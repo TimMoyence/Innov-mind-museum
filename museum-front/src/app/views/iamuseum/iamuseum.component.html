@@ -1,0 +1,118 @@
+<div class="flex items-center justify-center min-h-screen">
+  <div class="w-full max-w-4xl mx-auto p-4">
+    <form
+      (ngSubmit)="onSubmit(museumForm)"
+      #museumForm="ngForm"
+      class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4"
+    >
+      <!-- TODO : faire en sorte que le forme il est l'artiste et le nom de l'oeuvre cote a cote sous le format ordi, et en l'un sous l'autre sou sle format telephone -->
+      <div class="mb-4">
+        <label class="block text-gray-700 text-sm font-bold mb-2" for="name"
+          >Nom</label
+        >
+        <input
+          class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          id="name"
+          placeholder="Leave a name here"
+          [(ngModel)]="iamuseumForm.artName"
+          name="name"
+          required
+        />
+      </div>
+      <div class="mb-2">
+        <label class="block text-gray-700 text-sm font-bold mb-2" for="artiste"
+          >Artiste</label
+        >
+        <input
+          class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          id="artiste"
+          placeholder="Leave an artist name here"
+          [(ngModel)]="iamuseumForm.artist"
+          name="artiste"
+          required
+        />
+      </div>
+      <!-- TODO : faire une jolie transition sur les boutons et mettre de jolie couleur (cf post de melvyn) -->
+      <!-- TODO : faire en sorte de réduire l'ecriture des boutons / la taille / la police -->
+      <!-- TODO : faire en sorte d'avoir les boutons sur le coté sur ordi et les boutons sur le dessous sur telelephone, les mettre cote a cote et centrée -->
+      <!-- TODO optionnelle : condition, si la personne a eu la réponse, les boutons disparaissent, si la personne clic de nouveaux sur le formulaire ou sur la croix les boutons réapparaissent -->
+      <div class="button-group flex flex-wrap space-x-2">
+        <button
+          type="button"
+          (click)="addValueToForm('fun')"
+          [ngClass]="{
+            'bg-menthe': selectedValue() === 'fun',
+            'bg-gris-doux': selectedValue() !== 'fun'
+          }"
+          class="btn m-2 py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          Fun
+        </button>
+        <button
+          type="button"
+          (click)="addValueToForm('serieuse')"
+          [ngClass]="{
+            'btn-menthe': selectedValue() === 'serieuse',
+            'btn-gray': selectedValue() !== 'serieuse'
+          }"
+          class="btn m-2 py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          Sérieuse
+        </button>
+        <button
+          type="button"
+          (click)="addValueToForm('une Annecdote rigolote')"
+          [ngClass]="{
+            'btn-menthe': selectedValue() === 'une Annecdote rigolote',
+            'btn-gray': selectedValue() !== 'une Annecdote rigolote'
+          }"
+          class="btn m-2 py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          Une Anecdote Rigolote
+        </button>
+        <button
+          type="button"
+          (click)="addValueToForm('une Annecdote serieuse')"
+          [ngClass]="{
+            'btn-menthe': selectedValue() === 'une Annecdote serieuse',
+            'btn-gray': selectedValue() !== 'une Annecdote serieuse'
+          }"
+          class="btn m-2 py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          Une Anecdote Sérieuse
+        </button>
+        <button
+          type="button"
+          (click)="addValueToForm('comme si tu étais un pirate')"
+          [ngClass]="{
+            'btn-menthe': selectedValue() === 'comme si tu étais un pirate',
+            'btn-gray': selectedValue() !== 'comme si tu étais un pirate'
+          }"
+          class="btn m-2 py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          Comme si tu étais un pirate
+        </button>
+      </div>
+      @if(loading){
+      <div class="flex justify-center mt-6">
+        <div class="loader"></div>
+      </div>
+      } @if(!loading && !response) {
+      <!-- todo: Mettre le bouton en bas a droite, avec juste une fleche qui renvoi gérer les cas (si il a dajà répondu et que les valeur du form on changé ) -->
+      <div class="flex items-center justify-between mt-6">
+        <button
+          class="bg-cyan-fonce hover:bg-cyan-fonce-darker text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          type="submit"
+        >
+          Submit
+        </button>
+      </div>
+      }
+    </form>
+    @if(response) {
+    <div class="bg-menthe rounded px-8 pt-6 pb-8 mb-4 mt-4">
+      <p class="text-gray-700">{{ response }}</p>
+    </div>
+    }
+  </div>
+</div>

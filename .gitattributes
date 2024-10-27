@@ -1,0 +1,5 @@
+museum-frontend/ios/Pods/React-Core-prebuilt/React.xcframework/ios-arm64/React.framework/React filter=lfs diff=lfs merge=lfs -text
+museum-frontend/ios/Pods/React-Core-prebuilt/React.xcframework/ios-arm64_x86_64-maccatalyst/React.framework/React filter=lfs diff=lfs merge=lfs -text
+museum-frontend/ios/Pods/React-Core-prebuilt/React.xcframework/ios-arm64_x86_64-maccatalyst/React.framework/Versions/A/React filter=lfs diff=lfs merge=lfs -text
+museum-frontend/ios/Pods/React-Core-prebuilt/React.xcframework/ios-arm64_x86_64-maccatalyst/React.framework/Versions/Current/React filter=lfs diff=lfs merge=lfs -text
+museum-frontend/ios/Pods/React-Core-prebuilt/React.xcframework/ios-arm64_x86_64-simulator/React.framework/React filter=lfs diff=lfs merge=lfs -text

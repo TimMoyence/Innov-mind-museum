@@ -1,0 +1,14 @@
+######### ! ############################# 
+
+#! TEST
+
+######### ! ############################# 
+
+### ? send artName and artist Test
+POST http://localhost:3000/api/v1/ia/museum/
+Content-Type: application/json
+
+{
+  "artName": "Venus de milo",
+  "artist": "Alexandros of Antioch"
+}

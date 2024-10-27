@@ -1,0 +1,7 @@
+{
+  "name": "museum-front",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}
