@@ -13,11 +13,14 @@ import { IAMuseumForm } from '../../core/models/museumForm';
 })
 export default class IAMuseumComponent {
   iamuseumForm: IAMuseumForm = new IAMuseumForm();
+
   private iaMuseumService = inject(IAMuseumService);
+
   loading = false;
   response: string | null = null;
   selectedValue = signal<string>('');
   // bosser sur le faite que ce soit comme un search et que ce soit appellable plusieurs fois
+
   addValueToForm(value: string) {
     this.iamuseumForm.responseTon = value;
     this.selectedValue.set(value);
