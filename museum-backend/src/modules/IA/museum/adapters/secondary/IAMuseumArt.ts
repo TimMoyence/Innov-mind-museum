@@ -4,7 +4,7 @@ import { ResponseMessage } from '@shared/domaine/index';
 import { IAMuseumArtInterface } from '../../core/domaine/IAMuseumArtInterface';
 
 export class IAMuseumArt implements IAMuseumArtInterface {
-  llm = new IAConnection().chatOpenAI('gpt-3.5-turbo', 0.5);
+  llm = new IAConnection().chatOpenAI('gpt-4o-mini', 0.5);
 
   async askQuestionOnArtToIA(
     artName: string,
