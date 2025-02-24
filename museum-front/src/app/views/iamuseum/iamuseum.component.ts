@@ -1,4 +1,4 @@
-import { NgClass, NgIf } from '@angular/common';
+import { NgClass } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IAMuseumService } from '../../core/adapters/iaMuseum.getaway';
@@ -7,7 +7,7 @@ import { IAMuseumForm } from '../../core/models/museumForm';
 @Component({
   selector: 'app-iamuseum',
   standalone: true,
-  imports: [FormsModule, NgIf, NgClass],
+  imports: [FormsModule, NgClass],
   templateUrl: './iamuseum.component.html',
   styleUrl: './iamuseum.component.scss',
 })
