@@ -10,8 +10,8 @@ export default function HomeScreen() {
       <BlurView intensity={60} tint="light" style={styles.content}>
         <Text style={styles.title}>Welcome to ArtTalk</Text>
         <Text style={styles.subtitle}>Discuss and explore art masterpieces</Text>
-        <Link href="/conversations" style={styles.link}>
-          <Text style={styles.linkText}>Start a Discussion</Text>
+        <Link href="/auth" style={styles.link}>
+          <Text style={styles.linkText}>Se connecter</Text>
         </Link>
       </BlurView>
     </ImageBackground>
