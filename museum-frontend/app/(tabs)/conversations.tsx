@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ImageBackground, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { RadioButton } from '../../components/RadioButton';
@@ -9,10 +9,11 @@ import { Ionicons } from '@expo/vector-icons';
 const LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
 
 export default function ConversationsScreen() {
+  const cameraRef = useRef<Camera>(null);
   const [selectedLevel, setSelectedLevel] = useState('');
-  const [hasPermission, setHasPermission] = useState(null);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [showCamera, setShowCamera] = useState(false);
-  const [photo, setPhoto] = useState(null);
+  const [photo, setPhoto] = useState<string | null>(null);
 
   const requestPermissions = async () => {
     if (Platform.OS === 'web') {
