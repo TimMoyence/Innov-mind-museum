@@ -1,267 +1,206 @@
-import { useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ImageBackground, Platform } from 'react-native';
-import { BlurView } from 'expo-blur';
-import { RadioButton } from '../../components/RadioButton';
-import { Camera } from 'expo-camera';
-import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons';
+import { useState, useRef } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  StatusBar,
+  Dimensions,
+  SafeAreaView,
+} from "react-native";
+import { router } from "expo-router";
+import { Feather } from "@expo/vector-icons";
+import { LevelSelector } from "../../components/LevelSelector";
+import { DiscussionItem } from "../../components/DiscussionItem";
+import { mainStyles } from "../styles/mainStyles";
+import { CameraView } from "@/components/CameraView";
 
-const LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
+const LEVELS = ["Beginner", "Intermediate", "Advanced"];
 
 export default function ConversationsScreen() {
-  const cameraRef = useRef<Camera>(null);
-  const [selectedLevel, setSelectedLevel] = useState('');
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [selectedLevel, setSelectedLevel] = useState("");
   const [showCamera, setShowCamera] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
-
-  const requestPermissions = async () => {
-    if (Platform.OS === 'web') {
-      return;
-    }
-    const { status } = await Camera.requestCameraPermissionsAsync();
-    setHasPermission(status === 'granted');
-  };
+  const [activeTab, setActiveTab] = useState("All");
 
   const handleLevelSelect = (level: string) => {
     setSelectedLevel(level);
-    requestPermissions();
   };
 
   const takePicture = async () => {
-    if (Platform.OS === 'web') {
-      // For web, use file picker instead
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
-      });
-
-      if (!result.canceled) {
-        setPhoto(result.assets[0].uri);
-        setShowCamera(false);
-      }
-      return;
-    }
-
-    const { status } = await Camera.requestCameraPermissionsAsync();
-    if (status === 'granted') {
-      setShowCamera(true);
-    }
+    setShowCamera(true);
   };
 
-  if (showCamera && Platform.OS !== 'web') {
+  const handlePhotoCapture = (uri: string) => {
+    setPhoto(uri);
+    setShowCamera(false);
+  };
+
+  // Camera mode screen (VR style)
+  if (showCamera) {
     return (
-      <Camera style={styles.camera}>
-        <View style={styles.cameraControls}>
-          <TouchableOpacity 
-            style={styles.closeButton}
-            onPress={() => setShowCamera(false)}
-          >
-            <Ionicons name="close" size={30} color="white" />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.captureButton}
-            onPress={async () => {
-              if (cameraRef.current) {
-                const photo = await cameraRef.current.takePictureAsync();
-                setPhoto(photo.uri);
-                setShowCamera(false);
-              }
-            }}
-          >
-            <View style={styles.captureButtonInner} />
-          </TouchableOpacity>
-        </View>
-      </Camera>
+      <CameraView 
+        onClose={() => setShowCamera(false)} 
+        onCapture={handlePhotoCapture}
+      />
     );
   }
 
+  // Main screen - Inspired by MUSEUR main view
   return (
-    <ImageBackground
-      source={{ uri: 'https://images.unsplash.com/photo-1577083552431-6e5fd75a9475' }}
-      style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <BlurView intensity={60} tint="light" style={styles.content}>
-          <Text style={styles.title}>Art Discussion</Text>
-          
-          <View style={styles.levelSelector}>
-            <Text style={styles.subtitle}>Select your expertise level:</Text>
-            {LEVELS.map((level) => (
-              <RadioButton
-                key={level}
-                label={level}
-                selected={selectedLevel === level}
-                onSelect={() => handleLevelSelect(level)}
-              />
-            ))}
-          </View>
+    <SafeAreaView style={mainStyles.container}>
+      <StatusBar barStyle="dark-content" />
+      <View style={mainStyles.header}>
+        <TouchableOpacity 
+          style={mainStyles.menuButton}
+          onPress={() => router.back()}
+        >
+          <Feather name="arrow-left" size={24} color="#111" />
+        </TouchableOpacity>
+        
+        <View style={mainStyles.logoHeaderContainer}>
+          <Text style={mainStyles.logoHeader}>★ ARTDISCUSS ★</Text>
+        </View>
+        
+        <TouchableOpacity style={mainStyles.searchButton}>
+          <Feather name="search" size={24} color="#111" />
+        </TouchableOpacity>
+      </View>
 
-          {selectedLevel && (
-            <TouchableOpacity 
-              style={styles.cameraButton}
-              onPress={takePicture}
+      <View style={mainStyles.tabs}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          contentContainerStyle={mainStyles.tabsContent}
+        >
+          {["All", "Paintings", "Sculpture", "Photography"].map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              style={[mainStyles.tabButton, activeTab === tab && mainStyles.activeTabButton]}
+              onPress={() => setActiveTab(tab)}
             >
-              <BlurView intensity={40} tint="light" style={styles.cameraButtonContent}>
-                <Ionicons name="camera" size={24} color="#1a1a1a" />
-                <Text style={styles.cameraButtonText}>Take a Photo of Artwork</Text>
-              </BlurView>
+              <Text style={[mainStyles.tabText, activeTab === tab && mainStyles.activeTabText]}>
+                {tab}
+              </Text>
             </TouchableOpacity>
-          )}
+          ))}
+        </ScrollView>
+      </View>
 
-          {photo && (
-            <View style={styles.photoContainer}>
-              <ImageBackground 
-                source={{ uri: photo }} 
-                style={styles.photoPreview}
-                imageStyle={styles.photoPreviewImage}
-              >
-                <BlurView intensity={40} tint="light" style={styles.photoInfo}>
-                  <Text style={styles.photoLevel}>Level: {selectedLevel}</Text>
-                </BlurView>
-              </ImageBackground>
+      <ScrollView 
+        style={mainStyles.content}
+        contentContainerStyle={mainStyles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Expertise Level Selection */}
+        <View style={mainStyles.sectionContainer}>
+          <View style={mainStyles.sectionHeader}>
+            <Text style={mainStyles.sectionTitle}>Select Your Level</Text>
+          </View>
+          
+          <LevelSelector
+            levels={LEVELS}
+            selectedLevel={selectedLevel}
+            onSelectLevel={handleLevelSelect}
+          />
+        </View>
+
+        {/* Camera Option */}
+        {selectedLevel && (
+          <TouchableOpacity 
+            style={mainStyles.cameraOption} 
+            onPress={takePicture}
+            activeOpacity={0.9}
+          >
+            <View style={mainStyles.cameraOptionContent}>
+              <View style={mainStyles.cameraOptionTextContainer}>
+                <Text style={mainStyles.cameraOptionTitle}>
+                  Artwork Camera
+                </Text>
+                <Text style={mainStyles.cameraOptionDescription}>
+                  Capture and discuss art pieces
+                </Text>
+                <View style={mainStyles.cameraOptionMeta}>
+                  <View style={mainStyles.cameraOptionTag}>
+                    <Text style={mainStyles.cameraOptionTagText}>AR Mode</Text>
+                  </View>
+                  <View style={mainStyles.cameraOptionBadge}>
+                    <Text style={mainStyles.cameraOptionBadgeText}>{selectedLevel}</Text>
+                  </View>
+                </View>
+              </View>
+              <View style={mainStyles.cameraOptionIcon}>
+                <Feather name="camera" size={24} color="#111" />
+              </View>
             </View>
-          )}
+          </TouchableOpacity>
+        )}
 
-          <View style={styles.discussionList}>
-            <Text style={styles.subtitle}>Recent Discussions</Text>
-            <TouchableOpacity style={styles.discussionItem}>
-              <BlurView intensity={40} tint="light" style={styles.itemContent}>
-                <Text style={styles.itemTitle}>The Starry Night - Van Gogh</Text>
-                <Text style={styles.itemMeta}>5 participants • Intermediate</Text>
-              </BlurView>
-            </TouchableOpacity>
+        {/* Photo Preview */}
+        {photo && (
+          <View style={mainStyles.photoPreviewContainer}>
+            <View style={mainStyles.photoHeader}>
+              <Text style={mainStyles.photoTitle}>Your Artwork</Text>
+              <Text style={mainStyles.photoSubtitle}>Selected Level: {selectedLevel}</Text>
+            </View>
+            
+            <Image
+              source={{ uri: photo }}
+              style={mainStyles.photoImage}
+              resizeMode="cover"
+            />
+            
+            <View style={mainStyles.photoStats}>
+              <View style={mainStyles.photoStatItem}>
+                <Text style={mainStyles.photoStatNumber}>0</Text>
+                <Text style={mainStyles.photoStatLabel}>Comments</Text>
+              </View>
+              <View style={mainStyles.photoStatItem}>
+                <Text style={mainStyles.photoStatNumber}>0</Text>
+                <Text style={mainStyles.photoStatLabel}>Views</Text>
+              </View>
+            </View>
+          </View>
+        )}
 
-            <TouchableOpacity style={styles.discussionItem}>
-              <BlurView intensity={40} tint="light" style={styles.itemContent}>
-                <Text style={styles.itemTitle}>Mona Lisa - Da Vinci</Text>
-                <Text style={styles.itemMeta}>3 participants • Beginner</Text>
-              </BlurView>
+        {/* Discussions */}
+        <View style={mainStyles.sectionContainer}>
+          <View style={mainStyles.sectionHeader}>
+            <Text style={mainStyles.sectionTitle}>Recent Discussions</Text>
+            <TouchableOpacity style={mainStyles.seeAllButton}>
+              <Text style={mainStyles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
-        </BlurView>
+
+          <DiscussionItem
+            imageUrl="https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&w=500"
+            title="The Starry Night - Van Gogh"
+            location="Manhattan, NYC"
+            time="Mon-Fri (10am-8pm)"
+            participants={5}
+            tags={["Painting", "Artwork"]}
+          />
+
+          <DiscussionItem
+            imageUrl="https://images.unsplash.com/photo-1423742774270-6884aac775fa?auto=format&fit=crop&w=500"
+            title="Mona Lisa - Da Vinci"
+            location="Paris, France"
+            time="Wed-Sun (9am-7pm)"
+            participants={3}
+            tags={["Exhibition"]}
+          />
+          
+          <DiscussionItem
+            imageUrl="https://images.unsplash.com/photo-1595524362380-053b4cd0632c?auto=format&fit=crop&w=500"
+            title="David - Michelangelo"
+            location="Florence, Italy"
+            time="Tue-Sun (10am-6pm)"
+            participants={7}
+            tags={["Sculpture", "Exhibition"]}
+          />
+        </View>
       </ScrollView>
-    </ImageBackground>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f0f0f0',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    margin: 20,
-    borderRadius: 15,
-    overflow: 'hidden',
-    padding: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 20,
-  },
-  subtitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 15,
-  },
-  levelSelector: {
-    marginBottom: 30,
-  },
-  discussionList: {
-    flex: 1,
-  },
-  discussionItem: {
-    marginBottom: 15,
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  itemContent: {
-    padding: 15,
-  },
-  itemTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 5,
-  },
-  itemMeta: {
-    fontSize: 14,
-    color: '#666',
-  },
-  camera: {
-    flex: 1,
-  },
-  cameraControls: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    paddingBottom: 30,
-  },
-  captureButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  captureButtonInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'white',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 40,
-    left: 20,
-  },
-  cameraButton: {
-    marginBottom: 20,
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  cameraButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-    justifyContent: 'center',
-  },
-  cameraButtonText: {
-    marginLeft: 10,
-    fontSize: 16,
-    color: '#1a1a1a',
-    fontWeight: '600',
-  },
-  photoContainer: {
-    marginBottom: 20,
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  photoPreview: {
-    height: 200,
-    justifyContent: 'flex-end',
-  },
-  photoPreviewImage: {
-    borderRadius: 10,
-  },
-  photoInfo: {
-    padding: 15,
-  },
-  photoLevel: {
-    color: '#1a1a1a',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});
