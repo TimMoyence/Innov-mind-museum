@@ -12,3 +12,49 @@ Content-Type: application/json
   "artName": "Venus de milo",
   "artist": "de vinci"
 }
+
+
+
+######### ! ############################# 
+
+#! USER GESTURE
+
+######### ! ############################# 
+
+### ? Register user
+POST http://localhost:3000/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "tim.moyence@outlook.fr",
+  "password": "Test123456!",
+  "firstname": "Tim",
+  "lastname": "Le big T"
+}
+
+
+### ? Login user
+POST http://localhost:3000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "tim.moyence@outlook.fr",
+  "password": "Test123456!"
+}
+
+### ? forgot-password user
+POST http://localhost:3000/api/v1/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "tim.moyence@outlook.fr"
+}
+
+### ? reset-password user
+POST http://localhost:3000/api/v1/auth/reset-password
+Content-Type: application/json
+
+{
+  "token" :"54aa061a6c7d37ad42b2238db42c100484790b42",
+  "newPassword" : "Test123456!"
+}
