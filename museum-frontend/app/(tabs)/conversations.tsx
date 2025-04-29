@@ -37,7 +37,7 @@ export default function ConversationsScreen() {
     setShowCamera(false);
   };
 
-  // Camera mode screen (VR style)
+  // Camera mode screen
   if (showCamera) {
     return (
       <CameraView 
@@ -47,7 +47,7 @@ export default function ConversationsScreen() {
     );
   }
 
-  // Main screen - Inspired by MUSEUR main view
+  // Main screen
   return (
     <SafeAreaView style={mainStyles.container}>
       <StatusBar barStyle="dark-content" />
@@ -60,7 +60,7 @@ export default function ConversationsScreen() {
         </TouchableOpacity>
         
         <View style={mainStyles.logoHeaderContainer}>
-          <Text style={mainStyles.logoHeader}>★ ARTDISCUSS ★</Text>
+          <Text style={mainStyles.logoHeader}>★ NOAVISIT ★</Text>
         </View>
         
         <TouchableOpacity style={mainStyles.searchButton}>
