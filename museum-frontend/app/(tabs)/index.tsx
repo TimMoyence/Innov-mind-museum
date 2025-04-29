@@ -43,8 +43,8 @@ export default function HomeScreen() {
             ]}
           >
             <View style={homeStyles.logoContainer}>
-              <Text style={homeStyles.logoText}>ART</Text>
-              <Text style={homeStyles.logoSubText}>DISCUSSION</Text>
+              <Text style={homeStyles.logoText}>NOA</Text>
+              <Text style={homeStyles.logoSubText}>VISIT</Text>
             </View>
             
             <Text style={homeStyles.welcomeDescription}>
