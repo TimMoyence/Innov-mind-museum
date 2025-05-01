@@ -8,11 +8,16 @@ import passport from 'passport';
 import 'reflect-metadata';
 import { AppDataSource } from './data/db/data-source';
 import { configurePassport } from './modules/auth/adapters/secondary/passport.config';
+import { setupSwagger } from '../src/helpers/swagger';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+if (process.env.NODE_ENV !== 'production') {
+  setupSwagger(app);
+}
 
 const allowedOrigins = process.env.CORSORIGIN?.split(',') || [];
 const corsOptionsDelegate = (
@@ -29,7 +34,6 @@ const corsOptionsDelegate = (
 };
 
 app.use(cors(corsOptionsDelegate));
-app.options('*', cors(corsOptionsDelegate));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -56,4 +60,14 @@ AppDataSource.initialize()
       );
     });
   })
-  .catch((error: any) => console.error('Erreur de connexion à la DB:', error));
+  .catch((error: unknown) => {
+    console.error('Erreur de connexion à la DB:');
+
+    if (error instanceof Error) {
+      console.error(error.stack || error.message);
+    } else if (typeof error === 'object' && error !== null) {
+      console.error(JSON.stringify(error, null, 2));
+    } else {
+      console.error('Unknown error:', error);
+    }
+  });

@@ -1,5 +1,5 @@
-# Utiliser une image Node.js officielle en version LTS
-FROM node:18-alpine
+FROM node:23-bullseye
+
 
 # Définir le répertoire de travail
 WORKDIR /app

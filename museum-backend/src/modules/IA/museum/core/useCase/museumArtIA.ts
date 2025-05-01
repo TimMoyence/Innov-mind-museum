@@ -1,4 +1,4 @@
-import { IAMuseumArtInterface } from '../domaine/IAMuseumArtInterface';
+import { IAMuseumArtInterface } from '../domaine/IAMuseumArt.interface';
 
 export class museumArtIA {
   constructor(private readonly _museumArtIA: IAMuseumArtInterface) {}
