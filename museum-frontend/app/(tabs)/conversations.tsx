@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,29 +6,112 @@ import {
   TouchableOpacity,
   Image,
   StatusBar,
-  Dimensions,
   SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { LevelSelector } from "../../components/LevelSelector";
 import { DiscussionItem } from "../../components/DiscussionItem";
 import { mainStyles } from "../styles/mainStyles";
-import { CameraView } from "@/components/CameraView";
+import { CameraView } from "../../components/CameraView";
 
 const LEVELS = ["Beginner", "Intermediate", "Advanced"];
+
+// Exemple de données fictives pour le développement
+const MOCK_DISCUSSIONS = [
+  {
+    id: "1",
+    imageUrl: "https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&w=500",
+    title: "The Starry Night - Van Gogh",
+    location: "Manhattan, NYC",
+    time: "Mon-Fri (10am-8pm)",
+    participants: 5,
+    tags: ["Painting", "Artwork"],
+  },
+  {
+    id: "2",
+    imageUrl: "https://images.unsplash.com/photo-1423742774270-6884aac775fa?auto=format&fit=crop&w=500",
+    title: "Mona Lisa - Da Vinci",
+    location: "Paris, France",
+    time: "Wed-Sun (9am-7pm)",
+    participants: 3,
+    tags: ["Exhibition"],
+  },
+  {
+    id: "3",
+    imageUrl: "https://images.unsplash.com/photo-1562522730-7c98d13c6690?q=80&w=2940??auto=format&fit=crop&w=500",
+    title: "David - Michelangelo",
+    location: "Florence, Italy",
+    time: "Tue-Sun (10am-6pm)",
+    participants: 7,
+    tags: ["Sculpture", "Exhibition"],
+  },
+];
+
+// Fonction qui simule un appel API pour récupérer les discussions
+// Cette fonction sera remplacée par un vrai appel API dans le futur
+const fetchDiscussions = async (filter?: string): Promise<typeof MOCK_DISCUSSIONS> => {
+  // Simulation d'un délai réseau
+  await new Promise(resolve => setTimeout(resolve, 300));
+  
+  if (!filter || filter === "All") {
+    return MOCK_DISCUSSIONS;
+  }
+  
+  return MOCK_DISCUSSIONS.filter(discussion => 
+    discussion.tags.some(tag => tag === filter)
+  );
+};
+
+// Type pour les discussions
+interface Discussion {
+  id: string;
+  imageUrl: string;
+  title: string;
+  location: string;
+  time: string;
+  participants: number;
+  tags: string[];
+}
 
 export default function ConversationsScreen() {
   const [selectedLevel, setSelectedLevel] = useState("");
   const [showCamera, setShowCamera] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("All");
+  const [discussions, setDiscussions] = useState<Discussion[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fonction pour charger les discussions
+  const loadDiscussions = async (filter?: string) => {
+    setIsLoading(true);
+    try {
+      const data = await fetchDiscussions(filter);
+      setDiscussions(data);
+    } catch (error) {
+      console.error("Error fetching discussions:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Charger les discussions au premier rendu
+  useEffect(() => {
+    loadDiscussions();
+  }, []);
+
+  // Charger les discussions lorsque l'onglet change
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    loadDiscussions(tab);
+  };
 
   const handleLevelSelect = (level: string) => {
     setSelectedLevel(level);
   };
 
-  const takePicture = async () => {
+  const takePicture = () => {
     setShowCamera(true);
   };
 
@@ -74,11 +157,11 @@ export default function ConversationsScreen() {
           showsHorizontalScrollIndicator={false} 
           contentContainerStyle={mainStyles.tabsContent}
         >
-          {["All", "Paintings", "Sculpture", "Photography"].map((tab) => (
+          {["All", "Painting", "Sculpture", "Exhibition"].map((tab) => (
             <TouchableOpacity
               key={tab}
               style={[mainStyles.tabButton, activeTab === tab && mainStyles.activeTabButton]}
-              onPress={() => setActiveTab(tab)}
+              onPress={() => handleTabChange(tab)}
             >
               <Text style={[mainStyles.tabText, activeTab === tab && mainStyles.activeTabText]}>
                 {tab}
@@ -173,32 +256,28 @@ export default function ConversationsScreen() {
             </TouchableOpacity>
           </View>
 
-          <DiscussionItem
-            imageUrl="https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&w=500"
-            title="The Starry Night - Van Gogh"
-            location="Manhattan, NYC"
-            time="Mon-Fri (10am-8pm)"
-            participants={5}
-            tags={["Painting", "Artwork"]}
-          />
-
-          <DiscussionItem
-            imageUrl="https://images.unsplash.com/photo-1423742774270-6884aac775fa?auto=format&fit=crop&w=500"
-            title="Mona Lisa - Da Vinci"
-            location="Paris, France"
-            time="Wed-Sun (9am-7pm)"
-            participants={3}
-            tags={["Exhibition"]}
-          />
-          
-          <DiscussionItem
-            imageUrl="https://images.unsplash.com/photo-1595524362380-053b4cd0632c?auto=format&fit=crop&w=500"
-            title="David - Michelangelo"
-            location="Florence, Italy"
-            time="Tue-Sun (10am-6pm)"
-            participants={7}
-            tags={["Sculpture", "Exhibition"]}
-          />
+          {isLoading ? (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <ActivityIndicator size="large" color="#0000ff" />
+              <Text style={{ marginTop: 10, color: '#666' }}>Chargement des discussions...</Text>
+            </View>
+          ) : discussions.length > 0 ? (
+            discussions.map((discussion, index) => (
+              <DiscussionItem
+                key={discussion.id}
+                imageUrl={discussion.imageUrl}
+                title={discussion.title}
+                location={discussion.location}
+                time={discussion.time}
+                participants={discussion.participants}
+                tags={discussion.tags}
+              />
+            ))
+          ) : (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text style={{ color: '#666' }}>Aucune discussion trouvée</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
