@@ -1,7 +1,7 @@
 import { PromptTemplate } from '@langchain/core/prompts';
 import { IAConnection } from '@shared/IAConnection';
 import { ResponseMessage } from '@shared/domaine/index';
-import { IAMuseumArtInterface } from '../../core/domaine/IAMuseumArtInterface';
+import { IAMuseumArtInterface } from '../../core/domaine/IAMuseumArt.interface';
 
 export class IAMuseumArt implements IAMuseumArtInterface {
   llm = new IAConnection().chatOpenAI('gpt-4o-mini', 0.5);
@@ -23,5 +23,3 @@ export class IAMuseumArt implements IAMuseumArtInterface {
     return { message: response.content.toString() };
   }
 }
-
-// ton potentiel : fun / serieuse / une Annecdote rigolote / une Annecdote serieuse / comme si tu était un pirate .
