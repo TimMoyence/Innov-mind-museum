@@ -10,7 +10,33 @@ import {
 const authRouter: Router = Router();
 
 /**
- * Route d'enregistrement
+ * @swagger
+ * /api/v1/auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password, firstname, lastname]
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               firstname:
+ *                 type: string
+ *               lastname:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *       400:
+ *         description: Bad request
  */
 authRouter.post('/register', async (req: Request, res: Response) => {
   const { email, password, firstname, lastname } = req.body;
@@ -21,7 +47,6 @@ authRouter.post('/register', async (req: Request, res: Response) => {
       firstname,
       lastname,
     );
-    // On retire le mot de passe avant de renvoyer l'utilisateur
     if (user && 'password' in user) {
       user.password = 'je suis le mot de passe';
     }
@@ -32,7 +57,29 @@ authRouter.post('/register', async (req: Request, res: Response) => {
 });
 
 /**
- * Route de login utilisant Passport Local Strategy
+ * @swagger
+ * /api/v1/auth/login:
+ *   post:
+ *     summary: Authenticate user and return JWT token
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Successfully logged in
+ *       401:
+ *         description: Invalid credentials
  */
 authRouter.post('/login', (req: Request, res: Response, next) => {
   passport.authenticate(
@@ -44,11 +91,8 @@ authRouter.post('/login', (req: Request, res: Response, next) => {
         return res
           .status(401)
           .json({ message: info?.message || 'Identifiants invalides' });
-      // Si vous utilisez les sessions, Passport va créer une session,
-      // sinon, pour JWT, vous pouvez générer un token.
       req.logIn(user, { session: true }, (err) => {
         if (err) return next(err);
-        // Exemple de génération de token JWT en complément (optionnel)
         const token = jwt.sign(
           { id: user.id, email: user.email },
           process.env.JWT_SECRET || 'default_secret',
@@ -61,8 +105,17 @@ authRouter.post('/login', (req: Request, res: Response, next) => {
 });
 
 /**
- * Route de logout
- * Cette route nécessite que la session soit active.
+ * @swagger
+ * /api/v1/auth/logout:
+ *   post:
+ *     summary: Logout user
+ *     tags:
+ *       - Authentication
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *       500:
+ *         description: Logout error
  */
 authRouter.post('/logout', (req: Request, res: Response) => {
   req.logout((err: any) => {
@@ -74,13 +127,32 @@ authRouter.post('/logout', (req: Request, res: Response) => {
 });
 
 /**
- * Route pour la demande de réinitialisation du mot de passe
+ * @swagger
+ * /auth/forgot-password:
+ *   post:
+ *     summary: Request a password reset token
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: If email exists, reset token was sent
+ *       500:
+ *         description: Internal server error
  */
 authRouter.post('/forgot-password', async (req: Request, res: Response) => {
   const { email } = req.body;
   try {
     const token = await forgotPasswordUseCase.execute(email);
-    // En production, envoyer un email contenant le token
     res.json({
       message: 'Si cet email existe, un lien de réinitialisation a été envoyé.',
       token,
@@ -91,7 +163,29 @@ authRouter.post('/forgot-password', async (req: Request, res: Response) => {
 });
 
 /**
- * Route pour la réinitialisation du mot de passe
+ * @swagger
+ * /api/v1/auth/reset-password:
+ *   post:
+ *     summary: Reset password with a valid token
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token, newPassword]
+ *             properties:
+ *               token:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password successfully reset
+ *       400:
+ *         description: Invalid token or bad request
  */
 authRouter.post('/reset-password', async (req: Request, res: Response) => {
   const { token, newPassword } = req.body;
