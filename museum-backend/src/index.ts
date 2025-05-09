@@ -19,21 +19,27 @@ if (process.env.NODE_ENV !== 'production') {
   setupSwagger(app);
 }
 
-const allowedOrigins = process.env.CORSORIGIN?.split(',') || [];
-const corsOptionsDelegate = (
-  req: express.Request,
-  callback: (error: any, options: cors.CorsOptions) => void,
-) => {
-  let corsOptions;
-  if (allowedOrigins.includes(req.headers['origin'] ?? '')) {
-    corsOptions = { origin: true };
-  } else {
-    corsOptions = { origin: false };
-  }
-  callback(null, corsOptions);
-};
+// const allowedOrigins = process.env.CORSORIGIN?.split(',') || [];
+// const corsOptionsDelegate = (
+//   req: express.Request,
+//   callback: (error: any, options: cors.CorsOptions) => void,
+// ) => {
+//   let corsOptions;
+//   if (allowedOrigins.includes(req.headers['origin'] ?? '')) {
+//     corsOptions = { origin: true };
+//   } else {
+//     corsOptions = { origin: false };
+//   }
+//   callback(null, corsOptions);
+// };
 
-app.use(cors(corsOptionsDelegate));
+// app.use(cors(corsOptionsDelegate));
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
