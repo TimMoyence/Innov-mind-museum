@@ -200,4 +200,169 @@ export const mainStyles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
   },
-});
+ aiChatOption: {
+    marginTop: 10,
+    backgroundColor: '#EFF6FF', // Couleur bleu clair pour distinguer du composant caméra
+  },
+  
+  aiTag: {
+    backgroundColor: '#3B82F6', // Bleu pour le tag AI
+  },
+  
+  aiIcon: {
+    backgroundColor: '#93C5FD', // Bleu clair pour l'icône
+  },
+  
+  // Styles pour l'écran de chat
+  conversationContainer: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  
+  conversationContent: {
+    padding: 16,
+    paddingBottom: 20,
+  },
+  
+  // Style pour les bulles de message
+  messageBubble: {
+    maxWidth: '80%',
+    padding: 12,
+    borderRadius: 18,
+    marginBottom: 12,
+  },
+  
+  userMessageBubble: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#3B82F6',
+    borderBottomRightRadius: 4,
+  },
+  
+  aiMessageBubble: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#E5E7EB',
+    borderBottomLeftRadius: 4,
+  },
+  
+  messageText: {
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  
+  userMessageText: {
+    color: 'white',
+  },
+  
+  aiMessageText: {
+    color: '#1F2937',
+  },
+  
+  messageTimestamp: {
+    fontSize: 11,
+    marginTop: 4,
+    opacity: 0.6,
+    alignSelf: 'flex-end',
+  },
+  
+  // Zone de saisie du message
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    backgroundColor: 'white',
+    zIndex: 100, // S'assurer que la zone de saisie est au-dessus
+  },
+  
+  input: {
+    flex: 1,
+    minHeight: 40,
+    maxHeight: 100,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    fontSize: 16,
+    zIndex: 1, // S'assurer que le TextInput est au-dessus
+  },
+  
+  sendButton: {
+    marginLeft: 10,
+    backgroundColor: '#3B82F6',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  disabledSendButton: {
+    backgroundColor: '#E5E7EB',
+  },
+  
+  // Indicateur de frappe de l'IA
+  aiTypingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#E5E7EB',
+    padding: 10,
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  
+  aiTypingText: {
+    marginLeft: 8,
+    color: '#6B7280',
+    fontSize: 14,
+  },
+  
+  // Écran de conversation vide
+  emptyConversation: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    minHeight: 300,
+  },
+  
+  emptyConversationText: {
+    marginTop: 16,
+    textAlign: 'center',
+    color: '#6B7280',
+    fontSize: 16,
+  },
+  
+  // Image dans le chat
+  chatImageContainer: {
+    padding: 10,
+    backgroundColor: '#F3F4F6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  
+  chatImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+  },
+  
+  changeImageButton: {
+    marginLeft: 12,
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  
+  changeImageText: {
+    color: '#4B5563',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+})
