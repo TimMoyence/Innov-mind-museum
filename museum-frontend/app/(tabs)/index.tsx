@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Animated, StatusBar } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import { useRef, useEffect } from 'react';
 import { Feather } from "@expo/vector-icons";
 import { homeStyles } from '../styles/homeStyles';
@@ -10,7 +10,6 @@ export default function HomeScreen() {
   const translateYAnim = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
-    // Fade in animation when component mounts
     Animated.parallel([
       Animated.timing(opacityAnim, {
         toValue: 1,
@@ -53,10 +52,10 @@ export default function HomeScreen() {
             
             <TouchableOpacity 
               style={homeStyles.enterButton}
-              onPress={() => router.push('/conversations')}
+              onPress={() => router.push('/(tabs)/conversations')}
             >
-              <Text style={homeStyles.enterButtonText}>Enter Gallery</Text>
-              <Feather name="arrow-right" size={18} color="#111" />
+              <Text style={homeStyles.enterButtonText}>Enter</Text>
+              <Feather name="log-in" size={18} color="#111" />
             </TouchableOpacity>
           </Animated.View>
         </View>
@@ -64,3 +63,4 @@ export default function HomeScreen() {
     </View>
   );
 }
+
