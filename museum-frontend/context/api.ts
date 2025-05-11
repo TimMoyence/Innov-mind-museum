@@ -465,14 +465,6 @@ export const IAService = {
         responseTo: question, // On met notre question ici
       };
 
-      // Si un conversationId est disponible, on pourrait l'ajouter en tant que champ additionnel
-      // même si ce n'est pas dans le schéma officiel
-      if (conversationId && conversationId.trim() !== "") {
-        (payload as any).conversationId = conversationId;
-      }
-
-      console.log("Payload formaté selon le schéma Swagger:", payload);
-
       // Si une image est fournie et que nous devons envoyer un FormData
       if (artworkImageUri) {
         console.log("Préparation du FormData avec image");
@@ -483,11 +475,6 @@ export const IAService = {
         formData.append("artName", payload.artName);
         formData.append("artist", payload.artist);
         formData.append("responseTo", payload.responseTo);
-
-        // Si un conversationId est fourni, l'ajouter également
-        if (conversationId && conversationId.trim() !== "") {
-          formData.append("conversationId", conversationId);
-        }
 
         // Extraire le type de fichier à partir de l'URI
         const uriParts = artworkImageUri.split(".");
