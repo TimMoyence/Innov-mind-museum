@@ -26,5 +26,14 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
 
+  adminer:
+    image: adminer:latest
+    container_name: my-adminer
+    depends_on:
+      - db
+    ports:
+      - '8080:8080'
+    restart: unless-stopped
+
 volumes:
   pgdata:

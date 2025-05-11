@@ -41,6 +41,7 @@ coverage/
 # Environment variables
 .env
 **/.env
+expo-env.d.ts
 
 # Visual Studio Code
 .vscode/
