@@ -16,7 +16,7 @@ import { LevelSelector } from "../../components/LevelSelector";
 import { DiscussionItem } from "../../components/DiscussionItem";
 import { ChatInput } from "../../components/chatInput";
 import { mainStyles } from "../styles/mainStyles";
-import { CameraView } from "../../components/CameraView";
+import { CustomCameraView } from "../../components/CameraView";
 
 interface Discussion {
   id: string;
@@ -552,7 +552,7 @@ export default function ConversationsScreen() {
   // Camera mode screen
   if (showCamera) {
     return (
-      <CameraView
+      <CustomCameraView
         onClose={() => setShowCamera(false)}
         onCapture={handlePhotoCapture}
       />
