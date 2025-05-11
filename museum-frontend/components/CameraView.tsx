@@ -6,7 +6,8 @@ import {
   StatusBar,
   SafeAreaView,
 } from "react-native";
-import { Camera, CameraType } from "expo-camera";
+// Importation correcte selon la documentation actuelle
+import { CameraType, CameraView, Camera as ExpoCamera, useCameraPermissions } from "expo-camera";
 import { Feather } from "@expo/vector-icons";
 import { cameraStyles } from "../../museum-frontend/app/styles/cameraStyles";
 
@@ -15,20 +16,14 @@ interface CameraViewProps {
   onCapture: (uri: string) => void;
 }
 
-export const CameraView: React.FC<CameraViewProps> = ({
+export const CustomCameraView: React.FC<CameraViewProps> = ({
   onClose,
   onCapture,
 }) => {
-  const cameraRef = useRef<Camera | null>(null);
+  const cameraRef = useRef<CameraView | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-
-  React.useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === "granted");
-    })();
-  }, []);
+  const [permission, requestPermission] = useCameraPermissions();
+  const [facing, setFacing] = useState<CameraType>('back');
 
   const capturePhoto = async () => {
     if (cameraRef.current && cameraReady) {
@@ -44,7 +39,8 @@ export const CameraView: React.FC<CameraViewProps> = ({
     }
   };
 
-  if (hasPermission === null) {
+  if (!permission) {
+    // Les permissions de caméra sont toujours en cours de chargement
     return (
       <View style={cameraStyles.container}>
         <Text>Requesting camera permission...</Text>
@@ -52,10 +48,14 @@ export const CameraView: React.FC<CameraViewProps> = ({
     );
   }
 
-  if (hasPermission === false) {
+  if (!permission.granted) {
+    // Les permissions de caméra ne sont pas accordées
     return (
       <View style={cameraStyles.container}>
         <Text>No access to camera</Text>
+        <TouchableOpacity onPress={requestPermission}>
+          <Text>Grant permission</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -63,10 +63,10 @@ export const CameraView: React.FC<CameraViewProps> = ({
   return (
     <View style={cameraStyles.cameraContainer}>
       <StatusBar barStyle="light-content" />
-      <Camera
+      <CameraView
         style={cameraStyles.camera}
         ref={cameraRef}
-        type={CameraType.back}
+        facing={facing}
         onCameraReady={() => setCameraReady(true)}
       >
         <SafeAreaView style={cameraStyles.cameraContent}>
@@ -102,7 +102,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
             <View style={cameraStyles.navArrowRight} />
           </View>
         </SafeAreaView>
-      </Camera>
+      </CameraView>
     </View>
   );
 };

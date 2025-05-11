@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { JSX, useEffect } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
