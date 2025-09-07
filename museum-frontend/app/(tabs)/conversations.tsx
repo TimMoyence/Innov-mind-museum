@@ -17,6 +17,7 @@ import { DiscussionItem } from "../../components/DiscussionItem";
 import { ChatInput } from "../../components/chatInput";
 import { mainStyles } from "../styles/mainStyles";
 import { CustomCameraView } from "../../components/CameraView";
+import APIService from "../../context/api";
 
 interface Discussion {
   id: string;
@@ -87,205 +88,6 @@ const fetchDiscussions = async (
   );
 };
 
-// Service pour interagir avec l'API selon le Swagger
-const APIService = {
-  // URL de base de l'API (selon votre indication : localhost:3000)
-  BASE_URL: "http://localhost:3000",
-
-  // Poser une question à l'IA muséale (endpoint /api/v1/ia/museum)
-  askMuseumQuestion: async (
-    question: string,
-    artworkImageUrl?: string
-  ): Promise<any> => {
-    try {
-      const endpoint = "/api/v1/ia/museum";
-      const url = `${APIService.BASE_URL}${endpoint}`;
-
-      console.log(`Envoi d'une question à ${url}:`, {
-        question,
-        artworkImageUrl,
-      });
-
-      const payload: any = { question };
-      if (artworkImageUrl) {
-        payload.artworkImageUrl = artworkImageUrl;
-      }
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          // Remarque: Token à ajouter si nécessaire pour l'authentification
-          // 'Authorization': 'Bearer YOUR_TOKEN'
-        },
-        body: JSON.stringify(payload),
-      });
-
-      console.log("Statut de réponse:", response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erreur API ${response.status}: ${errorText}`);
-      }
-
-      const responseData = await response.json();
-      console.log("Réponse API:", responseData);
-
-      return responseData;
-    } catch (error) {
-      console.error(
-        "Erreur lors de la communication avec l'API IA Museum:",
-        error
-      );
-      throw error;
-    }
-  },
-
-  // Récupérer une conversation spécifique (endpoint /api/v1/conversation/{conversationId})
-  getConversation: async (conversationId: string): Promise<any> => {
-    try {
-      const endpoint = `/api/v1/conversation/${conversationId}`;
-      const url = `${APIService.BASE_URL}${endpoint}`;
-
-      console.log(`Récupération de la conversation ${conversationId} à ${url}`);
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          // Remarque: Token à ajouter si nécessaire pour l'authentification
-          // 'Authorization': 'Bearer YOUR_TOKEN'
-        },
-      });
-
-      console.log("Statut de réponse:", response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erreur API ${response.status}: ${errorText}`);
-      }
-
-      const responseData = await response.json();
-      console.log("Conversation récupérée:", responseData);
-
-      return responseData;
-    } catch (error) {
-      console.error(
-        "Erreur lors de la récupération de la conversation:",
-        error
-      );
-      throw error;
-    }
-  },
-
-  // Récupérer toutes les conversations (endpoint /api/v1/conversation/all)
-  getAllConversations: async (): Promise<any[]> => {
-    try {
-      const endpoint = "/api/v1/conversation/all";
-      const url = `${APIService.BASE_URL}${endpoint}`;
-
-      console.log(`Récupération de toutes les conversations à ${url}`);
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          // Remarque: Token à ajouter si nécessaire pour l'authentification
-          // 'Authorization': 'Bearer YOUR_TOKEN'
-        },
-      });
-
-      console.log("Statut de réponse:", response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erreur API ${response.status}: ${errorText}`);
-      }
-
-      const responseData = await response.json();
-      console.log("Conversations récupérées:", responseData);
-
-      return responseData;
-    } catch (error) {
-      console.error("Erreur lors de la récupération des conversations:", error);
-      return [];
-    }
-  },
-
-  // Récupérer les conversations d'un utilisateur (endpoint /api/v1/conversation/all/{userId})
-  getUserConversations: async (userId: string): Promise<any[]> => {
-    try {
-      const endpoint = `/api/v1/conversation/all/${userId}`;
-      const url = `${APIService.BASE_URL}${endpoint}`;
-
-      console.log(
-        `Récupération des conversations de l'utilisateur ${userId} à ${url}`
-      );
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          // Remarque: Token à ajouter si nécessaire pour l'authentification
-          // 'Authorization': 'Bearer YOUR_TOKEN'
-        },
-      });
-
-      console.log("Statut de réponse:", response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erreur API ${response.status}: ${errorText}`);
-      }
-
-      const responseData = await response.json();
-      console.log("Conversations de l'utilisateur récupérées:", responseData);
-
-      return responseData;
-    } catch (error) {
-      console.error(
-        "Erreur lors de la récupération des conversations de l'utilisateur:",
-        error
-      );
-      return [];
-    }
-  },
-
-  // Analyser une image (endpoint /api/v1/image-insight)
-  analyzeImage: async (imageUrl: string): Promise<any> => {
-    try {
-      const endpoint = "/api/v1/image-insight";
-      const url = `${APIService.BASE_URL}${endpoint}`;
-
-      console.log(`Analyse d'image à ${url}:`, { imageUrl });
-
-      const payload = { imageUrl };
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          // Remarque: Token à ajouter si nécessaire pour l'authentification
-          // 'Authorization': 'Bearer YOUR_TOKEN'
-        },
-        body: JSON.stringify(payload),
-      });
-
-      console.log("Statut de réponse:", response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erreur API ${response.status}: ${errorText}`);
-      }
-
-      const responseData = await response.json();
-      console.log("Résultat de l'analyse d'image:", responseData);
-
-      return responseData;
-    } catch (error) {
-      console.error("Erreur lors de l'analyse de l'image:", error);
-      throw error;
-    }
-  },
-};
-
 // Composant pour afficher un message individuel
 const MessageBubble = ({ message }: { message: AIMessage }) => {
   const isAI = message.sender === "ai";
@@ -353,7 +155,7 @@ export default function ConversationsScreen() {
     try {
       console.log("Tentative de chargement des conversations");
 
-      const conversations = await APIService.getAllConversations();
+      const conversations = await APIService.conversation.getAllConversations();
 
       if (conversations && conversations.length > 0) {
         // Récupérer la dernière conversation
@@ -364,9 +166,7 @@ export default function ConversationsScreen() {
         setConversationId(lastConvId);
 
         // Récupérer les détails de cette conversation
-        const conversationDetails = await APIService.getConversation(
-          lastConvId
-        );
+        const conversationDetails = await APIService.conversation.getConversation(lastConvId);
 
         if (conversationDetails && conversationDetails.messages) {
           console.log("Messages trouvés dans la conversation");
@@ -449,13 +249,25 @@ export default function ConversationsScreen() {
     }
   };
 
-  // Analyser une image d'œuvre d'art
-  const analyzeArtworkImage = async (imageUrl: string) => {
+  const analyzeArtworkImage = async (imageUri: string) => {
     try {
       setIsAILoading(true);
-      const analysisResult = await APIService.analyzeImage(imageUrl);
+      console.log("Analyse de l'image:", imageUri);
+      
+      const analysisResult = await APIService.ia.analyzeImage(
+        imageUri,
+        conversationId || undefined
+      );
 
       if (analysisResult) {
+        console.log("Résultat d'analyse:", analysisResult);
+        
+        // Si nous recevons un nouvel ID de conversation, le stocker
+        if (analysisResult.conversationId && !conversationId) {
+          console.log("Nouvelle conversation créée:", analysisResult.conversationId);
+          setConversationId(analysisResult.conversationId);
+        }
+        
         // Créer un message IA avec le résultat de l'analyse
         const aiMessage: AIMessage = {
           id: Date.now().toString(),
@@ -469,12 +281,15 @@ export default function ConversationsScreen() {
       }
     } catch (error) {
       console.error("Erreur lors de l'analyse de l'image:", error);
+      Alert.alert(
+        "Erreur",
+        "Impossible d'analyser l'image. Veuillez réessayer."
+      );
     } finally {
       setIsAILoading(false);
     }
   };
 
-  // Fonction pour envoyer un message à l'IA
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
 
@@ -495,14 +310,23 @@ export default function ConversationsScreen() {
 
     try {
       console.log("Envoi de question à l'IA:", messageText);
+      console.log("Photo associée:", photo ? "Oui" : "Non");
+      console.log("ID de conversation:", conversationId || "Aucun");
 
-      // Appel à l'API exactement selon le swagger
-      const response = await APIService.askMuseumQuestion(
+      // Utiliser la fonction mise à jour avec le conversationId si disponible
+      const response = await APIService.ia.askMuseumQuestion(
         messageText,
-        photo || undefined
+        photo || undefined,
+        conversationId || undefined
       );
 
       console.log("Réponse complète de l'API:", response);
+
+      // Si nous recevons un nouvel ID de conversation, le stocker
+      if (response.conversationId && !conversationId) {
+        console.log("Nouvelle conversation créée:", response.conversationId);
+        setConversationId(response.conversationId);
+      }
 
       // Extraire la partie pertinente de la réponse selon sa structure
       let responseText = "";
@@ -516,6 +340,8 @@ export default function ConversationsScreen() {
           responseText = response.answer;
         } else if (response.message) {
           responseText = response.message;
+        } else if (response.insight) {
+          responseText = response.insight;
         } else {
           responseText = JSON.stringify(response);
         }
@@ -736,7 +562,6 @@ export default function ConversationsScreen() {
           </TouchableOpacity>
         )}
 
-        {/* AI Chat Option */}
         {selectedLevel && (
           <TouchableOpacity
             style={[mainStyles.cameraOption, mainStyles.aiChatOption]}
