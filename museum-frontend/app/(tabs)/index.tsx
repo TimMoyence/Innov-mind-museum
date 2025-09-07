@@ -52,7 +52,7 @@ export default function HomeScreen() {
             
             <TouchableOpacity 
               style={homeStyles.enterButton}
-              onPress={() => router.push('/(tabs)/conversations')}
+              onPress={() => router.push('/(tabs)/conversation')}
             >
               <Text style={homeStyles.enterButtonText}>Enter</Text>
               <Feather name="log-in" size={18} color="#111" />
