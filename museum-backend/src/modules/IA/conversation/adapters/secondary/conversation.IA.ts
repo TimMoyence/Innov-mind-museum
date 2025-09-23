@@ -1,7 +1,11 @@
 // adapters/secondary/conversation.IA.ts
 
 import { ImageInsightConversation } from '@IA/imageInsight/core/domain/imageInsightConversation.entity';
-import { HumanMessage } from '@langchain/core/messages';
+import {
+  AIMessage,
+  HumanMessage,
+  SystemMessage,
+} from '@langchain/core/messages';
 import { ChatOpenAI } from '@langchain/openai';
 
 export class IAService {
@@ -9,55 +13,59 @@ export class IAService {
     modelName: 'gpt-4o',
     temperature: 0.5,
   });
-
+  // Improved: lean prompt + structured messages for better/faster answers
   async generateResponse(
     conversation: ImageInsightConversation,
     tone: 'débutant' | 'expert' | 'confirmé' = 'débutant',
     language = 'fr',
   ): Promise<string> {
-    // Construction du prompt basé sur l'historique
-    const history = conversation.messages
-      .map((message) => {
-        const rolePrefix = message.role === 'user' ? '🗣️ Visiteur' : '🎨 Guide';
-        return `${rolePrefix}: ${message.content}`;
-      })
-      .join('\n');
+    // Keep the prompt short and role-structured for better results and speed
+    const systemPrompt = [
+      `Tu es un guide de musée expert, chaleureux et pédagogue.`,
+      `Réponds en ${language} avec un niveau ${tone}.`,
+      `Règles:`,
+      `- Reste centré sur l'art et l'expérience muséale.`,
+      `- Relie les œuvres déjà évoquées quand pertinent.`,
+      `- Sois factuel, clair et précis.`,
+      `- Réponse concise (120–180 mots).`,
+      `- Termine par une question ouverte.`,
+      `- Si la demande est hors-sujet, recadre poliment.`,
+    ].join(' ');
 
-    const prompt = `
-      Tu es un guide de musée spécialisé en art, conçu pour offrir une expérience immersive et personnalisée. Tu dois répondre en ${language} à un visiteur qui est ${tone} dans le domaine de l'art, en te basant sur l'historique de votre conversation pour comprendre le musée visité, les œuvres déjà explorées et les intérêts manifestés.
+    // Use only the most recent messages to reduce token usage
+    const MAX_MESSAGES = 12;
+    const truncate = (text: string, max = 800) =>
+      text.length > max ? `${text.slice(0, max)}…` : text;
 
-      **Règles de réponse :**
-      1. Analyse l'historique de la conversation pour déduire :  
-        - Le musée où se trouve le visiteur (par les œuvres mentionnées ou les questions posées).  
-        - Les œuvres déjà vues ou mentionnées pour créer une continuité narrative.  
-        - Les préférences du visiteur pour personnaliser les prochaines étapes de la visite.
+    const sorted = [...(conversation.messages || [])].sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+    const recent = sorted.slice(-MAX_MESSAGES);
 
-      2. Réponds uniquement aux questions liées à l'art ou aux œuvres présentes dans le musée, en créant des liens logiques entre les œuvres déjà explorées et celles à venir.
-      3. Si une question est hors sujet, rappelle poliment que tu es un guide de musée et ne peux répondre qu'à des questions artistiques.
-      4. Intègre des éléments interactifs comme des questions ouvertes ou des anecdotes pour engager le visiteur et enrichir son expérience.
-      5. Utilise un ton adapté au niveau de connaissance du visiteur, en te basant sur ses questions et l'historique.
+    const chatHistory = recent.map((m) =>
+      m.role === 'user'
+        ? new HumanMessage({ content: truncate(m.content) })
+        : new AIMessage({ content: truncate(m.content) }),
+    );
 
-      **Historique de la conversation :**
-      ${history}
+    const messages = [new SystemMessage(systemPrompt), ...chatHistory];
 
-      **Guide :**
-      `;
-
-    console.log('Prompt envoyé à Langchain:', prompt);
+    // Lightweight logging for observability without dumping full content
+    try {
+      const lastUser = [...recent].reverse().find((m) => m.role === 'user');
+      console.log(
+        'IA: invoking with last user msg len =',
+        lastUser?.content?.length || 0,
+      );
+    } catch {}
 
     try {
-      const message = new HumanMessage({
-        content: prompt,
-      });
+      const result = await this.llm.invoke(messages);
 
-      const result = await this.llm.invoke([message]);
-      const response = result.content?.toString().trim() || '';
+      const content = result.content?.toString() || '';
 
-      if (!response || response.toLowerCase().includes('désolé')) {
-        return "Désolé, je ne peux pas vous fournir d'informations sur ce contenu.";
-      }
-
-      return response;
+      return content || "Je n'ai pas réussi à générer une réponse utile.";
     } catch (error) {
       console.error("Erreur lors de l'appel à Langchain:", error);
       return "Une erreur est survenue lors de l'analyse du message.";
