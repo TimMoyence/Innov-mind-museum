@@ -29,6 +29,42 @@ const postNewMessageInConversation = new PostNewMessageInConversation(
 );
 
 ConversationRouter.get(
+  '/all',
+  isAuthenticated,
+  /**
+   * @swagger
+   * /api/v1/conversation/all:
+   *   get:
+   *     summary: Récupère toutes les conversations IA
+   *     tags: [Conversation]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Liste des conversations IA
+   *       401:
+   *         description: Non autorisé
+   *       404:
+   *         description: Aucune conversation trouvée
+   */
+  async (req: Request, res: Response): Promise<void> => {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const conversations = await getAllConversations.execute();
+
+    if (!conversations || conversations.length === 0) {
+      res.status(404).json({ error: 'No conversations found' });
+      return;
+    }
+
+    res.json(conversations);
+  },
+);
+
+ConversationRouter.get(
   '/:conversationId',
   isAuthenticated,
   /**
@@ -62,9 +98,13 @@ ConversationRouter.get(
 
     const { id } = req.user as { id: number };
     const { conversationId } = req.params;
-    const safeConversationId = isUuid(conversationId) ? conversationId : '';
 
-    const conversation = await getConversationById.execute(safeConversationId);
+    if (!isUuid(conversationId)) {
+      res.status(400).json({ error: 'Invalid conversation ID format' });
+      return;
+    }
+
+    const conversation = await getConversationById.execute(conversationId);
 
     if (!conversation || conversation.user.id !== id) {
       res.status(404).json({ error: 'Conversation not found or unauthorized' });
@@ -72,42 +112,6 @@ ConversationRouter.get(
     }
 
     res.json(conversation);
-  },
-);
-
-ConversationRouter.get(
-  '/all',
-  isAuthenticated,
-  /**
-   * @swagger
-   * /api/v1/conversation/all:
-   *   get:
-   *     summary: Récupère toutes les conversations IA
-   *     tags: [Conversation]
-   *     security:
-   *       - bearerAuth: []
-   *     responses:
-   *       200:
-   *         description: Liste des conversations IA
-   *       401:
-   *         description: Non autorisé
-   *       404:
-   *         description: Aucune conversation trouvée
-   */
-  async (req: Request, res: Response): Promise<void> => {
-    if (!req.user) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-
-    const conversations = await getAllConversations.execute();
-
-    if (!conversations || conversations.length === 0) {
-      res.status(404).json({ error: 'No conversations found' });
-      return;
-    }
-
-    res.json(conversations);
   },
 );
 

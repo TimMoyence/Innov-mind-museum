@@ -42,7 +42,7 @@ export const DiscussionItem: React.FC<DiscussionItemProps> = ({
         <View style={componentStyles.discussionMeta}>
           <Text style={componentStyles.discussionTime}>{time}</Text>
           <Text style={componentStyles.discussionParticipants}>
-            {participants} participants
+            {participants} messages
           </Text>
         </View>
       </View>
