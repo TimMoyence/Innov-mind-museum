@@ -2,10 +2,13 @@
 // Configurez l'URL de base selon votre environnement de développement
 
 // URL de base pour tous les endpoints API
-export const BASE_API_URL = "http://localhost:3000";
+export const BASE_API_URL = 'http://localhost:3000';
 
 // URL spécifique pour l'authentification
 export const AUTH_API_URL = `${BASE_API_URL}/api/v1/auth`;
+
+// Point d'accès principal utilisé par les vues d'authentification existantes
+export const API_URL = AUTH_API_URL;
 
 // Pour l'émulateur Android (décommentez si nécessaire)
 // export const BASE_API_URL = "http://10.0.2.2:3000";
@@ -15,37 +18,36 @@ export const AUTH_API_URL = `${BASE_API_URL}/api/v1/auth`;
 // export const BASE_API_URL = "http://X.X.X.X:3000";
 // export const AUTH_API_URL = `${BASE_API_URL}/api/v1/auth`;
 
-let JWT_TOKEN =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJ0aW0ubW95ZW5jZUBvdXRsb29rLmZyIiwiaWF0IjoxNzQ2OTc4MjczLCJleHAiOjE3NDcwNjQ2NzN9.fS0TDNEk989UqGO2v1xmHp55N_YeDa0Lr5JyoPR-pUg";
+let JWT_TOKEN = '';
 
 export const API_ENDPOINTS = {
   auth: {
-    login: "/login",
-    register: "/register",
-    logout: "/logout",
-    forgotPassword: "/forgot-password",
-    resetPassword: "/reset-password",
+    login: '/login',
+    register: '/register',
+    logout: '/logout',
+    forgotPassword: '/forgot-password',
+    resetPassword: '/reset-password',
   },
   conversation: {
     getById: (id: string) => `/conversation/${id}`,
-    getAll: "/conversation/all",
+    getAll: '/conversation/all',
     getByUser: (userId: string) => `/conversation/all/${userId}`,
   },
   ia: {
-    museum: "/ia/museum",
-    imageInsight: "/image-insight",
+    museum: '/ia/museum',
+    imageInsight: '/image-insight',
   },
 };
 
 // Fonction utilitaire pour construire les URL d'API
 export const getApiUrl = (endpoint: string, category?: string): string => {
   // Si l'endpoint commence déjà par http, on le retourne tel quel
-  if (endpoint.startsWith("http")) {
+  if (endpoint.startsWith('http')) {
     return endpoint;
   }
 
   // Si l'endpoint commence par un slash, on le garde
-  if (!endpoint.startsWith("/")) {
+  if (!endpoint.startsWith('/')) {
     endpoint = `/${endpoint}`;
   }
 
@@ -59,14 +61,19 @@ export const getApiUrl = (endpoint: string, category?: string): string => {
 };
 
 export const getAuthHeaders = () => {
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${JWT_TOKEN}`,
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
   };
+  console.log('Headers:', {
+    Authorization: `Bearer ${getJwtToken().substring(0, 15)}...`,
+  });
+  headers.Authorization = `Bearer ${getJwtToken()}`;
+
+  return headers;
 };
 
-export const setJwtToken = (token: string) => {
-  JWT_TOKEN = token;
+export const setJwtToken = (token: string | null | undefined) => {
+  JWT_TOKEN = token ? token : '';
 };
 
 export const getJwtToken = (): string => {
@@ -77,9 +84,9 @@ export const AuthService = {
   register: async (userData: any) => {
     try {
       const response = await fetch(getApiUrl(API_ENDPOINTS.auth.register), {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(userData),
       });
@@ -87,7 +94,7 @@ export const AuthService = {
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Erreur d'inscription ${response.status}: ${errorText}`
+          `Erreur d'inscription ${response.status}: ${errorText}`,
         );
       }
 
@@ -101,9 +108,9 @@ export const AuthService = {
   login: async (email: string, password: string) => {
     try {
       const response = await fetch(getApiUrl(API_ENDPOINTS.auth.login), {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, password }),
       });
@@ -121,7 +128,7 @@ export const AuthService = {
 
       return data;
     } catch (error) {
-      console.error("Erreur de connexion:", error);
+      console.error('Erreur de connexion:', error);
       throw error;
     }
   },
@@ -129,23 +136,23 @@ export const AuthService = {
   logout: async () => {
     try {
       const response = await fetch(getApiUrl(API_ENDPOINTS.auth.logout), {
-        method: "POST",
+        method: 'POST',
         headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Erreur de déconnexion ${response.status}: ${errorText}`
+          `Erreur de déconnexion ${response.status}: ${errorText}`,
         );
       }
 
       // Effacer le token
-      setJwtToken("");
+      setJwtToken('');
 
       return await response.json();
     } catch (error) {
-      console.error("Erreur de déconnexion:", error);
+      console.error('Erreur de déconnexion:', error);
       throw error;
     }
   },
@@ -155,24 +162,24 @@ export const AuthService = {
       const response = await fetch(
         getApiUrl(API_ENDPOINTS.auth.forgotPassword),
         {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({ email }),
-        }
+        },
       );
 
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Erreur de demande de réinitialisation ${response.status}: ${errorText}`
+          `Erreur de demande de réinitialisation ${response.status}: ${errorText}`,
         );
       }
 
       return await response.json();
     } catch (error) {
-      console.error("Erreur de demande de réinitialisation:", error);
+      console.error('Erreur de demande de réinitialisation:', error);
       throw error;
     }
   },
@@ -182,24 +189,24 @@ export const AuthService = {
       const response = await fetch(
         getApiUrl(API_ENDPOINTS.auth.resetPassword),
         {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({ token, newPassword }),
-        }
+        },
       );
 
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Erreur de réinitialisation ${response.status}: ${errorText}`
+          `Erreur de réinitialisation ${response.status}: ${errorText}`,
         );
       }
 
       return await response.json();
     } catch (error) {
-      console.error("Erreur de réinitialisation:", error);
+      console.error('Erreur de réinitialisation:', error);
       throw error;
     }
   },
@@ -211,24 +218,24 @@ export const ConversationService = {
       const response = await fetch(
         getApiUrl(
           API_ENDPOINTS.conversation.getById(conversationId),
-          "conversation"
+          'conversation',
         ),
         {
-          method: "GET",
+          method: 'GET',
           headers: getAuthHeaders(),
-        }
+        },
       );
 
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Erreur de récupération de conversation ${response.status}: ${errorText}`
+          `Erreur de récupération de conversation ${response.status}: ${errorText}`,
         );
       }
 
       return await response.json();
     } catch (error) {
-      console.error("Erreur de récupération de conversation:", error);
+      console.error('Erreur de récupération de conversation:', error);
       throw error;
     }
   },
@@ -236,23 +243,23 @@ export const ConversationService = {
   getAllConversations: async () => {
     try {
       const response = await fetch(
-        getApiUrl(API_ENDPOINTS.conversation.getAll, "conversation"),
+        getApiUrl(API_ENDPOINTS.conversation.getAll, 'conversation'),
         {
-          method: "GET",
+          method: 'GET',
           headers: getAuthHeaders(),
-        }
+        },
       );
 
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Erreur de récupération des conversations ${response.status}: ${errorText}`
+          `Erreur de récupération des conversations ${response.status}: ${errorText}`,
         );
       }
 
       return await response.json();
     } catch (error) {
-      console.error("Erreur de récupération des conversations:", error);
+      console.error('Erreur de récupération des conversations:', error);
       return [];
     }
   },
@@ -260,17 +267,17 @@ export const ConversationService = {
   getUserConversations: async (userId: string) => {
     try {
       const response = await fetch(
-        getApiUrl(API_ENDPOINTS.conversation.getByUser(userId), "conversation"),
+        getApiUrl(API_ENDPOINTS.conversation.getByUser(userId), 'conversation'),
         {
-          method: "GET",
+          method: 'GET',
           headers: getAuthHeaders(),
-        }
+        },
       );
 
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Erreur de récupération des conversations de l'utilisateur ${response.status}: ${errorText}`
+          `Erreur de récupération des conversations de l'utilisateur ${response.status}: ${errorText}`,
         );
       }
 
@@ -278,7 +285,7 @@ export const ConversationService = {
     } catch (error) {
       console.error(
         "Erreur de récupération des conversations de l'utilisateur:",
-        error
+        error,
       );
       return [];
     }
@@ -300,7 +307,7 @@ export const IAService = {
       // Vérifier si le fichier existe (pour débogage)
       console.log("Type d'URI:", typeof imageUri);
       console.log("Longueur de l'URI:", imageUri.length);
-      console.log("L'URI commence par:", imageUri.substring(0, 30) + "...");
+      console.log("L'URI commence par:", imageUri.substring(0, 30) + '...');
 
       // Créer un objet FormData
       const formData = new FormData();
@@ -311,13 +318,13 @@ export const IAService = {
       // - Android: 'file:///data/user/0/com.yourapp/cache/...' ou 'content://...'
 
       // Extraire le type de fichier à partir de l'URI (jpg par défaut pour les photos de caméra)
-      let fileType = "jpg";
-      if (imageUri.includes(".")) {
-        const uriParts = imageUri.split(".");
+      let fileType = 'jpg';
+      if (imageUri.includes('.')) {
+        const uriParts = imageUri.split('.');
         fileType = uriParts[uriParts.length - 1];
       }
 
-      console.log("Type de fichier détecté:", fileType);
+      console.log('Type de fichier détecté:', fileType);
 
       // Créer un objet fichier pour React Native avec des logs explicites
       const fileObject = {
@@ -326,60 +333,78 @@ export const IAService = {
         type: `image/${fileType}`,
       };
 
-      console.log("Objet fichier créé:", JSON.stringify(fileObject));
+      console.log('Objet fichier créé:', JSON.stringify(fileObject));
 
       // Ajouter l'image au FormData - UTILISER LE NOM DE CHAMP 'image' EXACTEMENT
-      formData.append("image", fileObject as any);
+      let fileEntry: any = fileObject;
+
+      if (typeof File !== 'undefined') {
+        try {
+          const imageResponse = await fetch(imageUri);
+          const imageBlob = await imageResponse.blob();
+          const fileName = `photo.${fileType}`;
+          fileEntry = new File([imageBlob], fileName, {
+            type: `image/${fileType}`,
+          });
+          console.log('Image convertie en File:', fileName, imageBlob.size);
+        } catch (conversionError) {
+          console.warn(
+            "Conversion en File impossible, utilisation de l'objet React Native",
+            conversionError,
+          );
+        }
+      }
+
+      formData.append('image', fileEntry);
 
       // Si un conversationId est fourni, l'ajouter également
       if (conversationId) {
-        formData.append("conversationId", conversationId);
-        console.log("ConversationId ajouté:", conversationId);
+        formData.append('conversationId', conversationId);
+        console.log('ConversationId ajouté:', conversationId);
       }
 
-      console.log("FormData créé avec les champs appropriés");
+      console.log('FormData créé avec les champs appropriés');
 
       // Log détaillé de la requête
       console.log(
-        "Envoi de la requête à:",
-        getApiUrl(API_ENDPOINTS.ia.imageInsight, "image-insight")
+        'Envoi de la requête à:',
+        getApiUrl(API_ENDPOINTS.ia.imageInsight, 'image-insight'),
       );
-      console.log("Méthode:", "POST");
-      console.log("Headers:", {
+      console.log('Méthode:', 'POST');
+      console.log('Headers:', {
         Authorization: `Bearer ${getJwtToken().substring(0, 15)}...`,
       });
-      console.log("Type de body:", typeof formData);
+      console.log('Type de body:', typeof formData);
 
       // Envoyer la requête avec le FormData
       const response = await fetch(
-        getApiUrl(API_ENDPOINTS.ia.imageInsight, "image-insight"),
+        getApiUrl(API_ENDPOINTS.ia.imageInsight, 'image-insight'),
         {
-          method: "POST",
+          method: 'POST',
           headers: {
-            // NE PAS définir 'Content-Type' pour FormData - le navigateur le fait automatiquement
             Authorization: `Bearer ${getJwtToken()}`,
           },
           body: formData,
-        }
+        },
       );
 
       // Log détaillé de la réponse
-      console.log("Réponse reçue - Statut:", response.status);
-      console.log("Réponse reçue - OK:", response.ok);
+      console.log('Réponse reçue - Statut:', response.status);
+      console.log('Réponse reçue - OK:', response.ok);
       console.log(
-        "Réponse reçue - Headers:",
-        JSON.stringify(Object.fromEntries([...response.headers.entries()]))
+        'Réponse reçue - Headers:',
+        JSON.stringify(Object.fromEntries([...response.headers.entries()])),
       );
 
       // Récupérer le texte de la réponse
       const responseText = await response.text();
-      console.log("Réponse reçue - Texte:", responseText);
+      console.log('Réponse reçue - Texte:', responseText);
 
       // Vérifier si la requête a réussi
       if (!response.ok) {
         console.error("Erreur d'analyse d'image:", responseText);
         throw new Error(
-          `Erreur d'analyse d'image ${response.status}: ${responseText}`
+          `Erreur d'analyse d'image ${response.status}: ${responseText}`,
         );
       }
 
@@ -388,7 +413,7 @@ export const IAService = {
       try {
         responseData = JSON.parse(responseText);
       } catch (e) {
-        console.error("Erreur lors du parsing JSON:", e);
+        console.error('Erreur lors du parsing JSON:', e);
         responseData = { insight: responseText };
       }
 
@@ -407,24 +432,24 @@ export const IAService = {
       const formData = new FormData();
 
       // Ajouter le blob au FormData
-      formData.append("image", imageBlob, "image.jpg");
+      formData.append('image', imageBlob, 'image.jpg');
 
       const response = await fetch(
-        getApiUrl(API_ENDPOINTS.ia.imageInsight, "image-insight"),
+        getApiUrl(API_ENDPOINTS.ia.imageInsight, 'image-insight'),
         {
-          method: "POST",
+          method: 'POST',
           headers: {
             // Ne pas définir Content-Type pour FormData, il sera automatiquement défini
             Authorization: `Bearer ${getJwtToken()}`,
           },
           body: formData,
-        }
+        },
       );
 
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Erreur d'analyse d'image ${response.status}: ${errorText}`
+          `Erreur d'analyse d'image ${response.status}: ${errorText}`,
         );
       }
 
@@ -438,17 +463,17 @@ export const IAService = {
   askMuseumQuestion: async (
     question: string,
     artworkImageUri?: string,
-    conversationId?: string
+    conversationId?: string,
   ) => {
     try {
       // Validation des entrées
-      if (!question || typeof question !== "string" || question.trim() === "") {
-        throw new Error("La question ne peut pas être vide");
+      if (!question || typeof question !== 'string' || question.trim() === '') {
+        throw new Error('La question ne peut pas être vide');
       }
 
       console.log("Envoi de question à l'IA:", question);
-      console.log("Image associée:", artworkImageUri ? "Oui" : "Non");
-      console.log("ID de conversation:", conversationId || "Aucun");
+      console.log('Image associée:', artworkImageUri ? 'Oui' : 'Non');
+      console.log('ID de conversation:', conversationId || 'Aucun');
 
       // Préparer le payload selon le format EXACT attendu par le serveur
       // D'après le Swagger, le format attendu est:
@@ -460,38 +485,38 @@ export const IAService = {
 
       // On va utiliser le champ 'responseTo' pour notre question
       const payload = {
-        artName: "Non spécifié", // Valeur par défaut
-        artist: "Non spécifié", // Valeur par défaut
+        artName: 'Non spécifié', // Valeur par défaut
+        artist: 'Non spécifié', // Valeur par défaut
         responseTo: question, // On met notre question ici
       };
 
       // Si une image est fournie et que nous devons envoyer un FormData
       if (artworkImageUri) {
-        console.log("Préparation du FormData avec image");
+        console.log('Préparation du FormData avec image');
 
         const formData = new FormData();
 
         // Ajouter chaque champ du payload au FormData
-        formData.append("artName", payload.artName);
-        formData.append("artist", payload.artist);
-        formData.append("responseTo", payload.responseTo);
+        formData.append('artName', payload.artName);
+        formData.append('artist', payload.artist);
+        formData.append('responseTo', payload.responseTo);
 
         // Extraire le type de fichier à partir de l'URI
-        const uriParts = artworkImageUri.split(".");
+        const uriParts = artworkImageUri.split('.');
         const fileType = uriParts[uriParts.length - 1];
 
         // Ajouter l'image au FormData
-        formData.append("artworkImage", {
+        formData.append('artworkImage', {
           uri: artworkImageUri,
           name: `artwork.${fileType}`,
           type: `image/${fileType}`,
         } as any);
 
-        console.log("FormData créé avec question et image");
+        console.log('FormData créé avec question et image');
 
         // Envoi de la requête
-        const response = await fetch(getApiUrl(API_ENDPOINTS.ia.museum, "ia"), {
-          method: "POST",
+        const response = await fetch(getApiUrl(API_ENDPOINTS.ia.museum, 'ia'), {
+          method: 'POST',
           headers: {
             // Ne pas définir Content-Type pour FormData
             Authorization: `Bearer ${getJwtToken()}`,
@@ -499,13 +524,13 @@ export const IAService = {
           body: formData,
         });
 
-        console.log("Statut de réponse (avec image):", response.status);
+        console.log('Statut de réponse (avec image):', response.status);
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error("Erreur de question IA muséale:", errorText);
+          console.error('Erreur de question IA muséale:', errorText);
           throw new Error(
-            `Erreur de question IA muséale ${response.status}: ${errorText}`
+            `Erreur de question IA muséale ${response.status}: ${errorText}`,
           );
         }
 
@@ -513,21 +538,21 @@ export const IAService = {
         return responseData;
       } else {
         // Sans image, envoi JSON standard
-        console.log("Envoi de la requête JSON sans image");
+        console.log('Envoi de la requête JSON sans image');
 
-        const response = await fetch(getApiUrl(API_ENDPOINTS.ia.museum, "ia"), {
-          method: "POST",
+        const response = await fetch(getApiUrl(API_ENDPOINTS.ia.museum, 'ia'), {
+          method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify(payload),
         });
 
-        console.log("Statut de réponse (sans image):", response.status);
+        console.log('Statut de réponse (sans image):', response.status);
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error("Erreur de question IA muséale:", errorText);
+          console.error('Erreur de question IA muséale:', errorText);
           throw new Error(
-            `Erreur de question IA muséale ${response.status}: ${errorText}`
+            `Erreur de question IA muséale ${response.status}: ${errorText}`,
           );
         }
 

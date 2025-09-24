@@ -8,6 +8,7 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { setJwtToken } from "./api";
 
 // Empêcher l'écran de démarrage de se cacher automatiquement
 SplashScreen.preventAutoHideAsync().catch(() => {
@@ -49,6 +50,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         const token = await AsyncStorage.getItem("userToken");
         setIsAuthenticated(!!token);
+        setJwtToken(token);
       } catch (error) {
         console.error("Erreur lors de la vérification du token:", error);
       } finally {
@@ -68,6 +70,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async (): Promise<void> => {
     try {
       await AsyncStorage.removeItem("userToken");
+      setJwtToken("");
       setIsAuthenticated(false);
       router.navigate("/");
     } catch (error) {
@@ -80,9 +83,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const token = await AsyncStorage.getItem("userToken");
       if (!token) {
+        setJwtToken("");
         setIsAuthenticated(false);
         return false;
       }
+
+      setJwtToken(token);
 
       // Ici on peut appeler l'API pour vérifier la validité du token
 

@@ -2,6 +2,7 @@ import { createImageInsightUseCase } from '@IA/imageInsight/core/useCase';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import { Request, Response, Router } from 'express';
 import multer from 'multer';
+import { randomUUID } from 'crypto';
 import { validate as isUuid } from 'uuid';
 import { imageInsightRepositoryPg } from '../../secondary/imageInsight.repository.pg';
 
@@ -56,6 +57,7 @@ ImageInsightRouter.post(
 
     const { id } = req.user as { id: number };
     const image = req.file;
+    console.log(image);
     const conversationId: string = req.body.conversationId;
 
     if (!image) {
@@ -67,7 +69,7 @@ ImageInsightRouter.post(
 
     const safeConversationId = isUuid(conversationId)
       ? conversationId
-      : undefined;
+      : randomUUID();
 
     const conversation = await createInsight.execute(
       base64,

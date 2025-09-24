@@ -1,23 +1,49 @@
-import { useState, useEffect, useRef } from "react";
+import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  StatusBar,
-  SafeAreaView,
   ActivityIndicator,
   Alert,
-} from "react-native";
-import { router } from "expo-router";
-import { Feather } from "@expo/vector-icons";
-import { LevelSelector } from "../../components/LevelSelector";
-import { DiscussionItem } from "../../components/DiscussionItem";
-import { ChatInput } from "../../components/chatInput";
-import { mainStyles } from "../styles/mainStyles";
-import { CustomCameraView } from "../../components/CameraView";
-import APIService from "../../context/api";
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { CustomCameraView } from '../../components/CameraView';
+import { DiscussionItem } from '../../components/DiscussionItem';
+import { LevelSelector } from '../../components/LevelSelector';
+import { ChatInput } from '../../components/chatInput';
+import APIService from '../../context/api';
+import { mainStyles } from '../styles/mainStyles';
+
+interface AIMessage {
+  id: string;
+  text: string;
+  sender: 'user' | 'ai';
+  timestamp: Date;
+}
+
+interface BackendConversationMessage {
+  id: string;
+  content: string;
+  role: 'user' | 'assistant';
+  createdAt?: string;
+  timestamp?: string;
+}
+
+interface BackendConversation {
+  id: string;
+  imageUrl?: string | null;
+  createdAt?: string;
+  messages?: BackendConversationMessage[];
+  user?: {
+    id?: string | number;
+    firstname?: string;
+  } | null;
+}
 
 interface Discussion {
   id: string;
@@ -29,68 +55,75 @@ interface Discussion {
   tags: string[];
 }
 
-interface AIMessage {
-  id: string;
-  text: string;
-  sender: "user" | "ai";
-  timestamp: Date;
-}
+const LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
+const DEFAULT_DISCUSSION_IMAGE =
+  'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=60';
 
-const LEVELS = ["Beginner", "Intermediate", "Advanced"];
-
-// Exemple de données fictives pour le développement
-const MOCK_DISCUSSIONS = [
-  {
-    id: "1",
-    imageUrl:
-      "https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&w=500",
-    title: "The Starry Night - Van Gogh",
-    location: "Manhattan, NYC",
-    time: "Mon-Fri (10am-8pm)",
-    participants: 5,
-    tags: ["Painting", "Artwork"],
-  },
-  {
-    id: "2",
-    imageUrl:
-      "https://images.unsplash.com/photo-1423742774270-6884aac775fa?auto=format&fit=crop&w=500",
-    title: "Mona Lisa - Da Vinci",
-    location: "Paris, France",
-    time: "Wed-Sun (9am-7pm)",
-    participants: 3,
-    tags: ["Exhibition"],
-  },
-  {
-    id: "3",
-    imageUrl:
-      "https://images.unsplash.com/photo-1562522730-7c98d13c6690?q=80&w=2940??auto=format&fit=crop&w=500",
-    title: "David - Michelangelo",
-    location: "Florence, Italy",
-    time: "Tue-Sun (10am-6pm)",
-    participants: 7,
-    tags: ["Sculpture", "Exhibition"],
-  },
-];
-
-// Fonction qui simule un appel API pour récupérer les discussions
-const fetchDiscussions = async (
-  filter?: string
-): Promise<typeof MOCK_DISCUSSIONS> => {
-  // Simulation d'un délai réseau
-  await new Promise((resolve) => setTimeout(resolve, 300));
-
-  if (!filter || filter === "All") {
-    return MOCK_DISCUSSIONS;
+const formatTimestamp = (value?: string | number | Date) => {
+  if (!value) return 'Unk. date';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Unk. date';
   }
 
-  return MOCK_DISCUSSIONS.filter((discussion) =>
-    discussion.tags.some((tag) => tag === filter)
-  );
+  return date.toLocaleString([], {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const normaliseConversation = (conversation: BackendConversation): Discussion => {
+  const messages = [...(conversation.messages ?? [])].sort((a, b) => {
+    const aDate = new Date(a.createdAt ?? a.timestamp ?? 0).getTime();
+    const bDate = new Date(b.createdAt ?? b.timestamp ?? 0).getTime();
+    return aDate - bDate;
+  });
+
+  const lastMessage = messages[messages.length - 1];
+  const userMessages = messages.filter((msg) => msg.role === 'user');
+  const assistantMessages = messages.filter((msg) => msg.role === 'assistant');
+
+  const baseTitle = lastMessage?.content ||
+    assistantMessages[0]?.content ||
+    'AI conversation';
+
+  const title =
+    baseTitle.length > 80 ? `${baseTitle.slice(0, 77)}...` : baseTitle;
+
+  const imageUrl = conversation.imageUrl || DEFAULT_DISCUSSION_IMAGE;
+
+  const createdAt =
+    lastMessage?.createdAt ||
+    lastMessage?.timestamp ||
+    conversation.createdAt ||
+    new Date().toISOString();
+
+  const tags: string[] = ['AI Chat'];
+  if (conversation.imageUrl) {
+    tags.push('Image Insight');
+  }
+  if (assistantMessages.length) {
+    tags.push('Assistant');
+  }
+
+  return {
+    id: conversation.id,
+    imageUrl,
+    title,
+    location: conversation.user?.firstname
+      ? `Visitor: ${conversation.user.firstname}`
+      : 'Visitor: Anonymous',
+    time: formatTimestamp(createdAt),
+    participants: Math.max(messages.length, 1),
+    tags,
+  };
 };
 
 // Composant pour afficher un message individuel
 const MessageBubble = ({ message }: { message: AIMessage }) => {
-  const isAI = message.sender === "ai";
+  const isAI = message.sender === 'ai';
 
   return (
     <View
@@ -109,8 +142,8 @@ const MessageBubble = ({ message }: { message: AIMessage }) => {
       </Text>
       <Text style={mainStyles.messageTimestamp}>
         {message.timestamp.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
+          hour: '2-digit',
+          minute: '2-digit',
         })}
       </Text>
     </View>
@@ -119,11 +152,12 @@ const MessageBubble = ({ message }: { message: AIMessage }) => {
 
 // Composant principal
 export default function ConversationsScreen() {
-  const [selectedLevel, setSelectedLevel] = useState("");
+  const [selectedLevel, setSelectedLevel] = useState('');
   const [showCamera, setShowCamera] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("All");
+  const [activeTab, setActiveTab] = useState('All');
+  const [allDiscussions, setAllDiscussions] = useState<Discussion[]>([]);
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -138,13 +172,17 @@ export default function ConversationsScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Fonction pour charger les discussions
-  const loadDiscussions = async (filter?: string) => {
+  const loadDiscussions = async () => {
     setIsLoading(true);
     try {
-      const data = await fetchDiscussions(filter);
-      setDiscussions(data);
+      const data = await APIService.conversation.getAllConversations();
+      const normalized = (data ?? []).map(normaliseConversation);
+      setAllDiscussions(normalized);
+      setDiscussions(normalized);
     } catch (error) {
-      console.error("Error fetching discussions:", error);
+      console.error('Error fetching discussions:', error);
+      setAllDiscussions([]);
+      setDiscussions([]);
     } finally {
       setIsLoading(false);
     }
@@ -153,7 +191,7 @@ export default function ConversationsScreen() {
   // Essayer de récupérer une conversation existante quand on ouvre le chat
   const loadConversation = async () => {
     try {
-      console.log("Tentative de chargement des conversations");
+      console.log('Tentative de chargement des conversations');
 
       const conversations = await APIService.conversation.getAllConversations();
 
@@ -162,14 +200,15 @@ export default function ConversationsScreen() {
         const lastConversation = conversations[conversations.length - 1];
         const lastConvId = lastConversation.id;
 
-        console.log("Dernière conversation trouvée:", lastConvId);
+        console.log('Dernière conversation trouvée:', lastConvId);
         setConversationId(lastConvId);
 
         // Récupérer les détails de cette conversation
-        const conversationDetails = await APIService.conversation.getConversation(lastConvId);
+        const conversationDetails =
+          await APIService.conversation.getConversation(lastConvId);
 
         if (conversationDetails && conversationDetails.messages) {
-          console.log("Messages trouvés dans la conversation");
+          console.log('Messages trouvés dans la conversation');
 
           // Convertir les messages au format attendu par notre app
           const formattedMessages = conversationDetails.messages.map(
@@ -177,29 +216,40 @@ export default function ConversationsScreen() {
               id?: string;
               content?: string;
               text?: string;
-              isFromAI: boolean;
+              isFromAI?: boolean;
+              role?: 'user' | 'assistant';
               timestamp?: string | number;
+              createdAt?: string | number;
             }) => ({
               id: msg.id || Date.now().toString(),
-              text: msg.content || msg.text || "Message sans contenu",
-              sender: msg.isFromAI ? "ai" : "user",
-              timestamp: new Date(msg.timestamp || Date.now()),
-            })
+              text: msg.content || msg.text || 'Message sans contenu',
+              sender:
+                msg.isFromAI !== undefined
+                  ? msg.isFromAI
+                    ? 'ai'
+                    : 'user'
+                  : msg.role === 'assistant'
+                    ? 'ai'
+                    : 'user',
+              timestamp: new Date(
+                msg.timestamp || msg.createdAt || Date.now(),
+              ),
+            }),
           );
 
           setConversation(formattedMessages);
         }
       } else {
-        console.log("Aucune conversation existante");
+        console.log('Aucune conversation existante');
         // Réinitialiser les états
         setConversationId(null);
         setConversation([]);
       }
     } catch (error) {
-      console.error("Erreur lors du chargement de la conversation:", error);
+      console.error('Erreur lors du chargement de la conversation:', error);
       Alert.alert(
-        "Erreur",
-        "Impossible de charger l'historique des conversations."
+        'Erreur',
+        "Impossible de charger l'historique des conversations.",
       );
     }
   };
@@ -208,6 +258,19 @@ export default function ConversationsScreen() {
   useEffect(() => {
     loadDiscussions();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'All') {
+      setDiscussions(allDiscussions);
+      return;
+    }
+
+    setDiscussions(
+      allDiscussions.filter((discussion) =>
+        discussion.tags.includes(activeTab),
+      ),
+    );
+  }, [activeTab, allDiscussions]);
 
   // Charger la conversation quand on ouvre le chat
   useEffect(() => {
@@ -228,7 +291,6 @@ export default function ConversationsScreen() {
   // Charger les discussions lorsque l'onglet change
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
-    loadDiscussions(tab);
   };
 
   const handleLevelSelect = (level: string) => {
@@ -253,26 +315,29 @@ export default function ConversationsScreen() {
     try {
       setIsAILoading(true);
       console.log("Analyse de l'image:", imageUri);
-      
+
       const analysisResult = await APIService.ia.analyzeImage(
         imageUri,
-        conversationId || undefined
+        conversationId || undefined,
       );
 
       if (analysisResult) {
         console.log("Résultat d'analyse:", analysisResult);
-        
+
         // Si nous recevons un nouvel ID de conversation, le stocker
         if (analysisResult.conversationId && !conversationId) {
-          console.log("Nouvelle conversation créée:", analysisResult.conversationId);
+          console.log(
+            'Nouvelle conversation créée:',
+            analysisResult.conversationId,
+          );
           setConversationId(analysisResult.conversationId);
         }
-        
+
         // Créer un message IA avec le résultat de l'analyse
         const aiMessage: AIMessage = {
           id: Date.now().toString(),
           text: analysisResult.insight || "Analyse de l'image réussie",
-          sender: "ai",
+          sender: 'ai',
           timestamp: new Date(),
         };
 
@@ -282,8 +347,8 @@ export default function ConversationsScreen() {
     } catch (error) {
       console.error("Erreur lors de l'analyse de l'image:", error);
       Alert.alert(
-        "Erreur",
-        "Impossible d'analyser l'image. Veuillez réessayer."
+        'Erreur',
+        "Impossible d'analyser l'image. Veuillez réessayer.",
       );
     } finally {
       setIsAILoading(false);
@@ -300,7 +365,7 @@ export default function ConversationsScreen() {
     const userMessage: AIMessage = {
       id: Date.now().toString(),
       text: messageText,
-      sender: "user",
+      sender: 'user',
       timestamp: new Date(),
     };
 
@@ -310,29 +375,29 @@ export default function ConversationsScreen() {
 
     try {
       console.log("Envoi de question à l'IA:", messageText);
-      console.log("Photo associée:", photo ? "Oui" : "Non");
-      console.log("ID de conversation:", conversationId || "Aucun");
+      console.log('Photo associée:', photo ? 'Oui' : 'Non');
+      console.log('ID de conversation:', conversationId || 'Aucun');
 
       // Utiliser la fonction mise à jour avec le conversationId si disponible
       const response = await APIService.ia.askMuseumQuestion(
         messageText,
         photo || undefined,
-        conversationId || undefined
+        conversationId || undefined,
       );
 
       console.log("Réponse complète de l'API:", response);
 
       // Si nous recevons un nouvel ID de conversation, le stocker
       if (response.conversationId && !conversationId) {
-        console.log("Nouvelle conversation créée:", response.conversationId);
+        console.log('Nouvelle conversation créée:', response.conversationId);
         setConversationId(response.conversationId);
       }
 
       // Extraire la partie pertinente de la réponse selon sa structure
-      let responseText = "";
+      let responseText = '';
 
       if (response) {
-        if (typeof response === "string") {
+        if (typeof response === 'string') {
           responseText = response;
         } else if (response.response) {
           responseText = response.response;
@@ -353,7 +418,7 @@ export default function ConversationsScreen() {
       const aiMessage: AIMessage = {
         id: (Date.now() + 1).toString(),
         text: responseText,
-        sender: "ai",
+        sender: 'ai',
         timestamp: new Date(),
       };
 
@@ -362,8 +427,8 @@ export default function ConversationsScreen() {
     } catch (error) {
       console.error("Erreur lors de l'envoi du message:", error);
       Alert.alert(
-        "Erreur",
-        "Impossible de communiquer avec l'IA. Veuillez vérifier votre connexion et réessayer."
+        'Erreur',
+        "Impossible de communiquer avec l'IA. Veuillez vérifier votre connexion et réessayer.",
       );
     } finally {
       setIsAILoading(false);
@@ -389,13 +454,13 @@ export default function ConversationsScreen() {
   if (showAIChat) {
     return (
       <SafeAreaView style={mainStyles.container}>
-        <StatusBar barStyle="dark-content" />
+        <StatusBar barStyle='dark-content' />
         <View style={mainStyles.header}>
           <TouchableOpacity
             style={mainStyles.menuButton}
             onPress={() => setShowAIChat(false)}
           >
-            <Feather name="arrow-left" size={24} color="#111" />
+            <Feather name='arrow-left' size={24} color='#111' />
           </TouchableOpacity>
 
           <View style={mainStyles.logoHeaderContainer}>
@@ -403,7 +468,7 @@ export default function ConversationsScreen() {
           </View>
 
           <TouchableOpacity style={mainStyles.searchButton}>
-            <Feather name="info" size={24} color="#111" />
+            <Feather name='info' size={24} color='#111' />
           </TouchableOpacity>
         </View>
 
@@ -412,7 +477,7 @@ export default function ConversationsScreen() {
             <Image
               source={{ uri: photo }}
               style={mainStyles.chatImage}
-              resizeMode="cover"
+              resizeMode='cover'
             />
             <TouchableOpacity
               style={mainStyles.changeImageButton}
@@ -434,7 +499,7 @@ export default function ConversationsScreen() {
           >
             {conversation.length === 0 ? (
               <View style={mainStyles.emptyConversation}>
-                <Feather name="message-circle" size={48} color="#ddd" />
+                <Feather name='message-circle' size={48} color='#ddd' />
                 <Text style={mainStyles.emptyConversationText}>
                   Commencez à poser des questions sur l'art ou les œuvres que
                   vous voyez !
@@ -448,7 +513,7 @@ export default function ConversationsScreen() {
 
             {isAILoading && (
               <View style={mainStyles.aiTypingIndicator}>
-                <ActivityIndicator size="small" color="#0066cc" />
+                <ActivityIndicator size='small' color='#0066cc' />
                 <Text style={mainStyles.aiTypingText}>L'IA réfléchit...</Text>
               </View>
             )}
@@ -467,13 +532,13 @@ export default function ConversationsScreen() {
   // Main screen
   return (
     <SafeAreaView style={mainStyles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle='dark-content' />
       <View style={mainStyles.header}>
         <TouchableOpacity
           style={mainStyles.menuButton}
           onPress={() => router.back()}
         >
-          <Feather name="arrow-left" size={24} color="#111" />
+          <Feather name='arrow-left' size={24} color='#111' />
         </TouchableOpacity>
 
         <View style={mainStyles.logoHeaderContainer}>
@@ -481,7 +546,7 @@ export default function ConversationsScreen() {
         </View>
 
         <TouchableOpacity style={mainStyles.searchButton}>
-          <Feather name="search" size={24} color="#111" />
+          <Feather name='search' size={24} color='#111' />
         </TouchableOpacity>
       </View>
 
@@ -491,7 +556,7 @@ export default function ConversationsScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={mainStyles.tabsContent}
         >
-          {["All", "Painting", "Sculpture", "Exhibition"].map((tab) => (
+          {['All', 'AI Chat', 'Image Insight', 'Assistant'].map((tab) => (
             <TouchableOpacity
               key={tab}
               style={[
@@ -556,7 +621,7 @@ export default function ConversationsScreen() {
                 </View>
               </View>
               <View style={mainStyles.cameraOptionIcon}>
-                <Feather name="camera" size={24} color="#111" />
+                <Feather name='camera' size={24} color='#111' />
               </View>
             </View>
           </TouchableOpacity>
@@ -588,7 +653,7 @@ export default function ConversationsScreen() {
                 </View>
               </View>
               <View style={[mainStyles.cameraOptionIcon, mainStyles.aiIcon]}>
-                <Feather name="message-circle" size={24} color="#111" />
+                <Feather name='message-circle' size={24} color='#111' />
               </View>
             </View>
           </TouchableOpacity>
@@ -607,7 +672,7 @@ export default function ConversationsScreen() {
             <Image
               source={{ uri: photo }}
               style={mainStyles.photoImage}
-              resizeMode="cover"
+              resizeMode='cover'
             />
 
             <View style={mainStyles.photoStats}>
@@ -633,9 +698,9 @@ export default function ConversationsScreen() {
           </View>
 
           {isLoading ? (
-            <View style={{ padding: 20, alignItems: "center" }}>
-              <ActivityIndicator size="large" color="#0000ff" />
-              <Text style={{ marginTop: 10, color: "#666" }}>
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <ActivityIndicator size='large' color='#0000ff' />
+              <Text style={{ marginTop: 10, color: '#666' }}>
                 Chargement des discussions...
               </Text>
             </View>
@@ -652,8 +717,8 @@ export default function ConversationsScreen() {
               />
             ))
           ) : (
-            <View style={{ padding: 20, alignItems: "center" }}>
-              <Text style={{ color: "#666" }}>Aucune discussion trouvée</Text>
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text style={{ color: '#666' }}>Aucune discussion trouvée</Text>
             </View>
           )}
         </View>

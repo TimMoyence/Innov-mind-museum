@@ -12,14 +12,10 @@ import {
 import { BlurView } from "expo-blur";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_URL, API_ENDPOINTS } from "../context/api";
+import APIService, { setJwtToken } from "../context/api";
+import { useAuth } from "../context/AuthContext";
 import { homeStyles } from "./styles/homeStyles";
-
-interface LoginResponse {
-  token: string;
-}
 
 export default function AuthScreen() {
   const [isLogin, setIsLogin] = useState<boolean>(true);
@@ -28,55 +24,42 @@ export default function AuthScreen() {
   const [firstname, setFirstname] = useState<string>("");
   const [lastname, setLastname] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { setIsAuthenticated } = useAuth();
 
-const handleLogin = async (): Promise<void> => {
-  if (!email || !password) {
-    Alert.alert("Error", "Please fill in all fields");
-    return;
-  }
-
-  setIsLoading(true);
-
-  try {
-    console.log("Trying to login with:", { email });
-    const response = await axios.post<LoginResponse>(`${API_URL}/login`, {
-      email,
-      password,
-    });
-
-    console.log("Login response status:", response.status);
-    console.log("Login response data:", response.data);
-
-    if (response.data && response.data.token) {
-      // Stock du token
-      await AsyncStorage.setItem("userToken", response.data.token);
-      
-      // Ajout d'un petit délai pour s'assurer que le token est bien enregistré
-      setTimeout(() => {
-        router.navigate("/(tabs)");
-      }, 100);
-    } else {
-      Alert.alert("Error", "Login failed - No token received");
+  const handleLogin = async (): Promise<void> => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
     }
-  } catch (error: any) {
-    console.error("Login error:", error);
-    
-    if (error.response) {
-      console.error("Error response data:", error.response.data);
-      console.error("Error response status:", error.response.status);
-      console.error("Error response headers:", error.response.headers);
-      
-      Alert.alert("Error", `Login failed: ${error.response.status} - ${error.response.data?.message || 'Invalid credentials'}`);
-    } else if (error.request) {
-      console.error("No response received:", error.request);
-      Alert.alert("Error", "Server not responding. Check your internet connection.");
-    } else {
-      Alert.alert("Error", `Error: ${error.message}`);
+
+    setIsLoading(true);
+
+    try {
+      console.log("Trying to login with:", { email });
+      const response = await APIService.auth.login(email, password);
+
+      if (response && response.token) {
+        await AsyncStorage.setItem("userToken", response.token);
+        setJwtToken(response.token);
+        setIsAuthenticated(true);
+
+        setTimeout(() => {
+          router.navigate("/(tabs)");
+        }, 100);
+      } else {
+        Alert.alert("Error", "Login failed - No token received");
+      }
+    } catch (error: any) {
+      console.error("Login error:", error);
+
+      const message =
+        error instanceof Error ? error.message : "Unexpected login error";
+
+      Alert.alert("Error", message);
+    } finally {
+      setIsLoading(false);
     }
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const handleRegister = async (): Promise<void> => {
     if (!email || !password || !firstname || !lastname) {
@@ -87,7 +70,7 @@ const handleLogin = async (): Promise<void> => {
     setIsLoading(true);
 
     try {
-      await axios.post(`${API_URL}/register`, {
+      await APIService.auth.register({
         email,
         password,
         firstname,
@@ -132,7 +115,7 @@ const handleLogin = async (): Promise<void> => {
           onPress: async () => {
             setIsLoading(true);
             try {
-              await axios.post(`${API_URL}/forgot-password`, { email });
+              await APIService.auth.forgotPassword(email);
               Alert.alert(
                 "Email sent",
                 "If this email address is associated with an account, you will receive a link to reset your password."
@@ -160,10 +143,12 @@ const handleLogin = async (): Promise<void> => {
   };
 
   return (
-     <ImageBackground
-        source={{ uri: "https://images.unsplash.com/photo-1638186824584-6d6367254927?auto=format&fit=crop&w=500" }}
-        style={homeStyles.welcomeBackground}
-      >
+    <ImageBackground
+      source={{
+        uri: "https://images.unsplash.com/photo-1638186824584-6d6367254927?auto=format&fit=crop&w=500",
+      }}
+      style={homeStyles.welcomeBackground}
+    >
       <BlurView intensity={60} tint="light" style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>NOA VISIT</Text>

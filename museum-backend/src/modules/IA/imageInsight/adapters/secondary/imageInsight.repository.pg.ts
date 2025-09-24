@@ -10,15 +10,18 @@ export const imageInsightRepositoryPg: ImageInsightRepository = {
     const msgRepo = AppDataSource.getRepository(ImageInsightMessage);
     const userRepo = AppDataSource.getRepository(User);
 
-    let conversation: ImageInsightConversation;
+    let conversation = conversationId
+      ? await convRepo.findOne({
+          where: { id: conversationId },
+        })
+      : null;
 
-    if (conversationId) {
-      conversation = await convRepo.findOneOrFail({
-        where: { id: conversationId },
-      });
-    } else {
+    if (!conversation) {
       const user = await userRepo.findOneByOrFail({ id: userId });
       conversation = new ImageInsightConversation();
+      if (conversationId) {
+        conversation.id = conversationId;
+      }
       conversation.user = user;
       conversation.imageUrl = imageUrl || undefined;
       conversation.messages = [];
