@@ -6,13 +6,15 @@ import React, {
   ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from "expo-router";
+import { Href, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { setJwtToken } from "./api";
+import { authService, clearAccessToken, setAccessToken } from "../services";
 
 // Empêcher l'écran de démarrage de se cacher automatiquement
 SplashScreen.preventAutoHideAsync().catch(() => {
 });
+
+const ROOT_ROUTE = '/' satisfies Href;
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -50,7 +52,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         const token = await AsyncStorage.getItem("userToken");
         setIsAuthenticated(!!token);
-        setJwtToken(token);
+        setAccessToken(token);
       } catch (error) {
         console.error("Erreur lors de la vérification du token:", error);
       } finally {
@@ -70,9 +72,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async (): Promise<void> => {
     try {
       await AsyncStorage.removeItem("userToken");
-      setJwtToken("");
+      try {
+        await authService.logout();
+      } catch (error) {
+        console.warn("Erreur lors de l'appel logout:", error);
+      }
+      clearAccessToken();
       setIsAuthenticated(false);
-      router.navigate("/");
+      router.navigate(ROOT_ROUTE);
     } catch (error) {
       console.error("Erreur lors de la déconnexion:", error);
     }
@@ -83,12 +90,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const token = await AsyncStorage.getItem("userToken");
       if (!token) {
-        setJwtToken("");
+        clearAccessToken();
         setIsAuthenticated(false);
         return false;
       }
 
-      setJwtToken(token);
+      setAccessToken(token);
 
       // Ici on peut appeler l'API pour vérifier la validité du token
 
