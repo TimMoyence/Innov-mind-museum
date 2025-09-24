@@ -1,19 +1,22 @@
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Href, useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 
 export default function Index() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
 
+  const AUTH_ROUTE = '/auth' satisfies Href;
+  const TABS_ROUTE = '/(tabs)' satisfies Href;
+
   useEffect(() => {
     if (isLoading) return;
 
     if (isAuthenticated) {
-      router.replace('/(tabs)');
+      router.replace(TABS_ROUTE);
     } else {
-      router.replace('/auth');
+      router.replace(AUTH_ROUTE);
     }
   }, [isAuthenticated, isLoading, router]);
 

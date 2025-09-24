@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { Href, router } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import {
   Animated,
@@ -29,6 +29,9 @@ export default function HomeScreen() {
       }),
     ]).start();
   }, []);
+
+  const CONVERSATIONS_ROUTE =
+    '/(tabs)/conversations' satisfies Href;
 
   return (
     <View style={homeStyles.welcomeContainer}>
@@ -60,7 +63,7 @@ export default function HomeScreen() {
 
             <TouchableOpacity
               style={homeStyles.enterButton}
-              onPress={() => router.push('/(tabs)/conversations')}
+              onPress={() => router.push(CONVERSATIONS_ROUTE)}
             >
               <Text style={homeStyles.enterButtonText}>Enter</Text>
               <Feather name='log-in' size={18} color='#111' />

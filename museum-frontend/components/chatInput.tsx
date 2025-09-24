@@ -11,7 +11,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 
 interface ChatInputProps {
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string) => void | Promise<void>;
 }
 
 export const ChatInput = ({ onSendMessage }: ChatInputProps) => {

@@ -10,10 +10,10 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { BlurView } from "expo-blur";
-import { router } from "expo-router";
+import { Href, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import APIService, { setJwtToken } from "../context/api";
+import { authService, setAccessToken } from "../services";
 import { useAuth } from "../context/AuthContext";
 import { homeStyles } from "./styles/homeStyles";
 
@@ -26,6 +26,8 @@ export default function AuthScreen() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { setIsAuthenticated } = useAuth();
 
+  const TABS_ROUTE = '/(tabs)' satisfies Href;
+
   const handleLogin = async (): Promise<void> => {
     if (!email || !password) {
       Alert.alert("Error", "Please fill in all fields");
@@ -35,16 +37,15 @@ export default function AuthScreen() {
     setIsLoading(true);
 
     try {
-      console.log("Trying to login with:", { email });
-      const response = await APIService.auth.login(email, password);
+      const response = await authService.login(email, password);
 
       if (response && response.token) {
         await AsyncStorage.setItem("userToken", response.token);
-        setJwtToken(response.token);
+        setAccessToken(response.token);
         setIsAuthenticated(true);
 
         setTimeout(() => {
-          router.navigate("/(tabs)");
+          router.navigate(TABS_ROUTE);
         }, 100);
       } else {
         Alert.alert("Error", "Login failed - No token received");
@@ -70,7 +71,7 @@ export default function AuthScreen() {
     setIsLoading(true);
 
     try {
-      await APIService.auth.register({
+      await authService.register({
         email,
         password,
         firstname,
@@ -115,7 +116,7 @@ export default function AuthScreen() {
           onPress: async () => {
             setIsLoading(true);
             try {
-              await APIService.auth.forgotPassword(email);
+              await authService.forgotPassword(email);
               Alert.alert(
                 "Email sent",
                 "If this email address is associated with an account, you will receive a link to reset your password."
