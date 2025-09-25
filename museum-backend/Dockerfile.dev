@@ -1,0 +1,17 @@
+FROM node:22-bullseye-slim
+WORKDIR /app
+
+# pnpm
+RUN corepack enable && corepack prepare pnpm@8.15.8 --activate
+
+# Copier manifests
+COPY package.json pnpm-lock.yaml ./
+
+# Installer toutes les deps
+RUN pnpm install
+
+# Copier le code (sera écrasé par le volume en compose)
+COPY . .
+
+EXPOSE 3000
+CMD ["pnpm", "run", "dev"]

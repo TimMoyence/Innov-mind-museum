@@ -1,0 +1,17 @@
+# Node & logs
+node_modules
+npm-debug.log
+.DS_Store
+
+# Git
+.git
+.gitignore
+
+# Tests et coverage
+coverage
+__tests__/
+jest.config.js
+
+# Configs locales
+.env*
+docker-compose*.yml
