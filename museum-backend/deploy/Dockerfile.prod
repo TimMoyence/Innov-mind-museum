@@ -5,7 +5,7 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@8.15.8 --activate
 
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 RUN pnpm run build
@@ -17,11 +17,14 @@ ENV NODE_ENV=production
 
 RUN corepack enable && corepack prepare pnpm@8.15.8 --activate
 
+# Copier uniquement package.json + lockfile pour traceabilité
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --prod --frozen-lockfile && pnpm cache clean --force
 
+# Copier node_modules du build stage (en prod-only)
+COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 
+# Sécurité : user non-root
 RUN adduser --system --uid 1001 nodeuser
 USER nodeuser
 
