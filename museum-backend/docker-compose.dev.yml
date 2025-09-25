@@ -1,7 +1,9 @@
 services:
   backend:
-    build: .
-    container_name: my-backend
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: dev-backend
     ports:
       - '3000:3000'
     env_file:
@@ -15,7 +17,7 @@ services:
 
   db:
     image: postgres:16-alpine
-    container_name: my-postgres
+    container_name: dev-postgres
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -23,12 +25,12 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata_dev:/var/lib/postgresql/data
     restart: unless-stopped
 
   adminer:
     image: adminer:latest
-    container_name: my-adminer
+    container_name: dev-adminer
     depends_on:
       - db
     ports:
@@ -36,4 +38,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  pgdata:
+  pgdata_dev:
