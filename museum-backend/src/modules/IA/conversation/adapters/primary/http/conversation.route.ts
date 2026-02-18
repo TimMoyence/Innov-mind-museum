@@ -54,9 +54,14 @@ ConversationRouter.get(
     }
 
     const conversations = await getAllConversations.execute();
-
-    if (!conversations || conversations.length === 0) {
+    console.log(conversations);
+    if (!conversations) {
       res.status(404).json({ error: 'No conversations found' });
+      return;
+    }
+
+    if (conversations.length === 0) {
+      res.status(204).json({ message: 'No conversations' });
       return;
     }
 

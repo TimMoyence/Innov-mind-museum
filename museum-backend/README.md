@@ -1,15 +1,64 @@
-You need to install pnpm first
+# museum-ia backend
 
-1. On window : npm install -g pnpm
-1. On Macos : brew install pnpm
+Express 5 + TypeORM backend for MuseumIA.
 
-1. run : pnpm install
+## Prerequisites
 
-1. start the api : pnpm run start
+- Node.js 22+
+- PostgreSQL 16+
+- npm (or pnpm if you prefer)
 
-1. adapt your .env to add you api key for make some call : You need to need to add the API key of chatGPT to do it. If you want I can generate a key with my account for you, but ehter we need to make one account with paiment split for all.
+## Setup
 
-1. . Try your first call in the files test.http and click on send request
-   You need to install the package test to use test.http => REST Client in your IDE package.
+```bash
+cp .env.example .env
+pnpm install
+```
 
----
+Update `.env` with database and LLM credentials.
+
+For local Postgres without credentials, keep `DB_USER=` and `DB_PASSWORD=` empty.
+Use `DB_PORT=5432` for native local Postgres, or `DB_PORT=5433` for the bundled docker-compose DB.
+Set `DB_SYNCHRONIZE=false` to keep schema changes under migration control.
+
+Note: this backend uses a `pnpm-lock.yaml`. Running `npm install` on an existing pnpm-managed `node_modules` can fail; prefer `pnpm install`.
+
+## Run
+
+```bash
+npm run dev
+```
+
+Server endpoints:
+
+- `GET /api/health`
+- `POST /api/chat/sessions`
+- `POST /api/chat/sessions/:id/messages`
+- `GET /api/chat/sessions/:id`
+- Legacy endpoints under `/api/v1/*`
+
+## Quality checks
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+```
+
+## TypeORM migration commands
+
+Migration workflow is enabled and intended for development/production parity.
+
+```bash
+npm run migration:new -- --name=CreateChatSessionTable
+npm run migration:create -- --name=ManualFixForSessionIndexes
+npm run migration:show
+npm run migration:run
+npm run migration:revert
+```
+
+## Local docker stack
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```

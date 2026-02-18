@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "types": ["node", "express"],
+    "types": ["node", "express", "jest"],
     "target": "es2022",
     "module": "commonjs",
     "moduleResolution": "node",
@@ -33,10 +33,6 @@
     "outDir": "./dist",
     "lib": ["ES2023"]
   },
-  "include": [
-    "src/**/*.ts",
-    "tests/**/*.ts",
-    "src/modules/IA/conversation/core/useCase/getConversationById.useCasets"
-  ],
+  "include": ["src/**/*.ts", "tests/**/*.ts"],
   "exclude": ["node_modules"]
 }

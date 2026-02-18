@@ -2,12 +2,13 @@ import { PassportStatic } from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import bcrypt from 'bcrypt';
+
+import { env } from '@src/config/env';
 import { UserRepositoryPg } from './user.repository.pg';
 
 const userRepository = new UserRepositoryPg();
 
 export function configurePassport(passport: PassportStatic) {
-  // Local Strategy pour le login
   passport.use(
     new LocalStrategy(
       { usernameField: 'email' },
@@ -33,12 +34,11 @@ export function configurePassport(passport: PassportStatic) {
     ),
   );
 
-  // JWT Strategy pour protéger les routes
   passport.use(
     new JwtStrategy(
       {
         jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-        secretOrKey: process.env.JWT_SECRET || 'default_secret',
+        secretOrKey: env.auth.jwtSecret,
       },
       async (jwtPayload, done) => {
         try {
@@ -52,9 +52,9 @@ export function configurePassport(passport: PassportStatic) {
     ),
   );
 
-  // Si vous utilisez des sessions (pour le logout, par exemple)
-  passport.serializeUser((user: any, done) => {
-    done(null, user.id);
+  passport.serializeUser((user: Express.User, done) => {
+    const serialized = user as { id?: number };
+    done(null, serialized.id);
   });
 
   passport.deserializeUser(async (id: number, done) => {
