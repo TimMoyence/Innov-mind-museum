@@ -1,15 +1,19 @@
 {
   "expo": {
-    "name": "bolt-expo-nativewind",
-    "slug": "bolt-expo-nativewind",
+    "name": "MuseumIA",
+    "slug": "museum-ia",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "museumia",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.museumia.mobile"
+    },
+    "android": {
+      "package": "com.museumia.mobile"
     },
     "web": {
       "bundler": "metro",
@@ -19,16 +23,23 @@
     "plugins": [
       "expo-router",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos"
+        }
+      ],
+      [
         "expo-camera",
         {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
-          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
-          "recordAudioAndroid": true
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera"
         }
       ]
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": false
+    },
+    "extra": {
+      "API_BASE_URL": "http://localhost:3000"
     }
   }
 }

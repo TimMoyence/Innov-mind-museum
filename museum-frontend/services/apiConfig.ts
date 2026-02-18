@@ -1,3 +1,5 @@
+import Constants from 'expo-constants';
+
 const ensureLeadingSlash = (path: string): string => {
   if (!path.length) {
     return '/';
@@ -6,7 +8,18 @@ const ensureLeadingSlash = (path: string): string => {
   return path.startsWith('/') ? path : `/${path}`;
 };
 
-export const BASE_API_URL = 'http://localhost:3000';
+const resolveBaseApiUrl = (): string => {
+  const fromEnv = process.env.EXPO_PUBLIC_API_BASE_URL;
+  const fromExpoExtra =
+    (Constants?.expoConfig as { extra?: Record<string, unknown> } | undefined)
+      ?.extra?.API_BASE_URL;
+
+  const candidate = (fromEnv || fromExpoExtra) as string | undefined;
+
+  return candidate?.trim?.() || 'http://localhost:3000';
+};
+
+export const BASE_API_URL = resolveBaseApiUrl();
 
 const API_VERSION_PREFIX = '/api/v1';
 

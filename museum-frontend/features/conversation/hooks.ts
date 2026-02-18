@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ScrollView } from 'react-native';
 
-import { conversationService } from '@/services/conversationService';
-import { iaService } from '@/services/iaService';
+import { getErrorMessage } from '@/shared/lib/errors';
+import {
+  analyzeArtworkImage as analyzeArtworkImageUseCase,
+  askMuseumQuestion as askMuseumQuestionUseCase,
+  fetchAllConversations,
+  fetchLatestConversationMessages,
+} from './application/useCases';
 
 import {
   type ChatMessage,
@@ -12,70 +17,6 @@ import {
   LEVELS,
 } from './types';
 import { normaliseConversation } from './lib';
-
-const mapToChatMessage = (message: {
-  id?: string;
-  content?: string;
-  text?: string;
-  isFromAI?: boolean;
-  role?: 'user' | 'assistant';
-  timestamp?: string | number;
-  createdAt?: string | number;
-}): ChatMessage => ({
-  id: message.id || Date.now().toString(),
-  text: message.content || message.text || 'Message sans contenu',
-  sender:
-    message.isFromAI !== undefined
-      ? message.isFromAI
-        ? 'ai'
-        : 'user'
-      : message.role === 'assistant'
-        ? 'ai'
-        : 'user',
-  timestamp: new Date(message.timestamp || message.createdAt || Date.now()),
-});
-
-const getErrorMessage = (error: unknown): string => {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return 'Une erreur inattendue est survenue.';
-};
-
-const extractConversationId = (
-  data: unknown,
-): string | undefined => {
-  if (data && typeof data === 'object' && 'conversationId' in data) {
-    const conversationId = (data as { conversationId?: unknown }).conversationId;
-    if (typeof conversationId === 'string') {
-      return conversationId;
-    }
-  }
-
-  return undefined;
-};
-
-const extractResponseText = (data: unknown): string => {
-  if (typeof data === 'string') {
-    return data;
-  }
-
-  if (!data || typeof data !== 'object') {
-    return '';
-  }
-
-  const candidates = ['response', 'insight', 'message', 'answer'];
-
-  for (const key of candidates) {
-    const value = (data as Record<string, unknown>)[key];
-    if (typeof value === 'string' && value.trim().length) {
-      return value;
-    }
-  }
-
-  return '';
-};
 
 export const useConversationScreen = () => {
   const [selectedLevel, setSelectedLevel] = useState<ExperienceLevel | ''>('');
@@ -113,7 +54,7 @@ export const useConversationScreen = () => {
   const loadDiscussions = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await conversationService.getAllConversations();
+      const data = await fetchAllConversations();
       normaliseAndStore(data ?? []);
     } catch (loadError) {
       setError(getErrorMessage(loadError));
@@ -126,26 +67,11 @@ export const useConversationScreen = () => {
 
   const loadConversation = useCallback(async () => {
     try {
-      const conversations = await conversationService.getAllConversations();
-
-      if (!conversations?.length) {
-        setConversationId(null);
-        setConversation([]);
-        return;
-      }
-
-      const lastConversation = conversations[conversations.length - 1];
-      const lastConvId = lastConversation.id;
+      const { conversationId: lastConvId, messages } =
+        await fetchLatestConversationMessages();
 
       setConversationId(lastConvId);
-
-      const conversationDetails =
-        await conversationService.getConversation(lastConvId);
-
-      if (conversationDetails?.messages?.length) {
-        const formattedMessages = conversationDetails.messages.map(mapToChatMessage);
-        setConversation(formattedMessages);
-      }
+      setConversation(messages);
     } catch (loadError) {
       setError(getErrorMessage(loadError));
       setConversation([]);
@@ -208,19 +134,12 @@ export const useConversationScreen = () => {
       setIsAILoading(true);
 
       try {
-        const analysisResult = await iaService.analyzeImage(
-          imageUri,
-          conversationId ?? undefined,
-        );
-
-        const newConversationId =
-          extractConversationId(analysisResult) ?? conversationId ?? undefined;
+        const { conversationId: newConversationId, responseText } =
+          await analyzeArtworkImageUseCase(imageUri, conversationId ?? undefined);
 
         if (newConversationId && newConversationId !== conversationId) {
           setConversationId(newConversationId);
         }
-
-        const responseText = extractResponseText(analysisResult);
 
         if (responseText) {
           const aiMessage: ChatMessage = {
@@ -271,23 +190,15 @@ export const useConversationScreen = () => {
       setIsAILoading(true);
 
       try {
-        const response = await iaService.askMuseumQuestion(
-          messageText,
-          photo ?? undefined,
-          conversationId ?? undefined,
-        );
-
-        const newConversationId =
-          extractConversationId(response) ?? conversationId ?? undefined;
+        const { conversationId: newConversationId, responseText } =
+          await askMuseumQuestionUseCase(
+            messageText,
+            photo ?? undefined,
+            conversationId ?? undefined,
+          );
 
         if (newConversationId && newConversationId !== conversationId) {
           setConversationId(newConversationId);
-        }
-
-        let responseText = extractResponseText(response);
-
-        if (!responseText && response && typeof response === 'object') {
-          responseText = JSON.stringify(response);
         }
 
         const aiMessage: ChatMessage = {

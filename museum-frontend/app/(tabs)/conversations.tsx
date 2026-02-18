@@ -1,221 +1,200 @@
-import { Feather } from '@expo/vector-icons';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
+  FlatList,
+  Pressable,
+  StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import { router } from 'expo-router';
 
-import { CustomCameraView } from '@/components/CameraView';
-import { DiscussionItem } from '@/components/DiscussionItem';
-import { LevelSelector } from '@/components/LevelSelector';
-import { ChatInput } from '@/components/chatInput';
-import { useConversationScreen } from '@/features/conversation/hooks';
-import type {
-  ChatMessage,
-  ExperienceLevel,
-} from '@/features/conversation/types';
-import { mainStyles } from '../styles/mainStyles';
-
-const MessageBubble = ({ message }: { message: ChatMessage }) => {
-  const isAI = message.sender === 'ai';
-
-  return (
-    <View
-      style={[
-        mainStyles.messageBubble,
-        isAI ? mainStyles.aiMessageBubble : mainStyles.userMessageBubble,
-      ]}
-    >
-      <Text
-        style={[
-          mainStyles.messageText,
-          isAI ? mainStyles.aiMessageText : mainStyles.userMessageText,
-        ]}
-      >
-        {message.text}
-      </Text>
-      <Text style={mainStyles.messageTimestamp}>
-        {message.timestamp.toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        })}
-      </Text>
-    </View>
-  );
-};
+import { chatApi } from '@/features/chat/infrastructure/chatApi';
+import {
+  DashboardSessionCard,
+  mapSessionsToDashboardCards,
+} from '@/features/chat/domain/dashboard-session';
+import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
+import { getErrorMessage } from '@/shared/lib/errors';
+import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 
 export default function ConversationsScreen() {
-  const {
-    levelOptions,
-    selectedLevel,
-    setSelectedLevel,
-    showCamera,
-    openCamera,
-    closeCamera,
-    showAIChat,
-    setShowAIChat,
-    activeTab,
-    setActiveTab,
-    discussions,
-    isLoading,
-    conversation,
-    scrollViewRef,
-    isAILoading,
-    handlePhotoCapture,
-    sendMessage,
-    error,
-    clearError,
-  } = useConversationScreen();
+  const [items, setItems] = useState<DashboardSessionCard[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadDashboard = useCallback(async (isManualRefresh = false) => {
+    if (isManualRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+    setError(null);
+
+    try {
+      const settings = await loadRuntimeSettings();
+      const response = await chatApi.listSessions({ limit: 50 });
+      const mapped = mapSessionsToDashboardCards(
+        response.sessions,
+        settings.defaultLocale,
+      );
+      setItems(mapped);
+    } catch (loadError) {
+      setError(getErrorMessage(loadError));
+      setItems([]);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (!error) {
-      return;
-    }
-
-    Alert.alert('Erreur', error, [
-      {
-        text: 'OK',
-        onPress: clearError,
-      },
-    ]);
-  }, [error, clearError]);
+    void loadDashboard();
+  }, [loadDashboard]);
 
   return (
-    <SafeAreaView style={mainStyles.safeArea}>
-      <StatusBar barStyle='dark-content' />
+    <View style={styles.container}>
+      <Text style={styles.title}>Dashboard</Text>
+      <Text style={styles.subtitle}>
+        Your recent museum chat sessions. Pull down to refresh.
+      </Text>
 
-      <View style={mainStyles.headerContainer}>
-        <View>
-          <Text style={mainStyles.headerTitle}>Museum Insights</Text>
-          <Text style={mainStyles.headerSubtitle}>
-            Explore recent AI-powered conversations
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={mainStyles.cameraButton}
-          onPress={openCamera}
+      {error ? (
+        <ErrorNotice message={error} onDismiss={() => setError(null)} />
+      ) : null}
+
+      <View style={styles.actionsRow}>
+        <Pressable
+          style={styles.primaryButton}
+          onPress={() => router.push('/(tabs)/home')}
         >
-          <Feather name='camera' size={20} color='#111' />
-          <Text style={mainStyles.cameraButtonText}>AR Mode</Text>
-        </TouchableOpacity>
-      </View>
-
-      <LevelSelector
-        levels={Array.from(levelOptions)}
-        selectedLevel={selectedLevel || ''}
-        onSelectLevel={(level) => setSelectedLevel(level as ExperienceLevel)}
-      />
-
-      <View style={mainStyles.tabContainer}>
-        {['All', 'AI Chat', 'Assistant', 'Image Insight'].map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={[
-              mainStyles.tabButton,
-              activeTab === tab && mainStyles.tabButtonActive,
-            ]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text
-              style={[
-                mainStyles.tabButtonText,
-                activeTab === tab && mainStyles.tabButtonTextActive,
-              ]}
-            >
-              {tab}
-            </Text>
-          </TouchableOpacity>
-        ))}
+          <Text style={styles.primaryButtonText}>Start New Conversation</Text>
+        </Pressable>
       </View>
 
       {isLoading ? (
-        <View style={mainStyles.loaderContainer}>
-          <ActivityIndicator size='large' color='#0066cc' />
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator color='#0F766E' size='large' />
         </View>
       ) : (
-        <ScrollView style={mainStyles.discussionList}>
-          {discussions.map((discussion) => (
-            <DiscussionItem
-              key={discussion.id}
-              imageUrl={discussion.imageUrl}
-              title={discussion.title}
-              location={discussion.location}
-              time={discussion.time}
-              participants={discussion.participants}
-              tags={discussion.tags}
-            />
-          ))}
-
-          {!discussions.length && (
-            <View style={mainStyles.emptyState}>
-              <Image
-                source={{
-                  uri: 'https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=800&q=60',
-                }}
-                style={mainStyles.emptyStateImage}
-              />
-              <Text style={mainStyles.emptyStateTitle}>No conversations yet</Text>
-              <Text style={mainStyles.emptyStateSubtitle}>
-                Start chatting with the AI to see your discussions here.
+        <FlatList
+          data={items}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          refreshing={isRefreshing}
+          onRefresh={() => void loadDashboard(true)}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTitle}>No conversations yet</Text>
+              <Text style={styles.emptySubtitle}>
+                Start a new conversation from Home to create your first session.
               </Text>
             </View>
+          }
+          renderItem={({ item }) => (
+            <Pressable
+              style={styles.card}
+              onPress={() => router.push(`/(stack)/chat/${item.id}`)}
+            >
+              <Text style={styles.cardTitle}>{item.title}</Text>
+              <Text style={styles.cardMeta}>{item.subtitle}</Text>
+              <Text style={styles.cardMeta}>{item.timeLabel}</Text>
+              <Text style={styles.cardTags}>
+                Messages: {item.messageCount}
+              </Text>
+            </Pressable>
           )}
-        </ScrollView>
-      )}
-
-      <View style={mainStyles.chatContainer}>
-        <View style={mainStyles.chatHeader}>
-          <View>
-            <Text style={mainStyles.chatTitle}>AI Companion</Text>
-            <Text style={mainStyles.chatSubtitle}>
-              Ask questions about artworks or share your thoughts.
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={mainStyles.chatToggleButton}
-            onPress={() => setShowAIChat(!showAIChat)}
-          >
-            <Feather
-              name={showAIChat ? 'chevron-down' : 'chevron-up'}
-              size={20}
-              color='#0066cc'
-            />
-          </TouchableOpacity>
-        </View>
-
-        {showAIChat && (
-          <View style={mainStyles.chatContent}>
-            <ScrollView ref={scrollViewRef} style={mainStyles.chatMessages}>
-              {conversation.map((message) => (
-                <MessageBubble key={message.id} message={message} />
-              ))}
-
-              {isAILoading && (
-                <View style={mainStyles.loadingBubble}>
-                  <ActivityIndicator size='small' color='#0066cc' />
-                  <Text style={mainStyles.loadingBubbleText}>AI is typing...</Text>
-                </View>
-              )}
-            </ScrollView>
-
-            <ChatInput onSendMessage={sendMessage} />
-          </View>
-        )}
-      </View>
-
-      {showCamera && (
-        <CustomCameraView
-          onClose={closeCamera}
-          onCapture={handlePhotoCapture}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 18,
+    paddingTop: 56,
+  },
+  title: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  subtitle: {
+    marginTop: 6,
+    color: '#334155',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  actionsRow: {
+    marginTop: 16,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  primaryButton: {
+    flex: 1,
+    backgroundColor: '#0F766E',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  loaderContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  listContent: {
+    marginTop: 16,
+    paddingBottom: 22,
+    gap: 10,
+  },
+  emptyState: {
+    marginTop: 44,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 14,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  emptySubtitle: {
+    marginTop: 6,
+    color: '#475569',
+    lineHeight: 20,
+  },
+  card: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#FFFFFF',
+    padding: 14,
+    gap: 4,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  cardMeta: {
+    fontSize: 13,
+    color: '#475569',
+  },
+  cardTags: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#0F766E',
+    fontWeight: '600',
+  },
+});

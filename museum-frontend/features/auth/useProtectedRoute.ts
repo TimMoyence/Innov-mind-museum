@@ -1,10 +1,8 @@
 import { useEffect } from 'react';
-import { Href, useRouter, useSegments } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
-
-const AUTH_ROUTE = '/auth' satisfies Href;
-const TABS_ROUTE = '/(tabs)' satisfies Href;
+import { AUTH_ROUTE, HOME_ROUTE } from './routes';
 
 export const useProtectedRoute = (): void => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -17,14 +15,15 @@ export const useProtectedRoute = (): void => {
     }
 
     const currentRoot = segments[0];
+    const isAuthRoute = currentRoot === 'auth';
 
-    if (!isAuthenticated && currentRoot === '(tabs)') {
+    if (!isAuthenticated && !isAuthRoute) {
       router.replace(AUTH_ROUTE);
       return;
     }
 
-    if (isAuthenticated && currentRoot === 'auth') {
-      router.replace(TABS_ROUTE);
+    if (isAuthenticated && isAuthRoute) {
+      router.replace(HOME_ROUTE);
     }
   }, [isAuthenticated, isLoading, router, segments]);
 };

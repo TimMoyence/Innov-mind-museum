@@ -1,9 +1,13 @@
-import { getAccessToken } from './tokenStore';
+import { httpClient, mapAxiosError } from '@/shared/infrastructure/httpClient';
+import { isAppError } from '@/shared/lib/errors';
 
 type HeadersRecord = Record<string, string>;
 
-interface RequestOptions extends RequestInit {
+interface RequestOptions {
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   requiresAuth?: boolean;
+  headers?: HeadersRecord;
+  body?: unknown;
 }
 
 const isFormData = (body: unknown): body is FormData => {
@@ -16,51 +20,32 @@ const isFormData = (body: unknown): body is FormData => {
 
 export const httpRequest = async <T>(
   url: string,
-  { requiresAuth = true, headers, body, ...rest }: RequestOptions = {},
+  { requiresAuth = true, headers, body, method }: RequestOptions = {},
 ): Promise<T> => {
   const finalHeaders: HeadersRecord = {
-    Accept: 'application/json',
-    ...(headers as HeadersRecord | undefined),
+    ...(headers || {}),
   };
-
-  if (requiresAuth) {
-    const token = getAccessToken();
-    if (token) {
-      finalHeaders.Authorization = `Bearer ${token}`;
-    }
-  }
 
   if (body && !isFormData(body) && finalHeaders['Content-Type'] === undefined) {
     finalHeaders['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(url, {
-    ...rest,
-    headers: finalHeaders,
-    body,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `${response.status} ${response.statusText}`.trim() +
-        (errorText ? `: ${errorText}` : ''),
-    );
-  }
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  const responseText = await response.text();
-
-  if (!responseText.length) {
-    return undefined as T;
-  }
-
   try {
-    return JSON.parse(responseText) as T;
-  } catch (_error) {
-    return responseText as unknown as T;
+    const requestConfig = {
+      url,
+      method: method || 'GET',
+      data: body,
+      headers: finalHeaders,
+      requiresAuth,
+    } as unknown as never;
+
+    const response = await httpClient.request(requestConfig);
+
+    return (response as { data: T }).data;
+  } catch (error) {
+    if (isAppError(error)) {
+      throw error;
+    }
+    throw mapAxiosError(error);
   }
 };
