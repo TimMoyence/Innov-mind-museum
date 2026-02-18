@@ -2,13 +2,23 @@
   "name": "museum-ia",
   "version": "1.0.0",
   "description": "",
+  "packageManager": "pnpm@9.15.3",
   "main": "index.ts",
   "scripts": {
     "dev": "nodemon --watch src --exec ts-node -r tsconfig-paths/register src/index.ts",
     "start": "ts-node -r tsconfig-paths/register src/index.ts",
     "build": "rm -rf dist && tsc && tsc-alias",
     "start:prod": "node dist/src/index.js",
-    "test": "jest"
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --watchman=false --runInBand",
+    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js -d src/data/db/data-source.ts",
+    "migration:create": "node ./scripts/migration-cli.cjs create",
+    "migration:generate": "node ./scripts/migration-cli.cjs generate",
+    "migration:new": "npm run migration:generate --",
+    "migration:run": "npm run typeorm -- migration:run",
+    "migration:show": "npm run typeorm -- migration:show",
+    "migration:revert": "npm run typeorm -- migration:revert"
   },
   "keywords": [],
   "author": "",
@@ -76,7 +86,7 @@
     "reflect-metadata": "^0.2.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
-    "typeorm": "^0.3.22",
+    "typeorm": "^0.3.27",
     "uuid": "^11.1.0"
   }
 }
