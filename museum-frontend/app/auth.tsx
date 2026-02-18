@@ -10,12 +10,15 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { BlurView } from "expo-blur";
-import { Href, router } from "expo-router";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authService, setAccessToken } from "../services";
 import { useAuth } from "../context/AuthContext";
 import { homeStyles } from "./styles/homeStyles";
+import { HOME_ROUTE } from "@/features/auth/routes";
+import { getErrorMessage } from "@/shared/lib/errors";
+import { authStorage } from "@/features/auth/infrastructure/authStorage";
+import { ErrorNotice } from "@/shared/ui/ErrorNotice";
 
 export default function AuthScreen() {
   const [isLogin, setIsLogin] = useState<boolean>(true);
@@ -24,9 +27,9 @@ export default function AuthScreen() {
   const [firstname, setFirstname] = useState<string>("");
   const [lastname, setLastname] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const { setIsAuthenticated } = useAuth();
-
-  const TABS_ROUTE = '/(tabs)' satisfies Href;
 
   const handleLogin = async (): Promise<void> => {
     if (!email || !password) {
@@ -35,28 +38,26 @@ export default function AuthScreen() {
     }
 
     setIsLoading(true);
+    setErrorMessage(null);
+    setInfoMessage(null);
 
     try {
       const response = await authService.login(email, password);
 
       if (response && response.token) {
-        await AsyncStorage.setItem("userToken", response.token);
+        await authStorage.setToken(response.token);
         setAccessToken(response.token);
         setIsAuthenticated(true);
 
         setTimeout(() => {
-          router.navigate(TABS_ROUTE);
+          router.replace(HOME_ROUTE);
         }, 100);
       } else {
         Alert.alert("Error", "Login failed - No token received");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Login error:", error);
-
-      const message =
-        error instanceof Error ? error.message : "Unexpected login error";
-
-      Alert.alert("Error", message);
+      setErrorMessage(getErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
@@ -69,6 +70,8 @@ export default function AuthScreen() {
     }
 
     setIsLoading(true);
+    setErrorMessage(null);
+    setInfoMessage(null);
 
     try {
       await authService.register({
@@ -77,21 +80,14 @@ export default function AuthScreen() {
         firstname,
         lastname,
       });
-
-      Alert.alert(
-        "Registration successful",
-        "Your account has been successfully created",
-        [{ text: "OK", onPress: () => setIsLogin(true) }]
-      );
-
-      // Champs réinitialisés après l'inscription
+      setIsLogin(true);
+      setInfoMessage("Registration complete. Please log in.");
       setFirstname("");
       setLastname("");
-      setEmail("");
       setPassword("");
     } catch (error) {
       console.error("Registration error:", error);
-      Alert.alert("Error", "Error during registration");
+      setErrorMessage(getErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
@@ -115,6 +111,8 @@ export default function AuthScreen() {
           text: "Send",
           onPress: async () => {
             setIsLoading(true);
+            setErrorMessage(null);
+            setInfoMessage(null);
             try {
               await authService.forgotPassword(email);
               Alert.alert(
@@ -122,10 +120,7 @@ export default function AuthScreen() {
                 "If this email address is associated with an account, you will receive a link to reset your password."
               );
             } catch (error) {
-              Alert.alert(
-                "Email sent",
-                "If this email address is associated with an account, you will receive a link to reset your password."
-              );
+              setErrorMessage(getErrorMessage(error));
             } finally {
               setIsLoading(false);
             }
@@ -159,6 +154,15 @@ export default function AuthScreen() {
         </View>
 
         <View style={styles.form}>
+          {errorMessage ? (
+            <ErrorNotice
+              message={errorMessage}
+              onDismiss={() => setErrorMessage(null)}
+            />
+          ) : null}
+
+          {infoMessage ? <Text style={styles.infoText}>{infoMessage}</Text> : null}
+
           {!isLogin && (
             <>
               <BlurView
@@ -251,7 +255,11 @@ export default function AuthScreen() {
 
           <TouchableOpacity
             style={styles.switchButton}
-            onPress={() => setIsLogin(!isLogin)}
+            onPress={() => {
+              setIsLogin(!isLogin);
+              setErrorMessage(null);
+              setInfoMessage(null);
+            }}
             disabled={isLoading}
           >
             <Text style={styles.switchButtonText}>
@@ -340,5 +348,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#1a1a1a",
     textDecorationLine: "underline",
+  },
+  infoText: {
+    color: "#065F46",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

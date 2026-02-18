@@ -5,16 +5,47 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Href, router } from "expo-router";
+import { router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+
 import { authService, clearAccessToken, setAccessToken } from "../services";
+import { AUTH_ROUTE } from "@/features/auth/routes";
+import { authStorage } from "@/features/auth/infrastructure/authStorage";
+import { setUnauthorizedHandler } from "@/shared/infrastructure/httpClient";
 
 // Empêcher l'écran de démarrage de se cacher automatiquement
 SplashScreen.preventAutoHideAsync().catch(() => {
 });
 
-const ROOT_ROUTE = '/' satisfies Href;
+const parseJwtExpiration = (token: string): number | null => {
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    return null;
+  }
+
+  if (typeof globalThis.atob !== "function") {
+    return null;
+  }
+
+  try {
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = `${base64}${"=".repeat((4 - (base64.length % 4)) % 4)}`;
+    const payload = JSON.parse(globalThis.atob(padded)) as { exp?: unknown };
+
+    return typeof payload.exp === "number" ? payload.exp : null;
+  } catch {
+    return null;
+  }
+};
+
+const isTokenExpired = (token: string): boolean => {
+  const expiration = parseJwtExpiration(token);
+  if (!expiration) {
+    return false;
+  }
+
+  return Date.now() >= expiration * 1000;
+};
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -50,9 +81,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const checkAuth = async (): Promise<void> => {
       try {
-        const token = await AsyncStorage.getItem("userToken");
-        setIsAuthenticated(!!token);
-        setAccessToken(token);
+        const token = await authStorage.getToken();
+        if (token && isTokenExpired(token)) {
+          await authStorage.clearToken();
+          clearAccessToken();
+          setIsAuthenticated(false);
+        } else {
+          setIsAuthenticated(!!token);
+          setAccessToken(token);
+        }
       } catch (error) {
         console.error("Erreur lors de la vérification du token:", error);
       } finally {
@@ -68,27 +105,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      void authStorage.clearToken().catch(() => {
+        /* ignore storage errors */
+      });
+      clearAccessToken();
+      setIsAuthenticated(false);
+      router.replace(AUTH_ROUTE);
+    });
+
+    return () => setUnauthorizedHandler(null);
+  }, []);
+
   // Fonction de déconnexion
   const logout = async (): Promise<void> => {
     try {
-      await AsyncStorage.removeItem("userToken");
-      try {
-        await authService.logout();
-      } catch (error) {
-        console.warn("Erreur lors de l'appel logout:", error);
-      }
-      clearAccessToken();
-      setIsAuthenticated(false);
-      router.navigate(ROOT_ROUTE);
+      await authStorage.clearToken();
     } catch (error) {
-      console.error("Erreur lors de la déconnexion:", error);
+      console.warn("Erreur lors du nettoyage du token:", error);
+    }
+
+    clearAccessToken();
+    setIsAuthenticated(false);
+    router.replace(AUTH_ROUTE);
+
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.warn("Erreur lors de l'appel logout:", error);
     }
   };
 
   // Vérifier si un token est valide
   const checkTokenValidity = async (): Promise<boolean> => {
     try {
-      const token = await AsyncStorage.getItem("userToken");
+      const token = await authStorage.getToken();
       if (!token) {
         clearAccessToken();
         setIsAuthenticated(false);

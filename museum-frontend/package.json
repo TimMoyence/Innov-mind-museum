@@ -1,12 +1,15 @@
 {
-  "name": "bolt-expo-starter",
+  "name": "museum-ia-mobile",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "EXPO_NO_TELEMETRY=1 expo start",
     "build:web": "expo export --platform web",
-    "lint": "expo lint"
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test:node",
+    "test:node": "rm -rf .test-dist && tsc -p tsconfig.test.json && node --test .test-dist/tests/*.test.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.2",
