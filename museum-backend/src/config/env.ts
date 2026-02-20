@@ -71,12 +71,19 @@ interface AppEnv {
     provider: LlmProvider;
     model: string;
     temperature: number;
+    parallelEnabled: boolean;
     timeoutMs: number;
+    timeoutSummaryMs: number;
+    timeoutExpertCompactMs: number;
+    totalBudgetMs: number;
     retries: number;
+    retryBaseDelayMs: number;
     maxConcurrent: number;
+    sectionsMaxConcurrent: number;
     maxHistoryMessages: number;
     maxTextLength: number;
     maxImageBytes: number;
+    includeDiagnostics: boolean;
     openAiApiKey?: string;
     deepseekApiKey?: string;
     googleApiKey?: string;
@@ -141,12 +148,25 @@ const env: AppEnv = {
     provider,
     model: process.env.LLM_MODEL || 'gpt-4o-mini',
     temperature: toNumber(process.env.LLM_TEMPERATURE, 0.3),
+    parallelEnabled: toBoolean(process.env.LLM_PARALLEL_ENABLED, false),
     timeoutMs: toNumber(process.env.LLM_TIMEOUT_MS, 15000),
+    timeoutSummaryMs: toNumber(process.env.LLM_TIMEOUT_SUMMARY_MS, 8000),
+    timeoutExpertCompactMs: toNumber(
+      process.env.LLM_TIMEOUT_EXPERT_COMPACT_MS,
+      20000,
+    ),
+    totalBudgetMs: toNumber(process.env.LLM_TOTAL_BUDGET_MS, 25000),
     retries: toNumber(process.env.LLM_RETRIES, 1),
+    retryBaseDelayMs: toNumber(process.env.LLM_RETRY_BASE_DELAY_MS, 250),
     maxConcurrent: toNumber(process.env.LLM_MAX_CONCURRENT, 5),
+    sectionsMaxConcurrent: toNumber(process.env.LLM_SECTIONS_MAX_CONCURRENT, 2),
     maxHistoryMessages: toNumber(process.env.LLM_MAX_HISTORY_MESSAGES, 12),
     maxTextLength: toNumber(process.env.LLM_MAX_TEXT_LENGTH, 2000),
     maxImageBytes: toNumber(process.env.LLM_MAX_IMAGE_BYTES, 3 * 1024 * 1024),
+    includeDiagnostics: toBoolean(
+      process.env.LLM_INCLUDE_DIAGNOSTICS,
+      nodeEnv !== 'production',
+    ),
     openAiApiKey: process.env.OPENAI_API_KEY,
     deepseekApiKey: process.env.DEEPSEEK_API_KEY,
     googleApiKey: process.env.GOOGLE_API_KEY,
