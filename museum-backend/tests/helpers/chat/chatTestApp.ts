@@ -199,10 +199,12 @@ class FakeOrchestrator implements ChatOrchestrator {
   }
 }
 
-export const buildChatTestService = (): ChatService => {
+export const buildChatTestService = (
+  orchestrator: ChatOrchestrator = new FakeOrchestrator(),
+): ChatService => {
   return new ChatService(
     new InMemoryChatRepository(),
-    new FakeOrchestrator(),
+    orchestrator,
     new LocalImageStorage(),
   );
 };

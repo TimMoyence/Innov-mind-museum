@@ -27,6 +27,24 @@ export interface MessagePageQuery {
   limit?: number;
 }
 
+export type ChatSectionName = 'summary' | 'expertCompact';
+export type ChatSectionStatus = 'success' | 'timeout' | 'error' | 'fallback';
+
+export interface ChatAssistantDiagnostics {
+  profile: 'single_section' | 'parallel_sections';
+  degraded: boolean;
+  totalLatencyMs: number;
+  sections: Array<{
+    name: ChatSectionName;
+    status: ChatSectionStatus;
+    attempts: number;
+    latencyMs: number;
+    timeoutMs: number;
+    payloadBytes: number;
+    error?: string;
+  }>;
+}
+
 export interface ChatAssistantMetadata {
   detectedArtwork?: {
     artworkId?: string;
@@ -36,4 +54,5 @@ export interface ChatAssistantMetadata {
     source?: string;
   };
   citations?: string[];
+  diagnostics?: ChatAssistantDiagnostics;
 }

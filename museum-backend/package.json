@@ -12,6 +12,7 @@
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "jest --watchman=false --runInBand",
+    "perf:chat:mock": "ts-node -r tsconfig-paths/register tests/perf/chat-load.mocked.ts",
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js -d src/data/db/data-source.ts",
     "migration:create": "node ./scripts/migration-cli.cjs create",
     "migration:generate": "node ./scripts/migration-cli.cjs generate",

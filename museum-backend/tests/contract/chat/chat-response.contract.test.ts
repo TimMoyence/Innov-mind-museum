@@ -23,4 +23,35 @@ describe('chat response contracts', () => {
     const list = await chatService.listSessions({ limit: 20 }, 77);
     expect(isListSessionsResponse(list)).toBe(true);
   });
+
+  it('keeps post-message validator compatible with optional diagnostics metadata', () => {
+    expect(
+      isPostMessageResponse({
+        sessionId: 'session-id',
+        message: {
+          id: 'message-id',
+          role: 'assistant',
+          text: 'hello',
+          createdAt: new Date().toISOString(),
+        },
+        metadata: {
+          diagnostics: {
+            profile: 'parallel_sections',
+            degraded: true,
+            totalLatencyMs: 1234,
+            sections: [
+              {
+                name: 'summary',
+                status: 'success',
+                attempts: 1,
+                latencyMs: 320,
+                timeoutMs: 8000,
+                payloadBytes: 1024,
+              },
+            ],
+          },
+        },
+      }),
+    ).toBe(true);
+  });
 });
