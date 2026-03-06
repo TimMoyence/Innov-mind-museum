@@ -1,7 +1,9 @@
 import {
   isCreateSessionResponse,
+  isDeleteSessionResponse,
   isGetSessionResponse,
   isListSessionsResponse,
+  isPostAudioMessageResponse,
   isPostMessageResponse,
   parseCreateSessionRequest,
   parseListSessionsQuery,
@@ -56,6 +58,24 @@ describe('chat.contracts', () => {
     ).toBe(true);
 
     expect(
+      isPostAudioMessageResponse({
+        sessionId: 's1',
+        message: {
+          id: 'm1',
+          role: 'assistant',
+          text: 'answer',
+          createdAt: new Date().toISOString(),
+        },
+        metadata: {},
+        transcription: {
+          text: 'Transcribed question',
+          model: 'gpt-4o-mini-transcribe',
+          provider: 'openai',
+        },
+      }),
+    ).toBe(true);
+
+    expect(
       isGetSessionResponse({
         session: {
           id: 's1',
@@ -69,6 +89,13 @@ describe('chat.contracts', () => {
           hasMore: false,
           limit: 20,
         },
+      }),
+    ).toBe(true);
+
+    expect(
+      isDeleteSessionResponse({
+        sessionId: 's1',
+        deleted: true,
       }),
     ).toBe(true);
 

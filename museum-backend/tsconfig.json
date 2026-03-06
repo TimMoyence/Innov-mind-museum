@@ -27,7 +27,6 @@
       "@shared/*": ["src/shared/*"],
       "@modules/*": ["src/modules/*"],
       "@data/*": ["src/data/*"],
-      "@IA/*": ["src/modules/IA/*"],
       "@src/*": ["src/*"]
     },
     "outDir": "./dist",

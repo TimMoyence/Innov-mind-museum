@@ -1,87 +1,32 @@
+import type { components } from '@/shared/api/generated/openapi';
+
 export interface CreateSessionRequestDTO {
   userId?: number;
   locale?: string;
   museumMode?: boolean;
 }
 
-export interface SessionDTO {
-  id: string;
-  locale?: string | null;
-  museumMode: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+type Schemas = components['schemas'];
 
-export interface CreateSessionResponseDTO {
-  session: SessionDTO;
-}
+export type SessionDTO = Schemas['SessionDTO'];
 
-export interface ChatMessageDTO {
-  id: string;
-  role: 'user' | 'assistant' | 'system';
-  text?: string | null;
-  imageRef?: string | null;
-  createdAt: string;
-  metadata?: Record<string, unknown> | null;
-}
+export type CreateSessionResponseDTO = Schemas['CreateSessionResponse'];
 
-export interface PostMessageResponseDTO {
-  sessionId: string;
-  message: {
-    id: string;
-    role: 'assistant';
-    text: string;
-    createdAt: string;
-  };
-  metadata: {
-    detectedArtwork?: {
-      artworkId?: string;
-      title?: string;
-      artist?: string;
-      confidence?: number;
-      source?: string;
-    };
-    citations?: string[];
-  };
-}
+export type ChatMessageDTO = Schemas['ChatMessageDTO'];
 
-export interface GetSessionResponseDTO {
-  session: SessionDTO;
-  messages: ChatMessageDTO[];
-  page: {
-    nextCursor: string | null;
-    hasMore: boolean;
-    limit: number;
-  };
-}
+export type PostMessageResponseDTO = Schemas['PostMessageResponse'];
+
+export type GetSessionResponseDTO = Schemas['GetSessionResponse'];
+
+export type DeleteSessionResponseDTO = Schemas['DeleteSessionResponse'];
 
 export interface ListSessionsRequestDTO {
   cursor?: string;
   limit?: number;
 }
 
-export interface SessionListItemDTO {
-  id: string;
-  locale?: string | null;
-  museumMode: boolean;
-  createdAt: string;
-  updatedAt: string;
-  preview?: {
-    text: string;
-    createdAt: string;
-    role: 'user' | 'assistant' | 'system';
-  };
-  messageCount: number;
-}
-
-export interface ListSessionsResponseDTO {
-  sessions: SessionListItemDTO[];
-  page: {
-    nextCursor: string | null;
-    hasMore: boolean;
-    limit: number;
-  };
-}
+export type ListSessionsResponseDTO = Schemas['ListSessionsResponse'];
+export type SessionListItemDTO = ListSessionsResponseDTO['sessions'][number];
 
 interface RecordValue {
   [key: string]: unknown;
@@ -111,6 +56,19 @@ export const isPostMessageResponseDTO = (
 ): payload is PostMessageResponseDTO => {
   if (!isRecord(payload) || !isRecord(payload.message) || !isRecord(payload.metadata)) {
     return false;
+  }
+
+  if (payload.transcription !== undefined) {
+    if (!isRecord(payload.transcription)) {
+      return false;
+    }
+    if (
+      typeof payload.transcription.text !== 'string' ||
+      typeof payload.transcription.model !== 'string' ||
+      payload.transcription.provider !== 'openai'
+    ) {
+      return false;
+    }
   }
 
   return (
@@ -151,12 +109,37 @@ export const isGetSessionResponseDTO = (
       return false;
     }
 
+    if (item.image !== undefined && item.image !== null) {
+      if (!isRecord(item.image)) {
+        return false;
+      }
+      if (
+        typeof item.image.url !== 'string' ||
+        typeof item.image.expiresAt !== 'string'
+      ) {
+        return false;
+      }
+    }
+
     return (
       typeof item.id === 'string' &&
       typeof item.createdAt === 'string' &&
       ['user', 'assistant', 'system'].includes(String(item.role))
     );
   });
+};
+
+export const isDeleteSessionResponseDTO = (
+  payload: unknown,
+): payload is DeleteSessionResponseDTO => {
+  if (!isRecord(payload)) {
+    return false;
+  }
+
+  return (
+    typeof payload.sessionId === 'string' &&
+    typeof payload.deleted === 'boolean'
+  );
 };
 
 export const isListSessionsResponseDTO = (

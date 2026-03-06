@@ -42,6 +42,9 @@ export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
     return (
       <View style={cameraStyles.container}>
         <Text>Requesting camera permission...</Text>
+        <TouchableOpacity onPress={onClose} style={{ marginTop: 12 }}>
+          <Text>Close</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -50,8 +53,11 @@ export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
     return (
       <View style={cameraStyles.container}>
         <Text>No access to camera</Text>
-        <TouchableOpacity onPress={requestPermission}>
+        <TouchableOpacity onPress={requestPermission} style={{ marginTop: 12 }}>
           <Text>Grant permission</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onClose} style={{ marginTop: 12 }}>
+          <Text>Close</Text>
         </TouchableOpacity>
       </View>
     );

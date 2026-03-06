@@ -107,6 +107,14 @@ export interface PostMessageResponse {
   };
 }
 
+export interface PostAudioMessageResponse extends PostMessageResponse {
+  transcription: {
+    text: string;
+    model: string;
+    provider: 'openai';
+  };
+}
+
 export interface GetSessionResponse {
   session: {
     id: string;
@@ -120,6 +128,10 @@ export interface GetSessionResponse {
     role: 'user' | 'assistant' | 'system';
     text?: string | null;
     imageRef?: string | null;
+    image?: {
+      url: string;
+      expiresAt: string;
+    } | null;
     createdAt: string;
     metadata?: Record<string, unknown> | null;
   }>;
@@ -154,6 +166,11 @@ export interface ListSessionsResponse {
     hasMore: boolean;
     limit: number;
   };
+}
+
+export interface DeleteSessionResponse {
+  sessionId: string;
+  deleted: boolean;
 }
 
 export interface ApiErrorResponse {
@@ -280,6 +297,25 @@ export const isPostMessageResponse = (
   );
 };
 
+export const isPostAudioMessageResponse = (
+  payload: unknown,
+): payload is PostAudioMessageResponse => {
+  if (!isPostMessageResponse(payload)) {
+    return false;
+  }
+
+  const record = payload as unknown as RecordValue;
+  if (!isRecord(record.transcription)) {
+    return false;
+  }
+
+  return (
+    typeof record.transcription.text === 'string' &&
+    typeof record.transcription.model === 'string' &&
+    record.transcription.provider === 'openai'
+  );
+};
+
 export const isGetSessionResponse = (
   payload: unknown,
 ): payload is GetSessionResponse => {
@@ -306,12 +342,34 @@ export const isGetSessionResponse = (
 
   return payload.messages.every((item) => {
     if (!isRecord(item)) return false;
+    if (item.image !== undefined && item.image !== null) {
+      if (!isRecord(item.image)) return false;
+      if (
+        typeof item.image.url !== 'string' ||
+        typeof item.image.expiresAt !== 'string'
+      ) {
+        return false;
+      }
+    }
     return (
       typeof item.id === 'string' &&
       ['user', 'assistant', 'system'].includes(String(item.role)) &&
       typeof item.createdAt === 'string'
     );
   });
+};
+
+export const isDeleteSessionResponse = (
+  payload: unknown,
+): payload is DeleteSessionResponse => {
+  if (!isRecord(payload)) {
+    return false;
+  }
+
+  return (
+    typeof payload.sessionId === 'string' &&
+    typeof payload.deleted === 'boolean'
+  );
 };
 
 export const isListSessionsResponse = (

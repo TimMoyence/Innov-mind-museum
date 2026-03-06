@@ -1,12 +1,18 @@
 import axios from 'axios';
-import Constants from 'expo-constants';
 
 import { getAccessToken } from '@/services/tokenStore';
+import {
+  assertApiBaseUrlAllowed,
+  resolveInitialApiBaseUrl,
+} from '@/services/apiConfig';
 import { createAppError } from '@/shared/types/AppError';
 
 type UnauthorizedHandler = () => void;
+type AuthRefreshHandler = () => Promise<string | null>;
 
 let unauthorizedHandler: UnauthorizedHandler | null = null;
+let authRefreshHandler: AuthRefreshHandler | null = null;
+let authRefreshInFlight: Promise<string | null> | null = null;
 
 export const setUnauthorizedHandler = (
   handler: UnauthorizedHandler | null,
@@ -14,28 +20,38 @@ export const setUnauthorizedHandler = (
   unauthorizedHandler = handler;
 };
 
+export const setAuthRefreshHandler = (
+  handler: AuthRefreshHandler | null,
+): void => {
+  authRefreshHandler = handler;
+};
+
 type HttpRequestConfig = {
   requiresAuth?: boolean;
   _retryCount?: number;
+  _retriedAfterAuthRefresh?: boolean;
 } & Record<string, unknown>;
 
-const resolveBaseUrl = (): string => {
-  const fromEnv = process.env.EXPO_PUBLIC_API_BASE_URL;
-  const fromExpoExtra = (
-    Constants?.expoConfig as { extra?: Record<string, unknown> } | undefined
-  )?.extra?.API_BASE_URL;
-
-  const candidate = (fromEnv || fromExpoExtra) as string | undefined;
-
-  return candidate?.trim?.() || 'http://localhost:3000';
+const resolveDefaultBaseUrl = (): string => {
+  try {
+    return resolveInitialApiBaseUrl();
+  } catch (error) {
+    if (__DEV__) {
+      // eslint-disable-next-line no-console
+      console.warn('[HTTP] Invalid API base URL configuration', error);
+      return 'http://localhost:3000';
+    }
+    throw error;
+  }
 };
 
-const DEFAULT_BASE_URL = resolveBaseUrl();
+const DEFAULT_BASE_URL = resolveDefaultBaseUrl();
 let runtimeBaseUrl = DEFAULT_BASE_URL;
 
 export const setApiBaseUrl = (nextUrl: string): void => {
-  const normalized = nextUrl?.trim?.();
-  runtimeBaseUrl = normalized || DEFAULT_BASE_URL;
+  const normalized = nextUrl?.trim?.() || DEFAULT_BASE_URL;
+  assertApiBaseUrlAllowed(normalized);
+  runtimeBaseUrl = normalized;
 };
 
 export const getApiBaseUrl = (): string => runtimeBaseUrl;
@@ -46,7 +62,6 @@ const httpClient = axios.create({
   headers: {
     Accept: 'application/json',
   },
-  withCredentials: true,
   timeout: 15000,
 });
 
@@ -94,8 +109,42 @@ httpClient.interceptors.response.use(
   async (error: unknown) => {
     const axiosError = toAxiosLikeError(error);
     const config = (axiosError?.config || {}) as HttpRequestConfig;
-
     const status = axiosError?.response?.status;
+
+    const requestUrl = String(config.url || '');
+    const isAuthRefreshRequest = requestUrl.includes('/api/auth/refresh');
+    const isAuthRequired = config.requiresAuth !== false;
+
+    if (
+      status === 401 &&
+      isAuthRequired &&
+      !isAuthRefreshRequest &&
+      !config._retriedAfterAuthRefresh &&
+      authRefreshHandler &&
+      axiosError?.config
+    ) {
+      try {
+        if (!authRefreshInFlight) {
+          authRefreshInFlight = authRefreshHandler().finally(() => {
+            authRefreshInFlight = null;
+          });
+        }
+
+        const nextAccessToken = await authRefreshInFlight;
+        if (nextAccessToken) {
+          config._retriedAfterAuthRefresh = true;
+          const headers = (axiosError.config.headers || {}) as Record<string, unknown>;
+          axiosError.config.headers = {
+            ...headers,
+            Authorization: `Bearer ${nextAccessToken}`,
+          };
+          return httpClient.request(axiosError.config as never);
+        }
+      } catch {
+        // Fall through to standard error mapping / unauthorized handling.
+      }
+    }
+
     const retryable =
       !status || status >= 500 || axiosError?.code === 'ECONNABORTED';
     const retryCount = config._retryCount || 0;
@@ -221,12 +270,16 @@ export const mapAxiosError = (error: unknown) => {
   const responseData = axiosLike.response?.data;
   const apiErrorCode = getApiErrorCode(responseData);
   const apiErrorMessage = (getApiErrorMessage(responseData) || '').toLowerCase();
+  const requestRequiresAuth =
+    ((axiosLike.config || {}) as HttpRequestConfig).requiresAuth !== false;
 
   if (status === 401) {
-    try {
-      unauthorizedHandler?.();
-    } catch (_error) {
-      // preserve original error mapping
+    if (requestRequiresAuth) {
+      try {
+        unauthorizedHandler?.();
+      } catch (_error) {
+        // preserve original error mapping
+      }
     }
     return createAppError({
       kind: 'Unauthorized',
@@ -241,10 +294,12 @@ export const mapAxiosError = (error: unknown) => {
       apiErrorCode === 'FORBIDDEN' &&
       apiErrorMessage.includes('invalid token')
     ) {
-      try {
-        unauthorizedHandler?.();
-      } catch (_error) {
-        // preserve original error mapping
+      if (requestRequiresAuth) {
+        try {
+          unauthorizedHandler?.();
+        } catch (_error) {
+          // preserve original error mapping
+        }
       }
       return createAppError({
         kind: 'Unauthorized',

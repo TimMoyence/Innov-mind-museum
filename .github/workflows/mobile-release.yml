@@ -1,0 +1,221 @@
+name: mobile-release
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'museum-frontend/**'
+      - 'museum-backend/**'
+      - '.github/workflows/mobile-release.yml'
+  push:
+    branches: ['main']
+    tags: ['v*']
+    paths:
+      - 'museum-frontend/**'
+      - 'museum-backend/**'
+      - '.github/workflows/mobile-release.yml'
+
+jobs:
+  quality-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: museum-frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Check OpenAPI Typegen Sync
+        run: npm run check:openapi-types
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+  quality-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: museum-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: museum-backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: OpenAPI Spec Validate
+        run: pnpm run openapi:validate
+
+      - name: OpenAPI Contract (spec-backed)
+        run: pnpm run test:contract:openapi
+
+      - name: Tests
+        run: pnpm test
+
+  build-preview:
+    if: ${{ !startsWith(github.ref, 'refs/tags/v') && secrets.EXPO_TOKEN != '' }}
+    needs: [quality-frontend, quality-backend]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: museum-frontend
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_API_BASE_URL_STAGING: ${{ secrets.EXPO_PUBLIC_API_BASE_URL_STAGING }}
+      EXPO_PUBLIC_API_BASE_URL_PROD: ${{ secrets.EXPO_PUBLIC_API_BASE_URL_PROD }}
+      EXPO_PUBLIC_EAS_PROJECT_ID: ${{ secrets.EXPO_PUBLIC_EAS_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Validate preview build env
+        run: |
+          test -n "$EXPO_PUBLIC_API_BASE_URL_STAGING"
+          test -n "$EXPO_PUBLIC_API_BASE_URL_PROD"
+          test -n "$EXPO_PUBLIC_EAS_PROJECT_ID"
+
+      - name: Setup Expo/EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build Android preview
+        run: npx eas build --platform android --profile preview --non-interactive --no-wait
+
+      - name: Build iOS preview
+        run: npx eas build --platform ios --profile preview --non-interactive --no-wait
+
+  build-production:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.EXPO_TOKEN != '' }}
+    needs: [quality-frontend, quality-backend]
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: museum-frontend
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_API_BASE_URL_STAGING: ${{ secrets.EXPO_PUBLIC_API_BASE_URL_STAGING }}
+      EXPO_PUBLIC_API_BASE_URL_PROD: ${{ secrets.EXPO_PUBLIC_API_BASE_URL_PROD }}
+      EXPO_PUBLIC_EAS_PROJECT_ID: ${{ secrets.EXPO_PUBLIC_EAS_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Validate production build env
+        run: |
+          test -n "$EXPO_PUBLIC_API_BASE_URL_STAGING"
+          test -n "$EXPO_PUBLIC_API_BASE_URL_PROD"
+          test -n "$EXPO_PUBLIC_EAS_PROJECT_ID"
+
+      - name: Setup Expo/EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build Android production
+        run: npx eas build --platform android --profile production --non-interactive --no-wait
+
+      - name: Build iOS production
+        run: npx eas build --platform ios --profile production --non-interactive --no-wait
+
+  submit-production:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.EXPO_TOKEN != '' }}
+    needs: build-production
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: museum-frontend
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_API_BASE_URL_STAGING: ${{ secrets.EXPO_PUBLIC_API_BASE_URL_STAGING }}
+      EXPO_PUBLIC_API_BASE_URL_PROD: ${{ secrets.EXPO_PUBLIC_API_BASE_URL_PROD }}
+      EXPO_PUBLIC_EAS_PROJECT_ID: ${{ secrets.EXPO_PUBLIC_EAS_PROJECT_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Validate production submit env
+        run: |
+          test -n "$EXPO_PUBLIC_API_BASE_URL_PROD"
+          test -n "$EXPO_PUBLIC_EAS_PROJECT_ID"
+          test -n "$APPLE_ID"
+          test -n "$ASC_APP_ID"
+          test -n "$APPLE_TEAM_ID"
+          test -n "$GOOGLE_SERVICE_ACCOUNT_JSON"
+
+      - name: Setup Expo/EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Prepare Google Play service account key
+        run: |
+          mkdir -p .secrets
+          echo "$GOOGLE_SERVICE_ACCOUNT_JSON" > .secrets/google-service-account.json
+
+      - name: Submit Android latest production build
+        run: npx eas submit --platform android --profile production --latest --non-interactive
+
+      - name: Submit iOS latest production build
+        run: npx eas submit --platform ios --profile production --latest --non-interactive

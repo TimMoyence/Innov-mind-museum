@@ -2,6 +2,22 @@
 
 _Application mobile interactive basée sur LangChain, GPT‑4 et reconnaissance visuelle_
 
+## ⚠️ Current Implementation Notes (Repo Reality)
+
+This README includes product/vision material and some older architecture wording.
+
+For the current operational source of truth, use:
+- backend runtime/API doc: `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-backend/README.md`
+- deployment runbook (local / preprod / prod): `/Users/Tim/Desktop/all/dev/Pro/InnovMind/docs/DEPLOYMENT_STEP_BY_STEP.md`
+- backend OpenAPI spec (active routes): `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-backend/openapi/openapi.json`
+- env templates:
+  - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-backend/.env.local.example`
+  - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-backend/.env.staging.example`
+  - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-backend/.env.production.example`
+  - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/.env.local.example`
+  - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/.env.preview.example`
+  - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/.env.production.example`
+
 ---
 
 ## 📌 Présentation

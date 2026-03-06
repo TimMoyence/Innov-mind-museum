@@ -1,52 +1,63 @@
 import { httpRequest } from './http';
 import { AUTH_ENDPOINTS, buildAuthUrl } from './apiConfig';
-import { clearAccessToken, setAccessToken } from './tokenStore';
+import { clearAccessToken } from './tokenStore';
+import type { components, paths } from '@/shared/api/generated/openapi';
+import {
+  openApiRequest,
+  type OpenApiJsonRequestBodyFor,
+} from '@/shared/api/openapiClient';
 
-export interface RegisterPayload {
-  email: string;
-  password: string;
-  firstname: string;
-  lastname: string;
-}
+type Schemas = components['schemas'];
+type RegisterPayload = OpenApiJsonRequestBodyFor<'/api/auth/register', 'post'>;
+type AuthMeResponse =
+  paths['/api/auth/me']['get']['responses'][200]['content']['application/json'];
+type AuthLogoutResponse =
+  paths['/api/auth/logout']['post']['responses'][200]['content']['application/json'];
 
-export interface LoginResponse {
-  token?: string;
-  [key: string]: unknown;
-}
+export type LoginResponse = Schemas['AuthSessionResponse'];
 
 export const authService = {
-  async register(payload: RegisterPayload): Promise<unknown> {
-    return httpRequest<unknown>(buildAuthUrl(AUTH_ENDPOINTS.register), {
-      method: 'POST',
+  async register(payload: RegisterPayload): Promise<void> {
+    return openApiRequest({
+      path: '/api/auth/register',
+      method: 'post',
       body: JSON.stringify(payload),
+      requiresAuth: false,
+    }).then(() => undefined);
+  },
+
+  async login(email: string, password: string): Promise<LoginResponse> {
+    return openApiRequest({
+      path: '/api/auth/login',
+      method: 'post',
+      body: JSON.stringify({ email, password }),
       requiresAuth: false,
     });
   },
 
-  async login(email: string, password: string): Promise<LoginResponse> {
-    const response = await httpRequest<LoginResponse>(
-      buildAuthUrl(AUTH_ENDPOINTS.login),
-      {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-        requiresAuth: false,
-      },
-    );
-
-    if (response?.token) {
-      setAccessToken(response.token);
-    }
-
-    return response;
+  async refresh(refreshToken: string): Promise<LoginResponse> {
+    return openApiRequest({
+      path: '/api/auth/refresh',
+      method: 'post',
+      body: JSON.stringify({ refreshToken }),
+      requiresAuth: false,
+    });
   },
 
-  async logout(): Promise<unknown> {
-    const response = await httpRequest<unknown>(
-      buildAuthUrl(AUTH_ENDPOINTS.logout),
-      {
-        method: 'POST',
-      },
-    );
+  async me(): Promise<AuthMeResponse> {
+    return openApiRequest({
+      path: '/api/auth/me',
+      method: 'get',
+    });
+  },
+
+  async logout(refreshToken?: string | null): Promise<AuthLogoutResponse> {
+    const response = await openApiRequest({
+      path: '/api/auth/logout',
+      method: 'post',
+      body: JSON.stringify({ refreshToken: refreshToken || undefined }),
+      requiresAuth: false,
+    });
 
     clearAccessToken();
 

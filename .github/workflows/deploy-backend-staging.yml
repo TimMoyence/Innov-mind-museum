@@ -1,0 +1,114 @@
+name: deploy-backend-staging
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['staging']
+    paths:
+      - 'museum-backend/**'
+      - '.github/workflows/deploy-backend-staging.yml'
+
+jobs:
+  backend-quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: museum-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: museum-backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: OpenAPI Spec Validate
+        run: pnpm run openapi:validate
+
+      - name: OpenAPI Contract (spec-backed)
+        run: pnpm run test:contract:openapi
+
+      - name: Test
+        run: pnpm test
+
+  build-and-deploy-staging:
+    needs: backend-quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node (for post-deploy smoke)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USER }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build & Push staging image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./museum-backend
+          file: ./museum-backend/deploy/Dockerfile.prod
+          push: true
+          tags: |
+            ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging:latest
+            ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging:${{ github.sha }}
+
+      - name: Deploy on VPS staging service
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          script: |
+            set -e
+            cd /srv/museum
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin || true
+            docker compose pull backend-staging
+            docker compose up -d --remove-orphans backend-staging
+
+      - name: Validate staging smoke secrets
+        env:
+          STAGING_SMOKE_API_BASE_URL: ${{ secrets.STAGING_SMOKE_API_BASE_URL }}
+          STAGING_SMOKE_TEST_EMAIL: ${{ secrets.STAGING_SMOKE_TEST_EMAIL }}
+          STAGING_SMOKE_TEST_PASSWORD: ${{ secrets.STAGING_SMOKE_TEST_PASSWORD }}
+        run: |
+          test -n "$STAGING_SMOKE_API_BASE_URL"
+          test -n "$STAGING_SMOKE_TEST_EMAIL"
+          test -n "$STAGING_SMOKE_TEST_PASSWORD"
+
+      - name: Post-deploy smoke test (staging)
+        working-directory: museum-backend
+        env:
+          SMOKE_API_BASE_URL: ${{ secrets.STAGING_SMOKE_API_BASE_URL }}
+          SMOKE_TEST_EMAIL: ${{ secrets.STAGING_SMOKE_TEST_EMAIL }}
+          SMOKE_TEST_PASSWORD: ${{ secrets.STAGING_SMOKE_TEST_PASSWORD }}
+          SMOKE_TIMEOUT_MS: '20000'
+        run: node ./scripts/smoke-api.cjs

@@ -14,7 +14,10 @@ function AuthenticationGuard({ children }: { children: ReactNode }) {
 
 export default function RootLayout() {
   useEffect(() => {
-    void applyRuntimeSettings();
+    applyRuntimeSettings().catch((error) => {
+      // eslint-disable-next-line no-console
+      console.error('Failed to apply runtime settings', error);
+    });
   }, []);
 
   return (
@@ -31,6 +34,11 @@ export default function RootLayout() {
             }}
           />
           <Stack.Screen name="(stack)/settings" />
+          <Stack.Screen name="(stack)/preferences" />
+          <Stack.Screen name="(stack)/guided-museum-mode" />
+          <Stack.Screen name="(stack)/discover" />
+          <Stack.Screen name="(stack)/support" />
+          <Stack.Screen name="(stack)/privacy" />
           <Stack.Screen name="(stack)/onboarding" />
           <Stack.Screen name="+not-found" />
         </Stack>

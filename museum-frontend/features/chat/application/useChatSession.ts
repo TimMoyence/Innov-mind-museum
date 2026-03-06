@@ -13,6 +13,10 @@ export interface ChatUiMessage {
   text: string;
   createdAt: string;
   imageRef?: string | null;
+  image?: {
+    url: string;
+    expiresAt: string;
+  } | null;
 }
 
 const sortByTime = (messages: ChatUiMessage[]): ChatUiMessage[] => {
@@ -45,6 +49,7 @@ export const useChatSession = (sessionId: string) => {
             text: message.text || '',
             createdAt: message.createdAt,
             imageRef: message.imageRef,
+            image: message.image ?? null,
           })),
         ),
       );
@@ -70,17 +75,24 @@ export const useChatSession = (sessionId: string) => {
   }, [loadSession]);
 
   const sendMessage = useCallback(
-    async (params: { text?: string; imageUri?: string }) => {
+    async (params: { text?: string; imageUri?: string; audioUri?: string; audioBlob?: Blob }) => {
       const trimmedText = params.text?.trim();
-      if (!trimmedText && !params.imageUri) {
-        return;
+      if (!trimmedText && !params.imageUri && !params.audioUri && !params.audioBlob) {
+        return false;
       }
 
       const optimisticMessage: ChatUiMessage = {
         id: `${Date.now()}-user`,
         role: 'user',
-        text: trimmedText || (params.imageUri ? '[Image sent]' : ''),
+        text:
+          trimmedText ||
+          (params.audioUri || params.audioBlob
+            ? '[Voice message]'
+            : params.imageUri
+              ? '[Image sent]'
+              : ''),
         createdAt: new Date().toISOString(),
+        image: null,
       };
 
       setMessages((prev) => sortByTime([...prev, optimisticMessage]));
@@ -88,14 +100,23 @@ export const useChatSession = (sessionId: string) => {
       setError(null);
 
       try {
-        const response = await chatApi.postMessage({
-          sessionId,
-          text: trimmedText,
-          imageUri: params.imageUri,
-          museumMode,
-          guideLevel,
-          locale,
-        });
+        const response = params.audioUri
+          ? await chatApi.postAudioMessage({
+              sessionId,
+              audioUri: params.audioUri,
+              audioBlob: params.audioBlob,
+              museumMode,
+              guideLevel,
+              locale,
+            })
+          : await chatApi.postMessage({
+              sessionId,
+              text: trimmedText,
+              imageUri: params.imageUri,
+              museumMode,
+              guideLevel,
+              locale,
+            });
 
         const assistantMessage: ChatUiMessage = {
           id: response.message.id,
@@ -105,8 +126,13 @@ export const useChatSession = (sessionId: string) => {
         };
 
         setMessages((prev) => sortByTime([...prev, assistantMessage]));
+        return true;
       } catch (sendError) {
+        setMessages((prev) =>
+          prev.filter((message) => message.id !== optimisticMessage.id),
+        );
         setError(getErrorMessage(sendError));
+        return false;
       } finally {
         setIsSending(false);
       }
@@ -115,15 +141,33 @@ export const useChatSession = (sessionId: string) => {
   );
 
   const grouped = useMemo(() => sortByTime(messages), [messages]);
+  const isEmpty = grouped.length === 0;
+
+  const refreshMessageImageUrl = useCallback(async (messageId: string) => {
+    const signed = await chatApi.getMessageImageUrl(messageId);
+    setMessages((prev) =>
+      prev.map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              image: signed,
+            }
+          : message,
+      ),
+    );
+    return signed;
+  }, []);
 
   return {
     messages: grouped,
+    isEmpty,
     isLoading,
     isSending,
     error,
     clearError: () => setError(null),
     reload: loadSession,
     sendMessage,
+    refreshMessageImageUrl,
     locale,
   };
 };

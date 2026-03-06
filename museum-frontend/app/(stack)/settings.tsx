@@ -1,200 +1,299 @@
 import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
+  ScrollView,
   StyleSheet,
-  Switch,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { router } from 'expo-router';
 
-import {
-  GuideLevel,
-  loadRuntimeSettings,
-  saveDefaultLocale,
-  saveDefaultMuseumMode,
-  saveGuideLevel,
-} from '@/features/settings/runtimeSettings';
 import { useAuth } from '@/context/AuthContext';
+import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
+import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
+import { GlassCard } from '@/shared/ui/GlassCard';
+import { LiquidScreen } from '@/shared/ui/LiquidScreen';
+import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
 
-const GUIDE_LEVELS: GuideLevel[] = ['beginner', 'intermediate', 'expert'];
+type SettingsRoute =
+  | '/(stack)/preferences'
+  | '/(stack)/privacy'
+  | '/(stack)/support'
+  | '/(stack)/guided-museum-mode'
+  | '/(stack)/onboarding'
+  | '/(tabs)/home';
 
 export default function SettingsScreen() {
   const { logout } = useAuth();
   const [locale, setLocale] = useState('en-US');
   const [museumMode, setMuseumMode] = useState(true);
-  const [guideLevel, setGuideLevel] = useState<GuideLevel>('beginner');
-  const [status, setStatus] = useState('');
+  const [guideLevel, setGuideLevel] = useState<'beginner' | 'intermediate' | 'expert'>('beginner');
+  const [isLoadingPrefs, setIsLoadingPrefs] = useState(true);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
-    loadRuntimeSettings().then((settings) => {
-      setLocale(settings.defaultLocale);
-      setMuseumMode(settings.defaultMuseumMode);
-      setGuideLevel(settings.guideLevel);
-    });
+    loadRuntimeSettings()
+      .then((settings) => {
+        setLocale(settings.defaultLocale);
+        setMuseumMode(settings.defaultMuseumMode);
+        setGuideLevel(settings.guideLevel);
+      })
+      .finally(() => {
+        setIsLoadingPrefs(false);
+      });
   }, []);
 
-  const save = async () => {
-    await Promise.all([
-      saveDefaultLocale(locale),
-      saveDefaultMuseumMode(museumMode),
-      saveGuideLevel(guideLevel),
-    ]);
+  const open = (path: SettingsRoute) => {
+    router.push(path);
+  };
 
-    setStatus(`Saved (${locale.trim() || 'en-US'})`);
+  const onLogout = async () => {
+    if (isSigningOut) {
+      return;
+    }
+
+    setIsSigningOut(true);
+    try {
+      await logout();
+    } finally {
+      setIsSigningOut(false);
+    }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Profile & Guide Settings</Text>
-
-      <Text style={styles.label}>Language (locale)</Text>
-      <Text style={styles.hint}>
-        Applies to AI response language and chat timestamp formatting.
-      </Text>
-      <TextInput
-        value={locale}
-        onChangeText={setLocale}
-        placeholder='en-US'
-        autoCapitalize='none'
-        style={styles.input}
-      />
-
-      <View style={styles.switchRow}>
-        <Text style={styles.label}>Guided Museum Mode</Text>
-        <Switch value={museumMode} onValueChange={setMuseumMode} />
+    <LiquidScreen background={pickMuseumBackground(4)} contentStyle={styles.screen}>
+      <View style={styles.menuWrap}>
+        <FloatingContextMenu
+          actions={[
+            {
+              id: 'prefs',
+              icon: 'options-outline',
+              label: 'Preferences',
+              onPress: () => open('/(stack)/preferences'),
+            },
+            {
+              id: 'privacy',
+              icon: 'shield-checkmark-outline',
+              label: 'Privacy',
+              onPress: () => open('/(stack)/privacy'),
+            },
+            {
+              id: 'support',
+              icon: 'headset-outline',
+              label: 'Support',
+              onPress: () => open('/(stack)/support'),
+            },
+          ]}
+        />
       </View>
 
-      <Text style={styles.label}>AI Guide Level</Text>
-      <View style={styles.levelRow}>
-        {GUIDE_LEVELS.map((level) => (
-          <Pressable
-            key={level}
-            style={[
-              styles.levelButton,
-              guideLevel === level && styles.levelButtonActive,
-            ]}
-            onPress={() => setGuideLevel(level)}
-          >
-            <Text
-              style={[
-                styles.levelButtonText,
-                guideLevel === level && styles.levelButtonTextActive,
-              ]}
-            >
-              {level}
-            </Text>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <GlassCard style={styles.heroCard} intensity={60}>
+          <Text style={styles.title}>Settings</Text>
+          <Text style={styles.subtitle}>
+            Manage your MuseumIA preferences, privacy information, and support access.
+          </Text>
+          <Text style={styles.buildNotice}>
+            Backend environment is build-driven (local/preview/production), not user-selectable.
+          </Text>
+        </GlassCard>
+
+        <GlassCard style={styles.card} intensity={56}>
+          <Text style={styles.cardTitle}>Current Preferences</Text>
+          {isLoadingPrefs ? (
+            <View style={styles.loadingRow}>
+              <ActivityIndicator color={liquidColors.primary} />
+              <Text style={styles.loadingText}>Loading preferences…</Text>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.metaLine}>Locale: {locale}</Text>
+              <Text style={styles.metaLine}>Guided mode: {museumMode ? 'On' : 'Off'}</Text>
+              <Text style={styles.metaLine}>Guide level: {guideLevel}</Text>
+            </>
+          )}
+          <Pressable style={styles.primaryButton} onPress={() => open('/(stack)/preferences')}>
+            <Text style={styles.primaryButtonText}>Open Preferences</Text>
           </Pressable>
-        ))}
-      </View>
+        </GlassCard>
 
-      {status ? <Text style={styles.status}>{status}</Text> : null}
+        <GlassCard style={styles.card} intensity={52}>
+          <Text style={styles.cardTitle}>Guided Museum Experience</Text>
+          <Text style={styles.cardBody}>
+            Understand how guided mode changes explanations, next-stop suggestions, and response depth
+            during museum visits.
+          </Text>
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() => open('/(stack)/guided-museum-mode')}
+          >
+            <Text style={styles.secondaryButtonText}>Guided Museum Mode Info</Text>
+          </Pressable>
+        </GlassCard>
 
-      <Pressable style={styles.button} onPress={save}>
-        <Text style={styles.buttonText}>Save Settings</Text>
-      </Pressable>
+        <GlassCard style={styles.card} intensity={52}>
+          <Text style={styles.cardTitle}>Compliance & Help</Text>
+          <View style={styles.linkList}>
+            <Pressable style={styles.linkRow} onPress={() => open('/(stack)/privacy')}>
+              <Text style={styles.linkTitle}>Privacy (RGPD)</Text>
+              <Text style={styles.linkDescription}>Read data processing, rights, and legal contacts.</Text>
+            </Pressable>
+            <Pressable style={styles.linkRow} onPress={() => open('/(stack)/support')}>
+              <Text style={styles.linkTitle}>Support</Text>
+              <Text style={styles.linkDescription}>
+                Contact support through Instagram or Telegram channels.
+              </Text>
+            </Pressable>
+            <Pressable style={styles.linkRow} onPress={() => open('/(stack)/onboarding')}>
+              <Text style={styles.linkTitle}>Onboarding Help</Text>
+              <Text style={styles.linkDescription}>
+                Revisit usage flow, practical tips, and help shortcuts.
+              </Text>
+            </Pressable>
+          </View>
+        </GlassCard>
 
-      <Pressable style={styles.secondaryButton} onPress={() => router.replace('/(tabs)/home')}>
-        <Text style={styles.secondaryButtonText}>Back to Home</Text>
-      </Pressable>
+        <View style={styles.footerRow}>
+          <Pressable style={styles.secondaryButton} onPress={() => open('/(tabs)/home')}>
+            <Text style={styles.secondaryButtonText}>Back to Home</Text>
+          </Pressable>
 
-      <Pressable style={styles.logoutButton} onPress={() => void logout()}>
-        <Text style={styles.logoutButtonText}>Sign out</Text>
-      </Pressable>
-    </View>
+          <Pressable
+            style={styles.logoutButton}
+            onPress={() => void onLogout()}
+            disabled={isSigningOut}
+          >
+            {isSigningOut ? (
+              <ActivityIndicator color='#B91C1C' />
+            ) : (
+              <Text style={styles.logoutButtonText}>Sign out</Text>
+            )}
+          </Pressable>
+        </View>
+      </ScrollView>
+    </LiquidScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
+    paddingTop: 28,
+    paddingHorizontal: 18,
+    paddingBottom: 16,
+  },
+  menuWrap: {
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  scroll: {
     flex: 1,
-    backgroundColor: '#FAF5FF',
-    padding: 24,
+  },
+  scrollContent: {
     gap: 12,
-    justifyContent: 'center',
+    paddingBottom: 22,
+  },
+  heroCard: {
+    padding: 18,
+    gap: 8,
   },
   title: {
     fontSize: 30,
     fontWeight: '700',
-    color: '#4C1D95',
-    marginBottom: 8,
+    color: liquidColors.textPrimary,
   },
-  label: {
+  subtitle: {
+    color: liquidColors.textSecondary,
+    lineHeight: 20,
     fontSize: 14,
-    fontWeight: '600',
-    color: '#5B21B6',
   },
-  hint: {
+  buildNotice: {
+    color: '#1E3A8A',
     fontSize: 12,
-    color: '#6D28D9',
-    marginTop: -4,
-    marginBottom: 2,
+    fontWeight: '700',
+    lineHeight: 18,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#C4B5FD',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 12,
+  card: {
+    padding: 16,
+    gap: 10,
   },
-  switchRow: {
-    marginTop: 8,
+  cardTitle: {
+    color: liquidColors.textPrimary,
+    fontWeight: '700',
+    fontSize: 17,
+  },
+  cardBody: {
+    color: liquidColors.textSecondary,
+    lineHeight: 20,
+    fontSize: 13,
+  },
+  loadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  levelRow: {
-    flexDirection: 'row',
     gap: 8,
   },
-  levelButton: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#C4B5FD',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    backgroundColor: '#FFFFFF',
+  loadingText: {
+    color: liquidColors.textSecondary,
+    fontSize: 13,
   },
-  levelButtonActive: {
-    backgroundColor: '#4C1D95',
-    borderColor: '#4C1D95',
-  },
-  levelButtonText: {
-    color: '#4C1D95',
+  metaLine: {
+    color: liquidColors.textPrimary,
     fontWeight: '600',
+    fontSize: 13,
   },
-  levelButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  status: {
-    color: '#166534',
-    fontWeight: '600',
-  },
-  button: {
-    marginTop: 14,
-    backgroundColor: '#4C1D95',
+  primaryButton: {
+    marginTop: 2,
     borderRadius: 12,
-    paddingVertical: 14,
+    backgroundColor: liquidColors.primary,
     alignItems: 'center',
+    paddingVertical: 12,
   },
-  buttonText: {
+  primaryButtonText: {
     color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 16,
+    fontWeight: '700',
+    fontSize: 14,
   },
   secondaryButton: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#C4B5FD',
+    borderColor: 'rgba(148,163,184,0.5)',
     paddingVertical: 12,
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.68)',
+    paddingHorizontal: 12,
   },
   secondaryButtonText: {
-    color: '#4C1D95',
-    fontWeight: '600',
-    fontSize: 15,
+    color: liquidColors.textPrimary,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  linkList: {
+    gap: 8,
+  },
+  linkRow: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.32)',
+    backgroundColor: 'rgba(255,255,255,0.58)',
+    padding: 12,
+    gap: 4,
+  },
+  linkTitle: {
+    color: liquidColors.textPrimary,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  linkDescription: {
+    color: liquidColors.textSecondary,
+    lineHeight: 18,
+    fontSize: 12,
+  },
+  footerRow: {
+    gap: 10,
   },
   logoutButton: {
     borderRadius: 12,
@@ -202,7 +301,7 @@ const styles = StyleSheet.create({
     borderColor: '#FCA5A5',
     paddingVertical: 12,
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: 'rgba(254,242,242,0.82)',
   },
   logoutButtonText: {
     color: '#B91C1C',

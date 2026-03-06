@@ -4,12 +4,17 @@ import { router } from 'expo-router';
 
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
 import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
-import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { getErrorMessage } from '@/shared/lib/errors';
+import { ErrorNotice } from '@/shared/ui/ErrorNotice';
+import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
+import { GlassCard } from '@/shared/ui/GlassCard';
+import { LiquidScreen } from '@/shared/ui/LiquidScreen';
+import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
 
 export default function HomeScreen() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [menuStatus, setMenuStatus] = useState<string | null>(null);
   const [locale, setLocale] = useState('en-US');
   const [museumMode, setMuseumMode] = useState(true);
 
@@ -24,7 +29,9 @@ export default function HomeScreen() {
       });
   }, []);
 
-  const startConversation = async () => {
+  const startConversation = async (
+    intent: 'default' | 'camera' | 'audio' = 'default',
+  ) => {
     setIsCreating(true);
     setError(null);
 
@@ -35,7 +42,15 @@ export default function HomeScreen() {
         museumMode: settings.defaultMuseumMode,
       });
 
-      router.push(`/(stack)/chat/${response.session.id}`);
+      const suffix = intent === 'default' ? '' : `?intent=${intent}`;
+      router.push(`/(stack)/chat/${response.session.id}${suffix}`);
+      setMenuStatus(
+        intent === 'camera'
+          ? 'Lens conversation opened'
+          : intent === 'audio'
+            ? 'Audio conversation opened'
+            : 'Conversation opened',
+      );
     } catch (createError) {
       setError(getErrorMessage(createError));
     } finally {
@@ -44,82 +59,147 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>MuseumIA Companion</Text>
-      <Text style={styles.subtitle}>
-        Discuss artworks with an AI guide, add an image, and get museum-ready storytelling.
-      </Text>
-      <Text style={styles.settingsNote}>
-        Language: {locale} • Guided mode: {museumMode ? 'On' : 'Off'}
-      </Text>
+    <LiquidScreen background={pickMuseumBackground(0)} contentStyle={styles.screen}>
+      <View style={styles.menuRow}>
+        <FloatingContextMenu
+          actions={[
+            {
+              id: 'discover',
+              icon: 'sparkles-outline',
+              label: 'Discover',
+              onPress: () => {
+                setMenuStatus('Opening Discover');
+                router.push('/(stack)/discover');
+              },
+            },
+            {
+              id: 'lens',
+              icon: 'camera-outline',
+              label: 'Lens',
+              onPress: () => {
+                setMenuStatus('Opening Lens');
+                void startConversation('camera');
+              },
+            },
+            {
+              id: 'audio',
+              icon: 'musical-notes-outline',
+              label: 'Audio',
+              onPress: () => {
+                setMenuStatus('Opening Audio');
+                void startConversation('audio');
+              },
+            },
+          ]}
+        />
+      </View>
+
+      {menuStatus ? <Text style={styles.menuStatus}>{menuStatus}</Text> : null}
+
+      <GlassCard style={styles.heroCard} intensity={62}>
+        <Text style={styles.title}>MuseumIA Companion</Text>
+        <Text style={styles.subtitle}>
+          Explore artworks, monuments, and heritage with a focused AI guide.
+        </Text>
+        <Text style={styles.settingsNote}>
+          Language: {locale} • Guided mode: {museumMode ? 'On' : 'Off'}
+        </Text>
+      </GlassCard>
 
       {error ? <ErrorNotice message={error} onDismiss={() => setError(null)} /> : null}
 
-      <Pressable style={styles.primaryButton} onPress={startConversation} disabled={isCreating}>
+      <Pressable
+        style={styles.primaryButton}
+        onPress={() => void startConversation('default')}
+        disabled={isCreating}
+      >
         {isCreating ? (
-          <ActivityIndicator color="#FFFFFF" />
+          <ActivityIndicator color='#FFFFFF' />
         ) : (
           <Text style={styles.primaryButtonText}>Start Conversation</Text>
         )}
       </Pressable>
 
-      <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/onboarding')}>
-        <Text style={styles.secondaryButtonText}>Onboarding</Text>
-      </Pressable>
-
-      <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/settings')}>
-        <Text style={styles.secondaryButtonText}>Settings</Text>
-      </Pressable>
-    </View>
+      <View style={styles.secondaryRow}>
+        <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/onboarding')}>
+          <Text style={styles.secondaryButtonText}>Onboarding</Text>
+        </Pressable>
+        <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/settings')}>
+          <Text style={styles.secondaryButtonText}>Settings</Text>
+        </Pressable>
+      </View>
+    </LiquidScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 24,
+  screen: {
+    paddingHorizontal: 22,
     justifyContent: 'center',
-    gap: 14,
+    gap: 16,
+  },
+  menuRow: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  menuStatus: {
+    textAlign: 'center',
+    color: '#1E3A8A',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  heroCard: {
+    padding: 20,
+    gap: 8,
   },
   title: {
-    fontSize: 34,
+    fontSize: 36,
     fontWeight: '700',
-    color: '#0F172A',
+    color: liquidColors.textPrimary,
   },
   subtitle: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#334155',
+    color: liquidColors.textSecondary,
   },
   settingsNote: {
     fontSize: 13,
-    color: '#0F766E',
+    color: '#1E3A8A',
     fontWeight: '600',
   },
   primaryButton: {
-    marginTop: 12,
-    backgroundColor: '#0F766E',
-    borderRadius: 12,
+    marginTop: 6,
+    backgroundColor: liquidColors.primary,
+    borderRadius: 16,
     paddingVertical: 14,
     alignItems: 'center',
+    shadowColor: '#1E3A8A',
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 10 },
   },
   primaryButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  secondaryRow: {
+    flexDirection: 'row',
+    gap: 10,
   },
   secondaryButton: {
+    flex: 1,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 12,
+    borderColor: 'rgba(148,163,184,0.5)',
+    borderRadius: 14,
     paddingVertical: 12,
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.64)',
   },
   secondaryButtonText: {
-    color: '#0F172A',
+    color: liquidColors.textPrimary,
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });

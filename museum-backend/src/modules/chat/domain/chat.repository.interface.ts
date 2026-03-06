@@ -31,6 +31,11 @@ export interface SessionMessagesPage {
   hasMore: boolean;
 }
 
+export interface ChatMessageWithSessionOwnership {
+  message: ChatMessage;
+  session: ChatSession;
+}
+
 export interface ListSessionsParams {
   userId: number;
   limit: number;
@@ -56,6 +61,8 @@ export interface ChatSessionsPage {
 export interface ChatRepository {
   createSession(input: CreateSessionInput): Promise<ChatSession>;
   getSessionById(sessionId: string): Promise<ChatSession | null>;
+  getMessageById(messageId: string): Promise<ChatMessageWithSessionOwnership | null>;
+  deleteSessionIfEmpty(sessionId: string): Promise<boolean>;
   persistMessage(input: PersistMessageInput): Promise<ChatMessage>;
   persistArtworkMatch(input: PersistArtworkMatchInput): Promise<void>;
   listSessionMessages(params: ListSessionMessagesParams): Promise<SessionMessagesPage>;

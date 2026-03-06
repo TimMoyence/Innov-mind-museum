@@ -1,16 +1,10 @@
 import compression from 'compression';
-import pgSession from 'connect-pg-simple';
 import cors from 'cors';
 import express, { Express } from 'express';
-import session from 'express-session';
 import helmet from 'helmet';
-import passport from 'passport';
-import { Pool } from 'pg';
 
-import { configurePassport } from '@modules/auth/adapters/secondary/passport.config';
 import { buildChatService } from '@modules/chat';
 import { createApiRouter } from '@shared/routers/api.router';
-import legacyRouter from '@shared/routers/index.router';
 import { env } from '@src/config/env';
 import { AppDataSource } from '@src/data/db/data-source';
 import { errorHandler } from '@src/helpers/middleware/error.middleware';
@@ -51,7 +45,7 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   app.use(requestLoggerMiddleware);
 
   const corsOrigins: cors.CorsOptions['origin'] =
-    env.corsOrigins.length > 0 ? env.corsOrigins : true;
+    env.corsOrigins.length > 0 ? env.corsOrigins : isProd ? false : true;
 
   app.use(
     cors({
@@ -85,41 +79,6 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   app.use(express.json({ limit: env.jsonBodyLimit }));
   app.use(express.urlencoded({ extended: true, limit: env.jsonBodyLimit }));
 
-  let store: session.Store | undefined;
-  if (isProd && (process.env.SESS_USE_PG || 'true') === 'true') {
-    const PgSession = pgSession(session);
-    const pool = new Pool({
-      host: env.db.host,
-      port: env.db.port,
-      user: env.db.user,
-      password: env.db.password,
-      database: env.db.database,
-      max: env.db.poolMax,
-      ssl: false,
-    });
-    store = new PgSession({ pool, tableName: 'user_sessions' });
-  }
-
-  app.use(
-    session({
-      secret: env.auth.sessionSecret,
-      resave: false,
-      saveUninitialized: false,
-      store,
-      cookie: {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        domain: env.cookieDomain,
-      },
-    }) as unknown as express.RequestHandler,
-  );
-
-  configurePassport(passport);
-  app.use(passport.initialize());
-  app.use(passport.session());
-
   if (!isProd) {
     setupSwagger(app);
   }
@@ -128,7 +87,6 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   const healthCheck = options.healthCheck || createHealthCheck;
 
   app.use('/api', createApiRouter({ chatService, healthCheck }));
-  app.use('/api/v1', legacyRouter);
 
   app.use(errorHandler);
 

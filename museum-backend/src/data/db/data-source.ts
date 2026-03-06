@@ -1,12 +1,11 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 
-import { ImageInsightConversation } from '@IA/imageInsight/core/domain/imageInsightConversation.entity';
 import { User } from '@modules/auth/core/domain/user.entity';
+import { AuthRefreshToken } from '@modules/auth/core/domain/authRefreshToken.entity';
 import { ArtworkMatch } from '@modules/chat/domain/artworkMatch.entity';
 import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import { ChatSession } from '@modules/chat/domain/chatSession.entity';
-import { ImageInsightMessage } from '@modules/IA/imageInsight/core/domain/imageInsightMessage.entity';
 import { env } from '@src/config/env';
 
 export const AppDataSource = new DataSource({
@@ -18,8 +17,7 @@ export const AppDataSource = new DataSource({
   database: env.db.database,
   entities: [
     User,
-    ImageInsightConversation,
-    ImageInsightMessage,
+    AuthRefreshToken,
     ChatSession,
     ChatMessage,
     ArtworkMatch,

@@ -1,64 +1,109 @@
-# museum-ia backend
+# MuseumIA Backend
 
-Express 5 + TypeORM backend for MuseumIA.
+Express 5 + TypeORM backend for MuseumIA (mobile-first API).
+
+Current active backend surface:
+- `GET /api/health`
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/refresh`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+- `POST /api/chat/sessions`
+- `GET /api/chat/sessions`
+- `GET /api/chat/sessions/:id`
+- `DELETE /api/chat/sessions/:id`
+- `POST /api/chat/sessions/:id/messages`
+- `POST /api/chat/sessions/:id/audio`
+- `POST /api/chat/messages/:messageId/image-url`
+- `GET /api/chat/messages/:messageId/image`
+
+## Architecture Snapshot
+
+- Auth: `JWT-only` (access + refresh rotation)
+- Chat: session/message persistence with TypeORM + PostgreSQL
+- Media: image upload + signed image URLs for history rendering
+- Contracts: active OpenAPI spec in `openapi/openapi.json`
+- Swagger UI: `/api/docs` (loads the versioned OpenAPI spec)
 
 ## Prerequisites
 
 - Node.js 22+
+- `pnpm` 9.x
 - PostgreSQL 16+
-- npm (or pnpm if you prefer)
+- Docker (recommended for e2e tests)
 
-## Setup
+## Environment Setup
 
-```bash
-cp .env.example .env
-pnpm install
-```
-
-Update `.env` with database and LLM credentials.
-
-For local Postgres without credentials, keep `DB_USER=` and `DB_PASSWORD=` empty.
-Use `DB_PORT=5432` for native local Postgres, or `DB_PORT=5433` for the bundled docker-compose DB.
-Set `DB_SYNCHRONIZE=false` to keep schema changes under migration control.
-
-Note: this backend uses a `pnpm-lock.yaml`. Running `npm install` on an existing pnpm-managed `node_modules` can fail; prefer `pnpm install`.
-
-## Run
+Use environment-specific templates:
 
 ```bash
-npm run dev
+cp .env.local.example .env        # local dev
+# or
+cp .env.staging.example .env      # preprod/staging
+# or
+cp .env.production.example .env   # production
 ```
 
-Server endpoints:
+Legacy convenience file `./.env.example` still exists, but prefer the environment-specific templates.
 
-- `GET /api/health`
-- `POST /api/chat/sessions`
-- `POST /api/chat/sessions/:id/messages`
-- `GET /api/chat/sessions/:id`
-- Legacy endpoints under `/api/v1/*`
-
-## Quality checks
+## Install
 
 ```bash
-npm run lint
-npm run typecheck
-npm test
+pnpm install --frozen-lockfile
 ```
 
-## TypeORM migration commands
-
-Migration workflow is enabled and intended for development/production parity.
+## Run (Local)
 
 ```bash
-npm run migration:new -- --name=CreateChatSessionTable
-npm run migration:create -- --name=ManualFixForSessionIndexes
-npm run migration:show
-npm run migration:run
-npm run migration:revert
+pnpm run dev
 ```
 
-## Local docker stack
+## Quality Checks
 
 ```bash
-docker compose -f docker-compose.dev.yml up --build
+pnpm run lint
+pnpm run typecheck
+pnpm test
 ```
+
+## E2E (Postgres + Docker)
+
+```bash
+RUN_E2E=true pnpm test -- --watchman=false --runInBand tests/e2e/api.postgres.e2e.test.ts
+```
+
+## Migrations
+
+```bash
+pnpm run migration:show
+pnpm run migration:run
+pnpm run migration:revert
+```
+
+Create/generate migrations:
+
+```bash
+pnpm run migration:create -- --name=ManualChange
+pnpm run migration:generate -- --name=DescribeChange
+```
+
+## OpenAPI / Swagger
+
+- Source of truth: `openapi/openapi.json`
+- Swagger UI: `GET /api/docs`
+
+## Deployment
+
+Use the guided runbook:
+
+- `/Users/Tim/Desktop/all/dev/Pro/InnovMind/docs/DEPLOYMENT_STEP_BY_STEP.md`
+
+This includes:
+- local/preprod/prod env setup
+- backend GHCR/VPS Docker deploy
+- migrations
+- staging/prod smoke tests
+- EAS mobile preview/prod build and submission
+- rollback and incident runbook
+

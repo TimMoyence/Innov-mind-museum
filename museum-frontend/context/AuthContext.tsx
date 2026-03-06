@@ -11,7 +11,10 @@ import * as SplashScreen from "expo-splash-screen";
 import { authService, clearAccessToken, setAccessToken } from "../services";
 import { AUTH_ROUTE } from "@/features/auth/routes";
 import { authStorage } from "@/features/auth/infrastructure/authStorage";
-import { setUnauthorizedHandler } from "@/shared/infrastructure/httpClient";
+import {
+  setAuthRefreshHandler,
+  setUnauthorizedHandler,
+} from "@/shared/infrastructure/httpClient";
 
 // Empêcher l'écran de démarrage de se cacher automatiquement
 SplashScreen.preventAutoHideAsync().catch(() => {
@@ -81,17 +84,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const checkAuth = async (): Promise<void> => {
       try {
-        const token = await authStorage.getToken();
-        if (token && isTokenExpired(token)) {
-          await authStorage.clearToken();
-          clearAccessToken();
+        const refreshToken = await authStorage.getRefreshToken();
+        if (!refreshToken) {
           setIsAuthenticated(false);
+          clearAccessToken();
         } else {
-          setIsAuthenticated(!!token);
-          setAccessToken(token);
+          const session = await authService.refresh(refreshToken);
+          await authStorage.setRefreshToken(session.refreshToken);
+          setAccessToken(session.accessToken);
+          setIsAuthenticated(true);
         }
       } catch (error) {
-        console.error("Erreur lors de la vérification du token:", error);
+        await authStorage.clearRefreshToken().catch(() => undefined);
+        clearAccessToken();
+        setIsAuthenticated(false);
+        console.error("Erreur lors du bootstrap auth:", error);
       } finally {
         setIsLoading(false);
         try {
@@ -106,8 +113,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   useEffect(() => {
+    setAuthRefreshHandler(async () => {
+      const refreshToken = await authStorage.getRefreshToken();
+      if (!refreshToken) {
+        return null;
+      }
+
+      try {
+        const session = await authService.refresh(refreshToken);
+        await authStorage.setRefreshToken(session.refreshToken);
+        setAccessToken(session.accessToken);
+        setIsAuthenticated(true);
+        return session.accessToken;
+      } catch {
+        await authStorage.clearRefreshToken().catch(() => undefined);
+        clearAccessToken();
+        setIsAuthenticated(false);
+        return null;
+      }
+    });
+
     setUnauthorizedHandler(() => {
-      void authStorage.clearToken().catch(() => {
+      void authStorage.clearRefreshToken().catch(() => {
         /* ignore storage errors */
       });
       clearAccessToken();
@@ -115,13 +142,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       router.replace(AUTH_ROUTE);
     });
 
-    return () => setUnauthorizedHandler(null);
+    return () => {
+      setUnauthorizedHandler(null);
+      setAuthRefreshHandler(null);
+    };
   }, []);
 
   // Fonction de déconnexion
   const logout = async (): Promise<void> => {
+    let refreshToken: string | null = null;
     try {
-      await authStorage.clearToken();
+      refreshToken = await authStorage.getRefreshToken();
+      await authStorage.clearRefreshToken();
     } catch (error) {
       console.warn("Erreur lors du nettoyage du token:", error);
     }
@@ -131,7 +163,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     router.replace(AUTH_ROUTE);
 
     try {
-      await authService.logout();
+      await authService.logout(refreshToken);
     } catch (error) {
       console.warn("Erreur lors de l'appel logout:", error);
     }
@@ -147,10 +179,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return false;
       }
 
-      setAccessToken(token);
-
-      // Ici on peut appeler l'API pour vérifier la validité du token
-
+      const session = await authService.refresh(token);
+      await authStorage.setRefreshToken(session.refreshToken);
+      setAccessToken(session.accessToken);
+      setIsAuthenticated(true);
       return true;
     } catch (error) {
       console.error("Erreur lors de la vérification du token:", error);
