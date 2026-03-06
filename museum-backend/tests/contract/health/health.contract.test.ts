@@ -3,6 +3,7 @@ import { buildHealthPayload } from '@shared/routers/api.router';
 describe('health response contract', () => {
   const previousAppVersion = process.env.APP_VERSION;
   const previousCommitSha = process.env.COMMIT_SHA;
+  const previousGithubSha = process.env.GITHUB_SHA;
 
   afterEach(() => {
     if (previousAppVersion === undefined) {
@@ -16,11 +17,18 @@ describe('health response contract', () => {
     } else {
       process.env.COMMIT_SHA = previousCommitSha;
     }
+
+    if (previousGithubSha === undefined) {
+      delete process.env.GITHUB_SHA;
+    } else {
+      process.env.GITHUB_SHA = previousGithubSha;
+    }
   });
 
   it('includes environment/version fields without breaking existing checks object', () => {
     process.env.APP_VERSION = '1.2.3-test';
     delete process.env.COMMIT_SHA;
+    delete process.env.GITHUB_SHA;
 
     const payload = buildHealthPayload({
       checks: { database: 'up' },

@@ -1,12 +1,8 @@
 name: ci-backend
 
 on:
+  workflow_dispatch:
   pull_request:
-    paths:
-      - 'museum-backend/**'
-      - '.github/workflows/ci-backend.yml'
-  push:
-    branches: ['main', 'staging']
     paths:
       - 'museum-backend/**'
       - '.github/workflows/ci-backend.yml'
@@ -82,4 +78,3 @@ jobs:
 
       - name: E2E Postgres (Testcontainers)
         run: RUN_E2E=true pnpm test -- --watchman=false --runInBand tests/e2e/api.postgres.e2e.test.ts
-
