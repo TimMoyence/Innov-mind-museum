@@ -109,4 +109,6 @@ jobs:
           SMOKE_TEST_EMAIL: ${{ secrets.PROD_SMOKE_TEST_EMAIL }}
           SMOKE_TEST_PASSWORD: ${{ secrets.PROD_SMOKE_TEST_PASSWORD }}
           SMOKE_TIMEOUT_MS: '20000'
+          SMOKE_HEALTH_RETRIES: '24'
+          SMOKE_HEALTH_RETRY_DELAY_MS: '5000'
         run: node ./scripts/smoke-api.cjs
