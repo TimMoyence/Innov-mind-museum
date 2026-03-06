@@ -4,6 +4,7 @@ import { ArtworkMatch } from '../domain/artworkMatch.entity';
 import {
   ChatRepository,
   ChatSessionsPage,
+  ChatMessageWithSessionOwnership,
   PersistArtworkMatchInput,
   PersistMessageInput,
   ListSessionsParams,
@@ -100,16 +101,77 @@ export class TypeOrmChatRepository implements ChatRepository {
     });
   }
 
-  async persistMessage(input: PersistMessageInput): Promise<ChatMessage> {
-    const entity = this.messageRepo.create({
-      role: input.role,
-      text: input.text || null,
-      imageRef: input.imageRef || null,
-      metadata: input.metadata || null,
-      session: { id: input.sessionId } as ChatSession,
+  async getMessageById(
+    messageId: string,
+  ): Promise<ChatMessageWithSessionOwnership | null> {
+    const message = await this.messageRepo.findOne({
+      where: { id: messageId },
+      relations: {
+        session: {
+          user: true,
+        },
+      },
     });
 
-    return this.messageRepo.save(entity);
+    if (!message?.session) {
+      return null;
+    }
+
+    return {
+      message,
+      session: message.session,
+    };
+  }
+
+  async deleteSessionIfEmpty(sessionId: string): Promise<boolean> {
+    return this.sessionRepo.manager.transaction(async (transactionManager) => {
+      const sessionRepository = transactionManager.getRepository(ChatSession);
+      const messageRepository = transactionManager.getRepository(ChatMessage);
+
+      const session = await sessionRepository.findOne({
+        where: { id: sessionId },
+      });
+
+      if (!session) {
+        return false;
+      }
+
+      const messageCount = await messageRepository
+        .createQueryBuilder('message')
+        .where('message.sessionId = :sessionId', { sessionId })
+        .getCount();
+
+      if (messageCount > 0) {
+        return false;
+      }
+
+      const deletion = await sessionRepository.delete({ id: sessionId });
+      return Boolean(deletion.affected && deletion.affected > 0);
+    });
+  }
+
+  async persistMessage(input: PersistMessageInput): Promise<ChatMessage> {
+    return this.messageRepo.manager.transaction(async (transactionManager) => {
+      const messageRepository = transactionManager.getRepository(ChatMessage);
+      const sessionRepository = transactionManager.getRepository(ChatSession);
+
+      const entity = messageRepository.create({
+        role: input.role,
+        text: input.text || null,
+        imageRef: input.imageRef || null,
+        metadata: input.metadata || null,
+        session: { id: input.sessionId } as ChatSession,
+      });
+
+      const saved = await messageRepository.save(entity);
+
+      await sessionRepository.update(
+        { id: input.sessionId },
+        { updatedAt: new Date() as never },
+      );
+
+      return saved;
+    });
   }
 
   async persistArtworkMatch(input: PersistArtworkMatchInput): Promise<void> {

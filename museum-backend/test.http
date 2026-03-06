@@ -5,7 +5,7 @@
 ######### ! ############################# 
 
 ### ? send artName and artist Test
-POST http://localhost:3000/api/v1/ia/museum/
+POST http://localhost:3000/api/ia/museum/
 Content-Type: application/json
 
 {
@@ -22,7 +22,7 @@ Content-Type: application/json
 ######### ! ############################# 
 
 ### ? Register user
-POST http://localhost:3000/api/v1/auth/register
+POST http://localhost:3000/api/auth/register
 Content-Type: application/json
 
 {
@@ -34,7 +34,7 @@ Content-Type: application/json
 
 
 ### ? Login user
-POST http://localhost:3000/api/v1/auth/login
+POST http://localhost:3000/api/auth/login
 Content-Type: application/json
 
 {
@@ -43,7 +43,7 @@ Content-Type: application/json
 }
 
 ### ? forgot-password user
-POST http://localhost:3000/api/v1/auth/forgot-password
+POST http://localhost:3000/api/auth/forgot-password
 Content-Type: application/json
 
 {
@@ -51,10 +51,26 @@ Content-Type: application/json
 }
 
 ### ? reset-password user
-POST http://localhost:3000/api/v1/auth/reset-password
+POST http://localhost:3000/api/auth/reset-password
 Content-Type: application/json
 
 {
   "token" :"54aa061a6c7d37ad42b2238db42c100484790b42",
   "newPassword" : "Test123456!"
 }
+
+### ? send audio message in chat session
+POST http://localhost:3000/api/chat/sessions/{{sessionId}}/audio
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=Boundary
+
+--Boundary
+Content-Disposition: form-data; name="context"
+
+{"museumMode":true,"locale":"fr-FR","guideLevel":"beginner"}
+--Boundary
+Content-Disposition: form-data; name="audio"; filename="voice-note.m4a"
+Content-Type: audio/mp4
+
+< ./fixtures/voice-note.m4a
+--Boundary--

@@ -24,15 +24,15 @@ export const ErrorNotice = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FDECEA',
-    borderColor: '#F5C2C7',
-    borderRadius: 10,
+    backgroundColor: 'rgba(254,242,242,0.82)',
+    borderColor: 'rgba(248,113,113,0.36)',
+    borderRadius: 14,
     borderWidth: 1,
     padding: 12,
     marginBottom: 12,
   },
   text: {
-    color: '#611A15',
+    color: '#7F1D1D',
     fontSize: 14,
   },
   dismissButton: {
@@ -42,8 +42,8 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   dismissText: {
-    color: '#611A15',
+    color: '#7F1D1D',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

@@ -1,34 +1,57 @@
 import { Link, Stack } from 'expo-router';
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { GlassCard } from '@/shared/ui/GlassCard';
+import { LiquidScreen } from '@/shared/ui/LiquidScreen';
+import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
 
 export default function NotFoundScreen() {
   return (
     <>
-      <Stack.Screen options={{ title: 'Oops!' }} />
-      <View style={styles.container}>
-        <Text style={styles.text}>This screen doesn't exist.</Text>
-        <Link href="/" style={styles.link}>
-          <Text>Go to home screen!</Text>
-        </Link>
-      </View>
+      <Stack.Screen options={{ title: 'Oops' }} />
+      <LiquidScreen background={pickMuseumBackground(2)} contentStyle={styles.screen}>
+        <GlassCard style={styles.card} intensity={60}>
+          <Text style={styles.title}>This screen does not exist</Text>
+          <Link href='/' asChild>
+            <Pressable style={styles.button}>
+              <Text style={styles.buttonText}>Go to Home</Text>
+            </Pressable>
+          </Link>
+        </GlassCard>
+      </LiquidScreen>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
   },
-  text: {
-    fontSize: 20,
-    fontWeight: 600,
+  card: {
+    width: '100%',
+    maxWidth: 420,
+    padding: 20,
+    gap: 12,
   },
-  link: {
-    marginTop: 15,
-    paddingVertical: 15,
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: liquidColors.textPrimary,
+    textAlign: 'center',
+  },
+  button: {
+    marginTop: 4,
+    backgroundColor: liquidColors.primary,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

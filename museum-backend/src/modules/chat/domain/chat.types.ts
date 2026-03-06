@@ -6,6 +6,13 @@ export interface CreateSessionInput {
   museumMode?: boolean;
 }
 
+export interface ChatRequestContext {
+  location?: string;
+  museumMode?: boolean;
+  guideLevel?: 'beginner' | 'intermediate' | 'expert';
+  locale?: string;
+}
+
 export interface PostMessageInput {
   text?: string;
   image?: {
@@ -14,12 +21,16 @@ export interface PostMessageInput {
     mimeType?: string;
     sizeBytes?: number;
   };
-  context?: {
-    location?: string;
-    museumMode?: boolean;
-    guideLevel?: 'beginner' | 'intermediate' | 'expert';
-    locale?: string;
+  context?: ChatRequestContext;
+}
+
+export interface PostAudioMessageInput {
+  audio: {
+    base64: string;
+    mimeType: string;
+    sizeBytes: number;
   };
+  context?: ChatRequestContext;
 }
 
 export interface MessagePageQuery {

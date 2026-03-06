@@ -23,6 +23,7 @@ COPY package.json pnpm-lock.yaml ./
 # Copier node_modules du build stage (en prod-only)
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/openapi ./openapi
 
 # Sécurité : user non-root
 RUN adduser --system --uid 1001 nodeuser

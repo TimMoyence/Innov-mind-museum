@@ -58,4 +58,50 @@ describe('chat api smoke (service integration)', () => {
     expect(list.page.hasMore).toBe(false);
     expect(list.page.nextCursor).toBeNull();
   });
+
+  it('blocks non-art prompts with a policy response', async () => {
+    const chatService = buildChatTestService();
+
+    const session = await chatService.createSession({
+      locale: 'en-US',
+      museumMode: true,
+      userId: 444,
+    });
+
+    const response = await chatService.postMessage(
+      session.id,
+      { text: 'What is the weather in Paris today?' },
+      undefined,
+      444,
+    );
+
+    expect(response.message.text).toContain('only');
+    expect(response.metadata.citations).toContain('policy:off_topic');
+  });
+
+  it('deletes only empty sessions', async () => {
+    const chatService = buildChatTestService();
+
+    const empty = await chatService.createSession({
+      locale: 'en-US',
+      museumMode: true,
+      userId: 555,
+    });
+    const nonEmpty = await chatService.createSession({
+      locale: 'en-US',
+      museumMode: true,
+      userId: 555,
+    });
+
+    await chatService.postMessage(nonEmpty.id, { text: 'Tell me about this painting.' }, undefined, 555);
+
+    const deletedEmpty = await chatService.deleteSessionIfEmpty(empty.id, 555);
+    const deletedNonEmpty = await chatService.deleteSessionIfEmpty(nonEmpty.id, 555);
+    const list = await chatService.listSessions({ limit: 20 }, 555);
+
+    expect(deletedEmpty.deleted).toBe(true);
+    expect(deletedNonEmpty.deleted).toBe(false);
+    expect(list.sessions.map((session) => session.id)).toContain(nonEmpty.id);
+    expect(list.sessions.map((session) => session.id)).not.toContain(empty.id);
+  });
 });

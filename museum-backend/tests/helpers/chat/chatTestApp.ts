@@ -4,6 +4,7 @@ import { ChatService } from '@modules/chat/application/chat.service';
 import type {
   ChatSessionsPage,
   ChatRepository,
+  ChatMessageWithSessionOwnership,
   ListSessionsParams,
   ListSessionMessagesParams,
   PersistArtworkMatchInput,
@@ -71,6 +72,46 @@ class InMemoryChatRepository implements ChatRepository {
 
   async getSessionById(sessionId: string): Promise<ChatSession | null> {
     return this.sessions.get(sessionId) || null;
+  }
+
+  async getMessageById(messageId: string): Promise<ChatMessageWithSessionOwnership | null> {
+    for (const [sessionId, rows] of this.messages.entries()) {
+      const row = rows.find((message) => message.id === messageId);
+      if (!row) {
+        continue;
+      }
+
+      const session = this.sessions.get(sessionId);
+      if (!session) {
+        return null;
+      }
+
+      return {
+        message: {
+          ...row,
+          session,
+        } as ChatMessage,
+        session,
+      };
+    }
+
+    return null;
+  }
+
+  async deleteSessionIfEmpty(sessionId: string): Promise<boolean> {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return false;
+    }
+
+    const messages = this.messages.get(sessionId) || [];
+    if (messages.length > 0) {
+      return false;
+    }
+
+    this.messages.delete(sessionId);
+    this.sessions.delete(sessionId);
+    return true;
   }
 
   async persistMessage(input: PersistMessageInput): Promise<ChatMessage> {

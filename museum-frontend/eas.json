@@ -1,20 +1,52 @@
 {
   "cli": {
-    "version": ">= 14.0.0"
+    "version": ">= 14.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "channel": "development",
+      "env": {
+        "APP_VARIANT": "development",
+        "EXPO_PUBLIC_API_BASE_URL": "http://localhost:3000"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "channel": "preview",
+      "env": {
+        "APP_VARIANT": "preview",
+        "EXPO_PUBLIC_API_BASE_URL": "$EXPO_PUBLIC_API_BASE_URL_STAGING",
+        "EXPO_PUBLIC_API_BASE_URL_STAGING": "$EXPO_PUBLIC_API_BASE_URL_STAGING",
+        "EXPO_PUBLIC_API_BASE_URL_PROD": "$EXPO_PUBLIC_API_BASE_URL_PROD",
+        "EXPO_PUBLIC_EAS_PROJECT_ID": "$EXPO_PUBLIC_EAS_PROJECT_ID"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "channel": "production",
+      "autoIncrement": true,
+      "env": {
+        "APP_VARIANT": "production",
+        "EXPO_PUBLIC_API_BASE_URL": "$EXPO_PUBLIC_API_BASE_URL_PROD",
+        "EXPO_PUBLIC_API_BASE_URL_STAGING": "$EXPO_PUBLIC_API_BASE_URL_STAGING",
+        "EXPO_PUBLIC_API_BASE_URL_PROD": "$EXPO_PUBLIC_API_BASE_URL_PROD",
+        "EXPO_PUBLIC_EAS_PROJECT_ID": "$EXPO_PUBLIC_EAS_PROJECT_ID"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "$ASC_APP_ID",
+        "appleId": "$APPLE_ID",
+        "appleTeamId": "$APPLE_TEAM_ID"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./.secrets/google-service-account.json",
+        "track": "internal"
+      }
+    }
   }
 }

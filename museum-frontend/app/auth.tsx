@@ -1,39 +1,41 @@
-import { useState } from "react";
+import { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ImageBackground,
-  TextInput,
-  TouchableOpacity,
-  Alert,
   ActivityIndicator,
-} from "react-native";
-import { BlurView } from "expo-blur";
-import { router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { authService, setAccessToken } from "../services";
-import { useAuth } from "../context/AuthContext";
-import { homeStyles } from "./styles/homeStyles";
-import { HOME_ROUTE } from "@/features/auth/routes";
-import { getErrorMessage } from "@/shared/lib/errors";
-import { authStorage } from "@/features/auth/infrastructure/authStorage";
-import { ErrorNotice } from "@/shared/ui/ErrorNotice";
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+
+import { useAuth } from '@/context/AuthContext';
+import { authStorage } from '@/features/auth/infrastructure/authStorage';
+import { HOME_ROUTE } from '@/features/auth/routes';
+import { getErrorMessage } from '@/shared/lib/errors';
+import { ErrorNotice } from '@/shared/ui/ErrorNotice';
+import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
+import { GlassCard } from '@/shared/ui/GlassCard';
+import { LiquidScreen } from '@/shared/ui/LiquidScreen';
+import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { authService, setAccessToken } from '@/services';
 
 export default function AuthScreen() {
-  const [isLogin, setIsLogin] = useState<boolean>(true);
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [firstname, setFirstname] = useState<string>("");
-  const [lastname, setLastname] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [firstname, setFirstname] = useState('');
+  const [lastname, setLastname] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const { setIsAuthenticated } = useAuth();
 
   const handleLogin = async (): Promise<void> => {
     if (!email || !password) {
-      Alert.alert("Error", "Please fill in all fields");
+      Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
@@ -44,19 +46,18 @@ export default function AuthScreen() {
     try {
       const response = await authService.login(email, password);
 
-      if (response && response.token) {
-        await authStorage.setToken(response.token);
-        setAccessToken(response.token);
+      if (response?.accessToken && response?.refreshToken) {
+        await authStorage.setRefreshToken(response.refreshToken);
+        setAccessToken(response.accessToken);
         setIsAuthenticated(true);
 
         setTimeout(() => {
           router.replace(HOME_ROUTE);
-        }, 100);
+        }, 120);
       } else {
-        Alert.alert("Error", "Login failed - No token received");
+        Alert.alert('Error', 'Login failed - invalid auth response');
       }
     } catch (error) {
-      console.error("Login error:", error);
       setErrorMessage(getErrorMessage(error));
     } finally {
       setIsLoading(false);
@@ -65,7 +66,7 @@ export default function AuthScreen() {
 
   const handleRegister = async (): Promise<void> => {
     if (!email || !password || !firstname || !lastname) {
-      Alert.alert("Error", "Please fill in all fields");
+      Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
@@ -81,12 +82,11 @@ export default function AuthScreen() {
         lastname,
       });
       setIsLogin(true);
-      setInfoMessage("Registration complete. Please log in.");
-      setFirstname("");
-      setLastname("");
-      setPassword("");
+      setInfoMessage('Registration complete. Please log in.');
+      setFirstname('');
+      setLastname('');
+      setPassword('');
     } catch (error) {
-      console.error("Registration error:", error);
       setErrorMessage(getErrorMessage(error));
     } finally {
       setIsLoading(false);
@@ -95,20 +95,17 @@ export default function AuthScreen() {
 
   const handleForgotPassword = (): void => {
     if (!email) {
-      Alert.alert("Error", "Please enter your email address");
+      Alert.alert('Error', 'Please enter your email address');
       return;
     }
 
     Alert.alert(
-      "Password reset",
-      "Would you like to receive a password reset email?",
+      'Password reset',
+      'Would you like to receive a password reset email?',
       [
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Send",
+          text: 'Send',
           onPress: async () => {
             setIsLoading(true);
             setErrorMessage(null);
@@ -116,8 +113,8 @@ export default function AuthScreen() {
             try {
               await authService.forgotPassword(email);
               Alert.alert(
-                "Email sent",
-                "If this email address is associated with an account, you will receive a link to reset your password."
+                'Email sent',
+                'If this email is associated with an account, you will receive a reset link.',
               );
             } catch (error) {
               setErrorMessage(getErrorMessage(error));
@@ -126,233 +123,228 @@ export default function AuthScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
-  const handleSubmit = (): void => {
-    if (isLogin) {
-      handleLogin();
-    } else {
-      handleRegister();
+  const toggleAuthMode = () => {
+    if (isLoading) {
+      return;
     }
+    setIsLogin((value) => !value);
+    setErrorMessage(null);
+    setInfoMessage(null);
+  };
+
+  const openGuide = () => {
+    router.push('/(stack)/onboarding');
   };
 
   return (
-    <ImageBackground
-      source={{
-        uri: "https://images.unsplash.com/photo-1638186824584-6d6367254927?auto=format&fit=crop&w=500",
-      }}
-      style={homeStyles.welcomeBackground}
-    >
-      <BlurView intensity={60} tint="light" style={styles.content}>
+    <LiquidScreen background={pickMuseumBackground(1)} contentStyle={styles.screen}>
+      <View style={styles.menuWrap}>
+        <FloatingContextMenu
+          actions={[
+            { id: 'style', icon: 'color-filter-outline', label: 'Style', onPress: toggleAuthMode },
+            { id: 'guide', icon: 'sparkles-outline', label: 'Guide', onPress: openGuide },
+            { id: 'safe', icon: 'shield-checkmark-outline', label: 'Safe', onPress: handleForgotPassword },
+          ]}
+        />
+      </View>
+
+      <GlassCard style={styles.panel} intensity={66}>
         <View style={styles.header}>
-          <Text style={styles.title}>NOA VISIT</Text>
+          <Text style={styles.title}>MuseumIA</Text>
           <Text style={styles.subtitle}>
-            {isLogin ? "Log in to continue" : "Create your account"}
+            {isLogin ? 'Sign in to continue your cultural journey' : 'Create your account'}
           </Text>
         </View>
 
         <View style={styles.form}>
           {errorMessage ? (
-            <ErrorNotice
-              message={errorMessage}
-              onDismiss={() => setErrorMessage(null)}
-            />
+            <ErrorNotice message={errorMessage} onDismiss={() => setErrorMessage(null)} />
           ) : null}
-
           {infoMessage ? <Text style={styles.infoText}>{infoMessage}</Text> : null}
 
-          {!isLogin && (
+          {!isLogin ? (
             <>
-              <BlurView
-                intensity={40}
-                tint="light"
-                style={styles.inputContainer}
-              >
-                <Ionicons name="person-outline" size={24} color="#1a1a1a" />
+              <View style={styles.inputShell}>
+                <Ionicons name='person-outline' size={20} color={liquidColors.textSecondary} />
                 <TextInput
                   style={styles.input}
-                  placeholder="First name"
-                  placeholderTextColor="#666"
+                  placeholder='First name'
+                  placeholderTextColor='#64748B'
                   value={firstname}
                   onChangeText={setFirstname}
                 />
-              </BlurView>
-
-              <BlurView
-                intensity={40}
-                tint="light"
-                style={styles.inputContainer}
-              >
-                <Ionicons name="person-outline" size={24} color="#1a1a1a" />
+              </View>
+              <View style={styles.inputShell}>
+                <Ionicons name='person-outline' size={20} color={liquidColors.textSecondary} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Last name"
-                  placeholderTextColor="#666"
+                  placeholder='Last name'
+                  placeholderTextColor='#64748B'
                   value={lastname}
                   onChangeText={setLastname}
                 />
-              </BlurView>
+              </View>
             </>
-          )}
+          ) : null}
 
-          <BlurView intensity={40} tint="light" style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={24} color="#1a1a1a" />
+          <View style={styles.inputShell}>
+            <Ionicons name='mail-outline' size={20} color={liquidColors.textSecondary} />
             <TextInput
               style={styles.input}
-              placeholder="Email"
-              placeholderTextColor="#666"
+              placeholder='Email'
+              placeholderTextColor='#64748B'
               value={email}
               onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
+              autoCapitalize='none'
+              keyboardType='email-address'
             />
-          </BlurView>
+          </View>
 
-          <BlurView intensity={40} tint="light" style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={24} color="#1a1a1a" />
+          <View style={styles.inputShell}>
+            <Ionicons name='lock-closed-outline' size={20} color={liquidColors.textSecondary} />
             <TextInput
               style={styles.input}
-              placeholder="Password"
-              placeholderTextColor="#666"
+              placeholder='Password'
+              placeholderTextColor='#64748B'
               value={password}
               onChangeText={setPassword}
               secureTextEntry
             />
-          </BlurView>
+          </View>
 
-          {isLogin && (
-            <TouchableOpacity
-              style={styles.forgotPasswordButton}
-              onPress={handleForgotPassword}
-            >
-              <Text style={styles.forgotPasswordText}>
-                Forgot password?
-              </Text>
-            </TouchableOpacity>
-          )}
+          {isLogin ? (
+            <Pressable style={styles.forgotPasswordButton} onPress={handleForgotPassword}>
+              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+            </Pressable>
+          ) : null}
 
-          <TouchableOpacity
-            style={styles.submitButton}
-            onPress={handleSubmit}
+          <Pressable
+            style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+            onPress={isLogin ? handleLogin : handleRegister}
             disabled={isLoading}
           >
-            <BlurView
-              intensity={40}
-              tint="light"
-              style={styles.submitButtonContent}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#1a1a1a" />
-              ) : (
-                <Text style={styles.submitButtonText}>
-                  {isLogin ? "Log in" : "Sign up"}
-                </Text>
-              )}
-            </BlurView>
-          </TouchableOpacity>
+            {isLoading ? (
+              <ActivityIndicator color='#FFFFFF' />
+            ) : (
+              <Text style={styles.submitButtonText}>{isLogin ? 'Log in' : 'Sign up'}</Text>
+            )}
+          </Pressable>
 
-          <TouchableOpacity
+          <Pressable
             style={styles.switchButton}
-            onPress={() => {
-              setIsLogin(!isLogin);
-              setErrorMessage(null);
-              setInfoMessage(null);
-            }}
+            onPress={toggleAuthMode}
             disabled={isLoading}
           >
             <Text style={styles.switchButtonText}>
-              {isLogin
-                ? "No account? Sign up"
-                : "Already have an account? Log in"}
+              {isLogin ? 'No account? Sign up' : 'Already have an account? Log in'}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
-      </BlurView>
-    </ImageBackground>
+      </GlassCard>
+    </LiquidScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f0f0f0",
+  screen: {
+    paddingHorizontal: 16,
+    paddingTop: 56,
+    paddingBottom: 18,
+    justifyContent: 'center',
+    gap: 12,
   },
-  content: {
-    flex: 1,
-    margin: 20,
-    borderRadius: 15,
-    overflow: "hidden",
-    padding: 20,
-    justifyContent: "center",
+  menuWrap: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  panel: {
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    gap: 14,
   },
   header: {
-    alignItems: "center",
-    marginBottom: 40,
+    alignItems: 'center',
+    gap: 6,
   },
   title: {
     fontSize: 32,
-    fontWeight: "bold",
-    color: "#1a1a1a",
-    marginBottom: 10,
+    fontWeight: '700',
+    color: liquidColors.textPrimary,
   },
   subtitle: {
-    fontSize: 18,
-    color: "#4a4a4a",
-    textAlign: "center",
+    fontSize: 14,
+    color: liquidColors.textSecondary,
+    textAlign: 'center',
   },
   form: {
-    gap: 15,
+    gap: 10,
   },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 10,
-    overflow: "hidden",
-    padding: 15,
+  infoText: {
+    color: '#166534',
+    fontWeight: '600',
+    fontSize: 13,
+    marginBottom: 6,
+  },
+  inputShell: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.42)',
+    backgroundColor: 'rgba(255,255,255,0.74)',
+    minHeight: 50,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   input: {
     flex: 1,
-    marginLeft: 10,
-    fontSize: 16,
-    color: "#1a1a1a",
+    color: liquidColors.textPrimary,
+    fontSize: 15,
+    paddingVertical: 8,
   },
   forgotPasswordButton: {
-    alignSelf: "flex-end",
+    alignSelf: 'flex-end',
+    marginTop: 4,
   },
   forgotPasswordText: {
-    fontSize: 14,
-    color: "#1a1a1a",
-    textDecorationLine: "underline",
+    fontSize: 13,
+    color: liquidColors.primary,
+    fontWeight: '600',
   },
   submitButton: {
-    marginTop: 20,
-    borderRadius: 10,
-    overflow: "hidden",
+    marginTop: 8,
+    borderRadius: 14,
+    backgroundColor: liquidColors.primary,
+    paddingVertical: 14,
+    alignItems: 'center',
+    shadowColor: '#1E3A8A',
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
   },
-  submitButtonContent: {
-    padding: 15,
-    alignItems: "center",
+  submitButtonDisabled: {
+    opacity: 0.72,
   },
   submitButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1a1a1a",
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 15,
   },
   switchButton: {
-    marginTop: 15,
-    alignItems: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.42)',
+    backgroundColor: 'rgba(255,255,255,0.66)',
+    paddingVertical: 12,
+    alignItems: 'center',
   },
   switchButtonText: {
+    color: liquidColors.textPrimary,
+    fontWeight: '600',
     fontSize: 14,
-    color: "#1a1a1a",
-    textDecorationLine: "underline",
-  },
-  infoText: {
-    color: "#065F46",
-    fontSize: 14,
-    fontWeight: "600",
-    textAlign: "center",
   },
 });
