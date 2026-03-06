@@ -1,7 +1,8 @@
 import { Request, Response, Router } from 'express';
-import jwt from 'jsonwebtoken';
-import passport from 'passport';
+import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
+import { env } from '@src/config/env';
 import {
+  authSessionService,
   forgotPasswordUseCase,
   registerUseCase,
   resetPasswordUseCase,
@@ -9,35 +10,6 @@ import {
 
 const authRouter: Router = Router();
 
-/**
- * @swagger
- * /api/v1/auth/register:
- *   post:
- *     summary: Register a new user
- *     tags:
- *       - Authentication
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [email, password, firstname, lastname]
- *             properties:
- *               email:
- *                 type: string
- *               password:
- *                 type: string
- *               firstname:
- *                 type: string
- *               lastname:
- *                 type: string
- *     responses:
- *       201:
- *         description: User registered successfully
- *       400:
- *         description: Bad request
- */
 authRouter.post('/register', async (req: Request, res: Response) => {
   const { email, password, firstname, lastname } = req.body;
   try {
@@ -48,152 +20,133 @@ authRouter.post('/register', async (req: Request, res: Response) => {
       lastname,
     );
     if (user && 'password' in user) {
-      user.password = 'je suis le mot de passe';
+      user.password = 'hidden';
     }
     res.status(201).json(user);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Registration failed';
+    res.status(400).json({ error: { code: 'REGISTER_FAILED', message } });
   }
 });
 
-/**
- * @swagger
- * /api/v1/auth/login:
- *   post:
- *     summary: Authenticate user and return JWT token
- *     tags:
- *       - Authentication
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [email, password]
- *             properties:
- *               email:
- *                 type: string
- *               password:
- *                 type: string
- *     responses:
- *       200:
- *         description: Successfully logged in
- *       401:
- *         description: Invalid credentials
- */
-authRouter.post('/login', (req: Request, res: Response, next) => {
-  passport.authenticate(
-    'local',
-    { session: true },
-    (err: any, user: any, info: any) => {
-      if (err) return next(err);
-      if (!user)
-        return res
-          .status(401)
-          .json({ message: info?.message || 'Identifiants invalides' });
-      req.logIn(user, { session: true }, (err) => {
-        if (err) return next(err);
-        const token = jwt.sign(
-          { id: user.id, email: user.email },
-          process.env.JWT_SECRET || 'default_secret',
-          { expiresIn: '1d' },
-        );
-        return res.json({ token });
-      });
-    },
-  )(req, res, next);
+authRouter.post('/login', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, password } = (req.body || {}) as {
+      email?: string;
+      password?: string;
+    };
+    const session = await authSessionService.login(email || '', password || '');
+    res.status(200).json(session);
+    return;
+  } catch (error) {
+    const status =
+      typeof error === 'object' &&
+      error !== null &&
+      'statusCode' in error &&
+      typeof (error as { statusCode?: unknown }).statusCode === 'number'
+        ? ((error as { statusCode: number }).statusCode)
+        : 401;
+    const code =
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      typeof (error as { code?: unknown }).code === 'string'
+        ? ((error as { code: string }).code)
+        : 'LOGIN_FAILED';
+    const message = error instanceof Error ? error.message : 'Login failed';
+    res.status(status).json({ error: { code, message } });
+    return;
+  }
 });
 
-/**
- * @swagger
- * /api/v1/auth/logout:
- *   post:
- *     summary: Logout user
- *     tags:
- *       - Authentication
- *     responses:
- *       200:
- *         description: Logout successful
- *       500:
- *         description: Logout error
- */
-authRouter.post('/logout', (req: Request, res: Response) => {
-  req.logout((err: any) => {
-    if (err) {
-      return res.status(500).json({ error: 'Erreur lors de la déconnexion.' });
+authRouter.post('/refresh', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { refreshToken } = (req.body || {}) as { refreshToken?: string };
+    const session = await authSessionService.refresh(refreshToken || '');
+    res.status(200).json(session);
+    return;
+  } catch (error) {
+    const status =
+      typeof error === 'object' &&
+      error !== null &&
+      'statusCode' in error &&
+      typeof (error as { statusCode?: unknown }).statusCode === 'number'
+        ? ((error as { statusCode: number }).statusCode)
+        : 401;
+    const code =
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      typeof (error as { code?: unknown }).code === 'string'
+        ? ((error as { code: string }).code)
+        : 'REFRESH_FAILED';
+    const message = error instanceof Error ? error.message : 'Refresh failed';
+    res.status(status).json({ error: { code, message } });
+    return;
+  }
+});
+
+authRouter.post('/logout', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { refreshToken } = (req.body || {}) as { refreshToken?: string };
+    await authSessionService.logout(refreshToken);
+    res.status(200).json({ success: true });
+    return;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Logout failed';
+    res.status(400).json({ error: { code: 'LOGOUT_FAILED', message } });
+    return;
+  }
+});
+
+authRouter.get('/me', isAuthenticated, async (req: Request, res: Response): Promise<void> => {
+  const user = (
+    req as Request & {
+      user?: { id?: number; email?: string; firstname?: string | null; lastname?: string | null };
     }
-    return res.json({ message: 'Déconnexion réussie.' });
+  ).user as
+    | { id?: number; email?: string; firstname?: string | null; lastname?: string | null }
+    | undefined;
+  if (!user?.id || !user.email) {
+    res.status(401).json({
+      error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+    });
+    return;
+  }
+
+  res.status(200).json({
+    user: {
+      id: user.id,
+      email: user.email,
+      firstname: user.firstname || null,
+      lastname: user.lastname || null,
+    },
   });
+  return;
 });
 
-/**
- * @swagger
- * /auth/forgot-password:
- *   post:
- *     summary: Request a password reset token
- *     tags:
- *       - Authentication
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [email]
- *             properties:
- *               email:
- *                 type: string
- *     responses:
- *       200:
- *         description: If email exists, reset token was sent
- *       500:
- *         description: Internal server error
- */
 authRouter.post('/forgot-password', async (req: Request, res: Response) => {
   const { email } = req.body;
   try {
     const token = await forgotPasswordUseCase.execute(email);
     res.json({
       message: 'Si cet email existe, un lien de réinitialisation a été envoyé.',
-      token,
+      ...(env.nodeEnv !== 'production' ? { debugResetToken: token } : {}),
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    res.status(500).json({ error: { code: 'FORGOT_PASSWORD_FAILED', message } });
   }
 });
 
-/**
- * @swagger
- * /api/v1/auth/reset-password:
- *   post:
- *     summary: Reset password with a valid token
- *     tags:
- *       - Authentication
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [token, newPassword]
- *             properties:
- *               token:
- *                 type: string
- *               newPassword:
- *                 type: string
- *     responses:
- *       200:
- *         description: Password successfully reset
- *       400:
- *         description: Invalid token or bad request
- */
 authRouter.post('/reset-password', async (req: Request, res: Response) => {
   const { token, newPassword } = req.body;
   try {
     await resetPasswordUseCase.execute(token, newPassword);
     res.json({ message: 'Mot de passe mis à jour avec succès.' });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Bad request';
+    res.status(400).json({ error: { code: 'RESET_PASSWORD_FAILED', message } });
   }
 });
 

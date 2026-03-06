@@ -1,0 +1,18 @@
+{
+  "mobile": {
+    "target": "1440x2560",
+    "ratio": "9:16",
+    "format": "png",
+    "notes": "Use portrait-safe framing. Keep subject centered vertically for camera notches and top bars."
+  },
+  "desktop": {
+    "target": "2560x1440",
+    "ratio": "16:9",
+    "format": "png",
+    "notes": "Keep key subject in middle third to avoid side clipping on ultra-wide screens."
+  },
+  "opacity": {
+    "mobile": 0.18,
+    "desktop": 0.24
+  }
+}

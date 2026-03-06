@@ -7,13 +7,57 @@ on:
     branches: ['main']
 
 jobs:
+  backend-quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: museum-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: museum-backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: OpenAPI Spec Validate
+        run: pnpm run openapi:validate
+
+      - name: OpenAPI Contract (spec-backed)
+        run: pnpm run test:contract:openapi
+
+      - name: Test
+        run: pnpm test
+
   build-and-deploy:
+    needs: backend-quality
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Node (for post-deploy smoke)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
       - name: Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -47,3 +91,22 @@ jobs:
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin || true
             docker compose pull backend
             docker compose up -d --remove-orphans backend
+
+      - name: Validate prod smoke secrets
+        env:
+          PROD_SMOKE_API_BASE_URL: ${{ secrets.PROD_SMOKE_API_BASE_URL }}
+          PROD_SMOKE_TEST_EMAIL: ${{ secrets.PROD_SMOKE_TEST_EMAIL }}
+          PROD_SMOKE_TEST_PASSWORD: ${{ secrets.PROD_SMOKE_TEST_PASSWORD }}
+        run: |
+          test -n "$PROD_SMOKE_API_BASE_URL"
+          test -n "$PROD_SMOKE_TEST_EMAIL"
+          test -n "$PROD_SMOKE_TEST_PASSWORD"
+
+      - name: Post-deploy smoke test (prod)
+        working-directory: museum-backend
+        env:
+          SMOKE_API_BASE_URL: ${{ secrets.PROD_SMOKE_API_BASE_URL }}
+          SMOKE_TEST_EMAIL: ${{ secrets.PROD_SMOKE_TEST_EMAIL }}
+          SMOKE_TEST_PASSWORD: ${{ secrets.PROD_SMOKE_TEST_PASSWORD }}
+          SMOKE_TIMEOUT_MS: '20000'
+        run: node ./scripts/smoke-api.cjs

@@ -1,0 +1,576 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "MuseumIA API",
+    "version": "1.0.0",
+    "description": "Active API surface for MuseumIA mobile backend (health, auth, chat)."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" },
+              "requestId": { "type": "string" }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "required": ["status", "checks", "environment", "version", "timestamp"],
+        "properties": {
+          "status": { "type": "string", "enum": ["ok", "degraded"] },
+          "checks": {
+            "type": "object",
+            "required": ["database", "llmConfigured"],
+            "properties": {
+              "database": { "type": "string", "enum": ["up", "down"] },
+              "llmConfigured": { "type": "boolean" }
+            }
+          },
+          "environment": { "type": "string" },
+          "version": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "commitSha": { "type": "string" }
+        }
+      },
+      "AuthUser": {
+        "type": "object",
+        "required": ["id", "email"],
+        "properties": {
+          "id": { "type": "integer" },
+          "email": { "type": "string", "format": "email" },
+          "firstname": { "type": ["string", "null"] },
+          "lastname": { "type": ["string", "null"] }
+        }
+      },
+      "AuthSessionResponse": {
+        "type": "object",
+        "required": ["accessToken", "refreshToken", "expiresIn", "refreshExpiresIn", "user"],
+        "properties": {
+          "accessToken": { "type": "string" },
+          "refreshToken": { "type": "string" },
+          "expiresIn": { "type": "integer" },
+          "refreshExpiresIn": { "type": "integer" },
+          "user": { "$ref": "#/components/schemas/AuthUser" }
+        }
+      },
+      "SessionDTO": {
+        "type": "object",
+        "required": ["id", "museumMode", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "locale": { "type": ["string", "null"] },
+          "museumMode": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ChatMessageImage": {
+        "type": "object",
+        "required": ["url", "expiresAt"],
+        "properties": {
+          "url": { "type": "string", "format": "uri" },
+          "expiresAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ChatMessageDTO": {
+        "type": "object",
+        "required": ["id", "role", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "role": { "type": "string", "enum": ["user", "assistant", "system"] },
+          "text": { "type": ["string", "null"] },
+          "imageRef": { "type": ["string", "null"] },
+          "image": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/ChatMessageImage" },
+              { "type": "null" }
+            ]
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "metadata": { "type": ["object", "null"], "additionalProperties": true }
+        },
+        "additionalProperties": false
+      },
+      "CreateSessionResponse": {
+        "type": "object",
+        "required": ["session"],
+        "properties": {
+          "session": { "$ref": "#/components/schemas/SessionDTO" }
+        }
+      },
+      "PostMessageResponse": {
+        "type": "object",
+        "required": ["sessionId", "message", "metadata"],
+        "properties": {
+          "sessionId": { "type": "string", "format": "uuid" },
+          "message": {
+            "type": "object",
+            "required": ["id", "role", "text", "createdAt"],
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "role": { "type": "string", "enum": ["assistant"] },
+              "text": { "type": "string" },
+              "createdAt": { "type": "string", "format": "date-time" }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "citations": { "type": "array", "items": { "type": "string" } }
+            },
+            "additionalProperties": true
+          },
+          "transcription": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" },
+              "model": { "type": "string" },
+              "provider": { "type": "string", "enum": ["openai"] }
+            },
+            "required": ["text", "model", "provider"]
+          }
+        }
+      },
+      "GetSessionResponse": {
+        "type": "object",
+        "required": ["session", "messages", "page"],
+        "properties": {
+          "session": { "$ref": "#/components/schemas/SessionDTO" },
+          "messages": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ChatMessageDTO" }
+          },
+          "page": {
+            "type": "object",
+            "required": ["nextCursor", "hasMore", "limit"],
+            "properties": {
+              "nextCursor": { "type": ["string", "null"] },
+              "hasMore": { "type": "boolean" },
+              "limit": { "type": "integer" }
+            }
+          }
+        }
+      },
+      "ListSessionsResponse": {
+        "type": "object",
+        "required": ["sessions", "page"],
+        "properties": {
+          "sessions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "museumMode", "createdAt", "updatedAt", "messageCount"],
+              "properties": {
+                "id": { "type": "string", "format": "uuid" },
+                "locale": { "type": ["string", "null"] },
+                "museumMode": { "type": "boolean" },
+                "createdAt": { "type": "string", "format": "date-time" },
+                "updatedAt": { "type": "string", "format": "date-time" },
+                "messageCount": { "type": "integer" },
+                "preview": {
+                  "type": "object",
+                  "properties": {
+                    "text": { "type": "string" },
+                    "createdAt": { "type": "string", "format": "date-time" },
+                    "role": { "type": "string", "enum": ["user", "assistant", "system"] }
+                  }
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "object",
+            "required": ["nextCursor", "hasMore", "limit"],
+            "properties": {
+              "nextCursor": { "type": ["string", "null"] },
+              "hasMore": { "type": "boolean" },
+              "limit": { "type": "integer" }
+            }
+          }
+        }
+      },
+      "DeleteSessionResponse": {
+        "type": "object",
+        "required": ["sessionId", "deleted"],
+        "properties": {
+          "sessionId": { "type": "string", "format": "uuid" },
+          "deleted": { "type": "boolean" }
+        }
+      },
+      "SignedImageUrlResponse": {
+        "type": "object",
+        "required": ["url", "expiresAt"],
+        "properties": {
+          "url": { "type": "string", "format": "uri" },
+          "expiresAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": ["Health"],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Healthy",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+              }
+            }
+          },
+          "503": {
+            "description": "Degraded",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password", "firstname", "lastname"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string" },
+                  "firstname": { "type": "string" },
+                  "lastname": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Registered" },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JWT session",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthSessionResponse" }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": ["Auth"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rotated JWT session",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthSessionResponse" }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid refresh token",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "security": [],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refreshToken": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logged out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success"],
+                  "properties": { "success": { "type": "boolean" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": ["Auth"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Current user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["user"],
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/AuthUser" }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat/sessions": {
+      "post": {
+        "tags": ["Chat"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CreateSessionResponse" }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Chat"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "List sessions",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ListSessionsResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat/sessions/{id}": {
+      "get": {
+        "tags": ["Chat"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "id", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session history",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GetSessionResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Chat"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "id", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delete if empty",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeleteSessionResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat/sessions/{id}/messages": {
+      "post": {
+        "tags": ["Chat"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "id", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "201": {
+            "description": "Posted message / assistant response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PostMessageResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat/sessions/{id}/audio": {
+      "post": {
+        "tags": ["Chat"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "id", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "201": {
+            "description": "Posted audio / assistant response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PostMessageResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat/messages/{messageId}/image-url": {
+      "post": {
+        "tags": ["Chat"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "messageId", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Signed image URL",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SignedImageUrlResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat/messages/{messageId}/image": {
+      "get": {
+        "tags": ["Chat"],
+        "security": [],
+        "parameters": [
+          { "in": "path", "name": "messageId", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "in": "query", "name": "token", "required": true, "schema": { "type": "string" } },
+          { "in": "query", "name": "sig", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Image content",
+            "content": {
+              "image/jpeg": {},
+              "image/png": {},
+              "image/webp": {}
+            }
+          }
+        }
+      }
+    }
+  }
+}

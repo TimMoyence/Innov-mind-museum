@@ -1,12 +1,17 @@
 {
-  "name": "bolt-expo-starter",
+  "name": "museum-ia-mobile",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "EXPO_NO_TELEMETRY=1 expo start",
     "build:web": "expo export --platform web",
-    "lint": "expo lint"
+    "generate:openapi-types": "openapi-typescript ../museum-backend/openapi/openapi.json -o shared/api/generated/openapi.ts",
+    "check:openapi-types": "npm run generate:openapi-types && git diff --exit-code -- shared/api/generated/openapi.ts",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test:node",
+    "test:node": "rm -rf .test-dist && tsc -p tsconfig.test.json && node --test .test-dist/tests/*.test.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.2",
@@ -15,9 +20,11 @@
     "@react-navigation/native": "^7.0.14",
     "axios": "^1.9.0",
     "expo": "^53.0.0",
+    "expo-av": "^16.0.8",
     "expo-blur": "^14.0.3",
     "expo-camera": "~16.1.6",
     "expo-constants": "^17.0.5",
+    "expo-dev-client": "^6.0.20",
     "expo-font": "^13.0.3",
     "expo-haptics": "^14.0.1",
     "expo-image-picker": "~16.1.4",
@@ -25,9 +32,11 @@
     "expo-linking": "^7.0.5",
     "expo-media-library": "~17.1.6",
     "expo-router": "~5.0.6",
+    "expo-secure-store": "~14.2.4",
     "expo-splash-screen": "~0.30.8",
     "expo-status-bar": "^2.0.1",
     "expo-system-ui": "~5.0.7",
+    "expo-updates": "^29.0.16",
     "expo-web-browser": "^14.0.2",
     "react": "19.0.0",
     "react-dom": "19.0.0",
@@ -43,6 +52,7 @@
     "@tsconfig/react-native": "^3.0.5",
     "@types/axios": "^0.9.36",
     "@types/react": "~19.0.10",
+    "openapi-typescript": "^7.13.0",
     "typescript": "^5.3.3"
   }
 }

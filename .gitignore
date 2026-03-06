@@ -1,3 +1,6 @@
+# docs 
+**/docs/**
+
 # OS X
 **/.DS_Store*
 **/Icon?
@@ -83,3 +86,4 @@ Thumbs.db
 out-tsc/
 bazel-out/
 .tmp
+recommendations.md

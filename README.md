@@ -1,6 +1,22 @@
 # 🏛️ MuseumIA – Assistant IA muséal interactif
 
-*Application mobile interactive basée sur LangChain, GPT‑4 et reconnaissance visuelle*
+_Application mobile interactive basée sur LangChain, GPT‑4 et reconnaissance visuelle_
+
+## ⚠️ Current Implementation Notes (Repo Reality)
+
+This README includes product/vision material and some older architecture wording.
+
+For the current operational source of truth, use:
+- backend runtime/API doc: `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-backend/README.md`
+- deployment runbook (local / preprod / prod): `/Users/Tim/Desktop/all/dev/Pro/InnovMind/docs/DEPLOYMENT_STEP_BY_STEP.md`
+- backend OpenAPI spec (active routes): `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-backend/openapi/openapi.json`
+- env templates:
+  - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-backend/.env.local.example`
+  - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-backend/.env.staging.example`
+  - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-backend/.env.production.example`
+  - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/.env.local.example`
+  - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/.env.preview.example`
+  - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/.env.production.example`
 
 ---
 
@@ -15,12 +31,12 @@ En prenant en photo une œuvre ou en saisissant son nom, l’utilisateur peut **
 
 ## ✨ Fonctionnalités principales
 
-* 📸 **Reconnaissance d’œuvres** : l’utilisateur prend une photo d’un tableau ou d’une sculpture, l’application identifie l’œuvre.
-* 💬 **Dialogue IA contextuel** : poser des questions sur l’artiste, le mouvement ou l’histoire de l’œuvre.
-* 🧠 **Mémoire conversationnelle** : l’IA se souvient des œuvres déjà vues et personnalise les suggestions.
-* 🗂️ **Classement thématique** : navigation par tags (périodes, styles, techniques…).
-* 🌍 **Multilingue** : expérience fluide pour les visiteurs internationaux.
-* 📱 **Interface mobile intuitive** : design moderne, accessible et adapté à un usage en visite.
+- 📸 **Reconnaissance d’œuvres** : l’utilisateur prend une photo d’un tableau ou d’une sculpture, l’application identifie l’œuvre.
+- 💬 **Dialogue IA contextuel** : poser des questions sur l’artiste, le mouvement ou l’histoire de l’œuvre.
+- 🧠 **Mémoire conversationnelle** : l’IA se souvient des œuvres déjà vues et personnalise les suggestions.
+- 🗂️ **Classement thématique** : navigation par tags (périodes, styles, techniques…).
+- 🌍 **Multilingue** : expérience fluide pour les visiteurs internationaux.
+- 📱 **Interface mobile intuitive** : design moderne, accessible et adapté à un usage en visite.
 
 ---
 
@@ -82,8 +98,8 @@ cd backend
 docker-compose up -d --build
 ```
 
-* API disponible sur : `http://localhost:3000`
-* Base PostgreSQL accessible via le volume Docker
+- API disponible sur : `http://localhost:3000`
+- Base PostgreSQL accessible via le volume Docker
 
 ### **3. Lancer l’application mobile**
 
@@ -139,19 +155,19 @@ DATABASE_URL=postgres://user:pass@db:5432/museumia
 
 ## 📌 État d’avancement
 
-* ✅ Authentification utilisateurs
-* ✅ Upload et traitement des images d’œuvres
-* ✅ Chat IA contextuel via GPT‑4 + LangChain
-* ✅ Persistance des conversations et œuvres consultées
-* ⏳ Interface finale en cours de refonte graphique
-* ⏳ Optimisation des performances IA
+- ✅ Authentification utilisateurs
+- ✅ Upload et traitement des images d’œuvres
+- ✅ Chat IA contextuel via GPT‑4 + LangChain
+- ✅ Persistance des conversations et œuvres consultées
+- ⏳ Interface finale en cours de refonte graphique
+- ⏳ Optimisation des performances IA
 
 ---
 
 ## 👥 Équipe projet
 
-* **Tim Moyence** — Développeur backend & intégration IA
-* **Cristelle Almodar** — UX & UI mobile
+- **Tim Moyence** — Développeur backend & intégration IA
+- **Cristelle Almodar** — UX & UI mobile
 
 ---
 
