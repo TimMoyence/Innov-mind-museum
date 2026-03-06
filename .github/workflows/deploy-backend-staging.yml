@@ -93,6 +93,7 @@ jobs:
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin || true
             docker compose pull backend-staging
             docker compose up -d --remove-orphans backend-staging
+            docker compose exec -T backend-staging node ./node_modules/typeorm/cli.js migration:run -d dist/src/data/db/data-source.js
 
       - name: Validate staging smoke secrets
         env:
