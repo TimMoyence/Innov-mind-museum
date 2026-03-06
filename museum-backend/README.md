@@ -3,6 +3,7 @@
 Express 5 + TypeORM backend for MuseumIA (mobile-first API).
 
 Current active backend surface:
+
 - `GET /api/health`
 - `POST /api/auth/register`
 - `POST /api/auth/login`
@@ -100,10 +101,10 @@ Use the guided runbook:
 - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/docs/DEPLOYMENT_STEP_BY_STEP.md`
 
 This includes:
+
 - local/preprod/prod env setup
-- backend GHCR/VPS Docker deploy
+- backend GHCR/VPS Docker deploy : 2 years token
 - migrations
 - staging/prod smoke tests
 - EAS mobile preview/prod build and submission
 - rollback and incident runbook
-
