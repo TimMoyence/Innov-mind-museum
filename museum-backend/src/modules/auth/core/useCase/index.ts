@@ -1,6 +1,7 @@
 import { RegisterUseCase } from './register.useCase';
 import { ForgotPasswordUseCase } from './forgotPassword.useCase';
 import { ResetPasswordUseCase } from './resetPassword.useCase';
+import { AuthSessionService } from './authSession.service';
 import { UserRepositoryPg } from '../../../auth/adapters/secondary/user.repository.pg';
 
 // Instanciation de l'implémentation concrète du repository utilisateur
@@ -10,5 +11,6 @@ const userRepository = new UserRepositoryPg();
 const registerUseCase = new RegisterUseCase(userRepository);
 const forgotPasswordUseCase = new ForgotPasswordUseCase(userRepository);
 const resetPasswordUseCase = new ResetPasswordUseCase(userRepository);
+const authSessionService = new AuthSessionService(userRepository);
 
-export { registerUseCase, forgotPasswordUseCase, resetPasswordUseCase };
+export { registerUseCase, forgotPasswordUseCase, resetPasswordUseCase, authSessionService };

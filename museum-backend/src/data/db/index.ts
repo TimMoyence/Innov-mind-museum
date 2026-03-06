@@ -1,11 +1,14 @@
 import { Pool } from 'pg';
 
+import { env } from '@src/config/env';
+
 const pool = new Pool({
-  host: process.env.DB_HOST || 'db',
-  port: Number(process.env.DB_PORT) || 5432,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.PGDATABASE,
+  host: env.db.host,
+  port: env.db.port,
+  user: env.db.user,
+  password: env.db.password,
+  database: env.db.database,
+  max: env.db.poolMax,
 });
 
 export default pool;

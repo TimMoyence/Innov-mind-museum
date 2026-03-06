@@ -1,54 +1,41 @@
 import { Tabs } from 'expo-router';
-import { BlurView } from 'expo-blur';
-import { StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../context/AuthContext';
+import { BlurView } from 'expo-blur';
+import { StyleSheet } from 'react-native';
 
 export default function TabLayout() {
-  const { logout } = useAuth();
-
-  const renderHeaderRight = () => {
-    return (
-      <TouchableOpacity 
-        onPress={logout} 
-        style={styles.logoutButton}
-      >
-        <Ionicons name="log-out-outline" size={24} color="#0066cc" />
-      </TouchableOpacity>
-    );
-  };
-
   return (
     <Tabs
       screenOptions={{
-        headerShown: true,
-        headerTransparent: true,
-        headerBackground: () => (
-          <BlurView intensity={70} tint="light" style={StyleSheet.absoluteFill} />
-        ),
-        headerTitleStyle: styles.headerTitle,
-        headerRight: renderHeaderRight,
+        headerShown: false,
+        tabBarActiveTintColor: '#0F172A',
+        tabBarInactiveTintColor: 'rgba(15, 23, 42, 0.56)',
+        tabBarLabelStyle: styles.tabLabel,
         tabBarStyle: styles.tabBar,
-        tabBarBackground: () => (
-          <BlurView intensity={70} tint="light" style={StyleSheet.absoluteFill} />
-        ),
-        tabBarActiveTintColor: '#0066cc',
-      }}>
+        tabBarBackground: () => <BlurView tint='light' intensity={72} style={StyleSheet.absoluteFill} />,
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen
         name="conversations"
         options={{
-          title: 'Discussions',
+          title: 'Dashboard',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles" size={size} color={color} />
+            <Ionicons name="grid-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="home"
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />
@@ -59,17 +46,23 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-    borderTopWidth: 0,
-    elevation: 0,
-    height: 60,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.58)',
+    backgroundColor: 'transparent',
+    height: 84,
+    paddingBottom: 14,
+    paddingTop: 8,
+    marginHorizontal: 14,
+    marginBottom: 12,
+    borderRadius: 999,
+    overflow: 'hidden',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
   },
-  headerTitle: {
-    color: '#1a1a1a',
-    fontWeight: '600',
-  },
-  logoutButton: {
-    marginRight: 16,
-    padding: 8,
+  tabLabel: {
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

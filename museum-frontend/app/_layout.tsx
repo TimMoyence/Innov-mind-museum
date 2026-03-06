@@ -1,29 +1,45 @@
-import { JSX } from 'react';
+import type { ReactNode } from 'react';
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React from 'react';
-import { AuthProvider } from '../context/AuthContext';
+
+import { AuthProvider } from '@/context/AuthContext';
 import { useProtectedRoute } from '@/features/auth/useProtectedRoute';
+import { applyRuntimeSettings } from '@/features/settings/runtimeSettings';
 
-function AuthenticationGuard({ children }: { children: React.ReactNode }): JSX.Element {
+function AuthenticationGuard({ children }: { children: ReactNode }) {
   useProtectedRoute();
-
   return <>{children}</>;
 }
 
-export default function RootLayout(): JSX.Element {
+export default function RootLayout() {
+  useEffect(() => {
+    applyRuntimeSettings().catch((error) => {
+      // eslint-disable-next-line no-console
+      console.error('Failed to apply runtime settings', error);
+    });
+  }, []);
+
   return (
     <AuthProvider>
       <AuthenticationGuard>
-        <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-          <Stack.Screen name="index" />
+        <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="auth" />
+          <Stack.Screen name="(tabs)" />
           <Stack.Screen
-            name="(tabs)"
+            name="(stack)/chat/[sessionId]"
             options={{
-              animation: 'flip',
+              headerShown: false,
+              gestureEnabled: true,
             }}
           />
+          <Stack.Screen name="(stack)/settings" />
+          <Stack.Screen name="(stack)/preferences" />
+          <Stack.Screen name="(stack)/guided-museum-mode" />
+          <Stack.Screen name="(stack)/discover" />
+          <Stack.Screen name="(stack)/support" />
+          <Stack.Screen name="(stack)/privacy" />
+          <Stack.Screen name="(stack)/onboarding" />
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style="auto" />

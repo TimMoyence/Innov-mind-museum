@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import { authSessionService } from '@modules/auth/core/useCase';
 
 export function isAuthenticated(
   req: Request,
@@ -8,19 +8,28 @@ export function isAuthenticated(
 ): void {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
-    res.status(401).json({ error: 'Token required' });
+    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token required' } });
     return;
   }
 
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || 'default_secret',
-    ) as any;
-
-    req.user = decoded;
+    const user = authSessionService.verifyAccessToken(token);
+    (
+      req as Request & {
+        user?: {
+          id?: number;
+          email?: string;
+          firstname?: string;
+          lastname?: string;
+        };
+      }
+    ).user = {
+      ...user,
+      firstname: user.firstname ?? undefined,
+      lastname: user.lastname ?? undefined,
+    };
     next();
   } catch {
-    res.status(403).json({ error: 'Invalid token' });
+    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid token' } });
   }
 }

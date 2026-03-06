@@ -1,0 +1,85 @@
+name: ci-backend
+
+on:
+  pull_request:
+    paths:
+      - 'museum-backend/**'
+      - '.github/workflows/ci-backend.yml'
+  push:
+    branches: ['main', 'staging']
+    paths:
+      - 'museum-backend/**'
+      - '.github/workflows/ci-backend.yml'
+  schedule:
+    - cron: '17 3 * * *'
+
+jobs:
+  backend-checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: museum-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: museum-backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: OpenAPI Spec Validate
+        run: pnpm run openapi:validate
+
+      - name: OpenAPI Contract (spec-backed)
+        run: pnpm run test:contract:openapi
+
+      - name: Unit/Integration Tests (non-E2E)
+        run: pnpm test -- --watchman=false --runInBand --testPathIgnorePatterns=tests/e2e
+
+  backend-e2e-postgres:
+    needs: backend-checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: museum-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: museum-backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Docker availability
+        run: docker version
+
+      - name: E2E Postgres (Testcontainers)
+        run: RUN_E2E=true pnpm test -- --watchman=false --runInBand tests/e2e/api.postgres.e2e.test.ts
+

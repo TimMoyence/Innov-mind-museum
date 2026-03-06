@@ -1,31 +1,14 @@
-import swaggerJSDoc from 'swagger-jsdoc';
+import fs from 'fs';
+import path from 'path';
 import swaggerUi from 'swagger-ui-express';
 import { Express } from 'express';
 
-const swaggerOptions: swaggerJSDoc.Options = {
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'Museum-IA API',
-      version: '1.0.0',
-      description: 'Documentation for the Museum-IA backend API',
-    },
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-        },
-      },
-    },
-    security: [{ bearerAuth: [] }],
-  },
-  apis: ['src/**/*.route.ts'],
+const loadOpenApiSpec = (): Record<string, unknown> => {
+  const specPath = path.resolve(process.cwd(), 'openapi', 'openapi.json');
+  const raw = fs.readFileSync(specPath, 'utf8');
+  return JSON.parse(raw) as Record<string, unknown>;
 };
 
-const swaggerSpec = swaggerJSDoc(swaggerOptions);
-
 export const setupSwagger = (app: Express): void => {
-  app.use('/api/v1/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(loadOpenApiSpec()));
 };
