@@ -18,6 +18,12 @@ type ExpoExtra = {
   };
 };
 
+const BRAND_ICON = './assets/images/museum-ia/apple-devices/AppIcon.appiconset/icon-ios-1024x1024.png';
+const BRAND_SPLASH_IMAGE = './assets/images/museum-ia/android/playstore-icon.png';
+const BRAND_ANDROID_ADAPTIVE_FOREGROUND =
+  './assets/images/museum-ia/android/mipmap-xxxhdpi/ic_launcher_foreground.png';
+const BRAND_BACKGROUND_COLOR = '#1E1B19';
+
 const resolveVariant = (env: RuntimeEnv): AppVariant => {
   const raw = (
     env.APP_VARIANT ||
@@ -74,15 +80,21 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     slug: 'museum-ia',
     version: '1.0.0',
     orientation: 'portrait',
-    icon: './assets/images/icon.png',
+    icon: BRAND_ICON,
     scheme: 'museumia',
     userInterfaceStyle: 'automatic',
     newArchEnabled: true,
     runtimeVersion: {
       policy: 'appVersion',
     },
+    splash: {
+      image: BRAND_SPLASH_IMAGE,
+      resizeMode: 'contain',
+      backgroundColor: BRAND_BACKGROUND_COLOR,
+    },
     ios: {
       supportsTablet: true,
+      icon: BRAND_ICON,
       bundleIdentifier: isProduction
         ? 'com.museumia.mobile'
         : 'com.museumia.mobile.preview',
@@ -96,11 +108,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         ? 'com.museumia.mobile'
         : 'com.museumia.mobile.preview',
       permissions: ['android.permission.RECORD_AUDIO'],
+      adaptiveIcon: {
+        foregroundImage: BRAND_ANDROID_ADAPTIVE_FOREGROUND,
+        backgroundColor: BRAND_BACKGROUND_COLOR,
+      },
     },
     web: {
       bundler: 'metro',
       output: 'single',
-      favicon: './assets/images/favicon.png',
+      favicon: BRAND_ICON,
     },
     plugins: [
       'expo-router',
