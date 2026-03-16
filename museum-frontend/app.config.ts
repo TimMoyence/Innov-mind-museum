@@ -56,17 +56,29 @@ const nonEmpty = (value?: string): string | undefined => {
   return normalized.length ? normalized : undefined;
 };
 
-const resolveApiBaseUrl = (variant: AppVariant, env: RuntimeEnv): string => {
-  const explicit = nonEmpty(env.EXPO_PUBLIC_API_BASE_URL);
-  if (explicit) {
-    return explicit;
+const nonPlaceholder = (value?: string): string | undefined => {
+  const normalized = nonEmpty(value);
+  if (!normalized) {
+    return undefined;
   }
+
+  return normalized.startsWith('$') ? undefined : normalized;
+};
+
+const resolveApiBaseUrl = (variant: AppVariant, env: RuntimeEnv): string => {
+  const explicit = nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL);
+  const staging = nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL_STAGING);
+  const production = nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL_PROD);
 
   if (variant === 'production') {
-    return nonEmpty(env.EXPO_PUBLIC_API_BASE_URL_PROD) || 'http://localhost:3000';
+    return production || explicit || 'http://localhost:3000';
   }
 
-  return nonEmpty(env.EXPO_PUBLIC_API_BASE_URL_STAGING) || 'http://localhost:3000';
+  if (variant === 'preview') {
+    return staging || explicit || 'http://localhost:3000';
+  }
+
+  return explicit || staging || production || 'http://localhost:3000';
 };
 
 export default ({ config }: ConfigContext): ExpoConfig => {
@@ -153,8 +165,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     extra: {
       API_BASE_URL: resolveApiBaseUrl(variant, env),
-      API_BASE_URL_STAGING: nonEmpty(env.EXPO_PUBLIC_API_BASE_URL_STAGING),
-      API_BASE_URL_PRODUCTION: nonEmpty(env.EXPO_PUBLIC_API_BASE_URL_PROD),
+      API_BASE_URL_STAGING: nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL_STAGING),
+      API_BASE_URL_PRODUCTION: nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL_PROD),
       APP_VARIANT: variant,
       eas: projectId
         ? {

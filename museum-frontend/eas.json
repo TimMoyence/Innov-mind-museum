@@ -17,20 +17,14 @@
       "distribution": "internal",
       "channel": "preview",
       "env": {
-        "APP_VARIANT": "preview",
-        "EXPO_PUBLIC_API_BASE_URL": "$EXPO_PUBLIC_API_BASE_URL_STAGING",
-        "EXPO_PUBLIC_API_BASE_URL_STAGING": "$EXPO_PUBLIC_API_BASE_URL_STAGING",
-        "EXPO_PUBLIC_API_BASE_URL_PROD": "$EXPO_PUBLIC_API_BASE_URL_PROD"
+        "APP_VARIANT": "preview"
       }
     },
     "production": {
       "channel": "production",
       "autoIncrement": true,
       "env": {
-        "APP_VARIANT": "production",
-        "EXPO_PUBLIC_API_BASE_URL": "$EXPO_PUBLIC_API_BASE_URL_PROD",
-        "EXPO_PUBLIC_API_BASE_URL_STAGING": "$EXPO_PUBLIC_API_BASE_URL_STAGING",
-        "EXPO_PUBLIC_API_BASE_URL_PROD": "$EXPO_PUBLIC_API_BASE_URL_PROD"
+        "APP_VARIANT": "production"
       }
     }
   },
