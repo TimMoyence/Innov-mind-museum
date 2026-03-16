@@ -19,6 +19,7 @@ import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
 import { storage } from '@/shared/infrastructure/storage';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
+import { BrandMark } from '@/shared/ui/BrandMark';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -148,6 +149,7 @@ export default function ConversationsScreen() {
       </View>
 
       <GlassCard style={styles.headerCard} intensity={60}>
+        <BrandMark variant='header' style={styles.brand} />
         <Text style={styles.title}>Dashboard</Text>
         <Text style={styles.subtitle}>Your recent museum sessions. Pull down to refresh.</Text>
         <Text style={styles.metaLine}>
@@ -219,23 +221,30 @@ const styles = StyleSheet.create({
   headerCard: {
     paddingHorizontal: 16,
     paddingVertical: 16,
+    alignItems: 'center',
+  },
+  brand: {
+    marginBottom: 6,
   },
   title: {
     fontSize: 30,
     fontWeight: '700',
     color: liquidColors.textPrimary,
+    textAlign: 'center',
   },
   subtitle: {
     marginTop: 6,
     color: liquidColors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
+    textAlign: 'center',
   },
   metaLine: {
     marginTop: 6,
     fontSize: 12,
     color: '#1E3A8A',
     fontWeight: '700',
+    textAlign: 'center',
   },
   menuStatus: {
     marginTop: 8,
