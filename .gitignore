@@ -1,3 +1,5 @@
+.env
+
 # docs 
 **/docs/**
 
@@ -87,3 +89,4 @@ out-tsc/
 bazel-out/
 .tmp
 recommendations.md
+museum-frontend/musaium-490413-b3472f10991e.json

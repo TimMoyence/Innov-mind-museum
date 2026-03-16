@@ -1,6 +1,11 @@
 {
   "expo": {
     "name": "MuseumIA",
-    "slug": "museum-ia"
+    "slug": "museum-ia",
+    "extra": {
+      "eas": {
+        "projectId": "0341650b-fb52-422f-9dd8-a166cea82eb4"
+      }
+    }
   }
 }
