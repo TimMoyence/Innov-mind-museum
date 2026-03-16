@@ -69,7 +69,7 @@ jobs:
         run: npm test
 
   build-preview-ios:
-    if: ${{ secrets.EXPO_TOKEN != '' && ((github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'preview' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all')) || (github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, 'android-only') && !contains(github.event.head_commit.message, 'android only'))) }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'preview' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all')) || (github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, 'android-only') && !contains(github.event.head_commit.message, 'android only')) }}
     needs: quality-frontend
     runs-on: ubuntu-latest
     defaults:
@@ -107,7 +107,7 @@ jobs:
         run: npx eas build --platform ios --profile preview --non-interactive --no-wait
 
   build-preview-android:
-    if: ${{ secrets.EXPO_TOKEN != '' && ((github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'preview' && (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all')) || (github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, 'ios-only') && !contains(github.event.head_commit.message, 'ios only'))) }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'preview' && (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all')) || (github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, 'ios-only') && !contains(github.event.head_commit.message, 'ios only')) }}
     needs: quality-frontend
     runs-on: ubuntu-latest
     defaults:
@@ -145,7 +145,7 @@ jobs:
         run: npx eas build --platform android --profile preview --non-interactive --no-wait
 
   build-production-ios:
-    if: ${{ secrets.EXPO_TOKEN != '' && ((startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all'))) }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all')) }}
     needs: quality-frontend
     runs-on: ubuntu-latest
     environment: production
@@ -184,7 +184,7 @@ jobs:
         run: npx eas build --platform ios --profile production --non-interactive --no-wait
 
   build-production-android:
-    if: ${{ secrets.EXPO_TOKEN != '' && ((github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all')) || (startsWith(github.ref, 'refs/tags/v') && vars.AUTO_TAG_BUILD_ANDROID == 'true')) }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all')) || (startsWith(github.ref, 'refs/tags/v') && vars.AUTO_TAG_BUILD_ANDROID == 'true') }}
     needs: quality-frontend
     runs-on: ubuntu-latest
     environment: production
@@ -223,7 +223,7 @@ jobs:
         run: npx eas build --platform android --profile production --non-interactive --no-wait
 
   submit-production-ios:
-    if: ${{ secrets.EXPO_TOKEN != '' && secrets.APPLE_ID != '' && secrets.ASC_APP_ID != '' && secrets.APPLE_TEAM_ID != '' && ((startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && github.event.inputs.submit == 'yes' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all'))) }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && github.event.inputs.submit == 'yes' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all')) }}
     needs: build-production-ios
     runs-on: ubuntu-latest
     environment: production
@@ -267,7 +267,7 @@ jobs:
         run: npx eas submit --platform ios --profile production --latest --non-interactive
 
   submit-production-android:
-    if: ${{ secrets.EXPO_TOKEN != '' && secrets.GOOGLE_SERVICE_ACCOUNT_JSON != '' && ((github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && github.event.inputs.submit == 'yes' && (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all')) || (startsWith(github.ref, 'refs/tags/v') && vars.AUTO_TAG_BUILD_ANDROID == 'true')) }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && github.event.inputs.submit == 'yes' && (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all')) || (startsWith(github.ref, 'refs/tags/v') && vars.AUTO_TAG_BUILD_ANDROID == 'true') }}
     needs: build-production-android
     runs-on: ubuntu-latest
     environment: production
