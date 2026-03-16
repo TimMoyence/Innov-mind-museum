@@ -6,6 +6,7 @@ import { chatApi } from '@/features/chat/infrastructure/chatApi';
 import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
+import { BrandMark } from '@/shared/ui/BrandMark';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -97,9 +98,10 @@ export default function HomeScreen() {
       {menuStatus ? <Text style={styles.menuStatus}>{menuStatus}</Text> : null}
 
       <GlassCard style={styles.heroCard} intensity={62}>
-        <Text style={styles.title}>Musaium Companion</Text>
+        <BrandMark variant='hero' />
+        <Text style={styles.title}>Your museum companion</Text>
         <Text style={styles.subtitle}>
-          Explore artworks, monuments, and heritage with a focused AI guide.
+          Explore artworks, monuments, and heritage with a focused AI guide built for real visits.
         </Text>
         <Text style={styles.settingsNote}>
           Language: {locale} • Guided mode: {museumMode ? 'On' : 'Off'}
@@ -151,22 +153,25 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     padding: 20,
-    gap: 8,
+    gap: 10,
   },
   title: {
-    fontSize: 36,
+    fontSize: 32,
     fontWeight: '700',
     color: liquidColors.textPrimary,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
     lineHeight: 24,
     color: liquidColors.textSecondary,
+    textAlign: 'center',
   },
   settingsNote: {
     fontSize: 13,
     color: '#1E3A8A',
     fontWeight: '600',
+    textAlign: 'center',
   },
   primaryButton: {
     marginTop: 6,

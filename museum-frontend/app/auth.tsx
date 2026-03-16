@@ -16,6 +16,7 @@ import { authStorage } from '@/features/auth/infrastructure/authStorage';
 import { HOME_ROUTE } from '@/features/auth/routes';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
+import { BrandMark } from '@/shared/ui/BrandMark';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -154,9 +155,12 @@ export default function AuthScreen() {
 
       <GlassCard style={styles.panel} intensity={66}>
         <View style={styles.header}>
-          <Text style={styles.title}>Musaium</Text>
+          <BrandMark variant='auth' />
+          <Text style={styles.title}>{isLogin ? 'Welcome back' : 'Create your account'}</Text>
           <Text style={styles.subtitle}>
-            {isLogin ? 'Sign in to continue your cultural journey' : 'Create your account'}
+            {isLogin
+              ? 'Sign in to continue your cultural journey.'
+              : 'Create a Musaium account to save and resume your visits.'}
           </Text>
         </View>
 
@@ -271,14 +275,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
     color: liquidColors.textPrimary,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 14,
     color: liquidColors.textSecondary,
     textAlign: 'center',
+    lineHeight: 21,
   },
   form: {
     gap: 10,
