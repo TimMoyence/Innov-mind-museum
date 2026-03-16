@@ -87,7 +87,7 @@ export default function PrivacyScreen() {
           </View>
 
           <Text style={styles.subtitle}>
-            This page explains how MuseumIA processes personal data, user rights under GDPR/RGPD,
+            This page explains how Musaium processes personal data, user rights under GDPR/RGPD,
             and how to contact support for privacy requests.
           </Text>
 

@@ -36,7 +36,7 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
     'Withdraw consent for permission-based processing',
   ],
   quickFacts: [
-    { label: 'Scope', value: 'MuseumIA mobile app + related support channels' },
+    { label: 'Scope', value: 'Musaium mobile app + related support channels' },
     { label: 'Data types', value: 'Account, chat, image upload, voice upload, diagnostics' },
     { label: 'Permissions', value: 'Camera / microphone only on explicit user action' },
     { label: 'User rights', value: 'GDPR rights available via privacy contact / support' },
@@ -54,7 +54,7 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
       id: 'controller',
       title: '1. Data Controller',
       paragraphs: [
-        'MuseumIA is operated by TO_FILL_CONTROLLER_NAME, acting as data controller for personal data processed through the mobile application and related support channels.',
+        'Musaium is operated by TO_FILL_CONTROLLER_NAME, acting as data controller for personal data processed through the mobile application and related support channels.',
         'Registered address: TO_FILL_CONTROLLER_ADDRESS.',
       ],
     },
@@ -90,7 +90,7 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
       title: '5. Recipients / Processors',
       paragraphs: [
         'Authorized internal personnel on a need-to-know basis.',
-        'Hosting, infrastructure, analytics, and AI processing providers used to operate MuseumIA (TO_FILL_PROCESSOR_LIST).',
+        'Hosting, infrastructure, analytics, and AI processing providers used to operate Musaium (TO_FILL_PROCESSOR_LIST).',
         'Payment providers are TO_FILL_IF_APPLICABLE.',
       ],
     },
@@ -115,7 +115,7 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
       id: 'security',
       title: '8. Security Measures',
       paragraphs: [
-        'MuseumIA uses technical and organizational safeguards such as access controls, transport security, environment isolation, and operational monitoring. No system is risk-free, and users should avoid sharing unnecessary sensitive data.',
+        'Musaium uses technical and organizational safeguards such as access controls, transport security, environment isolation, and operational monitoring. No system is risk-free, and users should avoid sharing unnecessary sensitive data.',
       ],
     },
     {
@@ -138,7 +138,7 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
       id: 'minors',
       title: '11. Children / Minors',
       paragraphs: [
-        'MuseumIA is not intended for children below the age required under applicable law without parental authorization. If you believe a minor provided data unlawfully, contact TO_FILL_PRIVACY_EMAIL.',
+        'Musaium is not intended for children below the age required under applicable law without parental authorization. If you believe a minor provided data unlawfully, contact TO_FILL_PRIVACY_EMAIL.',
       ],
     },
     {

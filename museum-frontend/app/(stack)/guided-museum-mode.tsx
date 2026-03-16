@@ -52,7 +52,7 @@ export default function GuidedMuseumModeScreen() {
         <GlassCard style={styles.heroCard} intensity={60}>
           <Text style={styles.title}>Guided Museum Mode</Text>
           <Text style={styles.subtitle}>
-            Guided mode turns MuseumIA into a museum companion: it explains the artwork and suggests a
+            Guided mode turns Musaium into a museum companion: it explains the artwork and suggests a
             relevant next step for your visit.
           </Text>
           <Text style={styles.stateLine}>
@@ -63,7 +63,7 @@ export default function GuidedMuseumModeScreen() {
         <GlassCard style={styles.card} intensity={54}>
           <Text style={styles.cardTitle}>What changes in guided mode</Text>
           <Text style={styles.cardText}>
-            MuseumIA adds practical museum-oriented guidance such as the next stop, transitions between
+            Musaium adds practical museum-oriented guidance such as the next stop, transitions between
             rooms, and observation prompts tied to nearby works or monuments.
           </Text>
         </GlassCard>

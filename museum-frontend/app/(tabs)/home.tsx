@@ -97,7 +97,7 @@ export default function HomeScreen() {
       {menuStatus ? <Text style={styles.menuStatus}>{menuStatus}</Text> : null}
 
       <GlassCard style={styles.heroCard} intensity={62}>
-        <Text style={styles.title}>MuseumIA Companion</Text>
+        <Text style={styles.title}>Musaium Companion</Text>
         <Text style={styles.subtitle}>
           Explore artworks, monuments, and heritage with a focused AI guide.
         </Text>

@@ -1,13 +1,13 @@
 export const SUPPORT_LINKS = {
   instagram: {
     label: 'Instagram',
-    url: 'https://instagram.com/museumia_support',
-    handle: '@museumia_support',
+    url: 'https://instagram.com/musaium_support',
+    handle: '@musaium_support',
   },
   telegram: {
     label: 'Telegram',
-    url: 'https://t.me/museumia_support',
-    handle: '@museumia_support',
+    url: 'https://t.me/musaium_support',
+    handle: '@musaium_support',
   },
 } as const;
 

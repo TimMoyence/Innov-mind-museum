@@ -105,8 +105,8 @@ export default function ConversationsScreen() {
     const total = items.length;
     const savedCount = savedSessionIds.length;
     await Share.share({
-      title: 'MuseumIA dashboard',
-      message: `MuseumIA dashboard: ${total} sessions, ${savedCount} saved.`,
+      title: 'Musaium dashboard',
+      message: `Musaium dashboard: ${total} sessions, ${savedCount} saved.`,
     });
     setMenuStatus('Dashboard summary shared');
   };

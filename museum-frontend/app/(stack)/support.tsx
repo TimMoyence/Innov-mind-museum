@@ -48,9 +48,9 @@ export default function SupportScreen() {
 
   const shareChannels = async () => {
     await Share.share({
-      title: 'MuseumIA support channels',
+      title: 'Musaium support channels',
       message: [
-        'MuseumIA support channels',
+        'Musaium support channels',
         `${SUPPORT_LINKS.instagram.label}: ${SUPPORT_LINKS.instagram.url}`,
         `${SUPPORT_LINKS.telegram.label}: ${SUPPORT_LINKS.telegram.url}`,
       ].join('\n'),
@@ -89,7 +89,7 @@ export default function SupportScreen() {
         <GlassCard style={styles.heroCard} intensity={60}>
           <Text style={styles.title}>Support</Text>
           <Text style={styles.subtitle}>
-            Contact MuseumIA support through our social channels. Replace placeholder handles before
+            Contact Musaium support through our social channels. Replace placeholder handles before
             production release.
           </Text>
           {status ? <Text style={styles.status}>{status}</Text> : null}

@@ -1,11 +1,12 @@
 {
   "expo": {
-    "name": "MuseumIA",
-    "slug": "museum-ia",
+    "name": "Musaium",
+    "slug": "musaium",
     "extra": {
       "eas": {
-        "projectId": "0341650b-fb52-422f-9dd8-a166cea82eb4"
+        "projectId": "11146d52-cc47-4f49-81f4-517485895e03"
       }
-    }
+    },
+    "owner": "tim-moyence"
   }
 }
