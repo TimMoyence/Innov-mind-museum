@@ -95,14 +95,14 @@ jobs:
           test -n "$EXPO_PUBLIC_API_BASE_URL_STAGING"
           test -n "$EXPO_PUBLIC_API_BASE_URL_PROD"
 
-      - name: Setup Expo/EAS CLI
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
       - name: Validate Expo auth
         run: test -n "$EXPO_TOKEN"
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli@latest
+
+      - name: Verify EAS CLI
+        run: eas --version
 
       - name: Build iOS preview
         run: eas build --platform ios --profile preview --non-interactive --no-wait
@@ -134,14 +134,14 @@ jobs:
           test -n "$EXPO_PUBLIC_API_BASE_URL_STAGING"
           test -n "$EXPO_PUBLIC_API_BASE_URL_PROD"
 
-      - name: Setup Expo/EAS CLI
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
       - name: Validate Expo auth
         run: test -n "$EXPO_TOKEN"
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli@latest
+
+      - name: Verify EAS CLI
+        run: eas --version
 
       - name: Build Android preview
         run: eas build --platform android --profile preview --non-interactive --no-wait
@@ -174,14 +174,14 @@ jobs:
           test -n "$EXPO_PUBLIC_API_BASE_URL_STAGING"
           test -n "$EXPO_PUBLIC_API_BASE_URL_PROD"
 
-      - name: Setup Expo/EAS CLI
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
       - name: Validate Expo auth
         run: test -n "$EXPO_TOKEN"
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli@latest
+
+      - name: Verify EAS CLI
+        run: eas --version
 
       - name: Build iOS production
         run: eas build --platform ios --profile production --non-interactive --no-wait
@@ -214,14 +214,14 @@ jobs:
           test -n "$EXPO_PUBLIC_API_BASE_URL_STAGING"
           test -n "$EXPO_PUBLIC_API_BASE_URL_PROD"
 
-      - name: Setup Expo/EAS CLI
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
       - name: Validate Expo auth
         run: test -n "$EXPO_TOKEN"
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli@latest
+
+      - name: Verify EAS CLI
+        run: eas --version
 
       - name: Build Android production
         run: eas build --platform android --profile production --non-interactive --no-wait
@@ -259,14 +259,14 @@ jobs:
           test -n "$ASC_APP_ID"
           test -n "$APPLE_TEAM_ID"
 
-      - name: Setup Expo/EAS CLI
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
       - name: Validate Expo auth
         run: test -n "$EXPO_TOKEN"
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli@latest
+
+      - name: Verify EAS CLI
+        run: eas --version
 
       - name: Submit iOS latest production build
         run: eas submit --platform ios --profile production --latest --non-interactive
@@ -299,12 +299,6 @@ jobs:
           test -n "$EXPO_PUBLIC_API_BASE_URL_PROD"
           test -n "$GOOGLE_SERVICE_ACCOUNT_JSON"
 
-      - name: Setup Expo/EAS CLI
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
       - name: Prepare Google Play service account key
         run: |
           mkdir -p .secrets
@@ -312,6 +306,12 @@ jobs:
 
       - name: Validate Expo auth
         run: test -n "$EXPO_TOKEN"
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli@latest
+
+      - name: Verify EAS CLI
+        run: eas --version
 
       - name: Submit Android latest production build
         run: eas submit --platform android --profile production --latest --non-interactive
