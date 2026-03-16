@@ -12,6 +12,12 @@ type RuntimeEnv = {
   APP_VARIANT?: string;
 };
 
+type ExpoExtra = {
+  eas?: {
+    projectId?: string;
+  };
+};
+
 const resolveVariant = (env: RuntimeEnv): AppVariant => {
   const raw = (
     env.APP_VARIANT ||
@@ -56,8 +62,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const env = process.env as RuntimeEnv;
   const variant = resolveVariant(env);
   const isProduction = variant === 'production';
+  const configProjectId = nonEmpty((config.extra as ExpoExtra | undefined)?.eas?.projectId);
   const projectId =
-    nonEmpty(env.EXPO_PUBLIC_EAS_PROJECT_ID) || nonEmpty(env.EAS_PROJECT_ID);
+    nonEmpty(env.EXPO_PUBLIC_EAS_PROJECT_ID) ||
+    nonEmpty(env.EAS_PROJECT_ID) ||
+    configProjectId;
 
   const appConfig: ExpoConfig = {
     ...config,
