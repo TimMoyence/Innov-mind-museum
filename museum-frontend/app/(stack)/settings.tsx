@@ -96,7 +96,7 @@ export default function SettingsScreen() {
         <GlassCard style={styles.heroCard} intensity={60}>
           <Text style={styles.title}>Settings</Text>
           <Text style={styles.subtitle}>
-            Manage your MuseumIA preferences, privacy information, and support access.
+            Manage your Musaium preferences, privacy information, and support access.
           </Text>
           <Text style={styles.buildNotice}>
             Backend environment is build-driven (local/preview/production), not user-selectable.

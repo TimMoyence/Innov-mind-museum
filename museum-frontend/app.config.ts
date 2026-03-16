@@ -6,8 +6,6 @@ type RuntimeEnv = {
   EXPO_PUBLIC_API_BASE_URL?: string;
   EXPO_PUBLIC_API_BASE_URL_STAGING?: string;
   EXPO_PUBLIC_API_BASE_URL_PROD?: string;
-  EXPO_PUBLIC_EAS_PROJECT_ID?: string;
-  EAS_PROJECT_ID?: string;
   EAS_BUILD_PROFILE?: string;
   APP_VARIANT?: string;
 };
@@ -18,6 +16,13 @@ type ExpoExtra = {
   };
 };
 
+const APP_NAME = 'Musaium';
+const APP_SLUG = 'musaium';
+const APP_SCHEME = 'musaium';
+const APP_IOS_BUNDLE_ID = 'com.musaium.mobile';
+const APP_IOS_BUNDLE_ID_PREVIEW = 'com.musaium.mobile.preview';
+const APP_ANDROID_PACKAGE = 'com.musaium.mobile';
+const APP_ANDROID_PACKAGE_PREVIEW = 'com.musaium.mobile.preview';
 const BRAND_ICON = './assets/images/museum-ia/apple-devices/AppIcon.appiconset/icon-ios-1024x1024.png';
 const BRAND_SPLASH_IMAGE = './assets/images/museum-ia/android/playstore-icon.png';
 const BRAND_ANDROID_ADAPTIVE_FOREGROUND =
@@ -67,21 +72,17 @@ const resolveApiBaseUrl = (variant: AppVariant, env: RuntimeEnv): string => {
 export default ({ config }: ConfigContext): ExpoConfig => {
   const env = process.env as RuntimeEnv;
   const variant = resolveVariant(env);
-  const isProduction = variant === 'production';
   const configProjectId = nonEmpty((config.extra as ExpoExtra | undefined)?.eas?.projectId);
-  const projectId =
-    nonEmpty(env.EXPO_PUBLIC_EAS_PROJECT_ID) ||
-    nonEmpty(env.EAS_PROJECT_ID) ||
-    configProjectId;
+  const projectId = configProjectId;
 
   const appConfig: ExpoConfig = {
     ...config,
-    name: isProduction ? 'MuseumIA' : 'MuseumIA Preview',
-    slug: 'museum-ia',
+    name: APP_NAME,
+    slug: APP_SLUG,
     version: '1.0.0',
     orientation: 'portrait',
     icon: BRAND_ICON,
-    scheme: 'museumia',
+    scheme: APP_SCHEME,
     userInterfaceStyle: 'automatic',
     newArchEnabled: true,
     runtimeVersion: {
@@ -95,18 +96,18 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ios: {
       supportsTablet: true,
       icon: BRAND_ICON,
-      bundleIdentifier: isProduction
-        ? 'com.museumia.mobile'
-        : 'com.museumia.mobile.preview',
+      bundleIdentifier:
+        variant === 'production' ? APP_IOS_BUNDLE_ID : APP_IOS_BUNDLE_ID_PREVIEW,
       infoPlist: {
         NSMicrophoneUsageDescription:
           'Allow $(PRODUCT_NAME) to access your microphone for voice questions about artworks.',
       },
     },
     android: {
-      package: isProduction
-        ? 'com.museumia.mobile'
-        : 'com.museumia.mobile.preview',
+      package:
+        variant === 'production'
+          ? APP_ANDROID_PACKAGE
+          : APP_ANDROID_PACKAGE_PREVIEW,
       permissions: ['android.permission.RECORD_AUDIO'],
       adaptiveIcon: {
         foregroundImage: BRAND_ANDROID_ADAPTIVE_FOREGROUND,

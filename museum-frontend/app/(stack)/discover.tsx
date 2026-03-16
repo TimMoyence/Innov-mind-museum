@@ -95,7 +95,7 @@ export default function DiscoverScreen() {
         >
           <Text style={styles.actionTitle}>Take a Photo of an Artwork</Text>
           <Text style={styles.actionText}>
-            Launch the camera directly and ask MuseumIA to analyze an artwork, monument, or cultural detail.
+            Launch the camera directly and ask Musaium to analyze an artwork, monument, or cultural detail.
           </Text>
           {isCreating ? <ActivityIndicator color='#FFFFFF' /> : <Text style={styles.actionCta}>Open Lens</Text>}
         </Pressable>

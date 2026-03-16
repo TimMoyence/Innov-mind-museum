@@ -154,7 +154,7 @@ export default function AuthScreen() {
 
       <GlassCard style={styles.panel} intensity={66}>
         <View style={styles.header}>
-          <Text style={styles.title}>MuseumIA</Text>
+          <Text style={styles.title}>Musaium</Text>
           <Text style={styles.subtitle}>
             {isLogin ? 'Sign in to continue your cultural journey' : 'Create your account'}
           </Text>
