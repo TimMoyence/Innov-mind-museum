@@ -1,11 +1,13 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 type AppVariant = 'development' | 'preview' | 'production';
+type ApiEnvironment = 'staging' | 'production';
 
 type RuntimeEnv = {
   EXPO_PUBLIC_API_BASE_URL?: string;
   EXPO_PUBLIC_API_BASE_URL_STAGING?: string;
   EXPO_PUBLIC_API_BASE_URL_PROD?: string;
+  EXPO_PUBLIC_API_ENVIRONMENT?: string;
   EAS_BUILD_PROFILE?: string;
   APP_VARIANT?: string;
 };
@@ -65,17 +67,30 @@ const nonPlaceholder = (value?: string): string | undefined => {
   return normalized.startsWith('$') ? undefined : normalized;
 };
 
+const resolveApiEnvironment = (
+  variant: AppVariant,
+  env: RuntimeEnv,
+): ApiEnvironment => {
+  const explicit = nonPlaceholder(env.EXPO_PUBLIC_API_ENVIRONMENT)?.toLowerCase();
+  if (explicit === 'production') {
+    return 'production';
+  }
+
+  if (explicit === 'staging') {
+    return 'staging';
+  }
+
+  return variant === 'production' ? 'production' : 'staging';
+};
+
 const resolveApiBaseUrl = (variant: AppVariant, env: RuntimeEnv): string => {
   const explicit = nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL);
   const staging = nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL_STAGING);
   const production = nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL_PROD);
+  const apiEnvironment = resolveApiEnvironment(variant, env);
 
-  if (variant === 'production') {
+  if (apiEnvironment === 'production') {
     return production || explicit || 'http://localhost:3000';
-  }
-
-  if (variant === 'preview') {
-    return staging || explicit || 'http://localhost:3000';
   }
 
   return explicit || staging || production || 'http://localhost:3000';
@@ -84,6 +99,7 @@ const resolveApiBaseUrl = (variant: AppVariant, env: RuntimeEnv): string => {
 export default ({ config }: ConfigContext): ExpoConfig => {
   const env = process.env as RuntimeEnv;
   const variant = resolveVariant(env);
+  const apiEnvironment = resolveApiEnvironment(variant, env);
   const configProjectId = nonEmpty((config.extra as ExpoExtra | undefined)?.eas?.projectId);
   const projectId = configProjectId;
 
@@ -167,6 +183,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       API_BASE_URL: resolveApiBaseUrl(variant, env),
       API_BASE_URL_STAGING: nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL_STAGING),
       API_BASE_URL_PRODUCTION: nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL_PROD),
+      API_ENVIRONMENT: apiEnvironment,
       APP_VARIANT: variant,
       eas: projectId
         ? {
