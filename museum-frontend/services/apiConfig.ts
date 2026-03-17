@@ -1,6 +1,16 @@
 import Constants from 'expo-constants';
 
 export type ApiEnvironment = 'staging' | 'production' | 'custom';
+export type BuildVariant = 'development' | 'preview' | 'production';
+
+export interface ApiConfigurationSnapshot {
+  buildVariant: BuildVariant;
+  apiEnvironment: ApiEnvironment;
+  fallbackBaseUrl: string;
+  stagingBaseUrl?: string;
+  productionBaseUrl?: string;
+  resolvedBaseUrl: string;
+}
 
 const normalizeApiEnvironment = (value: unknown): ApiEnvironment | undefined => {
   if (typeof value !== 'string') {
@@ -43,7 +53,7 @@ const readExtra = (): Record<string, unknown> => {
   );
 };
 
-const resolveBuildVariant = (): 'development' | 'preview' | 'production' => {
+const resolveBuildVariant = (): BuildVariant => {
   const extra = readExtra();
   const fromExtra = trimOrUndefined(extra.APP_VARIANT);
   const raw = (
@@ -131,6 +141,20 @@ export const resolveRuntimeApiBaseUrl = (
   return configured.staging || configured.fallback;
 };
 
+export const getApiConfigurationSnapshot = (): ApiConfigurationSnapshot => {
+  const configured = resolveConfiguredBaseUrls();
+  const apiEnvironment = getDefaultApiEnvironment();
+
+  return {
+    buildVariant: resolveBuildVariant(),
+    apiEnvironment,
+    fallbackBaseUrl: configured.fallback,
+    stagingBaseUrl: configured.staging,
+    productionBaseUrl: configured.production,
+    resolvedBaseUrl: resolveRuntimeApiBaseUrl(apiEnvironment),
+  };
+};
+
 export const assertApiBaseUrlAllowed = (value: string): void => {
   const variant = resolveBuildVariant();
   if (variant !== 'development' && isLocalhostApiBaseUrl(value)) {
@@ -144,6 +168,32 @@ export const resolveInitialApiBaseUrl = (): string => {
   const url = resolveRuntimeApiBaseUrl(getDefaultApiEnvironment());
   assertApiBaseUrlAllowed(url);
   return url;
+};
+
+export const getStartupConfigurationError = (): Error | null => {
+  try {
+    resolveInitialApiBaseUrl();
+    return null;
+  } catch (error) {
+    if (error instanceof Error) {
+      return error;
+    }
+
+    return new Error('Invalid app startup configuration');
+  }
+};
+
+export const tryResolveInitialApiBaseUrl = (): {
+  url: string;
+  error: Error | null;
+} => {
+  const snapshot = getApiConfigurationSnapshot();
+  const error = getStartupConfigurationError();
+
+  return {
+    url: snapshot.resolvedBaseUrl,
+    error,
+  };
 };
 
 const API_PREFIX = '/api';

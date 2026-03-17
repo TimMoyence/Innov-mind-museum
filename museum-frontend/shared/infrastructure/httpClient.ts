@@ -3,7 +3,7 @@ import axios from 'axios';
 import { getAccessToken } from '@/services/tokenStore';
 import {
   assertApiBaseUrlAllowed,
-  resolveInitialApiBaseUrl,
+  tryResolveInitialApiBaseUrl,
 } from '@/services/apiConfig';
 import { createAppError } from '@/shared/types/AppError';
 
@@ -32,20 +32,16 @@ type HttpRequestConfig = {
   _retriedAfterAuthRefresh?: boolean;
 } & Record<string, unknown>;
 
-const resolveDefaultBaseUrl = (): string => {
-  try {
-    return resolveInitialApiBaseUrl();
-  } catch (error) {
-    if (__DEV__) {
-      // eslint-disable-next-line no-console
-      console.warn('[HTTP] Invalid API base URL configuration', error);
-      return 'http://localhost:3000';
-    }
-    throw error;
-  }
-};
+const initialApiBaseUrlResolution = tryResolveInitialApiBaseUrl();
+if (initialApiBaseUrlResolution.error && __DEV__) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    '[HTTP] Invalid API base URL configuration',
+    initialApiBaseUrlResolution.error,
+  );
+}
 
-const DEFAULT_BASE_URL = resolveDefaultBaseUrl();
+const DEFAULT_BASE_URL = initialApiBaseUrlResolution.url;
 let runtimeBaseUrl = DEFAULT_BASE_URL;
 
 export const setApiBaseUrl = (nextUrl: string): void => {

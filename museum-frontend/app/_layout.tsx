@@ -1,11 +1,16 @@
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import { AuthProvider } from '@/context/AuthContext';
 import { useProtectedRoute } from '@/features/auth/useProtectedRoute';
 import { applyRuntimeSettings } from '@/features/settings/runtimeSettings';
+import {
+  getApiConfigurationSnapshot,
+  getStartupConfigurationError,
+} from '@/services/apiConfig';
+import { StartupConfigurationErrorScreen } from '@/shared/ui/StartupConfigurationErrorScreen';
 
 function AuthenticationGuard({ children }: { children: ReactNode }) {
   useProtectedRoute();
@@ -13,12 +18,49 @@ function AuthenticationGuard({ children }: { children: ReactNode }) {
 }
 
 export default function RootLayout() {
+  const startupConfiguration = useMemo(() => {
+    return {
+      error: getStartupConfigurationError(),
+      snapshot: getApiConfigurationSnapshot(),
+    };
+  }, []);
+  const [runtimeStartupError, setRuntimeStartupError] = useState<Error | null>(
+    null,
+  );
+
   useEffect(() => {
+    if (startupConfiguration.error) {
+      return;
+    }
+
     applyRuntimeSettings().catch((error) => {
       // eslint-disable-next-line no-console
       console.error('Failed to apply runtime settings', error);
+      setRuntimeStartupError(
+        error instanceof Error
+          ? error
+          : new Error('Failed to apply runtime settings'),
+      );
     });
-  }, []);
+  }, [startupConfiguration.error]);
+
+  if (startupConfiguration.error) {
+    return (
+      <StartupConfigurationErrorScreen
+        error={startupConfiguration.error}
+        snapshot={startupConfiguration.snapshot}
+      />
+    );
+  }
+
+  if (runtimeStartupError) {
+    return (
+      <StartupConfigurationErrorScreen
+        error={runtimeStartupError}
+        snapshot={startupConfiguration.snapshot}
+      />
+    );
+  }
 
   return (
     <AuthProvider>
