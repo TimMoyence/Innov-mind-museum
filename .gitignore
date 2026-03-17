@@ -2,6 +2,9 @@
 
 # docs 
 **/docs/**
+!docs/
+!docs/CI_CD_SECRETS.md
+!docs/MOBILE_INTERNAL_TESTING_FLOW.md
 
 # OS X
 **/.DS_Store*
@@ -48,6 +51,7 @@ coverage/
 .env
 **/.env
 expo-env.d.ts
+**/.expo/
 
 # Visual Studio Code
 .vscode/

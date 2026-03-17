@@ -2,6 +2,19 @@ import Constants from 'expo-constants';
 
 export type ApiEnvironment = 'staging' | 'production' | 'custom';
 
+const normalizeApiEnvironment = (value: unknown): ApiEnvironment | undefined => {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'staging' || normalized === 'production' || normalized === 'custom') {
+    return normalized;
+  }
+
+  return undefined;
+};
+
 const ensureLeadingSlash = (path: string): string => {
   if (!path.length) {
     return '/';
@@ -88,6 +101,15 @@ export const isLocalhostApiBaseUrl = (value: string): boolean => {
 };
 
 export const getDefaultApiEnvironment = (): ApiEnvironment => {
+  const extra = readExtra();
+  const explicit =
+    normalizeApiEnvironment(process.env.EXPO_PUBLIC_API_ENVIRONMENT) ||
+    normalizeApiEnvironment(extra.API_ENVIRONMENT);
+
+  if (explicit && explicit !== 'custom') {
+    return explicit;
+  }
+
   return resolveBuildVariant() === 'production' ? 'production' : 'staging';
 };
 

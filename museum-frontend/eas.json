@@ -10,6 +10,7 @@
       "channel": "development",
       "env": {
         "APP_VARIANT": "development",
+        "EXPO_PUBLIC_API_ENVIRONMENT": "staging",
         "EXPO_PUBLIC_API_BASE_URL": "http://localhost:3000"
       }
     },
@@ -17,18 +18,35 @@
       "distribution": "internal",
       "channel": "preview",
       "env": {
-        "APP_VARIANT": "preview"
+        "APP_VARIANT": "preview",
+        "EXPO_PUBLIC_API_ENVIRONMENT": "staging"
+      }
+    },
+    "internal": {
+      "extends": "production",
+      "channel": "internal",
+      "env": {
+        "APP_VARIANT": "production",
+        "EXPO_PUBLIC_API_ENVIRONMENT": "staging"
       }
     },
     "production": {
       "channel": "production",
       "autoIncrement": true,
       "env": {
-        "APP_VARIANT": "production"
+        "APP_VARIANT": "production",
+        "EXPO_PUBLIC_API_ENVIRONMENT": "production"
       }
     }
   },
   "submit": {
+    "internal": {
+      "android": {
+        "serviceAccountKeyPath": "./.secrets/google-service-account.json",
+        "track": "internal",
+        "releaseStatus": "completed"
+      }
+    },
     "production": {
       "ios": {
         "ascAppId": "$ASC_APP_ID",
@@ -37,7 +55,8 @@
       },
       "android": {
         "serviceAccountKeyPath": "./.secrets/google-service-account.json",
-        "track": "internal"
+        "track": "production",
+        "releaseStatus": "draft"
       }
     }
   }
