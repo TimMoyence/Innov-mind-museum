@@ -66,7 +66,7 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
 
   app.use(
     helmet({
-      contentSecurityPolicy: false,
+      contentSecurityPolicy: isProd ? undefined : false,
     }),
   );
   app.use(compression());

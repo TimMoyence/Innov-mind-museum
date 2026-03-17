@@ -51,3 +51,46 @@ test('maps empty preview session to fallback title', () => {
   assert.equal(cards[0].title, 'No messages yet');
   assert.match(cards[0].subtitle, /Standard mode/);
 });
+
+test('prefers session title over preview text and shows museumName in subtitle', () => {
+  const now = new Date().toISOString();
+  const card = mapSessionToDashboardCard(
+    {
+      id: 'session-99',
+      locale: 'fr-FR',
+      museumMode: true,
+      title: 'Mona Lisa',
+      museumName: 'Louvre',
+      createdAt: now,
+      updatedAt: now,
+      messageCount: 3,
+      preview: { text: 'Tell me about this painting', createdAt: now, role: 'user' },
+    },
+    'fr-FR',
+  );
+
+  assert.equal(card.title, 'Mona Lisa');
+  assert.match(card.subtitle, /Guided mode/);
+  assert.match(card.subtitle, /Louvre/);
+  assert.match(card.subtitle, /fr-FR/);
+});
+
+test('falls back to preview text when session title is null', () => {
+  const now = new Date().toISOString();
+  const card = mapSessionToDashboardCard(
+    {
+      id: 'session-100',
+      museumMode: false,
+      title: null,
+      museumName: null,
+      createdAt: now,
+      updatedAt: now,
+      messageCount: 1,
+      preview: { text: 'What is this sculpture?', createdAt: now, role: 'user' },
+    },
+    'en-US',
+  );
+
+  assert.equal(card.title, 'What is this sculpture?');
+  assert.match(card.subtitle, /Standard mode/);
+});

@@ -165,9 +165,25 @@ export class TypeOrmChatRepository implements ChatRepository {
 
       const saved = await messageRepository.save(entity);
 
+      const sessionUpdate: Record<string, unknown> = {
+        updatedAt: new Date(),
+      };
+
+      if (input.sessionUpdates) {
+        if (input.sessionUpdates.title !== undefined) {
+          sessionUpdate.title = input.sessionUpdates.title;
+        }
+        if (input.sessionUpdates.museumName !== undefined) {
+          sessionUpdate.museumName = input.sessionUpdates.museumName;
+        }
+        if (input.sessionUpdates.visitContext !== undefined) {
+          sessionUpdate.visitContext = input.sessionUpdates.visitContext;
+        }
+      }
+
       await sessionRepository.update(
         { id: input.sessionId },
-        { updatedAt: new Date() as never },
+        sessionUpdate as never,
       );
 
       return saved;
@@ -181,6 +197,7 @@ export class TypeOrmChatRepository implements ChatRepository {
       title: input.title || null,
       source: input.source || null,
       confidence: input.confidence ?? 0,
+      room: input.room || null,
       message: { id: input.messageId } as ChatMessage,
     });
 

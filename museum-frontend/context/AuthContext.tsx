@@ -169,17 +169,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Vérifier si un token est valide
   const checkTokenValidity = async (): Promise<boolean> => {
     try {
-      const token = await authStorage.getToken();
-      if (!token) {
+      const refreshToken = await authStorage.getRefreshToken();
+      if (!refreshToken) {
         clearAccessToken();
         setIsAuthenticated(false);
         return false;
       }
 
-      const session = await authService.refresh(token);
+      const session = await authService.refresh(refreshToken);
       await authStorage.setRefreshToken(session.refreshToken);
       setAccessToken(session.accessToken);
       setIsAuthenticated(true);

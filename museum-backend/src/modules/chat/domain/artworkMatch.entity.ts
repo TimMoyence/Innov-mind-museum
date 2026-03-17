@@ -33,6 +33,9 @@ export class ArtworkMatch {
   @Column({ type: 'varchar', length: 512, nullable: true })
   source?: string | null;
 
+  @Column({ type: 'varchar', length: 256, nullable: true })
+  room?: string | null;
+
   @CreateDateColumn({ type: 'timestamp' })
   createdAt!: Date;
 }

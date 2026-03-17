@@ -32,11 +32,10 @@ export const mapSessionToDashboardCard = (
   session: SessionListItemDTO,
   locale = 'en-US',
 ): DashboardSessionCard => {
-  const rawTitle = session.preview?.text?.trim() || fallbackTitle;
+  const rawTitle = session.title || session.preview?.text?.trim() || fallbackTitle;
   const modeLabel = session.museumMode ? 'Guided mode' : 'Standard mode';
-  const subtitle = session.locale
-    ? `${modeLabel} • ${session.locale}`
-    : modeLabel;
+  const parts = [modeLabel, session.museumName, session.locale].filter(Boolean);
+  const subtitle = parts.join(' • ');
   const timeSource = session.preview?.createdAt || session.updatedAt;
 
   return {

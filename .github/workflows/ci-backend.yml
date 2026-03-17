@@ -45,6 +45,13 @@ jobs:
       - name: OpenAPI Contract (spec-backed)
         run: pnpm run test:contract:openapi
 
+      - name: Guard DB_SYNCHRONIZE
+        run: |
+          if grep -rq 'DB_SYNCHRONIZE=true' .env* 2>/dev/null; then
+            echo "::error::DB_SYNCHRONIZE=true found in env files — forbidden in CI"
+            exit 1
+          fi
+
       - name: Unit/Integration Tests (non-E2E)
         run: pnpm test -- --watchman=false --runInBand --testPathIgnorePatterns=tests/e2e
 

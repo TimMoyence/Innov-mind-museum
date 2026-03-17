@@ -9,3 +9,4 @@ expo-env.d.ts
 
 api.ts
 .test-dist/
+.secrets/
