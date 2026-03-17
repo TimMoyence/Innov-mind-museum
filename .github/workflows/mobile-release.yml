@@ -6,7 +6,7 @@ on:
       profile:
         description: Build profile to run
         required: true
-        default: preview
+        default: internal
         type: choice
         options:
           - preview
@@ -15,7 +15,7 @@ on:
       platform:
         description: Platform target
         required: true
-        default: ios
+        default: android
         type: choice
         options:
           - ios
@@ -73,7 +73,7 @@ jobs:
         run: npm test
 
   build-preview-ios:
-    if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'preview' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all')) || (github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, 'android-only') && !contains(github.event.head_commit.message, 'android only')) }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'preview' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all') }}
     needs: quality-frontend
     runs-on: ubuntu-latest
     defaults:
@@ -194,10 +194,10 @@ jobs:
         run: eas --version
 
       - name: Build and auto-submit Android internal testing release
-        run: eas build --platform android --profile internal --auto-submit --auto-submit-with-profile internal --non-interactive --no-wait
+        run: eas build --platform android --profile internal --auto-submit-with-profile internal --non-interactive --no-wait
 
   build-production-ios:
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all')) }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all') }}
     needs: quality-frontend
     runs-on: ubuntu-latest
     environment: production
@@ -277,7 +277,7 @@ jobs:
         run: eas build --platform android --profile production --non-interactive --no-wait
 
   submit-production-ios:
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && github.event.inputs.submit == 'yes' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all')) }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && github.event.inputs.submit == 'yes' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all') }}
     needs: build-production-ios
     runs-on: ubuntu-latest
     environment: production
