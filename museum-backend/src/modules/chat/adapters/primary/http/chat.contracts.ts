@@ -71,6 +71,8 @@ export interface CreateSessionResponse {
     id: string;
     locale?: string | null;
     museumMode: boolean;
+    title?: string | null;
+    museumName?: string | null;
     createdAt: string;
     updatedAt: string;
   };
@@ -102,7 +104,11 @@ export interface PostMessageResponse {
       artist?: string;
       confidence?: number;
       source?: string;
+      museum?: string;
+      room?: string;
     };
+    recommendations?: string[];
+    expertiseSignal?: string;
     citations?: string[];
   };
 }
@@ -120,6 +126,8 @@ export interface GetSessionResponse {
     id: string;
     locale?: string | null;
     museumMode: boolean;
+    title?: string | null;
+    museumName?: string | null;
     createdAt: string;
     updatedAt: string;
   };
@@ -152,6 +160,8 @@ export interface ListSessionsResponse {
     id: string;
     locale?: string | null;
     museumMode: boolean;
+    title?: string | null;
+    museumName?: string | null;
     createdAt: string;
     updatedAt: string;
     preview?: {

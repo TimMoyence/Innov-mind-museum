@@ -602,6 +602,8 @@ export interface components {
             id: string;
             locale?: string | null;
             museumMode: boolean;
+            title?: string | null;
+            museumName?: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -643,6 +645,18 @@ export interface components {
                 createdAt: string;
             };
             metadata: {
+                detectedArtwork?: {
+                    artworkId?: string;
+                    title?: string;
+                    artist?: string;
+                    confidence?: number;
+                    source?: string;
+                    museum?: string;
+                    room?: string;
+                };
+                recommendations?: string[];
+                /** @enum {string} */
+                expertiseSignal?: "beginner" | "intermediate" | "expert";
                 citations?: string[];
             } & {
                 [key: string]: unknown;
@@ -669,6 +683,8 @@ export interface components {
                 id: string;
                 locale?: string | null;
                 museumMode: boolean;
+                title?: string | null;
+                museumName?: string | null;
                 /** Format: date-time */
                 createdAt: string;
                 /** Format: date-time */

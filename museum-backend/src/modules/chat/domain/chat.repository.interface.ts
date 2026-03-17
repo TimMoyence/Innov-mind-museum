@@ -1,4 +1,4 @@
-import type { CreateSessionInput, ChatRole } from './chat.types';
+import type { CreateSessionInput, ChatRole, VisitContext } from './chat.types';
 import { ChatSession } from './chatSession.entity';
 import { ChatMessage } from './chatMessage.entity';
 
@@ -8,12 +8,19 @@ export interface ListSessionMessagesParams {
   cursor?: string;
 }
 
+export interface PersistMessageSessionUpdates {
+  title?: string;
+  museumName?: string;
+  visitContext?: VisitContext;
+}
+
 export interface PersistMessageInput {
   sessionId: string;
   role: ChatRole;
   text?: string;
   imageRef?: string;
   metadata?: Record<string, unknown>;
+  sessionUpdates?: PersistMessageSessionUpdates;
 }
 
 export interface PersistArtworkMatchInput {
@@ -23,6 +30,7 @@ export interface PersistArtworkMatchInput {
   artist?: string;
   confidence?: number;
   source?: string;
+  room?: string;
 }
 
 export interface SessionMessagesPage {

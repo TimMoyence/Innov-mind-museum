@@ -16,6 +16,7 @@ export interface LlmSectionPlanInput {
   parallelEnabled: boolean;
   timeoutSummaryMs: number;
   timeoutExpertCompactMs: number;
+  visitContextBlock?: string;
 }
 
 const isFrenchLocale = (locale?: string): boolean => {
@@ -47,6 +48,7 @@ const buildSummaryPrompt = (
   locale: string | undefined,
   museumMode: boolean,
   guideLevel: 'beginner' | 'intermediate' | 'expert',
+  visitContextBlock?: string,
 ): string => {
   const french = isFrenchLocale(locale);
   const modeLine = museumMode
@@ -57,15 +59,28 @@ const buildSummaryPrompt = (
       ? 'Le visiteur est en mode libre: reste concis et utile.'
       : 'Visitor is in regular mode: stay concise and practical.';
 
-  return [
+  const parts = [
     '[SECTION:summary]',
     french ? 'Reponds en francais.' : 'Reply in English.',
     buildGuideLevelHint(guideLevel, french),
     modeLine,
+  ];
+
+  if (visitContextBlock) {
+    parts.push(visitContextBlock);
+  }
+
+  parts.push(
     'Return strict JSON only with this shape:',
-    '{"answer":"string","detectedArtwork":{"artworkId":"string?","title":"string?","artist":"string?","confidence":"number?","source":"string?"},"citations":["string"]}',
+    '{"answer":"string","detectedArtwork":{"artworkId":"string?","title":"string?","artist":"string?","confidence":"number?","source":"string?","museum":"string?","room":"string?"},"recommendations":["string"],"expertiseSignal":"beginner|intermediate|expert","citations":["string"]}',
     'Do not add markdown. Keep answer concise.',
-  ].join(' ');
+    museumMode
+      ? 'In recommendations, suggest 1-3 nearby artworks or rooms the visitor could explore next.'
+      : 'In recommendations, suggest 1-2 related artworks or topics to explore.',
+    'Set expertiseSignal to the visitor expertise level you detect from their question.',
+  );
+
+  return parts.join(' ');
 };
 
 const buildExpertCompactPrompt = (
@@ -101,7 +116,7 @@ export const createLlmSectionPlan = (
     name: 'summary',
     timeoutMs: input.timeoutSummaryMs,
     required: true,
-    prompt: buildSummaryPrompt(input.locale, input.museumMode, input.guideLevel),
+    prompt: buildSummaryPrompt(input.locale, input.museumMode, input.guideLevel, input.visitContextBlock),
   };
 
   if (!input.parallelEnabled) {

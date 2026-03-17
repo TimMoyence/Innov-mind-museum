@@ -34,6 +34,8 @@ export const useChatSession = (sessionId: string) => {
   const [museumMode, setMuseumMode] = useState<boolean>(true);
   const [guideLevel, setGuideLevel] = useState<GuideLevel>('beginner');
   const [locale, setLocale] = useState<string>('en-US');
+  const [sessionTitle, setSessionTitle] = useState<string | null>(null);
+  const [museumName, setMuseumName] = useState<string | null>(null);
 
   const loadSession = useCallback(async () => {
     setIsLoading(true);
@@ -41,6 +43,8 @@ export const useChatSession = (sessionId: string) => {
 
     try {
       const response = await chatApi.getSession(sessionId);
+      setSessionTitle(response.session.title ?? null);
+      setMuseumName(response.session.museumName ?? null);
       setMessages(
         sortByTime(
           response.messages.map((message) => ({
@@ -169,5 +173,7 @@ export const useChatSession = (sessionId: string) => {
     sendMessage,
     refreshMessageImageUrl,
     locale,
+    sessionTitle,
+    museumName,
   };
 };

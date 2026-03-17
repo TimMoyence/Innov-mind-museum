@@ -23,6 +23,7 @@ import {
   MessagePageQuery,
   PostMessageInput,
 } from '../domain/chat.types';
+import { computeSessionUpdates } from './visit-context';
 import {
   ChatRepository,
   ChatSessionsPage,
@@ -42,6 +43,8 @@ export interface CreateSessionResult {
   id: string;
   locale?: string | null;
   museumMode: boolean;
+  title?: string | null;
+  museumName?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -96,6 +99,8 @@ export interface ListSessionsResult {
     id: string;
     locale?: string | null;
     museumMode: boolean;
+    title?: string | null;
+    museumName?: string | null;
     createdAt: string;
     updatedAt: string;
     preview?: {
@@ -214,6 +219,8 @@ export class ChatService {
       id: session.id,
       locale: session.locale,
       museumMode: session.museumMode,
+      title: session.title ?? null,
+      museumName: session.museumName ?? null,
       createdAt: session.createdAt.toISOString(),
       updatedAt: session.updatedAt.toISOString(),
     };
@@ -367,6 +374,7 @@ export class ChatService {
         location: input.context?.location,
         guideLevel: input.context?.guideLevel,
       },
+      visitContext: session.visitContext,
       requestId,
     });
 
@@ -381,12 +389,28 @@ export class ChatService {
       ? aiResult.metadata
       : withPolicyCitation(aiResult.metadata, outputGuardrail.reason);
 
+    const sessionUpdates = outputGuardrail.allow
+      ? computeSessionUpdates(session, assistantMetadata, 'pending')
+      : undefined;
+
     const assistantMessage = await this.repository.persistMessage({
       sessionId,
       role: 'assistant',
       text: assistantText,
       metadata: assistantMetadata as Record<string, unknown>,
+      sessionUpdates,
     });
+
+    if (outputGuardrail.allow && sessionUpdates) {
+      if (sessionUpdates.visitContext) {
+        const pendingArtwork = sessionUpdates.visitContext.artworksDiscussed.find(
+          (a) => a.messageId === 'pending',
+        );
+        if (pendingArtwork) {
+          pendingArtwork.messageId = assistantMessage.id;
+        }
+      }
+    }
 
     if (outputGuardrail.allow && aiResult.metadata.detectedArtwork) {
       await this.repository.persistArtworkMatch({
@@ -396,6 +420,7 @@ export class ChatService {
         artist: aiResult.metadata.detectedArtwork.artist,
         confidence: aiResult.metadata.detectedArtwork.confidence,
         source: aiResult.metadata.detectedArtwork.source,
+        room: aiResult.metadata.detectedArtwork.room,
       });
     }
 
@@ -528,6 +553,8 @@ export class ChatService {
         id: session.id,
         locale: session.locale,
         museumMode: session.museumMode,
+        title: session.title ?? null,
+        museumName: session.museumName ?? null,
         createdAt: session.createdAt.toISOString(),
         updatedAt: session.updatedAt.toISOString(),
       },
@@ -574,6 +601,8 @@ export class ChatService {
         id: row.session.id,
         locale: row.session.locale,
         museumMode: row.session.museumMode,
+        title: row.session.title ?? null,
+        museumName: row.session.museumName ?? null,
         createdAt: row.session.createdAt.toISOString(),
         updatedAt: row.session.updatedAt.toISOString(),
         preview: row.preview

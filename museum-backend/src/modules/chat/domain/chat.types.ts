@@ -1,4 +1,23 @@
 export type ChatRole = 'user' | 'assistant' | 'system';
+export type ExpertiseLevel = 'beginner' | 'intermediate' | 'expert';
+
+export interface VisitedArtwork {
+  title: string;
+  artist?: string;
+  room?: string;
+  messageId: string;
+  discussedAt: string;
+}
+
+export interface VisitContext {
+  museumName?: string;
+  museumConfidence: number;
+  artworksDiscussed: VisitedArtwork[];
+  roomsVisited: string[];
+  detectedExpertise: ExpertiseLevel;
+  expertiseSignals: number;
+  lastUpdated: string;
+}
 
 export interface CreateSessionInput {
   userId?: number;
@@ -63,7 +82,11 @@ export interface ChatAssistantMetadata {
     artist?: string;
     confidence?: number;
     source?: string;
+    museum?: string;
+    room?: string;
   };
+  recommendations?: string[];
+  expertiseSignal?: ExpertiseLevel;
   citations?: string[];
   diagnostics?: ChatAssistantDiagnostics;
 }

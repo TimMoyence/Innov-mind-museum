@@ -66,6 +66,8 @@ export default function ChatSessionScreen() {
     sendMessage,
     refreshMessageImageUrl,
     locale,
+    sessionTitle,
+    museumName,
   } = useChatSession(sessionId);
 
   const revokeWebAudioObjectUrl = useCallback(() => {
@@ -401,8 +403,8 @@ export default function ChatSessionScreen() {
       <GlassCard style={styles.headerShell} intensity={58}>
         <View style={styles.headerRow}>
           <View style={styles.headerContent}>
-            <Text style={styles.header}>Art Session</Text>
-            <Text style={styles.subheader}>{sessionId.slice(0, 12)}...</Text>
+            <Text style={styles.header} numberOfLines={1}>{sessionTitle || 'Art Session'}</Text>
+            <Text style={styles.subheader} numberOfLines={1}>{museumName || `${sessionId.slice(0, 12)}...`}</Text>
           </View>
           <Pressable onPress={onClose} style={styles.closeButton} disabled={isClosing}>
             {isClosing ? (

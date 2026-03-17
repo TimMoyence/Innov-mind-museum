@@ -61,14 +61,4 @@ export const authStorage = {
     return refreshTokenStore.clear();
   },
 
-  // Backward-compatible aliases during migration.
-  async getToken(): Promise<string | null> {
-    return refreshTokenStore.get();
-  },
-  async setToken(token: string): Promise<void> {
-    return refreshTokenStore.set(token);
-  },
-  async clearToken(): Promise<void> {
-    return refreshTokenStore.clear();
-  },
 };

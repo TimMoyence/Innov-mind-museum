@@ -8,6 +8,8 @@ import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import { ChatSession } from '@modules/chat/domain/chatSession.entity';
 import { env } from '@src/config/env';
 
+const isCompiledRuntime = __filename.endsWith('.js');
+
 export const AppDataSource = new DataSource({
   type: 'postgres',
   host: env.db.host,
@@ -22,11 +24,10 @@ export const AppDataSource = new DataSource({
     ChatMessage,
     ArtworkMatch,
   ],
-  migrations: [
-    'src/data/db/migrations/*.ts',
-    'dist/src/data/db/migrations/*.js',
-  ],
-  synchronize: env.dbSynchronize,
+  migrations: isCompiledRuntime
+    ? ['dist/src/data/db/migrations/*.js']
+    : ['src/data/db/migrations/*.ts'],
+  synchronize: env.nodeEnv === 'production' ? false : env.dbSynchronize,
   logging: false,
   extra: {
     max: env.db.poolMax,

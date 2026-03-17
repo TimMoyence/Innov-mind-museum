@@ -73,15 +73,15 @@ const resolveBuildVariant = (): BuildVariant => {
 };
 
 const resolveConfiguredBaseUrls = (): {
+  explicit?: string;
   fallback: string;
   staging?: string;
   production?: string;
 } => {
   const extra = readExtra();
-  const fallback =
+  const explicit =
     trimOrUndefined(process.env.EXPO_PUBLIC_API_BASE_URL) ||
-    trimOrUndefined(extra.API_BASE_URL) ||
-    'http://localhost:3000';
+    trimOrUndefined(extra.API_BASE_URL);
 
   const staging =
     trimOrUndefined(process.env.EXPO_PUBLIC_API_BASE_URL_STAGING) ||
@@ -92,7 +92,8 @@ const resolveConfiguredBaseUrls = (): {
     trimOrUndefined(extra.API_BASE_URL_PRODUCTION);
 
   return {
-    fallback: normalizeBaseUrl(fallback),
+    explicit: explicit ? normalizeBaseUrl(explicit) : undefined,
+    fallback: normalizeBaseUrl(explicit || 'http://localhost:3000'),
     staging: staging ? normalizeBaseUrl(staging) : undefined,
     production: production ? normalizeBaseUrl(production) : undefined,
   };
@@ -135,10 +136,10 @@ export const resolveRuntimeApiBaseUrl = (
   }
 
   if (environment === 'production') {
-    return configured.production || configured.fallback;
+    return configured.production || configured.explicit || configured.fallback;
   }
 
-  return configured.staging || configured.fallback;
+  return configured.explicit || configured.staging || configured.fallback;
 };
 
 export const getApiConfigurationSnapshot = (): ApiConfigurationSnapshot => {

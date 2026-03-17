@@ -82,6 +82,8 @@
           "id": { "type": "string", "format": "uuid" },
           "locale": { "type": ["string", "null"] },
           "museumMode": { "type": "boolean" },
+          "title": { "type": ["string", "null"] },
+          "museumName": { "type": ["string", "null"] },
           "createdAt": { "type": "string", "format": "date-time" },
           "updatedAt": { "type": "string", "format": "date-time" }
         }
@@ -138,6 +140,20 @@
           "metadata": {
             "type": "object",
             "properties": {
+              "detectedArtwork": {
+                "type": "object",
+                "properties": {
+                  "artworkId": { "type": "string" },
+                  "title": { "type": "string" },
+                  "artist": { "type": "string" },
+                  "confidence": { "type": "number" },
+                  "source": { "type": "string" },
+                  "museum": { "type": "string" },
+                  "room": { "type": "string" }
+                }
+              },
+              "recommendations": { "type": "array", "items": { "type": "string" } },
+              "expertiseSignal": { "type": "string", "enum": ["beginner", "intermediate", "expert"] },
               "citations": { "type": "array", "items": { "type": "string" } }
             },
             "additionalProperties": true
@@ -186,6 +202,8 @@
                 "id": { "type": "string", "format": "uuid" },
                 "locale": { "type": ["string", "null"] },
                 "museumMode": { "type": "boolean" },
+                "title": { "type": ["string", "null"] },
+                "museumName": { "type": ["string", "null"] },
                 "createdAt": { "type": "string", "format": "date-time" },
                 "updatedAt": { "type": "string", "format": "date-time" },
                 "messageCount": { "type": "integer" },
