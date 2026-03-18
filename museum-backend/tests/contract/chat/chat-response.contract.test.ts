@@ -24,7 +24,7 @@ describe('chat response contracts', () => {
     expect(isListSessionsResponse(list)).toBe(true);
   });
 
-  it('keeps post-message validator compatible with optional diagnostics metadata', () => {
+  it('keeps post-message validator compatible with diagnostics and new metadata fields', () => {
     expect(
       isPostMessageResponse({
         sessionId: 'session-id',
@@ -35,9 +35,13 @@ describe('chat response contracts', () => {
           createdAt: new Date().toISOString(),
         },
         metadata: {
+          deeperContext: 'Historical context here.',
+          openQuestion: 'What do you notice about the composition?',
+          followUpQuestions: ['Tell me about the artist.', 'What period is this?'],
+          imageDescription: 'A painting showing a landscape.',
           diagnostics: {
-            profile: 'parallel_sections',
-            degraded: true,
+            profile: 'single_section',
+            degraded: false,
             totalLatencyMs: 1234,
             sections: [
               {
@@ -45,7 +49,7 @@ describe('chat response contracts', () => {
                 status: 'success',
                 attempts: 1,
                 latencyMs: 320,
-                timeoutMs: 8000,
+                timeoutMs: 10000,
                 payloadBytes: 1024,
               },
             ],

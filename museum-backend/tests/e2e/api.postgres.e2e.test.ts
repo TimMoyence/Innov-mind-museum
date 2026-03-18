@@ -194,7 +194,7 @@ describeE2E('api e2e (express + postgres container)', () => {
   });
 
   it('supports full auth + chat flow with runtime contract validation', async () => {
-    const email = `e2e-${Date.now()}@museumia.test`;
+    const email = `e2e-${Date.now()}@musaium.test`;
     const password = 'Password123!';
 
     const register = await request('/api/auth/register', {
@@ -320,7 +320,7 @@ describeE2E('api e2e (express + postgres container)', () => {
   });
 
   it('accepts audio upload route and returns assistant response + transcription', async () => {
-    const email = `e2e-audio-${Date.now()}@museumia.test`;
+    const email = `e2e-audio-${Date.now()}@musaium.test`;
     const password = 'Password123!';
 
     const register = await request('/api/auth/register', {
@@ -394,7 +394,7 @@ describeE2E('api e2e (express + postgres container)', () => {
   });
 
   it('returns signed image URLs for uploaded images and serves image bytes', async () => {
-    const email = `e2e-image-${Date.now()}@museumia.test`;
+    const email = `e2e-image-${Date.now()}@musaium.test`;
     const password = 'Password123!';
 
     await request('/api/auth/register', {
@@ -498,7 +498,7 @@ describeE2E('api e2e (express + postgres container)', () => {
   });
 
   it('keeps the most recently active session first in session list', async () => {
-    const email = `e2e-recency-${Date.now()}@museumia.test`;
+    const email = `e2e-recency-${Date.now()}@musaium.test`;
     const password = 'Password123!';
 
     await request('/api/auth/register', {
@@ -556,7 +556,7 @@ describeE2E('api e2e (express + postgres container)', () => {
   });
 
   it('deletes an empty chat session and keeps non-empty session', async () => {
-    const email = `e2e-delete-${Date.now()}@museumia.test`;
+    const email = `e2e-delete-${Date.now()}@musaium.test`;
     const password = 'Password123!';
 
     const register = await request('/api/auth/register', {

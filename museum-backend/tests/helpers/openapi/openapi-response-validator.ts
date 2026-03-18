@@ -242,9 +242,12 @@ const getResponseSchema = (
   if (!isRecord(responses)) {
     throw new Error(`OpenAPI responses missing for ${method.toUpperCase()} ${path}`);
   }
-  const response = responses[String(statusCode)] ?? responses[statusCode];
+  let response: Record<string, unknown> = (responses[String(statusCode)] ?? responses[statusCode]) as Record<string, unknown>;
   if (!isRecord(response)) {
     throw new Error(`OpenAPI response status ${statusCode} not found for ${method.toUpperCase()} ${path}`);
+  }
+  if (typeof response.$ref === 'string') {
+    response = getSchemaByRef(response.$ref) as Record<string, unknown>;
   }
   const content = response.content;
   if (!isRecord(content)) {
@@ -261,6 +264,11 @@ const getResponseSchema = (
   return schema as OpenApiSchema;
 };
 
+/**
+ * Test utility: asserts that a response payload structurally matches the OpenAPI spec for the given endpoint.
+ * @param params - Endpoint path, HTTP method, status code, and the response payload to validate.
+ * @throws Error if the payload does not conform to the declared schema.
+ */
 export const assertMatchesOpenApiResponse = (params: {
   path: string;
   method: HttpMethod;

@@ -1,8 +1,6 @@
 import {
-  createExpertCompactFallback,
   createLlmSectionPlan,
   createSummaryFallback,
-  mergeSectionTexts,
 } from '@modules/chat/application/llm-sections';
 import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 
@@ -23,45 +21,66 @@ const createMessage = (
   }) as ChatMessage;
 
 describe('llm-sections', () => {
-  it('creates summary + expert plan when parallel mode is enabled', () => {
+  it('creates a single summary section', () => {
     const plan = createLlmSectionPlan({
       locale: 'en-US',
       museumMode: true,
       guideLevel: 'intermediate',
-      parallelEnabled: true,
-      timeoutSummaryMs: 8000,
-      timeoutExpertCompactMs: 20000,
-    });
-
-    expect(plan.map((section) => section.name)).toEqual([
-      'summary',
-      'expertCompact',
-    ]);
-    expect(plan[0].required).toBe(true);
-    expect(plan[1].required).toBe(false);
-  });
-
-  it('keeps only summary section when parallel mode is disabled', () => {
-    const plan = createLlmSectionPlan({
-      locale: 'fr-FR',
-      museumMode: false,
-      guideLevel: 'beginner',
-      parallelEnabled: false,
-      timeoutSummaryMs: 8000,
-      timeoutExpertCompactMs: 20000,
+      timeoutSummaryMs: 10000,
     });
 
     expect(plan).toHaveLength(1);
     expect(plan[0].name).toBe('summary');
+    expect(plan[0].required).toBe(true);
   });
 
-  it('merges summary then expert in deterministic order', () => {
-    const merged = mergeSectionTexts(
-      'Summary content',
-      'Expert compact enrichment',
-    );
+  it('includes image analysis guidance when hasImage is true', () => {
+    const plan = createLlmSectionPlan({
+      locale: 'en-US',
+      museumMode: true,
+      guideLevel: 'beginner',
+      timeoutSummaryMs: 10000,
+      hasImage: true,
+    });
 
-    expect(merged).toBe('Summary content\n\nExpert compact enrichment');
+    expect(plan[0].prompt).toContain('[IMAGE ANALYSIS]');
+    expect(plan[0].prompt).toContain('imageDescription');
+  });
+
+  it('does not include image guidance when hasImage is false', () => {
+    const plan = createLlmSectionPlan({
+      locale: 'en-US',
+      museumMode: true,
+      guideLevel: 'beginner',
+      timeoutSummaryMs: 10000,
+      hasImage: false,
+    });
+
+    expect(plan[0].prompt).not.toContain('[IMAGE ANALYSIS]');
+  });
+
+  it('includes followUpQuestions in JSON schema', () => {
+    const plan = createLlmSectionPlan({
+      locale: 'en-US',
+      museumMode: false,
+      guideLevel: 'expert',
+      timeoutSummaryMs: 10000,
+    });
+
+    expect(plan[0].prompt).toContain('followUpQuestions');
+    expect(plan[0].prompt).toContain('deeperContext');
+    expect(plan[0].prompt).toContain('openQuestion');
+  });
+
+  it('uses French prompts for fr locale', () => {
+    const plan = createLlmSectionPlan({
+      locale: 'fr-FR',
+      museumMode: false,
+      guideLevel: 'beginner',
+      timeoutSummaryMs: 10000,
+    });
+
+    expect(plan[0].prompt).toContain('Reponds en francais');
   });
 
   it('builds deterministic summary fallback', () => {
@@ -79,16 +98,5 @@ describe('llm-sections', () => {
     expect(fallback).toContain('Room 12');
     expect(fallback).toContain('Quick summary');
     expect(fallback).toContain('Next step');
-  });
-
-  it('builds deterministic expert compact fallback', () => {
-    const fallback = createExpertCompactFallback({
-      summaryText: 'Base summary',
-      locale: 'fr-FR',
-      location: 'Galerie Nord',
-    });
-
-    expect(fallback).toContain('Galerie Nord');
-    expect(fallback).toContain('Question guidee');
   });
 });

@@ -25,7 +25,7 @@ type InvokeOptions = {
 class FakeSectionModel {
   async invoke(
     messages: unknown,
-    options?: InvokeOptions,
+    _options?: InvokeOptions,
   ): Promise<{ content: unknown }> {
     const serialized = JSON.stringify(messages);
 
@@ -33,28 +33,35 @@ class FakeSectionModel {
       return {
         content: JSON.stringify({
           answer: 'Summary answer',
+          deeperContext: 'More context here.',
+          followUpQuestions: ['What technique was used?'],
           citations: ['catalog-ref'],
         }),
       };
     }
 
-    if (serialized.includes('[SECTION:expertCompact]')) {
-      await new Promise<void>((resolve, reject) => {
-        const timer = setTimeout(resolve, 100);
-        options?.signal?.addEventListener(
-          'abort',
-          () => {
-            clearTimeout(timer);
-            reject(new Error('TimeoutError: Request timed out.'));
-          },
-          { once: true },
-        );
-      });
-
-      return { content: 'Expert compact answer' };
-    }
-
     return { content: 'Unknown section' };
+  }
+}
+
+class SlowFakeModel {
+  async invoke(
+    _messages: unknown,
+    options?: InvokeOptions,
+  ): Promise<{ content: unknown }> {
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(resolve, 200);
+      options?.signal?.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(timer);
+          reject(new Error('TimeoutError: Request timed out.'));
+        },
+        { once: true },
+      );
+    });
+
+    return { content: JSON.stringify({ answer: 'Too late' }) };
   }
 }
 
@@ -65,12 +72,9 @@ describe('LangChainChatOrchestrator fail-soft profile', () => {
     Object.assign(env.llm, previous);
   });
 
-  it('returns summary with expert fallback when expert section times out', async () => {
+  it('returns summary with new metadata fields', async () => {
     Object.assign(env.llm, {
-      parallelEnabled: true,
-      sectionsMaxConcurrent: 2,
       timeoutSummaryMs: 200,
-      timeoutExpertCompactMs: 30,
       totalBudgetMs: 500,
       retries: 0,
       retryBaseDelayMs: 1,
@@ -97,29 +101,25 @@ describe('LangChainChatOrchestrator fail-soft profile', () => {
     });
 
     expect(result.text).toContain('Summary answer');
-    expect(result.text).toContain('Guided question');
     expect(result.metadata.citations).toEqual(['catalog-ref']);
-    expect(result.metadata.diagnostics?.degraded).toBe(true);
-    expect(result.metadata.diagnostics?.profile).toBe('parallel_sections');
-
-    const expert = result.metadata.diagnostics?.sections.find(
-      (section) => section.name === 'expertCompact',
-    );
-    expect(expert?.status).toBe('fallback');
+    expect(result.metadata.deeperContext).toBe('More context here.');
+    expect(result.metadata.followUpQuestions).toEqual(['What technique was used?']);
+    expect(result.metadata.diagnostics?.profile).toBe('single_section');
+    expect(result.metadata.diagnostics?.sections).toHaveLength(1);
+    expect(result.metadata.diagnostics?.degraded).toBe(false);
   });
 
-  it('keeps single-section profile when parallel flag is disabled', async () => {
+  it('falls back gracefully when summary times out', async () => {
     Object.assign(env.llm, {
-      parallelEnabled: false,
-      timeoutSummaryMs: 200,
-      totalBudgetMs: 500,
+      timeoutSummaryMs: 30,
+      totalBudgetMs: 100,
       retries: 0,
       retryBaseDelayMs: 1,
       includeDiagnostics: true,
     });
 
     const orchestrator = new LangChainChatOrchestrator({
-      model: new FakeSectionModel(),
+      model: new SlowFakeModel(),
     });
 
     const result = await orchestrator.generate({
@@ -127,12 +127,58 @@ describe('LangChainChatOrchestrator fail-soft profile', () => {
       text: 'Who painted this?',
       locale: 'en-US',
       museumMode: false,
-      requestId: 'single-section-test',
+      requestId: 'timeout-test',
     });
 
-    expect(result.text).toContain('Summary answer');
-    expect(result.metadata.diagnostics?.profile).toBe('single_section');
-    expect(result.metadata.diagnostics?.sections).toHaveLength(1);
-    expect(result.metadata.diagnostics?.degraded).toBe(false);
+    expect(result.text).toBeTruthy();
+    expect(result.metadata.diagnostics?.degraded).toBe(true);
+    expect(result.metadata.diagnostics?.sections[0].status).toBe('fallback');
+  });
+
+  it('injects redirectHint as system message when provided', async () => {
+    let capturedMessages: unknown = null;
+
+    const capturingModel = {
+      async invoke(messages: unknown): Promise<{ content: unknown }> {
+        capturedMessages = messages;
+        return {
+          content: JSON.stringify({
+            answer: 'Let me help you with art instead.',
+            followUpQuestions: ['What artwork is nearby?'],
+          }),
+        };
+      },
+    };
+
+    Object.assign(env.llm, {
+      timeoutSummaryMs: 200,
+      totalBudgetMs: 500,
+      retries: 0,
+      retryBaseDelayMs: 1,
+      includeDiagnostics: false,
+    });
+
+    const orchestrator = new LangChainChatOrchestrator({
+      model: capturingModel,
+    });
+
+    const result = await orchestrator.generate({
+      history: [],
+      text: "What's the weather?",
+      locale: 'en-US',
+      museumMode: false,
+      requestId: 'redirect-test',
+      redirectHint: 'Acknowledge briefly then redirect to art topics.',
+    });
+
+    expect(result.text).toContain('Let me help you with art instead.');
+    expect(result.metadata.followUpQuestions).toEqual(['What artwork is nearby?']);
+
+    // Verify the redirectHint was injected as a message
+    const messages = capturedMessages as Array<{ content: string }>;
+    const hintMessage = messages.find(
+      (m) => typeof m.content === 'string' && m.content.includes('redirect to art topics'),
+    );
+    expect(hintMessage).toBeTruthy();
   });
 });

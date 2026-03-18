@@ -72,6 +72,18 @@ describe('openapi response contracts (active API)', () => {
       statusCode: 200,
       payload: { success: true },
     });
+    assertMatchesOpenApiResponse({
+      path: '/api/auth/social-login',
+      method: 'post',
+      statusCode: 200,
+      payload: authSessionPayload,
+    });
+    assertMatchesOpenApiResponse({
+      path: '/api/auth/account',
+      method: 'delete',
+      statusCode: 200,
+      payload: { deleted: true },
+    });
 
     const chatService = buildChatTestService();
 
@@ -140,6 +152,68 @@ describe('openapi response contracts (active API)', () => {
       statusCode: 200,
       payload: deletePayload,
     });
+  });
+
+  it('validates error responses match the ApiError schema', () => {
+    const errorPayload = {
+      error: {
+        code: 'BAD_REQUEST',
+        message: 'Validation failed',
+        requestId: 'req-123',
+      },
+    };
+
+    const errorEndpoints: Array<{
+      path: string;
+      method: 'get' | 'post' | 'delete';
+      statusCode: number;
+    }> = [
+      { path: '/api/auth/register', method: 'post', statusCode: 400 },
+      { path: '/api/auth/login', method: 'post', statusCode: 400 },
+      { path: '/api/auth/login', method: 'post', statusCode: 401 },
+      { path: '/api/auth/refresh', method: 'post', statusCode: 400 },
+      { path: '/api/auth/refresh', method: 'post', statusCode: 401 },
+      { path: '/api/auth/me', method: 'get', statusCode: 401 },
+      { path: '/api/auth/social-login', method: 'post', statusCode: 400 },
+      { path: '/api/auth/social-login', method: 'post', statusCode: 401 },
+      { path: '/api/auth/account', method: 'delete', statusCode: 401 },
+      { path: '/api/auth/account', method: 'delete', statusCode: 404 },
+      { path: '/api/chat/sessions', method: 'post', statusCode: 400 },
+      { path: '/api/chat/sessions', method: 'post', statusCode: 401 },
+      { path: '/api/chat/sessions', method: 'get', statusCode: 400 },
+      { path: '/api/chat/sessions', method: 'get', statusCode: 401 },
+      { path: '/api/chat/sessions/{id}', method: 'get', statusCode: 400 },
+      { path: '/api/chat/sessions/{id}', method: 'get', statusCode: 401 },
+      { path: '/api/chat/sessions/{id}', method: 'get', statusCode: 404 },
+      { path: '/api/chat/sessions/{id}', method: 'delete', statusCode: 400 },
+      { path: '/api/chat/sessions/{id}', method: 'delete', statusCode: 401 },
+      { path: '/api/chat/sessions/{id}', method: 'delete', statusCode: 404 },
+      { path: '/api/chat/sessions/{id}/messages', method: 'post', statusCode: 400 },
+      { path: '/api/chat/sessions/{id}/messages', method: 'post', statusCode: 401 },
+      { path: '/api/chat/sessions/{id}/messages', method: 'post', statusCode: 404 },
+      { path: '/api/chat/sessions/{id}/messages', method: 'post', statusCode: 409 },
+      { path: '/api/chat/sessions/{id}/messages', method: 'post', statusCode: 429 },
+      { path: '/api/chat/sessions/{id}/audio', method: 'post', statusCode: 400 },
+      { path: '/api/chat/sessions/{id}/audio', method: 'post', statusCode: 401 },
+      { path: '/api/chat/sessions/{id}/audio', method: 'post', statusCode: 404 },
+      { path: '/api/chat/sessions/{id}/audio', method: 'post', statusCode: 409 },
+      { path: '/api/chat/sessions/{id}/audio', method: 'post', statusCode: 429 },
+      { path: '/api/chat/messages/{messageId}/report', method: 'post', statusCode: 400 },
+      { path: '/api/chat/messages/{messageId}/report', method: 'post', statusCode: 401 },
+      { path: '/api/chat/messages/{messageId}/report', method: 'post', statusCode: 404 },
+      { path: '/api/chat/messages/{messageId}/image-url', method: 'post', statusCode: 400 },
+      { path: '/api/chat/messages/{messageId}/image-url', method: 'post', statusCode: 401 },
+      { path: '/api/chat/messages/{messageId}/image-url', method: 'post', statusCode: 404 },
+      { path: '/api/chat/messages/{messageId}/image', method: 'get', statusCode: 400 },
+      { path: '/api/chat/messages/{messageId}/image', method: 'get', statusCode: 404 },
+    ];
+
+    for (const endpoint of errorEndpoints) {
+      assertMatchesOpenApiResponse({
+        ...endpoint,
+        payload: errorPayload,
+      });
+    }
   });
 });
 
