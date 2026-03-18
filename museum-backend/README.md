@@ -1,6 +1,6 @@
-# MuseumIA Backend
+# Musaium Backend
 
-Express 5 + TypeORM backend for MuseumIA (mobile-first API).
+Express 5 + TypeORM backend for Musaium (mobile-first API).
 
 Current active backend surface:
 

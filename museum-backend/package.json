@@ -1,5 +1,5 @@
 {
-  "name": "museum-ia",
+  "name": "musaium-backend",
   "version": "1.0.0",
   "description": "",
   "packageManager": "pnpm@9.15.3",
@@ -14,6 +14,7 @@
     "openapi:validate": "node ./scripts/check-openapi-spec.cjs",
     "smoke:api": "node ./scripts/smoke-api.cjs",
     "test": "jest --watchman=false --runInBand",
+    "test:ai": "RUN_AI_TESTS=true jest --watchman=false --runInBand --testPathPattern=tests/ai/ --testPathIgnorePatterns '/dist/' '/node_modules/'",
     "test:contract:openapi": "jest --watchman=false --runInBand tests/contract/openapi/openapi-response.contract.test.ts",
     "test:e2e": "RUN_E2E=true jest --watchman=false --runInBand --testPathPattern=tests/e2e/ --forceExit",
     "perf:chat:mock": "ts-node -r tsconfig-paths/register tests/perf/chat-load.mocked.ts",
@@ -23,7 +24,8 @@
     "migration:new": "npm run migration:generate --",
     "migration:run": "npm run typeorm -- migration:run",
     "migration:show": "npm run typeorm -- migration:show",
-    "migration:revert": "npm run typeorm -- migration:revert"
+    "migration:revert": "npm run typeorm -- migration:revert",
+    "purge:tokens": "ts-node -r tsconfig-paths/register scripts/purge-expired-tokens.ts"
   },
   "keywords": [],
   "author": "",

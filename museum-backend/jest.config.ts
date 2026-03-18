@@ -3,7 +3,7 @@ import type { Config } from '@jest/types';
 const config: Config.InitialOptions = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  testPathIgnorePatterns: ['/dist/', '/node_modules/'],
+  testPathIgnorePatterns: ['/dist/', '/node_modules/', '/tests/ai/'],
   transform: {
     '^.+\\.tsx?$': 'ts-jest',
   },
@@ -11,7 +11,7 @@ const config: Config.InitialOptions = {
     '^@src/(.*)$': '<rootDir>/src/$1',
     '^@modules/(.*)$': '<rootDir>/src/modules/$1',
     '^@data/(.*)$': '<rootDir>/src/data/$1',
-    '^@IA/(.*)$': '<rootDir>/src/modules/IA/$1',
+    '^@IA/(.*)$': '<rootDir>/src/modules/IA/$1', // @deprecated — stale alias, @IA module removed
     '^@shared/(.*)$': '<rootDir>/src/shared/$1',
     '^tests/(.*)$': '<rootDir>/tests/$1',
   },
