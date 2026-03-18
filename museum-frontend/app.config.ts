@@ -25,8 +25,10 @@ const APP_IOS_BUNDLE_ID = 'com.musaium.mobile';
 const APP_IOS_BUNDLE_ID_PREVIEW = 'com.musaium.mobile.preview';
 const APP_ANDROID_PACKAGE = 'com.musaium.mobile';
 const APP_ANDROID_PACKAGE_PREVIEW = 'com.musaium.mobile.preview';
-const BRAND_ICON = './assets/images/museum-ia/apple-devices/AppIcon.appiconset/icon-ios-1024x1024.png';
-const BRAND_SPLASH_IMAGE = './assets/images/museum-ia/android/playstore-icon.png';
+const BRAND_ICON =
+  './assets/images/museum-ia/apple-devices/AppIcon.appiconset/icon-ios-1024x1024.png';
+const BRAND_SPLASH_IMAGE =
+  './assets/images/museum-ia/android/playstore-icon.png';
 const BRAND_ANDROID_ADAPTIVE_FOREGROUND =
   './assets/images/museum-ia/android/mipmap-xxxhdpi/ic_launcher_foreground.png';
 const BRAND_BACKGROUND_COLOR = '#1E1B19';
@@ -71,7 +73,9 @@ const resolveApiEnvironment = (
   variant: AppVariant,
   env: RuntimeEnv,
 ): ApiEnvironment => {
-  const explicit = nonPlaceholder(env.EXPO_PUBLIC_API_ENVIRONMENT)?.toLowerCase();
+  const explicit = nonPlaceholder(
+    env.EXPO_PUBLIC_API_ENVIRONMENT,
+  )?.toLowerCase();
   if (explicit === 'production') {
     return 'production';
   }
@@ -100,7 +104,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const env = process.env as RuntimeEnv;
   const variant = resolveVariant(env);
   const apiEnvironment = resolveApiEnvironment(variant, env);
-  const configProjectId = nonEmpty((config.extra as ExpoExtra | undefined)?.eas?.projectId);
+  const configProjectId = nonEmpty(
+    (config.extra as ExpoExtra | undefined)?.eas?.projectId,
+  );
   const projectId = configProjectId;
 
   const appConfig: ExpoConfig = {
@@ -125,9 +131,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       supportsTablet: true,
       icon: BRAND_ICON,
       bundleIdentifier:
-        variant === 'production' ? APP_IOS_BUNDLE_ID : APP_IOS_BUNDLE_ID_PREVIEW,
+        variant === 'production'
+          ? APP_IOS_BUNDLE_ID
+          : APP_IOS_BUNDLE_ID_PREVIEW,
       usesAppleSignIn: true,
       infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
         NSMicrophoneUsageDescription:
           'Allow $(PRODUCT_NAME) to access your microphone for voice questions about artworks.',
       },
@@ -174,7 +183,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         '@react-native-google-signin/google-signin',
         {
-          iosUrlScheme: 'com.googleusercontent.apps.GOOGLE_IOS_CLIENT_ID',
+          iosUrlScheme:
+            'com.googleusercontent.apps.498339023976-8r199kpqbqmhb7mdf45ostg3sutqeng2',
         },
       ],
     ],
@@ -189,8 +199,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     extra: {
       API_BASE_URL: resolveApiBaseUrl(variant, env),
-      API_BASE_URL_STAGING: nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL_STAGING),
-      API_BASE_URL_PRODUCTION: nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL_PROD),
+      API_BASE_URL_STAGING: nonPlaceholder(
+        env.EXPO_PUBLIC_API_BASE_URL_STAGING,
+      ),
+      API_BASE_URL_PRODUCTION: nonPlaceholder(
+        env.EXPO_PUBLIC_API_BASE_URL_PROD,
+      ),
       API_ENVIRONMENT: apiEnvironment,
       APP_VARIANT: variant,
       eas: projectId
