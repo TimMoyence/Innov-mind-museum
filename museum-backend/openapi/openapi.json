@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "MuseumIA API",
-    "version": "1.0.0",
-    "description": "Active API surface for MuseumIA mobile backend (health, auth, chat)."
+    "title": "Musaium API",
+    "version": "1.1.0",
+    "description": "Active API surface for Musaium mobile backend (health, auth, chat)."
   },
   "servers": [
     {
@@ -154,7 +154,11 @@
               },
               "recommendations": { "type": "array", "items": { "type": "string" } },
               "expertiseSignal": { "type": "string", "enum": ["beginner", "intermediate", "expert"] },
-              "citations": { "type": "array", "items": { "type": "string" } }
+              "citations": { "type": "array", "items": { "type": "string" } },
+              "deeperContext": { "type": "string" },
+              "openQuestion": { "type": "string" },
+              "followUpQuestions": { "type": "array", "items": { "type": "string" } },
+              "imageDescription": { "type": "string" }
             },
             "additionalProperties": true
           },
@@ -237,12 +241,70 @@
           "deleted": { "type": "boolean" }
         }
       },
+      "ReportMessageResponse": {
+        "type": "object",
+        "required": ["messageId", "reported"],
+        "properties": {
+          "messageId": { "type": "string", "format": "uuid" },
+          "reported": { "type": "boolean" }
+        }
+      },
       "SignedImageUrlResponse": {
         "type": "object",
         "required": ["url", "expiresAt"],
         "properties": {
           "url": { "type": "string", "format": "uri" },
           "expiresAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Validation error",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ApiError" }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Authentication required",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ApiError" }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ApiError" }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Concurrent modification",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ApiError" }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Rate limit exceeded",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ApiError" }
+          }
+        }
+      },
+      "InternalError": {
+        "description": "Internal server error",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ApiError" }
+          }
         }
       }
     }
@@ -295,14 +357,7 @@
         },
         "responses": {
           "201": { "description": "Registered" },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/ApiError" }
-              }
-            }
-          }
+          "400": { "$ref": "#/components/responses/BadRequest" }
         }
       }
     },
@@ -334,14 +389,8 @@
               }
             }
           },
-          "401": {
-            "description": "Invalid credentials",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/ApiError" }
-              }
-            }
-          }
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },
@@ -372,14 +421,8 @@
               }
             }
           },
-          "401": {
-            "description": "Invalid refresh token",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/ApiError" }
-              }
-            }
-          }
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },
@@ -435,14 +478,64 @@
               }
             }
           },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/ApiError" }
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/auth/social-login": {
+      "post": {
+        "tags": ["Auth"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["provider", "idToken"],
+                "properties": {
+                  "provider": { "type": "string", "enum": ["apple", "google"] },
+                  "idToken": { "type": "string" }
+                }
               }
             }
           }
+        },
+        "responses": {
+          "200": {
+            "description": "JWT session via social sign-in",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthSessionResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/auth/account": {
+      "delete": {
+        "tags": ["Auth"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Account deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["deleted"],
+                  "properties": {
+                    "deleted": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
     },
@@ -458,7 +551,9 @@
                 "schema": { "$ref": "#/components/schemas/CreateSessionResponse" }
               }
             }
-          }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       },
       "get": {
@@ -472,7 +567,9 @@
                 "schema": { "$ref": "#/components/schemas/ListSessionsResponse" }
               }
             }
-          }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },
@@ -491,7 +588,10 @@
                 "schema": { "$ref": "#/components/schemas/GetSessionResponse" }
               }
             }
-          }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
         }
       },
       "delete": {
@@ -508,7 +608,10 @@
                 "schema": { "$ref": "#/components/schemas/DeleteSessionResponse" }
               }
             }
-          }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
     },
@@ -527,7 +630,12 @@
                 "schema": { "$ref": "#/components/schemas/PostMessageResponse" }
               }
             }
-          }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
         }
       }
     },
@@ -546,7 +654,49 @@
                 "schema": { "$ref": "#/components/schemas/PostMessageResponse" }
               }
             }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/chat/messages/{messageId}/report": {
+      "post": {
+        "tags": ["Chat"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "messageId", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["reason"],
+                "properties": {
+                  "reason": { "type": "string", "enum": ["offensive", "inaccurate", "inappropriate", "other"] },
+                  "comment": { "type": "string" }
+                }
+              }
+            }
           }
+        },
+        "responses": {
+          "201": {
+            "description": "Report submitted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReportMessageResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
     },
@@ -565,7 +715,10 @@
                 "schema": { "$ref": "#/components/schemas/SignedImageUrlResponse" }
               }
             }
-          }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
     },
@@ -586,7 +739,9 @@
               "image/png": {},
               "image/webp": {}
             }
-          }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
     }
