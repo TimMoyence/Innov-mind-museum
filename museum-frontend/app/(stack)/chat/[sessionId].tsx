@@ -18,14 +18,22 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { CustomCameraView } from '@/components/CameraView';
-import { useChatSession } from '@/features/chat/application/useChatSession';
+import { useChatSession, ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { TypingIndicator } from '@/features/chat/ui/TypingIndicator';
+import { WelcomeCard } from '@/features/chat/ui/WelcomeCard';
+import { ArtworkCard } from '@/features/chat/ui/ArtworkCard';
+import { RecommendationChips } from '@/features/chat/ui/RecommendationChips';
+import { FollowUpButtons } from '@/features/chat/ui/FollowUpButtons';
+import { MarkdownBubble } from '@/features/chat/ui/MarkdownBubble';
+import { ExpertiseBadge } from '@/features/chat/ui/ExpertiseBadge';
 
+/** Renders the chat session screen with message history, text/image/audio input, and assistant response display. */
 export default function ChatSessionScreen() {
   const params = useLocalSearchParams<{ sessionId: string; intent?: string }>();
   const sessionId = useMemo(() => String(params.sessionId || ''), [params.sessionId]);
@@ -55,6 +63,7 @@ export default function ChatSessionScreen() {
   const webAudioObjectUrlRef = useRef<string | null>(null);
   const webAudioPlaybackRef = useRef<HTMLAudioElement | null>(null);
   const imageRefreshInFlightRef = useRef<Set<string>>(new Set());
+  const flatListRef = useRef<FlatList<ChatUiMessage>>(null);
 
   const {
     messages,
@@ -69,6 +78,25 @@ export default function ChatSessionScreen() {
     sessionTitle,
     museumName,
   } = useChatSession(sessionId);
+
+  // Derive last assistant metadata for recommendations/follow-up/expertise
+  const lastAssistantMessage = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant') return messages[i];
+    }
+    return null;
+  }, [messages]);
+
+  const expertiseLevel = lastAssistantMessage?.metadata?.expertiseSignal;
+
+  // Auto-scroll when messages change or sending starts
+  useEffect(() => {
+    if (messages.length > 0 || isSending) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages.length, isSending]);
 
   const revokeWebAudioObjectUrl = useCallback(() => {
     if (webAudioObjectUrlRef.current) {
@@ -312,8 +340,8 @@ export default function ChatSessionScreen() {
     setRecordedAudioUri(null);
   };
 
-  const onSend = async () => {
-    const nextText = text.trim();
+  const onSend = async (overrideText?: string) => {
+    const nextText = (overrideText ?? text).trim();
     if (!nextText && !selectedImage && !recordedAudioUri) {
       return;
     }
@@ -330,6 +358,14 @@ export default function ChatSessionScreen() {
       clearMedia();
     }
   };
+
+  const onFollowUpPress = useCallback((questionText: string) => {
+    void onSend(questionText);
+  }, [sendMessage, selectedImage, recordedAudioUri, recordedAudioBlob]);
+
+  const onRecommendationPress = useCallback((recommendationText: string) => {
+    setText(recommendationText);
+  }, []);
 
   useEffect(() => {
     if (isIntentHandled || !initialIntent) {
@@ -369,6 +405,25 @@ export default function ChatSessionScreen() {
     router.replace('/(tabs)/conversations');
   };
 
+  const submitReport = useCallback(async (messageId: string, reason: 'offensive' | 'inaccurate' | 'inappropriate' | 'other') => {
+    try {
+      await chatApi.reportMessage({ messageId, reason });
+      Alert.alert('Thank you', 'Your report has been submitted.');
+    } catch {
+      Alert.alert('Error', 'Could not submit report. Please try again.');
+    }
+  }, []);
+
+  const onReportMessage = useCallback((messageId: string) => {
+    Alert.alert('Report message', 'Why are you reporting this message?', [
+      { text: 'Offensive', onPress: () => void submitReport(messageId, 'offensive') },
+      { text: 'Inaccurate', onPress: () => void submitReport(messageId, 'inaccurate') },
+      { text: 'Inappropriate', onPress: () => void submitReport(messageId, 'inappropriate') },
+      { text: 'Other', onPress: () => void submitReport(messageId, 'other') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }, [submitReport]);
+
   const onMessageImageError = useCallback(
     (messageId: string) => {
       if (imageRefreshInFlightRef.current.has(messageId)) {
@@ -385,6 +440,11 @@ export default function ChatSessionScreen() {
         });
     },
     [refreshMessageImageUrl],
+  );
+
+  const isLastAssistantMessage = useCallback(
+    (item: ChatUiMessage) => lastAssistantMessage?.id === item.id,
+    [lastAssistantMessage],
   );
 
   if (isCameraOpen) {
@@ -404,7 +464,10 @@ export default function ChatSessionScreen() {
         <View style={styles.headerRow}>
           <View style={styles.headerContent}>
             <Text style={styles.header} numberOfLines={1}>{sessionTitle || 'Art Session'}</Text>
-            <Text style={styles.subheader} numberOfLines={1}>{museumName || `${sessionId.slice(0, 12)}...`}</Text>
+            <View style={styles.headerSubRow}>
+              <Text style={styles.subheader} numberOfLines={1}>{museumName || `${sessionId.slice(0, 12)}...`}</Text>
+              {expertiseLevel ? <ExpertiseBadge level={expertiseLevel} /> : null}
+            </View>
           </View>
           <Pressable onPress={onClose} style={styles.closeButton} disabled={isClosing}>
             {isClosing ? (
@@ -425,35 +488,91 @@ export default function ChatSessionScreen() {
           </View>
         ) : (
           <FlatList
+            ref={flatListRef}
             data={messages}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => (
-              <View
-                style={[
-                  styles.bubble,
-                  item.role === 'assistant' ? styles.assistantBubble : styles.userBubble,
-                ]}
-              >
-                <Text style={item.role === 'assistant' ? styles.assistantText : styles.userText}>
-                  {item.text}
-                </Text>
-                {item.image?.url ? (
-                  <Image
-                    source={{ uri: item.image.url }}
-                    style={styles.messageImage}
-                    resizeMode='cover'
-                    onError={() => onMessageImageError(item.id)}
-                  />
-                ) : null}
-                <Text style={styles.timestamp}>
-                  {new Date(item.createdAt).toLocaleTimeString(locale || undefined, {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </Text>
-              </View>
-            )}
+            ListEmptyComponent={
+              <WelcomeCard
+                museumMode={true}
+                locale={locale}
+                onSuggestion={(suggestion) => void onSend(suggestion)}
+                onCamera={() => void onTakePicture()}
+              />
+            }
+            ListFooterComponent={isSending ? <TypingIndicator /> : null}
+            renderItem={({ item }) => {
+              const isAssistant = item.role === 'assistant';
+              const isLast = isLastAssistantMessage(item);
+
+              const bubbleContent = (
+                <>
+                  {isAssistant ? (
+                    <MarkdownBubble text={item.text} />
+                  ) : (
+                    <Text style={styles.userText}>{item.text}</Text>
+                  )}
+                  {item.image?.url ? (
+                    <Image
+                      source={{ uri: item.image.url }}
+                      style={styles.messageImage}
+                      resizeMode='cover'
+                      onError={() => onMessageImageError(item.id)}
+                    />
+                  ) : null}
+                  <Text style={styles.timestamp}>
+                    {new Date(item.createdAt).toLocaleTimeString(locale || undefined, {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Text>
+                </>
+              );
+
+              return (
+                <View>
+                  {isAssistant ? (
+                    <Pressable
+                      onLongPress={() => onReportMessage(item.id)}
+                      style={[styles.bubble, styles.assistantBubble]}
+                    >
+                      {bubbleContent}
+                    </Pressable>
+                  ) : (
+                    <View style={[styles.bubble, styles.userBubble]}>
+                      {bubbleContent}
+                    </View>
+                  )}
+
+                  {/* Artwork card */}
+                  {isAssistant && item.metadata?.detectedArtwork?.title ? (
+                    <ArtworkCard
+                      title={item.metadata.detectedArtwork.title}
+                      artist={item.metadata.detectedArtwork.artist}
+                      museum={item.metadata.detectedArtwork.museum}
+                      room={item.metadata.detectedArtwork.room}
+                      confidence={item.metadata.detectedArtwork.confidence}
+                    />
+                  ) : null}
+
+                  {/* Follow-up question buttons — last assistant message only */}
+                  {isAssistant && isLast && item.metadata?.followUpQuestions?.length ? (
+                    <FollowUpButtons
+                      questions={item.metadata.followUpQuestions}
+                      onPress={onFollowUpPress}
+                    />
+                  ) : null}
+
+                  {/* Recommendation chips — last assistant message only */}
+                  {isAssistant && isLast && item.metadata?.recommendations?.length ? (
+                    <RecommendationChips
+                      recommendations={item.metadata.recommendations}
+                      onPress={onRecommendationPress}
+                    />
+                  ) : null}
+                </View>
+              );
+            }}
           />
         )}
       </GlassCard>
@@ -547,8 +666,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: liquidColors.textPrimary,
   },
-  subheader: {
+  headerSubRow: {
     marginTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  subheader: {
     color: '#475569',
     fontSize: 12,
   },
@@ -591,9 +715,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(30, 64, 175, 0.88)',
     borderColor: 'rgba(191, 219, 254, 0.6)',
     alignSelf: 'flex-end',
-  },
-  assistantText: {
-    color: liquidColors.textPrimary,
   },
   userText: {
     color: '#FFFFFF',

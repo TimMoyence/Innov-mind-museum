@@ -18,6 +18,12 @@ const isFormData = (body: unknown): body is FormData => {
   return body instanceof FormData;
 };
 
+/**
+ * Sends an HTTP request through the shared Axios client, mapping errors to {@link AppError}.
+ * @param url - Request URL (relative paths are resolved against the runtime base URL).
+ * @param options - HTTP method, headers, body, and auth requirement flag.
+ * @returns Parsed response data of type `T`.
+ */
 export const httpRequest = async <T>(
   url: string,
   { requiresAuth = true, headers, body, method }: RequestOptions = {},

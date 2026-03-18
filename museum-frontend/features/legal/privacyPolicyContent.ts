@@ -1,9 +1,11 @@
+/** A single numbered section within the privacy policy document. */
 export interface PrivacyPolicySection {
   id: string;
   title: string;
   paragraphs: string[];
 }
 
+/** Structured content of the full GDPR-compliant privacy policy, rendered in the legal screen. */
 export interface PrivacyPolicyContent {
   title: string;
   version: string;
@@ -18,6 +20,7 @@ export interface PrivacyPolicyContent {
   sections: PrivacyPolicySection[];
 }
 
+/** Complete privacy policy content for the Musaium app, structured for in-app rendering. */
 export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
   title: 'Privacy Policy (GDPR / RGPD)',
   version: '1.0.0',
@@ -144,6 +147,11 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
   ],
 };
 
+/**
+ * Checks whether a string contains a placeholder marker that must be replaced before release.
+ * @param value - String to inspect.
+ * @returns `true` if the value contains `'TO_FILL_'`.
+ */
 export const isPrivacyPlaceholderValue = (value: string): boolean => {
   return value.includes('TO_FILL_');
 };

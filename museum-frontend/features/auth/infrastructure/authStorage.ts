@@ -50,13 +50,20 @@ const refreshTokenStore = {
   },
 };
 
+/** Persistent storage for auth credentials, using expo-secure-store on native and AsyncStorage on web. */
 export const authStorage = {
+  /** Retrieves the stored refresh token, or `null` if none exists. */
   async getRefreshToken(): Promise<string | null> {
     return refreshTokenStore.get();
   },
+  /**
+   * Persists a refresh token to secure storage.
+   * @param token - The refresh token to store.
+   */
   async setRefreshToken(token: string): Promise<void> {
     return refreshTokenStore.set(token);
   },
+  /** Removes the stored refresh token. */
   async clearRefreshToken(): Promise<void> {
     return refreshTokenStore.clear();
   },

@@ -45,12 +45,14 @@ type SuccessStatusFor<
         ? 204
         : never;
 
+/** Extracts the success JSON response type for a given OpenAPI path and method. */
 export type OpenApiResponseFor<
   P extends PathKey,
   M extends AvailableMethodsForPath<P>,
   S extends number = SuccessStatusFor<P, M>,
 > = JsonContent<ResponseForStatus<P, M, S>>;
 
+/** Extracts the JSON request body type for a given OpenAPI path and method. */
 export type OpenApiJsonRequestBodyFor<
   P extends PathKey,
   M extends AvailableMethodsForPath<P>,
@@ -66,6 +68,7 @@ type PathParamNames<T extends string> = T extends `${string}{${infer Param}}${in
   ? Param | PathParamNames<Rest>
   : never;
 
+/** Maps path template parameters to a record of string/number values. Resolves to an empty record when no params exist. */
 export type PathParamsFor<P extends PathKey> = [PathParamNames<P>] extends [never]
   ? Record<string, never>
   : Record<PathParamNames<P>, string | number>;
@@ -83,6 +86,13 @@ const appendQuery = (path: string, query?: Record<string, QueryPrimitive>): stri
   return suffix ? `${path}?${suffix}` : path;
 };
 
+/**
+ * Replaces `{param}` placeholders in an OpenAPI path template with actual values.
+ * @param template - OpenAPI path template (e.g. `'/api/chat/sessions/{id}'`).
+ * @param pathParams - Record mapping parameter names to their values.
+ * @returns Rendered path with all parameters substituted and URI-encoded.
+ * @throws When a required path parameter is missing or unresolved placeholders remain.
+ */
 export const formatOpenApiPath = <P extends PathKey>(
   template: P,
   pathParams?: PathParamsFor<P>,
@@ -103,6 +113,11 @@ export const formatOpenApiPath = <P extends PathKey>(
   return rendered;
 };
 
+/**
+ * Type-safe HTTP request using OpenAPI path/method definitions.
+ * Resolves path parameters, appends query string, and delegates to {@link httpRequest}.
+ * @returns The parsed JSON response typed to the OpenAPI schema's success status.
+ */
 export const openApiRequest = async <
   P extends PathKey,
   M extends AvailableMethodsForPath<P>,

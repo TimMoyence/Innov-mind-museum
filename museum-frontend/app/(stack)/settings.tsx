@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,7 +11,11 @@ import {
 import { router } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
+import { authStorage } from '@/features/auth/infrastructure/authStorage';
+import { AUTH_ROUTE } from '@/features/auth/routes';
 import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
+import { authService, clearAccessToken } from '@/services';
+import { getErrorMessage } from '@/shared/lib/errors';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -19,18 +24,21 @@ import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
 type SettingsRoute =
   | '/(stack)/preferences'
   | '/(stack)/privacy'
+  | '/(stack)/terms'
   | '/(stack)/support'
   | '/(stack)/guided-museum-mode'
   | '/(stack)/onboarding'
   | '/(tabs)/home';
 
+/** Renders the settings hub with preferences summary, compliance links, account deletion, and sign-out actions. */
 export default function SettingsScreen() {
-  const { logout } = useAuth();
+  const { logout, setIsAuthenticated } = useAuth();
   const [locale, setLocale] = useState('en-US');
   const [museumMode, setMuseumMode] = useState(true);
   const [guideLevel, setGuideLevel] = useState<'beginner' | 'intermediate' | 'expert'>('beginner');
   const [isLoadingPrefs, setIsLoadingPrefs] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     loadRuntimeSettings()
@@ -59,6 +67,34 @@ export default function SettingsScreen() {
     } finally {
       setIsSigningOut(false);
     }
+  };
+
+  const onDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and all data. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeletingAccount(true);
+            try {
+              await authService.deleteAccount();
+              await authStorage.clearRefreshToken().catch(() => undefined);
+              clearAccessToken();
+              setIsAuthenticated(false);
+              router.replace(AUTH_ROUTE);
+            } catch (error) {
+              Alert.alert('Error', getErrorMessage(error));
+            } finally {
+              setIsDeletingAccount(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -143,6 +179,10 @@ export default function SettingsScreen() {
               <Text style={styles.linkTitle}>Privacy (RGPD)</Text>
               <Text style={styles.linkDescription}>Read data processing, rights, and legal contacts.</Text>
             </Pressable>
+            <Pressable style={styles.linkRow} onPress={() => open('/(stack)/terms')}>
+              <Text style={styles.linkTitle}>Terms of Service</Text>
+              <Text style={styles.linkDescription}>Read our terms and conditions of use.</Text>
+            </Pressable>
             <Pressable style={styles.linkRow} onPress={() => open('/(stack)/support')}>
               <Text style={styles.linkTitle}>Support</Text>
               <Text style={styles.linkDescription}>
@@ -156,6 +196,24 @@ export default function SettingsScreen() {
               </Text>
             </Pressable>
           </View>
+        </GlassCard>
+
+        <GlassCard style={styles.dangerCard} intensity={52}>
+          <Text style={styles.dangerTitle}>Danger Zone</Text>
+          <Text style={styles.cardBody}>
+            Permanently delete your account and all associated data. This action cannot be undone.
+          </Text>
+          <Pressable
+            style={styles.deleteButton}
+            onPress={onDeleteAccount}
+            disabled={isDeletingAccount}
+          >
+            {isDeletingAccount ? (
+              <ActivityIndicator color='#FFFFFF' />
+            ) : (
+              <Text style={styles.deleteButtonText}>Delete Account</Text>
+            )}
+          </Pressable>
         </GlassCard>
 
         <View style={styles.footerRow}>
@@ -291,6 +349,28 @@ const styles = StyleSheet.create({
     color: liquidColors.textSecondary,
     lineHeight: 18,
     fontSize: 12,
+  },
+  dangerCard: {
+    padding: 16,
+    gap: 10,
+    borderColor: 'rgba(239,68,68,0.3)',
+  },
+  dangerTitle: {
+    color: '#B91C1C',
+    fontWeight: '700',
+    fontSize: 17,
+  },
+  deleteButton: {
+    marginTop: 2,
+    borderRadius: 12,
+    backgroundColor: '#DC2626',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  deleteButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
   },
   footerRow: {
     gap: 10,
