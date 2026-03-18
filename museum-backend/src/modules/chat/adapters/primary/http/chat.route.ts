@@ -24,6 +24,7 @@ import {
   parseCreateSessionRequest,
   parseListSessionsQuery,
   parsePostMessageRequest,
+  parseReportMessageRequest,
 } from './chat.contracts';
 
 const upload = multer({
@@ -193,6 +194,11 @@ const buildImageReadUrl = (params: {
   });
 };
 
+/**
+ * Builds Express router for chat endpoints (sessions, messages, audio, image serving, reporting).
+ * @param chatService - Injected chat application service.
+ * @returns Configured Express Router.
+ */
 export const createChatRouter = (chatService: ChatService): Router => {
   const router = Router();
 
@@ -363,6 +369,29 @@ export const createChatRouter = (chatService: ChatService): Router => {
       });
 
       res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/messages/:messageId/report', isAuthenticated, async (req, res, next) => {
+    try {
+      const currentUser = getRequestUser(req);
+      if (!currentUser?.id) {
+        res.status(401).json({
+          error: { code: 'UNAUTHORIZED', message: 'Token required' },
+        });
+        return;
+      }
+
+      const payload = parseReportMessageRequest(req.body || {});
+      const result = await chatService.reportMessage(
+        req.params.messageId,
+        payload.reason,
+        currentUser.id,
+        payload.comment,
+      );
+      res.status(201).json(result);
     } catch (error) {
       next(error);
     }

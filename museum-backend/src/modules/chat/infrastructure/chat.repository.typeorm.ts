@@ -1,12 +1,14 @@
 import { DataSource, Repository } from 'typeorm';
 
 import { ArtworkMatch } from '../domain/artworkMatch.entity';
+import { MessageReport } from '../domain/messageReport.entity';
 import {
   ChatRepository,
   ChatSessionsPage,
   ChatMessageWithSessionOwnership,
   PersistArtworkMatchInput,
   PersistMessageInput,
+  PersistMessageReportInput,
   ListSessionsParams,
   ListSessionMessagesParams,
   SessionMessagesPage,
@@ -71,17 +73,26 @@ const decodeSessionCursor = (
   }
 };
 
+/** TypeORM/PG implementation of {@link ChatRepository}. */
 export class TypeOrmChatRepository implements ChatRepository {
   private readonly sessionRepo: Repository<ChatSession>;
   private readonly messageRepo: Repository<ChatMessage>;
   private readonly artworkMatchRepo: Repository<ArtworkMatch>;
+  private readonly reportRepo: Repository<MessageReport>;
 
+  /** @param dataSource - Active TypeORM DataSource used to obtain entity repositories. */
   constructor(dataSource: DataSource) {
     this.sessionRepo = dataSource.getRepository(ChatSession);
     this.messageRepo = dataSource.getRepository(ChatMessage);
     this.artworkMatchRepo = dataSource.getRepository(ArtworkMatch);
+    this.reportRepo = dataSource.getRepository(MessageReport);
   }
 
+  /**
+   * Creates a new chat session.
+   * @param input - Session creation parameters (locale, museumMode, userId).
+   * @returns The persisted ChatSession entity.
+   */
   async createSession(input: CreateSessionInput): Promise<ChatSession> {
     const session = this.sessionRepo.create({
       locale: input.locale || null,
@@ -92,6 +103,11 @@ export class TypeOrmChatRepository implements ChatRepository {
     return this.sessionRepo.save(session);
   }
 
+  /**
+   * Retrieves a chat session by its ID, including the owning user relation.
+   * @param sessionId - UUID of the session.
+   * @returns The session or `null` if not found.
+   */
   async getSessionById(sessionId: string): Promise<ChatSession | null> {
     return this.sessionRepo.findOne({
       where: { id: sessionId },
@@ -101,6 +117,11 @@ export class TypeOrmChatRepository implements ChatRepository {
     });
   }
 
+  /**
+   * Retrieves a message together with its session and owning user.
+   * @param messageId - UUID of the message.
+   * @returns The message with session ownership info, or `null` if not found.
+   */
   async getMessageById(
     messageId: string,
   ): Promise<ChatMessageWithSessionOwnership | null> {
@@ -123,6 +144,11 @@ export class TypeOrmChatRepository implements ChatRepository {
     };
   }
 
+  /**
+   * Deletes a session only if it contains no messages (transactional).
+   * @param sessionId - UUID of the session to delete.
+   * @returns `true` if the session was deleted, `false` otherwise.
+   */
   async deleteSessionIfEmpty(sessionId: string): Promise<boolean> {
     return this.sessionRepo.manager.transaction(async (transactionManager) => {
       const sessionRepository = transactionManager.getRepository(ChatSession);
@@ -150,6 +176,11 @@ export class TypeOrmChatRepository implements ChatRepository {
     });
   }
 
+  /**
+   * Persists a chat message, optional artwork match, and session updates in a single transaction.
+   * @param input - Message content, role, optional artwork match, and session update fields.
+   * @returns The persisted ChatMessage entity.
+   */
   async persistMessage(input: PersistMessageInput): Promise<ChatMessage> {
     return this.messageRepo.manager.transaction(async (transactionManager) => {
       const messageRepository = transactionManager.getRepository(ChatMessage);
@@ -165,31 +196,42 @@ export class TypeOrmChatRepository implements ChatRepository {
 
       const saved = await messageRepository.save(entity);
 
-      const sessionUpdate: Record<string, unknown> = {
-        updatedAt: new Date(),
-      };
-
-      if (input.sessionUpdates) {
-        if (input.sessionUpdates.title !== undefined) {
-          sessionUpdate.title = input.sessionUpdates.title;
-        }
-        if (input.sessionUpdates.museumName !== undefined) {
-          sessionUpdate.museumName = input.sessionUpdates.museumName;
-        }
-        if (input.sessionUpdates.visitContext !== undefined) {
-          sessionUpdate.visitContext = input.sessionUpdates.visitContext;
-        }
+      if (input.artworkMatch) {
+        const artworkMatchRepo = transactionManager.getRepository(ArtworkMatch);
+        const match = artworkMatchRepo.create({
+          artworkId: input.artworkMatch.artworkId || null,
+          title: input.artworkMatch.title || null,
+          artist: input.artworkMatch.artist || null,
+          confidence: input.artworkMatch.confidence ?? 0,
+          source: input.artworkMatch.source || null,
+          room: input.artworkMatch.room || null,
+          message: { id: saved.id } as ChatMessage,
+        });
+        await artworkMatchRepo.save(match);
       }
 
-      await sessionRepository.update(
-        { id: input.sessionId },
-        sessionUpdate as never,
-      );
+      const session = await sessionRepository.findOneBy({ id: input.sessionId });
+      if (session) {
+        session.updatedAt = new Date();
+        if (input.sessionUpdates) {
+          if (input.sessionUpdates.title !== undefined) {
+            session.title = input.sessionUpdates.title;
+          }
+          if (input.sessionUpdates.museumName !== undefined) {
+            session.museumName = input.sessionUpdates.museumName;
+          }
+          if (input.sessionUpdates.visitContext !== undefined) {
+            session.visitContext = input.sessionUpdates.visitContext;
+          }
+        }
+        await sessionRepository.save(session);
+      }
 
       return saved;
     });
   }
 
+  /** @deprecated Use artworkMatch field in persistMessage */
   async persistArtworkMatch(input: PersistArtworkMatchInput): Promise<void> {
     const entity = this.artworkMatchRepo.create({
       artworkId: input.artworkId || null,
@@ -204,6 +246,11 @@ export class TypeOrmChatRepository implements ChatRepository {
     await this.artworkMatchRepo.save(entity);
   }
 
+  /**
+   * Lists messages for a session with cursor-based pagination (newest first, returned in chronological order).
+   * @param params - Session ID, limit, and optional cursor.
+   * @returns A page of messages with `hasMore` flag and `nextCursor`.
+   */
   async listSessionMessages({
     sessionId,
     limit,
@@ -250,6 +297,12 @@ export class TypeOrmChatRepository implements ChatRepository {
     };
   }
 
+  /**
+   * Returns the most recent messages for a session in chronological order (used for LLM history context).
+   * @param sessionId - UUID of the session.
+   * @param limit - Maximum number of messages (clamped to 1..50).
+   * @returns Array of messages ordered oldest-first.
+   */
   async listSessionHistory(sessionId: string, limit: number): Promise<ChatMessage[]> {
     const rows = await this.messageRepo
       .createQueryBuilder('message')
@@ -263,6 +316,11 @@ export class TypeOrmChatRepository implements ChatRepository {
     return rows.reverse();
   }
 
+  /**
+   * Lists chat sessions for a user with cursor-based pagination, including message count and latest-message preview.
+   * @param params - User ID, limit, and optional cursor.
+   * @returns A page of sessions with previews, message counts, `hasMore` flag, and `nextCursor`.
+   */
   async listSessions({
     userId,
     limit,
@@ -364,5 +422,33 @@ export class TypeOrmChatRepository implements ChatRepository {
       hasMore,
       nextCursor,
     };
+  }
+
+  /**
+   * Checks whether a report already exists for a given message and user.
+   * @param messageId - UUID of the message.
+   * @param userId - Numeric user ID.
+   * @returns `true` if a report exists.
+   */
+  async hasMessageReport(messageId: string, userId: number): Promise<boolean> {
+    const count = await this.reportRepo.count({
+      where: { message: { id: messageId }, userId },
+    });
+    return count > 0;
+  }
+
+  /**
+   * Persists a user report against a message.
+   * @param input - Message ID, user ID, reason, and optional comment.
+   */
+  async persistMessageReport(input: PersistMessageReportInput): Promise<void> {
+    const entity = this.reportRepo.create({
+      message: { id: input.messageId } as ChatMessage,
+      userId: input.userId,
+      reason: input.reason,
+      comment: input.comment || null,
+    });
+
+    await this.reportRepo.save(entity);
   }
 }
