@@ -20,12 +20,12 @@ export interface PrivacyPolicyContent {
 
 export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
   title: 'Privacy Policy (GDPR / RGPD)',
-  version: '1.0.0-draft',
-  lastUpdated: '2026-02-22',
-  controllerName: 'TO_FILL_CONTROLLER_NAME',
-  controllerAddress: 'TO_FILL_CONTROLLER_ADDRESS',
-  contactEmail: 'TO_FILL_PRIVACY_EMAIL',
-  dpoContact: 'Not designated yet (TO_FILL_DPO_CONTACT_OR_NA)',
+  version: '1.0.0',
+  lastUpdated: '2026-03-18',
+  controllerName: 'InnovMind (Tim Moyence, Entrepreneur Individuel)',
+  controllerAddress: 'France',
+  contactEmail: 'tim.moyence@gmail.com',
+  dpoContact: 'Non désigné (non requis au titre de l\'article 37 du RGPD)',
   rightsSummary: [
     'Access your data',
     'Correct inaccurate data',
@@ -41,21 +41,14 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
     { label: 'Permissions', value: 'Camera / microphone only on explicit user action' },
     { label: 'User rights', value: 'GDPR rights available via privacy contact / support' },
   ],
-  releaseChecklist: [
-    'Replace controller legal name and registered address',
-    'Set privacy contact email and DPO contact (or explicitly state N/A legally)',
-    'List current processors and international transfer safeguards',
-    'Define retention periods for account, chat, logs, images, and audio',
-    'Specify supervisory authority and complaint contact details',
-    'Validate wording with legal counsel before public store release',
-  ],
+  releaseChecklist: [],
   sections: [
     {
       id: 'controller',
       title: '1. Data Controller',
       paragraphs: [
-        'Musaium is operated by TO_FILL_CONTROLLER_NAME, acting as data controller for personal data processed through the mobile application and related support channels.',
-        'Registered address: TO_FILL_CONTROLLER_ADDRESS.',
+        'Musaium is operated by InnovMind (Tim Moyence, Entrepreneur Individuel), acting as data controller for personal data processed through the mobile application and related support channels.',
+        'Registered address: France.',
       ],
     },
     {
@@ -89,9 +82,9 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
       id: 'recipients',
       title: '5. Recipients / Processors',
       paragraphs: [
-        'Authorized internal personnel on a need-to-know basis.',
-        'Hosting, infrastructure, analytics, and AI processing providers used to operate Musaium (TO_FILL_PROCESSOR_LIST).',
-        'Payment providers are TO_FILL_IF_APPLICABLE.',
+        'Personnel interne autorisé, sur la base du besoin d\'en connaître.',
+        'Sous-traitants : OpenAI (États-Unis), Google Cloud (États-Unis/UE), DeepSeek (Chine), OVH SAS (France, données UE), Amazon Web Services (UE, données UE), Expo/EAS (États-Unis).',
+        'Aucun prestataire de paiement n\'est utilisé à ce jour.',
       ],
     },
     {
@@ -99,16 +92,16 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
       title: '6. International Transfers',
       paragraphs: [
         'Some processors may process data outside the EEA/UK/Switzerland. Where applicable, transfers are governed by appropriate safeguards such as SCCs, adequacy decisions, or equivalent mechanisms.',
-        'Transfer details for current processors: TO_FILL_TRANSFER_DETAILS.',
+        'Les transferts vers les États-Unis sont encadrés par les conditions d\'utilisation des fournisseurs concernés. Les données hébergées chez OVH et AWS restent dans l\'Union européenne.',
       ],
     },
     {
       id: 'retention',
       title: '7. Retention Periods',
       paragraphs: [
-        'Account and session data are retained for TO_FILL_RETENTION_ACCOUNT_DATA unless deletion is requested and no legal retention obligation applies.',
-        'Support diagnostics and incident logs are retained for TO_FILL_RETENTION_LOGS.',
-        'Voice/image uploads may be retained only as needed to provide the service and maintain security, subject to TO_FILL_RETENTION_MEDIA_POLICY.',
+        'Données de compte, historique de conversations et images : conservés pendant la durée d\'utilisation du service, supprimés sur demande.',
+        'Fichiers audio (questions vocales) : non stockés — transmis pour transcription puis immédiatement supprimés.',
+        'Jetons d\'authentification : accès 15 minutes, renouvellement 30 jours.',
       ],
     },
     {
@@ -130,15 +123,15 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
       id: 'exercise-rights',
       title: '10. Exercising Rights / Complaints',
       paragraphs: [
-        'To exercise your rights, contact: TO_FILL_PRIVACY_EMAIL and include enough information to verify your request.',
-        'You may also lodge a complaint with your local supervisory authority. Lead authority (if applicable): TO_FILL_SUPERVISORY_AUTHORITY.',
+        'To exercise your rights, contact: tim.moyence@gmail.com and include enough information to verify your request.',
+        'You may also lodge a complaint with your local supervisory authority. Lead authority (if applicable): la CNIL (Commission Nationale de l\'Informatique et des Libertés), 3 Place de Fontenoy, TSA 80715, 75334 Paris Cedex 07.',
       ],
     },
     {
       id: 'minors',
       title: '11. Children / Minors',
       paragraphs: [
-        'Musaium is not intended for children below the age required under applicable law without parental authorization. If you believe a minor provided data unlawfully, contact TO_FILL_PRIVACY_EMAIL.',
+        'Musaium is not intended for children below the age required under applicable law without parental authorization. If you believe a minor provided data unlawfully, contact tim.moyence@gmail.com.',
       ],
     },
     {

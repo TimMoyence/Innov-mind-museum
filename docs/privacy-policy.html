@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Politique de confidentialit&eacute; de Musaium, l'assistant mus&eacute;al intelligent. D&eacute;couvrez comment nous prot&eacute;geons vos donn&eacute;es personnelles.">
+  <meta name="author" content="InnovMind">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Politique de confidentialit&eacute; &mdash; Musaium">
+  <meta property="og:description" content="Politique de confidentialit&eacute; de Musaium, l'assistant mus&eacute;al intelligent propuls&eacute; par l'IA.">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="fr_FR">
+
+  <title>Politique de confidentialit&eacute; &mdash; Musaium</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ===== Reset & Base ===== */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(180deg, #EAF2FF 0%, #D8E8FF 40%, #D5F0FF 100%);
+      background-attachment: fixed;
+      color: #0F172A;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      min-height: 100vh;
+    }
+
+    /* ===== Layout ===== */
+    .page-wrapper {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 24px;
+      width: 100%;
+    }
+
+    /* ===== Header ===== */
+    .site-header {
+      padding: 32px 0 20px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.44);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.58);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .brand {
+      font-size: 1.125rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: #1D4ED8;
+    }
+
+    .brand span {
+      color: #334155;
+      font-weight: 400;
+      letter-spacing: 0.01em;
+      font-size: 0.875rem;
+      margin-left: 10px;
+      opacity: 0.6;
+    }
+
+    /* ===== Hero ===== */
+    .hero {
+      padding: 48px 0 36px;
+    }
+
+    .hero h1 {
+      font-size: 2.25rem;
+      font-weight: 700;
+      color: #0F172A;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+
+    .hero .subtitle {
+      font-size: 1.0625rem;
+      color: #334155;
+      font-weight: 400;
+      opacity: 0.7;
+    }
+
+    .meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      margin-top: 20px;
+      padding: 14px 20px;
+      background: rgba(255, 255, 255, 0.44);
+      border: 1px solid rgba(255, 255, 255, 0.58);
+      border-radius: 14px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      font-size: 0.8125rem;
+      color: #334155;
+    }
+
+    .meta-bar strong {
+      color: #0F172A;
+      font-weight: 600;
+    }
+
+    /* ===== Glass Card ===== */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.44);
+      border: 1px solid rgba(255, 255, 255, 0.58);
+      border-radius: 24px;
+      backdrop-filter: blur(52px);
+      -webkit-backdrop-filter: blur(52px);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+    }
+
+    /* ===== Quick Facts Box ===== */
+    .quick-facts {
+      background: rgba(255, 255, 255, 0.54);
+      border: 1px solid rgba(255, 255, 255, 0.68);
+      border-radius: 24px;
+      padding: 28px 32px;
+      margin-bottom: 32px;
+      backdrop-filter: blur(52px);
+      -webkit-backdrop-filter: blur(52px);
+    }
+
+    .quick-facts h2 {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #1D4ED8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .quick-facts h2::before {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 16px;
+      background: #3B82F6;
+      border-radius: 2px;
+    }
+
+    .facts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 32px;
+    }
+
+    .fact-item {
+      font-size: 0.875rem;
+    }
+
+    .fact-label {
+      display: block;
+      color: #334155;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 3px;
+      opacity: 0.55;
+    }
+
+    .fact-value {
+      color: #0F172A;
+      font-weight: 500;
+    }
+
+    /* ===== Table of Contents ===== */
+    .toc {
+      margin-bottom: 40px;
+    }
+
+    .toc h2 {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #334155;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 14px;
+      opacity: 0.5;
+    }
+
+    .toc ol {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      columns: 2;
+      column-gap: 24px;
+    }
+
+    .toc li {
+      margin-bottom: 5px;
+      padding-left: 0;
+      break-inside: avoid;
+    }
+
+    .toc a {
+      font-size: 0.875rem;
+      color: #334155;
+      border-bottom: none;
+      transition: color 0.2s ease;
+    }
+
+    .toc a:hover {
+      color: #1D4ED8;
+    }
+
+    .toc .toc-num {
+      color: #3B82F6;
+      font-weight: 600;
+      margin-right: 4px;
+      font-size: 0.8125rem;
+    }
+
+    /* ===== Sections ===== */
+    .content {
+      flex: 1;
+      padding-bottom: 48px;
+    }
+
+    .section {
+      background: rgba(255, 255, 255, 0.44);
+      border: 1px solid rgba(255, 255, 255, 0.58);
+      border-radius: 24px;
+      backdrop-filter: blur(52px);
+      -webkit-backdrop-filter: blur(52px);
+      padding: 28px 32px;
+      margin-bottom: 20px;
+      scroll-margin-top: 80px;
+    }
+
+    .section-number {
+      display: inline-block;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      color: #FFFFFF;
+      background: #3B82F6;
+      border-radius: 999px;
+      padding: 3px 12px;
+      margin-bottom: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    h2.section-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #0F172A;
+      margin-bottom: 14px;
+      line-height: 1.3;
+    }
+
+    h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #0F172A;
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+
+    p {
+      margin-bottom: 12px;
+      color: #334155;
+      font-size: 0.9375rem;
+    }
+
+    strong {
+      color: #0F172A;
+    }
+
+    /* ===== Lists ===== */
+    ul, ol {
+      margin: 10px 0 14px 18px;
+      color: #334155;
+      font-size: 0.9375rem;
+    }
+
+    li {
+      margin-bottom: 6px;
+      padding-left: 4px;
+    }
+
+    li::marker {
+      color: #3B82F6;
+    }
+
+    /* ===== Tables ===== */
+    .table-wrapper {
+      overflow-x: auto;
+      margin: 14px 0 18px;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    thead {
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    th {
+      text-align: left;
+      padding: 11px 16px;
+      font-weight: 600;
+      color: #1D4ED8;
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 11px 16px;
+      border-top: 1px solid rgba(148, 163, 184, 0.12);
+      color: #334155;
+      vertical-align: top;
+    }
+
+    tbody tr:hover {
+      background: rgba(59, 130, 246, 0.03);
+    }
+
+    /* ===== Links ===== */
+    a {
+      color: #1D4ED8;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(29, 78, 216, 0.2);
+      transition: border-color 0.2s ease, color 0.2s ease;
+    }
+
+    a:hover {
+      color: #3B82F6;
+      border-bottom-color: #3B82F6;
+    }
+
+    /* ===== Callout Box ===== */
+    .callout {
+      background: rgba(59, 130, 246, 0.06);
+      border-left: 3px solid #3B82F6;
+      border-radius: 0 14px 14px 0;
+      padding: 14px 20px;
+      margin: 14px 0 18px;
+      font-size: 0.875rem;
+      color: #334155;
+    }
+
+    .callout strong {
+      color: #0F172A;
+    }
+
+    /* ===== Footer ===== */
+    .site-footer {
+      padding: 28px 0;
+      text-align: center;
+    }
+
+    .site-footer p {
+      font-size: 0.8125rem;
+      color: #334155;
+      opacity: 0.45;
+      margin: 0;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 640px) {
+      .hero h1 {
+        font-size: 1.75rem;
+      }
+
+      .facts-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .quick-facts,
+      .section {
+        padding: 20px;
+        border-radius: 18px;
+      }
+
+      .meta-bar {
+        gap: 10px;
+        flex-direction: column;
+        border-radius: 12px;
+      }
+
+      .toc ol {
+        columns: 1;
+      }
+
+      th, td {
+        padding: 9px 12px;
+        font-size: 0.8125rem;
+      }
+
+      h2.section-title {
+        font-size: 1.125rem;
+      }
+
+      .container {
+        padding: 0 16px;
+      }
+
+      .brand span {
+        display: block;
+        margin-left: 0;
+        margin-top: 2px;
+      }
+
+      .site-header {
+        padding: 20px 0 14px;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .hero h1 {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+
+    <!-- Header -->
+    <header class="site-header">
+      <div class="container">
+        <div class="brand">Musaium <span>Assistant mus&eacute;al intelligent</span></div>
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="container">
+        <h1>Politique de confidentialit&eacute;</h1>
+        <p class="subtitle">Comment Musaium prot&egrave;ge vos donn&eacute;es personnelles</p>
+        <div class="meta-bar">
+          <div><strong>Version&nbsp;:</strong> 1.0.0</div>
+          <div><strong>Derni&egrave;re mise &agrave; jour&nbsp;:</strong> 18 mars 2026</div>
+          <div><strong>Date d'effet&nbsp;:</strong> 18 mars 2026</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <main class="content">
+      <div class="container">
+
+        <!-- Quick Facts -->
+        <div class="quick-facts">
+          <h2>En bref</h2>
+          <div class="facts-grid">
+            <div class="fact-item">
+              <span class="fact-label">Responsable</span>
+              <span class="fact-value">InnovMind (Tim Moyence, EI)</span>
+            </div>
+            <div class="fact-item">
+              <span class="fact-label">Contact</span>
+              <span class="fact-value"><a href="mailto:tim.moyence@gmail.com">tim.moyence@gmail.com</a></span>
+            </div>
+            <div class="fact-item">
+              <span class="fact-label">Donn&eacute;es collect&eacute;es</span>
+              <span class="fact-value">Compte, conversations, images, audio</span>
+            </div>
+            <div class="fact-item">
+              <span class="fact-label">Permissions</span>
+              <span class="fact-value">Cam&eacute;ra, Micro, Phototh&egrave;que</span>
+            </div>
+            <div class="fact-item">
+              <span class="fact-label">H&eacute;bergement</span>
+              <span class="fact-value">Union europ&eacute;enne (OVH, AWS)</span>
+            </div>
+            <div class="fact-item">
+              <span class="fact-label">Autorit&eacute; de contr&ocirc;le</span>
+              <span class="fact-value">CNIL (France)</span>
+            </div>
+            <div class="fact-item">
+              <span class="fact-label">Vos droits</span>
+              <span class="fact-value">Acc&egrave;s, rectification, suppression, portabilit&eacute;</span>
+            </div>
+            <div class="fact-item">
+              <span class="fact-label">Mineurs</span>
+              <span class="fact-value">16 ans minimum sans autorisation parentale</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table of Contents -->
+        <nav class="toc" aria-label="Sommaire">
+          <h2>Sommaire</h2>
+          <ol>
+            <li><a href="#s1"><span class="toc-num">1.</span> Responsable du traitement</a></li>
+            <li><a href="#s2"><span class="toc-num">2.</span> Donn&eacute;es collect&eacute;es</a></li>
+            <li><a href="#s3"><span class="toc-num">3.</span> Finalit&eacute;s et bases l&eacute;gales</a></li>
+            <li><a href="#s4"><span class="toc-num">4.</span> Permissions de l'appareil</a></li>
+            <li><a href="#s5"><span class="toc-num">5.</span> Sous-traitants et transferts</a></li>
+            <li><a href="#s6"><span class="toc-num">6.</span> Dur&eacute;es de conservation</a></li>
+            <li><a href="#s7"><span class="toc-num">7.</span> S&eacute;curit&eacute; des donn&eacute;es</a></li>
+            <li><a href="#s8"><span class="toc-num">8.</span> Vos droits</a></li>
+            <li><a href="#s9"><span class="toc-num">9.</span> Cookies et traceurs</a></li>
+            <li><a href="#s10"><span class="toc-num">10.</span> Protection des mineurs</a></li>
+            <li><a href="#s11"><span class="toc-num">11.</span> Modifications de la politique</a></li>
+            <li><a href="#s12"><span class="toc-num">12.</span> Contact et r&eacute;clamations</a></li>
+          </ol>
+        </nav>
+
+        <!-- Section 1 -->
+        <section class="section" id="s1">
+          <span class="section-number">Article 1</span>
+          <h2 class="section-title">Responsable du traitement</h2>
+          <p>
+            Le responsable du traitement des donn&eacute;es personnelles collect&eacute;es dans le cadre
+            de l'application <strong>Musaium</strong> est&nbsp;:
+          </p>
+          <ul>
+            <li><strong>Entit&eacute;&nbsp;:</strong> InnovMind &mdash; Tim Moyence, Entrepreneur Individuel</li>
+            <li><strong>Si&egrave;ge&nbsp;:</strong> France</li>
+            <li><strong>E-mail&nbsp;:</strong> <a href="mailto:tim.moyence@gmail.com">tim.moyence@gmail.com</a></li>
+          </ul>
+          <p>
+            Conform&eacute;ment &agrave; l'article 37 du R&egrave;glement G&eacute;n&eacute;ral sur la Protection des
+            Donn&eacute;es (RGPD), la d&eacute;signation d'un D&eacute;l&eacute;gu&eacute; &agrave; la Protection des
+            Donn&eacute;es (DPO) n'est pas requise pour notre organisation, celle-ci ne r&eacute;unissant pas les
+            crit&egrave;res de seuil fix&eacute;s par ledit article. Pour toute question relative &agrave; la
+            protection de vos donn&eacute;es, vous pouvez nous contacter directement &agrave; l'adresse
+            indiqu&eacute;e ci-dessus.
+          </p>
+        </section>
+
+        <!-- Section 2 -->
+        <section class="section" id="s2">
+          <span class="section-number">Article 2</span>
+          <h2 class="section-title">Donn&eacute;es personnelles collect&eacute;es</h2>
+          <p>
+            Dans le cadre de l'utilisation de Musaium, nous sommes amen&eacute;s &agrave; collecter et
+            traiter les cat&eacute;gories de donn&eacute;es suivantes&nbsp;:
+          </p>
+
+          <h3>2.1 Donn&eacute;es de compte</h3>
+          <p>
+            Adresse e-mail, mot de passe (stock&eacute; sous forme hash&eacute;e et sal&eacute;e),
+            date de cr&eacute;ation du compte, pr&eacute;f&eacute;rences utilisateur (langue, th&egrave;me).
+          </p>
+
+          <h3>2.2 Donn&eacute;es de conversation</h3>
+          <p>
+            Messages textuels envoy&eacute;s dans le cadre des sessions de chat, r&eacute;ponses
+            g&eacute;n&eacute;r&eacute;es par l'intelligence artificielle, m&eacute;tadonn&eacute;es de session
+            (horodatage, identifiant de session, contexte mus&eacute;al le cas &eacute;ch&eacute;ant).
+          </p>
+
+          <h3>2.3 Donn&eacute;es visuelles et audio</h3>
+          <p>
+            Photographies d'&oelig;uvres d'art prises ou import&eacute;es par l'utilisateur,
+            enregistrements audio des questions vocales. Ces donn&eacute;es sont transmises
+            aux services d'IA pour analyse et ne sont conserv&eacute;es que pour la dur&eacute;e
+            n&eacute;cessaire au traitement (voir article 6).
+          </p>
+
+          <h3>2.4 Donn&eacute;es techniques</h3>
+          <p>
+            Type et version de l'appareil, syst&egrave;me d'exploitation, version de l'application,
+            identifiants techniques anonymis&eacute;s, journaux d'erreurs et de performance.
+          </p>
+
+          <div class="callout">
+            <strong>Principe de minimisation&nbsp;:</strong> Nous ne collectons que les donn&eacute;es strictement
+            n&eacute;cessaires au fonctionnement du service. Aucune donn&eacute;e de g&eacute;olocalisation
+            pr&eacute;cise n'est collect&eacute;e. Aucun identifiant publicitaire n'est utilis&eacute;.
+          </div>
+        </section>
+
+        <!-- Section 3 -->
+        <section class="section" id="s3">
+          <span class="section-number">Article 3</span>
+          <h2 class="section-title">Finalit&eacute;s et bases l&eacute;gales du traitement</h2>
+          <p>
+            Conform&eacute;ment &agrave; l'article 6 du RGPD, chaque traitement repose sur une base
+            l&eacute;gale identifi&eacute;e&nbsp;:
+          </p>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Finalit&eacute;</th>
+                  <th>Base l&eacute;gale</th>
+                  <th>R&eacute;f&eacute;rence</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Cr&eacute;ation et gestion du compte utilisateur</td>
+                  <td>Ex&eacute;cution du contrat</td>
+                  <td>Art. 6(1)(b)</td>
+                </tr>
+                <tr>
+                  <td>Fonctionnalit&eacute;s principales (chat IA, analyse d'images)</td>
+                  <td>Ex&eacute;cution du contrat</td>
+                  <td>Art. 6(1)(b)</td>
+                </tr>
+                <tr>
+                  <td>Historique des conversations</td>
+                  <td>Ex&eacute;cution du contrat</td>
+                  <td>Art. 6(1)(b)</td>
+                </tr>
+                <tr>
+                  <td>S&eacute;curit&eacute; et pr&eacute;vention des abus</td>
+                  <td>Int&eacute;r&ecirc;ts l&eacute;gitimes</td>
+                  <td>Art. 6(1)(f)</td>
+                </tr>
+                <tr>
+                  <td>Diagnostics et am&eacute;lioration du service</td>
+                  <td>Int&eacute;r&ecirc;ts l&eacute;gitimes</td>
+                  <td>Art. 6(1)(f)</td>
+                </tr>
+                <tr>
+                  <td>Acc&egrave;s cam&eacute;ra, microphone, phototh&egrave;que</td>
+                  <td>Consentement</td>
+                  <td>Art. 6(1)(a)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Lorsque le traitement repose sur votre consentement, vous pouvez le retirer &agrave; tout
+            moment via les r&eacute;glages de votre appareil ou en nous contactant. Le retrait du
+            consentement ne compromet pas la lic&eacute;it&eacute; du traitement effectu&eacute; avant ce retrait.
+          </p>
+
+          <p>
+            Pour les traitements fond&eacute;s sur l'int&eacute;r&ecirc;t l&eacute;gitime, nous avons
+            proc&eacute;d&eacute; &agrave; une mise en balance de nos int&eacute;r&ecirc;ts avec vos droits et
+            libert&eacute;s fondamentaux. Vous pouvez obtenir des informations compl&eacute;mentaires
+            sur cette analyse en nous contactant.
+          </p>
+        </section>
+
+        <!-- Section 4 -->
+        <section class="section" id="s4">
+          <span class="section-number">Article 4</span>
+          <h2 class="section-title">Permissions de l'appareil</h2>
+          <p>
+            Musaium peut solliciter l'acc&egrave;s aux fonctionnalit&eacute;s suivantes de votre
+            appareil. Chaque permission est d&eacute;clench&eacute;e uniquement sur votre action
+            explicite et peut &ecirc;tre r&eacute;voqu&eacute;e &agrave; tout moment dans les r&eacute;glages
+            de votre appareil&nbsp;:
+          </p>
+          <ul>
+            <li>
+              <strong>Cam&eacute;ra&nbsp;:</strong> Utilis&eacute;e pour photographier des &oelig;uvres d'art
+              afin d'obtenir des informations contextuelles via l'IA. Aucune image n'est
+              captur&eacute;e en arri&egrave;re-plan.
+            </li>
+            <li>
+              <strong>Microphone&nbsp;:</strong> Utilis&eacute; pour la saisie vocale des questions.
+              L'enregistrement audio est transmis pour transcription puis supprim&eacute; apr&egrave;s
+              traitement.
+            </li>
+            <li>
+              <strong>Phototh&egrave;que&nbsp;:</strong> Utilis&eacute;e pour importer une image existante
+              depuis votre galerie. Seule l'image s&eacute;lectionn&eacute;e est accessible &agrave;
+              l'application.
+            </li>
+          </ul>
+          <div class="callout">
+            <strong>Aucune collecte passive&nbsp;:</strong> Les permissions ne sont utilis&eacute;es que
+            lorsque vous d&eacute;clenchez activement la fonctionnalit&eacute; correspondante. Aucune
+            donn&eacute;e n'est collect&eacute;e en arri&egrave;re-plan via ces permissions.
+          </div>
+        </section>
+
+        <!-- Section 5 -->
+        <section class="section" id="s5">
+          <span class="section-number">Article 5</span>
+          <h2 class="section-title">Sous-traitants et transferts internationaux</h2>
+          <p>
+            Pour fournir le service, nous faisons appel aux sous-traitants suivants, conform&eacute;ment
+            &agrave; l'article 28 du RGPD. Chaque transfert hors de l'Espace &Eacute;conomique
+            Europ&eacute;en (EEE) est encadr&eacute; par des garanties appropri&eacute;es&nbsp;:
+          </p>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Sous-traitant</th>
+                  <th>Localisation</th>
+                  <th>Finalit&eacute;</th>
+                  <th>Garanties</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>OpenAI, LLC</td>
+                  <td>&Eacute;tats-Unis</td>
+                  <td>Traitement IA des requ&ecirc;tes textuelles et visuelles</td>
+                  <td>Conditions d'utilisation du fournisseur</td>
+                </tr>
+                <tr>
+                  <td>Google Cloud / Vertex AI</td>
+                  <td>&Eacute;tats-Unis / UE</td>
+                  <td>Traitement IA alternatif</td>
+                  <td>Conditions d'utilisation du fournisseur</td>
+                </tr>
+                <tr>
+                  <td>DeepSeek</td>
+                  <td>Chine</td>
+                  <td>Traitement IA alternatif</td>
+                  <td>Conditions d'utilisation du fournisseur</td>
+                </tr>
+                <tr>
+                  <td>OVH SAS</td>
+                  <td>France</td>
+                  <td>H&eacute;bergement serveur et BDD</td>
+                  <td>Donn&eacute;es dans l'UE</td>
+                </tr>
+                <tr>
+                  <td>Amazon Web Services</td>
+                  <td>UE</td>
+                  <td>Stockage d'images (S3)</td>
+                  <td>Donn&eacute;es dans l'UE</td>
+                </tr>
+                <tr>
+                  <td>Expo / EAS</td>
+                  <td>&Eacute;tats-Unis</td>
+                  <td>Distribution et mises &agrave; jour app</td>
+                  <td>Conditions d'utilisation du fournisseur</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Vous pouvez obtenir une copie des garanties mises en place en nous contactant &agrave;
+            <a href="mailto:tim.moyence@gmail.com">tim.moyence@gmail.com</a>.
+          </p>
+        </section>
+
+        <!-- Section 6 -->
+        <section class="section" id="s6">
+          <span class="section-number">Article 6</span>
+          <h2 class="section-title">Dur&eacute;es de conservation</h2>
+          <p>
+            Vos donn&eacute;es sont conserv&eacute;es pour la dur&eacute;e n&eacute;cessaire aux finalit&eacute;s
+            d&eacute;crites dans la pr&eacute;sente politique&nbsp;:
+          </p>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Cat&eacute;gorie de donn&eacute;es</th>
+                  <th>Dur&eacute;e de conservation</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Donn&eacute;es de compte</td>
+                  <td>Dur&eacute;e d'utilisation du service, jusqu'&agrave; suppression sur demande</td>
+                </tr>
+                <tr>
+                  <td>Historique de conversations et messages</td>
+                  <td>Dur&eacute;e d'utilisation du service, jusqu'&agrave; suppression sur demande</td>
+                </tr>
+                <tr>
+                  <td>Images upload&eacute;es</td>
+                  <td>Dur&eacute;e d'utilisation du service, jusqu'&agrave; suppression sur demande</td>
+                </tr>
+                <tr>
+                  <td>Fichiers audio (questions vocales)</td>
+                  <td>Non stock&eacute;s &mdash; transmis pour transcription puis imm&eacute;diatement supprim&eacute;s</td>
+                </tr>
+                <tr>
+                  <td>Jetons d'authentification</td>
+                  <td>Acc&egrave;s&nbsp;: 15&nbsp;minutes / Renouvellement&nbsp;: 30&nbsp;jours</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Vous pouvez demander la suppression de vos donn&eacute;es &agrave; tout moment en nous
+            contactant &agrave; <a href="mailto:tim.moyence@gmail.com">tim.moyence@gmail.com</a>.
+            Les donn&eacute;es seront alors supprim&eacute;es dans un d&eacute;lai raisonnable, sauf
+            obligation l&eacute;gale de conservation.
+          </p>
+        </section>
+
+        <!-- Section 7 -->
+        <section class="section" id="s7">
+          <span class="section-number">Article 7</span>
+          <h2 class="section-title">S&eacute;curit&eacute; des donn&eacute;es</h2>
+          <p>
+            Nous mettons en &oelig;uvre des mesures techniques et organisationnelles appropri&eacute;es
+            conform&eacute;ment &agrave; l'article 32 du RGPD&nbsp;:
+          </p>
+          <ul>
+            <li>
+              <strong>Chiffrement en transit&nbsp;:</strong> TLS 1.2 ou sup&eacute;rieur pour toutes les communications.
+            </li>
+            <li>
+              <strong>Chiffrement au repos&nbsp;:</strong> Donn&eacute;es chiffr&eacute;es au niveau du syst&egrave;me
+              de fichiers et de la base de donn&eacute;es.
+            </li>
+            <li>
+              <strong>Authentification s&eacute;curis&eacute;e&nbsp;:</strong> Mots de passe hash&eacute;s (bcrypt),
+              jetons JWT &agrave; dur&eacute;e de vie limit&eacute;e.
+            </li>
+            <li>
+              <strong>Stockage local s&eacute;curis&eacute;&nbsp;:</strong> Jetons stock&eacute;s dans le trousseau
+              s&eacute;curis&eacute; de l'appareil (Keychain / Keystore) via Expo SecureStore.
+            </li>
+            <li>
+              <strong>Contr&ocirc;le d'acc&egrave;s&nbsp;:</strong> Principe du moindre privil&egrave;ge pour l'acc&egrave;s
+              aux donn&eacute;es.
+            </li>
+            <li>
+              <strong>Rate limiting&nbsp;:</strong> Protection contre les abus et les attaques par force brute.
+            </li>
+            <li>
+              <strong>Filtrage des contenus&nbsp;:</strong> Mod&eacute;ration en entr&eacute;e et en sortie
+              pour les interactions avec l'IA.
+            </li>
+          </ul>
+        </section>
+
+        <!-- Section 8 -->
+        <section class="section" id="s8">
+          <span class="section-number">Article 8</span>
+          <h2 class="section-title">Vos droits</h2>
+          <p>
+            Conform&eacute;ment au RGPD (articles 15 &agrave; 22) et &agrave; la loi Informatique et
+            Libert&eacute;s, vous disposez des droits suivants&nbsp;:
+          </p>
+          <ul>
+            <li>
+              <strong>Droit d'acc&egrave;s</strong> (art. 15) &mdash; Obtenir la confirmation que vos
+              donn&eacute;es sont trait&eacute;es et en recevoir une copie.
+            </li>
+            <li>
+              <strong>Droit de rectification</strong> (art. 16) &mdash; Faire corriger des donn&eacute;es
+              inexactes ou incompl&egrave;tes.
+            </li>
+            <li>
+              <strong>Droit &agrave; l'effacement</strong> (art. 17) &mdash; Demander la suppression de
+              vos donn&eacute;es dans les conditions pr&eacute;vues par le r&egrave;glement.
+            </li>
+            <li>
+              <strong>Droit &agrave; la limitation</strong> (art. 18) &mdash; Obtenir la limitation du
+              traitement dans certains cas.
+            </li>
+            <li>
+              <strong>Droit &agrave; la portabilit&eacute;</strong> (art. 20) &mdash; Recevoir vos donn&eacute;es
+              dans un format structur&eacute; et lisible par machine.
+            </li>
+            <li>
+              <strong>Droit d'opposition</strong> (art. 21) &mdash; Vous opposer au traitement fond&eacute;
+              sur l'int&eacute;r&ecirc;t l&eacute;gitime.
+            </li>
+            <li>
+              <strong>Retrait du consentement</strong> (art. 7) &mdash; Retirer votre consentement &agrave;
+              tout moment.
+            </li>
+          </ul>
+
+          <div class="callout">
+            <strong>Comment exercer vos droits&nbsp;:</strong> Envoyez votre demande &agrave;
+            <a href="mailto:tim.moyence@gmail.com">tim.moyence@gmail.com</a> en pr&eacute;cisant le droit
+            que vous souhaitez exercer. R&eacute;ponse sous un mois (art. 12(3) RGPD), prolongeable
+            de deux mois si n&eacute;cessaire.
+          </div>
+        </section>
+
+        <!-- Section 9 -->
+        <section class="section" id="s9">
+          <span class="section-number">Article 9</span>
+          <h2 class="section-title">Cookies et traceurs</h2>
+          <p>
+            Musaium est une application mobile native. Elle n'utilise <strong>pas de cookies</strong>
+            au sens de la directive ePrivacy. L'application ne contient aucun traceur publicitaire,
+            aucun pixel de suivi et aucun outil d'analyse comportementale tiers.
+          </p>
+          <p>
+            Les seuls identifiants techniques utilis&eacute;s sont les jetons d'authentification (JWT),
+            n&eacute;cessaires au fonctionnement du service et stock&eacute;s de mani&egrave;re s&eacute;curis&eacute;e
+            sur votre appareil.
+          </p>
+        </section>
+
+        <!-- Section 10 -->
+        <section class="section" id="s10">
+          <span class="section-number">Article 10</span>
+          <h2 class="section-title">Protection des mineurs</h2>
+          <p>
+            Musaium n'est pas destin&eacute;e aux mineurs de moins de 16&nbsp;ans. Conform&eacute;ment &agrave;
+            l'article 8 du RGPD et &agrave; l'article 45 de la loi Informatique et Libert&eacute;s,
+            l'inscription d'un mineur de moins de 16&nbsp;ans n'est possible qu'avec
+            l'autorisation du titulaire de l'autorit&eacute; parentale.
+          </p>
+          <p>
+            Si vous &ecirc;tes parent ou tuteur et pensez que votre enfant nous a fourni des
+            donn&eacute;es personnelles sans autorisation, contactez-nous &agrave;
+            <a href="mailto:tim.moyence@gmail.com">tim.moyence@gmail.com</a>.
+          </p>
+        </section>
+
+        <!-- Section 11 -->
+        <section class="section" id="s11">
+          <span class="section-number">Article 11</span>
+          <h2 class="section-title">Modifications de la politique</h2>
+          <p>
+            Nous nous r&eacute;servons le droit de modifier cette politique &agrave; tout moment.
+            En cas de modification substantielle, vous serez inform&eacute;(e) par notification
+            dans l'application et/ou par e-mail au moins 30&nbsp;jours avant l'entr&eacute;e en vigueur.
+          </p>
+          <p>
+            Les modifications mineures peuvent &ecirc;tre apport&eacute;es sans notification pr&eacute;alable.
+            La date de mise &agrave; jour et le num&eacute;ro de version figurent en haut de cette page.
+          </p>
+        </section>
+
+        <!-- Section 12 -->
+        <section class="section" id="s12">
+          <span class="section-number">Article 12</span>
+          <h2 class="section-title">Contact et r&eacute;clamations</h2>
+          <p>
+            Pour toute question ou demande relative &agrave; la protection de vos donn&eacute;es&nbsp;:
+          </p>
+          <ul>
+            <li><strong>E-mail&nbsp;:</strong> <a href="mailto:tim.moyence@gmail.com">tim.moyence@gmail.com</a></li>
+            <li><strong>Responsable&nbsp;:</strong> InnovMind &mdash; Tim Moyence</li>
+          </ul>
+          <p>
+            Si vous estimez que vos droits ne sont pas respect&eacute;s, vous pouvez introduire
+            une r&eacute;clamation aupr&egrave;s de&nbsp;:
+          </p>
+          <ul>
+            <li>
+              <strong>CNIL</strong> &mdash; Commission Nationale de l'Informatique et des Libert&eacute;s
+            </li>
+            <li>3 Place de Fontenoy, TSA 80715, 75334 Paris Cedex 07</li>
+            <li>Site web&nbsp;: <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer">www.cnil.fr</a></li>
+            <li>T&eacute;l&eacute;phone&nbsp;: +33 (0)1 53 73 22 22</li>
+          </ul>
+        </section>
+
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      <div class="container">
+        <p>&copy; 2026 InnovMind &mdash; Musaium. Tous droits r&eacute;serv&eacute;s.</p>
+      </div>
+    </footer>
+
+  </div>
+</body>
+</html>
