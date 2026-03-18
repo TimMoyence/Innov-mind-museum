@@ -9,6 +9,7 @@ import type {
   ListSessionMessagesParams,
   PersistArtworkMatchInput,
   PersistMessageInput,
+  PersistMessageReportInput,
   SessionMessagesPage,
 } from '@modules/chat/domain/chat.repository.interface';
 import type { CreateSessionInput } from '@modules/chat/domain/chat.types';
@@ -19,11 +20,14 @@ import type {
   ChatOrchestrator,
   OrchestratorOutput,
 } from '@modules/chat/adapters/secondary/langchain.orchestrator';
+import type { AudioTranscriber } from '@modules/chat/adapters/secondary/audio-transcriber.openai';
 
+/** Test utility: in-memory ChatRepository implementation that stores sessions and messages in Maps. */
 class InMemoryChatRepository implements ChatRepository {
   private readonly sessions = new Map<string, ChatSession>();
   private readonly messages = new Map<string, ChatMessage[]>();
   private readonly artworkMatches: PersistArtworkMatchInput[] = [];
+  private readonly reports = new Map<string, Set<number>>();
 
   private decodeCursor(
     cursor: string,
@@ -60,6 +64,7 @@ class InMemoryChatRepository implements ChatRepository {
       museumMode: input.museumMode ?? false,
       user: input.userId ? ({ id: input.userId } as ChatSession['user']) : null,
       messages: [],
+      version: 1,
       createdAt: now,
       updatedAt: now,
     } as ChatSession;
@@ -130,15 +135,23 @@ class InMemoryChatRepository implements ChatRepository {
     list.push(row);
     this.messages.set(input.sessionId, list);
 
+    if (input.artworkMatch) {
+      this.artworkMatches.push({ messageId: row.id, ...input.artworkMatch });
+    }
+
     const session = this.sessions.get(input.sessionId);
     if (session) {
       session.updatedAt = new Date();
+      if (input.sessionUpdates) {
+        session.version = (session.version || 1) + 1;
+      }
       this.sessions.set(input.sessionId, session);
     }
 
     return row;
   }
 
+  /** @deprecated Use artworkMatch field in persistMessage */
   async persistArtworkMatch(input: PersistArtworkMatchInput): Promise<void> {
     this.artworkMatches.push(input);
   }
@@ -163,6 +176,16 @@ class InMemoryChatRepository implements ChatRepository {
     );
 
     return list.slice(-Math.max(1, Math.min(limit, 50)));
+  }
+
+  async hasMessageReport(messageId: string, userId: number): Promise<boolean> {
+    return this.reports.get(messageId)?.has(userId) ?? false;
+  }
+
+  async persistMessageReport(input: PersistMessageReportInput): Promise<void> {
+    const set = this.reports.get(input.messageId) ?? new Set<number>();
+    set.add(input.userId);
+    this.reports.set(input.messageId, set);
   }
 
   async listSessions(params: ListSessionsParams): Promise<ChatSessionsPage> {
@@ -223,6 +246,7 @@ class InMemoryChatRepository implements ChatRepository {
   }
 }
 
+/** Test utility: stub ChatOrchestrator that returns a deterministic synthetic response. */
 class FakeOrchestrator implements ChatOrchestrator {
   async generate(): Promise<OrchestratorOutput> {
     return {
@@ -240,12 +264,20 @@ class FakeOrchestrator implements ChatOrchestrator {
   }
 }
 
+/**
+ * Test utility: builds a ChatService wired with in-memory repository, local image storage, and optional fake orchestrator.
+ * @param orchestrator - Chat orchestrator to use; defaults to FakeOrchestrator.
+ * @param audioTranscriber - Optional audio transcriber override.
+ * @returns ChatService configured for unit/integration tests.
+ */
 export const buildChatTestService = (
   orchestrator: ChatOrchestrator = new FakeOrchestrator(),
+  audioTranscriber?: AudioTranscriber,
 ): ChatService => {
   return new ChatService(
     new InMemoryChatRepository(),
     orchestrator,
     new LocalImageStorage(),
+    audioTranscriber,
   );
 };
