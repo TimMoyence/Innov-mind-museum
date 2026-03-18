@@ -84,6 +84,14 @@ describeE2E('api e2e (express + postgres container)', () => {
       { AppDataSource },
       { InitDatabase1771427010387 },
       { AddAuthRefreshTokens1771800000000 },
+      { EnsureChatTables1771900000000 },
+      { DropLegacyImageInsightTables1772000000000 },
+      { FixChatSessionsUserFk1772000000001 },
+      { AddMuseumContextToSessions1772000000002 },
+      { AddMessageReports1773820507870 },
+      { AddSocialAccountsAndNullablePassword1773823617791 },
+      { AddSessionVersionColumn1774000000000 },
+      { RecreateRefreshTokenIndexes1773852493401 },
       { ChatService },
       { TypeOrmChatRepository },
       { LocalImageStorage },
@@ -93,6 +101,14 @@ describeE2E('api e2e (express + postgres container)', () => {
       import('@src/data/db/data-source'),
       import('@src/data/db/migrations/1771427010387-InitDatabase'),
       import('@src/data/db/migrations/1771800000000-AddAuthRefreshTokens'),
+      import('@src/data/db/migrations/1771900000000-EnsureChatTables'),
+      import('@src/data/db/migrations/1772000000000-DropLegacyImageInsightTables'),
+      import('@src/data/db/migrations/1772000000001-FixChatSessionsUserFk'),
+      import('@src/data/db/migrations/1772000000002-AddMuseumContextToSessions'),
+      import('@src/data/db/migrations/1773820507870-AddMessageReports'),
+      import('@src/data/db/migrations/1773823617791-AddSocialAccountsAndNullablePassword'),
+      import('@src/data/db/migrations/1774000000000-AddSessionVersionColumn'),
+      import('@src/data/db/migrations/1773852493401-RecreateRefreshTokenIndexes'),
       import('@modules/chat/application/chat.service'),
       import('@modules/chat/infrastructure/chat.repository.typeorm'),
       import('@modules/chat/adapters/secondary/image-storage.stub'),
@@ -109,7 +125,18 @@ describeE2E('api e2e (express + postgres container)', () => {
     appDataSource = AppDataSource;
     (
       appDataSource.options as { migrations?: unknown[] }
-    ).migrations = [InitDatabase1771427010387, AddAuthRefreshTokens1771800000000];
+    ).migrations = [
+      InitDatabase1771427010387,
+      AddAuthRefreshTokens1771800000000,
+      EnsureChatTables1771900000000,
+      DropLegacyImageInsightTables1772000000000,
+      FixChatSessionsUserFk1772000000001,
+      AddMuseumContextToSessions1772000000002,
+      AddMessageReports1773820507870,
+      AddSocialAccountsAndNullablePassword1773823617791,
+      AddSessionVersionColumn1774000000000,
+      RecreateRefreshTokenIndexes1773852493401,
+    ];
     await appDataSource.initialize();
     (
       appDataSource.driver as {
