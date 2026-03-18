@@ -6,8 +6,14 @@ import {
   forgotPasswordUseCase,
   registerUseCase,
   resetPasswordUseCase,
+  socialLoginUseCase,
+  deleteAccountUseCase,
 } from '../../../core/useCase';
 
+/**
+ * Express router for authentication endpoints (register, login, refresh, logout, social-login,
+ * forgot/reset password, account deletion, and current-user retrieval).
+ */
 const authRouter: Router = Router();
 
 authRouter.post('/register', async (req: Request, res: Response) => {
@@ -123,6 +129,83 @@ authRouter.get('/me', isAuthenticated, async (req: Request, res: Response): Prom
     },
   });
   return;
+});
+
+authRouter.post('/social-login', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { provider, idToken } = (req.body || {}) as {
+      provider?: string;
+      idToken?: string;
+    };
+
+    if (!provider || !idToken) {
+      res.status(400).json({
+        error: { code: 'BAD_REQUEST', message: 'provider and idToken are required' },
+      });
+      return;
+    }
+
+    if (provider !== 'apple' && provider !== 'google') {
+      res.status(400).json({
+        error: { code: 'BAD_REQUEST', message: 'provider must be "apple" or "google"' },
+      });
+      return;
+    }
+
+    const session = await socialLoginUseCase.execute(provider, idToken);
+    res.status(200).json(session);
+    return;
+  } catch (error) {
+    const status =
+      typeof error === 'object' &&
+      error !== null &&
+      'statusCode' in error &&
+      typeof (error as { statusCode?: unknown }).statusCode === 'number'
+        ? ((error as { statusCode: number }).statusCode)
+        : 401;
+    const code =
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      typeof (error as { code?: unknown }).code === 'string'
+        ? ((error as { code: string }).code)
+        : 'SOCIAL_LOGIN_FAILED';
+    const message = error instanceof Error ? error.message : 'Social login failed';
+    res.status(status).json({ error: { code, message } });
+    return;
+  }
+});
+
+authRouter.delete('/account', isAuthenticated, async (req: Request, res: Response): Promise<void> => {
+  const user = (
+    req as Request & {
+      user?: { id?: number };
+    }
+  ).user;
+
+  if (!user?.id) {
+    res.status(401).json({
+      error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+    });
+    return;
+  }
+
+  try {
+    await deleteAccountUseCase.execute(user.id);
+    res.status(200).json({ deleted: true });
+    return;
+  } catch (error) {
+    const status =
+      typeof error === 'object' &&
+      error !== null &&
+      'statusCode' in error &&
+      typeof (error as { statusCode?: unknown }).statusCode === 'number'
+        ? ((error as { statusCode: number }).statusCode)
+        : 500;
+    const message = error instanceof Error ? error.message : 'Account deletion failed';
+    res.status(status).json({ error: { code: 'DELETE_ACCOUNT_FAILED', message } });
+    return;
+  }
 });
 
 authRouter.post('/forgot-password', async (req: Request, res: Response) => {
