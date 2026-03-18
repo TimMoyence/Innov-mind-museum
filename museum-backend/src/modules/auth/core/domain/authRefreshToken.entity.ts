@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -15,6 +16,7 @@ export class AuthRefreshToken {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
+  @Index('idx_refresh_token_user')
   @ManyToOne(() => User, { nullable: false, eager: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user!: User;
@@ -24,6 +26,7 @@ export class AuthRefreshToken {
   jti!: string;
 
   /** Token family ID for rotation-based reuse detection. */
+  @Index('idx_refresh_token_family')
   @Column({ type: 'uuid' })
   familyId!: string;
 
@@ -34,6 +37,7 @@ export class AuthRefreshToken {
   @Column({ type: 'timestamp' })
   issuedAt!: Date;
 
+  @Index('idx_refresh_token_expires')
   @Column({ type: 'timestamp' })
   expiresAt!: Date;
 
