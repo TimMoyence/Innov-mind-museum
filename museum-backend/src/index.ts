@@ -6,6 +6,7 @@ import { AppDataSource } from '@src/data/db/data-source';
 import { logger } from '@shared/logger/logger';
 import { createApp } from './app';
 
+/** Initializes the database, starts the HTTP server, and registers graceful shutdown handlers. */
 const start = async (): Promise<void> => {
   try {
     await AppDataSource.initialize();

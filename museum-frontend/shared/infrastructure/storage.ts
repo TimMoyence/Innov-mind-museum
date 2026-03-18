@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+/** Thin wrapper around AsyncStorage providing typed get/set, JSON serialization, and a uniform API. */
 export const storage = {
   async getItem(key: string): Promise<string | null> {
     return AsyncStorage.getItem(key);

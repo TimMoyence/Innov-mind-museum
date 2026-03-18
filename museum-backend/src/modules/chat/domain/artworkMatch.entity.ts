@@ -8,6 +8,7 @@ import {
 
 import { ChatMessage } from './chatMessage.entity';
 
+/** Represents an artwork identified from a user message (image or text). Mapped to `artwork_matches`. */
 @Entity({ name: 'artwork_matches' })
 export class ArtworkMatch {
   @PrimaryGeneratedColumn('uuid')

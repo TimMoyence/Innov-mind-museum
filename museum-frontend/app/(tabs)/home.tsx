@@ -12,6 +12,7 @@ import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
 
+/** Renders the home screen with branding, runtime settings summary, and actions to start new conversations. */
 export default function HomeScreen() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);

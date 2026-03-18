@@ -1,9 +1,18 @@
+/**
+ * Counting semaphore that limits the number of concurrently executing async tasks.
+ * Tasks that exceed the limit are queued and executed in FIFO order as slots free up.
+ */
 export class Semaphore {
   private queue: Array<() => void> = [];
   private inFlight = 0;
 
   constructor(private readonly maxConcurrent: number) {}
 
+  /**
+   * Acquires a slot, executes the task, then releases the slot.
+   * @param task - Async function to run under the concurrency limit.
+   * @returns The resolved value of the task.
+   */
   async use<T>(task: () => Promise<T>): Promise<T> {
     await this.acquire();
     try {

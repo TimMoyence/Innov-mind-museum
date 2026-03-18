@@ -2,9 +2,19 @@ import { IUserRepository } from '../domain/user.repository.interface';
 import { User } from '../domain/user.entity';
 import { validateEmail } from '../../adapters/secondary/email.service';
 
+/** Orchestrates new user registration with email/password. */
 export class RegisterUseCase {
   constructor(private userRepository: IUserRepository) {}
 
+  /**
+   * Validate email format and register a new user.
+   * @param email - The user's email address.
+   * @param password - The user's chosen password.
+   * @param firstname - Optional first name.
+   * @param lastname - Optional last name.
+   * @returns The newly created user.
+   * @throws {Error} If the email format is invalid.
+   */
   async execute(
     email: string,
     password: string,

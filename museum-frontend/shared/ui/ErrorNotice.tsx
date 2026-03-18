@@ -6,6 +6,7 @@ interface ErrorNoticeProps {
   onDismiss?: () => void;
 }
 
+/** Displays a dismissible error banner with a red-tinted background and optional dismiss button. */
 export const ErrorNotice = ({
   message,
   onDismiss,

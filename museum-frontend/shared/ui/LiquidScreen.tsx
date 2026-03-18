@@ -34,6 +34,7 @@ const isResponsiveBackground = (
   );
 };
 
+/** Renders a full-screen layout with a gradient background, responsive background image, and centered content area. */
 export const LiquidScreen = ({
   children,
   background,

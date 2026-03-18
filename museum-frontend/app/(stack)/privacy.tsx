@@ -32,6 +32,7 @@ function MetaRow({ label, value }: MetaItem) {
   );
 }
 
+/** Renders the GDPR/RGPD privacy policy screen with legal metadata, rights summary, and release readiness status. */
 export default function PrivacyScreen() {
   const metaItems = useMemo<MetaItem[]>(
     () => [

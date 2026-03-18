@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 
+/** Style definitions for shared legacy components (level selector, discussion items). */
 export const componentStyles = StyleSheet.create({
   // Level Selection
   levelButtons: {

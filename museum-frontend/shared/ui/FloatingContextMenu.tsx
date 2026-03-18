@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { liquidColors } from './liquidTheme';
 
+/** Describes a single action item rendered inside a FloatingContextMenu. */
 export interface ContextMenuAction {
   id: string;
   icon: keyof typeof Ionicons.glyphMap;
@@ -16,6 +17,7 @@ interface FloatingContextMenuProps {
   actions: ContextMenuAction[];
 }
 
+/** Renders a blurred floating pill-shaped menu bar with icon-labeled action buttons. */
 export const FloatingContextMenu = ({
   actions,
 }: FloatingContextMenuProps): JSX.Element => {

@@ -12,6 +12,7 @@ interface DiscussionItemProps {
   onPress?: () => void;
 }
 
+/** @deprecated Never imported. Superseded by chat UI in features/chat/ui. Candidate for removal in next cleanup pass. */
 export const DiscussionItem: React.FC<DiscussionItemProps> = ({
   imageUrl,
   title,

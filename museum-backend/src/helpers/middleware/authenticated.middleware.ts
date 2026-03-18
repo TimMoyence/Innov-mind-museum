@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { authSessionService } from '@modules/auth/core/useCase';
 
+/** Extracts and validates the Bearer JWT from the Authorization header. @throws {401} if token is missing or invalid. */
 export function isAuthenticated(
   req: Request,
   res: Response,

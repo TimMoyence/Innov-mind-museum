@@ -28,6 +28,7 @@ import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
 const SAVED_SESSIONS_KEY = 'dashboard.savedSessions';
 type SortMode = 'recent' | 'messages';
 
+/** Renders the dashboard screen listing recent chat sessions with sort, save, and share capabilities. */
 export default function ConversationsScreen() {
   const [items, setItems] = useState<DashboardSessionCard[]>([]);
   const [savedSessionIds, setSavedSessionIds] = useState<string[]>([]);

@@ -16,6 +16,7 @@ import { requestIdMiddleware } from '@src/helpers/middleware/request-id.middlewa
 import { requestLoggerMiddleware } from '@src/helpers/middleware/request-logger.middleware';
 import { setupSwagger } from '@src/helpers/swagger';
 
+/** Optional overrides for dependency injection, primarily used in tests. */
 interface CreateAppOptions {
   chatService?: ReturnType<typeof buildChatService>;
   healthCheck?: () => Promise<{ database: 'up' | 'down' }>;
@@ -36,6 +37,11 @@ const createHealthCheck = async (): Promise<{ database: 'up' | 'down' }> => {
   }
 };
 
+/**
+ * Creates and configures the Express application with all middleware, routers, and error handling.
+ * @param options - Optional dependency overrides for testing.
+ * @returns Fully configured Express application.
+ */
 export const createApp = (options: CreateAppOptions = {}): Express => {
   const app = express();
 

@@ -8,6 +8,7 @@ interface LevelSelectorProps {
   onSelectLevel: (level: string) => void;
 }
 
+/** @deprecated Never imported. Superseded by chat UI in features/chat/ui. Candidate for removal in next cleanup pass. */
 export const LevelSelector: React.FC<LevelSelectorProps> = ({
   levels,
   selectedLevel,

@@ -17,6 +17,7 @@ function AuthenticationGuard({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/** Renders the root navigation layout with startup configuration validation, runtime settings bootstrap, and auth guard. */
 export default function RootLayout() {
   const startupConfiguration = useMemo(() => {
     return {

@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 
+/** Style definitions for the legacy welcome/home screen. */
 export const homeStyles = StyleSheet.create({
   welcomeContainer: {
     flex: 1,
