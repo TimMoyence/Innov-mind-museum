@@ -64,7 +64,7 @@ interface AuthProviderProps {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Hook pour utiliser le contexte
+/** Manages authentication state. @returns The current auth context including login status, logout, and token validity check. */
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -75,7 +75,7 @@ export const useAuth = (): AuthContextType => {
   return context;
 };
 
-// Fournisseur du contexte
+/** Provides authentication context to the component tree. Bootstraps the session on mount and manages token refresh and logout. */
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);

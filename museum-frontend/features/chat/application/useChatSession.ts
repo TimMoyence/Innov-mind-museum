@@ -7,6 +7,24 @@ import {
 } from '@/features/settings/runtimeSettings';
 import { chatApi } from '../infrastructure/chatApi';
 
+/** Metadata attached to an assistant message, including artwork detection and follow-up suggestions. */
+export interface ChatUiMessageMetadata {
+  detectedArtwork?: {
+    title?: string;
+    artist?: string;
+    museum?: string;
+    room?: string;
+    confidence?: number;
+  };
+  recommendations?: string[];
+  followUpQuestions?: string[];
+  expertiseSignal?: 'beginner' | 'intermediate' | 'expert';
+  deeperContext?: string;
+  openQuestion?: string;
+  imageDescription?: string;
+}
+
+/** UI-layer representation of a single chat message (user, assistant, or system). */
 export interface ChatUiMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -17,6 +35,8 @@ export interface ChatUiMessage {
     url: string;
     expiresAt: string;
   } | null;
+  metadata?: ChatUiMessageMetadata | null;
+  transcription?: { text: string } | null;
 }
 
 const sortByTime = (messages: ChatUiMessage[]): ChatUiMessage[] => {
@@ -26,6 +46,12 @@ const sortByTime = (messages: ChatUiMessage[]): ChatUiMessage[] => {
   );
 };
 
+/**
+ * Manages chat session state: loads messages, sends text/image/audio messages with optimistic updates,
+ * refreshes signed image URLs, and exposes session metadata.
+ * @param sessionId - ID of the chat session to manage.
+ * @returns State (messages, loading/sending flags, error) and action callbacks (sendMessage, reload, clearError, refreshMessageImageUrl).
+ */
 export const useChatSession = (sessionId: string) => {
   const [messages, setMessages] = useState<ChatUiMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,6 +80,7 @@ export const useChatSession = (sessionId: string) => {
             createdAt: message.createdAt,
             imageRef: message.imageRef,
             image: message.image ?? null,
+            metadata: (message.metadata as ChatUiMessageMetadata) ?? null,
           })),
         ),
       );
@@ -127,7 +154,22 @@ export const useChatSession = (sessionId: string) => {
           role: response.message.role,
           text: response.message.text,
           createdAt: response.message.createdAt,
+          metadata: (response.metadata as ChatUiMessageMetadata) ?? null,
+          transcription: ('transcription' in response && response.transcription)
+            ? { text: (response.transcription as { text: string }).text }
+            : null,
         };
+
+        // If audio transcription available, update the optimistic user message text
+        if (assistantMessage.transcription?.text && (params.audioUri || params.audioBlob)) {
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === optimisticMessage.id
+                ? { ...message, text: `🎙 ${assistantMessage.transcription!.text}` }
+                : message,
+            ),
+          );
+        }
 
         setMessages((prev) => sortByTime([...prev, assistantMessage]));
         return true;

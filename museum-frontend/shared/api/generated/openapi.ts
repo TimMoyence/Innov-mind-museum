@@ -83,15 +83,7 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description Validation error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
+                400: components["responses"]["BadRequest"];
             };
         };
         delete?: never;
@@ -135,15 +127,8 @@ export interface paths {
                         "application/json": components["schemas"]["AuthSessionResponse"];
                     };
                 };
-                /** @description Invalid credentials */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
             };
         };
         delete?: never;
@@ -185,15 +170,8 @@ export interface paths {
                         "application/json": components["schemas"]["AuthSessionResponse"];
                     };
                 };
-                /** @description Invalid refresh token */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
             };
         };
         delete?: never;
@@ -272,20 +250,96 @@ export interface paths {
                         };
                     };
                 };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
+                401: components["responses"]["Unauthorized"];
             };
         };
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/social-login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        provider: "apple" | "google";
+                        idToken: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description JWT session via social sign-in */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AuthSessionResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Account deleted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            deleted: boolean;
+                        };
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -316,6 +370,8 @@ export interface paths {
                         "application/json": components["schemas"]["ListSessionsResponse"];
                     };
                 };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
             };
         };
         put?: never;
@@ -337,6 +393,8 @@ export interface paths {
                         "application/json": components["schemas"]["CreateSessionResponse"];
                     };
                 };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
             };
         };
         delete?: never;
@@ -372,6 +430,9 @@ export interface paths {
                         "application/json": components["schemas"]["GetSessionResponse"];
                     };
                 };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
             };
         };
         put?: never;
@@ -396,6 +457,9 @@ export interface paths {
                         "application/json": components["schemas"]["DeleteSessionResponse"];
                     };
                 };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
             };
         };
         options?: never;
@@ -432,6 +496,11 @@ export interface paths {
                         "application/json": components["schemas"]["PostMessageResponse"];
                     };
                 };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                409: components["responses"]["Conflict"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
         delete?: never;
@@ -469,6 +538,59 @@ export interface paths {
                         "application/json": components["schemas"]["PostMessageResponse"];
                     };
                 };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                409: components["responses"]["Conflict"];
+                429: components["responses"]["TooManyRequests"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chat/messages/{messageId}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    messageId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        reason: "offensive" | "inaccurate" | "inappropriate" | "other";
+                        comment?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Report submitted */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReportMessageResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
             };
         };
         delete?: never;
@@ -506,6 +628,9 @@ export interface paths {
                         "application/json": components["schemas"]["SignedImageUrlResponse"];
                     };
                 };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
             };
         };
         delete?: never;
@@ -546,6 +671,8 @@ export interface paths {
                         "image/webp": unknown;
                     };
                 };
+                400: components["responses"]["BadRequest"];
+                404: components["responses"]["NotFound"];
             };
         };
         put?: never;
@@ -658,6 +785,10 @@ export interface components {
                 /** @enum {string} */
                 expertiseSignal?: "beginner" | "intermediate" | "expert";
                 citations?: string[];
+                deeperContext?: string;
+                openQuestion?: string;
+                followUpQuestions?: string[];
+                imageDescription?: string;
             } & {
                 [key: string]: unknown;
             };
@@ -709,6 +840,11 @@ export interface components {
             sessionId: string;
             deleted: boolean;
         };
+        ReportMessageResponse: {
+            /** Format: uuid */
+            messageId: string;
+            reported: boolean;
+        };
         SignedImageUrlResponse: {
             /** Format: uri */
             url: string;
@@ -716,7 +852,62 @@ export interface components {
             expiresAt: string;
         };
     };
-    responses: never;
+    responses: {
+        /** @description Validation error */
+        BadRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description Authentication required */
+        Unauthorized: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description Resource not found */
+        NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description Concurrent modification */
+        Conflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description Rate limit exceeded */
+        TooManyRequests: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description Internal server error */
+        InternalError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+    };
     parameters: never;
     requestBodies: never;
     headers: never;

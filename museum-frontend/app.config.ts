@@ -126,6 +126,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       icon: BRAND_ICON,
       bundleIdentifier:
         variant === 'production' ? APP_IOS_BUNDLE_ID : APP_IOS_BUNDLE_ID_PREVIEW,
+      usesAppleSignIn: true,
       infoPlist: {
         NSMicrophoneUsageDescription:
           'Allow $(PRODUCT_NAME) to access your microphone for voice questions about artworks.',
@@ -167,6 +168,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         {
           microphonePermission:
             'Allow $(PRODUCT_NAME) to access your microphone for voice questions about artworks.',
+        },
+      ],
+      'expo-apple-authentication',
+      [
+        '@react-native-google-signin/google-signin',
+        {
+          iosUrlScheme: 'com.googleusercontent.apps.GOOGLE_IOS_CLIENT_ID',
         },
       ],
     ],

@@ -1,8 +1,12 @@
 import Constants from 'expo-constants';
 
+/** Target API environment the app is configured to communicate with. */
 export type ApiEnvironment = 'staging' | 'production' | 'custom';
+
+/** EAS / Expo build variant determining app behavior and allowed configurations. */
 export type BuildVariant = 'development' | 'preview' | 'production';
 
+/** Snapshot of the resolved API configuration at a point in time, used for diagnostics. */
 export interface ApiConfigurationSnapshot {
   buildVariant: BuildVariant;
   apiEnvironment: ApiEnvironment;
@@ -102,6 +106,11 @@ const resolveConfiguredBaseUrls = (): {
 const localhostPattern =
   /^(localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0|\[::1\]|::1)$/i;
 
+/**
+ * Checks whether a URL points to a localhost address.
+ * @param value - URL string to test.
+ * @returns `true` if the hostname is a loopback address.
+ */
 export const isLocalhostApiBaseUrl = (value: string): boolean => {
   try {
     const hostname = new URL(value).hostname;
@@ -111,6 +120,10 @@ export const isLocalhostApiBaseUrl = (value: string): boolean => {
   }
 };
 
+/**
+ * Determines the default API environment from env vars, Expo config, or the build variant.
+ * @returns The resolved {@link ApiEnvironment}.
+ */
 export const getDefaultApiEnvironment = (): ApiEnvironment => {
   const extra = readExtra();
   const explicit =
@@ -124,6 +137,12 @@ export const getDefaultApiEnvironment = (): ApiEnvironment => {
   return resolveBuildVariant() === 'production' ? 'production' : 'staging';
 };
 
+/**
+ * Resolves the backend base URL for a given API environment.
+ * @param environment - Target API environment.
+ * @param customUrl - Optional user-provided URL used when environment is `'custom'`.
+ * @returns Normalized base URL string without a trailing slash.
+ */
 export const resolveRuntimeApiBaseUrl = (
   environment: ApiEnvironment,
   customUrl?: string,
@@ -142,6 +161,10 @@ export const resolveRuntimeApiBaseUrl = (
   return configured.explicit || configured.staging || configured.fallback;
 };
 
+/**
+ * Builds a diagnostic snapshot of the current API configuration.
+ * @returns An {@link ApiConfigurationSnapshot} reflecting build variant, environment, and URLs.
+ */
 export const getApiConfigurationSnapshot = (): ApiConfigurationSnapshot => {
   const configured = resolveConfiguredBaseUrls();
   const apiEnvironment = getDefaultApiEnvironment();
@@ -156,6 +179,11 @@ export const getApiConfigurationSnapshot = (): ApiConfigurationSnapshot => {
   };
 };
 
+/**
+ * Throws if the given URL targets localhost in a non-development build.
+ * @param value - Base URL to validate.
+ * @throws When localhost is used in preview or production builds.
+ */
 export const assertApiBaseUrlAllowed = (value: string): void => {
   const variant = resolveBuildVariant();
   if (variant !== 'development' && isLocalhostApiBaseUrl(value)) {
@@ -165,12 +193,21 @@ export const assertApiBaseUrlAllowed = (value: string): void => {
   }
 };
 
+/**
+ * Resolves and validates the initial API base URL at app startup.
+ * @returns The validated base URL.
+ * @throws When the resolved URL is not allowed for the current build variant.
+ */
 export const resolveInitialApiBaseUrl = (): string => {
   const url = resolveRuntimeApiBaseUrl(getDefaultApiEnvironment());
   assertApiBaseUrlAllowed(url);
   return url;
 };
 
+/**
+ * Attempts to resolve the initial API base URL and captures any configuration error.
+ * @returns An `Error` if the configuration is invalid, or `null` when valid.
+ */
 export const getStartupConfigurationError = (): Error | null => {
   try {
     resolveInitialApiBaseUrl();
@@ -184,6 +221,10 @@ export const getStartupConfigurationError = (): Error | null => {
   }
 };
 
+/**
+ * Resolves the initial API base URL, returning both the URL and any startup error.
+ * @returns An object with the resolved `url` and an `error` (or `null`).
+ */
 export const tryResolveInitialApiBaseUrl = (): {
   url: string;
   error: Error | null;
@@ -201,21 +242,39 @@ const API_PREFIX = '/api';
 const AUTH_BASE_PATH = `${API_PREFIX}/auth`;
 const HEALTH_PATH = `${API_PREFIX}/health`;
 
+/**
+ * Concatenates a base URL with an API path, normalizing slashes.
+ * @param baseUrl - Backend base URL.
+ * @param path - API path segment.
+ * @returns Fully qualified URL string.
+ */
 export const buildApiUrl = (baseUrl: string, path: string): string => {
   const normalizedBase = normalizeBaseUrl(baseUrl);
   return `${normalizedBase}${ensureLeadingSlash(path)}`;
 };
 
+/**
+ * Builds the health-check endpoint URL for a given base URL.
+ * @param baseUrl - Backend base URL.
+ * @returns Full health endpoint URL.
+ */
 export const buildHealthUrl = (baseUrl: string): string => {
   return buildApiUrl(baseUrl, HEALTH_PATH);
 };
 
+/** Result of a health-check probe against the backend API. */
 export interface ApiHealthProbeResult {
   ok: boolean;
   status: number;
   payload: Record<string, unknown> | null;
 }
 
+/**
+ * Probes the backend health endpoint with an abort-controlled timeout.
+ * @param baseUrl - Backend base URL to probe.
+ * @param timeoutMs - Maximum wait time in milliseconds (defaults to 7000).
+ * @returns An {@link ApiHealthProbeResult} with status and parsed JSON payload.
+ */
 export const probeApiHealth = async (
   baseUrl: string,
   timeoutMs = 7000,
@@ -243,6 +302,11 @@ export const probeApiHealth = async (
   }
 };
 
+/**
+ * Builds a full auth endpoint path, prepending the auth base path when needed.
+ * @param path - Relative auth path or absolute URL.
+ * @returns Fully qualified auth endpoint path.
+ */
 export const buildAuthUrl = (path: string): string => {
   if (path.startsWith('http')) {
     return path;
@@ -255,6 +319,7 @@ export const buildAuthUrl = (path: string): string => {
   return `${AUTH_BASE_PATH}${ensureLeadingSlash(path)}`;
 };
 
+/** Map of auth-related endpoint path segments. */
 export const AUTH_ENDPOINTS = {
   login: '/login',
   register: '/register',

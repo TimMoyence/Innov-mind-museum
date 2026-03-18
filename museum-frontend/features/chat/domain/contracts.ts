@@ -1,5 +1,6 @@
 import type { components } from '@/shared/api/generated/openapi';
 
+/** Request payload for creating a new chat session. */
 export interface CreateSessionRequestDTO {
   userId?: number;
   locale?: string;
@@ -8,25 +9,44 @@ export interface CreateSessionRequestDTO {
 
 type Schemas = components['schemas'];
 
+/** Full session data transfer object derived from the OpenAPI schema. */
 export type SessionDTO = Schemas['SessionDTO'];
 
+/** Response payload returned after creating a new chat session. */
 export type CreateSessionResponseDTO = Schemas['CreateSessionResponse'];
 
+/** Single chat message data transfer object derived from the OpenAPI schema. */
 export type ChatMessageDTO = Schemas['ChatMessageDTO'];
 
+/** Response payload returned after posting a message to a chat session. */
 export type PostMessageResponseDTO = Schemas['PostMessageResponse'];
 
+/** Response payload for fetching a session with its messages and pagination info. */
 export type GetSessionResponseDTO = Schemas['GetSessionResponse'];
 
+/** Response payload returned after deleting a chat session. */
 export type DeleteSessionResponseDTO = Schemas['DeleteSessionResponse'];
 
+/** Request parameters for paginated session listing. */
 export interface ListSessionsRequestDTO {
   cursor?: string;
   limit?: number;
 }
 
+/** Response payload for the paginated session list endpoint. */
 export type ListSessionsResponseDTO = Schemas['ListSessionsResponse'];
+
+/** A single session item within the paginated list response. */
 export type SessionListItemDTO = ListSessionsResponseDTO['sessions'][number];
+
+/** Allowed reasons for reporting a chat message. */
+export type ReportReason = 'offensive' | 'inaccurate' | 'inappropriate' | 'other';
+
+/** Response payload returned after reporting a chat message. */
+export type ReportMessageResponseDTO = {
+  messageId: string;
+  reported: boolean;
+};
 
 interface RecordValue {
   [key: string]: unknown;
@@ -36,6 +56,11 @@ const isRecord = (value: unknown): value is RecordValue => {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 };
 
+/**
+ * Runtime type guard for {@link CreateSessionResponseDTO}.
+ * @param payload - Unknown value to validate.
+ * @returns `true` if the payload matches the create-session response shape.
+ */
 export const isCreateSessionResponseDTO = (
   payload: unknown,
 ): payload is CreateSessionResponseDTO => {
@@ -51,6 +76,11 @@ export const isCreateSessionResponseDTO = (
   );
 };
 
+/**
+ * Runtime type guard for {@link PostMessageResponseDTO}.
+ * @param payload - Unknown value to validate.
+ * @returns `true` if the payload matches the post-message response shape.
+ */
 export const isPostMessageResponseDTO = (
   payload: unknown,
 ): payload is PostMessageResponseDTO => {
@@ -80,6 +110,11 @@ export const isPostMessageResponseDTO = (
   );
 };
 
+/**
+ * Runtime type guard for {@link GetSessionResponseDTO}.
+ * @param payload - Unknown value to validate.
+ * @returns `true` if the payload matches the get-session response shape.
+ */
 export const isGetSessionResponseDTO = (
   payload: unknown,
 ): payload is GetSessionResponseDTO => {
@@ -129,6 +164,11 @@ export const isGetSessionResponseDTO = (
   });
 };
 
+/**
+ * Runtime type guard for {@link DeleteSessionResponseDTO}.
+ * @param payload - Unknown value to validate.
+ * @returns `true` if the payload matches the delete-session response shape.
+ */
 export const isDeleteSessionResponseDTO = (
   payload: unknown,
 ): payload is DeleteSessionResponseDTO => {
@@ -142,6 +182,29 @@ export const isDeleteSessionResponseDTO = (
   );
 };
 
+/**
+ * Runtime type guard for {@link ReportMessageResponseDTO}.
+ * @param payload - Unknown value to validate.
+ * @returns `true` if the payload matches the report-message response shape.
+ */
+export const isReportMessageResponseDTO = (
+  payload: unknown,
+): payload is ReportMessageResponseDTO => {
+  if (!isRecord(payload)) {
+    return false;
+  }
+
+  return (
+    typeof payload.messageId === 'string' &&
+    typeof payload.reported === 'boolean'
+  );
+};
+
+/**
+ * Runtime type guard for {@link ListSessionsResponseDTO}.
+ * @param payload - Unknown value to validate.
+ * @returns `true` if the payload matches the list-sessions response shape.
+ */
 export const isListSessionsResponseDTO = (
   payload: unknown,
 ): payload is ListSessionsResponseDTO => {

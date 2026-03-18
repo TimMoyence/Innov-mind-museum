@@ -4,6 +4,10 @@ import { useRouter, useSegments } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { AUTH_ROUTE, HOME_ROUTE } from './routes';
 
+/**
+ * Guards navigation based on authentication state.
+ * Redirects unauthenticated users to the auth screen and authenticated users away from it.
+ */
 export const useProtectedRoute = (): void => {
   const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();

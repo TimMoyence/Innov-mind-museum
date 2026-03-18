@@ -14,12 +14,20 @@ let unauthorizedHandler: UnauthorizedHandler | null = null;
 let authRefreshHandler: AuthRefreshHandler | null = null;
 let authRefreshInFlight: Promise<string | null> | null = null;
 
+/**
+ * Registers a callback invoked when a 401 response is received on an authenticated request.
+ * @param handler - Handler function, or `null` to unregister.
+ */
 export const setUnauthorizedHandler = (
   handler: UnauthorizedHandler | null,
 ): void => {
   unauthorizedHandler = handler;
 };
 
+/**
+ * Registers a handler that attempts to refresh the access token on 401 responses.
+ * @param handler - Async function returning a new access token (or `null` on failure), or `null` to unregister.
+ */
 export const setAuthRefreshHandler = (
   handler: AuthRefreshHandler | null,
 ): void => {
@@ -44,14 +52,21 @@ if (initialApiBaseUrlResolution.error && __DEV__) {
 const DEFAULT_BASE_URL = initialApiBaseUrlResolution.url;
 let runtimeBaseUrl = DEFAULT_BASE_URL;
 
+/**
+ * Updates the runtime API base URL used by all subsequent HTTP requests.
+ * @param nextUrl - New base URL; falls back to the default when empty.
+ * @throws When the URL targets localhost in a non-development build.
+ */
 export const setApiBaseUrl = (nextUrl: string): void => {
   const normalized = nextUrl?.trim?.() || DEFAULT_BASE_URL;
   assertApiBaseUrlAllowed(normalized);
   runtimeBaseUrl = normalized;
 };
 
+/** Returns the current runtime API base URL. */
 export const getApiBaseUrl = (): string => runtimeBaseUrl;
 
+/** The initial API base URL resolved at module load time. */
 export const API_BASE_URL = DEFAULT_BASE_URL;
 
 const httpClient = axios.create({
@@ -235,6 +250,12 @@ const getApiErrorMessage = (value: unknown): string | undefined => {
   return undefined;
 };
 
+/**
+ * Converts an Axios error (or unknown thrown value) into a structured {@link AppError}.
+ * Handles timeout, network, 401, 403, 404, and 4xx/5xx status codes.
+ * @param error - The caught error value.
+ * @returns An `AppError & Error` with the appropriate kind and message.
+ */
 export const mapAxiosError = (error: unknown) => {
   const axiosLike = toAxiosLikeError(error);
 
@@ -339,4 +360,5 @@ export const mapAxiosError = (error: unknown) => {
   });
 };
 
+/** Pre-configured Axios instance with auth, retry, and token-refresh interceptors. */
 export { httpClient };
