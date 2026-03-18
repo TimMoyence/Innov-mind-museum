@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import Markdown from 'react-native-markdown-display';
+import Markdown from '@ronradtke/react-native-markdown-display';
 
 import { liquidColors } from '@/shared/ui/liquidTheme';
 
