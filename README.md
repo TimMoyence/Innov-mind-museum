@@ -1,4 +1,4 @@
-# 🏛️ MuseumIA – Assistant IA muséal interactif
+# 🏛️ Musaium – Assistant IA muséal interactif
 
 _Application mobile interactive basée sur LangChain, GPT‑4 et reconnaissance visuelle_
 
@@ -22,7 +22,7 @@ For the current operational source of truth, use:
 
 ## 📌 Présentation
 
-MuseumIA est une **application mobile intelligente** permettant aux visiteurs de musées d’interagir directement avec les œuvres exposées grâce à l’intelligence artificielle.
+Musaium est une **application mobile intelligente** permettant aux visiteurs de musées d’interagir directement avec les œuvres exposées grâce à l’intelligence artificielle.
 En prenant en photo une œuvre ou en saisissant son nom, l’utilisateur peut **obtenir des informations enrichies, contextualisées et personnalisées**, allant bien au-delà des audioguides traditionnels.
 
 > 🎯 **Objectif** : rendre l’art **accessible**, **ludique** et **immersif** pour tous les publics — novices, passionnés, touristes ou familles.
@@ -42,7 +42,7 @@ En prenant en photo une œuvre ou en saisissant son nom, l’utilisateur peut **
 
 ## 🏗️ Architecture technique
 
-MuseumIA repose sur une **architecture hexagonale** afin de séparer clairement les **couches métier**, **infrastructure** et **interfaces utilisateur**.
+Musaium repose sur une **architecture hexagonale** afin de séparer clairement les **couches métier**, **infrastructure** et **interfaces utilisateur**.
 L’ensemble du backend est conteneurisé via **Docker** et hébergé sur un **VPS OVH**.
 
 ### **Schéma simplifié**
@@ -87,8 +87,8 @@ L’ensemble du backend est conteneurisé via **Docker** et hébergé sur un **V
 ### **1. Cloner le projet**
 
 ```bash
-git clone https://github.com/<votre_repo>/museumia.git
-cd museumia
+git clone https://github.com/<votre_repo>/musaium.git
+cd musaium
 ```
 
 ### **2. Lancer le backend**
@@ -116,7 +116,7 @@ npm start
 ## 📂 Structure du projet
 
 ```
-museumia/
+musaium/
 │
 ├── backend/
 │   ├── src/
@@ -148,7 +148,7 @@ Exemple `.env` :
 
 ```env
 OPENAI_API_KEY=sk-xxxxxx
-DATABASE_URL=postgres://user:pass@db:5432/museumia
+DATABASE_URL=postgres://user:pass@db:5432/musaium
 ```
 
 ---

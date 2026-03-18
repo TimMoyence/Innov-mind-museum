@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MuseumIA — an interactive museum assistant mobile app. Visitors photograph artworks or ask questions and get AI-powered contextual responses via LangChain + LLM (OpenAI/Deepseek/Google).
+Musaium — an interactive museum assistant mobile app. Visitors photograph artworks or ask questions and get AI-powered contextual responses via LangChain + LLM (OpenAI/Deepseek/Google).
 
 Monorepo with two independent apps:
 - **`museum-backend/`** — Node.js 22 + Express 5 + TypeORM + PostgreSQL 16 (pnpm)
