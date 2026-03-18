@@ -11,6 +11,7 @@ const format = (level: 'info' | 'warn' | 'error', message: string, context?: Log
   });
 };
 
+/** Structured JSON logger that writes to stdout/stderr with ISO-8601 timestamps. */
 export const logger = {
   info(message: string, context?: LogContext): void {
     console.log(format('info', message, context));

@@ -1,14 +1,18 @@
 import { Semaphore } from './semaphore';
 
+/** Terminal status of a single section execution attempt. */
 export type SectionRunStatus = 'success' | 'timeout' | 'error';
 
+/** A unit of work to execute within the section runner (typically a single LLM call). */
 export interface SectionTask<TValue> {
   name: string;
   timeoutMs: number;
   payloadBytes: number;
+  /** Executes the task; receives an AbortSignal that fires on timeout. */
   run: (signal: AbortSignal) => Promise<TValue>;
 }
 
+/** Successful section result carrying the resolved value. */
 export interface SectionRunSuccess<TValue> {
   name: string;
   status: 'success';
@@ -19,6 +23,7 @@ export interface SectionRunSuccess<TValue> {
   payloadBytes: number;
 }
 
+/** Failed section result carrying the error description. */
 export interface SectionRunFailure {
   name: string;
   status: 'timeout' | 'error';
@@ -29,6 +34,7 @@ export interface SectionRunFailure {
   payloadBytes: number;
 }
 
+/** Discriminated union of a section's success or failure outcome. */
 export type SectionRunResult<TValue> =
   | SectionRunSuccess<TValue>
   | SectionRunFailure;
@@ -55,6 +61,7 @@ interface SectionFailureEvent extends SectionStartEvent {
   error: string;
 }
 
+/** Lifecycle hooks fired during section execution for logging and observability. */
 export interface SectionRunnerHooks {
   onStart?: (event: SectionStartEvent) => void;
   onSuccess?: (event: SectionSuccessEvent) => void;
@@ -63,15 +70,20 @@ export interface SectionRunnerHooks {
   onError?: (event: SectionFailureEvent) => void;
 }
 
+/** Configuration for the section runner including concurrency, retry policy, and time budget. */
 export interface SectionRunnerOptions {
   maxConcurrent: number;
   retries: number;
   retryBaseDelayMs: number;
+  /** Total wall-clock budget in ms for all sections combined. */
   totalBudgetMs: number;
   requestId?: string;
   hooks?: SectionRunnerHooks;
+  /** Optional predicate to control which errors are retryable. Defaults to no retries. */
   shouldRetry?: (error: unknown, status: SectionRunStatus) => boolean;
+  /** Clock function override for testing. */
   now?: () => number;
+  /** Sleep function override for testing. */
   sleep?: (ms: number) => Promise<void>;
 }
 
@@ -267,6 +279,13 @@ const executeTask = async <TValue>(
   };
 };
 
+/**
+ * Executes section tasks concurrently (bounded by {@link SectionRunnerOptions.maxConcurrent})
+ * with per-task timeouts, jittered exponential-backoff retries, and a global time budget.
+ * @param tasks - The section tasks to run.
+ * @param options - Runner configuration (concurrency, retries, budget, hooks).
+ * @returns An array of results in the same order as the input tasks.
+ */
 export const runSectionTasks = async <TValue>(
   tasks: SectionTask<TValue>[],
   options: SectionRunnerOptions,

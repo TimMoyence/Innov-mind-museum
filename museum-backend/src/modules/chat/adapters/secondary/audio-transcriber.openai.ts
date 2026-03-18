@@ -1,20 +1,35 @@
 import { env } from '@src/config/env';
 import { AppError, badRequest } from '@shared/errors/app.error';
 
+/** Input for an audio transcription request. */
 export interface AudioTranscriberInput {
+  /** Base64-encoded audio data. */
   base64: string;
+  /** Audio MIME type (e.g. `audio/mpeg`). */
   mimeType: string;
+  /** Optional locale hint to improve transcription accuracy. */
   locale?: string;
+  /** Optional request ID for tracing. */
   requestId?: string;
 }
 
+/** Result of a successful audio transcription. */
 export interface AudioTranscriptionResult {
+  /** Transcribed text. */
   text: string;
+  /** Model used for transcription (e.g. `whisper-1`). */
   model: string;
+  /** Upstream provider identifier. */
   provider: 'openai';
 }
 
+/** Port for speech-to-text transcription of audio messages. */
 export interface AudioTranscriber {
+  /**
+   * Transcribes base64-encoded audio into text.
+   * @param input - Audio data, MIME type, and optional locale/requestId.
+   * @returns Transcribed text with model and provider metadata.
+   */
   transcribe(input: AudioTranscriberInput): Promise<AudioTranscriptionResult>;
 }
 
@@ -52,7 +67,15 @@ interface OpenAiTranscriptionPayload {
   };
 }
 
+/** OpenAI Whisper implementation of {@link AudioTranscriber}. */
 export class OpenAiAudioTranscriber implements AudioTranscriber {
+  /**
+   * Sends audio to the OpenAI transcription API and returns the transcribed text.
+   * @param input - Base64 audio, MIME type, and optional locale hint.
+   * @returns Transcription result.
+   * @throws AppError with code `FEATURE_UNAVAILABLE` if provider is not OpenAI.
+   * @throws AppError with code `UPSTREAM_AUDIO_TRANSCRIPTION_ERROR` on API failure.
+   */
   async transcribe(input: AudioTranscriberInput): Promise<AudioTranscriptionResult> {
     if (env.llm.provider !== 'openai' || !env.llm.openAiApiKey) {
       throw new AppError({
@@ -127,7 +150,9 @@ export class OpenAiAudioTranscriber implements AudioTranscriber {
   }
 }
 
+/** Stub implementation of {@link AudioTranscriber} that always throws — used when transcription is disabled. */
 export class DisabledAudioTranscriber implements AudioTranscriber {
+  /** @throws AppError with code `FEATURE_UNAVAILABLE` — always. */
   async transcribe(): Promise<AudioTranscriptionResult> {
     throw new AppError({
       message: 'Audio transcription is disabled in the current environment.',

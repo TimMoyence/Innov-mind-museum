@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 
+/** Style definitions for the main layout, tabs, chat bubbles, and legacy conversation screen. */
 export const mainStyles = StyleSheet.create({
   // Main Container
   container: {

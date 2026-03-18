@@ -11,6 +11,7 @@ import { ArtworkMatch } from './artworkMatch.entity';
 import { ChatSession } from './chatSession.entity';
 import type { ChatRole } from './chat.types';
 
+/** Represents a single message (user, assistant, or system) within a chat session. Mapped to `chat_messages`. */
 @Entity({ name: 'chat_messages' })
 export class ChatMessage {
   @PrimaryGeneratedColumn('uuid')

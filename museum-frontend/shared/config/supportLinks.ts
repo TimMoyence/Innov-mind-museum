@@ -1,3 +1,4 @@
+/** Contact channel URLs and handles for user support (Instagram, Telegram). */
 export const SUPPORT_LINKS = {
   instagram: {
     label: 'Instagram',
@@ -11,6 +12,7 @@ export const SUPPORT_LINKS = {
   },
 } as const;
 
+/** Checks whether the given string is a valid HTTPS URL suitable for a support link. */
 export const isValidSupportUrl = (value: string): boolean => {
   try {
     const url = new URL(value);

@@ -2,6 +2,7 @@ import { Pool } from 'pg';
 
 import { env } from '@src/config/env';
 
+/** Raw pg connection pool configured from environment variables. */
 const pool = new Pool({
   host: env.db.host,
   port: env.db.port,

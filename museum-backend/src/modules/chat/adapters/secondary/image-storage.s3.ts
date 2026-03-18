@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 
 import { ImageStorage, SaveImageInput } from './image-storage.stub';
 
+/** Configuration for an S3-compatible image storage backend. */
 export interface S3ImageStorageConfig {
   endpoint: string;
   region: string;
@@ -314,6 +315,11 @@ const buildS3SignedHeadersForPut = (params: {
   };
 };
 
+/**
+ * Extracts the S3 object key from an `s3://` image reference.
+ * @param imageRef - Storage reference string.
+ * @returns An object containing the key, or `null` if the reference is not an S3 URI.
+ */
 export const parseS3ImageRef = (imageRef: string): { key: string } | null => {
   const match = imageRef.match(/^s3:\/\/(.+)$/);
   if (!match?.[1]) {
@@ -323,14 +329,29 @@ export const parseS3ImageRef = (imageRef: string): { key: string } | null => {
   return { key: match[1] };
 };
 
+/**
+ * Checks whether a storage reference is an S3 URI (`s3://...`).
+ * @param imageRef - Storage reference string (may be null/undefined).
+ * @returns `true` if the reference starts with `s3://`.
+ */
 export const isS3ImageRef = (imageRef: string | null | undefined): boolean => {
   return typeof imageRef === 'string' && /^s3:\/\//.test(imageRef);
 };
 
+/**
+ * Builds an `s3://` storage reference from an object key.
+ * @param key - S3 object key.
+ * @returns An `s3://<key>` URI.
+ */
 export const buildS3ImageRef = (key: string): string => {
   return `s3://${key}`;
 };
 
+/**
+ * Generates a pre-signed GET URL from an `s3://` image reference.
+ * @param params - Image reference, S3 config, optional TTL and timestamp.
+ * @returns Signed URL and expiry timestamp, or `null` if the reference is not a valid S3 URI.
+ */
 export const buildS3SignedReadUrlFromRef = (params: {
   imageRef: string;
   config: S3ImageStorageConfig;
@@ -350,6 +371,11 @@ export const buildS3SignedReadUrlFromRef = (params: {
   });
 };
 
+/**
+ * Generates an AWS SigV4 pre-signed GET URL for an S3 object.
+ * @param params - Object key, S3 config, optional TTL and timestamp.
+ * @returns The signed URL and its ISO-8601 expiry.
+ */
 export const buildS3PresignedReadUrl = (params: {
   key: string;
   config: S3ImageStorageConfig;
@@ -406,9 +432,16 @@ export const buildS3PresignedReadUrl = (params: {
   };
 };
 
+/** S3-compatible implementation of {@link ImageStorage} — uploads images via signed PUT requests. */
 export class S3CompatibleImageStorage implements ImageStorage {
   constructor(private readonly config: S3ImageStorageConfig) {}
 
+  /**
+   * Uploads a base64-encoded image to S3 and returns an `s3://` reference.
+   * @param input - Image data, MIME type, and optional object key.
+   * @returns An `s3://<key>` storage reference.
+   * @throws Error if the S3 PUT request fails.
+   */
   async save(input: SaveImageInput): Promise<string> {
     const body = Buffer.from(input.base64, 'base64');
     const extension = extensionByMime[input.mimeType] || 'img';

@@ -2,6 +2,7 @@ import type { RequestHandler } from 'express';
 
 import { logger } from '@shared/logger/logger';
 
+/** Logs each completed HTTP request with method, path, status, latency, and request ID. */
 export const requestLoggerMiddleware: RequestHandler = (req, res, next) => {
   const startedAt = Date.now();
   const requestId =

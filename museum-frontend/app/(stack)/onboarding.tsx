@@ -19,6 +19,7 @@ interface OnboardingSectionContent {
   onSecondaryPress: () => void;
 }
 
+/** Renders the onboarding guide with switchable sections for usage flow, practical tips, and help resources. */
 export default function OnboardingScreen() {
   const [activeSection, setActiveSection] = useState<OnboardingSectionKey>('flow');
 

@@ -8,6 +8,11 @@ import { S3CompatibleImageStorage } from './adapters/secondary/image-storage.s3'
 import { OpenAiAudioTranscriber } from './adapters/secondary/audio-transcriber.openai';
 import { TypeOrmChatRepository } from './infrastructure/chat.repository.typeorm';
 
+/**
+ * Wires the chat module dependency graph and returns a fully configured ChatService.
+ * @param dataSource - Initialized TypeORM DataSource for repository creation.
+ * @returns ChatService with repository, orchestrator, image storage, and audio transcriber.
+ */
 export const buildChatService = (dataSource: DataSource): ChatService => {
   let imageStorage: LocalImageStorage | S3CompatibleImageStorage;
   if (env.storage.driver === 's3') {

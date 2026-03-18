@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 
+/** Style definitions for the camera view screen. */
 export const cameraStyles = StyleSheet.create({
   // Container for permission handling
   container: {

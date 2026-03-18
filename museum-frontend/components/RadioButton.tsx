@@ -6,6 +6,7 @@ interface RadioButtonProps {
   onSelect: () => void;
 }
 
+/** Renders a single radio button with a circular indicator and label text. */
 export function RadioButton({ label, selected, onSelect }: RadioButtonProps) {
   return (
     <TouchableOpacity style={styles.container} onPress={onSelect}>

@@ -33,6 +33,7 @@ const resolveResponsiveSize = (variant: BrandMarkVariant, viewportWidth: number)
   return clamp(Math.round(viewportWidth * 0.5), 140, 184);
 };
 
+/** Displays the Musaium logo at a responsive size determined by the chosen variant (auth, hero, or header). */
 export const BrandMark = ({
   variant = 'hero',
   size,

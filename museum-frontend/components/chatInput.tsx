@@ -14,6 +14,7 @@ interface ChatInputProps {
   onSendMessage: (message: string) => void | Promise<void>;
 }
 
+/** @deprecated Never imported. Superseded by chat UI in features/chat/ui. Candidate for removal in next cleanup pass. */
 export const ChatInput = ({ onSendMessage }: ChatInputProps) => {
   const [message, setMessage] = useState("");
 

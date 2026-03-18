@@ -5,11 +5,13 @@ import { ChatService } from '@modules/chat/application/chat.service';
 import { createChatRouter } from '@modules/chat/adapters/primary/http/chat.route';
 import authRouter from '@modules/auth/adapters/primary/http/auth.route';
 
+/** Dependencies required to build the top-level API router. */
 export interface ApiRouterDeps {
   chatService: ChatService;
   healthCheck: () => Promise<{ database: 'up' | 'down' }>;
 }
 
+/** Shape of the JSON response returned by the GET /api/health endpoint. */
 export interface HealthPayload {
   status: 'ok' | 'degraded';
   checks: {
@@ -42,6 +44,11 @@ const resolveCommitSha = (): string | undefined => {
   return trimmed?.length ? trimmed : undefined;
 };
 
+/**
+ * Builds a health-check response payload from the current system state.
+ * @param params - Database status and LLM configuration flag.
+ * @returns Structured health payload with version and timestamp.
+ */
 export const buildHealthPayload = (params: {
   checks: { database: 'up' | 'down' };
   llmConfigured: boolean;
@@ -66,6 +73,11 @@ export const buildHealthPayload = (params: {
   return payload;
 };
 
+/**
+ * Creates the top-level Express router that mounts /health, /chat, and /auth sub-routers.
+ * @param deps - Injected chatService and healthCheck function.
+ * @returns Configured Express Router.
+ */
 export const createApiRouter = ({ chatService, healthCheck }: ApiRouterDeps): Router => {
   const router = Router();
 

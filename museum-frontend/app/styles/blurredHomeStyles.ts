@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 
+/** Style definitions for the blurred home screen variant. */
 export const blurredHomeStyles = StyleSheet.create({
   container: {
     flex: 1,

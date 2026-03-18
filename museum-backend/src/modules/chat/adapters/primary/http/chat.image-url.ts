@@ -13,6 +13,11 @@ const signPayload = (payload: string): string => {
     .digest('base64url');
 };
 
+/**
+ * Generates a signed URL for reading a chat message image via the local image endpoint.
+ * @param params - Base URL, message ID, and optional TTL in seconds.
+ * @returns The signed URL and its ISO-8601 expiry timestamp.
+ */
 export const buildSignedChatImageReadUrl = (params: {
   baseUrl: string;
   messageId: string;
@@ -34,6 +39,11 @@ export const buildSignedChatImageReadUrl = (params: {
   };
 };
 
+/**
+ * Verifies the HMAC signature and expiry of a signed chat image URL.
+ * @param params - Message ID, token, and signature from the query string.
+ * @returns `{ ok: true, expiresAtMs }` on success, or `{ ok: false, reason }` on failure.
+ */
 export const verifySignedChatImageReadUrl = (params: {
   messageId: string;
   token?: string;

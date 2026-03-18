@@ -16,6 +16,7 @@ interface CameraViewProps {
   onCapture: (uri: string) => void;
 }
 
+/** Renders a full-screen camera view with capture and close controls, handling permission requests. */
 export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
   const cameraRef = useRef<CameraView | null>(null);
   const [cameraReady, setCameraReady] = useState(false);

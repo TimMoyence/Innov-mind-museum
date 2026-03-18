@@ -5,6 +5,7 @@ import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
 
+/** Displays a 404-style screen with a link to navigate back to the home page. */
 export default function NotFoundScreen() {
   return (
     <>

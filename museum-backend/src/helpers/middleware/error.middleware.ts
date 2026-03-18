@@ -3,6 +3,7 @@ import type { ErrorRequestHandler } from 'express';
 import { logger } from '@shared/logger/logger';
 import { AppError } from '@shared/errors/app.error';
 
+/** Shape of the JSON error response sent to clients. */
 interface ErrorResponseShape {
   error: {
     code: string;
@@ -12,6 +13,7 @@ interface ErrorResponseShape {
   };
 }
 
+/** Express error-handling middleware that maps AppError instances to structured JSON responses and logs 5xx errors. */
 export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   const requestId =
     (req as { requestId?: string } | undefined)?.requestId || undefined;

@@ -11,6 +11,7 @@ type StartupConfigurationErrorScreenProps = {
 
 const fallback = 'Not configured';
 
+/** Displays a diagnostic error screen shown when the app cannot start due to missing or invalid build configuration. */
 export function StartupConfigurationErrorScreen({
   error,
   snapshot,
