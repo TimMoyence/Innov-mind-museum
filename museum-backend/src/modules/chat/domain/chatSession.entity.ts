@@ -6,12 +6,14 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  VersionColumn,
 } from 'typeorm';
 
 import { User } from '@modules/auth/core/domain/user.entity';
 import { ChatMessage } from './chatMessage.entity';
 import type { VisitContext } from './chat.types';
 
+/** Represents a chat session between a visitor and the assistant. Mapped to `chat_sessions`. */
 @Entity({ name: 'chat_sessions' })
 export class ChatSession {
   @PrimaryGeneratedColumn('uuid')
@@ -40,6 +42,9 @@ export class ChatSession {
     eager: false,
   })
   messages!: ChatMessage[];
+
+  @VersionColumn()
+  version!: number;
 
   @CreateDateColumn({ type: 'timestamp' })
   createdAt!: Date;

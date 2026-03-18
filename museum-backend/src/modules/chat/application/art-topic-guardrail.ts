@@ -1,5 +1,6 @@
 import { ChatMessage } from '../domain/chatMessage.entity';
 
+/** Reason why the guardrail blocked or flagged a message. */
 export type GuardrailBlockReason =
   | 'insult'
   | 'external_request'
@@ -7,9 +8,15 @@ export type GuardrailBlockReason =
   | 'off_topic'
   | 'unsafe_output';
 
+/**
+ * Result of a guardrail evaluation.
+ * When `allow` is false the message is blocked; `redirectHint` asks the LLM to soft-redirect.
+ */
 export interface GuardrailDecision {
   allow: boolean;
   reason?: GuardrailBlockReason;
+  /** Prompt hint injected into the LLM call to steer the response back on topic. */
+  redirectHint?: string;
 }
 
 interface EvaluateUserInputParams {
@@ -175,6 +182,8 @@ const INJECTION_PATTERNS = [
   'dan mode',
 ];
 
+const GREETING_PATTERN = /^(hi|hello|hey|bonjour|salut|coucou|bonsoir|good morning|good evening|good afternoon)\b/;
+
 const FOLLOW_UP_PATTERNS = [
   /^(et|pourquoi|comment|quand|ou|continue|plus de details)\b/,
   /^(and|why|how|when|where|continue|more details)\b/,
@@ -217,6 +226,14 @@ const hasPromptInjectionSignal = (normalizedText: string): boolean => {
   return includesAny(normalizedText, INJECTION_PATTERNS);
 };
 
+const hasGreetingSignal = (normalizedText: string): boolean => {
+  return GREETING_PATTERN.test(normalizedText);
+};
+
+const isShortInnocuousMessage = (normalizedText: string): boolean => {
+  return normalizedText.length > 0 && normalizedText.length < 15;
+};
+
 const looksLikeFollowUp = (normalizedText: string): boolean => {
   if (normalizedText.length > 80) {
     return false;
@@ -233,6 +250,18 @@ const hasArtContext = (history: ChatMessage[]): boolean => {
   });
 };
 
+const REDIRECT_HINT_OFF_TOPIC =
+  'The visitor asked something outside your scope. Acknowledge briefly with warmth, then gently redirect to art and museum topics. Suggest 1-2 art-related follow-up questions in your followUpQuestions field.';
+
+const REDIRECT_HINT_EXTERNAL =
+  'The visitor asked for an external action you cannot perform. Acknowledge warmly that you cannot help with that, then redirect to art and museum topics. Suggest 1-2 art-related follow-up questions in your followUpQuestions field.';
+
+/**
+ * Evaluates user input against layered keyword rules.
+ * Hard-blocks insults and prompt injections; soft-redirects off-topic and external requests.
+ * @param params - The user text and recent conversation history.
+ * @returns A guardrail decision indicating whether the message is allowed.
+ */
 export const evaluateUserInputGuardrail = ({
   text,
   history,
@@ -242,33 +271,56 @@ export const evaluateUserInputGuardrail = ({
     return { allow: true };
   }
 
+  // 1. Insult → always block (even if greeting present)
   if (hasInsultSignal(normalizedText)) {
     return { allow: false, reason: 'insult' };
   }
 
+  // 2. Injection → always block
   if (hasPromptInjectionSignal(normalizedText)) {
     return { allow: false, reason: 'prompt_injection' };
   }
 
-  if (hasExternalActionSignal(normalizedText)) {
-    return { allow: false, reason: 'external_request' };
+  // 3. Greeting detected → allow (LLM handles warm welcome)
+  if (hasGreetingSignal(normalizedText)) {
+    return { allow: true };
   }
 
+  // 4. Short innocuous message (< 15 chars) without insult/injection → allow
+  if (isShortInnocuousMessage(normalizedText) && !hasExternalActionSignal(normalizedText)) {
+    return { allow: true };
+  }
+
+  // 5. Art signal → allow
   if (hasArtSignal(normalizedText)) {
     return { allow: true };
   }
 
-  if (hasOffTopicSignal(normalizedText)) {
-    return { allow: false, reason: 'off_topic' };
+  // 6. External request (benign) → soft redirect via LLM
+  if (hasExternalActionSignal(normalizedText)) {
+    return { allow: true, redirectHint: REDIRECT_HINT_EXTERNAL };
   }
 
+  // 7. Off-topic (benign) → soft redirect via LLM
+  if (hasOffTopicSignal(normalizedText)) {
+    return { allow: true, redirectHint: REDIRECT_HINT_OFF_TOPIC };
+  }
+
+  // 8. Follow-up + art context → allow
   if (looksLikeFollowUp(normalizedText) && hasArtContext(history)) {
     return { allow: true };
   }
 
-  return { allow: false, reason: 'off_topic' };
+  // 9. Default → off-topic redirect
+  return { allow: true, redirectHint: REDIRECT_HINT_OFF_TOPIC };
 };
 
+/**
+ * Evaluates assistant LLM output for unsafe content, insults, injection leaks, or off-topic drift.
+ * Blocks the response if it fails any check.
+ * @param params - The assistant text and recent conversation history.
+ * @returns A guardrail decision indicating whether the response is safe to return.
+ */
 export const evaluateAssistantOutputGuardrail = ({
   text,
   history,
@@ -309,6 +361,12 @@ const isFrench = (locale?: string): boolean => {
   return Boolean(locale && locale.toLowerCase().startsWith('fr'));
 };
 
+/**
+ * Builds a localized refusal message for the user when the guardrail blocks a message.
+ * @param locale - User locale; messages are in French when locale starts with "fr".
+ * @param reason - The guardrail block reason, used to select the specific refusal wording.
+ * @returns A human-readable refusal string.
+ */
 export const buildGuardrailRefusal = (
   locale: string | undefined,
   reason?: GuardrailBlockReason,
@@ -332,6 +390,11 @@ export const buildGuardrailRefusal = (
   return 'I answer only about art, monuments, museums, architecture, and cultural heritage.';
 };
 
+/**
+ * Builds a policy citation string (e.g. `"policy:insult"`) for metadata tagging.
+ * @param reason - The guardrail block reason.
+ * @returns A citation string, or undefined when no reason is provided.
+ */
 export const buildGuardrailCitation = (
   reason?: GuardrailBlockReason,
 ): string | undefined => {

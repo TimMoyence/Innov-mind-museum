@@ -3,7 +3,7 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 
 import { env } from '@src/config/env';
-import { badRequest, notFound } from '@shared/errors/app.error';
+import { badRequest, conflict, notFound } from '@shared/errors/app.error';
 import {
   assertImageSize,
   assertMimeType,
@@ -22,6 +22,7 @@ import {
   PostAudioMessageInput,
   MessagePageQuery,
   PostMessageInput,
+  ReportReason,
 } from '../domain/chat.types';
 import { computeSessionUpdates } from './visit-context';
 import {
@@ -39,6 +40,7 @@ import {
   DisabledAudioTranscriber,
 } from '../adapters/secondary/audio-transcriber.openai';
 
+/** Returned after a new chat session is created. */
 export interface CreateSessionResult {
   id: string;
   locale?: string | null;
@@ -49,6 +51,7 @@ export interface CreateSessionResult {
   updatedAt: string;
 }
 
+/** Returned after a user message is processed and the assistant replies. */
 export interface PostMessageResult {
   sessionId: string;
   message: {
@@ -60,6 +63,7 @@ export interface PostMessageResult {
   metadata: ChatAssistantMetadata;
 }
 
+/** Extends {@link PostMessageResult} with the speech-to-text transcription details. */
 export interface PostAudioMessageResult extends PostMessageResult {
   transcription: {
     text: string;
@@ -68,11 +72,19 @@ export interface PostAudioMessageResult extends PostMessageResult {
   };
 }
 
+/** Returned after attempting to delete an empty session. */
 export interface DeleteSessionResult {
   sessionId: string;
   deleted: boolean;
 }
 
+/** Returned after a user reports an assistant message. */
+export interface ReportMessageResult {
+  messageId: string;
+  reported: boolean;
+}
+
+/** A single session with its paginated messages. */
 export interface SessionResult {
   session: CreateSessionResult;
   messages: Array<{
@@ -94,6 +106,7 @@ export interface SessionResult {
   };
 }
 
+/** Paginated list of sessions for a given user, each with a message preview. */
 export interface ListSessionsResult {
   sessions: Array<{
     id: string;
@@ -196,6 +209,10 @@ const withPolicyCitation = (
   };
 };
 
+/**
+ * Orchestrates the chat lifecycle: session CRUD, message posting with guardrails,
+ * image upload/storage, audio transcription, LLM orchestration, and message reporting.
+ */
 export class ChatService {
   constructor(
     private readonly repository: ChatRepository,
@@ -204,6 +221,12 @@ export class ChatService {
     private readonly audioTranscriber: AudioTranscriber = new DisabledAudioTranscriber(),
   ) {}
 
+  /**
+   * Creates a new chat session.
+   * @param input - Session creation parameters (userId, locale, museumMode).
+   * @returns The newly created session.
+   * @throws {AppError} 400 if userId is not a positive integer.
+   */
   async createSession(input: CreateSessionInput): Promise<CreateSessionResult> {
     if (input.userId !== undefined && (!Number.isInteger(input.userId) || input.userId <= 0)) {
       throw badRequest('userId must be a positive integer');
@@ -226,6 +249,16 @@ export class ChatService {
     };
   }
 
+  /**
+   * Processes a user text/image message: runs input guardrail, persists the user message,
+   * invokes the LLM orchestrator, applies the output guardrail, and persists the assistant reply.
+   * @param sessionId - UUID of the target chat session.
+   * @param input - User message payload (text and/or image).
+   * @param requestId - Optional correlation id for tracing.
+   * @param currentUserId - Authenticated user id for ownership checks.
+   * @returns The assistant's reply with metadata.
+   * @throws {AppError} 400 on invalid input, 404 if session not found, 409 on optimistic lock conflict.
+   */
   async postMessage(
     sessionId: string,
     input: PostMessageInput,
@@ -376,6 +409,7 @@ export class ChatService {
       },
       visitContext: session.visitContext,
       requestId,
+      redirectHint: userGuardrail.redirectHint,
     });
 
     const outputGuardrail = evaluateAssistantOutputGuardrail({
@@ -393,13 +427,34 @@ export class ChatService {
       ? computeSessionUpdates(session, assistantMetadata, 'pending')
       : undefined;
 
-    const assistantMessage = await this.repository.persistMessage({
-      sessionId,
-      role: 'assistant',
-      text: assistantText,
-      metadata: assistantMetadata as Record<string, unknown>,
-      sessionUpdates,
-    });
+    const artworkMatch =
+      outputGuardrail.allow && aiResult.metadata.detectedArtwork
+        ? {
+            artworkId: aiResult.metadata.detectedArtwork.artworkId,
+            title: aiResult.metadata.detectedArtwork.title,
+            artist: aiResult.metadata.detectedArtwork.artist,
+            confidence: aiResult.metadata.detectedArtwork.confidence,
+            source: aiResult.metadata.detectedArtwork.source,
+            room: aiResult.metadata.detectedArtwork.room,
+          }
+        : undefined;
+
+    let assistantMessage;
+    try {
+      assistantMessage = await this.repository.persistMessage({
+        sessionId,
+        role: 'assistant',
+        text: assistantText,
+        metadata: assistantMetadata as Record<string, unknown>,
+        sessionUpdates,
+        artworkMatch,
+      });
+    } catch (error) {
+      if ((error as Error).name === 'OptimisticLockVersionMismatchError') {
+        throw conflict('Session was modified concurrently');
+      }
+      throw error;
+    }
 
     if (outputGuardrail.allow && sessionUpdates) {
       if (sessionUpdates.visitContext) {
@@ -410,18 +465,6 @@ export class ChatService {
           pendingArtwork.messageId = assistantMessage.id;
         }
       }
-    }
-
-    if (outputGuardrail.allow && aiResult.metadata.detectedArtwork) {
-      await this.repository.persistArtworkMatch({
-        messageId: assistantMessage.id,
-        artworkId: aiResult.metadata.detectedArtwork.artworkId,
-        title: aiResult.metadata.detectedArtwork.title,
-        artist: aiResult.metadata.detectedArtwork.artist,
-        confidence: aiResult.metadata.detectedArtwork.confidence,
-        source: aiResult.metadata.detectedArtwork.source,
-        room: aiResult.metadata.detectedArtwork.room,
-      });
     }
 
     return {
@@ -436,6 +479,15 @@ export class ChatService {
     };
   }
 
+  /**
+   * Transcribes an audio message to text, then delegates to {@link postMessage}.
+   * @param sessionId - UUID of the target chat session.
+   * @param input - Audio payload with base64 data, mime type, and size.
+   * @param requestId - Optional correlation id for tracing.
+   * @param currentUserId - Authenticated user id for ownership checks.
+   * @returns The assistant's reply plus the transcription details.
+   * @throws {AppError} 400 on invalid audio input, 404 if session not found.
+   */
   async postAudioMessage(
     sessionId: string,
     input: PostAudioMessageInput,
@@ -497,6 +549,13 @@ export class ChatService {
     };
   }
 
+  /**
+   * Deletes a session only if it contains no messages.
+   * @param sessionId - UUID of the session to delete.
+   * @param currentUserId - Authenticated user id for ownership checks.
+   * @returns Whether the session was actually deleted.
+   * @throws {AppError} 400 on invalid id, 404 if session not found or not owned.
+   */
   async deleteSessionIfEmpty(
     sessionId: string,
     currentUserId?: number,
@@ -522,6 +581,14 @@ export class ChatService {
     };
   }
 
+  /**
+   * Retrieves a session with its paginated messages.
+   * @param sessionId - UUID of the session to retrieve.
+   * @param page - Cursor-based pagination parameters (limit, cursor).
+   * @param currentUserId - Authenticated user id for ownership checks.
+   * @returns The session details and a page of messages.
+   * @throws {AppError} 400 on invalid id, 404 if session not found or not owned.
+   */
   async getSession(
     sessionId: string,
     page: MessagePageQuery,
@@ -575,6 +642,13 @@ export class ChatService {
     };
   }
 
+  /**
+   * Lists all sessions for the authenticated user with cursor-based pagination.
+   * @param page - Cursor-based pagination parameters (limit, cursor).
+   * @param currentUserId - Authenticated user id (required).
+   * @returns Paginated sessions with message previews.
+   * @throws {AppError} 400 if userId is missing/invalid or cursor is malformed.
+   */
   async listSessions(
     page: MessagePageQuery,
     currentUserId?: number,
@@ -622,6 +696,13 @@ export class ChatService {
     };
   }
 
+  /**
+   * Resolves the image reference for a message, including local file name and content type when applicable.
+   * @param messageId - UUID of the message containing the image.
+   * @param currentUserId - Authenticated user id for ownership checks.
+   * @returns The image reference, and optionally the local file name and content type.
+   * @throws {AppError} 400 on invalid id, 404 if message or image not found.
+   */
   async getMessageImageRef(
     messageId: string,
     currentUserId?: number,
@@ -664,5 +745,58 @@ export class ChatService {
     return {
       imageRef: row.message.imageRef,
     };
+  }
+
+  /**
+   * Reports an assistant message for moderation.
+   * @param messageId - UUID of the assistant message to report.
+   * @param reason - Reason for the report (offensive, inaccurate, inappropriate, other).
+   * @param currentUserId - Authenticated user id filing the report.
+   * @param comment - Optional free-text comment.
+   * @returns Confirmation that the message was reported.
+   * @throws {AppError} 400 on invalid id/reason or non-assistant message, 404 if not found.
+   */
+  async reportMessage(
+    messageId: string,
+    reason: ReportReason,
+    currentUserId: number,
+    comment?: string,
+  ): Promise<ReportMessageResult> {
+    if (!isUuid(messageId)) {
+      throw badRequest('Invalid message id format');
+    }
+
+    const allowedReasons: ReportReason[] = ['offensive', 'inaccurate', 'inappropriate', 'other'];
+    if (!allowedReasons.includes(reason)) {
+      throw badRequest('Invalid report reason');
+    }
+
+    const row = await this.repository.getMessageById(messageId);
+    if (!row) {
+      throw notFound('Chat message not found');
+    }
+
+    const ownerId = row.session.user?.id;
+    if (ownerId && ownerId !== currentUserId) {
+      throw notFound('Chat message not found');
+    }
+
+    if (row.message.role !== 'assistant') {
+      throw badRequest('Only assistant messages can be reported');
+    }
+
+    const alreadyReported = await this.repository.hasMessageReport(messageId, currentUserId);
+    if (alreadyReported) {
+      return { messageId, reported: true };
+    }
+
+    await this.repository.persistMessageReport({
+      messageId,
+      userId: currentUserId,
+      reason,
+      comment,
+    });
+
+    return { messageId, reported: true };
   }
 }

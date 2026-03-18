@@ -1,28 +1,35 @@
-import type { CreateSessionInput, ChatRole, VisitContext } from './chat.types';
+import type { CreateSessionInput, ChatRole, ReportReason, VisitContext } from './chat.types';
 import { ChatSession } from './chatSession.entity';
 import { ChatMessage } from './chatMessage.entity';
 
+/** Cursor-based pagination parameters for listing session messages. */
 export interface ListSessionMessagesParams {
   sessionId: string;
   limit: number;
   cursor?: string;
 }
 
+/** Optional session-level fields to update atomically when persisting a message. */
 export interface PersistMessageSessionUpdates {
   title?: string;
   museumName?: string;
   visitContext?: VisitContext;
 }
 
+/** Input for persisting a single chat message and optional side-effects. */
 export interface PersistMessageInput {
   sessionId: string;
   role: ChatRole;
   text?: string;
   imageRef?: string;
   metadata?: Record<string, unknown>;
+  /** Session fields to update alongside the message (e.g. title, visit context). */
   sessionUpdates?: PersistMessageSessionUpdates;
+  /** Artwork match to persist in the same transaction as the message. */
+  artworkMatch?: Omit<PersistArtworkMatchInput, 'messageId'>;
 }
 
+/** Input for creating an artwork match record linked to a message. */
 export interface PersistArtworkMatchInput {
   messageId: string;
   artworkId?: string;
@@ -33,25 +40,30 @@ export interface PersistArtworkMatchInput {
   room?: string;
 }
 
+/** A page of messages with cursor-based pagination metadata. */
 export interface SessionMessagesPage {
   messages: ChatMessage[];
   nextCursor: string | null;
   hasMore: boolean;
 }
 
+/** A message together with its owning session, used for ownership checks. */
 export interface ChatMessageWithSessionOwnership {
   message: ChatMessage;
   session: ChatSession;
 }
 
+/** Cursor-based pagination parameters for listing a user's sessions. */
 export interface ListSessionsParams {
   userId: number;
   limit: number;
   cursor?: string;
 }
 
+/** A session summary including the latest message preview and total count. */
 export interface ChatSessionSummary {
   session: ChatSession;
+  /** Preview of the most recent message in the session. */
   preview?: {
     role: ChatRole;
     text?: string | null;
@@ -60,20 +72,97 @@ export interface ChatSessionSummary {
   messageCount: number;
 }
 
+/** A page of session summaries with cursor-based pagination metadata. */
 export interface ChatSessionsPage {
   sessions: ChatSessionSummary[];
   nextCursor: string | null;
   hasMore: boolean;
 }
 
+/** Input for persisting a user report on a specific message. */
+export interface PersistMessageReportInput {
+  messageId: string;
+  userId: number;
+  reason: ReportReason;
+  comment?: string;
+}
+
+/** Port for chat persistence operations. Implemented by {@link TypeOrmChatRepository}. */
 export interface ChatRepository {
+  /**
+   * Create a new chat session.
+   * @param input - Session creation parameters (user, locale, museum mode).
+   * @returns The newly created session.
+   */
   createSession(input: CreateSessionInput): Promise<ChatSession>;
+
+  /**
+   * Retrieve a session by its UUID.
+   * @param sessionId - The session UUID.
+   * @returns The session, or `null` if not found.
+   */
   getSessionById(sessionId: string): Promise<ChatSession | null>;
+
+  /**
+   * Retrieve a message along with its owning session (for ownership verification).
+   * @param messageId - The message UUID.
+   * @returns The message and session, or `null` if not found.
+   */
   getMessageById(messageId: string): Promise<ChatMessageWithSessionOwnership | null>;
+
+  /**
+   * Delete a session only if it contains no messages.
+   * @param sessionId - The session UUID.
+   * @returns `true` if the session was deleted, `false` if it had messages.
+   */
   deleteSessionIfEmpty(sessionId: string): Promise<boolean>;
+
+  /**
+   * Persist a chat message and optionally update session fields or create an artwork match.
+   * @param input - Message data and optional side-effects.
+   * @returns The persisted message.
+   */
   persistMessage(input: PersistMessageInput): Promise<ChatMessage>;
+
+  /**
+   * @deprecated Use artworkMatch field in persistMessage.
+   * @param input - Artwork match data.
+   */
   persistArtworkMatch(input: PersistArtworkMatchInput): Promise<void>;
+
+  /**
+   * List messages for a session with cursor-based pagination.
+   * @param params - Session ID, limit, and optional cursor.
+   * @returns A page of messages.
+   */
   listSessionMessages(params: ListSessionMessagesParams): Promise<SessionMessagesPage>;
+
+  /**
+   * List the most recent messages in a session (used for LLM history context).
+   * @param sessionId - The session UUID.
+   * @param limit - Maximum number of messages to return.
+   * @returns Messages in chronological order.
+   */
   listSessionHistory(sessionId: string, limit: number): Promise<ChatMessage[]>;
+
+  /**
+   * List a user's sessions with cursor-based pagination.
+   * @param params - User ID, limit, and optional cursor.
+   * @returns A page of session summaries.
+   */
   listSessions(params: ListSessionsParams): Promise<ChatSessionsPage>;
+
+  /**
+   * Check whether a user has already reported a specific message.
+   * @param messageId - The message UUID.
+   * @param userId - The reporting user's ID.
+   * @returns `true` if a report already exists.
+   */
+  hasMessageReport(messageId: string, userId: number): Promise<boolean>;
+
+  /**
+   * Persist a message report from a user.
+   * @param input - Report data (message, user, reason, optional comment).
+   */
+  persistMessageReport(input: PersistMessageReportInput): Promise<void>;
 }

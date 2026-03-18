@@ -1,22 +1,26 @@
 import { ChatMessage } from '../domain/chatMessage.entity';
 
-export type LlmSectionName = 'summary' | 'expertCompact';
+/** Identifier for a named LLM prompt section. */
+export type LlmSectionName = 'summary';
 
+/** Defines a single LLM section with its name, timeout budget, and prompt text. */
 export interface LlmSectionDefinition {
   name: LlmSectionName;
   timeoutMs: number;
+  /** Whether the orchestrator must fail when this section fails. */
   required: boolean;
   prompt: string;
 }
 
+/** Input parameters used to build the LLM section plan. */
 export interface LlmSectionPlanInput {
   locale?: string;
   museumMode: boolean;
   guideLevel: 'beginner' | 'intermediate' | 'expert';
-  parallelEnabled: boolean;
   timeoutSummaryMs: number;
-  timeoutExpertCompactMs: number;
+  /** Pre-built visit context block to inject into the prompt. */
   visitContextBlock?: string;
+  hasImage?: boolean;
 }
 
 const isFrenchLocale = (locale?: string): boolean => {
@@ -49,6 +53,7 @@ const buildSummaryPrompt = (
   museumMode: boolean,
   guideLevel: 'beginner' | 'intermediate' | 'expert',
   visitContextBlock?: string,
+  hasImage?: boolean,
 ): string => {
   const french = isFrenchLocale(locale);
   const modeLine = museumMode
@@ -58,6 +63,8 @@ const buildSummaryPrompt = (
     : french
       ? 'Le visiteur est en mode libre: reste concis et utile.'
       : 'Visitor is in regular mode: stay concise and practical.';
+
+  const wordLimit = museumMode ? 150 : 250;
 
   const parts = [
     '[SECTION:summary]',
@@ -71,44 +78,53 @@ const buildSummaryPrompt = (
   }
 
   parts.push(
+    french
+      ? `Ecris comme si tu parlais face-a-face. Sois precis: noms, dates, techniques, details visuels. Evite le remplissage comme "C est une oeuvre interessante" — dis ce qui la rend interessante. Limite la reponse a ${wordLimit} mots.`
+      : `Write as if speaking face-to-face. Be specific: names, dates, techniques, visual details. Avoid filler like "This is an interesting work" — say what makes it interesting. Keep answer under ${wordLimit} words.`,
+  );
+
+  if (hasImage) {
+    parts.push(
+      french
+        ? '[ANALYSE IMAGE] Le visiteur a partage une photographie. Suis cette sequence: 1. Decris ce que tu observes: medium, composition, couleurs, details visibles. 2. Identifie l oeuvre si possible (titre, artiste, periode). Indique ton niveau de confiance. 3. Fournis une interpretation contextuelle. 4. Si tu ne peux pas l identifier, decris ce que tu vois et propose des interpretations possibles. Ne fabrique pas d attributions. Remplis le champ imageDescription avec ta description visuelle.'
+        : '[IMAGE ANALYSIS] The visitor shared a photograph. Follow this sequence: 1. Describe what you observe: medium, composition, colors, visible details. 2. Identify the artwork if possible (title, artist, period). State your confidence. 3. Provide contextual interpretation. 4. If you cannot identify it, describe what you see and offer possible interpretations. Do not fabricate attributions. Fill the imageDescription field with your visual description.',
+    );
+  }
+
+  parts.push(
     'Return strict JSON only with this shape:',
-    '{"answer":"string","detectedArtwork":{"artworkId":"string?","title":"string?","artist":"string?","confidence":"number?","source":"string?","museum":"string?","room":"string?"},"recommendations":["string"],"expertiseSignal":"beginner|intermediate|expert","citations":["string"]}',
-    'Do not add markdown. Keep answer concise.',
+    '{"answer":"string","deeperContext":"string?","openQuestion":"string?","followUpQuestions":["string?"],"imageDescription":"string?","detectedArtwork":{"artworkId":"string?","title":"string?","artist":"string?","confidence":"number?","source":"string?","museum":"string?","room":"string?"},"recommendations":["string"],"expertiseSignal":"beginner|intermediate|expert","citations":["string"]}',
+    'Do not add markdown fences.',
+    french
+      ? 'Dans deeperContext, ajoute 2-3 phrases de contexte technique, historique ou d interpretation (optionnel).'
+      : 'In deeperContext, add 2-3 sentences of technical, historical, or interpretive context (optional).',
+    french
+      ? 'Dans openQuestion, pose une question qui incite le visiteur a regarder l oeuvre de plus pres (optionnel).'
+      : 'In openQuestion, ask a question that encourages the visitor to look more closely at the work (optional).',
+    french
+      ? 'Dans followUpQuestions, suggere 1-2 questions de relance naturelles que le visiteur pourrait poser ensuite, basees sur la discussion. Garde-les courtes et specifiques.'
+      : 'In followUpQuestions, suggest 1-2 natural follow-up questions the visitor might want to ask next, based on the current discussion. Keep them short and specific.',
     museumMode
-      ? 'In recommendations, suggest 1-3 nearby artworks or rooms the visitor could explore next.'
-      : 'In recommendations, suggest 1-2 related artworks or topics to explore.',
-    'Set expertiseSignal to the visitor expertise level you detect from their question.',
+      ? french
+        ? 'Dans recommendations, suggere 1-3 oeuvres ou salles proches que le visiteur pourrait explorer ensuite.'
+        : 'In recommendations, suggest 1-3 nearby artworks or rooms the visitor could explore next.'
+      : french
+        ? 'Dans recommendations, suggere 1-2 oeuvres ou sujets lies a explorer.'
+        : 'In recommendations, suggest 1-2 related artworks or topics to explore.',
+    french
+      ? 'Definis expertiseSignal au niveau d expertise du visiteur que tu detectes dans sa question.'
+      : 'Set expertiseSignal to the visitor expertise level you detect from their question.',
   );
 
   return parts.join(' ');
 };
 
-const buildExpertCompactPrompt = (
-  locale: string | undefined,
-  museumMode: boolean,
-  guideLevel: 'beginner' | 'intermediate' | 'expert',
-): string => {
-  const french = isFrenchLocale(locale);
-  const modeLine = museumMode
-    ? french
-      ? 'Propose des transitions entre salles et un prochain arret pertinent.'
-      : 'Suggest transitions between rooms and one relevant next stop.'
-    : french
-      ? 'Propose des pistes de lecture complementaires.'
-      : 'Offer additional interpretation angles.';
-
-  return [
-    '[SECTION:expertCompact]',
-    french ? 'Reponds en francais.' : 'Reply in English.',
-    buildGuideLevelHint(guideLevel, french),
-    modeLine,
-    french
-      ? 'Donne 3 a 4 phrases compactes: technique, contexte, interpretation, question ouverte.'
-      : 'Provide 3 to 4 compact sentences: technique, context, interpretation, and one open question.',
-    'Return plain text only.',
-  ].join(' ');
-};
-
+/**
+ * Creates the ordered list of LLM section definitions to execute for a single request.
+ * Currently produces a single required "summary" section.
+ * @param input - Configuration for locale, guide level, museum mode, and timeouts.
+ * @returns An array of section definitions.
+ */
 export const createLlmSectionPlan = (
   input: LlmSectionPlanInput,
 ): LlmSectionDefinition[] => {
@@ -116,58 +132,19 @@ export const createLlmSectionPlan = (
     name: 'summary',
     timeoutMs: input.timeoutSummaryMs,
     required: true,
-    prompt: buildSummaryPrompt(input.locale, input.museumMode, input.guideLevel, input.visitContextBlock),
+    prompt: buildSummaryPrompt(
+      input.locale,
+      input.museumMode,
+      input.guideLevel,
+      input.visitContextBlock,
+      input.hasImage,
+    ),
   };
 
-  if (!input.parallelEnabled) {
-    return [summary];
-  }
-
-  return [
-    summary,
-    {
-      name: 'expertCompact',
-      timeoutMs: input.timeoutExpertCompactMs,
-      required: false,
-      prompt: buildExpertCompactPrompt(
-        input.locale,
-        input.museumMode,
-        input.guideLevel,
-      ),
-    },
-  ];
+  return [summary];
 };
 
-const normalizeParagraph = (value: string | undefined): string => {
-  return (value || '').trim().replace(/\s+/g, ' ');
-};
-
-export const mergeSectionTexts = (
-  summaryText: string,
-  expertCompactText?: string,
-): string => {
-  const summary = normalizeParagraph(summaryText);
-  const expert = normalizeParagraph(expertCompactText);
-
-  if (!summary && !expert) {
-    return 'I can help with artworks, artist context, and guided museum visits.';
-  }
-
-  if (!expert) {
-    return summary;
-  }
-
-  if (!summary) {
-    return expert;
-  }
-
-  if (summary.includes(expert) || expert.includes(summary)) {
-    return summary.length >= expert.length ? summary : expert;
-  }
-
-  return `${summary}\n\n${expert}`;
-};
-
+/** Input for building a best-effort summary fallback when the LLM section fails. */
 export interface SummaryFallbackInput {
   history: ChatMessage[];
   question?: string;
@@ -183,6 +160,12 @@ const lastNonEmptyTexts = (history: ChatMessage[], limit = 3): string[] => {
     .map((message) => message.text!.trim());
 };
 
+/**
+ * Generates a localized fallback summary from conversation history when the LLM call fails.
+ * Stitches together recent non-empty messages with location context and a next-step suggestion.
+ * @param input - History, question, location, locale, and museum mode.
+ * @returns A human-readable fallback text.
+ */
 export const createSummaryFallback = (input: SummaryFallbackInput): string => {
   const french = isFrenchLocale(input.locale);
   const snippets = lastNonEmptyTexts(input.history, 3);
@@ -211,38 +194,5 @@ export const createSummaryFallback = (input: SummaryFallbackInput): string => {
       ? 'Next step: compare composition details with a nearby work.'
       : 'Helpful angle: focus on composition, light, and historical context.',
     'Would you like a technical, biographical, or symbolic reading next?',
-  ].join(' ');
-};
-
-export interface ExpertCompactFallbackInput {
-  summaryText: string;
-  locale?: string;
-  location?: string;
-}
-
-export const createExpertCompactFallback = (
-  input: ExpertCompactFallbackInput,
-): string => {
-  const french = isFrenchLocale(input.locale);
-  const locationLine = input.location
-    ? french
-      ? `Pour la suite a ${input.location}, `
-      : `For your next stop near ${input.location}, `
-    : '';
-
-  if (french) {
-    return [
-      `${locationLine}examinez la technique (matiere, geste, couleur),`,
-      'replacez l oeuvre dans son contexte historique,',
-      'puis comparez-la a une piece du meme artiste ou mouvement.',
-      'Question guidee: quel detail change le plus votre interpretation ?',
-    ].join(' ');
-  }
-
-  return [
-    `${locationLine}look at technique (material, gesture, color),`,
-    'place the work in its historical context,',
-    'then compare it with another piece from the same artist or movement.',
-    'Guided question: which detail most changes your interpretation?',
   ].join(' ');
 };

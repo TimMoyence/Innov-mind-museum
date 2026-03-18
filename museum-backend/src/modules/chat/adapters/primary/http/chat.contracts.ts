@@ -1,4 +1,5 @@
 import { badRequest } from '@shared/errors/app.error';
+import type { ReportReason } from '../../../domain/chat.types';
 
 interface RecordValue {
   [key: string]: unknown;
@@ -60,12 +61,14 @@ const optionalNumber = (
   throw badRequest(`${key} must be a number`);
 };
 
+/** Validated body for `POST /sessions`. */
 export interface CreateSessionRequest {
   userId?: number;
   locale?: string;
   museumMode?: boolean;
 }
 
+/** Response shape for `POST /sessions`. */
 export interface CreateSessionResponse {
   session: {
     id: string;
@@ -78,6 +81,7 @@ export interface CreateSessionResponse {
   };
 }
 
+/** Validated body for `POST /sessions/:id/messages`. */
 export interface PostMessageRequest {
   text?: string;
   image?: string;
@@ -89,6 +93,7 @@ export interface PostMessageRequest {
   };
 }
 
+/** Response shape for `POST /sessions/:id/messages`. */
 export interface PostMessageResponse {
   sessionId: string;
   message: {
@@ -110,9 +115,14 @@ export interface PostMessageResponse {
     recommendations?: string[];
     expertiseSignal?: string;
     citations?: string[];
+    deeperContext?: string;
+    openQuestion?: string;
+    followUpQuestions?: string[];
+    imageDescription?: string;
   };
 }
 
+/** Response shape for `POST /sessions/:id/audio` — extends {@link PostMessageResponse} with transcription data. */
 export interface PostAudioMessageResponse extends PostMessageResponse {
   transcription: {
     text: string;
@@ -121,6 +131,7 @@ export interface PostAudioMessageResponse extends PostMessageResponse {
   };
 }
 
+/** Response shape for `GET /sessions/:id` (session metadata + paginated messages). */
 export interface GetSessionResponse {
   session: {
     id: string;
@@ -150,11 +161,13 @@ export interface GetSessionResponse {
   };
 }
 
+/** Validated query parameters for `GET /sessions`. */
 export interface ListSessionsQuery {
   cursor?: string;
   limit?: number;
 }
 
+/** Response shape for `GET /sessions` (paginated session list with previews). */
 export interface ListSessionsResponse {
   sessions: Array<{
     id: string;
@@ -178,11 +191,25 @@ export interface ListSessionsResponse {
   };
 }
 
+/** Response shape for `DELETE /sessions/:id`. */
 export interface DeleteSessionResponse {
   sessionId: string;
   deleted: boolean;
 }
 
+/** Validated body for `POST /messages/:messageId/report`. */
+export interface ReportMessageRequest {
+  reason: ReportReason;
+  comment?: string;
+}
+
+/** Response shape for `POST /messages/:messageId/report`. */
+export interface ReportMessageResponse {
+  messageId: string;
+  reported: boolean;
+}
+
+/** Standard API error envelope returned by all chat endpoints on failure. */
 export interface ApiErrorResponse {
   error: {
     code: string;
@@ -192,6 +219,7 @@ export interface ApiErrorResponse {
   };
 }
 
+/** Validates and transforms a raw request body into a {@link CreateSessionRequest}. */
 export const parseCreateSessionRequest = (payload: unknown): CreateSessionRequest => {
   if (!isRecord(payload)) {
     throw badRequest('Payload must be an object');
@@ -204,6 +232,7 @@ export const parseCreateSessionRequest = (payload: unknown): CreateSessionReques
   };
 };
 
+/** Validates and transforms a raw request body into a {@link PostMessageRequest}. */
 export const parsePostMessageRequest = (payload: unknown): PostMessageRequest => {
   if (!isRecord(payload)) {
     throw badRequest('Payload must be an object');
@@ -244,6 +273,7 @@ export const parsePostMessageRequest = (payload: unknown): PostMessageRequest =>
   };
 };
 
+/** Validates and transforms raw query params into a {@link ListSessionsQuery}. */
 export const parseListSessionsQuery = (payload: unknown): ListSessionsQuery => {
   if (!isRecord(payload)) {
     throw badRequest('Query must be an object');
@@ -277,6 +307,7 @@ const isStringArray = (value: unknown): value is string[] => {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
 };
 
+/** Type guard verifying a payload conforms to {@link CreateSessionResponse}. */
 export const isCreateSessionResponse = (
   payload: unknown,
 ): payload is CreateSessionResponse => {
@@ -289,6 +320,7 @@ export const isCreateSessionResponse = (
   );
 };
 
+/** Type guard verifying a payload conforms to {@link PostMessageResponse}. */
 export const isPostMessageResponse = (
   payload: unknown,
 ): payload is PostMessageResponse => {
@@ -307,6 +339,7 @@ export const isPostMessageResponse = (
   );
 };
 
+/** Type guard verifying a payload conforms to {@link PostAudioMessageResponse}. */
 export const isPostAudioMessageResponse = (
   payload: unknown,
 ): payload is PostAudioMessageResponse => {
@@ -326,6 +359,7 @@ export const isPostAudioMessageResponse = (
   );
 };
 
+/** Type guard verifying a payload conforms to {@link GetSessionResponse}. */
 export const isGetSessionResponse = (
   payload: unknown,
 ): payload is GetSessionResponse => {
@@ -369,6 +403,7 @@ export const isGetSessionResponse = (
   });
 };
 
+/** Type guard verifying a payload conforms to {@link DeleteSessionResponse}. */
 export const isDeleteSessionResponse = (
   payload: unknown,
 ): payload is DeleteSessionResponse => {
@@ -382,6 +417,45 @@ export const isDeleteSessionResponse = (
   );
 };
 
+/** Validates and transforms a raw request body into a {@link ReportMessageRequest}. */
+export const parseReportMessageRequest = (payload: unknown): ReportMessageRequest => {
+  if (!isRecord(payload)) {
+    throw badRequest('Payload must be an object');
+  }
+
+  const reason = payload.reason;
+  if (typeof reason !== 'string' || !reason.trim()) {
+    throw badRequest('reason is required');
+  }
+
+  const allowedReasons: ReportReason[] = ['offensive', 'inaccurate', 'inappropriate', 'other'];
+  if (!allowedReasons.includes(reason as ReportReason)) {
+    throw badRequest('reason must be offensive, inaccurate, inappropriate, or other');
+  }
+
+  const comment = optionalString(payload, 'comment');
+
+  return {
+    reason: reason as ReportReason,
+    comment,
+  };
+};
+
+/** Type guard verifying a payload conforms to {@link ReportMessageResponse}. */
+export const isReportMessageResponse = (
+  payload: unknown,
+): payload is ReportMessageResponse => {
+  if (!isRecord(payload)) {
+    return false;
+  }
+
+  return (
+    typeof payload.messageId === 'string' &&
+    typeof payload.reported === 'boolean'
+  );
+};
+
+/** Type guard verifying a payload conforms to {@link ListSessionsResponse}. */
 export const isListSessionsResponse = (
   payload: unknown,
 ): payload is ListSessionsResponse => {
