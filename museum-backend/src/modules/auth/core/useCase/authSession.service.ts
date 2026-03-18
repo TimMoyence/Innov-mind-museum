@@ -33,10 +33,13 @@ interface RefreshTokenClaims extends JwtPayload {
   familyId: string;
 }
 
+/** Token pair and user info returned after successful authentication. */
 export interface AuthSessionResponse {
   accessToken: string;
   refreshToken: string;
+  /** Access token lifetime in seconds. */
   expiresIn: number;
+  /** Refresh token lifetime in seconds. */
   refreshExpiresIn: number;
   user: SafeUser;
 }
@@ -92,6 +95,7 @@ const sanitizeUser = (user: Record<string, unknown>): SafeUser => {
   };
 };
 
+/** Orchestrates authentication sessions: login, token refresh, logout, and access-token verification. */
 export class AuthSessionService {
   private readonly accessTtlSeconds = ttlToSeconds(env.auth.accessTokenTtl);
   private readonly refreshTtlSeconds = ttlToSeconds(env.auth.refreshTokenTtl);
@@ -101,6 +105,13 @@ export class AuthSessionService {
     private readonly refreshTokenRepository = new RefreshTokenRepositoryPg(),
   ) {}
 
+  /**
+   * Authenticate a user with email/password and issue a token pair.
+   * @param email - The user's email.
+   * @param password - The user's plain-text password.
+   * @returns Access/refresh tokens and user info.
+   * @throws {AppError} 400 if fields are missing, 401 if credentials are invalid or account is social-only.
+   */
   async login(email: string, password: string): Promise<AuthSessionResponse> {
     if (!email?.trim() || !password) {
       throw badRequest('email and password are required');
@@ -111,16 +122,32 @@ export class AuthSessionService {
       throw unauthorized('Invalid credentials', 'INVALID_CREDENTIALS');
     }
 
+    if (!user.password) {
+      throw unauthorized(
+        'This account uses social sign-in. Please use Apple or Google to log in.',
+        'SOCIAL_ACCOUNT',
+      );
+    }
+
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
       throw unauthorized('Invalid credentials', 'INVALID_CREDENTIALS');
     }
 
-    return this.issueSession({
+    const session = await this.issueSession({
       user: sanitizeUser(user as unknown as Record<string, unknown>),
     });
+    this.refreshTokenRepository.deleteExpiredTokens().catch(() => {});
+    return session;
   }
 
+  /**
+   * Rotate a refresh token and issue a new token pair.
+   * Revokes the entire token family if reuse is detected.
+   * @param refreshToken - The current refresh JWT.
+   * @returns A new access/refresh token pair.
+   * @throws {AppError} 400 if token is missing, 401 if token is invalid/expired/reused.
+   */
   async refresh(refreshToken: string): Promise<AuthSessionResponse> {
     const token = refreshToken?.trim();
     if (!token) {
@@ -148,6 +175,10 @@ export class AuthSessionService {
     });
   }
 
+  /**
+   * Revoke a refresh token on logout. Idempotent — silently ignores invalid tokens.
+   * @param refreshToken - The refresh JWT to revoke, or `undefined`.
+   */
   async logout(refreshToken: string | undefined): Promise<void> {
     const token = refreshToken?.trim();
     if (!token) {
@@ -162,6 +193,25 @@ export class AuthSessionService {
     }
   }
 
+  /**
+   * Issue a session for a user authenticated via social sign-in.
+   * @param user - Raw user record (sanitized internally).
+   * @returns Access/refresh tokens and user info.
+   */
+  async socialLogin(user: Record<string, unknown>): Promise<AuthSessionResponse> {
+    const session = await this.issueSession({
+      user: sanitizeUser(user),
+    });
+    this.refreshTokenRepository.deleteExpiredTokens().catch(() => {});
+    return session;
+  }
+
+  /**
+   * Verify and decode an access token.
+   * @param token - The raw JWT access token.
+   * @returns The authenticated user's safe profile.
+   * @throws {AppError} 401 if the token is invalid or expired.
+   */
   verifyAccessToken(token: string): SafeUser {
     try {
       const decoded = jwt.verify(token, env.auth.accessTokenSecret) as AccessTokenClaims;

@@ -2,8 +2,11 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+/** Allowed Node.js runtime environments. */
 type NodeEnv = 'development' | 'test' | 'production';
+/** Supported LLM provider identifiers. */
 type LlmProvider = 'openai' | 'deepseek' | 'google';
+/** Supported object-storage driver identifiers. */
 type StorageDriver = 'local' | 's3';
 
 const toNumber = (value: string | undefined, fallback: number): number => {
@@ -34,6 +37,7 @@ const toOptionalString = (value: string | undefined): string | undefined => {
   return trimmed.length ? trimmed : undefined;
 };
 
+/** Application configuration loaded from environment variables. */
 interface AppEnv {
   nodeEnv: NodeEnv;
   port: number;
@@ -56,21 +60,20 @@ interface AppEnv {
     refreshTokenSecret: string;
     accessTokenTtl: string;
     refreshTokenTtl: string;
+    appleClientId: string;
+    googleClientIds: string[];
   };
   llm: {
     provider: LlmProvider;
     model: string;
     audioTranscriptionModel: string;
     temperature: number;
-    parallelEnabled: boolean;
     timeoutMs: number;
     timeoutSummaryMs: number;
-    timeoutExpertCompactMs: number;
     totalBudgetMs: number;
     retries: number;
     retryBaseDelayMs: number;
     maxConcurrent: number;
-    sectionsMaxConcurrent: number;
     maxHistoryMessages: number;
     maxTextLength: number;
     maxImageBytes: number;
@@ -134,6 +137,7 @@ const storageDriver: StorageDriver = ['local', 's3'].includes(storageDriverRaw)
   ? (storageDriverRaw as StorageDriver)
   : 'local';
 
+/** Resolved application configuration singleton, validated at startup. */
 const env: AppEnv = {
   nodeEnv,
   port: toNumber(process.env.PORT, 3000),
@@ -168,6 +172,10 @@ const env: AppEnv = {
       'local-dev-refresh-jwt-secret',
     accessTokenTtl: process.env.JWT_ACCESS_TTL || '15m',
     refreshTokenTtl: process.env.JWT_REFRESH_TTL || '30d',
+    appleClientId: process.env.APPLE_CLIENT_ID || 'com.musaium.mobile',
+    googleClientIds: toList(process.env.GOOGLE_OAUTH_CLIENT_ID).length
+      ? toList(process.env.GOOGLE_OAUTH_CLIENT_ID)
+      : [],
   },
   llm: {
     provider,
@@ -175,18 +183,12 @@ const env: AppEnv = {
     audioTranscriptionModel:
       process.env.LLM_AUDIO_TRANSCRIPTION_MODEL || 'gpt-4o-mini-transcribe',
     temperature: toNumber(process.env.LLM_TEMPERATURE, 0.3),
-    parallelEnabled: toBoolean(process.env.LLM_PARALLEL_ENABLED, false),
     timeoutMs: toNumber(process.env.LLM_TIMEOUT_MS, 15000),
-    timeoutSummaryMs: toNumber(process.env.LLM_TIMEOUT_SUMMARY_MS, 8000),
-    timeoutExpertCompactMs: toNumber(
-      process.env.LLM_TIMEOUT_EXPERT_COMPACT_MS,
-      20000,
-    ),
+    timeoutSummaryMs: toNumber(process.env.LLM_TIMEOUT_SUMMARY_MS, 10000),
     totalBudgetMs: toNumber(process.env.LLM_TOTAL_BUDGET_MS, 25000),
     retries: toNumber(process.env.LLM_RETRIES, 1),
     retryBaseDelayMs: toNumber(process.env.LLM_RETRY_BASE_DELAY_MS, 250),
     maxConcurrent: toNumber(process.env.LLM_MAX_CONCURRENT, 5),
-    sectionsMaxConcurrent: toNumber(process.env.LLM_SECTIONS_MAX_CONCURRENT, 2),
     maxHistoryMessages: toNumber(process.env.LLM_MAX_HISTORY_MESSAGES, 12),
     maxTextLength: toNumber(process.env.LLM_MAX_TEXT_LENGTH, 2000),
     maxImageBytes: toNumber(process.env.LLM_MAX_IMAGE_BYTES, 3 * 1024 * 1024),

@@ -3,13 +3,16 @@ import { DataSource } from 'typeorm';
 
 import { User } from '@modules/auth/core/domain/user.entity';
 import { AuthRefreshToken } from '@modules/auth/core/domain/authRefreshToken.entity';
+import { SocialAccount } from '@modules/auth/core/domain/socialAccount.entity';
 import { ArtworkMatch } from '@modules/chat/domain/artworkMatch.entity';
 import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import { ChatSession } from '@modules/chat/domain/chatSession.entity';
+import { MessageReport } from '@modules/chat/domain/messageReport.entity';
 import { env } from '@src/config/env';
 
 const isCompiledRuntime = __filename.endsWith('.js');
 
+/** TypeORM DataSource for PostgreSQL, configured from environment variables. Synchronize is always disabled in production. */
 export const AppDataSource = new DataSource({
   type: 'postgres',
   host: env.db.host,
@@ -20,9 +23,11 @@ export const AppDataSource = new DataSource({
   entities: [
     User,
     AuthRefreshToken,
+    SocialAccount,
     ChatSession,
     ChatMessage,
     ArtworkMatch,
+    MessageReport,
   ],
   migrations: isCompiledRuntime
     ? ['dist/src/data/db/migrations/*.js']

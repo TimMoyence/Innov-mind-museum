@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+/** Represents a registered user account. Mapped to `users`. */
 @Entity({ name: 'users' })
 export class User {
   @PrimaryGeneratedColumn()
@@ -15,8 +16,9 @@ export class User {
   @Column({ unique: true })
   email!: string;
 
-  @Column()
-  password!: string;
+  /** Bcrypt-hashed password. `null` for social-only accounts. */
+  @Column({ type: 'varchar', nullable: true })
+  password!: string | null;
 
   @Column({ nullable: true })
   firstname?: string;
@@ -24,9 +26,11 @@ export class User {
   @Column({ nullable: true })
   lastname?: string;
 
+  /** One-time token for password reset flow. */
   @Column({ nullable: true })
   reset_token?: string;
 
+  /** Expiration timestamp for {@link reset_token}. */
   @Column({ nullable: true, type: 'timestamp' })
   reset_token_expires: Date;
 
