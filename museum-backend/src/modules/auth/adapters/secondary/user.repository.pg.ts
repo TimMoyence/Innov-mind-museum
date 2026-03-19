@@ -141,6 +141,23 @@ export class UserRepositoryPg implements IUserRepository {
   }
 
   /**
+   * Atomically consume a reset token and update the user's password.
+   * @param token - The reset token to consume.
+   * @param hashedPassword - The new bcrypt-hashed password.
+   * @returns The updated user row or `null` if the token is invalid/expired.
+   */
+  async consumeResetTokenAndUpdatePassword(token: string, hashedPassword: string): Promise<User | null> {
+    const query = `
+      UPDATE "users"
+      SET password = $1, reset_token = NULL, reset_token_expires = NULL
+      WHERE reset_token = $2 AND reset_token_expires > NOW()
+      RETURNING *
+    `;
+    const result = await pool.query(query, [hashedPassword, token]);
+    return result.rows[0] || null;
+  }
+
+  /**
    * Deletes a user and all related data (sessions, tokens, social accounts) in a transaction.
    * @param userId - User primary key.
    */

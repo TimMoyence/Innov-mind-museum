@@ -66,19 +66,20 @@ export class SocialLoginUseCase {
     }
 
     // Check if email matches existing user (account linking)
+    const normalizedEmail = payload.email?.trim().toLowerCase();
     const isApplePrivateRelay =
       provider === 'apple' &&
-      payload.email?.endsWith(APPLE_PRIVATE_RELAY_SUFFIX);
+      normalizedEmail?.endsWith(APPLE_PRIVATE_RELAY_SUFFIX);
 
-    if (payload.email && !isApplePrivateRelay) {
-      const existingUser = await this.userRepository.getUserByEmail(payload.email);
+    if (normalizedEmail && !isApplePrivateRelay && payload.emailVerified) {
+      const existingUser = await this.userRepository.getUserByEmail(normalizedEmail);
       if (existingUser) {
         // Link social account to existing user
         await this.socialAccountRepository.create({
           userId: existingUser.id,
           provider,
           providerUserId: payload.providerUserId,
-          email: payload.email,
+          email: normalizedEmail,
         });
         return this.authSessionService.socialLogin(
           existingUser as unknown as Record<string, unknown>,
@@ -87,7 +88,7 @@ export class SocialLoginUseCase {
     }
 
     // Create new user + social account
-    const email = payload.email || `${payload.providerUserId}@${provider}.social`;
+    const email = normalizedEmail || `${payload.providerUserId}@${provider}.social`;
     const newUser = await this.userRepository.registerSocialUser(
       email,
       payload.firstname,
@@ -98,7 +99,7 @@ export class SocialLoginUseCase {
       userId: newUser.id,
       provider,
       providerUserId: payload.providerUserId,
-      email: payload.email,
+      email: normalizedEmail,
     });
 
     return this.authSessionService.socialLogin(

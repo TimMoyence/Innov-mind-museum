@@ -69,6 +69,15 @@ export interface IUserRepository {
   ): Promise<User>;
 
   /**
+   * Atomically consume a reset token and update the user's password in a single query.
+   * Prevents race conditions where two requests use the same token.
+   * @param token - The reset token to consume.
+   * @param hashedPassword - The new bcrypt-hashed password.
+   * @returns The updated user, or `null` if the token is invalid or expired.
+   */
+  consumeResetTokenAndUpdatePassword(token: string, hashedPassword: string): Promise<User | null>;
+
+  /**
    * Permanently delete a user and all associated data (GDPR).
    * @param userId - The user's ID.
    */
