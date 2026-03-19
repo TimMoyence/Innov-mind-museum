@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import {
   PRIVACY_POLICY_CONTENT,
@@ -9,7 +10,8 @@ import {
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
-import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 interface MetaItem {
   label: string;
@@ -17,16 +19,18 @@ interface MetaItem {
 }
 
 function MetaRow({ label, value }: MetaItem) {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
   const isPlaceholder = isPrivacyPlaceholderValue(value);
 
   return (
     <View style={styles.metaRow}>
-      <Text style={styles.metaLabel}>{label}</Text>
+      <Text style={[styles.metaLabel, { color: theme.textPrimary }]}>{label}</Text>
       <View style={styles.metaValueWrap}>
-        <Text style={[styles.metaValue, isPlaceholder && styles.metaValuePlaceholder]}>
+        <Text style={[styles.metaValue, { color: theme.textSecondary }, isPlaceholder && styles.metaValuePlaceholder]}>
           {value}
         </Text>
-        {isPlaceholder ? <Text style={styles.pendingBadge}>To complete</Text> : null}
+        {isPlaceholder ? <Text style={styles.pendingBadge}>{t('privacy.pending_badge')}</Text> : null}
       </View>
     </View>
   );
@@ -34,6 +38,8 @@ function MetaRow({ label, value }: MetaItem) {
 
 /** Renders the GDPR/RGPD privacy policy screen with legal metadata, rights summary, and release readiness status. */
 export default function PrivacyScreen() {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
   const metaItems = useMemo<MetaItem[]>(
     () => [
       { label: 'Version', value: PRIVACY_POLICY_CONTENT.version },
@@ -57,19 +63,19 @@ export default function PrivacyScreen() {
             {
               id: 'support',
               icon: 'headset-outline',
-              label: 'Support',
+              label: t('privacy.menu.support'),
               onPress: () => router.push('/(stack)/support'),
             },
             {
               id: 'prefs',
               icon: 'options-outline',
-              label: 'Preferences',
+              label: t('privacy.menu.preferences'),
               onPress: () => router.push('/(stack)/preferences'),
             },
             {
               id: 'settings',
               icon: 'settings-outline',
-              label: 'Settings',
+              label: t('privacy.menu.settings'),
               onPress: () => router.push('/(stack)/settings'),
             },
           ]}
@@ -79,17 +85,16 @@ export default function PrivacyScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <GlassCard style={styles.heroCard} intensity={60}>
           <View style={styles.heroHeader}>
-            <Text style={styles.title}>{PRIVACY_POLICY_CONTENT.title}</Text>
+            <Text style={[styles.title, { color: theme.textPrimary }]}>{PRIVACY_POLICY_CONTENT.title}</Text>
             <View style={[styles.statusPill, hasReleaseWork ? styles.statusPillPending : styles.statusPillReady]}>
               <Text style={[styles.statusPillText, hasReleaseWork ? styles.statusPillTextPending : styles.statusPillTextReady]}>
-                {hasReleaseWork ? `${unresolvedMetaCount} legal fields pending` : 'Release-ready metadata'}
+                {hasReleaseWork ? t('privacy.pending_count', { count: unresolvedMetaCount }) : t('privacy.status_ready')}
               </Text>
             </View>
           </View>
 
-          <Text style={styles.subtitle}>
-            This page explains how Musaium processes personal data, user rights under GDPR/RGPD,
-            and how to contact support for privacy requests.
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+            {t('privacy.subtitle')}
           </Text>
 
           <View style={styles.metaList}>
@@ -100,22 +105,22 @@ export default function PrivacyScreen() {
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={54}>
-          <Text style={styles.cardTitle}>Quick Facts</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('privacy.quick_facts')}</Text>
           <View style={styles.quickFactsList}>
             {PRIVACY_POLICY_CONTENT.quickFacts.map((fact) => (
               <View key={fact.label} style={styles.quickFactRow}>
-                <Text style={styles.quickFactLabel}>{fact.label}</Text>
-                <Text style={styles.quickFactValue}>{fact.value}</Text>
+                <Text style={[styles.quickFactLabel, { color: theme.textPrimary }]}>{fact.label}</Text>
+                <Text style={[styles.quickFactValue, { color: theme.textSecondary }]}>{fact.value}</Text>
               </View>
             ))}
           </View>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={54}>
-          <Text style={styles.cardTitle}>Your GDPR Rights (Summary)</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('privacy.gdpr_rights')}</Text>
           <View style={styles.bulletGroup}>
             {PRIVACY_POLICY_CONTENT.rightsSummary.map((item) => (
-              <Text key={item} style={styles.bulletText}>
+              <Text key={item} style={[styles.bulletText, { color: theme.textSecondary }]}>
                 • {item}
               </Text>
             ))}
@@ -124,9 +129,9 @@ export default function PrivacyScreen() {
 
         {hasReleaseWork ? (
           <GlassCard style={styles.warningCard} intensity={58}>
-            <Text style={styles.warningTitle}>Pre-release legal completion checklist</Text>
+            <Text style={styles.warningTitle}>{t('privacy.prerelease_title')}</Text>
             <Text style={styles.warningText}>
-              These items should be validated before publishing to stores or production users.
+              {t('privacy.prerelease_text')}
             </Text>
             <View style={styles.bulletGroup}>
               {PRIVACY_POLICY_CONTENT.releaseChecklist.map((item) => (
@@ -139,10 +144,10 @@ export default function PrivacyScreen() {
         ) : null}
 
         <GlassCard style={styles.card} intensity={52}>
-          <Text style={styles.cardTitle}>Policy Contents</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('privacy.policy_contents')}</Text>
           <View style={styles.sectionIndex}>
             {PRIVACY_POLICY_CONTENT.sections.map((section) => (
-              <Text key={section.id} style={styles.sectionIndexItem}>
+              <Text key={section.id} style={[styles.sectionIndexItem, { color: theme.textSecondary }]}>
                 • {section.title}
               </Text>
             ))}
@@ -151,10 +156,10 @@ export default function PrivacyScreen() {
 
         {PRIVACY_POLICY_CONTENT.sections.map((section) => (
           <GlassCard key={section.id} style={styles.sectionCard} intensity={52}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{section.title}</Text>
             <View style={styles.paragraphGroup}>
               {section.paragraphs.map((paragraph, index) => (
-                <Text key={`${section.id}-${index}`} style={styles.paragraph}>
+                <Text key={`${section.id}-${index}`} style={[styles.paragraph, { color: theme.textSecondary }]}>
                   {paragraph}
                 </Text>
               ))}
@@ -163,18 +168,16 @@ export default function PrivacyScreen() {
         ))}
 
         <GlassCard style={styles.ctaCard} intensity={54}>
-          <Text style={styles.sectionTitle}>Privacy request support</Text>
-          <Text style={styles.paragraph}>
-            For access, deletion, rectification, or objection requests, contact the team via the support
-            page and include “privacy request” in your message until a dedicated legal workflow is
-            finalized.
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('privacy.request_title')}</Text>
+          <Text style={[styles.paragraph, { color: theme.textSecondary }]}>
+            {t('privacy.request_text')}
           </Text>
           <View style={styles.ctaRow}>
-            <Pressable style={styles.primaryButton} onPress={() => router.push('/(stack)/support')}>
-              <Text style={styles.primaryButtonText}>Open Support</Text>
+            <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(stack)/support')}>
+              <Text style={styles.primaryButtonText}>{t('privacy.open_support')}</Text>
             </Pressable>
             <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/settings')}>
-              <Text style={styles.secondaryButtonText}>Back to Settings</Text>
+              <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('privacy.back_settings')}</Text>
             </Pressable>
           </View>
         </GlassCard>
@@ -205,7 +208,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    color: liquidColors.textPrimary,
     fontSize: 24,
     fontWeight: '700',
   },
@@ -235,7 +237,6 @@ const styles = StyleSheet.create({
     color: '#166534',
   },
   subtitle: {
-    color: liquidColors.textSecondary,
     fontSize: 13,
     lineHeight: 19,
   },
@@ -246,7 +247,6 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   metaLabel: {
-    color: liquidColors.textPrimary,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -257,7 +257,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   metaValue: {
-    color: liquidColors.textSecondary,
     fontSize: 12,
     lineHeight: 18,
   },
@@ -286,7 +285,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(245,158,11,0.34)',
   },
   cardTitle: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 15,
   },
@@ -317,12 +315,10 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   quickFactLabel: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 12,
   },
   quickFactValue: {
-    color: liquidColors.textSecondary,
     fontSize: 12,
     lineHeight: 18,
   },
@@ -330,7 +326,6 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   bulletText: {
-    color: liquidColors.textSecondary,
     fontSize: 13,
     lineHeight: 20,
   },
@@ -338,7 +333,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   sectionIndexItem: {
-    color: liquidColors.textSecondary,
     fontSize: 12,
     lineHeight: 18,
   },
@@ -347,7 +341,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionTitle: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 15,
   },
@@ -355,7 +348,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   paragraph: {
-    color: liquidColors.textSecondary,
     fontSize: 13,
     lineHeight: 20,
   },
@@ -369,7 +361,6 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     borderRadius: 12,
-    backgroundColor: liquidColors.primary,
     alignItems: 'center',
     paddingVertical: 12,
   },
@@ -387,7 +378,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   secondaryButtonText: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 13,
   },

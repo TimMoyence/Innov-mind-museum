@@ -12,6 +12,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/context/AuthContext';
 import { authStorage } from '@/features/auth/infrastructure/authStorage';
@@ -23,11 +24,14 @@ import { BrandMark } from '@/shared/ui/BrandMark';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
-import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
 import { authService, setAccessToken } from '@/services';
 
 /** Renders the login and registration screen with email/password, Apple, and Google sign-in options. */
 export default function AuthScreen() {
+  const { t } = useTranslation();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -37,6 +41,7 @@ export default function AuthScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [gdprAccepted, setGdprAccepted] = useState(false);
   const { setIsAuthenticated } = useAuth();
 
   const {
@@ -48,7 +53,7 @@ export default function AuthScreen() {
 
   const handleLogin = async (): Promise<void> => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert(t('common.error'), t('auth.fill_all_fields'));
       return;
     }
 
@@ -68,7 +73,7 @@ export default function AuthScreen() {
           router.replace(HOME_ROUTE);
         }, 120);
       } else {
-        Alert.alert('Error', 'Login failed - invalid auth response');
+        Alert.alert(t('common.error'), t('auth.login_failed'));
       }
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
@@ -79,7 +84,7 @@ export default function AuthScreen() {
 
   const handleRegister = async (): Promise<void> => {
     if (!email || !password || !firstname || !lastname) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert(t('common.error'), t('auth.fill_all_fields'));
       return;
     }
 
@@ -95,7 +100,7 @@ export default function AuthScreen() {
         lastname,
       });
       setIsLogin(true);
-      setInfoMessage('Registration complete. Please log in.');
+      setInfoMessage(t('auth.registration_complete'));
       setFirstname('');
       setLastname('');
       setPassword('');
@@ -108,17 +113,17 @@ export default function AuthScreen() {
 
   const handleForgotPassword = (): void => {
     if (!email) {
-      Alert.alert('Error', 'Please enter your email address');
+      Alert.alert(t('common.error'), t('auth.fill_all_fields'));
       return;
     }
 
     Alert.alert(
-      'Password reset',
-      'Would you like to receive a password reset email?',
+      t('auth.password_reset_title'),
+      t('auth.password_reset_confirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Send',
+          text: t('common.send'),
           onPress: async () => {
             setIsLoading(true);
             setErrorMessage(null);
@@ -126,8 +131,8 @@ export default function AuthScreen() {
             try {
               await authService.forgotPassword(email);
               Alert.alert(
-                'Email sent',
-                'If this email is associated with an account, you will receive a reset link.',
+                t('auth.email_sent_title'),
+                t('auth.email_sent_message'),
               );
             } catch (error) {
               setErrorMessage(getErrorMessage(error));
@@ -147,10 +152,19 @@ export default function AuthScreen() {
     setIsLogin((value) => !value);
     setErrorMessage(null);
     setInfoMessage(null);
+    setGdprAccepted(false);
   };
 
   const openGuide = () => {
     router.push('/(stack)/onboarding');
+  };
+
+  const openTerms = () => {
+    router.push('/(stack)/terms');
+  };
+
+  const openPrivacy = () => {
+    router.push('/(stack)/privacy');
   };
 
   return (
@@ -158,9 +172,9 @@ export default function AuthScreen() {
       <View style={styles.menuWrap}>
         <FloatingContextMenu
           actions={[
-            { id: 'style', icon: 'color-filter-outline', label: 'Style', onPress: toggleAuthMode },
-            { id: 'guide', icon: 'sparkles-outline', label: 'Guide', onPress: openGuide },
-            { id: 'safe', icon: 'shield-checkmark-outline', label: 'Safe', onPress: handleForgotPassword },
+            { id: 'style', icon: 'color-filter-outline', label: t('auth.badge_style'), onPress: toggleAuthMode },
+            { id: 'guide', icon: 'sparkles-outline', label: t('auth.badge_guide'), onPress: openGuide },
+            { id: 'safe', icon: 'shield-checkmark-outline', label: t('auth.badge_safe'), onPress: handleForgotPassword },
           ]}
         />
       </View>
@@ -168,11 +182,11 @@ export default function AuthScreen() {
       <GlassCard style={styles.panel} intensity={66}>
         <View style={styles.header}>
           <BrandMark variant='auth' />
-          <Text style={styles.title}>{isLogin ? 'Welcome back' : 'Create your account'}</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, { color: theme.textPrimary }]}>{isLogin ? t('auth.welcome_back') : t('auth.create_account')}</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
             {isLogin
-              ? 'Sign in to continue your cultural journey.'
-              : 'Create a Musaium account to save and resume your visits.'}
+              ? t('auth.sign_in_subtitle')
+              : t('auth.sign_up_subtitle')}
           </Text>
         </View>
 
@@ -185,20 +199,20 @@ export default function AuthScreen() {
           {!isLogin ? (
             <>
               <View style={styles.inputShell}>
-                <Ionicons name='person-outline' size={20} color={liquidColors.textSecondary} />
+                <Ionicons name='person-outline' size={20} color={theme.textSecondary} />
                 <TextInput
-                  style={styles.input}
-                  placeholder='First name'
+                  style={[styles.input, { color: theme.textPrimary }]}
+                  placeholder={t('auth.first_name')}
                   placeholderTextColor='#64748B'
                   value={firstname}
                   onChangeText={setFirstname}
                 />
               </View>
               <View style={styles.inputShell}>
-                <Ionicons name='person-outline' size={20} color={liquidColors.textSecondary} />
+                <Ionicons name='person-outline' size={20} color={theme.textSecondary} />
                 <TextInput
-                  style={styles.input}
-                  placeholder='Last name'
+                  style={[styles.input, { color: theme.textPrimary }]}
+                  placeholder={t('auth.last_name')}
                   placeholderTextColor='#64748B'
                   value={lastname}
                   onChangeText={setLastname}
@@ -208,10 +222,10 @@ export default function AuthScreen() {
           ) : null}
 
           <View style={styles.inputShell}>
-            <Ionicons name='mail-outline' size={20} color={liquidColors.textSecondary} />
+            <Ionicons name='mail-outline' size={20} color={theme.textSecondary} />
             <TextInput
               style={styles.input}
-              placeholder='Email'
+              placeholder={t('auth.email')}
               placeholderTextColor='#64748B'
               value={email}
               onChangeText={setEmail}
@@ -221,10 +235,10 @@ export default function AuthScreen() {
           </View>
 
           <View style={styles.inputShell}>
-            <Ionicons name='lock-closed-outline' size={20} color={liquidColors.textSecondary} />
+            <Ionicons name='lock-closed-outline' size={20} color={theme.textSecondary} />
             <TextInput
               style={styles.input}
-              placeholder='Password'
+              placeholder={t('auth.password')}
               placeholderTextColor='#64748B'
               value={password}
               onChangeText={setPassword}
@@ -234,19 +248,33 @@ export default function AuthScreen() {
 
           {isLogin ? (
             <Pressable style={styles.forgotPasswordButton} onPress={handleForgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+              <Text style={[styles.forgotPasswordText, { color: theme.primary }]}>{t('auth.forgot_password')}</Text>
+            </Pressable>
+          ) : null}
+
+          {!isLogin ? (
+            <Pressable style={styles.gdprRow} onPress={() => setGdprAccepted((v) => !v)}>
+              <View style={[styles.checkbox, gdprAccepted && { backgroundColor: theme.primary, borderColor: theme.primary }]}>
+                {gdprAccepted ? <Ionicons name='checkmark' size={14} color='#FFFFFF' /> : null}
+              </View>
+              <Text style={[styles.gdprText, { color: theme.textSecondary }]}>
+                {t('auth.agree_terms').split(t('auth.terms_of_service'))[0]}
+                <Text style={[styles.gdprLink, { color: theme.primary }]} onPress={openTerms}>{t('auth.terms_of_service')}</Text>
+                {t('auth.agree_terms').split(t('auth.terms_of_service'))[1]?.split(t('auth.privacy_policy'))[0]}
+                <Text style={[styles.gdprLink, { color: theme.primary }]} onPress={openPrivacy}>{t('auth.privacy_policy')}</Text>
+              </Text>
             </Pressable>
           ) : null}
 
           <Pressable
-            style={[styles.submitButton, (isLoading || isSocialLoading) && styles.submitButtonDisabled]}
+            style={[styles.submitButton, { backgroundColor: theme.primary }, (isLoading || isSocialLoading || (!isLogin && !gdprAccepted)) && styles.submitButtonDisabled]}
             onPress={isLogin ? handleLogin : handleRegister}
-            disabled={isLoading || isSocialLoading}
+            disabled={isLoading || isSocialLoading || (!isLogin && !gdprAccepted)}
           >
             {isLoading || isSocialLoading ? (
               <ActivityIndicator color='#FFFFFF' />
             ) : (
-              <Text style={styles.submitButtonText}>{isLogin ? 'Log in' : 'Sign up'}</Text>
+              <Text style={styles.submitButtonText}>{isLogin ? t('auth.log_in') : t('auth.sign_up')}</Text>
             )}
           </Pressable>
 
@@ -255,39 +283,43 @@ export default function AuthScreen() {
             onPress={toggleAuthMode}
             disabled={isLoading || isSocialLoading}
           >
-            <Text style={styles.switchButtonText}>
-              {isLogin ? 'No account? Sign up' : 'Already have an account? Log in'}
+            <Text style={[styles.switchButtonText, { color: theme.textPrimary }]}>
+              {isLogin ? t('auth.no_account') : t('auth.has_account')}
             </Text>
           </Pressable>
 
           <View style={styles.separator}>
             <View style={styles.separatorLine} />
-            <Text style={styles.separatorText}>or continue with</Text>
+            <Text style={[styles.separatorText, { color: theme.textSecondary }]}>{t('common.or_continue_with')}</Text>
             <View style={styles.separatorLine} />
           </View>
 
           {appleAuthAvailable ? (
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-              cornerRadius={14}
-              style={styles.appleButton}
-              onPress={() => void handleAppleSignIn()}
-            />
+            <View style={{ opacity: !isLogin && !gdprAccepted ? 0.5 : 1 }} pointerEvents={!isLogin && !gdprAccepted ? 'none' : 'auto'}>
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={14}
+                style={styles.appleButton}
+                onPress={() => void handleAppleSignIn()}
+              />
+            </View>
           ) : null}
 
           <Pressable
-            style={styles.googleButton}
+            style={[styles.googleButton, (!isLogin && !gdprAccepted) && { opacity: 0.5 }]}
             onPress={() => void handleGoogleSignIn()}
-            disabled={isLoading || isSocialLoading}
+            disabled={isLoading || isSocialLoading || (!isLogin && !gdprAccepted)}
           >
-            <Ionicons name='logo-google' size={20} color={liquidColors.textPrimary} />
-            <Text style={styles.googleButtonText}>Sign in with Google</Text>
+            <Ionicons name='logo-google' size={20} color={theme.textPrimary} />
+            <Text style={[styles.googleButtonText, { color: theme.textPrimary }]}>{t('auth.sign_in_google')}</Text>
           </Pressable>
 
-          <Text style={styles.legalText}>
-            By continuing, you agree to our Terms of Service and Privacy Policy.
-          </Text>
+          {isLogin ? (
+            <Text style={[styles.legalText, { color: theme.textSecondary }]}>
+              {t('auth.legal_notice')}
+            </Text>
+          ) : null}
         </View>
       </GlassCard>
     </LiquidScreen>
@@ -317,12 +349,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: liquidColors.textPrimary,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 14,
-    color: liquidColors.textSecondary,
     textAlign: 'center',
     lineHeight: 21,
   },
@@ -348,7 +378,6 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: liquidColors.textPrimary,
     fontSize: 15,
     paddingVertical: 8,
   },
@@ -358,13 +387,11 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 13,
-    color: liquidColors.primary,
     fontWeight: '600',
   },
   submitButton: {
     marginTop: 8,
     borderRadius: 14,
-    backgroundColor: liquidColors.primary,
     paddingVertical: 14,
     alignItems: 'center',
     shadowColor: '#1E3A8A',
@@ -389,7 +416,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   switchButtonText: {
-    color: liquidColors.textPrimary,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -405,7 +431,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(148,163,184,0.36)',
   },
   separatorText: {
-    color: liquidColors.textSecondary,
     fontSize: 13,
     fontWeight: '500',
   },
@@ -425,12 +450,35 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   googleButtonText: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 15,
   },
+  gdprRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: 4,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: 'rgba(148,163,184,0.6)',
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  gdprText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  gdprLink: {
+    fontWeight: '600',
+  },
   legalText: {
-    color: liquidColors.textSecondary,
     fontSize: 11,
     textAlign: 'center',
     lineHeight: 16,

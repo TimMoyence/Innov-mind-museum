@@ -1,21 +1,26 @@
 import { Link, Stack } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
-import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 /** Displays a 404-style screen with a link to navigate back to the home page. */
 export default function NotFoundScreen() {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
+
   return (
     <>
-      <Stack.Screen options={{ title: 'Oops' }} />
+      <Stack.Screen options={{ title: t('notFound.screen_title') }} />
       <LiquidScreen background={pickMuseumBackground(2)} contentStyle={styles.screen}>
         <GlassCard style={styles.card} intensity={60}>
-          <Text style={styles.title}>This screen does not exist</Text>
+          <Text style={[styles.title, { color: theme.textPrimary }]}>{t('notFound.title')}</Text>
           <Link href='/' asChild>
-            <Pressable style={styles.button}>
-              <Text style={styles.buttonText}>Go to Home</Text>
+            <Pressable style={[styles.button, { backgroundColor: theme.primary }]}>
+              <Text style={styles.buttonText}>{t('notFound.button')}</Text>
             </Pressable>
           </Link>
         </GlassCard>
@@ -40,12 +45,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: liquidColors.textPrimary,
     textAlign: 'center',
   },
   button: {
     marginTop: 4,
-    backgroundColor: liquidColors.primary,
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',

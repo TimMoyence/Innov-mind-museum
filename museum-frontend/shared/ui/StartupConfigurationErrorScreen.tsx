@@ -1,5 +1,6 @@
 import type { StyleProp, ViewStyle } from 'react-native';
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import type { ApiConfigurationSnapshot } from '@/services/apiConfig';
 
@@ -9,46 +10,47 @@ type StartupConfigurationErrorScreenProps = {
   containerStyle?: StyleProp<ViewStyle>;
 };
 
-const fallback = 'Not configured';
-
 /** Displays a diagnostic error screen shown when the app cannot start due to missing or invalid build configuration. */
 export function StartupConfigurationErrorScreen({
   error,
   snapshot,
   containerStyle,
 }: StartupConfigurationErrorScreenProps) {
+  const { t } = useTranslation(undefined, { useSuspense: false });
+  const fallback = t('common.not_configured');
+
   return (
     <SafeAreaView style={[styles.safeArea, containerStyle]}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>Startup configuration error</Text>
+          <Text style={styles.badgeText}>{t('startupError.badge')}</Text>
         </View>
 
-        <Text style={styles.title}>The app cannot start with this build.</Text>
+        <Text style={styles.title}>{t('startupError.title')}</Text>
         <Text style={styles.message}>{error.message}</Text>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Current build context</Text>
+          <Text style={styles.cardTitle}>{t('startupError.build_context')}</Text>
           <View style={styles.row}>
-            <Text style={styles.label}>Build variant</Text>
+            <Text style={styles.label}>{t('startupError.build_variant')}</Text>
             <Text style={styles.value}>{snapshot.buildVariant}</Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.label}>API environment</Text>
+            <Text style={styles.label}>{t('startupError.api_env')}</Text>
             <Text style={styles.value}>{snapshot.apiEnvironment}</Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.label}>Resolved base URL</Text>
+            <Text style={styles.label}>{t('startupError.resolved_url')}</Text>
             <Text style={styles.value}>{snapshot.resolvedBaseUrl}</Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.label}>Staging URL</Text>
+            <Text style={styles.label}>{t('startupError.staging_url')}</Text>
             <Text style={styles.value}>
               {snapshot.stagingBaseUrl || fallback}
             </Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.label}>Production URL</Text>
+            <Text style={styles.label}>{t('startupError.prod_url')}</Text>
             <Text style={styles.value}>
               {snapshot.productionBaseUrl || fallback}
             </Text>
@@ -56,16 +58,15 @@ export function StartupConfigurationErrorScreen({
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>How to fix it</Text>
+          <Text style={styles.cardTitle}>{t('startupError.how_to_fix')}</Text>
           <Text style={styles.step}>
-            1. Set `EXPO_PUBLIC_API_BASE_URL_STAGING` on the Expo project.
+            {t('startupError.step1')}
           </Text>
           <Text style={styles.step}>
-            2. Set `EXPO_PUBLIC_API_BASE_URL_PROD` on the Expo project.
+            {t('startupError.step2')}
           </Text>
           <Text style={styles.step}>
-            3. Rebuild the app after the environment variables are available to
-            EAS Build.
+            {t('startupError.step3')}
           </Text>
         </View>
       </ScrollView>

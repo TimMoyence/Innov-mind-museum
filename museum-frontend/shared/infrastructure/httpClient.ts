@@ -66,6 +66,19 @@ export const setApiBaseUrl = (nextUrl: string): void => {
 /** Returns the current runtime API base URL. */
 export const getApiBaseUrl = (): string => runtimeBaseUrl;
 
+let runtimeLocale = 'en';
+
+/**
+ * Updates the locale sent via Accept-Language on all subsequent requests.
+ * @param locale - Language code (e.g. "fr", "en").
+ */
+export const setLocale = (locale: string): void => {
+  runtimeLocale = locale || 'en';
+};
+
+/** Returns the current runtime locale used for Accept-Language. */
+export const getLocale = (): string => runtimeLocale;
+
 const httpClient = axios.create({
   headers: {
     Accept: 'application/json',
@@ -80,6 +93,11 @@ const wait = async (ms: number): Promise<void> => {
 httpClient.interceptors.request.use((config) => {
   const finalConfig = config as typeof config & HttpRequestConfig;
   finalConfig.baseURL = getApiBaseUrl();
+
+  finalConfig.headers = {
+    ...finalConfig.headers,
+    'Accept-Language': getLocale(),
+  };
 
   const shouldAttachAuth = finalConfig.requiresAuth !== false;
 

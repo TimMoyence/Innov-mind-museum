@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
 import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
@@ -11,10 +12,13 @@ import { BrandMark } from '@/shared/ui/BrandMark';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
-import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 /** Renders the home screen with branding, runtime settings summary, and actions to start new conversations. */
 export default function HomeScreen() {
+  const { t } = useTranslation();
+  const { theme } = useTheme();
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [menuStatus, setMenuStatus] = useState<string | null>(null);
@@ -37,10 +41,10 @@ export default function HomeScreen() {
       router.push(`/(stack)/chat/${response.session.id}${suffix}`);
       setMenuStatus(
         intent === 'camera'
-          ? 'Lens conversation opened'
+          ? t('home.messages.lens_opened')
           : intent === 'audio'
-            ? 'Audio conversation opened'
-            : 'Conversation opened',
+            ? t('home.messages.audio_opened')
+            : t('home.messages.conversation_opened'),
       );
     } catch (createError) {
       setError(getErrorMessage(createError));
@@ -57,27 +61,27 @@ export default function HomeScreen() {
             {
               id: 'discover',
               icon: 'sparkles-outline',
-              label: 'Discover',
+              label: t('home.menu.discover'),
               onPress: () => {
-                setMenuStatus('Opening Discover');
+                setMenuStatus(t('home.messages.opening_discover'));
                 router.push('/(stack)/discover');
               },
             },
             {
               id: 'lens',
               icon: 'camera-outline',
-              label: 'Lens',
+              label: t('home.menu.lens'),
               onPress: () => {
-                setMenuStatus('Opening Lens');
+                setMenuStatus(t('home.messages.opening_lens'));
                 void startConversation('camera');
               },
             },
             {
               id: 'audio',
               icon: 'musical-notes-outline',
-              label: 'Audio',
+              label: t('home.menu.audio'),
               onPress: () => {
-                setMenuStatus('Opening Audio');
+                setMenuStatus(t('home.messages.opening_audio'));
                 void startConversation('audio');
               },
             },
@@ -89,35 +93,35 @@ export default function HomeScreen() {
 
       <GlassCard style={styles.heroCard} intensity={62}>
         <BrandMark variant='hero' />
-        <Text style={styles.title}>Your museum companion</Text>
-        <Text style={styles.subtitle}>
-          Explore artworks, monuments, and heritage with a focused AI guide built for real visits.
+        <Text style={[styles.title, { color: theme.textPrimary }]}>{t('home.hero_title')}</Text>
+        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+          {t('home.hero_subtitle')}
         </Text>
         <Text style={styles.settingsNote}>
-          Language: {locale} • Guided mode: {museumMode ? 'On' : 'Off'}
+          {t('home.settings_note', { locale, mode: museumMode ? t('common.on') : t('common.off') })}
         </Text>
       </GlassCard>
 
       {error ? <ErrorNotice message={error} onDismiss={() => setError(null)} /> : null}
 
       <Pressable
-        style={styles.primaryButton}
+        style={[styles.primaryButton, { backgroundColor: theme.primary }]}
         onPress={() => void startConversation('default')}
         disabled={isCreating}
       >
         {isCreating ? (
           <ActivityIndicator color='#FFFFFF' />
         ) : (
-          <Text style={styles.primaryButtonText}>Start Conversation</Text>
+          <Text style={styles.primaryButtonText}>{t('home.start_conversation')}</Text>
         )}
       </Pressable>
 
       <View style={styles.secondaryRow}>
         <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/onboarding')}>
-          <Text style={styles.secondaryButtonText}>Onboarding</Text>
+          <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('home.onboarding')}</Text>
         </Pressable>
         <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/settings')}>
-          <Text style={styles.secondaryButtonText}>Settings</Text>
+          <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('home.settings')}</Text>
         </Pressable>
       </View>
     </LiquidScreen>
@@ -148,13 +152,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: liquidColors.textPrimary,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
     lineHeight: 24,
-    color: liquidColors.textSecondary,
     textAlign: 'center',
   },
   settingsNote: {
@@ -165,7 +167,6 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     marginTop: 6,
-    backgroundColor: liquidColors.primary,
     borderRadius: 16,
     paddingVertical: 14,
     alignItems: 'center',
@@ -193,7 +194,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.64)',
   },
   secondaryButtonText: {
-    color: liquidColors.textPrimary,
     fontSize: 15,
     fontWeight: '600',
   },

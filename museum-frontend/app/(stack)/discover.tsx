@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
 import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
@@ -9,11 +10,14 @@ import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
-import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 type ConversationIntent = 'default' | 'camera' | 'audio';
 
 export default function DiscoverScreen() {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
@@ -27,10 +31,10 @@ export default function DiscoverScreen() {
     setError(null);
     setActionStatus(
       intent === 'camera'
-        ? 'Opening camera conversation...'
+        ? t('discover.messages.opening_camera')
         : intent === 'audio'
-          ? 'Opening voice conversation...'
-          : 'Opening conversation...',
+          ? t('discover.messages.opening_voice')
+          : t('discover.messages.opening_default'),
     );
 
     try {
@@ -58,19 +62,19 @@ export default function DiscoverScreen() {
             {
               id: 'lens',
               icon: 'camera-outline',
-              label: 'Lens',
+              label: t('discover.menu.lens'),
               onPress: () => void startConversation('camera'),
             },
             {
               id: 'audio',
               icon: 'mic-outline',
-              label: 'Audio',
+              label: t('discover.menu.audio'),
               onPress: () => void startConversation('audio'),
             },
             {
               id: 'saved',
               icon: 'grid-outline',
-              label: 'Dashboard',
+              label: t('discover.menu.dashboard'),
               onPress: () => router.push('/(tabs)/conversations'),
             },
           ]}
@@ -79,12 +83,11 @@ export default function DiscoverScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <GlassCard style={styles.heroCard} intensity={62}>
-          <Text style={styles.title}>Discover</Text>
-          <Text style={styles.subtitle}>
-            Explore artworks and monuments with the fastest entry points: photo analysis, voice question,
-            or your recent sessions.
+          <Text style={[styles.title, { color: theme.textPrimary }]}>{t('discover.title')}</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+            {t('discover.subtitle')}
           </Text>
-          {actionStatus ? <Text style={styles.statusLine}>{actionStatus}</Text> : null}
+          {actionStatus ? <Text style={[styles.statusLine, { color: theme.primary }]}>{actionStatus}</Text> : null}
           {error ? <ErrorNotice message={error} onDismiss={() => setError(null)} /> : null}
         </GlassCard>
 
@@ -93,50 +96,50 @@ export default function DiscoverScreen() {
           onPress={() => void startConversation('camera')}
           disabled={isCreating}
         >
-          <Text style={styles.actionTitle}>Take a Photo of an Artwork</Text>
+          <Text style={styles.actionTitle}>{t('discover.photo_title')}</Text>
           <Text style={styles.actionText}>
-            Launch the camera directly and ask Musaium to analyze an artwork, monument, or cultural detail.
+            {t('discover.photo_desc')}
           </Text>
-          {isCreating ? <ActivityIndicator color='#FFFFFF' /> : <Text style={styles.actionCta}>Open Lens</Text>}
+          {isCreating ? <ActivityIndicator color='#FFFFFF' /> : <Text style={styles.actionCta}>{t('discover.open_lens')}</Text>}
         </Pressable>
 
         <GlassCard style={styles.actionGlassCard} intensity={56}>
-          <Text style={styles.cardTitle}>Voice Question</Text>
-          <Text style={styles.cardText}>
-            Start an audio-first chat to record a spoken question while visiting a museum or monument.
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('discover.voice_title')}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>
+            {t('discover.voice_desc')}
           </Text>
           <Pressable
             style={styles.secondaryButton}
             onPress={() => void startConversation('audio')}
             disabled={isCreating}
           >
-            <Text style={styles.secondaryButtonText}>Start Audio Conversation</Text>
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('discover.start_audio')}</Text>
           </Pressable>
         </GlassCard>
 
         <GlassCard style={styles.actionGlassCard} intensity={54}>
-          <Text style={styles.cardTitle}>Continue My Conversations</Text>
-          <Text style={styles.cardText}>
-            Open your dashboard to resume previous art sessions, saved chats, and recent interpretations.
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('discover.continue_title')}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>
+            {t('discover.continue_desc')}
           </Text>
           <Pressable
             style={styles.secondaryButton}
             onPress={() => router.push('/(tabs)/conversations')}
           >
-            <Text style={styles.secondaryButtonText}>Open Dashboard</Text>
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('discover.open_dashboard')}</Text>
           </Pressable>
         </GlassCard>
 
         <GlassCard style={styles.actionGlassCard} intensity={54}>
-          <Text style={styles.cardTitle}>Understand Guided Museum Mode</Text>
-          <Text style={styles.cardText}>
-            Learn how guided mode adds next-stop suggestions and richer context for museum visits.
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('discover.guided_title')}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>
+            {t('discover.guided_desc')}
           </Text>
           <Pressable
             style={styles.secondaryButton}
             onPress={() => router.push('/(stack)/guided-museum-mode')}
           >
-            <Text style={styles.secondaryButtonText}>Open Guided Mode Info</Text>
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('discover.open_guided')}</Text>
           </Pressable>
         </GlassCard>
       </ScrollView>
@@ -163,17 +166,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    color: liquidColors.textPrimary,
     fontSize: 30,
     fontWeight: '700',
   },
   subtitle: {
-    color: liquidColors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
   },
   statusLine: {
-    color: '#1E3A8A',
     fontWeight: '700',
     fontSize: 12,
   },
@@ -207,12 +207,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cardTitle: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 16,
   },
   cardText: {
-    color: liquidColors.textSecondary,
     fontSize: 13,
     lineHeight: 19,
   },
@@ -227,7 +225,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   secondaryButtonText: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 13,
   },

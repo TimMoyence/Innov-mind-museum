@@ -140,13 +140,25 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         NSMicrophoneUsageDescription:
           'Allow $(PRODUCT_NAME) to access your microphone for voice questions about artworks.',
       },
+      privacyManifests: {
+        NSPrivacyTracking: false,
+        NSPrivacyTrackingDomains: [],
+        NSPrivacyAccessedAPITypes: [
+          {
+            NSPrivacyAccessedAPIType:
+              'NSPrivacyAccessedAPICategoryUserDefaults',
+            NSPrivacyAccessedAPITypeReasons: ['CA92.1'],
+          },
+        ],
+        NSPrivacyCollectedDataTypes: [],
+      },
     },
     android: {
       package:
         variant === 'production'
           ? APP_ANDROID_PACKAGE
           : APP_ANDROID_PACKAGE_PREVIEW,
-      permissions: ['android.permission.RECORD_AUDIO'],
+      permissions: ['android.permission.RECORD_AUDIO', 'android.permission.CAMERA'],
       adaptiveIcon: {
         foregroundImage: BRAND_ANDROID_ADAPTIVE_FOREGROUND,
         backgroundColor: BRAND_BACKGROUND_COLOR,
@@ -162,7 +174,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         'expo-image-picker',
         {
-          photosPermission: false,
+          photosPermission:
+          'Allow $(PRODUCT_NAME) to select artwork photos from your library.',
         },
       ],
       [
@@ -180,6 +193,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
       ],
       'expo-apple-authentication',
+      [
+        'expo-tracking-transparency',
+        {
+          userTrackingPermission:
+            '$(PRODUCT_NAME) uses tracking to improve your museum experience with personalized artwork recommendations.',
+        },
+      ],
       [
         '@react-native-google-signin/google-signin',
         {

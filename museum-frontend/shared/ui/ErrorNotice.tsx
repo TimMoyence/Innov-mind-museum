@@ -1,5 +1,8 @@
 import type { JSX } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+
+import { useTheme } from './ThemeContext';
 
 interface ErrorNoticeProps {
   message: string;
@@ -14,19 +17,22 @@ export const ErrorNotice = ({
   onDismiss,
   onRetry,
 }: ErrorNoticeProps): JSX.Element => {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>{message}</Text>
+    <View style={[styles.container, { backgroundColor: theme.errorBackground, borderColor: theme.errorBackground }]}>
+      <Text style={[styles.text, { color: theme.error }]}>{message}</Text>
       {onDismiss || onRetry ? (
         <View style={styles.actionsRow}>
           {onRetry ? (
             <TouchableOpacity onPress={onRetry} style={styles.retryButton}>
-              <Text style={styles.retryText}>Retry</Text>
+              <Text style={[styles.retryText, { color: theme.primary }]}>{t('errorNotice.retry')}</Text>
             </TouchableOpacity>
           ) : null}
           {onDismiss ? (
             <TouchableOpacity onPress={onDismiss} style={styles.dismissButton}>
-              <Text style={styles.dismissText}>Dismiss</Text>
+              <Text style={[styles.dismissText, { color: theme.error }]}>{t('errorNotice.dismiss')}</Text>
             </TouchableOpacity>
           ) : null}
         </View>
@@ -37,15 +43,12 @@ export const ErrorNotice = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(254,242,242,0.82)',
-    borderColor: 'rgba(248,113,113,0.36)',
     borderRadius: 14,
     borderWidth: 1,
     padding: 12,
     marginBottom: 12,
   },
   text: {
-    color: '#7F1D1D',
     fontSize: 14,
   },
   actionsRow: {
@@ -59,7 +62,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   retryText: {
-    color: '#1E40AF',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -68,7 +70,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   dismissText: {
-    color: '#7F1D1D',
     fontSize: 12,
     fontWeight: '700',
   },

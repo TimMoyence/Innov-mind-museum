@@ -10,22 +10,26 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { SUPPORT_LINKS, isValidSupportUrl } from '@/shared/config/supportLinks';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
-import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 type SupportChannelKey = keyof typeof SUPPORT_LINKS;
 
 export default function SupportScreen() {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
   const [status, setStatus] = useState<string | null>(null);
 
   const openChannel = async (channelKey: SupportChannelKey) => {
     const channel = SUPPORT_LINKS[channelKey];
     if (!isValidSupportUrl(channel.url)) {
-      Alert.alert('Invalid support link', `The ${channel.label} link is not configured correctly.`);
+      Alert.alert(t('support.invalid_link'), `The ${channel.label} link is not configured correctly.`);
       return;
     }
 
@@ -39,8 +43,8 @@ export default function SupportScreen() {
       setStatus(`${channel.label} opened`);
     } catch {
       Alert.alert(
-        'Unable to open link',
-        `Please open ${channel.url} manually or update the support channel configuration.`,
+        t('support.unable_open_link'),
+        t('support.manual_open', { url: channel.url }),
       );
       setStatus(`${channel.label} link failed`);
     }
@@ -66,19 +70,19 @@ export default function SupportScreen() {
             {
               id: 'instagram',
               icon: 'logo-instagram',
-              label: 'Instagram',
+              label: t('support.instagram'),
               onPress: () => void openChannel('instagram'),
             },
             {
               id: 'telegram',
               icon: 'paper-plane-outline',
-              label: 'Telegram',
+              label: t('support.telegram'),
               onPress: () => void openChannel('telegram'),
             },
             {
               id: 'privacy',
               icon: 'shield-checkmark-outline',
-              label: 'Privacy',
+              label: t('support.privacy'),
               onPress: () => router.push('/(stack)/privacy'),
             },
           ]}
@@ -87,58 +91,56 @@ export default function SupportScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <GlassCard style={styles.heroCard} intensity={60}>
-          <Text style={styles.title}>Support</Text>
-          <Text style={styles.subtitle}>
-            Contact Musaium support through our social channels. Replace placeholder handles before
-            production release.
+          <Text style={[styles.title, { color: theme.textPrimary }]}>{t('support.title')}</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+            {t('support.subtitle')}
           </Text>
-          {status ? <Text style={styles.status}>{status}</Text> : null}
+          {status ? <Text style={[styles.status, { color: theme.success }]}>{status}</Text> : null}
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={56}>
-          <Text style={styles.cardTitle}>Instagram</Text>
-          <Text style={styles.cardText}>Handle: {SUPPORT_LINKS.instagram.handle}</Text>
-          <Text style={styles.cardText}>{SUPPORT_LINKS.instagram.url}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('support.instagram')}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>Handle: {SUPPORT_LINKS.instagram.handle}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>{SUPPORT_LINKS.instagram.url}</Text>
           <Pressable
-            style={styles.primaryButton}
+            style={[styles.primaryButton, { backgroundColor: theme.primary }]}
             onPress={() => void openChannel('instagram')}
           >
-            <Text style={styles.primaryButtonText}>Open Instagram Support</Text>
+            <Text style={styles.primaryButtonText}>{t('support.open_instagram')}</Text>
           </Pressable>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={56}>
-          <Text style={styles.cardTitle}>Telegram</Text>
-          <Text style={styles.cardText}>Handle: {SUPPORT_LINKS.telegram.handle}</Text>
-          <Text style={styles.cardText}>{SUPPORT_LINKS.telegram.url}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('support.telegram')}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>Handle: {SUPPORT_LINKS.telegram.handle}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>{SUPPORT_LINKS.telegram.url}</Text>
           <Pressable
             style={styles.secondaryButton}
             onPress={() => void openChannel('telegram')}
           >
-            <Text style={styles.secondaryButtonText}>Open Telegram Support</Text>
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('support.open_telegram')}</Text>
           </Pressable>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={52}>
-          <Text style={styles.cardTitle}>Support Scope</Text>
-          <Text style={styles.cardText}>
-            Supported topics (placeholder): account access, app bugs, feature feedback, and guided museum
-            experience issues.
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('support.scope_title')}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>
+            {t('support.scope_topics')}
           </Text>
-          <Text style={styles.cardText}>
-            Target response time (placeholder): TO_FILL_SUPPORT_RESPONSE_TIME.
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>
+            {t('support.scope_response')}
           </Text>
-          <Text style={styles.cardText}>
-            Escalation channel owner (placeholder): TO_FILL_SUPPORT_OWNER.
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>
+            {t('support.scope_team')}
           </Text>
         </GlassCard>
 
         <Pressable style={styles.secondaryButton} onPress={() => void shareChannels()}>
-          <Text style={styles.secondaryButtonText}>Share Support Channels</Text>
+          <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('support.share_channels')}</Text>
         </Pressable>
 
         <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/settings')}>
-          <Text style={styles.secondaryButtonText}>Back to Settings</Text>
+          <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('support.back_settings')}</Text>
         </Pressable>
       </ScrollView>
     </LiquidScreen>
@@ -164,17 +166,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    color: liquidColors.textPrimary,
     fontSize: 28,
     fontWeight: '700',
   },
   subtitle: {
-    color: liquidColors.textSecondary,
     lineHeight: 20,
     fontSize: 14,
   },
   status: {
-    color: '#166534',
     fontWeight: '700',
     fontSize: 12,
   },
@@ -183,19 +182,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cardTitle: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 16,
   },
   cardText: {
-    color: liquidColors.textSecondary,
     lineHeight: 19,
     fontSize: 13,
   },
   primaryButton: {
     marginTop: 4,
     borderRadius: 12,
-    backgroundColor: liquidColors.primary,
     alignItems: 'center',
     paddingVertical: 12,
   },
@@ -214,7 +210,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   secondaryButtonText: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 13,
   },
