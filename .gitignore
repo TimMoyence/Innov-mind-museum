@@ -1,11 +1,13 @@
 .env
 
-# docs 
+# docs
 **/docs/**
 !docs/
 !docs/CI_CD_SECRETS.md
 !docs/MOBILE_INTERNAL_TESTING_FLOW.md
 !docs/privacy-policy.html
+!docs/V1_Sprint/
+!docs/V1_Sprint/**
 
 # OS X
 **/.DS_Store*

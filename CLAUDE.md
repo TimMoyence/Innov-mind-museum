@@ -10,6 +10,15 @@ Monorepo with two independent apps:
 - **`museum-backend/`** — Node.js 22 + Express 5 + TypeORM + PostgreSQL 16 (pnpm)
 - **`museum-frontend/`** — React Native 0.79 + Expo 53 + Expo Router (npm)
 
+## Progress Tracking
+
+All tracking lives in **`docs/V1_Sprint/`**:
+- **`PROGRESS_TRACKER.md`** — checkbox tracker per sprint/item (quick status)
+- **`SPRINT_LOG.md`** — detailed technical journal (what, how, why, which files)
+- **`MASTER_ROADMAP_V2.md`** — product roadmap (read-only reference)
+
+After completing sprint work, update both PROGRESS_TRACKER and SPRINT_LOG.
+
 ## Common Commands
 
 ### Backend (`cd museum-backend`)
