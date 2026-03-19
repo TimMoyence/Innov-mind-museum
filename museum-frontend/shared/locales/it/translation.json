@@ -1,0 +1,378 @@
+{
+  "common": {
+    "cancel": "Annulla",
+    "error": "Errore",
+    "send": "Invia",
+    "delete": "Elimina",
+    "save": "Salva",
+    "close": "Chiudi",
+    "back": "Indietro",
+    "retry": "Riprova",
+    "dismiss": "Ignora",
+    "loading": "Caricamento...",
+    "on": "Attivo",
+    "off": "Disattivo",
+    "enabled": "Attivato",
+    "disabled": "Disattivato",
+    "not_configured": "Non configurato",
+    "or_continue_with": "oppure continua con"
+  },
+  "tabs": {
+    "dashboard": "Bacheca",
+    "home": "Home"
+  },
+  "auth": {
+    "welcome_back": "Bentornato",
+    "create_account": "Crea il tuo account",
+    "sign_in_subtitle": "Accedi per continuare il tuo percorso culturale.",
+    "sign_up_subtitle": "Crea un account Musaium per salvare e riprendere le tue visite.",
+    "fill_all_fields": "Compila tutti i campi",
+    "login_failed": "Accesso fallito - risposta di autenticazione non valida",
+    "registration_complete": "Registrazione completata. Effettua l'accesso.",
+    "forgot_password": "Password dimenticata?",
+    "password_reset_title": "Reimpostazione password",
+    "password_reset_confirm": "Vuoi ricevere un'email per reimpostare la password?",
+    "email_sent_title": "Email inviata",
+    "email_sent_message": "Se questa email è associata a un account, riceverai un link per la reimpostazione.",
+    "first_name": "Nome",
+    "last_name": "Cognome",
+    "email": "Email",
+    "password": "Password",
+    "log_in": "Accedi",
+    "sign_up": "Registrati",
+    "no_account": "Non hai un account? Registrati",
+    "has_account": "Hai già un account? Accedi",
+    "sign_in_google": "Accedi con Google",
+    "agree_terms": "Accetto i Termini di Servizio e l'Informativa sulla Privacy",
+    "legal_notice": "Accedendo, accetti i nostri Termini di Servizio e l'Informativa sulla Privacy.",
+    "terms_of_service": "Termini di Servizio",
+    "privacy_policy": "Informativa sulla Privacy",
+    "badge_style": "Stile",
+    "badge_guide": "Guida",
+    "badge_safe": "Sicuro"
+  },
+  "home": {
+    "hero_title": "Il tuo compagno di museo",
+    "hero_subtitle": "Esplora opere d'arte, monumenti e patrimonio culturale con una guida IA pensata per le visite reali.",
+    "settings_note": "Lingua: {{locale}} • Modalità guidata: {{mode}}",
+    "start_conversation": "Inizia conversazione",
+    "onboarding": "Introduzione",
+    "settings": "Impostazioni",
+    "menu": {
+      "discover": "Scopri",
+      "lens": "Obiettivo",
+      "audio": "Audio"
+    },
+    "messages": {
+      "lens_opened": "Conversazione con obiettivo aperta",
+      "audio_opened": "Conversazione audio aperta",
+      "conversation_opened": "Conversazione aperta",
+      "opening_discover": "Apertura Scopri",
+      "opening_lens": "Apertura Obiettivo",
+      "opening_audio": "Apertura Audio"
+    }
+  },
+  "conversations": {
+    "title": "Bacheca",
+    "subtitle": "Le tue sessioni museali recenti. Scorri verso il basso per aggiornare.",
+    "filter": "Filtra",
+    "saved": "Salvate",
+    "share": "Condividi",
+    "start_new": "Nuova conversazione",
+    "sorted_by_recency": "Ordinate per data",
+    "sorted_by_messages": "Ordinate per numero di messaggi",
+    "showing_saved_only": "Solo sessioni salvate",
+    "showing_all": "Tutte le sessioni",
+    "share_title": "Bacheca Musaium",
+    "share_body": "Bacheca Musaium: {{total}} sessioni, {{savedCount}} salvate.",
+    "shared_success": "Riepilogo bacheca condiviso",
+    "session_unsaved": "Sessione rimossa dai salvati",
+    "session_saved": "Sessione salvata",
+    "empty_title": "Nessuna conversazione",
+    "empty_saved": "Nessuna sessione salvata. Tieni premuto su una sessione per salvarla.",
+    "empty_body": "Inizia una nuova conversazione dalla Home per creare la tua prima sessione.",
+    "message_count": "Messaggi: {{count}}",
+    "saved_hint": "Salvata • tieni premuto per rimuovere",
+    "unsaved_hint": "Tieni premuto per salvare",
+    "saved_filter_on": "Filtro salvati ATTIVO",
+    "saved_filter_off": "Filtro salvati DISATTIVO",
+    "sort_label": "ordina: {{sortMode}}"
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "subtitle": "Gestisci le tue preferenze Musaium, le informazioni sulla privacy e l'accesso al supporto.",
+    "env_note": "L'ambiente backend è determinato dalla build (local/preview/production), non selezionabile dall'utente.",
+    "appearance": "Aspetto",
+    "theme_system": "Sistema",
+    "theme_light": "Chiaro",
+    "theme_dark": "Scuro",
+    "current_preferences": "Preferenze attuali",
+    "loading_preferences": "Caricamento preferenze…",
+    "locale_label": "Lingua: {{locale}}",
+    "museum_mode_label": "Modalità guidata: {{mode}}",
+    "guide_level_label": "Livello guida: {{level}}",
+    "open_preferences": "Apri Preferenze",
+    "guided_experience_title": "Esperienza museale guidata",
+    "guided_experience_subtitle": "Scopri come la modalità guidata cambia le spiegazioni, i suggerimenti per la prossima tappa e la profondità delle risposte durante le visite museali.",
+    "guided_mode_info": "Info modalità museale guidata",
+    "compliance_title": "Conformità e Aiuto",
+    "privacy_rgpd": "Privacy (RGPD)",
+    "privacy_desc": "Leggi le informazioni su trattamento dati, diritti e contatti legali.",
+    "terms_of_service": "Termini di Servizio",
+    "terms_desc": "Leggi i nostri termini e condizioni d'uso.",
+    "support": "Supporto",
+    "support_desc": "Contatta il supporto tramite i canali Instagram o Telegram.",
+    "onboarding_help": "Guida introduttiva",
+    "onboarding_desc": "Rivedi il flusso d'uso, i consigli pratici e le scorciatoie di aiuto.",
+    "danger_zone": "Zona pericolosa",
+    "danger_zone_desc": "Elimina permanentemente il tuo account e tutti i dati associati. Questa azione è irreversibile.",
+    "delete_account": "Elimina Account",
+    "delete_confirm_title": "Elimina Account",
+    "delete_confirm_body": "Questo eliminerà permanentemente il tuo account e tutti i dati. Questa azione è irreversibile.",
+    "back_to_home": "Torna alla Home",
+    "sign_out": "Esci",
+    "preferences": "Preferenze"
+  },
+  "preferences": {
+    "title": "Preferenze",
+    "subtitle": "Controlla lingua, modalità museale guidata e profondità delle spiegazioni per le conversazioni sull'arte.",
+    "loading": "Caricamento preferenze attuali...",
+    "language_label": "Lingua (locale)",
+    "language_hint": "Usata per la lingua delle risposte IA e la formattazione dei timestamp nella chat.",
+    "museum_mode_label": "Modalità museale guidata",
+    "museum_mode_hint": "Aggiunge suggerimenti per la prossima tappa e indicazioni per la navigazione nel museo.",
+    "guide_level_label": "Livello guida IA",
+    "guide_level_hint": "Principiante mantiene le spiegazioni semplici. Esperto usa il vocabolario della storia dell'arte.",
+    "load_failed": "Caricamento fallito: {{error}}",
+    "save_failed": "Salvataggio fallito: {{error}}",
+    "saved": "Preferenze salvate",
+    "save_button": "Salva Preferenze",
+    "learn_guided": "Scopri la modalità museale guidata",
+    "menu": {
+      "guided": "Modalità guidata",
+      "privacy": "Privacy",
+      "settings": "Impostazioni"
+    }
+  },
+  "onboarding": {
+    "skip": "Salta",
+    "next": "Avanti",
+    "get_started": "Inizia",
+    "slide0": {
+      "title": "Benvenuto su Musaium",
+      "subtitle": "La tua guida museale personale. Fotografa le opere d'arte o fai domande per ottenere approfondimenti basati sull'IA.",
+      "tip1": "Apri Home e scegli Scopri, Obiettivo, Audio o Inizia conversazione.",
+      "tip2": "Obiettivo crea una chat e apre la fotocamera per inquadrare un'opera.",
+      "tip3": "Audio crea una chat e avvia la registrazione vocale per domande parlate.",
+      "tip4": "Visita la Bacheca per rileggere conversazioni salvate o recenti."
+    },
+    "slide1": {
+      "title": "Consigli pratici",
+      "subtitle": "Ottieni risposte migliori al museo con immagini e audio mirati.",
+      "tip1": "Inquadra un'opera o un dettaglio alla volta per un'analisi più precisa.",
+      "tip2": "Fai domande legate all'arte (artista, stile, periodo, simbologia).",
+      "tip3": "Usa la modalità museale guidata per suggerimenti sulla prossima tappa durante le visite.",
+      "tip4": "Scegli il livello Principiante o Esperto per la profondità del vocabolario."
+    },
+    "slide2": {
+      "title": "Aiuto e Supporto",
+      "subtitle": "Trova rapidamente i canali di supporto e le informazioni sulla privacy.",
+      "tip1": "Usa il Supporto per problemi con l'account, bug e feedback.",
+      "tip2": "La pagina Privacy mostra le informazioni sul trattamento dei dati e i tuoi diritti.",
+      "tip3": "Impostazioni è il punto di riferimento per navigazione e azioni sull'account.",
+      "tip4": "I tuoi dati sono trattati in modo sicuro nel rispetto del GDPR."
+    }
+  },
+  "support": {
+    "title": "Supporto",
+    "subtitle": "Contatta il supporto Musaium attraverso i nostri canali social.",
+    "invalid_link": "Link di supporto non valido",
+    "unable_open_link": "Impossibile aprire il link",
+    "manual_open": "Apri {{url}} manualmente o aggiorna la configurazione del canale di supporto.",
+    "instagram": "Instagram",
+    "telegram": "Telegram",
+    "privacy": "Privacy",
+    "open_instagram": "Apri Supporto Instagram",
+    "open_telegram": "Apri Supporto Telegram",
+    "scope_title": "Ambito del Supporto",
+    "scope_topics": "Argomenti supportati: accesso all'account, bug dell'app, feedback sulle funzionalità e problemi con l'esperienza museale guidata.",
+    "scope_response": "Di solito rispondiamo entro 48 ore.",
+    "scope_team": "Tutte le richieste di supporto sono gestite dal team Musaium.",
+    "share_channels": "Condividi canali di supporto",
+    "back_settings": "Torna alle Impostazioni"
+  },
+  "discover": {
+    "title": "Scopri",
+    "subtitle": "Esplora opere d'arte e monumenti con i punti d'accesso più rapidi: analisi fotografica, domanda vocale o le tue sessioni recenti.",
+    "photo_title": "Scatta una foto a un'opera",
+    "photo_desc": "Apri direttamente la fotocamera e chiedi a Musaium di analizzare un'opera, un monumento o un dettaglio culturale.",
+    "open_lens": "Apri Obiettivo",
+    "voice_title": "Domanda vocale",
+    "voice_desc": "Avvia una chat vocale per registrare una domanda parlata mentre visiti un museo o un monumento.",
+    "start_audio": "Avvia conversazione audio",
+    "continue_title": "Continua le mie conversazioni",
+    "continue_desc": "Apri la bacheca per riprendere sessioni precedenti, chat salvate e interpretazioni recenti.",
+    "open_dashboard": "Apri Bacheca",
+    "guided_title": "Scopri la modalità museale guidata",
+    "guided_desc": "Scopri come la modalità guidata aggiunge suggerimenti per la prossima tappa e un contesto più ricco per le visite museali.",
+    "open_guided": "Apri info modalità guidata",
+    "menu": {
+      "lens": "Obiettivo",
+      "audio": "Audio",
+      "dashboard": "Bacheca"
+    },
+    "messages": {
+      "opening_camera": "Apertura conversazione con fotocamera...",
+      "opening_voice": "Apertura conversazione vocale...",
+      "opening_default": "Apertura conversazione..."
+    }
+  },
+  "guidedMode": {
+    "title": "Modalità museale guidata",
+    "subtitle": "La modalità guidata trasforma Musaium in un compagno di museo: spiega l'opera e suggerisce un passo successivo pertinente per la tua visita.",
+    "status_line": "Stato attuale: {{status}} • Livello guida: {{level}}",
+    "card1_title": "Cosa cambia nella modalità guidata",
+    "card1_text": "Musaium aggiunge indicazioni pratiche orientate al museo, come la prossima tappa, le transizioni tra le sale e spunti di osservazione legati alle opere o ai monumenti vicini.",
+    "card2_title": "Guidata vs standard",
+    "card2_text": "La modalità standard resta concisa e descrittiva. La modalità guidata rimane focalizzata sull'arte ma supporta attivamente il tuo percorso attraverso una mostra o un sito culturale.",
+    "card3_title": "Livelli guida",
+    "card3_text": "Principiante usa un linguaggio educativo semplice. Intermedio introduce brevi termini tecnici. Esperto aggiunge un vocabolario e un contesto più approfonditi di storia dell'arte.",
+    "card4_title": "Esempi",
+    "card4_text": "Esempio di comportamento guidato: spiega la tecnica pittorica, collega l'opera al suo movimento storico, poi suggerisce un'opera vicina per confrontare composizione o simbologia.",
+    "turn_off": "Vai alle Preferenze per disattivare la modalità guidata",
+    "turn_on": "Vai alle Preferenze per attivare la modalità guidata",
+    "start_exploring": "Inizia a esplorare in Scopri",
+    "menu": {
+      "preferences": "Preferenze",
+      "discover": "Scopri",
+      "home": "Home"
+    }
+  },
+  "privacy": {
+    "pending_badge": "Da completare",
+    "pending_count": "{{count}} campi legali in sospeso",
+    "status_ready": "Metadati pronti per il rilascio",
+    "subtitle": "Questa pagina spiega come Musaium tratta i dati personali, i diritti degli utenti ai sensi del GDPR/RGPD e come contattare il supporto per richieste sulla privacy.",
+    "quick_facts": "Informazioni rapide",
+    "gdpr_rights": "I tuoi diritti GDPR (Riepilogo)",
+    "prerelease_title": "Checklist di completamento pre-rilascio",
+    "prerelease_text": "Questi elementi devono essere verificati prima della pubblicazione sugli store o per gli utenti in produzione.",
+    "policy_contents": "Contenuto dell'Informativa",
+    "request_title": "Supporto per richieste privacy",
+    "request_text": "Per richieste di accesso, cancellazione, rettifica o opposizione, contatta il team tramite la pagina di supporto e includi \"richiesta privacy\" nel tuo messaggio finché non sarà finalizzato un flusso legale dedicato.",
+    "open_support": "Apri Supporto",
+    "back_settings": "Torna alle Impostazioni",
+    "menu": {
+      "support": "Supporto",
+      "preferences": "Preferenze",
+      "settings": "Impostazioni"
+    }
+  },
+  "terms": {
+    "version_note": "Versione {{version}} — Ultimo aggiornamento {{lastUpdated}}",
+    "privacy_policy": "Informativa sulla Privacy",
+    "back_settings": "Torna alle Impostazioni",
+    "menu": {
+      "privacy": "Privacy",
+      "settings": "Impostazioni"
+    }
+  },
+  "notFound": {
+    "screen_title": "Ops",
+    "title": "Questa schermata non esiste",
+    "button": "Vai alla Home"
+  },
+  "chat": {
+    "fallback_title": "Sessione artistica",
+    "report_thanks_title": "Grazie",
+    "report_thanks_body": "La tua segnalazione è stata inviata.",
+    "report_error_body": "Impossibile inviare la segnalazione. Riprova.",
+    "report_title": "Segnala messaggio",
+    "report_body": "Perché stai segnalando questo messaggio?",
+    "report_offensive": "Offensivo",
+    "report_inaccurate": "Impreciso",
+    "report_inappropriate": "Inappropriato",
+    "report_other": "Altro",
+    "recording_hint": "Registrazione input vocale...",
+    "voice_ready": "Messaggio vocale pronto",
+    "playing": "In riproduzione...",
+    "play": "Riproduci",
+    "clear": "Cancella",
+    "gallery": "Galleria",
+    "lens": "Obiettivo",
+    "stop_audio": "Ferma audio",
+    "audio": "Audio",
+    "image_sent": "[Immagine inviata]",
+    "voice_message": "[Messaggio vocale]"
+  },
+  "chatInput": {
+    "placeholder": "Chiedi di un'opera, un monumento, oppure invia voce/foto...",
+    "send": "Invia"
+  },
+  "welcome": {
+    "title": "Benvenuto su Musaium",
+    "subtitle": "Il tuo compagno di museo personale",
+    "suggestions": {
+      "museum_camera": "Che opera ho davanti?",
+      "museum_history": "Raccontami la storia di questo museo",
+      "museum_next": "Cosa dovrei vedere dopo?",
+      "standard_camera": "Fotografa un'opera per conoscerla meglio",
+      "standard_style": "Parlami dell'Impressionismo",
+      "standard_question": "Chi ha dipinto la Gioconda?"
+    }
+  },
+  "expertiseBadge": {
+    "beginner": "Principiante",
+    "intermediate": "Intermedio",
+    "expert": "Esperto"
+  },
+  "artworkCard": {
+    "confidence": {
+      "high": "Alta",
+      "medium": "Media",
+      "low": "Bassa"
+    }
+  },
+  "followUpButtons": {
+    "section_label": "Domande rapide"
+  },
+  "recommendationChips": {
+    "section_label": "Spunti da esplorare"
+  },
+  "camera": {
+    "requesting_permission": "Richiesta permesso fotocamera...",
+    "close": "Chiudi",
+    "no_access": "Accesso alla fotocamera non disponibile",
+    "grant_permission": "Concedi permesso",
+    "ar_mode": "Modalità AR"
+  },
+  "imagePreview": {
+    "title": "Anteprima immagine"
+  },
+  "messageMenu": {
+    "copy": "Copia",
+    "report": "Segnala",
+    "speak": "Leggi"
+  },
+  "errorNotice": {
+    "retry": "Riprova",
+    "dismiss": "Ignora"
+  },
+  "startupError": {
+    "badge": "Errore di configurazione all'avvio",
+    "title": "L'app non può avviarsi con questa build.",
+    "build_context": "Contesto build attuale",
+    "build_variant": "Variante build",
+    "api_env": "Ambiente API",
+    "resolved_url": "URL base risolto",
+    "staging_url": "URL staging",
+    "prod_url": "URL produzione",
+    "how_to_fix": "Come risolvere",
+    "step1": "1. Imposta `EXPO_PUBLIC_API_BASE_URL_STAGING` nel progetto Expo.",
+    "step2": "2. Imposta `EXPO_PUBLIC_API_BASE_URL_PROD` nel progetto Expo.",
+    "step3": "3. Ricompila l'app dopo che le variabili d'ambiente sono disponibili per EAS Build."
+  },
+  "conversationSearch": {
+    "placeholder": "Cerca conversazioni..."
+  }
+}
