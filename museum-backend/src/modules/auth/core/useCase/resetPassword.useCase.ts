@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import { IUserRepository } from '../domain/user.repository.interface';
+import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
 import { validatePassword } from '@shared/validation/password';
 import { badRequest } from '@shared/errors/app.error';
 
@@ -19,7 +20,7 @@ export class ResetPasswordUseCase {
     if (!pw.valid) {
       throw badRequest(pw.reason!);
     }
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     const user = await this.userRepository.consumeResetTokenAndUpdatePassword(token, hashedPassword);
     if (!user) {
       throw badRequest('Invalid or expired reset token');

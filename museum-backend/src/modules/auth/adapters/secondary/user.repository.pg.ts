@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import pool from '../../../../data/db';
+import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
 import { User } from '../../core/domain/user.entity';
 import { IUserRepository } from '../../core/domain/user.repository.interface';
 
@@ -50,7 +51,7 @@ export class UserRepositoryPg implements IUserRepository {
       throw new Error('Un utilisateur avec cet email existe déjà.');
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
     const query = `
       INSERT INTO "users" (email, password, firstname, lastname)
       VALUES ($1, $2, $3, $4)
@@ -106,7 +107,7 @@ export class UserRepositoryPg implements IUserRepository {
    * @returns The updated user row.
    */
   async updatePassword(userId: number, newPassword: string): Promise<User> {
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     const query = `
       UPDATE "users"
       SET password = $1, reset_token = null, reset_token_expires = null
@@ -114,28 +115,6 @@ export class UserRepositoryPg implements IUserRepository {
       RETURNING *
     `;
     const values = [hashedPassword, userId];
-    const result = await pool.query(query, values);
-    return result.rows[0];
-  }
-
-  /**
-   * Registers a user originating from social login (no password).
-   * @param email - User email.
-   * @param firstname - Optional first name.
-   * @param lastname - Optional last name.
-   * @returns The newly created user row.
-   */
-  async registerSocialUser(
-    email: string,
-    firstname?: string,
-    lastname?: string,
-  ): Promise<User> {
-    const query = `
-      INSERT INTO "users" (email, password, firstname, lastname)
-      VALUES ($1, NULL, $2, $3)
-      RETURNING *
-    `;
-    const values = [email, firstname || null, lastname || null];
     const result = await pool.query(query, values);
     return result.rows[0];
   }
@@ -155,6 +134,46 @@ export class UserRepositoryPg implements IUserRepository {
     `;
     const result = await pool.query(query, [hashedPassword, token]);
     return result.rows[0] || null;
+  }
+
+  async setVerificationToken(userId: number, token: string, expires: Date): Promise<void> {
+    await pool.query(
+      `UPDATE "users" SET verification_token = $1, verification_token_expires = $2 WHERE id = $3`,
+      [token, expires, userId],
+    );
+  }
+
+  async verifyEmail(token: string): Promise<User | null> {
+    const query = `
+      UPDATE "users"
+      SET email_verified = true, verification_token = NULL, verification_token_expires = NULL
+      WHERE verification_token = $1 AND verification_token_expires > NOW()
+      RETURNING *
+    `;
+    const result = await pool.query(query, [token]);
+    return result.rows[0] || null;
+  }
+
+  /**
+   * Registers a user originating from social login (no password, email_verified = true).
+   * @param email - User email.
+   * @param firstname - Optional first name.
+   * @param lastname - Optional last name.
+   * @returns The newly created user row.
+   */
+  async registerSocialUser(
+    email: string,
+    firstname?: string,
+    lastname?: string,
+  ): Promise<User> {
+    const query = `
+      INSERT INTO "users" (email, password, firstname, lastname, email_verified)
+      VALUES ($1, NULL, $2, $3, true)
+      RETURNING *
+    `;
+    const values = [email, firstname || null, lastname || null];
+    const result = await pool.query(query, values);
+    return result.rows[0];
   }
 
   /**

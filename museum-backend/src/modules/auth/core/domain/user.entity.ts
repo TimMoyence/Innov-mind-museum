@@ -34,6 +34,15 @@ export class User {
   @Column({ nullable: true, type: 'timestamp' })
   reset_token_expires: Date;
 
+  @Column({ type: 'boolean', default: false })
+  email_verified!: boolean;
+
+  @Column({ nullable: true })
+  verification_token?: string;
+
+  @Column({ nullable: true, type: 'timestamp' })
+  verification_token_expires?: Date;
+
   @CreateDateColumn({ type: 'timestamp' })
   createdAt!: Date;
 
