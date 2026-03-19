@@ -13,6 +13,7 @@
   "include": [
     "tests/**/*.ts",
     "features/chat/domain/contracts.ts",
+    "features/settings/runtimeSettings.pure.ts",
     "shared/lib/errors.ts",
     "shared/types/AppError.ts"
   ]
