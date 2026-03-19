@@ -9,11 +9,13 @@ import Animated, {
   withDelay,
 } from 'react-native-reanimated';
 
+import { useTheme } from '@/shared/ui/ThemeContext';
+
 const DOT_SIZE = 8;
 const DOT_COUNT = 3;
 const ANIMATION_DURATION = 400;
 
-const Dot = ({ delay }: { delay: number }) => {
+const Dot = ({ delay, color }: { delay: number; color: string }) => {
   const opacity = useSharedValue(0.3);
 
   useEffect(() => {
@@ -33,15 +35,29 @@ const Dot = ({ delay }: { delay: number }) => {
     opacity: opacity.value,
   }));
 
-  return <Animated.View style={[styles.dot, animatedStyle]} />;
+  return (
+    <Animated.View
+      style={[styles.dot, { backgroundColor: color }, animatedStyle]}
+    />
+  );
 };
 
 /** Displays an animated three-dot typing indicator shown while the assistant is generating a response. */
 export const TypingIndicator = () => {
+  const { theme } = useTheme();
+
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.assistantBubble,
+          borderColor: theme.assistantBubbleBorder,
+        },
+      ]}
+    >
       {Array.from({ length: DOT_COUNT }).map((_, index) => (
-        <Dot key={index} delay={index * 160} />
+        <Dot key={index} delay={index * 160} color={theme.textSecondary} />
       ))}
     </View>
   );
@@ -55,14 +71,11 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     borderRadius: 16,
     padding: 14,
-    backgroundColor: 'rgba(255,255,255,0.72)',
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.22)',
   },
   dot: {
     width: DOT_SIZE,
     height: DOT_SIZE,
     borderRadius: DOT_SIZE / 2,
-    backgroundColor: '#64748B',
   },
 });

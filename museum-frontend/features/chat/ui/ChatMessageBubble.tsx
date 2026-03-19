@@ -1,14 +1,19 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 import { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { MarkdownBubble } from '@/features/chat/ui/MarkdownBubble';
 import { ArtworkCard } from '@/features/chat/ui/ArtworkCard';
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 interface ChatMessageBubbleProps {
   /** The message to render. */
   message: ChatUiMessage;
   /** Locale string for time formatting (e.g. 'en-US'). */
   locale: string;
+  /** Whether this message is currently being streamed from the LLM. */
+  isStreaming?: boolean;
   /** Called when an assistant message image fails to load, to trigger URL refresh. */
   onImageError: (messageId: string) => void;
   /** Called on long-press of an assistant message to report it. */
@@ -18,23 +23,45 @@ interface ChatMessageBubbleProps {
 /**
  * Renders a single chat message bubble with user/assistant styling,
  * markdown support, image display, timestamp, artwork card, and report action.
+ * Memoized to prevent unnecessary re-renders; always re-renders during streaming.
  */
-export const ChatMessageBubble = ({
+export const ChatMessageBubble = React.memo(({
   message,
   locale,
+  isStreaming = false,
   onImageError,
   onReport,
 }: ChatMessageBubbleProps) => {
+  const { theme } = useTheme();
   const isAssistant = message.role === 'assistant';
+
+  // Blinking cursor animation for streaming
+  const cursorOpacity = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!isStreaming) return;
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(cursorOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+        Animated.timing(cursorOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [isStreaming, cursorOpacity]);
 
   const bubbleContent = (
     <>
       {isAssistant ? (
-        <MarkdownBubble text={message.text} />
+        <View>
+          <MarkdownBubble text={message.text} />
+          {isStreaming ? (
+            <Animated.Text style={[styles.cursor, { opacity: cursorOpacity }]}>{'▍'}</Animated.Text>
+          ) : null}
+        </View>
       ) : (
         <Text style={styles.userText}>{message.text}</Text>
       )}
-      {message.image?.url ? (
+      {!isStreaming && message.image?.url ? (
         <Image
           source={{ uri: message.image.url }}
           style={styles.messageImage}
@@ -42,12 +69,14 @@ export const ChatMessageBubble = ({
           onError={() => onImageError(message.id)}
         />
       ) : null}
-      <Text style={styles.timestamp}>
-        {new Date(message.createdAt).toLocaleTimeString(locale || undefined, {
-          hour: '2-digit',
-          minute: '2-digit',
-        })}
-      </Text>
+      {!isStreaming ? (
+        <Text style={[styles.timestamp, { color: theme.timestamp }]}>
+          {new Date(message.createdAt).toLocaleTimeString(locale || undefined, {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </Text>
+      ) : null}
     </>
   );
 
@@ -55,18 +84,38 @@ export const ChatMessageBubble = ({
     <View>
       {isAssistant ? (
         <Pressable
-          onLongPress={() => onReport(message.id)}
-          style={[styles.bubble, styles.assistantBubble]}
+          onLongPress={() => {
+            if (isStreaming) return;
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            onReport(message.id);
+          }}
+          style={[
+            styles.bubble,
+            {
+              backgroundColor: theme.assistantBubble,
+              borderColor: theme.assistantBubbleBorder,
+              alignSelf: 'flex-start',
+            },
+          ]}
         >
           {bubbleContent}
         </Pressable>
       ) : (
-        <View style={[styles.bubble, styles.userBubble]}>
+        <View
+          style={[
+            styles.bubble,
+            {
+              backgroundColor: theme.userBubble,
+              borderColor: theme.userBubbleBorder,
+              alignSelf: 'flex-end',
+            },
+          ]}
+        >
           {bubbleContent}
         </View>
       )}
 
-      {isAssistant && message.metadata?.detectedArtwork?.title ? (
+      {!isStreaming && isAssistant && message.metadata?.detectedArtwork?.title ? (
         <ArtworkCard
           title={message.metadata.detectedArtwork.title}
           artist={message.metadata.detectedArtwork.artist}
@@ -77,7 +126,11 @@ export const ChatMessageBubble = ({
       ) : null}
     </View>
   );
-};
+}, (prev, next) => {
+  // Always re-render during streaming
+  if (prev.isStreaming || next.isStreaming) return false;
+  return prev.message.id === next.message.id && prev.message.text === next.message.text;
+});
 
 const styles = StyleSheet.create({
   bubble: {
@@ -86,23 +139,12 @@ const styles = StyleSheet.create({
     maxWidth: '85%',
     borderWidth: 1,
   },
-  assistantBubble: {
-    backgroundColor: 'rgba(255,255,255,0.72)',
-    borderColor: 'rgba(148,163,184,0.22)',
-    alignSelf: 'flex-start',
-  },
-  userBubble: {
-    backgroundColor: 'rgba(30, 64, 175, 0.88)',
-    borderColor: 'rgba(191, 219, 254, 0.6)',
-    alignSelf: 'flex-end',
-  },
   userText: {
     color: '#FFFFFF',
   },
   timestamp: {
     marginTop: 6,
     fontSize: 11,
-    color: 'rgba(100,116,139,0.92)',
   },
   messageImage: {
     marginTop: 8,
@@ -112,5 +154,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(148,163,184,0.35)',
     backgroundColor: 'rgba(226,232,240,0.45)',
+  },
+  cursor: {
+    fontSize: 18,
+    lineHeight: 22,
+    color: '#6366F1',
   },
 });

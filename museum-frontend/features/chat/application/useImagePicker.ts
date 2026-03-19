@@ -7,6 +7,7 @@ import * as ImagePickerLib from 'expo-image-picker';
  */
 export const useImagePicker = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   const onPickImage = useCallback(async () => {
@@ -17,12 +18,12 @@ export const useImagePicker = () => {
 
     const result = await ImagePickerLib.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
+      allowsEditing: false,
       quality: 0.8,
     });
 
     if (!result.canceled && result.assets.length) {
-      setSelectedImage(result.assets[0].uri);
+      setPendingImage(result.assets[0].uri);
     }
   }, []);
 
@@ -31,8 +32,17 @@ export const useImagePicker = () => {
   }, []);
 
   const onCameraCapture = useCallback((uri: string) => {
-    setSelectedImage(uri);
+    setPendingImage(uri);
     setIsCameraOpen(false);
+  }, []);
+
+  const confirmPendingImage = useCallback((uri: string) => {
+    setSelectedImage(uri);
+    setPendingImage(null);
+  }, []);
+
+  const cancelPendingImage = useCallback(() => {
+    setPendingImage(null);
   }, []);
 
   const clearSelectedImage = useCallback(() => {
@@ -41,11 +51,14 @@ export const useImagePicker = () => {
 
   return {
     selectedImage,
+    pendingImage,
     isCameraOpen,
     setIsCameraOpen,
     onPickImage,
     onTakePicture,
     onCameraCapture,
+    confirmPendingImage,
+    cancelPendingImage,
     clearSelectedImage,
   };
 };

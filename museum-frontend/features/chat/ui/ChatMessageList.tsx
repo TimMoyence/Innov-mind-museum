@@ -12,6 +12,8 @@ interface ChatMessageListProps {
   messages: ChatUiMessage[];
   /** Whether the assistant is currently generating a response. */
   isSending: boolean;
+  /** Whether tokens are currently being streamed from the LLM. */
+  isStreaming?: boolean;
   /** Locale string for time formatting. */
   locale: string;
   /** Whether museum mode is active (affects welcome card suggestions). */
@@ -37,6 +39,7 @@ interface ChatMessageListProps {
 export const ChatMessageList = ({
   messages,
   isSending,
+  isStreaming = false,
   locale,
   museumMode,
   onFollowUpPress,
@@ -68,17 +71,19 @@ export const ChatMessageList = ({
     ({ item }: { item: ChatUiMessage }) => {
       const isAssistant = item.role === 'assistant';
       const isLast = lastAssistantMessage?.id === item.id;
+      const isItemStreaming = isStreaming && isLast && isAssistant;
 
       return (
         <View>
           <ChatMessageBubble
             message={item}
             locale={locale}
+            isStreaming={isItemStreaming}
             onImageError={onImageError}
             onReport={onReport}
           />
 
-          {isAssistant && isLast ? (
+          {isAssistant && isLast && !isStreaming ? (
             <MessageActions
               metadata={item.metadata}
               onFollowUpPress={onFollowUpPress}
@@ -89,8 +94,11 @@ export const ChatMessageList = ({
         </View>
       );
     },
-    [lastAssistantMessage, locale, isSending, onFollowUpPress, onRecommendationPress, onImageError, onReport],
+    [lastAssistantMessage, locale, isSending, isStreaming, onFollowUpPress, onRecommendationPress, onImageError, onReport],
   );
+
+  // Show typing indicator only when sending but NOT streaming (streaming shows inline cursor)
+  const showTypingIndicator = isSending && !isStreaming;
 
   return (
     <FlatList
@@ -101,13 +109,12 @@ export const ChatMessageList = ({
       ListEmptyComponent={
         <WelcomeCard
           museumMode={museumMode}
-          locale={locale}
           onSuggestion={onSuggestion}
           onCamera={onCamera}
           disabled={isSending}
         />
       }
-      ListFooterComponent={isSending ? <TypingIndicator /> : null}
+      ListFooterComponent={showTypingIndicator ? <TypingIndicator /> : null}
       renderItem={renderItem}
     />
   );
