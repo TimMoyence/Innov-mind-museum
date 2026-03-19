@@ -109,6 +109,26 @@ interface AppEnv {
       objectKeyPrefix?: string;
     };
   };
+  tts?: {
+    enabled: boolean;
+    model: string;
+    voice: string;
+    speed: number;
+    maxTextLength: number;
+    cacheTtlSeconds: number;
+  };
+  cache?: {
+    enabled: boolean;
+    url: string;
+    sessionTtlSeconds: number;
+    listTtlSeconds: number;
+  };
+  featureFlags: {
+    voiceMode: boolean;
+    ocrGuard: boolean;
+    apiKeys: boolean;
+    streaming: boolean;
+  };
 }
 
 const required = (name: string, value: string | undefined): string => {
@@ -194,10 +214,9 @@ const env: AppEnv = {
     maxTextLength: toNumber(process.env.LLM_MAX_TEXT_LENGTH, 2000),
     maxImageBytes: toNumber(process.env.LLM_MAX_IMAGE_BYTES, 3 * 1024 * 1024),
     maxAudioBytes: toNumber(process.env.LLM_MAX_AUDIO_BYTES, 12 * 1024 * 1024),
-    includeDiagnostics: toBoolean(
-      process.env.LLM_INCLUDE_DIAGNOSTICS,
-      nodeEnv !== 'production',
-    ),
+    includeDiagnostics: nodeEnv === 'production'
+      ? false
+      : toBoolean(process.env.LLM_INCLUDE_DIAGNOSTICS, true),
     openAiApiKey: process.env.OPENAI_API_KEY,
     deepseekApiKey: process.env.DEEPSEEK_API_KEY,
     googleApiKey: process.env.GOOGLE_API_KEY,
@@ -225,6 +244,30 @@ const env: AppEnv = {
           'audio/ogg',
           'audio/aac',
         ],
+  },
+  tts: toBoolean(process.env.TTS_ENABLED, false)
+    ? {
+        enabled: true,
+        model: process.env.TTS_MODEL || 'tts-1',
+        voice: process.env.TTS_VOICE || 'alloy',
+        speed: toNumber(process.env.TTS_SPEED, 1.0),
+        maxTextLength: toNumber(process.env.TTS_MAX_TEXT_LENGTH, 4096),
+        cacheTtlSeconds: toNumber(process.env.TTS_CACHE_TTL_SECONDS, 86400),
+      }
+    : undefined,
+  cache: toBoolean(process.env.CACHE_ENABLED, false)
+    ? {
+        enabled: true,
+        url: process.env.REDIS_URL || 'redis://localhost:6379',
+        sessionTtlSeconds: toNumber(process.env.CACHE_SESSION_TTL_SECONDS, 3600),
+        listTtlSeconds: toNumber(process.env.CACHE_LIST_TTL_SECONDS, 300),
+      }
+    : undefined,
+  featureFlags: {
+    voiceMode: toBoolean(process.env.FEATURE_FLAG_VOICE_MODE, false),
+    ocrGuard: toBoolean(process.env.FEATURE_FLAG_OCR_GUARD, false),
+    apiKeys: toBoolean(process.env.FEATURE_FLAG_API_KEYS, false),
+    streaming: toBoolean(process.env.FEATURE_FLAG_STREAMING, false),
   },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
   storage: {

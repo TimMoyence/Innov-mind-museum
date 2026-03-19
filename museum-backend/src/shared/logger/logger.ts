@@ -1,12 +1,24 @@
+import os from 'node:os';
+
+import { env } from '@src/config/env';
+
 interface LogContext {
   [key: string]: unknown;
 }
+
+const defaultFields = {
+  service: 'museum-backend',
+  environment: env.nodeEnv,
+  version: process.env.APP_VERSION || process.env.npm_package_version || '1.0.0',
+  hostname: os.hostname(),
+};
 
 const format = (level: 'info' | 'warn' | 'error', message: string, context?: LogContext): string => {
   return JSON.stringify({
     level,
     message,
     timestamp: new Date().toISOString(),
+    ...defaultFields,
     ...(context || {}),
   });
 };

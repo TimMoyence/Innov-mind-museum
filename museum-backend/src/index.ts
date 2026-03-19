@@ -5,6 +5,11 @@ import { env } from '@src/config/env';
 import { AppDataSource } from '@src/data/db/data-source';
 import { logger } from '@shared/logger/logger';
 import { createApp } from './app';
+import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/refresh-token.repository.pg';
+import { TokenCleanupService } from '@modules/auth/core/useCase/tokenCleanup.service';
+import { RedisCacheService } from '@shared/cache/redis-cache.service';
+import { NoopCacheService } from '@shared/cache/noop-cache.service';
+import type { CacheService } from '@shared/cache/cache.port';
 
 /** Initializes the database, starts the HTTP server, and registers graceful shutdown handlers. */
 const start = async (): Promise<void> => {
@@ -15,7 +20,21 @@ const start = async (): Promise<void> => {
       database: env.db.database,
     });
 
-    const app = createApp();
+    let cacheService: CacheService;
+    if (env.cache?.enabled) {
+      const redis = new RedisCacheService({
+        url: env.cache.url,
+        defaultTtlSeconds: env.cache.sessionTtlSeconds,
+      });
+      void redis.connect().catch((err) => {
+        logger.error('redis_connection_failed', { error: (err as Error).message ?? err });
+      });
+      cacheService = redis;
+    } else {
+      cacheService = new NoopCacheService();
+    }
+
+    const app = createApp({ cacheService });
     const server = app.listen(env.port, () => {
       logger.info('server_started', {
         port: env.port,
@@ -23,8 +42,15 @@ const start = async (): Promise<void> => {
       });
     });
 
+    const tokenCleanup = new TokenCleanupService(
+      new RefreshTokenRepositoryPg(),
+      cacheService,
+    );
+    tokenCleanup.startScheduler();
+
     const shutdown = async (signal: string): Promise<void> => {
       logger.info('server_shutdown_start', { signal });
+      tokenCleanup.stopScheduler();
       server.close(async () => {
         try {
           if (AppDataSource.isInitialized) {

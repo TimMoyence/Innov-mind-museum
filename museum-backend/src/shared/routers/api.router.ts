@@ -4,11 +4,13 @@ import { env } from '@src/config/env';
 import { ChatService } from '@modules/chat/application/chat.service';
 import { createChatRouter } from '@modules/chat/adapters/primary/http/chat.route';
 import authRouter from '@modules/auth/adapters/primary/http/auth.route';
+import type { FeatureFlagService } from '@shared/feature-flags/feature-flags.port';
 
 /** Dependencies required to build the top-level API router. */
 export interface ApiRouterDeps {
   chatService: ChatService;
   healthCheck: () => Promise<{ database: 'up' | 'down' }>;
+  featureFlagService: FeatureFlagService;
 }
 
 /** Shape of the JSON response returned by the GET /api/health endpoint. */
@@ -78,7 +80,9 @@ export const buildHealthPayload = (params: {
  * @param deps - Injected chatService and healthCheck function.
  * @returns Configured Express Router.
  */
-export const createApiRouter = ({ chatService, healthCheck }: ApiRouterDeps): Router => {
+export const createApiRouter = ({ chatService, healthCheck, featureFlagService }: ApiRouterDeps): Router => {
+  // featureFlagService available for route-level gating (S3-10 OCR, S3-16 API Keys)
+  void featureFlagService;
   const router = Router();
 
   router.get('/health', async (_req, res) => {

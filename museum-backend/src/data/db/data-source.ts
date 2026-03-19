@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 import { User } from '@modules/auth/core/domain/user.entity';
 import { AuthRefreshToken } from '@modules/auth/core/domain/authRefreshToken.entity';
 import { SocialAccount } from '@modules/auth/core/domain/socialAccount.entity';
+import { ApiKey } from '@modules/auth/core/domain/apiKey.entity';
 import { ArtworkMatch } from '@modules/chat/domain/artworkMatch.entity';
 import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import { ChatSession } from '@modules/chat/domain/chatSession.entity';
@@ -24,6 +25,7 @@ export const AppDataSource = new DataSource({
     User,
     AuthRefreshToken,
     SocialAccount,
+    ApiKey,
     ChatSession,
     ChatMessage,
     ArtworkMatch,
