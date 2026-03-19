@@ -293,12 +293,20 @@ describe('evaluateAssistantOutputGuardrail', () => {
     expect(result).toEqual({ allow: false, reason: 'unsafe_output' });
   });
 
-  it('blocks output containing external action', () => {
+  it('blocks output containing external action without art keyword', () => {
     const result = evaluateAssistantOutputGuardrail({
       text: 'I will send you an email with details',
       history: [],
     });
     expect(result).toEqual({ allow: false, reason: 'unsafe_output' });
+  });
+
+  it('allows assistant output with art keyword even when external action present', () => {
+    const result = evaluateAssistantOutputGuardrail({
+      text: 'I recommend you open the gallery exhibition on Renaissance painting.',
+      history: [],
+    });
+    expect(result).toEqual({ allow: true });
   });
 
   it('allows output with art keyword', () => {
