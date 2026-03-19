@@ -11,7 +11,6 @@ const config: Config.InitialOptions = {
     '^@src/(.*)$': '<rootDir>/src/$1',
     '^@modules/(.*)$': '<rootDir>/src/modules/$1',
     '^@data/(.*)$': '<rootDir>/src/data/$1',
-    '^@IA/(.*)$': '<rootDir>/src/modules/IA/$1', // @deprecated — stale alias, @IA module removed
     '^@shared/(.*)$': '<rootDir>/src/shared/$1',
     '^tests/(.*)$': '<rootDir>/tests/$1',
   },

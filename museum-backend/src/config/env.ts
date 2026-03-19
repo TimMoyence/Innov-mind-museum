@@ -92,6 +92,7 @@ interface AppEnv {
     allowedMimeTypes: string[];
     allowedAudioMimeTypes: string[];
   };
+  brevoApiKey?: string;
   storage: {
     driver: StorageDriver;
     localUploadsDir: string;
@@ -119,11 +120,12 @@ const required = (name: string, value: string | undefined): string => {
 };
 
 const nodeEnvRaw = (process.env.NODE_ENV || 'development') as NodeEnv;
-const nodeEnv: NodeEnv = ['development', 'test', 'production'].includes(
-  nodeEnvRaw,
-)
-  ? nodeEnvRaw
-  : 'development';
+if (!['development', 'test', 'production'].includes(nodeEnvRaw)) {
+  throw new Error(
+    `Invalid NODE_ENV="${nodeEnvRaw}". Must be development, test, or production.`,
+  );
+}
+const nodeEnv: NodeEnv = nodeEnvRaw;
 
 const providerRaw = (process.env.LLM_PROVIDER || 'openai').toLowerCase();
 const provider: LlmProvider = ['openai', 'deepseek', 'google'].includes(
@@ -136,6 +138,8 @@ const storageDriverRaw = (process.env.OBJECT_STORAGE_DRIVER || 'local').toLowerC
 const storageDriver: StorageDriver = ['local', 's3'].includes(storageDriverRaw)
   ? (storageDriverRaw as StorageDriver)
   : 'local';
+
+const isDev = nodeEnv === 'development' || nodeEnv === 'test';
 
 /** Resolved application configuration singleton, validated at startup. */
 const env: AppEnv = {
@@ -158,18 +162,15 @@ const env: AppEnv = {
     poolMax: toNumber(process.env.DB_POOL_MAX, 20),
   },
   auth: {
-    jwtSecret:
-      toOptionalString(process.env.JWT_ACCESS_SECRET) ||
-      process.env.JWT_SECRET ||
-      'local-dev-jwt-secret',
-    accessTokenSecret:
-      toOptionalString(process.env.JWT_ACCESS_SECRET) ||
-      process.env.JWT_SECRET ||
-      'local-dev-jwt-secret',
-    refreshTokenSecret:
-      toOptionalString(process.env.JWT_REFRESH_SECRET) ||
-      process.env.JWT_SECRET ||
-      'local-dev-refresh-jwt-secret',
+    jwtSecret: isDev
+      ? (toOptionalString(process.env.JWT_ACCESS_SECRET) || process.env.JWT_SECRET || 'local-dev-jwt-secret')
+      : required('JWT_ACCESS_SECRET or JWT_SECRET', toOptionalString(process.env.JWT_ACCESS_SECRET) || process.env.JWT_SECRET),
+    accessTokenSecret: isDev
+      ? (toOptionalString(process.env.JWT_ACCESS_SECRET) || process.env.JWT_SECRET || 'local-dev-jwt-secret')
+      : required('JWT_ACCESS_SECRET or JWT_SECRET', toOptionalString(process.env.JWT_ACCESS_SECRET) || process.env.JWT_SECRET),
+    refreshTokenSecret: isDev
+      ? (toOptionalString(process.env.JWT_REFRESH_SECRET) || process.env.JWT_SECRET || 'local-dev-refresh-jwt-secret')
+      : required('JWT_REFRESH_SECRET', toOptionalString(process.env.JWT_REFRESH_SECRET) || process.env.JWT_SECRET),
     accessTokenTtl: process.env.JWT_ACCESS_TTL || '15m',
     refreshTokenTtl: process.env.JWT_REFRESH_TTL || '30d',
     appleClientId: process.env.APPLE_CLIENT_ID || 'com.musaium.mobile',
@@ -225,6 +226,7 @@ const env: AppEnv = {
           'audio/aac',
         ],
   },
+  brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
   storage: {
     driver: storageDriver,
     localUploadsDir:
@@ -249,6 +251,9 @@ const env: AppEnv = {
 };
 
 if (env.nodeEnv === 'production') {
+  if (!env.brevoApiKey) {
+    console.warn('BREVO_API_KEY not set \u2014 password reset emails will not be sent');
+  }
   required('JWT_ACCESS_SECRET or JWT_SECRET', process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET);
   required('JWT_REFRESH_SECRET', process.env.JWT_REFRESH_SECRET);
   required('PGDATABASE', process.env.PGDATABASE);
