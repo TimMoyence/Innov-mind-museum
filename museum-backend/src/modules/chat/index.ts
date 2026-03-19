@@ -6,7 +6,16 @@ import { LangChainChatOrchestrator } from './adapters/secondary/langchain.orches
 import { LocalImageStorage } from './adapters/secondary/image-storage.stub';
 import { S3CompatibleImageStorage } from './adapters/secondary/image-storage.s3';
 import { OpenAiAudioTranscriber } from './adapters/secondary/audio-transcriber.openai';
+import {
+  OpenAiTextToSpeechService,
+  DisabledTextToSpeechService,
+} from './adapters/secondary/text-to-speech.openai';
+import {
+  TesseractOcrService,
+  DisabledOcrService,
+} from './adapters/secondary/ocr-service';
 import { TypeOrmChatRepository } from './infrastructure/chat.repository.typeorm';
+import type { CacheService } from '@shared/cache/cache.port';
 
 /** Lazily-initialized image storage singleton, shared with the auth module for GDPR cleanup. */
 let sharedImageStorage: LocalImageStorage | S3CompatibleImageStorage | undefined;
@@ -14,12 +23,18 @@ let sharedImageStorage: LocalImageStorage | S3CompatibleImageStorage | undefined
 /** Returns the shared image storage instance (available after buildChatService has been called). */
 export const getImageStorage = (): LocalImageStorage | S3CompatibleImageStorage | undefined => sharedImageStorage;
 
+/** Lazily-initialized chat repository singleton, shared with the auth module for GDPR data export. */
+let sharedRepository: TypeOrmChatRepository | undefined;
+
+/** Returns the shared chat repository instance (available after buildChatService has been called). */
+export const getChatRepository = (): TypeOrmChatRepository | undefined => sharedRepository;
+
 /**
  * Wires the chat module dependency graph and returns a fully configured ChatService.
  * @param dataSource - Initialized TypeORM DataSource for repository creation.
  * @returns ChatService with repository, orchestrator, image storage, and audio transcriber.
  */
-export const buildChatService = (dataSource: DataSource): ChatService => {
+export const buildChatService = (dataSource: DataSource, cache?: CacheService): ChatService => {
   let imageStorage: LocalImageStorage | S3CompatibleImageStorage;
   if (env.storage.driver === 's3') {
     const s3 = env.storage.s3;
@@ -53,10 +68,24 @@ export const buildChatService = (dataSource: DataSource): ChatService => {
 
   sharedImageStorage = imageStorage;
 
-  return new ChatService(
-    new TypeOrmChatRepository(dataSource),
-    new LangChainChatOrchestrator(),
+  const repository = new TypeOrmChatRepository(dataSource);
+  sharedRepository = repository;
+
+  const tts = env.tts?.enabled && env.llm.openAiApiKey
+    ? new OpenAiTextToSpeechService()
+    : new DisabledTextToSpeechService();
+
+  const ocr = env.featureFlags.ocrGuard
+    ? new TesseractOcrService()
+    : new DisabledOcrService();
+
+  return new ChatService({
+    repository,
+    orchestrator: new LangChainChatOrchestrator(),
     imageStorage,
-    new OpenAiAudioTranscriber(),
-  );
+    audioTranscriber: new OpenAiAudioTranscriber(),
+    tts,
+    cache,
+    ocr,
+  });
 };

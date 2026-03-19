@@ -14,6 +14,7 @@ export interface PersistMessageSessionUpdates {
   title?: string;
   museumName?: string;
   visitContext?: VisitContext;
+  locale?: string;
 }
 
 /** Input for persisting a single chat message and optional side-effects. */
@@ -85,6 +86,27 @@ export interface PersistMessageReportInput {
   userId: number;
   reason: ReportReason;
   comment?: string;
+}
+
+/** Shape returned by {@link ChatRepository.exportUserData} for GDPR data export. */
+export interface UserChatExportData {
+  sessions: Array<{
+    id: string;
+    locale?: string | null;
+    museumMode: boolean;
+    title?: string | null;
+    museumName?: string | null;
+    createdAt: string;
+    updatedAt: string;
+    messages: Array<{
+      id: string;
+      role: string;
+      text?: string | null;
+      imageRef?: string | null;
+      createdAt: string;
+      metadata?: Record<string, unknown> | null;
+    }>;
+  }>;
 }
 
 /** Port for chat persistence operations. Implemented by {@link TypeOrmChatRepository}. */
@@ -165,4 +187,11 @@ export interface ChatRepository {
    * @param input - Report data (message, user, reason, optional comment).
    */
   persistMessageReport(input: PersistMessageReportInput): Promise<void>;
+
+  /**
+   * Export all chat data for a user (GDPR data portability).
+   * @param userId - The user's numeric ID.
+   * @returns All sessions and messages belonging to the user.
+   */
+  exportUserData(userId: number): Promise<UserChatExportData>;
 }

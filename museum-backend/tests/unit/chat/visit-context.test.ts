@@ -218,6 +218,60 @@ describe('deriveSessionTitle', () => {
 
     expect(deriveSessionTitle(session, metadata, visitContext)).toBeNull();
   });
+
+  it('prioritizes museum name over artwork in museum mode', () => {
+    const session = makeSession({ museumMode: true });
+    const metadata: ChatAssistantMetadata = {
+      detectedArtwork: { title: 'Mona Lisa', artist: 'Leonardo' },
+    };
+    const visitContext: VisitContext = {
+      museumName: 'Louvre',
+      museumConfidence: 0.6,
+      artworksDiscussed: [],
+      roomsVisited: [],
+      detectedExpertise: 'beginner',
+      expertiseSignals: 0,
+      lastUpdated: '',
+    };
+
+    expect(deriveSessionTitle(session, metadata, visitContext)).toBe('Louvre');
+  });
+
+  it('falls back to artwork title in museum mode when museum confidence is low', () => {
+    const session = makeSession({ museumMode: true });
+    const metadata: ChatAssistantMetadata = {
+      detectedArtwork: { title: 'Starry Night', artist: 'Van Gogh' },
+    };
+    const visitContext: VisitContext = {
+      museumName: 'MoMA',
+      museumConfidence: 0.3,
+      artworksDiscussed: [],
+      roomsVisited: [],
+      detectedExpertise: 'beginner',
+      expertiseSignals: 0,
+      lastUpdated: '',
+    };
+
+    expect(deriveSessionTitle(session, metadata, visitContext)).toBe('Starry Night — Van Gogh');
+  });
+
+  it('uses artwork title in standard mode even when museum name is confident', () => {
+    const session = makeSession({ museumMode: false });
+    const metadata: ChatAssistantMetadata = {
+      detectedArtwork: { title: 'Starry Night', artist: 'Van Gogh' },
+    };
+    const visitContext: VisitContext = {
+      museumName: 'MoMA',
+      museumConfidence: 0.8,
+      artworksDiscussed: [],
+      roomsVisited: [],
+      detectedExpertise: 'beginner',
+      expertiseSignals: 0,
+      lastUpdated: '',
+    };
+
+    expect(deriveSessionTitle(session, metadata, visitContext)).toBe('Starry Night — Van Gogh');
+  });
 });
 
 describe('buildVisitContextPromptBlock', () => {

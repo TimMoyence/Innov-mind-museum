@@ -371,8 +371,17 @@ describe('buildGuardrailRefusal', () => {
     expect(buildGuardrailRefusal(undefined, 'insult')).toContain('insulting');
   });
 
-  it('defaults to EN when locale does not start with "fr"', () => {
-    expect(buildGuardrailRefusal('de-DE', 'off_topic')).toContain('only about art');
+  it('returns German refusal for de-DE locale', () => {
+    expect(buildGuardrailRefusal('de-DE', 'off_topic')).toContain('Kunst');
+  });
+
+  it.each([
+    ['es-ES', 'insult', 'insultante'],
+    ['it-IT', 'insult', 'offensivo'],
+    ['ja-JP', 'insult', '侮辱'],
+    ['zh-CN', 'insult', '侮辱'],
+  ])('returns localized refusal for %s/%s', (locale, reason, expected) => {
+    expect(buildGuardrailRefusal(locale, reason as any)).toContain(expected);
   });
 });
 

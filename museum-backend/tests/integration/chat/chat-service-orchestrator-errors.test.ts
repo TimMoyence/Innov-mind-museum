@@ -9,11 +9,17 @@ class ThrowingOrchestrator implements ChatOrchestrator {
   async generate(): Promise<OrchestratorOutput> {
     throw new Error('LLM provider unavailable');
   }
+  async generateStream(_i: unknown, _c: (t: string) => void): Promise<OrchestratorOutput> {
+    return this.generate();
+  }
 }
 
 class EmptyResponseOrchestrator implements ChatOrchestrator {
   async generate(): Promise<OrchestratorOutput> {
     return { text: '', metadata: {} };
+  }
+  async generateStream(_i: unknown, onChunk: (t: string) => void): Promise<OrchestratorOutput> {
+    const r = await this.generate(); onChunk(r.text); return r;
   }
 }
 
@@ -21,11 +27,17 @@ class InsultResponseOrchestrator implements ChatOrchestrator {
   async generate(): Promise<OrchestratorOutput> {
     return { text: 'You are stupid and should feel bad', metadata: {} };
   }
+  async generateStream(_i: unknown, onChunk: (t: string) => void): Promise<OrchestratorOutput> {
+    const r = await this.generate(); onChunk(r.text); return r;
+  }
 }
 
 class OffTopicResponseOrchestrator implements ChatOrchestrator {
   async generate(): Promise<OrchestratorOutput> {
     return { text: 'Here is the latest bitcoin price update', metadata: {} };
+  }
+  async generateStream(_i: unknown, onChunk: (t: string) => void): Promise<OrchestratorOutput> {
+    const r = await this.generate(); onChunk(r.text); return r;
   }
 }
 
@@ -42,6 +54,9 @@ class ArtResponseOrchestrator implements ChatOrchestrator {
         },
       },
     };
+  }
+  async generateStream(_i: unknown, onChunk: (t: string) => void): Promise<OrchestratorOutput> {
+    const r = await this.generate(); onChunk(r.text); return r;
   }
 }
 

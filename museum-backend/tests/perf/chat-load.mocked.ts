@@ -27,6 +27,12 @@ class MockLatencyOrchestrator implements ChatOrchestrator {
       metadata: {},
     };
   }
+
+  async generateStream(_input: unknown, onChunk: (text: string) => void): Promise<OrchestratorOutput> {
+    const result = await this.generate();
+    onChunk(result.text);
+    return result;
+  }
 }
 
 const p95 = (values: number[]): number => {
