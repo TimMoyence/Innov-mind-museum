@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
-import { liquidColors } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 interface FollowUpButtonsProps {
   questions: string[];
@@ -12,11 +13,13 @@ interface FollowUpButtonsProps {
 
 /** Renders a vertical list of tappable follow-up question buttons suggested by the assistant. */
 export const FollowUpButtons = ({ questions, onPress, disabled = false }: FollowUpButtonsProps) => {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
   if (!questions.length) return null;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionLabel}>Quick questions</Text>
+      <Text style={styles.sectionLabel}>{t('followUpButtons.section_label')}</Text>
       {questions.map((question) => (
         <Pressable
           key={question}
@@ -24,8 +27,8 @@ export const FollowUpButtons = ({ questions, onPress, disabled = false }: Follow
           onPress={() => onPress(question)}
           disabled={disabled}
         >
-          <Ionicons name='send-outline' size={14} color={liquidColors.primary} />
-          <Text style={styles.buttonText}>{question}</Text>
+          <Ionicons name='send-outline' size={14} color={theme.primary} />
+          <Text style={[styles.buttonText, { color: theme.primary }]}>{question}</Text>
         </Pressable>
       ))}
     </View>
@@ -64,7 +67,6 @@ const styles = StyleSheet.create({
   buttonText: {
     flex: 1,
     fontSize: 13,
-    color: liquidColors.primary,
     fontWeight: '500',
   },
 });

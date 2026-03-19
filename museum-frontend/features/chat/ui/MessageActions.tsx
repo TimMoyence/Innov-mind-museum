@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ChatUiMessageMetadata } from '@/features/chat/application/useChatSession';
 import { FollowUpButtons } from '@/features/chat/ui/FollowUpButtons';
 import { RecommendationChips } from '@/features/chat/ui/RecommendationChips';
-import { liquidColors } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 interface MessageActionsProps {
   /** Metadata from the last assistant message. */
@@ -29,6 +29,7 @@ export const MessageActions = ({
   onRecommendationPress,
   isSendingDisabled,
 }: MessageActionsProps) => {
+  const { theme } = useTheme();
   const [isDeeperContextExpanded, setIsDeeperContextExpanded] = useState(false);
 
   if (!metadata) {
@@ -62,9 +63,9 @@ export const MessageActions = ({
             <Ionicons
               name={isDeeperContextExpanded ? 'chevron-up' : 'chevron-down'}
               size={16}
-              color={liquidColors.primary}
+              color={theme.primary}
             />
-            <Text style={styles.deeperContextLabel}>Learn more</Text>
+            <Text style={[styles.deeperContextLabel, { color: theme.primary }]}>Learn more</Text>
           </Pressable>
           {isDeeperContextExpanded ? (
             <Text style={styles.deeperContextText}>{metadata.deeperContext}</Text>
@@ -82,8 +83,8 @@ export const MessageActions = ({
           }}
           disabled={isSendingDisabled}
         >
-          <Ionicons name='bulb-outline' size={14} color={liquidColors.primary} />
-          <Text style={styles.openQuestionText} numberOfLines={2}>{metadata.openQuestion}</Text>
+          <Ionicons name='bulb-outline' size={14} color={theme.primary} />
+          <Text style={[styles.openQuestionText, { color: theme.primary }]} numberOfLines={2}>{metadata.openQuestion}</Text>
         </Pressable>
       ) : null}
     </View>
@@ -112,7 +113,6 @@ const styles = StyleSheet.create({
   deeperContextLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: liquidColors.primary,
   },
   deeperContextText: {
     marginTop: 8,
@@ -140,7 +140,6 @@ const styles = StyleSheet.create({
   openQuestionText: {
     flex: 1,
     fontSize: 13,
-    color: liquidColors.primary,
     fontWeight: '500',
   },
 });

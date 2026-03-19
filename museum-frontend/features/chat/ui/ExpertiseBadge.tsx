@@ -1,16 +1,11 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
-import { liquidColors } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 interface ExpertiseBadgeProps {
   level: 'beginner' | 'intermediate' | 'expert';
 }
-
-const labelByLevel: Record<string, string> = {
-  beginner: 'Beginner',
-  intermediate: 'Intermediate',
-  expert: 'Expert',
-};
 
 const colorByLevel: Record<string, string> = {
   beginner: '#059669',
@@ -20,8 +15,10 @@ const colorByLevel: Record<string, string> = {
 
 /** Displays a color-coded pill badge indicating the user's expertise level (beginner, intermediate, or expert). */
 export const ExpertiseBadge = ({ level }: ExpertiseBadgeProps) => {
-  const label = labelByLevel[level] || level;
-  const color = colorByLevel[level] || liquidColors.primary;
+  const { theme } = useTheme();
+  const { t } = useTranslation();
+  const label = t(`expertiseBadge.${level}`);
+  const color = colorByLevel[level] || theme.primary;
 
   return (
     <View style={[styles.pill, { backgroundColor: `${color}14` }]}>

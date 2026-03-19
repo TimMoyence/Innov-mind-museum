@@ -94,3 +94,48 @@ test('falls back to preview text when session title is null', () => {
   assert.equal(card.title, 'What is this sculpture?');
   assert.match(card.subtitle, /Standard mode/);
 });
+
+test('omits museumName from subtitle when it equals the title (prevents duplication)', () => {
+  const now = new Date().toISOString();
+  const card = mapSessionToDashboardCard(
+    {
+      id: 'session-200',
+      locale: 'fr-FR',
+      museumMode: true,
+      title: 'Louvre',
+      museumName: 'Louvre',
+      createdAt: now,
+      updatedAt: now,
+      messageCount: 5,
+      preview: { text: 'Tell me about the Mona Lisa', createdAt: now, role: 'user' },
+    },
+    'fr-FR',
+  );
+
+  assert.equal(card.title, 'Louvre');
+  assert.match(card.subtitle, /Guided mode/);
+  // museumName should NOT appear in subtitle since it equals the title
+  assert.doesNotMatch(card.subtitle, /Louvre/);
+  assert.match(card.subtitle, /fr-FR/);
+});
+
+test('shows museumName in subtitle when it differs from title', () => {
+  const now = new Date().toISOString();
+  const card = mapSessionToDashboardCard(
+    {
+      id: 'session-201',
+      locale: 'en-US',
+      museumMode: true,
+      title: 'Mona Lisa — Leonardo da Vinci',
+      museumName: 'Louvre',
+      createdAt: now,
+      updatedAt: now,
+      messageCount: 3,
+      preview: { text: 'Tell me about this painting', createdAt: now, role: 'user' },
+    },
+    'en-US',
+  );
+
+  assert.equal(card.title, 'Mona Lisa — Leonardo da Vinci');
+  assert.match(card.subtitle, /Louvre/);
+});

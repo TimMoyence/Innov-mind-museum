@@ -1,7 +1,8 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
-import { liquidColors } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 interface RecommendationChipsProps {
   recommendations: string[];
@@ -12,11 +13,13 @@ interface RecommendationChipsProps {
 
 /** Renders a horizontal scrollable row of recommendation chips that the user can tap to populate the input. */
 export const RecommendationChips = ({ recommendations, onPress, disabled = false }: RecommendationChipsProps) => {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
   if (!recommendations.length) return null;
 
   return (
     <View>
-      <Text style={styles.sectionLabel}>Ideas to explore</Text>
+      <Text style={styles.sectionLabel}>{t('recommendationChips.section_label')}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -29,8 +32,8 @@ export const RecommendationChips = ({ recommendations, onPress, disabled = false
             onPress={() => onPress(recommendation)}
             disabled={disabled}
           >
-            <Ionicons name='create-outline' size={14} color={liquidColors.primary} />
-            <Text style={styles.chipText} numberOfLines={1}>{recommendation}</Text>
+            <Ionicons name='create-outline' size={14} color={theme.primary} />
+            <Text style={[styles.chipText, { color: theme.primary }]} numberOfLines={1}>{recommendation}</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -68,7 +71,6 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 13,
-    color: liquidColors.primary,
     fontWeight: '500',
   },
 });

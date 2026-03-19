@@ -1,7 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
-import { liquidColors } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 interface ArtworkCardProps {
   title: string;
@@ -11,22 +12,25 @@ interface ArtworkCardProps {
   confidence?: number;
 }
 
-const confidenceLabel = (value?: number): string | null => {
+const confidenceKey = (value?: number): 'high' | 'medium' | 'low' | null => {
   if (value === undefined || value === null) return null;
-  if (value >= 0.8) return 'High';
-  if (value >= 0.5) return 'Medium';
-  return 'Low';
+  if (value >= 0.8) return 'high';
+  if (value >= 0.5) return 'medium';
+  return 'low';
 };
 
 /** Displays a card with detected artwork metadata including title, artist, museum location, and recognition confidence level. */
 export const ArtworkCard = ({ title, artist, museum, room, confidence }: ArtworkCardProps) => {
-  const badge = confidenceLabel(confidence);
+  const { theme } = useTheme();
+  const { t } = useTranslation();
+  const badgeKey = confidenceKey(confidence);
+  const badge = badgeKey ? String(t(`artworkCard.confidence.${badgeKey}`)) : null;
 
   return (
     <GlassCard style={styles.card} intensity={44}>
       <View style={styles.row}>
         <View style={styles.content}>
-          <Text style={styles.title} numberOfLines={2}>{title}</Text>
+          <Text style={[styles.title, { color: theme.textPrimary }]} numberOfLines={2}>{title}</Text>
           {artist ? <Text style={styles.detail} numberOfLines={1}>{artist}</Text> : null}
           {museum || room ? (
             <Text style={styles.location} numberOfLines={1}>
@@ -36,7 +40,7 @@ export const ArtworkCard = ({ title, artist, museum, room, confidence }: Artwork
         </View>
         {badge ? (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{badge}</Text>
+            <Text style={[styles.badgeText, { color: theme.primary }]}>{badge}</Text>
           </View>
         ) : null}
       </View>
@@ -63,7 +67,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '700',
-    color: liquidColors.textPrimary,
   },
   detail: {
     marginTop: 2,
@@ -84,6 +87,5 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: liquidColors.primary,
   },
 });

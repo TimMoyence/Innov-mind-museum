@@ -3,6 +3,9 @@ import { openApiRequest } from '@/shared/api/openapiClient';
 import { getErrorMessage } from '@/shared/lib/errors';
 import type { components } from '@/shared/api/generated/openapi';
 import { GuideLevel } from '@/features/settings/runtimeSettings';
+import { getAccessToken } from '@/services/tokenStore';
+import { getApiBaseUrl, getLocale } from '@/shared/infrastructure/httpClient';
+import { parseSseChunk, SseStreamEvent } from './sseParser';
 import {
   CreateSessionRequestDTO,
   CreateSessionResponseDTO,
@@ -299,6 +302,27 @@ export const chatApi = {
   },
 
   /**
+   * Synthesizes speech from an assistant message and returns the audio buffer.
+   * @param messageId - ID of the assistant message to synthesize.
+   * @returns ArrayBuffer of audio/mpeg data, or null if the message has no text (204).
+   */
+  async synthesizeSpeech(messageId: string): Promise<ArrayBuffer | null> {
+    try {
+      const response = await httpRequest<ArrayBuffer>(
+        `${CHAT_BASE}/messages/${messageId}/tts`,
+        { method: 'POST', responseType: 'arraybuffer' },
+      );
+      // 204 No Content: Axios returns empty/zero-length data
+      if (!response || (response instanceof ArrayBuffer && response.byteLength === 0)) {
+        return null;
+      }
+      return response;
+    } catch (error: unknown) {
+      throw new Error(getErrorMessage(error));
+    }
+  },
+
+  /**
    * Creates a session, re-throwing any error as a plain `Error` with a user-facing message.
    * @param payload - Session creation parameters.
    * @returns The created session response.
@@ -310,5 +334,189 @@ export const chatApi = {
     } catch (error) {
       throw new Error(getErrorMessage(error));
     }
+  },
+
+  /**
+   * Posts a text message via SSE streaming. Tokens arrive progressively via onToken.
+   * Uses raw fetch() to access the text/event-stream response body.
+   * @param params - Session ID, text, context, and stream event callbacks.
+   */
+  async postMessageStream(params: {
+    sessionId: string;
+    text?: string;
+    museumMode?: boolean;
+    guideLevel?: GuideLevel;
+    locale?: string;
+    onToken: (text: string) => void;
+    onDone: (payload: { messageId: string; createdAt: string; metadata: Record<string, unknown> }) => void;
+    onError: (code: string, message: string) => void;
+    onGuardrail?: (text: string, reason: string) => void;
+    signal?: AbortSignal;
+  }): Promise<void> {
+    const baseUrl = getApiBaseUrl();
+    const token = getAccessToken();
+    const url = `${baseUrl}${CHAT_BASE}/sessions/${params.sessionId}/messages/stream`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+        'Accept-Language': getLocale(),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        text: params.text?.trim() || undefined,
+        context: {
+          museumMode: params.museumMode,
+          guideLevel: params.guideLevel,
+          locale: params.locale,
+        },
+      }),
+      signal: params.signal,
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('STREAMING_NOT_AVAILABLE');
+      }
+      if (response.status === 401) {
+        // Throw so sendMessageSmart falls back to Axios path (which has refresh interceptor)
+        throw new Error('STREAMING_UNAUTHORIZED');
+      }
+      params.onError('HTTP_ERROR', `HTTP ${response.status}`);
+      return;
+    }
+
+    const processEvent = (event: SseStreamEvent) => {
+      switch (event.type) {
+        case 'token':
+          params.onToken(event.text);
+          break;
+        case 'done':
+          params.onDone({ messageId: event.messageId, createdAt: event.createdAt, metadata: event.metadata });
+          break;
+        case 'error':
+          params.onError(event.code, event.message);
+          break;
+        case 'guardrail':
+          params.onGuardrail?.(event.text, event.reason);
+          break;
+      }
+    };
+
+    // Primary: ReadableStream with progressive parsing
+    if (response.body && typeof response.body.getReader === 'function') {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const { events, remainder } = parseSseChunk(buffer);
+          buffer = remainder;
+          for (const event of events) {
+            processEvent(event);
+          }
+        }
+        // Process any remaining buffer
+        if (buffer.trim()) {
+          const { events } = parseSseChunk(buffer + '\n\n');
+          for (const event of events) {
+            processEvent(event);
+          }
+        }
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+          params.onError('STREAM_ERROR', (error as Error).message);
+        }
+      }
+    } else {
+      // Fallback: read full response text and parse all events at once
+      const text = await response.text();
+      const { events } = parseSseChunk(text + '\n\n');
+      for (const event of events) {
+        processEvent(event);
+      }
+    }
+  },
+
+  /**
+   * Smart message sender: tries streaming first, falls back to non-streaming on 404.
+   * @returns The full PostMessageResponseDTO (from either path).
+   */
+  async sendMessageSmart(params: {
+    sessionId: string;
+    text?: string;
+    imageUri?: string;
+    museumMode?: boolean;
+    location?: string;
+    guideLevel?: GuideLevel;
+    locale?: string;
+    onToken?: (text: string) => void;
+    onDone?: (payload: { messageId: string; createdAt: string; metadata: Record<string, unknown> }) => void;
+    onGuardrail?: (text: string, reason: string) => void;
+    signal?: AbortSignal;
+  }): Promise<PostMessageResponseDTO | null> {
+    // Image messages always use non-streaming path
+    if (params.imageUri) {
+      return this.postMessage(params);
+    }
+
+    // Try streaming
+    if (params.onToken) {
+      try {
+        let result: PostMessageResponseDTO | null = null;
+        let streamError: { code: string; message: string } | null = null;
+
+        await this.postMessageStream({
+          sessionId: params.sessionId,
+          text: params.text,
+          museumMode: params.museumMode,
+          guideLevel: params.guideLevel,
+          locale: params.locale,
+          onToken: params.onToken,
+          onDone: (payload) => {
+            result = {
+              sessionId: params.sessionId,
+              message: {
+                id: payload.messageId,
+                role: 'assistant',
+                text: '', // Text was streamed via onToken
+                createdAt: payload.createdAt,
+              },
+              metadata: payload.metadata,
+            } as PostMessageResponseDTO;
+            params.onDone?.(payload);
+          },
+          onError: (code, message) => {
+            streamError = { code, message };
+          },
+          onGuardrail: params.onGuardrail,
+          signal: params.signal,
+        });
+
+        const err = streamError as { code: string; message: string } | null;
+        if (err) {
+          throw new Error(`${err.code}: ${err.message}`);
+        }
+
+        return result;
+      } catch (error) {
+        const msg = (error as Error).message;
+        // 404 or 401 — fallback to Axios path (which has refresh interceptor)
+        if (msg === 'STREAMING_NOT_AVAILABLE' || msg === 'STREAMING_UNAUTHORIZED') {
+          return this.postMessage(params);
+        }
+        throw error;
+      }
+    }
+
+    // No onToken callback — use non-streaming
+    return this.postMessage(params);
   },
 };

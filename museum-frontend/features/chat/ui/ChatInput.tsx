@@ -1,8 +1,10 @@
 import { ActivityIndicator, Pressable, StyleSheet, TextInput } from 'react-native';
 import { Text } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
-import { liquidColors } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 interface ChatInputProps {
   /** Current text value. */
@@ -25,19 +27,40 @@ export const ChatInput = ({
   isSending,
   disabled = false,
 }: ChatInputProps) => {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
+
   return (
     <GlassCard style={styles.inputRow} intensity={56}>
       <TextInput
-        style={styles.input}
+        style={[
+          styles.input,
+          {
+            borderColor: theme.inputBorder,
+            backgroundColor: theme.inputBackground,
+            color: theme.textPrimary,
+          },
+        ]}
         value={value}
         onChangeText={onChangeText}
-        placeholder='Ask about an artwork, monument, or send voice/photo...'
-        placeholderTextColor='#64748B'
+        placeholder={t('chatInput.placeholder')}
+        placeholderTextColor={theme.textSecondary}
         multiline
         editable={!disabled}
       />
-      <Pressable style={styles.sendButton} onPress={onSend} disabled={isSending || disabled}>
-        {isSending ? <ActivityIndicator color='#FFFFFF' /> : <Text style={styles.sendText}>Send</Text>}
+      <Pressable
+        style={[styles.sendButton, { backgroundColor: theme.primary }]}
+        onPress={() => {
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onSend();
+        }}
+        disabled={isSending || disabled}
+      >
+        {isSending ? (
+          <ActivityIndicator color='#FFFFFF' />
+        ) : (
+          <Text style={styles.sendText}>{t('chatInput.send')}</Text>
+        )}
       </Pressable>
     </GlassCard>
   );
@@ -57,15 +80,11 @@ const styles = StyleSheet.create({
     maxHeight: 120,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.45)',
-    backgroundColor: 'rgba(255,255,255,0.7)',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: liquidColors.textPrimary,
   },
   sendButton: {
     borderRadius: 12,
-    backgroundColor: liquidColors.primary,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
