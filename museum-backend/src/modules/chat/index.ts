@@ -8,6 +8,12 @@ import { S3CompatibleImageStorage } from './adapters/secondary/image-storage.s3'
 import { OpenAiAudioTranscriber } from './adapters/secondary/audio-transcriber.openai';
 import { TypeOrmChatRepository } from './infrastructure/chat.repository.typeorm';
 
+/** Lazily-initialized image storage singleton, shared with the auth module for GDPR cleanup. */
+let sharedImageStorage: LocalImageStorage | S3CompatibleImageStorage | undefined;
+
+/** Returns the shared image storage instance (available after buildChatService has been called). */
+export const getImageStorage = (): LocalImageStorage | S3CompatibleImageStorage | undefined => sharedImageStorage;
+
 /**
  * Wires the chat module dependency graph and returns a fully configured ChatService.
  * @param dataSource - Initialized TypeORM DataSource for repository creation.
@@ -44,6 +50,8 @@ export const buildChatService = (dataSource: DataSource): ChatService => {
   } else {
     imageStorage = new LocalImageStorage(env.storage.localUploadsDir);
   }
+
+  sharedImageStorage = imageStorage;
 
   return new ChatService(
     new TypeOrmChatRepository(dataSource),

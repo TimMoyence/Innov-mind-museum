@@ -4,15 +4,7 @@ import type {
   VisitedArtwork,
 } from '../domain/chat.types';
 import type { ChatSession } from '../domain/chatSession.entity';
-
-const sanitizePromptInput = (value: string): string => {
-  return value
-    .normalize('NFC')
-    .replace(/[\u200B-\u200D\uFEFF\u2060\u00AD]/g, '')
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-    .trim()
-    .slice(0, 200);
-};
+import { sanitizePromptInput } from '@shared/validation/input';
 
 const emptyContext = (): VisitContext => ({
   museumConfidence: 0,
@@ -136,7 +128,7 @@ export const buildVisitContextPromptBlock = (ctx: VisitContext | null | undefine
 
   if (ctx.roomsVisited.length) {
     lines.push(
-      `Rooms visited: ${ctx.roomsVisited.slice(-5).map(sanitizePromptInput).join(', ')}`,
+      `Rooms visited: ${ctx.roomsVisited.slice(-5).map((r) => sanitizePromptInput(r)).join(', ')}`,
     );
   }
 

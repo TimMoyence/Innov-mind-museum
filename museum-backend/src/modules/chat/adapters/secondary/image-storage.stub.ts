@@ -20,6 +20,12 @@ export interface ImageStorage {
    * @returns A storage reference URI.
    */
   save(input: SaveImageInput): Promise<string>;
+
+  /**
+   * Deletes all images matching the given key prefix (GDPR right-to-erasure).
+   * @param prefix - Object key prefix to match for deletion.
+   */
+  deleteByPrefix(prefix: string): Promise<void>;
 }
 
 const extensionByMime: Record<string, string> = {
@@ -49,7 +55,7 @@ export const resolveLocalImageFilePath = (
   return path.join(uploadsDir, match[1]);
 };
 
-/** Local-filesystem implementation of {@link ImageStorage} — writes files to disk under `tmp/uploads`. */
+/** Local-filesystem implementation of {@link ImageStorage} -- writes files to disk under `tmp/uploads`. */
 export class LocalImageStorage implements ImageStorage {
   constructor(private readonly uploadsDir = DEFAULT_LOCAL_UPLOADS_DIR) {}
 
@@ -67,5 +73,13 @@ export class LocalImageStorage implements ImageStorage {
     await writeFile(filePath, Buffer.from(base64, 'base64'));
 
     return `local://${fileName}`;
+  }
+
+  /**
+   * No-op for local storage — local refs are `local://uuid.ext` (flat, no user prefix
+   * in filename). Dev-only storage; cleanup is handled by DB cascade on chat sessions.
+   */
+  async deleteByPrefix(_prefix: string): Promise<void> {
+    // Intentional no-op — see JSDoc above.
   }
 }

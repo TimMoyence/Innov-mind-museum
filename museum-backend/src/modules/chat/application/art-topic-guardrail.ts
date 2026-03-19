@@ -326,34 +326,35 @@ export const evaluateAssistantOutputGuardrail = ({
   history,
 }: EvaluateAssistantOutputParams): GuardrailDecision => {
   const normalizedText = normalize(text || '');
+  // 1. Empty -> block
   if (!normalizedText) {
     return { allow: false, reason: 'unsafe_output' };
   }
-
+  // 2. Insult -> block
   if (hasInsultSignal(normalizedText)) {
     return { allow: false, reason: 'unsafe_output' };
   }
-
+  // 3. Injection -> block
   if (hasPromptInjectionSignal(normalizedText)) {
     return { allow: false, reason: 'unsafe_output' };
   }
-
-  if (hasExternalActionSignal(normalizedText)) {
-    return { allow: false, reason: 'unsafe_output' };
-  }
-
+  // 4. Art signal -> ALLOW (moved before external action check)
   if (hasArtSignal(normalizedText)) {
     return { allow: true };
   }
-
+  // 5. External action -> block
+  if (hasExternalActionSignal(normalizedText)) {
+    return { allow: false, reason: 'unsafe_output' };
+  }
+  // 6. Off-topic -> block
   if (hasOffTopicSignal(normalizedText)) {
     return { allow: false, reason: 'off_topic' };
   }
-
+  // 7. Art context in history -> allow
   if (hasArtContext(history)) {
     return { allow: true };
   }
-
+  // 8. Default -> block
   return { allow: false, reason: 'off_topic' };
 };
 
