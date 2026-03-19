@@ -146,9 +146,9 @@ describeE2E('api e2e (express + postgres container)', () => {
     await appDataSource.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
     await appDataSource.runMigrations();
 
-    const chatService = new ChatService(
-      new TypeOrmChatRepository(appDataSource),
-      {
+    const chatService = new ChatService({
+      repository: new TypeOrmChatRepository(appDataSource),
+      orchestrator: {
         async generate() {
           return {
             text: 'Synthetic assistant response for e2e',
@@ -157,9 +157,14 @@ describeE2E('api e2e (express + postgres container)', () => {
             },
           };
         },
+        async generateStream(_input: unknown, onChunk: (t: string) => void) {
+          const result = { text: 'Synthetic assistant response for e2e', metadata: { citations: ['e2e'] } };
+          onChunk(result.text);
+          return result;
+        },
       },
-      new LocalImageStorage(),
-      {
+      imageStorage: new LocalImageStorage(),
+      audioTranscriber: {
         async transcribe() {
           return {
             text: 'Transcribed voice question for e2e',
@@ -168,7 +173,7 @@ describeE2E('api e2e (express + postgres container)', () => {
           };
         },
       },
-    );
+    });
 
     const app = createApp({ chatService });
     await new Promise<void>((resolve) => {
@@ -237,8 +242,10 @@ describeE2E('api e2e (express + postgres container)', () => {
     expect(register.status).toBe(201);
     expect(register.body).toEqual(
       expect.objectContaining({
-        email,
-        password: 'hidden',
+        user: expect.objectContaining({
+          id: expect.any(Number),
+          email,
+        }),
       }),
     );
 

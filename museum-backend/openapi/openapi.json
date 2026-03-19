@@ -16,6 +16,12 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT"
+      },
+      "apiKeyAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API Key (msk_...)",
+        "description": "B2B API key authentication. Pass the full API key as a Bearer token."
       }
     },
     "schemas": {
@@ -256,6 +262,45 @@
           "url": { "type": "string", "format": "uri" },
           "expiresAt": { "type": "string", "format": "date-time" }
         }
+      },
+      "ApiKeyResponse": {
+        "type": "object",
+        "required": ["apiKey", "plaintext"],
+        "properties": {
+          "apiKey": {
+            "type": "object",
+            "required": ["id", "prefix", "name", "createdAt"],
+            "properties": {
+              "id": { "type": "integer" },
+              "prefix": { "type": "string" },
+              "name": { "type": "string" },
+              "createdAt": { "type": "string", "format": "date-time" }
+            }
+          },
+          "plaintext": { "type": "string", "description": "The full API key — shown only once, never stored." }
+        }
+      },
+      "ApiKeyListResponse": {
+        "type": "object",
+        "required": ["apiKeys"],
+        "properties": {
+          "apiKeys": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "prefix", "name", "createdAt", "lastUsedAt", "expiresAt", "isActive"],
+              "properties": {
+                "id": { "type": "integer" },
+                "prefix": { "type": "string" },
+                "name": { "type": "string" },
+                "createdAt": { "type": "string", "format": "date-time" },
+                "lastUsedAt": { "type": ["string", "null"], "format": "date-time" },
+                "expiresAt": { "type": ["string", "null"], "format": "date-time" },
+                "isActive": { "type": "boolean" }
+              }
+            }
+          }
+        }
       }
     },
     "responses": {
@@ -301,6 +346,14 @@
       },
       "InternalError": {
         "description": "Internal server error",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ApiError" }
+          }
+        }
+      },
+      "FeatureUnavailable": {
+        "description": "Feature not available",
         "content": {
           "application/json": {
             "schema": { "$ref": "#/components/schemas/ApiError" }
@@ -356,7 +409,27 @@
           }
         },
         "responses": {
-          "201": { "description": "Registered" },
+          "201": {
+            "description": "Registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["user"],
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "required": ["id", "email"],
+                      "properties": {
+                        "id": { "type": "integer" },
+                        "email": { "type": "string", "format": "email" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
           "400": { "$ref": "#/components/responses/BadRequest" }
         }
       }
@@ -539,6 +612,271 @@
         }
       }
     },
+    "/api/auth/forgot-password": {
+      "post": {
+        "tags": ["Auth"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reset email sent (always succeeds to prevent enumeration)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["message"],
+                  "properties": {
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/reset-password": {
+      "post": {
+        "tags": ["Auth"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["token", "newPassword"],
+                "properties": {
+                  "token": { "type": "string" },
+                  "newPassword": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["message"],
+                  "properties": {
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/auth/change-password": {
+      "put": {
+        "tags": ["Auth"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["currentPassword", "newPassword"],
+                "properties": {
+                  "currentPassword": { "type": "string" },
+                  "newPassword": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["message"],
+                  "properties": {
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/auth/verify-email": {
+      "post": {
+        "tags": ["Auth"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["token"],
+                "properties": {
+                  "token": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["verified"],
+                  "properties": {
+                    "verified": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/auth/export-data": {
+      "get": {
+        "tags": ["Auth"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "GDPR data export",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["exportedAt", "user", "chatData"],
+                  "properties": {
+                    "exportedAt": { "type": "string", "format": "date-time" },
+                    "user": {
+                      "type": "object",
+                      "required": ["id", "email", "createdAt", "updatedAt"],
+                      "properties": {
+                        "id": { "type": "integer" },
+                        "email": { "type": "string", "format": "email" },
+                        "firstname": { "type": ["string", "null"] },
+                        "lastname": { "type": ["string", "null"] },
+                        "createdAt": { "type": "string", "format": "date-time" },
+                        "updatedAt": { "type": "string", "format": "date-time" }
+                      }
+                    },
+                    "chatData": { "type": "object", "additionalProperties": true }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/auth/api-keys": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Generate a new API key",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string", "maxLength": 100 },
+                  "expiresAt": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "API key created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiKeyResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "get": {
+        "tags": ["Auth"],
+        "summary": "List API keys for the current user",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "API keys listed",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiKeyListResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/auth/api-keys/{id}": {
+      "delete": {
+        "tags": ["Auth"],
+        "summary": "Revoke an API key",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "API key revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["revoked"],
+                  "properties": {
+                    "revoked": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/api/chat/sessions": {
       "post": {
         "tags": ["Chat"],
@@ -639,6 +977,52 @@
         }
       }
     },
+    "/api/chat/sessions/{id}/messages/stream": {
+      "post": {
+        "tags": ["Chat"],
+        "summary": "Post a text message and receive the assistant response as an SSE stream",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "id", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": { "type": "string" },
+                  "context": {
+                    "type": "object",
+                    "properties": {
+                      "location": { "type": "string" },
+                      "museumMode": { "type": "boolean" },
+                      "guideLevel": { "type": "string", "enum": ["beginner", "intermediate", "expert"] },
+                      "locale": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SSE stream of token, guardrail, done, and error events",
+            "content": {
+              "text/event-stream": {
+                "schema": { "type": "string" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
     "/api/chat/sessions/{id}/audio": {
       "post": {
         "tags": ["Chat"],
@@ -719,6 +1103,31 @@
           "400": { "$ref": "#/components/responses/BadRequest" },
           "401": { "$ref": "#/components/responses/Unauthorized" },
           "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/chat/messages/{messageId}/tts": {
+      "post": {
+        "tags": ["Chat"],
+        "summary": "Synthesize assistant message to speech",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "messageId", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audio file (MP3)",
+            "content": {
+              "audio/mpeg": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          },
+          "204": { "description": "No text to synthesize" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "501": { "$ref": "#/components/responses/FeatureUnavailable" }
         }
       }
     },
