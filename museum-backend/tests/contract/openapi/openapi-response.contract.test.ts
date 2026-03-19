@@ -46,7 +46,7 @@ describe('openapi response contracts (active API)', () => {
       path: '/api/auth/register',
       method: 'post',
       statusCode: 201,
-      payload: undefined,
+      payload: { user: { id: 42, email: 'new@test.com' } },
     });
     assertMatchesOpenApiResponse({
       path: '/api/auth/login',
@@ -83,6 +83,87 @@ describe('openapi response contracts (active API)', () => {
       method: 'delete',
       statusCode: 200,
       payload: { deleted: true },
+    });
+
+    assertMatchesOpenApiResponse({
+      path: '/api/auth/forgot-password',
+      method: 'post',
+      statusCode: 200,
+      payload: { message: 'Si cet email existe, un lien de réinitialisation a été envoyé.' },
+    });
+    assertMatchesOpenApiResponse({
+      path: '/api/auth/reset-password',
+      method: 'post',
+      statusCode: 200,
+      payload: { message: 'Password updated successfully.' },
+    });
+    assertMatchesOpenApiResponse({
+      path: '/api/auth/change-password',
+      method: 'put',
+      statusCode: 200,
+      payload: { message: 'Password changed successfully.' },
+    });
+    assertMatchesOpenApiResponse({
+      path: '/api/auth/verify-email',
+      method: 'post',
+      statusCode: 200,
+      payload: { verified: true },
+    });
+    assertMatchesOpenApiResponse({
+      path: '/api/auth/export-data',
+      method: 'get',
+      statusCode: 200,
+      payload: {
+        exportedAt: new Date().toISOString(),
+        user: {
+          id: 42,
+          email: 'user@example.com',
+          firstname: 'Ada',
+          lastname: 'Lovelace',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        chatData: {},
+      },
+    });
+
+    assertMatchesOpenApiResponse({
+      path: '/api/auth/api-keys',
+      method: 'post',
+      statusCode: 201,
+      payload: {
+        apiKey: {
+          id: 1,
+          prefix: 'msk_abcd1234...',
+          name: 'Test Key',
+          createdAt: new Date().toISOString(),
+        },
+        plaintext: 'msk_abcd1234xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+      },
+    });
+    assertMatchesOpenApiResponse({
+      path: '/api/auth/api-keys',
+      method: 'get',
+      statusCode: 200,
+      payload: {
+        apiKeys: [
+          {
+            id: 1,
+            prefix: 'msk_abcd1234...',
+            name: 'My Key',
+            createdAt: new Date().toISOString(),
+            lastUsedAt: null,
+            expiresAt: null,
+            isActive: true,
+          },
+        ],
+      },
+    });
+    assertMatchesOpenApiResponse({
+      path: '/api/auth/api-keys/{id}',
+      method: 'delete',
+      statusCode: 200,
+      payload: { revoked: true },
     });
 
     const chatService = buildChatTestService();
@@ -165,7 +246,7 @@ describe('openapi response contracts (active API)', () => {
 
     const errorEndpoints: Array<{
       path: string;
-      method: 'get' | 'post' | 'delete';
+      method: 'get' | 'post' | 'put' | 'delete';
       statusCode: number;
     }> = [
       { path: '/api/auth/register', method: 'post', statusCode: 400 },
@@ -178,6 +259,17 @@ describe('openapi response contracts (active API)', () => {
       { path: '/api/auth/social-login', method: 'post', statusCode: 401 },
       { path: '/api/auth/account', method: 'delete', statusCode: 401 },
       { path: '/api/auth/account', method: 'delete', statusCode: 404 },
+      { path: '/api/auth/reset-password', method: 'post', statusCode: 400 },
+      { path: '/api/auth/change-password', method: 'put', statusCode: 400 },
+      { path: '/api/auth/change-password', method: 'put', statusCode: 401 },
+      { path: '/api/auth/verify-email', method: 'post', statusCode: 400 },
+      { path: '/api/auth/export-data', method: 'get', statusCode: 401 },
+      { path: '/api/auth/export-data', method: 'get', statusCode: 404 },
+      { path: '/api/auth/api-keys', method: 'post', statusCode: 400 },
+      { path: '/api/auth/api-keys', method: 'post', statusCode: 401 },
+      { path: '/api/auth/api-keys', method: 'get', statusCode: 401 },
+      { path: '/api/auth/api-keys/{id}', method: 'delete', statusCode: 401 },
+      { path: '/api/auth/api-keys/{id}', method: 'delete', statusCode: 404 },
       { path: '/api/chat/sessions', method: 'post', statusCode: 400 },
       { path: '/api/chat/sessions', method: 'post', statusCode: 401 },
       { path: '/api/chat/sessions', method: 'get', statusCode: 400 },
@@ -204,6 +296,10 @@ describe('openapi response contracts (active API)', () => {
       { path: '/api/chat/messages/{messageId}/image-url', method: 'post', statusCode: 400 },
       { path: '/api/chat/messages/{messageId}/image-url', method: 'post', statusCode: 401 },
       { path: '/api/chat/messages/{messageId}/image-url', method: 'post', statusCode: 404 },
+      { path: '/api/chat/messages/{messageId}/tts', method: 'post', statusCode: 400 },
+      { path: '/api/chat/messages/{messageId}/tts', method: 'post', statusCode: 401 },
+      { path: '/api/chat/messages/{messageId}/tts', method: 'post', statusCode: 404 },
+      { path: '/api/chat/messages/{messageId}/tts', method: 'post', statusCode: 501 },
       { path: '/api/chat/messages/{messageId}/image', method: 'get', statusCode: 400 },
       { path: '/api/chat/messages/{messageId}/image', method: 'get', statusCode: 404 },
     ];
