@@ -2,18 +2,33 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
+
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 /** Renders the bottom tab navigator with Dashboard and Home tabs using a frosted-glass tab bar. */
 export default function TabLayout() {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#0F172A',
-        tabBarInactiveTintColor: 'rgba(15, 23, 42, 0.56)',
+        tabBarActiveTintColor: theme.textPrimary,
+        tabBarInactiveTintColor: theme.textSecondary,
         tabBarLabelStyle: styles.tabLabel,
-        tabBarStyle: styles.tabBar,
-        tabBarBackground: () => <BlurView tint='light' intensity={72} style={StyleSheet.absoluteFill} />,
+        tabBarStyle: [
+          styles.tabBar,
+          { borderTopColor: theme.glassBorder },
+        ],
+        tabBarBackground: () => (
+          <BlurView
+            tint={theme.blurTint}
+            intensity={72}
+            style={StyleSheet.absoluteFill}
+          />
+        ),
       }}
     >
       <Tabs.Screen
@@ -25,7 +40,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="conversations"
         options={{
-          title: 'Dashboard',
+          title: t('tabs.dashboard'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="grid-outline" size={size} color={color} />
           ),
@@ -34,7 +49,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          title: 'Home',
+          title: t('tabs.home'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
@@ -48,7 +63,6 @@ const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.58)',
     backgroundColor: 'transparent',
     height: 84,
     paddingBottom: 14,

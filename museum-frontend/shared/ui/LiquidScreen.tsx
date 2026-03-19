@@ -10,11 +10,8 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import {
-  liquidColors,
-  type ResponsiveBackground,
-  viewportConfig,
-} from './liquidTheme';
+import { type ResponsiveBackground, viewportConfig } from './liquidTheme';
+import { useTheme } from './ThemeContext';
 
 interface LiquidScreenProps {
   children: ReactNode;
@@ -40,6 +37,7 @@ export const LiquidScreen = ({
   background,
   contentStyle,
 }: LiquidScreenProps) => {
+  const { theme } = useTheme();
   const { width, height } = useWindowDimensions();
   const isDesktop = width >= viewportConfig.desktopBreakpoint;
   const imageSource = isResponsiveBackground(background)
@@ -56,9 +54,14 @@ export const LiquidScreen = ({
     : viewportConfig.mobileResizeMode;
 
   return (
-    <View style={[styles.container, { minHeight: height, height }]}>
+    <View
+      style={[
+        styles.container,
+        { minHeight: height, height, backgroundColor: theme.pageGradient[0] },
+      ]}
+    >
       <LinearGradient
-        colors={liquidColors.pageGradient}
+        colors={theme.pageGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
@@ -69,17 +72,11 @@ export const LiquidScreen = ({
         style={[styles.backgroundImage, { opacity: backgroundOpacity }]}
       />
       <LinearGradient
-        colors={[
-          'rgba(255,255,255,0.70)',
-          'rgba(224,238,255,0.56)',
-          'rgba(216,242,255,0.58)',
-        ]}
+        colors={[theme.overlay, theme.surface, theme.surface]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-      {/* <View style={styles.glowA} />
-      <View style={styles.glowB} /> */}
       <View
         style={[
           styles.content,
@@ -97,7 +94,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: '100%',
-    backgroundColor: '#EAF2FF',
     overflow: 'hidden',
   },
   content: {
@@ -111,22 +107,4 @@ const styles = StyleSheet.create({
   backgroundImage: {
     ...StyleSheet.absoluteFillObject,
   },
-  // glowA: {
-  //   position: 'absolute',
-  //   top: -70,
-  //   right: -46,
-  //   width: 210,
-  //   height: 210,
-  //   borderRadius: 999,
-  //   backgroundColor: 'rgba(147,197,253,0.24)',
-  // },
-  // glowB: {
-  //   position: 'absolute',
-  //   bottom: -90,
-  //   left: -65,
-  //   width: 230,
-  //   height: 230,
-  //   borderRadius: 999,
-  //   backgroundColor: 'rgba(125,211,252,0.18)',
-  // },
 });

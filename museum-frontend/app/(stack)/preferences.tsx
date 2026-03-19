@@ -6,28 +6,32 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import {
   GuideLevel,
   loadRuntimeSettings,
-  saveDefaultLocale,
   saveDefaultMuseumMode,
   saveGuideLevel,
 } from '@/features/settings/runtimeSettings';
 import { getErrorMessage } from '@/shared/lib/errors';
+import { LANGUAGE_OPTIONS } from '@/shared/config/supportedLocales';
+import { useI18n } from '@/shared/i18n/I18nContext';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
-import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 const GUIDE_LEVELS: GuideLevel[] = ['beginner', 'intermediate', 'expert'];
 
 export default function PreferencesScreen() {
-  const [locale, setLocale] = useState('en-US');
+  const { t } = useTranslation();
+  const { theme } = useTheme();
+  const { language, setLanguage } = useI18n();
   const [museumMode, setMuseumMode] = useState(true);
   const [guideLevel, setGuideLevel] = useState<GuideLevel>('beginner');
   const [isLoading, setIsLoading] = useState(true);
@@ -37,17 +41,16 @@ export default function PreferencesScreen() {
   useEffect(() => {
     loadRuntimeSettings()
       .then((settings) => {
-        setLocale(settings.defaultLocale);
         setMuseumMode(settings.defaultMuseumMode);
         setGuideLevel(settings.guideLevel);
       })
       .catch((error) => {
-        setStatus(`Load failed: ${getErrorMessage(error)}`);
+        setStatus(t('preferences.load_failed', { error: getErrorMessage(error) }));
       })
       .finally(() => {
         setIsLoading(false);
       });
-  }, []);
+  }, [t]);
 
   const onSave = async () => {
     if (isSaving) {
@@ -59,13 +62,12 @@ export default function PreferencesScreen() {
 
     try {
       await Promise.all([
-        saveDefaultLocale(locale),
         saveDefaultMuseumMode(museumMode),
         saveGuideLevel(guideLevel),
       ]);
-      setStatus('Preferences saved');
+      setStatus(t('preferences.saved'));
     } catch (error) {
-      setStatus(`Save failed: ${getErrorMessage(error)}`);
+      setStatus(t('preferences.save_failed', { error: getErrorMessage(error) }));
     } finally {
       setIsSaving(false);
     }
@@ -79,19 +81,19 @@ export default function PreferencesScreen() {
             {
               id: 'guided',
               icon: 'walk-outline',
-              label: 'Guided Mode',
+              label: t('preferences.menu.guided'),
               onPress: () => router.push('/(stack)/guided-museum-mode'),
             },
             {
               id: 'privacy',
               icon: 'shield-checkmark-outline',
-              label: 'Privacy',
+              label: t('preferences.menu.privacy'),
               onPress: () => router.push('/(stack)/privacy'),
             },
             {
               id: 'back',
               icon: 'arrow-back-outline',
-              label: 'Settings',
+              label: t('preferences.menu.settings'),
               onPress: () => router.push('/(stack)/settings'),
             },
           ]}
@@ -100,44 +102,58 @@ export default function PreferencesScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <GlassCard style={styles.card} intensity={60}>
-          <Text style={styles.title}>Preferences</Text>
-          <Text style={styles.subtitle}>
-            Control language, guided museum mode, and explanation depth for art conversations.
+          <Text style={[styles.title, { color: theme.textPrimary }]}>{t('preferences.title')}</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+            {t('preferences.subtitle')}
           </Text>
 
           {isLoading ? (
             <View style={styles.loadingRow}>
-              <ActivityIndicator color={liquidColors.primary} />
-              <Text style={styles.hint}>Loading current preferences...</Text>
+              <ActivityIndicator color={theme.primary} />
+              <Text style={[styles.hint, { color: theme.textSecondary }]}>{t('preferences.loading')}</Text>
             </View>
           ) : (
             <>
-              <Text style={styles.label}>Language (locale)</Text>
-              <Text style={styles.hint}>
-                Used for AI response language and timestamp formatting in the chat.
+              <Text style={[styles.label, { color: theme.textPrimary }]}>{t('preferences.language_label')}</Text>
+              <Text style={[styles.hint, { color: theme.textSecondary }]}>
+                {t('preferences.language_hint')}
               </Text>
-              <TextInput
-                value={locale}
-                onChangeText={setLocale}
-                placeholder='en-US'
-                autoCapitalize='none'
-                style={styles.input}
-                placeholderTextColor='#64748B'
-              />
+              <View style={styles.languageRow}>
+                {LANGUAGE_OPTIONS.map((option) => (
+                  <Pressable
+                    key={option.code}
+                    style={[
+                      styles.languageButton,
+                      language === option.code && { backgroundColor: theme.primary, borderColor: theme.primary },
+                    ]}
+                    onPress={() => setLanguage(option.code)}
+                  >
+                    <Text
+                      style={[
+                        styles.languageButtonText,
+                        { color: theme.textPrimary },
+                        language === option.code && styles.languageButtonTextActive,
+                      ]}
+                    >
+                      {option.nativeLabel}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
 
               <View style={styles.switchRow}>
                 <View style={styles.switchTextWrap}>
-                  <Text style={styles.label}>Guided Museum Mode</Text>
-                  <Text style={styles.hint}>
-                    Adds next-step recommendations and museum navigation cues.
+                  <Text style={[styles.label, { color: theme.textPrimary }]}>{t('preferences.museum_mode_label')}</Text>
+                  <Text style={[styles.hint, { color: theme.textSecondary }]}>
+                    {t('preferences.museum_mode_hint')}
                   </Text>
                 </View>
                 <Switch value={museumMode} onValueChange={setMuseumMode} />
               </View>
 
-              <Text style={styles.label}>AI Guide Level</Text>
-              <Text style={styles.hint}>
-                Beginner keeps explanations simple. Expert uses art-history vocabulary.
+              <Text style={[styles.label, { color: theme.textPrimary }]}>{t('preferences.guide_level_label')}</Text>
+              <Text style={[styles.hint, { color: theme.textSecondary }]}>
+                {t('preferences.guide_level_hint')}
               </Text>
               <View style={styles.levelRow}>
                 {GUIDE_LEVELS.map((level) => (
@@ -145,13 +161,14 @@ export default function PreferencesScreen() {
                     key={level}
                     style={[
                       styles.levelButton,
-                      guideLevel === level && styles.levelButtonActive,
+                      guideLevel === level && { backgroundColor: theme.primary, borderColor: theme.primary },
                     ]}
                     onPress={() => setGuideLevel(level)}
                   >
                     <Text
                       style={[
                         styles.levelButtonText,
+                        { color: theme.textPrimary },
                         guideLevel === level && styles.levelButtonTextActive,
                       ]}
                     >
@@ -163,13 +180,13 @@ export default function PreferencesScreen() {
             </>
           )}
 
-          {status ? <Text style={styles.status}>{status}</Text> : null}
+          {status ? <Text style={[styles.status, { color: theme.success }]}>{status}</Text> : null}
 
-          <Pressable style={styles.primaryButton} onPress={() => void onSave()} disabled={isSaving}>
+          <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => void onSave()} disabled={isSaving}>
             {isSaving ? (
               <ActivityIndicator color='#FFFFFF' />
             ) : (
-              <Text style={styles.primaryButtonText}>Save Preferences</Text>
+              <Text style={styles.primaryButtonText}>{t('preferences.save_button')}</Text>
             )}
           </Pressable>
 
@@ -177,7 +194,7 @@ export default function PreferencesScreen() {
             style={styles.secondaryButton}
             onPress={() => router.push('/(stack)/guided-museum-mode')}
           >
-            <Text style={styles.secondaryButtonText}>Learn About Guided Museum Mode</Text>
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('preferences.learn_guided')}</Text>
           </Pressable>
         </GlassCard>
       </ScrollView>
@@ -205,10 +222,8 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: liquidColors.textPrimary,
   },
   subtitle: {
-    color: liquidColors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 2,
@@ -220,22 +235,32 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   label: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 14,
   },
   hint: {
-    color: liquidColors.textSecondary,
     fontSize: 12,
     lineHeight: 18,
   },
-  input: {
+  languageRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  languageButton: {
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(148,163,184,0.44)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     backgroundColor: 'rgba(255,255,255,0.72)',
-    padding: 12,
-    color: liquidColors.textPrimary,
+  },
+  languageButtonText: {
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  languageButtonTextActive: {
+    color: '#FFFFFF',
   },
   switchRow: {
     marginTop: 6,
@@ -261,12 +286,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: 'rgba(255,255,255,0.72)',
   },
-  levelButtonActive: {
-    backgroundColor: liquidColors.primary,
-    borderColor: liquidColors.primary,
-  },
   levelButtonText: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -274,7 +294,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   status: {
-    color: '#166534',
     fontWeight: '700',
     fontSize: 12,
     marginTop: 2,
@@ -282,7 +301,6 @@ const styles = StyleSheet.create({
   primaryButton: {
     marginTop: 6,
     borderRadius: 12,
-    backgroundColor: liquidColors.primary,
     alignItems: 'center',
     paddingVertical: 12,
   },
@@ -301,7 +319,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   secondaryButtonText: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 13,
   },

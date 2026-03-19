@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
-import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 export default function GuidedMuseumModeScreen() {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
   const [museumMode, setMuseumMode] = useState(true);
   const [guideLevel, setGuideLevel] = useState<'beginner' | 'intermediate' | 'expert'>('beginner');
 
@@ -29,19 +33,19 @@ export default function GuidedMuseumModeScreen() {
             {
               id: 'prefs',
               icon: 'options-outline',
-              label: 'Preferences',
+              label: t('guidedMode.menu.preferences'),
               onPress: () => router.push('/(stack)/preferences'),
             },
             {
               id: 'discover',
               icon: 'sparkles-outline',
-              label: 'Discover',
+              label: t('guidedMode.menu.discover'),
               onPress: () => router.push('/(stack)/discover'),
             },
             {
               id: 'home',
               icon: 'home-outline',
-              label: 'Home',
+              label: t('guidedMode.menu.home'),
               onPress: () => router.push('/(tabs)/home'),
             },
           ]}
@@ -50,56 +54,51 @@ export default function GuidedMuseumModeScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <GlassCard style={styles.heroCard} intensity={60}>
-          <Text style={styles.title}>Guided Museum Mode</Text>
-          <Text style={styles.subtitle}>
-            Guided mode turns Musaium into a museum companion: it explains the artwork and suggests a
-            relevant next step for your visit.
+          <Text style={[styles.title, { color: theme.textPrimary }]}>{t('guidedMode.title')}</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+            {t('guidedMode.subtitle')}
           </Text>
-          <Text style={styles.stateLine}>
-            Current status: {museumMode ? 'Enabled' : 'Disabled'} • Guide level: {guideLevel}
+          <Text style={[styles.stateLine, { color: theme.primary }]}>
+            {t('guidedMode.status_line', { status: museumMode ? t('common.enabled') : t('common.disabled'), level: guideLevel })}
           </Text>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={54}>
-          <Text style={styles.cardTitle}>What changes in guided mode</Text>
-          <Text style={styles.cardText}>
-            Musaium adds practical museum-oriented guidance such as the next stop, transitions between
-            rooms, and observation prompts tied to nearby works or monuments.
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('guidedMode.card1_title')}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>
+            {t('guidedMode.card1_text')}
           </Text>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={52}>
-          <Text style={styles.cardTitle}>Guided vs standard</Text>
-          <Text style={styles.cardText}>
-            Standard mode stays concise and descriptive. Guided mode remains art-focused but actively
-            supports your path through an exhibition or cultural site.
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('guidedMode.card2_title')}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>
+            {t('guidedMode.card2_text')}
           </Text>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={52}>
-          <Text style={styles.cardTitle}>Guide levels</Text>
-          <Text style={styles.cardText}>
-            Beginner uses simple educational language. Intermediate introduces short technical terms.
-            Expert adds deeper art-history vocabulary and context.
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('guidedMode.card3_title')}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>
+            {t('guidedMode.card3_text')}
           </Text>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={52}>
-          <Text style={styles.cardTitle}>Examples</Text>
-          <Text style={styles.cardText}>
-            Example guided behavior: explain brushwork, connect the piece to its historical movement,
-            then suggest a nearby work to compare composition or symbolism.
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('guidedMode.card4_title')}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>
+            {t('guidedMode.card4_text')}
           </Text>
         </GlassCard>
 
-        <Pressable style={styles.primaryButton} onPress={() => router.push('/(stack)/preferences')}>
+        <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(stack)/preferences')}>
           <Text style={styles.primaryButtonText}>
-            {museumMode ? 'Go to Preferences to Turn Off Guided Mode' : 'Go to Preferences to Turn On Guided Mode'}
+            {museumMode ? t('guidedMode.turn_off') : t('guidedMode.turn_on')}
           </Text>
         </Pressable>
 
         <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/discover')}>
-          <Text style={styles.secondaryButtonText}>Start Exploring in Discover</Text>
+          <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('guidedMode.start_exploring')}</Text>
         </Pressable>
       </ScrollView>
     </LiquidScreen>
@@ -127,15 +126,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: liquidColors.textPrimary,
   },
   subtitle: {
-    color: liquidColors.textSecondary,
     lineHeight: 20,
     fontSize: 14,
   },
   stateLine: {
-    color: '#1E3A8A',
     fontWeight: '700',
     fontSize: 12,
   },
@@ -144,18 +140,15 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   cardTitle: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 15,
   },
   cardText: {
-    color: liquidColors.textSecondary,
     fontSize: 13,
     lineHeight: 19,
   },
   primaryButton: {
     borderRadius: 14,
-    backgroundColor: liquidColors.primary,
     alignItems: 'center',
     paddingVertical: 13,
     paddingHorizontal: 14,
@@ -175,7 +168,6 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
   },
   secondaryButtonText: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 13,
   },

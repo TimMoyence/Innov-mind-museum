@@ -1,14 +1,19 @@
 import { ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { TERMS_OF_SERVICE_CONTENT } from '@/features/legal/termsOfServiceContent';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
-import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 /** Renders the Terms of Service screen with versioned legal sections and navigation to Privacy Policy. */
 export default function TermsScreen() {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
+
   return (
     <LiquidScreen background={pickMuseumBackground(4)} contentStyle={styles.screen}>
       <View style={styles.menuWrap}>
@@ -17,13 +22,13 @@ export default function TermsScreen() {
             {
               id: 'privacy',
               icon: 'shield-checkmark-outline',
-              label: 'Privacy',
+              label: t('terms.menu.privacy'),
               onPress: () => router.push('/(stack)/privacy'),
             },
             {
               id: 'settings',
               icon: 'settings-outline',
-              label: 'Settings',
+              label: t('terms.menu.settings'),
               onPress: () => router.push('/(stack)/settings'),
             },
           ]}
@@ -32,19 +37,18 @@ export default function TermsScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <GlassCard style={styles.heroCard} intensity={60}>
-          <Text style={styles.title}>{TERMS_OF_SERVICE_CONTENT.title}</Text>
-          <Text style={styles.subtitle}>
-            Version {TERMS_OF_SERVICE_CONTENT.version} — Last updated{' '}
-            {TERMS_OF_SERVICE_CONTENT.lastUpdated}
+          <Text style={[styles.title, { color: theme.textPrimary }]}>{TERMS_OF_SERVICE_CONTENT.title}</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+            {t('terms.version_note', { version: TERMS_OF_SERVICE_CONTENT.version, lastUpdated: TERMS_OF_SERVICE_CONTENT.lastUpdated })}
           </Text>
         </GlassCard>
 
         {TERMS_OF_SERVICE_CONTENT.sections.map((section) => (
           <GlassCard key={section.id} style={styles.sectionCard} intensity={52}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{section.title}</Text>
             <View style={styles.paragraphGroup}>
               {section.paragraphs.map((paragraph, index) => (
-                <Text key={`${section.id}-${index}`} style={styles.paragraph}>
+                <Text key={`${section.id}-${index}`} style={[styles.paragraph, { color: theme.textSecondary }]}>
                   {paragraph}
                 </Text>
               ))}
@@ -54,11 +58,11 @@ export default function TermsScreen() {
 
         <GlassCard style={styles.ctaCard} intensity={54}>
           <View style={styles.ctaRow}>
-            <Pressable style={styles.primaryButton} onPress={() => router.push('/(stack)/privacy')}>
-              <Text style={styles.primaryButtonText}>Privacy Policy</Text>
+            <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(stack)/privacy')}>
+              <Text style={styles.primaryButtonText}>{t('terms.privacy_policy')}</Text>
             </Pressable>
             <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/settings')}>
-              <Text style={styles.secondaryButtonText}>Back to Settings</Text>
+              <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('terms.back_settings')}</Text>
             </Pressable>
           </View>
         </GlassCard>
@@ -86,12 +90,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    color: liquidColors.textPrimary,
     fontSize: 24,
     fontWeight: '700',
   },
   subtitle: {
-    color: liquidColors.textSecondary,
     fontSize: 13,
     lineHeight: 19,
   },
@@ -100,7 +102,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionTitle: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 15,
   },
@@ -108,7 +109,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   paragraph: {
-    color: liquidColors.textSecondary,
     fontSize: 13,
     lineHeight: 20,
   },
@@ -121,7 +121,6 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     borderRadius: 12,
-    backgroundColor: liquidColors.primary,
     alignItems: 'center',
     paddingVertical: 12,
   },
@@ -139,7 +138,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   secondaryButtonText: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 13,
   },

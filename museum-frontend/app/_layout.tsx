@@ -1,11 +1,16 @@
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import { AuthProvider } from '@/context/AuthContext';
 import { useProtectedRoute } from '@/features/auth/useProtectedRoute';
 import { applyRuntimeSettings } from '@/features/settings/runtimeSettings';
+import '@/shared/i18n/i18n';
+import { I18nProvider } from '@/shared/i18n/I18nContext';
+import { ThemeProvider, useTheme } from '@/shared/ui/ThemeContext';
+import { ConnectivityProvider } from '@/shared/infrastructure/connectivity/ConnectivityProvider';
 import {
   getApiConfigurationSnapshot,
   getStartupConfigurationError,
@@ -15,6 +20,11 @@ import { StartupConfigurationErrorScreen } from '@/shared/ui/StartupConfiguratio
 function AuthenticationGuard({ children }: { children: ReactNode }) {
   useProtectedRoute();
   return <>{children}</>;
+}
+
+function ThemedStatusBar() {
+  const { isDark } = useTheme();
+  return <StatusBar style={isDark ? 'light' : 'dark'} />;
 }
 
 /** Renders the root navigation layout with startup configuration validation, runtime settings bootstrap, and auth guard. */
@@ -28,6 +38,14 @@ export default function RootLayout() {
   const [runtimeStartupError, setRuntimeStartupError] = useState<Error | null>(
     null,
   );
+
+  useEffect(() => {
+    if (Platform.OS === 'ios') {
+      import('expo-tracking-transparency').then(({ requestTrackingPermissionsAsync }) => {
+        void requestTrackingPermissionsAsync();
+      }).catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     if (startupConfiguration.error) {
@@ -64,29 +82,35 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <AuthenticationGuard>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="auth" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen
-            name="(stack)/chat/[sessionId]"
-            options={{
-              headerShown: false,
-              gestureEnabled: true,
-            }}
-          />
-          <Stack.Screen name="(stack)/settings" />
-          <Stack.Screen name="(stack)/preferences" />
-          <Stack.Screen name="(stack)/guided-museum-mode" />
-          <Stack.Screen name="(stack)/discover" />
-          <Stack.Screen name="(stack)/support" />
-          <Stack.Screen name="(stack)/privacy" />
-          <Stack.Screen name="(stack)/onboarding" />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="auto" />
-      </AuthenticationGuard>
-    </AuthProvider>
+    <I18nProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ConnectivityProvider>
+            <AuthenticationGuard>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="auth" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen
+                name="(stack)/chat/[sessionId]"
+                options={{
+                  headerShown: false,
+                  gestureEnabled: true,
+                }}
+              />
+              <Stack.Screen name="(stack)/settings" />
+              <Stack.Screen name="(stack)/preferences" />
+              <Stack.Screen name="(stack)/guided-museum-mode" />
+              <Stack.Screen name="(stack)/discover" />
+              <Stack.Screen name="(stack)/support" />
+              <Stack.Screen name="(stack)/privacy" />
+              <Stack.Screen name="(stack)/onboarding" />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+            <ThemedStatusBar />
+            </AuthenticationGuard>
+          </ConnectivityProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </I18nProvider>
   );
 }

@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   Share,
@@ -10,12 +9,14 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
 import {
   DashboardSessionCard,
   mapSessionsToDashboardCards,
 } from '@/features/chat/domain/dashboard-session';
+import { ConversationSearchBar } from '@/features/conversation/ui/ConversationSearchBar';
 import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
 import { storage } from '@/shared/infrastructure/storage';
 import { getErrorMessage } from '@/shared/lib/errors';
@@ -24,20 +25,29 @@ import { BrandMark } from '@/shared/ui/BrandMark';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
-import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
+import { SkeletonConversationCard } from '@/shared/ui/SkeletonConversationCard';
 
 const SAVED_SESSIONS_KEY = 'dashboard.savedSessions';
 type SortMode = 'recent' | 'messages';
 
 /** Renders the dashboard screen listing recent chat sessions with sort, save, and share capabilities. */
 export default function ConversationsScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
   const [items, setItems] = useState<DashboardSessionCard[]>([]);
   const [savedSessionIds, setSavedSessionIds] = useState<string[]>([]);
   const [isSavedOnly, setIsSavedOnly] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>('recent');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const isLoadingMoreRef = useRef(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [menuStatus, setMenuStatus] = useState('');
 
@@ -64,9 +74,11 @@ export default function ConversationsScreen() {
 
     try {
       const settings = await loadRuntimeSettings();
-      const response = await chatApi.listSessions({ limit: 50 });
+      const response = await chatApi.listSessions({ limit: 20 });
       const mapped = mapSessionsToDashboardCards(response.sessions, settings.defaultLocale);
       setItems(mapped);
+      setNextCursor(response.page.nextCursor);
+      setHasMore(response.page.hasMore);
     } catch (loadError) {
       setError(getErrorMessage(loadError));
       setItems([]);
@@ -75,6 +87,25 @@ export default function ConversationsScreen() {
       setIsRefreshing(false);
     }
   }, []);
+
+  const loadMore = useCallback(async () => {
+    if (!hasMore || !nextCursor || isLoadingMoreRef.current) return;
+    isLoadingMoreRef.current = true;
+    setIsLoadingMore(true);
+    try {
+      const settings = await loadRuntimeSettings();
+      const response = await chatApi.listSessions({ limit: 20, cursor: nextCursor });
+      const mapped = mapSessionsToDashboardCards(response.sessions, settings.defaultLocale);
+      setItems((prev) => [...prev, ...mapped]);
+      setNextCursor(response.page.nextCursor);
+      setHasMore(response.page.hasMore);
+    } catch {
+      // Silently fail — user can scroll again
+    } finally {
+      isLoadingMoreRef.current = false;
+      setIsLoadingMore(false);
+    }
+  }, [hasMore, nextCursor]);
 
   useEffect(() => {
     void loadDashboard();
@@ -90,8 +121,8 @@ export default function ConversationsScreen() {
       const next = previous === 'recent' ? 'messages' : 'recent';
       setMenuStatus(
         next === 'recent'
-          ? 'Sorted by recency'
-          : 'Sorted by message count',
+          ? t('conversations.sorted_by_recency')
+          : t('conversations.sorted_by_messages'),
       );
       return next;
     });
@@ -100,7 +131,7 @@ export default function ConversationsScreen() {
   const toggleSavedFilter = () => {
     setIsSavedOnly((previous) => {
       const next = !previous;
-      setMenuStatus(next ? 'Showing saved sessions only' : 'Showing all sessions');
+      setMenuStatus(next ? t('conversations.showing_saved_only') : t('conversations.showing_all'));
       return next;
     });
   };
@@ -109,10 +140,10 @@ export default function ConversationsScreen() {
     const total = items.length;
     const savedCount = savedSessionIds.length;
     await Share.share({
-      title: 'Musaium dashboard',
-      message: `Musaium dashboard: ${total} sessions, ${savedCount} saved.`,
+      title: t('conversations.share_title'),
+      message: t('conversations.share_body', { total, savedCount }),
     });
-    setMenuStatus('Dashboard summary shared');
+    setMenuStatus(t('conversations.shared_success'));
   };
 
   const toggleSavedSession = async (sessionId: string) => {
@@ -122,13 +153,22 @@ export default function ConversationsScreen() {
       : [...savedSessionIds, sessionId];
 
     await persistSavedSessions(nextSaved);
-    setMenuStatus(exists ? 'Session removed from saved' : 'Session saved');
+    setMenuStatus(exists ? t('conversations.session_unsaved') : t('conversations.session_saved'));
   };
 
   const visibleItems = useMemo(() => {
-    const filtered = isSavedOnly
+    let filtered = isSavedOnly
       ? items.filter((item) => savedSessionIds.includes(item.id))
       : items;
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (item) =>
+          item.title.toLowerCase().includes(query) ||
+          item.subtitle.toLowerCase().includes(query),
+      );
+    }
 
     if (sortMode === 'recent') {
       return filtered;
@@ -137,40 +177,44 @@ export default function ConversationsScreen() {
     return [...filtered].sort(
       (left, right) => right.messageCount - left.messageCount,
     );
-  }, [isSavedOnly, items, savedSessionIds, sortMode]);
+  }, [isSavedOnly, items, savedSessionIds, sortMode, searchQuery]);
 
   return (
     <LiquidScreen background={pickMuseumBackground(2)} contentStyle={[styles.screen, { paddingTop: insets.top + 12 }]}>
       <View style={styles.menuRow}>
         <FloatingContextMenu
           actions={[
-            { id: 'sort', icon: 'filter-outline', label: 'Filter', onPress: toggleSortMode },
-            { id: 'bookmark', icon: 'bookmark-outline', label: 'Saved', onPress: toggleSavedFilter },
-            { id: 'share', icon: 'share-social-outline', label: 'Share', onPress: () => void shareDashboard() },
+            { id: 'sort', icon: 'filter-outline', label: t('conversations.filter'), onPress: toggleSortMode },
+            { id: 'bookmark', icon: 'bookmark-outline', label: t('conversations.saved'), onPress: toggleSavedFilter },
+            { id: 'share', icon: 'share-social-outline', label: t('conversations.share'), onPress: () => void shareDashboard() },
           ]}
         />
       </View>
 
       <GlassCard style={styles.headerCard} intensity={60}>
         <BrandMark variant='header' style={styles.brand} />
-        <Text style={styles.title}>Dashboard</Text>
-        <Text style={styles.subtitle}>Your recent museum sessions. Pull down to refresh.</Text>
-        <Text style={styles.metaLine}>
-          {isSavedOnly ? 'Saved filter ON' : 'Saved filter OFF'} • sort: {sortMode}
+        <Text style={[styles.title, { color: theme.textPrimary }]}>{t('conversations.title')}</Text>
+        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>{t('conversations.subtitle')}</Text>
+        <Text style={[styles.metaLine, { color: theme.primary }]}>
+          {isSavedOnly ? t('conversations.saved_filter_on') : t('conversations.saved_filter_off')} • {t('conversations.sort_label', { sortMode })}
         </Text>
       </GlassCard>
 
-      {menuStatus ? <Text style={styles.menuStatus}>{menuStatus}</Text> : null}
+      {menuStatus ? <Text style={[styles.menuStatus, { color: theme.success }]}>{menuStatus}</Text> : null}
 
       {error ? <ErrorNotice message={error} onDismiss={() => setError(null)} /> : null}
 
-      <Pressable style={styles.primaryButton} onPress={() => router.push('/(tabs)/home')}>
-        <Text style={styles.primaryButtonText}>Start New Conversation</Text>
+      <ConversationSearchBar value={searchQuery} onChangeText={setSearchQuery} />
+
+      <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(tabs)/home')}>
+        <Text style={styles.primaryButtonText}>{t('conversations.start_new')}</Text>
       </Pressable>
 
       {isLoading ? (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator color={liquidColors.primary} size='large' />
+        <View style={styles.skeletonList}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <SkeletonConversationCard key={i} />
+          ))}
         </View>
       ) : (
         <FlatList
@@ -179,30 +223,35 @@ export default function ConversationsScreen() {
           contentContainerStyle={styles.listContent}
           refreshing={isRefreshing}
           onRefresh={() => void loadDashboard(true)}
+          onEndReached={() => void loadMore()}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={
+            isLoadingMore ? <SkeletonConversationCard /> : null
+          }
           ListEmptyComponent={
             <GlassCard style={styles.emptyState} intensity={48}>
-              <Text style={styles.emptyTitle}>No conversations yet</Text>
-              <Text style={styles.emptySubtitle}>
+              <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>{t('conversations.empty_title')}</Text>
+              <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
                 {isSavedOnly
-                  ? 'No saved sessions yet. Long-press a session to save it.'
-                  : 'Start a new conversation from Home to create your first session.'}
+                  ? t('conversations.empty_saved')
+                  : t('conversations.empty_body')}
               </Text>
             </GlassCard>
           }
           renderItem={({ item }) => (
             <Pressable
-              style={styles.card}
+              style={[styles.card, { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground }]}
               onPress={() => router.push(`/(stack)/chat/${item.id}`)}
               onLongPress={() => {
                 void toggleSavedSession(item.id);
               }}
             >
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardMeta}>{item.subtitle}</Text>
-              <Text style={styles.cardMeta}>{item.timeLabel}</Text>
-              <Text style={styles.cardTags}>Messages: {item.messageCount}</Text>
-              <Text style={styles.savedHint}>
-                {savedSessionIds.includes(item.id) ? 'Saved • hold to unsave' : 'Hold to save'}
+              <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{item.title}</Text>
+              <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>{item.subtitle}</Text>
+              <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>{item.timeLabel}</Text>
+              <Text style={[styles.cardTags, { color: theme.primary }]}>{t('conversations.message_count', { count: item.messageCount })}</Text>
+              <Text style={[styles.savedHint, { color: theme.textSecondary }]}>
+                {savedSessionIds.includes(item.id) ? t('conversations.saved_hint') : t('conversations.unsaved_hint')}
               </Text>
             </Pressable>
           )}
@@ -231,12 +280,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: '700',
-    color: liquidColors.textPrimary,
+    color: undefined, // theme.textPrimary applied inline
     textAlign: 'center',
   },
   subtitle: {
     marginTop: 6,
-    color: liquidColors.textSecondary,
+    color: undefined, // theme.textSecondary applied inline
     fontSize: 14,
     lineHeight: 20,
     textAlign: 'center',
@@ -257,7 +306,7 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     marginTop: 14,
-    backgroundColor: liquidColors.primary,
+    backgroundColor: undefined, // theme.primary applied inline
     borderRadius: 14,
     paddingVertical: 12,
     alignItems: 'center',
@@ -271,10 +320,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
   },
-  loaderContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  skeletonList: {
+    marginTop: 16,
+    paddingBottom: 24,
   },
   listContent: {
     marginTop: 16,
@@ -288,11 +336,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: liquidColors.textPrimary,
+    color: undefined, // theme.textPrimary applied inline
   },
   emptySubtitle: {
     marginTop: 6,
-    color: liquidColors.textSecondary,
+    color: undefined, // theme.textSecondary applied inline
     lineHeight: 20,
   },
   card: {
@@ -306,7 +354,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: liquidColors.textPrimary,
+    color: undefined, // theme.textPrimary applied inline
   },
   cardMeta: {
     fontSize: 13,
@@ -315,7 +363,7 @@ const styles = StyleSheet.create({
   cardTags: {
     marginTop: 4,
     fontSize: 12,
-    color: liquidColors.primary,
+    color: undefined, // theme.primary applied inline
     fontWeight: '700',
   },
   savedHint: {

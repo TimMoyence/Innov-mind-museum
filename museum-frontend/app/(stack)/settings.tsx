@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/context/AuthContext';
 import { authStorage } from '@/features/auth/infrastructure/authStorage';
@@ -20,7 +21,16 @@ import { getErrorMessage } from '@/shared/lib/errors';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
-import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
+
+type ThemeMode = 'system' | 'light' | 'dark';
+
+const THEME_OPTION_KEYS: { value: ThemeMode; key: string }[] = [
+  { value: 'system', key: 'settings.theme_system' },
+  { value: 'light', key: 'settings.theme_light' },
+  { value: 'dark', key: 'settings.theme_dark' },
+];
 
 type SettingsRoute =
   | '/(stack)/preferences'
@@ -33,9 +43,11 @@ type SettingsRoute =
 
 /** Renders the settings hub with preferences summary, compliance links, account deletion, and sign-out actions. */
 export default function SettingsScreen() {
+  const { t } = useTranslation();
   const { logout, setIsAuthenticated } = useAuth();
   const insets = useSafeAreaInsets();
   const { locale, museumMode, guideLevel, isLoading: isLoadingPrefs } = useRuntimeSettings();
+  const { theme, mode, setMode } = useTheme();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
@@ -58,12 +70,12 @@ export default function SettingsScreen() {
 
   const onDeleteAccount = () => {
     Alert.alert(
-      'Delete Account',
-      'This will permanently delete your account and all data. This action cannot be undone.',
+      t('settings.delete_confirm_title'),
+      t('settings.delete_confirm_body'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             setIsDeletingAccount(true);
@@ -74,7 +86,7 @@ export default function SettingsScreen() {
               setIsAuthenticated(false);
               router.replace(AUTH_ROUTE);
             } catch (error) {
-              Alert.alert('Error', getErrorMessage(error));
+              Alert.alert(t('common.error'), getErrorMessage(error));
             } finally {
               setIsDeletingAccount(false);
             }
@@ -92,19 +104,19 @@ export default function SettingsScreen() {
             {
               id: 'prefs',
               icon: 'options-outline',
-              label: 'Preferences',
+              label: t('settings.preferences'),
               onPress: () => open('/(stack)/preferences'),
             },
             {
               id: 'privacy',
               icon: 'shield-checkmark-outline',
-              label: 'Privacy',
+              label: t('settings.privacy_rgpd'),
               onPress: () => open('/(stack)/privacy'),
             },
             {
               id: 'support',
               icon: 'headset-outline',
-              label: 'Support',
+              label: t('settings.support'),
               onPress: () => open('/(stack)/support'),
             },
           ]}
@@ -117,78 +129,110 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <GlassCard style={styles.heroCard} intensity={60}>
-          <Text style={styles.title}>Settings</Text>
-          <Text style={styles.subtitle}>
-            Manage your Musaium preferences, privacy information, and support access.
+          <Text style={[styles.title, { color: theme.textPrimary }]}>{t('settings.title')}</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+            {t('settings.subtitle')}
           </Text>
-          <Text style={styles.buildNotice}>
-            Backend environment is build-driven (local/preview/production), not user-selectable.
+          <Text style={[styles.buildNotice, { color: theme.primary }]}>
+            {t('settings.env_note')}
           </Text>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={56}>
-          <Text style={styles.cardTitle}>Current Preferences</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.appearance')}</Text>
+          <View style={styles.themeRow}>
+            {THEME_OPTION_KEYS.map((option) => (
+              <Pressable
+                key={option.value}
+                style={[
+                  styles.themeButton,
+                  {
+                    borderColor: theme.cardBorder,
+                    backgroundColor: theme.surface,
+                  },
+                  mode === option.value && {
+                    borderColor: theme.primary,
+                    backgroundColor: theme.glassBackground,
+                  },
+                ]}
+                onPress={() => setMode(option.value)}
+              >
+                <Text
+                  style={[
+                    styles.themeButtonText,
+                    { color: theme.textSecondary },
+                    mode === option.value && { color: theme.primary, fontWeight: '700' },
+                  ]}
+                >
+                  {t(option.key as 'settings.theme_system')}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </GlassCard>
+
+        <GlassCard style={styles.card} intensity={56}>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.current_preferences')}</Text>
           {isLoadingPrefs ? (
             <View style={styles.loadingRow}>
-              <ActivityIndicator color={liquidColors.primary} />
-              <Text style={styles.loadingText}>Loading preferences…</Text>
+              <ActivityIndicator color={theme.primary} />
+              <Text style={[styles.loadingText, { color: theme.textSecondary }]}>{t('settings.loading_preferences')}</Text>
             </View>
           ) : (
             <>
-              <Text style={styles.metaLine}>Locale: {locale}</Text>
-              <Text style={styles.metaLine}>Guided mode: {museumMode ? 'On' : 'Off'}</Text>
-              <Text style={styles.metaLine}>Guide level: {guideLevel}</Text>
+              <Text style={[styles.metaLine, { color: theme.textPrimary }]}>{t('settings.locale_label', { locale })}</Text>
+              <Text style={[styles.metaLine, { color: theme.textPrimary }]}>{t('settings.museum_mode_label', { mode: museumMode ? t('common.on') : t('common.off') })}</Text>
+              <Text style={[styles.metaLine, { color: theme.textPrimary }]}>{t('settings.guide_level_label', { level: guideLevel })}</Text>
             </>
           )}
-          <Pressable style={styles.primaryButton} onPress={() => open('/(stack)/preferences')}>
-            <Text style={styles.primaryButtonText}>Open Preferences</Text>
+          <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => open('/(stack)/preferences')}>
+            <Text style={styles.primaryButtonText}>{t('settings.open_preferences')}</Text>
           </Pressable>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={52}>
-          <Text style={styles.cardTitle}>Guided Museum Experience</Text>
-          <Text style={styles.cardBody}>
-            Understand how guided mode changes explanations, next-stop suggestions, and response depth
-            during museum visits.
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.guided_experience_title')}</Text>
+          <Text style={[styles.cardBody, { color: theme.textSecondary }]}>
+            {t('settings.guided_experience_subtitle')}
           </Text>
           <Pressable
-            style={styles.secondaryButton}
+            style={[styles.secondaryButton, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]}
             onPress={() => open('/(stack)/guided-museum-mode')}
           >
-            <Text style={styles.secondaryButtonText}>Guided Museum Mode Info</Text>
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('settings.guided_mode_info')}</Text>
           </Pressable>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={52}>
-          <Text style={styles.cardTitle}>Compliance & Help</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.compliance_title')}</Text>
           <View style={styles.linkList}>
-            <Pressable style={styles.linkRow} onPress={() => open('/(stack)/privacy')}>
-              <Text style={styles.linkTitle}>Privacy (RGPD)</Text>
-              <Text style={styles.linkDescription}>Read data processing, rights, and legal contacts.</Text>
+            <Pressable style={[styles.linkRow, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => open('/(stack)/privacy')}>
+              <Text style={[styles.linkTitle, { color: theme.textPrimary }]}>{t('settings.privacy_rgpd')}</Text>
+              <Text style={[styles.linkDescription, { color: theme.textSecondary }]}>{t('settings.privacy_desc')}</Text>
             </Pressable>
-            <Pressable style={styles.linkRow} onPress={() => open('/(stack)/terms')}>
-              <Text style={styles.linkTitle}>Terms of Service</Text>
-              <Text style={styles.linkDescription}>Read our terms and conditions of use.</Text>
+            <Pressable style={[styles.linkRow, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => open('/(stack)/terms')}>
+              <Text style={[styles.linkTitle, { color: theme.textPrimary }]}>{t('settings.terms_of_service')}</Text>
+              <Text style={[styles.linkDescription, { color: theme.textSecondary }]}>{t('settings.terms_desc')}</Text>
             </Pressable>
-            <Pressable style={styles.linkRow} onPress={() => open('/(stack)/support')}>
-              <Text style={styles.linkTitle}>Support</Text>
-              <Text style={styles.linkDescription}>
-                Contact support through Instagram or Telegram channels.
+            <Pressable style={[styles.linkRow, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => open('/(stack)/support')}>
+              <Text style={[styles.linkTitle, { color: theme.textPrimary }]}>{t('settings.support')}</Text>
+              <Text style={[styles.linkDescription, { color: theme.textSecondary }]}>
+                {t('settings.support_desc')}
               </Text>
             </Pressable>
-            <Pressable style={styles.linkRow} onPress={() => open('/(stack)/onboarding')}>
-              <Text style={styles.linkTitle}>Onboarding Help</Text>
-              <Text style={styles.linkDescription}>
-                Revisit usage flow, practical tips, and help shortcuts.
+            <Pressable style={[styles.linkRow, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => open('/(stack)/onboarding')}>
+              <Text style={[styles.linkTitle, { color: theme.textPrimary }]}>{t('settings.onboarding_help')}</Text>
+              <Text style={[styles.linkDescription, { color: theme.textSecondary }]}>
+                {t('settings.onboarding_desc')}
               </Text>
             </Pressable>
           </View>
         </GlassCard>
 
-        <GlassCard style={styles.dangerCard} intensity={52}>
-          <Text style={styles.dangerTitle}>Danger Zone</Text>
-          <Text style={styles.cardBody}>
-            Permanently delete your account and all associated data. This action cannot be undone.
+        <GlassCard style={[styles.dangerCard, { borderColor: theme.errorBackground }]} intensity={52}>
+          <Text style={[styles.dangerTitle, { color: theme.error }]}>{t('settings.danger_zone')}</Text>
+          <Text style={[styles.cardBody, { color: theme.textSecondary }]}>
+            {t('settings.danger_zone_desc')}
           </Text>
           <Pressable
             style={styles.deleteButton}
@@ -198,25 +242,25 @@ export default function SettingsScreen() {
             {isDeletingAccount ? (
               <ActivityIndicator color='#FFFFFF' />
             ) : (
-              <Text style={styles.deleteButtonText}>Delete Account</Text>
+              <Text style={styles.deleteButtonText}>{t('settings.delete_account')}</Text>
             )}
           </Pressable>
         </GlassCard>
 
         <View style={styles.footerRow}>
-          <Pressable style={styles.secondaryButton} onPress={() => open('/(tabs)/home')}>
-            <Text style={styles.secondaryButtonText}>Back to Home</Text>
+          <Pressable style={[styles.secondaryButton, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => open('/(tabs)/home')}>
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('settings.back_to_home')}</Text>
           </Pressable>
 
           <Pressable
-            style={styles.logoutButton}
+            style={[styles.logoutButton, { borderColor: theme.error, backgroundColor: theme.errorBackground }]}
             onPress={() => void onLogout()}
             disabled={isSigningOut}
           >
             {isSigningOut ? (
-              <ActivityIndicator color='#B91C1C' />
+              <ActivityIndicator color={theme.error} />
             ) : (
-              <Text style={styles.logoutButtonText}>Sign out</Text>
+              <Text style={[styles.logoutButtonText, { color: theme.error }]}>{t('settings.sign_out')}</Text>
             )}
           </Pressable>
         </View>
@@ -248,15 +292,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: '700',
-    color: liquidColors.textPrimary,
   },
   subtitle: {
-    color: liquidColors.textSecondary,
     lineHeight: 20,
     fontSize: 14,
   },
   buildNotice: {
-    color: '#1E3A8A',
     fontSize: 12,
     fontWeight: '700',
     lineHeight: 18,
@@ -266,14 +307,27 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   cardTitle: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 17,
   },
   cardBody: {
-    color: liquidColors.textSecondary,
     lineHeight: 20,
     fontSize: 13,
+  },
+  themeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  themeButton: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  themeButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   loadingRow: {
     flexDirection: 'row',
@@ -281,18 +335,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingText: {
-    color: liquidColors.textSecondary,
     fontSize: 13,
   },
   metaLine: {
-    color: liquidColors.textPrimary,
     fontWeight: '600',
     fontSize: 13,
   },
   primaryButton: {
     marginTop: 2,
     borderRadius: 12,
-    backgroundColor: liquidColors.primary,
     alignItems: 'center',
     paddingVertical: 12,
   },
@@ -304,14 +355,11 @@ const styles = StyleSheet.create({
   secondaryButton: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.5)',
     paddingVertical: 12,
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.68)',
     paddingHorizontal: 12,
   },
   secondaryButtonText: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -321,28 +369,22 @@ const styles = StyleSheet.create({
   linkRow: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.32)',
-    backgroundColor: 'rgba(255,255,255,0.58)',
     padding: 12,
     gap: 4,
   },
   linkTitle: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 14,
   },
   linkDescription: {
-    color: liquidColors.textSecondary,
     lineHeight: 18,
     fontSize: 12,
   },
   dangerCard: {
     padding: 16,
     gap: 10,
-    borderColor: 'rgba(239,68,68,0.3)',
   },
   dangerTitle: {
-    color: '#B91C1C',
     fontWeight: '700',
     fontSize: 17,
   },
@@ -364,13 +406,10 @@ const styles = StyleSheet.create({
   logoutButton: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#FCA5A5',
     paddingVertical: 12,
     alignItems: 'center',
-    backgroundColor: 'rgba(254,242,242,0.82)',
   },
   logoutButtonText: {
-    color: '#B91C1C',
     fontWeight: '700',
     fontSize: 15,
   },

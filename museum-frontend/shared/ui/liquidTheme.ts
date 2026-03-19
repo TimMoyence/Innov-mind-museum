@@ -1,5 +1,7 @@
 import type { ImageSourcePropType } from 'react-native';
 
+import { lightTheme, type ThemePalette } from './themes';
+
 /** Pair of image sources for mobile and desktop viewports used by LiquidScreen backgrounds. */
 export interface ResponsiveBackground {
   mobile: ImageSourcePropType;
@@ -47,12 +49,15 @@ export const pickMuseumBackground = (index: number): ResponsiveBackground => {
   return museumBackgrounds[normalized];
 };
 
-/** Core color tokens for the liquid design system used across all UI components. */
-export const liquidColors = {
-  pageGradient: ['#EAF2FF', '#D8E8FF', '#D5F0FF'] as const,
-  primary: '#1D4ED8',
-  textPrimary: '#0F172A',
-  textSecondary: '#334155',
-  glassBorder: 'rgba(255,255,255,0.58)',
-  glassBackground: 'rgba(255,255,255,0.44)',
-};
+/** Returns theme-aware color tokens for the liquid design system. */
+export const themeColors = (theme: ThemePalette) => ({
+  pageGradient: theme.pageGradient,
+  primary: theme.primary,
+  textPrimary: theme.textPrimary,
+  textSecondary: theme.textSecondary,
+  glassBorder: theme.glassBorder,
+  glassBackground: theme.glassBackground,
+});
+
+/** Core color tokens for the liquid design system (light theme — backward compat for unmigrated files). */
+export const liquidColors = themeColors(lightTheme);

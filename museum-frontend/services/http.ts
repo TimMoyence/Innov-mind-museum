@@ -8,6 +8,7 @@ interface RequestOptions {
   requiresAuth?: boolean;
   headers?: HeadersRecord;
   body?: unknown;
+  responseType?: 'json' | 'arraybuffer' | 'blob' | 'text';
 }
 
 const isFormData = (body: unknown): body is FormData => {
@@ -26,7 +27,7 @@ const isFormData = (body: unknown): body is FormData => {
  */
 export const httpRequest = async <T>(
   url: string,
-  { requiresAuth = true, headers, body, method }: RequestOptions = {},
+  { requiresAuth = true, headers, body, method, responseType }: RequestOptions = {},
 ): Promise<T> => {
   const finalHeaders: HeadersRecord = {
     ...(headers || {}),
@@ -43,6 +44,7 @@ export const httpRequest = async <T>(
       data: body,
       headers: finalHeaders,
       requiresAuth,
+      ...(responseType ? { responseType } : {}),
     } as unknown as never;
 
     const response = await httpClient.request(requestConfig);

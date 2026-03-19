@@ -2,8 +2,9 @@ import type { JSX } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 
-import { liquidColors } from './liquidTheme';
+import { useTheme } from './ThemeContext';
 
 /** Describes a single action item rendered inside a FloatingContextMenu. */
 export interface ContextMenuAction {
@@ -21,7 +22,10 @@ interface FloatingContextMenuProps {
 export const FloatingContextMenu = ({
   actions,
 }: FloatingContextMenuProps): JSX.Element => {
+  const { theme } = useTheme();
+
   const handleAction = (action: ContextMenuAction): void => {
+    void Haptics.selectionAsync();
     if (action.onPress) {
       action.onPress();
       return;
@@ -31,7 +35,7 @@ export const FloatingContextMenu = ({
   };
 
   return (
-    <BlurView intensity={58} tint='light' style={styles.menuShell}>
+    <BlurView intensity={58} tint={theme.blurTint} style={styles.menuShell}>
       <View style={styles.menuRow}>
         {actions.map((action) => (
           <Pressable
@@ -39,8 +43,8 @@ export const FloatingContextMenu = ({
             onPress={() => handleAction(action)}
             style={styles.menuAction}
           >
-            <Ionicons name={action.icon} size={16} color={liquidColors.textPrimary} />
-            <Text style={styles.menuLabel}>{action.label}</Text>
+            <Ionicons name={action.icon} size={16} color={theme.textPrimary} />
+            <Text style={[styles.menuLabel, { color: theme.textPrimary }]}>{action.label}</Text>
           </Pressable>
         ))}
       </View>
@@ -76,7 +80,6 @@ const styles = StyleSheet.create({
   },
   menuLabel: {
     fontSize: 11,
-    color: liquidColors.textPrimary,
     fontWeight: '600',
   },
 });

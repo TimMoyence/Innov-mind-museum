@@ -10,10 +10,13 @@ import {
   Text,
   View,
 } from 'react-native';
+import { SkeletonChatBubble } from '@/shared/ui/SkeletonChatBubble';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 
 import { CustomCameraView } from '@/components/CameraView';
 import { useChatSession } from '@/features/chat/application/useChatSession';
@@ -23,14 +26,21 @@ import { chatApi } from '@/features/chat/infrastructure/chatApi';
 import { ChatMessageList } from '@/features/chat/ui/ChatMessageList';
 import { ChatInput } from '@/features/chat/ui/ChatInput';
 import { ExpertiseBadge } from '@/features/chat/ui/ExpertiseBadge';
+import { ImagePreviewModal } from '@/features/chat/ui/ImagePreviewModal';
+import { MessageContextMenu } from '@/features/chat/ui/MessageContextMenu';
+import { OfflineBanner } from '@/features/chat/ui/OfflineBanner';
+import { useMessageActions } from '@/features/chat/application/useMessageActions';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
-import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 /** Renders the chat session screen with message history, text/image/audio input, and assistant response display. */
 export default function ChatSessionScreen() {
+  const { t } = useTranslation();
+  const { theme } = useTheme();
   const params = useLocalSearchParams<{ sessionId: string; intent?: string }>();
   const sessionId = useMemo(() => String(params.sessionId || ''), [params.sessionId]);
   const initialIntent = useMemo(() => {
@@ -45,6 +55,7 @@ export default function ChatSessionScreen() {
   const [text, setText] = useState('');
   const [isIntentHandled, setIsIntentHandled] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [contextMenuMessage, setContextMenuMessage] = useState<(typeof messages)[number] | null>(null);
   const imageRefreshInFlightRef = useRef<Set<string>>(new Set());
 
   const {
@@ -52,6 +63,9 @@ export default function ChatSessionScreen() {
     isEmpty,
     isLoading,
     isSending,
+    isStreaming,
+    isOffline,
+    pendingCount,
     error,
     clearError,
     sendMessage,
@@ -74,11 +88,14 @@ export default function ChatSessionScreen() {
 
   const {
     selectedImage,
+    pendingImage,
     isCameraOpen,
     setIsCameraOpen,
     onPickImage,
     onTakePicture,
     onCameraCapture,
+    confirmPendingImage,
+    cancelPendingImage,
     clearSelectedImage,
   } = useImagePicker();
 
@@ -125,6 +142,13 @@ export default function ChatSessionScreen() {
     setText(recommendationText);
   }, []);
 
+  // Haptic feedback on error
+  useEffect(() => {
+    if (error) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  }, [error]);
+
   // Handle initial intent (camera or audio)
   useEffect(() => {
     if (isIntentHandled || !initialIntent) {
@@ -167,21 +191,28 @@ export default function ChatSessionScreen() {
   const submitReport = useCallback(async (messageId: string, reason: 'offensive' | 'inaccurate' | 'inappropriate' | 'other') => {
     try {
       await chatApi.reportMessage({ messageId, reason });
-      Alert.alert('Thank you', 'Your report has been submitted.');
+      Alert.alert(t('chat.report_thanks_title'), t('chat.report_thanks_body'));
     } catch {
-      Alert.alert('Error', 'Could not submit report. Please try again.');
+      Alert.alert(t('common.error'), t('chat.report_error_body'));
     }
   }, []);
 
   const onReportMessage = useCallback((messageId: string) => {
-    Alert.alert('Report message', 'Why are you reporting this message?', [
-      { text: 'Offensive', onPress: () => void submitReport(messageId, 'offensive') },
-      { text: 'Inaccurate', onPress: () => void submitReport(messageId, 'inaccurate') },
-      { text: 'Inappropriate', onPress: () => void submitReport(messageId, 'inappropriate') },
-      { text: 'Other', onPress: () => void submitReport(messageId, 'other') },
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('chat.report_title'), t('chat.report_body'), [
+      { text: t('chat.report_offensive'), onPress: () => void submitReport(messageId, 'offensive') },
+      { text: t('chat.report_inaccurate'), onPress: () => void submitReport(messageId, 'inaccurate') },
+      { text: t('chat.report_inappropriate'), onPress: () => void submitReport(messageId, 'inappropriate') },
+      { text: t('chat.report_other'), onPress: () => void submitReport(messageId, 'other') },
+      { text: t('common.cancel'), style: 'cancel' },
     ]);
   }, [submitReport]);
+
+  const { copyText, shareText } = useMessageActions({ onReport: onReportMessage });
+
+  const onMessageLongPress = useCallback((messageId: string) => {
+    const msg = messages.find((m) => m.id === messageId);
+    if (msg) setContextMenuMessage(msg);
+  }, [messages]);
 
   const onMessageImageError = useCallback(
     (messageId: string) => {
@@ -217,38 +248,43 @@ export default function ChatSessionScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        {isRecording ? <Text style={styles.recordingStatus}>Recording voice input...</Text> : null}
+        {isRecording ? <Text style={[styles.recordingStatus, { color: theme.error }]}>{t('chat.recording_hint')}</Text> : null}
 
         <GlassCard style={styles.headerShell} intensity={58}>
           <View style={styles.headerRow}>
             <View style={styles.headerContent}>
-              <Text style={styles.header} numberOfLines={1}>{sessionTitle || 'Art Session'}</Text>
+              <Text style={[styles.header, { color: theme.textPrimary }]} numberOfLines={1}>{sessionTitle || t('chat.fallback_title')}</Text>
               <View style={styles.headerSubRow}>
-                <Text style={styles.subheader} numberOfLines={1}>{museumName || `${sessionId.slice(0, 12)}...`}</Text>
+                <Text style={[styles.subheader, { color: theme.textSecondary }]} numberOfLines={1}>{museumName || `${sessionId.slice(0, 12)}...`}</Text>
                 {expertiseLevel ? <ExpertiseBadge level={expertiseLevel} /> : null}
               </View>
             </View>
-            <Pressable onPress={onClose} style={styles.closeButton} disabled={isClosing}>
+            <Pressable onPress={onClose} style={[styles.closeButton, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]} disabled={isClosing}>
               {isClosing ? (
-                <ActivityIndicator size='small' color='#334155' />
+                <ActivityIndicator size='small' color={theme.textSecondary} />
               ) : (
-                <Ionicons name='close' size={20} color={liquidColors.textPrimary} />
+                <Ionicons name='close' size={20} color={theme.textPrimary} />
               )}
             </Pressable>
           </View>
         </GlassCard>
 
+        {isOffline ? <OfflineBanner pendingCount={pendingCount} /> : null}
+
         {error ? <ErrorNotice message={error} onDismiss={clearError} /> : null}
 
         <GlassCard style={styles.chatSurface} intensity={42}>
           {isLoading ? (
-            <View style={styles.loaderContainer}>
-              <ActivityIndicator size='large' color={liquidColors.primary} />
+            <View style={styles.skeletonChat}>
+              <SkeletonChatBubble alignSelf='flex-start' />
+              <SkeletonChatBubble alignSelf='flex-end' />
+              <SkeletonChatBubble alignSelf='flex-start' />
             </View>
           ) : (
             <ChatMessageList
               messages={messages}
               isSending={isSending}
+              isStreaming={isStreaming}
               locale={locale}
               museumMode={museumMode}
               onFollowUpPress={onFollowUpPress}
@@ -256,7 +292,7 @@ export default function ChatSessionScreen() {
               onSuggestion={(suggestion) => void onSend(suggestion)}
               onCamera={onTakePicture}
               onImageError={onMessageImageError}
-              onReport={onReportMessage}
+              onReport={onMessageLongPress}
             />
           )}
         </GlassCard>
@@ -277,13 +313,13 @@ export default function ChatSessionScreen() {
 
         {recordedAudioUri ? (
           <GlassCard style={styles.audioCard} intensity={56}>
-            <Text style={styles.audioTitle}>Voice message ready</Text>
+            <Text style={[styles.audioTitle, { color: theme.textPrimary }]}>{t('chat.voice_ready')}</Text>
             <View style={styles.audioRow}>
               <Pressable style={styles.attachButton} onPress={() => void playRecordedAudio()} disabled={isPlayingAudio}>
-                <Text style={styles.attachText}>{isPlayingAudio ? 'Playing...' : 'Play'}</Text>
+                <Text style={[styles.attachText, { color: theme.textPrimary }]}>{isPlayingAudio ? t('chat.playing') : t('chat.play')}</Text>
               </Pressable>
               <Pressable style={styles.attachButton} onPress={clearMedia}>
-                <Text style={styles.attachText}>Clear</Text>
+                <Text style={[styles.attachText, { color: theme.textPrimary }]}>{t('chat.clear')}</Text>
               </Pressable>
             </View>
           </GlassCard>
@@ -291,13 +327,13 @@ export default function ChatSessionScreen() {
 
         <View style={styles.attachRow}>
           <Pressable style={styles.attachButton} onPress={() => void onPickImage()}>
-            <Text style={styles.attachText}>Gallery</Text>
+            <Text style={[styles.attachText, { color: theme.textPrimary }]}>{t('chat.gallery')}</Text>
           </Pressable>
           <Pressable style={styles.attachButton} onPress={onTakePicture}>
-            <Text style={styles.attachText}>Lens</Text>
+            <Text style={[styles.attachText, { color: theme.textPrimary }]}>{t('chat.lens')}</Text>
           </Pressable>
           <Pressable style={styles.attachButton} onPress={() => void toggleRecording()}>
-            <Text style={styles.attachText}>{isRecording ? 'Stop Audio' : 'Audio'}</Text>
+            <Text style={[styles.attachText, { color: theme.textPrimary }]}>{isRecording ? t('chat.stop_audio') : t('chat.audio')}</Text>
           </Pressable>
         </View>
 
@@ -308,6 +344,20 @@ export default function ChatSessionScreen() {
           isSending={isSending}
         />
       </KeyboardAvoidingView>
+
+      <ImagePreviewModal
+        imageUri={pendingImage}
+        onConfirm={confirmPendingImage}
+        onCancel={cancelPendingImage}
+      />
+
+      <MessageContextMenu
+        message={contextMenuMessage}
+        onCopy={(msg) => void copyText(msg)}
+        onShare={(msg) => void shareText(msg)}
+        onReport={onReportMessage}
+        onClose={() => setContextMenuMessage(null)}
+      />
     </LiquidScreen>
   );
 }
@@ -344,7 +394,6 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 24,
     fontWeight: '700',
-    color: liquidColors.textPrimary,
   },
   headerSubRow: {
     marginTop: 4,
@@ -359,22 +408,20 @@ const styles = StyleSheet.create({
   closeButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.45)',
     width: 36,
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.72)',
   },
   chatSurface: {
     flex: 1,
     paddingHorizontal: 10,
     paddingVertical: 10,
   },
-  loaderContainer: {
+  skeletonChat: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 12,
   },
   previewWrap: {
     marginTop: 8,
@@ -395,7 +442,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   audioTitle: {
-    color: liquidColors.textPrimary,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -417,7 +463,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.64)',
   },
   attachText: {
-    color: '#1E293B',
     fontWeight: '600',
   },
 });

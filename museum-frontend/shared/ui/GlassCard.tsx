@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
 
-import { liquidColors } from './liquidTheme';
+import { useTheme } from './ThemeContext';
 
 interface GlassCardProps {
   children: ReactNode;
@@ -16,11 +16,20 @@ export const GlassCard = ({
   style,
   intensity = 52,
 }: GlassCardProps) => {
+  const { theme } = useTheme();
+
   return (
     <BlurView
       intensity={intensity}
-      tint='light'
-      style={[styles.card, style]}
+      tint={theme.blurTint}
+      style={[
+        styles.card,
+        {
+          borderColor: theme.glassBorder,
+          backgroundColor: theme.glassBackground,
+        },
+        style,
+      ]}
     >
       {children}
     </BlurView>
@@ -31,8 +40,6 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: liquidColors.glassBorder,
-    backgroundColor: liquidColors.glassBackground,
     overflow: 'hidden',
   },
 });

@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
 import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 
 import { cameraStyles } from '@/app/styles/cameraStyles';
 
@@ -18,6 +20,7 @@ interface CameraViewProps {
 
 /** Renders a full-screen camera view with capture and close controls, handling permission requests. */
 export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
+  const { t } = useTranslation();
   const cameraRef = useRef<CameraView | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
@@ -32,6 +35,7 @@ export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
       });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onCapture(photo.uri);
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -42,9 +46,9 @@ export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
   if (!permission) {
     return (
       <View style={cameraStyles.container}>
-        <Text>Requesting camera permission...</Text>
+        <Text>{t('camera.requesting_permission')}</Text>
         <TouchableOpacity onPress={onClose} style={{ marginTop: 12 }}>
-          <Text>Close</Text>
+          <Text>{t('camera.close')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -53,12 +57,12 @@ export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
   if (!permission.granted) {
     return (
       <View style={cameraStyles.container}>
-        <Text>No access to camera</Text>
+        <Text>{t('camera.no_access')}</Text>
         <TouchableOpacity onPress={requestPermission} style={{ marginTop: 12 }}>
-          <Text>Grant permission</Text>
+          <Text>{t('camera.grant_permission')}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={onClose} style={{ marginTop: 12 }}>
-          <Text>Close</Text>
+          <Text>{t('camera.close')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -78,7 +82,7 @@ export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
             <TouchableOpacity style={cameraStyles.backButton} onPress={onClose}>
               <Feather name='chevron-left' size={26} color='white' />
             </TouchableOpacity>
-            <Text style={cameraStyles.cameraTitle}>AR Mode</Text>
+            <Text style={cameraStyles.cameraTitle}>{t('camera.ar_mode')}</Text>
           </View>
 
           <View style={cameraStyles.vrControls}>
