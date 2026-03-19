@@ -20,9 +20,6 @@ interface SafeUser {
 
 interface AccessTokenClaims extends JwtPayload {
   sub: string;
-  email: string;
-  firstname?: string | null;
-  lastname?: string | null;
   type: 'access';
   jti: string;
 }
@@ -128,10 +125,8 @@ export class AuthSessionService {
     }
 
     if (!user.password) {
-      throw unauthorized(
-        'This account uses social sign-in. Please use Apple or Google to log in.',
-        'SOCIAL_ACCOUNT',
-      );
+      /** Deliberately generic to avoid revealing whether an account exists or uses social sign-in. */
+      throw unauthorized('Invalid credentials', 'INVALID_CREDENTIALS');
     }
 
     const valid = await bcrypt.compare(password, user.password);
@@ -220,19 +215,14 @@ export class AuthSessionService {
    * @returns The authenticated user's safe profile.
    * @throws {AppError} 401 if the token is invalid or expired.
    */
-  verifyAccessToken(token: string): SafeUser {
+  verifyAccessToken(token: string): { id: number } {
     try {
       const decoded = jwt.verify(token, env.auth.accessTokenSecret) as AccessTokenClaims;
-      if (decoded.type !== 'access' || !decoded.sub || !decoded.email) {
+      if (decoded.type !== 'access' || !decoded.sub) {
         throw unauthorized('Invalid access token', 'INVALID_ACCESS_TOKEN');
       }
 
-      return {
-        id: Number(decoded.sub),
-        email: decoded.email,
-        firstname: decoded.firstname ?? null,
-        lastname: decoded.lastname ?? null,
-      };
+      return { id: Number(decoded.sub) };
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -298,9 +288,6 @@ export class AuthSessionService {
     const accessToken = jwt.sign(
       {
         sub: String(params.user.id),
-        email: params.user.email,
-        firstname: params.user.firstname ?? null,
-        lastname: params.user.lastname ?? null,
         type: 'access',
         jti: accessJti,
       },

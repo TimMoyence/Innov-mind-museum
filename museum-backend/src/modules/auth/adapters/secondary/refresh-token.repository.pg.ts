@@ -164,6 +164,28 @@ export class RefreshTokenRepositoryPg {
   }
 
   /**
+   * Revokes all active refresh tokens for a user, optionally excluding one JTI.
+   * Used after password change to invalidate all existing sessions.
+   * @param userId - The user's ID.
+   * @param excludeJti - Optional JTI to exclude (e.g. the current session).
+   */
+  async revokeAllForUser(userId: number, excludeJti?: string): Promise<void> {
+    if (excludeJti) {
+      await pool.query(
+        `UPDATE "auth_refresh_tokens" SET "revokedAt" = NOW()
+         WHERE "userId" = $1 AND "revokedAt" IS NULL AND "jti" != $2`,
+        [userId, excludeJti],
+      );
+    } else {
+      await pool.query(
+        `UPDATE "auth_refresh_tokens" SET "revokedAt" = NOW()
+         WHERE "userId" = $1 AND "revokedAt" IS NULL`,
+        [userId],
+      );
+    }
+  }
+
+  /**
    * Revokes all tokens in a token family, optionally marking reuse detection.
    * @param familyId - Token family identifier.
    * @param reuseDetected - When `true`, also sets `reuseDetectedAt` on all family members.

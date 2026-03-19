@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response, Router } from 'express';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
+import { isAuthenticated, isAuthenticatedJwtOnly } from '@src/helpers/middleware/authenticated.middleware';
 import { env } from '@src/config/env';
 import { badRequest } from '@shared/errors/app.error';
 import {
@@ -9,6 +9,13 @@ import {
   resetPasswordUseCase,
   socialLoginUseCase,
   deleteAccountUseCase,
+  exportUserDataUseCase,
+  getProfileUseCase,
+  changePasswordUseCase,
+  verifyEmailUseCase,
+  generateApiKeyUseCase,
+  revokeApiKeyUseCase,
+  listApiKeysUseCase,
 } from '../../../core/useCase';
 
 /**
@@ -21,10 +28,7 @@ authRouter.post('/register', async (req: Request, res: Response, next: NextFunct
   try {
     const { email, password, firstname, lastname } = req.body;
     const user = await registerUseCase.execute(email, password, firstname, lastname);
-    if (user && 'password' in user) {
-      user.password = 'hidden';
-    }
-    res.status(201).json(user);
+    res.status(201).json({ user: { id: user.id, email: user.email } });
   } catch (error) { next(error); }
 });
 
@@ -52,29 +56,29 @@ authRouter.post('/logout', async (req: Request, res: Response, next: NextFunctio
   } catch (error) { next(error); }
 });
 
-authRouter.get('/me', isAuthenticated, async (req: Request, res: Response): Promise<void> => {
-  const user = (
-    req as Request & {
-      user?: { id?: number; email?: string; firstname?: string | null; lastname?: string | null };
-    }
-  ).user as
-    | { id?: number; email?: string; firstname?: string | null; lastname?: string | null }
-    | undefined;
-  if (!user?.id || !user.email) {
-    res.status(401).json({
-      error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
-    });
+authRouter.get('/me', isAuthenticated, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const jwtUser = (req as Request & { user?: { id: number } }).user;
+  if (!jwtUser?.id) {
+    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
     return;
   }
 
-  res.status(200).json({
-    user: {
-      id: user.id,
-      email: user.email,
-      firstname: user.firstname || null,
-      lastname: user.lastname || null,
-    },
-  });
+  try {
+    const profile = await getProfileUseCase.execute(jwtUser.id);
+    if (!profile) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'User not found' } });
+      return;
+    }
+
+    res.status(200).json({
+      user: {
+        id: profile.id,
+        email: profile.email,
+        firstname: profile.firstname ?? null,
+        lastname: profile.lastname ?? null,
+      },
+    });
+  } catch (error) { next(error); }
 });
 
 authRouter.post('/social-login', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -117,6 +121,50 @@ authRouter.delete('/account', isAuthenticated, async (req: Request, res: Respons
   } catch (error) { next(error); }
 });
 
+authRouter.get('/export-data', isAuthenticated, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const jwtUser = (req as Request & { user?: { id: number } }).user;
+
+  if (!jwtUser?.id) {
+    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
+    return;
+  }
+
+  try {
+    const profile = await getProfileUseCase.execute(jwtUser.id);
+    if (!profile) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'User not found' } });
+      return;
+    }
+
+    const result = await exportUserDataUseCase.execute({
+      id: profile.id,
+      email: profile.email,
+      firstname: profile.firstname,
+      lastname: profile.lastname,
+      createdAt: profile.createdAt,
+      updatedAt: profile.updatedAt,
+    });
+    res.json(result);
+  } catch (error) { next(error); }
+});
+
+authRouter.put('/change-password', isAuthenticated, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const jwtUser = (req as Request & { user?: { id: number } }).user;
+  if (!jwtUser?.id) {
+    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
+    return;
+  }
+
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
+      throw badRequest('currentPassword and newPassword are required');
+    }
+    await changePasswordUseCase.execute(jwtUser.id, currentPassword, newPassword);
+    res.status(200).json({ message: 'Password changed successfully.' });
+  } catch (error) { next(error); }
+});
+
 authRouter.post('/forgot-password', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email } = req.body;
@@ -135,5 +183,64 @@ authRouter.post('/reset-password', async (req: Request, res: Response, next: Nex
     res.json({ message: 'Password updated successfully.' });
   } catch (error) { next(error); }
 });
+
+authRouter.post('/verify-email', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { token } = req.body || {};
+    const result = await verifyEmailUseCase.execute(token);
+    res.json(result);
+  } catch (error) { next(error); }
+});
+
+// ─── API Key Management (B2B) ─── gated behind feature flag ───
+if (env.featureFlags.apiKeys) {
+  authRouter.post('/api-keys', isAuthenticatedJwtOnly, async (req: Request, res: Response, next: NextFunction) => {
+    const jwtUser = (req as Request & { user?: { id: number } }).user;
+    if (!jwtUser?.id) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
+      return;
+    }
+
+    try {
+      const { name, expiresAt } = req.body || {};
+      if (!name || typeof name !== 'string') {
+        throw badRequest('name is required');
+      }
+      const expiry = expiresAt ? new Date(expiresAt) : undefined;
+      const result = await generateApiKeyUseCase.execute(jwtUser.id, name, expiry);
+      res.status(201).json(result);
+    } catch (error) { next(error); }
+  });
+
+  authRouter.get('/api-keys', isAuthenticatedJwtOnly, async (req: Request, res: Response, next: NextFunction) => {
+    const jwtUser = (req as Request & { user?: { id: number } }).user;
+    if (!jwtUser?.id) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
+      return;
+    }
+
+    try {
+      const result = await listApiKeysUseCase.execute(jwtUser.id);
+      res.status(200).json(result);
+    } catch (error) { next(error); }
+  });
+
+  authRouter.delete('/api-keys/:id', isAuthenticatedJwtOnly, async (req: Request, res: Response, next: NextFunction) => {
+    const jwtUser = (req as Request & { user?: { id: number } }).user;
+    if (!jwtUser?.id) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
+      return;
+    }
+
+    try {
+      const keyId = parseInt(req.params.id, 10);
+      if (isNaN(keyId)) {
+        throw badRequest('Invalid API key ID');
+      }
+      const result = await revokeApiKeyUseCase.execute(keyId, jwtUser.id);
+      res.status(200).json(result);
+    } catch (error) { next(error); }
+  });
+}
 
 export default authRouter;
