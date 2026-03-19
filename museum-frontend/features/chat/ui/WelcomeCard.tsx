@@ -9,6 +9,8 @@ interface WelcomeCardProps {
   locale: string;
   onSuggestion: (text: string) => void;
   onCamera: () => void;
+  /** When true, all suggestion buttons are disabled (e.g. during an active send). */
+  disabled?: boolean;
 }
 
 interface Suggestion {
@@ -50,7 +52,7 @@ const getFrSuggestions = (museumMode: boolean): Suggestion[] => {
 };
 
 /** Displays a welcome greeting with locale-aware suggestion buttons for starting a conversation or opening the camera. */
-export const WelcomeCard = ({ museumMode, locale, onSuggestion, onCamera }: WelcomeCardProps) => {
+export const WelcomeCard = ({ museumMode, locale, onSuggestion, onCamera, disabled = false }: WelcomeCardProps) => {
   const isFrench = locale.toLowerCase().startsWith('fr');
   const suggestions = isFrench ? getFrSuggestions(museumMode) : getEnSuggestions(museumMode);
   const welcomeTitle = isFrench ? 'Bienvenue sur Musaium' : 'Welcome to Musaium';
@@ -66,7 +68,7 @@ export const WelcomeCard = ({ museumMode, locale, onSuggestion, onCamera }: Welc
         {suggestions.map((suggestion) => (
           <Pressable
             key={suggestion.text}
-            style={styles.suggestionButton}
+            style={[styles.suggestionButton, disabled && styles.suggestionButtonDisabled]}
             onPress={() => {
               if (suggestion.isCamera) {
                 onCamera();
@@ -74,6 +76,7 @@ export const WelcomeCard = ({ museumMode, locale, onSuggestion, onCamera }: Welc
                 onSuggestion(suggestion.text);
               }
             }}
+            disabled={disabled}
           >
             <Ionicons name={suggestion.icon} size={18} color={liquidColors.primary} />
             <Text style={styles.suggestionText} numberOfLines={2}>{suggestion.text}</Text>
@@ -121,5 +124,8 @@ const styles = StyleSheet.create({
     color: liquidColors.textPrimary,
     fontSize: 14,
     fontWeight: '500',
+  },
+  suggestionButtonDisabled: {
+    opacity: 0.5,
   },
 });
