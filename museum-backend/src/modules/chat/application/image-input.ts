@@ -6,20 +6,43 @@ interface DecodedImage {
   sizeBytes: number;
 }
 
-const privateHostPatterns = [/^localhost$/i, /^127\./, /^10\./, /^192\.168\./, /^172\.(1[6-9]|2[0-9]|3[0-1])\./];
+const privateHostPatterns = [
+  /^localhost$/i,
+  /^127\./,
+  /^10\./,
+  /^192\.168\./,
+  /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+  /^0\.0\.0\.0$/,
+  /^::1$/,
+  /^\[::1\]$/,
+  /^169\.254\./,
+  /^100\.(6[4-9]|[7-9]\d|1[0-1]\d|12[0-7])\./,
+  /^fe80:/i,
+  /^fd[0-9a-f]{2}:/i,
+  /^fc[0-9a-f]{2}:/i,
+  /^0x[0-9a-f]/i,       // hex IP
+  /^0[0-7]+\./,          // octal IP
+  /^::ffff:/i,           // IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1)
+  /^\[::ffff:/i,         // bracketed IPv4-mapped IPv6
+];
 
 /**
  * Validates that the given URL is a safe HTTPS image URL (not pointing to private/internal hosts).
+ * Rejects non-HTTPS, non-443 ports, and all private/reserved IP ranges.
+ *
+ * Note: The validated URL is never fetched by this backend — it is passed to the LLM
+ * provider's API as an image reference. DNS rebinding attacks target the fetching host,
+ * so the SSRF surface is on the provider side, not ours. If server-side fetching is ever
+ * added (thumbnailing, caching), DNS resolution validation must be introduced here.
+ *
  * @param value - The URL string to validate.
  * @returns True if the URL uses HTTPS and does not target a private host.
  */
 export const isSafeImageUrl = (value: string): boolean => {
   try {
     const url = new URL(value);
-    if (url.protocol !== 'https:') {
-      return false;
-    }
-
+    if (url.protocol !== 'https:') return false;
+    if (url.port && url.port !== '443') return false;
     return !privateHostPatterns.some((pattern) => pattern.test(url.hostname));
   } catch {
     return false;

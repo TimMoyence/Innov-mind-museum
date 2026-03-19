@@ -1,7 +1,3 @@
-import { validate as isUuid } from 'uuid';
-import path from 'path';
-import { randomUUID } from 'crypto';
-
 import { env } from '@src/config/env';
 import { badRequest, conflict, notFound } from '@shared/errors/app.error';
 import {
@@ -11,7 +7,6 @@ import {
   isSafeImageUrl,
 } from './image-input';
 import {
-  buildGuardrailCitation,
   buildGuardrailRefusal,
   evaluateAssistantOutputGuardrail,
   evaluateUserInputGuardrail,
@@ -39,6 +34,13 @@ import {
   AudioTranscriber,
   DisabledAudioTranscriber,
 } from '../adapters/secondary/audio-transcriber.openai';
+import { ensureSessionAccess, ensureMessageAccess } from './session-access';
+import {
+  isValidSessionListCursor,
+  buildChatImageObjectKey,
+  withPolicyCitation,
+  resolveLocalImageMeta,
+} from './chat-image.helpers';
 
 /** Returned after a new chat session is created. */
 export interface CreateSessionResult {
@@ -130,85 +132,6 @@ export interface ListSessionsResult {
   };
 }
 
-const isValidSessionListCursor = (value: string): boolean => {
-  try {
-    const decoded = Buffer.from(value, 'base64url').toString('utf8');
-    const parsed = JSON.parse(decoded) as unknown;
-
-    return (
-      typeof parsed === 'object' &&
-      parsed !== null &&
-      typeof (parsed as Record<string, unknown>).updatedAt === 'string' &&
-      typeof (parsed as Record<string, unknown>).id === 'string'
-    );
-  } catch {
-    return false;
-  }
-};
-
-const imageExtensionByMimeType: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-};
-
-const localImageRefPattern = /^local:\/\/([a-zA-Z0-9._-]+)$/;
-
-const toLocalImageFileName = (imageRef: string): string | null => {
-  const match = imageRef.match(localImageRefPattern);
-  return match?.[1] || null;
-};
-
-const sanitizeObjectKeySegment = (value: string): string => {
-  return value.replace(/[^a-zA-Z0-9._-]/g, '_');
-};
-
-const buildChatImageObjectKey = (params: {
-  mimeType: string;
-  sessionId: string;
-  userId?: number;
-  now?: Date;
-}): string => {
-  const extension = imageExtensionByMimeType[params.mimeType] || 'img';
-  const now = params.now || new Date();
-  const yyyy = String(now.getUTCFullYear());
-  const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
-  const userSegment =
-    typeof params.userId === 'number' && Number.isInteger(params.userId) && params.userId > 0
-      ? `user-${params.userId}`
-      : 'user-anonymous';
-  const sessionSegment = `session-${sanitizeObjectKeySegment(params.sessionId)}`;
-
-  return [
-    'chat-images',
-    yyyy,
-    mm,
-    userSegment,
-    sessionSegment,
-    `${randomUUID()}.${extension}`,
-  ].join('/');
-};
-
-const withPolicyCitation = (
-  metadata: ChatAssistantMetadata,
-  reason?: Parameters<typeof buildGuardrailCitation>[0],
-): ChatAssistantMetadata => {
-  const policyCitation = buildGuardrailCitation(reason);
-  if (!policyCitation) {
-    return metadata;
-  }
-
-  const citations = metadata.citations ? [...metadata.citations] : [];
-  if (!citations.includes(policyCitation)) {
-    citations.push(policyCitation);
-  }
-
-  return {
-    ...metadata,
-    citations,
-  };
-};
-
 /**
  * Orchestrates the chat lifecycle: session CRUD, message posting with guardrails,
  * image upload/storage, audio transcription, LLM orchestration, and message reporting.
@@ -265,18 +188,8 @@ export class ChatService {
     requestId?: string,
     currentUserId?: number,
   ): Promise<PostMessageResult> {
-    if (!isUuid(sessionId)) {
-      throw badRequest('Invalid session id format');
-    }
-
-    const session = await this.repository.getSessionById(sessionId);
-    if (!session) {
-      throw notFound('Chat session not found');
-    }
+    const session = await ensureSessionAccess(sessionId, this.repository, currentUserId);
     const ownerId = session.user?.id;
-    if (ownerId && currentUserId && ownerId !== currentUserId) {
-      throw notFound('Chat session not found');
-    }
 
     const text = input.text?.trim();
     if (text && text.length > env.llm.maxTextLength) {
@@ -494,19 +407,7 @@ export class ChatService {
     requestId?: string,
     currentUserId?: number,
   ): Promise<PostAudioMessageResult> {
-    if (!isUuid(sessionId)) {
-      throw badRequest('Invalid session id format');
-    }
-
-    const session = await this.repository.getSessionById(sessionId);
-    if (!session) {
-      throw notFound('Chat session not found');
-    }
-
-    const ownerId = session.user?.id;
-    if (ownerId && currentUserId && ownerId !== currentUserId) {
-      throw notFound('Chat session not found');
-    }
+    const session = await ensureSessionAccess(sessionId, this.repository, currentUserId);
 
     const audio = input.audio;
     if (!audio?.base64?.trim()) {
@@ -560,19 +461,7 @@ export class ChatService {
     sessionId: string,
     currentUserId?: number,
   ): Promise<DeleteSessionResult> {
-    if (!isUuid(sessionId)) {
-      throw badRequest('Invalid session id format');
-    }
-
-    const session = await this.repository.getSessionById(sessionId);
-    if (!session) {
-      throw notFound('Chat session not found');
-    }
-
-    const ownerId = session.user?.id;
-    if (ownerId && currentUserId && ownerId !== currentUserId) {
-      throw notFound('Chat session not found');
-    }
+    await ensureSessionAccess(sessionId, this.repository, currentUserId);
 
     const deleted = await this.repository.deleteSessionIfEmpty(sessionId);
     return {
@@ -594,18 +483,7 @@ export class ChatService {
     page: MessagePageQuery,
     currentUserId?: number,
   ): Promise<SessionResult> {
-    if (!isUuid(sessionId)) {
-      throw badRequest('Invalid session id format');
-    }
-
-    const session = await this.repository.getSessionById(sessionId);
-    if (!session) {
-      throw notFound('Chat session not found');
-    }
-    const ownerId = session.user?.id;
-    if (ownerId && currentUserId && ownerId !== currentUserId) {
-      throw notFound('Chat session not found');
-    }
+    const session = await ensureSessionAccess(sessionId, this.repository, currentUserId);
 
     const limit = Math.max(1, Math.min(page.limit || 20, 50));
 
@@ -711,35 +589,15 @@ export class ChatService {
     fileName?: string;
     contentType?: string;
   }> {
-    if (!isUuid(messageId)) {
-      throw badRequest('Invalid message id format');
-    }
-
-    const row = await this.repository.getMessageById(messageId);
-    if (!row) {
-      throw notFound('Chat message not found');
-    }
-
-    const ownerId = row.session.user?.id;
-    if (ownerId && currentUserId && ownerId !== currentUserId) {
-      throw notFound('Chat message not found');
-    }
+    const row = await ensureMessageAccess(messageId, this.repository, currentUserId);
 
     if (!row.message.imageRef) {
       throw notFound('Chat message image not found');
     }
 
-    const fileName = toLocalImageFileName(row.message.imageRef);
-    if (fileName) {
-      const extension = path.extname(fileName).replace('.', '').toLowerCase();
-      const contentType = Object.entries(imageExtensionByMimeType).find(
-        ([, ext]) => ext === extension,
-      )?.[0];
-      return {
-        imageRef: row.message.imageRef,
-        fileName,
-        contentType,
-      };
+    const localMeta = resolveLocalImageMeta(row.message.imageRef);
+    if (localMeta) {
+      return { imageRef: row.message.imageRef, ...localMeta };
     }
 
     return {
@@ -762,24 +620,12 @@ export class ChatService {
     currentUserId: number,
     comment?: string,
   ): Promise<ReportMessageResult> {
-    if (!isUuid(messageId)) {
-      throw badRequest('Invalid message id format');
-    }
-
     const allowedReasons: ReportReason[] = ['offensive', 'inaccurate', 'inappropriate', 'other'];
     if (!allowedReasons.includes(reason)) {
       throw badRequest('Invalid report reason');
     }
 
-    const row = await this.repository.getMessageById(messageId);
-    if (!row) {
-      throw notFound('Chat message not found');
-    }
-
-    const ownerId = row.session.user?.id;
-    if (ownerId && ownerId !== currentUserId) {
-      throw notFound('Chat message not found');
-    }
+    const row = await ensureMessageAccess(messageId, this.repository, currentUserId);
 
     if (row.message.role !== 'assistant') {
       throw badRequest('Only assistant messages can be reported');

@@ -1,4 +1,5 @@
 import { ChatMessage } from '../domain/chatMessage.entity';
+import { sanitizePromptInput } from '@shared/validation/input';
 
 /** Identifier for a named LLM prompt section. */
 export type LlmSectionName = 'summary';
@@ -169,10 +170,11 @@ const lastNonEmptyTexts = (history: ChatMessage[], limit = 3): string[] => {
 export const createSummaryFallback = (input: SummaryFallbackInput): string => {
   const french = isFrenchLocale(input.locale);
   const snippets = lastNonEmptyTexts(input.history, 3);
-  const locationLine = input.location
+  const sanitizedLocation = input.location ? sanitizePromptInput(input.location) : undefined;
+  const locationLine = sanitizedLocation
     ? french
-      ? `Vous etes pres de ${input.location}. `
-      : `You are currently near ${input.location}. `
+      ? `Vous etes pres de ${sanitizedLocation}. `
+      : `You are currently near ${sanitizedLocation}. `
     : '';
   const recap = snippets.length
     ? snippets.join(' ')

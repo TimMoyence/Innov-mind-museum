@@ -187,62 +187,74 @@ const signString = (params: {
   return { scope, signature };
 };
 
-const httpPut = async (params: {
+const httpRequest = async (params: {
+  method: string;
   url: URL;
   headers: Record<string, string>;
-  body: Buffer;
+  body?: Buffer;
   timeoutMs?: number;
-}): Promise<void> => {
+}): Promise<{ statusCode: number; body: string }> => {
   const client = params.url.protocol === 'https:' ? https : http;
-  await new Promise<void>((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     let settled = false;
-    const finishReject = (error: Error) => {
+    const finish = (err: Error | null, result?: { statusCode: number; body: string }) => {
       if (settled) return;
       settled = true;
-      reject(error);
+      if (err) reject(err);
+      else resolve(result!);
     };
-    const finishResolve = () => {
-      if (settled) return;
-      settled = true;
-      resolve();
-    };
+
+    const reqHeaders: Record<string, string> = { ...params.headers };
+    if (params.body) {
+      reqHeaders['Content-Length'] = String(params.body.byteLength);
+    }
+
     const req = client.request(
       params.url,
-      {
-        method: 'PUT',
-        headers: {
-          ...params.headers,
-          'Content-Length': String(params.body.byteLength),
-        },
-      },
+      { method: params.method, headers: reqHeaders },
       (res) => {
         const chunks: Buffer[] = [];
-        res.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+        res.on('data', (chunk: Buffer | string) =>
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)),
+        );
         res.on('end', () => {
           const statusCode = res.statusCode || 0;
-          if (statusCode >= 200 && statusCode < 300) {
-            finishResolve();
-            return;
-          }
-
-          const bodyText = Buffer.concat(chunks).toString('utf8').slice(0, 500);
-          finishReject(
-            new Error(`S3 upload failed (${statusCode})${bodyText ? `: ${bodyText}` : ''}`),
-          );
+          const bodyText = Buffer.concat(chunks).toString('utf8');
+          finish(null, { statusCode, body: bodyText });
         });
       },
     );
 
     if (params.timeoutMs && params.timeoutMs > 0) {
       req.setTimeout(params.timeoutMs, () => {
-        req.destroy(new Error(`S3 upload timed out after ${params.timeoutMs}ms`));
+        req.destroy(new Error(`S3 request timed out after ${params.timeoutMs}ms`));
       });
     }
 
-    req.on('error', (error) => finishReject(error as Error));
-    req.write(params.body);
+    req.on('error', (error) => finish(error as Error));
+    if (params.body) req.write(params.body);
     req.end();
   });
+};
+
+const httpPut = async (params: {
+  url: URL;
+  headers: Record<string, string>;
+  body: Buffer;
+  timeoutMs?: number;
+}): Promise<void> => {
+  const { statusCode, body } = await httpRequest({
+    method: 'PUT',
+    url: params.url,
+    headers: params.headers,
+    body: params.body,
+    timeoutMs: params.timeoutMs,
+  });
+  if (statusCode < 200 || statusCode >= 300) {
+    throw new Error(
+      `S3 upload failed (${statusCode})${body ? `: ${body.slice(0, 500)}` : ''}`,
+    );
+  }
 };
 
 const buildS3SignedHeadersForPut = (params: {
@@ -432,6 +444,186 @@ export const buildS3PresignedReadUrl = (params: {
   };
 };
 
+const buildS3SignedHeaders = (params: {
+  config: S3ImageStorageConfig;
+  method: string;
+  path: string;
+  queryString: string;
+  headers: Record<string, string>;
+  payloadHash: string;
+  now?: Date;
+}): Record<string, string> => {
+  const now = params.now || new Date();
+  const { amzDate, dateStamp } = toAmzDate(now);
+  const headersToSign: Record<string, string> = {
+    ...params.headers,
+    'x-amz-content-sha256': params.payloadHash,
+    'x-amz-date': amzDate,
+  };
+  if (params.config.sessionToken) {
+    headersToSign['x-amz-security-token'] = params.config.sessionToken;
+  }
+  const { canonicalHeaders, signedHeaders } = buildCanonicalHeaders(headersToSign);
+
+  const canonicalRequest = [
+    params.method,
+    params.path,
+    params.queryString,
+    canonicalHeaders,
+    signedHeaders,
+    params.payloadHash,
+  ].join('\n');
+
+  const { scope, signature } = signString({
+    secretAccessKey: params.config.secretAccessKey,
+    dateStamp,
+    region: params.config.region,
+    amzDate,
+    canonicalRequest,
+  });
+
+  const authorization = [
+    'AWS4-HMAC-SHA256',
+    `Credential=${params.config.accessKeyId}/${scope}`,
+    `SignedHeaders=${signedHeaders}`,
+    `Signature=${signature}`,
+  ].join(', ');
+
+  return {
+    'X-Amz-Content-Sha256': params.payloadHash,
+    'X-Amz-Date': amzDate,
+    ...(params.config.sessionToken
+      ? { 'X-Amz-Security-Token': params.config.sessionToken }
+      : {}),
+    Authorization: authorization,
+  };
+};
+
+interface ListObjectsResult {
+  keys: string[];
+  nextToken?: string;
+}
+
+const extractXmlValues = (xml: string, tag: string): string[] => {
+  const results: string[] = [];
+  const regex = new RegExp(`<${tag}>([^<]*)</${tag}>`, 'g');
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(xml)) !== null) {
+    results.push(match[1]);
+  }
+  return results;
+};
+
+const extractXmlValue = (xml: string, tag: string): string | undefined => {
+  const match = xml.match(new RegExp(`<${tag}>([^<]*)</${tag}>`));
+  return match?.[1];
+};
+
+export const listObjectsByPrefix = async (
+  config: S3ImageStorageConfig,
+  prefix: string,
+  continuationToken?: string,
+): Promise<ListObjectsResult> => {
+  const endpoint = normalizeEndpoint(config.endpoint);
+  const bucketPath = `/${encodePathSegments(config.bucket)}`;
+  const objectPath = `${endpoint.pathname.replace(/\/+$/, '')}${bucketPath}`.replace(/\/{2,}/g, '/');
+
+  const queryPairs: Array<[string, string]> = [
+    ['list-type', '2'],
+    ['max-keys', '1000'],
+    ['prefix', prefix],
+  ];
+  if (continuationToken) {
+    queryPairs.push(['continuation-token', continuationToken]);
+  }
+  const qs = canonicalQueryString(queryPairs);
+
+  const url = new URL(endpoint.toString());
+  url.pathname = objectPath;
+  url.search = qs;
+
+  const payloadHash = sha256Hex('');
+  const signedHeaders = buildS3SignedHeaders({
+    config,
+    method: 'GET',
+    path: objectPath,
+    queryString: qs,
+    headers: { host: endpoint.host },
+    payloadHash,
+  });
+
+  const { statusCode, body } = await httpRequest({
+    method: 'GET',
+    url,
+    headers: { ...signedHeaders, Host: endpoint.host },
+    timeoutMs: config.requestTimeoutMs,
+  });
+
+  if (statusCode < 200 || statusCode >= 300) {
+    throw new Error(`S3 ListObjectsV2 failed (${statusCode}): ${body.slice(0, 500)}`);
+  }
+
+  const keys = extractXmlValues(body, 'Key');
+  const isTruncated = extractXmlValue(body, 'IsTruncated') === 'true';
+  const nextToken = isTruncated ? extractXmlValue(body, 'NextContinuationToken') : undefined;
+
+  return { keys, nextToken };
+};
+
+export const deleteObjectsBatch = async (
+  config: S3ImageStorageConfig,
+  keys: string[],
+): Promise<void> => {
+  if (keys.length === 0) return;
+
+  const objectsXml = keys
+    .map((k) => `<Object><Key>${k.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</Key></Object>`)
+    .join('');
+  const xmlBody = `<?xml version="1.0" encoding="UTF-8"?><Delete><Quiet>true</Quiet>${objectsXml}</Delete>`;
+  const bodyBuffer = Buffer.from(xmlBody, 'utf8');
+
+  const endpoint = normalizeEndpoint(config.endpoint);
+  const bucketPath = `/${encodePathSegments(config.bucket)}`;
+  const objectPath = `${endpoint.pathname.replace(/\/+$/, '')}${bucketPath}`.replace(/\/{2,}/g, '/');
+
+  const qs = 'delete=';
+  const url = new URL(endpoint.toString());
+  url.pathname = objectPath;
+  url.search = qs;
+
+  const contentMd5 = crypto.createHash('md5').update(bodyBuffer).digest('base64');
+  const payloadHash = sha256Hex(bodyBuffer);
+  const signedHeaders = buildS3SignedHeaders({
+    config,
+    method: 'POST',
+    path: objectPath,
+    queryString: qs,
+    headers: {
+      host: endpoint.host,
+      'content-type': 'application/xml',
+      'content-md5': contentMd5,
+    },
+    payloadHash,
+  });
+
+  const { statusCode, body } = await httpRequest({
+    method: 'POST',
+    url,
+    headers: {
+      ...signedHeaders,
+      Host: endpoint.host,
+      'Content-Type': 'application/xml',
+      'Content-MD5': contentMd5,
+    },
+    body: bodyBuffer,
+    timeoutMs: config.requestTimeoutMs,
+  });
+
+  if (statusCode < 200 || statusCode >= 300) {
+    throw new Error(`S3 DeleteObjects failed (${statusCode}): ${body.slice(0, 500)}`);
+  }
+};
+
 /** S3-compatible implementation of {@link ImageStorage} — uploads images via signed PUT requests. */
 export class S3CompatibleImageStorage implements ImageStorage {
   constructor(private readonly config: S3ImageStorageConfig) {}
@@ -473,5 +665,31 @@ export class S3CompatibleImageStorage implements ImageStorage {
     });
 
     return buildS3ImageRef(key);
+  }
+
+  /**
+   * Deletes all objects whose key contains the given user pattern (e.g. `user-42`).
+   * Lists all objects under `chat-images/` and filters by pattern match.
+   * @param userPattern - Substring to match within object keys (e.g. `user-42`).
+   */
+  async deleteByPrefix(userPattern: string): Promise<void> {
+    const prefix = normalizeObjectKey({
+      key: 'chat-images/',
+      objectKeyPrefix: this.config.objectKeyPrefix,
+    });
+    let continuationToken: string | undefined;
+    do {
+      const { keys, nextToken } = await listObjectsByPrefix(
+        this.config,
+        prefix,
+        continuationToken,
+      );
+      const matching = keys.filter((k) => k.includes(`/${userPattern}/`) || k.includes(`/${userPattern}`));
+      if (matching.length > 0) {
+        // DeleteObjects supports max 1000 keys per call — list already returns max 1000
+        await deleteObjectsBatch(this.config, matching);
+      }
+      continuationToken = nextToken;
+    } while (continuationToken);
   }
 }
