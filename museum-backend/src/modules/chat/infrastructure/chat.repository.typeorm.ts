@@ -12,6 +12,7 @@ import {
   ListSessionsParams,
   ListSessionMessagesParams,
   SessionMessagesPage,
+  UserChatExportData,
 } from '../domain/chat.repository.interface';
 import { ChatMessage } from '../domain/chatMessage.entity';
 import { ChatSession } from '../domain/chatSession.entity';
@@ -222,6 +223,9 @@ export class TypeOrmChatRepository implements ChatRepository {
           }
           if (input.sessionUpdates.visitContext !== undefined) {
             session.visitContext = input.sessionUpdates.visitContext;
+          }
+          if (input.sessionUpdates.locale !== undefined) {
+            session.locale = input.sessionUpdates.locale;
           }
         }
         await sessionRepository.save(session);
@@ -450,5 +454,38 @@ export class TypeOrmChatRepository implements ChatRepository {
     });
 
     await this.reportRepo.save(entity);
+  }
+
+  /**
+   * Exports all chat sessions and messages for a user (GDPR data portability).
+   * @param userId - Numeric user ID.
+   * @returns Structured export payload containing all sessions and their messages.
+   */
+  async exportUserData(userId: number): Promise<UserChatExportData> {
+    const sessions = await this.sessionRepo.find({
+      where: { user: { id: userId } },
+      relations: ['messages'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      sessions: sessions.map((session) => ({
+        id: session.id,
+        locale: session.locale,
+        museumMode: session.museumMode,
+        title: session.title ?? null,
+        museumName: session.museumName ?? null,
+        createdAt: session.createdAt.toISOString(),
+        updatedAt: session.updatedAt.toISOString(),
+        messages: (session.messages || []).map((msg) => ({
+          id: msg.id,
+          role: msg.role,
+          text: msg.text,
+          imageRef: msg.imageRef,
+          createdAt: msg.createdAt.toISOString(),
+          metadata: msg.metadata,
+        })),
+      })),
+    };
   }
 }

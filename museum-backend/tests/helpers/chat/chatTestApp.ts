@@ -11,6 +11,7 @@ import type {
   PersistMessageInput,
   PersistMessageReportInput,
   SessionMessagesPage,
+  UserChatExportData,
 } from '@modules/chat/domain/chat.repository.interface';
 import type { CreateSessionInput } from '@modules/chat/domain/chat.types';
 import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
@@ -21,6 +22,9 @@ import type {
   OrchestratorOutput,
 } from '@modules/chat/adapters/secondary/langchain.orchestrator';
 import type { AudioTranscriber } from '@modules/chat/adapters/secondary/audio-transcriber.openai';
+import type { TextToSpeechService } from '@modules/chat/adapters/secondary/text-to-speech.openai';
+import type { OcrService } from '@modules/chat/adapters/secondary/ocr-service';
+import type { CacheService } from '@shared/cache/cache.port';
 
 /** Test utility: in-memory ChatRepository implementation that stores sessions and messages in Maps. */
 class InMemoryChatRepository implements ChatRepository {
@@ -143,6 +147,9 @@ class InMemoryChatRepository implements ChatRepository {
     if (session) {
       session.updatedAt = new Date();
       if (input.sessionUpdates) {
+        if (input.sessionUpdates.title !== undefined) session.title = input.sessionUpdates.title;
+        if (input.sessionUpdates.museumName !== undefined) session.museumName = input.sessionUpdates.museumName;
+        if (input.sessionUpdates.visitContext !== undefined) session.visitContext = input.sessionUpdates.visitContext;
         session.version = (session.version || 1) + 1;
       }
       this.sessions.set(input.sessionId, session);
@@ -186,6 +193,35 @@ class InMemoryChatRepository implements ChatRepository {
     const set = this.reports.get(input.messageId) ?? new Set<number>();
     set.add(input.userId);
     this.reports.set(input.messageId, set);
+  }
+
+  async exportUserData(userId: number): Promise<UserChatExportData> {
+    const sessions = [...this.sessions.values()]
+      .filter((session) => session.user?.id === userId)
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+
+    return {
+      sessions: sessions.map((session) => {
+        const messages = this.messages.get(session.id) || [];
+        return {
+          id: session.id,
+          locale: session.locale,
+          museumMode: session.museumMode,
+          title: session.title ?? null,
+          museumName: session.museumName ?? null,
+          createdAt: session.createdAt.toISOString(),
+          updatedAt: session.updatedAt.toISOString(),
+          messages: messages.map((msg) => ({
+            id: msg.id,
+            role: msg.role,
+            text: msg.text,
+            imageRef: msg.imageRef,
+            createdAt: msg.createdAt.toISOString(),
+            metadata: msg.metadata,
+          })),
+        };
+      }),
+    };
   }
 
   async listSessions(params: ListSessionsParams): Promise<ChatSessionsPage> {
@@ -248,36 +284,63 @@ class InMemoryChatRepository implements ChatRepository {
 
 /** Test utility: stub ChatOrchestrator that returns a deterministic synthetic response. */
 class FakeOrchestrator implements ChatOrchestrator {
-  async generate(): Promise<OrchestratorOutput> {
-    return {
-      text: 'Synthetic assistant response',
-      metadata: {
-        detectedArtwork: {
-          title: 'Mock Artwork',
-          artist: 'Mock Artist',
-          confidence: 0.8,
-          source: 'test',
-        },
-        citations: ['test-citation'],
+  private readonly fakeOutput: OrchestratorOutput = {
+    text: 'Synthetic assistant response',
+    metadata: {
+      detectedArtwork: {
+        title: 'Mock Artwork',
+        artist: 'Mock Artist',
+        confidence: 0.8,
+        source: 'test',
       },
-    };
+      citations: ['test-citation'],
+    },
+  };
+
+  async generate(): Promise<OrchestratorOutput> {
+    return this.fakeOutput;
   }
+
+  async generateStream(_input: unknown, onChunk: (text: string) => void): Promise<OrchestratorOutput> {
+    onChunk(this.fakeOutput.text);
+    return this.fakeOutput;
+  }
+}
+
+interface BuildChatTestServiceOptions {
+  orchestrator?: ChatOrchestrator;
+  audioTranscriber?: AudioTranscriber;
+  tts?: TextToSpeechService;
+  cache?: CacheService;
+  ocr?: OcrService;
 }
 
 /**
  * Test utility: builds a ChatService wired with in-memory repository, local image storage, and optional fake orchestrator.
- * @param orchestrator - Chat orchestrator to use; defaults to FakeOrchestrator.
- * @param audioTranscriber - Optional audio transcriber override.
- * @returns ChatService configured for unit/integration tests.
+ * Supports legacy positional args and new options object.
  */
-export const buildChatTestService = (
-  orchestrator: ChatOrchestrator = new FakeOrchestrator(),
-  audioTranscriber?: AudioTranscriber,
-): ChatService => {
-  return new ChatService(
-    new InMemoryChatRepository(),
-    orchestrator,
-    new LocalImageStorage(),
-    audioTranscriber,
-  );
-};
+export function buildChatTestService(orchestrator?: ChatOrchestrator, audioTranscriber?: AudioTranscriber): ChatService;
+export function buildChatTestService(options: BuildChatTestServiceOptions): ChatService;
+export function buildChatTestService(arg1?: ChatOrchestrator | BuildChatTestServiceOptions, arg2?: AudioTranscriber): ChatService {
+  const isOptions = arg1 !== undefined && typeof arg1 === 'object' && !('generate' in arg1);
+
+  if (isOptions) {
+    const opts = arg1 as BuildChatTestServiceOptions;
+    return new ChatService({
+      repository: new InMemoryChatRepository(),
+      orchestrator: opts.orchestrator ?? new FakeOrchestrator(),
+      imageStorage: new LocalImageStorage(),
+      audioTranscriber: opts.audioTranscriber,
+      tts: opts.tts,
+      cache: opts.cache,
+      ocr: opts.ocr,
+    });
+  }
+
+  return new ChatService({
+    repository: new InMemoryChatRepository(),
+    orchestrator: (arg1 as ChatOrchestrator) ?? new FakeOrchestrator(),
+    imageStorage: new LocalImageStorage(),
+    audioTranscriber: arg2,
+  });
+}

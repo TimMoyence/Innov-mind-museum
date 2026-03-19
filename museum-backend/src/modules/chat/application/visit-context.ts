@@ -88,6 +88,12 @@ export const deriveSessionTitle = (
     return null;
   }
 
+  // In museum mode: prioritize museum name as title
+  if (session.museumMode && visitContext.museumName && visitContext.museumConfidence >= 0.5) {
+    return visitContext.museumName.slice(0, 256);
+  }
+
+  // Standard mode (or museum mode without confident museum name): prioritize artwork title
   const artwork = metadata.detectedArtwork;
   if (artwork?.title) {
     const parts = [artwork.title];
@@ -95,6 +101,7 @@ export const deriveSessionTitle = (
     return parts.join(' ').slice(0, 256);
   }
 
+  // Fallback: museum name even in standard mode
   if (visitContext.museumName && visitContext.museumConfidence >= 0.5) {
     return visitContext.museumName.slice(0, 256);
   }

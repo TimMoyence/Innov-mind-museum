@@ -1,5 +1,8 @@
 import { env } from '@src/config/env';
-import { badRequest, conflict, notFound } from '@shared/errors/app.error';
+import { logger } from '@shared/logger/logger';
+import { AppError, badRequest, conflict, notFound } from '@shared/errors/app.error';
+import { resolveLocale } from '@shared/i18n/locale';
+import type { CacheService } from '@shared/cache/cache.port';
 import {
   assertImageSize,
   assertMimeType,
@@ -10,6 +13,7 @@ import {
   buildGuardrailRefusal,
   evaluateAssistantOutputGuardrail,
   evaluateUserInputGuardrail,
+  GuardrailBlockReason,
 } from './art-topic-guardrail';
 import {
   ChatAssistantMetadata,
@@ -34,6 +38,8 @@ import {
   AudioTranscriber,
   DisabledAudioTranscriber,
 } from '../adapters/secondary/audio-transcriber.openai';
+import type { TextToSpeechService } from '../adapters/secondary/text-to-speech.openai';
+import type { OcrService } from '../adapters/secondary/ocr-service';
 import { ensureSessionAccess, ensureMessageAccess } from './session-access';
 import {
   isValidSessionListCursor,
@@ -41,6 +47,17 @@ import {
   withPolicyCitation,
   resolveLocalImageMeta,
 } from './chat-image.helpers';
+
+/** Dependencies for constructing a ChatService instance. */
+export interface ChatServiceDeps {
+  repository: ChatRepository;
+  orchestrator: ChatOrchestrator;
+  imageStorage: ImageStorage;
+  audioTranscriber?: AudioTranscriber;
+  tts?: TextToSpeechService;
+  cache?: CacheService;
+  ocr?: OcrService;
+}
 
 /** Returned after a new chat session is created. */
 export interface CreateSessionResult {
@@ -137,12 +154,23 @@ export interface ListSessionsResult {
  * image upload/storage, audio transcription, LLM orchestration, and message reporting.
  */
 export class ChatService {
-  constructor(
-    private readonly repository: ChatRepository,
-    private readonly orchestrator: ChatOrchestrator,
-    private readonly imageStorage: ImageStorage,
-    private readonly audioTranscriber: AudioTranscriber = new DisabledAudioTranscriber(),
-  ) {}
+  private readonly repository: ChatRepository;
+  private readonly orchestrator: ChatOrchestrator;
+  private readonly imageStorage: ImageStorage;
+  private readonly audioTranscriber: AudioTranscriber;
+  private readonly tts?: TextToSpeechService;
+  private readonly cache?: CacheService;
+  private readonly ocr?: OcrService;
+
+  constructor(deps: ChatServiceDeps) {
+    this.repository = deps.repository;
+    this.orchestrator = deps.orchestrator;
+    this.imageStorage = deps.imageStorage;
+    this.audioTranscriber = deps.audioTranscriber ?? new DisabledAudioTranscriber();
+    this.tts = deps.tts;
+    this.cache = deps.cache;
+    this.ocr = deps.ocr;
+  }
 
   /**
    * Creates a new chat session.
@@ -161,6 +189,11 @@ export class ChatService {
       museumMode: input.museumMode,
     });
 
+    // Invalidate session list cache so new session appears immediately
+    if (this.cache && input.userId) {
+      await this.cache.delByPrefix(`sessions:user:${input.userId}:`);
+    }
+
     return {
       id: session.id,
       locale: session.locale,
@@ -173,21 +206,30 @@ export class ChatService {
   }
 
   /**
-   * Processes a user text/image message: runs input guardrail, persists the user message,
-   * invokes the LLM orchestrator, applies the output guardrail, and persists the assistant reply.
-   * @param sessionId - UUID of the target chat session.
-   * @param input - User message payload (text and/or image).
-   * @param requestId - Optional correlation id for tracing.
-   * @param currentUserId - Authenticated user id for ownership checks.
-   * @returns The assistant's reply with metadata.
-   * @throws {AppError} 400 on invalid input, 404 if session not found, 409 on optimistic lock conflict.
+   * Shared pre-LLM logic: validates session, processes image, runs input guardrail, persists user message.
+   * @returns Either a 'ready' preparation or a 'refused' result (guardrail blocked input).
    */
-  async postMessage(
+  private async prepareMessage(
     sessionId: string,
     input: PostMessageInput,
-    requestId?: string,
+    _requestId?: string,
     currentUserId?: number,
-  ): Promise<PostMessageResult> {
+  ): Promise<
+    | {
+        kind: 'ready';
+        session: Awaited<ReturnType<typeof ensureSessionAccess>>;
+        imageRef?: string;
+        orchestratorImage?: PostMessageInput['image'];
+        requestedLocale?: string;
+        history: Awaited<ReturnType<ChatRepository['listSessionHistory']>>;
+        redirectHint?: string;
+        ownerId?: number;
+      }
+    | {
+        kind: 'refused';
+        result: PostMessageResult;
+      }
+  > {
     const session = await ensureSessionAccess(sessionId, this.repository, currentUserId);
     const ownerId = session.user?.id;
 
@@ -266,6 +308,26 @@ export class ChatService {
       }
     }
 
+    // OCR injection guard: extract text from image and run through input guardrail
+    if (this.ocr && orchestratorImage) {
+      try {
+        const ocrResult = await this.ocr.extractText(orchestratorImage.value);
+        if (ocrResult?.text) {
+          const ocrGuardrail = evaluateUserInputGuardrail({ text: ocrResult.text, history: [] });
+          if (!ocrGuardrail.allow) {
+            throw badRequest('Image contains disallowed content');
+          }
+        }
+      } catch (error) {
+        // Fail-open: if OCR itself fails, let the request proceed (AppError from guardrail re-thrown)
+        if (error instanceof AppError) throw error;
+        logger.warn('ocr_guard_fail_open', {
+          error: error instanceof Error ? error.message : String(error),
+          sessionId,
+        });
+      }
+    }
+
     const requestedLocale = input.context?.locale?.trim() || session.locale || undefined;
     const historyBeforeMessage = await this.repository.listSessionHistory(
       sessionId,
@@ -294,14 +356,17 @@ export class ChatService {
       });
 
       return {
-        sessionId,
-        message: {
-          id: assistantMessage.id,
-          role: 'assistant',
-          text: refusalText,
-          createdAt: assistantMessage.createdAt.toISOString(),
+        kind: 'refused',
+        result: {
+          sessionId,
+          message: {
+            id: assistantMessage.id,
+            role: 'assistant',
+            text: refusalText,
+            createdAt: assistantMessage.createdAt.toISOString(),
+          },
+          metadata: refusalMetadata,
         },
-        metadata: refusalMetadata,
       };
     }
 
@@ -310,21 +375,29 @@ export class ChatService {
       env.llm.maxHistoryMessages,
     );
 
-    const aiResult: OrchestratorOutput = await this.orchestrator.generate({
+    return {
+      kind: 'ready',
+      session,
+      imageRef,
+      orchestratorImage,
+      requestedLocale,
       history,
-      text,
-      image: orchestratorImage,
-      locale: requestedLocale,
-      museumMode: input.context?.museumMode ?? session.museumMode,
-      context: {
-        location: input.context?.location,
-        guideLevel: input.context?.guideLevel,
-      },
-      visitContext: session.visitContext,
-      requestId,
       redirectHint: userGuardrail.redirectHint,
-    });
+      ownerId,
+    };
+  }
 
+  /**
+   * Persists the assistant response and returns the result. Shared by postMessage and postMessageStream.
+   */
+  private async commitAssistantResponse(
+    sessionId: string,
+    session: Awaited<ReturnType<typeof ensureSessionAccess>>,
+    aiResult: OrchestratorOutput,
+    requestedLocale: string | undefined,
+    history: Awaited<ReturnType<ChatRepository['listSessionHistory']>>,
+    ownerId: number | undefined,
+  ): Promise<PostMessageResult> {
     const outputGuardrail = evaluateAssistantOutputGuardrail({
       text: aiResult.text,
       history,
@@ -336,9 +409,16 @@ export class ChatService {
       ? aiResult.metadata
       : withPolicyCitation(aiResult.metadata, outputGuardrail.reason);
 
-    const sessionUpdates = outputGuardrail.allow
+    const baseSessionUpdates = outputGuardrail.allow
       ? computeSessionUpdates(session, assistantMetadata, 'pending')
       : undefined;
+
+    // Normalize locale before persisting to avoid garbage in DB
+    const normalizedLocale = requestedLocale ? resolveLocale([requestedLocale]) : undefined;
+    const localeChanged = normalizedLocale && normalizedLocale !== resolveLocale([session.locale]);
+    const sessionUpdates = localeChanged
+      ? { ...baseSessionUpdates, locale: normalizedLocale }
+      : baseSessionUpdates;
 
     const artworkMatch =
       outputGuardrail.allow && aiResult.metadata.detectedArtwork
@@ -380,6 +460,13 @@ export class ChatService {
       }
     }
 
+    if (this.cache) {
+      await this.cache.delByPrefix(`session:${sessionId}:`);
+      if (ownerId) {
+        await this.cache.delByPrefix(`sessions:user:${ownerId}:`);
+      }
+    }
+
     return {
       sessionId,
       message: {
@@ -390,6 +477,146 @@ export class ChatService {
       },
       metadata: assistantMetadata,
     };
+  }
+
+  /**
+   * Processes a user text/image message: runs input guardrail, persists the user message,
+   * invokes the LLM orchestrator, applies the output guardrail, and persists the assistant reply.
+   * @param sessionId - UUID of the target chat session.
+   * @param input - User message payload (text and/or image).
+   * @param requestId - Optional correlation id for tracing.
+   * @param currentUserId - Authenticated user id for ownership checks.
+   * @returns The assistant's reply with metadata.
+   * @throws {AppError} 400 on invalid input, 404 if session not found, 409 on optimistic lock conflict.
+   */
+  async postMessage(
+    sessionId: string,
+    input: PostMessageInput,
+    requestId?: string,
+    currentUserId?: number,
+  ): Promise<PostMessageResult> {
+    const prep = await this.prepareMessage(sessionId, input, requestId, currentUserId);
+    if (prep.kind === 'refused') return prep.result;
+
+    const { session, orchestratorImage, requestedLocale, history, redirectHint, ownerId } = prep;
+    const text = input.text?.trim();
+
+    const aiResult: OrchestratorOutput = await this.orchestrator.generate({
+      history,
+      text,
+      image: orchestratorImage,
+      locale: requestedLocale,
+      museumMode: input.context?.museumMode ?? session.museumMode,
+      context: {
+        location: input.context?.location,
+        guideLevel: input.context?.guideLevel,
+      },
+      visitContext: session.visitContext,
+      requestId,
+      redirectHint,
+    });
+
+    return this.commitAssistantResponse(sessionId, session, aiResult, requestedLocale, history, ownerId);
+  }
+
+  /**
+   * Streams assistant response tokens via onToken callback while processing the message.
+   * Uses shared prepareMessage/commitAssistantResponse logic.
+   * @param sessionId - UUID of the target chat session.
+   * @param input - User message payload (text only for streaming).
+   * @param onToken - Called with each text token as it streams from the LLM.
+   * @param onGuardrail - Called when the output guardrail blocks mid-stream.
+   * @param requestId - Optional correlation id for tracing.
+   * @param currentUserId - Authenticated user id for ownership checks.
+   * @param signal - AbortSignal to cancel the stream (e.g. on client disconnect).
+   * @returns The assistant's reply with metadata.
+   */
+  async postMessageStream(
+    sessionId: string,
+    input: PostMessageInput,
+    onToken: (text: string) => void,
+    onGuardrail?: (text: string, reason: GuardrailBlockReason) => void,
+    requestId?: string,
+    currentUserId?: number,
+    signal?: AbortSignal,
+  ): Promise<PostMessageResult> {
+    const prep = await this.prepareMessage(sessionId, input, requestId, currentUserId);
+    if (prep.kind === 'refused') return prep.result;
+
+    const { session, orchestratorImage, requestedLocale, history, redirectHint, ownerId } = prep;
+    const text = input.text?.trim();
+
+    if (signal?.aborted) {
+      throw new AppError({ message: 'Request aborted', statusCode: 499, code: 'ABORTED' });
+    }
+
+    // Incremental guardrail state
+    let accumulated = '';
+    let artSignalSeen = false;
+    let metaStarted = false;
+    const META_MARKER = '\n[META]';
+
+    const onChunk = (chunk: string) => {
+      // Abort LLM stream when client disconnects (throws inside for-await loop)
+      if (signal?.aborted) {
+        throw new AppError({ message: 'Client disconnected', statusCode: 499, code: 'ABORTED' });
+      }
+
+      accumulated += chunk;
+
+      // Check if we've hit the [META] delimiter
+      const metaIdx = accumulated.indexOf(META_MARKER);
+      if (metaIdx !== -1) {
+        if (!metaStarted) {
+          metaStarted = true;
+          // Emit the answer-text portion of this chunk that falls before [META]
+          const prevLen = accumulated.length - chunk.length;
+          const answerPartLen = metaIdx - prevLen;
+          if (answerPartLen > 0) {
+            onToken(chunk.slice(0, answerPartLen));
+          }
+        }
+        // Don't emit chunks after [META] — it's metadata JSON
+        return;
+      }
+
+      // Run incremental guardrail every ~50 chars if art signal not yet seen
+      if (!artSignalSeen && accumulated.length % 50 < chunk.length) {
+        const guardrail = evaluateAssistantOutputGuardrail({ text: accumulated, history });
+        if (guardrail.allow) {
+          artSignalSeen = true;
+        } else if (!guardrail.allow && accumulated.length > 100) {
+          // Guardrail blocking — notify caller
+          if (onGuardrail && guardrail.reason) {
+            const refusalText = buildGuardrailRefusal(requestedLocale, guardrail.reason);
+            onGuardrail(refusalText, guardrail.reason);
+          }
+          // Don't throw — let the stream complete so we can handle it in commitAssistantResponse
+        }
+      }
+
+      onToken(chunk);
+    };
+
+    const aiResult: OrchestratorOutput = await this.orchestrator.generateStream(
+      {
+        history,
+        text,
+        image: orchestratorImage,
+        locale: requestedLocale,
+        museumMode: input.context?.museumMode ?? session.museumMode,
+        context: {
+          location: input.context?.location,
+          guideLevel: input.context?.guideLevel,
+        },
+        visitContext: session.visitContext,
+        requestId,
+        redirectHint,
+      },
+      onChunk,
+    );
+
+    return this.commitAssistantResponse(sessionId, session, aiResult, requestedLocale, history, ownerId);
   }
 
   /**
@@ -461,9 +688,17 @@ export class ChatService {
     sessionId: string,
     currentUserId?: number,
   ): Promise<DeleteSessionResult> {
-    await ensureSessionAccess(sessionId, this.repository, currentUserId);
+    const session = await ensureSessionAccess(sessionId, this.repository, currentUserId);
 
     const deleted = await this.repository.deleteSessionIfEmpty(sessionId);
+
+    if (deleted && this.cache) {
+      await this.cache.delByPrefix(`session:${sessionId}:`);
+      if (session.user?.id) {
+        await this.cache.delByPrefix(`sessions:user:${session.user.id}:`);
+      }
+    }
+
     return {
       sessionId,
       deleted,
@@ -486,6 +721,12 @@ export class ChatService {
     const session = await ensureSessionAccess(sessionId, this.repository, currentUserId);
 
     const limit = Math.max(1, Math.min(page.limit || 20, 50));
+    const cacheKey = `session:${sessionId}:${page.cursor ?? 'first'}:${limit}`;
+
+    if (this.cache) {
+      const cached = await this.cache.get<SessionResult>(cacheKey);
+      if (cached) return cached;
+    }
 
     const rows: SessionMessagesPage = await this.repository.listSessionMessages({
       sessionId,
@@ -493,7 +734,7 @@ export class ChatService {
       cursor: page.cursor,
     });
 
-    return {
+    const result: SessionResult = {
       session: {
         id: session.id,
         locale: session.locale,
@@ -518,6 +759,12 @@ export class ChatService {
         limit,
       },
     };
+
+    if (this.cache) {
+      await this.cache.set(cacheKey, result, env.cache?.sessionTtlSeconds ?? 3600);
+    }
+
+    return result;
   }
 
   /**
@@ -541,6 +788,12 @@ export class ChatService {
     }
 
     const limit = Math.max(1, Math.min(page.limit || 20, 50));
+    const cacheKey = `sessions:user:${userId}:${page.cursor ?? 'first'}:${limit}`;
+
+    if (this.cache) {
+      const cached = await this.cache.get<ListSessionsResult>(cacheKey);
+      if (cached) return cached;
+    }
 
     const rows: ChatSessionsPage = await this.repository.listSessions({
       userId,
@@ -548,7 +801,7 @@ export class ChatService {
       cursor: page.cursor,
     });
 
-    return {
+    const result: ListSessionsResult = {
       sessions: rows.sessions.map((row) => ({
         id: row.session.id,
         locale: row.session.locale,
@@ -572,6 +825,12 @@ export class ChatService {
         limit,
       },
     };
+
+    if (this.cache) {
+      await this.cache.set(cacheKey, result, env.cache?.listTtlSeconds ?? 300);
+    }
+
+    return result;
   }
 
   /**
@@ -644,5 +903,57 @@ export class ChatService {
     });
 
     return { messageId, reported: true };
+  }
+
+  /**
+   * Synthesizes speech from an assistant message's text content.
+   * @param messageId - UUID of the assistant message to synthesize.
+   * @param currentUserId - Authenticated user id for ownership checks.
+   * @returns Audio buffer with content type, or null if the message has no text.
+   * @throws {AppError} 400 if the message is not from the assistant.
+   * @throws {AppError} 501 if TTS is not available.
+   * @throws {AppError} 404 if message not found or not owned.
+   */
+  async synthesizeSpeech(
+    messageId: string,
+    currentUserId?: number,
+  ): Promise<{ audio: Buffer; contentType: string } | null> {
+    const row = await ensureMessageAccess(messageId, this.repository, currentUserId);
+
+    if (row.message.role !== 'assistant') {
+      throw badRequest('TTS is only available for assistant messages');
+    }
+
+    if (!row.message.text?.trim()) {
+      return null;
+    }
+
+    if (!this.tts) {
+      throw new AppError({
+        message: 'Text-to-speech is not available',
+        statusCode: 501,
+        code: 'FEATURE_UNAVAILABLE',
+      });
+    }
+
+    const cacheKey = `tts:${messageId}`;
+    if (this.cache) {
+      const cached = await this.cache.get<{ audio: string; contentType: string }>(cacheKey);
+      if (cached) {
+        return { audio: Buffer.from(cached.audio, 'base64'), contentType: cached.contentType };
+      }
+    }
+
+    const result = await this.tts.synthesize({ text: row.message.text });
+
+    if (this.cache) {
+      await this.cache.set(
+        cacheKey,
+        { audio: result.audio.toString('base64'), contentType: result.contentType },
+        env.tts?.cacheTtlSeconds ?? 86400,
+      );
+    }
+
+    return result;
   }
 }

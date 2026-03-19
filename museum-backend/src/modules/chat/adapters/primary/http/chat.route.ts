@@ -9,7 +9,14 @@ import {
   bySession,
   createRateLimitMiddleware,
 } from '@src/helpers/middleware/rate-limit.middleware';
-import { badRequest } from '@shared/errors/app.error';
+import { AppError, badRequest } from '@shared/errors/app.error';
+import {
+  initSseResponse,
+  sendSseToken,
+  sendSseDone,
+  sendSseError,
+  sendSseGuardrail,
+} from './sse.helpers';
 import { resolveLocalImageFilePath } from '../../secondary/image-storage.stub';
 import {
   buildS3SignedReadUrlFromRef,
@@ -214,6 +221,7 @@ export const createChatRouter = (chatService: ChatService): Router => {
       const payload = parseCreateSessionRequest(req.body || {});
       const session = await chatService.createSession({
         ...payload,
+        locale: payload.locale || req.clientLocale,
         userId: currentUser?.id,
       });
       res.status(201).json({ session });
@@ -268,7 +276,11 @@ export const createChatRouter = (chatService: ChatService): Router => {
             : rawBody;
         const bodyPayload = parsePostMessageRequest(parseableBody);
 
-        const context = parseContext(rawBody.context) || bodyPayload.context;
+        const parsedContext = parseContext(rawBody.context) || bodyPayload.context;
+        const context = {
+          ...parsedContext,
+          locale: parsedContext?.locale || req.clientLocale,
+        };
 
         const imageFromBody = bodyPayload.image
           ? {
@@ -305,6 +317,73 @@ export const createChatRouter = (chatService: ChatService): Router => {
   );
 
   router.post(
+    '/sessions/:id/messages/stream',
+    isAuthenticated,
+    sessionLimiter,
+    async (req, res) => {
+      if (!env.featureFlags.streaming) {
+        res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Streaming not enabled' } });
+        return;
+      }
+
+      res.setTimeout(0);
+      req.socket.setTimeout(0);
+      initSseResponse(res);
+
+      const controller = new AbortController();
+      req.on('close', () => controller.abort());
+
+      try {
+        const currentUser = getRequestUser(req);
+        const rawBody = (req.body || {}) as Record<string, unknown>;
+        const parseableBody =
+          typeof rawBody.context === 'string'
+            ? { ...rawBody, context: undefined }
+            : rawBody;
+        const bodyPayload = parsePostMessageRequest(parseableBody);
+        const parsedContext = parseContext(rawBody.context) || bodyPayload.context;
+        const context = {
+          ...parsedContext,
+          locale: parsedContext?.locale || req.clientLocale,
+        };
+
+        const result = await chatService.postMessageStream(
+          req.params.id,
+          { text: bodyPayload.text, context },
+          (tokenText) => {
+            if (!res.writableEnded && !res.destroyed) sendSseToken(res, tokenText);
+          },
+          (guardrailText, reason) => {
+            if (!res.writableEnded && !res.destroyed) sendSseGuardrail(res, guardrailText, reason);
+          },
+          (req as { requestId?: string }).requestId,
+          currentUser?.id,
+          controller.signal,
+        );
+
+        if (!res.writableEnded && !res.destroyed) {
+          sendSseDone(res, {
+            messageId: result.message.id,
+            createdAt: result.message.createdAt,
+            metadata: result.metadata as Record<string, unknown>,
+          });
+        }
+      } catch (error) {
+        if (!res.writableEnded && !res.destroyed) {
+          const isKnown = error instanceof AppError;
+          sendSseError(
+            res,
+            isKnown ? (error as AppError).code : 'INTERNAL_ERROR',
+            isKnown ? error.message : 'Internal server error',
+          );
+        }
+      } finally {
+        if (!res.writableEnded) res.end();
+      }
+    },
+  );
+
+  router.post(
     '/sessions/:id/audio',
     isAuthenticated,
     sessionLimiter,
@@ -312,7 +391,11 @@ export const createChatRouter = (chatService: ChatService): Router => {
     async (req, res, next) => {
       try {
         const currentUser = getRequestUser(req);
-        const context = parseContext(req.body?.context);
+        const parsedAudioContext = parseContext(req.body?.context);
+        const context = {
+          ...parsedAudioContext,
+          locale: parsedAudioContext?.locale || req.clientLocale,
+        };
 
         if (!req.file) {
           throw badRequest('audio file is required');
@@ -411,6 +494,32 @@ export const createChatRouter = (chatService: ChatService): Router => {
       }
 
       res.status(200).json(signed);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/messages/:messageId/tts', isAuthenticated, sessionLimiter, async (req, res, next) => {
+    if (!env.featureFlags.voiceMode) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Voice mode is not enabled' } });
+      return;
+    }
+
+    try {
+      const currentUser = getRequestUser(req);
+      const result = await chatService.synthesizeSpeech(
+        req.params.messageId,
+        currentUser?.id,
+      );
+
+      if (!result) {
+        res.status(204).end();
+        return;
+      }
+
+      res.set('Content-Type', result.contentType);
+      res.set('Content-Length', String(result.audio.length));
+      res.send(result.audio);
     } catch (error) {
       next(error);
     }

@@ -1,4 +1,6 @@
 import { ChatMessage } from '../domain/chatMessage.entity';
+import { resolveLocale } from '@shared/i18n/locale';
+import { GUARDRAIL_REFUSALS } from '@shared/i18n/guardrail-refusals';
 
 /** Reason why the guardrail blocked or flagged a message. */
 export type GuardrailBlockReason =
@@ -90,6 +92,30 @@ const ART_KEYWORDS = [
   'palais',
   'chateau',
   'temple',
+  // Spanish
+  'pintura',
+  'escultura',
+  'cuadro',
+  'galeria',
+  // German
+  'malerei',
+  'gemalde',
+  'skulptur',
+  // Italian
+  'pittura',
+  'dipinto',
+  'scultura',
+  'galleria',
+  // Japanese
+  '絵画',
+  '美術',
+  '博物館',
+  '彫刻',
+  // Chinese
+  '绘画',
+  '艺术',
+  '博物馆',
+  '雕塑',
 ];
 
 const OFF_TOPIC_KEYWORDS = [
@@ -182,7 +208,7 @@ const INJECTION_PATTERNS = [
   'dan mode',
 ];
 
-const GREETING_PATTERN = /^(hi|hello|hey|bonjour|salut|coucou|bonsoir|good morning|good evening|good afternoon)\b/;
+const GREETING_PATTERN = /^(hi|hello|hey|bonjour|salut|coucou|bonsoir|good morning|good evening|good afternoon|hola|ciao|hallo|こんにちは|你好)(\b|$)/;
 
 const FOLLOW_UP_PATTERNS = [
   /^(et|pourquoi|comment|quand|ou|continue|plus de details)\b/,
@@ -193,7 +219,14 @@ const escapeRegExp = (value: string): string => {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
 
+const isCjk = (s: string): boolean => /[\u3000-\u9fff\uf900-\ufaff]/.test(s);
+
 const containsKeyword = (normalizedText: string, keyword: string): boolean => {
+  // CJK characters don't have word boundaries — always use includes()
+  if (isCjk(keyword)) {
+    return normalizedText.includes(keyword);
+  }
+
   if (keyword.includes(' ') || keyword.length <= 3) {
     const pattern = new RegExp(`(^|\\b)${escapeRegExp(keyword)}(\\b|$)`);
     return pattern.test(normalizedText);
@@ -358,13 +391,10 @@ export const evaluateAssistantOutputGuardrail = ({
   return { allow: false, reason: 'off_topic' };
 };
 
-const isFrench = (locale?: string): boolean => {
-  return Boolean(locale && locale.toLowerCase().startsWith('fr'));
-};
-
 /**
  * Builds a localized refusal message for the user when the guardrail blocks a message.
- * @param locale - User locale; messages are in French when locale starts with "fr".
+ * Supports all 7 locales via the GUARDRAIL_REFUSALS dictionary.
+ * @param locale - User locale tag (e.g. "fr-FR", "de", "ja").
  * @param reason - The guardrail block reason, used to select the specific refusal wording.
  * @returns A human-readable refusal string.
  */
@@ -372,23 +402,12 @@ export const buildGuardrailRefusal = (
   locale: string | undefined,
   reason?: GuardrailBlockReason,
 ): string => {
-  if (isFrench(locale)) {
-    if (reason === 'insult') {
-      return 'Je ne traite pas les insultes. Je peux aider uniquement sur l art, les monuments, les musees et le patrimoine.';
-    }
-    if (reason === 'external_request') {
-      return 'Je ne peux pas executer de demande externe. Je reponds uniquement a des questions artistiques.';
-    }
-    return 'Je reponds uniquement sur l art, les monuments, les musees, l architecture et le patrimoine culturel.';
-  }
+  const resolved = resolveLocale([locale]);
+  const messages = GUARDRAIL_REFUSALS[resolved];
 
-  if (reason === 'insult') {
-    return 'I cannot process insulting language. I can only help with art, monuments, museums, and cultural heritage.';
-  }
-  if (reason === 'external_request') {
-    return 'I cannot execute external actions. I can only answer artistic and cultural questions.';
-  }
-  return 'I answer only about art, monuments, museums, architecture, and cultural heritage.';
+  if (reason === 'insult') return messages.insult;
+  if (reason === 'external_request') return messages.external_request;
+  return messages.default;
 };
 
 /**

@@ -42,6 +42,11 @@ class FakeSectionModel {
 
     return { content: 'Unknown section' };
   }
+
+  async stream(messages: unknown, options?: InvokeOptions): Promise<AsyncIterable<{ content: unknown }>> {
+    const result = await this.invoke(messages, options);
+    return (async function* () { yield result; })();
+  }
 }
 
 class SlowFakeModel {
@@ -62,6 +67,11 @@ class SlowFakeModel {
     });
 
     return { content: JSON.stringify({ answer: 'Too late' }) };
+  }
+
+  async stream(messages: unknown, options?: InvokeOptions): Promise<AsyncIterable<{ content: unknown }>> {
+    const result = await this.invoke(messages, options);
+    return (async function* () { yield result; })();
   }
 }
 
@@ -147,6 +157,10 @@ describe('LangChainChatOrchestrator fail-soft profile', () => {
             followUpQuestions: ['What artwork is nearby?'],
           }),
         };
+      },
+      async stream(messages: unknown): Promise<AsyncIterable<{ content: unknown }>> {
+        const result = await this.invoke(messages);
+        return (async function* () { yield result; })();
       },
     };
 

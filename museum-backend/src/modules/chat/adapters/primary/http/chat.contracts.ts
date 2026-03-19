@@ -434,6 +434,9 @@ export const parseReportMessageRequest = (payload: unknown): ReportMessageReques
   }
 
   const comment = optionalString(payload, 'comment');
+  if (comment && comment.length > 500) {
+    throw badRequest('comment must be 500 characters or fewer');
+  }
 
   return {
     reason: reason as ReportReason,
