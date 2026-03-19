@@ -66,9 +66,6 @@ export const setApiBaseUrl = (nextUrl: string): void => {
 /** Returns the current runtime API base URL. */
 export const getApiBaseUrl = (): string => runtimeBaseUrl;
 
-/** The initial API base URL resolved at module load time. */
-export const API_BASE_URL = DEFAULT_BASE_URL;
-
 const httpClient = axios.create({
   headers: {
     Accept: 'application/json',

@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
 import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
+import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSettings';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { BrandMark } from '@/shared/ui/BrandMark';
@@ -17,19 +18,7 @@ export default function HomeScreen() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [menuStatus, setMenuStatus] = useState<string | null>(null);
-  const [locale, setLocale] = useState('en-US');
-  const [museumMode, setMuseumMode] = useState(true);
-
-  useEffect(() => {
-    loadRuntimeSettings()
-      .then((settings) => {
-        setLocale(settings.defaultLocale);
-        setMuseumMode(settings.defaultMuseumMode);
-      })
-      .catch(() => {
-        // keep defaults when settings are unavailable
-      });
-  }, []);
+  const { locale, museumMode } = useRuntimeSettings();
 
   const startConversation = async (
     intent: 'default' | 'camera' | 'audio' = 'default',

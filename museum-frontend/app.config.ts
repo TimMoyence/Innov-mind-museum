@@ -162,7 +162,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         'expo-image-picker',
         {
-          photosPermission: 'Allow $(PRODUCT_NAME) to access your photos',
+          photosPermission: false,
         },
       ],
       [
