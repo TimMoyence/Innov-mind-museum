@@ -2,36 +2,32 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Image,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
-import { Audio } from 'expo-av';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CustomCameraView } from '@/components/CameraView';
-import { useChatSession, ChatUiMessage } from '@/features/chat/application/useChatSession';
+import { useChatSession } from '@/features/chat/application/useChatSession';
+import { useAudioRecorder } from '@/features/chat/application/useAudioRecorder';
+import { useImagePicker } from '@/features/chat/application/useImagePicker';
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
+import { ChatMessageList } from '@/features/chat/ui/ChatMessageList';
+import { ChatInput } from '@/features/chat/ui/ChatInput';
+import { ExpertiseBadge } from '@/features/chat/ui/ExpertiseBadge';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
-import { TypingIndicator } from '@/features/chat/ui/TypingIndicator';
-import { WelcomeCard } from '@/features/chat/ui/WelcomeCard';
-import { ArtworkCard } from '@/features/chat/ui/ArtworkCard';
-import { RecommendationChips } from '@/features/chat/ui/RecommendationChips';
-import { FollowUpButtons } from '@/features/chat/ui/FollowUpButtons';
-import { MarkdownBubble } from '@/features/chat/ui/MarkdownBubble';
-import { ExpertiseBadge } from '@/features/chat/ui/ExpertiseBadge';
 
 /** Renders the chat session screen with message history, text/image/audio input, and assistant response display. */
 export default function ChatSessionScreen() {
@@ -41,29 +37,15 @@ export default function ChatSessionScreen() {
     if (params.intent === 'camera' || params.intent === 'audio') {
       return params.intent;
     }
-
     return null;
   }, [params.intent]);
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
 
   const [text, setText] = useState('');
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
-  const [recordedAudioUri, setRecordedAudioUri] = useState<string | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [isIntentHandled, setIsIntentHandled] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
-
-  const webMediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const webMediaStreamRef = useRef<MediaStream | null>(null);
-  const webAudioChunksRef = useRef<BlobPart[]>([]);
-  const webAudioObjectUrlRef = useRef<string | null>(null);
-  const webAudioPlaybackRef = useRef<HTMLAudioElement | null>(null);
   const imageRefreshInFlightRef = useRef<Set<string>>(new Set());
-  const flatListRef = useRef<FlatList<ChatUiMessage>>(null);
 
   const {
     messages,
@@ -75,11 +57,32 @@ export default function ChatSessionScreen() {
     sendMessage,
     refreshMessageImageUrl,
     locale,
+    museumMode,
     sessionTitle,
     museumName,
   } = useChatSession(sessionId);
 
-  // Derive last assistant metadata for recommendations/follow-up/expertise
+  const {
+    isRecording,
+    recordedAudioUri,
+    recordedAudioBlob,
+    isPlayingAudio,
+    toggleRecording,
+    playRecordedAudio,
+    clearRecordedAudio,
+  } = useAudioRecorder();
+
+  const {
+    selectedImage,
+    isCameraOpen,
+    setIsCameraOpen,
+    onPickImage,
+    onTakePicture,
+    onCameraCapture,
+    clearSelectedImage,
+  } = useImagePicker();
+
+  // Derive last assistant metadata for expertise badge
   const lastAssistantMessage = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].role === 'assistant') return messages[i];
@@ -89,258 +92,12 @@ export default function ChatSessionScreen() {
 
   const expertiseLevel = lastAssistantMessage?.metadata?.expertiseSignal;
 
-  // Auto-scroll when messages change or sending starts
-  useEffect(() => {
-    if (messages.length > 0 || isSending) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    }
-  }, [messages.length, isSending]);
+  const clearMedia = useCallback(() => {
+    clearSelectedImage();
+    clearRecordedAudio();
+  }, [clearSelectedImage, clearRecordedAudio]);
 
-  const revokeWebAudioObjectUrl = useCallback(() => {
-    if (webAudioObjectUrlRef.current) {
-      URL.revokeObjectURL(webAudioObjectUrlRef.current);
-      webAudioObjectUrlRef.current = null;
-    }
-  }, []);
-
-  const stopWebAudioStreamTracks = useCallback(() => {
-    const stream = webMediaStreamRef.current;
-    if (!stream) {
-      return;
-    }
-    stream.getTracks().forEach((track) => track.stop());
-    webMediaStreamRef.current = null;
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (recording) {
-        recording.stopAndUnloadAsync().catch(() => undefined);
-      }
-      if (webMediaRecorderRef.current && webMediaRecorderRef.current.state !== 'inactive') {
-        webMediaRecorderRef.current.stop();
-      }
-      stopWebAudioStreamTracks();
-      if (webAudioPlaybackRef.current) {
-        webAudioPlaybackRef.current.pause();
-        webAudioPlaybackRef.current = null;
-      }
-      revokeWebAudioObjectUrl();
-    };
-  }, [recording, revokeWebAudioObjectUrl, stopWebAudioStreamTracks]);
-
-  const onPickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission required', 'Photo library access is required to send images.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets.length) {
-      setSelectedImage(result.assets[0].uri);
-    }
-  };
-
-  const onTakePicture = async () => {
-    setIsCameraOpen(true);
-  };
-
-  const onCameraCapture = useCallback((uri: string) => {
-    setSelectedImage(uri);
-    setIsCameraOpen(false);
-  }, []);
-
-  const startRecording = async () => {
-    if (Platform.OS === 'web') {
-      if (
-        typeof navigator === 'undefined' ||
-        !navigator.mediaDevices?.getUserMedia ||
-        typeof MediaRecorder === 'undefined'
-      ) {
-        Alert.alert(
-          'Audio unavailable',
-          'This browser does not support microphone recording. Try a modern Chrome, Safari, or Edge build.',
-        );
-        return;
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      webMediaStreamRef.current = stream;
-      webAudioChunksRef.current = [];
-      revokeWebAudioObjectUrl();
-      setRecordedAudioBlob(null);
-      setRecordedAudioUri(null);
-
-      const mediaRecorder = new MediaRecorder(stream);
-      webMediaRecorderRef.current = mediaRecorder;
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          webAudioChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-      return;
-    }
-
-    const permission = await Audio.requestPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission required', 'Microphone access is required for voice input.');
-      return;
-    }
-
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
-    });
-
-    const nextRecording = new Audio.Recording();
-    await nextRecording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-    await nextRecording.startAsync();
-
-    setRecording(nextRecording);
-    setIsRecording(true);
-  };
-
-  const stopRecording = async () => {
-    if (Platform.OS === 'web') {
-      const mediaRecorder = webMediaRecorderRef.current;
-      if (!mediaRecorder || mediaRecorder.state === 'inactive') {
-        return;
-      }
-
-      const blob = await new Promise<Blob>((resolve) => {
-        mediaRecorder.onstop = () => {
-          const mimeType =
-            mediaRecorder.mimeType && mediaRecorder.mimeType.length
-              ? mediaRecorder.mimeType
-              : 'audio/webm';
-          resolve(new Blob(webAudioChunksRef.current, { type: mimeType }));
-        };
-        mediaRecorder.stop();
-      });
-
-      stopWebAudioStreamTracks();
-      webMediaRecorderRef.current = null;
-      setIsRecording(false);
-
-      if (blob.size > 0) {
-        revokeWebAudioObjectUrl();
-        const objectUrl = URL.createObjectURL(blob);
-        webAudioObjectUrlRef.current = objectUrl;
-        setRecordedAudioBlob(blob);
-        setRecordedAudioUri(objectUrl);
-      }
-      return;
-    }
-
-    if (!recording) {
-      return;
-    }
-
-    await recording.stopAndUnloadAsync();
-    const uri = recording.getURI();
-    setRecording(null);
-    setIsRecording(false);
-
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      playsInSilentModeIOS: true,
-    });
-
-    if (uri) {
-      setRecordedAudioBlob(null);
-      setRecordedAudioUri(uri);
-    }
-  };
-
-  const toggleRecording = async () => {
-    try {
-      if (isRecording) {
-        await stopRecording();
-      } else {
-        await startRecording();
-      }
-    } catch {
-      setIsRecording(false);
-      setRecording(null);
-      Alert.alert('Audio error', 'Recording could not be started. Please try again.');
-    }
-  };
-
-  const playRecordedAudio = async () => {
-    if (!recordedAudioUri || isPlayingAudio) {
-      return;
-    }
-
-    setIsPlayingAudio(true);
-
-    try {
-      if (Platform.OS === 'web') {
-        if (webAudioPlaybackRef.current) {
-          webAudioPlaybackRef.current.pause();
-          webAudioPlaybackRef.current = null;
-        }
-
-        const audioElement = new window.Audio(recordedAudioUri);
-        webAudioPlaybackRef.current = audioElement;
-        audioElement.onended = () => {
-          setIsPlayingAudio(false);
-          webAudioPlaybackRef.current = null;
-        };
-        audioElement.onerror = () => {
-          setIsPlayingAudio(false);
-          webAudioPlaybackRef.current = null;
-        };
-        await audioElement.play();
-        return;
-      }
-
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: recordedAudioUri },
-        { shouldPlay: true },
-      );
-
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (!status.isLoaded) {
-          setIsPlayingAudio(false);
-          sound.unloadAsync().catch(() => undefined);
-          return;
-        }
-
-        if (status.didJustFinish) {
-          setIsPlayingAudio(false);
-          sound.unloadAsync().catch(() => undefined);
-        }
-      });
-    } catch {
-      setIsPlayingAudio(false);
-      Alert.alert('Playback error', 'Unable to play this recording.');
-    }
-  };
-
-  const clearMedia = () => {
-    setSelectedImage(null);
-    setRecordedAudioBlob(null);
-    if (webAudioPlaybackRef.current) {
-      webAudioPlaybackRef.current.pause();
-      webAudioPlaybackRef.current = null;
-    }
-    revokeWebAudioObjectUrl();
-    setRecordedAudioUri(null);
-  };
-
-  const onSend = async (overrideText?: string) => {
+  const onSend = useCallback(async (overrideText?: string) => {
     const nextText = (overrideText ?? text).trim();
     if (!nextText && !selectedImage && !recordedAudioUri) {
       return;
@@ -357,16 +114,18 @@ export default function ChatSessionScreen() {
       setText('');
       clearMedia();
     }
-  };
+  }, [text, selectedImage, recordedAudioUri, recordedAudioBlob, sendMessage, clearMedia]);
 
+  // F3.1: Follow-up buttons send ONLY text, no attached media
   const onFollowUpPress = useCallback((questionText: string) => {
-    void onSend(questionText);
-  }, [sendMessage, selectedImage, recordedAudioUri, recordedAudioBlob]);
+    void sendMessage({ text: questionText });
+  }, [sendMessage]);
 
   const onRecommendationPress = useCallback((recommendationText: string) => {
     setText(recommendationText);
   }, []);
 
+  // Handle initial intent (camera or audio)
   useEffect(() => {
     if (isIntentHandled || !initialIntent) {
       return;
@@ -374,12 +133,12 @@ export default function ChatSessionScreen() {
 
     setIsIntentHandled(true);
     if (initialIntent === 'camera') {
-      void onTakePicture();
+      onTakePicture();
       return;
     }
 
     void toggleRecording();
-  }, [initialIntent, isIntentHandled]);
+  }, [initialIntent, isIntentHandled, onTakePicture, toggleRecording]);
 
   const onClose = async () => {
     if (isClosing) {
@@ -442,11 +201,6 @@ export default function ChatSessionScreen() {
     [refreshMessageImageUrl],
   );
 
-  const isLastAssistantMessage = useCallback(
-    (item: ChatUiMessage) => lastAssistantMessage?.id === item.id,
-    [lastAssistantMessage],
-  );
-
   if (isCameraOpen) {
     return (
       <CustomCameraView
@@ -457,188 +211,114 @@ export default function ChatSessionScreen() {
   }
 
   return (
-    <LiquidScreen background={pickMuseumBackground(4)} contentStyle={styles.screen}>
-      {isRecording ? <Text style={styles.recordingStatus}>Recording voice input...</Text> : null}
+    <LiquidScreen background={pickMuseumBackground(4)} contentStyle={[styles.screen, { paddingTop: insets.top + 8 }]}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        {isRecording ? <Text style={styles.recordingStatus}>Recording voice input...</Text> : null}
 
-      <GlassCard style={styles.headerShell} intensity={58}>
-        <View style={styles.headerRow}>
-          <View style={styles.headerContent}>
-            <Text style={styles.header} numberOfLines={1}>{sessionTitle || 'Art Session'}</Text>
-            <View style={styles.headerSubRow}>
-              <Text style={styles.subheader} numberOfLines={1}>{museumName || `${sessionId.slice(0, 12)}...`}</Text>
-              {expertiseLevel ? <ExpertiseBadge level={expertiseLevel} /> : null}
+        <GlassCard style={styles.headerShell} intensity={58}>
+          <View style={styles.headerRow}>
+            <View style={styles.headerContent}>
+              <Text style={styles.header} numberOfLines={1}>{sessionTitle || 'Art Session'}</Text>
+              <View style={styles.headerSubRow}>
+                <Text style={styles.subheader} numberOfLines={1}>{museumName || `${sessionId.slice(0, 12)}...`}</Text>
+                {expertiseLevel ? <ExpertiseBadge level={expertiseLevel} /> : null}
+              </View>
             </View>
-          </View>
-          <Pressable onPress={onClose} style={styles.closeButton} disabled={isClosing}>
-            {isClosing ? (
-              <ActivityIndicator size='small' color='#334155' />
-            ) : (
-              <Ionicons name='close' size={20} color={liquidColors.textPrimary} />
-            )}
-          </Pressable>
-        </View>
-      </GlassCard>
-
-      {error ? <ErrorNotice message={error} onDismiss={clearError} /> : null}
-
-      <GlassCard style={styles.chatSurface} intensity={42}>
-        {isLoading ? (
-          <View style={styles.loaderContainer}>
-            <ActivityIndicator size='large' color={liquidColors.primary} />
-          </View>
-        ) : (
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContent}
-            ListEmptyComponent={
-              <WelcomeCard
-                museumMode={true}
-                locale={locale}
-                onSuggestion={(suggestion) => void onSend(suggestion)}
-                onCamera={() => void onTakePicture()}
-              />
-            }
-            ListFooterComponent={isSending ? <TypingIndicator /> : null}
-            renderItem={({ item }) => {
-              const isAssistant = item.role === 'assistant';
-              const isLast = isLastAssistantMessage(item);
-
-              const bubbleContent = (
-                <>
-                  {isAssistant ? (
-                    <MarkdownBubble text={item.text} />
-                  ) : (
-                    <Text style={styles.userText}>{item.text}</Text>
-                  )}
-                  {item.image?.url ? (
-                    <Image
-                      source={{ uri: item.image.url }}
-                      style={styles.messageImage}
-                      resizeMode='cover'
-                      onError={() => onMessageImageError(item.id)}
-                    />
-                  ) : null}
-                  <Text style={styles.timestamp}>
-                    {new Date(item.createdAt).toLocaleTimeString(locale || undefined, {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </Text>
-                </>
-              );
-
-              return (
-                <View>
-                  {isAssistant ? (
-                    <Pressable
-                      onLongPress={() => onReportMessage(item.id)}
-                      style={[styles.bubble, styles.assistantBubble]}
-                    >
-                      {bubbleContent}
-                    </Pressable>
-                  ) : (
-                    <View style={[styles.bubble, styles.userBubble]}>
-                      {bubbleContent}
-                    </View>
-                  )}
-
-                  {/* Artwork card */}
-                  {isAssistant && item.metadata?.detectedArtwork?.title ? (
-                    <ArtworkCard
-                      title={item.metadata.detectedArtwork.title}
-                      artist={item.metadata.detectedArtwork.artist}
-                      museum={item.metadata.detectedArtwork.museum}
-                      room={item.metadata.detectedArtwork.room}
-                      confidence={item.metadata.detectedArtwork.confidence}
-                    />
-                  ) : null}
-
-                  {/* Follow-up question buttons — last assistant message only */}
-                  {isAssistant && isLast && item.metadata?.followUpQuestions?.length ? (
-                    <FollowUpButtons
-                      questions={item.metadata.followUpQuestions}
-                      onPress={onFollowUpPress}
-                    />
-                  ) : null}
-
-                  {/* Recommendation chips — last assistant message only */}
-                  {isAssistant && isLast && item.metadata?.recommendations?.length ? (
-                    <RecommendationChips
-                      recommendations={item.metadata.recommendations}
-                      onPress={onRecommendationPress}
-                    />
-                  ) : null}
-                </View>
-              );
-            }}
-          />
-        )}
-      </GlassCard>
-
-      {selectedImage ? (
-        <View style={styles.previewWrap}>
-          <Image source={{ uri: selectedImage }} style={styles.preview} />
-          <View style={styles.previewMenu}>
-            <FloatingContextMenu
-              actions={[
-                { id: 'replace', icon: 'images-outline', label: 'Replace', onPress: () => void onPickImage() },
-                { id: 'clear-image', icon: 'trash-outline', label: 'Remove', onPress: () => setSelectedImage(null) },
-              ]}
-            />
-          </View>
-        </View>
-      ) : null}
-
-      {recordedAudioUri ? (
-        <GlassCard style={styles.audioCard} intensity={56}>
-          <Text style={styles.audioTitle}>Voice message ready</Text>
-          <View style={styles.audioRow}>
-            <Pressable style={styles.attachButton} onPress={() => void playRecordedAudio()} disabled={isPlayingAudio}>
-              <Text style={styles.attachText}>{isPlayingAudio ? 'Playing...' : 'Play'}</Text>
-            </Pressable>
-            <Pressable style={styles.attachButton} onPress={clearMedia}>
-              <Text style={styles.attachText}>Clear</Text>
+            <Pressable onPress={onClose} style={styles.closeButton} disabled={isClosing}>
+              {isClosing ? (
+                <ActivityIndicator size='small' color='#334155' />
+              ) : (
+                <Ionicons name='close' size={20} color={liquidColors.textPrimary} />
+              )}
             </Pressable>
           </View>
         </GlassCard>
-      ) : null}
 
-      <View style={styles.attachRow}>
-        <Pressable style={styles.attachButton} onPress={() => void onPickImage()}>
-          <Text style={styles.attachText}>Gallery</Text>
-        </Pressable>
-        <Pressable style={styles.attachButton} onPress={() => void onTakePicture()}>
-          <Text style={styles.attachText}>Lens</Text>
-        </Pressable>
-        <Pressable style={styles.attachButton} onPress={() => void toggleRecording()}>
-          <Text style={styles.attachText}>{isRecording ? 'Stop Audio' : 'Audio'}</Text>
-        </Pressable>
-      </View>
+        {error ? <ErrorNotice message={error} onDismiss={clearError} /> : null}
 
-      <GlassCard style={styles.inputRow} intensity={56}>
-        <TextInput
-          style={styles.input}
+        <GlassCard style={styles.chatSurface} intensity={42}>
+          {isLoading ? (
+            <View style={styles.loaderContainer}>
+              <ActivityIndicator size='large' color={liquidColors.primary} />
+            </View>
+          ) : (
+            <ChatMessageList
+              messages={messages}
+              isSending={isSending}
+              locale={locale}
+              museumMode={museumMode}
+              onFollowUpPress={onFollowUpPress}
+              onRecommendationPress={onRecommendationPress}
+              onSuggestion={(suggestion) => void onSend(suggestion)}
+              onCamera={onTakePicture}
+              onImageError={onMessageImageError}
+              onReport={onReportMessage}
+            />
+          )}
+        </GlassCard>
+
+        {selectedImage ? (
+          <View style={styles.previewWrap}>
+            <Image source={{ uri: selectedImage }} style={styles.preview} />
+            <View style={styles.previewMenu}>
+              <FloatingContextMenu
+                actions={[
+                  { id: 'replace', icon: 'images-outline', label: 'Replace', onPress: () => void onPickImage() },
+                  { id: 'clear-image', icon: 'trash-outline', label: 'Remove', onPress: clearSelectedImage },
+                ]}
+              />
+            </View>
+          </View>
+        ) : null}
+
+        {recordedAudioUri ? (
+          <GlassCard style={styles.audioCard} intensity={56}>
+            <Text style={styles.audioTitle}>Voice message ready</Text>
+            <View style={styles.audioRow}>
+              <Pressable style={styles.attachButton} onPress={() => void playRecordedAudio()} disabled={isPlayingAudio}>
+                <Text style={styles.attachText}>{isPlayingAudio ? 'Playing...' : 'Play'}</Text>
+              </Pressable>
+              <Pressable style={styles.attachButton} onPress={clearMedia}>
+                <Text style={styles.attachText}>Clear</Text>
+              </Pressable>
+            </View>
+          </GlassCard>
+        ) : null}
+
+        <View style={styles.attachRow}>
+          <Pressable style={styles.attachButton} onPress={() => void onPickImage()}>
+            <Text style={styles.attachText}>Gallery</Text>
+          </Pressable>
+          <Pressable style={styles.attachButton} onPress={onTakePicture}>
+            <Text style={styles.attachText}>Lens</Text>
+          </Pressable>
+          <Pressable style={styles.attachButton} onPress={() => void toggleRecording()}>
+            <Text style={styles.attachText}>{isRecording ? 'Stop Audio' : 'Audio'}</Text>
+          </Pressable>
+        </View>
+
+        <ChatInput
           value={text}
           onChangeText={setText}
-          placeholder='Ask about an artwork, monument, or send voice/photo...'
-          placeholderTextColor='#64748B'
-          multiline
+          onSend={() => void onSend()}
+          isSending={isSending}
         />
-        <Pressable style={styles.sendButton} onPress={() => void onSend()} disabled={isSending}>
-          {isSending ? <ActivityIndicator color='#FFFFFF' /> : <Text style={styles.sendText}>Send</Text>}
-        </Pressable>
-      </GlassCard>
+      </KeyboardAvoidingView>
     </LiquidScreen>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
-    paddingTop: 50,
     paddingHorizontal: 14,
     paddingBottom: 12,
+  },
+  flex: {
+    flex: 1,
   },
   recordingStatus: {
     marginBottom: 10,
@@ -696,43 +376,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  listContent: {
-    paddingBottom: 16,
-    gap: 10,
-  },
-  bubble: {
-    borderRadius: 16,
-    padding: 12,
-    maxWidth: '85%',
-    borderWidth: 1,
-  },
-  assistantBubble: {
-    backgroundColor: 'rgba(255,255,255,0.72)',
-    borderColor: 'rgba(148,163,184,0.22)',
-    alignSelf: 'flex-start',
-  },
-  userBubble: {
-    backgroundColor: 'rgba(30, 64, 175, 0.88)',
-    borderColor: 'rgba(191, 219, 254, 0.6)',
-    alignSelf: 'flex-end',
-  },
-  userText: {
-    color: '#FFFFFF',
-  },
-  timestamp: {
-    marginTop: 6,
-    fontSize: 11,
-    color: 'rgba(100,116,139,0.92)',
-  },
-  messageImage: {
-    marginTop: 8,
-    width: 220,
-    height: 220,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.35)',
-    backgroundColor: 'rgba(226,232,240,0.45)',
-  },
   previewWrap: {
     marginTop: 8,
   },
@@ -776,34 +419,5 @@ const styles = StyleSheet.create({
   attachText: {
     color: '#1E293B',
     fontWeight: '600',
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    marginTop: 12,
-    padding: 8,
-  },
-  input: {
-    flex: 1,
-    minHeight: 44,
-    maxHeight: 120,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.45)',
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: liquidColors.textPrimary,
-  },
-  sendButton: {
-    borderRadius: 12,
-    backgroundColor: liquidColors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  sendText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
   },
 });

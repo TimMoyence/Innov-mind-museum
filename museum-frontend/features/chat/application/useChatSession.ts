@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { getErrorMessage } from '@/shared/lib/errors';
-import {
-  GuideLevel,
-  loadRuntimeSettings,
-} from '@/features/settings/runtimeSettings';
+import { GuideLevel } from '@/features/settings/runtimeSettings';
+import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSettings';
 import { chatApi } from '../infrastructure/chatApi';
 
 /** Metadata attached to an assistant message, including artwork detection and follow-up suggestions. */
@@ -57,11 +55,11 @@ export const useChatSession = (sessionId: string) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [museumMode, setMuseumMode] = useState<boolean>(true);
-  const [guideLevel, setGuideLevel] = useState<GuideLevel>('beginner');
-  const [locale, setLocale] = useState<string>('en-US');
   const [sessionTitle, setSessionTitle] = useState<string | null>(null);
   const [museumName, setMuseumName] = useState<string | null>(null);
+  const isSendingRef = useRef(false);
+
+  const { locale, museumMode, guideLevel } = useRuntimeSettings();
 
   const loadSession = useCallback(async () => {
     setIsLoading(true);
@@ -92,21 +90,15 @@ export const useChatSession = (sessionId: string) => {
   }, [sessionId]);
 
   useEffect(() => {
-    loadRuntimeSettings()
-      .then((settings) => {
-        setLocale(settings.defaultLocale);
-        setMuseumMode(settings.defaultMuseumMode);
-        setGuideLevel(settings.guideLevel);
-      })
-      .catch(() => {
-        // fall back to defaults
-      });
-
     void loadSession();
   }, [loadSession]);
 
   const sendMessage = useCallback(
     async (params: { text?: string; imageUri?: string; audioUri?: string; audioBlob?: Blob }) => {
+      if (isSendingRef.current) {
+        return false;
+      }
+
       const trimmedText = params.text?.trim();
       if (!trimmedText && !params.imageUri && !params.audioUri && !params.audioBlob) {
         return false;
@@ -128,6 +120,7 @@ export const useChatSession = (sessionId: string) => {
 
       setMessages((prev) => sortByTime([...prev, optimisticMessage]));
       setIsSending(true);
+      isSendingRef.current = true;
       setError(null);
 
       try {
@@ -181,6 +174,7 @@ export const useChatSession = (sessionId: string) => {
         return false;
       } finally {
         setIsSending(false);
+        isSendingRef.current = false;
       }
     },
     [locale, museumMode, guideLevel, sessionId],
@@ -215,6 +209,7 @@ export const useChatSession = (sessionId: string) => {
     sendMessage,
     refreshMessageImageUrl,
     locale,
+    museumMode,
     sessionTitle,
     museumName,
   };
