@@ -7,6 +7,8 @@ import {
   buildS3SignedReadUrlFromRef,
   isS3ImageRef,
   parseS3ImageRef,
+  listObjectsByPrefix,
+  deleteObjectsBatch,
 } from '@modules/chat/adapters/secondary/image-storage.s3';
 
 const config = {
@@ -182,4 +184,194 @@ describe('image-storage.s3', () => {
       's3://staging/chat-images/2026/02/user-42/session-abc/custom.png',
     );
   });
+
+  describe('listObjectsByPrefix', () => {
+    it('parses ListObjectsV2 XML response and extracts keys', async () => {
+      const listXml = `<?xml version="1.0" encoding="UTF-8"?>
+        <ListBucketResult>
+          <IsTruncated>false</IsTruncated>
+          <Contents><Key>chat-images/2026/03/user-42/session-1/a.png</Key></Contents>
+          <Contents><Key>chat-images/2026/03/user-42/session-2/b.jpg</Key></Contents>
+          <Contents><Key>chat-images/2026/03/user-99/session-3/c.png</Key></Contents>
+        </ListBucketResult>`;
+
+      const result = await withTestServer(listXml, async (port) => {
+        return listObjectsByPrefix(
+          { ...config, endpoint: `http://127.0.0.1:${port}`, requestTimeoutMs: 5000 },
+          'chat-images/',
+        );
+      });
+
+      expect(result.keys).toEqual([
+        'chat-images/2026/03/user-42/session-1/a.png',
+        'chat-images/2026/03/user-42/session-2/b.jpg',
+        'chat-images/2026/03/user-99/session-3/c.png',
+      ]);
+      expect(result.nextToken).toBeUndefined();
+    });
+
+    it('handles truncated responses with continuation token', async () => {
+      const listXml = `<?xml version="1.0" encoding="UTF-8"?>
+        <ListBucketResult>
+          <IsTruncated>true</IsTruncated>
+          <NextContinuationToken>token-abc-123</NextContinuationToken>
+          <Contents><Key>chat-images/2026/03/user-1/s/a.png</Key></Contents>
+        </ListBucketResult>`;
+
+      const result = await withTestServer(listXml, async (port) => {
+        return listObjectsByPrefix(
+          { ...config, endpoint: `http://127.0.0.1:${port}`, requestTimeoutMs: 5000 },
+          'chat-images/',
+        );
+      });
+
+      expect(result.keys).toEqual(['chat-images/2026/03/user-1/s/a.png']);
+      expect(result.nextToken).toBe('token-abc-123');
+    });
+  });
+
+  describe('deleteObjectsBatch', () => {
+    it('sends correct DeleteObjects XML with Content-MD5', async () => {
+      const keys = ['chat-images/2026/03/user-42/s1/a.png', 'chat-images/2026/03/user-42/s2/b.jpg'];
+
+      const received = await withTestServer('', async (port) => {
+        await deleteObjectsBatch(
+          { ...config, endpoint: `http://127.0.0.1:${port}`, requestTimeoutMs: 5000 },
+          keys,
+        );
+        return null;
+      }, true);
+
+      expect(received.method).toBe('POST');
+      expect(received.path).toContain('?delete=');
+      expect(received.body).toContain('<Delete>');
+      expect(received.body).toContain('<Quiet>true</Quiet>');
+      expect(received.body).toContain('<Key>chat-images/2026/03/user-42/s1/a.png</Key>');
+      expect(received.body).toContain('<Key>chat-images/2026/03/user-42/s2/b.jpg</Key>');
+      expect(received.headers['content-md5']).toBeTruthy();
+      expect(received.headers['content-type']).toBe('application/xml');
+    });
+
+    it('is a no-op for empty key list', async () => {
+      // Should not throw or make any request
+      await deleteObjectsBatch(config, []);
+    });
+  });
+
+  describe('deleteByPrefix integration', () => {
+    it('lists and deletes only matching user keys', async () => {
+      const requests: Array<{ method: string; path: string; body: string }> = [];
+      const listXml = `<?xml version="1.0" encoding="UTF-8"?>
+        <ListBucketResult>
+          <IsTruncated>false</IsTruncated>
+          <Contents><Key>chat-images/2026/03/user-42/s1/a.png</Key></Contents>
+          <Contents><Key>chat-images/2026/03/user-42/s2/b.jpg</Key></Contents>
+          <Contents><Key>chat-images/2026/03/user-99/s3/c.png</Key></Contents>
+        </ListBucketResult>`;
+
+      await new Promise<void>((resolve, reject) => {
+        const server = http.createServer((req, res) => {
+          const chunks: Buffer[] = [];
+          req.on('data', (chunk) =>
+            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)),
+          );
+          req.on('end', () => {
+            requests.push({
+              method: req.method || '',
+              path: req.url || '',
+              body: Buffer.concat(chunks).toString('utf8'),
+            });
+            res.statusCode = 200;
+            // Return list XML for GET, empty for POST
+            res.end(req.method === 'GET' ? listXml : '');
+          });
+        });
+
+        server.listen(0, '127.0.0.1', async () => {
+          try {
+            const address = server.address();
+            if (!address || typeof address === 'string') throw new Error('bind failed');
+
+            const storage = new S3CompatibleImageStorage({
+              ...config,
+              endpoint: `http://127.0.0.1:${address.port}`,
+              requestTimeoutMs: 5000,
+            });
+
+            await storage.deleteByPrefix('user-42');
+            server.close();
+            resolve();
+          } catch (err) {
+            server.close();
+            reject(err);
+          }
+        });
+      });
+
+      // Expect a GET (list) and a POST (delete)
+      expect(requests.length).toBe(2);
+      expect(requests[0].method).toBe('GET');
+      expect(requests[1].method).toBe('POST');
+      // Delete body should contain user-42 keys but NOT user-99
+      expect(requests[1].body).toContain('user-42/s1/a.png');
+      expect(requests[1].body).toContain('user-42/s2/b.jpg');
+      expect(requests[1].body).not.toContain('user-99');
+    });
+  });
 });
+
+interface CapturedRequest {
+  method: string;
+  path: string;
+  headers: http.IncomingHttpHeaders;
+  body: string;
+}
+
+/** Helper: spins up a local HTTP server that responds with the given body. */
+async function withTestServer<T>(
+  responseBody: string,
+  fn: (port: number) => Promise<T>,
+): Promise<T>;
+async function withTestServer<T>(
+  responseBody: string,
+  fn: (port: number) => Promise<T>,
+  captureRequest: true,
+): Promise<CapturedRequest>;
+async function withTestServer<T>(
+  responseBody: string,
+  fn: (port: number) => Promise<T>,
+  captureRequest?: boolean,
+): Promise<T | CapturedRequest> {
+  return new Promise((resolve, reject) => {
+    let captured: CapturedRequest | undefined;
+    const server = http.createServer((req, res) => {
+      const chunks: Buffer[] = [];
+      req.on('data', (chunk) =>
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)),
+      );
+      req.on('end', () => {
+        captured = {
+          method: req.method || '',
+          path: req.url || '',
+          headers: req.headers,
+          body: Buffer.concat(chunks).toString('utf8'),
+        };
+        res.statusCode = 200;
+        res.end(responseBody);
+      });
+    });
+
+    server.listen(0, '127.0.0.1', async () => {
+      try {
+        const address = server.address();
+        if (!address || typeof address === 'string') throw new Error('bind failed');
+        const result = await fn(address.port);
+        server.close();
+        resolve(captureRequest && captured ? captured : (result as T));
+      } catch (err) {
+        server.close();
+        reject(err);
+      }
+    });
+  });
+}
