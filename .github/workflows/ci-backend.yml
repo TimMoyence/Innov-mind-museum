@@ -33,6 +33,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Audit dependencies
+        run: pnpm audit --audit-level=critical
+        continue-on-error: true
+
       - name: Lint
         run: pnpm run lint
 
