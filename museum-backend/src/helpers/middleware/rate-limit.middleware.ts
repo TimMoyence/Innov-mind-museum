@@ -55,7 +55,7 @@ export const createRateLimitMiddleware = ({
  * @returns Client IP string used as the bucket key.
  */
 export const byIp = (req: Parameters<RequestHandler>[0]): string => {
-  return req.ip || req.header('x-forwarded-for') || 'unknown-ip';
+  return req.ip || req.socket?.remoteAddress || 'unknown-ip';
 };
 
 /**
