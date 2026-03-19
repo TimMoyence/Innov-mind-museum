@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
 import {
@@ -30,6 +31,7 @@ type SortMode = 'recent' | 'messages';
 
 /** Renders the dashboard screen listing recent chat sessions with sort, save, and share capabilities. */
 export default function ConversationsScreen() {
+  const insets = useSafeAreaInsets();
   const [items, setItems] = useState<DashboardSessionCard[]>([]);
   const [savedSessionIds, setSavedSessionIds] = useState<string[]>([]);
   const [isSavedOnly, setIsSavedOnly] = useState(false);
@@ -138,7 +140,7 @@ export default function ConversationsScreen() {
   }, [isSavedOnly, items, savedSessionIds, sortMode]);
 
   return (
-    <LiquidScreen background={pickMuseumBackground(2)} contentStyle={styles.screen}>
+    <LiquidScreen background={pickMuseumBackground(2)} contentStyle={[styles.screen, { paddingTop: insets.top + 12 }]}>
       <View style={styles.menuRow}>
         <FloatingContextMenu
           actions={[
@@ -213,7 +215,6 @@ export default function ConversationsScreen() {
 const styles = StyleSheet.create({
   screen: {
     paddingHorizontal: 18,
-    paddingTop: 56,
   },
   menuRow: {
     alignItems: 'center',

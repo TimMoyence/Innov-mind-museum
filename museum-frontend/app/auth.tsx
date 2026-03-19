@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -12,10 +11,12 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
 import { authStorage } from '@/features/auth/infrastructure/authStorage';
 import { HOME_ROUTE } from '@/features/auth/routes';
+import { useSocialLogin } from '@/features/auth/application/useSocialLogin';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { BrandMark } from '@/shared/ui/BrandMark';
@@ -23,17 +24,11 @@ import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { liquidColors, pickMuseumBackground } from '@/shared/ui/liquidTheme';
-import {
-  authService,
-  setAccessToken,
-  signInWithApple,
-  signInWithGoogle,
-  isAppleSignInAvailable,
-} from '@/services';
-import type { LoginResponse } from '@/services/authService';
+import { authService, setAccessToken } from '@/services';
 
 /** Renders the login and registration screen with email/password, Apple, and Google sign-in options. */
 export default function AuthScreen() {
+  const insets = useSafeAreaInsets();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -42,59 +37,14 @@ export default function AuthScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
-  const [appleAuthAvailable, setAppleAuthAvailable] = useState(false);
   const { setIsAuthenticated } = useAuth();
 
-  useEffect(() => {
-    isAppleSignInAvailable().then(setAppleAuthAvailable);
-  }, []);
-
-  const handleSocialLoginSuccess = async (response: LoginResponse): Promise<void> => {
-    if (response?.accessToken && response?.refreshToken) {
-      await authStorage.setRefreshToken(response.refreshToken);
-      setAccessToken(response.accessToken);
-      setIsAuthenticated(true);
-      setTimeout(() => {
-        router.replace(HOME_ROUTE);
-      }, 120);
-    }
-  };
-
-  const handleAppleSignIn = async (): Promise<void> => {
-    setIsLoading(true);
-    setErrorMessage(null);
-    setInfoMessage(null);
-    try {
-      const { provider, idToken } = await signInWithApple();
-      const response = await authService.socialLogin(provider, idToken);
-      await handleSocialLoginSuccess(response);
-    } catch (error) {
-      const message = getErrorMessage(error);
-      if (!message.includes('canceled') && !message.includes('cancelled')) {
-        setErrorMessage(message);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async (): Promise<void> => {
-    setIsLoading(true);
-    setErrorMessage(null);
-    setInfoMessage(null);
-    try {
-      const { provider, idToken } = await signInWithGoogle();
-      const response = await authService.socialLogin(provider, idToken);
-      await handleSocialLoginSuccess(response);
-    } catch (error) {
-      const message = getErrorMessage(error);
-      if (!message.includes('canceled') && !message.includes('cancelled')) {
-        setErrorMessage(message);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const {
+    handleAppleSignIn,
+    handleGoogleSignIn,
+    isSocialLoading,
+    appleAuthAvailable,
+  } = useSocialLogin({ setIsAuthenticated, setErrorMessage, setInfoMessage });
 
   const handleLogin = async (): Promise<void> => {
     if (!email || !password) {
@@ -191,7 +141,7 @@ export default function AuthScreen() {
   };
 
   const toggleAuthMode = () => {
-    if (isLoading) {
+    if (isLoading || isSocialLoading) {
       return;
     }
     setIsLogin((value) => !value);
@@ -204,7 +154,7 @@ export default function AuthScreen() {
   };
 
   return (
-    <LiquidScreen background={pickMuseumBackground(1)} contentStyle={styles.screen}>
+    <LiquidScreen background={pickMuseumBackground(1)} contentStyle={[styles.screen, { paddingTop: insets.top + 12 }]}>
       <View style={styles.menuWrap}>
         <FloatingContextMenu
           actions={[
@@ -289,11 +239,11 @@ export default function AuthScreen() {
           ) : null}
 
           <Pressable
-            style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+            style={[styles.submitButton, (isLoading || isSocialLoading) && styles.submitButtonDisabled]}
             onPress={isLogin ? handleLogin : handleRegister}
-            disabled={isLoading}
+            disabled={isLoading || isSocialLoading}
           >
-            {isLoading ? (
+            {isLoading || isSocialLoading ? (
               <ActivityIndicator color='#FFFFFF' />
             ) : (
               <Text style={styles.submitButtonText}>{isLogin ? 'Log in' : 'Sign up'}</Text>
@@ -303,7 +253,7 @@ export default function AuthScreen() {
           <Pressable
             style={styles.switchButton}
             onPress={toggleAuthMode}
-            disabled={isLoading}
+            disabled={isLoading || isSocialLoading}
           >
             <Text style={styles.switchButtonText}>
               {isLogin ? 'No account? Sign up' : 'Already have an account? Log in'}
@@ -329,7 +279,7 @@ export default function AuthScreen() {
           <Pressable
             style={styles.googleButton}
             onPress={() => void handleGoogleSignIn()}
-            disabled={isLoading}
+            disabled={isLoading || isSocialLoading}
           >
             <Ionicons name='logo-google' size={20} color={liquidColors.textPrimary} />
             <Text style={styles.googleButtonText}>Sign in with Google</Text>
@@ -347,7 +297,6 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   screen: {
     paddingHorizontal: 16,
-    paddingTop: 56,
     paddingBottom: 18,
     justifyContent: 'center',
     gap: 12,

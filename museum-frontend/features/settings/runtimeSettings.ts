@@ -2,6 +2,14 @@ import { resolveInitialApiBaseUrl } from '@/services/apiConfig';
 import { setApiBaseUrl } from '@/shared/infrastructure/httpClient';
 import { storage } from '@/shared/infrastructure/storage';
 
+export {
+  defaults,
+  normalizeGuideLevel,
+  type GuideLevel,
+  type RuntimeSettings,
+} from './runtimeSettings.pure';
+import { defaults, normalizeGuideLevel, type GuideLevel, type RuntimeSettings } from './runtimeSettings.pure';
+
 const DEFAULT_LOCALE_KEY = 'runtime.defaultLocale';
 const DEFAULT_MUSEUM_MODE_KEY = 'runtime.defaultMuseumMode';
 const GUIDE_LEVEL_KEY = 'runtime.guideLevel';
@@ -9,29 +17,6 @@ const GUIDE_LEVEL_KEY = 'runtime.guideLevel';
 // Legacy keys kept for migration cleanup only. Environment is now build-driven.
 const API_BASE_URL_KEY = 'runtime.apiBaseUrl';
 const API_ENVIRONMENT_KEY = 'runtime.apiEnvironment';
-
-/** User-selectable expertise level controlling the depth of AI-generated explanations. */
-export type GuideLevel = 'beginner' | 'intermediate' | 'expert';
-
-/** Persisted user preferences that influence chat behavior and UI defaults. */
-export interface RuntimeSettings {
-  defaultLocale: string;
-  defaultMuseumMode: boolean;
-  guideLevel: GuideLevel;
-}
-
-const defaults: RuntimeSettings = {
-  defaultLocale: 'en-US',
-  defaultMuseumMode: true,
-  guideLevel: 'beginner',
-};
-
-const normalizeGuideLevel = (value: string | null): GuideLevel => {
-  if (value === 'expert' || value === 'intermediate' || value === 'beginner') {
-    return value;
-  }
-  return defaults.guideLevel;
-};
 
 const cleanupLegacyApiOverrideKeys = async (
   apiBaseUrl: string | null,

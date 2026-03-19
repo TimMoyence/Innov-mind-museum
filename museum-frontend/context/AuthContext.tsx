@@ -16,39 +16,9 @@ import {
   setUnauthorizedHandler,
 } from "@/shared/infrastructure/httpClient";
 
-// Empêcher l'écran de démarrage de se cacher automatiquement
+// Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync().catch(() => {
 });
-
-const parseJwtExpiration = (token: string): number | null => {
-  const parts = token.split(".");
-  if (parts.length !== 3) {
-    return null;
-  }
-
-  if (typeof globalThis.atob !== "function") {
-    return null;
-  }
-
-  try {
-    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const padded = `${base64}${"=".repeat((4 - (base64.length % 4)) % 4)}`;
-    const payload = JSON.parse(globalThis.atob(padded)) as { exp?: unknown };
-
-    return typeof payload.exp === "number" ? payload.exp : null;
-  } catch {
-    return null;
-  }
-};
-
-const isTokenExpired = (token: string): boolean => {
-  const expiration = parseJwtExpiration(token);
-  if (!expiration) {
-    return false;
-  }
-
-  return Date.now() >= expiration * 1000;
-};
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -69,7 +39,7 @@ export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error(
-      "useAuth doit être utilisé à l'intérieur d'un AuthProvider"
+      "useAuth must be used inside an AuthProvider"
     );
   }
   return context;
@@ -80,7 +50,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
-  // Vérifier l'authentification au démarrage
+  // Check authentication on startup
   useEffect(() => {
     const checkAuth = async (): Promise<void> => {
       try {
@@ -98,7 +68,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await authStorage.clearRefreshToken().catch(() => undefined);
         clearAccessToken();
         setIsAuthenticated(false);
-        console.error("Erreur lors du bootstrap auth:", error);
+        console.error("Auth bootstrap error:", error);
       } finally {
         setIsLoading(false);
         try {
@@ -148,14 +118,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
-  // Fonction de déconnexion
+  // Logout function
   const logout = async (): Promise<void> => {
     let refreshToken: string | null = null;
     try {
       refreshToken = await authStorage.getRefreshToken();
       await authStorage.clearRefreshToken();
     } catch (error) {
-      console.warn("Erreur lors du nettoyage du token:", error);
+      console.warn("Error clearing token:", error);
     }
 
     clearAccessToken();
@@ -165,7 +135,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await authService.logout(refreshToken);
     } catch (error) {
-      console.warn("Erreur lors de l'appel logout:", error);
+      console.warn("Error during logout call:", error);
     }
   };
 
@@ -184,7 +154,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsAuthenticated(true);
       return true;
     } catch (error) {
-      console.error("Erreur lors de la vérification du token:", error);
+      console.error("Error during token validation:", error);
       return false;
     }
   };

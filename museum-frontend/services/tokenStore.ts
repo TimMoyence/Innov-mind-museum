@@ -15,6 +15,3 @@ export const getAccessToken = (): string => accessToken;
 export const clearAccessToken = (): void => {
   accessToken = '';
 };
-
-/** Returns `true` when an access token is currently stored in memory. */
-export const hasAccessToken = (): boolean => accessToken.length > 0;

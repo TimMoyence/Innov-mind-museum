@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -9,11 +9,12 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
 import { authStorage } from '@/features/auth/infrastructure/authStorage';
 import { AUTH_ROUTE } from '@/features/auth/routes';
-import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
+import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSettings';
 import { authService, clearAccessToken } from '@/services';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
@@ -33,24 +34,10 @@ type SettingsRoute =
 /** Renders the settings hub with preferences summary, compliance links, account deletion, and sign-out actions. */
 export default function SettingsScreen() {
   const { logout, setIsAuthenticated } = useAuth();
-  const [locale, setLocale] = useState('en-US');
-  const [museumMode, setMuseumMode] = useState(true);
-  const [guideLevel, setGuideLevel] = useState<'beginner' | 'intermediate' | 'expert'>('beginner');
-  const [isLoadingPrefs, setIsLoadingPrefs] = useState(true);
+  const insets = useSafeAreaInsets();
+  const { locale, museumMode, guideLevel, isLoading: isLoadingPrefs } = useRuntimeSettings();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-
-  useEffect(() => {
-    loadRuntimeSettings()
-      .then((settings) => {
-        setLocale(settings.defaultLocale);
-        setMuseumMode(settings.defaultMuseumMode);
-        setGuideLevel(settings.guideLevel);
-      })
-      .finally(() => {
-        setIsLoadingPrefs(false);
-      });
-  }, []);
 
   const open = (path: SettingsRoute) => {
     router.push(path);
@@ -98,7 +85,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <LiquidScreen background={pickMuseumBackground(4)} contentStyle={styles.screen}>
+    <LiquidScreen background={pickMuseumBackground(4)} contentStyle={[styles.screen, { paddingTop: insets.top + 8 }]}>
       <View style={styles.menuWrap}>
         <FloatingContextMenu
           actions={[
@@ -240,7 +227,6 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    paddingTop: 28,
     paddingHorizontal: 18,
     paddingBottom: 16,
   },
