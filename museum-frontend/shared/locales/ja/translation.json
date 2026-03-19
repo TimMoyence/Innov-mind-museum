@@ -1,0 +1,378 @@
+{
+  "common": {
+    "cancel": "キャンセル",
+    "error": "エラー",
+    "send": "送信",
+    "delete": "削除",
+    "save": "保存",
+    "close": "閉じる",
+    "back": "戻る",
+    "retry": "再試行",
+    "dismiss": "閉じる",
+    "loading": "読み込み中...",
+    "on": "オン",
+    "off": "オフ",
+    "enabled": "有効",
+    "disabled": "無効",
+    "not_configured": "未設定",
+    "or_continue_with": "または以下で続行"
+  },
+  "tabs": {
+    "dashboard": "ダッシュボード",
+    "home": "ホーム"
+  },
+  "auth": {
+    "welcome_back": "おかえりなさい",
+    "create_account": "アカウントを作成",
+    "sign_in_subtitle": "ログインして文化の旅を続けましょう。",
+    "sign_up_subtitle": "Musaiumアカウントを作成して、訪問記録を保存・再開できます。",
+    "fill_all_fields": "すべての項目を入力してください",
+    "login_failed": "ログインに失敗しました — 認証レスポンスが無効です",
+    "registration_complete": "登録が完了しました。ログインしてください。",
+    "forgot_password": "パスワードをお忘れですか？",
+    "password_reset_title": "パスワードのリセット",
+    "password_reset_confirm": "パスワードリセット用のメールを受け取りますか？",
+    "email_sent_title": "メール送信完了",
+    "email_sent_message": "このメールアドレスにアカウントが関連付けられている場合、リセットリンクが送信されます。",
+    "first_name": "名",
+    "last_name": "姓",
+    "email": "メールアドレス",
+    "password": "パスワード",
+    "log_in": "ログイン",
+    "sign_up": "新規登録",
+    "no_account": "アカウントをお持ちでない方は新規登録",
+    "has_account": "すでにアカウントをお持ちの方はログイン",
+    "sign_in_google": "Googleでログイン",
+    "agree_terms": "利用規約およびプライバシーポリシーに同意します",
+    "legal_notice": "ログインすることで、利用規約およびプライバシーポリシーに同意したものとみなされます。",
+    "terms_of_service": "利用規約",
+    "privacy_policy": "プライバシーポリシー",
+    "badge_style": "スタイル",
+    "badge_guide": "ガイド",
+    "badge_safe": "安全"
+  },
+  "home": {
+    "hero_title": "あなたの美術館コンパニオン",
+    "hero_subtitle": "実際の訪問に特化したAIガイドで、美術品・建造物・文化遺産を探索しましょう。",
+    "settings_note": "言語: {{locale}} • ガイドモード: {{mode}}",
+    "start_conversation": "会話を始める",
+    "onboarding": "オンボーディング",
+    "settings": "設定",
+    "menu": {
+      "discover": "ディスカバー",
+      "lens": "レンズ",
+      "audio": "オーディオ"
+    },
+    "messages": {
+      "lens_opened": "レンズ会話を開きました",
+      "audio_opened": "オーディオ会話を開きました",
+      "conversation_opened": "会話を開きました",
+      "opening_discover": "ディスカバーを開いています",
+      "opening_lens": "レンズを開いています",
+      "opening_audio": "オーディオを開いています"
+    }
+  },
+  "conversations": {
+    "title": "ダッシュボード",
+    "subtitle": "最近の美術館セッション一覧です。下に引いて更新できます。",
+    "filter": "フィルター",
+    "saved": "保存済み",
+    "share": "共有",
+    "start_new": "新しい会話を始める",
+    "sorted_by_recency": "新しい順に表示",
+    "sorted_by_messages": "メッセージ数順に表示",
+    "showing_saved_only": "保存済みのセッションのみ表示中",
+    "showing_all": "すべてのセッションを表示中",
+    "share_title": "Musaiumダッシュボード",
+    "share_body": "Musaiumダッシュボード: {{total}}件のセッション、{{savedCount}}件を保存済み。",
+    "shared_success": "ダッシュボードの概要を共有しました",
+    "session_unsaved": "セッションの保存を解除しました",
+    "session_saved": "セッションを保存しました",
+    "empty_title": "まだ会話がありません",
+    "empty_saved": "保存済みのセッションはまだありません。セッションを長押しして保存できます。",
+    "empty_body": "ホームから新しい会話を始めて、最初のセッションを作成しましょう。",
+    "message_count": "メッセージ数: {{count}}",
+    "saved_hint": "保存済み • 長押しで保存解除",
+    "unsaved_hint": "長押しで保存",
+    "saved_filter_on": "保存済みフィルター オン",
+    "saved_filter_off": "保存済みフィルター オフ",
+    "sort_label": "並び順: {{sortMode}}"
+  },
+  "settings": {
+    "title": "設定",
+    "subtitle": "Musaiumの環境設定、プライバシー情報、サポートへのアクセスを管理します。",
+    "env_note": "バックエンド環境はビルド時に決定されます（local/preview/production）。ユーザーが選択することはできません。",
+    "appearance": "外観",
+    "theme_system": "システム",
+    "theme_light": "ライト",
+    "theme_dark": "ダーク",
+    "current_preferences": "現在の設定",
+    "loading_preferences": "設定を読み込み中…",
+    "locale_label": "言語: {{locale}}",
+    "museum_mode_label": "ガイドモード: {{mode}}",
+    "guide_level_label": "ガイドレベル: {{level}}",
+    "open_preferences": "環境設定を開く",
+    "guided_experience_title": "ガイド付き美術館体験",
+    "guided_experience_subtitle": "ガイドモードが美術館訪問時の解説、次のおすすめスポット、回答の詳しさにどのように影響するかをご確認ください。",
+    "guided_mode_info": "ガイド付き美術館モードの詳細",
+    "compliance_title": "法令遵守とヘルプ",
+    "privacy_rgpd": "プライバシー（RGPD）",
+    "privacy_desc": "データ処理、権利、法的連絡先について確認できます。",
+    "terms_of_service": "利用規約",
+    "terms_desc": "利用規約をお読みください。",
+    "support": "サポート",
+    "support_desc": "InstagramまたはTelegramチャンネルからサポートに連絡できます。",
+    "onboarding_help": "オンボーディングヘルプ",
+    "onboarding_desc": "使い方の流れ、便利なヒント、ヘルプへのショートカットを再確認できます。",
+    "danger_zone": "危険ゾーン",
+    "danger_zone_desc": "アカウントおよび関連するすべてのデータを完全に削除します。この操作は取り消せません。",
+    "delete_account": "アカウントを削除",
+    "delete_confirm_title": "アカウントの削除",
+    "delete_confirm_body": "アカウントおよびすべてのデータが完全に削除されます。この操作は取り消せません。",
+    "back_to_home": "ホームに戻る",
+    "sign_out": "ログアウト",
+    "preferences": "環境設定"
+  },
+  "preferences": {
+    "title": "環境設定",
+    "subtitle": "美術品についての会話に使用する言語、ガイド付き美術館モード、解説の詳しさを設定できます。",
+    "loading": "現在の設定を読み込み中...",
+    "language_label": "言語（ロケール）",
+    "language_hint": "チャットでのAI応答言語およびタイムスタンプの表示形式に使用されます。",
+    "museum_mode_label": "ガイド付き美術館モード",
+    "museum_mode_hint": "次の見どころの提案や美術館内のナビゲーションガイドが追加されます。",
+    "guide_level_label": "AIガイドレベル",
+    "guide_level_hint": "初級はわかりやすい解説です。上級は美術史の専門用語を使用します。",
+    "load_failed": "読み込みに失敗しました: {{error}}",
+    "save_failed": "保存に失敗しました: {{error}}",
+    "saved": "設定を保存しました",
+    "save_button": "設定を保存",
+    "learn_guided": "ガイド付き美術館モードについて詳しく",
+    "menu": {
+      "guided": "ガイドモード",
+      "privacy": "プライバシー",
+      "settings": "設定"
+    }
+  },
+  "onboarding": {
+    "skip": "スキップ",
+    "next": "次へ",
+    "get_started": "はじめる",
+    "slide0": {
+      "title": "Musaiumへようこそ",
+      "subtitle": "あなた専用の美術館ガイドです。美術品を撮影したり質問したりして、AIによる解説を得られます。",
+      "tip1": "ホームを開いて、ディスカバー、レンズ、オーディオ、または会話を始めるを選びましょう。",
+      "tip2": "レンズはチャットを作成し、カメラを起動して美術品を撮影します。",
+      "tip3": "オーディオはチャットを作成し、音声録音を開始して質問を話しかけられます。",
+      "tip4": "ダッシュボードで保存済みや最近の会話を振り返れます。"
+    },
+    "slide1": {
+      "title": "実践的なヒント",
+      "subtitle": "画像と音声の入力を工夫して、より良い美術館の回答を得ましょう。",
+      "tip1": "一度に一つの美術品や建造物の細部を撮影すると、より正確な分析ができます。",
+      "tip2": "美術に関する質問をしましょう（作家、様式、時代、象徴など）。",
+      "tip3": "訪問中にガイド付き美術館モードを使うと、次の見どころを提案してもらえます。",
+      "tip4": "初級または上級のガイドレベルを選んで、解説の専門度を調整できます。"
+    },
+    "slide2": {
+      "title": "ヘルプとサポート",
+      "subtitle": "サポート窓口やプライバシー情報をすぐに確認できます。",
+      "tip1": "アカウントの問題、バグ報告、フィードバックにはサポートをご利用ください。",
+      "tip2": "プライバシーページではデータ処理の詳細とあなたの権利を確認できます。",
+      "tip3": "設定はナビゲーションとアカウント操作の中心です。",
+      "tip4": "お客様のデータはGDPR準拠のもと安全に処理されます。"
+    }
+  },
+  "support": {
+    "title": "サポート",
+    "subtitle": "ソーシャルチャンネルからMusaiumサポートにお問い合わせください。",
+    "invalid_link": "無効なサポートリンク",
+    "unable_open_link": "リンクを開けません",
+    "manual_open": "{{url}} を手動で開くか、サポートチャンネルの設定を更新してください。",
+    "instagram": "Instagram",
+    "telegram": "Telegram",
+    "privacy": "プライバシー",
+    "open_instagram": "Instagramサポートを開く",
+    "open_telegram": "Telegramサポートを開く",
+    "scope_title": "サポート対象範囲",
+    "scope_topics": "対応トピック: アカウントアクセス、アプリの不具合、機能へのフィードバック、ガイド付き美術館体験に関する問題。",
+    "scope_response": "通常48時間以内にご返信いたします。",
+    "scope_team": "すべてのサポートリクエストはMusaiumチームが対応いたします。",
+    "share_channels": "サポート窓口を共有",
+    "back_settings": "設定に戻る"
+  },
+  "discover": {
+    "title": "ディスカバー",
+    "subtitle": "写真分析、音声質問、最近のセッションなど、最速のエントリーポイントで美術品や建造物を探索しましょう。",
+    "photo_title": "美術品を撮影する",
+    "photo_desc": "カメラを直接起動して、美術品、建造物、文化的な細部をMusaiumに分析してもらいましょう。",
+    "open_lens": "レンズを開く",
+    "voice_title": "音声で質問",
+    "voice_desc": "音声優先のチャットを開始して、美術館や建造物を訪問しながら話しかけて質問できます。",
+    "start_audio": "オーディオ会話を始める",
+    "continue_title": "会話を続ける",
+    "continue_desc": "ダッシュボードを開いて、以前の美術セッション、保存済みチャット、最近の作品解説を再開しましょう。",
+    "open_dashboard": "ダッシュボードを開く",
+    "guided_title": "ガイド付き美術館モードを理解する",
+    "guided_desc": "ガイドモードが美術館訪問時にどのように次のおすすめスポットやより充実した解説を提供するかをご確認ください。",
+    "open_guided": "ガイドモード情報を開く",
+    "menu": {
+      "lens": "レンズ",
+      "audio": "オーディオ",
+      "dashboard": "ダッシュボード"
+    },
+    "messages": {
+      "opening_camera": "カメラ会話を開いています...",
+      "opening_voice": "音声会話を開いています...",
+      "opening_default": "会話を開いています..."
+    }
+  },
+  "guidedMode": {
+    "title": "ガイド付き美術館モード",
+    "subtitle": "ガイドモードはMusaiumを美術館のコンパニオンに変えます。美術品の解説に加えて、訪問の次のステップを提案します。",
+    "status_line": "現在のステータス: {{status}} • ガイドレベル: {{level}}",
+    "card1_title": "ガイドモードで変わること",
+    "card1_text": "Musaiumは次の見どころ、展示室間の移動案内、近くの作品や建造物に関連した観察のヒントなど、実践的な美術館ガイドを提供します。",
+    "card2_title": "ガイドモードと標準モードの違い",
+    "card2_text": "標準モードは簡潔で説明的です。ガイドモードは美術に焦点を当てつつ、展覧会や文化施設の巡り方を積極的にサポートします。",
+    "card3_title": "ガイドレベル",
+    "card3_text": "初級はわかりやすい教育的な言葉を使います。中級は短い専門用語を導入します。上級はより深い美術史の語彙と背景知識を加えます。",
+    "card4_title": "例",
+    "card4_text": "ガイドモードの動作例: 筆致を解説し、その作品を歴史的な美術運動と結びつけ、構図や象徴を比較できる近くの作品を提案します。",
+    "turn_off": "環境設定でガイドモードをオフにする",
+    "turn_on": "環境設定でガイドモードをオンにする",
+    "start_exploring": "ディスカバーで探索を始める",
+    "menu": {
+      "preferences": "環境設定",
+      "discover": "ディスカバー",
+      "home": "ホーム"
+    }
+  },
+  "privacy": {
+    "pending_badge": "未完了",
+    "pending_count": "{{count}}件の法的項目が未完了",
+    "status_ready": "リリース準備完了のメタデータ",
+    "subtitle": "このページでは、Musaiumが個人データをどのように処理するか、GDPR/RGPDに基づくユーザーの権利、およびプライバシーに関するお問い合わせ先について説明します。",
+    "quick_facts": "概要",
+    "gdpr_rights": "あなたのGDPRの権利（要約）",
+    "prerelease_title": "リリース前の法的チェックリスト",
+    "prerelease_text": "これらの項目はストアや本番ユーザーに公開する前に確認する必要があります。",
+    "policy_contents": "ポリシーの内容",
+    "request_title": "プライバシーリクエストのサポート",
+    "request_text": "アクセス、削除、訂正、異議申し立てのリクエストについては、サポートページからチームにご連絡いただき、専用の法的ワークフローが確立されるまで、メッセージに「privacy request」と記載してください。",
+    "open_support": "サポートを開く",
+    "back_settings": "設定に戻る",
+    "menu": {
+      "support": "サポート",
+      "preferences": "環境設定",
+      "settings": "設定"
+    }
+  },
+  "terms": {
+    "version_note": "バージョン {{version}} — 最終更新日 {{lastUpdated}}",
+    "privacy_policy": "プライバシーポリシー",
+    "back_settings": "設定に戻る",
+    "menu": {
+      "privacy": "プライバシー",
+      "settings": "設定"
+    }
+  },
+  "notFound": {
+    "screen_title": "エラー",
+    "title": "この画面は存在しません",
+    "button": "ホームに移動"
+  },
+  "chat": {
+    "fallback_title": "アートセッション",
+    "report_thanks_title": "ありがとうございます",
+    "report_thanks_body": "報告が送信されました。",
+    "report_error_body": "報告を送信できませんでした。もう一度お試しください。",
+    "report_title": "メッセージを報告",
+    "report_body": "このメッセージを報告する理由を教えてください。",
+    "report_offensive": "不快な内容",
+    "report_inaccurate": "不正確な内容",
+    "report_inappropriate": "不適切な内容",
+    "report_other": "その他",
+    "recording_hint": "音声入力を録音中...",
+    "voice_ready": "音声メッセージ準備完了",
+    "playing": "再生中...",
+    "play": "再生",
+    "clear": "クリア",
+    "gallery": "ギャラリー",
+    "lens": "レンズ",
+    "stop_audio": "オーディオを停止",
+    "audio": "オーディオ",
+    "image_sent": "[画像送信]",
+    "voice_message": "[音声メッセージ]"
+  },
+  "chatInput": {
+    "placeholder": "美術品や建造物について質問、または音声・写真を送信...",
+    "send": "送信"
+  },
+  "welcome": {
+    "title": "Musaiumへようこそ",
+    "subtitle": "あなた専用の美術館コンパニオン",
+    "suggestions": {
+      "museum_camera": "目の前の美術品は何ですか？",
+      "museum_history": "この美術館の歴史を教えてください",
+      "museum_next": "次に何を見るべきですか？",
+      "standard_camera": "美術品を撮影して詳しく知る",
+      "standard_style": "印象派について教えてください",
+      "standard_question": "モナ・リザを描いたのは誰ですか？"
+    }
+  },
+  "expertiseBadge": {
+    "beginner": "初級",
+    "intermediate": "中級",
+    "expert": "上級"
+  },
+  "artworkCard": {
+    "confidence": {
+      "high": "高",
+      "medium": "中",
+      "low": "低"
+    }
+  },
+  "followUpButtons": {
+    "section_label": "クイック質問"
+  },
+  "recommendationChips": {
+    "section_label": "探索のヒント"
+  },
+  "camera": {
+    "requesting_permission": "カメラの許可をリクエスト中...",
+    "close": "閉じる",
+    "no_access": "カメラにアクセスできません",
+    "grant_permission": "許可を付与",
+    "ar_mode": "ARモード"
+  },
+  "imagePreview": {
+    "title": "画像プレビュー"
+  },
+  "messageMenu": {
+    "copy": "コピー",
+    "report": "報告",
+    "speak": "読み上げ"
+  },
+  "errorNotice": {
+    "retry": "再試行",
+    "dismiss": "閉じる"
+  },
+  "startupError": {
+    "badge": "起動時の設定エラー",
+    "title": "このビルドではアプリを起動できません。",
+    "build_context": "現在のビルドコンテキスト",
+    "build_variant": "ビルドバリアント",
+    "api_env": "API環境",
+    "resolved_url": "解決済みベースURL",
+    "staging_url": "ステージングURL",
+    "prod_url": "本番URL",
+    "how_to_fix": "修正方法",
+    "step1": "1. Expoプロジェクトに `EXPO_PUBLIC_API_BASE_URL_STAGING` を設定してください。",
+    "step2": "2. Expoプロジェクトに `EXPO_PUBLIC_API_BASE_URL_PROD` を設定してください。",
+    "step3": "3. 環境変数がEAS Buildで利用可能になった後、アプリを再ビルドしてください。"
+  },
+  "conversationSearch": {
+    "placeholder": "会話を検索..."
+  }
+}

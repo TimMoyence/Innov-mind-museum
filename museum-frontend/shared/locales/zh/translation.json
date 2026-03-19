@@ -1,0 +1,378 @@
+{
+  "common": {
+    "cancel": "取消",
+    "error": "错误",
+    "send": "发送",
+    "delete": "删除",
+    "save": "保存",
+    "close": "关闭",
+    "back": "返回",
+    "retry": "重试",
+    "dismiss": "忽略",
+    "loading": "加载中...",
+    "on": "开启",
+    "off": "关闭",
+    "enabled": "已启用",
+    "disabled": "已禁用",
+    "not_configured": "未配置",
+    "or_continue_with": "或通过以下方式继续"
+  },
+  "tabs": {
+    "dashboard": "仪表盘",
+    "home": "首页"
+  },
+  "auth": {
+    "welcome_back": "欢迎回来",
+    "create_account": "创建您的账户",
+    "sign_in_subtitle": "登录以继续您的文化之旅。",
+    "sign_up_subtitle": "创建 Musaium 账户，保存并恢复您的参观记录。",
+    "fill_all_fields": "请填写所有字段",
+    "login_failed": "登录失败 - 无效的认证响应",
+    "registration_complete": "注册成功，请登录。",
+    "forgot_password": "忘记密码？",
+    "password_reset_title": "重置密码",
+    "password_reset_confirm": "是否向您发送密码重置邮件？",
+    "email_sent_title": "邮件已发送",
+    "email_sent_message": "如果该邮箱已关联账户，您将收到一封重置链接邮件。",
+    "first_name": "名",
+    "last_name": "姓",
+    "email": "邮箱",
+    "password": "密码",
+    "log_in": "登录",
+    "sign_up": "注册",
+    "no_account": "没有账户？立即注册",
+    "has_account": "已有账户？立即登录",
+    "sign_in_google": "使用 Google 登录",
+    "agree_terms": "我同意服务条款和隐私政策",
+    "legal_notice": "登录即表示您同意我们的服务条款和隐私政策。",
+    "terms_of_service": "服务条款",
+    "privacy_policy": "隐私政策",
+    "badge_style": "风格",
+    "badge_guide": "导览",
+    "badge_safe": "安全"
+  },
+  "home": {
+    "hero_title": "您的博物馆伴侣",
+    "hero_subtitle": "借助专为实地参观打造的 AI 导览，探索艺术品、古迹和文化遗产。",
+    "settings_note": "语言：{{locale}} • 导览模式：{{mode}}",
+    "start_conversation": "开始对话",
+    "onboarding": "入门引导",
+    "settings": "设置",
+    "menu": {
+      "discover": "发现",
+      "lens": "镜头",
+      "audio": "语音"
+    },
+    "messages": {
+      "lens_opened": "镜头对话已打开",
+      "audio_opened": "语音对话已打开",
+      "conversation_opened": "对话已打开",
+      "opening_discover": "正在打开发现",
+      "opening_lens": "正在打开镜头",
+      "opening_audio": "正在打开语音"
+    }
+  },
+  "conversations": {
+    "title": "仪表盘",
+    "subtitle": "您最近的博物馆会话。下拉刷新。",
+    "filter": "筛选",
+    "saved": "已收藏",
+    "share": "分享",
+    "start_new": "开始新对话",
+    "sorted_by_recency": "按时间排序",
+    "sorted_by_messages": "按消息数量排序",
+    "showing_saved_only": "仅显示已收藏的会话",
+    "showing_all": "显示全部会话",
+    "share_title": "Musaium 仪表盘",
+    "share_body": "Musaium 仪表盘：共 {{total}} 个会话，已收藏 {{savedCount}} 个。",
+    "shared_success": "仪表盘摘要已分享",
+    "session_unsaved": "会话已取消收藏",
+    "session_saved": "会话已收藏",
+    "empty_title": "暂无对话",
+    "empty_saved": "暂无已收藏的会话。长按会话可收藏。",
+    "empty_body": "从首页开始新对话，创建您的第一个会话。",
+    "message_count": "消息数：{{count}}",
+    "saved_hint": "已收藏 • 长按取消收藏",
+    "unsaved_hint": "长按收藏",
+    "saved_filter_on": "收藏筛选 已开启",
+    "saved_filter_off": "收藏筛选 已关闭",
+    "sort_label": "排序：{{sortMode}}"
+  },
+  "settings": {
+    "title": "设置",
+    "subtitle": "管理您的 Musaium 偏好设置、隐私信息和支持入口。",
+    "env_note": "后端环境由构建配置决定（本地/预览/生产），不可由用户选择。",
+    "appearance": "外观",
+    "theme_system": "跟随系统",
+    "theme_light": "浅色",
+    "theme_dark": "深色",
+    "current_preferences": "当前偏好",
+    "loading_preferences": "正在加载偏好…",
+    "locale_label": "语言：{{locale}}",
+    "museum_mode_label": "导览模式：{{mode}}",
+    "guide_level_label": "导览级别：{{level}}",
+    "open_preferences": "打开偏好设置",
+    "guided_experience_title": "博物馆导览体验",
+    "guided_experience_subtitle": "了解导览模式如何改变解说内容、下一站推荐以及参观时的回答深度。",
+    "guided_mode_info": "博物馆导览模式说明",
+    "compliance_title": "合规与帮助",
+    "privacy_rgpd": "隐私（RGPD）",
+    "privacy_desc": "查阅数据处理、权利及法律联系方式。",
+    "terms_of_service": "服务条款",
+    "terms_desc": "查阅我们的使用条款和条件。",
+    "support": "支持",
+    "support_desc": "通过 Instagram 或 Telegram 渠道联系支持团队。",
+    "onboarding_help": "入门帮助",
+    "onboarding_desc": "重新查看使用流程、实用技巧和帮助快捷方式。",
+    "danger_zone": "危险操作",
+    "danger_zone_desc": "永久删除您的账户及所有关联数据。此操作不可撤销。",
+    "delete_account": "删除账户",
+    "delete_confirm_title": "删除账户",
+    "delete_confirm_body": "此操作将永久删除您的账户和所有数据，且不可撤销。",
+    "back_to_home": "返回首页",
+    "sign_out": "退出登录",
+    "preferences": "偏好设置"
+  },
+  "preferences": {
+    "title": "偏好设置",
+    "subtitle": "控制语言、博物馆导览模式以及艺术对话的解说深度。",
+    "loading": "正在加载当前偏好...",
+    "language_label": "语言（区域）",
+    "language_hint": "用于 AI 回复语言和聊天中的时间戳格式。",
+    "museum_mode_label": "博物馆导览模式",
+    "museum_mode_hint": "添加下一站推荐和博物馆导航提示。",
+    "guide_level_label": "AI 导览级别",
+    "guide_level_hint": "初学者模式使用简单易懂的语言。专家模式使用艺术史专业词汇。",
+    "load_failed": "加载失败：{{error}}",
+    "save_failed": "保存失败：{{error}}",
+    "saved": "偏好已保存",
+    "save_button": "保存偏好设置",
+    "learn_guided": "了解博物馆导览模式",
+    "menu": {
+      "guided": "导览模式",
+      "privacy": "隐私",
+      "settings": "设置"
+    }
+  },
+  "onboarding": {
+    "skip": "跳过",
+    "next": "下一步",
+    "get_started": "开始使用",
+    "slide0": {
+      "title": "欢迎使用 Musaium",
+      "subtitle": "您的私人博物馆导览。拍摄艺术品或提问，获取 AI 驱动的解读。",
+      "tip1": "打开首页，选择发现、镜头、语音或开始对话。",
+      "tip2": "镜头模式会创建对话并打开相机，拍摄艺术品。",
+      "tip3": "语音模式会创建对话并开始录音，用于语音提问。",
+      "tip4": "访问仪表盘可查看已收藏或最近的对话。"
+    },
+    "slide1": {
+      "title": "实用技巧",
+      "subtitle": "使用精准的图像和语音输入，获得更好的博物馆解答。",
+      "tip1": "每次对准一件艺术品或古迹细节拍摄，以获得更清晰的分析。",
+      "tip2": "提出与艺术相关的问题（艺术家、风格、时期、象征意义）。",
+      "tip3": "使用博物馆导览模式，在参观时获得下一站推荐。",
+      "tip4": "选择初学者或专家导览级别，调整词汇深度。"
+    },
+    "slide2": {
+      "title": "帮助与支持",
+      "subtitle": "快速找到支持渠道和隐私信息。",
+      "tip1": "如遇账户问题、程序错误或有反馈建议，请使用支持功能。",
+      "tip2": "隐私页面展示数据处理信息和您的权利。",
+      "tip3": "设置页面是导航和账户操作的中心。",
+      "tip4": "您的数据将按照 GDPR 合规要求进行安全处理。"
+    }
+  },
+  "support": {
+    "title": "支持",
+    "subtitle": "通过社交渠道联系 Musaium 支持团队。",
+    "invalid_link": "无效的支持链接",
+    "unable_open_link": "无法打开链接",
+    "manual_open": "请手动打开 {{url}}，或更新支持渠道配置。",
+    "instagram": "Instagram",
+    "telegram": "Telegram",
+    "privacy": "隐私",
+    "open_instagram": "打开 Instagram 支持",
+    "open_telegram": "打开 Telegram 支持",
+    "scope_title": "支持范围",
+    "scope_topics": "支持的主题包括：账户访问、应用程序错误、功能反馈以及博物馆导览体验问题。",
+    "scope_response": "我们通常会在 48 小时内回复。",
+    "scope_team": "所有支持请求均由 Musaium 团队处理。",
+    "share_channels": "分享支持渠道",
+    "back_settings": "返回设置"
+  },
+  "discover": {
+    "title": "发现",
+    "subtitle": "通过最便捷的入口探索艺术品和古迹：拍照分析、语音提问或您最近的会话。",
+    "photo_title": "拍摄一件艺术品",
+    "photo_desc": "直接启动相机，让 Musaium 分析一件艺术品、古迹或文化细节。",
+    "open_lens": "打开镜头",
+    "voice_title": "语音提问",
+    "voice_desc": "开始语音对话，在参观博物馆或古迹时录制语音提问。",
+    "start_audio": "开始语音对话",
+    "continue_title": "继续我的对话",
+    "continue_desc": "打开仪表盘，恢复之前的艺术会话、已收藏的聊天和最近的解读。",
+    "open_dashboard": "打开仪表盘",
+    "guided_title": "了解博物馆导览模式",
+    "guided_desc": "了解导览模式如何在参观中添加下一站推荐和更丰富的背景信息。",
+    "open_guided": "打开导览模式说明",
+    "menu": {
+      "lens": "镜头",
+      "audio": "语音",
+      "dashboard": "仪表盘"
+    },
+    "messages": {
+      "opening_camera": "正在打开相机对话...",
+      "opening_voice": "正在打开语音对话...",
+      "opening_default": "正在打开对话..."
+    }
+  },
+  "guidedMode": {
+    "title": "博物馆导览模式",
+    "subtitle": "导览模式将 Musaium 变成博物馆伴侣：它不仅解说艺术品，还会为您的参观推荐相关的下一站。",
+    "status_line": "当前状态：{{status}} • 导览级别：{{level}}",
+    "card1_title": "导览模式有何不同",
+    "card1_text": "Musaium 会添加实用的博物馆导向指引，例如下一站推荐、展厅之间的过渡建议，以及与附近作品或古迹相关的观赏提示。",
+    "card2_title": "导览模式与标准模式",
+    "card2_text": "标准模式保持简洁的描述性回答。导览模式同样聚焦于艺术，但会主动引导您在展览或文化场所中前行。",
+    "card3_title": "导览级别",
+    "card3_text": "初学者使用简单易懂的语言。中级会引入简短的专业术语。专家则使用更深入的艺术史词汇和背景知识。",
+    "card4_title": "示例",
+    "card4_text": "导览行为示例：解说笔触技法，将作品与所属的历史流派联系起来，然后推荐附近一件作品以比较构图或象征手法。",
+    "turn_off": "前往偏好设置关闭导览模式",
+    "turn_on": "前往偏好设置开启导览模式",
+    "start_exploring": "在发现中开始探索",
+    "menu": {
+      "preferences": "偏好设置",
+      "discover": "发现",
+      "home": "首页"
+    }
+  },
+  "privacy": {
+    "pending_badge": "待完成",
+    "pending_count": "{{count}} 项法律字段待完善",
+    "status_ready": "已准备好发布的元数据",
+    "subtitle": "本页面说明 Musaium 如何处理个人数据、用户在 GDPR/RGPD 下的权利，以及如何联系支持团队进行隐私相关请求。",
+    "quick_facts": "快速概览",
+    "gdpr_rights": "您的 GDPR 权利（摘要）",
+    "prerelease_title": "发布前法律合规清单",
+    "prerelease_text": "这些项目应在上架应用商店或面向生产用户发布之前完成验证。",
+    "policy_contents": "政策内容",
+    "request_title": "隐私请求支持",
+    "request_text": "如需访问、删除、更正或异议请求，请通过支持页面联系团队，并在消息中注明「隐私请求」，直至专门的法律流程建立完成。",
+    "open_support": "打开支持",
+    "back_settings": "返回设置",
+    "menu": {
+      "support": "支持",
+      "preferences": "偏好设置",
+      "settings": "设置"
+    }
+  },
+  "terms": {
+    "version_note": "版本 {{version}} — 最后更新于 {{lastUpdated}}",
+    "privacy_policy": "隐私政策",
+    "back_settings": "返回设置",
+    "menu": {
+      "privacy": "隐私",
+      "settings": "设置"
+    }
+  },
+  "notFound": {
+    "screen_title": "出错了",
+    "title": "此页面不存在",
+    "button": "返回首页"
+  },
+  "chat": {
+    "fallback_title": "艺术会话",
+    "report_thanks_title": "感谢您",
+    "report_thanks_body": "您的举报已提交。",
+    "report_error_body": "无法提交举报，请重试。",
+    "report_title": "举报消息",
+    "report_body": "您举报此消息的原因是什么？",
+    "report_offensive": "冒犯性内容",
+    "report_inaccurate": "内容不准确",
+    "report_inappropriate": "不当内容",
+    "report_other": "其他",
+    "recording_hint": "正在录制语音...",
+    "voice_ready": "语音消息已就绪",
+    "playing": "播放中...",
+    "play": "播放",
+    "clear": "清除",
+    "gallery": "相册",
+    "lens": "镜头",
+    "stop_audio": "停止音频",
+    "audio": "语音",
+    "image_sent": "[已发送图片]",
+    "voice_message": "[语音消息]"
+  },
+  "chatInput": {
+    "placeholder": "询问关于艺术品、古迹的问题，或发送语音/照片...",
+    "send": "发送"
+  },
+  "welcome": {
+    "title": "欢迎使用 Musaium",
+    "subtitle": "您的私人博物馆伴侣",
+    "suggestions": {
+      "museum_camera": "我面前的是什么艺术品？",
+      "museum_history": "给我讲讲这座博物馆的历史",
+      "museum_next": "我接下来应该看什么？",
+      "standard_camera": "拍摄一件艺术品来了解它",
+      "standard_style": "给我讲讲印象派",
+      "standard_question": "蒙娜丽莎是谁画的？"
+    }
+  },
+  "expertiseBadge": {
+    "beginner": "初学者",
+    "intermediate": "中级",
+    "expert": "专家"
+  },
+  "artworkCard": {
+    "confidence": {
+      "high": "高",
+      "medium": "中",
+      "low": "低"
+    }
+  },
+  "followUpButtons": {
+    "section_label": "快捷提问"
+  },
+  "recommendationChips": {
+    "section_label": "探索灵感"
+  },
+  "camera": {
+    "requesting_permission": "正在请求相机权限...",
+    "close": "关闭",
+    "no_access": "无法访问相机",
+    "grant_permission": "授予权限",
+    "ar_mode": "AR 模式"
+  },
+  "imagePreview": {
+    "title": "图片预览"
+  },
+  "messageMenu": {
+    "copy": "复制",
+    "report": "举报",
+    "speak": "朗读"
+  },
+  "errorNotice": {
+    "retry": "重试",
+    "dismiss": "忽略"
+  },
+  "startupError": {
+    "badge": "启动配置错误",
+    "title": "当前构建无法启动应用。",
+    "build_context": "当前构建上下文",
+    "build_variant": "构建变体",
+    "api_env": "API 环境",
+    "resolved_url": "解析后的基础 URL",
+    "staging_url": "预发布 URL",
+    "prod_url": "生产 URL",
+    "how_to_fix": "修复方法",
+    "step1": "1. 在 Expo 项目中设置 `EXPO_PUBLIC_API_BASE_URL_STAGING`。",
+    "step2": "2. 在 Expo 项目中设置 `EXPO_PUBLIC_API_BASE_URL_PROD`。",
+    "step3": "3. 在环境变量对 EAS Build 可用后重新构建应用。"
+  },
+  "conversationSearch": {
+    "placeholder": "搜索对话..."
+  }
+}
