@@ -1,12 +1,20 @@
 import { AppError } from '@shared/errors/app.error';
+import { logger } from '@shared/logger/logger';
 import type { IUserRepository } from '../domain/user.repository.interface';
+/** Minimal port for image cleanup — avoids direct coupling to chat adapter internals. */
+export interface ImageCleanupPort {
+  deleteByPrefix(prefix: string): Promise<void>;
+}
 
 /** Orchestrates permanent user account deletion (GDPR right-to-erasure). */
 export class DeleteAccountUseCase {
-  constructor(private readonly userRepository: IUserRepository) {}
+  constructor(
+    private readonly userRepository: IUserRepository,
+    private readonly imageStorage?: ImageCleanupPort,
+  ) {}
 
   /**
-   * Delete a user and all associated data (sessions, messages, tokens, social accounts).
+   * Delete a user and all associated data (sessions, messages, tokens, social accounts, images).
    * @param userId - The ID of the user to delete.
    * @throws {AppError} 404 if the user does not exist.
    */
@@ -18,6 +26,18 @@ export class DeleteAccountUseCase {
         statusCode: 404,
         code: 'USER_NOT_FOUND',
       });
+    }
+
+    // Delete stored images (RGPD compliance — SEC-23)
+    if (this.imageStorage) {
+      try {
+        await this.imageStorage.deleteByPrefix(`user-${userId}`);
+      } catch (error) {
+        logger.warn('delete_account_image_cleanup_failed', {
+          userId,
+          error: (error as Error).message,
+        });
+      }
     }
 
     // Full RGPD deletion — transaction:

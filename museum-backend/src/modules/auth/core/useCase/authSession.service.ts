@@ -9,6 +9,7 @@ import {
   RefreshTokenRepositoryPg,
   StoredRefreshTokenRow,
 } from '@modules/auth/adapters/secondary/refresh-token.repository.pg';
+import { checkLoginRateLimit, recordFailedLogin, clearLoginAttempts } from './login-rate-limiter';
 
 interface SafeUser {
   id: number;
@@ -117,8 +118,12 @@ export class AuthSessionService {
       throw badRequest('email and password are required');
     }
 
-    const user = await this.userRepository.getUserByEmail(email.trim());
+    const normalizedEmail = email.trim().toLowerCase();
+    checkLoginRateLimit(normalizedEmail);
+
+    const user = await this.userRepository.getUserByEmail(normalizedEmail);
     if (!user) {
+      recordFailedLogin(normalizedEmail);
       throw unauthorized('Invalid credentials', 'INVALID_CREDENTIALS');
     }
 
@@ -131,8 +136,11 @@ export class AuthSessionService {
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
+      recordFailedLogin(normalizedEmail);
       throw unauthorized('Invalid credentials', 'INVALID_CREDENTIALS');
     }
+
+    clearLoginAttempts(normalizedEmail);
 
     const session = await this.issueSession({
       user: sanitizeUser(user as unknown as Record<string, unknown>),

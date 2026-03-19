@@ -1,21 +1,29 @@
+import bcrypt from 'bcrypt';
 import { IUserRepository } from '../domain/user.repository.interface';
+import { validatePassword } from '@shared/validation/password';
+import { badRequest } from '@shared/errors/app.error';
 
-/** Orchestrates password reset using a one-time token. */
+/** Orchestrates password reset using a one-time token (atomic consume + update). */
 export class ResetPasswordUseCase {
   constructor(private userRepository: IUserRepository) {}
 
   /**
-   * Validate a reset token and update the user's password.
+   * Validate a reset token and update the user's password atomically.
    * @param token - The password-reset token.
    * @param newPassword - The new plain-text password.
    * @returns The updated user.
-   * @throws {Error} If the token is invalid or expired.
+   * @throws {AppError} 400 if the token is invalid/expired or password is too weak.
    */
   async execute(token: string, newPassword: string) {
-    const user = await this.userRepository.getUserByResetToken(token);
-    if (!user) {
-      throw new Error('Token invalide ou expiré.');
+    const pw = validatePassword(newPassword);
+    if (!pw.valid) {
+      throw badRequest(pw.reason!);
     }
-    return await this.userRepository.updatePassword(user.id, newPassword);
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const user = await this.userRepository.consumeResetTokenAndUpdatePassword(token, hashedPassword);
+    if (!user) {
+      throw badRequest('Invalid or expired reset token');
+    }
+    return user;
   }
 }
