@@ -263,15 +263,6 @@ export const chatApi = {
   async listSessions(
     params: ListSessionsRequestDTO = {},
   ): Promise<ListSessionsResponseDTO> {
-    const query = new URLSearchParams();
-    if (params.cursor) {
-      query.set('cursor', params.cursor);
-    }
-    if (params.limit !== undefined) {
-      query.set('limit', String(params.limit));
-    }
-    const suffix = query.toString() ? `?${query.toString()}` : '';
-
     const data = await openApiRequest({
       path: '/api/chat/sessions',
       method: 'get',
