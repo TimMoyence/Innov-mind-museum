@@ -6,8 +6,11 @@ import {
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { ChatOpenAI } from '@langchain/openai';
 
+import * as Sentry from '@sentry/node';
+
 import { env } from '@src/config/env';
 import { logger } from '@shared/logger/logger';
+import { startSpan } from '@shared/observability/sentry';
 import { sanitizePromptInput } from '@shared/validation/input';
 import { resolveLocale, localeToLanguageName } from '@shared/i18n/locale';
 import { parseAssistantResponse } from '../../application/assistant-response';
@@ -277,6 +280,16 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
    * @returns Generated text and metadata (citations, diagnostics).
    */
   async generate(input: OrchestratorInput): Promise<OrchestratorOutput> {
+    return startSpan({
+      name: 'llm.orchestrate',
+      op: 'ai.orchestrate',
+      attributes: {
+        'llm.provider': env.llm.provider,
+        'llm.model': env.llm.model,
+        'llm.has_image': !!input.image,
+        'llm.history_length': input.history.length,
+      },
+    }, async () => {
     const startedAt = Date.now();
     const normalizedText = (input.text || '').trim();
 
@@ -379,11 +392,20 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         timeoutMs: section.timeoutMs,
         payloadBytes,
         run: async (signal: AbortSignal) => {
-          const result = await this.semaphore.use(async () =>
-            model.invoke(sectionMessages, { signal }),
-          );
-
-          return toContentString(result.content);
+          return startSpan({
+            name: `llm.section.${section.name}`,
+            op: 'ai.invoke',
+            attributes: {
+              'llm.section': section.name,
+              'llm.timeout_ms': section.timeoutMs,
+              'llm.payload_bytes': payloadBytes,
+            },
+          }, async () => {
+            const result = await this.semaphore.use(async () =>
+              model.invoke(sectionMessages, { signal }),
+            );
+            return toContentString(result.content);
+          });
         },
       };
     });
@@ -563,10 +585,14 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
       };
     }
 
+    Sentry.getActiveSpan()?.setAttribute('llm.latency_ms', totalLatencyMs);
+    Sentry.getActiveSpan()?.setAttribute('llm.degraded', degraded);
+
     return {
       text,
       metadata,
     };
+    }); // end startSpan('llm.orchestrate')
   }
 
   /**
@@ -580,6 +606,15 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     input: OrchestratorInput,
     onChunk: (text: string) => void,
   ): Promise<OrchestratorOutput> {
+    return startSpan({
+      name: 'llm.orchestrate.stream',
+      op: 'ai.orchestrate',
+      attributes: {
+        'llm.provider': env.llm.provider,
+        'llm.model': env.llm.model,
+        'llm.has_image': !!input.image,
+      },
+    }, async () => {
     const normalizedText = (input.text || '').trim();
     const recentHistory = applyHistoryWindow(input.history, env.llm.maxHistoryMessages);
     const guideLevel = input.context?.guideLevel ?? 'beginner';
@@ -670,15 +705,17 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     let accumulated = '';
     try {
       const rawContent = await this.semaphore.use(async () => {
-        const stream = await model.stream(sectionMessages, { signal: controller.signal });
-        for await (const chunk of stream) {
-          const chunkText = toContentString(chunk.content);
-          if (chunkText) {
-            accumulated += chunkText;
-            onChunk(chunkText);
+        return startSpan({ name: 'llm.stream', op: 'ai.stream' }, async () => {
+          const stream = await model.stream(sectionMessages, { signal: controller.signal });
+          for await (const chunk of stream) {
+            const chunkText = toContentString(chunk.content);
+            if (chunkText) {
+              accumulated += chunkText;
+              onChunk(chunkText);
+            }
           }
-        }
-        return accumulated;
+          return accumulated;
+        });
       });
 
       clearTimeout(timeout);
@@ -732,5 +769,6 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
 
       return { text: fallbackText, metadata: {} };
     }
+    }); // end startSpan('llm.orchestrate.stream')
   }
 }

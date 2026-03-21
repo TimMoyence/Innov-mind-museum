@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { authSessionService } from '@modules/auth/core/useCase';
 import { env } from '@src/config/env';
+import { setUser } from '@shared/observability/sentry';
 import { validateApiKey } from './apiKey.middleware';
 
 /**
@@ -29,6 +30,7 @@ export function isAuthenticated(
   try {
     const user = authSessionService.verifyAccessToken(token);
     (req as Request & { user?: { id: number } }).user = { id: user.id };
+    setUser({ id: String(user.id) });
     next();
   } catch {
     res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid token' } });
@@ -58,6 +60,7 @@ export function isAuthenticatedJwtOnly(
   try {
     const user = authSessionService.verifyAccessToken(token);
     (req as Request & { user?: { id: number } }).user = { id: user.id };
+    setUser({ id: String(user.id) });
     next();
   } catch {
     res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid token' } });
