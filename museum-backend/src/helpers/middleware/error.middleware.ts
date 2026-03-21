@@ -2,6 +2,7 @@ import type { ErrorRequestHandler } from 'express';
 
 import { logger } from '@shared/logger/logger';
 import { AppError } from '@shared/errors/app.error';
+import { captureExceptionWithContext } from '@shared/observability/sentry';
 
 /** Shape of the JSON error response sent to clients. */
 interface ErrorResponseShape {
@@ -29,6 +30,11 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   };
 
   if (statusCode >= 500) {
+    captureExceptionWithContext(error, {
+      requestId,
+      method: req.method,
+      path: req.originalUrl,
+    });
     logger.error('request_failed', {
       requestId,
       method: req.method,

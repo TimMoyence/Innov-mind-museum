@@ -123,6 +123,13 @@ interface AppEnv {
     sessionTtlSeconds: number;
     listTtlSeconds: number;
   };
+  sentry?: {
+    dsn: string;
+    environment: string;
+    release: string;
+    tracesSampleRate: number;
+    profilesSampleRate: number;
+  };
   featureFlags: {
     voiceMode: boolean;
     ocrGuard: boolean;
@@ -261,6 +268,15 @@ const env: AppEnv = {
         url: process.env.REDIS_URL || 'redis://localhost:6379',
         sessionTtlSeconds: toNumber(process.env.CACHE_SESSION_TTL_SECONDS, 3600),
         listTtlSeconds: toNumber(process.env.CACHE_LIST_TTL_SECONDS, 300),
+      }
+    : undefined,
+  sentry: toOptionalString(process.env.SENTRY_DSN)
+    ? {
+        dsn: process.env.SENTRY_DSN!.trim(),
+        environment: nodeEnv,
+        release: toOptionalString(process.env.APP_VERSION) || process.env.npm_package_version || '1.0.0',
+        tracesSampleRate: toNumber(process.env.SENTRY_TRACES_SAMPLE_RATE, 0.1),
+        profilesSampleRate: toNumber(process.env.SENTRY_PROFILES_SAMPLE_RATE, 0),
       }
     : undefined,
   featureFlags: {

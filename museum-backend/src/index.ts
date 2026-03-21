@@ -4,15 +4,20 @@ import util from 'util';
 import { env } from '@src/config/env';
 import { AppDataSource } from '@src/data/db/data-source';
 import { logger } from '@shared/logger/logger';
+import { initSentry } from '@shared/observability/sentry';
 import { createApp } from './app';
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/refresh-token.repository.pg';
 import { TokenCleanupService } from '@modules/auth/core/useCase/tokenCleanup.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import type { CacheService } from '@shared/cache/cache.port';
+import { getOcrService } from '@modules/chat';
+import { stopRateLimitSweep } from '@src/helpers/middleware/rate-limit.middleware';
 
 /** Initializes the database, starts the HTTP server, and registers graceful shutdown handlers. */
 const start = async (): Promise<void> => {
+  initSentry();
+
   try {
     await AppDataSource.initialize();
     logger.info('database_initialized', {
@@ -51,6 +56,9 @@ const start = async (): Promise<void> => {
     const shutdown = async (signal: string): Promise<void> => {
       logger.info('server_shutdown_start', { signal });
       tokenCleanup.stopScheduler();
+      stopRateLimitSweep();
+      const ocr = getOcrService();
+      if (ocr?.destroy) await ocr.destroy();
       server.close(async () => {
         try {
           if (AppDataSource.isInitialized) {
