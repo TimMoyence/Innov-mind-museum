@@ -28,6 +28,8 @@ export const ConversationSearchBar = ({
         autoCapitalize="none"
         autoCorrect={false}
         clearButtonMode="while-editing"
+        accessibilityRole="search"
+        accessibilityLabel={t('a11y.conversations.search_input')}
       />
     </View>
   );

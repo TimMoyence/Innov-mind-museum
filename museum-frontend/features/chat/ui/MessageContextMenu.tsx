@@ -78,19 +78,19 @@ export const MessageContextMenu = ({
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
+      <Pressable style={styles.overlay} onPress={onClose} accessibilityLabel={t('a11y.contextMenu.overlay_hint')}>
         <View style={[styles.sheet, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }]}>
           <View style={styles.handle} />
           <Text style={[styles.title, { color: theme.textSecondary }]} numberOfLines={1}>
             {message.text?.slice(0, 60) || t('chat.voice_message')}
           </Text>
           {actions.map((action) => (
-            <Pressable key={action.id} style={styles.action} onPress={action.onPress}>
+            <Pressable key={action.id} style={styles.action} onPress={action.onPress} accessibilityRole="button" accessibilityLabel={action.label}>
               <Ionicons name={action.icon} size={20} color={theme.textPrimary} />
               <Text style={[styles.actionLabel, { color: theme.textPrimary }]}>{action.label}</Text>
             </Pressable>
           ))}
-          <Pressable style={styles.cancelAction} onPress={onClose}>
+          <Pressable style={styles.cancelAction} onPress={onClose} accessibilityRole="button" accessibilityLabel={t('a11y.contextMenu.cancel')}>
             <Text style={[styles.cancelLabel, { color: theme.textSecondary }]}>{t('common.cancel')}</Text>
           </Pressable>
         </View>

@@ -95,6 +95,10 @@ export default function DiscoverScreen() {
           style={[styles.actionCard, styles.primaryActionCard]}
           onPress={() => void startConversation('camera')}
           disabled={isCreating}
+          accessibilityRole="button"
+          accessibilityLabel={t('a11y.discover.photo_card')}
+          accessibilityHint={t('a11y.discover.photo_card_hint')}
+          accessibilityState={{ disabled: isCreating }}
         >
           <Text style={styles.actionTitle}>{t('discover.photo_title')}</Text>
           <Text style={styles.actionText}>
@@ -112,6 +116,9 @@ export default function DiscoverScreen() {
             style={styles.secondaryButton}
             onPress={() => void startConversation('audio')}
             disabled={isCreating}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.discover.voice')}
+            accessibilityState={{ disabled: isCreating }}
           >
             <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('discover.start_audio')}</Text>
           </Pressable>
@@ -125,6 +132,8 @@ export default function DiscoverScreen() {
           <Pressable
             style={styles.secondaryButton}
             onPress={() => router.push('/(tabs)/conversations')}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.discover.dashboard')}
           >
             <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('discover.open_dashboard')}</Text>
           </Pressable>
@@ -138,6 +147,8 @@ export default function DiscoverScreen() {
           <Pressable
             style={styles.secondaryButton}
             onPress={() => router.push('/(stack)/guided-museum-mode')}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.discover.guided')}
           >
             <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('discover.open_guided')}</Text>
           </Pressable>

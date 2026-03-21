@@ -127,6 +127,9 @@ export default function PreferencesScreen() {
                       language === option.code && { backgroundColor: theme.primary, borderColor: theme.primary },
                     ]}
                     onPress={() => setLanguage(option.code)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('a11y.preferences.language_button', { language: option.nativeLabel })}
+                    accessibilityState={{ selected: language === option.code }}
                   >
                     <Text
                       style={[
@@ -148,7 +151,7 @@ export default function PreferencesScreen() {
                     {t('preferences.museum_mode_hint')}
                   </Text>
                 </View>
-                <Switch value={museumMode} onValueChange={setMuseumMode} />
+                <Switch value={museumMode} onValueChange={setMuseumMode} accessibilityRole="switch" accessibilityLabel={t('a11y.preferences.museum_mode_switch')} accessibilityState={{ checked: museumMode }} />
               </View>
 
               <Text style={[styles.label, { color: theme.textPrimary }]}>{t('preferences.guide_level_label')}</Text>
@@ -164,6 +167,9 @@ export default function PreferencesScreen() {
                       guideLevel === level && { backgroundColor: theme.primary, borderColor: theme.primary },
                     ]}
                     onPress={() => setGuideLevel(level)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('a11y.preferences.guide_level_button', { level })}
+                    accessibilityState={{ selected: guideLevel === level }}
                   >
                     <Text
                       style={[
@@ -182,7 +188,7 @@ export default function PreferencesScreen() {
 
           {status ? <Text style={[styles.status, { color: theme.success }]}>{status}</Text> : null}
 
-          <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => void onSave()} disabled={isSaving}>
+          <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => void onSave()} disabled={isSaving} accessibilityRole="button" accessibilityLabel={t('a11y.preferences.save')} accessibilityState={{ disabled: isSaving }}>
             {isSaving ? (
               <ActivityIndicator color='#FFFFFF' />
             ) : (
@@ -193,6 +199,8 @@ export default function PreferencesScreen() {
           <Pressable
             style={styles.secondaryButton}
             onPress={() => router.push('/(stack)/guided-museum-mode')}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.preferences.learn_guided')}
           >
             <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('preferences.learn_guided')}</Text>
           </Pressable>

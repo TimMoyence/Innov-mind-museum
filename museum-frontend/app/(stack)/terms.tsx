@@ -58,10 +58,10 @@ export default function TermsScreen() {
 
         <GlassCard style={styles.ctaCard} intensity={54}>
           <View style={styles.ctaRow}>
-            <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(stack)/privacy')}>
+            <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(stack)/privacy')} accessibilityRole="button" accessibilityLabel={t('a11y.terms.privacy_policy')}>
               <Text style={styles.primaryButtonText}>{t('terms.privacy_policy')}</Text>
             </Pressable>
-            <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/settings')}>
+            <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/settings')} accessibilityRole="button" accessibilityLabel={t('a11y.terms.back_settings')}>
               <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('terms.back_settings')}</Text>
             </Pressable>
           </View>

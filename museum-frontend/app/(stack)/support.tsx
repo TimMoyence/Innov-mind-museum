@@ -105,6 +105,8 @@ export default function SupportScreen() {
           <Pressable
             style={[styles.primaryButton, { backgroundColor: theme.primary }]}
             onPress={() => void openChannel('instagram')}
+            accessibilityRole="link"
+            accessibilityLabel={t('a11y.support.instagram')}
           >
             <Text style={styles.primaryButtonText}>{t('support.open_instagram')}</Text>
           </Pressable>
@@ -117,6 +119,8 @@ export default function SupportScreen() {
           <Pressable
             style={styles.secondaryButton}
             onPress={() => void openChannel('telegram')}
+            accessibilityRole="link"
+            accessibilityLabel={t('a11y.support.telegram')}
           >
             <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('support.open_telegram')}</Text>
           </Pressable>
@@ -135,11 +139,11 @@ export default function SupportScreen() {
           </Text>
         </GlassCard>
 
-        <Pressable style={styles.secondaryButton} onPress={() => void shareChannels()}>
+        <Pressable style={styles.secondaryButton} onPress={() => void shareChannels()} accessibilityRole="button" accessibilityLabel={t('a11y.support.share')}>
           <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('support.share_channels')}</Text>
         </Pressable>
 
-        <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/settings')}>
+        <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/settings')} accessibilityRole="button" accessibilityLabel={t('a11y.support.back_settings')}>
           <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('support.back_settings')}</Text>
         </Pressable>
       </ScrollView>

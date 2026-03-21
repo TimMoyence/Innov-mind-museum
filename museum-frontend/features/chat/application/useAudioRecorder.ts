@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Platform } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Audio } from 'expo-av';
 
 /**
@@ -7,6 +8,7 @@ import { Audio } from 'expo-av';
  * Handles platform-specific logic for both web (MediaRecorder) and native (expo-av).
  */
 export const useAudioRecorder = () => {
+  const { t } = useTranslation();
   const [isRecording, setIsRecording] = useState(false);
   const [recordedAudioUri, setRecordedAudioUri] = useState<string | null>(null);
   const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
@@ -69,10 +71,7 @@ export const useAudioRecorder = () => {
         !navigator.mediaDevices?.getUserMedia ||
         typeof MediaRecorder === 'undefined'
       ) {
-        Alert.alert(
-          'Audio unavailable',
-          'This browser does not support microphone recording. Try a modern Chrome, Safari, or Edge build.',
-        );
+        Alert.alert(t('audio.unavailable_title'), t('audio.unavailable_body'));
         return;
       }
 
@@ -99,7 +98,7 @@ export const useAudioRecorder = () => {
 
     const permission = await Audio.requestPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission required', 'Microphone access is required for voice input.');
+      Alert.alert(t('audio.permission_title'), t('audio.permission_body'));
       return;
     }
 
@@ -179,7 +178,7 @@ export const useAudioRecorder = () => {
     } catch {
       setIsRecording(false);
       nativeRecordingRef.current = null;
-      Alert.alert('Audio error', 'Recording could not be started. Please try again.');
+      Alert.alert(t('audio.error_title'), t('audio.error_body'));
     }
   }, [startRecording, stopRecording]);
 
@@ -231,7 +230,7 @@ export const useAudioRecorder = () => {
       });
     } catch {
       setIsPlayingAudio(false);
-      Alert.alert('Playback error', 'Unable to play this recording.');
+      Alert.alert(t('audio.playback_error_title'), t('audio.playback_error_body'));
     }
   }, []);
 

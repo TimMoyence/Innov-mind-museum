@@ -1,4 +1,4 @@
-import { resolveInitialApiBaseUrl } from '@/services/apiConfig';
+import { resolveInitialApiBaseUrl } from '@/shared/infrastructure/apiConfig';
 import { setApiBaseUrl } from '@/shared/infrastructure/httpClient';
 import { storage } from '@/shared/infrastructure/storage';
 

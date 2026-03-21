@@ -2,7 +2,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import type { ApiConfigurationSnapshot } from '@/services/apiConfig';
+import type { ApiConfigurationSnapshot } from '@/shared/infrastructure/apiConfig';
 
 type StartupConfigurationErrorScreenProps = {
   error: Error;

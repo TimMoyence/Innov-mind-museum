@@ -53,6 +53,9 @@ export const WelcomeCard = ({ museumMode, onSuggestion, onCamera, disabled = fal
               }
             }}
             disabled={disabled}
+            accessibilityRole="button"
+            accessibilityLabel={suggestion.text}
+            accessibilityHint={suggestion.isCamera ? t('a11y.chat.camera_suggestion_hint') : t('a11y.chat.suggestion_hint')}
           >
             <Ionicons name={suggestion.icon} size={18} color={theme.primary} />
             <Text style={[styles.suggestionText, { color: theme.textPrimary }]} numberOfLines={2}>{suggestion.text}</Text>

@@ -173,10 +173,10 @@ export default function PrivacyScreen() {
             {t('privacy.request_text')}
           </Text>
           <View style={styles.ctaRow}>
-            <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(stack)/support')}>
+            <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(stack)/support')} accessibilityRole="button" accessibilityLabel={t('a11y.privacy.open_support')}>
               <Text style={styles.primaryButtonText}>{t('privacy.open_support')}</Text>
             </Pressable>
-            <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/settings')}>
+            <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/settings')} accessibilityRole="button" accessibilityLabel={t('a11y.privacy.back_settings')}>
               <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('privacy.back_settings')}</Text>
             </Pressable>
           </View>

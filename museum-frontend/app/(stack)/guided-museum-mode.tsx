@@ -91,13 +91,13 @@ export default function GuidedMuseumModeScreen() {
           </Text>
         </GlassCard>
 
-        <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(stack)/preferences')}>
+        <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(stack)/preferences')} accessibilityRole="button" accessibilityLabel={museumMode ? t('a11y.guidedMode.toggle_off') : t('a11y.guidedMode.toggle_on')}>
           <Text style={styles.primaryButtonText}>
             {museumMode ? t('guidedMode.turn_off') : t('guidedMode.turn_on')}
           </Text>
         </Pressable>
 
-        <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/discover')}>
+        <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/discover')} accessibilityRole="button" accessibilityLabel={t('a11y.guidedMode.start_exploring')}>
           <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('guidedMode.start_exploring')}</Text>
         </Pressable>
       </ScrollView>
