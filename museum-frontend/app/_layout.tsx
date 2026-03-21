@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useNavigationContainerRef } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as Sentry from '@sentry/react-native';
 
 import { AuthProvider } from '@/context/AuthContext';
 import { useProtectedRoute } from '@/features/auth/useProtectedRoute';
@@ -14,8 +15,29 @@ import { ConnectivityProvider } from '@/shared/infrastructure/connectivity/Conne
 import {
   getApiConfigurationSnapshot,
   getStartupConfigurationError,
-} from '@/services/apiConfig';
+} from '@/shared/infrastructure/apiConfig';
 import { StartupConfigurationErrorScreen } from '@/shared/ui/StartupConfigurationErrorScreen';
+
+const sentryDsn =
+  Platform.OS === 'android'
+    ? process.env.EXPO_PUBLIC_SENTRY_DSN_ANDROID
+    : process.env.EXPO_PUBLIC_SENTRY_DSN_IOS;
+
+const reactNavigationIntegration = Sentry.reactNavigationIntegration({
+  enableTimeToInitialDisplay: true,
+});
+
+Sentry.init({
+  dsn: sentryDsn || '',
+  enabled: !!sentryDsn,
+  environment: __DEV__ ? 'development' : 'production',
+  tracesSampleRate: 0.2,
+  integrations: [
+    Sentry.reactNativeTracingIntegration(),
+    reactNavigationIntegration,
+  ],
+  enableAutoPerformanceTracing: true,
+});
 
 function AuthenticationGuard({ children }: { children: ReactNode }) {
   useProtectedRoute();
@@ -28,7 +50,15 @@ function ThemedStatusBar() {
 }
 
 /** Renders the root navigation layout with startup configuration validation, runtime settings bootstrap, and auth guard. */
-export default function RootLayout() {
+function RootLayout() {
+  const ref = useNavigationContainerRef();
+
+  useEffect(() => {
+    if (ref) {
+      reactNavigationIntegration.registerNavigationContainer(ref);
+    }
+  }, [ref]);
+
   const startupConfiguration = useMemo(() => {
     return {
       error: getStartupConfigurationError(),
@@ -114,3 +144,5 @@ export default function RootLayout() {
     </I18nProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);

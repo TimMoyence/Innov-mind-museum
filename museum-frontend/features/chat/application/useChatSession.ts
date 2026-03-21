@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import * as Sentry from '@sentry/react-native';
 
 import { getErrorMessage } from '@/shared/lib/errors';
 import { GuideLevel } from '@/features/settings/runtimeSettings';
@@ -65,7 +66,7 @@ export const useChatSession = (sessionId: string) => {
   // Streaming state refs (avoid re-renders during token accumulation)
   const streamTextRef = useRef('');
   const streamingIdRef = useRef<string | null>(null);
-  const updateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const updateTimerRef = useRef<number | null>(null);
 
   const { locale, museumMode, guideLevel } = useRuntimeSettings();
   const { isOffline, enqueue, dequeue, pendingCount } = useOfflineQueue();
@@ -93,6 +94,7 @@ export const useChatSession = (sessionId: string) => {
         ),
       );
     } catch (loadError) {
+      Sentry.captureException(loadError, { tags: { flow: 'chat.loadSession' } });
       setError(getErrorMessage(loadError));
     } finally {
       setIsLoading(false);
@@ -103,7 +105,7 @@ export const useChatSession = (sessionId: string) => {
     void loadSession();
   }, [loadSession]);
 
-  // Throttled stream text flush — max 15 updates/sec (~66ms interval)
+  // Smooth stream text flush — synced to display refresh via requestAnimationFrame
   const flushStreamText = useCallback(() => {
     const text = streamTextRef.current;
     const id = streamingIdRef.current;
@@ -115,10 +117,10 @@ export const useChatSession = (sessionId: string) => {
 
   const scheduleFlush = useCallback(() => {
     if (!updateTimerRef.current) {
-      updateTimerRef.current = setTimeout(() => {
+      updateTimerRef.current = requestAnimationFrame(() => {
         updateTimerRef.current = null;
         flushStreamText();
-      }, 66);
+      });
     }
   }, [flushStreamText]);
 
@@ -236,11 +238,17 @@ export const useChatSession = (sessionId: string) => {
             scheduleFlush();
           },
           onDone: (payload) => {
-            // Clear any pending flush timer
+            // Clear any pending animation frame
             if (updateTimerRef.current) {
-              clearTimeout(updateTimerRef.current);
+              cancelAnimationFrame(updateTimerRef.current);
               updateTimerRef.current = null;
             }
+
+            // Capture text before clearing — React 18 batching defers the
+            // updater function, so the ref would be '' by the time it runs.
+            const finalText = streamTextRef.current;
+            streamingIdRef.current = null;
+            streamTextRef.current = '';
 
             // Replace placeholder with final committed message
             setMessages(prev => prev.map(m =>
@@ -248,14 +256,12 @@ export const useChatSession = (sessionId: string) => {
                 ? {
                     ...m,
                     id: payload.messageId,
-                    text: streamTextRef.current,
+                    text: finalText,
                     createdAt: payload.createdAt,
                     metadata: (payload.metadata as ChatUiMessageMetadata) ?? null,
                   }
                 : m,
             ));
-            streamingIdRef.current = null;
-            streamTextRef.current = '';
           },
           onGuardrail: (guardrailText) => {
             // Replace streaming text with guardrail message
@@ -293,10 +299,11 @@ export const useChatSession = (sessionId: string) => {
         setIsStreaming(false);
         return true;
       } catch (sendError) {
+        Sentry.captureException(sendError, { tags: { flow: 'chat.sendMessage' } });
         setIsStreaming(false);
         // Clean up streaming state
         if (updateTimerRef.current) {
-          clearTimeout(updateTimerRef.current);
+          cancelAnimationFrame(updateTimerRef.current);
           updateTimerRef.current = null;
         }
         streamingIdRef.current = null;
@@ -318,12 +325,13 @@ export const useChatSession = (sessionId: string) => {
     [locale, museumMode, guideLevel, sessionId, isOffline, enqueue, scheduleFlush, flushStreamText],
   );
 
-  // Flush queued messages when connectivity is restored
+  // Flush queued messages when connectivity is restored, then sync with server state
   useEffect(() => {
     if (!isConnected) return;
 
     const flush = async () => {
       let next = dequeue();
+      let flushedAny = false;
       while (next) {
         try {
           await chatApi.postMessage({
@@ -334,22 +342,42 @@ export const useChatSession = (sessionId: string) => {
             guideLevel,
             locale,
           });
+          flushedAny = true;
         } catch {
           // If flush fails, stop trying (next reconnect will retry)
           break;
         }
         next = dequeue();
       }
+
+      // Re-fetch session to merge assistant replies without content jump
+      if (flushedAny) {
+        try {
+          const response = await chatApi.getSession(sessionId);
+          const serverMessages: ChatUiMessage[] = response.messages.map((m) => ({
+            id: m.id,
+            role: m.role,
+            text: m.text || '',
+            createdAt: m.createdAt,
+            imageRef: m.imageRef,
+            image: m.image ?? null,
+            metadata: (m.metadata as ChatUiMessageMetadata) ?? null,
+          }));
+          setMessages(sortByTime(serverMessages));
+        } catch {
+          // Sync failure is non-critical; user can pull-to-refresh
+        }
+      }
     };
 
     void flush();
-  }, [isConnected, dequeue, museumMode, guideLevel, locale]);
+  }, [isConnected, dequeue, museumMode, guideLevel, locale, sessionId]);
 
-  // Cleanup timer on unmount
+  // Cleanup animation frame on unmount
   useEffect(() => {
     return () => {
       if (updateTimerRef.current) {
-        clearTimeout(updateTimerRef.current);
+        cancelAnimationFrame(updateTimerRef.current);
       }
     };
   }, []);

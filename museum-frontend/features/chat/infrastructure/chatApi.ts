@@ -1,10 +1,13 @@
-import { httpRequest } from '@/services/http';
+import { httpRequest } from '@/shared/api/httpRequest';
 import { openApiRequest } from '@/shared/api/openapiClient';
 import { getErrorMessage } from '@/shared/lib/errors';
 import type { components } from '@/shared/api/generated/openapi';
 import { GuideLevel } from '@/features/settings/runtimeSettings';
-import { getAccessToken } from '@/services/tokenStore';
+import { getAccessToken } from '@/features/auth/infrastructure/authTokenStore';
 import { getApiBaseUrl, getLocale } from '@/shared/infrastructure/httpClient';
+import { generateRequestId } from '@/shared/infrastructure/requestId';
+import { fetch as expoFetch } from 'expo/fetch';
+import { getTraceData, isInitialized } from '@sentry/core';
 import { parseSseChunk, SseStreamEvent } from './sseParser';
 import {
   CreateSessionRequestDTO,
@@ -349,7 +352,7 @@ export const chatApi = {
     locale?: string;
     onToken: (text: string) => void;
     onDone: (payload: { messageId: string; createdAt: string; metadata: Record<string, unknown> }) => void;
-    onError: (code: string, message: string) => void;
+    onError: (code: string, message: string, requestId?: string) => void;
     onGuardrail?: (text: string, reason: string) => void;
     signal?: AbortSignal;
   }): Promise<void> {
@@ -357,13 +360,18 @@ export const chatApi = {
     const token = getAccessToken();
     const url = `${baseUrl}${CHAT_BASE}/sessions/${params.sessionId}/messages/stream`;
 
-    const response = await fetch(url, {
+    const traceHeaders = isInitialized() ? getTraceData() : {};
+    const requestId = generateRequestId();
+
+    const response = await expoFetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'text/event-stream',
         'Accept-Language': getLocale(),
+        'X-Request-Id': requestId,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...traceHeaders,
       },
       body: JSON.stringify({
         text: params.text?.trim() || undefined,
@@ -384,7 +392,7 @@ export const chatApi = {
         // Throw so sendMessageSmart falls back to Axios path (which has refresh interceptor)
         throw new Error('STREAMING_UNAUTHORIZED');
       }
-      params.onError('HTTP_ERROR', `HTTP ${response.status}`);
+      params.onError('HTTP_ERROR', `HTTP ${response.status}`, requestId);
       return;
     }
 
@@ -397,7 +405,7 @@ export const chatApi = {
           params.onDone({ messageId: event.messageId, createdAt: event.createdAt, metadata: event.metadata });
           break;
         case 'error':
-          params.onError(event.code, event.message);
+          params.onError(event.code, event.message, requestId);
           break;
         case 'guardrail':
           params.onGuardrail?.(event.text, event.reason);
@@ -432,7 +440,7 @@ export const chatApi = {
         }
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
-          params.onError('STREAM_ERROR', (error as Error).message);
+          params.onError('STREAM_ERROR', (error as Error).message, requestId);
         }
       }
     } else {
