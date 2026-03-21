@@ -79,6 +79,28 @@ jobs:
             ghcr.io/${{ secrets.GHCR_USER }}/museum-backend:latest
             ghcr.io/${{ secrets.GHCR_USER }}/museum-backend:${{ github.sha }}
 
+      - name: Create Sentry release
+        if: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT_BACKEND }}
+        run: |
+          npx @sentry/cli releases new "${{ github.sha }}"
+          npx @sentry/cli releases set-commits "${{ github.sha }}" --auto
+          npx @sentry/cli releases finalize "${{ github.sha }}"
+
+      - name: Upload backend source maps to Sentry
+        if: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT_BACKEND }}
+        working-directory: museum-backend
+        run: |
+          pnpm build
+          npx @sentry/cli sourcemaps upload --release="${{ github.sha }}" dist/
+
       - name: Deploy on VPS (pull & restart backend)
         uses: appleboy/ssh-action@v1.2.0
         with:
