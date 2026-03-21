@@ -7,10 +7,21 @@ import React, {
 } from "react";
 import { router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import * as Sentry from "@sentry/react-native";
 
-import { authService, clearAccessToken, setAccessToken } from "../services";
+import { authService } from "@/features/auth/infrastructure/authApi";
+import { clearAccessToken, setAccessToken, authStorage } from "@/features/auth/infrastructure/authTokenStore";
 import { AUTH_ROUTE } from "@/features/auth/routes";
-import { authStorage } from "@/features/auth/infrastructure/authStorage";
+import { reportError } from "@/shared/observability/errorReporting";
+
+/** Extracts user ID from a JWT access token and sets Sentry user context. Non-critical — fails silently. */
+const identifySentryUser = (accessToken: string): void => {
+  try {
+    const payload = JSON.parse(atob(accessToken.split('.')[1]));
+    const userId = payload.id || payload.sub;
+    if (userId) Sentry.setUser({ id: String(userId) });
+  } catch { /* Non-critical */ }
+};
 import {
   setAuthRefreshHandler,
   setUnauthorizedHandler,
@@ -63,12 +74,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           await authStorage.setRefreshToken(session.refreshToken);
           setAccessToken(session.accessToken);
           setIsAuthenticated(true);
+          identifySentryUser(session.accessToken);
         }
       } catch (error) {
         await authStorage.clearRefreshToken().catch(() => undefined);
         clearAccessToken();
         setIsAuthenticated(false);
-        console.error("Auth bootstrap error:", error);
+        Sentry.setUser(null);
+        reportError(error, { context: 'auth_bootstrap' });
       } finally {
         setIsLoading(false);
         try {
@@ -94,11 +107,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await authStorage.setRefreshToken(session.refreshToken);
         setAccessToken(session.accessToken);
         setIsAuthenticated(true);
+        identifySentryUser(session.accessToken);
         return session.accessToken;
       } catch {
         await authStorage.clearRefreshToken().catch(() => undefined);
         clearAccessToken();
         setIsAuthenticated(false);
+        Sentry.setUser(null);
         return null;
       }
     });
@@ -109,6 +124,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
       clearAccessToken();
       setIsAuthenticated(false);
+      Sentry.setUser(null);
       router.replace(AUTH_ROUTE);
     });
 
@@ -130,6 +146,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     clearAccessToken();
     setIsAuthenticated(false);
+    Sentry.setUser(null);
     router.replace(AUTH_ROUTE);
 
     try {
@@ -152,9 +169,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await authStorage.setRefreshToken(session.refreshToken);
       setAccessToken(session.accessToken);
       setIsAuthenticated(true);
+      identifySentryUser(session.accessToken);
       return true;
     } catch (error) {
-      console.error("Error during token validation:", error);
+      reportError(error, { context: 'token_validation' });
       return false;
     }
   };
