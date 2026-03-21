@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { isAuthenticated, isAuthenticatedJwtOnly } from '@src/helpers/middleware/authenticated.middleware';
+import { createRateLimitMiddleware, byUserId } from '@src/helpers/middleware/rate-limit.middleware';
 import { env } from '@src/config/env';
 import { badRequest } from '@shared/errors/app.error';
 import {
@@ -193,8 +194,14 @@ authRouter.post('/verify-email', async (req: Request, res: Response, next: NextF
 });
 
 // ─── API Key Management (B2B) ─── gated behind feature flag ───
+const apiKeyLimiter = createRateLimitMiddleware({
+  limit: 10,
+  windowMs: 60_000,
+  keyGenerator: byUserId,
+});
+
 if (env.featureFlags.apiKeys) {
-  authRouter.post('/api-keys', isAuthenticatedJwtOnly, async (req: Request, res: Response, next: NextFunction) => {
+  authRouter.post('/api-keys', isAuthenticatedJwtOnly, apiKeyLimiter, async (req: Request, res: Response, next: NextFunction) => {
     const jwtUser = (req as Request & { user?: { id: number } }).user;
     if (!jwtUser?.id) {
       res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });

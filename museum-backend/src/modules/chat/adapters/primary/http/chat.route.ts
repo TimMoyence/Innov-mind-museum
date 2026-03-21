@@ -331,7 +331,7 @@ export const createChatRouter = (chatService: ChatService): Router => {
       initSseResponse(res);
 
       const controller = new AbortController();
-      req.on('close', () => controller.abort());
+      res.on('close', () => controller.abort());
 
       try {
         const currentUser = getRequestUser(req);

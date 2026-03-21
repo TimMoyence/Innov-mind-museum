@@ -24,6 +24,7 @@ export interface HealthPayload {
   version: string;
   timestamp: string;
   commitSha?: string;
+  responseTimeMs?: number;
 }
 
 const resolveAppVersion = (): string => {
@@ -86,7 +87,9 @@ export const createApiRouter = ({ chatService, healthCheck, featureFlagService }
   const router = Router();
 
   router.get('/health', async (_req, res) => {
+    const start = Date.now();
     const checks = await healthCheck();
+    const responseTimeMs = Date.now() - start;
     const llmConfigured =
       (env.llm.provider === 'openai' && !!env.llm.openAiApiKey) ||
       (env.llm.provider === 'deepseek' && !!env.llm.deepseekApiKey) ||
@@ -96,6 +99,7 @@ export const createApiRouter = ({ chatService, healthCheck, featureFlagService }
       checks,
       llmConfigured,
     });
+    payload.responseTimeMs = responseTimeMs;
 
     res.status(payload.status === 'ok' ? 200 : 503).json(payload);
   });

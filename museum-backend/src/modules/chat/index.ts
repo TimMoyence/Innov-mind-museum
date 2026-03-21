@@ -14,6 +14,7 @@ import {
   TesseractOcrService,
   DisabledOcrService,
 } from './adapters/secondary/ocr-service';
+import type { OcrService } from './adapters/secondary/ocr-service';
 import { TypeOrmChatRepository } from './infrastructure/chat.repository.typeorm';
 import type { CacheService } from '@shared/cache/cache.port';
 
@@ -28,6 +29,12 @@ let sharedRepository: TypeOrmChatRepository | undefined;
 
 /** Returns the shared chat repository instance (available after buildChatService has been called). */
 export const getChatRepository = (): TypeOrmChatRepository | undefined => sharedRepository;
+
+/** Lazily-initialized OCR service singleton, exposed for graceful shutdown (worker pool cleanup). */
+let ocrServiceRef: OcrService | undefined;
+
+/** Returns the shared OCR service instance (available after buildChatService has been called). */
+export const getOcrService = (): OcrService | undefined => ocrServiceRef;
 
 /**
  * Wires the chat module dependency graph and returns a fully configured ChatService.
@@ -78,6 +85,7 @@ export const buildChatService = (dataSource: DataSource, cache?: CacheService): 
   const ocr = env.featureFlags.ocrGuard
     ? new TesseractOcrService()
     : new DisabledOcrService();
+  ocrServiceRef = ocr;
 
   return new ChatService({
     repository,
