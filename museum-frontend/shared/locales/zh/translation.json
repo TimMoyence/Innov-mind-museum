@@ -358,6 +358,20 @@
     "retry": "重试",
     "dismiss": "忽略"
   },
+  "offline": {
+    "title": "您已离线",
+    "pending": "{{count}}条待发送"
+  },
+  "audio": {
+    "unavailable_title": "音频不可用",
+    "unavailable_body": "此设备不支持麦克风录音。",
+    "permission_title": "需要权限",
+    "permission_body": "语音输入需要麦克风访问权限。",
+    "error_title": "音频错误",
+    "error_body": "无法开始录音，请重试。",
+    "playback_error_title": "播放错误",
+    "playback_error_body": "无法播放此录音。"
+  },
   "startupError": {
     "badge": "启动配置错误",
     "title": "当前构建无法启动应用。",
@@ -374,5 +388,131 @@
   },
   "conversationSearch": {
     "placeholder": "搜索对话..."
+  },
+  "a11y": {
+    "home": {
+      "start_conversation": "开始新对话",
+      "start_conversation_hint": "创建与博物馆助手的新聊天会话",
+      "onboarding": "打开引导教程",
+      "settings": "打开设置"
+    },
+    "auth": {
+      "email_input": "电子邮箱地址",
+      "password_input": "密码",
+      "firstname_input": "名",
+      "lastname_input": "姓",
+      "forgot_password": "忘记密码",
+      "forgot_password_hint": "发送密码重置邮件",
+      "gdpr_checkbox": "接受条款和隐私政策",
+      "login_button": "登录",
+      "register_button": "注册",
+      "toggle_login": "切换到登录",
+      "toggle_register": "切换到注册",
+      "google_signin": "使用 Google 登录",
+      "apple_signin": "使用 Apple 登录",
+      "terms_link": "服务条款",
+      "privacy_link": "隐私政策"
+    },
+    "conversations": {
+      "search_input": "搜索对话",
+      "start_new": "开始新对话",
+      "card_hint": "打开此对话",
+      "long_press_hint": "长按以保存"
+    },
+    "chat": {
+      "close": "关闭对话",
+      "close_hint": "返回对话列表",
+      "play_audio": "播放录制的音频",
+      "clear_audio": "清除录制的音频",
+      "gallery": "从相册选择图片",
+      "gallery_hint": "打开照片库以附加图片",
+      "lens": "打开相机",
+      "lens_hint": "打开相机拍摄艺术品",
+      "start_recording": "开始录音",
+      "stop_recording": "停止录音",
+      "send": "发送消息",
+      "send_hint": "将您的消息发送给博物馆助手",
+      "message_input": "输入您的消息",
+      "assistant_message": "助手消息",
+      "user_message": "您的消息",
+      "long_press_hint": "长按以查看更多选项",
+      "follow_up_hint": "发送此后续问题",
+      "recommendation_hint": "用此建议填充输入框",
+      "suggestion_hint": "以此主题开始对话",
+      "camera_suggestion_hint": "打开相机拍摄艺术品"
+    },
+    "onboarding": {
+      "skip": "跳过引导",
+      "next": "下一页",
+      "get_started": "开始使用"
+    },
+    "settings": {
+      "theme_button": "选择{{theme}}主题",
+      "theme_selected": "当前已选",
+      "preferences": "打开偏好设置",
+      "guided_mode": "查看导览模式信息",
+      "privacy_link": "打开隐私政策",
+      "terms_link": "打开服务条款",
+      "support_link": "打开支持",
+      "onboarding_link": "重新播放引导教程",
+      "delete_account": "永久删除账户",
+      "delete_account_hint": "此操作无法撤销",
+      "back_home": "返回主页",
+      "sign_out": "退出登录",
+      "sign_out_hint": "退出登录并返回登录页面"
+    },
+    "preferences": {
+      "language_button": "选择{{language}}语言",
+      "language_selected": "当前已选",
+      "museum_mode_switch": "博物馆模式",
+      "guide_level_button": "选择{{level}}导览级别",
+      "guide_level_selected": "当前已选",
+      "save": "保存偏好设置",
+      "learn_guided": "了解导览模式"
+    },
+    "discover": {
+      "photo_card": "拍摄艺术品",
+      "photo_card_hint": "打开相机识别艺术品",
+      "voice": "开始语音对话",
+      "dashboard": "查看对话历史",
+      "guided": "打开博物馆导览模式"
+    },
+    "privacy": {
+      "open_support": "联系支持",
+      "back_settings": "返回设置"
+    },
+    "terms": {
+      "privacy_policy": "查看隐私政策",
+      "back_settings": "返回设置"
+    },
+    "support": {
+      "instagram": "打开 Instagram",
+      "telegram": "打开 Telegram",
+      "share": "分享支持渠道",
+      "back_settings": "返回设置"
+    },
+    "guidedMode": {
+      "toggle_on": "开启博物馆模式",
+      "toggle_off": "关闭博物馆模式",
+      "start_exploring": "开始探索"
+    },
+    "notFound": {
+      "home": "前往主页"
+    },
+    "camera": {
+      "close": "关闭相机",
+      "capture": "拍照",
+      "capture_hint": "拍摄艺术品照片",
+      "grid": "切换相机网格",
+      "switch_camera": "切换摄像头",
+      "grant_permission": "授予相机权限"
+    },
+    "contextMenu": {
+      "copy": "复制消息文本",
+      "share": "分享消息",
+      "report": "举报消息",
+      "cancel": "关闭菜单",
+      "overlay_hint": "点击关闭菜单"
+    }
   }
 }

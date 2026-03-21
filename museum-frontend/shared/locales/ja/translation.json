@@ -358,6 +358,20 @@
     "retry": "再試行",
     "dismiss": "閉じる"
   },
+  "offline": {
+    "title": "オフラインです",
+    "pending": "{{count}}件保留中"
+  },
+  "audio": {
+    "unavailable_title": "音声が利用できません",
+    "unavailable_body": "このデバイスはマイク録音に対応していません。",
+    "permission_title": "許可が必要です",
+    "permission_body": "音声入力にはマイクへのアクセスが必要です。",
+    "error_title": "音声エラー",
+    "error_body": "録音を開始できませんでした。もう一度お試しください。",
+    "playback_error_title": "再生エラー",
+    "playback_error_body": "この録音を再生できません。"
+  },
   "startupError": {
     "badge": "起動時の設定エラー",
     "title": "このビルドではアプリを起動できません。",
@@ -374,5 +388,131 @@
   },
   "conversationSearch": {
     "placeholder": "会話を検索..."
+  },
+  "a11y": {
+    "home": {
+      "start_conversation": "新しい会話を始める",
+      "start_conversation_hint": "ミュージアムアシスタントとの新しいチャットセッションを作成します",
+      "onboarding": "ガイドを開く",
+      "settings": "設定を開く"
+    },
+    "auth": {
+      "email_input": "メールアドレス",
+      "password_input": "パスワード",
+      "firstname_input": "名",
+      "lastname_input": "姓",
+      "forgot_password": "パスワードを忘れた場合",
+      "forgot_password_hint": "パスワードリセットメールを送信します",
+      "gdpr_checkbox": "利用規約とプライバシーポリシーに同意する",
+      "login_button": "ログイン",
+      "register_button": "登録",
+      "toggle_login": "ログインに切り替え",
+      "toggle_register": "登録に切り替え",
+      "google_signin": "Googleでサインイン",
+      "apple_signin": "Appleでサインイン",
+      "terms_link": "利用規約",
+      "privacy_link": "プライバシーポリシー"
+    },
+    "conversations": {
+      "search_input": "会話を検索",
+      "start_new": "新しい会話を始める",
+      "card_hint": "この会話を開きます",
+      "long_press_hint": "長押しで保存"
+    },
+    "chat": {
+      "close": "会話を閉じる",
+      "close_hint": "会話一覧に戻ります",
+      "play_audio": "録音した音声を再生",
+      "clear_audio": "録音した音声を削除",
+      "gallery": "ギャラリーから画像を選択",
+      "gallery_hint": "フォトライブラリを開いて画像を添付します",
+      "lens": "カメラを開く",
+      "lens_hint": "カメラを開いて作品を撮影します",
+      "start_recording": "録音を開始",
+      "stop_recording": "録音を停止",
+      "send": "メッセージを送信",
+      "send_hint": "ミュージアムアシスタントにメッセージを送信します",
+      "message_input": "メッセージを入力",
+      "assistant_message": "アシスタントのメッセージ",
+      "user_message": "あなたのメッセージ",
+      "long_press_hint": "長押しでその他のオプション",
+      "follow_up_hint": "このフォローアップ質問を送信します",
+      "recommendation_hint": "この提案で入力欄を埋めます",
+      "suggestion_hint": "このトピックで会話を開始します",
+      "camera_suggestion_hint": "カメラを開いて作品を撮影します"
+    },
+    "onboarding": {
+      "skip": "紹介をスキップ",
+      "next": "次のスライド",
+      "get_started": "始める"
+    },
+    "settings": {
+      "theme_button": "{{theme}}テーマを選択",
+      "theme_selected": "現在選択中",
+      "preferences": "設定を開く",
+      "guided_mode": "ガイド付きミュージアムモードの情報を見る",
+      "privacy_link": "プライバシーポリシーを開く",
+      "terms_link": "利用規約を開く",
+      "support_link": "サポートを開く",
+      "onboarding_link": "ガイドを再表示",
+      "delete_account": "アカウントを完全に削除",
+      "delete_account_hint": "この操作は元に戻せません",
+      "back_home": "ホーム画面に戻る",
+      "sign_out": "サインアウト",
+      "sign_out_hint": "サインアウトしてログイン画面に戻ります"
+    },
+    "preferences": {
+      "language_button": "{{language}}言語を選択",
+      "language_selected": "現在選択中",
+      "museum_mode_switch": "ミュージアムモード",
+      "guide_level_button": "ガイドレベル{{level}}を選択",
+      "guide_level_selected": "現在選択中",
+      "save": "設定を保存",
+      "learn_guided": "ガイドモードについて学ぶ"
+    },
+    "discover": {
+      "photo_card": "作品を撮影する",
+      "photo_card_hint": "カメラを開いて作品を識別します",
+      "voice": "音声会話を開始",
+      "dashboard": "会話履歴を表示",
+      "guided": "ガイド付きミュージアムモードを開く"
+    },
+    "privacy": {
+      "open_support": "サポートに連絡",
+      "back_settings": "設定に戻る"
+    },
+    "terms": {
+      "privacy_policy": "プライバシーポリシーを表示",
+      "back_settings": "設定に戻る"
+    },
+    "support": {
+      "instagram": "Instagramを開く",
+      "telegram": "Telegramを開く",
+      "share": "サポートチャンネルを共有",
+      "back_settings": "設定に戻る"
+    },
+    "guidedMode": {
+      "toggle_on": "ミュージアムモードをオンにする",
+      "toggle_off": "ミュージアムモードをオフにする",
+      "start_exploring": "探索を開始"
+    },
+    "notFound": {
+      "home": "ホーム画面に移動"
+    },
+    "camera": {
+      "close": "カメラを閉じる",
+      "capture": "写真を撮る",
+      "capture_hint": "作品の写真を撮影します",
+      "grid": "カメラグリッドの切り替え",
+      "switch_camera": "カメラを切り替え",
+      "grant_permission": "カメラの許可を付与"
+    },
+    "contextMenu": {
+      "copy": "メッセージのテキストをコピー",
+      "share": "メッセージを共有",
+      "report": "メッセージを報告",
+      "cancel": "メニューを閉じる",
+      "overlay_hint": "タップしてメニューを閉じる"
+    }
   }
 }
