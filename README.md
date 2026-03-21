@@ -72,11 +72,11 @@ L’ensemble du backend est conteneurisé via **Docker** et hébergé sur un **V
 
 | **Domaine**          | **Technologie utilisée**               | **Rôle**                                                    |
 | -------------------- | -------------------------------------- | ----------------------------------------------------------- |
-| **Frontend**         | React Native, Tailwind CSS, TypeScript | Application mobile multiplateforme                          |
-| **Backend**          | Node.js, Express, TypeORM              | API REST, logique métier, intégration IA                    |
+| **Frontend**         | React Native 0.79, Expo 53, TypeScript | Application mobile multiplateforme (iOS/Android)            |
+| **Backend**          | Node.js 22, Express 5, TypeORM         | API REST, logique métier, intégration IA                    |
 | **Architecture**     | Hexagonale (Ports & Adapters)          | Séparation stricte des responsabilités                      |
-| **Base de données**  | PostgreSQL                             | Persistance des conversations, œuvres et utilisateurs       |
-| **IA**               | LangChain + GPT‑4                      | Analyse visuelle, génération de réponses et recommandations |
+| **Base de données**  | PostgreSQL 16                          | Persistance des conversations, œuvres et utilisateurs       |
+| **IA**               | LangChain + Multi-provider LLM         | Analyse visuelle, génération de réponses et recommandations |
 | **Conteneurisation** | Docker                                 | Encapsulation du backend + volumes persistants              |
 | **Hébergement**      | VPS OVH                                | Déploiement et gestion autonome du projet                   |
 
@@ -94,19 +94,21 @@ cd musaium
 ### **2. Lancer le backend**
 
 ```bash
-cd backend
-docker-compose up -d --build
+cd museum-backend
+docker compose -f docker-compose.dev.yml up -d
+pnpm install
+pnpm dev
 ```
 
 - API disponible sur : `http://localhost:3000`
-- Base PostgreSQL accessible via le volume Docker
+- Base PostgreSQL sur port `5433` via Docker
 
 ### **3. Lancer l’application mobile**
 
 ```bash
-cd frontend
+cd museum-frontend
 npm install
-npm start
+npm run dev
 ```
 
 > 📱 Utilisez **Expo** pour tester l’application sur simulateur ou appareil physique.
@@ -118,23 +120,27 @@ npm start
 ```
 musaium/
 │
-├── backend/
+├── museum-backend/
 │   ├── src/
-│   │   ├── domain/          # Entités métiers (œuvres, conversations, utilisateurs…)
-│   │   ├── application/     # Services métier (logique IA, parcours personnalisés…)
-│   │   ├── infrastructure/  # Repositories, TypeORM, intégrations externes
-│   │   └── interfaces/      # Routes Express, endpoints API
-│   ├── docker-compose.yml   # Conteneurisation backend + BDD
+│   │   ├── config/          # Variables d'environnement validées
+│   │   ├── modules/
+│   │   │   ├── auth/        # Hexagonal : domain → useCase → adapters (HTTP, PG)
+│   │   │   └── chat/        # Hexagonal : domain → application → infrastructure
+│   │   ├── shared/          # Errors, logger, cache, i18n, observability
+│   │   └── helpers/         # Middlewares (auth, rate-limit, error handler)
+│   ├── openapi/             # Spec OpenAPI (source de vérité contrat API)
+│   ├── deploy/              # Dockerfile.prod, nginx config
 │   └── package.json
 │
-├── frontend/
-│   ├── src/
-│   │   ├── screens/         # Interfaces utilisateur
-│   │   ├── components/      # Composants UI réutilisables
-│   │   ├── services/        # Appels API et gestion des données
-│   │   └── styles/          # Thèmes et Tailwind config
+├── museum-frontend/
+│   ├── app/                 # Expo Router (file-based routing)
+│   │   ├── (tabs)/          # Onglets (Dashboard, Home)
+│   │   └── (stack)/         # Écrans empilés (chat, settings, onboarding…)
+│   ├── features/            # Logique métier par domaine (auth, chat, conversation…)
+│   ├── shared/              # API client, i18n, thème, composants UI, observability
 │   └── package.json
 │
+├── docs/                    # Documentation technique et sprint tracking
 └── README.md
 ```
 

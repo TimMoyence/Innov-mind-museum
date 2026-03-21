@@ -199,7 +199,10 @@
     "scope_response": "We typically respond within 48 hours.",
     "scope_team": "All support requests are handled by the Musaium team.",
     "share_channels": "Share Support Channels",
-    "back_settings": "Back to Settings"
+    "back_settings": "Back to Settings",
+    "invalid_link_body": "The {{label}} link is not configured correctly.",
+    "channel_opened": "{{label}} opened",
+    "channel_failed": "{{label}} link failed"
   },
   "discover": {
     "title": "Discover",
@@ -287,6 +290,8 @@
     "report_thanks_title": "Thank you",
     "report_thanks_body": "Your report has been submitted.",
     "report_error_body": "Could not submit report. Please try again.",
+    "copied_title": "Copied",
+    "copied_body": "Message copied to clipboard.",
     "report_title": "Report message",
     "report_body": "Why are you reporting this message?",
     "report_offensive": "Offensive",

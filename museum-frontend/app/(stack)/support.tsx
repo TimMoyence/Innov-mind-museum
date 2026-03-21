@@ -29,7 +29,7 @@ export default function SupportScreen() {
   const openChannel = async (channelKey: SupportChannelKey) => {
     const channel = SUPPORT_LINKS[channelKey];
     if (!isValidSupportUrl(channel.url)) {
-      Alert.alert(t('support.invalid_link'), `The ${channel.label} link is not configured correctly.`);
+      Alert.alert(t('support.invalid_link'), t('support.invalid_link_body', { label: channel.label }));
       return;
     }
 
@@ -40,13 +40,13 @@ export default function SupportScreen() {
       }
 
       await Linking.openURL(channel.url);
-      setStatus(`${channel.label} opened`);
+      setStatus(t('support.channel_opened', { label: channel.label }));
     } catch {
       Alert.alert(
         t('support.unable_open_link'),
         t('support.manual_open', { url: channel.url }),
       );
-      setStatus(`${channel.label} link failed`);
+      setStatus(t('support.channel_failed', { label: channel.label }));
     }
   };
 

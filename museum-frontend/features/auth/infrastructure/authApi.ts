@@ -1,10 +1,9 @@
-import { httpRequest } from '@/shared/api/httpRequest';
-import { AUTH_ENDPOINTS, buildAuthUrl } from '@/shared/infrastructure/apiConfig';
 import { clearAccessToken } from './authTokenStore';
 import type { components, paths } from '@/shared/api/generated/openapi';
 import {
   openApiRequest,
   type OpenApiJsonRequestBodyFor,
+  type OpenApiResponseFor,
 } from '@/shared/api/openapiClient';
 
 type Schemas = components['schemas'];
@@ -116,9 +115,10 @@ export const authService = {
    * Requests a password-reset email.
    * @param email - Email address associated with the account.
    */
-  async forgotPassword(email: string): Promise<unknown> {
-    return httpRequest<unknown>(buildAuthUrl(AUTH_ENDPOINTS.forgotPassword), {
-      method: 'POST',
+  async forgotPassword(email: string): Promise<OpenApiResponseFor<'/api/auth/forgot-password', 'post'>> {
+    return openApiRequest({
+      path: '/api/auth/forgot-password',
+      method: 'post',
       body: JSON.stringify({ email }),
       requiresAuth: false,
     });
@@ -129,9 +129,10 @@ export const authService = {
    * @param token - Password reset token from the email link.
    * @param newPassword - The new password to set.
    */
-  async resetPassword(token: string, newPassword: string): Promise<unknown> {
-    return httpRequest<unknown>(buildAuthUrl(AUTH_ENDPOINTS.resetPassword), {
-      method: 'POST',
+  async resetPassword(token: string, newPassword: string): Promise<OpenApiResponseFor<'/api/auth/reset-password', 'post'>> {
+    return openApiRequest({
+      path: '/api/auth/reset-password',
+      method: 'post',
       body: JSON.stringify({ token, newPassword }),
       requiresAuth: false,
     });

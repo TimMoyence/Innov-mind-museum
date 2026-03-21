@@ -239,7 +239,6 @@ export const tryResolveInitialApiBaseUrl = (): {
 };
 
 const API_PREFIX = '/api';
-const AUTH_BASE_PATH = `${API_PREFIX}/auth`;
 const HEALTH_PATH = `${API_PREFIX}/health`;
 
 /**
@@ -302,30 +301,3 @@ export const probeApiHealth = async (
   }
 };
 
-/**
- * Builds a full auth endpoint path, prepending the auth base path when needed.
- * @param path - Relative auth path or absolute URL.
- * @returns Fully qualified auth endpoint path.
- */
-export const buildAuthUrl = (path: string): string => {
-  if (path.startsWith('http')) {
-    return path;
-  }
-
-  if (path.startsWith(`${API_PREFIX}/`)) {
-    return path;
-  }
-
-  return `${AUTH_BASE_PATH}${ensureLeadingSlash(path)}`;
-};
-
-/** Map of auth-related endpoint path segments. */
-export const AUTH_ENDPOINTS = {
-  login: '/login',
-  register: '/register',
-  logout: '/logout',
-  refresh: '/refresh',
-  me: '/me',
-  forgotPassword: '/forgot-password',
-  resetPassword: '/reset-password',
-} as const;

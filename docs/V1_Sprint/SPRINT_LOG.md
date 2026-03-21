@@ -1143,3 +1143,96 @@ Enterprise-grade audit verifying 84/101 tasks across Sprints 1-3. All tracker cl
 | Frontend tests | 26 | 29+ | +3 (RateLimited error) |
 | Backend typecheck | OK | OK | — |
 | Frontend typecheck | OK | OK | — |
+
+---
+
+## Post-Sprint 3 Audit (2026-03-21)
+
+### Context
+
+Enterprise-grade forensic audit of the full monorepo post-Sprint 3 (9 commits, ~12.5K insertions). Methodology: 3 exploration agents + 9 automated checks (power-tools) + 2 planning agents + 3 rounds of 4-team critical review (Architecture, Backend, Frontend, QA) = 12 review agents total.
+
+### Findings Summary
+
+- **14 anomalies** identified (0 CRITICAL, 0 HIGH, 7 MEDIUM, 7 LOW)
+- **6 user-reported issues corrected as FALSE POSITIVES**:
+  - OpenAPI spec is COMPLETE (24 endpoints, all documented)
+  - POST /api-keys HAS a dedicated rate limiter (10/min/userId)
+  - `createSummaryFallback` IS multi-locale (7 languages)
+  - `OfflineBanner` IS i18n'd
+  - `useAudioRecorder` IS i18n'd
+  - X-Request-Id propagation IS already implemented in frontend
+
+### Corrections Applied (5 lots)
+
+#### S3-A1 — Typed Client Alignment (ANO-01, ANO-11)
+
+**Problem**: `authApi.ts` used `httpRequest<unknown>()` for `forgotPassword` and `resetPassword` while all other 7 auth endpoints used typed `openApiRequest()`.
+
+**Fix**:
+- Migrated both endpoints to `openApiRequest()` with `OpenApiResponseFor<>` typed returns
+- Removed dead `AUTH_ENDPOINTS` map, `buildAuthUrl()`, `AUTH_BASE_PATH` from `apiConfig.ts`
+
+**Files**: `authApi.ts`, `apiConfig.ts`
+
+#### S3-A2 — i18n Completeness (ANO-02, ANO-03, ANO-04, ANO-05)
+
+**Problem**: 3 hardcoded EN strings (`useMessageActions`, `support.tsx`), 1 FR string in backend response.
+
+**Fix**:
+- Added `useTranslation()` to `useMessageActions` hook (pattern: `useAudioRecorder`)
+- Replaced hardcoded Alert.alert and setStatus strings with `t()` calls
+- Added 5 i18n keys (`chat.copied_title`, `chat.copied_body`, `support.invalid_link_body`, `support.channel_opened`, `support.channel_failed`) to all 7 locales
+- Standardized `auth.route.ts:174` from French to English
+
+**Files**: `useMessageActions.ts`, `support.tsx`, `auth.route.ts`, 7 locale JSON files
+
+#### S3-A3 — Dead Code Removal (ANO-06)
+
+**Problem**: `persistArtworkMatch()` deprecated method with 0 callers.
+
+**Fix**:
+- Removed method signature from `ChatRepository` interface
+- Removed implementation from `TypeOrmChatRepository`
+- Removed unused `artworkMatchRepo` class field and `PersistArtworkMatchInput` import from implementation
+- **Kept** `PersistArtworkMatchInput` type definition (still used by `PersistMessageInput.artworkMatch`)
+
+**Files**: `chat.repository.interface.ts`, `chat.repository.typeorm.ts`
+
+#### S3-A4 — Rate Limiters Password Reset (ANO-13, ANO-14)
+
+**Problem**: `/forgot-password` and `/reset-password` had no dedicated rate limiter (only global IP 120/min).
+
+**Fix**:
+- Added `passwordResetLimiter` (5 req/5min per IP) using existing `createRateLimitMiddleware` + `byIp`
+- Applied to both routes
+- Trust proxy verified: `app.ts` + nginx `X-Forwarded-For` correctly configured
+
+**Files**: `auth.route.ts`
+
+#### S3-A5 — README Update (ANO-09)
+
+**Problem**: README referenced deleted `services/`, wrong paths (`cd backend`), stale tech stack (Tailwind, GPT-4).
+
+**Fix**: Updated tech stack table, installation paths, and architecture tree to match current monorepo structure.
+
+**Files**: `README.md`
+
+### Risks Accepted & Monitoring Points
+
+| Point | Status |
+|---|---|
+| Redis maxmemory deployment config | Must configure `256MB + allkeys-lru` in production |
+| GDPR export doesn't cover social accounts / API keys | Gap documented |
+| Reset token stored plain text | Acceptable: single-use, 1h TTL, 160 bits entropy |
+| Google OAuth fallback client IDs hardcoded | Verify dev-only IDs |
+
+### Verification
+
+| Check | Result |
+|---|---|
+| Backend typecheck (`tsc --noEmit`) | OK |
+| Frontend typecheck (`tsc --noEmit`) | OK |
+| Backend tests (364 pass) | OK |
+| Frontend tests (29 pass) | OK |
+| i18n completeness (405 keys x 7 locales) | OK |

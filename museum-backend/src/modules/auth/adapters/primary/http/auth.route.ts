@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { isAuthenticated, isAuthenticatedJwtOnly } from '@src/helpers/middleware/authenticated.middleware';
-import { createRateLimitMiddleware, byUserId } from '@src/helpers/middleware/rate-limit.middleware';
+import { createRateLimitMiddleware, byUserId, byIp } from '@src/helpers/middleware/rate-limit.middleware';
 import { env } from '@src/config/env';
 import { badRequest } from '@shared/errors/app.error';
 import {
@@ -166,18 +166,24 @@ authRouter.put('/change-password', isAuthenticated, async (req: Request, res: Re
   } catch (error) { next(error); }
 });
 
-authRouter.post('/forgot-password', async (req: Request, res: Response, next: NextFunction) => {
+const passwordResetLimiter = createRateLimitMiddleware({
+  limit: 5,
+  windowMs: 300_000,
+  keyGenerator: byIp,
+});
+
+authRouter.post('/forgot-password', passwordResetLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email } = req.body;
     const token = await forgotPasswordUseCase.execute(email);
     res.json({
-      message: 'Si cet email existe, un lien de réinitialisation a été envoyé.',
+      message: 'If this email exists, a reset link has been sent.',
       ...(env.nodeEnv === 'development' ? { debugResetToken: token } : {}),
     });
   } catch (error) { next(error); }
 });
 
-authRouter.post('/reset-password', async (req: Request, res: Response, next: NextFunction) => {
+authRouter.post('/reset-password', passwordResetLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { token, newPassword } = req.body;
     await resetPasswordUseCase.execute(token, newPassword);
