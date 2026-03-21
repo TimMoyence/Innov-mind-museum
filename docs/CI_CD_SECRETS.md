@@ -185,6 +185,28 @@ Ces secrets sont **maintenant bloquants** dans les workflows de déploiement bac
 - Pour GHCR, utiliser un token à portée minimale.
 - Documenter l’inventaire des secrets dans votre gestionnaire de secrets interne (Vault, 1Password, etc.).
 
+## Sentry (Observability)
+
+| Secret | Role | Used by | Scope |
+|--------|------|---------|-------|
+| `SENTRY_AUTH_TOKEN` | Authentication for Sentry CLI (source map upload, release creation) | `deploy-backend.yml`, `deploy-backend-staging.yml`, EAS builds (via `eas secret:create`) | repository |
+| `SENTRY_ORG` | Sentry organization slug | Deploy workflows | repository |
+| `SENTRY_PROJECT_BACKEND` | Sentry project slug for the backend API | Deploy workflows | repository |
+
+### Frontend (EAS)
+
+The `@sentry/react-native/expo` plugin in `app.config.ts` auto-uploads source maps during EAS builds when `SENTRY_AUTH_TOKEN` is available as an EAS secret.
+
+Setup: `eas secret:create --scope project --name SENTRY_AUTH_TOKEN --value <token>`
+
+### Backend DSN
+
+Set `SENTRY_DSN` in the backend `.env` file on the VPS (not in GitHub secrets — it's a runtime env var).
+
+### Frontend DSN
+
+Set `EXPO_PUBLIC_SENTRY_DSN_ANDROID` and `EXPO_PUBLIC_SENTRY_DSN_IOS` in the frontend `.env` file or EAS build profile env vars.
+
 ## Checklist de mise en place (rapide)
 
 1. Configurer `GHCR_*` et `SERVER_*`.
