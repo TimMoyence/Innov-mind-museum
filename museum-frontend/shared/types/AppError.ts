@@ -5,6 +5,7 @@ export type AppErrorKind =
   | 'Forbidden'
   | 'NotFound'
   | 'Validation'
+  | 'RateLimited'
   | 'Timeout'
   | 'Unknown';
 
@@ -16,6 +17,10 @@ export interface AppError {
   status?: number;
   /** Arbitrary context attached for debugging or logging. */
   details?: unknown;
+  /** Backend request ID for cross-referencing server logs. */
+  requestId?: string;
+  /** Set to `true` after the error has been reported to Sentry to prevent double-capture. */
+  _reported?: boolean;
 }
 
 /**
@@ -28,5 +33,6 @@ export const createAppError = (params: AppError): AppError & Error => {
   error.kind = params.kind;
   error.status = params.status;
   error.details = params.details;
+  error.requestId = params.requestId;
   return error;
 };

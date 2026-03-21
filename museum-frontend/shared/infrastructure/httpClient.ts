@@ -1,11 +1,13 @@
 import axios from 'axios';
 
-import { getAccessToken } from '@/services/tokenStore';
+import { getAccessToken } from '@/features/auth/infrastructure/authTokenStore';
 import {
   assertApiBaseUrlAllowed,
   tryResolveInitialApiBaseUrl,
-} from '@/services/apiConfig';
+} from './apiConfig';
 import { createAppError } from '@/shared/types/AppError';
+import { reportError } from '@/shared/observability/errorReporting';
+import { generateRequestId } from './requestId';
 
 type UnauthorizedHandler = () => void;
 type AuthRefreshHandler = () => Promise<string | null>;
@@ -94,9 +96,11 @@ httpClient.interceptors.request.use((config) => {
   const finalConfig = config as typeof config & HttpRequestConfig;
   finalConfig.baseURL = getApiBaseUrl();
 
+  const requestId = generateRequestId();
   finalConfig.headers = {
     ...finalConfig.headers,
     'Accept-Language': getLocale(),
+    'X-Request-Id': requestId,
   };
 
   const shouldAttachAuth = finalConfig.requiresAuth !== false;
@@ -118,6 +122,7 @@ httpClient.interceptors.request.use((config) => {
       finalConfig.method?.toUpperCase(),
       finalConfig.baseURL,
       finalConfig.url,
+      `[${requestId}]`,
     );
   }
 
@@ -181,7 +186,9 @@ httpClient.interceptors.response.use(
       return httpClient.request(axiosError.config as never);
     }
 
-    return Promise.reject(mapAxiosError(error));
+    const mapped = mapAxiosError(error);
+    reportError(mapped);
+    return Promise.reject(mapped);
   },
 );
 
@@ -200,6 +207,7 @@ interface ApiErrorPayload {
   error?: {
     code?: unknown;
     message?: unknown;
+    requestId?: unknown;
   };
   code?: unknown;
   message?: unknown;
@@ -265,6 +273,20 @@ const getApiErrorMessage = (value: unknown): string | undefined => {
   return undefined;
 };
 
+const getApiRequestId = (value: unknown): string | undefined => {
+  const payload = toApiErrorPayload(value);
+  if (!payload) {
+    return undefined;
+  }
+
+  const nested = payload.error;
+  if (nested && typeof nested.requestId === 'string') {
+    return nested.requestId;
+  }
+
+  return undefined;
+};
+
 /**
  * Converts an Axios error (or unknown thrown value) into a structured {@link AppError}.
  * Handles timeout, network, 401, 403, 404, and 4xx/5xx status codes.
@@ -304,6 +326,7 @@ export const mapAxiosError = (error: unknown) => {
   const apiErrorMessage = (getApiErrorMessage(responseData) || '').toLowerCase();
   const requestRequiresAuth =
     ((axiosLike.config || {}) as HttpRequestConfig).requiresAuth !== false;
+  const requestId = getApiRequestId(responseData);
 
   if (status === 401) {
     if (requestRequiresAuth) {
@@ -318,6 +341,7 @@ export const mapAxiosError = (error: unknown) => {
       message: 'Authentication required',
       status,
       details: axiosLike.response?.data,
+      requestId,
     });
   }
 
@@ -338,6 +362,7 @@ export const mapAxiosError = (error: unknown) => {
         message: 'Authentication required',
         status,
         details: responseData,
+        requestId,
       });
     }
 
@@ -346,6 +371,7 @@ export const mapAxiosError = (error: unknown) => {
       message: 'Access denied',
       status,
       details: responseData,
+      requestId,
     });
   }
 
@@ -355,6 +381,17 @@ export const mapAxiosError = (error: unknown) => {
       message: 'Resource not found',
       status,
       details: axiosLike.response?.data,
+      requestId,
+    });
+  }
+
+  if (status === 429) {
+    return createAppError({
+      kind: 'RateLimited',
+      message: 'Too many requests',
+      status,
+      details: axiosLike.response?.data,
+      requestId,
     });
   }
 
@@ -364,6 +401,7 @@ export const mapAxiosError = (error: unknown) => {
       message: 'Request validation error',
       status,
       details: axiosLike.response?.data,
+      requestId,
     });
   }
 
@@ -372,6 +410,7 @@ export const mapAxiosError = (error: unknown) => {
     message: 'Unexpected server error',
     status,
     details: axiosLike.response?.data ?? axiosLike,
+    requestId,
   });
 };
 

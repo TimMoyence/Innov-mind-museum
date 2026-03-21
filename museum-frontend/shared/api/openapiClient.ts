@@ -1,4 +1,4 @@
-import { httpRequest } from '@/services/http';
+import { httpRequest } from '@/shared/api/httpRequest';
 import type { paths } from '@/shared/api/generated/openapi';
 
 type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';

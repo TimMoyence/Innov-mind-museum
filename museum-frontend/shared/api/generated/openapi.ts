@@ -704,7 +704,12 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Cursor for pagination */
+                    cursor?: string;
+                    /** @description Number of sessions per page */
+                    limit?: number;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -762,7 +767,12 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Cursor for message pagination */
+                    cursor?: string;
+                    /** @description Number of messages per page */
+                    limit?: number;
+                };
                 header?: never;
                 path: {
                     id: string;
@@ -1163,6 +1173,7 @@ export interface components {
             /** Format: date-time */
             timestamp: string;
             commitSha?: string;
+            responseTimeMs?: number;
         };
         AuthUser: {
             id: number;

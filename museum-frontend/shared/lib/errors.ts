@@ -32,6 +32,8 @@ export const getErrorMessage = (error: unknown): string => {
         return 'The requested resource was not found.';
       case 'Validation':
         return 'Please review your input and try again.';
+      case 'RateLimited':
+        return 'Too many requests. Please wait a moment and try again.';
       case 'Timeout':
         return 'Request timed out. Please retry.';
       default:
