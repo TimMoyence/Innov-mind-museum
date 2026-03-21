@@ -6,7 +6,6 @@ import {
   ChatRepository,
   ChatSessionsPage,
   ChatMessageWithSessionOwnership,
-  PersistArtworkMatchInput,
   PersistMessageInput,
   PersistMessageReportInput,
   ListSessionsParams,
@@ -78,14 +77,12 @@ const decodeSessionCursor = (
 export class TypeOrmChatRepository implements ChatRepository {
   private readonly sessionRepo: Repository<ChatSession>;
   private readonly messageRepo: Repository<ChatMessage>;
-  private readonly artworkMatchRepo: Repository<ArtworkMatch>;
   private readonly reportRepo: Repository<MessageReport>;
 
   /** @param dataSource - Active TypeORM DataSource used to obtain entity repositories. */
   constructor(dataSource: DataSource) {
     this.sessionRepo = dataSource.getRepository(ChatSession);
     this.messageRepo = dataSource.getRepository(ChatMessage);
-    this.artworkMatchRepo = dataSource.getRepository(ArtworkMatch);
     this.reportRepo = dataSource.getRepository(MessageReport);
   }
 
@@ -233,21 +230,6 @@ export class TypeOrmChatRepository implements ChatRepository {
 
       return saved;
     });
-  }
-
-  /** @deprecated Use artworkMatch field in persistMessage */
-  async persistArtworkMatch(input: PersistArtworkMatchInput): Promise<void> {
-    const entity = this.artworkMatchRepo.create({
-      artworkId: input.artworkId || null,
-      artist: input.artist || null,
-      title: input.title || null,
-      source: input.source || null,
-      confidence: input.confidence ?? 0,
-      room: input.room || null,
-      message: { id: input.messageId } as ChatMessage,
-    });
-
-    await this.artworkMatchRepo.save(entity);
   }
 
   /**

@@ -147,12 +147,6 @@ export interface ChatRepository {
   persistMessage(input: PersistMessageInput): Promise<ChatMessage>;
 
   /**
-   * @deprecated Use artworkMatch field in persistMessage.
-   * @param input - Artwork match data.
-   */
-  persistArtworkMatch(input: PersistArtworkMatchInput): Promise<void>;
-
-  /**
    * List messages for a session with cursor-based pagination.
    * @param params - Session ID, limit, and optional cursor.
    * @returns A page of messages.

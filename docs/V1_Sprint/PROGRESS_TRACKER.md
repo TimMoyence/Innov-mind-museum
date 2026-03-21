@@ -184,6 +184,16 @@
 - [x] S3-13: APM setup (Sentry Performance) — custom spans (LLM orchestrate/stream, audio transcribe, OCR, S3 upload), user identification (JWT + API key), frontend navigation instrumentation, distributed tracing (CORS + SSE trace headers)
 - [x] S3-17: Log aggregation (structured fields: service, environment, version, hostname + userId in request logger + promtail config)
 
+### Post-Sprint 3 Audit (2026-03-21)
+
+- [x] S3-A1: Typed client alignment — migrate forgotPassword/resetPassword from httpRequest to openApiRequest + remove dead AUTH_ENDPOINTS/buildAuthUrl
+- [x] S3-A2: i18n completeness — fix 3 hardcoded EN strings (useMessageActions, support.tsx) + 2 status strings + standardize backend FR→EN response
+- [x] S3-A3: Dead code removal — remove deprecated persistArtworkMatch method (keep type) + clean unused artworkMatchRepo field
+- [x] S3-A4: Rate limiters — add passwordResetLimiter (5/5min byIp) on /forgot-password and /reset-password
+- [x] S3-A5: README update — fix stale architecture tree, paths, tech stack (Tailwind→Expo, GPT-4→Multi-provider)
+
+> Audit results: 14 anomalies (0 CRITICAL, 0 HIGH, 7 MEDIUM, 7 LOW), 6 user-reported false positives corrected.
+
 ---
 
 ## Sprint 4 — Enterprise "Make it Scalable" (Weeks 7-12, 3 FTE)

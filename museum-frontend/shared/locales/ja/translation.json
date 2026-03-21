@@ -199,7 +199,10 @@
     "scope_response": "通常48時間以内にご返信いたします。",
     "scope_team": "すべてのサポートリクエストはMusaiumチームが対応いたします。",
     "share_channels": "サポート窓口を共有",
-    "back_settings": "設定に戻る"
+    "back_settings": "設定に戻る",
+    "invalid_link_body": "{{label}}のリンクが正しく設定されていません。",
+    "channel_opened": "{{label}}を開きました",
+    "channel_failed": "{{label}}のリンクに失敗しました"
   },
   "discover": {
     "title": "ディスカバー",
@@ -287,6 +290,8 @@
     "report_thanks_title": "ありがとうございます",
     "report_thanks_body": "報告が送信されました。",
     "report_error_body": "報告を送信できませんでした。もう一度お試しください。",
+    "copied_title": "コピー完了",
+    "copied_body": "メッセージをクリップボードにコピーしました。",
     "report_title": "メッセージを報告",
     "report_body": "このメッセージを報告する理由を教えてください。",
     "report_offensive": "不快な内容",

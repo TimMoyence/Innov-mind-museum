@@ -199,7 +199,10 @@
     "scope_response": "我们通常会在 48 小时内回复。",
     "scope_team": "所有支持请求均由 Musaium 团队处理。",
     "share_channels": "分享支持渠道",
-    "back_settings": "返回设置"
+    "back_settings": "返回设置",
+    "invalid_link_body": "{{label}}链接配置不正确。",
+    "channel_opened": "{{label}}已打开",
+    "channel_failed": "{{label}}链接失败"
   },
   "discover": {
     "title": "发现",
@@ -287,6 +290,8 @@
     "report_thanks_title": "感谢您",
     "report_thanks_body": "您的举报已提交。",
     "report_error_body": "无法提交举报，请重试。",
+    "copied_title": "已复制",
+    "copied_body": "消息已复制到剪贴板。",
     "report_title": "举报消息",
     "report_body": "您举报此消息的原因是什么？",
     "report_offensive": "冒犯性内容",
