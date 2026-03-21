@@ -358,6 +358,20 @@
     "retry": "Réessayer",
     "dismiss": "Ignorer"
   },
+  "offline": {
+    "title": "Vous êtes hors ligne",
+    "pending": "{{count}} en attente"
+  },
+  "audio": {
+    "unavailable_title": "Audio indisponible",
+    "unavailable_body": "Cet appareil ne prend pas en charge l'enregistrement par microphone.",
+    "permission_title": "Autorisation requise",
+    "permission_body": "L'accès au microphone est nécessaire pour la saisie vocale.",
+    "error_title": "Erreur audio",
+    "error_body": "L'enregistrement n'a pas pu démarrer. Veuillez réessayer.",
+    "playback_error_title": "Erreur de lecture",
+    "playback_error_body": "Impossible de lire cet enregistrement."
+  },
   "startupError": {
     "badge": "Erreur de configuration au démarrage",
     "title": "L'application ne peut pas démarrer avec ce build.",
@@ -374,5 +388,131 @@
   },
   "conversationSearch": {
     "placeholder": "Rechercher des conversations..."
+  },
+  "a11y": {
+    "home": {
+      "start_conversation": "Commencer une nouvelle conversation",
+      "start_conversation_hint": "Crée une nouvelle session de chat avec l'assistant du musée",
+      "onboarding": "Ouvrir le guide de démarrage",
+      "settings": "Ouvrir les paramètres"
+    },
+    "auth": {
+      "email_input": "Adresse e-mail",
+      "password_input": "Mot de passe",
+      "firstname_input": "Prénom",
+      "lastname_input": "Nom de famille",
+      "forgot_password": "Mot de passe oublié",
+      "forgot_password_hint": "Envoie un e-mail de réinitialisation du mot de passe",
+      "gdpr_checkbox": "Accepter les conditions et la politique de confidentialité",
+      "login_button": "Se connecter",
+      "register_button": "S'inscrire",
+      "toggle_login": "Passer à la connexion",
+      "toggle_register": "Passer à l'inscription",
+      "google_signin": "Se connecter avec Google",
+      "apple_signin": "Se connecter avec Apple",
+      "terms_link": "Conditions d'utilisation",
+      "privacy_link": "Politique de confidentialité"
+    },
+    "conversations": {
+      "search_input": "Rechercher des conversations",
+      "start_new": "Commencer une nouvelle conversation",
+      "card_hint": "Ouvre cette conversation",
+      "long_press_hint": "Appui long pour enregistrer"
+    },
+    "chat": {
+      "close": "Fermer la conversation",
+      "close_hint": "Retourne à la liste des conversations",
+      "play_audio": "Lire l'audio enregistré",
+      "clear_audio": "Supprimer l'audio enregistré",
+      "gallery": "Choisir une image depuis la galerie",
+      "gallery_hint": "Ouvre la photothèque pour joindre une image",
+      "lens": "Ouvrir l'appareil photo",
+      "lens_hint": "Ouvre l'appareil photo pour photographier une œuvre",
+      "start_recording": "Démarrer l'enregistrement",
+      "stop_recording": "Arrêter l'enregistrement",
+      "send": "Envoyer le message",
+      "send_hint": "Envoie votre message à l'assistant du musée",
+      "message_input": "Saisissez votre message",
+      "assistant_message": "Message de l'assistant",
+      "user_message": "Votre message",
+      "long_press_hint": "Appui long pour plus d'options",
+      "follow_up_hint": "Envoie cette question de suivi",
+      "recommendation_hint": "Remplit le champ avec cette suggestion",
+      "suggestion_hint": "Démarre la conversation sur ce sujet",
+      "camera_suggestion_hint": "Ouvre l'appareil photo pour photographier une œuvre"
+    },
+    "onboarding": {
+      "skip": "Passer l'introduction",
+      "next": "Diapositive suivante",
+      "get_started": "Commencer"
+    },
+    "settings": {
+      "theme_button": "Sélectionner le thème {{theme}}",
+      "theme_selected": "Actuellement sélectionné",
+      "preferences": "Ouvrir les préférences",
+      "guided_mode": "Voir les infos du mode visite guidée",
+      "privacy_link": "Ouvrir la politique de confidentialité",
+      "terms_link": "Ouvrir les conditions d'utilisation",
+      "support_link": "Ouvrir le support",
+      "onboarding_link": "Revoir le guide de démarrage",
+      "delete_account": "Supprimer le compte définitivement",
+      "delete_account_hint": "Cette action est irréversible",
+      "back_home": "Retourner à l'écran d'accueil",
+      "sign_out": "Se déconnecter",
+      "sign_out_hint": "Se déconnecte et retourne à la connexion"
+    },
+    "preferences": {
+      "language_button": "Sélectionner la langue {{language}}",
+      "language_selected": "Actuellement sélectionné",
+      "museum_mode_switch": "Mode musée",
+      "guide_level_button": "Sélectionner le niveau de guide {{level}}",
+      "guide_level_selected": "Actuellement sélectionné",
+      "save": "Enregistrer les préférences",
+      "learn_guided": "En savoir plus sur le mode guidé"
+    },
+    "discover": {
+      "photo_card": "Photographier une œuvre",
+      "photo_card_hint": "Ouvre l'appareil photo pour identifier une œuvre",
+      "voice": "Démarrer une conversation vocale",
+      "dashboard": "Voir l'historique des conversations",
+      "guided": "Ouvrir le mode visite guidée"
+    },
+    "privacy": {
+      "open_support": "Contacter le support",
+      "back_settings": "Retourner aux paramètres"
+    },
+    "terms": {
+      "privacy_policy": "Voir la politique de confidentialité",
+      "back_settings": "Retourner aux paramètres"
+    },
+    "support": {
+      "instagram": "Ouvrir Instagram",
+      "telegram": "Ouvrir Telegram",
+      "share": "Partager les canaux de support",
+      "back_settings": "Retourner aux paramètres"
+    },
+    "guidedMode": {
+      "toggle_on": "Activer le mode musée",
+      "toggle_off": "Désactiver le mode musée",
+      "start_exploring": "Commencer l'exploration"
+    },
+    "notFound": {
+      "home": "Aller à l'écran d'accueil"
+    },
+    "camera": {
+      "close": "Fermer l'appareil photo",
+      "capture": "Prendre une photo",
+      "capture_hint": "Capture une photo de l'œuvre",
+      "grid": "Activer/désactiver la grille",
+      "switch_camera": "Changer de caméra",
+      "grant_permission": "Autoriser l'accès à la caméra"
+    },
+    "contextMenu": {
+      "copy": "Copier le texte du message",
+      "share": "Partager le message",
+      "report": "Signaler le message",
+      "cancel": "Fermer le menu",
+      "overlay_hint": "Appuyez pour fermer le menu"
+    }
   }
 }

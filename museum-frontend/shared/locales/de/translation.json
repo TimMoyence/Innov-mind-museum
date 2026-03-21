@@ -358,6 +358,20 @@
     "retry": "Erneut versuchen",
     "dismiss": "Verwerfen"
   },
+  "offline": {
+    "title": "Offline",
+    "pending": "{{count}} ausstehend"
+  },
+  "audio": {
+    "unavailable_title": "Audio nicht verfügbar",
+    "unavailable_body": "Dieses Gerät unterstützt keine Mikrofonaufnahme.",
+    "permission_title": "Berechtigung erforderlich",
+    "permission_body": "Mikrofonzugriff ist für die Spracheingabe erforderlich.",
+    "error_title": "Audiofehler",
+    "error_body": "Aufnahme konnte nicht gestartet werden. Bitte erneut versuchen.",
+    "playback_error_title": "Wiedergabefehler",
+    "playback_error_body": "Diese Aufnahme kann nicht abgespielt werden."
+  },
   "startupError": {
     "badge": "Startkonfigurationsfehler",
     "title": "Die App kann mit diesem Build nicht gestartet werden.",
@@ -374,5 +388,131 @@
   },
   "conversationSearch": {
     "placeholder": "Gespräche durchsuchen..."
+  },
+  "a11y": {
+    "home": {
+      "start_conversation": "Neue Unterhaltung starten",
+      "start_conversation_hint": "Erstellt eine neue Chat-Sitzung mit dem Museumsassistenten",
+      "onboarding": "Einführung öffnen",
+      "settings": "Einstellungen öffnen"
+    },
+    "auth": {
+      "email_input": "E-Mail-Adresse",
+      "password_input": "Passwort",
+      "firstname_input": "Vorname",
+      "lastname_input": "Nachname",
+      "forgot_password": "Passwort vergessen",
+      "forgot_password_hint": "Sendet eine E-Mail zum Zurücksetzen des Passworts",
+      "gdpr_checkbox": "Nutzungsbedingungen und Datenschutzrichtlinie akzeptieren",
+      "login_button": "Anmelden",
+      "register_button": "Registrieren",
+      "toggle_login": "Zur Anmeldung wechseln",
+      "toggle_register": "Zur Registrierung wechseln",
+      "google_signin": "Mit Google anmelden",
+      "apple_signin": "Mit Apple anmelden",
+      "terms_link": "Nutzungsbedingungen",
+      "privacy_link": "Datenschutzrichtlinie"
+    },
+    "conversations": {
+      "search_input": "Unterhaltungen durchsuchen",
+      "start_new": "Neue Unterhaltung starten",
+      "card_hint": "Öffnet diese Unterhaltung",
+      "long_press_hint": "Lange drücken zum Speichern"
+    },
+    "chat": {
+      "close": "Unterhaltung schließen",
+      "close_hint": "Kehrt zur Unterhaltungsliste zurück",
+      "play_audio": "Aufgenommenes Audio abspielen",
+      "clear_audio": "Aufgenommenes Audio löschen",
+      "gallery": "Bild aus Galerie auswählen",
+      "gallery_hint": "Öffnet die Fotomediathek zum Anhängen eines Bildes",
+      "lens": "Kamera öffnen",
+      "lens_hint": "Öffnet die Kamera zum Fotografieren eines Kunstwerks",
+      "start_recording": "Aufnahme starten",
+      "stop_recording": "Aufnahme stoppen",
+      "send": "Nachricht senden",
+      "send_hint": "Sendet Ihre Nachricht an den Museumsassistenten",
+      "message_input": "Nachricht eingeben",
+      "assistant_message": "Nachricht des Assistenten",
+      "user_message": "Ihre Nachricht",
+      "long_press_hint": "Lange drücken für weitere Optionen",
+      "follow_up_hint": "Sendet diese Folgefrage",
+      "recommendation_hint": "Füllt das Eingabefeld mit diesem Vorschlag",
+      "suggestion_hint": "Startet die Unterhaltung mit diesem Thema",
+      "camera_suggestion_hint": "Öffnet die Kamera zum Fotografieren eines Kunstwerks"
+    },
+    "onboarding": {
+      "skip": "Einführung überspringen",
+      "next": "Nächste Folie",
+      "get_started": "Loslegen"
+    },
+    "settings": {
+      "theme_button": "{{theme}}-Design auswählen",
+      "theme_selected": "Aktuell ausgewählt",
+      "preferences": "Einstellungen öffnen",
+      "guided_mode": "Info zum geführten Museumsmodus anzeigen",
+      "privacy_link": "Datenschutzrichtlinie öffnen",
+      "terms_link": "Nutzungsbedingungen öffnen",
+      "support_link": "Support öffnen",
+      "onboarding_link": "Einführung erneut ansehen",
+      "delete_account": "Konto dauerhaft löschen",
+      "delete_account_hint": "Diese Aktion kann nicht rückgängig gemacht werden",
+      "back_home": "Zum Startbildschirm zurückkehren",
+      "sign_out": "Abmelden",
+      "sign_out_hint": "Meldet ab und kehrt zur Anmeldung zurück"
+    },
+    "preferences": {
+      "language_button": "Sprache {{language}} auswählen",
+      "language_selected": "Aktuell ausgewählt",
+      "museum_mode_switch": "Museumsmodus",
+      "guide_level_button": "Führungsniveau {{level}} auswählen",
+      "guide_level_selected": "Aktuell ausgewählt",
+      "save": "Einstellungen speichern",
+      "learn_guided": "Mehr über den geführten Modus erfahren"
+    },
+    "discover": {
+      "photo_card": "Kunstwerk fotografieren",
+      "photo_card_hint": "Öffnet die Kamera zur Identifizierung eines Kunstwerks",
+      "voice": "Sprachunterhaltung starten",
+      "dashboard": "Unterhaltungsverlauf anzeigen",
+      "guided": "Geführten Museumsmodus öffnen"
+    },
+    "privacy": {
+      "open_support": "Support kontaktieren",
+      "back_settings": "Zu den Einstellungen zurückkehren"
+    },
+    "terms": {
+      "privacy_policy": "Datenschutzrichtlinie anzeigen",
+      "back_settings": "Zu den Einstellungen zurückkehren"
+    },
+    "support": {
+      "instagram": "Instagram öffnen",
+      "telegram": "Telegram öffnen",
+      "share": "Support-Kanäle teilen",
+      "back_settings": "Zu den Einstellungen zurückkehren"
+    },
+    "guidedMode": {
+      "toggle_on": "Museumsmodus einschalten",
+      "toggle_off": "Museumsmodus ausschalten",
+      "start_exploring": "Erkundung starten"
+    },
+    "notFound": {
+      "home": "Zum Startbildschirm gehen"
+    },
+    "camera": {
+      "close": "Kamera schließen",
+      "capture": "Foto aufnehmen",
+      "capture_hint": "Nimmt ein Foto des Kunstwerks auf",
+      "grid": "Kameraraster ein-/ausblenden",
+      "switch_camera": "Kamera wechseln",
+      "grant_permission": "Kamerazugriff erlauben"
+    },
+    "contextMenu": {
+      "copy": "Nachrichtentext kopieren",
+      "share": "Nachricht teilen",
+      "report": "Nachricht melden",
+      "cancel": "Menü schließen",
+      "overlay_hint": "Tippen zum Schließen des Menüs"
+    }
   }
 }

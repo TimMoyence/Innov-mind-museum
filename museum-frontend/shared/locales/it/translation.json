@@ -358,6 +358,20 @@
     "retry": "Riprova",
     "dismiss": "Ignora"
   },
+  "offline": {
+    "title": "Sei offline",
+    "pending": "{{count}} in sospeso"
+  },
+  "audio": {
+    "unavailable_title": "Audio non disponibile",
+    "unavailable_body": "Questo dispositivo non supporta la registrazione con microfono.",
+    "permission_title": "Autorizzazione necessaria",
+    "permission_body": "L'accesso al microfono è necessario per l'input vocale.",
+    "error_title": "Errore audio",
+    "error_body": "Impossibile avviare la registrazione. Riprova.",
+    "playback_error_title": "Errore di riproduzione",
+    "playback_error_body": "Impossibile riprodurre questa registrazione."
+  },
   "startupError": {
     "badge": "Errore di configurazione all'avvio",
     "title": "L'app non può avviarsi con questa build.",
@@ -374,5 +388,131 @@
   },
   "conversationSearch": {
     "placeholder": "Cerca conversazioni..."
+  },
+  "a11y": {
+    "home": {
+      "start_conversation": "Inizia una nuova conversazione",
+      "start_conversation_hint": "Crea una nuova sessione di chat con l'assistente del museo",
+      "onboarding": "Apri la guida introduttiva",
+      "settings": "Apri impostazioni"
+    },
+    "auth": {
+      "email_input": "Indirizzo e-mail",
+      "password_input": "Password",
+      "firstname_input": "Nome",
+      "lastname_input": "Cognome",
+      "forgot_password": "Password dimenticata",
+      "forgot_password_hint": "Invia un'e-mail per reimpostare la password",
+      "gdpr_checkbox": "Accetta i termini e l'informativa sulla privacy",
+      "login_button": "Accedi",
+      "register_button": "Registrati",
+      "toggle_login": "Passa all'accesso",
+      "toggle_register": "Passa alla registrazione",
+      "google_signin": "Accedi con Google",
+      "apple_signin": "Accedi con Apple",
+      "terms_link": "Termini di servizio",
+      "privacy_link": "Informativa sulla privacy"
+    },
+    "conversations": {
+      "search_input": "Cerca conversazioni",
+      "start_new": "Inizia una nuova conversazione",
+      "card_hint": "Apre questa conversazione",
+      "long_press_hint": "Premi a lungo per salvare"
+    },
+    "chat": {
+      "close": "Chiudi conversazione",
+      "close_hint": "Torna all'elenco delle conversazioni",
+      "play_audio": "Riproduci audio registrato",
+      "clear_audio": "Cancella audio registrato",
+      "gallery": "Scegli immagine dalla galleria",
+      "gallery_hint": "Apre la libreria foto per allegare un'immagine",
+      "lens": "Apri fotocamera",
+      "lens_hint": "Apre la fotocamera per fotografare un'opera d'arte",
+      "start_recording": "Avvia registrazione",
+      "stop_recording": "Interrompi registrazione",
+      "send": "Invia messaggio",
+      "send_hint": "Invia il tuo messaggio all'assistente del museo",
+      "message_input": "Scrivi il tuo messaggio",
+      "assistant_message": "Messaggio dell'assistente",
+      "user_message": "Il tuo messaggio",
+      "long_press_hint": "Premi a lungo per altre opzioni",
+      "follow_up_hint": "Invia questa domanda di approfondimento",
+      "recommendation_hint": "Compila il campo con questo suggerimento",
+      "suggestion_hint": "Avvia la conversazione su questo argomento",
+      "camera_suggestion_hint": "Apre la fotocamera per fotografare un'opera d'arte"
+    },
+    "onboarding": {
+      "skip": "Salta l'introduzione",
+      "next": "Diapositiva successiva",
+      "get_started": "Inizia"
+    },
+    "settings": {
+      "theme_button": "Seleziona tema {{theme}}",
+      "theme_selected": "Attualmente selezionato",
+      "preferences": "Apri preferenze",
+      "guided_mode": "Visualizza info modalità visita guidata",
+      "privacy_link": "Apri informativa sulla privacy",
+      "terms_link": "Apri termini di servizio",
+      "support_link": "Apri supporto",
+      "onboarding_link": "Rivedi la guida introduttiva",
+      "delete_account": "Elimina account definitivamente",
+      "delete_account_hint": "Questa azione non può essere annullata",
+      "back_home": "Torna alla schermata iniziale",
+      "sign_out": "Esci",
+      "sign_out_hint": "Esce e torna all'accesso"
+    },
+    "preferences": {
+      "language_button": "Seleziona lingua {{language}}",
+      "language_selected": "Attualmente selezionato",
+      "museum_mode_switch": "Modalità museo",
+      "guide_level_button": "Seleziona livello guida {{level}}",
+      "guide_level_selected": "Attualmente selezionato",
+      "save": "Salva preferenze",
+      "learn_guided": "Scopri la modalità guidata"
+    },
+    "discover": {
+      "photo_card": "Fotografa un'opera d'arte",
+      "photo_card_hint": "Apre la fotocamera per identificare un'opera d'arte",
+      "voice": "Avvia conversazione vocale",
+      "dashboard": "Visualizza cronologia conversazioni",
+      "guided": "Apri modalità visita guidata"
+    },
+    "privacy": {
+      "open_support": "Contatta il supporto",
+      "back_settings": "Torna alle impostazioni"
+    },
+    "terms": {
+      "privacy_policy": "Visualizza informativa sulla privacy",
+      "back_settings": "Torna alle impostazioni"
+    },
+    "support": {
+      "instagram": "Apri Instagram",
+      "telegram": "Apri Telegram",
+      "share": "Condividi canali di supporto",
+      "back_settings": "Torna alle impostazioni"
+    },
+    "guidedMode": {
+      "toggle_on": "Attiva modalità museo",
+      "toggle_off": "Disattiva modalità museo",
+      "start_exploring": "Inizia a esplorare"
+    },
+    "notFound": {
+      "home": "Vai alla schermata iniziale"
+    },
+    "camera": {
+      "close": "Chiudi fotocamera",
+      "capture": "Scatta foto",
+      "capture_hint": "Scatta una foto dell'opera d'arte",
+      "grid": "Attiva/disattiva griglia",
+      "switch_camera": "Cambia fotocamera",
+      "grant_permission": "Concedi permesso fotocamera"
+    },
+    "contextMenu": {
+      "copy": "Copia testo del messaggio",
+      "share": "Condividi messaggio",
+      "report": "Segnala messaggio",
+      "cancel": "Chiudi menù",
+      "overlay_hint": "Tocca per chiudere il menù"
+    }
   }
 }

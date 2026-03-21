@@ -358,6 +358,20 @@
     "retry": "Reintentar",
     "dismiss": "Descartar"
   },
+  "offline": {
+    "title": "Sin conexión",
+    "pending": "{{count}} pendientes"
+  },
+  "audio": {
+    "unavailable_title": "Audio no disponible",
+    "unavailable_body": "Este dispositivo no admite grabación por micrófono.",
+    "permission_title": "Permiso requerido",
+    "permission_body": "Se requiere acceso al micrófono para la entrada de voz.",
+    "error_title": "Error de audio",
+    "error_body": "No se pudo iniciar la grabación. Inténtelo de nuevo.",
+    "playback_error_title": "Error de reproducción",
+    "playback_error_body": "No se puede reproducir esta grabación."
+  },
   "startupError": {
     "badge": "Error de configuración de inicio",
     "title": "La app no puede iniciarse con esta compilación.",
@@ -374,5 +388,131 @@
   },
   "conversationSearch": {
     "placeholder": "Buscar conversaciones..."
+  },
+  "a11y": {
+    "home": {
+      "start_conversation": "Iniciar una nueva conversación",
+      "start_conversation_hint": "Crea una nueva sesión de chat con el asistente del museo",
+      "onboarding": "Abrir la guía de inicio",
+      "settings": "Abrir ajustes"
+    },
+    "auth": {
+      "email_input": "Dirección de correo electrónico",
+      "password_input": "Contraseña",
+      "firstname_input": "Nombre",
+      "lastname_input": "Apellido",
+      "forgot_password": "Contraseña olvidada",
+      "forgot_password_hint": "Envía un correo para restablecer la contraseña",
+      "gdpr_checkbox": "Aceptar los términos y la política de privacidad",
+      "login_button": "Iniciar sesión",
+      "register_button": "Registrarse",
+      "toggle_login": "Cambiar a inicio de sesión",
+      "toggle_register": "Cambiar a registro",
+      "google_signin": "Iniciar sesión con Google",
+      "apple_signin": "Iniciar sesión con Apple",
+      "terms_link": "Términos de servicio",
+      "privacy_link": "Política de privacidad"
+    },
+    "conversations": {
+      "search_input": "Buscar conversaciones",
+      "start_new": "Iniciar una nueva conversación",
+      "card_hint": "Abre esta conversación",
+      "long_press_hint": "Mantener pulsado para guardar"
+    },
+    "chat": {
+      "close": "Cerrar conversación",
+      "close_hint": "Vuelve a la lista de conversaciones",
+      "play_audio": "Reproducir audio grabado",
+      "clear_audio": "Eliminar audio grabado",
+      "gallery": "Elegir imagen de la galería",
+      "gallery_hint": "Abre la galería de fotos para adjuntar una imagen",
+      "lens": "Abrir cámara",
+      "lens_hint": "Abre la cámara para fotografiar una obra de arte",
+      "start_recording": "Iniciar grabación",
+      "stop_recording": "Detener grabación",
+      "send": "Enviar mensaje",
+      "send_hint": "Envía tu mensaje al asistente del museo",
+      "message_input": "Escribe tu mensaje",
+      "assistant_message": "Mensaje del asistente",
+      "user_message": "Tu mensaje",
+      "long_press_hint": "Mantener pulsado para más opciones",
+      "follow_up_hint": "Envía esta pregunta de seguimiento",
+      "recommendation_hint": "Rellena el campo con esta sugerencia",
+      "suggestion_hint": "Inicia la conversación con este tema",
+      "camera_suggestion_hint": "Abre la cámara para fotografiar una obra de arte"
+    },
+    "onboarding": {
+      "skip": "Omitir introducción",
+      "next": "Siguiente diapositiva",
+      "get_started": "Comenzar"
+    },
+    "settings": {
+      "theme_button": "Seleccionar tema {{theme}}",
+      "theme_selected": "Seleccionado actualmente",
+      "preferences": "Abrir preferencias",
+      "guided_mode": "Ver info del modo visita guiada",
+      "privacy_link": "Abrir política de privacidad",
+      "terms_link": "Abrir términos de servicio",
+      "support_link": "Abrir soporte",
+      "onboarding_link": "Repetir la guía de inicio",
+      "delete_account": "Eliminar cuenta permanentemente",
+      "delete_account_hint": "Esta acción no se puede deshacer",
+      "back_home": "Volver a la pantalla de inicio",
+      "sign_out": "Cerrar sesión",
+      "sign_out_hint": "Cierra sesión y vuelve al inicio de sesión"
+    },
+    "preferences": {
+      "language_button": "Seleccionar idioma {{language}}",
+      "language_selected": "Seleccionado actualmente",
+      "museum_mode_switch": "Modo museo",
+      "guide_level_button": "Seleccionar nivel de guía {{level}}",
+      "guide_level_selected": "Seleccionado actualmente",
+      "save": "Guardar preferencias",
+      "learn_guided": "Conocer el modo guiado"
+    },
+    "discover": {
+      "photo_card": "Fotografiar una obra de arte",
+      "photo_card_hint": "Abre la cámara para identificar una obra de arte",
+      "voice": "Iniciar conversación por voz",
+      "dashboard": "Ver historial de conversaciones",
+      "guided": "Abrir modo visita guiada"
+    },
+    "privacy": {
+      "open_support": "Contactar con soporte",
+      "back_settings": "Volver a ajustes"
+    },
+    "terms": {
+      "privacy_policy": "Ver política de privacidad",
+      "back_settings": "Volver a ajustes"
+    },
+    "support": {
+      "instagram": "Abrir Instagram",
+      "telegram": "Abrir Telegram",
+      "share": "Compartir canales de soporte",
+      "back_settings": "Volver a ajustes"
+    },
+    "guidedMode": {
+      "toggle_on": "Activar modo museo",
+      "toggle_off": "Desactivar modo museo",
+      "start_exploring": "Empezar a explorar"
+    },
+    "notFound": {
+      "home": "Ir a la pantalla de inicio"
+    },
+    "camera": {
+      "close": "Cerrar cámara",
+      "capture": "Tomar foto",
+      "capture_hint": "Captura una foto de la obra de arte",
+      "grid": "Activar/desactivar cuadrícula",
+      "switch_camera": "Cambiar cámara",
+      "grant_permission": "Conceder permiso de cámara"
+    },
+    "contextMenu": {
+      "copy": "Copiar texto del mensaje",
+      "share": "Compartir mensaje",
+      "report": "Reportar mensaje",
+      "cancel": "Cerrar menú",
+      "overlay_hint": "Toca para cerrar el menú"
+    }
   }
 }

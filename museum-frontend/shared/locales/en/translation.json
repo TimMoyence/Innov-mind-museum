@@ -358,6 +358,20 @@
     "retry": "Retry",
     "dismiss": "Dismiss"
   },
+  "offline": {
+    "title": "You're offline",
+    "pending": "{{count}} pending"
+  },
+  "audio": {
+    "unavailable_title": "Audio unavailable",
+    "unavailable_body": "This device does not support microphone recording.",
+    "permission_title": "Permission required",
+    "permission_body": "Microphone access is required for voice input.",
+    "error_title": "Audio error",
+    "error_body": "Recording could not be started. Please try again.",
+    "playback_error_title": "Playback error",
+    "playback_error_body": "Unable to play this recording."
+  },
   "startupError": {
     "badge": "Startup configuration error",
     "title": "The app cannot start with this build.",
@@ -374,5 +388,131 @@
   },
   "conversationSearch": {
     "placeholder": "Search conversations..."
+  },
+  "a11y": {
+    "home": {
+      "start_conversation": "Start a new conversation",
+      "start_conversation_hint": "Creates a new chat session with the museum assistant",
+      "onboarding": "Open onboarding guide",
+      "settings": "Open settings"
+    },
+    "auth": {
+      "email_input": "Email address",
+      "password_input": "Password",
+      "firstname_input": "First name",
+      "lastname_input": "Last name",
+      "forgot_password": "Forgot password",
+      "forgot_password_hint": "Sends a password reset email",
+      "gdpr_checkbox": "Accept terms and privacy policy",
+      "login_button": "Log in",
+      "register_button": "Sign up",
+      "toggle_login": "Switch to login",
+      "toggle_register": "Switch to registration",
+      "google_signin": "Sign in with Google",
+      "apple_signin": "Sign in with Apple",
+      "terms_link": "Terms of Service",
+      "privacy_link": "Privacy Policy"
+    },
+    "conversations": {
+      "search_input": "Search conversations",
+      "start_new": "Start a new conversation",
+      "card_hint": "Opens this conversation",
+      "long_press_hint": "Long press to save"
+    },
+    "chat": {
+      "close": "Close conversation",
+      "close_hint": "Returns to conversations list",
+      "play_audio": "Play recorded audio",
+      "clear_audio": "Clear recorded audio",
+      "gallery": "Pick image from gallery",
+      "gallery_hint": "Opens photo library to attach an image",
+      "lens": "Open camera",
+      "lens_hint": "Opens camera to photograph artwork",
+      "start_recording": "Start recording",
+      "stop_recording": "Stop recording",
+      "send": "Send message",
+      "send_hint": "Sends your message to the museum assistant",
+      "message_input": "Type your message",
+      "assistant_message": "Assistant message",
+      "user_message": "Your message",
+      "long_press_hint": "Long press for more options",
+      "follow_up_hint": "Sends this follow-up question",
+      "recommendation_hint": "Fills input with this suggestion",
+      "suggestion_hint": "Starts conversation with this topic",
+      "camera_suggestion_hint": "Opens camera to photograph artwork"
+    },
+    "onboarding": {
+      "skip": "Skip onboarding",
+      "next": "Next slide",
+      "get_started": "Get started"
+    },
+    "settings": {
+      "theme_button": "Select {{theme}} theme",
+      "theme_selected": "Currently selected",
+      "preferences": "Open preferences",
+      "guided_mode": "View guided museum mode info",
+      "privacy_link": "Open privacy policy",
+      "terms_link": "Open terms of service",
+      "support_link": "Open support",
+      "onboarding_link": "Replay onboarding guide",
+      "delete_account": "Delete account permanently",
+      "delete_account_hint": "This action cannot be undone",
+      "back_home": "Return to home screen",
+      "sign_out": "Sign out",
+      "sign_out_hint": "Signs out and returns to login"
+    },
+    "preferences": {
+      "language_button": "Select {{language}} language",
+      "language_selected": "Currently selected",
+      "museum_mode_switch": "Museum mode",
+      "guide_level_button": "Select {{level}} guide level",
+      "guide_level_selected": "Currently selected",
+      "save": "Save preferences",
+      "learn_guided": "Learn about guided mode"
+    },
+    "discover": {
+      "photo_card": "Photograph an artwork",
+      "photo_card_hint": "Opens camera to identify artwork",
+      "voice": "Start voice conversation",
+      "dashboard": "View conversation history",
+      "guided": "Open guided museum mode"
+    },
+    "privacy": {
+      "open_support": "Contact support",
+      "back_settings": "Return to settings"
+    },
+    "terms": {
+      "privacy_policy": "View privacy policy",
+      "back_settings": "Return to settings"
+    },
+    "support": {
+      "instagram": "Open Instagram",
+      "telegram": "Open Telegram",
+      "share": "Share support channels",
+      "back_settings": "Return to settings"
+    },
+    "guidedMode": {
+      "toggle_on": "Turn on museum mode",
+      "toggle_off": "Turn off museum mode",
+      "start_exploring": "Start exploring"
+    },
+    "notFound": {
+      "home": "Go to home screen"
+    },
+    "camera": {
+      "close": "Close camera",
+      "capture": "Take photo",
+      "capture_hint": "Captures a photo of the artwork",
+      "grid": "Toggle camera grid",
+      "switch_camera": "Switch camera",
+      "grant_permission": "Grant camera permission"
+    },
+    "contextMenu": {
+      "copy": "Copy message text",
+      "share": "Share message",
+      "report": "Report message",
+      "cancel": "Close menu",
+      "overlay_hint": "Tap to close menu"
+    }
   }
 }
