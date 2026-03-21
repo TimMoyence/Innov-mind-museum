@@ -1,17 +1,15 @@
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 
-import { authStorage } from '@/features/auth/infrastructure/authStorage';
-import { HOME_ROUTE } from '@/features/auth/routes';
-import { getErrorMessage } from '@/shared/lib/errors';
+import { authService, type LoginResponse } from '@/features/auth/infrastructure/authApi';
+import { authStorage, setAccessToken } from '@/features/auth/infrastructure/authTokenStore';
 import {
-  authService,
-  setAccessToken,
   signInWithApple,
   signInWithGoogle,
   isAppleSignInAvailable,
-} from '@/services';
-import type { LoginResponse } from '@/services/authService';
+} from '@/features/auth/infrastructure/socialAuthProviders';
+import { HOME_ROUTE } from '@/features/auth/routes';
+import { getErrorMessage } from '@/shared/lib/errors';
 
 interface UseSocialLoginOptions {
   setIsAuthenticated: (value: boolean) => void;

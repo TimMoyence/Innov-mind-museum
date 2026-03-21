@@ -2,6 +2,28 @@ import { Platform } from 'react-native';
 
 import { storage } from '@/shared/infrastructure/storage';
 
+// ── In-memory access token ──────────────────────────────────────────────────
+
+let accessToken = '';
+
+/**
+ * Stores the access token in memory.
+ * @param token - JWT access token, or a nullish value to clear it.
+ */
+export const setAccessToken = (token: string | null | undefined): void => {
+  accessToken = token ? token : '';
+};
+
+/** Returns the current in-memory access token (empty string when none is set). */
+export const getAccessToken = (): string => accessToken;
+
+/** Clears the in-memory access token. */
+export const clearAccessToken = (): void => {
+  accessToken = '';
+};
+
+// ── Persistent refresh token (SecureStore on native, AsyncStorage on web) ───
+
 const REFRESH_TOKEN_KEY = 'auth.refreshToken';
 
 type SecureStoreModule = {
@@ -67,5 +89,4 @@ export const authStorage = {
   async clearRefreshToken(): Promise<void> {
     return refreshTokenStore.clear();
   },
-
 };

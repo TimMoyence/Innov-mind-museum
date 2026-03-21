@@ -1,6 +1,6 @@
-import { httpRequest } from './http';
-import { AUTH_ENDPOINTS, buildAuthUrl } from './apiConfig';
-import { clearAccessToken } from './tokenStore';
+import { httpRequest } from '@/shared/api/httpRequest';
+import { AUTH_ENDPOINTS, buildAuthUrl } from '@/shared/infrastructure/apiConfig';
+import { clearAccessToken } from './authTokenStore';
 import type { components, paths } from '@/shared/api/generated/openapi';
 import {
   openApiRequest,

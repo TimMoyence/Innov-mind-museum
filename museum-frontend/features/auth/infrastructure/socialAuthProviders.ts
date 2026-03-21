@@ -1,5 +1,6 @@
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 /** Supported social identity providers for sign-in. */
@@ -13,8 +14,10 @@ export interface SocialAuthResult {
 
 GoogleSignin.configure({
   webClientId:
+    Constants.expoConfig?.extra?.GOOGLE_WEB_CLIENT_ID ||
     '498339023976-bjbain2ir2t9q4pu9lsmmk8ni7t96dd7.apps.googleusercontent.com',
   iosClientId:
+    Constants.expoConfig?.extra?.GOOGLE_IOS_CLIENT_ID ||
     '498339023976-8r199kpqbqmhb7mdf45ostg3sutqeng2.apps.googleusercontent.com',
 });
 
