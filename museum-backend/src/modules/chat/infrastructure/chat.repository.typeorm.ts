@@ -1,4 +1,4 @@
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 
 import { ArtworkMatch } from '../domain/artworkMatch.entity';
 import { MessageReport } from '../domain/messageReport.entity';
@@ -462,30 +462,67 @@ export class TypeOrmChatRepository implements ChatRepository {
    * @returns Structured export payload containing all sessions and their messages.
    */
   async exportUserData(userId: number): Promise<UserChatExportData> {
-    const sessions = await this.sessionRepo.find({
-      where: { user: { id: userId } },
-      relations: ['messages'],
-      order: { createdAt: 'DESC' },
-    });
+    const PAGE_SIZE = 50;
 
-    return {
-      sessions: sessions.map((session) => ({
-        id: session.id,
-        locale: session.locale,
-        museumMode: session.museumMode,
-        title: session.title ?? null,
-        museumName: session.museumName ?? null,
-        createdAt: session.createdAt.toISOString(),
-        updatedAt: session.updatedAt.toISOString(),
-        messages: (session.messages || []).map((msg) => ({
-          id: msg.id,
-          role: msg.role,
-          text: msg.text,
-          imageRef: msg.imageRef,
-          createdAt: msg.createdAt.toISOString(),
-          metadata: msg.metadata,
-        })),
-      })),
-    };
+    return this.sessionRepo.manager.transaction('REPEATABLE READ', async (em) => {
+      const sessionRepo = em.getRepository(ChatSession);
+      const messageRepo = em.getRepository(ChatMessage);
+
+      const allSessions: UserChatExportData['sessions'] = [];
+      let offset = 0;
+
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, no-constant-condition
+      while (true) {
+        const sessionBatch = await sessionRepo.find({
+          where: { user: { id: userId } },
+          order: { createdAt: 'DESC' },
+          take: PAGE_SIZE,
+          skip: offset,
+        });
+
+        if (sessionBatch.length === 0) break;
+
+        const sessionIds = sessionBatch.map((s) => s.id);
+        const messages = await messageRepo.find({
+          where: { session: { id: In(sessionIds) } },
+          relations: ['session'],
+          order: { createdAt: 'ASC' },
+        });
+
+        const messagesBySessionId = new Map<string, ChatMessage[]>();
+        for (const msg of messages) {
+          const sessionId = msg.session.id;
+          const list = messagesBySessionId.get(sessionId) || [];
+          list.push(msg);
+          messagesBySessionId.set(sessionId, list);
+        }
+
+        for (const session of sessionBatch) {
+          const sessionMessages = messagesBySessionId.get(session.id) || [];
+          allSessions.push({
+            id: session.id,
+            locale: session.locale,
+            museumMode: session.museumMode,
+            title: session.title ?? null,
+            museumName: session.museumName ?? null,
+            createdAt: session.createdAt.toISOString(),
+            updatedAt: session.updatedAt.toISOString(),
+            messages: sessionMessages.map((msg) => ({
+              id: msg.id,
+              role: msg.role,
+              text: msg.text,
+              imageRef: msg.imageRef,
+              createdAt: msg.createdAt.toISOString(),
+              metadata: msg.metadata,
+            })),
+          });
+        }
+
+        if (sessionBatch.length < PAGE_SIZE) break;
+        offset += PAGE_SIZE;
+      }
+
+      return { sessions: allSessions };
+    });
   }
 }
