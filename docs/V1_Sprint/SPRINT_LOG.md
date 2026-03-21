@@ -18,17 +18,17 @@ Sprint de stabilisation post-MVP. Correction de tous les bugs securite identifie
 
 ### Changements cles
 
-| Domaine | Action | Fichiers |
-|---------|--------|----------|
-| Auth securite | Password policy, rate limiter, social login verification | `shared/validation/password.ts`, `login-rate-limiter.ts`, `socialLogin.useCase.ts` |
-| SSRF | 17 regex patterns pour bloquer IPs privees | `image-input.ts` |
-| Token securite | SHA-256 hashing des reset tokens, indexes refresh tokens | `authSession.service.ts`, migration `RecreateRefreshTokenIndexes` |
-| DB | 3 migrations (social accounts, refresh token indexes, session version) | `src/data/db/migrations/` |
-| Chat refactoring | Extraction hooks, helpers, session access | `useAudioRecorder.ts`, `useImagePicker.ts`, `chat-image.helpers.ts`, `session-access.ts` |
-| Frontend cleanup | Suppression styles/, old components/, dead code | `-components/`, `-app/styles/` |
-| Email | Service Brevo (adapter port) | `shared/email/` |
-| Validation | Module input validation | `shared/validation/` |
-| Tests | 212 backend (Jest), 8 frontend (node:test) | `tests/unit/`, `tests/integration/`, `tests/contract/` |
+| Domaine          | Action                                                                 | Fichiers                                                                                 |
+| ---------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Auth securite    | Password policy, rate limiter, social login verification               | `shared/validation/password.ts`, `login-rate-limiter.ts`, `socialLogin.useCase.ts`       |
+| SSRF             | 17 regex patterns pour bloquer IPs privees                             | `image-input.ts`                                                                         |
+| Token securite   | SHA-256 hashing des reset tokens, indexes refresh tokens               | `authSession.service.ts`, migration `RecreateRefreshTokenIndexes`                        |
+| DB               | 3 migrations (social accounts, refresh token indexes, session version) | `src/data/db/migrations/`                                                                |
+| Chat refactoring | Extraction hooks, helpers, session access                              | `useAudioRecorder.ts`, `useImagePicker.ts`, `chat-image.helpers.ts`, `session-access.ts` |
+| Frontend cleanup | Suppression styles/, old components/, dead code                        | `-components/`, `-app/styles/`                                                           |
+| Email            | Service Brevo (adapter port)                                           | `shared/email/`                                                                          |
+| Validation       | Module input validation                                                | `shared/validation/`                                                                     |
+| Tests            | 212 backend (Jest), 8 frontend (node:test)                             | `tests/unit/`, `tests/integration/`, `tests/contract/`                                   |
 
 ---
 
@@ -113,12 +113,14 @@ Le DNS rebinding cible le host qui fetch. Notre backend ne fetch pas. Le risque 
 **Solution**:
 
 **`useAudioRecorder.ts`** — Ajout de 3 refs synces avec l'etat (`isRecordingRef`, `recordedAudioUriRef`, `isPlayingAudioRef`), mises a jour a chaque render (`ref.current = state`). Les callbacks lisent les refs au lieu de l'etat, ce qui permet `useCallback` avec deps stables:
+
 - `startRecording` — `useCallback([revokeWebAudioObjectUrl])`
 - `stopRecording` — `useCallback([revokeWebAudioObjectUrl, stopWebAudioStreamTracks])`
 - `toggleRecording` — `useCallback([startRecording, stopRecording])` — lit `isRecordingRef.current`
 - `playRecordedAudio` — `useCallback([])` — lit `recordedAudioUriRef.current` et `isPlayingAudioRef.current`
 
 **`useImagePicker.ts`** — Plus simple car pas de deps d'etat:
+
 - `onPickImage` — `useCallback([])` — n'utilise que `setSelectedImage` (setter stable)
 - `onTakePicture` — `useCallback([])` — n'utilise que `setIsCameraOpen` (setter stable)
 
@@ -157,14 +159,14 @@ Le DNS rebinding cible le host qui fetch. Notre backend ne fetch pas. Le risque 
 
 ### Bilan Sprint 1.5
 
-| Metrique | Avant | Apres | Delta |
-|----------|-------|-------|-------|
-| Tests backend | 212 | 217 | +5 |
-| Tests frontend | 8 | 11 | +3 |
-| Bugs ouverts (audit) | 5 | 0 | -5 |
-| S3 RGPD compliance | NO-OP | Fonctionnel | Fix |
-| Email case-sensitivity | 1/4 use cases | 4/4 use cases | Fix |
-| useCallback coverage | 2/6 functions | 6/6 functions | Fix |
+| Metrique               | Avant         | Apres         | Delta |
+| ---------------------- | ------------- | ------------- | ----- |
+| Tests backend          | 212           | 217           | +5    |
+| Tests frontend         | 8             | 11            | +3    |
+| Bugs ouverts (audit)   | 5             | 0             | -5    |
+| S3 RGPD compliance     | NO-OP         | Fonctionnel   | Fix   |
+| Email case-sensitivity | 1/4 use cases | 4/4 use cases | Fix   |
+| useCallback coverage   | 2/6 functions | 6/6 functions | Fix   |
 
 ---
 
@@ -180,6 +182,7 @@ Le DNS rebinding cible le host qui fetch. Notre backend ne fetch pas. Le risque 
 **Probleme**: `photosPermission: false` bloquait l'acces a la galerie photo. `android.permission.CAMERA` manquant.
 
 **Solution**:
+
 - `photosPermission` → string descriptif `'Allow $(PRODUCT_NAME) to select artwork photos from your library.'`
 - Ajout `'android.permission.CAMERA'` dans `android.permissions`
 - `expo-camera` plugin injecte deja `NSCameraUsageDescription` automatiquement — pas de doublon dans infoPlist.
@@ -193,6 +196,7 @@ Le DNS rebinding cible le host qui fetch. Notre backend ne fetch pas. Le risque 
 **Probleme**: Texte dev visible ("Replace placeholder handles before production release"), tokens `TO_FILL_*`.
 
 **Solution**:
+
 - Supprime texte dev de la hero card subtitle
 - `TO_FILL_SUPPORT_RESPONSE_TIME` → "within 48 hours"
 - `TO_FILL_SUPPORT_OWNER` → "the Musaium team"
@@ -210,6 +214,7 @@ Le DNS rebinding cible le host qui fetch. Notre backend ne fetch pas. Le risque 
 **Probleme**: Apple exige un privacy manifest pour App Store Review.
 
 **Solution**: Expo 53 supporte `privacyManifests` nativement sous `ios` config. Pas besoin de config plugin custom.
+
 - `NSPrivacyTracking: false`
 - `NSPrivacyTrackingDomains: []`
 - `NSPrivacyAccessedAPITypes`: `NSPrivacyAccessedAPICategoryUserDefaults` (AsyncStorage), reason `CA92.1`
@@ -265,6 +270,7 @@ Le DNS rebinding cible le host qui fetch. Notre backend ne fetch pas. Le risque 
 **Probleme**: `bcrypt.hash(password, 10)` hard-code dans 3 endroits. Cost factor 10 insuffisant.
 
 **Solution**:
+
 - Nouveau `shared/security/bcrypt.ts` → exporte `BCRYPT_ROUNDS = 12`
 - Import dans les 3 sites d'appel:
   - `user.repository.pg.ts:registerUser()`
@@ -311,24 +317,24 @@ Le DNS rebinding cible le host qui fetch. Notre backend ne fetch pas. Le risque 
 
 **Nouveau fichier**: `museum-backend/tests/unit/auth/security-fixes.test.ts` — 4 tests:
 
-| Test | Verifie |
-|------|---------|
+| Test                      | Verifie                                                               |
+| ------------------------- | --------------------------------------------------------------------- |
 | S2-20a: social-only login | Erreur = `INVALID_CREDENTIALS`, pas de leak "social"/"Apple"/"Google" |
-| S2-20c: comment 500 chars | Boundary: 500 accepte, 501 rejete |
-| S2-20d: register response | Shape = `{ user: { id, email } }`, pas de password/names |
+| S2-20c: comment 500 chars | Boundary: 500 accepte, 501 rejete                                     |
+| S2-20d: register response | Shape = `{ user: { id, email } }`, pas de password/names              |
 
 ---
 
 ### Bilan Phase 1A
 
-| Metrique | Avant | Apres | Delta |
-|----------|-------|-------|-------|
-| Tests backend | 217 | 256 | +39 |
-| Tests frontend | 11 | 13 | +2 |
-| Store blockers | 3 open | 0 open | -3 |
-| Security items S2-20 | 4 open | 0 open | -4 |
-| Bcrypt cost | 10 | 12 | Upgrade |
-| Phase 1A items | 0/9 | 9/9 | Done |
+| Metrique             | Avant  | Apres  | Delta   |
+| -------------------- | ------ | ------ | ------- |
+| Tests backend        | 217    | 256    | +39     |
+| Tests frontend       | 11     | 13     | +2      |
+| Store blockers       | 3 open | 0 open | -3      |
+| Security items S2-20 | 4 open | 0 open | -4      |
+| Bcrypt cost          | 10     | 12     | Upgrade |
+| Phase 1A items       | 0/9    | 9/9    | Done    |
 
 **Note**: S2-02 Instagram handle marque partiel (`[~]`) en attente de confirmation.
 
@@ -348,6 +354,7 @@ Full SSE streaming pipeline: backend streams LLM tokens via `text/event-stream`,
 **Solution**: 12-step implementation following hexagonal architecture patterns.
 
 **Key decisions**:
+
 - **Prompt format**: Changed from `{"answer":"..."}` JSON to text-first + `\n[META]\n{...}` delimiter. Parser handles both formats (backward compat).
 - **`prepareMessage()` extraction**: Shared pre-LLM logic (session access, validation, image storage, input guardrail, user message persistence) extracted from `postMessage()` into private `prepareMessage()`. Zero behavior change — validated by 360+ existing tests.
 - **`postMessageStream()`**: Uses `onToken` callback pattern (not AsyncGenerator) to keep the port interface clean. Incremental output guardrail every ~50 chars with early-ALLOW on art keyword detection.
@@ -356,6 +363,7 @@ Full SSE streaming pipeline: backend streams LLM tokens via `text/event-stream`,
 - **Client disconnect handling**: `req.on('close')` → `AbortController.abort()` → cancels LangChain stream.
 
 **Fichiers modifies (backend)**:
+
 - `src/config/env.ts` — `featureFlags.streaming` added
 - `.env.local.example` — `FEATURE_FLAG_STREAMING=false`
 - `src/app.ts` — compression filter for SSE bypass
@@ -372,6 +380,7 @@ Full SSE streaming pipeline: backend streams LLM tokens via `text/event-stream`,
 **Solution**: Progressive streaming with throttled renders + automatic fallback.
 
 **Key decisions**:
+
 - **SSE parser**: Custom `parseSseChunk()` handles progressive buffer parsing with remainder tracking.
 - **Streaming fetch**: Raw `fetch()` with `ReadableStream` (primary) or full `response.text()` (fallback). No EventSource (POST body needed).
 - **`sendMessageSmart()`**: Tries streaming first, falls back to non-streaming on 404 (feature flag off). Image/audio messages always use non-streaming path.
@@ -380,6 +389,7 @@ Full SSE streaming pipeline: backend streams LLM tokens via `text/event-stream`,
 - **Typing indicator suppression**: Shows only when `isSending && !isStreaming` (streaming shows inline cursor).
 
 **Fichiers modifies (frontend)**:
+
 - `features/chat/infrastructure/sseParser.ts` — NEW: SSE event parser
 - `features/chat/infrastructure/chatApi.ts` — `postMessageStream()`, `sendMessageSmart()`
 - `features/chat/application/useChatSession.ts` — streaming path with throttled updates, `isStreaming` state
@@ -388,6 +398,7 @@ Full SSE streaming pipeline: backend streams LLM tokens via `text/event-stream`,
 - `app/(stack)/chat/[sessionId].tsx` — passes `isStreaming` to list
 
 ### Tests added
+
 - `tests/unit/chat/sse-helpers.test.ts` — 9 tests (SSE format, headers, destroyed guards)
 - `tests/unit/chat/chat-service-stream.test.ts` — 5 tests (token streaming, guardrail blocking, error propagation, message persistence)
 - `tests/unit/chat/assistant-response.test.ts` — 7 new tests ([META] format parsing, extractMetadata, backward compat)
@@ -395,14 +406,14 @@ Full SSE streaming pipeline: backend streams LLM tokens via `text/event-stream`,
 
 ### Bilan Sprint 2 Phase 3
 
-| Metrique | Avant | Apres | Delta |
-|----------|-------|-------|-------|
-| Backend tests | 339 | 360 | +21 |
-| Frontend tests | 13 | 22 | +9 |
-| Backend suites | 38 | 41 | +3 |
-| New files | - | 6 | +6 |
-| Modified files (backend) | - | 10 | - |
-| Modified files (frontend) | - | 6 | - |
+| Metrique                  | Avant | Apres | Delta |
+| ------------------------- | ----- | ----- | ----- |
+| Backend tests             | 339   | 360   | +21   |
+| Frontend tests            | 13    | 22    | +9    |
+| Backend suites            | 38    | 41    | +3    |
+| New files                 | -     | 6     | +6    |
+| Modified files (backend)  | -     | 10    | -     |
+| Modified files (frontend) | -     | 6     | -     |
 
 ---
 
@@ -445,93 +456,107 @@ Post-implementation audit (3 parallel teams: backend, frontend, QA/regression) f
 ### Taches realisees
 
 #### S3-01: Dark Mode Theme System (FE)
+
 - **Fichiers crees**: `shared/ui/themes.ts` (ThemePalette + light/dark palettes), `shared/ui/ThemeContext.tsx` (ThemeProvider + useTheme hook)
 - **Fichiers modifies**: `shared/ui/liquidTheme.ts` (themeColors function + backward-compat static export), `app/_layout.tsx` (ThemeProvider wrapper + ThemedStatusBar), `shared/ui/LiquidScreen.tsx`, `shared/ui/GlassCard.tsx`, `app/(tabs)/_layout.tsx`, `features/chat/ui/ChatInput.tsx`, `features/chat/ui/ChatMessageBubble.tsx`, `features/chat/ui/TypingIndicator.tsx`, `app/(stack)/settings.tsx` (theme toggle UI), `shared/ui/FloatingContextMenu.tsx`
 - **Choix**: System/light/dark mode persisted via AsyncStorage. `liquidColors` export kept for backward compatibility with unmigrated files.
 
 #### S3-03: Onboarding Carousel (FE)
+
 - **Fichiers crees**: `features/onboarding/application/useOnboarding.ts`, `features/onboarding/ui/OnboardingSlide.tsx` (Reanimated entrance animations), `features/onboarding/ui/StepIndicator.tsx`
 - **Fichiers modifies**: `app/(stack)/onboarding.tsx` (complete rewrite: FlatList carousel + snapToInterval)
 - **Audit fix**: Removed conflicting `pagingEnabled` (supersedes `snapToInterval` on iOS).
 
 #### S3-04: Voice Mode TTS (BE)
+
 - **Fichiers crees**: `modules/chat/adapters/secondary/text-to-speech.openai.ts` (TTS port + OpenAI impl + disabled stub)
 - **Fichiers modifies**: `config/env.ts` (tts section), `modules/chat/application/chat.service.ts` (synthesizeSpeech method + cache), `modules/chat/adapters/primary/http/chat.route.ts` (POST /messages/:messageId/tts), `modules/chat/index.ts` (conditional TTS wiring)
 - **Audit fix**: Added feature flag gate (`env.featureFlags.voiceMode`) + session rate limiter to TTS route.
 
 #### S3-05: Image Preview + Crop (FE)
+
 - **Fichiers crees**: `features/chat/application/useImageManipulation.ts`, `features/chat/ui/ImagePreviewModal.tsx`
 - **Fichiers modifies**: `features/chat/application/useImagePicker.ts` (pendingImage state), `app/(stack)/chat/[sessionId].tsx`
 - **Audit fix**: Moved setState from render body to useEffect in ImagePreviewModal.
 
 #### S3-06: Message Context Menu (FE)
+
 - **Fichiers crees**: `features/chat/application/useMessageActions.ts`, `features/chat/ui/MessageContextMenu.tsx`
 - **Fichiers modifies**: `app/(stack)/chat/[sessionId].tsx` (contextMenuMessage state, onMessageLongPress)
 
 #### S3-07: Skeleton Loading (FE)
+
 - **Fichiers crees**: `shared/ui/SkeletonBox.tsx` (Reanimated shimmer), `shared/ui/SkeletonConversationCard.tsx`, `shared/ui/SkeletonChatBubble.tsx`
 - **Fichiers modifies**: `app/(tabs)/conversations.tsx`, `app/(stack)/chat/[sessionId].tsx` (replacing ActivityIndicator)
 
 #### S3-08: Conversation Search + Infinite Scroll (FE)
+
 - **Fichiers crees**: `features/conversation/ui/ConversationSearchBar.tsx`
 - **Fichiers modifies**: `app/(tabs)/conversations.tsx` (search state, cursor pagination, onEndReached + onEndReachedThreshold)
 - **Audit fix**: Added ref-based guard to prevent double-fire race condition on loadMore.
 
 #### S3-09: Redis Cache Layer (BE)
+
 - **Fichiers crees**: `shared/cache/cache.port.ts`, `shared/cache/redis-cache.service.ts`, `shared/cache/noop-cache.service.ts`
 - **Fichiers modifies**: `config/env.ts` (cache section), `modules/chat/application/chat.service.ts` (ChatServiceDeps options object + cache reads/invalidation), `modules/chat/index.ts` (CacheService pass-through), `app.ts` (Redis init), `tests/helpers/chat/chatTestApp.ts` (options object constructor), `tests/e2e/api.postgres.e2e.test.ts`
 - **Audit fix**: Added error logging on Redis connection failure. Fixed InMemoryChatRepository to apply sessionUpdates (title, museumName, visitContext).
 
 #### S3-11: GDPR Data Export (BE)
+
 - **Fichiers crees**: `modules/auth/core/domain/exportUserData.types.ts`, `modules/auth/core/useCase/exportUserData.useCase.ts`
 - **Fichiers modifies**: `modules/chat/domain/chat.repository.interface.ts` (exportUserData method), `modules/chat/infrastructure/chat.repository.typeorm.ts`, `modules/chat/index.ts` (getChatRepository getter), `modules/auth/core/useCase/index.ts` (lazy-bound chatDataExportProxy), `modules/auth/adapters/primary/http/auth.route.ts` (GET /export-data)
 - **Audit fix CRITICAL**: Route was casting req.user (JWT claims) with createdAt/updatedAt which don't exist in JWT. Fixed to fetch full user entity from DB before passing to use case.
 
 #### S3-12: Feature Flags (DV)
+
 - **Fichiers crees**: `shared/feature-flags/feature-flags.port.ts` (FeatureFlagService + StaticFeatureFlagService), `tests/unit/shared/feature-flags.test.ts` (3 tests)
 - **Fichiers modifies**: `config/env.ts`, `app.ts`, `shared/routers/api.router.ts`
 
 #### S3-15: Haptic Feedback (FE)
+
 - **Fichiers modifies**: `features/chat/ui/ChatInput.tsx`, `features/chat/ui/ChatMessageBubble.tsx`, `shared/ui/FloatingContextMenu.tsx`, `components/CameraView.tsx`, `app/(stack)/chat/[sessionId].tsx`
 
 #### S3-17: Log Aggregation (DV)
+
 - **Fichiers crees**: `deploy/promtail-config.yml`
 - **Fichiers modifies**: `shared/logger/logger.ts` (structured fields), `helpers/middleware/request-logger.middleware.ts` (userId)
 
 #### S3-18a: ATTrackingManager (FE)
+
 - **Fichiers modifies**: `app.config.ts` (plugin + NSUserTrackingUsageDescription), `app/_layout.tsx` (requestTrackingPermissionsAsync)
 - **Dep ajoutee**: `expo-tracking-transparency`
 
 #### S3-18b: Dashboard Title Fix (FS)
+
 - **Fichiers modifies**: `modules/chat/application/visit-context.ts` (museum mode priority), `features/chat/domain/dashboard-session.ts` (museumName dedup)
 - **Tests ajoutes**: 3 backend (visit-context.test.ts), 2 frontend (dashboard-session-mapper.test.ts)
 
 ### Audit post-implementation (3 equipes paralleles)
 
-| # | Severite | Corrige | Probleme | Cause | Impact |
-|---|----------|---------|----------|-------|--------|
-| 1 | CRITICAL | OUI | GDPR export crash: req.user manque createdAt/updatedAt | JWT ne contient que id/email/name | TypeError a chaque appel export-data |
-| 2 | HIGH | OUI | TTS non gate par feature flag | featureFlagService accepte mais jamais lu dans les routes | Endpoint accessible meme si voiceMode=false |
-| 3 | HIGH | OUI | TTS sans rate limit | Route manque sessionLimiter | Abus API OpenAI possible |
-| 4 | HIGH | OUI | InMemoryChatRepository n'applique pas sessionUpdates | Seul version++ etait fait, pas title/museumName/visitContext | Tests integration silencieusement faux sur visit context |
-| 5 | HIGH | OUI | ImagePreviewModal setState pendant render | setState directement dans le corps du composant, hors useEffect | Anti-pattern React, bug de staleness potentiel |
-| 6 | HIGH | OUI | Onboarding pagingEnabled + snapToInterval conflit | pagingEnabled supersede snapToInterval sur iOS | Snapping desaligne |
-| 7 | MEDIUM | OUI | Redis connection failure silencieuse | catch vide | Pas de log, pas de diagnostic |
-| 8 | MEDIUM | OUI | FloatingContextMenu tint='light' en dur | Non migre vers theme | Broken en dark mode |
-| 9 | MEDIUM | OUI | StatusBar non synce avec theme override | style="auto" suit l'OS, pas le theme manuel | Status bar invisible en dark mode force |
-| 10 | MEDIUM | OUI | Infinite scroll double-fire | useState guard vs useRef guard | Doublons possibles dans la liste |
-| 11 | MEDIUM | OUI | JSDoc "Debounced" sans debounce | Documentation trompeuse | Confusion developpeur |
+| #   | Severite | Corrige | Probleme                                               | Cause                                                           | Impact                                                   |
+| --- | -------- | ------- | ------------------------------------------------------ | --------------------------------------------------------------- | -------------------------------------------------------- |
+| 1   | CRITICAL | OUI     | GDPR export crash: req.user manque createdAt/updatedAt | JWT ne contient que id/email/name                               | TypeError a chaque appel export-data                     |
+| 2   | HIGH     | OUI     | TTS non gate par feature flag                          | featureFlagService accepte mais jamais lu dans les routes       | Endpoint accessible meme si voiceMode=false              |
+| 3   | HIGH     | OUI     | TTS sans rate limit                                    | Route manque sessionLimiter                                     | Abus API OpenAI possible                                 |
+| 4   | HIGH     | OUI     | InMemoryChatRepository n'applique pas sessionUpdates   | Seul version++ etait fait, pas title/museumName/visitContext    | Tests integration silencieusement faux sur visit context |
+| 5   | HIGH     | OUI     | ImagePreviewModal setState pendant render              | setState directement dans le corps du composant, hors useEffect | Anti-pattern React, bug de staleness potentiel           |
+| 6   | HIGH     | OUI     | Onboarding pagingEnabled + snapToInterval conflit      | pagingEnabled supersede snapToInterval sur iOS                  | Snapping desaligne                                       |
+| 7   | MEDIUM   | OUI     | Redis connection failure silencieuse                   | catch vide                                                      | Pas de log, pas de diagnostic                            |
+| 8   | MEDIUM   | OUI     | FloatingContextMenu tint='light' en dur                | Non migre vers theme                                            | Broken en dark mode                                      |
+| 9   | MEDIUM   | OUI     | StatusBar non synce avec theme override                | style="auto" suit l'OS, pas le theme manuel                     | Status bar invisible en dark mode force                  |
+| 10  | MEDIUM   | OUI     | Infinite scroll double-fire                            | useState guard vs useRef guard                                  | Doublons possibles dans la liste                         |
+| 11  | MEDIUM   | OUI     | JSDoc "Debounced" sans debounce                        | Documentation trompeuse                                         | Confusion developpeur                                    |
 
 ### Points non verifies (a surveiller)
 
-| Point | Raison |
-|-------|--------|
-| TTS base64 cache en Redis — impact memoire | Pas de maxmemory configure; 200-500KB par message cache |
-| BlurView tint sur Android 13 | expo-blur a un support limite sur Android |
-| GDPR export OOM sur gros utilisateurs | Eager loading de toutes les sessions+messages sans pagination |
-| Cache race condition (read stale pendant invalidation) | Trade-off accepte du pattern cache-aside |
-| Pas de tests pour cache, TTS, GDPR export | Couverture de tests a ajouter en priorite |
-| OpenAPI spec manque TTS + GDPR export | Contract drift — endpoints existent mais non documentes |
+| Point                                                  | Raison                                                        | Statut (audit 2026-03-21) |
+| ------------------------------------------------------ | ------------------------------------------------------------- | ------------------------- |
+| TTS base64 cache en Redis — impact memoire             | Pas de maxmemory configure; 200-500KB par message cache       | OUVERT — Redis maxmemory a configurer |
+| BlurView tint sur Android 13                           | expo-blur a un support limite sur Android                     | OUVERT — limitation Expo connue |
+| GDPR export OOM sur gros utilisateurs                  | Eager loading de toutes les sessions+messages sans pagination | CORRIGE — pagination + transaction REPEATABLE READ |
+| Cache race condition (read stale pendant invalidation) | Trade-off accepte du pattern cache-aside                      | ACCEPTE — trade-off documente |
+| ~~Pas de tests pour cache, TTS, GDPR export~~         | ~~Couverture de tests a ajouter en priorite~~                 | RESOLU — tests existent: chat-service-tts.test.ts, chat-service-cache.test.ts, export-user-data.test.ts |
+| ~~OpenAPI spec manque TTS + GDPR export~~              | ~~Contract drift~~                                            | RESOLU — endpoints documentes dans openapi.json |
 
 ### Audit forensique post-remediation (3 equipes paralleles, 2eme passe)
 
@@ -572,43 +597,43 @@ S2-14 (GDPR checkbox)  → frontend independant
 
 ### Changements cles
 
-| # | Item | Fichiers principaux | Detail |
-|---|------|---------------------|--------|
-| 1 | S2-22: Strip PII JWT | `user-jwt-payload.ts`, `authSession.service.ts`, `authenticated.middleware.ts`, `auth.route.ts`, NEW `getProfile.useCase.ts` | AccessTokenClaims: `{sub,type,jti}` only. `verifyAccessToken()` returns `{id}`. `isAuthenticated` sets `req.user={id}`. `/me` et `/export-data` migres vers DB lookup via `GetProfileUseCase`. |
-| 2 | S2-08: Redis container | `docker-compose.dev.yml`, `cache.port.ts`, `redis-cache.service.ts`, `noop-cache.service.ts`, `app.ts`, `.env.local.example` | Redis 7-alpine ajoute. `setNx` sur interface CacheService + implementations. `createApp()` accepte `cacheService` optionnel. |
-| 3 | S2-17: Token cleanup | NEW `tokenCleanup.service.ts`, `index.ts` | `TokenCleanupService`: lock distribue via `setNx`, batch 10K, intervalle 6h, `timer.unref()`. Wire dans `index.ts` avec shutdown propre. |
-| 4 | S2-18: Change password | NEW `changePassword.useCase.ts`, `refresh-token.repository.pg.ts`, `auth.route.ts`, `useCase/index.ts` | `revokeAllForUser()` sur RefreshTokenRepositoryPg. UseCase: verify current → validate new → check not same → `updatePassword(plain-text)` → revoke all. `PUT /change-password`. Shared `RefreshTokenRepositoryPg` singleton. |
-| 5 | S2-13: Email verification | `user.entity.ts`, `user.repository.interface.ts`, `user.repository.pg.ts`, `register.useCase.ts`, NEW `verifyEmail.useCase.ts`, migration `AddEmailVerification` | 3 colonnes: `email_verified`, `verification_token`, `verification_token_expires`. Index partiel. `registerSocialUser()` set `email_verified=true`. RegisterUseCase envoie email (non-bloquant, try/catch). `POST /verify-email`. |
-| 6 | S2-09: OpenAPI spec | `openapi/openapi.json`, `openapi-response.contract.test.ts`, `api.postgres.e2e.test.ts` | Register 201: `{user:{id,email}}`. 5 endpoints ajoutes. Contract tests mis a jour (type `put` ajoute). E2E test register assertion corrige (ancien format `{email, password:'hidden'}`). Frontend types regeneres. |
-| 7 | S2-14: GDPR checkbox | `museum-frontend/app/auth.tsx` | Checkbox avec liens Terms/Privacy en mode register. Desactive sign-up + social buttons si non coche. Apple: `pointerEvents` wrapper. Google: `disabled`. Reset `gdprAccepted` au toggle mode. Login: texte legal simple. |
+| #   | Item                      | Fichiers principaux                                                                                                                                              | Detail                                                                                                                                                                                                                           |
+| --- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | S2-22: Strip PII JWT      | `user-jwt-payload.ts`, `authSession.service.ts`, `authenticated.middleware.ts`, `auth.route.ts`, NEW `getProfile.useCase.ts`                                     | AccessTokenClaims: `{sub,type,jti}` only. `verifyAccessToken()` returns `{id}`. `isAuthenticated` sets `req.user={id}`. `/me` et `/export-data` migres vers DB lookup via `GetProfileUseCase`.                                   |
+| 2   | S2-08: Redis container    | `docker-compose.dev.yml`, `cache.port.ts`, `redis-cache.service.ts`, `noop-cache.service.ts`, `app.ts`, `.env.local.example`                                     | Redis 7-alpine ajoute. `setNx` sur interface CacheService + implementations. `createApp()` accepte `cacheService` optionnel.                                                                                                     |
+| 3   | S2-17: Token cleanup      | NEW `tokenCleanup.service.ts`, `index.ts`                                                                                                                        | `TokenCleanupService`: lock distribue via `setNx`, batch 10K, intervalle 6h, `timer.unref()`. Wire dans `index.ts` avec shutdown propre.                                                                                         |
+| 4   | S2-18: Change password    | NEW `changePassword.useCase.ts`, `refresh-token.repository.pg.ts`, `auth.route.ts`, `useCase/index.ts`                                                           | `revokeAllForUser()` sur RefreshTokenRepositoryPg. UseCase: verify current → validate new → check not same → `updatePassword(plain-text)` → revoke all. `PUT /change-password`. Shared `RefreshTokenRepositoryPg` singleton.     |
+| 5   | S2-13: Email verification | `user.entity.ts`, `user.repository.interface.ts`, `user.repository.pg.ts`, `register.useCase.ts`, NEW `verifyEmail.useCase.ts`, migration `AddEmailVerification` | 3 colonnes: `email_verified`, `verification_token`, `verification_token_expires`. Index partiel. `registerSocialUser()` set `email_verified=true`. RegisterUseCase envoie email (non-bloquant, try/catch). `POST /verify-email`. |
+| 6   | S2-09: OpenAPI spec       | `openapi/openapi.json`, `openapi-response.contract.test.ts`, `api.postgres.e2e.test.ts`                                                                          | Register 201: `{user:{id,email}}`. 5 endpoints ajoutes. Contract tests mis a jour (type `put` ajoute). E2E test register assertion corrige (ancien format `{email, password:'hidden'}`). Frontend types regeneres.               |
+| 7   | S2-14: GDPR checkbox      | `museum-frontend/app/auth.tsx`                                                                                                                                   | Checkbox avec liens Terms/Privacy en mode register. Desactive sign-up + social buttons si non coche. Apple: `pointerEvents` wrapper. Google: `disabled`. Reset `gdprAccepted` au toggle mode. Login: texte legal simple.         |
 
 ### Decisions techniques
 
-| Decision | Raison |
-|----------|--------|
-| `updatePassword()` recoit plain-text, pas hash | Evite double-hashing: `updatePassword` hash en interne avec `BCRYPT_ROUNDS`. Pre-hasher causerait mots de passe inverifiables. |
-| Verification token stocke en clair | Risque acceptable pour email verification (inferieur aux auth tokens). Coherence avec reset_token existant. |
-| Social users `email_verified=true` a la creation | Providers (Apple/Google) verifient l'email. Sans ca, tous les social users apparaitraient non-verifies. |
-| Single-batch token cleanup (10K/tick) | Leger, non-bloquant. Si >10K expires, ticks suivants nettoient. Script standalone pour purge manuelle. |
-| `NoopCacheService.setNx` retourne `true` | Sans Redis, le cleanup s'execute toujours (pas de lock). Correct pour dev/test. |
+| Decision                                         | Raison                                                                                                                         |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `updatePassword()` recoit plain-text, pas hash   | Evite double-hashing: `updatePassword` hash en interne avec `BCRYPT_ROUNDS`. Pre-hasher causerait mots de passe inverifiables. |
+| Verification token stocke en clair               | Risque acceptable pour email verification (inferieur aux auth tokens). Coherence avec reset_token existant.                    |
+| Social users `email_verified=true` a la creation | Providers (Apple/Google) verifient l'email. Sans ca, tous les social users apparaitraient non-verifies.                        |
+| Single-batch token cleanup (10K/tick)            | Leger, non-bloquant. Si >10K expires, ticks suivants nettoient. Script standalone pour purge manuelle.                         |
+| `NoopCacheService.setNx` retourne `true`         | Sans Redis, le cleanup s'execute toujours (pas de lock). Correct pour dev/test.                                                |
 
 ### Tests ajoutes
 
-| Fichier | Tests | Couvre |
-|---------|-------|-------|
-| `tests/unit/auth/jwt-pii-strip.test.ts` | 5 | verifyAccessToken returns {id}, token decoded has no PII, login response has SafeUser, GetProfileUseCase |
-| `tests/unit/auth/token-cleanup.test.ts` | 4 | Lock acquired → runs, lock held → skips, no cache → runs, DB error → returns 0 |
-| `tests/unit/auth/change-password.test.ts` | 6 | Wrong password, same password, weak password, social-only, success + revoke, user not found |
-| `tests/unit/auth/verify-email.test.ts` | 5 | Valid token, expired token, empty token, register generates token, register succeeds if email fails |
+| Fichier                                   | Tests | Couvre                                                                                                   |
+| ----------------------------------------- | ----- | -------------------------------------------------------------------------------------------------------- |
+| `tests/unit/auth/jwt-pii-strip.test.ts`   | 5     | verifyAccessToken returns {id}, token decoded has no PII, login response has SafeUser, GetProfileUseCase |
+| `tests/unit/auth/token-cleanup.test.ts`   | 4     | Lock acquired → runs, lock held → skips, no cache → runs, DB error → returns 0                           |
+| `tests/unit/auth/change-password.test.ts` | 6     | Wrong password, same password, weak password, social-only, success + revoke, user not found              |
+| `tests/unit/auth/verify-email.test.ts`    | 5     | Valid token, expired token, empty token, register generates token, register succeeds if email fails      |
 
 ### Bug fixes inclus
 
-| Bug | Cause | Fix |
-|-----|-------|-----|
-| `/export-data` crash sur `createdAt`/`updatedAt` | JWT ne contenait jamais ces champs, cast incorrect | DB lookup via `GetProfileUseCase` |
-| E2E test register assertion | Phase 1A changed response to `{user:{id,email}}` but test still expected `{email, password:'hidden'}` | Updated assertion |
-| `request-logger.middleware.ts` ts-node error | Global Express augmentation not picked up by ts-node at runtime | Explicit type assertions |
-| Frontend `expo-tracking-transparency` crash on web | Top-level import loads native module eagerly | Lazy `import()` inside Platform.OS check |
+| Bug                                                | Cause                                                                                                 | Fix                                      |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `/export-data` crash sur `createdAt`/`updatedAt`   | JWT ne contenait jamais ces champs, cast incorrect                                                    | DB lookup via `GetProfileUseCase`        |
+| E2E test register assertion                        | Phase 1A changed response to `{user:{id,email}}` but test still expected `{email, password:'hidden'}` | Updated assertion                        |
+| `request-logger.middleware.ts` ts-node error       | Global Express augmentation not picked up by ts-node at runtime                                       | Explicit type assertions                 |
+| Frontend `expo-tracking-transparency` crash on web | Top-level import loads native module eagerly                                                          | Lazy `import()` inside Platform.OS check |
 
 ### Verification finale
 
@@ -622,16 +647,17 @@ S2-14 (GDPR checkbox)  → frontend independant
 - [x] Frontend OpenAPI types regenerated and synced
 
 ### Bilan Sprint 3 (post-forensic)
-| Metrique | Avant (S1.5) | Apres (S3) | Delta |
-|----------|-------------|------------|-------|
-| Backend tests | 217 | 247 | +30 |
-| Frontend tests | 11 | 13 | +2 |
-| Backend test suites | 24 | 30 | +6 |
-| New dependencies (BE) | 0 | 1 (ioredis) | +1 |
-| New dependencies (FE) | 0 | 3 (expo-tracking-transparency, expo-image-manipulator, expo-clipboard) | +3 |
-| New API endpoints | 0 | 2 (TTS, GDPR export) | +2 |
-| New env vars | 0 | 13 (cache, TTS, feature flags) | +13 |
-| Audit issues fixed | 0 | 19 (1 CRITICAL, 5 HIGH, 5+8 MEDIUM) | +19 |
+
+| Metrique              | Avant (S1.5) | Apres (S3)                                                             | Delta |
+| --------------------- | ------------ | ---------------------------------------------------------------------- | ----- |
+| Backend tests         | 217          | 247                                                                    | +30   |
+| Frontend tests        | 11           | 13                                                                     | +2    |
+| Backend test suites   | 24           | 30                                                                     | +6    |
+| New dependencies (BE) | 0            | 1 (ioredis)                                                            | +1    |
+| New dependencies (FE) | 0            | 3 (expo-tracking-transparency, expo-image-manipulator, expo-clipboard) | +3    |
+| New API endpoints     | 0            | 2 (TTS, GDPR export)                                                   | +2    |
+| New env vars          | 0            | 13 (cache, TTS, feature flags)                                         | +13   |
+| Audit issues fixed    | 0            | 19 (1 CRITICAL, 5 HIGH, 5+8 MEDIUM)                                    | +19   |
 
 ---
 
@@ -646,27 +672,27 @@ Cloture des 4 items identifies par les audits forensiques Sprint 3: (1) OpenAPI 
 
 ### Changements cles
 
-| Domaine | Action | Fichiers cles |
-|---------|--------|---------------|
-| Item 1: OpenAPI | TTS endpoint + FeatureUnavailable response + API key schemas/endpoints ajoutés au spec | `openapi/openapi.json` (24 paths, 27 ops) |
-| Item 1: Frontend | `synthesizeSpeech()` API call + `responseType` support dans httpRequest | `chatApi.ts`, `services/http.ts` |
-| Item 2: Tests TTS | 7 tests: audio buffer, empty text, user msg 400, ownership 404, no TTS 501, cache hit, no cache | `tests/integration/chat/chat-service-tts.test.ts` |
-| Item 2: Tests Cache | 4 tests: getSession cached, listSessions cached, postMessage invalidates, createSession invalidates | `tests/integration/chat/chat-service-cache.test.ts` |
-| Item 2: Tests GDPR | 3 tests: full payload, no chat data, null optional fields | `tests/unit/auth/export-user-data.test.ts` |
-| Item 2: Test helpers | InMemoryCacheService, FakeTextToSpeechService, FakeOcrService + buildChatTestService overload | `tests/helpers/` |
-| Item 3: Theme | 15 fichiers migres de `liquidColors` vers `useTheme()` (chat UI, screens, shared UI) | Batch A (7), B (3), C (5) |
-| Item 4A: OCR Guard | OcrService port + TesseractOcrService + DisabledOcrService + fail-open integration + 4 tests | `ocr-service.ts`, `chat.service.ts`, `chat-service-ocr-guard.test.ts` |
-| Item 4B: API Keys | ApiKey entity + HMAC-SHA256 hashing + timing-safe middleware + CRUD use cases + 14 tests + migration | 9 new files + auth.route.ts + authenticated.middleware.ts |
-| Item 4C: Offline | ConnectivityProvider + OfflineQueue + useOfflineQueue + OfflineBanner + useChatSession integration | 5 new files + useChatSession.ts + _layout.tsx |
+| Domaine              | Action                                                                                               | Fichiers cles                                                         |
+| -------------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Item 1: OpenAPI      | TTS endpoint + FeatureUnavailable response + API key schemas/endpoints ajoutés au spec               | `openapi/openapi.json` (24 paths, 27 ops)                             |
+| Item 1: Frontend     | `synthesizeSpeech()` API call + `responseType` support dans httpRequest                              | `chatApi.ts`, `services/http.ts`                                      |
+| Item 2: Tests TTS    | 7 tests: audio buffer, empty text, user msg 400, ownership 404, no TTS 501, cache hit, no cache      | `tests/integration/chat/chat-service-tts.test.ts`                     |
+| Item 2: Tests Cache  | 4 tests: getSession cached, listSessions cached, postMessage invalidates, createSession invalidates  | `tests/integration/chat/chat-service-cache.test.ts`                   |
+| Item 2: Tests GDPR   | 3 tests: full payload, no chat data, null optional fields                                            | `tests/unit/auth/export-user-data.test.ts`                            |
+| Item 2: Test helpers | InMemoryCacheService, FakeTextToSpeechService, FakeOcrService + buildChatTestService overload        | `tests/helpers/`                                                      |
+| Item 3: Theme        | 15 fichiers migres de `liquidColors` vers `useTheme()` (chat UI, screens, shared UI)                 | Batch A (7), B (3), C (5)                                             |
+| Item 4A: OCR Guard   | OcrService port + TesseractOcrService + DisabledOcrService + fail-open integration + 4 tests         | `ocr-service.ts`, `chat.service.ts`, `chat-service-ocr-guard.test.ts` |
+| Item 4B: API Keys    | ApiKey entity + HMAC-SHA256 hashing + timing-safe middleware + CRUD use cases + 14 tests + migration | 9 new files + auth.route.ts + authenticated.middleware.ts             |
+| Item 4C: Offline     | ConnectivityProvider + OfflineQueue + useOfflineQueue + OfflineBanner + useChatSession integration   | 5 new files + useChatSession.ts + \_layout.tsx                        |
 
 ### Audit destructif (3 agents paralleles)
 
-| Severity | Count | Corriges | Exemples |
-|----------|-------|----------|----------|
-| CRITICAL | 1 | 1 | Migration `api_keys` manquante — generee |
-| HIGH | 2 | 2 | async `validateApiKey` sans `.catch(next)`, `useSyncExternalStore` snapshot instabilite |
-| MEDIUM | 7 | 5 | `synthesizeSpeech` 204 dead code, OCR fail-open sans logging, contract tests API keys manquants, `setNx` TTL check |
-| LOW | 6 | 0 | Performance concerns (Tesseract worker-per-request, base64 cache overhead), architecture notes |
+| Severity | Count | Corriges | Exemples                                                                                                           |
+| -------- | ----- | -------- | ------------------------------------------------------------------------------------------------------------------ |
+| CRITICAL | 1     | 1        | Migration `api_keys` manquante — generee                                                                           |
+| HIGH     | 2     | 2        | async `validateApiKey` sans `.catch(next)`, `useSyncExternalStore` snapshot instabilite                            |
+| MEDIUM   | 7     | 5        | `synthesizeSpeech` 204 dead code, OCR fail-open sans logging, contract tests API keys manquants, `setNx` TTL check |
+| LOW      | 6     | 0        | Performance concerns (Tesseract worker-per-request, base64 cache overhead), architecture notes                     |
 
 ### Points non verifies (hors scope)
 
@@ -696,47 +722,47 @@ Cloture des 4 items identifies par les audits forensiques Sprint 3: (1) OpenAPI 
 
 ### Decisions d'architecture
 
-| Decision | Choix | Raison |
-|----------|-------|--------|
-| Prompts LLM | English-only + `Reply in ${language}` | Elimine 16+ ternaires FR/EN, fiable avec GPT-4o/Gemini/Deepseek |
-| Frontend framework | react-i18next + expo-localization | Standard RN, useSuspense: false, bundles statiques |
-| Locale propagation | Accept-Language header + context.locale body | Double canal: header global, body override par requete |
-| Guardrail refusals | Dictionnaire statique 7 langues x 3 variantes | Pas de LLM call pour les refus |
-| Locale storage | `runtime.defaultLocale` (cle unique) | Evite desync entre I18nContext et runtimeSettings |
-| Device language detection | Seulement si aucune preference stockee | Respect du choix explicite de l'utilisateur |
+| Decision                  | Choix                                         | Raison                                                          |
+| ------------------------- | --------------------------------------------- | --------------------------------------------------------------- |
+| Prompts LLM               | English-only + `Reply in ${language}`         | Elimine 16+ ternaires FR/EN, fiable avec GPT-4o/Gemini/Deepseek |
+| Frontend framework        | react-i18next + expo-localization             | Standard RN, useSuspense: false, bundles statiques              |
+| Locale propagation        | Accept-Language header + context.locale body  | Double canal: header global, body override par requete          |
+| Guardrail refusals        | Dictionnaire statique 7 langues x 3 variantes | Pas de LLM call pour les refus                                  |
+| Locale storage            | `runtime.defaultLocale` (cle unique)          | Evite desync entre I18nContext et runtimeSettings               |
+| Device language detection | Seulement si aucune preference stockee        | Respect du choix explicite de l'utilisateur                     |
 
 ### Backend — Nouveaux fichiers
 
-| Fichier | Role |
-|---------|------|
-| `src/shared/i18n/locale.ts` | `resolveLocale()`, `localeToLanguageName()`, `parseAcceptLanguageHeader()`, `SUPPORTED_LOCALES` |
-| `src/shared/i18n/guardrail-refusals.ts` | 21 strings statiques (7 langues x 3 variantes: insult, external_request, default) |
-| `src/shared/i18n/fallback-messages.ts` | Templates de fallback LLM localises (7 langues) |
-| `src/helpers/middleware/accept-language.middleware.ts` | Parse Accept-Language → `req.clientLocale` |
+| Fichier                                                | Role                                                                                            |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `src/shared/i18n/locale.ts`                            | `resolveLocale()`, `localeToLanguageName()`, `parseAcceptLanguageHeader()`, `SUPPORTED_LOCALES` |
+| `src/shared/i18n/guardrail-refusals.ts`                | 21 strings statiques (7 langues x 3 variantes: insult, external_request, default)               |
+| `src/shared/i18n/fallback-messages.ts`                 | Templates de fallback LLM localises (7 langues)                                                 |
+| `src/helpers/middleware/accept-language.middleware.ts` | Parse Accept-Language → `req.clientLocale`                                                      |
 
 ### Backend — Fichiers modifies
 
-| Fichier | Changement |
-|---------|-----------|
-| `app.ts` | +middleware acceptLanguage, +Accept-Language dans CORS allowedHeaders |
-| `llm-sections.ts` | Supprime `isFrenchLocale()` + 16 ternaires. Prompts EN-only + `Reply in ${language}`. Fallback localise via `FALLBACK_TEMPLATES[locale].defaultQuestion` |
-| `art-topic-guardrail.ts` | Supprime `isFrench()`. `buildGuardrailRefusal` → lookup `GUARDRAIL_REFUSALS[resolveLocale()]`. +CJK keywords (8), +greetings multilangues. +`isCjk()` guard pour `containsKeyword` (`\b` ne marche pas avec CJK) |
-| `langchain.orchestrator.ts` | `startsWith('fr') ? 'French' : 'English'` → `localeToLanguageName(resolveLocale([locale]))` |
-| `chat.route.ts` | Accept-Language fallback dans messages/audio/stream/sessions handlers |
-| `chat.service.ts` | Session locale update mid-conversation (normalise via `resolveLocale()` avant persistance) |
-| `chat.repository.interface.ts` | +`locale?: string` dans `PersistMessageSessionUpdates` |
-| `chat.repository.typeorm.ts` | Applique `sessionUpdates.locale` dans la transaction persistMessage |
+| Fichier                        | Changement                                                                                                                                                                                                       |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app.ts`                       | +middleware acceptLanguage, +Accept-Language dans CORS allowedHeaders                                                                                                                                            |
+| `llm-sections.ts`              | Supprime `isFrenchLocale()` + 16 ternaires. Prompts EN-only + `Reply in ${language}`. Fallback localise via `FALLBACK_TEMPLATES[locale].defaultQuestion`                                                         |
+| `art-topic-guardrail.ts`       | Supprime `isFrench()`. `buildGuardrailRefusal` → lookup `GUARDRAIL_REFUSALS[resolveLocale()]`. +CJK keywords (8), +greetings multilangues. +`isCjk()` guard pour `containsKeyword` (`\b` ne marche pas avec CJK) |
+| `langchain.orchestrator.ts`    | `startsWith('fr') ? 'French' : 'English'` → `localeToLanguageName(resolveLocale([locale]))`                                                                                                                      |
+| `chat.route.ts`                | Accept-Language fallback dans messages/audio/stream/sessions handlers                                                                                                                                            |
+| `chat.service.ts`              | Session locale update mid-conversation (normalise via `resolveLocale()` avant persistance)                                                                                                                       |
+| `chat.repository.interface.ts` | +`locale?: string` dans `PersistMessageSessionUpdates`                                                                                                                                                           |
+| `chat.repository.typeorm.ts`   | Applique `sessionUpdates.locale` dans la transaction persistMessage                                                                                                                                              |
 
 ### Frontend — Nouveaux fichiers
 
-| Fichier | Role |
-|---------|------|
-| `shared/i18n/i18n.ts` | Init i18next avec 7 bundles statiques |
-| `shared/i18n/I18nContext.tsx` | Provider React: AsyncStorage + device detection + sync i18n/httpClient/runtimeSettings |
-| `shared/i18n/types.ts` | Module augmentation i18next pour type-safe keys |
-| `shared/config/supportedLocales.ts` | `LANGUAGE_OPTIONS`, `toSupportedLocale()` |
-| `shared/locales/{en,fr,es,de,it,ja,zh}/translation.json` | 296 cles chacun |
-| `scripts/check-i18n-completeness.js` | CI: verifie toutes les cles EN existent dans chaque langue |
+| Fichier                                                  | Role                                                                                   |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `shared/i18n/i18n.ts`                                    | Init i18next avec 7 bundles statiques                                                  |
+| `shared/i18n/I18nContext.tsx`                            | Provider React: AsyncStorage + device detection + sync i18n/httpClient/runtimeSettings |
+| `shared/i18n/types.ts`                                   | Module augmentation i18next pour type-safe keys                                        |
+| `shared/config/supportedLocales.ts`                      | `LANGUAGE_OPTIONS`, `toSupportedLocale()`                                              |
+| `shared/locales/{en,fr,es,de,it,ja,zh}/translation.json` | 296 cles chacun                                                                        |
+| `scripts/check-i18n-completeness.js`                     | CI: verifie toutes les cles EN existent dans chaque langue                             |
 
 ### Frontend — Fichiers modifies (~25 fichiers)
 
@@ -749,27 +775,27 @@ Cloture des 4 items identifies par les audits forensiques Sprint 3: (1) OpenAPI 
 
 ### Tests
 
-| Suite | Avant | Apres |
-|-------|-------|-------|
-| Backend total | 346 (1 fail pre-existant) | 367 (40/40 suites pass) |
-| Backend nouveaux | — | `locale.test.ts` (35), `guardrail-refusals.test.ts` (5), `accept-language.test.ts` (4) |
-| Backend modifies | — | `llm-sections.test.ts` (+7 locales), `art-topic-guardrail.test.ts` (+4 locales) |
-| Frontend | 13 | 22 |
-| i18n CI check | — | 7 langues x 296 cles = PASS |
+| Suite            | Avant                     | Apres                                                                                  |
+| ---------------- | ------------------------- | -------------------------------------------------------------------------------------- |
+| Backend total    | 346 (1 fail pre-existant) | 367 (40/40 suites pass)                                                                |
+| Backend nouveaux | —                         | `locale.test.ts` (35), `guardrail-refusals.test.ts` (5), `accept-language.test.ts` (4) |
+| Backend modifies | —                         | `llm-sections.test.ts` (+7 locales), `art-topic-guardrail.test.ts` (+4 locales)        |
+| Frontend         | 13                        | 22                                                                                     |
+| i18n CI check    | —                         | 7 langues x 296 cles = PASS                                                            |
 
 ### Bugs trouves et corriges par audit
 
-| # | Severite | Fichier | Bug | Correction |
-|---|----------|---------|-----|------------|
-| 1 | CRITICAL | `art-topic-guardrail.ts` | `\b` regex ne fonctionne pas avec CJK — keywords JA/ZH ne matchent jamais | `isCjk()` guard → `includes()` pour CJK |
-| 2 | CRITICAL | `art-topic-guardrail.ts` | `GREETING_PATTERN` `\b` casse apres こんにちは/你好 | `\b` → `(\b\|$)` en fin de pattern |
-| 3 | CRITICAL | `llm-sections.ts` | Fallback `'Artwork question.'` hardcode EN dans texte sinon localise | Utilise `FALLBACK_TEMPLATES[locale].defaultQuestion` |
-| 4 | HIGH | `I18nContext.tsx` | Dual AsyncStorage keys (`app.language` vs `runtime.defaultLocale`) | Unifie: lit `runtime.defaultLocale` directement |
-| 5 | HIGH | `guardrail-refusals.ts` + `fallback-messages.ts` | Diacritiques manquants FR/ES/DE/IT | Tous accents corriges |
-| 6 | MEDIUM | `chat.service.ts` | `requestedLocale` brut persiste en DB | Normalise via `resolveLocale()` |
-| 7 | MEDIUM | `I18nContext.tsx` | `defaults.defaultLocale = "en-US"` empeche detection device pour nouveaux users | Lit raw AsyncStorage, detecte device si null |
-| 8 | MEDIUM | `chatApi.ts` | Streaming `fetch()` sans Accept-Language header | Ajoute `'Accept-Language': getLocale()` |
-| 9 | LOW | `check-i18n-completeness.js` | Valeurs `null` dans JSON non detectees | Ajoute check `value === null` et `typeof !== 'string'` |
+| #   | Severite | Fichier                                          | Bug                                                                             | Correction                                             |
+| --- | -------- | ------------------------------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| 1   | CRITICAL | `art-topic-guardrail.ts`                         | `\b` regex ne fonctionne pas avec CJK — keywords JA/ZH ne matchent jamais       | `isCjk()` guard → `includes()` pour CJK                |
+| 2   | CRITICAL | `art-topic-guardrail.ts`                         | `GREETING_PATTERN` `\b` casse apres こんにちは/你好                             | `\b` → `(\b\|$)` en fin de pattern                     |
+| 3   | CRITICAL | `llm-sections.ts`                                | Fallback `'Artwork question.'` hardcode EN dans texte sinon localise            | Utilise `FALLBACK_TEMPLATES[locale].defaultQuestion`   |
+| 4   | HIGH     | `I18nContext.tsx`                                | Dual AsyncStorage keys (`app.language` vs `runtime.defaultLocale`)              | Unifie: lit `runtime.defaultLocale` directement        |
+| 5   | HIGH     | `guardrail-refusals.ts` + `fallback-messages.ts` | Diacritiques manquants FR/ES/DE/IT                                              | Tous accents corriges                                  |
+| 6   | MEDIUM   | `chat.service.ts`                                | `requestedLocale` brut persiste en DB                                           | Normalise via `resolveLocale()`                        |
+| 7   | MEDIUM   | `I18nContext.tsx`                                | `defaults.defaultLocale = "en-US"` empeche detection device pour nouveaux users | Lit raw AsyncStorage, detecte device si null           |
+| 8   | MEDIUM   | `chatApi.ts`                                     | Streaming `fetch()` sans Accept-Language header                                 | Ajoute `'Accept-Language': getLocale()`                |
+| 9   | LOW      | `check-i18n-completeness.js`                     | Valeurs `null` dans JSON non detectees                                          | Ajoute check `value === null` et `typeof !== 'string'` |
 
 ### Verification finale
 
@@ -780,3 +806,340 @@ Cloture des 4 items identifies par les audits forensiques Sprint 3: (1) OpenAPI 
 - [x] i18n completeness: 7 langues x 296 cles PASS
 - [x] Aucun `isFrenchLocale`/`isFrench`/`startsWith('fr')` residuel dans backend src/
 - [x] 2 passes d'audit adversarial (4 agents x 2 = 8 audits paralleles)
+
+---
+
+## Sprint 2 (suite) — Lot A+C: Services consolidation, x-request-id, FlatList perf, a11y (2026-03-21)
+
+> 4 taches implementees (S2-07, S2-15, S2-16, S2-24). 26 tests frontend (22 → 26). 3 equipes de review (Architecture, Frontend Integration, QA/Risk).
+
+### S2-16 — Consolider services/ → features/auth/ + shared/
+
+**Probleme** : le repertoire `services/` (6 fichiers, 625 lignes) melangeait auth-specific et cross-cutting dans un dossier plat, hors architecture feature-driven.
+
+**Solution** : migration en 6 phases ordonnees par dependance :
+
+1. `apiConfig.ts` → `shared/infrastructure/apiConfig.ts` (cross-cutting)
+2. `http.ts` → `shared/api/httpRequest.ts` (generic HTTP wrapper)
+3. `tokenStore.ts` + `authStorage.ts` → `features/auth/infrastructure/authTokenStore.ts` (merge in-memory + persistent)
+4. `authService.ts` → `features/auth/infrastructure/authApi.ts` (auth HTTP adapter)
+5. `socialAuthService.ts` → `features/auth/infrastructure/socialAuthProviders.ts`
+6. Suppression `services/` + ancien `authStorage.ts`
+
+**Fichiers crees** : `shared/infrastructure/apiConfig.ts`, `shared/api/httpRequest.ts`, `features/auth/infrastructure/authTokenStore.ts`, `features/auth/infrastructure/authApi.ts`, `features/auth/infrastructure/socialAuthProviders.ts`
+**Fichiers supprimes** : `services/index.ts`, `services/authService.ts`, `services/apiConfig.ts`, `services/http.ts`, `services/tokenStore.ts`, `services/socialAuthService.ts`, `features/auth/infrastructure/authStorage.ts`
+**Consumers mis a jour** : 10 fichiers (AuthContext.tsx, \_layout.tsx, auth.tsx, settings.tsx, httpClient.ts, useSocialLogin.ts, openapiClient.ts, chatApi.ts, runtimeSettings.ts, StartupConfigurationErrorScreen.tsx)
+
+**Verification** : grep `@/services` = 0 resultats, typecheck OK, 22 tests green, pas de dependance circulaire.
+
+### S2-24 — Propagation x-request-id depuis frontend + enrichissement AppError
+
+**Probleme** : le backend genere un `requestId` pour chaque requete mais le frontend n'en envoie jamais — impossible de correler logs mobile ↔ backend.
+
+**Solution** :
+
+- **Nouveau fichier** `shared/infrastructure/requestId.ts` — generateur UUID v4-like (Math.random, suffisant pour tracing)
+- **httpClient.ts** : injection `X-Request-Id` dans l'interceptor request (ligne 102), log en DEV (ligne 124)
+- **chatApi.ts** : injection `X-Request-Id` dans les headers SSE fetch (ligne 367)
+- **AppError.ts** : ajout champ `requestId?: string` a l'interface + assignation dans `createAppError`
+- **httpClient.ts mapAxiosError** : extraction `requestId` depuis `response.data.error.requestId` via nouveau helper `getApiRequestId()`, threade dans les 6 appels `createAppError` (401, 403x2, 404, 4xx, 5xx)
+
+**Test** : `tests/request-id.test.ts` — 4 tests (format UUID, unicite 100 appels, version nibble, variant bits)
+
+### S2-15 — FlatList performance
+
+**Probleme** : 3 FlatLists sans optimisation de rendu, inline renderItem recree a chaque render.
+
+**Solution** :
+
+- **Conversations** (`conversations.tsx`) : extraction `renderItem` en `useCallback` avec deps completes (`theme, savedSessionIds, t, toggleSavedSession, router`), ajout `initialNumToRender={10}`, `maxToRenderPerBatch={8}`, `windowSize={5}`, `removeClippedSubviews={Platform.OS === 'android'}`
+- **Chat messages** (`ChatMessageList.tsx`) : ajout `initialNumToRender={15}`, `maxToRenderPerBatch={10}`, `windowSize={7}` (renderItem deja en useCallback, ChatMessageBubble deja memo)
+- **Onboarding** (`OnboardingSlide.tsx`) : wrap `React.memo` (3 slides statiques, evite re-renders au swipe)
+- Pas de `getItemLayout` (hauteur variable), pas de `removeClippedSubviews` sur chat (flicker images)
+
+### S2-07 — Accessibility labels/roles/hints
+
+**Probleme** : 0% de couverture a11y — 100+ elements interactifs sans label sur 14 ecrans.
+
+**Solution** :
+
+- **Traductions** : section `"a11y"` ajoutee aux 7 fichiers de traduction (en, fr, es, de, it, ja, zh) — ~85 cles par langue
+- **22 fichiers de composants modifies** : ajout `accessibilityRole`, `accessibilityLabel={t('a11y.xxx')}`, `accessibilityHint`, `accessibilityState` sur tous les Pressable, TextInput, Switch, TouchableOpacity
+- Props dynamiques : `accessibilityState={{ checked: gdprAccepted }}` (checkbox), `{{ checked: museumMode }}` (switch), `{{ selected: mode === option.value }}` (theme/language), `{{ disabled }}` (boutons disabled)
+- Labels dynamiques : `accessibilityLabel={item.title}` (conversation cards), `accessibilityLabel={question}` (follow-up), `accessibilityLabel={suggestion.text}` (welcome card)
+
+### Review multi-teams post-implementation
+
+3 equipes lancees en parallele (Architecture, Frontend Integration, QA/Risk) — 12 categories verifiees.
+
+**Issues trouvees et corrigees** :
+
+1. `router` manquant dans deps useCallback `renderConversationItem` → ajoute
+2. Pas de test pour `generateRequestId()` → 4 tests ajoutes
+
+**Confirmations** :
+
+- 0 reference orpheline `@/services`
+- 0 dependance circulaire
+- Singleton accessToken partage correctement entre httpClient et chatApi
+- Auth flow (login + refresh) intact via nouveau authTokenStore
+- CORS header case match (X-Request-Id title case)
+- Backend requestId extraction match (nested `error.requestId`)
+- React.memo + Reanimated safe (shared values internes au composant)
+- GoogleSignin.configure() idempotent au module load
+- Platform.OS web safe avec try/catch fallback
+
+### Verification finale
+
+- [x] Frontend `tsc --noEmit`: 0 erreurs
+- [x] Frontend tests: 26 pass (22 → 26)
+- [x] `grep @/services` : 0 resultats
+- [x] `services/` : repertoire supprime
+- [x] 3 equipes de review (Architecture, Frontend, QA) : APPROVED
+- [x] 2 corrections post-review appliquees et verifiees
+
+---
+
+## Post-Sprint Audit — Remediation Plan v2 (2026-03-21)
+
+> Audit forensique complet du repo apres 9 commits (Sprint 2-3). 3 equipes de review (Architecture, Backend/Frontend, QA/Risk) + websearch. 9 lots identifies, 9 implementes. 12 anomalies traitees.
+
+### LOT H — Fix streaming mobile (expo/fetch) — CRITICAL
+
+**Probleme** : Le `fetch()` global de React Native ne supporte pas `response.body.getReader()` — le streaming SSE tombait silencieusement dans le fallback `response.text()` = pas de streaming progressif sur mobile.
+**Source** : [RN#27741](https://github.com/facebook/react-native/issues/27741), [RN#37505](https://github.com/facebook/react-native/issues/37505)
+
+**Fix** : `import { fetch as expoFetch } from 'expo/fetch'` dans `chatApi.ts:postMessageStream()`. Expo SDK 52+ supporte `response.body.getReader()` sur iOS/Android.
+**Fichier** : `museum-frontend/features/chat/infrastructure/chatApi.ts`
+
+### LOT A — OCR Worker Pool (Tesseract Scheduler) — CRITICAL
+
+**Probleme** : Worker Tesseract cree/detruit par requete = 2-5s overhead. Non concurrent-safe (singleton serialise).
+**Source** : [tesseract.js#875](https://github.com/naptha/tesseract.js/issues/875)
+
+**Fix** : `TesseractOcrService` refactorise avec `createScheduler()` + 2 workers lazy-init. `destroy()` methode ajoutee. Getter `getOcrService()` expose pour shutdown. `tesseract.js` deplace en `optionalDependencies`.
+**Fichiers** : `ocr-service.ts`, `chat/index.ts`, `index.ts`, `package.json`
+
+### LOT B — Nginx SSE + migration domaine musaium.com/fr — CRITICAL
+
+**Probleme** : Config Nginx existante avait `proxy_read_timeout 60s` (tue SSE) + pas de `gzip off` (bufferise chunks SSE). Migration vers nouveaux domaines musaium.com/musaium.fr.
+**Source** : [OneUptime blog](https://oneuptime.com/blog/post/2025-12-16-server-sent-events-nginx/view)
+
+**Fix** : Config Nginx complete avec location SSE dedie (`proxy_read_timeout 600s`, `proxy_buffering off`, `gzip off`, `Connection ''`). Support certbot multi-domaines (SAN cert). Redirect legacy `museum.asilidesign.fr`.
+**Fichier** : `museum-backend/deploy/nginx/musaium.conf` (nouveau)
+
+### LOT C — Dockerfile HEALTHCHECK — HIGH
+
+**Fix** : `HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3` + `STOPSIGNAL SIGTERM` ajoutes au Dockerfile.prod. Utilise `fetch('http://localhost:3000/api/health')` (Node 22 global fetch).
+**Fichier** : `museum-backend/deploy/Dockerfile.prod`
+
+### LOT D — Rate limit POST /api-keys — MEDIUM
+
+**Probleme** : Pas de rate-limit dedie sur POST /api-keys. Le global IP s'execute avant auth → req.user n'existe pas.
+
+**Fix** : `byUserId` key generator dans rate-limit.middleware.ts. Applique route-level APRES `isAuthenticatedJwtOnly` (10 req/60s).
+**Fichiers** : `rate-limit.middleware.ts`, `auth.route.ts`
+
+### LOT E — i18n strings manquantes — MEDIUM
+
+**Fix** : `OfflineBanner.tsx` et `useAudioRecorder.ts` (5 Alert.alert) migres vers `useTranslation()`. 2 nouvelles sections (`offline`, `audio`) ajoutees aux 7 fichiers de traduction.
+**Fichiers** : `OfflineBanner.tsx`, `useAudioRecorder.ts`, 7 x `translation.json`
+
+### LOT G — Offline queue sync post-flush — MEDIUM
+
+**Probleme** : Apres flush des messages en queue, les reponses assistant n'apparaissaient qu'apres reload manuel.
+
+**Fix** : Apres flush reussi, `chatApi.getSession()` refetch les messages serveur et remplace l'etat local.
+**Fichier** : `useChatSession.ts`
+
+### LOT I — Locale sync CI guard — LOW
+
+**Fix** : Script `scripts/check-locale-sync.sh` compare `SUPPORTED_LOCALES` backend/frontend et fail si divergence.
+**Fichier** : `scripts/check-locale-sync.sh` (nouveau)
+
+### Hypotheses invalidees par review
+
+| Hypothese v1                             | Verdict                                                            |
+| ---------------------------------------- | ------------------------------------------------------------------ |
+| ReadableStream RN 0.79 = "a investiguer" | INVALIDE — fetch global ne supporte pas, fix requis via expo/fetch |
+| OCR singleton simple                     | CORRIGE — singleton serialise, utiliser Scheduler                  |
+| Nginx `proxy_buffering off` suffit       | CORRIGE — `gzip off` obligatoire                                   |
+| Rate limit byUserId en global            | CORRIGE — global avant auth, doit etre route-level                 |
+| ThemePalette 23 tokens                   | CORRIGE — 21 tokens                                                |
+| I18nContext.tsx TS error                 | RESOLU — code propre                                               |
+| Double loadRuntimeSettings()             | FAUX POSITIF — pas de doublon                                      |
+| StartupConfigurationErrorScreen 12 hex   | PAR DESIGN — avant ThemeProvider                                   |
+
+### Verification finale
+
+- [x] Backend: `tsc --noEmit` OK, 360 tests pass (40 suites, 7 skipped)
+- [x] Frontend: `tsc --noEmit` OK, 26 tests pass
+
+---
+
+## Sprint 2 (suite) — Lot B Infrastructure : Sentry + Uptime + Backup (2026-03-21)
+
+> 3 taches infra implementees (S2-10, S2-11, S2-12). Sprint 2 passe de 88% a 100%.
+
+### S2-10 — Sentry backend + frontend
+
+**Probleme** : zero observabilite sur les erreurs — pas de crash reporting, pas de tracking, logs stdout uniquement.
+
+**Solution backend** :
+
+- Installe `@sentry/node` v10.45
+- **Nouveau module** `src/shared/observability/sentry.ts` — centralise toute l'integration Sentry :
+  - `initSentry()` : init SDK avec DSN/env/release/tracesSampleRate, no-op si `SENTRY_DSN` absent
+  - `setupSentryExpressErrorHandler(app)` : middleware error handler SDK entre routes et custom errorHandler
+  - `captureExceptionWithContext(error, context)` : wrapper avec scope tags (requestId, method, path)
+  - `isSentryEnabled()` : boolean
+- `env.ts` : ajout bloc optionnel `sentry?` (meme pattern que `tts`, `cache`)
+- `index.ts` : `initSentry()` premiere ligne de `start()`, avant DB init
+- `app.ts` : `setupSentryExpressErrorHandler(app)` entre routes et errorHandler
+- `error.middleware.ts` : `captureExceptionWithContext()` sur les 5xx uniquement (pas les 4xx = bruit)
+- `.env.local.example` : ajout `SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE`
+
+**Solution frontend** :
+
+- Installe `@sentry/react-native`
+- `app.config.ts` : ajout plugin `@sentry/react-native/expo` avec org/project
+- `_layout.tsx` : `Sentry.init()` avec DSN platform-specific (Android/iOS via env vars), `enabled: !!dsn`, wrap export `Sentry.wrap(RootLayout)`
+- `.env.local.example` : ajout `EXPO_PUBLIC_SENTRY_DSN_ANDROID`, `EXPO_PUBLIC_SENTRY_DSN_IOS`
+
+**CI** :
+
+- `deploy-backend.yml` + `deploy-backend-staging.yml` : ajout steps "Create Sentry release" + "Upload source maps" avec guard `if: secrets.SENTRY_AUTH_TOKEN`
+- `docs/CI_CD_SECRETS.md` : section Sentry documentant tous les secrets
+
+**Fichiers** : 1 cree (`sentry.ts`), 11 modifies
+
+### S2-11 — Uptime monitoring (BetterUptime)
+
+**Probleme** : health endpoint existant a `/api/health` (DB + LLM checks, 200/503) mais aucun service externe qui le poll.
+
+**Solution** :
+
+- `api.router.ts` : ajout `responseTimeMs` au payload health (timing autour du healthCheck)
+- `openapi.json` : ajout `responseTimeMs: integer` au schema HealthResponse
+- **Nouveau doc** `docs/UPTIME_MONITORING.md` : provider (Better Stack), config monitors prod/staging, politique d'alerte, heartbeats pour taches planifiees
+
+**Fichiers** : 1 cree (`UPTIME_MONITORING.md`), 2 modifies
+
+### S2-12 — Backup DB automatise
+
+**Probleme** : zero backup automatise — tout repose sur le provider VPS ou des sauvegardes manuelles.
+
+**Solution** :
+
+- **Nouveau script** `scripts/backup-db.sh` :
+  - `pg_dump --format=custom --compress=9 --no-owner`
+  - Nommage : `musaium-backup-YYYY-MM-DD-HHMMSS.dump`
+  - Repertoires `daily/` + `weekly/` (copie dimanche)
+  - Retention configurable : 7 daily + 4 weekly (defaut)
+  - Cross-platform `stat` (Linux + macOS)
+  - Heartbeat ping optionnel (BetterUptime)
+  - Toutes valeurs via env vars, zero hardcode
+- **Nouveau doc** `docs/DB_BACKUP_RESTORE.md` :
+  - Schedule, role PostgreSQL backup (SELECT only), cron setup
+  - Procedure restore staging puis prod
+  - Note RGPD : retention max 35 jours
+  - Integration monitoring heartbeat
+- `DEPLOYMENT_STEP_BY_STEP.md` : section 23 remplacee par reference vers backup doc
+- `.env.local.example` : ajout vars backup (`BACKUP_DB_USER`, `BACKUP_DB_PASSWORD`, `BACKUP_DIR`, `BACKUP_HEARTBEAT_URL`)
+
+**Fichiers** : 2 crees (`backup-db.sh`, `DB_BACKUP_RESTORE.md`), 2 modifies
+
+### Verification finale
+
+- [x] Backend: `tsc --noEmit` OK, 360 tests pass (40 suites)
+- [x] Frontend: `tsc --noEmit` OK, 26 tests pass
+- [x] Sprint 2: 25/25 (100%) — S2-02 (Instagram handle) compte comme reporte [-]
+- [x] S3-13 (Sentry APM) debloque par S2-10
+- [x] `scripts/check-locale-sync.sh` : SUPPORTED_LOCALES in sync
+- [x] 3 equipes de review (Architecture, Backend/Frontend, QA/Risk) : corrections integrees
+
+---
+
+## S3-13 — APM setup (Sentry Performance) (2026-03-21)
+
+### S3-13: Sentry Performance / APM
+
+**Backend — Custom Spans + User Identification**
+- Enhanced `src/shared/observability/sentry.ts`: added `startSpan()` wrapper with `NOOP_SPAN` Proxy (safe no-op when Sentry disabled) + `setUser()` helper. Added `profilesSampleRate` to `Sentry.init()`.
+- `src/config/env.ts`: added `profilesSampleRate: number` field to `sentry?` config block, parsed from `SENTRY_PROFILES_SAMPLE_RATE` (default: 0).
+- `src/app.ts`: added `sentry-trace` and `baggage` to CORS `allowedHeaders` for distributed tracing.
+- `src/modules/chat/adapters/secondary/langchain.orchestrator.ts`: wrapped `generate()` in `ai.orchestrate` span with attributes (provider, model, has_image, history_length), added `llm.latency_ms` and `llm.degraded` attributes. Wrapped each section task `model.invoke` in `ai.invoke` span. Wrapped `generateStream()` in `ai.orchestrate` span, `model.stream` in `ai.stream` child span.
+- `src/modules/chat/adapters/secondary/audio-transcriber.openai.ts`: wrapped `transcribe()` in `ai.transcribe` span with mime_type and model attributes.
+- `src/modules/chat/adapters/secondary/ocr-service.ts`: wrapped `extractText()` in `ai.ocr` span.
+- `src/modules/chat/adapters/secondary/image-storage.s3.ts`: wrapped `save()` in `storage.upload` span.
+- `src/helpers/middleware/authenticated.middleware.ts`: added `setUser({ id })` after JWT verification in both `isAuthenticated` and `isAuthenticatedJwtOnly`.
+- `src/helpers/middleware/apiKey.middleware.ts`: added `setUser({ id })` after API key validation.
+- `.env.local.example`: documented `SENTRY_PROFILES_SAMPLE_RATE`.
+
+**Frontend — Navigation Instrumentation + User ID + Error Capture + Distributed Tracing**
+- `app/_layout.tsx`: replaced minimal `Sentry.init()` with full APM config: `reactNativeTracingIntegration()` + `reactNavigationIntegration({ enableTimeToInitialDisplay: true })` as peer integrations, `enableAutoPerformanceTracing: true`. Added `useNavigationContainerRef()` + `registerNavigationContainer()` for Expo Router screen performance tracking.
+- `context/AuthContext.tsx`: added `identifySentryUser()` helper (JWT decode → `Sentry.setUser({ id })`), called on all 3 auth success paths (bootstrap, refresh handler, checkTokenValidity). Added `Sentry.setUser(null)` on logout, unauthorized handler, and auth failure.
+- `features/chat/application/useChatSession.ts`: added `Sentry.captureException()` in both `loadSession` and `sendMessage` catch blocks with flow tags.
+- `features/chat/infrastructure/chatApi.ts`: imported `getTraceData`/`isInitialized` from `@sentry/core` (not re-exported by `@sentry/react-native`), injected trace headers into SSE `expoFetch` call for distributed tracing.
+
+**Key Decisions**
+- `@sentry/profiling-node` NOT installed (native dep, build complexity) — config field future-ready at 0 default.
+- `NOOP_SPAN` uses a Proxy pattern instead of `undefined` cast — prevents runtime crashes if callback uses `span.setAttribute()`.
+- `reactNativeTracingIntegration` and `reactNavigationIntegration` are peer integrations in v8, not nested.
+- Only 4 business-critical adapters instrumented with spans (LLM, audio, OCR, S3) — Express HTTP, outgoing HTTP, and DB auto-instrumented by defaults.
+
+**Fichiers** : 0 crees, 14 modifies (9 backend, 4 frontend, 1 config)
+
+### Verification
+- [x] Backend: `tsc --noEmit` OK, 360 tests pass (40 suites)
+- [x] Frontend: `tsc --noEmit` OK, 26 tests pass
+
+---
+
+## Enterprise Audit — Post-Sprint 3 Forensic Review (2026-03-21)
+
+**Scope**: Full-stack forensic audit of Sprints 1-3 work. 3 explore agents (codebase cartography) + 2 plan agents (remediation design) + 4 review teams (architecture, backend validation, frontend integration, QA/risk).
+
+### Resume executif
+
+Enterprise-grade audit verifying 84/101 tasks across Sprints 1-3. All tracker claims confirmed against code. Architecture verified sound (hexagonal backend, feature-driven frontend). 0 CRITICAL, 2 HIGH, 10 MEDIUM, 6 LOW findings. Key remediations applied.
+
+### Findings Summary
+
+| Severity | Count | Key Items |
+|----------|-------|-----------|
+| CRITICAL | 0 | — |
+| HIGH | 2 | Frontend Sentry absent (F-06), uncommitted changeset (C-02) |
+| MEDIUM | 10 | Rate limiter leak (A-01), GDPR OOM (A-04), OCR timeout (A-09), OpenAPI params (A-02), TTS Redis (A-05), Google OAuth hardcoded (F-03), 429 mapping (F-05), a11y gaps (F-07), Sentry whitelist (NEW-6), GDPR transaction (NEW-5) |
+| LOW | 6 | Logger consistency (A-03), feature flag docs (A-06), APM (A-07), DRY violations (A-10/A-11), CI locale sync (C-01), sprint log stale (C-03) |
+
+### Corrections applied
+
+| Fix | Files | Description |
+|-----|-------|-------------|
+| A-01 | `rate-limit.middleware.ts`, `index.ts` | Sweep timer + MAX_MAP_SIZE cap + graceful shutdown |
+| A-02 | `openapi.json` | Added missing query params and x-feature-flag extensions |
+| A-03 | `app.ts` | console.error → logger.error for Redis init |
+| A-04 | `chat.repository.typeorm.ts` | GDPR export paginated with REPEATABLE READ transaction |
+| A-09 | `ocr-service.ts` | Promise.race timeout (30s) with fail-open |
+| F-05 | `AppError.ts`, `httpClient.ts`, `errors.ts` | RateLimited error kind + 429 mapping |
+| F-06 | `errorReporting.ts`, `AuthContext.tsx`, `httpClient.ts` | Sentry error reporting with kind whitelist + dedup guard |
+| F-07 | `OfflineBanner.tsx`, `OnboardingSlide.tsx`, `ChatMessageBubble.tsx` | Accessibility props added |
+| F-08 | `chatApi.ts` | requestId passed through SSE onError callback |
+| F-03 | `socialAuthProviders.ts`, `app.config.ts` | Google OAuth IDs externalized to env vars |
+
+### Verified as sound (no action needed)
+
+- Hexagonal architecture, JWT PII stripping, guardrail layering, prompt isolation
+- Session ownership on all endpoints, auth refresh dedup, React lifecycle
+- services/ migration complete, 13 migrations no drift, Docker build, nginx SSE
+- No circular dependencies (lazy binding), intentional HTTP layering, security storage tiers
+
+### Test metrics
+
+| Metric | Before | After | Delta |
+|--------|--------|-------|-------|
+| Backend tests | 360 | 364+ | +4 (rate limiter sweep) |
+| Frontend tests | 26 | 29+ | +3 (RateLimited error) |
+| Backend typecheck | OK | OK | — |
+| Frontend typecheck | OK | OK | — |

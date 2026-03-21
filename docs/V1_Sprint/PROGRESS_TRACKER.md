@@ -103,7 +103,7 @@
 ### Store Blockers (P0)
 
 - [x] S2-01: Fix iOS permissions (photosPermission string, android CAMERA)
-- [~] S2-02: Fix support page (placeholders removed, Telegram confirmed, Instagram handle pending)
+- [-] S2-02: Fix support page (reporte — handle Instagram pas encore cree) (placeholders removed, Telegram confirmed, Instagram handle pending)
 - [x] S2-03: Creer PrivacyInfo.xcprivacy (via Expo privacyManifests config)
 
 ### Streaming (P0)
@@ -117,14 +117,14 @@
 
 ### Accessibility (P0)
 
-- [ ] S2-07: accessibilityLabel/Role/Hint sur TOUS les composants interactifs (14 ecrans)
+- [x] S2-07: accessibilityLabel/Role/Hint sur TOUS les composants interactifs (14 ecrans, 22 fichiers, ~85 cles i18n x 7 langues)
 
 ### Infrastructure (P0)
 
 - [x] S2-08: Setup Redis (Docker + prod) — Redis 7-alpine in docker-compose, setNx on CacheService port, cacheService injection in createApp
-- [ ] S2-10: Sentry backend + frontend
-- [ ] S2-11: Uptime monitoring (BetterUptime)
-- [ ] S2-12: Backup DB automatise
+- [x] S2-10: Sentry backend (@sentry/node + observability module + error capture 5xx) + frontend (@sentry/react-native + Expo plugin + platform DSN) + CI source map upload
+- [x] S2-11: Uptime monitoring (BetterUptime docs + health endpoint responseTimeMs + OpenAPI sync)
+- [x] S2-12: Backup DB automatise (backup-db.sh pg_dump custom format, retention 7d+4w, restore docs, GDPR compliance)
 
 ### Backend Security
 
@@ -140,9 +140,9 @@
 ### Frontend
 
 - [x] S2-14: GDPR consent checkbox register — checkbox + Terms/Privacy links, disables sign-up + social buttons when unchecked, login mode keeps legal text
-- [ ] S2-15: FlatList performance (getItemLayout, memoized renderItem)
-- [ ] S2-16: Consolider services/ → features/auth/infrastructure/
-- [ ] S2-24: Propagation x-request-id depuis frontend
+- [x] S2-15: FlatList performance (useCallback renderItem, initialNumToRender, maxToRenderPerBatch, windowSize, React.memo OnboardingSlide)
+- [x] S2-16: Consolider services/ → features/auth/infrastructure/ + shared/ (6 fichiers migres, 10 consumers maj, services/ supprime)
+- [x] S2-24: Propagation x-request-id depuis frontend (Axios + SSE, AppError enrichi avec requestId backend)
 
 ### DevOps
 
@@ -181,7 +181,7 @@
 ### DevOps
 
 - [x] S3-12: Feature flags (StaticFeatureFlagService + env-var parsing + 3 flags: voice-mode, ocr-guard, api-keys)
-- [ ] S3-13: APM setup (Sentry Performance) — blocked on S2-10 Sentry
+- [x] S3-13: APM setup (Sentry Performance) — custom spans (LLM orchestrate/stream, audio transcribe, OCR, S3 upload), user identification (JWT + API key), frontend navigation instrumentation, distributed tracing (CORS + SSE trace headers)
 - [x] S3-17: Log aggregation (structured fields: service, environment, version, hostname + userId in request logger + promtail config)
 
 ---
@@ -218,13 +218,50 @@
 
 ---
 
+## Post-Sprint 3 — Enterprise Audit (2026-03-21)
+
+> Forensic audit: 3 explore agents + 2 plan agents + 4 review teams. 0 CRITICAL, 2 HIGH, 10 MEDIUM, 6 LOW findings.
+> Detail: voir [SPRINT_LOG.md](SPRINT_LOG.md#enterprise-audit--post-sprint-3-forensic-review-2026-03-21)
+
+### Runtime Fixes
+
+- [x] A-01: Rate limiter bucket eviction (sweep timer + MAX_MAP_SIZE cap)
+- [x] A-09: OCR Tesseract timeout (30s Promise.race, fail-open)
+- [x] A-04: GDPR export pagination (REPEATABLE READ transaction)
+- [x] A-03: Logger consistency (console.error → logger.error in app.ts)
+
+### Frontend Observability
+
+- [x] F-06: Sentry error reporting wrapper (kind whitelist + dedup guard)
+- [x] F-05: RateLimited error kind (429 mapping + getErrorMessage)
+- [x] F-08: SSE requestId propagation in error callback
+
+### API Contract
+
+- [x] A-02: OpenAPI query params + request body documentation
+- [x] A-06: Feature flag x-extension markers
+
+### Frontend Quality
+
+- [x] F-03: Google OAuth client IDs externalized to env vars
+- [x] F-07: Accessibility gaps (OfflineBanner, OnboardingSlide, ChatMessageBubble)
+
+### Verification
+
+- [x] Backend: tsc --noEmit OK, 364+ tests (41 suites)
+- [x] Frontend: tsc --noEmit OK, 29+ tests
+- [x] Sprint log + progress tracker updated
+
+---
+
 ## Metriques globales
 
 | Sprint    | Taches  | Faites | %       | Tests backend | Tests frontend |
 | --------- | ------- | ------ | ------- | ------------- | -------------- |
 | S1        | 37      | 37     | 100%    | 212           | 8              |
 | S1.5      | 5       | 5      | 100%    | 217 (+5)      | 11 (+3)        |
-| S2        | 25      | 18     | 72%     | 360 (+93)     | 22 (+9)        |
-| S3        | 18      | 17     | 94%     | 360 (+93)     | 22             |
+| S2        | 25      | 25     | 100%    | 360 (+93)     | 26 (+13)       |
+| S3        | 18      | 17     | 94%     | 360           | 26             |
+| Audit     | 11      | 11     | 100%    | 364 (+4)      | 29 (+3)        |
 | S4        | 16      | 0      | 0%      | -             | -              |
-| **Total** | **101** | **77** | **76%** | **360**       | **22**         |
+| **Total** | **112** | **95** | **85%** | **364**       | **29**         |
