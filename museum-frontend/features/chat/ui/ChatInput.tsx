@@ -47,6 +47,7 @@ export const ChatInput = ({
         placeholderTextColor={theme.textSecondary}
         multiline
         editable={!disabled}
+        accessibilityLabel={t('a11y.chat.message_input')}
       />
       <Pressable
         style={[styles.sendButton, { backgroundColor: theme.primary }]}
@@ -55,6 +56,9 @@ export const ChatInput = ({
           onSend();
         }}
         disabled={isSending || disabled}
+        accessibilityRole="button"
+        accessibilityLabel={t('a11y.chat.send')}
+        accessibilityHint={t('a11y.chat.send_hint')}
       >
         {isSending ? (
           <ActivityIndicator color='#FFFFFF' />

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -25,7 +25,7 @@ interface OnboardingSlideProps {
 }
 
 /** Single onboarding slide with Reanimated entrance animations. */
-export const OnboardingSlide = ({ slide }: OnboardingSlideProps) => {
+export const OnboardingSlide = React.memo(({ slide }: OnboardingSlideProps) => {
   const { theme } = useTheme();
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(20);
@@ -41,13 +41,16 @@ export const OnboardingSlide = ({ slide }: OnboardingSlideProps) => {
   }));
 
   return (
-    <View style={[styles.slide, { width: SCREEN_WIDTH - 36 }]}>
+    <View
+      style={[styles.slide, { width: SCREEN_WIDTH - 36 }]}
+      accessibilityLabel={`${slide.title}. ${slide.subtitle}`}
+    >
       <Animated.View style={animatedStyle}>
         <View style={styles.iconWrap}>
           <Ionicons name={slide.icon} size={48} color={theme.primary} />
         </View>
 
-        <Text style={[styles.title, { color: theme.textPrimary }]}>{slide.title}</Text>
+        <Text style={[styles.title, { color: theme.textPrimary }]} accessibilityRole="header">{slide.title}</Text>
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>{slide.subtitle}</Text>
 
         <GlassCard style={styles.card} intensity={50}>
@@ -61,7 +64,7 @@ export const OnboardingSlide = ({ slide }: OnboardingSlideProps) => {
       </Animated.View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   slide: {

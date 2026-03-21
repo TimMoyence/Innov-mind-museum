@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
+  Platform,
   Pressable,
   Share,
   StyleSheet,
@@ -156,6 +157,30 @@ export default function ConversationsScreen() {
     setMenuStatus(exists ? t('conversations.session_unsaved') : t('conversations.session_saved'));
   };
 
+  const renderConversationItem = useCallback(
+    ({ item }: { item: DashboardSessionCard }) => (
+      <Pressable
+        style={[styles.card, { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground }]}
+        onPress={() => router.push(`/(stack)/chat/${item.id}`)}
+        onLongPress={() => {
+          void toggleSavedSession(item.id);
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={item.title}
+        accessibilityHint={t('a11y.conversations.card_hint')}
+      >
+        <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{item.title}</Text>
+        <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>{item.subtitle}</Text>
+        <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>{item.timeLabel}</Text>
+        <Text style={[styles.cardTags, { color: theme.primary }]}>{t('conversations.message_count', { count: item.messageCount })}</Text>
+        <Text style={[styles.savedHint, { color: theme.textSecondary }]}>
+          {savedSessionIds.includes(item.id) ? t('conversations.saved_hint') : t('conversations.unsaved_hint')}
+        </Text>
+      </Pressable>
+    ),
+    [theme, savedSessionIds, t, toggleSavedSession, router],
+  );
+
   const visibleItems = useMemo(() => {
     let filtered = isSavedOnly
       ? items.filter((item) => savedSessionIds.includes(item.id))
@@ -206,7 +231,7 @@ export default function ConversationsScreen() {
 
       <ConversationSearchBar value={searchQuery} onChangeText={setSearchQuery} />
 
-      <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(tabs)/home')}>
+      <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(tabs)/home')} accessibilityRole="button" accessibilityLabel={t('a11y.conversations.start_new')}>
         <Text style={styles.primaryButtonText}>{t('conversations.start_new')}</Text>
       </Pressable>
 
@@ -220,11 +245,16 @@ export default function ConversationsScreen() {
         <FlatList
           data={visibleItems}
           keyExtractor={(item) => item.id}
+          renderItem={renderConversationItem}
           contentContainerStyle={styles.listContent}
           refreshing={isRefreshing}
           onRefresh={() => void loadDashboard(true)}
           onEndReached={() => void loadMore()}
           onEndReachedThreshold={0.3}
+          initialNumToRender={10}
+          maxToRenderPerBatch={8}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
           ListFooterComponent={
             isLoadingMore ? <SkeletonConversationCard /> : null
           }
@@ -238,23 +268,6 @@ export default function ConversationsScreen() {
               </Text>
             </GlassCard>
           }
-          renderItem={({ item }) => (
-            <Pressable
-              style={[styles.card, { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground }]}
-              onPress={() => router.push(`/(stack)/chat/${item.id}`)}
-              onLongPress={() => {
-                void toggleSavedSession(item.id);
-              }}
-            >
-              <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{item.title}</Text>
-              <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>{item.subtitle}</Text>
-              <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>{item.timeLabel}</Text>
-              <Text style={[styles.cardTags, { color: theme.primary }]}>{t('conversations.message_count', { count: item.messageCount })}</Text>
-              <Text style={[styles.savedHint, { color: theme.textSecondary }]}>
-                {savedSessionIds.includes(item.id) ? t('conversations.saved_hint') : t('conversations.unsaved_hint')}
-              </Text>
-            </Pressable>
-          )}
         />
       )}
     </LiquidScreen>

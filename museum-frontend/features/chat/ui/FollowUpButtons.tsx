@@ -26,6 +26,9 @@ export const FollowUpButtons = ({ questions, onPress, disabled = false }: Follow
           style={[styles.button, disabled && styles.buttonDisabled]}
           onPress={() => onPress(question)}
           disabled={disabled}
+          accessibilityRole="button"
+          accessibilityLabel={question}
+          accessibilityHint={t('a11y.chat.follow_up_hint')}
         >
           <Ionicons name='send-outline' size={14} color={theme.primary} />
           <Text style={[styles.buttonText, { color: theme.primary }]}>{question}</Text>

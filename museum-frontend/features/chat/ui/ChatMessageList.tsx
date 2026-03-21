@@ -58,7 +58,7 @@ export const ChatMessageList = ({
     return null;
   }, [messages]);
 
-  // Auto-scroll when messages change or sending starts
+  // Auto-scroll when new messages arrive or sending starts
   useEffect(() => {
     if (messages.length > 0 || isSending) {
       setTimeout(() => {
@@ -66,6 +66,13 @@ export const ChatMessageList = ({
       }, 100);
     }
   }, [messages.length, isSending]);
+
+  // Auto-scroll as streaming content grows
+  const handleContentSizeChange = useCallback(() => {
+    if (isStreaming) {
+      flatListRef.current?.scrollToEnd({ animated: false });
+    }
+  }, [isStreaming]);
 
   const renderItem = useCallback(
     ({ item }: { item: ChatUiMessage }) => {
@@ -105,7 +112,12 @@ export const ChatMessageList = ({
       ref={flatListRef}
       data={messages}
       keyExtractor={(item) => item.id}
+      renderItem={renderItem}
       contentContainerStyle={styles.listContent}
+      initialNumToRender={15}
+      maxToRenderPerBatch={10}
+      windowSize={7}
+      onContentSizeChange={handleContentSizeChange}
       ListEmptyComponent={
         <WelcomeCard
           museumMode={museumMode}
@@ -115,7 +127,6 @@ export const ChatMessageList = ({
         />
       }
       ListFooterComponent={showTypingIndicator ? <TypingIndicator /> : null}
-      renderItem={renderItem}
     />
   );
 };

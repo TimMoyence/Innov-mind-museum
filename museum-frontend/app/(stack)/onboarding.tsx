@@ -93,7 +93,7 @@ export default function OnboardingScreen() {
 
   return (
     <LiquidScreen background={pickMuseumBackground(3)} contentStyle={[styles.screen, { paddingTop: insets.top + 16 }]}>
-      <Pressable onPress={handleSkip} style={styles.skipButton}>
+      <Pressable onPress={handleSkip} style={styles.skipButton} accessibilityRole="button" accessibilityLabel={t('a11y.onboarding.skip')}>
         <Text style={[styles.skipText, { color: theme.textSecondary }]}>{t('onboarding.skip')}</Text>
       </Pressable>
 
@@ -120,7 +120,7 @@ export default function OnboardingScreen() {
       <StepIndicator totalSteps={slides.length} currentStep={currentStep} />
 
       <View style={styles.footer}>
-        <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={handleNext}>
+        <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={handleNext} accessibilityRole="button" accessibilityLabel={isLast ? t('a11y.onboarding.get_started') : t('a11y.onboarding.next')}>
           <Text style={styles.primaryButtonText}>
             {isLast ? t('onboarding.get_started') : t('onboarding.next')}
           </Text>

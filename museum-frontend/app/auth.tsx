@@ -15,7 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/context/AuthContext';
-import { authStorage } from '@/features/auth/infrastructure/authStorage';
+import { authService } from '@/features/auth/infrastructure/authApi';
+import { authStorage, setAccessToken } from '@/features/auth/infrastructure/authTokenStore';
 import { HOME_ROUTE } from '@/features/auth/routes';
 import { useSocialLogin } from '@/features/auth/application/useSocialLogin';
 import { getErrorMessage } from '@/shared/lib/errors';
@@ -26,7 +27,6 @@ import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { authService, setAccessToken } from '@/services';
 
 /** Renders the login and registration screen with email/password, Apple, and Google sign-in options. */
 export default function AuthScreen() {
@@ -206,6 +206,7 @@ export default function AuthScreen() {
                   placeholderTextColor='#64748B'
                   value={firstname}
                   onChangeText={setFirstname}
+                  accessibilityLabel={t('a11y.auth.firstname_input')}
                 />
               </View>
               <View style={styles.inputShell}>
@@ -216,6 +217,7 @@ export default function AuthScreen() {
                   placeholderTextColor='#64748B'
                   value={lastname}
                   onChangeText={setLastname}
+                  accessibilityLabel={t('a11y.auth.lastname_input')}
                 />
               </View>
             </>
@@ -231,6 +233,7 @@ export default function AuthScreen() {
               onChangeText={setEmail}
               autoCapitalize='none'
               keyboardType='email-address'
+              accessibilityLabel={t('a11y.auth.email_input')}
             />
           </View>
 
@@ -243,25 +246,26 @@ export default function AuthScreen() {
               value={password}
               onChangeText={setPassword}
               secureTextEntry
+              accessibilityLabel={t('a11y.auth.password_input')}
             />
           </View>
 
           {isLogin ? (
-            <Pressable style={styles.forgotPasswordButton} onPress={handleForgotPassword}>
+            <Pressable style={styles.forgotPasswordButton} onPress={handleForgotPassword} accessibilityRole="button" accessibilityLabel={t('a11y.auth.forgot_password')} accessibilityHint={t('a11y.auth.forgot_password_hint')}>
               <Text style={[styles.forgotPasswordText, { color: theme.primary }]}>{t('auth.forgot_password')}</Text>
             </Pressable>
           ) : null}
 
           {!isLogin ? (
-            <Pressable style={styles.gdprRow} onPress={() => setGdprAccepted((v) => !v)}>
+            <Pressable style={styles.gdprRow} onPress={() => setGdprAccepted((v) => !v)} accessibilityRole="checkbox" accessibilityLabel={t('a11y.auth.gdpr_checkbox')} accessibilityState={{ checked: gdprAccepted }}>
               <View style={[styles.checkbox, gdprAccepted && { backgroundColor: theme.primary, borderColor: theme.primary }]}>
                 {gdprAccepted ? <Ionicons name='checkmark' size={14} color='#FFFFFF' /> : null}
               </View>
               <Text style={[styles.gdprText, { color: theme.textSecondary }]}>
                 {t('auth.agree_terms').split(t('auth.terms_of_service'))[0]}
-                <Text style={[styles.gdprLink, { color: theme.primary }]} onPress={openTerms}>{t('auth.terms_of_service')}</Text>
+                <Text style={[styles.gdprLink, { color: theme.primary }]} onPress={openTerms} accessibilityRole="link" accessibilityLabel={t('a11y.auth.terms_link')}>{t('auth.terms_of_service')}</Text>
                 {t('auth.agree_terms').split(t('auth.terms_of_service'))[1]?.split(t('auth.privacy_policy'))[0]}
-                <Text style={[styles.gdprLink, { color: theme.primary }]} onPress={openPrivacy}>{t('auth.privacy_policy')}</Text>
+                <Text style={[styles.gdprLink, { color: theme.primary }]} onPress={openPrivacy} accessibilityRole="link" accessibilityLabel={t('a11y.auth.privacy_link')}>{t('auth.privacy_policy')}</Text>
               </Text>
             </Pressable>
           ) : null}
@@ -270,6 +274,9 @@ export default function AuthScreen() {
             style={[styles.submitButton, { backgroundColor: theme.primary }, (isLoading || isSocialLoading || (!isLogin && !gdprAccepted)) && styles.submitButtonDisabled]}
             onPress={isLogin ? handleLogin : handleRegister}
             disabled={isLoading || isSocialLoading || (!isLogin && !gdprAccepted)}
+            accessibilityRole="button"
+            accessibilityLabel={isLogin ? t('a11y.auth.login_button') : t('a11y.auth.register_button')}
+            accessibilityState={{ disabled: isLoading || isSocialLoading || (!isLogin && !gdprAccepted) }}
           >
             {isLoading || isSocialLoading ? (
               <ActivityIndicator color='#FFFFFF' />
@@ -282,6 +289,8 @@ export default function AuthScreen() {
             style={styles.switchButton}
             onPress={toggleAuthMode}
             disabled={isLoading || isSocialLoading}
+            accessibilityRole="button"
+            accessibilityLabel={isLogin ? t('a11y.auth.toggle_register') : t('a11y.auth.toggle_login')}
           >
             <Text style={[styles.switchButtonText, { color: theme.textPrimary }]}>
               {isLogin ? t('auth.no_account') : t('auth.has_account')}
@@ -295,7 +304,7 @@ export default function AuthScreen() {
           </View>
 
           {appleAuthAvailable ? (
-            <View style={{ opacity: !isLogin && !gdprAccepted ? 0.5 : 1 }} pointerEvents={!isLogin && !gdprAccepted ? 'none' : 'auto'}>
+            <View style={{ opacity: !isLogin && !gdprAccepted ? 0.5 : 1 }} pointerEvents={!isLogin && !gdprAccepted ? 'none' : 'auto'} accessibilityRole="button" accessibilityLabel={t('a11y.auth.apple_signin')}>
               <AppleAuthentication.AppleAuthenticationButton
                 buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
                 buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
@@ -310,6 +319,8 @@ export default function AuthScreen() {
             style={[styles.googleButton, (!isLogin && !gdprAccepted) && { opacity: 0.5 }]}
             onPress={() => void handleGoogleSignIn()}
             disabled={isLoading || isSocialLoading || (!isLogin && !gdprAccepted)}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.auth.google_signin')}
           >
             <Ionicons name='logo-google' size={20} color={theme.textPrimary} />
             <Text style={[styles.googleButtonText, { color: theme.textPrimary }]}>{t('auth.sign_in_google')}</Text>

@@ -5,6 +5,8 @@ import * as Haptics from 'expo-haptics';
 import { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { MarkdownBubble } from '@/features/chat/ui/MarkdownBubble';
 import { ArtworkCard } from '@/features/chat/ui/ArtworkCard';
+import { useTranslation } from 'react-i18next';
+
 import { useTheme } from '@/shared/ui/ThemeContext';
 
 interface ChatMessageBubbleProps {
@@ -33,6 +35,7 @@ export const ChatMessageBubble = React.memo(({
   onReport,
 }: ChatMessageBubbleProps) => {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const isAssistant = message.role === 'assistant';
 
   // Blinking cursor animation for streaming
@@ -97,6 +100,9 @@ export const ChatMessageBubble = React.memo(({
               alignSelf: 'flex-start',
             },
           ]}
+          accessibilityRole="text"
+          accessibilityLabel={t('a11y.chat.assistant_message')}
+          accessibilityHint={t('a11y.chat.long_press_hint')}
         >
           {bubbleContent}
         </Pressable>
@@ -110,6 +116,8 @@ export const ChatMessageBubble = React.memo(({
               alignSelf: 'flex-end',
             },
           ]}
+          accessibilityRole="text"
+          accessibilityLabel={t('a11y.chat.user_message')}
         >
           {bubbleContent}
         </View>

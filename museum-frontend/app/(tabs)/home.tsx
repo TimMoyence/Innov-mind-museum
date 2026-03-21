@@ -108,6 +108,10 @@ export default function HomeScreen() {
         style={[styles.primaryButton, { backgroundColor: theme.primary }]}
         onPress={() => void startConversation('default')}
         disabled={isCreating}
+        accessibilityRole="button"
+        accessibilityLabel={t('a11y.home.start_conversation')}
+        accessibilityHint={t('a11y.home.start_conversation_hint')}
+        accessibilityState={{ disabled: isCreating }}
       >
         {isCreating ? (
           <ActivityIndicator color='#FFFFFF' />
@@ -117,10 +121,10 @@ export default function HomeScreen() {
       </Pressable>
 
       <View style={styles.secondaryRow}>
-        <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/onboarding')}>
+        <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/onboarding')} accessibilityRole="button" accessibilityLabel={t('a11y.home.onboarding')}>
           <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('home.onboarding')}</Text>
         </Pressable>
-        <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/settings')}>
+        <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/settings')} accessibilityRole="button" accessibilityLabel={t('a11y.home.settings')}>
           <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('home.settings')}</Text>
         </Pressable>
       </View>

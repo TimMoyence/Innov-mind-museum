@@ -31,6 +31,9 @@ export const RecommendationChips = ({ recommendations, onPress, disabled = false
             style={[styles.chip, disabled && styles.chipDisabled]}
             onPress={() => onPress(recommendation)}
             disabled={disabled}
+            accessibilityRole="button"
+            accessibilityLabel={recommendation}
+            accessibilityHint={t('a11y.chat.recommendation_hint')}
           >
             <Ionicons name='create-outline' size={14} color={theme.primary} />
             <Text style={[styles.chipText, { color: theme.primary }]} numberOfLines={1}>{recommendation}</Text>

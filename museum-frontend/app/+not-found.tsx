@@ -19,7 +19,11 @@ export default function NotFoundScreen() {
         <GlassCard style={styles.card} intensity={60}>
           <Text style={[styles.title, { color: theme.textPrimary }]}>{t('notFound.title')}</Text>
           <Link href='/' asChild>
-            <Pressable style={[styles.button, { backgroundColor: theme.primary }]}>
+            <Pressable
+              style={[styles.button, { backgroundColor: theme.primary }]}
+              accessibilityRole="link"
+              accessibilityLabel={t('a11y.notFound.home')}
+            >
               <Text style={styles.buttonText}>{t('notFound.button')}</Text>
             </Pressable>
           </Link>

@@ -42,6 +42,8 @@ export const FloatingContextMenu = ({
             key={action.id}
             onPress={() => handleAction(action)}
             style={styles.menuAction}
+            accessibilityRole="button"
+            accessibilityLabel={action.label}
           >
             <Ionicons name={action.icon} size={16} color={theme.textPrimary} />
             <Text style={[styles.menuLabel, { color: theme.textPrimary }]}>{action.label}</Text>
