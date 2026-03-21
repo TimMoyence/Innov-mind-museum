@@ -203,8 +203,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         '@react-native-google-signin/google-signin',
         {
+          // Derived from GOOGLE_IOS_CLIENT_ID — update if client ID changes
           iosUrlScheme:
             'com.googleusercontent.apps.498339023976-8r199kpqbqmhb7mdf45ostg3sutqeng2',
+        },
+      ],
+      [
+        '@sentry/react-native/expo',
+        {
+          organization: process.env.SENTRY_ORG || 'musaium',
+          project: process.env.SENTRY_PROJECT || 'musaium-mobile',
         },
       ],
     ],
@@ -226,6 +234,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         env.EXPO_PUBLIC_API_BASE_URL_PROD,
       ),
       API_ENVIRONMENT: apiEnvironment,
+      GOOGLE_WEB_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '498339023976-bjbain2ir2t9q4pu9lsmmk8ni7t96dd7.apps.googleusercontent.com',
+      GOOGLE_IOS_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '498339023976-8r199kpqbqmhb7mdf45ostg3sutqeng2.apps.googleusercontent.com',
       APP_VARIANT: variant,
       eas: projectId
         ? {
