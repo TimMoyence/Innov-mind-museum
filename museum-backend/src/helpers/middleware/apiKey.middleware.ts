@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 import type { ApiKeyRepository } from '@modules/auth/core/domain/apiKey.repository.interface';
 import { logger } from '@shared/logger/logger';
+import { setUser } from '@shared/observability/sentry';
 
 /** Singleton reference set during auth module initialization. */
 let apiKeyRepo: ApiKeyRepository | null = null;
@@ -76,6 +77,7 @@ export async function validateApiKey(
 
     // Set user on request (same shape as JWT auth)
     (req as Request & { user?: { id: number } }).user = { id: apiKey.userId };
+    setUser({ id: String(apiKey.userId) });
 
     // Update lastUsedAt asynchronously (fire-and-forget)
     apiKeyRepo.updateLastUsed(apiKey.id).catch((err) => {

@@ -4,6 +4,7 @@ import https from 'https';
 import { randomUUID } from 'crypto';
 
 import { ImageStorage, SaveImageInput } from './image-storage.stub';
+import { startSpan } from '@shared/observability/sentry';
 
 /** Configuration for an S3-compatible image storage backend. */
 export interface S3ImageStorageConfig {
@@ -635,36 +636,38 @@ export class S3CompatibleImageStorage implements ImageStorage {
    * @throws Error if the S3 PUT request fails.
    */
   async save(input: SaveImageInput): Promise<string> {
-    const body = Buffer.from(input.base64, 'base64');
-    const extension = extensionByMime[input.mimeType] || 'img';
-    const now = new Date();
-    const fallbackKey = [
-      'chat-images',
-      String(now.getUTCFullYear()),
-      String(now.getUTCMonth() + 1).padStart(2, '0'),
-      `${randomUUID()}.${extension}`,
-    ].join('/');
-    const key = normalizeObjectKey({
-      key: input.objectKey || fallbackKey,
-      objectKeyPrefix: this.config.objectKeyPrefix,
-    });
+    return startSpan({ name: 'image.upload.s3', op: 'storage.upload' }, async () => {
+      const body = Buffer.from(input.base64, 'base64');
+      const extension = extensionByMime[input.mimeType] || 'img';
+      const now = new Date();
+      const fallbackKey = [
+        'chat-images',
+        String(now.getUTCFullYear()),
+        String(now.getUTCMonth() + 1).padStart(2, '0'),
+        `${randomUUID()}.${extension}`,
+      ].join('/');
+      const key = normalizeObjectKey({
+        key: input.objectKey || fallbackKey,
+        objectKeyPrefix: this.config.objectKeyPrefix,
+      });
 
-    const signed = buildS3SignedHeadersForPut({
-      config: this.config,
-      key,
-      body,
-      contentType: input.mimeType,
-      now,
-    });
+      const signed = buildS3SignedHeadersForPut({
+        config: this.config,
+        key,
+        body,
+        contentType: input.mimeType,
+        now,
+      });
 
-    await httpPut({
-      url: signed.url,
-      headers: signed.headers,
-      body,
-      timeoutMs: this.config.requestTimeoutMs,
-    });
+      await httpPut({
+        url: signed.url,
+        headers: signed.headers,
+        body,
+        timeoutMs: this.config.requestTimeoutMs,
+      });
 
-    return buildS3ImageRef(key);
+      return buildS3ImageRef(key);
+    });
   }
 
   /**

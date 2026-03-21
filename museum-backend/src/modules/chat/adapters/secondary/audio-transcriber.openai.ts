@@ -1,5 +1,6 @@
 import { env } from '@src/config/env';
 import { AppError, badRequest } from '@shared/errors/app.error';
+import { startSpan } from '@shared/observability/sentry';
 
 /** Input for an audio transcription request. */
 export interface AudioTranscriberInput {
@@ -77,6 +78,14 @@ export class OpenAiAudioTranscriber implements AudioTranscriber {
    * @throws AppError with code `UPSTREAM_AUDIO_TRANSCRIPTION_ERROR` on API failure.
    */
   async transcribe(input: AudioTranscriberInput): Promise<AudioTranscriptionResult> {
+    return startSpan({
+      name: 'audio.transcribe',
+      op: 'ai.transcribe',
+      attributes: {
+        'audio.mime_type': input.mimeType,
+        'audio.model': env.llm.audioTranscriptionModel,
+      },
+    }, async () => {
     if (env.llm.provider !== 'openai' || !env.llm.openAiApiKey) {
       throw new AppError({
         message:
@@ -147,6 +156,7 @@ export class OpenAiAudioTranscriber implements AudioTranscriber {
       model: env.llm.audioTranscriptionModel,
       provider: 'openai',
     };
+    }); // end startSpan('audio.transcribe')
   }
 }
 

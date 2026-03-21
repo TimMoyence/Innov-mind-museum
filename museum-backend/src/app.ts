@@ -20,6 +20,8 @@ import {
 import { requestIdMiddleware } from '@src/helpers/middleware/request-id.middleware';
 import { requestLoggerMiddleware } from '@src/helpers/middleware/request-logger.middleware';
 import { setupSwagger } from '@src/helpers/swagger';
+import { logger } from '@shared/logger/logger';
+import { setupSentryExpressErrorHandler } from '@shared/observability/sentry';
 
 /** Optional overrides for dependency injection, primarily used in tests. */
 interface CreateAppOptions {
@@ -65,7 +67,7 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
       origin: corsOrigins,
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Accept-Language'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Accept-Language', 'sentry-trace', 'baggage'],
     }),
   );
 
@@ -113,8 +115,7 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
       defaultTtlSeconds: env.cache.sessionTtlSeconds,
     });
     void redisCacheService.connect().catch((err) => {
-      // eslint-disable-next-line no-console
-      console.error('Redis connection failed (cache degraded to no-op):', (err as Error).message ?? err);
+      logger.error('redis_connection_failed', { error: (err as Error).message ?? err });
     });
     cacheService = redisCacheService;
   } else {
@@ -126,6 +127,7 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
 
   app.use('/api', createApiRouter({ chatService, healthCheck, featureFlagService }));
 
+  setupSentryExpressErrorHandler(app);
   app.use(errorHandler);
 
   return app;
