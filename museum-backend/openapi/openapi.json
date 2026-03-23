@@ -63,12 +63,17 @@
       },
       "AuthUser": {
         "type": "object",
-        "required": ["id", "email"],
+        "required": ["id", "email", "role"],
         "properties": {
           "id": { "type": "integer" },
           "email": { "type": "string", "format": "email" },
           "firstname": { "type": ["string", "null"] },
-          "lastname": { "type": ["string", "null"] }
+          "lastname": { "type": ["string", "null"] },
+          "role": {
+            "type": "string",
+            "enum": ["visitor", "moderator", "museum_manager", "admin"],
+            "description": "User role for RBAC"
+          }
         }
       },
       "AuthSessionResponse": {
@@ -315,6 +320,14 @@
       },
       "Unauthorized": {
         "description": "Authentication required",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ApiError" }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Insufficient permissions",
         "content": {
           "application/json": {
             "schema": { "$ref": "#/components/schemas/ApiError" }

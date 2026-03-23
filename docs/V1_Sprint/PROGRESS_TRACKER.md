@@ -200,31 +200,31 @@
 
 ### Admin Dashboard
 
-- [ ] S4-01: Admin dashboard web (React + Vite + Tailwind) — MVP
-- [ ] S4-02: RBAC (admin, moderator, museum_manager)
-- [ ] S4-03: Content moderation queue
-- [ ] S4-04: Analytics API + dashboard
+- [x] S4-01: Admin dashboard web (React + Vite + Tailwind) — MVP
+- [x] S4-02: RBAC (admin, moderator, museum_manager)
+- [x] S4-03: Content moderation queue
+- [x] S4-04: Analytics API + dashboard
 
 ### Backend
 
-- [ ] S4-05: Multi-tenancy (B2B museum scoping)
-- [ ] S4-07: Cross-session user memory
-- [ ] S4-08: Audit logging (immutable trail)
+- [x] S4-05: Multi-tenancy (B2B museum scoping)
+- [x] S4-07: Cross-session user memory
+- [x] S4-08: Audit logging (immutable trail)
 
 ### Frontend
 
-- [ ] S4-06: Museum directory + geolocation
-- [ ] S4-09: Arabic RTL support
-- [ ] S4-10: Biometric authentication
-- [ ] S4-11: In-app support / ticket system
+- [x] S4-06: Museum directory + geolocation
+- [x] S4-09: Arabic RTL support
+- [x] S4-10: Biometric authentication
+- [x] S4-11: In-app support / ticket system
 
 ### DevOps
 
-- [ ] S4-12: CDN setup (CloudFlare)
-- [ ] S4-13: OpenTelemetry distributed tracing
-- [ ] S4-14: Load testing + horizontal scaling
-- [ ] S4-15: E2E test suite comprehensive
-- [ ] S4-16: Google Play Data Safety form
+- [x] S4-12: CDN setup (CloudFlare)
+- [x] S4-13: OpenTelemetry distributed tracing
+- [x] S4-14: Load testing + horizontal scaling
+- [x] S4-15: E2E test suite comprehensive
+- [x] S4-16: Google Play Data Safety form
 
 ---
 
@@ -270,8 +270,8 @@
 | --------- | ------- | ------ | ------- | ------------- | -------------- |
 | S1        | 37      | 37     | 100%    | 212           | 8              |
 | S1.5      | 5       | 5      | 100%    | 217 (+5)      | 11 (+3)        |
-| S2        | 25      | 25     | 100%    | 360 (+93)     | 26 (+13)       |
-| S3        | 18      | 17     | 94%     | 360           | 26             |
+| S2        | 25      | 24     | 96%     | 360 (+93)     | 26 (+13)       |
+| S3        | 18      | 18     | 100%    | 360           | 26             |
 | Audit     | 11      | 11     | 100%    | 364 (+4)      | 29 (+3)        |
-| S4        | 16      | 0      | 0%      | -             | -              |
-| **Total** | **112** | **95** | **85%** | **364**       | **29**         |
+| S4        | 16      | 16     | 100%    | 416 (+52)     | 29             |
+| **Total** | **112** | **111** | **99%** | **416**       | **29**         |
