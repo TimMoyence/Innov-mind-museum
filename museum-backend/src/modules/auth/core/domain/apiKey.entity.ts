@@ -34,6 +34,9 @@ export class ApiKey {
   @Column({ name: 'user_id' })
   userId!: number;
 
+  @Column({ type: 'integer', nullable: true, name: 'museum_id' })
+  museumId?: number | null;
+
   @Column({ type: 'timestamp', nullable: true, name: 'expires_at' })
   expiresAt!: Date | null;
 

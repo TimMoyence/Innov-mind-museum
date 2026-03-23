@@ -34,6 +34,9 @@ export class ChatSession {
   @Column({ type: 'varchar', length: 256, nullable: true })
   museumName?: string | null;
 
+  @Column({ type: 'integer', nullable: true, name: 'museum_id' })
+  museumId?: number | null;
+
   @Column({ type: 'jsonb', nullable: true })
   visitContext?: VisitContext | null;
 

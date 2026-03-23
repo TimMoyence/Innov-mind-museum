@@ -37,6 +37,7 @@ export interface CreateSessionInput {
   userId?: number;
   locale?: string;
   museumMode?: boolean;
+  museumId?: number;
 }
 
 /** Client-provided context attached to each chat message request. */

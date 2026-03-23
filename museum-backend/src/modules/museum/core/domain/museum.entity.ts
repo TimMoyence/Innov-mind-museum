@@ -1,0 +1,44 @@
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+
+/** Represents a museum tenant in the B2B multi-tenancy model. Mapped to `museums`. */
+@Entity({ name: 'museums' })
+export class Museum {
+  @PrimaryGeneratedColumn()
+  id!: number;
+
+  @Column({ type: 'varchar', length: 256 })
+  name!: string;
+
+  @Column({ type: 'varchar', length: 128, unique: true })
+  slug!: string;
+
+  @Column({ type: 'varchar', length: 512, nullable: true })
+  address?: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  description?: string | null;
+
+  @Column({ type: 'jsonb', default: '{}' })
+  config!: Record<string, unknown>;
+
+  @Column({ type: 'double precision', nullable: true })
+  latitude?: number | null;
+
+  @Column({ type: 'double precision', nullable: true })
+  longitude?: number | null;
+
+  @Column({ type: 'boolean', default: true, name: 'is_active' })
+  isActive!: boolean;
+
+  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
+  updatedAt!: Date;
+}
