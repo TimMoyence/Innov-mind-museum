@@ -139,6 +139,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         ITSAppUsesNonExemptEncryption: false,
         NSMicrophoneUsageDescription:
           'Allow $(PRODUCT_NAME) to access your microphone for voice questions about artworks.',
+        NSFaceIDUsageDescription:
+          'Allow $(PRODUCT_NAME) to use Face ID to unlock the app.',
+        NSLocationWhenInUseUsageDescription:
+          'Allow Musaium to show museums near you.',
       },
       privacyManifests: {
         NSPrivacyTracking: false,
@@ -158,7 +162,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         variant === 'production'
           ? APP_ANDROID_PACKAGE
           : APP_ANDROID_PACKAGE_PREVIEW,
-      permissions: ['android.permission.RECORD_AUDIO', 'android.permission.CAMERA'],
+      permissions: [
+        'android.permission.RECORD_AUDIO',
+        'android.permission.CAMERA',
+        'android.permission.ACCESS_FINE_LOCATION',
+        'android.permission.ACCESS_COARSE_LOCATION',
+      ],
       adaptiveIcon: {
         foregroundImage: BRAND_ANDROID_ADAPTIVE_FOREGROUND,
         backgroundColor: BRAND_BACKGROUND_COLOR,
@@ -190,6 +199,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         {
           microphonePermission:
             'Allow $(PRODUCT_NAME) to access your microphone for voice questions about artworks.',
+        },
+      ],
+      [
+        'expo-location',
+        {
+          locationWhenInUsePermission:
+            'Allow Musaium to find museums near your location.',
         },
       ],
       'expo-apple-authentication',

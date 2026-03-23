@@ -5,6 +5,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -13,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/context/AuthContext';
+import { useBiometricAuth } from '@/features/auth/application/useBiometricAuth';
 import { authService } from '@/features/auth/infrastructure/authApi';
 import { authStorage, clearAccessToken } from '@/features/auth/infrastructure/authTokenStore';
 import { AUTH_ROUTE } from '@/features/auth/routes';
@@ -48,8 +50,17 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { locale, museumMode, guideLevel, isLoading: isLoadingPrefs } = useRuntimeSettings();
   const { theme, mode, setMode } = useTheme();
+  const { isAvailable: biometricAvailable, isEnabled: biometricEnabled, biometricLabel, enable: enableBiometric, disable: disableBiometric, isChecking: isBiometricChecking } = useBiometricAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  const onToggleBiometric = async (value: boolean) => {
+    if (value) {
+      await enableBiometric();
+    } else {
+      await disableBiometric();
+    }
+  };
 
   const open = (path: SettingsRoute) => {
     router.push(path);
@@ -171,6 +182,32 @@ export default function SettingsScreen() {
                 </Text>
               </Pressable>
             ))}
+          </View>
+        </GlassCard>
+
+        <GlassCard style={styles.card} intensity={56}>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.security')}</Text>
+          <View style={styles.biometricRow}>
+            <View style={styles.biometricInfo}>
+              <Text style={[styles.biometricLabel, { color: theme.textPrimary }]}>
+                {t('settings.biometric_lock')}
+              </Text>
+              {biometricAvailable ? (
+                <Text style={[styles.biometricHint, { color: theme.textSecondary }]}>
+                  {biometricLabel}
+                </Text>
+              ) : (
+                <Text style={[styles.biometricHint, { color: theme.textSecondary }]}>
+                  {t('biometric.not_available')}
+                </Text>
+              )}
+            </View>
+            <Switch
+              value={biometricEnabled}
+              onValueChange={(v) => void onToggleBiometric(v)}
+              disabled={!biometricAvailable || isBiometricChecking}
+              trackColor={{ false: theme.cardBorder, true: theme.primary }}
+            />
           </View>
         </GlassCard>
 
@@ -326,6 +363,22 @@ const styles = StyleSheet.create({
   cardBody: {
     lineHeight: 20,
     fontSize: 13,
+  },
+  biometricRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  biometricInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  biometricLabel: {
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  biometricHint: {
+    fontSize: 12,
   },
   themeRow: {
     flexDirection: 'row',
