@@ -19,6 +19,7 @@
   },
   "tabs": {
     "dashboard": "Dashboard",
+    "museums": "Museums",
     "home": "Home"
   },
   "auth": {
@@ -131,7 +132,9 @@
     "delete_confirm_body": "This will permanently delete your account and all data. This action cannot be undone.",
     "back_to_home": "Back to Home",
     "sign_out": "Sign out",
-    "preferences": "Preferences"
+    "preferences": "Preferences",
+    "security": "Security",
+    "biometric_lock": "Biometric Lock"
   },
   "preferences": {
     "title": "Preferences",
@@ -390,6 +393,26 @@
     "step1": "1. Set `EXPO_PUBLIC_API_BASE_URL_STAGING` on the Expo project.",
     "step2": "2. Set `EXPO_PUBLIC_API_BASE_URL_PROD` on the Expo project.",
     "step3": "3. Rebuild the app after the environment variables are available to EAS Build."
+  },
+  "biometric": {
+    "lock_title": "App Locked",
+    "lock_subtitle": "Unlock to continue",
+    "unlock": "Unlock",
+    "prompt": "Authenticate to unlock Musaium",
+    "retry": "Try Again",
+    "failed": "Authentication failed",
+    "not_available": "Biometric authentication not available",
+    "not_enrolled": "No biometrics enrolled"
+  },
+  "museumDirectory": {
+    "title": "Nearby Museums",
+    "search_placeholder": "Search museums...",
+    "no_results": "No museums found",
+    "distance_km": "{{distance}} km",
+    "distance_unknown": "Distance unavailable",
+    "location_denied": "Location access denied",
+    "start_chat": "Start Chat Here",
+    "detail_title": "Museum Details"
   },
   "conversationSearch": {
     "placeholder": "Search conversations..."

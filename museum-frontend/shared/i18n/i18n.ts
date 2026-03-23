@@ -9,6 +9,7 @@ import de from '../locales/de/translation.json';
 import it from '../locales/it/translation.json';
 import ja from '../locales/ja/translation.json';
 import zh from '../locales/zh/translation.json';
+import ar from '../locales/ar/translation.json';
 
 import './types';
 
@@ -21,6 +22,7 @@ void i18n.use(initReactI18next).init({
     it: { translation: it },
     ja: { translation: ja },
     zh: { translation: zh },
+    ar: { translation: ar },
   },
   lng: 'en',
   fallbackLng: 'en',

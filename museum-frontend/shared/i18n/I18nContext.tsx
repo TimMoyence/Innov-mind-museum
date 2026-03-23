@@ -2,11 +2,13 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import type { ReactNode } from 'react';
 import { getLocales } from 'expo-localization';
 import i18n from 'i18next';
+import * as Updates from 'expo-updates';
 
 import { toSupportedLocale, type SupportedLocale } from '@/shared/config/supportedLocales';
 import { saveDefaultLocale } from '@/features/settings/runtimeSettings';
 import { setLocale as setHttpLocale } from '@/shared/infrastructure/httpClient';
 import { storage } from '@/shared/infrastructure/storage';
+import { applyRTLLayout, needsRTLReload } from '@/shared/i18n/rtl';
 
 interface I18nContextValue {
   language: SupportedLocale;
@@ -54,11 +56,23 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const setLanguage = useCallback((lang: SupportedLocale) => {
+    const currentLang = language;
+    if (needsRTLReload(currentLang, lang)) {
+      void saveDefaultLocale(lang);
+      applyRTLLayout(lang);
+      void Updates.reloadAsync().catch(() => {
+        // Fallback: apply language without reload in dev
+        setLanguageState(lang);
+        void i18n.changeLanguage(lang);
+        setHttpLocale(lang);
+      });
+      return;
+    }
     setLanguageState(lang);
     void i18n.changeLanguage(lang);
     setHttpLocale(lang);
     void saveDefaultLocale(lang);
-  }, []);
+  }, [language]);
 
   return (
     <I18nContext.Provider value={{ language, setLanguage }}>

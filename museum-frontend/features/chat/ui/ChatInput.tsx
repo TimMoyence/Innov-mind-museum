@@ -86,6 +86,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 10,
+    writingDirection: 'auto',
   },
   sendButton: {
     borderRadius: 12,

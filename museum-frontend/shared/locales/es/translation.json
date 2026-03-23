@@ -19,6 +19,7 @@
   },
   "tabs": {
     "dashboard": "Panel",
+    "museums": "Museos",
     "home": "Inicio"
   },
   "auth": {
@@ -131,7 +132,9 @@
     "delete_confirm_body": "Esto eliminará permanentemente tu cuenta y todos tus datos. Esta acción no se puede deshacer.",
     "back_to_home": "Volver a Inicio",
     "sign_out": "Cerrar sesión",
-    "preferences": "Preferencias"
+    "preferences": "Preferencias",
+    "security": "Seguridad",
+    "biometric_lock": "Bloqueo biométrico"
   },
   "preferences": {
     "title": "Preferencias",
@@ -390,6 +393,26 @@
     "step1": "1. Configura `EXPO_PUBLIC_API_BASE_URL_STAGING` en el proyecto Expo.",
     "step2": "2. Configura `EXPO_PUBLIC_API_BASE_URL_PROD` en el proyecto Expo.",
     "step3": "3. Recompila la app después de que las variables de entorno estén disponibles para EAS Build."
+  },
+  "biometric": {
+    "lock_title": "Aplicación bloqueada",
+    "lock_subtitle": "Desbloquea para continuar",
+    "unlock": "Desbloquear",
+    "prompt": "Autentícate para desbloquear Musaium",
+    "retry": "Intentar de nuevo",
+    "failed": "Error de autenticación",
+    "not_available": "Autenticación biométrica no disponible",
+    "not_enrolled": "No hay biometría registrada"
+  },
+  "museumDirectory": {
+    "title": "Museos cercanos",
+    "search_placeholder": "Buscar museos...",
+    "no_results": "No se encontraron museos",
+    "distance_km": "{{distance}} km",
+    "distance_unknown": "Distancia no disponible",
+    "location_denied": "Acceso a la ubicación denegado",
+    "start_chat": "Iniciar chat aquí",
+    "detail_title": "Detalles del museo"
   },
   "conversationSearch": {
     "placeholder": "Buscar conversaciones..."
