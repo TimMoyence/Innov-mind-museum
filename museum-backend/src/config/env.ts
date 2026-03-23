@@ -130,11 +130,18 @@ interface AppEnv {
     tracesSampleRate: number;
     profilesSampleRate: number;
   };
+  otel?: {
+    enabled: boolean;
+    exporterEndpoint: string;
+    serviceName: string;
+  };
   featureFlags: {
     voiceMode: boolean;
     ocrGuard: boolean;
     apiKeys: boolean;
     streaming: boolean;
+    multiTenancy: boolean;
+    userMemory: boolean;
   };
 }
 
@@ -279,11 +286,20 @@ const env: AppEnv = {
         profilesSampleRate: toNumber(process.env.SENTRY_PROFILES_SAMPLE_RATE, 0),
       }
     : undefined,
+  otel: toBoolean(process.env.OTEL_ENABLED, false)
+    ? {
+        enabled: true,
+        exporterEndpoint: process.env.OTEL_EXPORTER_ENDPOINT || 'http://localhost:4318',
+        serviceName: process.env.OTEL_SERVICE_NAME || 'museum-backend',
+      }
+    : undefined,
   featureFlags: {
     voiceMode: toBoolean(process.env.FEATURE_FLAG_VOICE_MODE, false),
     ocrGuard: toBoolean(process.env.FEATURE_FLAG_OCR_GUARD, false),
     apiKeys: toBoolean(process.env.FEATURE_FLAG_API_KEYS, false),
     streaming: toBoolean(process.env.FEATURE_FLAG_STREAMING, false),
+    multiTenancy: toBoolean(process.env.FEATURE_FLAG_MULTI_TENANCY, false),
+    userMemory: toBoolean(process.env.FEATURE_FLAG_USER_MEMORY, false),
   },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
   storage: {
