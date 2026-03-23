@@ -49,7 +49,16 @@ async function fetchJson({ baseUrl, path, method = 'GET', token, body, timeoutMs
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: controller.signal,
+      redirect: 'manual',
     });
+
+    if ([301, 302, 307, 308].includes(response.status)) {
+      const location = response.headers.get('location') || '<unknown>';
+      throw new Error(
+        `${method} ${path} was redirected (${response.status}) to ${location}. ` +
+          'Update SMOKE_API_BASE_URL to point directly to the final URL (likely https://).',
+      );
+    }
 
     const text = await response.text();
     let json = null;
