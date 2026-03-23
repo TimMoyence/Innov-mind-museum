@@ -19,6 +19,7 @@
   },
   "tabs": {
     "dashboard": "仪表盘",
+    "museums": "博物馆",
     "home": "首页"
   },
   "auth": {
@@ -131,7 +132,9 @@
     "delete_confirm_body": "此操作将永久删除您的账户和所有数据，且不可撤销。",
     "back_to_home": "返回首页",
     "sign_out": "退出登录",
-    "preferences": "偏好设置"
+    "preferences": "偏好设置",
+    "security": "安全",
+    "biometric_lock": "生物识别锁定"
   },
   "preferences": {
     "title": "偏好设置",
@@ -390,6 +393,26 @@
     "step1": "1. 在 Expo 项目中设置 `EXPO_PUBLIC_API_BASE_URL_STAGING`。",
     "step2": "2. 在 Expo 项目中设置 `EXPO_PUBLIC_API_BASE_URL_PROD`。",
     "step3": "3. 在环境变量对 EAS Build 可用后重新构建应用。"
+  },
+  "biometric": {
+    "lock_title": "应用已锁定",
+    "lock_subtitle": "解锁以继续",
+    "unlock": "解锁",
+    "prompt": "验证身份以解锁 Musaium",
+    "retry": "重试",
+    "failed": "身份验证失败",
+    "not_available": "生物识别认证不可用",
+    "not_enrolled": "未注册生物识别信息"
+  },
+  "museumDirectory": {
+    "title": "附近博物馆",
+    "search_placeholder": "搜索博物馆...",
+    "no_results": "未找到博物馆",
+    "distance_km": "{{distance}} 公里",
+    "distance_unknown": "距离不可用",
+    "location_denied": "位置访问被拒绝",
+    "start_chat": "在此开始聊天",
+    "detail_title": "博物馆详情"
   },
   "conversationSearch": {
     "placeholder": "搜索对话..."

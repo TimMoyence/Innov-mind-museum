@@ -19,6 +19,7 @@
   },
   "tabs": {
     "dashboard": "ダッシュボード",
+    "museums": "ミュージアム",
     "home": "ホーム"
   },
   "auth": {
@@ -131,7 +132,9 @@
     "delete_confirm_body": "アカウントおよびすべてのデータが完全に削除されます。この操作は取り消せません。",
     "back_to_home": "ホームに戻る",
     "sign_out": "ログアウト",
-    "preferences": "環境設定"
+    "preferences": "環境設定",
+    "security": "セキュリティ",
+    "biometric_lock": "生体認証ロック"
   },
   "preferences": {
     "title": "環境設定",
@@ -390,6 +393,26 @@
     "step1": "1. Expoプロジェクトに `EXPO_PUBLIC_API_BASE_URL_STAGING` を設定してください。",
     "step2": "2. Expoプロジェクトに `EXPO_PUBLIC_API_BASE_URL_PROD` を設定してください。",
     "step3": "3. 環境変数がEAS Buildで利用可能になった後、アプリを再ビルドしてください。"
+  },
+  "biometric": {
+    "lock_title": "アプリがロックされています",
+    "lock_subtitle": "続行するにはロック解除してください",
+    "unlock": "ロック解除",
+    "prompt": "Musaiumのロック解除のために認証してください",
+    "retry": "もう一度試す",
+    "failed": "認証に失敗しました",
+    "not_available": "生体認証は利用できません",
+    "not_enrolled": "生体情報が登録されていません"
+  },
+  "museumDirectory": {
+    "title": "近くのミュージアム",
+    "search_placeholder": "ミュージアムを検索...",
+    "no_results": "ミュージアムが見つかりません",
+    "distance_km": "{{distance}} km",
+    "distance_unknown": "距離不明",
+    "location_denied": "位置情報のアクセスが拒否されました",
+    "start_chat": "ここでチャットを開始",
+    "detail_title": "ミュージアムの詳細"
   },
   "conversationSearch": {
     "placeholder": "会話を検索..."

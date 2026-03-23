@@ -1,4 +1,4 @@
-export const SUPPORTED_LOCALES = ['en', 'fr', 'es', 'de', 'it', 'ja', 'zh'] as const;
+export const SUPPORTED_LOCALES = ['en', 'fr', 'es', 'de', 'it', 'ja', 'zh', 'ar'] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
 export interface LanguageOption {
@@ -15,6 +15,7 @@ export const LANGUAGE_OPTIONS: LanguageOption[] = [
   { code: 'it', label: 'Italian', nativeLabel: 'Italiano' },
   { code: 'ja', label: 'Japanese', nativeLabel: '日本語' },
   { code: 'zh', label: 'Chinese', nativeLabel: '中文' },
+  { code: 'ar', label: 'Arabic', nativeLabel: 'العربية' },
 ];
 
 export function isSupportedLocale(code: string): code is SupportedLocale {
