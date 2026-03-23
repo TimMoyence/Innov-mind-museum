@@ -4,6 +4,9 @@ import { env } from '@src/config/env';
 import { ChatService } from '@modules/chat/application/chat.service';
 import { createChatRouter } from '@modules/chat/adapters/primary/http/chat.route';
 import authRouter from '@modules/auth/adapters/primary/http/auth.route';
+import museumRouter from '@modules/museum/adapters/primary/http/museum.route';
+import adminRouter from '@modules/admin/adapters/primary/http/admin.route';
+import supportRouter from '@modules/support/adapters/primary/http/support.route';
 import type { FeatureFlagService } from '@shared/feature-flags/feature-flags.port';
 
 /** Dependencies required to build the top-level API router. */
@@ -87,6 +90,7 @@ export const createApiRouter = ({ chatService, healthCheck, featureFlagService }
   const router = Router();
 
   router.get('/health', async (_req, res) => {
+    res.set('Cache-Control', 'public, max-age=10, s-maxage=10');
     const start = Date.now();
     const checks = await healthCheck();
     const responseTimeMs = Date.now() - start;
@@ -106,6 +110,9 @@ export const createApiRouter = ({ chatService, healthCheck, featureFlagService }
 
   router.use('/chat', createChatRouter(chatService));
   router.use('/auth', authRouter);
+  router.use('/museums', museumRouter);
+  router.use('/admin', adminRouter);
+  router.use('/support', supportRouter);
 
   return router;
 };

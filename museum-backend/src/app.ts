@@ -100,6 +100,12 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   app.use(express.urlencoded({ extended: true, limit: env.jsonBodyLimit }));
   app.use(acceptLanguageMiddleware);
 
+  // Default Cache-Control: prevent CDN/proxy caching of dynamic API responses
+  app.use((_req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+  });
+
   if (!isProd) {
     setupSwagger(app);
   }
