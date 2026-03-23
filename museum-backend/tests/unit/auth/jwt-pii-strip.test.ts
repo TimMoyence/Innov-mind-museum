@@ -23,6 +23,7 @@ const makeUser = (overrides: Partial<User> = {}): User =>
     password: '$2b$12$hashed',
     firstname: 'Alice',
     lastname: 'Doe',
+    role: 'visitor',
     createdAt: new Date('2025-01-01'),
     updatedAt: new Date('2025-06-01'),
     ...overrides,
@@ -45,26 +46,26 @@ const makeRefreshTokenRepo = () =>
   }) as unknown as ConstructorParameters<typeof AuthSessionService>[1];
 
 describe('S2-22: JWT PII strip', () => {
-  it('verifyAccessToken returns { id } only — no email, firstname, lastname', () => {
+  it('verifyAccessToken returns { id, role } only — no email, firstname, lastname', () => {
     const service = new AuthSessionService(
       makeUserRepo(makeUser()),
       makeRefreshTokenRepo(),
     );
 
     const token = jwt.sign(
-      { sub: '42', type: 'access', jti: 'test-jti' },
+      { sub: '42', type: 'access', jti: 'test-jti', role: 'visitor' },
       getAccessSecret(),
       { expiresIn: '15m' },
     );
 
     const result = service.verifyAccessToken(token);
-    expect(result).toEqual({ id: 42 });
+    expect(result).toEqual({ id: 42, role: 'visitor', museumId: null });
     expect(result).not.toHaveProperty('email');
     expect(result).not.toHaveProperty('firstname');
     expect(result).not.toHaveProperty('lastname');
   });
 
-  it('issued access token contains no PII fields when decoded', async () => {
+  it('issued access token contains role but no PII fields when decoded', async () => {
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     const user = makeUser();
     const service = new AuthSessionService(
@@ -78,6 +79,7 @@ describe('S2-22: JWT PII strip', () => {
     expect(decoded.sub).toBe('42');
     expect(decoded.type).toBe('access');
     expect(decoded.jti).toBeDefined();
+    expect(decoded.role).toBe('visitor');
     expect(decoded).not.toHaveProperty('email');
     expect(decoded).not.toHaveProperty('firstname');
     expect(decoded).not.toHaveProperty('lastname');
@@ -97,6 +99,8 @@ describe('S2-22: JWT PII strip', () => {
       email: 'alice@example.com',
       firstname: 'Alice',
       lastname: 'Doe',
+      role: 'visitor',
+      museumId: null,
     });
   });
 });
@@ -112,6 +116,7 @@ describe('GetProfileUseCase', () => {
       email: 'alice@example.com',
       firstname: 'Alice',
       lastname: 'Doe',
+      role: 'visitor',
       createdAt: new Date('2025-01-01'),
       updatedAt: new Date('2025-06-01'),
     });

@@ -1,3 +1,4 @@
+import type { UserRole } from '../domain/user-role';
 import type { IUserRepository } from '../domain/user.repository.interface';
 
 interface UserProfile {
@@ -5,6 +6,7 @@ interface UserProfile {
   email: string;
   firstname?: string | null;
   lastname?: string | null;
+  role: UserRole;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,6 +24,7 @@ export class GetProfileUseCase {
       email: user.email,
       firstname: user.firstname ?? null,
       lastname: user.lastname ?? null,
+      role: user.role || 'visitor',
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

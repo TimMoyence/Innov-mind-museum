@@ -36,6 +36,7 @@ describe('openapi response contracts (active API)', () => {
         email: 'user@example.com',
         firstname: 'Ada',
         lastname: 'Lovelace',
+        role: 'visitor',
       },
     };
     const authMePayload = {
