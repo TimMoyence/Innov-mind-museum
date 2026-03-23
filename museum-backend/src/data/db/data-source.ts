@@ -9,6 +9,11 @@ import { ArtworkMatch } from '@modules/chat/domain/artworkMatch.entity';
 import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import { ChatSession } from '@modules/chat/domain/chatSession.entity';
 import { MessageReport } from '@modules/chat/domain/messageReport.entity';
+import { UserMemory } from '@modules/chat/domain/userMemory.entity';
+import { AuditLog } from '@shared/audit/auditLog.entity';
+import { Museum } from '@modules/museum/core/domain/museum.entity';
+import { SupportTicket } from '@modules/support/domain/supportTicket.entity';
+import { TicketMessage } from '@modules/support/domain/ticketMessage.entity';
 import { env } from '@src/config/env';
 
 const isCompiledRuntime = __filename.endsWith('.js');
@@ -30,6 +35,11 @@ export const AppDataSource = new DataSource({
     ChatMessage,
     ArtworkMatch,
     MessageReport,
+    UserMemory,
+    AuditLog,
+    Museum,
+    SupportTicket,
+    TicketMessage,
   ],
   migrations: isCompiledRuntime
     ? ['dist/src/data/db/migrations/*.js']

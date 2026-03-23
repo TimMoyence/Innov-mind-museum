@@ -48,6 +48,10 @@ import {
   resolveLocalImageMeta,
 } from './chat-image.helpers';
 
+import type { AuditService } from '@shared/audit/audit.service';
+import { AUDIT_SECURITY_GUARDRAIL_BLOCK } from '@shared/audit/audit.types';
+import type { UserMemoryService } from './user-memory.service';
+
 /** Dependencies for constructing a ChatService instance. */
 export interface ChatServiceDeps {
   repository: ChatRepository;
@@ -57,6 +61,8 @@ export interface ChatServiceDeps {
   tts?: TextToSpeechService;
   cache?: CacheService;
   ocr?: OcrService;
+  audit?: AuditService;
+  userMemory?: UserMemoryService;
 }
 
 /** Returned after a new chat session is created. */
@@ -161,6 +167,8 @@ export class ChatService {
   private readonly tts?: TextToSpeechService;
   private readonly cache?: CacheService;
   private readonly ocr?: OcrService;
+  private readonly audit?: AuditService;
+  private readonly userMemory?: UserMemoryService;
 
   constructor(deps: ChatServiceDeps) {
     this.repository = deps.repository;
@@ -170,6 +178,8 @@ export class ChatService {
     this.tts = deps.tts;
     this.cache = deps.cache;
     this.ocr = deps.ocr;
+    this.audit = deps.audit;
+    this.userMemory = deps.userMemory;
   }
 
   /**
@@ -187,6 +197,7 @@ export class ChatService {
       userId: input.userId,
       locale: input.locale,
       museumMode: input.museumMode,
+      museumId: input.museumId,
     });
 
     // Invalidate session list cache so new session appears immediately
@@ -224,6 +235,7 @@ export class ChatService {
         history: Awaited<ReturnType<ChatRepository['listSessionHistory']>>;
         redirectHint?: string;
         ownerId?: number;
+        userMemoryBlock?: string;
       }
     | {
         kind: 'refused';
@@ -346,6 +358,15 @@ export class ChatService {
     });
 
     if (!userGuardrail.allow) {
+      this.audit?.log({
+        action: AUDIT_SECURITY_GUARDRAIL_BLOCK,
+        actorType: session.user?.id ? 'user' : 'anonymous',
+        actorId: session.user?.id ?? null,
+        targetType: 'session',
+        targetId: sessionId,
+        metadata: { reason: userGuardrail.reason },
+      });
+
       const refusalText = buildGuardrailRefusal(requestedLocale, userGuardrail.reason);
       const refusalMetadata = withPolicyCitation({}, userGuardrail.reason);
       const assistantMessage = await this.repository.persistMessage({
@@ -375,6 +396,16 @@ export class ChatService {
       env.llm.maxHistoryMessages,
     );
 
+    // Fetch cross-session user memory prompt block (fail-open)
+    let userMemoryBlock = '';
+    if (this.userMemory && ownerId) {
+      try {
+        userMemoryBlock = await this.userMemory.getMemoryForPrompt(ownerId);
+      } catch {
+        // fail-open: memory enrichment is non-critical
+      }
+    }
+
     return {
       kind: 'ready',
       session,
@@ -384,6 +415,7 @@ export class ChatService {
       history,
       redirectHint: userGuardrail.redirectHint,
       ownerId,
+      userMemoryBlock,
     };
   }
 
@@ -465,6 +497,15 @@ export class ChatService {
       if (ownerId) {
         await this.cache.delByPrefix(`sessions:user:${ownerId}:`);
       }
+    }
+
+    // Fire-and-forget: update cross-session user memory
+    if (this.userMemory && ownerId && sessionUpdates?.visitContext) {
+      this.userMemory
+        .updateAfterSession(ownerId, sessionUpdates.visitContext, sessionId)
+        .catch(() => {
+          // swallowed — user memory is non-critical
+        });
     }
 
     return {
