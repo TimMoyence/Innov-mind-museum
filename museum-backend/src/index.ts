@@ -1,3 +1,4 @@
+import './instrumentation';
 import 'reflect-metadata';
 import util from 'util';
 
@@ -5,6 +6,7 @@ import { env } from '@src/config/env';
 import { AppDataSource } from '@src/data/db/data-source';
 import { logger } from '@shared/logger/logger';
 import { initSentry } from '@shared/observability/sentry';
+import { shutdownOpenTelemetry } from '@shared/observability/opentelemetry';
 import { createApp } from './app';
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/refresh-token.repository.pg';
 import { TokenCleanupService } from '@modules/auth/core/useCase/tokenCleanup.service';
@@ -57,6 +59,7 @@ const start = async (): Promise<void> => {
       logger.info('server_shutdown_start', { signal });
       tokenCleanup.stopScheduler();
       stopRateLimitSweep();
+      await shutdownOpenTelemetry();
       const ocr = getOcrService();
       if (ocr?.destroy) await ocr.destroy();
       server.close(async () => {
