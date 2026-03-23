@@ -1,5 +1,6 @@
 import React, {
   createContext,
+  useCallback,
   useState,
   useContext,
   useEffect,
@@ -11,6 +12,7 @@ import * as Sentry from "@sentry/react-native";
 
 import { authService } from "@/features/auth/infrastructure/authApi";
 import { clearAccessToken, setAccessToken, authStorage } from "@/features/auth/infrastructure/authTokenStore";
+import { getBiometricEnabled } from "@/features/auth/infrastructure/biometricStore";
 import { AUTH_ROUTE } from "@/features/auth/routes";
 import { reportError } from "@/shared/observability/errorReporting";
 
@@ -37,6 +39,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   checkTokenValidity: () => Promise<boolean>;
   setIsAuthenticated: React.Dispatch<React.SetStateAction<boolean>>;
+  isBiometricLocked: boolean;
+  unlockBiometric: () => void;
 }
 
 interface AuthProviderProps {
@@ -60,6 +64,7 @@ export const useAuth = (): AuthContextType => {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isBiometricLocked, setIsBiometricLocked] = useState<boolean>(false);
 
   // Check authentication on startup
   useEffect(() => {
@@ -75,6 +80,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setAccessToken(session.accessToken);
           setIsAuthenticated(true);
           identifySentryUser(session.accessToken);
+          const biometricOn = await getBiometricEnabled();
+          if (biometricOn) {
+            setIsBiometricLocked(true);
+          }
         }
       } catch (error) {
         await authStorage.clearRefreshToken().catch(() => undefined);
@@ -134,6 +143,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
+  const unlockBiometric = useCallback(() => {
+    setIsBiometricLocked(false);
+  }, []);
+
   // Logout function
   const logout = async (): Promise<void> => {
     let refreshToken: string | null = null;
@@ -185,6 +198,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         logout,
         checkTokenValidity,
         setIsAuthenticated,
+        isBiometricLocked,
+        unlockBiometric,
       }}
     >
       {children}

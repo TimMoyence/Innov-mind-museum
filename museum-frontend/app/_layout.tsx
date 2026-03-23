@@ -5,7 +5,9 @@ import { Stack, useNavigationContainerRef } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Sentry from '@sentry/react-native';
 
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { useBiometricAuth } from '@/features/auth/application/useBiometricAuth';
+import { BiometricLockScreen } from '@/features/auth/ui/BiometricLockScreen';
 import { useProtectedRoute } from '@/features/auth/useProtectedRoute';
 import { applyRuntimeSettings } from '@/features/settings/runtimeSettings';
 import '@/shared/i18n/i18n';
@@ -41,6 +43,34 @@ Sentry.init({
 
 function AuthenticationGuard({ children }: { children: ReactNode }) {
   useProtectedRoute();
+  return <>{children}</>;
+}
+
+function BiometricGate({ children }: { children: ReactNode }) {
+  const { isBiometricLocked, unlockBiometric } = useAuth();
+  const { authenticate, biometricLabel } = useBiometricAuth();
+  const [failed, setFailed] = useState(false);
+
+  const handleUnlock = async () => {
+    setFailed(false);
+    const success = await authenticate();
+    if (success) {
+      unlockBiometric();
+    } else {
+      setFailed(true);
+    }
+  };
+
+  if (isBiometricLocked) {
+    return (
+      <BiometricLockScreen
+        biometricLabel={biometricLabel}
+        onUnlock={() => void handleUnlock()}
+        failed={failed}
+      />
+    );
+  }
+
   return <>{children}</>;
 }
 
@@ -116,6 +146,7 @@ function RootLayout() {
       <ThemeProvider>
         <AuthProvider>
           <ConnectivityProvider>
+            <BiometricGate>
             <AuthenticationGuard>
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="auth" />
@@ -131,13 +162,16 @@ function RootLayout() {
               <Stack.Screen name="(stack)/preferences" />
               <Stack.Screen name="(stack)/guided-museum-mode" />
               <Stack.Screen name="(stack)/discover" />
+              <Stack.Screen name="(stack)/museum-detail" />
               <Stack.Screen name="(stack)/support" />
               <Stack.Screen name="(stack)/privacy" />
+              <Stack.Screen name="(stack)/terms" />
               <Stack.Screen name="(stack)/onboarding" />
               <Stack.Screen name="+not-found" />
             </Stack>
             <ThemedStatusBar />
             </AuthenticationGuard>
+            </BiometricGate>
           </ConnectivityProvider>
         </AuthProvider>
       </ThemeProvider>
