@@ -14,22 +14,22 @@ describe('login-rate-limiter', () => {
     expect(() => checkLoginRateLimit('user@test.com')).not.toThrow();
   });
 
-  it('allows up to 4 failed attempts', () => {
-    for (let i = 0; i < 4; i++) {
+  it('allows up to 9 failed attempts', () => {
+    for (let i = 0; i < 9; i++) {
       recordFailedLogin('user@test.com');
     }
     expect(() => checkLoginRateLimit('user@test.com')).not.toThrow();
   });
 
-  it('blocks after 5 failed attempts', () => {
-    for (let i = 0; i < 5; i++) {
+  it('blocks after 10 failed attempts', () => {
+    for (let i = 0; i < 10; i++) {
       recordFailedLogin('user@test.com');
     }
     expect(() => checkLoginRateLimit('user@test.com')).toThrow('Too many login attempts');
   });
 
   it('clears attempts on successful login', () => {
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 9; i++) {
       recordFailedLogin('user@test.com');
     }
     clearLoginAttempts('user@test.com');
@@ -37,7 +37,7 @@ describe('login-rate-limiter', () => {
   });
 
   it('is case-insensitive', () => {
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 10; i++) {
       recordFailedLogin('User@Test.COM');
     }
     expect(() => checkLoginRateLimit('user@test.com')).toThrow();
