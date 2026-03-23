@@ -213,6 +213,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         {
           organization: process.env.SENTRY_ORG || 'musaium',
           project: process.env.SENTRY_PROJECT || 'musaium-mobile',
+          autoUpload: !!(process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG),
         },
       ],
     ],
