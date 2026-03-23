@@ -1236,3 +1236,270 @@ Enterprise-grade forensic audit of the full monorepo post-Sprint 3 (9 commits, ~
 | Backend tests (364 pass) | OK |
 | Frontend tests (29 pass) | OK |
 | i18n completeness (405 keys x 7 locales) | OK |
+
+---
+
+## Sprint 4 Wave 1 — Enterprise Foundation (2026-03-23)
+
+### Context
+
+Sprint 4 "Make it Scalable" — Wave 1 targets the foundational enterprise features: RBAC, audit logging, and CDN preparation. These are prerequisites for the admin dashboard, multi-tenancy, and content moderation in Wave 2-3.
+
+### S4-02 — RBAC (admin, moderator, museum_manager)
+
+**What**: Added role-based access control to the user model with 4 roles: `visitor` (default), `moderator`, `museum_manager`, `admin`.
+
+**How**:
+- `UserRole` const + type in `modules/auth/core/domain/user-role.ts`
+- `role` column on `User` entity (PostgreSQL enum, default `'visitor'`)
+- Migration `1774200000000-AddUserRoleColumn.ts`: creates `user_role_enum` type, adds column
+- Role embedded in JWT access token claims (`role` field in payload)
+- `verifyAccessToken()` returns `{ id, role }` — old tokens fallback to `'visitor'`
+- `requireRole(...roles)` middleware factory in `helpers/middleware/require-role.middleware.ts`
+- API key auth resolves user role from DB via `setUserRoleResolver()`
+- `forbidden()` error factory added to `app.error.ts`
+- `SafeUser`, `UserJwtPayload`, `UserProfile`, Express `req.user` all include `role`
+- `/me` endpoint returns `role` in response
+- OpenAPI spec updated: `AuthUser.role` (required enum), `Forbidden` response added
+- Frontend types regenerated
+
+**Files created**:
+- `src/modules/auth/core/domain/user-role.ts`
+- `src/helpers/middleware/require-role.middleware.ts`
+- `src/data/db/migrations/1774200000000-AddUserRoleColumn.ts`
+- `tests/unit/auth/require-role.test.ts` (6 tests)
+
+**Files modified**: `user.entity.ts`, `user-jwt-payload.ts`, `express/index.d.ts`, `authSession.service.ts`, `authenticated.middleware.ts`, `apiKey.middleware.ts`, `getProfile.useCase.ts`, `auth.route.ts`, `auth/core/useCase/index.ts`, `app.error.ts`, `exportUserData.types.ts`, `openapi.json`, `jwt-pii-strip.test.ts`, `security-fixes.test.ts`, `openapi-response.contract.test.ts`
+
+### S4-08 — Audit Logging (immutable trail)
+
+**What**: Immutable audit trail recording 17 event types across auth, security, and admin domains.
+
+**How**:
+- New shared module `src/shared/audit/` with hexagonal architecture (port + PG adapter)
+- `AuditLog` entity: UUID PK, action (varchar 64), actorType, actorId, targetType, targetId, metadata (JSONB), ip (inet), requestId, createdAt (timestamptz)
+- Fire-and-forget `AuditService.log()` — never throws, never blocks the caller
+- Migration with 5 indexes + DB-level immutability triggers (UPDATE/DELETE blocked)
+- Integrated at auth route level: login (success/fail), register, logout, social-login, password change/reset, account delete, GDPR export, API key CRUD, rate limit triggers
+- Integrated in ChatService: guardrail block events
+
+**Files created**:
+- `src/shared/audit/audit.types.ts` (17 action constants)
+- `src/shared/audit/auditLog.entity.ts`
+- `src/shared/audit/audit.repository.interface.ts`
+- `src/shared/audit/audit.repository.pg.ts`
+- `src/shared/audit/audit.service.ts`
+- `src/shared/audit/index.ts`
+- `src/data/db/migrations/1774200100000-CreateAuditLogsTable.ts`
+- `tests/unit/audit/audit.service.test.ts` (5 tests)
+
+**Files modified**: `data-source.ts`, `auth.route.ts`, `chat.service.ts`, `chat/index.ts`
+
+### S4-12 — CDN Setup (CloudFlare)
+
+**What**: Prepared backend and Nginx for CloudFlare CDN integration.
+
+**How**:
+- Default `Cache-Control: no-store` middleware in `app.ts` (secure by default)
+- `/api/health` override: `public, max-age=10, s-maxage=10`
+- `cache-control.middleware.ts` with preset directives
+- Nginx `musaium.conf`: added all CloudFlare IPv4/IPv6 ranges via `set_real_ip_from` + `real_ip_header CF-Connecting-IP`
+- Documentation `docs/CDN_CLOUDFLARE_SETUP.md`: DNS migration, SSL, caching rules, security, SSE handling, rollback plan
+
+**Files created**:
+- `src/helpers/middleware/cache-control.middleware.ts`
+- `docs/CDN_CLOUDFLARE_SETUP.md`
+
+**Files modified**: `app.ts`, `api.router.ts`, `deploy/nginx/musaium.conf`
+
+### Verification
+
+| Check | Result |
+|---|---|
+| Backend typecheck (`tsc --noEmit`) | OK |
+| Frontend typecheck (`tsc --noEmit`) | OK |
+| Backend tests (382 pass, 43 suites) | OK (+18 tests) |
+| Frontend tests (29 pass) | OK |
+| OpenAPI validate (24 paths, 27 ops) | OK |
+| Contract tests (6 pass) | OK |
+| OpenAPI types freshness | OK (regenerated) |
+| `pnpm build` | OK |
+
+---
+
+## Sprint 4 Wave 2 — Enterprise Core Features (2026-03-23)
+
+### Context
+
+Wave 2 implements the core enterprise features: admin dashboard (web + backend), multi-tenancy, cross-session user memory, Arabic RTL support, and biometric authentication. These build on Wave 1 foundations (RBAC, audit logging, CDN).
+
+### S4-01 — Admin Dashboard MVP
+
+**What**: New `museum-admin/` web application + `src/modules/admin/` backend module.
+
+**Backend** (11 files):
+- Hexagonal module: `admin.types.ts` (DTOs) → `admin.repository.interface.ts` (port) → `admin.repository.pg.ts` (raw SQL, never exposes passwords)
+- 4 use cases: `listUsers`, `changeUserRole` (last-admin guard + audit logging), `listAuditLogs`, `getStats`
+- 4 endpoints: `GET /api/admin/users`, `PATCH /api/admin/users/:id/role`, `GET /api/admin/audit-logs`, `GET /api/admin/stats`
+- All behind `requireRole('admin', 'moderator')`, write ops admin-only
+- Offset-based pagination for admin queries
+- 8 unit tests for changeUserRole (role validation, last-admin guard, audit)
+
+**Frontend** (18 files in `museum-admin/`):
+- React 19 + Vite 6 + Tailwind 4 + React Router 7 + TanStack Query 5
+- JWT in-memory only (no localStorage — XSS protection)
+- Pages: Login → Dashboard (6 stat cards) → Users (table + search + role filter) → User Detail (role change) → Audit Logs (filters)
+- Dark sidebar + white content layout, 332 kB JS bundle
+
+### S4-05 — Multi-tenancy (B2B Museum Scoping)
+
+**What**: `Museum` entity + tenant FK columns on User/ChatSession/ApiKey + museum CRUD endpoints.
+
+**How**:
+- New `museums` table: id, name, slug (unique), address, description, config (JSONB), is_active
+- Nullable `museum_id` FK added to `users`, `chat_sessions`, `api_keys` tables
+- New `src/modules/museum/` hexagonal module: entity, CRUD use cases, routes at `/api/museums`
+- `museumId` added to JWT claims + `UserJwtPayload` + `Express.Request`
+- Tenant resolution: JWT claim → `req.museumId`, API key → `req.museumId`
+- `CreateSessionInput` accepts `museumId`
+- Feature-flagged: `FEATURE_FLAG_MULTI_TENANCY`
+- Migration: `1774300000000-CreateMuseumsAndTenantFKs.ts`
+- Fully backward compatible: existing data gets `museum_id = NULL`
+
+**Files**: 15 created (museum module + migration), 12 modified (entities, auth service, middleware, types, routes, env)
+
+### S4-07 — Cross-Session User Memory
+
+**What**: Per-user memory profile that accumulates knowledge across chat sessions.
+
+**How**:
+- `user_memories` table: userId (UNIQUE FK), preferredExpertise, favoritePeriods[], favoriteArtists[], museumsVisited[], notableArtworks (JSONB cap 20), interests[], summary (text), sessionCount, version
+- `UserMemoryService`: cache-through `getMemoryForPrompt`, `updateAfterSession` (merges with array caps), GDPR delete
+- `buildUserMemoryPromptBlock`: pure function, sanitized, max 600 chars, `[USER MEMORY]` block
+- Integration: `prepareMessage` loads memory (fail-open), `commitAssistantResponse` updates memory (fire-and-forget)
+- Redis caching: `memory:prompt:{userId}` with TTL
+- Feature-flagged: `FEATURE_FLAG_USER_MEMORY`
+- 9 unit tests for prompt builder
+
+**Files**: 8 created, 5 modified (chat.service, chat/index, env, data-source, migration)
+
+### S4-09 — Arabic RTL Support
+
+**What**: Arabic as 8th language + full RTL layout support.
+
+**How**:
+- `shared/locales/ar/translation.json` with 415 keys (matching all other locales)
+- `shared/i18n/rtl.ts`: `isRTLLocale()`, `applyRTLLayout()`, `needsRTLReload()`
+- `I18nContext.tsx`: on language change, if RTL/LTR switch, persist locale → `forceRTL()` → `Updates.reloadAsync()` (restart required — React Native limitation)
+- RTL style fixes: `marginRight` → `marginEnd` (ConversationSearchBar), `writingDirection: 'auto'` (ChatInput)
+- `I18nManager.isRTL` persists natively across relaunches
+
+**Files**: 2 created, 5 modified (supportedLocales, i18n.ts, I18nContext, 2 UI components)
+
+### S4-10 — Biometric Authentication
+
+**What**: Optional Face ID / Fingerprint lock on app launch.
+
+**How**:
+- `expo-local-authentication` dependency installed
+- `biometricStore.ts`: AsyncStorage-backed preference
+- `useBiometricAuth.ts` hook: hardware check, enrollment check, authenticate/enable/disable
+- `BiometricLockScreen.tsx`: full-screen lock UI with unlock/retry buttons
+- `AuthContext.tsx`: `isBiometricLocked` state, checked after token refresh
+- `_layout.tsx`: `BiometricGate` wrapper shows lock screen before app content
+- `settings.tsx`: Security card with biometric toggle
+- `app.config.ts`: `NSFaceIDUsageDescription` for iOS
+- Biometric i18n keys added to all 8 translation files
+
+**Files**: 3 created, 4 modified + 8 translation files updated
+
+### Verification
+
+| Check | Result |
+|---|---|
+| Backend typecheck (`tsc --noEmit`) | OK |
+| Frontend typecheck (`tsc --noEmit`) | OK |
+| Backend tests (399 pass, 45 suites) | OK (+17 from Wave 1) |
+| Frontend tests (29 pass) | OK |
+| OpenAPI validate | OK |
+| Contract tests (6 pass) | OK |
+| `pnpm build` | OK |
+| Admin frontend build (Vite) | OK (332 kB JS) |
+| i18n completeness (8 locales, 415 keys) | OK |
+
+---
+
+## Sprint 4 Wave 3 — Enterprise Final (2026-03-23)
+
+### Context
+
+Wave 3 completes Sprint 4 with the remaining 8 tasks: content moderation, analytics, museum directory, ticket system, OpenTelemetry, load testing, E2E tests, and Data Safety documentation.
+
+### S4-03 — Content Moderation Queue
+
+- Added `status` (pending/reviewed/dismissed), `reviewedBy`, `reviewedAt`, `reviewerNotes` to `MessageReport` entity
+- Migration `1774400000000-AddModerationColumnsToMessageReports.ts`
+- 2 new admin endpoints: `GET /api/admin/reports` (list with status/reason/date filters), `PATCH /api/admin/reports/:id` (resolve)
+- `AUDIT_ADMIN_REPORT_RESOLVED` event
+
+### S4-04 — Analytics API
+
+- 3 new admin endpoints: `GET /api/admin/analytics/usage` (time-series daily/weekly/monthly), `GET /api/admin/analytics/content` (top artworks/museums, guardrail rate), `GET /api/admin/analytics/engagement` (avg messages/session, duration, return rate)
+- Raw SQL with `date_trunc()`, `Promise.all` for parallel queries, no new tables
+
+### S4-06 — Museum Directory + Geolocation
+
+- **Backend**: Added `latitude`/`longitude` to Museum entity + migration. New `GET /api/museums/directory` (visitor-accessible). `museumId` wired through chat session creation HTTP contract.
+- **Frontend**: `expo-location` installed. New `features/museum/` module: `useLocation` hook, `useMuseumDirectory` hook (Haversine sort), `MuseumCard`, `MuseumDirectoryList`. New "Museums" tab + `museum-detail` stack screen with "Start Chat Here" CTA.
+- i18n: `museumDirectory.*` keys added to all 8 locales (424 keys each)
+
+### S4-11 — In-App Support / Ticket System
+
+- New `src/modules/support/` hexagonal module (14 files)
+- 2 entities: `SupportTicket` (status/priority/category/assignedTo) + `TicketMessage` (thread)
+- User endpoints: `POST/GET /api/support/tickets`, `GET /api/support/tickets/:id`, `POST /api/support/tickets/:id/messages`
+- Admin endpoints: `GET /api/admin/tickets`, `PATCH /api/admin/tickets/:id`
+- Auto-transition: admin reply to open ticket → in_progress
+- Migration `1774400100000-CreateSupportTables.ts`
+
+### S4-13 — OpenTelemetry Distributed Tracing
+
+- `@opentelemetry/sdk-node` + auto-instrumentations (HTTP, Express, pg)
+- `src/instrumentation.ts` loaded before all other imports in `index.ts`
+- Dynamic `require()` to avoid loading when disabled
+- Feature-flagged: `OTEL_ENABLED=false` by default
+- Complements Sentry (errors) with OTel (traces)
+
+### S4-14 — Load Testing + Horizontal Scaling
+
+- 3 k6 scripts: `auth-flow.k6.js` (10 VUs), `chat-flow.k6.js` (5 VUs), `concurrent-users.k6.js` (50 VUs ramp)
+- Shared auth helper module
+- `docs/HORIZONTAL_SCALING.md`: stateless architecture, DB pool formula, Redis requirements, Docker Swarm + K8s configs, rate limiter migration caveat
+- npm scripts: `perf:auth`, `perf:chat`, `perf:load`
+
+### S4-15 — E2E Test Suite Comprehensive
+
+- Shared `e2e-app-harness.ts` (extracts 120 lines of common setup, all 20 migrations)
+- `e2e-auth.helpers.ts` (register/login reusable functions)
+- 3 new E2E test files (17 tests): `auth.e2e.test.ts` (8 tests), `chat.e2e.test.ts` (4 tests), `rbac.e2e.test.ts` (5 tests)
+- All gated by `RUN_E2E=true`, use testcontainers
+- Original E2E test preserved untouched
+
+### S4-16 — Google Play Data Safety Form
+
+- `docs/GOOGLE_PLAY_DATA_SAFETY.md`: maps all data collection, sharing, security practices
+- Covers personal info, photos, audio, location, chat data, crash logs, device IDs
+- Documents third-party sharing (Sentry, LLM providers, Brevo)
+- Form answers quick reference for each Google Play question
+
+### Verification
+
+| Check | Result |
+|---|---|
+| Backend typecheck (`tsc --noEmit`) | OK |
+| Frontend typecheck (`tsc --noEmit`) | OK |
+| Backend tests (416 total: 392 pass, 24 E2E skipped) | OK |
+| Frontend tests (29 pass) | OK |
+| `pnpm build` | OK |
+| E2E tests (24 tests, 3 new files + 1 existing) | Ready (needs `RUN_E2E=true` + Docker) |
+| k6 load tests (3 scripts) | Ready (needs k6 binary) |

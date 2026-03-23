@@ -5,7 +5,7 @@
 ######### ! ############################# 
 
 ### ? send artName and artist Test
-POST http://localhost:3000/api/ia/museum/
+POST https://musaium.com/api/ia/museum/
 Content-Type: application/json
 
 {
@@ -22,7 +22,7 @@ Content-Type: application/json
 ######### ! ############################# 
 
 ### ? Register user
-POST http://localhost:3000/api/auth/register
+POST https://musaium.com/api/auth/register
 Content-Type: application/json
 
 {
@@ -34,16 +34,16 @@ Content-Type: application/json
 
 
 ### ? Login user
-POST http://localhost:3000/api/auth/login
+POST https://musaium.com/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "tim.moyence@outlook.fr",
+  "email": "tim.moyence@gamil.com",
   "password": "Test123456!"
 }
 
 ### ? forgot-password user
-POST http://localhost:3000/api/auth/forgot-password
+POST https://musaium.com/api/auth/forgot-password
 Content-Type: application/json
 
 {
@@ -51,7 +51,7 @@ Content-Type: application/json
 }
 
 ### ? reset-password user
-POST http://localhost:3000/api/auth/reset-password
+POST https://musaium.com/api/auth/reset-password
 Content-Type: application/json
 
 {
