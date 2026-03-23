@@ -5,6 +5,7 @@ export interface CreateSessionRequestDTO {
   userId?: number;
   locale?: string;
   museumMode?: boolean;
+  museumId?: number;
 }
 
 type Schemas = components['schemas'];

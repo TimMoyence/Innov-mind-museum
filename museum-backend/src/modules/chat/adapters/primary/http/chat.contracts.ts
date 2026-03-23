@@ -66,6 +66,7 @@ export interface CreateSessionRequest {
   userId?: number;
   locale?: string;
   museumMode?: boolean;
+  museumId?: number;
 }
 
 /** Response shape for `POST /sessions`. */
@@ -225,10 +226,16 @@ export const parseCreateSessionRequest = (payload: unknown): CreateSessionReques
     throw badRequest('Payload must be an object');
   }
 
+  const museumId = optionalNumber(payload, 'museumId');
+  if (museumId !== undefined && (!Number.isInteger(museumId) || museumId <= 0)) {
+    throw badRequest('museumId must be a positive integer');
+  }
+
   return {
     userId: optionalNumber(payload, 'userId'),
     locale: optionalString(payload, 'locale'),
     museumMode: optionalBoolean(payload, 'museumMode'),
+    museumId,
   };
 };
 

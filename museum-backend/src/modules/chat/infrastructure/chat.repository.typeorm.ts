@@ -96,6 +96,7 @@ export class TypeOrmChatRepository implements ChatRepository {
       locale: input.locale || null,
       museumMode: input.museumMode ?? false,
       user: input.userId ? ({ id: input.userId } as ChatSession['user']) : null,
+      museumId: input.museumId ?? null,
     });
 
     return this.sessionRepo.save(session);
