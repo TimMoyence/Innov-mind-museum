@@ -51,6 +51,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      HAS_SENTRY_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -80,7 +82,7 @@ jobs:
             ghcr.io/${{ secrets.GHCR_USER }}/museum-backend:${{ github.sha }}
 
       - name: Create Sentry release
-        if: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
+        if: env.HAS_SENTRY_TOKEN == 'true'
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
@@ -91,7 +93,7 @@ jobs:
           npx @sentry/cli releases finalize "${{ github.sha }}"
 
       - name: Upload backend source maps to Sentry
-        if: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
+        if: env.HAS_SENTRY_TOKEN == 'true'
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
