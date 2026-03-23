@@ -1181,6 +1181,11 @@ export interface components {
             email: string;
             firstname?: string | null;
             lastname?: string | null;
+            /**
+             * @description User role for RBAC
+             * @enum {string}
+             */
+            role: "visitor" | "moderator" | "museum_manager" | "admin";
         };
         AuthSessionResponse: {
             accessToken: string;
@@ -1354,6 +1359,15 @@ export interface components {
         };
         /** @description Authentication required */
         Unauthorized: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description Insufficient permissions */
+        Forbidden: {
             headers: {
                 [name: string]: unknown;
             };

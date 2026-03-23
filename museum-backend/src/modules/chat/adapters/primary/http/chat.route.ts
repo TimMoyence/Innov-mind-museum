@@ -223,6 +223,7 @@ export const createChatRouter = (chatService: ChatService): Router => {
         ...payload,
         locale: payload.locale || req.clientLocale,
         userId: currentUser?.id,
+        museumId: payload.museumId ?? (req as Request & { museumId?: number }).museumId,
       });
       res.status(201).json({ session });
     } catch (error) {
