@@ -28,6 +28,18 @@ export class MessageReport {
   @Column({ type: 'text', nullable: true })
   comment!: string | null;
 
+  @Column({ type: 'varchar', length: 16, default: 'pending' })
+  status!: string;
+
+  @Column({ type: 'integer', nullable: true })
+  reviewedBy!: number | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  reviewedAt!: Date | null;
+
+  @Column({ type: 'text', nullable: true })
+  reviewerNotes!: string | null;
+
   @CreateDateColumn({ type: 'timestamp' })
   createdAt!: Date;
 }
