@@ -35,8 +35,17 @@
       "autoIncrement": true,
       "env": {
         "APP_VARIANT": "production",
-        "EXPO_PUBLIC_API_ENVIRONMENT": "production",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "EXPO_PUBLIC_API_ENVIRONMENT": "production"
+      },
+      "android": {
+        "env": {
+          "SENTRY_PROJECT": "android"
+        }
+      },
+      "ios": {
+        "env": {
+          "SENTRY_PROJECT": "apple-ios"
+        }
       }
     }
   },
