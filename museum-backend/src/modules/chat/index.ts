@@ -1,7 +1,9 @@
 import { env } from '@src/config/env';
 import { DataSource } from 'typeorm';
+import { auditService } from '@shared/audit';
 
 import { ChatService } from './application/chat.service';
+import { UserMemoryService } from './application/user-memory.service';
 import { LangChainChatOrchestrator } from './adapters/secondary/langchain.orchestrator';
 import { LocalImageStorage } from './adapters/secondary/image-storage.stub';
 import { S3CompatibleImageStorage } from './adapters/secondary/image-storage.s3';
@@ -16,6 +18,7 @@ import {
 } from './adapters/secondary/ocr-service';
 import type { OcrService } from './adapters/secondary/ocr-service';
 import { TypeOrmChatRepository } from './infrastructure/chat.repository.typeorm';
+import { TypeOrmUserMemoryRepository } from './infrastructure/userMemory.repository.typeorm';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /** Lazily-initialized image storage singleton, shared with the auth module for GDPR cleanup. */
@@ -35,6 +38,12 @@ let ocrServiceRef: OcrService | undefined;
 
 /** Returns the shared OCR service instance (available after buildChatService has been called). */
 export const getOcrService = (): OcrService | undefined => ocrServiceRef;
+
+/** Lazily-initialized user-memory service singleton, shared with the auth module for GDPR cleanup. */
+let sharedUserMemoryService: UserMemoryService | undefined;
+
+/** Returns the shared user-memory service instance (available after buildChatService has been called). */
+export const getUserMemoryService = (): UserMemoryService | undefined => sharedUserMemoryService;
 
 /**
  * Wires the chat module dependency graph and returns a fully configured ChatService.
@@ -87,6 +96,13 @@ export const buildChatService = (dataSource: DataSource, cache?: CacheService): 
     : new DisabledOcrService();
   ocrServiceRef = ocr;
 
+  let userMemory: UserMemoryService | undefined;
+  if (env.featureFlags.userMemory) {
+    const userMemoryRepo = new TypeOrmUserMemoryRepository(dataSource);
+    userMemory = new UserMemoryService(userMemoryRepo, cache);
+    sharedUserMemoryService = userMemory;
+  }
+
   return new ChatService({
     repository,
     orchestrator: new LangChainChatOrchestrator(),
@@ -95,5 +111,7 @@ export const buildChatService = (dataSource: DataSource, cache?: CacheService): 
     tts,
     cache,
     ocr,
+    audit: auditService,
+    userMemory,
   });
 };
