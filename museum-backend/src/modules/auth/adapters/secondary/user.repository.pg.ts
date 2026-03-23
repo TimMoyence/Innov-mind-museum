@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import pool from '../../../../data/db';
+import { conflict } from '@shared/errors/app.error';
 import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
 import { User } from '../../core/domain/user.entity';
 import { IUserRepository } from '../../core/domain/user.repository.interface';
@@ -48,7 +49,7 @@ export class UserRepositoryPg implements IUserRepository {
     // Vérifier l'existence préalable
     const existingUser = await this.getUserByEmail(email);
     if (existingUser) {
-      throw new Error('Un utilisateur avec cet email existe déjà.');
+      throw conflict('Un utilisateur avec cet email existe déjà.');
     }
 
     const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);

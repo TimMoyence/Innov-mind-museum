@@ -6,8 +6,8 @@
 
 import { tooManyRequests } from '@shared/errors/app.error';
 
-const MAX_ATTEMPTS = 5;
-const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_ATTEMPTS = 10;
+const WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const MAX_MAP_SIZE = 100_000;
 const SWEEP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
