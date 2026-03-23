@@ -135,8 +135,8 @@ Pour préparer une vraie release publique:
 ```bash
 cd /Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend
 
-export EXPO_PUBLIC_API_BASE_URL_STAGING="https://museum.asilidesign.fr"
-export EXPO_PUBLIC_API_BASE_URL_PROD="https://museum.asilidesign.fr"
+export EXPO_PUBLIC_API_BASE_URL_STAGING="https://musaium.com"
+export EXPO_PUBLIC_API_BASE_URL_PROD="https://musaium.com"
 
 eas build --platform android --profile production --non-interactive
 ```
