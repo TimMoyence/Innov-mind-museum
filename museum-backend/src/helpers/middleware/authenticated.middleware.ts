@@ -29,7 +29,8 @@ export function isAuthenticated(
 
   try {
     const user = authSessionService.verifyAccessToken(token);
-    (req as Request & { user?: { id: number } }).user = { id: user.id };
+    req.user = { id: user.id, role: user.role, museumId: user.museumId };
+    req.museumId = user.museumId ?? undefined;
     setUser({ id: String(user.id) });
     next();
   } catch {
@@ -59,7 +60,8 @@ export function isAuthenticatedJwtOnly(
 
   try {
     const user = authSessionService.verifyAccessToken(token);
-    (req as Request & { user?: { id: number } }).user = { id: user.id };
+    req.user = { id: user.id, role: user.role, museumId: user.museumId };
+    req.museumId = user.museumId ?? undefined;
     setUser({ id: String(user.id) });
     next();
   } catch {

@@ -30,6 +30,7 @@ export interface UserExportPayload {
     email: string;
     firstname?: string | null;
     lastname?: string | null;
+    role?: string;
     createdAt: string;
     updatedAt: string;
   };

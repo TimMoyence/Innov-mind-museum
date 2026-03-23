@@ -10,18 +10,23 @@ import {
   StoredRefreshTokenRow,
 } from '@modules/auth/adapters/secondary/refresh-token.repository.pg';
 import { checkLoginRateLimit, recordFailedLogin, clearLoginAttempts } from './login-rate-limiter';
+import type { UserRole } from '../domain/user-role';
 
 interface SafeUser {
   id: number;
   email: string;
   firstname?: string | null;
   lastname?: string | null;
+  role: UserRole;
+  museumId?: number | null;
 }
 
 interface AccessTokenClaims extends JwtPayload {
   sub: string;
   type: 'access';
   jti: string;
+  role?: UserRole;
+  museumId?: number | null;
 }
 
 interface RefreshTokenClaims extends JwtPayload {
@@ -90,6 +95,8 @@ const sanitizeUser = (user: Record<string, unknown>): SafeUser => {
       typeof user.lastname === 'string' || user.lastname === null
         ? (user.lastname as string | null)
         : null,
+    role: (user.role as UserRole) || 'visitor',
+    museumId: typeof user.museum_id === 'number' ? user.museum_id : (typeof user.museumId === 'number' ? user.museumId : null),
   };
 };
 
@@ -215,14 +222,14 @@ export class AuthSessionService {
    * @returns The authenticated user's safe profile.
    * @throws {AppError} 401 if the token is invalid or expired.
    */
-  verifyAccessToken(token: string): { id: number } {
+  verifyAccessToken(token: string): { id: number; role: UserRole; museumId?: number | null } {
     try {
       const decoded = jwt.verify(token, env.auth.accessTokenSecret) as AccessTokenClaims;
       if (decoded.type !== 'access' || !decoded.sub) {
         throw unauthorized('Invalid access token', 'INVALID_ACCESS_TOKEN');
       }
 
-      return { id: Number(decoded.sub) };
+      return { id: Number(decoded.sub), role: decoded.role || 'visitor', museumId: decoded.museumId ?? null };
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -290,6 +297,8 @@ export class AuthSessionService {
         sub: String(params.user.id),
         type: 'access',
         jti: accessJti,
+        role: params.user.role,
+        ...(params.user.museumId ? { museumId: params.user.museumId } : {}),
       },
       env.auth.accessTokenSecret,
       { expiresIn: env.auth.accessTokenTtl as jwt.SignOptions['expiresIn'] },

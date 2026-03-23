@@ -23,7 +23,7 @@ import { RefreshTokenRepositoryPg } from '../../../auth/adapters/secondary/refre
 import { ApiKeyRepositoryPg } from '../../../auth/adapters/secondary/apiKey.repository.pg';
 import { BrevoEmailService } from '@shared/email/brevo-email.service';
 import type { EmailService } from '@shared/email/email.port';
-import { setApiKeyRepository } from '@src/helpers/middleware/apiKey.middleware';
+import { setApiKeyRepository, setUserRoleResolver } from '@src/helpers/middleware/apiKey.middleware';
 
 const userRepository = new UserRepositoryPg();
 const socialAccountRepository = new SocialAccountRepositoryPg();
@@ -86,6 +86,10 @@ const listApiKeysUseCase = new ListApiKeysUseCase(apiKeyRepository);
 // Register the repository with the middleware so it can validate API keys
 if (env.featureFlags.apiKeys) {
   setApiKeyRepository(apiKeyRepository);
+  setUserRoleResolver(async (userId) => {
+    const user = await userRepository.getUserById(userId);
+    return user?.role ?? null;
+  });
 }
 
 export {

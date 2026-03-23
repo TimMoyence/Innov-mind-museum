@@ -62,6 +62,19 @@ export const conflict = (message: string): AppError => {
 };
 
 /**
+ * Creates a 403 Forbidden AppError.
+ * @param message - Human-readable error description.
+ * @returns AppError with status 403.
+ */
+export const forbidden = (message: string): AppError => {
+  return new AppError({
+    message,
+    statusCode: 403,
+    code: 'FORBIDDEN',
+  });
+};
+
+/**
  * Creates a 429 Too Many Requests AppError.
  * @param message - Human-readable error description.
  * @returns AppError with status 429.

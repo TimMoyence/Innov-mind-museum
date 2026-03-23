@@ -6,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import type { UserRole } from './user-role';
 
 /** Represents a registered user account. Mapped to `users`. */
 @Entity({ name: 'users' })
@@ -15,6 +16,16 @@ export class User {
 
   @Column({ unique: true })
   email!: string;
+
+  @Column({
+    type: 'enum',
+    enum: ['visitor', 'moderator', 'museum_manager', 'admin'],
+    default: 'visitor',
+  })
+  role!: UserRole;
+
+  @Column({ type: 'integer', nullable: true, name: 'museum_id' })
+  museumId?: number | null;
 
   /** Bcrypt-hashed password. `null` for social-only accounts. */
   @Column({ type: 'varchar', nullable: true })

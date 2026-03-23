@@ -10,6 +10,7 @@ const makeSocialUser = (overrides: Partial<User> = {}): User =>
     password: null,
     firstname: 'Alice',
     lastname: 'Test',
+    role: 'visitor',
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
