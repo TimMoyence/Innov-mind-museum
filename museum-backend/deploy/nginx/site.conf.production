@@ -1,0 +1,277 @@
+# ----------------------------
+# HTTP -> HTTPS + ACME
+# ----------------------------
+server {
+  listen 80;
+  listen [::]:80;
+  server_name asilidesign.fr www.asilidesign.fr museum.asilidesign.fr
+              musaium.com www.musaium.com musaium.fr www.musaium.fr;
+
+  location ^~ /.well-known/acme-challenge/ {
+    root /var/www/certbot;
+    default_type "text/plain";
+    try_files $uri =404;
+  }
+
+  location / {
+    return 301 https://$host$request_uri;
+  }
+}
+
+# ----------------------------
+# HTTPS www -> non-www (asilidesign)
+# ----------------------------
+server {
+  listen 443 ssl;
+  listen [::]:443 ssl;
+  http2 on;
+  server_name www.asilidesign.fr;
+
+  ssl_certificate     /etc/letsencrypt/live/asilidesign.fr/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/asilidesign.fr/privkey.pem;
+
+  location ^~ /.well-known/acme-challenge/ {
+    root /var/www/certbot;
+    default_type "text/plain";
+    try_files $uri =404;
+  }
+
+  location / {
+    return 301 https://asilidesign.fr$request_uri;
+  }
+}
+
+# ----------------------------
+# HTTPS portfolio
+# ----------------------------
+server {
+  listen 443 ssl;
+  listen [::]:443 ssl;
+  http2 on;
+  server_name asilidesign.fr;
+
+  ssl_certificate     /etc/letsencrypt/live/asilidesign.fr/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/asilidesign.fr/privkey.pem;
+
+  resolver 127.0.0.11 valid=30s ipv6=off;
+  client_max_body_size 20m;
+
+  location ^~ /.well-known/acme-challenge/ {
+    root /var/www/certbot;
+    default_type "text/plain";
+    try_files $uri =404;
+  }
+
+  proxy_set_header Host $host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+
+  proxy_http_version 1.1;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection "upgrade";
+
+  location = /home           { return 301 /fr; }
+  location = /presentation   { return 301 /fr/presentation; }
+  location = /offer          { return 301 /fr/offer; }
+  location = /contact        { return 301 /fr/contact; }
+  location = /client-project { return 301 /fr/client-project; }
+
+  location = /fr/home { return 301 /fr; }
+  location = /en/home { return 301 /en; }
+
+  location ^~ /api/v1/portfolio25/ {
+    proxy_pass http://portfolio-api:3000;
+  }
+
+  set $prefer_en 0;
+  if ($http_accept_language ~* "(^|,)\s*en(-|;|,|$)") {
+    set $prefer_en 1;
+  }
+
+  location = / {
+    if ($prefer_en = 1) { return 302 /en; }
+    return 302 /fr;
+  }
+
+  location ^~ /en/ {
+    proxy_pass http://portfolio-web-en:4000;
+  }
+
+  location ^~ /fr/ {
+    proxy_pass http://portfolio-web-fr:4000;
+  }
+
+  location / {
+    proxy_pass http://portfolio-web-fr:4000;
+  }
+}
+
+
+# ==========================================================
+# Musaium — musaium.com / musaium.fr
+# ==========================================================
+
+# Rate limiting zones
+limit_req_zone $binary_remote_addr zone=global:10m rate=30r/s;
+limit_req_zone $binary_remote_addr zone=auth:10m rate=5r/m;
+
+server {
+  listen 443 ssl;
+  listen [::]:443 ssl;
+  http2 on;
+
+  server_name musaium.com musaium.fr;
+
+  ssl_certificate     /etc/letsencrypt/live/musaium.com/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/musaium.com/privkey.pem;
+  ssl_protocols       TLSv1.2 TLSv1.3;
+  ssl_prefer_server_ciphers on;
+
+  resolver 127.0.0.11 valid=30s ipv6=off;
+  client_max_body_size 20m;
+
+  location ^~ /.well-known/acme-challenge/ {
+    root /var/www/certbot;
+    default_type "text/plain";
+    try_files $uri =404;
+  }
+
+  # --- Block vulnerability scanners and phishing probes ---
+  # 444 = nginx silently closes connection (no response, no headers)
+  location ~* \.(php|asp|aspx|jsp|cgi|pl|py|sh|sql|bak|old|orig|save|swp|tmp|log|ini)$ {
+    access_log off;
+    return 444;
+  }
+  location ~* ^/(\.env|\.git|\.svn|\.hg|\.DS_Store|\.aws|\.docker|\.config|\.settings|\.well-known/(config|credentials)) {
+    access_log off;
+    return 444;
+  }
+  location ~* ^/(wp-|wordpress|phpmyadmin|phpinfo|adminer|mysqladmin|dbadmin|sqladmin|phpminiadmin) {
+    access_log off;
+    return 444;
+  }
+  location ~* ^/(vendor|node_modules|composer\.|package\.json|yarn\.lock|Dockerfile|docker-compose|webpack|vite\.config|vercel\.json|\.nvmrc|\.yarnrc|\.rbenv) {
+    access_log off;
+    return 444;
+  }
+  location ~* ^/(debug|test[0-9_]|tester|testing|errors\.|build\.|npm-debug|firebase-debug|yarn-debug) {
+    access_log off;
+    return 444;
+  }
+  location ~* ^/(backup|dump|data\.tar|database\.|export\.sql|mysql\.sql|site\.sql|install\.|setup\.|upgrade\.|migrate\.|migration\.|console\.) {
+    access_log off;
+    return 444;
+  }
+  location ~* ^/(id_rsa|key\.pem|cert\.pem|ssl\.key|public\.key|selfsigned|nginx\.conf|httpd\.conf|server-status|server-info) {
+    access_log off;
+    return 444;
+  }
+  location ~* ^/(sendgrid|brevo|mailgun|twilio|stripe|paypal|webhook-test) {
+    access_log off;
+    return 444;
+  }
+  location ~* ^/(admin|_profiler|_debugbar|debugbar|xdebug|artisan|storage/(oauth|logs|debug)|bootstrap/app) {
+    access_log off;
+    return 444;
+  }
+  location ~* ^/(config|settings|appsettings|connectionstrings|sample|example)\.(json|yml|yaml|xml|php|js|ts|bak|old|ini|local|properties|inc) {
+    access_log off;
+    return 444;
+  }
+  location ~* ^/(form|webhook)/(upload|uploads|file|files|import|media|image|avatar|attachment|document|blob|storage|drive|backup|export|dropzone|batch|bulk|multipart|content|asset|resource|submit|data) {
+    access_log off;
+    return 444;
+  }
+
+  # --- SSE streaming endpoint ---
+  location ~ ^/api/chat/sessions/.*/messages/stream$ {
+    set $museum_upstream http://museum-backend:3000;
+    proxy_pass $museum_upstream;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    proxy_http_version 1.1;
+    proxy_set_header Connection '';
+    proxy_buffering off;
+    proxy_cache off;
+    gzip off;
+    proxy_read_timeout 600s;
+    proxy_send_timeout 600s;
+    add_header X-Accel-Buffering no;
+  }
+
+  # --- Auth endpoints (stricter rate limit) ---
+  location /api/auth/ {
+    limit_req zone=auth burst=10 nodelay;
+
+    set $museum_upstream http://museum-backend:3000;
+    proxy_pass $museum_upstream;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  # --- Only /api/ paths reach the backend ---
+  location / {
+    if ($uri !~* ^/(api/|\.well-known/)) {
+      return 444;
+    }
+
+    limit_req zone=global burst=60 nodelay;
+
+    set $museum_upstream http://museum-backend:3000;
+    proxy_pass $museum_upstream;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+
+    proxy_connect_timeout 5s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
+  }
+}
+
+# --- www -> non-www redirect (musaium) ---
+server {
+  listen 443 ssl;
+  listen [::]:443 ssl;
+  http2 on;
+
+  server_name www.musaium.com www.musaium.fr;
+
+  ssl_certificate     /etc/letsencrypt/live/musaium.com/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/musaium.com/privkey.pem;
+
+  location ^~ /.well-known/acme-challenge/ {
+    root /var/www/certbot;
+    default_type "text/plain";
+    try_files $uri =404;
+  }
+
+  return 301 https://musaium.com$request_uri;
+}
+
+# --- Legacy domain redirect ---
+server {
+  listen 443 ssl;
+  listen [::]:443 ssl;
+  http2 on;
+
+  server_name museum.asilidesign.fr;
+
+  ssl_certificate     /etc/letsencrypt/live/asilidesign.fr/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/asilidesign.fr/privkey.pem;
+
+  return 301 https://musaium.com$request_uri;
+}

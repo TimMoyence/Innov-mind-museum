@@ -115,8 +115,6 @@ function RootLayout() {
     setOnLanguageChange((lang) => void saveDefaultLocale(lang));
 
     applyRuntimeSettings().catch((error) => {
-      // eslint-disable-next-line no-console
-      console.error('Failed to apply runtime settings', error);
       setRuntimeStartupError(
         error instanceof Error
           ? error

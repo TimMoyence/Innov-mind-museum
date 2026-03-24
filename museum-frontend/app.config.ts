@@ -154,7 +154,62 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             NSPrivacyAccessedAPITypeReasons: ['CA92.1'],
           },
         ],
-        NSPrivacyCollectedDataTypes: [],
+        NSPrivacyCollectedDataTypes: [
+          {
+            NSPrivacyCollectedDataType:
+              'NSPrivacyCollectedDataTypeEmailAddress',
+            NSPrivacyCollectedDataTypePurposes: [
+              'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+            ],
+            NSPrivacyCollectedDataTypeLinked: true,
+            NSPrivacyCollectedDataTypeTracking: false,
+          },
+          {
+            NSPrivacyCollectedDataType:
+              'NSPrivacyCollectedDataTypeName',
+            NSPrivacyCollectedDataTypePurposes: [
+              'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+            ],
+            NSPrivacyCollectedDataTypeLinked: true,
+            NSPrivacyCollectedDataTypeTracking: false,
+          },
+          {
+            NSPrivacyCollectedDataType:
+              'NSPrivacyCollectedDataTypePhotosOrVideos',
+            NSPrivacyCollectedDataTypePurposes: [
+              'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+            ],
+            NSPrivacyCollectedDataTypeLinked: false,
+            NSPrivacyCollectedDataTypeTracking: false,
+          },
+          {
+            NSPrivacyCollectedDataType:
+              'NSPrivacyCollectedDataTypeAudioData',
+            NSPrivacyCollectedDataTypePurposes: [
+              'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+            ],
+            NSPrivacyCollectedDataTypeLinked: false,
+            NSPrivacyCollectedDataTypeTracking: false,
+          },
+          {
+            NSPrivacyCollectedDataType:
+              'NSPrivacyCollectedDataTypePreciseLocation',
+            NSPrivacyCollectedDataTypePurposes: [
+              'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+            ],
+            NSPrivacyCollectedDataTypeLinked: false,
+            NSPrivacyCollectedDataTypeTracking: false,
+          },
+          {
+            NSPrivacyCollectedDataType:
+              'NSPrivacyCollectedDataTypeCrashData',
+            NSPrivacyCollectedDataTypePurposes: [
+              'NSPrivacyCollectedDataTypePurposeAnalytics',
+            ],
+            NSPrivacyCollectedDataTypeLinked: false,
+            NSPrivacyCollectedDataTypeTracking: false,
+          },
+        ],
       },
     },
     android: {
