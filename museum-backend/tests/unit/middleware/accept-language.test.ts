@@ -45,4 +45,19 @@ describe('acceptLanguageMiddleware', () => {
 
     expect(req.clientLocale).toBe('ja');
   });
+
+  it('handles array-valued accept-language header', () => {
+    // Some proxies may send headers as arrays
+    const req = {
+      headers: { 'accept-language': ['es-ES', 'en;q=0.5'] },
+      clientLocale: undefined,
+    } as unknown as Request;
+    const next = jest.fn() as NextFunction;
+
+    acceptLanguageMiddleware(req, mockRes() as Response, next);
+
+    // Should use the first element of the array
+    expect(req.clientLocale).toBe('es-ES');
+    expect(next).toHaveBeenCalledTimes(1);
+  });
 });

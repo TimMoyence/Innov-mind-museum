@@ -104,5 +104,10 @@ describe('locale utilities', () => {
     it('trims whitespace', () => {
       expect(parseAcceptLanguageHeader('  es-ES , en;q=0.5  ')).toBe('es-ES');
     });
+
+    it('returns undefined for header with only semicolons/commas', () => {
+      // After splitting and filtering, no valid tag remains
+      expect(parseAcceptLanguageHeader(';q=0.8, ;q=0.5')).toBeUndefined();
+    });
   });
 });

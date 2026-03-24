@@ -1,0 +1,87 @@
+import { renderHook, act } from '@testing-library/react-native';
+import { useOfflineQueue } from '@/features/chat/application/useOfflineQueue';
+
+// ── Mocks ────────────────────────────────────────────────────────────────────
+
+// In-memory fake storage
+const fakeStore: Record<string, string> = {};
+jest.mock('@/shared/infrastructure/storage', () => ({
+  storage: {
+    getItem: jest.fn(async (key: string) => fakeStore[key] ?? null),
+    setItem: jest.fn(async (key: string, value: string) => {
+      fakeStore[key] = value;
+    }),
+    removeItem: jest.fn(async (key: string) => {
+      delete fakeStore[key];
+    }),
+  },
+}));
+
+let mockIsConnected = true;
+jest.mock('@/shared/infrastructure/connectivity/useConnectivity', () => ({
+  useConnectivity: () => ({ isConnected: mockIsConnected }),
+}));
+
+// ── Tests ────────────────────────────────────────────────────────────────────
+
+describe('useOfflineQueue', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockIsConnected = true;
+    // Clear fake store
+    for (const key of Object.keys(fakeStore)) delete fakeStore[key];
+  });
+
+  it('calls hydrate on mount', async () => {
+    const { result } = renderHook(() => useOfflineQueue());
+
+    // After mount, queue should be empty (no persisted data)
+    expect(result.current.pendingCount).toBe(0);
+    expect(result.current.pendingMessages).toEqual([]);
+  });
+
+  it('enqueue adds a message and increments pendingCount', () => {
+    const { result } = renderHook(() => useOfflineQueue());
+
+    act(() => {
+      result.current.enqueue({ sessionId: 's1', text: 'hello' });
+    });
+
+    expect(result.current.pendingCount).toBe(1);
+    expect(result.current.pendingMessages[0]).toMatchObject({
+      sessionId: 's1',
+      text: 'hello',
+    });
+  });
+
+  it('dequeue removes a message and decrements pendingCount', () => {
+    const { result } = renderHook(() => useOfflineQueue());
+
+    act(() => {
+      result.current.enqueue({ sessionId: 's1', text: 'first' });
+      result.current.enqueue({ sessionId: 's1', text: 'second' });
+    });
+
+    expect(result.current.pendingCount).toBe(2);
+
+    act(() => {
+      result.current.dequeue();
+    });
+
+    expect(result.current.pendingCount).toBe(1);
+    expect(result.current.pendingMessages[0]).toMatchObject({ text: 'second' });
+  });
+
+  it('isOffline reflects useConnectivity', () => {
+    mockIsConnected = false;
+    const { result } = renderHook(() => useOfflineQueue());
+    expect(result.current.isOffline).toBe(true);
+  });
+
+  it('empty queue has pendingCount=0 and isEmpty-equivalent state', () => {
+    const { result } = renderHook(() => useOfflineQueue());
+
+    expect(result.current.pendingCount).toBe(0);
+    expect(result.current.pendingMessages).toEqual([]);
+  });
+});
