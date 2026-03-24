@@ -13,8 +13,13 @@
   "include": [
     "tests/**/*.ts",
     "features/chat/domain/contracts.ts",
+    "features/chat/application/offlineQueue.ts",
+    "features/chat/application/chatSessionLogic.pure.ts",
+    "features/chat/infrastructure/sseParser.ts",
     "features/settings/runtimeSettings.pure.ts",
     "shared/lib/errors.ts",
-    "shared/types/AppError.ts"
+    "shared/types/AppError.ts",
+    "shared/infrastructure/httpErrorMapper.ts",
+    "context/authLogic.pure.ts"
   ]
 }

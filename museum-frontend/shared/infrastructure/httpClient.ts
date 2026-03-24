@@ -1,20 +1,29 @@
 import axios from 'axios';
 
-import { getAccessToken } from '@/features/auth/infrastructure/authTokenStore';
 import {
   assertApiBaseUrlAllowed,
   tryResolveInitialApiBaseUrl,
 } from './apiConfig';
-import { createAppError } from '@/shared/types/AppError';
 import { reportError } from '@/shared/observability/errorReporting';
 import { generateRequestId } from './requestId';
+import { mapAxiosError, toAxiosLikeError } from './httpErrorMapper';
 
 type UnauthorizedHandler = () => void;
 type AuthRefreshHandler = () => Promise<string | null>;
+type TokenProvider = () => string | null;
 
 let unauthorizedHandler: UnauthorizedHandler | null = null;
 let authRefreshHandler: AuthRefreshHandler | null = null;
 let authRefreshInFlight: Promise<string | null> | null = null;
+let tokenProvider: TokenProvider | null = null;
+
+/**
+ * Registers a provider function that returns the current access token.
+ * @param fn - Function returning the token string (or `null`), or `null` to unregister.
+ */
+export const setTokenProvider = (fn: TokenProvider | null): void => {
+  tokenProvider = fn;
+};
 
 /**
  * Registers a callback invoked when a 401 response is received on an authenticated request.
@@ -106,7 +115,7 @@ httpClient.interceptors.request.use((config) => {
   const shouldAttachAuth = finalConfig.requiresAuth !== false;
 
   if (shouldAttachAuth) {
-    const token = getAccessToken();
+    const token = tokenProvider?.() ?? null;
     if (token && !finalConfig.headers?.Authorization) {
       finalConfig.headers = {
         ...finalConfig.headers,
@@ -192,227 +201,7 @@ httpClient.interceptors.response.use(
   },
 );
 
-interface AxiosLikeError {
-  isAxiosError?: boolean;
-  code?: string;
-  message?: string;
-  response?: {
-    status?: number;
-    data?: unknown;
-  };
-  config?: Record<string, unknown>;
-}
-
-interface ApiErrorPayload {
-  error?: {
-    code?: unknown;
-    message?: unknown;
-    requestId?: unknown;
-  };
-  code?: unknown;
-  message?: unknown;
-}
-
-const toAxiosLikeError = (error: unknown): AxiosLikeError | null => {
-  if (!error || typeof error !== 'object') {
-    return null;
-  }
-
-  const candidate = error as AxiosLikeError;
-  if (
-    candidate.isAxiosError ||
-    'response' in candidate ||
-    'config' in candidate ||
-    'code' in candidate
-  ) {
-    return candidate;
-  }
-
-  return null;
-};
-
-const toApiErrorPayload = (value: unknown): ApiErrorPayload | null => {
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-
-  return value as ApiErrorPayload;
-};
-
-const getApiErrorCode = (value: unknown): string | undefined => {
-  const payload = toApiErrorPayload(value);
-  if (!payload) {
-    return undefined;
-  }
-
-  if (typeof payload.error?.code === 'string') {
-    return payload.error.code;
-  }
-
-  if (typeof payload.code === 'string') {
-    return payload.code;
-  }
-
-  return undefined;
-};
-
-const getApiErrorMessage = (value: unknown): string | undefined => {
-  const payload = toApiErrorPayload(value);
-  if (!payload) {
-    return undefined;
-  }
-
-  if (typeof payload.error?.message === 'string') {
-    return payload.error.message;
-  }
-
-  if (typeof payload.message === 'string') {
-    return payload.message;
-  }
-
-  return undefined;
-};
-
-const getApiRequestId = (value: unknown): string | undefined => {
-  const payload = toApiErrorPayload(value);
-  if (!payload) {
-    return undefined;
-  }
-
-  const nested = payload.error;
-  if (nested && typeof nested.requestId === 'string') {
-    return nested.requestId;
-  }
-
-  return undefined;
-};
-
-/**
- * Converts an Axios error (or unknown thrown value) into a structured {@link AppError}.
- * Handles timeout, network, 401, 403, 404, and 4xx/5xx status codes.
- * @param error - The caught error value.
- * @returns An `AppError & Error` with the appropriate kind and message.
- */
-export const mapAxiosError = (error: unknown) => {
-  const axiosLike = toAxiosLikeError(error);
-
-  if (!axiosLike) {
-    return createAppError({
-      kind: 'Unknown',
-      message: 'Unexpected error',
-      details: error,
-    });
-  }
-
-  if (axiosLike.code === 'ECONNABORTED') {
-    return createAppError({
-      kind: 'Timeout',
-      message: 'Request timed out',
-      details: axiosLike,
-    });
-  }
-
-  if (axiosLike.message === 'Network Error') {
-    return createAppError({
-      kind: 'Network',
-      message: 'Network unavailable',
-      details: axiosLike,
-    });
-  }
-
-  const status = axiosLike.response?.status;
-  const responseData = axiosLike.response?.data;
-  const apiErrorCode = getApiErrorCode(responseData);
-  const apiErrorMessage = (getApiErrorMessage(responseData) || '').toLowerCase();
-  const requestRequiresAuth =
-    ((axiosLike.config || {}) as HttpRequestConfig).requiresAuth !== false;
-  const requestId = getApiRequestId(responseData);
-
-  if (status === 401) {
-    if (requestRequiresAuth) {
-      try {
-        unauthorizedHandler?.();
-      } catch (_error) {
-        // preserve original error mapping
-      }
-    }
-    return createAppError({
-      kind: 'Unauthorized',
-      message: 'Authentication required',
-      status,
-      details: axiosLike.response?.data,
-      requestId,
-    });
-  }
-
-  if (status === 403) {
-    if (
-      apiErrorCode === 'FORBIDDEN' &&
-      apiErrorMessage.includes('invalid token')
-    ) {
-      if (requestRequiresAuth) {
-        try {
-          unauthorizedHandler?.();
-        } catch (_error) {
-          // preserve original error mapping
-        }
-      }
-      return createAppError({
-        kind: 'Unauthorized',
-        message: 'Authentication required',
-        status,
-        details: responseData,
-        requestId,
-      });
-    }
-
-    return createAppError({
-      kind: 'Forbidden',
-      message: 'Access denied',
-      status,
-      details: responseData,
-      requestId,
-    });
-  }
-
-  if (status === 404) {
-    return createAppError({
-      kind: 'NotFound',
-      message: 'Resource not found',
-      status,
-      details: axiosLike.response?.data,
-      requestId,
-    });
-  }
-
-  if (status === 429) {
-    return createAppError({
-      kind: 'RateLimited',
-      message: 'Too many requests',
-      status,
-      details: axiosLike.response?.data,
-      requestId,
-    });
-  }
-
-  if (status && status >= 400 && status < 500) {
-    return createAppError({
-      kind: 'Validation',
-      message: 'Request validation error',
-      status,
-      details: axiosLike.response?.data,
-      requestId,
-    });
-  }
-
-  return createAppError({
-    kind: 'Unknown',
-    message: 'Unexpected server error',
-    status,
-    details: axiosLike.response?.data ?? axiosLike,
-    requestId,
-  });
-};
+export { mapAxiosError };
 
 /** Pre-configured Axios instance with auth, retry, and token-refresh interceptors. */
 export { httpClient };

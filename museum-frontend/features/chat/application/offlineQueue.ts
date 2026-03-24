@@ -7,10 +7,42 @@ export interface QueuedMessage {
   retryCount: number;
 }
 
+export interface QueueStorage {
+  getItem(key: string): Promise<string | null>;
+  setItem(key: string, value: string): Promise<void>;
+}
+
+const STORAGE_KEY = 'musaium.offline.queue';
+
 export class OfflineQueue {
   private queue: QueuedMessage[] = [];
   private snapshot: readonly QueuedMessage[] = [];
   private listeners: Set<() => void> = new Set();
+  private storage: QueueStorage | null;
+
+  constructor(storage?: QueueStorage) {
+    this.storage = storage ?? null;
+  }
+
+  /**
+   * Loads persisted queue entries from storage.
+   * Call once after construction to rehydrate the queue.
+   */
+  async hydrate(): Promise<void> {
+    if (!this.storage) return;
+    try {
+      const raw = await this.storage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          this.queue = parsed as QueuedMessage[];
+          this.notify();
+        }
+      }
+    } catch {
+      // Corrupted data — start fresh
+    }
+  }
 
   enqueue(message: Omit<QueuedMessage, 'id' | 'createdAt' | 'retryCount'>): QueuedMessage {
     const entry: QueuedMessage = {
@@ -21,12 +53,16 @@ export class OfflineQueue {
     };
     this.queue.push(entry);
     this.notify();
+    void this.persist();
     return entry;
   }
 
   dequeue(): QueuedMessage | undefined {
     const item = this.queue.shift();
-    if (item) this.notify();
+    if (item) {
+      this.notify();
+      void this.persist();
+    }
     return item;
   }
 
@@ -44,12 +80,16 @@ export class OfflineQueue {
 
   incrementRetry(id: string): void {
     const item = this.queue.find(m => m.id === id);
-    if (item) item.retryCount++;
+    if (item) {
+      item.retryCount++;
+      void this.persist();
+    }
   }
 
   remove(id: string): void {
     this.queue = this.queue.filter(m => m.id !== id);
     this.notify();
+    void this.persist();
   }
 
   getAll(): readonly QueuedMessage[] {
@@ -64,5 +104,14 @@ export class OfflineQueue {
   private notify(): void {
     this.snapshot = [...this.queue];
     this.listeners.forEach(l => l());
+  }
+
+  private async persist(): Promise<void> {
+    if (!this.storage) return;
+    try {
+      await this.storage.setItem(STORAGE_KEY, JSON.stringify(this.queue));
+    } catch {
+      // Storage write failed — queue remains in memory
+    }
   }
 }

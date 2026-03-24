@@ -5,10 +5,20 @@ import i18n from 'i18next';
 import * as Updates from 'expo-updates';
 
 import { toSupportedLocale, type SupportedLocale } from '@/shared/config/supportedLocales';
-import { saveDefaultLocale } from '@/features/settings/runtimeSettings';
 import { setLocale as setHttpLocale } from '@/shared/infrastructure/httpClient';
 import { storage } from '@/shared/infrastructure/storage';
 import { applyRTLLayout, needsRTLReload } from '@/shared/i18n/rtl';
+
+let onLanguageChangeCb: ((lang: string) => void) | null = null;
+
+/**
+ * Registers a callback invoked whenever the user changes the app language.
+ * Used to persist the locale preference without coupling shared → features.
+ * @param fn - Callback receiving the new language code, or `null` to unregister.
+ */
+export const setOnLanguageChange = (fn: ((lang: string) => void) | null): void => {
+  onLanguageChangeCb = fn;
+};
 
 interface I18nContextValue {
   language: SupportedLocale;
@@ -49,7 +59,7 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
         setHttpLocale(lang);
         // Persist device-detected language so runtimeSettings stays in sync
         if (!stored) {
-          void saveDefaultLocale(lang);
+          onLanguageChangeCb?.(lang);
         }
       })
       .catch(() => {});
@@ -58,7 +68,7 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
   const setLanguage = useCallback((lang: SupportedLocale) => {
     const currentLang = language;
     if (needsRTLReload(currentLang, lang)) {
-      void saveDefaultLocale(lang);
+      onLanguageChangeCb?.(lang);
       applyRTLLayout(lang);
       void Updates.reloadAsync().catch(() => {
         // Fallback: apply language without reload in dev
@@ -71,7 +81,7 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
     setLanguageState(lang);
     void i18n.changeLanguage(lang);
     setHttpLocale(lang);
-    void saveDefaultLocale(lang);
+    onLanguageChangeCb?.(lang);
   }, [language]);
 
   return (

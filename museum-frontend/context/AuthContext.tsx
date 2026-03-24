@@ -11,21 +11,21 @@ import * as SplashScreen from "expo-splash-screen";
 import * as Sentry from "@sentry/react-native";
 
 import { authService } from "@/features/auth/infrastructure/authApi";
-import { clearAccessToken, setAccessToken, authStorage } from "@/features/auth/infrastructure/authTokenStore";
+import { clearAccessToken, setAccessToken, getAccessToken, authStorage } from "@/features/auth/infrastructure/authTokenStore";
 import { getBiometricEnabled } from "@/features/auth/infrastructure/biometricStore";
 import { AUTH_ROUTE } from "@/features/auth/routes";
 import { reportError } from "@/shared/observability/errorReporting";
 
+import { extractUserIdFromToken } from './authLogic.pure';
+
 /** Extracts user ID from a JWT access token and sets Sentry user context. Non-critical — fails silently. */
 const identifySentryUser = (accessToken: string): void => {
-  try {
-    const payload = JSON.parse(atob(accessToken.split('.')[1]));
-    const userId = payload.id || payload.sub;
-    if (userId) Sentry.setUser({ id: String(userId) });
-  } catch { /* Non-critical */ }
+  const userId = extractUserIdFromToken(accessToken);
+  if (userId) Sentry.setUser({ id: userId });
 };
 import {
   setAuthRefreshHandler,
+  setTokenProvider,
   setUnauthorizedHandler,
 } from "@/shared/infrastructure/httpClient";
 
@@ -105,6 +105,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   useEffect(() => {
+    setTokenProvider(getAccessToken);
+
     setAuthRefreshHandler(async () => {
       const refreshToken = await authStorage.getRefreshToken();
       if (!refreshToken) {
@@ -138,6 +140,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
 
     return () => {
+      setTokenProvider(null);
       setUnauthorizedHandler(null);
       setAuthRefreshHandler(null);
     };

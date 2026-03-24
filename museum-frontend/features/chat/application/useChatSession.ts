@@ -2,50 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Sentry from '@sentry/react-native';
 
 import { getErrorMessage } from '@/shared/lib/errors';
-import { GuideLevel } from '@/features/settings/runtimeSettings';
 import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSettings';
 import { useConnectivity } from '@/shared/infrastructure/connectivity/useConnectivity';
 import { useOfflineQueue } from './useOfflineQueue';
 import { chatApi } from '../infrastructure/chatApi';
+import {
+  sortByTime,
+  type ChatUiMessage,
+  type ChatUiMessageMetadata,
+} from './chatSessionLogic.pure';
 
-/** Metadata attached to an assistant message, including artwork detection and follow-up suggestions. */
-export interface ChatUiMessageMetadata {
-  detectedArtwork?: {
-    title?: string;
-    artist?: string;
-    museum?: string;
-    room?: string;
-    confidence?: number;
-  };
-  recommendations?: string[];
-  followUpQuestions?: string[];
-  expertiseSignal?: 'beginner' | 'intermediate' | 'expert';
-  deeperContext?: string;
-  openQuestion?: string;
-  imageDescription?: string;
-}
-
-/** UI-layer representation of a single chat message (user, assistant, or system). */
-export interface ChatUiMessage {
-  id: string;
-  role: 'user' | 'assistant' | 'system';
-  text: string;
-  createdAt: string;
-  imageRef?: string | null;
-  image?: {
-    url: string;
-    expiresAt: string;
-  } | null;
-  metadata?: ChatUiMessageMetadata | null;
-  transcription?: { text: string } | null;
-}
-
-const sortByTime = (messages: ChatUiMessage[]): ChatUiMessage[] => {
-  return [...messages].sort(
-    (left, right) =>
-      new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
-  );
-};
+export type { ChatUiMessage, ChatUiMessageMetadata };
 
 /**
  * Manages chat session state: loads messages, sends text/image/audio messages with optimistic updates,
