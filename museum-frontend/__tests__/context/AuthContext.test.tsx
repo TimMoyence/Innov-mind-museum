@@ -43,7 +43,7 @@ jest.mock('@/features/auth/infrastructure/authTokenStore', () => ({
   },
   setAccessToken: (...args: unknown[]) => mockSetAccessToken(...args),
   clearAccessToken: (...args: unknown[]) => mockClearAccessToken(...args),
-  getAccessToken: (...args: unknown[]) => mockGetAccessToken(...args),
+  getAccessToken: () => mockGetAccessToken(),
 }));
 
 jest.mock('@/features/auth/infrastructure/biometricStore', () => ({
