@@ -23,4 +23,10 @@ describe('StaticFeatureFlagService', () => {
     const svc = new StaticFeatureFlagService({});
     expect(svc.isEnabled('voice-mode')).toBe(false);
   });
+
+  it('uses process.env when no argument is provided', () => {
+    const svc = new StaticFeatureFlagService();
+    // Should not throw and return false for unknown flags
+    expect(svc.isEnabled('some-random-flag')).toBe(false);
+  });
 });

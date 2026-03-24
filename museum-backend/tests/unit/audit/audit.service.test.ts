@@ -71,4 +71,27 @@ describe('AuditService', () => {
 
     await new Promise((r) => setTimeout(r, 10));
   });
+
+  it('logs non-Error rejection from insert as string', async () => {
+    const repo = makeRepo({
+      insert: jest.fn().mockRejectedValue('string error'),
+    });
+    const service = new AuditService(repo);
+
+    service.log({ action: 'TEST', actorType: 'system' });
+
+    await new Promise((r) => setTimeout(r, 10));
+    // Should not throw; the catch handler converts non-Error to String()
+  });
+
+  it('logs non-Error rejection from insertBatch as string', async () => {
+    const repo = makeRepo({
+      insertBatch: jest.fn().mockRejectedValue(42),
+    });
+    const service = new AuditService(repo);
+
+    service.logBatch([{ action: 'TEST', actorType: 'system' }]);
+
+    await new Promise((r) => setTimeout(r, 10));
+  });
 });

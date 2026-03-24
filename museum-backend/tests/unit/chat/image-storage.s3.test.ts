@@ -258,6 +258,30 @@ describe('image-storage.s3', () => {
     });
   });
 
+  it('encodes special characters in object keys (RFC 3986)', () => {
+    const now = new Date('2026-02-23T10:00:00.000Z');
+    const result = buildS3PresignedReadUrl({
+      key: "chat-images/file's name!(test).png",
+      config,
+      ttlSeconds: 300,
+      now,
+    });
+
+    // The URL should contain the encoded special characters
+    expect(result.url).toContain('file');
+    expect(result.url).not.toContain("'");
+    expect(result.url).not.toContain('!');
+    expect(result.url).not.toContain('(');
+    expect(result.url).not.toContain(')');
+    expect(result.url).not.toContain('*');
+  });
+
+  it('handles isS3ImageRef with null and undefined', () => {
+    expect(isS3ImageRef(null)).toBe(false);
+    expect(isS3ImageRef(undefined)).toBe(false);
+    expect(isS3ImageRef('')).toBe(false);
+  });
+
   describe('deleteByPrefix integration', () => {
     it('lists and deletes only matching user keys', async () => {
       const requests: Array<{ method: string; path: string; body: string }> = [];
