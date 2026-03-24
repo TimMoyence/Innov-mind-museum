@@ -1,37 +1,16 @@
 import type { Request, RequestHandler } from 'express';
 
 import { tooManyRequests } from '@shared/errors/app.error';
+import { InMemoryBucketStore } from '@shared/rate-limit/in-memory-bucket-store';
 
 interface Bucket {
   count: number;
   resetAt: number;
 }
 
-const MAX_MAP_SIZE = 100_000;
-const SWEEP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-
-const buckets = new Map<string, Bucket>();
-
-/** Periodic sweep to evict expired buckets and prevent unbounded memory growth. */
-let sweepTimer: ReturnType<typeof setInterval> | null = null;
-const ensureSweep = (): void => {
-  if (sweepTimer) return;
-  sweepTimer = setInterval(() => {
-    const now = Date.now();
-    for (const [key, bucket] of buckets) {
-      if (bucket.resetAt <= now) {
-        buckets.delete(key);
-      }
-    }
-    if (buckets.size === 0 && sweepTimer) {
-      clearInterval(sweepTimer);
-      sweepTimer = null;
-    }
-  }, SWEEP_INTERVAL_MS);
-  if (typeof sweepTimer === 'object' && 'unref' in sweepTimer) {
-    sweepTimer.unref();
-  }
-};
+const store = new InMemoryBucketStore<Bucket>({
+  isExpired: (entry, now) => entry.resetAt <= now,
+});
 
 interface RateLimitOptions {
   limit: number;
@@ -52,15 +31,10 @@ export const createRateLimitMiddleware = ({
   return (req, res, next) => {
     const key = keyGenerator(req);
     const now = Date.now();
-    const current = buckets.get(key);
+    const current = store.get(key);
 
     if (!current || current.resetAt <= now) {
-      if (buckets.size >= MAX_MAP_SIZE) {
-        const oldest = buckets.keys().next().value;
-        if (oldest) buckets.delete(oldest);
-      }
-      buckets.set(key, { count: 1, resetAt: now + windowMs });
-      ensureSweep();
+      store.set(key, { count: 1, resetAt: now + windowMs });
       next();
       return;
     }
@@ -73,7 +47,7 @@ export const createRateLimitMiddleware = ({
     }
 
     current.count += 1;
-    buckets.set(key, current);
+    store.set(key, current);
     next();
   };
 };
@@ -110,11 +84,10 @@ export const byUserId = (req: Parameters<RequestHandler>[0]): string => {
 
 /** Clears all in-memory rate-limit buckets and stops the sweep timer. Intended for test teardown. */
 export const clearRateLimitBuckets = (): void => {
-  buckets.clear();
-  if (sweepTimer) { clearInterval(sweepTimer); sweepTimer = null; }
+  store.clear();
 };
 
 /** Stops the periodic sweep timer. Call during graceful shutdown. */
 export const stopRateLimitSweep = (): void => {
-  if (sweepTimer) { clearInterval(sweepTimer); sweepTimer = null; }
+  store.stopSweep();
 };

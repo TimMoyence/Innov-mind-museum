@@ -539,7 +539,7 @@ export class ChatService {
     const prep = await this.prepareMessage(sessionId, input, requestId, currentUserId);
     if (prep.kind === 'refused') return prep.result;
 
-    const { session, orchestratorImage, requestedLocale, history, redirectHint, ownerId } = prep;
+    const { session, orchestratorImage, requestedLocale, history, redirectHint, ownerId, userMemoryBlock } = prep;
     const text = input.text?.trim();
 
     const aiResult: OrchestratorOutput = await this.orchestrator.generate({
@@ -555,6 +555,7 @@ export class ChatService {
       visitContext: session.visitContext,
       requestId,
       redirectHint,
+      userMemoryBlock,
     });
 
     return this.commitAssistantResponse(sessionId, session, aiResult, requestedLocale, history, ownerId);
@@ -584,7 +585,7 @@ export class ChatService {
     const prep = await this.prepareMessage(sessionId, input, requestId, currentUserId);
     if (prep.kind === 'refused') return prep.result;
 
-    const { session, orchestratorImage, requestedLocale, history, redirectHint, ownerId } = prep;
+    const { session, orchestratorImage, requestedLocale, history, redirectHint, ownerId, userMemoryBlock } = prep;
     const text = input.text?.trim();
 
     if (signal?.aborted) {
@@ -653,6 +654,7 @@ export class ChatService {
         visitContext: session.visitContext,
         requestId,
         redirectHint,
+        userMemoryBlock,
       },
       onChunk,
     );

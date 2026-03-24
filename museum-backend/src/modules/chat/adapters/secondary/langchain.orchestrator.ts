@@ -51,6 +51,7 @@ interface OrchestratorInput {
   visitContext?: VisitContext | null;
   requestId?: string;
   redirectHint?: string;
+  userMemoryBlock?: string;
 }
 
 /** Result returned by {@link ChatOrchestrator.generate}. */
@@ -376,6 +377,10 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         new SystemMessage(section.prompt),
       ];
 
+      if (input.userMemoryBlock) {
+        sectionMessages.push(new SystemMessage(input.userMemoryBlock));
+      }
+
       if (input.redirectHint) {
         sectionMessages.push(new SystemMessage(input.redirectHint));
       }
@@ -688,6 +693,10 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
       new SystemMessage(systemPrompt),
       new SystemMessage(section.prompt),
     ];
+
+    if (input.userMemoryBlock) {
+      sectionMessages.push(new SystemMessage(input.userMemoryBlock));
+    }
 
     if (input.redirectHint) {
       sectionMessages.push(new SystemMessage(input.redirectHint));
