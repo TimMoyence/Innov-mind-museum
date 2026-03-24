@@ -264,6 +264,75 @@
 
 ---
 
+## Sprint S5 — Hotfix (2026-03-24) (TERMINE)
+
+> Hotfix post-audit: unification DB pool, DRY rate limiting, injection userMemoryBlock.
+> Commit: `3298b2f`
+
+- [x] Unification double pool DB (pg natif + TypeORM) via wrapper AppDataSource
+- [x] DRY rate limiting — InMemoryBucketStore partage
+- [x] Injection userMemoryBlock dans le pipeline LLM
+- [x] Typecheck: PASS, Tests: +114
+
+---
+
+## Sprint S6 — Refactor Architecture (2026-03-24) (TERMINE)
+
+> Split chat God Service, DRY orchestrator, +163 tests, fix architecture.
+> Commit: `2d79f7d`
+
+- [x] Split chat.service.ts (1002 lignes) en facade + 3 services (chat-message, chat-session, chat-media)
+- [x] DRY langchain orchestrator (generate/generateStream)
+- [x] Fix shared/ importations features/ (setTokenProvider/setOnLanguageChange)
+- [x] +105 tests backend (museum, support, admin modules 80-85% couverture)
+- [x] +58 tests frontend (pure logic extraction)
+- [x] Typecheck: PASS, Tests: +163
+
+---
+
+## Sprint S7 — Test Fortress (2026-03-24) (TERMINE)
+
+> +93 tests, SSE timeout 60s, coverage baseline.
+> Commit: `a6d341d`
+
+- [x] +93 tests backend (integration + unit)
+- [x] SSE timeout configurable (60s)
+- [x] Coverage baseline: 62.9% statements
+- [x] 4 recommandations S6 appliquees et verifiees
+- [x] Typecheck: PASS
+
+---
+
+## Sprint S8 — Coverage Branches (2026-03-24) (TERMINE)
+
+> Coverage branches +8.4pp, Jest hooks setup, Wikidata spec.
+> Commits: `17c8a94`, `c10e362`
+
+- [x] Coverage branches: 46.5% → 54.9% (+8.4pp)
+- [x] Jest hooks setup (useProtectedRoute, useOfflineQueue)
+- [x] Wikidata spec
+- [x] Fix TS2556 spread argument in AuthContext test
+- [x] Typecheck: PASS
+
+---
+
+## Phase 0 — Store Readiness Fixes (2026-03-24) (TERMINE)
+
+> Audit full codebase + fixes bloquants pour publication stores.
+> Commit: `e855174`
+
+- [x] Ajout *.aab/apk/ipa a .gitignore (root + frontend)
+- [x] Suppression 2 fichiers .aab (178MB)
+- [x] NSPrivacyCollectedDataTypes renseigne (6 types donnees)
+- [x] Suppression 4 console.* non-`__DEV__` en frontend
+- [x] Simplification Dockerfile.prod (double mkdir)
+- [x] Correction email sender Brevo (no-reply@musaium.com)
+- [x] Ajout nginx config production
+- [x] Ajout release checklist (654 lignes)
+- [x] Typecheck: PASS, Tests: 0 regression
+
+---
+
 ## Metriques globales
 
 | Sprint    | Taches  | Faites | %       | Tests backend | Tests frontend |
@@ -274,4 +343,9 @@
 | S3        | 18      | 18     | 100%    | 360           | 26             |
 | Audit     | 11      | 11     | 100%    | 364 (+4)      | 29 (+3)        |
 | S4        | 16      | 16     | 100%    | 416 (+52)     | 29             |
-| **Total** | **112** | **111** | **99%** | **416**       | **29**         |
+| S5        | 3       | 3      | 100%    | 530 (+114)    | 29             |
+| S6        | 5       | 5      | 100%    | 693 (+163)    | 87 (+58)       |
+| S7        | 4       | 4      | 100%    | 786 (+93)     | 87             |
+| S8        | 4       | 4      | 100%    | 913 (+127)    | 106 (+19)      |
+| Phase 0   | 8       | 8      | 100%    | 909 (-4)      | 106            |
+| **Total** | **136** | **135** | **99%** | **909**       | **106**        |
