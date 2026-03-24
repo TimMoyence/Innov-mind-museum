@@ -1,12 +1,17 @@
-import { useRef, useSyncExternalStore, useCallback } from 'react';
+import { useRef, useEffect, useSyncExternalStore, useCallback } from 'react';
 import { OfflineQueue, QueuedMessage } from './offlineQueue';
 import { useConnectivity } from '@/shared/infrastructure/connectivity/useConnectivity';
+import { storage } from '@/shared/infrastructure/storage';
 
 export const useOfflineQueue = () => {
-  const queueRef = useRef(new OfflineQueue());
+  const queueRef = useRef(new OfflineQueue(storage));
   const { isConnected } = useConnectivity();
 
   const queue = queueRef.current;
+
+  useEffect(() => {
+    void queue.hydrate();
+  }, [queue]);
 
   const snapshot = useSyncExternalStore(
     useCallback((cb: () => void) => queue.subscribe(cb), [queue]),

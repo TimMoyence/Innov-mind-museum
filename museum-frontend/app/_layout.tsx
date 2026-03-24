@@ -9,9 +9,9 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { useBiometricAuth } from '@/features/auth/application/useBiometricAuth';
 import { BiometricLockScreen } from '@/features/auth/ui/BiometricLockScreen';
 import { useProtectedRoute } from '@/features/auth/useProtectedRoute';
-import { applyRuntimeSettings } from '@/features/settings/runtimeSettings';
+import { applyRuntimeSettings, saveDefaultLocale } from '@/features/settings/runtimeSettings';
 import '@/shared/i18n/i18n';
-import { I18nProvider } from '@/shared/i18n/I18nContext';
+import { I18nProvider, setOnLanguageChange } from '@/shared/i18n/I18nContext';
 import { ThemeProvider, useTheme } from '@/shared/ui/ThemeContext';
 import { ConnectivityProvider } from '@/shared/infrastructure/connectivity/ConnectivityProvider';
 import {
@@ -111,6 +111,8 @@ function RootLayout() {
     if (startupConfiguration.error) {
       return;
     }
+
+    setOnLanguageChange((lang) => void saveDefaultLocale(lang));
 
     applyRuntimeSettings().catch((error) => {
       // eslint-disable-next-line no-console
