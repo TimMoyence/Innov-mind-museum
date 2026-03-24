@@ -42,7 +42,7 @@ describe('sentry — conditional initialization', () => {
       const { setupSentryExpressErrorHandler, isSentryEnabled } = require('@shared/observability/sentry');
       expect(isSentryEnabled()).toBe(false);
 
-      const fakeApp = {} as any;
+      const fakeApp = {} as unknown as import('express').Express;
       // Should not throw
       expect(() => setupSentryExpressErrorHandler(fakeApp)).not.toThrow();
     });

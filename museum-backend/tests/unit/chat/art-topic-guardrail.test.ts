@@ -3,6 +3,7 @@ import {
   evaluateAssistantOutputGuardrail,
   buildGuardrailRefusal,
   buildGuardrailCitation,
+  type GuardrailBlockReason,
 } from '@modules/chat/application/art-topic-guardrail';
 import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import { ChatSession } from '@modules/chat/domain/chatSession.entity';
@@ -381,7 +382,7 @@ describe('buildGuardrailRefusal', () => {
     ['ja-JP', 'insult', '侮辱'],
     ['zh-CN', 'insult', '侮辱'],
   ])('returns localized refusal for %s/%s', (locale, reason, expected) => {
-    expect(buildGuardrailRefusal(locale, reason as any)).toContain(expected);
+    expect(buildGuardrailRefusal(locale, reason as GuardrailBlockReason)).toContain(expected);
   });
 });
 

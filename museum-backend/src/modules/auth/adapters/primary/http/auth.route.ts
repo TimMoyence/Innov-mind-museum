@@ -42,7 +42,13 @@ import {
  */
 const authRouter: Router = Router();
 
-authRouter.post('/register', async (req: Request, res: Response, next: NextFunction) => {
+const registerLimiter = createRateLimitMiddleware({
+  limit: 5,
+  windowMs: 600_000,
+  keyGenerator: byIp,
+});
+
+authRouter.post('/register', registerLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password, firstname, lastname } = req.body;
     const user = await registerUseCase.execute(email, password, firstname, lastname);

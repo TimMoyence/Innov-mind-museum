@@ -3,7 +3,7 @@ import { AppError, badRequest, notFound } from '@shared/errors/app.error';
 import type { CacheService } from '@shared/cache/cache.port';
 import type { ReportReason } from '../domain/chat.types';
 import type { ChatRepository } from '../domain/chat.repository.interface';
-import type { TextToSpeechService } from '../adapters/secondary/text-to-speech.openai';
+import type { TextToSpeechService } from '../domain/ports/tts.port';
 import { ensureMessageAccess } from './session-access';
 import { resolveLocalImageMeta } from './chat-image.helpers';
 import type { ReportMessageResult } from './chat.service.types';

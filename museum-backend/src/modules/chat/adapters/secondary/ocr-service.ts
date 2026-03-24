@@ -2,18 +2,10 @@ import { env } from '@src/config/env';
 import { AppError } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { startSpan } from '@shared/observability/sentry';
+import type { OcrResult, OcrService } from '../../domain/ports/ocr.port';
 
-/** Result of OCR text extraction from an image. */
-export interface OcrResult {
-  text: string;
-  confidence: number;
-}
-
-/** Port interface for extracting text from images via OCR. */
-export interface OcrService {
-  extractText(imageBase64: string): Promise<OcrResult | null>;
-  destroy?(): Promise<void>;
-}
+// Re-export domain port types so existing consumers that imported from here keep working
+export type { OcrResult, OcrService } from '../../domain/ports/ocr.port';
 
 /** Tesseract.js-based OCR implementation with pooled Scheduler (2 workers). */
 export class TesseractOcrService implements OcrService {

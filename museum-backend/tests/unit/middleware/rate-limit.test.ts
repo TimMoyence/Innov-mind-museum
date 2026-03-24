@@ -17,7 +17,7 @@ const makeMockReq = (overrides: Record<string, unknown> = {}): Parameters<Reques
     ...overrides,
   }) as unknown as Parameters<RequestHandler>[0];
 
-const makeMockRes = () => ({ setHeader: jest.fn() }) as any;
+const makeMockRes = () => ({ setHeader: jest.fn() }) as unknown as Parameters<RequestHandler>[1];
 
 describe('rate-limit middleware — branch coverage', () => {
   beforeEach(() => clearRateLimitBuckets());

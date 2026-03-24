@@ -4,11 +4,11 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 
 import { env } from '@src/config/env';
 import { AppError, badRequest } from '@shared/errors/app.error';
-import { UserRepositoryPg } from '@modules/auth/adapters/secondary/user.repository.pg';
-import {
-  RefreshTokenRepositoryPg,
+import type { IUserRepository } from '../domain/user.repository.interface';
+import type {
+  IRefreshTokenRepository,
   StoredRefreshTokenRow,
-} from '@modules/auth/adapters/secondary/refresh-token.repository.pg';
+} from '../domain/refresh-token.repository.interface';
 import { checkLoginRateLimit, recordFailedLogin, clearLoginAttempts } from './login-rate-limiter';
 import type { UserRole } from '../domain/user-role';
 
@@ -106,8 +106,8 @@ export class AuthSessionService {
   private readonly refreshTtlSeconds = ttlToSeconds(env.auth.refreshTokenTtl);
 
   constructor(
-    private readonly userRepository = new UserRepositoryPg(),
-    private readonly refreshTokenRepository = new RefreshTokenRepositoryPg(),
+    private readonly userRepository: IUserRepository,
+    private readonly refreshTokenRepository: IRefreshTokenRepository,
   ) {}
 
   /**

@@ -1,4 +1,5 @@
 import { TokenCleanupService } from '@modules/auth/core/useCase/tokenCleanup.service';
+import type { IRefreshTokenRepository } from '@modules/auth/core/domain/refresh-token.repository.interface';
 
 const makeRefreshTokenRepo = (deleteResult = 5) => ({
   deleteExpiredTokens: jest.fn().mockResolvedValue(deleteResult),
@@ -16,7 +17,7 @@ describe('TokenCleanupService', () => {
   it('runs cleanup when lock is acquired (setNx returns true)', async () => {
     const repo = makeRefreshTokenRepo(42);
     const cache = makeCacheService(true);
-    const service = new TokenCleanupService(repo as any, cache);
+    const service = new TokenCleanupService(repo as unknown as IRefreshTokenRepository, cache);
 
     const deleted = await service.runCleanup();
 
@@ -28,7 +29,7 @@ describe('TokenCleanupService', () => {
   it('skips cleanup when lock is held (setNx returns false)', async () => {
     const repo = makeRefreshTokenRepo();
     const cache = makeCacheService(false);
-    const service = new TokenCleanupService(repo as any, cache);
+    const service = new TokenCleanupService(repo as unknown as IRefreshTokenRepository, cache);
 
     const deleted = await service.runCleanup();
 
@@ -39,7 +40,7 @@ describe('TokenCleanupService', () => {
 
   it('runs cleanup without cache (no lock)', async () => {
     const repo = makeRefreshTokenRepo(10);
-    const service = new TokenCleanupService(repo as any, undefined);
+    const service = new TokenCleanupService(repo as unknown as IRefreshTokenRepository, undefined);
 
     const deleted = await service.runCleanup();
 
@@ -50,7 +51,7 @@ describe('TokenCleanupService', () => {
   it('returns 0 and does not throw if deleteExpiredTokens fails', async () => {
     const repo = makeRefreshTokenRepo();
     repo.deleteExpiredTokens.mockRejectedValue(new Error('DB down'));
-    const service = new TokenCleanupService(repo as any, undefined);
+    const service = new TokenCleanupService(repo as unknown as IRefreshTokenRepository, undefined);
 
     const deleted = await service.runCleanup();
     expect(deleted).toBe(0);

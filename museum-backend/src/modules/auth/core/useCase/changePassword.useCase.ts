@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import type { IUserRepository } from '../domain/user.repository.interface';
-import type { RefreshTokenRepositoryPg } from '../../adapters/secondary/refresh-token.repository.pg';
+import type { IRefreshTokenRepository } from '../domain/refresh-token.repository.interface';
 import { validatePassword } from '@shared/validation/password';
 import { AppError, badRequest } from '@shared/errors/app.error';
 
@@ -14,7 +14,7 @@ import { AppError, badRequest } from '@shared/errors/app.error';
 export class ChangePasswordUseCase {
   constructor(
     private readonly userRepository: IUserRepository,
-    private readonly refreshTokenRepository: RefreshTokenRepositoryPg,
+    private readonly refreshTokenRepository: IRefreshTokenRepository,
   ) {}
 
   async execute(userId: number, currentPassword: string, newPassword: string): Promise<void> {

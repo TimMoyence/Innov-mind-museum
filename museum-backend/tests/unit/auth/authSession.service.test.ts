@@ -2,7 +2,8 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { AuthSessionService } from '@modules/auth/core/useCase/authSession.service';
-import type { StoredRefreshTokenRow } from '@modules/auth/adapters/secondary/refresh-token.repository.pg';
+import type { IRefreshTokenRepository, StoredRefreshTokenRow } from '@modules/auth/core/domain/refresh-token.repository.interface';
+import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
 import type { User } from '@modules/auth/core/domain/user.entity';
 import { env } from '@src/config/env';
 
@@ -58,7 +59,7 @@ const makeStoredToken = (overrides: Partial<StoredRefreshTokenRow> = {}): Stored
 });
 
 const makeMockRepos = () => {
-  const userRepo = {
+  const userRepo: jest.Mocked<IUserRepository> = {
     getUserByEmail: jest.fn(),
     getUserById: jest.fn(),
     registerUser: jest.fn(),
@@ -72,7 +73,7 @@ const makeMockRepos = () => {
     verifyEmail: jest.fn(),
   };
 
-  const refreshTokenRepo = {
+  const refreshTokenRepo: jest.Mocked<IRefreshTokenRepository> = {
     findByJti: jest.fn(),
     revokeFamily: jest.fn().mockResolvedValue(undefined),
     revokeByJti: jest.fn().mockResolvedValue(undefined),
@@ -85,15 +86,18 @@ const makeMockRepos = () => {
   return { userRepo, refreshTokenRepo };
 };
 
-const createService = (userRepo?: unknown, refreshTokenRepo?: unknown) => {
+const createService = (
+  userRepo?: jest.Mocked<IUserRepository>,
+  refreshTokenRepo?: jest.Mocked<IRefreshTokenRepository>,
+) => {
   const mocks = makeMockRepos();
   return {
     service: new AuthSessionService(
-      (userRepo || mocks.userRepo) as any,
-      (refreshTokenRepo || mocks.refreshTokenRepo) as any,
+      userRepo || mocks.userRepo,
+      refreshTokenRepo || mocks.refreshTokenRepo,
     ),
-    userRepo: (userRepo || mocks.userRepo) as ReturnType<typeof makeMockRepos>['userRepo'],
-    refreshTokenRepo: (refreshTokenRepo || mocks.refreshTokenRepo) as ReturnType<typeof makeMockRepos>['refreshTokenRepo'],
+    userRepo: userRepo || mocks.userRepo,
+    refreshTokenRepo: refreshTokenRepo || mocks.refreshTokenRepo,
   };
 };
 
@@ -113,7 +117,7 @@ describe('AuthSessionService', () => {
       const user = makeUser();
       userRepo.getUserByEmail.mockResolvedValue(user);
 
-      const service = new AuthSessionService(userRepo as any, refreshTokenRepo as any);
+      const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       // Use bcrypt to compare (real bcrypt)
       const hashed = await bcrypt.hash('ValidPass1', 12);
@@ -136,7 +140,7 @@ describe('AuthSessionService', () => {
       const hashed = await bcrypt.hash('ValidPass1', 4); // fast rounds for test
       userRepo.getUserByEmail.mockResolvedValue(makeUser({ password: hashed }));
 
-      const service = new AuthSessionService(userRepo as any, refreshTokenRepo as any);
+      const service = new AuthSessionService(userRepo, refreshTokenRepo);
       await service.login('user@test.com', 'ValidPass1');
 
       expect(mockClearLoginAttempts).toHaveBeenCalledWith('user@test.com');
@@ -164,7 +168,7 @@ describe('AuthSessionService', () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
       userRepo.getUserByEmail.mockResolvedValue(null);
 
-      const service = new AuthSessionService(userRepo as any, refreshTokenRepo as any);
+      const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       await expect(service.login('noone@test.com', 'pass')).rejects.toMatchObject({
         statusCode: 401,
@@ -177,7 +181,7 @@ describe('AuthSessionService', () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
       userRepo.getUserByEmail.mockResolvedValue(makeUser({ password: null }));
 
-      const service = new AuthSessionService(userRepo as any, refreshTokenRepo as any);
+      const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       await expect(service.login('social@test.com', 'anypass')).rejects.toMatchObject({
         statusCode: 401,
@@ -190,7 +194,7 @@ describe('AuthSessionService', () => {
       const hashed = await bcrypt.hash('CorrectPass1', 4);
       userRepo.getUserByEmail.mockResolvedValue(makeUser({ password: hashed }));
 
-      const service = new AuthSessionService(userRepo as any, refreshTokenRepo as any);
+      const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       await expect(service.login('user@test.com', 'WrongPass1')).rejects.toMatchObject({
         statusCode: 401,
@@ -218,7 +222,7 @@ describe('AuthSessionService', () => {
       const hashed = await bcrypt.hash('ValidPass1', 4);
       userRepo.getUserByEmail.mockResolvedValue(makeUser({ password: hashed }));
 
-      const service = new AuthSessionService(userRepo as any, refreshTokenRepo as any);
+      const service = new AuthSessionService(userRepo, refreshTokenRepo);
       await service.login('user@test.com', 'ValidPass1');
 
       expect(refreshTokenRepo.insert).toHaveBeenCalledWith(
@@ -243,16 +247,16 @@ describe('AuthSessionService', () => {
       const user = makeUser();
       userRepo.getUserById.mockResolvedValue(user);
 
-      const service = new AuthSessionService(userRepo as any, refreshTokenRepo as any);
+      const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       // Issue an initial session to get a real refresh token
-      refreshTokenRepo.insert.mockResolvedValue(undefined);
+      refreshTokenRepo.insert.mockResolvedValue(makeStoredToken());
       const hashed = await bcrypt.hash('ValidPass1', 4);
       userRepo.getUserByEmail.mockResolvedValue(makeUser({ password: hashed }));
       const loginResult = await service.login('user@test.com', 'ValidPass1');
 
       // Extract the jti/familyId from the real refresh token
-      const decoded = jwt.verify(loginResult.refreshToken, env.auth.refreshTokenSecret) as any;
+      const decoded = jwt.verify(loginResult.refreshToken, env.auth.refreshTokenSecret) as jwt.JwtPayload & { jti: string; familyId: string };
 
       const storedToken = makeStoredToken({
         jti: decoded.jti,
@@ -283,13 +287,13 @@ describe('AuthSessionService', () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
       userRepo.getUserById.mockResolvedValue(makeUser());
 
-      const service = new AuthSessionService(userRepo as any, refreshTokenRepo as any);
+      const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       // Create initial login
       const hashed = await bcrypt.hash('ValidPass1', 4);
       userRepo.getUserByEmail.mockResolvedValue(makeUser({ password: hashed }));
       const loginResult = await service.login('user@test.com', 'ValidPass1');
-      const decoded = jwt.verify(loginResult.refreshToken, env.auth.refreshTokenSecret) as any;
+      const decoded = jwt.verify(loginResult.refreshToken, env.auth.refreshTokenSecret) as jwt.JwtPayload & { jti: string; familyId: string };
 
       refreshTokenRepo.findByJti.mockResolvedValue(
         makeStoredToken({
@@ -325,7 +329,7 @@ describe('AuthSessionService', () => {
 
     it('throws 401 when token is not found in DB', async () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
-      const service = new AuthSessionService(userRepo as any, refreshTokenRepo as any);
+      const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       // Create a valid JWT that won't be in the DB
       const token = jwt.sign(
@@ -343,7 +347,7 @@ describe('AuthSessionService', () => {
 
     it('revokes family on hash mismatch (reuse detection)', async () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
-      const service = new AuthSessionService(userRepo as any, refreshTokenRepo as any);
+      const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       const token = jwt.sign(
         { sub: '1', type: 'refresh', jti: 'jti-reuse', familyId: 'fam-reuse' },
@@ -368,7 +372,7 @@ describe('AuthSessionService', () => {
 
     it('revokes family when token is already revoked', async () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
-      const service = new AuthSessionService(userRepo as any, refreshTokenRepo as any);
+      const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       const token = jwt.sign(
         { sub: '1', type: 'refresh', jti: 'jti-revoked', familyId: 'fam-revoked' },
@@ -394,7 +398,7 @@ describe('AuthSessionService', () => {
 
     it('revokes by jti when token is expired', async () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
-      const service = new AuthSessionService(userRepo as any, refreshTokenRepo as any);
+      const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       // Create a JWT that's not yet expired in JWT terms but expired in DB
       const token = jwt.sign(
@@ -423,7 +427,7 @@ describe('AuthSessionService', () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
       userRepo.getUserById.mockResolvedValue(null);
 
-      const service = new AuthSessionService(userRepo as any, refreshTokenRepo as any);
+      const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       const token = jwt.sign(
         { sub: '999', type: 'refresh', jti: 'jti-nousers', familyId: 'fam-nousers' },
@@ -448,7 +452,7 @@ describe('AuthSessionService', () => {
 
     it('detects reuse when token was already rotated', async () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
-      const service = new AuthSessionService(userRepo as any, refreshTokenRepo as any);
+      const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       const token = jwt.sign(
         { sub: '1', type: 'refresh', jti: 'jti-rotated', familyId: 'fam-rotated' },
@@ -479,7 +483,7 @@ describe('AuthSessionService', () => {
   describe('logout', () => {
     it('revokes token on valid refresh token', async () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
-      const service = new AuthSessionService(userRepo as any, refreshTokenRepo as any);
+      const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       const token = jwt.sign(
         { sub: '1', type: 'refresh', jti: 'jti-logout', familyId: 'fam-logout' },
@@ -636,7 +640,7 @@ describe('AuthSessionService', () => {
   describe('socialLogin', () => {
     it('issues session and returns tokens + user info', async () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
-      const service = new AuthSessionService(userRepo as any, refreshTokenRepo as any);
+      const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       const result = await service.socialLogin({
         id: 7,
@@ -657,7 +661,7 @@ describe('AuthSessionService', () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
       refreshTokenRepo.deleteExpiredTokens.mockRejectedValue(new Error('DB error'));
 
-      const service = new AuthSessionService(userRepo as any, refreshTokenRepo as any);
+      const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       // Should NOT throw even if deleteExpiredTokens fails
       const result = await service.socialLogin({

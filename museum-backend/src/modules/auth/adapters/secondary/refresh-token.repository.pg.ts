@@ -1,29 +1,12 @@
 import pool from '@src/data/db';
+import type {
+  IRefreshTokenRepository,
+  StoredRefreshTokenRow,
+  InsertRefreshTokenInput,
+} from '../../core/domain/refresh-token.repository.interface';
 
-/** Row shape for a persisted refresh token in the `auth_refresh_tokens` table. */
-export interface StoredRefreshTokenRow {
-  id: string;
-  userId: number;
-  jti: string;
-  familyId: string;
-  tokenHash: string;
-  issuedAt: Date;
-  expiresAt: Date;
-  rotatedAt: Date | null;
-  revokedAt: Date | null;
-  reuseDetectedAt: Date | null;
-  replacedByTokenId: string | null;
-  createdAt: Date;
-}
-
-interface InsertRefreshTokenInput {
-  userId: number;
-  jti: string;
-  familyId: string;
-  tokenHash: string;
-  issuedAt: Date;
-  expiresAt: Date;
-}
+// Re-export domain types so existing consumers that imported from here keep working
+export type { StoredRefreshTokenRow, InsertRefreshTokenInput } from '../../core/domain/refresh-token.repository.interface';
 
 const mapRow = (row: Record<string, unknown>): StoredRefreshTokenRow => {
   return {
@@ -43,7 +26,7 @@ const mapRow = (row: Record<string, unknown>): StoredRefreshTokenRow => {
 };
 
 /** PostgreSQL (raw SQL) repository for refresh-token lifecycle management. */
-export class RefreshTokenRepositoryPg {
+export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
   /**
    * Inserts a new refresh token row.
    * @param input - Token metadata (userId, jti, familyId, hash, dates).

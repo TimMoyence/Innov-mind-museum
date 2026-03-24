@@ -23,8 +23,9 @@ export const buildAiTestOrchestrator = (): LangChainChatOrchestrator => {
     temperature: 0.3,
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return new LangChainChatOrchestrator({ model } as any);
+  return new LangChainChatOrchestrator(
+    { model } as unknown as ConstructorParameters<typeof LangChainChatOrchestrator>[0],
+  );
 };
 
 /** Test utility: builds a ChatService backed by a live AI orchestrator for end-to-end AI tests. */
