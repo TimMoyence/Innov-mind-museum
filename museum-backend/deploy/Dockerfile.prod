@@ -25,8 +25,10 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/openapi ./openapi
 
-# Sécurité : user non-root
-RUN adduser --system --uid 1001 nodeuser
+# Sécurité : user non-root + uploads directory
+RUN adduser --system --uid 1001 nodeuser \
+    && mkdir -p /app/tmp/uploads \
+    && chown -R nodeuser:nogroup /app/tmp
 USER nodeuser
 
 EXPOSE 3000

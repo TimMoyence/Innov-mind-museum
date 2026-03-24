@@ -10,7 +10,11 @@ export class BrevoEmailService implements EmailService {
    * @param subject - Email subject line.
    * @param htmlContent - HTML body content.
    */
-  async sendEmail(to: string, subject: string, htmlContent: string): Promise<void> {
+  async sendEmail(
+    to: string,
+    subject: string,
+    htmlContent: string,
+  ): Promise<void> {
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
@@ -18,7 +22,7 @@ export class BrevoEmailService implements EmailService {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        sender: { name: 'Musaium', email: 'noreply@musaium.app' },
+        sender: { name: 'Musaium', email: 'no-reply@musaium.com' },
         to: [{ email: to }],
         subject,
         htmlContent,
@@ -27,7 +31,9 @@ export class BrevoEmailService implements EmailService {
 
     if (!response.ok) {
       const body = await response.text().catch(() => '');
-      throw new Error(`Brevo email failed (${response.status}): ${body.slice(0, 200)}`);
+      throw new Error(
+        `Brevo email failed (${response.status}): ${body.slice(0, 200)}`,
+      );
     }
   }
 }

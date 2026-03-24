@@ -37,9 +37,8 @@ export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
       });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onCapture(photo.uri);
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error taking picture:', error);
+    } catch {
+      // Camera capture failure — silently ignored, user can retry
     }
   };
 

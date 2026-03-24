@@ -156,8 +156,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       refreshToken = await authStorage.getRefreshToken();
       await authStorage.clearRefreshToken();
-    } catch (error) {
-      console.warn("Error clearing token:", error);
+    } catch {
+      // Token clear failure is non-critical — proceed with logout
     }
 
     clearAccessToken();
@@ -167,8 +167,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     try {
       await authService.logout(refreshToken);
-    } catch (error) {
-      console.warn("Error during logout call:", error);
+    } catch {
+      // Logout API failure is non-critical — user is already logged out locally
     }
   };
 
