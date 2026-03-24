@@ -5,39 +5,19 @@
  */
 
 import { tooManyRequests } from '@shared/errors/app.error';
+import { InMemoryBucketStore } from '@shared/rate-limit/in-memory-bucket-store';
 
 const MAX_ATTEMPTS = 10;
 const WINDOW_MS = 10 * 60 * 1000; // 10 minutes
-const MAX_MAP_SIZE = 100_000;
-const SWEEP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 interface LoginAttempt {
   count: number;
   firstAttemptAt: number;
 }
 
-const attempts = new Map<string, LoginAttempt>();
-
-/** Periodic sweep to evict expired entries and prevent unbounded memory growth. */
-let sweepTimer: ReturnType<typeof setInterval> | null = null;
-const ensureSweep = (): void => {
-  if (sweepTimer) return;
-  sweepTimer = setInterval(() => {
-    const now = Date.now();
-    for (const [key, entry] of attempts) {
-      if (now - entry.firstAttemptAt > WINDOW_MS) {
-        attempts.delete(key);
-      }
-    }
-    if (attempts.size === 0 && sweepTimer) {
-      clearInterval(sweepTimer);
-      sweepTimer = null;
-    }
-  }, SWEEP_INTERVAL_MS);
-  if (typeof sweepTimer === 'object' && 'unref' in sweepTimer) {
-    sweepTimer.unref(); // Don't keep the process alive for cleanup
-  }
-};
+const store = new InMemoryBucketStore<LoginAttempt>({
+  isExpired: (entry, now) => now - entry.firstAttemptAt > WINDOW_MS,
+});
 
 /**
  * Checks whether the given email has exceeded the maximum number of login attempts.
@@ -46,11 +26,11 @@ const ensureSweep = (): void => {
  */
 export const checkLoginRateLimit = (email: string): void => {
   const key = email.toLowerCase().trim();
-  const entry = attempts.get(key);
+  const entry = store.get(key);
   if (!entry) return;
 
   if (Date.now() - entry.firstAttemptAt > WINDOW_MS) {
-    attempts.delete(key);
+    store.delete(key);
     return;
   }
 
@@ -65,16 +45,10 @@ export const checkLoginRateLimit = (email: string): void => {
  */
 export const recordFailedLogin = (email: string): void => {
   const key = email.toLowerCase().trim();
-  const entry = attempts.get(key);
+  const entry = store.get(key);
 
   if (!entry || Date.now() - entry.firstAttemptAt > WINDOW_MS) {
-    // Evict oldest entry if map is at capacity
-    if (attempts.size >= MAX_MAP_SIZE) {
-      const oldest = attempts.keys().next().value;
-      if (oldest) attempts.delete(oldest);
-    }
-    attempts.set(key, { count: 1, firstAttemptAt: Date.now() });
-    ensureSweep();
+    store.set(key, { count: 1, firstAttemptAt: Date.now() });
     return;
   }
 
@@ -86,11 +60,10 @@ export const recordFailedLogin = (email: string): void => {
  * @param email - The email address to clear.
  */
 export const clearLoginAttempts = (email: string): void => {
-  attempts.delete(email.toLowerCase().trim());
+  store.delete(email.toLowerCase().trim());
 };
 
 /** Exposed for testing only. */
 export const _resetAllAttempts = (): void => {
-  attempts.clear();
-  if (sweepTimer) { clearInterval(sweepTimer); sweepTimer = null; }
+  store.clear();
 };
