@@ -74,7 +74,7 @@ describe('isAuthenticated middleware', () => {
     isAuthenticated(req, res, next);
 
     expect(next).toHaveBeenCalledTimes(1);
-    expect((req as any).user).toEqual({ id: 1, role: 'visitor', museumId: null });
+    expect(req.user).toEqual({ id: 1, role: 'visitor', museumId: null });
   });
 
   it('sets req.museumId from token when present', () => {
@@ -90,7 +90,7 @@ describe('isAuthenticated middleware', () => {
 
     isAuthenticated(req, res, next);
 
-    expect((req as any).museumId).toBe(42);
+    expect(req.museumId).toBe(42);
   });
 
   it('returns 401 when JWT verification throws', () => {
@@ -144,7 +144,7 @@ describe('isAuthenticated middleware', () => {
 
     isAuthenticated(req, res, next);
 
-    expect((req as any).museumId).toBeUndefined();
+    expect(req.museumId).toBeUndefined();
     expect(next).toHaveBeenCalledTimes(1);
   });
 });
@@ -193,7 +193,7 @@ describe('isAuthenticatedJwtOnly middleware', () => {
     isAuthenticatedJwtOnly(req, res, next);
 
     expect(next).toHaveBeenCalledTimes(1);
-    expect((req as any).user).toEqual({ id: 5, role: 'admin', museumId: null });
+    expect(req.user).toEqual({ id: 5, role: 'admin', museumId: null });
   });
 
   it('returns 401 when JWT verification throws', () => {

@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import { ChangePasswordUseCase } from '@modules/auth/core/useCase/changePassword.useCase';
 import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
+import type { IRefreshTokenRepository } from '@modules/auth/core/domain/refresh-token.repository.interface';
 import type { User } from '@modules/auth/core/domain/user.entity';
 
 jest.mock('bcrypt', () => ({
@@ -28,7 +29,7 @@ const makeUserRepo = (user: User | null) =>
     updatePassword: jest.fn().mockResolvedValue(user),
   }) as unknown as IUserRepository;
 
-const makeRefreshTokenRepo = () => ({
+const makeRefreshTokenRepo = (): jest.Mocked<Pick<IRefreshTokenRepository, 'revokeAllForUser'>> => ({
   revokeAllForUser: jest.fn().mockResolvedValue(undefined),
 });
 
@@ -40,7 +41,7 @@ describe('ChangePasswordUseCase', () => {
   it('rejects wrong current password', async () => {
     (bcrypt.compare as jest.Mock).mockResolvedValueOnce(false);
     const repo = makeUserRepo(makeUser());
-    const useCase = new ChangePasswordUseCase(repo, makeRefreshTokenRepo() as any);
+    const useCase = new ChangePasswordUseCase(repo, makeRefreshTokenRepo() as unknown as IRefreshTokenRepository);
 
     await expect(useCase.execute(1, 'wrongPass1', 'NewValid1')).rejects.toMatchObject({
       message: 'Current password is incorrect',
@@ -53,7 +54,7 @@ describe('ChangePasswordUseCase', () => {
       .mockResolvedValueOnce(true)   // current password matches
       .mockResolvedValueOnce(true);  // new password is same
     const repo = makeUserRepo(makeUser());
-    const useCase = new ChangePasswordUseCase(repo, makeRefreshTokenRepo() as any);
+    const useCase = new ChangePasswordUseCase(repo, makeRefreshTokenRepo() as unknown as IRefreshTokenRepository);
 
     await expect(useCase.execute(1, 'OldPass1', 'OldPass1')).rejects.toMatchObject({
       message: 'New password must be different from current password',
@@ -66,7 +67,7 @@ describe('ChangePasswordUseCase', () => {
       .mockResolvedValueOnce(true)   // current password matches
       .mockResolvedValueOnce(false); // new password is different
     const repo = makeUserRepo(makeUser());
-    const useCase = new ChangePasswordUseCase(repo, makeRefreshTokenRepo() as any);
+    const useCase = new ChangePasswordUseCase(repo, makeRefreshTokenRepo() as unknown as IRefreshTokenRepository);
 
     await expect(useCase.execute(1, 'OldPass1', 'weak')).rejects.toMatchObject({
       message: expect.stringContaining('Password must be'),
@@ -76,7 +77,7 @@ describe('ChangePasswordUseCase', () => {
 
   it('rejects social-only account (no password)', async () => {
     const repo = makeUserRepo(makeUser({ password: null }));
-    const useCase = new ChangePasswordUseCase(repo, makeRefreshTokenRepo() as any);
+    const useCase = new ChangePasswordUseCase(repo, makeRefreshTokenRepo() as unknown as IRefreshTokenRepository);
 
     await expect(useCase.execute(1, 'anything', 'NewValid1')).rejects.toMatchObject({
       message: 'Cannot change password for social-only accounts',
@@ -90,7 +91,7 @@ describe('ChangePasswordUseCase', () => {
       .mockResolvedValueOnce(false); // new password is different
     const repo = makeUserRepo(makeUser());
     const refreshRepo = makeRefreshTokenRepo();
-    const useCase = new ChangePasswordUseCase(repo, refreshRepo as any);
+    const useCase = new ChangePasswordUseCase(repo, refreshRepo as unknown as IRefreshTokenRepository);
 
     await useCase.execute(1, 'OldPass1', 'NewValid1');
 
@@ -100,7 +101,7 @@ describe('ChangePasswordUseCase', () => {
 
   it('throws 404 for non-existent user', async () => {
     const repo = makeUserRepo(null);
-    const useCase = new ChangePasswordUseCase(repo, makeRefreshTokenRepo() as any);
+    const useCase = new ChangePasswordUseCase(repo, makeRefreshTokenRepo() as unknown as IRefreshTokenRepository);
 
     await expect(useCase.execute(999, 'pass', 'NewValid1')).rejects.toMatchObject({
       message: 'User not found',

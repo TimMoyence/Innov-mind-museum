@@ -21,16 +21,16 @@ import type {
 } from '../domain/chat.types';
 import { computeSessionUpdates } from './visit-context';
 import type { ChatRepository } from '../domain/chat.repository.interface';
-import type { ImageStorage } from '../adapters/secondary/image-storage.stub';
+import type { ImageStorage } from '../domain/ports/image-storage.port';
 import type {
   ChatOrchestrator,
   OrchestratorOutput,
-} from '../adapters/secondary/langchain.orchestrator';
+} from '../domain/ports/chat-orchestrator.port';
 import type {
   AudioTranscriber,
-} from '../adapters/secondary/audio-transcriber.openai';
-import { DisabledAudioTranscriber } from '../adapters/secondary/audio-transcriber.openai';
-import type { OcrService } from '../adapters/secondary/ocr-service';
+} from '../domain/ports/audio-transcriber.port';
+import { DisabledAudioTranscriber } from '../domain/ports/audio-transcriber.port';
+import type { OcrService } from '../domain/ports/ocr.port';
 import { ensureSessionAccess } from './session-access';
 import {
   buildChatImageObjectKey,

@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
+import type { ApiKeyRepository } from '@modules/auth/core/domain/apiKey.repository.interface';
 
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
@@ -23,14 +24,25 @@ const mockRes = (): Response => {
   } as unknown as Response;
 };
 
+const makeFakeApiKeyRepo = (
+  overrides: Partial<jest.Mocked<ApiKeyRepository>> = {},
+): jest.Mocked<ApiKeyRepository> => ({
+  findByPrefix: jest.fn(),
+  findByUserId: jest.fn(),
+  save: jest.fn(),
+  remove: jest.fn(),
+  updateLastUsed: jest.fn().mockResolvedValue(undefined),
+  ...overrides,
+});
+
 describe('validateApiKey middleware', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('getApiKeyRepository returns the currently set repository', () => {
-    const fakeRepo = { findByPrefix: jest.fn(), updateLastUsed: jest.fn() };
-    setApiKeyRepository(fakeRepo as any);
+    const fakeRepo = makeFakeApiKeyRepo();
+    setApiKeyRepository(fakeRepo);
     expect(getApiKeyRepository()).toBe(fakeRepo);
   });
 
@@ -54,11 +66,8 @@ describe('validateApiKey middleware', () => {
   });
 
   it('returns 401 when token body is too short (<8 chars after msk_)', async () => {
-    const fakeRepo = {
-      findByPrefix: jest.fn(),
-      updateLastUsed: jest.fn().mockResolvedValue(undefined),
-    };
-    setApiKeyRepository(fakeRepo as any);
+    const fakeRepo = makeFakeApiKeyRepo();
+    setApiKeyRepository(fakeRepo);
 
     const req = {} as Request;
     const res = mockRes();
@@ -74,11 +83,10 @@ describe('validateApiKey middleware', () => {
   });
 
   it('returns 401 when no API key found for prefix', async () => {
-    const fakeRepo = {
+    const fakeRepo = makeFakeApiKeyRepo({
       findByPrefix: jest.fn().mockResolvedValue(null),
-      updateLastUsed: jest.fn().mockResolvedValue(undefined),
-    };
-    setApiKeyRepository(fakeRepo as any);
+    });
+    setApiKeyRepository(fakeRepo);
 
     const req = {} as Request;
     const res = mockRes();
@@ -94,7 +102,7 @@ describe('validateApiKey middleware', () => {
   });
 
   it('returns 401 when API key is expired', async () => {
-    const fakeRepo = {
+    const fakeRepo = makeFakeApiKeyRepo({
       findByPrefix: jest.fn().mockResolvedValue({
         id: 1,
         userId: 10,
@@ -104,9 +112,8 @@ describe('validateApiKey middleware', () => {
         isActive: true,
         expiresAt: new Date('2020-01-01'),
       }),
-      updateLastUsed: jest.fn().mockResolvedValue(undefined),
-    };
-    setApiKeyRepository(fakeRepo as any);
+    });
+    setApiKeyRepository(fakeRepo);
 
     const req = {} as Request;
     const res = mockRes();
@@ -121,7 +128,7 @@ describe('validateApiKey middleware', () => {
   });
 
   it('returns 401 when API key is revoked (not active)', async () => {
-    const fakeRepo = {
+    const fakeRepo = makeFakeApiKeyRepo({
       findByPrefix: jest.fn().mockResolvedValue({
         id: 1,
         userId: 10,
@@ -131,9 +138,8 @@ describe('validateApiKey middleware', () => {
         isActive: false,
         expiresAt: null,
       }),
-      updateLastUsed: jest.fn().mockResolvedValue(undefined),
-    };
-    setApiKeyRepository(fakeRepo as any);
+    });
+    setApiKeyRepository(fakeRepo);
 
     const req = {} as Request;
     const res = mockRes();
@@ -152,7 +158,7 @@ describe('validateApiKey middleware', () => {
     const salt = 'testsalt';
     const wrongHash = 'a'.repeat(64); // wrong hash
 
-    const fakeRepo = {
+    const fakeRepo = makeFakeApiKeyRepo({
       findByPrefix: jest.fn().mockResolvedValue({
         id: 1,
         userId: 10,
@@ -162,9 +168,8 @@ describe('validateApiKey middleware', () => {
         isActive: true,
         expiresAt: null,
       }),
-      updateLastUsed: jest.fn().mockResolvedValue(undefined),
-    };
-    setApiKeyRepository(fakeRepo as any);
+    });
+    setApiKeyRepository(fakeRepo);
 
     const req = {} as Request;
     const res = mockRes();
@@ -183,7 +188,7 @@ describe('validateApiKey middleware', () => {
     const salt = 'testsalt';
     const hash = crypto.createHmac('sha256', salt).update(token).digest('hex');
 
-    const fakeRepo = {
+    const fakeRepo = makeFakeApiKeyRepo({
       findByPrefix: jest.fn().mockResolvedValue({
         id: 1,
         userId: 10,
@@ -194,12 +199,11 @@ describe('validateApiKey middleware', () => {
         expiresAt: null,
         museumId: null,
       }),
-      updateLastUsed: jest.fn().mockResolvedValue(undefined),
-    };
-    setApiKeyRepository(fakeRepo as any);
+    });
+    setApiKeyRepository(fakeRepo);
 
     // No user role resolver set — should default to 'visitor'
-    setUserRoleResolver(null as any);
+    setUserRoleResolver(undefined as unknown as (userId: number) => Promise<null>);
 
     const req = { headers: {} } as unknown as Request;
     const res = mockRes();
@@ -208,7 +212,7 @@ describe('validateApiKey middleware', () => {
     await validateApiKey(token, req, res, next);
 
     expect(next).toHaveBeenCalledTimes(1);
-    expect((req as any).user).toEqual({ id: 10, role: 'visitor', museumId: null });
+    expect(req.user).toEqual({ id: 10, role: 'visitor', museumId: null });
     expect(fakeRepo.updateLastUsed).toHaveBeenCalledWith(1);
   });
 
@@ -217,7 +221,7 @@ describe('validateApiKey middleware', () => {
     const salt = 'testsalt';
     const hash = crypto.createHmac('sha256', salt).update(token).digest('hex');
 
-    const fakeRepo = {
+    const fakeRepo = makeFakeApiKeyRepo({
       findByPrefix: jest.fn().mockResolvedValue({
         id: 1,
         userId: 10,
@@ -228,9 +232,8 @@ describe('validateApiKey middleware', () => {
         expiresAt: null,
         museumId: 5,
       }),
-      updateLastUsed: jest.fn().mockResolvedValue(undefined),
-    };
-    setApiKeyRepository(fakeRepo as any);
+    });
+    setApiKeyRepository(fakeRepo);
     setUserRoleResolver(async (_userId: number) => 'admin');
 
     const req = { headers: {} } as unknown as Request;
@@ -240,8 +243,8 @@ describe('validateApiKey middleware', () => {
     await validateApiKey(token, req, res, next);
 
     expect(next).toHaveBeenCalledTimes(1);
-    expect((req as any).user).toEqual({ id: 10, role: 'admin', museumId: 5 });
-    expect((req as any).museumId).toBe(5);
+    expect(req.user).toEqual({ id: 10, role: 'admin', museumId: 5 });
+    expect(req.museumId).toBe(5);
   });
 
   it('defaults to visitor when role resolver returns null', async () => {
@@ -249,7 +252,7 @@ describe('validateApiKey middleware', () => {
     const salt = 'testsalt';
     const hash = crypto.createHmac('sha256', salt).update(token).digest('hex');
 
-    const fakeRepo = {
+    const fakeRepo = makeFakeApiKeyRepo({
       findByPrefix: jest.fn().mockResolvedValue({
         id: 1,
         userId: 10,
@@ -259,9 +262,8 @@ describe('validateApiKey middleware', () => {
         isActive: true,
         expiresAt: null,
       }),
-      updateLastUsed: jest.fn().mockResolvedValue(undefined),
-    };
-    setApiKeyRepository(fakeRepo as any);
+    });
+    setApiKeyRepository(fakeRepo);
     setUserRoleResolver(async () => null);
 
     const req = { headers: {} } as unknown as Request;
@@ -270,15 +272,14 @@ describe('validateApiKey middleware', () => {
 
     await validateApiKey(token, req, res, next);
 
-    expect((req as any).user.role).toBe('visitor');
+    expect(req.user!.role).toBe('visitor');
   });
 
   it('returns 401 when findByPrefix throws', async () => {
-    const fakeRepo = {
+    const fakeRepo = makeFakeApiKeyRepo({
       findByPrefix: jest.fn().mockRejectedValue(new Error('DB error')),
-      updateLastUsed: jest.fn().mockResolvedValue(undefined),
-    };
-    setApiKeyRepository(fakeRepo as any);
+    });
+    setApiKeyRepository(fakeRepo);
 
     const req = {} as Request;
     const res = mockRes();
@@ -297,7 +298,7 @@ describe('validateApiKey middleware', () => {
     const salt = 'testsalt';
     const hash = crypto.createHmac('sha256', salt).update(token).digest('hex');
 
-    const fakeRepo = {
+    const fakeRepo = makeFakeApiKeyRepo({
       findByPrefix: jest.fn().mockResolvedValue({
         id: 1,
         userId: 10,
@@ -308,9 +309,9 @@ describe('validateApiKey middleware', () => {
         expiresAt: null,
       }),
       updateLastUsed: jest.fn().mockRejectedValue(new Error('update failed')),
-    };
-    setApiKeyRepository(fakeRepo as any);
-    setUserRoleResolver(null as any);
+    });
+    setApiKeyRepository(fakeRepo);
+    setUserRoleResolver(undefined as unknown as (userId: number) => Promise<null>);
 
     const req = { headers: {} } as unknown as Request;
     const res = mockRes();

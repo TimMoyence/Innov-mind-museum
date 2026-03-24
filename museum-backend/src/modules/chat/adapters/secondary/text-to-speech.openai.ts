@@ -1,23 +1,9 @@
 import { env } from '@src/config/env';
 import { AppError } from '@shared/errors/app.error';
+import type { TtsResult, TextToSpeechService } from '../../domain/ports/tts.port';
 
-/** Result of a text-to-speech synthesis request. */
-export interface TtsResult {
-  /** Raw audio buffer (MP3). */
-  audio: Buffer;
-  /** MIME content type of the audio (e.g. `audio/mpeg`). */
-  contentType: string;
-}
-
-/** Port for text-to-speech synthesis of assistant messages. */
-export interface TextToSpeechService {
-  /**
-   * Synthesizes speech from text.
-   * @param input - Text to synthesize and optional voice override.
-   * @returns Audio buffer with content type metadata.
-   */
-  synthesize(input: { text: string; voice?: string }): Promise<TtsResult>;
-}
+// Re-export domain port types so existing consumers that imported from here keep working
+export type { TtsResult, TextToSpeechService } from '../../domain/ports/tts.port';
 
 /** OpenAI TTS implementation using POST https://api.openai.com/v1/audio/speech */
 export class OpenAiTextToSpeechService implements TextToSpeechService {

@@ -16,7 +16,7 @@ import {
   TesseractOcrService,
   DisabledOcrService,
 } from './adapters/secondary/ocr-service';
-import type { OcrService } from './adapters/secondary/ocr-service';
+import type { OcrService } from './domain/ports/ocr.port';
 import { TypeOrmChatRepository } from './infrastructure/chat.repository.typeorm';
 import { TypeOrmUserMemoryRepository } from './infrastructure/userMemory.repository.typeorm';
 import type { CacheService } from '@shared/cache/cache.port';

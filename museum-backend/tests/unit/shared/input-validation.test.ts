@@ -58,7 +58,7 @@ describe('validateNameField', () => {
   });
 
   it('returns undefined for null input', () => {
-    expect(validateNameField(null as any, 'firstname')).toBeUndefined();
+    expect(validateNameField(null as unknown as string, 'firstname')).toBeUndefined();
   });
 
   it('returns undefined for empty string after trim', () => {
@@ -96,6 +96,6 @@ describe('validateNameField', () => {
   it('coerces non-string values to string then validates', () => {
     // The type says string|undefined but test the non-string branch
     // "42" contains digits which are not in the NAME_PATTERN (unicode letters only)
-    expect(() => validateNameField(42 as any, 'field')).toThrow('contains invalid characters');
+    expect(() => validateNameField(42 as unknown as string, 'field')).toThrow('contains invalid characters');
   });
 });

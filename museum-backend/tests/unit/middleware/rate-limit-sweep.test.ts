@@ -1,3 +1,4 @@
+import type { Response, RequestHandler } from 'express';
 import { clearRateLimitBuckets, createRateLimitMiddleware, byIp, stopRateLimitSweep } from '@src/helpers/middleware/rate-limit.middleware';
 
 describe('rate-limit middleware — sweep and eviction', () => {
@@ -12,8 +13,8 @@ describe('rate-limit middleware — sweep and eviction', () => {
   });
 
   const makeMockReq = (ip: string) =>
-    ({ ip, socket: { remoteAddress: ip }, params: {}, body: {}, header: () => undefined } as any);
-  const makeMockRes = () => ({ setHeader: jest.fn() } as any);
+    ({ ip, socket: { remoteAddress: ip }, params: {}, body: {}, header: () => undefined } as unknown as Parameters<RequestHandler>[0]);
+  const makeMockRes = () => ({ setHeader: jest.fn() } as unknown as Response);
   const noop = jest.fn();
 
   it('evicts expired buckets after sweep interval', () => {

@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { IUserRepository } from '../domain/user.repository.interface';
 import { User } from '../domain/user.entity';
-import { validateEmail } from '../../adapters/secondary/email.service';
+import { validateEmail } from '@shared/validation/email';
 import { validatePassword } from '@shared/validation/password';
 import { validateNameField } from '@shared/validation/input';
 import { badRequest } from '@shared/errors/app.error';

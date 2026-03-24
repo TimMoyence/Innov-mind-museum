@@ -1,5 +1,5 @@
 import type { CacheService } from '@shared/cache/cache.port';
-import type { RefreshTokenRepositoryPg } from '../../adapters/secondary/refresh-token.repository.pg';
+import type { IRefreshTokenRepository } from '../domain/refresh-token.repository.interface';
 import { logger } from '@shared/logger/logger';
 
 const LOCK_KEY = 'token-cleanup:lock';
@@ -12,7 +12,7 @@ export class TokenCleanupService {
   private timer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
-    private readonly refreshTokenRepository: RefreshTokenRepositoryPg,
+    private readonly refreshTokenRepository: IRefreshTokenRepository,
     private readonly cacheService?: CacheService,
   ) {}
 

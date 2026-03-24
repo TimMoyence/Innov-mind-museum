@@ -7,12 +7,12 @@ import type {
   ReportReason,
 } from '../domain/chat.types';
 import type { ChatRepository } from '../domain/chat.repository.interface';
-import type { ImageStorage } from '../adapters/secondary/image-storage.stub';
-import type { ChatOrchestrator } from '../adapters/secondary/langchain.orchestrator';
-import type { AudioTranscriber } from '../adapters/secondary/audio-transcriber.openai';
-import { DisabledAudioTranscriber } from '../adapters/secondary/audio-transcriber.openai';
-import type { TextToSpeechService } from '../adapters/secondary/text-to-speech.openai';
-import type { OcrService } from '../adapters/secondary/ocr-service';
+import type { ImageStorage } from '../domain/ports/image-storage.port';
+import type { ChatOrchestrator } from '../domain/ports/chat-orchestrator.port';
+import type { AudioTranscriber } from '../domain/ports/audio-transcriber.port';
+import { DisabledAudioTranscriber } from '../domain/ports/audio-transcriber.port';
+import type { TextToSpeechService } from '../domain/ports/tts.port';
+import type { OcrService } from '../domain/ports/ocr.port';
 import type { AuditService } from '@shared/audit/audit.service';
 import type { UserMemoryService } from './user-memory.service';
 import type { GuardrailBlockReason } from './art-topic-guardrail';
