@@ -262,7 +262,7 @@ const isRetryableError = (error: unknown): boolean => {
 // Private helpers — factorise duplicated logic between generate() / generateStream()
 // ---------------------------------------------------------------------------
 
-interface OrchestratorPrepared {
+export interface OrchestratorPrepared {
   normalizedText: string;
   recentHistory: ChatMessage[];
   guideLevel: 'beginner' | 'intermediate' | 'expert';
@@ -786,3 +786,6 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     }); // end startSpan('llm.orchestrate.stream')
   }
 }
+
+// Exported for testing
+export { buildOrchestratorMessages, buildSectionMessages };

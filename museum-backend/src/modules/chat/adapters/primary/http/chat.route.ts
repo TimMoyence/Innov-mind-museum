@@ -334,6 +334,17 @@ export const createChatRouter = (chatService: ChatService): Router => {
       const controller = new AbortController();
       res.on('close', () => controller.abort());
 
+      // Hard timeout: cut SSE after 60s — if response takes longer, something is wrong
+      // (LLM budget is 25s; beyond 60s = zombie connection or provider failure)
+      const SSE_TIMEOUT_MS = 60_000;
+      const sseTimer = setTimeout(() => {
+        if (!res.writableEnded && !res.destroyed) {
+          sendSseError(res, 'TIMEOUT', 'Stream timeout exceeded (60s). The response took too long.');
+          controller.abort();
+          res.end();
+        }
+      }, SSE_TIMEOUT_MS);
+
       try {
         const currentUser = getRequestUser(req);
         const rawBody = (req.body || {}) as Record<string, unknown>;
@@ -379,6 +390,7 @@ export const createChatRouter = (chatService: ChatService): Router => {
           );
         }
       } finally {
+        clearTimeout(sseTimer);
         if (!res.writableEnded) res.end();
       }
     },
