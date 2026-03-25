@@ -15,6 +15,12 @@ import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import type { CacheService } from '@shared/cache/cache.port';
 import { getOcrService } from '@modules/chat';
 import { stopRateLimitSweep } from '@src/helpers/middleware/rate-limit.middleware';
+import { setRedisRateLimitStore } from '@src/helpers/middleware/rate-limit.middleware';
+import { RedisRateLimitStore } from '@src/helpers/middleware/redis-rate-limit-store';
+import Redis from 'ioredis';
+
+/** Grace period for in-flight requests to complete before forced exit (ms). */
+const SHUTDOWN_TIMEOUT_MS = 30_000;
 
 /** Initializes the database, starts the HTTP server, and registers graceful shutdown handlers. */
 const start = async (): Promise<void> => {
@@ -28,15 +34,33 @@ const start = async (): Promise<void> => {
     });
 
     let cacheService: CacheService;
+    let redisClient: Redis | undefined;
+
     if (env.cache?.enabled) {
-      const redis = new RedisCacheService({
+      const redisCacheService = new RedisCacheService({
         url: env.cache.url,
         defaultTtlSeconds: env.cache.sessionTtlSeconds,
       });
-      void redis.connect().catch((err) => {
+      void redisCacheService.connect().catch((err) => {
         logger.error('redis_connection_failed', { error: (err as Error).message ?? err });
       });
-      cacheService = redis;
+      cacheService = redisCacheService;
+
+      // Create a dedicated Redis connection for rate limiting
+      redisClient = new Redis(env.cache.url, {
+        maxRetriesPerRequest: 1,
+        lazyConnect: false,
+        enableReadyCheck: false,
+        connectionName: 'rate-limit',
+      });
+      redisClient.on('error', (err) => {
+        logger.warn('redis_rate_limit_connection_error', {
+          error: (err as Error).message ?? 'unknown',
+        });
+      });
+      const redisRateLimitStore = new RedisRateLimitStore(redisClient);
+      setRedisRateLimitStore(redisRateLimitStore);
+      logger.info('redis_rate_limit_store_enabled');
     } else {
       cacheService = new NoopCacheService();
     }
@@ -55,24 +79,52 @@ const start = async (): Promise<void> => {
     );
     tokenCleanup.startScheduler();
 
+    let isShuttingDown = false;
+
     const shutdown = async (signal: string): Promise<void> => {
-      logger.info('server_shutdown_start', { signal });
+      if (isShuttingDown) return;
+      isShuttingDown = true;
+
+      logger.info('server_shutdown_start', { signal, timeoutMs: SHUTDOWN_TIMEOUT_MS });
+
+      // 1. Stop accepting new connections
       tokenCleanup.stopScheduler();
       stopRateLimitSweep();
       await shutdownOpenTelemetry();
       const ocr = getOcrService();
       if (ocr?.destroy) await ocr.destroy();
+
+      // 2. Close the HTTP server — stops accepting new connections,
+      //    waits for in-flight requests to complete
       server.close(async () => {
+        logger.info('server_connections_drained');
         try {
           if (AppDataSource.isInitialized) {
             await AppDataSource.destroy();
+            logger.info('database_closed');
           }
         } finally {
+          // 3. Close Redis connections
+          if (redisClient) {
+            try {
+              await redisClient.quit();
+              logger.info('redis_rate_limit_closed');
+            } catch {
+              // Best-effort
+            }
+          }
           process.exit(0);
         }
       });
 
-      setTimeout(() => process.exit(1), 10000).unref();
+      // Force exit after grace period if connections don't drain in time
+      setTimeout(() => {
+        logger.warn('server_shutdown_forced', {
+          reason: 'drain timeout exceeded',
+          timeoutMs: SHUTDOWN_TIMEOUT_MS,
+        });
+        process.exit(1);
+      }, SHUTDOWN_TIMEOUT_MS).unref();
     };
 
     ['SIGINT', 'SIGTERM'].forEach((sig) => {
