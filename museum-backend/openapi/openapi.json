@@ -3,7 +3,7 @@
   "info": {
     "title": "Musaium API",
     "version": "1.1.0",
-    "description": "Active API surface for Musaium mobile backend (health, auth, chat)."
+    "description": "Active API surface for Musaium mobile backend (health, auth, chat, admin, museum, support)."
   },
   "servers": [
     {
@@ -307,6 +307,217 @@
             }
           }
         }
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "required": ["total", "page", "limit", "totalPages"],
+        "properties": {
+          "total": { "type": "integer" },
+          "page": { "type": "integer" },
+          "limit": { "type": "integer" },
+          "totalPages": { "type": "integer" }
+        }
+      },
+      "AdminUserDTO": {
+        "type": "object",
+        "required": ["id", "email", "role", "emailVerified", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "integer" },
+          "email": { "type": "string", "format": "email" },
+          "firstname": { "type": ["string", "null"] },
+          "lastname": { "type": ["string", "null"] },
+          "role": { "type": "string" },
+          "emailVerified": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "AdminAuditLogDTO": {
+        "type": "object",
+        "required": ["id", "action", "actorType", "createdAt"],
+        "properties": {
+          "id": { "type": "string" },
+          "action": { "type": "string" },
+          "actorType": { "type": "string" },
+          "actorId": { "type": ["integer", "null"] },
+          "targetType": { "type": ["string", "null"] },
+          "targetId": { "type": ["string", "null"] },
+          "metadata": { "type": ["object", "null"], "additionalProperties": true },
+          "ip": { "type": ["string", "null"] },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "AdminStats": {
+        "type": "object",
+        "required": ["totalUsers", "usersByRole", "totalSessions", "totalMessages", "recentSignups", "recentSessions"],
+        "properties": {
+          "totalUsers": { "type": "integer" },
+          "usersByRole": { "type": "object", "additionalProperties": { "type": "integer" } },
+          "totalSessions": { "type": "integer" },
+          "totalMessages": { "type": "integer" },
+          "recentSignups": { "type": "integer" },
+          "recentSessions": { "type": "integer" }
+        }
+      },
+      "AdminReportDTO": {
+        "type": "object",
+        "required": ["id", "messageId", "userId", "reason", "status", "createdAt", "messageRole", "sessionId"],
+        "properties": {
+          "id": { "type": "string" },
+          "messageId": { "type": "string" },
+          "userId": { "type": "integer" },
+          "reason": { "type": "string" },
+          "comment": { "type": ["string", "null"] },
+          "status": { "type": "string", "enum": ["pending", "reviewed", "dismissed"] },
+          "reviewedBy": { "type": ["integer", "null"] },
+          "reviewedAt": { "type": ["string", "null"], "format": "date-time" },
+          "reviewerNotes": { "type": ["string", "null"] },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "messageText": { "type": ["string", "null"] },
+          "messageRole": { "type": "string" },
+          "sessionId": { "type": "string" }
+        }
+      },
+      "TimeSeriesPoint": {
+        "type": "object",
+        "required": ["date", "count"],
+        "properties": {
+          "date": { "type": "string" },
+          "count": { "type": "integer" }
+        }
+      },
+      "UsageAnalytics": {
+        "type": "object",
+        "required": ["period", "granularity", "sessionsCreated", "messagesSent", "activeUsers"],
+        "properties": {
+          "period": {
+            "type": "object",
+            "required": ["from", "to"],
+            "properties": {
+              "from": { "type": "string" },
+              "to": { "type": "string" }
+            }
+          },
+          "granularity": { "type": "string", "enum": ["daily", "weekly", "monthly"] },
+          "sessionsCreated": { "type": "array", "items": { "$ref": "#/components/schemas/TimeSeriesPoint" } },
+          "messagesSent": { "type": "array", "items": { "$ref": "#/components/schemas/TimeSeriesPoint" } },
+          "activeUsers": { "type": "array", "items": { "$ref": "#/components/schemas/TimeSeriesPoint" } }
+        }
+      },
+      "ContentAnalytics": {
+        "type": "object",
+        "required": ["topArtworks", "topMuseums", "guardrailBlockRate"],
+        "properties": {
+          "topArtworks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["title", "count"],
+              "properties": {
+                "title": { "type": "string" },
+                "artist": { "type": ["string", "null"] },
+                "count": { "type": "integer" }
+              }
+            }
+          },
+          "topMuseums": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "count"],
+              "properties": {
+                "name": { "type": "string" },
+                "count": { "type": "integer" }
+              }
+            }
+          },
+          "guardrailBlockRate": { "type": "number" }
+        }
+      },
+      "EngagementAnalytics": {
+        "type": "object",
+        "required": ["avgMessagesPerSession", "avgSessionDurationMinutes", "returnUserRate", "totalUniqueUsers", "returningUsers"],
+        "properties": {
+          "avgMessagesPerSession": { "type": "number" },
+          "avgSessionDurationMinutes": { "type": "number" },
+          "returnUserRate": { "type": "number" },
+          "totalUniqueUsers": { "type": "integer" },
+          "returningUsers": { "type": "integer" }
+        }
+      },
+      "MuseumDTO": {
+        "type": "object",
+        "required": ["id", "name", "slug", "config", "isActive", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" },
+          "address": { "type": ["string", "null"] },
+          "description": { "type": ["string", "null"] },
+          "latitude": { "type": ["number", "null"] },
+          "longitude": { "type": ["number", "null"] },
+          "config": { "type": "object", "additionalProperties": true },
+          "isActive": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "MuseumDirectoryDTO": {
+        "type": "object",
+        "required": ["id", "name", "slug"],
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" },
+          "address": { "type": ["string", "null"] },
+          "description": { "type": ["string", "null"] },
+          "latitude": { "type": ["number", "null"] },
+          "longitude": { "type": ["number", "null"] }
+        }
+      },
+      "TicketDTO": {
+        "type": "object",
+        "required": ["id", "userId", "subject", "description", "status", "priority", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "integer" },
+          "subject": { "type": "string" },
+          "description": { "type": "string" },
+          "status": { "type": "string", "enum": ["open", "in_progress", "resolved", "closed"] },
+          "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+          "category": { "type": ["string", "null"] },
+          "assignedTo": { "type": ["integer", "null"] },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "messageCount": { "type": "integer" }
+        }
+      },
+      "TicketMessageDTO": {
+        "type": "object",
+        "required": ["id", "ticketId", "senderId", "senderRole", "text", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "ticketId": { "type": "string", "format": "uuid" },
+          "senderId": { "type": "integer" },
+          "senderRole": { "type": "string" },
+          "text": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "TicketDetailDTO": {
+        "allOf": [
+          { "$ref": "#/components/schemas/TicketDTO" },
+          {
+            "type": "object",
+            "required": ["messages"],
+            "properties": {
+              "messages": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/TicketMessageDTO" }
+              }
+            }
+          }
+        ]
       }
     },
     "responses": {
@@ -1175,6 +1386,692 @@
             }
           },
           "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Paginated user list",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "page", "required": false, "schema": { "type": "integer", "default": 1 }, "description": "Page number" },
+          { "in": "query", "name": "limit", "required": false, "schema": { "type": "integer", "default": 20 }, "description": "Items per page" },
+          { "in": "query", "name": "search", "required": false, "schema": { "type": "string" }, "description": "Search by email or name" },
+          { "in": "query", "name": "role", "required": false, "schema": { "type": "string" }, "description": "Filter by role" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated user list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "total", "page", "limit", "totalPages"],
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/AdminUserDTO" } },
+                    "total": { "type": "integer" },
+                    "page": { "type": "integer" },
+                    "limit": { "type": "integer" },
+                    "totalPages": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/admin/users/{id}/role": {
+      "patch": {
+        "tags": ["Admin"],
+        "summary": "Change user role (admin only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "id", "required": true, "schema": { "type": "integer" }, "description": "User ID" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["role"],
+                "properties": {
+                  "role": { "type": "string", "enum": ["visitor", "moderator", "museum_manager", "admin"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User role updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["user"],
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/AdminUserDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/admin/audit-logs": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Paginated audit logs",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "page", "required": false, "schema": { "type": "integer", "default": 1 }, "description": "Page number" },
+          { "in": "query", "name": "limit", "required": false, "schema": { "type": "integer", "default": 20 }, "description": "Items per page" },
+          { "in": "query", "name": "action", "required": false, "schema": { "type": "string" }, "description": "Filter by action type" },
+          { "in": "query", "name": "actorId", "required": false, "schema": { "type": "integer" }, "description": "Filter by actor user ID" },
+          { "in": "query", "name": "targetType", "required": false, "schema": { "type": "string" }, "description": "Filter by target type" },
+          { "in": "query", "name": "dateFrom", "required": false, "schema": { "type": "string", "format": "date" }, "description": "Start date filter" },
+          { "in": "query", "name": "dateTo", "required": false, "schema": { "type": "string", "format": "date" }, "description": "End date filter" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated audit logs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "total", "page", "limit", "totalPages"],
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/AdminAuditLogDTO" } },
+                    "total": { "type": "integer" },
+                    "page": { "type": "integer" },
+                    "limit": { "type": "integer" },
+                    "totalPages": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/admin/stats": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Dashboard statistics",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Dashboard statistics",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdminStats" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/admin/reports": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Paginated content reports",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "page", "required": false, "schema": { "type": "integer", "default": 1 }, "description": "Page number" },
+          { "in": "query", "name": "limit", "required": false, "schema": { "type": "integer", "default": 20 }, "description": "Items per page" },
+          { "in": "query", "name": "status", "required": false, "schema": { "type": "string", "enum": ["pending", "reviewed", "dismissed"] }, "description": "Filter by report status" },
+          { "in": "query", "name": "reason", "required": false, "schema": { "type": "string" }, "description": "Filter by reason" },
+          { "in": "query", "name": "dateFrom", "required": false, "schema": { "type": "string", "format": "date" }, "description": "Start date filter" },
+          { "in": "query", "name": "dateTo", "required": false, "schema": { "type": "string", "format": "date" }, "description": "End date filter" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated report list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "total", "page", "limit", "totalPages"],
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/AdminReportDTO" } },
+                    "total": { "type": "integer" },
+                    "page": { "type": "integer" },
+                    "limit": { "type": "integer" },
+                    "totalPages": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/admin/reports/{id}": {
+      "patch": {
+        "tags": ["Admin"],
+        "summary": "Resolve a content report",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "id", "required": true, "schema": { "type": "string" }, "description": "Report ID" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["status"],
+                "properties": {
+                  "status": { "type": "string", "enum": ["pending", "reviewed", "dismissed"] },
+                  "reviewerNotes": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Report resolved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["report"],
+                  "properties": {
+                    "report": { "$ref": "#/components/schemas/AdminReportDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/admin/analytics/usage": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Usage time-series analytics",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "granularity", "required": false, "schema": { "type": "string", "enum": ["daily", "weekly", "monthly"] }, "description": "Time-series granularity" },
+          { "in": "query", "name": "from", "required": false, "schema": { "type": "string", "format": "date" }, "description": "Start date" },
+          { "in": "query", "name": "to", "required": false, "schema": { "type": "string", "format": "date" }, "description": "End date" },
+          { "in": "query", "name": "days", "required": false, "schema": { "type": "integer" }, "description": "Number of days to look back" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usage analytics",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UsageAnalytics" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/admin/analytics/content": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Content analytics (top artworks, museums, guardrail rate)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "from", "required": false, "schema": { "type": "string", "format": "date" }, "description": "Start date" },
+          { "in": "query", "name": "to", "required": false, "schema": { "type": "string", "format": "date" }, "description": "End date" },
+          { "in": "query", "name": "limit", "required": false, "schema": { "type": "integer" }, "description": "Number of top items to return" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Content analytics",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ContentAnalytics" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/admin/analytics/engagement": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Engagement analytics (session duration, return rate)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "from", "required": false, "schema": { "type": "string", "format": "date" }, "description": "Start date" },
+          { "in": "query", "name": "to", "required": false, "schema": { "type": "string", "format": "date" }, "description": "End date" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Engagement analytics",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EngagementAnalytics" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/admin/tickets": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Paginated list of all support tickets (admin/moderator)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "page", "required": false, "schema": { "type": "integer", "default": 1 }, "description": "Page number" },
+          { "in": "query", "name": "limit", "required": false, "schema": { "type": "integer", "default": 20 }, "description": "Items per page" },
+          { "in": "query", "name": "status", "required": false, "schema": { "type": "string", "enum": ["open", "in_progress", "resolved", "closed"] }, "description": "Filter by ticket status" },
+          { "in": "query", "name": "priority", "required": false, "schema": { "type": "string", "enum": ["low", "medium", "high"] }, "description": "Filter by priority" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated ticket list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "total", "page", "limit", "totalPages"],
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/TicketDTO" } },
+                    "total": { "type": "integer" },
+                    "page": { "type": "integer" },
+                    "limit": { "type": "integer" },
+                    "totalPages": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/admin/tickets/{id}": {
+      "patch": {
+        "tags": ["Admin"],
+        "summary": "Update ticket status, priority, or assignment",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "id", "required": true, "schema": { "type": "string", "format": "uuid" }, "description": "Ticket ID" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": { "type": "string", "enum": ["open", "in_progress", "resolved", "closed"] },
+                  "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+                  "assignedTo": { "type": ["integer", "null"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["ticket"],
+                  "properties": {
+                    "ticket": { "$ref": "#/components/schemas/TicketDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/museums/directory": {
+      "get": {
+        "tags": ["Museum"],
+        "summary": "Public directory of active museums",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Museum directory",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["museums"],
+                  "properties": {
+                    "museums": { "type": "array", "items": { "$ref": "#/components/schemas/MuseumDirectoryDTO" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/museums": {
+      "post": {
+        "tags": ["Museum"],
+        "summary": "Create a new museum (admin only)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "slug"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "slug": { "type": "string" },
+                  "address": { "type": "string" },
+                  "description": { "type": "string" },
+                  "config": { "type": "object", "additionalProperties": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Museum created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["museum"],
+                  "properties": {
+                    "museum": { "$ref": "#/components/schemas/MuseumDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "get": {
+        "tags": ["Museum"],
+        "summary": "List all museums (admin/moderator/museum_manager)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Museum list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["museums"],
+                  "properties": {
+                    "museums": { "type": "array", "items": { "$ref": "#/components/schemas/MuseumDTO" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/museums/{idOrSlug}": {
+      "get": {
+        "tags": ["Museum"],
+        "summary": "Get museum by ID or slug",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "idOrSlug", "required": true, "schema": { "type": "string" }, "description": "Museum numeric ID or slug" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Museum details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["museum"],
+                  "properties": {
+                    "museum": { "$ref": "#/components/schemas/MuseumDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/museums/{id}": {
+      "put": {
+        "tags": ["Museum"],
+        "summary": "Update museum (admin only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "id", "required": true, "schema": { "type": "integer" }, "description": "Museum ID" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "slug": { "type": "string" },
+                  "address": { "type": ["string", "null"] },
+                  "description": { "type": ["string", "null"] },
+                  "latitude": { "type": ["number", "null"] },
+                  "longitude": { "type": ["number", "null"] },
+                  "config": { "type": "object", "additionalProperties": true },
+                  "isActive": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Museum updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["museum"],
+                  "properties": {
+                    "museum": { "$ref": "#/components/schemas/MuseumDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/support/tickets": {
+      "post": {
+        "tags": ["Support"],
+        "summary": "Create a support ticket",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["subject", "description"],
+                "properties": {
+                  "subject": { "type": "string", "maxLength": 256 },
+                  "description": { "type": "string", "maxLength": 5000 },
+                  "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+                  "category": { "type": "string", "maxLength": 64 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ticket created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["ticket"],
+                  "properties": {
+                    "ticket": { "$ref": "#/components/schemas/TicketDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "get": {
+        "tags": ["Support"],
+        "summary": "List own support tickets",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "page", "required": false, "schema": { "type": "integer", "default": 1 }, "description": "Page number" },
+          { "in": "query", "name": "limit", "required": false, "schema": { "type": "integer", "default": 20 }, "description": "Items per page" },
+          { "in": "query", "name": "status", "required": false, "schema": { "type": "string", "enum": ["open", "in_progress", "resolved", "closed"] }, "description": "Filter by status" },
+          { "in": "query", "name": "priority", "required": false, "schema": { "type": "string", "enum": ["low", "medium", "high"] }, "description": "Filter by priority" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated ticket list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "total", "page", "limit", "totalPages"],
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/TicketDTO" } },
+                    "total": { "type": "integer" },
+                    "page": { "type": "integer" },
+                    "limit": { "type": "integer" },
+                    "totalPages": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/support/tickets/{id}": {
+      "get": {
+        "tags": ["Support"],
+        "summary": "Get ticket detail with messages",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "id", "required": true, "schema": { "type": "string", "format": "uuid" }, "description": "Ticket ID" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["ticket"],
+                  "properties": {
+                    "ticket": { "$ref": "#/components/schemas/TicketDetailDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/support/tickets/{id}/messages": {
+      "post": {
+        "tags": ["Support"],
+        "summary": "Add a message to a ticket",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "id", "required": true, "schema": { "type": "string", "format": "uuid" }, "description": "Ticket ID" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {
+                  "text": { "type": "string", "maxLength": 5000 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Message added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["message"],
+                  "properties": {
+                    "message": { "$ref": "#/components/schemas/TicketMessageDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
           "404": { "$ref": "#/components/responses/NotFound" }
         }
       }

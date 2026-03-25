@@ -54,7 +54,7 @@ for (const requiredPath of requiredPaths) {
   assert(paths.includes(requiredPath), `Missing required path: ${requiredPath}`);
 }
 
-const forbiddenPrefixes = ['/api/IA', '/api/imageInsight', '/api/museum', '/api/conversation'];
+const forbiddenPrefixes = ['/api/IA', '/api/imageInsight', '/api/museum/', '/api/conversation'];
 for (const routePath of paths) {
   assert(routePath.startsWith('/api/'), `Path must start with /api/: ${routePath}`);
   for (const prefix of forbiddenPrefixes) {

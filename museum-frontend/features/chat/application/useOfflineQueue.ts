@@ -27,6 +27,7 @@ export const useOfflineQueue = () => {
       [queue],
     ),
     dequeue: useCallback(() => queue.dequeue(), [queue]),
+    peek: useCallback(() => queue.peek(), [queue]),
     remove: useCallback((id: string) => queue.remove(id), [queue]),
   };
 };
