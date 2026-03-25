@@ -49,6 +49,15 @@
       "level": "L1->L2",
       "postDevFail": false,
       "notes": "L2 promotion triggered. 5/5 runs >= 85, 0 FAIL post-DEV."
+    },
+    {
+      "date": "2026-03-25",
+      "run": "R6",
+      "score": 95,
+      "result": "PASS",
+      "level": "L2",
+      "postDevFail": false,
+      "notes": "W2 landing + admin API. All W1 findings resolved. 0 loops."
     }
   ],
   "conditions": {
@@ -60,7 +69,7 @@
     },
     "L3": {
       "required": "10 runs consecutifs >= 85/100 ET 0 regression Ratchet ET 0 boucle > 2",
-      "current": "5/10",
+      "current": "6/10",
       "met": false
     },
     "L4": {
