@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://musaium.com/fr</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://musaium.com/fr"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://musaium.com/en"/>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://musaium.com/en</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://musaium.com/fr"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://musaium.com/en"/>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://musaium.com/fr/support</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://musaium.com/fr/support"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://musaium.com/en/support"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://musaium.com/en/support</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://musaium.com/fr/support"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://musaium.com/en/support"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://musaium.com/fr/privacy</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://musaium.com/fr/privacy"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://musaium.com/en/privacy"/>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://musaium.com/en/privacy</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://musaium.com/fr/privacy"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://musaium.com/en/privacy"/>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>
