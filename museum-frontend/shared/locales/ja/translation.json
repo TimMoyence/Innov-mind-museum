@@ -311,7 +311,8 @@
     "stop_audio": "オーディオを停止",
     "audio": "オーディオ",
     "image_sent": "[画像送信]",
-    "voice_message": "[音声メッセージ]"
+    "voice_message": "[音声メッセージ]",
+    "share_footer": "Musaiumでシェア — あなたの美術館コンパニオン\nhttps://musaium.app"
   },
   "chatInput": {
     "placeholder": "美術品や建造物について質問、または音声・写真を送信...",
@@ -361,6 +362,19 @@
     "copy": "コピー",
     "report": "報告",
     "speak": "読み上げ"
+  },
+  "error": {
+    "network": "ネットワークに接続できません。接続を確認して再試行してください。",
+    "timeout": "リクエストがタイムアウトしました。再試行してください。",
+    "unauthorized": "セッションが期限切れです。再度ログインしてください。",
+    "forbidden": "このアクションへのアクセス権がありません。",
+    "notFound": "コンテンツが見つかりません。",
+    "validation": "入力内容を確認して再試行してください。",
+    "rateLimited": "リクエストが多すぎます。しばらくお待ちください。",
+    "unknown": "問題が発生しました。再試行してください。",
+    "boundaryTitle": "問題が発生しました",
+    "boundarySubtitle": "アプリで予期しないエラーが発生しました。データは安全です。",
+    "boundaryReload": "再読み込み"
   },
   "errorNotice": {
     "retry": "再試行",

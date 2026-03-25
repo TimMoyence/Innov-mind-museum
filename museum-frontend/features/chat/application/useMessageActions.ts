@@ -23,8 +23,10 @@ export const useMessageActions = ({ onReport }: UseMessageActionsOptions) => {
 
   const shareText = useCallback(async (message: ChatUiMessage) => {
     if (!message.text) return;
-    await Share.share({ message: message.text });
-  }, []);
+    const footer = t('chat.share_footer');
+    const shareBody = `${message.text}\n\n${footer}`;
+    await Share.share({ message: shareBody });
+  }, [t]);
 
   const reportMessage = useCallback(
     (messageId: string) => {

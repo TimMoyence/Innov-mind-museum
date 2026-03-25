@@ -10,8 +10,15 @@ import { useBiometricAuth } from '@/features/auth/application/useBiometricAuth';
 import { BiometricLockScreen } from '@/features/auth/ui/BiometricLockScreen';
 import { useProtectedRoute } from '@/features/auth/useProtectedRoute';
 import { applyRuntimeSettings, saveDefaultLocale } from '@/features/settings/runtimeSettings';
-import '@/shared/i18n/i18n';
+import i18n from '@/shared/i18n/i18n';
 import { I18nProvider, setOnLanguageChange } from '@/shared/i18n/I18nContext';
+import { setErrorTranslate } from '@/shared/lib/errors';
+
+// Wire i18n into error message formatting so getErrorMessage() returns localised strings.
+// The key is always a valid `error.*` path defined in our translation files.
+setErrorTranslate((key, opts) =>
+  i18n.t(key as 'error.network', opts),
+);
 import { ThemeProvider, useTheme } from '@/shared/ui/ThemeContext';
 import { ConnectivityProvider } from '@/shared/infrastructure/connectivity/ConnectivityProvider';
 import {

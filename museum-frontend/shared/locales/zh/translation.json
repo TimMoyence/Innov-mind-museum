@@ -311,7 +311,8 @@
     "stop_audio": "停止音频",
     "audio": "语音",
     "image_sent": "[已发送图片]",
-    "voice_message": "[语音消息]"
+    "voice_message": "[语音消息]",
+    "share_footer": "通过Musaium分享 — 您的博物馆伴侣\nhttps://musaium.app"
   },
   "chatInput": {
     "placeholder": "询问关于艺术品、古迹的问题，或发送语音/照片...",
@@ -361,6 +362,19 @@
     "copy": "复制",
     "report": "举报",
     "speak": "朗读"
+  },
+  "error": {
+    "network": "网络不可用。请检查连接后重试。",
+    "timeout": "请求超时。请重试。",
+    "unauthorized": "会话已过期。请重新登录。",
+    "forbidden": "您无权执行此操作。",
+    "notFound": "未找到内容。",
+    "validation": "请检查输入后重试。",
+    "rateLimited": "请求过多。请稍候片刻。",
+    "unknown": "出了点问题。请重试。",
+    "boundaryTitle": "出了点问题",
+    "boundarySubtitle": "应用遇到了意外错误。您的数据是安全的。",
+    "boundaryReload": "重新加载"
   },
   "errorNotice": {
     "retry": "重试",

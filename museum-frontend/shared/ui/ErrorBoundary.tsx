@@ -3,6 +3,7 @@ import type { ErrorInfo, ReactNode } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Sentry from '@sentry/react-native';
 import * as Updates from 'expo-updates';
+import i18n from '@/shared/i18n/i18n';
 
 interface Props {
   children: ReactNode;
@@ -52,17 +53,21 @@ export class ErrorBoundary extends Component<Props, State> {
     return (
       <View style={styles.container}>
         <Text style={styles.emoji}>!</Text>
-        <Text style={styles.title}>Something went wrong</Text>
+        <Text style={styles.title}>
+          {i18n.t('error.boundaryTitle', { defaultValue: 'Something went wrong' })}
+        </Text>
         <Text style={styles.subtitle}>
-          The app encountered an unexpected error. Your data is safe.
+          {i18n.t('error.boundarySubtitle', { defaultValue: 'The app encountered an unexpected error. Your data is safe.' })}
         </Text>
         <TouchableOpacity
           style={styles.button}
           onPress={() => void this.handleReload()}
           accessibilityRole="button"
-          accessibilityLabel="Reload the application"
+          accessibilityLabel={i18n.t('error.boundaryReload', { defaultValue: 'Reload' })}
         >
-          <Text style={styles.buttonText}>Reload</Text>
+          <Text style={styles.buttonText}>
+            {i18n.t('error.boundaryReload', { defaultValue: 'Reload' })}
+          </Text>
         </TouchableOpacity>
       </View>
     );

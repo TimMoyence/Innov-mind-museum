@@ -311,7 +311,8 @@
     "stop_audio": "Stop Audio",
     "audio": "Audio",
     "image_sent": "[Image sent]",
-    "voice_message": "[Voice message]"
+    "voice_message": "[Voice message]",
+    "share_footer": "Shared via Musaium — Your museum companion\nhttps://musaium.app"
   },
   "chatInput": {
     "placeholder": "Ask about an artwork, monument, or send voice/photo...",
@@ -361,6 +362,19 @@
     "copy": "Copy",
     "report": "Report",
     "speak": "Speak"
+  },
+  "error": {
+    "network": "Network unavailable. Check your connection and try again.",
+    "timeout": "Request timed out. Please try again.",
+    "unauthorized": "Session expired. Please log in again.",
+    "forbidden": "You do not have access to this action.",
+    "notFound": "Content not found.",
+    "validation": "Please review your input and try again.",
+    "rateLimited": "Too many requests. Please wait a moment.",
+    "unknown": "Something went wrong. Please try again.",
+    "boundaryTitle": "Something went wrong",
+    "boundarySubtitle": "The app encountered an unexpected error. Your data is safe.",
+    "boundaryReload": "Reload"
   },
   "errorNotice": {
     "retry": "Retry",
