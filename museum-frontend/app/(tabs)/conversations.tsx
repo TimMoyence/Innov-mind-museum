@@ -18,8 +18,8 @@ import {
   mapSessionsToDashboardCards,
 } from '@/features/chat/domain/dashboard-session';
 import { ConversationSearchBar } from '@/features/conversation/ui/ConversationSearchBar';
+import { useConversationsStore } from '@/features/conversation/infrastructure/conversationsStore';
 import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
-import { storage } from '@/shared/infrastructure/storage';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { BrandMark } from '@/shared/ui/BrandMark';
@@ -30,18 +30,25 @@ import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { SkeletonConversationCard } from '@/shared/ui/SkeletonConversationCard';
 
-const SAVED_SESSIONS_KEY = 'dashboard.savedSessions';
-type SortMode = 'recent' | 'messages';
-
 /** Renders the dashboard screen listing recent chat sessions with sort, save, and share capabilities. */
 export default function ConversationsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
-  const [items, setItems] = useState<DashboardSessionCard[]>([]);
-  const [savedSessionIds, setSavedSessionIds] = useState<string[]>([]);
+
+  // Zustand-persisted state
+  const items = useConversationsStore((s) => s.items);
+  const setItems = useConversationsStore((s) => s.setItems);
+  const appendItems = useConversationsStore((s) => s.appendItems);
+  const clearItems = useConversationsStore((s) => s.clearItems);
+  const savedSessionIds = useConversationsStore((s) => s.savedSessionIds);
+  const toggleSaved = useConversationsStore((s) => s.toggleSaved);
+  const sortMode = useConversationsStore((s) => s.sortMode);
+  const setSortMode = useConversationsStore((s) => s.setSortMode);
+  const migrateLegacy = useConversationsStore((s) => s.migrateLegacySavedSessions);
+
+  // Ephemeral local state
   const [isSavedOnly, setIsSavedOnly] = useState(false);
-  const [sortMode, setSortMode] = useState<SortMode>('recent');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -52,18 +59,10 @@ export default function ConversationsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [menuStatus, setMenuStatus] = useState('');
 
+  // One-time migration of legacy savedSessions from raw AsyncStorage
   useEffect(() => {
-    storage
-      .getJSON<string[]>(SAVED_SESSIONS_KEY)
-      .then((saved) => {
-        if (Array.isArray(saved)) {
-          setSavedSessionIds(saved.filter((id) => typeof id === 'string'));
-        }
-      })
-      .catch(() => {
-        // keep runtime fallback when storage is unavailable
-      });
-  }, []);
+    void migrateLegacy();
+  }, [migrateLegacy]);
 
   const loadDashboard = useCallback(async (isManualRefresh = false) => {
     if (isManualRefresh) {
@@ -82,12 +81,12 @@ export default function ConversationsScreen() {
       setHasMore(response.page.hasMore);
     } catch (loadError) {
       setError(getErrorMessage(loadError));
-      setItems([]);
+      clearItems();
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [setItems, clearItems]);
 
   const loadMore = useCallback(async () => {
     if (!hasMore || !nextCursor || isLoadingMoreRef.current) return;
@@ -97,7 +96,7 @@ export default function ConversationsScreen() {
       const settings = await loadRuntimeSettings();
       const response = await chatApi.listSessions({ limit: 20, cursor: nextCursor });
       const mapped = mapSessionsToDashboardCards(response.sessions, settings.defaultLocale);
-      setItems((prev) => [...prev, ...mapped]);
+      appendItems(mapped);
       setNextCursor(response.page.nextCursor);
       setHasMore(response.page.hasMore);
     } catch {
@@ -106,27 +105,20 @@ export default function ConversationsScreen() {
       isLoadingMoreRef.current = false;
       setIsLoadingMore(false);
     }
-  }, [hasMore, nextCursor]);
+  }, [hasMore, nextCursor, appendItems]);
 
   useEffect(() => {
     void loadDashboard();
   }, [loadDashboard]);
 
-  const persistSavedSessions = async (nextSaved: string[]) => {
-    setSavedSessionIds(nextSaved);
-    await storage.setJSON(SAVED_SESSIONS_KEY, nextSaved);
-  };
-
   const toggleSortMode = () => {
-    setSortMode((previous) => {
-      const next = previous === 'recent' ? 'messages' : 'recent';
-      setMenuStatus(
-        next === 'recent'
-          ? t('conversations.sorted_by_recency')
-          : t('conversations.sorted_by_messages'),
-      );
-      return next;
-    });
+    const next = sortMode === 'recent' ? 'messages' : 'recent';
+    setSortMode(next);
+    setMenuStatus(
+      next === 'recent'
+        ? t('conversations.sorted_by_recency')
+        : t('conversations.sorted_by_messages'),
+    );
   };
 
   const toggleSavedFilter = () => {
@@ -147,14 +139,9 @@ export default function ConversationsScreen() {
     setMenuStatus(t('conversations.shared_success'));
   };
 
-  const toggleSavedSession = async (sessionId: string) => {
-    const exists = savedSessionIds.includes(sessionId);
-    const nextSaved = exists
-      ? savedSessionIds.filter((id) => id !== sessionId)
-      : [...savedSessionIds, sessionId];
-
-    await persistSavedSessions(nextSaved);
-    setMenuStatus(exists ? t('conversations.session_unsaved') : t('conversations.session_saved'));
+  const toggleSavedSession = (sessionId: string) => {
+    const isNowSaved = toggleSaved(sessionId);
+    setMenuStatus(isNowSaved ? t('conversations.session_saved') : t('conversations.session_unsaved'));
   };
 
   const renderConversationItem = useCallback(
@@ -162,9 +149,7 @@ export default function ConversationsScreen() {
       <Pressable
         style={[styles.card, { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground }]}
         onPress={() => router.push(`/(stack)/chat/${item.id}`)}
-        onLongPress={() => {
-          void toggleSavedSession(item.id);
-        }}
+        onLongPress={() => toggleSavedSession(item.id)}
         accessibilityRole="button"
         accessibilityLabel={item.title}
         accessibilityHint={t('a11y.conversations.card_hint')}

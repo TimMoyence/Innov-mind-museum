@@ -6,6 +6,7 @@ import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSe
 import { useConnectivity } from '@/shared/infrastructure/connectivity/useConnectivity';
 import { useOfflineQueue } from './useOfflineQueue';
 import { chatApi } from '../infrastructure/chatApi';
+import { useChatSessionStore } from '../infrastructure/chatSessionStore';
 import {
   sortByTime,
   type ChatUiMessage,
@@ -17,17 +18,29 @@ export type { ChatUiMessage, ChatUiMessageMetadata };
 /**
  * Manages chat session state: loads messages, sends text/image/audio messages with optimistic updates,
  * supports SSE streaming with throttled renders, refreshes signed image URLs, and exposes session metadata.
+ * Persists messages to a Zustand store so they survive navigation and app restarts.
  * @param sessionId - ID of the chat session to manage.
  * @returns State (messages, loading/sending/streaming flags, error) and action callbacks.
  */
 export const useChatSession = (sessionId: string) => {
-  const [messages, setMessages] = useState<ChatUiMessage[]>([]);
+  // Hydrate from Zustand store for instant display while API loads
+  const cachedSession = useChatSessionStore((s) => s.sessions[sessionId]);
+  const storeSetSession = useChatSessionStore((s) => s.setSession);
+  const storeUpdateMessages = useChatSessionStore((s) => s.updateMessages);
+
+  const [messages, setMessages] = useState<ChatUiMessage[]>(
+    () => cachedSession?.messages ?? [],
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sessionTitle, setSessionTitle] = useState<string | null>(null);
-  const [museumName, setMuseumName] = useState<string | null>(null);
+  const [sessionTitle, setSessionTitle] = useState<string | null>(
+    () => cachedSession?.title ?? null,
+  );
+  const [museumName, setMuseumName] = useState<string | null>(
+    () => cachedSession?.museumName ?? null,
+  );
   const isSendingRef = useRef(false);
 
   // Streaming state refs (avoid re-renders during token accumulation)
@@ -36,7 +49,7 @@ export const useChatSession = (sessionId: string) => {
   const updateTimerRef = useRef<number | null>(null);
 
   const { locale, museumMode, guideLevel } = useRuntimeSettings();
-  const { isOffline, enqueue, dequeue, pendingCount } = useOfflineQueue();
+  const { isOffline, enqueue, dequeue, peek, pendingCount } = useOfflineQueue();
   const { isConnected } = useConnectivity();
 
   const loadSession = useCallback(async () => {
@@ -45,32 +58,45 @@ export const useChatSession = (sessionId: string) => {
 
     try {
       const response = await chatApi.getSession(sessionId);
-      setSessionTitle(response.session.title ?? null);
-      setMuseumName(response.session.museumName ?? null);
-      setMessages(
-        sortByTime(
-          response.messages.map((message) => ({
-            id: message.id,
-            role: message.role,
-            text: message.text || '',
-            createdAt: message.createdAt,
-            imageRef: message.imageRef,
-            image: message.image ?? null,
-            metadata: (message.metadata as ChatUiMessageMetadata) ?? null,
-          })),
-        ),
+      const title = response.session.title ?? null;
+      const museum = response.session.museumName ?? null;
+      setSessionTitle(title);
+      setMuseumName(museum);
+      const sorted = sortByTime(
+        response.messages.map((message) => ({
+          id: message.id,
+          role: message.role,
+          text: message.text || '',
+          createdAt: message.createdAt,
+          imageRef: message.imageRef,
+          image: message.image ?? null,
+          metadata: (message.metadata as ChatUiMessageMetadata) ?? null,
+        })),
       );
+      setMessages(sorted);
+      // Sync API data into persistent store
+      storeSetSession(sessionId, sorted, title, museum);
     } catch (loadError) {
       Sentry.captureException(loadError, { tags: { flow: 'chat.loadSession' } });
       setError(getErrorMessage(loadError));
     } finally {
       setIsLoading(false);
     }
-  }, [sessionId]);
+  }, [sessionId, storeSetSession]);
 
   useEffect(() => {
     void loadSession();
   }, [loadSession]);
+
+  // Sync local messages to persistent Zustand store whenever they change.
+  // Skip syncing during streaming to avoid writing every intermediate token state.
+  const isStreamingRef = useRef(false);
+  isStreamingRef.current = isStreaming;
+  useEffect(() => {
+    if (isStreamingRef.current) return;
+    if (messages.length === 0) return;
+    storeUpdateMessages(sessionId, messages);
+  }, [messages, sessionId, storeUpdateMessages]);
 
   // Smooth stream text flush — synced to display refresh via requestAnimationFrame
   const flushStreamText = useCallback(() => {
@@ -297,7 +323,7 @@ export const useChatSession = (sessionId: string) => {
     if (!isConnected) return;
 
     const flush = async () => {
-      let next = dequeue();
+      let next = peek();
       let flushedAny = false;
       while (next) {
         try {
@@ -309,12 +335,14 @@ export const useChatSession = (sessionId: string) => {
             guideLevel,
             locale,
           });
+          // Only remove from queue after successful send
+          dequeue();
           flushedAny = true;
         } catch {
-          // If flush fails, stop trying (next reconnect will retry)
+          // If flush fails, stop trying — message stays in queue for next reconnect
           break;
         }
-        next = dequeue();
+        next = peek();
       }
 
       // Re-fetch session to merge assistant replies without content jump
@@ -338,7 +366,7 @@ export const useChatSession = (sessionId: string) => {
     };
 
     void flush();
-  }, [isConnected, dequeue, museumMode, guideLevel, locale, sessionId]);
+  }, [isConnected, dequeue, peek, museumMode, guideLevel, locale, sessionId]);
 
   // Cleanup animation frame on unmount
   useEffect(() => {
