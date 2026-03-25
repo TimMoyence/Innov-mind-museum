@@ -1,0 +1,93 @@
+{
+  "metadata": {
+    "title": "Musaium — L'assistant muséal intelligent",
+    "description": "Photographiez une œuvre, posez une question, et laissez l'IA vous guider. Musaium transforme chaque visite en une expérience enrichissante."
+  },
+  "nav": {
+    "home": "Accueil",
+    "support": "Aide",
+    "privacy": "Confidentialité",
+    "admin": "Administration",
+    "login": "Connexion",
+    "download": "Télécharger",
+    "language": "EN"
+  },
+  "hero": {
+    "title": "Votre guide muséal, propulsé par l'IA",
+    "subtitle": "Photographiez une œuvre, posez une question — Musaium vous répond avec le contexte historique, artistique et culturel de chaque pièce.",
+    "cta": "Télécharger l'application"
+  },
+  "features": {
+    "title": "Comment ça marche",
+    "items": [
+      {
+        "title": "Photographiez",
+        "description": "Prenez en photo n'importe quelle œuvre d'art dans un musée."
+      },
+      {
+        "title": "Posez votre question",
+        "description": "Demandez ce que vous voulez savoir — technique, histoire, contexte."
+      },
+      {
+        "title": "Recevez une réponse",
+        "description": "L'IA analyse l'œuvre et vous répond en temps réel avec des sources fiables."
+      }
+    ]
+  },
+  "support": {
+    "title": "Centre d'aide",
+    "subtitle": "Trouvez des réponses à vos questions ou contactez-nous directement.",
+    "faq": [
+      {
+        "question": "L'application est-elle gratuite ?",
+        "answer": "Oui, Musaium est gratuit. Certaines fonctionnalités avancées pourront être proposées en premium à l'avenir."
+      },
+      {
+        "question": "Quels musées sont compatibles ?",
+        "answer": "Musaium fonctionne dans tous les musées. L'IA reconnaît les œuvres grâce à la vision par ordinateur et enrichit ses réponses via Wikidata."
+      },
+      {
+        "question": "Mes données sont-elles protégées ?",
+        "answer": "Absolument. Consultez notre politique de confidentialité pour tous les détails. Vos photos ne sont jamais partagées."
+      },
+      {
+        "question": "Comment contacter le support ?",
+        "answer": "Utilisez le formulaire ci-dessous ou rejoignez-nous sur Telegram @musaium_support."
+      }
+    ],
+    "contact": {
+      "title": "Nous contacter",
+      "namePlaceholder": "Votre nom",
+      "emailPlaceholder": "Votre email",
+      "messagePlaceholder": "Décrivez votre question ou problème...",
+      "submit": "Envoyer"
+    }
+  },
+  "privacy": {
+    "title": "Politique de confidentialité"
+  },
+  "footer": {
+    "copyright": "© {year} Musaium — InnovMind",
+    "madeBy": "Propulsé par l'intelligence artificielle",
+    "links": {
+      "privacy": "Confidentialité",
+      "support": "Aide"
+    }
+  },
+  "admin": {
+    "dashboard": "Tableau de bord",
+    "users": "Utilisateurs",
+    "auditLogs": "Journaux d'audit",
+    "reports": "Signalements",
+    "analytics": "Analytiques",
+    "tickets": "Tickets",
+    "supportAdmin": "Support",
+    "login": {
+      "title": "Administration Musaium",
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Mot de passe",
+      "submit": "Se connecter",
+      "error": "Identifiants invalides"
+    }
+  }
+}
