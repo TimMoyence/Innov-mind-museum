@@ -14,5 +14,16 @@ const config: Config.InitialOptions = {
     '^@shared/(.*)$': '<rootDir>/src/shared/$1',
     '^tests/(.*)$': '<rootDir>/tests/$1',
   },
+  collectCoverage: true,
+  coverageReporters: ['text-summary', 'lcov'],
+  coveragePathIgnorePatterns: ['/node_modules/', '/dist/', '/tests/'],
+  coverageThreshold: {
+    global: {
+      statements: 63,
+      branches: 49,
+      functions: 55,
+      lines: 63,
+    },
+  },
 };
 export default config;

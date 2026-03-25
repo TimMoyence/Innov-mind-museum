@@ -56,7 +56,7 @@ jobs:
           fi
 
       - name: Unit/Integration Tests (non-E2E)
-        run: pnpm test -- --watchman=false --runInBand --testPathIgnorePatterns=tests/e2e
+        run: pnpm test -- --watchman=false --runInBand --coverage --testPathIgnorePatterns=tests/e2e
 
   backend-e2e-postgres:
     needs: backend-checks
