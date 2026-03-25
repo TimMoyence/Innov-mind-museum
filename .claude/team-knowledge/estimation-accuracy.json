@@ -45,6 +45,18 @@
       "filesReal": 0,
       "precision": "N/A",
       "notes": "Read-only audit — no files modified. Estimation accuracy not applicable. 5 agents spawned as expected for full-stack audit."
+    },
+    {
+      "id": "R5",
+      "date": "2026-03-25",
+      "mode": "feature (museum-web foundations W1)",
+      "estimation": "L",
+      "loopsEstimated": 0,
+      "loopsReal": 0,
+      "filesEstimated": 30,
+      "filesReal": 39,
+      "precision": 0.77,
+      "notes": "AM-001 validation: estimated 30+ files, actual 39. Ratio 1.3x — correction factor confirmed."
     }
   ],
   "calibration": {
@@ -59,9 +71,10 @@
   "amendment": {
     "id": "AM-001",
     "description": "Multiplier estimations fichiers par 1.3x",
-    "status": "EN_OBSERVATION",
+    "status": "CONFIRMED",
     "monitoringRuns": ["R4", "R5"],
     "r4Result": "N/A (read-only audit, no files to estimate)",
-    "nextValidation": "R5 (first code-modifying run after R4)"
+    "r5Result": "CONFIRMED — estimated 30+, actual 39, ratio 1.3x matches factor",
+    "nextValidation": "Continue monitoring"
   }
 }

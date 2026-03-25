@@ -1,9 +1,11 @@
 {
   "lastUpdated": "2026-03-25",
-  "currentLevel": "L1",
+  "currentLevel": "L2",
   "proposedLevel": null,
-  "runsSinceLastFail": 4,
-  "runsQualifying": 4,
+  "promotionDate": "2026-03-25",
+  "promotionTrigger": "R5 score 93 >= 85 — 5/5 consecutive qualifying runs",
+  "runsSinceLastFail": 5,
+  "runsQualifying": 5,
   "runsRequired": 5,
   "history": [
     {
@@ -38,18 +40,27 @@
       "level": "L1",
       "postDevFail": false,
       "notes": "Read-only audit enterprise-grade. 5 agents, 37 findings. Verdict CONDITIONNEL (product score 3.52/5)."
+    },
+    {
+      "date": "2026-03-25",
+      "run": "R5",
+      "score": 93,
+      "result": "PASS",
+      "level": "L1->L2",
+      "postDevFail": false,
+      "notes": "L2 promotion triggered. 5/5 runs >= 85, 0 FAIL post-DEV."
     }
   ],
   "conditions": {
     "L2": {
       "required": "5 runs consecutifs >= 85/100 ET 0 FAIL post-DEV",
-      "current": "4/5 runs qualifiants (R1:91, R2:95, R3:97, R4:88 — tous >= 85)",
-      "met": false,
-      "nextRunPromotion": "R5 >= 85 declenchera promotion L2"
+      "current": "5/5 runs qualifiants (R1:91, R2:95, R3:97, R4:88, R5:93)",
+      "met": true,
+      "promotionEffective": "2026-03-25"
     },
     "L3": {
       "required": "10 runs consecutifs >= 85/100 ET 0 regression Ratchet ET 0 boucle > 2",
-      "current": "4/10",
+      "current": "5/10",
       "met": false
     },
     "L4": {

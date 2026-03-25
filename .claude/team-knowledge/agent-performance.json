@@ -17,17 +17,18 @@
       ]
     },
     "Frontend Architect": {
-      "totalRuns": 1,
-      "averageScore": 9.5,
-      "averageROI": 4.75,
+      "totalRuns": 2,
+      "averageScore": 9.25,
+      "averageROI": 4.63,
       "verdict": "ESSENTIEL",
-      "strengths": ["Exhaustif 8 domaines", "PE-004 confirme (2 violations)", "Error Boundary gap detecte", "Offline/latence analyse"],
-      "weaknesses": [],
+      "strengths": ["Exhaustif 8 domaines", "PE-004 confirme (2 violations)", "Error Boundary gap detecte", "Offline/latence analyse", "22 app files W1 scaffolding", "i18n dictionary pattern clean"],
+      "weaknesses": ["Auth types mismatch (F1) — LoginResponse shape wrong vs backend"],
       "selfVerificationRate": 1.0,
       "retired": false,
-      "lastRun": "2026-03-25 R4 audit enterprise-grade",
+      "lastRun": "2026-03-25 R5 museum-web W1",
       "history": [
-        { "run": "R4", "score": 9.5, "role": "audit enterprise-grade" }
+        { "run": "R4", "score": 9.5, "role": "audit enterprise-grade" },
+        { "run": "R5", "score": 9.0, "role": "museum-web W1 — 22 app files" }
       ]
     },
     "QA Engineer": {
@@ -46,17 +47,18 @@
       ]
     },
     "DevOps Engineer": {
-      "totalRuns": 1,
-      "averageScore": 9.0,
-      "averageROI": 4.5,
+      "totalRuns": 2,
+      "averageScore": 9.5,
+      "averageROI": 4.75,
       "verdict": "ESSENTIEL",
-      "strengths": ["6 domaines couverts", "Checklist production readiness", "EP-007 re-confirme", "Scaling gaps identifies"],
+      "strengths": ["6 domaines couverts", "Checklist production readiness", "EP-007 re-confirme", "Scaling gaps identifies", "Dockerfile standalone pattern", "nginx diff safe — API paths preserved", "CI/CD mirrors backend pipeline"],
       "weaknesses": [],
       "selfVerificationRate": 1.0,
       "retired": false,
-      "lastRun": "2026-03-25 R4 audit enterprise-grade",
+      "lastRun": "2026-03-25 R5 museum-web W1",
       "history": [
-        { "run": "R4", "score": 9.0, "role": "audit enterprise-grade" }
+        { "run": "R4", "score": 9.0, "role": "audit enterprise-grade" },
+        { "run": "R5", "score": 10.0, "role": "museum-web W1 — Dockerfile + nginx + CI/CD" }
       ]
     },
     "Security Analyst": {
@@ -141,19 +143,20 @@
       "lastRun": "2026-03-24 audit"
     },
     "Sentinelle": {
-      "totalRuns": 3,
-      "averageScore": 9.33,
+      "totalRuns": 4,
+      "averageScore": 9.38,
       "averageROI": 5.0,
       "verdict": "ESSENTIEL",
-      "strengths": ["Verification independante", "Ajustements pertinents", "Cross-run learning", "Triage 3-tier (bloquant/planifiable/backlog)", "EP escalade protocol"],
+      "strengths": ["Verification independante", "Ajustements pertinents", "Cross-run learning", "Triage 3-tier (bloquant/planifiable/backlog)", "EP escalade protocol", "Auth type mismatch caught (F1)", "nginx safety audit"],
       "weaknesses": [],
       "selfVerificationRate": null,
       "retired": false,
-      "lastRun": "2026-03-25 R4 audit enterprise-grade",
+      "lastRun": "2026-03-25 R5 museum-web W1",
       "history": [
         { "run": "R1", "score": 9.0, "role": "audit" },
         { "run": "R3", "score": 9.5, "role": "V1.1" },
-        { "run": "R4", "score": 9.5, "role": "audit enterprise-grade" }
+        { "run": "R4", "score": 9.5, "role": "audit enterprise-grade" },
+        { "run": "R5", "score": 9.5, "role": "museum-web W1 feature" }
       ]
     }
   },

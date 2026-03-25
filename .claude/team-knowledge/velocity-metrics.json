@@ -61,18 +61,34 @@
       "estimation": "L",
       "result": "PASS",
       "notes": "Read-only audit. Score 88 = run quality. Product maturity score: 3.52/5 (CONDITIONNEL). 37 findings (12C + 25M)."
+    },
+    {
+      "id": "R5",
+      "date": "2026-03-25",
+      "mode": "feature (museum-web foundations W1)",
+      "score": 93,
+      "agentsSpawned": 2,
+      "filesTouched": 39,
+      "testsWritten": 0,
+      "filesPerAgent": 19.5,
+      "roiMoyen": 4.75,
+      "correctiveLoops": 0,
+      "firstPassRate": 1.0,
+      "estimation": "L",
+      "result": "PASS",
+      "notes": "First feature run. New package museum-web (Next.js 15). 37 new files + 2 modified (nginx). 13 routes, build PASS, 0 backend regression. 7 findings (2M 5F), F1 fixed. L2 PROMOTION TRIGGERED."
     }
   ],
   "averages": {
-    "score": 92.75,
-    "filesPerAgent": 7.16,
+    "score": 92.8,
+    "filesPerAgent": 11.07,
     "correctiveLoops": 0,
     "firstPassRate": 1.0,
-    "roiMoyen": 4.4
+    "roiMoyen": 4.47
   },
   "trends": {
-    "scoreTrend": "STABLE-DOWN (91 -> 95 -> 97 -> 88) — R4 lower due to audit mode scoring",
-    "loopsTrend": "STABLE (0)",
-    "roiTrend": "UP (3.5 -> 5.0 -> 4.5 -> 4.6)"
+    "scoreTrend": "RECOVERY (91 -> 95 -> 97 -> 88 -> 93) — back up after R4 audit dip",
+    "loopsTrend": "STABLE (0) — 5 runs, 0 corrective loops",
+    "roiTrend": "UP (3.5 -> 5.0 -> 4.5 -> 4.6 -> 4.75)"
   }
 }
