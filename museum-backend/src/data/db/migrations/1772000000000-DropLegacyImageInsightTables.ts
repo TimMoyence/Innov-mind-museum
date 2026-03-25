@@ -4,14 +4,21 @@ export class DropLegacyImageInsightTables1772000000000 implements MigrationInter
   name = 'DropLegacyImageInsightTables1772000000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE IF EXISTS "image_insight_messages" DROP CONSTRAINT IF EXISTS "FK_30f03922716e25cfaefb72a9e5f"`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE IF EXISTS "image_insight_conversations" DROP CONSTRAINT IF EXISTS "FK_be40cc010dd6fd7c67bb8bebd91"`,
-    );
-    await queryRunner.query(`DROP TABLE IF EXISTS "image_insight_messages"`);
-    await queryRunner.query(`DROP TABLE IF EXISTS "image_insight_conversations"`);
+    await queryRunner.startTransaction();
+    try {
+      await queryRunner.query(
+        `ALTER TABLE IF EXISTS "image_insight_messages" DROP CONSTRAINT IF EXISTS "FK_30f03922716e25cfaefb72a9e5f"`,
+      );
+      await queryRunner.query(
+        `ALTER TABLE IF EXISTS "image_insight_conversations" DROP CONSTRAINT IF EXISTS "FK_be40cc010dd6fd7c67bb8bebd91"`,
+      );
+      await queryRunner.query(`DROP TABLE IF EXISTS "image_insight_messages"`);
+      await queryRunner.query(`DROP TABLE IF EXISTS "image_insight_conversations"`);
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

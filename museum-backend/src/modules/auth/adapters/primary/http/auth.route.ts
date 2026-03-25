@@ -1,9 +1,22 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { isAuthenticated, isAuthenticatedJwtOnly } from '@src/helpers/middleware/authenticated.middleware';
 import { createRateLimitMiddleware, byUserId, byIp } from '@src/helpers/middleware/rate-limit.middleware';
+import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 import { env } from '@src/config/env';
 import { AppError, badRequest } from '@shared/errors/app.error';
 import { auditService } from '@shared/audit';
+import {
+  registerSchema,
+  loginSchema,
+  refreshSchema,
+  logoutSchema,
+  socialLoginSchema,
+  changePasswordSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  verifyEmailSchema,
+  createApiKeySchema,
+} from './auth.schemas';
 import {
   AUDIT_AUTH_LOGIN_SUCCESS,
   AUDIT_AUTH_LOGIN_FAILED,
@@ -54,7 +67,7 @@ const loginLimiter = createRateLimitMiddleware({
   keyGenerator: byIp,
 });
 
-authRouter.post('/register', registerLimiter, async (req: Request, res: Response, next: NextFunction) => {
+authRouter.post('/register', registerLimiter, validateBody(registerSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password, firstname, lastname } = req.body;
     const user = await registerUseCase.execute(email, password, firstname, lastname);
@@ -71,10 +84,10 @@ authRouter.post('/register', registerLimiter, async (req: Request, res: Response
   } catch (error) { next(error); }
 });
 
-authRouter.post('/login', loginLimiter, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+authRouter.post('/login', loginLimiter, validateBody(loginSchema), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { email, password } = (req.body || {}) as { email?: string; password?: string };
-    const session = await authSessionService.login(email || '', password || '');
+    const { email, password } = req.body;
+    const session = await authSessionService.login(email, password);
     auditService.log({
       action: AUDIT_AUTH_LOGIN_SUCCESS,
       actorType: 'user',
@@ -108,17 +121,17 @@ authRouter.post('/login', loginLimiter, async (req: Request, res: Response, next
   }
 });
 
-authRouter.post('/refresh', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+authRouter.post('/refresh', validateBody(refreshSchema), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { refreshToken } = (req.body || {}) as { refreshToken?: string };
-    const session = await authSessionService.refresh(refreshToken || '');
+    const { refreshToken } = req.body;
+    const session = await authSessionService.refresh(refreshToken);
     res.status(200).json(session);
   } catch (error) { next(error); }
 });
 
-authRouter.post('/logout', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+authRouter.post('/logout', validateBody(logoutSchema), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { refreshToken } = (req.body || {}) as { refreshToken?: string };
+    const { refreshToken } = req.body;
     await authSessionService.logout(refreshToken);
     auditService.log({
       action: AUDIT_AUTH_LOGOUT,
@@ -156,21 +169,9 @@ authRouter.get('/me', isAuthenticated, async (req: Request, res: Response, next:
   } catch (error) { next(error); }
 });
 
-authRouter.post('/social-login', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+authRouter.post('/social-login', validateBody(socialLoginSchema), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { provider, idToken } = (req.body || {}) as {
-      provider?: string;
-      idToken?: string;
-    };
-
-    if (!provider || !idToken) {
-      throw badRequest('provider and idToken are required');
-    }
-
-    if (provider !== 'apple' && provider !== 'google') {
-      throw badRequest('provider must be "apple" or "google"');
-    }
-
+    const { provider, idToken } = req.body;
     const session = await socialLoginUseCase.execute(provider, idToken);
     auditService.log({
       action: AUDIT_AUTH_SOCIAL_LOGIN,
@@ -251,7 +252,7 @@ authRouter.get('/export-data', isAuthenticated, async (req: Request, res: Respon
   } catch (error) { next(error); }
 });
 
-authRouter.put('/change-password', isAuthenticated, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+authRouter.put('/change-password', isAuthenticated, validateBody(changePasswordSchema), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const jwtUser = (req as Request & { user?: { id: number } }).user;
   if (!jwtUser?.id) {
     res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
@@ -259,10 +260,7 @@ authRouter.put('/change-password', isAuthenticated, async (req: Request, res: Re
   }
 
   try {
-    const { currentPassword, newPassword } = req.body || {};
-    if (typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
-      throw badRequest('currentPassword and newPassword are required');
-    }
+    const { currentPassword, newPassword } = req.body;
     await changePasswordUseCase.execute(jwtUser.id, currentPassword, newPassword);
     auditService.log({
       action: AUDIT_AUTH_PASSWORD_CHANGE,
@@ -283,7 +281,7 @@ const passwordResetLimiter = createRateLimitMiddleware({
   keyGenerator: byIp,
 });
 
-authRouter.post('/forgot-password', passwordResetLimiter, async (req: Request, res: Response, next: NextFunction) => {
+authRouter.post('/forgot-password', passwordResetLimiter, validateBody(forgotPasswordSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email } = req.body;
     const token = await forgotPasswordUseCase.execute(email);
@@ -301,7 +299,7 @@ authRouter.post('/forgot-password', passwordResetLimiter, async (req: Request, r
   } catch (error) { next(error); }
 });
 
-authRouter.post('/reset-password', passwordResetLimiter, async (req: Request, res: Response, next: NextFunction) => {
+authRouter.post('/reset-password', passwordResetLimiter, validateBody(resetPasswordSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { token, newPassword } = req.body;
     await resetPasswordUseCase.execute(token, newPassword);
@@ -315,9 +313,9 @@ authRouter.post('/reset-password', passwordResetLimiter, async (req: Request, re
   } catch (error) { next(error); }
 });
 
-authRouter.post('/verify-email', async (req: Request, res: Response, next: NextFunction) => {
+authRouter.post('/verify-email', validateBody(verifyEmailSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { token } = req.body || {};
+    const { token } = req.body;
     const result = await verifyEmailUseCase.execute(token);
     auditService.log({
       action: AUDIT_AUTH_EMAIL_VERIFIED,
@@ -337,7 +335,7 @@ const apiKeyLimiter = createRateLimitMiddleware({
 });
 
 if (env.featureFlags.apiKeys) {
-  authRouter.post('/api-keys', isAuthenticatedJwtOnly, apiKeyLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  authRouter.post('/api-keys', isAuthenticatedJwtOnly, apiKeyLimiter, validateBody(createApiKeySchema), async (req: Request, res: Response, next: NextFunction) => {
     const jwtUser = (req as Request & { user?: { id: number } }).user;
     if (!jwtUser?.id) {
       res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
@@ -345,10 +343,7 @@ if (env.featureFlags.apiKeys) {
     }
 
     try {
-      const { name, expiresAt } = req.body || {};
-      if (!name || typeof name !== 'string') {
-        throw badRequest('name is required');
-      }
+      const { name, expiresAt } = req.body;
       const expiry = expiresAt ? new Date(expiresAt) : undefined;
       const result = await generateApiKeyUseCase.execute(jwtUser.id, name, expiry);
       auditService.log({
