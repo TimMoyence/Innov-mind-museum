@@ -3,6 +3,29 @@ dist
 coverage
 .git
 .gitignore
-npm-debug.log
 .DS_Store
 .env
+.env.*
+npm-debug.log
+
+# Test & dev files
+tests/
+*.test.ts
+jest.config.ts
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Scripts (not needed in image)
+scripts/
+
+# Docker configs (avoid recursive context)
+docker-compose*.yml
+deploy/
+
+# Editor & CI
+.vscode/
+.claude/
+.github/
