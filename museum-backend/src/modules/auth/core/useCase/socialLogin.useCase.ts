@@ -2,10 +2,7 @@ import { AppError } from '@shared/errors/app.error';
 import type { IUserRepository } from '../domain/user.repository.interface';
 import type { ISocialAccountRepository } from '../domain/socialAccount.repository.interface';
 import type { AuthSessionService, AuthSessionResponse } from './authSession.service';
-import {
-  verifySocialIdToken,
-  type SocialProvider,
-} from '../../adapters/secondary/social-token-verifier';
+import type { SocialTokenVerifier, SocialProvider } from '../domain/social-token-verifier.port';
 
 const APPLE_PRIVATE_RELAY_SUFFIX = '@privaterelay.appleid.com';
 
@@ -18,6 +15,7 @@ export class SocialLoginUseCase {
     private readonly userRepository: IUserRepository,
     private readonly socialAccountRepository: ISocialAccountRepository,
     private readonly authSessionService: AuthSessionService,
+    private readonly socialTokenVerifier: SocialTokenVerifier,
   ) {}
 
   /**
@@ -43,7 +41,7 @@ export class SocialLoginUseCase {
       });
     }
 
-    const payload = await verifySocialIdToken(provider, idToken);
+    const payload = await this.socialTokenVerifier.verify(provider, idToken);
 
     // Look up existing social account
     const existingLink = await this.socialAccountRepository.findByProviderAndProviderUserId(

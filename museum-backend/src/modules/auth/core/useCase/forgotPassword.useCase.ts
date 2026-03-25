@@ -2,6 +2,7 @@ import { IUserRepository } from '../domain/user.repository.interface';
 import crypto from 'crypto';
 import type { EmailService } from '@shared/email/email.port';
 import { logger } from '@shared/logger/logger';
+import { env } from '@src/config/env';
 
 /** Orchestrates the "forgot password" flow: generates a reset token if the user exists. */
 export class ForgotPasswordUseCase {
@@ -44,7 +45,9 @@ export class ForgotPasswordUseCase {
         });
       }
     } else {
-      logger.info('forgot_password_token', { email: normalizedEmail, token });
+      if (env.nodeEnv !== 'production') {
+        logger.info('forgot_password_token', { email: normalizedEmail, token });
+      }
     }
 
     return token;

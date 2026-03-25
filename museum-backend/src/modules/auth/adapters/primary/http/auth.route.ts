@@ -48,6 +48,12 @@ const registerLimiter = createRateLimitMiddleware({
   keyGenerator: byIp,
 });
 
+const loginLimiter = createRateLimitMiddleware({
+  limit: 10,
+  windowMs: 300_000,
+  keyGenerator: byIp,
+});
+
 authRouter.post('/register', registerLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password, firstname, lastname } = req.body;
@@ -65,7 +71,7 @@ authRouter.post('/register', registerLimiter, async (req: Request, res: Response
   } catch (error) { next(error); }
 });
 
-authRouter.post('/login', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+authRouter.post('/login', loginLimiter, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { email, password } = (req.body || {}) as { email?: string; password?: string };
     const session = await authSessionService.login(email || '', password || '');

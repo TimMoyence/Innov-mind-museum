@@ -7,6 +7,7 @@ import { validateNameField } from '@shared/validation/input';
 import { badRequest } from '@shared/errors/app.error';
 import type { EmailService } from '@shared/email/email.port';
 import { logger } from '@shared/logger/logger';
+import { env } from '@src/config/env';
 
 /** Orchestrates new user registration with email/password. */
 export class RegisterUseCase {
@@ -74,7 +75,9 @@ export class RegisterUseCase {
           + '<p>This link expires in 24 hours. If you did not create an account, you can safely ignore this email.</p>';
         await this.emailService.sendEmail(normalizedEmail, 'Verify your Musaium email', htmlContent);
       } else {
-        logger.info('verification_token_generated', { userId: user.id, token });
+        if (env.nodeEnv !== 'production') {
+          logger.info('verification_token_generated', { userId: user.id, token });
+        }
       }
     } catch (error) {
       logger.warn('verification_email_failed', {

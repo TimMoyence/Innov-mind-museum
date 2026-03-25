@@ -99,13 +99,26 @@ export class OpenAiAudioTranscriber implements AudioTranscriber {
       formData.append('language', languageHint);
     }
 
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${env.llm.openAiApiKey}`,
-      },
-      body: formData,
-    });
+    let response: Response;
+    try {
+      response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${env.llm.openAiApiKey}`,
+        },
+        body: formData,
+        signal: AbortSignal.timeout(env.llm.timeoutMs),
+      });
+    } catch (error: unknown) {
+      if (error instanceof DOMException && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
+        throw new AppError({
+          message: 'Audio transcription request timed out',
+          statusCode: 504,
+          code: 'UPSTREAM_TIMEOUT',
+        });
+      }
+      throw error;
+    }
 
     const payload = (await response.json().catch(() => null)) as
       | OpenAiTranscriptionPayload
