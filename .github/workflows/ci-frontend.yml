@@ -32,7 +32,6 @@ jobs:
 
       - name: Audit dependencies
         run: npm audit --audit-level=critical
-        continue-on-error: true
 
       - name: Check OpenAPI Typegen Sync
         run: npm run check:openapi-types

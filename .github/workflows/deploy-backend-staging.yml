@@ -8,6 +8,10 @@ on:
       - 'museum-backend/**'
       - '.github/workflows/deploy-backend-staging.yml'
 
+concurrency:
+  group: deploy-backend-staging-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   backend-quality:
     runs-on: ubuntu-latest

@@ -18,6 +18,7 @@ import {
   getApiConfigurationSnapshot,
   getStartupConfigurationError,
 } from '@/shared/infrastructure/apiConfig';
+import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 import { StartupConfigurationErrorScreen } from '@/shared/ui/StartupConfigurationErrorScreen';
 
 const sentryDsn =
@@ -142,6 +143,7 @@ function RootLayout() {
   }
 
   return (
+    <ErrorBoundary>
     <I18nProvider>
       <ThemeProvider>
         <AuthProvider>
@@ -176,6 +178,7 @@ function RootLayout() {
         </AuthProvider>
       </ThemeProvider>
     </I18nProvider>
+    </ErrorBoundary>
   );
 }
 
