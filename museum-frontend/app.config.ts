@@ -282,8 +282,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         '@sentry/react-native/expo',
         {
-          organization: process.env.SENTRY_ORG || 'musaium',
-          project: process.env.SENTRY_PROJECT || 'musaium-mobile',
+          organization: process.env.SENTRY_ORG || 'asili-design',
+          project: process.env.SENTRY_PROJECT || 'apple-ios',
         },
       ],
     ],
