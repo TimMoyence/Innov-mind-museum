@@ -9,7 +9,8 @@ services:
     env_file:
       - .env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - .:/app
       - /app/node_modules
@@ -27,6 +28,12 @@ services:
     volumes:
       - pgdata_dev:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${PGDATABASE:-museumAI}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
@@ -39,7 +46,8 @@ services:
     image: adminer:latest
     container_name: dev-adminer
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - '8082:8080'
     restart: unless-stopped

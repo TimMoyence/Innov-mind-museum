@@ -2,16 +2,8 @@ import { SocialLoginUseCase } from '@modules/auth/core/useCase/socialLogin.useCa
 import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
 import type { ISocialAccountRepository } from '@modules/auth/core/domain/socialAccount.repository.interface';
 import type { AuthSessionService } from '@modules/auth/core/useCase/authSession.service';
+import type { SocialTokenVerifier } from '@modules/auth/core/domain/social-token-verifier.port';
 import type { User } from '@modules/auth/core/domain/user.entity';
-
-// Mock the social token verifier
-jest.mock('@modules/auth/adapters/secondary/social-token-verifier', () => ({
-  verifySocialIdToken: jest.fn(),
-}));
-
-import { verifySocialIdToken } from '@modules/auth/adapters/secondary/social-token-verifier';
-
-const mockVerify = verifySocialIdToken as jest.MockedFunction<typeof verifySocialIdToken>;
 
 const makeUser = (overrides: Partial<User> = {}): User =>
   ({
@@ -50,7 +42,11 @@ const makeMocks = () => {
     socialLogin: jest.fn().mockResolvedValue(sessionResponse),
   } as unknown as AuthSessionService;
 
-  return { userRepo, socialAccountRepo, authSessionService };
+  const socialTokenVerifier: jest.Mocked<SocialTokenVerifier> = {
+    verify: jest.fn(),
+  };
+
+  return { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier };
 };
 
 describe('SocialLoginUseCase', () => {
@@ -61,7 +57,7 @@ describe('SocialLoginUseCase', () => {
   // ── Happy paths ──────────────────────────────────────────────────
 
   it('returns session when user exists via social link', async () => {
-    const { userRepo, socialAccountRepo, authSessionService } = makeMocks();
+    const { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier } = makeMocks();
     const user = makeUser();
 
     socialAccountRepo.findByProviderAndProviderUserId.mockResolvedValue({
@@ -73,7 +69,7 @@ describe('SocialLoginUseCase', () => {
       createdAt: new Date(),
     });
     userRepo.getUserById.mockResolvedValue(user);
-    mockVerify.mockResolvedValue({
+    socialTokenVerifier.verify.mockResolvedValue({
       providerUserId: 'goog-123',
       email: 'user@test.com',
       emailVerified: true,
@@ -85,6 +81,7 @@ describe('SocialLoginUseCase', () => {
       userRepo as unknown as IUserRepository,
       socialAccountRepo as unknown as ISocialAccountRepository,
       authSessionService,
+      socialTokenVerifier,
     );
 
     const result = await useCase.execute('google', 'valid-id-token');
@@ -95,7 +92,7 @@ describe('SocialLoginUseCase', () => {
   });
 
   it('links social account when email matches existing user', async () => {
-    const { userRepo, socialAccountRepo, authSessionService } = makeMocks();
+    const { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier } = makeMocks();
     const existingUser = makeUser({ id: 5, email: 'existing@test.com' });
 
     socialAccountRepo.findByProviderAndProviderUserId.mockResolvedValue(null);
@@ -108,7 +105,7 @@ describe('SocialLoginUseCase', () => {
       email: 'existing@test.com',
       createdAt: new Date(),
     });
-    mockVerify.mockResolvedValue({
+    socialTokenVerifier.verify.mockResolvedValue({
       providerUserId: 'goog-456',
       email: 'existing@test.com',
       emailVerified: true,
@@ -120,6 +117,7 @@ describe('SocialLoginUseCase', () => {
       userRepo as unknown as IUserRepository,
       socialAccountRepo as unknown as ISocialAccountRepository,
       authSessionService,
+      socialTokenVerifier,
     );
 
     const result = await useCase.execute('google', 'valid-token');
@@ -135,7 +133,7 @@ describe('SocialLoginUseCase', () => {
   });
 
   it('creates new user when no social link and no email match', async () => {
-    const { userRepo, socialAccountRepo, authSessionService } = makeMocks();
+    const { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier } = makeMocks();
     const newUser = makeUser({ id: 10, email: 'new@test.com' });
 
     socialAccountRepo.findByProviderAndProviderUserId.mockResolvedValue(null);
@@ -149,7 +147,7 @@ describe('SocialLoginUseCase', () => {
       email: 'new@test.com',
       createdAt: new Date(),
     });
-    mockVerify.mockResolvedValue({
+    socialTokenVerifier.verify.mockResolvedValue({
       providerUserId: 'goog-789',
       email: 'new@test.com',
       emailVerified: true,
@@ -161,6 +159,7 @@ describe('SocialLoginUseCase', () => {
       userRepo as unknown as IUserRepository,
       socialAccountRepo as unknown as ISocialAccountRepository,
       authSessionService,
+      socialTokenVerifier,
     );
 
     await useCase.execute('google', 'valid-token');
@@ -177,11 +176,12 @@ describe('SocialLoginUseCase', () => {
   // ── Error paths ──────────────────────────────────────────────────
 
   it('throws 400 when idToken is empty', async () => {
-    const { userRepo, socialAccountRepo, authSessionService } = makeMocks();
+    const { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier } = makeMocks();
     const useCase = new SocialLoginUseCase(
       userRepo as unknown as IUserRepository,
       socialAccountRepo as unknown as ISocialAccountRepository,
       authSessionService,
+      socialTokenVerifier,
     );
 
     await expect(useCase.execute('google', '')).rejects.toMatchObject({
@@ -191,11 +191,12 @@ describe('SocialLoginUseCase', () => {
   });
 
   it('throws 400 when idToken is whitespace-only', async () => {
-    const { userRepo, socialAccountRepo, authSessionService } = makeMocks();
+    const { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier } = makeMocks();
     const useCase = new SocialLoginUseCase(
       userRepo as unknown as IUserRepository,
       socialAccountRepo as unknown as ISocialAccountRepository,
       authSessionService,
+      socialTokenVerifier,
     );
 
     await expect(useCase.execute('apple', '   ')).rejects.toMatchObject({
@@ -205,20 +206,21 @@ describe('SocialLoginUseCase', () => {
   });
 
   it('propagates error when token verification fails', async () => {
-    const { userRepo, socialAccountRepo, authSessionService } = makeMocks();
-    mockVerify.mockRejectedValue(new Error('Invalid JWT format'));
+    const { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier } = makeMocks();
+    socialTokenVerifier.verify.mockRejectedValue(new Error('Invalid JWT format'));
 
     const useCase = new SocialLoginUseCase(
       userRepo as unknown as IUserRepository,
       socialAccountRepo as unknown as ISocialAccountRepository,
       authSessionService,
+      socialTokenVerifier,
     );
 
     await expect(useCase.execute('google', 'invalid-token')).rejects.toThrow('Invalid JWT format');
   });
 
   it('throws 401 when social link exists but user was deleted', async () => {
-    const { userRepo, socialAccountRepo, authSessionService } = makeMocks();
+    const { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier } = makeMocks();
 
     socialAccountRepo.findByProviderAndProviderUserId.mockResolvedValue({
       id: 'sa-orphan',
@@ -229,7 +231,7 @@ describe('SocialLoginUseCase', () => {
       createdAt: new Date(),
     });
     userRepo.getUserById.mockResolvedValue(null);
-    mockVerify.mockResolvedValue({
+    socialTokenVerifier.verify.mockResolvedValue({
       providerUserId: 'goog-orphan',
       email: 'orphan@test.com',
       emailVerified: true,
@@ -239,6 +241,7 @@ describe('SocialLoginUseCase', () => {
       userRepo as unknown as IUserRepository,
       socialAccountRepo as unknown as ISocialAccountRepository,
       authSessionService,
+      socialTokenVerifier,
     );
 
     await expect(useCase.execute('google', 'some-token')).rejects.toMatchObject({
@@ -250,7 +253,7 @@ describe('SocialLoginUseCase', () => {
   // ── Edge cases ───────────────────────────────────────────────────
 
   it('does not link by email for Apple private relay addresses', async () => {
-    const { userRepo, socialAccountRepo, authSessionService } = makeMocks();
+    const { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier } = makeMocks();
     const newUser = makeUser({ id: 20, email: 'abc123@privaterelay.appleid.com' });
 
     socialAccountRepo.findByProviderAndProviderUserId.mockResolvedValue(null);
@@ -263,7 +266,7 @@ describe('SocialLoginUseCase', () => {
       email: 'abc123@privaterelay.appleid.com',
       createdAt: new Date(),
     });
-    mockVerify.mockResolvedValue({
+    socialTokenVerifier.verify.mockResolvedValue({
       providerUserId: 'apple-pr-1',
       email: 'abc123@privaterelay.appleid.com',
       emailVerified: true,
@@ -273,6 +276,7 @@ describe('SocialLoginUseCase', () => {
       userRepo as unknown as IUserRepository,
       socialAccountRepo as unknown as ISocialAccountRepository,
       authSessionService,
+      socialTokenVerifier,
     );
 
     await useCase.execute('apple', 'apple-token');
@@ -284,7 +288,7 @@ describe('SocialLoginUseCase', () => {
   });
 
   it('does not link by email when emailVerified is false', async () => {
-    const { userRepo, socialAccountRepo, authSessionService } = makeMocks();
+    const { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier } = makeMocks();
     const newUser = makeUser({ id: 21 });
 
     socialAccountRepo.findByProviderAndProviderUserId.mockResolvedValue(null);
@@ -297,7 +301,7 @@ describe('SocialLoginUseCase', () => {
       email: 'unverified@test.com',
       createdAt: new Date(),
     });
-    mockVerify.mockResolvedValue({
+    socialTokenVerifier.verify.mockResolvedValue({
       providerUserId: 'goog-unver',
       email: 'unverified@test.com',
       emailVerified: false,
@@ -307,6 +311,7 @@ describe('SocialLoginUseCase', () => {
       userRepo as unknown as IUserRepository,
       socialAccountRepo as unknown as ISocialAccountRepository,
       authSessionService,
+      socialTokenVerifier,
     );
 
     await useCase.execute('google', 'some-token');
@@ -317,7 +322,7 @@ describe('SocialLoginUseCase', () => {
   });
 
   it('generates synthetic email when provider has no email', async () => {
-    const { userRepo, socialAccountRepo, authSessionService } = makeMocks();
+    const { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier } = makeMocks();
     const newUser = makeUser({ id: 30, email: 'apple-no-email@apple.social' });
 
     socialAccountRepo.findByProviderAndProviderUserId.mockResolvedValue(null);
@@ -330,7 +335,7 @@ describe('SocialLoginUseCase', () => {
       email: null,
       createdAt: new Date(),
     });
-    mockVerify.mockResolvedValue({
+    socialTokenVerifier.verify.mockResolvedValue({
       providerUserId: 'apple-noemail',
       email: null,
       emailVerified: false,
@@ -340,6 +345,7 @@ describe('SocialLoginUseCase', () => {
       userRepo as unknown as IUserRepository,
       socialAccountRepo as unknown as ISocialAccountRepository,
       authSessionService,
+      socialTokenVerifier,
     );
 
     await useCase.execute('apple', 'apple-token');
@@ -355,7 +361,7 @@ describe('SocialLoginUseCase', () => {
   });
 
   it('normalizes email to lowercase and trimmed', async () => {
-    const { userRepo, socialAccountRepo, authSessionService } = makeMocks();
+    const { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier } = makeMocks();
     const existingUser = makeUser({ id: 40, email: 'mixed@test.com' });
 
     socialAccountRepo.findByProviderAndProviderUserId.mockResolvedValue(null);
@@ -368,7 +374,7 @@ describe('SocialLoginUseCase', () => {
       email: 'mixed@test.com',
       createdAt: new Date(),
     });
-    mockVerify.mockResolvedValue({
+    socialTokenVerifier.verify.mockResolvedValue({
       providerUserId: 'goog-norm',
       email: '  Mixed@Test.COM  ',
       emailVerified: true,
@@ -378,6 +384,7 @@ describe('SocialLoginUseCase', () => {
       userRepo as unknown as IUserRepository,
       socialAccountRepo as unknown as ISocialAccountRepository,
       authSessionService,
+      socialTokenVerifier,
     );
 
     await useCase.execute('google', 'some-token');
@@ -389,7 +396,7 @@ describe('SocialLoginUseCase', () => {
   });
 
   it('Google private relay is NOT excluded from linking (only Apple is)', async () => {
-    const { userRepo, socialAccountRepo, authSessionService } = makeMocks();
+    const { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier } = makeMocks();
     const existingUser = makeUser({ id: 50, email: 'relay@privaterelay.appleid.com' });
 
     socialAccountRepo.findByProviderAndProviderUserId.mockResolvedValue(null);
@@ -402,7 +409,7 @@ describe('SocialLoginUseCase', () => {
       email: 'relay@privaterelay.appleid.com',
       createdAt: new Date(),
     });
-    mockVerify.mockResolvedValue({
+    socialTokenVerifier.verify.mockResolvedValue({
       providerUserId: 'goog-relay',
       email: 'relay@privaterelay.appleid.com',
       emailVerified: true,
@@ -412,6 +419,7 @@ describe('SocialLoginUseCase', () => {
       userRepo as unknown as IUserRepository,
       socialAccountRepo as unknown as ISocialAccountRepository,
       authSessionService,
+      socialTokenVerifier,
     );
 
     await useCase.execute('google', 'some-token');
@@ -421,7 +429,7 @@ describe('SocialLoginUseCase', () => {
   });
 
   it('creates social account with null email when provider email is null and user is new', async () => {
-    const { userRepo, socialAccountRepo, authSessionService } = makeMocks();
+    const { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier } = makeMocks();
     const newUser = makeUser({ id: 60 });
 
     socialAccountRepo.findByProviderAndProviderUserId.mockResolvedValue(null);
@@ -434,7 +442,7 @@ describe('SocialLoginUseCase', () => {
       email: null,
       createdAt: new Date(),
     });
-    mockVerify.mockResolvedValue({
+    socialTokenVerifier.verify.mockResolvedValue({
       providerUserId: 'apple-null',
       email: null,
       emailVerified: false,
@@ -444,6 +452,7 @@ describe('SocialLoginUseCase', () => {
       userRepo as unknown as IUserRepository,
       socialAccountRepo as unknown as ISocialAccountRepository,
       authSessionService,
+      socialTokenVerifier,
     );
 
     await useCase.execute('apple', 'some-token');

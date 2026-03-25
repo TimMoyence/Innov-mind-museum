@@ -19,6 +19,7 @@ import { ListApiKeysUseCase } from './listApiKeys.useCase';
 import type { ChatDataExportPort } from '../domain/exportUserData.types';
 import { UserRepositoryPg } from '../../../auth/adapters/secondary/user.repository.pg';
 import { SocialAccountRepositoryPg } from '../../../auth/adapters/secondary/social-account.repository.pg';
+import { SocialTokenVerifierAdapter } from '../../../auth/adapters/secondary/social-token-verifier.adapter';
 import { RefreshTokenRepositoryPg } from '../../../auth/adapters/secondary/refresh-token.repository.pg';
 import { ApiKeyRepositoryPg } from '../../../auth/adapters/secondary/apiKey.repository.pg';
 import { BrevoEmailService } from '@shared/email/brevo-email.service';
@@ -27,6 +28,7 @@ import { setApiKeyRepository, setUserRoleResolver } from '@src/helpers/middlewar
 
 const userRepository = new UserRepositoryPg();
 const socialAccountRepository = new SocialAccountRepositoryPg();
+const socialTokenVerifier = new SocialTokenVerifierAdapter();
 const refreshTokenRepository = new RefreshTokenRepositoryPg();
 
 const emailService: EmailService | undefined = env.brevoApiKey
@@ -48,6 +50,7 @@ const socialLoginUseCase = new SocialLoginUseCase(
   userRepository,
   socialAccountRepository,
   authSessionService,
+  socialTokenVerifier,
 );
 /** Singleton instance of {@link DeleteAccountUseCase}. Lazy image cleanup via chat module's shared storage. */
 const imageCleanupProxy: import('./deleteAccount.useCase').ImageCleanupPort = {
