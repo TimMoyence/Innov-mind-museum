@@ -31,6 +31,34 @@
         { "run": "R5", "score": 9.0, "role": "museum-web W1 — 22 app files" }
       ]
     },
+    "Marketing Architect": {
+      "totalRuns": 1,
+      "averageScore": 10.0,
+      "averageROI": 5.0,
+      "verdict": "ESSENTIEL",
+      "strengths": ["6-section landing page (hero, how-it-works, features, showcase, testimonials, download)", "5 composants Framer Motion reusables", "Parallax phone mockup", "Store badges Apple/Google", "Dictionnaires marketing FR+EN complets", "Bundle +45kB only for rich animations"],
+      "weaknesses": [],
+      "selfVerificationRate": 1.0,
+      "retired": false,
+      "lastRun": "2026-03-25 R6 museum-web W2",
+      "history": [
+        { "run": "R6", "score": 10.0, "role": "Landing page 6 sections + 5 composants + dictionnaires" }
+      ]
+    },
+    "Admin Architect": {
+      "totalRuns": 1,
+      "averageScore": 10.0,
+      "averageROI": 5.0,
+      "verdict": "ESSENTIEL",
+      "strengths": ["Refresh token interceptor ported from museum-admin", "Dashboard stats wired to /api/admin/stats", "Users table with pagination + search + role filter", "Audit logs table with pagination", "AdminDictProvider + useAdminDict i18n pattern", "LoginForm + AdminShell client component extraction", "All W1 findings (F2-F6) resolved in single pass"],
+      "weaknesses": [],
+      "selfVerificationRate": 1.0,
+      "retired": false,
+      "lastRun": "2026-03-25 R6 museum-web W2",
+      "history": [
+        { "run": "R6", "score": 10.0, "role": "Admin API wiring + refresh token + i18n fixes" }
+      ]
+    },
     "QA Engineer": {
       "totalRuns": 2,
       "averageScore": 9.25,
@@ -143,20 +171,21 @@
       "lastRun": "2026-03-24 audit"
     },
     "Sentinelle": {
-      "totalRuns": 4,
-      "averageScore": 9.38,
+      "totalRuns": 5,
+      "averageScore": 9.4,
       "averageROI": 5.0,
       "verdict": "ESSENTIEL",
-      "strengths": ["Verification independante", "Ajustements pertinents", "Cross-run learning", "Triage 3-tier (bloquant/planifiable/backlog)", "EP escalade protocol", "Auth type mismatch caught (F1)", "nginx safety audit"],
+      "strengths": ["Verification independante", "Ajustements pertinents", "Cross-run learning", "Triage 3-tier (bloquant/planifiable/backlog)", "EP escalade protocol", "Auth type mismatch caught (F1)", "nginx safety audit", "W1 findings tracking + W2 resolution verification"],
       "weaknesses": [],
       "selfVerificationRate": null,
       "retired": false,
-      "lastRun": "2026-03-25 R5 museum-web W1",
+      "lastRun": "2026-03-25 R6 museum-web W2",
       "history": [
         { "run": "R1", "score": 9.0, "role": "audit" },
         { "run": "R3", "score": 9.5, "role": "V1.1" },
         { "run": "R4", "score": 9.5, "role": "audit enterprise-grade" },
-        { "run": "R5", "score": 9.5, "role": "museum-web W1 feature" }
+        { "run": "R5", "score": 9.5, "role": "museum-web W1 feature" },
+        { "run": "R6", "score": 9.5, "role": "museum-web W2 feature — streamlined L2 gate" }
       ]
     }
   },
@@ -170,5 +199,12 @@
     "avgScore": 9.2,
     "avgROI": 4.6,
     "splitValidation": "DevOps+Security -> DevOps Engineer (9.0) + Security Analyst (9.0) = validation reussie"
+  },
+  "r6AgentSummary": {
+    "agentsSpawned": 2,
+    "allVerdictEssentiel": true,
+    "avgScore": 10.0,
+    "avgROI": 5.0,
+    "newAgents": "Marketing Architect (10/10) + Admin Architect (10/10) — both first-run, both perfect score"
   }
 }

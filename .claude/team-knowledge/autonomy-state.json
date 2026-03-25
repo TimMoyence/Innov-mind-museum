@@ -4,8 +4,8 @@
   "proposedLevel": null,
   "promotionDate": "2026-03-25",
   "promotionTrigger": "R5 score 93 >= 85 — 5/5 consecutive qualifying runs",
-  "runsSinceLastFail": 5,
-  "runsQualifying": 5,
+  "runsSinceLastFail": 6,
+  "runsQualifying": 6,
   "runsRequired": 5,
   "history": [
     {
