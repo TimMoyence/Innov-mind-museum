@@ -184,7 +184,8 @@ server {
     access_log off;
     return 444;
   }
-  location ~* ^/(admin|_profiler|_debugbar|debugbar|xdebug|artisan|storage/(oauth|logs|debug)|bootstrap/app) {
+  # /admin is served by museum-web — removed from scanner block
+  location ~* ^/(_profiler|_debugbar|debugbar|xdebug|artisan|storage/(oauth|logs|debug)|bootstrap/app) {
     access_log off;
     return 444;
   }
@@ -230,16 +231,30 @@ server {
     proxy_set_header X-Forwarded-Proto $scheme;
   }
 
-  # --- Only /api/ paths reach the backend ---
-  location / {
-    if ($uri !~* ^/(api/|\.well-known/)) {
-      return 444;
-    }
-
+  # --- API proxy (all /api/ paths except auth and SSE handled above) ---
+  location /api/ {
     limit_req zone=global burst=60 nodelay;
 
     set $museum_upstream http://museum-backend:3000;
     proxy_pass $museum_upstream;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+
+    proxy_connect_timeout 5s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
+  }
+
+  # --- Web frontend (Next.js) ---
+  location / {
+    set $web_upstream http://museum-web:3001;
+    proxy_pass $web_upstream;
 
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;

@@ -1,0 +1,93 @@
+{
+  "metadata": {
+    "title": "Musaium — The Intelligent Museum Assistant",
+    "description": "Photograph an artwork, ask a question, and let AI guide you. Musaium transforms every visit into an enriching experience."
+  },
+  "nav": {
+    "home": "Home",
+    "support": "Support",
+    "privacy": "Privacy",
+    "admin": "Admin",
+    "login": "Login",
+    "download": "Download",
+    "language": "FR"
+  },
+  "hero": {
+    "title": "Your museum guide, powered by AI",
+    "subtitle": "Photograph an artwork, ask a question — Musaium responds with the historical, artistic, and cultural context of every piece.",
+    "cta": "Download the app"
+  },
+  "features": {
+    "title": "How it works",
+    "items": [
+      {
+        "title": "Photograph",
+        "description": "Take a photo of any artwork in a museum."
+      },
+      {
+        "title": "Ask your question",
+        "description": "Ask whatever you want to know — technique, history, context."
+      },
+      {
+        "title": "Get an answer",
+        "description": "AI analyzes the artwork and responds in real time with reliable sources."
+      }
+    ]
+  },
+  "support": {
+    "title": "Help Center",
+    "subtitle": "Find answers to your questions or contact us directly.",
+    "faq": [
+      {
+        "question": "Is the app free?",
+        "answer": "Yes, Musaium is free. Some advanced features may be offered as premium in the future."
+      },
+      {
+        "question": "Which museums are compatible?",
+        "answer": "Musaium works in all museums. The AI recognizes artworks through computer vision and enriches its responses via Wikidata."
+      },
+      {
+        "question": "Is my data protected?",
+        "answer": "Absolutely. Check our privacy policy for full details. Your photos are never shared."
+      },
+      {
+        "question": "How do I contact support?",
+        "answer": "Use the form below or reach us on Telegram @musaium_support."
+      }
+    ],
+    "contact": {
+      "title": "Contact us",
+      "namePlaceholder": "Your name",
+      "emailPlaceholder": "Your email",
+      "messagePlaceholder": "Describe your question or issue...",
+      "submit": "Send"
+    }
+  },
+  "privacy": {
+    "title": "Privacy Policy"
+  },
+  "footer": {
+    "copyright": "© {year} Musaium — InnovMind",
+    "madeBy": "Powered by artificial intelligence",
+    "links": {
+      "privacy": "Privacy",
+      "support": "Support"
+    }
+  },
+  "admin": {
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "auditLogs": "Audit Logs",
+    "reports": "Reports",
+    "analytics": "Analytics",
+    "tickets": "Tickets",
+    "supportAdmin": "Support",
+    "login": {
+      "title": "Musaium Administration",
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Password",
+      "submit": "Sign in",
+      "error": "Invalid credentials"
+    }
+  }
+}
