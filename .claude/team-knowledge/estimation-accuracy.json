@@ -57,6 +57,18 @@
       "filesReal": 39,
       "precision": 0.77,
       "notes": "AM-001 validation: estimated 30+ files, actual 39. Ratio 1.3x — correction factor confirmed."
+    },
+    {
+      "id": "R6",
+      "date": "2026-03-25",
+      "mode": "feature (museum-web W2)",
+      "estimation": "M",
+      "loopsEstimated": 0,
+      "loopsReal": 0,
+      "filesEstimated": 20,
+      "filesReal": 25,
+      "precision": 0.80,
+      "notes": "AM-001 applied: estimated 20 files with 1.3x factor (raw ~15), actual 25. Ratio 1.25x — correction factor slightly over-estimating now (good direction)."
     }
   ],
   "calibration": {
@@ -64,8 +76,8 @@
     "M": { "loopsRef": "0-1", "filesRef": "4-10" },
     "L": { "loopsRef": "1-2", "filesRef": "10+" }
   },
-  "averagePrecision": 0.79,
-  "averagePrecisionNote": "Computed on R1-R3 only (R4 = N/A read-only audit)",
+  "averagePrecision": 0.80,
+  "averagePrecisionNote": "Computed on R1-R3, R5-R6 (R4 = N/A read-only audit)",
   "bias": "sous-estimation systematique fichiers (~25% de plus que prevu)",
   "correctionFactor": 1.3,
   "amendment": {
@@ -75,6 +87,7 @@
     "monitoringRuns": ["R4", "R5"],
     "r4Result": "N/A (read-only audit, no files to estimate)",
     "r5Result": "CONFIRMED — estimated 30+, actual 39, ratio 1.3x matches factor",
-    "nextValidation": "Continue monitoring"
+    "r6Result": "CONFIRMED — estimated 20 (with factor), actual 25, ratio 1.25x — converging",
+    "nextValidation": "Continue monitoring, factor stabilizing"
   }
 }

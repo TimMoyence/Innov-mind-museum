@@ -1580,11 +1580,84 @@ Findings deferred W2: F2 (refresh token), F3-F5 (i18n admin sidebar), F6 (public
 | Frontend tests (47 passed) | PASS (not impacted) |
 | Nginx diff | Verified, synchronized |
 
-### Prochaines etapes (W2-W5)
+### Prochaines etapes (W3-W5)
 
 | Sprint | Focus |
 |--------|-------|
-| W2 | Landing page marketing (contenu riche, animations Framer Motion, screenshots) |
 | W3 | Support complet + privacy policy migration + formulaire connecte au backend |
-| W4 | Admin panel migration (museum-admin → museum-web), refresh token, real API calls |
-| W5 | Polish, perf, accessibilite, deploy production |
+| W4 | Admin remaining pages (analytics, reports, tickets) + production deploy |
+| W5 | Polish, perf, accessibilite |
+
+---
+
+## Sprint W2 — Web Enrichment (2026-03-25)
+
+**Scope**: Landing page riche + admin API wiring + W1 findings resolution.
+**Commit**: `d6c77f1`
+**Stats**: 25 fichiers modifies, +1886 / -364 lignes, 0 tests (frontend web — no test framework yet).
+**Mode**: /team feature — Sentinelle R6, L2 streamlined gates.
+
+### Resume executif
+
+Sprint d'enrichissement du package `museum-web/`. Landing page transformee de scaffold minimal en page marketing riche avec 6 sections animees via Framer Motion (hero, how-it-works, feature grid, app showcase, testimonials, download CTA). Admin panel connecte aux endpoints backend API reels (/api/admin/stats, /api/admin/users, /api/admin/audit-logs). Resolution de tous les findings W1 (F2-F6): refresh token interceptor porte de museum-admin, i18n complete admin, public assets.
+
+### Architecture
+
+| Choix | Justification |
+|-------|---------------|
+| Framer Motion (scroll-triggered) | Animations legeres, tree-shakeable, +45 kB acceptable |
+| Server Component admin layout | RSC pour metadata, client AdminShell pour interactivite |
+| AdminDictProvider pattern | Evite prop drilling dictionnaire dans toute la sidebar |
+| Refresh token interceptor | Port direct du pattern museum-admin (eprouve en prod) |
+| Types admin separes (admin-types.ts) | Pas de dependance sur openapi generated types (museum-web est standalone) |
+
+### Changements cles
+
+| Domaine | Action | Fichiers |
+|---------|--------|----------|
+| Marketing | 6 sections landing page animees | `[locale]/page.tsx` |
+| Composants | 5 composants marketing reusables | `components/marketing/*.tsx` |
+| Admin API | Dashboard stats, users table, audit logs | `admin/page.tsx`, `admin/users/page.tsx`, `admin/audit-logs/page.tsx` |
+| Admin infra | AdminShell + LoginForm extraction | `components/admin/*.tsx` |
+| Auth | Refresh token interceptor + registerLogoutHandler | `lib/api.ts`, `lib/auth.tsx` |
+| i18n | Admin sidebar + login + contact form | `lib/admin-dictionary.tsx`, `components/admin/*.tsx` |
+| Types | Admin backend types | `lib/admin-types.ts` |
+| Dictionnaires | Sections marketing + contact.success | `dictionaries/fr.json`, `dictionaries/en.json` |
+| Public | robots.txt, sitemap.xml | `public/` |
+
+### W1 Findings Resolution
+
+| # | Sev | Description | Resolution |
+|---|-----|-------------|------------|
+| F2 | M | No refresh token handling | `api.ts` — 401 interceptor avec queue de requetes en attente, retry apres refresh, registerLogoutHandler pour deconnexion propre. Pattern identique a museum-admin (eprouve). |
+| F3 | F | ContactForm hardcoded text | `ContactForm.tsx` — `dict.contact.success` au lieu de string hardcodee. Cle ajoutee aux 2 dictionnaires. |
+| F4 | F | Admin sidebar not i18n | `AdminDictProvider` — Context React avec dictionnaire admin charge via `useAdminDict()`. AdminShell consomme le contexte. |
+| F5 | F | Admin login inline locale | `LoginForm.tsx` — Composant client qui recoit le dictionnaire en props. Plus de ternaires `locale === 'fr'`. |
+| F6 | F | Missing public assets | `robots.txt` (User-agent: *, Allow: /, Sitemap ref) + `sitemap.xml` (13 URLs FR+EN, lastmod 2026-03-25). |
+
+### Decisions techniques
+
+1. **Framer Motion over CSS animations** — Scroll-triggered `whileInView` + stagger delays = comportement riche impossible en CSS pur. Bundle impact +45 kB acceptable pour une landing page marketing.
+2. **PhoneMockup parallax** — `useScroll` + `useTransform` pour effet parallax vertical sur le mockup telephone. Pas de dependance externe.
+3. **Admin types manuels** — `admin-types.ts` definit les types en miroir du backend sans importer le package openapi types. museum-web reste un package standalone sans dependance vers museum-backend.
+4. **AdminDictProvider vs prop drilling** — Le pattern Context evite de passer le dictionnaire a travers 3+ niveaux de composants. Le hook `useAdminDict()` est ergonomique et type-safe.
+5. **Refresh token queue** — Les requetes qui echouent en 401 sont mises en queue pendant le refresh. Une fois le token rafraichi, toutes les requetes en queue sont rejouees. Pattern identique a museum-admin.
+
+### Verification
+
+| Check | Result |
+|-------|--------|
+| museum-web typecheck (`tsc --noEmit`) | PASS (0 errors) |
+| museum-web build (`next build`) | PASS (13 routes, 147 kB First Load JS) |
+| Backend typecheck | PASS (0 regression) |
+| Backend tests (951 passed) | PASS (0 regression, +10 not from our changes) |
+| Corrective loops | 0 |
+| First-pass rate | 100% |
+
+### Prochaines etapes (W3-W5)
+
+| Sprint | Focus |
+|--------|-------|
+| W3 | Support complet + privacy policy content migration + formulaire connecte au backend |
+| W4 | Admin remaining pages (analytics, reports, tickets) + production deploy |
+| W5 | Polish, perf, accessibilite |

@@ -369,6 +369,39 @@
 
 ---
 
+## Sprint W2 — Web Enrichment (2026-03-25) (TERMINE)
+
+> Landing page riche avec Framer Motion. Admin panel connecte au backend API. Refresh token, i18n, public assets.
+> Commit: `d6c77f1`
+
+### museum-web (enrichissement)
+
+- [x] W2-01: Landing page 6 sections (hero anime, how-it-works, feature grid, app showcase, testimonials, download CTA)
+- [x] W2-02: 5 composants marketing (AnimatedSection, PhoneMockup, FeatureCard, TestimonialCard, StoreButton)
+- [x] W2-03: Dictionnaires marketing FR+EN (showcase, testimonials, download, grid)
+- [x] W2-04: Admin dashboard connecte a /api/admin/stats
+- [x] W2-05: Admin users table paginee + recherche + filtre role (/api/admin/users)
+- [x] W2-06: Admin audit-logs table paginee (/api/admin/audit-logs)
+- [x] W2-07: Types admin backend (User, DashboardStats, AuditLog, PaginatedResponse)
+- [x] W2-08: AdminDictProvider + useAdminDict() hook i18n
+
+### W1 Findings resolus
+
+- [x] F2: Refresh token interceptor (port museum-admin pattern)
+- [x] F3: ContactForm i18n (dict.contact.success)
+- [x] F4: Admin sidebar labels i18n (AdminShell + AdminDictProvider)
+- [x] F5: Admin login i18n (LoginForm component + dict props)
+- [x] F6: Public assets (robots.txt, sitemap.xml)
+
+### Verification
+
+- [x] museum-web typecheck: PASS (0 errors)
+- [x] museum-web build: PASS (13 routes, 147 kB First Load JS)
+- [x] Backend: 0 regression (951 tests, tsc PASS)
+- [x] Sentinelle: GO (0 bloqueurs, 0 boucles correctives)
+
+---
+
 ## Metriques globales
 
 | Sprint    | Taches  | Faites | %       | Tests backend | Tests frontend |
@@ -384,4 +417,6 @@
 | S7        | 4       | 4      | 100%    | 786 (+93)     | 87             |
 | S8        | 4       | 4      | 100%    | 913 (+127)    | 106 (+19)      |
 | Phase 0   | 8       | 8      | 100%    | 909 (-4)      | 106            |
-| **Total** | **136** | **135** | **99%** | **909**       | **106**        |
+| W1        | 16      | 16     | 100%    | 941 (+32)     | 106            |
+| W2        | 13      | 13     | 100%    | 951 (+10)     | 106            |
+| **Total** | **165** | **164** | **99%** | **951**       | **106**        |
