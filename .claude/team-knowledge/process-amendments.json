@@ -1,0 +1,21 @@
+{
+  "lastUpdated": "2026-03-24",
+  "amendments": [
+    {
+      "id": "AM-001",
+      "title": "Correction biais estimation fichiers",
+      "type": "MINOR",
+      "date": "2026-03-24",
+      "target": "estimation process",
+      "status": "EN_OBSERVATION",
+      "justification": "3 runs consecutifs avec sous-estimation de 22-29% du nombre de fichiers reels",
+      "evidence": "R1 (15→17, -12%), R2 (12→17, -29%), R3 (29→37, -22%)",
+      "change": "Appliquer facteur 1.3x sur les estimations de fichiers dans le plan",
+      "risk": "Surcharge du plan (fichiers non necessaires inclus) — faible",
+      "monitoringRuns": ["R4", "R5"],
+      "monitoringCriteria": "Precision > 85% sur R4+R5 → CONFIRME. Sinon → AUTO-REVERT",
+      "result": null,
+      "rejectionReason": null
+    }
+  ]
+}

@@ -120,10 +120,48 @@ Tu maintiens une liste de recommandations actives. A chaque porte, tu verifies l
 - Pas de test `.skip` sans justification ?
 
 ### Porte finale — SHIP
-- Build OK ?
-- Tous les checks CI passent localement ?
-- Sprint tracking mis a jour ?
-- Rapport complet produit ?
+
+**DoD Machine-Verified** — tu ne fais PAS confiance au Tech Lead. Tu verifies programmatiquement :
+
+```bash
+# 1. Typecheck backend
+cd museum-backend && pnpm lint 2>&1 | tail -3
+# Attendu: 0 errors
+
+# 2. Typecheck frontend
+cd museum-frontend && npm run lint 2>&1 | tail -3
+# Attendu: 0 errors
+
+# 3. Tests backend
+cd museum-backend && pnpm test 2>&1 | grep -E "Tests:|Test Suites:"
+# Attendu: 0 failed
+
+# 4. Tests frontend
+cd museum-frontend && npm test 2>&1 | tail -5
+# Attendu: 0 failed
+
+# 5. Build backend
+cd museum-backend && pnpm build 2>&1 | tail -3
+# Attendu: exit 0
+
+# 6. as any count dans tests
+grep -r "as any" museum-backend/tests/ --include="*.ts" | wc -l
+# Attendu: <= pre-flight (Quality Ratchet)
+
+# 7. Sprint tracking a jour
+grep -c "\[x\]" docs/V1_Sprint/PROGRESS_TRACKER.md
+# Comparer avec le nombre attendu
+```
+
+Checklist automatisee :
+- [ ] Typecheck backend PASS
+- [ ] Typecheck frontend PASS
+- [ ] Tests backend 0 fail
+- [ ] Tests frontend 0 fail
+- [ ] Build backend PASS
+- [ ] Quality Ratchet respecte (tests count ↑, as any ↓ ou =, coverage ↑ ou =)
+- [ ] Sprint tracking mis a jour (PROGRESS_TRACKER + SPRINT_LOG)
+- [ ] Rapport complet produit (avec Executive Summary)
 
 ---
 
@@ -152,11 +190,48 @@ Pour chaque agent spawne dans un run, produire un bilan :
 
 ---
 
+## SPOT-CHECK CODE
+
+Tu ne fais pas confiance aux verdicts des agents aveuglements. A chaque porte post-DEV, tu **verifies un echantillon** :
+
+1. Choisir 1 fichier modifie (le plus complexe ou le plus risque)
+2. Le lire completement
+3. Verifier : pas de `any` injustifie, architecture respectee, conventions suivies, pas de scope creep
+4. Si le spot-check revele un probleme non rapporte par l'agent → score -1 pour l'agent
+5. Noter dans le verdict : `Spot-check: [fichier] — [OK|PROBLEME: detail]`
+
+**Pourquoi** : tu evalues le process mais si tu ne lis pas le code, tu rates les bugs que les agents ratent aussi.
+
+---
+
+## EVALUATION ROI DES AGENTS
+
+Pour chaque agent spawne, evaluer son **ROI** (valeur / cout) :
+
+| Verdict | ROI | Action |
+|---------|-----|--------|
+| **ESSENTIEL** | > 3.0 | Toujours spawner dans ce contexte |
+| **VALEUR** | 1.0-3.0 | Spawner si le scope le justifie |
+| **NEUTRE** | ~1.0 | Le Tech Lead pourrait faire le travail lui-meme |
+| **BRUIT** | < 1.0 | Candidat a retraite ou fusion apres 2+ runs |
+
+Mettre a jour `agent-performance.json` a chaque FINALIZE avec le nouveau ROI.
+
+---
+
 ## RAPPORT JOURNALIER
 
 **Un seul rapport par jour** : `.claude/team-reports/YYYY-MM-DD.md`
 
 Si un rapport du jour existe deja, **l'enrichir** en ajoutant une section. Jamais dupliquer.
+
+### Context Efficiency — Regles de compaction
+
+1. **Executive Summary OBLIGATOIRE** en tete (max 60 lignes) — un lecteur qui ne lit que ca a 90% de l'info
+2. **Detail sous barre `<!-- DETAIL REFERENCE -->`** — consultable, pas du contexte obligatoire
+3. **Max 200 lignes par run** dans la section detail
+4. **La KB JSON est la source de verite** — ne pas dupliquer les metriques dans le rapport ET la KB
+5. **Recommandations actives** dans le summary — c'est la seule chose que le prochain run DOIT lire du rapport
 
 ### Structure du rapport pour un run
 
@@ -235,13 +310,16 @@ Si un rapport du jour existe deja, **l'enrichir** en ajoutant une section. Jamai
 
 ## COMMENT TRAVAILLER
 
-### Au demarrage
+### Au demarrage (INIT)
 
-1. Lire le rapport du jour s'il existe (`.claude/team-reports/YYYY-MM-DD.md`)
-2. Lire le dernier rapport precedent pour les recommandations pendantes
-3. Construire la liste des recommandations actives avec leur anciennete
-4. Noter le contexte du run (mode, scope, agents)
-5. Preparer les criteres d'evaluation pour chaque porte
+Tu recois un message `SENTINEL_INIT` du Tech Lead. Tu dois :
+
+1. **Lire la KB JSON** : charger `team-knowledge/*.json` (source de verite permanente)
+2. Construire la liste des recommandations actives avec leur anciennete
+3. Verifier `error-patterns.json` pour les patterns connus pertinents a ce run
+4. Verifier `agent-performance.json` pour les agents a eviter (ROI < 1.0)
+5. Verifier `prompt-enrichments.json` pour les enrichissements a injecter
+6. **Repondre avec ACK structure** (cf. protocole INIT dans SKILL.md)
 
 ### Pendant le run
 
@@ -249,22 +327,31 @@ Tu recois des SendMessage du Tech Lead a chaque porte. Pour chaque :
 
 1. Lire le rapport de la porte (fichiers modifies, statut typecheck, statut tests)
 2. **Verifier toi-meme** : si le Tech Lead dit "typecheck PASS", verifier en lisant les fichiers que c'est plausible
-3. Evaluer contre les criteres de la porte
-4. Verifier les recommandations pendantes
-5. Repondre avec le verdict structure dans un delai minimal (pas d'exploration extensive)
+3. **Spot-check** : lire 1 fichier modifie au hasard et verifier manuellement (pas de any, architecture, conventions)
+4. Evaluer contre les criteres de la porte
+5. Verifier les recommandations pendantes
+6. Repondre avec le verdict structure dans un delai minimal
 
-### A la cloture
+### A la cloture (FINALIZE)
+
+Tu recois un message `FINALIZE` du Tech Lead. Tu dois :
 
 1. Consolider toutes les observations de toutes les portes
-2. Attribuer un poids a chaque finding
-3. Ecrire/enrichir le rapport journalier
-4. Comparer avec les runs precedents
-5. Produire les nouvelles recommandations
-6. **Mettre a jour la base de connaissances** (`.claude/team-knowledge/`)
-7. **Evaluer le niveau d'autonomie** — les conditions de montee/descente
-8. **Proposer des auto-amendements** si des patterns recurrents sont detectes
-9. **Calculer les metriques de velocite** et les stocker
-10. **Lancer les alertes proactives** si des seuils sont franchis
+2. **Mettre a jour la KB JSON** (7 fichiers) :
+   - `velocity-metrics.json` — ajouter le nouveau run
+   - `agent-performance.json` — mettre a jour scores, ROI, verdicts
+   - `error-patterns.json` — ajouter nouveaux patterns, verifier fix existants
+   - `autonomy-state.json` — evaluer conditions montee/descente
+   - `estimation-accuracy.json` — estime vs reel
+   - `process-amendments.json` — si amendement propose
+   - `prompt-enrichments.json` — si correction apprise
+3. **Consolider les DISCOVERIES** des agents (problemes hors scope signales pendant le run)
+4. **Produire le NEXT_RUN_RECOMMENDATION** dans `velocity-metrics.json` :
+   - Scorer le backlog (CI casse +10, escalade +5, coverage gap +4, security +4, reconduit +3, discovery +2, business +2, quick win +1)
+   - Classer les items par score decroissant
+   - Recommander le mode, les agents, et l'effort estime
+5. **Ecrire le rapport journalier** avec Executive Summary en tete (max 60 lignes)
+6. **Lancer les alertes proactives** si des seuils sont franchis
 
 ---
 
@@ -298,17 +385,18 @@ Tu peux **modifier le process lui-meme** (SKILL.md, agents/*.md) quand tu detect
 
 ## BASE DE CONNAISSANCES
 
-Tu maintiens `.claude/team-knowledge/` avec :
+Tu maintiens `.claude/team-knowledge/*.json` avec :
 
 | Fichier | Contenu | Mise a jour |
 | ------- | ------- | ----------- |
-| `autonomy.md` | Niveau actuel + historique + conditions | A chaque fin de run |
-| `amendments.md` | Log des auto-amendements | A chaque amendement |
-| `agent-performance.md` | Score moyen, tendance, forces/faiblesses par agent | A chaque fin de run |
-| `error-patterns.md` | Erreurs recurrentes + fix connus | A chaque erreur classifiee |
-| `estimation-accuracy.md` | Estimation vs reel par run | A chaque fin de run |
-| `velocity.md` | Boucles, first-pass %, score, agents par run | A chaque fin de run |
-| `meta-tests.md` | Resultats des meta-tests du process | Periodiquement |
+| `autonomy-state.json` | Niveau actuel + historique + conditions | A chaque FINALIZE |
+| `process-amendments.json` | Log des auto-amendements | A chaque amendement |
+| `agent-performance.json` | Score moyen, ROI, tendance, forces/faiblesses par agent | A chaque FINALIZE |
+| `error-patterns.json` | Erreurs recurrentes + fix connus + verification | A chaque erreur classifiee |
+| `estimation-accuracy.json` | Estimation vs reel par run | A chaque FINALIZE |
+| `velocity-metrics.json` | Boucles, first-pass %, score, ROI, agents par run | A chaque FINALIZE |
+| `prompt-enrichments.json` | Corrections apprises injectees dans les mandats | A chaque correction apprise |
+| `meta-tests.json` | Resultats des meta-tests du process | Periodiquement |
 
 ### Regles
 

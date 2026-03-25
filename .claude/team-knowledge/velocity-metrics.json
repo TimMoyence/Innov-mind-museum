@@ -1,0 +1,78 @@
+{
+  "lastUpdated": "2026-03-25",
+  "runs": [
+    {
+      "id": "R1",
+      "date": "2026-03-24",
+      "mode": "refactor (audit)",
+      "score": 91,
+      "agentsSpawned": 7,
+      "filesTouched": 17,
+      "testsWritten": 0,
+      "filesPerAgent": 2.4,
+      "roiMoyen": 3.5,
+      "correctiveLoops": 0,
+      "firstPassRate": 1.0,
+      "estimation": "L",
+      "result": "PASS"
+    },
+    {
+      "id": "R2",
+      "date": "2026-03-24",
+      "mode": "refactor (Phase 0+1)",
+      "score": 95,
+      "agentsSpawned": 1,
+      "filesTouched": 17,
+      "testsWritten": 0,
+      "filesPerAgent": 17.0,
+      "roiMoyen": 5.0,
+      "correctiveLoops": 0,
+      "firstPassRate": 1.0,
+      "estimation": "S",
+      "result": "PASS"
+    },
+    {
+      "id": "R3",
+      "date": "2026-03-24",
+      "mode": "refactor (V1.1)",
+      "score": 97,
+      "agentsSpawned": 4,
+      "filesTouched": 37,
+      "testsWritten": 0,
+      "filesPerAgent": 9.25,
+      "roiMoyen": 4.5,
+      "correctiveLoops": 0,
+      "firstPassRate": 1.0,
+      "estimation": "L",
+      "result": "PASS"
+    },
+    {
+      "id": "R4",
+      "date": "2026-03-25",
+      "mode": "chore (audit enterprise-grade)",
+      "score": 88,
+      "agentsSpawned": 5,
+      "filesTouched": 0,
+      "testsWritten": 0,
+      "filesPerAgent": 0,
+      "roiMoyen": 4.6,
+      "correctiveLoops": 0,
+      "firstPassRate": 1.0,
+      "estimation": "L",
+      "result": "PASS",
+      "notes": "Read-only audit. Score 88 = run quality. Product maturity score: 3.52/5 (CONDITIONNEL). 37 findings (12C + 25M)."
+    }
+  ],
+  "averages": {
+    "score": 92.75,
+    "filesPerAgent": 7.16,
+    "correctiveLoops": 0,
+    "firstPassRate": 1.0,
+    "roiMoyen": 4.4
+  },
+  "trends": {
+    "scoreTrend": "STABLE-DOWN (91 -> 95 -> 97 -> 88) — R4 lower due to audit mode scoring",
+    "loopsTrend": "STABLE (0)",
+    "roiTrend": "UP (3.5 -> 5.0 -> 4.5 -> 4.6)"
+  }
+}
