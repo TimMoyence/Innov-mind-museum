@@ -10,7 +10,13 @@ import {
   type ReactNode,
 } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { apiPost } from '@/lib/api';
+import {
+  apiPost,
+  setTokens,
+  clearTokens,
+  registerLogoutHandler,
+} from '@/lib/api';
+import type { LoginResponse } from '@/lib/admin-types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -28,20 +34,10 @@ export interface AuthUser {
 
 interface AuthContextValue {
   user: AuthUser | null;
-  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-}
-
-/** Matches backend POST /api/auth/login response shape. */
-interface LoginResponse {
-  user: AuthUser;
-  tokens: {
-    accessToken: string;
-    refreshToken: string;
-  };
 }
 
 // ---------------------------------------------------------------------------
@@ -56,30 +52,11 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const login = useCallback(
-    async (email: string, password: string) => {
-      setIsLoading(true);
-      try {
-        const data = await apiPost<LoginResponse>('/api/auth/login', {
-          email,
-          password,
-        });
-        setToken(data.tokens.accessToken);
-        setUser(data.user);
-        // TODO (W2): store refreshToken + implement auto-refresh on 401
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [],
-  );
-
   const logout = useCallback(() => {
-    setToken(null);
+    clearTokens();
     setUser(null);
     // Redirect to login — extract locale from current path
     const segments = window.location.pathname.split('/');
@@ -87,16 +64,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push(`/${locale}/admin/login`);
   }, [router]);
 
+  // Register the logout handler so api.ts can trigger it on refresh failure
+  useEffect(() => {
+    registerLogoutHandler(logout);
+  }, [logout]);
+
+  const login = useCallback(async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const data = await apiPost<LoginResponse>('/api/auth/login', {
+        email,
+        password,
+      });
+      // Store both tokens in the api.ts in-memory store
+      setTokens(data.tokens.accessToken, data.tokens.refreshToken);
+      setUser(data.user);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
-      token,
-      isAuthenticated: token !== null && user !== null,
+      isAuthenticated: user !== null,
       isLoading,
       login,
       logout,
     }),
-    [user, token, isLoading, login, logout],
+    [user, isLoading, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

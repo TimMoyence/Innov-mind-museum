@@ -33,10 +33,30 @@ export interface Dictionary {
     title: string;
     subtitle: string;
     cta: string;
+    ctaSecondary: string;
   };
   features: {
     title: string;
     items: { title: string; description: string }[];
+    gridTitle: string;
+    gridSubtitle: string;
+    grid: { title: string; description: string }[];
+  };
+  showcase: {
+    title: string;
+    description: string;
+    caption: string;
+  };
+  testimonials: {
+    title: string;
+    items: { name: string; role: string; quote: string }[];
+  };
+  download: {
+    title: string;
+    subtitle: string;
+    appStore: string;
+    googlePlay: string;
+    qrLabel: string;
   };
   support: {
     title: string;
@@ -48,6 +68,7 @@ export interface Dictionary {
       emailPlaceholder: string;
       messagePlaceholder: string;
       submit: string;
+      success: string;
     };
   };
   privacy: {

@@ -15,7 +15,8 @@
   "hero": {
     "title": "Votre guide muséal, propulsé par l'IA",
     "subtitle": "Photographiez une œuvre, posez une question — Musaium vous répond avec le contexte historique, artistique et culturel de chaque pièce.",
-    "cta": "Télécharger l'application"
+    "cta": "Télécharger l'application",
+    "ctaSecondary": "En savoir plus"
   },
   "features": {
     "title": "Comment ça marche",
@@ -32,7 +33,67 @@
         "title": "Recevez une réponse",
         "description": "L'IA analyse l'œuvre et vous répond en temps réel avec des sources fiables."
       }
+    ],
+    "gridTitle": "Tout ce dont vous avez besoin",
+    "gridSubtitle": "Musaium combine reconnaissance visuelle, intelligence artificielle et données culturelles pour une expérience muséale sans précédent.",
+    "grid": [
+      {
+        "title": "Reconnaissance visuelle",
+        "description": "Prenez en photo une œuvre et l'IA l'identifie instantanément grâce à la vision par ordinateur."
+      },
+      {
+        "title": "Chat IA contextuel",
+        "description": "Posez vos questions en langage naturel et recevez des réponses détaillées et sourcées."
+      },
+      {
+        "title": "Multilingue",
+        "description": "Interagissez dans votre langue. Musaium comprend et répond en français, anglais et plus encore."
+      },
+      {
+        "title": "Historique de visites",
+        "description": "Retrouvez toutes vos conversations et œuvres explorées, organisées par visite."
+      },
+      {
+        "title": "Mode hors-ligne",
+        "description": "Accédez à vos conversations précédentes même sans connexion internet."
+      },
+      {
+        "title": "Sources fiables",
+        "description": "Chaque réponse est enrichie par Wikidata et des bases de données culturelles vérifiées."
+      }
     ]
+  },
+  "showcase": {
+    "title": "Une expérience pensée pour le musée",
+    "description": "Interface épurée, réponses instantanées et navigation intuitive. Musaium s'adapte à votre rythme de visite pour une découverte sans friction.",
+    "caption": "Disponible sur iOS et Android"
+  },
+  "testimonials": {
+    "title": "Ce qu'en disent nos utilisateurs",
+    "items": [
+      {
+        "name": "Marie Leclerc",
+        "role": "Visiteuse régulière",
+        "quote": "Musaium a complètement transformé mes visites. Je comprends enfin les œuvres en profondeur, comme si j'avais un guide personnel dans ma poche."
+      },
+      {
+        "name": "Antoine Dubois",
+        "role": "Étudiant en histoire de l'art",
+        "quote": "Les sources Wikidata et la qualité des réponses sont impressionnantes. C'est devenu un outil indispensable pour mes recherches au musée."
+      },
+      {
+        "name": "Sophie Martin",
+        "role": "Guide touristique",
+        "quote": "Je recommande Musaium à tous mes groupes. L'application complète parfaitement mes explications avec des détails que je n'ai pas toujours le temps de couvrir."
+      }
+    ]
+  },
+  "download": {
+    "title": "Prêt à transformer vos visites ?",
+    "subtitle": "Téléchargez Musaium gratuitement et commencez à explorer les musées autrement.",
+    "appStore": "App Store",
+    "googlePlay": "Google Play",
+    "qrLabel": "Scannez pour télécharger"
   },
   "support": {
     "title": "Centre d'aide",
@@ -60,7 +121,8 @@
       "namePlaceholder": "Votre nom",
       "emailPlaceholder": "Votre email",
       "messagePlaceholder": "Décrivez votre question ou problème...",
-      "submit": "Envoyer"
+      "submit": "Envoyer",
+      "success": "Merci ! Votre message a bien été envoyé. Nous vous répondrons dans les plus brefs délais."
     }
   },
   "privacy": {
