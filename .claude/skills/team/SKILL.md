@@ -63,6 +63,8 @@ L'objectif est l'**autonomie complete** : une equipe d'agents capables de produi
 4. **Intelligence d'allocation** — spawner les bons agents au bon moment. Pas d'agent inutile, mais pas de sous-effectif non plus.
 5. **Tracabilite** — chaque decision, chaque modification, chaque verdict est documente.
 6. **La Sentinelle est 1 seul agent** pour tout le run — spawnee au debut, communiquee via SendMessage.
+7. **Context Efficiency** — tout output respecte un budget de contexte. Les rapports ont un summary autonome, la KB en JSON est la source de verite permanente.
+8. **Penser produit** — chaque agent verifie la viabilite utilisateur, pas seulement la conformite technique.
 
 ### Agents disponibles
 
@@ -99,6 +101,15 @@ Tous les agents utilisent **model: opus**.
 - Les tests existants ne doivent pas casser
 - [Recommandations Sentinelle actives a respecter]
 
+### Patterns connus (injection KB automatique)
+[Auto-filtres depuis error-patterns.json et prompt-enrichments.json par le Tech Lead]
+- [EP-XXX] [pattern] → fix: [fix connu]
+- [PE-XXX] [regle apprise] → respecter obligatoirement
+
+### Criteres de viabilite
+AVANT de coder, verifier que ta solution repond a :
+- [ ] [criteres adaptes au scope — cf. section Viabilite]
+
 ### Criteres de succes
 [Comment le Tech Lead verifiera que le travail est conforme]
 
@@ -106,7 +117,25 @@ Tous les agents utilisent **model: opus**.
 [Ce que l'agent ne doit PAS faire — explicite pour eviter le scope creep]
 ```
 
+**Le Tech Lead DOIT** remplir la section `Patterns connus` en consultant `error-patterns.json` et `prompt-enrichments.json` AVANT de spawner l'agent. Ne pas envoyer un mandat sans cette section.
+
 **Un agent sans mandat formel est un agent non fiable.**
+
+### Criteres de Viabilite (obligatoire dans chaque mandat)
+
+Chaque mandat d'implementation DOIT inclure une section **CRITERES DE VIABILITE** que l'agent verifie AVANT de coder :
+
+```
+### Criteres de viabilite
+AVANT de coder, verifier que ta solution repond a :
+- [ ] Les donnees survivent-elles a un changement de vue/ecran/navigation ?
+- [ ] Les etats sont-ils persistes correctement (pas juste en memoire locale) ?
+- [ ] Un utilisateur qui ferme et rouvre l'app retrouve-t-il son travail ?
+- [ ] Le comportement est-il coherent pour un utilisateur reel (pas juste pour le prompt) ?
+- [ ] Les edge cases utilisateur (offline, timeout, permissions refusees) sont-ils geres ?
+```
+
+**Pourquoi** : Les agents codent exactement ce qu'on leur demande mais ne pensent pas "produit". Les criteres de viabilite forcent la reflexion utilisateur avant l'implementation. Pattern observe sur ZenFirst : des features livrees sans persistance car le prompt ne le demandait pas explicitement.
 
 ### Intelligence d'allocation
 
@@ -455,6 +484,110 @@ cd museum-backend && pnpm lint 2>&1 | grep "error TS" | wc -l
 
 ---
 
+## CONTEXT EFFICIENCY PROTOCOL
+
+Le systeme /team genere des rapports, des KB entries, et des communications. TOUS les outputs doivent respecter un **budget de contexte** pour eviter de noyer les futures conversations dans des informations non pertinentes.
+
+### Rapport Journalier — Format Compact
+
+Chaque rapport (`team-reports/YYYY-MM-DD.md`) DOIT commencer par un **Executive Summary** (max 60 lignes) autonome. Le detail est de la reference consultable, pas du contexte obligatoire.
+
+**Template Executive Summary :**
+
+```markdown
+# YYYY-MM-DD — Executive Summary
+
+> **N runs | Score moyen: N/100 | Tests: N→N (+N) | Coverage: N%→N%**
+
+| Run | Mode | Score | Commit | Delta cle |
+
+### Decisions cles
+[max 5 bullet points]
+
+### Recommandations actives
+| ID | Recommandation | Depuis | Sprints | Statut |
+
+### Quality Ratchet
+| Metrique | Debut | Fin | Delta |
+
+### Prochaine etape
+[1 phrase]
+
+---
+<!-- DETAIL REFERENCE ci-dessous — archive consultable, pas du contexte obligatoire -->
+```
+
+### Regles de contexte
+
+1. **Le summary est autonome** — un lecteur qui ne lit QUE le summary a 90% de l'info necessaire pour le prochain run
+2. **Max 60 lignes** pour le summary — au-dela, condenser
+3. **Le detail est de la reference** — sous la barre `<!-- DETAIL REFERENCE -->`, consultable a la demande
+4. **La KB JSON est la source de verite permanente** — les rapports sont des snapshots datees, la KB (`team-knowledge/*.json`) est le contexte permanent
+5. **Conversation fraiche par run** — chaque run `/team` PEUT demarrer dans une nouvelle conversation. La KB JSON + MEMORY.md + CLAUDE.md suffisent a reconstituer le contexte. Pas besoin de garder l'historique de N runs dans le meme thread
+6. **Pas de duplication KB ↔ rapport** — le rapport resume, la KB structure. Ne pas copier les memes donnees dans les deux
+7. **Compaction J-1** — quand un nouveau jour commence, seuls le summary du jour precedent et la KB font foi. Le detail est archive
+
+### Smart Context Loading
+
+Au demarrage d'un run, le Tech Lead charge uniquement :
+
+```
+1. KB JSON (source de verite)           — team-knowledge/*.json
+2. Recommandations actives              — du summary du dernier rapport
+3. Dernier commit log (5 derniers)      — git log --oneline -5
+4. Pre-flight baseline                  — execute en live
+```
+
+**NE PAS charger** : rapports complets des jours precedents, detail des runs archives, historique git complet.
+
+---
+
+## INSTITUTIONAL LEARNING
+
+Les patterns decouverts pendant les runs sont codifies en **regles formelles** (IL-N) qui s'appliquent automatiquement aux runs suivants. C'est le mecanisme qui transforme les erreurs ponctuelles en corrections permanentes.
+
+### Regles codifiees
+
+| ID | Regle | Origine | Application |
+|----|-------|---------|-------------|
+| IL-1 | **Post-rewrite diff check** — Apres toute reecriture totale d'un fichier, verifier via `git diff` que le contenu original est preserve | Run docker-compose audit: 3 regressions par reecriture | Tout agent qui reecrit un fichier entier |
+| IL-2 | **Spec-first pour features > 8h** — Ecrire une specification complete (architecture, API, interfaces, tests, risques) avant toute implementation | S8 Wikidata spec = multiplicateur de productivite | Phase Design pour features > 8h |
+| IL-3 | **Integration-first apres ceiling** — Quand coverage unit stagne (~55% branches), passer aux tests integration supertest | S8 gap 55%→60%, routes HTTP = 0% branches | Phase Test quand coverage unit ne progresse plus |
+| IL-4 | **Typecheck = gate pre-test** — Executer `tsc --noEmit` AVANT de declarer les tests "verts" | S8 TS2556 AuthContext — tests Jest OK mais CI casse | Verification Pipeline: TYPE avant TEST |
+| IL-5 | **Edition chirurgicale > reecriture** — Preferer `Edit` cible a `Write` complet pour fichiers > 50L | Runs docker audit R1 vs R2 | Tout agent dev |
+| IL-6 | **Discovery croisee code-vs-config** — Auditer configs en partant du code source (env.ts, imports) | Run audit infra: methode fiable pour vars mortes | Chore infra/config |
+
+### Mecanisme d'ajout
+
+1. La Sentinelle detecte un pattern (observe 2+ fois dans les runs)
+2. Propose une nouvelle regle IL-N (amendement MINOR)
+3. La regle est ajoutee a cette table et a `prompt-enrichments.json`
+4. Monitoring 2 runs. Si la regle cause des problemes → auto-revert
+
+### Prompt Enrichments
+
+Les regles IL-N et les corrections apprises sont stockees dans `.claude/team-knowledge/prompt-enrichments.json`. Le Tech Lead **injecte automatiquement** les enrichissements pertinents dans les mandats agents.
+
+**Format :**
+
+```json
+{
+  "enrichments": [
+    {
+      "id": "PE-001",
+      "rule": "useState local pour donnees metier = BUG. Utiliser un store ou hook persistant.",
+      "source": "ZenFirst runs 5-6: donnees perdues au changement de step",
+      "inject_when": "agent cree composant avec etat metier",
+      "severity": "HIGH"
+    }
+  ]
+}
+```
+
+**Injection** : le Tech Lead parcourt `prompt-enrichments.json` au demarrage et inclut les enrichissements pertinents dans le mandat de chaque agent. Un agent qui viole un enrichissement connu voit son score baisser.
+
+---
+
 ## AUTO-AMENDEMENT DU PROCESS
 
 La Sentinelle peut **modifier le process lui-meme** pour qu'il evolue. Mais toute auto-modification est soumise a des garde-fous anti-regression.
@@ -551,60 +684,91 @@ En mode **L3+** pour les features non-risquees :
 
 ## BASE DE CONNAISSANCES
 
-La Sentinelle maintient une base de connaissances dans `.claude/team-knowledge/` qui s'enrichit a chaque run.
+La Sentinelle maintient une base de connaissances **structuree en JSON** dans `.claude/team-knowledge/` qui s'enrichit a chaque run. Le format JSON permet des requetes structurees et evite la pollution de contexte des tableaux markdown.
 
 ### Structure
 
 ```
 .claude/team-knowledge/
-├── autonomy.md              # Niveau d'autonomie actuel + historique
-├── amendments.md            # Log des auto-amendements du process
-├── agent-performance.md     # Score moyen par agent, forces/faiblesses recurrentes
-├── error-patterns.md        # Erreurs recurrentes + fix connus
-├── estimation-accuracy.md   # S/M/L estime vs reel (boucles, fichiers, temps)
-└── velocity.md              # Metriques de velocite par run
+├── autonomy-state.json        # Niveau d'autonomie actuel + historique
+├── process-amendments.json    # Log des auto-amendements du process
+├── agent-performance.json     # Score moyen par agent, ROI, forces/faiblesses
+├── error-patterns.json        # Erreurs recurrentes + fix connus + verification
+├── estimation-accuracy.json   # S/M/L estime vs reel (boucles, fichiers)
+├── velocity-metrics.json      # Metriques de velocite par run
+└── prompt-enrichments.json    # Corrections apprises injectees dans les mandats
 ```
 
-### agent-performance.md
+### agent-performance.json
 
-```markdown
-| Agent | Runs | Score moyen | Tendance | Force principale | Faiblesse recurrente | Fiabilite self-verif |
-|-------|------|-------------|----------|------------------|----------------------|----------------------|
-| Backend Architect | 12 | 8.4/10 | ↑ | Architecture coherente | Scope creep sur les helpers | 90% |
-| QA Engineer | 10 | 7.8/10 | → | Tests exhaustifs | Oublie le typecheck | 70% |
+Chaque agent a un **verdict ROI** : `ESSENTIEL` (ROI > 3) | `VALEUR` (ROI 1-3) | `NEUTRE` (ROI ~1) | `BRUIT` (ROI < 1, candidat a retraite).
+
+```json
+{
+  "agents": {
+    "Backend Architect": {
+      "totalRuns": 3, "averageScore": 9.3, "averageROI": 4.2,
+      "verdict": "ESSENTIEL",
+      "strengths": ["Architecture coherente", "0 regression"],
+      "weaknesses": [],
+      "selfVerificationRate": 1.0,
+      "retired": false
+    }
+  },
+  "retirementCandidates": [],
+  "fusionRecommendations": []
+}
 ```
 
-La Sentinelle met a jour ce fichier a chaque rapport final. Les tendances sont calculees sur les 5 derniers runs.
+**ROI** = (valeur produite / complexite du mandat). Un agent qui score < 1.0 sur 2+ runs est candidat a retraite ou fusion.
 
-### error-patterns.md
+### error-patterns.json
 
-```markdown
-| Pattern | Frequence | Derniere occurrence | Fix connu | Agent concerne |
-|---------|-----------|---------------------|-----------|----------------|
-| TS2556 spread args sur fonction sans rest | 2 fois | 2026-03-24 S8 | Remplacer `(...args) =>` par `() =>` | QA Engineer |
-| `as any` au lieu de `jest.Mocked<T>` | 3 fois | 2026-03-24 S8 | Utiliser `jest.Mocked<InterfaceName>` | QA Engineer, Backend Architect |
-| Import domain → adapter | 1 fois | 2026-03-23 | Deplacer l'import dans le use case barrel | Backend Architect |
+Chaque pattern a un **cycle de vie** : detecte → fix identifie → fix applique → fix verifie.
+
+```json
+{
+  "patterns": [
+    {
+      "id": "EP-001", "name": "TS2556_SPREAD_ARGS",
+      "occurrences": 2, "lastSeen": "2026-03-24",
+      "runs": ["S8"], "severity": 3,
+      "fix": "Remplacer (...args: unknown[]) => fn(...args) par () => fn()",
+      "fixApplied": true, "fixAppliedDate": "2026-03-24",
+      "fixVerified": true, "fixVerifiedRuns": ["S8-fix"]
+    }
+  ]
+}
 ```
 
-Quand un agent rencontre une erreur, la Sentinelle verifie d'abord si un fix connu existe dans cette base. Si oui, elle l'inclut dans le mandat de correction.
+Quand un agent rencontre une erreur, la Sentinelle verifie d'abord `error-patterns.json` pour un fix connu. Si oui, elle l'inclut dans le mandat de correction.
 
-### estimation-accuracy.md
+### prompt-enrichments.json
 
-```markdown
-| Run | Mode | Estimation | Boucles reelles | Fichiers estimes | Fichiers reels | Precision |
-|-----|------|------------|-----------------|------------------|----------------|-----------|
-| R12 | feature | M | 1 | 8 | 11 | 73% |
-| R13 | bug | S | 0 | 2 | 2 | 100% |
+Corrections apprises injectees dans les mandats agents (cf. section INSTITUTIONAL LEARNING).
+
+```json
+{
+  "enrichments": [
+    {
+      "id": "PE-001",
+      "rule": "jest.Mocked<T> au lieu de as any pour les repos mock dans les tests",
+      "source": "S7-S8: as any en hausse (+27), pattern corrige en V1.1",
+      "inject_when": "agent ecrit des tests avec mocks de repositories",
+      "severity": "HIGH"
+    }
+  ]
+}
 ```
 
-Sert a calibrer les estimations futures. Si les features M ont en moyenne 1.5x plus de fichiers que prevu, l'estimation suivante est ajustee.
+### Regles de la KB
 
-### Regles de la base
-
-- **Mise a jour a chaque fin de run** par la Sentinelle
+- **Format JSON obligatoire** — structuree, append-only, requetable
+- **Mise a jour a chaque fin de run** par la Sentinelle via FINALIZE
 - **Les donnees sont factuelles** — pas d'opinions, des metriques
-- **Retention** : garder les 20 derniers runs. Au-dela, agreger en moyennes.
-- **La base informe les decisions** — quand le Tech Lead choisit quel agent spawner, il consulte `agent-performance.md`
+- **Retention** : garder les 20 derniers runs. Au-dela, agreger en moyennes
+- **La base informe les decisions** — quand le Tech Lead choisit quel agent spawner, il consulte `agent-performance.json`
+- **Source de verite permanente** — la KB survit aux conversations. Les rapports sont des snapshots jetables
 
 ---
 
@@ -1129,11 +1293,70 @@ Boucle: [numero de l'iteration]
 - [ ] Pour `bug` : le test de regression reproduit le bug et passe apres fix
 - [ ] **Quality Ratchet** : aucune metrique n'a regresse par rapport au pre-flight
 
+### Pyramide de Tests Frontend (React Native)
+
+Le frontend a 4 niveaux de tests. Chaque run DOIT couvrir le niveau adapte au scope modifie.
+
+```
+L4: Flows E2E (Detox/Maestro)          ← FUTUR (pas encore en place)
+L3: Composants (jest-expo/render)       ← A DEVELOPPER (0 tests actuellement)
+L2: Hooks (jest-expo/renderHook)        ← PARTIEL (3/~15 hooks testes)
+L1: Fonctions pures (node:test)         ← FAIT (90 tests)
+```
+
+| Niveau | Quand tester | Comment | Priorite |
+|--------|-------------|---------|----------|
+| **L1** | Toute fonction pure modifiee (utils, mappers, contracts) | `node:test` dans `.test-dist/` | Toujours |
+| **L2** | Tout hook React modifie/cree | `jest-expo` + `renderHook`/`act`/`waitFor` | Toujours si hook modifie |
+| **L3** | Tout composant UI critique modifie (chat, auth, settings) | `jest-expo` + `render` + `fireEvent` | Feature/refactor UI |
+| **L4** | Parcours utilisateur complet (onboarding → chat → settings) | Detox ou Maestro | Pre-release |
+
+**Hooks prioritaires non testes** (par criticite) :
+1. `useChatSession` (300+ lignes, le plus critique)
+2. `useImagePicker`
+3. `useAudioRecorder`
+4. `useSettings`
+
+**Cohabitation runners** : `node:test` (L1) + `jest-expo` (L2-L3) coexistent via `npm test` = `test:node && test:rn`.
+
+---
+
+### Phase 6b — SMOKE TEST API (si routes modifiees/creees)
+
+Apres les tests unitaires, si des routes HTTP ont ete modifiees ou creees :
+
+1. **Option A** (si le serveur backend tourne) :
+```bash
+cd museum-backend && pnpm smoke:api
+```
+
+2. **Option B** (tests integration inline avec supertest) :
+Pour chaque route modifiee/creee, tester au minimum :
+- 1 test happy path (200/201)
+- 1 test auth (401 sans token)
+- 1 test validation (400/422 avec payload invalide)
+
+```typescript
+// Exemple pour POST /api/auth/login
+describe('POST /api/auth/login', () => {
+  it('returns 200 with valid credentials', async () => { ... });
+  it('returns 401 with wrong password', async () => { ... });
+  it('returns 422 with missing email', async () => { ... });
+});
+```
+
+3. **Quand skipper** : si le run n'a modifie aucune route HTTP, cette phase est skippee.
+
+**Impact** : les routes HTTP representent 293 branches a 0% coverage — c'est le gisement le plus important.
+
+---
+
 → **PORTE SENTINELLE 5** : SendMessage avec :
 ```
 PORTE 5 — TEST
 Tests ecrits: [nombre] nouveaux tests, [liste fichiers]
 Self-verification QA Engineer: [rapport]
+Smoke test API: [PASS/FAIL/SKIP — routes testees]
 
 Verification Pipeline:
   LINT: PASS/FAIL [erreurs avec code + fichier:ligne]
@@ -1142,6 +1365,7 @@ Verification Pipeline:
   TEST frontend: PASS/FAIL (N pass, N fail, N skip)
 
 Erreurs trouvees: [Error Taxonomy complete]
+Discoveries agents: [si des agents ont signale des problemes hors scope]
 
 Quality Ratchet:
   Tests count: [pre-flight] → [post-test] (delta)
@@ -1170,9 +1394,23 @@ SKIP pour mockup et chore (sauf si chore modifie du code de production).
    - `pnpm openapi:validate`
    - `pnpm test:contract:openapi`
    - `cd museum-frontend && npm run generate:openapi-types && npm run check:openapi-types`
-3. Build de verification : `pnpm build`
+3. **CI Dry-Run** (NON NEGOCIABLE) — simuler localement ce que le CI va faire :
+   ```bash
+   # Simuler ci-backend.yml
+   cd museum-backend && pnpm lint && pnpm test && pnpm build 2>&1 | tail -20
+
+   # Simuler ci-frontend.yml
+   cd museum-frontend && npm run lint && npm test
+   ```
+   Si une etape echoue → **BLOCK SHIP**. Un code qui passe en local mais echoue en CI est un defaut du process, pas du CI.
+
 4. Si securite touchee → spawner Security Analyst pour un audit final
-5. Mettre a jour `docs/V1_Sprint/PROGRESS_TRACKER.md` et `docs/V1_Sprint/SPRINT_LOG.md`
+
+5. **Sprint Tracking** (NON SKIPABLE) — mettre a jour :
+   - `docs/V1_Sprint/PROGRESS_TRACKER.md` — cocher les items termines, ajouter les metriques
+   - `docs/V1_Sprint/SPRINT_LOG.md` — ajouter une entree avec : commit, scope, delta tests, delta coverage, decisions cles
+   - Si le tracking est en retard (sprints manquants) → le rattraper DANS CE RUN, pas le reporter
+
 6. Proposer le commit et/ou le PR a l'utilisateur
 
 → **PORTE SENTINELLE FINALE** : Rapport complet du run → `.claude/team-reports/YYYY-MM-DD.md`
@@ -1187,10 +1425,31 @@ La Sentinelle est un **CTO tres experimente** qui observe tout le cycle de devel
 
 ### Spawn et communication
 
-1. **Spawnee une seule fois** en arriere-plan au debut du run avec le contexte :
-   - Mode detecte, description, scope, agents selectionnes, phases planifiees
-   - Recommandations pendantes des runs precedents
-   - Instruction : lire le rapport du jour s'il existe pour enrichir
+1. **Spawnee une seule fois** en arriere-plan au debut du run avec le **protocole INIT** :
+
+```
+SENTINEL_INIT:
+  mode: {mode}
+  description: {desc}
+  scope: {backend|frontend|full-stack|infra}
+  autonomy_level: {L1|L2|L3|L4}
+  phases: [1,2,3,4,5,6,7]
+  knowledge_base_summary: {resume des fichiers JSON de team-knowledge/}
+  active_recommendations: {liste des recommandations ouvertes avec anciennete}
+  prompt_enrichments: {enrichissements pertinents pour ce run}
+```
+
+La Sentinelle repond avec un **ACK structure** :
+
+```
+ACK: Run #{N} mode:{mode}
+AUTONOMY: L{N} — {conditions de montee/descente}
+ALERTES PRE-RUN:
+  - [EP-{N}]: "{pattern}" — fix connu: "{fix}"
+  - Agents a eviter (ROI < 1.0): [...]
+VELOCITY BASELINE: filesPerAgent avg={X}, correctiveLoops avg={X}
+PROMPT ENRICHMENTS INJECTES: [PE-001, PE-003, ...]
+```
 
 2. **A chaque porte**, le Tech Lead envoie un SendMessage structure a la Sentinelle et **attend le verdict** avant de continuer.
 
@@ -1224,12 +1483,82 @@ Un seul fichier rapport par jour : `.claude/team-reports/YYYY-MM-DD.md`.
 Si le fichier du jour existe deja → enrichir (ajouter une section).
 
 Le rapport inclut :
+- **Executive Summary** (max 60 lignes, cf. Context Efficiency Protocol) — OBLIGATOIRE en tete
 - Metadata du run (mode, scope, agents, temps)
 - Scorecard par porte (verdict + score pour chaque porte traversee)
-- Bilan par agent (scope, livraison, score, forces, faiblesses)
+- Bilan par agent (scope, livraison, score, ROI, forces, faiblesses)
 - Suivi recommandations : appliquees, ignorees, nouvelles
 - Metriques consolidees (tests, coverage, typecheck, boucles correctives)
 - Amelioration continue (patterns positifs, problemes recurrents, tendances)
+
+### Sentinel Spot-Check
+
+La Sentinelle ne se contente pas de faire confiance aux verdicts des agents. Elle **verifie un echantillon du code** :
+
+1. A chaque porte post-DEV, lire **1 fichier modifie au hasard**
+2. Verifier manuellement : pas de `any` injustifie, architecture respectee, conventions suivies
+3. Si le spot-check revele un probleme non rapporte par l'agent → **score de l'agent baisse**
+4. Le spot-check est note dans le rapport : `Spot-check: [fichier] — [verdict]`
+
+**Pourquoi** : le Sentinel evalue le process mais pas la qualite du code. Si le QA rate un bug, le Sentinel le rate aussi. Le spot-check ajoute une verification independante.
+
+### FINALIZE — Mise a jour KB
+
+A la cloture du run, la Sentinelle execute le protocole **FINALIZE** :
+
+```
+FINALIZE:
+  1. Mettre a jour team-knowledge/velocity-metrics.json (nouveau run)
+  2. Mettre a jour team-knowledge/agent-performance.json (scores, ROI)
+  3. Mettre a jour team-knowledge/error-patterns.json (nouveaux patterns, verifications)
+  4. Mettre a jour team-knowledge/autonomy-state.json (conditions de montee/descente)
+  5. Mettre a jour team-knowledge/estimation-accuracy.json (estime vs reel)
+  6. Si amendement propose → team-knowledge/process-amendments.json
+  7. Si correction apprise → team-knowledge/prompt-enrichments.json
+  8. Consolider les DISCOVERIES des agents (problemes hors scope signales)
+  9. Produire le NEXT_RUN_RECOMMENDATION
+  10. Ecrire/enrichir le rapport journalier (summary + detail)
+```
+
+### NEXT_RUN_RECOMMENDATION
+
+A chaque FINALIZE, la Sentinelle produit une **recommandation de prochain run** stockee dans `velocity-metrics.json`. Le Tech Lead et l'utilisateur savent immediatement quoi faire ensuite.
+
+**Format :**
+
+```json
+{
+  "nextRunRecommendation": {
+    "priority": "P0",
+    "mode": "bug",
+    "description": "Fix TS2556 AuthContext.test.tsx — CI frontend casse",
+    "rationale": "Bloque tous les deploys frontend. Quick fix: () => mockGetAccessToken()",
+    "estimatedEffort": "S",
+    "backlogRanked": [
+      { "rank": 1, "id": "R-P0", "item": "Fix TS2556", "score": 10, "reason": "CI bloque" },
+      { "rank": 2, "id": "R-P1", "item": "Tests supertest routes HTTP", "score": 8, "reason": "293 branches a 0%" },
+      { "rank": 3, "id": "R-P2", "item": "SSE_TIMEOUT_MS env var", "score": 5, "reason": "3e sprint, escalade" }
+    ],
+    "agentsRecommended": ["QA Engineer"],
+    "discoveriesToAddress": ["[liste des DISCOVERIES non traitees des agents]"]
+  }
+}
+```
+
+**Scoring du backlog :**
+
+| Critere | Points |
+|---------|--------|
+| CI/build casse | +10 |
+| Recommandation escaladee (3+ sprints) | +5 |
+| Coverage gap > 10pp | +4 |
+| Security finding non corrige | +4 |
+| Recommandation reconduite (2 sprints) | +3 |
+| Discovery agent non traitee | +2 |
+| Business value (feature strategique) | +2 |
+| Quick win (effort S) | +1 |
+
+La KB JSON est la **source de verite permanente**. Le rapport est un snapshot lisible.
 
 ---
 

@@ -1,0 +1,61 @@
+{
+  "lastUpdated": "2026-03-25",
+  "enrichments": [
+    {
+      "id": "PE-001",
+      "rule": "jest.Mocked<T> au lieu de as any pour les repos mock dans les tests. Pattern: const mockRepo = { method: jest.fn() } as jest.Mocked<PortInterface>",
+      "source": "S7-S8: as any en hausse (+27), corrige V1.1 wave-c (64->0)",
+      "inject_when": "agent ecrit des tests avec mocks de repositories ou services injectes",
+      "severity": "HIGH",
+      "r4Validation": "CONFIRME ACTIF — 0 as-any total, pattern respecte"
+    },
+    {
+      "id": "PE-002",
+      "rule": "Apres toute reecriture totale d'un fichier, verifier via git show HEAD~1:path/file vs version actuelle que le contenu original est preserve",
+      "source": "Docker-compose audit Run #1: 3 regressions par reecriture (APP_VARIANT, CloudFlare, Redis)",
+      "inject_when": "agent reecrit un fichier entier (Write au lieu de Edit)",
+      "severity": "HIGH"
+    },
+    {
+      "id": "PE-003",
+      "rule": "tsc --noEmit DOIT passer AVANT de declarer les tests verts. Un test qui passe Jest mais echoue tsc casse le CI.",
+      "source": "S8: TS2556 AuthContext.test.tsx — tests Jest OK mais tsc --noEmit FAIL -> CI casse",
+      "inject_when": "agent ecrit ou modifie des tests",
+      "severity": "CRITICAL"
+    },
+    {
+      "id": "PE-004",
+      "rule": "Pour les hooks React Native avec etat metier, verifier que les donnees survivent a un changement de vue/navigation. Utiliser un store ou hook persistant, pas useState local.",
+      "source": "ZenFirst runs 5-6: donnees perdues au changement de step car useState local",
+      "inject_when": "agent cree un composant ou hook avec etat metier",
+      "severity": "HIGH",
+      "r4Validation": "CONFIRME ACTIF — 2 violations critiques trouvees: useChatSession (C2) + ConversationsScreen (C3). Enrichment pertinent et necessaire."
+    },
+    {
+      "id": "PE-005",
+      "rule": "Ne pas utiliser des chemins relatifs avec grep/rg dans les agents. Toujours utiliser le chemin absolu ou cd vers la racine du repo d'abord.",
+      "source": "Audit 2026-03-24: comptages as any inexacts (25/18 vs reel 21/17) a cause de chemins relatifs + hook RTK",
+      "inject_when": "agent fait du comptage ou de la recherche dans le codebase",
+      "severity": "MEDIUM"
+    },
+    {
+      "id": "PE-006",
+      "rule": "Les .env locaux sont gitignores — ne JAMAIS classifier comme vulnerabilite securite. Seules les cles commitees dans le repo sont des vulnerabilites.",
+      "source": "Audit 2026-03-24: faux positif cle API classee CRITIQUE alors que .env gitignore",
+      "inject_when": "agent fait un audit securite",
+      "severity": "HIGH"
+    },
+    {
+      "id": "PE-007",
+      "rule": "Pour la coverage branches, les tests unitaires ont un plafond (~55%). Au-dela, il faut des tests integration supertest pour les routes HTTP Express.",
+      "source": "S8: gap 55%->60% impossible sans supertest, routes HTTP = 0% branches",
+      "inject_when": "agent travaille sur la coverage ou ecrit des tests pour des routes Express",
+      "severity": "MEDIUM"
+    }
+  ],
+  "r4Summary": {
+    "validated": ["PE-001", "PE-004"],
+    "noNewEnrichments": true,
+    "notes": "R4 audit confirmed PE-001 (0 as-any maintained) and PE-004 (2 critical violations found). No new enrichments needed — existing set covers R4 findings."
+  }
+}

@@ -1,8 +1,19 @@
-# Process Auditor Report — 2026-03-24 chore: docker-compose audit
+# 2026-03-24 chore: docker-compose audit — Executive Summary
+
+> **2 runs | Score combine: 92/100 | 2 fichiers modifies | Livrables: RELEASE_CHECKLIST 12 sections + Dockerfile.prod fix**
+
+- **Run #1 (90/100)** : Audit docker-compose prod vs besoins backend. Livrables : `RELEASE_CHECKLIST.md` (635L, 12 sections actionnables) + fix Dockerfile.prod (mkdir+chown+HEALTHCHECK). 3 regressions doc introduites par reecriture totale.
+- **Run #2 (95/100)** : Hotfix docs-only. 3 edits chirurgicaux : doc Redis semantique, fix APP_VARIANT, restauration CloudFlare. 0 regression residuelle.
+- **Patterns valides** : discovery croisee code-vs-config, edition chirurgicale > reecriture, boucle feedback Process Auditor effective.
+- **Prochaine etape** : run `deploy` pour appliquer les recommandations sur le VPS.
 
 ---
+<!-- DETAIL REFERENCE ci-dessous -->
+---
 
-## Run metadata
+## DETAIL — Run #1
+
+### Run metadata
 
 | Field | Value |
 |-------|-------|
@@ -107,9 +118,8 @@ Ce run est un succes. Les 2 livrables sont corrects, actionnables, et respectent
 **Prochaine etape naturelle** : un run mode `deploy` ou `hotfix` pour appliquer les recommandations sur le VPS (mise a jour du compose prod, .env, verification des migrations). Ce run a produit le plan ; il reste a l'executer.
 
 ---
----
 
-# Run #2 — hotfix (docs-only): Redis semantique + RELEASE_CHECKLIST regressions
+## DETAIL — Run #2 — hotfix (docs-only): Redis semantique + RELEASE_CHECKLIST regressions
 
 ---
 
