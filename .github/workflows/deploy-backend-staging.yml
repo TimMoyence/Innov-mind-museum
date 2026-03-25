@@ -120,7 +120,7 @@ jobs:
           pnpm build
           npx @sentry/cli sourcemaps upload --release="${{ github.sha }}" dist/
 
-      - name: Deploy on VPS staging service
+      - name: Deploy on VPS staging (zero-downtime)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -129,10 +129,33 @@ jobs:
           script: |
             set -e
             cd /srv/museum
+
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin || true
+
+            # 1. Pull the new image
             docker compose pull backend-staging
-            docker compose up -d --remove-orphans backend-staging
-            docker compose exec -T backend-staging node ./node_modules/typeorm/cli.js migration:run -d dist/src/data/db/data-source.js
+
+            # 2. Run migrations in an ephemeral container BEFORE restarting
+            docker compose run --rm --no-deps -T backend-staging \
+              node ./node_modules/typeorm/cli.js migration:run -d dist/src/data/db/data-source.js
+
+            # 3. Restart with 30s grace period for in-flight requests to drain
+            docker compose up -d --remove-orphans --timeout 30 backend-staging
+
+            # 4. Wait for the new container to pass its healthcheck
+            echo "Waiting for backend-staging healthcheck..."
+            TRIES=0
+            MAX_TRIES=20
+            until docker compose exec -T backend-staging node -e "fetch('http://localhost:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))" 2>/dev/null; do
+              TRIES=$((TRIES + 1))
+              if [ "$TRIES" -ge "$MAX_TRIES" ]; then
+                echo "Healthcheck failed after ${MAX_TRIES} attempts"
+                exit 1
+              fi
+              echo "  attempt ${TRIES}/${MAX_TRIES}..."
+              sleep 3
+            done
+            echo "Backend-staging is healthy."
 
       - name: Validate staging smoke secrets
         env:

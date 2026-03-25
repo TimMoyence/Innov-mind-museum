@@ -2,6 +2,7 @@ import type { Request, RequestHandler } from 'express';
 
 import { tooManyRequests } from '@shared/errors/app.error';
 import { InMemoryBucketStore } from '@shared/rate-limit/in-memory-bucket-store';
+import type { RedisRateLimitStore } from './redis-rate-limit-store';
 
 interface Bucket {
   count: number;
@@ -12,6 +13,20 @@ const store = new InMemoryBucketStore<Bucket>({
   isExpired: (entry, now) => entry.resetAt <= now,
 });
 
+/** Shared Redis rate-limit store, set once during app bootstrap. */
+let redisStore: RedisRateLimitStore | null = null;
+
+/**
+ * Register a Redis-backed rate-limit store for distributed rate limiting.
+ * When set, all rate-limit middleware instances will use Redis with in-memory fallback.
+ */
+export const setRedisRateLimitStore = (s: RedisRateLimitStore): void => {
+  redisStore = s;
+};
+
+/** Returns the active Redis rate-limit store, or null if not configured. */
+export const getRedisRateLimitStore = (): RedisRateLimitStore | null => redisStore;
+
 interface RateLimitOptions {
   limit: number;
   windowMs: number;
@@ -19,7 +34,9 @@ interface RateLimitOptions {
 }
 
 /**
- * Creates an in-memory sliding-window rate-limit middleware.
+ * Creates a sliding-window rate-limit middleware.
+ * Uses Redis when a RedisRateLimitStore has been registered via `setRedisRateLimitStore`,
+ * otherwise falls back to the in-memory bucket store.
  * @param options - Limit, window duration, and key extraction strategy.
  * @returns Express middleware that rejects excess requests with 429.
  */
@@ -30,6 +47,30 @@ export const createRateLimitMiddleware = ({
 }: RateLimitOptions): RequestHandler => {
   return (req, res, next) => {
     const key = keyGenerator(req);
+
+    if (redisStore) {
+      void redisStore
+        .increment(key, windowMs)
+        .then(({ count, resetAt }) => {
+          if (count > limit) {
+            const retryAfterSec = Math.max(
+              1,
+              Math.ceil((resetAt - Date.now()) / 1000),
+            );
+            res.setHeader('Retry-After', retryAfterSec.toString());
+            next(tooManyRequests('Too many requests. Please retry later.'));
+            return;
+          }
+          next();
+        })
+        .catch(() => {
+          // If Redis call fails entirely, allow the request (fail-open)
+          next();
+        });
+      return;
+    }
+
+    // In-memory fallback path (original behavior)
     const now = Date.now();
     const current = store.get(key);
 
@@ -85,9 +126,19 @@ export const byUserId = (req: Parameters<RequestHandler>[0]): string => {
 /** Clears all in-memory rate-limit buckets and stops the sweep timer. Intended for test teardown. */
 export const clearRateLimitBuckets = (): void => {
   store.clear();
+  redisStore?.clear();
 };
 
 /** Stops the periodic sweep timer. Call during graceful shutdown. */
 export const stopRateLimitSweep = (): void => {
   store.stopSweep();
+  redisStore?.stopSweep();
+};
+
+/**
+ * Resets the Redis store reference. Intended for test teardown only.
+ * @internal
+ */
+export const _resetRedisStore = (): void => {
+  redisStore = null;
 };
