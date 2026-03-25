@@ -333,6 +333,42 @@
 
 ---
 
+## Sprint W1 — Web Presence Foundations (2026-03-25) (TERMINE)
+
+> Nouveau package museum-web/ (Next.js 15). Landing, support, admin, privacy. i18n FR/EN.
+> Commit: `b37ed6e`
+
+### museum-web (nouveau)
+
+- [x] W1-01: Next.js 15 App Router + Tailwind 4 + TypeScript (standalone output)
+- [x] W1-02: i18n middleware (FR/EN, path-based /[locale]/)
+- [x] W1-03: Dictionnaires FR + EN complets (nav, hero, features, support, admin)
+- [x] W1-04: Marketing landing page (hero, features, app showcase, CTA)
+- [x] W1-05: Support page (FAQ accordion, contact form)
+- [x] W1-06: Privacy policy page (scaffold)
+- [x] W1-07: Admin layout (sidebar responsive, AuthGuard, hamburger mobile)
+- [x] W1-08: Admin login page (JWT, types alignes sur backend)
+- [x] W1-09: Admin pages scaffold (dashboard, users, audit-logs, reports, analytics, tickets, support)
+- [x] W1-10: Shared components (Header, Footer, LanguageSwitcher, Button)
+- [x] W1-11: Auth system (AuthProvider, AuthGuard, useAuth, UserRole matching backend)
+- [x] W1-12: API client (fetch-based, SSR/CSR aware)
+
+### Deployment pipeline
+
+- [x] W1-13: Dockerfile.prod (multi-stage standalone, non-root, healthcheck)
+- [x] W1-14: CI workflow (ci-web.yml — typecheck + build)
+- [x] W1-15: Deploy workflow (deploy-web.yml — GHCR + VPS SSH)
+- [x] W1-16: Nginx updated (musaium.conf + site.conf.production — /api/ + / separation)
+
+### Verification
+
+- [x] museum-web typecheck: PASS (0 errors)
+- [x] museum-web build: PASS (13 routes, 102 kB First Load JS)
+- [x] Backend: 0 regression (941 tests, tsc PASS)
+- [x] Sentinelle: GO (0 bloqueurs, 7 findings mineurs)
+
+---
+
 ## Metriques globales
 
 | Sprint    | Taches  | Faites | %       | Tests backend | Tests frontend |

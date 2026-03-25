@@ -1503,3 +1503,88 @@ Wave 3 completes Sprint 4 with the remaining 8 tasks: content moderation, analyt
 | `pnpm build` | OK |
 | E2E tests (24 tests, 3 new files + 1 existing) | Ready (needs `RUN_E2E=true` + Docker) |
 | k6 load tests (3 scripts) | Ready (needs k6 binary) |
+
+---
+
+## Sprint W1 — Web Presence Foundations (2026-03-25)
+
+**Scope**: Nouveau package `museum-web/` — Next.js 15 web platform pour musaium.com.
+**Commit**: `b37ed6e`
+**Stats**: 39 fichiers (37 new, 2 modified), +2898 lignes, 0 tests (scaffolding sprint).
+**Mode**: /team feature — cycle complet avec Sentinelle (R5).
+
+### Resume executif
+
+Creation du package `museum-web/` — une application Next.js 15 avec App Router, Tailwind CSS 4, et i18n FR/EN qui servira de plateforme web complete pour musaium.com. Remplace le 444 nginx actuel par une presence web professionnelle : landing page marketing, support/FAQ, admin panel, politique de confidentialite. Pipeline de deploiement complet (Docker, GHCR, VPS SSH, nginx).
+
+### Architecture
+
+| Choix | Justification |
+|-------|---------------|
+| Next.js 15 (App Router) | SSR/SSG pour SEO landing, RSC pour performance |
+| Tailwind CSS 4 | Coherence avec museum-admin existant |
+| i18n path-based (`/[locale]/`) | SEO-friendly, pas de lib externe |
+| pnpm | Coherence avec museum-backend |
+| Port 3001 (container) | Evite conflit avec backend 3000 |
+| Standalone output | Image Docker legere (~150MB) |
+
+### Changements cles
+
+| Domaine | Action | Fichiers |
+|---------|--------|----------|
+| Project setup | Next.js 15 + Tailwind 4 + TS strict | `package.json`, `next.config.ts`, `tsconfig.json`, `postcss.config.mjs` |
+| i18n | Middleware + dictionnaires FR/EN | `middleware.ts`, `lib/i18n.ts`, `dictionaries/*.json` |
+| Marketing | Landing page (hero, features, showcase, CTA) | `[locale]/page.tsx`, `[locale]/layout.tsx` |
+| Support | FAQ accordion + formulaire contact | `[locale]/support/page.tsx`, `ContactForm.tsx` |
+| Privacy | Page scaffold | `[locale]/privacy/page.tsx` |
+| Admin | Layout sidebar + auth + 9 pages scaffold | `[locale]/admin/**` (11 fichiers) |
+| Components | Header, Footer, LanguageSwitcher, Button | `components/shared/`, `components/ui/` |
+| Auth | AuthProvider + AuthGuard + useAuth (types backend) | `lib/auth.tsx`, `lib/api.ts` |
+| Docker | Multi-stage standalone build | `deploy/Dockerfile.prod` |
+| CI/CD | Typecheck + build + deploy VPS | `ci-web.yml`, `deploy-web.yml` |
+| Nginx | `/api/` → backend, `/` → museum-web | `musaium.conf`, `site.conf.production` |
+
+### Nginx changes (critical path)
+
+1. Retrait `/admin` du scanner-blocker regex (maintenant servi par Next.js)
+2. Separation `location /` catch-all en `location /api/` (backend) + `location /` (museum-web)
+3. Tous les endpoints existants preserves (SSE, auth rate limit, ACME)
+4. Les 2 fichiers conf synchronises
+
+### Decisions techniques
+
+1. **Pas de lib i18n externe** — middleware + JSON dictionnaires suffisent, zero dep supplementaire
+2. **Token auth en memoire** — pas de localStorage (securite), refresh token prevu pour W2
+3. **Server Components par defaut** — `'use client'` uniquement pour interactivite (Header, admin layout, login, auth)
+4. **Design tokens Tailwind 4** — palette primary/accent/surface coherente avec la privacy policy existante
+
+### Sentinelle R5
+
+| Porte | Verdict | Score |
+|-------|---------|-------|
+| P1 (Analyse) | GO | - |
+| P3 (Dev) | GO | 7 findings (0 bloqueur) |
+| Finale (Ship) | GO | En cours |
+
+Findings corriges: F1 (auth types alignes sur backend UserRole + LoginResponse shape)
+Findings deferred W2: F2 (refresh token), F3-F5 (i18n admin sidebar), F6 (public assets), F7 (gzip text/html)
+
+### Verification
+
+| Check | Result |
+|-------|--------|
+| museum-web typecheck (`tsc --noEmit`) | PASS (0 errors) |
+| museum-web build (`next build`) | PASS (13 routes, 102 kB First Load JS) |
+| Backend typecheck | PASS (0 regression) |
+| Backend tests (941 passed) | PASS (0 regression) |
+| Frontend tests (47 passed) | PASS (not impacted) |
+| Nginx diff | Verified, synchronized |
+
+### Prochaines etapes (W2-W5)
+
+| Sprint | Focus |
+|--------|-------|
+| W2 | Landing page marketing (contenu riche, animations Framer Motion, screenshots) |
+| W3 | Support complet + privacy policy migration + formulaire connecte au backend |
+| W4 | Admin panel migration (museum-admin → museum-web), refresh token, real API calls |
+| W5 | Polish, perf, accessibilite, deploy production |
