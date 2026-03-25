@@ -137,8 +137,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       usesAppleSignIn: true,
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
+        NSCameraUsageDescription:
+          'Allow $(PRODUCT_NAME) to access your camera to photograph artworks and monuments for AI analysis.',
         NSMicrophoneUsageDescription:
           'Allow $(PRODUCT_NAME) to access your microphone for voice questions about artworks.',
+        NSPhotoLibraryUsageDescription:
+          'Allow $(PRODUCT_NAME) to access your photo library to select artwork images for analysis.',
+        NSPhotoLibraryAddUsageDescription:
+          'Allow $(PRODUCT_NAME) to save images to your photo library.',
         NSFaceIDUsageDescription:
           'Allow $(PRODUCT_NAME) to use Face ID to unlock the app.',
         NSLocationWhenInUseUsageDescription:

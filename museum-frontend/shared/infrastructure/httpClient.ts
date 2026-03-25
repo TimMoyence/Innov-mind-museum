@@ -185,13 +185,37 @@ httpClient.interceptors.response.use(
       }
     }
 
+    const is429 = status === 429;
     const retryable =
-      !status || status >= 500 || axiosError?.code === 'ECONNABORTED';
+      !status || status >= 500 || axiosError?.code === 'ECONNABORTED' || is429;
     const retryCount = config._retryCount || 0;
+    const maxRetries = is429 ? 3 : 2;
 
-    if (retryable && retryCount < 2 && axiosError?.config) {
+    if (retryable && retryCount < maxRetries && axiosError?.config) {
       config._retryCount = retryCount + 1;
-      await wait(150 * (retryCount + 1));
+
+      let delayMs: number;
+      if (is429) {
+        // Respect Retry-After header when present, otherwise exponential backoff: 1s, 2s, 4s
+        const responseHeaders = (
+          axiosError.response as { headers?: Record<string, string> } | undefined
+        )?.headers;
+        const retryAfterValue =
+          responseHeaders?.['retry-after'] ?? responseHeaders?.['Retry-After'];
+        if (retryAfterValue) {
+          const parsed = Number(retryAfterValue);
+          delayMs =
+            Number.isFinite(parsed) && parsed > 0
+              ? parsed * 1000
+              : 1000 * 2 ** retryCount;
+        } else {
+          delayMs = 1000 * 2 ** retryCount;
+        }
+      } else {
+        delayMs = 150 * (retryCount + 1);
+      }
+
+      await wait(delayMs);
       return httpClient.request(axiosError.config as never);
     }
 

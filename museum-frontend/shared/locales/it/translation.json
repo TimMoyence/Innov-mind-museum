@@ -311,7 +311,8 @@
     "stop_audio": "Ferma audio",
     "audio": "Audio",
     "image_sent": "[Immagine inviata]",
-    "voice_message": "[Messaggio vocale]"
+    "voice_message": "[Messaggio vocale]",
+    "share_footer": "Condiviso tramite Musaium — Il tuo compagno di museo\nhttps://musaium.app"
   },
   "chatInput": {
     "placeholder": "Chiedi di un'opera, un monumento, oppure invia voce/foto...",
@@ -361,6 +362,19 @@
     "copy": "Copia",
     "report": "Segnala",
     "speak": "Leggi"
+  },
+  "error": {
+    "network": "Rete non disponibile. Controlla la connessione e riprova.",
+    "timeout": "Richiesta scaduta. Riprova.",
+    "unauthorized": "Sessione scaduta. Accedi di nuovo.",
+    "forbidden": "Non hai accesso a questa azione.",
+    "notFound": "Contenuto non trovato.",
+    "validation": "Controlla i dati inseriti e riprova.",
+    "rateLimited": "Troppe richieste. Attendi un momento.",
+    "unknown": "Qualcosa è andato storto. Riprova.",
+    "boundaryTitle": "Qualcosa è andato storto",
+    "boundarySubtitle": "L'app ha riscontrato un errore imprevisto. I tuoi dati sono al sicuro.",
+    "boundaryReload": "Ricarica"
   },
   "errorNotice": {
     "retry": "Riprova",

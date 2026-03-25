@@ -20,7 +20,7 @@ test('maps app error kinds to user friendly messages', () => {
     message: 'Request timeout',
   });
 
-  assert.equal(getErrorMessage(timeoutError), 'Request timed out. Please retry.');
+  assert.equal(getErrorMessage(timeoutError), 'Request timed out. Please try again.');
 });
 
 test('falls back to generic messages', () => {

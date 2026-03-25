@@ -1,5 +1,27 @@
 import type { AppError } from '@/shared/types/AppError';
 
+/** A translate function compatible with i18next's `t()`. */
+type TranslateFn = (key: string, opts?: { defaultValue: string }) => string;
+
+let _translate: TranslateFn | null = null;
+
+/**
+ * Registers the i18n translate function for error messages.
+ * Called once at app startup after i18n initialisation.
+ * @param fn - The i18next `t` function (bound to the i18n instance).
+ */
+export const setErrorTranslate = (fn: TranslateFn): void => {
+  _translate = fn;
+};
+
+/** Translates a key with a hardcoded English fallback when i18n is unavailable. */
+const t = (key: string, defaultValue: string): string => {
+  if (_translate) {
+    return _translate(key, { defaultValue }) as string;
+  }
+  return defaultValue;
+};
+
 /**
  * Runtime type guard for {@link AppError}.
  * @param error - Unknown value to check.
@@ -23,21 +45,21 @@ export const getErrorMessage = (error: unknown): string => {
   if (isAppError(error)) {
     switch (error.kind) {
       case 'Network':
-        return 'Network unavailable. Check your connection and try again.';
+        return t('error.network', 'Network unavailable. Check your connection and try again.');
       case 'Unauthorized':
-        return 'Please sign in again.';
+        return t('error.unauthorized', 'Session expired. Please log in again.');
       case 'Forbidden':
-        return 'You do not have access to this action.';
+        return t('error.forbidden', 'You do not have access to this action.');
       case 'NotFound':
-        return 'The requested resource was not found.';
+        return t('error.notFound', 'Content not found.');
       case 'Validation':
-        return 'Please review your input and try again.';
+        return t('error.validation', 'Please review your input and try again.');
       case 'RateLimited':
-        return 'Too many requests. Please wait a moment and try again.';
+        return t('error.rateLimited', 'Too many requests. Please wait a moment.');
       case 'Timeout':
-        return 'Request timed out. Please retry.';
+        return t('error.timeout', 'Request timed out. Please try again.');
       default:
-        return error.message || 'Something went wrong. Please try again.';
+        return error.message || t('error.unknown', 'Something went wrong. Please try again.');
     }
   }
 
@@ -45,5 +67,5 @@ export const getErrorMessage = (error: unknown): string => {
     return error.message;
   }
 
-  return 'Something went wrong. Please try again.';
+  return t('error.unknown', 'Something went wrong. Please try again.');
 };

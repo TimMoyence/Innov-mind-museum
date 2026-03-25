@@ -13,7 +13,7 @@ describe('RateLimited error kind', () => {
     };
 
     const message = getErrorMessage(error);
-    assert.equal(message, 'Too many requests. Please wait a moment and try again.');
+    assert.equal(message, 'Too many requests. Please wait a moment.');
   });
 
   it('isAppError recognizes RateLimited errors', () => {
