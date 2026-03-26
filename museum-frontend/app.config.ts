@@ -288,8 +288,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         '@sentry/react-native/expo',
         {
-          organization: process.env.SENTRY_ORG ?? 'asili-design',
-          project: process.env.SENTRY_PROJECT ?? 'apple-ios',
+          organization: String(process.env.SENTRY_ORG ?? 'asili-design'),
+          project: String(process.env.SENTRY_PROJECT ?? 'apple-ios'),
         },
       ],
     ],
@@ -311,8 +311,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         env.EXPO_PUBLIC_API_BASE_URL_PROD,
       ),
       API_ENVIRONMENT: apiEnvironment,
-      GOOGLE_WEB_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '498339023976-bjbain2ir2t9q4pu9lsmmk8ni7t96dd7.apps.googleusercontent.com',
-      GOOGLE_IOS_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '498339023976-8r199kpqbqmhb7mdf45ostg3sutqeng2.apps.googleusercontent.com',
+      GOOGLE_WEB_CLIENT_ID: String(process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '498339023976-bjbain2ir2t9q4pu9lsmmk8ni7t96dd7.apps.googleusercontent.com'),
+      GOOGLE_IOS_CLIENT_ID: String(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '498339023976-8r199kpqbqmhb7mdf45ostg3sutqeng2.apps.googleusercontent.com'),
       APP_VARIANT: variant,
       eas: projectId
         ? {
