@@ -24,6 +24,7 @@ const isResponsiveBackground = (
 ): value is ResponsiveBackground => {
   return (
     typeof value === 'object' &&
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- responsive type guard
     value !== null &&
     !Array.isArray(value) &&
     'mobile' in value &&

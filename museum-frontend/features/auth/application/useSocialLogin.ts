@@ -34,7 +34,7 @@ export const useSocialLogin = ({
   }, []);
 
   const handleSocialLoginSuccess = async (response: LoginResponse): Promise<void> => {
-    if (response?.accessToken && response?.refreshToken) {
+    if (response.accessToken && response.refreshToken) {
       await authStorage.setRefreshToken(response.refreshToken);
       setAccessToken(response.accessToken);
       setIsAuthenticated(true);

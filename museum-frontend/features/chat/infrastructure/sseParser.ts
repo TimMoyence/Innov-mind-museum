@@ -53,6 +53,7 @@ export function parseSseChunk(buffer: string): { events: SseStreamEvent[]; remai
               type: 'done',
               messageId: data.messageId,
               createdAt: data.createdAt,
+              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime SSE data
               metadata: (data.metadata as Record<string, unknown>) ?? {},
             });
           }

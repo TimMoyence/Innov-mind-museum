@@ -29,6 +29,7 @@ export const useChatSession = (sessionId: string) => {
   const storeUpdateMessages = useChatSessionStore((s) => s.updateMessages);
 
   const [messages, setMessages] = useState<ChatUiMessage[]>(
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cachedSession can be undefined at runtime (store key miss)
     () => cachedSession?.messages ?? [],
   );
   const [isLoading, setIsLoading] = useState(true);
@@ -36,9 +37,11 @@ export const useChatSession = (sessionId: string) => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sessionTitle, setSessionTitle] = useState<string | null>(
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cachedSession can be undefined at runtime
     () => cachedSession?.title ?? null,
   );
   const [museumName, setMuseumName] = useState<string | null>(
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cachedSession can be undefined at runtime
     () => cachedSession?.museumName ?? null,
   );
   const isSendingRef = useRef(false);
@@ -70,6 +73,7 @@ export const useChatSession = (sessionId: string) => {
           createdAt: message.createdAt,
           imageRef: message.imageRef,
           image: message.image ?? null,
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
           metadata: (message.metadata as ChatUiMessageMetadata) ?? null,
         })),
       );
@@ -183,6 +187,7 @@ export const useChatSession = (sessionId: string) => {
             role: response.message.role,
             text: response.message.text,
             createdAt: response.message.createdAt,
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
             metadata: (response.metadata as ChatUiMessageMetadata) ?? null,
             transcription: ('transcription' in response && response.transcription)
               ? { text: (response.transcription as { text: string }).text }
@@ -252,6 +257,7 @@ export const useChatSession = (sessionId: string) => {
                     id: payload.messageId,
                     text: finalText,
                     createdAt: payload.createdAt,
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
                     metadata: (payload.metadata as ChatUiMessageMetadata) ?? null,
                   }
                 : m,
@@ -279,6 +285,7 @@ export const useChatSession = (sessionId: string) => {
                         role: response.message.role as 'assistant',
                         text: response.message.text,
                         createdAt: response.message.createdAt,
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
                         metadata: (response.metadata as ChatUiMessageMetadata) ?? null,
                         image: null,
                       }
@@ -357,6 +364,7 @@ export const useChatSession = (sessionId: string) => {
             createdAt: m.createdAt,
             imageRef: m.imageRef,
             image: m.image ?? null,
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
             metadata: (m.metadata as ChatUiMessageMetadata) ?? null,
           }));
           setMessages(sortByTime(serverMessages));

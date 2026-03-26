@@ -318,6 +318,7 @@ export const chatApi = {
         { method: 'POST', responseType: 'arraybuffer' },
       );
       // 204 No Content: Axios returns empty/zero-length data
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive response check
       if (!response || (response instanceof ArrayBuffer && response.byteLength === 0)) {
         return null;
       }
@@ -422,6 +423,7 @@ export const chatApi = {
       let buffer = '';
 
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- infinite SSE read loop
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;

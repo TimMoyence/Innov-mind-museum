@@ -82,7 +82,7 @@ export const MessageContextMenu = ({
         <View style={[styles.sheet, { backgroundColor: isDark ? theme.glassBackground : theme.primaryContrast }]}>
           <View style={[styles.handle, { backgroundColor: theme.cardBorder }]} />
           <Text style={[styles.title, { color: theme.textSecondary }]} numberOfLines={1}>
-            {message.text?.slice(0, 60) || t('chat.voice_message')}
+            {message.text.slice(0, 60) || t('chat.voice_message')}
           </Text>
           {actions.map((action) => (
             <Pressable key={action.id} style={[styles.action, { borderBottomColor: theme.separator }]} onPress={action.onPress} accessibilityRole="button" accessibilityLabel={action.label}>

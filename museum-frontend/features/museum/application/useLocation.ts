@@ -31,6 +31,7 @@ export const useLocation = (): UseLocationResult => {
         const { status: permissionStatus } =
           await Location.requestForegroundPermissionsAsync();
 
+         
         if (cancelled) return;
 
         if (permissionStatus !== 'granted') {

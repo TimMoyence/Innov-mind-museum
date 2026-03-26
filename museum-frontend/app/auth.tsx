@@ -64,7 +64,7 @@ export default function AuthScreen() {
     try {
       const response = await authService.login(email, password);
 
-      if (response?.accessToken && response?.refreshToken) {
+      if (response.accessToken && response.refreshToken) {
         await authStorage.setRefreshToken(response.refreshToken);
         setAccessToken(response.accessToken);
         setIsAuthenticated(true);

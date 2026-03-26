@@ -57,6 +57,7 @@ export const mapApiMessageToUiMessage = (apiMsg: ApiMessage): ChatUiMessage => (
   createdAt: apiMsg.createdAt,
   imageRef: apiMsg.imageRef,
   image: apiMsg.image ?? null,
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
   metadata: (apiMsg.metadata as ChatUiMessageMetadata) ?? null,
 });
 

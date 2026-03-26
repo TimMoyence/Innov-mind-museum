@@ -92,6 +92,7 @@ function RootLayout() {
   const ref = useNavigationContainerRef();
 
   useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- ref guard
     if (ref) {
       reactNavigationIntegration.registerNavigationContainer(ref);
     }

@@ -68,6 +68,7 @@ export const useAudioRecorder = () => {
     if (Platform.OS === 'web') {
       if (
         typeof navigator === 'undefined' ||
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- web platform check
         !navigator.mediaDevices?.getUserMedia ||
         typeof MediaRecorder === 'undefined'
       ) {
@@ -86,6 +87,7 @@ export const useAudioRecorder = () => {
       webMediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive data check
         if (event.data && event.data.size > 0) {
           webAudioChunksRef.current.push(event.data);
         }

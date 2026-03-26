@@ -52,7 +52,7 @@ const normalizeBaseUrl = (value: string): string => {
 
 const readExtra = (): Record<string, unknown> => {
   return (
-    (Constants?.expoConfig as { extra?: Record<string, unknown> } | undefined)
+    (Constants.expoConfig as { extra?: Record<string, unknown> } | undefined)
       ?.extra ?? {}
   );
 };

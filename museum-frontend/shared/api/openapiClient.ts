@@ -78,6 +78,7 @@ const appendQuery = (path: string, query?: Record<string, QueryPrimitive>): stri
 
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
+     
     if (value === undefined || value === null) continue;
     search.set(key, String(value));
   }
