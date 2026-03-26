@@ -450,10 +450,10 @@
 
 ---
 
-## Technical Polish — Component Tests + FlashList + React Compiler (2026-03-26, R11)
+## Technical Polish — Component Tests + FlashList + React Compiler + Theme SSOT (2026-03-26, R11)
 
-> Mode: refactor | 23 fichiers (7 crees, 16 modifies) | +24 tests | 0 regression | Sentinelle: R11
-> Commit: `700d056`
+> Mode: refactor | 27+ fichiers (7 crees, 20+ modifies) | +24 tests | 0 regression | Sentinelle: R11
+> Commits: `700d056`, `dab537c`
 
 ### FlashList Migration
 
@@ -477,7 +477,7 @@
 ### SSOT Colors
 
 - [x] TP-11: 8 new theme properties (primaryContrast, textTertiary, placeholderText, successBackground, danger, warningText, warningBackground, shadowColor)
-- [x] TP-12: Hardcoded colors → theme refs in 10 files (conversations, auth, home, settings, preferences, privacy, onboarding, ErrorBoundary, ConversationSearchBar, ImagePreviewModal)
+- [x] TP-12: Hardcoded colors → theme refs in 27 files (all app/ screens, features/chat/*, features/conversation/*, features/auth/*, shared/ui/ErrorBoundary). ~109 hardcoded hex → 9 intentional (92% reduction). Dark mode warning badge bug fixed.
 
 ### Verification
 
