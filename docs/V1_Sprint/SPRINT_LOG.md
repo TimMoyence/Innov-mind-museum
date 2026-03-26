@@ -1715,3 +1715,61 @@ Preparation complete pour la soumission App Store + Google Play. Le produit est 
 | `museum-frontend/maestro/screenshots.yaml` | `maestro test maestro/screenshots.yaml` sur simulateur |
 | `docs/GOOGLE_PLAY_DATA_SAFETY.md` | Reference pour remplir le formulaire Data Safety |
 | `docs/STORE_SUBMISSION_GUIDE.md` | Guide pas a pas pour la soumission complete |
+
+---
+
+## Technical Polish — Component Tests + FlashList + React Compiler (2026-03-26)
+
+> R11 | Mode: refactor | Commit: `700d056` | Score Sentinelle: TBD
+> Objectif: Combler les 2 gaps techniques les plus critiques identifies en R8
+
+### Contexte
+
+L'audit V2 frontend (R8) avait identifie 10 gaps techniques. Apres 2 sprints de deferral, FlashList et Component Tests sont passes en statut OBLIGATOIRE. Ce run les adresse directement, avec React Compiler en bonus.
+
+### Changements techniques
+
+**FlashList v2 migration (3 fichiers)**
+
+| Fichier | Avant | Apres | Notes |
+|---------|-------|-------|-------|
+| `features/chat/ui/ChatMessageList.tsx` | FlatList + gap:10 | FlashList + ItemSeparatorComponent + FlashListRef | Auto-scroll streaming preserve |
+| `features/museum/ui/MuseumDirectoryList.tsx` | FlatList + removeClippedSubviews + gap:10 | FlashList + ItemSeparator | Skeleton loading inchange |
+| `app/(tabs)/conversations.tsx` | FlatList + removeClippedSubviews + Platform + gap:10 | FlashList + ItemSeparator + paddingTop | Platform import retire |
+
+Adaptation FlashList v2: `estimatedItemSize` n'existe pas en v2.3.1 (auto-measurement). Design initial base sur API v1 — corrige pendant dev via self-verification typecheck.
+
+**Component tests L3 (5 fichiers + test-utils)**
+
+| Test file | Composant | Tests | Scope |
+|-----------|-----------|-------|-------|
+| WelcomeCard.test.tsx | features/chat/ui/WelcomeCard | 6 | title, museum/standard icons, callbacks, disabled |
+| ErrorBoundary.test.tsx | shared/ui/ErrorBoundary | 5 | render children, error fallback, reload, Sentry, reset |
+| ChatMessageList.test.tsx | features/chat/ui/ChatMessageList | 5 | render bubbles, empty→WelcomeCard, typing, streaming |
+| AuthScreen.test.tsx | app/auth | 5 | login form, register toggle, GDPR, submit text, forgot |
+| ConversationsScreen.test.tsx | app/(tabs)/conversations | 3 | loading skeletons, cards, empty state |
+
+Shared mocks (test-utils.tsx): 17 module mocks (i18n, theme, router, safe-area, icons, blur, haptics, gradient, Sentry, Updates, GlassCard, LiquidScreen, BrandMark, FloatingContextMenu, SkeletonConversationCard, ErrorNotice, FlashList→FlatList).
+
+**React Compiler**: `babel.config.js` cree avec `babel-preset-expo` + `babel-plugin-react-compiler`. Auto-memoization active. useMemo/useCallback existants deviennent redondants mais inoffensifs.
+
+**SSOT Colors**: 8 nouvelles proprietes theme (`primaryContrast`, `textTertiary`, `placeholderText`, `successBackground`, `danger`, `warningText`, `warningBackground`, `shadowColor`). 10 fichiers nettoyes des couleurs hardcodees vers theme refs.
+
+### Metriques
+
+| Metrique | Avant | Apres | Delta |
+|----------|:-----:|:-----:|:-----:|
+| Tests frontend total | 137 | 161 | +24 |
+| Tests jest | 47 | 71 | +24 |
+| Tests node | 90 | 90 | 0 |
+| Typecheck errors | 0 | 0 | 0 |
+| as any (tests) | 0 | 0 | 0 |
+| Fichiers crees | — | 7 | +7 |
+| Fichiers modifies | — | 16 | 16 |
+
+### Decisions techniques
+
+1. **ItemSeparatorComponent > margin** — coherent, pas de margin apres le dernier item
+2. **FlashList mock → FlatList** en tests — FlashList v2 depend de bindings natifs RecyclerView non disponibles en env Jest
+3. **paddingTop au lieu de marginTop** dans contentContainerStyle — FlashList ne supporte que padding dans contentContainerStyle
+4. **Exclusion onboarding.tsx** — FlatList horizontal paging, pattern different ou FlashList peut avoir des quirks

@@ -450,6 +450,45 @@
 
 ---
 
+## Technical Polish — Component Tests + FlashList + React Compiler (2026-03-26, R11)
+
+> Mode: refactor | 23 fichiers (7 crees, 16 modifies) | +24 tests | 0 regression | Sentinelle: R11
+> Commit: `700d056`
+
+### FlashList Migration
+
+- [x] TP-01: FlatList → FlashList v2 dans ChatMessageList (ItemSeparator, FlashListRef)
+- [x] TP-02: FlatList → FlashList v2 dans MuseumDirectoryList (ItemSeparator, removed removeClippedSubviews)
+- [x] TP-03: FlatList → FlashList v2 dans ConversationsScreen (ItemSeparator, removed removeClippedSubviews/Platform)
+
+### Component Render Tests (L3)
+
+- [x] TP-04: WelcomeCard.test.tsx — 6 tests (title, museum/standard icons, onCamera, onSuggestion, disabled)
+- [x] TP-05: ErrorBoundary.test.tsx — 5 tests (render children, error fallback, reload, Sentry, reset)
+- [x] TP-06: ChatMessageList.test.tsx — 5 tests (render bubbles, empty WelcomeCard, typing indicator, streaming)
+- [x] TP-07: AuthScreen.test.tsx — 5 tests (login form, register toggle, GDPR, submit text, forgot password)
+- [x] TP-08: ConversationsScreen.test.tsx — 3 tests (loading, cards, empty state)
+- [x] TP-09: test-utils.tsx — 17 module mocks shared (i18n, theme, router, icons, blur, haptics, etc.)
+
+### React Compiler
+
+- [x] TP-10: babel.config.js — babel-preset-expo + babel-plugin-react-compiler (auto-memoization)
+
+### SSOT Colors
+
+- [x] TP-11: 8 new theme properties (primaryContrast, textTertiary, placeholderText, successBackground, danger, warningText, warningBackground, shadowColor)
+- [x] TP-12: Hardcoded colors → theme refs in 10 files (conversations, auth, home, settings, preferences, privacy, onboarding, ErrorBoundary, ConversationSearchBar, ImagePreviewModal)
+
+### Verification
+
+- [x] Frontend typecheck: PASS (0 errors)
+- [x] Frontend tests: 161 pass (90 node + 71 jest) — was 137, +24
+- [x] Backend: 0 regression (951 tests, tsc PASS)
+- [x] as any: 0
+- [x] Sentinelle: PASS (0 boucles correctives)
+
+---
+
 ## Metriques globales
 
 | Sprint    | Taches  | Faites | %       | Tests backend | Tests frontend |
@@ -468,4 +507,5 @@
 | W1        | 16      | 16     | 100%    | 941 (+32)     | 106            |
 | W2        | 13      | 13     | 100%    | 951 (+10)     | 106            |
 | Store Sub | 7       | 7      | 100%    | 951           | 106            |
-| **Total** | **172** | **171** | **99%** | **951**       | **106**        |
+| Tech Polish | 12    | 12     | 100%    | 951           | 161 (+55)      |
+| **Total** | **184** | **183** | **99%** | **951**       | **161**        |
