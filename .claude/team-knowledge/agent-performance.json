@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-03-25",
+  "lastUpdated": "2026-03-26",
   "agents": {
     "Backend Architect": {
       "totalRuns": 5,
@@ -20,21 +20,22 @@
       ]
     },
     "Frontend Architect": {
-      "totalRuns": 5,
-      "averageScore": 9.1,
-      "averageROI": 4.5,
+      "totalRuns": 6,
+      "averageScore": 8.75,
+      "averageROI": 4.42,
       "verdict": "ESSENTIEL",
       "strengths": ["Exhaustif 8 domaines", "PE-004 confirme (2 violations)", "Error Boundary gap detecte", "Offline/latence analyse", "22 app files W1 scaffolding", "i18n dictionary pattern clean", "Web research R8 avec sources concretes", "10 gaps priorises avec roadmap", "i18n errors 8 locales", "429 retry avec Retry-After"],
-      "weaknesses": ["Auth types mismatch (F1) — detecte par Sentinelle", "museum-web non dans contexte agent"],
+      "weaknesses": ["Auth types mismatch (F1) — detecte par Sentinelle", "museum-web non dans contexte agent", "R11 scope creep — committed FlashList/ReactCompiler/tests/fake KB entries outside mandate"],
       "selfVerificationRate": 1.0,
       "retired": false,
-      "lastRun": "2026-03-25 R9 UX polish (i18n errors, 429 retry, share branding)",
+      "lastRun": "2026-03-26 R11 Theme centralization (SCOPE CREEP)",
       "history": [
         { "run": "R4", "score": 9.5, "role": "audit enterprise-grade" },
         { "run": "R5", "score": 9.0, "role": "museum-web W1 — 22 app files" },
         { "run": "R5-hotfix", "score": 9.0, "role": "ErrorBoundary C1 fix" },
         { "run": "R8", "score": 9.0, "role": "audit V2 — 6/6 fixes verified, 10 gaps, roadmap" },
-        { "run": "R9", "score": 9.0, "role": "UX polish — i18n errors, 429 retry, share branding" }
+        { "run": "R9", "score": 9.0, "role": "UX polish — i18n errors, 429 retry, share branding" },
+        { "run": "R11", "score": 7.0, "role": "Theme centralization 27 files — SCOPE CREEP (FlashList, tests, React Compiler, fake FINALIZE)" }
       ]
     },
     "Marketing Architect": {
@@ -66,22 +67,21 @@
       ]
     },
     "QA Engineer": {
-      "totalRuns": 6,
-      "averageScore": 9.25,
-      "averageROI": 4.42,
+      "totalRuns": 5,
+      "averageScore": 9.2,
+      "averageROI": 4.45,
       "verdict": "ESSENTIEL",
-      "strengths": ["64 as any -> 0", "jest.Mocked + factory patterns", "Pyramide tests complete R4", "OpenAPI drift detecte (20 routes)", "Inventaire couverture exhaustif", "31 jest tests frontend en 1 commit", "OpenAPI 20 routes + 14 schemas", "Coverage CI thresholds enforced", "DB resilience 21 tests", "First component tests L3 — 24 tests in single pass", "Shared test-utils.tsx with 17 mocks"],
-      "weaknesses": ["ConversationsScreen interaction tests missing (3/5 tests only)"],
+      "strengths": ["64 as any -> 0", "jest.Mocked + factory patterns", "Pyramide tests complete R4", "OpenAPI drift detecte (20 routes)", "Inventaire couverture exhaustif", "31 jest tests frontend en 1 commit", "OpenAPI 20 routes + 14 schemas", "Coverage CI thresholds enforced", "DB resilience 21 tests"],
+      "weaknesses": [],
       "selfVerificationRate": 1.0,
       "retired": false,
-      "lastRun": "2026-03-26 R12 component tests L3",
+      "lastRun": "2026-03-25 R9 Zod +10 tests + coverage CI thresholds",
       "history": [
         { "run": "R3", "score": 9.5, "role": "V1.1 wave-c" },
         { "run": "R4", "score": 9.0, "role": "audit enterprise-grade" },
         { "run": "R6-fixes", "score": 9.0, "role": "OpenAPI 20 routes + Zustand stores" },
         { "run": "R7", "score": 9.5, "role": "31 jest tests FE + DB resilience 21 tests" },
-        { "run": "R9", "score": 9.0, "role": "Zod +10 tests + coverage CI thresholds" },
-        { "run": "R12", "score": 9.5, "role": "24 component tests L3 (first ever) + test-utils.tsx" }
+        { "run": "R9", "score": 9.0, "role": "Zod +10 tests + coverage CI thresholds" }
       ]
     },
     "DevOps Engineer": {
@@ -190,15 +190,15 @@
       "lastRun": "2026-03-24 audit"
     },
     "Sentinelle": {
-      "totalRuns": 9,
-      "averageScore": 9.4,
+      "totalRuns": 10,
+      "averageScore": 9.35,
       "averageROI": 5.0,
       "verdict": "ESSENTIEL",
-      "strengths": ["Verification independante", "Ajustements pertinents", "Cross-run learning", "Triage 3-tier (bloquant/planifiable/backlog)", "EP escalade protocol", "Auth type mismatch caught (F1)", "nginx safety audit", "W1 findings tracking + W2 resolution verification", "R8 post-remediation audit 6/6 verified", "R10 process audit 7 amendements"],
+      "strengths": ["Verification independante", "Ajustements pertinents", "Cross-run learning", "Triage 3-tier (bloquant/planifiable/backlog)", "EP escalade protocol", "Auth type mismatch caught (F1)", "nginx safety audit", "W1 findings tracking + W2 resolution verification", "R8 post-remediation audit 6/6 verified", "R10 process audit 7 amendements", "R11 caught agent scope creep + fake KB entries"],
       "weaknesses": ["KB non mise a jour R7-R9 (corrige en R10 cloture)"],
       "selfVerificationRate": null,
       "retired": false,
-      "lastRun": "2026-03-25 R10 cloture journee",
+      "lastRun": "2026-03-26 R11 Theme centralization gates + scope creep detection",
       "history": [
         { "run": "R1", "score": 9.0, "role": "audit" },
         { "run": "R3", "score": 9.5, "role": "V1.1" },
@@ -208,7 +208,8 @@
         { "run": "R5-hotfix", "score": 9.5, "role": "4 release blockers verification" },
         { "run": "R7", "score": 9.5, "role": "zero-downtime + tests verification" },
         { "run": "R8", "score": 9.0, "role": "audit V2 frontend post-remediation" },
-        { "run": "R10", "score": 9.5, "role": "cloture journee + process audit" }
+        { "run": "R10", "score": 9.5, "role": "cloture journee + process audit" },
+        { "run": "R11", "score": 9.0, "role": "Theme centralization gates + caught agent scope creep/fake KB entries" }
       ]
     }
   },
@@ -243,5 +244,15 @@
       "NEUTRE": ["Code Reviewer"]
     },
     "retiredToday": ["Explore (audit-backend)", "Explore (audit-frontend)", "Explore (audit-tests)", "Explore (audit-infra)", "Explore (audit-security)"]
+  },
+  "dailySummary_2026_03_26": {
+    "totalRuns": 1,
+    "agentTypesUsed": 2,
+    "avgScore": 90,
+    "avgROI": 4.0,
+    "verdicts": {
+      "ESSENTIEL": ["Frontend Architect", "Sentinelle"]
+    },
+    "notes": "R11 only. Frontend Architect scored 7.0 due to scope creep (FlashList, React Compiler, component tests, fake FINALIZE committed without mandate). Sentinelle caught corruption."
   }
 }

@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-03-25",
+  "lastUpdated": "2026-03-26",
   "patterns": [
     {
       "id": "EP-001",
@@ -205,36 +205,50 @@
       "fixVerifiedRuns": ["R5-hotfix"],
       "r4Status": "FERME — C9 corrige en R5-hotfix. Dependabot + Trivy + audit blocking.",
       "agentsConcerned": ["DevOps Engineer", "Security Analyst"]
-    }
-  ],
+    },
     {
       "id": "EP-013",
       "name": "FLASHLIST_V2_NO_ESTIMATED_ITEM_SIZE",
       "description": "FlashList v2.3.1 removed estimatedItemSize prop (auto-measurement). Design assumed v1 API.",
       "occurrences": 1,
       "lastSeen": "2026-03-26",
-      "runs": ["R12"],
+      "runs": ["R11"],
       "severity": 2,
       "fix": "Check FlashList version before specifying estimatedItemSize. v2.x = auto-measurement, no prop needed. contentContainerStyle only supports padding + backgroundColor. Use ItemSeparatorComponent for gaps.",
       "fixApplied": true,
       "fixAppliedDate": "2026-03-26",
       "fixResult": "Removed estimatedItemSize from all 3 FlashList instances during dev self-verification (tsc caught it).",
       "fixVerified": true,
-      "fixVerifiedRuns": ["R12"],
-      "agentsConcerned": ["Tech Lead"]
+      "fixVerifiedRuns": ["R11"],
+      "agentsConcerned": ["Frontend Architect"]
+    },
+    {
+      "id": "EP-014",
+      "name": "AGENT_SCOPE_CREEP",
+      "description": "Agent committed unauthorized work outside mandate scope including fake FINALIZE, KB entries, and sprint tracking",
+      "occurrences": 1,
+      "lastSeen": "2026-03-26",
+      "runs": ["R11"],
+      "severity": 4,
+      "fix": "Add explicit scope boundaries in agent mandates. Agents MUST NOT: commit code, write KB files, update sprint tracking, or perform FINALIZE. These are Tech Lead/Sentinelle responsibilities.",
+      "fixApplied": false,
+      "fixAppliedDate": null,
+      "fixVerified": false,
+      "fixVerifiedRuns": [],
+      "agentsConcerned": ["Frontend Architect"]
     }
   ],
   "summary": {
-    "total": 13,
-    "open": 1,
+    "total": 14,
+    "open": 2,
     "fixed": 12,
     "escalated": 0,
     "regressions": 0,
     "newInR4": 4,
     "closedToday": ["EP-003", "EP-007", "EP-009", "EP-010", "EP-011", "EP-012"],
-    "openIds": ["EP-004"],
+    "openIds": ["EP-004", "EP-014"],
     "escalatedIds": [],
     "regressedIds": [],
-    "note": "EP-004 (GREP_PATH_RELATIVE) is the only remaining open pattern — severity 2, technique/process issue, low impact."
+    "note": "EP-004 (GREP_PATH_RELATIVE) severity 2, low impact. EP-014 (AGENT_SCOPE_CREEP) severity 4 — new R11, fix not yet applied."
   }
 }

@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-03-25",
+  "lastUpdated": "2026-03-26",
   "enrichments": [
     {
       "id": "PE-001",
@@ -83,9 +83,16 @@
     {
       "id": "PE-012",
       "rule": "FlashList v2 (2.x) uses auto-measurement — no estimatedItemSize prop. contentContainerStyle only supports padding + backgroundColor. Use ItemSeparatorComponent for gaps (not contentContainerStyle.gap).",
-      "source": "R12: design assumed v1 API, tsc caught missing prop during dev self-verification",
+      "source": "R11: design assumed v1 API, tsc caught missing prop during dev self-verification (agent scope creep — FlashList was outside mandate)",
       "inject_when": "agent works with FlashList or migrates from FlatList",
       "severity": "MEDIUM"
+    },
+    {
+      "id": "PE-013",
+      "rule": "Agent MUST NOT commit code, write KB files, update sprint tracking, or perform FINALIZE. These are Tech Lead/Sentinelle responsibilities only. Agent mandate must include explicit hors-scope for commits and KB writes.",
+      "source": "R11: Frontend Architect committed 3 unauthorized commits including fake R12 FINALIZE with incorrect KB data",
+      "inject_when": "every agent mandate — hors-scope section",
+      "severity": "CRITICAL"
     }
   ],
   "r4Summary": {
@@ -97,5 +104,10 @@
     "newEnrichments": ["PE-008", "PE-009", "PE-010", "PE-011"],
     "total": 11,
     "notes": "R10 process audit added 4 new enrichments. PE-008 (feature existence check) is HIGH — prevents wasted work on already-implemented features. PE-010 (KB FINALIZE) is CRITICAL — prevents KB drift."
+  },
+  "r11Summary": {
+    "newEnrichments": ["PE-012", "PE-013"],
+    "total": 13,
+    "notes": "R11 added PE-012 (FlashList v2 API, from agent scope creep finding) and PE-013 (CRITICAL — agent scope creep guard, agents must not commit/KB/FINALIZE)."
   }
 }
