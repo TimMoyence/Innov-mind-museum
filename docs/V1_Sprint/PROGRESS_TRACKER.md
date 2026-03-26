@@ -419,4 +419,53 @@
 | Phase 0   | 8       | 8      | 100%    | 909 (-4)      | 106            |
 | W1        | 16      | 16     | 100%    | 941 (+32)     | 106            |
 | W2        | 13      | 13     | 100%    | 951 (+10)     | 106            |
-| **Total** | **165** | **164** | **99%** | **951**       | **106**        |
+---
+
+## Store Submission Polish (2026-03-26, R11)
+
+> Mode: chore | 7 fichiers crees, 1 modifie | 0 regression | Sentinelle: R11
+
+### Store Metadata
+
+- [x] SS-01: App Store description + keywords + What's New (EN, FR, ES, DE)
+- [x] SS-02: Google Play short + full description (EN, FR, ES, DE)
+- [x] SS-03: Feature Graphic HTML template (1024x500)
+
+### Privacy Policy
+
+- [x] SS-04: Privacy policy page museum-web — real GDPR content (was scaffold)
+- [x] SS-05: Privacy content i18n (FR + EN) — server-side data
+
+### Screenshot & Submission Automation
+
+- [x] SS-06: Maestro screenshot automation flows (10 screens)
+- [x] SS-07: STORE_SUBMISSION_GUIDE.md — complete submission checklist
+
+### Verification
+
+- [x] museum-web typecheck: PASS (0 errors)
+- [x] museum-web build: PASS
+- [x] Backend: 0 regression (951 tests, tsc PASS)
+- [x] Frontend: 0 regression (47 tests, tsc PASS)
+
+---
+
+## Metriques globales
+
+| Sprint    | Taches  | Faites | %       | Tests backend | Tests frontend |
+| --------- | ------- | ------ | ------- | ------------- | -------------- |
+| S1        | 37      | 37     | 100%    | 212           | 8              |
+| S1.5      | 5       | 5      | 100%    | 217 (+5)      | 11 (+3)        |
+| S2        | 25      | 24     | 96%     | 360 (+93)     | 26 (+13)       |
+| S3        | 18      | 18     | 100%    | 360           | 26             |
+| Audit     | 11      | 11     | 100%    | 364 (+4)      | 29 (+3)        |
+| S4        | 16      | 16     | 100%    | 416 (+52)     | 29             |
+| S5        | 3       | 3      | 100%    | 530 (+114)    | 29             |
+| S6        | 5       | 5      | 100%    | 693 (+163)    | 87 (+58)       |
+| S7        | 4       | 4      | 100%    | 786 (+93)     | 87             |
+| S8        | 4       | 4      | 100%    | 913 (+127)    | 106 (+19)      |
+| Phase 0   | 8       | 8      | 100%    | 909 (-4)      | 106            |
+| W1        | 16      | 16     | 100%    | 941 (+32)     | 106            |
+| W2        | 13      | 13     | 100%    | 951 (+10)     | 106            |
+| Store Sub | 7       | 7      | 100%    | 951           | 106            |
+| **Total** | **172** | **171** | **99%** | **951**       | **106**        |

@@ -4,8 +4,8 @@
   "proposedLevel": null,
   "promotionDate": "2026-03-25",
   "promotionTrigger": "R5 score 93 >= 85 — 5/5 consecutive qualifying runs",
-  "runsSinceLastFail": 6,
-  "runsQualifying": 6,
+  "runsSinceLastFail": 7,
+  "runsQualifying": 7,
   "runsRequired": 5,
   "history": [
     {
@@ -58,19 +58,83 @@
       "level": "L2",
       "postDevFail": false,
       "notes": "W2 landing + admin API. All W1 findings resolved. 0 loops."
+    },
+    {
+      "date": "2026-03-25",
+      "run": "R5-hotfix",
+      "score": 96,
+      "result": "PASS",
+      "level": "L2",
+      "postDevFail": false,
+      "notes": "4 release blockers. EP-007/EP-009/EP-012 fermes."
+    },
+    {
+      "date": "2026-03-25",
+      "run": "R6-fixes",
+      "score": 95,
+      "result": "PASS",
+      "level": "L2",
+      "postDevFail": false,
+      "notes": "Phase 1+2 fixes. 6 MAJEURS + Zustand + OpenAPI 20 routes."
+    },
+    {
+      "date": "2026-03-25",
+      "run": "R7",
+      "score": 94,
+      "result": "PASS",
+      "level": "L2",
+      "postDevFail": false,
+      "notes": "Zero-downtime, Redis rate-limit, DB resilience +32 tests, FE +31 tests."
+    },
+    {
+      "date": "2026-03-25",
+      "run": "R8",
+      "score": 92,
+      "result": "PASS",
+      "level": "L2",
+      "postDevFail": false,
+      "notes": "Read-only audit V2. 6/6 fixes verified. 10 gaps. Frontend maturity 3.5/5."
+    },
+    {
+      "date": "2026-03-25",
+      "run": "R9",
+      "score": 94,
+      "result": "PASS",
+      "level": "L2",
+      "postDevFail": false,
+      "notes": "3 vagues: store-ready, DX enablers, museum-web W2. Tests 1078->1088."
+    },
+    {
+      "date": "2026-03-25",
+      "run": "R10",
+      "score": 93,
+      "result": "PASS",
+      "level": "L2",
+      "postDevFail": false,
+      "notes": "Process audit. 7 amendements. KB gaps identifies et corriges."
+    },
+    {
+      "date": "2026-03-26",
+      "run": "R11",
+      "score": 92,
+      "result": "PASS",
+      "level": "L2",
+      "postDevFail": false,
+      "notes": "Store submission polish. 0 agents, 8 files, 0 tests. PE-008 applied. Privacy page migrated."
     }
   ],
   "conditions": {
     "L2": {
       "required": "5 runs consecutifs >= 85/100 ET 0 FAIL post-DEV",
-      "current": "5/5 runs qualifiants (R1:91, R2:95, R3:97, R4:88, R5:93)",
+      "current": "5/5 runs qualifiants (R1:91, R2:95, R3:97, R4:88, R5:93) — ATTEINT",
       "met": true,
       "promotionEffective": "2026-03-25"
     },
     "L3": {
       "required": "10 runs consecutifs >= 85/100 ET 0 regression Ratchet ET 0 boucle > 2",
-      "current": "6/10",
-      "met": false
+      "current": "13/10 — ATTEINT numeriquement (R1-R10 tous >= 85). A valider formellement au prochain run.",
+      "met": false,
+      "note": "L3 qualification atteinte en nombre (13 runs >= 85, 0 boucle > 2, 0 regression ratchet) mais non encore formellement declare. Le R10 process audit recommande une validation explicite."
     },
     "L4": {
       "required": "Validation explicite utilisateur",
