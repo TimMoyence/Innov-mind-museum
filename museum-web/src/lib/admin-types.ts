@@ -75,3 +75,89 @@ export interface DashboardStats {
   newUsersToday: number;
   messagesThisWeek: number;
 }
+
+// --- Reports ---
+
+export type ReportStatus = 'pending' | 'reviewed' | 'dismissed';
+
+export interface Report {
+  id: string;
+  messageId: string;
+  userId: number;
+  reason: string;
+  comment: string | null;
+  status: ReportStatus;
+  reviewedBy: number | null;
+  reviewedAt: string | null;
+  reviewerNotes: string | null;
+  createdAt: string;
+  messageText: string | null;
+  messageRole: string;
+  sessionId: string;
+}
+
+// --- Tickets ---
+
+export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+export type TicketPriority = 'low' | 'medium' | 'high';
+
+export const TICKET_STATUSES: TicketStatus[] = ['open', 'in_progress', 'resolved', 'closed'];
+export const TICKET_PRIORITIES: TicketPriority[] = ['low', 'medium', 'high'];
+
+export interface Ticket {
+  id: string;
+  userId: number;
+  subject: string;
+  description: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  category: string | null;
+  assignedTo: number | null;
+  createdAt: string;
+  updatedAt: string;
+  messageCount?: number;
+}
+
+export interface TicketMessage {
+  id: string;
+  ticketId: string;
+  senderId: number;
+  senderRole: string;
+  text: string;
+  createdAt: string;
+}
+
+export interface TicketDetail extends Ticket {
+  messages: TicketMessage[];
+}
+
+// --- Analytics ---
+
+export type AnalyticsGranularity = 'daily' | 'weekly' | 'monthly';
+
+export interface TimeSeriesPoint {
+  date: string;
+  count: number;
+}
+
+export interface UsageAnalytics {
+  period: { from: string; to: string };
+  granularity: AnalyticsGranularity;
+  sessionsCreated: TimeSeriesPoint[];
+  messagesSent: TimeSeriesPoint[];
+  activeUsers: TimeSeriesPoint[];
+}
+
+export interface ContentAnalytics {
+  topArtworks: { title: string; artist: string | null; count: number }[];
+  topMuseums: { name: string; count: number }[];
+  guardrailBlockRate: number;
+}
+
+export interface EngagementAnalytics {
+  avgMessagesPerSession: number;
+  avgSessionDurationMinutes: number;
+  returnUserRate: number;
+  totalUniqueUsers: number;
+  returningUsers: number;
+}

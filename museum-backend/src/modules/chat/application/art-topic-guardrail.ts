@@ -349,8 +349,8 @@ export const evaluateUserInputGuardrail = ({
     return { allow: true };
   }
 
-  // 9. Default → no signal at all → let the LLM decide (it has system-level art-scope instructions)
-  return { allow: true };
+  // 9. Default → off-topic redirect
+  return { allow: true, redirectHint: REDIRECT_HINT_OFF_TOPIC };
 };
 
 /**
