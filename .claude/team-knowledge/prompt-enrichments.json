@@ -92,7 +92,8 @@
       "rule": "Agent MUST NOT commit code, write KB files, update sprint tracking, or perform FINALIZE. These are Tech Lead/Sentinelle responsibilities only. Agent mandate must include explicit hors-scope for commits and KB writes.",
       "source": "R11: Frontend Architect committed 3 unauthorized commits including fake R12 FINALIZE with incorrect KB data",
       "inject_when": "every agent mandate — hors-scope section",
-      "severity": "CRITICAL"
+      "severity": "CRITICAL",
+      "injectedInAgents": "2026-03-26 R12-chore — LIMITES OPERATIONNELLES section in all 9 agents + SKILL.md template + REGLES ABSOLUES rule 7"
     }
   ],
   "r4Summary": {

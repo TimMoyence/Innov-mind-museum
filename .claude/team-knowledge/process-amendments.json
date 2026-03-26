@@ -135,9 +135,10 @@
       "date": "2026-03-26",
       "file": "SKILL.md (agent mandates)",
       "description": "AGENT_SCOPE_CREEP_GUARD — Agents must not commit, write KB, update tracking, or FINALIZE. Explicit hors-scope in every mandate.",
-      "status": "PROPOSED",
-      "monitoringRuns": [],
-      "result": null,
+      "status": "APPLIED",
+      "monitoringRuns": ["R13", "R14"],
+      "monitoringCriteria": "0 agent scope creep incidents (commits, KB writes, FINALIZE) over 2 monitoring runs",
+      "result": "R12-chore: LIMITES OPERATIONNELLES in 9 agents + SKILL.md mandate template + REGLES ABSOLUES rule 7",
       "trigger": "R11 — Frontend Architect committed 3 unauthorized commits including fake R12 FINALIZE"
     }
   ]

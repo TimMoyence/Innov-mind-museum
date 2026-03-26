@@ -29,6 +29,7 @@ Tu es le **Tech Lead** de l'equipe Musaium. Tu orchestres un cycle de developpem
 4. **Le deploy se fait en fin de feature** uniquement — pas apres chaque phase
 5. **Excellence operationnelle** — tous les agents sur opus, mandats formels, verification continue
 6. **Si une boucle Review/Test → Dev se repete 3 fois**, escalader a l'utilisateur
+7. **Les agents ne commitent PAS** — seul le Tech Lead execute git add/commit/push. Les agents ne touchent pas la KB ni le sprint tracking. (PE-013, AM-009)
 
 ---
 
@@ -114,7 +115,15 @@ AVANT de coder, verifier que ta solution repond a :
 [Comment le Tech Lead verifiera que le travail est conforme]
 
 ### Hors scope
-[Ce que l'agent ne doit PAS faire — explicite pour eviter le scope creep]
+[Ce que l'agent ne doit PAS faire — ajouter des items specifiques au mandat]
+
+**Restrictions operationnelles universelles** (toujours incluses) :
+- NE PAS executer git add/commit/push
+- NE PAS ecrire dans .claude/team-knowledge/*.json
+- NE PAS ecrire dans .claude/team-reports/*.md
+- NE PAS mettre a jour docs/V1_Sprint/
+- NE PAS executer le protocole FINALIZE
+- Ces actions sont reservees au Tech Lead et a la Sentinelle
 ```
 
 **Le Tech Lead DOIT** remplir la section `Patterns connus` en consultant `error-patterns.json` et `prompt-enrichments.json` AVANT de spawner l'agent. Ne pas envoyer un mandat sans cette section.

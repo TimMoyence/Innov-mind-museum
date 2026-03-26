@@ -205,18 +205,34 @@
       "estimation": "M",
       "result": "PASS",
       "notes": "8 new theme tokens, 92% hardcoded color reduction, dark mode bug fixed. Agent scope creep: FlashList + React Compiler + component tests committed without mandate. Tests 47→71 (+24 from scope creep)."
+    },
+    {
+      "id": "R12",
+      "date": "2026-03-26",
+      "mode": "chore (scope creep guards — EP-014, AM-009, PE-013)",
+      "score": 95,
+      "agentsSpawned": 0,
+      "filesTouched": 10,
+      "testsWritten": 0,
+      "filesPerAgent": 0,
+      "roiMoyen": 5.0,
+      "correctiveLoops": 0,
+      "firstPassRate": 1.0,
+      "estimation": "S",
+      "result": "PASS",
+      "notes": "LIMITES OPERATIONNELLES in 9 agents + SKILL.md. EP-014 fixed, AM-009 applied, PE-013 injected. L3 PROMOTION confirmed."
     }
   ],
   "averages": {
-    "score": 93.07,
-    "filesPerAgent": 9.42,
+    "score": 93.2,
+    "filesPerAgent": 8.83,
     "correctiveLoops": 0,
     "firstPassRate": 1.0,
-    "roiMoyen": 4.65
+    "roiMoyen": 4.67
   },
   "trends": {
-    "scoreTrend": "STABLE HIGH (88-97 range, avg 93.1 over 14 runs) — L3 deferred due to R11 agent scope creep",
-    "loopsTrend": "STABLE (0) — 14 runs lifetime, 0 corrective loops",
-    "roiTrend": "STABLE HIGH (3.5-5.0) — R11 at 4.0 (scope creep lowered). 14 runs avg 4.65"
+    "scoreTrend": "STABLE HIGH (88-97 range, avg 93.2 over 15 runs) — L3 CONFIRMED R12",
+    "loopsTrend": "STABLE (0) — 15 runs lifetime, 0 corrective loops",
+    "roiTrend": "STABLE HIGH (3.5-5.0) — 15 runs avg 4.67"
   }
 }

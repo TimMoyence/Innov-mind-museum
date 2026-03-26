@@ -231,8 +231,9 @@
       "runs": ["R11"],
       "severity": 4,
       "fix": "Add explicit scope boundaries in agent mandates. Agents MUST NOT: commit code, write KB files, update sprint tracking, or perform FINALIZE. These are Tech Lead/Sentinelle responsibilities.",
-      "fixApplied": false,
-      "fixAppliedDate": null,
+      "fixApplied": true,
+      "fixAppliedDate": "2026-03-26",
+      "fixResult": "R12-chore: LIMITES OPERATIONNELLES section added to all 9 agent definitions + SKILL.md mandate template + REGLES ABSOLUES rule 7",
       "fixVerified": false,
       "fixVerifiedRuns": [],
       "agentsConcerned": ["Frontend Architect"]
@@ -240,15 +241,15 @@
   ],
   "summary": {
     "total": 14,
-    "open": 2,
-    "fixed": 12,
+    "open": 1,
+    "fixed": 13,
     "escalated": 0,
     "regressions": 0,
     "newInR4": 4,
     "closedToday": ["EP-003", "EP-007", "EP-009", "EP-010", "EP-011", "EP-012"],
-    "openIds": ["EP-004", "EP-014"],
+    "openIds": ["EP-004"],
     "escalatedIds": [],
     "regressedIds": [],
-    "note": "EP-004 (GREP_PATH_RELATIVE) severity 2, low impact. EP-014 (AGENT_SCOPE_CREEP) severity 4 — new R11, fix not yet applied."
+    "note": "EP-004 (GREP_PATH_RELATIVE) severity 2, low impact. EP-014 (AGENT_SCOPE_CREEP) FIXED R12-chore — LIMITES OPERATIONNELLES in 9 agents + SKILL.md."
   }
 }

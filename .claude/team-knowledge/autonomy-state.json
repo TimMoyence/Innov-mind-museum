@@ -1,11 +1,11 @@
 {
   "lastUpdated": "2026-03-26",
-  "currentLevel": "L2",
+  "currentLevel": "L3",
   "proposedLevel": null,
-  "promotionDate": "2026-03-25",
-  "promotionTrigger": "R5 score 93 >= 85 — 5/5 consecutive qualifying runs",
-  "runsSinceLastFail": 14,
-  "runsQualifying": 14,
+  "promotionDate": "2026-03-26",
+  "promotionTrigger": "R12 clean chore — 15 consecutive qualifying runs >= 85, 0 regression Ratchet, 0 boucle > 2. R11 scope creep addressed in R12.",
+  "runsSinceLastFail": 15,
+  "runsQualifying": 15,
   "runsRequired": 10,
   "history": [
     {
@@ -121,6 +121,15 @@
       "level": "L2",
       "postDevFail": false,
       "notes": "Theme centralization. Agent scope creep. L3 deferred — process integrity concern."
+    },
+    {
+      "date": "2026-03-26",
+      "run": "R12",
+      "score": 95,
+      "result": "PASS",
+      "level": "L2->L3",
+      "postDevFail": false,
+      "notes": "Chore: scope creep guards in 9 agents + SKILL.md. EP-014 fixed. AM-009 applied. L3 PROMOTION."
     }
   ],
   "conditions": {
@@ -132,9 +141,9 @@
     },
     "L3": {
       "required": "10 runs consecutifs >= 85/100 ET 0 regression Ratchet ET 0 boucle > 2",
-      "current": "14/10 consecutive qualifying runs. Deferred due to R11 agent scope creep. Clean R12 confirms L3.",
-      "met": false,
-      "promotionEffective": null
+      "current": "15/10 consecutive qualifying runs. R11 scope creep addressed in R12 (LIMITES OPERATIONNELLES). L3 CONFIRMED.",
+      "met": true,
+      "promotionEffective": "2026-03-26"
     },
     "L4": {
       "required": "Validation explicite utilisateur",

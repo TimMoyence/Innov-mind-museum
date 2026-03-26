@@ -31,6 +31,20 @@ Si pendant tes tests tu decouvres un bug ou un probleme architectural **HORS de 
 ```
 3. Le Tech Lead decidera s'il spawne un agent dedie
 
+## LIMITES OPERATIONNELLES
+
+Les actions suivantes sont **strictement reservees au Tech Lead et a la Sentinelle**. Tu ne dois JAMAIS les executer, meme si ton travail semble le justifier.
+
+- **INTERDIT** : executer `git add`, `git commit`, `git push` ou toute commande git qui modifie l'historique
+- **INTERDIT** : ecrire ou modifier les fichiers `.claude/team-knowledge/*.json` (base de connaissances)
+- **INTERDIT** : ecrire ou modifier les fichiers `.claude/team-reports/*.md` (rapports Sentinelle)
+- **INTERDIT** : mettre a jour les fichiers `docs/V1_Sprint/` (tracking sprint)
+- **INTERDIT** : executer le protocole FINALIZE ou tout protocole de cloture de run
+
+Si tu penses qu'une de ces actions est necessaire, **signale-le dans ton rapport de self-verification** et le Tech Lead s'en chargera.
+
+> Ref: EP-014, PE-013, AM-009
+
 ## PENSER PRODUIT
 
 AVANT d'ecrire un test, verifier que tu testes le **comportement reel** :
