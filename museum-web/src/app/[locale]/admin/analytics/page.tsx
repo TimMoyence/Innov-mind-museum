@@ -71,7 +71,6 @@ function mergeUsageTimeSeries(usage: UsageAnalytics): UsageChartPoint[] {
 
 export default function AnalyticsPage() {
   const adminDict = useAdminDict();
-  const isFr = adminDict.dashboard === 'Tableau de bord';
 
   // Data state
   const [usage, setUsage] = useState<UsageAnalytics | null>(null);
@@ -157,9 +156,7 @@ export default function AnalyticsPage() {
     <div>
       <h1 className="text-2xl font-bold text-text-primary">{adminDict.analytics}</h1>
       <p className="mt-1 text-text-secondary">
-        {isFr
-          ? "Statistiques d'utilisation et d'engagement de la plateforme."
-          : 'Platform usage and engagement statistics.'}
+        {adminDict.analyticsPage.subtitle}
       </p>
 
       {/* Loading */}
@@ -181,7 +178,7 @@ export default function AnalyticsPage() {
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <div className="rounded-xl border border-primary-100 bg-white p-6">
             <p className="text-sm font-medium text-text-secondary">
-              {isFr ? 'Moy. messages/session' : 'Avg Messages/Session'}
+              {adminDict.analyticsPage.avgMessages}
             </p>
             <p className="mt-2 text-3xl font-bold text-text-primary">
               {engagement.avgMessagesPerSession.toFixed(1)}
@@ -190,7 +187,7 @@ export default function AnalyticsPage() {
 
           <div className="rounded-xl border border-primary-100 bg-white p-6">
             <p className="text-sm font-medium text-text-secondary">
-              {isFr ? 'Durée moy. (min)' : 'Avg Duration (min)'}
+              {adminDict.analyticsPage.avgDuration}
             </p>
             <p className="mt-2 text-3xl font-bold text-text-primary">
               {engagement.avgSessionDurationMinutes.toFixed(1)}
@@ -199,7 +196,7 @@ export default function AnalyticsPage() {
 
           <div className="rounded-xl border border-primary-100 bg-white p-6">
             <p className="text-sm font-medium text-text-secondary">
-              {isFr ? 'Taux de retour' : 'Return Rate'}
+              {adminDict.analyticsPage.returnRate}
             </p>
             <p className="mt-2 text-3xl font-bold text-text-primary">
               {(engagement.returnUserRate * 100).toFixed(1)}%
@@ -208,7 +205,7 @@ export default function AnalyticsPage() {
 
           <div className="rounded-xl border border-primary-100 bg-white p-6">
             <p className="text-sm font-medium text-text-secondary">
-              {isFr ? 'Utilisateurs uniques' : 'Unique Users'}
+              {adminDict.analyticsPage.uniqueUsers}
             </p>
             <p className="mt-2 text-3xl font-bold text-text-primary">
               {engagement.totalUniqueUsers.toLocaleString()}
@@ -217,7 +214,7 @@ export default function AnalyticsPage() {
 
           <div className="rounded-xl border border-primary-100 bg-white p-6">
             <p className="text-sm font-medium text-text-secondary">
-              {isFr ? 'Utilisateurs récurrents' : 'Returning Users'}
+              {adminDict.analyticsPage.returningUsers}
             </p>
             <p className="mt-2 text-3xl font-bold text-text-primary">
               {engagement.returningUsers.toLocaleString()}
@@ -231,7 +228,7 @@ export default function AnalyticsPage() {
         <div className="mt-8 rounded-xl border border-primary-100 bg-white p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-semibold text-text-primary">
-              {isFr ? 'Utilisation' : 'Usage'}
+              {adminDict.analyticsPage.usage}
             </h2>
 
             <div className="flex gap-3">
@@ -242,11 +239,7 @@ export default function AnalyticsPage() {
               >
                 {GRANULARITY_OPTIONS.map((g) => (
                   <option key={g} value={g}>
-                    {g === 'daily'
-                      ? isFr ? 'Quotidien' : 'Daily'
-                      : g === 'weekly'
-                        ? isFr ? 'Hebdomadaire' : 'Weekly'
-                        : isFr ? 'Mensuel' : 'Monthly'}
+                    {adminDict.analyticsPage[g]}
                   </option>
                 ))}
               </select>
@@ -258,7 +251,7 @@ export default function AnalyticsPage() {
               >
                 {DAYS_OPTIONS.map((d) => (
                   <option key={d} value={d}>
-                    {d} {isFr ? 'jours' : 'days'}
+                    {d} {adminDict.analyticsPage.days}
                   </option>
                 ))}
               </select>
@@ -276,7 +269,7 @@ export default function AnalyticsPage() {
                 <Line
                   type="monotone"
                   dataKey="sessions"
-                  name={isFr ? 'Sessions' : 'Sessions'}
+                  name={adminDict.analyticsPage.sessions}
                   stroke="#2563eb"
                   strokeWidth={2}
                   dot={false}
@@ -284,7 +277,7 @@ export default function AnalyticsPage() {
                 <Line
                   type="monotone"
                   dataKey="messages"
-                  name="Messages"
+                  name={adminDict.analyticsPage.messagesSent}
                   stroke="#16a34a"
                   strokeWidth={2}
                   dot={false}
@@ -292,7 +285,7 @@ export default function AnalyticsPage() {
                 <Line
                   type="monotone"
                   dataKey="activeUsers"
-                  name={isFr ? 'Utilisateurs actifs' : 'Active Users'}
+                  name={adminDict.analyticsPage.activeUsers}
                   stroke="#d97706"
                   strokeWidth={2}
                   dot={false}
@@ -309,7 +302,7 @@ export default function AnalyticsPage() {
           {/* Top Artworks — Bar Chart */}
           <div className="rounded-xl border border-primary-100 bg-white p-6">
             <h2 className="text-lg font-semibold text-text-primary">
-              {isFr ? 'Top oeuvres' : 'Top Artworks'}
+              {adminDict.analyticsPage.topArtworks}
             </h2>
             {content.topArtworks.length > 0 ? (
               <div className="mt-4">
@@ -337,7 +330,7 @@ export default function AnalyticsPage() {
               </div>
             ) : (
               <p className="mt-4 text-sm text-text-muted">
-                {isFr ? 'Aucune donnee.' : 'No data available.'}
+                {adminDict.common.noData}
               </p>
             )}
           </div>
@@ -345,7 +338,7 @@ export default function AnalyticsPage() {
           {/* Top Museums — Table */}
           <div className="rounded-xl border border-primary-100 bg-white p-6">
             <h2 className="text-lg font-semibold text-text-primary">
-              {isFr ? 'Top musees' : 'Top Museums'}
+              {adminDict.analyticsPage.topMuseums}
             </h2>
 
             {content.topMuseums.length > 0 ? (
@@ -354,10 +347,10 @@ export default function AnalyticsPage() {
                   <thead className="border-b border-primary-100 bg-surface-elevated">
                     <tr>
                       <th className="px-4 py-2.5 font-medium text-text-secondary">
-                        {isFr ? 'Musee' : 'Museum'}
+                        {adminDict.analyticsPage.museum}
                       </th>
                       <th className="px-4 py-2.5 text-right font-medium text-text-secondary">
-                        {isFr ? 'Conversations' : 'Conversations'}
+                        {adminDict.common.conversations}
                       </th>
                     </tr>
                   </thead>
@@ -375,14 +368,14 @@ export default function AnalyticsPage() {
               </div>
             ) : (
               <p className="mt-4 text-sm text-text-muted">
-                {isFr ? 'Aucune donnee.' : 'No data available.'}
+                {adminDict.common.noData}
               </p>
             )}
 
             {/* Guardrail Block Rate */}
             <div className="mt-6 rounded-lg bg-amber-50 px-4 py-3">
               <p className="text-sm font-medium text-amber-800">
-                {isFr ? 'Taux de blocage guardrail' : 'Guardrail Block Rate'}
+                {adminDict.analyticsPage.guardrailBlockRate}
               </p>
               <p className="mt-1 text-2xl font-bold text-amber-900">
                 {(content.guardrailBlockRate * 100).toFixed(1)}%

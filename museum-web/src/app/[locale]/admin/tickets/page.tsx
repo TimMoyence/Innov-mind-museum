@@ -110,7 +110,7 @@ export default function TicketsPage() {
     <div>
       <h1 className="text-2xl font-bold text-text-primary">{adminDict.tickets}</h1>
       <p className="mt-1 text-text-secondary">
-        {isFr ? 'Gérez les tickets de support.' : 'Manage support tickets.'}
+        {adminDict.ticketsPage.subtitle}
       </p>
 
       {/* Filters */}
@@ -120,7 +120,7 @@ export default function TicketsPage() {
           onChange={(e) => { setStatusFilter(e.target.value as TicketStatus | ''); }}
           className="rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         >
-          <option value="">{isFr ? 'Tous les statuts' : 'All statuses'}</option>
+          <option value="">{adminDict.common.allStatuses}</option>
           {TICKET_STATUSES.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
@@ -131,7 +131,7 @@ export default function TicketsPage() {
           onChange={(e) => { setPriorityFilter(e.target.value as TicketPriority | ''); }}
           className="rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         >
-          <option value="">{isFr ? 'Toutes les priorités' : 'All priorities'}</option>
+          <option value="">{adminDict.common.allPriorities}</option>
           {TICKET_PRIORITIES.map((p) => (
             <option key={p} value={p}>{p}</option>
           ))}
@@ -160,31 +160,31 @@ export default function TicketsPage() {
               <thead className="border-b border-primary-100 bg-surface-elevated">
                 <tr>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    {isFr ? 'Date' : 'Date'}
+                    {adminDict.common.date}
                   </th>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    {isFr ? 'Sujet' : 'Subject'}
+                    {adminDict.common.subject}
                   </th>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    {isFr ? 'Utilisateur' : 'User ID'}
+                    {adminDict.common.user}
                   </th>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    {isFr ? 'Statut' : 'Status'}
+                    {adminDict.common.status}
                   </th>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    {isFr ? 'Priorité' : 'Priority'}
+                    {adminDict.common.priority}
                   </th>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    {isFr ? 'Messages' : 'Messages'}
+                    {adminDict.common.messages}
                   </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">Actions</th>
+                  <th className="px-6 py-3 font-medium text-text-secondary">{adminDict.common.actions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary-50">
                 {tickets.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-12 text-center text-text-muted">
-                      {isFr ? 'Aucun ticket trouvé.' : 'No tickets found.'}
+                      {adminDict.ticketsPage.noTickets}
                     </td>
                   </tr>
                 ) : (
@@ -231,13 +231,13 @@ export default function TicketsPage() {
                             }}
                             className="rounded-md px-3 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50"
                           >
-                            {isFr ? 'Modifier' : 'Update'}
+                            {adminDict.ticketsPage.update}
                           </button>
                           <a
                             href={`/${locale}/admin/support?ticket=${t.id}`}
                             className="rounded-md px-3 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50"
                           >
-                            {isFr ? 'Voir' : 'View'}
+                            {adminDict.ticketsPage.view}
                           </a>
                         </div>
                       </td>
@@ -255,7 +255,6 @@ export default function TicketsPage() {
               totalPages={meta.totalPages}
               total={meta.total}
               onPageChange={setPage}
-              isFr={isFr}
             />
           )}
         </div>
@@ -278,14 +277,14 @@ export default function TicketsPage() {
         >
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
             <h2 className="text-lg font-bold text-text-primary">
-              {isFr ? 'Modifier le ticket' : 'Update Ticket'}
+              {adminDict.ticketsPage.updateTicket}
             </h2>
             <p className="mt-1 text-sm text-text-secondary">
               {editingTicket.subject}
             </p>
 
             <label className="mt-4 block text-sm font-medium text-text-secondary">
-              {isFr ? 'Statut' : 'Status'}
+              {adminDict.common.status}
             </label>
             <select
               value={newStatus}
@@ -298,7 +297,7 @@ export default function TicketsPage() {
             </select>
 
             <label className="mt-4 block text-sm font-medium text-text-secondary">
-              {isFr ? 'Priorité' : 'Priority'}
+              {adminDict.common.priority}
             </label>
             <select
               value={newPriority}
@@ -316,7 +315,7 @@ export default function TicketsPage() {
                 onClick={() => { setEditingTicket(null); }}
                 className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted"
               >
-                {isFr ? 'Annuler' : 'Cancel'}
+                {adminDict.common.cancel}
               </button>
               <button
                 type="button"
@@ -326,7 +325,7 @@ export default function TicketsPage() {
               >
                 {saving
                   ? '...'
-                  : isFr ? 'Confirmer' : 'Confirm'}
+                  : adminDict.common.confirm}
               </button>
             </div>
           </div>

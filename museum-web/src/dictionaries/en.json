@@ -152,6 +152,76 @@
       "passwordPlaceholder": "Password",
       "submit": "Sign in",
       "error": "Invalid credentials"
+    },
+    "common": {
+      "date": "Date",
+      "status": "Status",
+      "priority": "Priority",
+      "actions": "Actions",
+      "messages": "Messages",
+      "user": "User",
+      "userId": "User ID",
+      "subject": "Subject",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "previous": "Previous",
+      "next": "Next",
+      "pageOf": "Page {page} of {totalPages} ({total} results)",
+      "allStatuses": "All statuses",
+      "allPriorities": "All priorities",
+      "noData": "No data available.",
+      "conversations": "Conversations"
+    },
+    "reportsPage": {
+      "subtitle": "Review and moderate content reports.",
+      "reason": "Reason",
+      "message": "Message",
+      "review": "Review",
+      "reviewReport": "Review Report",
+      "reportedMessage": "Reported message",
+      "reviewerNotes": "Reviewer notes",
+      "reviewerNotesPlaceholder": "Add notes about your review decision...",
+      "noReports": "No reports found."
+    },
+    "ticketsPage": {
+      "subtitle": "Manage support tickets.",
+      "update": "Update",
+      "view": "View",
+      "updateTicket": "Update Ticket",
+      "noTickets": "No tickets found."
+    },
+    "supportPage": {
+      "subtitle": "View and respond to support tickets.",
+      "selectTicket": "Select a ticket from the tickets page to view details.",
+      "viewTickets": "View Tickets",
+      "backToTickets": "Back to tickets",
+      "createdAt": "Created",
+      "description": "Description",
+      "noMessages": "No messages yet.",
+      "reply": "Reply",
+      "replyPlaceholder": "Type your reply...",
+      "send": "Send",
+      "sending": "Sending..."
+    },
+    "analyticsPage": {
+      "subtitle": "Platform usage and engagement statistics.",
+      "avgMessages": "Avg. Messages / Session",
+      "avgDuration": "Avg. Duration (min)",
+      "returnRate": "Return Rate",
+      "uniqueUsers": "Unique Users",
+      "returningUsers": "Returning Users",
+      "usage": "Usage",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "days": "days",
+      "sessions": "Sessions",
+      "messagesSent": "Messages",
+      "activeUsers": "Active Users",
+      "topArtworks": "Top Artworks",
+      "topMuseums": "Top Museums",
+      "museum": "Museum",
+      "guardrailBlockRate": "Guardrail Block Rate"
     }
   }
 }

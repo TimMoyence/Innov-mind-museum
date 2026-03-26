@@ -92,7 +92,7 @@ export default function ReportsPage() {
     <div>
       <h1 className="text-2xl font-bold text-text-primary">{adminDict.reports}</h1>
       <p className="mt-1 text-text-secondary">
-        {isFr ? 'Consultez et modérez les signalements.' : 'Review and moderate content reports.'}
+        {adminDict.reportsPage.subtitle}
       </p>
 
       {/* Filter */}
@@ -102,7 +102,7 @@ export default function ReportsPage() {
           onChange={(e) => { setStatusFilter(e.target.value as ReportStatus | ''); }}
           className="rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         >
-          <option value="">{isFr ? 'Tous les statuts' : 'All'}</option>
+          <option value="">{adminDict.common.allStatuses}</option>
           {ALL_STATUSES.map((s) => (
             <option key={s} value={s}>
               {s}
@@ -133,22 +133,22 @@ export default function ReportsPage() {
               <thead className="border-b border-primary-100 bg-surface-elevated">
                 <tr>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    Date
+                    {adminDict.common.date}
                   </th>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    {isFr ? 'Utilisateur' : 'User ID'}
+                    {adminDict.common.user}
                   </th>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    {isFr ? 'Raison' : 'Reason'}
+                    {adminDict.reportsPage.reason}
                   </th>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    Message
+                    {adminDict.reportsPage.message}
                   </th>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    {isFr ? 'Statut' : 'Status'}
+                    {adminDict.common.status}
                   </th>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    Actions
+                    {adminDict.common.actions}
                   </th>
                 </tr>
               </thead>
@@ -159,7 +159,7 @@ export default function ReportsPage() {
                       colSpan={6}
                       className="px-6 py-12 text-center text-text-muted"
                     >
-                      {isFr ? 'Aucun signalement trouvé.' : 'No reports found.'}
+                      {adminDict.reportsPage.noReports}
                     </td>
                   </tr>
                 ) : (
@@ -202,7 +202,7 @@ export default function ReportsPage() {
                           }}
                           className="rounded-md px-3 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50"
                         >
-                          {isFr ? 'Examiner' : 'Review'}
+                          {adminDict.reportsPage.review}
                         </button>
                       </td>
                     </tr>
@@ -219,7 +219,6 @@ export default function ReportsPage() {
               totalPages={meta.totalPages}
               total={meta.total}
               onPageChange={setPage}
-              isFr={isFr}
             />
           )}
         </div>
@@ -242,16 +241,16 @@ export default function ReportsPage() {
         >
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
             <h2 className="text-lg font-bold text-text-primary">
-              {isFr ? 'Examiner le signalement' : 'Review Report'}
+              {adminDict.reportsPage.reviewReport}
             </h2>
             <p className="mt-1 text-sm text-text-secondary">
-              {isFr ? 'Raison :' : 'Reason:'} {editingReport.reason}
+              {adminDict.reportsPage.reason} : {editingReport.reason}
             </p>
 
             {editingReport.messageText && (
               <div className="mt-3 rounded-lg bg-surface-muted p-3 text-sm text-text-secondary">
                 <p className="mb-1 text-xs font-medium text-text-muted">
-                  {isFr ? 'Message signalé' : 'Reported message'}
+                  {adminDict.reportsPage.reportedMessage}
                 </p>
                 {editingReport.messageText}
               </div>
@@ -274,7 +273,7 @@ export default function ReportsPage() {
               onChange={(e) => { setReviewerNotes(e.target.value); }}
               maxLength={2000}
               rows={3}
-              placeholder={isFr ? 'Notes du modérateur...' : 'Reviewer notes...'}
+              placeholder={adminDict.reportsPage.reviewerNotesPlaceholder}
               className="mt-3 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
             />
 
@@ -284,7 +283,7 @@ export default function ReportsPage() {
                 onClick={() => { setEditingReport(null); }}
                 className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted"
               >
-                {isFr ? 'Annuler' : 'Cancel'}
+                {adminDict.common.cancel}
               </button>
               <button
                 type="button"
@@ -294,7 +293,7 @@ export default function ReportsPage() {
               >
                 {submitting
                   ? '...'
-                  : isFr ? 'Confirmer' : 'Confirm'}
+                  : adminDict.common.confirm}
               </button>
             </div>
           </div>
