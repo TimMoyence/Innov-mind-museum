@@ -28,10 +28,10 @@ import {
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 import { StartupConfigurationErrorScreen } from '@/shared/ui/StartupConfigurationErrorScreen';
 
-const sentryDsn =
+const sentryDsn: string | undefined =
   Platform.OS === 'android'
-    ? process.env.EXPO_PUBLIC_SENTRY_DSN_ANDROID
-    : process.env.EXPO_PUBLIC_SENTRY_DSN_IOS;
+    ? (process.env.EXPO_PUBLIC_SENTRY_DSN_ANDROID as string | undefined)
+    : (process.env.EXPO_PUBLIC_SENTRY_DSN_IOS as string | undefined);
 
 const reactNavigationIntegration = Sentry.reactNavigationIntegration({
   enableTimeToInitialDisplay: true,

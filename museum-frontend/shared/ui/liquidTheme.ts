@@ -21,24 +21,24 @@ export const viewportConfig = {
 /** Pre-loaded set of museum-themed background image pairs (mobile + desktop) used across screens. */
 export const museumBackgrounds: ResponsiveBackground[] = [
   {
-    mobile: require('../../assets/images/backgrounds/mobile/museum-child.png'),
-    desktop: require('../../assets/images/backgrounds/desktop/museum-child.png'),
+    mobile: require('../../assets/images/backgrounds/mobile/museum-child.png') as ImageSourcePropType,
+    desktop: require('../../assets/images/backgrounds/desktop/museum-child.png') as ImageSourcePropType,
   },
   {
-    mobile: require('../../assets/images/backgrounds/mobile/museum-girl.png'),
-    desktop: require('../../assets/images/backgrounds/desktop/museum-girl.png'),
+    mobile: require('../../assets/images/backgrounds/mobile/museum-girl.png') as ImageSourcePropType,
+    desktop: require('../../assets/images/backgrounds/desktop/museum-girl.png') as ImageSourcePropType,
   },
   {
-    mobile: require('../../assets/images/backgrounds/mobile/museum-men.png'),
-    desktop: require('../../assets/images/backgrounds/desktop/museum-men.png'),
+    mobile: require('../../assets/images/backgrounds/mobile/museum-men.png') as ImageSourcePropType,
+    desktop: require('../../assets/images/backgrounds/desktop/museum-men.png') as ImageSourcePropType,
   },
   {
-    mobile: require('../../assets/images/backgrounds/mobile/museum-old-men.png'),
-    desktop: require('../../assets/images/backgrounds/desktop/museum-old-men.png'),
+    mobile: require('../../assets/images/backgrounds/mobile/museum-old-men.png') as ImageSourcePropType,
+    desktop: require('../../assets/images/backgrounds/desktop/museum-old-men.png') as ImageSourcePropType,
   },
   {
-    mobile: require('../../assets/images/backgrounds/mobile/museum-old-women.png'),
-    desktop: require('../../assets/images/backgrounds/desktop/museum-old-women.png'),
+    mobile: require('../../assets/images/backgrounds/mobile/museum-old-women.png') as ImageSourcePropType,
+    desktop: require('../../assets/images/backgrounds/desktop/museum-old-women.png') as ImageSourcePropType,
   },
 ];
 

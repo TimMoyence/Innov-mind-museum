@@ -33,7 +33,7 @@ export class OfflineQueue {
     try {
       const raw = await this.storage.getItem(STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw);
+        const parsed: unknown = JSON.parse(raw);
         if (Array.isArray(parsed)) {
           this.queue = parsed as QueuedMessage[];
           this.notify();

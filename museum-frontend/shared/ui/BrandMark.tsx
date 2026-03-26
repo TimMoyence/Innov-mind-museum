@@ -4,10 +4,12 @@ import {
   useWindowDimensions,
   View,
   type StyleProp,
+  type ImageSourcePropType,
   type ViewStyle,
 } from 'react-native';
 
-const musaiumLogo = require('../../assets/images/logo.png');
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- RN image require pattern
+const musaiumLogo = require('../../assets/images/logo.png') as ImageSourcePropType;
 
 type BrandMarkVariant = 'auth' | 'hero' | 'header';
 

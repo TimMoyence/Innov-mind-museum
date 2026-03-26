@@ -13,12 +13,14 @@ export interface SocialAuthResult {
 }
 
 GoogleSignin.configure({
-  webClientId:
+  webClientId: String(
     Constants.expoConfig?.extra?.GOOGLE_WEB_CLIENT_ID ??
     '498339023976-bjbain2ir2t9q4pu9lsmmk8ni7t96dd7.apps.googleusercontent.com',
-  iosClientId:
+  ),
+  iosClientId: String(
     Constants.expoConfig?.extra?.GOOGLE_IOS_CLIENT_ID ??
     '498339023976-8r199kpqbqmhb7mdf45ostg3sutqeng2.apps.googleusercontent.com',
+  ),
 });
 
 /**
