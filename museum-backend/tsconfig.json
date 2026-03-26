@@ -29,6 +29,7 @@
       "@data/*": ["src/data/*"],
       "@src/*": ["src/*"]
     },
+    "rootDir": "./",
     "outDir": "./dist",
     "lib": ["ES2023"]
   },
