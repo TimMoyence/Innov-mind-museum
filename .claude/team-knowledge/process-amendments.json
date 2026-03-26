@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-03-25",
+  "lastUpdated": "2026-03-26",
   "amendments": [
     {
       "id": "AM-001",
@@ -23,14 +23,14 @@
       "type": "MAJOR",
       "date": "2026-03-25",
       "target": "Phase 1 ANALYSE flow",
-      "status": "CONFIRMED",
+      "status": "MONITORING",
       "justification": "R9 — 6/14 items deja implementes, travail inutile planifie sur code existant",
       "evidence": "R9: i18n errors, 429 retry, SSE streaming, etc. deja presents dans le codebase",
       "change": "Ajouter etape 'FEATURE EXISTENCE CHECK' dans Phase 1 ANALYSE: verifier si chaque item existe deja (grep + read), marquer DEJA IMPLEMENTE, reduire le scope",
       "risk": "Faible — ajoute un check, ne retire rien",
       "monitoringRuns": ["R11", "R12"],
       "monitoringCriteria": "0 item deja implemente passe inapercu sur R11+R12",
-      "result": "CONFIRMED — R11 applied (0 false starts), R12 applied (PE-008 verified, all 4 items genuinely needed). 2/2 monitoring runs PASS.",
+      "result": "R11 applied (0 false starts on theme scope). 1/2 monitoring runs PASS. Awaiting R12.",
       "rejectionReason": null
     },
     {
@@ -39,14 +39,14 @@
       "type": "MAJOR",
       "date": "2026-03-25",
       "target": "REGLES ABSOLUES",
-      "status": "CONFIRMED",
+      "status": "MONITORING",
       "justification": "R7-R9 n'ont pas de traces dans velocity-metrics.json — la KB est la source de verite permanente, sans FINALIZE elle perd sa valeur",
       "evidence": "velocity-metrics.json ne contenait que R1-R6, manquant R7-R9",
       "change": "Ajouter regle 7 aux REGLES ABSOLUES: KB FINALIZE OBLIGATOIRE a chaque fin de run (7 fichiers KB)",
       "risk": "Faible — force le respect d'une regle existante",
       "monitoringRuns": ["R11", "R12"],
       "monitoringCriteria": "Tous les fichiers KB mis a jour a chaque fin de run",
-      "result": "CONFIRMED — R11 KB updated (store submission), R12 KB FINALIZE executed with all 7 files. 2/2 monitoring runs PASS.",
+      "result": "R11 KB FINALIZE executed (Sentinelle corrected agent corruption). 1/2 monitoring runs PASS. Awaiting R12.",
       "rejectionReason": null
     },
     {
@@ -128,6 +128,17 @@
       "monitoringCriteria": "N/A — applied",
       "result": "APPLIED in R10 cloture",
       "rejectionReason": null
+    },
+    {
+      "id": "AM-009",
+      "type": "MAJOR",
+      "date": "2026-03-26",
+      "file": "SKILL.md (agent mandates)",
+      "description": "AGENT_SCOPE_CREEP_GUARD — Agents must not commit, write KB, update tracking, or FINALIZE. Explicit hors-scope in every mandate.",
+      "status": "PROPOSED",
+      "monitoringRuns": [],
+      "result": null,
+      "trigger": "R11 — Frontend Architect committed 3 unauthorized commits including fake R12 FINALIZE"
     }
   ]
 }

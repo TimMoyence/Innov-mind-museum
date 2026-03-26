@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-03-25",
+  "lastUpdated": "2026-03-26",
   "runs": [
     {
       "id": "R1",
@@ -193,46 +193,30 @@
     {
       "id": "R11",
       "date": "2026-03-26",
-      "mode": "chore (store submission polish)",
-      "score": 92,
-      "agentsSpawned": 0,
-      "filesTouched": 8,
-      "testsWritten": 0,
-      "filesPerAgent": 0,
-      "roiMoyen": 5.0,
-      "correctiveLoops": 0,
-      "firstPassRate": 1.0,
-      "estimation": "L",
-      "result": "PASS",
-      "notes": "Store metadata EN/FR/ES/DE (App Store + Google Play), privacy page museum-web migrated from scaffold to real GDPR content, Feature Graphic HTML template, Maestro screenshot automation, STORE_SUBMISSION_GUIDE.md. 0 agents spawned (Tech Lead direct). PE-008 applied (verified no duplicate work)."
-    },
-    {
-      "id": "R12",
-      "date": "2026-03-26",
-      "mode": "refactor (component tests + FlashList + React Compiler)",
-      "score": 95,
+      "mode": "refactor (theme centralization)",
+      "score": 90,
       "agentsSpawned": 1,
-      "filesTouched": 13,
-      "testsWritten": 24,
-      "filesPerAgent": 6.0,
-      "roiMoyen": 5.0,
+      "filesTouched": 27,
+      "testsWritten": 0,
+      "filesPerAgent": 27.0,
+      "roiMoyen": 4.0,
       "correctiveLoops": 0,
       "firstPassRate": 1.0,
       "estimation": "M",
       "result": "PASS",
-      "notes": "FlashList v2 migration 3 files, 24 component render tests (L3 — first ever), React Compiler babel.config.js, SSOT colors 8 new theme props + 10 files cleaned. FE tests 137->161 (+24). EP-013 FlashList v2 API. L3 AUTONOMY PROMOTED."
+      "notes": "8 new theme tokens, 92% hardcoded color reduction, dark mode bug fixed. Agent scope creep: FlashList + React Compiler + component tests committed without mandate. Tests 47→71 (+24 from scope creep)."
     }
   ],
   "averages": {
-    "score": 93.22,
-    "filesPerAgent": 7.83,
+    "score": 93.07,
+    "filesPerAgent": 9.42,
     "correctiveLoops": 0,
     "firstPassRate": 1.0,
-    "roiMoyen": 4.69
+    "roiMoyen": 4.65
   },
   "trends": {
-    "scoreTrend": "STABLE HIGH (88-96 range, avg 93.4 over 15 runs) — L3 autonomy promoted at R12",
-    "loopsTrend": "STABLE (0) — 15 runs lifetime, 0 corrective loops",
-    "roiTrend": "STABLE HIGH (4.67-5.0) — R12 at 5.0. 15 runs avg 4.70"
+    "scoreTrend": "STABLE HIGH (88-97 range, avg 93.1 over 14 runs) — L3 deferred due to R11 agent scope creep",
+    "loopsTrend": "STABLE (0) — 14 runs lifetime, 0 corrective loops",
+    "roiTrend": "STABLE HIGH (3.5-5.0) — R11 at 4.0 (scope creep lowered). 14 runs avg 4.65"
   }
 }
