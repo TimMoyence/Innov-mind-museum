@@ -148,10 +148,10 @@ httpClient.interceptors.response.use(
   },
   async (error: unknown) => {
     const axiosError = toAxiosLikeError(error);
-    const config = (axiosError?.config || {}) as HttpRequestConfig;
+    const config = (axiosError?.config ?? {}) as HttpRequestConfig;
     const status = axiosError?.response?.status;
 
-    const requestUrl = String(config.url || '');
+    const requestUrl = String(config.url ?? '');
     const isAuthRefreshRequest = requestUrl.includes('/api/auth/refresh');
     const isAuthRequired = config.requiresAuth !== false;
 
@@ -164,6 +164,7 @@ httpClient.interceptors.response.use(
       axiosError?.config
     ) {
       try {
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- multi-line promise guard, ??= less readable
         if (!authRefreshInFlight) {
           authRefreshInFlight = authRefreshHandler().finally(() => {
             authRefreshInFlight = null;
@@ -173,7 +174,7 @@ httpClient.interceptors.response.use(
         const nextAccessToken = await authRefreshInFlight;
         if (nextAccessToken) {
           config._retriedAfterAuthRefresh = true;
-          const headers = (axiosError.config.headers || {}) as Record<string, unknown>;
+          const headers = (axiosError.config.headers ?? {}) as Record<string, unknown>;
           axiosError.config.headers = {
             ...headers,
             Authorization: `Bearer ${nextAccessToken}`,
@@ -188,7 +189,7 @@ httpClient.interceptors.response.use(
     const is429 = status === 429;
     const retryable =
       !status || status >= 500 || axiosError?.code === 'ECONNABORTED' || is429;
-    const retryCount = config._retryCount || 0;
+    const retryCount = config._retryCount ?? 0;
     const maxRetries = is429 ? 3 : 2;
 
     if (retryable && retryCount < maxRetries && axiosError?.config) {

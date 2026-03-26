@@ -39,13 +39,13 @@ export const mapSessionToDashboardCard = (
   session: SessionListItemDTO,
   locale = 'en-US',
 ): DashboardSessionCard => {
-  const rawTitle = session.title || session.preview?.text?.trim() || fallbackTitle;
+  const rawTitle = session.title ?? session.preview?.text?.trim() ?? fallbackTitle;
   const modeLabel = session.museumMode ? 'Guided mode' : 'Standard mode';
   // Skip museumName from subtitle when it's already the title (prevents duplication)
   const showMuseumInSubtitle = session.museumName && session.museumName !== session.title;
   const parts = [modeLabel, showMuseumInSubtitle ? session.museumName : null, session.locale].filter(Boolean);
   const subtitle = parts.join(' • ');
-  const timeSource = session.preview?.createdAt || session.updatedAt;
+  const timeSource = session.preview?.createdAt ?? session.updatedAt;
 
   return {
     id: session.id,

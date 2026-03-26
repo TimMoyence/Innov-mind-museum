@@ -35,8 +35,8 @@ const BRAND_BACKGROUND_COLOR = '#1E1B19';
 
 const resolveVariant = (env: RuntimeEnv): AppVariant => {
   const raw = (
-    env.APP_VARIANT ||
-    env.EAS_BUILD_PROFILE ||
+    env.APP_VARIANT ??
+    env.EAS_BUILD_PROFILE ??
     'development'
   ).toLowerCase();
 
@@ -94,10 +94,10 @@ const resolveApiBaseUrl = (variant: AppVariant, env: RuntimeEnv): string => {
   const apiEnvironment = resolveApiEnvironment(variant, env);
 
   if (apiEnvironment === 'production') {
-    return production || explicit || 'http://localhost:3000';
+    return production ?? explicit ?? 'http://localhost:3000';
   }
 
-  return explicit || staging || production || 'http://localhost:3000';
+  return explicit ?? staging ?? production ?? 'http://localhost:3000';
 };
 
 export default ({ config }: ConfigContext): ExpoConfig => {
@@ -288,8 +288,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         '@sentry/react-native/expo',
         {
-          organization: process.env.SENTRY_ORG || 'asili-design',
-          project: process.env.SENTRY_PROJECT || 'apple-ios',
+          organization: process.env.SENTRY_ORG ?? 'asili-design',
+          project: process.env.SENTRY_PROJECT ?? 'apple-ios',
         },
       ],
     ],
@@ -311,8 +311,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         env.EXPO_PUBLIC_API_BASE_URL_PROD,
       ),
       API_ENVIRONMENT: apiEnvironment,
-      GOOGLE_WEB_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '498339023976-bjbain2ir2t9q4pu9lsmmk8ni7t96dd7.apps.googleusercontent.com',
-      GOOGLE_IOS_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '498339023976-8r199kpqbqmhb7mdf45ostg3sutqeng2.apps.googleusercontent.com',
+      GOOGLE_WEB_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '498339023976-bjbain2ir2t9q4pu9lsmmk8ni7t96dd7.apps.googleusercontent.com',
+      GOOGLE_IOS_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '498339023976-8r199kpqbqmhb7mdf45ostg3sutqeng2.apps.googleusercontent.com',
       APP_VARIANT: variant,
       eas: projectId
         ? {

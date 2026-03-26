@@ -122,9 +122,9 @@ export default function ChatSessionScreen() {
 
     const sent = await sendMessage({
       text: nextText || undefined,
-      imageUri: selectedImage || undefined,
-      audioUri: recordedAudioUri || undefined,
-      audioBlob: recordedAudioBlob || undefined,
+      imageUri: selectedImage ?? undefined,
+      audioUri: recordedAudioUri ?? undefined,
+      audioBlob: recordedAudioBlob ?? undefined,
     });
 
     if (sent) {
@@ -253,9 +253,9 @@ export default function ChatSessionScreen() {
         <GlassCard style={styles.headerShell} intensity={58}>
           <View style={styles.headerRow}>
             <View style={styles.headerContent}>
-              <Text style={[styles.header, { color: theme.textPrimary }]} numberOfLines={1}>{sessionTitle || t('chat.fallback_title')}</Text>
+              <Text style={[styles.header, { color: theme.textPrimary }]} numberOfLines={1}>{sessionTitle ?? t('chat.fallback_title')}</Text>
               <View style={styles.headerSubRow}>
-                <Text style={[styles.subheader, { color: theme.textTertiary }]} numberOfLines={1}>{museumName || `${sessionId.slice(0, 12)}...`}</Text>
+                <Text style={[styles.subheader, { color: theme.textTertiary }]} numberOfLines={1}>{museumName ?? `${sessionId.slice(0, 12)}...`}</Text>
                 {expertiseLevel ? <ExpertiseBadge level={expertiseLevel} /> : null}
               </View>
             </View>

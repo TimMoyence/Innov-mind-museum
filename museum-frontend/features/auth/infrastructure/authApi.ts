@@ -79,7 +79,7 @@ export const authService = {
     const response = await openApiRequest({
       path: '/api/auth/logout',
       method: 'post',
-      body: JSON.stringify({ refreshToken: refreshToken || undefined }),
+      body: JSON.stringify({ refreshToken: refreshToken ?? undefined }),
       requiresAuth: false,
     });
 

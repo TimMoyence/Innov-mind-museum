@@ -53,7 +53,7 @@ const normalizeBaseUrl = (value: string): string => {
 const readExtra = (): Record<string, unknown> => {
   return (
     (Constants?.expoConfig as { extra?: Record<string, unknown> } | undefined)
-      ?.extra || {}
+      ?.extra ?? {}
   );
 };
 
@@ -61,9 +61,9 @@ const resolveBuildVariant = (): BuildVariant => {
   const extra = readExtra();
   const fromExtra = trimOrUndefined(extra.APP_VARIANT);
   const raw = (
-    process.env.APP_VARIANT ||
-    process.env.EAS_BUILD_PROFILE ||
-    fromExtra ||
+    process.env.APP_VARIANT ??
+    process.env.EAS_BUILD_PROFILE ??
+    fromExtra ??
     'development'
   ).toLowerCase();
 
@@ -84,20 +84,20 @@ const resolveConfiguredBaseUrls = (): {
 } => {
   const extra = readExtra();
   const explicit =
-    trimOrUndefined(process.env.EXPO_PUBLIC_API_BASE_URL) ||
+    trimOrUndefined(process.env.EXPO_PUBLIC_API_BASE_URL) ??
     trimOrUndefined(extra.API_BASE_URL);
 
   const staging =
-    trimOrUndefined(process.env.EXPO_PUBLIC_API_BASE_URL_STAGING) ||
+    trimOrUndefined(process.env.EXPO_PUBLIC_API_BASE_URL_STAGING) ??
     trimOrUndefined(extra.API_BASE_URL_STAGING);
 
   const production =
-    trimOrUndefined(process.env.EXPO_PUBLIC_API_BASE_URL_PROD) ||
+    trimOrUndefined(process.env.EXPO_PUBLIC_API_BASE_URL_PROD) ??
     trimOrUndefined(extra.API_BASE_URL_PRODUCTION);
 
   return {
     explicit: explicit ? normalizeBaseUrl(explicit) : undefined,
-    fallback: normalizeBaseUrl(explicit || 'http://localhost:3000'),
+    fallback: normalizeBaseUrl(explicit ?? 'http://localhost:3000'),
     staging: staging ? normalizeBaseUrl(staging) : undefined,
     production: production ? normalizeBaseUrl(production) : undefined,
   };
@@ -127,7 +127,7 @@ export const isLocalhostApiBaseUrl = (value: string): boolean => {
 export const getDefaultApiEnvironment = (): ApiEnvironment => {
   const extra = readExtra();
   const explicit =
-    normalizeApiEnvironment(process.env.EXPO_PUBLIC_API_ENVIRONMENT) ||
+    normalizeApiEnvironment(process.env.EXPO_PUBLIC_API_ENVIRONMENT) ??
     normalizeApiEnvironment(extra.API_ENVIRONMENT);
 
   if (explicit && explicit !== 'custom') {
@@ -151,14 +151,14 @@ export const resolveRuntimeApiBaseUrl = (
   const custom = trimOrUndefined(customUrl);
 
   if (environment === 'custom') {
-    return normalizeBaseUrl(custom || configured.fallback);
+    return normalizeBaseUrl(custom ?? configured.fallback);
   }
 
   if (environment === 'production') {
-    return configured.production || configured.explicit || configured.fallback;
+    return configured.production ?? configured.explicit ?? configured.fallback;
   }
 
-  return configured.explicit || configured.staging || configured.fallback;
+  return configured.explicit ?? configured.staging ?? configured.fallback;
 };
 
 /**

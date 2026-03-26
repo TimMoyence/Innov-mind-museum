@@ -46,13 +46,13 @@ export function StartupConfigurationErrorScreen({
           <View style={styles.row}>
             <Text style={styles.label}>{t('startupError.staging_url')}</Text>
             <Text style={styles.value}>
-              {snapshot.stagingBaseUrl || fallback}
+              {snapshot.stagingBaseUrl ?? fallback}
             </Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>{t('startupError.prod_url')}</Text>
             <Text style={styles.value}>
-              {snapshot.productionBaseUrl || fallback}
+              {snapshot.productionBaseUrl ?? fallback}
             </Text>
           </View>
         </View>

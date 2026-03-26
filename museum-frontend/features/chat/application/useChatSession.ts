@@ -66,7 +66,7 @@ export const useChatSession = (sessionId: string) => {
         response.messages.map((message) => ({
           id: message.id,
           role: message.role,
-          text: message.text || '',
+          text: message.text ?? '',
           createdAt: message.createdAt,
           imageRef: message.imageRef,
           image: message.image ?? null,
@@ -109,6 +109,7 @@ export const useChatSession = (sessionId: string) => {
   }, []);
 
   const scheduleFlush = useCallback(() => {
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- multi-line RAF guard, ??= less readable
     if (!updateTimerRef.current) {
       updateTimerRef.current = requestAnimationFrame(() => {
         updateTimerRef.current = null;
@@ -138,7 +139,7 @@ export const useChatSession = (sessionId: string) => {
         const offlineMessage: ChatUiMessage = {
           id: queued.id,
           role: 'user',
-          text: trimmedText || (params.imageUri ? '[Image sent]' : ''),
+          text: trimmedText ?? (params.imageUri ? '[Image sent]' : ''),
           createdAt: new Date().toISOString(),
           image: null,
         };
@@ -150,7 +151,7 @@ export const useChatSession = (sessionId: string) => {
         id: `${Date.now()}-user`,
         role: 'user',
         text:
-          trimmedText ||
+          trimmedText ??
           (params.audioUri || params.audioBlob
             ? '[Voice message]'
             : params.imageUri
@@ -352,7 +353,7 @@ export const useChatSession = (sessionId: string) => {
           const serverMessages: ChatUiMessage[] = response.messages.map((m) => ({
             id: m.id,
             role: m.role,
-            text: m.text || '',
+            text: m.text ?? '',
             createdAt: m.createdAt,
             imageRef: m.imageRef,
             image: m.image ?? null,
