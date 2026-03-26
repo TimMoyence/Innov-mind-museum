@@ -1753,7 +1753,7 @@ Shared mocks (test-utils.tsx): 17 module mocks (i18n, theme, router, safe-area, 
 
 **React Compiler**: `babel.config.js` cree avec `babel-preset-expo` + `babel-plugin-react-compiler`. Auto-memoization active. useMemo/useCallback existants deviennent redondants mais inoffensifs.
 
-**SSOT Colors**: 8 nouvelles proprietes theme (`primaryContrast`, `textTertiary`, `placeholderText`, `successBackground`, `danger`, `warningText`, `warningBackground`, `shadowColor`). 10 fichiers nettoyes des couleurs hardcodees vers theme refs.
+**SSOT Colors (R11 theme centralization)**: 8 nouvelles proprietes theme (`primaryContrast`, `textTertiary`, `placeholderText`, `successBackground`, `danger`, `warningText`, `warningBackground`, `shadowColor`). 27 fichiers nettoyes des couleurs hardcodees vers theme tokens (commit `dab537c`). Reduction: ~109 hex hardcodes → 9 intentionnels (92%). Bug dark mode corrige: privacy.tsx warning badges `#92400E` invisible sur fond sombre → `theme.warningText` (#FCD34D dark). ErrorBoundary: import `darkTheme` directement (class component). ExpertiseBadge: mapping isDark local. Exclusions: StartupConfigurationErrorScreen (fallback), cameraStyles (camera UI), app.config.ts (build config).
 
 ### Metriques
 
@@ -1765,7 +1765,8 @@ Shared mocks (test-utils.tsx): 17 module mocks (i18n, theme, router, safe-area, 
 | Typecheck errors | 0 | 0 | 0 |
 | as any (tests) | 0 | 0 | 0 |
 | Fichiers crees | — | 7 | +7 |
-| Fichiers modifies | — | 16 | 16 |
+| Fichiers modifies | — | 27 | 27 |
+| Hardcoded hex colors | ~109 | 9 | -92% |
 
 ### Decisions techniques
 
