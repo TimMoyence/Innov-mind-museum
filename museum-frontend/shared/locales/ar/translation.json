@@ -205,7 +205,8 @@
     "back_settings": "العودة إلى الإعدادات",
     "invalid_link_body": "رابط {{label}} غير مهيّأ بشكل صحيح.",
     "channel_opened": "تم فتح {{label}}",
-    "channel_failed": "فشل رابط {{label}}"
+    "channel_failed": "فشل رابط {{label}}",
+    "links_shared": "تم مشاركة روابط الدعم"
   },
   "discover": {
     "title": "اكتشف",
@@ -312,7 +313,9 @@
     "audio": "صوتي",
     "image_sent": "[تم إرسال صورة]",
     "voice_message": "[رسالة صوتية]",
-    "share_footer": "تمت المشاركة عبر Musaium — رفيقك في المتحف\nhttps://musaium.app"
+    "share_footer": "تمت المشاركة عبر Musaium — رفيقك في المتحف\nhttps://musaium.app",
+    "replace_image": "استبدال",
+    "remove_image": "إزالة"
   },
   "chatInput": {
     "placeholder": "اسأل عن عمل فني أو معلم، أو أرسل صوتًا/صورة...",
@@ -556,5 +559,37 @@
       "cancel": "إغلاق القائمة",
       "overlay_hint": "انقر لإغلاق القائمة"
     }
+  },
+  "tickets": {
+    "title": "تذاكري",
+    "create": "إنشاء تذكرة",
+    "subject": "الموضوع",
+    "description": "الوصف",
+    "priority": "الأولوية",
+    "status": "الحالة",
+    "messages": "الرسائل",
+    "noTickets": "لا توجد تذاكر بعد",
+    "noTicketsDesc": "أنشئ تذكرة للحصول على مساعدة من فريق الدعم.",
+    "createFirst": "أنشئ تذكرتك الأولى",
+    "detail": "تفاصيل التذكرة",
+    "reply": "رد",
+    "replyPlaceholder": "اكتب رسالتك...",
+    "send": "إرسال",
+    "sending": "جارٍ الإرسال...",
+    "created": "تاريخ الإنشاء",
+    "noMessages": "لا توجد رسائل بعد",
+    "submitTicket": "إرسال التذكرة",
+    "subjectPlaceholder": "ملخص موجز لمشكلتك",
+    "descriptionPlaceholder": "صف مشكلتك بالتفصيل...",
+    "priorityLow": "منخفضة",
+    "priorityMedium": "متوسطة",
+    "priorityHigh": "عالية",
+    "statusOpen": "مفتوحة",
+    "statusInProgress": "قيد المعالجة",
+    "statusResolved": "تم الحل",
+    "statusClosed": "مغلقة",
+    "myTickets": "تذاكري",
+    "createTicket": "إنشاء تذكرة",
+    "ticketCreated": "تم إنشاء التذكرة بنجاح"
   }
 }

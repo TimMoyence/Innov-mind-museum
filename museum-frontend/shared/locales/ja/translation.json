@@ -205,7 +205,8 @@
     "back_settings": "設定に戻る",
     "invalid_link_body": "{{label}}のリンクが正しく設定されていません。",
     "channel_opened": "{{label}}を開きました",
-    "channel_failed": "{{label}}のリンクに失敗しました"
+    "channel_failed": "{{label}}のリンクに失敗しました",
+    "links_shared": "サポートリンクを共有しました"
   },
   "discover": {
     "title": "ディスカバー",
@@ -312,7 +313,9 @@
     "audio": "オーディオ",
     "image_sent": "[画像送信]",
     "voice_message": "[音声メッセージ]",
-    "share_footer": "Musaiumでシェア — あなたの美術館コンパニオン\nhttps://musaium.app"
+    "share_footer": "Musaiumでシェア — あなたの美術館コンパニオン\nhttps://musaium.app",
+    "replace_image": "置き換え",
+    "remove_image": "削除"
   },
   "chatInput": {
     "placeholder": "美術品や建造物について質問、または音声・写真を送信...",
@@ -556,5 +559,37 @@
       "cancel": "メニューを閉じる",
       "overlay_hint": "タップしてメニューを閉じる"
     }
+  },
+  "tickets": {
+    "title": "マイチケット",
+    "create": "チケットを作成",
+    "subject": "件名",
+    "description": "説明",
+    "priority": "優先度",
+    "status": "ステータス",
+    "messages": "メッセージ",
+    "noTickets": "チケットはまだありません",
+    "noTicketsDesc": "チケットを作成して、サポートチームからの支援を受けましょう。",
+    "createFirst": "最初のチケットを作成",
+    "detail": "チケット詳細",
+    "reply": "返信",
+    "replyPlaceholder": "メッセージを入力...",
+    "send": "送信",
+    "sending": "送信中...",
+    "created": "作成日",
+    "noMessages": "メッセージはまだありません",
+    "submitTicket": "チケットを送信",
+    "subjectPlaceholder": "問題の簡単な要約",
+    "descriptionPlaceholder": "問題の詳細を記述してください...",
+    "priorityLow": "低",
+    "priorityMedium": "中",
+    "priorityHigh": "高",
+    "statusOpen": "未対応",
+    "statusInProgress": "対応中",
+    "statusResolved": "解決済み",
+    "statusClosed": "クローズ",
+    "myTickets": "マイチケット",
+    "createTicket": "チケットを作成",
+    "ticketCreated": "チケットが正常に作成されました"
   }
 }

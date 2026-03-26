@@ -205,7 +205,8 @@
     "back_settings": "Zurück zu Einstellungen",
     "invalid_link_body": "Der {{label}}-Link ist nicht korrekt konfiguriert.",
     "channel_opened": "{{label}} geöffnet",
-    "channel_failed": "{{label}}-Link fehlgeschlagen"
+    "channel_failed": "{{label}}-Link fehlgeschlagen",
+    "links_shared": "Support-Links geteilt"
   },
   "discover": {
     "title": "Entdecken",
@@ -312,7 +313,9 @@
     "audio": "Audio",
     "image_sent": "[Bild gesendet]",
     "voice_message": "[Sprachnachricht]",
-    "share_footer": "Geteilt über Musaium — Ihr Museumsbegleiter\nhttps://musaium.app"
+    "share_footer": "Geteilt über Musaium — Ihr Museumsbegleiter\nhttps://musaium.app",
+    "replace_image": "Ersetzen",
+    "remove_image": "Entfernen"
   },
   "chatInput": {
     "placeholder": "Fragen Sie zu einem Kunstwerk, Denkmal, oder senden Sie Sprache/Foto...",
@@ -556,5 +559,37 @@
       "cancel": "Menü schließen",
       "overlay_hint": "Tippen zum Schließen des Menüs"
     }
+  },
+  "tickets": {
+    "title": "Meine Tickets",
+    "create": "Ticket erstellen",
+    "subject": "Betreff",
+    "description": "Beschreibung",
+    "priority": "Priorität",
+    "status": "Status",
+    "messages": "Nachrichten",
+    "noTickets": "Noch keine Tickets",
+    "noTicketsDesc": "Erstellen Sie ein Ticket, um Hilfe von unserem Support-Team zu erhalten.",
+    "createFirst": "Erstellen Sie Ihr erstes Ticket",
+    "detail": "Ticketdetails",
+    "reply": "Antworten",
+    "replyPlaceholder": "Geben Sie Ihre Nachricht ein...",
+    "send": "Senden",
+    "sending": "Wird gesendet...",
+    "created": "Erstellt",
+    "noMessages": "Noch keine Nachrichten",
+    "submitTicket": "Ticket absenden",
+    "subjectPlaceholder": "Kurze Zusammenfassung Ihres Problems",
+    "descriptionPlaceholder": "Beschreiben Sie Ihr Problem im Detail...",
+    "priorityLow": "Niedrig",
+    "priorityMedium": "Mittel",
+    "priorityHigh": "Hoch",
+    "statusOpen": "Offen",
+    "statusInProgress": "In Bearbeitung",
+    "statusResolved": "Gelöst",
+    "statusClosed": "Geschlossen",
+    "myTickets": "Meine Tickets",
+    "createTicket": "Ticket erstellen",
+    "ticketCreated": "Ticket erfolgreich erstellt"
   }
 }

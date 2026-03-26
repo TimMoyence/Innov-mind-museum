@@ -23,11 +23,13 @@ const emptyHistory: ChatMessage[] = [];
 
 describe('evaluateUserInputGuardrail', () => {
   it('allows empty text', async () => {
-    await expect(evaluateUserInputGuardrail({ text: '', history: [] })).resolves.toEqual({ allow: true });
+    const result = await evaluateUserInputGuardrail({ text: '', history: [] });
+    expect(result).toEqual({ allow: true });
   });
 
   it('allows undefined text', async () => {
-    await expect(evaluateUserInputGuardrail({ text: undefined, history: [] })).resolves.toEqual({ allow: true });
+    const result = await evaluateUserInputGuardrail({ text: undefined, history: [] });
+    expect(result).toEqual({ allow: true });
   });
 
   // Insults — always block

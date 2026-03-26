@@ -205,7 +205,8 @@
     "back_settings": "Volver a Ajustes",
     "invalid_link_body": "El enlace de {{label}} no está configurado correctamente.",
     "channel_opened": "{{label}} abierto",
-    "channel_failed": "Error en el enlace de {{label}}"
+    "channel_failed": "Error en el enlace de {{label}}",
+    "links_shared": "Enlaces de soporte compartidos"
   },
   "discover": {
     "title": "Descubrir",
@@ -312,7 +313,9 @@
     "audio": "Audio",
     "image_sent": "[Imagen enviada]",
     "voice_message": "[Mensaje de voz]",
-    "share_footer": "Compartido con Musaium — Tu compañero de museo\nhttps://musaium.app"
+    "share_footer": "Compartido con Musaium — Tu compañero de museo\nhttps://musaium.app",
+    "replace_image": "Reemplazar",
+    "remove_image": "Eliminar"
   },
   "chatInput": {
     "placeholder": "Pregunta sobre una obra de arte, monumento, o envía voz/foto...",
@@ -556,5 +559,37 @@
       "cancel": "Cerrar menú",
       "overlay_hint": "Toca para cerrar el menú"
     }
+  },
+  "tickets": {
+    "title": "Mis tickets",
+    "create": "Crear ticket",
+    "subject": "Asunto",
+    "description": "Descripción",
+    "priority": "Prioridad",
+    "status": "Estado",
+    "messages": "Mensajes",
+    "noTickets": "Aún no hay tickets",
+    "noTicketsDesc": "Crea un ticket para obtener ayuda de nuestro equipo de soporte.",
+    "createFirst": "Crea tu primer ticket",
+    "detail": "Detalle del ticket",
+    "reply": "Responder",
+    "replyPlaceholder": "Escribe tu mensaje...",
+    "send": "Enviar",
+    "sending": "Enviando...",
+    "created": "Creado",
+    "noMessages": "Aún no hay mensajes",
+    "submitTicket": "Enviar ticket",
+    "subjectPlaceholder": "Resumen breve de tu problema",
+    "descriptionPlaceholder": "Describe tu problema en detalle...",
+    "priorityLow": "Baja",
+    "priorityMedium": "Media",
+    "priorityHigh": "Alta",
+    "statusOpen": "Abierto",
+    "statusInProgress": "En progreso",
+    "statusResolved": "Resuelto",
+    "statusClosed": "Cerrado",
+    "myTickets": "Mis tickets",
+    "createTicket": "Crear ticket",
+    "ticketCreated": "Ticket creado con éxito"
   }
 }
