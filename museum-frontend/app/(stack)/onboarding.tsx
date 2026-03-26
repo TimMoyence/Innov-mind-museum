@@ -74,6 +74,7 @@ export default function OnboardingScreen() {
     [goToStep],
   );
 
+  // eslint-disable-next-line react-hooks/refs -- stable config ref pattern
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
   const handleNext = useCallback(() => {

@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles -- camera UI spacing */
 import { useRef, useState } from 'react';
 import {
   View,
@@ -64,7 +65,7 @@ export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
       <View style={cameraStyles.container}>
         <Text>{t('camera.no_access')}</Text>
         <TouchableOpacity
-          onPress={requestPermission}
+          onPress={() => { void requestPermission(); }}
           style={{ marginTop: 12 }}
           accessibilityRole="button"
           accessibilityLabel={t('a11y.camera.grant_permission')}
@@ -116,7 +117,7 @@ export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
 
             <TouchableOpacity
               style={cameraStyles.captureButton}
-              onPress={capturePhoto}
+              onPress={() => { void capturePhoto(); }}
               disabled={!cameraReady}
               accessibilityRole="button"
               accessibilityLabel={t('a11y.camera.capture')}

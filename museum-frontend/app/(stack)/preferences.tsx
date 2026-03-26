@@ -45,7 +45,7 @@ export default function PreferencesScreen() {
         setMuseumMode(settings.defaultMuseumMode);
         setGuideLevel(settings.guideLevel);
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         setStatus(t('preferences.load_failed', { error: getErrorMessage(error) }));
       })
       .finally(() => {
@@ -268,7 +268,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
   },
-  languageButtonTextActive: {},
   switchRow: {
     marginTop: 6,
     flexDirection: 'row',
@@ -295,7 +294,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
   },
-  levelButtonTextActive: {},
   status: {
     fontWeight: '700',
     fontSize: 12,

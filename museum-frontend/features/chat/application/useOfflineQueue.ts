@@ -8,6 +8,7 @@ export const useOfflineQueue = () => {
   const queueRef = useRef(new OfflineQueue(storage));
   const { isConnected } = useConnectivity();
 
+  // eslint-disable-next-line react-hooks/refs -- stable singleton ref
   const queue = queueRef.current;
 
   useEffect(() => {

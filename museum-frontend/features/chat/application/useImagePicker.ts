@@ -12,6 +12,7 @@ export const useImagePicker = () => {
 
   const onPickImage = useCallback(async () => {
     const { status } = await ImagePickerLib.requestMediaLibraryPermissionsAsync();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- Expo permission status API
     if (status !== 'granted') {
       return;
     }

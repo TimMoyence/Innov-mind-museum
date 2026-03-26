@@ -16,7 +16,7 @@ export const storage = {
     if (!raw) return null;
     try {
       return JSON.parse(raw) as T;
-    } catch (_e) {
+    } catch {
       return null;
     }
   },

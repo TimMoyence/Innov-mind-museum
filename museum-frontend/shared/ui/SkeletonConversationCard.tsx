@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles -- small static spacing values */
 import { StyleSheet, View } from 'react-native';
 import { SkeletonBox } from './SkeletonBox';
 import { useTheme } from './ThemeContext';

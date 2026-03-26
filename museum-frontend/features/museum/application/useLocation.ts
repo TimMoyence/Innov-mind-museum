@@ -34,6 +34,7 @@ export const useLocation = (): UseLocationResult => {
          
         if (cancelled) return;
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- Expo permission status API
         if (permissionStatus !== 'granted') {
           setStatus('denied');
           return;
@@ -45,6 +46,7 @@ export const useLocation = (): UseLocationResult => {
           accuracy: Location.Accuracy.Balanced,
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- async cancellation guard
         if (cancelled) return;
 
         setLatitude(position.coords.latitude);

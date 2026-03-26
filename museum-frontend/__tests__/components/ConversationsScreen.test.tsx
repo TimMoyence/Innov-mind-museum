@@ -36,7 +36,7 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
 }));
 
 jest.mock('@/features/settings/runtimeSettings', () => ({
-  loadRuntimeSettings: jest.fn(async () => ({ defaultLocale: 'en' })),
+  loadRuntimeSettings: jest.fn(() => ({ defaultLocale: 'en' })),
 }));
 
 jest.mock('@/features/chat/domain/dashboard-session', () => ({

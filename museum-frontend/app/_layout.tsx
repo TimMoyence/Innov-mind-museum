@@ -112,7 +112,7 @@ function RootLayout() {
     if (Platform.OS === 'ios') {
       import('expo-tracking-transparency').then(({ requestTrackingPermissionsAsync }) => {
         void requestTrackingPermissionsAsync();
-      }).catch(() => {});
+      }).catch(() => { /* fire-and-forget */ });
     }
   }, []);
 
@@ -123,7 +123,7 @@ function RootLayout() {
 
     setOnLanguageChange((lang) => void saveDefaultLocale(lang));
 
-    applyRuntimeSettings().catch((error) => {
+    applyRuntimeSettings().catch((error: unknown) => {
       setRuntimeStartupError(
         error instanceof Error
           ? error

@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-color-literals -- intentional dark overlay */
 import { useCallback, useEffect, useState } from 'react';
 import {
   Image,
@@ -37,6 +38,7 @@ export const ImagePreviewModal = ({
   // Sync with external imageUri changes
   useEffect(() => {
     if (imageUri !== null && !isProcessing) {
+      // eslint-disable-next-line -- prop sync requires setState in effect
       setCurrentUri(imageUri);
     }
   }, [imageUri, isProcessing]);

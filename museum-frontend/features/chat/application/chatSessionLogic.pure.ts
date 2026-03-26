@@ -73,7 +73,7 @@ export const buildOptimisticMessage = (
 ): ChatUiMessage => {
   const trimmed = text?.trim() ?? '';
   return {
-    id: `${Date.now()}-user`,
+    id: `${String(Date.now())}-user`,
     role: 'user',
     text: trimmed || (imageUri ? '[Image sent]' : ''),
     createdAt: new Date().toISOString(),

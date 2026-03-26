@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- React Native image require() pattern */
 import type { ImageSourcePropType } from 'react-native';
 
 import { lightTheme, type ThemePalette } from './themes';

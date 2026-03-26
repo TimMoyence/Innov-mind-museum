@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/refs, react/display-name -- React.memo ref pattern + RN Animated */
 import React, { useEffect, useRef } from 'react';
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -94,6 +95,7 @@ export const ChatMessageBubble = React.memo(({
           }}
           style={[
             styles.bubble,
+          // eslint-disable-next-line react-native/no-inline-styles -- dynamic alignment
             {
               backgroundColor: theme.assistantBubble,
               borderColor: theme.assistantBubbleBorder,
@@ -110,6 +112,7 @@ export const ChatMessageBubble = React.memo(({
         <View
           style={[
             styles.bubble,
+          // eslint-disable-next-line react-native/no-inline-styles -- dynamic alignment
             {
               backgroundColor: theme.userBubble,
               borderColor: theme.userBubbleBorder,

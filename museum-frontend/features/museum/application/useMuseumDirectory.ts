@@ -78,6 +78,7 @@ export const useMuseumDirectory = (
       filtered = enriched.filter(
         (m) =>
           m.name.toLowerCase().includes(query) ||
+    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain -- complex condition
           (m.address && m.address.toLowerCase().includes(query)),
       );
     }

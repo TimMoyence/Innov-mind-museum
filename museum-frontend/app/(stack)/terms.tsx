@@ -48,7 +48,7 @@ export default function TermsScreen() {
             <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{section.title}</Text>
             <View style={styles.paragraphGroup}>
               {section.paragraphs.map((paragraph, index) => (
-                <Text key={`${section.id}-${index}`} style={[styles.paragraph, { color: theme.textSecondary }]}>
+                <Text key={`${section.id}-${String(index)}`} style={[styles.paragraph, { color: theme.textSecondary }]}>
                   {paragraph}
                 </Text>
               ))}

@@ -12,6 +12,7 @@ type UnauthorizedHandler = () => void;
 type AuthRefreshHandler = () => Promise<string | null>;
 type TokenProvider = () => string | null;
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- assigned via setter, used in interceptor
 let unauthorizedHandler: UnauthorizedHandler | null = null;
 let authRefreshHandler: AuthRefreshHandler | null = null;
 let authRefreshInFlight: Promise<string | null> | null = null;
@@ -151,6 +152,7 @@ httpClient.interceptors.response.use(
     const config = (axiosError?.config ?? {}) as HttpRequestConfig;
     const status = axiosError?.response?.status;
 
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string -- config.url is always string at runtime
     const requestUrl = String(config.url ?? '');
     const isAuthRefreshRequest = requestUrl.includes('/api/auth/refresh');
     const isAuthRequired = config.requiresAuth !== false;

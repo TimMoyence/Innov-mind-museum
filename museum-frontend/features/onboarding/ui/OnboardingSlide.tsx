@@ -25,6 +25,7 @@ interface OnboardingSlideProps {
 }
 
 /** Single onboarding slide with Reanimated entrance animations. */
+// eslint-disable-next-line react/display-name -- memo wrapped component
 export const OnboardingSlide = React.memo(({ slide }: OnboardingSlideProps) => {
   const { theme } = useTheme();
   const opacity = useSharedValue(0);

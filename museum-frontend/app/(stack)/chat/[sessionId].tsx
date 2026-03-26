@@ -42,6 +42,7 @@ export default function ChatSessionScreen() {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const params = useLocalSearchParams<{ sessionId: string; intent?: string }>();
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion -- params may be string[]
   const sessionId = useMemo(() => String(params.sessionId || ''), [params.sessionId]);
   const initialIntent = useMemo(() => {
     if (params.intent === 'camera' || params.intent === 'audio') {
@@ -259,7 +260,7 @@ export default function ChatSessionScreen() {
                 {expertiseLevel ? <ExpertiseBadge level={expertiseLevel} /> : null}
               </View>
             </View>
-            <Pressable onPress={onClose} style={[styles.closeButton, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]} disabled={isClosing}>
+            <Pressable onPress={() => { void onClose(); }} style={[styles.closeButton, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]} disabled={isClosing}>
               {isClosing ? (
                 <ActivityIndicator size='small' color={theme.textSecondary} />
               ) : (

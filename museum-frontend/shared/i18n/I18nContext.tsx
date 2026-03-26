@@ -27,7 +27,7 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue>({
   language: 'en',
-  setLanguage: () => {},
+  setLanguage: () => { /* noop */ },
 });
 
 export const useI18n = () => useContext(I18nContext);
@@ -62,7 +62,7 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
           onLanguageChangeCb?.(lang);
         }
       })
-      .catch(() => {});
+      .catch(() => { /* noop */ });
   }, []);
 
   const setLanguage = useCallback((lang: SupportedLocale) => {

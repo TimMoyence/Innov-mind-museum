@@ -69,6 +69,7 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
+    // eslint-disable-next-line react-native/no-color-literals -- transparent is a standard value
   tabBar: {
     position: 'absolute',
     borderTopWidth: 1,
