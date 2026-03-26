@@ -59,7 +59,7 @@ export default function SupportScreen() {
         `${SUPPORT_LINKS.telegram.label}: ${SUPPORT_LINKS.telegram.url}`,
       ].join('\n'),
     });
-    setStatus('Support links shared');
+    setStatus(t('support.links_shared'));
   };
 
   return (
@@ -96,6 +96,27 @@ export default function SupportScreen() {
             {t('support.subtitle')}
           </Text>
           {status ? <Text style={[styles.status, { color: theme.success }]}>{status}</Text> : null}
+        </GlassCard>
+
+        <GlassCard style={styles.card} intensity={56}>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('tickets.myTickets')}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>{t('tickets.noTicketsDesc')}</Text>
+          <Pressable
+            style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+            onPress={() => { router.push('/(stack)/tickets'); }}
+            accessibilityRole="button"
+            accessibilityLabel={t('tickets.myTickets')}
+          >
+            <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>{t('tickets.myTickets')}</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]}
+            onPress={() => { router.push('/(stack)/create-ticket'); }}
+            accessibilityRole="button"
+            accessibilityLabel={t('tickets.createTicket')}
+          >
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('tickets.createTicket')}</Text>
+          </Pressable>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={56}>

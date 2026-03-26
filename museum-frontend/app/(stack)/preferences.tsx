@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
 import type {
@@ -67,6 +68,7 @@ export default function PreferencesScreen() {
         saveGuideLevel(guideLevel),
       ]);
       setStatus(t('preferences.saved'));
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
       setStatus(t('preferences.save_failed', { error: getErrorMessage(error) }));
     } finally {

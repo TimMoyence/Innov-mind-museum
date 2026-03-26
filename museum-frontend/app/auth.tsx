@@ -99,6 +99,23 @@ export default function AuthScreen() {
         firstname,
         lastname,
       });
+
+      // Auto-login after successful registration
+      try {
+        const response = await authService.login(email, password);
+        if (response.accessToken && response.refreshToken) {
+          await authStorage.setRefreshToken(response.refreshToken);
+          setAccessToken(response.accessToken);
+          setIsAuthenticated(true);
+          setTimeout(() => {
+            router.replace(HOME_ROUTE);
+          }, 120);
+          return;
+        }
+      } catch {
+        // Auto-login failed (e.g. email verification required) — fall back to manual login
+      }
+
       setIsLogin(true);
       setInfoMessage(t('auth.registration_complete'));
       setFirstname('');

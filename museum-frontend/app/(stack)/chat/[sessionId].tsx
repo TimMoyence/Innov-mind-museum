@@ -304,8 +304,8 @@ export default function ChatSessionScreen() {
             <View style={styles.previewMenu}>
               <FloatingContextMenu
                 actions={[
-                  { id: 'replace', icon: 'images-outline', label: 'Replace', onPress: () => void onPickImage() },
-                  { id: 'clear-image', icon: 'trash-outline', label: 'Remove', onPress: clearSelectedImage },
+                  { id: 'replace', icon: 'images-outline', label: t('chat.replace_image'), onPress: () => void onPickImage() },
+                  { id: 'clear-image', icon: 'trash-outline', label: t('chat.remove_image'), onPress: clearSelectedImage },
                 ]}
               />
             </View>
