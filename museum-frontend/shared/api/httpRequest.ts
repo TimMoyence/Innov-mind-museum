@@ -33,6 +33,7 @@ export const httpRequest = async <T>(
     ...(headers ?? {}),
   };
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- body type guard
   if (body && !isFormData(body) && finalHeaders['Content-Type'] === undefined) {
     finalHeaders['Content-Type'] = 'application/json';
   }

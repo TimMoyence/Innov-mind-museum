@@ -13,6 +13,7 @@ interface ArtworkCardProps {
 }
 
 const confidenceKey = (value?: number): 'high' | 'medium' | 'low' | null => {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive null check
   if (value === undefined || value === null) return null;
   if (value >= 0.8) return 'high';
   if (value >= 0.5) return 'medium';

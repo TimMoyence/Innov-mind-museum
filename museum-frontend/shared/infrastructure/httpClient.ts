@@ -69,7 +69,7 @@ let runtimeBaseUrl = DEFAULT_BASE_URL;
  * @throws When the URL targets localhost in a non-development build.
  */
 export const setApiBaseUrl = (nextUrl: string): void => {
-  const normalized = nextUrl?.trim?.() || DEFAULT_BASE_URL;
+  const normalized = nextUrl.trim() || DEFAULT_BASE_URL;
   assertApiBaseUrlAllowed(normalized);
   runtimeBaseUrl = normalized;
 };
@@ -116,7 +116,7 @@ httpClient.interceptors.request.use((config) => {
 
   if (shouldAttachAuth) {
     const token = tokenProvider?.() ?? null;
-    if (token && !finalConfig.headers?.Authorization) {
+    if (token && !finalConfig.headers.Authorization) {
       finalConfig.headers = {
         ...finalConfig.headers,
         Authorization: `Bearer ${token}`,
@@ -188,7 +188,7 @@ httpClient.interceptors.response.use(
 
     const is429 = status === 429;
     const retryable =
-      !status || status >= 500 || axiosError?.code === 'ECONNABORTED' || is429;
+      !status || status >= 500 || axiosError.code === 'ECONNABORTED' || is429;
     const retryCount = config._retryCount ?? 0;
     const maxRetries = is429 ? 3 : 2;
 
