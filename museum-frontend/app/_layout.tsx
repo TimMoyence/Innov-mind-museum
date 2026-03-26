@@ -174,6 +174,9 @@ function RootLayout() {
               <Stack.Screen name="(stack)/discover" />
               <Stack.Screen name="(stack)/museum-detail" />
               <Stack.Screen name="(stack)/support" />
+              <Stack.Screen name="(stack)/tickets" />
+              <Stack.Screen name="(stack)/ticket-detail" />
+              <Stack.Screen name="(stack)/create-ticket" />
               <Stack.Screen name="(stack)/privacy" />
               <Stack.Screen name="(stack)/terms" />
               <Stack.Screen name="(stack)/onboarding" />

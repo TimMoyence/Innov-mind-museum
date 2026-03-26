@@ -205,7 +205,8 @@
     "back_settings": "Back to Settings",
     "invalid_link_body": "The {{label}} link is not configured correctly.",
     "channel_opened": "{{label}} opened",
-    "channel_failed": "{{label}} link failed"
+    "channel_failed": "{{label}} link failed",
+    "links_shared": "Support links shared"
   },
   "discover": {
     "title": "Discover",
@@ -312,7 +313,9 @@
     "audio": "Audio",
     "image_sent": "[Image sent]",
     "voice_message": "[Voice message]",
-    "share_footer": "Shared via Musaium — Your museum companion\nhttps://musaium.app"
+    "share_footer": "Shared via Musaium — Your museum companion\nhttps://musaium.app",
+    "replace_image": "Replace",
+    "remove_image": "Remove"
   },
   "chatInput": {
     "placeholder": "Ask about an artwork, monument, or send voice/photo...",
@@ -556,5 +559,37 @@
       "cancel": "Close menu",
       "overlay_hint": "Tap to close menu"
     }
+  },
+  "tickets": {
+    "title": "My Tickets",
+    "create": "Create Ticket",
+    "subject": "Subject",
+    "description": "Description",
+    "priority": "Priority",
+    "status": "Status",
+    "messages": "Messages",
+    "noTickets": "No tickets yet",
+    "noTicketsDesc": "Create a ticket to get help from our support team.",
+    "createFirst": "Create your first ticket",
+    "detail": "Ticket Detail",
+    "reply": "Reply",
+    "replyPlaceholder": "Type your message...",
+    "send": "Send",
+    "sending": "Sending...",
+    "created": "Created",
+    "noMessages": "No messages yet",
+    "submitTicket": "Submit Ticket",
+    "subjectPlaceholder": "Brief summary of your issue",
+    "descriptionPlaceholder": "Describe your issue in detail...",
+    "priorityLow": "Low",
+    "priorityMedium": "Medium",
+    "priorityHigh": "High",
+    "statusOpen": "Open",
+    "statusInProgress": "In Progress",
+    "statusResolved": "Resolved",
+    "statusClosed": "Closed",
+    "myTickets": "My Tickets",
+    "createTicket": "Create Ticket",
+    "ticketCreated": "Ticket created successfully"
   }
 }

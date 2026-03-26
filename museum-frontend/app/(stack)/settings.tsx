@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -60,6 +61,7 @@ export default function SettingsScreen() {
     } else {
       await disableBiometric();
     }
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   const open = (path: SettingsRoute) => {
@@ -167,7 +169,7 @@ export default function SettingsScreen() {
                     backgroundColor: theme.glassBackground,
                   },
                 ]}
-                onPress={() => { setMode(option.value); }}
+                onPress={() => { setMode(option.value); void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); }}
                 accessibilityRole="button"
                 accessibilityLabel={t('a11y.settings.theme_button', { theme: option.key })}
                 accessibilityState={{ selected: mode === option.value }}
