@@ -100,11 +100,11 @@ export default function DiscoverScreen() {
           accessibilityHint={t('a11y.discover.photo_card_hint')}
           accessibilityState={{ disabled: isCreating }}
         >
-          <Text style={styles.actionTitle}>{t('discover.photo_title')}</Text>
+          <Text style={[styles.actionTitle, { color: theme.primaryContrast }]}>{t('discover.photo_title')}</Text>
           <Text style={styles.actionText}>
             {t('discover.photo_desc')}
           </Text>
-          {isCreating ? <ActivityIndicator color='#FFFFFF' /> : <Text style={styles.actionCta}>{t('discover.open_lens')}</Text>}
+          {isCreating ? <ActivityIndicator color={theme.primaryContrast} /> : <Text style={[styles.actionCta, { color: theme.primaryContrast }]}>{t('discover.open_lens')}</Text>}
         </Pressable>
 
         <GlassCard style={styles.actionGlassCard} intensity={56}>
@@ -113,7 +113,7 @@ export default function DiscoverScreen() {
             {t('discover.voice_desc')}
           </Text>
           <Pressable
-            style={styles.secondaryButton}
+            style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]}
             onPress={() => void startConversation('audio')}
             disabled={isCreating}
             accessibilityRole="button"
@@ -130,7 +130,7 @@ export default function DiscoverScreen() {
             {t('discover.continue_desc')}
           </Text>
           <Pressable
-            style={styles.secondaryButton}
+            style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]}
             onPress={() => router.push('/(tabs)/conversations')}
             accessibilityRole="button"
             accessibilityLabel={t('a11y.discover.dashboard')}
@@ -145,7 +145,7 @@ export default function DiscoverScreen() {
             {t('discover.guided_desc')}
           </Text>
           <Pressable
-            style={styles.secondaryButton}
+            style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]}
             onPress={() => router.push('/(stack)/guided-museum-mode')}
             accessibilityRole="button"
             accessibilityLabel={t('a11y.discover.guided')}
@@ -199,7 +199,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(191,219,254,0.8)',
   },
   actionTitle: {
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 18,
   },
@@ -209,7 +208,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   actionCta: {
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 13,
   },
@@ -229,8 +227,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.45)',
-    backgroundColor: 'rgba(255,255,255,0.70)',
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 12,

@@ -61,9 +61,9 @@ export const ChatInput = ({
         accessibilityHint={t('a11y.chat.send_hint')}
       >
         {isSending ? (
-          <ActivityIndicator color='#FFFFFF' />
+          <ActivityIndicator color={theme.primaryContrast} />
         ) : (
-          <Text style={styles.sendText}>{t('chatInput.send')}</Text>
+          <Text style={[styles.sendText, { color: theme.primaryContrast }]}>{t('chatInput.send')}</Text>
         )}
       </Pressable>
     </GlassCard>
@@ -94,7 +94,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   sendText: {
-    color: '#FFFFFF',
     fontWeight: '700',
   },
 });

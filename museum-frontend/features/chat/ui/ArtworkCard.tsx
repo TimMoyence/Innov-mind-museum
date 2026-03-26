@@ -31,9 +31,9 @@ export const ArtworkCard = ({ title, artist, museum, room, confidence }: Artwork
       <View style={styles.row}>
         <View style={styles.content}>
           <Text style={[styles.title, { color: theme.textPrimary }]} numberOfLines={2}>{title}</Text>
-          {artist ? <Text style={styles.detail} numberOfLines={1}>{artist}</Text> : null}
+          {artist ? <Text style={[styles.detail, { color: theme.textTertiary }]} numberOfLines={1}>{artist}</Text> : null}
           {museum || room ? (
-            <Text style={styles.location} numberOfLines={1}>
+            <Text style={[styles.location, { color: theme.placeholderText }]} numberOfLines={1}>
               {[museum, room].filter(Boolean).join(' — ')}
             </Text>
           ) : null}
@@ -71,12 +71,10 @@ const styles = StyleSheet.create({
   detail: {
     marginTop: 2,
     fontSize: 12,
-    color: '#475569',
   },
   location: {
     marginTop: 2,
     fontSize: 11,
-    color: '#64748B',
   },
   badge: {
     borderRadius: 8,

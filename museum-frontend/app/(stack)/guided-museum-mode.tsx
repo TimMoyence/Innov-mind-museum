@@ -92,12 +92,12 @@ export default function GuidedMuseumModeScreen() {
         </GlassCard>
 
         <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(stack)/preferences')} accessibilityRole="button" accessibilityLabel={museumMode ? t('a11y.guidedMode.toggle_off') : t('a11y.guidedMode.toggle_on')}>
-          <Text style={styles.primaryButtonText}>
+          <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
             {museumMode ? t('guidedMode.turn_off') : t('guidedMode.turn_on')}
           </Text>
         </Pressable>
 
-        <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/discover')} accessibilityRole="button" accessibilityLabel={t('a11y.guidedMode.start_exploring')}>
+        <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.inputBackground }]} onPress={() => router.push('/(stack)/discover')} accessibilityRole="button" accessibilityLabel={t('a11y.guidedMode.start_exploring')}>
           <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('guidedMode.start_exploring')}</Text>
         </Pressable>
       </ScrollView>
@@ -154,7 +154,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 13,
     textAlign: 'center',
@@ -162,8 +161,6 @@ const styles = StyleSheet.create({
   secondaryButton: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.48)',
-    backgroundColor: 'rgba(255,255,255,0.7)',
     alignItems: 'center',
     paddingVertical: 13,
   },

@@ -68,7 +68,7 @@ export const MessageActions = ({
             <Text style={[styles.deeperContextLabel, { color: theme.primary }]}>Learn more</Text>
           </Pressable>
           {isDeeperContextExpanded ? (
-            <Text style={styles.deeperContextText}>{metadata.deeperContext}</Text>
+            <Text style={[styles.deeperContextText, { color: theme.textSecondary }]}>{metadata.deeperContext}</Text>
           ) : null}
         </View>
       ) : null}
@@ -118,7 +118,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 13,
     lineHeight: 19,
-    color: '#334155',
   },
   openQuestionChip: {
     marginTop: 2,

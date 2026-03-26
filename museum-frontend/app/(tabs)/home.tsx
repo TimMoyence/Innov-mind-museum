@@ -121,10 +121,10 @@ export default function HomeScreen() {
       </Pressable>
 
       <View style={styles.secondaryRow}>
-        <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/onboarding')} accessibilityRole="button" accessibilityLabel={t('a11y.home.onboarding')}>
+        <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]} onPress={() => router.push('/(stack)/onboarding')} accessibilityRole="button" accessibilityLabel={t('a11y.home.onboarding')}>
           <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('home.onboarding')}</Text>
         </Pressable>
-        <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/settings')} accessibilityRole="button" accessibilityLabel={t('a11y.home.settings')}>
+        <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]} onPress={() => router.push('/(stack)/settings')} accessibilityRole="button" accessibilityLabel={t('a11y.home.settings')}>
           <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('home.settings')}</Text>
         </Pressable>
       </View>
@@ -187,11 +187,9 @@ const styles = StyleSheet.create({
   secondaryButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.5)',
     borderRadius: 14,
     paddingVertical: 12,
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.64)',
   },
   secondaryButtonText: {
     fontSize: 15,

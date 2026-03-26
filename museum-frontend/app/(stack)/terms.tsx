@@ -59,9 +59,9 @@ export default function TermsScreen() {
         <GlassCard style={styles.ctaCard} intensity={54}>
           <View style={styles.ctaRow}>
             <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(stack)/privacy')} accessibilityRole="button" accessibilityLabel={t('a11y.terms.privacy_policy')}>
-              <Text style={styles.primaryButtonText}>{t('terms.privacy_policy')}</Text>
+              <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>{t('terms.privacy_policy')}</Text>
             </Pressable>
-            <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/settings')} accessibilityRole="button" accessibilityLabel={t('a11y.terms.back_settings')}>
+            <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]} onPress={() => router.push('/(stack)/settings')} accessibilityRole="button" accessibilityLabel={t('a11y.terms.back_settings')}>
               <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('terms.back_settings')}</Text>
             </Pressable>
           </View>
@@ -125,15 +125,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 13,
   },
   secondaryButton: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.45)',
-    backgroundColor: 'rgba(255,255,255,0.70)',
     alignItems: 'center',
     paddingVertical: 12,
   },

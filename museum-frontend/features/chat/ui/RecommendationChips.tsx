@@ -19,7 +19,7 @@ export const RecommendationChips = ({ recommendations, onPress, disabled = false
 
   return (
     <View>
-      <Text style={styles.sectionLabel}>{t('recommendationChips.section_label')}</Text>
+      <Text style={[styles.sectionLabel, { color: theme.placeholderText }]}>{t('recommendationChips.section_label')}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -48,7 +48,6 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#64748B',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 4,

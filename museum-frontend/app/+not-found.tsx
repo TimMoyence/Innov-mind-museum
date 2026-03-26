@@ -24,7 +24,7 @@ export default function NotFoundScreen() {
               accessibilityRole="link"
               accessibilityLabel={t('a11y.notFound.home')}
             >
-              <Text style={styles.buttonText}>{t('notFound.button')}</Text>
+              <Text style={[styles.buttonText, { color: theme.primaryContrast }]}>{t('notFound.button')}</Text>
             </Pressable>
           </Link>
         </GlassCard>
@@ -58,7 +58,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: {
-    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
   },

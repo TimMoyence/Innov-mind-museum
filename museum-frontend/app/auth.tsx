@@ -198,7 +198,7 @@ export default function AuthScreen() {
 
           {!isLogin ? (
             <>
-              <View style={styles.inputShell}>
+              <View style={[styles.inputShell, { borderColor: theme.cardBorder, backgroundColor: theme.inputBackground }]}>
                 <Ionicons name='person-outline' size={20} color={theme.textSecondary} />
                 <TextInput
                   style={[styles.input, { color: theme.textPrimary }]}
@@ -209,7 +209,7 @@ export default function AuthScreen() {
                   accessibilityLabel={t('a11y.auth.firstname_input')}
                 />
               </View>
-              <View style={styles.inputShell}>
+              <View style={[styles.inputShell, { borderColor: theme.cardBorder, backgroundColor: theme.inputBackground }]}>
                 <Ionicons name='person-outline' size={20} color={theme.textSecondary} />
                 <TextInput
                   style={[styles.input, { color: theme.textPrimary }]}
@@ -223,7 +223,7 @@ export default function AuthScreen() {
             </>
           ) : null}
 
-          <View style={styles.inputShell}>
+          <View style={[styles.inputShell, { borderColor: theme.cardBorder, backgroundColor: theme.inputBackground }]}>
             <Ionicons name='mail-outline' size={20} color={theme.textSecondary} />
             <TextInput
               style={styles.input}
@@ -237,7 +237,7 @@ export default function AuthScreen() {
             />
           </View>
 
-          <View style={styles.inputShell}>
+          <View style={[styles.inputShell, { borderColor: theme.cardBorder, backgroundColor: theme.inputBackground }]}>
             <Ionicons name='lock-closed-outline' size={20} color={theme.textSecondary} />
             <TextInput
               style={styles.input}
@@ -286,7 +286,7 @@ export default function AuthScreen() {
           </Pressable>
 
           <Pressable
-            style={styles.switchButton}
+            style={[styles.switchButton, { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground }]}
             onPress={toggleAuthMode}
             disabled={isLoading || isSocialLoading}
             accessibilityRole="button"
@@ -316,7 +316,7 @@ export default function AuthScreen() {
           ) : null}
 
           <Pressable
-            style={[styles.googleButton, (!isLogin && !gdprAccepted) && { opacity: 0.5 }]}
+            style={[styles.googleButton, { borderColor: theme.cardBorder, backgroundColor: theme.assistantBubble }, (!isLogin && !gdprAccepted) && { opacity: 0.5 }]}
             onPress={() => void handleGoogleSignIn()}
             disabled={isLoading || isSocialLoading || (!isLogin && !gdprAccepted)}
             accessibilityRole="button"
@@ -378,8 +378,6 @@ const styles = StyleSheet.create({
   inputShell: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.42)',
-    backgroundColor: 'rgba(255,255,255,0.74)',
     minHeight: 50,
     paddingHorizontal: 12,
     flexDirection: 'row',
@@ -418,8 +416,6 @@ const styles = StyleSheet.create({
   switchButton: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.42)',
-    backgroundColor: 'rgba(255,255,255,0.66)',
     paddingVertical: 12,
     alignItems: 'center',
   },
@@ -449,8 +445,6 @@ const styles = StyleSheet.create({
   googleButton: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.42)',
-    backgroundColor: 'rgba(255,255,255,0.82)',
     paddingVertical: 14,
     alignItems: 'center',
     flexDirection: 'row',
