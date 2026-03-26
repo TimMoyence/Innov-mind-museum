@@ -226,7 +226,7 @@ export default function SettingsScreen() {
             </>
           )}
           <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => open('/(stack)/preferences')} accessibilityRole="button" accessibilityLabel={t('a11y.settings.preferences')}>
-            <Text style={styles.primaryButtonText}>{t('settings.open_preferences')}</Text>
+            <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>{t('settings.open_preferences')}</Text>
           </Pressable>
         </GlassCard>
 
@@ -277,7 +277,7 @@ export default function SettingsScreen() {
             {t('settings.danger_zone_desc')}
           </Text>
           <Pressable
-            style={styles.deleteButton}
+            style={[styles.deleteButton, { backgroundColor: theme.danger }]}
             onPress={onDeleteAccount}
             disabled={isDeletingAccount}
             accessibilityRole="button"
@@ -286,9 +286,9 @@ export default function SettingsScreen() {
             accessibilityState={{ disabled: isDeletingAccount }}
           >
             {isDeletingAccount ? (
-              <ActivityIndicator color='#FFFFFF' />
+              <ActivityIndicator color={theme.primaryContrast} />
             ) : (
-              <Text style={styles.deleteButtonText}>{t('settings.delete_account')}</Text>
+              <Text style={[styles.deleteButtonText, { color: theme.primaryContrast }]}>{t('settings.delete_account')}</Text>
             )}
           </Pressable>
         </GlassCard>
@@ -414,7 +414,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
   },
@@ -457,12 +456,10 @@ const styles = StyleSheet.create({
   deleteButton: {
     marginTop: 2,
     borderRadius: 12,
-    backgroundColor: '#DC2626',
     alignItems: 'center',
     paddingVertical: 12,
   },
   deleteButtonText: {
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
   },

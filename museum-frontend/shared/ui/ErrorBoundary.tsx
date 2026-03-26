@@ -4,6 +4,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Sentry from '@sentry/react-native';
 import * as Updates from 'expo-updates';
 import i18n from '@/shared/i18n/i18n';
+import { darkTheme } from './themes';
 
 interface Props {
   children: ReactNode;
@@ -74,42 +75,45 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
+const CRASH_ERROR_COLOR = '#EF4444';
+const CRASH_BUTTON_COLOR = '#6366F1';
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
+    backgroundColor: darkTheme.pageGradient[0],
     padding: 32,
   },
   emoji: {
     fontSize: 48,
     fontWeight: '700',
-    color: '#EF4444',
+    color: CRASH_ERROR_COLOR,
     marginBottom: 16,
   },
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#F1F5F9',
+    color: darkTheme.textPrimary,
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 15,
-    color: '#94A3B8',
+    color: darkTheme.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 32,
   },
   button: {
-    backgroundColor: '#6366F1',
+    backgroundColor: CRASH_BUTTON_COLOR,
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: darkTheme.primaryContrast,
     fontSize: 16,
     fontWeight: '600',
   },

@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  FlatList,
-  Platform,
   Pressable,
   Share,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -158,7 +157,7 @@ export default function ConversationsScreen() {
         <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>{item.subtitle}</Text>
         <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>{item.timeLabel}</Text>
         <Text style={[styles.cardTags, { color: theme.primary }]}>{t('conversations.message_count', { count: item.messageCount })}</Text>
-        <Text style={[styles.savedHint, { color: theme.textSecondary }]}>
+        <Text style={[styles.savedHint, { color: theme.timestamp }]}>
           {savedSessionIds.includes(item.id) ? t('conversations.saved_hint') : t('conversations.unsaved_hint')}
         </Text>
       </Pressable>
@@ -216,8 +215,8 @@ export default function ConversationsScreen() {
 
       <ConversationSearchBar value={searchQuery} onChangeText={setSearchQuery} />
 
-      <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(tabs)/home')} accessibilityRole="button" accessibilityLabel={t('a11y.conversations.start_new')}>
-        <Text style={styles.primaryButtonText}>{t('conversations.start_new')}</Text>
+      <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary, shadowColor: theme.primary }]} onPress={() => router.push('/(tabs)/home')} accessibilityRole="button" accessibilityLabel={t('a11y.conversations.start_new')}>
+        <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>{t('conversations.start_new')}</Text>
       </Pressable>
 
       {isLoading ? (
@@ -227,7 +226,7 @@ export default function ConversationsScreen() {
           ))}
         </View>
       ) : (
-        <FlatList
+        <FlashList
           data={visibleItems}
           keyExtractor={(item) => item.id}
           renderItem={renderConversationItem}
@@ -236,10 +235,6 @@ export default function ConversationsScreen() {
           onRefresh={() => void loadDashboard(true)}
           onEndReached={() => void loadMore()}
           onEndReachedThreshold={0.3}
-          initialNumToRender={10}
-          maxToRenderPerBatch={8}
-          windowSize={5}
-          removeClippedSubviews={Platform.OS === 'android'}
           ListFooterComponent={
             isLoadingMore ? <SkeletonConversationCard /> : null
           }
@@ -253,11 +248,14 @@ export default function ConversationsScreen() {
               </Text>
             </GlassCard>
           }
+          ItemSeparatorComponent={ItemSeparator}
         />
       )}
     </LiquidScreen>
   );
 }
+
+const ItemSeparator = () => <View style={{ height: 10 }} />;
 
 const styles = StyleSheet.create({
   screen: {
@@ -291,7 +289,6 @@ const styles = StyleSheet.create({
   metaLine: {
     marginTop: 6,
     fontSize: 12,
-    color: '#1E3A8A',
     fontWeight: '700',
     textAlign: 'center',
   },
@@ -299,22 +296,18 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 4,
     fontSize: 12,
-    color: '#166534',
     fontWeight: '700',
   },
   primaryButton: {
     marginTop: 14,
-    backgroundColor: undefined, // theme.primary applied inline
     borderRadius: 14,
     paddingVertical: 12,
     alignItems: 'center',
-    shadowColor: '#1E3A8A',
     shadowOpacity: 0.2,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 8 },
   },
   primaryButtonText: {
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
   },
@@ -323,9 +316,8 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   listContent: {
-    marginTop: 16,
+    paddingTop: 16,
     paddingBottom: 24,
-    gap: 10,
   },
   emptyState: {
     marginTop: 28,
@@ -334,40 +326,32 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: undefined, // theme.textPrimary applied inline
   },
   emptySubtitle: {
     marginTop: 6,
-    color: undefined, // theme.textSecondary applied inline
     lineHeight: 20,
   },
   card: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.42)',
-    backgroundColor: 'rgba(255,255,255,0.66)',
     padding: 14,
     gap: 4,
   },
   cardTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: undefined, // theme.textPrimary applied inline
   },
   cardMeta: {
     fontSize: 13,
-    color: '#475569',
   },
   cardTags: {
     marginTop: 4,
     fontSize: 12,
-    color: undefined, // theme.primary applied inline
     fontWeight: '700',
   },
   savedHint: {
     marginTop: 6,
     fontSize: 11,
-    color: '#334155',
     fontWeight: '600',
   },
 });

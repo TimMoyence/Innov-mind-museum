@@ -27,10 +27,10 @@ function MetaRow({ label, value }: MetaItem) {
     <View style={styles.metaRow}>
       <Text style={[styles.metaLabel, { color: theme.textPrimary }]}>{label}</Text>
       <View style={styles.metaValueWrap}>
-        <Text style={[styles.metaValue, { color: theme.textSecondary }, isPlaceholder && styles.metaValuePlaceholder]}>
+        <Text style={[styles.metaValue, { color: theme.textSecondary }, isPlaceholder && [styles.metaValuePlaceholder, { color: theme.warningText }]]}>
           {value}
         </Text>
-        {isPlaceholder ? <Text style={styles.pendingBadge}>{t('privacy.pending_badge')}</Text> : null}
+        {isPlaceholder ? <Text style={[styles.pendingBadge, { color: theme.warningText, backgroundColor: theme.warningBackground, borderColor: 'rgba(245,158,11,0.34)' }]}>{t('privacy.pending_badge')}</Text> : null}
       </View>
     </View>
   );
@@ -86,8 +86,8 @@ export default function PrivacyScreen() {
         <GlassCard style={styles.heroCard} intensity={60}>
           <View style={styles.heroHeader}>
             <Text style={[styles.title, { color: theme.textPrimary }]}>{PRIVACY_POLICY_CONTENT.title}</Text>
-            <View style={[styles.statusPill, hasReleaseWork ? styles.statusPillPending : styles.statusPillReady]}>
-              <Text style={[styles.statusPillText, hasReleaseWork ? styles.statusPillTextPending : styles.statusPillTextReady]}>
+            <View style={[styles.statusPill, hasReleaseWork ? { backgroundColor: theme.warningBackground, borderColor: 'rgba(245,158,11,0.38)' } : { backgroundColor: theme.successBackground, borderColor: 'rgba(34,197,94,0.34)' }]}>
+              <Text style={[styles.statusPillText, { color: hasReleaseWork ? theme.warningText : theme.success }]}>
                 {hasReleaseWork ? t('privacy.pending_count', { count: unresolvedMetaCount }) : t('privacy.status_ready')}
               </Text>
             </View>
@@ -108,7 +108,7 @@ export default function PrivacyScreen() {
           <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('privacy.quick_facts')}</Text>
           <View style={styles.quickFactsList}>
             {PRIVACY_POLICY_CONTENT.quickFacts.map((fact) => (
-              <View key={fact.label} style={styles.quickFactRow}>
+              <View key={fact.label} style={[styles.quickFactRow, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]}>
                 <Text style={[styles.quickFactLabel, { color: theme.textPrimary }]}>{fact.label}</Text>
                 <Text style={[styles.quickFactValue, { color: theme.textSecondary }]}>{fact.value}</Text>
               </View>
@@ -129,13 +129,13 @@ export default function PrivacyScreen() {
 
         {hasReleaseWork ? (
           <GlassCard style={styles.warningCard} intensity={58}>
-            <Text style={styles.warningTitle}>{t('privacy.prerelease_title')}</Text>
-            <Text style={styles.warningText}>
+            <Text style={[styles.warningTitle, { color: theme.warningText }]}>{t('privacy.prerelease_title')}</Text>
+            <Text style={[styles.warningText, { color: theme.warningText }]}>
               {t('privacy.prerelease_text')}
             </Text>
             <View style={styles.bulletGroup}>
               {PRIVACY_POLICY_CONTENT.releaseChecklist.map((item) => (
-                <Text key={item} style={styles.warningBullet}>
+                <Text key={item} style={[styles.warningBullet, { color: theme.warningText }]}>
                   • {item}
                 </Text>
               ))}
@@ -174,9 +174,9 @@ export default function PrivacyScreen() {
           </Text>
           <View style={styles.ctaRow}>
             <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(stack)/support')} accessibilityRole="button" accessibilityLabel={t('a11y.privacy.open_support')}>
-              <Text style={styles.primaryButtonText}>{t('privacy.open_support')}</Text>
+              <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>{t('privacy.open_support')}</Text>
             </Pressable>
-            <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/settings')} accessibilityRole="button" accessibilityLabel={t('a11y.privacy.back_settings')}>
+            <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]} onPress={() => router.push('/(stack)/settings')} accessibilityRole="button" accessibilityLabel={t('a11y.privacy.back_settings')}>
               <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('privacy.back_settings')}</Text>
             </Pressable>
           </View>
@@ -218,24 +218,14 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderWidth: 1,
   },
-  statusPillPending: {
-    backgroundColor: 'rgba(254,243,199,0.78)',
-    borderColor: 'rgba(245,158,11,0.38)',
-  },
-  statusPillReady: {
-    backgroundColor: 'rgba(220,252,231,0.78)',
-    borderColor: 'rgba(34,197,94,0.34)',
-  },
+  statusPillPending: {},
+  statusPillReady: {},
   statusPillText: {
     fontSize: 11,
     fontWeight: '700',
   },
-  statusPillTextPending: {
-    color: '#92400E',
-  },
-  statusPillTextReady: {
-    color: '#166534',
-  },
+  statusPillTextPending: {},
+  statusPillTextReady: {},
   subtitle: {
     fontSize: 13,
     lineHeight: 19,
@@ -261,14 +251,10 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   metaValuePlaceholder: {
-    color: '#92400E',
     fontWeight: '700',
   },
   pendingBadge: {
-    color: '#92400E',
-    backgroundColor: 'rgba(254,243,199,0.82)',
     borderWidth: 1,
-    borderColor: 'rgba(245,158,11,0.34)',
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -289,17 +275,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   warningTitle: {
-    color: '#92400E',
     fontWeight: '700',
     fontSize: 15,
   },
   warningText: {
-    color: '#78350F',
     fontSize: 13,
     lineHeight: 19,
   },
   warningBullet: {
-    color: '#78350F',
     fontSize: 13,
     lineHeight: 20,
   },
@@ -309,8 +292,6 @@ const styles = StyleSheet.create({
   quickFactRow: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.26)',
-    backgroundColor: 'rgba(255,255,255,0.56)',
     padding: 10,
     gap: 3,
   },
@@ -365,15 +346,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 13,
   },
   secondaryButton: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.45)',
-    backgroundColor: 'rgba(255,255,255,0.70)',
     alignItems: 'center',
     paddingVertical: 12,
   },

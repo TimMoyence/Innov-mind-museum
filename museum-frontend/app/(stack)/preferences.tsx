@@ -124,6 +124,7 @@ export default function PreferencesScreen() {
                     key={option.code}
                     style={[
                       styles.languageButton,
+                      { borderColor: theme.cardBorder, backgroundColor: theme.assistantBubble },
                       language === option.code && { backgroundColor: theme.primary, borderColor: theme.primary },
                     ]}
                     onPress={() => setLanguage(option.code)}
@@ -135,7 +136,7 @@ export default function PreferencesScreen() {
                       style={[
                         styles.languageButtonText,
                         { color: theme.textPrimary },
-                        language === option.code && styles.languageButtonTextActive,
+                        language === option.code && { color: theme.primaryContrast },
                       ]}
                     >
                       {option.nativeLabel}
@@ -164,6 +165,7 @@ export default function PreferencesScreen() {
                     key={level}
                     style={[
                       styles.levelButton,
+                      { borderColor: theme.cardBorder, backgroundColor: theme.assistantBubble },
                       guideLevel === level && { backgroundColor: theme.primary, borderColor: theme.primary },
                     ]}
                     onPress={() => setGuideLevel(level)}
@@ -175,7 +177,7 @@ export default function PreferencesScreen() {
                       style={[
                         styles.levelButtonText,
                         { color: theme.textPrimary },
-                        guideLevel === level && styles.levelButtonTextActive,
+                        guideLevel === level && { color: theme.primaryContrast },
                       ]}
                     >
                       {level}
@@ -190,14 +192,14 @@ export default function PreferencesScreen() {
 
           <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => void onSave()} disabled={isSaving} accessibilityRole="button" accessibilityLabel={t('a11y.preferences.save')} accessibilityState={{ disabled: isSaving }}>
             {isSaving ? (
-              <ActivityIndicator color='#FFFFFF' />
+              <ActivityIndicator color={theme.primaryContrast} />
             ) : (
-              <Text style={styles.primaryButtonText}>{t('preferences.save_button')}</Text>
+              <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>{t('preferences.save_button')}</Text>
             )}
           </Pressable>
 
           <Pressable
-            style={styles.secondaryButton}
+            style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.cardBackground }]}
             onPress={() => router.push('/(stack)/guided-museum-mode')}
             accessibilityRole="button"
             accessibilityLabel={t('a11y.preferences.learn_guided')}
@@ -258,18 +260,14 @@ const styles = StyleSheet.create({
   languageButton: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.44)',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: 'rgba(255,255,255,0.72)',
   },
   languageButtonText: {
     fontWeight: '700',
     fontSize: 13,
   },
-  languageButtonTextActive: {
-    color: '#FFFFFF',
-  },
+  languageButtonTextActive: {},
   switchRow: {
     marginTop: 6,
     flexDirection: 'row',
@@ -289,18 +287,14 @@ const styles = StyleSheet.create({
   levelButton: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.44)',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: 'rgba(255,255,255,0.72)',
   },
   levelButtonText: {
     fontWeight: '700',
     fontSize: 13,
   },
-  levelButtonTextActive: {
-    color: '#FFFFFF',
-  },
+  levelButtonTextActive: {},
   status: {
     fontWeight: '700',
     fontSize: 12,
@@ -313,15 +307,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
   },
   secondaryButton: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.45)',
-    backgroundColor: 'rgba(255,255,255,0.68)',
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 10,

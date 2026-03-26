@@ -1,4 +1,5 @@
-import { FlatList, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
@@ -17,7 +18,7 @@ interface MuseumDirectoryListProps {
   isRefreshing?: boolean;
 }
 
-/** FlatList of MuseumCards with search bar header, pull-to-refresh, and empty state. */
+/** Scrollable list of MuseumCards with search bar header, pull-to-refresh, and empty state. */
 export const MuseumDirectoryList = ({
   museums,
   isLoading,
@@ -55,7 +56,7 @@ export const MuseumDirectoryList = ({
         />
       </View>
 
-      <FlatList
+      <FlashList
         data={museums}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
@@ -64,10 +65,6 @@ export const MuseumDirectoryList = ({
         contentContainerStyle={styles.listContent}
         refreshing={isRefreshing}
         onRefresh={onRefresh}
-        initialNumToRender={10}
-        maxToRenderPerBatch={8}
-        windowSize={5}
-        removeClippedSubviews={Platform.OS === 'android'}
         ListEmptyComponent={
           <GlassCard style={styles.emptyState} intensity={48}>
             <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>
@@ -75,10 +72,13 @@ export const MuseumDirectoryList = ({
             </Text>
           </GlassCard>
         }
+        ItemSeparatorComponent={ItemSeparator}
       />
     </>
   );
 };
+
+const ItemSeparator = () => <View style={{ height: 10 }} />;
 
 const styles = StyleSheet.create({
   searchBar: {
@@ -97,7 +97,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 24,
-    gap: 10,
   },
   emptyState: {
     marginTop: 28,

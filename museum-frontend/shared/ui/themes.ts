@@ -1,8 +1,11 @@
 export interface ThemePalette {
   pageGradient: readonly [string, string, ...string[]];
   primary: string;
+  primaryContrast: string;
   textPrimary: string;
   textSecondary: string;
+  textTertiary: string;
+  placeholderText: string;
   glassBorder: string;
   glassBackground: string;
   cardBackground: string;
@@ -16,6 +19,11 @@ export interface ThemePalette {
   error: string;
   errorBackground: string;
   success: string;
+  successBackground: string;
+  danger: string;
+  warningText: string;
+  warningBackground: string;
+  shadowColor: string;
   timestamp: string;
   surface: string;
   overlay: string;
@@ -25,8 +33,11 @@ export interface ThemePalette {
 export const lightTheme: ThemePalette = {
   pageGradient: ['#EAF2FF', '#D8E8FF', '#D5F0FF'],
   primary: '#1D4ED8',
+  primaryContrast: '#FFFFFF',
   textPrimary: '#0F172A',
   textSecondary: '#334155',
+  textTertiary: '#475569',
+  placeholderText: '#64748B',
   glassBorder: 'rgba(255,255,255,0.58)',
   glassBackground: 'rgba(255,255,255,0.44)',
   cardBackground: 'rgba(255,255,255,0.66)',
@@ -40,6 +51,11 @@ export const lightTheme: ThemePalette = {
   error: '#991B1B',
   errorBackground: 'rgba(254,242,242,0.82)',
   success: '#166534',
+  successBackground: 'rgba(220,252,231,0.78)',
+  danger: '#DC2626',
+  warningText: '#92400E',
+  warningBackground: 'rgba(254,243,199,0.78)',
+  shadowColor: '#1E3A8A',
   timestamp: 'rgba(100,116,139,0.92)',
   surface: 'rgba(255,255,255,0.64)',
   overlay: 'rgba(255,255,255,0.70)',
@@ -49,8 +65,11 @@ export const lightTheme: ThemePalette = {
 export const darkTheme: ThemePalette = {
   pageGradient: ['#0F172A', '#1E293B', '#0F172A'],
   primary: '#60A5FA',
+  primaryContrast: '#FFFFFF',
   textPrimary: '#F8FAFC',
   textSecondary: '#94A3B8',
+  textTertiary: '#64748B',
+  placeholderText: '#64748B',
   glassBorder: 'rgba(255,255,255,0.12)',
   glassBackground: 'rgba(30,41,59,0.72)',
   cardBackground: 'rgba(30,41,59,0.66)',
@@ -64,6 +83,11 @@ export const darkTheme: ThemePalette = {
   error: '#FCA5A5',
   errorBackground: 'rgba(127,29,29,0.4)',
   success: '#86EFAC',
+  successBackground: 'rgba(34,197,94,0.15)',
+  danger: '#EF4444',
+  warningText: '#FCD34D',
+  warningBackground: 'rgba(245,158,11,0.15)',
+  shadowColor: '#000000',
   timestamp: 'rgba(148,163,184,0.72)',
   surface: 'rgba(30,41,59,0.64)',
   overlay: 'rgba(15,23,42,0.70)',
