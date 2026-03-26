@@ -51,11 +51,51 @@
       "source": "S8: gap 55%->60% impossible sans supertest, routes HTTP = 0% branches",
       "inject_when": "agent travaille sur la coverage ou ecrit des tests pour des routes Express",
       "severity": "MEDIUM"
+    },
+    {
+      "id": "PE-008",
+      "rule": "Avant d'implementer un item feature/refactor, verifier si le code/la feature existe deja dans le codebase (grep + read). Si existant, retirer du scope.",
+      "source": "R9: 6/14 items deja implementes, travail inutile planifie",
+      "inject_when": "Tech Lead prepare le plan d'un run feature ou refactor",
+      "severity": "HIGH"
+    },
+    {
+      "id": "PE-009",
+      "rule": "Les cles i18n doivent etre presentes dans TOUS les fichiers de locale (8 langues pour museum-frontend, 2 pour museum-web). Apres ajout d'une cle, verifier tous les fichiers locales.",
+      "source": "R5-R6: cles ajoutees en EN/FR mais pas verifiees dans les autres langues",
+      "inject_when": "agent ajoute ou modifie des cles de traduction",
+      "severity": "MEDIUM"
+    },
+    {
+      "id": "PE-010",
+      "rule": "Le FINALIZE KB est OBLIGATOIRE a chaque fin de run. Mettre a jour les 7 fichiers team-knowledge/*.json. Un run sans FINALIZE est un run incomplet.",
+      "source": "R7-R9: KB gaps — velocity-metrics, estimation-accuracy, agent-performance manquent 3 runs",
+      "inject_when": "Sentinelle recoit le message FINALIZE",
+      "severity": "CRITICAL"
+    },
+    {
+      "id": "PE-011",
+      "rule": "Dans museum-web (Next.js 15), les composants sont Server Components par defaut. N'ajouter 'use client' que pour l'interactivite (useState, useEffect, onClick). Extraire les parties client dans des fichiers separes.",
+      "source": "R5-R6: pattern etabli — LoginForm client extrait de page.tsx server",
+      "inject_when": "agent cree ou modifie des fichiers dans museum-web/",
+      "severity": "MEDIUM"
+    },
+    {
+      "id": "PE-012",
+      "rule": "FlashList v2 (2.x) uses auto-measurement — no estimatedItemSize prop. contentContainerStyle only supports padding + backgroundColor. Use ItemSeparatorComponent for gaps (not contentContainerStyle.gap).",
+      "source": "R12: design assumed v1 API, tsc caught missing prop during dev self-verification",
+      "inject_when": "agent works with FlashList or migrates from FlatList",
+      "severity": "MEDIUM"
     }
   ],
   "r4Summary": {
     "validated": ["PE-001", "PE-004"],
     "noNewEnrichments": true,
     "notes": "R4 audit confirmed PE-001 (0 as-any maintained) and PE-004 (2 critical violations found). No new enrichments needed — existing set covers R4 findings."
+  },
+  "r10Summary": {
+    "newEnrichments": ["PE-008", "PE-009", "PE-010", "PE-011"],
+    "total": 11,
+    "notes": "R10 process audit added 4 new enrichments. PE-008 (feature existence check) is HIGH — prevents wasted work on already-implemented features. PE-010 (KB FINALIZE) is CRITICAL — prevents KB drift."
   }
 }
