@@ -2,7 +2,13 @@ import type { PaginationParams } from '@modules/admin/domain/admin.types';
 
 // ─── Enums ───
 
+/**
+ *
+ */
 export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+/**
+ *
+ */
 export type TicketPriority = 'low' | 'medium' | 'high';
 
 export const TICKET_STATUSES: TicketStatus[] = ['open', 'in_progress', 'resolved', 'closed'];
@@ -10,6 +16,9 @@ export const TICKET_PRIORITIES: TicketPriority[] = ['low', 'medium', 'high'];
 
 // ─── Inputs ───
 
+/**
+ *
+ */
 export interface CreateTicketInput {
   userId: number;
   subject: string;
@@ -18,6 +27,9 @@ export interface CreateTicketInput {
   category?: string;
 }
 
+/**
+ *
+ */
 export interface AddTicketMessageInput {
   ticketId: string;
   senderId: number;
@@ -25,6 +37,9 @@ export interface AddTicketMessageInput {
   text: string;
 }
 
+/**
+ *
+ */
 export interface UpdateTicketInput {
   ticketId: string;
   status?: TicketStatus;
@@ -32,6 +47,9 @@ export interface UpdateTicketInput {
   assignedTo?: number | null;
 }
 
+/**
+ *
+ */
 export interface ListTicketsFilters {
   userId?: number;
   status?: TicketStatus;
@@ -41,6 +59,9 @@ export interface ListTicketsFilters {
 
 // ─── DTOs ───
 
+/**
+ *
+ */
 export interface TicketDTO {
   id: string;
   userId: number;
@@ -55,6 +76,9 @@ export interface TicketDTO {
   messageCount?: number;
 }
 
+/**
+ *
+ */
 export interface TicketMessageDTO {
   id: string;
   ticketId: string;
@@ -64,6 +88,9 @@ export interface TicketMessageDTO {
   createdAt: string;
 }
 
+/**
+ *
+ */
 export interface TicketDetailDTO extends TicketDTO {
   messages: TicketMessageDTO[];
 }

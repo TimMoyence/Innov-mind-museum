@@ -56,7 +56,7 @@ export const OnboardingSlide = React.memo(({ slide }: OnboardingSlideProps) => {
         <GlassCard style={styles.card} intensity={50}>
           {slide.bullets.map((bullet, i) => (
             <View key={i} style={styles.bulletRow}>
-              <Text style={[styles.bulletNumber, { color: theme.primary }]}>{i + 1}</Text>
+              <Text style={[styles.bulletNumber, { color: theme.primary, backgroundColor: theme.primaryTint }]}>{i + 1}</Text>
               <Text style={[styles.bulletText, { color: theme.textSecondary }]}>{bullet}</Text>
             </View>
           ))}
@@ -100,7 +100,6 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: 'rgba(30,64,175,0.1)',
     fontSize: 12,
     fontWeight: '700',
     textAlign: 'center',

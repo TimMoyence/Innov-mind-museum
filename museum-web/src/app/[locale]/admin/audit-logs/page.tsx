@@ -59,7 +59,7 @@ export default function AuditLogsPage() {
           type="text"
           placeholder={isFr ? 'Filtrer par action...' : 'Filter by action...'}
           value={actionFilter}
-          onChange={(e) => setActionFilter(e.target.value)}
+          onChange={(e) => { setActionFilter(e.target.value); }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200 sm:max-w-xs"
         />
       </div>
@@ -155,7 +155,7 @@ export default function AuditLogsPage() {
                 <button
                   type="button"
                   disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
+                  onClick={() => { setPage((p) => p - 1); }}
                   className="rounded-md border border-primary-200 px-3 py-1 text-sm font-medium text-text-secondary hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isFr ? 'Précédent' : 'Previous'}
@@ -163,7 +163,7 @@ export default function AuditLogsPage() {
                 <button
                   type="button"
                   disabled={page >= meta.totalPages}
-                  onClick={() => setPage((p) => p + 1)}
+                  onClick={() => { setPage((p) => p + 1); }}
                   className="rounded-md border border-primary-200 px-3 py-1 text-sm font-medium text-text-secondary hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isFr ? 'Suivant' : 'Next'}

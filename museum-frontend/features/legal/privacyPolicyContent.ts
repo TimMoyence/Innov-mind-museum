@@ -15,7 +15,7 @@ export interface PrivacyPolicyContent {
   contactEmail: string;
   dpoContact: string;
   rightsSummary: string[];
-  quickFacts: Array<{ label: string; value: string }>;
+  quickFacts: { label: string; value: string }[];
   releaseChecklist: string[];
   sections: PrivacyPolicySection[];
 }

@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 import { env } from '@src/config/env';
 
@@ -15,7 +15,11 @@ const signPayload = (payload: string): string => {
 
 /**
  * Generates a signed URL for reading a chat message image via the local image endpoint.
+ *
  * @param params - Base URL, message ID, and optional TTL in seconds.
+ * @param params.baseUrl - Base URL of the API server.
+ * @param params.messageId - UUID of the chat message.
+ * @param params.ttlSeconds - Optional TTL in seconds for the signed URL.
  * @returns The signed URL and its ISO-8601 expiry timestamp.
  */
 export const buildSignedChatImageReadUrl = (params: {
@@ -41,13 +45,18 @@ export const buildSignedChatImageReadUrl = (params: {
 
 /**
  * Verifies the HMAC signature and expiry of a signed chat image URL.
+ *
  * @param params - Message ID, token, and signature from the query string.
+ * @param params.messageId - UUID of the chat message.
+ * @param params.token - Base64url-encoded token from the query string.
+ * @param params.signature - HMAC signature from the query string.
  * @returns `{ ok: true, expiresAtMs }` on success, or `{ ok: false, reason }` on failure.
  */
 export const verifySignedChatImageReadUrl = (params: {
   messageId: string;
   token?: string;
   signature?: string;
+  // eslint-disable-next-line complexity -- signed URL verification requires many validation steps
 }): { ok: true; expiresAtMs: number } | { ok: false; reason: string } => {
   const token = params.token?.trim();
   const signature = params.signature?.trim();

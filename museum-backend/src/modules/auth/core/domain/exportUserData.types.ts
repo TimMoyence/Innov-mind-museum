@@ -3,8 +3,11 @@ export interface ChatDataExportPort {
   getAllUserData(userId: number): Promise<UserChatExportData>;
 }
 
+/**
+ *
+ */
 export interface UserChatExportData {
-  sessions: Array<{
+  sessions: {
     id: string;
     locale?: string | null;
     museumMode: boolean;
@@ -12,17 +15,20 @@ export interface UserChatExportData {
     museumName?: string | null;
     createdAt: string;
     updatedAt: string;
-    messages: Array<{
+    messages: {
       id: string;
       role: string;
       text?: string | null;
       imageRef?: string | null;
       createdAt: string;
       metadata?: Record<string, unknown> | null;
-    }>;
-  }>;
+    }[];
+  }[];
 }
 
+/**
+ *
+ */
 export interface UserExportPayload {
   exportedAt: string;
   user: {

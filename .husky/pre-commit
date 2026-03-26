@@ -1,0 +1,17 @@
+#!/bin/sh
+
+# Detect which apps have staged .ts/.tsx files and run lint-staged
+if git diff --cached --name-only | grep -q '^museum-backend/'; then
+  cd museum-backend && npx lint-staged
+  cd ..
+fi
+
+if git diff --cached --name-only | grep -q '^museum-frontend/'; then
+  cd museum-frontend && npx lint-staged
+  cd ..
+fi
+
+if git diff --cached --name-only | grep -q '^museum-web/'; then
+  cd museum-web && npx lint-staged
+  cd ..
+fi

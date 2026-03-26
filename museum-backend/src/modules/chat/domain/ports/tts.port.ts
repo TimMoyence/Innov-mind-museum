@@ -10,7 +10,10 @@ export interface TtsResult {
 export interface TextToSpeechService {
   /**
    * Synthesizes speech from text.
+   *
    * @param input - Text to synthesize and optional voice override.
+   * @param input.text - Text content to synthesize.
+   * @param input.voice - Optional voice identifier override.
    * @returns Audio buffer with content type metadata.
    */
   synthesize(input: { text: string; voice?: string }): Promise<TtsResult>;

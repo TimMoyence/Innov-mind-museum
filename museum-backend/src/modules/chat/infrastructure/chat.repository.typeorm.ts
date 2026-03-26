@@ -1,8 +1,11 @@
-import { DataSource, In, Repository } from 'typeorm';
+import { type DataSource, In, type Repository } from 'typeorm';
 
 import { ArtworkMatch } from '../domain/artworkMatch.entity';
+import { ChatMessage } from '../domain/chatMessage.entity';
+import { ChatSession } from '../domain/chatSession.entity';
 import { MessageReport } from '../domain/messageReport.entity';
-import {
+
+import type {
   ChatRepository,
   ChatSessionsPage,
   ChatMessageWithSessionOwnership,
@@ -13,9 +16,7 @@ import {
   SessionMessagesPage,
   UserChatExportData,
 } from '../domain/chat.repository.interface';
-import { ChatMessage } from '../domain/chatMessage.entity';
-import { ChatSession } from '../domain/chatSession.entity';
-import { ChatRole, CreateSessionInput } from '../domain/chat.types';
+import type { ChatRole, CreateSessionInput } from '../domain/chat.types';
 
 const encodeCursor = (value: { createdAt: string; id: string }): string => {
   return Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
@@ -79,7 +80,7 @@ export class TypeOrmChatRepository implements ChatRepository {
   private readonly messageRepo: Repository<ChatMessage>;
   private readonly reportRepo: Repository<MessageReport>;
 
-  /** @param dataSource - Active TypeORM DataSource used to obtain entity repositories. */
+  /** Creates a new TypeORM chat repository. @param dataSource - Active TypeORM DataSource used to obtain entity repositories. */
   constructor(dataSource: DataSource) {
     this.sessionRepo = dataSource.getRepository(ChatSession);
     this.messageRepo = dataSource.getRepository(ChatMessage);
@@ -88,27 +89,30 @@ export class TypeOrmChatRepository implements ChatRepository {
 
   /**
    * Creates a new chat session.
+   *
    * @param input - Session creation parameters (locale, museumMode, userId).
    * @returns The persisted ChatSession entity.
    */
   async createSession(input: CreateSessionInput): Promise<ChatSession> {
     const session = this.sessionRepo.create({
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
       locale: input.locale || null,
       museumMode: input.museumMode ?? false,
       user: input.userId ? ({ id: input.userId } as ChatSession['user']) : null,
       museumId: input.museumId ?? null,
     });
 
-    return this.sessionRepo.save(session);
+    return await this.sessionRepo.save(session);
   }
 
   /**
    * Retrieves a chat session by its ID, including the owning user relation.
+   *
    * @param sessionId - UUID of the session.
    * @returns The session or `null` if not found.
    */
   async getSessionById(sessionId: string): Promise<ChatSession | null> {
-    return this.sessionRepo.findOne({
+    return await this.sessionRepo.findOne({
       where: { id: sessionId },
       relations: {
         user: true,
@@ -118,6 +122,7 @@ export class TypeOrmChatRepository implements ChatRepository {
 
   /**
    * Retrieves a message together with its session and owning user.
+   *
    * @param messageId - UUID of the message.
    * @returns The message with session ownership info, or `null` if not found.
    */
@@ -145,11 +150,12 @@ export class TypeOrmChatRepository implements ChatRepository {
 
   /**
    * Deletes a session only if it contains no messages (transactional).
+   *
    * @param sessionId - UUID of the session to delete.
    * @returns `true` if the session was deleted, `false` otherwise.
    */
   async deleteSessionIfEmpty(sessionId: string): Promise<boolean> {
-    return this.sessionRepo.manager.transaction(async (transactionManager) => {
+    return await this.sessionRepo.manager.transaction(async (transactionManager) => {
       const sessionRepository = transactionManager.getRepository(ChatSession);
       const messageRepository = transactionManager.getRepository(ChatMessage);
 
@@ -177,19 +183,21 @@ export class TypeOrmChatRepository implements ChatRepository {
 
   /**
    * Persists a chat message, optional artwork match, and session updates in a single transaction.
+   *
    * @param input - Message content, role, optional artwork match, and session update fields.
    * @returns The persisted ChatMessage entity.
    */
   async persistMessage(input: PersistMessageInput): Promise<ChatMessage> {
-    return this.messageRepo.manager.transaction(async (transactionManager) => {
+    // eslint-disable-next-line complexity -- transaction must handle message, artwork match, and session updates atomically
+    return await this.messageRepo.manager.transaction(async (transactionManager) => {
       const messageRepository = transactionManager.getRepository(ChatMessage);
       const sessionRepository = transactionManager.getRepository(ChatSession);
 
       const entity = messageRepository.create({
         role: input.role,
-        text: input.text || null,
-        imageRef: input.imageRef || null,
-        metadata: input.metadata || null,
+        text: input.text ?? null,
+        imageRef: input.imageRef ?? null,
+        metadata: input.metadata ?? null,
         session: { id: input.sessionId } as ChatSession,
       });
 
@@ -198,12 +206,12 @@ export class TypeOrmChatRepository implements ChatRepository {
       if (input.artworkMatch) {
         const artworkMatchRepo = transactionManager.getRepository(ArtworkMatch);
         const match = artworkMatchRepo.create({
-          artworkId: input.artworkMatch.artworkId || null,
-          title: input.artworkMatch.title || null,
-          artist: input.artworkMatch.artist || null,
+          artworkId: input.artworkMatch.artworkId ?? null,
+          title: input.artworkMatch.title ?? null,
+          artist: input.artworkMatch.artist ?? null,
           confidence: input.artworkMatch.confidence ?? 0,
-          source: input.artworkMatch.source || null,
-          room: input.artworkMatch.room || null,
+          source: input.artworkMatch.source ?? null,
+          room: input.artworkMatch.room ?? null,
           message: { id: saved.id } as ChatMessage,
         });
         await artworkMatchRepo.save(match);
@@ -235,7 +243,11 @@ export class TypeOrmChatRepository implements ChatRepository {
 
   /**
    * Lists messages for a session with cursor-based pagination (newest first, returned in chronological order).
-   * @param params - Session ID, limit, and optional cursor.
+   *
+   * @param root0 - Session ID, limit, and optional cursor.
+   * @param root0.sessionId - UUID of the session.
+   * @param root0.limit - Maximum number of messages to return.
+   * @param root0.cursor - Optional pagination cursor.
    * @returns A page of messages with `hasMore` flag and `nextCursor`.
    */
   async listSessionMessages({
@@ -269,16 +281,15 @@ export class TypeOrmChatRepository implements ChatRepository {
     const hasMore = rows.length > effectiveLimit;
     const messages = hasMore ? rows.slice(0, effectiveLimit) : rows;
     const last = messages[messages.length - 1];
-    const nextCursor =
-      hasMore && last
-        ? encodeCursor({
-            createdAt: last.createdAt.toISOString(),
-            id: last.id,
-          })
-        : null;
+    const nextCursor = hasMore
+      ? encodeCursor({
+          createdAt: last.createdAt.toISOString(),
+          id: last.id,
+        })
+      : null;
 
     return {
-      messages: messages.reverse(),
+      messages: [...messages].reverse(),
       hasMore,
       nextCursor,
     };
@@ -286,6 +297,7 @@ export class TypeOrmChatRepository implements ChatRepository {
 
   /**
    * Returns the most recent messages for a session in chronological order (used for LLM history context).
+   *
    * @param sessionId - UUID of the session.
    * @param limit - Maximum number of messages (clamped to 1..50).
    * @returns Array of messages ordered oldest-first.
@@ -300,14 +312,19 @@ export class TypeOrmChatRepository implements ChatRepository {
       .take(Math.max(1, Math.min(limit, 50)))
       .getMany();
 
-    return rows.reverse();
+    return [...rows].reverse();
   }
 
   /**
    * Lists chat sessions for a user with cursor-based pagination, including message count and latest-message preview.
-   * @param params - User ID, limit, and optional cursor.
+   *
+   * @param root0 - User ID, limit, and optional cursor.
+   * @param root0.userId - Owning user ID.
+   * @param root0.limit - Maximum number of sessions to return.
+   * @param root0.cursor - Optional pagination cursor.
    * @returns A page of sessions with previews, message counts, `hasMore` flag, and `nextCursor`.
    */
+  // eslint-disable-next-line max-lines-per-function -- cursor pagination with message counts and previews requires multiple queries
   async listSessions({
     userId,
     limit,
@@ -339,13 +356,12 @@ export class TypeOrmChatRepository implements ChatRepository {
     const hasMore = rows.length > effectiveLimit;
     const sessions = hasMore ? rows.slice(0, effectiveLimit) : rows;
     const last = sessions[sessions.length - 1];
-    const nextCursor =
-      hasMore && last
-        ? encodeSessionCursor({
-            updatedAt: last.updatedAt.toISOString(),
-            id: last.id,
-          })
-        : null;
+    const nextCursor = hasMore
+      ? encodeSessionCursor({
+          updatedAt: last.updatedAt.toISOString(),
+          id: last.id,
+        })
+      : null;
 
     const sessionIds = sessions.map((session) => session.id);
     if (!sessionIds.length) {
@@ -365,9 +381,9 @@ export class TypeOrmChatRepository implements ChatRepository {
       .getRawMany<{ sessionId: string; messageCount: string }>();
 
     const countBySessionId = new Map<string, number>();
-    messageCounts.forEach((row) => {
+    for (const row of messageCounts) {
       countBySessionId.set(row.sessionId, Number(row.messageCount) || 0);
-    });
+    }
 
     const previewRows = await this.messageRepo
       .createQueryBuilder('message')
@@ -391,20 +407,20 @@ export class TypeOrmChatRepository implements ChatRepository {
       string,
       { role: ChatRole; text: string | null; createdAt: Date }
     >();
-    previewRows.forEach((row) => {
+    for (const row of previewRows) {
       previewBySessionId.set(row.sessionId, {
         role: row.role,
         text: row.text,
         createdAt:
           row.createdAt instanceof Date ? row.createdAt : new Date(row.createdAt),
       });
-    });
+    }
 
     return {
       sessions: sessions.map((session) => ({
         session,
         preview: previewBySessionId.get(session.id),
-        messageCount: countBySessionId.get(session.id) || 0,
+        messageCount: countBySessionId.get(session.id) ?? 0,
       })),
       hasMore,
       nextCursor,
@@ -413,6 +429,7 @@ export class TypeOrmChatRepository implements ChatRepository {
 
   /**
    * Checks whether a report already exists for a given message and user.
+   *
    * @param messageId - UUID of the message.
    * @param userId - Numeric user ID.
    * @returns `true` if a report exists.
@@ -426,6 +443,7 @@ export class TypeOrmChatRepository implements ChatRepository {
 
   /**
    * Persists a user report against a message.
+   *
    * @param input - Message ID, user ID, reason, and optional comment.
    */
   async persistMessageReport(input: PersistMessageReportInput): Promise<void> {
@@ -433,7 +451,7 @@ export class TypeOrmChatRepository implements ChatRepository {
       message: { id: input.messageId } as ChatMessage,
       userId: input.userId,
       reason: input.reason,
-      comment: input.comment || null,
+      comment: input.comment ?? null,
     });
 
     await this.reportRepo.save(entity);
@@ -441,20 +459,21 @@ export class TypeOrmChatRepository implements ChatRepository {
 
   /**
    * Exports all chat sessions and messages for a user (GDPR data portability).
+   *
    * @param userId - Numeric user ID.
    * @returns Structured export payload containing all sessions and their messages.
    */
   async exportUserData(userId: number): Promise<UserChatExportData> {
     const PAGE_SIZE = 50;
 
-    return this.sessionRepo.manager.transaction('REPEATABLE READ', async (em) => {
+    return await this.sessionRepo.manager.transaction('REPEATABLE READ', async (em) => {
       const sessionRepo = em.getRepository(ChatSession);
       const messageRepo = em.getRepository(ChatMessage);
 
       const allSessions: UserChatExportData['sessions'] = [];
       let offset = 0;
 
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, no-constant-condition
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       while (true) {
         const sessionBatch = await sessionRepo.find({
           where: { user: { id: userId } },
@@ -475,13 +494,13 @@ export class TypeOrmChatRepository implements ChatRepository {
         const messagesBySessionId = new Map<string, ChatMessage[]>();
         for (const msg of messages) {
           const sessionId = msg.session.id;
-          const list = messagesBySessionId.get(sessionId) || [];
+          const list = messagesBySessionId.get(sessionId) ?? [];
           list.push(msg);
           messagesBySessionId.set(sessionId, list);
         }
 
         for (const session of sessionBatch) {
-          const sessionMessages = messagesBySessionId.get(session.id) || [];
+          const sessionMessages = messagesBySessionId.get(session.id) ?? [];
           allSessions.push({
             id: session.id,
             locale: session.locale,

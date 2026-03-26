@@ -56,7 +56,7 @@ export default function ChatSessionScreen() {
   const [isIntentHandled, setIsIntentHandled] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [contextMenuMessage, setContextMenuMessage] = useState<(typeof messages)[number] | null>(null);
-  const imageRefreshInFlightRef = useRef<Set<string>>(new Set());
+  const imageRefreshInFlightRef = useRef(new Set());
 
   const {
     messages,
@@ -195,7 +195,7 @@ export default function ChatSessionScreen() {
     } catch {
       Alert.alert(t('common.error'), t('chat.report_error_body'));
     }
-  }, []);
+  }, [t]);
 
   const onReportMessage = useCallback((messageId: string) => {
     Alert.alert(t('chat.report_title'), t('chat.report_body'), [
@@ -205,7 +205,7 @@ export default function ChatSessionScreen() {
       { text: t('chat.report_other'), onPress: () => void submitReport(messageId, 'other') },
       { text: t('common.cancel'), style: 'cancel' },
     ]);
-  }, [submitReport]);
+  }, [submitReport, t]);
 
   const { copyText, shareText } = useMessageActions({ onReport: onReportMessage });
 
@@ -235,7 +235,7 @@ export default function ChatSessionScreen() {
   if (isCameraOpen) {
     return (
       <CustomCameraView
-        onClose={() => setIsCameraOpen(false)}
+        onClose={() => { setIsCameraOpen(false); }}
         onCapture={onCameraCapture}
       />
     );
@@ -299,7 +299,7 @@ export default function ChatSessionScreen() {
 
         {selectedImage ? (
           <View style={styles.previewWrap}>
-            <Image source={{ uri: selectedImage }} style={styles.preview} />
+            <Image source={{ uri: selectedImage }} style={[styles.preview, { borderColor: theme.inputBorder }]} />
             <View style={styles.previewMenu}>
               <FloatingContextMenu
                 actions={[
@@ -356,7 +356,7 @@ export default function ChatSessionScreen() {
         onCopy={(msg) => void copyText(msg)}
         onShare={(msg) => void shareText(msg)}
         onReport={onReportMessage}
-        onClose={() => setContextMenuMessage(null)}
+        onClose={() => { setContextMenuMessage(null); }}
       />
     </LiquidScreen>
   );
@@ -429,7 +429,6 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.45)',
   },
   previewMenu: {
     marginTop: 6,

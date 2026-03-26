@@ -1,6 +1,9 @@
-import { NextFunction, Request, Response, Router } from 'express';
+import { type NextFunction, type Request, type Response, Router } from 'express';
+
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { badRequest } from '@shared/errors/app.error';
+import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+
+import { createTicketSchema, addTicketMessageSchema } from './support.schemas';
 import {
   createTicketUseCase,
   listUserTicketsUseCase,
@@ -14,24 +17,18 @@ const supportRouter: Router = Router();
 supportRouter.post(
   '/tickets',
   isAuthenticated,
+  validateBody(createTicketSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { subject, description, priority, category } = (req.body || {}) as {
-        subject?: string;
-        description?: string;
+      const { subject, description, priority, category } = req.body as {
+        subject: string;
+        description: string;
         priority?: string;
         category?: string;
       };
 
-      if (!subject || typeof subject !== 'string') {
-        throw badRequest('subject is required');
-      }
-      if (!description || typeof description !== 'string') {
-        throw badRequest('description is required');
-      }
-
       const ticket = await createTicketUseCase.execute({
-        userId: req.user!.id,
+        userId: req.user?.id ?? 0,
         subject,
         description,
         priority,
@@ -53,13 +50,13 @@ supportRouter.get(
   isAuthenticated,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const page = parseInt(req.query.page as string, 10) || 1;
-      const limit = parseInt(req.query.limit as string, 10) || 20;
+      const page = Number.parseInt(req.query.page as string, 10) || 1;
+      const limit = Number.parseInt(req.query.limit as string, 10) || 20;
       const status = (req.query.status as string) || undefined;
       const priority = (req.query.priority as string) || undefined;
 
       const result = await listUserTicketsUseCase.execute({
-        userId: req.user!.id,
+        userId: req.user?.id ?? 0,
         status,
         priority,
         page,
@@ -81,8 +78,8 @@ supportRouter.get(
     try {
       const ticket = await getTicketDetailUseCase.execute({
         ticketId: req.params.id,
-        userId: req.user!.id,
-        userRole: req.user!.role,
+        userId: req.user?.id ?? 0,
+        userRole: req.user?.role ?? 'visitor',
       });
 
       res.json({ ticket });
@@ -96,17 +93,15 @@ supportRouter.get(
 supportRouter.post(
   '/tickets/:id/messages',
   isAuthenticated,
+  validateBody(addTicketMessageSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { text } = (req.body || {}) as { text?: string };
-      if (!text || typeof text !== 'string') {
-        throw badRequest('text is required');
-      }
+      const { text } = req.body as { text: string };
 
       const message = await addTicketMessageUseCase.execute({
         ticketId: req.params.id,
-        senderId: req.user!.id,
-        senderRole: req.user!.role,
+        senderId: req.user?.id ?? 0,
+        senderRole: req.user?.role ?? 'visitor',
         text,
       });
 

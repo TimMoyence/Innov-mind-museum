@@ -20,6 +20,7 @@ export class AppError extends Error {
 
 /**
  * Creates a 400 Bad Request AppError.
+ *
  * @param message - Human-readable error description.
  * @param details - Optional payload with validation details.
  * @returns AppError with status 400.
@@ -35,6 +36,7 @@ export const badRequest = (message: string, details?: unknown): AppError => {
 
 /**
  * Creates a 404 Not Found AppError.
+ *
  * @param message - Human-readable error description.
  * @param details - Optional additional context.
  * @returns AppError with status 404.
@@ -50,6 +52,7 @@ export const notFound = (message: string, details?: unknown): AppError => {
 
 /**
  * Creates a 409 Conflict AppError.
+ *
  * @param message - Human-readable error description.
  * @returns AppError with status 409.
  */
@@ -63,6 +66,7 @@ export const conflict = (message: string): AppError => {
 
 /**
  * Creates a 403 Forbidden AppError.
+ *
  * @param message - Human-readable error description.
  * @returns AppError with status 403.
  */
@@ -76,6 +80,7 @@ export const forbidden = (message: string): AppError => {
 
 /**
  * Creates a 429 Too Many Requests AppError.
+ *
  * @param message - Human-readable error description.
  * @returns AppError with status 429.
  */

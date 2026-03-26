@@ -1,4 +1,5 @@
 import { badRequest } from '@shared/errors/app.error';
+
 import type { IAdminRepository } from '../domain/admin.repository.interface';
 import type { PaginatedResult, AdminAuditLogDTO, ListAuditLogsFilters } from '../domain/admin.types';
 
@@ -6,6 +7,7 @@ import type { PaginatedResult, AdminAuditLogDTO, ListAuditLogsFilters } from '..
 export class ListAuditLogsUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
+  /** Validates pagination constraints and retrieves a paginated list of audit logs. */
   async execute(filters: ListAuditLogsFilters): Promise<PaginatedResult<AdminAuditLogDTO>> {
     const { page, limit } = filters.pagination;
 
@@ -16,6 +18,6 @@ export class ListAuditLogsUseCase {
       throw badRequest('limit must be between 1 and 100');
     }
 
-    return this.repository.listAuditLogs(filters);
+    return await this.repository.listAuditLogs(filters);
   }
 }

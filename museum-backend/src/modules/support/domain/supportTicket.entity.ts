@@ -6,6 +6,9 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+/**
+ *
+ */
 @Entity({ name: 'support_tickets' })
 export class SupportTicket {
   @PrimaryGeneratedColumn('uuid')

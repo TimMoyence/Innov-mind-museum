@@ -1,142 +1,104 @@
 # Maestro Screenshot Automation for Musaium
-# Usage: maestro test maestro/screenshots.yaml
-# Prerequisites: iOS Simulator or Android Emulator running with Musaium
+# Usage: TEST_EMAIL=x TEST_PASSWORD=y maestro test maestro/screenshots.yaml
 #
-# Screenshot output: ~/.maestro/screenshots/
-# Rename/organize screenshots after capture for store submission.
-#
-# For multi-device sizes:
-#   iPhone 15 Pro Max (6.7") — required for App Store
-#   iPhone 14 Plus (6.5") — legacy size
-#   iPhone SE 3 (4.7") — optional
-#   iPad Pro 12.9" — required if supportsTablet: true
-#
-# Run per device:
-#   xcrun simctl boot "iPhone 15 Pro Max"
-#   maestro test maestro/screenshots.yaml
-#   xcrun simctl shutdown "iPhone 15 Pro Max"
+# Device sizes:
+#   iPhone 16 Pro Max (6.7") — required for App Store
+#   iPhone 16 Plus (6.5") — recommended
+#   iPad Pro 13-inch (M4) — required if iPad supported
 
 appId: com.musaium.mobile
 
+env:
+  TEST_EMAIL: ${TEST_EMAIL}
+  TEST_PASSWORD: ${TEST_PASSWORD}
+
 ---
 
-# --- Pre-conditions: ensure app is in clean state ---
+# --- Launch app (keep Metro bundler connection) ---
+- launchApp:
+    clearState: false
 
-- clearState
-
-- launchApp
-
-# Wait for app to fully load
-- waitForAnimationToEnd:
-    timeout: 5000
-
-# --- Screenshot 1: Onboarding ---
-- assertVisible: "Musaium"
-- takeScreenshot: "01_onboarding"
-
-# --- Navigate through onboarding if present ---
+# If Expo Dev Client list appears, tap localhost
 - tapOn:
-    text: ".*continue.*|.*commencer.*|.*skip.*"
+    text: ".*localhost.*"
     optional: true
 
-- waitForAnimationToEnd
-
-# --- Screenshot 2: Auth Screen ---
-- takeScreenshot: "02_auth"
-
-# --- Login with test account ---
+# Dismiss Expo dev menu if it appears
 - tapOn:
-    id: "email-input"
-    optional: true
-- inputText: "${TEST_EMAIL:-test@musaium.com}"
-
-- tapOn:
-    id: "password-input"
-    optional: true
-- inputText: "${TEST_PASSWORD:-TestPassword123!}"
-
-- tapOn:
-    text: ".*sign in.*|.*connexion.*|.*login.*"
+    text: "Continue"
     optional: true
 
-- waitForAnimationToEnd:
-    timeout: 8000
+# Dismiss any other modal
+- tapOn:
+    text: ".*ontinue.*|.*ismiss.*|.*lose.*"
+    optional: true
 
-# --- Screenshot 3: Home Tab ---
-- takeScreenshot: "03_home"
+# Wait for the actual app to load
+- extendedWaitUntil:
+    visible: ".*Bon retour.*|.*Se connecter.*|.*Sign in.*"
+    timeout: 20000
+
+# --- Screenshot 1: Auth Screen ---
+- takeScreenshot: 01_auth
+
+# --- Login: tap on the email text field (placeholder text) ---
+- tapOn:
+    text: ".*E-mail.*"
+    index: 0
+    optional: true
+- tapOn:
+    point: "50%,46%"
+    optional: true
+- inputText: ${TEST_EMAIL}
+
+# Tap password field
+- tapOn:
+    text: ".*Mot de passe.*"
+    index: 0
+    optional: true
+- tapOn:
+    point: "50%,52%"
+    optional: true
+- inputText: ${TEST_PASSWORD}
+
+# Hide keyboard and tap login
+- hideKeyboard
+- tapOn:
+    text: ".*Se connecter.*"
+
+# Wait for home screen
+- extendedWaitUntil:
+    visible: ".*Musaium.*|.*Bonjour.*|.*Hello.*"
+    timeout: 20000
+
+# --- Screenshot 2: Home ---
+- takeScreenshot: 02_home
 
 # --- Navigate to Conversations Tab ---
 - tapOn:
-    text: ".*conversations.*|.*historique.*"
+    text: ".*onversation.*"
     optional: true
 
-- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ".*onversation.*"
+    timeout: 8000
 
-# --- Screenshot 4: Conversations Dashboard ---
-- takeScreenshot: "04_conversations"
+# --- Screenshot 3: Conversations ---
+- takeScreenshot: 03_conversations
 
-# --- Open an existing conversation or create new one ---
+# --- Navigate back to Home tab ---
 - tapOn:
-    text: ".*new.*|.*nouveau.*|.*start.*"
+    text: ".*ccueil.*|.*ome.*"
     optional: true
-
-- waitForAnimationToEnd:
-    timeout: 5000
-
-# --- Screenshot 5: Chat Screen (empty) ---
-- takeScreenshot: "05_chat_empty"
-
-# --- Type a message ---
-- tapOn:
-    id: "chat-input"
-    optional: true
-- inputText: "Tell me about the Mona Lisa"
-
-- tapOn:
-    id: "send-button"
-    optional: true
-
-# Wait for AI response
-- waitForAnimationToEnd:
-    timeout: 15000
-
-# --- Screenshot 6: Chat with AI response ---
-- takeScreenshot: "06_chat_response"
 
 # --- Navigate to Settings ---
-- pressKey: back
 - tapOn:
-    text: ".*settings.*|.*paramètres.*|.*réglages.*"
+    text: ".*églages.*|.*aramètre.*|.*ettings.*"
     optional: true
 
-- waitForAnimationToEnd
-
-# --- Screenshot 7: Settings ---
-- takeScreenshot: "07_settings"
-
-# --- Toggle Dark Mode if available ---
-- tapOn:
-    text: ".*dark.*|.*sombre.*|.*theme.*"
-    optional: true
-
-- waitForAnimationToEnd
-
-# --- Screenshot 8: Dark Mode ---
-- takeScreenshot: "08_dark_mode"
-
-# --- Navigate back and go to Museums tab ---
-- pressKey: back
-- tapOn:
-    text: ".*museums.*|.*musées.*"
-    optional: true
-
-- waitForAnimationToEnd:
+- extendedWaitUntil:
+    visible: ".*églages.*|.*aramètre.*|.*ettings.*|.*ompte.*"
     timeout: 5000
 
-# --- Screenshot 9: Museum Directory ---
-- takeScreenshot: "09_museums"
-
-# --- Final: return to home ---
-- pressKey: back
-
-- takeScreenshot: "10_final"
+# --- Screenshot 4: Settings ---
+- takeScreenshot: 04_settings

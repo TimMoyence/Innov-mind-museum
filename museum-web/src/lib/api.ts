@@ -47,17 +47,17 @@ export function registerLogoutHandler(handler: () => void): void {
 // ── Refresh queue ──────────────────────────────────────────────────────
 
 let isRefreshing = false;
-let failedQueue: Array<{
+let failedQueue: {
   resolve: (token: string) => void;
   reject: (err: unknown) => void;
-}> = [];
+}[] = [];
 
 function processQueue(error: unknown, token: string | null): void {
   for (const entry of failedQueue) {
     if (error) {
       entry.reject(error);
     } else {
-      entry.resolve(token!);
+      entry.resolve(token as string);
     }
   }
   failedQueue = [];
@@ -130,7 +130,7 @@ async function request<T>(
   };
 
   if (accessToken) {
-    headers['Authorization'] = `Bearer ${accessToken}`;
+    headers.Authorization = `Bearer ${accessToken}`;
   }
 
   const res = await fetch(url, {

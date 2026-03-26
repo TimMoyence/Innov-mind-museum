@@ -20,7 +20,7 @@ export const StepIndicator = ({ totalSteps, currentStep }: StepIndicatorProps) =
             styles.dot,
             i === currentStep
               ? [styles.activeDot, { backgroundColor: theme.primary }]
-              : styles.inactiveDot,
+              : [styles.inactiveDot, { backgroundColor: theme.cardBorder }],
           ]}
         />
       ))}
@@ -46,6 +46,5 @@ const styles = StyleSheet.create({
   inactiveDot: {
     width: 8,
     height: 8,
-    backgroundColor: 'rgba(148,163,184,0.4)',
   },
 });

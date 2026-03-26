@@ -1,8 +1,13 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
 
+/**
+ *
+ */
 export class EnsureChatTables1771900000000 implements MigrationInterface {
   name = 'EnsureChatTables1771900000000';
 
+  /** Apply the EnsureChatTables migration. */
+  // eslint-disable-next-line max-lines-per-function -- migration must define all DDL statements in a single method
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
 
@@ -91,6 +96,7 @@ export class EnsureChatTables1771900000000 implements MigrationInterface {
     `);
   }
 
+  /** Revert the EnsureChatTables migration. */
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       DO $$

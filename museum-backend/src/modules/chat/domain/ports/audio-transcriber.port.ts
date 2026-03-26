@@ -26,6 +26,7 @@ export interface AudioTranscriptionResult {
 export interface AudioTranscriber {
   /**
    * Transcribes base64-encoded audio into text.
+   *
    * @param input - Audio data, MIME type, and optional locale/requestId.
    * @returns Transcribed text with model and provider metadata.
    */
@@ -34,7 +35,8 @@ export interface AudioTranscriber {
 
 /** Stub implementation of {@link AudioTranscriber} that always throws -- used when transcription is disabled. */
 export class DisabledAudioTranscriber implements AudioTranscriber {
-  /** @throws AppError with code `FEATURE_UNAVAILABLE` -- always. */
+  /** Always throws because audio transcription is disabled. @throws AppError with code `FEATURE_UNAVAILABLE`. */
+  // eslint-disable-next-line @typescript-eslint/require-await
   async transcribe(): Promise<AudioTranscriptionResult> {
     throw new AppError({
       message: 'Audio transcription is disabled in the current environment.',

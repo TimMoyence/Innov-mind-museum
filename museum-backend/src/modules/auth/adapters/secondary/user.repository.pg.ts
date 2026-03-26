@@ -1,14 +1,18 @@
 import bcrypt from 'bcrypt';
-import pool from '../../../../data/db';
+
 import { conflict } from '@shared/errors/app.error';
 import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
-import { User } from '../../core/domain/user.entity';
-import { IUserRepository } from '../../core/domain/user.repository.interface';
+
+import pool from '../../../../data/db';
+
+import type { User } from '../../core/domain/user.entity';
+import type { IUserRepository } from '../../core/domain/user.repository.interface';
 
 /** PostgreSQL (raw SQL) implementation of {@link IUserRepository}. */
 export class UserRepositoryPg implements IUserRepository {
   /**
    * Finds a user by email address.
+   *
    * @param email - User email.
    * @returns The user row or `null` if not found.
    */
@@ -16,11 +20,12 @@ export class UserRepositoryPg implements IUserRepository {
     const query = 'SELECT * FROM "users" WHERE email = $1';
     const values = [email];
     const result = await pool.query(query, values);
-    return result.rows[0] || null;
+    return result.rows[0] ?? null;
   }
 
   /**
    * Finds a user by numeric ID.
+   *
    * @param id - User primary key.
    * @returns The user row or `null` if not found.
    */
@@ -28,11 +33,12 @@ export class UserRepositoryPg implements IUserRepository {
     const query = 'SELECT * FROM "users" WHERE id = $1';
     const values = [id];
     const result = await pool.query(query, values);
-    return result.rows[0] || null;
+    return result.rows[0] ?? null;
   }
 
   /**
    * Registers a new user with an email/password credential.
+   *
    * @param email - User email (must be unique).
    * @param password - Plain-text password (hashed with bcrypt before storage).
    * @param firstname - Optional first name.
@@ -58,13 +64,14 @@ export class UserRepositoryPg implements IUserRepository {
       VALUES ($1, $2, $3, $4)
       RETURNING *
     `;
-    const values = [email, hashedPassword, firstname || null, lastname || null];
+    const values = [email, hashedPassword, firstname ?? null, lastname ?? null];
     const result = await pool.query(query, values);
     return result.rows[0];
   }
 
   /**
    * Sets a password-reset token and its expiry on the user row.
+   *
    * @param email - User email.
    * @param token - Reset token value.
    * @param expires - Expiry date for the token.
@@ -88,6 +95,7 @@ export class UserRepositoryPg implements IUserRepository {
 
   /**
    * Finds a user by a non-expired reset token.
+   *
    * @param token - Password-reset token.
    * @returns The matching user or `null`.
    */
@@ -98,11 +106,12 @@ export class UserRepositoryPg implements IUserRepository {
       WHERE reset_token = $1 AND reset_token_expires > NOW()
     `;
     const result = await pool.query(query, [token]);
-    return result.rows[0] || null;
+    return result.rows[0] ?? null;
   }
 
   /**
    * Updates a user's password and clears any reset token.
+   *
    * @param userId - User primary key.
    * @param newPassword - New plain-text password (hashed before storage).
    * @returns The updated user row.
@@ -122,6 +131,7 @@ export class UserRepositoryPg implements IUserRepository {
 
   /**
    * Atomically consume a reset token and update the user's password.
+   *
    * @param token - The reset token to consume.
    * @param hashedPassword - The new bcrypt-hashed password.
    * @returns The updated user row or `null` if the token is invalid/expired.
@@ -134,9 +144,10 @@ export class UserRepositoryPg implements IUserRepository {
       RETURNING *
     `;
     const result = await pool.query(query, [hashedPassword, token]);
-    return result.rows[0] || null;
+    return result.rows[0] ?? null;
   }
 
+  /** Stores an email verification token and its expiry on a user record. */
   async setVerificationToken(userId: number, token: string, expires: Date): Promise<void> {
     await pool.query(
       `UPDATE "users" SET verification_token = $1, verification_token_expires = $2 WHERE id = $3`,
@@ -144,6 +155,7 @@ export class UserRepositoryPg implements IUserRepository {
     );
   }
 
+  /** Marks a user's email as verified by consuming the verification token. */
   async verifyEmail(token: string): Promise<User | null> {
     const query = `
       UPDATE "users"
@@ -152,11 +164,12 @@ export class UserRepositoryPg implements IUserRepository {
       RETURNING *
     `;
     const result = await pool.query(query, [token]);
-    return result.rows[0] || null;
+    return result.rows[0] ?? null;
   }
 
   /**
    * Registers a user originating from social login (no password, email_verified = true).
+   *
    * @param email - User email.
    * @param firstname - Optional first name.
    * @param lastname - Optional last name.
@@ -172,13 +185,14 @@ export class UserRepositoryPg implements IUserRepository {
       VALUES ($1, NULL, $2, $3, true)
       RETURNING *
     `;
-    const values = [email, firstname || null, lastname || null];
+    const values = [email, firstname ?? null, lastname ?? null];
     const result = await pool.query(query, values);
     return result.rows[0];
   }
 
   /**
    * Deletes a user and all related data (sessions, tokens, social accounts) in a transaction.
+   *
    * @param userId - User primary key.
    */
   async deleteUser(userId: number): Promise<void> {
@@ -191,10 +205,10 @@ export class UserRepositoryPg implements IUserRepository {
       await client.query('DELETE FROM "users" WHERE id = $1', [userId]);
       await client.query('COMMIT');
     } catch (error) {
-      await client.query('ROLLBACK').catch(() => undefined);
+      await client.query('ROLLBACK').catch(() => { /* best-effort rollback */ });
       throw error;
     } finally {
-      client.release();
+      void client.release();
     }
   }
 }

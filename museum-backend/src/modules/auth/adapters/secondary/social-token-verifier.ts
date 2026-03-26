@@ -1,5 +1,7 @@
+import crypto from 'node:crypto';
+
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
+
 import { env } from '@src/config/env';
 
 /** Decoded identity claims extracted from a social provider's ID token. */
@@ -96,6 +98,7 @@ const decodeHeader = (token: string): { kid?: string; alg?: string } => {
 
 /**
  * Verifies an Apple Sign-In ID token using Apple's public JWKS.
+ *
  * @param idToken - Raw JWT string from Apple.
  * @returns Decoded identity claims.
  * @throws Error if the token is invalid, expired, or the signing key cannot be found.
@@ -120,7 +123,7 @@ export const verifyAppleIdToken = async (
   }) as jwt.JwtPayload;
 
   return {
-    providerUserId: decoded.sub!,
+    providerUserId: decoded.sub ?? '',
     email: typeof decoded.email === 'string' ? decoded.email : null,
     emailVerified: decoded.email_verified === 'true' || decoded.email_verified === true,
     // Apple only sends name on first auth — caller must handle storage
@@ -129,6 +132,7 @@ export const verifyAppleIdToken = async (
 
 /**
  * Verifies a Google Sign-In ID token using Google's public JWKS.
+ *
  * @param idToken - Raw JWT string from Google.
  * @returns Decoded identity claims.
  * @throws Error if the token is invalid, expired, or the signing key cannot be found.
@@ -153,7 +157,7 @@ export const verifyGoogleIdToken = async (
   }) as jwt.JwtPayload;
 
   return {
-    providerUserId: decoded.sub!,
+    providerUserId: decoded.sub ?? '',
     email: typeof decoded.email === 'string' ? decoded.email : null,
     emailVerified: decoded.email_verified === true,
     firstname: typeof decoded.given_name === 'string' ? decoded.given_name : undefined,
@@ -166,6 +170,7 @@ export type SocialProvider = 'apple' | 'google';
 
 /**
  * Dispatches ID-token verification to the appropriate provider verifier.
+ *
  * @param provider - Social provider (`apple` or `google`).
  * @param idToken - Raw JWT string from the provider.
  * @returns Decoded identity claims.
@@ -177,9 +182,9 @@ export const verifySocialIdToken = async (
 ): Promise<SocialTokenPayload> => {
   switch (provider) {
     case 'apple':
-      return verifyAppleIdToken(idToken);
+      return await verifyAppleIdToken(idToken);
     case 'google':
-      return verifyGoogleIdToken(idToken);
+      return await verifyGoogleIdToken(idToken);
     default:
       throw new Error(`Unsupported social provider: ${provider}`);
   }

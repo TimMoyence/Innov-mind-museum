@@ -2,13 +2,12 @@ import os from 'node:os';
 
 import { env } from '@src/config/env';
 
-interface LogContext {
-  [key: string]: unknown;
-}
+type LogContext = Record<string, unknown>;
 
 const defaultFields = {
   service: 'museum-backend',
   environment: env.nodeEnv,
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
   version: process.env.APP_VERSION || process.env.npm_package_version || '1.0.0',
   hostname: os.hostname(),
 };
@@ -19,7 +18,7 @@ const format = (level: 'info' | 'warn' | 'error', message: string, context?: Log
     message,
     timestamp: new Date().toISOString(),
     ...defaultFields,
-    ...(context || {}),
+    ...(context ?? {}),
   });
 };
 

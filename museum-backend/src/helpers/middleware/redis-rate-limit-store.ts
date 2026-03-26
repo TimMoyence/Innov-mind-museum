@@ -1,7 +1,8 @@
-import type Redis from 'ioredis';
 
 import { logger } from '@shared/logger/logger';
 import { InMemoryBucketStore } from '@shared/rate-limit/in-memory-bucket-store';
+
+import type Redis from 'ioredis';
 
 interface Bucket {
   count: number;
@@ -26,6 +27,7 @@ export class RedisRateLimitStore {
 
   /**
    * Atomically increment the request count for a key within a time window.
+   *
    * @returns The current count after increment and the TTL remaining in ms.
    */
   async increment(
@@ -66,6 +68,7 @@ export class RedisRateLimitStore {
       return { count, resetAt };
     } catch (err) {
       logger.warn('redis_rate_limit_fallback', {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: err may not be Error at runtime
         reason: (err as Error).message ?? 'unknown',
         key,
       });

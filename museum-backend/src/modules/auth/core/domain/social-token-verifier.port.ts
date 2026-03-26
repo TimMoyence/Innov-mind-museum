@@ -22,6 +22,7 @@ export interface SocialTokenPayload {
 export interface SocialTokenVerifier {
   /**
    * Verifies an ID token from the given social provider.
+   *
    * @param provider - Social provider (`apple` or `google`).
    * @param idToken - Raw JWT string from the provider.
    * @returns Decoded identity claims.

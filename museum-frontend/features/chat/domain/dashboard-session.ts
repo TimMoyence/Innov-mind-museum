@@ -1,4 +1,4 @@
-import { SessionListItemDTO } from './contracts';
+import type { SessionListItemDTO } from './contracts';
 
 /** View-model for a session card displayed on the conversation dashboard. */
 export interface DashboardSessionCard {

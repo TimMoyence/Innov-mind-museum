@@ -1,5 +1,6 @@
 /**
  * Password strength validation for user registration and password reset.
+ *
  * @module shared/validation/password
  */
 
@@ -12,6 +13,7 @@ export interface PasswordValidationResult {
 /**
  * Validates a password against the application's strength policy.
  * Requirements: 8-128 characters, at least one lowercase, one uppercase, and one digit.
+ *
  * @param password - The plain-text password to validate.
  * @returns Validation result with an optional human-readable reason on failure.
  */

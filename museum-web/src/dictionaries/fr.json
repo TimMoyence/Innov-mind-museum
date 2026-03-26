@@ -144,6 +144,8 @@
     "analytics": "Analytiques",
     "tickets": "Tickets",
     "supportAdmin": "Support",
+    "accessDenied": "Acces refuse",
+    "goToHomepage": "Retour a l'accueil",
     "login": {
       "title": "Administration Musaium",
       "emailPlaceholder": "Email",

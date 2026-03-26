@@ -21,7 +21,7 @@ export const MuseumCard = ({ museum, onPress }: MuseumCardProps) => {
         styles.card,
         { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground },
       ]}
-      onPress={() => onPress(museum)}
+      onPress={() => { onPress(museum); }}
       accessibilityRole="button"
       accessibilityLabel={museum.name}
     >

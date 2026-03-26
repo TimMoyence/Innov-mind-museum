@@ -1,10 +1,11 @@
-import crypto from 'crypto';
-import { Request, Response, NextFunction } from 'express';
-import type { ApiKeyRepository } from '@modules/auth/core/domain/apiKey.repository.interface';
+import crypto from 'node:crypto';
+
 import { logger } from '@shared/logger/logger';
 import { setUser } from '@shared/observability/sentry';
 
+import type { ApiKeyRepository } from '@modules/auth/core/domain/apiKey.repository.interface';
 import type { UserRole } from '@modules/auth/core/domain/user-role';
+import type { Request, Response, NextFunction } from 'express';
 
 /** Singleton reference set during auth module initialization. */
 let apiKeyRepo: ApiKeyRepository | null = null;
@@ -34,6 +35,7 @@ export function setUserRoleResolver(resolver: (userId: number) => Promise<UserRo
  * @param res - Express response (used to send 401 on failure).
  * @param next - Express next function.
  */
+// eslint-disable-next-line complexity -- validates API key with multiple error paths
 export async function validateApiKey(
   token: string,
   req: Request,
@@ -46,13 +48,13 @@ export async function validateApiKey(
   }
 
   // Prefix = chars 4..12 of the token (skip "msk_")
-  const keyBody = token.substring(4); // everything after "msk_"
+  const keyBody = token.slice(4); // everything after "msk_"
   if (keyBody.length < 8) {
     res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid API key format' } });
     return;
   }
 
-  const prefix = keyBody.substring(0, 8);
+  const prefix = keyBody.slice(0, 8);
 
   try {
     const apiKey = await apiKeyRepo.findByPrefix(prefix);
@@ -97,8 +99,8 @@ export async function validateApiKey(
     setUser({ id: String(apiKey.userId) });
 
     // Update lastUsedAt asynchronously (fire-and-forget)
-    apiKeyRepo.updateLastUsed(apiKey.id).catch((err) => {
-      logger.warn('api_key_last_used_update_failed', { apiKeyId: apiKey.id, error: (err as Error).message });
+    apiKeyRepo.updateLastUsed(apiKey.id).catch((err: unknown) => {
+      logger.warn('api_key_last_used_update_failed', { apiKeyId: apiKey.id, error: err instanceof Error ? err.message : String(err) });
     });
 
     next();

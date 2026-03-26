@@ -12,8 +12,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
+import type {
+  DashboardSessionCard} from '@/features/chat/domain/dashboard-session';
 import {
-  DashboardSessionCard,
   mapSessionsToDashboardCards,
 } from '@/features/chat/domain/dashboard-session';
 import { ConversationSearchBar } from '@/features/conversation/ui/ConversationSearchBar';
@@ -138,17 +139,17 @@ export default function ConversationsScreen() {
     setMenuStatus(t('conversations.shared_success'));
   };
 
-  const toggleSavedSession = (sessionId: string) => {
+  const toggleSavedSession = useCallback((sessionId: string) => {
     const isNowSaved = toggleSaved(sessionId);
     setMenuStatus(isNowSaved ? t('conversations.session_saved') : t('conversations.session_unsaved'));
-  };
+  }, [toggleSaved, t]);
 
   const renderConversationItem = useCallback(
     ({ item }: { item: DashboardSessionCard }) => (
       <Pressable
         style={[styles.card, { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground }]}
-        onPress={() => router.push(`/(stack)/chat/${item.id}`)}
-        onLongPress={() => toggleSavedSession(item.id)}
+        onPress={() => { router.push(`/(stack)/chat/${item.id}`); }}
+        onLongPress={() => { toggleSavedSession(item.id); }}
         accessibilityRole="button"
         accessibilityLabel={item.title}
         accessibilityHint={t('a11y.conversations.card_hint')}
@@ -162,7 +163,7 @@ export default function ConversationsScreen() {
         </Text>
       </Pressable>
     ),
-    [theme, savedSessionIds, t, toggleSavedSession, router],
+    [theme, savedSessionIds, t, toggleSavedSession],
   );
 
   const visibleItems = useMemo(() => {
@@ -211,11 +212,11 @@ export default function ConversationsScreen() {
 
       {menuStatus ? <Text style={[styles.menuStatus, { color: theme.success }]}>{menuStatus}</Text> : null}
 
-      {error ? <ErrorNotice message={error} onDismiss={() => setError(null)} /> : null}
+      {error ? <ErrorNotice message={error} onDismiss={() => { setError(null); }} /> : null}
 
       <ConversationSearchBar value={searchQuery} onChangeText={setSearchQuery} />
 
-      <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary, shadowColor: theme.primary }]} onPress={() => router.push('/(tabs)/home')} accessibilityRole="button" accessibilityLabel={t('a11y.conversations.start_new')}>
+      <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary, shadowColor: theme.primary }]} onPress={() => { router.push('/(tabs)/home'); }} accessibilityRole="button" accessibilityLabel={t('a11y.conversations.start_new')}>
         <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>{t('conversations.start_new')}</Text>
       </Pressable>
 

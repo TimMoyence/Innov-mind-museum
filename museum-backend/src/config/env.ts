@@ -146,7 +146,7 @@ interface AppEnv {
 }
 
 const required = (name: string, value: string | undefined): string => {
-  if (!value || !value.trim()) {
+  if (!value?.trim()) {
     throw new Error(`Missing required environment variable: ${name}`);
   }
 
@@ -264,7 +264,7 @@ const env: AppEnv = {
         enabled: true,
         model: process.env.TTS_MODEL || 'tts-1',
         voice: process.env.TTS_VOICE || 'alloy',
-        speed: toNumber(process.env.TTS_SPEED, 1.0),
+        speed: toNumber(process.env.TTS_SPEED, 1),
         maxTextLength: toNumber(process.env.TTS_MAX_TEXT_LENGTH, 4096),
         cacheTtlSeconds: toNumber(process.env.TTS_CACHE_TTL_SECONDS, 86400),
       }
@@ -279,7 +279,7 @@ const env: AppEnv = {
     : undefined,
   sentry: toOptionalString(process.env.SENTRY_DSN)
     ? {
-        dsn: process.env.SENTRY_DSN!.trim(),
+        dsn: (process.env.SENTRY_DSN ?? '').trim(),
         environment: nodeEnv,
         release: toOptionalString(process.env.APP_VERSION) || process.env.npm_package_version || '1.0.0',
         tracesSampleRate: toNumber(process.env.SENTRY_TRACES_SAMPLE_RATE, 0.1),

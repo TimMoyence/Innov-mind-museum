@@ -27,7 +27,7 @@ export const reportError = (
     if (!Sentry.getClient()) return;
 
     const appError: AppError | null = isAppError(error)
-      ? (error as AppError)
+      ? (error)
       : null;
 
     if (appError?._reported) return;

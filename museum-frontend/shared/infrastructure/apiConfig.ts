@@ -279,7 +279,7 @@ export const probeApiHealth = async (
   timeoutMs = 7000,
 ): Promise<ApiHealthProbeResult> => {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const timeout = setTimeout(() => { controller.abort(); }, timeoutMs);
 
   try {
     const response = await fetch(buildHealthUrl(baseUrl), {

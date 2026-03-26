@@ -15,6 +15,7 @@ interface UserProfile {
 export class GetProfileUseCase {
   constructor(private readonly userRepository: IUserRepository) {}
 
+  /** Fetches the user profile by ID, returning null if not found. */
   async execute(userId: number): Promise<UserProfile | null> {
     const user = await this.userRepository.getUserById(userId);
     if (!user) return null;
@@ -24,6 +25,7 @@ export class GetProfileUseCase {
       email: user.email,
       firstname: user.firstname ?? null,
       lastname: user.lastname ?? null,
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: role may be undefined in legacy DB rows
       role: user.role || 'visitor',
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,

@@ -1,4 +1,5 @@
 import pool from '@src/data/db';
+
 import type {
   IRefreshTokenRepository,
   StoredRefreshTokenRow,
@@ -7,6 +8,20 @@ import type {
 
 // Re-export domain types so existing consumers that imported from here keep working
 export type { StoredRefreshTokenRow, InsertRefreshTokenInput } from '../../core/domain/refresh-token.repository.interface';
+
+/** Resolve a nullable date field from a raw PG row, handling both camelCase and lowercase column names. */
+const toDateOrNull = (row: Record<string, unknown>, camel: string, lower: string): Date | null => {
+  const value = row[camel] ?? row[lower];
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string
+  return value ? new Date(String(value)) : null;
+};
+
+/** Resolve a nullable string field from a raw PG row, handling both camelCase and lowercase column names. */
+const toStringOrNull = (row: Record<string, unknown>, camel: string, lower: string): string | null => {
+  const value = row[camel] ?? row[lower];
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string -- converting raw DB field to string
+  return value ? String(value) : null;
+};
 
 const mapRow = (row: Record<string, unknown>): StoredRefreshTokenRow => {
   return {
@@ -17,10 +32,10 @@ const mapRow = (row: Record<string, unknown>): StoredRefreshTokenRow => {
     tokenHash: String(row.tokenHash ?? row.tokenhash),
     issuedAt: new Date(String(row.issuedAt ?? row.issuedat)),
     expiresAt: new Date(String(row.expiresAt ?? row.expiresat)),
-    rotatedAt: row.rotatedAt ? new Date(String(row.rotatedAt)) : row.rotatedat ? new Date(String(row.rotatedat)) : null,
-    revokedAt: row.revokedAt ? new Date(String(row.revokedAt)) : row.revokedat ? new Date(String(row.revokedat)) : null,
-    reuseDetectedAt: row.reuseDetectedAt ? new Date(String(row.reuseDetectedAt)) : row.reusedetectedat ? new Date(String(row.reusedetectedat)) : null,
-    replacedByTokenId: row.replacedByTokenId ? String(row.replacedByTokenId) : row.replacedbytokenid ? String(row.replacedbytokenid) : null,
+    rotatedAt: toDateOrNull(row, 'rotatedAt', 'rotatedat'),
+    revokedAt: toDateOrNull(row, 'revokedAt', 'revokedat'),
+    reuseDetectedAt: toDateOrNull(row, 'reuseDetectedAt', 'reusedetectedat'),
+    replacedByTokenId: toStringOrNull(row, 'replacedByTokenId', 'replacedbytokenid'),
     createdAt: new Date(String(row.createdAt ?? row.createdat)),
   };
 };
@@ -29,6 +44,7 @@ const mapRow = (row: Record<string, unknown>): StoredRefreshTokenRow => {
 export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
   /**
    * Inserts a new refresh token row.
+   *
    * @param input - Token metadata (userId, jti, familyId, hash, dates).
    * @returns The inserted row.
    */
@@ -55,6 +71,7 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
 
   /**
    * Finds a refresh token by its JTI claim.
+   *
    * @param jti - JWT ID.
    * @returns The token row or `null`.
    */
@@ -69,7 +86,10 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
 
   /**
    * Atomically rotates a refresh token: inserts the new token and marks the current one as rotated.
+   *
    * @param params - Current token ID and next token input.
+   * @param params.currentTokenId - ID of the current token being rotated out.
+   * @param params.next - Metadata for the new replacement token.
    * @returns The newly inserted token row.
    */
   async rotate(params: {
@@ -111,15 +131,16 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
       await client.query('COMMIT');
       return nextRow;
     } catch (error) {
-      await client.query('ROLLBACK').catch(() => undefined);
+      await client.query('ROLLBACK').catch(() => { /* best-effort rollback */ });
       throw error;
     } finally {
-      client.release();
+      void client.release();
     }
   }
 
   /**
    * Revokes a single refresh token by its JTI.
+   *
    * @param jti - JWT ID of the token to revoke.
    */
   async revokeByJti(jti: string): Promise<void> {
@@ -135,6 +156,7 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
 
   /**
    * Deletes expired refresh tokens in a bounded batch.
+   *
    * @param limit - Maximum rows to delete per invocation.
    * @returns The number of rows actually deleted.
    */
@@ -143,33 +165,32 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
       'DELETE FROM "auth_refresh_tokens" WHERE "id" IN (SELECT "id" FROM "auth_refresh_tokens" WHERE "expiresAt" < NOW() LIMIT $1)',
       [limit],
     );
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: rowCount may be null for certain pg drivers
     return result.rowCount ?? 0;
   }
 
   /**
    * Revokes all active refresh tokens for a user, optionally excluding one JTI.
    * Used after password change to invalidate all existing sessions.
+   *
    * @param userId - The user's ID.
    * @param excludeJti - Optional JTI to exclude (e.g. the current session).
    */
   async revokeAllForUser(userId: number, excludeJti?: string): Promise<void> {
-    if (excludeJti) {
-      await pool.query(
+    await (excludeJti ? pool.query(
         `UPDATE "auth_refresh_tokens" SET "revokedAt" = NOW()
          WHERE "userId" = $1 AND "revokedAt" IS NULL AND "jti" != $2`,
         [userId, excludeJti],
-      );
-    } else {
-      await pool.query(
+      ) : pool.query(
         `UPDATE "auth_refresh_tokens" SET "revokedAt" = NOW()
          WHERE "userId" = $1 AND "revokedAt" IS NULL`,
         [userId],
-      );
-    }
+      ));
   }
 
   /**
    * Revokes all tokens in a token family, optionally marking reuse detection.
+   *
    * @param familyId - Token family identifier.
    * @param reuseDetected - When `true`, also sets `reuseDetectedAt` on all family members.
    */

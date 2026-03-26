@@ -1,17 +1,21 @@
 /**
  * Session ownership validation helpers. Single source of truth for the UUID + fetch + ownership
  * pattern used across ChatService methods.
+ *
  * @module chat/application/session-access
  */
 
 import { validate as isUuid } from 'uuid';
+
 import { badRequest, notFound } from '@shared/errors/app.error';
+
 import type { ChatRepository } from '../domain/chat.repository.interface';
 import type { ChatSession } from '../domain/chatSession.entity';
 
 /**
  * Asserts that the given owner ID matches the current authenticated user.
  * Uses strict null check (`!= null`) to prevent bypass with null/0 values (SEC-16).
+ *
  * @param ownerId - The session owner's user ID (may be null/undefined for anonymous sessions).
  * @param currentUserId - The authenticated user's ID (may be undefined).
  * @throws {AppError} 404 if ownership check fails.
@@ -28,6 +32,7 @@ export const ensureSessionOwnership = (
 /**
  * Validates the session ID format, fetches the session, and checks ownership in one call.
  * Replaces the 4-5 line pattern duplicated across ChatService methods.
+ *
  * @param sessionId - UUID of the target chat session.
  * @param repository - Chat repository for session lookup.
  * @param currentUserId - Authenticated user ID for ownership verification.
@@ -55,6 +60,7 @@ export const ensureSessionAccess = async (
 /**
  * Validates message ID, fetches the message with its session, and checks ownership.
  * Used by getMessageImageRef and reportMessage.
+ *
  * @param messageId - UUID of the target message.
  * @param repository - Chat repository for message lookup.
  * @param currentUserId - Authenticated user ID for ownership verification.

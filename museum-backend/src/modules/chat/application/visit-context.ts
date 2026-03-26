@@ -1,10 +1,11 @@
+import { sanitizePromptInput } from '@shared/validation/input';
+
 import type {
   ChatAssistantMetadata,
   VisitContext,
   VisitedArtwork,
 } from '../domain/chat.types';
 import type { ChatSession } from '../domain/chatSession.entity';
-import { sanitizePromptInput } from '@shared/validation/input';
 
 const emptyContext = (): VisitContext => ({
   museumConfidence: 0,
@@ -18,6 +19,7 @@ const emptyContext = (): VisitContext => ({
 /**
  * Incrementally updates the visit context with artwork, room, museum, and expertise data
  * extracted from the assistant's metadata.
+ *
  * @param existing - The current visit context (or null/undefined for a fresh context).
  * @param metadata - Assistant response metadata containing detected artwork and expertise.
  * @param messageId - Id of the assistant message that produced this metadata.
@@ -48,12 +50,10 @@ export const updateVisitContext = (
     }
 
     if (artwork.museum) {
-      if (!ctx.museumName) {
-        ctx.museumName = artwork.museum;
-        ctx.museumConfidence = 0.3;
-      } else if (ctx.museumName.toLowerCase() === artwork.museum.toLowerCase()) {
+      if (ctx.museumName?.toLowerCase() === artwork.museum.toLowerCase()) {
         ctx.museumConfidence = Math.min(1, ctx.museumConfidence + 0.3);
       } else {
+        // First museum or different museum — (re)set with initial confidence
         ctx.museumName = artwork.museum;
         ctx.museumConfidence = 0.3;
       }
@@ -74,6 +74,7 @@ export const updateVisitContext = (
 /**
  * Derives a human-readable session title from the first detected artwork or confident museum name.
  * Returns null if the session already has a title or no suitable title can be derived.
+ *
  * @param session - The current chat session.
  * @param metadata - Assistant response metadata.
  * @param visitContext - The accumulated visit context.
@@ -112,6 +113,7 @@ export const deriveSessionTitle = (
 /**
  * Builds a sanitized `[VISIT CONTEXT]` prompt block summarizing the museum, artworks discussed,
  * rooms visited, and detected expertise level. Returns an empty string when there is no context.
+ *
  * @param ctx - The accumulated visit context.
  * @returns A prompt-safe text block (max 500 chars), or empty string.
  */
@@ -154,6 +156,7 @@ export interface SessionUpdates {
 /**
  * Computes all session-level updates (visit context, title, museum name) to apply
  * after an assistant response.
+ *
  * @param session - The current chat session.
  * @param metadata - Assistant response metadata.
  * @param messageId - Id of the assistant message (may be "pending" before persistence).

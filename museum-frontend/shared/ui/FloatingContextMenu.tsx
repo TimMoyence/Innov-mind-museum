@@ -35,13 +35,13 @@ export const FloatingContextMenu = ({
   };
 
   return (
-    <BlurView intensity={58} tint={theme.blurTint} style={styles.menuShell}>
+    <BlurView intensity={58} tint={theme.blurTint} style={[styles.menuShell, { borderColor: theme.glassBorder, backgroundColor: theme.glassBackground }]}>
       <View style={styles.menuRow}>
         {actions.map((action) => (
           <Pressable
             key={action.id}
-            onPress={() => handleAction(action)}
-            style={styles.menuAction}
+            onPress={() => { handleAction(action); }}
+            style={[styles.menuAction, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]}
             accessibilityRole="button"
             accessibilityLabel={action.label}
           >
@@ -58,8 +58,6 @@ const styles = StyleSheet.create({
   menuShell: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.62)',
-    backgroundColor: 'rgba(255,255,255,0.42)',
     overflow: 'hidden',
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -77,8 +75,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.42)',
-    backgroundColor: 'rgba(255,255,255,0.64)',
   },
   menuLabel: {
     fontSize: 11,

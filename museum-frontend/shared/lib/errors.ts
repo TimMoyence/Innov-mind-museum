@@ -17,7 +17,7 @@ export const setErrorTranslate = (fn: TranslateFn): void => {
 /** Translates a key with a hardcoded English fallback when i18n is unavailable. */
 const t = (key: string, defaultValue: string): string => {
   if (_translate) {
-    return _translate(key, { defaultValue }) as string;
+    return _translate(key, { defaultValue });
   }
   return defaultValue;
 };

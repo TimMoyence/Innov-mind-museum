@@ -7,6 +7,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+
 import { User } from './user.entity';
 
 /** Represents a B2B API key for programmatic access. Mapped to `api_keys`. */

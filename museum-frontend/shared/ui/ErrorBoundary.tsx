@@ -76,7 +76,7 @@ export class ErrorBoundary extends Component<Props, State> {
 }
 
 const CRASH_ERROR_COLOR = '#EF4444';
-const CRASH_BUTTON_COLOR = '#6366F1';
+const CRASH_BUTTON_COLOR = darkTheme.primary;
 
 const styles = StyleSheet.create({
   container: {

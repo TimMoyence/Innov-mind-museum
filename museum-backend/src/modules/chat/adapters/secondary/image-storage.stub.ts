@@ -1,6 +1,7 @@
-import { mkdir, writeFile } from 'fs/promises';
-import path from 'path';
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+
 import type { SaveImageInput, ImageStorage } from '../../domain/ports/image-storage.port';
 
 // Re-export domain port types so existing consumers that imported from here keep working
@@ -17,6 +18,7 @@ export const DEFAULT_LOCAL_UPLOADS_DIR = path.join(process.cwd(), 'tmp', 'upload
 
 /**
  * Resolves a `local://` image reference to an absolute filesystem path.
+ *
  * @param imageRef - Storage reference (e.g. `local://abc.jpg`).
  * @param uploadsDir - Base directory for uploads.
  * @returns Absolute file path or `null` if the reference format is invalid.
@@ -25,7 +27,7 @@ export const resolveLocalImageFilePath = (
   imageRef: string,
   uploadsDir = DEFAULT_LOCAL_UPLOADS_DIR,
 ): string | null => {
-  const match = imageRef.match(/^local:\/\/([a-zA-Z0-9._-]+)$/);
+  const match = /^local:\/\/([a-zA-Z0-9._-]+)$/.exec(imageRef);
   if (!match?.[1]) {
     return null;
   }
@@ -39,7 +41,10 @@ export class LocalImageStorage implements ImageStorage {
 
   /**
    * Writes a base64 image to the local uploads directory.
-   * @param input - Image data and MIME type.
+   *
+   * @param root0 - Image data and MIME type.
+   * @param root0.base64 - Base64-encoded image data.
+   * @param root0.mimeType - MIME type of the image.
    * @returns A `local://<filename>` reference.
    */
   async save({ base64, mimeType }: SaveImageInput): Promise<string> {

@@ -1,7 +1,9 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
+
 import swaggerUi from 'swagger-ui-express';
-import { Express } from 'express';
+
+import type { Express } from 'express';
 
 const loadOpenApiSpec = (): Record<string, unknown> => {
   const specPath = path.resolve(process.cwd(), 'openapi', 'openapi.json');
@@ -11,6 +13,7 @@ const loadOpenApiSpec = (): Record<string, unknown> => {
 
 /**
  * Mounts Swagger UI at /api/docs using the OpenAPI spec from openapi/openapi.json.
+ *
  * @param app - Express application instance.
  */
 export const setupSwagger = (app: Express): void => {

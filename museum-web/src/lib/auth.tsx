@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { useAdminDict } from '@/lib/admin-dictionary';
 import {
   apiPost,
   setTokens,
@@ -137,6 +138,62 @@ export function AuthGuard({ children }: { children: ReactNode }) {
 
   if (!isAuthenticated) {
     return null;
+  }
+
+  return <>{children}</>;
+}
+
+// ---------------------------------------------------------------------------
+// RoleGuard — AuthGuard + role-based access control
+// ---------------------------------------------------------------------------
+
+interface RoleGuardProps {
+  children: ReactNode;
+  allowedRoles: UserRole[];
+}
+
+export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const adminDict = useAdminDict();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      const locale = pathname.split('/')[1] ?? 'fr';
+      router.replace(`/${locale}/admin/login`);
+    }
+  }, [isAuthenticated, isLoading, router, pathname]);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  if (!user || !allowedRoles.includes(user.role)) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4">
+        <div className="text-4xl font-bold text-text-secondary">403</div>
+        <p className="text-lg text-text-secondary">{adminDict.accessDenied}</p>
+        <button
+          type="button"
+          className="mt-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 transition-colors"
+          onClick={() => {
+            const locale = pathname.split('/')[1] ?? 'fr';
+            router.push(`/${locale}`);
+          }}
+        >
+          {adminDict.goToHomepage}
+        </button>
+      </div>
+    );
   }
 
   return <>{children}</>;

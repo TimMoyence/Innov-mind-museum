@@ -6,6 +6,7 @@ export class BrevoEmailService implements EmailService {
 
   /**
    * Send a single transactional email via Brevo REST API.
+   *
    * @param to - Recipient email address.
    * @param subject - Email subject line.
    * @param htmlContent - HTML body content.

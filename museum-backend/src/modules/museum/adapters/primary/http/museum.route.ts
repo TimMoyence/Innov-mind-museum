@@ -1,15 +1,20 @@
-import { NextFunction, Request, Response, Router } from 'express';
+import { type NextFunction, type Request, type Response, Router } from 'express';
+
+import { auditService } from '@shared/audit';
+import { badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import { requireRole } from '@src/helpers/middleware/require-role.middleware';
-import { badRequest } from '@shared/errors/app.error';
-import { auditService } from '@shared/audit';
-import type { MuseumDirectoryDTO } from '../../../core/domain/museum.types';
+import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+
+import { createMuseumSchema, updateMuseumSchema } from './museum.schemas';
 import {
   createMuseumUseCase,
   getMuseumUseCase,
   listMuseumsUseCase,
   updateMuseumUseCase,
 } from '../../../core/useCase';
+
+import type { MuseumDirectoryDTO, UpdateMuseumInput } from '../../../core/domain/museum.types';
 
 const museumRouter: Router = Router();
 
@@ -31,10 +36,11 @@ museumRouter.get('/directory', isAuthenticated, async (_req: Request, res: Respo
 });
 
 // POST /api/museums — Admin only: create museum
-museumRouter.post('/', isAuthenticated, requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
+museumRouter.post('/', isAuthenticated, requireRole('admin'), validateBody(createMuseumSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, slug, address, description, config } = req.body || {};
-    if (!name || !slug) throw badRequest('name and slug are required');
+    const { name, slug, address, description, config } = req.body as {
+      name: string; slug: string; address?: string; description?: string; config?: Record<string, unknown>;
+    };
     const museum = await createMuseumUseCase.execute({ name, slug, address, description, config });
     auditService.log({
       action: 'MUSEUM_CREATED',
@@ -67,11 +73,11 @@ museumRouter.get('/:idOrSlug', isAuthenticated, async (req: Request, res: Respon
 });
 
 // PUT /api/museums/:id — Admin: update museum
-museumRouter.put('/:id', isAuthenticated, requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
+museumRouter.put('/:id', isAuthenticated, requireRole('admin'), validateBody(updateMuseumSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) throw badRequest('Invalid museum ID');
-    const museum = await updateMuseumUseCase.execute(id, req.body || {});
+    const id = Number.parseInt(req.params.id, 10);
+    if (Number.isNaN(id)) throw badRequest('Invalid museum ID');
+    const museum = await updateMuseumUseCase.execute(id, req.body as UpdateMuseumInput);
     auditService.log({
       action: 'MUSEUM_UPDATED',
       actorType: 'user',

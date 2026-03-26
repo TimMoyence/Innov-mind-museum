@@ -1,6 +1,7 @@
 /**
  * Generic in-memory bucket store with periodic sweep and bounded size.
  * Used by rate-limit middleware and login rate limiter to avoid code duplication.
+ *
  * @template T - Shape of a bucket entry.
  */
 
@@ -13,6 +14,7 @@ interface InMemoryBucketStoreOptions<T> {
   isExpired: (entry: T, now: number) => boolean;
 }
 
+/** Generic in-memory key-value store with periodic expired-entry sweeping and bounded size. */
 export class InMemoryBucketStore<T> {
   private readonly buckets = new Map<string, T>();
   private sweepTimer: ReturnType<typeof setInterval> | null = null;
@@ -26,10 +28,12 @@ export class InMemoryBucketStore<T> {
     this.isExpired = options.isExpired;
   }
 
+  /** Retrieves a bucket entry by key, or undefined if not present. */
   get(key: string): T | undefined {
     return this.buckets.get(key);
   }
 
+  /** Stores or updates a bucket entry, evicting the oldest entry if at capacity. */
   set(key: string, value: T): void {
     if (!this.buckets.has(key) && this.buckets.size >= this.maxSize) {
       const oldest = this.buckets.keys().next().value;
@@ -39,19 +43,23 @@ export class InMemoryBucketStore<T> {
     this.ensureSweep();
   }
 
+  /** Removes a single bucket entry by key. */
   delete(key: string): void {
     this.buckets.delete(key);
   }
 
+  /** Removes all entries and stops the sweep timer. */
   clear(): void {
     this.buckets.clear();
     this.stopSweep();
   }
 
+  /** Returns the current number of entries in the store. */
   get size(): number {
     return this.buckets.size;
   }
 
+  /** Stops the periodic sweep timer without clearing entries. */
   stopSweep(): void {
     if (this.sweepTimer) {
       clearInterval(this.sweepTimer);

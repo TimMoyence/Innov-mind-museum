@@ -2,14 +2,15 @@ import { httpRequest } from '@/shared/api/httpRequest';
 import { openApiRequest } from '@/shared/api/openapiClient';
 import { getErrorMessage } from '@/shared/lib/errors';
 import type { components } from '@/shared/api/generated/openapi';
-import { GuideLevel } from '@/features/settings/runtimeSettings';
+import type { GuideLevel } from '@/features/settings/runtimeSettings';
 import { getAccessToken } from '@/features/auth/infrastructure/authTokenStore';
 import { getApiBaseUrl, getLocale } from '@/shared/infrastructure/httpClient';
 import { generateRequestId } from '@/shared/infrastructure/requestId';
 import { fetch as expoFetch } from 'expo/fetch';
 import { getTraceData, isInitialized } from '@sentry/core';
-import { parseSseChunk, SseStreamEvent } from './sseParser';
-import {
+import type { SseStreamEvent } from './sseParser';
+import { parseSseChunk } from './sseParser';
+import type {
   CreateSessionRequestDTO,
   CreateSessionResponseDTO,
   DeleteSessionResponseDTO,
@@ -18,7 +19,8 @@ import {
   ListSessionsResponseDTO,
   PostMessageResponseDTO,
   ReportMessageResponseDTO,
-  ReportReason,
+  ReportReason} from '../domain/contracts';
+import {
   isCreateSessionResponseDTO,
   isDeleteSessionResponseDTO,
   isGetSessionResponseDTO,

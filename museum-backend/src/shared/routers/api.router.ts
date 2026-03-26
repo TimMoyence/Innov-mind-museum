@@ -1,12 +1,13 @@
 import { Router } from 'express';
 
-import { env } from '@src/config/env';
-import { ChatService } from '@modules/chat/application/chat.service';
-import { createChatRouter } from '@modules/chat/adapters/primary/http/chat.route';
-import authRouter from '@modules/auth/adapters/primary/http/auth.route';
-import museumRouter from '@modules/museum/adapters/primary/http/museum.route';
 import adminRouter from '@modules/admin/adapters/primary/http/admin.route';
+import authRouter from '@modules/auth/adapters/primary/http/auth.route';
+import { createChatRouter } from '@modules/chat/adapters/primary/http/chat.route';
+import museumRouter from '@modules/museum/adapters/primary/http/museum.route';
 import supportRouter from '@modules/support/adapters/primary/http/support.route';
+import { env } from '@src/config/env';
+
+import type { ChatService } from '@modules/chat/application/chat.service';
 import type { FeatureFlagService } from '@shared/feature-flags/feature-flags.port';
 
 /** Dependencies required to build the top-level API router. */
@@ -45,6 +46,7 @@ const resolveAppVersion = (): string => {
 };
 
 const resolveCommitSha = (): string | undefined => {
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
   const source = process.env.COMMIT_SHA || process.env.GITHUB_SHA;
   const trimmed = source?.trim();
   return trimmed?.length ? trimmed : undefined;
@@ -52,7 +54,11 @@ const resolveCommitSha = (): string | undefined => {
 
 /**
  * Builds a health-check response payload from the current system state.
+ *
  * @param params - Database status and LLM configuration flag.
+ * @param params.checks - Health check results.
+ * @param params.checks.database - Database connectivity status.
+ * @param params.llmConfigured - Whether at least one LLM provider is configured.
  * @returns Structured health payload with version and timestamp.
  */
 export const buildHealthPayload = (params: {
@@ -81,7 +87,11 @@ export const buildHealthPayload = (params: {
 
 /**
  * Creates the top-level Express router that mounts /health, /chat, and /auth sub-routers.
- * @param deps - Injected chatService and healthCheck function.
+ *
+ * @param root0 - Injected dependencies.
+ * @param root0.chatService - Chat service instance for the chat sub-router.
+ * @param root0.healthCheck - Async function returning database health status.
+ * @param root0.featureFlagService - Feature flag service for route-level gating.
  * @returns Configured Express Router.
  */
 export const createApiRouter = ({ chatService, healthCheck, featureFlagService }: ApiRouterDeps): Router => {

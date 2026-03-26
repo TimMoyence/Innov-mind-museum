@@ -1,9 +1,9 @@
+/* eslint-disable max-lines -- contract validators for all chat endpoints must co-locate */
 import { badRequest } from '@shared/errors/app.error';
+
 import type { ReportReason } from '../../../domain/chat.types';
 
-interface RecordValue {
-  [key: string]: unknown;
-}
+type RecordValue = Record<string, unknown>;
 
 const isRecord = (value: unknown): value is RecordValue => {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -143,7 +143,7 @@ export interface GetSessionResponse {
     createdAt: string;
     updatedAt: string;
   };
-  messages: Array<{
+  messages: {
     id: string;
     role: 'user' | 'assistant' | 'system';
     text?: string | null;
@@ -154,7 +154,7 @@ export interface GetSessionResponse {
     } | null;
     createdAt: string;
     metadata?: Record<string, unknown> | null;
-  }>;
+  }[];
   page: {
     nextCursor: string | null;
     hasMore: boolean;
@@ -170,7 +170,7 @@ export interface ListSessionsQuery {
 
 /** Response shape for `GET /sessions` (paginated session list with previews). */
 export interface ListSessionsResponse {
-  sessions: Array<{
+  sessions: {
     id: string;
     locale?: string | null;
     museumMode: boolean;
@@ -184,7 +184,7 @@ export interface ListSessionsResponse {
       role: 'user' | 'assistant' | 'system';
     };
     messageCount: number;
-  }>;
+  }[];
   page: {
     nextCursor: string | null;
     hasMore: boolean;
@@ -369,6 +369,7 @@ export const isPostAudioMessageResponse = (
 /** Type guard verifying a payload conforms to {@link GetSessionResponse}. */
 export const isGetSessionResponse = (
   payload: unknown,
+  // eslint-disable-next-line complexity -- type guard must check many fields
 ): payload is GetSessionResponse => {
   if (!isRecord(payload) || !isRecord(payload.session) || !Array.isArray(payload.messages) || !isRecord(payload.page)) {
     return false;

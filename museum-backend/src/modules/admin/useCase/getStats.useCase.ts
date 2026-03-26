@@ -5,7 +5,8 @@ import type { AdminStats } from '../domain/admin.types';
 export class GetStatsUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
+  /** Retrieves aggregated dashboard statistics. */
   async execute(): Promise<AdminStats> {
-    return this.repository.getStats();
+    return await this.repository.getStats();
   }
 }

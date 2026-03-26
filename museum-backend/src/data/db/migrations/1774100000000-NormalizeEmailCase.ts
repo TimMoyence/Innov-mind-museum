@@ -1,8 +1,12 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
 
+/**
+ *
+ */
 export class NormalizeEmailCase1774100000000 implements MigrationInterface {
   name = 'NormalizeEmailCase1774100000000';
 
+  /** Apply the NormalizeEmailCase migration. */
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.startTransaction();
     try {
@@ -19,6 +23,7 @@ export class NormalizeEmailCase1774100000000 implements MigrationInterface {
     }
   }
 
+  /** Revert the NormalizeEmailCase migration. */
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
       `DROP INDEX IF EXISTS "idx_users_email_lower"`,

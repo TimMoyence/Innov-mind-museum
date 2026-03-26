@@ -1,12 +1,14 @@
-import { env } from '@src/config/env';
 import { AppError, badRequest, notFound } from '@shared/errors/app.error';
-import type { CacheService } from '@shared/cache/cache.port';
-import type { ReportReason } from '../domain/chat.types';
-import type { ChatRepository } from '../domain/chat.repository.interface';
-import type { TextToSpeechService } from '../domain/ports/tts.port';
-import { ensureMessageAccess } from './session-access';
+import { env } from '@src/config/env';
+
 import { resolveLocalImageMeta } from './chat-image.helpers';
+import { ensureMessageAccess } from './session-access';
+
 import type { ReportMessageResult } from './chat.service.types';
+import type { ChatRepository } from '../domain/chat.repository.interface';
+import type { ReportReason } from '../domain/chat.types';
+import type { TextToSpeechService } from '../domain/ports/tts.port';
+import type { CacheService } from '@shared/cache/cache.port';
 
 /** Dependencies for the media sub-service. */
 export interface ChatMediaServiceDeps {
@@ -31,6 +33,7 @@ export class ChatMediaService {
 
   /**
    * Resolves the image reference for a message, including local file name and content type when applicable.
+   *
    * @param messageId - UUID of the message containing the image.
    * @param currentUserId - Authenticated user id for ownership checks.
    * @returns The image reference, and optionally the local file name and content type.
@@ -62,6 +65,7 @@ export class ChatMediaService {
 
   /**
    * Reports an assistant message for moderation.
+   *
    * @param messageId - UUID of the assistant message to report.
    * @param reason - Reason for the report (offensive, inaccurate, inappropriate, other).
    * @param currentUserId - Authenticated user id filing the report.
@@ -103,6 +107,7 @@ export class ChatMediaService {
 
   /**
    * Synthesizes speech from an assistant message's text content.
+   *
    * @param messageId - UUID of the assistant message to synthesize.
    * @param currentUserId - Authenticated user id for ownership checks.
    * @returns Audio buffer with content type, or null if the message has no text.

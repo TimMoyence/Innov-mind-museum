@@ -1,6 +1,7 @@
-import { ChatMessage } from '../domain/chatMessage.entity';
-import { resolveLocale } from '@shared/i18n/locale';
 import { GUARDRAIL_REFUSALS } from '@shared/i18n/guardrail-refusals';
+import { resolveLocale } from '@shared/i18n/locale';
+
+import type { ChatMessage } from '../domain/chatMessage.entity';
 
 /** Reason why the guardrail blocked or flagged a message. */
 export type GuardrailBlockReason =
@@ -278,7 +279,7 @@ const looksLikeFollowUp = (normalizedText: string): boolean => {
 const hasArtContext = (history: ChatMessage[]): boolean => {
   const recent = history.slice(-8);
   return recent.some((message) => {
-    const value = normalize(message.text || '');
+    const value = normalize(message.text ?? '');
     return value.length > 0 && hasArtSignal(value);
   });
 };
@@ -292,14 +293,18 @@ const REDIRECT_HINT_EXTERNAL =
 /**
  * Evaluates user input against layered keyword rules.
  * Hard-blocks insults and prompt injections; soft-redirects off-topic and external requests.
- * @param params - The user text and recent conversation history.
+ *
+ * @param root0 - The user text and recent conversation history.
+ * @param root0.text - User message text to evaluate.
+ * @param root0.history - Recent conversation messages for context.
  * @returns A guardrail decision indicating whether the message is allowed.
  */
+ 
 export const evaluateUserInputGuardrail = ({
   text,
   history,
 }: EvaluateUserInputParams): GuardrailDecision => {
-  const normalizedText = normalize(text || '');
+  const normalizedText = normalize(text ?? '');
   if (!normalizedText) {
     return { allow: true };
   }
@@ -344,21 +349,24 @@ export const evaluateUserInputGuardrail = ({
     return { allow: true };
   }
 
-  // 9. Default → off-topic redirect
-  return { allow: true, redirectHint: REDIRECT_HINT_OFF_TOPIC };
+  // 9. Default → no signal at all → let the LLM decide (it has system-level art-scope instructions)
+  return { allow: true };
 };
 
 /**
  * Evaluates assistant LLM output for unsafe content, insults, injection leaks, or off-topic drift.
  * Blocks the response if it fails any check.
- * @param params - The assistant text and recent conversation history.
+ *
+ * @param root0 - The assistant text and recent conversation history.
+ * @param root0.text - Assistant response text to evaluate.
+ * @param root0.history - Recent conversation messages for context.
  * @returns A guardrail decision indicating whether the response is safe to return.
  */
 export const evaluateAssistantOutputGuardrail = ({
   text,
   history,
 }: EvaluateAssistantOutputParams): GuardrailDecision => {
-  const normalizedText = normalize(text || '');
+  const normalizedText = normalize(text);
   // 1. Empty -> block
   if (!normalizedText) {
     return { allow: false, reason: 'unsafe_output' };
@@ -394,6 +402,7 @@ export const evaluateAssistantOutputGuardrail = ({
 /**
  * Builds a localized refusal message for the user when the guardrail blocks a message.
  * Supports all 7 locales via the GUARDRAIL_REFUSALS dictionary.
+ *
  * @param locale - User locale tag (e.g. "fr-FR", "de", "ja").
  * @param reason - The guardrail block reason, used to select the specific refusal wording.
  * @returns A human-readable refusal string.
@@ -412,6 +421,7 @@ export const buildGuardrailRefusal = (
 
 /**
  * Builds a policy citation string (e.g. `"policy:insult"`) for metadata tagging.
+ *
  * @param reason - The guardrail block reason.
  * @returns A citation string, or undefined when no reason is provided.
  */

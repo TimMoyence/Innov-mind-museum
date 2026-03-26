@@ -89,7 +89,7 @@ export interface ChatAssistantDiagnostics {
   /** Whether any section fell back to a degraded response. */
   degraded: boolean;
   totalLatencyMs: number;
-  sections: Array<{
+  sections: {
     name: ChatSectionName;
     status: ChatSectionStatus;
     attempts: number;
@@ -97,7 +97,7 @@ export interface ChatAssistantDiagnostics {
     timeoutMs: number;
     payloadBytes: number;
     error?: string;
-  }>;
+  }[];
 }
 
 /** Structured metadata extracted from an assistant response by the LLM pipeline. */

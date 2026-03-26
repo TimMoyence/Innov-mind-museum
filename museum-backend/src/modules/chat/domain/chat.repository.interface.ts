@@ -1,6 +1,6 @@
 import type { CreateSessionInput, ChatRole, ReportReason, VisitContext } from './chat.types';
-import { ChatSession } from './chatSession.entity';
-import { ChatMessage } from './chatMessage.entity';
+import type { ChatMessage } from './chatMessage.entity';
+import type { ChatSession } from './chatSession.entity';
 
 /** Cursor-based pagination parameters for listing session messages. */
 export interface ListSessionMessagesParams {
@@ -90,7 +90,7 @@ export interface PersistMessageReportInput {
 
 /** Shape returned by {@link ChatRepository.exportUserData} for GDPR data export. */
 export interface UserChatExportData {
-  sessions: Array<{
+  sessions: {
     id: string;
     locale?: string | null;
     museumMode: boolean;
@@ -98,21 +98,22 @@ export interface UserChatExportData {
     museumName?: string | null;
     createdAt: string;
     updatedAt: string;
-    messages: Array<{
+    messages: {
       id: string;
       role: string;
       text?: string | null;
       imageRef?: string | null;
       createdAt: string;
       metadata?: Record<string, unknown> | null;
-    }>;
-  }>;
+    }[];
+  }[];
 }
 
 /** Port for chat persistence operations. Implemented by {@link TypeOrmChatRepository}. */
 export interface ChatRepository {
   /**
    * Create a new chat session.
+   *
    * @param input - Session creation parameters (user, locale, museum mode).
    * @returns The newly created session.
    */
@@ -120,6 +121,7 @@ export interface ChatRepository {
 
   /**
    * Retrieve a session by its UUID.
+   *
    * @param sessionId - The session UUID.
    * @returns The session, or `null` if not found.
    */
@@ -127,6 +129,7 @@ export interface ChatRepository {
 
   /**
    * Retrieve a message along with its owning session (for ownership verification).
+   *
    * @param messageId - The message UUID.
    * @returns The message and session, or `null` if not found.
    */
@@ -134,6 +137,7 @@ export interface ChatRepository {
 
   /**
    * Delete a session only if it contains no messages.
+   *
    * @param sessionId - The session UUID.
    * @returns `true` if the session was deleted, `false` if it had messages.
    */
@@ -141,6 +145,7 @@ export interface ChatRepository {
 
   /**
    * Persist a chat message and optionally update session fields or create an artwork match.
+   *
    * @param input - Message data and optional side-effects.
    * @returns The persisted message.
    */
@@ -148,6 +153,7 @@ export interface ChatRepository {
 
   /**
    * List messages for a session with cursor-based pagination.
+   *
    * @param params - Session ID, limit, and optional cursor.
    * @returns A page of messages.
    */
@@ -155,6 +161,7 @@ export interface ChatRepository {
 
   /**
    * List the most recent messages in a session (used for LLM history context).
+   *
    * @param sessionId - The session UUID.
    * @param limit - Maximum number of messages to return.
    * @returns Messages in chronological order.
@@ -163,6 +170,7 @@ export interface ChatRepository {
 
   /**
    * List a user's sessions with cursor-based pagination.
+   *
    * @param params - User ID, limit, and optional cursor.
    * @returns A page of session summaries.
    */
@@ -170,6 +178,7 @@ export interface ChatRepository {
 
   /**
    * Check whether a user has already reported a specific message.
+   *
    * @param messageId - The message UUID.
    * @param userId - The reporting user's ID.
    * @returns `true` if a report already exists.
@@ -178,12 +187,14 @@ export interface ChatRepository {
 
   /**
    * Persist a message report from a user.
+   *
    * @param input - Report data (message, user, reason, optional comment).
    */
   persistMessageReport(input: PersistMessageReportInput): Promise<void>;
 
   /**
    * Export all chat data for a user (GDPR data portability).
+   *
    * @param userId - The user's numeric ID.
    * @returns All sessions and messages belonging to the user.
    */

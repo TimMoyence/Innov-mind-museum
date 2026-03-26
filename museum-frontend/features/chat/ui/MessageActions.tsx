@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { ChatUiMessageMetadata } from '@/features/chat/application/useChatSession';
+import type { ChatUiMessageMetadata } from '@/features/chat/application/useChatSession';
 import { FollowUpButtons } from '@/features/chat/ui/FollowUpButtons';
 import { RecommendationChips } from '@/features/chat/ui/RecommendationChips';
 import { useTheme } from '@/shared/ui/ThemeContext';
@@ -55,10 +55,10 @@ export const MessageActions = ({
       ) : null}
 
       {metadata.deeperContext ? (
-        <View style={styles.deeperContextWrap}>
+        <View style={[styles.deeperContextWrap, { borderColor: theme.assistantBubbleBorder, backgroundColor: theme.glassBackground }]}>
           <Pressable
             style={styles.deeperContextToggle}
-            onPress={() => setIsDeeperContextExpanded((v) => !v)}
+            onPress={() => { setIsDeeperContextExpanded((v) => !v); }}
           >
             <Ionicons
               name={isDeeperContextExpanded ? 'chevron-up' : 'chevron-down'}
@@ -75,7 +75,7 @@ export const MessageActions = ({
 
       {metadata.openQuestion ? (
         <Pressable
-          style={[styles.openQuestionChip, isSendingDisabled && styles.disabledChip]}
+          style={[styles.openQuestionChip, { borderColor: theme.primaryBorderSubtle, backgroundColor: theme.primaryTint }, isSendingDisabled && styles.disabledChip]}
           onPress={() => {
             if (!isSendingDisabled) {
               onRecommendationPress(metadata.openQuestion!);
@@ -101,8 +101,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.25)',
-    backgroundColor: 'rgba(255,255,255,0.5)',
     padding: 10,
   },
   deeperContextToggle: {
@@ -128,8 +126,6 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(30, 64, 175, 0.2)',
-    backgroundColor: 'rgba(30, 64, 175, 0.04)',
     paddingHorizontal: 12,
     paddingVertical: 8,
   },

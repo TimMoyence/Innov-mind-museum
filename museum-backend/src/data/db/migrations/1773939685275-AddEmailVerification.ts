@@ -1,8 +1,12 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import type { MigrationInterface, QueryRunner } from "typeorm";
 
+/**
+ *
+ */
 export class AddEmailVerification1773939685275 implements MigrationInterface {
     name = 'AddEmailVerification1773939685275'
 
+    /** Apply the AddEmailVerification migration. */
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`ALTER TABLE "users" ADD "email_verified" boolean NOT NULL DEFAULT false`);
         await queryRunner.query(`ALTER TABLE "users" ADD "verification_token" character varying`);
@@ -11,6 +15,7 @@ export class AddEmailVerification1773939685275 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "chat_sessions" ALTER COLUMN "version" DROP DEFAULT`);
     }
 
+    /** Revert the AddEmailVerification migration. */
     public async down(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`ALTER TABLE "chat_sessions" ALTER COLUMN "version" SET DEFAULT '1'`);
         await queryRunner.query(`DROP INDEX "idx_users_verification_token"`);

@@ -1,9 +1,13 @@
 import { badRequest } from '@shared/errors/app.error';
-import type { PaginatedResult } from '@modules/admin/domain/admin.types';
-import type { ISupportRepository } from '../domain/support.repository.interface';
-import type { TicketDTO, ListTicketsFilters, TicketStatus, TicketPriority } from '../domain/support.types';
+
 import { TICKET_STATUSES, TICKET_PRIORITIES } from '../domain/support.types';
 
+import type { ISupportRepository } from '../domain/support.repository.interface';
+import type { TicketDTO, ListTicketsFilters, TicketStatus, TicketPriority } from '../domain/support.types';
+import type { PaginatedResult } from '@modules/admin/domain/admin.types';
+
+
+/** Input for listing a specific user's support tickets. */
 export interface ListUserTicketsInput {
   userId: number;
   status?: string;
@@ -16,6 +20,7 @@ export interface ListUserTicketsInput {
 export class ListUserTicketsUseCase {
   constructor(private readonly repository: ISupportRepository) {}
 
+  /** Validates pagination and filter enums, then retrieves a paginated list of the user's tickets. */
   async execute(input: ListUserTicketsInput): Promise<PaginatedResult<TicketDTO>> {
     if (!Number.isInteger(input.page) || input.page < 1) {
       throw badRequest('page must be a positive integer');
@@ -38,6 +43,6 @@ export class ListUserTicketsUseCase {
       pagination: { page: input.page, limit: input.limit },
     };
 
-    return this.repository.listTickets(filters);
+    return await this.repository.listTickets(filters);
   }
 }

@@ -53,7 +53,7 @@ type HttpRequestConfig = {
 
 const initialApiBaseUrlResolution = tryResolveInitialApiBaseUrl();
 if (initialApiBaseUrlResolution.error && __DEV__) {
-  // eslint-disable-next-line no-console
+   
   console.warn(
     '[HTTP] Invalid API base URL configuration',
     initialApiBaseUrlResolution.error,
@@ -125,7 +125,7 @@ httpClient.interceptors.request.use((config) => {
   }
 
   if (__DEV__) {
-    // eslint-disable-next-line no-console
+     
     console.debug(
       '[HTTP] ->',
       finalConfig.method?.toUpperCase(),
@@ -141,7 +141,7 @@ httpClient.interceptors.request.use((config) => {
 httpClient.interceptors.response.use(
   (response) => {
     if (__DEV__) {
-      // eslint-disable-next-line no-console
+       
       console.debug('[HTTP] <-', response.status, response.config.url);
     }
     return response;
@@ -178,7 +178,7 @@ httpClient.interceptors.response.use(
             ...headers,
             Authorization: `Bearer ${nextAccessToken}`,
           };
-          return httpClient.request(axiosError.config as never);
+          return await httpClient.request(axiosError.config as never);
         }
       } catch {
         // Fall through to standard error mapping / unauthorized handling.

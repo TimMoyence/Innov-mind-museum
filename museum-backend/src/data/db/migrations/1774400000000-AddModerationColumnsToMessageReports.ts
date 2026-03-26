@@ -1,8 +1,12 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import type { MigrationInterface, QueryRunner } from "typeorm";
 
+/**
+ *
+ */
 export class AddModerationColumnsToMessageReports1774400000000 implements MigrationInterface {
     name = 'AddModerationColumnsToMessageReports1774400000000'
 
+    /** Apply the AddModerationColumnsToMessageReports migration. */
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`
             ALTER TABLE "message_reports"
@@ -14,6 +18,7 @@ export class AddModerationColumnsToMessageReports1774400000000 implements Migrat
         await queryRunner.query(`CREATE INDEX "IDX_message_reports_status" ON "message_reports" ("status")`);
     }
 
+    /** Revert the AddModerationColumnsToMessageReports migration. */
     public async down(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`DROP INDEX "IDX_message_reports_status"`);
         await queryRunner.query(`

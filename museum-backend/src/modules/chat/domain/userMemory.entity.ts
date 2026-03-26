@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 
 import { User } from '@modules/auth/core/domain/user.entity';
+
 import type { NotableArtwork } from './userMemory.types';
 
 /** Persists cross-session memory for a user (expertise, favourite artists/periods, etc.). Mapped to `user_memories`. */

@@ -1,4 +1,5 @@
 export const SUPPORTED_LOCALES = ['en', 'fr', 'es', 'de', 'it', 'ja', 'zh'] as const;
+/** Union type of all supported two-letter locale codes. */
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
 export const LOCALE_TO_LANGUAGE: Record<SupportedLocale, string> = {
@@ -11,6 +12,7 @@ export const LOCALE_TO_LANGUAGE: Record<SupportedLocale, string> = {
   zh: 'Chinese',
 };
 
+/** Type guard that checks whether a string is a supported locale code. */
 export function isSupportedLocale(s: string): s is SupportedLocale {
   return (SUPPORTED_LOCALES as readonly string[]).includes(s);
 }
@@ -53,7 +55,8 @@ export function parseAcceptLanguageHeader(header?: string): string | undefined {
   const first = header
     .split(',')
     .map((part) => part.split(';')[0].trim())
-    .filter(Boolean)[0];
+    .find(Boolean);
 
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
   return first || undefined;
 }

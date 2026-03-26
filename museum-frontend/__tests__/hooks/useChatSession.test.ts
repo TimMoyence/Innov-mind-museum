@@ -7,7 +7,7 @@ import type { ChatUiMessage } from '@/features/chat/application/chatSessionLogic
 // chatApi
 const mockGetSession = jest.fn<Promise<{
   session: { title: string | null; museumName: string | null };
-  messages: Array<{
+  messages: {
     id: string;
     role: string;
     text: string;
@@ -15,7 +15,7 @@ const mockGetSession = jest.fn<Promise<{
     imageRef?: string | null;
     image?: { url: string; expiresAt: string } | null;
     metadata?: Record<string, unknown> | null;
-  }>;
+  }[];
 }>, [string]>();
 const mockSendMessageSmart = jest.fn();
 const mockPostMessage = jest.fn();
@@ -105,7 +105,7 @@ jest.mock('@/features/chat/infrastructure/chatSessionStore', () => ({
 
 const SESSION_ID = 'test-session-123';
 
-const makeApiMessages = (msgs: Array<{ id: string; role: string; text: string }>) =>
+const makeApiMessages = (msgs: { id: string; role: string; text: string }[]) =>
   msgs.map((m) => ({
     id: m.id,
     role: m.role,

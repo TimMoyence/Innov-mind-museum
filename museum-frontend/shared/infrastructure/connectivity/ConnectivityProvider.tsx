@@ -1,5 +1,7 @@
-import React, { createContext, useEffect, useState } from 'react';
-import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
+import type React from 'react';
+import { createContext, useEffect, useState } from 'react';
+import type { NetInfoState } from '@react-native-community/netinfo';
+import NetInfo from '@react-native-community/netinfo';
 
 interface ConnectivityContextValue {
   isConnected: boolean;
@@ -24,7 +26,7 @@ export const ConnectivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
         isInternetReachable: netState.isInternetReachable,
       });
     });
-    return () => unsubscribe();
+    return () => { unsubscribe(); };
   }, []);
 
   return (

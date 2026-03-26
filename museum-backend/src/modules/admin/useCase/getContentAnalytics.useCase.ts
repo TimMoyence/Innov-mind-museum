@@ -5,7 +5,8 @@ import type { ContentAnalytics, ContentAnalyticsFilters } from '../domain/admin.
 export class GetContentAnalyticsUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
+  /** Executes the content analytics retrieval with the given filters. */
   async execute(filters: ContentAnalyticsFilters): Promise<ContentAnalytics> {
-    return this.repository.getContentAnalytics(filters);
+    return await this.repository.getContentAnalytics(filters);
   }
 }

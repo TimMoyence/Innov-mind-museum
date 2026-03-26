@@ -1,8 +1,12 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
 
+/**
+ *
+ */
 export class CreateUserMemoriesTable1774300100000 implements MigrationInterface {
   name = 'CreateUserMemoriesTable1774300100000';
 
+  /** Apply the CreateUserMemoriesTable migration. */
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE TABLE "user_memories" (
@@ -33,6 +37,7 @@ export class CreateUserMemoriesTable1774300100000 implements MigrationInterface 
     );
   }
 
+  /** Revert the CreateUserMemoriesTable migration. */
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_user_memories_user_id"`);
     await queryRunner.query(`DROP TABLE IF EXISTS "user_memories"`);

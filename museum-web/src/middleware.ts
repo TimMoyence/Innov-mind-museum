@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { locales, defaultLocale, type Locale } from '@/lib/i18n';
 
 /** Paths that should never be rewritten by the i18n middleware. */

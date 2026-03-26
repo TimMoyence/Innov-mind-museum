@@ -44,14 +44,12 @@ export type SessionListItemDTO = ListSessionsResponseDTO['sessions'][number];
 export type ReportReason = 'offensive' | 'inaccurate' | 'inappropriate' | 'other';
 
 /** Response payload returned after reporting a chat message. */
-export type ReportMessageResponseDTO = {
+export interface ReportMessageResponseDTO {
   messageId: string;
   reported: boolean;
-};
-
-interface RecordValue {
-  [key: string]: unknown;
 }
+
+type RecordValue = Record<string, unknown>;
 
 const isRecord = (value: unknown): value is RecordValue => {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

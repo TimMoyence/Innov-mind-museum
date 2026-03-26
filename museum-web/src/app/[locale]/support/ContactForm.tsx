@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import Button from '@/components/ui/Button';
 import type { Dictionary } from '@/lib/i18n';
 
@@ -14,7 +14,7 @@ export default function ContactForm({ dict }: ContactFormProps) {
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     // TODO: send to API
     setSubmitted(true);
@@ -42,7 +42,7 @@ export default function ContactForm({ dict }: ContactFormProps) {
           required
           placeholder={dict.namePlaceholder}
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => { setName(e.target.value); }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         />
       </div>
@@ -56,7 +56,7 @@ export default function ContactForm({ dict }: ContactFormProps) {
           required
           placeholder={dict.emailPlaceholder}
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => { setEmail(e.target.value); }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         />
       </div>
@@ -70,7 +70,7 @@ export default function ContactForm({ dict }: ContactFormProps) {
           rows={5}
           placeholder={dict.messagePlaceholder}
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={(e) => { setMessage(e.target.value); }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         />
       </div>

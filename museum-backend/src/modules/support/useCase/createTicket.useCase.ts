@@ -1,8 +1,10 @@
-import { badRequest } from '@shared/errors/app.error';
 import { auditService, AUDIT_SUPPORT_TICKET_CREATED } from '@shared/audit';
+import { badRequest } from '@shared/errors/app.error';
+
 import type { ISupportRepository } from '../domain/support.repository.interface';
 import type { CreateTicketInput, TicketDTO } from '../domain/support.types';
 
+/** Input for the create-ticket use case. */
 export interface CreateTicketUseCaseInput {
   userId: number;
   subject: string;
@@ -17,13 +19,14 @@ export interface CreateTicketUseCaseInput {
 export class CreateTicketUseCase {
   constructor(private readonly repository: ISupportRepository) {}
 
+  /** Validates inputs, creates the ticket, and emits an audit event. */
   async execute(input: CreateTicketUseCaseInput): Promise<TicketDTO> {
-    const subject = input.subject?.trim();
+    const subject = input.subject.trim();
     if (!subject || subject.length < 1 || subject.length > 256) {
       throw badRequest('subject must be between 1 and 256 characters');
     }
 
-    const description = input.description?.trim();
+    const description = input.description.trim();
     if (!description || description.length < 1 || description.length > 5000) {
       throw badRequest('description must be between 1 and 5000 characters');
     }
@@ -38,6 +41,7 @@ export class CreateTicketUseCase {
       subject,
       description,
       priority: (input.priority as CreateTicketInput['priority']) ?? undefined,
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
       category: input.category?.trim().slice(0, 64) || undefined,
     };
 

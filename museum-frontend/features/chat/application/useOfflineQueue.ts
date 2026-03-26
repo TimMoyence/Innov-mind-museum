@@ -1,5 +1,6 @@
 import { useRef, useEffect, useSyncExternalStore, useCallback } from 'react';
-import { OfflineQueue, QueuedMessage } from './offlineQueue';
+import type { QueuedMessage } from './offlineQueue';
+import { OfflineQueue } from './offlineQueue';
 import { useConnectivity } from '@/shared/infrastructure/connectivity/useConnectivity';
 import { storage } from '@/shared/infrastructure/storage';
 
@@ -28,6 +29,6 @@ export const useOfflineQueue = () => {
     ),
     dequeue: useCallback(() => queue.dequeue(), [queue]),
     peek: useCallback(() => queue.peek(), [queue]),
-    remove: useCallback((id: string) => queue.remove(id), [queue]),
+    remove: useCallback((id: string) => { queue.remove(id); }, [queue]),
   };
 };

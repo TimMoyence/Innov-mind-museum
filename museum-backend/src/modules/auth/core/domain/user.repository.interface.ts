@@ -1,9 +1,10 @@
-import { User } from './user.entity';
+import type { User } from './user.entity';
 
 /** Port for user persistence operations. Implemented by {@link UserRepositoryPg}. */
 export interface IUserRepository {
   /**
    * Find a user by email address.
+   *
    * @param email - The email to look up.
    * @returns The user, or `null` if not found.
    */
@@ -11,6 +12,7 @@ export interface IUserRepository {
 
   /**
    * Find a user by numeric ID.
+   *
    * @param id - The user's primary key.
    * @returns The user, or `null` if not found.
    */
@@ -18,6 +20,7 @@ export interface IUserRepository {
 
   /**
    * Register a new user with email/password credentials.
+   *
    * @param email - Unique email address.
    * @param password - Plain-text password (hashed before storage).
    * @param firstname - Optional first name.
@@ -33,6 +36,7 @@ export interface IUserRepository {
 
   /**
    * Store a password-reset token and its expiration for a user.
+   *
    * @param email - The user's email.
    * @param token - The reset token.
    * @param expires - Token expiration timestamp.
@@ -42,6 +46,7 @@ export interface IUserRepository {
 
   /**
    * Find a user by a valid (non-expired) password-reset token.
+   *
    * @param token - The reset token.
    * @returns The user, or `null` if the token is invalid or expired.
    */
@@ -49,6 +54,7 @@ export interface IUserRepository {
 
   /**
    * Update a user's password.
+   *
    * @param userId - The user's ID.
    * @param newPassword - Plain-text password (hashed before storage).
    * @returns The updated user.
@@ -57,6 +63,7 @@ export interface IUserRepository {
 
   /**
    * Register a new user via social sign-in (no password).
+   *
    * @param email - Email from the social provider.
    * @param firstname - Optional first name from the provider.
    * @param lastname - Optional last name from the provider.
@@ -71,6 +78,7 @@ export interface IUserRepository {
   /**
    * Atomically consume a reset token and update the user's password in a single query.
    * Prevents race conditions where two requests use the same token.
+   *
    * @param token - The reset token to consume.
    * @param hashedPassword - The new bcrypt-hashed password.
    * @returns The updated user, or `null` if the token is invalid or expired.
@@ -79,12 +87,14 @@ export interface IUserRepository {
 
   /**
    * Permanently delete a user and all associated data (GDPR).
+   *
    * @param userId - The user's ID.
    */
   deleteUser(userId: number): Promise<void>;
 
   /**
    * Store an email verification token with an expiration timestamp.
+   *
    * @param userId - The user's ID.
    * @param token - The verification token.
    * @param expires - Token expiration timestamp.
@@ -93,6 +103,7 @@ export interface IUserRepository {
 
   /**
    * Atomically consume a verification token and mark the email as verified.
+   *
    * @param token - The verification token to consume.
    * @returns The user if the token was valid and consumed, or `null` if invalid/expired.
    */

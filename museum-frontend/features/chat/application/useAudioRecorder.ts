@@ -42,7 +42,7 @@ export const useAudioRecorder = () => {
     if (!stream) {
       return;
     }
-    stream.getTracks().forEach((track) => track.stop());
+    stream.getTracks().forEach((track) => { track.stop(); });
     webMediaStreamRef.current = null;
   }, []);
 
@@ -113,7 +113,7 @@ export const useAudioRecorder = () => {
 
     nativeRecordingRef.current = nextRecording;
     setIsRecording(true);
-  }, [revokeWebAudioObjectUrl]);
+  }, [revokeWebAudioObjectUrl, t]);
 
   const stopRecording = useCallback(async () => {
     if (Platform.OS === 'web') {
@@ -180,7 +180,7 @@ export const useAudioRecorder = () => {
       nativeRecordingRef.current = null;
       Alert.alert(t('audio.error_title'), t('audio.error_body'));
     }
-  }, [startRecording, stopRecording]);
+  }, [startRecording, stopRecording, t]);
 
   const playRecordedAudio = useCallback(async () => {
     const uri = recordedAudioUriRef.current;
@@ -232,7 +232,7 @@ export const useAudioRecorder = () => {
       setIsPlayingAudio(false);
       Alert.alert(t('audio.playback_error_title'), t('audio.playback_error_body'));
     }
-  }, []);
+  }, [t]);
 
   const clearRecordedAudio = useCallback(() => {
     setRecordedAudioBlob(null);

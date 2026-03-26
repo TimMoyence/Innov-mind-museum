@@ -1,8 +1,12 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
 
+/**
+ *
+ */
 export class DropLegacyImageInsightTables1772000000000 implements MigrationInterface {
   name = 'DropLegacyImageInsightTables1772000000000';
 
+  /** Apply the DropLegacyImageInsightTables migration. */
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.startTransaction();
     try {
@@ -21,6 +25,7 @@ export class DropLegacyImageInsightTables1772000000000 implements MigrationInter
     }
   }
 
+  /** Revert the DropLegacyImageInsightTables migration. */
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "image_insight_conversations" (

@@ -6,7 +6,8 @@ import {
   StatusBar,
   SafeAreaView,
 } from 'react-native';
-import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
+import type { CameraType} from 'expo-camera';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
@@ -89,7 +90,7 @@ export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
         style={cameraStyles.camera}
         ref={cameraRef}
         facing={facing}
-        onCameraReady={() => setCameraReady(true)}
+        onCameraReady={() => { setCameraReady(true); }}
       >
         <SafeAreaView style={cameraStyles.cameraContent}>
           <View style={cameraStyles.cameraHeader}>

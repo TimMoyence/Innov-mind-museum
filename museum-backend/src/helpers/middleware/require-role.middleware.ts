@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
 import type { UserRole } from '@modules/auth/core/domain/user-role';
+import type { Request, Response, NextFunction } from 'express';
 
 /**
  * Middleware factory that restricts access to users with one of the specified roles.

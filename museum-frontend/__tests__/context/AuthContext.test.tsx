@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 
@@ -169,7 +169,7 @@ describe('AuthProvider / useAuth', () => {
       refreshToken: 'fresh-refresh',
     });
 
-    let validity: boolean = false;
+    let validity = false;
     await act(async () => {
       validity = await result.current.checkTokenValidity();
     });
@@ -186,7 +186,7 @@ describe('AuthProvider / useAuth', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    let validity: boolean = true;
+    let validity = true;
     await act(async () => {
       validity = await result.current.checkTokenValidity();
     });

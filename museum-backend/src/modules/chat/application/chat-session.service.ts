@@ -1,20 +1,22 @@
-import { env } from '@src/config/env';
-import type { CacheService } from '@shared/cache/cache.port';
 import { badRequest } from '@shared/errors/app.error';
-import type { CreateSessionInput, MessagePageQuery } from '../domain/chat.types';
-import type {
-  ChatRepository,
-  ChatSessionsPage,
-  SessionMessagesPage,
-} from '../domain/chat.repository.interface';
-import { ensureSessionAccess } from './session-access';
+import { env } from '@src/config/env';
+
 import { isValidSessionListCursor } from './chat-image.helpers';
+import { ensureSessionAccess } from './session-access';
+
 import type {
   CreateSessionResult,
   DeleteSessionResult,
   SessionResult,
   ListSessionsResult,
 } from './chat.service.types';
+import type {
+  ChatRepository,
+  ChatSessionsPage,
+  SessionMessagesPage,
+} from '../domain/chat.repository.interface';
+import type { CreateSessionInput, MessagePageQuery } from '../domain/chat.types';
+import type { CacheService } from '@shared/cache/cache.port';
 
 /** Dependencies for the session sub-service. */
 export interface ChatSessionServiceDeps {
@@ -36,6 +38,7 @@ export class ChatSessionService {
 
   /**
    * Creates a new chat session.
+   *
    * @param input - Session creation parameters (userId, locale, museumMode).
    * @returns The newly created session.
    * @throws {AppError} 400 if userId is not a positive integer.
@@ -70,6 +73,7 @@ export class ChatSessionService {
 
   /**
    * Retrieves a session with its paginated messages.
+   *
    * @param sessionId - UUID of the session to retrieve.
    * @param page - Cursor-based pagination parameters (limit, cursor).
    * @param currentUserId - Authenticated user id for ownership checks.
@@ -83,6 +87,7 @@ export class ChatSessionService {
   ): Promise<SessionResult> {
     const session = await ensureSessionAccess(sessionId, this.repository, currentUserId);
 
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- zero fallback
     const limit = Math.max(1, Math.min(page.limit || 20, 50));
     const cacheKey = `session:${sessionId}:${page.cursor ?? 'first'}:${limit}`;
 
@@ -132,6 +137,7 @@ export class ChatSessionService {
 
   /**
    * Lists all sessions for the authenticated user with cursor-based pagination.
+   *
    * @param page - Cursor-based pagination parameters (limit, cursor).
    * @param currentUserId - Authenticated user id (required).
    * @returns Paginated sessions with message previews.
@@ -144,12 +150,14 @@ export class ChatSessionService {
     if (!Number.isInteger(currentUserId) || Number(currentUserId) <= 0) {
       throw badRequest('Authenticated user id is required');
     }
+    // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style -- using `as number` over `!` for clarity after Number.isInteger guard
     const userId = currentUserId as number;
 
     if (page.cursor && !isValidSessionListCursor(page.cursor)) {
       throw badRequest('Invalid cursor format');
     }
 
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- zero fallback
     const limit = Math.max(1, Math.min(page.limit || 20, 50));
     const cacheKey = `sessions:user:${userId}:${page.cursor ?? 'first'}:${limit}`;
 
@@ -175,6 +183,7 @@ export class ChatSessionService {
         updatedAt: row.session.updatedAt.toISOString(),
         preview: row.preview
           ? {
+              // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
               text: row.preview.text || '[Image message]',
               createdAt: row.preview.createdAt.toISOString(),
               role: row.preview.role,
@@ -198,6 +207,7 @@ export class ChatSessionService {
 
   /**
    * Deletes a session only if it contains no messages.
+   *
    * @param sessionId - UUID of the session to delete.
    * @param currentUserId - Authenticated user id for ownership checks.
    * @returns Whether the session was actually deleted.

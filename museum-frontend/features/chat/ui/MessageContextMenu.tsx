@@ -54,13 +54,13 @@ export const MessageContextMenu = ({
             id: 'copy',
             icon: 'copy-outline' as const,
             label: t('messageMenu.copy'),
-            onPress: () => handleAction(() => onCopy(message)),
+            onPress: () => { handleAction(() => { onCopy(message); }); },
           },
           {
             id: 'share',
             icon: 'share-outline' as const,
             label: t('conversations.share'),
-            onPress: () => handleAction(() => onShare(message)),
+            onPress: () => { handleAction(() => { onShare(message); }); },
           },
         ]
       : []),
@@ -70,7 +70,7 @@ export const MessageContextMenu = ({
             id: 'report',
             icon: 'flag-outline' as const,
             label: t('messageMenu.report'),
-            onPress: () => handleAction(() => onReport(message.id)),
+            onPress: () => { handleAction(() => { onReport(message.id); }); },
           },
         ]
       : []),
@@ -78,14 +78,14 @@ export const MessageContextMenu = ({
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose} accessibilityLabel={t('a11y.contextMenu.overlay_hint')}>
+      <Pressable style={[styles.overlay, { backgroundColor: theme.modalOverlay }]} onPress={onClose} accessibilityLabel={t('a11y.contextMenu.overlay_hint')}>
         <View style={[styles.sheet, { backgroundColor: isDark ? theme.glassBackground : theme.primaryContrast }]}>
-          <View style={styles.handle} />
+          <View style={[styles.handle, { backgroundColor: theme.cardBorder }]} />
           <Text style={[styles.title, { color: theme.textSecondary }]} numberOfLines={1}>
             {message.text?.slice(0, 60) || t('chat.voice_message')}
           </Text>
           {actions.map((action) => (
-            <Pressable key={action.id} style={styles.action} onPress={action.onPress} accessibilityRole="button" accessibilityLabel={action.label}>
+            <Pressable key={action.id} style={[styles.action, { borderBottomColor: theme.separator }]} onPress={action.onPress} accessibilityRole="button" accessibilityLabel={action.label}>
               <Ionicons name={action.icon} size={20} color={theme.textPrimary} />
               <Text style={[styles.actionLabel, { color: theme.textPrimary }]}>{action.label}</Text>
             </Pressable>
@@ -102,7 +102,6 @@ export const MessageContextMenu = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
   },
   sheet: {
@@ -117,7 +116,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(148,163,184,0.4)',
     marginBottom: 16,
   },
   title: {
@@ -130,7 +128,6 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(148,163,184,0.25)',
   },
   actionLabel: {
     fontSize: 16,

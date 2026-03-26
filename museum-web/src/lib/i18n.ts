@@ -9,9 +9,7 @@ const dictionaries: Record<Locale, () => Promise<Dictionary>> = {
 };
 
 export async function getDictionary(locale: Locale): Promise<Dictionary> {
-  const loader = dictionaries[locale];
-  if (!loader) return dictionaries[defaultLocale]();
-  return loader();
+  return dictionaries[locale]();
 }
 
 /** Shape of a dictionary file — extend as pages are built out. */
@@ -90,6 +88,8 @@ export interface Dictionary {
     analytics: string;
     tickets: string;
     supportAdmin: string;
+    accessDenied: string;
+    goToHomepage: string;
     login: {
       title: string;
       emailPlaceholder: string;

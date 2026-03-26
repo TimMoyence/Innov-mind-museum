@@ -2,13 +2,13 @@
  * Support module composition root.
  * Wires the PG repository to use-case classes and exports ready-to-use singletons.
  */
-import { SupportRepositoryPg } from '../adapters/secondary/support.repository.pg';
-import { CreateTicketUseCase } from './createTicket.useCase';
-import { ListUserTicketsUseCase } from './listUserTickets.useCase';
-import { GetTicketDetailUseCase } from './getTicketDetail.useCase';
 import { AddTicketMessageUseCase } from './addTicketMessage.useCase';
+import { CreateTicketUseCase } from './createTicket.useCase';
+import { GetTicketDetailUseCase } from './getTicketDetail.useCase';
 import { ListAllTicketsUseCase } from './listAllTickets.useCase';
+import { ListUserTicketsUseCase } from './listUserTickets.useCase';
 import { UpdateTicketStatusUseCase } from './updateTicketStatus.useCase';
+import { SupportRepositoryPg } from '../adapters/secondary/support.repository.pg';
 
 const supportRepository = new SupportRepositoryPg();
 

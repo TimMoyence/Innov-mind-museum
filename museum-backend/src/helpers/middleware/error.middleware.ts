@@ -1,8 +1,9 @@
-import type { ErrorRequestHandler } from 'express';
 
-import { logger } from '@shared/logger/logger';
 import { AppError } from '@shared/errors/app.error';
+import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
+
+import type { ErrorRequestHandler } from 'express';
 
 /** Shape of the JSON error response sent to clients. */
 interface ErrorResponseShape {
@@ -17,7 +18,7 @@ interface ErrorResponseShape {
 /** Express error-handling middleware that maps AppError instances to structured JSON responses and logs 5xx errors. */
 export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   const requestId =
-    (req as { requestId?: string } | undefined)?.requestId || undefined;
+    (req as { requestId?: string } | undefined)?.requestId ?? undefined;
   const isKnown = error instanceof AppError;
   const statusCode = isKnown ? error.statusCode : 500;
   const payload: ErrorResponseShape = {

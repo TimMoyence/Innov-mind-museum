@@ -4,11 +4,11 @@ import { useTranslation } from 'react-i18next';
 
 import type { ApiConfigurationSnapshot } from '@/shared/infrastructure/apiConfig';
 
-type StartupConfigurationErrorScreenProps = {
+interface StartupConfigurationErrorScreenProps {
   error: Error;
   snapshot: ApiConfigurationSnapshot;
   containerStyle?: StyleProp<ViewStyle>;
-};
+}
 
 /** Displays a diagnostic error screen shown when the app cannot start due to missing or invalid build configuration. */
 export function StartupConfigurationErrorScreen({

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { AuthProvider, AuthGuard } from '@/lib/auth';
+import { AuthProvider, RoleGuard } from '@/lib/auth';
 import { AdminDictProvider, useAdminDict } from '@/lib/admin-dictionary';
 import type { ReactNode } from 'react';
 import type { Dictionary } from '@/lib/i18n';
@@ -59,7 +59,7 @@ function AuthenticatedLayout({
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/30 md:hidden"
-          onClick={() => setSidebarOpen(false)}
+          onClick={() => { setSidebarOpen(false); }}
           aria-hidden="true"
         />
       )}
@@ -90,7 +90,7 @@ function AuthenticatedLayout({
                 <li key={key}>
                   <Link
                     href={href}
-                    onClick={() => setSidebarOpen(false)}
+                    onClick={() => { setSidebarOpen(false); }}
                     className={`flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                       active
                         ? 'bg-primary-50 text-primary-700'
@@ -114,7 +114,7 @@ function AuthenticatedLayout({
             type="button"
             className="rounded-md p-2 text-text-secondary hover:bg-surface-muted"
             aria-label="Open sidebar"
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => { setSidebarOpen(true); }}
           >
             <svg
               className="h-6 w-6"
@@ -169,11 +169,11 @@ export default function AdminShell({
   return (
     <AdminDictProvider dict={adminDict}>
       <AuthProvider>
-        <AuthGuard>
+        <RoleGuard allowedRoles={['admin', 'moderator']}>
           <AuthenticatedLayout locale={locale}>
             {children}
           </AuthenticatedLayout>
-        </AuthGuard>
+        </RoleGuard>
       </AuthProvider>
     </AdminDictProvider>
   );

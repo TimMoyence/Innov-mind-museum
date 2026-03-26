@@ -30,7 +30,7 @@ export const useSocialLogin = ({
   const [appleAuthAvailable, setAppleAuthAvailable] = useState(false);
 
   useEffect(() => {
-    isAppleSignInAvailable().then(setAppleAuthAvailable);
+    void isAppleSignInAvailable().then(setAppleAuthAvailable);
   }, []);
 
   const handleSocialLoginSuccess = async (response: LoginResponse): Promise<void> => {

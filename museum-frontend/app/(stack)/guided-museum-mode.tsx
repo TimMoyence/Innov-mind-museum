@@ -34,19 +34,19 @@ export default function GuidedMuseumModeScreen() {
               id: 'prefs',
               icon: 'options-outline',
               label: t('guidedMode.menu.preferences'),
-              onPress: () => router.push('/(stack)/preferences'),
+              onPress: () => { router.push('/(stack)/preferences'); },
             },
             {
               id: 'discover',
               icon: 'sparkles-outline',
               label: t('guidedMode.menu.discover'),
-              onPress: () => router.push('/(stack)/discover'),
+              onPress: () => { router.push('/(stack)/discover'); },
             },
             {
               id: 'home',
               icon: 'home-outline',
               label: t('guidedMode.menu.home'),
-              onPress: () => router.push('/(tabs)/home'),
+              onPress: () => { router.push('/(tabs)/home'); },
             },
           ]}
         />
@@ -91,13 +91,13 @@ export default function GuidedMuseumModeScreen() {
           </Text>
         </GlassCard>
 
-        <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(stack)/preferences')} accessibilityRole="button" accessibilityLabel={museumMode ? t('a11y.guidedMode.toggle_off') : t('a11y.guidedMode.toggle_on')}>
+        <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => { router.push('/(stack)/preferences'); }} accessibilityRole="button" accessibilityLabel={museumMode ? t('a11y.guidedMode.toggle_off') : t('a11y.guidedMode.toggle_on')}>
           <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
             {museumMode ? t('guidedMode.turn_off') : t('guidedMode.turn_on')}
           </Text>
         </Pressable>
 
-        <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.inputBackground }]} onPress={() => router.push('/(stack)/discover')} accessibilityRole="button" accessibilityLabel={t('a11y.guidedMode.start_exploring')}>
+        <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.inputBackground }]} onPress={() => { router.push('/(stack)/discover'); }} accessibilityRole="button" accessibilityLabel={t('a11y.guidedMode.start_exploring')}>
           <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('guidedMode.start_exploring')}</Text>
         </Pressable>
       </ScrollView>

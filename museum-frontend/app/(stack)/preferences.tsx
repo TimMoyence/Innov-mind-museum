@@ -11,8 +11,9 @@ import {
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
+import type {
+  GuideLevel} from '@/features/settings/runtimeSettings';
 import {
-  GuideLevel,
   loadRuntimeSettings,
   saveDefaultMuseumMode,
   saveGuideLevel,
@@ -82,19 +83,19 @@ export default function PreferencesScreen() {
               id: 'guided',
               icon: 'walk-outline',
               label: t('preferences.menu.guided'),
-              onPress: () => router.push('/(stack)/guided-museum-mode'),
+              onPress: () => { router.push('/(stack)/guided-museum-mode'); },
             },
             {
               id: 'privacy',
               icon: 'shield-checkmark-outline',
               label: t('preferences.menu.privacy'),
-              onPress: () => router.push('/(stack)/privacy'),
+              onPress: () => { router.push('/(stack)/privacy'); },
             },
             {
               id: 'back',
               icon: 'arrow-back-outline',
               label: t('preferences.menu.settings'),
-              onPress: () => router.push('/(stack)/settings'),
+              onPress: () => { router.push('/(stack)/settings'); },
             },
           ]}
         />
@@ -127,7 +128,7 @@ export default function PreferencesScreen() {
                       { borderColor: theme.cardBorder, backgroundColor: theme.assistantBubble },
                       language === option.code && { backgroundColor: theme.primary, borderColor: theme.primary },
                     ]}
-                    onPress={() => setLanguage(option.code)}
+                    onPress={() => { setLanguage(option.code); }}
                     accessibilityRole="button"
                     accessibilityLabel={t('a11y.preferences.language_button', { language: option.nativeLabel })}
                     accessibilityState={{ selected: language === option.code }}
@@ -168,7 +169,7 @@ export default function PreferencesScreen() {
                       { borderColor: theme.cardBorder, backgroundColor: theme.assistantBubble },
                       guideLevel === level && { backgroundColor: theme.primary, borderColor: theme.primary },
                     ]}
-                    onPress={() => setGuideLevel(level)}
+                    onPress={() => { setGuideLevel(level); }}
                     accessibilityRole="button"
                     accessibilityLabel={t('a11y.preferences.guide_level_button', { level })}
                     accessibilityState={{ selected: guideLevel === level }}
@@ -200,7 +201,7 @@ export default function PreferencesScreen() {
 
           <Pressable
             style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.cardBackground }]}
-            onPress={() => router.push('/(stack)/guided-museum-mode')}
+            onPress={() => { router.push('/(stack)/guided-museum-mode'); }}
             accessibilityRole="button"
             accessibilityLabel={t('a11y.preferences.learn_guided')}
           >

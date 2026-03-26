@@ -1,5 +1,6 @@
 /**
  * Validates the format of an email address.
+ *
  * @param email - The email address to validate.
  * @returns `true` if the address matches the expected format, `false` otherwise.
  */

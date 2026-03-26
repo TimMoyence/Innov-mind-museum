@@ -404,7 +404,7 @@ export const useChatSession = (sessionId: string) => {
     isOffline,
     pendingCount,
     error,
-    clearError: () => setError(null),
+    clearError: () => { setError(null); },
     reload: loadSession,
     sendMessage,
     refreshMessageImageUrl,

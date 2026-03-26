@@ -1,9 +1,13 @@
-import { badRequest, notFound } from '@shared/errors/app.error';
 import { auditService, AUDIT_ADMIN_TICKET_UPDATED } from '@shared/audit';
-import type { ISupportRepository } from '../domain/support.repository.interface';
-import type { TicketDTO, TicketStatus, TicketPriority } from '../domain/support.types';
+import { badRequest, notFound } from '@shared/errors/app.error';
+
 import { TICKET_STATUSES, TICKET_PRIORITIES } from '../domain/support.types';
 
+import type { ISupportRepository } from '../domain/support.repository.interface';
+import type { TicketDTO, TicketStatus, TicketPriority } from '../domain/support.types';
+
+
+/** Input for the update-ticket-status use case. */
 export interface UpdateTicketStatusInput {
   ticketId: string;
   status?: string;
@@ -18,6 +22,7 @@ export interface UpdateTicketStatusInput {
 export class UpdateTicketStatusUseCase {
   constructor(private readonly repository: ISupportRepository) {}
 
+  /** Validates enum values, delegates the update, and emits an audit event. */
   async execute(input: UpdateTicketStatusInput): Promise<TicketDTO> {
     if (input.status && !TICKET_STATUSES.includes(input.status as TicketStatus)) {
       throw badRequest(`status must be one of: ${TICKET_STATUSES.join(', ')}`);

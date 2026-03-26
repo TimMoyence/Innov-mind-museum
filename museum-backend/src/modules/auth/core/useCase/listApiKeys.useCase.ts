@@ -13,10 +13,11 @@ export interface ApiKeyListItem {
 
 /** Lists a user's API keys with safe, masked output. */
 export class ListApiKeysUseCase {
-  constructor(private apiKeyRepository: ApiKeyRepository) {}
+  constructor(private readonly apiKeyRepository: ApiKeyRepository) {}
 
   /**
    * List all API keys for a user.
+   *
    * @param userId - The authenticated user's ID.
    * @returns Array of key metadata (hash and salt are never exposed).
    */

@@ -1,13 +1,14 @@
 import compression from 'compression';
 import cors from 'cors';
-import express, { Express } from 'express';
+import express, { type Express } from 'express';
 import helmet from 'helmet';
 
 import { buildChatService } from '@modules/chat';
-import { StaticFeatureFlagService } from '@shared/feature-flags/feature-flags.port';
-import type { CacheService } from '@shared/cache/cache.port';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
+import { StaticFeatureFlagService } from '@shared/feature-flags/feature-flags.port';
+import { logger } from '@shared/logger/logger';
+import { setupSentryExpressErrorHandler } from '@shared/observability/sentry';
 import { createApiRouter } from '@shared/routers/api.router';
 import { env } from '@src/config/env';
 import { AppDataSource } from '@src/data/db/data-source';
@@ -20,8 +21,8 @@ import {
 import { requestIdMiddleware } from '@src/helpers/middleware/request-id.middleware';
 import { requestLoggerMiddleware } from '@src/helpers/middleware/request-logger.middleware';
 import { setupSwagger } from '@src/helpers/swagger';
-import { logger } from '@shared/logger/logger';
-import { setupSentryExpressErrorHandler } from '@shared/observability/sentry';
+
+import type { CacheService } from '@shared/cache/cache.port';
 
 /** Optional overrides for dependency injection, primarily used in tests. */
 interface CreateAppOptions {
@@ -48,9 +49,11 @@ const createHealthCheck = async (): Promise<{ database: 'up' | 'down' }> => {
 
 /**
  * Creates and configures the Express application with all middleware, routers, and error handling.
+ *
  * @param options - Optional dependency overrides for testing.
  * @returns Fully configured Express application.
  */
+// eslint-disable-next-line max-lines-per-function -- app factory wires all middleware and routes in one place
 export const createApp = (options: CreateAppOptions = {}): Express => {
   const app = express();
 
@@ -60,7 +63,7 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   app.use(requestLoggerMiddleware);
 
   const corsOrigins: cors.CorsOptions['origin'] =
-    env.corsOrigins.length > 0 ? env.corsOrigins : isProd ? false : true;
+    env.corsOrigins.length > 0 ? env.corsOrigins : !isProd;
 
   app.use(
     cors({
@@ -110,7 +113,7 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
     setupSwagger(app);
   }
 
-  const featureFlagService = options.featureFlagService || new StaticFeatureFlagService();
+  const featureFlagService = options.featureFlagService ?? new StaticFeatureFlagService();
 
   let cacheService: CacheService;
   if (options.cacheService) {
@@ -120,16 +123,16 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
       url: env.cache.url,
       defaultTtlSeconds: env.cache.sessionTtlSeconds,
     });
-    void redisCacheService.connect().catch((err) => {
-      logger.error('redis_connection_failed', { error: (err as Error).message ?? err });
+    void redisCacheService.connect().catch((err: unknown) => {
+      logger.error('redis_connection_failed', { error: err instanceof Error ? err.message : String(err) });
     });
     cacheService = redisCacheService;
   } else {
     cacheService = new NoopCacheService();
   }
 
-  const chatService = options.chatService || buildChatService(AppDataSource, cacheService);
-  const healthCheck = options.healthCheck || createHealthCheck;
+  const chatService = options.chatService ?? buildChatService(AppDataSource, cacheService);
+  const healthCheck = options.healthCheck ?? createHealthCheck;
 
   app.use('/api', createApiRouter({ chatService, healthCheck, featureFlagService }));
 

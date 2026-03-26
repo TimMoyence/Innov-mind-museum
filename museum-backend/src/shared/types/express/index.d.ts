@@ -1,4 +1,4 @@
-import { UserJwtPayload } from '@shared/types/auth/user-jwt-payload';
+import type { UserJwtPayload } from '@shared/types/auth/user-jwt-payload';
 
 /** Augments the Express Request with authentication and tracing fields. */
 declare global {

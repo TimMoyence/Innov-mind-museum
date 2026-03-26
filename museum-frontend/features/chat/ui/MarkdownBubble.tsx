@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import Markdown from '@ronradtke/react-native-markdown-display';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
@@ -54,9 +54,27 @@ export const MarkdownBubble = ({ text }: MarkdownBubbleProps) => {
     },
     blockquote: {
       borderLeftWidth: 3,
-      borderLeftColor: 'rgba(148,163,184,0.4)',
+      borderLeftColor: theme.cardBorder,
       paddingLeft: 10,
       marginVertical: 4,
+    },
+    code_inline: {
+      backgroundColor: theme.primaryTint,
+      color: theme.primary,
+      paddingHorizontal: 4,
+      borderRadius: 4,
+      fontSize: 13,
+      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    },
+    fence: {
+      backgroundColor: theme.inputBackground,
+      color: theme.textPrimary,
+      borderColor: theme.cardBorder,
+      borderWidth: 1,
+      borderRadius: 8,
+      padding: 10,
+      fontSize: 13,
+      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     },
   }), [theme]);
 

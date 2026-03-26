@@ -1,25 +1,28 @@
-import crypto from 'crypto';
-import { IUserRepository } from '../domain/user.repository.interface';
-import { User } from '../domain/user.entity';
-import { validateEmail } from '@shared/validation/email';
-import { validatePassword } from '@shared/validation/password';
-import { validateNameField } from '@shared/validation/input';
+import crypto from 'node:crypto';
+
 import { badRequest } from '@shared/errors/app.error';
-import type { EmailService } from '@shared/email/email.port';
 import { logger } from '@shared/logger/logger';
+import { validateEmail } from '@shared/validation/email';
+import { validateNameField } from '@shared/validation/input';
+import { validatePassword } from '@shared/validation/password';
 import { env } from '@src/config/env';
+
+import type { User } from '../domain/user.entity';
+import type { IUserRepository } from '../domain/user.repository.interface';
+import type { EmailService } from '@shared/email/email.port';
 
 /** Orchestrates new user registration with email/password. */
 export class RegisterUseCase {
   constructor(
-    private userRepository: IUserRepository,
-    private emailService?: EmailService,
-    private frontendUrl?: string,
+    private readonly userRepository: IUserRepository,
+    private readonly emailService?: EmailService,
+    private readonly frontendUrl?: string,
   ) {}
 
   /**
    * Validate email format, password strength, and name fields, then register a new user.
    * Sends a verification email if an email service is configured (non-blocking).
+   *
    * @param email - The user's email address.
    * @param password - The user's chosen password.
    * @param firstname - Optional first name.
@@ -41,7 +44,7 @@ export class RegisterUseCase {
 
     const pw = validatePassword(password);
     if (!pw.valid) {
-      throw badRequest(pw.reason!);
+      throw badRequest(pw.reason ?? 'Invalid password');
     }
 
     let sanitizedFirstname: string | undefined;

@@ -1,25 +1,26 @@
-import { env } from '@src/config/env';
-import { DataSource } from 'typeorm';
 import { auditService } from '@shared/audit';
+import { env } from '@src/config/env';
 
-import { ChatService } from './application/chat.service';
-import { UserMemoryService } from './application/user-memory.service';
-import { LangChainChatOrchestrator } from './adapters/secondary/langchain.orchestrator';
-import { LocalImageStorage } from './adapters/secondary/image-storage.stub';
-import { S3CompatibleImageStorage } from './adapters/secondary/image-storage.s3';
 import { OpenAiAudioTranscriber } from './adapters/secondary/audio-transcriber.openai';
-import {
-  OpenAiTextToSpeechService,
-  DisabledTextToSpeechService,
-} from './adapters/secondary/text-to-speech.openai';
+import { S3CompatibleImageStorage } from './adapters/secondary/image-storage.s3';
+import { LocalImageStorage } from './adapters/secondary/image-storage.stub';
+import { LangChainChatOrchestrator } from './adapters/secondary/langchain.orchestrator';
 import {
   TesseractOcrService,
   DisabledOcrService,
 } from './adapters/secondary/ocr-service';
-import type { OcrService } from './domain/ports/ocr.port';
+import {
+  OpenAiTextToSpeechService,
+  DisabledTextToSpeechService,
+} from './adapters/secondary/text-to-speech.openai';
+import { ChatService } from './application/chat.service';
+import { UserMemoryService } from './application/user-memory.service';
 import { TypeOrmChatRepository } from './infrastructure/chat.repository.typeorm';
 import { TypeOrmUserMemoryRepository } from './infrastructure/userMemory.repository.typeorm';
+
+import type { OcrService } from './domain/ports/ocr.port';
 import type { CacheService } from '@shared/cache/cache.port';
+import type { DataSource } from 'typeorm';
 
 /** Lazily-initialized image storage singleton, shared with the auth module for GDPR cleanup. */
 let sharedImageStorage: LocalImageStorage | S3CompatibleImageStorage | undefined;
@@ -47,9 +48,11 @@ export const getUserMemoryService = (): UserMemoryService | undefined => sharedU
 
 /**
  * Wires the chat module dependency graph and returns a fully configured ChatService.
+ *
  * @param dataSource - Initialized TypeORM DataSource for repository creation.
  * @returns ChatService with repository, orchestrator, image storage, and audio transcriber.
  */
+// eslint-disable-next-line complexity -- dependency wiring requires conditional initialization of storage, audio, OCR, and memory services
 export const buildChatService = (dataSource: DataSource, cache?: CacheService): ChatService => {
   let imageStorage: LocalImageStorage | S3CompatibleImageStorage;
   if (env.storage.driver === 's3') {

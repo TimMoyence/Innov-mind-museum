@@ -1,10 +1,10 @@
-import crypto from 'crypto';
-import http from 'http';
-import https from 'https';
-import { randomUUID } from 'crypto';
+import crypto, { randomUUID } from 'node:crypto';
+import http from 'node:http';
+import https from 'node:https';
 
-import { ImageStorage, SaveImageInput } from './image-storage.stub';
 import { startSpan } from '@shared/observability/sentry';
+
+import type { ImageStorage, SaveImageInput } from './image-storage.stub';
 
 /** Configuration for an S3-compatible image storage backend. */
 export interface S3ImageStorageConfig {
@@ -77,13 +77,13 @@ const normalizeEndpoint = (endpoint: string): URL => {
 };
 
 const buildObjectPath = (params: { bucket: string; key: string; endpointPath?: string }): string => {
-  const base = params.endpointPath?.replace(/\/+$/, '') || '';
+  const base = params.endpointPath?.replace(/\/+$/, '') ?? '';
   const bucketPart = encodePathSegments(params.bucket);
   const keyPart = encodePathSegments(params.key);
   return `${base}/${bucketPart}/${keyPart}`.replace(/\/{2,}/g, '/');
 };
 
-const joinKeyParts = (...parts: Array<string | undefined>): string => {
+const joinKeyParts = (...parts: (string | undefined)[]): string => {
   return parts
     .filter((part): part is string => typeof part === 'string' && part.trim().length > 0)
     .flatMap((part) => part.split('/'))
@@ -116,6 +116,7 @@ const buildReadBaseUrlAndPath = (params: {
     params.publicBaseUrl?.includes('{bucket}')
       ? params.publicBaseUrl.replaceAll('{bucket}', params.bucket)
       : params.publicBaseUrl;
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
   const base = normalizeEndpoint(publicBaseUrl || params.endpoint);
   const bucketPath = `/${encodePathSegments(params.bucket)}`;
   const keyPath = `/${encodePathSegments(params.key)}`;
@@ -145,7 +146,7 @@ const buildReadBaseUrlAndPath = (params: {
   return { url, objectPath };
 };
 
-const canonicalQueryString = (query: Array<[string, string]>): string => {
+const canonicalQueryString = (query: [string, string][]): string => {
   return [...query]
     .sort((a, b) => {
       if (a[0] === b[0]) return a[1].localeCompare(b[1]);
@@ -164,7 +165,7 @@ const buildCanonicalHeaders = (headers: Record<string, string>): {
     .sort(([a], [b]) => a.localeCompare(b));
 
   return {
-    canonicalHeaders: `${normalized.map(([k, v]) => `${k}:${v}\n`).join('')}`,
+    canonicalHeaders: normalized.map(([k, v]) => `${k}:${v}\n`).join(''),
     signedHeaders: normalized.map(([k]) => k).join(';'),
   };
 };
@@ -196,13 +197,13 @@ const httpRequest = async (params: {
   timeoutMs?: number;
 }): Promise<{ statusCode: number; body: string }> => {
   const client = params.url.protocol === 'https:' ? https : http;
-  return new Promise((resolve, reject) => {
+  return await new Promise((resolve, reject) => {
     let settled = false;
     const finish = (err: Error | null, result?: { statusCode: number; body: string }) => {
       if (settled) return;
       settled = true;
       if (err) reject(err);
-      else resolve(result!);
+      else resolve(result ?? { statusCode: 0, body: '' });
     };
 
     const reqHeaders: Record<string, string> = { ...params.headers };
@@ -219,7 +220,7 @@ const httpRequest = async (params: {
           chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)),
         );
         res.on('end', () => {
-          const statusCode = res.statusCode || 0;
+          const statusCode = res.statusCode ?? 0;
           const bodyText = Buffer.concat(chunks).toString('utf8');
           finish(null, { statusCode, body: bodyText });
         });
@@ -232,7 +233,7 @@ const httpRequest = async (params: {
       });
     }
 
-    req.on('error', (error) => finish(error as Error));
+    req.on('error', (error) => { finish(error); });
     if (params.body) req.write(params.body);
     req.end();
   });
@@ -252,9 +253,8 @@ const httpPut = async (params: {
     timeoutMs: params.timeoutMs,
   });
   if (statusCode < 200 || statusCode >= 300) {
-    throw new Error(
-      `S3 upload failed (${statusCode})${body ? `: ${body.slice(0, 500)}` : ''}`,
-    );
+    const detail = body ? ': ' + body.slice(0, 500) : '';
+    throw new Error(`S3 upload failed (${statusCode})${detail}`);
   }
 };
 
@@ -276,7 +276,7 @@ const buildS3SignedHeadersForPut = (params: {
   url.pathname = objectPath;
   url.search = '';
 
-  const now = params.now || new Date();
+  const now = params.now ?? new Date();
   const { amzDate, dateStamp } = toAmzDate(now);
   const payloadHash = sha256Hex(params.body);
   const headersToSign: Record<string, string> = {
@@ -330,11 +330,12 @@ const buildS3SignedHeadersForPut = (params: {
 
 /**
  * Extracts the S3 object key from an `s3://` image reference.
+ *
  * @param imageRef - Storage reference string.
  * @returns An object containing the key, or `null` if the reference is not an S3 URI.
  */
 export const parseS3ImageRef = (imageRef: string): { key: string } | null => {
-  const match = imageRef.match(/^s3:\/\/(.+)$/);
+  const match = /^s3:\/\/(.+)$/.exec(imageRef);
   if (!match?.[1]) {
     return null;
   }
@@ -344,15 +345,17 @@ export const parseS3ImageRef = (imageRef: string): { key: string } | null => {
 
 /**
  * Checks whether a storage reference is an S3 URI (`s3://...`).
+ *
  * @param imageRef - Storage reference string (may be null/undefined).
  * @returns `true` if the reference starts with `s3://`.
  */
 export const isS3ImageRef = (imageRef: string | null | undefined): boolean => {
-  return typeof imageRef === 'string' && /^s3:\/\//.test(imageRef);
+  return typeof imageRef === 'string' && imageRef.startsWith("s3://");
 };
 
 /**
  * Builds an `s3://` storage reference from an object key.
+ *
  * @param key - S3 object key.
  * @returns An `s3://<key>` URI.
  */
@@ -362,7 +365,12 @@ export const buildS3ImageRef = (key: string): string => {
 
 /**
  * Generates a pre-signed GET URL from an `s3://` image reference.
+ *
  * @param params - Image reference, S3 config, optional TTL and timestamp.
+ * @param params.imageRef - S3 image reference string (e.g. `s3://key`).
+ * @param params.config - S3 connection and bucket configuration.
+ * @param params.ttlSeconds - Optional TTL in seconds for the signed URL.
+ * @param params.now - Optional timestamp override for signature generation.
  * @returns Signed URL and expiry timestamp, or `null` if the reference is not a valid S3 URI.
  */
 export const buildS3SignedReadUrlFromRef = (params: {
@@ -386,7 +394,12 @@ export const buildS3SignedReadUrlFromRef = (params: {
 
 /**
  * Generates an AWS SigV4 pre-signed GET URL for an S3 object.
+ *
  * @param params - Object key, S3 config, optional TTL and timestamp.
+ * @param params.key - S3 object key.
+ * @param params.config - S3 connection and bucket configuration.
+ * @param params.ttlSeconds - Optional TTL in seconds for the signed URL.
+ * @param params.now - Optional timestamp override for signature generation.
  * @returns The signed URL and its ISO-8601 expiry.
  */
 export const buildS3PresignedReadUrl = (params: {
@@ -402,13 +415,13 @@ export const buildS3PresignedReadUrl = (params: {
     key: params.key,
   });
 
-  const now = params.now || new Date();
+  const now = params.now ?? new Date();
   const { amzDate, dateStamp } = toAmzDate(now);
   const ttlSeconds = Math.max(
     30,
     Math.min(60 * 60 * 24 * 7, params.ttlSeconds ?? params.config.signedUrlTtlSeconds),
   );
-  const query: Array<[string, string]> = [
+  const query: [string, string][] = [
     ['X-Amz-Algorithm', 'AWS4-HMAC-SHA256'],
     ['X-Amz-Credential', `${params.config.accessKeyId}/${dateStamp}/${params.config.region}/s3/aws4_request`],
     ['X-Amz-Date', amzDate],
@@ -454,7 +467,7 @@ const buildS3SignedHeaders = (params: {
   payloadHash: string;
   now?: Date;
 }): Record<string, string> => {
-  const now = params.now || new Date();
+  const now = params.now ?? new Date();
   const { amzDate, dateStamp } = toAmzDate(now);
   const headersToSign: Record<string, string> = {
     ...params.headers,
@@ -516,7 +529,7 @@ const extractXmlValues = (xml: string, tag: string): string[] => {
 };
 
 const extractXmlValue = (xml: string, tag: string): string | undefined => {
-  const match = xml.match(new RegExp(`<${tag}>([^<]*)</${tag}>`));
+  const match = new RegExp(`<${tag}>([^<]*)</${tag}>`).exec(xml);
   return match?.[1];
 };
 
@@ -529,7 +542,7 @@ export const listObjectsByPrefix = async (
   const bucketPath = `/${encodePathSegments(config.bucket)}`;
   const objectPath = `${endpoint.pathname.replace(/\/+$/, '')}${bucketPath}`.replace(/\/{2,}/g, '/');
 
-  const queryPairs: Array<[string, string]> = [
+  const queryPairs: [string, string][] = [
     ['list-type', '2'],
     ['max-keys', '1000'],
     ['prefix', prefix],
@@ -592,7 +605,7 @@ export const deleteObjectsBatch = async (
   url.pathname = objectPath;
   url.search = qs;
 
-  const contentMd5 = crypto.createHash('md5').update(bodyBuffer).digest('base64');
+  const contentMd5 = crypto.createHash('md5').update(bodyBuffer).digest('base64'); // eslint-disable-line sonarjs/hashing -- S3 API requires Content-MD5 header for integrity verification
   const payloadHash = sha256Hex(bodyBuffer);
   const signedHeaders = buildS3SignedHeaders({
     config,
@@ -631,12 +644,13 @@ export class S3CompatibleImageStorage implements ImageStorage {
 
   /**
    * Uploads a base64-encoded image to S3 and returns an `s3://` reference.
+   *
    * @param input - Image data, MIME type, and optional object key.
    * @returns An `s3://<key>` storage reference.
    * @throws Error if the S3 PUT request fails.
    */
   async save(input: SaveImageInput): Promise<string> {
-    return startSpan({ name: 'image.upload.s3', op: 'storage.upload' }, async () => {
+    return await startSpan({ name: 'image.upload.s3', op: 'storage.upload' }, async () => {
       const body = Buffer.from(input.base64, 'base64');
       const extension = extensionByMime[input.mimeType] || 'img';
       const now = new Date();
@@ -647,6 +661,7 @@ export class S3CompatibleImageStorage implements ImageStorage {
         `${randomUUID()}.${extension}`,
       ].join('/');
       const key = normalizeObjectKey({
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
         key: input.objectKey || fallbackKey,
         objectKeyPrefix: this.config.objectKeyPrefix,
       });
@@ -673,6 +688,7 @@ export class S3CompatibleImageStorage implements ImageStorage {
   /**
    * Deletes all objects whose key contains the given user pattern (e.g. `user-42`).
    * Lists all objects under `chat-images/` and filters by pattern match.
+   *
    * @param userPattern - Substring to match within object keys (e.g. `user-42`).
    */
   async deleteByPrefix(userPattern: string): Promise<void> {

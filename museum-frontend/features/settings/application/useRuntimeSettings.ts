@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 
-import {
+import type {
   GuideLevel,
-  loadRuntimeSettings,
-  RuntimeSettings,
+  RuntimeSettings} from '@/features/settings/runtimeSettings';
+import {
+  loadRuntimeSettings
 } from '@/features/settings/runtimeSettings';
 
 /**
@@ -16,7 +17,7 @@ export const useRuntimeSettings = () => {
 
   useEffect(() => {
     let cancelled = false;
-    loadRuntimeSettings().then((s) => {
+    void loadRuntimeSettings().then((s) => {
       if (!cancelled) {
         setSettings(s);
         setIsLoading(false);
@@ -30,7 +31,7 @@ export const useRuntimeSettings = () => {
   return {
     locale: settings?.defaultLocale ?? 'en-US',
     museumMode: settings?.defaultMuseumMode ?? true,
-    guideLevel: (settings?.guideLevel ?? 'beginner') as GuideLevel,
+    guideLevel: (settings?.guideLevel ?? 'beginner'),
     isLoading,
     settings,
   };

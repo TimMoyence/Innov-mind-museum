@@ -1,4 +1,5 @@
 import pool from '../../../../data/db';
+
 import type {
   ISocialAccountRepository,
   SocialAccountRow,
@@ -8,6 +9,7 @@ import type {
 export class SocialAccountRepositoryPg implements ISocialAccountRepository {
   /**
    * Finds a social account by provider and provider-specific user ID.
+   *
    * @param provider - OAuth provider name (e.g. `apple`, `google`).
    * @param providerUserId - The user's ID within the provider.
    * @returns The matching row or `null`.
@@ -23,11 +25,12 @@ export class SocialAccountRepositoryPg implements ISocialAccountRepository {
       LIMIT 1
     `;
     const result = await pool.query(query, [provider, providerUserId]);
-    return result.rows[0] || null;
+    return result.rows[0] ?? null;
   }
 
   /**
    * Lists all social accounts linked to a user.
+   *
    * @param userId - Numeric user ID.
    * @returns Array of social account rows.
    */
@@ -43,7 +46,12 @@ export class SocialAccountRepositoryPg implements ISocialAccountRepository {
 
   /**
    * Links a new social account to an existing user.
+   *
    * @param params - User ID, provider, providerUserId, and optional email.
+   * @param params.userId - Owning user ID.
+   * @param params.provider - OAuth provider name.
+   * @param params.providerUserId - User's ID within the provider.
+   * @param params.email - Optional email from the provider.
    * @returns The inserted social account row.
    */
   async create(params: {
@@ -61,7 +69,7 @@ export class SocialAccountRepositoryPg implements ISocialAccountRepository {
       params.userId,
       params.provider,
       params.providerUserId,
-      params.email || null,
+      params.email ?? null,
     ];
     const result = await pool.query(query, values);
     return result.rows[0];
@@ -69,6 +77,7 @@ export class SocialAccountRepositoryPg implements ISocialAccountRepository {
 
   /**
    * Deletes all social accounts linked to a user.
+   *
    * @param userId - Numeric user ID.
    */
   async deleteByUserId(userId: number): Promise<void> {

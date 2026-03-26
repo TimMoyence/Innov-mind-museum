@@ -6,7 +6,7 @@
  * automatically via jest.mock() hoisting.
  */
 
-import React from 'react';
+import type React from 'react';
 
 // ── react-i18next ────────────────────────────────────────────────────────────
 jest.mock('react-i18next', () => ({
@@ -42,6 +42,10 @@ jest.mock('@/shared/ui/ThemeContext', () => ({
       warningText: '#92400E',
       warningBackground: 'rgba(254,243,199,0.78)',
       shadowColor: '#1E3A8A',
+      primaryTint: 'rgba(30, 64, 175, 0.06)',
+      primaryBorderSubtle: 'rgba(30, 64, 175, 0.2)',
+      modalOverlay: 'rgba(0, 0, 0, 0.4)',
+      separator: 'rgba(148, 163, 184, 0.35)',
       timestamp: 'rgba(100,116,139,0.92)',
       surface: 'rgba(255,255,255,0.64)',
       overlay: 'rgba(255,255,255,0.70)',

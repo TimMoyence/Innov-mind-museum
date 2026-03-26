@@ -3,20 +3,20 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 type AppVariant = 'development' | 'preview' | 'production';
 type ApiEnvironment = 'staging' | 'production';
 
-type RuntimeEnv = {
+interface RuntimeEnv {
   EXPO_PUBLIC_API_BASE_URL?: string;
   EXPO_PUBLIC_API_BASE_URL_STAGING?: string;
   EXPO_PUBLIC_API_BASE_URL_PROD?: string;
   EXPO_PUBLIC_API_ENVIRONMENT?: string;
   EAS_BUILD_PROFILE?: string;
   APP_VARIANT?: string;
-};
+}
 
-type ExpoExtra = {
+interface ExpoExtra {
   eas?: {
     projectId?: string;
   };
-};
+}
 
 const APP_NAME = 'Musaium';
 const APP_SLUG = 'musaium';
