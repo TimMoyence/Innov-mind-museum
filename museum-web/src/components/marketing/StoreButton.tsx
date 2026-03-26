@@ -1,6 +1,7 @@
 interface StoreButtonProps {
   store: 'apple' | 'google';
   label: string;
+  subLabel: string;
   href?: string;
 }
 
@@ -20,16 +21,16 @@ function GooglePlayIcon() {
   );
 }
 
-export default function StoreButton({ store, label, href = '#' }: StoreButtonProps) {
+export default function StoreButton({ store, label, subLabel, href = '#' }: StoreButtonProps) {
   return (
     <a
       href={href}
-      className="inline-flex items-center gap-3 rounded-xl bg-primary-900 px-6 py-3.5 text-white transition-all duration-200 hover:bg-primary-800 hover:shadow-lg active:scale-[0.98]"
+      className="glass-card inline-flex items-center gap-3 !bg-primary-900/90 !border-primary-800/30 rounded-2xl px-6 py-3.5 text-white transition-all duration-200 hover:!bg-primary-800/95 hover:shadow-lg active:scale-[0.98]"
     >
       {store === 'apple' ? <AppleIcon /> : <GooglePlayIcon />}
       <div className="text-left">
-        <div className="text-[10px] uppercase leading-tight opacity-80">
-          {store === 'apple' ? 'Download on the' : 'Get it on'}
+        <div className="text-[10px] uppercase leading-tight opacity-70">
+          {subLabel}
         </div>
         <div className="text-base font-semibold leading-tight">{label}</div>
       </div>

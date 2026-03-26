@@ -18,10 +18,15 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? 'https://musaium.com',
   ),
+  icons: {
+    icon: '/images/favicon.png',
+    apple: '/images/logo.png',
+  },
   openGraph: {
     type: 'website',
     siteName: 'Musaium',
     locale: 'fr_FR',
+    images: [{ url: '/images/logo.png', width: 1024, height: 1024, alt: 'Musaium' }],
   },
 };
 
