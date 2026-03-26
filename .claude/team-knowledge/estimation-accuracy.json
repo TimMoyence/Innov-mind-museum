@@ -153,6 +153,18 @@
       "filesReal": 8,
       "precision": 0.80,
       "notes": "Estimated L (10+ files), actual 8 files (7 created + 1 modified). Overestimated — chore runs have lower file count than feature runs."
+    },
+    {
+      "id": "R12",
+      "date": "2026-03-26",
+      "mode": "refactor (component tests + FlashList + React Compiler)",
+      "estimation": "M",
+      "loopsEstimated": 0,
+      "loopsReal": 0,
+      "filesEstimated": 12,
+      "filesReal": 13,
+      "precision": 0.92,
+      "notes": "Estimated M (~12 files with AM-001 1.3x factor), actual 13 (7 created + 6 modified). Best precision yet for a code-touching run. Factor working well."
     }
   ],
   "calibration": {

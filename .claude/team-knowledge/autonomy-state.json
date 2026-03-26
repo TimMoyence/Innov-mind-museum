@@ -1,6 +1,6 @@
 {
   "lastUpdated": "2026-03-25",
-  "currentLevel": "L2",
+  "currentLevel": "L3",
   "proposedLevel": null,
   "promotionDate": "2026-03-25",
   "promotionTrigger": "R5 score 93 >= 85 — 5/5 consecutive qualifying runs",
@@ -121,6 +121,15 @@
       "level": "L2",
       "postDevFail": false,
       "notes": "Store submission polish. 0 agents, 8 files, 0 tests. PE-008 applied. Privacy page migrated."
+    },
+    {
+      "date": "2026-03-26",
+      "run": "R12",
+      "score": 95,
+      "result": "PASS",
+      "level": "L2->L3",
+      "postDevFail": false,
+      "notes": "FlashList v2 + 24 component tests + React Compiler + SSOT colors. L3 PROMOTED. 15 consecutive runs >= 85."
     }
   ],
   "conditions": {
@@ -132,9 +141,10 @@
     },
     "L3": {
       "required": "10 runs consecutifs >= 85/100 ET 0 regression Ratchet ET 0 boucle > 2",
-      "current": "13/10 — ATTEINT numeriquement (R1-R10 tous >= 85). A valider formellement au prochain run.",
-      "met": false,
-      "note": "L3 qualification atteinte en nombre (13 runs >= 85, 0 boucle > 2, 0 regression ratchet) mais non encore formellement declare. Le R10 process audit recommande une validation explicite."
+      "current": "15/10 — ATTEINT et DECLARE. R1-R12 tous >= 85, 0 boucle > 2, 0 regression Ratchet.",
+      "met": true,
+      "promotionEffective": "2026-03-26",
+      "promotionTrigger": "R12 score 95 — 15th consecutive qualifying run. Sentinelle declared L3."
     },
     "L4": {
       "required": "Validation explicite utilisateur",
