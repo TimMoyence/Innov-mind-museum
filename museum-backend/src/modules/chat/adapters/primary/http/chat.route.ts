@@ -36,6 +36,7 @@ import {
 import { resolveLocalImageFilePath } from '../../secondary/image-storage.stub';
 
 import type { ChatService } from '../../../application/chat.service';
+import type { ArtKeywordRepository } from '../../../domain/artKeyword.repository.interface';
 
 
 const upload = multer({
@@ -212,7 +213,7 @@ const buildImageReadUrl = (params: {
  * @returns Configured Express Router.
  */
 // eslint-disable-next-line max-lines-per-function -- router factory registers all chat endpoints in one place
-export const createChatRouter = (chatService: ChatService): Router => {
+export const createChatRouter = (chatService: ChatService, artKeywordRepo?: ArtKeywordRepository): Router => {
   const router = Router();
 
   const sessionLimiter = createRateLimitMiddleware({
@@ -599,6 +600,55 @@ export const createChatRouter = (chatService: ChatService): Router => {
       const stream = createReadStream(imagePath);
       stream.on('error', next);
       stream.pipe(res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get('/art-keywords', isAuthenticated, async (req, res, next) => {
+    try {
+      if (!artKeywordRepo) {
+        res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Art keywords not enabled' } });
+        return;
+      }
+      const locale = typeof req.query.locale === 'string' ? req.query.locale : '%';
+      const sinceRaw = typeof req.query.since === 'string' ? req.query.since : undefined;
+      if (sinceRaw && Number.isNaN(Date.parse(sinceRaw))) {
+        throw badRequest('since must be a valid ISO date');
+      }
+      const keywords = sinceRaw
+        ? await artKeywordRepo.findByLocaleSince(locale, new Date(sinceRaw))
+        : await artKeywordRepo.findByLocale(locale);
+      res.status(200).json({ keywords: keywords.map((k: { keyword: string }) => k.keyword) });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/art-keywords', isAuthenticated, async (req, res, next) => {
+    try {
+      if (!artKeywordRepo) {
+        res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Art keywords not enabled' } });
+        return;
+      }
+      const { keywords, locale } = req.body as { keywords?: unknown[]; locale?: string };
+      if (!Array.isArray(keywords) || keywords.length === 0) {
+        throw badRequest('keywords must be a non-empty array of strings');
+      }
+      if (keywords.length > 100) {
+        throw badRequest('Maximum 100 keywords per request');
+      }
+      const validated = keywords.filter(
+        (k): k is string => typeof k === 'string' && k.trim().length > 0 && k.length <= 200,
+      );
+      if (validated.length === 0) {
+        throw badRequest('keywords must contain at least one valid string');
+      }
+      if (locale && (typeof locale !== 'string' || locale.length > 10)) {
+        throw badRequest('locale must be a string of max 10 characters');
+      }
+      await artKeywordRepo.bulkUpsert(validated, locale ?? 'en');
+      res.status(201).json({ created: validated.length });
     } catch (error) {
       next(error);
     }

@@ -3,9 +3,9 @@
   "currentLevel": "L3",
   "proposedLevel": null,
   "promotionDate": "2026-03-26",
-  "promotionTrigger": "R12 clean chore — 15 consecutive qualifying runs >= 85, 0 regression Ratchet, 0 boucle > 2. R11 scope creep addressed in R12.",
-  "runsSinceLastFail": 15,
-  "runsQualifying": 15,
+  "promotionTrigger": "R12 clean chore \u2014 15 consecutive qualifying runs >= 85, 0 regression Ratchet, 0 boucle > 2. R11 scope creep addressed in R12.",
+  "runsSinceLastFail": 16,
+  "runsQualifying": 16,
   "runsRequired": 10,
   "history": [
     {
@@ -120,7 +120,7 @@
       "result": "PASS",
       "level": "L2",
       "postDevFail": false,
-      "notes": "Theme centralization. Agent scope creep. L3 deferred — process integrity concern."
+      "notes": "Theme centralization. Agent scope creep. L3 deferred \u2014 process integrity concern."
     },
     {
       "date": "2026-03-26",
@@ -130,12 +130,21 @@
       "level": "L2->L3",
       "postDevFail": false,
       "notes": "Chore: scope creep guards in 9 agents + SKILL.md. EP-014 fixed. AM-009 applied. L3 PROMOTION."
+    },
+    {
+      "date": "2026-03-26",
+      "run": "R13",
+      "score": 85,
+      "result": "PASS",
+      "level": "L3",
+      "postDevFail": false,
+      "notes": "R15 Smart Art Keywords feature + review. First run with corrective loops (2). Score 85 = initial Sentinelle 68 (blockers found) raised to 85 after all fixes applied. L3 maintained."
     }
   ],
   "conditions": {
     "L2": {
       "required": "5 runs consecutifs >= 85/100 ET 0 FAIL post-DEV",
-      "current": "5/5 runs qualifiants (R1:91, R2:95, R3:97, R4:88, R5:93) — ATTEINT",
+      "current": "5/5 runs qualifiants (R1:91, R2:95, R3:97, R4:88, R5:93) \u2014 ATTEINT",
       "met": true,
       "promotionEffective": "2026-03-25"
     },

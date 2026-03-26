@@ -82,6 +82,7 @@ interface AppEnv {
     openAiApiKey?: string;
     deepseekApiKey?: string;
     googleApiKey?: string;
+    anthropicApiKey?: string;
   };
   rateLimit: {
     ipLimit: number;
@@ -241,6 +242,7 @@ const env: AppEnv = {
     openAiApiKey: process.env.OPENAI_API_KEY,
     deepseekApiKey: process.env.DEEPSEEK_API_KEY,
     googleApiKey: process.env.GOOGLE_API_KEY,
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY,
   },
   rateLimit: {
     ipLimit: toNumber(process.env.RATE_LIMIT_IP, 120),
