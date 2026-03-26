@@ -106,15 +106,13 @@ export default function AdminSupportPage() {
         </h1>
         <div className="mt-8 rounded-xl border border-primary-100 bg-white p-12 text-center text-text-muted">
           <p>
-            {isFr
-              ? 'Sélectionnez un ticket depuis la page des tickets.'
-              : 'Select a ticket from the tickets page.'}
+            {adminDict.supportPage.selectTicket}
           </p>
           <Link
             href={`/${locale}/admin/tickets`}
             className="mt-4 inline-block rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 transition-colors"
           >
-            {isFr ? 'Voir les tickets' : 'View Tickets'}
+            {adminDict.supportPage.viewTickets}
           </Link>
         </div>
       </div>
@@ -151,7 +149,7 @@ export default function AdminSupportPage() {
           href={`/${locale}/admin/tickets`}
           className="mt-4 inline-block text-sm font-medium text-primary-600 hover:text-primary-700"
         >
-          &larr; {isFr ? 'Retour aux tickets' : 'Back to tickets'}
+          &larr; {adminDict.supportPage.backToTickets}
         </Link>
       </div>
     );
@@ -168,7 +166,7 @@ export default function AdminSupportPage() {
         href={`/${locale}/admin/tickets`}
         className="text-sm font-medium text-primary-600 hover:text-primary-700"
       >
-        &larr; {isFr ? 'Retour aux tickets' : 'Back to tickets'}
+        &larr; {adminDict.supportPage.backToTickets}
       </Link>
 
       <h1 className="mt-2 text-2xl font-bold text-text-primary">
@@ -202,13 +200,13 @@ export default function AdminSupportPage() {
         <div className="mt-4 grid gap-2 text-sm text-text-secondary sm:grid-cols-2">
           <p>
             <span className="font-medium text-text-primary">
-              {isFr ? 'Utilisateur ID' : 'User ID'}:
+              {adminDict.common.userId}:
             </span>{' '}
             {ticket.userId}
           </p>
           <p>
             <span className="font-medium text-text-primary">
-              {isFr ? 'Créé le' : 'Created'}:
+              {adminDict.supportPage.createdAt}:
             </span>{' '}
             {formatDate(ticket.createdAt, isFr)}
           </p>
@@ -224,12 +222,12 @@ export default function AdminSupportPage() {
       {/* Messages thread */}
       <div className="mt-6 space-y-4">
         <h3 className="text-sm font-semibold text-text-primary">
-          {isFr ? 'Messages' : 'Messages'} ({ticket.messages.length})
+          {adminDict.common.messages} ({ticket.messages.length})
         </h3>
 
         {ticket.messages.length === 0 && (
           <p className="text-sm text-text-muted">
-            {isFr ? 'Aucun message pour le moment.' : 'No messages yet.'}
+            {adminDict.supportPage.noMessages}
           </p>
         )}
 
@@ -267,13 +265,13 @@ export default function AdminSupportPage() {
       {/* Reply form */}
       <div className="mt-6 rounded-xl border border-primary-100 bg-white p-6">
         <h3 className="text-sm font-semibold text-text-primary">
-          {isFr ? 'Répondre' : 'Reply'}
+          {adminDict.supportPage.reply}
         </h3>
         <textarea
           value={replyText}
           onChange={(e) => { setReplyText(e.target.value); }}
           rows={4}
-          placeholder={isFr ? 'Votre message...' : 'Your message...'}
+          placeholder={adminDict.supportPage.replyPlaceholder}
           className="mt-3 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200 resize-none"
         />
         <div className="mt-3 flex justify-end">
@@ -284,8 +282,8 @@ export default function AdminSupportPage() {
             className="rounded-lg bg-primary-600 px-5 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
           >
             {sending
-              ? '...'
-              : isFr ? 'Envoyer' : 'Send'}
+              ? adminDict.supportPage.sending
+              : adminDict.supportPage.send}
           </button>
         </div>
       </div>

@@ -97,5 +97,75 @@ export interface Dictionary {
       submit: string;
       error: string;
     };
+    common: {
+      date: string;
+      status: string;
+      priority: string;
+      actions: string;
+      messages: string;
+      user: string;
+      userId: string;
+      subject: string;
+      confirm: string;
+      cancel: string;
+      previous: string;
+      next: string;
+      pageOf: string;
+      allStatuses: string;
+      allPriorities: string;
+      noData: string;
+      conversations: string;
+    };
+    reportsPage: {
+      subtitle: string;
+      reason: string;
+      message: string;
+      review: string;
+      reviewReport: string;
+      reportedMessage: string;
+      reviewerNotes: string;
+      reviewerNotesPlaceholder: string;
+      noReports: string;
+    };
+    ticketsPage: {
+      subtitle: string;
+      update: string;
+      view: string;
+      updateTicket: string;
+      noTickets: string;
+    };
+    supportPage: {
+      subtitle: string;
+      selectTicket: string;
+      viewTickets: string;
+      backToTickets: string;
+      createdAt: string;
+      description: string;
+      noMessages: string;
+      reply: string;
+      replyPlaceholder: string;
+      send: string;
+      sending: string;
+    };
+    analyticsPage: {
+      subtitle: string;
+      avgMessages: string;
+      avgDuration: string;
+      returnRate: string;
+      uniqueUsers: string;
+      returningUsers: string;
+      usage: string;
+      daily: string;
+      weekly: string;
+      monthly: string;
+      days: string;
+      sessions: string;
+      messagesSent: string;
+      activeUsers: string;
+      topArtworks: string;
+      topMuseums: string;
+      museum: string;
+      guardrailBlockRate: string;
+    };
   };
 }

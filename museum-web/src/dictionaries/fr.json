@@ -152,6 +152,76 @@
       "passwordPlaceholder": "Mot de passe",
       "submit": "Se connecter",
       "error": "Identifiants invalides"
+    },
+    "common": {
+      "date": "Date",
+      "status": "Statut",
+      "priority": "Priorité",
+      "actions": "Actions",
+      "messages": "Messages",
+      "user": "Utilisateur",
+      "userId": "ID utilisateur",
+      "subject": "Sujet",
+      "confirm": "Confirmer",
+      "cancel": "Annuler",
+      "previous": "Précédent",
+      "next": "Suivant",
+      "pageOf": "Page {page} sur {totalPages} ({total} résultats)",
+      "allStatuses": "Tous les statuts",
+      "allPriorities": "Toutes les priorités",
+      "noData": "Aucune donnée.",
+      "conversations": "Conversations"
+    },
+    "reportsPage": {
+      "subtitle": "Consultez et modérez les signalements.",
+      "reason": "Raison",
+      "message": "Message",
+      "review": "Examiner",
+      "reviewReport": "Examiner le signalement",
+      "reportedMessage": "Message signalé",
+      "reviewerNotes": "Notes du modérateur",
+      "reviewerNotesPlaceholder": "Ajoutez des notes sur votre décision...",
+      "noReports": "Aucun signalement trouvé."
+    },
+    "ticketsPage": {
+      "subtitle": "Gérez les tickets de support.",
+      "update": "Modifier",
+      "view": "Voir",
+      "updateTicket": "Modifier le ticket",
+      "noTickets": "Aucun ticket trouvé."
+    },
+    "supportPage": {
+      "subtitle": "Consultez et répondez aux tickets de support.",
+      "selectTicket": "Sélectionnez un ticket depuis la page des tickets.",
+      "viewTickets": "Voir les tickets",
+      "backToTickets": "Retour aux tickets",
+      "createdAt": "Créé le",
+      "description": "Description",
+      "noMessages": "Aucun message pour le moment.",
+      "reply": "Répondre",
+      "replyPlaceholder": "Votre réponse...",
+      "send": "Envoyer",
+      "sending": "Envoi..."
+    },
+    "analyticsPage": {
+      "subtitle": "Statistiques d'utilisation et d'engagement de la plateforme.",
+      "avgMessages": "Moy. messages / session",
+      "avgDuration": "Durée moy. (min)",
+      "returnRate": "Taux de retour",
+      "uniqueUsers": "Utilisateurs uniques",
+      "returningUsers": "Utilisateurs récurrents",
+      "usage": "Utilisation",
+      "daily": "Quotidien",
+      "weekly": "Hebdomadaire",
+      "monthly": "Mensuel",
+      "days": "jours",
+      "sessions": "Sessions",
+      "messagesSent": "Messages",
+      "activeUsers": "Utilisateurs actifs",
+      "topArtworks": "Œuvres les plus consultées",
+      "topMuseums": "Musées les plus actifs",
+      "museum": "Musée",
+      "guardrailBlockRate": "Taux de blocage (guardrail)"
     }
   }
 }
