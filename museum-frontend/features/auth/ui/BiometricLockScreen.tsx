@@ -34,7 +34,7 @@ export const BiometricLockScreen = ({
         accessibilityRole="button"
         accessibilityLabel={t('biometric.unlock')}
       >
-        <Text style={styles.buttonText}>
+        <Text style={[styles.buttonText, { color: theme.primaryContrast }]}>
           {failed
             ? t('biometric.retry')
             : `${t('biometric.unlock')} ${biometricLabel}`}
@@ -74,7 +74,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   buttonText: {
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 16,
   },

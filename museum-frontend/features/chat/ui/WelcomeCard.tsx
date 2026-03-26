@@ -39,7 +39,7 @@ export const WelcomeCard = ({ museumMode, onSuggestion, onCamera, disabled = fal
   return (
     <GlassCard style={styles.card} intensity={48}>
       <Text style={[styles.title, { color: theme.textPrimary }]}>{t('welcome.title')}</Text>
-      <Text style={styles.subtitle}>{t('welcome.subtitle')}</Text>
+      <Text style={[styles.subtitle, { color: theme.textTertiary }]}>{t('welcome.subtitle')}</Text>
       <View style={styles.suggestions}>
         {suggestions.map((suggestion) => (
           <Pressable
@@ -79,7 +79,6 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 4,
     fontSize: 14,
-    color: '#475569',
     textAlign: 'center',
   },
   suggestions: {

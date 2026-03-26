@@ -20,7 +20,7 @@ export default function TabLayout() {
         tabBarLabelStyle: styles.tabLabel,
         tabBarStyle: [
           styles.tabBar,
-          { borderTopColor: theme.glassBorder },
+          { borderTopColor: theme.glassBorder, shadowColor: theme.shadowColor },
         ],
         tabBarBackground: () => (
           <BlurView
@@ -80,7 +80,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderRadius: 999,
     overflow: 'hidden',
-    shadowColor: '#0F172A',
     shadowOpacity: 0.12,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },

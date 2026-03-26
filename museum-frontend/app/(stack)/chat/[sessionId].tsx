@@ -255,7 +255,7 @@ export default function ChatSessionScreen() {
             <View style={styles.headerContent}>
               <Text style={[styles.header, { color: theme.textPrimary }]} numberOfLines={1}>{sessionTitle || t('chat.fallback_title')}</Text>
               <View style={styles.headerSubRow}>
-                <Text style={[styles.subheader, { color: theme.textSecondary }]} numberOfLines={1}>{museumName || `${sessionId.slice(0, 12)}...`}</Text>
+                <Text style={[styles.subheader, { color: theme.textTertiary }]} numberOfLines={1}>{museumName || `${sessionId.slice(0, 12)}...`}</Text>
                 {expertiseLevel ? <ExpertiseBadge level={expertiseLevel} /> : null}
               </View>
             </View>
@@ -315,10 +315,10 @@ export default function ChatSessionScreen() {
           <GlassCard style={styles.audioCard} intensity={56}>
             <Text style={[styles.audioTitle, { color: theme.textPrimary }]}>{t('chat.voice_ready')}</Text>
             <View style={styles.audioRow}>
-              <Pressable style={styles.attachButton} onPress={() => void playRecordedAudio()} disabled={isPlayingAudio}>
+              <Pressable style={[styles.attachButton, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => void playRecordedAudio()} disabled={isPlayingAudio}>
                 <Text style={[styles.attachText, { color: theme.textPrimary }]}>{isPlayingAudio ? t('chat.playing') : t('chat.play')}</Text>
               </Pressable>
-              <Pressable style={styles.attachButton} onPress={clearMedia}>
+              <Pressable style={[styles.attachButton, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={clearMedia}>
                 <Text style={[styles.attachText, { color: theme.textPrimary }]}>{t('chat.clear')}</Text>
               </Pressable>
             </View>
@@ -326,13 +326,13 @@ export default function ChatSessionScreen() {
         ) : null}
 
         <View style={styles.attachRow}>
-          <Pressable style={styles.attachButton} onPress={() => void onPickImage()}>
+          <Pressable style={[styles.attachButton, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => void onPickImage()}>
             <Text style={[styles.attachText, { color: theme.textPrimary }]}>{t('chat.gallery')}</Text>
           </Pressable>
-          <Pressable style={styles.attachButton} onPress={onTakePicture}>
+          <Pressable style={[styles.attachButton, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={onTakePicture}>
             <Text style={[styles.attachText, { color: theme.textPrimary }]}>{t('chat.lens')}</Text>
           </Pressable>
-          <Pressable style={styles.attachButton} onPress={() => void toggleRecording()}>
+          <Pressable style={[styles.attachButton, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => void toggleRecording()}>
             <Text style={[styles.attachText, { color: theme.textPrimary }]}>{isRecording ? t('chat.stop_audio') : t('chat.audio')}</Text>
           </Pressable>
         </View>
@@ -373,7 +373,6 @@ const styles = StyleSheet.create({
   recordingStatus: {
     marginBottom: 10,
     textAlign: 'center',
-    color: '#991B1B',
     fontWeight: '700',
     fontSize: 12,
   },
@@ -402,7 +401,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   subheader: {
-    color: '#475569',
     fontSize: 12,
   },
   closeButton: {
@@ -457,10 +455,8 @@ const styles = StyleSheet.create({
   attachButton: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.44)',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: 'rgba(255,255,255,0.64)',
   },
   attachText: {
     fontWeight: '600',

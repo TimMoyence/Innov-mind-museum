@@ -121,18 +121,18 @@ export default function MuseumDetailScreen() {
         {error ? <ErrorNotice message={error} onDismiss={() => setError(null)} /> : null}
 
         <Pressable
-          style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+          style={[styles.primaryButton, { backgroundColor: theme.primary, shadowColor: theme.shadowColor }]}
           onPress={() => void handleStartChat()}
           disabled={isCreating}
           accessibilityRole="button"
           accessibilityLabel={t('museumDirectory.start_chat')}
         >
           {isCreating ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={theme.primaryContrast} />
           ) : (
             <>
-              <Ionicons name="chatbubble-outline" size={18} color="#FFFFFF" />
-              <Text style={styles.primaryButtonText}>
+              <Ionicons name="chatbubble-outline" size={18} color={theme.primaryContrast} />
+              <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
                 {t('museumDirectory.start_chat')}
               </Text>
             </>
@@ -215,13 +215,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 8,
-    shadowColor: '#1E3A8A',
     shadowOpacity: 0.2,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 8 },
   },
   primaryButtonText: {
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 15,
   },

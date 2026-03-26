@@ -79,7 +79,7 @@ export const MessageContextMenu = ({
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose} accessibilityLabel={t('a11y.contextMenu.overlay_hint')}>
-        <View style={[styles.sheet, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }]}>
+        <View style={[styles.sheet, { backgroundColor: isDark ? theme.glassBackground : theme.primaryContrast }]}>
           <View style={styles.handle} />
           <Text style={[styles.title, { color: theme.textSecondary }]} numberOfLines={1}>
             {message.text?.slice(0, 60) || t('chat.voice_message')}

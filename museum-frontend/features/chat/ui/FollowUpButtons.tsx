@@ -19,7 +19,7 @@ export const FollowUpButtons = ({ questions, onPress, disabled = false }: Follow
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionLabel}>{t('followUpButtons.section_label')}</Text>
+      <Text style={[styles.sectionLabel, { color: theme.placeholderText }]}>{t('followUpButtons.section_label')}</Text>
       {questions.map((question) => (
         <Pressable
           key={question}
@@ -48,7 +48,6 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#64748B',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 2,

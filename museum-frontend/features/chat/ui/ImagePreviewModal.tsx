@@ -91,7 +91,7 @@ export const ImagePreviewModal = ({
           </Pressable>
           <Pressable
             onPress={handleConfirm}
-            style={styles.confirmButton}
+            style={[styles.confirmButton, { backgroundColor: theme.primary }]}
             disabled={isProcessing}
           >
             <Ionicons name="send" size={18} color={theme.primaryContrast} />
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#1D4ED8',
+    backgroundColor: undefined,
   },
   confirmText: {
     fontWeight: '700',

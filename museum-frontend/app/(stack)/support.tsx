@@ -108,7 +108,7 @@ export default function SupportScreen() {
             accessibilityRole="link"
             accessibilityLabel={t('a11y.support.instagram')}
           >
-            <Text style={styles.primaryButtonText}>{t('support.open_instagram')}</Text>
+            <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>{t('support.open_instagram')}</Text>
           </Pressable>
         </GlassCard>
 
@@ -117,7 +117,7 @@ export default function SupportScreen() {
           <Text style={[styles.cardText, { color: theme.textSecondary }]}>Handle: {SUPPORT_LINKS.telegram.handle}</Text>
           <Text style={[styles.cardText, { color: theme.textSecondary }]}>{SUPPORT_LINKS.telegram.url}</Text>
           <Pressable
-            style={styles.secondaryButton}
+            style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]}
             onPress={() => void openChannel('telegram')}
             accessibilityRole="link"
             accessibilityLabel={t('a11y.support.telegram')}
@@ -139,11 +139,11 @@ export default function SupportScreen() {
           </Text>
         </GlassCard>
 
-        <Pressable style={styles.secondaryButton} onPress={() => void shareChannels()} accessibilityRole="button" accessibilityLabel={t('a11y.support.share')}>
+        <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]} onPress={() => void shareChannels()} accessibilityRole="button" accessibilityLabel={t('a11y.support.share')}>
           <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('support.share_channels')}</Text>
         </Pressable>
 
-        <Pressable style={styles.secondaryButton} onPress={() => router.push('/(stack)/settings')} accessibilityRole="button" accessibilityLabel={t('a11y.support.back_settings')}>
+        <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]} onPress={() => router.push('/(stack)/settings')} accessibilityRole="button" accessibilityLabel={t('a11y.support.back_settings')}>
           <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('support.back_settings')}</Text>
         </Pressable>
       </ScrollView>
@@ -200,15 +200,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 13,
   },
   secondaryButton: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.48)',
-    backgroundColor: 'rgba(255,255,255,0.70)',
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 12,

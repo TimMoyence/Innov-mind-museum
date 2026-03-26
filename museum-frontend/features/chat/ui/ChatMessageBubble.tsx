@@ -62,7 +62,7 @@ export const ChatMessageBubble = React.memo(({
           ) : null}
         </View>
       ) : (
-        <Text style={styles.userText}>{message.text}</Text>
+        <Text style={[styles.userText, { color: theme.primaryContrast }]}>{message.text}</Text>
       )}
       {!isStreaming && message.image?.url ? (
         <Image
@@ -147,9 +147,7 @@ const styles = StyleSheet.create({
     maxWidth: '85%',
     borderWidth: 1,
   },
-  userText: {
-    color: '#FFFFFF',
-  },
+  userText: {},
   timestamp: {
     marginTop: 6,
     fontSize: 11,

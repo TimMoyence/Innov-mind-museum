@@ -7,18 +7,25 @@ interface ExpertiseBadgeProps {
   level: 'beginner' | 'intermediate' | 'expert';
 }
 
-const colorByLevel: Record<string, string> = {
+const lightColorByLevel: Record<string, string> = {
   beginner: '#059669',
   intermediate: '#D97706',
   expert: '#7C3AED',
 };
 
+const darkColorByLevel: Record<string, string> = {
+  beginner: '#34D399',
+  intermediate: '#FBBF24',
+  expert: '#A78BFA',
+};
+
 /** Displays a color-coded pill badge indicating the user's expertise level (beginner, intermediate, or expert). */
 export const ExpertiseBadge = ({ level }: ExpertiseBadgeProps) => {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const { t } = useTranslation();
   const label = t(`expertiseBadge.${level}`);
-  const color = colorByLevel[level] || theme.primary;
+  const colorMap = isDark ? darkColorByLevel : lightColorByLevel;
+  const color = colorMap[level] || theme.primary;
 
   return (
     <View style={[styles.pill, { backgroundColor: `${color}14` }]}>
