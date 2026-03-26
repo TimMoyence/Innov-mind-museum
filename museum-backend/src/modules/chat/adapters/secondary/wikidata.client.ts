@@ -31,7 +31,8 @@ export class WikidataClient implements KnowledgeBaseProvider {
    */
   async lookup(query: KnowledgeBaseQuery): Promise<ArtworkFacts | null> {
     try {
-      const lang = query.language ?? 'en';
+      const rawLang = query.language ?? 'en';
+      const lang = /^[a-z]{2,3}$/i.test(rawLang) ? rawLang.toLowerCase() : 'en';
       const entity = await this.searchEntity(query.searchTerm, lang);
       if (!entity) return null;
       return await this.fetchProperties(entity.id, entity.label, lang);

@@ -205,7 +205,8 @@
     "back_settings": "返回设置",
     "invalid_link_body": "{{label}}链接配置不正确。",
     "channel_opened": "{{label}}已打开",
-    "channel_failed": "{{label}}链接失败"
+    "channel_failed": "{{label}}链接失败",
+    "links_shared": "已分享支持链接"
   },
   "discover": {
     "title": "发现",
@@ -312,7 +313,9 @@
     "audio": "语音",
     "image_sent": "[已发送图片]",
     "voice_message": "[语音消息]",
-    "share_footer": "通过Musaium分享 — 您的博物馆伴侣\nhttps://musaium.app"
+    "share_footer": "通过Musaium分享 — 您的博物馆伴侣\nhttps://musaium.app",
+    "replace_image": "替换",
+    "remove_image": "删除"
   },
   "chatInput": {
     "placeholder": "询问关于艺术品、古迹的问题，或发送语音/照片...",
@@ -556,5 +559,37 @@
       "cancel": "关闭菜单",
       "overlay_hint": "点击关闭菜单"
     }
+  },
+  "tickets": {
+    "title": "我的工单",
+    "create": "创建工单",
+    "subject": "主题",
+    "description": "描述",
+    "priority": "优先级",
+    "status": "状态",
+    "messages": "消息",
+    "noTickets": "暂无工单",
+    "noTicketsDesc": "创建工单以获取支持团队的帮助。",
+    "createFirst": "创建您的第一个工单",
+    "detail": "工单详情",
+    "reply": "回复",
+    "replyPlaceholder": "输入您的消息...",
+    "send": "发送",
+    "sending": "发送中...",
+    "created": "创建时间",
+    "noMessages": "暂无消息",
+    "submitTicket": "提交工单",
+    "subjectPlaceholder": "简要描述您的问题",
+    "descriptionPlaceholder": "详细描述您的问题...",
+    "priorityLow": "低",
+    "priorityMedium": "中",
+    "priorityHigh": "高",
+    "statusOpen": "待处理",
+    "statusInProgress": "处理中",
+    "statusResolved": "已解决",
+    "statusClosed": "已关闭",
+    "myTickets": "我的工单",
+    "createTicket": "创建工单",
+    "ticketCreated": "工单创建成功"
   }
 }

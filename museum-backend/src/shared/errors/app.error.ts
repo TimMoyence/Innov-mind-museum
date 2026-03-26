@@ -91,3 +91,17 @@ export const tooManyRequests = (message: string): AppError => {
     code: 'TOO_MANY_REQUESTS',
   });
 };
+
+/**
+ * Creates a 401 Unauthorized error.
+ *
+ * @param message - Error description.
+ * @returns AppError with status 401.
+ */
+export const unauthorized = (message: string): AppError => {
+  return new AppError({
+    message,
+    statusCode: 401,
+    code: 'UNAUTHORIZED',
+  });
+};
