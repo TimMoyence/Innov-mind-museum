@@ -1,4 +1,5 @@
 import { badRequest } from '@shared/errors/app.error';
+
 import type { IAdminRepository } from '../domain/admin.repository.interface';
 import type { PaginatedResult, AdminUserDTO, ListUsersFilters } from '../domain/admin.types';
 
@@ -6,6 +7,7 @@ import type { PaginatedResult, AdminUserDTO, ListUsersFilters } from '../domain/
 export class ListUsersUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
+  /** Validates pagination, sanitizes search input, and retrieves a paginated user list. */
   async execute(filters: ListUsersFilters): Promise<PaginatedResult<AdminUserDTO>> {
     const { page, limit } = filters.pagination;
 
@@ -16,9 +18,10 @@ export class ListUsersUseCase {
       throw badRequest('limit must be between 1 and 100');
     }
 
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
     const sanitizedSearch = filters.search?.trim().slice(0, 200) || undefined;
 
-    return this.repository.listUsers({
+    return await this.repository.listUsers({
       search: sanitizedSearch,
       role: filters.role,
       pagination: { page, limit },

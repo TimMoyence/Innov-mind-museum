@@ -8,7 +8,7 @@ const mockRequestMediaLibraryPermissionsAsync = jest.fn<
   []
 >();
 const mockLaunchImageLibraryAsync = jest.fn<
-  Promise<{ canceled: boolean; assets: Array<{ uri: string }> }>,
+  Promise<{ canceled: boolean; assets: { uri: string }[] }>,
   []
 >();
 

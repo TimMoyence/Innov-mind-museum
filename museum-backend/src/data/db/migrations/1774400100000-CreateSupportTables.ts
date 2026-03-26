@@ -1,8 +1,12 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
 
+/**
+ *
+ */
 export class CreateSupportTables1774400100000 implements MigrationInterface {
   name = 'CreateSupportTables1774400100000';
 
+  /** Apply the CreateSupportTables migration. */
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE TABLE "support_tickets" (
@@ -57,6 +61,7 @@ export class CreateSupportTables1774400100000 implements MigrationInterface {
     );
   }
 
+  /** Revert the CreateSupportTables migration. */
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP TABLE IF EXISTS "ticket_messages"`);
     await queryRunner.query(`DROP TABLE IF EXISTS "support_tickets"`);

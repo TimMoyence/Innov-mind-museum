@@ -44,7 +44,7 @@ export const WelcomeCard = ({ museumMode, onSuggestion, onCamera, disabled = fal
         {suggestions.map((suggestion) => (
           <Pressable
             key={suggestion.text}
-            style={[styles.suggestionButton, disabled && styles.suggestionButtonDisabled]}
+            style={[styles.suggestionButton, { borderColor: theme.separator, backgroundColor: theme.surface }, disabled && styles.suggestionButtonDisabled]}
             onPress={() => {
               if (suggestion.isCamera) {
                 onCamera();
@@ -91,8 +91,6 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.35)',
-    backgroundColor: 'rgba(255,255,255,0.6)',
     paddingHorizontal: 14,
     paddingVertical: 12,
   },

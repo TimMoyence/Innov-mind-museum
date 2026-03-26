@@ -28,8 +28,8 @@ export const RecommendationChips = ({ recommendations, onPress, disabled = false
         {recommendations.map((recommendation) => (
           <Pressable
             key={recommendation}
-            style={[styles.chip, disabled && styles.chipDisabled]}
-            onPress={() => onPress(recommendation)}
+            style={[styles.chip, { borderColor: theme.separator, backgroundColor: theme.surface }, disabled && styles.chipDisabled]}
+            onPress={() => { onPress(recommendation); }}
             disabled={disabled}
             accessibilityRole="button"
             accessibilityLabel={recommendation}
@@ -62,8 +62,6 @@ const styles = StyleSheet.create({
     gap: 6,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.35)',
-    backgroundColor: 'rgba(255,255,255,0.6)',
     paddingHorizontal: 12,
     paddingVertical: 8,
     maxWidth: 220,

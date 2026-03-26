@@ -1,8 +1,12 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
 
+/**
+ *
+ */
 export class AddAuthRefreshTokens1771800000000 implements MigrationInterface {
   name = 'AddAuthRefreshTokens1771800000000';
 
+  /** Apply the AddAuthRefreshTokens migration. */
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE TABLE "auth_refresh_tokens" (
@@ -40,6 +44,7 @@ export class AddAuthRefreshTokens1771800000000 implements MigrationInterface {
     `);
   }
 
+  /** Revert the AddAuthRefreshTokens migration. */
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
       `ALTER TABLE "auth_refresh_tokens" DROP CONSTRAINT "FK_auth_refresh_tokens_user"`,

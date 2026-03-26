@@ -65,7 +65,7 @@ export default function MuseumDetailScreen() {
     >
       <Pressable
         style={styles.backButton}
-        onPress={() => router.back()}
+        onPress={() => { router.back(); }}
         accessibilityRole="button"
         accessibilityLabel={t('common.back')}
       >
@@ -118,7 +118,7 @@ export default function MuseumDetailScreen() {
           </GlassCard>
         ) : null}
 
-        {error ? <ErrorNotice message={error} onDismiss={() => setError(null)} /> : null}
+        {error ? <ErrorNotice message={error} onDismiss={() => { setError(null); }} /> : null}
 
         <Pressable
           style={[styles.primaryButton, { backgroundColor: theme.primary, shadowColor: theme.shadowColor }]}

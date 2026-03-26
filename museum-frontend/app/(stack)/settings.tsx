@@ -116,19 +116,19 @@ export default function SettingsScreen() {
               id: 'prefs',
               icon: 'options-outline',
               label: t('settings.preferences'),
-              onPress: () => open('/(stack)/preferences'),
+              onPress: () => { open('/(stack)/preferences'); },
             },
             {
               id: 'privacy',
               icon: 'shield-checkmark-outline',
               label: t('settings.privacy_rgpd'),
-              onPress: () => open('/(stack)/privacy'),
+              onPress: () => { open('/(stack)/privacy'); },
             },
             {
               id: 'support',
               icon: 'headset-outline',
               label: t('settings.support'),
-              onPress: () => open('/(stack)/support'),
+              onPress: () => { open('/(stack)/support'); },
             },
           ]}
         />
@@ -166,7 +166,7 @@ export default function SettingsScreen() {
                     backgroundColor: theme.glassBackground,
                   },
                 ]}
-                onPress={() => setMode(option.value)}
+                onPress={() => { setMode(option.value); }}
                 accessibilityRole="button"
                 accessibilityLabel={t('a11y.settings.theme_button', { theme: option.key })}
                 accessibilityState={{ selected: mode === option.value }}
@@ -225,7 +225,7 @@ export default function SettingsScreen() {
               <Text style={[styles.metaLine, { color: theme.textPrimary }]}>{t('settings.guide_level_label', { level: guideLevel })}</Text>
             </>
           )}
-          <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => open('/(stack)/preferences')} accessibilityRole="button" accessibilityLabel={t('a11y.settings.preferences')}>
+          <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => { open('/(stack)/preferences'); }} accessibilityRole="button" accessibilityLabel={t('a11y.settings.preferences')}>
             <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>{t('settings.open_preferences')}</Text>
           </Pressable>
         </GlassCard>
@@ -237,7 +237,7 @@ export default function SettingsScreen() {
           </Text>
           <Pressable
             style={[styles.secondaryButton, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]}
-            onPress={() => open('/(stack)/guided-museum-mode')}
+            onPress={() => { open('/(stack)/guided-museum-mode'); }}
             accessibilityRole="button"
             accessibilityLabel={t('a11y.settings.guided_mode')}
           >
@@ -248,21 +248,21 @@ export default function SettingsScreen() {
         <GlassCard style={styles.card} intensity={52}>
           <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.compliance_title')}</Text>
           <View style={styles.linkList}>
-            <Pressable style={[styles.linkRow, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => open('/(stack)/privacy')} accessibilityRole="link" accessibilityLabel={t('a11y.settings.privacy_link')}>
+            <Pressable style={[styles.linkRow, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => { open('/(stack)/privacy'); }} accessibilityRole="link" accessibilityLabel={t('a11y.settings.privacy_link')}>
               <Text style={[styles.linkTitle, { color: theme.textPrimary }]}>{t('settings.privacy_rgpd')}</Text>
               <Text style={[styles.linkDescription, { color: theme.textSecondary }]}>{t('settings.privacy_desc')}</Text>
             </Pressable>
-            <Pressable style={[styles.linkRow, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => open('/(stack)/terms')} accessibilityRole="link" accessibilityLabel={t('a11y.settings.terms_link')}>
+            <Pressable style={[styles.linkRow, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => { open('/(stack)/terms'); }} accessibilityRole="link" accessibilityLabel={t('a11y.settings.terms_link')}>
               <Text style={[styles.linkTitle, { color: theme.textPrimary }]}>{t('settings.terms_of_service')}</Text>
               <Text style={[styles.linkDescription, { color: theme.textSecondary }]}>{t('settings.terms_desc')}</Text>
             </Pressable>
-            <Pressable style={[styles.linkRow, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => open('/(stack)/support')} accessibilityRole="link" accessibilityLabel={t('a11y.settings.support_link')}>
+            <Pressable style={[styles.linkRow, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => { open('/(stack)/support'); }} accessibilityRole="link" accessibilityLabel={t('a11y.settings.support_link')}>
               <Text style={[styles.linkTitle, { color: theme.textPrimary }]}>{t('settings.support')}</Text>
               <Text style={[styles.linkDescription, { color: theme.textSecondary }]}>
                 {t('settings.support_desc')}
               </Text>
             </Pressable>
-            <Pressable style={[styles.linkRow, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => open('/(stack)/onboarding')} accessibilityRole="link" accessibilityLabel={t('a11y.settings.onboarding_link')}>
+            <Pressable style={[styles.linkRow, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => { open('/(stack)/onboarding'); }} accessibilityRole="link" accessibilityLabel={t('a11y.settings.onboarding_link')}>
               <Text style={[styles.linkTitle, { color: theme.textPrimary }]}>{t('settings.onboarding_help')}</Text>
               <Text style={[styles.linkDescription, { color: theme.textSecondary }]}>
                 {t('settings.onboarding_desc')}
@@ -294,7 +294,7 @@ export default function SettingsScreen() {
         </GlassCard>
 
         <View style={styles.footerRow}>
-          <Pressable style={[styles.secondaryButton, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => open('/(tabs)/home')} accessibilityRole="button" accessibilityLabel={t('a11y.settings.back_home')}>
+          <Pressable style={[styles.secondaryButton, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => { open('/(tabs)/home'); }} accessibilityRole="button" accessibilityLabel={t('a11y.settings.back_home')}>
             <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('settings.back_to_home')}</Text>
           </Pressable>
 

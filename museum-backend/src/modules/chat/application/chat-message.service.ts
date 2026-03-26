@@ -1,46 +1,48 @@
-import { env } from '@src/config/env';
-import { logger } from '@shared/logger/logger';
+/* eslint-disable max-lines -- message service covers prepare, commit, post, stream, and audio workflows */
+import { AUDIT_SECURITY_GUARDRAIL_BLOCK } from '@shared/audit/audit.types';
 import { AppError, badRequest, conflict } from '@shared/errors/app.error';
 import { resolveLocale } from '@shared/i18n/locale';
-import type { CacheService } from '@shared/cache/cache.port';
+import { logger } from '@shared/logger/logger';
+import { env } from '@src/config/env';
+
+import {
+  buildGuardrailRefusal,
+  evaluateAssistantOutputGuardrail,
+  evaluateUserInputGuardrail,
+  type GuardrailBlockReason,
+} from './art-topic-guardrail';
+import {
+  buildChatImageObjectKey,
+  withPolicyCitation,
+} from './chat-image.helpers';
 import {
   assertImageSize,
   assertMimeType,
   decodeBase64Image,
   isSafeImageUrl,
 } from './image-input';
-import {
-  buildGuardrailRefusal,
-  evaluateAssistantOutputGuardrail,
-  evaluateUserInputGuardrail,
-  GuardrailBlockReason,
-} from './art-topic-guardrail';
+import { ensureSessionAccess } from './session-access';
+import { computeSessionUpdates } from './visit-context';
+import { DisabledAudioTranscriber } from '../domain/ports/audio-transcriber.port';
+
+import type { PostMessageResult, PostAudioMessageResult } from './chat.service.types';
+import type { UserMemoryService } from './user-memory.service';
+import type { ChatRepository } from '../domain/chat.repository.interface';
 import type {
   PostAudioMessageInput,
   PostMessageInput,
 } from '../domain/chat.types';
-import { computeSessionUpdates } from './visit-context';
-import type { ChatRepository } from '../domain/chat.repository.interface';
-import type { ImageStorage } from '../domain/ports/image-storage.port';
+import type {
+  AudioTranscriber,
+} from '../domain/ports/audio-transcriber.port';
 import type {
   ChatOrchestrator,
   OrchestratorOutput,
 } from '../domain/ports/chat-orchestrator.port';
-import type {
-  AudioTranscriber,
-} from '../domain/ports/audio-transcriber.port';
-import { DisabledAudioTranscriber } from '../domain/ports/audio-transcriber.port';
+import type { ImageStorage } from '../domain/ports/image-storage.port';
 import type { OcrService } from '../domain/ports/ocr.port';
-import { ensureSessionAccess } from './session-access';
-import {
-  buildChatImageObjectKey,
-  withPolicyCitation,
-} from './chat-image.helpers';
-
 import type { AuditService } from '@shared/audit/audit.service';
-import { AUDIT_SECURITY_GUARDRAIL_BLOCK } from '@shared/audit/audit.types';
-import type { UserMemoryService } from './user-memory.service';
-import type { PostMessageResult, PostAudioMessageResult } from './chat.service.types';
+import type { CacheService } from '@shared/cache/cache.port';
 
 /** Dependencies for the message sub-service. */
 export interface ChatMessageServiceDeps {
@@ -80,8 +82,10 @@ export class ChatMessageService {
 
   /**
    * Shared pre-LLM logic: validates session, processes image, runs input guardrail, persists user message.
+   *
    * @returns Either a 'ready' preparation or a 'refused' result (guardrail blocked input).
    */
+  // eslint-disable-next-line max-lines-per-function, complexity, sonarjs/cognitive-complexity -- message preparation covers image processing, guardrail evaluation, and persistence in a single pipeline
   private async prepareMessage(
     sessionId: string,
     input: PostMessageInput,
@@ -140,7 +144,7 @@ export class ChatMessageService {
         }
 
         assertMimeType(mimeType, env.upload.allowedMimeTypes);
-        assertImageSize(sizeBytes as number, env.llm.maxImageBytes);
+        assertImageSize(sizeBytes ?? 0, env.llm.maxImageBytes);
 
         imageRef = await this.imageStorage.save({
           base64: normalizedBase64,
@@ -202,6 +206,7 @@ export class ChatMessageService {
       }
     }
 
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
     const requestedLocale = input.context?.locale?.trim() || session.locale || undefined;
     const historyBeforeMessage = await this.repository.listSessionHistory(
       sessionId,
@@ -284,6 +289,7 @@ export class ChatMessageService {
   /**
    * Persists the assistant response and returns the result. Shared by postMessage and postMessageStream.
    */
+  // eslint-disable-next-line max-lines-per-function, max-params, complexity -- commits assistant response with guardrail, session updates, artwork matching, cache invalidation
   private async commitAssistantResponse(
     sessionId: string,
     session: Awaited<ReturnType<typeof ensureSessionAccess>>,
@@ -343,8 +349,7 @@ export class ChatMessageService {
       throw error;
     }
 
-    if (outputGuardrail.allow && sessionUpdates) {
-      if (sessionUpdates.visitContext) {
+    if (outputGuardrail.allow && sessionUpdates?.visitContext) {
         const pendingArtwork = sessionUpdates.visitContext.artworksDiscussed.find(
           (a) => a.messageId === 'pending',
         );
@@ -352,7 +357,6 @@ export class ChatMessageService {
           pendingArtwork.messageId = assistantMessage.id;
         }
       }
-    }
 
     if (this.cache) {
       await this.cache.delByPrefix(`session:${sessionId}:`);
@@ -385,6 +389,7 @@ export class ChatMessageService {
   /**
    * Processes a user text/image message: runs input guardrail, persists the user message,
    * invokes the LLM orchestrator, applies the output guardrail, and persists the assistant reply.
+   *
    * @param sessionId - UUID of the target chat session.
    * @param input - User message payload (text and/or image).
    * @param requestId - Optional correlation id for tracing.
@@ -420,12 +425,13 @@ export class ChatMessageService {
       userMemoryBlock,
     });
 
-    return this.commitAssistantResponse(sessionId, session, aiResult, requestedLocale, history, ownerId);
+    return await this.commitAssistantResponse(sessionId, session, aiResult, requestedLocale, history, ownerId);
   }
 
   /**
    * Streams assistant response tokens via onToken callback while processing the message.
    * Uses shared prepareMessage/commitAssistantResponse logic.
+   *
    * @param sessionId - UUID of the target chat session.
    * @param input - User message payload (text only for streaming).
    * @param onToken - Called with each text token as it streams from the LLM.
@@ -435,6 +441,7 @@ export class ChatMessageService {
    * @param signal - AbortSignal to cancel the stream (e.g. on client disconnect).
    * @returns The assistant's reply with metadata.
    */
+  // eslint-disable-next-line max-params -- streaming requires callbacks, abort signal, and user context alongside core message parameters
   async postMessageStream(
     sessionId: string,
     input: PostMessageInput,
@@ -489,14 +496,12 @@ export class ChatMessageService {
         const guardrail = evaluateAssistantOutputGuardrail({ text: accumulated, history });
         if (guardrail.allow) {
           artSignalSeen = true;
-        } else if (!guardrail.allow && accumulated.length > 100) {
-          // Guardrail blocking — notify caller
-          if (onGuardrail && guardrail.reason) {
+        } else if (accumulated.length > 100 && // Guardrail blocking — notify caller
+          onGuardrail && guardrail.reason) {
             const refusalText = buildGuardrailRefusal(requestedLocale, guardrail.reason);
             onGuardrail(refusalText, guardrail.reason);
           }
           // Don't throw — let the stream complete so we can handle it in commitAssistantResponse
-        }
       }
 
       onToken(chunk);
@@ -521,11 +526,12 @@ export class ChatMessageService {
       onChunk,
     );
 
-    return this.commitAssistantResponse(sessionId, session, aiResult, requestedLocale, history, ownerId);
+    return await this.commitAssistantResponse(sessionId, session, aiResult, requestedLocale, history, ownerId);
   }
 
   /**
    * Transcribes an audio message to text, then delegates to {@link postMessage}.
+   *
    * @param sessionId - UUID of the target chat session.
    * @param input - Audio payload with base64 data, mime type, and size.
    * @param requestId - Optional correlation id for tracing.
@@ -542,9 +548,11 @@ export class ChatMessageService {
     const session = await ensureSessionAccess(sessionId, this.repository, currentUserId);
 
     const audio = input.audio;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: audio fields may be undefined from external API input
     if (!audio?.base64?.trim()) {
       throw badRequest('Audio payload is required');
     }
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: mimeType may be undefined from external API input
     if (!audio.mimeType?.trim()) {
       throw badRequest('Audio mime type is required');
     }
@@ -562,6 +570,7 @@ export class ChatMessageService {
     const transcription = await this.audioTranscriber.transcribe({
       base64: audio.base64,
       mimeType: audio.mimeType,
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
       locale: input.context?.locale || session.locale || undefined,
       requestId,
     });

@@ -1,4 +1,3 @@
-import type { PaginatedResult } from '@modules/admin/domain/admin.types';
 import type {
   CreateTicketInput,
   TicketDTO,
@@ -8,6 +7,7 @@ import type {
   TicketMessageDTO,
   UpdateTicketInput,
 } from './support.types';
+import type { PaginatedResult } from '@modules/admin/domain/admin.types';
 
 /** Port for support ticket data access. */
 export interface ISupportRepository {

@@ -114,6 +114,7 @@ export const META_DELIMITER = '\n[META]';
  * 1. **Text + [META] JSON** (streaming format): answer text, then `\n[META]` delimiter, then JSON metadata.
  * 2. **Legacy JSON** (pre-streaming): a JSON object with an `answer` field.
  * Falls back to using the raw string as the answer when neither format matches.
+ *
  * @param raw - Raw LLM output.
  * @returns The parsed answer text and extracted metadata.
  */

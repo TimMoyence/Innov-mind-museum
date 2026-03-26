@@ -8,6 +8,7 @@ interface ExportUserDataDeps {
 export class ExportUserDataUseCase {
   constructor(private readonly deps: ExportUserDataDeps) {}
 
+  /** Assembles a GDPR-compliant data export payload for the given user. */
   async execute(user: {
     id: number;
     email: string;

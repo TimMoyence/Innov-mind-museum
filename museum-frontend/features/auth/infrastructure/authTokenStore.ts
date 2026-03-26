@@ -26,11 +26,11 @@ export const clearAccessToken = (): void => {
 
 const REFRESH_TOKEN_KEY = 'auth.refreshToken';
 
-type SecureStoreModule = {
+interface SecureStoreModule {
   getItemAsync: (key: string) => Promise<string | null>;
   setItemAsync: (key: string, value: string) => Promise<void>;
   deleteItemAsync: (key: string) => Promise<void>;
-};
+}
 
 const loadSecureStore = (): SecureStoreModule | null => {
   if (Platform.OS === 'web') {
@@ -40,7 +40,7 @@ const loadSecureStore = (): SecureStoreModule | null => {
   try {
     // Runtime optional to avoid breaking local CI/typecheck when the package is not installed yet.
     // Install `expo-secure-store` before production mobile builds.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
     return require('expo-secure-store') as SecureStoreModule;
   } catch {
     return null;

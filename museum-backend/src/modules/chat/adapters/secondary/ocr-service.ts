@@ -1,7 +1,8 @@
-import { env } from '@src/config/env';
 import { AppError } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { startSpan } from '@shared/observability/sentry';
+import { env } from '@src/config/env';
+
 import type { OcrResult, OcrService } from '../../domain/ports/ocr.port';
 
 // Re-export domain port types so existing consumers that imported from here keep working
@@ -12,31 +13,30 @@ export class TesseractOcrService implements OcrService {
   private schedulerPromise: Promise<any> | null = null;
 
   private getScheduler(): Promise<any> {
-    if (!this.schedulerPromise) {
-      this.schedulerPromise = (async () => {
-        const Tesseract = await import('tesseract.js');
-        const scheduler = Tesseract.createScheduler();
-        const w1 = await Tesseract.createWorker('eng');
-        const w2 = await Tesseract.createWorker('eng');
-        scheduler.addWorker(w1);
-        scheduler.addWorker(w2);
-        return scheduler;
-      })();
-    }
+    this.schedulerPromise ??= (async () => {
+      const Tesseract = await import('tesseract.js');
+      const scheduler = Tesseract.createScheduler();
+      const w1 = await Tesseract.createWorker('eng');
+      const w2 = await Tesseract.createWorker('eng');
+      scheduler.addWorker(w1);
+      scheduler.addWorker(w2);
+      return scheduler;
+    })();
     return this.schedulerPromise;
   }
 
+  /** Runs Tesseract OCR on a base64-encoded image and returns the extracted text with confidence. */
   async extractText(imageBase64: string): Promise<OcrResult | null> {
-    return startSpan({ name: 'ocr.extract', op: 'ai.ocr' }, async () => {
+    return await startSpan({ name: 'ocr.extract', op: 'ai.ocr' }, async () => {
       try {
         const scheduler = await this.getScheduler();
         const buffer = Buffer.from(imageBase64, 'base64');
-        const timeoutMs = env.llm?.timeoutMs ?? 30_000;
+        const timeoutMs = env.llm.timeoutMs;
 
         const { data } = await Promise.race([
           scheduler.addJob('recognize', buffer),
           new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('OCR timed out')), timeoutMs),
+            setTimeout(() => { reject(new Error('OCR timed out')); }, timeoutMs),
           ),
         ]);
 
@@ -46,7 +46,7 @@ export class TesseractOcrService implements OcrService {
         return { text, confidence: data.confidence / 100 };
       } catch (error) {
         if (error instanceof Error && error.message === 'OCR timed out') {
-          logger.warn('ocr_timeout', { timeoutMs: env.llm?.timeoutMs ?? 30_000 });
+          logger.warn('ocr_timeout', { timeoutMs: env.llm.timeoutMs });
           return null; // fail-open: skip OCR guard on timeout
         }
         throw new AppError({
@@ -58,6 +58,7 @@ export class TesseractOcrService implements OcrService {
     });
   }
 
+  /** Terminates the Tesseract worker pool and releases resources. */
   async destroy(): Promise<void> {
     if (this.schedulerPromise) {
       try {
@@ -73,6 +74,9 @@ export class TesseractOcrService implements OcrService {
 
 /** No-op OCR service for when OCR guard is disabled. */
 export class DisabledOcrService implements OcrService {
+   
+  /** Returns null immediately since OCR is disabled. */
+  // eslint-disable-next-line @typescript-eslint/require-await -- must match async interface signature
   async extractText(): Promise<OcrResult | null> {
     return null;
   }

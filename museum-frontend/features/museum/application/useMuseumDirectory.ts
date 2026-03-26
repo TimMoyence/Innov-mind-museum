@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { museumApi, MuseumDirectoryEntry } from '../infrastructure/museumApi';
+import type { MuseumDirectoryEntry } from '../infrastructure/museumApi';
+import { museumApi } from '../infrastructure/museumApi';
 import { haversineDistance } from './haversine';
 
 /** Museum entry enriched with optional distance from the user. */

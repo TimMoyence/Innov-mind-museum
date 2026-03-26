@@ -1,5 +1,5 @@
-import type { ChatMessage } from '../chatMessage.entity';
 import type { ChatAssistantMetadata, VisitContext } from '../chat.types';
+import type { ChatMessage } from '../chatMessage.entity';
 
 /** Input for the LLM orchestrator. */
 export interface OrchestratorInput {

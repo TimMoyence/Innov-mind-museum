@@ -1,6 +1,7 @@
+import { logger } from '@shared/logger/logger';
+
 import type { Request, Response, NextFunction } from 'express';
 
-import { logger } from '@shared/logger/logger';
 
 /** Logs each completed HTTP request with method, path, status, latency, and request ID. */
 export const requestLoggerMiddleware = (req: Request, res: Response, next: NextFunction): void => {

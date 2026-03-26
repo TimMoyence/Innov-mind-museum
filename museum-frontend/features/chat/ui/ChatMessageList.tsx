@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 
-import { ChatUiMessage } from '@/features/chat/application/useChatSession';
+import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { ChatMessageBubble } from '@/features/chat/ui/ChatMessageBubble';
 import { MessageActions } from '@/features/chat/ui/MessageActions';
 import { TypingIndicator } from '@/features/chat/ui/TypingIndicator';

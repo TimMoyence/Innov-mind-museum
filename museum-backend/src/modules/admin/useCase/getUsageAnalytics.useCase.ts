@@ -5,7 +5,8 @@ import type { UsageAnalytics, UsageAnalyticsFilters } from '../domain/admin.type
 export class GetUsageAnalyticsUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
+  /** Executes the usage analytics retrieval with the given filters. */
   async execute(filters: UsageAnalyticsFilters): Promise<UsageAnalytics> {
-    return this.repository.getUsageAnalytics(filters);
+    return await this.repository.getUsageAnalytics(filters);
   }
 }

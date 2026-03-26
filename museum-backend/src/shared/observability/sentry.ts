@@ -1,9 +1,11 @@
 import * as Sentry from '@sentry/node';
+
+import { logger } from '@shared/logger/logger';
+import { env } from '@src/config/env';
+
 import type { Span } from '@sentry/node';
 import type { Express } from 'express';
 
-import { env } from '@src/config/env';
-import { logger } from '@shared/logger/logger';
 
 let initialized = false;
 
@@ -58,6 +60,7 @@ export const setupSentryExpressErrorHandler = (app: Express): void => {
 /**
  * Captures an exception in Sentry with additional context tags.
  * No-op when Sentry is not initialized — safe to call unconditionally.
+ *
  * @param error - The error to report.
  * @param context - Key-value pairs attached as tags (e.g. requestId, method, path).
  */
@@ -82,7 +85,11 @@ export const captureExceptionWithContext = (
 /**
  * Wraps an operation in a Sentry performance span.
  * No-op when Sentry is not initialized — the callback still executes with a dummy span.
+ *
  * @param context - Span name, operation category, and optional attributes.
+ * @param context.name - Human-readable span name.
+ * @param context.op - Operation category (e.g. `ai.orchestrate`).
+ * @param context.attributes - Optional key-value attributes to attach to the span.
  * @param callback - The work to measure. Receives the active span for attribute setting.
  */
 export const startSpan = <T>(
@@ -96,6 +103,7 @@ export const startSpan = <T>(
 /**
  * Sets the current user on the Sentry scope for error/performance correlation.
  * No-op when Sentry is not initialized.
+ *
  * @param user - User identity (pass `null` to clear).
  */
 export const setUser = (user: { id: string } | null): void => {

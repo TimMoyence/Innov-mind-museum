@@ -1,8 +1,10 @@
 import bcrypt from 'bcrypt';
-import type { IUserRepository } from '../domain/user.repository.interface';
-import type { IRefreshTokenRepository } from '../domain/refresh-token.repository.interface';
-import { validatePassword } from '@shared/validation/password';
+
 import { AppError, badRequest } from '@shared/errors/app.error';
+import { validatePassword } from '@shared/validation/password';
+
+import type { IRefreshTokenRepository } from '../domain/refresh-token.repository.interface';
+import type { IUserRepository } from '../domain/user.repository.interface';
 
 /**
  * Changes a user's password after verifying the current one.
@@ -17,6 +19,7 @@ export class ChangePasswordUseCase {
     private readonly refreshTokenRepository: IRefreshTokenRepository,
   ) {}
 
+  /** Verifies the current password, validates the new one, and updates it across all sessions. */
   async execute(userId: number, currentPassword: string, newPassword: string): Promise<void> {
     const user = await this.userRepository.getUserById(userId);
     if (!user) {
@@ -34,7 +37,7 @@ export class ChangePasswordUseCase {
 
     const pw = validatePassword(newPassword);
     if (!pw.valid) {
-      throw badRequest(pw.reason!);
+      throw badRequest(pw.reason ?? 'Invalid password');
     }
 
     const isSame = await bcrypt.compare(newPassword, user.password);

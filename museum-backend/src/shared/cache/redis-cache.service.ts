@@ -23,14 +23,17 @@ export class RedisCacheService implements CacheService {
     this.defaultTtl = options.defaultTtlSeconds ?? 300;
   }
 
+  /** Opens the Redis connection. */
   async connect(): Promise<void> {
     await this.redis.connect();
   }
 
+  /** Gracefully closes the Redis connection. */
   async disconnect(): Promise<void> {
     await this.redis.quit();
   }
 
+  /** Retrieves and deserializes a cached value by key, returning null on miss or error. */
   async get<T>(key: string): Promise<T | null> {
     try {
       const raw = await this.redis.get(key);
@@ -41,6 +44,8 @@ export class RedisCacheService implements CacheService {
     }
   }
 
+  /** Serializes and stores a value with an optional TTL (defaults to the configured default). */
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- matches CacheService interface signature
   async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
     const ttl = ttlSeconds ?? this.defaultTtl;
     try {
@@ -50,6 +55,7 @@ export class RedisCacheService implements CacheService {
     }
   }
 
+  /** Deletes a single cached entry by key. */
   async del(key: string): Promise<void> {
     try {
       await this.redis.del(key);
@@ -58,6 +64,7 @@ export class RedisCacheService implements CacheService {
     }
   }
 
+  /** Scans and deletes all keys matching a given prefix. */
   async delByPrefix(prefix: string): Promise<void> {
     try {
       let cursor = '0';
@@ -79,6 +86,8 @@ export class RedisCacheService implements CacheService {
     }
   }
 
+  /** Atomically sets a key only if it does not already exist (SET NX), with a TTL. */
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- matches CacheService interface signature
   async setNx<T>(key: string, value: T, ttlSeconds: number): Promise<boolean> {
     try {
       const result = await this.redis.set(key, JSON.stringify(value), 'EX', ttlSeconds, 'NX');
@@ -91,8 +100,8 @@ export class RedisCacheService implements CacheService {
   /** Check if Redis is reachable. */
   async ping(): Promise<boolean> {
     try {
-      const result = await this.redis.ping();
-      return result === 'PONG';
+      await this.redis.ping();
+      return true;
     } catch {
       return false;
     }

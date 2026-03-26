@@ -30,7 +30,7 @@ function MetaRow({ label, value }: MetaItem) {
         <Text style={[styles.metaValue, { color: theme.textSecondary }, isPlaceholder && [styles.metaValuePlaceholder, { color: theme.warningText }]]}>
           {value}
         </Text>
-        {isPlaceholder ? <Text style={[styles.pendingBadge, { color: theme.warningText, backgroundColor: theme.warningBackground, borderColor: 'rgba(245,158,11,0.34)' }]}>{t('privacy.pending_badge')}</Text> : null}
+        {isPlaceholder ? <Text style={[styles.pendingBadge, { color: theme.warningText, backgroundColor: theme.warningBackground, borderColor: theme.warningBackground }]}>{t('privacy.pending_badge')}</Text> : null}
       </View>
     </View>
   );
@@ -64,19 +64,19 @@ export default function PrivacyScreen() {
               id: 'support',
               icon: 'headset-outline',
               label: t('privacy.menu.support'),
-              onPress: () => router.push('/(stack)/support'),
+              onPress: () => { router.push('/(stack)/support'); },
             },
             {
               id: 'prefs',
               icon: 'options-outline',
               label: t('privacy.menu.preferences'),
-              onPress: () => router.push('/(stack)/preferences'),
+              onPress: () => { router.push('/(stack)/preferences'); },
             },
             {
               id: 'settings',
               icon: 'settings-outline',
               label: t('privacy.menu.settings'),
-              onPress: () => router.push('/(stack)/settings'),
+              onPress: () => { router.push('/(stack)/settings'); },
             },
           ]}
         />
@@ -86,7 +86,7 @@ export default function PrivacyScreen() {
         <GlassCard style={styles.heroCard} intensity={60}>
           <View style={styles.heroHeader}>
             <Text style={[styles.title, { color: theme.textPrimary }]}>{PRIVACY_POLICY_CONTENT.title}</Text>
-            <View style={[styles.statusPill, hasReleaseWork ? { backgroundColor: theme.warningBackground, borderColor: 'rgba(245,158,11,0.38)' } : { backgroundColor: theme.successBackground, borderColor: 'rgba(34,197,94,0.34)' }]}>
+            <View style={[styles.statusPill, hasReleaseWork ? { backgroundColor: theme.warningBackground, borderColor: theme.warningBackground } : { backgroundColor: theme.successBackground, borderColor: theme.successBackground }]}>
               <Text style={[styles.statusPillText, { color: hasReleaseWork ? theme.warningText : theme.success }]}>
                 {hasReleaseWork ? t('privacy.pending_count', { count: unresolvedMetaCount }) : t('privacy.status_ready')}
               </Text>
@@ -128,7 +128,7 @@ export default function PrivacyScreen() {
         </GlassCard>
 
         {hasReleaseWork ? (
-          <GlassCard style={styles.warningCard} intensity={58}>
+          <GlassCard style={[styles.warningCard, { borderColor: theme.warningBackground }]} intensity={58}>
             <Text style={[styles.warningTitle, { color: theme.warningText }]}>{t('privacy.prerelease_title')}</Text>
             <Text style={[styles.warningText, { color: theme.warningText }]}>
               {t('privacy.prerelease_text')}
@@ -173,10 +173,10 @@ export default function PrivacyScreen() {
             {t('privacy.request_text')}
           </Text>
           <View style={styles.ctaRow}>
-            <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(stack)/support')} accessibilityRole="button" accessibilityLabel={t('a11y.privacy.open_support')}>
+            <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => { router.push('/(stack)/support'); }} accessibilityRole="button" accessibilityLabel={t('a11y.privacy.open_support')}>
               <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>{t('privacy.open_support')}</Text>
             </Pressable>
-            <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]} onPress={() => router.push('/(stack)/settings')} accessibilityRole="button" accessibilityLabel={t('a11y.privacy.back_settings')}>
+            <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]} onPress={() => { router.push('/(stack)/settings'); }} accessibilityRole="button" accessibilityLabel={t('a11y.privacy.back_settings')}>
               <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('privacy.back_settings')}</Text>
             </Pressable>
           </View>
@@ -268,7 +268,6 @@ const styles = StyleSheet.create({
   warningCard: {
     padding: 16,
     gap: 8,
-    borderColor: 'rgba(245,158,11,0.34)',
   },
   cardTitle: {
     fontWeight: '700',

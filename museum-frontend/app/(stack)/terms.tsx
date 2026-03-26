@@ -23,13 +23,13 @@ export default function TermsScreen() {
               id: 'privacy',
               icon: 'shield-checkmark-outline',
               label: t('terms.menu.privacy'),
-              onPress: () => router.push('/(stack)/privacy'),
+              onPress: () => { router.push('/(stack)/privacy'); },
             },
             {
               id: 'settings',
               icon: 'settings-outline',
               label: t('terms.menu.settings'),
-              onPress: () => router.push('/(stack)/settings'),
+              onPress: () => { router.push('/(stack)/settings'); },
             },
           ]}
         />
@@ -58,10 +58,10 @@ export default function TermsScreen() {
 
         <GlassCard style={styles.ctaCard} intensity={54}>
           <View style={styles.ctaRow}>
-            <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => router.push('/(stack)/privacy')} accessibilityRole="button" accessibilityLabel={t('a11y.terms.privacy_policy')}>
+            <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => { router.push('/(stack)/privacy'); }} accessibilityRole="button" accessibilityLabel={t('a11y.terms.privacy_policy')}>
               <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>{t('terms.privacy_policy')}</Text>
             </Pressable>
-            <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]} onPress={() => router.push('/(stack)/settings')} accessibilityRole="button" accessibilityLabel={t('a11y.terms.back_settings')}>
+            <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]} onPress={() => { router.push('/(stack)/settings'); }} accessibilityRole="button" accessibilityLabel={t('a11y.terms.back_settings')}>
               <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('terms.back_settings')}</Text>
             </Pressable>
           </View>

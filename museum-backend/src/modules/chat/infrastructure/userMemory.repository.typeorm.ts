@@ -1,10 +1,11 @@
-import { DataSource, Repository } from 'typeorm';
 
 import { UserMemory } from '../domain/userMemory.entity';
+
 import type {
   UserMemoryRepository,
   UserMemoryUpdates,
 } from '../domain/userMemory.repository.interface';
+import type { DataSource, Repository } from 'typeorm';
 
 /** TypeORM/PG implementation of {@link UserMemoryRepository}. */
 export class TypeOrmUserMemoryRepository implements UserMemoryRepository {
@@ -14,10 +15,12 @@ export class TypeOrmUserMemoryRepository implements UserMemoryRepository {
     this.repo = dataSource.getRepository(UserMemory);
   }
 
+  /** Retrieves the user memory record for a given user, or null if none exists. */
   async getByUserId(userId: number): Promise<UserMemory | null> {
-    return this.repo.findOne({ where: { userId } });
+    return await this.repo.findOne({ where: { userId } });
   }
 
+  /** Creates or updates a user memory record with the given fields. */
   async upsert(userId: number, updates: UserMemoryUpdates): Promise<UserMemory> {
     // Build column-value maps for the INSERT … ON CONFLICT … DO UPDATE statement.
     const values: Record<string, unknown> = { userId, ...updates };
@@ -36,9 +39,11 @@ export class TypeOrmUserMemoryRepository implements UserMemoryRepository {
     // Return the freshly-written row.
     const row = await this.repo.findOne({ where: { userId } });
     // Should always exist after upsert, but guard defensively.
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- row always exists after upsert
     return row!;
   }
 
+  /** Deletes the user memory record for a given user. */
   async deleteByUserId(userId: number): Promise<void> {
     await this.repo.delete({ userId });
   }

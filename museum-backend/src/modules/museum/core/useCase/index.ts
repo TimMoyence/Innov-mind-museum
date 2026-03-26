@@ -2,11 +2,11 @@
  * Museum module composition root.
  * Wires repository implementations to use-case classes and exports ready-to-use singletons.
  */
-import { MuseumRepositoryPg } from '../../adapters/secondary/museum.repository.pg';
 import { CreateMuseumUseCase } from './createMuseum.useCase';
 import { GetMuseumUseCase } from './getMuseum.useCase';
 import { ListMuseumsUseCase } from './listMuseums.useCase';
 import { UpdateMuseumUseCase } from './updateMuseum.useCase';
+import { MuseumRepositoryPg } from '../../adapters/secondary/museum.repository.pg';
 
 const museumRepository = new MuseumRepositoryPg();
 

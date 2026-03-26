@@ -1,4 +1,5 @@
 import { sanitizePromptInput } from '@shared/validation/input';
+
 import type { UserMemory } from '../domain/userMemory.entity';
 
 const MAX_PROMPT_BLOCK_LENGTH = 600;

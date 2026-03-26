@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useLocation } from '@/features/museum/application/useLocation';
-import { useMuseumDirectory, MuseumWithDistance } from '@/features/museum/application/useMuseumDirectory';
+import type { MuseumWithDistance } from '@/features/museum/application/useMuseumDirectory';
+import { useMuseumDirectory } from '@/features/museum/application/useMuseumDirectory';
 import { MuseumDirectoryList } from '@/features/museum/ui/MuseumDirectoryList';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';

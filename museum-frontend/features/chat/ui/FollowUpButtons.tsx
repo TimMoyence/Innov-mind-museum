@@ -23,8 +23,8 @@ export const FollowUpButtons = ({ questions, onPress, disabled = false }: Follow
       {questions.map((question) => (
         <Pressable
           key={question}
-          style={[styles.button, disabled && styles.buttonDisabled]}
-          onPress={() => onPress(question)}
+          style={[styles.button, { borderColor: theme.primaryBorderSubtle, backgroundColor: theme.primaryTint }, disabled && styles.buttonDisabled]}
+          onPress={() => { onPress(question); }}
           disabled={disabled}
           accessibilityRole="button"
           accessibilityLabel={question}
@@ -58,8 +58,6 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(30, 64, 175, 0.25)',
-    backgroundColor: 'rgba(30, 64, 175, 0.06)',
     paddingHorizontal: 14,
     paddingVertical: 10,
   },

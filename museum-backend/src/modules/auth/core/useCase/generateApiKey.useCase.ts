@@ -1,7 +1,10 @@
-import crypto from 'crypto';
-import { ApiKey } from '../domain/apiKey.entity';
-import type { ApiKeyRepository } from '../domain/apiKey.repository.interface';
+import crypto from 'node:crypto';
+
 import { badRequest } from '@shared/errors/app.error';
+
+import { ApiKey } from '../domain/apiKey.entity';
+
+import type { ApiKeyRepository } from '../domain/apiKey.repository.interface';
 
 const MAX_KEYS_PER_USER = 5;
 
@@ -19,10 +22,11 @@ export interface GenerateApiKeyResult {
 
 /** Generates a new API key for a user. The key is HMAC-hashed before storage. */
 export class GenerateApiKeyUseCase {
-  constructor(private apiKeyRepository: ApiKeyRepository) {}
+  constructor(private readonly apiKeyRepository: ApiKeyRepository) {}
 
   /**
    * Generate a new API key.
+   *
    * @param userId - Owner of the key.
    * @param name - Human-readable label for the key.
    * @param expiresAt - Optional expiration date.
@@ -50,7 +54,7 @@ export class GenerateApiKeyUseCase {
     const plaintext = `msk_${randomPart}`;
 
     // Prefix = first 8 chars after "msk_"
-    const prefix = randomPart.substring(0, 8);
+    const prefix = randomPart.slice(0, 8);
 
     // Per-key random salt
     const salt = crypto.randomBytes(32).toString('hex');

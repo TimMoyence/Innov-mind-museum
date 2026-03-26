@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- LangChain orchestrator co-locates prompt building, model invocation, and response parsing */
 import {
   AIMessage,
   HumanMessage,
@@ -5,34 +6,34 @@ import {
 } from '@langchain/core/messages';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { ChatOpenAI } from '@langchain/openai';
-
 import * as Sentry from '@sentry/node';
 
-import { env } from '@src/config/env';
+import { resolveLocale, localeToLanguageName } from '@shared/i18n/locale';
 import { logger } from '@shared/logger/logger';
 import { startSpan } from '@shared/observability/sentry';
 import { sanitizePromptInput } from '@shared/validation/input';
-import { resolveLocale, localeToLanguageName } from '@shared/i18n/locale';
+import { env } from '@src/config/env';
+
 import { parseAssistantResponse } from '../../application/assistant-response';
+import { applyHistoryWindow } from '../../application/history-window';
 import {
   runSectionTasks,
-  SectionRunResult,
-  SectionTask,
+  type SectionRunResult,
+  type SectionTask,
 } from '../../application/llm-section-runner';
 import {
   createLlmSectionPlan,
   createSummaryFallback,
-  LlmSectionName,
+  type LlmSectionName,
 } from '../../application/llm-sections';
-import { buildVisitContextPromptBlock } from '../../application/visit-context';
-import { applyHistoryWindow } from '../../application/history-window';
 import { Semaphore } from '../../application/semaphore';
-import { ChatMessage } from '../../domain/chatMessage.entity';
-import {
+import { buildVisitContextPromptBlock } from '../../application/visit-context';
+
+import type {
   ChatAssistantDiagnostics,
   ChatAssistantMetadata,
 } from '../../domain/chat.types';
-
+import type { ChatMessage } from '../../domain/chatMessage.entity';
 import type {
   OrchestratorInput,
   OrchestratorOutput,
@@ -62,12 +63,12 @@ const buildSystemPrompt = (
   conversationPhase: ConversationPhase = 'active',
 ): string => {
   const language = localeToLanguageName(resolveLocale([locale]));
-  const guidanceStyle =
-    guideLevel === 'expert'
-      ? 'Use advanced art-history vocabulary and deeper context.'
-      : guideLevel === 'intermediate'
-        ? 'Use balanced depth with short explanations of technical terms.'
-        : 'Use beginner-friendly language and very clear short sentences.';
+  const guidanceStyles: Record<string, string> = {
+    expert: 'Use advanced art-history vocabulary and deeper context.',
+    intermediate: 'Use balanced depth with short explanations of technical terms.',
+    beginner: 'Use beginner-friendly language and very clear short sentences.',
+  };
+  const guidanceStyle = guidanceStyles[guideLevel] ?? guidanceStyles.beginner;
 
   const parts = [
     'You are Musaium, a knowledgeable and warm museum companion.',
@@ -122,7 +123,7 @@ interface ChatModelInvokeOptions {
   signal?: AbortSignal;
 }
 
-type ChatModel = {
+interface ChatModel {
   invoke: (
     messages: unknown,
     options?: ChatModelInvokeOptions,
@@ -131,7 +132,7 @@ type ChatModel = {
     messages: unknown,
     options?: ChatModelInvokeOptions,
   ) => Promise<AsyncIterable<{ content: unknown }>>;
-};
+}
 
 const toModel = (): ChatModel | null => {
   if (env.llm.provider === 'google' && env.llm.googleApiKey) {
@@ -193,15 +194,19 @@ const toContentString = (content: unknown): string => {
     try {
       return JSON.stringify(content);
     } catch {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
       return String(content);
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string
   return content === undefined || content === null ? '' : String(content);
 };
 
+type ChatModelMessage = HumanMessage | AIMessage | SystemMessage;
+
 const estimatePayloadBytes = (
-  messages: Array<HumanMessage | AIMessage | SystemMessage>,
+  messages: ChatModelMessage[],
 ): number => {
   const serialized = messages
     .map((message) => {
@@ -238,6 +243,9 @@ const isRetryableError = (error: unknown): boolean => {
 // Private helpers — factorise duplicated logic between generate() / generateStream()
 // ---------------------------------------------------------------------------
 
+/**
+ *
+ */
 export interface OrchestratorPrepared {
   normalizedText: string;
   recentHistory: ChatMessage[];
@@ -246,7 +254,7 @@ export interface OrchestratorPrepared {
   conversationPhase: ConversationPhase;
   visitContextBlock: string | null;
   systemPrompt: string;
-  historyMessages: Array<HumanMessage | AIMessage | SystemMessage>;
+  historyMessages: ChatModelMessage[];
   userMessage: HumanMessage;
   sectionPlan: ReturnType<typeof createLlmSectionPlan>;
 }
@@ -257,7 +265,7 @@ export interface OrchestratorPrepared {
  * and the LLM section plan.
  */
 const buildOrchestratorMessages = (input: OrchestratorInput): OrchestratorPrepared => {
-  const normalizedText = (input.text || '').trim();
+  const normalizedText = (input.text ?? '').trim();
   const recentHistory = applyHistoryWindow(input.history, env.llm.maxHistoryMessages);
   const guideLevel = input.context?.guideLevel ?? 'beginner';
   const hasImage = !!input.image;
@@ -272,11 +280,11 @@ const buildOrchestratorMessages = (input: OrchestratorInput): OrchestratorPrepar
     conversationPhase,
   );
 
-  const historyMessages: Array<HumanMessage | AIMessage | SystemMessage> =
+  const historyMessages: ChatModelMessage[] =
     recentHistory.map((message) => {
-      if (message.role === 'assistant') return new AIMessage(message.text || '');
-      if (message.role === 'system') return new SystemMessage(message.text || '');
-      return new HumanMessage(message.text || '');
+      if (message.role === 'assistant') return new AIMessage(message.text ?? '');
+      if (message.role === 'system') return new SystemMessage(message.text ?? '');
+      return new HumanMessage(message.text ?? '');
     });
 
   const contextLine = input.context?.location
@@ -294,6 +302,7 @@ const buildOrchestratorMessages = (input: OrchestratorInput): OrchestratorPrepar
     const imageUrl =
       input.image.source === 'url'
         ? input.image.value
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
         : `data:${input.image.mimeType || 'image/jpeg'};base64,${input.image.value}`;
 
     userMessage = new HumanMessage({
@@ -337,12 +346,13 @@ const buildOrchestratorMessages = (input: OrchestratorInput): OrchestratorPrepar
 const buildSectionMessages = (
   systemPrompt: string,
   sectionPrompt: string,
-  historyMessages: Array<HumanMessage | AIMessage | SystemMessage>,
+  historyMessages: ChatModelMessage[],
   userMessage: HumanMessage,
   userMemoryBlock?: string,
   redirectHint?: string,
-): Array<HumanMessage | AIMessage | SystemMessage> => {
-  const messages: Array<HumanMessage | AIMessage | SystemMessage> = [
+  // eslint-disable-next-line max-params -- prompt assembly requires all context pieces as separate parameters
+): ChatModelMessage[] => {
+  const messages: ChatModelMessage[] = [
     new SystemMessage(systemPrompt),
     new SystemMessage(sectionPrompt),
   ];
@@ -375,20 +385,22 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
   private readonly model: ChatModel | null;
   private readonly semaphore: Semaphore;
 
-  /** @param deps - Optional overrides for the LLM model and concurrency semaphore (useful for testing). */
+  /** Creates a new LangChain orchestrator instance. @param deps - Optional overrides for the LLM model and concurrency semaphore (useful for testing). */
   constructor(deps: LangChainChatOrchestratorDeps = {}) {
     this.model = deps.model === undefined ? toModel() : deps.model;
     this.semaphore =
-      deps.semaphore || new Semaphore(Math.max(1, env.llm.maxConcurrent));
+      deps.semaphore ?? new Semaphore(Math.max(1, env.llm.maxConcurrent));
   }
 
   /**
    * Builds section-based prompts, invokes the LLM with retry/timeout logic, and assembles the final response.
+   *
    * @param input - Conversation history, user text/image, locale, museum context, etc.
    * @returns Generated text and metadata (citations, diagnostics).
    */
+  // eslint-disable-next-line max-lines-per-function -- orchestrator builds prompts, invokes LLM with retries, and parses response in a single traced span
   async generate(input: OrchestratorInput): Promise<OrchestratorOutput> {
-    return startSpan({
+    return await startSpan({
       name: 'llm.orchestrate',
       op: 'ai.orchestrate',
       attributes: {
@@ -397,6 +409,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         'llm.has_image': !!input.image,
         'llm.history_length': input.history.length,
       },
+    // eslint-disable-next-line max-lines-per-function -- traced span callback contains the full orchestration pipeline
     }, async () => {
     const startedAt = Date.now();
 
@@ -436,7 +449,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         timeoutMs: section.timeoutMs,
         payloadBytes,
         run: async (signal: AbortSignal) => {
-          return startSpan({
+          return await startSpan({
             name: `llm.section.${section.name}`,
             op: 'ai.invoke',
             attributes: {
@@ -444,9 +457,11 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
               'llm.timeout_ms': section.timeoutMs,
               'llm.payload_bytes': payloadBytes,
             },
+          // eslint-disable-next-line sonarjs/no-nested-functions -- tracing span callback wraps semaphore-guarded LLM invocation
           }, async () => {
-            const result = await this.semaphore.use(async () =>
-              model.invoke(sectionMessages, { signal }),
+            const result = await this.semaphore.use(
+              // eslint-disable-next-line max-nested-callbacks -- semaphore wraps model invocation
+              async () => await model.invoke(sectionMessages, { signal }),
             );
             return toContentString(result.content);
           });
@@ -531,17 +546,17 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     });
 
     const bySection = new Map<LlmSectionName, SectionRunResult<string>>();
-    sectionResults.forEach((result) => {
+    for (const result of sectionResults) {
       bySection.set(result.name as LlmSectionName, result);
-    });
+    }
 
     const summaryResult = bySection.get('summary');
-    let text = '';
+    let text: string;
     let metadata: ChatAssistantMetadata = {};
     let degraded = false;
     let summaryFallbackApplied = false;
 
-    if (summaryResult && summaryResult.status === 'success') {
+    if (summaryResult?.status === 'success') {
       const parsed = parseAssistantResponse(summaryResult.value);
       text = parsed.answer;
       metadata = parsed.metadata;
@@ -562,7 +577,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         reason:
           summaryResult?.status === 'timeout'
             ? 'timeout'
-            : summaryResult?.status || 'missing-result',
+            : summaryResult?.status ?? 'missing-result',
       });
     }
 
@@ -642,15 +657,17 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
   /**
    * Streams assistant response tokens via the onChunk callback while building the full response.
    * Uses the same system prompt, sections, semaphore, and retry logic as generate().
+   *
    * @param input - Conversation history, user text/image, locale, museum context, etc.
    * @param onChunk - Called with each text token as it arrives from the LLM.
    * @returns Generated text and metadata after the stream completes.
    */
+  // eslint-disable-next-line max-lines-per-function -- streaming orchestration requires setup, streaming loop, and response assembly
   async generateStream(
     input: OrchestratorInput,
     onChunk: (text: string) => void,
   ): Promise<OrchestratorOutput> {
-    return startSpan({
+    return await startSpan({
       name: 'llm.orchestrate.stream',
       op: 'ai.orchestrate',
       attributes: {
@@ -658,6 +675,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         'llm.model': env.llm.model,
         'llm.has_image': !!input.image,
       },
+    // eslint-disable-next-line max-lines-per-function -- traced span callback contains the full streaming pipeline
     }, async () => {
     const {
       normalizedText,
@@ -690,12 +708,12 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
 
     const timeoutMs = section.timeoutMs;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    const timeout = setTimeout(() => { controller.abort(); }, timeoutMs);
 
     let accumulated = '';
     try {
       const rawContent = await this.semaphore.use(async () => {
-        return startSpan({ name: 'llm.stream', op: 'ai.stream' }, async () => {
+        return await startSpan({ name: 'llm.stream', op: 'ai.stream' }, async () => {
           const stream = await model.stream(sectionMessages, { signal: controller.signal });
           for await (const chunk of stream) {
             const chunkText = toContentString(chunk.content);

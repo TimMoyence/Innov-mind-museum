@@ -1,6 +1,7 @@
-import { env } from '@src/config/env';
 import { AppError, badRequest } from '@shared/errors/app.error';
 import { startSpan } from '@shared/observability/sentry';
+import { env } from '@src/config/env';
+
 import type {
   AudioTranscriberInput,
   AudioTranscriptionResult,
@@ -53,19 +54,22 @@ interface OpenAiTranscriptionPayload {
 export class OpenAiAudioTranscriber implements AudioTranscriber {
   /**
    * Sends audio to the OpenAI transcription API and returns the transcribed text.
+   *
    * @param input - Base64 audio, MIME type, and optional locale hint.
    * @returns Transcription result.
    * @throws AppError with code `FEATURE_UNAVAILABLE` if provider is not OpenAI.
    * @throws AppError with code `UPSTREAM_AUDIO_TRANSCRIPTION_ERROR` on API failure.
    */
+  // eslint-disable-next-line max-lines-per-function -- audio transcription has many validation and error-handling steps
   async transcribe(input: AudioTranscriberInput): Promise<AudioTranscriptionResult> {
-    return startSpan({
+    return await startSpan({
       name: 'audio.transcribe',
       op: 'ai.transcribe',
       attributes: {
         'audio.mime_type': input.mimeType,
         'audio.model': env.llm.audioTranscriptionModel,
       },
+    // eslint-disable-next-line complexity -- inner callback handles provider check, input validation, API call, and error mapping
     }, async () => {
     if (env.llm.provider !== 'openai' || !env.llm.openAiApiKey) {
       throw new AppError({
@@ -76,7 +80,7 @@ export class OpenAiAudioTranscriber implements AudioTranscriber {
       });
     }
 
-    const normalizedBase64 = input.base64?.trim();
+    const normalizedBase64 = input.base64.trim();
     if (!normalizedBase64) {
       throw badRequest('Audio payload is empty');
     }

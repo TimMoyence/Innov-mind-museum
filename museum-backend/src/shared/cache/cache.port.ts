@@ -5,9 +5,11 @@
  */
 export interface CacheService {
   /** Retrieve a cached value by key. Returns `null` on miss. */
+   
   get<T>(key: string): Promise<T | null>;
 
   /** Store a value under key with optional TTL in seconds. */
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
   set<T>(key: string, value: T, ttlSeconds?: number): Promise<void>;
 
   /** Delete a single cached key. */
@@ -17,5 +19,6 @@ export interface CacheService {
   delByPrefix(prefix: string): Promise<void>;
 
   /** Set a key only if it does not already exist (distributed lock pattern). Returns true if set. */
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
   setNx<T>(key: string, value: T, ttlSeconds: number): Promise<boolean>;
 }

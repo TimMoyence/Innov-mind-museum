@@ -39,7 +39,7 @@ export const ArtworkCard = ({ title, artist, museum, room, confidence }: Artwork
           ) : null}
         </View>
         {badge ? (
-          <View style={styles.badge}>
+          <View style={[styles.badge, { backgroundColor: theme.primaryTint }]}>
             <Text style={[styles.badgeText, { color: theme.primary }]}>{badge}</Text>
           </View>
         ) : null}
@@ -80,7 +80,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    backgroundColor: 'rgba(30, 64, 175, 0.12)',
   },
   badgeText: {
     fontSize: 10,

@@ -86,7 +86,7 @@ export const ImagePreviewModal = ({
         </View>
 
         <View style={styles.footer}>
-          <Pressable onPress={onCancel} style={styles.cancelButton}>
+          <Pressable onPress={onCancel} style={[styles.cancelButton, { borderColor: theme.glassBorder }]}>
             <Text style={[styles.cancelText, { color: theme.primaryContrast }]}>{t('common.cancel')}</Text>
           </Pressable>
           <Pressable
@@ -151,7 +151,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
   },
   cancelText: {
     fontWeight: '600',

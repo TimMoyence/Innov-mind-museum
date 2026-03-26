@@ -1,7 +1,9 @@
-import { ChatMessage } from '../domain/chatMessage.entity';
-import { sanitizePromptInput } from '@shared/validation/input';
-import { resolveLocale, localeToLanguageName } from '@shared/i18n/locale';
 import { buildLocalizedFallback, FALLBACK_TEMPLATES } from '@shared/i18n/fallback-messages';
+import { resolveLocale, localeToLanguageName } from '@shared/i18n/locale';
+import { sanitizePromptInput } from '@shared/validation/input';
+
+import type { ExpertiseLevel } from '../domain/chat.types';
+import type { ChatMessage } from '../domain/chatMessage.entity';
 
 /** Identifier for a named LLM prompt section. */
 export type LlmSectionName = 'summary';
@@ -19,7 +21,7 @@ export interface LlmSectionDefinition {
 export interface LlmSectionPlanInput {
   locale?: string;
   museumMode: boolean;
-  guideLevel: 'beginner' | 'intermediate' | 'expert';
+  guideLevel: ExpertiseLevel;
   timeoutSummaryMs: number;
   /** Pre-built visit context block to inject into the prompt. */
   visitContextBlock?: string;
@@ -96,6 +98,7 @@ const buildSummaryPrompt = (
 /**
  * Creates the ordered list of LLM section definitions to execute for a single request.
  * Currently produces a single required "summary" section.
+ *
  * @param input - Configuration for locale, guide level, museum mode, and timeouts.
  * @returns An array of section definitions.
  */
@@ -131,12 +134,13 @@ const lastNonEmptyTexts = (history: ChatMessage[], limit = 3): string[] => {
   return history
     .filter((message) => !!message.text?.trim())
     .slice(-limit)
-    .map((message) => message.text!.trim());
+    .map((message) => (message.text ?? '').trim());
 };
 
 /**
  * Generates a localized fallback summary from conversation history when the LLM call fails.
  * Stitches together recent non-empty messages with location context and a next-step suggestion.
+ *
  * @param input - History, question, location, locale, and museum mode.
  * @returns A human-readable fallback text.
  */
@@ -146,6 +150,7 @@ export const createSummaryFallback = (input: SummaryFallbackInput): string => {
   const sanitizedLocation = input.location ? sanitizePromptInput(input.location) : undefined;
   const recap = snippets.length
     ? snippets.join(' ')
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
     : input.question?.trim() || FALLBACK_TEMPLATES[locale].defaultQuestion;
 
   return buildLocalizedFallback(locale, {

@@ -1,11 +1,13 @@
 import pool from '@data/db';
 import { conflict } from '@shared/errors/app.error';
+
 import type { Museum } from '../../core/domain/museum.entity';
 import type { IMuseumRepository } from '../../core/domain/museum.repository.interface';
 import type { CreateMuseumInput, UpdateMuseumInput } from '../../core/domain/museum.types';
 
 /** PostgreSQL implementation of the museum repository. */
 export class MuseumRepositoryPg implements IMuseumRepository {
+  /** Inserts a new museum row and returns the persisted record. */
   async create(input: CreateMuseumInput): Promise<Museum> {
     try {
       const result = await pool.query(
@@ -23,6 +25,7 @@ export class MuseumRepositoryPg implements IMuseumRepository {
     }
   }
 
+  /** Dynamically updates museum fields and returns the updated record. */
   async update(id: number, input: UpdateMuseumInput): Promise<Museum | null> {
     const sets: string[] = [];
     const values: unknown[] = [];
@@ -37,7 +40,7 @@ export class MuseumRepositoryPg implements IMuseumRepository {
     if (input.config !== undefined) { sets.push(`config = $${idx++}`); values.push(JSON.stringify(input.config)); }
     if (input.isActive !== undefined) { sets.push(`is_active = $${idx++}`); values.push(input.isActive); }
 
-    if (sets.length === 0) return this.findById(id);
+    if (sets.length === 0) return await this.findById(id);
 
     sets.push(`updated_at = NOW()`);
     values.push(id);
@@ -47,7 +50,7 @@ export class MuseumRepositoryPg implements IMuseumRepository {
         `UPDATE "museums" SET ${sets.join(', ')} WHERE id = $${idx} RETURNING *`,
         values,
       );
-      return result.rows[0] || null;
+      return result.rows[0] ?? null;
     } catch (err: unknown) {
       if ((err as { code?: string }).code === '23505') {
         throw conflict('A museum with this slug already exists');
@@ -56,22 +59,26 @@ export class MuseumRepositoryPg implements IMuseumRepository {
     }
   }
 
+  /** Finds a museum by its numeric ID. */
   async findById(id: number): Promise<Museum | null> {
     const result = await pool.query(`SELECT * FROM "museums" WHERE id = $1`, [id]);
-    return result.rows[0] || null;
+    return result.rows[0] ?? null;
   }
 
+  /** Finds a museum by its URL-friendly slug. */
   async findBySlug(slug: string): Promise<Museum | null> {
     const result = await pool.query(`SELECT * FROM "museums" WHERE slug = $1`, [slug]);
-    return result.rows[0] || null;
+    return result.rows[0] ?? null;
   }
 
+  /** Lists all museums, optionally filtering to active-only. */
   async findAll(opts?: { activeOnly?: boolean }): Promise<Museum[]> {
     const where = opts?.activeOnly ? `WHERE is_active = true` : '';
     const result = await pool.query(`SELECT * FROM "museums" ${where} ORDER BY name ASC`);
     return result.rows;
   }
 
+  /** Permanently deletes a museum by its numeric ID. */
   async delete(id: number): Promise<void> {
     await pool.query(`DELETE FROM "museums" WHERE id = $1`, [id]);
   }

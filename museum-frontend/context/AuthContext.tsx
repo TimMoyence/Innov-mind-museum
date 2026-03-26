@@ -1,10 +1,12 @@
-import React, {
+import type {
+  ReactNode} from "react";
+import type React from "react";
+import {
   createContext,
   useCallback,
   useState,
   useContext,
-  useEffect,
-  ReactNode,
+  useEffect
 } from "react";
 import { router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -62,9 +64,9 @@ export const useAuth = (): AuthContextType => {
 
 /** Provides authentication context to the component tree. Bootstraps the session on mount and manages token refresh and logout. */
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isBiometricLocked, setIsBiometricLocked] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isBiometricLocked, setIsBiometricLocked] = useState(false);
 
   // Check authentication on startup
   useEffect(() => {
@@ -101,7 +103,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     };
 
-    checkAuth();
+    void checkAuth();
   }, []);
 
   useEffect(() => {

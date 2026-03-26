@@ -41,7 +41,7 @@ jest.mock('@/features/settings/runtimeSettings', () => ({
 
 jest.mock('@/features/chat/domain/dashboard-session', () => ({
   mapSessionsToDashboardCards: jest.fn(
-    (sessions: Array<{ id: string }>) =>
+    (sessions: { id: string }[]) =>
       sessions.map((s) => ({
         id: s.id,
         title: `Session ${s.id}`,

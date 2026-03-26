@@ -3,13 +3,14 @@
  * Tasks that exceed the limit are queued and executed in FIFO order as slots free up.
  */
 export class Semaphore {
-  private queue: Array<() => void> = [];
+  private readonly queue: (() => void)[] = [];
   private inFlight = 0;
 
   constructor(private readonly maxConcurrent: number) {}
 
   /**
    * Acquires a slot, executes the task, then releases the slot.
+   *
    * @param task - Async function to run under the concurrency limit.
    * @returns The resolved value of the task.
    */

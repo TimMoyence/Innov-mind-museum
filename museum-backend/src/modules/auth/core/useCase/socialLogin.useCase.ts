@@ -1,8 +1,9 @@
 import { AppError } from '@shared/errors/app.error';
-import type { IUserRepository } from '../domain/user.repository.interface';
-import type { ISocialAccountRepository } from '../domain/socialAccount.repository.interface';
+
 import type { AuthSessionService, AuthSessionResponse } from './authSession.service';
 import type { SocialTokenVerifier, SocialProvider } from '../domain/social-token-verifier.port';
+import type { ISocialAccountRepository } from '../domain/socialAccount.repository.interface';
+import type { IUserRepository } from '../domain/user.repository.interface';
 
 const APPLE_PRIVATE_RELAY_SUFFIX = '@privaterelay.appleid.com';
 
@@ -33,7 +34,7 @@ export class SocialLoginUseCase {
     provider: SocialProvider,
     idToken: string,
   ): Promise<AuthSessionResponse> {
-    if (!idToken?.trim()) {
+    if (!idToken.trim()) {
       throw new AppError({
         message: 'idToken is required',
         statusCode: 400,
@@ -58,7 +59,7 @@ export class SocialLoginUseCase {
           code: 'USER_NOT_FOUND',
         });
       }
-      return this.authSessionService.socialLogin(
+      return await this.authSessionService.socialLogin(
         user as unknown as Record<string, unknown>,
       );
     }
@@ -79,13 +80,14 @@ export class SocialLoginUseCase {
           providerUserId: payload.providerUserId,
           email: normalizedEmail,
         });
-        return this.authSessionService.socialLogin(
+        return await this.authSessionService.socialLogin(
           existingUser as unknown as Record<string, unknown>,
         );
       }
     }
 
     // Create new user + social account
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
     const email = normalizedEmail || `${payload.providerUserId}@${provider}.social`;
     const newUser = await this.userRepository.registerSocialUser(
       email,
@@ -100,7 +102,7 @@ export class SocialLoginUseCase {
       email: normalizedEmail,
     });
 
-    return this.authSessionService.socialLogin(
+    return await this.authSessionService.socialLogin(
       newUser as unknown as Record<string, unknown>,
     );
   }

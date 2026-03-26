@@ -47,7 +47,7 @@ export interface ReportMessageResult {
 /** A single session with its paginated messages. */
 export interface SessionResult {
   session: CreateSessionResult;
-  messages: Array<{
+  messages: {
     id: string;
     role: 'user' | 'assistant' | 'system';
     text?: string | null;
@@ -58,7 +58,7 @@ export interface SessionResult {
     } | null;
     createdAt: string;
     metadata?: Record<string, unknown> | null;
-  }>;
+  }[];
   page: {
     nextCursor: string | null;
     hasMore: boolean;
@@ -68,7 +68,7 @@ export interface SessionResult {
 
 /** Paginated list of sessions for a given user, each with a message preview. */
 export interface ListSessionsResult {
-  sessions: Array<{
+  sessions: {
     id: string;
     locale?: string | null;
     museumMode: boolean;
@@ -82,7 +82,7 @@ export interface ListSessionsResult {
       role: 'user' | 'assistant' | 'system';
     };
     messageCount: number;
-  }>;
+  }[];
   page: {
     nextCursor: string | null;
     hasMore: boolean;

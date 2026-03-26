@@ -1,11 +1,14 @@
 import { badRequest, notFound } from '@shared/errors/app.error';
+
+import type { Museum } from '../domain/museum.entity';
 import type { IMuseumRepository } from '../domain/museum.repository.interface';
 import type { UpdateMuseumInput } from '../domain/museum.types';
-import type { Museum } from '../domain/museum.entity';
 
+/** Validates slug format and updates a museum's fields. */
 export class UpdateMuseumUseCase {
   constructor(private readonly repository: IMuseumRepository) {}
 
+  /** Validates slug if provided, delegates update to the repository, and throws if museum not found. */
   async execute(id: number, input: UpdateMuseumInput): Promise<Museum> {
     if (input.slug !== undefined && !/^[a-z0-9-]+$/.test(input.slug)) {
       throw badRequest('Slug must contain only lowercase letters, numbers, and hyphens');

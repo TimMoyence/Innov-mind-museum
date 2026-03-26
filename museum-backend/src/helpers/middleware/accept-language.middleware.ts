@@ -1,5 +1,6 @@
-import type { Request, Response, NextFunction } from 'express';
 import { parseAcceptLanguageHeader } from '@shared/i18n/locale';
+
+import type { Request, Response, NextFunction } from 'express';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace

@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-import { ChatUiMessage } from '@/features/chat/application/useChatSession';
+import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { MarkdownBubble } from '@/features/chat/ui/MarkdownBubble';
 import { ArtworkCard } from '@/features/chat/ui/ArtworkCard';
 import { useTranslation } from 'react-i18next';
@@ -49,7 +49,7 @@ export const ChatMessageBubble = React.memo(({
       ]),
     );
     animation.start();
-    return () => animation.stop();
+    return () => { animation.stop(); };
   }, [isStreaming, cursorOpacity]);
 
   const bubbleContent = (
@@ -58,7 +58,7 @@ export const ChatMessageBubble = React.memo(({
         <View>
           <MarkdownBubble text={message.text} />
           {isStreaming ? (
-            <Animated.Text style={[styles.cursor, { opacity: cursorOpacity }]}>{'▍'}</Animated.Text>
+            <Animated.Text style={[styles.cursor, { color: theme.primary, opacity: cursorOpacity }]}>{'▍'}</Animated.Text>
           ) : null}
         </View>
       ) : (
@@ -67,9 +67,9 @@ export const ChatMessageBubble = React.memo(({
       {!isStreaming && message.image?.url ? (
         <Image
           source={{ uri: message.image.url }}
-          style={styles.messageImage}
+          style={[styles.messageImage, { borderColor: theme.separator, backgroundColor: theme.surface }]}
           resizeMode='cover'
-          onError={() => onImageError(message.id)}
+          onError={() => { onImageError(message.id); }}
         />
       ) : null}
       {!isStreaming ? (
@@ -158,12 +158,9 @@ const styles = StyleSheet.create({
     height: 220,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.35)',
-    backgroundColor: 'rgba(226,232,240,0.45)',
   },
   cursor: {
     fontSize: 18,
     lineHeight: 22,
-    color: '#6366F1',
   },
 });

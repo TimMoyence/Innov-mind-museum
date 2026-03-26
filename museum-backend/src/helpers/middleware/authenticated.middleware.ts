@@ -1,13 +1,16 @@
-import { Request, Response, NextFunction } from 'express';
 import { authSessionService } from '@modules/auth/core/useCase';
-import { env } from '@src/config/env';
 import { setUser } from '@shared/observability/sentry';
+import { env } from '@src/config/env';
+
 import { validateApiKey } from './apiKey.middleware';
+
+import type { Request, Response, NextFunction } from 'express';
 
 /**
  * Extracts and validates the Bearer token from the Authorization header.
  * Supports dual auth: if the token starts with `msk_` and the API key feature flag
  * is enabled, routes to API key validation; otherwise uses JWT.
+ *
  * @throws {401} if token is missing or invalid.
  */
 export function isAuthenticated(

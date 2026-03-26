@@ -192,7 +192,7 @@ export default function AuthScreen() {
 
         <View style={styles.form}>
           {errorMessage ? (
-            <ErrorNotice message={errorMessage} onDismiss={() => setErrorMessage(null)} />
+            <ErrorNotice message={errorMessage} onDismiss={() => { setErrorMessage(null); }} />
           ) : null}
           {infoMessage ? <Text style={[styles.infoText, { color: theme.success }]}>{infoMessage}</Text> : null}
 
@@ -226,7 +226,7 @@ export default function AuthScreen() {
           <View style={[styles.inputShell, { borderColor: theme.cardBorder, backgroundColor: theme.inputBackground }]}>
             <Ionicons name='mail-outline' size={20} color={theme.textSecondary} />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: theme.textPrimary }]}
               placeholder={t('auth.email')}
               placeholderTextColor={theme.placeholderText}
               value={email}
@@ -240,7 +240,7 @@ export default function AuthScreen() {
           <View style={[styles.inputShell, { borderColor: theme.cardBorder, backgroundColor: theme.inputBackground }]}>
             <Ionicons name='lock-closed-outline' size={20} color={theme.textSecondary} />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: theme.textPrimary }]}
               placeholder={t('auth.password')}
               placeholderTextColor={theme.placeholderText}
               value={password}
@@ -257,8 +257,8 @@ export default function AuthScreen() {
           ) : null}
 
           {!isLogin ? (
-            <Pressable style={styles.gdprRow} onPress={() => setGdprAccepted((v) => !v)} accessibilityRole="checkbox" accessibilityLabel={t('a11y.auth.gdpr_checkbox')} accessibilityState={{ checked: gdprAccepted }}>
-              <View style={[styles.checkbox, gdprAccepted && { backgroundColor: theme.primary, borderColor: theme.primary }]}>
+            <Pressable style={styles.gdprRow} onPress={() => { setGdprAccepted((v) => !v); }} accessibilityRole="checkbox" accessibilityLabel={t('a11y.auth.gdpr_checkbox')} accessibilityState={{ checked: gdprAccepted }}>
+              <View style={[styles.checkbox, { borderColor: theme.inputBorder, backgroundColor: theme.inputBackground }, gdprAccepted && { backgroundColor: theme.primary, borderColor: theme.primary }]}>
                 {gdprAccepted ? <Ionicons name='checkmark' size={14} color={theme.primaryContrast} /> : null}
               </View>
               <Text style={[styles.gdprText, { color: theme.textSecondary }]}>
@@ -298,9 +298,9 @@ export default function AuthScreen() {
           </Pressable>
 
           <View style={styles.separator}>
-            <View style={styles.separatorLine} />
+            <View style={[styles.separatorLine, { backgroundColor: theme.separator }]} />
             <Text style={[styles.separatorText, { color: theme.textSecondary }]}>{t('common.or_continue_with')}</Text>
-            <View style={styles.separatorLine} />
+            <View style={[styles.separatorLine, { backgroundColor: theme.separator }]} />
           </View>
 
           {appleAuthAvailable ? (
@@ -432,7 +432,6 @@ const styles = StyleSheet.create({
   separatorLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(148,163,184,0.36)',
   },
   separatorText: {
     fontSize: 13,
@@ -466,8 +465,6 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: 'rgba(148,163,184,0.6)',
-    backgroundColor: 'rgba(255,255,255,0.8)',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,

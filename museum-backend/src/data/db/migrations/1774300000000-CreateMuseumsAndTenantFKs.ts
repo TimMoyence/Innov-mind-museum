@@ -1,8 +1,12 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
 
+/**
+ *
+ */
 export class CreateMuseumsAndTenantFKs1774300000000 implements MigrationInterface {
   name = 'CreateMuseumsAndTenantFKs1774300000000';
 
+  /** Apply the CreateMuseumsAndTenantFKs migration. */
   public async up(queryRunner: QueryRunner): Promise<void> {
     // 1. Create museums table
     await queryRunner.query(`
@@ -49,6 +53,7 @@ export class CreateMuseumsAndTenantFKs1774300000000 implements MigrationInterfac
     );
   }
 
+  /** Revert the CreateMuseumsAndTenantFKs migration. */
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_api_keys_museum_id"`);
     await queryRunner.query(`ALTER TABLE "api_keys" DROP COLUMN IF EXISTS "museum_id"`);

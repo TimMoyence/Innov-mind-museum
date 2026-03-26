@@ -1,10 +1,13 @@
 import { logger } from '@shared/logger/logger';
-import type { CacheService } from '@shared/cache/cache.port';
-import type { UserMemoryRepository, UserMemoryUpdates } from '../domain/userMemory.repository.interface';
-import type { UserMemory } from '../domain/userMemory.entity';
-import type { VisitContext } from '../domain/chat.types';
-import type { NotableArtwork } from '../domain/userMemory.types';
+
 import { buildUserMemoryPromptBlock } from './user-memory.prompt';
+
+import type { VisitContext } from '../domain/chat.types';
+import type { UserMemory } from '../domain/userMemory.entity';
+import type { UserMemoryRepository, UserMemoryUpdates } from '../domain/userMemory.repository.interface';
+import type { NotableArtwork } from '../domain/userMemory.types';
+import type { CacheService } from '@shared/cache/cache.port';
+
 
 /** Array cap constants to prevent unbounded growth. */
 const MAX_ARTISTS = 10;
@@ -50,6 +53,7 @@ export class UserMemoryService {
    * Merges data from the completed session into the user's persistent memory.
    * Caps arrays to prevent unbounded growth.
    */
+  // eslint-disable-next-line complexity -- merges multiple memory dimensions (expertise, museums, artworks, artists) from visit context
   async updateAfterSession(
     userId: number,
     visitContext: VisitContext | null | undefined,
@@ -64,6 +68,7 @@ export class UserMemoryService {
 
     if (visitContext) {
       // Merge expertise
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: detectedExpertise may be empty string at runtime
       if (visitContext.detectedExpertise && visitContext.expertiseSignals >= 3) {
         updates.preferredExpertise = visitContext.detectedExpertise;
       }
@@ -127,7 +132,7 @@ export class UserMemoryService {
 
   /** Returns the raw entity for GDPR data export. */
   async getUserMemory(userId: number): Promise<UserMemory | null> {
-    return this.repository.getByUserId(userId);
+    return await this.repository.getByUserId(userId);
   }
 
   /** Invalidates cached prompt block for a user. */

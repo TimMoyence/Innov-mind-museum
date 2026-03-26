@@ -1,4 +1,5 @@
 import { badRequest } from '@shared/errors/app.error';
+
 import type { IAdminRepository } from '../domain/admin.repository.interface';
 import type { PaginatedResult, AdminReportDTO, ListReportsFilters } from '../domain/admin.types';
 
@@ -6,6 +7,7 @@ import type { PaginatedResult, AdminReportDTO, ListReportsFilters } from '../dom
 export class ListReportsUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
+  /** Validates pagination constraints and retrieves a paginated list of message reports. */
   async execute(filters: ListReportsFilters): Promise<PaginatedResult<AdminReportDTO>> {
     const { page, limit } = filters.pagination;
 
@@ -16,6 +18,6 @@ export class ListReportsUseCase {
       throw badRequest('limit must be between 1 and 100');
     }
 
-    return this.repository.listReports(filters);
+    return await this.repository.listReports(filters);
   }
 }

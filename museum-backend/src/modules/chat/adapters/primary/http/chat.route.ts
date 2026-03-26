@@ -1,15 +1,27 @@
-import { Request, Router } from 'express';
-import { createReadStream } from 'fs';
-import { stat } from 'fs/promises';
+import { createReadStream } from 'node:fs';
+import { stat } from 'node:fs/promises';
+
+import { type Request, Router } from 'express';
 import multer from 'multer';
 
+import { AppError, badRequest } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import {
   bySession,
   createRateLimitMiddleware,
 } from '@src/helpers/middleware/rate-limit.middleware';
-import { AppError, badRequest } from '@shared/errors/app.error';
+
+import {
+  parseCreateSessionRequest,
+  parseListSessionsQuery,
+  parsePostMessageRequest,
+  parseReportMessageRequest,
+} from './chat.contracts';
+import {
+  buildSignedChatImageReadUrl,
+  verifySignedChatImageReadUrl,
+} from './chat.image-url';
 import {
   initSseResponse,
   sendSseToken,
@@ -17,22 +29,14 @@ import {
   sendSseError,
   sendSseGuardrail,
 } from './sse.helpers';
-import { resolveLocalImageFilePath } from '../../secondary/image-storage.stub';
 import {
   buildS3SignedReadUrlFromRef,
   isS3ImageRef,
 } from '../../secondary/image-storage.s3';
-import { ChatService } from '../../../application/chat.service';
-import {
-  buildSignedChatImageReadUrl,
-  verifySignedChatImageReadUrl,
-} from './chat.image-url';
-import {
-  parseCreateSessionRequest,
-  parseListSessionsQuery,
-  parsePostMessageRequest,
-  parseReportMessageRequest,
-} from './chat.contracts';
+import { resolveLocalImageFilePath } from '../../secondary/image-storage.stub';
+
+import type { ChatService } from '../../../application/chat.service';
+
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -50,14 +54,17 @@ const audioUpload = multer({
   },
 });
 
-const parseContext = (
-  input: unknown,
-): {
+interface ParsedContext {
   location?: string;
   museumMode?: boolean;
   guideLevel?: 'beginner' | 'intermediate' | 'expert';
   locale?: string;
-} | undefined => {
+}
+
+const parseContext = (
+  input: unknown,
+  // eslint-disable-next-line sonarjs/cognitive-complexity, complexity -- context parsing requires sequential field validation
+): ParsedContext | undefined => {
   if (input === undefined || input === null || input === '') {
     return undefined;
   }
@@ -71,18 +78,14 @@ const parseContext = (
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, sonarjs/different-types-comparison -- defensive: JSON.parse("null") returns null at runtime
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
     throw badRequest('context must be an object');
   }
 
   const value = raw as Record<string, unknown>;
 
-  const context: {
-    location?: string;
-    museumMode?: boolean;
-    guideLevel?: 'beginner' | 'intermediate' | 'expert';
-    locale?: string;
-  } = {};
+  const context: ParsedContext = {};
   if (value.location !== undefined) {
     if (typeof value.location !== 'string') {
       throw badRequest('context.location must be a string');
@@ -144,6 +147,7 @@ const resolveRequestBaseUrl = (req: {
     return null;
   }
 
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
   const protocol = req.protocol || 'http';
   return `${protocol}://${host}`;
 };
@@ -203,9 +207,11 @@ const buildImageReadUrl = (params: {
 
 /**
  * Builds Express router for chat endpoints (sessions, messages, audio, image serving, reporting).
+ *
  * @param chatService - Injected chat application service.
  * @returns Configured Express Router.
  */
+// eslint-disable-next-line max-lines-per-function -- router factory registers all chat endpoints in one place
 export const createChatRouter = (chatService: ChatService): Router => {
   const router = Router();
 
@@ -218,9 +224,10 @@ export const createChatRouter = (chatService: ChatService): Router => {
   router.post('/sessions', isAuthenticated, async (req, res, next) => {
     try {
       const currentUser = getRequestUser(req);
-      const payload = parseCreateSessionRequest(req.body || {});
+      const payload = parseCreateSessionRequest(req.body ?? {});
       const session = await chatService.createSession({
         ...payload,
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
         locale: payload.locale || req.clientLocale,
         userId: currentUser?.id,
         museumId: payload.museumId ?? (req as Request & { museumId?: number }).museumId,
@@ -241,7 +248,7 @@ export const createChatRouter = (chatService: ChatService): Router => {
         return;
       }
 
-      const query = parseListSessionsQuery(req.query || {});
+      const query = parseListSessionsQuery(req.query);
       const result = await chatService.listSessions(query, currentUser.id);
       res.status(200).json(result);
     } catch (error) {
@@ -270,16 +277,17 @@ export const createChatRouter = (chatService: ChatService): Router => {
     async (req, res, next) => {
       try {
         const currentUser = getRequestUser(req);
-        const rawBody = (req.body || {}) as Record<string, unknown>;
+        const rawBody = (req.body ?? {}) as Record<string, unknown>;
         const parseableBody =
           typeof rawBody.context === 'string'
             ? { ...rawBody, context: undefined }
             : rawBody;
         const bodyPayload = parsePostMessageRequest(parseableBody);
 
-        const parsedContext = parseContext(rawBody.context) || bodyPayload.context;
+        const parsedContext = parseContext(rawBody.context) ?? bodyPayload.context;
         const context = {
           ...parsedContext,
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
           locale: parsedContext?.locale || req.clientLocale,
         };
 
@@ -321,6 +329,7 @@ export const createChatRouter = (chatService: ChatService): Router => {
     '/sessions/:id/messages/stream',
     isAuthenticated,
     sessionLimiter,
+    // eslint-disable-next-line complexity -- SSE streaming handler manages setup, timeout, error handling, and cleanup
     async (req, res) => {
       if (!env.featureFlags.streaming) {
         res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Streaming not enabled' } });
@@ -332,7 +341,7 @@ export const createChatRouter = (chatService: ChatService): Router => {
       initSseResponse(res);
 
       const controller = new AbortController();
-      res.on('close', () => controller.abort());
+      res.on('close', () => { controller.abort(); });
 
       // Hard timeout: cut SSE after 60s — if response takes longer, something is wrong
       // (LLM budget is 25s; beyond 60s = zombie connection or provider failure)
@@ -347,15 +356,16 @@ export const createChatRouter = (chatService: ChatService): Router => {
 
       try {
         const currentUser = getRequestUser(req);
-        const rawBody = (req.body || {}) as Record<string, unknown>;
+        const rawBody = (req.body ?? {}) as Record<string, unknown>;
         const parseableBody =
           typeof rawBody.context === 'string'
             ? { ...rawBody, context: undefined }
             : rawBody;
         const bodyPayload = parsePostMessageRequest(parseableBody);
-        const parsedContext = parseContext(rawBody.context) || bodyPayload.context;
+        const parsedContext = parseContext(rawBody.context) ?? bodyPayload.context;
         const context = {
           ...parsedContext,
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
           locale: parsedContext?.locale || req.clientLocale,
         };
 
@@ -385,7 +395,7 @@ export const createChatRouter = (chatService: ChatService): Router => {
           const isKnown = error instanceof AppError;
           sendSseError(
             res,
-            isKnown ? (error as AppError).code : 'INTERNAL_ERROR',
+            isKnown ? (error).code : 'INTERNAL_ERROR',
             isKnown ? error.message : 'Internal server error',
           );
         }
@@ -407,6 +417,7 @@ export const createChatRouter = (chatService: ChatService): Router => {
         const parsedAudioContext = parseContext(req.body?.context);
         const context = {
           ...parsedAudioContext,
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
           locale: parsedAudioContext?.locale || req.clientLocale,
         };
 
@@ -480,7 +491,7 @@ export const createChatRouter = (chatService: ChatService): Router => {
         return;
       }
 
-      const payload = parseReportMessageRequest(req.body || {});
+      const payload = parseReportMessageRequest(req.body ?? {});
       const result = await chatService.reportMessage(
         req.params.messageId,
         payload.reason,
@@ -577,7 +588,8 @@ export const createChatRouter = (chatService: ChatService): Router => {
       }
 
       const fileStat = await stat(imagePath);
-      const ext = image.fileName?.split('.').pop()?.toLowerCase() || '';
+      const ext = image.fileName?.split('.').pop()?.toLowerCase() ?? '';
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
       const contentType = image.contentType || contentTypeByExtension[ext] || 'application/octet-stream';
 
       res.setHeader('Content-Type', contentType);

@@ -89,7 +89,7 @@ export interface SectionRunnerOptions {
 
 const defaultNow = (): number => Date.now();
 const defaultSleep = async (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+  { await new Promise((resolve) => setTimeout(resolve, ms)); };
 
 const toErrorMessage = (error: unknown): string => {
   if (error instanceof Error) {
@@ -120,20 +120,22 @@ const jitteredDelay = (
     return 0;
   }
   const exponential = baseMs * Math.pow(2, Math.max(0, attempt - 1));
-  const jitter = Math.floor(Math.random() * Math.max(1, baseMs));
+  const jitter = Math.floor(Math.random() * Math.max(1, baseMs)); // eslint-disable-line sonarjs/pseudo-random -- jitter for retry backoff, not security-sensitive
   return Math.min(exponential + jitter, Math.max(0, remainingBudgetMs - 1));
 };
 
+// eslint-disable-next-line max-lines-per-function -- retry loop with timeout, backoff, and hook coordination
 const executeTask = async <TValue>(
   task: SectionTask<TValue>,
   options: SectionRunnerOptions,
   deadlineMs: number,
+  // eslint-disable-next-line sonarjs/cognitive-complexity, complexity -- retry loop with timeout, backoff, and hook coordination requires inherent complexity
 ): Promise<SectionRunResult<TValue>> => {
-  const now = options.now || defaultNow;
-  const sleep = options.sleep || defaultSleep;
+  const now = options.now ?? defaultNow;
+  const sleep = options.sleep ?? defaultSleep;
   const retries = Math.max(0, options.retries);
   const maxAttempts = retries + 1;
-  const shouldRetry = options.shouldRetry || (() => false);
+  const shouldRetry = options.shouldRetry ?? (() => false);
 
   let attempts = 0;
 
@@ -282,6 +284,7 @@ const executeTask = async <TValue>(
 /**
  * Executes section tasks concurrently (bounded by {@link SectionRunnerOptions.maxConcurrent})
  * with per-task timeouts, jittered exponential-backoff retries, and a global time budget.
+ *
  * @param tasks - The section tasks to run.
  * @param options - Runner configuration (concurrency, retries, budget, hooks).
  * @returns An array of results in the same order as the input tasks.
@@ -289,12 +292,12 @@ const executeTask = async <TValue>(
 export const runSectionTasks = async <TValue>(
   tasks: SectionTask<TValue>[],
   options: SectionRunnerOptions,
-): Promise<Array<SectionRunResult<TValue>>> => {
+): Promise<SectionRunResult<TValue>[]> => {
   if (!tasks.length) {
     return [];
   }
 
-  const now = options.now || defaultNow;
+  const now = options.now ?? defaultNow;
   const deadlineMs = now() + Math.max(1, options.totalBudgetMs);
   const limiter = new Semaphore(Math.max(1, options.maxConcurrent));
 

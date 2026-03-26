@@ -1,5 +1,6 @@
 import { AppError } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
+
 import type { IUserRepository } from '../domain/user.repository.interface';
 /** Minimal port for image cleanup — avoids direct coupling to chat adapter internals. */
 export interface ImageCleanupPort {
@@ -15,6 +16,7 @@ export class DeleteAccountUseCase {
 
   /**
    * Delete a user and all associated data (sessions, messages, tokens, social accounts, images).
+   *
    * @param userId - The ID of the user to delete.
    * @throws {AppError} 404 if the user does not exist.
    */

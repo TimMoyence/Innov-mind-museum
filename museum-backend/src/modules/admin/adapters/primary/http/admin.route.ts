@@ -1,7 +1,19 @@
-import { NextFunction, Request, Response, Router } from 'express';
+import { type NextFunction, type Request, type Response, Router } from 'express';
+
+import {
+  listAllTicketsUseCase,
+  updateTicketStatusUseCase,
+} from '@modules/support/useCase';
+import { badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import { requireRole } from '@src/helpers/middleware/require-role.middleware';
-import { badRequest } from '@shared/errors/app.error';
+import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+
+import {
+  changeUserRoleSchema,
+  resolveReportSchema,
+  updateTicketSchema,
+} from './admin.schemas';
 import {
   listUsersUseCase,
   changeUserRoleUseCase,
@@ -13,10 +25,7 @@ import {
   getContentAnalyticsUseCase,
   getEngagementAnalyticsUseCase,
 } from '../../../useCase';
-import {
-  listAllTicketsUseCase,
-  updateTicketStatusUseCase,
-} from '@modules/support/useCase';
+
 
 const adminRouter: Router = Router();
 
@@ -27,8 +36,8 @@ adminRouter.get(
   requireRole('admin', 'moderator'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const page = parseInt(req.query.page as string, 10) || 1;
-      const limit = parseInt(req.query.limit as string, 10) || 20;
+      const page = Number.parseInt(req.query.page as string, 10) || 1;
+      const limit = Number.parseInt(req.query.limit as string, 10) || 20;
       const search = (req.query.search as string) || undefined;
       const role = (req.query.role as string) || undefined;
 
@@ -50,20 +59,18 @@ adminRouter.patch(
   '/users/:id/role',
   isAuthenticated,
   requireRole('admin'),
+  validateBody(changeUserRoleSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = parseInt(req.params.id, 10);
-      if (isNaN(userId)) throw badRequest('Invalid user ID');
+      const userId = Number.parseInt(req.params.id, 10);
+      if (Number.isNaN(userId)) throw badRequest('Invalid user ID');
 
-      const { role } = (req.body || {}) as { role?: string };
-      if (!role || typeof role !== 'string') {
-        throw badRequest('role is required');
-      }
+      const { role } = req.body as { role: string };
 
       const updated = await changeUserRoleUseCase.execute({
         userId,
         newRole: role,
-        actorId: req.user!.id,
+        actorId: req.user?.id ?? 0,
         ip: req.ip,
         requestId: req.requestId,
       });
@@ -82,11 +89,11 @@ adminRouter.get(
   requireRole('admin', 'moderator'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const page = parseInt(req.query.page as string, 10) || 1;
-      const limit = parseInt(req.query.limit as string, 10) || 20;
+      const page = Number.parseInt(req.query.page as string, 10) || 1;
+      const limit = Number.parseInt(req.query.limit as string, 10) || 20;
       const action = (req.query.action as string) || undefined;
       const actorId = req.query.actorId
-        ? parseInt(req.query.actorId as string, 10)
+        ? Number.parseInt(req.query.actorId as string, 10)
         : undefined;
       const targetType = (req.query.targetType as string) || undefined;
       const dateFrom = (req.query.dateFrom as string) || undefined;
@@ -132,8 +139,8 @@ adminRouter.get(
   requireRole('admin', 'moderator'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const page = parseInt(req.query.page as string, 10) || 1;
-      const limit = parseInt(req.query.limit as string, 10) || 20;
+      const page = Number.parseInt(req.query.page as string, 10) || 1;
+      const limit = Number.parseInt(req.query.limit as string, 10) || 20;
       const status = (req.query.status as string) || undefined;
       const reason = (req.query.reason as string) || undefined;
       const dateFrom = (req.query.dateFrom as string) || undefined;
@@ -159,23 +166,20 @@ adminRouter.patch(
   '/reports/:id',
   isAuthenticated,
   requireRole('admin', 'moderator'),
+  validateBody(resolveReportSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const reportId = req.params.id;
-      const { status, reviewerNotes } = (req.body || {}) as {
-        status?: string;
+      const { status, reviewerNotes } = req.body as {
+        status: string;
         reviewerNotes?: string;
       };
-
-      if (!status || typeof status !== 'string') {
-        throw badRequest('status is required');
-      }
 
       const result = await resolveReportUseCase.execute({
         reportId,
         status,
         reviewerNotes,
-        reviewedBy: req.user!.id,
+        reviewedBy: req.user?.id ?? 0,
         ip: req.ip,
         requestId: req.requestId,
       });
@@ -199,7 +203,7 @@ adminRouter.get(
       const granularity = (req.query.granularity as string) || undefined;
       const from = (req.query.from as string) || undefined;
       const to = (req.query.to as string) || undefined;
-      const days = req.query.days ? parseInt(req.query.days as string, 10) : undefined;
+      const days = req.query.days ? Number.parseInt(req.query.days as string, 10) : undefined;
 
       const result = await getUsageAnalyticsUseCase.execute({
         granularity: granularity as 'daily' | 'weekly' | 'monthly' | undefined,
@@ -224,7 +228,7 @@ adminRouter.get(
     try {
       const from = (req.query.from as string) || undefined;
       const to = (req.query.to as string) || undefined;
-      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+      const limit = req.query.limit ? Number.parseInt(req.query.limit as string, 10) : undefined;
 
       const result = await getContentAnalyticsUseCase.execute({ from, to, limit });
 
@@ -263,8 +267,8 @@ adminRouter.get(
   requireRole('admin', 'moderator'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const page = parseInt(req.query.page as string, 10) || 1;
-      const limit = parseInt(req.query.limit as string, 10) || 20;
+      const page = Number.parseInt(req.query.page as string, 10) || 1;
+      const limit = Number.parseInt(req.query.limit as string, 10) || 20;
       const status = (req.query.status as string) || undefined;
       const priority = (req.query.priority as string) || undefined;
 
@@ -287,10 +291,11 @@ adminRouter.patch(
   '/tickets/:id',
   isAuthenticated,
   requireRole('admin', 'moderator'),
+  validateBody(updateTicketSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const ticketId = req.params.id;
-      const { status, priority, assignedTo } = (req.body || {}) as {
+      const { status, priority, assignedTo } = req.body as {
         status?: string;
         priority?: string;
         assignedTo?: number | null;
@@ -301,7 +306,7 @@ adminRouter.patch(
         status,
         priority,
         assignedTo,
-        actorId: req.user!.id,
+        actorId: req.user?.id ?? 0,
         ip: req.ip,
         requestId: req.requestId,
       });

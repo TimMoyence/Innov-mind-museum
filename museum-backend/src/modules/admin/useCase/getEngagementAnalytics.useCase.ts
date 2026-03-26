@@ -5,7 +5,8 @@ import type { EngagementAnalytics, EngagementAnalyticsFilters } from '../domain/
 export class GetEngagementAnalyticsUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
+  /** Executes the engagement analytics retrieval with the given filters. */
   async execute(filters: EngagementAnalyticsFilters): Promise<EngagementAnalytics> {
-    return this.repository.getEngagementAnalytics(filters);
+    return await this.repository.getEngagementAnalytics(filters);
   }
 }

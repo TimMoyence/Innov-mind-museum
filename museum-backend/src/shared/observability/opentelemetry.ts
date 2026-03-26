@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { env } from '@src/config/env';
 
 let sdkInstance: any = null;
@@ -21,6 +22,7 @@ export function initOpenTelemetry(): void {
 
   const resource = new Resource({
     [ATTR_SERVICE_NAME]: env.otel.serviceName,
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
     [ATTR_SERVICE_VERSION]: process.env.APP_VERSION || '1.0.0',
   });
 

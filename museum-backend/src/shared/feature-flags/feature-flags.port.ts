@@ -21,6 +21,7 @@ export class StaticFeatureFlagService implements FeatureFlagService {
     }
   }
 
+  /** Returns whether the given feature flag is enabled. */
   isEnabled(flag: string): boolean {
     return this.flags.get(flag) ?? false;
   }

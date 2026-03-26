@@ -28,6 +28,7 @@ export interface InsertRefreshTokenInput {
 export interface IRefreshTokenRepository {
   /**
    * Inserts a new refresh token row.
+   *
    * @param input - Token metadata (userId, jti, familyId, hash, dates).
    * @returns The inserted row.
    */
@@ -35,6 +36,7 @@ export interface IRefreshTokenRepository {
 
   /**
    * Finds a refresh token by its JTI claim.
+   *
    * @param jti - JWT ID.
    * @returns The token row or `null`.
    */
@@ -42,7 +44,10 @@ export interface IRefreshTokenRepository {
 
   /**
    * Atomically rotates a refresh token: inserts the new token and marks the current one as rotated.
+   *
    * @param params - Current token ID and next token input.
+   * @param params.currentTokenId - ID of the current token being rotated out.
+   * @param params.next - Metadata for the new replacement token.
    * @returns The newly inserted token row.
    */
   rotate(params: {
@@ -52,12 +57,14 @@ export interface IRefreshTokenRepository {
 
   /**
    * Revokes a single refresh token by its JTI.
+   *
    * @param jti - JWT ID of the token to revoke.
    */
   revokeByJti(jti: string): Promise<void>;
 
   /**
    * Deletes expired refresh tokens in a bounded batch.
+   *
    * @param limit - Maximum rows to delete per invocation.
    * @returns The number of rows actually deleted.
    */
@@ -66,6 +73,7 @@ export interface IRefreshTokenRepository {
   /**
    * Revokes all active refresh tokens for a user, optionally excluding one JTI.
    * Used after password change to invalidate all existing sessions.
+   *
    * @param userId - The user's ID.
    * @param excludeJti - Optional JTI to exclude (e.g. the current session).
    */
@@ -73,6 +81,7 @@ export interface IRefreshTokenRepository {
 
   /**
    * Revokes all tokens in a token family, optionally marking reuse detection.
+   *
    * @param familyId - Token family identifier.
    * @param reuseDetected - When `true`, also sets `reuseDetectedAt` on all family members.
    */

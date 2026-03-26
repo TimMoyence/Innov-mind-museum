@@ -2,29 +2,32 @@
  * Auth module composition root.
  * Wires repository implementations to use-case classes and exports ready-to-use singleton instances.
  */
-import { env } from '@src/config/env';
-import { RegisterUseCase } from './register.useCase';
-import { ForgotPasswordUseCase } from './forgotPassword.useCase';
-import { ResetPasswordUseCase } from './resetPassword.useCase';
-import { AuthSessionService } from './authSession.service';
-import { SocialLoginUseCase } from './socialLogin.useCase';
-import { DeleteAccountUseCase } from './deleteAccount.useCase';
-import { ExportUserDataUseCase } from './exportUserData.useCase';
-import { GetProfileUseCase } from './getProfile.useCase';
-import { ChangePasswordUseCase } from './changePassword.useCase';
-import { VerifyEmailUseCase } from './verifyEmail.useCase';
-import { GenerateApiKeyUseCase } from './generateApiKey.useCase';
-import { RevokeApiKeyUseCase } from './revokeApiKey.useCase';
-import { ListApiKeysUseCase } from './listApiKeys.useCase';
-import type { ChatDataExportPort } from '../domain/exportUserData.types';
-import { UserRepositoryPg } from '../../../auth/adapters/secondary/user.repository.pg';
-import { SocialAccountRepositoryPg } from '../../../auth/adapters/secondary/social-account.repository.pg';
-import { SocialTokenVerifierAdapter } from '../../../auth/adapters/secondary/social-token-verifier.adapter';
-import { RefreshTokenRepositoryPg } from '../../../auth/adapters/secondary/refresh-token.repository.pg';
-import { ApiKeyRepositoryPg } from '../../../auth/adapters/secondary/apiKey.repository.pg';
 import { BrevoEmailService } from '@shared/email/brevo-email.service';
-import type { EmailService } from '@shared/email/email.port';
+import { env } from '@src/config/env';
 import { setApiKeyRepository, setUserRoleResolver } from '@src/helpers/middleware/apiKey.middleware';
+
+import { AuthSessionService } from './authSession.service';
+import { ChangePasswordUseCase } from './changePassword.useCase';
+import { DeleteAccountUseCase, type ImageCleanupPort } from './deleteAccount.useCase';
+import { ExportUserDataUseCase } from './exportUserData.useCase';
+import { ForgotPasswordUseCase } from './forgotPassword.useCase';
+import { GenerateApiKeyUseCase } from './generateApiKey.useCase';
+import { GetProfileUseCase } from './getProfile.useCase';
+import { ListApiKeysUseCase } from './listApiKeys.useCase';
+import { RegisterUseCase } from './register.useCase';
+import { ResetPasswordUseCase } from './resetPassword.useCase';
+import { RevokeApiKeyUseCase } from './revokeApiKey.useCase';
+import { SocialLoginUseCase } from './socialLogin.useCase';
+import { VerifyEmailUseCase } from './verifyEmail.useCase';
+import { ApiKeyRepositoryPg } from "../../adapters/secondary/apiKey.repository.pg";
+import { RefreshTokenRepositoryPg } from "../../adapters/secondary/refresh-token.repository.pg";
+import { SocialAccountRepositoryPg } from "../../adapters/secondary/social-account.repository.pg";
+import { SocialTokenVerifierAdapter } from "../../adapters/secondary/social-token-verifier.adapter";
+import { UserRepositoryPg } from "../../adapters/secondary/user.repository.pg";
+
+import type { ChatDataExportPort } from '../domain/exportUserData.types';
+import type { EmailService } from '@shared/email/email.port';
+
 
 const userRepository = new UserRepositoryPg();
 const socialAccountRepository = new SocialAccountRepositoryPg();
@@ -35,6 +38,7 @@ const emailService: EmailService | undefined = env.brevoApiKey
   ? new BrevoEmailService(env.brevoApiKey)
   : undefined;
 
+// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
 const frontendUrl = process.env.FRONTEND_URL || undefined;
 
 /** Singleton instance of {@link RegisterUseCase}. */
@@ -53,7 +57,7 @@ const socialLoginUseCase = new SocialLoginUseCase(
   socialTokenVerifier,
 );
 /** Singleton instance of {@link DeleteAccountUseCase}. Lazy image cleanup via chat module's shared storage. */
-const imageCleanupProxy: import('./deleteAccount.useCase').ImageCleanupPort = {
+const imageCleanupProxy: ImageCleanupPort = {
   async deleteByPrefix(prefix: string): Promise<void> {
     // Late-bind to avoid circular init: chat module initializes after auth module
     const { getImageStorage } = await import('@modules/chat/index');
@@ -69,7 +73,7 @@ const chatDataExportProxy: ChatDataExportPort = {
     const { getChatRepository } = await import('@modules/chat/index');
     const repo = getChatRepository();
     if (!repo) throw new Error('Chat repository not initialized');
-    return repo.exportUserData(userId);
+    return await repo.exportUserData(userId);
   },
 };
 const exportUserDataUseCase = new ExportUserDataUseCase({ chatDataExport: chatDataExportProxy });

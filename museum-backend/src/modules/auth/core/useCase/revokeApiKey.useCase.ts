@@ -1,12 +1,14 @@
-import type { ApiKeyRepository } from '../domain/apiKey.repository.interface';
 import { notFound } from '@shared/errors/app.error';
+
+import type { ApiKeyRepository } from '../domain/apiKey.repository.interface';
 
 /** Revokes (soft-deletes) an API key. Only the key owner can revoke. */
 export class RevokeApiKeyUseCase {
-  constructor(private apiKeyRepository: ApiKeyRepository) {}
+  constructor(private readonly apiKeyRepository: ApiKeyRepository) {}
 
   /**
    * Revoke an API key by setting isActive = false.
+   *
    * @param keyId - The API key ID.
    * @param userId - The authenticated user's ID (must be the key owner).
    * @returns `{ revoked: true }` on success.

@@ -12,6 +12,7 @@ export interface SaveImageInput {
 export interface ImageStorage {
   /**
    * Persists an image and returns a storage reference string (e.g. `local://...` or `s3://...`).
+   *
    * @param input - Base64 data, MIME type, and optional key.
    * @returns A storage reference URI.
    */
@@ -19,6 +20,7 @@ export interface ImageStorage {
 
   /**
    * Deletes all images matching the given key prefix (GDPR right-to-erasure).
+   *
    * @param prefix - Object key prefix to match for deletion.
    */
   deleteByPrefix(prefix: string): Promise<void>;

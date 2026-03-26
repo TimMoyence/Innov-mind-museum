@@ -10,8 +10,8 @@ export const useOnboarding = (totalSteps: number) => {
 
   useEffect(() => {
     AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY)
-      .then((value) => setIsFirstLaunch(value !== 'true'))
-      .catch(() => setIsFirstLaunch(true));
+      .then((value) => { setIsFirstLaunch(value !== 'true'); })
+      .catch(() => { setIsFirstLaunch(true); });
   }, []);
 
   const goToStep = useCallback(

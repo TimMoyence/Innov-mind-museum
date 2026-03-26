@@ -1,16 +1,19 @@
-import bcrypt from 'bcrypt';
-import crypto from 'crypto';
-import jwt, { JwtPayload } from 'jsonwebtoken';
+import crypto from 'node:crypto';
 
-import { env } from '@src/config/env';
+import bcrypt from 'bcrypt';
+import jwt, { type JwtPayload } from 'jsonwebtoken';
+
 import { AppError, badRequest } from '@shared/errors/app.error';
-import type { IUserRepository } from '../domain/user.repository.interface';
+import { env } from '@src/config/env';
+
+import { checkLoginRateLimit, recordFailedLogin, clearLoginAttempts } from './login-rate-limiter';
+
 import type {
   IRefreshTokenRepository,
   StoredRefreshTokenRow,
 } from '../domain/refresh-token.repository.interface';
-import { checkLoginRateLimit, recordFailedLogin, clearLoginAttempts } from './login-rate-limiter';
 import type { UserRole } from '../domain/user-role';
+import type { IUserRepository } from '../domain/user.repository.interface';
 
 interface SafeUser {
   id: number;
@@ -62,7 +65,7 @@ const ttlToSeconds = (value: string): number => {
     return Number(raw);
   }
 
-  const match = raw.match(/^(\d+)\s*([smhd])$/i);
+  const match = /^(\d+)\s*([smhd])$/i.exec(raw);
   if (!match) {
     throw new Error(`Unsupported JWT TTL format: ${value}`);
   }
@@ -89,14 +92,15 @@ const sanitizeUser = (user: Record<string, unknown>): SafeUser => {
     email: String(user.email),
     firstname:
       typeof user.firstname === 'string' || user.firstname === null
-        ? (user.firstname as string | null)
+        ? (user.firstname)
         : null,
     lastname:
       typeof user.lastname === 'string' || user.lastname === null
-        ? (user.lastname as string | null)
+        ? (user.lastname)
         : null,
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: role may be undefined at runtime from raw DB row
     role: (user.role as UserRole) || 'visitor',
-    museumId: typeof user.museum_id === 'number' ? user.museum_id : (typeof user.museumId === 'number' ? user.museumId : null),
+    museumId: typeof user.museum_id === 'number' ? user.museum_id : (typeof user.museumId === 'number' ? user.museumId : null), // eslint-disable-line sonarjs/no-nested-conditional -- simple ternary chain for column name aliasing
   };
 };
 
@@ -112,13 +116,14 @@ export class AuthSessionService {
 
   /**
    * Authenticate a user with email/password and issue a token pair.
+   *
    * @param email - The user's email.
    * @param password - The user's plain-text password.
    * @returns Access/refresh tokens and user info.
    * @throws {AppError} 400 if fields are missing, 401 if credentials are invalid or account is social-only.
    */
   async login(email: string, password: string): Promise<AuthSessionResponse> {
-    if (!email?.trim() || !password) {
+    if (!email.trim() || !password) {
       throw badRequest('email and password are required');
     }
 
@@ -147,19 +152,20 @@ export class AuthSessionService {
     const session = await this.issueSession({
       user: sanitizeUser(user as unknown as Record<string, unknown>),
     });
-    this.refreshTokenRepository.deleteExpiredTokens().catch(() => {});
+    this.refreshTokenRepository.deleteExpiredTokens().catch(() => { /* noop */ });
     return session;
   }
 
   /**
    * Rotate a refresh token and issue a new token pair.
    * Revokes the entire token family if reuse is detected.
+   *
    * @param refreshToken - The current refresh JWT.
    * @returns A new access/refresh token pair.
    * @throws {AppError} 400 if token is missing, 401 if token is invalid/expired/reused.
    */
   async refresh(refreshToken: string): Promise<AuthSessionResponse> {
-    const token = refreshToken?.trim();
+    const token = refreshToken.trim();
     if (!token) {
       throw badRequest('refreshToken is required');
     }
@@ -178,7 +184,7 @@ export class AuthSessionService {
       throw unauthorized('User not found', 'INVALID_REFRESH_TOKEN');
     }
 
-    return this.issueSession({
+    return await this.issueSession({
       user: sanitizeUser(user as unknown as Record<string, unknown>),
       familyId: stored.familyId,
       rotateFrom: stored,
@@ -187,6 +193,7 @@ export class AuthSessionService {
 
   /**
    * Revoke a refresh token on logout. Idempotent — silently ignores invalid tokens.
+   *
    * @param refreshToken - The refresh JWT to revoke, or `undefined`.
    */
   async logout(refreshToken: string | undefined): Promise<void> {
@@ -205,6 +212,7 @@ export class AuthSessionService {
 
   /**
    * Issue a session for a user authenticated via social sign-in.
+   *
    * @param user - Raw user record (sanitized internally).
    * @returns Access/refresh tokens and user info.
    */
@@ -212,12 +220,13 @@ export class AuthSessionService {
     const session = await this.issueSession({
       user: sanitizeUser(user),
     });
-    this.refreshTokenRepository.deleteExpiredTokens().catch(() => {});
+    this.refreshTokenRepository.deleteExpiredTokens().catch(() => { /* noop */ });
     return session;
   }
 
   /**
    * Verify and decode an access token.
+   *
    * @param token - The raw JWT access token.
    * @returns The authenticated user's safe profile.
    * @throws {AppError} 401 if the token is invalid or expired.
@@ -225,10 +234,12 @@ export class AuthSessionService {
   verifyAccessToken(token: string): { id: number; role: UserRole; museumId?: number | null } {
     try {
       const decoded = jwt.verify(token, env.auth.accessTokenSecret) as AccessTokenClaims;
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: JWT payload may not match expected type at runtime
       if (decoded.type !== 'access' || !decoded.sub) {
         throw unauthorized('Invalid access token', 'INVALID_ACCESS_TOKEN');
       }
 
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
       return { id: Number(decoded.sub), role: decoded.role || 'visitor', museumId: decoded.museumId ?? null };
     } catch (error) {
       if (error instanceof AppError) {
@@ -242,12 +253,14 @@ export class AuthSessionService {
   private verifyRefreshToken(token: string): RefreshTokenClaims {
     try {
       const decoded = jwt.verify(token, env.auth.refreshTokenSecret) as RefreshTokenClaims;
+      /* eslint-disable @typescript-eslint/no-unnecessary-condition -- defensive: JWT payload may not match expected type at runtime */
       if (
         decoded.type !== 'refresh' ||
         typeof decoded.sub !== 'string' ||
         typeof decoded.jti !== 'string' ||
         typeof decoded.familyId !== 'string'
       ) {
+        /* eslint-enable @typescript-eslint/no-unnecessary-condition */
         throw unauthorized('Invalid refresh token', 'INVALID_REFRESH_TOKEN');
       }
 
@@ -288,7 +301,7 @@ export class AuthSessionService {
   }): Promise<AuthSessionResponse> {
     const accessJti = crypto.randomUUID();
     const refreshJti = crypto.randomUUID();
-    const familyId = params.familyId || crypto.randomUUID();
+    const familyId = params.familyId ?? crypto.randomUUID();
     const issuedAt = new Date();
     const refreshExpiresAt = new Date(Date.now() + this.refreshTtlSeconds * 1000);
 
@@ -324,14 +337,10 @@ export class AuthSessionService {
       expiresAt: refreshExpiresAt,
     };
 
-    if (params.rotateFrom) {
-      await this.refreshTokenRepository.rotate({
+    await (params.rotateFrom ? this.refreshTokenRepository.rotate({
         currentTokenId: params.rotateFrom.id,
         next: nextTokenRow,
-      });
-    } else {
-      await this.refreshTokenRepository.insert(nextTokenRow);
-    }
+      }) : this.refreshTokenRepository.insert(nextTokenRow));
 
     return {
       accessToken,

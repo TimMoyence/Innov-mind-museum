@@ -1,22 +1,6 @@
-import { NextFunction, Request, Response, Router } from 'express';
-import { isAuthenticated, isAuthenticatedJwtOnly } from '@src/helpers/middleware/authenticated.middleware';
-import { createRateLimitMiddleware, byUserId, byIp } from '@src/helpers/middleware/rate-limit.middleware';
-import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
-import { env } from '@src/config/env';
-import { AppError, badRequest } from '@shared/errors/app.error';
+import { type NextFunction, type Request, type Response, Router } from 'express';
+
 import { auditService } from '@shared/audit';
-import {
-  registerSchema,
-  loginSchema,
-  refreshSchema,
-  logoutSchema,
-  socialLoginSchema,
-  changePasswordSchema,
-  forgotPasswordSchema,
-  resetPasswordSchema,
-  verifyEmailSchema,
-  createApiKeySchema,
-} from './auth.schemas';
 import {
   AUDIT_AUTH_LOGIN_SUCCESS,
   AUDIT_AUTH_LOGIN_FAILED,
@@ -33,6 +17,24 @@ import {
   AUDIT_API_KEY_REVOKED,
   AUDIT_SECURITY_RATE_LIMIT,
 } from '@shared/audit/audit.types';
+import { AppError, badRequest } from '@shared/errors/app.error';
+import { env } from '@src/config/env';
+import { isAuthenticated, isAuthenticatedJwtOnly } from '@src/helpers/middleware/authenticated.middleware';
+import { createRateLimitMiddleware, byUserId, byIp } from '@src/helpers/middleware/rate-limit.middleware';
+import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+
+import {
+  registerSchema,
+  loginSchema,
+  refreshSchema,
+  logoutSchema,
+  socialLoginSchema,
+  changePasswordSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  verifyEmailSchema,
+  createApiKeySchema,
+} from './auth.schemas';
 import {
   authSessionService,
   forgotPasswordUseCase,
@@ -103,7 +105,7 @@ authRouter.post('/login', loginLimiter, validateBody(loginSchema), async (req: R
       auditService.log({
         action: AUDIT_AUTH_LOGIN_FAILED,
         actorType: 'anonymous',
-        metadata: { email: (req.body || {}).email },
+        metadata: { email: req.body?.email },
         ip: req.ip,
         requestId: req.requestId,
       });
@@ -112,7 +114,7 @@ authRouter.post('/login', loginLimiter, validateBody(loginSchema), async (req: R
       auditService.log({
         action: AUDIT_SECURITY_RATE_LIMIT,
         actorType: 'anonymous',
-        metadata: { email: (req.body || {}).email, endpoint: '/login' },
+        metadata: { email: req.body?.email, endpoint: '/login' },
         ip: req.ip,
         requestId: req.requestId,
       });
@@ -381,8 +383,8 @@ if (env.featureFlags.apiKeys) {
     }
 
     try {
-      const keyId = parseInt(req.params.id, 10);
-      if (isNaN(keyId)) {
+      const keyId = Number.parseInt(req.params.id, 10);
+      if (Number.isNaN(keyId)) {
         throw badRequest('Invalid API key ID');
       }
       const result = await revokeApiKeyUseCase.execute(keyId, jwtUser.id);

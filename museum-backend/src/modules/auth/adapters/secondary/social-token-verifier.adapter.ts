@@ -1,16 +1,18 @@
+import { verifySocialIdToken } from './social-token-verifier';
+
 import type {
   SocialTokenVerifier,
   SocialProvider,
   SocialTokenPayload,
 } from '../../core/domain/social-token-verifier.port';
-import { verifySocialIdToken } from './social-token-verifier';
 
 /**
  * Adapter that implements the {@link SocialTokenVerifier} port
  * by delegating to the existing `verifySocialIdToken` function.
  */
 export class SocialTokenVerifierAdapter implements SocialTokenVerifier {
+  /** Verifies a social login ID token and returns the decoded payload. */
   async verify(provider: SocialProvider, idToken: string): Promise<SocialTokenPayload> {
-    return verifySocialIdToken(provider, idToken);
+    return await verifySocialIdToken(provider, idToken);
   }
 }

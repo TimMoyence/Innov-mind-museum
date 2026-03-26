@@ -1,9 +1,11 @@
 import { UserRole } from '@modules/auth/core/domain/user-role';
-import { badRequest, notFound, conflict } from '@shared/errors/app.error';
 import { auditService, AUDIT_ADMIN_ROLE_CHANGE } from '@shared/audit';
+import { badRequest, notFound, conflict } from '@shared/errors/app.error';
+
 import type { IAdminRepository } from '../domain/admin.repository.interface';
 import type { AdminUserDTO } from '../domain/admin.types';
 
+/** Input for the change-user-role use case. */
 export interface ChangeUserRoleInput {
   userId: number;
   newRole: string;
@@ -16,6 +18,7 @@ export interface ChangeUserRoleInput {
 export class ChangeUserRoleUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
+  /** Executes the role change after validating the new role and preventing removal of the last admin. */
   async execute(input: ChangeUserRoleInput): Promise<AdminUserDTO> {
     const validRoles: string[] = Object.values(UserRole);
 

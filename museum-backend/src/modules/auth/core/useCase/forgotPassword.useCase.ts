@@ -1,26 +1,30 @@
-import { IUserRepository } from '../domain/user.repository.interface';
-import crypto from 'crypto';
-import type { EmailService } from '@shared/email/email.port';
+import crypto from 'node:crypto';
+
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
+
+import type { IUserRepository } from '../domain/user.repository.interface';
+import type { EmailService } from '@shared/email/email.port';
 
 /** Orchestrates the "forgot password" flow: generates a reset token if the user exists. */
 export class ForgotPasswordUseCase {
   constructor(
-    private userRepository: IUserRepository,
-    private emailService?: EmailService,
-    private frontendUrl?: string,
+    private readonly userRepository: IUserRepository,
+    private readonly emailService?: EmailService,
+    private readonly frontendUrl?: string,
   ) {}
 
   /**
    * Generate a password-reset token for the given email.
    * If an email service is configured, sends a reset link; otherwise logs the token (dev only).
    * Returns `undefined` silently if the user does not exist (to prevent enumeration).
+   *
    * @param email - The email to initiate reset for.
    * @returns The reset token string, or `undefined` if the user was not found.
    */
   async execute(email: string): Promise<string | undefined> {
-    const normalizedEmail = email?.trim().toLowerCase() || '';
+    if (!email) return;
+    const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) return;
 
     const user = await this.userRepository.getUserByEmail(normalizedEmail);

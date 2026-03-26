@@ -1,4 +1,4 @@
-import { ApiKey } from './apiKey.entity';
+import type { ApiKey } from './apiKey.entity';
 
 /** Port for API key persistence operations. */
 export interface ApiKeyRepository {

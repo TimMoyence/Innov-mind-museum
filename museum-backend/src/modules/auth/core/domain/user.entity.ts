@@ -6,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+
 import type { UserRole } from './user-role';
 
 /** Represents a registered user account. Mapped to `users`. */

@@ -1,8 +1,12 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import type { MigrationInterface, QueryRunner } from "typeorm";
 
+/**
+ *
+ */
 export class AddSocialAccountsAndNullablePassword1773823617791 implements MigrationInterface {
     name = 'AddSocialAccountsAndNullablePassword1773823617791'
 
+    /** Apply the AddSocialAccountsAndNullablePassword migration. */
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.startTransaction();
         try {
@@ -36,6 +40,7 @@ export class AddSocialAccountsAndNullablePassword1773823617791 implements Migrat
         }
     }
 
+    /** Revert the AddSocialAccountsAndNullablePassword migration. */
     public async down(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`ALTER TABLE "message_reports" DROP CONSTRAINT "FK_7078835e4cc127f9394f40ac6e7"`);
         await queryRunner.query(`ALTER TABLE "social_accounts" DROP CONSTRAINT "FK_7de933c3670ec71c68aca0afd56"`);

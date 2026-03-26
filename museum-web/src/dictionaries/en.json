@@ -144,6 +144,8 @@
     "analytics": "Analytics",
     "tickets": "Tickets",
     "supportAdmin": "Support",
+    "accessDenied": "Access Denied",
+    "goToHomepage": "Go to homepage",
     "login": {
       "title": "Musaium Administration",
       "emailPlaceholder": "Email",

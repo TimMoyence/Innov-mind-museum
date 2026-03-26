@@ -10,7 +10,9 @@ import {
 } from 'typeorm';
 
 import { User } from '@modules/auth/core/domain/user.entity';
+
 import { ChatMessage } from './chatMessage.entity';
+
 import type { VisitContext } from './chat.types';
 
 /** Represents a chat session between a visitor and the assistant. Mapped to `chat_sessions`. */

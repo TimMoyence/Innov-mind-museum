@@ -75,7 +75,7 @@ export default function DiscoverScreen() {
               id: 'saved',
               icon: 'grid-outline',
               label: t('discover.menu.dashboard'),
-              onPress: () => router.push('/(tabs)/conversations'),
+              onPress: () => { router.push('/(tabs)/conversations'); },
             },
           ]}
         />
@@ -88,11 +88,11 @@ export default function DiscoverScreen() {
             {t('discover.subtitle')}
           </Text>
           {actionStatus ? <Text style={[styles.statusLine, { color: theme.primary }]}>{actionStatus}</Text> : null}
-          {error ? <ErrorNotice message={error} onDismiss={() => setError(null)} /> : null}
+          {error ? <ErrorNotice message={error} onDismiss={() => { setError(null); }} /> : null}
         </GlassCard>
 
         <Pressable
-          style={[styles.actionCard, styles.primaryActionCard]}
+          style={[styles.actionCard, styles.primaryActionCard, { backgroundColor: theme.userBubble, borderColor: theme.userBubbleBorder }]}
           onPress={() => void startConversation('camera')}
           disabled={isCreating}
           accessibilityRole="button"
@@ -101,7 +101,7 @@ export default function DiscoverScreen() {
           accessibilityState={{ disabled: isCreating }}
         >
           <Text style={[styles.actionTitle, { color: theme.primaryContrast }]}>{t('discover.photo_title')}</Text>
-          <Text style={styles.actionText}>
+          <Text style={[styles.actionText, { color: theme.primaryContrast }]}>
             {t('discover.photo_desc')}
           </Text>
           {isCreating ? <ActivityIndicator color={theme.primaryContrast} /> : <Text style={[styles.actionCta, { color: theme.primaryContrast }]}>{t('discover.open_lens')}</Text>}
@@ -131,7 +131,7 @@ export default function DiscoverScreen() {
           </Text>
           <Pressable
             style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]}
-            onPress={() => router.push('/(tabs)/conversations')}
+            onPress={() => { router.push('/(tabs)/conversations'); }}
             accessibilityRole="button"
             accessibilityLabel={t('a11y.discover.dashboard')}
           >
@@ -146,7 +146,7 @@ export default function DiscoverScreen() {
           </Text>
           <Pressable
             style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]}
-            onPress={() => router.push('/(stack)/guided-museum-mode')}
+            onPress={() => { router.push('/(stack)/guided-museum-mode'); }}
             accessibilityRole="button"
             accessibilityLabel={t('a11y.discover.guided')}
           >
@@ -194,16 +194,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryActionCard: {
-    backgroundColor: 'rgba(29,78,216,0.92)',
     borderWidth: 1,
-    borderColor: 'rgba(191,219,254,0.8)',
   },
   actionTitle: {
     fontWeight: '700',
     fontSize: 18,
   },
   actionText: {
-    color: 'rgba(255,255,255,0.92)',
     lineHeight: 20,
     fontSize: 13,
   },

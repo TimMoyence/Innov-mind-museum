@@ -89,7 +89,7 @@ export default function HomeScreen() {
         />
       </View>
 
-      {menuStatus ? <Text style={[styles.menuStatus, { color: theme.shadowColor }]}>{menuStatus}</Text> : null}
+      {menuStatus ? <Text style={[styles.menuStatus, { color: theme.success }]}>{menuStatus}</Text> : null}
 
       <GlassCard style={styles.heroCard} intensity={62}>
         <BrandMark variant='hero' />
@@ -97,12 +97,12 @@ export default function HomeScreen() {
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
           {t('home.hero_subtitle')}
         </Text>
-        <Text style={[styles.settingsNote, { color: theme.shadowColor }]}>
+        <Text style={[styles.settingsNote, { color: theme.textTertiary }]}>
           {t('home.settings_note', { locale, mode: museumMode ? t('common.on') : t('common.off') })}
         </Text>
       </GlassCard>
 
-      {error ? <ErrorNotice message={error} onDismiss={() => setError(null)} /> : null}
+      {error ? <ErrorNotice message={error} onDismiss={() => { setError(null); }} /> : null}
 
       <Pressable
         style={[styles.primaryButton, { backgroundColor: theme.primary, shadowColor: theme.shadowColor }]}
@@ -121,10 +121,10 @@ export default function HomeScreen() {
       </Pressable>
 
       <View style={styles.secondaryRow}>
-        <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]} onPress={() => router.push('/(stack)/onboarding')} accessibilityRole="button" accessibilityLabel={t('a11y.home.onboarding')}>
+        <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]} onPress={() => { router.push('/(stack)/onboarding'); }} accessibilityRole="button" accessibilityLabel={t('a11y.home.onboarding')}>
           <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('home.onboarding')}</Text>
         </Pressable>
-        <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]} onPress={() => router.push('/(stack)/settings')} accessibilityRole="button" accessibilityLabel={t('a11y.home.settings')}>
+        <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]} onPress={() => { router.push('/(stack)/settings'); }} accessibilityRole="button" accessibilityLabel={t('a11y.home.settings')}>
           <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('home.settings')}</Text>
         </Pressable>
       </View>

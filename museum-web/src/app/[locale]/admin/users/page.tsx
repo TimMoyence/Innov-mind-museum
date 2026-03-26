@@ -22,8 +22,8 @@ const ALL_ROLES: UserRole[] = ['visitor', 'moderator', 'museum_manager', 'admin'
 function useDebouncedValue(value: string, delay: number): string {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
-    const id = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(id);
+    const id = setTimeout(() => { setDebounced(value); }, delay);
+    return () => { clearTimeout(id); };
   }, [value, delay]);
   return debounced;
 }
@@ -117,12 +117,12 @@ export default function UsersPage() {
           type="text"
           placeholder={isFr ? 'Rechercher...' : 'Search...'}
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200 sm:max-w-xs"
         />
         <select
           value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value as UserRole | '')}
+          onChange={(e) => { setRoleFilter(e.target.value as UserRole | ''); }}
           className="rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         >
           <option value="">{isFr ? 'Tous les rôles' : 'All roles'}</option>
@@ -256,7 +256,7 @@ export default function UsersPage() {
                 <button
                   type="button"
                   disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
+                  onClick={() => { setPage((p) => p - 1); }}
                   className="rounded-md border border-primary-200 px-3 py-1 text-sm font-medium text-text-secondary hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isFr ? 'Précédent' : 'Previous'}
@@ -264,7 +264,7 @@ export default function UsersPage() {
                 <button
                   type="button"
                   disabled={page >= meta.totalPages}
-                  onClick={() => setPage((p) => p + 1)}
+                  onClick={() => { setPage((p) => p + 1); }}
                   className="rounded-md border border-primary-200 px-3 py-1 text-sm font-medium text-text-secondary hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isFr ? 'Suivant' : 'Next'}
@@ -277,11 +277,17 @@ export default function UsersPage() {
 
       {/* Change Role Modal */}
       {editingUser && (
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
         <div
           ref={modalRef}
+          role="dialog"
+          aria-modal="true"
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
           onClick={(e) => {
             if (e.target === modalRef.current) setEditingUser(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setEditingUser(null);
           }}
         >
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
@@ -294,7 +300,7 @@ export default function UsersPage() {
 
             <select
               value={newRole}
-              onChange={(e) => setNewRole(e.target.value as UserRole)}
+              onChange={(e) => { setNewRole(e.target.value as UserRole); }}
               className="mt-4 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
             >
               {ALL_ROLES.map((r) => (
@@ -307,7 +313,7 @@ export default function UsersPage() {
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => setEditingUser(null)}
+                onClick={() => { setEditingUser(null); }}
                 className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted"
               >
                 {isFr ? 'Annuler' : 'Cancel'}

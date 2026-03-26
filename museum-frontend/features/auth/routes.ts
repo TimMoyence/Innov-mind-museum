@@ -1,4 +1,4 @@
-import { Href } from 'expo-router';
+import type { Href } from 'expo-router';
 
 /** Route path for the authentication screen. */
 export const AUTH_ROUTE = '/auth' satisfies Href;

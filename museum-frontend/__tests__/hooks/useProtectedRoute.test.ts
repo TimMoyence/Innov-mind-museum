@@ -32,7 +32,7 @@ describe('useProtectedRoute', () => {
     mockedUseAuth.mockReturnValue({ isAuthenticated: false, isLoading: true });
     mockedUseSegments.mockReturnValue(['(tabs)']);
 
-    renderHook(() => useProtectedRoute());
+    renderHook(() => { useProtectedRoute(); });
 
     expect(mockReplace).not.toHaveBeenCalled();
   });
@@ -41,7 +41,7 @@ describe('useProtectedRoute', () => {
     mockedUseAuth.mockReturnValue({ isAuthenticated: false, isLoading: false });
     mockedUseSegments.mockReturnValue(['(tabs)']);
 
-    renderHook(() => useProtectedRoute());
+    renderHook(() => { useProtectedRoute(); });
 
     expect(mockReplace).toHaveBeenCalledWith('/auth');
   });
@@ -50,7 +50,7 @@ describe('useProtectedRoute', () => {
     mockedUseAuth.mockReturnValue({ isAuthenticated: true, isLoading: false });
     mockedUseSegments.mockReturnValue(['auth']);
 
-    renderHook(() => useProtectedRoute());
+    renderHook(() => { useProtectedRoute(); });
 
     expect(mockReplace).toHaveBeenCalledWith('/(tabs)/home');
   });
@@ -59,7 +59,7 @@ describe('useProtectedRoute', () => {
     mockedUseAuth.mockReturnValue({ isAuthenticated: true, isLoading: false });
     mockedUseSegments.mockReturnValue(['(tabs)']);
 
-    renderHook(() => useProtectedRoute());
+    renderHook(() => { useProtectedRoute(); });
 
     expect(mockReplace).not.toHaveBeenCalled();
   });

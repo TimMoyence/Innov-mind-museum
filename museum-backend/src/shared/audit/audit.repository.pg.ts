@@ -1,9 +1,11 @@
 import pool from '@data/db';
+
 import type { IAuditLogRepository } from './audit.repository.interface';
 import type { AuditLogEntry } from './audit.types';
 
 /** PostgreSQL implementation of the audit log repository. INSERT-only by design. */
 export class AuditRepositoryPg implements IAuditLogRepository {
+  /** Inserts a single audit log entry into the database. */
   async insert(entry: AuditLogEntry): Promise<void> {
     await pool.query(
       `INSERT INTO "audit_logs" (action, actor_type, actor_id, target_type, target_id, metadata, ip, request_id)
@@ -21,6 +23,7 @@ export class AuditRepositoryPg implements IAuditLogRepository {
     );
   }
 
+  /** Inserts multiple audit log entries in a single batched query. */
   async insertBatch(entries: AuditLogEntry[]): Promise<void> {
     if (entries.length === 0) return;
 

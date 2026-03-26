@@ -41,11 +41,9 @@ export const BiometricLockScreen = ({
         </Text>
       </Pressable>
 
-      {failed && (
-        <Text style={[styles.failedText, { color: theme.error }]}>
+      {failed ? <Text style={[styles.failedText, { color: theme.error }]}>
           {t('biometric.failed')}
-        </Text>
-      )}
+        </Text> : null}
     </View>
   );
 };

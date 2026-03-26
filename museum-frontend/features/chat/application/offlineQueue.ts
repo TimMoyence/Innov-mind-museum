@@ -17,7 +17,7 @@ const STORAGE_KEY = 'musaium.offline.queue';
 export class OfflineQueue {
   private queue: QueuedMessage[] = [];
   private snapshot: readonly QueuedMessage[] = [];
-  private listeners: Set<() => void> = new Set();
+  private listeners = new Set<() => void>();
   private storage: QueueStorage | null;
 
   constructor(storage?: QueueStorage) {
@@ -103,7 +103,7 @@ export class OfflineQueue {
 
   private notify(): void {
     this.snapshot = [...this.queue];
-    this.listeners.forEach(l => l());
+    this.listeners.forEach(l => { l(); });
   }
 
   private async persist(): Promise<void> {

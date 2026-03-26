@@ -1,8 +1,12 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import type { MigrationInterface, QueryRunner } from "typeorm";
 
+/**
+ *
+ */
 export class InitDatabase1771427010387 implements MigrationInterface {
     name = 'InitDatabase1771427010387'
 
+    /** Apply the InitDatabase migration. */
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`CREATE TABLE "users" ("id" SERIAL NOT NULL, "email" character varying NOT NULL, "password" character varying NOT NULL, "firstname" character varying, "lastname" character varying, "reset_token" character varying, "reset_token_expires" TIMESTAMP, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "UQ_97672ac88f789774dd47f7c8be3" UNIQUE ("email"), CONSTRAINT "PK_a3ffb1c0c8416b9fc6f907b7433" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE TABLE "image_insight_messages" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "role" character varying NOT NULL, "content" text NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "conversationId" uuid, CONSTRAINT "PK_26a7261320960138a72e45d5bf4" PRIMARY KEY ("id"))`);
@@ -17,6 +21,7 @@ export class InitDatabase1771427010387 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "artwork_matches" ADD CONSTRAINT "FK_4e09da4e92fddfef0d14f634d5e" FOREIGN KEY ("messageId") REFERENCES "chat_messages"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
     }
 
+    /** Revert the InitDatabase migration. */
     public async down(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`ALTER TABLE "artwork_matches" DROP CONSTRAINT "FK_4e09da4e92fddfef0d14f634d5e"`);
         await queryRunner.query(`ALTER TABLE "chat_messages" DROP CONSTRAINT "FK_a82476a8acdd6cd6936378cb72d"`);

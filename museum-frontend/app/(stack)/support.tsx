@@ -83,7 +83,7 @@ export default function SupportScreen() {
               id: 'privacy',
               icon: 'shield-checkmark-outline',
               label: t('support.privacy'),
-              onPress: () => router.push('/(stack)/privacy'),
+              onPress: () => { router.push('/(stack)/privacy'); },
             },
           ]}
         />
@@ -143,7 +143,7 @@ export default function SupportScreen() {
           <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('support.share_channels')}</Text>
         </Pressable>
 
-        <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]} onPress={() => router.push('/(stack)/settings')} accessibilityRole="button" accessibilityLabel={t('a11y.support.back_settings')}>
+        <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]} onPress={() => { router.push('/(stack)/settings'); }} accessibilityRole="button" accessibilityLabel={t('a11y.support.back_settings')}>
           <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('support.back_settings')}</Text>
         </Pressable>
       </ScrollView>

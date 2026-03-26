@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import Button from '@/components/ui/Button';
@@ -21,7 +21,7 @@ export default function LoginForm({ dict }: LoginFormProps) {
 
   const locale = pathname.split('/')[1] ?? 'fr';
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setError('');
     try {
@@ -40,7 +40,7 @@ export default function LoginForm({ dict }: LoginFormProps) {
           <p className="mt-2 text-sm text-text-secondary">{dict.title}</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-5">
           <div>
             <label htmlFor="admin-email" className="sr-only">
               Email
@@ -52,7 +52,7 @@ export default function LoginForm({ dict }: LoginFormProps) {
               autoComplete="email"
               placeholder={dict.emailPlaceholder}
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); }}
               className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
             />
           </div>
@@ -67,7 +67,7 @@ export default function LoginForm({ dict }: LoginFormProps) {
               autoComplete="current-password"
               placeholder={dict.passwordPlaceholder}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); }}
               className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
             />
           </div>

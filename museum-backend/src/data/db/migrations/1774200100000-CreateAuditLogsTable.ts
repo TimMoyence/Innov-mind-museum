@@ -1,8 +1,12 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
 
+/**
+ *
+ */
 export class CreateAuditLogsTable1774200100000 implements MigrationInterface {
   name = 'CreateAuditLogsTable1774200100000';
 
+  /** Apply the CreateAuditLogsTable migration. */
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE TABLE "audit_logs" (
@@ -59,6 +63,7 @@ export class CreateAuditLogsTable1774200100000 implements MigrationInterface {
     `);
   }
 
+  /** Revert the CreateAuditLogsTable migration. */
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP TRIGGER IF EXISTS trg_audit_logs_no_delete ON "audit_logs"`);
     await queryRunner.query(`DROP TRIGGER IF EXISTS trg_audit_logs_no_update ON "audit_logs"`);

@@ -1,7 +1,9 @@
 import { badRequest, notFound, forbidden } from '@shared/errors/app.error';
+
 import type { ISupportRepository } from '../domain/support.repository.interface';
 import type { TicketMessageDTO } from '../domain/support.types';
 
+/** Input for adding a message to a support ticket. */
 export interface AddTicketMessageInput {
   ticketId: string;
   senderId: number;
@@ -13,8 +15,9 @@ export interface AddTicketMessageInput {
 export class AddTicketMessageUseCase {
   constructor(private readonly repository: ISupportRepository) {}
 
+  /** Validates message text, verifies access, and adds a message to the ticket. */
   async execute(input: AddTicketMessageInput): Promise<TicketMessageDTO> {
-    const text = input.text?.trim();
+    const text = input.text.trim();
     if (!text || text.length < 1 || text.length > 5000) {
       throw badRequest('text must be between 1 and 5000 characters');
     }

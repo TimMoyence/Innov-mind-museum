@@ -1,6 +1,7 @@
 /**
  * In-memory per-email login rate limiter (SEC-05).
  * Blocks brute-force password guessing by tracking failed attempts per email address.
+ *
  * @module auth/core/useCase/login-rate-limiter
  */
 
@@ -21,6 +22,7 @@ const store = new InMemoryBucketStore<LoginAttempt>({
 
 /**
  * Checks whether the given email has exceeded the maximum number of login attempts.
+ *
  * @param email - The email address to check.
  * @throws {AppError} 429 if the rate limit has been exceeded.
  */
@@ -41,6 +43,7 @@ export const checkLoginRateLimit = (email: string): void => {
 
 /**
  * Records a failed login attempt for the given email.
+ *
  * @param email - The email address that failed to authenticate.
  */
 export const recordFailedLogin = (email: string): void => {
@@ -57,6 +60,7 @@ export const recordFailedLogin = (email: string): void => {
 
 /**
  * Clears all recorded failed attempts for the given email (called on successful login).
+ *
  * @param email - The email address to clear.
  */
 export const clearLoginAttempts = (email: string): void => {

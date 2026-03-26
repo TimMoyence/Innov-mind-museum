@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "name": "musaium-monorepo",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}

@@ -62,10 +62,12 @@ eas build:list --platform all --status finished --limit 2
 
 | Platform | Device | Resolution | Required |
 |----------|--------|------------|----------|
-| **App Store** | iPhone 6.7" (15 Pro Max) | 1290 x 2796 | Yes |
-| **App Store** | iPhone 6.5" (14 Plus) | 1284 x 2778 | Yes (legacy) |
-| **App Store** | iPad 12.9" (Pro) | 2048 x 2732 | Yes (if iPad supported) |
+| **App Store** | iPhone 6.7" (16 Pro Max) | 1320 x 2868 | Yes |
+| **App Store** | iPhone 6.5" (16 Plus) | 1284 x 2778 | Recommended |
+| **App Store** | iPad 13" (Pro M4) | 2064 x 2752 | Yes (if iPad supported) |
 | **Google Play** | Phone | Min 320px, max 3840px, 16:9 or 9:16 | Min 2, max 8 |
+| **Google Play** | 7" tablet | Optional | Recommended |
+| **Google Play** | 10" tablet | Optional | Recommended |
 
 ### Capture screenshots
 
@@ -74,22 +76,39 @@ eas build:list --platform all --status finished --limit 2
 # Install Maestro
 curl -Ls "https://get.maestro.mobile.dev" | bash
 
-# Boot simulator
-xcrun simctl boot "iPhone 15 Pro Max"
+# Build and install on simulator (first time only)
+npx expo run:ios --device "iPhone 16 Pro Max"
 
-# Set production variant for clean UI
-APP_VARIANT=production npx expo start --ios
+# Start Expo pointing to production backend
+APP_VARIANT=production EXPO_PUBLIC_API_ENVIRONMENT=production npx expo start --ios
 
-# Run screenshot flow
+# Run screenshot flow (in another terminal)
 maestro test museum-frontend/maestro/screenshots.yaml
 
 # Screenshots saved to ~/.maestro/screenshots/
 ```
 
+**Other device sizes:**
+```bash
+# iPhone 6.5" (16 Plus)
+xcrun simctl shutdown all
+xcrun simctl boot "iPhone 16 Plus"
+npx expo run:ios --device "iPhone 16 Plus"    # first time only
+APP_VARIANT=production EXPO_PUBLIC_API_ENVIRONMENT=production npx expo start --ios
+maestro test maestro/screenshots.yaml
+
+# iPad 13" (Pro M4)
+xcrun simctl shutdown all
+xcrun simctl boot "iPad Pro 13-inch (M4)"
+npx expo run:ios --device "iPad Pro 13-inch (M4)"    # first time only
+APP_VARIANT=production EXPO_PUBLIC_API_ENVIRONMENT=production npx expo start --ios
+maestro test maestro/screenshots.yaml
+```
+
 **Option B: Manual capture**
 ```bash
 cd museum-frontend
-APP_VARIANT=production npx expo start --ios
+APP_VARIANT=production EXPO_PUBLIC_API_ENVIRONMENT=production npx expo start --ios
 # In Simulator: Cmd+S to save screenshot to ~/Desktop/
 ```
 

@@ -31,7 +31,7 @@ const STAT_LABELS: Record<string, { en: string; fr: string }> = {
 };
 
 function getStatLabel(key: string, locale: string): string {
-  const entry = STAT_LABELS[key];
+  const entry = STAT_LABELS[key] as { en: string; fr: string } | undefined;
   if (!entry) return key;
   return locale === 'fr' ? entry.fr : entry.en;
 }

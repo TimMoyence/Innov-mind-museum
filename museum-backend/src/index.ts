@@ -1,28 +1,33 @@
 import './instrumentation';
 import 'reflect-metadata';
-import util from 'util';
+import util from 'node:util';
 
-import { env } from '@src/config/env';
-import { AppDataSource } from '@src/data/db/data-source';
-import { logger } from '@shared/logger/logger';
-import { initSentry } from '@shared/observability/sentry';
-import { shutdownOpenTelemetry } from '@shared/observability/opentelemetry';
-import { createApp } from './app';
+import Redis from 'ioredis';
+
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/refresh-token.repository.pg';
 import { TokenCleanupService } from '@modules/auth/core/useCase/tokenCleanup.service';
-import { RedisCacheService } from '@shared/cache/redis-cache.service';
-import { NoopCacheService } from '@shared/cache/noop-cache.service';
-import type { CacheService } from '@shared/cache/cache.port';
 import { getOcrService } from '@modules/chat';
-import { stopRateLimitSweep } from '@src/helpers/middleware/rate-limit.middleware';
-import { setRedisRateLimitStore } from '@src/helpers/middleware/rate-limit.middleware';
+import { NoopCacheService } from '@shared/cache/noop-cache.service';
+import { RedisCacheService } from '@shared/cache/redis-cache.service';
+import { logger } from '@shared/logger/logger';
+import { shutdownOpenTelemetry } from '@shared/observability/opentelemetry';
+import { initSentry } from '@shared/observability/sentry';
+import { env } from '@src/config/env';
+import { AppDataSource } from '@src/data/db/data-source';
+import { stopRateLimitSweep, setRedisRateLimitStore  } from '@src/helpers/middleware/rate-limit.middleware';
 import { RedisRateLimitStore } from '@src/helpers/middleware/redis-rate-limit-store';
-import Redis from 'ioredis';
+
+import { createApp } from './app';
+
+import type { CacheService } from '@shared/cache/cache.port';
+
+
 
 /** Grace period for in-flight requests to complete before forced exit (ms). */
 const SHUTDOWN_TIMEOUT_MS = 30_000;
 
 /** Initializes the database, starts the HTTP server, and registers graceful shutdown handlers. */
+// eslint-disable-next-line max-lines-per-function -- server bootstrap must wire all subsystems in one place
 const start = async (): Promise<void> => {
   initSentry();
 
@@ -41,8 +46,8 @@ const start = async (): Promise<void> => {
         url: env.cache.url,
         defaultTtlSeconds: env.cache.sessionTtlSeconds,
       });
-      void redisCacheService.connect().catch((err) => {
-        logger.error('redis_connection_failed', { error: (err as Error).message ?? err });
+      void redisCacheService.connect().catch((err: unknown) => {
+        logger.error('redis_connection_failed', { error: err instanceof Error ? err.message : String(err) });
       });
       cacheService = redisCacheService;
 
@@ -55,7 +60,8 @@ const start = async (): Promise<void> => {
       });
       redisClient.on('error', (err) => {
         logger.warn('redis_rate_limit_connection_error', {
-          error: (err as Error).message ?? 'unknown',
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: err.message may be undefined at runtime
+          error: (err).message ?? 'unknown',
         });
       });
       const redisRateLimitStore = new RedisRateLimitStore(redisClient);
@@ -96,25 +102,27 @@ const start = async (): Promise<void> => {
 
       // 2. Close the HTTP server — stops accepting new connections,
       //    waits for in-flight requests to complete
-      server.close(async () => {
+      server.close(() => {
         logger.info('server_connections_drained');
-        try {
-          if (AppDataSource.isInitialized) {
-            await AppDataSource.destroy();
-            logger.info('database_closed');
-          }
-        } finally {
-          // 3. Close Redis connections
-          if (redisClient) {
-            try {
-              await redisClient.quit();
-              logger.info('redis_rate_limit_closed');
-            } catch {
-              // Best-effort
+        void (async () => {
+          try {
+            if (AppDataSource.isInitialized) {
+              await AppDataSource.destroy();
+              logger.info('database_closed');
             }
+          } finally {
+            // 3. Close Redis connections
+            if (redisClient) {
+              try {
+                await redisClient.quit();
+                logger.info('redis_rate_limit_closed');
+              } catch {
+                // Best-effort
+              }
+            }
+            process.exit(0);
           }
-          process.exit(0);
-        }
+        })();
       });
 
       // Force exit after grace period if connections don't drain in time
@@ -127,11 +135,11 @@ const start = async (): Promise<void> => {
       }, SHUTDOWN_TIMEOUT_MS).unref();
     };
 
-    ['SIGINT', 'SIGTERM'].forEach((sig) => {
+    for (const sig of ['SIGINT', 'SIGTERM']) {
       process.on(sig as NodeJS.Signals, () => {
         void shutdown(sig);
       });
-    });
+    }
   } catch (error) {
     const errorMessage =
       error instanceof Error
