@@ -1,5 +1,10 @@
 import { type NextFunction, type Request, type Response, Router } from 'express';
 
+import { moderateReviewSchema } from '@modules/review/adapters/primary/http/review.schemas';
+import {
+  listAllReviewsUseCase as listAllReviewsUseCaseInstance,
+  moderateReviewUseCase as moderateReviewUseCaseInstance,
+} from '@modules/review/useCase';
 import {
   listAllTicketsUseCase,
   updateTicketStatusUseCase,
@@ -8,6 +13,7 @@ import { badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import { requireRole } from '@src/helpers/middleware/require-role.middleware';
 import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+
 
 import {
   changeUserRoleSchema,
@@ -312,6 +318,55 @@ adminRouter.patch(
       });
 
       res.json({ ticket: updated });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// ─── Reviews Moderation ───
+
+// GET /api/admin/reviews — Admin & moderator: paginated review list (filterable by status)
+adminRouter.get(
+  '/reviews',
+  isAuthenticated,
+  requireRole('admin', 'moderator'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const page = Number.parseInt(req.query.page as string, 10) || 1;
+      const limit = Number.parseInt(req.query.limit as string, 10) || 20;
+      const status = (req.query.status as string) || undefined;
+
+      const result = await listAllReviewsUseCaseInstance.execute({
+        status,
+        page,
+        limit,
+      });
+
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// PATCH /api/admin/reviews/:id — Admin & moderator: moderate a review (approve/reject)
+adminRouter.patch(
+  '/reviews/:id',
+  isAuthenticated,
+  requireRole('admin', 'moderator'),
+  validateBody(moderateReviewSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const reviewId = req.params.id;
+      const { status } = req.body as { status: string };
+
+      const updated = await moderateReviewUseCaseInstance.execute({
+        reviewId,
+        status,
+      });
+
+      res.json({ review: updated });
     } catch (error) {
       next(error);
     }

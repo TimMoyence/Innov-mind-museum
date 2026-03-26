@@ -45,16 +45,21 @@ export interface Dictionary {
     description: string;
     caption: string;
   };
-  testimonials: {
+  reviews: {
     title: string;
-    items: { name: string; role: string; quote: string }[];
+    subtitle: string;
+    cta: string;
+    ctaSubtitle: string;
+    leaveReview: string;
+    stars: string;
   };
   download: {
     title: string;
     subtitle: string;
     appStore: string;
     googlePlay: string;
-    qrLabel: string;
+    appStorePrefix: string;
+    googlePlayPrefix: string;
   };
   support: {
     title: string;

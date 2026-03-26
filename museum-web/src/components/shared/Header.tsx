@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Dictionary, Locale } from '@/lib/i18n';
 import LanguageSwitcher from '@/components/shared/LanguageSwitcher';
 
@@ -20,14 +21,23 @@ export default function Header({ dict, locale }: HeaderProps) {
   ];
 
   return (
-    <header className="sticky top-0 z-50 border-b border-primary-100 bg-white/80 backdrop-blur-md">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+    <header className="glass-heavy sticky top-0 z-50 !border-x-0 !border-t-0 !border-b !border-b-white/20">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link
           href={`/${locale}`}
-          className="text-xl font-bold tracking-tight text-primary-700"
+          className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
         >
-          Musaium
+          <Image
+            src="/images/logo.png"
+            alt="Musaium"
+            width={36}
+            height={36}
+            className="rounded-lg"
+          />
+          <span className="text-lg font-semibold tracking-tight text-text-primary">
+            Musaium
+          </span>
         </Link>
 
         {/* Desktop nav */}
@@ -43,8 +53,8 @@ export default function Header({ dict, locale }: HeaderProps) {
           ))}
           <LanguageSwitcher locale={locale} label={dict.nav.language} />
           <Link
-            href="#download"
-            className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-600"
+            href={`/${locale}#download`}
+            className="rounded-xl bg-primary-500 px-5 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-600 hover:shadow-md active:scale-[0.98]"
           >
             {dict.nav.download}
           </Link>
@@ -53,18 +63,16 @@ export default function Header({ dict, locale }: HeaderProps) {
         {/* Mobile hamburger */}
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-md p-2 text-text-secondary transition-colors hover:bg-primary-50 md:hidden"
+          className="inline-flex items-center justify-center rounded-lg p-2 text-text-secondary transition-colors hover:bg-white/50 md:hidden"
           aria-label="Toggle menu"
           aria-expanded={menuOpen}
           onClick={() => { setMenuOpen((prev) => !prev); }}
         >
           {menuOpen ? (
-            // X icon
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           ) : (
-            // Hamburger icon
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
             </svg>
@@ -74,13 +82,13 @@ export default function Header({ dict, locale }: HeaderProps) {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <nav className="border-t border-primary-100 bg-white px-4 pb-4 pt-2 md:hidden" aria-label="Mobile">
+        <nav className="border-t border-white/20 bg-white/60 px-4 pb-4 pt-2 backdrop-blur-xl md:hidden" aria-label="Mobile">
           <ul className="flex flex-col gap-2">
             {navLinks.map((link) => (
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="block rounded-md px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-primary-50 hover:text-primary-600"
+                  className="block rounded-lg px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-white/50 hover:text-primary-600"
                   onClick={() => { setMenuOpen(false); }}
                 >
                   {link.label}
@@ -92,8 +100,8 @@ export default function Header({ dict, locale }: HeaderProps) {
             </li>
             <li>
               <Link
-                href="#download"
-                className="block rounded-lg bg-primary-500 px-4 py-2 text-center text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-600"
+                href={`/${locale}#download`}
+                className="block rounded-xl bg-primary-500 px-4 py-2 text-center text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-600"
                 onClick={() => { setMenuOpen(false); }}
               >
                 {dict.nav.download}

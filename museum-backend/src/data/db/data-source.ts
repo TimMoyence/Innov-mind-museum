@@ -5,12 +5,14 @@ import { ApiKey } from '@modules/auth/core/domain/apiKey.entity';
 import { AuthRefreshToken } from '@modules/auth/core/domain/authRefreshToken.entity';
 import { SocialAccount } from '@modules/auth/core/domain/socialAccount.entity';
 import { User } from '@modules/auth/core/domain/user.entity';
+import { ArtKeyword } from '@modules/chat/domain/artKeyword.entity';
 import { ArtworkMatch } from '@modules/chat/domain/artworkMatch.entity';
 import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import { ChatSession } from '@modules/chat/domain/chatSession.entity';
 import { MessageReport } from '@modules/chat/domain/messageReport.entity';
 import { UserMemory } from '@modules/chat/domain/userMemory.entity';
 import { Museum } from '@modules/museum/core/domain/museum.entity';
+import { Review } from '@modules/review/domain/review.entity';
 import { SupportTicket } from '@modules/support/domain/supportTicket.entity';
 import { TicketMessage } from '@modules/support/domain/ticketMessage.entity';
 import { AuditLog } from '@shared/audit/auditLog.entity';
@@ -33,11 +35,13 @@ export const AppDataSource = new DataSource({
     ApiKey,
     ChatSession,
     ChatMessage,
+    ArtKeyword,
     ArtworkMatch,
     MessageReport,
     UserMemory,
     AuditLog,
     Museum,
+    Review,
     SupportTicket,
     TicketMessage,
   ],

@@ -68,32 +68,21 @@
     "description": "Interface épurée, réponses instantanées et navigation intuitive. Musaium s'adapte à votre rythme de visite pour une découverte sans friction.",
     "caption": "Disponible sur iOS et Android"
   },
-  "testimonials": {
-    "title": "Ce qu'en disent nos utilisateurs",
-    "items": [
-      {
-        "name": "Marie Leclerc",
-        "role": "Visiteuse régulière",
-        "quote": "Musaium a complètement transformé mes visites. Je comprends enfin les œuvres en profondeur, comme si j'avais un guide personnel dans ma poche."
-      },
-      {
-        "name": "Antoine Dubois",
-        "role": "Étudiant en histoire de l'art",
-        "quote": "Les sources Wikidata et la qualité des réponses sont impressionnantes. C'est devenu un outil indispensable pour mes recherches au musée."
-      },
-      {
-        "name": "Sophie Martin",
-        "role": "Guide touristique",
-        "quote": "Je recommande Musaium à tous mes groupes. L'application complète parfaitement mes explications avec des détails que je n'ai pas toujours le temps de couvrir."
-      }
-    ]
+  "reviews": {
+    "title": "Votre avis compte",
+    "subtitle": "Aidez-nous à améliorer Musaium en partageant votre expérience de visite.",
+    "cta": "Donner mon avis",
+    "ctaSubtitle": "Partagez votre expérience et aidez les autres visiteurs",
+    "leaveReview": "Laisser un avis",
+    "stars": "étoiles"
   },
   "download": {
     "title": "Prêt à transformer vos visites ?",
     "subtitle": "Téléchargez Musaium gratuitement et commencez à explorer les musées autrement.",
     "appStore": "App Store",
     "googlePlay": "Google Play",
-    "qrLabel": "Scannez pour télécharger"
+    "appStorePrefix": "Téléchargez sur",
+    "googlePlayPrefix": "Disponible sur"
   },
   "support": {
     "title": "Centre d'aide",
@@ -144,8 +133,8 @@
     "analytics": "Analytiques",
     "tickets": "Tickets",
     "supportAdmin": "Support",
-    "accessDenied": "Acces refuse",
-    "goToHomepage": "Retour a l'accueil",
+    "accessDenied": "Accès refusé",
+    "goToHomepage": "Retour à l'accueil",
     "login": {
       "title": "Administration Musaium",
       "emailPlaceholder": "Email",

@@ -3,7 +3,9 @@ import { Router } from 'express';
 import adminRouter from '@modules/admin/adapters/primary/http/admin.route';
 import authRouter from '@modules/auth/adapters/primary/http/auth.route';
 import { createChatRouter } from '@modules/chat/adapters/primary/http/chat.route';
+import { getArtKeywordRepository } from '@modules/chat/index';
 import museumRouter from '@modules/museum/adapters/primary/http/museum.route';
+import reviewRouter from '@modules/review/adapters/primary/http/review.route';
 import supportRouter from '@modules/support/adapters/primary/http/support.route';
 import { env } from '@src/config/env';
 
@@ -118,11 +120,12 @@ export const createApiRouter = ({ chatService, healthCheck, featureFlagService }
     res.status(payload.status === 'ok' ? 200 : 503).json(payload);
   });
 
-  router.use('/chat', createChatRouter(chatService));
+  router.use('/chat', createChatRouter(chatService, getArtKeywordRepository()));
   router.use('/auth', authRouter);
   router.use('/museums', museumRouter);
   router.use('/admin', adminRouter);
   router.use('/support', supportRouter);
+  router.use('/reviews', reviewRouter);
 
   return router;
 };
