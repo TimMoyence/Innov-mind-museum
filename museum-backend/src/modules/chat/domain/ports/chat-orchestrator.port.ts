@@ -20,6 +20,7 @@ export interface OrchestratorInput {
   requestId?: string;
   redirectHint?: string;
   userMemoryBlock?: string;
+  knowledgeBaseBlock?: string;
 }
 
 /** Result returned by {@link ChatOrchestrator.generate}. */

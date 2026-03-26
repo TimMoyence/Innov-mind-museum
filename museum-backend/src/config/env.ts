@@ -142,6 +142,13 @@ interface AppEnv {
     streaming: boolean;
     multiTenancy: boolean;
     userMemory: boolean;
+    knowledgeBase: boolean;
+  };
+  /** Knowledge base (Wikidata) configuration. */
+  knowledgeBase: {
+    timeoutMs: number;
+    cacheTtlSeconds: number;
+    cacheMaxEntries: number;
   };
 }
 
@@ -300,6 +307,12 @@ const env: AppEnv = {
     streaming: toBoolean(process.env.FEATURE_FLAG_STREAMING, false),
     multiTenancy: toBoolean(process.env.FEATURE_FLAG_MULTI_TENANCY, false),
     userMemory: toBoolean(process.env.FEATURE_FLAG_USER_MEMORY, false),
+    knowledgeBase: toBoolean(process.env.FEATURE_FLAG_KNOWLEDGE_BASE, false),
+  },
+  knowledgeBase: {
+    timeoutMs: toNumber(process.env.KB_TIMEOUT_MS, 500),
+    cacheTtlSeconds: toNumber(process.env.KB_CACHE_TTL_SECONDS, 3600),
+    cacheMaxEntries: toNumber(process.env.KB_CACHE_MAX_ENTRIES, 500),
   },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
   storage: {

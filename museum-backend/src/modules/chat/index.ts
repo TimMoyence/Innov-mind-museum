@@ -13,7 +13,9 @@ import {
   OpenAiTextToSpeechService,
   DisabledTextToSpeechService,
 } from './adapters/secondary/text-to-speech.openai';
+import { WikidataClient } from './adapters/secondary/wikidata.client';
 import { ChatService } from './application/chat.service';
+import { KnowledgeBaseService } from './application/knowledge-base.service';
 import { UserMemoryService } from './application/user-memory.service';
 import { TypeOrmChatRepository } from './infrastructure/chat.repository.typeorm';
 import { TypeOrmUserMemoryRepository } from './infrastructure/userMemory.repository.typeorm';
@@ -52,7 +54,7 @@ export const getUserMemoryService = (): UserMemoryService | undefined => sharedU
  * @param dataSource - Initialized TypeORM DataSource for repository creation.
  * @returns ChatService with repository, orchestrator, image storage, and audio transcriber.
  */
-// eslint-disable-next-line complexity -- dependency wiring requires conditional initialization of storage, audio, OCR, and memory services
+// eslint-disable-next-line complexity, max-lines-per-function -- dependency wiring requires conditional initialization of storage, audio, OCR, KB, and memory services
 export const buildChatService = (dataSource: DataSource, cache?: CacheService): ChatService => {
   let imageStorage: LocalImageStorage | S3CompatibleImageStorage;
   if (env.storage.driver === 's3') {
@@ -106,6 +108,16 @@ export const buildChatService = (dataSource: DataSource, cache?: CacheService): 
     sharedUserMemoryService = userMemory;
   }
 
+  let knowledgeBase: KnowledgeBaseService | undefined;
+  if (env.featureFlags.knowledgeBase) {
+    const wikidataClient = new WikidataClient();
+    knowledgeBase = new KnowledgeBaseService(wikidataClient, {
+      timeoutMs: env.knowledgeBase.timeoutMs,
+      cacheTtlSeconds: env.knowledgeBase.cacheTtlSeconds,
+      cacheMaxEntries: env.knowledgeBase.cacheMaxEntries,
+    });
+  }
+
   return new ChatService({
     repository,
     orchestrator: new LangChainChatOrchestrator(),
@@ -116,5 +128,6 @@ export const buildChatService = (dataSource: DataSource, cache?: CacheService): 
     ocr,
     audit: auditService,
     userMemory,
+    knowledgeBase,
   });
 };

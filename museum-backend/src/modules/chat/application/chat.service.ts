@@ -13,6 +13,7 @@ import type {
   ReportMessageResult,
   SessionResult,
 } from './chat.service.types';
+import type { KnowledgeBaseService } from './knowledge-base.service';
 import type { UserMemoryService } from './user-memory.service';
 import type { ChatRepository } from '../domain/chat.repository.interface';
 import type {
@@ -52,6 +53,7 @@ export interface ChatServiceDeps {
   ocr?: OcrService;
   audit?: AuditService;
   userMemory?: UserMemoryService;
+  knowledgeBase?: KnowledgeBaseService;
 }
 
 /**
@@ -84,6 +86,7 @@ export class ChatService {
       ocr: deps.ocr,
       audit: deps.audit,
       userMemory: deps.userMemory,
+      knowledgeBase: deps.knowledgeBase,
     });
 
     this.media = new ChatMediaService({

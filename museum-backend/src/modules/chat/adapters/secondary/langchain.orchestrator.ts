@@ -361,6 +361,7 @@ const buildSectionMessages = (
   historyMessages: ChatModelMessage[],
   userMessage: HumanMessage,
   userMemoryBlock?: string,
+  knowledgeBaseBlock?: string,
   redirectHint?: string,
   // eslint-disable-next-line max-params -- prompt assembly requires all context pieces as separate parameters
 ): ChatModelMessage[] => {
@@ -371,6 +372,10 @@ const buildSectionMessages = (
 
   if (userMemoryBlock) {
     messages.push(new SystemMessage(userMemoryBlock));
+  }
+
+  if (knowledgeBaseBlock) {
+    messages.push(new SystemMessage(knowledgeBaseBlock));
   }
 
   if (redirectHint) {
@@ -451,6 +456,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         historyMessages,
         userMessage,
         input.userMemoryBlock,
+        input.knowledgeBaseBlock,
         input.redirectHint,
       );
 
@@ -715,6 +721,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
       historyMessages,
       userMessage,
       input.userMemoryBlock,
+      input.knowledgeBaseBlock,
       input.redirectHint,
     );
 
