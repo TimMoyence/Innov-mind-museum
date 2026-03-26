@@ -153,7 +153,7 @@ export const verifyGoogleIdToken = async (
   const decoded = jwt.verify(idToken, publicKey, {
     algorithms: ['RS256'],
     issuer: ['accounts.google.com', 'https://accounts.google.com'],
-    audience: env.auth.googleClientIds,
+    audience: env.auth.googleClientIds as [string, ...string[]],
   }) as jwt.JwtPayload;
 
   return {
