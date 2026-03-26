@@ -25,6 +25,7 @@ import { ensureSessionAccess } from './session-access';
 import { computeSessionUpdates } from './visit-context';
 import { DisabledAudioTranscriber } from '../domain/ports/audio-transcriber.port';
 
+import type { ArtTopicClassifier } from './art-topic-classifier';
 import type { PostMessageResult, PostAudioMessageResult } from './chat.service.types';
 import type { KnowledgeBaseService } from './knowledge-base.service';
 import type { UserMemoryService } from './user-memory.service';
@@ -56,6 +57,9 @@ export interface ChatMessageServiceDeps {
   audit?: AuditService;
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
+  dynamicArtKeywords?: ReadonlySet<string>;
+  artTopicClassifier?: ArtTopicClassifier;
+  onArtKeywordDiscovered?: (keyword: string, locale: string) => void;
 }
 
 /**
@@ -96,6 +100,9 @@ export class ChatMessageService {
   private readonly audit?: AuditService;
   private readonly userMemory?: UserMemoryService;
   private readonly knowledgeBase?: KnowledgeBaseService;
+  private readonly dynamicArtKeywords?: ReadonlySet<string>;
+  private readonly artTopicClassifier?: ArtTopicClassifier;
+  private readonly onArtKeywordDiscovered?: (keyword: string, locale: string) => void;
 
   constructor(deps: ChatMessageServiceDeps) {
     this.repository = deps.repository;
@@ -107,6 +114,9 @@ export class ChatMessageService {
     this.audit = deps.audit;
     this.userMemory = deps.userMemory;
     this.knowledgeBase = deps.knowledgeBase;
+    this.dynamicArtKeywords = deps.dynamicArtKeywords;
+    this.artTopicClassifier = deps.artTopicClassifier;
+    this.onArtKeywordDiscovered = deps.onArtKeywordDiscovered;
   }
 
   /**
@@ -143,7 +153,7 @@ export class ChatMessageService {
 
     const text = input.text?.trim();
     if (text && text.length > env.llm.maxTextLength) {
-      throw badRequest(`text must be <= ${env.llm.maxTextLength} characters`);
+      throw badRequest(`text must be <= ${String(env.llm.maxTextLength)} characters`);
     }
 
     if (!text && !input.image) {
@@ -221,7 +231,7 @@ export class ChatMessageService {
       try {
         const ocrResult = await this.ocr.extractText(orchestratorImage.value);
         if (ocrResult?.text) {
-          const ocrGuardrail = evaluateUserInputGuardrail({ text: ocrResult.text, history: [] });
+          const ocrGuardrail = await evaluateUserInputGuardrail({ text: ocrResult.text, history: [] });
           if (!ocrGuardrail.allow) {
             throw badRequest('Image contains disallowed content');
           }
@@ -242,9 +252,14 @@ export class ChatMessageService {
       sessionId,
       env.llm.maxHistoryMessages,
     );
-    const userGuardrail = evaluateUserInputGuardrail({
+    const userGuardrail = await evaluateUserInputGuardrail({
       text,
       history: historyBeforeMessage,
+      dynamicKeywords: this.dynamicArtKeywords,
+      classifier: this.artTopicClassifier,
+      onKeywordDiscovered: this.onArtKeywordDiscovered
+        ? (kw: string) => { this.onArtKeywordDiscovered?.(kw, requestedLocale ?? 'en'); }
+        : undefined,
     });
 
     await this.repository.persistMessage({
@@ -401,7 +416,7 @@ export class ChatMessageService {
     if (this.cache) {
       await this.cache.delByPrefix(`session:${sessionId}:`);
       if (ownerId) {
-        await this.cache.delByPrefix(`sessions:user:${ownerId}:`);
+        await this.cache.delByPrefix(`sessions:user:${String(ownerId)}:`);
       }
     }
 
@@ -603,7 +618,7 @@ export class ChatMessageService {
       audio.sizeBytes <= 0 ||
       audio.sizeBytes > env.llm.maxAudioBytes
     ) {
-      throw badRequest(`Audio exceeds max size of ${env.llm.maxAudioBytes} bytes`);
+      throw badRequest(`Audio exceeds max size of ${String(env.llm.maxAudioBytes)} bytes`);
     }
     if (!env.upload.allowedAudioMimeTypes.includes(audio.mimeType)) {
       throw badRequest(`Unsupported audio mime type: ${audio.mimeType}`);

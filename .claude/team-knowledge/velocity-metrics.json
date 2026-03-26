@@ -81,7 +81,7 @@
     {
       "id": "R6",
       "date": "2026-03-25",
-      "mode": "feature (museum-web W2 — landing + admin API)",
+      "mode": "feature (museum-web W2 \u2014 landing + admin API)",
       "score": 95,
       "agentsSpawned": 2,
       "filesTouched": 25,
@@ -113,7 +113,7 @@
     {
       "id": "R6-fixes",
       "date": "2026-03-25",
-      "mode": "fix (Phase 1+2 — 6 findings + Zustand + OpenAPI)",
+      "mode": "fix (Phase 1+2 \u2014 6 findings + Zustand + OpenAPI)",
       "score": 95,
       "agentsSpawned": 2,
       "filesTouched": 18,
@@ -161,7 +161,7 @@
     {
       "id": "R9",
       "date": "2026-03-25",
-      "mode": "feat (3 vagues — store-ready + DX enablers + museum-web W2)",
+      "mode": "feat (3 vagues \u2014 store-ready + DX enablers + museum-web W2)",
       "score": 94,
       "agentsSpawned": 2,
       "filesTouched": 35,
@@ -177,7 +177,7 @@
     {
       "id": "R10",
       "date": "2026-03-25",
-      "mode": "chore (process audit — amelioration team)",
+      "mode": "chore (process audit \u2014 amelioration team)",
       "score": 93,
       "agentsSpawned": 1,
       "filesTouched": 0,
@@ -204,12 +204,12 @@
       "firstPassRate": 1.0,
       "estimation": "M",
       "result": "PASS",
-      "notes": "8 new theme tokens, 92% hardcoded color reduction, dark mode bug fixed. Agent scope creep: FlashList + React Compiler + component tests committed without mandate. Tests 47→71 (+24 from scope creep)."
+      "notes": "8 new theme tokens, 92% hardcoded color reduction, dark mode bug fixed. Agent scope creep: FlashList + React Compiler + component tests committed without mandate. Tests 47\u219271 (+24 from scope creep)."
     },
     {
       "id": "R12",
       "date": "2026-03-26",
-      "mode": "chore (scope creep guards — EP-014, AM-009, PE-013)",
+      "mode": "chore (scope creep guards \u2014 EP-014, AM-009, PE-013)",
       "score": 95,
       "agentsSpawned": 0,
       "filesTouched": 10,
@@ -221,18 +221,34 @@
       "estimation": "S",
       "result": "PASS",
       "notes": "LIMITES OPERATIONNELLES in 9 agents + SKILL.md. EP-014 fixed, AM-009 applied, PE-013 injected. L3 PROMOTION confirmed."
+    },
+    {
+      "id": "R13",
+      "date": "2026-03-26",
+      "mode": "feature (R15 Smart Art Keywords + review + corrections)",
+      "score": 85,
+      "agentsSpawned": 3,
+      "filesTouched": 16,
+      "testsWritten": 19,
+      "filesPerAgent": 5.3,
+      "roiMoyen": 3.5,
+      "correctiveLoops": 2,
+      "firstPassRate": 0.6,
+      "estimation": "L",
+      "result": "PASS",
+      "notes": "Feature: Haiku classifier + dynamic keywords + offline sync. 3 review agents (Sentinelle 68/100, QA, PM). 2 correction loops: W2 bulkUpsert O(n), W3 locale hardcoded, W5 0 tests. Final: 1054 tests pass (+19), tsc PASS. File revert issue during background agents."
     }
   ],
   "averages": {
-    "score": 93.2,
+    "score": 92.9,
     "filesPerAgent": 8.83,
-    "correctiveLoops": 0,
+    "correctiveLoops": 0.13,
     "firstPassRate": 1.0,
     "roiMoyen": 4.67
   },
   "trends": {
-    "scoreTrend": "STABLE HIGH (88-97 range, avg 93.2 over 15 runs) — L3 CONFIRMED R12",
-    "loopsTrend": "STABLE (0) — 15 runs lifetime, 0 corrective loops",
-    "roiTrend": "STABLE HIGH (3.5-5.0) — 15 runs avg 4.67"
+    "scoreTrend": "STABLE HIGH (88-97 range, avg 93.2 over 15 runs) \u2014 L3 CONFIRMED R12",
+    "loopsTrend": "STABLE (0) \u2014 15 runs lifetime, 0 corrective loops",
+    "roiTrend": "STABLE HIGH (3.5-5.0) \u2014 15 runs avg 4.67"
   }
 }

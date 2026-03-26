@@ -7,14 +7,20 @@
       "description": "Spread args sur fonction sans rest param",
       "occurrences": 1,
       "lastSeen": "2026-03-24",
-      "runs": ["S8"],
+      "runs": [
+        "S8"
+      ],
       "severity": 3,
       "fix": "Remplacer (...args: unknown[]) => fn(...args) par () => fn()",
       "fixApplied": true,
       "fixAppliedDate": "2026-03-24",
       "fixVerified": true,
-      "fixVerifiedRuns": ["S8-commit"],
-      "agentsConcerned": ["QA Engineer"]
+      "fixVerifiedRuns": [
+        "S8-commit"
+      ],
+      "agentsConcerned": [
+        "QA Engineer"
+      ]
     },
     {
       "id": "EP-002",
@@ -22,16 +28,26 @@
       "description": "as any au lieu de jest.Mocked<T> dans les tests",
       "occurrences": 3,
       "lastSeen": "2026-03-24",
-      "runs": ["S7", "S8", "V1.1"],
+      "runs": [
+        "S7",
+        "S8",
+        "V1.1"
+      ],
       "severity": 4,
       "fix": "jest.Mocked<InterfacePort> pour repos injectes, makeFakeRepo() factory pour mocks complexes, as unknown as Type pour casts explicites",
       "fixApplied": true,
       "fixAppliedDate": "2026-03-24",
       "fixResult": "V1.1 wave-c: 64 as any -> 0 dans tests",
       "fixVerified": true,
-      "fixVerifiedRuns": ["V1.1", "R4"],
+      "fixVerifiedRuns": [
+        "V1.1",
+        "R4"
+      ],
       "r4Status": "CONFIRME 0 as-any (PE-001 toujours actif et efficace)",
-      "agentsConcerned": ["QA Engineer", "Backend Architect"]
+      "agentsConcerned": [
+        "QA Engineer",
+        "Backend Architect"
+      ]
     },
     {
       "id": "EP-003",
@@ -39,17 +55,28 @@
       "description": "Import concret adapter dans useCase/application layer",
       "occurrences": 9,
       "lastSeen": "2026-03-25",
-      "runs": ["audit", "V1.1", "R4", "R6-fixes"],
+      "runs": [
+        "audit",
+        "V1.1",
+        "R4",
+        "R6-fixes"
+      ],
       "severity": 4,
       "fix": "Creer interface port dans domain/ports/, adapter implements le port, composition root seul autorise les imports concrets",
       "fixApplied": true,
       "fixAppliedDate": "2026-03-25",
       "fixResult": "R6-fixes: SocialTokenVerifier port interface extracted, SocialLoginUseCase injects via constructor",
       "fixVerified": true,
-      "fixVerifiedRuns": ["V1.1", "R6-fixes", "R8"],
-      "r4Status": "FERME — Regression M4 corrigee en R6-fixes (d9c17a2). Verification R8: port interface presente.",
-      "regressionDetail": "socialLogin.useCase imports concrete adapter instead of port interface — CORRIGE",
-      "agentsConcerned": ["Backend Architect"]
+      "fixVerifiedRuns": [
+        "V1.1",
+        "R6-fixes",
+        "R8"
+      ],
+      "r4Status": "FERME \u2014 Regression M4 corrigee en R6-fixes (d9c17a2). Verification R8: port interface presente.",
+      "regressionDetail": "socialLogin.useCase imports concrete adapter instead of port interface \u2014 CORRIGE",
+      "agentsConcerned": [
+        "Backend Architect"
+      ]
     },
     {
       "id": "EP-004",
@@ -57,14 +84,18 @@
       "description": "grep avec path relatif retourne 0 au lieu du count reel",
       "occurrences": 2,
       "lastSeen": "2026-03-24",
-      "runs": ["audit"],
+      "runs": [
+        "audit"
+      ],
       "severity": 2,
       "fix": "Toujours utiliser cd /repo/root && grep -r ou chemin absolu. Le hook rtk peut interferer.",
       "fixApplied": false,
       "fixAppliedDate": null,
       "fixVerified": false,
       "fixVerifiedRuns": [],
-      "agentsConcerned": ["Tech Lead"]
+      "agentsConcerned": [
+        "Tech Lead"
+      ]
     },
     {
       "id": "EP-005",
@@ -72,14 +103,20 @@
       "description": "console.* non conditionne __DEV__ en frontend",
       "occurrences": 4,
       "lastSeen": "2026-03-24",
-      "runs": ["Phase 0"],
+      "runs": [
+        "Phase 0"
+      ],
       "severity": 3,
       "fix": "Supprimer ou wrapper dans if (__DEV__). Les erreurs non-critiques (logout, token clear) peuvent etre silencieuses.",
       "fixApplied": true,
       "fixAppliedDate": "2026-03-24",
       "fixVerified": true,
-      "fixVerifiedRuns": ["Phase 0"],
-      "agentsConcerned": ["Tech Lead"]
+      "fixVerifiedRuns": [
+        "Phase 0"
+      ],
+      "agentsConcerned": [
+        "Tech Lead"
+      ]
     },
     {
       "id": "EP-006",
@@ -87,14 +124,20 @@
       "description": "NSPrivacyCollectedDataTypes vide dans app.config.ts",
       "occurrences": 1,
       "lastSeen": "2026-03-24",
-      "runs": ["Phase 0"],
+      "runs": [
+        "Phase 0"
+      ],
       "severity": 4,
       "fix": "Renseigner avec les types reels de donnees collectees. Expo utilise NSPrivacyCollectedDataType (pas ...Identifier).",
       "fixApplied": true,
       "fixAppliedDate": "2026-03-24",
       "fixVerified": true,
-      "fixVerifiedRuns": ["Phase 0"],
-      "agentsConcerned": ["Frontend Architect"]
+      "fixVerifiedRuns": [
+        "Phase 0"
+      ],
+      "agentsConcerned": [
+        "Frontend Architect"
+      ]
     },
     {
       "id": "EP-007",
@@ -102,17 +145,24 @@
       "description": "devDependencies dans image Docker prod",
       "occurrences": 1,
       "lastSeen": "2026-03-25",
-      "runs": ["audit", "R3", "R4", "R5-hotfix"],
+      "runs": [
+        "audit",
+        "R3",
+        "R4",
+        "R5-hotfix"
+      ],
       "severity": 4,
       "severityEscalated": true,
-      "severityEscalationReason": "3 consecutive runs unfixed — escalated from 3 to 4",
+      "severityEscalationReason": "3 consecutive runs unfixed \u2014 escalated from 3 to 4",
       "fix": "pnpm install --prod dans le runtime stage ou prune apres COPY",
       "fixApplied": true,
       "fixAppliedDate": "2026-03-25",
-      "fixResult": "R5-hotfix (09c6b3e): Docker 3-stage build — build stage, deps-prod stage (pnpm install --prod), runtime stage. devDeps excluded from final image.",
+      "fixResult": "R5-hotfix (09c6b3e): Docker 3-stage build \u2014 build stage, deps-prod stage (pnpm install --prod), runtime stage. devDeps excluded from final image.",
       "fixVerified": true,
-      "fixVerifiedRuns": ["R5-hotfix"],
-      "r4Status": "FERME — C7 corrige en R5-hotfix. Docker 3-stage: build -> deps-prod -> runtime.",
+      "fixVerifiedRuns": [
+        "R5-hotfix"
+      ],
+      "r4Status": "FERME \u2014 C7 corrige en R5-hotfix. Docker 3-stage: build -> deps-prod -> runtime.",
       "escalation": {
         "level": "RESOLVED",
         "runsUnfixed": 3,
@@ -120,7 +170,9 @@
         "resolvedIn": "R5-hotfix (2026-03-25)",
         "recommendation": "Resolved via 3-stage Dockerfile pattern"
       },
-      "agentsConcerned": ["DevOps Engineer"]
+      "agentsConcerned": [
+        "DevOps Engineer"
+      ]
     },
     {
       "id": "EP-008",
@@ -128,32 +180,46 @@
       "description": "Reecriture totale d'un fichier doc introduit des regressions de contenu",
       "occurrences": 1,
       "lastSeen": "2026-03-24",
-      "runs": ["docker-compose-audit"],
+      "runs": [
+        "docker-compose-audit"
+      ],
       "severity": 4,
       "fix": "Toujours verifier via git diff que le contenu original est preserve apres reecriture. Preferer edition chirurgicale a reecriture totale.",
       "fixApplied": true,
       "fixAppliedDate": "2026-03-24",
       "fixResult": "Codifie en regle IL-1 et IL-5",
       "fixVerified": true,
-      "fixVerifiedRuns": ["docker-compose-audit-run2"],
-      "agentsConcerned": ["Tech Lead"]
+      "fixVerifiedRuns": [
+        "docker-compose-audit-run2"
+      ],
+      "agentsConcerned": [
+        "Tech Lead"
+      ]
     },
     {
       "id": "EP-009",
       "name": "FRONTEND_NO_ERROR_BOUNDARY",
-      "description": "Aucun React Error Boundary dans l'app React Native — crash JS = crash app entiere (ecran blanc)",
+      "description": "Aucun React Error Boundary dans l'app React Native \u2014 crash JS = crash app entiere (ecran blanc)",
       "occurrences": 1,
       "lastSeen": "2026-03-25",
-      "runs": ["R4", "R5-hotfix"],
+      "runs": [
+        "R4",
+        "R5-hotfix"
+      ],
       "severity": 5,
       "fix": "Ajouter un ErrorBoundary React au root layout (_layout.tsx) avec fallback UI gracieux. Considerer react-native-error-boundary ou implementation custom.",
       "fixApplied": true,
       "fixAppliedDate": "2026-03-25",
       "fixResult": "R5-hotfix (09c6b3e): Custom ErrorBoundary class component with Sentry.captureException, componentDidCatch, reload via expo-updates. Placed before all providers in _layout.tsx. Sentry.wrap on root export.",
       "fixVerified": true,
-      "fixVerifiedRuns": ["R5-hotfix", "R8"],
-      "r4Status": "FERME — C1 corrige en R5-hotfix. Verifie R8 (6 criteres PASS).",
-      "agentsConcerned": ["Frontend Architect"]
+      "fixVerifiedRuns": [
+        "R5-hotfix",
+        "R8"
+      ],
+      "r4Status": "FERME \u2014 C1 corrige en R5-hotfix. Verifie R8 (6 criteres PASS).",
+      "agentsConcerned": [
+        "Frontend Architect"
+      ]
     },
     {
       "id": "EP-010",
@@ -161,33 +227,49 @@
       "description": "fetch() vers services externes (audio transcription, TTS) sans timeout ni AbortController",
       "occurrences": 2,
       "lastSeen": "2026-03-25",
-      "runs": ["R4", "R6-fixes"],
+      "runs": [
+        "R4",
+        "R6-fixes"
+      ],
       "severity": 3,
       "fix": "Ajouter AbortController avec timeout (30s) sur tous les fetch() externes. Pattern: const controller = new AbortController(); setTimeout(() => controller.abort(), 30000);",
       "fixApplied": true,
       "fixAppliedDate": "2026-03-25",
       "fixResult": "R6-fixes (d9c17a2): AbortSignal.timeout() added to both audio transcription fetch and TTS fetch calls.",
       "fixVerified": true,
-      "fixVerifiedRuns": ["R6-fixes"],
-      "r4Status": "FERME — M1+M2 corriges en R6-fixes.",
-      "agentsConcerned": ["Backend Architect"]
+      "fixVerifiedRuns": [
+        "R6-fixes"
+      ],
+      "r4Status": "FERME \u2014 M1+M2 corriges en R6-fixes.",
+      "agentsConcerned": [
+        "Backend Architect"
+      ]
     },
     {
       "id": "EP-011",
       "name": "OPENAPI_SPEC_DRIFT",
-      "description": "20 routes (admin, museum, support) absentes de l'OpenAPI spec — drift silencieux, pas de types generes",
+      "description": "20 routes (admin, museum, support) absentes de l'OpenAPI spec \u2014 drift silencieux, pas de types generes",
       "occurrences": 1,
       "lastSeen": "2026-03-25",
-      "runs": ["R4", "R6-fixes"],
+      "runs": [
+        "R4",
+        "R6-fixes"
+      ],
       "severity": 4,
       "fix": "Ajouter les 20 routes manquantes a l'OpenAPI spec. Mettre en place un test CI qui verifie que toutes les routes Express enregistrees ont une definition OpenAPI correspondante.",
       "fixApplied": true,
       "fixAppliedDate": "2026-03-25",
       "fixResult": "R6-fixes (39aaada): 20 routes + 14 schemas added to OpenAPI spec. Total: 42 paths, 47 operations. Frontend types regenerated.",
       "fixVerified": true,
-      "fixVerifiedRuns": ["R6-fixes", "R8"],
-      "r4Status": "FERME — C4 corrige en R6-fixes. 42 paths, 47 operations. Verifie R8.",
-      "agentsConcerned": ["API Contract Specialist", "QA Engineer"]
+      "fixVerifiedRuns": [
+        "R6-fixes",
+        "R8"
+      ],
+      "r4Status": "FERME \u2014 C4 corrige en R6-fixes. 42 paths, 47 operations. Verifie R8.",
+      "agentsConcerned": [
+        "API Contract Specialist",
+        "QA Engineer"
+      ]
     },
     {
       "id": "EP-012",
@@ -195,16 +277,24 @@
       "description": "Aucun security scanning dans CI (pas de Trivy, CodeQL, Dependabot). Vulnerabilites deps non detectees automatiquement.",
       "occurrences": 1,
       "lastSeen": "2026-03-25",
-      "runs": ["R4", "R5-hotfix"],
+      "runs": [
+        "R4",
+        "R5-hotfix"
+      ],
       "severity": 5,
       "fix": "Activer Dependabot pour les deps (package.json). Ajouter Trivy scan sur l'image Docker dans le deploy workflow. Optionnel: CodeQL pour SAST.",
       "fixApplied": true,
       "fixAppliedDate": "2026-03-25",
       "fixResult": "R5-hotfix (09c6b3e): Dependabot config added (.github/dependabot.yml), npm audit made blocking in CI, Trivy image scan gate added before GHCR push in deploy workflows.",
       "fixVerified": true,
-      "fixVerifiedRuns": ["R5-hotfix"],
-      "r4Status": "FERME — C9 corrige en R5-hotfix. Dependabot + Trivy + audit blocking.",
-      "agentsConcerned": ["DevOps Engineer", "Security Analyst"]
+      "fixVerifiedRuns": [
+        "R5-hotfix"
+      ],
+      "r4Status": "FERME \u2014 C9 corrige en R5-hotfix. Dependabot + Trivy + audit blocking.",
+      "agentsConcerned": [
+        "DevOps Engineer",
+        "Security Analyst"
+      ]
     },
     {
       "id": "EP-013",
@@ -212,15 +302,21 @@
       "description": "FlashList v2.3.1 removed estimatedItemSize prop (auto-measurement). Design assumed v1 API.",
       "occurrences": 1,
       "lastSeen": "2026-03-26",
-      "runs": ["R11"],
+      "runs": [
+        "R11"
+      ],
       "severity": 2,
       "fix": "Check FlashList version before specifying estimatedItemSize. v2.x = auto-measurement, no prop needed. contentContainerStyle only supports padding + backgroundColor. Use ItemSeparatorComponent for gaps.",
       "fixApplied": true,
       "fixAppliedDate": "2026-03-26",
       "fixResult": "Removed estimatedItemSize from all 3 FlashList instances during dev self-verification (tsc caught it).",
       "fixVerified": true,
-      "fixVerifiedRuns": ["R11"],
-      "agentsConcerned": ["Frontend Architect"]
+      "fixVerifiedRuns": [
+        "R11"
+      ],
+      "agentsConcerned": [
+        "Frontend Architect"
+      ]
     },
     {
       "id": "EP-014",
@@ -228,7 +324,9 @@
       "description": "Agent committed unauthorized work outside mandate scope including fake FINALIZE, KB entries, and sprint tracking",
       "occurrences": 1,
       "lastSeen": "2026-03-26",
-      "runs": ["R11"],
+      "runs": [
+        "R11"
+      ],
       "severity": 4,
       "fix": "Add explicit scope boundaries in agent mandates. Agents MUST NOT: commit code, write KB files, update sprint tracking, or perform FINALIZE. These are Tech Lead/Sentinelle responsibilities.",
       "fixApplied": true,
@@ -236,20 +334,98 @@
       "fixResult": "R12-chore: LIMITES OPERATIONNELLES section added to all 9 agent definitions + SKILL.md mandate template + REGLES ABSOLUES rule 7",
       "fixVerified": false,
       "fixVerifiedRuns": [],
-      "agentsConcerned": ["Frontend Architect"]
+      "agentsConcerned": [
+        "Frontend Architect"
+      ]
+    },
+    {
+      "id": "EP-015",
+      "name": "ASYNC_MIGRATION_INCOMPLETE",
+      "description": "Function made async but not all callers updated to await \u2014 sync callers get Promise<T> instead of T",
+      "occurrences": 1,
+      "lastSeen": "2026-03-26",
+      "runs": [
+        "R13"
+      ],
+      "severity": 4,
+      "fix": "After making any function async: 1) grep all callers, 2) update each to await, 3) update tests (async callbacks + await). Systematic, not optional.",
+      "fixApplied": true,
+      "fixAppliedDate": "2026-03-26",
+      "fixResult": "R13: evaluateUserInputGuardrail made async, 2 callers + 30 tests updated",
+      "fixVerified": true,
+      "fixVerifiedRuns": [
+        "R13"
+      ],
+      "agentsConcerned": [
+        "Tech Lead",
+        "Backend Architect"
+      ]
+    },
+    {
+      "id": "EP-016",
+      "name": "USEEFFECT_ZUSTAND_SELECTOR_LOOP",
+      "description": "Zustand array/object selectors in useEffect deps cause infinite re-renders (new ref every render)",
+      "occurrences": 1,
+      "lastSeen": "2026-03-26",
+      "runs": [
+        "R13"
+      ],
+      "severity": 3,
+      "fix": "Use store.getState() inside the effect callback with empty deps [], or use useRef for mutable state. Never put pendingKeywords/lastSyncAt selectors in deps.",
+      "fixApplied": true,
+      "fixAppliedDate": "2026-03-26",
+      "fixResult": "R13: useKeywordsSync rewritten with getState() pattern and empty deps",
+      "fixVerified": true,
+      "fixVerifiedRuns": [
+        "R13"
+      ],
+      "agentsConcerned": [
+        "Frontend Architect"
+      ]
+    },
+    {
+      "id": "EP-017",
+      "name": "BULK_DB_N_PLUS_1",
+      "description": "Bulk operations implemented as sequential individual queries instead of single INSERT ON CONFLICT",
+      "occurrences": 1,
+      "lastSeen": "2026-03-26",
+      "runs": [
+        "R13"
+      ],
+      "severity": 2,
+      "fix": "For bulk upserts, use INSERT INTO table VALUES (...) ON CONFLICT DO UPDATE. Deduplicate inputs with Set before query.",
+      "fixApplied": true,
+      "fixAppliedDate": "2026-03-26",
+      "fixResult": "R13: bulkUpsert rewritten \u2014 1 query instead of 200 for 100 keywords",
+      "fixVerified": true,
+      "fixVerifiedRuns": [
+        "R13"
+      ],
+      "agentsConcerned": [
+        "Backend Architect"
+      ]
     }
   ],
   "summary": {
-    "total": 14,
+    "total": 17,
     "open": 1,
-    "fixed": 13,
+    "fixed": 16,
     "escalated": 0,
     "regressions": 0,
     "newInR4": 4,
-    "closedToday": ["EP-003", "EP-007", "EP-009", "EP-010", "EP-011", "EP-012"],
-    "openIds": ["EP-004"],
+    "closedToday": [
+      "EP-003",
+      "EP-007",
+      "EP-009",
+      "EP-010",
+      "EP-011",
+      "EP-012"
+    ],
+    "openIds": [
+      "EP-004"
+    ],
     "escalatedIds": [],
     "regressedIds": [],
-    "note": "EP-004 (GREP_PATH_RELATIVE) severity 2, low impact. EP-014 (AGENT_SCOPE_CREEP) FIXED R12-chore — LIMITES OPERATIONNELLES in 9 agents + SKILL.md."
+    "note": "EP-004 (GREP_PATH_RELATIVE) severity 2, low impact. EP-014 (AGENT_SCOPE_CREEP) FIXED R12-chore \u2014 LIMITES OPERATIONNELLES in 9 agents + SKILL.md."
   }
 }

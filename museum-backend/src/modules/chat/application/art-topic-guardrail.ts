@@ -1,6 +1,7 @@
 import { GUARDRAIL_REFUSALS } from '@shared/i18n/guardrail-refusals';
 import { resolveLocale } from '@shared/i18n/locale';
 
+import type { ArtTopicClassifier } from './art-topic-classifier';
 import type { ChatMessage } from '../domain/chatMessage.entity';
 
 /** Reason why the guardrail blocked or flagged a message. */
@@ -25,6 +26,9 @@ export interface GuardrailDecision {
 interface EvaluateUserInputParams {
   text?: string;
   history: ChatMessage[];
+  dynamicKeywords?: ReadonlySet<string>;
+  classifier?: ArtTopicClassifier;
+  onKeywordDiscovered?: (keyword: string, locale: string) => void;
 }
 
 interface EvaluateAssistantOutputParams {
@@ -202,6 +206,17 @@ const hasArtSignal = (normalizedText: string): boolean => {
   return includesAny(normalizedText, ART_KEYWORDS);
 };
 
+const hasDynamicArtSignal = (
+  normalizedText: string,
+  dynamicKeywords?: ReadonlySet<string>,
+): boolean => {
+  if (!dynamicKeywords || dynamicKeywords.size === 0) return false;
+  for (const keyword of dynamicKeywords) {
+    if (containsKeyword(normalizedText, keyword)) return true;
+  }
+  return false;
+};
+
 const hasOffTopicSignal = (normalizedText: string): boolean => {
   return includesAny(normalizedText, OFF_TOPIC_KEYWORDS);
 };
@@ -258,56 +273,57 @@ const REDIRECT_HINT_EXTERNAL =
  * @returns A guardrail decision indicating whether the message is allowed.
  */
  
-export const evaluateUserInputGuardrail = ({
+/** Evaluates static keyword-based rules (steps 1–7). Returns a decision or null if no rule matched. */
+function evaluateStaticRules(
+  normalizedText: string,
+  dynamicKeywords: ReadonlySet<string> | undefined,
+): GuardrailDecision | null {
+  if (hasInsultSignal(normalizedText)) return { allow: false, reason: 'insult' };
+  if (hasPromptInjectionSignal(normalizedText)) return { allow: false, reason: 'prompt_injection' };
+  if (hasGreetingSignal(normalizedText)) return { allow: true };
+  if (isShortInnocuousMessage(normalizedText) && !hasExternalActionSignal(normalizedText)) return { allow: true };
+  if (hasArtSignal(normalizedText)) return { allow: true };
+  if (hasDynamicArtSignal(normalizedText, dynamicKeywords)) return { allow: true };
+  if (hasExternalActionSignal(normalizedText)) return { allow: true, redirectHint: REDIRECT_HINT_EXTERNAL };
+  if (hasOffTopicSignal(normalizedText)) return { allow: true, redirectHint: REDIRECT_HINT_OFF_TOPIC };
+  return null;
+}
+
+export const evaluateUserInputGuardrail = async ({
   text,
   history,
-}: EvaluateUserInputParams): GuardrailDecision => {
+  dynamicKeywords,
+  classifier,
+  onKeywordDiscovered,
+}: EvaluateUserInputParams): Promise<GuardrailDecision> => {
   const normalizedText = normalize(text ?? '');
-  if (!normalizedText) {
-    return { allow: true };
-  }
+  if (!normalizedText) return { allow: true };
 
-  // 1. Insult → always block (even if greeting present)
-  if (hasInsultSignal(normalizedText)) {
-    return { allow: false, reason: 'insult' };
-  }
-
-  // 2. Injection → always block
-  if (hasPromptInjectionSignal(normalizedText)) {
-    return { allow: false, reason: 'prompt_injection' };
-  }
-
-  // 3. Greeting detected → allow (LLM handles warm welcome)
-  if (hasGreetingSignal(normalizedText)) {
-    return { allow: true };
-  }
-
-  // 4. Short innocuous message (< 15 chars) without insult/injection → allow
-  if (isShortInnocuousMessage(normalizedText) && !hasExternalActionSignal(normalizedText)) {
-    return { allow: true };
-  }
-
-  // 5. Art signal → allow
-  if (hasArtSignal(normalizedText)) {
-    return { allow: true };
-  }
-
-  // 6. External request (benign) → soft redirect via LLM
-  if (hasExternalActionSignal(normalizedText)) {
-    return { allow: true, redirectHint: REDIRECT_HINT_EXTERNAL };
-  }
-
-  // 7. Off-topic (benign) → soft redirect via LLM
-  if (hasOffTopicSignal(normalizedText)) {
-    return { allow: true, redirectHint: REDIRECT_HINT_OFF_TOPIC };
-  }
+  // Steps 1-7: static keyword rules
+  const staticDecision = evaluateStaticRules(normalizedText, dynamicKeywords);
+  if (staticDecision) return staticDecision;
 
   // 8. Follow-up + art context → allow
   if (looksLikeFollowUp(normalizedText) && hasArtContext(history)) {
     return { allow: true };
   }
 
-  // 9. Default → off-topic redirect
+  // 9. Classifier fallback (fail-open)
+  if (classifier && text) {
+    try {
+      const isArt = await classifier.isArtRelated(text);
+      if (isArt) {
+        const word = normalizedText.split(' ').find((w) => w.length > 3);
+        if (word && onKeywordDiscovered) {
+          onKeywordDiscovered(word, 'en');
+        }
+        return { allow: true };
+      }
+    } catch {
+      // Fail-open: classifier error should never block the user
+    }
+  }
+
   return { allow: true, redirectHint: REDIRECT_HINT_OFF_TOPIC };
 };
 

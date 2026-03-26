@@ -44,7 +44,7 @@
       "filesEstimated": "N/A",
       "filesReal": 0,
       "precision": "N/A",
-      "notes": "Read-only audit — no files modified. Estimation accuracy not applicable. 5 agents spawned as expected for full-stack audit."
+      "notes": "Read-only audit \u2014 no files modified. Estimation accuracy not applicable. 5 agents spawned as expected for full-stack audit."
     },
     {
       "id": "R5",
@@ -56,7 +56,7 @@
       "filesEstimated": 30,
       "filesReal": 39,
       "precision": 0.77,
-      "notes": "AM-001 validation: estimated 30+ files, actual 39. Ratio 1.3x — correction factor confirmed."
+      "notes": "AM-001 validation: estimated 30+ files, actual 39. Ratio 1.3x \u2014 correction factor confirmed."
     },
     {
       "id": "R6",
@@ -67,8 +67,8 @@
       "loopsReal": 0,
       "filesEstimated": 20,
       "filesReal": 25,
-      "precision": 0.80,
-      "notes": "AM-001 applied: estimated 20 files with 1.3x factor (raw ~15), actual 25. Ratio 1.25x — correction factor slightly over-estimating now (good direction)."
+      "precision": 0.8,
+      "notes": "AM-001 applied: estimated 20 files with 1.3x factor (raw ~15), actual 25. Ratio 1.25x \u2014 correction factor slightly over-estimating now (good direction)."
     },
     {
       "id": "R5-hotfix",
@@ -153,28 +153,51 @@
       "loopsActual": 0,
       "precision": 1.0,
       "notes": "Estimation accurate. Agent scope creep added ~13 unplanned files (FlashList, tests, React Compiler) but core theme scope was on target."
+    },
+    {
+      "id": "R13",
+      "date": "2026-03-26",
+      "mode": "feature (R15 Smart Art Keywords + review + corrections)",
+      "estimation": "L",
+      "loopsEstimated": 0,
+      "loopsReal": 2,
+      "filesEstimated": 14,
+      "filesReal": 16,
+      "precision": 0.71
     }
   ],
   "calibration": {
-    "S": { "loopsRef": 0, "filesRef": "1-3" },
-    "M": { "loopsRef": "0-1", "filesRef": "4-10" },
-    "L": { "loopsRef": "1-2", "filesRef": "10+" }
+    "S": {
+      "loopsRef": 0,
+      "filesRef": "1-3"
+    },
+    "M": {
+      "loopsRef": "0-1",
+      "filesRef": "4-10"
+    },
+    "L": {
+      "loopsRef": "1-2",
+      "filesRef": "10+"
+    }
   },
   "averagePrecision": 0.84,
   "averagePrecisionNote": "Computed on R1-R3, R5-R7, R5-hotfix, R6-fixes, R9, R11 (R4/R8/R10 = N/A read-only). R11 at 1.0 precision lifted average from 0.83 to 0.84.",
-  "bias": "sous-estimation systematique fichiers — diminuant (AM-001 factor 1.3x efficace)",
+  "bias": "sous-estimation systematique fichiers \u2014 diminuant (AM-001 factor 1.3x efficace)",
   "correctionFactor": 1.3,
   "amendment": {
     "id": "AM-001",
     "description": "Multiplier estimations fichiers par 1.3x",
     "status": "CONFIRMED",
-    "monitoringRuns": ["R4", "R5"],
+    "monitoringRuns": [
+      "R4",
+      "R5"
+    ],
     "r4Result": "N/A (read-only audit, no files to estimate)",
-    "r5Result": "CONFIRMED — estimated 30+, actual 39, ratio 1.3x matches factor",
-    "r6Result": "CONFIRMED — estimated 20 (with factor), actual 25, ratio 1.25x — converging",
-    "r7Result": "GOOD — estimated 10, actual 11, precision 0.91 (best yet)",
-    "r9Result": "OK — estimated 30, actual 35, precision 0.86. Note: 6/14 items were already implemented (AM-002 proposed)",
-    "r11Result": "PERFECT — estimated 27, actual 27, precision 1.0 (core theme scope on target)",
+    "r5Result": "CONFIRMED \u2014 estimated 30+, actual 39, ratio 1.3x matches factor",
+    "r6Result": "CONFIRMED \u2014 estimated 20 (with factor), actual 25, ratio 1.25x \u2014 converging",
+    "r7Result": "GOOD \u2014 estimated 10, actual 11, precision 0.91 (best yet)",
+    "r9Result": "OK \u2014 estimated 30, actual 35, precision 0.86. Note: 6/14 items were already implemented (AM-002 proposed)",
+    "r11Result": "PERFECT \u2014 estimated 27, actual 27, precision 1.0 (core theme scope on target)",
     "nextValidation": "Factor stabilized. Average precision 0.84 (up from 0.83). Continue monitoring."
   }
 }

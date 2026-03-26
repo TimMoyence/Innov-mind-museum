@@ -1,4 +1,5 @@
 import { auditService } from '@shared/audit';
+import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
 import { OpenAiAudioTranscriber } from './adapters/secondary/audio-transcriber.openai';
@@ -14,12 +15,15 @@ import {
   DisabledTextToSpeechService,
 } from './adapters/secondary/text-to-speech.openai';
 import { WikidataClient } from './adapters/secondary/wikidata.client';
+import { ArtTopicClassifier } from './application/art-topic-classifier';
 import { ChatService } from './application/chat.service';
 import { KnowledgeBaseService } from './application/knowledge-base.service';
 import { UserMemoryService } from './application/user-memory.service';
+import { TypeOrmArtKeywordRepository } from './infrastructure/artKeyword.repository.typeorm';
 import { TypeOrmChatRepository } from './infrastructure/chat.repository.typeorm';
 import { TypeOrmUserMemoryRepository } from './infrastructure/userMemory.repository.typeorm';
 
+import type { ArtKeywordRepository } from './domain/artKeyword.repository.interface';
 import type { OcrService } from './domain/ports/ocr.port';
 import type { CacheService } from '@shared/cache/cache.port';
 import type { DataSource } from 'typeorm';
@@ -47,6 +51,12 @@ let sharedUserMemoryService: UserMemoryService | undefined;
 
 /** Returns the shared user-memory service instance (available after buildChatService has been called). */
 export const getUserMemoryService = (): UserMemoryService | undefined => sharedUserMemoryService;
+
+let sharedArtKeywordRepository: ArtKeywordRepository | undefined;
+export const getArtKeywordRepository = (): ArtKeywordRepository | undefined => sharedArtKeywordRepository;
+
+let artKeywordsRefreshTimer: ReturnType<typeof setInterval> | undefined;
+export const getArtKeywordsRefreshTimer = (): ReturnType<typeof setInterval> | undefined => artKeywordsRefreshTimer;
 
 /**
  * Wires the chat module dependency graph and returns a fully configured ChatService.
@@ -118,6 +128,39 @@ export const buildChatService = (dataSource: DataSource, cache?: CacheService): 
     });
   }
 
+  const artKeywordRepo = new TypeOrmArtKeywordRepository(dataSource);
+  sharedArtKeywordRepository = artKeywordRepo;
+
+  let artTopicClassifier: ArtTopicClassifier | undefined;
+  if (env.llm.anthropicApiKey) {
+    artTopicClassifier = new ArtTopicClassifier(env.llm.anthropicApiKey);
+  }
+
+  const dynamicArtKeywords = new Set<string>();
+  const refreshKeywords = async () => {
+    try {
+      const rows = await artKeywordRepo.findByLocale('%');
+      dynamicArtKeywords.clear();
+      for (const row of rows) {
+        dynamicArtKeywords.add(row.keyword);
+      }
+    } catch (error) {
+      logger.warn('art_keywords_refresh_failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
+  void refreshKeywords();
+  artKeywordsRefreshTimer = setInterval(() => void refreshKeywords(), 5 * 60 * 1000);
+
+  const onArtKeywordDiscovered = (keyword: string, locale: string) => {
+    const normalized = keyword.toLowerCase().trim();
+    if (!normalized || dynamicArtKeywords.has(normalized)) return;
+    dynamicArtKeywords.add(normalized);
+    void artKeywordRepo.upsert(normalized, locale).catch(() => { /* fire-and-forget */ });
+  };
+
   return new ChatService({
     repository,
     orchestrator: new LangChainChatOrchestrator(),
@@ -129,5 +172,8 @@ export const buildChatService = (dataSource: DataSource, cache?: CacheService): 
     audit: auditService,
     userMemory,
     knowledgeBase,
+    dynamicArtKeywords,
+    artTopicClassifier,
+    onArtKeywordDiscovered,
   });
 };
