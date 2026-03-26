@@ -88,6 +88,7 @@ export default function SettingsScreen() {
         {
           text: t('common.delete'),
           style: 'destructive',
+          // eslint-disable-next-line @typescript-eslint/no-misused-promises -- void handled by caller
           onPress: async () => {
             setIsDeletingAccount(true);
             try {
@@ -175,6 +176,7 @@ export default function SettingsScreen() {
                   style={[
                     styles.themeButtonText,
                     { color: theme.textSecondary },
+                // eslint-disable-next-line react-native/no-inline-styles -- conditional bold
                     mode === option.value && { color: theme.primary, fontWeight: '700' },
                   ]}
                 >

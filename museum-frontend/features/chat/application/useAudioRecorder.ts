@@ -17,11 +17,12 @@ export const useAudioRecorder = () => {
   const isRecordingRef = useRef(false);
   const recordedAudioUriRef = useRef<string | null>(null);
   const isPlayingAudioRef = useRef(false);
-
+  /* eslint-disable react-hooks/refs -- intentional ref sync for stable callbacks */
   // Keep refs in sync with state
   isRecordingRef.current = isRecording;
   recordedAudioUriRef.current = recordedAudioUri;
   isPlayingAudioRef.current = isPlayingAudio;
+  /* eslint-enable react-hooks/refs */
 
   const nativeRecordingRef = useRef<Audio.Recording | null>(null);
   const webMediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -127,6 +128,7 @@ export const useAudioRecorder = () => {
       const blob = await new Promise<Blob>((resolve) => {
         mediaRecorder.onstop = () => {
           const mimeType =
+      // eslint-disable-next-line @typescript-eslint/prefer-optional-chain -- complex condition
             mediaRecorder.mimeType && mediaRecorder.mimeType.length
               ? mediaRecorder.mimeType
               : 'audio/webm';

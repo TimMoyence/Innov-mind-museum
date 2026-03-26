@@ -78,6 +78,7 @@ export const MessageActions = ({
           style={[styles.openQuestionChip, { borderColor: theme.primaryBorderSubtle, backgroundColor: theme.primaryTint }, isSendingDisabled && styles.disabledChip]}
           onPress={() => {
             if (!isSendingDisabled) {
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guarded by conditional render
               onRecommendationPress(metadata.openQuestion!);
             }
           }}

@@ -7,11 +7,12 @@ import { useOfflineQueue } from '@/features/chat/application/useOfflineQueue';
 const fakeStore: Record<string, string> = {};
 jest.mock('@/shared/infrastructure/storage', () => ({
   storage: {
-    getItem: jest.fn(async (key: string) => fakeStore[key] ?? null),
-    setItem: jest.fn(async (key: string, value: string) => {
+    getItem: jest.fn((key: string) => fakeStore[key] ?? null),
+    setItem: jest.fn((key: string, value: string) => {
       fakeStore[key] = value;
     }),
-    removeItem: jest.fn(async (key: string) => {
+    removeItem: jest.fn((key: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- test cleanup
       delete fakeStore[key];
     }),
   },
@@ -29,10 +30,11 @@ describe('useOfflineQueue', () => {
     jest.clearAllMocks();
     mockIsConnected = true;
     // Clear fake store
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- test cleanup
     for (const key of Object.keys(fakeStore)) delete fakeStore[key];
   });
 
-  it('calls hydrate on mount', async () => {
+  it('calls hydrate on mount', () => {
     const { result } = renderHook(() => useOfflineQueue());
 
     // After mount, queue should be empty (no persisted data)

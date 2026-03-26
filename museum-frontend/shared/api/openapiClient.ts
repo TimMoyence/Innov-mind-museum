@@ -2,6 +2,7 @@ import { httpRequest } from '@/shared/api/httpRequest';
 import type { paths } from '@/shared/api/generated/openapi';
 
 type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
+// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents -- generated type intersection
 type PathKey = keyof paths & string;
 type HeadersRecord = Record<string, string>;
 type QueryPrimitive = string | number | boolean | null | undefined;
@@ -30,6 +31,7 @@ type JsonContent<T> = T extends {
   content: { 'application/json': infer Json };
 }
   ? Json
+  // eslint-disable-next-line @typescript-eslint/no-invalid-void-type -- generated type
   : void;
 
 type SuccessStatusFor<
@@ -101,6 +103,7 @@ export const formatOpenApiPath = <P extends PathKey>(
   const params = (pathParams ?? {}) as Record<string, string | number>;
   const rendered = template.replace(/\{([^}]+)\}/g, (_, key: string) => {
     const value = params[key];
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive null guard for query params
     if (value === undefined || value === null) {
       throw new Error(`Missing path param: ${key}`);
     }

@@ -25,7 +25,7 @@ export const ArtworkCard = ({ title, artist, museum, room, confidence }: Artwork
   const { theme } = useTheme();
   const { t } = useTranslation();
   const badgeKey = confidenceKey(confidence);
-  const badge = badgeKey ? String(t(`artworkCard.confidence.${badgeKey}`)) : null;
+  const badge = badgeKey ? t(`artworkCard.confidence.${badgeKey}`) : null;
 
   return (
     <GlassCard style={styles.card} intensity={44}>

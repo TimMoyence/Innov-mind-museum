@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 
 import type {
-  GuideLevel,
   RuntimeSettings} from '@/features/settings/runtimeSettings';
 import {
   loadRuntimeSettings

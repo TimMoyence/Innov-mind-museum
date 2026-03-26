@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-unused-styles -- dynamic styles in useMemo, not detectable by lint */
 import { useMemo } from 'react';
 import { Platform, StyleSheet } from 'react-native';
 import Markdown from '@ronradtke/react-native-markdown-display';

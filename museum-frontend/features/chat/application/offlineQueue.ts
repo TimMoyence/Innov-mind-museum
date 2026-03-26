@@ -47,7 +47,7 @@ export class OfflineQueue {
   enqueue(message: Omit<QueuedMessage, 'id' | 'createdAt' | 'retryCount'>): QueuedMessage {
     const entry: QueuedMessage = {
       ...message,
-      id: `offline-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      id: `offline-${String(Date.now())}-${Math.random().toString(36).slice(2)}`,
       createdAt: Date.now(),
       retryCount: 0,
     };

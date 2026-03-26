@@ -159,7 +159,7 @@ export default function PrivacyScreen() {
             <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{section.title}</Text>
             <View style={styles.paragraphGroup}>
               {section.paragraphs.map((paragraph, index) => (
-                <Text key={`${section.id}-${index}`} style={[styles.paragraph, { color: theme.textSecondary }]}>
+                <Text key={`${section.id}-${String(index)}`} style={[styles.paragraph, { color: theme.textSecondary }]}>
                   {paragraph}
                 </Text>
               ))}
@@ -218,14 +218,10 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderWidth: 1,
   },
-  statusPillPending: {},
-  statusPillReady: {},
   statusPillText: {
     fontSize: 11,
     fontWeight: '700',
   },
-  statusPillTextPending: {},
-  statusPillTextReady: {},
   subtitle: {
     fontSize: 13,
     lineHeight: 19,

@@ -78,7 +78,8 @@ export const MuseumDirectoryList = ({
   );
 };
 
-const ItemSeparator = () => <View style={{ height: 10 }} />;
+const separatorStyle = { height: 10 } as const;
+const ItemSeparator = () => <View style={separatorStyle} />;
 
 const styles = StyleSheet.create({
   searchBar: {

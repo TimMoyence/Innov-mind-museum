@@ -137,7 +137,7 @@ export const mapAxiosError = (error: unknown): AppError & Error => {
   const responseData = axiosLike.response?.data;
   const apiErrorCode = getApiErrorCode(responseData);
   const apiErrorMessage = (getApiErrorMessage(responseData) ?? '').toLowerCase();
-  const requestRequiresAuth =
+  const _requestRequiresAuth =
     ((axiosLike.config ?? {}) as HttpRequestConfig).requiresAuth !== false;
   const requestId = getApiRequestId(responseData);
 

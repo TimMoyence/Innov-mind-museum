@@ -32,7 +32,7 @@ import {
 } from "@/shared/infrastructure/httpClient";
 
 // Prevent the splash screen from auto-hiding
-SplashScreen.preventAutoHideAsync().catch(() => {
+SplashScreen.preventAutoHideAsync().catch(() => { /* fire-and-forget */
 });
 
 interface AuthContextType {
@@ -97,7 +97,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsLoading(false);
         try {
           await SplashScreen.hideAsync();
-        } catch (e) {
+        } catch {
           /* ignore error */
         }
       }

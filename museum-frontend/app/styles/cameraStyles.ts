@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-color-literals -- camera UI uses universal dark colors */
 import { StyleSheet } from "react-native";
 
 /** Style definitions for the camera view screen. */

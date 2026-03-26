@@ -41,6 +41,7 @@ const loadSecureStore = (): SecureStoreModule | null => {
     // Runtime optional to avoid breaking local CI/typecheck when the package is not installed yet.
     // Install `expo-secure-store` before production mobile builds.
      
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy load for test isolation
     return require('expo-secure-store') as SecureStoreModule;
   } catch {
     return null;

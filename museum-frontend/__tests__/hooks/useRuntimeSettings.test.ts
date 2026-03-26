@@ -96,7 +96,7 @@ describe('useRuntimeSettings', () => {
     expect(result.current.settings).toEqual(fullSettings);
   });
 
-  it('handles the cancelled effect cleanup (no stale update)', async () => {
+  it('handles the cancelled effect cleanup (no stale update)', () => {
     // Simulate an unmount before the promise resolves
     let resolvePromise: (value: RuntimeSettings) => void;
     mockLoadRuntimeSettings.mockReturnValue(
@@ -113,6 +113,7 @@ describe('useRuntimeSettings', () => {
     unmount();
 
     // Resolve after unmount — should not throw or update
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- test assertion on known mock data
     resolvePromise!({
       defaultLocale: 'ja-JP',
       defaultMuseumMode: false,

@@ -124,6 +124,7 @@ export default function AuthScreen() {
         { text: t('common.cancel'), style: 'cancel' },
         {
           text: t('common.send'),
+          // eslint-disable-next-line @typescript-eslint/no-misused-promises -- void handled by caller
           onPress: async () => {
             setIsLoading(true);
             setErrorMessage(null);
@@ -272,7 +273,7 @@ export default function AuthScreen() {
 
           <Pressable
             style={[styles.submitButton, { backgroundColor: theme.primary, shadowColor: theme.shadowColor }, (isLoading || isSocialLoading || (!isLogin && !gdprAccepted)) && styles.submitButtonDisabled]}
-            onPress={isLogin ? handleLogin : handleRegister}
+            onPress={() => { void (isLogin ? handleLogin() : handleRegister()); }}
             disabled={isLoading || isSocialLoading || (!isLogin && !gdprAccepted)}
             accessibilityRole="button"
             accessibilityLabel={isLogin ? t('a11y.auth.login_button') : t('a11y.auth.register_button')}
@@ -303,6 +304,7 @@ export default function AuthScreen() {
             <View style={[styles.separatorLine, { backgroundColor: theme.separator }]} />
           </View>
 
+          {/* eslint-disable react-native/no-inline-styles -- dynamic opacity for GDPR gate */}
           {appleAuthAvailable ? (
             <View style={{ opacity: !isLogin && !gdprAccepted ? 0.5 : 1 }} pointerEvents={!isLogin && !gdprAccepted ? 'none' : 'auto'} accessibilityRole="button" accessibilityLabel={t('a11y.auth.apple_signin')}>
               <AppleAuthentication.AppleAuthenticationButton

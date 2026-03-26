@@ -190,7 +190,7 @@ export const chatApi = {
     }
 
     const fallbackExt = audioBlob?.type.includes('webm') ? 'webm' : 'm4a';
-    const fileName = (audioUri?.split('/').pop() ?? `voice-${Date.now()}.${fallbackExt}`).trim();
+    const fileName = (audioUri?.split('/').pop() ?? `voice-${String(Date.now())}.${fallbackExt}`).trim();
     const extension = fileName.includes('.')
       ? fileName.split('.').pop()?.toLowerCase() ?? fallbackExt
       : fallbackExt;
@@ -395,7 +395,7 @@ export const chatApi = {
         // Throw so sendMessageSmart falls back to Axios path (which has refresh interceptor)
         throw new Error('STREAMING_UNAUTHORIZED');
       }
-      params.onError('HTTP_ERROR', `HTTP ${response.status}`, requestId);
+      params.onError('HTTP_ERROR', `HTTP ${String(response.status)}`, requestId);
       return;
     }
 

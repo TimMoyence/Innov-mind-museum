@@ -152,7 +152,7 @@ export const useChatSession = (sessionId: string) => {
       }
 
       const optimisticMessage: ChatUiMessage = {
-        id: `${Date.now()}-user`,
+        id: `${String(Date.now())}-user`,
         role: 'user',
         text:
           trimmedText ??
@@ -198,6 +198,7 @@ export const useChatSession = (sessionId: string) => {
             setMessages((prev) =>
               prev.map((message) =>
                 message.id === optimisticMessage.id
+                  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guarded by if check on line 200
                   ? { ...message, text: `🎙 ${assistantMessage.transcription!.text}` }
                   : message,
               ),
@@ -209,7 +210,7 @@ export const useChatSession = (sessionId: string) => {
         }
 
         // Text/image messages: try streaming via sendMessageSmart
-        const streamingPlaceholderId = `${Date.now()}-streaming`;
+        const streamingPlaceholderId = `${String(Date.now())}-streaming`;
         streamTextRef.current = '';
         streamingIdRef.current = streamingPlaceholderId;
 

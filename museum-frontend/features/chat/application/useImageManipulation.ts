@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-deprecated -- expo-image-manipulator API migration pending */
 import { useCallback, useState } from 'react';
 import * as ImageManipulator from 'expo-image-manipulator';
 
