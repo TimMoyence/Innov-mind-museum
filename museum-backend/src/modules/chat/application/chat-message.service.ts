@@ -26,6 +26,7 @@ import { computeSessionUpdates } from './visit-context';
 import { DisabledAudioTranscriber } from '../domain/ports/audio-transcriber.port';
 
 import type { PostMessageResult, PostAudioMessageResult } from './chat.service.types';
+import type { KnowledgeBaseService } from './knowledge-base.service';
 import type { UserMemoryService } from './user-memory.service';
 import type { ChatRepository } from '../domain/chat.repository.interface';
 import type {
@@ -54,6 +55,32 @@ export interface ChatMessageServiceDeps {
   ocr?: OcrService;
   audit?: AuditService;
   userMemory?: UserMemoryService;
+  knowledgeBase?: KnowledgeBaseService;
+}
+
+/**
+ * Extracts a search term for knowledge base lookup from conversation history or input text.
+ * Searches for the last assistant message with a detected artwork title, falling back to input text if 3+ words.
+ */
+function extractSearchTerm(
+  history: { role: string; metadata?: Record<string, unknown> | null }[],
+  inputText?: string,
+): string | null {
+  // Search history for last assistant message with detectedArtwork.title
+  for (let i = history.length - 1; i >= 0; i--) {
+    const msg = history[i];
+    if (msg.role === 'assistant' && msg.metadata) {
+      const meta = msg.metadata as { detectedArtwork?: { title?: string } };
+      if (meta.detectedArtwork?.title) {
+        return meta.detectedArtwork.title;
+      }
+    }
+  }
+  // Fallback: use input text if it has 3+ words
+  if (inputText && inputText.split(/\s+/).length >= 3) {
+    return inputText;
+  }
+  return null;
 }
 
 /**
@@ -68,6 +95,7 @@ export class ChatMessageService {
   private readonly ocr?: OcrService;
   private readonly audit?: AuditService;
   private readonly userMemory?: UserMemoryService;
+  private readonly knowledgeBase?: KnowledgeBaseService;
 
   constructor(deps: ChatMessageServiceDeps) {
     this.repository = deps.repository;
@@ -78,6 +106,7 @@ export class ChatMessageService {
     this.ocr = deps.ocr;
     this.audit = deps.audit;
     this.userMemory = deps.userMemory;
+    this.knowledgeBase = deps.knowledgeBase;
   }
 
   /**
@@ -102,6 +131,7 @@ export class ChatMessageService {
         redirectHint?: string;
         ownerId?: number;
         userMemoryBlock?: string;
+        knowledgeBaseBlock?: string;
       }
     | {
         kind: 'refused';
@@ -263,15 +293,24 @@ export class ChatMessageService {
       env.llm.maxHistoryMessages,
     );
 
-    // Fetch cross-session user memory prompt block (fail-open)
+    // Fetch cross-session user memory + knowledge base prompt blocks (fail-open, parallel)
     let userMemoryBlock = '';
-    if (this.userMemory && ownerId) {
-      try {
-        userMemoryBlock = await this.userMemory.getMemoryForPrompt(ownerId);
-      } catch {
-        // fail-open: memory enrichment is non-critical
-      }
-    }
+    let knowledgeBaseBlock = '';
+
+    const searchTerm = extractSearchTerm(history, input.text?.trim());
+
+    await Promise.all([
+      (this.userMemory && ownerId)
+        ? this.userMemory.getMemoryForPrompt(ownerId)
+            .then((b: string) => { userMemoryBlock = b; })
+            .catch(() => { /* fail-open */ })
+        : Promise.resolve(),
+      (this.knowledgeBase && searchTerm)
+        ? this.knowledgeBase.lookup(searchTerm)
+            .then((b: string) => { knowledgeBaseBlock = b; })
+            .catch(() => { /* fail-open */ })
+        : Promise.resolve(),
+    ]);
 
     return {
       kind: 'ready',
@@ -283,6 +322,7 @@ export class ChatMessageService {
       redirectHint: userGuardrail.redirectHint,
       ownerId,
       userMemoryBlock,
+      knowledgeBaseBlock,
     };
   }
 
@@ -406,7 +446,7 @@ export class ChatMessageService {
     const prep = await this.prepareMessage(sessionId, input, requestId, currentUserId);
     if (prep.kind === 'refused') return prep.result;
 
-    const { session, orchestratorImage, requestedLocale, history, redirectHint, ownerId, userMemoryBlock } = prep;
+    const { session, orchestratorImage, requestedLocale, history, redirectHint, ownerId, userMemoryBlock, knowledgeBaseBlock } = prep;
     const text = input.text?.trim();
 
     const aiResult: OrchestratorOutput = await this.orchestrator.generate({
@@ -423,6 +463,7 @@ export class ChatMessageService {
       requestId,
       redirectHint,
       userMemoryBlock,
+      knowledgeBaseBlock,
     });
 
     return await this.commitAssistantResponse(sessionId, session, aiResult, requestedLocale, history, ownerId);
@@ -454,7 +495,7 @@ export class ChatMessageService {
     const prep = await this.prepareMessage(sessionId, input, requestId, currentUserId);
     if (prep.kind === 'refused') return prep.result;
 
-    const { session, orchestratorImage, requestedLocale, history, redirectHint, ownerId, userMemoryBlock } = prep;
+    const { session, orchestratorImage, requestedLocale, history, redirectHint, ownerId, userMemoryBlock, knowledgeBaseBlock } = prep;
     const text = input.text?.trim();
 
     if (signal?.aborted) {
@@ -522,6 +563,7 @@ export class ChatMessageService {
         requestId,
         redirectHint,
         userMemoryBlock,
+        knowledgeBaseBlock,
       },
       onChunk,
     );
