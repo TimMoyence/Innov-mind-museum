@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1024">
+  <title>Musaium — Google Play Feature Graphic (1024x500)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 1024px;
+      height: 500px;
+      overflow: hidden;
+      font-family: 'Inter', -apple-system, sans-serif;
+    }
+
+    .graphic {
+      width: 1024px;
+      height: 500px;
+      background: linear-gradient(135deg, #1E1B19 0%, #2D2926 40%, #3A3330 70%, #1E1B19 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Decorative elements */
+    .graphic::before {
+      content: '';
+      position: absolute;
+      top: -100px;
+      right: -100px;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(200, 170, 110, 0.12) 0%, transparent 70%);
+    }
+
+    .graphic::after {
+      content: '';
+      position: absolute;
+      bottom: -80px;
+      left: -80px;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(200, 170, 110, 0.08) 0%, transparent 70%);
+    }
+
+    /* Grid pattern overlay */
+    .grid-overlay {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(200, 170, 110, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200, 170, 110, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 60px;
+      padding: 0 80px;
+    }
+
+    .text-side {
+      flex: 1;
+    }
+
+    .logo-mark {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #C8AA6E 0%, #A08050 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(200, 170, 110, 0.3);
+    }
+
+    .logo-mark span {
+      font-size: 28px;
+      font-weight: 800;
+      color: #1E1B19;
+      line-height: 1;
+    }
+
+    .title {
+      font-size: 48px;
+      font-weight: 800;
+      color: #FFFFFF;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .title .accent {
+      color: #C8AA6E;
+    }
+
+    .tagline {
+      font-size: 18px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.7);
+      margin-top: 16px;
+      line-height: 1.5;
+      max-width: 380px;
+    }
+
+    .badges {
+      display: flex;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .badge .icon {
+      font-size: 16px;
+    }
+
+    .phone-side {
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    /* Phone mockup */
+    .phone {
+      width: 220px;
+      height: 440px;
+      border-radius: 36px;
+      background: #111;
+      border: 3px solid #333;
+      overflow: hidden;
+      box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(255, 255, 255, 0.05);
+      position: relative;
+    }
+
+    .phone-screen {
+      position: absolute;
+      inset: 3px;
+      border-radius: 33px;
+      background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      display: flex;
+      flex-direction: column;
+      padding: 50px 16px 20px;
+      overflow: hidden;
+    }
+
+    .phone-notch {
+      position: absolute;
+      top: 3px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 25px;
+      background: #111;
+      border-radius: 0 0 16px 16px;
+      z-index: 2;
+    }
+
+    .chat-bubble {
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 11px;
+      line-height: 1.4;
+      margin-bottom: 8px;
+      max-width: 85%;
+    }
+
+    .chat-user {
+      background: #C8AA6E;
+      color: #1E1B19;
+      align-self: flex-end;
+      margin-left: auto;
+      border-bottom-right-radius: 4px;
+      font-weight: 500;
+    }
+
+    .chat-ai {
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.9);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-input {
+      margin-top: auto;
+      padding: 10px 14px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 11px;
+    }
+
+    /* Second phone (tilted, behind) */
+    .phone-bg {
+      position: absolute;
+      top: 20px;
+      left: -40px;
+      transform: rotate(-8deg);
+      opacity: 0.4;
+    }
+  </style>
+</head>
+<body>
+  <!--
+    INSTRUCTIONS:
+    1. Open this file in a browser at 1024px width
+    2. Take a screenshot at exactly 1024x500
+    3. Use browser DevTools → Device toolbar → set to 1024x500
+    4. Or use: `npx capture-website-cli feature-graphic.html --width=1024 --height=500 --output=feature-graphic.png`
+    5. Upload to Google Play Console → Store listing → Feature graphic
+  -->
+  <div class="graphic">
+    <div class="grid-overlay"></div>
+    <div class="content">
+      <div class="text-side">
+        <div class="logo-mark"><span>M</span></div>
+        <h1 class="title">
+          Your <span class="accent">AI guide</span><br>
+          for every museum
+        </h1>
+        <p class="tagline">
+          Photograph an artwork, ask a question — get instant cultural context powered by artificial intelligence.
+        </p>
+        <div class="badges">
+          <span class="badge"><span class="icon">📷</span> Visual Recognition</span>
+          <span class="badge"><span class="icon">💬</span> AI Chat</span>
+          <span class="badge"><span class="icon">🌍</span> 8 Languages</span>
+        </div>
+      </div>
+      <div class="phone-side">
+        <div class="phone phone-bg">
+          <div class="phone-screen"></div>
+        </div>
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="chat-bubble chat-user">What painting is this?</div>
+            <div class="chat-bubble chat-ai">This is <strong>Starry Night</strong> by Vincent van Gogh (1889). The swirling sky depicts the view from his asylum room in Saint-Rémy-de-Provence...</div>
+            <div class="chat-bubble chat-user">What technique did he use?</div>
+            <div class="chat-bubble chat-ai">Van Gogh used <strong>impasto</strong> — thick, textured brushstrokes that create a sense of movement and energy across the canvas...</div>
+            <div class="chat-input">Ask about any artwork...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

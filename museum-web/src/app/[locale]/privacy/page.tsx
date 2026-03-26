@@ -1,4 +1,5 @@
 import { getDictionary, type Locale } from '@/lib/i18n';
+import { getPrivacyContent } from '@/lib/privacy-content';
 import type { Metadata } from 'next';
 
 interface PrivacyPageProps {
@@ -14,6 +15,7 @@ export async function generateMetadata({ params }: PrivacyPageProps): Promise<Me
 export default async function PrivacyPage({ params }: PrivacyPageProps) {
   const { locale } = await params;
   const dict = await getDictionary(locale as Locale);
+  const privacy = getPrivacyContent(locale);
 
   return (
     <div className="bg-white">
@@ -22,41 +24,26 @@ export default async function PrivacyPage({ params }: PrivacyPageProps) {
           <h1 className="text-3xl font-bold tracking-tight text-text-primary sm:text-4xl">
             {dict.privacy.title}
           </h1>
+          <p className="mt-3 text-sm text-text-secondary">
+            {privacy.version} — {privacy.lastUpdated}
+          </p>
         </div>
       </section>
 
       <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
         <article className="prose prose-slate max-w-none">
-          {/* Placeholder structure — real content will be migrated from docs/privacy-policy.html */}
-          <h2>1. Introduction</h2>
-          <p className="text-text-secondary">
-            Content will be migrated from the existing privacy policy document.
-          </p>
-
-          <h2>2. Data Collection</h2>
-          <p className="text-text-secondary">
-            Details about data collection practices.
-          </p>
-
-          <h2>3. Data Usage</h2>
-          <p className="text-text-secondary">
-            How collected data is used.
-          </p>
-
-          <h2>4. Data Storage &amp; Security</h2>
-          <p className="text-text-secondary">
-            Information about data storage and security measures.
-          </p>
-
-          <h2>5. User Rights</h2>
-          <p className="text-text-secondary">
-            Your rights regarding your personal data.
-          </p>
-
-          <h2>6. Contact</h2>
-          <p className="text-text-secondary">
-            How to reach us regarding privacy concerns.
-          </p>
+          {privacy.sections.map((section) => (
+            <div key={section.id} id={section.id} className="mb-10">
+              <h2 className="text-xl font-semibold text-text-primary">
+                {section.title}
+              </h2>
+              {section.paragraphs.map((paragraph, i) => (
+                <p key={i} className="mt-3 text-text-secondary leading-relaxed">
+                  {paragraph}
+                </p>
+              ))}
+            </div>
+          ))}
         </article>
       </section>
     </div>

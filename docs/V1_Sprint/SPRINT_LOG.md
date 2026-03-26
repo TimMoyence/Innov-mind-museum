@@ -1661,3 +1661,57 @@ Sprint d'enrichissement du package `museum-web/`. Landing page transformee de sc
 | W3 | Support complet + privacy policy content migration + formulaire connecte au backend |
 | W4 | Admin remaining pages (analytics, reports, tickets) + production deploy |
 | W5 | Polish, perf, accessibilite |
+
+---
+
+## Store Submission Polish (2026-03-26, R11)
+
+**Scope**: Store metadata, privacy page migration, screenshot automation, submission guide.
+**Commits**: TBD
+**Stats**: 7 fichiers crees, 1 modifie, 0 tests ajoutes (chore/docs run), 0 regression.
+
+### Resume executif
+
+Preparation complete pour la soumission App Store + Google Play. Le produit est fonctionnellement complet (ErrorBoundary, i18n, offline, Zustand, 1088 tests). Ce run cree tous les artefacts manquants pour la mise en store : descriptions multilingues, privacy page reelle, Feature Graphic, automation screenshots, guide de soumission.
+
+### Changements cles
+
+| Domaine | Action | Fichiers |
+|---------|--------|----------|
+| Store metadata | Descriptions, keywords, What's New en 4 langues (EN/FR/ES/DE) | `docs/store-listing/appstore-metadata.json`, `docs/store-listing/googleplay-metadata.json` |
+| Privacy page | Migration scaffold → contenu RGPD reel (12 sections, FR+EN) | `museum-web/src/lib/privacy-content.ts`, `museum-web/src/app/[locale]/privacy/page.tsx` |
+| Feature Graphic | Template HTML 1024x500 pour Google Play | `docs/store-listing/feature-graphic.html` |
+| Screenshots | Maestro automation flow (10 ecrans) | `museum-frontend/maestro/screenshots.yaml` |
+| Documentation | Guide complet de soumission store | `docs/STORE_SUBMISSION_GUIDE.md` |
+
+### Decisions techniques
+
+1. **Privacy content as TS data, not JSON i18n** — La politique de confidentialite contient 12 sections avec du texte juridique complexe. Stocker dans un fichier TS (`privacy-content.ts`) plutot que dans les dictionnaires JSON permet le typage strict et evite de polluer les dictionnaires marketing avec du contenu legal.
+2. **Server Component pour privacy** — La page privacy est un Server Component (PE-011). Le contenu est charge server-side, jamais envoye au bundle client.
+3. **Feature Graphic en HTML** — Un template HTML avec CSS est plus maintenable qu'une image statique. Peut etre screenshote via DevTools ou `capture-website-cli`.
+4. **Maestro over Fastlane Snapshot** — Maestro est plus simple a configurer que Fastlane pour Expo/React Native. Un seul fichier YAML couvre les 10 ecrans.
+5. **4 langues (EN/FR/ES/DE)** — Couvre les principaux marches europeens + anglophone. Les descriptions sont adaptees culturellement, pas traduites mot a mot.
+
+### Verification
+
+| Check | Result |
+|-------|--------|
+| museum-web typecheck (`tsc --noEmit`) | PASS (0 errors) |
+| museum-web build (`next build`) | PASS |
+| Backend typecheck | PASS (0 regression) |
+| Backend tests (951 passed) | PASS (0 regression) |
+| Frontend typecheck | PASS (0 regression) |
+| Frontend tests (47 passed) | PASS (0 regression) |
+| Corrective loops | 0 |
+| First-pass rate | 100% |
+
+### Artefacts a utiliser manuellement
+
+| Artefact | Action requise |
+|----------|---------------|
+| `docs/store-listing/appstore-metadata.json` | Copier dans App Store Connect pour chaque langue |
+| `docs/store-listing/googleplay-metadata.json` | Copier dans Google Play Console pour chaque langue |
+| `docs/store-listing/feature-graphic.html` | Ouvrir dans navigateur, screenshot 1024x500 |
+| `museum-frontend/maestro/screenshots.yaml` | `maestro test maestro/screenshots.yaml` sur simulateur |
+| `docs/GOOGLE_PLAY_DATA_SAFETY.md` | Reference pour remplir le formulaire Data Safety |
+| `docs/STORE_SUBMISSION_GUIDE.md` | Guide pas a pas pour la soumission complete |

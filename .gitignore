@@ -8,6 +8,10 @@
 !docs/privacy-policy.html
 !docs/V1_Sprint/
 !docs/V1_Sprint/**
+!docs/STORE_SUBMISSION_GUIDE.md
+!docs/store-listing/
+!docs/store-listing/**
+!docs/GOOGLE_PLAY_DATA_SAFETY.md
 
 # OS X
 **/.DS_Store*
