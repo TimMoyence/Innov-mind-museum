@@ -123,5 +123,5 @@ jobs:
       - name: Smoke test
         run: |
           sleep 10
-          curl -sf ${{ secrets.PROD_WEB_BASE_URL }} | grep -q '<html' || (echo "Smoke test failed" && exit 1)
+          curl -sfL ${{ secrets.PROD_WEB_BASE_URL }} | grep -q '<html' || (echo "Smoke test failed" && exit 1)
           echo "Smoke test passed"
