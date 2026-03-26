@@ -2,6 +2,8 @@ import { StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
+import { useTheme } from '@/shared/ui/ThemeContext';
+
 interface ConversationSearchBarProps {
   value: string;
   onChangeText: (text: string) => void;
@@ -15,16 +17,17 @@ export const ConversationSearchBar = ({
   placeholder,
 }: ConversationSearchBarProps) => {
   const { t } = useTranslation();
+  const { theme } = useTheme();
 
   return (
-    <View style={styles.container}>
-      <Ionicons name="search-outline" size={16} color="#64748B" style={styles.icon} />
+    <View style={[styles.container, { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground }]}>
+      <Ionicons name="search-outline" size={16} color={theme.placeholderText} style={styles.icon} />
       <TextInput
-        style={styles.input}
+        style={[styles.input, { color: theme.textPrimary }]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder ?? t('conversationSearch.placeholder')}
-        placeholderTextColor="#94A3B8"
+        placeholderTextColor={theme.placeholderText}
         autoCapitalize="none"
         autoCorrect={false}
         clearButtonMode="while-editing"
@@ -41,8 +44,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.42)',
-    backgroundColor: 'rgba(255,255,255,0.68)',
     paddingHorizontal: 12,
     marginTop: 12,
   },
@@ -53,6 +54,5 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#0F172A',
   },
 });

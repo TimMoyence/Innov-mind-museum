@@ -94,7 +94,7 @@ export default function OnboardingScreen() {
   return (
     <LiquidScreen background={pickMuseumBackground(3)} contentStyle={[styles.screen, { paddingTop: insets.top + 16 }]}>
       <Pressable onPress={handleSkip} style={styles.skipButton} accessibilityRole="button" accessibilityLabel={t('a11y.onboarding.skip')}>
-        <Text style={[styles.skipText, { color: theme.textSecondary }]}>{t('onboarding.skip')}</Text>
+        <Text style={[styles.skipText, { color: theme.placeholderText }]}>{t('onboarding.skip')}</Text>
       </Pressable>
 
       <FlatList
@@ -121,7 +121,7 @@ export default function OnboardingScreen() {
 
       <View style={styles.footer}>
         <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={handleNext} accessibilityRole="button" accessibilityLabel={isLast ? t('a11y.onboarding.get_started') : t('a11y.onboarding.next')}>
-          <Text style={styles.primaryButtonText}>
+          <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
             {isLast ? t('onboarding.get_started') : t('onboarding.next')}
           </Text>
         </Pressable>
@@ -141,7 +141,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   skipText: {
-    color: '#64748B',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -161,7 +160,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 15,
   },

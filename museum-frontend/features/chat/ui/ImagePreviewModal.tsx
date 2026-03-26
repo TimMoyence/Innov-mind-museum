@@ -12,6 +12,7 @@ import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
 import { useImageManipulation } from '@/features/chat/application/useImageManipulation';
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 interface ImagePreviewModalProps {
   /** URI of the image to preview. `null` hides the modal. */
@@ -29,6 +30,7 @@ export const ImagePreviewModal = ({
   onCancel,
 }: ImagePreviewModalProps) => {
   const { t } = useTranslation();
+  const { theme } = useTheme();
   const [currentUri, setCurrentUri] = useState(imageUri);
   const { rotateImage, isProcessing } = useImageManipulation();
 
@@ -59,9 +61,9 @@ export const ImagePreviewModal = ({
       <View style={styles.overlay}>
         <View style={styles.header}>
           <Pressable onPress={onCancel} style={styles.headerButton}>
-            <Ionicons name="close" size={24} color="#FFFFFF" />
+            <Ionicons name="close" size={24} color={theme.primaryContrast} />
           </Pressable>
-          <Text style={styles.headerTitle}>{t('imagePreview.title')}</Text>
+          <Text style={[styles.headerTitle, { color: theme.primaryContrast }]}>{t('imagePreview.title')}</Text>
           <Pressable
             onPress={() => void handleRotate()}
             style={styles.headerButton}
@@ -70,7 +72,7 @@ export const ImagePreviewModal = ({
             <Ionicons
               name="refresh-outline"
               size={24}
-              color={isProcessing ? '#94A3B8' : '#FFFFFF'}
+              color={isProcessing ? theme.textSecondary : theme.primaryContrast}
             />
           </Pressable>
         </View>
@@ -85,15 +87,15 @@ export const ImagePreviewModal = ({
 
         <View style={styles.footer}>
           <Pressable onPress={onCancel} style={styles.cancelButton}>
-            <Text style={styles.cancelText}>{t('common.cancel')}</Text>
+            <Text style={[styles.cancelText, { color: theme.primaryContrast }]}>{t('common.cancel')}</Text>
           </Pressable>
           <Pressable
             onPress={handleConfirm}
             style={styles.confirmButton}
             disabled={isProcessing}
           >
-            <Ionicons name="send" size={18} color="#FFFFFF" />
-            <Text style={styles.confirmText}>{t('common.send')}</Text>
+            <Ionicons name="send" size={18} color={theme.primaryContrast} />
+            <Text style={[styles.confirmText, { color: theme.primaryContrast }]}>{t('common.send')}</Text>
           </Pressable>
         </View>
       </View>
@@ -122,7 +124,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    color: '#FFFFFF',
     fontSize: 17,
     fontWeight: '600',
   },
@@ -153,7 +154,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.3)',
   },
   cancelText: {
-    color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 15,
   },
@@ -167,7 +167,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#1D4ED8',
   },
   confirmText: {
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 15,
   },

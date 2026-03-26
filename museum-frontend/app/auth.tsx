@@ -194,7 +194,7 @@ export default function AuthScreen() {
           {errorMessage ? (
             <ErrorNotice message={errorMessage} onDismiss={() => setErrorMessage(null)} />
           ) : null}
-          {infoMessage ? <Text style={styles.infoText}>{infoMessage}</Text> : null}
+          {infoMessage ? <Text style={[styles.infoText, { color: theme.success }]}>{infoMessage}</Text> : null}
 
           {!isLogin ? (
             <>
@@ -203,7 +203,7 @@ export default function AuthScreen() {
                 <TextInput
                   style={[styles.input, { color: theme.textPrimary }]}
                   placeholder={t('auth.first_name')}
-                  placeholderTextColor='#64748B'
+                  placeholderTextColor={theme.placeholderText}
                   value={firstname}
                   onChangeText={setFirstname}
                   accessibilityLabel={t('a11y.auth.firstname_input')}
@@ -214,7 +214,7 @@ export default function AuthScreen() {
                 <TextInput
                   style={[styles.input, { color: theme.textPrimary }]}
                   placeholder={t('auth.last_name')}
-                  placeholderTextColor='#64748B'
+                  placeholderTextColor={theme.placeholderText}
                   value={lastname}
                   onChangeText={setLastname}
                   accessibilityLabel={t('a11y.auth.lastname_input')}
@@ -228,7 +228,7 @@ export default function AuthScreen() {
             <TextInput
               style={styles.input}
               placeholder={t('auth.email')}
-              placeholderTextColor='#64748B'
+              placeholderTextColor={theme.placeholderText}
               value={email}
               onChangeText={setEmail}
               autoCapitalize='none'
@@ -242,7 +242,7 @@ export default function AuthScreen() {
             <TextInput
               style={styles.input}
               placeholder={t('auth.password')}
-              placeholderTextColor='#64748B'
+              placeholderTextColor={theme.placeholderText}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -259,7 +259,7 @@ export default function AuthScreen() {
           {!isLogin ? (
             <Pressable style={styles.gdprRow} onPress={() => setGdprAccepted((v) => !v)} accessibilityRole="checkbox" accessibilityLabel={t('a11y.auth.gdpr_checkbox')} accessibilityState={{ checked: gdprAccepted }}>
               <View style={[styles.checkbox, gdprAccepted && { backgroundColor: theme.primary, borderColor: theme.primary }]}>
-                {gdprAccepted ? <Ionicons name='checkmark' size={14} color='#FFFFFF' /> : null}
+                {gdprAccepted ? <Ionicons name='checkmark' size={14} color={theme.primaryContrast} /> : null}
               </View>
               <Text style={[styles.gdprText, { color: theme.textSecondary }]}>
                 {t('auth.agree_terms').split(t('auth.terms_of_service'))[0]}
@@ -271,7 +271,7 @@ export default function AuthScreen() {
           ) : null}
 
           <Pressable
-            style={[styles.submitButton, { backgroundColor: theme.primary }, (isLoading || isSocialLoading || (!isLogin && !gdprAccepted)) && styles.submitButtonDisabled]}
+            style={[styles.submitButton, { backgroundColor: theme.primary, shadowColor: theme.shadowColor }, (isLoading || isSocialLoading || (!isLogin && !gdprAccepted)) && styles.submitButtonDisabled]}
             onPress={isLogin ? handleLogin : handleRegister}
             disabled={isLoading || isSocialLoading || (!isLogin && !gdprAccepted)}
             accessibilityRole="button"
@@ -279,9 +279,9 @@ export default function AuthScreen() {
             accessibilityState={{ disabled: isLoading || isSocialLoading || (!isLogin && !gdprAccepted) }}
           >
             {isLoading || isSocialLoading ? (
-              <ActivityIndicator color='#FFFFFF' />
+              <ActivityIndicator color={theme.primaryContrast} />
             ) : (
-              <Text style={styles.submitButtonText}>{isLogin ? t('auth.log_in') : t('auth.sign_up')}</Text>
+              <Text style={[styles.submitButtonText, { color: theme.primaryContrast }]}>{isLogin ? t('auth.log_in') : t('auth.sign_up')}</Text>
             )}
           </Pressable>
 
@@ -371,7 +371,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   infoText: {
-    color: '#166534',
     fontWeight: '600',
     fontSize: 13,
     marginBottom: 6,
@@ -405,7 +404,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
-    shadowColor: '#1E3A8A',
     shadowOpacity: 0.2,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 8 },
@@ -414,7 +412,6 @@ const styles = StyleSheet.create({
     opacity: 0.72,
   },
   submitButtonText: {
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 15,
   },

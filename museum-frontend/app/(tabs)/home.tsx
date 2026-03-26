@@ -89,7 +89,7 @@ export default function HomeScreen() {
         />
       </View>
 
-      {menuStatus ? <Text style={styles.menuStatus}>{menuStatus}</Text> : null}
+      {menuStatus ? <Text style={[styles.menuStatus, { color: theme.shadowColor }]}>{menuStatus}</Text> : null}
 
       <GlassCard style={styles.heroCard} intensity={62}>
         <BrandMark variant='hero' />
@@ -97,7 +97,7 @@ export default function HomeScreen() {
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
           {t('home.hero_subtitle')}
         </Text>
-        <Text style={styles.settingsNote}>
+        <Text style={[styles.settingsNote, { color: theme.shadowColor }]}>
           {t('home.settings_note', { locale, mode: museumMode ? t('common.on') : t('common.off') })}
         </Text>
       </GlassCard>
@@ -105,7 +105,7 @@ export default function HomeScreen() {
       {error ? <ErrorNotice message={error} onDismiss={() => setError(null)} /> : null}
 
       <Pressable
-        style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+        style={[styles.primaryButton, { backgroundColor: theme.primary, shadowColor: theme.shadowColor }]}
         onPress={() => void startConversation('default')}
         disabled={isCreating}
         accessibilityRole="button"
@@ -114,9 +114,9 @@ export default function HomeScreen() {
         accessibilityState={{ disabled: isCreating }}
       >
         {isCreating ? (
-          <ActivityIndicator color='#FFFFFF' />
+          <ActivityIndicator color={theme.primaryContrast} />
         ) : (
-          <Text style={styles.primaryButtonText}>{t('home.start_conversation')}</Text>
+          <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>{t('home.start_conversation')}</Text>
         )}
       </Pressable>
 
@@ -144,7 +144,6 @@ const styles = StyleSheet.create({
   },
   menuStatus: {
     textAlign: 'center',
-    color: '#1E3A8A',
     fontSize: 12,
     fontWeight: '700',
     marginBottom: 2,
@@ -165,7 +164,6 @@ const styles = StyleSheet.create({
   },
   settingsNote: {
     fontSize: 13,
-    color: '#1E3A8A',
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -174,13 +172,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     alignItems: 'center',
-    shadowColor: '#1E3A8A',
     shadowOpacity: 0.22,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 10 },
   },
   primaryButtonText: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },

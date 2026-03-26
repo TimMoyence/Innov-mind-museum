@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 
 import { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { ChatMessageBubble } from '@/features/chat/ui/ChatMessageBubble';
@@ -49,7 +50,7 @@ export const ChatMessageList = ({
   onImageError,
   onReport,
 }: ChatMessageListProps) => {
-  const flatListRef = useRef<FlatList<ChatUiMessage>>(null);
+  const listRef = useRef<FlashListRef<ChatUiMessage>>(null);
 
   const lastAssistantMessage = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -62,7 +63,7 @@ export const ChatMessageList = ({
   useEffect(() => {
     if (messages.length > 0 || isSending) {
       setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
+        listRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
   }, [messages.length, isSending]);
@@ -70,7 +71,7 @@ export const ChatMessageList = ({
   // Auto-scroll as streaming content grows
   const handleContentSizeChange = useCallback(() => {
     if (isStreaming) {
-      flatListRef.current?.scrollToEnd({ animated: false });
+      listRef.current?.scrollToEnd({ animated: false });
     }
   }, [isStreaming]);
 
@@ -108,15 +109,12 @@ export const ChatMessageList = ({
   const showTypingIndicator = isSending && !isStreaming;
 
   return (
-    <FlatList
-      ref={flatListRef}
+    <FlashList
+      ref={listRef}
       data={messages}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
       contentContainerStyle={styles.listContent}
-      initialNumToRender={15}
-      maxToRenderPerBatch={10}
-      windowSize={7}
       onContentSizeChange={handleContentSizeChange}
       ListEmptyComponent={
         <WelcomeCard
@@ -127,13 +125,18 @@ export const ChatMessageList = ({
         />
       }
       ListFooterComponent={showTypingIndicator ? <TypingIndicator /> : null}
+      ItemSeparatorComponent={ItemSeparator}
     />
   );
 };
 
+const ItemSeparator = () => <View style={styles.separator} />;
+
 const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 16,
-    gap: 10,
+  },
+  separator: {
+    height: 10,
   },
 });
