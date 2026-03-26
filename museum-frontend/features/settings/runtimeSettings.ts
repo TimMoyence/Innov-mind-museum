@@ -49,7 +49,7 @@ export const loadRuntimeSettings = async (): Promise<RuntimeSettings> => {
   await cleanupLegacyApiOverrideKeys(apiBaseUrl, apiEnvironment);
 
   return {
-    defaultLocale: defaultLocale || defaults.defaultLocale,
+    defaultLocale: defaultLocale ?? defaults.defaultLocale,
     defaultMuseumMode:
       defaultMuseumMode === null
         ? defaults.defaultMuseumMode

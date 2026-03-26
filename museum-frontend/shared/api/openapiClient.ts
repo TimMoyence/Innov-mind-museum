@@ -97,7 +97,7 @@ export const formatOpenApiPath = <P extends PathKey>(
   template: P,
   pathParams?: PathParamsFor<P>,
 ): string => {
-  const params = (pathParams || {}) as Record<string, string | number>;
+  const params = (pathParams ?? {}) as Record<string, string | number>;
   const rendered = template.replace(/\{([^}]+)\}/g, (_, key: string) => {
     const value = params[key];
     if (value === undefined || value === null) {

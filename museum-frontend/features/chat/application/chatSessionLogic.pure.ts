@@ -53,7 +53,7 @@ export interface ApiMessage {
 export const mapApiMessageToUiMessage = (apiMsg: ApiMessage): ChatUiMessage => ({
   id: apiMsg.id,
   role: apiMsg.role,
-  text: apiMsg.text || '',
+  text: apiMsg.text ?? '',
   createdAt: apiMsg.createdAt,
   imageRef: apiMsg.imageRef,
   image: apiMsg.image ?? null,
@@ -70,7 +70,7 @@ export const buildOptimisticMessage = (
   text: string | undefined,
   imageUri: string | undefined,
 ): ChatUiMessage => {
-  const trimmed = text?.trim() || '';
+  const trimmed = text?.trim() ?? '';
   return {
     id: `${Date.now()}-user`,
     role: 'user',

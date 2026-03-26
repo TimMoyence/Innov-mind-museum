@@ -7,7 +7,7 @@
 export const extractUserIdFromToken = (accessToken: string): string | null => {
   try {
     const payload = JSON.parse(atob(accessToken.split('.')[1]));
-    const userId = payload.id || payload.sub;
+    const userId = payload.id ?? payload.sub;
     return userId ? String(userId) : null;
   } catch {
     return null;

@@ -38,7 +38,7 @@ const reactNavigationIntegration = Sentry.reactNavigationIntegration({
 });
 
 Sentry.init({
-  dsn: sentryDsn || '',
+  dsn: sentryDsn ?? '',
   enabled: !!sentryDsn,
   environment: __DEV__ ? 'development' : 'production',
   tracesSampleRate: 0.2,

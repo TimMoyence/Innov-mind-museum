@@ -11,7 +11,7 @@ let accessToken = '';
  * @param token - JWT access token, or a nullish value to clear it.
  */
 export const setAccessToken = (token: string | null | undefined): void => {
-  accessToken = token ? token : '';
+  accessToken = token ?? '';
 };
 
 /** Returns the current in-memory access token (empty string when none is set). */

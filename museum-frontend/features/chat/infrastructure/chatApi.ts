@@ -44,7 +44,7 @@ const audioMimeByExtension: Record<string, string> = {
 };
 
 const normalizeImageMimeTypeFromExtension = (extensionRaw: string | undefined): string => {
-  const extension = (extensionRaw || 'jpg').toLowerCase();
+  const extension = (extensionRaw ?? 'jpg').toLowerCase();
   if (extension === 'jpg') {
     return 'image/jpeg';
   }
@@ -120,7 +120,7 @@ export const chatApi = {
     let payload: unknown;
 
     if (imageUri) {
-      const fileName = imageUri.split('/').pop() || 'image.jpg';
+      const fileName = imageUri.split('/').pop() ?? 'image.jpg';
       const extension = fileName.includes('.')
         ? fileName.split('.').pop()
         : 'jpg';
@@ -142,7 +142,7 @@ export const chatApi = {
       payload = formData;
     } else {
       payload = JSON.stringify({
-        text: text?.trim() || undefined,
+        text: text?.trim() ?? undefined,
         context: {
           museumMode,
           location,
@@ -190,11 +190,11 @@ export const chatApi = {
     }
 
     const fallbackExt = audioBlob?.type.includes('webm') ? 'webm' : 'm4a';
-    const fileName = (audioUri?.split('/').pop() || `voice-${Date.now()}.${fallbackExt}`).trim();
+    const fileName = (audioUri?.split('/').pop() ?? `voice-${Date.now()}.${fallbackExt}`).trim();
     const extension = fileName.includes('.')
-      ? fileName.split('.').pop()?.toLowerCase() || fallbackExt
+      ? fileName.split('.').pop()?.toLowerCase() ?? fallbackExt
       : fallbackExt;
-    const mimeType = audioBlob?.type || audioMimeByExtension[extension] || 'audio/mp4';
+    const mimeType = audioBlob?.type ?? (audioMimeByExtension[extension] || 'audio/mp4');
 
     const formData = new FormData();
     formData.append(
@@ -376,7 +376,7 @@ export const chatApi = {
         ...traceHeaders,
       },
       body: JSON.stringify({
-        text: params.text?.trim() || undefined,
+        text: params.text?.trim() ?? undefined,
         context: {
           museumMode: params.museumMode,
           guideLevel: params.guideLevel,

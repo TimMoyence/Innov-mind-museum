@@ -30,7 +30,7 @@ export const httpRequest = async <T>(
   { requiresAuth = true, headers, body, method, responseType }: RequestOptions = {},
 ): Promise<T> => {
   const finalHeaders: HeadersRecord = {
-    ...(headers || {}),
+    ...(headers ?? {}),
   };
 
   if (body && !isFormData(body) && finalHeaders['Content-Type'] === undefined) {
@@ -40,7 +40,7 @@ export const httpRequest = async <T>(
   try {
     const requestConfig = {
       url,
-      method: method || 'GET',
+      method: method ?? 'GET',
       data: body,
       headers: finalHeaders,
       requiresAuth,
