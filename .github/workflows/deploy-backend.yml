@@ -87,7 +87,7 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Build image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./museum-backend
           file: ./museum-backend/deploy/Dockerfile.prod
@@ -103,7 +103,7 @@ jobs:
           exit-code: '1'
 
       - name: Push image to GHCR
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./museum-backend
           file: ./museum-backend/deploy/Dockerfile.prod
