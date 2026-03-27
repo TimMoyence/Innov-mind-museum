@@ -69,11 +69,7 @@ export interface IUserRepository {
    * @param lastname - Optional last name from the provider.
    * @returns The newly created user.
    */
-  registerSocialUser(
-    email: string,
-    firstname?: string,
-    lastname?: string,
-  ): Promise<User>;
+  registerSocialUser(email: string, firstname?: string, lastname?: string): Promise<User>;
 
   /**
    * Atomically consume a reset token and update the user's password in a single query.
@@ -108,4 +104,28 @@ export interface IUserRepository {
    * @returns The user if the token was valid and consumed, or `null` if invalid/expired.
    */
   verifyEmail(token: string): Promise<User | null>;
+
+  /**
+   * Store an email change token, pending email, and expiry on the user record.
+   *
+   * @param userId - The user's ID.
+   * @param hashedToken - SHA-256 hash of the email change token.
+   * @param pendingEmail - The new email to be confirmed.
+   * @param expires - Token expiration timestamp.
+   */
+  setEmailChangeToken(
+    userId: number,
+    hashedToken: string,
+    pendingEmail: string,
+    expires: Date,
+  ): Promise<void>;
+
+  /**
+   * Atomically consume an email change token and update the user's email.
+   * Clears pending_email, email_change_token, and email_change_token_expiry.
+   *
+   * @param hashedToken - SHA-256 hash of the email change token.
+   * @returns The updated user, or `null` if the token is invalid or expired.
+   */
+  consumeEmailChangeToken(hashedToken: string): Promise<User | null>;
 }
