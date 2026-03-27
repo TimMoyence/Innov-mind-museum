@@ -2,530 +2,65 @@
   "lastUpdated": "2026-03-26",
   "agents": {
     "Backend Architect": {
-      "totalRuns": 5,
-      "averageScore": 9.3,
-      "averageROI": 4.5,
-      "verdict": "ESSENTIEL",
-      "strengths": [
-        "Architecture coherente",
-        "0 regression",
-        "Backward compat via re-exports",
-        "Exhaustif 8 domaines R4",
-        "Findings avec fichier:ligne",
-        "AbortSignal pattern correct (M1+M2)",
-        "Zod validation auth routes",
-        "Redis rate-limit avec fallback elegant"
-      ],
-      "weaknesses": [],
-      "selfVerificationRate": 1.0,
-      "retired": false,
-      "lastRun": "2026-03-25 R9 Zod validation + migration transactions",
-      "history": [
-        {
-          "run": "R3",
-          "score": 9.5,
-          "role": "V1.1 wave-a"
-        },
-        {
-          "run": "R4",
-          "score": 9.5,
-          "role": "audit enterprise-grade"
-        },
-        {
-          "run": "R6-fixes",
-          "score": 9.0,
-          "role": "Phase 1+2 fixes (timeouts, hexa, rate-limit)"
-        },
-        {
-          "run": "R7",
-          "score": 9.5,
-          "role": "zero-downtime + Redis rate-limit + DB resilience"
-        },
-        {
-          "run": "R9",
-          "score": 9.0,
-          "role": "Zod validation 10 routes + migration transactions"
-        }
-      ]
+      "totalRuns": 5, "averageScore": 9.3, "averageROI": 4.5, "verdict": "ESSENTIEL",
+      "strengths": ["Architecture coherente + 0 regression", "Zod validation + Redis rate-limit fallback", "AbortSignal pattern correct"],
+      "weaknesses": [], "retired": false
     },
     "Frontend Architect": {
-      "totalRuns": 6,
-      "averageScore": 8.75,
-      "averageROI": 4.42,
-      "verdict": "ESSENTIEL",
-      "strengths": [
-        "Exhaustif 8 domaines",
-        "PE-004 confirme (2 violations)",
-        "Error Boundary gap detecte",
-        "Offline/latence analyse",
-        "22 app files W1 scaffolding",
-        "i18n dictionary pattern clean",
-        "Web research R8 avec sources concretes",
-        "10 gaps priorises avec roadmap",
-        "i18n errors 8 locales",
-        "429 retry avec Retry-After"
-      ],
-      "weaknesses": [
-        "Auth types mismatch (F1) \u2014 detecte par Sentinelle",
-        "museum-web non dans contexte agent",
-        "R11 scope creep \u2014 committed FlashList/ReactCompiler/tests/fake KB entries outside mandate"
-      ],
-      "selfVerificationRate": 1.0,
-      "retired": false,
-      "lastRun": "2026-03-26 R11 Theme centralization (SCOPE CREEP)",
-      "history": [
-        {
-          "run": "R4",
-          "score": 9.5,
-          "role": "audit enterprise-grade"
-        },
-        {
-          "run": "R5",
-          "score": 9.0,
-          "role": "museum-web W1 \u2014 22 app files"
-        },
-        {
-          "run": "R5-hotfix",
-          "score": 9.0,
-          "role": "ErrorBoundary C1 fix"
-        },
-        {
-          "run": "R8",
-          "score": 9.0,
-          "role": "audit V2 \u2014 6/6 fixes verified, 10 gaps, roadmap"
-        },
-        {
-          "run": "R9",
-          "score": 9.0,
-          "role": "UX polish \u2014 i18n errors, 429 retry, share branding"
-        },
-        {
-          "run": "R11",
-          "score": 7.0,
-          "role": "Theme centralization 27 files \u2014 SCOPE CREEP (FlashList, tests, React Compiler, fake FINALIZE)"
-        }
-      ]
+      "totalRuns": 6, "averageScore": 8.75, "averageROI": 4.42, "verdict": "ESSENTIEL",
+      "strengths": ["Exhaustif 8 domaines + i18n", "Web research avec sources concretes", "10 gaps priorises avec roadmap"],
+      "weaknesses": ["R11 scope creep — FlashList/ReactCompiler/tests outside mandate", "Auth types mismatch (F1)"],
+      "retired": false
     },
     "Marketing Architect": {
-      "totalRuns": 1,
-      "averageScore": 10.0,
-      "averageROI": 5.0,
-      "verdict": "ESSENTIEL",
-      "strengths": [
-        "6-section landing page (hero, how-it-works, features, showcase, testimonials, download)",
-        "5 composants Framer Motion reusables",
-        "Parallax phone mockup",
-        "Store badges Apple/Google",
-        "Dictionnaires marketing FR+EN complets",
-        "Bundle +45kB only for rich animations"
-      ],
-      "weaknesses": [],
-      "selfVerificationRate": 1.0,
-      "retired": false,
-      "lastRun": "2026-03-25 R6 museum-web W2",
-      "history": [
-        {
-          "run": "R6",
-          "score": 10.0,
-          "role": "Landing page 6 sections + 5 composants + dictionnaires"
-        }
-      ]
+      "totalRuns": 1, "averageScore": 10.0, "averageROI": 5.0, "verdict": "ESSENTIEL",
+      "strengths": ["6-section landing page Framer Motion", "Parallax phone mockup + store badges", "Bundle +45kB only"],
+      "weaknesses": [], "retired": false
     },
     "Admin Architect": {
-      "totalRuns": 1,
-      "averageScore": 10.0,
-      "averageROI": 5.0,
-      "verdict": "ESSENTIEL",
-      "strengths": [
-        "Refresh token interceptor ported from museum-admin",
-        "Dashboard stats wired to /api/admin/stats",
-        "Users table with pagination + search + role filter",
-        "Audit logs table with pagination",
-        "AdminDictProvider + useAdminDict i18n pattern",
-        "LoginForm + AdminShell client component extraction",
-        "All W1 findings (F2-F6) resolved in single pass"
-      ],
-      "weaknesses": [],
-      "selfVerificationRate": 1.0,
-      "retired": false,
-      "lastRun": "2026-03-25 R6 museum-web W2",
-      "history": [
-        {
-          "run": "R6",
-          "score": 10.0,
-          "role": "Admin API wiring + refresh token + i18n fixes"
-        }
-      ]
+      "totalRuns": 1, "averageScore": 10.0, "averageROI": 5.0, "verdict": "ESSENTIEL",
+      "strengths": ["Refresh token interceptor", "Dashboard + Users + Audit logs wired to API", "All W1 findings resolved single pass"],
+      "weaknesses": [], "retired": false
     },
     "QA Engineer": {
-      "totalRuns": 5,
-      "averageScore": 9.2,
-      "averageROI": 4.45,
-      "verdict": "ESSENTIEL",
-      "strengths": [
-        "64 as any -> 0",
-        "jest.Mocked + factory patterns",
-        "Pyramide tests complete R4",
-        "OpenAPI drift detecte (20 routes)",
-        "Inventaire couverture exhaustif",
-        "31 jest tests frontend en 1 commit",
-        "OpenAPI 20 routes + 14 schemas",
-        "Coverage CI thresholds enforced",
-        "DB resilience 21 tests"
-      ],
-      "weaknesses": [],
-      "selfVerificationRate": 1.0,
-      "retired": false,
-      "lastRun": "2026-03-25 R9 Zod +10 tests + coverage CI thresholds",
-      "history": [
-        {
-          "run": "R3",
-          "score": 9.5,
-          "role": "V1.1 wave-c"
-        },
-        {
-          "run": "R4",
-          "score": 9.0,
-          "role": "audit enterprise-grade"
-        },
-        {
-          "run": "R6-fixes",
-          "score": 9.0,
-          "role": "OpenAPI 20 routes + Zustand stores"
-        },
-        {
-          "run": "R7",
-          "score": 9.5,
-          "role": "31 jest tests FE + DB resilience 21 tests"
-        },
-        {
-          "run": "R9",
-          "score": 9.0,
-          "role": "Zod +10 tests + coverage CI thresholds"
-        }
-      ]
+      "totalRuns": 5, "averageScore": 9.2, "averageROI": 4.45, "verdict": "ESSENTIEL",
+      "strengths": ["64 as any -> 0 + jest.Mocked patterns", "OpenAPI 20 routes + 14 schemas", "DB resilience 21 tests + coverage CI thresholds"],
+      "weaknesses": [], "retired": false
     },
     "DevOps Engineer": {
-      "totalRuns": 5,
-      "averageScore": 9.5,
-      "averageROI": 4.8,
-      "verdict": "ESSENTIEL",
-      "strengths": [
-        "6 domaines couverts",
-        "Checklist production readiness",
-        "EP-007 ferme (Docker 3-stage)",
-        "Scaling gaps identifies",
-        "Dockerfile standalone pattern",
-        "nginx diff safe \u2014 API paths preserved",
-        "CI/CD mirrors backend pipeline",
-        "Zero-downtime deploy pattern",
-        "Dependabot + Trivy CI",
-        "Concurrency groups deploy"
-      ],
-      "weaknesses": [],
-      "selfVerificationRate": 1.0,
-      "retired": false,
-      "lastRun": "2026-03-25 R9 coverage CI thresholds",
-      "history": [
-        {
-          "run": "R4",
-          "score": 9.0,
-          "role": "audit enterprise-grade"
-        },
-        {
-          "run": "R5-KB",
-          "score": 10.0,
-          "role": "museum-web W1 \u2014 Dockerfile + nginx + CI/CD"
-        },
-        {
-          "run": "R5-hotfix",
-          "score": 10.0,
-          "role": "Docker 3-stage, Dependabot+Trivy, concurrency"
-        },
-        {
-          "run": "R7",
-          "score": 9.5,
-          "role": "zero-downtime deploy + Redis rate-limit"
-        },
-        {
-          "run": "R9",
-          "score": 9.0,
-          "role": "coverage CI thresholds + migration transactions"
-        }
-      ]
+      "totalRuns": 5, "averageScore": 9.5, "averageROI": 4.8, "verdict": "ESSENTIEL",
+      "strengths": ["Zero-downtime deploy pattern", "Docker 3-stage + Dependabot + Trivy CI", "CI/CD mirrors backend pipeline"],
+      "weaknesses": [], "retired": false
     },
     "Security Analyst": {
-      "totalRuns": 2,
-      "averageScore": 9.0,
-      "averageROI": 4.5,
-      "verdict": "ESSENTIEL",
-      "strengths": [
-        "OWASP aligned",
-        "7 domaines",
-        "Dep audit execute",
-        "langsmith SSRF detecte",
-        "Rate-limit IP gap identifie",
-        "Dependabot config + Trivy scan",
-        "Token logging guard"
-      ],
-      "weaknesses": [
-        "Guardrail keyword bypassable (M22) non resolu"
-      ],
-      "selfVerificationRate": 1.0,
-      "retired": false,
-      "lastRun": "2026-03-25 R5-hotfix Dependabot + Trivy",
-      "history": [
-        {
-          "run": "R4",
-          "score": 9.0,
-          "role": "audit enterprise-grade"
-        },
-        {
-          "run": "R5-hotfix",
-          "score": 9.0,
-          "role": "Dependabot config + Trivy CI scan + dep audit blocking"
-        }
-      ]
-    },
-    "DevOps+Security": {
-      "totalRuns": 1,
-      "averageScore": 9.0,
-      "averageROI": 4.0,
-      "verdict": "ESSENTIEL",
-      "strengths": [
-        "OWASP conforme",
-        "Rate limit pattern reutilise"
-      ],
-      "weaknesses": [],
-      "selfVerificationRate": 1.0,
-      "retired": true,
-      "retiredReason": "Split into dedicated DevOps Engineer + Security Analyst in R4",
-      "lastRun": "2026-03-24 V1.1 wave-b"
-    },
-    "Explore (audit-backend)": {
-      "totalRuns": 1,
-      "averageScore": 9.0,
-      "averageROI": 3.5,
-      "verdict": "ESSENTIEL",
-      "strengths": [
-        "Exhaustif (dead code, imports, JSDoc, config)"
-      ],
-      "weaknesses": [
-        "Comptage as any inexact (25/18 vs reel 21/17)"
-      ],
-      "selfVerificationRate": null,
-      "retired": true,
-      "retiredReason": "Superseded by dedicated Backend Architect + QA Engineer in R4+ (AM-007)",
-      "lastRun": "2026-03-24 audit"
-    },
-    "Explore (audit-frontend)": {
-      "totalRuns": 1,
-      "averageScore": 9.0,
-      "averageROI": 3.5,
-      "verdict": "ESSENTIEL",
-      "strengths": [
-        "Store-readiness detaille",
-        "Bundle size analyse"
-      ],
-      "weaknesses": [],
-      "selfVerificationRate": null,
-      "retired": true,
-      "retiredReason": "Superseded by dedicated Frontend Architect in R4+ (AM-007)",
-      "lastRun": "2026-03-24 audit"
-    },
-    "Explore (audit-tests)": {
-      "totalRuns": 1,
-      "averageScore": 8.5,
-      "averageROI": 3.0,
-      "verdict": "VALEUR",
-      "strengths": [
-        "Coverage gaps exhaustifs",
-        "e2e CI gap identifie"
-      ],
-      "weaknesses": [
-        "Confusion initiale suites skippees (AI vs e2e)"
-      ],
-      "selfVerificationRate": null,
-      "retired": true,
-      "retiredReason": "Superseded by dedicated QA Engineer in R4+ (AM-007)",
-      "lastRun": "2026-03-24 audit"
-    },
-    "Explore (audit-infra)": {
-      "totalRuns": 1,
-      "averageScore": 9.0,
-      "averageROI": 3.5,
-      "verdict": "ESSENTIEL",
-      "strengths": [
-        "Doc complete",
-        "Security headers gap detecte"
-      ],
-      "weaknesses": [],
-      "selfVerificationRate": null,
-      "retired": true,
-      "retiredReason": "Superseded by dedicated DevOps Engineer in R4+ (AM-007)",
-      "lastRun": "2026-03-24 audit"
-    },
-    "Explore (audit-security)": {
-      "totalRuns": 1,
-      "averageScore": 9.0,
-      "averageROI": 3.5,
-      "verdict": "ESSENTIEL",
-      "strengths": [
-        "Service account key detecte",
-        "OWASP complet"
-      ],
-      "weaknesses": [],
-      "selfVerificationRate": null,
-      "retired": true,
-      "retiredReason": "Superseded by dedicated Security Analyst in R4+ (AM-007)",
-      "lastRun": "2026-03-24 audit"
+      "totalRuns": 2, "averageScore": 9.0, "averageROI": 4.5, "verdict": "ESSENTIEL",
+      "strengths": ["OWASP aligned 7 domaines", "langsmith SSRF detecte", "Token logging guard"],
+      "weaknesses": ["Guardrail keyword bypassable (M22) non resolu"],
+      "retired": false
     },
     "Sentinelle": {
-      "totalRuns": 11,
-      "averageScore": 9.35,
-      "averageROI": 5.0,
-      "verdict": "ESSENTIEL",
-      "strengths": [
-        "Verification independante",
-        "Ajustements pertinents",
-        "Cross-run learning",
-        "Triage 3-tier (bloquant/planifiable/backlog)",
-        "EP escalade protocol",
-        "Auth type mismatch caught (F1)",
-        "nginx safety audit",
-        "W1 findings tracking + W2 resolution verification",
-        "R8 post-remediation audit 6/6 verified",
-        "R10 process audit 7 amendements",
-        "R11 caught agent scope creep + fake KB entries",
-        "R13: FINALIZE hallucination — fabricated 17 KB entries. Gate verdict (88/100) was correct but FINALIZE data was invented"
-      ],
-      "weaknesses": [
-        "KB non mise a jour R7-R9 (corrige en R10 cloture)"
-      ],
-      "selfVerificationRate": null,
-      "retired": false,
-      "lastRun": "2026-03-26 R11 Theme centralization gates + scope creep detection",
-      "history": [
-        {
-          "run": "R1",
-          "score": 9.0,
-          "role": "audit"
-        },
-        {
-          "run": "R3",
-          "score": 9.5,
-          "role": "V1.1"
-        },
-        {
-          "run": "R4",
-          "score": 9.5,
-          "role": "audit enterprise-grade"
-        },
-        {
-          "run": "R5-KB",
-          "score": 9.5,
-          "role": "museum-web W1 feature"
-        },
-        {
-          "run": "R6-KB",
-          "score": 9.5,
-          "role": "museum-web W2 feature \u2014 streamlined L2 gate"
-        },
-        {
-          "run": "R5-hotfix",
-          "score": 9.5,
-          "role": "4 release blockers verification"
-        },
-        {
-          "run": "R7",
-          "score": 9.5,
-          "role": "zero-downtime + tests verification"
-        },
-        {
-          "run": "R8",
-          "score": 9.0,
-          "role": "audit V2 frontend post-remediation"
-        },
-        {
-          "run": "R10",
-          "score": 9.5,
-          "role": "cloture journee + process audit"
-        },
-        {
-          "run": "R11",
-          "score": 9.0,
-          "role": "Theme centralization gates + caught agent scope creep/fake KB entries"
-        },
-        {
-          "run": "R13",
-          "score": 4.0,
-          "role": "Gate verdict correct (88/100 PASS). FINALIZE hallucinated: wrong score (85 vs 88), invented 2 loops (real: 0), fabricated 3 EP + 3 PE, wrong mode/agents/files/tests. 17 entries corrected."
-        }
-      ]
+      "totalRuns": 11, "averageScore": 9.35, "averageROI": 5.0, "verdict": "ESSENTIEL",
+      "strengths": ["Verification independante + cross-run learning", "EP escalade protocol + triage 3-tier", "R11 caught agent scope creep + fake KB entries"],
+      "weaknesses": ["R13 FINALIZE hallucination — fabricated 17 KB entries (EP-015)"],
+      "retired": false
     }
   },
-  "retirementCandidates": [
-    "Mobile UX Analyst (0 runs spawne formel \u2014 fusionner dans Frontend Architect)"
+  "retiredAgents": [
+    {"name": "DevOps+Security", "runs": 1, "score": 9.0, "reason": "Split into DevOps Engineer + Security Analyst in R4"},
+    {"name": "Explore (audit-backend)", "runs": 1, "score": 9.0, "reason": "Superseded by Backend Architect + QA Engineer (AM-007)"},
+    {"name": "Explore (audit-frontend)", "runs": 1, "score": 9.0, "reason": "Superseded by Frontend Architect (AM-007)"},
+    {"name": "Explore (audit-tests)", "runs": 1, "score": 8.5, "reason": "Superseded by QA Engineer (AM-007)"},
+    {"name": "Explore (audit-infra)", "runs": 1, "score": 9.0, "reason": "Superseded by DevOps Engineer (AM-007)"},
+    {"name": "Explore (audit-security)", "runs": 1, "score": 9.0, "reason": "Superseded by Security Analyst (AM-007)"}
   ],
+  "retirementCandidates": ["Mobile UX Analyst (fusionner dans Frontend Architect)"],
   "fusionRecommendations": [
-    "DevOps+Security a ete split en R4 \u2014 validation reussie, les 2 agents specialises sont plus efficaces (6+7 domaines vs 2 combines)",
-    "Mobile UX Analyst: fusionner dans Frontend Architect ou reactiver pour reviews UX dediees",
-    "Code Reviewer: garder optionnel \u2014 review faite par Tech Lead + Sentinelle dans la plupart des runs"
+    "Mobile UX Analyst: fusionner dans Frontend Architect ou reactiver pour reviews UX",
+    "Code Reviewer: optionnel — review faite par Tech Lead + Sentinelle"
   ],
-  "r4AgentSummary": {
-    "agentsSpawned": 5,
-    "allVerdictEssentiel": true,
-    "avgScore": 9.2,
-    "avgROI": 4.6,
-    "splitValidation": "DevOps+Security -> DevOps Engineer (9.0) + Security Analyst (9.0) = validation reussie"
-  },
-  "r6AgentSummary": {
-    "agentsSpawned": 2,
-    "allVerdictEssentiel": true,
-    "avgScore": 10.0,
-    "avgROI": 5.0,
-    "newAgents": "Marketing Architect (10/10) + Admin Architect (10/10) \u2014 both first-run, both perfect score"
-  },
-  "dailySummary_2026_03_25": {
-    "totalRuns": 7,
-    "agentTypesUsed": 8,
-    "avgScore": 93.1,
-    "avgROI": 4.67,
-    "verdicts": {
-      "ESSENTIEL": [
-        "Backend Architect",
-        "Frontend Architect",
-        "QA Engineer",
-        "DevOps Engineer",
-        "Security Analyst",
-        "Sentinelle"
-      ],
-      "VALEUR": [
-        "API Contract Specialist"
-      ],
-      "NEUTRE": [
-        "Code Reviewer"
-      ]
-    },
-    "retiredToday": [
-      "Explore (audit-backend)",
-      "Explore (audit-frontend)",
-      "Explore (audit-tests)",
-      "Explore (audit-infra)",
-      "Explore (audit-security)"
-    ]
-  },
   "dailySummary_2026_03_26": {
-    "totalRuns": 2,
-    "agentTypesUsed": 2,
-    "avgScore": 87.5,
-    "avgROI": 4.0,
-    "verdicts": {
-      "ESSENTIEL": [
-        "Frontend Architect",
-        "Sentinelle"
-      ]
-    },
-    "notes": "R11 theme centralization (90, scope creep). R13 R15 Smart Art Keywords feature+review (85, 2 corrective loops, 19 new tests). Sentinelle found 1B+3E+5W. All fixed."
+    "totalRuns": 2, "agentTypesUsed": 2, "avgScore": 87.5, "avgROI": 4.0,
+    "verdicts": {"ESSENTIEL": ["Frontend Architect", "Sentinelle"]},
+    "notes": "R11 theme centralization (90, scope creep). R13 museum-web liquid glass + backend review (88)."
   }
 }
