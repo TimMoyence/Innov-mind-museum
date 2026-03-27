@@ -35,7 +35,7 @@ const mockDict: Dictionary = {
   },
   hero: { title: '', subtitle: '', cta: '', ctaSecondary: '' },
   features: { title: '', items: [], gridTitle: '', gridSubtitle: '', grid: [] },
-  showcase: { title: '', description: '', caption: '' },
+  showcase: { title: '', description: '', caption: '', sectionTitle: '', sectionSubtitle: '' },
   reviews: { title: '', subtitle: '', cta: '', ctaSubtitle: '', leaveReview: '', stars: '' },
   download: { title: '', subtitle: '', appStore: '', googlePlay: '', appStorePrefix: '', googlePlayPrefix: '' },
   support: { title: '', subtitle: '', faq: [], contact: { title: '', namePlaceholder: '', emailPlaceholder: '', messagePlaceholder: '', submit: '', success: '' } },

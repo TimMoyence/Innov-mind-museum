@@ -44,6 +44,8 @@ export interface Dictionary {
     title: string;
     description: string;
     caption: string;
+    sectionTitle: string;
+    sectionSubtitle: string;
   };
   reviews: {
     title: string;
