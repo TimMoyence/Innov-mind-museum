@@ -28,14 +28,13 @@ export interface RefreshResponse {
   refreshToken: string;
 }
 
+/** Paginated result — flat structure matching backend PaginatedResult<T>. */
 export interface PaginatedResponse<T> {
   data: T[];
-  meta: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 }
 
 export interface ListUsersParams {
