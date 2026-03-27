@@ -583,6 +583,15 @@
       "overlay_hint": "Appuyez pour fermer le menu"
     }
   },
+  "consent": {
+    "title": "Réponses générées par IA",
+    "body": "Les réponses que vous recevez sont produites par une intelligence artificielle. Elles peuvent contenir des inexactitudes ou des erreurs. Vérifiez toujours les informations importantes de manière indépendante.",
+    "info_accuracy": "Les réponses peuvent être inexactes — vérifiez toujours les faits importants.",
+    "info_privacy": "Vos données sont traitées conformément à notre politique de confidentialité.",
+    "info_report": "Vous pouvez signaler toute réponse problématique via le bouton drapeau.",
+    "read_privacy": "Lire notre politique de confidentialité",
+    "accept": "J'ai compris, continuer"
+  },
   "tickets": {
     "title": "Mes tickets",
     "create": "Créer un ticket",

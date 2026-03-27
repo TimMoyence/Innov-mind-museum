@@ -583,6 +583,15 @@
       "overlay_hint": "Tippen zum Schließen des Menüs"
     }
   },
+  "consent": {
+    "title": "KI-generierte Antworten",
+    "body": "Die Antworten, die Sie erhalten, werden von künstlicher Intelligenz erzeugt. Sie können Ungenauigkeiten oder Fehler enthalten. Überprüfen Sie wichtige Informationen immer unabhängig.",
+    "info_accuracy": "Antworten können ungenau sein — überprüfen Sie wichtige Fakten immer selbst.",
+    "info_privacy": "Ihre Daten werden gemäß unserer Datenschutzrichtlinie verarbeitet.",
+    "info_report": "Sie können jede problematische Antwort über die Flaggen-Schaltfläche melden.",
+    "read_privacy": "Unsere Datenschutzrichtlinie lesen",
+    "accept": "Verstanden, weiter"
+  },
   "tickets": {
     "title": "Meine Tickets",
     "create": "Ticket erstellen",

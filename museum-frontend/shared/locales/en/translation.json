@@ -583,6 +583,15 @@
       "overlay_hint": "Tap to close menu"
     }
   },
+  "consent": {
+    "title": "AI-Generated Responses",
+    "body": "The responses you receive are produced by artificial intelligence. They may contain inaccuracies or errors. Always verify important information independently.",
+    "info_accuracy": "Responses may be inaccurate — always cross-check critical facts.",
+    "info_privacy": "Your data is processed in accordance with our privacy policy.",
+    "info_report": "You can report any problematic response using the flag button.",
+    "read_privacy": "Read our Privacy Policy",
+    "accept": "I understand, continue"
+  },
   "tickets": {
     "title": "My Tickets",
     "create": "Create Ticket",

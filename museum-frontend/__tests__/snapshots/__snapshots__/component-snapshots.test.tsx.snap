@@ -77,9 +77,11 @@ exports[`ChatInput snapshots matches snapshot in default state 1`] = `
     style={
       [
         {
-          "borderRadius": 12,
-          "paddingHorizontal": 14,
-          "paddingVertical": 10,
+          "alignItems": "center",
+          "borderRadius": 999,
+          "height": 44,
+          "justifyContent": "center",
+          "width": 44,
         },
         {
           "backgroundColor": "#1D4ED8",
@@ -88,18 +90,10 @@ exports[`ChatInput snapshots matches snapshot in default state 1`] = `
     }
   >
     <Text
-      style={
-        [
-          {
-            "fontWeight": "700",
-          },
-          {
-            "color": "#FFFFFF",
-          },
-        ]
-      }
+      color="#FFFFFF"
+      size={20}
     >
-      chatInput.send
+      send
     </Text>
   </View>
 </View>
@@ -182,9 +176,11 @@ exports[`ChatInput snapshots matches snapshot in sending state 1`] = `
     style={
       [
         {
-          "borderRadius": 12,
-          "paddingHorizontal": 14,
-          "paddingVertical": 10,
+          "alignItems": "center",
+          "borderRadius": 999,
+          "height": 44,
+          "justifyContent": "center",
+          "width": 44,
         },
         {
           "backgroundColor": "#1D4ED8",
@@ -255,21 +251,93 @@ exports[`ChatMessageBubble snapshots matches snapshot for assistant message 1`] 
         Hello, how can I help?
       </Text>
     </View>
-    <Text
+    <View
       style={
-        [
-          {
-            "fontSize": 11,
-            "marginTop": 6,
-          },
-          {
-            "color": "rgba(100,116,139,0.92)",
-          },
-        ]
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "space-between",
+          "marginTop": 6,
+        }
       }
     >
-      12:30 PM
-    </Text>
+      <Text
+        style={
+          [
+            {
+              "fontSize": 11,
+            },
+            {
+              "color": "rgba(100,116,139,0.92)",
+            },
+          ]
+        }
+      >
+        12:30 PM
+      </Text>
+      <View
+        accessibilityLabel="messageMenu.report"
+        accessibilityRole="button"
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        hitSlop={8}
+        onBlur={[Function]}
+        onClick={[Function]}
+        onFocus={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 3,
+          }
+        }
+      >
+        <Text
+          color="rgba(100,116,139,0.92)"
+          size={13}
+        >
+          flag-outline
+        </Text>
+        <Text
+          style={
+            [
+              {
+                "fontSize": 11,
+              },
+              {
+                "color": "rgba(100,116,139,0.92)",
+              },
+            ]
+          }
+        >
+          messageMenu.report
+        </Text>
+      </View>
+    </View>
   </View>
 </View>
 `;
@@ -307,21 +375,31 @@ exports[`ChatMessageBubble snapshots matches snapshot for user message 1`] = `
     >
       Hello, how can I help?
     </Text>
-    <Text
+    <View
       style={
-        [
-          {
-            "fontSize": 11,
-            "marginTop": 6,
-          },
-          {
-            "color": "rgba(100,116,139,0.92)",
-          },
-        ]
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "space-between",
+          "marginTop": 6,
+        }
       }
     >
-      12:30 PM
-    </Text>
+      <Text
+        style={
+          [
+            {
+              "fontSize": 11,
+            },
+            {
+              "color": "rgba(100,116,139,0.92)",
+            },
+          ]
+        }
+      >
+        12:30 PM
+      </Text>
+    </View>
   </View>
 </View>
 `;
