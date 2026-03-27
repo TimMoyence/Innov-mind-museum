@@ -97,24 +97,10 @@
     },
     {
       "id": "PE-014",
-      "rule": "When making a function async, ALWAYS grep all callers and update them to await. Then grep all test files that call the function and add async/await. Missing await = Promise<T> passed where T expected = runtime bug.",
-      "source": "R13: evaluateUserInputGuardrail made async, callers initially left sync",
-      "inject_when": "agent changes a function signature to async",
-      "severity": "HIGH"
-    },
-    {
-      "id": "PE-015",
-      "rule": "Never use Zustand array/object selectors in useEffect dependency arrays \u2014 they create new references every render causing infinite loops. Use store.getState() inside the callback with empty deps [], or useRef.",
-      "source": "R13: useKeywordsSync had pendingKeywords+lastSyncAt in deps = infinite sync loop",
-      "inject_when": "agent creates a React hook that reads from Zustand store inside useEffect",
-      "severity": "HIGH"
-    },
-    {
-      "id": "PE-016",
-      "rule": "Bulk DB operations MUST use a single INSERT ... ON CONFLICT query, not sequential loops. Deduplicate inputs with Set. Max 1 query per bulkUpsert call.",
-      "source": "R13: bulkUpsert was O(n) sequential \u2014 200 queries for 100 keywords",
-      "inject_when": "agent implements a bulk insert/upsert method in a TypeORM repository",
-      "severity": "MEDIUM"
+      "rule": "Sentinelle FINALIZE MUST cite verifiable evidence for EVERY KB entry: git commit hash, test output line, or exact gate message quote. If no evidence exists, write 'N/A' — NEVER invent data to fill a template. An empty field is honest; a fabricated field is a severity 5 incident.",
+      "source": "R13: Sentinelle fabricated 17 KB entries (3 fake EP, 3 fake PE, wrong score/loops/mode/agents/files/tests across 6 files). Detected by user + Tech Lead audit.",
+      "inject_when": "Sentinelle executes FINALIZE protocol",
+      "severity": "CRITICAL"
     }
   ],
   "r4Summary": {
@@ -144,12 +130,8 @@
     "notes": "R11 added PE-012 (FlashList v2 API, from agent scope creep finding) and PE-013 (CRITICAL \u2014 agent scope creep guard, agents must not commit/KB/FINALIZE)."
   },
   "r13Summary": {
-    "newEnrichments": [
-      "PE-014",
-      "PE-015",
-      "PE-016"
-    ],
-    "total": 16,
-    "notes": "R13 added 3 enrichments from R15 feature review. PE-014 async migration (HIGH), PE-015 Zustand useEffect anti-pattern (HIGH), PE-016 bulk DB N+1 (MEDIUM)."
+    "newEnrichments": ["PE-014"],
+    "total": 14,
+    "notes": "R13: 3 fabricated PE (PE-014/015/016) removed. Replaced with single PE-014 (CRITICAL) — anti-hallucination guard for Sentinelle FINALIZE. Sentinelle must cite verifiable evidence for every KB entry."
   }
 }
