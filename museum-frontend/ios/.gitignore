@@ -26,5 +26,5 @@ project.xcworkspace
 # Bundle artifacts
 *.jsbundle
 
-# CocoaPods
-/Pods/
+# CocoaPods — Pods/ is committed for Xcode Cloud reliability
+# /Pods/

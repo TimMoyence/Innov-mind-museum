@@ -19,11 +19,10 @@ nvm use 22
 echo "Node: $(node -v)"
 echo "npm: $(npm -v)"
 
-# Install JS dependencies
-npm install
+# Install JS dependencies (needed for Metro bundler during build)
+npm install --no-audit --no-fund
 
-# Install CocoaPods dependencies
-cd ios
-pod install
+# Pods/ is committed to the repo — no pod install needed.
+# If Podfile.lock changes, run `pod install` locally and commit Pods/.
 
 echo "=== ci_post_clone.sh done ==="

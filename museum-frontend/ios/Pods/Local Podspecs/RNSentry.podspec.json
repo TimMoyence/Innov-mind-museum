@@ -1,0 +1,70 @@
+{
+  "name": "RNSentry",
+  "version": "8.5.0",
+  "license": "MIT",
+  "summary": "Official Sentry SDK for react-native",
+  "authors": "Sentry",
+  "homepage": "https://github.com/getsentry/sentry-react-native",
+  "source": {
+    "git": "https://github.com/getsentry/sentry-react-native.git",
+    "tag": "8.5.0"
+  },
+  "platforms": {
+    "ios": "12.0",
+    "osx": "10.13",
+    "tvos": "11.0",
+    "visionos": "1.0"
+  },
+  "preserve_paths": "*.js",
+  "source_files": "ios/**/*.{h,m,mm}",
+  "public_header_files": [
+    "ios/RNSentry.h",
+    "ios/RNSentrySDK.h",
+    "ios/RNSentryStart.h",
+    "ios/RNSentryVersion.h",
+    "ios/RNSentryBreadcrumb.h",
+    "ios/RNSentryReplay.h",
+    "ios/RNSentryReplayBreadcrumbConverter.h",
+    "ios/Replay/RNSentryReplayMask.h",
+    "ios/Replay/RNSentryReplayUnmask.h",
+    "ios/RNSentryTimeToDisplay.h"
+  ],
+  "compiler_flags": "$(inherited) -DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1 -Wno-comma -Wno-shorten-64-to-32 -DRCT_NEW_ARCH_ENABLED -DSENTRY_PROFILING_SUPPORTED=1  -DRCT_NEW_ARCH_ENABLED=1 -DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1 -DFOLLY_CFG_NO_COROUTINES=1 -DFOLLY_HAVE_CLOCK_GETTIME=1 -Wno-comma -Wno-shorten-64-to-32",
+  "pod_target_xcconfig": {
+    "DEFINES_MODULE": "YES",
+    "HEADER_SEARCH_PATHS": "$(inherited) \"${PODS_ROOT}/Sentry/Sources/Sentry\" \"${PODS_ROOT}/Sentry/Sources/Sentry/include\" \"$(PODS_ROOT)/boost\" \"$(PODS_ROOT)/Headers/Private/Yoga\"",
+    "CLANG_CXX_LANGUAGE_STANDARD": "c++20",
+    "OTHER_CPLUSPLUSFLAGS": "$(inherited) -DRCT_NEW_ARCH_ENABLED=1 -DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1 -DFOLLY_CFG_NO_COROUTINES=1 -DFOLLY_HAVE_CLOCK_GETTIME=1 -Wno-comma -Wno-shorten-64-to-32",
+    "OTHER_SWIFT_FLAGS": "$(inherited) -DRCT_NEW_ARCH_ENABLED"
+  },
+  "dependencies": {
+    "Sentry": [
+      "9.7.0"
+    ],
+    "React-Core": [],
+    "RCT-Folly": [
+      "2024.11.18.00"
+    ],
+    "glog": [],
+    "React-RCTFabric": [],
+    "ReactCodegen": [],
+    "RCTRequired": [],
+    "RCTTypeSafety": [],
+    "ReactCommon/turbomodule/bridging": [],
+    "ReactCommon/turbomodule/core": [],
+    "React-NativeModulesApple": [],
+    "Yoga": [],
+    "React-Fabric": [],
+    "React-graphics": [],
+    "React-utils": [],
+    "React-featureflags": [],
+    "React-debug": [],
+    "React-ImageManager": [],
+    "React-rendererdebug": [],
+    "DoubleConversion": [],
+    "React-jsi": [],
+    "React-renderercss": [],
+    "hermes-engine": [],
+    "React-hermes": []
+  }
+}
