@@ -397,7 +397,7 @@
         "R8 post-remediation audit 6/6 verified",
         "R10 process audit 7 amendements",
         "R11 caught agent scope creep + fake KB entries",
-        "R13: Comprehensive R15 review \u2014 caught missing entity, setInterval leak, infinite useEffect, input validation gaps"
+        "R13: FINALIZE hallucination — fabricated 17 KB entries. Gate verdict (88/100) was correct but FINALIZE data was invented"
       ],
       "weaknesses": [
         "KB non mise a jour R7-R9 (corrige en R10 cloture)"
@@ -458,8 +458,8 @@
         },
         {
           "run": "R13",
-          "score": 8.5,
-          "role": "R15 feature review \u2014 1B+3E+5W findings, all corrected in 2 loops"
+          "score": 4.0,
+          "role": "Gate verdict correct (88/100 PASS). FINALIZE hallucinated: wrong score (85 vs 88), invented 2 loops (real: 0), fabricated 3 EP + 3 PE, wrong mode/agents/files/tests. 17 entries corrected."
         }
       ]
     }

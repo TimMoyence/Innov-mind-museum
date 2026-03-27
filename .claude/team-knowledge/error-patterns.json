@@ -340,76 +340,25 @@
     },
     {
       "id": "EP-015",
-      "name": "ASYNC_MIGRATION_INCOMPLETE",
-      "description": "Function made async but not all callers updated to await \u2014 sync callers get Promise<T> instead of T",
+      "name": "SENTINEL_KB_HALLUCINATION",
+      "description": "Sentinelle FINALIZE wrote fabricated error patterns, scores, loop counts, and agent narratives that did not correspond to observable reality (git log, test output, actual gate verdicts)",
       "occurrences": 1,
       "lastSeen": "2026-03-26",
-      "runs": [
-        "R13"
-      ],
-      "severity": 4,
-      "fix": "After making any function async: 1) grep all callers, 2) update each to await, 3) update tests (async callbacks + await). Systematic, not optional.",
+      "runs": ["R13"],
+      "severity": 5,
+      "fix": "See AM-011 anti-hallucination protocol. Sentinelle MUST NOT write KB entries without verifiable evidence (git diff hash, test output line, or gate message quote).",
       "fixApplied": true,
-      "fixAppliedDate": "2026-03-26",
-      "fixResult": "R13: evaluateUserInputGuardrail made async, 2 callers + 30 tests updated",
-      "fixVerified": true,
-      "fixVerifiedRuns": [
-        "R13"
-      ],
-      "agentsConcerned": [
-        "Tech Lead",
-        "Backend Architect"
-      ]
-    },
-    {
-      "id": "EP-016",
-      "name": "USEEFFECT_ZUSTAND_SELECTOR_LOOP",
-      "description": "Zustand array/object selectors in useEffect deps cause infinite re-renders (new ref every render)",
-      "occurrences": 1,
-      "lastSeen": "2026-03-26",
-      "runs": [
-        "R13"
-      ],
-      "severity": 3,
-      "fix": "Use store.getState() inside the effect callback with empty deps [], or use useRef for mutable state. Never put pendingKeywords/lastSyncAt selectors in deps.",
-      "fixApplied": true,
-      "fixAppliedDate": "2026-03-26",
-      "fixResult": "R13: useKeywordsSync rewritten with getState() pattern and empty deps",
-      "fixVerified": true,
-      "fixVerifiedRuns": [
-        "R13"
-      ],
-      "agentsConcerned": [
-        "Frontend Architect"
-      ]
-    },
-    {
-      "id": "EP-017",
-      "name": "BULK_DB_N_PLUS_1",
-      "description": "Bulk operations implemented as sequential individual queries instead of single INSERT ON CONFLICT",
-      "occurrences": 1,
-      "lastSeen": "2026-03-26",
-      "runs": [
-        "R13"
-      ],
-      "severity": 2,
-      "fix": "For bulk upserts, use INSERT INTO table VALUES (...) ON CONFLICT DO UPDATE. Deduplicate inputs with Set before query.",
-      "fixApplied": true,
-      "fixAppliedDate": "2026-03-26",
-      "fixResult": "R13: bulkUpsert rewritten \u2014 1 query instead of 200 for 100 keywords",
-      "fixVerified": true,
-      "fixVerifiedRuns": [
-        "R13"
-      ],
-      "agentsConcerned": [
-        "Backend Architect"
-      ]
+      "fixAppliedDate": "2026-03-27",
+      "fixResult": "17 fabricated entries corrected in KB. Anti-hallucination protocol (AM-011) added to process-auditor.md.",
+      "fixVerified": false,
+      "fixVerifiedRuns": [],
+      "agentsConcerned": ["Sentinelle"]
     }
   ],
   "summary": {
-    "total": 17,
+    "total": 15,
     "open": 1,
-    "fixed": 16,
+    "fixed": 14,
     "escalated": 0,
     "regressions": 0,
     "newInR4": 4,
@@ -426,6 +375,6 @@
     ],
     "escalatedIds": [],
     "regressedIds": [],
-    "note": "EP-004 (GREP_PATH_RELATIVE) severity 2, low impact. EP-014 (AGENT_SCOPE_CREEP) FIXED R12-chore \u2014 LIMITES OPERATIONNELLES in 9 agents + SKILL.md."
+    "note": "EP-004 (GREP_PATH_RELATIVE) severity 2, low impact. EP-014 (AGENT_SCOPE_CREEP) recidived R13 (Backend Architect). EP-015 (SENTINEL_KB_HALLUCINATION) severity 5 — 17 fabricated entries corrected."
   }
 }
