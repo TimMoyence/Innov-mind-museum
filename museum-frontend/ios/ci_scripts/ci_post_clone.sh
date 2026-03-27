@@ -3,6 +3,9 @@ set -e
 
 echo "=== ci_post_clone.sh ==="
 
+# Disable Sentry source map upload (no auth token in Xcode Cloud)
+export SENTRY_DISABLE_AUTO_UPLOAD=true
+
 # Navigate to frontend root
 cd "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend"
 
