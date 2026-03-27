@@ -1,15 +1,25 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import { ChatOpenAI } from '@langchain/openai';
 
 import { logger } from '@shared/logger/logger';
 
+const SYSTEM_PROMPT =
+  'You are a binary classifier. Reply ONLY "yes" or "no". ' +
+  'Is the following user message related to art, museums, architecture, ' +
+  'sculpture, painting, cultural heritage, or any visual/performing art topic?';
+
 /** Minimal LLM classifier that decides if a user message is art-related. */
 export class ArtTopicClassifier {
-  private readonly client: Anthropic;
-  private readonly model = 'claude-haiku-4-5-20251001';
-  private readonly timeoutMs = 3000;
+  private readonly model: ChatOpenAI;
 
-  constructor(apiKey: string) {
-    this.client = new Anthropic({ apiKey, timeout: this.timeoutMs });
+  constructor(openAiApiKey: string) {
+    this.model = new ChatOpenAI({
+      openAIApiKey: openAiApiKey,
+      model: 'gpt-4o-mini',
+      temperature: 0,
+      maxTokens: 3,
+      timeout: 3000,
+    });
   }
 
   /**
@@ -18,21 +28,13 @@ export class ArtTopicClassifier {
    */
   async isArtRelated(text: string): Promise<boolean> {
     try {
-      const response = await this.client.messages.create({
-        model: this.model,
-        max_tokens: 3,
-        temperature: 0,
-        system:
-          'You are a binary classifier. Reply ONLY "yes" or "no". ' +
-          'Is the following user message related to art, museums, architecture, ' +
-          'sculpture, painting, cultural heritage, or any visual/performing art topic?',
-        messages: [{ role: 'user', content: text }],
-      });
+      const response = await this.model.invoke([
+        new SystemMessage(SYSTEM_PROMPT),
+        new HumanMessage(text),
+      ]);
 
       const answer =
-        response.content[0]?.type === 'text'
-          ? response.content[0].text.trim().toLowerCase()
-          : '';
+        typeof response.content === 'string' ? response.content.trim().toLowerCase() : '';
 
       return answer.startsWith('yes');
     } catch (error) {
