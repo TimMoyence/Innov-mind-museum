@@ -22,7 +22,8 @@ export default function ReportsPage() {
   const adminDict = useAdminDict();
 
   const [reports, setReports] = useState<Report[]>([]);
-  const [meta, setMeta] = useState<PaginatedResponse<Report>['meta'] | null>(null);
+  const [totalPages, setTotalPages] = useState(0);
+  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<ReportStatus | ''>('');
   const [loading, setLoading] = useState(true);
@@ -54,7 +55,8 @@ export default function ReportsPage() {
         `/api/admin/reports?${params.toString()}`,
       );
       setReports(data.data);
-      setMeta(data.meta);
+      setTotalPages(data.totalPages);
+      setTotal(data.total);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load reports');
     } finally {
@@ -91,15 +93,15 @@ export default function ReportsPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-text-primary">{adminDict.reports}</h1>
-      <p className="mt-1 text-text-secondary">
-        {adminDict.reportsPage.subtitle}
-      </p>
+      <p className="mt-1 text-text-secondary">{adminDict.reportsPage.subtitle}</p>
 
       {/* Filter */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <select
           value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value as ReportStatus | ''); }}
+          onChange={(e) => {
+            setStatusFilter(e.target.value as ReportStatus | '');
+          }}
           className="rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         >
           <option value="">{adminDict.common.allStatuses}</option>
@@ -113,9 +115,7 @@ export default function ReportsPage() {
 
       {/* Error */}
       {error && (
-        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
+        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
       {/* Loading */}
@@ -155,10 +155,7 @@ export default function ReportsPage() {
               <tbody className="divide-y divide-primary-50">
                 {reports.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={6}
-                      className="px-6 py-12 text-center text-text-muted"
-                    >
+                    <td colSpan={6} className="px-6 py-12 text-center text-text-muted">
                       {adminDict.reportsPage.noReports}
                     </td>
                   </tr>
@@ -178,7 +175,10 @@ export default function ReportsPage() {
                       <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
                         {r.reason}
                       </td>
-                      <td className="max-w-xs truncate px-6 py-3 text-text-secondary" title={r.messageText ?? ''}>
+                      <td
+                        className="max-w-xs truncate px-6 py-3 text-text-secondary"
+                        title={r.messageText ?? ''}
+                      >
                         {r.messageText
                           ? r.messageText.length > 100
                             ? `${r.messageText.slice(0, 100)}...`
@@ -213,14 +213,12 @@ export default function ReportsPage() {
           </div>
 
           {/* Pagination */}
-          {meta && (
-            <AdminPagination
-              page={meta.page}
-              totalPages={meta.totalPages}
-              total={meta.total}
-              onPageChange={setPage}
-            />
-          )}
+          <AdminPagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            onPageChange={setPage}
+          />
         </div>
       )}
 
@@ -258,7 +256,9 @@ export default function ReportsPage() {
 
             <select
               value={newStatus}
-              onChange={(e) => { setNewStatus(e.target.value as ReportStatus); }}
+              onChange={(e) => {
+                setNewStatus(e.target.value as ReportStatus);
+              }}
               className="mt-4 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
             >
               {ALL_STATUSES.map((s) => (
@@ -270,7 +270,9 @@ export default function ReportsPage() {
 
             <textarea
               value={reviewerNotes}
-              onChange={(e) => { setReviewerNotes(e.target.value); }}
+              onChange={(e) => {
+                setReviewerNotes(e.target.value);
+              }}
               maxLength={2000}
               rows={3}
               placeholder={adminDict.reportsPage.reviewerNotesPlaceholder}
@@ -280,7 +282,9 @@ export default function ReportsPage() {
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => { setEditingReport(null); }}
+                onClick={() => {
+                  setEditingReport(null);
+                }}
                 className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted"
               >
                 {adminDict.common.cancel}
@@ -291,9 +295,7 @@ export default function ReportsPage() {
                 onClick={() => void handleReview()}
                 className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {submitting
-                  ? '...'
-                  : adminDict.common.confirm}
+                {submitting ? '...' : adminDict.common.confirm}
               </button>
             </div>
           </div>

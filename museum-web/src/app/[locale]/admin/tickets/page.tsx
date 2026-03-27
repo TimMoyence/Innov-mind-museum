@@ -5,16 +5,8 @@ import { usePathname } from 'next/navigation';
 import { apiGet, apiPatch } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { AdminPagination } from '@/components/admin/AdminPagination';
-import type {
-  PaginatedResponse,
-  Ticket,
-  TicketStatus,
-  TicketPriority,
-} from '@/lib/admin-types';
-import {
-  TICKET_STATUSES,
-  TICKET_PRIORITIES,
-} from '@/lib/admin-types';
+import type { PaginatedResponse, Ticket, TicketStatus, TicketPriority } from '@/lib/admin-types';
+import { TICKET_STATUSES, TICKET_PRIORITIES } from '@/lib/admin-types';
 
 // -- Badge colors ────────────────────────────────────────────────────────
 
@@ -40,7 +32,8 @@ export default function TicketsPage() {
   const isFr = adminDict.dashboard === 'Tableau de bord';
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [meta, setMeta] = useState<PaginatedResponse<Ticket>['meta'] | null>(null);
+  const [totalPages, setTotalPages] = useState(0);
+  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<TicketStatus | ''>('');
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | ''>('');
@@ -72,7 +65,8 @@ export default function TicketsPage() {
         `/api/admin/tickets?${params.toString()}`,
       );
       setTickets(data.data);
-      setMeta(data.meta);
+      setTotalPages(data.totalPages);
+      setTotal(data.total);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load tickets');
     } finally {
@@ -109,40 +103,44 @@ export default function TicketsPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-text-primary">{adminDict.tickets}</h1>
-      <p className="mt-1 text-text-secondary">
-        {adminDict.ticketsPage.subtitle}
-      </p>
+      <p className="mt-1 text-text-secondary">{adminDict.ticketsPage.subtitle}</p>
 
       {/* Filters */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <select
           value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value as TicketStatus | ''); }}
+          onChange={(e) => {
+            setStatusFilter(e.target.value as TicketStatus | '');
+          }}
           className="rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         >
           <option value="">{adminDict.common.allStatuses}</option>
           {TICKET_STATUSES.map((s) => (
-            <option key={s} value={s}>{s}</option>
+            <option key={s} value={s}>
+              {s}
+            </option>
           ))}
         </select>
 
         <select
           value={priorityFilter}
-          onChange={(e) => { setPriorityFilter(e.target.value as TicketPriority | ''); }}
+          onChange={(e) => {
+            setPriorityFilter(e.target.value as TicketPriority | '');
+          }}
           className="rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         >
           <option value="">{adminDict.common.allPriorities}</option>
           {TICKET_PRIORITIES.map((p) => (
-            <option key={p} value={p}>{p}</option>
+            <option key={p} value={p}>
+              {p}
+            </option>
           ))}
         </select>
       </div>
 
       {/* Error */}
       {error && (
-        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
+        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
       {/* Loading */}
@@ -177,7 +175,9 @@ export default function TicketsPage() {
                   <th className="px-6 py-3 font-medium text-text-secondary">
                     {adminDict.common.messages}
                   </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">{adminDict.common.actions}</th>
+                  <th className="px-6 py-3 font-medium text-text-secondary">
+                    {adminDict.common.actions}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary-50">
@@ -249,14 +249,12 @@ export default function TicketsPage() {
           </div>
 
           {/* Pagination */}
-          {meta && (
-            <AdminPagination
-              page={meta.page}
-              totalPages={meta.totalPages}
-              total={meta.total}
-              onPageChange={setPage}
-            />
-          )}
+          <AdminPagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            onPageChange={setPage}
+          />
         </div>
       )}
 
@@ -279,20 +277,22 @@ export default function TicketsPage() {
             <h2 className="text-lg font-bold text-text-primary">
               {adminDict.ticketsPage.updateTicket}
             </h2>
-            <p className="mt-1 text-sm text-text-secondary">
-              {editingTicket.subject}
-            </p>
+            <p className="mt-1 text-sm text-text-secondary">{editingTicket.subject}</p>
 
             <label className="mt-4 block text-sm font-medium text-text-secondary">
               {adminDict.common.status}
             </label>
             <select
               value={newStatus}
-              onChange={(e) => { setNewStatus(e.target.value as TicketStatus); }}
+              onChange={(e) => {
+                setNewStatus(e.target.value as TicketStatus);
+              }}
               className="mt-1 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
             >
               {TICKET_STATUSES.map((s) => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s} value={s}>
+                  {s}
+                </option>
               ))}
             </select>
 
@@ -301,31 +301,38 @@ export default function TicketsPage() {
             </label>
             <select
               value={newPriority}
-              onChange={(e) => { setNewPriority(e.target.value as TicketPriority); }}
+              onChange={(e) => {
+                setNewPriority(e.target.value as TicketPriority);
+              }}
               className="mt-1 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
             >
               {TICKET_PRIORITIES.map((p) => (
-                <option key={p} value={p}>{p}</option>
+                <option key={p} value={p}>
+                  {p}
+                </option>
               ))}
             </select>
 
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => { setEditingTicket(null); }}
+                onClick={() => {
+                  setEditingTicket(null);
+                }}
                 className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted"
               >
                 {adminDict.common.cancel}
               </button>
               <button
                 type="button"
-                disabled={saving || (newStatus === editingTicket.status && newPriority === editingTicket.priority)}
+                disabled={
+                  saving ||
+                  (newStatus === editingTicket.status && newPriority === editingTicket.priority)
+                }
                 onClick={() => void handleUpdate()}
                 className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {saving
-                  ? '...'
-                  : adminDict.common.confirm}
+                {saving ? '...' : adminDict.common.confirm}
               </button>
             </div>
           </div>

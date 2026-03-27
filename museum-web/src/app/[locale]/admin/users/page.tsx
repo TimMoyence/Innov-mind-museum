@@ -253,7 +253,6 @@ export default function UsersPage() {
             totalPages={totalPages}
             total={total}
             onPageChange={setPage}
-            isFr={isFr}
           />
         </div>
       )}
