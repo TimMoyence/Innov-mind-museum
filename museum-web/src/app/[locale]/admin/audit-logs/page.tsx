@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiGet } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
+import { AdminPagination } from '@/components/admin/AdminPagination';
 import type { AuditLog, PaginatedResponse } from '@/lib/admin-types';
 
 export default function AuditLogsPage() {
@@ -10,7 +11,8 @@ export default function AuditLogsPage() {
   const isFr = adminDict.dashboard === 'Tableau de bord';
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [meta, setMeta] = useState<PaginatedResponse<AuditLog>['meta'] | null>(null);
+  const [totalPages, setTotalPages] = useState(0);
+  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [actionFilter, setActionFilter] = useState('');
   const [loading, setLoading] = useState(true);
@@ -34,7 +36,8 @@ export default function AuditLogsPage() {
         `/api/admin/audit-logs?${params.toString()}`,
       );
       setLogs(data.data);
-      setMeta(data.meta);
+      setTotalPages(data.totalPages);
+      setTotal(data.total);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load audit logs');
     } finally {
@@ -144,33 +147,13 @@ export default function AuditLogsPage() {
           </div>
 
           {/* Pagination */}
-          {meta && meta.totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-primary-100 px-6 py-3">
-              <p className="text-sm text-text-secondary">
-                {isFr
-                  ? `Page ${meta.page} sur ${meta.totalPages} (${meta.total} résultats)`
-                  : `Page ${meta.page} of ${meta.totalPages} (${meta.total} results)`}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={page <= 1}
-                  onClick={() => { setPage((p) => p - 1); }}
-                  className="rounded-md border border-primary-200 px-3 py-1 text-sm font-medium text-text-secondary hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isFr ? 'Précédent' : 'Previous'}
-                </button>
-                <button
-                  type="button"
-                  disabled={page >= meta.totalPages}
-                  onClick={() => { setPage((p) => p + 1); }}
-                  className="rounded-md border border-primary-200 px-3 py-1 text-sm font-medium text-text-secondary hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isFr ? 'Suivant' : 'Next'}
-                </button>
-              </div>
-            </div>
-          )}
+          <AdminPagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            onPageChange={setPage}
+            isFr={isFr}
+          />
         </div>
       )}
     </div>

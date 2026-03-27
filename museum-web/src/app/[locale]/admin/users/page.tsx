@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiGet, apiPatch } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { useAuth } from '@/lib/auth';
+import { AdminPagination } from '@/components/admin/AdminPagination';
 import type { PaginatedResponse, User, UserRole } from '@/lib/admin-types';
 
 // ── Role badge colors ──────────────────────────────────────────────────
@@ -36,7 +37,8 @@ export default function UsersPage() {
   const isAdmin = currentUser?.role === 'admin';
 
   const [users, setUsers] = useState<User[]>([]);
-  const [meta, setMeta] = useState<PaginatedResponse<User>['meta'] | null>(null);
+  const [totalPages, setTotalPages] = useState(0);
+  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | ''>('');
@@ -71,7 +73,8 @@ export default function UsersPage() {
         `/api/admin/users?${params.toString()}`,
       );
       setUsers(data.data);
-      setMeta(data.meta);
+      setTotalPages(data.totalPages);
+      setTotal(data.total);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load users');
     } finally {
@@ -245,33 +248,13 @@ export default function UsersPage() {
           </div>
 
           {/* Pagination */}
-          {meta && meta.totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-primary-100 px-6 py-3">
-              <p className="text-sm text-text-secondary">
-                {isFr
-                  ? `Page ${meta.page} sur ${meta.totalPages} (${meta.total} résultats)`
-                  : `Page ${meta.page} of ${meta.totalPages} (${meta.total} results)`}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={page <= 1}
-                  onClick={() => { setPage((p) => p - 1); }}
-                  className="rounded-md border border-primary-200 px-3 py-1 text-sm font-medium text-text-secondary hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isFr ? 'Précédent' : 'Previous'}
-                </button>
-                <button
-                  type="button"
-                  disabled={page >= meta.totalPages}
-                  onClick={() => { setPage((p) => p + 1); }}
-                  className="rounded-md border border-primary-200 px-3 py-1 text-sm font-medium text-text-secondary hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isFr ? 'Suivant' : 'Next'}
-                </button>
-              </div>
-            </div>
-          )}
+          <AdminPagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            onPageChange={setPage}
+            isFr={isFr}
+          />
         </div>
       )}
 
