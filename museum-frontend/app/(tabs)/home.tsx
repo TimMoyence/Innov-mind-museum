@@ -24,9 +24,7 @@ export default function HomeScreen() {
   const [menuStatus, setMenuStatus] = useState<string | null>(null);
   const { locale, museumMode } = useRuntimeSettings();
 
-  const startConversation = async (
-    intent: 'default' | 'camera' | 'audio' = 'default',
-  ) => {
+  const startConversation = async (intent: 'default' | 'camera' | 'audio' = 'default') => {
     setIsCreating(true);
     setError(null);
 
@@ -89,10 +87,12 @@ export default function HomeScreen() {
         />
       </View>
 
-      {menuStatus ? <Text style={[styles.menuStatus, { color: theme.success }]}>{menuStatus}</Text> : null}
+      {menuStatus ? (
+        <Text style={[styles.menuStatus, { color: theme.success }]}>{menuStatus}</Text>
+      ) : null}
 
       <GlassCard style={styles.heroCard} intensity={62}>
-        <BrandMark variant='hero' />
+        <BrandMark variant="hero" />
         <Text style={[styles.title, { color: theme.textPrimary }]}>{t('home.hero_title')}</Text>
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
           {t('home.hero_subtitle')}
@@ -102,10 +102,20 @@ export default function HomeScreen() {
         </Text>
       </GlassCard>
 
-      {error ? <ErrorNotice message={error} onDismiss={() => { setError(null); }} /> : null}
+      {error ? (
+        <ErrorNotice
+          message={error}
+          onDismiss={() => {
+            setError(null);
+          }}
+        />
+      ) : null}
 
       <Pressable
-        style={[styles.primaryButton, { backgroundColor: theme.primary, shadowColor: theme.shadowColor }]}
+        style={[
+          styles.primaryButton,
+          { backgroundColor: theme.primary, shadowColor: theme.shadowColor },
+        ]}
         onPress={() => void startConversation('default')}
         disabled={isCreating}
         accessibilityRole="button"
@@ -116,16 +126,42 @@ export default function HomeScreen() {
         {isCreating ? (
           <ActivityIndicator color={theme.primaryContrast} />
         ) : (
-          <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>{t('home.start_conversation')}</Text>
+          <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
+            {t('home.start_conversation')}
+          </Text>
         )}
       </Pressable>
 
       <View style={styles.secondaryRow}>
-        <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]} onPress={() => { router.push('/(stack)/onboarding'); }} accessibilityRole="button" accessibilityLabel={t('a11y.home.onboarding')}>
-          <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('home.onboarding')}</Text>
+        <Pressable
+          style={[
+            styles.secondaryButton,
+            { borderColor: theme.inputBorder, backgroundColor: theme.surface },
+          ]}
+          onPress={() => {
+            router.push('/(stack)/onboarding');
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={t('a11y.home.onboarding')}
+        >
+          <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+            {t('home.onboarding')}
+          </Text>
         </Pressable>
-        <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]} onPress={() => { router.push('/(stack)/settings'); }} accessibilityRole="button" accessibilityLabel={t('a11y.home.settings')}>
-          <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('home.settings')}</Text>
+        <Pressable
+          style={[
+            styles.secondaryButton,
+            { borderColor: theme.inputBorder, backgroundColor: theme.surface },
+          ]}
+          onPress={() => {
+            router.push('/(stack)/settings');
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={t('a11y.home.settings')}
+        >
+          <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+            {t('home.settings')}
+          </Text>
         </Pressable>
       </View>
     </LiquidScreen>
@@ -135,6 +171,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   screen: {
     paddingHorizontal: 22,
+    paddingBottom: 110,
     justifyContent: 'center',
     gap: 16,
   },

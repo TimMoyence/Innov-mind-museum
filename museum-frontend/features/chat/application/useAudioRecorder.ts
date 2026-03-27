@@ -43,7 +43,9 @@ export const useAudioRecorder = () => {
     if (!stream) {
       return;
     }
-    stream.getTracks().forEach((track) => { track.stop(); });
+    stream.getTracks().forEach((track) => {
+      track.stop();
+    });
     webMediaStreamRef.current = null;
   }, []);
 
@@ -88,7 +90,7 @@ export const useAudioRecorder = () => {
       webMediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive data check
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive data check
         if (event.data && event.data.size > 0) {
           webAudioChunksRef.current.push(event.data);
         }
@@ -110,9 +112,9 @@ export const useAudioRecorder = () => {
       playsInSilentModeIOS: true,
     });
 
-    const nextRecording = new Audio.Recording();
-    await nextRecording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-    await nextRecording.startAsync();
+    const { recording: nextRecording } = await Audio.Recording.createAsync(
+      Audio.RecordingOptionsPresets.HIGH_QUALITY,
+    );
 
     nativeRecordingRef.current = nextRecording;
     setIsRecording(true);
@@ -128,7 +130,7 @@ export const useAudioRecorder = () => {
       const blob = await new Promise<Blob>((resolve) => {
         mediaRecorder.onstop = () => {
           const mimeType =
-      // eslint-disable-next-line @typescript-eslint/prefer-optional-chain -- complex condition
+            // eslint-disable-next-line @typescript-eslint/prefer-optional-chain -- complex condition
             mediaRecorder.mimeType && mediaRecorder.mimeType.length
               ? mediaRecorder.mimeType
               : 'audio/webm';
@@ -215,10 +217,7 @@ export const useAudioRecorder = () => {
         return;
       }
 
-      const { sound } = await Audio.Sound.createAsync(
-        { uri },
-        { shouldPlay: true },
-      );
+      const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true });
 
       sound.setOnPlaybackStatusUpdate((status) => {
         if (!status.isLoaded) {

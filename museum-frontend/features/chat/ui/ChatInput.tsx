@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, TextInput } from 'react-native';
-import { Text } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
@@ -63,7 +63,7 @@ export const ChatInput = ({
         {isSending ? (
           <ActivityIndicator color={theme.primaryContrast} />
         ) : (
-          <Text style={[styles.sendText, { color: theme.primaryContrast }]}>{t('chatInput.send')}</Text>
+          <Ionicons name="send" size={20} color={theme.primaryContrast} />
         )}
       </Pressable>
     </GlassCard>
@@ -89,11 +89,10 @@ const styles = StyleSheet.create({
     writingDirection: 'auto',
   },
   sendButton: {
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  sendText: {
-    fontWeight: '700',
+    borderRadius: 999,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
