@@ -92,6 +92,7 @@ export const ChatMessageBubble = React.memo(
               <Pressable
                 style={styles.reportButton}
                 onPress={() => {
+                  void Haptics.selectionAsync();
                   onReport(message.id);
                 }}
                 hitSlop={8}
