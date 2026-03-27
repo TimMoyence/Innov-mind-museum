@@ -3,11 +3,13 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
   Text,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { SkeletonChatBubble } from '@/shared/ui/SkeletonChatBubble';
@@ -17,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { CustomCameraView } from '@/components/CameraView';
 import { useChatSession } from '@/features/chat/application/useChatSession';
@@ -29,6 +32,7 @@ import { ExpertiseBadge } from '@/features/chat/ui/ExpertiseBadge';
 import { ImagePreviewModal } from '@/features/chat/ui/ImagePreviewModal';
 import { MessageContextMenu } from '@/features/chat/ui/MessageContextMenu';
 import { OfflineBanner } from '@/features/chat/ui/OfflineBanner';
+import { AiConsentModal } from '@/features/chat/ui/AiConsentModal';
 import { useMessageActions } from '@/features/chat/application/useMessageActions';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
@@ -56,7 +60,25 @@ export default function ChatSessionScreen() {
   const [text, setText] = useState('');
   const [isIntentHandled, setIsIntentHandled] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [contextMenuMessage, setContextMenuMessage] = useState<(typeof messages)[number] | null>(null);
+  const [showAiConsent, setShowAiConsent] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem('consent.ai_accepted')
+      .then((v) => {
+        if (v !== 'true') setShowAiConsent(true);
+      })
+      .catch(() => {
+        setShowAiConsent(true);
+      });
+  }, []);
+
+  const acceptAiConsent = useCallback(() => {
+    setShowAiConsent(false);
+    void AsyncStorage.setItem('consent.ai_accepted', 'true');
+  }, []);
+  const [contextMenuMessage, setContextMenuMessage] = useState<(typeof messages)[number] | null>(
+    null,
+  );
   const imageRefreshInFlightRef = useRef(new Set());
 
   const {
@@ -115,29 +137,35 @@ export default function ChatSessionScreen() {
     clearRecordedAudio();
   }, [clearSelectedImage, clearRecordedAudio]);
 
-  const onSend = useCallback(async (overrideText?: string) => {
-    const nextText = (overrideText ?? text).trim();
-    if (!nextText && !selectedImage && !recordedAudioUri) {
-      return;
-    }
+  const onSend = useCallback(
+    async (overrideText?: string) => {
+      const nextText = (overrideText ?? text).trim();
+      if (!nextText && !selectedImage && !recordedAudioUri) {
+        return;
+      }
 
-    const sent = await sendMessage({
-      text: nextText || undefined,
-      imageUri: selectedImage ?? undefined,
-      audioUri: recordedAudioUri ?? undefined,
-      audioBlob: recordedAudioBlob ?? undefined,
-    });
+      const sent = await sendMessage({
+        text: nextText || undefined,
+        imageUri: selectedImage ?? undefined,
+        audioUri: recordedAudioUri ?? undefined,
+        audioBlob: recordedAudioBlob ?? undefined,
+      });
 
-    if (sent) {
-      setText('');
-      clearMedia();
-    }
-  }, [text, selectedImage, recordedAudioUri, recordedAudioBlob, sendMessage, clearMedia]);
+      if (sent) {
+        setText('');
+        clearMedia();
+      }
+    },
+    [text, selectedImage, recordedAudioUri, recordedAudioBlob, sendMessage, clearMedia],
+  );
 
   // F3.1: Follow-up buttons send ONLY text, no attached media
-  const onFollowUpPress = useCallback((questionText: string) => {
-    void sendMessage({ text: questionText });
-  }, [sendMessage]);
+  const onFollowUpPress = useCallback(
+    (questionText: string) => {
+      void sendMessage({ text: questionText });
+    },
+    [sendMessage],
+  );
 
   const onRecommendationPress = useCallback((recommendationText: string) => {
     setText(recommendationText);
@@ -189,31 +217,49 @@ export default function ChatSessionScreen() {
     router.replace('/(tabs)/conversations');
   };
 
-  const submitReport = useCallback(async (messageId: string, reason: 'offensive' | 'inaccurate' | 'inappropriate' | 'other') => {
-    try {
-      await chatApi.reportMessage({ messageId, reason });
-      Alert.alert(t('chat.report_thanks_title'), t('chat.report_thanks_body'));
-    } catch {
-      Alert.alert(t('common.error'), t('chat.report_error_body'));
-    }
-  }, [t]);
+  const submitReport = useCallback(
+    async (messageId: string, reason: 'offensive' | 'inaccurate' | 'inappropriate' | 'other') => {
+      try {
+        await chatApi.reportMessage({ messageId, reason });
+        Alert.alert(t('chat.report_thanks_title'), t('chat.report_thanks_body'));
+      } catch {
+        Alert.alert(t('common.error'), t('chat.report_error_body'));
+      }
+    },
+    [t],
+  );
 
-  const onReportMessage = useCallback((messageId: string) => {
-    Alert.alert(t('chat.report_title'), t('chat.report_body'), [
-      { text: t('chat.report_offensive'), onPress: () => void submitReport(messageId, 'offensive') },
-      { text: t('chat.report_inaccurate'), onPress: () => void submitReport(messageId, 'inaccurate') },
-      { text: t('chat.report_inappropriate'), onPress: () => void submitReport(messageId, 'inappropriate') },
-      { text: t('chat.report_other'), onPress: () => void submitReport(messageId, 'other') },
-      { text: t('common.cancel'), style: 'cancel' },
-    ]);
-  }, [submitReport, t]);
+  const onReportMessage = useCallback(
+    (messageId: string) => {
+      Alert.alert(t('chat.report_title'), t('chat.report_body'), [
+        {
+          text: t('chat.report_offensive'),
+          onPress: () => void submitReport(messageId, 'offensive'),
+        },
+        {
+          text: t('chat.report_inaccurate'),
+          onPress: () => void submitReport(messageId, 'inaccurate'),
+        },
+        {
+          text: t('chat.report_inappropriate'),
+          onPress: () => void submitReport(messageId, 'inappropriate'),
+        },
+        { text: t('chat.report_other'), onPress: () => void submitReport(messageId, 'other') },
+        { text: t('common.cancel'), style: 'cancel' },
+      ]);
+    },
+    [submitReport, t],
+  );
 
   const { copyText, shareText } = useMessageActions({ onReport: onReportMessage });
 
-  const onMessageLongPress = useCallback((messageId: string) => {
-    const msg = messages.find((m) => m.id === messageId);
-    if (msg) setContextMenuMessage(msg);
-  }, [messages]);
+  const onMessageLongPress = useCallback(
+    (messageId: string) => {
+      const msg = messages.find((m) => m.id === messageId);
+      if (msg) setContextMenuMessage(msg);
+    },
+    [messages],
+  );
 
   const onMessageImageError = useCallback(
     (messageId: string) => {
@@ -236,115 +282,195 @@ export default function ChatSessionScreen() {
   if (isCameraOpen) {
     return (
       <CustomCameraView
-        onClose={() => { setIsCameraOpen(false); }}
+        onClose={() => {
+          setIsCameraOpen(false);
+        }}
         onCapture={onCameraCapture}
       />
     );
   }
 
   return (
-    <LiquidScreen background={pickMuseumBackground(4)} contentStyle={[styles.screen, { paddingTop: insets.top + 8 }]}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
-        {isRecording ? <Text style={[styles.recordingStatus, { color: theme.error }]}>{t('chat.recording_hint')}</Text> : null}
+    <LiquidScreen
+      background={pickMuseumBackground(4)}
+      contentStyle={[styles.screen, { paddingTop: insets.top + 8 }]}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
+          {isRecording ? (
+            <Text style={[styles.recordingStatus, { color: theme.error }]}>
+              {t('chat.recording_hint')}
+            </Text>
+          ) : null}
 
-        <GlassCard style={styles.headerShell} intensity={58}>
-          <View style={styles.headerRow}>
-            <View style={styles.headerContent}>
-              <Text style={[styles.header, { color: theme.textPrimary }]} numberOfLines={1}>{sessionTitle ?? t('chat.fallback_title')}</Text>
-              <View style={styles.headerSubRow}>
-                <Text style={[styles.subheader, { color: theme.textTertiary }]} numberOfLines={1}>{museumName ?? `${sessionId.slice(0, 12)}...`}</Text>
-                {expertiseLevel ? <ExpertiseBadge level={expertiseLevel} /> : null}
+          <GlassCard style={styles.headerShell} intensity={58}>
+            <View style={styles.headerRow}>
+              <View style={styles.headerContent}>
+                <Text style={[styles.header, { color: theme.textPrimary }]} numberOfLines={1}>
+                  {sessionTitle ?? t('chat.fallback_title')}
+                </Text>
+                <View style={styles.headerSubRow}>
+                  <Text style={[styles.subheader, { color: theme.textTertiary }]} numberOfLines={1}>
+                    {museumName ?? `${sessionId.slice(0, 12)}...`}
+                  </Text>
+                  {expertiseLevel ? <ExpertiseBadge level={expertiseLevel} /> : null}
+                </View>
               </View>
-            </View>
-            <Pressable onPress={() => { void onClose(); }} style={[styles.closeButton, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]} disabled={isClosing}>
-              {isClosing ? (
-                <ActivityIndicator size='small' color={theme.textSecondary} />
-              ) : (
-                <Ionicons name='close' size={20} color={theme.textPrimary} />
-              )}
-            </Pressable>
-          </View>
-        </GlassCard>
-
-        {isOffline ? <OfflineBanner pendingCount={pendingCount} /> : null}
-
-        {error ? <ErrorNotice message={error} onDismiss={clearError} /> : null}
-
-        <GlassCard style={styles.chatSurface} intensity={42}>
-          {isLoading ? (
-            <View style={styles.skeletonChat}>
-              <SkeletonChatBubble alignSelf='flex-start' />
-              <SkeletonChatBubble alignSelf='flex-end' />
-              <SkeletonChatBubble alignSelf='flex-start' />
-            </View>
-          ) : (
-            <ChatMessageList
-              messages={messages}
-              isSending={isSending}
-              isStreaming={isStreaming}
-              locale={locale}
-              museumMode={museumMode}
-              onFollowUpPress={onFollowUpPress}
-              onRecommendationPress={onRecommendationPress}
-              onSuggestion={(suggestion) => void onSend(suggestion)}
-              onCamera={onTakePicture}
-              onImageError={onMessageImageError}
-              onReport={onMessageLongPress}
-            />
-          )}
-        </GlassCard>
-
-        {selectedImage ? (
-          <View style={styles.previewWrap}>
-            <Image source={{ uri: selectedImage }} style={[styles.preview, { borderColor: theme.inputBorder }]} />
-            <View style={styles.previewMenu}>
-              <FloatingContextMenu
-                actions={[
-                  { id: 'replace', icon: 'images-outline', label: t('chat.replace_image'), onPress: () => void onPickImage() },
-                  { id: 'clear-image', icon: 'trash-outline', label: t('chat.remove_image'), onPress: clearSelectedImage },
+              <Pressable
+                onPress={() => {
+                  void onClose();
+                }}
+                style={[
+                  styles.closeButton,
+                  { borderColor: theme.inputBorder, backgroundColor: theme.surface },
                 ]}
-              />
-            </View>
-          </View>
-        ) : null}
-
-        {recordedAudioUri ? (
-          <GlassCard style={styles.audioCard} intensity={56}>
-            <Text style={[styles.audioTitle, { color: theme.textPrimary }]}>{t('chat.voice_ready')}</Text>
-            <View style={styles.audioRow}>
-              <Pressable style={[styles.attachButton, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => void playRecordedAudio()} disabled={isPlayingAudio}>
-                <Text style={[styles.attachText, { color: theme.textPrimary }]}>{isPlayingAudio ? t('chat.playing') : t('chat.play')}</Text>
-              </Pressable>
-              <Pressable style={[styles.attachButton, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={clearMedia}>
-                <Text style={[styles.attachText, { color: theme.textPrimary }]}>{t('chat.clear')}</Text>
+                disabled={isClosing}
+              >
+                {isClosing ? (
+                  <ActivityIndicator size="small" color={theme.textSecondary} />
+                ) : (
+                  <Ionicons name="close" size={20} color={theme.textPrimary} />
+                )}
               </Pressable>
             </View>
           </GlassCard>
-        ) : null}
 
-        <View style={styles.attachRow}>
-          <Pressable style={[styles.attachButton, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => void onPickImage()}>
-            <Text style={[styles.attachText, { color: theme.textPrimary }]}>{t('chat.gallery')}</Text>
-          </Pressable>
-          <Pressable style={[styles.attachButton, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={onTakePicture}>
-            <Text style={[styles.attachText, { color: theme.textPrimary }]}>{t('chat.lens')}</Text>
-          </Pressable>
-          <Pressable style={[styles.attachButton, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => void toggleRecording()}>
-            <Text style={[styles.attachText, { color: theme.textPrimary }]}>{isRecording ? t('chat.stop_audio') : t('chat.audio')}</Text>
-          </Pressable>
-        </View>
+          {isOffline ? <OfflineBanner pendingCount={pendingCount} /> : null}
 
-        <ChatInput
-          value={text}
-          onChangeText={setText}
-          onSend={() => void onSend()}
-          isSending={isSending}
-        />
-      </KeyboardAvoidingView>
+          {error ? <ErrorNotice message={error} onDismiss={clearError} /> : null}
+
+          <GlassCard style={styles.chatSurface} intensity={42}>
+            {isLoading ? (
+              <View style={styles.skeletonChat}>
+                <SkeletonChatBubble alignSelf="flex-start" />
+                <SkeletonChatBubble alignSelf="flex-end" />
+                <SkeletonChatBubble alignSelf="flex-start" />
+              </View>
+            ) : (
+              <ChatMessageList
+                messages={messages}
+                isSending={isSending}
+                isStreaming={isStreaming}
+                locale={locale}
+                museumMode={museumMode}
+                onFollowUpPress={onFollowUpPress}
+                onRecommendationPress={onRecommendationPress}
+                onSuggestion={(suggestion) => void onSend(suggestion)}
+                onCamera={onTakePicture}
+                onImageError={onMessageImageError}
+                onReport={onMessageLongPress}
+              />
+            )}
+          </GlassCard>
+
+          {selectedImage ? (
+            <View style={styles.previewWrap}>
+              <Image
+                source={{ uri: selectedImage }}
+                style={[styles.preview, { borderColor: theme.inputBorder }]}
+              />
+              <View style={styles.previewMenu}>
+                <FloatingContextMenu
+                  actions={[
+                    {
+                      id: 'replace',
+                      icon: 'images-outline',
+                      label: t('chat.replace_image'),
+                      onPress: () => void onPickImage(),
+                    },
+                    {
+                      id: 'clear-image',
+                      icon: 'trash-outline',
+                      label: t('chat.remove_image'),
+                      onPress: clearSelectedImage,
+                    },
+                  ]}
+                />
+              </View>
+            </View>
+          ) : null}
+
+          {recordedAudioUri ? (
+            <GlassCard style={styles.audioCard} intensity={56}>
+              <Text style={[styles.audioTitle, { color: theme.textPrimary }]}>
+                {t('chat.voice_ready')}
+              </Text>
+              <View style={styles.audioRow}>
+                <Pressable
+                  style={[
+                    styles.attachButton,
+                    { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+                  ]}
+                  onPress={() => void playRecordedAudio()}
+                  disabled={isPlayingAudio}
+                >
+                  <Text style={[styles.attachText, { color: theme.textPrimary }]}>
+                    {isPlayingAudio ? t('chat.playing') : t('chat.play')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.attachButton,
+                    { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+                  ]}
+                  onPress={clearMedia}
+                >
+                  <Text style={[styles.attachText, { color: theme.textPrimary }]}>
+                    {t('chat.clear')}
+                  </Text>
+                </Pressable>
+              </View>
+            </GlassCard>
+          ) : null}
+
+          <View style={styles.attachRow}>
+            <Pressable
+              style={[
+                styles.attachButton,
+                { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+              ]}
+              onPress={() => void onPickImage()}
+            >
+              <Text style={[styles.attachText, { color: theme.textPrimary }]}>
+                {t('chat.gallery')}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[
+                styles.attachButton,
+                { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+              ]}
+              onPress={onTakePicture}
+            >
+              <Text style={[styles.attachText, { color: theme.textPrimary }]}>
+                {t('chat.lens')}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[
+                styles.attachButton,
+                { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+              ]}
+              onPress={() => void toggleRecording()}
+            >
+              <Text style={[styles.attachText, { color: theme.textPrimary }]}>
+                {isRecording ? t('chat.stop_audio') : t('chat.audio')}
+              </Text>
+            </Pressable>
+          </View>
+
+          <ChatInput
+            value={text}
+            onChangeText={setText}
+            onSend={() => void onSend()}
+            isSending={isSending}
+          />
+        </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
 
       <ImagePreviewModal
         imageUri={pendingImage}
@@ -357,8 +483,12 @@ export default function ChatSessionScreen() {
         onCopy={(msg) => void copyText(msg)}
         onShare={(msg) => void shareText(msg)}
         onReport={onReportMessage}
-        onClose={() => { setContextMenuMessage(null); }}
+        onClose={() => {
+          setContextMenuMessage(null);
+        }}
       />
+
+      <AiConsentModal visible={showAiConsent} onAccept={acceptAiConsent} />
     </LiquidScreen>
   );
 }
