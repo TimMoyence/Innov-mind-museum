@@ -21,8 +21,8 @@ export default function Header({ dict, locale }: HeaderProps) {
   ];
 
   return (
-    <header className="glass-heavy sticky top-0 z-50 !border-x-0 !border-t-0 !border-b !border-b-white/20">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 sm:px-6 lg:px-8">
+    <header className="liquid-glass-heavy sticky top-0 z-50 !rounded-none !border-x-0 !border-t-0 border-b border-b-white/15">
+      <div className="relative mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link
           href={`/${locale}`}
@@ -82,7 +82,7 @@ export default function Header({ dict, locale }: HeaderProps) {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <nav className="border-t border-white/20 bg-white/60 px-4 pb-4 pt-2 backdrop-blur-xl md:hidden" aria-label="Mobile">
+        <nav className="border-t border-white/15 bg-white/60 px-4 pb-4 pt-2 backdrop-blur-xl md:hidden" aria-label="Mobile">
           <ul className="flex flex-col gap-2">
             {navLinks.map((link) => (
               <li key={link.href}>

@@ -25,15 +25,32 @@ export default function StoreButton({ store, label, subLabel, href = '#' }: Stor
   return (
     <a
       href={href}
-      className="glass-card inline-flex items-center gap-3 !bg-primary-900/90 !border-primary-800/30 rounded-2xl px-6 py-3.5 text-white transition-all duration-200 hover:!bg-primary-800/95 hover:shadow-lg active:scale-[0.98]"
+      className="group relative inline-flex items-center gap-3 overflow-hidden rounded-2xl px-7 py-4 text-white transition-all duration-300 hover:shadow-xl active:scale-[0.98]"
+      style={{
+        background: 'rgba(15, 23, 42, 0.9)',
+        backdropFilter: 'blur(20px) saturate(1.4)',
+        WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        boxShadow: '0 4px 24px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+      }}
     >
-      {store === 'apple' ? <AppleIcon /> : <GooglePlayIcon />}
-      <div className="text-left">
-        <div className="text-[10px] uppercase leading-tight opacity-70">
+      {/* Hover glow */}
+      <span
+        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        style={{
+          background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(56, 189, 248, 0.08) 100%)',
+        }}
+        aria-hidden="true"
+      />
+      <span className="relative z-10">
+        {store === 'apple' ? <AppleIcon /> : <GooglePlayIcon />}
+      </span>
+      <span className="relative z-10 text-left">
+        <span className="block text-[10px] uppercase leading-tight opacity-70">
           {subLabel}
-        </div>
-        <div className="text-base font-semibold leading-tight">{label}</div>
-      </div>
+        </span>
+        <span className="block text-base font-semibold leading-tight">{label}</span>
+      </span>
     </a>
   );
 }

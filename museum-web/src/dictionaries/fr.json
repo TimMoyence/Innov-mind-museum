@@ -66,7 +66,9 @@
   "showcase": {
     "title": "Une expérience pensée pour le musée",
     "description": "Interface épurée, réponses instantanées et navigation intuitive. Musaium s'adapte à votre rythme de visite pour une découverte sans friction.",
-    "caption": "Disponible sur iOS et Android"
+    "caption": "Disponible sur iOS et Android",
+    "sectionTitle": "Découvrez Musaium",
+    "sectionSubtitle": "L'application en action"
   },
   "reviews": {
     "title": "Votre avis compte",
