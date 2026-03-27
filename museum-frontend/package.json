@@ -9,8 +9,10 @@
     "generate:openapi-types": "openapi-typescript ../museum-backend/openapi/openapi.json -o shared/api/generated/openapi.ts",
     "check:openapi-types": "npm run generate:openapi-types && git diff --exit-code -- shared/api/generated/openapi.ts",
     "check:i18n": "node scripts/check-i18n-completeness.js",
-    "lint": "eslint . && tsc --noEmit",
+    "lint": "eslint . --max-warnings=20 && tsc --noEmit",
     "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"**/*.{ts,tsx}\" --ignore-path .gitignore",
+    "format:check": "prettier --check \"**/*.{ts,tsx}\" --ignore-path .gitignore",
     "typecheck": "tsc --noEmit",
     "test": "npm run test:node && npm run test:rn",
     "test:node": "rm -rf .test-dist && tsc -p tsconfig.test.json && node --test .test-dist/tests/*.test.js",
@@ -23,11 +25,11 @@
     "@react-native-async-storage/async-storage": "^2.1.2",
     "@react-native-community/netinfo": "11.4.1",
     "@react-native-google-signin/google-signin": "^16.1.2",
-    "@react-navigation/bottom-tabs": "^7.15.7",
+    "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/native": "^7.0.14",
     "@ronradtke/react-native-markdown-display": "^8.1.0",
     "@sentry/react-native": "^8.5.0",
-    "@shopify/flash-list": "^2.3.1",
+    "@shopify/flash-list": "1.7.6",
     "axios": "^1.9.0",
     "babel-plugin-react-compiler": "^19.0.0-beta-ebf51a3-20250411",
     "expo": "~53.0.27",
@@ -37,16 +39,16 @@
     "expo-camera": "~16.1.11",
     "expo-clipboard": "~7.1.5",
     "expo-constants": "^17.0.5",
-    "expo-dev-client": "~55.0.18",
+    "expo-dev-client": "~5.2.4",
     "expo-font": "^13.0.3",
     "expo-haptics": "^14.0.1",
     "expo-image-manipulator": "~13.1.7",
     "expo-image-picker": "~16.1.4",
     "expo-linear-gradient": "~14.1.5",
     "expo-linking": "~7.1.7",
-    "expo-local-authentication": "^55.0.9",
+    "expo-local-authentication": "~16.0.5",
     "expo-localization": "~16.1.6",
-    "expo-location": "^55.1.4",
+    "expo-location": "~18.1.6",
     "expo-router": "~5.1.11",
     "expo-secure-store": "~14.2.4",
     "expo-splash-screen": "~0.30.10",
@@ -57,7 +59,7 @@
     "expo-web-browser": "~14.2.0",
     "i18next": "^25.8.20",
     "intl-pluralrules": "^2.0.1",
-    "react": "19.2.4",
+    "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-i18next": "^16.5.8",
     "react-native": "0.79.6",
@@ -69,14 +71,16 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "@babel/core": "^7.25.2",
     "@eslint/js": "^9.39.4",
     "@testing-library/react-native": "^13.3.3",
     "@tsconfig/react-native": "^3.0.5",
     "@types/axios": "^0.9.36",
     "@types/jest": "^30.0.0",
-    "@types/react": "~19.2.14",
+    "@types/react": "~19.0.10",
     "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-native": "^5.0.0",
@@ -84,7 +88,8 @@
     "jest-expo": "~53.0.14",
     "lint-staged": "^16.4.0",
     "openapi-typescript": "^7.13.0",
-    "react-test-renderer": "^19.2.4",
+    "prettier": "^3.8.1",
+    "react-test-renderer": "19.0.0",
     "typescript": "^5.3.3",
     "typescript-eslint": "^8.57.2"
   },
@@ -103,6 +108,9 @@
     }
   },
   "lint-staged": {
-    "*.{ts,tsx}": "eslint --fix"
+    "*.{ts,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
   }
 }

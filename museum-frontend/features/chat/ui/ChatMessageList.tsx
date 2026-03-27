@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import { FlashList } from '@shopify/flash-list';
 
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { ChatMessageBubble } from '@/features/chat/ui/ChatMessageBubble';
@@ -50,7 +50,7 @@ export const ChatMessageList = ({
   onImageError,
   onReport,
 }: ChatMessageListProps) => {
-  const listRef = useRef<FlashListRef<ChatUiMessage>>(null);
+  const listRef = useRef<FlashList<ChatUiMessage>>(null);
 
   const lastAssistantMessage = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -102,7 +102,16 @@ export const ChatMessageList = ({
         </View>
       );
     },
-    [lastAssistantMessage, locale, isSending, isStreaming, onFollowUpPress, onRecommendationPress, onImageError, onReport],
+    [
+      lastAssistantMessage,
+      locale,
+      isSending,
+      isStreaming,
+      onFollowUpPress,
+      onRecommendationPress,
+      onImageError,
+      onReport,
+    ],
   );
 
   // Show typing indicator only when sending but NOT streaming (streaming shows inline cursor)
