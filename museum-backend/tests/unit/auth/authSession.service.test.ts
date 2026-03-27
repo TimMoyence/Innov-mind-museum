@@ -2,7 +2,10 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { AuthSessionService } from '@modules/auth/core/useCase/authSession.service';
-import type { IRefreshTokenRepository, StoredRefreshTokenRow } from '@modules/auth/core/domain/refresh-token.repository.interface';
+import type {
+  IRefreshTokenRepository,
+  StoredRefreshTokenRow,
+} from '@modules/auth/core/domain/refresh-token.repository.interface';
 import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
 import type { User } from '@modules/auth/core/domain/user.entity';
 import { env } from '@src/config/env';
@@ -19,7 +22,9 @@ import {
   clearLoginAttempts,
 } from '@modules/auth/core/useCase/login-rate-limiter';
 
-const mockCheckLoginRateLimit = checkLoginRateLimit as jest.MockedFunction<typeof checkLoginRateLimit>;
+const mockCheckLoginRateLimit = checkLoginRateLimit as jest.MockedFunction<
+  typeof checkLoginRateLimit
+>;
 const mockRecordFailedLogin = recordFailedLogin as jest.MockedFunction<typeof recordFailedLogin>;
 const mockClearLoginAttempts = clearLoginAttempts as jest.MockedFunction<typeof clearLoginAttempts>;
 
@@ -39,10 +44,11 @@ const makeUser = (overrides: Partial<User> = {}): User =>
     ...overrides,
   }) as User;
 
-const sha256 = (value: string): string =>
-  crypto.createHash('sha256').update(value).digest('hex');
+const sha256 = (value: string): string => crypto.createHash('sha256').update(value).digest('hex');
 
-const makeStoredToken = (overrides: Partial<StoredRefreshTokenRow> = {}): StoredRefreshTokenRow => ({
+const makeStoredToken = (
+  overrides: Partial<StoredRefreshTokenRow> = {},
+): StoredRefreshTokenRow => ({
   id: 'tok-1',
   userId: 1,
   jti: 'refresh-jti-1',
@@ -71,6 +77,8 @@ const makeMockRepos = () => {
     deleteUser: jest.fn(),
     setVerificationToken: jest.fn(),
     verifyEmail: jest.fn(),
+    setEmailChangeToken: jest.fn(),
+    consumeEmailChangeToken: jest.fn(),
   };
 
   const refreshTokenRepo: jest.Mocked<IRefreshTokenRepository> = {
@@ -256,7 +264,10 @@ describe('AuthSessionService', () => {
       const loginResult = await service.login('user@test.com', 'ValidPass1');
 
       // Extract the jti/familyId from the real refresh token
-      const decoded = jwt.verify(loginResult.refreshToken, env.auth.refreshTokenSecret) as jwt.JwtPayload & { jti: string; familyId: string };
+      const decoded = jwt.verify(
+        loginResult.refreshToken,
+        env.auth.refreshTokenSecret,
+      ) as jwt.JwtPayload & { jti: string; familyId: string };
 
       const storedToken = makeStoredToken({
         jti: decoded.jti,
@@ -293,7 +304,10 @@ describe('AuthSessionService', () => {
       const hashed = await bcrypt.hash('ValidPass1', 4);
       userRepo.getUserByEmail.mockResolvedValue(makeUser({ password: hashed }));
       const loginResult = await service.login('user@test.com', 'ValidPass1');
-      const decoded = jwt.verify(loginResult.refreshToken, env.auth.refreshTokenSecret) as jwt.JwtPayload & { jti: string; familyId: string };
+      const decoded = jwt.verify(
+        loginResult.refreshToken,
+        env.auth.refreshTokenSecret,
+      ) as jwt.JwtPayload & { jti: string; familyId: string };
 
       refreshTokenRepo.findByJti.mockResolvedValue(
         makeStoredToken({
@@ -608,11 +622,9 @@ describe('AuthSessionService', () => {
     it('throws 401 when sub is missing', () => {
       const { service } = createService();
 
-      const token = jwt.sign(
-        { type: 'access', jti: 'at-jti-nosub' },
-        env.auth.accessTokenSecret,
-        { expiresIn: '15m' },
-      );
+      const token = jwt.sign({ type: 'access', jti: 'at-jti-nosub' }, env.auth.accessTokenSecret, {
+        expiresIn: '15m',
+      });
 
       expect(() => service.verifyAccessToken(token)).toThrow(
         expect.objectContaining({ statusCode: 401, code: 'INVALID_ACCESS_TOKEN' }),
