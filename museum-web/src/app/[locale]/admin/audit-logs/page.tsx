@@ -152,7 +152,6 @@ export default function AuditLogsPage() {
             totalPages={totalPages}
             total={total}
             onPageChange={setPage}
-            isFr={isFr}
           />
         </div>
       )}
