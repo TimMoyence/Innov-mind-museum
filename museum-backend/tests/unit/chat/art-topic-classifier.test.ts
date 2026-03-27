@@ -1,19 +1,17 @@
 import { ArtTopicClassifier } from '@modules/chat/application/art-topic-classifier';
 
-// Mock the Anthropic SDK
-jest.mock('@anthropic-ai/sdk', () => {
-  const mockCreate = jest.fn();
-  return {
-    __esModule: true,
-    default: jest.fn().mockImplementation(() => ({
-      messages: { create: mockCreate },
-    })),
-    _mockCreate: mockCreate,
-  };
-});
+const mockInvoke = jest.fn();
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- access mock internals
-const { _mockCreate: mockCreate } = require('@anthropic-ai/sdk') as { _mockCreate: jest.Mock };
+jest.mock('@langchain/openai', () => ({
+  ChatOpenAI: jest.fn().mockImplementation(() => ({
+    invoke: mockInvoke,
+  })),
+}));
+
+jest.mock('@langchain/core/messages', () => ({
+  SystemMessage: jest.fn().mockImplementation((content: string) => ({ content, role: 'system' })),
+  HumanMessage: jest.fn().mockImplementation((content: string) => ({ content, role: 'human' })),
+}));
 
 describe('ArtTopicClassifier', () => {
   let classifier: ArtTopicClassifier;
@@ -24,34 +22,28 @@ describe('ArtTopicClassifier', () => {
   });
 
   it('returns true when API responds "yes"', async () => {
-    mockCreate.mockResolvedValue({
-      content: [{ type: 'text', text: 'yes' }],
-    });
+    mockInvoke.mockResolvedValue({ content: 'yes' });
 
     const result = await classifier.isArtRelated('Tell me about Renaissance');
     expect(result).toBe(true);
   });
 
   it('returns false when API responds "no"', async () => {
-    mockCreate.mockResolvedValue({
-      content: [{ type: 'text', text: 'no' }],
-    });
+    mockInvoke.mockResolvedValue({ content: 'no' });
 
     const result = await classifier.isArtRelated('What is the price of bitcoin?');
     expect(result).toBe(false);
   });
 
   it('returns false (fail-open) on network error', async () => {
-    mockCreate.mockRejectedValue(new Error('Connection timeout'));
+    mockInvoke.mockRejectedValue(new Error('Connection timeout'));
 
     const result = await classifier.isArtRelated('Some text');
     expect(result).toBe(false);
   });
 
   it('returns false on empty/malformed response', async () => {
-    mockCreate.mockResolvedValue({
-      content: [],
-    });
+    mockInvoke.mockResolvedValue({ content: '' });
 
     const result = await classifier.isArtRelated('Some text');
     expect(result).toBe(false);
