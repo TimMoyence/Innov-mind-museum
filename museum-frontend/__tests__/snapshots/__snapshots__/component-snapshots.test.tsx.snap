@@ -273,7 +273,7 @@ exports[`ChatMessageBubble snapshots matches snapshot for assistant message 1`] 
           ]
         }
       >
-        12:30 PM
+        10:30 AM
       </Text>
       <View
         accessibilityLabel="messageMenu.report"
@@ -397,7 +397,7 @@ exports[`ChatMessageBubble snapshots matches snapshot for user message 1`] = `
           ]
         }
       >
-        12:30 PM
+        10:30 AM
       </Text>
     </View>
   </View>

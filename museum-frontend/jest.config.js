@@ -1,3 +1,6 @@
+// Force UTC so snapshot timestamps are deterministic across CI and local envs
+process.env.TZ = 'UTC';
+
 module.exports = {
   preset: 'jest-expo',
   testMatch: ['<rootDir>/__tests__/**/*.test.{ts,tsx}'],
