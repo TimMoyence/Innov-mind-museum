@@ -6,8 +6,7 @@
       "rule": "jest.Mocked<T> au lieu de as any pour les repos mock dans les tests. Pattern: const mockRepo = { method: jest.fn() } as jest.Mocked<PortInterface>",
       "source": "S7-S8: as any en hausse (+27), corrige V1.1 wave-c (64->0)",
       "inject_when": "agent ecrit des tests avec mocks de repositories ou services injectes",
-      "severity": "HIGH",
-      "r4Validation": "CONFIRME ACTIF \u2014 0 as-any total, pattern respecte"
+      "severity": "HIGH"
     },
     {
       "id": "PE-002",
@@ -19,7 +18,7 @@
     {
       "id": "PE-003",
       "rule": "tsc --noEmit DOIT passer AVANT de declarer les tests verts. Un test qui passe Jest mais echoue tsc casse le CI.",
-      "source": "S8: TS2556 AuthContext.test.tsx \u2014 tests Jest OK mais tsc --noEmit FAIL -> CI casse",
+      "source": "S8: TS2556 AuthContext.test.tsx — tests Jest OK mais tsc --noEmit FAIL -> CI casse",
       "inject_when": "agent ecrit ou modifie des tests",
       "severity": "CRITICAL"
     },
@@ -28,19 +27,18 @@
       "rule": "Pour les hooks React Native avec etat metier, verifier que les donnees survivent a un changement de vue/navigation. Utiliser un store ou hook persistant, pas useState local.",
       "source": "ZenFirst runs 5-6: donnees perdues au changement de step car useState local",
       "inject_when": "agent cree un composant ou hook avec etat metier",
-      "severity": "HIGH",
-      "r4Validation": "CONFIRME ACTIF \u2014 2 violations critiques trouvees: useChatSession (C2) + ConversationsScreen (C3). Enrichment pertinent et necessaire."
+      "severity": "HIGH"
     },
     {
       "id": "PE-005",
       "rule": "Ne pas utiliser des chemins relatifs avec grep/rg dans les agents. Toujours utiliser le chemin absolu ou cd vers la racine du repo d'abord.",
-      "source": "Audit 2026-03-24: comptages as any inexacts (25/18 vs reel 21/17) a cause de chemins relatifs + hook RTK",
+      "source": "Audit 2026-03-24: comptages as any inexacts a cause de chemins relatifs + hook RTK",
       "inject_when": "agent fait du comptage ou de la recherche dans le codebase",
       "severity": "MEDIUM"
     },
     {
       "id": "PE-006",
-      "rule": "Les .env locaux sont gitignores \u2014 ne JAMAIS classifier comme vulnerabilite securite. Seules les cles commitees dans le repo sont des vulnerabilites.",
+      "rule": "Les .env locaux sont gitignores — ne JAMAIS classifier comme vulnerabilite securite. Seules les cles commitees dans le repo sont des vulnerabilites.",
       "source": "Audit 2026-03-24: faux positif cle API classee CRITIQUE alors que .env gitignore",
       "inject_when": "agent fait un audit securite",
       "severity": "HIGH"
@@ -69,21 +67,21 @@
     {
       "id": "PE-010",
       "rule": "Le FINALIZE KB est OBLIGATOIRE a chaque fin de run. Mettre a jour les 7 fichiers team-knowledge/*.json. Un run sans FINALIZE est un run incomplet.",
-      "source": "R7-R9: KB gaps \u2014 velocity-metrics, estimation-accuracy, agent-performance manquent 3 runs",
+      "source": "R7-R9: KB gaps — velocity-metrics, estimation-accuracy, agent-performance manquent 3 runs",
       "inject_when": "Sentinelle recoit le message FINALIZE",
       "severity": "CRITICAL"
     },
     {
       "id": "PE-011",
       "rule": "Dans museum-web (Next.js 15), les composants sont Server Components par defaut. N'ajouter 'use client' que pour l'interactivite (useState, useEffect, onClick). Extraire les parties client dans des fichiers separes.",
-      "source": "R5-R6: pattern etabli \u2014 LoginForm client extrait de page.tsx server",
+      "source": "R5-R6: pattern etabli — LoginForm client extrait de page.tsx server",
       "inject_when": "agent cree ou modifie des fichiers dans museum-web/",
       "severity": "MEDIUM"
     },
     {
       "id": "PE-012",
-      "rule": "FlashList v2 (2.x) uses auto-measurement \u2014 no estimatedItemSize prop. contentContainerStyle only supports padding + backgroundColor. Use ItemSeparatorComponent for gaps (not contentContainerStyle.gap).",
-      "source": "R11: design assumed v1 API, tsc caught missing prop during dev self-verification (agent scope creep \u2014 FlashList was outside mandate)",
+      "rule": "FlashList v2 (2.x) uses auto-measurement — no estimatedItemSize prop. contentContainerStyle only supports padding + backgroundColor. Use ItemSeparatorComponent for gaps (not contentContainerStyle.gap).",
+      "source": "R11: design assumed v1 API, tsc caught missing prop during dev self-verification",
       "inject_when": "agent works with FlashList or migrates from FlatList",
       "severity": "MEDIUM"
     },
@@ -91,47 +89,21 @@
       "id": "PE-013",
       "rule": "Agent MUST NOT commit code, write KB files, update sprint tracking, or perform FINALIZE. These are Tech Lead/Sentinelle responsibilities only. Agent mandate must include explicit hors-scope for commits and KB writes.",
       "source": "R11: Frontend Architect committed 3 unauthorized commits including fake R12 FINALIZE with incorrect KB data",
-      "inject_when": "every agent mandate \u2014 hors-scope section",
+      "inject_when": "every agent mandate — hors-scope section",
       "severity": "CRITICAL",
-      "injectedInAgents": "2026-03-26 R12-chore \u2014 LIMITES OPERATIONNELLES section in all 9 agents + SKILL.md template + REGLES ABSOLUES rule 7"
+      "injectedInAgents": "2026-03-26 R12-chore — LIMITES OPERATIONNELLES in all 9 agents + SKILL.md"
     },
     {
       "id": "PE-014",
       "rule": "Sentinelle FINALIZE MUST cite verifiable evidence for EVERY KB entry: git commit hash, test output line, or exact gate message quote. If no evidence exists, write 'N/A' — NEVER invent data to fill a template. An empty field is honest; a fabricated field is a severity 5 incident.",
-      "source": "R13: Sentinelle fabricated 17 KB entries (3 fake EP, 3 fake PE, wrong score/loops/mode/agents/files/tests across 6 files). Detected by user + Tech Lead audit.",
+      "source": "R13: Sentinelle fabricated 17 KB entries (3 fake EP, 3 fake PE, wrong score/loops/mode/agents/files/tests across 6 files).",
       "inject_when": "Sentinelle executes FINALIZE protocol",
       "severity": "CRITICAL"
     }
   ],
-  "r4Summary": {
-    "validated": [
-      "PE-001",
-      "PE-004"
-    ],
-    "noNewEnrichments": true,
-    "notes": "R4 audit confirmed PE-001 (0 as-any maintained) and PE-004 (2 critical violations found). No new enrichments needed \u2014 existing set covers R4 findings."
-  },
-  "r10Summary": {
-    "newEnrichments": [
-      "PE-008",
-      "PE-009",
-      "PE-010",
-      "PE-011"
-    ],
-    "total": 11,
-    "notes": "R10 process audit added 4 new enrichments. PE-008 (feature existence check) is HIGH \u2014 prevents wasted work on already-implemented features. PE-010 (KB FINALIZE) is CRITICAL \u2014 prevents KB drift."
-  },
-  "r11Summary": {
-    "newEnrichments": [
-      "PE-012",
-      "PE-013"
-    ],
-    "total": 13,
-    "notes": "R11 added PE-012 (FlashList v2 API, from agent scope creep finding) and PE-013 (CRITICAL \u2014 agent scope creep guard, agents must not commit/KB/FINALIZE)."
-  },
   "r13Summary": {
     "newEnrichments": ["PE-014"],
     "total": 14,
-    "notes": "R13: 3 fabricated PE (PE-014/015/016) removed. Replaced with single PE-014 (CRITICAL) — anti-hallucination guard for Sentinelle FINALIZE. Sentinelle must cite verifiable evidence for every KB entry."
+    "notes": "R13: 3 fabricated PE removed. Replaced with single PE-014 (CRITICAL) — anti-hallucination guard for Sentinelle FINALIZE."
   }
 }

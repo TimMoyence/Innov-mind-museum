@@ -3,116 +3,11 @@
   "currentLevel": "L3",
   "proposedLevel": null,
   "promotionDate": "2026-03-26",
-  "promotionTrigger": "R12 clean chore \u2014 15 consecutive qualifying runs >= 85, 0 regression Ratchet, 0 boucle > 2. R11 scope creep addressed in R12.",
+  "promotionTrigger": "R12 clean chore — 15 consecutive qualifying runs >= 85, 0 regression Ratchet, 0 boucle > 2. R11 scope creep addressed in R12.",
   "runsSinceLastFail": 16,
   "runsQualifying": 16,
   "runsRequired": 10,
   "history": [
-    {
-      "date": "2026-03-24",
-      "run": "R1",
-      "score": 91,
-      "result": "PASS",
-      "level": "L1",
-      "postDevFail": false
-    },
-    {
-      "date": "2026-03-24",
-      "run": "R2",
-      "score": 95,
-      "result": "PASS",
-      "level": "L1",
-      "postDevFail": false
-    },
-    {
-      "date": "2026-03-24",
-      "run": "R3",
-      "score": 97,
-      "result": "PASS",
-      "level": "L1",
-      "postDevFail": false
-    },
-    {
-      "date": "2026-03-25",
-      "run": "R4",
-      "score": 88,
-      "result": "PASS",
-      "level": "L1",
-      "postDevFail": false,
-      "notes": "Read-only audit enterprise-grade. 5 agents, 37 findings. Verdict CONDITIONNEL (product score 3.52/5)."
-    },
-    {
-      "date": "2026-03-25",
-      "run": "R5",
-      "score": 93,
-      "result": "PASS",
-      "level": "L1->L2",
-      "postDevFail": false,
-      "notes": "L2 promotion triggered. 5/5 runs >= 85, 0 FAIL post-DEV."
-    },
-    {
-      "date": "2026-03-25",
-      "run": "R6",
-      "score": 95,
-      "result": "PASS",
-      "level": "L2",
-      "postDevFail": false,
-      "notes": "W2 landing + admin API. All W1 findings resolved. 0 loops."
-    },
-    {
-      "date": "2026-03-25",
-      "run": "R5-hotfix",
-      "score": 96,
-      "result": "PASS",
-      "level": "L2",
-      "postDevFail": false,
-      "notes": "4 release blockers. EP-007/EP-009/EP-012 fermes."
-    },
-    {
-      "date": "2026-03-25",
-      "run": "R6-fixes",
-      "score": 95,
-      "result": "PASS",
-      "level": "L2",
-      "postDevFail": false,
-      "notes": "Phase 1+2 fixes. 6 MAJEURS + Zustand + OpenAPI 20 routes."
-    },
-    {
-      "date": "2026-03-25",
-      "run": "R7",
-      "score": 94,
-      "result": "PASS",
-      "level": "L2",
-      "postDevFail": false,
-      "notes": "Zero-downtime, Redis rate-limit, DB resilience +32 tests, FE +31 tests."
-    },
-    {
-      "date": "2026-03-25",
-      "run": "R8",
-      "score": 92,
-      "result": "PASS",
-      "level": "L2",
-      "postDevFail": false,
-      "notes": "Read-only audit V2. 6/6 fixes verified. 10 gaps. Frontend maturity 3.5/5."
-    },
-    {
-      "date": "2026-03-25",
-      "run": "R9",
-      "score": 94,
-      "result": "PASS",
-      "level": "L2",
-      "postDevFail": false,
-      "notes": "3 vagues: store-ready, DX enablers, museum-web W2. Tests 1078->1088."
-    },
-    {
-      "date": "2026-03-25",
-      "run": "R10",
-      "score": 93,
-      "result": "PASS",
-      "level": "L2",
-      "postDevFail": false,
-      "notes": "Process audit. 7 amendements. KB gaps identifies et corriges."
-    },
     {
       "date": "2026-03-26",
       "run": "R11",
@@ -120,7 +15,7 @@
       "result": "PASS",
       "level": "L2",
       "postDevFail": false,
-      "notes": "Theme centralization. Agent scope creep. L3 deferred \u2014 process integrity concern."
+      "notes": "Theme centralization. Agent scope creep. L3 deferred — process integrity concern."
     },
     {
       "date": "2026-03-26",
@@ -144,19 +39,16 @@
   "conditions": {
     "L2": {
       "required": "5 runs consecutifs >= 85/100 ET 0 FAIL post-DEV",
-      "current": "5/5 runs qualifiants (R1:91, R2:95, R3:97, R4:88, R5:93) \u2014 ATTEINT",
       "met": true,
       "promotionEffective": "2026-03-25"
     },
     "L3": {
       "required": "10 runs consecutifs >= 85/100 ET 0 regression Ratchet ET 0 boucle > 2",
-      "current": "15/10 consecutive qualifying runs. R11 scope creep addressed in R12 (LIMITES OPERATIONNELLES). L3 CONFIRMED.",
       "met": true,
       "promotionEffective": "2026-03-26"
     },
     "L4": {
       "required": "Validation explicite utilisateur",
-      "current": "Non demande",
       "met": false
     }
   }
