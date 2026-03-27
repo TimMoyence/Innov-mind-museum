@@ -1,0 +1,6 @@
+module Pods_Musaium {
+  umbrella header "Pods-Musaium-umbrella.h"
+
+  export *
+  module * { export * }
+}

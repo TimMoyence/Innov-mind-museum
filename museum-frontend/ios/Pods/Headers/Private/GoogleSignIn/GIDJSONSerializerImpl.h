@@ -1,0 +1,1 @@
+../../../GoogleSignIn/GoogleSignIn/Sources/GIDJSONSerializer/Implementation/GIDJSONSerializerImpl.h
