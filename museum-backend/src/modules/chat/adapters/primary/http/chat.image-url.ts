@@ -7,10 +7,7 @@ const toBase64Url = (value: Buffer | string): string => {
 };
 
 const signPayload = (payload: string): string => {
-  return crypto
-    .createHmac('sha256', env.storage.signingSecret)
-    .update(payload)
-    .digest('base64url');
+  return crypto.createHmac('sha256', env.storage.signingSecret).update(payload).digest('base64url');
 };
 
 /**
@@ -30,7 +27,7 @@ export const buildSignedChatImageReadUrl = (params: {
   const ttlSeconds = Math.max(30, params.ttlSeconds ?? env.storage.signedUrlTtlSeconds);
   const expiresAtMs = Date.now() + ttlSeconds * 1000;
   const expiresAt = new Date(expiresAtMs).toISOString();
-  const payload = `${params.messageId}.${expiresAtMs}`;
+  const payload = `${params.messageId}.${String(expiresAtMs)}`;
   const signature = signPayload(payload);
   const token = toBase64Url(payload);
   const url = new URL(`/api/chat/messages/${params.messageId}/image`, params.baseUrl);
@@ -97,4 +94,3 @@ export const verifySignedChatImageReadUrl = (params: {
 
   return { ok: true, expiresAtMs };
 };
-

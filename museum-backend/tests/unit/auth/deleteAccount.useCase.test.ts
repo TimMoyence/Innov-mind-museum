@@ -1,4 +1,7 @@
-import { DeleteAccountUseCase, ImageCleanupPort } from '@modules/auth/core/useCase/deleteAccount.useCase';
+import {
+  DeleteAccountUseCase,
+  ImageCleanupPort,
+} from '@modules/auth/core/useCase/deleteAccount.useCase';
 import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
 import type { User } from '@modules/auth/core/domain/user.entity';
 

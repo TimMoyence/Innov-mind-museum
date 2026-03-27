@@ -1,4 +1,7 @@
-import { ensureSessionAccess, ensureSessionOwnership } from '@modules/chat/application/session-access';
+import {
+  ensureSessionAccess,
+  ensureSessionOwnership,
+} from '@modules/chat/application/session-access';
 import type { ChatRepository } from '@modules/chat/domain/chat.repository.interface';
 
 describe('ensureSessionOwnership', () => {
@@ -28,11 +31,15 @@ describe('ensureSessionOwnership', () => {
 describe('ensureSessionAccess', () => {
   it('throws for invalid UUID', async () => {
     const mockRepo = {} as unknown as ChatRepository;
-    await expect(ensureSessionAccess('not-a-uuid', mockRepo, 1)).rejects.toThrow('Invalid session id format');
+    await expect(ensureSessionAccess('not-a-uuid', mockRepo, 1)).rejects.toThrow(
+      'Invalid session id format',
+    );
   });
 
   it('throws for non-existent session', async () => {
-    const mockRepo = { getSessionById: jest.fn().mockResolvedValue(null) } as unknown as ChatRepository;
+    const mockRepo = {
+      getSessionById: jest.fn().mockResolvedValue(null),
+    } as unknown as ChatRepository;
     await expect(
       ensureSessionAccess('a0000000-0000-4000-8000-000000000001', mockRepo, 1),
     ).rejects.toThrow('Chat session not found');
@@ -40,14 +47,18 @@ describe('ensureSessionAccess', () => {
 
   it('returns session when ownership matches', async () => {
     const session = { id: 'a0000000-0000-4000-8000-000000000001', user: { id: 1 } };
-    const mockRepo = { getSessionById: jest.fn().mockResolvedValue(session) } as unknown as ChatRepository;
+    const mockRepo = {
+      getSessionById: jest.fn().mockResolvedValue(session),
+    } as unknown as ChatRepository;
     const result = await ensureSessionAccess('a0000000-0000-4000-8000-000000000001', mockRepo, 1);
     expect(result).toBe(session);
   });
 
   it('throws when ownership mismatches', async () => {
     const session = { id: 'a0000000-0000-4000-8000-000000000001', user: { id: 42 } };
-    const mockRepo = { getSessionById: jest.fn().mockResolvedValue(session) } as unknown as ChatRepository;
+    const mockRepo = {
+      getSessionById: jest.fn().mockResolvedValue(session),
+    } as unknown as ChatRepository;
     await expect(
       ensureSessionAccess('a0000000-0000-4000-8000-000000000001', mockRepo, 99),
     ).rejects.toThrow('Chat session not found');

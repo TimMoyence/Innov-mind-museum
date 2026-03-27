@@ -11,10 +11,29 @@ const WIKIDATA_API = 'https://www.wikidata.org/w/api.php';
 const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
 
 const ART_KEYWORDS = [
-  'painting', 'sculpture', 'artwork', 'fresco', 'drawing', 'mural',
-  'installation', 'photograph', 'tapestry', 'mosaic', 'engraving', 'print',
-  'lithograph', 'watercolor', 'oil painting', 'portrait', 'landscape',
-  'altarpiece', 'relief', 'peinture', 'sculpture', 'tableau', 'oeuvre',
+  'painting',
+  'sculpture',
+  'artwork',
+  'fresco',
+  'drawing',
+  'mural',
+  'installation',
+  'photograph',
+  'tapestry',
+  'mosaic',
+  'engraving',
+  'print',
+  'lithograph',
+  'watercolor',
+  'oil painting',
+  'portrait',
+  'landscape',
+  'altarpiece',
+  'relief',
+  'peinture',
+  'sculpture',
+  'tableau',
+  'oeuvre',
 ];
 
 /** Wikidata adapter implementing {@link KnowledgeBaseProvider}. Never throws from public methods. */
@@ -120,15 +139,12 @@ export class WikidataClient implements KnowledgeBaseProvider {
       }
       LIMIT 1`;
 
-    const res = await fetch(
-      `${WIKIDATA_SPARQL}?query=${encodeURIComponent(sparql)}&format=json`,
-      {
-        headers: {
-          'User-Agent': USER_AGENT,
-          Accept: 'application/sparql-results+json',
-        },
+    const res = await fetch(`${WIKIDATA_SPARQL}?query=${encodeURIComponent(sparql)}&format=json`, {
+      headers: {
+        'User-Agent': USER_AGENT,
+        Accept: 'application/sparql-results+json',
       },
-    );
+    });
 
     if (!res.ok) return null;
 
@@ -138,11 +154,10 @@ export class WikidataClient implements KnowledgeBaseProvider {
     const bindings = data.results.bindings[0] as Record<string, { value: string }> | undefined;
     if (!bindings) return null;
 
-    const val = (key: string): string | undefined => (bindings[key] as { value: string } | undefined)?.value;
+    const val = (key: string): string | undefined =>
+      (bindings[key] as { value: string } | undefined)?.value;
     const inception = val('inception');
-    const date = inception
-      ? `c. ${new Date(inception).getFullYear().toString()}`
-      : undefined;
+    const date = inception ? `c. ${new Date(inception).getFullYear().toString()}` : undefined;
 
     return {
       qid,

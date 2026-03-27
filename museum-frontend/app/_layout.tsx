@@ -16,9 +16,7 @@ import { setErrorTranslate } from '@/shared/lib/errors';
 
 // Wire i18n into error message formatting so getErrorMessage() returns localised strings.
 // The key is always a valid `error.*` path defined in our translation files.
-setErrorTranslate((key, opts) =>
-  i18n.t(key as 'error.network', opts),
-);
+setErrorTranslate((key, opts) => i18n.t(key as 'error.network', opts));
 import { ThemeProvider, useTheme } from '@/shared/ui/ThemeContext';
 import { ConnectivityProvider } from '@/shared/infrastructure/connectivity/ConnectivityProvider';
 import {
@@ -42,10 +40,7 @@ Sentry.init({
   enabled: !!sentryDsn,
   environment: __DEV__ ? 'development' : 'production',
   tracesSampleRate: 0.2,
-  integrations: [
-    Sentry.reactNativeTracingIntegration(),
-    reactNavigationIntegration,
-  ],
+  integrations: [Sentry.reactNativeTracingIntegration(), reactNavigationIntegration],
   enableAutoPerformanceTracing: true,
 });
 
@@ -104,15 +99,17 @@ function RootLayout() {
       snapshot: getApiConfigurationSnapshot(),
     };
   }, []);
-  const [runtimeStartupError, setRuntimeStartupError] = useState<Error | null>(
-    null,
-  );
+  const [runtimeStartupError, setRuntimeStartupError] = useState<Error | null>(null);
 
   useEffect(() => {
     if (Platform.OS === 'ios') {
-      import('expo-tracking-transparency').then(({ requestTrackingPermissionsAsync }) => {
-        void requestTrackingPermissionsAsync();
-      }).catch(() => { /* fire-and-forget */ });
+      import('expo-tracking-transparency')
+        .then(({ requestTrackingPermissionsAsync }) => {
+          void requestTrackingPermissionsAsync();
+        })
+        .catch(() => {
+          /* fire-and-forget */
+        });
     }
   }, []);
 
@@ -125,9 +122,7 @@ function RootLayout() {
 
     applyRuntimeSettings().catch((error: unknown) => {
       setRuntimeStartupError(
-        error instanceof Error
-          ? error
-          : new Error('Failed to apply runtime settings'),
+        error instanceof Error ? error : new Error('Failed to apply runtime settings'),
       );
     });
   }, [startupConfiguration.error]);
@@ -152,43 +147,44 @@ function RootLayout() {
 
   return (
     <ErrorBoundary>
-    <I18nProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <ConnectivityProvider>
-            <BiometricGate>
-            <AuthenticationGuard>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="auth" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen
-                name="(stack)/chat/[sessionId]"
-                options={{
-                  headerShown: false,
-                  gestureEnabled: true,
-                }}
-              />
-              <Stack.Screen name="(stack)/settings" />
-              <Stack.Screen name="(stack)/preferences" />
-              <Stack.Screen name="(stack)/guided-museum-mode" />
-              <Stack.Screen name="(stack)/discover" />
-              <Stack.Screen name="(stack)/museum-detail" />
-              <Stack.Screen name="(stack)/support" />
-              <Stack.Screen name="(stack)/tickets" />
-              <Stack.Screen name="(stack)/ticket-detail" />
-              <Stack.Screen name="(stack)/create-ticket" />
-              <Stack.Screen name="(stack)/privacy" />
-              <Stack.Screen name="(stack)/terms" />
-              <Stack.Screen name="(stack)/onboarding" />
-              <Stack.Screen name="+not-found" />
-            </Stack>
-            <ThemedStatusBar />
-            </AuthenticationGuard>
-            </BiometricGate>
-          </ConnectivityProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </I18nProvider>
+      <I18nProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <ConnectivityProvider>
+              <BiometricGate>
+                <AuthenticationGuard>
+                  <Stack screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="auth" />
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen
+                      name="(stack)/chat/[sessionId]"
+                      options={{
+                        headerShown: false,
+                        gestureEnabled: true,
+                      }}
+                    />
+                    <Stack.Screen name="(stack)/settings" />
+                    <Stack.Screen name="(stack)/change-password" />
+                    <Stack.Screen name="(stack)/preferences" />
+                    <Stack.Screen name="(stack)/guided-museum-mode" />
+                    <Stack.Screen name="(stack)/discover" />
+                    <Stack.Screen name="(stack)/museum-detail" />
+                    <Stack.Screen name="(stack)/support" />
+                    <Stack.Screen name="(stack)/tickets" />
+                    <Stack.Screen name="(stack)/ticket-detail" />
+                    <Stack.Screen name="(stack)/create-ticket" />
+                    <Stack.Screen name="(stack)/privacy" />
+                    <Stack.Screen name="(stack)/terms" />
+                    <Stack.Screen name="(stack)/onboarding" />
+                    <Stack.Screen name="+not-found" />
+                  </Stack>
+                  <ThemedStatusBar />
+                </AuthenticationGuard>
+              </BiometricGate>
+            </ConnectivityProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </I18nProvider>
     </ErrorBoundary>
   );
 }

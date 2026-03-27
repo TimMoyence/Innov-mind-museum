@@ -36,12 +36,21 @@ export class ForgotPasswordUseCase {
 
     if (this.emailService && this.frontendUrl) {
       const resetLink = this.frontendUrl + '/reset-password?token=' + token;
-      const htmlContent = '<h1>Reset your password</h1>'
-        + '<p>Click the link below to reset your Musaium password. This link expires in 1 hour.</p>'
-        + '<p><a href="' + resetLink + '">' + resetLink + '</a></p>'
-        + '<p>If you did not request this, you can safely ignore this email.</p>';
+      const htmlContent =
+        '<h1>Reset your password</h1>' +
+        '<p>Click the link below to reset your Musaium password. This link expires in 1 hour.</p>' +
+        '<p><a href="' +
+        resetLink +
+        '">' +
+        resetLink +
+        '</a></p>' +
+        '<p>If you did not request this, you can safely ignore this email.</p>';
       try {
-        await this.emailService.sendEmail(normalizedEmail, 'Reset your Musaium password', htmlContent);
+        await this.emailService.sendEmail(
+          normalizedEmail,
+          'Reset your Musaium password',
+          htmlContent,
+        );
       } catch (error) {
         logger.warn('forgot_password_email_failed', {
           email: normalizedEmail,

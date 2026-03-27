@@ -72,7 +72,9 @@ describe('byIp key generator', () => {
   });
 
   it('falls back to socket.remoteAddress', () => {
-    expect(byIp(makeMockReq({ ip: undefined, socket: { remoteAddress: '5.6.7.8' } }))).toBe('5.6.7.8');
+    expect(byIp(makeMockReq({ ip: undefined, socket: { remoteAddress: '5.6.7.8' } }))).toBe(
+      '5.6.7.8',
+    );
   });
 
   it('falls back to "unknown-ip" when both are absent', () => {

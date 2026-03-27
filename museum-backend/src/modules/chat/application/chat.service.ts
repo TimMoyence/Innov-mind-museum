@@ -141,10 +141,7 @@ export class ChatService {
    * @returns Paginated sessions with message previews.
    * @throws {AppError} 400 if userId is missing/invalid or cursor is malformed.
    */
-  async listSessions(
-    page: MessagePageQuery,
-    currentUserId?: number,
-  ): Promise<ListSessionsResult> {
+  async listSessions(page: MessagePageQuery, currentUserId?: number): Promise<ListSessionsResult> {
     return await this.sessions.listSessions(page, currentUserId);
   }
 
@@ -208,7 +205,15 @@ export class ChatService {
     currentUserId?: number,
     signal?: AbortSignal,
   ): Promise<PostMessageResult> {
-    return await this.messages.postMessageStream(sessionId, input, onToken, onGuardrail, requestId, currentUserId, signal);
+    return await this.messages.postMessageStream(
+      sessionId,
+      input,
+      onToken,
+      onGuardrail,
+      requestId,
+      currentUserId,
+      signal,
+    );
   }
 
   /**

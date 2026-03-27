@@ -19,7 +19,9 @@ class EmptyResponseOrchestrator implements ChatOrchestrator {
     return { text: '', metadata: {} };
   }
   async generateStream(_i: unknown, onChunk: (t: string) => void): Promise<OrchestratorOutput> {
-    const r = await this.generate(); onChunk(r.text); return r;
+    const r = await this.generate();
+    onChunk(r.text);
+    return r;
   }
 }
 
@@ -28,7 +30,9 @@ class InsultResponseOrchestrator implements ChatOrchestrator {
     return { text: 'You are stupid and should feel bad', metadata: {} };
   }
   async generateStream(_i: unknown, onChunk: (t: string) => void): Promise<OrchestratorOutput> {
-    const r = await this.generate(); onChunk(r.text); return r;
+    const r = await this.generate();
+    onChunk(r.text);
+    return r;
   }
 }
 
@@ -37,7 +41,9 @@ class OffTopicResponseOrchestrator implements ChatOrchestrator {
     return { text: 'Here is the latest bitcoin price update', metadata: {} };
   }
   async generateStream(_i: unknown, onChunk: (t: string) => void): Promise<OrchestratorOutput> {
-    const r = await this.generate(); onChunk(r.text); return r;
+    const r = await this.generate();
+    onChunk(r.text);
+    return r;
   }
 }
 
@@ -56,7 +62,9 @@ class ArtResponseOrchestrator implements ChatOrchestrator {
     };
   }
   async generateStream(_i: unknown, onChunk: (t: string) => void): Promise<OrchestratorOutput> {
-    const r = await this.generate(); onChunk(r.text); return r;
+    const r = await this.generate();
+    onChunk(r.text);
+    return r;
   }
 }
 

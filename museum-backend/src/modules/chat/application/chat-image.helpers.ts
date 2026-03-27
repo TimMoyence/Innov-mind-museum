@@ -8,9 +8,7 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 
-import {
-  buildGuardrailCitation,
-} from './art-topic-guardrail';
+import { buildGuardrailCitation } from './art-topic-guardrail';
 
 import type { ChatAssistantMetadata } from '../domain/chat.types';
 
@@ -67,7 +65,7 @@ export const buildChatImageObjectKey = (params: {
   const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
   const userSegment =
     typeof params.userId === 'number' && Number.isInteger(params.userId) && params.userId > 0
-      ? `user-${params.userId}`
+      ? `user-${String(params.userId)}`
       : 'user-anonymous';
   const sessionSegment = `session-${sanitizeObjectKeySegment(params.sessionId)}`;
 

@@ -64,6 +64,12 @@ jobs:
       - name: Check OpenAPI Typegen Sync
         run: npm run check:openapi-types
 
+      - name: Validate Backend OpenAPI Spec
+        working-directory: museum-backend
+        run: |
+          corepack enable && pnpm install --frozen-lockfile
+          pnpm run openapi:validate
+
       - name: Lint
         run: npm run lint
 

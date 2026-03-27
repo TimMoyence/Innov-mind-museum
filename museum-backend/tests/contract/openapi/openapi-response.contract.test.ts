@@ -313,4 +313,3 @@ describe('openapi response contracts (active API)', () => {
     }
   });
 });
-

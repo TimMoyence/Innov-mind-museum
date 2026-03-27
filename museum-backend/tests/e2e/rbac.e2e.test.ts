@@ -20,11 +20,7 @@ describeE2E('rbac e2e (role-based access control)', () => {
   it('visitor cannot access admin endpoints', async () => {
     const { token } = await registerAndLogin(harness.request);
 
-    const usersRes = await harness.request(
-      '/api/admin/users',
-      { method: 'GET' },
-      token,
-    );
+    const usersRes = await harness.request('/api/admin/users', { method: 'GET' }, token);
     expect(usersRes.status).toBe(403);
     expect(usersRes.body).toEqual(
       expect.objectContaining({
@@ -32,71 +28,45 @@ describeE2E('rbac e2e (role-based access control)', () => {
       }),
     );
 
-    const statsRes = await harness.request(
-      '/api/admin/stats',
-      { method: 'GET' },
-      token,
-    );
+    const statsRes = await harness.request('/api/admin/stats', { method: 'GET' }, token);
     expect(statsRes.status).toBe(403);
 
-    const auditRes = await harness.request(
-      '/api/admin/audit-logs',
-      { method: 'GET' },
-      token,
-    );
+    const auditRes = await harness.request('/api/admin/audit-logs', { method: 'GET' }, token);
     expect(auditRes.status).toBe(403);
   });
 
   it('admin can access admin endpoints after role promotion', async () => {
     const password = 'Password123!';
-    const { token: visitorToken, userId, email } = await registerAndLogin(
-      harness.request,
-      { password },
-    );
+    const {
+      token: visitorToken,
+      userId,
+      email,
+    } = await registerAndLogin(harness.request, { password });
 
     // Verify visitor is blocked
-    const beforeUsers = await harness.request(
-      '/api/admin/users',
-      { method: 'GET' },
-      visitorToken,
-    );
+    const beforeUsers = await harness.request('/api/admin/users', { method: 'GET' }, visitorToken);
     expect(beforeUsers.status).toBe(403);
 
     // Promote user to admin via direct DB query
-    await harness.dataSource.query(
-      `UPDATE users SET role = 'admin' WHERE id = $1`,
-      [userId],
-    );
+    await harness.dataSource.query(`UPDATE users SET role = 'admin' WHERE id = $1`, [userId]);
 
     // Re-login to get a fresh JWT with the updated role
     const login = await loginUser(harness.request, email, password);
     const adminToken = login.accessToken;
 
     // GET /api/admin/users should now succeed
-    const usersRes = await harness.request(
-      '/api/admin/users',
-      { method: 'GET' },
-      adminToken,
-    );
+    const usersRes = await harness.request('/api/admin/users', { method: 'GET' }, adminToken);
     expect(usersRes.status).toBe(200);
     const usersBody = usersRes.body as { users?: unknown[]; total?: number };
     expect(Array.isArray(usersBody.users)).toBe(true);
     expect(typeof usersBody.total).toBe('number');
 
     // GET /api/admin/stats should succeed
-    const statsRes = await harness.request(
-      '/api/admin/stats',
-      { method: 'GET' },
-      adminToken,
-    );
+    const statsRes = await harness.request('/api/admin/stats', { method: 'GET' }, adminToken);
     expect(statsRes.status).toBe(200);
 
     // GET /api/admin/audit-logs should succeed
-    const auditRes = await harness.request(
-      '/api/admin/audit-logs',
-      { method: 'GET' },
-      adminToken,
-    );
+    const auditRes = await harness.request('/api/admin/audit-logs', { method: 'GET' }, adminToken);
     expect(auditRes.status).toBe(200);
   });
 
@@ -105,10 +75,7 @@ describeE2E('rbac e2e (role-based access control)', () => {
 
     // Create the admin user
     const admin = await registerAndLogin(harness.request, { password });
-    await harness.dataSource.query(
-      `UPDATE users SET role = 'admin' WHERE id = $1`,
-      [admin.userId],
-    );
+    await harness.dataSource.query(`UPDATE users SET role = 'admin' WHERE id = $1`, [admin.userId]);
     const adminLogin = await loginUser(harness.request, admin.email, password);
     const adminToken = adminLogin.accessToken;
 
@@ -132,11 +99,7 @@ describeE2E('rbac e2e (role-based access control)', () => {
     const modLogin = await loginUser(harness.request, target.email, password);
     const modToken = modLogin.accessToken;
 
-    const modUsersRes = await harness.request(
-      '/api/admin/users',
-      { method: 'GET' },
-      modToken,
-    );
+    const modUsersRes = await harness.request('/api/admin/users', { method: 'GET' }, modToken);
     expect(modUsersRes.status).toBe(200);
   });
 
@@ -145,10 +108,9 @@ describeE2E('rbac e2e (role-based access control)', () => {
 
     // Create and promote to moderator via DB
     const mod = await registerAndLogin(harness.request, { password });
-    await harness.dataSource.query(
-      `UPDATE users SET role = 'moderator' WHERE id = $1`,
-      [mod.userId],
-    );
+    await harness.dataSource.query(`UPDATE users SET role = 'moderator' WHERE id = $1`, [
+      mod.userId,
+    ]);
     const modLogin = await loginUser(harness.request, mod.email, password);
     const modToken = modLogin.accessToken;
 

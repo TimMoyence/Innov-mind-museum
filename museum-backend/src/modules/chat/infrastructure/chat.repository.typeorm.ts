@@ -49,9 +49,7 @@ const encodeSessionCursor = (value: { updatedAt: string; id: string }): string =
   return Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
 };
 
-const decodeSessionCursor = (
-  value: string,
-): { updatedAt: string; id: string } | null => {
+const decodeSessionCursor = (value: string): { updatedAt: string; id: string } | null => {
   try {
     const decoded = Buffer.from(value, 'base64url').toString('utf8');
     const parsed = JSON.parse(decoded) as unknown;
@@ -80,7 +78,7 @@ export class TypeOrmChatRepository implements ChatRepository {
   private readonly messageRepo: Repository<ChatMessage>;
   private readonly reportRepo: Repository<MessageReport>;
 
-  /** Creates a new TypeORM chat repository. @param dataSource - Active TypeORM DataSource used to obtain entity repositories. */
+  /** Creates a new TypeORM chat repository. \@param dataSource - Active TypeORM DataSource used to obtain entity repositories. */
   constructor(dataSource: DataSource) {
     this.sessionRepo = dataSource.getRepository(ChatSession);
     this.messageRepo = dataSource.getRepository(ChatMessage);
@@ -126,9 +124,7 @@ export class TypeOrmChatRepository implements ChatRepository {
    * @param messageId - UUID of the message.
    * @returns The message with session ownership info, or `null` if not found.
    */
-  async getMessageById(
-    messageId: string,
-  ): Promise<ChatMessageWithSessionOwnership | null> {
+  async getMessageById(messageId: string): Promise<ChatMessageWithSessionOwnership | null> {
     const message = await this.messageRepo.findOne({
       where: { id: messageId },
       relations: {
@@ -325,11 +321,7 @@ export class TypeOrmChatRepository implements ChatRepository {
    * @returns A page of sessions with previews, message counts, `hasMore` flag, and `nextCursor`.
    */
   // eslint-disable-next-line max-lines-per-function -- cursor pagination with message counts and previews requires multiple queries
-  async listSessions({
-    userId,
-    limit,
-    cursor,
-  }: ListSessionsParams): Promise<ChatSessionsPage> {
+  async listSessions({ userId, limit, cursor }: ListSessionsParams): Promise<ChatSessionsPage> {
     const effectiveLimit = Math.max(1, Math.min(limit, 50));
     const queryBuilder = this.sessionRepo
       .createQueryBuilder('session')
@@ -411,8 +403,7 @@ export class TypeOrmChatRepository implements ChatRepository {
       previewBySessionId.set(row.sessionId, {
         role: row.role,
         text: row.text,
-        createdAt:
-          row.createdAt instanceof Date ? row.createdAt : new Date(row.createdAt),
+        createdAt: row.createdAt instanceof Date ? row.createdAt : new Date(row.createdAt),
       });
     }
 

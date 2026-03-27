@@ -57,7 +57,7 @@ export class ChatSessionService {
 
     // Invalidate session list cache so new session appears immediately
     if (this.cache && input.userId) {
-      await this.cache.delByPrefix(`sessions:user:${input.userId}:`);
+      await this.cache.delByPrefix(`sessions:user:${String(input.userId)}:`);
     }
 
     return {
@@ -89,7 +89,7 @@ export class ChatSessionService {
 
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- zero fallback
     const limit = Math.max(1, Math.min(page.limit || 20, 50));
-    const cacheKey = `session:${sessionId}:${page.cursor ?? 'first'}:${limit}`;
+    const cacheKey = `session:${sessionId}:${page.cursor ?? 'first'}:${String(limit)}`;
 
     if (this.cache) {
       const cached = await this.cache.get<SessionResult>(cacheKey);
@@ -143,10 +143,7 @@ export class ChatSessionService {
    * @returns Paginated sessions with message previews.
    * @throws {AppError} 400 if userId is missing/invalid or cursor is malformed.
    */
-  async listSessions(
-    page: MessagePageQuery,
-    currentUserId?: number,
-  ): Promise<ListSessionsResult> {
+  async listSessions(page: MessagePageQuery, currentUserId?: number): Promise<ListSessionsResult> {
     if (!Number.isInteger(currentUserId) || Number(currentUserId) <= 0) {
       throw badRequest('Authenticated user id is required');
     }
@@ -159,7 +156,7 @@ export class ChatSessionService {
 
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- zero fallback
     const limit = Math.max(1, Math.min(page.limit || 20, 50));
-    const cacheKey = `sessions:user:${userId}:${page.cursor ?? 'first'}:${limit}`;
+    const cacheKey = `sessions:user:${String(userId)}:${page.cursor ?? 'first'}:${String(limit)}`;
 
     if (this.cache) {
       const cached = await this.cache.get<ListSessionsResult>(cacheKey);
@@ -224,7 +221,7 @@ export class ChatSessionService {
     if (deleted && this.cache) {
       await this.cache.delByPrefix(`session:${sessionId}:`);
       if (session.user?.id) {
-        await this.cache.delByPrefix(`sessions:user:${session.user.id}:`);
+        await this.cache.delByPrefix(`sessions:user:${String(session.user.id)}:`);
       }
     }
 

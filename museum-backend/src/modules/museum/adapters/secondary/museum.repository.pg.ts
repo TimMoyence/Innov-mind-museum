@@ -14,7 +14,15 @@ export class MuseumRepositoryPg implements IMuseumRepository {
         `INSERT INTO "museums" (name, slug, address, description, latitude, longitude, config)
          VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING *`,
-        [input.name, input.slug, input.address ?? null, input.description ?? null, input.latitude ?? null, input.longitude ?? null, JSON.stringify(input.config ?? {})],
+        [
+          input.name,
+          input.slug,
+          input.address ?? null,
+          input.description ?? null,
+          input.latitude ?? null,
+          input.longitude ?? null,
+          JSON.stringify(input.config ?? {}),
+        ],
       );
       return result.rows[0];
     } catch (err: unknown) {
@@ -31,14 +39,38 @@ export class MuseumRepositoryPg implements IMuseumRepository {
     const values: unknown[] = [];
     let idx = 1;
 
-    if (input.name !== undefined) { sets.push(`name = $${idx++}`); values.push(input.name); }
-    if (input.slug !== undefined) { sets.push(`slug = $${idx++}`); values.push(input.slug); }
-    if (input.address !== undefined) { sets.push(`address = $${idx++}`); values.push(input.address); }
-    if (input.description !== undefined) { sets.push(`description = $${idx++}`); values.push(input.description); }
-    if (input.latitude !== undefined) { sets.push(`latitude = $${idx++}`); values.push(input.latitude); }
-    if (input.longitude !== undefined) { sets.push(`longitude = $${idx++}`); values.push(input.longitude); }
-    if (input.config !== undefined) { sets.push(`config = $${idx++}`); values.push(JSON.stringify(input.config)); }
-    if (input.isActive !== undefined) { sets.push(`is_active = $${idx++}`); values.push(input.isActive); }
+    if (input.name !== undefined) {
+      sets.push(`name = $${idx++}`);
+      values.push(input.name);
+    }
+    if (input.slug !== undefined) {
+      sets.push(`slug = $${idx++}`);
+      values.push(input.slug);
+    }
+    if (input.address !== undefined) {
+      sets.push(`address = $${idx++}`);
+      values.push(input.address);
+    }
+    if (input.description !== undefined) {
+      sets.push(`description = $${idx++}`);
+      values.push(input.description);
+    }
+    if (input.latitude !== undefined) {
+      sets.push(`latitude = $${idx++}`);
+      values.push(input.latitude);
+    }
+    if (input.longitude !== undefined) {
+      sets.push(`longitude = $${idx++}`);
+      values.push(input.longitude);
+    }
+    if (input.config !== undefined) {
+      sets.push(`config = $${idx++}`);
+      values.push(JSON.stringify(input.config));
+    }
+    if (input.isActive !== undefined) {
+      sets.push(`is_active = $${idx++}`);
+      values.push(input.isActive);
+    }
 
     if (sets.length === 0) return await this.findById(id);
 

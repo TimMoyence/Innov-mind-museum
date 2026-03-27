@@ -97,7 +97,13 @@
     "unsaved_hint": "Hold to save",
     "saved_filter_on": "Saved filter ON",
     "saved_filter_off": "Saved filter OFF",
-    "sort_label": "sort: {{sortMode}}"
+    "sort_label": "sort: {{sortMode}}",
+    "swipe_delete": "Swipe to delete",
+    "delete_confirm": "Delete this conversation?",
+    "edit": "Edit",
+    "select_all": "Select All",
+    "delete_selected": "Delete ({{count}})",
+    "selected_count": "{{count}} conversation(s) will be deleted."
   },
   "settings": {
     "title": "Settings",
@@ -134,7 +140,21 @@
     "sign_out": "Sign out",
     "preferences": "Preferences",
     "security": "Security",
-    "biometric_lock": "Biometric Lock"
+    "biometric_lock": "Biometric Lock",
+    "change_password": "Change password",
+    "export_data": "Export my data",
+    "export_data_desc": "Download all your personal data (GDPR)",
+    "export_data_success": "Data exported successfully"
+  },
+  "change_password": {
+    "title": "Change Password",
+    "current": "Current password",
+    "new": "New password",
+    "confirm": "Confirm new password",
+    "submit": "Update password",
+    "success": "Password updated successfully",
+    "error_mismatch": "Passwords do not match",
+    "error_short": "Password must be at least 8 characters"
   },
   "preferences": {
     "title": "Preferences",
@@ -315,7 +335,8 @@
     "voice_message": "[Voice message]",
     "share_footer": "Shared via Musaium — Your museum companion\nhttps://musaium.app",
     "replace_image": "Replace",
-    "remove_image": "Remove"
+    "remove_image": "Remove",
+    "crop": "Crop"
   },
   "chatInput": {
     "placeholder": "Ask about an artwork, monument, or send voice/photo...",
@@ -504,7 +525,9 @@
       "delete_account_hint": "This action cannot be undone",
       "back_home": "Return to home screen",
       "sign_out": "Sign out",
-      "sign_out_hint": "Signs out and returns to login"
+      "sign_out_hint": "Signs out and returns to login",
+      "change_password": "Change your account password",
+      "export_data": "Export all your personal data"
     },
     "preferences": {
       "language_button": "Select {{language}} language",

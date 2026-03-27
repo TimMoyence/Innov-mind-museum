@@ -76,7 +76,11 @@ const normalizeEndpoint = (endpoint: string): URL => {
   return url;
 };
 
-const buildObjectPath = (params: { bucket: string; key: string; endpointPath?: string }): string => {
+const buildObjectPath = (params: {
+  bucket: string;
+  key: string;
+  endpointPath?: string;
+}): string => {
   const base = params.endpointPath?.replace(/\/+$/, '') ?? '';
   const bucketPart = encodePathSegments(params.bucket);
   const keyPart = encodePathSegments(params.key);
@@ -92,10 +96,7 @@ const joinKeyParts = (...parts: (string | undefined)[]): string => {
     .join('/');
 };
 
-const normalizeObjectKey = (params: {
-  key: string;
-  objectKeyPrefix?: string;
-}): string => {
+const normalizeObjectKey = (params: { key: string; objectKeyPrefix?: string }): string => {
   const normalized = joinKeyParts(params.objectKeyPrefix, params.key);
   if (!normalized) {
     throw new Error('S3 object key cannot be empty');
@@ -112,10 +113,9 @@ const buildReadBaseUrlAndPath = (params: {
   bucket: string;
   key: string;
 }): { url: URL; objectPath: string } => {
-  const publicBaseUrl =
-    params.publicBaseUrl?.includes('{bucket}')
-      ? params.publicBaseUrl.replaceAll('{bucket}', params.bucket)
-      : params.publicBaseUrl;
+  const publicBaseUrl = params.publicBaseUrl?.includes('{bucket}')
+    ? params.publicBaseUrl.replaceAll('{bucket}', params.bucket)
+    : params.publicBaseUrl;
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
   const base = normalizeEndpoint(publicBaseUrl || params.endpoint);
   const bucketPath = `/${encodePathSegments(params.bucket)}`;
@@ -123,8 +123,7 @@ const buildReadBaseUrlAndPath = (params: {
 
   const hasBucketInHost = base.hostname.startsWith(`${params.bucket}.`);
   const pathname = base.pathname.replace(/\/+$/, '');
-  const hasBucketInPath =
-    pathname === bucketPath || pathname.startsWith(`${bucketPath}/`);
+  const hasBucketInPath = pathname === bucketPath || pathname.startsWith(`${bucketPath}/`);
 
   let objectPath: string;
   if (hasBucketInHost) {
@@ -156,7 +155,9 @@ const canonicalQueryString = (query: [string, string][]): string => {
     .join('&');
 };
 
-const buildCanonicalHeaders = (headers: Record<string, string>): {
+const buildCanonicalHeaders = (
+  headers: Record<string, string>,
+): {
   canonicalHeaders: string;
   signedHeaders: string;
 } => {
@@ -233,7 +234,9 @@ const httpRequest = async (params: {
       });
     }
 
-    req.on('error', (error) => { finish(error); });
+    req.on('error', (error) => {
+      finish(error);
+    });
     if (params.body) req.write(params.body);
     req.end();
   });
@@ -320,9 +323,7 @@ const buildS3SignedHeadersForPut = (params: {
       'Content-Type': params.contentType,
       'X-Amz-Content-Sha256': payloadHash,
       'X-Amz-Date': amzDate,
-      ...(params.config.sessionToken
-        ? { 'X-Amz-Security-Token': params.config.sessionToken }
-        : {}),
+      ...(params.config.sessionToken ? { 'X-Amz-Security-Token': params.config.sessionToken } : {}),
       Authorization: authorization,
     },
   };
@@ -350,7 +351,7 @@ export const parseS3ImageRef = (imageRef: string): { key: string } | null => {
  * @returns `true` if the reference starts with `s3://`.
  */
 export const isS3ImageRef = (imageRef: string | null | undefined): boolean => {
-  return typeof imageRef === 'string' && imageRef.startsWith("s3://");
+  return typeof imageRef === 'string' && imageRef.startsWith('s3://');
 };
 
 /**
@@ -423,7 +424,10 @@ export const buildS3PresignedReadUrl = (params: {
   );
   const query: [string, string][] = [
     ['X-Amz-Algorithm', 'AWS4-HMAC-SHA256'],
-    ['X-Amz-Credential', `${params.config.accessKeyId}/${dateStamp}/${params.config.region}/s3/aws4_request`],
+    [
+      'X-Amz-Credential',
+      `${params.config.accessKeyId}/${dateStamp}/${params.config.region}/s3/aws4_request`,
+    ],
     ['X-Amz-Date', amzDate],
     ['X-Amz-Expires', String(ttlSeconds)],
     ['X-Amz-SignedHeaders', 'host'],
@@ -506,9 +510,7 @@ const buildS3SignedHeaders = (params: {
   return {
     'X-Amz-Content-Sha256': params.payloadHash,
     'X-Amz-Date': amzDate,
-    ...(params.config.sessionToken
-      ? { 'X-Amz-Security-Token': params.config.sessionToken }
-      : {}),
+    ...(params.config.sessionToken ? { 'X-Amz-Security-Token': params.config.sessionToken } : {}),
     Authorization: authorization,
   };
 };
@@ -540,7 +542,10 @@ export const listObjectsByPrefix = async (
 ): Promise<ListObjectsResult> => {
   const endpoint = normalizeEndpoint(config.endpoint);
   const bucketPath = `/${encodePathSegments(config.bucket)}`;
-  const objectPath = `${endpoint.pathname.replace(/\/+$/, '')}${bucketPath}`.replace(/\/{2,}/g, '/');
+  const objectPath = `${endpoint.pathname.replace(/\/+$/, '')}${bucketPath}`.replace(
+    /\/{2,}/g,
+    '/',
+  );
 
   const queryPairs: [string, string][] = [
     ['list-type', '2'],
@@ -598,7 +603,10 @@ export const deleteObjectsBatch = async (
 
   const endpoint = normalizeEndpoint(config.endpoint);
   const bucketPath = `/${encodePathSegments(config.bucket)}`;
-  const objectPath = `${endpoint.pathname.replace(/\/+$/, '')}${bucketPath}`.replace(/\/{2,}/g, '/');
+  const objectPath = `${endpoint.pathname.replace(/\/+$/, '')}${bucketPath}`.replace(
+    /\/{2,}/g,
+    '/',
+  );
 
   const qs = 'delete=';
   const url = new URL(endpoint.toString());
@@ -647,7 +655,7 @@ export class S3CompatibleImageStorage implements ImageStorage {
    *
    * @param input - Image data, MIME type, and optional object key.
    * @returns An `s3://<key>` storage reference.
-   * @throws Error if the S3 PUT request fails.
+   * @throws {Error} If the S3 PUT request fails.
    */
   async save(input: SaveImageInput): Promise<string> {
     return await startSpan({ name: 'image.upload.s3', op: 'storage.upload' }, async () => {
@@ -698,12 +706,10 @@ export class S3CompatibleImageStorage implements ImageStorage {
     });
     let continuationToken: string | undefined;
     do {
-      const { keys, nextToken } = await listObjectsByPrefix(
-        this.config,
-        prefix,
-        continuationToken,
+      const { keys, nextToken } = await listObjectsByPrefix(this.config, prefix, continuationToken);
+      const matching = keys.filter(
+        (k) => k.includes(`/${userPattern}/`) || k.includes(`/${userPattern}`),
       );
-      const matching = keys.filter((k) => k.includes(`/${userPattern}/`) || k.includes(`/${userPattern}`));
       if (matching.length > 0) {
         // DeleteObjects supports max 1000 keys per call — list already returns max 1000
         await deleteObjectsBatch(this.config, matching);

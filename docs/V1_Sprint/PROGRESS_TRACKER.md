@@ -509,3 +509,80 @@
 | Store Sub | 7       | 7      | 100%    | 951           | 106            |
 | Tech Polish | 12    | 12     | 100%    | 951           | 161 (+55)      |
 | **Total** | **184** | **183** | **99%** | **951**       | **161**        |
+
+---
+
+## V3 Sprints (2026-03-26 a 2026-03-27) — Post V3_REVIEW_AND_PLAN
+
+> V3.0 Pre-requis + V3.1 Sprints 2-4 + V3.2 Sprint 5 executes. Commits `75b8e70` a `5b3fb88`.
+
+### V3.1 Sprint 2 — Admin Web Complet
+
+- [x] 4 pages admin web connectees (analytics, reports, tickets, support) — Recharts, i18n dictionnaire
+- [x] i18n admin web migre vers fichier dictionnaire structure
+
+### V3.1 Sprint 3 — Support Mobile + UX Polish
+
+- [x] Tickets support in-app (creer, lister, detail, repondre) — 3 ecrans
+- [x] UX polish (haptic, onboarding, i18n)
+
+### V3.1 Sprint 4 — Wikidata Knowledge Enrichment
+
+- [x] Wikidata knowledge enrichment integre dans le pipeline LLM
+- [x] Art-topic classifier integration
+
+### V3.2 Sprint 5 — Tests Backend Core
+
+- [x] +40 tests chat core services + guardrail async fix
+
+### R13 — Liquid Glass Redesign + Review Module
+
+- [x] Museum-web liquid glass redesign
+- [x] Review module backend + frontend
+
+### Metriques post-V3
+
+- [x] Backend: 1054 tests, 98 suites, tsc PASS, 0 as-any
+- [x] Frontend: tsc PASS (10 warnings ESLint)
+- [x] Coverage: 68.6% stmts, 53.1% branches
+
+---
+
+## Audit Complet 2026-03-27 — Remaining Work
+
+> Audit 4 agents paralleles (backend, frontend, tests, devops). Score global: 84/100.
+> Rapport detaille: `.claude/team-reports/2026-03-27_full-audit.md`
+
+### TIER 0 — Store (PO tasks, pas de code)
+
+- [ ] RW-01: Remplir Google Play Data Safety Form dans Play Console (ref: `docs/GOOGLE_PLAY_DATA_SAFETY.md`)
+- [-] ~~RW-02: Instagram handle~~ — reporte volontairement, pas prioritaire
+
+### TIER 1 — CRITIQUE (avant launch public) — TERMINE 2026-03-27
+
+- [x] RW-03: Fixer Frontend Jest — `transformIgnorePatterns` + `.pnpm` (12 suites, 72 tests restored)
+- [x] RW-04: UI "Change Password" dans Settings — `app/(stack)/change-password.tsx` + authApi + i18n 8 langues
+- [x] RW-05: UI "Export My Data" dans Settings — bouton + Share.share() + authApi + i18n 8 langues
+- [x] RW-06: Procedure rollback production — `docs/RUNBOOK.md` (Docker, migration, DB restore, escalade)
+- [x] RW-07: Politique rotation secrets — section ajoutee dans `docs/CI_CD_SECRETS.md` (15 secrets, dual-key JWT)
+
+### TIER 2 — IMPORTANT — TERMINE 2026-03-27
+
+- [x] RW-08: Change Email endpoint backend — `PUT /change-email` + `POST /confirm-email-change` + migration + 13 tests
+- [-] RW-09: CAPTCHA (hCaptcha) — defere (necessite compte hCaptcha)
+- [x] RW-10: Trivy staging unifie (0.28.0 → 0.35.0)
+- [x] RW-11: Coverage thresholds ratchet (63/49/55/63 → 66/51/58/65)
+- [x] RW-12: Infrastructure tests museum-web — vitest + 51 tests (API, i18n, components, admin)
+- [x] RW-13: OpenAPI validation ajoutee dans mobile-release.yml
+- [-] RW-14: Network Security Config Android — defere (Expo managed ne supporte pas directement)
+
+### TIER 3 — Backlog v1.1+ — TERMINE 2026-03-27
+
+- [-] RW-15: Map view musees — defere (react-native-maps = gros chantier, v1.1)
+- [x] RW-16: Crop image UI — bouton crop dans ImagePreviewModal (crop carre centre)
+- [x] RW-17: Swipe-to-delete conversations — SwipeableConversationCard + gesture-handler
+- [x] RW-18: Bulk delete conversations — mode edit + checkboxes + barre actions + confirmation
+- [-] RW-19: PostHog analytics — defere (necessite compte)
+- [x] RW-20: Tests accessibilite — 19 tests frontend (a11y audit) + 10 tests museum-web
+- [x] RW-21: Tests snapshots — 8 snapshots frontend + 10 snapshots museum-web
+- [x] RW-22: Lighthouse CI museum-web — workflow + lighthouserc.json (perf 85, a11y 90, SEO 90)

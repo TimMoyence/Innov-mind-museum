@@ -86,10 +86,22 @@ describe('buildUserMemoryPromptBlock', () => {
     const memory = makeMemory({
       sessionCount: 3,
       preferredExpertise: 'expert',
-      favoritePeriods: Array.from({ length: 5 }, (_, i) => `Period ${i + 1} with a very long name that takes up space`),
-      favoriteArtists: Array.from({ length: 5 }, (_, i) => `Artist ${i + 1} with a very long name indeed`),
-      museumsVisited: Array.from({ length: 5 }, (_, i) => `Museum ${i + 1} of Fine Art and History`),
-      interests: Array.from({ length: 5 }, (_, i) => `Interest area ${i + 1} that is quite verbose`),
+      favoritePeriods: Array.from(
+        { length: 5 },
+        (_, i) => `Period ${i + 1} with a very long name that takes up space`,
+      ),
+      favoriteArtists: Array.from(
+        { length: 5 },
+        (_, i) => `Artist ${i + 1} with a very long name indeed`,
+      ),
+      museumsVisited: Array.from(
+        { length: 5 },
+        (_, i) => `Museum ${i + 1} of Fine Art and History`,
+      ),
+      interests: Array.from(
+        { length: 5 },
+        (_, i) => `Interest area ${i + 1} that is quite verbose`,
+      ),
       totalArtworksDiscussed: 100,
       summary: 'A'.repeat(300),
     });

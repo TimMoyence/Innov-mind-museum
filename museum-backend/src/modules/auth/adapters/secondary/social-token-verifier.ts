@@ -90,9 +90,10 @@ const decodeHeader = (token: string): { kid?: string; alg?: string } => {
   if (parts.length !== 3) {
     throw new Error('Invalid JWT format');
   }
-  const header = JSON.parse(
-    Buffer.from(parts[0], 'base64url').toString('utf8'),
-  ) as { kid?: string; alg?: string };
+  const header = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8')) as {
+    kid?: string;
+    alg?: string;
+  };
   return header;
 };
 
@@ -101,20 +102,15 @@ const decodeHeader = (token: string): { kid?: string; alg?: string } => {
  *
  * @param idToken - Raw JWT string from Apple.
  * @returns Decoded identity claims.
- * @throws Error if the token is invalid, expired, or the signing key cannot be found.
+ * @throws {Error} If the token is invalid, expired, or the signing key cannot be found.
  */
-export const verifyAppleIdToken = async (
-  idToken: string,
-): Promise<SocialTokenPayload> => {
+export const verifyAppleIdToken = async (idToken: string): Promise<SocialTokenPayload> => {
   const header = decodeHeader(idToken);
   if (!header.kid) {
     throw new Error('Apple ID token missing kid in header');
   }
 
-  const publicKey = await getSigningKey(
-    'https://appleid.apple.com/auth/keys',
-    header.kid,
-  );
+  const publicKey = await getSigningKey('https://appleid.apple.com/auth/keys', header.kid);
 
   const decoded = jwt.verify(idToken, publicKey, {
     algorithms: ['RS256'],
@@ -135,20 +131,15 @@ export const verifyAppleIdToken = async (
  *
  * @param idToken - Raw JWT string from Google.
  * @returns Decoded identity claims.
- * @throws Error if the token is invalid, expired, or the signing key cannot be found.
+ * @throws {Error} If the token is invalid, expired, or the signing key cannot be found.
  */
-export const verifyGoogleIdToken = async (
-  idToken: string,
-): Promise<SocialTokenPayload> => {
+export const verifyGoogleIdToken = async (idToken: string): Promise<SocialTokenPayload> => {
   const header = decodeHeader(idToken);
   if (!header.kid) {
     throw new Error('Google ID token missing kid in header');
   }
 
-  const publicKey = await getSigningKey(
-    'https://www.googleapis.com/oauth2/v3/certs',
-    header.kid,
-  );
+  const publicKey = await getSigningKey('https://www.googleapis.com/oauth2/v3/certs', header.kid);
 
   const decoded = jwt.verify(idToken, publicKey, {
     algorithms: ['RS256'],
@@ -174,7 +165,7 @@ export type SocialProvider = 'apple' | 'google';
  * @param provider - Social provider (`apple` or `google`).
  * @param idToken - Raw JWT string from the provider.
  * @returns Decoded identity claims.
- * @throws Error for unsupported providers or invalid tokens.
+ * @throws {Error} For unsupported providers or invalid tokens.
  */
 export const verifySocialIdToken = async (
   provider: SocialProvider,

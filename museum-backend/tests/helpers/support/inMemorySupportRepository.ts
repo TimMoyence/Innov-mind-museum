@@ -145,7 +145,14 @@ export class InMemorySupportRepository implements ISupportRepository {
   }
 
   /** Test helper: seed a ticket directly. */
-  seed(ticket: Partial<StoredTicket> & { id: string; userId: number; subject: string; description: string }): StoredTicket {
+  seed(
+    ticket: Partial<StoredTicket> & {
+      id: string;
+      userId: number;
+      subject: string;
+      description: string;
+    },
+  ): StoredTicket {
     const full: StoredTicket = {
       status: 'open',
       priority: 'medium',

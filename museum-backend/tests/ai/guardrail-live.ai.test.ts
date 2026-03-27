@@ -1,7 +1,4 @@
-import {
-  shouldRunAiTests,
-  buildAiTestService,
-} from './setup/ai-test-helpers';
+import { shouldRunAiTests, buildAiTestService } from './setup/ai-test-helpers';
 
 const describeAi = shouldRunAiTests ? describe : describe.skip;
 

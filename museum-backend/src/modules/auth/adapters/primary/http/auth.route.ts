@@ -16,11 +16,20 @@ import {
   AUDIT_API_KEY_CREATED,
   AUDIT_API_KEY_REVOKED,
   AUDIT_SECURITY_RATE_LIMIT,
+  AUDIT_AUTH_EMAIL_CHANGE_REQUEST,
+  AUDIT_AUTH_EMAIL_CHANGE_CONFIRMED,
 } from '@shared/audit/audit.types';
 import { AppError, badRequest } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
-import { isAuthenticated, isAuthenticatedJwtOnly } from '@src/helpers/middleware/authenticated.middleware';
-import { createRateLimitMiddleware, byUserId, byIp } from '@src/helpers/middleware/rate-limit.middleware';
+import {
+  isAuthenticated,
+  isAuthenticatedJwtOnly,
+} from '@src/helpers/middleware/authenticated.middleware';
+import {
+  createRateLimitMiddleware,
+  byUserId,
+  byIp,
+} from '@src/helpers/middleware/rate-limit.middleware';
 import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 
 import {
@@ -30,6 +39,8 @@ import {
   logoutSchema,
   socialLoginSchema,
   changePasswordSchema,
+  changeEmailSchema,
+  confirmEmailChangeSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
   verifyEmailSchema,
@@ -45,6 +56,8 @@ import {
   exportUserDataUseCase,
   getProfileUseCase,
   changePasswordUseCase,
+  changeEmailUseCase,
+  confirmEmailChangeUseCase,
   verifyEmailUseCase,
   generateApiKeyUseCase,
   revokeApiKeyUseCase,
@@ -69,213 +82,329 @@ const loginLimiter = createRateLimitMiddleware({
   keyGenerator: byIp,
 });
 
-authRouter.post('/register', registerLimiter, validateBody(registerSchema), async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { email, password, firstname, lastname } = req.body;
-    const user = await registerUseCase.execute(email, password, firstname, lastname);
-    auditService.log({
-      action: AUDIT_AUTH_REGISTER,
-      actorType: 'user',
-      actorId: user.id,
-      targetType: 'user',
-      targetId: String(user.id),
-      ip: req.ip,
-      requestId: req.requestId,
-    });
-    res.status(201).json({ user: { id: user.id, email: user.email } });
-  } catch (error) { next(error); }
-});
-
-authRouter.post('/login', loginLimiter, validateBody(loginSchema), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const { email, password } = req.body;
-    const session = await authSessionService.login(email, password);
-    auditService.log({
-      action: AUDIT_AUTH_LOGIN_SUCCESS,
-      actorType: 'user',
-      actorId: session.user.id,
-      targetType: 'user',
-      targetId: String(session.user.id),
-      ip: req.ip,
-      requestId: req.requestId,
-    });
-    res.status(200).json(session);
-  } catch (error) {
-    if (error instanceof AppError && error.code === 'INVALID_CREDENTIALS') {
+authRouter.post(
+  '/register',
+  registerLimiter,
+  validateBody(registerSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { email, password, firstname, lastname } = req.body;
+      const user = await registerUseCase.execute(email, password, firstname, lastname);
       auditService.log({
-        action: AUDIT_AUTH_LOGIN_FAILED,
-        actorType: 'anonymous',
-        metadata: { email: req.body?.email },
+        action: AUDIT_AUTH_REGISTER,
+        actorType: 'user',
+        actorId: user.id,
+        targetType: 'user',
+        targetId: String(user.id),
         ip: req.ip,
         requestId: req.requestId,
       });
+      res.status(201).json({ user: { id: user.id, email: user.email } });
+    } catch (error) {
+      next(error);
     }
-    if (error instanceof AppError && error.code === 'TOO_MANY_REQUESTS') {
+  },
+);
+
+authRouter.post(
+  '/login',
+  loginLimiter,
+  validateBody(loginSchema),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { email, password } = req.body;
+      const session = await authSessionService.login(email, password);
       auditService.log({
-        action: AUDIT_SECURITY_RATE_LIMIT,
-        actorType: 'anonymous',
-        metadata: { email: req.body?.email, endpoint: '/login' },
+        action: AUDIT_AUTH_LOGIN_SUCCESS,
+        actorType: 'user',
+        actorId: session.user.id,
+        targetType: 'user',
+        targetId: String(session.user.id),
         ip: req.ip,
         requestId: req.requestId,
       });
+      res.status(200).json(session);
+    } catch (error) {
+      if (error instanceof AppError && error.code === 'INVALID_CREDENTIALS') {
+        auditService.log({
+          action: AUDIT_AUTH_LOGIN_FAILED,
+          actorType: 'anonymous',
+          metadata: { email: req.body?.email },
+          ip: req.ip,
+          requestId: req.requestId,
+        });
+      }
+      if (error instanceof AppError && error.code === 'TOO_MANY_REQUESTS') {
+        auditService.log({
+          action: AUDIT_SECURITY_RATE_LIMIT,
+          actorType: 'anonymous',
+          metadata: { email: req.body?.email, endpoint: '/login' },
+          ip: req.ip,
+          requestId: req.requestId,
+        });
+      }
+      next(error);
     }
-    next(error);
-  }
-});
+  },
+);
 
-authRouter.post('/refresh', validateBody(refreshSchema), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const { refreshToken } = req.body;
-    const session = await authSessionService.refresh(refreshToken);
-    res.status(200).json(session);
-  } catch (error) { next(error); }
-});
+authRouter.post(
+  '/refresh',
+  validateBody(refreshSchema),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { refreshToken } = req.body;
+      const session = await authSessionService.refresh(refreshToken);
+      res.status(200).json(session);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
-authRouter.post('/logout', validateBody(logoutSchema), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const { refreshToken } = req.body;
-    await authSessionService.logout(refreshToken);
-    auditService.log({
-      action: AUDIT_AUTH_LOGOUT,
-      actorType: 'anonymous',
-      ip: req.ip,
-      requestId: req.requestId,
-    });
-    res.status(200).json({ success: true });
-  } catch (error) { next(error); }
-});
+authRouter.post(
+  '/logout',
+  validateBody(logoutSchema),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { refreshToken } = req.body;
+      await authSessionService.logout(refreshToken);
+      auditService.log({
+        action: AUDIT_AUTH_LOGOUT,
+        actorType: 'anonymous',
+        ip: req.ip,
+        requestId: req.requestId,
+      });
+      res.status(200).json({ success: true });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
-authRouter.get('/me', isAuthenticated, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const jwtUser = (req as Request & { user?: { id: number } }).user;
-  if (!jwtUser?.id) {
-    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
-    return;
-  }
-
-  try {
-    const profile = await getProfileUseCase.execute(jwtUser.id);
-    if (!profile) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'User not found' } });
+authRouter.get(
+  '/me',
+  isAuthenticated,
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const jwtUser = (req as Request & { user?: { id: number } }).user;
+    if (!jwtUser?.id) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
       return;
     }
 
-    res.status(200).json({
-      user: {
+    try {
+      const profile = await getProfileUseCase.execute(jwtUser.id);
+      if (!profile) {
+        res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'User not found' } });
+        return;
+      }
+
+      res.status(200).json({
+        user: {
+          id: profile.id,
+          email: profile.email,
+          firstname: profile.firstname ?? null,
+          lastname: profile.lastname ?? null,
+          role: profile.role,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+authRouter.post(
+  '/social-login',
+  validateBody(socialLoginSchema),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { provider, idToken } = req.body;
+      const session = await socialLoginUseCase.execute(provider, idToken);
+      auditService.log({
+        action: AUDIT_AUTH_SOCIAL_LOGIN,
+        actorType: 'user',
+        actorId: session.user.id,
+        targetType: 'user',
+        targetId: String(session.user.id),
+        metadata: { provider },
+        ip: req.ip,
+        requestId: req.requestId,
+      });
+      res.status(200).json(session);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+authRouter.delete(
+  '/account',
+  isAuthenticated,
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const user = (
+      req as Request & {
+        user?: { id?: number };
+      }
+    ).user;
+
+    if (!user?.id) {
+      res.status(401).json({
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+      });
+      return;
+    }
+
+    try {
+      auditService.log({
+        action: AUDIT_ACCOUNT_DELETED,
+        actorType: 'user',
+        actorId: user.id,
+        targetType: 'user',
+        targetId: String(user.id),
+        ip: req.ip,
+        requestId: req.requestId,
+      });
+      await deleteAccountUseCase.execute(user.id);
+      res.status(200).json({ deleted: true });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+authRouter.get(
+  '/export-data',
+  isAuthenticated,
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const jwtUser = (req as Request & { user?: { id: number } }).user;
+
+    if (!jwtUser?.id) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
+      return;
+    }
+
+    try {
+      const profile = await getProfileUseCase.execute(jwtUser.id);
+      if (!profile) {
+        res.status(404).json({ error: { code: 'NOT_FOUND', message: 'User not found' } });
+        return;
+      }
+
+      const result = await exportUserDataUseCase.execute({
         id: profile.id,
         email: profile.email,
-        firstname: profile.firstname ?? null,
-        lastname: profile.lastname ?? null,
-        role: profile.role,
-      },
-    });
-  } catch (error) { next(error); }
-});
-
-authRouter.post('/social-login', validateBody(socialLoginSchema), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const { provider, idToken } = req.body;
-    const session = await socialLoginUseCase.execute(provider, idToken);
-    auditService.log({
-      action: AUDIT_AUTH_SOCIAL_LOGIN,
-      actorType: 'user',
-      actorId: session.user.id,
-      targetType: 'user',
-      targetId: String(session.user.id),
-      metadata: { provider },
-      ip: req.ip,
-      requestId: req.requestId,
-    });
-    res.status(200).json(session);
-  } catch (error) { next(error); }
-});
-
-authRouter.delete('/account', isAuthenticated, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const user = (
-    req as Request & {
-      user?: { id?: number };
+        firstname: profile.firstname,
+        lastname: profile.lastname,
+        createdAt: profile.createdAt,
+        updatedAt: profile.updatedAt,
+      });
+      auditService.log({
+        action: AUDIT_DATA_EXPORT,
+        actorType: 'user',
+        actorId: jwtUser.id,
+        targetType: 'user',
+        targetId: String(jwtUser.id),
+        ip: req.ip,
+        requestId: req.requestId,
+      });
+      res.json(result);
+    } catch (error) {
+      next(error);
     }
-  ).user;
+  },
+);
 
-  if (!user?.id) {
-    res.status(401).json({
-      error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
-    });
-    return;
-  }
-
-  try {
-    auditService.log({
-      action: AUDIT_ACCOUNT_DELETED,
-      actorType: 'user',
-      actorId: user.id,
-      targetType: 'user',
-      targetId: String(user.id),
-      ip: req.ip,
-      requestId: req.requestId,
-    });
-    await deleteAccountUseCase.execute(user.id);
-    res.status(200).json({ deleted: true });
-  } catch (error) { next(error); }
-});
-
-authRouter.get('/export-data', isAuthenticated, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const jwtUser = (req as Request & { user?: { id: number } }).user;
-
-  if (!jwtUser?.id) {
-    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
-    return;
-  }
-
-  try {
-    const profile = await getProfileUseCase.execute(jwtUser.id);
-    if (!profile) {
-      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'User not found' } });
+authRouter.put(
+  '/change-password',
+  isAuthenticated,
+  validateBody(changePasswordSchema),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const jwtUser = (req as Request & { user?: { id: number } }).user;
+    if (!jwtUser?.id) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
       return;
     }
 
-    const result = await exportUserDataUseCase.execute({
-      id: profile.id,
-      email: profile.email,
-      firstname: profile.firstname,
-      lastname: profile.lastname,
-      createdAt: profile.createdAt,
-      updatedAt: profile.updatedAt,
-    });
-    auditService.log({
-      action: AUDIT_DATA_EXPORT,
-      actorType: 'user',
-      actorId: jwtUser.id,
-      targetType: 'user',
-      targetId: String(jwtUser.id),
-      ip: req.ip,
-      requestId: req.requestId,
-    });
-    res.json(result);
-  } catch (error) { next(error); }
+    try {
+      const { currentPassword, newPassword } = req.body;
+      await changePasswordUseCase.execute(jwtUser.id, currentPassword, newPassword);
+      auditService.log({
+        action: AUDIT_AUTH_PASSWORD_CHANGE,
+        actorType: 'user',
+        actorId: jwtUser.id,
+        targetType: 'user',
+        targetId: String(jwtUser.id),
+        ip: req.ip,
+        requestId: req.requestId,
+      });
+      res.status(200).json({ message: 'Password changed successfully.' });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+const changeEmailLimiter = createRateLimitMiddleware({
+  limit: 5,
+  windowMs: 300_000,
+  keyGenerator: byUserId,
 });
 
-authRouter.put('/change-password', isAuthenticated, validateBody(changePasswordSchema), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const jwtUser = (req as Request & { user?: { id: number } }).user;
-  if (!jwtUser?.id) {
-    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
-    return;
-  }
+authRouter.put(
+  '/change-email',
+  isAuthenticated,
+  changeEmailLimiter,
+  validateBody(changeEmailSchema),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const jwtUser = (req as Request & { user?: { id: number } }).user;
+    if (!jwtUser?.id) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
+      return;
+    }
 
-  try {
-    const { currentPassword, newPassword } = req.body;
-    await changePasswordUseCase.execute(jwtUser.id, currentPassword, newPassword);
-    auditService.log({
-      action: AUDIT_AUTH_PASSWORD_CHANGE,
-      actorType: 'user',
-      actorId: jwtUser.id,
-      targetType: 'user',
-      targetId: String(jwtUser.id),
-      ip: req.ip,
-      requestId: req.requestId,
-    });
-    res.status(200).json({ message: 'Password changed successfully.' });
-  } catch (error) { next(error); }
-});
+    try {
+      const { newEmail, currentPassword } = req.body;
+      const token = await changeEmailUseCase.execute(jwtUser.id, newEmail, currentPassword);
+      auditService.log({
+        action: AUDIT_AUTH_EMAIL_CHANGE_REQUEST,
+        actorType: 'user',
+        actorId: jwtUser.id,
+        targetType: 'user',
+        targetId: String(jwtUser.id),
+        metadata: { newEmail },
+        ip: req.ip,
+        requestId: req.requestId,
+      });
+      res.status(200).json({
+        message: 'A confirmation email has been sent to the new address.',
+        ...(env.nodeEnv === 'development' ? { debugToken: token } : {}),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+authRouter.post(
+  '/confirm-email-change',
+  validateBody(confirmEmailChangeSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { token } = req.body;
+      const result = await confirmEmailChangeUseCase.execute(token);
+      auditService.log({
+        action: AUDIT_AUTH_EMAIL_CHANGE_CONFIRMED,
+        actorType: 'anonymous',
+        ip: req.ip,
+        requestId: req.requestId,
+      });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 const passwordResetLimiter = createRateLimitMiddleware({
   limit: 5,
@@ -283,51 +412,71 @@ const passwordResetLimiter = createRateLimitMiddleware({
   keyGenerator: byIp,
 });
 
-authRouter.post('/forgot-password', passwordResetLimiter, validateBody(forgotPasswordSchema), async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { email } = req.body;
-    const token = await forgotPasswordUseCase.execute(email);
-    auditService.log({
-      action: AUDIT_AUTH_PASSWORD_RESET_REQUEST,
-      actorType: 'anonymous',
-      metadata: { email },
-      ip: req.ip,
-      requestId: req.requestId,
-    });
-    res.json({
-      message: 'If this email exists, a reset link has been sent.',
-      ...(env.nodeEnv === 'development' ? { debugResetToken: token } : {}),
-    });
-  } catch (error) { next(error); }
-});
+authRouter.post(
+  '/forgot-password',
+  passwordResetLimiter,
+  validateBody(forgotPasswordSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { email } = req.body;
+      const token = await forgotPasswordUseCase.execute(email);
+      auditService.log({
+        action: AUDIT_AUTH_PASSWORD_RESET_REQUEST,
+        actorType: 'anonymous',
+        metadata: { email },
+        ip: req.ip,
+        requestId: req.requestId,
+      });
+      res.json({
+        message: 'If this email exists, a reset link has been sent.',
+        ...(env.nodeEnv === 'development' ? { debugResetToken: token } : {}),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
-authRouter.post('/reset-password', passwordResetLimiter, validateBody(resetPasswordSchema), async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { token, newPassword } = req.body;
-    await resetPasswordUseCase.execute(token, newPassword);
-    auditService.log({
-      action: AUDIT_AUTH_PASSWORD_RESET,
-      actorType: 'anonymous',
-      ip: req.ip,
-      requestId: req.requestId,
-    });
-    res.json({ message: 'Password updated successfully.' });
-  } catch (error) { next(error); }
-});
+authRouter.post(
+  '/reset-password',
+  passwordResetLimiter,
+  validateBody(resetPasswordSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { token, newPassword } = req.body;
+      await resetPasswordUseCase.execute(token, newPassword);
+      auditService.log({
+        action: AUDIT_AUTH_PASSWORD_RESET,
+        actorType: 'anonymous',
+        ip: req.ip,
+        requestId: req.requestId,
+      });
+      res.json({ message: 'Password updated successfully.' });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
-authRouter.post('/verify-email', validateBody(verifyEmailSchema), async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { token } = req.body;
-    const result = await verifyEmailUseCase.execute(token);
-    auditService.log({
-      action: AUDIT_AUTH_EMAIL_VERIFIED,
-      actorType: 'anonymous',
-      ip: req.ip,
-      requestId: req.requestId,
-    });
-    res.json(result);
-  } catch (error) { next(error); }
-});
+authRouter.post(
+  '/verify-email',
+  validateBody(verifyEmailSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { token } = req.body;
+      const result = await verifyEmailUseCase.execute(token);
+      auditService.log({
+        action: AUDIT_AUTH_EMAIL_VERIFIED,
+        actorType: 'anonymous',
+        ip: req.ip,
+        requestId: req.requestId,
+      });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 // ─── API Key Management (B2B) ─── gated behind feature flag ───
 const apiKeyLimiter = createRateLimitMiddleware({
@@ -337,69 +486,95 @@ const apiKeyLimiter = createRateLimitMiddleware({
 });
 
 if (env.featureFlags.apiKeys) {
-  authRouter.post('/api-keys', isAuthenticatedJwtOnly, apiKeyLimiter, validateBody(createApiKeySchema), async (req: Request, res: Response, next: NextFunction) => {
-    const jwtUser = (req as Request & { user?: { id: number } }).user;
-    if (!jwtUser?.id) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
-      return;
-    }
-
-    try {
-      const { name, expiresAt } = req.body;
-      const expiry = expiresAt ? new Date(expiresAt) : undefined;
-      const result = await generateApiKeyUseCase.execute(jwtUser.id, name, expiry);
-      auditService.log({
-        action: AUDIT_API_KEY_CREATED,
-        actorType: 'user',
-        actorId: jwtUser.id,
-        targetType: 'api_key',
-        targetId: result.apiKey.prefix,
-        metadata: { name },
-        ip: req.ip,
-        requestId: req.requestId,
-      });
-      res.status(201).json(result);
-    } catch (error) { next(error); }
-  });
-
-  authRouter.get('/api-keys', isAuthenticatedJwtOnly, async (req: Request, res: Response, next: NextFunction) => {
-    const jwtUser = (req as Request & { user?: { id: number } }).user;
-    if (!jwtUser?.id) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
-      return;
-    }
-
-    try {
-      const result = await listApiKeysUseCase.execute(jwtUser.id);
-      res.status(200).json(result);
-    } catch (error) { next(error); }
-  });
-
-  authRouter.delete('/api-keys/:id', isAuthenticatedJwtOnly, async (req: Request, res: Response, next: NextFunction) => {
-    const jwtUser = (req as Request & { user?: { id: number } }).user;
-    if (!jwtUser?.id) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
-      return;
-    }
-
-    try {
-      const keyId = Number.parseInt(req.params.id, 10);
-      if (Number.isNaN(keyId)) {
-        throw badRequest('Invalid API key ID');
+  authRouter.post(
+    '/api-keys',
+    isAuthenticatedJwtOnly,
+    apiKeyLimiter,
+    validateBody(createApiKeySchema),
+    async (req: Request, res: Response, next: NextFunction) => {
+      const jwtUser = (req as Request & { user?: { id: number } }).user;
+      if (!jwtUser?.id) {
+        res
+          .status(401)
+          .json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
+        return;
       }
-      const result = await revokeApiKeyUseCase.execute(keyId, jwtUser.id);
-      auditService.log({
-        action: AUDIT_API_KEY_REVOKED,
-        actorType: 'user',
-        actorId: jwtUser.id,
-        targetType: 'api_key',
-        targetId: String(keyId),
-        ip: req.ip,
-        requestId: req.requestId,
-      });
-      res.status(200).json(result);
-    } catch (error) { next(error); }
-  });
+
+      try {
+        const { name, expiresAt } = req.body;
+        const expiry = expiresAt ? new Date(expiresAt) : undefined;
+        const result = await generateApiKeyUseCase.execute(jwtUser.id, name, expiry);
+        auditService.log({
+          action: AUDIT_API_KEY_CREATED,
+          actorType: 'user',
+          actorId: jwtUser.id,
+          targetType: 'api_key',
+          targetId: result.apiKey.prefix,
+          metadata: { name },
+          ip: req.ip,
+          requestId: req.requestId,
+        });
+        res.status(201).json(result);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  authRouter.get(
+    '/api-keys',
+    isAuthenticatedJwtOnly,
+    async (req: Request, res: Response, next: NextFunction) => {
+      const jwtUser = (req as Request & { user?: { id: number } }).user;
+      if (!jwtUser?.id) {
+        res
+          .status(401)
+          .json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
+        return;
+      }
+
+      try {
+        const result = await listApiKeysUseCase.execute(jwtUser.id);
+        res.status(200).json(result);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  authRouter.delete(
+    '/api-keys/:id',
+    isAuthenticatedJwtOnly,
+    async (req: Request, res: Response, next: NextFunction) => {
+      const jwtUser = (req as Request & { user?: { id: number } }).user;
+      if (!jwtUser?.id) {
+        res
+          .status(401)
+          .json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
+        return;
+      }
+
+      try {
+        const keyId = Number.parseInt(req.params.id, 10);
+        if (Number.isNaN(keyId)) {
+          throw badRequest('Invalid API key ID');
+        }
+        const result = await revokeApiKeyUseCase.execute(keyId, jwtUser.id);
+        auditService.log({
+          action: AUDIT_API_KEY_REVOKED,
+          actorType: 'user',
+          actorId: jwtUser.id,
+          targetType: 'api_key',
+          targetId: String(keyId),
+          ip: req.ip,
+          requestId: req.requestId,
+        });
+        res.status(200).json(result);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 }
 
 export default authRouter;

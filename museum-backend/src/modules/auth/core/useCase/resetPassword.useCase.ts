@@ -24,7 +24,10 @@ export class ResetPasswordUseCase {
       throw badRequest(pw.reason ?? 'Invalid password');
     }
     const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
-    const user = await this.userRepository.consumeResetTokenAndUpdatePassword(token, hashedPassword);
+    const user = await this.userRepository.consumeResetTokenAndUpdatePassword(
+      token,
+      hashedPassword,
+    );
     if (!user) {
       throw badRequest('Invalid or expired reset token');
     }

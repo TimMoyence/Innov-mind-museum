@@ -15,8 +15,6 @@ export class AddSessionVersionColumn1774000000000 implements MigrationInterface 
 
   /** Revert the AddSessionVersionColumn migration. */
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE "chat_sessions" DROP COLUMN "version"`,
-    );
+    await queryRunner.query(`ALTER TABLE "chat_sessions" DROP COLUMN "version"`);
   }
 }

@@ -9,14 +9,32 @@ class StreamingArtOrchestrator implements ChatOrchestrator {
     return {
       text: 'This painting by Monet captures the essence of impressionism.',
       metadata: {
-        detectedArtwork: { title: 'Water Lilies', artist: 'Monet', confidence: 0.9, source: 'test' },
+        detectedArtwork: {
+          title: 'Water Lilies',
+          artist: 'Monet',
+          confidence: 0.9,
+          source: 'test',
+        },
         citations: ['catalog'],
       },
     };
   }
 
-  async generateStream(_input: unknown, onChunk: (text: string) => void): Promise<OrchestratorOutput> {
-    const words = ['This ', 'painting ', 'by ', 'Monet ', 'captures ', 'the ', 'essence ', 'of ', 'impressionism.'];
+  async generateStream(
+    _input: unknown,
+    onChunk: (text: string) => void,
+  ): Promise<OrchestratorOutput> {
+    const words = [
+      'This ',
+      'painting ',
+      'by ',
+      'Monet ',
+      'captures ',
+      'the ',
+      'essence ',
+      'of ',
+      'impressionism.',
+    ];
     for (const word of words) {
       onChunk(word);
     }
@@ -29,7 +47,10 @@ class GuardrailBlockOrchestrator implements ChatOrchestrator {
     return { text: 'Here is the latest bitcoin price', metadata: {} };
   }
 
-  async generateStream(_input: unknown, onChunk: (text: string) => void): Promise<OrchestratorOutput> {
+  async generateStream(
+    _input: unknown,
+    onChunk: (text: string) => void,
+  ): Promise<OrchestratorOutput> {
     onChunk('Here is the latest bitcoin price');
     return this.generate();
   }
@@ -40,7 +61,10 @@ class ErrorOrchestrator implements ChatOrchestrator {
     throw new Error('LLM exploded');
   }
 
-  async generateStream(_input: unknown, _onChunk: (text: string) => void): Promise<OrchestratorOutput> {
+  async generateStream(
+    _input: unknown,
+    _onChunk: (text: string) => void,
+  ): Promise<OrchestratorOutput> {
     throw new Error('LLM exploded');
   }
 }

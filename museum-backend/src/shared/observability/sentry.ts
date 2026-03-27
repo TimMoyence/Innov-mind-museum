@@ -6,7 +6,6 @@ import { env } from '@src/config/env';
 import type { Span } from '@sentry/node';
 import type { Express } from 'express';
 
-
 let initialized = false;
 
 /** No-op span used when Sentry is disabled — safe to call any method on. */
@@ -33,9 +32,7 @@ export const initSentry = (): void => {
     release: env.sentry.release,
     tracesSampleRate: env.sentry.tracesSampleRate,
     profilesSampleRate: env.sentry.profilesSampleRate,
-    integrations: [
-      ...Sentry.getDefaultIntegrations({}),
-    ],
+    integrations: [...Sentry.getDefaultIntegrations({})],
   });
 
   initialized = true;

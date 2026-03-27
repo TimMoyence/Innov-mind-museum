@@ -4,10 +4,12 @@ import { buildUserMemoryPromptBlock } from './user-memory.prompt';
 
 import type { VisitContext } from '../domain/chat.types';
 import type { UserMemory } from '../domain/userMemory.entity';
-import type { UserMemoryRepository, UserMemoryUpdates } from '../domain/userMemory.repository.interface';
+import type {
+  UserMemoryRepository,
+  UserMemoryUpdates,
+} from '../domain/userMemory.repository.interface';
 import type { NotableArtwork } from '../domain/userMemory.types';
 import type { CacheService } from '@shared/cache/cache.port';
-
 
 /** Array cap constants to prevent unbounded growth. */
 const MAX_ARTISTS = 10;
@@ -32,7 +34,7 @@ export class UserMemoryService {
    * Returns empty string if the user has no memory yet.
    */
   async getMemoryForPrompt(userId: number): Promise<string> {
-    const cacheKey = `${CACHE_PREFIX}${userId}`;
+    const cacheKey = `${CACHE_PREFIX}${String(userId)}`;
 
     if (this.cache) {
       const cached = await this.cache.get<string>(cacheKey);
@@ -78,7 +80,9 @@ export class UserMemoryService {
         const existingMuseums = existing?.museumsVisited ?? [];
         const lowerExisting = existingMuseums.map((m) => m.toLowerCase());
         if (!lowerExisting.includes(visitContext.museumName.toLowerCase())) {
-          updates.museumsVisited = [...existingMuseums, visitContext.museumName].slice(-MAX_MUSEUMS);
+          updates.museumsVisited = [...existingMuseums, visitContext.museumName].slice(
+            -MAX_MUSEUMS,
+          );
         }
       }
 
@@ -138,7 +142,7 @@ export class UserMemoryService {
   /** Invalidates cached prompt block for a user. */
   async invalidateCache(userId: number): Promise<void> {
     if (this.cache) {
-      await this.cache.del(`${CACHE_PREFIX}${userId}`);
+      await this.cache.del(`${CACHE_PREFIX}${String(userId)}`);
     }
   }
 }

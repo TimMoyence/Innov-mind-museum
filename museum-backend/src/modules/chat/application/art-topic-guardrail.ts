@@ -171,7 +171,8 @@ const INJECTION_PATTERNS = [
   'dan mode',
 ];
 
-const GREETING_PATTERN = /^(hi|hello|hey|bonjour|salut|coucou|bonsoir|good morning|good evening|good afternoon|hola|ciao|hallo|こんにちは|你好)(\b|$)/;
+const GREETING_PATTERN =
+  /^(hi|hello|hey|bonjour|salut|coucou|bonsoir|good morning|good evening|good afternoon|hola|ciao|hallo|こんにちは|你好)(\b|$)/;
 
 const FOLLOW_UP_PATTERNS = [
   /^(et|pourquoi|comment|quand|ou|continue|plus de details)\b/,
@@ -272,7 +273,7 @@ const REDIRECT_HINT_EXTERNAL =
  * @param root0.history - Recent conversation messages for context.
  * @returns A guardrail decision indicating whether the message is allowed.
  */
- 
+
 /** Evaluates static keyword-based rules (steps 1–7). Returns a decision or null if no rule matched. */
 function evaluateStaticRules(
   normalizedText: string,
@@ -281,11 +282,14 @@ function evaluateStaticRules(
   if (hasInsultSignal(normalizedText)) return { allow: false, reason: 'insult' };
   if (hasPromptInjectionSignal(normalizedText)) return { allow: false, reason: 'prompt_injection' };
   if (hasGreetingSignal(normalizedText)) return { allow: true };
-  if (isShortInnocuousMessage(normalizedText) && !hasExternalActionSignal(normalizedText)) return { allow: true };
+  if (isShortInnocuousMessage(normalizedText) && !hasExternalActionSignal(normalizedText))
+    return { allow: true };
   if (hasArtSignal(normalizedText)) return { allow: true };
   if (hasDynamicArtSignal(normalizedText, dynamicKeywords)) return { allow: true };
-  if (hasExternalActionSignal(normalizedText)) return { allow: true, redirectHint: REDIRECT_HINT_EXTERNAL };
-  if (hasOffTopicSignal(normalizedText)) return { allow: true, redirectHint: REDIRECT_HINT_OFF_TOPIC };
+  if (hasExternalActionSignal(normalizedText))
+    return { allow: true, redirectHint: REDIRECT_HINT_EXTERNAL };
+  if (hasOffTopicSignal(normalizedText))
+    return { allow: true, redirectHint: REDIRECT_HINT_OFF_TOPIC };
   return null;
 }
 
@@ -399,9 +403,7 @@ export const buildGuardrailRefusal = (
  * @param reason - The guardrail block reason.
  * @returns A citation string, or undefined when no reason is provided.
  */
-export const buildGuardrailCitation = (
-  reason?: GuardrailBlockReason,
-): string | undefined => {
+export const buildGuardrailCitation = (reason?: GuardrailBlockReason): string | undefined => {
   if (!reason) {
     return undefined;
   }

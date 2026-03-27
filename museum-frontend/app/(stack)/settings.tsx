@@ -4,6 +4,7 @@ import {
   Alert,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Switch,
   Text,
@@ -51,9 +52,17 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { locale, museumMode, guideLevel, isLoading: isLoadingPrefs } = useRuntimeSettings();
   const { theme, mode, setMode } = useTheme();
-  const { isAvailable: biometricAvailable, isEnabled: biometricEnabled, biometricLabel, enable: enableBiometric, disable: disableBiometric, isChecking: isBiometricChecking } = useBiometricAuth();
+  const {
+    isAvailable: biometricAvailable,
+    isEnabled: biometricEnabled,
+    biometricLabel,
+    enable: enableBiometric,
+    disable: disableBiometric,
+    isChecking: isBiometricChecking,
+  } = useBiometricAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const onToggleBiometric = async (value: boolean) => {
     if (value) {
@@ -62,6 +71,18 @@ export default function SettingsScreen() {
       await disableBiometric();
     }
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  const onExportData = async () => {
+    setIsExporting(true);
+    try {
+      const data = await authService.exportData();
+      await Share.share({ message: JSON.stringify(data, null, 2) });
+    } catch (error) {
+      Alert.alert(t('common.error'), getErrorMessage(error));
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const open = (path: SettingsRoute) => {
@@ -82,36 +103,35 @@ export default function SettingsScreen() {
   };
 
   const onDeleteAccount = () => {
-    Alert.alert(
-      t('settings.delete_confirm_title'),
-      t('settings.delete_confirm_body'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.delete'),
-          style: 'destructive',
-          // eslint-disable-next-line @typescript-eslint/no-misused-promises -- void handled by caller
-          onPress: async () => {
-            setIsDeletingAccount(true);
-            try {
-              await authService.deleteAccount();
-              await authStorage.clearRefreshToken().catch(() => undefined);
-              clearAccessToken();
-              setIsAuthenticated(false);
-              router.replace(AUTH_ROUTE);
-            } catch (error) {
-              Alert.alert(t('common.error'), getErrorMessage(error));
-            } finally {
-              setIsDeletingAccount(false);
-            }
-          },
+    Alert.alert(t('settings.delete_confirm_title'), t('settings.delete_confirm_body'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises -- void handled by caller
+        onPress: async () => {
+          setIsDeletingAccount(true);
+          try {
+            await authService.deleteAccount();
+            await authStorage.clearRefreshToken().catch(() => undefined);
+            clearAccessToken();
+            setIsAuthenticated(false);
+            router.replace(AUTH_ROUTE);
+          } catch (error) {
+            Alert.alert(t('common.error'), getErrorMessage(error));
+          } finally {
+            setIsDeletingAccount(false);
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   return (
-    <LiquidScreen background={pickMuseumBackground(4)} contentStyle={[styles.screen, { paddingTop: insets.top + 8 }]}>
+    <LiquidScreen
+      background={pickMuseumBackground(4)}
+      contentStyle={[styles.screen, { paddingTop: insets.top + 8 }]}
+    >
       <View style={styles.menuWrap}>
         <FloatingContextMenu
           actions={[
@@ -119,19 +139,25 @@ export default function SettingsScreen() {
               id: 'prefs',
               icon: 'options-outline',
               label: t('settings.preferences'),
-              onPress: () => { open('/(stack)/preferences'); },
+              onPress: () => {
+                open('/(stack)/preferences');
+              },
             },
             {
               id: 'privacy',
               icon: 'shield-checkmark-outline',
               label: t('settings.privacy_rgpd'),
-              onPress: () => { open('/(stack)/privacy'); },
+              onPress: () => {
+                open('/(stack)/privacy');
+              },
             },
             {
               id: 'support',
               icon: 'headset-outline',
               label: t('settings.support'),
-              onPress: () => { open('/(stack)/support'); },
+              onPress: () => {
+                open('/(stack)/support');
+              },
             },
           ]}
         />
@@ -153,7 +179,9 @@ export default function SettingsScreen() {
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={56}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.appearance')}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
+            {t('settings.appearance')}
+          </Text>
           <View style={styles.themeRow}>
             {THEME_OPTION_KEYS.map((option) => (
               <Pressable
@@ -169,7 +197,10 @@ export default function SettingsScreen() {
                     backgroundColor: theme.glassBackground,
                   },
                 ]}
-                onPress={() => { setMode(option.value); void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); }}
+                onPress={() => {
+                  setMode(option.value);
+                  void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel={t('a11y.settings.theme_button', { theme: option.key })}
                 accessibilityState={{ selected: mode === option.value }}
@@ -178,7 +209,7 @@ export default function SettingsScreen() {
                   style={[
                     styles.themeButtonText,
                     { color: theme.textSecondary },
-                // eslint-disable-next-line react-native/no-inline-styles -- conditional bold
+                    // eslint-disable-next-line react-native/no-inline-styles -- conditional bold
                     mode === option.value && { color: theme.primary, fontWeight: '700' },
                   ]}
                 >
@@ -190,7 +221,9 @@ export default function SettingsScreen() {
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={56}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.security')}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
+            {t('settings.security')}
+          </Text>
           <View style={styles.biometricRow}>
             <View style={styles.biometricInfo}>
               <Text style={[styles.biometricLabel, { color: theme.textPrimary }]}>
@@ -213,70 +246,197 @@ export default function SettingsScreen() {
               trackColor={{ false: theme.cardBorder, true: theme.primary }}
             />
           </View>
+          <Pressable
+            style={[
+              styles.secondaryButton,
+              { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+            ]}
+            onPress={() => {
+              router.push('/(stack)/change-password');
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.settings.change_password')}
+          >
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+              {t('settings.change_password')}
+            </Text>
+          </Pressable>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={56}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.current_preferences')}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
+            {t('settings.current_preferences')}
+          </Text>
           {isLoadingPrefs ? (
             <View style={styles.loadingRow}>
               <ActivityIndicator color={theme.primary} />
-              <Text style={[styles.loadingText, { color: theme.textSecondary }]}>{t('settings.loading_preferences')}</Text>
+              <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+                {t('settings.loading_preferences')}
+              </Text>
             </View>
           ) : (
             <>
-              <Text style={[styles.metaLine, { color: theme.textPrimary }]}>{t('settings.locale_label', { locale })}</Text>
-              <Text style={[styles.metaLine, { color: theme.textPrimary }]}>{t('settings.museum_mode_label', { mode: museumMode ? t('common.on') : t('common.off') })}</Text>
-              <Text style={[styles.metaLine, { color: theme.textPrimary }]}>{t('settings.guide_level_label', { level: guideLevel })}</Text>
+              <Text style={[styles.metaLine, { color: theme.textPrimary }]}>
+                {t('settings.locale_label', { locale })}
+              </Text>
+              <Text style={[styles.metaLine, { color: theme.textPrimary }]}>
+                {t('settings.museum_mode_label', {
+                  mode: museumMode ? t('common.on') : t('common.off'),
+                })}
+              </Text>
+              <Text style={[styles.metaLine, { color: theme.textPrimary }]}>
+                {t('settings.guide_level_label', { level: guideLevel })}
+              </Text>
             </>
           )}
-          <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => { open('/(stack)/preferences'); }} accessibilityRole="button" accessibilityLabel={t('a11y.settings.preferences')}>
-            <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>{t('settings.open_preferences')}</Text>
+          <Pressable
+            style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+            onPress={() => {
+              open('/(stack)/preferences');
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.settings.preferences')}
+          >
+            <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
+              {t('settings.open_preferences')}
+            </Text>
           </Pressable>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={52}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.guided_experience_title')}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
+            {t('settings.guided_experience_title')}
+          </Text>
           <Text style={[styles.cardBody, { color: theme.textSecondary }]}>
             {t('settings.guided_experience_subtitle')}
           </Text>
           <Pressable
-            style={[styles.secondaryButton, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]}
-            onPress={() => { open('/(stack)/guided-museum-mode'); }}
+            style={[
+              styles.secondaryButton,
+              { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+            ]}
+            onPress={() => {
+              open('/(stack)/guided-museum-mode');
+            }}
             accessibilityRole="button"
             accessibilityLabel={t('a11y.settings.guided_mode')}
           >
-            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('settings.guided_mode_info')}</Text>
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+              {t('settings.guided_mode_info')}
+            </Text>
           </Pressable>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={52}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.compliance_title')}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
+            {t('settings.compliance_title')}
+          </Text>
           <View style={styles.linkList}>
-            <Pressable style={[styles.linkRow, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => { open('/(stack)/privacy'); }} accessibilityRole="link" accessibilityLabel={t('a11y.settings.privacy_link')}>
-              <Text style={[styles.linkTitle, { color: theme.textPrimary }]}>{t('settings.privacy_rgpd')}</Text>
-              <Text style={[styles.linkDescription, { color: theme.textSecondary }]}>{t('settings.privacy_desc')}</Text>
+            <Pressable
+              style={[
+                styles.linkRow,
+                { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+              ]}
+              onPress={() => {
+                open('/(stack)/privacy');
+              }}
+              accessibilityRole="link"
+              accessibilityLabel={t('a11y.settings.privacy_link')}
+            >
+              <Text style={[styles.linkTitle, { color: theme.textPrimary }]}>
+                {t('settings.privacy_rgpd')}
+              </Text>
+              <Text style={[styles.linkDescription, { color: theme.textSecondary }]}>
+                {t('settings.privacy_desc')}
+              </Text>
             </Pressable>
-            <Pressable style={[styles.linkRow, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => { open('/(stack)/terms'); }} accessibilityRole="link" accessibilityLabel={t('a11y.settings.terms_link')}>
-              <Text style={[styles.linkTitle, { color: theme.textPrimary }]}>{t('settings.terms_of_service')}</Text>
-              <Text style={[styles.linkDescription, { color: theme.textSecondary }]}>{t('settings.terms_desc')}</Text>
+            <Pressable
+              style={[
+                styles.linkRow,
+                { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+              ]}
+              onPress={() => {
+                open('/(stack)/terms');
+              }}
+              accessibilityRole="link"
+              accessibilityLabel={t('a11y.settings.terms_link')}
+            >
+              <Text style={[styles.linkTitle, { color: theme.textPrimary }]}>
+                {t('settings.terms_of_service')}
+              </Text>
+              <Text style={[styles.linkDescription, { color: theme.textSecondary }]}>
+                {t('settings.terms_desc')}
+              </Text>
             </Pressable>
-            <Pressable style={[styles.linkRow, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => { open('/(stack)/support'); }} accessibilityRole="link" accessibilityLabel={t('a11y.settings.support_link')}>
-              <Text style={[styles.linkTitle, { color: theme.textPrimary }]}>{t('settings.support')}</Text>
+            <Pressable
+              style={[
+                styles.linkRow,
+                { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+              ]}
+              onPress={() => {
+                open('/(stack)/support');
+              }}
+              accessibilityRole="link"
+              accessibilityLabel={t('a11y.settings.support_link')}
+            >
+              <Text style={[styles.linkTitle, { color: theme.textPrimary }]}>
+                {t('settings.support')}
+              </Text>
               <Text style={[styles.linkDescription, { color: theme.textSecondary }]}>
                 {t('settings.support_desc')}
               </Text>
             </Pressable>
-            <Pressable style={[styles.linkRow, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => { open('/(stack)/onboarding'); }} accessibilityRole="link" accessibilityLabel={t('a11y.settings.onboarding_link')}>
-              <Text style={[styles.linkTitle, { color: theme.textPrimary }]}>{t('settings.onboarding_help')}</Text>
+            <Pressable
+              style={[
+                styles.linkRow,
+                { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+              ]}
+              onPress={() => {
+                open('/(stack)/onboarding');
+              }}
+              accessibilityRole="link"
+              accessibilityLabel={t('a11y.settings.onboarding_link')}
+            >
+              <Text style={[styles.linkTitle, { color: theme.textPrimary }]}>
+                {t('settings.onboarding_help')}
+              </Text>
               <Text style={[styles.linkDescription, { color: theme.textSecondary }]}>
                 {t('settings.onboarding_desc')}
               </Text>
             </Pressable>
           </View>
+          <Pressable
+            style={[
+              styles.linkRow,
+              { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+            ]}
+            onPress={() => void onExportData()}
+            disabled={isExporting}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.settings.export_data')}
+          >
+            {isExporting ? (
+              <ActivityIndicator color={theme.primary} />
+            ) : (
+              <>
+                <Text style={[styles.linkTitle, { color: theme.textPrimary }]}>
+                  {t('settings.export_data')}
+                </Text>
+                <Text style={[styles.linkDescription, { color: theme.textSecondary }]}>
+                  {t('settings.export_data_desc')}
+                </Text>
+              </>
+            )}
+          </Pressable>
         </GlassCard>
 
-        <GlassCard style={[styles.dangerCard, { borderColor: theme.errorBackground }]} intensity={52}>
-          <Text style={[styles.dangerTitle, { color: theme.error }]}>{t('settings.danger_zone')}</Text>
+        <GlassCard
+          style={[styles.dangerCard, { borderColor: theme.errorBackground }]}
+          intensity={52}
+        >
+          <Text style={[styles.dangerTitle, { color: theme.error }]}>
+            {t('settings.danger_zone')}
+          </Text>
           <Text style={[styles.cardBody, { color: theme.textSecondary }]}>
             {t('settings.danger_zone_desc')}
           </Text>
@@ -292,18 +452,35 @@ export default function SettingsScreen() {
             {isDeletingAccount ? (
               <ActivityIndicator color={theme.primaryContrast} />
             ) : (
-              <Text style={[styles.deleteButtonText, { color: theme.primaryContrast }]}>{t('settings.delete_account')}</Text>
+              <Text style={[styles.deleteButtonText, { color: theme.primaryContrast }]}>
+                {t('settings.delete_account')}
+              </Text>
             )}
           </Pressable>
         </GlassCard>
 
         <View style={styles.footerRow}>
-          <Pressable style={[styles.secondaryButton, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]} onPress={() => { open('/(tabs)/home'); }} accessibilityRole="button" accessibilityLabel={t('a11y.settings.back_home')}>
-            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('settings.back_to_home')}</Text>
+          <Pressable
+            style={[
+              styles.secondaryButton,
+              { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+            ]}
+            onPress={() => {
+              open('/(tabs)/home');
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.settings.back_home')}
+          >
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+              {t('settings.back_to_home')}
+            </Text>
           </Pressable>
 
           <Pressable
-            style={[styles.logoutButton, { borderColor: theme.error, backgroundColor: theme.errorBackground }]}
+            style={[
+              styles.logoutButton,
+              { borderColor: theme.error, backgroundColor: theme.errorBackground },
+            ]}
             onPress={() => void onLogout()}
             disabled={isSigningOut}
             accessibilityRole="button"
@@ -314,7 +491,9 @@ export default function SettingsScreen() {
             {isSigningOut ? (
               <ActivityIndicator color={theme.error} />
             ) : (
-              <Text style={[styles.logoutButtonText, { color: theme.error }]}>{t('settings.sign_out')}</Text>
+              <Text style={[styles.logoutButtonText, { color: theme.error }]}>
+                {t('settings.sign_out')}
+              </Text>
             )}
           </Pressable>
         </View>

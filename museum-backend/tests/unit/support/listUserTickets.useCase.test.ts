@@ -10,9 +10,30 @@ describe('ListUserTicketsUseCase', () => {
     useCase = new ListUserTicketsUseCase(repo);
 
     // Seed tickets for user 10
-    repo.seed({ id: 't1', userId: 10, subject: 'Ticket 1', description: 'd1', status: 'open', priority: 'low' });
-    repo.seed({ id: 't2', userId: 10, subject: 'Ticket 2', description: 'd2', status: 'in_progress', priority: 'high' });
-    repo.seed({ id: 't3', userId: 10, subject: 'Ticket 3', description: 'd3', status: 'resolved', priority: 'medium' });
+    repo.seed({
+      id: 't1',
+      userId: 10,
+      subject: 'Ticket 1',
+      description: 'd1',
+      status: 'open',
+      priority: 'low',
+    });
+    repo.seed({
+      id: 't2',
+      userId: 10,
+      subject: 'Ticket 2',
+      description: 'd2',
+      status: 'in_progress',
+      priority: 'high',
+    });
+    repo.seed({
+      id: 't3',
+      userId: 10,
+      subject: 'Ticket 3',
+      description: 'd3',
+      status: 'resolved',
+      priority: 'medium',
+    });
     // Seed ticket for another user
     repo.seed({ id: 't4', userId: 20, subject: 'Other user', description: 'd4' });
   });
@@ -76,33 +97,33 @@ describe('ListUserTicketsUseCase', () => {
   });
 
   it('rejects page < 1', async () => {
-    await expect(
-      useCase.execute({ userId: 10, page: 0, limit: 10 }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ userId: 10, page: 0, limit: 10 })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('rejects negative page', async () => {
-    await expect(
-      useCase.execute({ userId: 10, page: -1, limit: 10 }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ userId: 10, page: -1, limit: 10 })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('rejects non-integer page', async () => {
-    await expect(
-      useCase.execute({ userId: 10, page: 1.5, limit: 10 }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ userId: 10, page: 1.5, limit: 10 })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('rejects limit < 1', async () => {
-    await expect(
-      useCase.execute({ userId: 10, page: 1, limit: 0 }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ userId: 10, page: 1, limit: 0 })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('rejects limit > 100', async () => {
-    await expect(
-      useCase.execute({ userId: 10, page: 1, limit: 101 }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ userId: 10, page: 1, limit: 101 })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('rejects invalid status', async () => {

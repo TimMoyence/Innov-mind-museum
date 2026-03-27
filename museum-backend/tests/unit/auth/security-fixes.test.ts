@@ -35,10 +35,7 @@ const makeRefreshTokenRepo = () =>
 describe('S2-20a: login oracle — social-only account', () => {
   it('returns generic INVALID_CREDENTIALS for social-only accounts', async () => {
     const socialUser = makeSocialUser();
-    const service = new AuthSessionService(
-      makeUserRepo(socialUser),
-      makeRefreshTokenRepo(),
-    );
+    const service = new AuthSessionService(makeUserRepo(socialUser), makeRefreshTokenRepo());
 
     try {
       await service.login('social@test.com', 'any-password');

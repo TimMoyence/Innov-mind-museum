@@ -85,17 +85,23 @@ describe('validateNameField', () => {
   });
 
   it('throws for name with custom maxLength exceeded', () => {
-    expect(() => validateNameField('toolong', 'nickname', 5)).toThrow('must be at most 5 characters');
+    expect(() => validateNameField('toolong', 'nickname', 5)).toThrow(
+      'must be at most 5 characters',
+    );
   });
 
   it('throws for name with invalid characters', () => {
     expect(() => validateNameField('Alice123', 'firstname')).toThrow('contains invalid characters');
-    expect(() => validateNameField('test@user', 'firstname')).toThrow('contains invalid characters');
+    expect(() => validateNameField('test@user', 'firstname')).toThrow(
+      'contains invalid characters',
+    );
   });
 
   it('coerces non-string values to string then validates', () => {
     // The type says string|undefined but test the non-string branch
     // "42" contains digits which are not in the NAME_PATTERN (unicode letters only)
-    expect(() => validateNameField(42 as unknown as string, 'field')).toThrow('contains invalid characters');
+    expect(() => validateNameField(42 as unknown as string, 'field')).toThrow(
+      'contains invalid characters',
+    );
   });
 });

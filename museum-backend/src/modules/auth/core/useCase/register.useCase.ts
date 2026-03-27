@@ -72,11 +72,15 @@ export class RegisterUseCase {
       if (this.emailService && this.frontendUrl) {
         const verifyLink = `${this.frontendUrl}/verify-email?token=${token}`;
         const htmlContent =
-          '<h1>Verify your email</h1>'
-          + '<p>Welcome to Musaium! Click the link below to verify your email address.</p>'
-          + `<p><a href="${verifyLink}">${verifyLink}</a></p>`
-          + '<p>This link expires in 24 hours. If you did not create an account, you can safely ignore this email.</p>';
-        await this.emailService.sendEmail(normalizedEmail, 'Verify your Musaium email', htmlContent);
+          '<h1>Verify your email</h1>' +
+          '<p>Welcome to Musaium! Click the link below to verify your email address.</p>' +
+          `<p><a href="${verifyLink}">${verifyLink}</a></p>` +
+          '<p>This link expires in 24 hours. If you did not create an account, you can safely ignore this email.</p>';
+        await this.emailService.sendEmail(
+          normalizedEmail,
+          'Verify your Musaium email',
+          htmlContent,
+        );
       } else {
         if (env.nodeEnv !== 'production') {
           logger.info('verification_token_generated', { userId: user.id, token });

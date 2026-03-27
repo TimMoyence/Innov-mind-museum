@@ -6,10 +6,7 @@ import { OpenAiAudioTranscriber } from './adapters/secondary/audio-transcriber.o
 import { S3CompatibleImageStorage } from './adapters/secondary/image-storage.s3';
 import { LocalImageStorage } from './adapters/secondary/image-storage.stub';
 import { LangChainChatOrchestrator } from './adapters/secondary/langchain.orchestrator';
-import {
-  TesseractOcrService,
-  DisabledOcrService,
-} from './adapters/secondary/ocr-service';
+import { TesseractOcrService, DisabledOcrService } from './adapters/secondary/ocr-service';
 import {
   OpenAiTextToSpeechService,
   DisabledTextToSpeechService,
@@ -32,7 +29,8 @@ import type { DataSource } from 'typeorm';
 let sharedImageStorage: LocalImageStorage | S3CompatibleImageStorage | undefined;
 
 /** Returns the shared image storage instance (available after buildChatService has been called). */
-export const getImageStorage = (): LocalImageStorage | S3CompatibleImageStorage | undefined => sharedImageStorage;
+export const getImageStorage = (): LocalImageStorage | S3CompatibleImageStorage | undefined =>
+  sharedImageStorage;
 
 /** Lazily-initialized chat repository singleton, shared with the auth module for GDPR data export. */
 let sharedRepository: TypeOrmChatRepository | undefined;
@@ -53,10 +51,12 @@ let sharedUserMemoryService: UserMemoryService | undefined;
 export const getUserMemoryService = (): UserMemoryService | undefined => sharedUserMemoryService;
 
 let sharedArtKeywordRepository: ArtKeywordRepository | undefined;
-export const getArtKeywordRepository = (): ArtKeywordRepository | undefined => sharedArtKeywordRepository;
+export const getArtKeywordRepository = (): ArtKeywordRepository | undefined =>
+  sharedArtKeywordRepository;
 
 let artKeywordsRefreshTimer: ReturnType<typeof setInterval> | undefined;
-export const getArtKeywordsRefreshTimer = (): ReturnType<typeof setInterval> | undefined => artKeywordsRefreshTimer;
+export const getArtKeywordsRefreshTimer = (): ReturnType<typeof setInterval> | undefined =>
+  artKeywordsRefreshTimer;
 
 /**
  * Wires the chat module dependency graph and returns a fully configured ChatService.
@@ -69,13 +69,7 @@ export const buildChatService = (dataSource: DataSource, cache?: CacheService): 
   let imageStorage: LocalImageStorage | S3CompatibleImageStorage;
   if (env.storage.driver === 's3') {
     const s3 = env.storage.s3;
-    if (
-      !s3?.endpoint ||
-      !s3.region ||
-      !s3.bucket ||
-      !s3.accessKeyId ||
-      !s3.secretAccessKey
-    ) {
+    if (!s3?.endpoint || !s3.region || !s3.bucket || !s3.accessKeyId || !s3.secretAccessKey) {
       throw new Error(
         'OBJECT_STORAGE_DRIVER=s3 requires S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY',
       );
@@ -102,13 +96,12 @@ export const buildChatService = (dataSource: DataSource, cache?: CacheService): 
   const repository = new TypeOrmChatRepository(dataSource);
   sharedRepository = repository;
 
-  const tts = env.tts?.enabled && env.llm.openAiApiKey
-    ? new OpenAiTextToSpeechService()
-    : new DisabledTextToSpeechService();
+  const tts =
+    env.tts?.enabled && env.llm.openAiApiKey
+      ? new OpenAiTextToSpeechService()
+      : new DisabledTextToSpeechService();
 
-  const ocr = env.featureFlags.ocrGuard
-    ? new TesseractOcrService()
-    : new DisabledOcrService();
+  const ocr = env.featureFlags.ocrGuard ? new TesseractOcrService() : new DisabledOcrService();
   ocrServiceRef = ocr;
 
   let userMemory: UserMemoryService | undefined;
@@ -132,8 +125,8 @@ export const buildChatService = (dataSource: DataSource, cache?: CacheService): 
   sharedArtKeywordRepository = artKeywordRepo;
 
   let artTopicClassifier: ArtTopicClassifier | undefined;
-  if (env.llm.anthropicApiKey) {
-    artTopicClassifier = new ArtTopicClassifier(env.llm.anthropicApiKey);
+  if (env.llm.openAiApiKey) {
+    artTopicClassifier = new ArtTopicClassifier(env.llm.openAiApiKey);
   }
 
   const dynamicArtKeywords = new Set<string>();
@@ -158,7 +151,9 @@ export const buildChatService = (dataSource: DataSource, cache?: CacheService): 
     const normalized = keyword.toLowerCase().trim();
     if (!normalized || dynamicArtKeywords.has(normalized)) return;
     dynamicArtKeywords.add(normalized);
-    void artKeywordRepo.upsert(normalized, locale).catch(() => { /* fire-and-forget */ });
+    void artKeywordRepo.upsert(normalized, locale).catch(() => {
+      /* fire-and-forget */
+    });
   };
 
   return new ChatService({

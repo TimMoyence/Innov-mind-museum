@@ -176,13 +176,95 @@ Ces secrets sont **maintenant bloquants** dans les workflows de déploiement bac
 - Le workflow écrit ce JSON dans `.secrets/google-service-account.json` au runtime CI.
 - Note: requis aussi pour le flux auto `push -> Google Play Internal testing`.
 
-## Bonnes pratiques (recommandées)
+## Secrets Rotation Policy
 
-- Créer des comptes de smoke test dédiés (`staging` et `prod`) séparés.
-- Ne pas réutiliser les comptes personnels/admin pour les smoke tests.
-- Faire tourner le mot de passe smoke régulièrement.
-- Restreindre la clé SSH de deploy (`SERVER_KEY`) au seul hôte/service de déploiement.
-- Pour GHCR, utiliser un token à portée minimale.
+### Schedule
+
+| Secret | Rotation | Procedure | Downtime |
+|--------|----------|-----------|----------|
+| `JWT_ACCESS_SECRET` | Quarterly | Dual-key (see below) | Zero |
+| `JWT_REFRESH_SECRET` | Quarterly | Dual-key (see below) | Zero |
+| `MEDIA_SIGNING_SECRET` | Quarterly | Direct replace | Zero (URLs re-signed on access) |
+| `SERVER_KEY` (SSH) | Annually | Generate new key pair, update GitHub + VPS | Zero |
+| `GHCR_TOKEN` | Annually or on compromise | Regenerate PAT, update GitHub secret | Zero |
+| `SENTRY_AUTH_TOKEN` | Annually | Regenerate in Sentry dashboard, update GitHub + EAS | Zero |
+| `BREVO_API_KEY` | On compromise only | Regenerate in Brevo dashboard, update VPS `.env` | Brief (email outage during update) |
+| `OPENAI_API_KEY` | On compromise only | Regenerate in OpenAI dashboard, update VPS `.env` | Brief (chat outage during update) |
+| `DEEPSEEK_API_KEY` | On compromise only | Regenerate in provider dashboard, update VPS `.env` | Brief |
+| `GOOGLE_API_KEY` | On compromise only | Regenerate in Google Cloud Console, update VPS `.env` | Brief |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Annually | Create new key in provider, update VPS `.env`, delete old | Zero (if done sequentially) |
+| `EXPO_TOKEN` | Annually | Regenerate in Expo dashboard, update GitHub secret | Zero |
+| Smoke test passwords | Quarterly | Change in app + update GitHub secret | Zero |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Annually | Create new key in GCP, update GitHub secret, delete old | Zero |
+| Apple credentials | On certificate renewal (yearly) | Renew in Apple Developer Portal, update GitHub | Zero |
+
+### Zero-Downtime JWT Rotation (Dual-Key Pattern)
+
+JWT secrets require a grace period where both old and new keys are valid.
+
+**Step 1 — Generate new secret**
+```bash
+node -e "console.log(require(‘crypto’).randomBytes(64).toString(‘hex’))"
+```
+
+**Step 2 — Deploy with dual verification**
+The backend currently validates tokens with a single secret. For zero-downtime rotation:
+
+1. Set the new secret in `.env` on VPS
+2. Restart backend — new tokens are signed with the new secret
+3. Existing access tokens (15min TTL) expire naturally within 15 minutes
+4. Existing refresh tokens (7d TTL) will fail on next refresh and force re-login
+5. **Grace period**: ~15 minutes for access tokens, up to 7 days for refresh tokens
+
+**Alternative (if users must not re-login)**:
+1. Temporarily modify `verifyAccessToken` to try both old and new secrets
+2. Deploy with both secrets
+3. Wait 7 days (max refresh token lifetime)
+4. Remove old secret, deploy again
+
+**Step 3 — Verify**
+```bash
+# Test login flow
+curl -X POST https://musaium.com/api/auth/login \
+  -H ‘Content-Type: application/json’ \
+  -d ‘{"email":"test@test.com","password":"test"}’ | jq .accessToken
+```
+
+### External API Key Rotation
+
+**Brevo / OpenAI / Deepseek / Google**:
+1. Generate new API key in provider dashboard (do NOT delete old key yet)
+2. Update `.env` on VPS with new key
+3. Restart backend: `docker compose restart backend`
+4. Verify with health check: `curl https://musaium.com/api/health | jq .`
+5. Test the specific service (send test email, ask test question)
+6. Delete old API key in provider dashboard
+
+**S3 Storage**:
+1. Create new access key in provider dashboard
+2. Update `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` in VPS `.env`
+3. Restart backend
+4. Test image upload + retrieval
+5. Delete old access key
+
+### Emergency Key Revocation
+
+If a secret is compromised:
+
+1. **Immediately** rotate the compromised secret (steps above)
+2. If JWT secret: all active sessions become invalid — users must re-login
+3. If API key: revoke old key in provider dashboard immediately
+4. If SSH key: remove old public key from VPS `~/.ssh/authorized_keys`
+5. Audit GitHub Actions logs for unauthorized usage
+6. Document the incident in `docs/incidents/`
+
+## Bonnes pratiques (recommandees)
+
+- Creer des comptes de smoke test dedies (`staging` et `prod`) separes.
+- Ne pas reutiliser les comptes personnels/admin pour les smoke tests.
+- Faire tourner le mot de passe smoke regulierement.
+- Restreindre la cle SSH de deploy (`SERVER_KEY`) au seul hote/service de deploiement.
+- Pour GHCR, utiliser un token a portee minimale.
 - Documenter l’inventaire des secrets dans votre gestionnaire de secrets interne (Vault, 1Password, etc.).
 
 ## Sentry (Observability)

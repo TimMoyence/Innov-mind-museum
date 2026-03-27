@@ -171,9 +171,9 @@ describe('ChatMediaService', () => {
       const repo = makeRepo(row);
       const svc = new ChatMediaService({ repository: repo });
 
-      await expect(
-        svc.reportMessage(MESSAGE_ID, 'offensive', 42),
-      ).rejects.toMatchObject({ statusCode: 400 });
+      await expect(svc.reportMessage(MESSAGE_ID, 'offensive', 42)).rejects.toMatchObject({
+        statusCode: 400,
+      });
     });
   });
 

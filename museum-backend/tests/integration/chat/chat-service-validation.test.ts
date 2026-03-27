@@ -42,9 +42,9 @@ describe('chat service input validation', () => {
       const session = await service.createSession({});
       const longText = 'a'.repeat(3000);
 
-      await expect(
-        service.postMessage(session.id, { text: longText }),
-      ).rejects.toThrow(expect.objectContaining({ statusCode: 400 }));
+      await expect(service.postMessage(session.id, { text: longText })).rejects.toThrow(
+        expect.objectContaining({ statusCode: 400 }),
+      );
     });
 
     it('rejects image URL with http (not https)', async () => {
@@ -130,9 +130,9 @@ describe('chat service input validation', () => {
     it('rejects invalid session id format', async () => {
       const service = buildChatTestService();
 
-      await expect(
-        service.postMessage('not-a-uuid', { text: 'Hello' }),
-      ).rejects.toThrow(expect.objectContaining({ statusCode: 400 }));
+      await expect(service.postMessage('not-a-uuid', { text: 'Hello' })).rejects.toThrow(
+        expect.objectContaining({ statusCode: 400 }),
+      );
     });
   });
 
@@ -140,17 +140,17 @@ describe('chat service input validation', () => {
     it('rejects without currentUserId', async () => {
       const service = buildChatTestService();
 
-      await expect(
-        service.listSessions({ limit: 20 }, undefined),
-      ).rejects.toThrow(expect.objectContaining({ statusCode: 400 }));
+      await expect(service.listSessions({ limit: 20 }, undefined)).rejects.toThrow(
+        expect.objectContaining({ statusCode: 400 }),
+      );
     });
 
     it('rejects currentUserId = 0', async () => {
       const service = buildChatTestService();
 
-      await expect(
-        service.listSessions({ limit: 20 }, 0),
-      ).rejects.toThrow(expect.objectContaining({ statusCode: 400 }));
+      await expect(service.listSessions({ limit: 20 }, 0)).rejects.toThrow(
+        expect.objectContaining({ statusCode: 400 }),
+      );
     });
 
     it('rejects invalid cursor format', async () => {

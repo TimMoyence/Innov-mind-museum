@@ -28,18 +28,26 @@ describe('sentry — conditional initialization', () => {
 
   it('captureExceptionWithContext is a no-op when not initialized', () => {
     jest.isolateModules(() => {
-      const { captureExceptionWithContext, isSentryEnabled } = require('@shared/observability/sentry');
+      const {
+        captureExceptionWithContext,
+        isSentryEnabled,
+      } = require('@shared/observability/sentry');
       expect(isSentryEnabled()).toBe(false);
 
       // Should not throw even when called without initialization
       expect(() => captureExceptionWithContext(new Error('test'))).not.toThrow();
-      expect(() => captureExceptionWithContext(new Error('test'), { requestId: 'r1' })).not.toThrow();
+      expect(() =>
+        captureExceptionWithContext(new Error('test'), { requestId: 'r1' }),
+      ).not.toThrow();
     });
   });
 
   it('setupSentryExpressErrorHandler is a no-op when not initialized', () => {
     jest.isolateModules(() => {
-      const { setupSentryExpressErrorHandler, isSentryEnabled } = require('@shared/observability/sentry');
+      const {
+        setupSentryExpressErrorHandler,
+        isSentryEnabled,
+      } = require('@shared/observability/sentry');
       expect(isSentryEnabled()).toBe(false);
 
       const fakeApp = {} as unknown as import('express').Express;

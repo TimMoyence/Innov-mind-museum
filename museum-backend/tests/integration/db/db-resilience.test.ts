@@ -205,11 +205,7 @@ describe('db-resilience: error handler with TypeORM errors', () => {
 
   it('masks QueryFailedError as 500 with generic message (no SQL leak)', () => {
     const driverErr = new Error('relation "users" does not exist');
-    const err = new QueryFailedError(
-      'SELECT * FROM users WHERE id = $1',
-      [1],
-      driverErr,
-    );
+    const err = new QueryFailedError('SELECT * FROM users WHERE id = $1', [1], driverErr);
     const req = mockReq({ requestId: 'res-qfe' });
     const res = mockRes();
 
@@ -225,9 +221,9 @@ describe('db-resilience: error handler with TypeORM errors', () => {
   });
 
   it('logs TypeORM QueryFailedError via Sentry (5xx path)', () => {
-    const { captureExceptionWithContext } = jest.requireMock(
-      '@shared/observability/sentry',
-    ) as { captureExceptionWithContext: jest.Mock };
+    const { captureExceptionWithContext } = jest.requireMock('@shared/observability/sentry') as {
+      captureExceptionWithContext: jest.Mock;
+    };
 
     const driverErr = new Error('timeout');
     const err = new QueryFailedError('SELECT 1', undefined, driverErr);
@@ -243,9 +239,7 @@ describe('db-resilience: error handler with TypeORM errors', () => {
   });
 
   it('does not expose driver error details in the client response', () => {
-    const driverErr = new Error(
-      'FATAL: password authentication failed for user "admin"',
-    );
+    const driverErr = new Error('FATAL: password authentication failed for user "admin"');
     const err = new QueryFailedError('SELECT 1', undefined, driverErr);
     const req = mockReq();
     const res = mockRes();
@@ -345,14 +339,8 @@ describe('db-resilience: connection pool behavior', () => {
 describe('db-resilience: query timeout handling', () => {
   it('propagates timeout error as AppError-style 500 through error handler', () => {
     // Simulates the kind of error pg driver produces on timeout
-    const driverErr = new Error(
-      'canceling statement due to statement timeout',
-    );
-    const err = new QueryFailedError(
-      'SELECT pg_sleep(60)',
-      undefined,
-      driverErr,
-    );
+    const driverErr = new Error('canceling statement due to statement timeout');
+    const err = new QueryFailedError('SELECT pg_sleep(60)', undefined, driverErr);
     const req = mockReq({ requestId: 'timeout-1' });
     const res = mockRes();
 
@@ -372,10 +360,7 @@ describe('db-resilience: query timeout handling', () => {
       try {
         // Simulate slow query that throws
         await new Promise<never>((_resolve, reject) => {
-          setTimeout(
-            () => reject(new Error('statement timeout')),
-            10,
-          );
+          setTimeout(() => reject(new Error('statement timeout')), 10);
         });
       } finally {
         // Pool driver always releases in finally
@@ -542,9 +527,7 @@ describeE2E('db-resilience: transaction isolation (real PG)', () => {
   it('concurrent reads do not see uncommitted transaction data', async () => {
     // This test requires a real Postgres connection via testcontainer.
     // It validates READ COMMITTED isolation level (PG default).
-    const {
-      startPostgresTestContainer,
-    } = await import('tests/helpers/e2e/postgres-testcontainer');
+    const { startPostgresTestContainer } = await import('tests/helpers/e2e/postgres-testcontainer');
     const { Client } = await import('pg');
 
     const container = await startPostgresTestContainer();
@@ -568,34 +551,22 @@ describeE2E('db-resilience: transaction isolation (real PG)', () => {
       await writer.query(
         'CREATE TABLE IF NOT EXISTS isolation_test (id SERIAL PRIMARY KEY, value TEXT)',
       );
-      await writer.query(
-        "INSERT INTO isolation_test (value) VALUES ('committed-row')",
-      );
+      await writer.query("INSERT INTO isolation_test (value) VALUES ('committed-row')");
 
       // Writer starts a transaction but does NOT commit
       await writer.query('BEGIN');
-      await writer.query(
-        "INSERT INTO isolation_test (value) VALUES ('uncommitted-row')",
-      );
+      await writer.query("INSERT INTO isolation_test (value) VALUES ('uncommitted-row')");
 
       // Reader should NOT see the uncommitted row
-      const readerResult = await reader.query(
-        'SELECT * FROM isolation_test',
-      );
-      const values = readerResult.rows.map(
-        (r: { value: string }) => r.value,
-      );
+      const readerResult = await reader.query('SELECT * FROM isolation_test');
+      const values = readerResult.rows.map((r: { value: string }) => r.value);
       expect(values).toContain('committed-row');
       expect(values).not.toContain('uncommitted-row');
 
       // Commit and verify reader can now see it
       await writer.query('COMMIT');
-      const afterCommit = await reader.query(
-        'SELECT * FROM isolation_test',
-      );
-      const afterValues = afterCommit.rows.map(
-        (r: { value: string }) => r.value,
-      );
+      const afterCommit = await reader.query('SELECT * FROM isolation_test');
+      const afterValues = afterCommit.rows.map((r: { value: string }) => r.value);
       expect(afterValues).toContain('uncommitted-row');
     } finally {
       await writer.end().catch(() => undefined);

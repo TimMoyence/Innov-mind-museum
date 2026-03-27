@@ -25,7 +25,9 @@ describe('validateNameField', () => {
   });
 
   it('rejects names with XSS characters', () => {
-    expect(() => validateNameField('<script>alert(1)</script>', 'firstname')).toThrow('invalid characters');
+    expect(() => validateNameField('<script>alert(1)</script>', 'firstname')).toThrow(
+      'invalid characters',
+    );
   });
 
   it('rejects names with numbers', () => {

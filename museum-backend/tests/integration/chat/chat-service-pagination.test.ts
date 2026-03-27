@@ -96,10 +96,7 @@ describe('chat service pagination', () => {
       expect(page1.page.hasMore).toBe(true);
       expect(page1.page.nextCursor).not.toBeNull();
 
-      const page2 = await service.listSessions(
-        { limit: 2, cursor: page1.page.nextCursor! },
-        USER,
-      );
+      const page2 = await service.listSessions({ limit: 2, cursor: page1.page.nextCursor! }, USER);
       expect(page2.sessions.length).toBe(1);
       expect(page2.page.hasMore).toBe(false);
     });
@@ -119,12 +116,7 @@ describe('chat service pagination', () => {
       const service = buildChatTestService();
       const session = await service.createSession({ userId: USER });
 
-      await service.postMessage(
-        session.id,
-        { text: 'Tell me about art first' },
-        undefined,
-        USER,
-      );
+      await service.postMessage(session.id, { text: 'Tell me about art first' }, undefined, USER);
       await service.postMessage(
         session.id,
         { text: 'Tell me about sculpture second' },

@@ -5,21 +5,13 @@ import {
   listAllReviewsUseCase as listAllReviewsUseCaseInstance,
   moderateReviewUseCase as moderateReviewUseCaseInstance,
 } from '@modules/review/useCase';
-import {
-  listAllTicketsUseCase,
-  updateTicketStatusUseCase,
-} from '@modules/support/useCase';
+import { listAllTicketsUseCase, updateTicketStatusUseCase } from '@modules/support/useCase';
 import { badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import { requireRole } from '@src/helpers/middleware/require-role.middleware';
 import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 
-
-import {
-  changeUserRoleSchema,
-  resolveReportSchema,
-  updateTicketSchema,
-} from './admin.schemas';
+import { changeUserRoleSchema, resolveReportSchema, updateTicketSchema } from './admin.schemas';
 import {
   listUsersUseCase,
   changeUserRoleUseCase,
@@ -31,7 +23,6 @@ import {
   getContentAnalyticsUseCase,
   getEngagementAnalyticsUseCase,
 } from '../../../useCase';
-
 
 const adminRouter: Router = Router();
 

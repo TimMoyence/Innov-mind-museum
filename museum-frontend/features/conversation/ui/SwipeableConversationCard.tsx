@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-deprecated -- Swipeable uses legacy Animated API */
 import { useCallback, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';

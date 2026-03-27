@@ -1,30 +1,24 @@
-import {
-  runSectionTasks,
-  SectionTask,
-} from '@modules/chat/application/llm-section-runner';
+import { runSectionTasks, SectionTask } from '@modules/chat/application/llm-section-runner';
 
-const wait = async (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+const wait = async (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe('llm-section-runner', () => {
   it('respects section concurrency caps', async () => {
     let inFlight = 0;
     let peak = 0;
 
-    const tasks: Array<SectionTask<string>> = ['a', 'b', 'c', 'd'].map(
-      (name) => ({
-        name,
-        timeoutMs: 200,
-        payloadBytes: 16,
-        run: async () => {
-          inFlight += 1;
-          peak = Math.max(peak, inFlight);
-          await wait(30);
-          inFlight -= 1;
-          return name;
-        },
-      }),
-    );
+    const tasks: Array<SectionTask<string>> = ['a', 'b', 'c', 'd'].map((name) => ({
+      name,
+      timeoutMs: 200,
+      payloadBytes: 16,
+      run: async () => {
+        inFlight += 1;
+        peak = Math.max(peak, inFlight);
+        await wait(30);
+        inFlight -= 1;
+        return name;
+      },
+    }));
 
     const result = await runSectionTasks(tasks, {
       maxConcurrent: 2,
@@ -61,8 +55,7 @@ describe('llm-section-runner', () => {
         retryBaseDelayMs: 1,
         totalBudgetMs: 500,
         shouldRetry: (error) =>
-          error instanceof Error &&
-          error.message.toLowerCase().includes('econnreset'),
+          error instanceof Error && error.message.toLowerCase().includes('econnreset'),
       },
     );
 

@@ -1,0 +1,82 @@
+#!/bin/bash
+# Quality Ratchet — compare current metrics vs baseline in quality-ratchet.json
+# Exit 0 if OK (no regression), exit 1 if regression detected
+# Write-on-improve: updates baseline if any metric improves
+
+set -euo pipefail
+
+REPO_ROOT="/Users/Tim/Desktop/all/dev/Pro/InnovMind"
+RATCHET_FILE="$REPO_ROOT/.claude/quality-ratchet.json"
+
+if [ ! -f "$RATCHET_FILE" ]; then
+  echo "No ratchet baseline found — skipping"
+  exit 0
+fi
+
+# Check jq is available
+if ! command -v jq &>/dev/null; then
+  echo "jq not found — skipping ratchet check"
+  exit 0
+fi
+
+# Read baseline
+BASELINE_TESTS=$(jq -r '.testCount // 0' "$RATCHET_FILE")
+BASELINE_TS_ERRORS=$(jq -r '.typecheckErrors // 0' "$RATCHET_FILE")
+BASELINE_AS_ANY=$(jq -r '.asAnyCount // 0' "$RATCHET_FILE")
+
+# Measure current metrics
+CURRENT_TESTS=$(cd "$REPO_ROOT/museum-backend" && pnpm test 2>&1 | grep "^Tests:" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' || echo "0")
+if [ -z "$CURRENT_TESTS" ]; then CURRENT_TESTS=0; fi
+
+CURRENT_TS_ERRORS=$(cd "$REPO_ROOT/museum-backend" && { npx tsc --noEmit 2>&1 | grep -c "error TS" || true; })
+if [ -z "$CURRENT_TS_ERRORS" ]; then CURRENT_TS_ERRORS=0; fi
+
+CURRENT_AS_ANY=$( { grep -r "as any" "$REPO_ROOT/museum-backend/tests/" --include="*.ts" 2>/dev/null || true; } | wc -l | tr -d ' ')
+if [ -z "$CURRENT_AS_ANY" ]; then CURRENT_AS_ANY=0; fi
+
+REGRESSION=false
+IMPROVED=false
+DETAILS=""
+
+# Test count must not decrease
+if [ "$CURRENT_TESTS" -lt "$BASELINE_TESTS" ] 2>/dev/null; then
+  REGRESSION=true
+  DETAILS="${DETAILS}testCount: $BASELINE_TESTS → $CURRENT_TESTS (↓). "
+elif [ "$CURRENT_TESTS" -gt "$BASELINE_TESTS" ] 2>/dev/null; then
+  IMPROVED=true
+fi
+
+# Typecheck errors must not increase
+if [ "$CURRENT_TS_ERRORS" -gt "$BASELINE_TS_ERRORS" ] 2>/dev/null; then
+  REGRESSION=true
+  DETAILS="${DETAILS}typecheckErrors: $BASELINE_TS_ERRORS → $CURRENT_TS_ERRORS (↑). "
+elif [ "$CURRENT_TS_ERRORS" -lt "$BASELINE_TS_ERRORS" ] 2>/dev/null; then
+  IMPROVED=true
+fi
+
+# as any count must not increase
+if [ "$CURRENT_AS_ANY" -gt "$BASELINE_AS_ANY" ] 2>/dev/null; then
+  REGRESSION=true
+  DETAILS="${DETAILS}asAnyCount: $BASELINE_AS_ANY → $CURRENT_AS_ANY (↑). "
+elif [ "$CURRENT_AS_ANY" -lt "$BASELINE_AS_ANY" ] 2>/dev/null; then
+  IMPROVED=true
+fi
+
+if $REGRESSION; then
+  echo "RATCHET REGRESSION: $DETAILS"
+  exit 1
+fi
+
+# Write-on-improve: update baseline if any metric improved
+if $IMPROVED; then
+  DATE=$(date -u +"%Y-%m-%d")
+  jq --argjson tests "$CURRENT_TESTS" \
+     --argjson tsErrors "$CURRENT_TS_ERRORS" \
+     --argjson asAny "$CURRENT_AS_ANY" \
+     --arg date "$DATE" \
+     '.testCount = $tests | .typecheckErrors = $tsErrors | .asAnyCount = $asAny | .lastUpdated = $date' \
+     "$RATCHET_FILE" > "${RATCHET_FILE}.tmp" && mv "${RATCHET_FILE}.tmp" "$RATCHET_FILE"
+  echo "RATCHET IMPROVED: tests=$CURRENT_TESTS tsErrors=$CURRENT_TS_ERRORS asAny=$CURRENT_AS_ANY"
+fi
+
+exit 0

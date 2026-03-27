@@ -26,7 +26,7 @@ export interface SocialTokenVerifier {
    * @param provider - Social provider (`apple` or `google`).
    * @param idToken - Raw JWT string from the provider.
    * @returns Decoded identity claims.
-   * @throws Error for unsupported providers or invalid tokens.
+   * @throws {Error} For unsupported providers or invalid tokens.
    */
   verify(provider: SocialProvider, idToken: string): Promise<SocialTokenPayload>;
 }

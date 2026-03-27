@@ -163,16 +163,12 @@ const required = (name: string, value: string | undefined): string => {
 
 const nodeEnvRaw = (process.env.NODE_ENV || 'development') as NodeEnv;
 if (!['development', 'test', 'production'].includes(nodeEnvRaw)) {
-  throw new Error(
-    `Invalid NODE_ENV="${nodeEnvRaw}". Must be development, test, or production.`,
-  );
+  throw new Error(`Invalid NODE_ENV="${nodeEnvRaw}". Must be development, test, or production.`);
 }
 const nodeEnv: NodeEnv = nodeEnvRaw;
 
 const providerRaw = (process.env.LLM_PROVIDER || 'openai').toLowerCase();
-const provider: LlmProvider = ['openai', 'deepseek', 'google'].includes(
-  providerRaw,
-)
+const provider: LlmProvider = ['openai', 'deepseek', 'google'].includes(providerRaw)
   ? (providerRaw as LlmProvider)
   : 'openai';
 
@@ -191,10 +187,7 @@ const env: AppEnv = {
   corsOrigins: toList(process.env.CORS_ORIGINS),
   jsonBodyLimit: process.env.JSON_BODY_LIMIT || '1mb',
   requestTimeoutMs: toNumber(process.env.REQUEST_TIMEOUT_MS, 20000),
-  dbSynchronize: toBoolean(
-    process.env.DB_SYNCHRONIZE,
-    false,
-  ),
+  dbSynchronize: toBoolean(process.env.DB_SYNCHRONIZE, false),
   db: {
     host: toOptionalString(process.env.DB_HOST) || 'localhost',
     port: toNumber(process.env.DB_PORT, 5432),
@@ -205,14 +198,29 @@ const env: AppEnv = {
   },
   auth: {
     jwtSecret: isDev
-      ? (toOptionalString(process.env.JWT_ACCESS_SECRET) || process.env.JWT_SECRET || 'local-dev-jwt-secret')
-      : required('JWT_ACCESS_SECRET or JWT_SECRET', toOptionalString(process.env.JWT_ACCESS_SECRET) || process.env.JWT_SECRET),
+      ? toOptionalString(process.env.JWT_ACCESS_SECRET) ||
+        process.env.JWT_SECRET ||
+        'local-dev-jwt-secret'
+      : required(
+          'JWT_ACCESS_SECRET or JWT_SECRET',
+          toOptionalString(process.env.JWT_ACCESS_SECRET) || process.env.JWT_SECRET,
+        ),
     accessTokenSecret: isDev
-      ? (toOptionalString(process.env.JWT_ACCESS_SECRET) || process.env.JWT_SECRET || 'local-dev-jwt-secret')
-      : required('JWT_ACCESS_SECRET or JWT_SECRET', toOptionalString(process.env.JWT_ACCESS_SECRET) || process.env.JWT_SECRET),
+      ? toOptionalString(process.env.JWT_ACCESS_SECRET) ||
+        process.env.JWT_SECRET ||
+        'local-dev-jwt-secret'
+      : required(
+          'JWT_ACCESS_SECRET or JWT_SECRET',
+          toOptionalString(process.env.JWT_ACCESS_SECRET) || process.env.JWT_SECRET,
+        ),
     refreshTokenSecret: isDev
-      ? (toOptionalString(process.env.JWT_REFRESH_SECRET) || process.env.JWT_SECRET || 'local-dev-refresh-jwt-secret')
-      : required('JWT_REFRESH_SECRET', toOptionalString(process.env.JWT_REFRESH_SECRET) || process.env.JWT_SECRET),
+      ? toOptionalString(process.env.JWT_REFRESH_SECRET) ||
+        process.env.JWT_SECRET ||
+        'local-dev-refresh-jwt-secret'
+      : required(
+          'JWT_REFRESH_SECRET',
+          toOptionalString(process.env.JWT_REFRESH_SECRET) || process.env.JWT_SECRET,
+        ),
     accessTokenTtl: process.env.JWT_ACCESS_TTL || '15m',
     refreshTokenTtl: process.env.JWT_REFRESH_TTL || '30d',
     appleClientId: process.env.APPLE_CLIENT_ID || 'com.musaium.mobile',
@@ -223,8 +231,7 @@ const env: AppEnv = {
   llm: {
     provider,
     model: process.env.LLM_MODEL || 'gpt-4o-mini',
-    audioTranscriptionModel:
-      process.env.LLM_AUDIO_TRANSCRIPTION_MODEL || 'gpt-4o-mini-transcribe',
+    audioTranscriptionModel: process.env.LLM_AUDIO_TRANSCRIPTION_MODEL || 'gpt-4o-mini-transcribe',
     temperature: toNumber(process.env.LLM_TEMPERATURE, 0.3),
     timeoutMs: toNumber(process.env.LLM_TIMEOUT_MS, 15000),
     timeoutSummaryMs: toNumber(process.env.LLM_TIMEOUT_SUMMARY_MS, 10000),
@@ -236,9 +243,8 @@ const env: AppEnv = {
     maxTextLength: toNumber(process.env.LLM_MAX_TEXT_LENGTH, 2000),
     maxImageBytes: toNumber(process.env.LLM_MAX_IMAGE_BYTES, 3 * 1024 * 1024),
     maxAudioBytes: toNumber(process.env.LLM_MAX_AUDIO_BYTES, 12 * 1024 * 1024),
-    includeDiagnostics: nodeEnv === 'production'
-      ? false
-      : toBoolean(process.env.LLM_INCLUDE_DIAGNOSTICS, true),
+    includeDiagnostics:
+      nodeEnv === 'production' ? false : toBoolean(process.env.LLM_INCLUDE_DIAGNOSTICS, true),
     openAiApiKey: process.env.OPENAI_API_KEY,
     deepseekApiKey: process.env.DEEPSEEK_API_KEY,
     googleApiKey: process.env.GOOGLE_API_KEY,
@@ -253,8 +259,7 @@ const env: AppEnv = {
     allowedMimeTypes: toList(process.env.UPLOAD_ALLOWED_MIME_TYPES).length
       ? toList(process.env.UPLOAD_ALLOWED_MIME_TYPES)
       : ['image/jpeg', 'image/png', 'image/webp'],
-    allowedAudioMimeTypes: toList(process.env.UPLOAD_ALLOWED_AUDIO_MIME_TYPES)
-      .length
+    allowedAudioMimeTypes: toList(process.env.UPLOAD_ALLOWED_AUDIO_MIME_TYPES).length
       ? toList(process.env.UPLOAD_ALLOWED_AUDIO_MIME_TYPES)
       : [
           'audio/mpeg',
@@ -290,7 +295,8 @@ const env: AppEnv = {
     ? {
         dsn: (process.env.SENTRY_DSN ?? '').trim(),
         environment: nodeEnv,
-        release: toOptionalString(process.env.APP_VERSION) || process.env.npm_package_version || '1.0.0',
+        release:
+          toOptionalString(process.env.APP_VERSION) || process.env.npm_package_version || '1.0.0',
         tracesSampleRate: toNumber(process.env.SENTRY_TRACES_SAMPLE_RATE, 0.1),
         profilesSampleRate: toNumber(process.env.SENTRY_PROFILES_SAMPLE_RATE, 0),
       }
@@ -319,8 +325,7 @@ const env: AppEnv = {
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
   storage: {
     driver: storageDriver,
-    localUploadsDir:
-      toOptionalString(process.env.LOCAL_UPLOADS_DIR) || 'tmp/uploads',
+    localUploadsDir: toOptionalString(process.env.LOCAL_UPLOADS_DIR) || 'tmp/uploads',
     signedUrlTtlSeconds: toNumber(process.env.S3_SIGNED_URL_TTL_SECONDS, 900),
     signingSecret:
       toOptionalString(process.env.MEDIA_SIGNING_SECRET) ||
@@ -344,7 +349,10 @@ if (env.nodeEnv === 'production') {
   if (!env.brevoApiKey) {
     console.warn('BREVO_API_KEY not set \u2014 password reset emails will not be sent');
   }
-  required('JWT_ACCESS_SECRET or JWT_SECRET', process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET);
+  required(
+    'JWT_ACCESS_SECRET or JWT_SECRET',
+    process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET,
+  );
   required('JWT_REFRESH_SECRET', process.env.JWT_REFRESH_SECRET);
   required('PGDATABASE', process.env.PGDATABASE);
   required('CORS_ORIGINS', process.env.CORS_ORIGINS);

@@ -1,4 +1,3 @@
-
 import { ArtKeyword } from '../domain/artKeyword.entity';
 
 import type { ArtKeywordRepository } from '../domain/artKeyword.repository.interface';
@@ -50,7 +49,9 @@ export class TypeOrmArtKeywordRepository implements ArtKeywordRepository {
     if (keywords.length === 0) return;
     const normalized = [...new Set(keywords.map((k) => k.toLowerCase().trim()).filter(Boolean))];
     if (normalized.length === 0) return;
-    const values = normalized.map((_, i) => `($${String(i * 2 + 1)}, $${String(i * 2 + 2)}, 1)`).join(', ');
+    const values = normalized
+      .map((_, i) => `($${String(i * 2 + 1)}, $${String(i * 2 + 2)}, 1)`)
+      .join(', ');
     const params = normalized.flatMap((kw) => [kw, locale]);
     await this.repo.query(
       `INSERT INTO "art_keywords" ("keyword", "locale", "hitCount")

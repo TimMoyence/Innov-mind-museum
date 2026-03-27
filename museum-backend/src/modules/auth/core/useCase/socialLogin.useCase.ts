@@ -30,10 +30,7 @@ export class SocialLoginUseCase {
    * @returns Access/refresh tokens and user info.
    * @throws {AppError} 400 if `idToken` is missing, 401 if the linked user is not found.
    */
-  async execute(
-    provider: SocialProvider,
-    idToken: string,
-  ): Promise<AuthSessionResponse> {
+  async execute(provider: SocialProvider, idToken: string): Promise<AuthSessionResponse> {
     if (!idToken.trim()) {
       throw new AppError({
         message: 'idToken is required',
@@ -59,16 +56,13 @@ export class SocialLoginUseCase {
           code: 'USER_NOT_FOUND',
         });
       }
-      return await this.authSessionService.socialLogin(
-        user as unknown as Record<string, unknown>,
-      );
+      return await this.authSessionService.socialLogin(user as unknown as Record<string, unknown>);
     }
 
     // Check if email matches existing user (account linking)
     const normalizedEmail = payload.email?.trim().toLowerCase();
     const isApplePrivateRelay =
-      provider === 'apple' &&
-      normalizedEmail?.endsWith(APPLE_PRIVATE_RELAY_SUFFIX);
+      provider === 'apple' && normalizedEmail?.endsWith(APPLE_PRIVATE_RELAY_SUFFIX);
 
     if (normalizedEmail && !isApplePrivateRelay && payload.emailVerified) {
       const existingUser = await this.userRepository.getUserByEmail(normalizedEmail);
@@ -102,8 +96,6 @@ export class SocialLoginUseCase {
       email: normalizedEmail,
     });
 
-    return await this.authSessionService.socialLogin(
-      newUser as unknown as Record<string, unknown>,
-    );
+    return await this.authSessionService.socialLogin(newUser as unknown as Record<string, unknown>);
   }
 }

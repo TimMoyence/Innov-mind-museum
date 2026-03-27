@@ -25,8 +25,6 @@ export class NormalizeEmailCase1774100000000 implements MigrationInterface {
 
   /** Revert the NormalizeEmailCase migration. */
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `DROP INDEX IF EXISTS "idx_users_email_lower"`,
-    );
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_users_email_lower"`);
   }
 }

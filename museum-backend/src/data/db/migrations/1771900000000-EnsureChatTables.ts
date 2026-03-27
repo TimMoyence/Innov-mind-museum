@@ -139,4 +139,3 @@ export class EnsureChatTables1771900000000 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE IF EXISTS "chat_sessions"`);
   }
 }
-

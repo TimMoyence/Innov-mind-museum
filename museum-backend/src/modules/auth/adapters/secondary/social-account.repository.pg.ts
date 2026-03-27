@@ -65,12 +65,7 @@ export class SocialAccountRepositoryPg implements ISocialAccountRepository {
       VALUES ($1, $2, $3, $4)
       RETURNING id, "userId", provider, "providerUserId", email, "createdAt"
     `;
-    const values = [
-      params.userId,
-      params.provider,
-      params.providerUserId,
-      params.email ?? null,
-    ];
+    const values = [params.userId, params.provider, params.providerUserId, params.email ?? null];
     const result = await pool.query(query, values);
     return result.rows[0];
   }

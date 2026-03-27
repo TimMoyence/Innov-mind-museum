@@ -45,36 +45,30 @@ reviewRouter.post(
 );
 
 // GET /api/reviews — Public: list approved reviews (paginated)
-reviewRouter.get(
-  '/',
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const page = Number.parseInt(req.query.page as string, 10) || 1;
-      const limit = Number.parseInt(req.query.limit as string, 10) || 20;
+reviewRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const page = Number.parseInt(req.query.page as string, 10) || 1;
+    const limit = Number.parseInt(req.query.limit as string, 10) || 20;
 
-      const result = await listApprovedReviewsUseCase.execute({
-        page,
-        limit,
-      });
+    const result = await listApprovedReviewsUseCase.execute({
+      page,
+      limit,
+    });
 
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  },
-);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
 
 // GET /api/reviews/stats — Public: get average rating + count
-reviewRouter.get(
-  '/stats',
-  async (_req: Request, res: Response, next: NextFunction) => {
-    try {
-      const stats = await getReviewStatsUseCase.execute();
-      res.json(stats);
-    } catch (error) {
-      next(error);
-    }
-  },
-);
+reviewRouter.get('/stats', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const stats = await getReviewStatsUseCase.execute();
+    res.json(stats);
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default reviewRouter;

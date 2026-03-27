@@ -27,9 +27,7 @@ export class CreateAuditLogsTable1774200100000 implements MigrationInterface {
     await queryRunner.query(
       `CREATE INDEX "IDX_audit_logs_actor_id" ON "audit_logs" ("actor_id") WHERE "actor_id" IS NOT NULL`,
     );
-    await queryRunner.query(
-      `CREATE INDEX "IDX_audit_logs_action" ON "audit_logs" ("action")`,
-    );
+    await queryRunner.query(`CREATE INDEX "IDX_audit_logs_action" ON "audit_logs" ("action")`);
     await queryRunner.query(
       `CREATE INDEX "IDX_audit_logs_target" ON "audit_logs" ("target_type", "target_id") WHERE "target_type" IS NOT NULL`,
     );

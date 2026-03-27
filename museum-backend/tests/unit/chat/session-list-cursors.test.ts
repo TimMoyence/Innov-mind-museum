@@ -5,9 +5,9 @@ describe('session list — cursor edge cases', () => {
     const chatService = buildChatTestService();
     await chatService.createSession({ locale: 'en', userId: 1 });
 
-    await expect(
-      chatService.listSessions({ limit: 20, cursor: '!invalid!' }, 1),
-    ).rejects.toThrow('Invalid cursor format');
+    await expect(chatService.listSessions({ limit: 20, cursor: '!invalid!' }, 1)).rejects.toThrow(
+      'Invalid cursor format',
+    );
   });
 
   it('rejects cursor with invalid JSON payload', async () => {
@@ -24,7 +24,9 @@ describe('session list — cursor edge cases', () => {
     const chatService = buildChatTestService();
     await chatService.createSession({ locale: 'en', userId: 3 });
 
-    const missingFieldsCursor = Buffer.from(JSON.stringify({ updatedAt: 'now' })).toString('base64url');
+    const missingFieldsCursor = Buffer.from(JSON.stringify({ updatedAt: 'now' })).toString(
+      'base64url',
+    );
     await expect(
       chatService.listSessions({ limit: 20, cursor: missingFieldsCursor }, 3),
     ).rejects.toThrow('Invalid cursor format');

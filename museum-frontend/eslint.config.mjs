@@ -3,6 +3,7 @@ import tseslint from 'typescript-eslint';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactNative from 'eslint-plugin-react-native';
+import prettierConfig from 'eslint-config-prettier';
 
 export default tseslint.config(
   // ── Global ignores ──────────────────────────────────────────────
@@ -140,4 +141,7 @@ export default tseslint.config(
       'react-native/no-inline-styles': 'off',
     },
   },
+
+  // ── Prettier — must be last ───────────────────────────────────────
+  prettierConfig,
 );

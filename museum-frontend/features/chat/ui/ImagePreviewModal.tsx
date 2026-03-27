@@ -1,13 +1,6 @@
 /* eslint-disable react-native/no-color-literals -- intentional dark overlay */
 import { useCallback, useEffect, useState } from 'react';
-import {
-  Image,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
@@ -24,16 +17,12 @@ interface ImagePreviewModalProps {
   onCancel: () => void;
 }
 
-/** Full-screen modal for previewing, rotating, and confirming an image before sending. */
-export const ImagePreviewModal = ({
-  imageUri,
-  onConfirm,
-  onCancel,
-}: ImagePreviewModalProps) => {
+/** Full-screen modal for previewing, rotating, cropping, and confirming an image before sending. */
+export const ImagePreviewModal = ({ imageUri, onConfirm, onCancel }: ImagePreviewModalProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const [currentUri, setCurrentUri] = useState(imageUri);
-  const { rotateImage, isProcessing } = useImageManipulation();
+  const { rotateImage, cropImage, isProcessing } = useImageManipulation();
 
   // Sync with external imageUri changes
   useEffect(() => {
@@ -50,6 +39,25 @@ export const ImagePreviewModal = ({
     setCurrentUri(rotated);
   }, [currentUri, isProcessing, rotateImage]);
 
+  const handleCrop = useCallback(async () => {
+    if (!currentUri || isProcessing) return;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const size = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+      Image.getSize(
+        currentUri,
+        (w, h) => {
+          resolve({ width: w, height: h });
+        },
+        reject,
+      );
+    });
+    const side = Math.min(size.width, size.height);
+    const originX = Math.round((size.width - side) / 2);
+    const originY = Math.round((size.height - side) / 2);
+    const cropped = await cropImage(currentUri, { originX, originY, width: side, height: side });
+    setCurrentUri(cropped);
+  }, [currentUri, isProcessing, cropImage]);
+
   const handleConfirm = useCallback(() => {
     if (!currentUri) return;
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -65,18 +73,33 @@ export const ImagePreviewModal = ({
           <Pressable onPress={onCancel} style={styles.headerButton}>
             <Ionicons name="close" size={24} color={theme.primaryContrast} />
           </Pressable>
-          <Text style={[styles.headerTitle, { color: theme.primaryContrast }]}>{t('imagePreview.title')}</Text>
-          <Pressable
-            onPress={() => void handleRotate()}
-            style={styles.headerButton}
-            disabled={isProcessing}
-          >
-            <Ionicons
-              name="refresh-outline"
-              size={24}
-              color={isProcessing ? theme.textSecondary : theme.primaryContrast}
-            />
-          </Pressable>
+          <Text style={[styles.headerTitle, { color: theme.primaryContrast }]}>
+            {t('imagePreview.title')}
+          </Text>
+          <View style={styles.headerActions}>
+            <Pressable
+              onPress={() => void handleCrop()}
+              style={styles.headerButton}
+              disabled={isProcessing}
+            >
+              <Ionicons
+                name="crop-outline"
+                size={24}
+                color={isProcessing ? theme.textSecondary : theme.primaryContrast}
+              />
+            </Pressable>
+            <Pressable
+              onPress={() => void handleRotate()}
+              style={styles.headerButton}
+              disabled={isProcessing}
+            >
+              <Ionicons
+                name="refresh-outline"
+                size={24}
+                color={isProcessing ? theme.textSecondary : theme.primaryContrast}
+              />
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.imageContainer}>
@@ -88,8 +111,13 @@ export const ImagePreviewModal = ({
         </View>
 
         <View style={styles.footer}>
-          <Pressable onPress={onCancel} style={[styles.cancelButton, { borderColor: theme.glassBorder }]}>
-            <Text style={[styles.cancelText, { color: theme.primaryContrast }]}>{t('common.cancel')}</Text>
+          <Pressable
+            onPress={onCancel}
+            style={[styles.cancelButton, { borderColor: theme.glassBorder }]}
+          >
+            <Text style={[styles.cancelText, { color: theme.primaryContrast }]}>
+              {t('common.cancel')}
+            </Text>
           </Pressable>
           <Pressable
             onPress={handleConfirm}
@@ -97,7 +125,9 @@ export const ImagePreviewModal = ({
             disabled={isProcessing}
           >
             <Ionicons name="send" size={18} color={theme.primaryContrast} />
-            <Text style={[styles.confirmText, { color: theme.primaryContrast }]}>{t('common.send')}</Text>
+            <Text style={[styles.confirmText, { color: theme.primaryContrast }]}>
+              {t('common.send')}
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -118,6 +148,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 54,
     paddingBottom: 12,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   headerButton: {
     width: 40,

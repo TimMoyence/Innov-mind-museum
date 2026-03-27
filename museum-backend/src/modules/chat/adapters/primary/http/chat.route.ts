@@ -18,10 +18,7 @@ import {
   parsePostMessageRequest,
   parseReportMessageRequest,
 } from './chat.contracts';
-import {
-  buildSignedChatImageReadUrl,
-  verifySignedChatImageReadUrl,
-} from './chat.image-url';
+import { buildSignedChatImageReadUrl, verifySignedChatImageReadUrl } from './chat.image-url';
 import {
   initSseResponse,
   sendSseToken,
@@ -29,15 +26,11 @@ import {
   sendSseError,
   sendSseGuardrail,
 } from './sse.helpers';
-import {
-  buildS3SignedReadUrlFromRef,
-  isS3ImageRef,
-} from '../../secondary/image-storage.s3';
+import { buildS3SignedReadUrlFromRef, isS3ImageRef } from '../../secondary/image-storage.s3';
 import { resolveLocalImageFilePath } from '../../secondary/image-storage.stub';
 
 import type { ChatService } from '../../../application/chat.service';
 import type { ArtKeywordRepository } from '../../../domain/artKeyword.repository.interface';
-
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -130,9 +123,7 @@ const parseContext = (
   return context;
 };
 
-const toImageSource = (
-  imageValue: string,
-): 'url' | 'base64' => {
+const toImageSource = (imageValue: string): 'url' | 'base64' => {
   if (imageValue.startsWith('http://') || imageValue.startsWith('https://')) {
     return 'url';
   }
@@ -171,13 +162,7 @@ const buildImageReadUrl = (params: {
 }): { url: string; expiresAt: string } | null => {
   if (isS3ImageRef(params.imageRef)) {
     const s3 = env.storage.s3;
-    if (
-      !s3?.endpoint ||
-      !s3.region ||
-      !s3.bucket ||
-      !s3.accessKeyId ||
-      !s3.secretAccessKey
-    ) {
+    if (!s3?.endpoint || !s3.region || !s3.bucket || !s3.accessKeyId || !s3.secretAccessKey) {
       return null;
     }
 
@@ -213,7 +198,10 @@ const buildImageReadUrl = (params: {
  * @returns Configured Express Router.
  */
 // eslint-disable-next-line max-lines-per-function -- router factory registers all chat endpoints in one place
-export const createChatRouter = (chatService: ChatService, artKeywordRepo?: ArtKeywordRepository): Router => {
+export const createChatRouter = (
+  chatService: ChatService,
+  artKeywordRepo?: ArtKeywordRepository,
+): Router => {
   const router = Router();
 
   const sessionLimiter = createRateLimitMiddleware({
@@ -260,10 +248,7 @@ export const createChatRouter = (chatService: ChatService, artKeywordRepo?: ArtK
   router.delete('/sessions/:id', isAuthenticated, async (req, res, next) => {
     try {
       const currentUser = getRequestUser(req);
-      const result = await chatService.deleteSessionIfEmpty(
-        req.params.id,
-        currentUser?.id,
-      );
+      const result = await chatService.deleteSessionIfEmpty(req.params.id, currentUser?.id);
       res.status(200).json(result);
     } catch (error) {
       next(error);
@@ -280,9 +265,7 @@ export const createChatRouter = (chatService: ChatService, artKeywordRepo?: ArtK
         const currentUser = getRequestUser(req);
         const rawBody = (req.body ?? {}) as Record<string, unknown>;
         const parseableBody =
-          typeof rawBody.context === 'string'
-            ? { ...rawBody, context: undefined }
-            : rawBody;
+          typeof rawBody.context === 'string' ? { ...rawBody, context: undefined } : rawBody;
         const bodyPayload = parsePostMessageRequest(parseableBody);
 
         const parsedContext = parseContext(rawBody.context) ?? bodyPayload.context;
@@ -342,14 +325,20 @@ export const createChatRouter = (chatService: ChatService, artKeywordRepo?: ArtK
       initSseResponse(res);
 
       const controller = new AbortController();
-      res.on('close', () => { controller.abort(); });
+      res.on('close', () => {
+        controller.abort();
+      });
 
       // Hard timeout: cut SSE after 60s — if response takes longer, something is wrong
       // (LLM budget is 25s; beyond 60s = zombie connection or provider failure)
       const SSE_TIMEOUT_MS = 60_000;
       const sseTimer = setTimeout(() => {
         if (!res.writableEnded && !res.destroyed) {
-          sendSseError(res, 'TIMEOUT', 'Stream timeout exceeded (60s). The response took too long.');
+          sendSseError(
+            res,
+            'TIMEOUT',
+            'Stream timeout exceeded (60s). The response took too long.',
+          );
           controller.abort();
           res.end();
         }
@@ -359,9 +348,7 @@ export const createChatRouter = (chatService: ChatService, artKeywordRepo?: ArtK
         const currentUser = getRequestUser(req);
         const rawBody = (req.body ?? {}) as Record<string, unknown>;
         const parseableBody =
-          typeof rawBody.context === 'string'
-            ? { ...rawBody, context: undefined }
-            : rawBody;
+          typeof rawBody.context === 'string' ? { ...rawBody, context: undefined } : rawBody;
         const bodyPayload = parsePostMessageRequest(parseableBody);
         const parsedContext = parseContext(rawBody.context) ?? bodyPayload.context;
         const context = {
@@ -396,7 +383,7 @@ export const createChatRouter = (chatService: ChatService, artKeywordRepo?: ArtK
           const isKnown = error instanceof AppError;
           sendSseError(
             res,
-            isKnown ? (error).code : 'INTERNAL_ERROR',
+            isKnown ? error.code : 'INTERNAL_ERROR',
             isKnown ? error.message : 'Internal server error',
           );
         }
@@ -450,13 +437,14 @@ export const createChatRouter = (chatService: ChatService, artKeywordRepo?: ArtK
   router.get('/sessions/:id', isAuthenticated, async (req, res, next) => {
     try {
       const currentUser = getRequestUser(req);
-      const result = await chatService.getSession(req.params.id, {
-        cursor: typeof req.query.cursor === 'string' ? req.query.cursor : undefined,
-        limit:
-          typeof req.query.limit === 'string'
-            ? Number(req.query.limit)
-            : undefined,
-      }, currentUser?.id);
+      const result = await chatService.getSession(
+        req.params.id,
+        {
+          cursor: typeof req.query.cursor === 'string' ? req.query.cursor : undefined,
+          limit: typeof req.query.limit === 'string' ? Number(req.query.limit) : undefined,
+        },
+        currentUser?.id,
+      );
 
       const baseUrl = resolveRequestBaseUrl(req);
       result.messages = result.messages.map((message) => {
@@ -524,31 +512,35 @@ export const createChatRouter = (chatService: ChatService, artKeywordRepo?: ArtK
     }
   });
 
-  router.post('/messages/:messageId/tts', isAuthenticated, sessionLimiter, async (req, res, next) => {
-    if (!env.featureFlags.voiceMode) {
-      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Voice mode is not enabled' } });
-      return;
-    }
-
-    try {
-      const currentUser = getRequestUser(req);
-      const result = await chatService.synthesizeSpeech(
-        req.params.messageId,
-        currentUser?.id,
-      );
-
-      if (!result) {
-        res.status(204).end();
+  router.post(
+    '/messages/:messageId/tts',
+    isAuthenticated,
+    sessionLimiter,
+    async (req, res, next) => {
+      if (!env.featureFlags.voiceMode) {
+        res
+          .status(404)
+          .json({ error: { code: 'NOT_FOUND', message: 'Voice mode is not enabled' } });
         return;
       }
 
-      res.set('Content-Type', result.contentType);
-      res.set('Content-Length', String(result.audio.length));
-      res.send(result.audio);
-    } catch (error) {
-      next(error);
-    }
-  });
+      try {
+        const currentUser = getRequestUser(req);
+        const result = await chatService.synthesizeSpeech(req.params.messageId, currentUser?.id);
+
+        if (!result) {
+          res.status(204).end();
+          return;
+        }
+
+        res.set('Content-Type', result.contentType);
+        res.set('Content-Length', String(result.audio.length));
+        res.send(result.audio);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 
   router.get('/messages/:messageId/image', async (req, res, next) => {
     try {
@@ -590,8 +582,9 @@ export const createChatRouter = (chatService: ChatService, artKeywordRepo?: ArtK
 
       const fileStat = await stat(imagePath);
       const ext = image.fileName?.split('.').pop()?.toLowerCase() ?? '';
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-      const contentType = image.contentType || contentTypeByExtension[ext] || 'application/octet-stream';
+      const contentType =
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
+        image.contentType || contentTypeByExtension[ext] || 'application/octet-stream';
 
       res.setHeader('Content-Type', contentType);
       res.setHeader('Content-Length', String(fileStat.size));

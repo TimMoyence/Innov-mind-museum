@@ -1,5 +1,4 @@
  
-/* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/restrict-template-expressions -- raw pool.query rows are untyped */
 import pool from '@data/db';
 
 import type { IReviewRepository } from '../../domain/review.repository.interface';
@@ -79,10 +78,7 @@ export class ReviewRepositoryPg implements IReviewRepository {
 
   /** Retrieves a review by ID. */
   async getReviewById(reviewId: string): Promise<ReviewDTO | null> {
-    const result = await pool.query(
-      `SELECT * FROM "reviews" WHERE "id" = $1`,
-      [reviewId],
-    );
+    const result = await pool.query(`SELECT * FROM "reviews" WHERE "id" = $1`, [reviewId]);
 
     if (result.rows.length === 0) return null;
     return mapReviewRow(result.rows[0]);

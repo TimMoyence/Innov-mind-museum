@@ -97,7 +97,13 @@
     "unsaved_hint": "Tieni premuto per salvare",
     "saved_filter_on": "Filtro salvati ATTIVO",
     "saved_filter_off": "Filtro salvati DISATTIVO",
-    "sort_label": "ordina: {{sortMode}}"
+    "sort_label": "ordina: {{sortMode}}",
+    "swipe_delete": "Scorri per eliminare",
+    "delete_confirm": "Eliminare questa conversazione?",
+    "edit": "Modifica",
+    "select_all": "Seleziona tutto",
+    "delete_selected": "Elimina ({{count}})",
+    "selected_count": "{{count}} conversazione/i verranno eliminate."
   },
   "settings": {
     "title": "Impostazioni",
@@ -134,7 +140,21 @@
     "sign_out": "Esci",
     "preferences": "Preferenze",
     "security": "Sicurezza",
-    "biometric_lock": "Blocco biometrico"
+    "biometric_lock": "Blocco biometrico",
+    "change_password": "Cambia password",
+    "export_data": "Esporta i miei dati",
+    "export_data_desc": "Scarica tutti i tuoi dati personali (GDPR)",
+    "export_data_success": "Dati esportati con successo"
+  },
+  "change_password": {
+    "title": "Cambia password",
+    "current": "Password attuale",
+    "new": "Nuova password",
+    "confirm": "Conferma nuova password",
+    "submit": "Aggiorna password",
+    "success": "Password aggiornata con successo",
+    "error_mismatch": "Le password non corrispondono",
+    "error_short": "La password deve contenere almeno 8 caratteri"
   },
   "preferences": {
     "title": "Preferenze",
@@ -315,7 +335,8 @@
     "voice_message": "[Messaggio vocale]",
     "share_footer": "Condiviso tramite Musaium — Il tuo compagno di museo\nhttps://musaium.app",
     "replace_image": "Sostituisci",
-    "remove_image": "Rimuovi"
+    "remove_image": "Rimuovi",
+    "crop": "Ritaglia"
   },
   "chatInput": {
     "placeholder": "Chiedi di un'opera, un monumento, oppure invia voce/foto...",
@@ -504,7 +525,9 @@
       "delete_account_hint": "Questa azione non può essere annullata",
       "back_home": "Torna alla schermata iniziale",
       "sign_out": "Esci",
-      "sign_out_hint": "Esce e torna all'accesso"
+      "sign_out_hint": "Esce e torna all'accesso",
+      "change_password": "Cambia la password del tuo account",
+      "export_data": "Esporta tutti i tuoi dati personali"
     },
     "preferences": {
       "language_button": "Seleziona lingua {{language}}",

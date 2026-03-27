@@ -9,9 +9,30 @@ describe('ListAllTicketsUseCase', () => {
     repo = new InMemorySupportRepository();
     useCase = new ListAllTicketsUseCase(repo);
 
-    repo.seed({ id: 't1', userId: 10, subject: 'Ticket A', description: 'd1', status: 'open', priority: 'low' });
-    repo.seed({ id: 't2', userId: 20, subject: 'Ticket B', description: 'd2', status: 'in_progress', priority: 'high' });
-    repo.seed({ id: 't3', userId: 30, subject: 'Ticket C', description: 'd3', status: 'resolved', priority: 'medium' });
+    repo.seed({
+      id: 't1',
+      userId: 10,
+      subject: 'Ticket A',
+      description: 'd1',
+      status: 'open',
+      priority: 'low',
+    });
+    repo.seed({
+      id: 't2',
+      userId: 20,
+      subject: 'Ticket B',
+      description: 'd2',
+      status: 'in_progress',
+      priority: 'high',
+    });
+    repo.seed({
+      id: 't3',
+      userId: 30,
+      subject: 'Ticket C',
+      description: 'd3',
+      status: 'resolved',
+      priority: 'medium',
+    });
   });
 
   it('lists all tickets across all users', async () => {
@@ -52,60 +73,54 @@ describe('ListAllTicketsUseCase', () => {
   });
 
   it('rejects page < 1', async () => {
-    await expect(
-      useCase.execute({ page: 0, limit: 10 }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ page: 0, limit: 10 })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('rejects negative page', async () => {
-    await expect(
-      useCase.execute({ page: -1, limit: 10 }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ page: -1, limit: 10 })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('rejects non-integer page', async () => {
-    await expect(
-      useCase.execute({ page: 1.5, limit: 10 }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ page: 1.5, limit: 10 })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('rejects limit < 1', async () => {
-    await expect(
-      useCase.execute({ page: 1, limit: 0 }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ page: 1, limit: 0 })).rejects.toMatchObject({ statusCode: 400 });
   });
 
   it('rejects limit > 100', async () => {
-    await expect(
-      useCase.execute({ page: 1, limit: 101 }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ page: 1, limit: 101 })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('rejects invalid status', async () => {
-    await expect(
-      useCase.execute({ status: 'pending', page: 1, limit: 10 }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ status: 'pending', page: 1, limit: 10 })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('rejects invalid priority', async () => {
-    await expect(
-      useCase.execute({ priority: 'urgent', page: 1, limit: 10 }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ priority: 'urgent', page: 1, limit: 10 })).rejects.toMatchObject(
+      { statusCode: 400 },
+    );
   });
 
   it('accepts all valid statuses', async () => {
     for (const status of ['open', 'in_progress', 'resolved', 'closed']) {
-      await expect(
-        useCase.execute({ status, page: 1, limit: 10 }),
-      ).resolves.toBeDefined();
+      await expect(useCase.execute({ status, page: 1, limit: 10 })).resolves.toBeDefined();
     }
   });
 
   it('accepts all valid priorities', async () => {
     for (const priority of ['low', 'medium', 'high']) {
-      await expect(
-        useCase.execute({ priority, page: 1, limit: 10 }),
-      ).resolves.toBeDefined();
+      await expect(useCase.execute({ priority, page: 1, limit: 10 })).resolves.toBeDefined();
     }
   });
 });

@@ -39,14 +39,16 @@ const FALLBACK_TEMPLATES: Record<SupportedLocale, FallbackTemplates> = {
     quickSummary: 'Kurze Zusammenfassung: ',
     defaultQuestion: 'Frage zu einem Kunstwerk.',
     museumNextStep: 'Nächster Schritt: Vergleichen Sie Kompositionsdetails mit einem nahen Werk.',
-    standardHint: 'Hilfreicher Blickwinkel: Achten Sie auf Komposition, Licht und historischen Kontext.',
-    closingQuestion: 'Möchten Sie als Nächstes eine technische, biografische oder symbolische Betrachtung?',
+    standardHint:
+      'Hilfreicher Blickwinkel: Achten Sie auf Komposition, Licht und historischen Kontext.',
+    closingQuestion:
+      'Möchten Sie als Nächstes eine technische, biografische oder symbolische Betrachtung?',
   },
   it: {
     locationPrefix: (loc) => `Ti trovi vicino a ${loc}. `,
     quickSummary: 'Riepilogo veloce: ',
-    defaultQuestion: 'Domanda su un\'opera d\'arte.',
-    museumNextStep: 'Prossimo passo: confronta i dettagli compositivi con un\'opera vicina.',
+    defaultQuestion: "Domanda su un'opera d'arte.",
+    museumNextStep: "Prossimo passo: confronta i dettagli compositivi con un'opera vicina.",
     standardHint: 'Angolo utile: concentrati sulla composizione, la luce e il contesto storico.',
     closingQuestion: 'Vorresti una lettura tecnica, biografica o simbolica?',
   },
@@ -83,11 +85,7 @@ export function buildLocalizedFallback(
   const locationLine = opts.location ? t.locationPrefix(opts.location) : '';
   const nextStep = opts.museumMode ? t.museumNextStep : t.standardHint;
 
-  return [
-    `${locationLine}${t.quickSummary}${opts.recap}`,
-    nextStep,
-    t.closingQuestion,
-  ].join(' ');
+  return [`${locationLine}${t.quickSummary}${opts.recap}`, nextStep, t.closingQuestion].join(' ');
 }
 
 export { FALLBACK_TEMPLATES };

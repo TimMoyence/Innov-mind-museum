@@ -1,14 +1,10 @@
 import { WikidataClient } from '@modules/chat/adapters/secondary/wikidata.client';
 
-const mockSearchResponse = (
-  items: Array<{ id: string; label: string; description?: string }>,
-) => ({
+const mockSearchResponse = (items: Array<{ id: string; label: string; description?: string }>) => ({
   search: items,
 });
 
-const mockSparqlResponse = (
-  bindings: Array<Record<string, { value: string }>>,
-) => ({
+const mockSparqlResponse = (bindings: Array<Record<string, { value: string }>>) => ({
   results: { bindings },
 });
 
@@ -156,18 +152,17 @@ describe('WikidataClient', () => {
 
   it('validates QID format (rejects non-Q\\d+ patterns)', async () => {
     // Simulate a search result with an invalid QID
-    fetchSpy
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () =>
-          mockSearchResponse([
-            {
-              id: 'INVALID_ID',
-              label: 'Malicious Item',
-              description: 'painting',
-            },
-          ]),
-      });
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () =>
+        mockSearchResponse([
+          {
+            id: 'INVALID_ID',
+            label: 'Malicious Item',
+            description: 'painting',
+          },
+        ]),
+    });
 
     const result = await client.lookup({ searchTerm: 'test' });
 
@@ -177,18 +172,17 @@ describe('WikidataClient', () => {
   });
 
   it('validates QID format (rejects injection attempts)', async () => {
-    fetchSpy
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () =>
-          mockSearchResponse([
-            {
-              id: 'Q123} SERVICE <http://evil.com>{ ?x ?y ?z',
-              label: 'Injected',
-              description: 'painting by someone',
-            },
-          ]),
-      });
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () =>
+        mockSearchResponse([
+          {
+            id: 'Q123} SERVICE <http://evil.com>{ ?x ?y ?z',
+            label: 'Injected',
+            description: 'painting by someone',
+          },
+        ]),
+    });
 
     const result = await client.lookup({ searchTerm: 'injection test' });
 

@@ -97,7 +97,13 @@
     "unsaved_hint": "Mantén presionado para guardar",
     "saved_filter_on": "Filtro de guardadas ACTIVADO",
     "saved_filter_off": "Filtro de guardadas DESACTIVADO",
-    "sort_label": "orden: {{sortMode}}"
+    "sort_label": "orden: {{sortMode}}",
+    "swipe_delete": "Deslizar para eliminar",
+    "delete_confirm": "Eliminar esta conversacion?",
+    "edit": "Editar",
+    "select_all": "Seleccionar todo",
+    "delete_selected": "Eliminar ({{count}})",
+    "selected_count": "Se eliminaran {{count}} conversacion(es)."
   },
   "settings": {
     "title": "Ajustes",
@@ -134,7 +140,21 @@
     "sign_out": "Cerrar sesión",
     "preferences": "Preferencias",
     "security": "Seguridad",
-    "biometric_lock": "Bloqueo biométrico"
+    "biometric_lock": "Bloqueo biométrico",
+    "change_password": "Cambiar contraseña",
+    "export_data": "Exportar mis datos",
+    "export_data_desc": "Descargar todos tus datos personales (RGPD)",
+    "export_data_success": "Datos exportados correctamente"
+  },
+  "change_password": {
+    "title": "Cambiar contraseña",
+    "current": "Contraseña actual",
+    "new": "Nueva contraseña",
+    "confirm": "Confirmar nueva contraseña",
+    "submit": "Actualizar contraseña",
+    "success": "Contraseña actualizada correctamente",
+    "error_mismatch": "Las contraseñas no coinciden",
+    "error_short": "La contraseña debe tener al menos 8 caracteres"
   },
   "preferences": {
     "title": "Preferencias",
@@ -315,7 +335,8 @@
     "voice_message": "[Mensaje de voz]",
     "share_footer": "Compartido con Musaium — Tu compañero de museo\nhttps://musaium.app",
     "replace_image": "Reemplazar",
-    "remove_image": "Eliminar"
+    "remove_image": "Eliminar",
+    "crop": "Recortar"
   },
   "chatInput": {
     "placeholder": "Pregunta sobre una obra de arte, monumento, o envía voz/foto...",
@@ -504,7 +525,9 @@
       "delete_account_hint": "Esta acción no se puede deshacer",
       "back_home": "Volver a la pantalla de inicio",
       "sign_out": "Cerrar sesión",
-      "sign_out_hint": "Cierra sesión y vuelve al inicio de sesión"
+      "sign_out_hint": "Cierra sesión y vuelve al inicio de sesión",
+      "change_password": "Cambiar la contraseña de tu cuenta",
+      "export_data": "Exportar todos tus datos personales"
     },
     "preferences": {
       "language_button": "Seleccionar idioma {{language}}",

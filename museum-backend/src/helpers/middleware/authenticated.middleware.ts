@@ -13,11 +13,7 @@ import type { Request, Response, NextFunction } from 'express';
  *
  * @throws {401} if token is missing or invalid.
  */
-export function isAuthenticated(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void {
+export function isAuthenticated(req: Request, res: Response, next: NextFunction): void {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
     res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token required' } });
@@ -45,11 +41,7 @@ export function isAuthenticated(
  * Middleware that only allows JWT authentication (no API keys).
  * Used for sensitive endpoints like API key management itself.
  */
-export function isAuthenticatedJwtOnly(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void {
+export function isAuthenticatedJwtOnly(req: Request, res: Response, next: NextFunction): void {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
     res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token required' } });
@@ -57,7 +49,9 @@ export function isAuthenticatedJwtOnly(
   }
 
   if (token.startsWith('msk_')) {
-    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'JWT authentication required for this endpoint' } });
+    res.status(401).json({
+      error: { code: 'UNAUTHORIZED', message: 'JWT authentication required for this endpoint' },
+    });
     return;
   }
 

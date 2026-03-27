@@ -1,5 +1,9 @@
 import { ChatSessionService } from '@modules/chat/application/chat-session.service';
-import type { ChatRepository, ChatSessionsPage, SessionMessagesPage } from '@modules/chat/domain/chat.repository.interface';
+import type {
+  ChatRepository,
+  ChatSessionsPage,
+  SessionMessagesPage,
+} from '@modules/chat/domain/chat.repository.interface';
 import type { ChatSession } from '@modules/chat/domain/chatSession.entity';
 import type { CacheService } from '@shared/cache/cache.port';
 import { AppError } from '@shared/errors/app.error';
@@ -79,9 +83,7 @@ describe('ChatSessionService', () => {
       const result = await svc.createSession({ locale: 'en' });
 
       expect(result.id).toBe(session.id);
-      expect(repo.createSession).toHaveBeenCalledWith(
-        expect.objectContaining({ locale: 'en' }),
-      );
+      expect(repo.createSession).toHaveBeenCalledWith(expect.objectContaining({ locale: 'en' }));
     });
 
     it('invalidates session list cache on creation', async () => {
@@ -144,9 +146,9 @@ describe('ChatSessionService', () => {
       const repo = makeRepo();
       const svc = new ChatSessionService({ repository: repo });
 
-      await expect(
-        svc.getSession('not-a-uuid', { limit: 20 }),
-      ).rejects.toMatchObject({ statusCode: 400 });
+      await expect(svc.getSession('not-a-uuid', { limit: 20 })).rejects.toMatchObject({
+        statusCode: 400,
+      });
     });
   });
 
@@ -194,7 +196,9 @@ describe('ChatSessionService', () => {
       const result = await svc.deleteSessionIfEmpty('a0a0a0a0-b1b1-4c2c-8d3d-e4e4e4e4e4e4', 42);
 
       expect(result.deleted).toBe(true);
-      expect(cache.delByPrefix).toHaveBeenCalledWith('session:a0a0a0a0-b1b1-4c2c-8d3d-e4e4e4e4e4e4:');
+      expect(cache.delByPrefix).toHaveBeenCalledWith(
+        'session:a0a0a0a0-b1b1-4c2c-8d3d-e4e4e4e4e4e4:',
+      );
       expect(cache.delByPrefix).toHaveBeenCalledWith('sessions:user:42:');
     });
 

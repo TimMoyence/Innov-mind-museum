@@ -28,9 +28,7 @@ export interface LlmSectionPlanInput {
   hasImage?: boolean;
 }
 
-const buildGuideLevelHint = (
-  guideLevel: 'beginner' | 'intermediate' | 'expert',
-): string => {
+const buildGuideLevelHint = (guideLevel: 'beginner' | 'intermediate' | 'expert'): string => {
   if (guideLevel === 'expert') {
     return 'Use advanced art-history vocabulary and precise contextual details.';
   }
@@ -68,7 +66,7 @@ const buildSummaryPrompt = (
   }
 
   parts.push(
-    `Write as if speaking face-to-face. Be specific: names, dates, techniques, visual details. Avoid filler like "This is an interesting work" — say what makes it interesting. Keep answer under ${wordLimit} words.`,
+    `Write as if speaking face-to-face. Be specific: names, dates, techniques, visual details. Avoid filler like "This is an interesting work" — say what makes it interesting. Keep answer under ${String(wordLimit)} words.`,
   );
 
   if (hasImage) {
@@ -102,9 +100,7 @@ const buildSummaryPrompt = (
  * @param input - Configuration for locale, guide level, museum mode, and timeouts.
  * @returns An array of section definitions.
  */
-export const createLlmSectionPlan = (
-  input: LlmSectionPlanInput,
-): LlmSectionDefinition[] => {
+export const createLlmSectionPlan = (input: LlmSectionPlanInput): LlmSectionDefinition[] => {
   const summary: LlmSectionDefinition = {
     name: 'summary',
     timeoutMs: input.timeoutSummaryMs,
@@ -150,8 +146,8 @@ export const createSummaryFallback = (input: SummaryFallbackInput): string => {
   const sanitizedLocation = input.location ? sanitizePromptInput(input.location) : undefined;
   const recap = snippets.length
     ? snippets.join(' ')
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-    : input.question?.trim() || FALLBACK_TEMPLATES[locale].defaultQuestion;
+    : // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
+      input.question?.trim() || FALLBACK_TEMPLATES[locale].defaultQuestion;
 
   return buildLocalizedFallback(locale, {
     location: sanitizedLocation,

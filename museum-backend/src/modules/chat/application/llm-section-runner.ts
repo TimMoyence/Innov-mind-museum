@@ -35,9 +35,7 @@ export interface SectionRunFailure {
 }
 
 /** Discriminated union of a section's success or failure outcome. */
-export type SectionRunResult<TValue> =
-  | SectionRunSuccess<TValue>
-  | SectionRunFailure;
+export type SectionRunResult<TValue> = SectionRunSuccess<TValue> | SectionRunFailure;
 
 interface SectionStartEvent {
   name: string;
@@ -88,8 +86,9 @@ export interface SectionRunnerOptions {
 }
 
 const defaultNow = (): number => Date.now();
-const defaultSleep = async (ms: number): Promise<void> =>
-  { await new Promise((resolve) => setTimeout(resolve, ms)); };
+const defaultSleep = async (ms: number): Promise<void> => {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+};
 
 const toErrorMessage = (error: unknown): string => {
   if (error instanceof Error) {
@@ -104,18 +103,10 @@ const isTimeoutError = (error: unknown): boolean => {
   }
 
   const text = `${error.name} ${error.message}`.toLowerCase();
-  return (
-    text.includes('timeout') ||
-    text.includes('timed out') ||
-    text.includes('abort')
-  );
+  return text.includes('timeout') || text.includes('timed out') || text.includes('abort');
 };
 
-const jitteredDelay = (
-  baseMs: number,
-  attempt: number,
-  remainingBudgetMs: number,
-): number => {
+const jitteredDelay = (baseMs: number, attempt: number, remainingBudgetMs: number): number => {
   if (remainingBudgetMs <= 0) {
     return 0;
   }
@@ -154,10 +145,7 @@ const executeTask = async <TValue>(
       };
     }
 
-    const effectiveTimeoutMs = Math.max(
-      1,
-      Math.min(task.timeoutMs, remainingBudget),
-    );
+    const effectiveTimeoutMs = Math.max(1, Math.min(task.timeoutMs, remainingBudget));
     const startedAt = now();
 
     options.hooks?.onStart?.({
@@ -172,16 +160,13 @@ const executeTask = async <TValue>(
     let timeoutId: NodeJS.Timeout | undefined;
     const timeoutPromise = new Promise<never>((_resolve, reject) => {
       timeoutId = setTimeout(() => {
-        controller.abort(new Error(`LLM timeout after ${effectiveTimeoutMs}ms`));
-        reject(new Error(`LLM timeout after ${effectiveTimeoutMs}ms`));
+        controller.abort(new Error(`LLM timeout after ${String(effectiveTimeoutMs)}ms`));
+        reject(new Error(`LLM timeout after ${String(effectiveTimeoutMs)}ms`));
       }, effectiveTimeoutMs);
     });
 
     try {
-      const value = await Promise.race([
-        task.run(controller.signal),
-        timeoutPromise,
-      ]);
+      const value = await Promise.race([task.run(controller.signal), timeoutPromise]);
       if (timeoutId) clearTimeout(timeoutId);
 
       const latencyMs = now() - startedAt;
@@ -232,8 +217,7 @@ const executeTask = async <TValue>(
         });
       }
 
-      const canRetry =
-        attempts < maxAttempts && shouldRetry(error, status);
+      const canRetry = attempts < maxAttempts && shouldRetry(error, status);
 
       if (!canRetry) {
         return {
@@ -301,9 +285,7 @@ export const runSectionTasks = async <TValue>(
   const deadlineMs = now() + Math.max(1, options.totalBudgetMs);
   const limiter = new Semaphore(Math.max(1, options.maxConcurrent));
 
-  const scheduled = tasks.map((task) =>
-    limiter.use(() => executeTask(task, options, deadlineMs)),
-  );
+  const scheduled = tasks.map((task) => limiter.use(() => executeTask(task, options, deadlineMs)));
 
   const settled = await Promise.allSettled(scheduled);
 

@@ -102,9 +102,9 @@
     },
     {
       "id": "PE-015",
-      "rule": "ESLint --fix DOIT etre execute sur chaque fichier modifie pendant le DEV (pas seulement au commit). Si un agent modifie un fichier, il lance `eslint --fix` immediatement apres. Le lint-staged au commit est le filet de securite, pas la premiere ligne.",
-      "source": "User feedback 2026-03-27: le lint est arrive et doit etre utilise en continu, pas juste au commit.",
-      "inject_when": "agent modifie un fichier TypeScript dans museum-backend ou museum-web",
+      "rule": "ESLint --fix ET Prettier DOIVENT etre executes sur chaque fichier modifie pendant le DEV (pas seulement au commit). Si un agent modifie un fichier, il lance `eslint --fix` + `prettier --write` immediatement apres. Le lint-staged au commit est le filet de securite, pas la premiere ligne.",
+      "source": "User feedback 2026-03-27: le lint + prettier sont arrives et doivent etre utilises en continu.",
+      "inject_when": "agent modifie un fichier TypeScript/JSON/CSS dans museum-backend ou museum-web",
       "severity": "HIGH"
     },
     {
@@ -127,8 +127,20 @@
       "source": "User feedback 2026-03-27: il faut tester le produit, les routes, developper en iterant dessus.",
       "inject_when": "agent implemente ou modifie des routes HTTP, des use cases, ou des fonctionnalites utilisateur",
       "severity": "HIGH"
+    },
+    {
+      "id": "PE-019",
+      "rule": "Agent Teams v2: les agents DEV sont spawnes en parallele reel via Agent(run_in_background: true, team_name: ...). La Sentinelle est un agent persistant communique via SendMessage. Les protocoles sont dans team-protocols/, les templates dans team-templates/. Le SKILL.md est un thin dispatcher de 222 lignes.",
+      "source": "v2 migration 2026-03-27: SKILL.md 1653L -> 222L, 7 protocoles + 9 templates + 5 hooks + 2 agents",
+      "inject_when": "Tech Lead orchestre un run /team",
+      "severity": "HIGH"
     }
   ],
+  "v2MigrationSummary": {
+    "newEnrichments": ["PE-019"],
+    "total": 19,
+    "notes": "v2 Agent Teams migration: thin dispatcher, parallel agents, automated hooks, quality ratchet."
+  },
   "r13Summary": {
     "newEnrichments": ["PE-014"],
     "total": 14,

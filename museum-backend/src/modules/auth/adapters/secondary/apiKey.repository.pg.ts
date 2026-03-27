@@ -47,9 +47,6 @@ export class ApiKeyRepositoryPg implements ApiKeyRepository {
 
   /** Stamps the last_used_at timestamp on an API key. */
   async updateLastUsed(id: number): Promise<void> {
-    await pool.query(
-      `UPDATE "api_keys" SET last_used_at = NOW() WHERE id = $1`,
-      [id],
-    );
+    await pool.query(`UPDATE "api_keys" SET last_used_at = NOW() WHERE id = $1`, [id]);
   }
 }

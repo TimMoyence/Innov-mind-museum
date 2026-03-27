@@ -11,16 +11,23 @@ jest.mock('@shared/observability/sentry', () => ({
   setUser: jest.fn(),
 }));
 
-jest.mock('./apiKey.middleware', () => ({
-  validateApiKey: jest.fn(),
-}), { virtual: true });
+jest.mock(
+  './apiKey.middleware',
+  () => ({
+    validateApiKey: jest.fn(),
+  }),
+  { virtual: true },
+);
 
 // Mock the apiKey.middleware relative import used inside authenticated.middleware
 jest.mock('@src/helpers/middleware/apiKey.middleware', () => ({
   validateApiKey: jest.fn(),
 }));
 
-import { isAuthenticated, isAuthenticatedJwtOnly } from '@src/helpers/middleware/authenticated.middleware';
+import {
+  isAuthenticated,
+  isAuthenticatedJwtOnly,
+} from '@src/helpers/middleware/authenticated.middleware';
 import { authSessionService } from '@modules/auth/core/useCase';
 
 const mockRes = (): Response => {

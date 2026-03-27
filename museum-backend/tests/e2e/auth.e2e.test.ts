@@ -136,11 +136,7 @@ describeE2E('auth e2e (full lifecycle)', () => {
     const { token, email } = await registerAndLogin(harness.request, { password });
 
     // Delete account
-    const deleteRes = await harness.request(
-      '/api/auth/account',
-      { method: 'DELETE' },
-      token,
-    );
+    const deleteRes = await harness.request('/api/auth/account', { method: 'DELETE' }, token);
     expect(deleteRes.status).toBe(200);
     expect(deleteRes.body).toEqual(expect.objectContaining({ deleted: true }));
 

@@ -116,7 +116,9 @@ describe('withPolicyCitation', () => {
 
 describe('isValidSessionListCursor', () => {
   it('returns true for valid cursor', () => {
-    const cursor = Buffer.from(JSON.stringify({ updatedAt: '2024-01-01', id: 'abc' })).toString('base64url');
+    const cursor = Buffer.from(JSON.stringify({ updatedAt: '2024-01-01', id: 'abc' })).toString(
+      'base64url',
+    );
     expect(isValidSessionListCursor(cursor)).toBe(true);
   });
 
