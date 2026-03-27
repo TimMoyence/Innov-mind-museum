@@ -95,15 +95,48 @@
     },
     {
       "id": "PE-014",
-      "rule": "Sentinelle FINALIZE MUST cite verifiable evidence for EVERY KB entry: git commit hash, test output line, or exact gate message quote. If no evidence exists, write 'N/A' — NEVER invent data to fill a template. An empty field is honest; a fabricated field is a severity 5 incident.",
-      "source": "R13: Sentinelle fabricated 17 KB entries (3 fake EP, 3 fake PE, wrong score/loops/mode/agents/files/tests across 6 files).",
-      "inject_when": "Sentinelle executes FINALIZE protocol",
+      "rule": "Sentinelle FINALIZE MUST cite verifiable evidence for EVERY KB entry: git commit hash, test output line, or exact gate message quote. If no evidence exists, write 'N/A' — NEVER invent data to fill a template.",
+      "source": "R13: Sentinelle fabricated 17 KB entries.",
+      "inject_when": "Sentinelle executes FIN DE RUN protocol",
       "severity": "CRITICAL"
+    },
+    {
+      "id": "PE-015",
+      "rule": "ESLint --fix DOIT etre execute sur chaque fichier modifie pendant le DEV (pas seulement au commit). Si un agent modifie un fichier, il lance `eslint --fix` immediatement apres. Le lint-staged au commit est le filet de securite, pas la premiere ligne.",
+      "source": "User feedback 2026-03-27: le lint est arrive et doit etre utilise en continu, pas juste au commit.",
+      "inject_when": "agent modifie un fichier TypeScript dans museum-backend ou museum-web",
+      "severity": "HIGH"
+    },
+    {
+      "id": "PE-016",
+      "rule": "Les migrations TypeORM DOIVENT etre generees via `node scripts/migration-cli.cjs generate --name=X` — JAMAIS ecrites a la main. Apres generation, verifier le contenu (souvent tsc genere du schema drift). Si le contenu est incorrect, supprimer et reecrire manuellement UNIQUEMENT le CREATE TABLE cible avec FK et CHECK constraints.",
+      "source": "R13: migration auto-generee contenait tout le schema drift. User feedback: migrations = CLI obligatoire, dans le journal.",
+      "inject_when": "agent cree ou modifie une entite TypeORM, ou quand une migration est necessaire",
+      "severity": "CRITICAL"
+    },
+    {
+      "id": "PE-017",
+      "rule": "AVANT de coder, verifier les donnees existantes en base. Lire les entites, les migrations, les routes existantes. Comparer le plan avec l'existant. Si un doute sur le schema, les contraintes, ou le comportement attendu : DEMANDER a l'utilisateur. Ne jamais supposer.",
+      "source": "User feedback 2026-03-27: vision produit = verifier la base, comparer a l'existant, poser des questions en cas de doute.",
+      "inject_when": "agent travaille sur un module qui touche la base de donnees ou les routes API",
+      "severity": "HIGH"
+    },
+    {
+      "id": "PE-018",
+      "rule": "Penser PRODUIT, pas juste CODE. Apres implementation, tester les routes (curl/httpie/test.http), verifier le comportement reel, iterer. Un endpoint qui compile mais retourne des donnees incorrectes est un bug. Le Dev ne s'arrete pas au typecheck — il s'arrete quand le produit fonctionne.",
+      "source": "User feedback 2026-03-27: il faut tester le produit, les routes, developper en iterant dessus.",
+      "inject_when": "agent implemente ou modifie des routes HTTP, des use cases, ou des fonctionnalites utilisateur",
+      "severity": "HIGH"
     }
   ],
   "r13Summary": {
     "newEnrichments": ["PE-014"],
     "total": 14,
-    "notes": "R13: 3 fabricated PE removed. Replaced with single PE-014 (CRITICAL) — anti-hallucination guard for Sentinelle FINALIZE."
+    "notes": "R13: anti-hallucination guard."
+  },
+  "postR13Summary": {
+    "newEnrichments": ["PE-015", "PE-016", "PE-017", "PE-018"],
+    "total": 18,
+    "notes": "User feedback 2026-03-27: ESLint continu (PE-015), migrations CLI (PE-016), verif DB existante (PE-017), vision produit/iteration (PE-018)."
   }
 }
