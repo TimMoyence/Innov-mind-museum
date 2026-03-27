@@ -20,7 +20,7 @@
     .graphic {
       width: 1024px;
       height: 500px;
-      background: linear-gradient(135deg, #1E1B19 0%, #2D2926 40%, #3A3330 70%, #1E1B19 100%);
+      background: linear-gradient(135deg, #0F172A 0%, #1E293B 35%, #1E3A8A 70%, #172554 100%);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -28,37 +28,50 @@
       overflow: hidden;
     }
 
-    /* Decorative elements */
-    .graphic::before {
-      content: '';
+    /* Animated orb - top right (static for screenshot) */
+    .orb-1 {
       position: absolute;
-      top: -100px;
-      right: -100px;
-      width: 400px;
-      height: 400px;
+      top: -120px;
+      right: -60px;
+      width: 380px;
+      height: 380px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(200, 170, 110, 0.12) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(96, 165, 250, 0.2) 0%, rgba(37, 99, 235, 0.08) 50%, transparent 70%);
+      filter: blur(40px);
     }
 
-    .graphic::after {
-      content: '';
+    /* Animated orb - bottom left */
+    .orb-2 {
       position: absolute;
-      bottom: -80px;
-      left: -80px;
+      bottom: -100px;
+      left: -40px;
       width: 300px;
       height: 300px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(200, 170, 110, 0.08) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, transparent 70%);
+      filter: blur(30px);
     }
 
-    /* Grid pattern overlay */
+    /* Mesh gradient accent */
+    .orb-3 {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(37, 99, 235, 0.06) 0%, transparent 60%);
+    }
+
+    /* Subtle grid overlay */
     .grid-overlay {
       position: absolute;
       inset: 0;
       background-image:
-        linear-gradient(rgba(200, 170, 110, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(200, 170, 110, 0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 48px 48px;
     }
 
     .content {
@@ -66,75 +79,84 @@
       z-index: 1;
       display: flex;
       align-items: center;
-      gap: 60px;
-      padding: 0 80px;
+      gap: 56px;
+      padding: 0 72px;
+      width: 100%;
     }
 
     .text-side {
       flex: 1;
     }
 
+    /* Logo mark - matches BrandMark.tsx */
     .logo-mark {
-      width: 56px;
-      height: 56px;
+      width: 52px;
+      height: 52px;
       border-radius: 14px;
-      background: linear-gradient(135deg, #C8AA6E 0%, #A08050 100%);
+      background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
       display: flex;
       align-items: center;
       justify-content: center;
       margin-bottom: 20px;
-      box-shadow: 0 4px 20px rgba(200, 170, 110, 0.3);
+      box-shadow: 0 4px 24px rgba(37, 99, 235, 0.4);
     }
 
     .logo-mark span {
-      font-size: 28px;
+      font-size: 26px;
       font-weight: 800;
-      color: #1E1B19;
+      color: #FFFFFF;
       line-height: 1;
     }
 
     .title {
-      font-size: 48px;
+      font-size: 44px;
       font-weight: 800;
-      color: #FFFFFF;
-      line-height: 1.1;
-      letter-spacing: -0.02em;
+      color: #F8FAFC;
+      line-height: 1.12;
+      letter-spacing: -0.025em;
     }
 
     .title .accent {
-      color: #C8AA6E;
+      background: linear-gradient(135deg, #60A5FA, #38BDF8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
     .tagline {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 400;
-      color: rgba(255, 255, 255, 0.7);
-      margin-top: 16px;
+      color: rgba(248, 250, 252, 0.6);
+      margin-top: 14px;
       line-height: 1.5;
       max-width: 380px;
     }
 
     .badges {
       display: flex;
-      gap: 12px;
-      margin-top: 28px;
+      gap: 10px;
+      margin-top: 24px;
     }
 
+    /* Glassmorphism badges */
     .badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 8px 16px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: rgba(255, 255, 255, 0.85);
-      font-size: 13px;
+      padding: 8px 14px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: rgba(248, 250, 252, 0.85);
+      font-size: 12.5px;
       font-weight: 600;
+      letter-spacing: 0.01em;
     }
 
     .badge .icon {
-      font-size: 16px;
+      font-size: 15px;
     }
 
     .phone-side {
@@ -144,53 +166,66 @@
 
     /* Phone mockup */
     .phone {
-      width: 220px;
-      height: 440px;
-      border-radius: 36px;
-      background: #111;
-      border: 3px solid #333;
+      width: 215px;
+      height: 430px;
+      border-radius: 32px;
+      background: #0F172A;
+      border: 2.5px solid rgba(255, 255, 255, 0.12);
       overflow: hidden;
       box-shadow:
-        0 20px 60px rgba(0, 0, 0, 0.5),
-        0 0 0 1px rgba(255, 255, 255, 0.05);
+        0 24px 64px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
       position: relative;
     }
 
     .phone-screen {
       position: absolute;
-      inset: 3px;
-      border-radius: 33px;
-      background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      inset: 2.5px;
+      border-radius: 29px;
+      background: linear-gradient(180deg, #0F172A 0%, #1E293B 100%);
       display: flex;
       flex-direction: column;
-      padding: 50px 16px 20px;
+      padding: 48px 14px 18px;
       overflow: hidden;
     }
 
     .phone-notch {
       position: absolute;
-      top: 3px;
+      top: 2.5px;
       left: 50%;
       transform: translateX(-50%);
-      width: 80px;
-      height: 25px;
-      background: #111;
-      border-radius: 0 0 16px 16px;
+      width: 90px;
+      height: 28px;
+      background: #0F172A;
+      border-radius: 0 0 18px 18px;
       z-index: 2;
     }
 
+    .phone-notch::after {
+      content: '';
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #1E293B;
+    }
+
     .chat-bubble {
-      padding: 10px 14px;
-      border-radius: 16px;
-      font-size: 11px;
-      line-height: 1.4;
-      margin-bottom: 8px;
-      max-width: 85%;
+      padding: 10px 13px;
+      border-radius: 14px;
+      font-size: 10.5px;
+      line-height: 1.45;
+      margin-bottom: 7px;
+      max-width: 88%;
     }
 
     .chat-user {
-      background: #C8AA6E;
-      color: #1E1B19;
+      background: rgba(37, 99, 235, 0.88);
+      color: #F8FAFC;
       align-self: flex-end;
       margin-left: auto;
       border-bottom-right-radius: 4px;
@@ -198,42 +233,69 @@
     }
 
     .chat-ai {
-      background: rgba(255, 255, 255, 0.1);
-      color: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: rgba(248, 250, 252, 0.9);
       align-self: flex-start;
       border-bottom-left-radius: 4px;
+    }
+
+    .chat-ai strong {
+      color: #60A5FA;
     }
 
     .chat-input {
       margin-top: auto;
       padding: 10px 14px;
-      border-radius: 20px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: rgba(255, 255, 255, 0.4);
-      font-size: 11px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: rgba(248, 250, 252, 0.35);
+      font-size: 10.5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chat-input .send-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #2563EB;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: white;
     }
 
     /* Second phone (tilted, behind) */
     .phone-bg {
       position: absolute;
-      top: 20px;
-      left: -40px;
-      transform: rotate(-8deg);
-      opacity: 0.4;
+      top: 24px;
+      left: -36px;
+      transform: rotate(-7deg);
+      opacity: 0.35;
+    }
+
+    .phone-bg .phone-screen {
+      background: linear-gradient(180deg, #0F172A 0%, #172554 100%);
     }
   </style>
 </head>
 <body>
   <!--
-    INSTRUCTIONS:
-    1. Open this file in a browser at 1024px width
-    2. Take a screenshot at exactly 1024x500
-    3. Use browser DevTools → Device toolbar → set to 1024x500
-    4. Or use: `npx capture-website-cli feature-graphic.html --width=1024 --height=500 --output=feature-graphic.png`
-    5. Upload to Google Play Console → Store listing → Feature graphic
+    EXPORT INSTRUCTIONS:
+    1. Open in browser → DevTools → Device toolbar → 1024x500
+    2. Screenshot (Cmd+Shift+4 on Mac, or DevTools capture)
+    3. Or CLI: npx capture-website-cli feature-graphic.html --width=1024 --height=500 --output=feature-graphic.png
+    4. Upload to Google Play Console → Store listing → Feature graphic
   -->
   <div class="graphic">
+    <div class="orb-1"></div>
+    <div class="orb-2"></div>
+    <div class="orb-3"></div>
     <div class="grid-overlay"></div>
     <div class="content">
       <div class="text-side">
@@ -243,7 +305,7 @@
           for every museum
         </h1>
         <p class="tagline">
-          Photograph an artwork, ask a question — get instant cultural context powered by artificial intelligence.
+          Photograph an artwork, ask a question — get instant cultural context powered by AI.
         </p>
         <div class="badges">
           <span class="badge"><span class="icon">📷</span> Visual Recognition</span>
@@ -259,10 +321,13 @@
           <div class="phone-notch"></div>
           <div class="phone-screen">
             <div class="chat-bubble chat-user">What painting is this?</div>
-            <div class="chat-bubble chat-ai">This is <strong>Starry Night</strong> by Vincent van Gogh (1889). The swirling sky depicts the view from his asylum room in Saint-Rémy-de-Provence...</div>
+            <div class="chat-bubble chat-ai">This is <strong>Starry Night</strong> by Vincent van Gogh (1889). The swirling sky depicts the view from his asylum room...</div>
             <div class="chat-bubble chat-user">What technique did he use?</div>
-            <div class="chat-bubble chat-ai">Van Gogh used <strong>impasto</strong> — thick, textured brushstrokes that create a sense of movement and energy across the canvas...</div>
-            <div class="chat-input">Ask about any artwork...</div>
+            <div class="chat-bubble chat-ai">Van Gogh used <strong>impasto</strong> — thick, textured brushstrokes creating movement and energy...</div>
+            <div class="chat-input">
+              <span>Ask about any artwork...</span>
+              <span class="send-icon">&#x27A4;</span>
+            </div>
           </div>
         </div>
       </div>
