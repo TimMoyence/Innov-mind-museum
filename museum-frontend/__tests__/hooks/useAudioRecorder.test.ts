@@ -11,22 +11,21 @@ jest.mock('react-i18next', () => ({
 }));
 
 // Shared mock fn references — class instances bind to these via prototype
-const mockPrepareToRecordAsync = jest.fn<Promise<void>, [Record<string, unknown>]>();
-const mockStartAsync = jest.fn<Promise<void>, []>();
 const mockStopAndUnloadAsync = jest.fn<Promise<void>, []>();
 const mockGetURI = jest.fn<string | null, []>();
 const mockRequestPermissionsAsync = jest.fn<Promise<{ granted: boolean }>, []>();
 const mockSetAudioModeAsync = jest.fn<Promise<void>, [Record<string, boolean>]>();
-const mockCreateAsync = jest.fn();
+const mockSoundCreateAsync = jest.fn();
+const mockRecordingCreateAsync = jest.fn();
 
 jest.mock('expo-av', () => {
   // Build the Recording "class" inside the factory so it captures mock fns via closure
   function Recording(this: Record<string, unknown>) {
-    this.prepareToRecordAsync = mockPrepareToRecordAsync;
-    this.startAsync = mockStartAsync;
     this.stopAndUnloadAsync = mockStopAndUnloadAsync;
     this.getURI = mockGetURI;
   }
+
+  Recording.createAsync = (...args: unknown[]) => mockRecordingCreateAsync(...args);
 
   return {
     Audio: {
@@ -42,7 +41,7 @@ jest.mock('expo-av', () => {
       },
       Sound: {
         get createAsync() {
-          return mockCreateAsync;
+          return mockSoundCreateAsync;
         },
       },
     },
@@ -59,11 +58,12 @@ describe('useAudioRecorder', () => {
     // Default to native (iOS) platform for tests
     Object.defineProperty(Platform, 'OS', { value: 'ios', writable: true });
     mockRequestPermissionsAsync.mockResolvedValue({ granted: true });
-    mockPrepareToRecordAsync.mockResolvedValue(undefined);
-    mockStartAsync.mockResolvedValue(undefined);
     mockStopAndUnloadAsync.mockResolvedValue(undefined);
     mockSetAudioModeAsync.mockResolvedValue(undefined);
     mockGetURI.mockReturnValue('file://recording.m4a');
+    mockRecordingCreateAsync.mockResolvedValue({
+      recording: { stopAndUnloadAsync: mockStopAndUnloadAsync, getURI: mockGetURI },
+    });
   });
 
   afterAll(() => {
@@ -91,8 +91,7 @@ describe('useAudioRecorder', () => {
       allowsRecordingIOS: true,
       playsInSilentModeIOS: true,
     });
-    expect(mockPrepareToRecordAsync).toHaveBeenCalledTimes(1);
-    expect(mockStartAsync).toHaveBeenCalledTimes(1);
+    expect(mockRecordingCreateAsync).toHaveBeenCalledTimes(1);
     expect(result.current.isRecording).toBe(true);
   });
 
@@ -141,8 +140,7 @@ describe('useAudioRecorder', () => {
     });
 
     expect(result.current.isRecording).toBe(false);
-    expect(mockPrepareToRecordAsync).not.toHaveBeenCalled();
-    expect(mockStartAsync).not.toHaveBeenCalled();
+    expect(mockRecordingCreateAsync).not.toHaveBeenCalled();
   });
 
   it('clearRecordedAudio() resets audio state', async () => {

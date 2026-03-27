@@ -125,6 +125,8 @@ export const ChatMessageList = ({
       renderItem={renderItem}
       contentContainerStyle={styles.listContent}
       onContentSizeChange={handleContentSizeChange}
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled"
       ListEmptyComponent={
         <WelcomeCard
           museumMode={museumMode}
