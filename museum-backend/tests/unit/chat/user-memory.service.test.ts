@@ -117,11 +117,7 @@ describe('UserMemoryService', () => {
 
       await svc.getMemoryForPrompt(42);
 
-      expect(cache.set).toHaveBeenCalledWith(
-        'memory:prompt:42',
-        expect.any(String),
-        3600,
-      );
+      expect(cache.set).toHaveBeenCalledWith('memory:prompt:42', expect.any(String), 3600);
     });
   });
 

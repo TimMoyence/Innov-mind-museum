@@ -14,9 +14,11 @@ const createMockRepo = () => {
   const repo: jest.Mocked<Repository<ArtKeyword>> = {
     find: jest.fn().mockResolvedValue([]),
     findOne: jest.fn().mockResolvedValue(null),
-    save: jest.fn().mockImplementation((entity) =>
-      Promise.resolve({ id: 'uuid-1', createdAt: new Date(), ...entity }),
-    ),
+    save: jest
+      .fn()
+      .mockImplementation((entity) =>
+        Promise.resolve({ id: 'uuid-1', createdAt: new Date(), ...entity }),
+      ),
     create: jest.fn().mockImplementation((data) => data),
     createQueryBuilder: jest.fn().mockReturnValue(mockQb),
     query: jest.fn().mockResolvedValue([]),
@@ -47,7 +49,13 @@ describe('TypeOrmArtKeywordRepository', () => {
 
   it('upsert increments hitCount for existing keyword', async () => {
     const { repository, repo } = createRepository();
-    const existing = { id: 'uuid-1', keyword: 'ceramics', locale: 'en', hitCount: 3, createdAt: new Date() } as ArtKeyword;
+    const existing = {
+      id: 'uuid-1',
+      keyword: 'ceramics',
+      locale: 'en',
+      hitCount: 3,
+      createdAt: new Date(),
+    } as ArtKeyword;
     repo.findOne.mockResolvedValue(existing);
 
     await repository.upsert('Ceramics', 'en');

@@ -37,8 +37,7 @@ export interface E2EHarness {
  * Mirrors the exact setup from `api.postgres.e2e.test.ts` but extracted into a reusable function.
  */
 export async function createE2EHarness(): Promise<E2EHarness> {
-  const postgresContainer: StartedPostgresTestContainer =
-    await startPostgresTestContainer();
+  const postgresContainer: StartedPostgresTestContainer = await startPostgresTestContainer();
 
   // Environment variables MUST be set before any dynamic import that touches `env.ts`.
   process.env.NODE_ENV = 'test';

@@ -14,10 +14,7 @@ import { env } from '@src/config/env';
 import { AppDataSource } from '@src/data/db/data-source';
 import { acceptLanguageMiddleware } from '@src/helpers/middleware/accept-language.middleware';
 import { errorHandler } from '@src/helpers/middleware/error.middleware';
-import {
-  byIp,
-  createRateLimitMiddleware,
-} from '@src/helpers/middleware/rate-limit.middleware';
+import { byIp, createRateLimitMiddleware } from '@src/helpers/middleware/rate-limit.middleware';
 import { requestIdMiddleware } from '@src/helpers/middleware/request-id.middleware';
 import { requestLoggerMiddleware } from '@src/helpers/middleware/request-logger.middleware';
 import { setupSwagger } from '@src/helpers/swagger';
@@ -70,7 +67,14 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
       origin: corsOrigins,
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Accept-Language', 'sentry-trace', 'baggage'],
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Request-Id',
+        'Accept-Language',
+        'sentry-trace',
+        'baggage',
+      ],
     }),
   );
 
@@ -87,12 +91,14 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
       contentSecurityPolicy: isProd ? undefined : false,
     }),
   );
-  app.use(compression({
-    filter: (req, res) => {
-      if (req.headers.accept === 'text/event-stream') return false;
-      return compression.filter(req, res);
-    },
-  }));
+  app.use(
+    compression({
+      filter: (req, res) => {
+        if (req.headers.accept === 'text/event-stream') return false;
+        return compression.filter(req, res);
+      },
+    }),
+  );
 
   app.use((_req, res, next) => {
     res.setTimeout(env.requestTimeoutMs);
@@ -124,7 +130,9 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
       defaultTtlSeconds: env.cache.sessionTtlSeconds,
     });
     void redisCacheService.connect().catch((err: unknown) => {
-      logger.error('redis_connection_failed', { error: err instanceof Error ? err.message : String(err) });
+      logger.error('redis_connection_failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
     });
     cacheService = redisCacheService;
   } else {

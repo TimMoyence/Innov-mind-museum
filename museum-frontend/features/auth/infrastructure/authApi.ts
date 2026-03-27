@@ -8,8 +8,7 @@ import {
 
 type Schemas = components['schemas'];
 type RegisterPayload = OpenApiJsonRequestBodyFor<'/api/auth/register', 'post'>;
-type AuthMeResponse =
-  paths['/api/auth/me']['get']['responses'][200]['content']['application/json'];
+type AuthMeResponse = paths['/api/auth/me']['get']['responses'][200]['content']['application/json'];
 type AuthLogoutResponse =
   paths['/api/auth/logout']['post']['responses'][200]['content']['application/json'];
 type SocialLoginPayload = OpenApiJsonRequestBodyFor<'/api/auth/social-login', 'post'>;
@@ -94,7 +93,10 @@ export const authService = {
    * @param idToken - Identity token obtained from the social provider SDK.
    * @returns Session tokens on success.
    */
-  async socialLogin(provider: SocialLoginPayload['provider'], idToken: string): Promise<LoginResponse> {
+  async socialLogin(
+    provider: SocialLoginPayload['provider'],
+    idToken: string,
+  ): Promise<LoginResponse> {
     return openApiRequest({
       path: '/api/auth/social-login',
       method: 'post',
@@ -115,7 +117,9 @@ export const authService = {
    * Requests a password-reset email.
    * @param email - Email address associated with the account.
    */
-  async forgotPassword(email: string): Promise<OpenApiResponseFor<'/api/auth/forgot-password', 'post'>> {
+  async forgotPassword(
+    email: string,
+  ): Promise<OpenApiResponseFor<'/api/auth/forgot-password', 'post'>> {
     return openApiRequest({
       path: '/api/auth/forgot-password',
       method: 'post',
@@ -129,12 +133,39 @@ export const authService = {
    * @param token - Password reset token from the email link.
    * @param newPassword - The new password to set.
    */
-  async resetPassword(token: string, newPassword: string): Promise<OpenApiResponseFor<'/api/auth/reset-password', 'post'>> {
+  async resetPassword(
+    token: string,
+    newPassword: string,
+  ): Promise<OpenApiResponseFor<'/api/auth/reset-password', 'post'>> {
     return openApiRequest({
       path: '/api/auth/reset-password',
       method: 'post',
       body: JSON.stringify({ token, newPassword }),
       requiresAuth: false,
+    });
+  },
+
+  /**
+   * Changes the authenticated user's password.
+   * @param currentPassword - The user's current password.
+   * @param newPassword - The new password to set.
+   */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    return openApiRequest({
+      path: '/api/auth/change-password',
+      method: 'put',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }).then(() => undefined);
+  },
+
+  /**
+   * Exports the authenticated user's personal data (GDPR).
+   * @returns The user's exported data payload.
+   */
+  async exportData(): Promise<OpenApiResponseFor<'/api/auth/export-data', 'get'>> {
+    return openApiRequest({
+      path: '/api/auth/export-data',
+      method: 'get',
     });
   },
 };

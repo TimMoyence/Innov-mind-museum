@@ -11,16 +11,8 @@ import {
   evaluateUserInputGuardrail,
   type GuardrailBlockReason,
 } from './art-topic-guardrail';
-import {
-  buildChatImageObjectKey,
-  withPolicyCitation,
-} from './chat-image.helpers';
-import {
-  assertImageSize,
-  assertMimeType,
-  decodeBase64Image,
-  isSafeImageUrl,
-} from './image-input';
+import { buildChatImageObjectKey, withPolicyCitation } from './chat-image.helpers';
+import { assertImageSize, assertMimeType, decodeBase64Image, isSafeImageUrl } from './image-input';
 import { ensureSessionAccess } from './session-access';
 import { computeSessionUpdates } from './visit-context';
 import { DisabledAudioTranscriber } from '../domain/ports/audio-transcriber.port';
@@ -30,17 +22,9 @@ import type { PostMessageResult, PostAudioMessageResult } from './chat.service.t
 import type { KnowledgeBaseService } from './knowledge-base.service';
 import type { UserMemoryService } from './user-memory.service';
 import type { ChatRepository } from '../domain/chat.repository.interface';
-import type {
-  PostAudioMessageInput,
-  PostMessageInput,
-} from '../domain/chat.types';
-import type {
-  AudioTranscriber,
-} from '../domain/ports/audio-transcriber.port';
-import type {
-  ChatOrchestrator,
-  OrchestratorOutput,
-} from '../domain/ports/chat-orchestrator.port';
+import type { PostAudioMessageInput, PostMessageInput } from '../domain/chat.types';
+import type { AudioTranscriber } from '../domain/ports/audio-transcriber.port';
+import type { ChatOrchestrator, OrchestratorOutput } from '../domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '../domain/ports/image-storage.port';
 import type { OcrService } from '../domain/ports/ocr.port';
 import type { AuditService } from '@shared/audit/audit.service';
@@ -231,7 +215,10 @@ export class ChatMessageService {
       try {
         const ocrResult = await this.ocr.extractText(orchestratorImage.value);
         if (ocrResult?.text) {
-          const ocrGuardrail = await evaluateUserInputGuardrail({ text: ocrResult.text, history: [] });
+          const ocrGuardrail = await evaluateUserInputGuardrail({
+            text: ocrResult.text,
+            history: [],
+          });
           if (!ocrGuardrail.allow) {
             throw badRequest('Image contains disallowed content');
           }
@@ -258,7 +245,9 @@ export class ChatMessageService {
       dynamicKeywords: this.dynamicArtKeywords,
       classifier: this.artTopicClassifier,
       onKeywordDiscovered: this.onArtKeywordDiscovered
-        ? (kw: string) => { this.onArtKeywordDiscovered?.(kw, requestedLocale ?? 'en'); }
+        ? (kw: string) => {
+            this.onArtKeywordDiscovered?.(kw, requestedLocale ?? 'en');
+          }
         : undefined,
     });
 
@@ -303,10 +292,7 @@ export class ChatMessageService {
       };
     }
 
-    const history = await this.repository.listSessionHistory(
-      sessionId,
-      env.llm.maxHistoryMessages,
-    );
+    const history = await this.repository.listSessionHistory(sessionId, env.llm.maxHistoryMessages);
 
     // Fetch cross-session user memory + knowledge base prompt blocks (fail-open, parallel)
     let userMemoryBlock = '';
@@ -315,15 +301,25 @@ export class ChatMessageService {
     const searchTerm = extractSearchTerm(history, input.text?.trim());
 
     await Promise.all([
-      (this.userMemory && ownerId)
-        ? this.userMemory.getMemoryForPrompt(ownerId)
-            .then((b: string) => { userMemoryBlock = b; })
-            .catch(() => { /* fail-open */ })
+      this.userMemory && ownerId
+        ? this.userMemory
+            .getMemoryForPrompt(ownerId)
+            .then((b: string) => {
+              userMemoryBlock = b;
+            })
+            .catch(() => {
+              /* fail-open */
+            })
         : Promise.resolve(),
-      (this.knowledgeBase && searchTerm)
-        ? this.knowledgeBase.lookup(searchTerm)
-            .then((b: string) => { knowledgeBaseBlock = b; })
-            .catch(() => { /* fail-open */ })
+      this.knowledgeBase && searchTerm
+        ? this.knowledgeBase
+            .lookup(searchTerm)
+            .then((b: string) => {
+              knowledgeBaseBlock = b;
+            })
+            .catch(() => {
+              /* fail-open */
+            })
         : Promise.resolve(),
     ]);
 
@@ -405,13 +401,13 @@ export class ChatMessageService {
     }
 
     if (outputGuardrail.allow && sessionUpdates?.visitContext) {
-        const pendingArtwork = sessionUpdates.visitContext.artworksDiscussed.find(
-          (a) => a.messageId === 'pending',
-        );
-        if (pendingArtwork) {
-          pendingArtwork.messageId = assistantMessage.id;
-        }
+      const pendingArtwork = sessionUpdates.visitContext.artworksDiscussed.find(
+        (a) => a.messageId === 'pending',
+      );
+      if (pendingArtwork) {
+        pendingArtwork.messageId = assistantMessage.id;
       }
+    }
 
     if (this.cache) {
       await this.cache.delByPrefix(`session:${sessionId}:`);
@@ -461,7 +457,16 @@ export class ChatMessageService {
     const prep = await this.prepareMessage(sessionId, input, requestId, currentUserId);
     if (prep.kind === 'refused') return prep.result;
 
-    const { session, orchestratorImage, requestedLocale, history, redirectHint, ownerId, userMemoryBlock, knowledgeBaseBlock } = prep;
+    const {
+      session,
+      orchestratorImage,
+      requestedLocale,
+      history,
+      redirectHint,
+      ownerId,
+      userMemoryBlock,
+      knowledgeBaseBlock,
+    } = prep;
     const text = input.text?.trim();
 
     const aiResult: OrchestratorOutput = await this.orchestrator.generate({
@@ -481,7 +486,14 @@ export class ChatMessageService {
       knowledgeBaseBlock,
     });
 
-    return await this.commitAssistantResponse(sessionId, session, aiResult, requestedLocale, history, ownerId);
+    return await this.commitAssistantResponse(
+      sessionId,
+      session,
+      aiResult,
+      requestedLocale,
+      history,
+      ownerId,
+    );
   }
 
   /**
@@ -497,7 +509,7 @@ export class ChatMessageService {
    * @param signal - AbortSignal to cancel the stream (e.g. on client disconnect).
    * @returns The assistant's reply with metadata.
    */
-  // eslint-disable-next-line max-params -- streaming requires callbacks, abort signal, and user context alongside core message parameters
+  // eslint-disable-next-line max-params, max-lines-per-function -- streaming requires callbacks, abort signal, and user context alongside core message parameters
   async postMessageStream(
     sessionId: string,
     input: PostMessageInput,
@@ -510,7 +522,16 @@ export class ChatMessageService {
     const prep = await this.prepareMessage(sessionId, input, requestId, currentUserId);
     if (prep.kind === 'refused') return prep.result;
 
-    const { session, orchestratorImage, requestedLocale, history, redirectHint, ownerId, userMemoryBlock, knowledgeBaseBlock } = prep;
+    const {
+      session,
+      orchestratorImage,
+      requestedLocale,
+      history,
+      redirectHint,
+      ownerId,
+      userMemoryBlock,
+      knowledgeBaseBlock,
+    } = prep;
     const text = input.text?.trim();
 
     if (signal?.aborted) {
@@ -552,12 +573,15 @@ export class ChatMessageService {
         const guardrail = evaluateAssistantOutputGuardrail({ text: accumulated, history });
         if (guardrail.allow) {
           artSignalSeen = true;
-        } else if (accumulated.length > 100 && // Guardrail blocking — notify caller
-          onGuardrail && guardrail.reason) {
-            const refusalText = buildGuardrailRefusal(requestedLocale, guardrail.reason);
-            onGuardrail(refusalText, guardrail.reason);
-          }
-          // Don't throw — let the stream complete so we can handle it in commitAssistantResponse
+        } else if (
+          accumulated.length > 100 && // Guardrail blocking — notify caller
+          onGuardrail &&
+          guardrail.reason
+        ) {
+          const refusalText = buildGuardrailRefusal(requestedLocale, guardrail.reason);
+          onGuardrail(refusalText, guardrail.reason);
+        }
+        // Don't throw — let the stream complete so we can handle it in commitAssistantResponse
       }
 
       onToken(chunk);
@@ -583,7 +607,14 @@ export class ChatMessageService {
       onChunk,
     );
 
-    return await this.commitAssistantResponse(sessionId, session, aiResult, requestedLocale, history, ownerId);
+    return await this.commitAssistantResponse(
+      sessionId,
+      session,
+      aiResult,
+      requestedLocale,
+      history,
+      ownerId,
+    );
   }
 
   /**

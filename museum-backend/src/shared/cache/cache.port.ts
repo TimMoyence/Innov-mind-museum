@@ -5,7 +5,7 @@
  */
 export interface CacheService {
   /** Retrieve a cached value by key. Returns `null` on miss. */
-   
+
   get<T>(key: string): Promise<T | null>;
 
   /** Store a value under key with optional TTL in seconds. */

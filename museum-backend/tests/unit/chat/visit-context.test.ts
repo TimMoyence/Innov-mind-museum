@@ -6,14 +6,15 @@ import {
 import type { ChatAssistantMetadata, VisitContext } from '@modules/chat/domain/chat.types';
 import type { ChatSession } from '@modules/chat/domain/chatSession.entity';
 
-const makeSession = (overrides: Partial<ChatSession> = {}): ChatSession => ({
-  id: 'session-1',
-  museumMode: true,
-  messages: [],
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  ...overrides,
-} as ChatSession);
+const makeSession = (overrides: Partial<ChatSession> = {}): ChatSession =>
+  ({
+    id: 'session-1',
+    museumMode: true,
+    messages: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  }) as ChatSession;
 
 describe('updateVisitContext', () => {
   it('creates initial context when existing is null', () => {
@@ -47,7 +48,12 @@ describe('updateVisitContext', () => {
       museumName: 'Louvre',
       museumConfidence: 0.3,
       artworksDiscussed: [
-        { title: 'Mona Lisa', artist: 'Leonardo da Vinci', messageId: 'msg-1', discussedAt: '2026-01-01T00:00:00Z' },
+        {
+          title: 'Mona Lisa',
+          artist: 'Leonardo da Vinci',
+          messageId: 'msg-1',
+          discussedAt: '2026-01-01T00:00:00Z',
+        },
       ],
       roomsVisited: ['Room 711'],
       detectedExpertise: 'beginner',
@@ -297,7 +303,13 @@ describe('buildVisitContextPromptBlock', () => {
       museumName: 'Louvre',
       museumConfidence: 0.6,
       artworksDiscussed: [
-        { title: 'Mona Lisa', artist: 'Leonardo da Vinci', room: 'Room 711', messageId: 'msg-1', discussedAt: '' },
+        {
+          title: 'Mona Lisa',
+          artist: 'Leonardo da Vinci',
+          room: 'Room 711',
+          messageId: 'msg-1',
+          discussedAt: '',
+        },
         { title: 'Winged Victory', messageId: 'msg-2', discussedAt: '' },
       ],
       roomsVisited: ['Room 711', 'Daru Staircase'],

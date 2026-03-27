@@ -45,7 +45,7 @@ export class GenerateApiKeyUseCase {
     const existing = await this.apiKeyRepository.findByUserId(userId);
     const activeKeys = existing.filter((k) => k.isActive);
     if (activeKeys.length >= MAX_KEYS_PER_USER) {
-      throw badRequest(`Maximum of ${MAX_KEYS_PER_USER} active API keys allowed per user`);
+      throw badRequest(`Maximum of ${String(MAX_KEYS_PER_USER)} active API keys allowed per user`);
     }
 
     // Generate random key: msk_<44 base64url chars from 32 bytes>

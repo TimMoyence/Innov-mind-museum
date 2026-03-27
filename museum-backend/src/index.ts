@@ -14,14 +14,15 @@ import { shutdownOpenTelemetry } from '@shared/observability/opentelemetry';
 import { initSentry } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
 import { AppDataSource } from '@src/data/db/data-source';
-import { stopRateLimitSweep, setRedisRateLimitStore  } from '@src/helpers/middleware/rate-limit.middleware';
+import {
+  stopRateLimitSweep,
+  setRedisRateLimitStore,
+} from '@src/helpers/middleware/rate-limit.middleware';
 import { RedisRateLimitStore } from '@src/helpers/middleware/redis-rate-limit-store';
 
 import { createApp } from './app';
 
 import type { CacheService } from '@shared/cache/cache.port';
-
-
 
 /** Grace period for in-flight requests to complete before forced exit (ms). */
 const SHUTDOWN_TIMEOUT_MS = 30_000;
@@ -47,7 +48,9 @@ const start = async (): Promise<void> => {
         defaultTtlSeconds: env.cache.sessionTtlSeconds,
       });
       void redisCacheService.connect().catch((err: unknown) => {
-        logger.error('redis_connection_failed', { error: err instanceof Error ? err.message : String(err) });
+        logger.error('redis_connection_failed', {
+          error: err instanceof Error ? err.message : String(err),
+        });
       });
       cacheService = redisCacheService;
 
@@ -61,7 +64,7 @@ const start = async (): Promise<void> => {
       redisClient.on('error', (err) => {
         logger.warn('redis_rate_limit_connection_error', {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: err.message may be undefined at runtime
-          error: (err).message ?? 'unknown',
+          error: err.message ?? 'unknown',
         });
       });
       const redisRateLimitStore = new RedisRateLimitStore(redisClient);
@@ -75,14 +78,11 @@ const start = async (): Promise<void> => {
     const server = app.listen(env.port, () => {
       logger.info('server_started', {
         port: env.port,
-        baseUrl: `http://localhost:${env.port}`,
+        baseUrl: `http://localhost:${String(env.port)}`,
       });
     });
 
-    const tokenCleanup = new TokenCleanupService(
-      new RefreshTokenRepositoryPg(),
-      cacheService,
-    );
+    const tokenCleanup = new TokenCleanupService(new RefreshTokenRepositoryPg(), cacheService);
     tokenCleanup.startScheduler();
 
     let isShuttingDown = false;
@@ -142,9 +142,7 @@ const start = async (): Promise<void> => {
     }
   } catch (error) {
     const errorMessage =
-      error instanceof Error
-        ? error.message || util.inspect(error)
-        : util.inspect(error);
+      error instanceof Error ? error.message || util.inspect(error) : util.inspect(error);
     logger.error('startup_failed', {
       error: errorMessage,
       dbHost: env.db.host,

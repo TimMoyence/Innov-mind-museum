@@ -36,7 +36,9 @@ export class TesseractOcrService implements OcrService {
         const { data } = await Promise.race([
           scheduler.addJob('recognize', buffer),
           new Promise<never>((_, reject) =>
-            setTimeout(() => { reject(new Error('OCR timed out')); }, timeoutMs),
+            setTimeout(() => {
+              reject(new Error('OCR timed out'));
+            }, timeoutMs),
           ),
         ]);
 
@@ -74,7 +76,6 @@ export class TesseractOcrService implements OcrService {
 
 /** No-op OCR service for when OCR guard is disabled. */
 export class DisabledOcrService implements OcrService {
-   
   /** Returns null immediately since OCR is disabled. */
   // eslint-disable-next-line @typescript-eslint/require-await -- must match async interface signature
   async extractText(): Promise<OcrResult | null> {

@@ -3,9 +3,7 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
 /**
  *
  */
-export class RecreateRefreshTokenIndexes1773852493401
-  implements MigrationInterface
-{
+export class RecreateRefreshTokenIndexes1773852493401 implements MigrationInterface {
   name = 'RecreateRefreshTokenIndexes1773852493401';
 
   /** Apply the RecreateRefreshTokenIndexes migration. */

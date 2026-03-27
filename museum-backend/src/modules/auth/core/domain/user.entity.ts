@@ -55,6 +55,18 @@ export class User {
   @Column({ nullable: true, type: 'timestamp' })
   verification_token_expires?: Date;
 
+  /** New email address pending verification via email change flow. */
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  pending_email?: string | null;
+
+  /** Hashed token for confirming an email change. */
+  @Column({ type: 'varchar', length: 128, nullable: true })
+  email_change_token?: string | null;
+
+  /** Expiration timestamp for {@link email_change_token}. */
+  @Column({ nullable: true, type: 'timestamp' })
+  email_change_token_expiry?: Date | null;
+
   @CreateDateColumn({ type: 'timestamp' })
   createdAt!: Date;
 

@@ -1,10 +1,6 @@
 import { sanitizePromptInput } from '@shared/validation/input';
 
-import type {
-  ChatAssistantMetadata,
-  VisitContext,
-  VisitedArtwork,
-} from '../domain/chat.types';
+import type { ChatAssistantMetadata, VisitContext, VisitedArtwork } from '../domain/chat.types';
 import type { ChatSession } from '../domain/chatSession.entity';
 
 const emptyContext = (): VisitContext => ({
@@ -31,7 +27,11 @@ export const updateVisitContext = (
   messageId: string,
 ): VisitContext => {
   const ctx: VisitContext = existing
-    ? { ...existing, artworksDiscussed: [...existing.artworksDiscussed], roomsVisited: [...existing.roomsVisited] }
+    ? {
+        ...existing,
+        artworksDiscussed: [...existing.artworksDiscussed],
+        roomsVisited: [...existing.roomsVisited],
+      }
     : emptyContext();
 
   const artwork = metadata.detectedArtwork;
@@ -137,7 +137,10 @@ export const buildVisitContextPromptBlock = (ctx: VisitContext | null | undefine
 
   if (ctx.roomsVisited.length) {
     lines.push(
-      `Rooms visited: ${ctx.roomsVisited.slice(-5).map((r) => sanitizePromptInput(r)).join(', ')}`,
+      `Rooms visited: ${ctx.roomsVisited
+        .slice(-5)
+        .map((r) => sanitizePromptInput(r))
+        .join(', ')}`,
     );
   }
 

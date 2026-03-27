@@ -15,8 +15,8 @@ export class OpenAiTextToSpeechService implements TextToSpeechService {
    * @param input.text - Text content to synthesize.
    * @param input.voice - Optional voice identifier override.
    * @returns MP3 audio buffer.
-   * @throws AppError with code `FEATURE_UNAVAILABLE` if OpenAI API key is missing.
-   * @throws AppError with code `UPSTREAM_TTS_ERROR` on API failure.
+   * @throws {AppError} With code `FEATURE_UNAVAILABLE` if OpenAI API key is missing.
+   * @throws {AppError} With code `UPSTREAM_TTS_ERROR` on API failure.
    */
   // eslint-disable-next-line complexity -- TTS synthesis has multiple validation and error-handling paths
   async synthesize(input: { text: string; voice?: string }): Promise<TtsResult> {
@@ -36,7 +36,7 @@ export class OpenAiTextToSpeechService implements TextToSpeechService {
       response = await fetch('https://api.openai.com/v1/audio/speech', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -49,7 +49,10 @@ export class OpenAiTextToSpeechService implements TextToSpeechService {
         signal: AbortSignal.timeout(env.llm.timeoutMs),
       });
     } catch (error: unknown) {
-      if (error instanceof DOMException && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
+      if (
+        error instanceof DOMException &&
+        (error.name === 'TimeoutError' || error.name === 'AbortError')
+      ) {
         throw new AppError({
           message: 'Text-to-speech request timed out',
           statusCode: 504,
@@ -78,7 +81,7 @@ export class OpenAiTextToSpeechService implements TextToSpeechService {
 
 /** Stub TTS service that always throws — used when text-to-speech is disabled. */
 export class DisabledTextToSpeechService implements TextToSpeechService {
-  /** Always throws because text-to-speech is disabled. @throws AppError with code `FEATURE_UNAVAILABLE`. */
+  /** Always throws because text-to-speech is disabled. \@throws {AppError} With code `FEATURE_UNAVAILABLE`. */
   // eslint-disable-next-line @typescript-eslint/require-await
   async synthesize(): Promise<TtsResult> {
     throw new AppError({

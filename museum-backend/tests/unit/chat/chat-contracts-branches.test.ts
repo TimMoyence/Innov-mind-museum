@@ -53,9 +53,15 @@ describe('parseCreateSessionRequest — branch coverage', () => {
   });
 
   it('throws for museumId that is not a positive integer', () => {
-    expect(() => parseCreateSessionRequest({ museumId: -1 })).toThrow('museumId must be a positive integer');
-    expect(() => parseCreateSessionRequest({ museumId: 0 })).toThrow('museumId must be a positive integer');
-    expect(() => parseCreateSessionRequest({ museumId: 1.5 })).toThrow('museumId must be a positive integer');
+    expect(() => parseCreateSessionRequest({ museumId: -1 })).toThrow(
+      'museumId must be a positive integer',
+    );
+    expect(() => parseCreateSessionRequest({ museumId: 0 })).toThrow(
+      'museumId must be a positive integer',
+    );
+    expect(() => parseCreateSessionRequest({ museumId: 1.5 })).toThrow(
+      'museumId must be a positive integer',
+    );
   });
 
   it('throws for museumId with non-numeric value', () => {
@@ -147,7 +153,9 @@ describe('parsePostMessageRequest — branch coverage', () => {
   });
 
   it('throws for context.museumMode with invalid type', () => {
-    expect(() => parsePostMessageRequest({ context: { museumMode: 42 } })).toThrow('must be a boolean');
+    expect(() => parsePostMessageRequest({ context: { museumMode: 42 } })).toThrow(
+      'must be a boolean',
+    );
   });
 
   it('throws when text is not a string', () => {
@@ -410,9 +418,7 @@ describe('type guard — negative branch coverage', () => {
       expect(
         isGetSessionResponse({
           session: { id: 's1', museumMode: true, createdAt: 'now', updatedAt: 'now' },
-          messages: [
-            { id: 'm1', role: 'user', createdAt: 'now', image: 'not-an-object' },
-          ],
+          messages: [{ id: 'm1', role: 'user', createdAt: 'now', image: 'not-an-object' }],
           page: { nextCursor: null, hasMore: false, limit: 20 },
         }),
       ).toBe(false);
@@ -435,7 +441,12 @@ describe('type guard — negative branch coverage', () => {
         isGetSessionResponse({
           session: { id: 's1', museumMode: true, createdAt: 'now', updatedAt: 'now' },
           messages: [
-            { id: 'm1', role: 'user', createdAt: 'now', image: { url: 'http://img', expiresAt: 123 } },
+            {
+              id: 'm1',
+              role: 'user',
+              createdAt: 'now',
+              image: { url: 'http://img', expiresAt: 123 },
+            },
           ],
           page: { nextCursor: null, hasMore: false, limit: 20 },
         }),
@@ -446,9 +457,7 @@ describe('type guard — negative branch coverage', () => {
       expect(
         isGetSessionResponse({
           session: { id: 's1', museumMode: true, createdAt: 'now', updatedAt: 'now' },
-          messages: [
-            { id: 'm1', role: 'user', createdAt: 'now', image: null },
-          ],
+          messages: [{ id: 'm1', role: 'user', createdAt: 'now', image: null }],
           page: { nextCursor: null, hasMore: false, limit: 20 },
         }),
       ).toBe(true);
@@ -458,9 +467,7 @@ describe('type guard — negative branch coverage', () => {
       expect(
         isGetSessionResponse({
           session: { id: 's1', museumMode: true, createdAt: 'now', updatedAt: 'now' },
-          messages: [
-            { id: 123, role: 'user', createdAt: 'now' },
-          ],
+          messages: [{ id: 123, role: 'user', createdAt: 'now' }],
           page: { nextCursor: null, hasMore: false, limit: 20 },
         }),
       ).toBe(false);
@@ -503,7 +510,10 @@ describe('type guard — negative branch coverage', () => {
 
     it('returns false when sessions is not an array', () => {
       expect(
-        isListSessionsResponse({ sessions: 'bad', page: { nextCursor: null, hasMore: false, limit: 10 } }),
+        isListSessionsResponse({
+          sessions: 'bad',
+          page: { nextCursor: null, hasMore: false, limit: 10 },
+        }),
       ).toBe(false);
     });
 
@@ -541,7 +551,9 @@ describe('type guard — negative branch coverage', () => {
     it('returns false when session item has wrong field types', () => {
       expect(
         isListSessionsResponse({
-          sessions: [{ id: 123, museumMode: true, createdAt: 'now', updatedAt: 'now', messageCount: 0 }],
+          sessions: [
+            { id: 123, museumMode: true, createdAt: 'now', updatedAt: 'now', messageCount: 0 },
+          ],
           page: { nextCursor: null, hasMore: false, limit: 10 },
         }),
       ).toBe(false);
@@ -550,7 +562,15 @@ describe('type guard — negative branch coverage', () => {
     it('returns false when session item has non-numeric messageCount', () => {
       expect(
         isListSessionsResponse({
-          sessions: [{ id: 's1', museumMode: true, createdAt: 'now', updatedAt: 'now', messageCount: 'three' }],
+          sessions: [
+            {
+              id: 's1',
+              museumMode: true,
+              createdAt: 'now',
+              updatedAt: 'now',
+              messageCount: 'three',
+            },
+          ],
           page: { nextCursor: null, hasMore: false, limit: 10 },
         }),
       ).toBe(false);

@@ -24,17 +24,9 @@ export class AddMuseumContextToSessions1772000000002 implements MigrationInterfa
 
   /** Revert the AddMuseumContextToSessions migration. */
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE "artwork_matches" DROP COLUMN IF EXISTS "room"`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "chat_sessions" DROP COLUMN IF EXISTS "visitContext"`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "chat_sessions" DROP COLUMN IF EXISTS "museumName"`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "chat_sessions" DROP COLUMN IF EXISTS "title"`,
-    );
+    await queryRunner.query(`ALTER TABLE "artwork_matches" DROP COLUMN IF EXISTS "room"`);
+    await queryRunner.query(`ALTER TABLE "chat_sessions" DROP COLUMN IF EXISTS "visitContext"`);
+    await queryRunner.query(`ALTER TABLE "chat_sessions" DROP COLUMN IF EXISTS "museumName"`);
+    await queryRunner.query(`ALTER TABLE "chat_sessions" DROP COLUMN IF EXISTS "title"`);
   }
 }

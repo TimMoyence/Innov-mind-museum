@@ -1,4 +1,11 @@
-import { AppError, badRequest, notFound, conflict, forbidden, tooManyRequests } from '@shared/errors/app.error';
+import {
+  AppError,
+  badRequest,
+  notFound,
+  conflict,
+  forbidden,
+  tooManyRequests,
+} from '@shared/errors/app.error';
 
 describe('AppError', () => {
   it('uses defaults for statusCode and code when not provided', () => {

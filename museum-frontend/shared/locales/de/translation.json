@@ -97,7 +97,13 @@
     "unsaved_hint": "Halten zum Speichern",
     "saved_filter_on": "Gespeichert-Filter AN",
     "saved_filter_off": "Gespeichert-Filter AUS",
-    "sort_label": "Sortierung: {{sortMode}}"
+    "sort_label": "Sortierung: {{sortMode}}",
+    "swipe_delete": "Zum Loschen wischen",
+    "delete_confirm": "Dieses Gesprach loschen?",
+    "edit": "Bearbeiten",
+    "select_all": "Alle auswahlen",
+    "delete_selected": "Loschen ({{count}})",
+    "selected_count": "{{count}} Gesprach(e) werden geloscht."
   },
   "settings": {
     "title": "Einstellungen",
@@ -134,7 +140,21 @@
     "sign_out": "Abmelden",
     "preferences": "Einstellungen",
     "security": "Sicherheit",
-    "biometric_lock": "Biometrische Sperre"
+    "biometric_lock": "Biometrische Sperre",
+    "change_password": "Passwort ändern",
+    "export_data": "Meine Daten exportieren",
+    "export_data_desc": "Alle persönlichen Daten herunterladen (DSGVO)",
+    "export_data_success": "Daten erfolgreich exportiert"
+  },
+  "change_password": {
+    "title": "Passwort ändern",
+    "current": "Aktuelles Passwort",
+    "new": "Neues Passwort",
+    "confirm": "Neues Passwort bestätigen",
+    "submit": "Passwort aktualisieren",
+    "success": "Passwort erfolgreich aktualisiert",
+    "error_mismatch": "Passwörter stimmen nicht überein",
+    "error_short": "Das Passwort muss mindestens 8 Zeichen lang sein"
   },
   "preferences": {
     "title": "Einstellungen",
@@ -315,7 +335,8 @@
     "voice_message": "[Sprachnachricht]",
     "share_footer": "Geteilt über Musaium — Ihr Museumsbegleiter\nhttps://musaium.app",
     "replace_image": "Ersetzen",
-    "remove_image": "Entfernen"
+    "remove_image": "Entfernen",
+    "crop": "Zuschneiden"
   },
   "chatInput": {
     "placeholder": "Fragen Sie zu einem Kunstwerk, Denkmal, oder senden Sie Sprache/Foto...",
@@ -504,7 +525,9 @@
       "delete_account_hint": "Diese Aktion kann nicht rückgängig gemacht werden",
       "back_home": "Zum Startbildschirm zurückkehren",
       "sign_out": "Abmelden",
-      "sign_out_hint": "Meldet ab und kehrt zur Anmeldung zurück"
+      "sign_out_hint": "Meldet ab und kehrt zur Anmeldung zurück",
+      "change_password": "Kontopasswort ändern",
+      "export_data": "Alle persönlichen Daten exportieren"
     },
     "preferences": {
       "language_button": "Sprache {{language}} auswählen",

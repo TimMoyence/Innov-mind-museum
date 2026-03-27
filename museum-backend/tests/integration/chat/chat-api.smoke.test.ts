@@ -93,7 +93,12 @@ describe('chat api smoke (service integration)', () => {
       userId: 555,
     });
 
-    await chatService.postMessage(nonEmpty.id, { text: 'Tell me about this painting.' }, undefined, 555);
+    await chatService.postMessage(
+      nonEmpty.id,
+      { text: 'Tell me about this painting.' },
+      undefined,
+      555,
+    );
 
     const deletedEmpty = await chatService.deleteSessionIfEmpty(empty.id, 555);
     const deletedNonEmpty = await chatService.deleteSessionIfEmpty(nonEmpty.id, 555);

@@ -12,7 +12,11 @@ const defaultFields = {
   hostname: os.hostname(),
 };
 
-const format = (level: 'info' | 'warn' | 'error', message: string, context?: LogContext): string => {
+const format = (
+  level: 'info' | 'warn' | 'error',
+  message: string,
+  context?: LogContext,
+): string => {
   return JSON.stringify({
     level,
     message,

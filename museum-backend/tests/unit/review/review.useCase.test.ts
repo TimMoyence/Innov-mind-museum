@@ -19,7 +19,9 @@ const fakeReview: ReviewDTO = {
 function makeFakeRepo(): jest.Mocked<IReviewRepository> {
   return {
     createReview: jest.fn().mockResolvedValue(fakeReview),
-    listReviews: jest.fn().mockResolvedValue({ data: [fakeReview], total: 1, page: 1, limit: 20, totalPages: 1 }),
+    listReviews: jest
+      .fn()
+      .mockResolvedValue({ data: [fakeReview], total: 1, page: 1, limit: 20, totalPages: 1 }),
     getReviewById: jest.fn().mockResolvedValue(fakeReview),
     moderateReview: jest.fn().mockResolvedValue({ ...fakeReview, status: 'approved' }),
     getAverageRating: jest.fn().mockResolvedValue({ average: 4.5, count: 10 }),
@@ -32,7 +34,12 @@ describe('CreateReviewUseCase', () => {
   it('creates a review with valid input', async () => {
     const repo = makeFakeRepo();
     const uc = new CreateReviewUseCase(repo);
-    const result = await uc.execute({ userId: 1, userName: 'Test User', rating: 5, comment: 'Great museum assistant app!' });
+    const result = await uc.execute({
+      userId: 1,
+      userName: 'Test User',
+      rating: 5,
+      comment: 'Great museum assistant app!',
+    });
     expect(result.id).toBe(fakeReview.id);
     expect(repo.createReview).toHaveBeenCalledTimes(1);
   });
@@ -40,25 +47,33 @@ describe('CreateReviewUseCase', () => {
   it('rejects rating < 1', async () => {
     const repo = makeFakeRepo();
     const uc = new CreateReviewUseCase(repo);
-    await expect(uc.execute({ userId: 1, userName: 'Test', rating: 0, comment: 'A valid comment here.' })).rejects.toThrow('rating');
+    await expect(
+      uc.execute({ userId: 1, userName: 'Test', rating: 0, comment: 'A valid comment here.' }),
+    ).rejects.toThrow('rating');
   });
 
   it('rejects rating > 5', async () => {
     const repo = makeFakeRepo();
     const uc = new CreateReviewUseCase(repo);
-    await expect(uc.execute({ userId: 1, userName: 'Test', rating: 6, comment: 'A valid comment here.' })).rejects.toThrow('rating');
+    await expect(
+      uc.execute({ userId: 1, userName: 'Test', rating: 6, comment: 'A valid comment here.' }),
+    ).rejects.toThrow('rating');
   });
 
   it('rejects comment shorter than 10 chars', async () => {
     const repo = makeFakeRepo();
     const uc = new CreateReviewUseCase(repo);
-    await expect(uc.execute({ userId: 1, userName: 'Test', rating: 4, comment: 'Short' })).rejects.toThrow('comment');
+    await expect(
+      uc.execute({ userId: 1, userName: 'Test', rating: 4, comment: 'Short' }),
+    ).rejects.toThrow('comment');
   });
 
   it('rejects empty userName', async () => {
     const repo = makeFakeRepo();
     const uc = new CreateReviewUseCase(repo);
-    await expect(uc.execute({ userId: 1, userName: '  ', rating: 4, comment: 'A valid comment here.' })).rejects.toThrow('userName');
+    await expect(
+      uc.execute({ userId: 1, userName: '  ', rating: 4, comment: 'A valid comment here.' }),
+    ).rejects.toThrow('userName');
   });
 });
 
@@ -134,20 +149,27 @@ describe('ModerateReviewUseCase', () => {
     const uc = new ModerateReviewUseCase(repo);
     const result = await uc.execute({ reviewId: fakeReview.id, status: 'approved' });
     expect(result.status).toBe('approved');
-    expect(repo.moderateReview).toHaveBeenCalledWith({ reviewId: fakeReview.id, status: 'approved' });
+    expect(repo.moderateReview).toHaveBeenCalledWith({
+      reviewId: fakeReview.id,
+      status: 'approved',
+    });
   });
 
   it('rejects invalid status', async () => {
     const repo = makeFakeRepo();
     const uc = new ModerateReviewUseCase(repo);
-    await expect(uc.execute({ reviewId: fakeReview.id, status: 'invalid' })).rejects.toThrow('status');
+    await expect(uc.execute({ reviewId: fakeReview.id, status: 'invalid' })).rejects.toThrow(
+      'status',
+    );
   });
 
   it('throws not found for missing review', async () => {
     const repo = makeFakeRepo();
     repo.moderateReview.mockResolvedValue(null);
     const uc = new ModerateReviewUseCase(repo);
-    await expect(uc.execute({ reviewId: 'missing-id', status: 'approved' })).rejects.toThrow('not found');
+    await expect(uc.execute({ reviewId: 'missing-id', status: 'approved' })).rejects.toThrow(
+      'not found',
+    );
   });
 });
 

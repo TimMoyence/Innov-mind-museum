@@ -32,9 +32,7 @@ export class CreateMuseumsAndTenantFKs1774300000000 implements MigrationInterfac
     await queryRunner.query(
       `ALTER TABLE "users" ADD COLUMN "museum_id" INTEGER REFERENCES "museums"("id") ON DELETE SET NULL`,
     );
-    await queryRunner.query(
-      `CREATE INDEX "IDX_users_museum_id" ON "users" ("museum_id")`,
-    );
+    await queryRunner.query(`CREATE INDEX "IDX_users_museum_id" ON "users" ("museum_id")`);
 
     // 3. Add museum_id FK to chat_sessions
     await queryRunner.query(
@@ -48,9 +46,7 @@ export class CreateMuseumsAndTenantFKs1774300000000 implements MigrationInterfac
     await queryRunner.query(
       `ALTER TABLE "api_keys" ADD COLUMN "museum_id" INTEGER REFERENCES "museums"("id") ON DELETE CASCADE`,
     );
-    await queryRunner.query(
-      `CREATE INDEX "IDX_api_keys_museum_id" ON "api_keys" ("museum_id")`,
-    );
+    await queryRunner.query(`CREATE INDEX "IDX_api_keys_museum_id" ON "api_keys" ("museum_id")`);
   }
 
   /** Revert the CreateMuseumsAndTenantFKs migration. */

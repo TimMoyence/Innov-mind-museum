@@ -96,7 +96,11 @@ export const buildHealthPayload = (params: {
  * @param root0.featureFlagService - Feature flag service for route-level gating.
  * @returns Configured Express Router.
  */
-export const createApiRouter = ({ chatService, healthCheck, featureFlagService }: ApiRouterDeps): Router => {
+export const createApiRouter = ({
+  chatService,
+  healthCheck,
+  featureFlagService,
+}: ApiRouterDeps): Router => {
   // featureFlagService available for route-level gating (S3-10 OCR, S3-16 API Keys)
   void featureFlagService;
   const router = Router();

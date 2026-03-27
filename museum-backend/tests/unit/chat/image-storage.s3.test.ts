@@ -124,9 +124,7 @@ describe('image-storage.s3', () => {
 
       const server = http.createServer((req, res) => {
         const chunks: Buffer[] = [];
-        req.on('data', (chunk) =>
-          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)),
-        );
+        req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
         req.on('end', () => {
           res.statusCode = 200;
           res.end('');
@@ -234,13 +232,17 @@ describe('image-storage.s3', () => {
     it('sends correct DeleteObjects XML with Content-MD5', async () => {
       const keys = ['chat-images/2026/03/user-42/s1/a.png', 'chat-images/2026/03/user-42/s2/b.jpg'];
 
-      const received = await withTestServer('', async (port) => {
-        await deleteObjectsBatch(
-          { ...config, endpoint: `http://127.0.0.1:${port}`, requestTimeoutMs: 5000 },
-          keys,
-        );
-        return null;
-      }, true);
+      const received = await withTestServer(
+        '',
+        async (port) => {
+          await deleteObjectsBatch(
+            { ...config, endpoint: `http://127.0.0.1:${port}`, requestTimeoutMs: 5000 },
+            keys,
+          );
+          return null;
+        },
+        true,
+      );
 
       expect(received.method).toBe('POST');
       expect(received.path).toContain('?delete=');
@@ -370,9 +372,7 @@ async function withTestServer<T>(
     let captured: CapturedRequest | undefined;
     const server = http.createServer((req, res) => {
       const chunks: Buffer[] = [];
-      req.on('data', (chunk) =>
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)),
-      );
+      req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
       req.on('end', () => {
         captured = {
           method: req.method || '',

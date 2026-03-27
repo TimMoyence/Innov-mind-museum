@@ -60,4 +60,3 @@ export class AuthRefreshToken {
   @CreateDateColumn({ type: 'timestamp' })
   createdAt!: Date;
 }
-

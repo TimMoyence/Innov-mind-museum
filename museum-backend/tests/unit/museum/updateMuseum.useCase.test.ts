@@ -62,21 +62,21 @@ describe('UpdateMuseumUseCase', () => {
   });
 
   it('rejects invalid slug format', async () => {
-    await expect(
-      useCase.execute(museumId, { slug: 'Invalid Slug!' }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute(museumId, { slug: 'Invalid Slug!' })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('rejects slug with uppercase', async () => {
-    await expect(
-      useCase.execute(museumId, { slug: 'Louvre' }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute(museumId, { slug: 'Louvre' })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('throws 404 when museum not found', async () => {
-    await expect(
-      useCase.execute(999, { name: 'Does not exist' }),
-    ).rejects.toMatchObject({ statusCode: 404 });
+    await expect(useCase.execute(999, { name: 'Does not exist' })).rejects.toMatchObject({
+      statusCode: 404,
+    });
   });
 
   it('allows update with no slug field (skips slug validation)', async () => {

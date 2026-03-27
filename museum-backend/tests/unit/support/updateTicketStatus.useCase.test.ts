@@ -99,9 +99,9 @@ describe('UpdateTicketStatusUseCase', () => {
   });
 
   it('rejects when no update fields provided', async () => {
-    await expect(
-      useCase.execute({ ticketId, actorId: 1 }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ ticketId, actorId: 1 })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('throws 404 when ticket not found', async () => {

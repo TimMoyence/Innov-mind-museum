@@ -28,9 +28,7 @@ describe('applyHistoryWindow', () => {
   });
 
   it('returns an empty array for non-positive limits', () => {
-    const result = applyHistoryWindow([
-      createMessage('m1', '2026-01-01T00:00:01.000Z'),
-    ], 0);
+    const result = applyHistoryWindow([createMessage('m1', '2026-01-01T00:00:01.000Z')], 0);
 
     expect(result).toEqual([]);
   });

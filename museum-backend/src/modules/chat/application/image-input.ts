@@ -20,10 +20,10 @@ const privateHostPatterns = [
   /^fe80:/i,
   /^fd[0-9a-f]{2}:/i,
   /^fc[0-9a-f]{2}:/i,
-  /^0x[0-9a-f]/i,       // hex IP
-  /^0[0-7]+\./,          // octal IP
-  /^::ffff:/i,           // IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1)
-  /^\[::ffff:/i,         // bracketed IPv4-mapped IPv6
+  /^0x[0-9a-f]/i, // hex IP
+  /^0[0-7]+\./, // octal IP
+  /^::ffff:/i, // IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1)
+  /^\[::ffff:/i, // bracketed IPv4-mapped IPv6
 ];
 
 /**
@@ -84,12 +84,9 @@ export const decodeBase64Image = (input: string): DecodedImage => {
  * @param maxBytes - Maximum allowed size in bytes.
  * @throws {AppError} 400 when sizeBytes > maxBytes.
  */
-export const assertImageSize = (
-  sizeBytes: number,
-  maxBytes: number,
-): void => {
+export const assertImageSize = (sizeBytes: number, maxBytes: number): void => {
   if (sizeBytes > maxBytes) {
-    throw badRequest(`Image exceeds max size of ${maxBytes} bytes`);
+    throw badRequest(`Image exceeds max size of ${String(maxBytes)} bytes`);
   }
 };
 
@@ -100,10 +97,7 @@ export const assertImageSize = (
  * @param allowed - Array of permitted MIME types.
  * @throws {AppError} 400 when the MIME type is not allowed.
  */
-export const assertMimeType = (
-  mimeType: string,
-  allowed: string[],
-): void => {
+export const assertMimeType = (mimeType: string, allowed: string[]): void => {
   if (!allowed.includes(mimeType)) {
     throw badRequest(`Unsupported image mime type: ${mimeType}`);
   }

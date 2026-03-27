@@ -2,13 +2,7 @@ import openApiSpec from '../../../openapi/openapi.json';
 
 type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
-type JsonValue =
-  | null
-  | boolean
-  | number
-  | string
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
 type OpenApiSchema = {
   $ref?: string;
@@ -33,9 +27,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 };
 
 const isValidUuid = (value: string): boolean => {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    value,
-  );
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 };
 
 const isValidDateTime = (value: string): boolean => {
@@ -80,10 +72,7 @@ const validateAgainstSchema = (
       return [];
     }
     return [
-      `${path}: value does not match any oneOf schema (${branches
-        .flat()
-        .slice(0, 3)
-        .join('; ')})`,
+      `${path}: value does not match any oneOf schema (${branches.flat().slice(0, 3).join('; ')})`,
     ];
   }
 
@@ -102,15 +91,13 @@ const validateAgainstSchema = (
   if (schema.enum) {
     const matches = schema.enum.some((candidate) => Object.is(candidate, value));
     if (!matches) {
-      return [`${path}: expected one of ${JSON.stringify(schema.enum)} but got ${JSON.stringify(value)}`];
+      return [
+        `${path}: expected one of ${JSON.stringify(schema.enum)} but got ${JSON.stringify(value)}`,
+      ];
     }
   }
 
-  const declaredTypes = Array.isArray(schema.type)
-    ? schema.type
-    : schema.type
-      ? [schema.type]
-      : [];
+  const declaredTypes = Array.isArray(schema.type) ? schema.type : schema.type ? [schema.type] : [];
 
   if (declaredTypes.length > 1) {
     const unionResults = declaredTypes.map((typeName) =>
@@ -123,8 +110,7 @@ const validateAgainstSchema = (
   }
 
   const inferredType =
-    declaredTypes[0] ||
-    (schema.properties || schema.additionalProperties ? 'object' : undefined);
+    declaredTypes[0] || (schema.properties || schema.additionalProperties ? 'object' : undefined);
 
   if (inferredType === 'null') {
     return value === null ? [] : [`${path}: expected null`];
@@ -195,11 +181,7 @@ const validateAgainstSchema = (
         continue;
       }
       errors.push(
-        ...validateAgainstSchema(
-          propertySchema as OpenApiSchema,
-          value[key],
-          `${path}.${key}`,
-        ),
+        ...validateAgainstSchema(propertySchema as OpenApiSchema, value[key], `${path}.${key}`),
       );
     }
 
@@ -242,9 +224,12 @@ const getResponseSchema = (
   if (!isRecord(responses)) {
     throw new Error(`OpenAPI responses missing for ${method.toUpperCase()} ${path}`);
   }
-  let response: Record<string, unknown> = (responses[String(statusCode)] ?? responses[statusCode]) as Record<string, unknown>;
+  let response: Record<string, unknown> = (responses[String(statusCode)] ??
+    responses[statusCode]) as Record<string, unknown>;
   if (!isRecord(response)) {
-    throw new Error(`OpenAPI response status ${statusCode} not found for ${method.toUpperCase()} ${path}`);
+    throw new Error(
+      `OpenAPI response status ${statusCode} not found for ${method.toUpperCase()} ${path}`,
+    );
   }
   if (typeof response.$ref === 'string') {
     response = getSchemaByRef(response.$ref) as Record<string, unknown>;
@@ -295,4 +280,3 @@ export const assertMatchesOpenApiResponse = (params: {
     );
   }
 };
-

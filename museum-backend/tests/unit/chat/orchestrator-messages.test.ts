@@ -247,12 +247,7 @@ describe('buildSectionMessages', () => {
   const userMsg = new HumanMessage('Hello');
 
   it('returns minimal structure without memoryBlock or redirectHint', () => {
-    const messages = buildSectionMessages(
-      systemPrompt,
-      sectionPrompt,
-      [],
-      userMsg,
-    );
+    const messages = buildSectionMessages(systemPrompt, sectionPrompt, [], userMsg);
 
     // system + section + user + anti-injection = 4
     expect(messages).toHaveLength(4);

@@ -35,9 +35,13 @@ const makeRepo = (overrides: Partial<IAdminRepository> = {}): IAdminRepository =
   listUsers: jest.fn().mockResolvedValue(makePaginatedAdmins([])),
   changeUserRole: jest.fn().mockResolvedValue(makeUser({ role: 'moderator' })),
   countAdmins: jest.fn().mockResolvedValue(2),
-  listAuditLogs: jest.fn().mockResolvedValue({ data: [], total: 0, page: 1, limit: 20, totalPages: 0 }),
+  listAuditLogs: jest
+    .fn()
+    .mockResolvedValue({ data: [], total: 0, page: 1, limit: 20, totalPages: 0 }),
   getStats: jest.fn(),
-  listReports: jest.fn().mockResolvedValue({ data: [], total: 0, page: 1, limit: 20, totalPages: 0 }),
+  listReports: jest
+    .fn()
+    .mockResolvedValue({ data: [], total: 0, page: 1, limit: 20, totalPages: 0 }),
   resolveReport: jest.fn().mockResolvedValue(null),
   getUsageAnalytics: jest.fn(),
   getContentAnalytics: jest.fn(),
@@ -54,9 +58,9 @@ describe('ChangeUserRoleUseCase', () => {
     const repo = makeRepo();
     const uc = new ChangeUserRoleUseCase(repo);
 
-    await expect(
-      uc.execute({ userId: 1, newRole: 'superadmin', actorId: 99 }),
-    ).rejects.toThrow(AppError);
+    await expect(uc.execute({ userId: 1, newRole: 'superadmin', actorId: 99 })).rejects.toThrow(
+      AppError,
+    );
 
     await expect(
       uc.execute({ userId: 1, newRole: 'superadmin', actorId: 99 }),
@@ -81,13 +85,13 @@ describe('ChangeUserRoleUseCase', () => {
     });
     const uc = new ChangeUserRoleUseCase(repo);
 
-    await expect(
-      uc.execute({ userId: 5, newRole: 'visitor', actorId: 99 }),
-    ).rejects.toThrow(AppError);
+    await expect(uc.execute({ userId: 5, newRole: 'visitor', actorId: 99 })).rejects.toThrow(
+      AppError,
+    );
 
-    await expect(
-      uc.execute({ userId: 5, newRole: 'visitor', actorId: 99 }),
-    ).rejects.toMatchObject({ statusCode: 409 });
+    await expect(uc.execute({ userId: 5, newRole: 'visitor', actorId: 99 })).rejects.toMatchObject({
+      statusCode: 409,
+    });
   });
 
   it('allows demoting a non-last admin', async () => {
@@ -150,9 +154,9 @@ describe('ChangeUserRoleUseCase', () => {
     });
     const uc = new ChangeUserRoleUseCase(repo);
 
-    await expect(
-      uc.execute({ userId: 999, newRole: 'admin', actorId: 99 }),
-    ).rejects.toMatchObject({ statusCode: 404 });
+    await expect(uc.execute({ userId: 999, newRole: 'admin', actorId: 99 })).rejects.toMatchObject({
+      statusCode: 404,
+    });
 
     expect(auditService.log).not.toHaveBeenCalled();
   });
@@ -163,8 +167,8 @@ describe('ChangeUserRoleUseCase', () => {
     });
     const uc = new ChangeUserRoleUseCase(repo);
 
-    await expect(
-      uc.execute({ userId: 999, newRole: 'admin', actorId: 99 }),
-    ).rejects.toThrow('User not found');
+    await expect(uc.execute({ userId: 999, newRole: 'admin', actorId: 99 })).rejects.toThrow(
+      'User not found',
+    );
   });
 });

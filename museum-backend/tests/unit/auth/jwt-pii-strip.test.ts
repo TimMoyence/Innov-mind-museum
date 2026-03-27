@@ -47,10 +47,7 @@ const makeRefreshTokenRepo = () =>
 
 describe('S2-22: JWT PII strip', () => {
   it('verifyAccessToken returns { id, role } only — no email, firstname, lastname', () => {
-    const service = new AuthSessionService(
-      makeUserRepo(makeUser()),
-      makeRefreshTokenRepo(),
-    );
+    const service = new AuthSessionService(makeUserRepo(makeUser()), makeRefreshTokenRepo());
 
     const token = jwt.sign(
       { sub: '42', type: 'access', jti: 'test-jti', role: 'visitor' },
@@ -68,10 +65,7 @@ describe('S2-22: JWT PII strip', () => {
   it('issued access token contains role but no PII fields when decoded', async () => {
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     const user = makeUser();
-    const service = new AuthSessionService(
-      makeUserRepo(user),
-      makeRefreshTokenRepo(),
-    );
+    const service = new AuthSessionService(makeUserRepo(user), makeRefreshTokenRepo());
 
     const session = await service.login('alice@example.com', 'ValidPass1');
 
@@ -88,10 +82,7 @@ describe('S2-22: JWT PII strip', () => {
   it('login response body still includes user with PII (SafeUser)', async () => {
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     const user = makeUser();
-    const service = new AuthSessionService(
-      makeUserRepo(user),
-      makeRefreshTokenRepo(),
-    );
+    const service = new AuthSessionService(makeUserRepo(user), makeRefreshTokenRepo());
 
     const session = await service.login('alice@example.com', 'ValidPass1');
     expect(session.user).toEqual({

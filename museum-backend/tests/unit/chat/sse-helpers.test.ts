@@ -64,9 +64,7 @@ describe('sendSseDone', () => {
 
     sendSseDone(res, payload);
 
-    expect(res.write).toHaveBeenCalledWith(
-      `event: done\ndata: ${JSON.stringify(payload)}\n\n`,
-    );
+    expect(res.write).toHaveBeenCalledWith(`event: done\ndata: ${JSON.stringify(payload)}\n\n`);
   });
 });
 
@@ -117,9 +115,7 @@ describe('sendSseEvent', () => {
 
     sendSseEvent(res, 'custom', data);
 
-    expect(res.write).toHaveBeenCalledWith(
-      `event: custom\ndata: ${JSON.stringify(data)}\n\n`,
-    );
+    expect(res.write).toHaveBeenCalledWith(`event: custom\ndata: ${JSON.stringify(data)}\n\n`);
   });
 
   it('writes string data as-is without JSON.stringifying', () => {

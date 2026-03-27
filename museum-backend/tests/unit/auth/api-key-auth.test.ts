@@ -153,7 +153,10 @@ describe('API Key Authentication', () => {
       const stored = await repo.findByPrefix(prefix);
       expect(stored).not.toBeNull();
 
-      const expectedHash = crypto.createHmac('sha256', stored!.salt).update(plaintext).digest('hex');
+      const expectedHash = crypto
+        .createHmac('sha256', stored!.salt)
+        .update(plaintext)
+        .digest('hex');
       const expectedBuffer = Buffer.from(expectedHash, 'hex');
       const actualBuffer = Buffer.from(stored!.hash, 'hex');
 

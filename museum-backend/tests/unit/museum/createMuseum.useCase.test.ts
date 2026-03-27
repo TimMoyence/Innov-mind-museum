@@ -49,45 +49,45 @@ describe('CreateMuseumUseCase', () => {
   });
 
   it('rejects empty name', async () => {
-    await expect(
-      useCase.execute({ name: '', slug: 'test' }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ name: '', slug: 'test' })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('rejects whitespace-only name', async () => {
-    await expect(
-      useCase.execute({ name: '   ', slug: 'test' }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ name: '   ', slug: 'test' })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('rejects empty slug', async () => {
-    await expect(
-      useCase.execute({ name: 'Test Museum', slug: '' }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ name: 'Test Museum', slug: '' })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('rejects whitespace-only slug', async () => {
-    await expect(
-      useCase.execute({ name: 'Test Museum', slug: '   ' }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ name: 'Test Museum', slug: '   ' })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('rejects slug with uppercase letters', async () => {
-    await expect(
-      useCase.execute({ name: 'Test', slug: 'My-Museum' }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ name: 'Test', slug: 'My-Museum' })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('rejects slug with spaces', async () => {
-    await expect(
-      useCase.execute({ name: 'Test', slug: 'my museum' }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ name: 'Test', slug: 'my museum' })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('rejects slug with special characters', async () => {
-    await expect(
-      useCase.execute({ name: 'Test', slug: 'my_museum!' }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(useCase.execute({ name: 'Test', slug: 'my_museum!' })).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('accepts slug with numbers and hyphens', async () => {

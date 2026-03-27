@@ -26,9 +26,10 @@ function mapTicketRow(row: Record<string, unknown>): TicketDTO {
     assignedTo: (row.assigned_to as number) ?? null,
     createdAt: (row.createdAt as Date).toISOString(),
     updatedAt: (row.updatedAt as Date).toISOString(),
-    messageCount: row.message_count !== undefined
-      ? Number.parseInt(row.message_count as string, 10)
-      : undefined,
+    messageCount:
+      row.message_count !== undefined
+        ? Number.parseInt(row.message_count as string, 10)
+        : undefined,
   };
 }
 
@@ -148,10 +149,9 @@ export class SupportRepositoryPg implements ISupportRepository {
     );
 
     // Bump the ticket's updatedAt
-    await pool.query(
-      `UPDATE "support_tickets" SET "updatedAt" = NOW() WHERE "id" = $1`,
-      [input.ticketId],
-    );
+    await pool.query(`UPDATE "support_tickets" SET "updatedAt" = NOW() WHERE "id" = $1`, [
+      input.ticketId,
+    ]);
 
     return mapMessageRow(result.rows[0]);
   }

@@ -43,18 +43,18 @@ describe('chat service ownership checks', () => {
     const service = buildChatTestService();
     const session = await service.createSession({ userId: USER_A });
 
-    await expect(
-      service.deleteSessionIfEmpty(session.id, USER_B),
-    ).rejects.toThrow(expect.objectContaining({ statusCode: 404 }));
+    await expect(service.deleteSessionIfEmpty(session.id, USER_B)).rejects.toThrow(
+      expect.objectContaining({ statusCode: 404 }),
+    );
   });
 
   it('getSession rejects when currentUserId does not match', async () => {
     const service = buildChatTestService();
     const session = await service.createSession({ userId: USER_A });
 
-    await expect(
-      service.getSession(session.id, { limit: 20 }, USER_B),
-    ).rejects.toThrow(expect.objectContaining({ statusCode: 404 }));
+    await expect(service.getSession(session.id, { limit: 20 }, USER_B)).rejects.toThrow(
+      expect.objectContaining({ statusCode: 404 }),
+    );
   });
 
   it('getMessageImageRef rejects when currentUserId does not match', async () => {
@@ -67,9 +67,9 @@ describe('chat service ownership checks', () => {
       USER_A,
     );
 
-    await expect(
-      service.getMessageImageRef(msg.message.id, USER_B),
-    ).rejects.toThrow(expect.objectContaining({ statusCode: 404 }));
+    await expect(service.getMessageImageRef(msg.message.id, USER_B)).rejects.toThrow(
+      expect.objectContaining({ statusCode: 404 }),
+    );
   });
 
   it('reportMessage rejects when currentUserId does not match session owner', async () => {
@@ -82,9 +82,9 @@ describe('chat service ownership checks', () => {
       USER_A,
     );
 
-    await expect(
-      service.reportMessage(msg.message.id, 'inaccurate', USER_B),
-    ).rejects.toThrow(expect.objectContaining({ statusCode: 404 }));
+    await expect(service.reportMessage(msg.message.id, 'inaccurate', USER_B)).rejects.toThrow(
+      expect.objectContaining({ statusCode: 404 }),
+    );
   });
 
   it('postMessage throws 404 for non-existent session', async () => {
@@ -114,9 +114,9 @@ describe('chat service ownership checks', () => {
   it('postMessage throws 400 for invalid UUID format', async () => {
     const service = buildChatTestService();
 
-    await expect(
-      service.postMessage('not-a-uuid', { text: 'Hello' }),
-    ).rejects.toThrow(expect.objectContaining({ statusCode: 400 }));
+    await expect(service.postMessage('not-a-uuid', { text: 'Hello' })).rejects.toThrow(
+      expect.objectContaining({ statusCode: 400 }),
+    );
   });
 
   it('getMessageImageRef throws 404 for non-existent message', async () => {

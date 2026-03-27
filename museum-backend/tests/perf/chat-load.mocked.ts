@@ -7,8 +7,7 @@ import type {
 } from '@modules/chat/adapters/secondary/langchain.orchestrator';
 import { buildChatTestService } from 'tests/helpers/chat/chatTestApp';
 
-const wait = async (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+const wait = async (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 class MockLatencyOrchestrator implements ChatOrchestrator {
   constructor(
@@ -18,8 +17,7 @@ class MockLatencyOrchestrator implements ChatOrchestrator {
 
   async generate(): Promise<OrchestratorOutput> {
     const delayMs =
-      this.minDelayMs +
-      Math.floor(Math.random() * Math.max(1, this.maxDelayMs - this.minDelayMs));
+      this.minDelayMs + Math.floor(Math.random() * Math.max(1, this.maxDelayMs - this.minDelayMs));
     await wait(delayMs);
 
     return {
@@ -28,7 +26,10 @@ class MockLatencyOrchestrator implements ChatOrchestrator {
     };
   }
 
-  async generateStream(_input: unknown, onChunk: (text: string) => void): Promise<OrchestratorOutput> {
+  async generateStream(
+    _input: unknown,
+    onChunk: (text: string) => void,
+  ): Promise<OrchestratorOutput> {
     const result = await this.generate();
     onChunk(result.text);
     return result;
@@ -38,10 +39,7 @@ class MockLatencyOrchestrator implements ChatOrchestrator {
 const p95 = (values: number[]): number => {
   if (!values.length) return 0;
   const sorted = [...values].sort((left, right) => left - right);
-  const index = Math.min(
-    sorted.length - 1,
-    Math.max(0, Math.ceil(sorted.length * 0.95) - 1),
-  );
+  const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * 0.95) - 1));
   return sorted[index];
 };
 
@@ -64,23 +62,20 @@ const run = async (): Promise<void> => {
   const timings: number[] = [];
   let cursor = 0;
 
-  const workers = Array.from(
-    { length: Math.max(1, concurrency) },
-    async () => {
-      while (true) {
-        const index = cursor;
-        cursor += 1;
-        if (index >= requests) break;
+  const workers = Array.from({ length: Math.max(1, concurrency) }, async () => {
+    while (true) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= requests) break;
 
-        const startedAt = performance.now();
-        await service.postMessage(session.id, {
-          text: `Perf message ${index + 1}`,
-          context: { museumMode: true },
-        });
-        timings.push(performance.now() - startedAt);
-      }
-    },
-  );
+      const startedAt = performance.now();
+      await service.postMessage(session.id, {
+        text: `Perf message ${index + 1}`,
+        context: { museumMode: true },
+      });
+      timings.push(performance.now() - startedAt);
+    }
+  });
 
   await Promise.all(workers);
 
@@ -88,9 +83,7 @@ const run = async (): Promise<void> => {
     requests,
     concurrency: Math.max(1, concurrency),
     minMs: Math.min(...timings),
-    avgMs:
-      timings.reduce((sum, current) => sum + current, 0) /
-      Math.max(1, timings.length),
+    avgMs: timings.reduce((sum, current) => sum + current, 0) / Math.max(1, timings.length),
     p95Ms: p95(timings),
     maxMs: Math.max(...timings),
     budgetMs,

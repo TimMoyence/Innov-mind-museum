@@ -23,17 +23,28 @@ const sessionResponse = {
   refreshToken: 'refresh-jwt',
   expiresIn: 900,
   refreshExpiresIn: 2592000,
-  user: { id: 1, email: 'user@test.com', firstname: 'Test', lastname: 'User', role: 'visitor' as const, museumId: null },
+  user: {
+    id: 1,
+    email: 'user@test.com',
+    firstname: 'Test',
+    lastname: 'User',
+    role: 'visitor' as const,
+    museumId: null,
+  },
 };
 
 const makeMocks = () => {
-  const userRepo: jest.Mocked<Pick<IUserRepository, 'getUserById' | 'getUserByEmail' | 'registerSocialUser'>> = {
+  const userRepo: jest.Mocked<
+    Pick<IUserRepository, 'getUserById' | 'getUserByEmail' | 'registerSocialUser'>
+  > = {
     getUserById: jest.fn(),
     getUserByEmail: jest.fn(),
     registerSocialUser: jest.fn(),
   };
 
-  const socialAccountRepo: jest.Mocked<Pick<ISocialAccountRepository, 'findByProviderAndProviderUserId' | 'create'>> = {
+  const socialAccountRepo: jest.Mocked<
+    Pick<ISocialAccountRepository, 'findByProviderAndProviderUserId' | 'create'>
+  > = {
     findByProviderAndProviderUserId: jest.fn(),
     create: jest.fn(),
   };
@@ -87,7 +98,10 @@ describe('SocialLoginUseCase', () => {
     const result = await useCase.execute('google', 'valid-id-token');
 
     expect(result).toEqual(sessionResponse);
-    expect(socialAccountRepo.findByProviderAndProviderUserId).toHaveBeenCalledWith('google', 'goog-123');
+    expect(socialAccountRepo.findByProviderAndProviderUserId).toHaveBeenCalledWith(
+      'google',
+      'goog-123',
+    );
     expect(authSessionService.socialLogin).toHaveBeenCalled();
   });
 

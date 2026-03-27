@@ -19,7 +19,7 @@ export const buildUserMemoryPromptBlock = (memory: UserMemory | null | undefined
   const lines: string[] = ['[USER MEMORY]'];
 
   lines.push(
-    `Returning visitor (${memory.sessionCount} session${memory.sessionCount === 1 ? '' : 's'}). Expertise: ${sanitizePromptInput(memory.preferredExpertise, 16)}.`,
+    `Returning visitor (${String(memory.sessionCount)} session${memory.sessionCount === 1 ? '' : 's'}). Expertise: ${sanitizePromptInput(memory.preferredExpertise, 16)}.`,
   );
 
   if (memory.favoritePeriods.length > 0) {
@@ -55,7 +55,7 @@ export const buildUserMemoryPromptBlock = (memory: UserMemory | null | undefined
   }
 
   if (memory.totalArtworksDiscussed > 0) {
-    lines.push(`Artworks discussed so far: ${memory.totalArtworksDiscussed}.`);
+    lines.push(`Artworks discussed so far: ${String(memory.totalArtworksDiscussed)}.`);
   }
 
   if (memory.summary) {

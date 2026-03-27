@@ -1,13 +1,15 @@
-import {
-  evaluateUserInputGuardrail,
-} from '@modules/chat/application/art-topic-guardrail';
+import { evaluateUserInputGuardrail } from '@modules/chat/application/art-topic-guardrail';
 import type { ArtTopicClassifier } from '@modules/chat/application/art-topic-classifier';
 
 const makeClassifier = (returnValue: boolean) =>
-  ({ isArtRelated: jest.fn().mockResolvedValue(returnValue) }) as unknown as jest.Mocked<ArtTopicClassifier>;
+  ({
+    isArtRelated: jest.fn().mockResolvedValue(returnValue),
+  }) as unknown as jest.Mocked<ArtTopicClassifier>;
 
 const makeFailingClassifier = () =>
-  ({ isArtRelated: jest.fn().mockRejectedValue(new Error('API timeout')) }) as unknown as jest.Mocked<ArtTopicClassifier>;
+  ({
+    isArtRelated: jest.fn().mockRejectedValue(new Error('API timeout')),
+  }) as unknown as jest.Mocked<ArtTopicClassifier>;
 
 describe('evaluateUserInputGuardrail — dynamic keywords (step 5b)', () => {
   it('allows message matching a dynamic keyword not in static list', async () => {
@@ -63,10 +65,7 @@ describe('evaluateUserInputGuardrail — classifier (step 9)', () => {
       classifier,
       onKeywordDiscovered,
     });
-    expect(onKeywordDiscovered).toHaveBeenCalledWith(
-      expect.any(String),
-      'en',
-    );
+    expect(onKeywordDiscovered).toHaveBeenCalledWith(expect.any(String), 'en');
   });
 
   it('returns redirectHint when classifier returns false', async () => {

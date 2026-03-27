@@ -123,9 +123,7 @@ describeE2E('api e2e (express + postgres container)', () => {
     isListSessionsResponse = contracts.isListSessionsResponse;
 
     appDataSource = AppDataSource;
-    (
-      appDataSource.options as { migrations?: unknown[] }
-    ).migrations = [
+    (appDataSource.options as { migrations?: unknown[] }).migrations = [
       InitDatabase1771427010387,
       AddAuthRefreshTokens1771800000000,
       EnsureChatTables1771900000000,
@@ -158,7 +156,10 @@ describeE2E('api e2e (express + postgres container)', () => {
           };
         },
         async generateStream(_input: unknown, onChunk: (t: string) => void) {
-          const result = { text: 'Synthetic assistant response for e2e', metadata: { citations: ['e2e'] } };
+          const result = {
+            text: 'Synthetic assistant response for e2e',
+            metadata: { citations: ['e2e'] },
+          };
           onChunk(result.text);
           return result;
         },
@@ -281,9 +282,7 @@ describeE2E('api e2e (express + postgres container)', () => {
       body: JSON.stringify({ refreshToken }),
     });
     expect(refresh.status).toBe(200);
-    expect((refresh.body as { accessToken?: unknown }).accessToken).toEqual(
-      expect.any(String),
-    );
+    expect((refresh.body as { accessToken?: unknown }).accessToken).toEqual(expect.any(String));
 
     const createSession = await request(
       '/api/chat/sessions',
@@ -300,9 +299,7 @@ describeE2E('api e2e (express + postgres container)', () => {
     expect(createSession.status).toBe(201);
     expect(isCreateSessionResponse(createSession.body)).toBe(true);
 
-    const sessionId = (
-      createSession.body as { session: { id: string } }
-    ).session.id;
+    const sessionId = (createSession.body as { session: { id: string } }).session.id;
 
     const postMessage = await request(
       `/api/chat/sessions/${sessionId}/messages`,
@@ -387,9 +384,7 @@ describeE2E('api e2e (express + postgres container)', () => {
       token,
     );
     expect(createSession.status).toBe(201);
-    const sessionId = (
-      createSession.body as { session: { id: string } }
-    ).session.id;
+    const sessionId = (createSession.body as { session: { id: string } }).session.id;
 
     const formData = new FormData();
     formData.append(
@@ -497,14 +492,16 @@ describeE2E('api e2e (express + postgres container)', () => {
     expect(getSession.status).toBe(200);
     expect(isGetSessionResponse(getSession.body)).toBe(true);
 
-    const messages = (getSession.body as {
-      messages: Array<{
-        id: string;
-        role: string;
-        image?: { url: string; expiresAt: string } | null;
-        imageRef?: string | null;
-      }>;
-    }).messages;
+    const messages = (
+      getSession.body as {
+        messages: Array<{
+          id: string;
+          role: string;
+          image?: { url: string; expiresAt: string } | null;
+          imageRef?: string | null;
+        }>;
+      }
+    ).messages;
     const userImageMessage = messages.find(
       (message) => message.role === 'user' && message.imageRef,
     );
@@ -551,18 +548,26 @@ describeE2E('api e2e (express + postgres container)', () => {
     });
     const token = (login.body as { accessToken?: string }).accessToken as string;
 
-    const createA = await request('/api/chat/sessions', {
-      method: 'POST',
-      body: JSON.stringify({ locale: 'en-US', museumMode: true }),
-    }, token);
+    const createA = await request(
+      '/api/chat/sessions',
+      {
+        method: 'POST',
+        body: JSON.stringify({ locale: 'en-US', museumMode: true }),
+      },
+      token,
+    );
     const sessionA = (createA.body as { session: { id: string } }).session.id;
 
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    const createB = await request('/api/chat/sessions', {
-      method: 'POST',
-      body: JSON.stringify({ locale: 'en-US', museumMode: true }),
-    }, token);
+    const createB = await request(
+      '/api/chat/sessions',
+      {
+        method: 'POST',
+        body: JSON.stringify({ locale: 'en-US', museumMode: true }),
+      },
+      token,
+    );
     const sessionB = (createB.body as { session: { id: string } }).session.id;
 
     const listBefore = await request('/api/chat/sessions?limit=20', { method: 'GET' }, token);
@@ -623,9 +628,7 @@ describeE2E('api e2e (express + postgres container)', () => {
       token,
     );
     expect(createEmpty.status).toBe(201);
-    const emptySessionId = (
-      createEmpty.body as { session: { id: string } }
-    ).session.id;
+    const emptySessionId = (createEmpty.body as { session: { id: string } }).session.id;
 
     const createNonEmpty = await request(
       '/api/chat/sessions',
@@ -639,9 +642,7 @@ describeE2E('api e2e (express + postgres container)', () => {
       token,
     );
     expect(createNonEmpty.status).toBe(201);
-    const nonEmptySessionId = (
-      createNonEmpty.body as { session: { id: string } }
-    ).session.id;
+    const nonEmptySessionId = (createNonEmpty.body as { session: { id: string } }).session.id;
 
     const postMessage = await request(
       `/api/chat/sessions/${nonEmptySessionId}/messages`,

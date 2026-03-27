@@ -86,21 +86,23 @@ const sha256 = (value: string): string => {
   return crypto.createHash('sha256').update(value).digest('hex');
 };
 
+/** Resolves museum_id / museumId from a raw DB row (column name may vary). */
+const resolveMuseumId = (user: Record<string, unknown>): number | null => {
+  if (typeof user.museum_id === 'number') return user.museum_id;
+  if (typeof user.museumId === 'number') return user.museumId;
+  return null;
+};
+
 const sanitizeUser = (user: Record<string, unknown>): SafeUser => {
   return {
     id: Number(user.id),
     email: String(user.email),
     firstname:
-      typeof user.firstname === 'string' || user.firstname === null
-        ? (user.firstname)
-        : null,
-    lastname:
-      typeof user.lastname === 'string' || user.lastname === null
-        ? (user.lastname)
-        : null,
+      typeof user.firstname === 'string' || user.firstname === null ? user.firstname : null,
+    lastname: typeof user.lastname === 'string' || user.lastname === null ? user.lastname : null,
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: role may be undefined at runtime from raw DB row
     role: (user.role as UserRole) || 'visitor',
-    museumId: typeof user.museum_id === 'number' ? user.museum_id : (typeof user.museumId === 'number' ? user.museumId : null), // eslint-disable-line sonarjs/no-nested-conditional -- simple ternary chain for column name aliasing
+    museumId: resolveMuseumId(user),
   };
 };
 
@@ -152,7 +154,9 @@ export class AuthSessionService {
     const session = await this.issueSession({
       user: sanitizeUser(user as unknown as Record<string, unknown>),
     });
-    this.refreshTokenRepository.deleteExpiredTokens().catch(() => { /* noop */ });
+    this.refreshTokenRepository.deleteExpiredTokens().catch(() => {
+      /* noop */
+    });
     return session;
   }
 
@@ -220,7 +224,9 @@ export class AuthSessionService {
     const session = await this.issueSession({
       user: sanitizeUser(user),
     });
-    this.refreshTokenRepository.deleteExpiredTokens().catch(() => { /* noop */ });
+    this.refreshTokenRepository.deleteExpiredTokens().catch(() => {
+      /* noop */
+    });
     return session;
   }
 
@@ -239,8 +245,12 @@ export class AuthSessionService {
         throw unauthorized('Invalid access token', 'INVALID_ACCESS_TOKEN');
       }
 
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-      return { id: Number(decoded.sub), role: decoded.role || 'visitor', museumId: decoded.museumId ?? null };
+      return {
+        id: Number(decoded.sub),
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
+        role: decoded.role || 'visitor',
+        museumId: decoded.museumId ?? null,
+      };
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -337,10 +347,12 @@ export class AuthSessionService {
       expiresAt: refreshExpiresAt,
     };
 
-    await (params.rotateFrom ? this.refreshTokenRepository.rotate({
-        currentTokenId: params.rotateFrom.id,
-        next: nextTokenRow,
-      }) : this.refreshTokenRepository.insert(nextTokenRow));
+    await (params.rotateFrom
+      ? this.refreshTokenRepository.rotate({
+          currentTokenId: params.rotateFrom.id,
+          next: nextTokenRow,
+        })
+      : this.refreshTokenRepository.insert(nextTokenRow));
 
     return {
       accessToken,

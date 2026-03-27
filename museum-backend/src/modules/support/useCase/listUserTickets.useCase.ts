@@ -3,9 +3,13 @@ import { badRequest } from '@shared/errors/app.error';
 import { TICKET_STATUSES, TICKET_PRIORITIES } from '../domain/support.types';
 
 import type { ISupportRepository } from '../domain/support.repository.interface';
-import type { TicketDTO, ListTicketsFilters, TicketStatus, TicketPriority } from '../domain/support.types';
+import type {
+  TicketDTO,
+  ListTicketsFilters,
+  TicketStatus,
+  TicketPriority,
+} from '../domain/support.types';
 import type { PaginatedResult } from '@modules/admin/domain/admin.types';
-
 
 /** Input for listing a specific user's support tickets. */
 export interface ListUserTicketsInput {

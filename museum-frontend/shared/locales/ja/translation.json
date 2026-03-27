@@ -97,7 +97,13 @@
     "unsaved_hint": "長押しで保存",
     "saved_filter_on": "保存済みフィルター オン",
     "saved_filter_off": "保存済みフィルター オフ",
-    "sort_label": "並び順: {{sortMode}}"
+    "sort_label": "並び順: {{sortMode}}",
+    "swipe_delete": "スワイプして削除",
+    "delete_confirm": "この会話を削除しますか？",
+    "edit": "編集",
+    "select_all": "すべて選択",
+    "delete_selected": "削除 ({{count}})",
+    "selected_count": "{{count}}件の会話が削除されます。"
   },
   "settings": {
     "title": "設定",
@@ -134,7 +140,21 @@
     "sign_out": "ログアウト",
     "preferences": "環境設定",
     "security": "セキュリティ",
-    "biometric_lock": "生体認証ロック"
+    "biometric_lock": "生体認証ロック",
+    "change_password": "パスワードを変更",
+    "export_data": "データをエクスポート",
+    "export_data_desc": "すべての個人データをダウンロード（GDPR）",
+    "export_data_success": "データのエクスポートに成功しました"
+  },
+  "change_password": {
+    "title": "パスワードの変更",
+    "current": "現在のパスワード",
+    "new": "新しいパスワード",
+    "confirm": "新しいパスワードの確認",
+    "submit": "パスワードを更新",
+    "success": "パスワードが正常に更新されました",
+    "error_mismatch": "パスワードが一致しません",
+    "error_short": "パスワードは8文字以上にしてください"
   },
   "preferences": {
     "title": "環境設定",
@@ -315,7 +335,8 @@
     "voice_message": "[音声メッセージ]",
     "share_footer": "Musaiumでシェア — あなたの美術館コンパニオン\nhttps://musaium.app",
     "replace_image": "置き換え",
-    "remove_image": "削除"
+    "remove_image": "削除",
+    "crop": "切り抜き"
   },
   "chatInput": {
     "placeholder": "美術品や建造物について質問、または音声・写真を送信...",
@@ -504,7 +525,9 @@
       "delete_account_hint": "この操作は元に戻せません",
       "back_home": "ホーム画面に戻る",
       "sign_out": "サインアウト",
-      "sign_out_hint": "サインアウトしてログイン画面に戻ります"
+      "sign_out_hint": "サインアウトしてログイン画面に戻ります",
+      "change_password": "アカウントのパスワードを変更",
+      "export_data": "すべての個人データをエクスポート"
     },
     "preferences": {
       "language_button": "{{language}}言語を選択",

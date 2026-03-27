@@ -36,5 +36,8 @@ export interface ChatOrchestrator {
   /** Generates an assistant response for the given input. */
   generate(input: OrchestratorInput): Promise<OrchestratorOutput>;
   /** Generates a streaming assistant response, calling onChunk for each text token. Returns final output when complete. */
-  generateStream(input: OrchestratorInput, onChunk: (text: string) => void): Promise<OrchestratorOutput>;
+  generateStream(
+    input: OrchestratorInput,
+    onChunk: (text: string) => void,
+  ): Promise<OrchestratorOutput>;
 }

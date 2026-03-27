@@ -53,7 +53,7 @@ describe('RedisRateLimitStore', () => {
   describe('increment', () => {
     it('increments and sets expiry on first request (count=1)', async () => {
       mockRedis.__setExecResult([
-        [null, 1],  // INCR result = 1
+        [null, 1], // INCR result = 1
         [null, -2], // PTTL result = -2 (no expiry yet)
       ]);
 
@@ -67,7 +67,7 @@ describe('RedisRateLimitStore', () => {
 
     it('increments without setting expiry on subsequent requests', async () => {
       mockRedis.__setExecResult([
-        [null, 5],      // INCR result = 5
+        [null, 5], // INCR result = 5
         [null, 45_000], // PTTL = 45s remaining
       ]);
 
@@ -168,10 +168,9 @@ describe('RedisRateLimitStore — integration with rate-limit middleware', () =>
 
   afterEach(() => {
     // Reset the global redis store
-    const { _resetRedisStore, clearRateLimitBuckets } =
-      jest.requireActual<typeof import('@src/helpers/middleware/rate-limit.middleware')>(
-        '@src/helpers/middleware/rate-limit.middleware',
-      );
+    const { _resetRedisStore, clearRateLimitBuckets } = jest.requireActual<
+      typeof import('@src/helpers/middleware/rate-limit.middleware')
+    >('@src/helpers/middleware/rate-limit.middleware');
     _resetRedisStore();
     clearRateLimitBuckets();
   });
@@ -184,9 +183,8 @@ describe('RedisRateLimitStore — integration with rate-limit middleware', () =>
       _resetRedisStore,
       clearRateLimitBuckets,
     } = await import('@src/helpers/middleware/rate-limit.middleware');
-    const { RedisRateLimitStore: StoreClass } = await import(
-      '@src/helpers/middleware/redis-rate-limit-store'
-    );
+    const { RedisRateLimitStore: StoreClass } =
+      await import('@src/helpers/middleware/redis-rate-limit-store');
 
     const store = new StoreClass(mockRedis as unknown as Redis);
     setRedisRateLimitStore(store);

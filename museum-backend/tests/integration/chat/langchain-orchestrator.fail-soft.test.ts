@@ -2,11 +2,7 @@ import { env } from '@src/config/env';
 import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/langchain.orchestrator';
 
-const createMessage = (
-  id: string,
-  role: 'user' | 'assistant',
-  text: string,
-): ChatMessage =>
+const createMessage = (id: string, role: 'user' | 'assistant', text: string): ChatMessage =>
   ({
     id,
     role,
@@ -23,10 +19,7 @@ type InvokeOptions = {
 };
 
 class FakeSectionModel {
-  async invoke(
-    messages: unknown,
-    _options?: InvokeOptions,
-  ): Promise<{ content: unknown }> {
+  async invoke(messages: unknown, _options?: InvokeOptions): Promise<{ content: unknown }> {
     const serialized = JSON.stringify(messages);
 
     if (serialized.includes('[SECTION:summary]')) {
@@ -43,17 +36,19 @@ class FakeSectionModel {
     return { content: 'Unknown section' };
   }
 
-  async stream(messages: unknown, options?: InvokeOptions): Promise<AsyncIterable<{ content: unknown }>> {
+  async stream(
+    messages: unknown,
+    options?: InvokeOptions,
+  ): Promise<AsyncIterable<{ content: unknown }>> {
     const result = await this.invoke(messages, options);
-    return (async function* () { yield result; })();
+    return (async function* () {
+      yield result;
+    })();
   }
 }
 
 class SlowFakeModel {
-  async invoke(
-    _messages: unknown,
-    options?: InvokeOptions,
-  ): Promise<{ content: unknown }> {
+  async invoke(_messages: unknown, options?: InvokeOptions): Promise<{ content: unknown }> {
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(resolve, 200);
       options?.signal?.addEventListener(
@@ -69,9 +64,14 @@ class SlowFakeModel {
     return { content: JSON.stringify({ answer: 'Too late' }) };
   }
 
-  async stream(messages: unknown, options?: InvokeOptions): Promise<AsyncIterable<{ content: unknown }>> {
+  async stream(
+    messages: unknown,
+    options?: InvokeOptions,
+  ): Promise<AsyncIterable<{ content: unknown }>> {
     const result = await this.invoke(messages, options);
-    return (async function* () { yield result; })();
+    return (async function* () {
+      yield result;
+    })();
   }
 }
 
@@ -160,7 +160,9 @@ describe('LangChainChatOrchestrator fail-soft profile', () => {
       },
       async stream(messages: unknown): Promise<AsyncIterable<{ content: unknown }>> {
         const result = await this.invoke(messages);
-        return (async function* () { yield result; })();
+        return (async function* () {
+          yield result;
+        })();
       },
     };
 

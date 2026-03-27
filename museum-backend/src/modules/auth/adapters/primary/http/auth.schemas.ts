@@ -43,6 +43,15 @@ export const verifyEmailSchema = z.object({
   token: z.string().min(1),
 });
 
+export const changeEmailSchema = z.object({
+  newEmail: z.string().email(),
+  currentPassword: z.string().min(1),
+});
+
+export const confirmEmailChangeSchema = z.object({
+  token: z.string().min(1),
+});
+
 export const createApiKeySchema = z.object({
   name: z.string().min(1).max(100),
   expiresAt: z.string().datetime().optional(),

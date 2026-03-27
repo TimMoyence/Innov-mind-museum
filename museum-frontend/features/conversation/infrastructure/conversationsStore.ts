@@ -23,6 +23,8 @@ interface ConversationsState {
   appendItems: (items: DashboardSessionCard[]) => void;
   /** Clear items (e.g. on error). */
   clearItems: () => void;
+  /** Remove specific session IDs from items and savedSessionIds. */
+  removeItems: (sessionIds: string[]) => void;
   /** Toggle a session's saved/bookmarked status. Returns true if the session is now saved. */
   toggleSaved: (sessionId: string) => boolean;
   /** Set sort mode. */
@@ -40,17 +42,20 @@ export const useConversationsStore = create<ConversationsState>()(
 
       setItems: (items) => set({ items }),
 
-      appendItems: (newItems) =>
-        set((state) => ({ items: [...state.items, ...newItems] })),
+      appendItems: (newItems) => set((state) => ({ items: [...state.items, ...newItems] })),
 
       clearItems: () => set({ items: [] }),
+
+      removeItems: (sessionIds) =>
+        set((state) => ({
+          items: state.items.filter((item) => !sessionIds.includes(item.id)),
+          savedSessionIds: state.savedSessionIds.filter((id) => !sessionIds.includes(id)),
+        })),
 
       toggleSaved: (sessionId) => {
         const current = get().savedSessionIds;
         const exists = current.includes(sessionId);
-        const next = exists
-          ? current.filter((id) => id !== sessionId)
-          : [...current, sessionId];
+        const next = exists ? current.filter((id) => id !== sessionId) : [...current, sessionId];
         set({ savedSessionIds: next });
         return !exists;
       },

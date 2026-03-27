@@ -1,4 +1,3 @@
-
 import { logger } from '@shared/logger/logger';
 import { InMemoryBucketStore } from '@shared/rate-limit/in-memory-bucket-store';
 
@@ -30,18 +29,11 @@ export class RedisRateLimitStore {
    *
    * @returns The current count after increment and the TTL remaining in ms.
    */
-  async increment(
-    key: string,
-    windowMs: number,
-  ): Promise<{ count: number; resetAt: number }> {
+  async increment(key: string, windowMs: number): Promise<{ count: number; resetAt: number }> {
     const redisKey = `${this.keyPrefix}${key}`;
 
     try {
-      const results = await this.redis
-        .multi()
-        .incr(redisKey)
-        .pttl(redisKey)
-        .exec();
+      const results = await this.redis.multi().incr(redisKey).pttl(redisKey).exec();
 
       if (!results) {
         return this.incrementFallback(key, windowMs);
@@ -97,10 +89,7 @@ export class RedisRateLimitStore {
     this.fallback.clear();
   }
 
-  private incrementFallback(
-    key: string,
-    windowMs: number,
-  ): { count: number; resetAt: number } {
+  private incrementFallback(key: string, windowMs: number): { count: number; resetAt: number } {
     const now = Date.now();
     const current = this.fallback.get(key);
 

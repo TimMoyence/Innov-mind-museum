@@ -95,9 +95,7 @@ export class AdminRepositoryPg implements IAdminRepository {
 
     if (filters.search) {
       const pattern = `%${filters.search}%`;
-      conditions.push(
-        `(email ILIKE $${idx} OR firstname ILIKE $${idx} OR lastname ILIKE $${idx})`,
-      );
+      conditions.push(`(email ILIKE $${idx} OR firstname ILIKE $${idx} OR lastname ILIKE $${idx})`);
       values.push(pattern);
       idx++;
     }
@@ -112,10 +110,7 @@ export class AdminRepositoryPg implements IAdminRepository {
     const { page, limit } = filters.pagination;
     const offset = (page - 1) * limit;
 
-    const countResult = await pool.query(
-      `SELECT COUNT(*) AS total FROM "users" ${where}`,
-      values,
-    );
+    const countResult = await pool.query(`SELECT COUNT(*) AS total FROM "users" ${where}`, values);
     const total = Number.parseInt(countResult.rows[0].total as string, 10);
 
     const dataResult = await pool.query(
@@ -145,16 +140,12 @@ export class AdminRepositoryPg implements IAdminRepository {
 
   /** Returns the total number of users with the admin role. */
   async countAdmins(): Promise<number> {
-    const result = await pool.query(
-      `SELECT COUNT(*) AS count FROM "users" WHERE role = 'admin'`,
-    );
+    const result = await pool.query(`SELECT COUNT(*) AS count FROM "users" WHERE role = 'admin'`);
     return Number.parseInt(result.rows[0].count as string, 10);
   }
 
   /** Retrieves a paginated list of audit log entries with optional filters. */
-  async listAuditLogs(
-    filters: ListAuditLogsFilters,
-  ): Promise<PaginatedResult<AdminAuditLogDTO>> {
+  async listAuditLogs(filters: ListAuditLogsFilters): Promise<PaginatedResult<AdminAuditLogDTO>> {
     const conditions: string[] = [];
     const values: unknown[] = [];
     let idx = 1;
@@ -258,9 +249,7 @@ export class AdminRepositoryPg implements IAdminRepository {
   // ─── Content Moderation (S4-03) ───
 
   /** Retrieves a paginated list of message reports with optional status/reason filters. */
-  async listReports(
-    filters: ListReportsFilters,
-  ): Promise<PaginatedResult<AdminReportDTO>> {
+  async listReports(filters: ListReportsFilters): Promise<PaginatedResult<AdminReportDTO>> {
     const conditions: string[] = [];
     const values: unknown[] = [];
     let idx = 1;
@@ -473,9 +462,7 @@ export class AdminRepositoryPg implements IAdminRepository {
           gValues.push(filters.to);
         }
 
-        const gWhere = guardrailWhere.length > 0
-          ? `WHERE ${guardrailWhere.join(' AND ')}`
-          : '';
+        const gWhere = guardrailWhere.length > 0 ? `WHERE ${guardrailWhere.join(' AND ')}` : '';
 
         const totalRes = await pool.query(
           `SELECT COUNT(*) AS total FROM "audit_logs" ${gWhere}`,
@@ -559,12 +546,15 @@ export class AdminRepositoryPg implements IAdminRepository {
       ),
     ]);
 
-    const totalUniqueUsers = Number.parseInt(returnRateResult.rows[0]?.total_unique as string, 10) || 0;
-    const returningUsers = Number.parseInt(returnRateResult.rows[0]?.returning_users as string, 10) || 0;
+    const totalUniqueUsers =
+      Number.parseInt(returnRateResult.rows[0]?.total_unique as string, 10) || 0;
+    const returningUsers =
+      Number.parseInt(returnRateResult.rows[0]?.returning_users as string, 10) || 0;
 
     return {
       avgMessagesPerSession: Number.parseFloat(avgMsgResult.rows[0]?.avg_msg as string) || 0,
-      avgSessionDurationMinutes: Number.parseFloat(avgDurationResult.rows[0]?.avg_dur as string) || 0,
+      avgSessionDurationMinutes:
+        Number.parseFloat(avgDurationResult.rows[0]?.avg_dur as string) || 0,
       returnUserRate: totalUniqueUsers > 0 ? returningUsers / totalUniqueUsers : 0,
       totalUniqueUsers,
       returningUsers,

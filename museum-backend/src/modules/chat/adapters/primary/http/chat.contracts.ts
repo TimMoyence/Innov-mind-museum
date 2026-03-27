@@ -9,10 +9,7 @@ const isRecord = (value: unknown): value is RecordValue => {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 };
 
-const optionalString = (
-  payload: RecordValue,
-  key: string,
-): string | undefined => {
+const optionalString = (payload: RecordValue, key: string): string | undefined => {
   const value = payload[key];
   if (value === undefined || value === null || value === '') {
     return undefined;
@@ -23,10 +20,7 @@ const optionalString = (
   return value;
 };
 
-const optionalBoolean = (
-  payload: RecordValue,
-  key: string,
-): boolean | undefined => {
+const optionalBoolean = (payload: RecordValue, key: string): boolean | undefined => {
   const value = payload[key];
   if (value === undefined || value === null || value === '') {
     return undefined;
@@ -41,10 +35,7 @@ const optionalBoolean = (
   throw badRequest(`${key} must be a boolean`);
 };
 
-const optionalNumber = (
-  payload: RecordValue,
-  key: string,
-): number | undefined => {
+const optionalNumber = (payload: RecordValue, key: string): number | undefined => {
   const value = payload[key];
   if (value === undefined || value === null || value === '') {
     return undefined;
@@ -293,11 +284,7 @@ export const parseListSessionsQuery = (payload: unknown): ListSessionsQuery => {
     throw badRequest('cursor must be a string');
   }
 
-  if (
-    limitRaw !== undefined &&
-    typeof limitRaw !== 'string' &&
-    typeof limitRaw !== 'number'
-  ) {
+  if (limitRaw !== undefined && typeof limitRaw !== 'string' && typeof limitRaw !== 'number') {
     throw badRequest('limit must be a number');
   }
 
@@ -315,9 +302,7 @@ const isStringArray = (value: unknown): value is string[] => {
 };
 
 /** Type guard verifying a payload conforms to {@link CreateSessionResponse}. */
-export const isCreateSessionResponse = (
-  payload: unknown,
-): payload is CreateSessionResponse => {
+export const isCreateSessionResponse = (payload: unknown): payload is CreateSessionResponse => {
   if (!isRecord(payload) || !isRecord(payload.session)) return false;
   return (
     typeof payload.session.id === 'string' &&
@@ -328,9 +313,7 @@ export const isCreateSessionResponse = (
 };
 
 /** Type guard verifying a payload conforms to {@link PostMessageResponse}. */
-export const isPostMessageResponse = (
-  payload: unknown,
-): payload is PostMessageResponse => {
+export const isPostMessageResponse = (payload: unknown): payload is PostMessageResponse => {
   if (!isRecord(payload) || !isRecord(payload.message) || !isRecord(payload.metadata)) {
     return false;
   }
@@ -371,7 +354,12 @@ export const isGetSessionResponse = (
   payload: unknown,
   // eslint-disable-next-line complexity -- type guard must check many fields
 ): payload is GetSessionResponse => {
-  if (!isRecord(payload) || !isRecord(payload.session) || !Array.isArray(payload.messages) || !isRecord(payload.page)) {
+  if (
+    !isRecord(payload) ||
+    !isRecord(payload.session) ||
+    !Array.isArray(payload.messages) ||
+    !isRecord(payload.page)
+  ) {
     return false;
   }
 
@@ -396,10 +384,7 @@ export const isGetSessionResponse = (
     if (!isRecord(item)) return false;
     if (item.image !== undefined && item.image !== null) {
       if (!isRecord(item.image)) return false;
-      if (
-        typeof item.image.url !== 'string' ||
-        typeof item.image.expiresAt !== 'string'
-      ) {
+      if (typeof item.image.url !== 'string' || typeof item.image.expiresAt !== 'string') {
         return false;
       }
     }
@@ -412,17 +397,12 @@ export const isGetSessionResponse = (
 };
 
 /** Type guard verifying a payload conforms to {@link DeleteSessionResponse}. */
-export const isDeleteSessionResponse = (
-  payload: unknown,
-): payload is DeleteSessionResponse => {
+export const isDeleteSessionResponse = (payload: unknown): payload is DeleteSessionResponse => {
   if (!isRecord(payload)) {
     return false;
   }
 
-  return (
-    typeof payload.sessionId === 'string' &&
-    typeof payload.deleted === 'boolean'
-  );
+  return typeof payload.sessionId === 'string' && typeof payload.deleted === 'boolean';
 };
 
 /** Validates and transforms a raw request body into a {@link ReportMessageRequest}. */
@@ -453,23 +433,16 @@ export const parseReportMessageRequest = (payload: unknown): ReportMessageReques
 };
 
 /** Type guard verifying a payload conforms to {@link ReportMessageResponse}. */
-export const isReportMessageResponse = (
-  payload: unknown,
-): payload is ReportMessageResponse => {
+export const isReportMessageResponse = (payload: unknown): payload is ReportMessageResponse => {
   if (!isRecord(payload)) {
     return false;
   }
 
-  return (
-    typeof payload.messageId === 'string' &&
-    typeof payload.reported === 'boolean'
-  );
+  return typeof payload.messageId === 'string' && typeof payload.reported === 'boolean';
 };
 
 /** Type guard verifying a payload conforms to {@link ListSessionsResponse}. */
-export const isListSessionsResponse = (
-  payload: unknown,
-): payload is ListSessionsResponse => {
+export const isListSessionsResponse = (payload: unknown): payload is ListSessionsResponse => {
   if (!isRecord(payload) || !Array.isArray(payload.sessions) || !isRecord(payload.page)) {
     return false;
   }

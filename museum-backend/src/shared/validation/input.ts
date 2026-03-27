@@ -14,13 +14,15 @@
  * @returns The sanitized string.
  */
 export const sanitizePromptInput = (value: string, maxLength = 200): string => {
-  return value
-    .normalize('NFC')
-    .replace(/[\u200B-\u200D\uFEFF\u2060\u00AD]/g, '')
-    // eslint-disable-next-line no-control-regex
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-    .trim()
-    .slice(0, maxLength);
+  return (
+    value
+      .normalize('NFC')
+      .replace(/[\u200B-\u200D\uFEFF\u2060\u00AD]/g, '')
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+      .trim()
+      .slice(0, maxLength)
+  );
 };
 
 /** Unicode letter pattern for name fields: letters, combining marks, spaces, hyphens, apostrophes. */

@@ -8,18 +8,25 @@ describe('guardrail refusals', () => {
     }
   });
 
-  it.each(SUPPORTED_LOCALES)('locale "%s" has non-empty insult, external_request, and default', (locale) => {
-    const messages = GUARDRAIL_REFUSALS[locale];
-    expect(messages.insult).toBeTruthy();
-    expect(messages.insult.length).toBeGreaterThan(10);
-    expect(messages.external_request).toBeTruthy();
-    expect(messages.external_request.length).toBeGreaterThan(10);
-    expect(messages.default).toBeTruthy();
-    expect(messages.default.length).toBeGreaterThan(10);
-  });
+  it.each(SUPPORTED_LOCALES)(
+    'locale "%s" has non-empty insult, external_request, and default',
+    (locale) => {
+      const messages = GUARDRAIL_REFUSALS[locale];
+      expect(messages.insult).toBeTruthy();
+      expect(messages.insult.length).toBeGreaterThan(10);
+      expect(messages.external_request).toBeTruthy();
+      expect(messages.external_request.length).toBeGreaterThan(10);
+      expect(messages.default).toBeTruthy();
+      expect(messages.default.length).toBeGreaterThan(10);
+    },
+  );
 
   it('produces 21 total refusal strings (7 locales x 3 variants)', () => {
-    const variants: (keyof typeof GUARDRAIL_REFUSALS['en'])[] = ['insult', 'external_request', 'default'];
+    const variants: (keyof (typeof GUARDRAIL_REFUSALS)['en'])[] = [
+      'insult',
+      'external_request',
+      'default',
+    ];
     let count = 0;
     for (const locale of SUPPORTED_LOCALES) {
       for (const variant of variants) {

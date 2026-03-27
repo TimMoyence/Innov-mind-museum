@@ -3,8 +3,7 @@ import { z } from 'zod';
 import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 import { AppError } from '@shared/errors/app.error';
 
-const mockReq = (body: unknown): Request =>
-  ({ body }) as unknown as Request;
+const mockReq = (body: unknown): Request => ({ body }) as unknown as Request;
 
 const mockRes = (): Response =>
   ({

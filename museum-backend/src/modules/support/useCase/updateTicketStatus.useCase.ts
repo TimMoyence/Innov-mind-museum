@@ -6,7 +6,6 @@ import { TICKET_STATUSES, TICKET_PRIORITIES } from '../domain/support.types';
 import type { ISupportRepository } from '../domain/support.repository.interface';
 import type { TicketDTO, TicketStatus, TicketPriority } from '../domain/support.types';
 
-
 /** Input for the update-ticket-status use case. */
 export interface UpdateTicketStatusInput {
   ticketId: string;

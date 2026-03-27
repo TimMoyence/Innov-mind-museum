@@ -35,7 +35,7 @@ export function setUserRoleResolver(resolver: (userId: number) => Promise<UserRo
  * @param res - Express response (used to send 401 on failure).
  * @param next - Express next function.
  */
-// eslint-disable-next-line complexity -- validates API key with multiple error paths
+// eslint-disable-next-line complexity, max-lines-per-function -- validates API key with multiple error paths
 export async function validateApiKey(
   token: string,
   req: Request,
@@ -43,7 +43,9 @@ export async function validateApiKey(
   next: NextFunction,
 ): Promise<void> {
   if (!apiKeyRepo) {
-    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'API key authentication not available' } });
+    res
+      .status(401)
+      .json({ error: { code: 'UNAUTHORIZED', message: 'API key authentication not available' } });
     return;
   }
 
@@ -71,7 +73,9 @@ export async function validateApiKey(
 
     // Check active status
     if (!apiKey.isActive) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'API key has been revoked' } });
+      res
+        .status(401)
+        .json({ error: { code: 'UNAUTHORIZED', message: 'API key has been revoked' } });
       return;
     }
 
@@ -80,7 +84,10 @@ export async function validateApiKey(
     const expectedBuffer = Buffer.from(expectedHash, 'hex');
     const actualBuffer = Buffer.from(apiKey.hash, 'hex');
 
-    if (expectedBuffer.length !== actualBuffer.length || !crypto.timingSafeEqual(expectedBuffer, actualBuffer)) {
+    if (
+      expectedBuffer.length !== actualBuffer.length ||
+      !crypto.timingSafeEqual(expectedBuffer, actualBuffer)
+    ) {
       res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid API key' } });
       return;
     }
@@ -94,13 +101,20 @@ export async function validateApiKey(
 
     // Set user on request (same shape as JWT auth)
     const museumId = (apiKey as { museumId?: number | null }).museumId ?? null;
-    (req as Request & { user?: { id: number; role: UserRole; museumId?: number | null } }).user = { id: apiKey.userId, role, museumId };
+    (req as Request & { user?: { id: number; role: UserRole; museumId?: number | null } }).user = {
+      id: apiKey.userId,
+      role,
+      museumId,
+    };
     req.museumId = museumId ?? undefined;
     setUser({ id: String(apiKey.userId) });
 
     // Update lastUsedAt asynchronously (fire-and-forget)
     apiKeyRepo.updateLastUsed(apiKey.id).catch((err: unknown) => {
-      logger.warn('api_key_last_used_update_failed', { apiKeyId: apiKey.id, error: err instanceof Error ? err.message : String(err) });
+      logger.warn('api_key_last_used_update_failed', {
+        apiKeyId: apiKey.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
     });
 
     next();

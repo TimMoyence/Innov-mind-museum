@@ -7,7 +7,10 @@ import type {
 } from '../../core/domain/refresh-token.repository.interface';
 
 // Re-export domain types so existing consumers that imported from here keep working
-export type { StoredRefreshTokenRow, InsertRefreshTokenInput } from '../../core/domain/refresh-token.repository.interface';
+export type {
+  StoredRefreshTokenRow,
+  InsertRefreshTokenInput,
+} from '../../core/domain/refresh-token.repository.interface';
 
 /** Resolve a nullable date field from a raw PG row, handling both camelCase and lowercase column names. */
 const toDateOrNull = (row: Record<string, unknown>, camel: string, lower: string): Date | null => {
@@ -17,7 +20,11 @@ const toDateOrNull = (row: Record<string, unknown>, camel: string, lower: string
 };
 
 /** Resolve a nullable string field from a raw PG row, handling both camelCase and lowercase column names. */
-const toStringOrNull = (row: Record<string, unknown>, camel: string, lower: string): string | null => {
+const toStringOrNull = (
+  row: Record<string, unknown>,
+  camel: string,
+  lower: string,
+): string | null => {
   const value = row[camel] ?? row[lower];
   // eslint-disable-next-line @typescript-eslint/no-base-to-string -- converting raw DB field to string
   return value ? String(value) : null;
@@ -56,14 +63,7 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
         VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *
       `,
-      [
-        input.userId,
-        input.jti,
-        input.familyId,
-        input.tokenHash,
-        input.issuedAt,
-        input.expiresAt,
-      ],
+      [input.userId, input.jti, input.familyId, input.tokenHash, input.issuedAt, input.expiresAt],
     );
 
     return mapRow(result.rows[0]);
@@ -131,7 +131,9 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
       await client.query('COMMIT');
       return nextRow;
     } catch (error) {
-      await client.query('ROLLBACK').catch(() => { /* best-effort rollback */ });
+      await client.query('ROLLBACK').catch(() => {
+        /* best-effort rollback */
+      });
       throw error;
     } finally {
       void client.release();
@@ -177,15 +179,17 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
    * @param excludeJti - Optional JTI to exclude (e.g. the current session).
    */
   async revokeAllForUser(userId: number, excludeJti?: string): Promise<void> {
-    await (excludeJti ? pool.query(
-        `UPDATE "auth_refresh_tokens" SET "revokedAt" = NOW()
+    await (excludeJti
+      ? pool.query(
+          `UPDATE "auth_refresh_tokens" SET "revokedAt" = NOW()
          WHERE "userId" = $1 AND "revokedAt" IS NULL AND "jti" != $2`,
-        [userId, excludeJti],
-      ) : pool.query(
-        `UPDATE "auth_refresh_tokens" SET "revokedAt" = NOW()
+          [userId, excludeJti],
+        )
+      : pool.query(
+          `UPDATE "auth_refresh_tokens" SET "revokedAt" = NOW()
          WHERE "userId" = $1 AND "revokedAt" IS NULL`,
-        [userId],
-      ));
+          [userId],
+        ));
   }
 
   /**
@@ -207,4 +211,3 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
     );
   }
 }
-

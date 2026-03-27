@@ -68,9 +68,7 @@ export const extractMetadata = (parsed: Record<string, unknown>): ChatAssistantM
           ? parsed.detectedArtwork.artworkId
           : undefined,
       title:
-        typeof parsed.detectedArtwork.title === 'string'
-          ? parsed.detectedArtwork.title
-          : undefined,
+        typeof parsed.detectedArtwork.title === 'string' ? parsed.detectedArtwork.title : undefined,
       artist:
         typeof parsed.detectedArtwork.artist === 'string'
           ? parsed.detectedArtwork.artist
@@ -88,9 +86,7 @@ export const extractMetadata = (parsed: Record<string, unknown>): ChatAssistantM
           ? parsed.detectedArtwork.museum
           : undefined,
       room:
-        typeof parsed.detectedArtwork.room === 'string'
-          ? parsed.detectedArtwork.room
-          : undefined,
+        typeof parsed.detectedArtwork.room === 'string' ? parsed.detectedArtwork.room : undefined,
     };
   }
 

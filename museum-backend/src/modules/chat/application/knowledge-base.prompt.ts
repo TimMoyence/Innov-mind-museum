@@ -33,7 +33,5 @@ export function buildKnowledgeBasePromptBlock(facts: ArtworkFacts | null): strin
   lines.push('Use these verified facts as ground truth. Do not contradict them.');
 
   const block = lines.join('\n');
-  return block.length > MAX_BLOCK_LENGTH
-    ? block.slice(0, MAX_BLOCK_LENGTH - 3) + '...'
-    : block;
+  return block.length > MAX_BLOCK_LENGTH ? block.slice(0, MAX_BLOCK_LENGTH - 3) + '...' : block;
 }

@@ -9,8 +9,10 @@
     "start": "ts-node -r tsconfig-paths/register src/index.ts",
     "build": "rm -rf dist && tsc && tsc-alias",
     "start:prod": "node dist/src/index.js",
-    "lint": "eslint src/ && tsc --noEmit",
+    "lint": "eslint src/ --max-warnings=50 && tsc --noEmit",
     "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "openapi:validate": "node ./scripts/check-openapi-spec.cjs",
     "smoke:api": "node ./scripts/smoke-api.cjs",
@@ -66,6 +68,7 @@
     "@types/swagger-ui-express": "^4.1.8",
     "@types/uuid": "^10.0.0",
     "eslint": "^10.1.0",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-boundaries": "^6.0.1",
     "eslint-plugin-check-file": "^3.3.1",
@@ -79,6 +82,7 @@
     "jest-html-reporter": "^4.3.0",
     "lint-staged": "^16.4.0",
     "nodemon": "^3.1.14",
+    "prettier": "^3.8.1",
     "readline-sync": "^1.4.10",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
@@ -117,6 +121,12 @@
     "tesseract.js": "^7.0.0"
   },
   "lint-staged": {
-    "src/**/*.ts": "eslint --fix"
+    "src/**/*.ts": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "tests/**/*.ts": [
+      "prettier --write"
+    ]
   }
 }

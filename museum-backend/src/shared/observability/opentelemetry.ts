@@ -18,7 +18,10 @@ export function initOpenTelemetry(): void {
   const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node');
   const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http');
   const { Resource } = require('@opentelemetry/resources');
-  const { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } = require('@opentelemetry/semantic-conventions');
+  const {
+    ATTR_SERVICE_NAME,
+    ATTR_SERVICE_VERSION,
+  } = require('@opentelemetry/semantic-conventions');
 
   const resource = new Resource({
     [ATTR_SERVICE_NAME]: env.otel.serviceName,

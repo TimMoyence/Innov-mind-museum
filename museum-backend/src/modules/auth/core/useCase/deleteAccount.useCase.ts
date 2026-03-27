@@ -33,7 +33,7 @@ export class DeleteAccountUseCase {
     // Delete stored images (RGPD compliance — SEC-23)
     if (this.imageStorage) {
       try {
-        await this.imageStorage.deleteByPrefix(`user-${userId}`);
+        await this.imageStorage.deleteByPrefix(`user-${String(userId)}`);
       } catch (error) {
         logger.warn('delete_account_image_cleanup_failed', {
           userId,

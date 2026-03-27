@@ -55,4 +55,3 @@ export class AddAuthRefreshTokens1771800000000 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE "auth_refresh_tokens"`);
   }
 }
-

@@ -2,7 +2,6 @@ import type { CacheService } from './cache.port';
 
 /** No-op cache implementation for tests and environments without Redis. */
 export class NoopCacheService implements CacheService {
-
   /** Returns null immediately (no-op). */
   // eslint-disable-next-line @typescript-eslint/require-await -- must match async CacheService interface
   async get<T>(): Promise<T | null> {
@@ -23,7 +22,6 @@ export class NoopCacheService implements CacheService {
   async delByPrefix(): Promise<void> {
     // no-op
   }
-
 
   /** Always returns true (no-op). */
   // eslint-disable-next-line @typescript-eslint/require-await -- must match async CacheService interface

@@ -1,4 +1,3 @@
-
 import { tooManyRequests } from '@shared/errors/app.error';
 import { InMemoryBucketStore } from '@shared/rate-limit/in-memory-bucket-store';
 
@@ -58,10 +57,7 @@ export const createRateLimitMiddleware = ({
         .increment(key, windowMs)
         .then(({ count, resetAt }) => {
           if (count > limit) {
-            const retryAfterSec = Math.max(
-              1,
-              Math.ceil((resetAt - Date.now()) / 1000),
-            );
+            const retryAfterSec = Math.max(1, Math.ceil((resetAt - Date.now()) / 1000));
             res.setHeader('Retry-After', retryAfterSec.toString());
             next(tooManyRequests('Too many requests. Please retry later.'));
             return;
@@ -130,7 +126,7 @@ export const bySession = (req: Parameters<RequestHandler>[0]): string => {
  */
 export const byUserId = (req: Parameters<RequestHandler>[0]): string => {
   const user = (req as Request & { user?: { id?: number } }).user;
-  return user?.id ? `user:${user.id}` : byIp(req);
+  return user?.id ? `user:${String(user.id)}` : byIp(req);
 };
 
 /** Clears all in-memory rate-limit buckets and stops the sweep timer. Intended for test teardown. */

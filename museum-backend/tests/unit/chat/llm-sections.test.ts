@@ -4,11 +4,7 @@ import {
 } from '@modules/chat/application/llm-sections';
 import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 
-const createMessage = (
-  id: string,
-  role: 'user' | 'assistant',
-  text: string,
-): ChatMessage =>
+const createMessage = (id: string, role: 'user' | 'assistant', text: string): ChatMessage =>
   ({
     id,
     role,

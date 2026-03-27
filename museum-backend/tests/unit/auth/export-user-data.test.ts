@@ -1,5 +1,8 @@
 import { ExportUserDataUseCase } from '@modules/auth/core/useCase/exportUserData.useCase';
-import type { ChatDataExportPort, UserChatExportData } from '@modules/auth/core/domain/exportUserData.types';
+import type {
+  ChatDataExportPort,
+  UserChatExportData,
+} from '@modules/auth/core/domain/exportUserData.types';
 
 const makeFakeChatExport = (data: UserChatExportData): ChatDataExportPort => ({
   getAllUserData: async () => data,

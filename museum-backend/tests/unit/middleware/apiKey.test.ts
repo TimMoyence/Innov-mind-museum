@@ -50,7 +50,9 @@ describe('validateApiKey middleware', () => {
     // Reset the repo to null by setting it to null via the internal state
     // We need to use jest.isolateModules to get a fresh module
     await jest.isolateModulesAsync(async () => {
-      const { validateApiKey: freshValidateApiKey } = require('@src/helpers/middleware/apiKey.middleware');
+      const {
+        validateApiKey: freshValidateApiKey,
+      } = require('@src/helpers/middleware/apiKey.middleware');
       const req = {} as Request;
       const res = mockRes();
       const next = jest.fn() as NextFunction;

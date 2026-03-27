@@ -1,9 +1,4 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 /** Immutable audit log entry. INSERT only — no UPDATE/DELETE at the application level. */
 @Entity({ name: 'audit_logs' })

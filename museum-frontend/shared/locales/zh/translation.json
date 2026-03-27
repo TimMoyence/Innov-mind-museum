@@ -97,7 +97,13 @@
     "unsaved_hint": "长按收藏",
     "saved_filter_on": "收藏筛选 已开启",
     "saved_filter_off": "收藏筛选 已关闭",
-    "sort_label": "排序：{{sortMode}}"
+    "sort_label": "排序：{{sortMode}}",
+    "swipe_delete": "滑动删除",
+    "delete_confirm": "删除此对话？",
+    "edit": "编辑",
+    "select_all": "全选",
+    "delete_selected": "删除 ({{count}})",
+    "selected_count": "将删除{{count}}个对话。"
   },
   "settings": {
     "title": "设置",
@@ -134,7 +140,21 @@
     "sign_out": "退出登录",
     "preferences": "偏好设置",
     "security": "安全",
-    "biometric_lock": "生物识别锁定"
+    "biometric_lock": "生物识别锁定",
+    "change_password": "修改密码",
+    "export_data": "导出我的数据",
+    "export_data_desc": "下载所有个人数据（GDPR）",
+    "export_data_success": "数据导出成功"
+  },
+  "change_password": {
+    "title": "修改密码",
+    "current": "当前密码",
+    "new": "新密码",
+    "confirm": "确认新密码",
+    "submit": "更新密码",
+    "success": "密码更新成功",
+    "error_mismatch": "两次输入的密码不一致",
+    "error_short": "密码长度至少为8个字符"
   },
   "preferences": {
     "title": "偏好设置",
@@ -315,7 +335,8 @@
     "voice_message": "[语音消息]",
     "share_footer": "通过Musaium分享 — 您的博物馆伴侣\nhttps://musaium.app",
     "replace_image": "替换",
-    "remove_image": "删除"
+    "remove_image": "删除",
+    "crop": "裁剪"
   },
   "chatInput": {
     "placeholder": "询问关于艺术品、古迹的问题，或发送语音/照片...",
@@ -504,7 +525,9 @@
       "delete_account_hint": "此操作无法撤销",
       "back_home": "返回主页",
       "sign_out": "退出登录",
-      "sign_out_hint": "退出登录并返回登录页面"
+      "sign_out_hint": "退出登录并返回登录页面",
+      "change_password": "更改账户密码",
+      "export_data": "导出所有个人数据"
     },
     "preferences": {
       "language_button": "选择{{language}}语言",

@@ -68,11 +68,7 @@ describeE2E('chat e2e (session + message lifecycle)', () => {
     expect(getBody.messages.length).toBeGreaterThanOrEqual(2); // user + assistant
 
     // ── List sessions ──
-    const listRes = await harness.request(
-      '/api/chat/sessions?limit=20',
-      { method: 'GET' },
-      token,
-    );
+    const listRes = await harness.request('/api/chat/sessions?limit=20', { method: 'GET' }, token);
     expect(listRes.status).toBe(200);
     const listBody = listRes.body as {
       sessions: Array<{ id: string }>;

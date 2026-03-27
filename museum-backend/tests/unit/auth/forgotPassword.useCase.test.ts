@@ -46,11 +46,7 @@ describe('ForgotPasswordUseCase', () => {
     expect(typeof token).toBe('string');
     expect(token!.length).toBe(40); // 20 bytes hex
     expect(repo.getUserByEmail).toHaveBeenCalledWith('user@test.com');
-    expect(repo.setResetToken).toHaveBeenCalledWith(
-      'user@test.com',
-      token,
-      expect.any(Date),
-    );
+    expect(repo.setResetToken).toHaveBeenCalledWith('user@test.com', token, expect.any(Date));
     expect(emailService.sendEmail).toHaveBeenCalledWith(
       'user@test.com',
       'Reset your Musaium password',

@@ -36,7 +36,8 @@ export async function registerUser(
   request: RequestFn,
   overrides: RegisterOverrides = {},
 ): Promise<RegisterResult> {
-  const email = overrides.email ?? `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@musaium.test`;
+  const email =
+    overrides.email ?? `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@musaium.test`;
   const password = overrides.password ?? 'Password123!';
   const firstname = overrides.firstname ?? 'E2E';
   const lastname = overrides.lastname ?? 'User';
@@ -47,9 +48,7 @@ export async function registerUser(
   });
 
   if (res.status !== 201) {
-    throw new Error(
-      `registerUser failed: status=${res.status} body=${JSON.stringify(res.body)}`,
-    );
+    throw new Error(`registerUser failed: status=${res.status} body=${JSON.stringify(res.body)}`);
   }
 
   const body = res.body as { user: { id: number; email: string } };
@@ -71,9 +70,7 @@ export async function loginUser(
   });
 
   if (res.status !== 200) {
-    throw new Error(
-      `loginUser failed: status=${res.status} body=${JSON.stringify(res.body)}`,
-    );
+    throw new Error(`loginUser failed: status=${res.status} body=${JSON.stringify(res.body)}`);
   }
 
   const body = res.body as LoginResult;

@@ -8,6 +8,7 @@ import importX from 'eslint-plugin-import-x';
 import security from 'eslint-plugin-security';
 import checkFile from 'eslint-plugin-check-file';
 import n from 'eslint-plugin-n';
+import prettierConfig from 'eslint-config-prettier';
 
 export default tseslint.config(
   // ═══════════════════════════════════════════════════════════════════
@@ -148,6 +149,7 @@ export default tseslint.config(
       'import-x/no-duplicates': 'error',
       'import-x/no-self-import': 'error',
       'import-x/no-useless-path-segments': 'error',
+      'import-x/no-cycle': ['error', { maxDepth: 5 }],
       'import-x/order': [
         'error',
         {
@@ -192,6 +194,7 @@ export default tseslint.config(
       'jsdoc/no-undefined-types': 'off', // TypeScript handles types
       'jsdoc/require-param': 'off', // TypeScript handles param types
       'jsdoc/require-returns': 'off', // TypeScript handles return types
+      'jsdoc/require-throws': 'off', // TS handles error types; @throws enforcement is noisy
       'jsdoc/tag-lines': ['error', 'any', { startLines: 1 }],
     },
   },
@@ -319,6 +322,7 @@ export default tseslint.config(
       'security/detect-unsafe-regex': 'error',
       'security/detect-possible-timing-attacks': 'warn',
       'security/detect-object-injection': 'off', // trop de faux positifs en TS
+      'security/detect-non-literal-fs-filename': 'off', // false positives with path.join
     },
   },
 
@@ -364,19 +368,33 @@ export default tseslint.config(
   },
 
   // ═══════════════════════════════════════════════════════════════════
-  //  OVERRIDES — fichiers infrastructure et routes (complexity naturelle)
+  //  OVERRIDES — infrastructure, adapters, routes (external boundary)
+  //  These files interface with untyped externals (DB results, HTTP
+  //  request bodies, S3 responses) — unsafe-* noise is structural.
   // ═══════════════════════════════════════════════════════════════════
   {
     files: [
       'src/modules/*/adapters/primary/http/*.route.ts',
       'src/modules/*/adapters/secondary/*.ts',
       'src/modules/*/infrastructure/*.ts',
+      'src/data/db/**/*.ts',
+      'src/shared/audit/*.ts',
     ],
     rules: {
+      // ── Complexity ──
       'max-lines': ['error', { max: 600, skipBlankLines: true, skipComments: true }],
       'max-lines-per-function': ['error', { max: 80, skipBlankLines: true, skipComments: true }],
       complexity: ['error', { max: 15 }],
       'sonarjs/cognitive-complexity': ['error', 20],
+
+      // ── Type safety relaxed at external boundary ──
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/restrict-template-expressions': 'off',
     },
   },
 
@@ -458,4 +476,9 @@ export default tseslint.config(
       'security/detect-possible-timing-attacks': 'off',
     },
   },
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  PRETTIER — must be last to disable conflicting formatting rules
+  // ═══════════════════════════════════════════════════════════════════
+  prettierConfig,
 );

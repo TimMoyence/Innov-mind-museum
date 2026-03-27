@@ -33,9 +33,7 @@ class InMemoryChatRepository implements ChatRepository {
   private readonly artworkMatches: PersistArtworkMatchInput[] = [];
   private readonly reports = new Map<string, Set<number>>();
 
-  private decodeCursor(
-    cursor: string,
-  ): { updatedAt: string; id: string } | null {
+  private decodeCursor(cursor: string): { updatedAt: string; id: string } | null {
     try {
       const decoded = Buffer.from(cursor, 'base64url').toString('utf8');
       const parsed = JSON.parse(decoded) as unknown;
@@ -148,8 +146,10 @@ class InMemoryChatRepository implements ChatRepository {
       session.updatedAt = new Date();
       if (input.sessionUpdates) {
         if (input.sessionUpdates.title !== undefined) session.title = input.sessionUpdates.title;
-        if (input.sessionUpdates.museumName !== undefined) session.museumName = input.sessionUpdates.museumName;
-        if (input.sessionUpdates.visitContext !== undefined) session.visitContext = input.sessionUpdates.visitContext;
+        if (input.sessionUpdates.museumName !== undefined)
+          session.museumName = input.sessionUpdates.museumName;
+        if (input.sessionUpdates.visitContext !== undefined)
+          session.visitContext = input.sessionUpdates.visitContext;
         session.version = (session.version || 1) + 1;
       }
       this.sessions.set(input.sessionId, session);
@@ -301,7 +301,10 @@ class FakeOrchestrator implements ChatOrchestrator {
     return this.fakeOutput;
   }
 
-  async generateStream(_input: unknown, onChunk: (text: string) => void): Promise<OrchestratorOutput> {
+  async generateStream(
+    _input: unknown,
+    onChunk: (text: string) => void,
+  ): Promise<OrchestratorOutput> {
     onChunk(this.fakeOutput.text);
     return this.fakeOutput;
   }
@@ -319,9 +322,15 @@ interface BuildChatTestServiceOptions {
  * Test utility: builds a ChatService wired with in-memory repository, local image storage, and optional fake orchestrator.
  * Supports legacy positional args and new options object.
  */
-export function buildChatTestService(orchestrator?: ChatOrchestrator, audioTranscriber?: AudioTranscriber): ChatService;
+export function buildChatTestService(
+  orchestrator?: ChatOrchestrator,
+  audioTranscriber?: AudioTranscriber,
+): ChatService;
 export function buildChatTestService(options: BuildChatTestServiceOptions): ChatService;
-export function buildChatTestService(arg1?: ChatOrchestrator | BuildChatTestServiceOptions, arg2?: AudioTranscriber): ChatService {
+export function buildChatTestService(
+  arg1?: ChatOrchestrator | BuildChatTestServiceOptions,
+  arg2?: AudioTranscriber,
+): ChatService {
   const isOptions = arg1 !== undefined && typeof arg1 === 'object' && !('generate' in arg1);
 
   if (isOptions) {
