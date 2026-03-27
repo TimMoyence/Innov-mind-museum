@@ -44,7 +44,7 @@ export class UserRepositoryPg implements IUserRepository {
    * @param firstname - Optional first name.
    * @param lastname - Optional last name.
    * @returns The newly created user row.
-   * @throws Error if a user with the given email already exists.
+   * @throws {Error} If a user with the given email already exists.
    */
   async registerUser(
     email: string,
@@ -77,11 +77,7 @@ export class UserRepositoryPg implements IUserRepository {
    * @param expires - Expiry date for the token.
    * @returns The updated user row.
    */
-  async setResetToken(
-    email: string,
-    token: string,
-    expires: Date,
-  ): Promise<User> {
+  async setResetToken(email: string, token: string, expires: Date): Promise<User> {
     const query = `
       UPDATE "users"
       SET reset_token = $1, reset_token_expires = $2
@@ -136,7 +132,10 @@ export class UserRepositoryPg implements IUserRepository {
    * @param hashedPassword - The new bcrypt-hashed password.
    * @returns The updated user row or `null` if the token is invalid/expired.
    */
-  async consumeResetTokenAndUpdatePassword(token: string, hashedPassword: string): Promise<User | null> {
+  async consumeResetTokenAndUpdatePassword(
+    token: string,
+    hashedPassword: string,
+  ): Promise<User | null> {
     const query = `
       UPDATE "users"
       SET password = $1, reset_token = NULL, reset_token_expires = NULL
@@ -175,11 +174,7 @@ export class UserRepositoryPg implements IUserRepository {
    * @param lastname - Optional last name.
    * @returns The newly created user row.
    */
-  async registerSocialUser(
-    email: string,
-    firstname?: string,
-    lastname?: string,
-  ): Promise<User> {
+  async registerSocialUser(email: string, firstname?: string, lastname?: string): Promise<User> {
     const query = `
       INSERT INTO "users" (email, password, firstname, lastname, email_verified)
       VALUES ($1, NULL, $2, $3, true)
@@ -188,6 +183,36 @@ export class UserRepositoryPg implements IUserRepository {
     const values = [email, firstname ?? null, lastname ?? null];
     const result = await pool.query(query, values);
     return result.rows[0];
+  }
+
+  /** Stores an email change token, pending email, and expiry on a user record. */
+  async setEmailChangeToken(
+    userId: number,
+    hashedToken: string,
+    pendingEmail: string,
+    expires: Date,
+  ): Promise<void> {
+    await pool.query(
+      `UPDATE "users"
+       SET email_change_token = $1, pending_email = $2, email_change_token_expiry = $3
+       WHERE id = $4`,
+      [hashedToken, pendingEmail, expires, userId],
+    );
+  }
+
+  /** Atomically consumes an email change token and updates the user's email. */
+  async consumeEmailChangeToken(hashedToken: string): Promise<User | null> {
+    const query = `
+      UPDATE "users"
+      SET email = pending_email,
+          pending_email = NULL,
+          email_change_token = NULL,
+          email_change_token_expiry = NULL
+      WHERE email_change_token = $1 AND email_change_token_expiry > NOW()
+      RETURNING *
+    `;
+    const result = await pool.query(query, [hashedToken]);
+    return result.rows[0] ?? null;
   }
 
   /**
@@ -205,7 +230,9 @@ export class UserRepositoryPg implements IUserRepository {
       await client.query('DELETE FROM "users" WHERE id = $1', [userId]);
       await client.query('COMMIT');
     } catch (error) {
-      await client.query('ROLLBACK').catch(() => { /* best-effort rollback */ });
+      await client.query('ROLLBACK').catch(() => {
+        /* best-effort rollback */
+      });
       throw error;
     } finally {
       void client.release();
