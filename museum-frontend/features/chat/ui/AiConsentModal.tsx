@@ -1,17 +1,17 @@
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { router } from 'expo-router';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
 
 interface AiConsentModalProps {
   visible: boolean;
   onAccept: () => void;
+  onPrivacy: () => void;
 }
 
 /** Full-screen modal shown once before first AI chat to inform users responses are AI-generated. */
-export const AiConsentModal = ({ visible, onAccept }: AiConsentModalProps) => {
+export const AiConsentModal = ({ visible, onAccept, onPrivacy }: AiConsentModalProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
 
@@ -54,10 +54,9 @@ export const AiConsentModal = ({ visible, onAccept }: AiConsentModalProps) => {
           </View>
 
           <Pressable
-            onPress={() => {
-              router.push('/(stack)/privacy');
-            }}
+            onPress={onPrivacy}
             accessibilityRole="link"
+            accessibilityLabel={t('consent.read_privacy')}
           >
             <Text style={[styles.link, { color: theme.primary }]}>{t('consent.read_privacy')}</Text>
           </Pressable>

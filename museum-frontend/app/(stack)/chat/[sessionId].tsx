@@ -61,6 +61,7 @@ export default function ChatSessionScreen() {
   const [isIntentHandled, setIsIntentHandled] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [showAiConsent, setShowAiConsent] = useState(false);
+  const [consentResolved, setConsentResolved] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem('consent.ai_accepted')
@@ -69,12 +70,19 @@ export default function ChatSessionScreen() {
       })
       .catch(() => {
         setShowAiConsent(true);
+      })
+      .finally(() => {
+        setConsentResolved(true);
       });
   }, []);
 
-  const acceptAiConsent = useCallback(() => {
+  const acceptAiConsent = useCallback(async () => {
+    try {
+      await AsyncStorage.setItem('consent.ai_accepted', 'true');
+    } catch {
+      // Persist failure is non-blocking — modal will re-appear next session
+    }
     setShowAiConsent(false);
-    void AsyncStorage.setItem('consent.ai_accepted', 'true');
   }, []);
   const [contextMenuMessage, setContextMenuMessage] = useState<(typeof messages)[number] | null>(
     null,
@@ -467,7 +475,7 @@ export default function ChatSessionScreen() {
             value={text}
             onChangeText={setText}
             onSend={() => void onSend()}
-            isSending={isSending}
+            isSending={isSending || !consentResolved || showAiConsent}
           />
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
@@ -488,7 +496,25 @@ export default function ChatSessionScreen() {
         }}
       />
 
-      <AiConsentModal visible={showAiConsent} onAccept={acceptAiConsent} />
+      <AiConsentModal
+        visible={showAiConsent}
+        onAccept={() => void acceptAiConsent()}
+        onPrivacy={() => {
+          setShowAiConsent(false);
+          router.push('/(stack)/privacy');
+          // Re-show on next focus since consent was not accepted
+          const unsub = navigation.addListener('focus', () => {
+            unsub();
+            AsyncStorage.getItem('consent.ai_accepted')
+              .then((v) => {
+                if (v !== 'true') setShowAiConsent(true);
+              })
+              .catch(() => {
+                setShowAiConsent(true);
+              });
+          });
+        }}
+      />
     </LiquidScreen>
   );
 }
