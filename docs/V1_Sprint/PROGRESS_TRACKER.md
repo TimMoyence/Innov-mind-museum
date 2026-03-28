@@ -586,3 +586,30 @@
 - [x] RW-20: Tests accessibilite — 19 tests frontend (a11y audit) + 10 tests museum-web
 - [x] RW-21: Tests snapshots — 8 snapshots frontend + 10 snapshots museum-web
 - [x] RW-22: Lighthouse CI museum-web — workflow + lighthouserc.json (perf 85, a11y 90, SEO 90)
+
+---
+
+## Refactor R15 — God-File Decomposition Phases 4-5 (2026-03-28)
+
+> Decomposition systematique des fichiers > 500L identifies par audit Sentinelle (score 80/100).
+
+### Backend — Phase 4: Service Decomposition
+
+- [x] R15-01: Extract ImageProcessingService from chat-message.service.ts
+- [x] R15-02: Extract GuardrailEvaluationService from chat-message.service.ts
+- [x] R15-03: Extract LLMPromptBuilder from langchain.orchestrator.ts
+- [x] R15-04: Extract LLMCircuitBreaker (3-state FSM resilience pattern)
+- [x] R15-05: Extract ChatSharedTypes from chat.contracts.ts
+- [x] R15-06: Cache infrastructure (ping() port + noop impl)
+
+### Backend — Phase 5: S3 Adapter Decomposition
+
+- [x] R15-07: Extract s3-signing.ts (SigV4 crypto utilities, 77L)
+- [x] R15-08: Extract s3-path-utils.ts (path/URL encoding, 120L)
+
+### Frontend — Phase 5: God-Route Decomposition
+
+- [x] R15-09: conversations.tsx decomposition (644L → 322L, -50%)
+- [x] R15-10: settings.tsx decomposition (662L → 334L, -50%)
+- [x] R15-11: A11y ImagePreviewModal (+15 attributes)
+- [x] R15-12: A11y MessageActions (+6 attributes)
