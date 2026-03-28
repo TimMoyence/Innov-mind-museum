@@ -33,4 +33,16 @@ else
 fi
 
 cat "$ENV_LOCAL"
+
+# Patch expo-configure-project.sh — pod install embeds absolute paths
+# from the dev machine, which break on Xcode Cloud. Replace with $PODS_ROOT.
+EXPO_SCRIPT="$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios/Pods/Target Support Files/Pods-Musaium/expo-configure-project.sh"
+if [ -f "$EXPO_SCRIPT" ]; then
+  sed -i '' \
+    -e 's|--target "[^"]*ios/Pods/|--target "${PODS_ROOT}/|' \
+    -e 's|--entitlement "[^"]*ios/|--entitlement "${PODS_ROOT}/../|' \
+    "$EXPO_SCRIPT"
+  echo "Patched expo-configure-project.sh with PODS_ROOT-relative paths"
+fi
+
 echo "=== ci_pre_xcodebuild.sh done ==="
