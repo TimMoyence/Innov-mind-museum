@@ -35,11 +35,11 @@ describe('ArtTopicClassifier', () => {
     expect(result).toBe(false);
   });
 
-  it('returns false (fail-open) on network error', async () => {
+  it('returns true (fail-open) on network error — never blocks the user', async () => {
     mockInvoke.mockRejectedValue(new Error('Connection timeout'));
 
     const result = await classifier.isArtRelated('Some text');
-    expect(result).toBe(false);
+    expect(result).toBe(true);
   });
 
   it('returns false on empty/malformed response', async () => {
