@@ -4,11 +4,12 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
 export class AddOnboardingCompleted1774732556635 implements MigrationInterface {
   name = 'AddOnboardingCompleted1774732556635';
 
-  /** Add onboarding_completed boolean column to users table. */
+  /** Add onboarding_completed boolean column to users table. Existing users are marked as completed. */
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
       `ALTER TABLE "users" ADD "onboarding_completed" boolean NOT NULL DEFAULT false`,
     );
+    await queryRunner.query(`UPDATE "users" SET "onboarding_completed" = true`);
   }
 
   /** Revert: drop onboarding_completed column. */
