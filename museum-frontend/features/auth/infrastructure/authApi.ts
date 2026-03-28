@@ -105,6 +105,14 @@ export const authService = {
     });
   },
 
+  /** Marks the authenticated user's onboarding as completed on the backend. */
+  async completeOnboarding(): Promise<void> {
+    return openApiRequest({
+      path: '/api/auth/onboarding-complete',
+      method: 'patch',
+    }).then(() => undefined);
+  },
+
   /** Permanently deletes the authenticated user's account. */
   async deleteAccount(): Promise<DeleteAccountResponse> {
     return openApiRequest({

@@ -49,6 +49,9 @@ export class User {
   @Column({ type: 'boolean', default: false })
   email_verified!: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  onboarding_completed!: boolean;
+
   @Column({ nullable: true })
   verification_token?: string;
 

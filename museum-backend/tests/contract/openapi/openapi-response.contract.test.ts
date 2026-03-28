@@ -37,6 +37,7 @@ describe('openapi response contracts (active API)', () => {
         firstname: 'Ada',
         lastname: 'Lovelace',
         role: 'visitor',
+        onboardingCompleted: false,
       },
     };
     const authMePayload = {

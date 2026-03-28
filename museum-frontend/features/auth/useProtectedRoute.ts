@@ -1,11 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter, useSegments } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useAuth } from '@/context/AuthContext';
 import { AUTH_ROUTE, HOME_ROUTE } from './routes';
-
-const ONBOARDING_COMPLETE_KEY = 'onboarding.complete';
 
 /**
  * Guards navigation based on authentication state.
@@ -13,16 +10,9 @@ const ONBOARDING_COMPLETE_KEY = 'onboarding.complete';
  * Forces first-launch users through onboarding before reaching home.
  */
 export const useProtectedRoute = (): void => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isFirstLaunch } = useAuth();
   const segments = useSegments();
   const router = useRouter();
-  const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY)
-      .then((value) => { setIsFirstLaunch(value !== 'true'); })
-      .catch(() => { setIsFirstLaunch(true); });
-  }, []);
 
   useEffect(() => {
     if (isLoading || isFirstLaunch === null) {

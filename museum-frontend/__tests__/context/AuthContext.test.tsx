@@ -22,10 +22,12 @@ jest.mock('@sentry/react-native', () => ({
 
 const mockRefresh = jest.fn();
 const mockLogoutApi = jest.fn();
+const mockCompleteOnboarding = jest.fn();
 jest.mock('@/features/auth/infrastructure/authApi', () => ({
   authService: {
     refresh: (...args: unknown[]) => mockRefresh(...args),
     logout: (...args: unknown[]) => mockLogoutApi(...args),
+    completeOnboarding: (...args: unknown[]) => mockCompleteOnboarding(...args),
   },
 }));
 
@@ -66,6 +68,13 @@ jest.mock('@/context/authLogic.pure', () => ({
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+const makeSession = (overrides?: Record<string, unknown>) => ({
+  accessToken: 'new-access',
+  refreshToken: 'new-refresh',
+  user: { id: 1, email: 'u@t.com', role: 'visitor', onboardingCompleted: false },
+  ...overrides,
+});
+
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <AuthProvider>{children}</AuthProvider>
 );
@@ -80,14 +89,12 @@ describe('AuthProvider / useAuth', () => {
     mockSetRefreshToken.mockResolvedValue(undefined);
     mockClearRefreshToken.mockResolvedValue(undefined);
     mockLogoutApi.mockResolvedValue({});
+    mockCompleteOnboarding.mockResolvedValue(undefined);
   });
 
   it('bootstrap with valid refreshToken sets isAuthenticated=true', async () => {
     mockGetRefreshToken.mockResolvedValue('valid-refresh');
-    mockRefresh.mockResolvedValue({
-      accessToken: 'new-access',
-      refreshToken: 'new-refresh',
-    });
+    mockRefresh.mockResolvedValue(makeSession());
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -131,10 +138,7 @@ describe('AuthProvider / useAuth', () => {
   it('logout() clears tokens, sets isAuthenticated=false, and redirects', async () => {
     // Start authenticated
     mockGetRefreshToken.mockResolvedValue('valid-refresh');
-    mockRefresh.mockResolvedValue({
-      accessToken: 'access',
-      refreshToken: 'refresh',
-    });
+    mockRefresh.mockResolvedValue(makeSession());
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -164,10 +168,9 @@ describe('AuthProvider / useAuth', () => {
 
     // Now set up a successful refresh for checkTokenValidity
     mockGetRefreshToken.mockResolvedValue('good-refresh');
-    mockRefresh.mockResolvedValue({
-      accessToken: 'fresh-access',
-      refreshToken: 'fresh-refresh',
-    });
+    mockRefresh.mockResolvedValue(
+      makeSession({ accessToken: 'fresh-access', refreshToken: 'fresh-refresh' }),
+    );
 
     let validity = false;
     await act(async () => {
@@ -201,10 +204,7 @@ describe('AuthProvider / useAuth', () => {
     biometricStore.getBiometricEnabled.mockResolvedValue(true);
 
     mockGetRefreshToken.mockResolvedValue('valid-refresh');
-    mockRefresh.mockResolvedValue({
-      accessToken: 'access',
-      refreshToken: 'refresh',
-    });
+    mockRefresh.mockResolvedValue(makeSession());
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -220,5 +220,63 @@ describe('AuthProvider / useAuth', () => {
     });
 
     expect(result.current.isBiometricLocked).toBe(false);
+  });
+
+  // ── Onboarding state ──
+
+  it('bootstrap with onboardingCompleted=false sets isFirstLaunch=true', async () => {
+    mockGetRefreshToken.mockResolvedValue('valid-refresh');
+    mockRefresh.mockResolvedValue(makeSession({ user: { onboardingCompleted: false } }));
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.isFirstLaunch).toBe(true);
+  });
+
+  it('bootstrap with onboardingCompleted=true sets isFirstLaunch=false', async () => {
+    mockGetRefreshToken.mockResolvedValue('valid-refresh');
+    mockRefresh.mockResolvedValue(makeSession({ user: { onboardingCompleted: true } }));
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.isFirstLaunch).toBe(false);
+  });
+
+  it('bootstrap without refreshToken sets isFirstLaunch=true', async () => {
+    mockGetRefreshToken.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.isFirstLaunch).toBe(true);
+  });
+
+  it('markOnboardingComplete() calls API and sets isFirstLaunch=false', async () => {
+    mockGetRefreshToken.mockResolvedValue('valid-refresh');
+    mockRefresh.mockResolvedValue(makeSession({ user: { onboardingCompleted: false } }));
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isFirstLaunch).toBe(true);
+    });
+
+    await act(async () => {
+      await result.current.markOnboardingComplete();
+    });
+
+    expect(mockCompleteOnboarding).toHaveBeenCalled();
+    expect(result.current.isFirstLaunch).toBe(false);
   });
 });
