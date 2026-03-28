@@ -27,18 +27,13 @@ const APP_ANDROID_PACKAGE = 'com.musaium.mobile';
 const APP_ANDROID_PACKAGE_PREVIEW = 'com.musaium.mobile.preview';
 const BRAND_ICON =
   './assets/images/museum-ia/apple-devices/AppIcon.appiconset/icon-ios-1024x1024.png';
-const BRAND_SPLASH_IMAGE =
-  './assets/images/museum-ia/android/playstore-icon.png';
+const BRAND_SPLASH_IMAGE = './assets/images/museum-ia/android/playstore-icon.png';
 const BRAND_ANDROID_ADAPTIVE_FOREGROUND =
   './assets/images/museum-ia/android/mipmap-xxxhdpi/ic_launcher_foreground.png';
 const BRAND_BACKGROUND_COLOR = '#1E1B19';
 
 const resolveVariant = (env: RuntimeEnv): AppVariant => {
-  const raw = (
-    env.APP_VARIANT ??
-    env.EAS_BUILD_PROFILE ??
-    'development'
-  ).toLowerCase();
+  const raw = (env.APP_VARIANT ?? env.EAS_BUILD_PROFILE ?? 'development').toLowerCase();
 
   if (raw === 'production') {
     return 'production';
@@ -69,13 +64,8 @@ const nonPlaceholder = (value?: string): string | undefined => {
   return normalized.startsWith('$') ? undefined : normalized;
 };
 
-const resolveApiEnvironment = (
-  variant: AppVariant,
-  env: RuntimeEnv,
-): ApiEnvironment => {
-  const explicit = nonPlaceholder(
-    env.EXPO_PUBLIC_API_ENVIRONMENT,
-  )?.toLowerCase();
+const resolveApiEnvironment = (variant: AppVariant, env: RuntimeEnv): ApiEnvironment => {
+  const explicit = nonPlaceholder(env.EXPO_PUBLIC_API_ENVIRONMENT)?.toLowerCase();
   if (explicit === 'production') {
     return 'production';
   }
@@ -104,9 +94,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const env = process.env as RuntimeEnv;
   const variant = resolveVariant(env);
   const apiEnvironment = resolveApiEnvironment(variant, env);
-  const configProjectId = nonEmpty(
-    (config.extra as ExpoExtra | undefined)?.eas?.projectId,
-  );
+  const configProjectId = nonEmpty((config.extra as ExpoExtra | undefined)?.eas?.projectId);
   const projectId = configProjectId;
 
   const appConfig: ExpoConfig = {
@@ -119,9 +107,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     scheme: APP_SCHEME,
     userInterfaceStyle: 'automatic',
     newArchEnabled: true,
-    runtimeVersion: {
-      policy: 'appVersion',
-    },
+    runtimeVersion: '1.0.0',
     splash: {
       image: BRAND_SPLASH_IMAGE,
       resizeMode: 'contain',
@@ -130,10 +116,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ios: {
       supportsTablet: true,
       icon: BRAND_ICON,
-      bundleIdentifier:
-        variant === 'production'
-          ? APP_IOS_BUNDLE_ID
-          : APP_IOS_BUNDLE_ID_PREVIEW,
+      bundleIdentifier: variant === 'production' ? APP_IOS_BUNDLE_ID : APP_IOS_BUNDLE_ID_PREVIEW,
       usesAppleSignIn: true,
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
@@ -145,25 +128,21 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           'Allow $(PRODUCT_NAME) to access your photo library to select artwork images for analysis.',
         NSPhotoLibraryAddUsageDescription:
           'Allow $(PRODUCT_NAME) to save images to your photo library.',
-        NSFaceIDUsageDescription:
-          'Allow $(PRODUCT_NAME) to use Face ID to unlock the app.',
-        NSLocationWhenInUseUsageDescription:
-          'Allow Musaium to show museums near you.',
+        NSFaceIDUsageDescription: 'Allow $(PRODUCT_NAME) to use Face ID to unlock the app.',
+        NSLocationWhenInUseUsageDescription: 'Allow Musaium to show museums near you.',
       },
       privacyManifests: {
         NSPrivacyTracking: false,
         NSPrivacyTrackingDomains: [],
         NSPrivacyAccessedAPITypes: [
           {
-            NSPrivacyAccessedAPIType:
-              'NSPrivacyAccessedAPICategoryUserDefaults',
+            NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryUserDefaults',
             NSPrivacyAccessedAPITypeReasons: ['CA92.1'],
           },
         ],
         NSPrivacyCollectedDataTypes: [
           {
-            NSPrivacyCollectedDataType:
-              'NSPrivacyCollectedDataTypeEmailAddress',
+            NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypeEmailAddress',
             NSPrivacyCollectedDataTypePurposes: [
               'NSPrivacyCollectedDataTypePurposeAppFunctionality',
             ],
@@ -171,8 +150,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             NSPrivacyCollectedDataTypeTracking: false,
           },
           {
-            NSPrivacyCollectedDataType:
-              'NSPrivacyCollectedDataTypeName',
+            NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypeName',
             NSPrivacyCollectedDataTypePurposes: [
               'NSPrivacyCollectedDataTypePurposeAppFunctionality',
             ],
@@ -180,8 +158,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             NSPrivacyCollectedDataTypeTracking: false,
           },
           {
-            NSPrivacyCollectedDataType:
-              'NSPrivacyCollectedDataTypePhotosOrVideos',
+            NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypePhotosOrVideos',
             NSPrivacyCollectedDataTypePurposes: [
               'NSPrivacyCollectedDataTypePurposeAppFunctionality',
             ],
@@ -189,8 +166,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             NSPrivacyCollectedDataTypeTracking: false,
           },
           {
-            NSPrivacyCollectedDataType:
-              'NSPrivacyCollectedDataTypeAudioData',
+            NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypeAudioData',
             NSPrivacyCollectedDataTypePurposes: [
               'NSPrivacyCollectedDataTypePurposeAppFunctionality',
             ],
@@ -198,8 +174,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             NSPrivacyCollectedDataTypeTracking: false,
           },
           {
-            NSPrivacyCollectedDataType:
-              'NSPrivacyCollectedDataTypePreciseLocation',
+            NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypePreciseLocation',
             NSPrivacyCollectedDataTypePurposes: [
               'NSPrivacyCollectedDataTypePurposeAppFunctionality',
             ],
@@ -207,11 +182,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             NSPrivacyCollectedDataTypeTracking: false,
           },
           {
-            NSPrivacyCollectedDataType:
-              'NSPrivacyCollectedDataTypeCrashData',
-            NSPrivacyCollectedDataTypePurposes: [
-              'NSPrivacyCollectedDataTypePurposeAnalytics',
-            ],
+            NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypeCrashData',
+            NSPrivacyCollectedDataTypePurposes: ['NSPrivacyCollectedDataTypePurposeAnalytics'],
             NSPrivacyCollectedDataTypeLinked: false,
             NSPrivacyCollectedDataTypeTracking: false,
           },
@@ -219,10 +191,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       },
     },
     android: {
-      package:
-        variant === 'production'
-          ? APP_ANDROID_PACKAGE
-          : APP_ANDROID_PACKAGE_PREVIEW,
+      package: variant === 'production' ? APP_ANDROID_PACKAGE : APP_ANDROID_PACKAGE_PREVIEW,
       permissions: [
         'android.permission.RECORD_AUDIO',
         'android.permission.CAMERA',
@@ -244,8 +213,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         'expo-image-picker',
         {
-          photosPermission:
-          'Allow $(PRODUCT_NAME) to select artwork photos from your library.',
+          photosPermission: 'Allow $(PRODUCT_NAME) to select artwork photos from your library.',
         },
       ],
       [
@@ -265,8 +233,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         'expo-location',
         {
-          locationWhenInUsePermission:
-            'Allow Musaium to find museums near your location.',
+          locationWhenInUsePermission: 'Allow Musaium to find museums near your location.',
         },
       ],
       'expo-apple-authentication',
@@ -281,8 +248,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         '@react-native-google-signin/google-signin',
         {
           // Derived from GOOGLE_IOS_CLIENT_ID — update if client ID changes
-          iosUrlScheme:
-            'com.googleusercontent.apps.498339023976-8r199kpqbqmhb7mdf45ostg3sutqeng2',
+          iosUrlScheme: 'com.googleusercontent.apps.498339023976-8r199kpqbqmhb7mdf45ostg3sutqeng2',
         },
       ],
       [
@@ -304,15 +270,17 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     extra: {
       API_BASE_URL: resolveApiBaseUrl(variant, env),
-      API_BASE_URL_STAGING: nonPlaceholder(
-        env.EXPO_PUBLIC_API_BASE_URL_STAGING,
-      ),
-      API_BASE_URL_PRODUCTION: nonPlaceholder(
-        env.EXPO_PUBLIC_API_BASE_URL_PROD,
-      ),
+      API_BASE_URL_STAGING: nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL_STAGING),
+      API_BASE_URL_PRODUCTION: nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL_PROD),
       API_ENVIRONMENT: apiEnvironment,
-      GOOGLE_WEB_CLIENT_ID: String(process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '498339023976-bjbain2ir2t9q4pu9lsmmk8ni7t96dd7.apps.googleusercontent.com'),
-      GOOGLE_IOS_CLIENT_ID: String(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '498339023976-8r199kpqbqmhb7mdf45ostg3sutqeng2.apps.googleusercontent.com'),
+      GOOGLE_WEB_CLIENT_ID: String(
+        process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ??
+          '498339023976-bjbain2ir2t9q4pu9lsmmk8ni7t96dd7.apps.googleusercontent.com',
+      ),
+      GOOGLE_IOS_CLIENT_ID: String(
+        process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ??
+          '498339023976-8r199kpqbqmhb7mdf45ostg3sutqeng2.apps.googleusercontent.com',
+      ),
       APP_VARIANT: variant,
       eas: projectId
         ? {
