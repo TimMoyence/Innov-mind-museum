@@ -24,7 +24,7 @@ export class ArtTopicClassifier {
 
   /**
    * Returns true if the message is art/museum/culture-related.
-   * Fails-open (returns false) on any error — never blocks the user.
+   * Fails-open (returns true) on any error — never blocks the user.
    */
   async isArtRelated(text: string): Promise<boolean> {
     try {
@@ -41,7 +41,7 @@ export class ArtTopicClassifier {
       logger.warn('art_topic_classifier_fail_open', {
         error: error instanceof Error ? error.message : String(error),
       });
-      return false;
+      return true;
     }
   }
 }
