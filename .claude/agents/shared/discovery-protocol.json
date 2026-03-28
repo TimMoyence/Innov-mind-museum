@@ -1,0 +1,13 @@
+{
+  "version": "1.0",
+  "description": "Protocole de signalement des problemes hors-scope. Reference unique pour tous les agents.",
+  "protocol": {
+    "trigger": "Probleme decouvert HORS de ton scope pendant ton travail",
+    "steps": [
+      "1. Ne PAS le corriger (scope creep interdit)",
+      "2. Le SIGNALER dans ton rapport de self-verification sous '### Discoveries (hors scope)'",
+      "3. Format: '- [SEVERITY] [fichier:ligne] [description] → agent suggere: [nom]'",
+      "4. Le Tech Lead decidera s'il spawne un agent dedie"
+    ]
+  }
+}

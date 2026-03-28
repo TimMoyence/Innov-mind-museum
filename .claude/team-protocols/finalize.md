@@ -4,10 +4,21 @@
 
 A la cloture du run, le Tech Lead execute :
 
+### Step 0 — Cross-validation des claims Sentinelle
+
+AVANT de mettre a jour la KB, le Tech Lead verifie CHAQUE claim numerique du message Sentinelle :
+- Test count → `pnpm test 2>&1 | grep -E "Tests:"` (reeel)
+- Typecheck errors → `pnpm lint 2>&1 | tail -3` (reel)
+- Files modified → `git diff --stat` (reel)
+- Si un claim Sentinelle diverge de > 5% du reel → marquer `"unverified"` dans la KB et logger EP-015
+
 ```
 FINALIZE:
   1. Mettre a jour team-knowledge/velocity-metrics.json (nouveau run)
-  2. Mettre a jour team-knowledge/agent-performance.json (scores, ROI)
+  2. Mettre a jour team-knowledge/agent-performance.json (scores, ROI, specializations)
+     → Categoriser le type de travail du run (new-module, refactor, bug-fix, audit, ci-cd, etc.)
+     → Mettre a jour specializations[taskType] pour chaque agent qui a participe
+     → Mettre a jour next-run.json avec les recommandations d'allocation
   3. Mettre a jour team-knowledge/error-patterns.json (nouveaux patterns, verifications)
   4. Mettre a jour team-knowledge/autonomy-state.json (conditions montee/descente)
   5. Mettre a jour team-knowledge/estimation-accuracy.json (estime vs reel)
@@ -114,6 +125,8 @@ Chaque rapport (`team-reports/YYYY-MM-DD.md`) DOIT commencer par un **Executive 
 | IL-4 | Typecheck = gate pre-test | Verification Pipeline: TYPE avant TEST |
 | IL-5 | Edition chirurgicale > reecriture | Tout agent dev |
 | IL-6 | Discovery croisee code-vs-config | Chore infra/config |
+| IL-7 | Feature existence check — Avant de planifier, verifier que la feature/le composant n'existe pas deja dans le code. Eviter le double travail. | Phase 1 ANALYSE |
+| IL-8 | KB FINALIZE mandatory — A chaque fin de run, les 7 fichiers KB DOIVENT etre mis a jour. Pas de shortcut. | FINALIZE |
 
 ### Mecanisme d'ajout
 1. Sentinelle detecte pattern (2+ occurrences)
@@ -183,6 +196,7 @@ Format :
 | Agent < 6/10 sur 3 runs | — | Amender ou remplacer |
 | Recommandation ignoree 3+ sprints | — | Escalade bloquante |
 | Estimation hors cible | < 60% sur 5 runs | Recalibrer S/M/L |
+| Boucles correctives = 0 sur 20+ runs | 20 runs consecutifs | Audit process obligatoire — verifier gate leniency, executer meta-test MT-003 |
 
 ---
 

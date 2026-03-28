@@ -28,4 +28,10 @@ export class NoopCacheService implements CacheService {
   async setNx(): Promise<boolean> {
     return true;
   }
+
+  /** Always returns true (no-op — no real cache to check). */
+  // eslint-disable-next-line @typescript-eslint/require-await -- must match async CacheService interface
+  async ping(): Promise<boolean> {
+    return true;
+  }
 }

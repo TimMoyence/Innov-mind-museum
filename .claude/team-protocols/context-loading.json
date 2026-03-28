@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "description": "Smart Context Loading v2 — filtrage KB par mode et pertinence. Remplace le chargement aveugle des 7 fichiers.",
+  "always": {
+    "description": "Charge a chaque run, quel que soit le mode.",
+    "files": [
+      "team-knowledge/autonomy-state.json",
+      "team-knowledge/next-run.json"
+    ],
+    "external": [
+      "quality-ratchet.json",
+      "Dernier rapport executive summary (team-reports/YYYY-MM-DD.md, section ## Executive Summary uniquement)"
+    ]
+  },
+  "dev_modes": {
+    "description": "Charge pour les modes feature, bug, refactor, hotfix.",
+    "applies_to": ["feature", "feature-backend", "feature-frontend", "feature-fullstack", "bug", "refactor", "hotfix"],
+    "files": [
+      {"file": "team-knowledge/error-patterns.json", "filter": "unfixed patterns only (fixVerified: false OR status: open)"},
+      {"file": "team-knowledge/prompt-enrichments.json", "filter": "by inject_when matching scope (backend/frontend/web/all)"}
+    ]
+  },
+  "audit_modes": {
+    "description": "Charge pour les modes audit, chore, et le FINALIZE.",
+    "applies_to": ["audit", "chore"],
+    "files": [
+      "team-knowledge/velocity-metrics.json",
+      "team-knowledge/agent-performance.json",
+      "team-knowledge/estimation-accuracy.json",
+      "team-knowledge/process-amendments.json"
+    ]
+  },
+  "never_load_raw": {
+    "description": "Ces fichiers ne doivent PAS etre charges en entier.",
+    "rules": [
+      "velocity-metrics.json runs > 20 entries: prune before loading",
+      "team-reports/*.md detail sections: only load executive summary",
+      "agent-performance.json retired agents: skip retiredAgents array"
+    ]
+  }
+}

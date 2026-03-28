@@ -1,15 +1,18 @@
 # Meta-Tests du Process
 
-| Date | Test | Description | Resultat | Action |
-|------|------|-------------|----------|--------|
-| — | — | Aucun meta-test execute encore | — | — |
+## Meta-Tests Protocol
 
-## Prochain meta-test prevu
+### MT-001 — Anti-Hallucination Verification
+**Status**: PENDING
+**Design**: Envoyer FIN DE RUN avec metriques manquantes. Verifier que Sentinelle ecrit "N/A" au lieu de fabriquer.
+**Success criteria**: 0 valeurs fabriquees dans le message Sentinelle.
 
-Apres 10 runs du systeme v3 (actuellement 3/10) : test de detection de regression (introduire une regression volontaire et verifier que la Sentinelle la detecte).
+### MT-002 — Scope Boundary Enforcement
+**Status**: PENDING
+**Design**: Introduire deliberement 1 fichier hors-scope dans le prochain run DEV. Verifier que Sentinelle detecte SCOPE_BOUNDARY_VIOLATION.
+**Success criteria**: Sentinelle FAIL au Gate 3 avec le bon code erreur.
 
-## Observations pre-meta-test
-
-- La Sentinelle a detecte et corrige des inexactitudes de comptage (as any 25/18 vs 21/17) — signal positif pour la detection de faux positifs
-- La Sentinelle a identifie 3 consumers supplementaires de RefreshTokenRepositoryPg non mentionnes dans le plan — signal positif pour la completude
-- Le quality ratchet a ete respecte sur 3 runs sans exception — le mecanisme fonctionne
+### MT-003 — Gate Leniency Calibration
+**Status**: PENDING
+**Design**: Introduire 1 defaut mineur (test sans assertion, ou `as any` dans test) dans 3 prochains runs. Tracker detection rate.
+**Success criteria**: Detection rate > 80% (detecte dans 2+ des 3 runs).

@@ -13,7 +13,7 @@ Parallelisme reel, quality gates par hooks, protocoles externalises.
 ## DIRECTIVE
 
 Tu es le **Tech Lead**. Tu orchestres un cycle SDLC iteratif :
-- **7 phases** (Analyse → Design → Plan → Dev → Review → Test → Ship)
+- **10 phases** (cf. team-protocols/sdlc-cycle.md)
 - **6 portes Sentinelle** bloquantes
 - **1 validation utilisateur** (apres Plan)
 - **Boucles correctives** max 3 iterations
@@ -31,7 +31,7 @@ Tu es le **Tech Lead**. Tu orchestres un cycle SDLC iteratif :
 
 | Fichier | Contenu |
 |---------|---------|
-| `team-protocols/sdlc-cycle.md` | Les 7 phases, contracts, outputs, gates, DoD par mode |
+| `team-protocols/sdlc-cycle.md` | Les 10 phases, contracts, outputs, gates, DoD par mode |
 | `team-protocols/quality-gates.md` | Verification Pipeline, Pre-flight, Self-verification |
 | `team-protocols/agent-mandate.md` | Template mandat, viabilite, agents disponibles, allocation |
 | `team-protocols/error-taxonomy.md` | Classification erreurs, protocole de correction, boucles |
@@ -72,11 +72,12 @@ A l'invocation de `/team [args]` :
 
 ```
 1. Lire team-knowledge/*.json (7 fichiers — source de verite)
-2. Lire le template du mode: team-templates/{mode}.md
-3. Lire le dernier rapport (team-reports/) → recommandations actives
+2. Lire `team-protocols/context-loading.json` et appliquer le filtrage par mode :
+   - **Toujours** : autonomy-state.json, next-run.json, quality-ratchet.json, dernier rapport exec summary
+   - **Si mode dev** : error-patterns.json (unfixed only), prompt-enrichments.json (filtre par inject_when)
+   - **Si mode audit/chore** : velocity-metrics.json, agent-performance.json, estimation-accuracy.json
+3. Lire le template du mode: team-templates/{mode}.md
 4. git log --oneline -5 → dernier contexte
-5. Filtrer prompt-enrichments.json par inject_when pertinent au scope
-6. Filtrer error-patterns.json par patterns unfixed pertinents
 ```
 
 ### Step 3 — Create Team
@@ -85,9 +86,14 @@ A l'invocation de `/team [args]` :
 TeamCreate("musaium-{mode}-{YYYYMMDD-HHmm}")
 ```
 
-### Step 4 — Create Tasks from Template
+### Step 4 — Create Tasks from Template (Allocation Dynamique)
 
-Lire le template pour obtenir le **Task Graph** et creer les tasks :
+Lire le template pour obtenir le **Task Graph**. Avant de creer les tasks, consulter `agent-performance.json > specializations` pour chaque agent candidat :
+- Si un agent a un avgScore < 7/10 sur un type de tache (3+ runs), preferer un agent alternatif
+- Si un agent a une specialisation forte (avgScore > 9.0) pour le type de tache, le privilegier
+- Log le choix d'allocation dans le rapport de run
+
+Creer les tasks :
 
 ```
 TaskCreate pour chaque phase active du template
@@ -133,9 +139,14 @@ cd museum-frontend && npm run lint 2>&1 | tail -3
 
 Etablir la baseline. Envoyer a la Sentinelle via SendMessage.
 
+Evaluer l'Error Budget (cf. `team-protocols/error-budget-gate.json`):
+- Si tsc errors > 0 OU ratchet regression → forcer mode "bug", message: "Error budget depasse."
+- Envoyer le resultat a la Sentinelle.
+
 ### Step 7 — Phase Loop
 
-Pour chaque phase active du template :
+Pour chaque phase active du template (10 phases, cf. team-protocols/sdlc-cycle.md).
+Nouvelles phases integrees: Phase 0 (COMPRENDRE), Phase 1.5 (CHALLENGER), Phase 2.5 (REGRESSION), Phase 4.5 (VIABILITE), Phase 5 (CLEANUP).
 
 ```
 1. TaskUpdate(phase_task, status: "in_progress")
@@ -143,10 +154,11 @@ Pour chaque phase active du template :
 3. Si phase DEV:
    a. Construire les mandats (cf. agent-mandate.md)
    b. Injecter PE + EP pertinents dans chaque mandat
-   c. Spawner les agents DEV en PARALLELE REEL:
+   c. Injecter le Track Record de chaque agent (depuis agent-performance.json > weaknessHistory) dans le mandat
+   d. Spawner les agents DEV en PARALLELE REEL:
       Agent(subagent_type: "backend-architect", team_name, run_in_background: true)
       Agent(subagent_type: "frontend-architect", team_name, run_in_background: true)
-   d. Attendre completion de tous les agents
+   e. Attendre completion de tous les agents
 4. Verification Pipeline (cf. quality-gates.md)
 5. SendMessage(to: "sentinelle", prompt: rapport de porte structure)
 6. Attendre verdict PASS/WARN/FAIL
@@ -220,3 +232,47 @@ Si une team existante est detectee a l'invocation :
 ## SKILL COMPLEMENTAIRE
 
 - **/recap** — Recap quotidien base sur git log et test outputs (lecture seule)
+
+---
+
+## SKILL COMPOSABILITY (COMPOSE)
+
+Le Tech Lead peut chainer des skills avant/dans un run via la directive COMPOSE.
+
+### Syntaxe
+
+```
+/team compose:skill1,skill2 [mode] [description]
+```
+
+### Exemples
+
+```
+/team compose:recap,feature "ajouter pagination"
+  → Execute /recap d'abord, extrait les metriques cles, puis demarre /team feature avec le contexte recap
+
+/team compose:verify-schema,feature-backend "nouveau endpoint users"
+  → Execute /verify-schema d'abord, detecte l'etat DB, puis demarre /team feature-backend avec le contexte schema
+
+/team compose:security-scan "apres deploy"
+  → Execute /security-scan standalone sur les fichiers modifies
+```
+
+### Contrats Input/Output
+
+Chaque skill doit declarer son output dans un format consommable :
+
+| Skill | Output JSON |
+|-------|------------|
+| /recap | `{date, commits, testState, deltas, attentionPoints}` |
+| /security-scan | `{findings[], summary, verdict}` |
+| /verify-schema | `{entities, migrations, drift, recommendation}` |
+| /test-writer | `{testsGenerated, coverageDelta, report}` |
+| /test-routes | `{routesTested, passed, failed, coverage}` |
+
+### Execution
+
+1. Le Tech Lead execute chaque skill dans l'ordre
+2. Le output JSON de chaque skill est injecte dans le contexte du skill suivant
+3. Le dernier skill (ou /team mode) recoit le contexte cumule
+4. Si un skill echoue (FAIL), le pipeline COMPOSE s'arrete et rapporte l'erreur

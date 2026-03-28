@@ -41,6 +41,7 @@ const makeCache = (): jest.Mocked<CacheService> => ({
   del: jest.fn().mockResolvedValue(undefined),
   delByPrefix: jest.fn().mockResolvedValue(undefined),
   setNx: jest.fn().mockResolvedValue(true),
+  ping: jest.fn().mockResolvedValue(true),
 });
 
 const makeVisitContext = (overrides: Partial<VisitContext> = {}): VisitContext => ({
@@ -144,7 +145,7 @@ describe('UserMemoryService', () => {
 
       await svc.updateAfterSession(42, ctx, 'sess-2');
 
-      const upsertCall = repo.upsert.mock.calls[0]![1];
+      const upsertCall = repo.upsert.mock.calls[0][1];
       expect(upsertCall.museumsVisited).toContain('Louvre');
       expect(upsertCall.museumsVisited).toContain('Orsay');
     });
@@ -157,7 +158,7 @@ describe('UserMemoryService', () => {
 
       await svc.updateAfterSession(42, ctx, 'sess-2');
 
-      const upsertCall = repo.upsert.mock.calls[0]![1];
+      const upsertCall = repo.upsert.mock.calls[0][1];
       expect(upsertCall.museumsVisited).toBeUndefined(); // no update needed
     });
 
@@ -169,9 +170,9 @@ describe('UserMemoryService', () => {
 
       await svc.updateAfterSession(42, ctx, 'sess-2');
 
-      const upsertCall = repo.upsert.mock.calls[0]![1];
+      const upsertCall = repo.upsert.mock.calls[0][1];
       expect(upsertCall.notableArtworks).toHaveLength(1);
-      expect(upsertCall.notableArtworks![0]!.title).toBe('Water Lilies');
+      expect(upsertCall.notableArtworks![0].title).toBe('Water Lilies');
       expect(upsertCall.totalArtworksDiscussed).toBe(1);
     });
 

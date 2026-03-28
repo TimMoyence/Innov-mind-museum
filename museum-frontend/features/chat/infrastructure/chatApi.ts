@@ -19,7 +19,8 @@ import type {
   ListSessionsResponseDTO,
   PostMessageResponseDTO,
   ReportMessageResponseDTO,
-  ReportReason} from '../domain/contracts';
+  ReportReason,
+} from '../domain/contracts';
 import {
   isCreateSessionResponseDTO,
   isDeleteSessionResponseDTO,
@@ -79,9 +80,7 @@ export const chatApi = {
    * @param payload - Session creation parameters (locale, museum mode, etc.).
    * @returns The created session response, validated against the contract.
    */
-  async createSession(
-    payload: CreateSessionRequestDTO,
-  ): Promise<CreateSessionResponseDTO> {
+  async createSession(payload: CreateSessionRequestDTO): Promise<CreateSessionResponseDTO> {
     const data = await openApiRequest({
       path: '/api/chat/sessions',
       method: 'post',
@@ -106,33 +105,19 @@ export const chatApi = {
     guideLevel?: GuideLevel;
     locale?: string;
   }): Promise<PostMessageResponseDTO> {
-    const {
-      sessionId,
-      text,
-      imageUri,
-      museumMode,
-      location,
-      guideLevel,
-      locale,
-    } =
-      params;
+    const { sessionId, text, imageUri, museumMode, location, guideLevel, locale } = params;
 
     let payload: unknown;
 
     if (imageUri) {
       const fileName = imageUri.split('/').pop() ?? 'image.jpg';
-      const extension = fileName.includes('.')
-        ? fileName.split('.').pop()
-        : 'jpg';
+      const extension = fileName.includes('.') ? fileName.split('.').pop() : 'jpg';
 
       const formData = new FormData();
       if (text?.trim()) {
         formData.append('text', text.trim());
       }
-      formData.append(
-        'context',
-        JSON.stringify({ museumMode, location, guideLevel, locale }),
-      );
+      formData.append('context', JSON.stringify({ museumMode, location, guideLevel, locale }));
       formData.append('image', {
         uri: imageUri,
         name: fileName,
@@ -175,32 +160,23 @@ export const chatApi = {
     guideLevel?: GuideLevel;
     locale?: string;
   }): Promise<PostMessageResponseDTO> {
-    const {
-      sessionId,
-      audioUri,
-      audioBlob,
-      museumMode,
-      location,
-      guideLevel,
-      locale,
-    } = params;
+    const { sessionId, audioUri, audioBlob, museumMode, location, guideLevel, locale } = params;
 
     if (!audioUri && !audioBlob) {
       throw new Error('audioUri or audioBlob is required');
     }
 
     const fallbackExt = audioBlob?.type.includes('webm') ? 'webm' : 'm4a';
-    const fileName = (audioUri?.split('/').pop() ?? `voice-${String(Date.now())}.${fallbackExt}`).trim();
+    const fileName = (
+      audioUri?.split('/').pop() ?? `voice-${String(Date.now())}.${fallbackExt}`
+    ).trim();
     const extension = fileName.includes('.')
-      ? fileName.split('.').pop()?.toLowerCase() ?? fallbackExt
+      ? (fileName.split('.').pop()?.toLowerCase() ?? fallbackExt)
       : fallbackExt;
     const mimeType = audioBlob?.type ?? (audioMimeByExtension[extension] || 'audio/mp4');
 
     const formData = new FormData();
-    formData.append(
-      'context',
-      JSON.stringify({ museumMode, location, guideLevel, locale }),
-    );
+    formData.append('context', JSON.stringify({ museumMode, location, guideLevel, locale }));
     if (audioBlob) {
       formData.append('audio', audioBlob, fileName);
     } else {
@@ -268,9 +244,7 @@ export const chatApi = {
    * @param params - Optional cursor and limit for pagination.
    * @returns Paginated session list, validated against the contract.
    */
-  async listSessions(
-    params: ListSessionsRequestDTO = {},
-  ): Promise<ListSessionsResponseDTO> {
+  async listSessions(params: ListSessionsRequestDTO = {}): Promise<ListSessionsResponseDTO> {
     const data = await openApiRequest({
       path: '/api/chat/sessions',
       method: 'get',
@@ -313,10 +287,10 @@ export const chatApi = {
    */
   async synthesizeSpeech(messageId: string): Promise<ArrayBuffer | null> {
     try {
-      const response = await httpRequest<ArrayBuffer>(
-        `${CHAT_BASE}/messages/${messageId}/tts`,
-        { method: 'POST', responseType: 'arraybuffer' },
-      );
+      const response = await httpRequest<ArrayBuffer>(`${CHAT_BASE}/messages/${messageId}/tts`, {
+        method: 'POST',
+        responseType: 'arraybuffer',
+      });
       // 204 No Content: Axios returns empty/zero-length data
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive response check
       if (!response || (response instanceof ArrayBuffer && response.byteLength === 0)) {
@@ -354,7 +328,11 @@ export const chatApi = {
     guideLevel?: GuideLevel;
     locale?: string;
     onToken: (text: string) => void;
-    onDone: (payload: { messageId: string; createdAt: string; metadata: Record<string, unknown> }) => void;
+    onDone: (payload: {
+      messageId: string;
+      createdAt: string;
+      metadata: Record<string, unknown>;
+    }) => void;
     onError: (code: string, message: string, requestId?: string) => void;
     onGuardrail?: (text: string, reason: string) => void;
     signal?: AbortSignal;
@@ -365,6 +343,29 @@ export const chatApi = {
 
     const traceHeaders = isInitialized() ? getTraceData() : {};
     const requestId = generateRequestId();
+
+    const STREAM_TIMEOUT_MS = 60_000;
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => {
+      timeoutController.abort(new DOMException('The operation timed out.', 'TimeoutError'));
+    }, STREAM_TIMEOUT_MS);
+
+    // Forward caller's signal to our controller
+    if (params.signal) {
+      if (params.signal.aborted) {
+        timeoutController.abort(params.signal.reason);
+      } else {
+        params.signal.addEventListener(
+          'abort',
+          () => {
+            timeoutController.abort(params.signal?.reason);
+          },
+          { once: true },
+        );
+      }
+    }
+
+    const combinedSignal = timeoutController.signal;
 
     const response = await expoFetch(url, {
       method: 'POST',
@@ -384,7 +385,7 @@ export const chatApi = {
           locale: params.locale,
         },
       }),
-      signal: params.signal,
+      signal: combinedSignal,
     });
 
     if (!response.ok) {
@@ -405,7 +406,11 @@ export const chatApi = {
           params.onToken(event.text);
           break;
         case 'done':
-          params.onDone({ messageId: event.messageId, createdAt: event.createdAt, metadata: event.metadata });
+          params.onDone({
+            messageId: event.messageId,
+            createdAt: event.createdAt,
+            metadata: event.metadata,
+          });
           break;
         case 'error':
           params.onError(event.code, event.message, requestId);
@@ -416,44 +421,55 @@ export const chatApi = {
       }
     };
 
-    // Primary: ReadableStream with progressive parsing
-    if (response.body && typeof response.body.getReader === 'function') {
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
+    try {
+      // Primary: ReadableStream with progressive parsing
+      if (response.body && typeof response.body.getReader === 'function') {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
 
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- infinite SSE read loop
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- infinite SSE read loop
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-          buffer += decoder.decode(value, { stream: true });
-          const { events, remainder } = parseSseChunk(buffer);
-          buffer = remainder;
-          for (const event of events) {
-            processEvent(event);
+            buffer += decoder.decode(value, { stream: true });
+            const { events, remainder } = parseSseChunk(buffer);
+            buffer = remainder;
+            for (const event of events) {
+              processEvent(event);
+            }
+          }
+          // Process any remaining buffer
+          if (buffer.trim()) {
+            const { events } = parseSseChunk(buffer + '\n\n');
+            for (const event of events) {
+              processEvent(event);
+            }
+          }
+        } catch (error) {
+          const err = error as Error;
+          if (err.name === 'TimeoutError') {
+            params.onError(
+              'STREAM_TIMEOUT',
+              'The response took too long. Please try again.',
+              requestId,
+            );
+          } else if (err.name !== 'AbortError') {
+            params.onError('STREAM_ERROR', err.message, requestId);
           }
         }
-        // Process any remaining buffer
-        if (buffer.trim()) {
-          const { events } = parseSseChunk(buffer + '\n\n');
-          for (const event of events) {
-            processEvent(event);
-          }
-        }
-      } catch (error) {
-        if ((error as Error).name !== 'AbortError') {
-          params.onError('STREAM_ERROR', (error as Error).message, requestId);
+      } else {
+        // Fallback: read full response text and parse all events at once
+        const text = await response.text();
+        const { events } = parseSseChunk(text + '\n\n');
+        for (const event of events) {
+          processEvent(event);
         }
       }
-    } else {
-      // Fallback: read full response text and parse all events at once
-      const text = await response.text();
-      const { events } = parseSseChunk(text + '\n\n');
-      for (const event of events) {
-        processEvent(event);
-      }
+    } finally {
+      clearTimeout(timeoutId);
     }
   },
 
@@ -470,7 +486,11 @@ export const chatApi = {
     guideLevel?: GuideLevel;
     locale?: string;
     onToken?: (text: string) => void;
-    onDone?: (payload: { messageId: string; createdAt: string; metadata: Record<string, unknown> }) => void;
+    onDone?: (payload: {
+      messageId: string;
+      createdAt: string;
+      metadata: Record<string, unknown>;
+    }) => void;
     onGuardrail?: (text: string, reason: string) => void;
     signal?: AbortSignal;
   }): Promise<PostMessageResponseDTO | null> {

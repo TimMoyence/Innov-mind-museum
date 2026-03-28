@@ -30,12 +30,18 @@ if ! (cd "$REPO_ROOT/museum-frontend" && npx tsc --noEmit &>/dev/null); then
   ERRORS="${ERRORS}Frontend typecheck FAIL. "
 fi
 
-# 3. Tests backend (bail on first failure for speed)
-if ! (cd "$REPO_ROOT/museum-backend" && pnpm test -- --bail &>/dev/null); then
+# 3. ESLint on staged TS/TSX files
+STAGED_TS=$(git diff --cached --name-only --diff-filter=d -- '*.ts' '*.tsx' 2>/dev/null)
+if [ -n "$STAGED_TS" ]; then
+  npx eslint $STAGED_TS --max-warnings=0 2>/dev/null || { echo "ESLint errors on staged files"; ERRORS="${ERRORS}ESLint staged files FAIL. "; }
+fi
+
+# 4. Tests backend (bail on first failure for speed, only changed files)
+if ! (cd "$REPO_ROOT/museum-backend" && pnpm test -- --bail --changedSince=HEAD &>/dev/null); then
   ERRORS="${ERRORS}Backend tests FAIL. "
 fi
 
-# 4. Ratchet check (if script exists and is executable)
+# 5. Ratchet check (if script exists and is executable)
 if [ -x "$RATCHET_SCRIPT" ]; then
   RATCHET_RESULT=$("$RATCHET_SCRIPT" 2>&1) || {
     ERRORS="${ERRORS}Quality ratchet: $RATCHET_RESULT. "

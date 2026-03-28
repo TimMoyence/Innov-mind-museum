@@ -1,0 +1,27 @@
+{
+  "lastUpdated": "2026-03-28",
+  "description": "Recommandations pour le prochain run. Mis a jour par la Sentinelle au FINALIZE. Lu par /team au Step 2.",
+  "recommendations": [
+    {
+      "id": "NR-001",
+      "priority": "HIGH",
+      "description": "Verifier EP-015 fix (anti-hallucination) via meta-test MT-001",
+      "status": "pending",
+      "source": "Sprint 1.4 improvement plan"
+    },
+    {
+      "id": "NR-002",
+      "priority": "HIGH",
+      "description": "Verifier scope boundary enforcement via meta-test MT-002",
+      "status": "pending",
+      "source": "Sprint 1.4 improvement plan"
+    },
+    {
+      "id": "NR-003",
+      "priority": "MEDIUM",
+      "description": "Calibrer gate leniency via meta-test MT-003 (introduire 1 defaut delibere)",
+      "status": "pending",
+      "source": "Sprint 1.5 zero loops investigation"
+    }
+  ]
+}

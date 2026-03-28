@@ -1,7 +1,20 @@
-/* eslint-disable max-lines -- contract validators for all chat endpoints must co-locate */
 import { badRequest } from '@shared/errors/app.error';
 
+import type {
+  ChatMessageResponse,
+  PaginationInfo,
+  SessionInfo,
+  VisitorContext,
+} from './chat.shared-types';
 import type { ReportReason } from '../../../domain/chat.types';
+
+// Re-export shared types so existing consumers keep working
+export type {
+  ChatMessageResponse,
+  PaginationInfo,
+  SessionInfo,
+  VisitorContext,
+} from './chat.shared-types';
 
 type RecordValue = Record<string, unknown>;
 
@@ -62,27 +75,14 @@ export interface CreateSessionRequest {
 
 /** Response shape for `POST /sessions`. */
 export interface CreateSessionResponse {
-  session: {
-    id: string;
-    locale?: string | null;
-    museumMode: boolean;
-    title?: string | null;
-    museumName?: string | null;
-    createdAt: string;
-    updatedAt: string;
-  };
+  session: SessionInfo;
 }
 
 /** Validated body for `POST /sessions/:id/messages`. */
 export interface PostMessageRequest {
   text?: string;
   image?: string;
-  context?: {
-    location?: string;
-    museumMode?: boolean;
-    guideLevel?: 'beginner' | 'intermediate' | 'expert';
-    locale?: string;
-  };
+  context?: VisitorContext;
 }
 
 /** Response shape for `POST /sessions/:id/messages`. */
@@ -125,32 +125,9 @@ export interface PostAudioMessageResponse extends PostMessageResponse {
 
 /** Response shape for `GET /sessions/:id` (session metadata + paginated messages). */
 export interface GetSessionResponse {
-  session: {
-    id: string;
-    locale?: string | null;
-    museumMode: boolean;
-    title?: string | null;
-    museumName?: string | null;
-    createdAt: string;
-    updatedAt: string;
-  };
-  messages: {
-    id: string;
-    role: 'user' | 'assistant' | 'system';
-    text?: string | null;
-    imageRef?: string | null;
-    image?: {
-      url: string;
-      expiresAt: string;
-    } | null;
-    createdAt: string;
-    metadata?: Record<string, unknown> | null;
-  }[];
-  page: {
-    nextCursor: string | null;
-    hasMore: boolean;
-    limit: number;
-  };
+  session: SessionInfo;
+  messages: ChatMessageResponse[];
+  page: PaginationInfo;
 }
 
 /** Validated query parameters for `GET /sessions`. */
@@ -161,26 +138,15 @@ export interface ListSessionsQuery {
 
 /** Response shape for `GET /sessions` (paginated session list with previews). */
 export interface ListSessionsResponse {
-  sessions: {
-    id: string;
-    locale?: string | null;
-    museumMode: boolean;
-    title?: string | null;
-    museumName?: string | null;
-    createdAt: string;
-    updatedAt: string;
+  sessions: (SessionInfo & {
     preview?: {
       text: string;
       createdAt: string;
       role: 'user' | 'assistant' | 'system';
     };
     messageCount: number;
-  }[];
-  page: {
-    nextCursor: string | null;
-    hasMore: boolean;
-    limit: number;
-  };
+  })[];
+  page: PaginationInfo;
 }
 
 /** Response shape for `DELETE /sessions/:id`. */

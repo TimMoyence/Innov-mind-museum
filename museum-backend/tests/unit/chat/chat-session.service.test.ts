@@ -53,6 +53,7 @@ const makeCache = (): jest.Mocked<CacheService> => ({
   del: jest.fn().mockResolvedValue(undefined),
   delByPrefix: jest.fn().mockResolvedValue(undefined),
   setNx: jest.fn().mockResolvedValue(true),
+  ping: jest.fn().mockResolvedValue(true),
 });
 
 // ── Tests ──────────────────────────────────────────────────────────────

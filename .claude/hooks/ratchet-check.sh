@@ -62,6 +62,32 @@ elif [ "$CURRENT_AS_ANY" -lt "$BASELINE_AS_ANY" ] 2>/dev/null; then
   IMPROVED=true
 fi
 
+# Frontend test count ratchet
+FE_TEST_OUTPUT=$(cd "$REPO_ROOT/museum-frontend" && npm test 2>&1 | grep -oE '[0-9]+ passed' | head -1)
+FE_CURRENT_TESTS=$(echo "$FE_TEST_OUTPUT" | grep -oE '[0-9]+' | head -1)
+FE_BASELINE=$(jq -r '.frontendTestCount // 0' "$RATCHET_FILE")
+if [ -n "$FE_CURRENT_TESTS" ] && [ "$FE_CURRENT_TESTS" -lt "$FE_BASELINE" ] 2>/dev/null; then
+  echo "RATCHET REGRESSION: Frontend tests $FE_CURRENT_TESTS < baseline $FE_BASELINE"
+  REGRESSION=1
+fi
+if [ -n "$FE_CURRENT_TESTS" ] && [ "$FE_CURRENT_TESTS" -gt "$FE_BASELINE" ] 2>/dev/null; then
+  jq --argjson v "$FE_CURRENT_TESTS" '.frontendTestCount = $v' "$RATCHET_FILE" > "$RATCHET_FILE.tmp" && mv "$RATCHET_FILE.tmp" "$RATCHET_FILE"
+  echo "Ratchet improved: frontend tests $FE_BASELINE -> $FE_CURRENT_TESTS"
+fi
+
+# Web test count ratchet
+WEB_TEST_OUTPUT=$(cd "$REPO_ROOT/museum-web" && pnpm test 2>&1 | grep -oE '[0-9]+ passed' | head -1)
+WEB_CURRENT_TESTS=$(echo "$WEB_TEST_OUTPUT" | grep -oE '[0-9]+' | head -1)
+WEB_BASELINE=$(jq -r '.webTestCount // 0' "$RATCHET_FILE")
+if [ -n "$WEB_CURRENT_TESTS" ] && [ "$WEB_CURRENT_TESTS" -lt "$WEB_BASELINE" ] 2>/dev/null; then
+  echo "RATCHET REGRESSION: Web tests $WEB_CURRENT_TESTS < baseline $WEB_BASELINE"
+  REGRESSION=1
+fi
+if [ -n "$WEB_CURRENT_TESTS" ] && [ "$WEB_CURRENT_TESTS" -gt "$WEB_BASELINE" ] 2>/dev/null; then
+  jq --argjson v "$WEB_CURRENT_TESTS" '.webTestCount = $v' "$RATCHET_FILE" > "$RATCHET_FILE.tmp" && mv "$RATCHET_FILE.tmp" "$RATCHET_FILE"
+  echo "Ratchet improved: web tests $WEB_BASELINE -> $WEB_CURRENT_TESTS"
+fi
+
 if $REGRESSION; then
   echo "RATCHET REGRESSION: $DETAILS"
   exit 1
@@ -77,6 +103,15 @@ if $IMPROVED; then
      '.testCount = $tests | .typecheckErrors = $tsErrors | .asAnyCount = $asAny | .lastUpdated = $date' \
      "$RATCHET_FILE" > "${RATCHET_FILE}.tmp" && mv "${RATCHET_FILE}.tmp" "$RATCHET_FILE"
   echo "RATCHET IMPROVED: tests=$CURRENT_TESTS tsErrors=$CURRENT_TS_ERRORS asAny=$CURRENT_AS_ANY"
+fi
+
+# Commit size check (warning only, doesn't block ratchet)
+STAGED_INSERTIONS=$(git diff --cached --stat 2>/dev/null | tail -1 | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+')
+if [ -n "$STAGED_INSERTIONS" ] && [ "$STAGED_INSERTIONS" -gt 2000 ] 2>/dev/null; then
+  echo "COMMIT SIZE BLOCK: $STAGED_INSERTIONS insertions > 2000 limit"
+  REGRESSION=1
+elif [ -n "$STAGED_INSERTIONS" ] && [ "$STAGED_INSERTIONS" -gt 500 ] 2>/dev/null; then
+  echo "COMMIT SIZE WARNING: $STAGED_INSERTIONS insertions > 500 recommended max"
 fi
 
 exit 0

@@ -1,23 +1,17 @@
-/* eslint-disable max-lines -- message service covers prepare, commit, post, stream, and audio workflows */
-import { AUDIT_SECURITY_GUARDRAIL_BLOCK } from '@shared/audit/audit.types';
+/* eslint-disable max-lines -- service orchestrates message lifecycle across image, guardrail, LLM, and persistence layers */
 import { AppError, badRequest, conflict } from '@shared/errors/app.error';
 import { resolveLocale } from '@shared/i18n/locale';
-import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
-import {
-  buildGuardrailRefusal,
-  evaluateAssistantOutputGuardrail,
-  evaluateUserInputGuardrail,
-  type GuardrailBlockReason,
-} from './art-topic-guardrail';
-import { buildChatImageObjectKey, withPolicyCitation } from './chat-image.helpers';
-import { assertImageSize, assertMimeType, decodeBase64Image, isSafeImageUrl } from './image-input';
+import { evaluateUserInputGuardrail } from './art-topic-guardrail';
+import { GuardrailEvaluationService } from './guardrail-evaluation.service';
+import { ImageProcessingService } from './image-processing.service';
 import { ensureSessionAccess } from './session-access';
 import { computeSessionUpdates } from './visit-context';
 import { DisabledAudioTranscriber } from '../domain/ports/audio-transcriber.port';
 
 import type { ArtTopicClassifier } from './art-topic-classifier';
+import type { GuardrailBlockReason } from './art-topic-guardrail';
 import type { PostMessageResult, PostAudioMessageResult } from './chat.service.types';
 import type { KnowledgeBaseService } from './knowledge-base.service';
 import type { UserMemoryService } from './user-memory.service';
@@ -77,30 +71,33 @@ function extractSearchTerm(
 export class ChatMessageService {
   private readonly repository: ChatRepository;
   private readonly orchestrator: ChatOrchestrator;
-  private readonly imageStorage: ImageStorage;
+  private readonly imageProcessor: ImageProcessingService;
+  private readonly guardrail: GuardrailEvaluationService;
   private readonly audioTranscriber: AudioTranscriber;
   private readonly cache?: CacheService;
-  private readonly ocr?: OcrService;
-  private readonly audit?: AuditService;
   private readonly userMemory?: UserMemoryService;
   private readonly knowledgeBase?: KnowledgeBaseService;
-  private readonly dynamicArtKeywords?: ReadonlySet<string>;
-  private readonly artTopicClassifier?: ArtTopicClassifier;
-  private readonly onArtKeywordDiscovered?: (keyword: string, locale: string) => void;
 
   constructor(deps: ChatMessageServiceDeps) {
     this.repository = deps.repository;
     this.orchestrator = deps.orchestrator;
-    this.imageStorage = deps.imageStorage;
     this.audioTranscriber = deps.audioTranscriber ?? new DisabledAudioTranscriber();
     this.cache = deps.cache;
-    this.ocr = deps.ocr;
-    this.audit = deps.audit;
     this.userMemory = deps.userMemory;
     this.knowledgeBase = deps.knowledgeBase;
-    this.dynamicArtKeywords = deps.dynamicArtKeywords;
-    this.artTopicClassifier = deps.artTopicClassifier;
-    this.onArtKeywordDiscovered = deps.onArtKeywordDiscovered;
+
+    this.imageProcessor = new ImageProcessingService({
+      imageStorage: deps.imageStorage,
+      ocr: deps.ocr,
+    });
+
+    this.guardrail = new GuardrailEvaluationService({
+      repository: deps.repository,
+      audit: deps.audit,
+      dynamicArtKeywords: deps.dynamicArtKeywords,
+      artTopicClassifier: deps.artTopicClassifier,
+      onArtKeywordDiscovered: deps.onArtKeywordDiscovered,
+    });
   }
 
   /**
@@ -108,7 +105,7 @@ export class ChatMessageService {
    *
    * @returns Either a 'ready' preparation or a 'refused' result (guardrail blocked input).
    */
-  // eslint-disable-next-line max-lines-per-function, complexity, sonarjs/cognitive-complexity -- message preparation covers image processing, guardrail evaluation, and persistence in a single pipeline
+  // eslint-disable-next-line max-lines-per-function, complexity -- message preparation covers image processing, guardrail evaluation, and persistence in a single pipeline
   private async prepareMessage(
     sessionId: string,
     input: PostMessageInput,
@@ -144,93 +141,27 @@ export class ChatMessageService {
       throw badRequest('Either text or image is required');
     }
 
+    // Image processing (validation, decode, storage)
     let imageRef: string | undefined;
     let orchestratorImage: PostMessageInput['image'] | undefined;
 
     if (input.image) {
-      if (input.image.source === 'url') {
-        if (!isSafeImageUrl(input.image.value)) {
-          throw badRequest('Image URL must be a safe HTTPS URL');
-        }
-
-        imageRef = input.image.value;
-        orchestratorImage = input.image;
-      } else if (input.image.source === 'upload') {
-        const normalizedBase64 = input.image.value.replace(/\s/g, '');
-        const mimeType = input.image.mimeType;
-        const sizeBytes = input.image.sizeBytes;
-
-        if (!mimeType || typeof mimeType !== 'string') {
-          throw badRequest('Uploaded image mime type is required');
-        }
-        if (!Number.isFinite(sizeBytes)) {
-          throw badRequest('Uploaded image size is required');
-        }
-
-        assertMimeType(mimeType, env.upload.allowedMimeTypes);
-        assertImageSize(sizeBytes ?? 0, env.llm.maxImageBytes);
-
-        imageRef = await this.imageStorage.save({
-          base64: normalizedBase64,
-          mimeType,
-          objectKey: buildChatImageObjectKey({
-            mimeType,
-            sessionId,
-            userId: ownerId ?? currentUserId,
-          }),
-        });
-
-        orchestratorImage = {
-          source: 'upload',
-          value: normalizedBase64,
-          mimeType,
-          sizeBytes,
-        };
-      } else {
-        const decoded = decodeBase64Image(input.image.value);
-        assertMimeType(decoded.mimeType, env.upload.allowedMimeTypes);
-        assertImageSize(decoded.sizeBytes, env.llm.maxImageBytes);
-
-        imageRef = await this.imageStorage.save({
-          base64: decoded.base64,
-          mimeType: decoded.mimeType,
-          objectKey: buildChatImageObjectKey({
-            mimeType: decoded.mimeType,
-            sessionId,
-            userId: ownerId ?? currentUserId,
-          }),
-        });
-
-        orchestratorImage = {
-          source: input.image.source,
-          value: decoded.base64,
-          mimeType: decoded.mimeType,
-          sizeBytes: decoded.sizeBytes,
-        };
-      }
+      const processed = await this.imageProcessor.processImage(
+        input.image,
+        sessionId,
+        ownerId ?? currentUserId,
+      );
+      imageRef = processed.imageRef;
+      orchestratorImage = processed.orchestratorImage;
     }
 
-    // OCR injection guard: extract text from image and run through input guardrail
-    if (this.ocr && orchestratorImage) {
-      try {
-        const ocrResult = await this.ocr.extractText(orchestratorImage.value);
-        if (ocrResult?.text) {
-          const ocrGuardrail = await evaluateUserInputGuardrail({
-            text: ocrResult.text,
-            history: [],
-          });
-          if (!ocrGuardrail.allow) {
-            throw badRequest('Image contains disallowed content');
-          }
-        }
-      } catch (error) {
-        // Fail-open: if OCR itself fails, let the request proceed (AppError from guardrail re-thrown)
-        if (error instanceof AppError) throw error;
-        logger.warn('ocr_guard_fail_open', {
-          error: error instanceof Error ? error.message : String(error),
-          sessionId,
-        });
-      }
+    // OCR injection guard
+    if (orchestratorImage) {
+      await this.imageProcessor.runOcrGuard(
+        orchestratorImage,
+        evaluateUserInputGuardrail,
+        sessionId,
+      );
     }
 
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
@@ -239,17 +170,12 @@ export class ChatMessageService {
       sessionId,
       env.llm.maxHistoryMessages,
     );
-    const userGuardrail = await evaluateUserInputGuardrail({
+
+    const userGuardrail = await this.guardrail.evaluateInput(
       text,
-      history: historyBeforeMessage,
-      dynamicKeywords: this.dynamicArtKeywords,
-      classifier: this.artTopicClassifier,
-      onKeywordDiscovered: this.onArtKeywordDiscovered
-        ? (kw: string) => {
-            this.onArtKeywordDiscovered?.(kw, requestedLocale ?? 'en');
-          }
-        : undefined,
-    });
+      historyBeforeMessage,
+      requestedLocale,
+    );
 
     await this.repository.persistMessage({
       sessionId,
@@ -259,37 +185,13 @@ export class ChatMessageService {
     });
 
     if (!userGuardrail.allow) {
-      this.audit?.log({
-        action: AUDIT_SECURITY_GUARDRAIL_BLOCK,
-        actorType: session.user?.id ? 'user' : 'anonymous',
-        actorId: session.user?.id ?? null,
-        targetType: 'session',
-        targetId: sessionId,
-        metadata: { reason: userGuardrail.reason },
-      });
-
-      const refusalText = buildGuardrailRefusal(requestedLocale, userGuardrail.reason);
-      const refusalMetadata = withPolicyCitation({}, userGuardrail.reason);
-      const assistantMessage = await this.repository.persistMessage({
+      const result = await this.guardrail.handleInputBlock({
         sessionId,
-        role: 'assistant',
-        text: refusalText,
-        metadata: refusalMetadata as Record<string, unknown>,
+        reason: userGuardrail.reason,
+        requestedLocale,
+        userId: ownerId,
       });
-
-      return {
-        kind: 'refused',
-        result: {
-          sessionId,
-          message: {
-            id: assistantMessage.id,
-            role: 'assistant',
-            text: refusalText,
-            createdAt: assistantMessage.createdAt.toISOString(),
-          },
-          metadata: refusalMetadata,
-        },
-      };
+      return { kind: 'refused', result };
     }
 
     const history = await this.repository.listSessionHistory(sessionId, env.llm.maxHistoryMessages);
@@ -349,18 +251,17 @@ export class ChatMessageService {
     history: Awaited<ReturnType<ChatRepository['listSessionHistory']>>,
     ownerId: number | undefined,
   ): Promise<PostMessageResult> {
-    const outputGuardrail = evaluateAssistantOutputGuardrail({
+    const outputCheck = this.guardrail.evaluateOutput({
       text: aiResult.text,
       history,
+      metadata: aiResult.metadata,
+      requestedLocale,
     });
-    const assistantText = outputGuardrail.allow
-      ? aiResult.text
-      : buildGuardrailRefusal(requestedLocale, outputGuardrail.reason);
-    const assistantMetadata = outputGuardrail.allow
-      ? aiResult.metadata
-      : withPolicyCitation(aiResult.metadata, outputGuardrail.reason);
 
-    const baseSessionUpdates = outputGuardrail.allow
+    const assistantText = outputCheck.text;
+    const assistantMetadata = outputCheck.metadata;
+
+    const baseSessionUpdates = outputCheck.allowed
       ? computeSessionUpdates(session, assistantMetadata, 'pending')
       : undefined;
 
@@ -372,7 +273,7 @@ export class ChatMessageService {
       : baseSessionUpdates;
 
     const artworkMatch =
-      outputGuardrail.allow && aiResult.metadata.detectedArtwork
+      outputCheck.allowed && aiResult.metadata.detectedArtwork
         ? {
             artworkId: aiResult.metadata.detectedArtwork.artworkId,
             title: aiResult.metadata.detectedArtwork.title,
@@ -400,7 +301,7 @@ export class ChatMessageService {
       throw error;
     }
 
-    if (outputGuardrail.allow && sessionUpdates?.visitContext) {
+    if (outputCheck.allowed && sessionUpdates?.visitContext) {
       const pendingArtwork = sessionUpdates.visitContext.artworksDiscussed.find(
         (a) => a.messageId === 'pending',
       );
@@ -437,17 +338,7 @@ export class ChatMessageService {
     };
   }
 
-  /**
-   * Processes a user text/image message: runs input guardrail, persists the user message,
-   * invokes the LLM orchestrator, applies the output guardrail, and persists the assistant reply.
-   *
-   * @param sessionId - UUID of the target chat session.
-   * @param input - User message payload (text and/or image).
-   * @param requestId - Optional correlation id for tracing.
-   * @param currentUserId - Authenticated user id for ownership checks.
-   * @returns The assistant's reply with metadata.
-   * @throws {AppError} 400 on invalid input, 404 if session not found, 409 on optimistic lock conflict.
-   */
+  /** Posts a message and returns the assistant response (non-streaming). */
   async postMessage(
     sessionId: string,
     input: PostMessageInput,
@@ -496,20 +387,8 @@ export class ChatMessageService {
     );
   }
 
-  /**
-   * Streams assistant response tokens via onToken callback while processing the message.
-   * Uses shared prepareMessage/commitAssistantResponse logic.
-   *
-   * @param sessionId - UUID of the target chat session.
-   * @param input - User message payload (text only for streaming).
-   * @param onToken - Called with each text token as it streams from the LLM.
-   * @param onGuardrail - Called when the output guardrail blocks mid-stream.
-   * @param requestId - Optional correlation id for tracing.
-   * @param currentUserId - Authenticated user id for ownership checks.
-   * @param signal - AbortSignal to cancel the stream (e.g. on client disconnect).
-   * @returns The assistant's reply with metadata.
-   */
-  // eslint-disable-next-line max-params, max-lines-per-function -- streaming requires callbacks, abort signal, and user context alongside core message parameters
+  /** Posts a message with token-by-token streaming and incremental guardrail checks. */
+  // eslint-disable-next-line max-lines-per-function, max-params -- streaming variant needs onToken, onGuardrail, signal callbacks alongside standard params
   async postMessageStream(
     sessionId: string,
     input: PostMessageInput,
@@ -545,43 +424,37 @@ export class ChatMessageService {
     const META_MARKER = '\n[META]';
 
     const onChunk = (chunk: string) => {
-      // Abort LLM stream when client disconnects (throws inside for-await loop)
       if (signal?.aborted) {
         throw new AppError({ message: 'Client disconnected', statusCode: 499, code: 'ABORTED' });
       }
 
       accumulated += chunk;
 
-      // Check if we've hit the [META] delimiter
       const metaIdx = accumulated.indexOf(META_MARKER);
       if (metaIdx !== -1) {
         if (!metaStarted) {
           metaStarted = true;
-          // Emit the answer-text portion of this chunk that falls before [META]
           const prevLen = accumulated.length - chunk.length;
           const answerPartLen = metaIdx - prevLen;
           if (answerPartLen > 0) {
             onToken(chunk.slice(0, answerPartLen));
           }
         }
-        // Don't emit chunks after [META] — it's metadata JSON
         return;
       }
 
-      // Run incremental guardrail every ~50 chars if art signal not yet seen
       if (!artSignalSeen && accumulated.length % 50 < chunk.length) {
-        const guardrail = evaluateAssistantOutputGuardrail({ text: accumulated, history });
-        if (guardrail.allow) {
+        const guardrailResult = this.guardrail.evaluateOutput({
+          text: accumulated,
+          history,
+          metadata: {},
+          requestedLocale,
+        });
+        if (guardrailResult.allowed) {
           artSignalSeen = true;
-        } else if (
-          accumulated.length > 100 && // Guardrail blocking — notify caller
-          onGuardrail &&
-          guardrail.reason
-        ) {
-          const refusalText = buildGuardrailRefusal(requestedLocale, guardrail.reason);
-          onGuardrail(refusalText, guardrail.reason);
+        } else if (accumulated.length > 100 && onGuardrail) {
+          onGuardrail(guardrailResult.text, 'unsafe_output');
         }
-        // Don't throw — let the stream complete so we can handle it in commitAssistantResponse
       }
 
       onToken(chunk);
@@ -617,16 +490,7 @@ export class ChatMessageService {
     );
   }
 
-  /**
-   * Transcribes an audio message to text, then delegates to {@link postMessage}.
-   *
-   * @param sessionId - UUID of the target chat session.
-   * @param input - Audio payload with base64 data, mime type, and size.
-   * @param requestId - Optional correlation id for tracing.
-   * @param currentUserId - Authenticated user id for ownership checks.
-   * @returns The assistant's reply plus the transcription details.
-   * @throws {AppError} 400 on invalid audio input, 404 if session not found.
-   */
+  /** Transcribes an audio message then delegates to postMessage for LLM processing. */
   async postAudioMessage(
     sessionId: string,
     input: PostAudioMessageInput,

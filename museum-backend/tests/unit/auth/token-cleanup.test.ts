@@ -11,6 +11,7 @@ const makeCacheService = (setNxResult = true) => ({
   del: jest.fn(),
   delByPrefix: jest.fn(),
   setNx: jest.fn().mockResolvedValue(setNxResult),
+  ping: jest.fn().mockResolvedValue(true),
 });
 
 describe('TokenCleanupService', () => {

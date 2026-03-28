@@ -1,0 +1,57 @@
+{
+  "version": "1.0",
+  "description": "Contexte technique partage du monorepo Musaium. Source unique pour les versions et structures.",
+  "monorepo": {
+    "backend": {
+      "dir": "museum-backend/",
+      "runtime": "Node.js 22",
+      "framework": "Express 5",
+      "orm": "TypeORM + PostgreSQL 16",
+      "packageManager": "pnpm",
+      "llm": "LangChain (OpenAI, Google GenAI, Deepseek)",
+      "tests": "Jest (ts-jest)",
+      "pathAliases": { "@src/*": "src/*", "@modules/*": "src/modules/*", "@shared/*": "src/shared/*", "@data/*": "src/data/*" },
+      "commands": {
+        "install": "pnpm install",
+        "dev": "pnpm dev",
+        "lint": "pnpm lint",
+        "test": "pnpm test",
+        "build": "pnpm build"
+      }
+    },
+    "frontend": {
+      "dir": "museum-frontend/",
+      "framework": "React Native 0.79",
+      "platform": "Expo 53 (managed workflow)",
+      "routing": "Expo Router (file-based)",
+      "packageManager": "npm",
+      "tests": "Node.js test runner (compile vers .test-dist/) + jest-expo (hooks/components)",
+      "pathAliases": { "@/*": "./*" },
+      "commands": {
+        "install": "npm install",
+        "dev": "npm run dev",
+        "lint": "npm run lint",
+        "test": "npm test",
+        "generateTypes": "npm run generate:openapi-types"
+      }
+    },
+    "web": {
+      "dir": "museum-web/",
+      "framework": "Next.js 15 (App Router)",
+      "rendering": "Server Components par defaut",
+      "i18n": "next-intl",
+      "tests": "Vitest",
+      "commands": {
+        "install": "pnpm install",
+        "dev": "pnpm dev",
+        "lint": "pnpm lint",
+        "test": "pnpm test",
+        "build": "pnpm build"
+      }
+    }
+  },
+  "knowledgeBase": {
+    "preamble": "AVANT de coder, lire: (1) error-patterns.json pour les patterns pertinents a ton scope, (2) prompt-enrichments.json pour les regles PE-* applicables, (3) appliquer les patterns connus AVANT de coder.",
+    "path": ".claude/team-knowledge/"
+  }
+}
