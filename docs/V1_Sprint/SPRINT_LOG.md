@@ -1774,3 +1774,55 @@ Shared mocks (test-utils.tsx): 17 module mocks (i18n, theme, router, safe-area, 
 2. **FlashList mock → FlatList** en tests — FlashList v2 depend de bindings natifs RecyclerView non disponibles en env Jest
 3. **paddingTop au lieu de marginTop** dans contentContainerStyle — FlashList ne supporte que padding dans contentContainerStyle
 4. **Exclusion onboarding.tsx** — FlatList horizontal paging, pattern different ou FlashList peut avoir des quirks
+
+---
+
+## Refactor R15 — God-File Decomposition Phases 4-5 (2026-03-28)
+
+**Scope**: Decomposition systematique des god-files > 500L identifies par audit Sentinelle (score 80/100).
+**Commits**: `fa71adc` (Phase 4), `ec7c573` (Phase 5)
+**Stats**: 29 fichiers crees, 10 modifies, net -546L (Phase 4) + -477L net reduction in god-files (Phase 5)
+
+### Resume executif
+
+Run /team R15-refactor en 2 phases. Phase 4 : extraction de 5 services backend du chat module (orchestrator -34%, message-service -20%). Phase 5 : decomposition des 2 god-routes frontend (-50% chacune), extraction S3 adapter (-20%), et 21 attributs accessibilite ajoutes. Zero regression, zero boucle corrective.
+
+### Phase 4 — Backend Service Decomposition (fa71adc)
+
+| Service extrait | Source | Lignes | Responsabilite |
+|----------------|--------|--------|----------------|
+| ImageProcessingService | chat-message.service.ts | 145L | Validation, decodage, stockage image, OCR guard |
+| GuardrailEvaluationService | chat-message.service.ts | 150L | Guardrail input/output + refusal handling |
+| LLMPromptBuilder | langchain.orchestrator.ts | 277L | Assemblage prompt systeme, sections, phases |
+| LLMCircuitBreaker | langchain.orchestrator.ts | 123L | Pattern resilience 3 etats (CLOSED/OPEN/HALF_OPEN) |
+| ChatSharedTypes | chat.contracts.ts | 39L | Types HTTP response partages |
+
+**Resultats** : orchestrator 801L → 529L (-34%), message-service 681L → 545L (-20%)
+
+### Phase 5 — Frontend + Backend Decomposition (ec7c573)
+
+| God-file | Avant | Apres | Delta | Extractions |
+|----------|-------|-------|-------|-------------|
+| conversations.tsx | 644L | 322L | -50% | 3 hooks + 2 components |
+| settings.tsx | 662L | 334L | -50% | 1 hook + 4 components |
+| image-storage.s3.ts | 720L | 575L | -20% | s3-signing + s3-path-utils |
+
+**A11y** : ImagePreviewModal (0 → 15 attributs), MessageActions (0 → 6 attributs) = 21 total
+
+### Metriques
+
+| Metrique | Avant | Apres | Delta |
+|----------|:-----:|:-----:|:-----:|
+| Tests backend | 1077 | 1077 | 0 |
+| Tests frontend | 99 | 99 | 0 |
+| Typecheck errors | 0 | 0 | 0 |
+| as any | 0 | 0 | 0 |
+| A11y attributes chat | ~29 | ~50 | +21 |
+| God-files > 500L | 5 | 2 | -3 |
+
+### Decisions techniques
+
+1. **Module-local extraction > shared/** pour S3 signing — YAGNI, pas de second consumer (recommandation Sentinelle)
+2. **StyleSheet reste avec le composant** — pas de shared styles entre routes et composants extraits
+3. **Type cast pour i18n keys manquantes** (`as 'common.close'`) — compile maintenant, cles ajoutees plus tard
+4. **image-storage.s3.ts a -20% (pas -50%)** — les fonctions restantes (presigned URL, batch ops, HTTP) sont fortement couplees

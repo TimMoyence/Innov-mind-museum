@@ -2,24 +2,24 @@
   "lastUpdated": "2026-03-28",
   "agents": {
     "Backend Architect": {
-      "totalRuns": 5, "averageScore": 9.3, "averageROI": 4.5, "verdict": "ESSENTIEL",
-      "strengths": ["Architecture coherente + 0 regression", "Zod validation + Redis rate-limit fallback", "AbortSignal pattern correct"],
+      "totalRuns": 6, "averageScore": 9.33, "averageROI": 4.5, "verdict": "ESSENTIEL",
+      "strengths": ["Architecture coherente + 0 regression", "Zod validation + Redis rate-limit fallback", "AbortSignal pattern correct", "R15: followed YAGNI directive, module-local extraction"],
       "weaknesses": ["R11: scope creep (FlashList, ReactCompiler outside mandate)", "R13: scope creep recidive (EP-014, reverted by Tech Lead)"],
       "specializations": {
         "new-module": {"runs": 2, "avgScore": 9.5, "avgROI": 4.8},
-        "refactor": {"runs": 1, "avgScore": 9.0, "avgROI": 4.0},
+        "refactor": {"runs": 2, "avgScore": 9.25, "avgROI": 4.25},
         "bug-fix": {"runs": 1, "avgScore": 9.5, "avgROI": 4.5},
         "audit": {"runs": 1, "avgScore": 9.0, "avgROI": 4.2}
       },
       "retired": false
     },
     "Frontend Architect": {
-      "totalRuns": 6, "averageScore": 8.75, "averageROI": 4.42, "verdict": "ESSENTIEL",
-      "strengths": ["Exhaustif 8 domaines + i18n", "Web research avec sources concretes", "10 gaps priorises avec roadmap"],
+      "totalRuns": 7, "averageScore": 8.79, "averageROI": 4.43, "verdict": "ESSENTIEL",
+      "strengths": ["Exhaustif 8 domaines + i18n", "Web research avec sources concretes", "10 gaps priorises avec roadmap", "R15: 10 files + 21 a11y attrs, scope compliance 100%"],
       "weaknesses": ["R11 scope creep — FlashList/ReactCompiler/tests outside mandate", "Auth types mismatch (F1)"],
       "specializations": {
         "new-module": {"runs": 2, "avgScore": 8.5, "avgROI": 4.2},
-        "refactor": {"runs": 2, "avgScore": 9.0, "avgROI": 4.5},
+        "refactor": {"runs": 3, "avgScore": 9.0, "avgROI": 4.5},
         "mobile-ux": {"runs": 1, "avgScore": 8.5, "avgROI": 4.0},
         "museum-web": {"runs": 1, "avgScore": 9.0, "avgROI": 4.5}
       },
@@ -68,10 +68,10 @@
       "retired": false
     },
     "Sentinelle": {
-      "totalRuns": 11, "averageScore": 9.35, "averageROI": 5.0, "verdict": "ESSENTIEL",
-      "strengths": ["Verification independante + cross-run learning", "EP escalade protocol + triage 3-tier", "R11 caught agent scope creep + fake KB entries"],
+      "totalRuns": 12, "averageScore": 9.36, "averageROI": 5.0, "verdict": "ESSENTIEL",
+      "strengths": ["Verification independante + cross-run learning", "EP escalade protocol + triage 3-tier", "R11 caught agent scope creep + fake KB entries", "R15: 5 substantive WARNs across 4 gates, YAGNI catch, percentage correction (MT-003 PASS)"],
       "specializations": {
-        "feature-gate": {"runs": 8, "avgScore": 9.5, "avgROI": 5.0},
+        "feature-gate": {"runs": 9, "avgScore": 9.5, "avgROI": 5.0},
         "audit-gate": {"runs": 3, "avgScore": 9.0, "avgROI": 4.5}
       },
       "weaknesses": ["R13 FINALIZE hallucination — fabricated 17 KB entries (EP-015)"],
