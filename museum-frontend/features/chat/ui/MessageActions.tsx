@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import type { ChatUiMessageMetadata } from '@/features/chat/application/useChatSession';
 import { FollowUpButtons } from '@/features/chat/ui/FollowUpButtons';
@@ -29,6 +30,7 @@ export const MessageActions = ({
   onRecommendationPress,
   isSendingDisabled,
 }: MessageActionsProps) => {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const [isDeeperContextExpanded, setIsDeeperContextExpanded] = useState(false);
 
@@ -55,10 +57,22 @@ export const MessageActions = ({
       ) : null}
 
       {metadata.deeperContext ? (
-        <View style={[styles.deeperContextWrap, { borderColor: theme.assistantBubbleBorder, backgroundColor: theme.glassBackground }]}>
+        <View
+          style={[
+            styles.deeperContextWrap,
+            { borderColor: theme.assistantBubbleBorder, backgroundColor: theme.glassBackground },
+          ]}
+        >
           <Pressable
             style={styles.deeperContextToggle}
-            onPress={() => { setIsDeeperContextExpanded((v) => !v); }}
+            onPress={() => {
+              setIsDeeperContextExpanded((v) => !v);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.chat.long_press_hint' as 'common.close', {
+              defaultValue: 'Toggle deeper context',
+            })}
+            accessibilityState={{ expanded: isDeeperContextExpanded }}
           >
             <Ionicons
               name={isDeeperContextExpanded ? 'chevron-up' : 'chevron-down'}
@@ -68,14 +82,23 @@ export const MessageActions = ({
             <Text style={[styles.deeperContextLabel, { color: theme.primary }]}>Learn more</Text>
           </Pressable>
           {isDeeperContextExpanded ? (
-            <Text style={[styles.deeperContextText, { color: theme.textSecondary }]}>{metadata.deeperContext}</Text>
+            <Text style={[styles.deeperContextText, { color: theme.textSecondary }]}>
+              {metadata.deeperContext}
+            </Text>
           ) : null}
         </View>
       ) : null}
 
       {metadata.openQuestion ? (
         <Pressable
-          style={[styles.openQuestionChip, { borderColor: theme.primaryBorderSubtle, backgroundColor: theme.primaryTint }, isSendingDisabled && styles.disabledChip]}
+          style={[
+            styles.openQuestionChip,
+            { borderColor: theme.primaryBorderSubtle, backgroundColor: theme.primaryTint },
+            isSendingDisabled && styles.disabledChip,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={metadata.openQuestion}
+          accessibilityHint={t('a11y.chat.recommendation_hint')}
           onPress={() => {
             if (!isSendingDisabled) {
               // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guarded by conditional render
@@ -84,8 +107,10 @@ export const MessageActions = ({
           }}
           disabled={isSendingDisabled}
         >
-          <Ionicons name='bulb-outline' size={14} color={theme.primary} />
-          <Text style={[styles.openQuestionText, { color: theme.primary }]} numberOfLines={2}>{metadata.openQuestion}</Text>
+          <Ionicons name="bulb-outline" size={14} color={theme.primary} />
+          <Text style={[styles.openQuestionText, { color: theme.primary }]} numberOfLines={2}>
+            {metadata.openQuestion}
+          </Text>
         </Pressable>
       ) : null}
     </View>

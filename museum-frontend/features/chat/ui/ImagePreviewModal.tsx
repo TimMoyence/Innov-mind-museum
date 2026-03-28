@@ -70,7 +70,12 @@ export const ImagePreviewModal = ({ imageUri, onConfirm, onCancel }: ImagePrevie
     <Modal visible animationType="fade" transparent statusBarTranslucent>
       <View style={styles.overlay}>
         <View style={styles.header}>
-          <Pressable onPress={onCancel} style={styles.headerButton}>
+          <Pressable
+            onPress={onCancel}
+            style={styles.headerButton}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
+          >
             <Ionicons name="close" size={24} color={theme.primaryContrast} />
           </Pressable>
           <Text style={[styles.headerTitle, { color: theme.primaryContrast }]}>
@@ -81,6 +86,9 @@ export const ImagePreviewModal = ({ imageUri, onConfirm, onCancel }: ImagePrevie
               onPress={() => void handleCrop()}
               style={styles.headerButton}
               disabled={isProcessing}
+              accessibilityRole="button"
+              accessibilityLabel={t('imagePreview.crop' as 'common.close')}
+              accessibilityState={{ disabled: isProcessing }}
             >
               <Ionicons
                 name="crop-outline"
@@ -92,6 +100,9 @@ export const ImagePreviewModal = ({ imageUri, onConfirm, onCancel }: ImagePrevie
               onPress={() => void handleRotate()}
               style={styles.headerButton}
               disabled={isProcessing}
+              accessibilityRole="button"
+              accessibilityLabel={t('imagePreview.rotate' as 'common.close')}
+              accessibilityState={{ disabled: isProcessing }}
             >
               <Ionicons
                 name="refresh-outline"
@@ -107,6 +118,8 @@ export const ImagePreviewModal = ({ imageUri, onConfirm, onCancel }: ImagePrevie
             source={{ uri: currentUri ?? undefined }}
             style={styles.image}
             resizeMode="contain"
+            accessibilityLabel={t('imagePreview.title')}
+            accessibilityRole="image"
           />
         </View>
 
@@ -114,6 +127,8 @@ export const ImagePreviewModal = ({ imageUri, onConfirm, onCancel }: ImagePrevie
           <Pressable
             onPress={onCancel}
             style={[styles.cancelButton, { borderColor: theme.glassBorder }]}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.cancel')}
           >
             <Text style={[styles.cancelText, { color: theme.primaryContrast }]}>
               {t('common.cancel')}
@@ -123,6 +138,9 @@ export const ImagePreviewModal = ({ imageUri, onConfirm, onCancel }: ImagePrevie
             onPress={handleConfirm}
             style={[styles.confirmButton, { backgroundColor: theme.primary }]}
             disabled={isProcessing}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.send')}
+            accessibilityState={{ disabled: isProcessing }}
           >
             <Ionicons name="send" size={18} color={theme.primaryContrast} />
             <Text style={[styles.confirmText, { color: theme.primaryContrast }]}>
