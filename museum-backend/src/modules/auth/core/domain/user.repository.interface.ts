@@ -128,4 +128,11 @@ export interface IUserRepository {
    * @returns The updated user, or `null` if the token is invalid or expired.
    */
   consumeEmailChangeToken(hashedToken: string): Promise<User | null>;
+
+  /**
+   * Mark the user's onboarding as completed.
+   *
+   * @param userId - The user's ID.
+   */
+  markOnboardingCompleted(userId: number): Promise<void>;
 }

@@ -12,6 +12,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAuth } from '@/context/AuthContext';
 import { useOnboarding } from '@/features/onboarding/application/useOnboarding';
 import { OnboardingSlide, type SlideData } from '@/features/onboarding/ui/OnboardingSlide';
 import { StepIndicator } from '@/features/onboarding/ui/StepIndicator';
@@ -63,7 +64,8 @@ export default function OnboardingScreen() {
   ];
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList<SlideData>>(null);
-  const { currentStep, goToStep, next, isLast, completeOnboarding } = useOnboarding(slides.length);
+  const { markOnboardingComplete } = useAuth();
+  const { currentStep, goToStep, next, isLast } = useOnboarding(slides.length);
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -77,25 +79,35 @@ export default function OnboardingScreen() {
   // eslint-disable-next-line react-hooks/refs -- stable config ref pattern
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
-  const handleNext = useCallback(() => {
+  const handleNext = useCallback(async () => {
     if (isLast) {
-      void completeOnboarding();
+      await markOnboardingComplete();
       router.replace('/(tabs)/home');
       return;
     }
     next();
     flatListRef.current?.scrollToIndex({ index: currentStep + 1, animated: true });
-  }, [isLast, next, currentStep, completeOnboarding]);
+  }, [isLast, next, currentStep, markOnboardingComplete]);
 
-  const handleSkip = useCallback(() => {
-    void completeOnboarding();
+  const handleSkip = useCallback(async () => {
+    await markOnboardingComplete();
     router.replace('/(tabs)/home');
-  }, [completeOnboarding]);
+  }, [markOnboardingComplete]);
 
   return (
-    <LiquidScreen background={pickMuseumBackground(3)} contentStyle={[styles.screen, { paddingTop: insets.top + 16 }]}>
-      <Pressable onPress={handleSkip} style={styles.skipButton} accessibilityRole="button" accessibilityLabel={t('a11y.onboarding.skip')}>
-        <Text style={[styles.skipText, { color: theme.placeholderText }]}>{t('onboarding.skip')}</Text>
+    <LiquidScreen
+      background={pickMuseumBackground(3)}
+      contentStyle={[styles.screen, { paddingTop: insets.top + 16 }]}
+    >
+      <Pressable
+        onPress={handleSkip}
+        style={styles.skipButton}
+        accessibilityRole="button"
+        accessibilityLabel={t('a11y.onboarding.skip')}
+      >
+        <Text style={[styles.skipText, { color: theme.placeholderText }]}>
+          {t('onboarding.skip')}
+        </Text>
       </Pressable>
 
       <FlatList
@@ -121,7 +133,12 @@ export default function OnboardingScreen() {
       <StepIndicator totalSteps={slides.length} currentStep={currentStep} />
 
       <View style={styles.footer}>
-        <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={handleNext} accessibilityRole="button" accessibilityLabel={isLast ? t('a11y.onboarding.get_started') : t('a11y.onboarding.next')}>
+        <Pressable
+          style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+          onPress={handleNext}
+          accessibilityRole="button"
+          accessibilityLabel={isLast ? t('a11y.onboarding.get_started') : t('a11y.onboarding.next')}
+        >
           <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
             {isLast ? t('onboarding.get_started') : t('onboarding.next')}
           </Text>

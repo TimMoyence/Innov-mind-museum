@@ -215,6 +215,11 @@ export class UserRepositoryPg implements IUserRepository {
     return result.rows[0] ?? null;
   }
 
+  /** Marks a user's onboarding as completed. */
+  async markOnboardingCompleted(userId: number): Promise<void> {
+    await pool.query(`UPDATE "users" SET onboarding_completed = true WHERE id = $1`, [userId]);
+  }
+
   /**
    * Deletes a user and all related data (sessions, tokens, social accounts) in a transaction.
    *

@@ -92,6 +92,7 @@ describe('S2-22: JWT PII strip', () => {
       lastname: 'Doe',
       role: 'visitor',
       museumId: null,
+      onboardingCompleted: false,
     });
   });
 });

@@ -1,22 +1,20 @@
-import type {
-  ReactNode} from "react";
-import type React from "react";
-import {
-  createContext,
-  useCallback,
-  useState,
-  useContext,
-  useEffect
-} from "react";
-import { router } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import * as Sentry from "@sentry/react-native";
+import type { ReactNode } from 'react';
+import type React from 'react';
+import { createContext, useCallback, useState, useContext, useEffect } from 'react';
+import { router } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import * as Sentry from '@sentry/react-native';
 
-import { authService } from "@/features/auth/infrastructure/authApi";
-import { clearAccessToken, setAccessToken, getAccessToken, authStorage } from "@/features/auth/infrastructure/authTokenStore";
-import { getBiometricEnabled } from "@/features/auth/infrastructure/biometricStore";
-import { AUTH_ROUTE } from "@/features/auth/routes";
-import { reportError } from "@/shared/observability/errorReporting";
+import { authService } from '@/features/auth/infrastructure/authApi';
+import {
+  clearAccessToken,
+  setAccessToken,
+  getAccessToken,
+  authStorage,
+} from '@/features/auth/infrastructure/authTokenStore';
+import { getBiometricEnabled } from '@/features/auth/infrastructure/biometricStore';
+import { AUTH_ROUTE } from '@/features/auth/routes';
+import { reportError } from '@/shared/observability/errorReporting';
 
 import { extractUserIdFromToken } from './authLogic.pure';
 
@@ -29,15 +27,18 @@ import {
   setAuthRefreshHandler,
   setTokenProvider,
   setUnauthorizedHandler,
-} from "@/shared/infrastructure/httpClient";
+} from '@/shared/infrastructure/httpClient';
 
 // Prevent the splash screen from auto-hiding
-SplashScreen.preventAutoHideAsync().catch(() => { /* fire-and-forget */
+SplashScreen.preventAutoHideAsync().catch(() => {
+  /* fire-and-forget */
 });
 
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
+  isFirstLaunch: boolean | null;
+  markOnboardingComplete: () => Promise<void>;
   logout: () => Promise<void>;
   checkTokenValidity: () => Promise<boolean>;
   setIsAuthenticated: React.Dispatch<React.SetStateAction<boolean>>;
@@ -55,9 +56,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error(
-      "useAuth must be used inside an AuthProvider"
-    );
+    throw new Error('useAuth must be used inside an AuthProvider');
   }
   return context;
 };
@@ -67,6 +66,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isBiometricLocked, setIsBiometricLocked] = useState(false);
+  const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
+
+  const markOnboardingComplete = useCallback(async () => {
+    await authService.completeOnboarding();
+    setIsFirstLaunch(false);
+  }, []);
 
   // Check authentication on startup
   useEffect(() => {
@@ -75,12 +80,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const refreshToken = await authStorage.getRefreshToken();
         if (!refreshToken) {
           setIsAuthenticated(false);
+          setIsFirstLaunch(true);
           clearAccessToken();
         } else {
           const session = await authService.refresh(refreshToken);
           await authStorage.setRefreshToken(session.refreshToken);
           setAccessToken(session.accessToken);
           setIsAuthenticated(true);
+          setIsFirstLaunch(!session.user.onboardingCompleted);
           identifySentryUser(session.accessToken);
           const biometricOn = await getBiometricEnabled();
           if (biometricOn) {
@@ -91,6 +98,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await authStorage.clearRefreshToken().catch(() => undefined);
         clearAccessToken();
         setIsAuthenticated(false);
+        setIsFirstLaunch(true);
         Sentry.setUser(null);
         reportError(error, { context: 'auth_bootstrap' });
       } finally {
@@ -120,6 +128,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await authStorage.setRefreshToken(session.refreshToken);
         setAccessToken(session.accessToken);
         setIsAuthenticated(true);
+        setIsFirstLaunch(!session.user.onboardingCompleted);
         identifySentryUser(session.accessToken);
         return session.accessToken;
       } catch {
@@ -187,6 +196,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await authStorage.setRefreshToken(session.refreshToken);
       setAccessToken(session.accessToken);
       setIsAuthenticated(true);
+      setIsFirstLaunch(!session.user.onboardingCompleted);
       identifySentryUser(session.accessToken);
       return true;
     } catch (error) {
@@ -200,6 +210,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       value={{
         isAuthenticated,
         isLoading,
+        isFirstLaunch,
+        markOnboardingComplete,
         logout,
         checkTokenValidity,
         setIsAuthenticated,

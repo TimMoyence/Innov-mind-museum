@@ -107,6 +107,11 @@ if (env.featureFlags.apiKeys) {
   });
 }
 
+/** Marks the user's onboarding as completed in the database. */
+const completeOnboarding = async (userId: number): Promise<void> => {
+  await userRepository.markOnboardingCompleted(userId);
+};
+
 export {
   registerUseCase,
   forgotPasswordUseCase,
@@ -123,4 +128,5 @@ export {
   generateApiKeyUseCase,
   revokeApiKeyUseCase,
   listApiKeysUseCase,
+  completeOnboarding,
 };

@@ -18,6 +18,7 @@ import {
   AUDIT_SECURITY_RATE_LIMIT,
   AUDIT_AUTH_EMAIL_CHANGE_REQUEST,
   AUDIT_AUTH_EMAIL_CHANGE_CONFIRMED,
+  AUDIT_AUTH_ONBOARDING_COMPLETED,
 } from '@shared/audit/audit.types';
 import { AppError, badRequest } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
@@ -62,6 +63,7 @@ import {
   generateApiKeyUseCase,
   revokeApiKeyUseCase,
   listApiKeysUseCase,
+  completeOnboarding,
 } from '../../../core/useCase';
 
 /**
@@ -472,6 +474,34 @@ authRouter.post(
         requestId: req.requestId,
       });
       res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+authRouter.patch(
+  '/onboarding-complete',
+  isAuthenticated,
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const jwtUser = (req as Request & { user?: { id: number } }).user;
+    if (!jwtUser?.id) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
+      return;
+    }
+
+    try {
+      await completeOnboarding(jwtUser.id);
+      auditService.log({
+        action: AUDIT_AUTH_ONBOARDING_COMPLETED,
+        actorType: 'user',
+        actorId: jwtUser.id,
+        targetType: 'user',
+        targetId: String(jwtUser.id),
+        ip: req.ip,
+        requestId: req.requestId,
+      });
+      res.status(204).end();
     } catch (error) {
       next(error);
     }

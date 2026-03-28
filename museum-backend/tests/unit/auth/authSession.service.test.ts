@@ -79,6 +79,7 @@ const makeMockRepos = () => {
     verifyEmail: jest.fn(),
     setEmailChangeToken: jest.fn(),
     consumeEmailChangeToken: jest.fn(),
+    markOnboardingCompleted: jest.fn().mockResolvedValue(undefined),
   };
 
   const refreshTokenRepo: jest.Mocked<IRefreshTokenRepository> = {
@@ -140,7 +141,21 @@ describe('AuthSessionService', () => {
       expect(result.user.id).toBe(1);
       expect(result.user.email).toBe('user@test.com');
       expect(result.user.role).toBe('visitor');
+      expect(result.user.onboardingCompleted).toBe(false);
       expect(mockClearLoginAttempts).toHaveBeenCalledWith('user@test.com');
+    });
+
+    it('returns onboardingCompleted=true when user has completed onboarding', async () => {
+      const { userRepo, refreshTokenRepo } = makeMockRepos();
+      const hashed = await bcrypt.hash('ValidPass1', 4);
+      userRepo.getUserByEmail.mockResolvedValue(
+        makeUser({ password: hashed, onboarding_completed: true }),
+      );
+
+      const service = new AuthSessionService(userRepo, refreshTokenRepo);
+      const result = await service.login('user@test.com', 'ValidPass1');
+
+      expect(result.user.onboardingCompleted).toBe(true);
     });
 
     it('calls clearLoginAttempts after successful login', async () => {
@@ -282,6 +297,7 @@ describe('AuthSessionService', () => {
       expect(result.accessToken).toBeDefined();
       expect(result.refreshToken).toBeDefined();
       expect(result.user.id).toBe(1);
+      expect(result.user.onboardingCompleted).toBe(false);
       // Should have called rotate (since we have a rotateFrom)
       expect(refreshTokenRepo.rotate).toHaveBeenCalledWith(
         expect.objectContaining({

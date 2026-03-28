@@ -1,18 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCallback, useState } from 'react';
 
-const ONBOARDING_COMPLETE_KEY = 'onboarding.complete';
-
-/** Hook that manages onboarding step progression and first-launch detection. */
+/** Hook that manages onboarding step progression. */
 export const useOnboarding = (totalSteps: number) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY)
-      .then((value) => { setIsFirstLaunch(value !== 'true'); })
-      .catch(() => { setIsFirstLaunch(true); });
-  }, []);
 
   const goToStep = useCallback(
     (step: number) => {
@@ -33,10 +23,5 @@ export const useOnboarding = (totalSteps: number) => {
 
   const isLast = currentStep === totalSteps - 1;
 
-  const completeOnboarding = useCallback(async () => {
-    await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
-    setIsFirstLaunch(false);
-  }, []);
-
-  return { currentStep, goToStep, next, prev, isLast, isFirstLaunch, completeOnboarding };
+  return { currentStep, goToStep, next, prev, isLast };
 };

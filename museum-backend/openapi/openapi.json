@@ -63,7 +63,7 @@
       },
       "AuthUser": {
         "type": "object",
-        "required": ["id", "email", "role"],
+        "required": ["id", "email", "role", "onboardingCompleted"],
         "properties": {
           "id": { "type": "integer" },
           "email": { "type": "string", "format": "email" },
@@ -73,6 +73,10 @@
             "type": "string",
             "enum": ["visitor", "moderator", "museum_manager", "admin"],
             "description": "User role for RBAC"
+          },
+          "onboardingCompleted": {
+            "type": "boolean",
+            "description": "Whether the user has completed the onboarding flow"
           }
         }
       },
@@ -984,6 +988,18 @@
             }
           },
           "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/auth/onboarding-complete": {
+      "patch": {
+        "tags": ["Auth"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "204": {
+            "description": "Onboarding marked as completed"
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },

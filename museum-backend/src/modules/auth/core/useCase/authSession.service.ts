@@ -22,6 +22,7 @@ interface SafeUser {
   lastname?: string | null;
   role: UserRole;
   museumId?: number | null;
+  onboardingCompleted: boolean;
 }
 
 interface AccessTokenClaims extends JwtPayload {
@@ -103,6 +104,7 @@ const sanitizeUser = (user: Record<string, unknown>): SafeUser => {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: role may be undefined at runtime from raw DB row
     role: (user.role as UserRole) || 'visitor',
     museumId: resolveMuseumId(user),
+    onboardingCompleted: user.onboarding_completed === true,
   };
 };
 
