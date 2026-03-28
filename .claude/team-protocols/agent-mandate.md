@@ -19,6 +19,31 @@
 - Les tests existants ne doivent pas casser
 - [Recommandations Sentinelle actives a respecter]
 
+### SCOPE BOUNDARY (whitelist obligatoire)
+
+L'agent est autorise a modifier UNIQUEMENT les fichiers listes ci-dessous. Tout fichier hors-liste = STOP + Discovery.
+
+**Fichiers autorises** :
+[Tech Lead renseigne la liste ici au moment du mandat]
+
+**Modules en scope** :
+[Tech Lead renseigne ici]
+
+> Si tu veux modifier un fichier non liste : STOP, signale-le comme Discovery. Le Tech Lead decidera.
+
+### YOUR TRACK RECORD (auto-peuple par le Tech Lead)
+
+Le Tech Lead injecte ici tes metriques depuis `agent-performance.json`:
+
+- **Score moyen** : [X.X/10 sur N runs]
+- **ROI** : [X.X/5.0]
+- **Faiblesses passees** :
+  [Liste des weaknessHistory entries — ex: "R11: scope creep (FlashList outside mandate)"]
+- **Points forts** :
+  [Liste des strengths]
+
+> Tu DOIS porter une attention particuliere a tes faiblesses passees. Si une faiblesse est "scope creep", verifie DOUBLEMENT ta whitelist avant chaque Edit.
+
 ### Patterns connus (injection KB automatique)
 [Auto-filtres depuis error-patterns.json et prompt-enrichments.json par le Tech Lead]
 - [EP-XXX] [pattern] → fix: [fix connu]

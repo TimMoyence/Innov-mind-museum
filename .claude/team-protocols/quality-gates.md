@@ -1,5 +1,25 @@
 # Quality Gates — Verification Pipeline & Pre-flight
 
+## Lint + Prettier — 3 Checkpoints
+
+### Checkpoint 1 — Agent Mandate
+Chaque agent DEV doit linter ses fichiers modifies avant soumission. Instruction explicite dans le mandat:
+"Apres chaque Edit/Write: `npx prettier --write {file} && npx eslint --fix {file}`"
+
+### Checkpoint 2 — Chaque Gate
+Pre-check a chaque gate: `eslint --quiet $(git diff --name-only)`.
+Si erreurs lint → FAIL avant meme le typecheck.
+
+### Checkpoint 3 — Phase 5 CLEANUP
+Batch final sur TOUS les fichiers modifies du run:
+```bash
+git diff --name-only HEAD~1 -- '*.ts' '*.tsx' | xargs npx prettier --write
+git diff --name-only HEAD~1 -- '*.ts' '*.tsx' | xargs npx eslint --fix
+```
+Filet de securite si un hook a rate pendant le DEV.
+
+---
+
 ## Quality Gates Non Negociables
 
 Ces criteres causent un **FAIL automatique** a n'importe quelle porte post-DEV :

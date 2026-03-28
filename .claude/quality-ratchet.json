@@ -1,10 +1,12 @@
 {
-  "lastUpdated": "2026-03-27",
-  "testCount": 1067,
+  "lastUpdated": "2026-03-28",
+  "testCount": 1077,
+  "frontendTestCount": 99,
+  "webTestCount": 71,
   "typecheckErrors": 0,
   "asAnyCount": 0,
   "coverageStatements": 52.45,
-  "coverageBranches": 0,
+  "coverageBranches": 51,
   "lintErrors": 0,
-  "_comment": "Baseline from R13 metrics. Updated automatically by ratchet-check.sh (write-on-improve)."
+  "_comment": "Baseline from R13 metrics. Updated automatically by ratchet-check.sh (write-on-improve). Extended with frontend/web test counts in Sprint 4."
 }

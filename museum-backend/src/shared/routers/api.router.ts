@@ -7,9 +7,11 @@ import { getArtKeywordRepository } from '@modules/chat/index';
 import museumRouter from '@modules/museum/adapters/primary/http/museum.route';
 import reviewRouter from '@modules/review/adapters/primary/http/review.route';
 import supportRouter from '@modules/support/adapters/primary/http/support.route';
+import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { env } from '@src/config/env';
 
 import type { ChatService } from '@modules/chat/application/chat.service';
+import type { CacheService } from '@shared/cache/cache.port';
 import type { FeatureFlagService } from '@shared/feature-flags/feature-flags.port';
 
 /** Dependencies required to build the top-level API router. */
@@ -17,6 +19,7 @@ export interface ApiRouterDeps {
   chatService: ChatService;
   healthCheck: () => Promise<{ database: 'up' | 'down' }>;
   featureFlagService: FeatureFlagService;
+  cacheService?: CacheService;
 }
 
 /** Shape of the JSON response returned by the GET /api/health endpoint. */
@@ -25,6 +28,7 @@ export interface HealthPayload {
   checks: {
     database: 'up' | 'down';
     llmConfigured: boolean;
+    redis?: 'up' | 'down' | 'skipped';
   };
   environment: string;
   version: string;
@@ -60,16 +64,20 @@ const resolveCommitSha = (): string | undefined => {
  * @param params - Database status and LLM configuration flag.
  * @param params.checks - Health check results.
  * @param params.checks.database - Database connectivity status.
+ * @param params.checks.redis - Optional Redis connectivity status.
  * @param params.llmConfigured - Whether at least one LLM provider is configured.
  * @returns Structured health payload with version and timestamp.
  */
 export const buildHealthPayload = (params: {
-  checks: { database: 'up' | 'down' };
+  checks: { database: 'up' | 'down'; redis?: 'up' | 'down' | 'skipped' };
   llmConfigured: boolean;
 }): HealthPayload => {
-  const ok = params.checks.database === 'up';
+  const dbUp = params.checks.database === 'up';
+  const redisDown = params.checks.redis === 'down';
+  const degraded = !dbUp || redisDown;
+
   const payload: HealthPayload = {
-    status: ok ? 'ok' : 'degraded',
+    status: degraded ? 'degraded' : 'ok',
     checks: {
       database: params.checks.database,
       llmConfigured: params.llmConfigured,
@@ -78,6 +86,10 @@ export const buildHealthPayload = (params: {
     version: resolveAppVersion(),
     timestamp: new Date().toISOString(),
   };
+
+  if (params.checks.redis !== undefined) {
+    payload.checks.redis = params.checks.redis;
+  }
 
   const commitSha = resolveCommitSha();
   if (commitSha) {
@@ -94,21 +106,42 @@ export const buildHealthPayload = (params: {
  * @param root0.chatService - Chat service instance for the chat sub-router.
  * @param root0.healthCheck - Async function returning database health status.
  * @param root0.featureFlagService - Feature flag service for route-level gating.
+ * @param root0.cacheService - Optional cache service for health check and route-level caching.
  * @returns Configured Express Router.
  */
 export const createApiRouter = ({
   chatService,
   healthCheck,
   featureFlagService,
+  cacheService,
 }: ApiRouterDeps): Router => {
   // featureFlagService available for route-level gating (S3-10 OCR, S3-16 API Keys)
+  // eslint-disable-next-line sonarjs/void-use -- intentional no-op to suppress unused param warning
   void featureFlagService;
   const router = Router();
+
+  const REDIS_PING_TIMEOUT_MS = 2_000;
 
   router.get('/health', async (_req, res) => {
     res.set('Cache-Control', 'public, max-age=10, s-maxage=10');
     const start = Date.now();
-    const checks = await healthCheck();
+
+    const isNoop = !cacheService || cacheService instanceof NoopCacheService;
+
+    const [dbChecks, redisStatus] = await Promise.all([
+      healthCheck(),
+      isNoop
+        ? Promise.resolve('skipped' as const)
+        : Promise.race([
+            cacheService.ping().then((ok) => (ok ? ('up' as const) : ('down' as const))),
+            new Promise<'down'>((resolve) =>
+              setTimeout(() => {
+                resolve('down');
+              }, REDIS_PING_TIMEOUT_MS),
+            ),
+          ]).catch(() => 'down' as const),
+    ]);
+
     const responseTimeMs = Date.now() - start;
     const llmConfigured =
       (env.llm.provider === 'openai' && !!env.llm.openAiApiKey) ||
@@ -116,12 +149,13 @@ export const createApiRouter = ({
       (env.llm.provider === 'google' && !!env.llm.googleApiKey);
 
     const payload = buildHealthPayload({
-      checks,
+      checks: { database: dbChecks.database, redis: redisStatus },
       llmConfigured,
     });
     payload.responseTimeMs = responseTimeMs;
 
-    res.status(payload.status === 'ok' ? 200 : 503).json(payload);
+    const httpStatus = dbChecks.database === 'down' ? 503 : 200;
+    res.status(httpStatus).json(payload);
   });
 
   router.use('/chat', createChatRouter(chatService, getArtKeywordRepository()));

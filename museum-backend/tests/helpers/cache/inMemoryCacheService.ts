@@ -40,7 +40,14 @@ export class InMemoryCacheService implements CacheService {
     return true;
   }
 
-  /** Test helper: check if a key exists. */
+  async ping(): Promise<boolean> {
+    return true;
+  }
+
+  /**
+   * Test helper: check if a key exists.
+   * @param key
+   */
   has(key: string): boolean {
     return this.store.has(key);
   }

@@ -21,4 +21,7 @@ export interface CacheService {
   /** Set a key only if it does not already exist (distributed lock pattern). Returns true if set. */
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
   setNx<T>(key: string, value: T, ttlSeconds: number): Promise<boolean>;
+
+  /** Check if the cache backend is reachable. Returns true if healthy. */
+  ping(): Promise<boolean>;
 }

@@ -142,7 +142,7 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   const chatService = options.chatService ?? buildChatService(AppDataSource, cacheService);
   const healthCheck = options.healthCheck ?? createHealthCheck;
 
-  app.use('/api', createApiRouter({ chatService, healthCheck, featureFlagService }));
+  app.use('/api', createApiRouter({ chatService, healthCheck, featureFlagService, cacheService }));
 
   setupSentryExpressErrorHandler(app);
   app.use(errorHandler);

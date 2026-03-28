@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-03-26",
+  "lastUpdated": "2026-03-28",
   "amendments": [
     {
       "id": "AM-002",
@@ -31,7 +31,8 @@
       "type": "MAJOR",
       "date": "2026-03-25",
       "target": "SHIP gate",
-      "status": "PROPOSED",
+      "status": "APPLIED",
+      "appliedDate": "2026-03-28",
       "change": "Sprint tracking VERIFIED dans SHIP gate — Sentinelle verifie via grep que les items sont coches",
       "monitoringRuns": ["R11", "R12"],
       "monitoringCriteria": "PROGRESS_TRACKER et SPRINT_LOG a jour a chaque SHIP gate"
@@ -42,7 +43,8 @@
       "type": "MINOR",
       "date": "2026-03-25",
       "target": "SKILL.md INSTITUTIONAL LEARNING",
-      "status": "PROPOSED",
+      "status": "APPLIED",
+      "appliedDate": "2026-03-28",
       "change": "Ajouter IL-7 (feature existence check) et IL-8 (KB FINALIZE mandatory) dans le SKILL",
       "monitoringRuns": ["R11", "R12"],
       "monitoringCriteria": "Regles respectees dans les runs suivants"
@@ -53,7 +55,8 @@
       "type": "MINOR",
       "date": "2026-03-25",
       "target": "frontend-architect.md, devops-engineer.md, code-reviewer.md",
-      "status": "PROPOSED",
+      "status": "APPLIED",
+      "appliedDate": "2026-03-28",
       "change": "Ajouter sections museum-web dans 3 agents (Frontend Architect, DevOps, Code Reviewer)",
       "monitoringRuns": ["R11", "R12"],
       "monitoringCriteria": "Agents connaissent museum-web dans les mandats W3+"

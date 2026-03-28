@@ -1,0 +1,30 @@
+{
+  "version": "1.0",
+  "description": "Error Budget Gate — double dimension: code quality + process health. Evalue au pre-flight et au FINALIZE.",
+  "dimensions": {
+    "codeQuality": {
+      "description": "Si le code n'est pas sain, les features sont bloquees.",
+      "checks": [
+        {"id": "EB-CQ-001", "rule": "tsc --noEmit = 0 errors (backend + frontend)", "action": "BLOCK features, force mode bug"},
+        {"id": "EB-CQ-002", "rule": "Pas de regression ratchet (tests, as-any, coverage)", "action": "BLOCK features, force mode bug"},
+        {"id": "EB-CQ-003", "rule": "eslint --quiet sur fichiers modifies = 0 errors", "action": "BLOCK avancement, fix d'abord"}
+      ],
+      "trigger": "Pre-flight (Step 6 du SKILL.md)"
+    },
+    "processHealth": {
+      "description": "Si le process accumule trop de dette, les features sont bloquees.",
+      "thresholds": {
+        "maxNewEPPerRun": 2,
+        "maxUnverifiedFixes": 3,
+        "maxOpenPatterns": 3
+      },
+      "checks": [
+        {"id": "EB-PH-001", "rule": "Nouveaux EP dans ce run <= 2", "action": "WARN si 2, FAIL si 3+"},
+        {"id": "EB-PH-002", "rule": "Fixes non verifiees <= 3", "action": "WARN si 3, FAIL si 4+"},
+        {"id": "EB-PH-003", "rule": "Patterns ouverts <= 3", "action": "WARN si 3, FAIL si 4+"}
+      ],
+      "trigger": "FINALIZE (Sentinelle verifie error-patterns.json)"
+    }
+  },
+  "enforcement": "Si code quality FAIL → mode force 'bug'. Si process health FAIL → recommandation bloquante pour le prochain run."
+}

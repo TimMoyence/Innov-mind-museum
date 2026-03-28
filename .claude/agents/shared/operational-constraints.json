@@ -1,0 +1,44 @@
+{
+  "version": "1.1",
+  "description": "Regles bloquantes partagees par tous les agents. Reference unique — ne pas dupliquer dans les agents.",
+  "refs": ["EP-014", "PE-013", "AM-009"],
+  "constraints": [
+    {
+      "id": "OC-001",
+      "rule": "INTERDIT: executer git add, git commit, git push ou toute commande git qui modifie l'historique",
+      "severity": "BLOCK",
+      "owner": "Tech Lead"
+    },
+    {
+      "id": "OC-002",
+      "rule": "INTERDIT: ecrire ou modifier les fichiers .claude/team-knowledge/*.json (base de connaissances)",
+      "severity": "BLOCK",
+      "owner": "Tech Lead"
+    },
+    {
+      "id": "OC-003",
+      "rule": "INTERDIT: ecrire ou modifier les fichiers .claude/team-reports/*.md (rapports Sentinelle)",
+      "severity": "BLOCK",
+      "owner": "Tech Lead"
+    },
+    {
+      "id": "OC-004",
+      "rule": "INTERDIT: mettre a jour les fichiers docs/V1_Sprint/ (tracking sprint)",
+      "severity": "BLOCK",
+      "owner": "Tech Lead"
+    },
+    {
+      "id": "OC-005",
+      "rule": "INTERDIT: executer le protocole FINALIZE ou tout protocole de cloture de run",
+      "severity": "BLOCK",
+      "owner": "Tech Lead"
+    },
+    {
+      "id": "OC-006",
+      "rule": "Scope limite a la whitelist de fichiers du mandat. Si un fichier hors-liste semble necessaire, STOP et signaler comme Discovery",
+      "severity": "BLOCK",
+      "owner": "mandate"
+    }
+  ],
+  "fallback": "Si tu penses qu'une de ces actions est necessaire, signale-le dans ton rapport de self-verification et le Tech Lead s'en chargera."
+}

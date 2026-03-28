@@ -44,14 +44,8 @@ export const useChatSession = (sessionId: string) => {
     setMessages,
   );
 
-  const {
-    streamTextRef,
-    streamingIdRef,
-    updateTimerRef,
-    flushStreamText,
-    scheduleFlush,
-    resetStreaming,
-  } = useStreamingState(setMessages);
+  const { streamTextRef, streamingIdRef, flushStreamText, scheduleFlush, resetStreaming } =
+    useStreamingState(setMessages);
 
   useOfflineSync({
     sessionId,
