@@ -34,6 +34,17 @@ fi
 
 cat "$ENV_LOCAL"
 
+# Set build number from Xcode Cloud's auto-incrementing CI_BUILD_NUMBER.
+# Without this, CFBundleVersion stays "1" (hardcoded in Info.plist) and
+# App Store Connect silently rejects duplicate uploads → nothing on TestFlight.
+if [ -n "$CI_BUILD_NUMBER" ]; then
+  cd "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios"
+  agvtool new-version -all "$CI_BUILD_NUMBER"
+  echo "Set CFBundleVersion (build number) to $CI_BUILD_NUMBER"
+else
+  echo "WARNING: CI_BUILD_NUMBER not set — build number unchanged"
+fi
+
 # Patch expo-configure-project.sh — pod install embeds absolute paths
 # from the dev machine, which break on Xcode Cloud. Replace with $PODS_ROOT.
 EXPO_SCRIPT="$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios/Pods/Target Support Files/Pods-Musaium/expo-configure-project.sh"
