@@ -117,14 +117,16 @@ describe('withDbRetry', () => {
     const transient = pgError('40P01', 'deadlock');
     const fn = jest.fn().mockRejectedValue(transient);
 
-    // Run in microtask so fake timers can advance
-    const promise = withDbRetry(fn, { maxRetries: 2, baseDelayMs: 10 });
+    // Attach rejection handler immediately so the promise doesn't cause
+    // unhandled rejection warnings while fake timers advance.
+    const promise = withDbRetry(fn, { maxRetries: 2, baseDelayMs: 10 }).catch((e: Error) => e);
 
-    // Advance through the retry delays
-    await jest.advanceTimersByTimeAsync(10); // attempt 0 delay: 10 * 2^0 = 10
-    await jest.advanceTimersByTimeAsync(20); // attempt 1 delay: 10 * 2^1 = 20
+    // Drain all pending timers (retry sleeps)
+    await jest.runAllTimersAsync();
 
-    await expect(promise).rejects.toThrow('deadlock');
+    const result = await promise;
+    expect(result).toBeInstanceOf(Error);
+    expect((result as Error).message).toBe('deadlock');
     // 1 initial + 2 retries = 3
     expect(fn).toHaveBeenCalledTimes(3);
   });
