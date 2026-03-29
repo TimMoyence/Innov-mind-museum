@@ -54,7 +54,7 @@ services:
     volumes:
       - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
       - ./pgbouncer/entrypoint.sh:/entrypoint.sh:ro
-    entrypoint: ["/entrypoint.sh"]
+    entrypoint: ["sh", "/entrypoint.sh"]
     networks:
       - private
     healthcheck:
