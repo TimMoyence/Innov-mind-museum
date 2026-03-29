@@ -2,6 +2,10 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { createApp } from '@src/app';
 import { env } from '@src/config/env';
+import {
+  clearRateLimitBuckets,
+  stopRateLimitSweep,
+} from '@src/helpers/middleware/rate-limit.middleware';
 
 /**
  * Review route integration tests — auth enforcement + validation.
@@ -23,6 +27,14 @@ const makeToken = (overrides: Record<string, unknown> = {}) =>
 const userToken = () => makeToken();
 
 describe('Review Routes — HTTP Layer', () => {
+  beforeEach(() => {
+    clearRateLimitBuckets();
+  });
+
+  afterAll(() => {
+    stopRateLimitSweep();
+  });
+
   // ── Unauthenticated access ─────────────────────────────────────
 
   describe('Unauthenticated access', () => {
