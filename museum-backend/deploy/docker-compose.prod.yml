@@ -43,7 +43,7 @@ services:
     restart: unless-stopped
 
   pgbouncer:
-    image: edoburu/pgbouncer:1.23.1-p2
+    image: edoburu/pgbouncer:v1.24.1-p1
     hostname: pgbouncer
     depends_on:
       db:
