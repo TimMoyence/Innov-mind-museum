@@ -2,6 +2,10 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { createApp } from '@src/app';
 import { env } from '@src/config/env';
+import {
+  clearRateLimitBuckets,
+  stopRateLimitSweep,
+} from '@src/helpers/middleware/rate-limit.middleware';
 
 /**
  * Support route integration tests — auth enforcement + validation.
@@ -22,6 +26,14 @@ const makeToken = (overrides: Record<string, unknown> = {}) =>
 const userToken = () => makeToken();
 
 describe('Support Routes — HTTP Layer', () => {
+  beforeEach(() => {
+    clearRateLimitBuckets();
+  });
+
+  afterAll(() => {
+    stopRateLimitSweep();
+  });
+
   // ── Unauthenticated access returns 401 ─────────────────────────
 
   describe('Unauthenticated access returns 401', () => {

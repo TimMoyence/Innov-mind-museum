@@ -2,6 +2,10 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { createApp } from '@src/app';
 import { env } from '@src/config/env';
+import {
+  clearRateLimitBuckets,
+  stopRateLimitSweep,
+} from '@src/helpers/middleware/rate-limit.middleware';
 
 /**
  * Admin route integration tests — RBAC enforcement + validation.
@@ -23,6 +27,14 @@ const adminToken = () => makeToken({ role: 'admin' });
 const visitorToken = () => makeToken({ role: 'visitor' });
 
 describe('Admin Routes — RBAC Enforcement', () => {
+  beforeEach(() => {
+    clearRateLimitBuckets();
+  });
+
+  afterAll(() => {
+    stopRateLimitSweep();
+  });
+
   describe('Unauthenticated access returns 401', () => {
     it('GET /api/admin/users', async () => {
       const res = await request(app).get('/api/admin/users');

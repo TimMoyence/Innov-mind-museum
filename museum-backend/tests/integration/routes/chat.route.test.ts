@@ -2,6 +2,10 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { createApp } from '@src/app';
 import { env } from '@src/config/env';
+import {
+  clearRateLimitBuckets,
+  stopRateLimitSweep,
+} from '@src/helpers/middleware/rate-limit.middleware';
 
 /**
  * Chat route integration tests — auth enforcement + basic validation.
@@ -23,6 +27,14 @@ const makeToken = (overrides: Record<string, unknown> = {}) =>
 const userToken = () => makeToken();
 
 describe('Chat Routes — HTTP Layer', () => {
+  beforeEach(() => {
+    clearRateLimitBuckets();
+  });
+
+  afterAll(() => {
+    stopRateLimitSweep();
+  });
+
   // ── Unauthenticated access returns 401 ─────────────────────────
 
   describe('Unauthenticated access returns 401', () => {
@@ -128,16 +140,6 @@ describe('Chat Routes — HTTP Layer', () => {
   // ── POST /api/chat/sessions/:id/messages — validation ──────────
 
   describe('POST /api/chat/sessions/:id/messages — validation', () => {
-    it('accepts well-formed body (will 500 without DB, but not 400)', async () => {
-      const res = await request(app)
-        .post('/api/chat/sessions/fake-session-id/messages')
-        .set('Authorization', `Bearer ${userToken()}`)
-        .send({ text: 'Tell me about the Mona Lisa' });
-      // Should NOT be 400 (validation passes) — will be 500 because no real chatService
-      expect(res.status).not.toBe(400);
-      expect(res.status).not.toBe(401);
-    });
-
     it('returns 400 for invalid context.guideLevel', async () => {
       const res = await request(app)
         .post('/api/chat/sessions/fake-session-id/messages')

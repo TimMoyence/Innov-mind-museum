@@ -2,17 +2,22 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { createApp } from '@src/app';
 import { env } from '@src/config/env';
+import {
+  clearRateLimitBuckets,
+  stopRateLimitSweep,
+} from '@src/helpers/middleware/rate-limit.middleware';
 
 /**
  * Auth route integration tests — HTTP layer validation + middleware.
  * Uses createApp() with mock healthCheck. No DB required.
  * Tests focus on: Zod validation (400), authentication (401), routing (404).
  * Routes that pass validation but need DB will 500 — those are NOT tested here.
+ *
+ * Rate-limit buckets are cleared before each test to prevent 429 bleed-through
+ * (all supertest calls share 127.0.0.1 and the in-memory store is a module singleton).
  */
 
-const app = createApp({
-  healthCheck: async () => ({ database: 'up' }),
-});
+const app = createApp({ healthCheck: async () => ({ database: 'up' }) });
 
 const makeToken = (overrides: Record<string, unknown> = {}) =>
   jwt.sign(
@@ -22,6 +27,14 @@ const makeToken = (overrides: Record<string, unknown> = {}) =>
   );
 
 describe('Auth Routes — HTTP Layer', () => {
+  beforeEach(() => {
+    clearRateLimitBuckets();
+  });
+
+  afterAll(() => {
+    stopRateLimitSweep();
+  });
+
   // ── POST /api/auth/register — Zod validation rejects ───────────
 
   describe('POST /api/auth/register', () => {
