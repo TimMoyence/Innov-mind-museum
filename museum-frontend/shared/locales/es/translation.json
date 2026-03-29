@@ -387,6 +387,9 @@
     "report": "Reportar",
     "speak": "Leer en voz alta"
   },
+  "messageActions": {
+    "learn_more": "Más información"
+  },
   "error": {
     "network": "Red no disponible. Comprueba tu conexión e inténtalo de nuevo.",
     "timeout": "La solicitud ha expirado. Inténtalo de nuevo.",

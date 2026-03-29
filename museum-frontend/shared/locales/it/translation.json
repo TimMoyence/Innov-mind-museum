@@ -61,15 +61,15 @@
     "settings": "Impostazioni",
     "menu": {
       "discover": "Scopri",
-      "lens": "Obiettivo",
+      "lens": "Fotocamera",
       "audio": "Audio"
     },
     "messages": {
-      "lens_opened": "Conversazione con obiettivo aperta",
+      "lens_opened": "Conversazione con fotocamera aperta",
       "audio_opened": "Conversazione audio aperta",
       "conversation_opened": "Conversazione aperta",
       "opening_discover": "Apertura Scopri",
-      "opening_lens": "Apertura Obiettivo",
+      "opening_lens": "Apertura Fotocamera",
       "opening_audio": "Apertura Audio"
     }
   },
@@ -184,8 +184,8 @@
     "slide0": {
       "title": "Benvenuto su Musaium",
       "subtitle": "La tua guida museale personale. Fotografa le opere d'arte o fai domande per ottenere approfondimenti basati sull'IA.",
-      "tip1": "Apri Home e scegli Scopri, Obiettivo, Audio o Inizia conversazione.",
-      "tip2": "Obiettivo crea una chat e apre la fotocamera per inquadrare un'opera.",
+      "tip1": "Apri Home e scegli Scopri, Fotocamera, Audio o Inizia conversazione.",
+      "tip2": "Fotocamera crea una chat e apre la fotocamera per inquadrare un'opera.",
       "tip3": "Audio crea una chat e avvia la registrazione vocale per domande parlate.",
       "tip4": "Visita la Bacheca per rileggere conversazioni salvate o recenti."
     },
@@ -233,7 +233,7 @@
     "subtitle": "Esplora opere d'arte e monumenti con i punti d'accesso più rapidi: analisi fotografica, domanda vocale o le tue sessioni recenti.",
     "photo_title": "Scatta una foto a un'opera",
     "photo_desc": "Apri direttamente la fotocamera e chiedi a Musaium di analizzare un'opera, un monumento o un dettaglio culturale.",
-    "open_lens": "Apri Obiettivo",
+    "open_lens": "Apri Fotocamera",
     "voice_title": "Domanda vocale",
     "voice_desc": "Avvia una chat vocale per registrare una domanda parlata mentre visiti un museo o un monumento.",
     "start_audio": "Avvia conversazione audio",
@@ -244,7 +244,7 @@
     "guided_desc": "Scopri come la modalità guidata aggiunge suggerimenti per la prossima tappa e un contesto più ricco per le visite museali.",
     "open_guided": "Apri info modalità guidata",
     "menu": {
-      "lens": "Obiettivo",
+      "lens": "Fotocamera",
       "audio": "Audio",
       "dashboard": "Bacheca"
     },
@@ -328,7 +328,7 @@
     "play": "Riproduci",
     "clear": "Cancella",
     "gallery": "Galleria",
-    "lens": "Obiettivo",
+    "lens": "Fotocamera",
     "stop_audio": "Ferma audio",
     "audio": "Audio",
     "image_sent": "[Immagine inviata]",
@@ -386,6 +386,9 @@
     "copy": "Copia",
     "report": "Segnala",
     "speak": "Leggi"
+  },
+  "messageActions": {
+    "learn_more": "Scopri di più"
   },
   "error": {
     "network": "Rete non disponibile. Controlla la connessione e riprova.",
@@ -492,7 +495,7 @@
       "clear_audio": "Cancella audio registrato",
       "gallery": "Scegli immagine dalla galleria",
       "gallery_hint": "Apre la libreria foto per allegare un'immagine",
-      "lens": "Apri fotocamera",
+      "lens": "Apri la fotocamera",
       "lens_hint": "Apre la fotocamera per fotografare un'opera d'arte",
       "start_recording": "Avvia registrazione",
       "stop_recording": "Interrompi registrazione",

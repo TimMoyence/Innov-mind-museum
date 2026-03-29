@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   Alert,
   Dimensions,
@@ -67,6 +67,7 @@ export default function OnboardingScreen() {
   const flatListRef = useRef<FlatList<SlideData>>(null);
   const { markOnboardingComplete } = useAuth();
   const { currentStep, goToStep, next, isLast } = useOnboarding(slides.length);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -81,13 +82,16 @@ export default function OnboardingScreen() {
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
   const completeAndNavigate = useCallback(async () => {
+    if (isCompleting) return;
+    setIsCompleting(true);
     try {
       await markOnboardingComplete();
       router.replace('/(tabs)/home');
     } catch {
+      setIsCompleting(false);
       Alert.alert(t('common.error'), t('error.network'));
     }
-  }, [markOnboardingComplete, t]);
+  }, [isCompleting, markOnboardingComplete, t]);
 
   const handleNext = useCallback(async () => {
     if (isLast) {
