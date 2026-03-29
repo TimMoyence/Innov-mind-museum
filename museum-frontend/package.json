@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "EXPO_NO_TELEMETRY=1 expo start",
     "build:web": "expo export --platform web",
-    "generate:openapi-types": "openapi-typescript ../museum-backend/openapi/openapi.json -o shared/api/generated/openapi.ts",
+    "generate:openapi-types": "openapi-typescript ../museum-backend/openapi/openapi.json -o shared/api/generated/openapi.ts && prettier --write shared/api/generated/openapi.ts",
     "check:openapi-types": "npm run generate:openapi-types && git diff --exit-code -- shared/api/generated/openapi.ts",
     "check:i18n": "node scripts/check-i18n-completeness.js",
     "lint": "eslint . --max-warnings=20 && tsc --noEmit",
