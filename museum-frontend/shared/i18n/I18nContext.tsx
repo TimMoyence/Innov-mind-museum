@@ -27,7 +27,9 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue>({
   language: 'en',
-  setLanguage: () => { /* noop */ },
+  setLanguage: () => {
+    /* noop */
+  },
 });
 
 export const useI18n = () => useContext(I18nContext);
@@ -49,11 +51,10 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // Read the raw stored value — null means "user never chose a language"
-    storage.getItem('runtime.defaultLocale')
+    storage
+      .getItem('runtime.defaultLocale')
       .then((stored) => {
-        const lang = stored
-          ? toSupportedLocale(stored)
-          : detectDeviceLanguage();
+        const lang = stored ? toSupportedLocale(stored) : detectDeviceLanguage();
         setLanguageState(lang);
         void i18n.changeLanguage(lang);
         setHttpLocale(lang);
@@ -62,31 +63,40 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
           onLanguageChangeCb?.(lang);
         }
       })
-      .catch(() => { /* noop */ });
+      .catch(() => {
+        /* noop */
+      });
   }, []);
 
-  const setLanguage = useCallback((lang: SupportedLocale) => {
-    const currentLang = language;
-    if (needsRTLReload(currentLang, lang)) {
+  const setLanguage = useCallback(
+    (lang: SupportedLocale) => {
+      const currentLang = language;
+      if (needsRTLReload(currentLang, lang)) {
+        onLanguageChangeCb?.(lang);
+        applyRTLLayout(lang);
+        void (async () => {
+          try {
+            if (!__DEV__) {
+              await Updates.reloadAsync();
+              return;
+            }
+          } catch {
+            // reloadAsync unavailable (dev/bare workflow) — fall through
+          }
+          // Fallback: apply language without full reload
+          setLanguageState(lang);
+          void i18n.changeLanguage(lang);
+          setHttpLocale(lang);
+        })();
+        return;
+      }
+      setLanguageState(lang);
+      void i18n.changeLanguage(lang);
+      setHttpLocale(lang);
       onLanguageChangeCb?.(lang);
-      applyRTLLayout(lang);
-      void Updates.reloadAsync().catch(() => {
-        // Fallback: apply language without reload in dev
-        setLanguageState(lang);
-        void i18n.changeLanguage(lang);
-        setHttpLocale(lang);
-      });
-      return;
-    }
-    setLanguageState(lang);
-    void i18n.changeLanguage(lang);
-    setHttpLocale(lang);
-    onLanguageChangeCb?.(lang);
-  }, [language]);
-
-  return (
-    <I18nContext.Provider value={{ language, setLanguage }}>
-      {children}
-    </I18nContext.Provider>
+    },
+    [language],
   );
+
+  return <I18nContext.Provider value={{ language, setLanguage }}>{children}</I18nContext.Provider>;
 };

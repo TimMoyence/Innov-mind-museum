@@ -208,6 +208,7 @@ authRouter.get(
           firstname: profile.firstname ?? null,
           lastname: profile.lastname ?? null,
           role: profile.role,
+          onboardingCompleted: profile.onboardingCompleted,
         },
       });
     } catch (error) {
