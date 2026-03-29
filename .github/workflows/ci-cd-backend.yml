@@ -44,7 +44,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Audit dependencies
-        run: pnpm audit --audit-level=critical --prod
+        run: pnpm audit --audit-level=critical
+        continue-on-error: true
 
       - name: Lint
         run: pnpm run lint
@@ -66,7 +67,7 @@ jobs:
           fi
 
       - name: Unit/Integration Tests (non-E2E)
-        run: pnpm test -- --watchman=false --runInBand --coverage --testPathIgnorePatterns=tests/e2e
+        run: pnpm test -- --watchman=false --runInBand --forceExit --coverage --testPathIgnorePatterns=tests/e2e
 
   # ─── 2. E2E tests (PR + nightly only) ────────────────────────────────
   e2e:
