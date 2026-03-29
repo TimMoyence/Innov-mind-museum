@@ -13,6 +13,11 @@ jest.mock('@langchain/core/messages', () => ({
   HumanMessage: jest.fn().mockImplementation((content: string) => ({ content, role: 'human' })),
 }));
 
+// Provide a fake API key so buildClassifierModel() creates the mocked ChatOpenAI
+jest.mock('@src/config/env', () => ({
+  env: { llm: { openAiApiKey: 'test-key', googleApiKey: '', deepseekApiKey: '' } },
+}));
+
 describe('ArtTopicClassifier', () => {
   let classifier: ArtTopicClassifier;
 
