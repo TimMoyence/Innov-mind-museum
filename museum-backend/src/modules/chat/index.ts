@@ -159,7 +159,9 @@ class ChatModule {
     };
 
     void refreshKeywords();
-    this._artKeywordsRefreshTimer = setInterval(() => void refreshKeywords(), 5 * 60 * 1000);
+    const timer = setInterval(() => void refreshKeywords(), 5 * 60 * 1000);
+    timer.unref(); // allow process/Jest to exit without waiting for this timer
+    this._artKeywordsRefreshTimer = timer;
 
     const onArtKeywordDiscovered = (keyword: string, locale: string) => {
       const normalized = keyword.toLowerCase().trim();
