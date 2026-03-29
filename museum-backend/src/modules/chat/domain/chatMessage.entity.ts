@@ -23,6 +23,9 @@ export class ChatMessage {
   })
   session!: ChatSession;
 
+  @Column({ type: 'uuid' })
+  sessionId!: string;
+
   @Column({ type: 'varchar', length: 20 })
   role!: ChatRole;
 

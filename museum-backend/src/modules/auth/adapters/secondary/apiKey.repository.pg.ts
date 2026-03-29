@@ -1,52 +1,54 @@
-import pool from '../../../../data/db';
+import { ApiKey } from '../../core/domain/apiKey.entity';
 
-import type { ApiKey } from '../../core/domain/apiKey.entity';
 import type { ApiKeyRepository } from '../../core/domain/apiKey.repository.interface';
+import type { DataSource, Repository } from 'typeorm';
 
-/** PostgreSQL (raw SQL) implementation of {@link ApiKeyRepository}. */
+/** TypeORM implementation of {@link ApiKeyRepository}. */
 export class ApiKeyRepositoryPg implements ApiKeyRepository {
+  private readonly repo: Repository<ApiKey>;
+
+  constructor(dataSource: DataSource) {
+    this.repo = dataSource.getRepository(ApiKey);
+  }
+
   /** Finds an active API key by its prefix. */
   async findByPrefix(prefix: string): Promise<ApiKey | null> {
-    const result = await pool.query(
-      `SELECT * FROM "api_keys" WHERE prefix = $1 AND is_active = true`,
-      [prefix],
-    );
-    return result.rows[0] ?? null;
+    return await this.repo.findOne({
+      where: { prefix, isActive: true },
+    });
   }
 
   /** Lists all API keys owned by a user, ordered by creation date descending. */
   async findByUserId(userId: number): Promise<ApiKey[]> {
-    const result = await pool.query(
-      `SELECT * FROM "api_keys" WHERE user_id = $1 ORDER BY created_at DESC`,
-      [userId],
-    );
-    return result.rows;
+    return await this.repo.find({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   /** Inserts a new API key row and returns the persisted record. */
   async save(key: ApiKey): Promise<ApiKey> {
-    const result = await pool.query(
-      `INSERT INTO "api_keys" (prefix, hash, salt, name, user_id, expires_at, is_active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
+    const entity = this.repo.create({
+      prefix: key.prefix,
+      hash: key.hash,
+      salt: key.salt,
+      name: key.name,
+      userId: key.userId,
+      expiresAt: key.expiresAt,
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: isActive may be undefined from external input
-      [key.prefix, key.hash, key.salt, key.name, key.userId, key.expiresAt, key.isActive ?? true],
-    );
-    return result.rows[0];
+      isActive: key.isActive ?? true,
+    });
+    return await this.repo.save(entity);
   }
 
-  /** Soft-deletes an API key by setting is_active to false. */
+  /** Soft-deletes an API key by setting isActive to false. */
   async remove(id: number, userId: number): Promise<boolean> {
-    const result = await pool.query(
-      `UPDATE "api_keys" SET is_active = false WHERE id = $1 AND user_id = $2 AND is_active = true`,
-      [id, userId],
-    );
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: rowCount may be null for certain pg drivers
-    return (result.rowCount ?? 0) > 0;
+    const result = await this.repo.update({ id, userId, isActive: true }, { isActive: false });
+    return (result.affected ?? 0) > 0;
   }
 
-  /** Stamps the last_used_at timestamp on an API key. */
+  /** Stamps the lastUsedAt timestamp on an API key. */
   async updateLastUsed(id: number): Promise<void> {
-    await pool.query(`UPDATE "api_keys" SET last_used_at = NOW() WHERE id = $1`, [id]);
+    await this.repo.update(id, { lastUsedAt: new Date() });
   }
 }

@@ -1,10 +1,11 @@
-import pool from '@src/data/db';
+import { AuthRefreshToken } from '../../core/domain/authRefreshToken.entity';
 
 import type {
   IRefreshTokenRepository,
   StoredRefreshTokenRow,
   InsertRefreshTokenInput,
 } from '../../core/domain/refresh-token.repository.interface';
+import type { DataSource, Repository } from 'typeorm';
 
 // Re-export domain types so existing consumers that imported from here keep working
 export type {
@@ -12,43 +13,34 @@ export type {
   InsertRefreshTokenInput,
 } from '../../core/domain/refresh-token.repository.interface';
 
-/** Resolve a nullable date field from a raw PG row, handling both camelCase and lowercase column names. */
-const toDateOrNull = (row: Record<string, unknown>, camel: string, lower: string): Date | null => {
-  const value = row[camel] ?? row[lower];
-  // eslint-disable-next-line @typescript-eslint/no-base-to-string
-  return value ? new Date(String(value)) : null;
-};
-
-/** Resolve a nullable string field from a raw PG row, handling both camelCase and lowercase column names. */
-const toStringOrNull = (
-  row: Record<string, unknown>,
-  camel: string,
-  lower: string,
-): string | null => {
-  const value = row[camel] ?? row[lower];
-  // eslint-disable-next-line @typescript-eslint/no-base-to-string -- converting raw DB field to string
-  return value ? String(value) : null;
-};
-
-const mapRow = (row: Record<string, unknown>): StoredRefreshTokenRow => {
+/** Convert an AuthRefreshToken entity to a StoredRefreshTokenRow DTO. */
+function toRow(entity: AuthRefreshToken): StoredRefreshTokenRow {
   return {
-    id: String(row.id),
-    userId: Number(row.userId ?? row.userid),
-    jti: String(row.jti),
-    familyId: String(row.familyId ?? row.familyid),
-    tokenHash: String(row.tokenHash ?? row.tokenhash),
-    issuedAt: new Date(String(row.issuedAt ?? row.issuedat)),
-    expiresAt: new Date(String(row.expiresAt ?? row.expiresat)),
-    rotatedAt: toDateOrNull(row, 'rotatedAt', 'rotatedat'),
-    revokedAt: toDateOrNull(row, 'revokedAt', 'revokedat'),
-    reuseDetectedAt: toDateOrNull(row, 'reuseDetectedAt', 'reusedetectedat'),
-    replacedByTokenId: toStringOrNull(row, 'replacedByTokenId', 'replacedbytokenid'),
-    createdAt: new Date(String(row.createdAt ?? row.createdat)),
+    id: entity.id,
+    userId: entity.user.id,
+    jti: entity.jti,
+    familyId: entity.familyId,
+    tokenHash: entity.tokenHash,
+    issuedAt: entity.issuedAt,
+    expiresAt: entity.expiresAt,
+    rotatedAt: entity.rotatedAt ?? null,
+    revokedAt: entity.revokedAt ?? null,
+    reuseDetectedAt: entity.reuseDetectedAt ?? null,
+    replacedByTokenId: entity.replacedByTokenId ?? null,
+    createdAt: entity.createdAt,
   };
-};
+}
 
-/** PostgreSQL (raw SQL) repository for refresh-token lifecycle management. */
+/** TypeORM repository for refresh-token lifecycle management. */
 export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
+  private readonly repo: Repository<AuthRefreshToken>;
+  private readonly dataSource: DataSource;
+
+  constructor(dataSource: DataSource) {
+    this.dataSource = dataSource;
+    this.repo = dataSource.getRepository(AuthRefreshToken);
+  }
+
   /**
    * Inserts a new refresh token row.
    *
@@ -56,17 +48,17 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
    * @returns The inserted row.
    */
   async insert(input: InsertRefreshTokenInput): Promise<StoredRefreshTokenRow> {
-    const result = await pool.query(
-      `
-        INSERT INTO "auth_refresh_tokens"
-          ("userId", "jti", "familyId", "tokenHash", "issuedAt", "expiresAt")
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING *
-      `,
-      [input.userId, input.jti, input.familyId, input.tokenHash, input.issuedAt, input.expiresAt],
-    );
+    const entity = this.repo.create({
+      user: { id: input.userId } as AuthRefreshToken['user'],
+      jti: input.jti,
+      familyId: input.familyId,
+      tokenHash: input.tokenHash,
+      issuedAt: input.issuedAt,
+      expiresAt: input.expiresAt,
+    });
 
-    return mapRow(result.rows[0]);
+    const saved = await this.repo.save(entity);
+    return toRow(saved);
   }
 
   /**
@@ -76,68 +68,44 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
    * @returns The token row or `null`.
    */
   async findByJti(jti: string): Promise<StoredRefreshTokenRow | null> {
-    const result = await pool.query(
-      `SELECT * FROM "auth_refresh_tokens" WHERE "jti" = $1 LIMIT 1`,
-      [jti],
-    );
-
-    return result.rows[0] ? mapRow(result.rows[0]) : null;
+    const entity = await this.repo.findOne({ where: { jti } });
+    return entity ? toRow(entity) : null;
   }
 
   /**
    * Atomically rotates a refresh token: inserts the new token and marks the current one as rotated.
    *
    * @param params - Current token ID and next token input.
-   * @param params.currentTokenId - ID of the current token being rotated out.
-   * @param params.next - Metadata for the new replacement token.
+   * @param params.currentTokenId - ID of the token being rotated out.
+   * @param params.next - Input data for the replacement token.
    * @returns The newly inserted token row.
    */
   async rotate(params: {
     currentTokenId: string;
     next: InsertRefreshTokenInput;
   }): Promise<StoredRefreshTokenRow> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return await this.dataSource.transaction(async (manager) => {
+      const tokenRepo = manager.getRepository(AuthRefreshToken);
 
-      const insertResult = await client.query(
-        `
-          INSERT INTO "auth_refresh_tokens"
-            ("userId", "jti", "familyId", "tokenHash", "issuedAt", "expiresAt")
-          VALUES ($1, $2, $3, $4, $5, $6)
-          RETURNING *
-        `,
-        [
-          params.next.userId,
-          params.next.jti,
-          params.next.familyId,
-          params.next.tokenHash,
-          params.next.issuedAt,
-          params.next.expiresAt,
-        ],
-      );
-
-      const nextRow = mapRow(insertResult.rows[0]);
-
-      await client.query(
-        `
-          UPDATE "auth_refresh_tokens"
-          SET "rotatedAt" = NOW(), "replacedByTokenId" = $2
-          WHERE "id" = $1
-        `,
-        [params.currentTokenId, nextRow.id],
-      );
-
-      await client.query('COMMIT');
-      return nextRow;
-    } catch (error) {
-      await client.query('ROLLBACK').catch(() => {
-        /* best-effort rollback */
+      const entity = tokenRepo.create({
+        user: { id: params.next.userId } as AuthRefreshToken['user'],
+        jti: params.next.jti,
+        familyId: params.next.familyId,
+        tokenHash: params.next.tokenHash,
+        issuedAt: params.next.issuedAt,
+        expiresAt: params.next.expiresAt,
       });
-      throw error;
-    } finally {
-      void client.release();
-    }
+
+      const saved = await tokenRepo.save(entity);
+      const nextRow = toRow(saved);
+
+      await tokenRepo.update(params.currentTokenId, {
+        rotatedAt: new Date(),
+        replacedByTokenId: nextRow.id,
+      });
+
+      return nextRow;
+    });
   }
 
   /**
@@ -146,14 +114,12 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
    * @param jti - JWT ID of the token to revoke.
    */
   async revokeByJti(jti: string): Promise<void> {
-    await pool.query(
-      `
-        UPDATE "auth_refresh_tokens"
-        SET "revokedAt" = COALESCE("revokedAt", NOW())
-        WHERE "jti" = $1
-      `,
-      [jti],
-    );
+    await this.repo
+      .createQueryBuilder()
+      .update(AuthRefreshToken)
+      .set({ revokedAt: () => 'COALESCE("revokedAt", NOW())' })
+      .where('jti = :jti', { jti })
+      .execute();
   }
 
   /**
@@ -163,12 +129,17 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
    * @returns The number of rows actually deleted.
    */
   async deleteExpiredTokens(limit = 10000): Promise<number> {
-    const result = await pool.query(
-      'DELETE FROM "auth_refresh_tokens" WHERE "id" IN (SELECT "id" FROM "auth_refresh_tokens" WHERE "expiresAt" < NOW() LIMIT $1)',
-      [limit],
-    );
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: rowCount may be null for certain pg drivers
-    return result.rowCount ?? 0;
+    const result = await this.repo
+      .createQueryBuilder()
+      .delete()
+      .from(AuthRefreshToken)
+      .where(
+        'id IN (SELECT id FROM "auth_refresh_tokens" WHERE "expiresAt" < NOW() LIMIT :limit)',
+        { limit },
+      )
+      .execute();
+
+    return result.affected ?? 0;
   }
 
   /**
@@ -179,17 +150,17 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
    * @param excludeJti - Optional JTI to exclude (e.g. the current session).
    */
   async revokeAllForUser(userId: number, excludeJti?: string): Promise<void> {
-    await (excludeJti
-      ? pool.query(
-          `UPDATE "auth_refresh_tokens" SET "revokedAt" = NOW()
-         WHERE "userId" = $1 AND "revokedAt" IS NULL AND "jti" != $2`,
-          [userId, excludeJti],
-        )
-      : pool.query(
-          `UPDATE "auth_refresh_tokens" SET "revokedAt" = NOW()
-         WHERE "userId" = $1 AND "revokedAt" IS NULL`,
-          [userId],
-        ));
+    const qb = this.repo
+      .createQueryBuilder()
+      .update(AuthRefreshToken)
+      .set({ revokedAt: new Date() })
+      .where('"userId" = :userId AND "revokedAt" IS NULL', { userId });
+
+    if (excludeJti) {
+      qb.andWhere('jti != :excludeJti', { excludeJti });
+    }
+
+    await qb.execute();
   }
 
   /**
@@ -199,15 +170,23 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
    * @param reuseDetected - When `true`, also sets `reuseDetectedAt` on all family members.
    */
   async revokeFamily(familyId: string, reuseDetected = false): Promise<void> {
-    await pool.query(
-      `
-        UPDATE "auth_refresh_tokens"
-        SET
-          "revokedAt" = COALESCE("revokedAt", NOW()),
-          "reuseDetectedAt" = CASE WHEN $2 THEN COALESCE("reuseDetectedAt", NOW()) ELSE "reuseDetectedAt" END
-        WHERE "familyId" = $1
-      `,
-      [familyId, reuseDetected],
-    );
+    await (reuseDetected
+      ? this.repo
+          .createQueryBuilder()
+          .update(AuthRefreshToken)
+          .set({
+            revokedAt: () => 'COALESCE("revokedAt", NOW())',
+            reuseDetectedAt: () => 'COALESCE("reuseDetectedAt", NOW())',
+          })
+          .where('"familyId" = :familyId', { familyId })
+          .execute()
+      : this.repo
+          .createQueryBuilder()
+          .update(AuthRefreshToken)
+          .set({
+            revokedAt: () => 'COALESCE("revokedAt", NOW())',
+          })
+          .where('"familyId" = :familyId', { familyId })
+          .execute());
   }
 }

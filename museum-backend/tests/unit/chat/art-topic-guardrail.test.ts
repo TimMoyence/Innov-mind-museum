@@ -12,6 +12,7 @@ const makeMessage = (text: string, role: 'user' | 'assistant' = 'user'): ChatMes
   ({
     id: 'msg-1',
     session: {} as ChatSession,
+    sessionId: 'test-session',
     role,
     text,
     createdAt: new Date(),

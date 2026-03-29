@@ -1,7 +1,9 @@
+import { AppDataSource } from '@src/data/db/data-source';
+
 import { AuditRepositoryPg } from './audit.repository.pg';
 import { AuditService } from './audit.service';
 
-const auditRepository = new AuditRepositoryPg();
+const auditRepository = new AuditRepositoryPg(AppDataSource);
 
 /** Singleton audit service instance, ready to use across the application. */
 export const auditService = new AuditService(auditRepository);

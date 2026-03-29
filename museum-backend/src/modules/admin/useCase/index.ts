@@ -2,6 +2,8 @@
  * Admin module composition root.
  * Wires the PG repository to use-case classes and exports ready-to-use singletons.
  */
+import { AppDataSource } from '@src/data/db/data-source';
+
 import { ChangeUserRoleUseCase } from './changeUserRole.useCase';
 import { GetContentAnalyticsUseCase } from './getContentAnalytics.useCase';
 import { GetEngagementAnalyticsUseCase } from './getEngagementAnalytics.useCase';
@@ -13,7 +15,7 @@ import { ListUsersUseCase } from './listUsers.useCase';
 import { ResolveReportUseCase } from './resolveReport.useCase';
 import { AdminRepositoryPg } from '../adapters/secondary/admin.repository.pg';
 
-const adminRepository = new AdminRepositoryPg();
+const adminRepository = new AdminRepositoryPg(AppDataSource);
 
 export const listUsersUseCase = new ListUsersUseCase(adminRepository);
 export const changeUserRoleUseCase = new ChangeUserRoleUseCase(adminRepository);

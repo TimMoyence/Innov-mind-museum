@@ -1,4 +1,7 @@
 import { type DataSource, In, type Repository } from 'typeorm';
+import { z } from 'zod';
+
+import { CursorCodec } from '@shared/pagination/cursor-codec';
 
 import { ArtworkMatch } from '../domain/artworkMatch.entity';
 import { ChatMessage } from '../domain/chatMessage.entity';
@@ -18,59 +21,8 @@ import type {
 } from '../domain/chat.repository.interface';
 import type { ChatRole, CreateSessionInput } from '../domain/chat.types';
 
-const encodeCursor = (value: { createdAt: string; id: string }): string => {
-  return Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
-};
-
-const decodeCursor = (value: string): { createdAt: string; id: string } | null => {
-  try {
-    const decoded = Buffer.from(value, 'base64url').toString('utf8');
-    const parsed = JSON.parse(decoded) as unknown;
-
-    if (
-      typeof parsed === 'object' &&
-      parsed !== null &&
-      typeof (parsed as Record<string, unknown>).createdAt === 'string' &&
-      typeof (parsed as Record<string, unknown>).id === 'string'
-    ) {
-      return {
-        createdAt: (parsed as Record<string, string>).createdAt,
-        id: (parsed as Record<string, string>).id,
-      };
-    }
-
-    return null;
-  } catch {
-    return null;
-  }
-};
-
-const encodeSessionCursor = (value: { updatedAt: string; id: string }): string => {
-  return Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
-};
-
-const decodeSessionCursor = (value: string): { updatedAt: string; id: string } | null => {
-  try {
-    const decoded = Buffer.from(value, 'base64url').toString('utf8');
-    const parsed = JSON.parse(decoded) as unknown;
-
-    if (
-      typeof parsed === 'object' &&
-      parsed !== null &&
-      typeof (parsed as Record<string, unknown>).updatedAt === 'string' &&
-      typeof (parsed as Record<string, unknown>).id === 'string'
-    ) {
-      return {
-        updatedAt: (parsed as Record<string, string>).updatedAt,
-        id: (parsed as Record<string, string>).id,
-      };
-    }
-
-    return null;
-  } catch {
-    return null;
-  }
-};
+const messageCursor = new CursorCodec(z.object({ createdAt: z.string(), id: z.string() }));
+const sessionCursor = new CursorCodec(z.object({ updatedAt: z.string(), id: z.string() }));
 
 /** TypeORM/PG implementation of {@link ChatRepository}. */
 export class TypeOrmChatRepository implements ChatRepository {
@@ -261,7 +213,7 @@ export class TypeOrmChatRepository implements ChatRepository {
       .take(effectiveLimit + 1);
 
     if (cursor) {
-      const decodedCursor = decodeCursor(cursor);
+      const decodedCursor = messageCursor.decode(cursor);
       if (decodedCursor) {
         queryBuilder.andWhere(
           '(message.createdAt < :cursorDate OR (message.createdAt = :cursorDate AND message.id < :cursorId))',
@@ -278,7 +230,7 @@ export class TypeOrmChatRepository implements ChatRepository {
     const messages = hasMore ? rows.slice(0, effectiveLimit) : rows;
     const last = messages[messages.length - 1];
     const nextCursor = hasMore
-      ? encodeCursor({
+      ? messageCursor.encode({
           createdAt: last.createdAt.toISOString(),
           id: last.id,
         })
@@ -332,7 +284,7 @@ export class TypeOrmChatRepository implements ChatRepository {
       .take(effectiveLimit + 1);
 
     if (cursor) {
-      const decodedCursor = decodeSessionCursor(cursor);
+      const decodedCursor = sessionCursor.decode(cursor);
       if (decodedCursor) {
         queryBuilder.andWhere(
           '(session.updatedAt < :cursorUpdatedAt OR (session.updatedAt = :cursorUpdatedAt AND session.id < :cursorId))',
@@ -349,7 +301,7 @@ export class TypeOrmChatRepository implements ChatRepository {
     const sessions = hasMore ? rows.slice(0, effectiveLimit) : rows;
     const last = sessions[sessions.length - 1];
     const nextCursor = hasMore
-      ? encodeSessionCursor({
+      ? sessionCursor.encode({
           updatedAt: last.updatedAt.toISOString(),
           id: last.id,
         })

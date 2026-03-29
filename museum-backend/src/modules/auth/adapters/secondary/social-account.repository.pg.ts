@@ -1,12 +1,31 @@
-import pool from '../../../../data/db';
+import { SocialAccount } from '../../core/domain/socialAccount.entity';
 
 import type {
   ISocialAccountRepository,
   SocialAccountRow,
 } from '../../core/domain/socialAccount.repository.interface';
+import type { DataSource, Repository } from 'typeorm';
 
-/** PostgreSQL (raw SQL) implementation of {@link ISocialAccountRepository}. */
+/** Helper to convert a SocialAccount entity to a plain SocialAccountRow DTO. */
+function toRow(entity: SocialAccount): SocialAccountRow {
+  return {
+    id: entity.id,
+    userId: entity.userId,
+    provider: entity.provider,
+    providerUserId: entity.providerUserId,
+    email: entity.email ?? null,
+    createdAt: entity.createdAt,
+  };
+}
+
+/** TypeORM implementation of {@link ISocialAccountRepository}. */
 export class SocialAccountRepositoryPg implements ISocialAccountRepository {
+  private readonly repo: Repository<SocialAccount>;
+
+  constructor(dataSource: DataSource) {
+    this.repo = dataSource.getRepository(SocialAccount);
+  }
+
   /**
    * Finds a social account by provider and provider-specific user ID.
    *
@@ -18,14 +37,10 @@ export class SocialAccountRepositoryPg implements ISocialAccountRepository {
     provider: string,
     providerUserId: string,
   ): Promise<SocialAccountRow | null> {
-    const query = `
-      SELECT id, "userId", provider, "providerUserId", email, "createdAt"
-      FROM "social_accounts"
-      WHERE provider = $1 AND "providerUserId" = $2
-      LIMIT 1
-    `;
-    const result = await pool.query(query, [provider, providerUserId]);
-    return result.rows[0] ?? null;
+    const entity = await this.repo.findOne({
+      where: { provider, providerUserId },
+    });
+    return entity ? toRow(entity) : null;
   }
 
   /**
@@ -35,23 +50,20 @@ export class SocialAccountRepositoryPg implements ISocialAccountRepository {
    * @returns Array of social account rows.
    */
   async findByUserId(userId: number): Promise<SocialAccountRow[]> {
-    const query = `
-      SELECT id, "userId", provider, "providerUserId", email, "createdAt"
-      FROM "social_accounts"
-      WHERE "userId" = $1
-    `;
-    const result = await pool.query(query, [userId]);
-    return result.rows;
+    const entities = await this.repo.find({
+      where: { userId },
+    });
+    return entities.map(toRow);
   }
 
   /**
    * Links a new social account to an existing user.
    *
    * @param params - User ID, provider, providerUserId, and optional email.
-   * @param params.userId - Owning user ID.
+   * @param params.userId - ID of the user to link.
    * @param params.provider - OAuth provider name.
-   * @param params.providerUserId - User's ID within the provider.
-   * @param params.email - Optional email from the provider.
+   * @param params.providerUserId - User ID from the OAuth provider.
+   * @param params.email - Email associated with the social account.
    * @returns The inserted social account row.
    */
   async create(params: {
@@ -60,14 +72,14 @@ export class SocialAccountRepositoryPg implements ISocialAccountRepository {
     providerUserId: string;
     email?: string | null;
   }): Promise<SocialAccountRow> {
-    const query = `
-      INSERT INTO "social_accounts" ("userId", provider, "providerUserId", email)
-      VALUES ($1, $2, $3, $4)
-      RETURNING id, "userId", provider, "providerUserId", email, "createdAt"
-    `;
-    const values = [params.userId, params.provider, params.providerUserId, params.email ?? null];
-    const result = await pool.query(query, values);
-    return result.rows[0];
+    const entity = this.repo.create({
+      userId: params.userId,
+      provider: params.provider,
+      providerUserId: params.providerUserId,
+      email: params.email ?? null,
+    });
+    const saved = await this.repo.save(entity);
+    return toRow(saved);
   }
 
   /**
@@ -76,6 +88,6 @@ export class SocialAccountRepositoryPg implements ISocialAccountRepository {
    * @param userId - Numeric user ID.
    */
   async deleteByUserId(userId: number): Promise<void> {
-    await pool.query('DELETE FROM "social_accounts" WHERE "userId" = $1', [userId]);
+    await this.repo.delete({ userId });
   }
 }

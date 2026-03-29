@@ -4,6 +4,7 @@
  */
 import { BrevoEmailService } from '@shared/email/brevo-email.service';
 import { env } from '@src/config/env';
+import { AppDataSource } from '@src/data/db/data-source';
 import {
   setApiKeyRepository,
   setUserRoleResolver,
@@ -33,10 +34,10 @@ import { UserRepositoryPg } from '../../adapters/secondary/user.repository.pg';
 import type { ChatDataExportPort } from '../domain/exportUserData.types';
 import type { EmailService } from '@shared/email/email.port';
 
-const userRepository = new UserRepositoryPg();
-const socialAccountRepository = new SocialAccountRepositoryPg();
+const userRepository = new UserRepositoryPg(AppDataSource);
+const socialAccountRepository = new SocialAccountRepositoryPg(AppDataSource);
 const socialTokenVerifier = new SocialTokenVerifierAdapter();
-const refreshTokenRepository = new RefreshTokenRepositoryPg();
+const refreshTokenRepository = new RefreshTokenRepositoryPg(AppDataSource);
 
 const emailService: EmailService | undefined = env.brevoApiKey
   ? new BrevoEmailService(env.brevoApiKey)
@@ -93,7 +94,7 @@ const confirmEmailChangeUseCase = new ConfirmEmailChangeUseCase(userRepository);
 const verifyEmailUseCase = new VerifyEmailUseCase(userRepository);
 
 // API Key use cases — only wired when feature flag is enabled
-const apiKeyRepository = new ApiKeyRepositoryPg();
+const apiKeyRepository = new ApiKeyRepositoryPg(AppDataSource);
 const generateApiKeyUseCase = new GenerateApiKeyUseCase(apiKeyRepository);
 const revokeApiKeyUseCase = new RevokeApiKeyUseCase(apiKeyRepository);
 const listApiKeysUseCase = new ListApiKeysUseCase(apiKeyRepository);

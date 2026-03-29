@@ -33,6 +33,7 @@ const createMessage = (
     metadata: null,
     createdAt: new Date(iso),
     session: undefined as never,
+    sessionId: 'test-session',
     artworkMatches: [],
   }) as ChatMessage;
 

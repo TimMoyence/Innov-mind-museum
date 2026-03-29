@@ -1,4 +1,9 @@
-import pool from '@data/db';
+import { User } from '@modules/auth/core/domain/user.entity';
+import { ArtworkMatch } from '@modules/chat/domain/artworkMatch.entity';
+import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
+import { ChatSession } from '@modules/chat/domain/chatSession.entity';
+import { MessageReport } from '@modules/chat/domain/messageReport.entity';
+import { AuditLog } from '@shared/audit/auditLog.entity';
 
 import type { IAdminRepository } from '../../domain/admin.repository.interface';
 import type {
@@ -19,42 +24,53 @@ import type {
   EngagementAnalyticsFilters,
   AnalyticsGranularity,
 } from '../../domain/admin.types';
+import type { DataSource, Repository } from 'typeorm';
 
-const SAFE_USER_COLUMNS =
-  'id, email, firstname, lastname, role, email_verified AS "emailVerified", "createdAt", "updatedAt"';
-
-/* eslint-disable @typescript-eslint/no-unnecessary-condition -- defensive: raw SQL row fields may be null at runtime */
-
-/** Map a raw user row to an AdminUserDTO with ISO date strings. */
-function mapUserRow(row: Record<string, unknown>): AdminUserDTO {
+/** Map a User entity to an AdminUserDTO with ISO date strings. */
+function mapUser(user: User): AdminUserDTO {
   return {
-    id: row.id as number,
-    email: row.email as string,
-    firstname: (row.firstname as string) ?? null,
-    lastname: (row.lastname as string) ?? null,
-    role: row.role as string,
-    emailVerified: row.emailVerified as boolean,
-    createdAt: (row.createdAt as Date).toISOString(),
-    updatedAt: (row.updatedAt as Date).toISOString(),
+    id: user.id,
+    email: user.email,
+    firstname: user.firstname ?? null,
+    lastname: user.lastname ?? null,
+    role: user.role,
+    emailVerified: user.email_verified,
+    createdAt: user.createdAt.toISOString(),
+    updatedAt: user.updatedAt.toISOString(),
   };
 }
 
 /** Map a raw report row (JOINed with chat_messages) to an AdminReportDTO. */
-function mapReportRow(row: Record<string, unknown>): AdminReportDTO {
+function mapReport(report: MessageReport, message?: ChatMessage): AdminReportDTO {
   return {
-    id: row.id as string,
-    messageId: row.messageId as string,
-    userId: row.userId as number,
-    reason: row.reason as string,
-    comment: (row.comment as string) ?? null,
-    status: row.status as AdminReportDTO['status'],
-    reviewedBy: (row.reviewedBy as number) ?? null,
-    reviewedAt: row.reviewedAt ? (row.reviewedAt as Date).toISOString() : null,
-    reviewerNotes: (row.reviewerNotes as string) ?? null,
-    createdAt: (row.createdAt as Date).toISOString(),
-    messageText: (row.messageText as string) ?? null,
-    messageRole: row.messageRole as string,
-    sessionId: row.sessionId as string,
+    id: report.id,
+    messageId: report.messageId,
+    userId: report.userId,
+    reason: report.reason,
+    comment: report.comment ?? null,
+    status: report.status as AdminReportDTO['status'],
+    reviewedBy: report.reviewedBy ?? null,
+    reviewedAt: report.reviewedAt ? report.reviewedAt.toISOString() : null,
+    reviewerNotes: report.reviewerNotes ?? null,
+    createdAt: report.createdAt.toISOString(),
+    messageText: message?.text ?? null,
+    messageRole: message?.role ?? 'unknown',
+    sessionId: message?.sessionId ?? '',
+  };
+}
+
+/** Map an AuditLog entity to an AdminAuditLogDTO with ISO date strings. */
+function mapAuditLog(log: AuditLog): AdminAuditLogDTO {
+  return {
+    id: log.id,
+    action: log.action,
+    actorType: log.actorType,
+    actorId: log.actorId ?? null,
+    targetType: log.targetType ?? null,
+    targetId: log.targetId ?? null,
+    metadata: log.metadata ?? null,
+    ip: log.ip ?? null,
+    createdAt: log.createdAt.toISOString(),
   };
 }
 
@@ -70,56 +86,49 @@ function granularityToTrunc(g: AnalyticsGranularity): string {
   }
 }
 
-/** Map a raw audit_logs row to an AdminAuditLogDTO with ISO date strings. */
-function mapAuditRow(row: Record<string, unknown>): AdminAuditLogDTO {
-  return {
-    id: row.id as string,
-    action: row.action as string,
-    actorType: row.actor_type as string,
-    actorId: (row.actor_id as number) ?? null,
-    targetType: (row.target_type as string) ?? null,
-    targetId: (row.target_id as string) ?? null,
-    metadata: (row.metadata as Record<string, unknown>) ?? null,
-    ip: (row.ip as string) ?? null,
-    createdAt: (row.created_at as Date).toISOString(),
-  };
-}
-
-/** PostgreSQL implementation of the admin repository. */
+/** PostgreSQL implementation of the admin repository using TypeORM. */
 export class AdminRepositoryPg implements IAdminRepository {
+  private readonly userRepo: Repository<User>;
+  private readonly auditRepo: Repository<AuditLog>;
+  private readonly reportRepo: Repository<MessageReport>;
+  private readonly sessionRepo: Repository<ChatSession>;
+  private readonly messageRepo: Repository<ChatMessage>;
+
+  constructor(private readonly dataSource: DataSource) {
+    this.userRepo = dataSource.getRepository(User);
+    this.auditRepo = dataSource.getRepository(AuditLog);
+    this.reportRepo = dataSource.getRepository(MessageReport);
+    this.sessionRepo = dataSource.getRepository(ChatSession);
+    this.messageRepo = dataSource.getRepository(ChatMessage);
+  }
+
   /** Retrieves a paginated list of users with optional search and role filters. */
   async listUsers(filters: ListUsersFilters): Promise<PaginatedResult<AdminUserDTO>> {
-    const conditions: string[] = [];
-    const values: unknown[] = [];
-    let idx = 1;
+    const qb = this.userRepo.createQueryBuilder('user');
 
     if (filters.search) {
       const pattern = `%${filters.search}%`;
-      conditions.push(`(email ILIKE $${idx} OR firstname ILIKE $${idx} OR lastname ILIKE $${idx})`);
-      values.push(pattern);
-      idx++;
+      qb.where(
+        '(user.email ILIKE :search OR user.firstname ILIKE :search OR user.lastname ILIKE :search)',
+        { search: pattern },
+      );
     }
 
     if (filters.role) {
-      conditions.push(`role = $${idx}`);
-      values.push(filters.role);
-      idx++;
+      qb.andWhere('user.role = :role', { role: filters.role });
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const { page, limit } = filters.pagination;
     const offset = (page - 1) * limit;
 
-    const countResult = await pool.query(`SELECT COUNT(*) AS total FROM "users" ${where}`, values);
-    const total = Number.parseInt(countResult.rows[0].total as string, 10);
-
-    const dataResult = await pool.query(
-      `SELECT ${SAFE_USER_COLUMNS} FROM "users" ${where} ORDER BY "createdAt" DESC LIMIT $${idx} OFFSET $${idx + 1}`,
-      [...values, limit, offset],
-    );
+    const [users, total] = await qb
+      .orderBy('user.createdAt', 'DESC')
+      .skip(offset)
+      .take(limit)
+      .getManyAndCount();
 
     return {
-      data: dataResult.rows.map(mapUserRow),
+      data: users.map(mapUser),
       total,
       page,
       limit,
@@ -129,74 +138,54 @@ export class AdminRepositoryPg implements IAdminRepository {
 
   /** Updates the role of a user and returns the updated record. */
   async changeUserRole(userId: number, newRole: string): Promise<AdminUserDTO | null> {
-    const result = await pool.query(
-      `UPDATE "users" SET role = $1 WHERE id = $2 RETURNING ${SAFE_USER_COLUMNS}`,
-      [newRole, userId],
-    );
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) return null;
 
-    if (result.rows.length === 0) return null;
-    return mapUserRow(result.rows[0]);
+    user.role = newRole as User['role'];
+    const saved = await this.userRepo.save(user);
+    return mapUser(saved);
   }
 
   /** Returns the total number of users with the admin role. */
   async countAdmins(): Promise<number> {
-    const result = await pool.query(`SELECT COUNT(*) AS count FROM "users" WHERE role = 'admin'`);
-    return Number.parseInt(result.rows[0].count as string, 10);
+    return await this.userRepo.countBy({ role: 'admin' });
   }
 
   /** Retrieves a paginated list of audit log entries with optional filters. */
   async listAuditLogs(filters: ListAuditLogsFilters): Promise<PaginatedResult<AdminAuditLogDTO>> {
-    const conditions: string[] = [];
-    const values: unknown[] = [];
-    let idx = 1;
+    const qb = this.auditRepo.createQueryBuilder('log');
 
     if (filters.action) {
-      conditions.push(`action = $${idx}`);
-      values.push(filters.action);
-      idx++;
+      qb.andWhere('log.action = :action', { action: filters.action });
     }
 
     if (filters.actorId !== undefined) {
-      conditions.push(`actor_id = $${idx}`);
-      values.push(filters.actorId);
-      idx++;
+      qb.andWhere('log.actorId = :actorId', { actorId: filters.actorId });
     }
 
     if (filters.targetType) {
-      conditions.push(`target_type = $${idx}`);
-      values.push(filters.targetType);
-      idx++;
+      qb.andWhere('log.targetType = :targetType', { targetType: filters.targetType });
     }
 
     if (filters.dateFrom) {
-      conditions.push(`created_at >= $${idx}`);
-      values.push(filters.dateFrom);
-      idx++;
+      qb.andWhere('log.createdAt >= :dateFrom', { dateFrom: filters.dateFrom });
     }
 
     if (filters.dateTo) {
-      conditions.push(`created_at <= $${idx}`);
-      values.push(filters.dateTo);
-      idx++;
+      qb.andWhere('log.createdAt <= :dateTo', { dateTo: filters.dateTo });
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const { page, limit } = filters.pagination;
     const offset = (page - 1) * limit;
 
-    const countResult = await pool.query(
-      `SELECT COUNT(*) AS total FROM "audit_logs" ${where}`,
-      values,
-    );
-    const total = Number.parseInt(countResult.rows[0].total as string, 10);
-
-    const dataResult = await pool.query(
-      `SELECT * FROM "audit_logs" ${where} ORDER BY created_at DESC LIMIT $${idx} OFFSET $${idx + 1}`,
-      [...values, limit, offset],
-    );
+    const [logs, total] = await qb
+      .orderBy('log.createdAt', 'DESC')
+      .skip(offset)
+      .take(limit)
+      .getManyAndCount();
 
     return {
-      data: dataResult.rows.map(mapAuditRow),
+      data: logs.map(mapAuditLog),
       total,
       page,
       limit,
@@ -207,42 +196,49 @@ export class AdminRepositoryPg implements IAdminRepository {
   /** Aggregates dashboard statistics including user counts, sessions, and messages. */
   async getStats(): Promise<AdminStats> {
     const [usersResult, sessionsResult, messagesResult] = await Promise.all([
-      pool.query(`
-        SELECT
-          COUNT(*) AS total,
-          role,
-          COUNT(*) FILTER (WHERE "createdAt" >= NOW() - INTERVAL '7 days') AS recent
-        FROM "users"
-        GROUP BY role
-      `),
-      pool.query(`
-        SELECT
-          COUNT(*) AS total,
-          COUNT(*) FILTER (WHERE "createdAt" >= NOW() - INTERVAL '7 days') AS recent
-        FROM "chat_sessions"
-      `),
-      pool.query(`SELECT COUNT(*) AS total FROM "chat_messages"`),
+      this.userRepo
+        .createQueryBuilder('user')
+        .select('user.role', 'role')
+        .addSelect('COUNT(*)', 'total')
+        .addSelect(
+          'COUNT(*) FILTER (WHERE user."createdAt" >= NOW() - INTERVAL \'7 days\')',
+          'recent',
+        )
+        .groupBy('user.role')
+        .getRawMany<{ role: string; total: string; recent: string }>(),
+      this.sessionRepo
+        .createQueryBuilder('session')
+        .select('COUNT(*)', 'total')
+        .addSelect(
+          'COUNT(*) FILTER (WHERE session."createdAt" >= NOW() - INTERVAL \'7 days\')',
+          'recent',
+        )
+        .getRawOne<{ total: string; recent: string }>(),
+      this.messageRepo
+        .createQueryBuilder('message')
+        .select('COUNT(*)', 'total')
+        .getRawOne<{ total: string }>(),
     ]);
 
     let totalUsers = 0;
     let recentSignups = 0;
     const usersByRole: Record<string, number> = {};
 
-    for (const row of usersResult.rows) {
-      const count = Number.parseInt(row.total as string, 10);
-      const recent = Number.parseInt(row.recent as string, 10);
+    for (const row of usersResult) {
+      const count = Number.parseInt(row.total, 10);
+      const recent = Number.parseInt(row.recent, 10);
       totalUsers += count;
       recentSignups += recent;
-      usersByRole[row.role as string] = count;
+      usersByRole[row.role] = count;
     }
 
     return {
       totalUsers,
       usersByRole,
-      totalSessions: Number.parseInt(sessionsResult.rows[0]?.total as string, 10) || 0,
-      totalMessages: Number.parseInt(messagesResult.rows[0]?.total as string, 10) || 0,
+      totalSessions: Number.parseInt(sessionsResult?.total ?? '0', 10),
+      totalMessages: Number.parseInt(messagesResult?.total ?? '0', 10),
       recentSignups,
-      recentSessions: Number.parseInt(sessionsResult.rows[0]?.recent as string, 10) || 0,
+      recentSessions: Number.parseInt(sessionsResult?.recent ?? '0', 10),
     };
   }
 
@@ -250,61 +246,37 @@ export class AdminRepositoryPg implements IAdminRepository {
 
   /** Retrieves a paginated list of message reports with optional status/reason filters. */
   async listReports(filters: ListReportsFilters): Promise<PaginatedResult<AdminReportDTO>> {
-    const conditions: string[] = [];
-    const values: unknown[] = [];
-    let idx = 1;
+    const qb = this.reportRepo
+      .createQueryBuilder('report')
+      .leftJoinAndSelect('report.message', 'message');
 
     if (filters.status) {
-      conditions.push(`r."status" = $${idx}`);
-      values.push(filters.status);
-      idx++;
+      qb.andWhere('report.status = :status', { status: filters.status });
     }
 
     if (filters.reason) {
-      conditions.push(`r."reason" = $${idx}`);
-      values.push(filters.reason);
-      idx++;
+      qb.andWhere('report.reason = :reason', { reason: filters.reason });
     }
 
     if (filters.dateFrom) {
-      conditions.push(`r."createdAt" >= $${idx}`);
-      values.push(filters.dateFrom);
-      idx++;
+      qb.andWhere('report.createdAt >= :dateFrom', { dateFrom: filters.dateFrom });
     }
 
     if (filters.dateTo) {
-      conditions.push(`r."createdAt" <= $${idx}`);
-      values.push(filters.dateTo);
-      idx++;
+      qb.andWhere('report.createdAt <= :dateTo', { dateTo: filters.dateTo });
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const { page, limit } = filters.pagination;
     const offset = (page - 1) * limit;
 
-    const countResult = await pool.query(
-      `SELECT COUNT(*) AS total FROM "message_reports" r ${where}`,
-      values,
-    );
-    const total = Number.parseInt(countResult.rows[0].total as string, 10);
-
-    const dataResult = await pool.query(
-      `SELECT
-        r."id", r."messageId", r."userId", r."reason", r."comment",
-        r."status", r."reviewedBy", r."reviewedAt", r."reviewerNotes",
-        r."createdAt",
-        m."text" AS "messageText", m."role" AS "messageRole",
-        m."sessionId" AS "sessionId"
-      FROM "message_reports" r
-      JOIN "chat_messages" m ON m."id" = r."messageId"
-      ${where}
-      ORDER BY r."createdAt" DESC
-      LIMIT $${idx} OFFSET $${idx + 1}`,
-      [...values, limit, offset],
-    );
+    const [reports, total] = await qb
+      .orderBy('report.createdAt', 'DESC')
+      .skip(offset)
+      .take(limit)
+      .getManyAndCount();
 
     return {
-      data: dataResult.rows.map(mapReportRow),
+      data: reports.map((r) => mapReport(r, r.message)),
       total,
       page,
       limit,
@@ -314,31 +286,20 @@ export class AdminRepositoryPg implements IAdminRepository {
 
   /** Updates a message report's status with reviewer information. */
   async resolveReport(input: ResolveReportInput): Promise<AdminReportDTO | null> {
-    const result = await pool.query(
-      `UPDATE "message_reports"
-       SET "status" = $1, "reviewedBy" = $2, "reviewedAt" = NOW(), "reviewerNotes" = $3
-       WHERE "id" = $4
-       RETURNING *`,
-      [input.status, input.reviewedBy, input.reviewerNotes ?? null, input.reportId],
-    );
-
-    if (result.rows.length === 0) return null;
-
-    const row = result.rows[0];
-
-    // Fetch joined message data
-    const msgResult = await pool.query(
-      `SELECT "text", "role", "sessionId" FROM "chat_messages" WHERE "id" = $1`,
-      [row.messageId],
-    );
-
-    const msg = msgResult.rows[0] ?? {};
-    return mapReportRow({
-      ...row,
-      messageText: msg.text ?? null,
-      messageRole: msg.role ?? 'unknown',
-      sessionId: msg.sessionId ?? '',
+    const report = await this.reportRepo.findOne({
+      where: { id: input.reportId },
+      relations: ['message'],
     });
+
+    if (!report) return null;
+
+    report.status = input.status;
+    report.reviewedBy = input.reviewedBy;
+    report.reviewedAt = new Date();
+    report.reviewerNotes = input.reviewerNotes ?? null;
+
+    const saved = await this.reportRepo.save(report);
+    return mapReport(saved, saved.message);
   }
 
   // ─── Analytics (S4-04) ───
@@ -349,51 +310,70 @@ export class AdminRepositoryPg implements IAdminRepository {
     const trunc = granularityToTrunc(granularity);
     const days = filters.days ?? 30;
 
-    const dateParts: string[] = [];
-    const baseValues: unknown[] = [];
-    let pIdx = 1;
+    // Build date filter conditions and parameters.
+    // The fallback cutoff is precomputed in JS to avoid interpolating `days`
+    // into an SQL INTERVAL string (prevents SQL-injection via numeric input).
+    const cutoff = new Date(Date.now() - days * 86_400_000);
+    const buildDateFilter = (
+      alias: string,
+    ): { conditions: string[]; params: Record<string, unknown> } => {
+      const conditions: string[] = [];
+      const params: Record<string, unknown> = {};
+      if (filters.from) {
+        conditions.push(`${alias}."createdAt" >= :from`);
+        params.from = filters.from;
+      } else {
+        conditions.push(`${alias}."createdAt" >= :cutoff`);
+        params.cutoff = cutoff.toISOString();
+      }
+      if (filters.to) {
+        conditions.push(`${alias}."createdAt" <= :to`);
+        params.to = filters.to;
+      }
+      return { conditions, params };
+    };
 
-    if (filters.from) {
-      dateParts.push(`"createdAt" >= $${pIdx}`);
-      baseValues.push(filters.from);
-      pIdx++;
-    } else {
-      dateParts.push(`"createdAt" >= NOW() - INTERVAL '${days} days'`);
-    }
+    const sessionFilter = buildDateFilter('session');
+    const messageFilter = buildDateFilter('message');
+    const activeFilter = buildDateFilter('session');
 
-    if (filters.to) {
-      dateParts.push(`"createdAt" <= $${pIdx}`);
-      baseValues.push(filters.to);
-    }
-
-    const dateFilter = dateParts.join(' AND ');
-
+    // SAFETY: `trunc` is derived from `granularityToTrunc()` which maps the
+    // TypeScript union `AnalyticsGranularity` ('daily'|'weekly'|'monthly') to
+    // a fixed set of literals ('day'|'week'|'month'). It never contains user input.
     const [sessionsResult, messagesResult, activeUsersResult] = await Promise.all([
-      pool.query(
-        `SELECT date_trunc('${trunc}', "createdAt") AS d, COUNT(*) AS c
-         FROM "chat_sessions" WHERE ${dateFilter}
-         GROUP BY d ORDER BY d`,
-        baseValues,
-      ),
-      pool.query(
-        `SELECT date_trunc('${trunc}', "createdAt") AS d, COUNT(*) AS c
-         FROM "chat_messages" WHERE ${dateFilter}
-         GROUP BY d ORDER BY d`,
-        baseValues,
-      ),
-      pool.query(
-        `SELECT date_trunc('${trunc}', "createdAt") AS d, COUNT(DISTINCT "userId") AS c
-         FROM "chat_sessions"
-         WHERE ${dateFilter} AND "userId" IS NOT NULL
-         GROUP BY d ORDER BY d`,
-        baseValues,
-      ),
+      this.sessionRepo
+        .createQueryBuilder('session')
+        .select(`date_trunc('${trunc}', session."createdAt")`, 'd')
+        .addSelect('COUNT(*)', 'c')
+        .where(sessionFilter.conditions.join(' AND '), sessionFilter.params)
+        .groupBy('d')
+        .orderBy('d')
+        .getRawMany<{ d: Date; c: string }>(),
+      this.messageRepo
+        .createQueryBuilder('message')
+        .select(`date_trunc('${trunc}', message."createdAt")`, 'd')
+        .addSelect('COUNT(*)', 'c')
+        .where(messageFilter.conditions.join(' AND '), messageFilter.params)
+        .groupBy('d')
+        .orderBy('d')
+        .getRawMany<{ d: Date; c: string }>(),
+      this.sessionRepo
+        .createQueryBuilder('session')
+        .select(`date_trunc('${trunc}', session."createdAt")`, 'd')
+        .addSelect('COUNT(DISTINCT session."userId")', 'c')
+        .where(
+          activeFilter.conditions.join(' AND ') + ' AND session."userId" IS NOT NULL',
+          activeFilter.params,
+        )
+        .groupBy('d')
+        .orderBy('d')
+        .getRawMany<{ d: Date; c: string }>(),
     ]);
 
-    const mapTs = (rows: Record<string, unknown>[]) =>
+    const mapTs = (rows: { d: Date; c: string }[]) =>
       rows.map((r) => ({
-        date: (r.d as Date).toISOString().slice(0, 10),
-        count: Number.parseInt(r.c as string, 10),
+        date: new Date(r.d).toISOString().slice(0, 10),
+        count: Number.parseInt(r.c, 10),
       }));
 
     return {
@@ -402,95 +382,96 @@ export class AdminRepositoryPg implements IAdminRepository {
         to: filters.to ?? new Date().toISOString().slice(0, 10),
       },
       granularity,
-      sessionsCreated: mapTs(sessionsResult.rows),
-      messagesSent: mapTs(messagesResult.rows),
-      activeUsers: mapTs(activeUsersResult.rows),
+      sessionsCreated: mapTs(sessionsResult),
+      messagesSent: mapTs(messagesResult),
+      activeUsers: mapTs(activeUsersResult),
     };
   }
 
   /** Computes content analytics including top artworks, museums, and guardrail block rate. */
   async getContentAnalytics(filters: ContentAnalyticsFilters): Promise<ContentAnalytics> {
-    const limit = filters.limit ?? 10;
-    const conditions: string[] = [];
-    const values: unknown[] = [];
-    let idx = 1;
+    const topN = filters.limit ?? 10;
+
+    // Build date filter for artwork_matches and chat_sessions
+    const artworkQb = this.dataSource
+      .getRepository(ArtworkMatch)
+      .createQueryBuilder('a')
+      .select('a.title', 'title')
+      .addSelect('a.artist', 'artist')
+      .addSelect('COUNT(*)', 'c')
+      .groupBy('a.title')
+      .addGroupBy('a.artist')
+      .orderBy('c', 'DESC')
+      .limit(topN);
 
     if (filters.from) {
-      conditions.push(`"createdAt" >= $${idx}`);
-      values.push(filters.from);
-      idx++;
+      artworkQb.andWhere('a.createdAt >= :from', { from: filters.from });
     }
     if (filters.to) {
-      conditions.push(`"createdAt" <= $${idx}`);
-      values.push(filters.to);
-      idx++;
+      artworkQb.andWhere('a.createdAt <= :to', { to: filters.to });
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const museumQb = this.sessionRepo
+      .createQueryBuilder('session')
+      .select('session.museumName', 'name')
+      .addSelect('COUNT(*)', 'c')
+      .where('session.museumName IS NOT NULL')
+      .groupBy('session.museumName')
+      .orderBy('c', 'DESC')
+      .limit(topN);
+
+    if (filters.from) {
+      museumQb.andWhere('session.createdAt >= :from', { from: filters.from });
+    }
+    if (filters.to) {
+      museumQb.andWhere('session.createdAt <= :to', { to: filters.to });
+    }
+
+    const guardrailPromise = (async () => {
+      const totalQb = this.auditRepo.createQueryBuilder('log').select('COUNT(*)', 'total');
+      if (filters.from) {
+        totalQb.andWhere('log.createdAt >= :from', { from: filters.from });
+      }
+      if (filters.to) {
+        totalQb.andWhere('log.createdAt <= :to', { to: filters.to });
+      }
+
+      const blockedQb = this.auditRepo
+        .createQueryBuilder('log')
+        .select('COUNT(*)', 'total')
+        .where("log.action = 'SECURITY_GUARDRAIL_BLOCK'");
+      if (filters.from) {
+        blockedQb.andWhere('log.createdAt >= :from', { from: filters.from });
+      }
+      if (filters.to) {
+        blockedQb.andWhere('log.createdAt <= :to', { to: filters.to });
+      }
+
+      const [totalRes, blockedRes] = await Promise.all([
+        totalQb.getRawOne<{ total: string }>(),
+        blockedQb.getRawOne<{ total: string }>(),
+      ]);
+
+      const total = Number.parseInt(totalRes?.total ?? '0', 10);
+      const blocked = Number.parseInt(blockedRes?.total ?? '0', 10);
+      return total > 0 ? blocked / total : 0;
+    })();
 
     const [artworksResult, museumsResult, guardrailResult] = await Promise.all([
-      pool.query(
-        `SELECT a."title", a."artist", COUNT(*) AS c
-         FROM "artwork_matches" a
-         ${where}
-         GROUP BY a."title", a."artist"
-         ORDER BY c DESC
-         LIMIT $${idx}`,
-        [...values, limit],
-      ),
-      pool.query(
-        `SELECT "museumName" AS name, COUNT(*) AS c
-         FROM "chat_sessions"
-         ${conditions.length > 0 ? `WHERE ${conditions.join(' AND ')} AND` : 'WHERE'} "museumName" IS NOT NULL
-         GROUP BY "museumName"
-         ORDER BY c DESC
-         LIMIT $${idx}`,
-        [...values, limit],
-      ),
-      (async () => {
-        const guardrailWhere: string[] = [];
-        const gValues: unknown[] = [];
-        let gIdx = 1;
-
-        if (filters.from) {
-          guardrailWhere.push(`created_at >= $${gIdx}`);
-          gValues.push(filters.from);
-          gIdx++;
-        }
-        if (filters.to) {
-          guardrailWhere.push(`created_at <= $${gIdx}`);
-          gValues.push(filters.to);
-        }
-
-        const gWhere = guardrailWhere.length > 0 ? `WHERE ${guardrailWhere.join(' AND ')}` : '';
-
-        const totalRes = await pool.query(
-          `SELECT COUNT(*) AS total FROM "audit_logs" ${gWhere}`,
-          gValues,
-        );
-        const blockedFilter = gWhere
-          ? gWhere + " AND action = 'SECURITY_GUARDRAIL_BLOCK'"
-          : "WHERE action = 'SECURITY_GUARDRAIL_BLOCK'";
-        const blockedRes = await pool.query(
-          `SELECT COUNT(*) AS total FROM "audit_logs" ${blockedFilter}`,
-          gValues,
-        );
-
-        const total = Number.parseInt(totalRes.rows[0].total as string, 10);
-        const blocked = Number.parseInt(blockedRes.rows[0].total as string, 10);
-        return total > 0 ? blocked / total : 0;
-      })(),
+      artworkQb.getRawMany<{ title: string | null; artist: string | null; c: string }>(),
+      museumQb.getRawMany<{ name: string; c: string }>(),
+      guardrailPromise,
     ]);
 
     return {
-      topArtworks: artworksResult.rows.map((r: Record<string, unknown>) => ({
-        title: (r.title as string) ?? 'Unknown',
-        artist: (r.artist as string) ?? null,
-        count: Number.parseInt(r.c as string, 10),
+      topArtworks: artworksResult.map((r) => ({
+        title: r.title ?? 'Unknown',
+        artist: r.artist ?? null,
+        count: Number.parseInt(r.c, 10),
       })),
-      topMuseums: museumsResult.rows.map((r: Record<string, unknown>) => ({
-        name: r.name as string,
-        count: Number.parseInt(r.c as string, 10),
+      topMuseums: museumsResult.map((r) => ({
+        name: r.name,
+        count: Number.parseInt(r.c, 10),
       })),
       guardrailBlockRate: guardrailResult,
     };
@@ -498,63 +479,91 @@ export class AdminRepositoryPg implements IAdminRepository {
 
   /** Computes engagement metrics including average messages, session duration, and return rate. */
   async getEngagementAnalytics(filters: EngagementAnalyticsFilters): Promise<EngagementAnalytics> {
-    const conditions: string[] = [];
-    const values: unknown[] = [];
-    let idx = 1;
+    // Build shared date filter
+    const addDateFilters = (
+      qb: { andWhere: (condition: string, params: Record<string, unknown>) => unknown },
+      alias: string,
+    ): void => {
+      if (filters.from) {
+        qb.andWhere(`${alias}."createdAt" >= :from`, { from: filters.from });
+      }
+      if (filters.to) {
+        qb.andWhere(`${alias}."createdAt" <= :to`, { to: filters.to });
+      }
+    };
 
+    // Average messages per session
+    const avgMsgQb = this.sessionRepo
+      .createQueryBuilder('s')
+      .select('COALESCE(AVG(sub.msg_count), 0)', 'avg_msg')
+      .from((subQuery) => {
+        const sq = subQuery
+          .select('s.id', 'id')
+          .addSelect('COUNT(m.id)', 'msg_count')
+          .from(ChatSession, 's')
+          .leftJoin(ChatMessage, 'm', 'm."sessionId" = s.id')
+          .groupBy('s.id');
+        if (filters.from) {
+          sq.andWhere('s."createdAt" >= :from', { from: filters.from });
+        }
+        if (filters.to) {
+          sq.andWhere('s."createdAt" <= :to', { to: filters.to });
+        }
+        return sq;
+      }, 'sub');
+
+    // Average session duration in minutes
+    const avgDurationQb = this.sessionRepo
+      .createQueryBuilder('s')
+      .select(
+        'COALESCE(AVG(EXTRACT(EPOCH FROM (s."updatedAt" - s."createdAt")) / 60), 0)',
+        'avg_dur',
+      );
+    addDateFilters(avgDurationQb, 's');
+
+    // Return rate: unique users vs returning users
+    const returnRateMainQb = this.sessionRepo
+      .createQueryBuilder('s')
+      .select('COUNT(DISTINCT s."userId")', 'total_unique')
+      .where('s."userId" IS NOT NULL');
+    addDateFilters(returnRateMainQb, 's');
+
+    // Build the returning users subquery as raw SQL to avoid complexity
+    const returningParams: unknown[] = [];
+    let returningWhere = '';
     if (filters.from) {
-      conditions.push(`s."createdAt" >= $${idx}`);
-      values.push(filters.from);
-      idx++;
+      returningParams.push(filters.from);
+      returningWhere += ` AND sub."createdAt" >= $${returningParams.length}`;
     }
     if (filters.to) {
-      conditions.push(`s."createdAt" <= $${idx}`);
-      values.push(filters.to);
+      returningParams.push(filters.to);
+      returningWhere += ` AND sub."createdAt" <= $${returningParams.length}`;
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const [avgMsgResult, avgDurationResult, totalUniqueResult, returningResult] = await Promise.all(
+      [
+        avgMsgQb.getRawOne<{ avg_msg: string }>(),
+        avgDurationQb.getRawOne<{ avg_dur: string }>(),
+        returnRateMainQb.getRawOne<{ total_unique: string }>(),
+        this.dataSource.query(
+          `SELECT COUNT(*) AS returning_users FROM (
+           SELECT sub."userId"
+           FROM "chat_sessions" sub
+           WHERE sub."userId" IS NOT NULL${returningWhere}
+           GROUP BY sub."userId"
+           HAVING COUNT(*) > 1
+         ) t`,
+          returningParams,
+        ),
+      ],
+    );
 
-    const [avgMsgResult, avgDurationResult, returnRateResult] = await Promise.all([
-      pool.query(
-        `SELECT COALESCE(AVG(msg_count), 0) AS avg_msg
-         FROM (
-           SELECT s."id", COUNT(m."id") AS msg_count
-           FROM "chat_sessions" s
-           LEFT JOIN "chat_messages" m ON m."sessionId" = s."id"
-           ${where}
-           GROUP BY s."id"
-         ) sub`,
-        values,
-      ),
-      pool.query(
-        `SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (s."updatedAt" - s."createdAt")) / 60), 0) AS avg_dur
-         FROM "chat_sessions" s
-         ${where}`,
-        values,
-      ),
-      pool.query(
-        `SELECT
-           COUNT(DISTINCT s."userId") AS total_unique,
-           COUNT(DISTINCT s."userId") FILTER (WHERE s."userId" IN (
-             SELECT sub."userId" FROM "chat_sessions" sub
-             ${conditions.length > 0 ? 'WHERE ' + conditions.map((c) => c.replace(/s\./g, 'sub.')).join(' AND ') : ''}
-             GROUP BY sub."userId" HAVING COUNT(*) > 1
-           )) AS returning_users
-         FROM "chat_sessions" s
-         ${conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') + ' AND' : 'WHERE'} s."userId" IS NOT NULL`,
-        values,
-      ),
-    ]);
-
-    const totalUniqueUsers =
-      Number.parseInt(returnRateResult.rows[0]?.total_unique as string, 10) || 0;
-    const returningUsers =
-      Number.parseInt(returnRateResult.rows[0]?.returning_users as string, 10) || 0;
+    const totalUniqueUsers = Number.parseInt(totalUniqueResult?.total_unique ?? '0', 10);
+    const returningUsers = Number.parseInt(returningResult[0]?.returning_users ?? '0', 10);
 
     return {
-      avgMessagesPerSession: Number.parseFloat(avgMsgResult.rows[0]?.avg_msg as string) || 0,
-      avgSessionDurationMinutes:
-        Number.parseFloat(avgDurationResult.rows[0]?.avg_dur as string) || 0,
+      avgMessagesPerSession: Number.parseFloat(avgMsgResult?.avg_msg ?? '0') || 0,
+      avgSessionDurationMinutes: Number.parseFloat(avgDurationResult?.avg_dur ?? '0') || 0,
       returnUserRate: totalUniqueUsers > 0 ? returningUsers / totalUniqueUsers : 0,
       totalUniqueUsers,
       returningUsers,

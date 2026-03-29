@@ -2,6 +2,8 @@
  * Support module composition root.
  * Wires the PG repository to use-case classes and exports ready-to-use singletons.
  */
+import { AppDataSource } from '@src/data/db/data-source';
+
 import { AddTicketMessageUseCase } from './addTicketMessage.useCase';
 import { CreateTicketUseCase } from './createTicket.useCase';
 import { GetTicketDetailUseCase } from './getTicketDetail.useCase';
@@ -10,7 +12,7 @@ import { ListUserTicketsUseCase } from './listUserTickets.useCase';
 import { UpdateTicketStatusUseCase } from './updateTicketStatus.useCase';
 import { SupportRepositoryPg } from '../adapters/secondary/support.repository.pg';
 
-const supportRepository = new SupportRepositoryPg();
+const supportRepository = new SupportRepositoryPg(AppDataSource);
 
 export const createTicketUseCase = new CreateTicketUseCase(supportRepository);
 export const listUserTicketsUseCase = new ListUserTicketsUseCase(supportRepository);

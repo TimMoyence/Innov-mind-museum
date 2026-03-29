@@ -19,6 +19,9 @@ export class MessageReport {
   @ManyToOne(() => ChatMessage, { onDelete: 'CASCADE' })
   message!: ChatMessage;
 
+  @Column({ type: 'uuid' })
+  messageId!: string;
+
   @Column({ type: 'integer' })
   userId!: number;
 
