@@ -1,18 +1,15 @@
 import { useEffect, useState } from 'react';
-import { router } from 'expo-router';
 
 import { authService, type LoginResponse } from '@/features/auth/infrastructure/authApi';
-import { authStorage, setAccessToken } from '@/features/auth/infrastructure/authTokenStore';
 import {
   signInWithApple,
   signInWithGoogle,
   isAppleSignInAvailable,
 } from '@/features/auth/infrastructure/socialAuthProviders';
-import { HOME_ROUTE } from '@/features/auth/routes';
 import { getErrorMessage } from '@/shared/lib/errors';
 
 interface UseSocialLoginOptions {
-  setIsAuthenticated: (value: boolean) => void;
+  loginWithSession: (session: LoginResponse) => Promise<void>;
   setErrorMessage: (value: string | null) => void;
   setInfoMessage: (value: string | null) => void;
 }
@@ -22,7 +19,7 @@ interface UseSocialLoginOptions {
  * Handles token storage, authentication state, and error reporting.
  */
 export const useSocialLogin = ({
-  setIsAuthenticated,
+  loginWithSession,
   setErrorMessage,
   setInfoMessage,
 }: UseSocialLoginOptions) => {
@@ -35,12 +32,7 @@ export const useSocialLogin = ({
 
   const handleSocialLoginSuccess = async (response: LoginResponse): Promise<void> => {
     if (response.accessToken && response.refreshToken) {
-      await authStorage.setRefreshToken(response.refreshToken);
-      setAccessToken(response.accessToken);
-      setIsAuthenticated(true);
-      setTimeout(() => {
-        router.replace(HOME_ROUTE);
-      }, 120);
+      await loginWithSession(response);
     }
   };
 

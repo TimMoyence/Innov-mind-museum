@@ -139,6 +139,18 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryUserDefaults',
             NSPrivacyAccessedAPITypeReasons: ['CA92.1'],
           },
+          {
+            NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryFileTimestamp',
+            NSPrivacyAccessedAPITypeReasons: ['C617.1'],
+          },
+          {
+            NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategorySystemBootTime',
+            NSPrivacyAccessedAPITypeReasons: ['35F9.1'],
+          },
+          {
+            NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryDiskSpace',
+            NSPrivacyAccessedAPITypeReasons: ['E174.1'],
+          },
         ],
         NSPrivacyCollectedDataTypes: [
           {
@@ -210,6 +222,19 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     plugins: [
       'expo-router',
+      [
+        'expo-build-properties',
+        {
+          android: {
+            blockedPermissions: [
+              'android.permission.READ_EXTERNAL_STORAGE',
+              'android.permission.WRITE_EXTERNAL_STORAGE',
+              'com.google.android.gms.permission.AD_ID',
+              'android.permission.SYSTEM_ALERT_WINDOW',
+            ],
+          },
+        },
+      ],
       [
         'expo-image-picker',
         {

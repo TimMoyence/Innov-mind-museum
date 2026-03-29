@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
 import {
+  Alert,
   Dimensions,
   FlatList,
   Pressable,
@@ -79,20 +80,27 @@ export default function OnboardingScreen() {
   // eslint-disable-next-line react-hooks/refs -- stable config ref pattern
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
-  const handleNext = useCallback(async () => {
-    if (isLast) {
+  const completeAndNavigate = useCallback(async () => {
+    try {
       await markOnboardingComplete();
       router.replace('/(tabs)/home');
+    } catch {
+      Alert.alert(t('common.error'), t('error.network'));
+    }
+  }, [markOnboardingComplete, t]);
+
+  const handleNext = useCallback(async () => {
+    if (isLast) {
+      await completeAndNavigate();
       return;
     }
     next();
     flatListRef.current?.scrollToIndex({ index: currentStep + 1, animated: true });
-  }, [isLast, next, currentStep, markOnboardingComplete]);
+  }, [isLast, next, currentStep, completeAndNavigate]);
 
   const handleSkip = useCallback(async () => {
-    await markOnboardingComplete();
-    router.replace('/(tabs)/home');
-  }, [markOnboardingComplete]);
+    await completeAndNavigate();
+  }, [completeAndNavigate]);
 
   return (
     <LiquidScreen

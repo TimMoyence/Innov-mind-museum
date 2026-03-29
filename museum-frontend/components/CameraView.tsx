@@ -1,13 +1,7 @@
 /* eslint-disable react-native/no-inline-styles -- camera UI spacing */
 import { useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StatusBar,
-  SafeAreaView,
-} from 'react-native';
-import type { CameraType} from 'expo-camera';
+import { View, Text, TouchableOpacity, StatusBar, SafeAreaView } from 'react-native';
+import type { CameraType } from 'expo-camera';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -37,6 +31,7 @@ export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
       });
+      if (!photo) return;
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onCapture(photo.uri);
     } catch {
@@ -65,7 +60,9 @@ export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
       <View style={cameraStyles.container}>
         <Text>{t('camera.no_access')}</Text>
         <TouchableOpacity
-          onPress={() => { void requestPermission(); }}
+          onPress={() => {
+            void requestPermission();
+          }}
           style={{ marginTop: 12 }}
           accessibilityRole="button"
           accessibilityLabel={t('a11y.camera.grant_permission')}
@@ -86,12 +83,14 @@ export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
 
   return (
     <View style={cameraStyles.cameraContainer}>
-      <StatusBar barStyle='light-content' />
+      <StatusBar barStyle="light-content" />
       <CameraView
         style={cameraStyles.camera}
         ref={cameraRef}
         facing={facing}
-        onCameraReady={() => { setCameraReady(true); }}
+        onCameraReady={() => {
+          setCameraReady(true);
+        }}
       >
         <SafeAreaView style={cameraStyles.cameraContent}>
           <View style={cameraStyles.cameraHeader}>
@@ -101,7 +100,7 @@ export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
               accessibilityRole="button"
               accessibilityLabel={t('a11y.camera.close')}
             >
-              <Feather name='chevron-left' size={26} color='white' />
+              <Feather name="chevron-left" size={26} color="white" />
             </TouchableOpacity>
             <Text style={cameraStyles.cameraTitle}>{t('camera.ar_mode')}</Text>
           </View>
@@ -112,12 +111,14 @@ export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
               accessibilityRole="button"
               accessibilityLabel={t('a11y.camera.grid')}
             >
-              <Feather name='grid' size={22} color='white' />
+              <Feather name="grid" size={22} color="white" />
             </TouchableOpacity>
 
             <TouchableOpacity
               style={cameraStyles.captureButton}
-              onPress={() => { void capturePhoto(); }}
+              onPress={() => {
+                void capturePhoto();
+              }}
               disabled={!cameraReady}
               accessibilityRole="button"
               accessibilityLabel={t('a11y.camera.capture')}
@@ -131,7 +132,7 @@ export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
               accessibilityRole="button"
               accessibilityLabel={t('a11y.camera.switch_camera')}
             >
-              <Feather name='camera' size={22} color='white' />
+              <Feather name="camera" size={22} color="white" />
             </TouchableOpacity>
           </View>
 

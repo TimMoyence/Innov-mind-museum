@@ -34,10 +34,18 @@ SplashScreen.preventAutoHideAsync().catch(() => {
   /* fire-and-forget */
 });
 
+/** Minimal session data needed by `loginWithSession`. */
+interface SessionData {
+  accessToken: string;
+  refreshToken: string;
+  user: { onboardingCompleted: boolean };
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   isFirstLaunch: boolean | null;
+  loginWithSession: (session: SessionData) => Promise<void>;
   markOnboardingComplete: () => Promise<void>;
   logout: () => Promise<void>;
   checkTokenValidity: () => Promise<boolean>;
@@ -67,6 +75,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isBiometricLocked, setIsBiometricLocked] = useState(false);
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
+
+  const loginWithSession = useCallback(async (session: SessionData) => {
+    await authStorage.setRefreshToken(session.refreshToken);
+    setAccessToken(session.accessToken);
+    setIsAuthenticated(true);
+    setIsFirstLaunch(!session.user.onboardingCompleted);
+    identifySentryUser(session.accessToken);
+  }, []);
 
   const markOnboardingComplete = useCallback(async () => {
     await authService.completeOnboarding();
@@ -211,6 +227,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         isAuthenticated,
         isLoading,
         isFirstLaunch,
+        loginWithSession,
         markOnboardingComplete,
         logout,
         checkTokenValidity,
