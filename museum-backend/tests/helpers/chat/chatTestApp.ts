@@ -130,6 +130,7 @@ class InMemoryChatRepository implements ChatRepository {
       metadata: input.metadata || null,
       createdAt: new Date(),
       session: { id: input.sessionId } as ChatSession,
+      sessionId: input.sessionId,
       artworkMatches: [],
     } as ChatMessage;
 

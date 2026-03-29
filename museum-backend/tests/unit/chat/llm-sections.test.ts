@@ -13,6 +13,7 @@ const createMessage = (id: string, role: 'user' | 'assistant', text: string): Ch
     metadata: null,
     createdAt: new Date('2026-02-18T10:00:00.000Z'),
     session: undefined as never,
+    sessionId: 'test-session',
     artworkMatches: [],
   }) as ChatMessage;
 

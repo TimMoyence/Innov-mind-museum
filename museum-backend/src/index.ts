@@ -88,7 +88,10 @@ const start = async (): Promise<void> => {
       });
     });
 
-    const tokenCleanup = new TokenCleanupService(new RefreshTokenRepositoryPg(), cacheService);
+    const tokenCleanup = new TokenCleanupService(
+      new RefreshTokenRepositoryPg(AppDataSource),
+      cacheService,
+    );
     tokenCleanup.startScheduler();
 
     let isShuttingDown = false;

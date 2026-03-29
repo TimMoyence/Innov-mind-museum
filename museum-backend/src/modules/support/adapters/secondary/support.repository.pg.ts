@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-condition -- defensive: raw SQL row fields may be null at runtime */
-import pool from '@data/db';
+import { SupportTicket } from '../../domain/supportTicket.entity';
+import { TicketMessage } from '../../domain/ticketMessage.entity';
 
 import type { ISupportRepository } from '../../domain/support.repository.interface';
 import type {
@@ -12,104 +12,97 @@ import type {
   UpdateTicketInput,
 } from '../../domain/support.types';
 import type { PaginatedResult } from '@modules/admin/domain/admin.types';
+import type { DataSource, Repository } from 'typeorm';
 
-/** Map a raw support_tickets row to a TicketDTO. */
-function mapTicketRow(row: Record<string, unknown>): TicketDTO {
+/** Map a SupportTicket entity to a TicketDTO. */
+function toTicketDTO(entity: SupportTicket, messageCount?: number): TicketDTO {
   return {
-    id: row.id as string,
-    userId: row.userId as number,
-    subject: row.subject as string,
-    description: row.description as string,
-    status: row.status as string,
-    priority: row.priority as string,
-    category: (row.category as string) ?? null,
-    assignedTo: (row.assigned_to as number) ?? null,
-    createdAt: (row.createdAt as Date).toISOString(),
-    updatedAt: (row.updatedAt as Date).toISOString(),
-    messageCount:
-      row.message_count !== undefined
-        ? Number.parseInt(row.message_count as string, 10)
-        : undefined,
+    id: entity.id,
+    userId: entity.userId,
+    subject: entity.subject,
+    description: entity.description,
+    status: entity.status,
+    priority: entity.priority,
+    category: entity.category ?? null,
+    assignedTo: entity.assignedTo ?? null,
+    createdAt: entity.createdAt.toISOString(),
+    updatedAt: entity.updatedAt.toISOString(),
+    messageCount,
   };
 }
 
-/** Map a raw ticket_messages row to a TicketMessageDTO. */
-function mapMessageRow(row: Record<string, unknown>): TicketMessageDTO {
+/** Map a TicketMessage entity to a TicketMessageDTO. */
+function toMessageDTO(entity: TicketMessage): TicketMessageDTO {
   return {
-    id: row.id as string,
-    ticketId: row.ticket_id as string,
-    senderId: row.sender_id as number,
-    senderRole: row.sender_role as string,
-    text: row.text as string,
-    createdAt: (row.createdAt as Date).toISOString(),
+    id: entity.id,
+    ticketId: entity.ticketId,
+    senderId: entity.senderId,
+    senderRole: entity.senderRole,
+    text: entity.text,
+    createdAt: entity.createdAt.toISOString(),
   };
 }
 
-/** PostgreSQL implementation of the support repository. */
+/** TypeORM implementation of the support repository. */
 export class SupportRepositoryPg implements ISupportRepository {
+  private readonly ticketRepo: Repository<SupportTicket>;
+  private readonly messageRepo: Repository<TicketMessage>;
+  private readonly dataSource: DataSource;
+
+  constructor(dataSource: DataSource) {
+    this.dataSource = dataSource;
+    this.ticketRepo = dataSource.getRepository(SupportTicket);
+    this.messageRepo = dataSource.getRepository(TicketMessage);
+  }
+
   /** Inserts a new support ticket and returns the created record. */
   async createTicket(input: CreateTicketInput): Promise<TicketDTO> {
-    const result = await pool.query(
-      `INSERT INTO "support_tickets" ("userId", "subject", "description", "priority", "category")
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *, "assigned_to"`,
-      [
-        input.userId,
-        input.subject,
-        input.description,
-        input.priority ?? 'medium',
-        input.category ?? null,
-      ],
-    );
-    return mapTicketRow(result.rows[0]);
+    const entity = this.ticketRepo.create({
+      userId: input.userId,
+      subject: input.subject,
+      description: input.description,
+      priority: input.priority ?? 'medium',
+      category: input.category ?? null,
+    });
+    const saved = await this.ticketRepo.save(entity);
+    return toTicketDTO(saved);
   }
 
   /** Retrieves a paginated list of support tickets with optional filters. */
   async listTickets(filters: ListTicketsFilters): Promise<PaginatedResult<TicketDTO>> {
-    const conditions: string[] = [];
-    const values: unknown[] = [];
-    let idx = 1;
-
-    if (filters.userId !== undefined) {
-      conditions.push(`t."userId" = $${idx}`);
-      values.push(filters.userId);
-      idx++;
-    }
-
-    if (filters.status) {
-      conditions.push(`t."status" = $${idx}`);
-      values.push(filters.status);
-      idx++;
-    }
-
-    if (filters.priority) {
-      conditions.push(`t."priority" = $${idx}`);
-      values.push(filters.priority);
-      idx++;
-    }
-
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const { page, limit } = filters.pagination;
     const offset = (page - 1) * limit;
 
-    const countResult = await pool.query(
-      `SELECT COUNT(*) AS total FROM "support_tickets" t ${where}`,
-      values,
-    );
-    const total = Number.parseInt(countResult.rows[0].total as string, 10);
+    const qb = this.ticketRepo.createQueryBuilder('t');
 
-    const dataResult = await pool.query(
-      `SELECT t.*, t."assigned_to",
-              (SELECT COUNT(*) FROM "ticket_messages" m WHERE m."ticket_id" = t."id") AS message_count
-       FROM "support_tickets" t
-       ${where}
-       ORDER BY t."updatedAt" DESC
-       LIMIT $${idx} OFFSET $${idx + 1}`,
-      [...values, limit, offset],
-    );
+    if (filters.userId !== undefined) {
+      qb.andWhere('t.userId = :userId', { userId: filters.userId });
+    }
+    if (filters.status) {
+      qb.andWhere('t.status = :status', { status: filters.status });
+    }
+    if (filters.priority) {
+      qb.andWhere('t.priority = :priority', { priority: filters.priority });
+    }
+
+    const total = await qb.getCount();
+
+    // Add message count subquery
+    const dataQb = qb
+      .clone()
+      .addSelect((subQuery) => {
+        return subQuery.select('COUNT(m.id)').from(TicketMessage, 'm').where('m.ticketId = t.id');
+      }, 'messageCount')
+      .orderBy('t.updatedAt', 'DESC')
+      .offset(offset)
+      .limit(limit);
+
+    const { entities, raw } = await dataQb.getRawAndEntities();
 
     return {
-      data: dataResult.rows.map(mapTicketRow),
+      data: entities.map((entity, idx) =>
+        toTicketDTO(entity, Number.parseInt(raw[idx]?.messageCount as string, 10) || 0),
+      ),
       total,
       page,
       limit,
@@ -119,89 +112,63 @@ export class SupportRepositoryPg implements ISupportRepository {
 
   /** Retrieves a ticket with its associated messages by ticket ID. */
   async getTicketById(ticketId: string): Promise<TicketDetailDTO | null> {
-    const ticketResult = await pool.query(
-      `SELECT *, "assigned_to" FROM "support_tickets" WHERE "id" = $1`,
-      [ticketId],
-    );
+    const ticket = await this.ticketRepo.findOne({ where: { id: ticketId } });
+    if (!ticket) return null;
 
-    if (ticketResult.rows.length === 0) return null;
-
-    const ticket = mapTicketRow(ticketResult.rows[0]);
-
-    const messagesResult = await pool.query(
-      `SELECT * FROM "ticket_messages" WHERE "ticket_id" = $1 ORDER BY "createdAt" ASC`,
-      [ticketId],
-    );
+    const messages = await this.messageRepo.find({
+      where: { ticketId },
+      order: { createdAt: 'ASC' },
+    });
 
     return {
-      ...ticket,
-      messages: messagesResult.rows.map(mapMessageRow),
+      ...toTicketDTO(ticket),
+      messages: messages.map(toMessageDTO),
     };
   }
 
   /** Inserts a new message into a ticket and bumps the ticket's updatedAt timestamp. */
   async addMessage(input: AddTicketMessageInput): Promise<TicketMessageDTO> {
-    const result = await pool.query(
-      `INSERT INTO "ticket_messages" ("ticket_id", "sender_id", "sender_role", "text")
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
-      [input.ticketId, input.senderId, input.senderRole, input.text],
-    );
+    return await this.dataSource.transaction(async (manager) => {
+      const msgRepo = manager.getRepository(TicketMessage);
+      const tktRepo = manager.getRepository(SupportTicket);
 
-    // Bump the ticket's updatedAt
-    await pool.query(`UPDATE "support_tickets" SET "updatedAt" = NOW() WHERE "id" = $1`, [
-      input.ticketId,
-    ]);
+      const entity = msgRepo.create({
+        ticketId: input.ticketId,
+        senderId: input.senderId,
+        senderRole: input.senderRole,
+        text: input.text,
+      });
+      const saved = await msgRepo.save(entity);
 
-    return mapMessageRow(result.rows[0]);
+      // Bump the ticket's updatedAt
+      await tktRepo.update(input.ticketId, { updatedAt: new Date() });
+
+      return toMessageDTO(saved);
+    });
   }
 
   /** Dynamically updates ticket fields (status, priority, assignedTo) and returns the updated record. */
   async updateTicket(input: UpdateTicketInput): Promise<TicketDTO | null> {
-    const setClauses: string[] = [];
-    const values: unknown[] = [];
-    let idx = 1;
+    const updates: Partial<SupportTicket> = {};
 
-    if (input.status !== undefined) {
-      setClauses.push(`"status" = $${idx}`);
-      values.push(input.status);
-      idx++;
-    }
+    if (input.status !== undefined) updates.status = input.status;
+    if (input.priority !== undefined) updates.priority = input.priority;
+    if (input.assignedTo !== undefined) updates.assignedTo = input.assignedTo;
 
-    if (input.priority !== undefined) {
-      setClauses.push(`"priority" = $${idx}`);
-      values.push(input.priority);
-      idx++;
-    }
+    if (Object.keys(updates).length === 0) return null;
 
-    if (input.assignedTo !== undefined) {
-      setClauses.push(`"assigned_to" = $${idx}`);
-      values.push(input.assignedTo);
-      idx++;
-    }
+    const result = await this.ticketRepo.update(input.ticketId, updates);
+    if ((result.affected ?? 0) === 0) return null;
 
-    if (setClauses.length === 0) return null;
-
-    setClauses.push(`"updatedAt" = NOW()`);
-
-    const result = await pool.query(
-      `UPDATE "support_tickets"
-       SET ${setClauses.join(', ')}
-       WHERE "id" = $${idx}
-       RETURNING *, "assigned_to"`,
-      [...values, input.ticketId],
-    );
-
-    if (result.rows.length === 0) return null;
-    return mapTicketRow(result.rows[0]);
+    const ticket = await this.ticketRepo.findOne({ where: { id: input.ticketId } });
+    return ticket ? toTicketDTO(ticket) : null;
   }
 
   /** Checks whether a user is the owner of a given support ticket. */
   async isTicketOwner(ticketId: string, userId: number): Promise<boolean> {
-    const result = await pool.query(
-      `SELECT 1 FROM "support_tickets" WHERE "id" = $1 AND "userId" = $2`,
-      [ticketId, userId],
-    );
-    return result.rows.length > 0;
+    const count = await this.ticketRepo.count({
+      where: { id: ticketId, userId },
+    });
+    return count > 0;
   }
 }
