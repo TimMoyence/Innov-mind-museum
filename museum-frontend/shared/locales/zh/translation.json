@@ -61,15 +61,15 @@
     "settings": "设置",
     "menu": {
       "discover": "发现",
-      "lens": "镜头",
+      "lens": "相机",
       "audio": "语音"
     },
     "messages": {
-      "lens_opened": "镜头对话已打开",
+      "lens_opened": "相机对话已打开",
       "audio_opened": "语音对话已打开",
       "conversation_opened": "对话已打开",
       "opening_discover": "正在打开发现",
-      "opening_lens": "正在打开镜头",
+      "opening_lens": "正在打开相机",
       "opening_audio": "正在打开语音"
     }
   },
@@ -184,8 +184,8 @@
     "slide0": {
       "title": "欢迎使用 Musaium",
       "subtitle": "您的私人博物馆导览。拍摄艺术品或提问，获取 AI 驱动的解读。",
-      "tip1": "打开首页，选择发现、镜头、语音或开始对话。",
-      "tip2": "镜头模式会创建对话并打开相机，拍摄艺术品。",
+      "tip1": "打开首页，选择发现、相机、语音或开始对话。",
+      "tip2": "相机模式会创建对话并打开相机，拍摄艺术品。",
       "tip3": "语音模式会创建对话并开始录音，用于语音提问。",
       "tip4": "访问仪表盘可查看已收藏或最近的对话。"
     },
@@ -233,7 +233,7 @@
     "subtitle": "通过最便捷的入口探索艺术品和古迹：拍照分析、语音提问或您最近的会话。",
     "photo_title": "拍摄一件艺术品",
     "photo_desc": "直接启动相机，让 Musaium 分析一件艺术品、古迹或文化细节。",
-    "open_lens": "打开镜头",
+    "open_lens": "打开相机",
     "voice_title": "语音提问",
     "voice_desc": "开始语音对话，在参观博物馆或古迹时录制语音提问。",
     "start_audio": "开始语音对话",
@@ -244,7 +244,7 @@
     "guided_desc": "了解导览模式如何在参观中添加下一站推荐和更丰富的背景信息。",
     "open_guided": "打开导览模式说明",
     "menu": {
-      "lens": "镜头",
+      "lens": "相机",
       "audio": "语音",
       "dashboard": "仪表盘"
     },
@@ -328,7 +328,7 @@
     "play": "播放",
     "clear": "清除",
     "gallery": "相册",
-    "lens": "镜头",
+    "lens": "相机",
     "stop_audio": "停止音频",
     "audio": "语音",
     "image_sent": "[已发送图片]",
@@ -386,6 +386,9 @@
     "copy": "复制",
     "report": "举报",
     "speak": "朗读"
+  },
+  "messageActions": {
+    "learn_more": "了解更多"
   },
   "error": {
     "network": "网络不可用。请检查连接后重试。",

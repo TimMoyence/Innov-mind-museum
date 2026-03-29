@@ -126,7 +126,7 @@ export function MediaAttachmentPanel({
             styles.attachButton,
             { borderColor: theme.cardBorder, backgroundColor: theme.surface },
           ]}
-          onPress={onTakePicture}
+          onPress={() => { onTakePicture(); }}
           accessibilityRole="button"
           accessibilityLabel={t('chat.lens')}
         >

@@ -28,8 +28,7 @@ export class GetProfileUseCase {
       lastname: user.lastname ?? null,
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: role may be undefined in legacy DB rows
       role: user.role || 'visitor',
-      onboardingCompleted:
-        (user as unknown as Record<string, unknown>).onboarding_completed === true,
+      onboardingCompleted: user.onboarding_completed,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

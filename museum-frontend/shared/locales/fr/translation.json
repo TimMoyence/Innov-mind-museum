@@ -65,7 +65,7 @@
       "audio": "Audio"
     },
     "messages": {
-      "lens_opened": "Conversation Objectif ouverte",
+      "lens_opened": "Conversation Caméra ouverte",
       "audio_opened": "Conversation Audio ouverte",
       "conversation_opened": "Conversation ouverte",
       "opening_discover": "Ouverture de Découvrir",
@@ -184,8 +184,8 @@
     "slide0": {
       "title": "Bienvenue sur Musaium",
       "subtitle": "Votre guide de musée personnel. Photographiez des œuvres ou posez des questions pour obtenir des analyses IA.",
-      "tip1": "Ouvrez l'Accueil et choisissez Découvrir, Objectif, Audio ou Démarrer une conversation.",
-      "tip2": "Objectif crée un chat et ouvre l'appareil photo pour capturer une œuvre.",
+      "tip1": "Ouvrez l'Accueil et choisissez Découvrir, Caméra, Audio ou Démarrer une conversation.",
+      "tip2": "Caméra crée un chat et ouvre l'appareil photo pour capturer une œuvre.",
       "tip3": "Audio crée un chat et démarre l'enregistrement vocal pour les questions parlées.",
       "tip4": "Visitez le Tableau de bord pour retrouver vos conversations enregistrées ou récentes."
     },

@@ -387,6 +387,9 @@
     "report": "Melden",
     "speak": "Vorlesen"
   },
+  "messageActions": {
+    "learn_more": "Mehr erfahren"
+  },
   "error": {
     "network": "Netzwerk nicht verfügbar. Überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
     "timeout": "Zeitüberschreitung der Anfrage. Bitte versuchen Sie es erneut.",

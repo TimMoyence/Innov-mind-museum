@@ -1,14 +1,14 @@
 import { useCallback, useState } from 'react';
+import { Alert, Linking } from 'react-native';
 import * as ImagePickerLib from 'expo-image-picker';
 
 /**
  * Hook that manages image selection state and handlers for chat attachments.
- * Supports gallery picking and camera capture via a callback pattern.
+ * Supports gallery picking and native camera capture.
  */
 export const useImagePicker = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<string | null>(null);
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   const onPickImage = useCallback(async () => {
     const { status } = await ImagePickerLib.requestMediaLibraryPermissionsAsync();
@@ -32,6 +32,10 @@ export const useImagePicker = () => {
     const { status } = await ImagePickerLib.requestCameraPermissionsAsync();
     // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- Expo permission status API
     if (status !== 'granted') {
+      Alert.alert('Camera Access', 'Camera permission is required. Please enable it in Settings.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Settings', onPress: () => void Linking.openSettings() },
+      ]);
       return;
     }
 
@@ -44,11 +48,6 @@ export const useImagePicker = () => {
     if (!result.canceled && result.assets.length) {
       setPendingImage(result.assets[0].uri);
     }
-  }, []);
-
-  const onCameraCapture = useCallback((uri: string) => {
-    setPendingImage(uri);
-    setIsCameraOpen(false);
   }, []);
 
   const confirmPendingImage = useCallback((uri: string) => {
@@ -67,11 +66,8 @@ export const useImagePicker = () => {
   return {
     selectedImage,
     pendingImage,
-    isCameraOpen,
-    setIsCameraOpen,
     onPickImage,
     onTakePicture,
-    onCameraCapture,
     confirmPendingImage,
     cancelPendingImage,
     clearSelectedImage,

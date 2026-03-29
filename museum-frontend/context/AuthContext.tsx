@@ -162,6 +162,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
       clearAccessToken();
       setIsAuthenticated(false);
+      setIsFirstLaunch(null);
       Sentry.setUser(null);
       router.replace(AUTH_ROUTE);
     });
@@ -189,6 +190,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     clearAccessToken();
     setIsAuthenticated(false);
+    setIsFirstLaunch(null);
     Sentry.setUser(null);
     router.replace(AUTH_ROUTE);
 
