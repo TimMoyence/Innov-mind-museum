@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { ChatMessageBubble } from '@/features/chat/ui/ChatMessageBubble';
@@ -50,7 +50,7 @@ export const ChatMessageList = ({
   onImageError,
   onReport,
 }: ChatMessageListProps) => {
-  const listRef = useRef<FlashList<ChatUiMessage>>(null);
+  const listRef = useRef<FlashListRef<ChatUiMessage>>(null);
 
   const lastAssistantMessage = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -80,8 +80,10 @@ export const ChatMessageList = ({
     if (!isStreaming) return;
     const interval = setInterval(() => {
       listRef.current?.scrollToEnd({ animated: false });
-    }, 200);
-    return () => { clearInterval(interval); };
+    }, 350);
+    return () => {
+      clearInterval(interval);
+    };
   }, [isStreaming]);
 
   const renderItem = useCallback(
@@ -130,7 +132,6 @@ export const ChatMessageList = ({
     <FlashList
       ref={listRef}
       data={messages}
-      estimatedItemSize={80}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
       contentContainerStyle={styles.listContent}

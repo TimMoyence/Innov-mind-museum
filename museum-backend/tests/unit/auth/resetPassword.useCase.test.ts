@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 import bcrypt from 'bcrypt';
 import { ResetPasswordUseCase } from '@modules/auth/core/useCase/resetPassword.useCase';
 import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
@@ -43,8 +45,12 @@ describe('ResetPasswordUseCase', () => {
 
     expect(result).toMatchObject({ id: 1, email: 'user@test.com' });
     expect(mockHash).toHaveBeenCalledWith('NewValid1', BCRYPT_ROUNDS);
+    const expectedHashedToken = crypto
+      .createHash('sha256')
+      .update('valid-reset-token')
+      .digest('hex');
     expect(repo.consumeResetTokenAndUpdatePassword).toHaveBeenCalledWith(
-      'valid-reset-token',
+      expectedHashedToken,
       '$2b$12$hashedNewPassword',
     );
   });

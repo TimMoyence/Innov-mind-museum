@@ -11,6 +11,7 @@ import {
   bySession,
   createRateLimitMiddleware,
 } from '@src/helpers/middleware/rate-limit.middleware';
+import { createUploadAdmissionMiddleware } from '@src/helpers/middleware/upload-admission.middleware';
 
 import {
   parseCreateSessionRequest,
@@ -204,6 +205,8 @@ export const createChatRouter = (
 ): Router => {
   const router = Router();
 
+  const uploadAdmission = createUploadAdmissionMiddleware();
+
   const sessionLimiter = createRateLimitMiddleware({
     limit: env.rateLimit.sessionLimit,
     windowMs: env.rateLimit.windowMs,
@@ -259,6 +262,7 @@ export const createChatRouter = (
     '/sessions/:id/messages',
     isAuthenticated,
     sessionLimiter,
+    uploadAdmission,
     upload.single('image'),
     async (req, res, next) => {
       try {
@@ -329,6 +333,15 @@ export const createChatRouter = (
         controller.abort();
       });
 
+      // SSE keep-alive: send comment frames every 15s while waiting for
+      // semaphore slot / LLM provider so proxies don't drop the connection.
+      const KEEP_ALIVE_MS = 15_000;
+      const keepAliveTimer = setInterval(() => {
+        if (!res.writableEnded && !res.destroyed) {
+          res.write(': keep-alive\n\n');
+        }
+      }, KEEP_ALIVE_MS);
+
       // Hard timeout: cut SSE after 60s — if response takes longer, something is wrong
       // (LLM budget is 25s; beyond 60s = zombie connection or provider failure)
       const SSE_TIMEOUT_MS = 60_000;
@@ -361,9 +374,12 @@ export const createChatRouter = (
           req.params.id,
           { text: bodyPayload.text, context },
           (tokenText) => {
+            // First real token arrived — stop keep-alive, proxy timeout no longer a risk
+            clearInterval(keepAliveTimer);
             if (!res.writableEnded && !res.destroyed) sendSseToken(res, tokenText);
           },
           (guardrailText, reason) => {
+            clearInterval(keepAliveTimer);
             if (!res.writableEnded && !res.destroyed) sendSseGuardrail(res, guardrailText, reason);
           },
           (req as { requestId?: string }).requestId,
@@ -388,6 +404,7 @@ export const createChatRouter = (
           );
         }
       } finally {
+        clearInterval(keepAliveTimer);
         clearTimeout(sseTimer);
         if (!res.writableEnded) res.end();
       }
@@ -398,6 +415,7 @@ export const createChatRouter = (
     '/sessions/:id/audio',
     isAuthenticated,
     sessionLimiter,
+    uploadAdmission,
     audioUpload.single('audio'),
     async (req, res, next) => {
       try {

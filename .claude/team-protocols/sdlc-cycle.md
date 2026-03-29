@@ -49,7 +49,7 @@ Le pre-flight est execute AVANT toute phase. Il mesure la sante du repo et peut 
 | CHALLENGER  | Plan valide (Porte 1 PASS), 5+ fichiers impactes               | Plan challenge, risques reevalues, **utilisateur a valide**           |
 | DEVELOPPER  | Plan valide par l'utilisateur                                   | Code implemente, lint+prettier par agent, Checkpoint 1 PASS          |
 | REGRESSION  | Dev valide (Checkpoint 1 PASS)                                  | Tests manquants identifies et ecrits via /test-writer                |
-| VERIFIER    | Regression couverte (Porte 2.5 PASS)                            | eslint --quiet PASS, /security-scan changed PASS (Checkpoint 2)      |
+| VERIFIER    | Regression couverte (Porte 2.5 PASS)                            | eslint --quiet PASS, /security-scan PASS, SAST PASS (Checkpoint 2)   |
 | TESTER      | Verification validee (Checkpoint 2 PASS)                        | Tests integres PASS, couverture maintenue, ratchet check OK          |
 | VIABILITE   | Tests valides (Porte 4 PASS)                                    | Product Viability Gate PASS (cf. product-viability-gate.json)        |
 | CLEANUP     | Viabilite validee (Porte 4.5 PASS)                              | prettier --write + eslint --fix batch, dead code supprime            |
@@ -215,8 +215,14 @@ Contenu obligatoire :
 2. Executer `/security-scan changed` sur les fichiers modifies
 3. Si erreurs eslint → corriger immediatement (pas de report)
 4. Si vulnerabilite security → corriger ou escalader
+5. SAST Pipeline (en parallele) :
+   a. `/semgrep` sur fichiers changes → findings
+   b. `/vulnerability-scanner` sur fichiers changes → OWASP findings
+   c. Si security-sensitive : `/codeql` sur modules impactes
+   d. Si package.json modifie : `/supply-chain-auditor`
+6. Consolider /security-scan + SAST → rapport unifie pour Sentinelle
 
-→ **CHECKPOINT 2** : eslint --quiet PASS + /security-scan clean.
+→ **CHECKPOINT 2** : eslint --quiet PASS + /security-scan clean + SAST clean.
 
 ---
 
@@ -240,6 +246,8 @@ Contenu obligatoire :
 - [ ] Chaque use case a 1+ test
 - [ ] Pas de `.skip` injustifie
 - [ ] Quality Ratchet respecte
+- [ ] Si museum-web en scope : browser-use smoke test PASS
+- [ ] obra/verification-before-completion checklist satisfait
 
 **Phase 4b — SMOKE TEST API** (si routes modifiees) :
 - `pnpm smoke:api` ou supertest inline (200, 401, 422)
@@ -264,6 +272,8 @@ Contenu obligatoire :
 3. Verifier l'impact UX (pas de regression UX)
 4. Verifier les dependances (pas de dette technique injustifiee)
 5. Si FAIL → retour en Phase 2 (DEVELOPPER) avec les corrections requises
+6. Si museum-web modifie : browser-use visual verification
+7. obra/verification-before-completion : checklist finale
 
 → **PORTE SENTINELLE 4.5** : Product Viability Gate result.
 
@@ -333,6 +343,7 @@ Migration a reverter: [nom] ou "aucune"
 3. Feedback loop : identifier les apprentissages du run
 4. KB update : mettre a jour la knowledge base avec les decisions et patterns
 5. Rapport Sentinelle final → `team-reports/YYYY-MM-DD.md`
+6. obra/verification-before-completion : derniere passe verification
 
 → **PORTE SENTINELLE FINALE** : Rapport complet → `team-reports/YYYY-MM-DD.md`
 

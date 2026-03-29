@@ -134,8 +134,39 @@
       "source": "v2 migration 2026-03-27: SKILL.md 1653L -> 222L, 7 protocoles + 9 templates + 5 hooks + 2 agents",
       "inject_when": "Tech Lead orchestre un run /team",
       "severity": "HIGH"
+    },
+    {
+      "id": "PE-020",
+      "rule": "Phase VERIFIER doit executer semgrep + vulnerability-scanner sur fichiers changes (en plus de /security-scan). Resultats consolides avant gate Sentinelle. obra/verification-before-completion checklist obligatoire avant toute declaration de completion.",
+      "source": "Community skills integration 2026-03-28. 13 skills installes apres review securite (double lecture native + emulee).",
+      "inject_when": "Phase 3 VERIFIER ou toute phase pre-completion",
+      "severity": "HIGH"
+    },
+    {
+      "id": "PE-021",
+      "rule": "Pour mandats Backend Architect touchant chat/LLM, injecter langchain-skills (fundamentals, rag, middleware). Pour scope Express/TypeORM, injecter backend-patterns reference.",
+      "source": "Community skills integration 2026-03-28. LangChain skills + backend-patterns installes.",
+      "inject_when": "Tech Lead prepare mandat Backend Architect",
+      "severity": "MEDIUM"
+    }
+    ,{
+      "id": "PE-022",
+      "rule": "Audit scan agents MUST verify line counts and file states against live codebase, not cached/memorized data. If a previous run refactored files, the scan agent must re-count lines (wc -l) rather than citing prior audit numbers. Stale data leads to incorrect severity classification.",
+      "source": "R16: Frontend scan reported settings.tsx 662L and conversations.tsx 644L — actual sizes were 327L and 331L after R15 refactor. Sentinelle corrected.",
+      "inject_when": "agent performs architecture audit or god-file analysis",
+      "severity": "HIGH"
     }
   ],
+  "r16Summary": {
+    "newEnrichments": ["PE-022"],
+    "total": 22,
+    "notes": "R16 audit: anti-stale-data guard for scan agents. Pagination refutation shows need for live verification of all claims."
+  },
+  "communitySkillsIntegration": {
+    "newEnrichments": ["PE-020", "PE-021"],
+    "total": 21,
+    "notes": "Community skills integration 2026-03-28: 13 skills (Trail of Bits SAST, LangChain, obra/superpowers, davila7 security, browser-use, backend-patterns)."
+  },
   "v2MigrationSummary": {
     "newEnrichments": ["PE-019"],
     "total": 19,

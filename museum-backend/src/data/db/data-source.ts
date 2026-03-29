@@ -16,6 +16,7 @@ import { Review } from '@modules/review/domain/review.entity';
 import { SupportTicket } from '@modules/support/domain/supportTicket.entity';
 import { TicketMessage } from '@modules/support/domain/ticketMessage.entity';
 import { AuditLog } from '@shared/audit/auditLog.entity';
+import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
 const isCompiledRuntime = __filename.endsWith('.js');
@@ -54,3 +55,29 @@ export const AppDataSource = new DataSource({
     max: env.db.poolMax,
   },
 });
+
+/** Logs pool utilization every 60s when pool usage exceeds 80%. */
+export function startPoolMonitor(intervalMs = 60_000): NodeJS.Timeout {
+  return setInterval(() => {
+    if (!AppDataSource.isInitialized) return;
+    try {
+      const pool = (AppDataSource.driver as any).master;
+      if (!pool) return;
+
+      const { totalCount, idleCount, waitingCount } = pool;
+      const active = (totalCount as number) - (idleCount as number);
+      const utilization = (totalCount as number) > 0 ? active / env.db.poolMax : 0;
+      if (utilization >= 0.8) {
+        logger.warn('db_pool_high_utilization', {
+          active,
+          idle: idleCount as number,
+          waiting: waitingCount as number,
+          max: env.db.poolMax,
+          utilization: Math.round(utilization * 100),
+        });
+      }
+    } catch {
+      // Pool stats unavailable — skip silently
+    }
+  }, intervalMs);
+}

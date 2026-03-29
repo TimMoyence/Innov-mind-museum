@@ -78,11 +78,11 @@ interface AppEnv {
     maxTextLength: number;
     maxImageBytes: number;
     maxAudioBytes: number;
+    maxOutputTokens: number;
     includeDiagnostics: boolean;
     openAiApiKey?: string;
     deepseekApiKey?: string;
     googleApiKey?: string;
-    anthropicApiKey?: string;
   };
   rateLimit: {
     ipLimit: number;
@@ -194,7 +194,7 @@ const env: AppEnv = {
     user: toOptionalString(process.env.DB_USER),
     password: toOptionalString(process.env.DB_PASSWORD),
     database: toOptionalString(process.env.PGDATABASE) || 'museumAI',
-    poolMax: toNumber(process.env.DB_POOL_MAX, 20),
+    poolMax: toNumber(process.env.DB_POOL_MAX, 50),
   },
   auth: {
     jwtSecret: isDev
@@ -238,21 +238,21 @@ const env: AppEnv = {
     totalBudgetMs: toNumber(process.env.LLM_TOTAL_BUDGET_MS, 25000),
     retries: toNumber(process.env.LLM_RETRIES, 1),
     retryBaseDelayMs: toNumber(process.env.LLM_RETRY_BASE_DELAY_MS, 250),
-    maxConcurrent: toNumber(process.env.LLM_MAX_CONCURRENT, 5),
+    maxConcurrent: toNumber(process.env.LLM_MAX_CONCURRENT, 20),
     maxHistoryMessages: toNumber(process.env.LLM_MAX_HISTORY_MESSAGES, 12),
     maxTextLength: toNumber(process.env.LLM_MAX_TEXT_LENGTH, 2000),
     maxImageBytes: toNumber(process.env.LLM_MAX_IMAGE_BYTES, 3 * 1024 * 1024),
     maxAudioBytes: toNumber(process.env.LLM_MAX_AUDIO_BYTES, 12 * 1024 * 1024),
+    maxOutputTokens: toNumber(process.env.LLM_MAX_OUTPUT_TOKENS, 800),
     includeDiagnostics:
       nodeEnv === 'production' ? false : toBoolean(process.env.LLM_INCLUDE_DIAGNOSTICS, true),
     openAiApiKey: process.env.OPENAI_API_KEY,
     deepseekApiKey: process.env.DEEPSEEK_API_KEY,
     googleApiKey: process.env.GOOGLE_API_KEY,
-    anthropicApiKey: process.env.ANTHROPIC_API_KEY,
   },
   rateLimit: {
-    ipLimit: toNumber(process.env.RATE_LIMIT_IP, 120),
-    sessionLimit: toNumber(process.env.RATE_LIMIT_SESSION, 60),
+    ipLimit: toNumber(process.env.RATE_LIMIT_IP, 200),
+    sessionLimit: toNumber(process.env.RATE_LIMIT_SESSION, 120),
     windowMs: toNumber(process.env.RATE_LIMIT_WINDOW_MS, 60000),
   },
   upload: {

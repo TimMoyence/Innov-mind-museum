@@ -3,7 +3,7 @@ import { Router } from 'express';
 import adminRouter from '@modules/admin/adapters/primary/http/admin.route';
 import authRouter from '@modules/auth/adapters/primary/http/auth.route';
 import { createChatRouter } from '@modules/chat/adapters/primary/http/chat.route';
-import { getArtKeywordRepository } from '@modules/chat/index';
+import { getArtKeywordRepository, getLlmCircuitBreakerState } from '@modules/chat/index';
 import museumRouter from '@modules/museum/adapters/primary/http/museum.route';
 import reviewRouter from '@modules/review/adapters/primary/http/review.route';
 import supportRouter from '@modules/support/adapters/primary/http/support.route';
@@ -29,6 +29,7 @@ export interface HealthPayload {
     database: 'up' | 'down';
     llmConfigured: boolean;
     redis?: 'up' | 'down' | 'skipped';
+    llmCircuitBreaker?: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
   };
   environment: string;
   version: string;
@@ -65,11 +66,16 @@ const resolveCommitSha = (): string | undefined => {
  * @param params.checks - Health check results.
  * @param params.checks.database - Database connectivity status.
  * @param params.checks.redis - Optional Redis connectivity status.
+ * @param params.checks.llmCircuitBreaker - Optional LLM circuit breaker state.
  * @param params.llmConfigured - Whether at least one LLM provider is configured.
  * @returns Structured health payload with version and timestamp.
  */
 export const buildHealthPayload = (params: {
-  checks: { database: 'up' | 'down'; redis?: 'up' | 'down' | 'skipped' };
+  checks: {
+    database: 'up' | 'down';
+    redis?: 'up' | 'down' | 'skipped';
+    llmCircuitBreaker?: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+  };
   llmConfigured: boolean;
 }): HealthPayload => {
   const dbUp = params.checks.database === 'up';
@@ -89,6 +95,10 @@ export const buildHealthPayload = (params: {
 
   if (params.checks.redis !== undefined) {
     payload.checks.redis = params.checks.redis;
+  }
+
+  if (params.checks.llmCircuitBreaker !== undefined) {
+    payload.checks.llmCircuitBreaker = params.checks.llmCircuitBreaker;
   }
 
   const commitSha = resolveCommitSha();
@@ -148,8 +158,14 @@ export const createApiRouter = ({
       (env.llm.provider === 'deepseek' && !!env.llm.deepseekApiKey) ||
       (env.llm.provider === 'google' && !!env.llm.googleApiKey);
 
+    const cbState = getLlmCircuitBreakerState();
+
     const payload = buildHealthPayload({
-      checks: { database: dbChecks.database, redis: redisStatus },
+      checks: {
+        database: dbChecks.database,
+        redis: redisStatus,
+        llmCircuitBreaker: cbState?.state,
+      },
       llmConfigured,
     });
     payload.responseTimeMs = responseTimeMs;

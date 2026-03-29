@@ -29,7 +29,7 @@
     "@react-navigation/native": "^7.0.14",
     "@ronradtke/react-native-markdown-display": "^8.1.0",
     "@sentry/react-native": "^8.5.0",
-    "@shopify/flash-list": "1.7.6",
+    "@shopify/flash-list": "^2.3.1",
     "axios": "^1.9.0",
     "babel-preset-expo": "^55.0.13",
     "expo": "~53.0.27",

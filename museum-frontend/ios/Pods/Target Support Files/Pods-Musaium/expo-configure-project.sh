@@ -45,7 +45,7 @@ with_node \
   --no-warnings \
   --eval "require(require.resolve('expo-modules-autolinking', { paths: [require.resolve('expo/package.json')] }))(process.argv.slice(1))" \
   generate-modules-provider  \
-  --target "${PODS_ROOT}/Target Support Files/Pods-Musaium/ExpoModulesProvider.swift" \
-  --entitlement "${PODS_ROOT}/../Musaium/Musaium.entitlements" \
+  --target "/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/ios/Pods/Target Support Files/Pods-Musaium/ExpoModulesProvider.swift" \
+  --entitlement "/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/ios/Musaium/Musaium.entitlements" \
   --platform "apple" \
   --packages "@react-native-google-signin/google-signin" "expo" "expo-apple-authentication" "expo-asset" "expo-av" "expo-blur" "expo-camera" "expo-clipboard" "expo-constants" "expo-dev-launcher" "expo-dev-menu" "expo-eas-client" "expo-file-system" "expo-font" "expo-haptics" "expo-image-manipulator" "expo-image-picker" "expo-keep-awake" "expo-linear-gradient" "expo-linking" "expo-local-authentication" "expo-localization" "expo-location" "expo-router" "expo-secure-store" "expo-splash-screen" "expo-system-ui" "expo-tracking-transparency" "expo-updates" "expo-web-browser"

@@ -49,6 +49,10 @@ Le Tech Lead injecte ici tes metriques depuis `agent-performance.json`:
 - [EP-XXX] [pattern] → fix: [fix connu]
 - [PE-XXX] [regle apprise] → respecter obligatoirement
 
+### Community Skills (injectes par le Tech Lead selon scope)
+Le Tech Lead selectionne les skills communautaires pertinents (cf. context-loading.json > community_skills) :
+- [skill-name] : [quand l'utiliser dans ce mandat]
+
 ### Criteres de viabilite
 AVANT de coder, verifier que ta solution repond a :
 - [ ] [criteres adaptes au scope — cf. section Viabilite ci-dessous]
@@ -120,6 +124,10 @@ Tous les agents utilisent **model: opus**.
 | Nouveau endpoint API | Backend Architect + API Contract | Backend seul (oubli contrat) |
 | Refactor architecture | Backend Architect puis Code Reviewer | Les deux en parallele |
 | Feature museum-web | Frontend Architect + SEO Specialist | Frontend seul (oubli SEO) |
+| Feature chat/LLM | Backend Architect + langchain-skills | Backend seul (oubli patterns LLM) |
+| Audit securite complet | Security + ToB (semgrep/codeql) + pentest + compliance | Security seul (oubli SAST) |
+| Feature museum-web E2E | Frontend + QA + browser-use | Frontend seul (pas de smoke test) |
+| Nouvelle dependance npm | DevOps + supply-chain-auditor | DevOps seul (oubli audit deps) |
 | Requirements complexes | Product Owner en ANALYSE | Deviner les requirements |
 
 ---

@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 import bcrypt from 'bcrypt';
 
 import { badRequest } from '@shared/errors/app.error';
@@ -24,8 +26,9 @@ export class ResetPasswordUseCase {
       throw badRequest(pw.reason ?? 'Invalid password');
     }
     const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     const user = await this.userRepository.consumeResetTokenAndUpdatePassword(
-      token,
+      hashedToken,
       hashedPassword,
     );
     if (!user) {

@@ -6,7 +6,7 @@ import Redis from 'ioredis';
 
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/refresh-token.repository.pg';
 import { TokenCleanupService } from '@modules/auth/core/useCase/tokenCleanup.service';
-import { getOcrService } from '@modules/chat';
+import { getOcrService, stopArtKeywordsRefresh } from '@modules/chat';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
 import { logger } from '@shared/logger/logger';
@@ -70,6 +70,12 @@ const start = async (): Promise<void> => {
       const redisRateLimitStore = new RedisRateLimitStore(redisClient);
       setRedisRateLimitStore(redisRateLimitStore);
       logger.info('redis_rate_limit_store_enabled');
+    } else if (env.nodeEnv === 'production') {
+      logger.warn('redis_disabled_in_production', {
+        message:
+          'Redis is disabled in production. Rate limiting will use in-memory store (not distributed). Set CACHE_ENABLED=true and REDIS_URL for multi-instance deployments.',
+      });
+      cacheService = new NoopCacheService();
     } else {
       cacheService = new NoopCacheService();
     }
@@ -96,6 +102,7 @@ const start = async (): Promise<void> => {
       // 1. Stop accepting new connections
       tokenCleanup.stopScheduler();
       stopRateLimitSweep();
+      stopArtKeywordsRefresh();
       await shutdownOpenTelemetry();
       const ocr = getOcrService();
       if (ocr?.destroy) await ocr.destroy();

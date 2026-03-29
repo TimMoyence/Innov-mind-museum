@@ -30,9 +30,10 @@ export class ForgotPasswordUseCase {
     const user = await this.userRepository.getUserByEmail(normalizedEmail);
     if (!user) return;
 
-    const token = crypto.randomBytes(20).toString('hex');
+    const token = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     const expires = new Date(Date.now() + 3600000); // 1 hour expiration
-    await this.userRepository.setResetToken(normalizedEmail, token, expires);
+    await this.userRepository.setResetToken(normalizedEmail, hashedToken, expires);
 
     if (this.emailService && this.frontendUrl) {
       const resetLink = this.frontendUrl + '/reset-password?token=' + token;

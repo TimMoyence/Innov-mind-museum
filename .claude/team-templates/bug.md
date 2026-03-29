@@ -32,12 +32,16 @@ ANALYSE-FOCUSED → PLAN-LIGHT → DEV → TEST-REGRESSION → SHIP
 - Phases actives: ANALYSE (FOCUSED), PLAN (LIGHT), DEV, TEST, SHIP
 - Phases skipped: DESIGN, REVIEW (integre dans DEV/TEST)
 - Plan non-bloquant si fix evident
+- Community skills actifs :
+  - Phase VERIFIER (si active) : semgrep + vulnerability-scanner
+  - obra/verification-before-completion : avant cloture
 
 ## Definition of Done
 - [ ] Cause racine identifiee
 - [ ] Fix minimal implemente, tsc PASS
 - [ ] Test de regression ecrit (reproduit le bug, passe apres fix)
 - [ ] 0 regression tests existants
+- [ ] obra/verification-before-completion PASS
 
 ## Mode-Specific Rules
 - Le Tech Lead corrige directement si < 3 fichiers

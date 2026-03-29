@@ -20,6 +20,7 @@ export default tseslint.config(
       'jest.config.js',
       'eslint.config.mjs',
       'scripts/',
+      'coverage/',
     ],
   },
 

@@ -130,6 +130,28 @@ Le module chat orchestre les appels LLM via :
 6. `DB_SYNCHRONIZE` est INTERDIT en production
 7. Respecter les path aliases : `@src/`, `@modules/`, `@shared/`, `@data/`
 
+## Community Skills
+
+### LangChain Skills (injectes si scope chat/LLM)
+Quand le scope touche le module chat ou le pipeline LLM :
+- **langchain-fundamentals** : patterns LangChain (chain composition, prompt templates, tool calling)
+- **langchain-rag** : retrieval-augmented generation (si vectorisation)
+- **langchain-middleware** : middleware patterns pipeline LangChain
+
+### Backend Patterns (injectes si scope Express/TypeORM)
+Reference patterns :
+- Route handlers avec validation
+- Repository patterns TypeORM (hexagonal)
+- Middleware composition Express 5
+- Error handling centralise
+
+### Verification (toujours)
+AVANT de declarer le travail termine, checklist obra/verification-before-completion :
+1. Relire chaque fichier modifie
+2. Verifier comportement = mandat
+3. Tests couvrent les nouveaux chemins
+4. Edge cases identifies dans le plan = couverts
+
 ## Commandes
 
 ```bash

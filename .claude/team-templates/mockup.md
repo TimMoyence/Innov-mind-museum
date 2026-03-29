@@ -33,12 +33,15 @@ ANALYSE → DESIGN → PLAN(user-validate) → DEV-UI → UX-REVIEW
 - Phases actives: ANALYSE, DESIGN, PLAN, DEV, UX-REVIEW
 - Phases skipped: TEST (unit), SHIP
 - Donnees mockees en place
+- Community skills actifs :
+  - obra/verification-before-completion : avant cloture
 
 ## Definition of Done
 - [ ] UI implementee selon le design
 - [ ] Navigation fonctionnelle
 - [ ] Donnees mockees en place
 - [ ] UX review PASS (accessibilite, patterns mobile)
+- [ ] obra/verification-before-completion PASS
 
 ## Mode-Specific Rules
 - Pas de tests unitaires requis

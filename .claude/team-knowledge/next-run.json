@@ -3,25 +3,61 @@
   "description": "Recommandations pour le prochain run. Mis a jour par la Sentinelle au FINALIZE. Lu par /team au Step 2.",
   "recommendations": [
     {
+      "id": "NR-007",
+      "priority": "CRITICAL",
+      "description": "Fix path-to-regexp@8.2.0 ReDoS (GHSA-j3q9-mxjg-w52f). Add pnpm.overrides to path-to-regexp@>=8.4.0 in museum-backend/package.json.",
+      "status": "pending",
+      "source": "R16 audit — SCAN-devops, confirmed by Sentinelle"
+    },
+    {
+      "id": "NR-008",
+      "priority": "CRITICAL",
+      "description": "Fix langsmith@0.3.87 SSRF (GHSA-v34v-rq6j-cj6p). Add pnpm.overrides to langsmith@>=0.4.6 in museum-backend/package.json.",
+      "status": "pending",
+      "source": "R16 audit — SCAN-devops, confirmed by Sentinelle"
+    },
+    {
+      "id": "NR-009",
+      "priority": "HIGH",
+      "description": "Hash password reset tokens with SHA-256 before DB storage. Currently stored plaintext in reset_token column (forgotPassword.useCase.ts). Compare hashed values on lookup (user.repository.pg.ts).",
+      "status": "pending",
+      "source": "R16 audit — SCAN-security, upgraded to HIGH by Sentinelle"
+    },
+    {
+      "id": "NR-010",
+      "priority": "HIGH",
+      "description": "Wire LLMCircuitBreaker into production path or remove dead code. File exists at src/modules/chat/adapters/secondary/llm-circuit-breaker.ts but has zero imports.",
+      "status": "pending",
+      "source": "R16 audit — SCAN-langchain, confirmed by Sentinelle"
+    },
+    {
+      "id": "NR-011",
+      "priority": "HIGH",
+      "description": "Add supertest HTTP route tests for auth + chat routes minimum. 1737L of route handler code at 0% branch coverage. Single largest coverage gap blocking 60% target.",
+      "status": "pending",
+      "source": "R16 audit — SCAN-tests, confirmed by Sentinelle"
+    },
+    {
       "id": "NR-004",
       "priority": "HIGH",
-      "description": "Frontend route files still bypass application layer (14 infrastructure imports in routes per audit F-ROUTE-01). conversations.tsx and settings.tsx now clean, but 9+ other routes remain.",
+      "description": "Frontend route files still bypass application layer (13 infrastructure imports in routes per R16 audit). conversations.tsx and settings.tsx now clean (R15), but 11 other routes remain.",
       "status": "pending",
-      "source": "R15 refactor — Sentinelle audit 2026-03-28 finding F-ROUTE-01"
+      "source": "R15 refactor — updated count R16 (14->13)"
     },
     {
       "id": "NR-005",
       "priority": "MEDIUM",
-      "description": "image-storage.s3.ts remains at 575L. Further decomposition (presigned URL, batch ops, HTTP layer) possible but lower ROI.",
+      "description": "image-storage.s3.ts remains at 720L. Further decomposition (presigned URL, batch ops, HTTP layer) possible but lower ROI.",
       "status": "pending",
       "source": "R15 refactor — Sentinelle REVIEW+TEST gate WARN"
     },
     {
       "id": "NR-006",
-      "priority": "MEDIUM",
-      "description": "i18n keys for new a11y labels (imagePreview.crop, imagePreview.rotate, a11y.messageActions.*) need to be added to all 8 locale files.",
-      "status": "pending",
-      "source": "R15 refactor — Frontend Architect delivery note"
+      "priority": "RESOLVED",
+      "description": "i18n keys for a11y labels — 100% parity achieved across 8 locales (497 keys).",
+      "status": "resolved",
+      "source": "R16 audit — confirmed by team-lead scan",
+      "resolvedAt": "R16"
     },
     {
       "id": "NR-001",

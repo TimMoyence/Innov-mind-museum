@@ -35,9 +35,15 @@ ANALYSE → DESIGN → PLAN(user-validate) → DEV → REVIEW → TEST → SHIP
 ## Phase Configuration
 - Phases actives: toutes
 - Backend verification: `pnpm lint` seulement (pas de modifs)
+- Community skills actifs :
+  - Si museum-web : browser-use smoke test en Phase TESTER + VIABILITE
+  - Phase VERIFIER : semgrep + vulnerability-scanner (toujours)
+  - obra/verification-before-completion : phases CHALLENGER, REGRESSION, TESTER, VALIDER
 
 ## Definition of Done
 - [ ] UI conforme au design, tsc PASS
 - [ ] 0 regression, nouveaux tests
-- [ ] Si museum-web: SEO review, CWV check
+- [ ] Si museum-web: SEO review, CWV check, browser-use smoke test
+- [ ] SAST (semgrep + vulnerability-scanner) clean
+- [ ] obra/verification-before-completion PASS
 - [ ] Sprint tracking mis a jour

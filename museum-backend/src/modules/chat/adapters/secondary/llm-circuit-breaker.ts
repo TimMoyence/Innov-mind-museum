@@ -8,7 +8,10 @@ export class CircuitOpenError extends Error {
   }
 }
 
-type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+/**
+ *
+ */
+export type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
 
 interface CircuitBreakerOptions {
   failureThreshold?: number;
@@ -84,6 +87,16 @@ export class LLMCircuitBreaker {
     if (this.failures.length >= this.failureThreshold) {
       this.trip(now);
     }
+  }
+
+  /** Returns a snapshot of the breaker's internal state for observability. */
+  getState(): { state: CircuitState; failureCount: number; lastFailureAt: Date | null } {
+    return {
+      state: this.state, // triggers OPEN → HALF_OPEN transition if cooldown expired
+      failureCount: this.failures.length,
+      lastFailureAt:
+        this.failures.length > 0 ? new Date(this.failures[this.failures.length - 1]) : null,
+    };
   }
 
   /** Resets the breaker to CLOSED with no recorded failures. */

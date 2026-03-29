@@ -30,12 +30,15 @@ ANALYSE-EXPRESS → DEV → TEST-MINIMAL → SHIP-FAST
 - Phases actives: ANALYSE (EXPRESS), DEV, TEST (MINIMAL), SHIP (FAST)
 - Phases skipped: DESIGN, PLAN (presente mais non-bloquant), REVIEW
 - Pas de gate architecture
+- Community skills actifs :
+  - obra/verification-before-completion uniquement (pas de SAST — vitesse prioritaire)
 
 ## Definition of Done
 - [ ] Fix chirurgical implemente, tsc PASS
 - [ ] Smoke test minimal PASS
 - [ ] Pas de regression
 - [ ] Deploy readiness validee
+- [ ] obra/verification-before-completion PASS
 
 ## Mode-Specific Rules
 - Vitesse > thoroughness (mais jamais au detriment de la correction)

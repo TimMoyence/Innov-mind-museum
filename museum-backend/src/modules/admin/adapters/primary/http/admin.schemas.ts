@@ -18,3 +18,24 @@ export const updateTicketSchema = z.object({
   priority: z.enum(['low', 'medium', 'high']).optional(),
   assignedTo: z.number().int().nullable().optional(),
 });
+
+const paginationQuery = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const listUsersQuerySchema = paginationQuery.extend({
+  search: z.string().optional(),
+  role: z.string().optional(),
+});
+
+export const auditLogsQuerySchema = paginationQuery.extend({
+  actorId: z.coerce.number().int().optional(),
+  action: z.string().optional(),
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
+});
+
+export const listReportsQuerySchema = paginationQuery.extend({
+  status: z.enum(['pending', 'reviewed', 'dismissed']).optional(),
+});
