@@ -13,6 +13,7 @@ jest.mock('react-i18next', () => ({
 // Shared mock fn references — class instances bind to these via prototype
 const mockStopAndUnloadAsync = jest.fn<Promise<void>, []>();
 const mockGetURI = jest.fn<string | null, []>();
+const mockGetStatusAsync = jest.fn();
 const mockRequestPermissionsAsync = jest.fn<Promise<{ granted: boolean }>, []>();
 const mockSetAudioModeAsync = jest.fn<Promise<void>, [Record<string, boolean>]>();
 const mockSoundCreateAsync = jest.fn();
@@ -61,8 +62,13 @@ describe('useAudioRecorder', () => {
     mockStopAndUnloadAsync.mockResolvedValue(undefined);
     mockSetAudioModeAsync.mockResolvedValue(undefined);
     mockGetURI.mockReturnValue('file://recording.m4a');
+    mockGetStatusAsync.mockResolvedValue({ isRecording: true });
     mockRecordingCreateAsync.mockResolvedValue({
-      recording: { stopAndUnloadAsync: mockStopAndUnloadAsync, getURI: mockGetURI },
+      recording: {
+        stopAndUnloadAsync: mockStopAndUnloadAsync,
+        getURI: mockGetURI,
+        getStatusAsync: mockGetStatusAsync,
+      },
     });
   });
 

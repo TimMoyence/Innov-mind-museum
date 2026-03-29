@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -15,6 +15,8 @@ import { ConversationsBulkBar } from '@/features/conversation/ui/ConversationsBu
 import { ConversationSearchBar } from '@/features/conversation/ui/ConversationSearchBar';
 import { SwipeableConversationCard } from '@/features/conversation/ui/SwipeableConversationCard';
 import { useConversationsStore } from '@/features/conversation/infrastructure/conversationsStore';
+import { chatApi } from '@/features/chat/infrastructure/chatApi';
+import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -28,6 +30,7 @@ export default function ConversationsScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
 
   const items = useConversationsStore((s) => s.items);
 
@@ -75,6 +78,23 @@ export default function ConversationsScreen() {
       searchQuery,
       getVisibleItems: () => visibleItems,
     });
+
+  const startConversation = useCallback(async () => {
+    if (isCreating) return;
+    setIsCreating(true);
+    try {
+      const settings = await loadRuntimeSettings();
+      const response = await chatApi.createSession({
+        locale: settings.defaultLocale,
+        museumMode: settings.defaultMuseumMode,
+      });
+      router.push(`/(stack)/chat/${response.session.id}`);
+    } catch (createError) {
+      setError(String(createError instanceof Error ? createError.message : createError));
+    } finally {
+      setIsCreating(false);
+    }
+  }, [isCreating, setError]);
 
   const handleConfirmDeleteSelected = useCallback(() => {
     confirmDeleteSelected(selectedIds);
@@ -191,16 +211,20 @@ export default function ConversationsScreen() {
         style={[
           styles.primaryButton,
           { backgroundColor: theme.primary, shadowColor: theme.primary },
+          isCreating && { opacity: 0.7 },
         ]}
-        onPress={() => {
-          router.push('/(tabs)/home');
-        }}
+        onPress={() => void startConversation()}
+        disabled={isCreating}
         accessibilityRole="button"
         accessibilityLabel={t('a11y.conversations.start_new')}
       >
-        <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
-          {t('conversations.start_new')}
-        </Text>
+        {isCreating ? (
+          <ActivityIndicator size="small" color={theme.primaryContrast} />
+        ) : (
+          <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
+            {t('conversations.start_new')}
+          </Text>
+        )}
       </Pressable>
 
       {isLoading ? (
@@ -212,6 +236,7 @@ export default function ConversationsScreen() {
       ) : (
         <FlashList
           data={visibleItems}
+          estimatedItemSize={80}
           keyExtractor={(item) => item.id}
           renderItem={renderConversationItem}
           extraData={editMode ? selectedIds.size : 0}

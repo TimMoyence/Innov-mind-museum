@@ -61,7 +61,7 @@
     "settings": "Paramètres",
     "menu": {
       "discover": "Découvrir",
-      "lens": "Objectif",
+      "lens": "Caméra",
       "audio": "Audio"
     },
     "messages": {
@@ -69,7 +69,7 @@
       "audio_opened": "Conversation Audio ouverte",
       "conversation_opened": "Conversation ouverte",
       "opening_discover": "Ouverture de Découvrir",
-      "opening_lens": "Ouverture de l'Objectif",
+      "opening_lens": "Ouverture de la Caméra",
       "opening_audio": "Ouverture de l'Audio"
     }
   },
@@ -233,7 +233,7 @@
     "subtitle": "Explorez les œuvres et monuments avec les points d'entrée les plus rapides : analyse photo, question vocale ou vos sessions récentes.",
     "photo_title": "Photographier une œuvre",
     "photo_desc": "Lancez l'appareil photo directement et demandez à Musaium d'analyser une œuvre, un monument ou un détail culturel.",
-    "open_lens": "Ouvrir l'Objectif",
+    "open_lens": "Ouvrir la Caméra",
     "voice_title": "Question vocale",
     "voice_desc": "Démarrez un chat audio pour enregistrer une question parlée pendant votre visite de musée ou monument.",
     "start_audio": "Démarrer une conversation audio",
@@ -244,7 +244,7 @@
     "guided_desc": "Découvrez comment le mode guidé ajoute des suggestions d'étapes et un contexte plus riche pour les visites.",
     "open_guided": "Ouvrir l'info Mode Guidé",
     "menu": {
-      "lens": "Objectif",
+      "lens": "Caméra",
       "audio": "Audio",
       "dashboard": "Tableau de bord"
     },
@@ -328,7 +328,7 @@
     "play": "Lire",
     "clear": "Effacer",
     "gallery": "Galerie",
-    "lens": "Objectif",
+    "lens": "Caméra",
     "stop_audio": "Arrêter l'audio",
     "audio": "Audio",
     "image_sent": "[Image envoyée]",
@@ -386,6 +386,9 @@
     "copy": "Copier",
     "report": "Signaler",
     "speak": "Écouter"
+  },
+  "messageActions": {
+    "learn_more": "En savoir plus"
   },
   "error": {
     "network": "Réseau indisponible. Vérifiez votre connexion et réessayez.",

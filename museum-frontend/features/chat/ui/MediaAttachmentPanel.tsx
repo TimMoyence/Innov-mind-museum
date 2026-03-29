@@ -1,4 +1,5 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
@@ -117,6 +118,7 @@ export function MediaAttachmentPanel({
           accessibilityRole="button"
           accessibilityLabel={t('chat.gallery')}
         >
+          <Ionicons name="images-outline" size={16} color={theme.textPrimary} />
           <Text style={[styles.attachText, { color: theme.textPrimary }]}>{t('chat.gallery')}</Text>
         </Pressable>
         <Pressable
@@ -128,6 +130,7 @@ export function MediaAttachmentPanel({
           accessibilityRole="button"
           accessibilityLabel={t('chat.lens')}
         >
+          <Ionicons name="camera-outline" size={16} color={theme.textPrimary} />
           <Text style={[styles.attachText, { color: theme.textPrimary }]}>{t('chat.lens')}</Text>
         </Pressable>
         <Pressable
@@ -139,6 +142,11 @@ export function MediaAttachmentPanel({
           accessibilityRole="button"
           accessibilityLabel={isRecording ? t('chat.stop_audio') : t('chat.audio')}
         >
+          <Ionicons
+            name={isRecording ? 'stop-circle-outline' : 'mic-outline'}
+            size={16}
+            color={theme.textPrimary}
+          />
           <Text style={[styles.attachText, { color: theme.textPrimary }]}>
             {isRecording ? t('chat.stop_audio') : t('chat.audio')}
           </Text>
@@ -180,6 +188,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   attachButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 12,

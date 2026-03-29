@@ -79,7 +79,9 @@ export const MessageActions = ({
               size={16}
               color={theme.primary}
             />
-            <Text style={[styles.deeperContextLabel, { color: theme.primary }]}>Learn more</Text>
+            <Text style={[styles.deeperContextLabel, { color: theme.primary }]}>
+              {t('messageActions.learn_more')}
+            </Text>
           </Pressable>
           {isDeeperContextExpanded ? (
             <Text style={[styles.deeperContextText, { color: theme.textSecondary }]}>
@@ -120,11 +122,12 @@ export const MessageActions = ({
 const styles = StyleSheet.create({
   container: {
     gap: 6,
+    alignItems: 'flex-end',
   },
   deeperContextWrap: {
     marginTop: 4,
     maxWidth: '85%',
-    alignSelf: 'flex-start',
+    alignSelf: 'flex-end',
     borderRadius: 12,
     borderWidth: 1,
     padding: 10,
@@ -146,7 +149,7 @@ const styles = StyleSheet.create({
   openQuestionChip: {
     marginTop: 2,
     maxWidth: '85%',
-    alignSelf: 'flex-start',
+    alignSelf: 'flex-end',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,

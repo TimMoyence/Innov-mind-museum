@@ -16,7 +16,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
-import { CustomCameraView } from '@/components/CameraView';
 import { useChatSession } from '@/features/chat/application/useChatSession';
 import { useAudioRecorder } from '@/features/chat/application/useAudioRecorder';
 import { useImagePicker } from '@/features/chat/application/useImagePicker';
@@ -94,11 +93,8 @@ export default function ChatSessionScreen() {
   const {
     selectedImage,
     pendingImage,
-    isCameraOpen,
-    setIsCameraOpen,
     onPickImage,
     onTakePicture,
-    onCameraCapture,
     confirmPendingImage,
     cancelPendingImage,
     clearSelectedImage,
@@ -122,15 +118,23 @@ export default function ChatSessionScreen() {
     async (overrideText?: string) => {
       const nextText = (overrideText ?? text).trim();
       if (!nextText && !selectedImage && !recordedAudioUri) return;
+
+      // Clear input immediately for responsive UX
+      const currentText = nextText;
+      const currentImage = selectedImage;
+      const currentAudioUri = recordedAudioUri;
+      const currentAudioBlob = recordedAudioBlob;
+      setText('');
+      clearMedia();
+
       const sent = await sendMessage({
-        text: nextText || undefined,
-        imageUri: selectedImage ?? undefined,
-        audioUri: recordedAudioUri ?? undefined,
-        audioBlob: recordedAudioBlob ?? undefined,
+        text: currentText || undefined,
+        imageUri: currentImage ?? undefined,
+        audioUri: currentAudioUri ?? undefined,
+        audioBlob: currentAudioBlob ?? undefined,
       });
-      if (sent) {
-        setText('');
-        clearMedia();
+      if (!sent) {
+        setText(currentText);
       }
     },
     [text, selectedImage, recordedAudioUri, recordedAudioBlob, sendMessage, clearMedia],
@@ -154,10 +158,14 @@ export default function ChatSessionScreen() {
     if (isIntentHandled || !initialIntent) return;
     setIsIntentHandled(true);
     if (initialIntent === 'camera') {
-      onTakePicture();
+      void onTakePicture();
       return;
     }
-    void toggleRecording();
+    // Delay audio recording to ensure screen is fully mounted (avoids silent failure on iOS)
+    const timer = setTimeout(() => {
+      void toggleRecording();
+    }, 500);
+    return () => { clearTimeout(timer); };
   }, [initialIntent, isIntentHandled, onTakePicture, toggleRecording]);
 
   const onClose = async () => {
@@ -237,17 +245,6 @@ export default function ChatSessionScreen() {
   );
 
   // --- Render ---
-  if (isCameraOpen) {
-    return (
-      <CustomCameraView
-        onClose={() => {
-          setIsCameraOpen(false);
-        }}
-        onCapture={onCameraCapture}
-      />
-    );
-  }
-
   return (
     <LiquidScreen
       background={pickMuseumBackground(4)}

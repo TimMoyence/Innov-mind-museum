@@ -19,18 +19,26 @@ export const FollowUpButtons = ({ questions, onPress, disabled = false }: Follow
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.sectionLabel, { color: theme.placeholderText }]}>{t('followUpButtons.section_label')}</Text>
+      <Text style={[styles.sectionLabel, { color: theme.placeholderText }]}>
+        {t('followUpButtons.section_label')}
+      </Text>
       {questions.map((question) => (
         <Pressable
           key={question}
-          style={[styles.button, { borderColor: theme.primaryBorderSubtle, backgroundColor: theme.primaryTint }, disabled && styles.buttonDisabled]}
-          onPress={() => { onPress(question); }}
+          style={[
+            styles.button,
+            { borderColor: theme.primaryBorderSubtle, backgroundColor: theme.primaryTint },
+            disabled && styles.buttonDisabled,
+          ]}
+          onPress={() => {
+            onPress(question);
+          }}
           disabled={disabled}
           accessibilityRole="button"
           accessibilityLabel={question}
           accessibilityHint={t('a11y.chat.follow_up_hint')}
         >
-          <Ionicons name='send-outline' size={14} color={theme.primary} />
+          <Ionicons name="send-outline" size={14} color={theme.primary} />
           <Text style={[styles.buttonText, { color: theme.primary }]}>{question}</Text>
         </Pressable>
       ))}
@@ -43,7 +51,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     gap: 6,
     maxWidth: '85%',
-    alignSelf: 'flex-start',
+    alignSelf: 'flex-end',
   },
   sectionLabel: {
     fontSize: 11,
