@@ -1,0 +1,44 @@
+# Production docker-compose with PgBouncer connection pooler.
+#
+# Architecture:
+#   backend (x N) → pgbouncer:6432 → db:5432
+#
+# To use: on your server, replace DB_HOST=db with DB_HOST=pgbouncer and DB_PORT=6432 in .env
+# Then: docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d
+#
+# This file is an OVERRIDE — it extends the base docker-compose.yml on the server.
+
+services:
+  pgbouncer:
+    image: edoburu/pgbouncer:1.23.1-p2
+    hostname: pgbouncer
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./deploy/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./deploy/pgbouncer/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/entrypoint.sh"]
+    networks:
+      - private
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Override backend to depend on pgbouncer instead of direct db access
+  backend:
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      # Point backend at pgbouncer instead of raw postgres
+      DB_HOST: pgbouncer
+      DB_PORT: 6432
