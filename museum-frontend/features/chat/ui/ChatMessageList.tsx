@@ -75,6 +75,15 @@ export const ChatMessageList = ({
     }
   }, [isStreaming]);
 
+  // Timer-based scroll during streaming (backup for unreliable onContentSizeChange)
+  useEffect(() => {
+    if (!isStreaming) return;
+    const interval = setInterval(() => {
+      listRef.current?.scrollToEnd({ animated: false });
+    }, 200);
+    return () => { clearInterval(interval); };
+  }, [isStreaming]);
+
   const renderItem = useCallback(
     ({ item }: { item: ChatUiMessage }) => {
       const isAssistant = item.role === 'assistant';
@@ -121,12 +130,15 @@ export const ChatMessageList = ({
     <FlashList
       ref={listRef}
       data={messages}
+      estimatedItemSize={80}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
       contentContainerStyle={styles.listContent}
       onContentSizeChange={handleContentSizeChange}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
+      accessibilityLabel="Chat messages"
+      accessibilityRole="list"
       ListEmptyComponent={
         <WelcomeCard
           museumMode={museumMode}

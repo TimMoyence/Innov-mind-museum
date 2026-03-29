@@ -2,8 +2,11 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import type { ChatUiMessage } from './chatSessionLogic.pure';
 
+/** Minimum interval (ms) between streaming text flushes for readable typing effect. */
+const FLUSH_INTERVAL_MS = 40;
+
 /**
- * Manages streaming text accumulation with requestAnimationFrame-throttled flushes.
+ * Manages streaming text accumulation with throttled flushes.
  * Keeps streaming state in refs to avoid re-renders during rapid token accumulation.
  */
 export const useStreamingState = (
@@ -11,7 +14,7 @@ export const useStreamingState = (
 ) => {
   const streamTextRef = useRef('');
   const streamingIdRef = useRef<string | null>(null);
-  const updateTimerRef = useRef<number | null>(null);
+  const updateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const flushStreamText = useCallback(() => {
     const text = streamTextRef.current;
@@ -21,29 +24,27 @@ export const useStreamingState = (
   }, [setMessages]);
 
   const scheduleFlush = useCallback(() => {
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- multi-line RAF guard, ??= less readable
     if (!updateTimerRef.current) {
-      updateTimerRef.current = requestAnimationFrame(() => {
+      updateTimerRef.current = setTimeout(() => {
         updateTimerRef.current = null;
         flushStreamText();
-      });
+      }, FLUSH_INTERVAL_MS);
     }
   }, [flushStreamText]);
 
   const resetStreaming = useCallback(() => {
     if (updateTimerRef.current) {
-      cancelAnimationFrame(updateTimerRef.current);
+      clearTimeout(updateTimerRef.current);
       updateTimerRef.current = null;
     }
     streamingIdRef.current = null;
     streamTextRef.current = '';
   }, []);
 
-  // Cleanup animation frame on unmount
   useEffect(() => {
     return () => {
       if (updateTimerRef.current) {
-        cancelAnimationFrame(updateTimerRef.current);
+        clearTimeout(updateTimerRef.current);
       }
     };
   }, []);

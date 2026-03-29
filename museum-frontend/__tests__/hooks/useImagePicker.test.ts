@@ -3,11 +3,13 @@ import { useImagePicker } from '@/features/chat/application/useImagePicker';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-const mockRequestMediaLibraryPermissionsAsync = jest.fn<
-  Promise<{ status: string }>,
+const mockRequestMediaLibraryPermissionsAsync = jest.fn<Promise<{ status: string }>, []>();
+const mockLaunchImageLibraryAsync = jest.fn<
+  Promise<{ canceled: boolean; assets: { uri: string }[] }>,
   []
 >();
-const mockLaunchImageLibraryAsync = jest.fn<
+const mockRequestCameraPermissionsAsync = jest.fn<Promise<{ status: string }>, []>();
+const mockLaunchCameraAsync = jest.fn<
   Promise<{ canceled: boolean; assets: { uri: string }[] }>,
   []
 >();
@@ -15,8 +17,9 @@ const mockLaunchImageLibraryAsync = jest.fn<
 jest.mock('expo-image-picker', () => ({
   requestMediaLibraryPermissionsAsync: (...args: unknown[]) =>
     mockRequestMediaLibraryPermissionsAsync(),
-  launchImageLibraryAsync: (...args: unknown[]) =>
-    mockLaunchImageLibraryAsync(),
+  launchImageLibraryAsync: (...args: unknown[]) => mockLaunchImageLibraryAsync(),
+  requestCameraPermissionsAsync: (...args: unknown[]) => mockRequestCameraPermissionsAsync(),
+  launchCameraAsync: (...args: unknown[]) => mockLaunchCameraAsync(),
 }));
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -26,12 +29,11 @@ describe('useImagePicker', () => {
     jest.clearAllMocks();
   });
 
-  it('initialises with null selectedImage, null pendingImage, and isCameraOpen=false', () => {
+  it('initialises with null selectedImage and null pendingImage', () => {
     const { result } = renderHook(() => useImagePicker());
 
     expect(result.current.selectedImage).toBeNull();
     expect(result.current.pendingImage).toBeNull();
-    expect(result.current.isCameraOpen).toBe(false);
   });
 
   it('onPickImage() requests permissions and sets pendingImage on success', async () => {
@@ -50,7 +52,6 @@ describe('useImagePicker', () => {
     expect(mockRequestMediaLibraryPermissionsAsync).toHaveBeenCalledTimes(1);
     expect(mockLaunchImageLibraryAsync).toHaveBeenCalledTimes(1);
     expect(result.current.pendingImage).toBe('file://photo.jpg');
-    // selectedImage stays null until confirmation
     expect(result.current.selectedImage).toBeNull();
   });
 
@@ -84,38 +85,48 @@ describe('useImagePicker', () => {
     expect(result.current.pendingImage).toBeNull();
   });
 
-  it('onTakePicture() sets isCameraOpen to true', () => {
+  it('onTakePicture() launches native camera and sets pendingImage on capture', async () => {
+    mockRequestCameraPermissionsAsync.mockResolvedValue({ status: 'granted' });
+    mockLaunchCameraAsync.mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: 'file://camera-photo.jpg' }],
+    });
+
     const { result } = renderHook(() => useImagePicker());
 
-    act(() => {
-      result.current.onTakePicture();
+    await act(async () => {
+      await result.current.onTakePicture();
     });
 
-    expect(result.current.isCameraOpen).toBe(true);
-  });
-
-  it('onCameraCapture() sets pendingImage and closes the camera', () => {
-    const { result } = renderHook(() => useImagePicker());
-
-    act(() => {
-      result.current.onTakePicture();
-    });
-    expect(result.current.isCameraOpen).toBe(true);
-
-    act(() => {
-      result.current.onCameraCapture('file://camera-photo.jpg');
-    });
-
+    expect(mockRequestCameraPermissionsAsync).toHaveBeenCalledTimes(1);
+    expect(mockLaunchCameraAsync).toHaveBeenCalledTimes(1);
     expect(result.current.pendingImage).toBe('file://camera-photo.jpg');
-    expect(result.current.isCameraOpen).toBe(false);
   });
 
-  it('confirmPendingImage() promotes pendingImage to selectedImage', () => {
+  it('onTakePicture() does nothing when camera permission denied', async () => {
+    mockRequestCameraPermissionsAsync.mockResolvedValue({ status: 'denied' });
+
     const { result } = renderHook(() => useImagePicker());
 
-    // Simulate a camera capture first
-    act(() => {
-      result.current.onCameraCapture('file://confirmed.jpg');
+    await act(async () => {
+      await result.current.onTakePicture();
+    });
+
+    expect(mockLaunchCameraAsync).not.toHaveBeenCalled();
+    expect(result.current.pendingImage).toBeNull();
+  });
+
+  it('confirmPendingImage() promotes pendingImage to selectedImage', async () => {
+    mockRequestCameraPermissionsAsync.mockResolvedValue({ status: 'granted' });
+    mockLaunchCameraAsync.mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: 'file://confirmed.jpg' }],
+    });
+
+    const { result } = renderHook(() => useImagePicker());
+
+    await act(async () => {
+      await result.current.onTakePicture();
     });
     expect(result.current.pendingImage).toBe('file://confirmed.jpg');
 
@@ -127,11 +138,17 @@ describe('useImagePicker', () => {
     expect(result.current.pendingImage).toBeNull();
   });
 
-  it('cancelPendingImage() clears pendingImage without affecting selectedImage', () => {
+  it('cancelPendingImage() clears pendingImage without affecting selectedImage', async () => {
+    mockRequestCameraPermissionsAsync.mockResolvedValue({ status: 'granted' });
+    mockLaunchCameraAsync.mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: 'file://to-cancel.jpg' }],
+    });
+
     const { result } = renderHook(() => useImagePicker());
 
-    act(() => {
-      result.current.onCameraCapture('file://to-cancel.jpg');
+    await act(async () => {
+      await result.current.onTakePicture();
     });
     expect(result.current.pendingImage).toBe('file://to-cancel.jpg');
 
@@ -143,12 +160,17 @@ describe('useImagePicker', () => {
     expect(result.current.selectedImage).toBeNull();
   });
 
-  it('clearSelectedImage() resets selectedImage to null', () => {
+  it('clearSelectedImage() resets selectedImage to null', async () => {
+    mockRequestCameraPermissionsAsync.mockResolvedValue({ status: 'granted' });
+    mockLaunchCameraAsync.mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: 'file://to-clear.jpg' }],
+    });
+
     const { result } = renderHook(() => useImagePicker());
 
-    // Go through the full flow: capture → confirm → clear
-    act(() => {
-      result.current.onCameraCapture('file://to-clear.jpg');
+    await act(async () => {
+      await result.current.onTakePicture();
     });
     act(() => {
       result.current.confirmPendingImage('file://to-clear.jpg');

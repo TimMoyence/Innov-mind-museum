@@ -116,6 +116,13 @@ export const useAudioRecorder = () => {
       Audio.RecordingOptionsPresets.HIGH_QUALITY,
     );
 
+    // Verify recording actually started (can silently fail during navigation transitions)
+    const status = await nextRecording.getStatusAsync();
+    if (!status.isRecording) {
+      await nextRecording.stopAndUnloadAsync().catch(() => undefined);
+      throw new Error('Recording failed to start');
+    }
+
     nativeRecordingRef.current = nextRecording;
     setIsRecording(true);
   }, [revokeWebAudioObjectUrl, t]);

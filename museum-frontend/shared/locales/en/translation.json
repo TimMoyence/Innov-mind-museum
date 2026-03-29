@@ -61,15 +61,15 @@
     "settings": "Settings",
     "menu": {
       "discover": "Discover",
-      "lens": "Lens",
+      "lens": "Camera",
       "audio": "Audio"
     },
     "messages": {
-      "lens_opened": "Lens conversation opened",
+      "lens_opened": "Camera conversation opened",
       "audio_opened": "Audio conversation opened",
       "conversation_opened": "Conversation opened",
       "opening_discover": "Opening Discover",
-      "opening_lens": "Opening Lens",
+      "opening_lens": "Opening Camera",
       "opening_audio": "Opening Audio"
     }
   },
@@ -184,8 +184,8 @@
     "slide0": {
       "title": "Welcome to Musaium",
       "subtitle": "Your personal museum guide. Photograph artworks or ask questions to get AI-powered insights.",
-      "tip1": "Open Home and choose Discover, Lens, Audio, or Start Conversation.",
-      "tip2": "Lens creates a chat and opens the camera to capture an artwork.",
+      "tip1": "Open Home and choose Discover, Camera, Audio, or Start Conversation.",
+      "tip2": "Camera creates a chat and opens the camera to capture an artwork.",
       "tip3": "Audio creates a chat and starts voice recording for spoken questions.",
       "tip4": "Visit Dashboard to revisit saved or recent conversations."
     },
@@ -233,7 +233,7 @@
     "subtitle": "Explore artworks and monuments with the fastest entry points: photo analysis, voice question, or your recent sessions.",
     "photo_title": "Take a Photo of an Artwork",
     "photo_desc": "Launch the camera directly and ask Musaium to analyze an artwork, monument, or cultural detail.",
-    "open_lens": "Open Lens",
+    "open_lens": "Open Camera",
     "voice_title": "Voice Question",
     "voice_desc": "Start an audio-first chat to record a spoken question while visiting a museum or monument.",
     "start_audio": "Start Audio Conversation",
@@ -244,7 +244,7 @@
     "guided_desc": "Learn how guided mode adds next-stop suggestions and richer context for museum visits.",
     "open_guided": "Open Guided Mode Info",
     "menu": {
-      "lens": "Lens",
+      "lens": "Camera",
       "audio": "Audio",
       "dashboard": "Dashboard"
     },
@@ -328,7 +328,7 @@
     "play": "Play",
     "clear": "Clear",
     "gallery": "Gallery",
-    "lens": "Lens",
+    "lens": "Camera",
     "stop_audio": "Stop Audio",
     "audio": "Audio",
     "image_sent": "[Image sent]",
@@ -386,6 +386,9 @@
     "copy": "Copy",
     "report": "Report",
     "speak": "Speak"
+  },
+  "messageActions": {
+    "learn_more": "Learn more"
   },
   "error": {
     "network": "Network unavailable. Check your connection and try again.",

@@ -28,8 +28,22 @@ export const useImagePicker = () => {
     }
   }, []);
 
-  const onTakePicture = useCallback(() => {
-    setIsCameraOpen(true);
+  const onTakePicture = useCallback(async () => {
+    const { status } = await ImagePickerLib.requestCameraPermissionsAsync();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- Expo permission status API
+    if (status !== 'granted') {
+      return;
+    }
+
+    const result = await ImagePickerLib.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: false,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets.length) {
+      setPendingImage(result.assets[0].uri);
+    }
   }, []);
 
   const onCameraCapture = useCallback((uri: string) => {
