@@ -101,6 +101,27 @@ Etape 3: TEST    — Jest/node:test scope au module
 
 ---
 
+## Etape 3b: SAST (Static Application Security Testing)
+
+Scans SAST executes en parallele avec l'etape 3, apres chaque gate post-DEV :
+
+| Outil | Scope | Quand |
+|-------|-------|-------|
+| semgrep (Trail of Bits) | Fichiers changes | Chaque gate post-DEV |
+| vulnerability-scanner (davila7) | Fichiers changes | Chaque gate post-DEV |
+| codeql (Trail of Bits) | Modules impactes | Features security-sensitive |
+| supply-chain-auditor (Trail of Bits) | Monorepo | Si package.json/pnpm-lock modifie |
+
+**Verdicts SAST** :
+- semgrep CRITICAL/HIGH → FAIL (meme semantique que /security-scan)
+- vulnerability-scanner OWASP finding → meme grille que /security-scan
+- codeql finding exploitable → FAIL, theorique → WARN
+- supply-chain-auditor CVE CRITICAL/HIGH → FAIL, MEDIUM → WARN
+
+Les resultats SAST sont consolides avec /security-scan et envoyes a la Sentinelle.
+
+---
+
 ## Impact Analysis
 
 Avant de modifier un fichier, identifier ses **dependants** :
@@ -139,6 +160,10 @@ TEST scope: PASS/FAIL [N pass, N fail]
 
 ### Recommandations Sentinelle
 - [recommandation] : appliquee/non-appliquee [detail]
+
+### SAST (si Phase VERIFIER active)
+SAST: semgrep [N findings] + vulnerability-scanner [N findings]
+VERIFICATION: obra/verification-before-completion [PASS/FAIL]
 
 ### Erreurs residuelles
 [liste avec Error Taxonomy si applicable]

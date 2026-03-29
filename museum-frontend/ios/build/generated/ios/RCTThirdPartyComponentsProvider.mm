@@ -21,8 +21,6 @@
   dispatch_once(&nativeComponentsToken, ^{
     thirdPartyComponents = @{
 			@"RNGoogleSignInButton": NSClassFromString(@"RNGoogleSignInButtonComponentView"), // @react-native-google-signin/google-signin
-			@"AutoLayoutView": NSClassFromString(@"AutoLayoutViewComponentView"), // @shopify/flash-list
-			@"CellContainer": NSClassFromString(@"CellContainerComponentView"), // @shopify/flash-list
 			@"RNGestureHandlerButton": NSClassFromString(@"RNGestureHandlerButtonComponentView"), // react-native-gesture-handler
 			@"RNCSafeAreaProvider": NSClassFromString(@"RNCSafeAreaProviderComponentView"), // react-native-safe-area-context
 			@"RNCSafeAreaView": NSClassFromString(@"RNCSafeAreaViewComponentView"), // react-native-safe-area-context

@@ -24,6 +24,7 @@ const makeUser = (overrides: Partial<User> = {}): User =>
     firstname: 'Alice',
     lastname: 'Doe',
     role: 'visitor',
+    onboarding_completed: false,
     createdAt: new Date('2025-01-01'),
     updatedAt: new Date('2025-06-01'),
     ...overrides,

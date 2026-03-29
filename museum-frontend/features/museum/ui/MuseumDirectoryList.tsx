@@ -43,7 +43,12 @@ export const MuseumDirectoryList = ({
 
   return (
     <>
-      <View style={[styles.searchBar, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]}>
+      <View
+        style={[
+          styles.searchBar,
+          { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+        ]}
+      >
         <TextInput
           style={[styles.searchInput, { color: theme.textPrimary }]}
           placeholder={t('museumDirectory.search_placeholder')}
@@ -59,9 +64,7 @@ export const MuseumDirectoryList = ({
       <FlashList
         data={museums}
         keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => (
-          <MuseumCard museum={item} onPress={onMuseumPress} />
-        )}
+        renderItem={({ item }) => <MuseumCard museum={item} onPress={onMuseumPress} />}
         contentContainerStyle={styles.listContent}
         refreshing={isRefreshing}
         onRefresh={onRefresh}

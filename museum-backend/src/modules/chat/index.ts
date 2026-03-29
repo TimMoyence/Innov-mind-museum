@@ -1,5 +1,6 @@
 import { auditService } from '@shared/audit';
 import { logger } from '@shared/logger/logger';
+import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
 import { OpenAiAudioTranscriber } from './adapters/secondary/audio-transcriber.openai';
@@ -54,9 +55,25 @@ let sharedArtKeywordRepository: ArtKeywordRepository | undefined;
 export const getArtKeywordRepository = (): ArtKeywordRepository | undefined =>
   sharedArtKeywordRepository;
 
+/** Lazily-initialized orchestrator singleton, exposed for circuit breaker observability. */
+let sharedOrchestrator: LangChainChatOrchestrator | undefined;
+
+/** Returns the LLM circuit breaker state for the health endpoint. */
+export const getLlmCircuitBreakerState = ():
+  | { state: 'CLOSED' | 'OPEN' | 'HALF_OPEN'; failureCount: number; lastFailureAt: Date | null }
+  | undefined => sharedOrchestrator?.getCircuitBreakerState();
+
 let artKeywordsRefreshTimer: ReturnType<typeof setInterval> | undefined;
 export const getArtKeywordsRefreshTimer = (): ReturnType<typeof setInterval> | undefined =>
   artKeywordsRefreshTimer;
+
+/** Stops the periodic art-keywords refresh timer. Call during graceful shutdown. */
+export const stopArtKeywordsRefresh = (): void => {
+  if (artKeywordsRefreshTimer) {
+    clearInterval(artKeywordsRefreshTimer);
+    artKeywordsRefreshTimer = undefined;
+  }
+};
 
 /**
  * Wires the chat module dependency graph and returns a fully configured ChatService.
@@ -124,10 +141,7 @@ export const buildChatService = (dataSource: DataSource, cache?: CacheService): 
   const artKeywordRepo = new TypeOrmArtKeywordRepository(dataSource);
   sharedArtKeywordRepository = artKeywordRepo;
 
-  let artTopicClassifier: ArtTopicClassifier | undefined;
-  if (env.llm.openAiApiKey) {
-    artTopicClassifier = new ArtTopicClassifier(env.llm.openAiApiKey);
-  }
+  const artTopicClassifier = new ArtTopicClassifier();
 
   const dynamicArtKeywords = new Set<string>();
   const refreshKeywords = async () => {
@@ -151,14 +165,15 @@ export const buildChatService = (dataSource: DataSource, cache?: CacheService): 
     const normalized = keyword.toLowerCase().trim();
     if (!normalized || dynamicArtKeywords.has(normalized)) return;
     dynamicArtKeywords.add(normalized);
-    void artKeywordRepo.upsert(normalized, locale).catch(() => {
-      /* fire-and-forget */
-    });
+    fireAndForget(artKeywordRepo.upsert(normalized, locale), 'art_keyword_upsert');
   };
+
+  const orchestrator = new LangChainChatOrchestrator();
+  sharedOrchestrator = orchestrator;
 
   return new ChatService({
     repository,
-    orchestrator: new LangChainChatOrchestrator(),
+    orchestrator,
     imageStorage,
     audioTranscriber: new OpenAiAudioTranscriber(),
     tts,

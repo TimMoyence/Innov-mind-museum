@@ -236,7 +236,6 @@ export default function ConversationsScreen() {
       ) : (
         <FlashList
           data={visibleItems}
-          estimatedItemSize={80}
           keyExtractor={(item) => item.id}
           renderItem={renderConversationItem}
           extraData={editMode ? selectedIds.size : 0}

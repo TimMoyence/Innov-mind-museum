@@ -322,11 +322,11 @@ PODS:
     - ExpoModulesCore
   - ExpoLinking (7.1.7):
     - ExpoModulesCore
-  - ExpoLocalAuthentication (55.0.9):
+  - ExpoLocalAuthentication (16.0.5):
     - ExpoModulesCore
   - ExpoLocalization (16.1.6):
     - ExpoModulesCore
-  - ExpoLocation (55.1.4):
+  - ExpoLocation (18.1.6):
     - ExpoModulesCore
   - ExpoModulesCore (2.5.0):
     - DoubleConversion
@@ -2849,9 +2849,9 @@ SPEC CHECKSUMS:
   ExpoKeepAwake: bf0811570c8da182bfb879169437d4de298376e7
   ExpoLinearGradient: 7734c8059972fcf691fb4330bcdf3390960a152d
   ExpoLinking: d5c183998ca6ada66ff45e407e0f965b398a8902
-  ExpoLocalAuthentication: 8c1a3f26f0681133c58a16ac42d4ae8ce256d99a
+  ExpoLocalAuthentication: c35f18692dcb35775a1be0f37b2131096951a6bd
   ExpoLocalization: 999a1ff61a7f5917d65c2bd9234883009019ca9f
-  ExpoLocation: fa2f518dc01243ed21e11b28d884d803eae741d2
+  ExpoLocation: a43df2ff15f2fae9504b23a77060e7cd16b3e326
   ExpoModulesCore: 00a1b5c73248465bd0b93f59f8538c4573dac579
   ExpoSecureStore: 3f1b632d6d40bcc62b4983ef9199cd079592a50a
   ExpoSplashScreen: 0ad5acac1b5d2953c6e00d4319f16d616f70d4dd
@@ -2950,6 +2950,6 @@ SPEC CHECKSUMS:
   Yoga: dc7c21200195acacb62fa920c588e7c2106de45e
   ZXingObjC: 8898711ab495761b2dbbdec76d90164a6d7e14c5
 
-PODFILE CHECKSUM: 0dc4bba83f5bdc5d85111ffcc2f7c34fb5d003bf
+PODFILE CHECKSUM: 1e82fb5d506db99bfb56401edf2771fbbed2e430
 
 COCOAPODS: 1.16.2

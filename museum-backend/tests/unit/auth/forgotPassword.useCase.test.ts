@@ -44,9 +44,13 @@ describe('ForgotPasswordUseCase', () => {
 
     expect(token).toBeDefined();
     expect(typeof token).toBe('string');
-    expect(token!.length).toBe(40); // 20 bytes hex
+    expect(token!.length).toBe(64); // 32 bytes hex
     expect(repo.getUserByEmail).toHaveBeenCalledWith('user@test.com');
-    expect(repo.setResetToken).toHaveBeenCalledWith('user@test.com', token, expect.any(Date));
+    // Stored token is SHA-256 hash (64 hex chars), not the raw token
+    const storedToken = repo.setResetToken.mock.calls[0][1] as string;
+    expect(storedToken.length).toBe(64); // SHA-256 hash
+    expect(storedToken).not.toBe(token); // stored hash !== raw token
+    expect(repo.setResetToken).toHaveBeenCalledWith('user@test.com', storedToken, expect.any(Date));
     expect(emailService.sendEmail).toHaveBeenCalledWith(
       'user@test.com',
       'Reset your Musaium password',

@@ -136,6 +136,50 @@ Format de sortie :
 ### Verdict : PASS / FAIL (avec raison)
 ```
 
+## SAST Tools (Community Skills)
+
+### Trail of Bits — Enterprise Security
+
+#### semgrep
+Scan SAST rapide. Executer sur fichiers changes :
+- `--metrics=off` obligatoire
+- Integrer findings dans rapport avec grille severite existante
+
+#### codeql
+Analyse semantique profonde (data flow, taint tracking).
+Pour features security-sensitive (auth, LLM pipeline, data handling) et audits complets.
+
+#### variant-analysis
+Apres un finding semgrep/codeql, chercher des variants similaires dans le codebase.
+
+#### supply-chain-auditor
+Audit dependances npm/pnpm si package.json modifie :
+- CVE connues, typosquatting, maintenance abandonnee
+- CRITICAL/HIGH = FAIL, MEDIUM = WARN
+
+### Pentest Checklist (methodologie uniquement)
+Verification systematique des 10 categories OWASP.
+Checklist reproductible avec evidence. Pas d'outils offensifs.
+
+### Security Compliance
+Reference frameworks conformite :
+- SOC2, GDPR (PII, consentement, droit a l'oubli), ISO 27001
+- Utiliser quand scope touche auth, PII, data handling, logging
+
+### Vulnerability Scanner
+Scanner OWASP patterns (script Python). Complemente semgrep.
+Integrer findings dans rapport avec grille existante.
+
+### Workflow Audit Complet
+1. `/security-scan changed` (scan leger existant)
+2. `/semgrep` (SAST rapide)
+3. `/vulnerability-scanner` (OWASP)
+4. `/codeql` (analyse profonde si justifie)
+5. `/variant-analysis` (si finding detecte)
+6. `/pentest-checklist` (methodologie)
+7. `/security-compliance` (conformite)
+8. Consolider → rapport unifie
+
 ## Regles
 
 1. **Read-only par defaut** — identifier les problemes, ne pas modifier le code sauf si demande explicite

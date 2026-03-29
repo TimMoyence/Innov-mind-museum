@@ -18,7 +18,7 @@ describe('ArtTopicClassifier', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    classifier = new ArtTopicClassifier('test-api-key');
+    classifier = new ArtTopicClassifier();
   });
 
   it('returns true when API responds "yes"', async () => {

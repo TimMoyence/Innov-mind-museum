@@ -35,9 +35,18 @@ ANALYSE → DESIGN → PLAN(user-validate) → DEV → REVIEW → TEST → SHIP
 ## Phase Configuration
 - Phases actives: toutes
 - Frontend verification: `npm run lint` seulement (pas de modifs)
+- Community skills actifs :
+  - Si scope chat/LLM : langchain-skills (fundamentals, rag, middleware)
+  - Si scope Express/TypeORM : backend-patterns
+  - Phase VERIFIER : semgrep + vulnerability-scanner (toujours)
+  - obra/verification-before-completion : phases CHALLENGER, REGRESSION, TESTER, VALIDER
+  - Si nouvelle dep : supply-chain-auditor
 
 ## Definition of Done
 - [ ] Code conforme, tsc PASS, 0 regression
 - [ ] Nouveaux tests ecrits et PASS
 - [ ] Si API: spec OpenAPI validee, contract tests
+- [ ] SAST (semgrep + vulnerability-scanner) clean
+- [ ] obra/verification-before-completion PASS
+- [ ] Si LangChain modifie : patterns langchain-skills respectes
 - [ ] Sprint tracking mis a jour

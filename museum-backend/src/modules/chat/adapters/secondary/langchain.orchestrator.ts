@@ -6,6 +6,7 @@ import { logger } from '@shared/logger/logger';
 import { startSpan } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
 
+import { LLMCircuitBreaker } from './llm-circuit-breaker';
 import { parseAssistantResponse } from '../../application/assistant-response';
 import {
   buildOrchestratorMessages,
@@ -27,7 +28,6 @@ import type {
   OrchestratorOutput,
   ChatOrchestrator,
 } from '../../domain/ports/chat-orchestrator.port';
-
 // Re-export domain port types so existing consumers that imported from here keep working
 export type {
   OrchestratorInput,
@@ -42,16 +42,13 @@ export {
 } from '../../application/llm-prompt-builder';
 export type { OrchestratorPrepared } from '../../application/llm-prompt-builder';
 
-interface ChatModelInvokeOptions {
-  signal?: AbortSignal;
-}
-
+/** Minimal contract for LLM models — satisfied by LangChain BaseChatModel and test fakes. */
 interface ChatModel {
-  invoke: (messages: unknown, options?: ChatModelInvokeOptions) => Promise<{ content: unknown }>;
-  stream: (
+  invoke(messages: unknown, options?: { signal?: AbortSignal }): Promise<{ content: unknown }>;
+  stream(
     messages: unknown,
-    options?: ChatModelInvokeOptions,
-  ) => Promise<AsyncIterable<{ content: unknown }>>;
+    options?: { signal?: AbortSignal },
+  ): Promise<AsyncIterable<{ content: unknown }>>;
 }
 
 const toModel = (): ChatModel | null => {
@@ -59,8 +56,8 @@ const toModel = (): ChatModel | null => {
     return new ChatGoogleGenerativeAI({
       apiKey: env.llm.googleApiKey,
       model: env.llm.model,
-      maxOutputTokens: 800,
-    }) as unknown as ChatModel;
+      maxOutputTokens: env.llm.maxOutputTokens,
+    });
   }
 
   if (env.llm.provider === 'deepseek' && env.llm.deepseekApiKey) {
@@ -71,8 +68,8 @@ const toModel = (): ChatModel | null => {
       openAIApiKey: env.llm.deepseekApiKey,
       model: env.llm.model,
       temperature: env.llm.temperature,
-      maxTokens: 800,
-    }) as unknown as ChatModel;
+      maxTokens: env.llm.maxOutputTokens,
+    });
   }
 
   if (env.llm.openAiApiKey) {
@@ -80,8 +77,8 @@ const toModel = (): ChatModel | null => {
       openAIApiKey: env.llm.openAiApiKey,
       model: env.llm.model,
       temperature: env.llm.temperature,
-      maxTokens: 800,
-    }) as unknown as ChatModel;
+      maxTokens: env.llm.maxOutputTokens,
+    });
   }
 
   return null;
@@ -113,17 +110,25 @@ const isRetryableError = (error: unknown): boolean => {
 interface LangChainChatOrchestratorDeps {
   model?: ChatModel | null;
   semaphore?: Semaphore;
+  circuitBreaker?: LLMCircuitBreaker;
 }
 
 /** LangChain-based implementation of {@link ChatOrchestrator} that delegates to OpenAI, Google, or Deepseek models. */
 export class LangChainChatOrchestrator implements ChatOrchestrator {
   private readonly model: ChatModel | null;
   private readonly semaphore: Semaphore;
+  private readonly circuitBreaker: LLMCircuitBreaker;
 
   /** Creates a new LangChain orchestrator instance. \@param deps - Optional overrides for the LLM model and concurrency semaphore (useful for testing). */
   constructor(deps: LangChainChatOrchestratorDeps = {}) {
     this.model = deps.model === undefined ? toModel() : deps.model;
     this.semaphore = deps.semaphore ?? new Semaphore(Math.max(1, env.llm.maxConcurrent));
+    this.circuitBreaker = deps.circuitBreaker ?? new LLMCircuitBreaker();
+  }
+
+  /** Returns the circuit breaker's observable state for health-check endpoints. */
+  getCircuitBreakerState() {
+    return this.circuitBreaker.getState();
   }
 
   /**
@@ -196,11 +201,15 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
                     'llm.payload_bytes': payloadBytes,
                   },
                 },
-                // eslint-disable-next-line sonarjs/no-nested-functions -- tracing span callback wraps semaphore-guarded LLM invocation
+                // eslint-disable-next-line sonarjs/no-nested-functions -- tracing span callback wraps circuit-breaker + semaphore-guarded LLM invocation
                 async () => {
-                  const result = await this.semaphore.use(
-                    // eslint-disable-next-line max-nested-callbacks -- semaphore wraps model invocation
-                    async () => await model.invoke(sectionMessages, { signal }),
+                  const result = await this.circuitBreaker.execute(
+                    // eslint-disable-next-line max-nested-callbacks -- circuit breaker wraps semaphore + model invocation
+                    () =>
+                      this.semaphore.use(
+                        // eslint-disable-next-line max-nested-callbacks -- semaphore wraps model invocation
+                        async () => await model.invoke(sectionMessages, { signal }),
+                      ),
                   );
                   return toContentString(result.content);
                 },
@@ -458,19 +467,22 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
 
         let accumulated = '';
         try {
-          const rawContent = await this.semaphore.use(async () => {
-            return await startSpan({ name: 'llm.stream', op: 'ai.stream' }, async () => {
-              const stream = await model.stream(sectionMessages, { signal: controller.signal });
-              for await (const chunk of stream) {
-                const chunkText = toContentString(chunk.content);
-                if (chunkText) {
-                  accumulated += chunkText;
-                  onChunk(chunkText);
+          const rawContent = await this.circuitBreaker.execute(() =>
+            this.semaphore.use(async () => {
+              // eslint-disable-next-line sonarjs/no-nested-functions, max-nested-callbacks -- Sentry tracing span callback inside semaphore + circuit breaker
+              return await startSpan({ name: 'llm.stream', op: 'ai.stream' }, async () => {
+                const stream = await model.stream(sectionMessages, { signal: controller.signal });
+                for await (const chunk of stream) {
+                  const chunkText = toContentString(chunk.content);
+                  if (chunkText) {
+                    accumulated += chunkText;
+                    onChunk(chunkText);
+                  }
                 }
-              }
-              return accumulated;
-            });
-          });
+                return accumulated;
+              });
+            }),
+          );
 
           clearTimeout(timeout);
 

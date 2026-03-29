@@ -216,3 +216,19 @@ Apres execution, presenter :
 ```
 
 Si echecs : lister chaque test echoue avec le message d'erreur et le fichier concerne.
+
+## Community Skills
+
+### Browser Automation (browser-use)
+Pour tests E2E museum-web (Next.js 15) :
+- Smoke tests visuels en Phase TESTER
+- Verification parcours utilisateur critiques
+- Scope : uniquement quand museum-web/ est impacte
+
+### Verification Discipline (obra/verification-before-completion)
+AVANT de declarer les tests complets :
+1. Chaque use case a au moins 1 test
+2. Chaque error path identifie = teste
+3. Edge cases couverts
+4. Tests resistant au refactoring (comportement, pas implementation)
+5. Relire la sortie des tests — pas juste "X passed"

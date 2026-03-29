@@ -32,11 +32,16 @@ ANALYSE → PLAN(user-validate) → DEV → REVIEW → TEST
 ## Phase Configuration
 - Phases actives: ANALYSE, PLAN, DEV, REVIEW, TEST
 - Phases skipped: DESIGN (inline dans PLAN), SHIP (optionnel)
+- Community skills actifs :
+  - Phase VERIFIER : semgrep + vulnerability-scanner
+  - obra/verification-before-completion : avant cloture
 
 ## Definition of Done
 - [ ] Transformation conforme au plan
 - [ ] tsc PASS, 0 regression (comportement identique)
 - [ ] Code review PASS (hexagonal, conventions)
+- [ ] SAST (semgrep + vulnerability-scanner) clean
+- [ ] obra/verification-before-completion PASS
 - [ ] Tests supplementaires si necessaire
 
 ## Mode-Specific Rules

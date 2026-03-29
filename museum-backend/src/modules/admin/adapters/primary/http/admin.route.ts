@@ -10,8 +10,16 @@ import { badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import { requireRole } from '@src/helpers/middleware/require-role.middleware';
 import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
 
-import { changeUserRoleSchema, resolveReportSchema, updateTicketSchema } from './admin.schemas';
+import {
+  changeUserRoleSchema,
+  resolveReportSchema,
+  updateTicketSchema,
+  listUsersQuerySchema,
+  auditLogsQuerySchema,
+  listReportsQuerySchema,
+} from './admin.schemas';
 import {
   listUsersUseCase,
   changeUserRoleUseCase,
@@ -31,12 +39,15 @@ adminRouter.get(
   '/users',
   isAuthenticated,
   requireRole('admin', 'moderator'),
+  validateQuery(listUsersQuerySchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const page = Number.parseInt(req.query.page as string, 10) || 1;
-      const limit = Number.parseInt(req.query.limit as string, 10) || 20;
-      const search = (req.query.search as string) || undefined;
-      const role = (req.query.role as string) || undefined;
+      const { page, limit, search, role } = req.query as unknown as {
+        page: number;
+        limit: number;
+        search?: string;
+        role?: string;
+      };
 
       const result = await listUsersUseCase.execute({
         search,
@@ -84,17 +95,18 @@ adminRouter.get(
   '/audit-logs',
   isAuthenticated,
   requireRole('admin', 'moderator'),
+  validateQuery(auditLogsQuerySchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const page = Number.parseInt(req.query.page as string, 10) || 1;
-      const limit = Number.parseInt(req.query.limit as string, 10) || 20;
-      const action = (req.query.action as string) || undefined;
-      const actorId = req.query.actorId
-        ? Number.parseInt(req.query.actorId as string, 10)
-        : undefined;
+      const { page, limit, action, actorId, dateFrom, dateTo } = req.query as unknown as {
+        page: number;
+        limit: number;
+        action?: string;
+        actorId?: number;
+        dateFrom?: string;
+        dateTo?: string;
+      };
       const targetType = (req.query.targetType as string) || undefined;
-      const dateFrom = (req.query.dateFrom as string) || undefined;
-      const dateTo = (req.query.dateTo as string) || undefined;
 
       const result = await listAuditLogsUseCase.execute({
         action,
@@ -134,17 +146,20 @@ adminRouter.get(
   '/reports',
   isAuthenticated,
   requireRole('admin', 'moderator'),
+  validateQuery(listReportsQuerySchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const page = Number.parseInt(req.query.page as string, 10) || 1;
-      const limit = Number.parseInt(req.query.limit as string, 10) || 20;
-      const status = (req.query.status as string) || undefined;
+      const { page, limit, status } = req.query as unknown as {
+        page: number;
+        limit: number;
+        status?: 'pending' | 'reviewed' | 'dismissed';
+      };
       const reason = (req.query.reason as string) || undefined;
       const dateFrom = (req.query.dateFrom as string) || undefined;
       const dateTo = (req.query.dateTo as string) || undefined;
 
       const result = await listReportsUseCase.execute({
-        status: status as 'pending' | 'reviewed' | 'dismissed' | undefined,
+        status,
         reason,
         dateFrom,
         dateTo,

@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-03-26",
+  "lastUpdated": "2026-03-28",
   "runs": [
     {
       "id": "R9",
@@ -80,18 +80,34 @@
       "estimation": "L",
       "result": "PASS",
       "notes": "Full-stack: museum-web liquid glass landing page (real screenshots, logo, glass cards, mesh gradients) + backend review module (hexagonal, 5 use cases, 16 tests). Backend Architect had EP-014 scope creep recidive (reverted). Sentinelle PASS @ 88/100. Tests 979->1054 (+75). Coverage 52.13%->52.45%."
+    },
+    {
+      "id": "R16",
+      "date": "2026-03-28",
+      "mode": "audit (full-stack prod-readiness)",
+      "score": 81,
+      "agentsSpawned": 7,
+      "filesTouched": 0,
+      "testsWritten": 0,
+      "filesPerAgent": 0,
+      "roiMoyen": 4.0,
+      "correctiveLoops": 0,
+      "firstPassRate": 1.0,
+      "estimation": "L",
+      "result": "PASS",
+      "notes": "Read-only audit. 6 scans (backend, frontend, security, tests, devops, langchain) + Sentinelle cross-validation. 7 corrections (1 refuted, 4 downgraded, 1 upgraded, 2 stale-data). Scan accuracy 78%. 2 CRITICAL, 5 HIGH, 14 MEDIUM, 12 LOW. 81/100 CONDITIONAL GO. 3 GO conditions (path-to-regexp, langsmith, reset token hashing)."
     }
   ],
   "averages": {
-    "score": 92.0,
-    "filesPerAgent": 12.7,
+    "score": 90.2,
+    "filesPerAgent": 10.6,
     "correctiveLoops": 0.0,
     "firstPassRate": 1.0,
-    "roiMoyen": 4.45
+    "roiMoyen": 4.38
   },
   "trends": {
-    "scoreTrend": "STABLE HIGH (88-95 range over last 5 runs, lifetime avg 93.0 over 16 runs) — L3 maintained R13",
-    "loopsTrend": "STABLE (0) — 16 runs lifetime, 0 corrective loops",
-    "roiTrend": "STABLE HIGH (3.5-5.0) — lifetime avg 4.60"
+    "scoreTrend": "STABLE (81-95 range over last 6 runs, lifetime avg 90.2) — R16 audit mode lower score expected (no code changes)",
+    "loopsTrend": "STABLE (0) — 17 runs lifetime, 0 corrective loops",
+    "roiTrend": "STABLE HIGH (3.5-5.0) — lifetime avg 4.38"
   }
 }

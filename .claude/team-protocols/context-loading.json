@@ -30,6 +30,53 @@
       "team-knowledge/process-amendments.json"
     ]
   },
+  "community_skills": {
+    "description": "Skills communautaires charges par mode et scope",
+    "rules": [
+      {
+        "id": "langchain",
+        "applies_to": ["feature", "feature-backend", "feature-fullstack", "bug", "refactor"],
+        "condition": "scope includes chat module OR LangChain pipeline",
+        "skills": ["langchain-fundamentals", "langchain-rag", "langchain-middleware"]
+      },
+      {
+        "id": "backend-patterns",
+        "applies_to": ["feature", "feature-backend", "feature-fullstack"],
+        "condition": "scope includes Express routes OR TypeORM entities",
+        "skills": ["backend-patterns"]
+      },
+      {
+        "id": "sast-always",
+        "applies_to": ["feature", "feature-backend", "feature-frontend", "feature-fullstack", "bug", "refactor", "audit"],
+        "condition": "always in Phase VERIFIER",
+        "skills": ["semgrep", "vulnerability-scanner"]
+      },
+      {
+        "id": "sast-deep",
+        "applies_to": ["audit"],
+        "condition": "audit mode or security-sensitive feature",
+        "skills": ["codeql", "variant-analysis", "pentest-checklist", "security-compliance"]
+      },
+      {
+        "id": "supply-chain",
+        "applies_to": ["feature", "feature-backend", "feature-fullstack", "chore"],
+        "condition": "package.json or pnpm-lock.yaml modified",
+        "skills": ["supply-chain-auditor"]
+      },
+      {
+        "id": "verification",
+        "applies_to": ["feature", "feature-backend", "feature-frontend", "feature-fullstack", "bug", "refactor"],
+        "condition": "always — discipline skill (obra/superpowers)",
+        "skills": ["verification-before-completion"]
+      },
+      {
+        "id": "browser-testing",
+        "applies_to": ["feature", "feature-frontend", "feature-fullstack", "mockup"],
+        "condition": "museum-web/ files in scope",
+        "skills": ["browser-use"]
+      }
+    ]
+  },
   "never_load_raw": {
     "description": "Ces fichiers ne doivent PAS etre charges en entier.",
     "rules": [

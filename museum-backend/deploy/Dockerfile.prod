@@ -32,6 +32,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/openapi ./openapi
 
+# Strip source maps from production image (uploaded to Sentry separately)
+RUN find /app/dist -name '*.map' -delete
+
 # Sécurité : user non-root + uploads directory
 RUN adduser --system --uid 1001 nodeuser \
     && mkdir -p /app/tmp/uploads \

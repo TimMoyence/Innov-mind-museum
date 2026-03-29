@@ -77,7 +77,8 @@ A l'invocation de `/team [args]` :
    - **Si mode dev** : error-patterns.json (unfixed only), prompt-enrichments.json (filtre par inject_when)
    - **Si mode audit/chore** : velocity-metrics.json, agent-performance.json, estimation-accuracy.json
 3. Lire le template du mode: team-templates/{mode}.md
-4. git log --oneline -5 → dernier contexte
+4. Lire `team-protocols/context-loading.json > community_skills` et charger les skills pertinents au mode + scope
+5. git log --oneline -5 → dernier contexte
 ```
 
 ### Step 3 — Create Team
@@ -229,9 +230,31 @@ Si une team existante est detectee a l'invocation :
 
 ---
 
-## SKILL COMPLEMENTAIRE
+## SKILLS COMPLEMENTAIRES
 
-- **/recap** — Recap quotidien base sur git log et test outputs (lecture seule)
+### Skills Internes
+- **/recap** — Recap quotidien (lecture seule)
+- **/security-scan** — Audit securite leger
+- **/test-writer** — Generateur de tests
+- **/verify-schema** — Audit schema TypeORM
+- **/test-routes** — Validation endpoints API
+- **/rollback** — Rollback atomique
+
+### Skills Communautaires — Tier 1 (HIGH VALUE)
+- **/langchain-fundamentals** + **/langchain-rag** + **/langchain-middleware** — 3 skills LangChain → Backend Architect (scope chat/LLM)
+- **/skill-creator** — Meta-skill amelioration → Tech Lead uniquement
+- **/semgrep** (Trail of Bits) — SAST rapide → Phase VERIFIER (toujours)
+- **/codeql** (Trail of Bits) — Analyse semantique → Phase VERIFIER (security-sensitive)
+- **/supply-chain-auditor** (Trail of Bits) — Audit deps → si package.json modifie
+- **/variant-analysis** (Trail of Bits) — Recherche variants → post-finding SAST
+- **verification-before-completion** (obra/superpowers) — Discipline verification → toutes phases pre-completion
+
+### Skills Communautaires — Tier 2 (MODERATE VALUE)
+- **/pentest-checklist** — Methodologie pentest → Audit securite
+- **/security-compliance** — SOC2/GDPR/ISO → Audit compliance
+- **/vulnerability-scanner** — OWASP scanning → Phase VERIFIER
+- **/browser-use** — Automation navigateur → Phase TESTER (museum-web)
+- **/backend-patterns** — Patterns Express/TypeORM → Phase DEV (backend)
 
 ---
 
@@ -256,6 +279,18 @@ Le Tech Lead peut chainer des skills avant/dans un run via la directive COMPOSE.
 
 /team compose:security-scan "apres deploy"
   → Execute /security-scan standalone sur les fichiers modifies
+
+/team compose:semgrep,security-scan "audit securite post-deploy"
+  → Execute semgrep SAST, puis /security-scan, consolide les findings
+
+/team compose:semgrep,vulnerability-scanner,security-scan "audit OWASP complet"
+  → Triple scan: OWASP patterns + semgrep + security-scan leger
+
+/team compose:supply-chain-auditor,feature-backend "ajout nouvelle lib"
+  → Audit des deps d'abord, puis /team feature-backend
+
+/team compose:pentest-checklist,semgrep,codeql,security-compliance "audit securite full"
+  → Full security audit: pentest methodology + SAST + compliance
 ```
 
 ### Contrats Input/Output
@@ -269,6 +304,13 @@ Chaque skill doit declarer son output dans un format consommable :
 | /verify-schema | `{entities, migrations, drift, recommendation}` |
 | /test-writer | `{testsGenerated, coverageDelta, report}` |
 | /test-routes | `{routesTested, passed, failed, coverage}` |
+| /semgrep | `{rules[], findings[], summary, verdict}` |
+| /codeql | `{queries[], findings[], dataFlows[], verdict}` |
+| /vulnerability-scanner | `{owaspFindings[], summary, verdict}` |
+| /supply-chain-auditor | `{dependencies[], vulnerabilities[], verdict}` |
+| /browser-use | `{pages[], screenshots[], assertions[], verdict}` |
+| /pentest-checklist | `{categories[], checked[], findings[], verdict}` |
+| /security-compliance | `{framework, controls[], gaps[], verdict}` |
 
 ### Execution
 

@@ -43,6 +43,13 @@ ANALYSE → DESIGN → PLAN(user-validate) → [DEV-be ⫽ DEV-fe ⫽ DEV-api] �
 - Phases actives: ANALYSE, DESIGN, PLAN, DEV, REVIEW, TEST, SHIP
 - Phases skipped: aucune
 - DEV agents en **parallele reel** (run_in_background: true)
+- Community skills actifs :
+  - Si scope chat/LLM : langchain-skills (fundamentals, rag, middleware)
+  - Si scope Express/TypeORM : backend-patterns
+  - Phase VERIFIER : semgrep + vulnerability-scanner (toujours)
+  - obra/verification-before-completion : phases CHALLENGER, REGRESSION, TESTER, VALIDER
+  - Si nouvelle dep : supply-chain-auditor
+  - Si museum-web en scope : browser-use smoke test en Phase TESTER
 
 ## Definition of Done
 - [ ] Code conforme au plan, tsc PASS backend + frontend
@@ -50,6 +57,8 @@ ANALYSE → DESIGN → PLAN(user-validate) → [DEV-be ⫽ DEV-fe ⫽ DEV-api] �
 - [ ] Nouveaux tests: happy + error + edge cases
 - [ ] Code review PASS (architecture, conventions)
 - [ ] Spec OpenAPI validee, contract tests PASS, types frontend regeneres
+- [ ] SAST (semgrep + vulnerability-scanner) clean
+- [ ] obra/verification-before-completion PASS
 - [ ] Security review si applicable
 - [ ] Sprint tracking (PROGRESS_TRACKER + SPRINT_LOG) mis a jour
 - [ ] Rapport Sentinelle produit

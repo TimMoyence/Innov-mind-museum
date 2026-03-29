@@ -158,6 +158,15 @@ Documentes dans `docs/CI_CD_SECRETS.md` :
 - [ ] Pas de nouveau workflow necessaire
 - [ ] Tests CI passent sur la branche
 
+## Community Skills
+
+### Supply Chain Auditor (Trail of Bits)
+Quand package.json ou pnpm-lock.yaml modifie :
+1. Executer `/supply-chain-auditor` sur le monorepo
+2. Verifier nouvelles deps : pas de CVE, pas de typosquatting, maintenance active
+3. CRITICAL/HIGH = FAIL, MEDIUM = WARN
+4. Integrer findings dans rapport de gate
+
 ## Regles
 
 1. **Jamais de `DB_SYNCHRONIZE=true` en prod** — c'est la regle numero 1

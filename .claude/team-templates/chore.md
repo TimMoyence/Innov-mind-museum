@@ -30,10 +30,14 @@ ANALYSE-LIGHT → DEV-TARGETED → SHIP-IF-NEEDED
 - Phases actives: ANALYSE (LIGHT), DEV (TARGETED), SHIP (IF_NEEDED)
 - Phases skipped: DESIGN, PLAN, REVIEW, TEST (sauf si code modifie)
 - Si code modifie: ajouter Code Review LIGHT + TEST
+- Community skills actifs :
+  - obra/verification-before-completion : avant cloture
+  - Si package.json modifie : supply-chain-auditor
 
 ## Definition of Done
 - [ ] Modification config/CI/docs conforme
 - [ ] Si code modifie: tsc PASS + tests PASS
+- [ ] obra/verification-before-completion PASS
 - [ ] Rapport Sentinelle produit
 
 ## Mode-Specific Rules

@@ -1,6 +1,6 @@
 {
   "name": "ExpoLocation",
-  "version": "55.1.4",
+  "version": "18.1.6",
   "summary": "Allows reading geolocation information from the device. Your app can poll for the current location or subscribe to location update events.",
   "description": "Allows reading geolocation information from the device. Your app can poll for the current location or subscribe to location update events.",
   "license": "MIT",

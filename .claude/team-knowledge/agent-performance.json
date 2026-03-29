@@ -2,26 +2,27 @@
   "lastUpdated": "2026-03-28",
   "agents": {
     "Backend Architect": {
-      "totalRuns": 6, "averageScore": 9.33, "averageROI": 4.5, "verdict": "ESSENTIEL",
+      "totalRuns": 7, "averageScore": 9.22, "averageROI": 4.46, "verdict": "ESSENTIEL",
       "strengths": ["Architecture coherente + 0 regression", "Zod validation + Redis rate-limit fallback", "AbortSignal pattern correct", "R15: followed YAGNI directive, module-local extraction"],
-      "weaknesses": ["R11: scope creep (FlashList, ReactCompiler outside mandate)", "R13: scope creep recidive (EP-014, reverted by Tech Lead)"],
+      "weaknesses": ["R11: scope creep (FlashList, ReactCompiler outside mandate)", "R13: scope creep recidive (EP-014, reverted by Tech Lead)", "R16: pagination limit claim incorrect (refuted by Sentinelle — limits ARE enforced 1-100)"],
       "specializations": {
         "new-module": {"runs": 2, "avgScore": 9.5, "avgROI": 4.8},
         "refactor": {"runs": 2, "avgScore": 9.25, "avgROI": 4.25},
         "bug-fix": {"runs": 1, "avgScore": 9.5, "avgROI": 4.5},
-        "audit": {"runs": 1, "avgScore": 9.0, "avgROI": 4.2}
+        "audit": {"runs": 2, "avgScore": 8.8, "avgROI": 4.1}
       },
       "retired": false
     },
     "Frontend Architect": {
-      "totalRuns": 7, "averageScore": 8.79, "averageROI": 4.43, "verdict": "ESSENTIEL",
+      "totalRuns": 8, "averageScore": 8.83, "averageROI": 4.43, "verdict": "ESSENTIEL",
       "strengths": ["Exhaustif 8 domaines + i18n", "Web research avec sources concretes", "10 gaps priorises avec roadmap", "R15: 10 files + 21 a11y attrs, scope compliance 100%"],
-      "weaknesses": ["R11 scope creep — FlashList/ReactCompiler/tests outside mandate", "Auth types mismatch (F1)"],
+      "weaknesses": ["R11 scope creep — FlashList/ReactCompiler/tests outside mandate", "Auth types mismatch (F1)", "R16: used stale line counts for settings.tsx (662->327L) and conversations.tsx (644->331L), did not account for R15 refactor"],
       "specializations": {
         "new-module": {"runs": 2, "avgScore": 8.5, "avgROI": 4.2},
         "refactor": {"runs": 3, "avgScore": 9.0, "avgROI": 4.5},
         "mobile-ux": {"runs": 1, "avgScore": 8.5, "avgROI": 4.0},
-        "museum-web": {"runs": 1, "avgScore": 9.0, "avgROI": 4.5}
+        "museum-web": {"runs": 1, "avgScore": 9.0, "avgROI": 4.5},
+        "audit": {"runs": 1, "avgScore": 9.1, "avgROI": 4.2}
       },
       "retired": false
     },
@@ -38,41 +39,44 @@
       "weaknesses": [], "retired": false
     },
     "QA Engineer": {
-      "totalRuns": 5, "averageScore": 9.2, "averageROI": 4.45, "verdict": "ESSENTIEL",
-      "strengths": ["64 as any -> 0 + jest.Mocked patterns", "OpenAPI 20 routes + 14 schemas", "DB resilience 21 tests + coverage CI thresholds"],
+      "totalRuns": 6, "averageScore": 8.83, "averageROI": 4.38, "verdict": "ESSENTIEL",
+      "strengths": ["64 as any -> 0 + jest.Mocked patterns", "OpenAPI 20 routes + 14 schemas", "DB resilience 21 tests + coverage CI thresholds", "R16: correctly identified 0% route coverage as critical gap"],
       "specializations": {
         "unit-tests": {"runs": 3, "avgScore": 9.5, "avgROI": 4.8},
         "contract-tests": {"runs": 2, "avgScore": 9.0, "avgROI": 4.2},
-        "e2e-tests": {"runs": 1, "avgScore": 8.5, "avgROI": 4.0}
+        "e2e-tests": {"runs": 1, "avgScore": 8.5, "avgROI": 4.0},
+        "audit": {"runs": 1, "avgScore": 7.0, "avgROI": 4.0}
       },
       "weaknesses": [], "retired": false
     },
     "DevOps Engineer": {
-      "totalRuns": 5, "averageScore": 9.5, "averageROI": 4.8, "verdict": "ESSENTIEL",
-      "strengths": ["Zero-downtime deploy pattern", "Docker 3-stage + Dependabot + Trivy CI", "CI/CD mirrors backend pipeline"],
+      "totalRuns": 6, "averageScore": 9.38, "averageROI": 4.73, "verdict": "ESSENTIEL",
+      "strengths": ["Zero-downtime deploy pattern", "Docker 3-stage + Dependabot + Trivy CI", "CI/CD mirrors backend pipeline", "R16: identified path-to-regexp + langsmith CVEs"],
       "specializations": {
         "ci-cd": {"runs": 3, "avgScore": 9.5, "avgROI": 4.8},
         "docker": {"runs": 2, "avgScore": 9.5, "avgROI": 5.0},
-        "migrations": {"runs": 2, "avgScore": 9.0, "avgROI": 4.5}
+        "migrations": {"runs": 2, "avgScore": 9.0, "avgROI": 4.5},
+        "audit": {"runs": 1, "avgScore": 8.8, "avgROI": 4.2}
       },
-      "weaknesses": [], "retired": false
+      "weaknesses": ["R16: source maps finding over-classified (HIGH->MEDIUM after Sentinelle review)"], "retired": false
     },
     "Security Analyst": {
-      "totalRuns": 2, "averageScore": 9.0, "averageROI": 4.5, "verdict": "ESSENTIEL",
-      "strengths": ["OWASP aligned 7 domaines", "langsmith SSRF detecte", "Token logging guard"],
+      "totalRuns": 3, "averageScore": 9.0, "averageROI": 4.5, "verdict": "ESSENTIEL",
+      "strengths": ["OWASP aligned 7 domaines", "langsmith SSRF detecte", "Token logging guard", "R16: unhashed reset tokens correctly identified"],
       "specializations": {
         "auth-audit": {"runs": 1, "avgScore": 9.0, "avgROI": 4.5},
-        "llm-security": {"runs": 1, "avgScore": 9.0, "avgROI": 4.5}
+        "llm-security": {"runs": 1, "avgScore": 9.0, "avgROI": 4.5},
+        "audit": {"runs": 1, "avgScore": 9.0, "avgROI": 4.5}
       },
       "weaknesses": ["Guardrail keyword bypassable (M22) non resolu"],
       "retired": false
     },
     "Sentinelle": {
-      "totalRuns": 12, "averageScore": 9.36, "averageROI": 5.0, "verdict": "ESSENTIEL",
-      "strengths": ["Verification independante + cross-run learning", "EP escalade protocol + triage 3-tier", "R11 caught agent scope creep + fake KB entries", "R15: 5 substantive WARNs across 4 gates, YAGNI catch, percentage correction (MT-003 PASS)"],
+      "totalRuns": 13, "averageScore": 9.33, "averageROI": 5.0, "verdict": "ESSENTIEL",
+      "strengths": ["Verification independante + cross-run learning", "EP escalade protocol + triage 3-tier", "R11 caught agent scope creep + fake KB entries", "R15: 5 substantive WARNs across 4 gates, YAGNI catch, percentage correction (MT-003 PASS)", "R16: 7 corrections across 6 scans (1 refuted, 4 downgraded, 1 upgraded, 2 stale-data), scan accuracy 78%"],
       "specializations": {
         "feature-gate": {"runs": 9, "avgScore": 9.5, "avgROI": 5.0},
-        "audit-gate": {"runs": 3, "avgScore": 9.0, "avgROI": 4.5}
+        "audit-gate": {"runs": 4, "avgScore": 9.0, "avgROI": 4.5}
       },
       "weaknesses": ["R13 FINALIZE hallucination — fabricated 17 KB entries (EP-015)"],
       "retired": false
@@ -96,5 +100,10 @@
     "totalRuns": 2, "agentTypesUsed": 2, "avgScore": 87.5, "avgROI": 4.0,
     "verdicts": {"ESSENTIEL": ["Frontend Architect", "Sentinelle"]},
     "notes": "R11 theme centralization (90, scope creep). R13 museum-web liquid glass + backend review (88)."
+  },
+  "dailySummary_2026_03_28": {
+    "totalRuns": 1, "agentTypesUsed": 7, "avgScore": 81, "avgROI": 4.0,
+    "verdicts": {"ESSENTIEL": ["Backend Architect", "Frontend Architect", "Security Analyst", "QA Engineer", "DevOps Engineer", "Sentinelle"]},
+    "notes": "R16 full-stack prod-readiness audit. 6 parallel scans + Sentinelle cross-validation. 81/100 CONDITIONAL GO. 7 Sentinelle corrections. Scan accuracy 78%. 3 GO conditions identified."
   }
 }
