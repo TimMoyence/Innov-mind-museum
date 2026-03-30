@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { badRequest } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
+import { dailyChatLimit } from '@src/helpers/middleware/daily-chat-limit.middleware';
 import {
   bySession,
   createRateLimitMiddleware,
@@ -51,6 +52,7 @@ export const createMediaRouter = (
   router.post(
     '/sessions/:id/audio',
     isAuthenticated,
+    dailyChatLimit,
     sessionLimiter,
     ...(uploadAdmission ? [uploadAdmission] : []),
     audioUpload.single('audio'),

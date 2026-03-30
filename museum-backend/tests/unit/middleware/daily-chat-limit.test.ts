@@ -56,13 +56,10 @@ describe('dailyChatLimit middleware', () => {
     const next = jest.fn();
     dailyChatLimit(req, res, next);
 
-    expect(next).not.toHaveBeenCalled();
-    const mockRes = res as unknown as { status: jest.Mock; json: jest.Mock };
-    expect(mockRes.status).toHaveBeenCalledWith(429);
-    expect(mockRes.json).toHaveBeenCalledWith(
+    expect(next).toHaveBeenCalledWith(
       expect.objectContaining({
+        statusCode: 429,
         code: 'DAILY_LIMIT_REACHED',
-        limit: 100,
         message: 'Daily chat limit reached',
       }),
     );
@@ -82,7 +79,7 @@ describe('dailyChatLimit middleware', () => {
     const blockedRes = makeMockRes();
     const blockedNext = jest.fn();
     dailyChatLimit(req, blockedRes, blockedNext);
-    expect(blockedNext).not.toHaveBeenCalled();
+    expect(blockedNext).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 429 }));
 
     // Simulate next day by advancing fake timers past midnight
     jest.useFakeTimers();
