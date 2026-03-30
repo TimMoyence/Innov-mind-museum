@@ -70,8 +70,8 @@ export const createMuseumRouter = (cacheService?: CacheService): Router => {
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { lat, lng, radius, q } = req.query as unknown as {
-          lat: number;
-          lng: number;
+          lat?: number;
+          lng?: number;
           radius?: number;
           q?: string;
         };

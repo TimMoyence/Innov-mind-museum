@@ -56,6 +56,10 @@ export const useMuseumDirectory = (
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Debounced search query — triggers API call when user types >=2 chars.
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+
   // Track whether we already attempted a fetch so we can re-fetch when
   // coordinates become available after the initial directory load.
   const hasLocationRef = useRef(false);
@@ -75,23 +79,26 @@ export const useMuseumDirectory = (
     });
   }, []);
 
-  /** Primary: fetch from search endpoint using geo-coordinates. */
-  const fetchFromSearch = useCallback(async (lat: number, lng: number) => {
-    const { museums } = await museumApi.searchMuseums({
-      lat,
-      lng,
-      radius: 10_000,
-    });
-    return museums.map(mapSearchEntryToMuseumWithDistance);
-  }, []);
+  /** Primary: fetch from search endpoint using geo-coordinates and/or text query. */
+  const fetchFromSearch = useCallback(
+    async (lat: number | null, lng: number | null, q?: string) => {
+      const { museums } = await museumApi.searchMuseums({
+        ...(lat !== null && lng !== null ? { lat, lng, radius: 30_000 } : {}),
+        ...(q ? { q } : {}),
+      });
+      return museums.map(mapSearchEntryToMuseumWithDistance);
+    },
+    [],
+  );
 
   const fetchMuseums = useCallback(
-    async (lat: number | null, lng: number | null) => {
+    async (lat: number | null, lng: number | null, q?: string) => {
       setIsLoading(true);
       try {
-        if (lat !== null && lng !== null) {
+        // Use search endpoint when we have coordinates OR a text query
+        if ((lat !== null && lng !== null) || q) {
           try {
-            const results = await fetchFromSearch(lat, lng);
+            const results = await fetchFromSearch(lat, lng, q);
             setRawMuseums(results);
             return;
           } catch {
@@ -120,6 +127,31 @@ export const useMuseumDirectory = (
 
     void fetchMuseums(userLatitude, userLongitude);
   }, [userLatitude, userLongitude, fetchMuseums]);
+
+  // Debounce search query — wait 500ms after last keystroke before API call.
+  useEffect(() => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+
+    if (searchQuery.trim().length >= 2) {
+      debounceTimerRef.current = setTimeout(() => {
+        setDebouncedQuery(searchQuery.trim());
+      }, 500);
+    } else {
+      setDebouncedQuery('');
+    }
+
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+  }, [searchQuery]);
+
+  // Re-fetch from API when debounced query changes.
+  useEffect(() => {
+    if (debouncedQuery) {
+      void fetchMuseums(userLatitude, userLongitude, debouncedQuery);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only react to debouncedQuery changes
+  }, [debouncedQuery]);
 
   const museums = useMemo<MuseumWithDistance[]>(() => {
     let filtered = rawMuseums;

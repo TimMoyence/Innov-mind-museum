@@ -1,3 +1,4 @@
+import { geocodeWithNominatim } from '@shared/http/nominatim.client';
 import { queryOverpassMuseums, type OverpassMuseumResult } from '@shared/http/overpass.client';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
@@ -7,8 +8,8 @@ import type { CacheService } from '@shared/cache/cache.port';
 
 /** Input for the museum search use case. */
 export interface SearchMuseumsInput {
-  lat: number;
-  lng: number;
+  lat?: number;
+  lng?: number;
   radiusMeters?: number;
   q?: string;
 }
@@ -29,7 +30,7 @@ export interface SearchMuseumsResult {
   count: number;
 }
 
-const DEFAULT_RADIUS = 10_000;
+const DEFAULT_RADIUS = 30_000;
 const MAX_RADIUS = 50_000;
 /** Distance threshold in meters below which an OSM result is considered a duplicate of a local museum. */
 const DEDUP_THRESHOLD_METERS = 100;
@@ -134,12 +135,42 @@ export class SearchMuseumsUseCase {
 
   /** Executes the search, merging OSM and local results with deduplication and distance sorting. */
   async execute(input: SearchMuseumsInput): Promise<SearchMuseumsResult> {
-    const { lat, lng, q } = input;
+    const { q } = input;
+    let { lat, lng } = input;
+
+    // If no coordinates provided, attempt geocoding from text query
+    // If no coordinates provided, attempt geocoding from text query
+    if ((lat == null || lng == null) && q) {
+      const geocoded = await geocodeWithNominatim(q);
+      if (geocoded) {
+        lat = geocoded.lat;
+        lng = geocoded.lng;
+        logger.info('Geocoded text query to coordinates', { q, lat, lng });
+      }
+    }
+
+    const localMuseums = await fetchLocalMuseumsWithCoords(this.repository);
+
+    // If we still have no coordinates, return local DB museums only (no Overpass)
+    if (lat == null || lng == null) {
+      let filtered = localMuseums.map((m) => ({
+        ...m,
+        distance: 0,
+        source: 'local' as const,
+      }));
+
+      if (q) {
+        const lower = q.toLowerCase();
+        filtered = filtered.filter((e) => e.name.toLowerCase().includes(lower));
+      }
+
+      return { museums: filtered, count: filtered.length };
+    }
+
     const radius = Math.min(input.radiusMeters ?? DEFAULT_RADIUS, MAX_RADIUS);
     const cacheKey = `osm:museums:${lat.toFixed(2)}:${lng.toFixed(2)}:${String(radius)}`;
 
     const osmResults = await this.fetchOsmResults(cacheKey, lat, lng, radius);
-    const localMuseums = await fetchLocalMuseumsWithCoords(this.repository);
     const entries = mergeResults(lat, lng, radius, localMuseums, osmResults);
 
     let filtered = entries;

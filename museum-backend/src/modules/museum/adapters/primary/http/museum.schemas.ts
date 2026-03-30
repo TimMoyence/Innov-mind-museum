@@ -22,8 +22,8 @@ export const updateMuseumSchema = z.object({
 });
 
 export const searchMuseumsQuerySchema = z.object({
-  lat: z.coerce.number().min(-90).max(90),
-  lng: z.coerce.number().min(-180).max(180),
+  lat: z.coerce.number().min(-90).max(90).optional(),
+  lng: z.coerce.number().min(-180).max(180).optional(),
   radius: z.coerce.number().int().min(1000).max(50000).optional(),
   q: z.string().max(100).optional(),
 });

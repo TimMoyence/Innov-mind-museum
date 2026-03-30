@@ -1,6 +1,7 @@
 import { SearchMuseumsUseCase } from '@modules/museum/core/useCase/searchMuseums.useCase';
 import { InMemoryMuseumRepository } from 'tests/helpers/museum/inMemoryMuseumRepository';
 import type { OverpassMuseumResult } from '@shared/http/overpass.client';
+import type { NominatimGeocodingResult } from '@shared/http/nominatim.client';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /* ------------------------------------------------------------------ */
@@ -10,6 +11,15 @@ const mockQueryOverpassMuseums = jest.fn<Promise<OverpassMuseumResult[]>, []>();
 
 jest.mock('@shared/http/overpass.client', () => ({
   queryOverpassMuseums: (...args: unknown[]) => mockQueryOverpassMuseums(...(args as [])),
+}));
+
+/* ------------------------------------------------------------------ */
+/*  Mock: Nominatim client                                             */
+/* ------------------------------------------------------------------ */
+const mockGeocodeWithNominatim = jest.fn<Promise<NominatimGeocodingResult | null>, []>();
+
+jest.mock('@shared/http/nominatim.client', () => ({
+  geocodeWithNominatim: (...args: unknown[]) => mockGeocodeWithNominatim(...(args as [])),
 }));
 
 /* ------------------------------------------------------------------ */
@@ -26,7 +36,13 @@ jest.mock('@src/config/env', () => ({
 /** Paris coordinates (reference point for all tests). */
 const PARIS = { lat: 48.8566, lng: 2.3522 };
 
-/** Creates an OSM result near a given offset from Paris. */
+/**
+ * Creates an OSM result near a given offset from Paris.
+ * @param name
+ * @param latOffset
+ * @param lonOffset
+ * @param osmId
+ */
 const makeOsmResult = (
   name: string,
   latOffset: number,
@@ -70,6 +86,8 @@ describe('SearchMuseumsUseCase', () => {
     useCase = new SearchMuseumsUseCase(repo);
     mockQueryOverpassMuseums.mockReset();
     mockQueryOverpassMuseums.mockResolvedValue([]);
+    mockGeocodeWithNominatim.mockReset();
+    mockGeocodeWithNominatim.mockResolvedValue(null);
   });
 
   it('returns merged results from Overpass + local DB', async () => {
@@ -278,8 +296,8 @@ describe('SearchMuseumsUseCase', () => {
     expect(osm?.source).toBe('osm');
   });
 
-  it('uses default radius of 10km when not provided', async () => {
-    // Museum at ~8km (within default 10km radius)
+  it('uses default radius of 30km when not provided', async () => {
+    // Museum at ~8km (within default 30km radius)
     await repo.create({
       name: 'Within Default',
       slug: 'within-default',
@@ -287,18 +305,29 @@ describe('SearchMuseumsUseCase', () => {
       longitude: PARIS.lng,
     });
 
-    // Museum at ~15km (outside default 10km radius)
+    // Museum at ~25km (within default 30km radius)
+    await repo.create({
+      name: 'Also Within Default',
+      slug: 'also-within-default',
+      latitude: PARIS.lat + 0.22,
+      longitude: PARIS.lng,
+    });
+
+    // Museum at ~40km (outside default 30km radius)
     await repo.create({
       name: 'Outside Default',
       slug: 'outside-default',
-      latitude: PARIS.lat + 0.14,
+      latitude: PARIS.lat + 0.36,
       longitude: PARIS.lng,
     });
 
     const result = await useCase.execute({ lat: PARIS.lat, lng: PARIS.lng });
 
-    expect(result.museums).toHaveLength(1);
-    expect(result.museums[0].name).toBe('Within Default');
+    expect(result.museums).toHaveLength(2);
+    const names = result.museums.map((m) => m.name);
+    expect(names).toContain('Within Default');
+    expect(names).toContain('Also Within Default');
+    expect(names).not.toContain('Outside Default');
   });
 
   it('excludes local museums without coordinates', async () => {
@@ -319,5 +348,86 @@ describe('SearchMuseumsUseCase', () => {
 
     expect(result.museums).toHaveLength(1);
     expect(result.museums[0].name).toBe('Has Coords Museum');
+  });
+
+  it('geocodes text-only search via Nominatim then searches Overpass', async () => {
+    // Nominatim resolves "Lyon" to Lyon coordinates
+    const LYON = { lat: 45.764, lng: 4.8357 };
+    mockGeocodeWithNominatim.mockResolvedValueOnce(LYON);
+
+    mockQueryOverpassMuseums.mockResolvedValueOnce([
+      {
+        name: 'Musee des Beaux-Arts de Lyon',
+        address: null,
+        latitude: 45.767,
+        longitude: 4.833,
+        osmId: 400,
+      },
+    ]);
+
+    const result = await useCase.execute({ q: 'Lyon' });
+
+    expect(mockGeocodeWithNominatim).toHaveBeenCalledWith('Lyon');
+    expect(mockQueryOverpassMuseums).toHaveBeenCalledTimes(1);
+    expect(result.museums).toHaveLength(1);
+    expect(result.museums[0].name).toBe('Musee des Beaux-Arts de Lyon');
+    expect(result.museums[0].source).toBe('osm');
+  });
+
+  it('returns local DB museums only when no params provided', async () => {
+    await repo.create({
+      name: 'Generic Museum',
+      slug: 'generic',
+      latitude: 48.86,
+      longitude: 2.34,
+    });
+
+    const result = await useCase.execute({});
+
+    // No coordinates → no Overpass call, no Nominatim call
+    expect(mockQueryOverpassMuseums).not.toHaveBeenCalled();
+    expect(mockGeocodeWithNominatim).not.toHaveBeenCalled();
+
+    expect(result.museums).toHaveLength(1);
+    expect(result.museums[0].name).toBe('Generic Museum');
+    expect(result.museums[0].source).toBe('local');
+    expect(result.museums[0].distance).toBe(0);
+  });
+
+  it('falls back to local DB when Nominatim geocoding fails', async () => {
+    mockGeocodeWithNominatim.mockResolvedValueOnce(null);
+
+    await repo.create({
+      name: 'Musee de Lyon',
+      slug: 'lyon-museum',
+      latitude: 45.764,
+      longitude: 4.836,
+    });
+
+    await repo.create({
+      name: 'Musee de Paris',
+      slug: 'paris-museum',
+      latitude: 48.86,
+      longitude: 2.34,
+    });
+
+    const result = await useCase.execute({ q: 'Lyon' });
+
+    // Nominatim failed → no coordinates → no Overpass
+    expect(mockQueryOverpassMuseums).not.toHaveBeenCalled();
+
+    // Should filter local museums by q
+    expect(result.museums).toHaveLength(1);
+    expect(result.museums[0].name).toBe('Musee de Lyon');
+  });
+
+  it('skips Nominatim when lat/lng are already provided', async () => {
+    mockQueryOverpassMuseums.mockResolvedValueOnce([]);
+
+    const result = await useCase.execute({ ...PARIS, q: 'test' });
+
+    expect(mockGeocodeWithNominatim).not.toHaveBeenCalled();
+    expect(mockQueryOverpassMuseums).toHaveBeenCalledTimes(1);
+    expect(result.museums).toHaveLength(0);
   });
 });

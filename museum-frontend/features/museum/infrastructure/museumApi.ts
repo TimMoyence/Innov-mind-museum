@@ -77,21 +77,16 @@ export const museumApi = {
    * @returns Search results with museum entries and total count.
    */
   async searchMuseums(params: {
-    lat: number;
-    lng: number;
+    lat?: number;
+    lng?: number;
     radius?: number;
     q?: string;
   }): Promise<{ museums: MuseumSearchEntry[]; count: number }> {
-    const searchParams = new URLSearchParams({
-      lat: String(params.lat),
-      lng: String(params.lng),
-    });
-    if (params.radius !== undefined) {
-      searchParams.set('radius', String(params.radius));
-    }
-    if (params.q) {
-      searchParams.set('q', params.q);
-    }
+    const searchParams = new URLSearchParams();
+    if (params.lat !== undefined) searchParams.set('lat', String(params.lat));
+    if (params.lng !== undefined) searchParams.set('lng', String(params.lng));
+    if (params.radius !== undefined) searchParams.set('radius', String(params.radius));
+    if (params.q) searchParams.set('q', params.q);
 
     const data = await httpRequest<MuseumSearchResponse>(
       `${MUSEUM_BASE}/search?${searchParams.toString()}`,
