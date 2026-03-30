@@ -430,7 +430,11 @@ export class ChatMessageService {
 
       accumulated += chunk;
 
-      const metaIdx = accumulated.indexOf(META_MARKER);
+      let metaIdx = accumulated.indexOf(META_MARKER);
+      if (metaIdx === -1) {
+        // Fallback: LLM may omit the leading newline before [META]
+        metaIdx = accumulated.indexOf('[META]');
+      }
       if (metaIdx !== -1) {
         if (!metaStarted) {
           metaStarted = true;

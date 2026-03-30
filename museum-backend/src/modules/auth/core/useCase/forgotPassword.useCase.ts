@@ -59,7 +59,11 @@ export class ForgotPasswordUseCase {
         });
       }
     } else {
-      if (env.nodeEnv !== 'production') {
+      if (env.nodeEnv === 'production') {
+        logger.error('forgot_password_email_service_missing', {
+          hint: 'BREVO_API_KEY and FRONTEND_URL must be set for email delivery',
+        });
+      } else {
         logger.info('forgot_password_token', { email: normalizedEmail, token });
       }
     }

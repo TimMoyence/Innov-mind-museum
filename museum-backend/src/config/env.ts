@@ -145,6 +145,8 @@ interface AppEnv {
     userMemory: boolean;
     knowledgeBase: boolean;
   };
+  /** TTL in seconds for Overpass API museum search cache entries. */
+  overpassCacheTtlSeconds: number;
   /** Knowledge base (Wikidata) configuration. */
   knowledgeBase: {
     timeoutMs: number;
@@ -317,6 +319,7 @@ const env: AppEnv = {
     userMemory: toBoolean(process.env.FEATURE_FLAG_USER_MEMORY, false),
     knowledgeBase: toBoolean(process.env.FEATURE_FLAG_KNOWLEDGE_BASE, false),
   },
+  overpassCacheTtlSeconds: toNumber(process.env.OVERPASS_CACHE_TTL_SECONDS, 86400),
   knowledgeBase: {
     timeoutMs: toNumber(process.env.KB_TIMEOUT_MS, 500),
     cacheTtlSeconds: toNumber(process.env.KB_CACHE_TTL_SECONDS, 3600),

@@ -113,7 +113,7 @@ export default function AuthScreen() {
 
   const handleForgotPassword = (): void => {
     if (!email) {
-      Alert.alert(t('common.error'), t('auth.fill_all_fields'));
+      Alert.alert(t('common.error'), t('auth.enter_email_for_reset'));
       return;
     }
 

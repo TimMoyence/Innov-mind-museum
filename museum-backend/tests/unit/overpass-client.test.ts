@@ -1,0 +1,266 @@
+import { queryOverpassMuseums } from '@shared/http/overpass.client';
+
+let fetchSpy: jest.SpyInstance;
+
+beforeEach(() => {
+  fetchSpy = jest.spyOn(globalThis, 'fetch');
+});
+
+afterEach(() => {
+  fetchSpy.mockRestore();
+});
+
+const makeOverpassResponse = (
+  elements: Array<{
+    type: 'node' | 'way' | 'relation';
+    id: number;
+    lat?: number;
+    lon?: number;
+    center?: { lat: number; lon: number };
+    tags?: Record<string, string>;
+  }>,
+) => ({ elements });
+
+describe('queryOverpassMuseums', () => {
+  it('parses nodes, ways, and relations from Overpass response', async () => {
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () =>
+        makeOverpassResponse([
+          {
+            type: 'node',
+            id: 1,
+            lat: 48.8606,
+            lon: 2.3376,
+            tags: {
+              name: 'Louvre Museum',
+              tourism: 'museum',
+              'addr:street': 'Rue de Rivoli',
+              'addr:housenumber': '1',
+              'addr:city': 'Paris',
+            },
+          },
+          {
+            type: 'way',
+            id: 2,
+            center: { lat: 48.8599, lon: 2.3266 },
+            tags: {
+              name: "Musee d'Orsay",
+              tourism: 'museum',
+              'addr:city': 'Paris',
+            },
+          },
+          {
+            type: 'relation',
+            id: 3,
+            center: { lat: 48.8611, lon: 2.2877 },
+            tags: { name: 'Palais de Tokyo', tourism: 'museum' },
+          },
+        ]),
+    });
+
+    const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 });
+
+    expect(results).toHaveLength(3);
+
+    expect(results[0]).toEqual({
+      name: 'Louvre Museum',
+      address: '1 Rue de Rivoli, Paris',
+      latitude: 48.8606,
+      longitude: 2.3376,
+      osmId: 1,
+    });
+
+    expect(results[1]).toEqual({
+      name: "Musee d'Orsay",
+      address: 'Paris',
+      latitude: 48.8599,
+      longitude: 2.3266,
+      osmId: 2,
+    });
+
+    expect(results[2]).toEqual({
+      name: 'Palais de Tokyo',
+      address: null,
+      latitude: 48.8611,
+      longitude: 2.2877,
+      osmId: 3,
+    });
+  });
+
+  it('returns empty array for empty response', async () => {
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () => makeOverpassResponse([]),
+    });
+
+    const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 });
+
+    expect(results).toEqual([]);
+  });
+
+  it('returns empty array on network error', async () => {
+    fetchSpy.mockRejectedValueOnce(new Error('Network failure'));
+
+    const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 });
+
+    expect(results).toEqual([]);
+  });
+
+  it('returns empty array on timeout (abort signal)', async () => {
+    fetchSpy.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          setTimeout(() => {
+            reject(new DOMException('The operation was aborted', 'AbortError'));
+          }, 5);
+        }),
+    );
+
+    const results = await queryOverpassMuseums(
+      { lat: 48.86, lng: 2.34, radiusMeters: 5000 },
+      10, // very short timeout
+    );
+
+    expect(results).toEqual([]);
+  });
+
+  it('filters results by q parameter (case-insensitive)', async () => {
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () =>
+        makeOverpassResponse([
+          {
+            type: 'node',
+            id: 1,
+            lat: 48.86,
+            lon: 2.34,
+            tags: { name: 'Louvre Museum' },
+          },
+          {
+            type: 'node',
+            id: 2,
+            lat: 48.85,
+            lon: 2.33,
+            tags: { name: "Musee d'Orsay" },
+          },
+          {
+            type: 'node',
+            id: 3,
+            lat: 48.87,
+            lon: 2.29,
+            tags: { name: 'Palais de Tokyo' },
+          },
+        ]),
+    });
+
+    const results = await queryOverpassMuseums({
+      lat: 48.86,
+      lng: 2.34,
+      radiusMeters: 5000,
+      q: 'louvre',
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0].name).toBe('Louvre Museum');
+  });
+
+  it('skips elements without a name tag', async () => {
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () =>
+        makeOverpassResponse([
+          {
+            type: 'node',
+            id: 1,
+            lat: 48.86,
+            lon: 2.34,
+            tags: { tourism: 'museum' },
+          },
+          {
+            type: 'node',
+            id: 2,
+            lat: 48.85,
+            lon: 2.33,
+            tags: { name: 'Named Museum', tourism: 'museum' },
+          },
+          {
+            type: 'node',
+            id: 3,
+            lat: 48.87,
+            lon: 2.29,
+            // no tags at all
+          },
+        ]),
+    });
+
+    const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 });
+
+    expect(results).toHaveLength(1);
+    expect(results[0].name).toBe('Named Museum');
+  });
+
+  it('returns empty array on non-OK HTTP status', async () => {
+    fetchSpy.mockResolvedValueOnce({ ok: false, status: 429, statusText: 'Too Many Requests' });
+
+    const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 });
+
+    expect(results).toEqual([]);
+  });
+
+  it('returns empty array when response shape is unexpected', async () => {
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ unexpected: 'shape' }),
+    });
+
+    const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 });
+
+    expect(results).toEqual([]);
+  });
+
+  it('formats address with street + housenumber + city', async () => {
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () =>
+        makeOverpassResponse([
+          {
+            type: 'node',
+            id: 1,
+            lat: 48.86,
+            lon: 2.34,
+            tags: {
+              name: 'Test Museum',
+              'addr:street': 'Main Street',
+              'addr:housenumber': '42',
+              'addr:city': 'Paris',
+            },
+          },
+        ]),
+    });
+
+    const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 });
+
+    expect(results[0].address).toBe('42 Main Street, Paris');
+  });
+
+  it('formats address with street only (no housenumber)', async () => {
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () =>
+        makeOverpassResponse([
+          {
+            type: 'node',
+            id: 1,
+            lat: 48.86,
+            lon: 2.34,
+            tags: { name: 'Test', 'addr:street': 'Main Street' },
+          },
+        ]),
+    });
+
+    const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 });
+
+    expect(results[0].address).toBe('Main Street');
+  });
+});

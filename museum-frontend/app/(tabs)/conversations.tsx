@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -88,6 +88,7 @@ export default function ConversationsScreen() {
         locale: settings.defaultLocale,
         museumMode: settings.defaultMuseumMode,
       });
+      Keyboard.dismiss();
       router.push(`/(stack)/chat/${response.session.id}`);
     } catch (createError) {
       setError(String(createError instanceof Error ? createError.message : createError));

@@ -277,8 +277,7 @@ export class TypeOrmChatRepository implements ChatRepository {
     const effectiveLimit = Math.max(1, Math.min(limit, 50));
     const queryBuilder = this.sessionRepo
       .createQueryBuilder('session')
-      .leftJoin('session.user', 'user')
-      .where('user.id = :userId', { userId })
+      .where('session."userId" = :userId', { userId })
       .orderBy('session.updatedAt', 'DESC')
       .addOrderBy('session.id', 'DESC')
       .take(effectiveLimit + 1);

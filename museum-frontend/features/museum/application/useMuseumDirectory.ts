@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { MuseumDirectoryEntry } from '../infrastructure/museumApi';
+import type { MuseumSearchEntry } from '../infrastructure/museumApi';
 import { museumApi } from '../infrastructure/museumApi';
 import { haversineDistance } from './haversine';
 
@@ -18,8 +19,32 @@ interface UseMuseumDirectoryResult {
 }
 
 /**
+ * Maps a search result entry to the MuseumWithDistance shape expected by the UI.
+ * OSM results lack id/slug/description — synthetic values are used.
+ */
+const mapSearchEntryToMuseumWithDistance = (
+  entry: MuseumSearchEntry,
+  index: number,
+): MuseumWithDistance => ({
+  id: -(index + 1),
+  name: entry.name,
+  slug: '',
+  address: entry.address,
+  description: null,
+  latitude: entry.latitude,
+  longitude: entry.longitude,
+  distance: Math.round(entry.distance * 10) / 10,
+});
+
+/**
  * Hook that fetches the museum directory, enriches entries with distance
  * from the user's location, and supports filtering by name.
+ *
+ * When geolocation is available, uses the backend search endpoint for
+ * server-side geo-sorted results. Falls back to the directory endpoint
+ * with client-side distance enrichment when location is unavailable or
+ * the search endpoint fails.
+ *
  * @param userLatitude - Current user latitude (null if unavailable).
  * @param userLongitude - Current user longitude (null if unavailable).
  */
@@ -27,58 +52,84 @@ export const useMuseumDirectory = (
   userLatitude: number | null,
   userLongitude: number | null,
 ): UseMuseumDirectoryResult => {
-  const [rawMuseums, setRawMuseums] = useState<MuseumDirectoryEntry[]>([]);
+  const [rawMuseums, setRawMuseums] = useState<MuseumWithDistance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchMuseums = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const museums = await museumApi.listMuseumDirectory();
-      setRawMuseums(museums);
-    } catch {
-      setRawMuseums([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // Track whether we already attempted a fetch so we can re-fetch when
+  // coordinates become available after the initial directory load.
+  const hasLocationRef = useRef(false);
 
-  useEffect(() => {
-    void fetchMuseums();
-  }, [fetchMuseums]);
-
-  const enriched = useMemo<MuseumWithDistance[]>(() => {
-    return rawMuseums.map((museum) => {
+  /** Fallback: fetch all museums from the directory endpoint and enrich client-side. */
+  const fetchFromDirectory = useCallback(async (lat: number | null, lng: number | null) => {
+    const entries = await museumApi.listMuseumDirectory();
+    return entries.map<MuseumWithDistance>((museum) => {
       let distance: number | null = null;
 
-      if (
-        userLatitude !== null &&
-        userLongitude !== null &&
-        museum.latitude !== null &&
-        museum.longitude !== null
-      ) {
-        distance = haversineDistance(
-          userLatitude,
-          userLongitude,
-          museum.latitude,
-          museum.longitude,
-        );
+      if (lat !== null && lng !== null && museum.latitude !== null && museum.longitude !== null) {
+        distance = haversineDistance(lat, lng, museum.latitude, museum.longitude);
         distance = Math.round(distance * 10) / 10;
       }
 
       return { ...museum, distance };
     });
-  }, [rawMuseums, userLatitude, userLongitude]);
+  }, []);
+
+  /** Primary: fetch from search endpoint using geo-coordinates. */
+  const fetchFromSearch = useCallback(async (lat: number, lng: number) => {
+    const { museums } = await museumApi.searchMuseums({
+      lat,
+      lng,
+      radius: 10_000,
+    });
+    return museums.map(mapSearchEntryToMuseumWithDistance);
+  }, []);
+
+  const fetchMuseums = useCallback(
+    async (lat: number | null, lng: number | null) => {
+      setIsLoading(true);
+      try {
+        if (lat !== null && lng !== null) {
+          try {
+            const results = await fetchFromSearch(lat, lng);
+            setRawMuseums(results);
+            return;
+          } catch {
+            // Search endpoint failed — fall back to directory
+          }
+        }
+        const results = await fetchFromDirectory(lat, lng);
+        setRawMuseums(results);
+      } catch {
+        setRawMuseums([]);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [fetchFromSearch, fetchFromDirectory],
+  );
+
+  // Initial fetch + re-fetch when coordinates become available
+  useEffect(() => {
+    const locationNowAvailable = userLatitude !== null && userLongitude !== null;
+
+    // Skip redundant fetches: only re-fetch if location just became
+    // available for the first time (upgrade from directory to search).
+    if (hasLocationRef.current && locationNowAvailable) return;
+    if (locationNowAvailable) hasLocationRef.current = true;
+
+    void fetchMuseums(userLatitude, userLongitude);
+  }, [userLatitude, userLongitude, fetchMuseums]);
 
   const museums = useMemo<MuseumWithDistance[]>(() => {
-    let filtered = enriched;
+    let filtered = rawMuseums;
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = enriched.filter(
+      filtered = rawMuseums.filter(
         (m) =>
           m.name.toLowerCase().includes(query) ||
-    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain -- complex condition
+          // eslint-disable-next-line @typescript-eslint/prefer-optional-chain -- complex condition
           (m.address && m.address.toLowerCase().includes(query)),
       );
     }
@@ -92,11 +143,11 @@ export const useMuseumDirectory = (
       if (b.distance !== null) return 1;
       return a.name.localeCompare(b.name);
     });
-  }, [enriched, searchQuery]);
+  }, [rawMuseums, searchQuery]);
 
   const refresh = useCallback(() => {
-    void fetchMuseums();
-  }, [fetchMuseums]);
+    void fetchMuseums(userLatitude, userLongitude);
+  }, [fetchMuseums, userLatitude, userLongitude]);
 
   return { museums, isLoading, searchQuery, setSearchQuery, refresh };
 };

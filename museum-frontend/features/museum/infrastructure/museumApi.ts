@@ -13,6 +13,22 @@ export interface MuseumDirectoryEntry {
   longitude: number | null;
 }
 
+/** Entry returned by the search endpoint (includes OSM results without id/slug). */
+export interface MuseumSearchEntry {
+  name: string;
+  address: string | null;
+  latitude: number;
+  longitude: number;
+  distance: number;
+  source: 'local' | 'osm';
+}
+
+/** Response shape for GET /api/museums/search. */
+interface MuseumSearchResponse {
+  museums: MuseumSearchEntry[];
+  count: number;
+}
+
 /** Response shape for GET /api/museums/directory. */
 interface MuseumDirectoryResponse {
   museums: MuseumDirectoryEntry[];
@@ -35,10 +51,9 @@ export const museumApi = {
    * @returns Array of museum directory entries.
    */
   async listMuseumDirectory(): Promise<MuseumDirectoryEntry[]> {
-    const data = await httpRequest<MuseumDirectoryResponse>(
-      `${MUSEUM_BASE}/directory`,
-      { method: 'GET' },
-    );
+    const data = await httpRequest<MuseumDirectoryResponse>(`${MUSEUM_BASE}/directory`, {
+      method: 'GET',
+    });
     return data.museums;
   },
 
@@ -53,5 +68,35 @@ export const museumApi = {
       { method: 'GET' },
     );
     return data.museum;
+  },
+
+  /**
+   * Searches museums near a geographic point using the backend search endpoint.
+   * Returns results sorted by distance, including OSM entries.
+   * @param params - Search parameters: lat, lng, optional radius (meters), optional text query.
+   * @returns Search results with museum entries and total count.
+   */
+  async searchMuseums(params: {
+    lat: number;
+    lng: number;
+    radius?: number;
+    q?: string;
+  }): Promise<{ museums: MuseumSearchEntry[]; count: number }> {
+    const searchParams = new URLSearchParams({
+      lat: String(params.lat),
+      lng: String(params.lng),
+    });
+    if (params.radius !== undefined) {
+      searchParams.set('radius', String(params.radius));
+    }
+    if (params.q) {
+      searchParams.set('q', params.q);
+    }
+
+    const data = await httpRequest<MuseumSearchResponse>(
+      `${MUSEUM_BASE}/search?${searchParams.toString()}`,
+      { method: 'GET' },
+    );
+    return { museums: data.museums, count: data.count };
   },
 };

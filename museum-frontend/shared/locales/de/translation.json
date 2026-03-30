@@ -28,6 +28,7 @@
     "sign_in_subtitle": "Melden Sie sich an, um Ihre kulturelle Entdeckungsreise fortzusetzen.",
     "sign_up_subtitle": "Erstellen Sie ein Musaium-Konto, um Ihre Besuche zu speichern und fortzusetzen.",
     "fill_all_fields": "Bitte füllen Sie alle Felder aus",
+    "enter_email_for_reset": "Bitte geben Sie Ihre E-Mail-Adresse ein, um Ihr Passwort zurückzusetzen",
     "login_failed": "Anmeldung fehlgeschlagen – ungültige Authentifizierungsantwort",
     "registration_complete": "Registrierung abgeschlossen. Bitte melden Sie sich an.",
     "forgot_password": "Passwort vergessen?",

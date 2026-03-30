@@ -4,7 +4,7 @@ import adminRouter from '@modules/admin/adapters/primary/http/admin.route';
 import authRouter from '@modules/auth/adapters/primary/http/auth.route';
 import { createChatRouter } from '@modules/chat/adapters/primary/http/chat.route';
 import { getArtKeywordRepository, getLlmCircuitBreakerState } from '@modules/chat/index';
-import museumRouter from '@modules/museum/adapters/primary/http/museum.route';
+import { createMuseumRouter } from '@modules/museum/adapters/primary/http/museum.route';
 import reviewRouter from '@modules/review/adapters/primary/http/review.route';
 import supportRouter from '@modules/support/adapters/primary/http/support.route';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
@@ -176,7 +176,7 @@ export const createApiRouter = ({
 
   router.use('/chat', createChatRouter(chatService, getArtKeywordRepository()));
   router.use('/auth', authRouter);
-  router.use('/museums', museumRouter);
+  router.use('/museums', createMuseumRouter(cacheService));
   router.use('/admin', adminRouter);
   router.use('/support', supportRouter);
   router.use('/reviews', reviewRouter);
