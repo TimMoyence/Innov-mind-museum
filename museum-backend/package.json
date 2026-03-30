@@ -105,7 +105,7 @@
     "@opentelemetry/resources": "^2.6.1",
     "@opentelemetry/sdk-node": "^0.213.0",
     "@opentelemetry/semantic-conventions": "^1.40.0",
-    "@sentry/node": "^10.45.0",
+    "@sentry/node": "^10.46.0",
     "bcrypt": "^6.0.0",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
