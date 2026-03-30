@@ -167,8 +167,26 @@ export default async function LandingPage({ params }: LandingPageProps) {
   const { locale } = await params;
   const dict = await getDictionary(locale as Locale);
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'MobileApplication',
+    name: 'Musaium',
+    applicationCategory: 'TravelApplication',
+    operatingSystem: 'iOS, Android',
+    description: dict.metadata.description,
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD',
+    },
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* SVG filter definitions for liquid glass effects */}
       <svg style={{ position: 'absolute', width: 0, height: 0 }} aria-hidden="true">
         <defs>
