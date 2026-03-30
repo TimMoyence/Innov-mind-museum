@@ -4,19 +4,33 @@ import type { ChatUiMessage } from '@/features/chat/application/chatSessionLogic
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn().mockResolvedValue(null),
+  setItem: jest.fn().mockResolvedValue(undefined),
+  removeItem: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@/shared/infrastructure/inAppReview', () => ({
+  incrementCompletedSessions: jest.fn(),
+  maybeRequestReview: jest.fn(),
+}));
+
 // chatApi
-const mockGetSession = jest.fn<Promise<{
-  session: { title: string | null; museumName: string | null };
-  messages: {
-    id: string;
-    role: string;
-    text: string;
-    createdAt: string;
-    imageRef?: string | null;
-    image?: { url: string; expiresAt: string } | null;
-    metadata?: Record<string, unknown> | null;
-  }[];
-}>, [string]>();
+const mockGetSession = jest.fn<
+  Promise<{
+    session: { title: string | null; museumName: string | null };
+    messages: {
+      id: string;
+      role: string;
+      text: string;
+      createdAt: string;
+      imageRef?: string | null;
+      image?: { url: string; expiresAt: string } | null;
+      metadata?: Record<string, unknown> | null;
+    }[];
+  }>,
+  [string]
+>();
 const mockSendMessageSmart = jest.fn();
 const mockPostMessage = jest.fn();
 const mockPostAudioMessage = jest.fn();
@@ -55,22 +69,41 @@ jest.mock('@/shared/infrastructure/connectivity/useConnectivity', () => ({
 }));
 
 // Offline queue
-const mockEnqueue = jest.fn<
-  { id: string; sessionId: string; text?: string; imageUri?: string; createdAt: number; retryCount: number },
-  [{ sessionId: string; text?: string; imageUri?: string }]
->().mockImplementation((msg) => ({
-  id: 'queued-1',
-  sessionId: msg.sessionId,
-  text: msg.text,
-  imageUri: msg.imageUri,
-  createdAt: Date.now(),
-  retryCount: 0,
-}));
+const mockEnqueue = jest
+  .fn<
+    {
+      id: string;
+      sessionId: string;
+      text?: string;
+      imageUri?: string;
+      createdAt: number;
+      retryCount: number;
+    },
+    [{ sessionId: string; text?: string; imageUri?: string }]
+  >()
+  .mockImplementation((msg) => ({
+    id: 'queued-1',
+    sessionId: msg.sessionId,
+    text: msg.text,
+    imageUri: msg.imageUri,
+    createdAt: Date.now(),
+    retryCount: 0,
+  }));
 const mockDequeue = jest.fn();
-const mockPeek = jest.fn<
-  { id: string; sessionId: string; text?: string; imageUri?: string; createdAt: number; retryCount: number } | undefined,
-  []
->().mockReturnValue(undefined);
+const mockPeek = jest
+  .fn<
+    | {
+        id: string;
+        sessionId: string;
+        text?: string;
+        imageUri?: string;
+        createdAt: number;
+        retryCount: number;
+      }
+    | undefined,
+    []
+  >()
+  .mockReturnValue(undefined);
 let mockIsOffline = false;
 let mockPendingCount = 0;
 
@@ -89,11 +122,13 @@ const mockSetSession = jest.fn();
 const mockUpdateMessages = jest.fn();
 
 jest.mock('@/features/chat/infrastructure/chatSessionStore', () => ({
-  useChatSessionStore: (selector: (state: {
-    sessions: Record<string, unknown>;
-    setSession: jest.Mock;
-    updateMessages: jest.Mock;
-  }) => unknown) =>
+  useChatSessionStore: (
+    selector: (state: {
+      sessions: Record<string, unknown>;
+      setSession: jest.Mock;
+      updateMessages: jest.Mock;
+    }) => unknown,
+  ) =>
     selector({
       sessions: {},
       setSession: mockSetSession,
@@ -214,9 +249,7 @@ describe('useChatSession', () => {
     expect(mockSendMessageSmart).not.toHaveBeenCalled();
 
     // The message should appear in the list as an optimistic entry
-    const offlineMsg = result.current.messages.find(
-      (m: ChatUiMessage) => m.id === 'queued-1',
-    );
+    const offlineMsg = result.current.messages.find((m: ChatUiMessage) => m.id === 'queued-1');
     expect(offlineMsg).toBeDefined();
     expect(offlineMsg?.role).toBe('user');
   });
@@ -240,7 +273,10 @@ describe('useChatSession', () => {
   });
 
   it('refreshMessageImageUrl() calls chatApi.getMessageImageUrl and updates the message', async () => {
-    const signedUrlResponse = { url: 'https://signed.url/image.jpg', expiresAt: '2099-01-01T00:00:00Z' };
+    const signedUrlResponse = {
+      url: 'https://signed.url/image.jpg',
+      expiresAt: '2099-01-01T00:00:00Z',
+    };
     mockGetMessageImageUrl.mockResolvedValue(signedUrlResponse);
 
     const { result } = renderHook(() => useChatSession(SESSION_ID));
@@ -258,9 +294,7 @@ describe('useChatSession', () => {
     expect(signedResult).toEqual(signedUrlResponse);
 
     // The message should now have the signed image
-    const updatedMsg = result.current.messages.find(
-      (m: ChatUiMessage) => m.id === 'msg-1',
-    );
+    const updatedMsg = result.current.messages.find((m: ChatUiMessage) => m.id === 'msg-1');
     expect(updatedMsg?.image).toEqual(signedUrlResponse);
   });
 

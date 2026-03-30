@@ -335,6 +335,7 @@
     "image_sent": "[Image envoyée]",
     "voice_message": "[Message vocal]",
     "share_footer": "Partagé via Musaium — Votre compagnon de musée\nhttps://musaium.app",
+    "share_response": "Partager",
     "replace_image": "Remplacer",
     "remove_image": "Supprimer",
     "crop": "Recadrer"
@@ -454,7 +455,8 @@
     "distance_unknown": "Distance indisponible",
     "location_denied": "Accès à la localisation refusé",
     "start_chat": "Démarrer un chat ici",
-    "detail_title": "Détails du musée"
+    "detail_title": "Détails du musée",
+    "open_in_maps": "Ouvrir dans Plans"
   },
   "conversationSearch": {
     "placeholder": "Rechercher des conversations..."
@@ -595,6 +597,14 @@
     "info_report": "Vous pouvez signaler toute réponse problématique via le bouton drapeau.",
     "read_privacy": "Lire notre politique de confidentialité",
     "accept": "J'ai compris, continuer"
+  },
+  "dailyArt": {
+    "title": "Oeuvre du Jour",
+    "save": "Sauvegarder",
+    "skip": "Passer",
+    "saved": "Sauvegardé !",
+    "by": "par",
+    "fun_fact": "Le saviez-vous ?"
   },
   "tickets": {
     "title": "Mes tickets",

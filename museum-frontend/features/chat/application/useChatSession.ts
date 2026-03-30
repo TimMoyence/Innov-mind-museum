@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Sentry from '@sentry/react-native';
 
 import { getErrorMessage } from '@/shared/lib/errors';
+import { incrementCompletedSessions } from '@/shared/infrastructure/inAppReview';
 import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSettings';
 import { useConnectivity } from '@/shared/infrastructure/connectivity/useConnectivity';
 import { useOfflineQueue } from './useOfflineQueue';
@@ -33,6 +34,7 @@ export const useChatSession = (sessionId: string) => {
   const [isSending, setIsSending] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const isSendingRef = useRef(false);
+  const successfulSendsRef = useRef(0);
 
   const { locale, museumMode, guideLevel } = useRuntimeSettings();
   const { isOffline, enqueue, dequeue, peek, pendingCount } = useOfflineQueue();
@@ -145,6 +147,10 @@ export const useChatSession = (sessionId: string) => {
           }
 
           setMessages((prev) => sortByTime([...prev, assistantMessage]));
+          successfulSendsRef.current += 1;
+          if (successfulSendsRef.current === 3) {
+            void incrementCompletedSessions();
+          }
           return true;
         }
 
@@ -226,6 +232,10 @@ export const useChatSession = (sessionId: string) => {
         }
 
         setIsStreaming(false);
+        successfulSendsRef.current += 1;
+        if (successfulSendsRef.current === 3) {
+          void incrementCompletedSessions();
+        }
         return true;
       } catch (sendError) {
         Sentry.captureException(sendError, { tags: { flow: 'chat.sendMessage' } });

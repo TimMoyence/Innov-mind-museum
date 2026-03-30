@@ -4,6 +4,8 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
+import { useDailyArt } from '@/features/daily-art/application/useDailyArt';
+import { DailyArtCard } from '@/features/daily-art/ui/DailyArtCard';
 import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
 import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSettings';
 import { getErrorMessage } from '@/shared/lib/errors';
@@ -23,6 +25,7 @@ export default function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [menuStatus, setMenuStatus] = useState<string | null>(null);
   const { locale, museumMode } = useRuntimeSettings();
+  const { artwork, isLoading: isDailyArtLoading, isSaved, dismissed, save, skip } = useDailyArt();
 
   const startConversation = async (intent: 'default' | 'camera' | 'audio' = 'default') => {
     Keyboard.dismiss();
@@ -101,6 +104,15 @@ export default function HomeScreen() {
           {t('home.settings_note', { locale, mode: museumMode ? t('common.on') : t('common.off') })}
         </Text>
       </GlassCard>
+
+      {artwork && !dismissed && !isDailyArtLoading ? (
+        <DailyArtCard
+          artwork={artwork}
+          isSaved={isSaved}
+          onSave={() => void save()}
+          onSkip={() => void skip()}
+        />
+      ) : null}
 
       {error ? (
         <ErrorNotice

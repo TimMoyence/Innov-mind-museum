@@ -337,6 +337,7 @@
     "share_footer": "通过Musaium分享 — 您的博物馆伴侣\nhttps://musaium.app",
     "replace_image": "替换",
     "remove_image": "删除",
+    "share_response": "分享",
     "crop": "裁剪"
   },
   "chatInput": {
@@ -454,7 +455,8 @@
     "distance_unknown": "距离不可用",
     "location_denied": "位置访问被拒绝",
     "start_chat": "在此开始聊天",
-    "detail_title": "博物馆详情"
+    "detail_title": "博物馆详情",
+    "open_in_maps": "在地图中打开"
   },
   "conversationSearch": {
     "placeholder": "搜索对话..."
@@ -595,6 +597,14 @@
     "info_report": "您可以使用旗帜按钮举报任何有问题的回复。",
     "read_privacy": "阅读我们的隐私政策",
     "accept": "我已了解，继续"
+  },
+  "dailyArt": {
+    "title": "每日艺术",
+    "save": "收藏",
+    "skip": "跳过",
+    "saved": "已收藏！",
+    "by": "作者",
+    "fun_fact": "你知道吗？"
   },
   "tickets": {
     "title": "我的工单",
