@@ -1,7 +1,8 @@
+import { AppError } from '@shared/errors/app.error';
 import { InMemoryBucketStore } from '@shared/rate-limit/in-memory-bucket-store';
 import { env } from '@src/config/env';
 
-import type { Request, RequestHandler } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 
 interface DailyBucket {
   count: number;
@@ -26,26 +27,29 @@ const todayStr = (): string => new Date().toISOString().slice(0, 10);
  *
  * @returns Express request handler.
  */
-export const dailyChatLimit: RequestHandler = (req, res, next) => {
+export const dailyChatLimit = (req: Request, _res: Response, next: NextFunction): void => {
   const user = (req as Request & { user?: { id?: number } }).user;
 
-  // Defensive: skip if unauthenticated (shouldn't happen when placed after isAuthenticated)
   if (!user?.id) {
     next();
     return;
   }
 
+  const limit = Math.max(1, env.freeTierDailyChatLimit);
   const dateStr = todayStr();
   const key = `daily-chat:${String(user.id)}:${dateStr}`;
   const current = store.get(key);
 
   if (current?.dateStr === dateStr) {
-    if (current.count >= env.freeTierDailyChatLimit) {
-      res.status(429).json({
-        code: 'DAILY_LIMIT_REACHED',
-        limit: env.freeTierDailyChatLimit,
-        message: 'Daily chat limit reached',
-      });
+    if (current.count >= limit) {
+      next(
+        new AppError({
+          message: 'Daily chat limit reached',
+          statusCode: 429,
+          code: 'DAILY_LIMIT_REACHED',
+          details: { limit },
+        }),
+      );
       return;
     }
 
