@@ -6,15 +6,16 @@ echo "=== ci_post_clone.sh ==="
 # Navigate to frontend root
 cd "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend"
 
-# Install Node.js via nvm (Xcode Cloud doesn't have it by default)
-export NVM_DIR="$HOME/.nvm"
-if [ ! -d "$NVM_DIR" ]; then
-  echo "Installing nvm..."
-  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+# Install Node.js 22 — Homebrew is pre-installed on Xcode Cloud.
+# We avoid nvm because its install script downloads from raw.githubusercontent.com
+# which intermittently fails DNS resolution on Xcode Cloud machines.
+echo "Installing Node.js 22 via Homebrew..."
+export HOMEBREW_NO_AUTO_UPDATE=1
+export HOMEBREW_NO_INSTALL_CLEANUP=TRUE
+if ! brew list node@22 >/dev/null 2>&1; then
+  brew install node@22
 fi
-. "$NVM_DIR/nvm.sh"
-nvm install 22
-nvm use 22
+export PATH="$(brew --prefix node@22)/bin:$PATH"
 
 echo "Node: $(node -v)"
 echo "npm: $(npm -v)"
