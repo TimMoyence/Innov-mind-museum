@@ -2,11 +2,12 @@
 
 echo "=== ci_pre_xcodebuild.sh ==="
 
-# Source nvm so node is available during build phases
-export NVM_DIR="$HOME/.nvm"
-if [ -s "$NVM_DIR/nvm.sh" ]; then
-  . "$NVM_DIR/nvm.sh"
-  echo "Node (via nvm): $(node -v || echo 'NOT FOUND')"
+# Ensure Homebrew-installed Node.js 22 is on PATH
+# (installed by ci_post_clone.sh via brew install node@22)
+BREW_NODE_PREFIX="$(brew --prefix node@22 2>/dev/null || true)"
+if [ -n "$BREW_NODE_PREFIX" ] && [ -d "$BREW_NODE_PREFIX/bin" ]; then
+  export PATH="$BREW_NODE_PREFIX/bin:$PATH"
+  echo "Node (via Homebrew): $(node -v || echo 'NOT FOUND')"
 fi
 
 # Write .xcode.env.local — this is the ONLY way to pass env vars
