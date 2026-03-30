@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { ChatMessageBubble } from '@/features/chat/ui/ChatMessageBubble';
 import { MessageActions } from '@/features/chat/ui/MessageActions';
 import { TypingIndicator } from '@/features/chat/ui/TypingIndicator';
 import { WelcomeCard } from '@/features/chat/ui/WelcomeCard';
+import { useTheme } from '@/shared/ui/ThemeContext';
 
 interface ChatMessageListProps {
   /** Array of chat messages to render. */
@@ -50,6 +53,8 @@ export const ChatMessageList = ({
   onImageError,
   onReport,
 }: ChatMessageListProps) => {
+  const { t } = useTranslation();
+  const { theme } = useTheme();
   const listRef = useRef<FlashListRef<ChatUiMessage>>(null);
 
   const lastAssistantMessage = useMemo(() => {
@@ -86,6 +91,16 @@ export const ChatMessageList = ({
     };
   }, [isStreaming]);
 
+  const handleShare = useCallback(
+    async (message: ChatUiMessage) => {
+      if (!message.text) return;
+      const preview = message.text.length > 200 ? message.text.slice(0, 200) + '...' : message.text;
+      const footer = t('chat.share_footer');
+      await Share.share({ message: `${preview}\n\n${footer}` });
+    },
+    [t],
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: ChatUiMessage }) => {
       const isAssistant = item.role === 'assistant';
@@ -101,6 +116,20 @@ export const ChatMessageList = ({
             onImageError={onImageError}
             onReport={onReport}
           />
+
+          {isAssistant && !isItemStreaming && item.text ? (
+            <Pressable
+              style={styles.shareButton}
+              onPress={() => void handleShare(item)}
+              accessibilityRole="button"
+              accessibilityLabel={t('chat.share_response')}
+            >
+              <Ionicons name="share-outline" size={14} color={theme.textTertiary} />
+              <Text style={[styles.shareButtonText, { color: theme.textTertiary }]}>
+                {t('chat.share_response')}
+              </Text>
+            </Pressable>
+          ) : null}
 
           {isAssistant && isLast && !isStreaming ? (
             <MessageActions
@@ -122,6 +151,9 @@ export const ChatMessageList = ({
       onRecommendationPress,
       onImageError,
       onReport,
+      handleShare,
+      t,
+      theme.textTertiary,
     ],
   );
 
@@ -162,5 +194,18 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 10,
+  },
+  shareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    marginTop: 2,
+  },
+  shareButtonText: {
+    fontSize: 11,
+    fontWeight: '500',
   },
 });

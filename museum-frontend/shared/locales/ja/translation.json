@@ -337,6 +337,7 @@
     "share_footer": "Musaiumでシェア — あなたの美術館コンパニオン\nhttps://musaium.app",
     "replace_image": "置き換え",
     "remove_image": "削除",
+    "share_response": "共有",
     "crop": "切り抜き"
   },
   "chatInput": {
@@ -454,7 +455,8 @@
     "distance_unknown": "距離不明",
     "location_denied": "位置情報のアクセスが拒否されました",
     "start_chat": "ここでチャットを開始",
-    "detail_title": "ミュージアムの詳細"
+    "detail_title": "ミュージアムの詳細",
+    "open_in_maps": "マップで開く"
   },
   "conversationSearch": {
     "placeholder": "会話を検索..."
@@ -595,6 +597,14 @@
     "info_report": "問題のある回答はフラグボタンで報告できます。",
     "read_privacy": "プライバシーポリシーを読む",
     "accept": "理解しました、続ける"
+  },
+  "dailyArt": {
+    "title": "今日のアートワーク",
+    "save": "保存",
+    "skip": "スキップ",
+    "saved": "保存済み！",
+    "by": "作",
+    "fun_fact": "ご存知でしたか？"
   },
   "tickets": {
     "title": "マイチケット",

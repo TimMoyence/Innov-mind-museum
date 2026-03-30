@@ -335,6 +335,7 @@
     "image_sent": "[Image sent]",
     "voice_message": "[Voice message]",
     "share_footer": "Shared via Musaium — Your museum companion\nhttps://musaium.app",
+    "share_response": "Share",
     "replace_image": "Replace",
     "remove_image": "Remove",
     "crop": "Crop"
@@ -454,7 +455,8 @@
     "distance_unknown": "Distance unavailable",
     "location_denied": "Location access denied",
     "start_chat": "Start Chat Here",
-    "detail_title": "Museum Details"
+    "detail_title": "Museum Details",
+    "open_in_maps": "Open in Maps"
   },
   "conversationSearch": {
     "placeholder": "Search conversations..."
@@ -595,6 +597,14 @@
     "info_report": "You can report any problematic response using the flag button.",
     "read_privacy": "Read our Privacy Policy",
     "accept": "I understand, continue"
+  },
+  "dailyArt": {
+    "title": "Artwork of the Day",
+    "save": "Save",
+    "skip": "Skip",
+    "saved": "Saved!",
+    "by": "by",
+    "fun_fact": "Did you know?"
   },
   "tickets": {
     "title": "My Tickets",

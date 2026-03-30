@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -40,6 +42,20 @@ export default function MuseumDetailScreen() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const hasCoordinates = Boolean(params.latitude && params.longitude);
+
+  const handleOpenInMaps = () => {
+    if (!params.latitude || !params.longitude) return;
+    const lat = params.latitude;
+    const lng = params.longitude;
+    const name = encodeURIComponent(params.name ?? '');
+    const url =
+      Platform.OS === 'ios'
+        ? `https://maps.apple.com/?ll=${lat},${lng}&q=${name}`
+        : `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    void Linking.openURL(url);
+  };
+
   const handleStartChat = async () => {
     setIsCreating(true);
     setError(null);
@@ -65,7 +81,9 @@ export default function MuseumDetailScreen() {
     >
       <Pressable
         style={styles.backButton}
-        onPress={() => { router.back(); }}
+        onPress={() => {
+          router.back();
+        }}
         accessibilityRole="button"
         accessibilityLabel={t('common.back')}
       >
@@ -78,15 +96,8 @@ export default function MuseumDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <GlassCard style={styles.heroCard} intensity={60}>
-          <Ionicons
-            name="business"
-            size={40}
-            color={theme.primary}
-            style={styles.heroIcon}
-          />
-          <Text style={[styles.title, { color: theme.textPrimary }]}>
-            {params.name}
-          </Text>
+          <Ionicons name="business" size={40} color={theme.primary} style={styles.heroIcon} />
+          <Text style={[styles.title, { color: theme.textPrimary }]}>{params.name}</Text>
 
           {params.address ? (
             <View style={styles.infoRow}>
@@ -105,6 +116,23 @@ export default function MuseumDetailScreen() {
               </Text>
             </View>
           ) : null}
+
+          {hasCoordinates ? (
+            <Pressable
+              style={[
+                styles.mapsButton,
+                { borderColor: theme.inputBorder, backgroundColor: theme.surface },
+              ]}
+              onPress={handleOpenInMaps}
+              accessibilityRole="button"
+              accessibilityLabel={t('museumDirectory.open_in_maps')}
+            >
+              <Ionicons name="navigate-outline" size={16} color={theme.primary} />
+              <Text style={[styles.mapsButtonText, { color: theme.primary }]}>
+                {t('museumDirectory.open_in_maps')}
+              </Text>
+            </Pressable>
+          ) : null}
         </GlassCard>
 
         {params.description ? (
@@ -118,10 +146,20 @@ export default function MuseumDetailScreen() {
           </GlassCard>
         ) : null}
 
-        {error ? <ErrorNotice message={error} onDismiss={() => { setError(null); }} /> : null}
+        {error ? (
+          <ErrorNotice
+            message={error}
+            onDismiss={() => {
+              setError(null);
+            }}
+          />
+        ) : null}
 
         <Pressable
-          style={[styles.primaryButton, { backgroundColor: theme.primary, shadowColor: theme.shadowColor }]}
+          style={[
+            styles.primaryButton,
+            { backgroundColor: theme.primary, shadowColor: theme.shadowColor },
+          ]}
           onPress={() => void handleStartChat()}
           disabled={isCreating}
           accessibilityRole="button"
@@ -206,6 +244,20 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 14,
     lineHeight: 22,
+  },
+  mapsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  mapsButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   primaryButton: {
     marginTop: 4,

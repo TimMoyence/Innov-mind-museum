@@ -337,6 +337,7 @@
     "share_footer": "تمت المشاركة عبر Musaium — رفيقك في المتحف\nhttps://musaium.app",
     "replace_image": "استبدال",
     "remove_image": "إزالة",
+    "share_response": "مشاركة",
     "crop": "اقتصاص"
   },
   "chatInput": {
@@ -444,7 +445,8 @@
     "distance_unknown": "المسافة غير متاحة",
     "location_denied": "تم رفض الوصول إلى الموقع",
     "start_chat": "ابدأ المحادثة هنا",
-    "detail_title": "تفاصيل المتحف"
+    "detail_title": "تفاصيل المتحف",
+    "open_in_maps": "فتح في الخرائط"
   },
   "conversationSearch": {
     "placeholder": "البحث في المحادثات..."
@@ -595,6 +597,14 @@
     "info_report": "يمكنك الإبلاغ عن أي رد مشكوك فيه باستخدام زر العلم.",
     "read_privacy": "اقرأ سياسة الخصوصية",
     "accept": "فهمت، متابعة"
+  },
+  "dailyArt": {
+    "title": "عمل فني اليوم",
+    "save": "حفظ",
+    "skip": "تخطي",
+    "saved": "تم الحفظ!",
+    "by": "بواسطة",
+    "fun_fact": "هل تعلم؟"
   },
   "tickets": {
     "title": "تذاكري",
