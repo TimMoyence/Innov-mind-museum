@@ -24,13 +24,13 @@ importers:
     dependencies:
       '@langchain/core':
         specifier: ^1.1.36
-        version: 1.1.36(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@3.25.76))(ws@8.18.1)
+        version: 1.1.36(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@4.3.6))(ws@8.18.1)
       '@langchain/google-genai':
         specifier: ^2.1.26
-        version: 2.1.26(@langchain/core@1.1.36(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@3.25.76))(ws@8.18.1))
+        version: 2.1.26(@langchain/core@1.1.36(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@4.3.6))(ws@8.18.1))
       '@langchain/openai':
         specifier: ^1.3.1
-        version: 1.3.1(@langchain/core@1.1.36(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@3.25.76))(ws@8.18.1))(ws@8.18.1)
+        version: 1.3.1(@langchain/core@1.1.36(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@4.3.6))(ws@8.18.1))(ws@8.18.1)
       '@opentelemetry/auto-instrumentations-node':
         specifier: ^0.71.0
         version: 0.71.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@2.6.0(@opentelemetry/api@1.9.0))
@@ -92,8 +92,8 @@ importers:
         specifier: ^11.1.0
         version: 11.1.0
       zod:
-        specifier: ^3.25.76
-        version: 3.25.76
+        specifier: ^4.3.6
+        version: 4.3.6
     optionalDependencies:
       tesseract.js:
         specifier: ^7.0.0
@@ -923,6 +923,7 @@ packages:
   '@opentelemetry/instrumentation-fastify@0.57.0':
     resolution: {integrity: sha512-D+rwRtbiOediYocpKGvY/RQTpuLsLdCVwaOREyqWViwItJGibWI7O/wgd9xIV63pMP0D9IdSy27wnARfUaotKg==}
     engines: {node: ^18.19.0 || >=20.6.0}
+    deprecated: Deprecated in favor of @fastify/otel, maintained by the Fastify authors.
     peerDependencies:
       '@opentelemetry/api': ^1.3.0
 
@@ -4388,8 +4389,8 @@ packages:
   zlibjs@0.3.1:
     resolution: {integrity: sha512-+J9RrgTKOmlxFSDHo0pI1xM6BLVUv+o0ZT9ANtCxGkjIVCCUdx9alUF8Gm+dGLKbkkkidWIHFDZHDMpfITt4+w==}
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+  zod@4.3.6:
+    resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
 
 snapshots:
 
@@ -5189,7 +5190,7 @@ snapshots:
 
   '@js-sdsl/ordered-map@4.4.2': {}
 
-  '@langchain/core@1.1.36(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@3.25.76))(ws@8.18.1)':
+  '@langchain/core@1.1.36(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@4.3.6))(ws@8.18.1)':
     dependencies:
       '@cfworker/json-schema': 4.1.1
       '@standard-schema/spec': 1.1.0
@@ -5197,11 +5198,11 @@ snapshots:
       camelcase: 6.3.0
       decamelize: 1.2.0
       js-tiktoken: 1.0.20
-      langsmith: 0.5.15(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@3.25.76))(ws@8.18.1)
+      langsmith: 0.5.15(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@4.3.6))(ws@8.18.1)
       mustache: 4.2.0
       p-queue: 6.6.2
       uuid: 11.1.0
-      zod: 3.25.76
+      zod: 4.3.6
     transitivePeerDependencies:
       - '@opentelemetry/api'
       - '@opentelemetry/exporter-trace-otlp-proto'
@@ -5209,18 +5210,18 @@ snapshots:
       - openai
       - ws
 
-  '@langchain/google-genai@2.1.26(@langchain/core@1.1.36(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@3.25.76))(ws@8.18.1))':
+  '@langchain/google-genai@2.1.26(@langchain/core@1.1.36(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@4.3.6))(ws@8.18.1))':
     dependencies:
       '@google/generative-ai': 0.24.0
-      '@langchain/core': 1.1.36(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@3.25.76))(ws@8.18.1)
+      '@langchain/core': 1.1.36(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@4.3.6))(ws@8.18.1)
       uuid: 11.1.0
 
-  '@langchain/openai@1.3.1(@langchain/core@1.1.36(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@3.25.76))(ws@8.18.1))(ws@8.18.1)':
+  '@langchain/openai@1.3.1(@langchain/core@1.1.36(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@4.3.6))(ws@8.18.1))(ws@8.18.1)':
     dependencies:
-      '@langchain/core': 1.1.36(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@3.25.76))(ws@8.18.1)
+      '@langchain/core': 1.1.36(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@4.3.6))(ws@8.18.1)
       js-tiktoken: 1.0.20
-      openai: 6.33.0(ws@8.18.1)(zod@3.25.76)
-      zod: 3.25.76
+      openai: 6.33.0(ws@8.18.1)(zod@4.3.6)
+      zod: 4.3.6
     transitivePeerDependencies:
       - ws
 
@@ -8256,7 +8257,7 @@ snapshots:
 
   kleur@3.0.3: {}
 
-  langsmith@0.5.15(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@3.25.76))(ws@8.18.1):
+  langsmith@0.5.15(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(openai@6.33.0(ws@8.18.1)(zod@4.3.6))(ws@8.18.1):
     dependencies:
       '@types/uuid': 10.0.0
       chalk: 5.6.2
@@ -8268,7 +8269,7 @@ snapshots:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/exporter-trace-otlp-proto': 0.213.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/sdk-trace-base': 2.6.0(@opentelemetry/api@1.9.0)
-      openai: 6.33.0(ws@8.18.1)(zod@3.25.76)
+      openai: 6.33.0(ws@8.18.1)(zod@4.3.6)
       ws: 8.18.1
 
   leven@3.1.0: {}
@@ -8506,10 +8507,10 @@ snapshots:
     dependencies:
       mimic-function: 5.0.1
 
-  openai@6.33.0(ws@8.18.1)(zod@3.25.76):
+  openai@6.33.0(ws@8.18.1)(zod@4.3.6):
     optionalDependencies:
       ws: 8.18.1
-      zod: 3.25.76
+      zod: 4.3.6
 
   opencollective-postinstall@2.0.3:
     optional: true
@@ -9434,4 +9435,4 @@ snapshots:
   zlibjs@0.3.1:
     optional: true
 
-  zod@3.25.76: {}
+  zod@4.3.6: {}
