@@ -46,13 +46,14 @@ export default function MuseumDetailScreen() {
 
   const handleOpenInMaps = () => {
     if (!params.latitude || !params.longitude) return;
-    const lat = params.latitude;
-    const lng = params.longitude;
+    const lat = Number(params.latitude);
+    const lng = Number(params.longitude);
+    if (Number.isNaN(lat) || Number.isNaN(lng)) return;
     const name = encodeURIComponent(params.name ?? '');
     const url =
       Platform.OS === 'ios'
-        ? `https://maps.apple.com/?ll=${lat},${lng}&q=${name}`
-        : `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+        ? `https://maps.apple.com/?ll=${String(lat)},${String(lng)}&q=${name}`
+        : `https://www.google.com/maps/search/?api=1&query=${String(lat)},${String(lng)}`;
     void Linking.openURL(url);
   };
 
