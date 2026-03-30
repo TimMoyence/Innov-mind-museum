@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,10 +8,14 @@ import { useLocation } from '@/features/museum/application/useLocation';
 import type { MuseumWithDistance } from '@/features/museum/application/useMuseumDirectory';
 import { useMuseumDirectory } from '@/features/museum/application/useMuseumDirectory';
 import { MuseumDirectoryList } from '@/features/museum/ui/MuseumDirectoryList';
+import { MuseumMapView } from '@/features/museum/ui/MuseumMapView';
+import { ViewModeToggle } from '@/features/museum/ui/ViewModeToggle';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
+
+type ViewMode = 'list' | 'map';
 
 /** Renders the museum directory tab screen listing nearby museums with distance. */
 export default function MuseumsScreen() {
@@ -19,8 +24,12 @@ export default function MuseumsScreen() {
   const { theme } = useTheme();
 
   const { latitude, longitude, status } = useLocation();
-  const { museums, isLoading, searchQuery, setSearchQuery, refresh } =
-    useMuseumDirectory(latitude, longitude);
+  const { museums, isLoading, searchQuery, setSearchQuery, refresh } = useMuseumDirectory(
+    latitude,
+    longitude,
+  );
+
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   const handleMuseumPress = (museum: MuseumWithDistance) => {
     router.push({
@@ -52,17 +61,24 @@ export default function MuseumsScreen() {
             {t('museumDirectory.location_denied')}
           </Text>
         )}
+        <View style={styles.toggleRow}>
+          <ViewModeToggle mode={viewMode} onToggle={setViewMode} />
+        </View>
       </GlassCard>
 
-      <View style={styles.listContainer}>
-        <MuseumDirectoryList
-          museums={museums}
-          isLoading={isLoading}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          onMuseumPress={handleMuseumPress}
-          onRefresh={refresh}
-        />
+      <View style={styles.contentContainer}>
+        {viewMode === 'list' ? (
+          <MuseumDirectoryList
+            museums={museums}
+            isLoading={isLoading}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onMuseumPress={handleMuseumPress}
+            onRefresh={refresh}
+          />
+        ) : (
+          <MuseumMapView museums={museums} userLatitude={latitude} userLongitude={longitude} />
+        )}
       </View>
     </LiquidScreen>
   );
@@ -88,7 +104,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  listContainer: {
+  toggleRow: {
+    marginTop: 10,
+  },
+  contentContainer: {
     flex: 1,
   },
 });
