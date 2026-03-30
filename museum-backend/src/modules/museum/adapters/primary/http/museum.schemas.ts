@@ -21,9 +21,13 @@ export const updateMuseumSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export const searchMuseumsQuerySchema = z.object({
-  lat: z.coerce.number().min(-90).max(90).optional(),
-  lng: z.coerce.number().min(-180).max(180).optional(),
-  radius: z.coerce.number().int().min(1000).max(50000).optional(),
-  q: z.string().max(100).optional(),
-});
+export const searchMuseumsQuerySchema = z
+  .object({
+    lat: z.coerce.number().min(-90).max(90).optional(),
+    lng: z.coerce.number().min(-180).max(180).optional(),
+    radius: z.coerce.number().int().min(1000).max(50000).optional(),
+    q: z.string().max(100).optional(),
+  })
+  .refine((data) => (data.lat == null) === (data.lng == null), {
+    message: 'lat and lng must both be provided or both omitted',
+  });

@@ -25,6 +25,7 @@ export default function HomeScreen() {
   const { locale, museumMode } = useRuntimeSettings();
 
   const startConversation = async (intent: 'default' | 'camera' | 'audio' = 'default') => {
+    Keyboard.dismiss();
     setIsCreating(true);
     setError(null);
 
@@ -34,8 +35,6 @@ export default function HomeScreen() {
         locale: settings.defaultLocale,
         museumMode: settings.defaultMuseumMode,
       });
-
-      Keyboard.dismiss();
       const suffix = intent === 'default' ? '' : `?intent=${intent}`;
       router.push(`/(stack)/chat/${response.session.id}${suffix}`);
       setMenuStatus(

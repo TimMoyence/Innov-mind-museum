@@ -139,7 +139,6 @@ export class SearchMuseumsUseCase {
     let { lat, lng } = input;
 
     // If no coordinates provided, attempt geocoding from text query
-    // If no coordinates provided, attempt geocoding from text query
     if ((lat == null || lng == null) && q) {
       const geocoded = await geocodeWithNominatim(q);
       if (geocoded) {
