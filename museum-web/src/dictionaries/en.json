@@ -127,6 +127,19 @@
       "support": "Support"
     }
   },
+  "resetPassword": {
+    "title": "Reset your password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "submit": "Reset password",
+    "success": "Password updated successfully!",
+    "successHint": "You can now sign in with your new password.",
+    "backToLogin": "Back to login",
+    "passwordMismatch": "Passwords do not match",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "invalidToken": "Invalid or expired reset link",
+    "error": "Error resetting password"
+  },
   "admin": {
     "dashboard": "Dashboard",
     "users": "Users",

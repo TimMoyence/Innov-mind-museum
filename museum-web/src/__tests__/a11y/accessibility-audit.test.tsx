@@ -19,8 +19,18 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
-    <a href={href} {...props}>{children}</a>
+  default: ({
+    children,
+    href,
+    ...props
+  }: {
+    children: React.ReactNode;
+    href: string;
+    [key: string]: unknown;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -33,19 +43,47 @@ vi.mock('next/image', () => ({
 
 const mockDict: Dictionary = {
   metadata: { title: 'Musaium', description: 'desc' },
-  nav: { home: 'Home', support: 'Support', privacy: 'Privacy', admin: 'Admin', login: 'Login', download: 'Download', language: 'EN' },
+  nav: {
+    home: 'Home',
+    support: 'Support',
+    privacy: 'Privacy',
+    admin: 'Admin',
+    login: 'Login',
+    download: 'Download',
+    language: 'EN',
+  },
   hero: { title: '', subtitle: '', cta: '', ctaSecondary: '' },
   features: { title: '', items: [], gridTitle: '', gridSubtitle: '', grid: [] },
   showcase: { title: '', description: '', caption: '', sectionTitle: '', sectionSubtitle: '' },
   reviews: { title: '', subtitle: '', cta: '', ctaSubtitle: '', leaveReview: '', stars: '' },
-  download: { title: '', subtitle: '', appStore: '', googlePlay: '', appStorePrefix: '', googlePlayPrefix: '' },
-  support: { title: '', subtitle: '', faq: [], contact: { title: '', namePlaceholder: '', emailPlaceholder: '', messagePlaceholder: '', submit: '', success: '' } },
+  download: {
+    title: '',
+    subtitle: '',
+    appStore: '',
+    googlePlay: '',
+    appStorePrefix: '',
+    googlePlayPrefix: '',
+  },
+  support: {
+    title: '',
+    subtitle: '',
+    faq: [],
+    contact: {
+      title: '',
+      namePlaceholder: '',
+      emailPlaceholder: '',
+      messagePlaceholder: '',
+      submit: '',
+      success: '',
+    },
+  },
   privacy: { title: '' },
   footer: {
     copyright: '(c) {year} Musaium',
     madeBy: 'Made by InnovMind',
     links: { privacy: 'Privacy Policy', support: 'Help' },
   },
+  resetPassword: {} as Dictionary['resetPassword'],
   admin: {} as Dictionary['admin'],
 };
 
