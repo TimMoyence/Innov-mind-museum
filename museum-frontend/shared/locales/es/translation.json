@@ -28,6 +28,7 @@
     "sign_in_subtitle": "Inicia sesión para continuar tu recorrido cultural.",
     "sign_up_subtitle": "Crea una cuenta en Musaium para guardar y retomar tus visitas.",
     "fill_all_fields": "Por favor, completa todos los campos",
+    "enter_email_for_reset": "Ingresa tu correo electrónico para restablecer tu contraseña",
     "login_failed": "Error de inicio de sesión: respuesta de autenticación no válida",
     "registration_complete": "Registro completado. Por favor, inicia sesión.",
     "forgot_password": "¿Olvidaste tu contraseña?",

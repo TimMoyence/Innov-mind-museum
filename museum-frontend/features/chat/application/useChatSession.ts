@@ -176,8 +176,8 @@ export const useChatSession = (sessionId: string) => {
             scheduleFlush();
           },
           onDone: (payload) => {
-            resetStreaming();
             const finalText = streamTextRef.current;
+            resetStreaming();
 
             setMessages((prev) =>
               prev.map((m) =>

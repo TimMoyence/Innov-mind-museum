@@ -28,6 +28,7 @@
     "sign_in_subtitle": "ログインして文化の旅を続けましょう。",
     "sign_up_subtitle": "Musaiumアカウントを作成して、訪問記録を保存・再開できます。",
     "fill_all_fields": "すべての項目を入力してください",
+    "enter_email_for_reset": "パスワードをリセットするにはメールアドレスを入力してください",
     "login_failed": "ログインに失敗しました — 認証レスポンスが無効です",
     "registration_complete": "登録が完了しました。ログインしてください。",
     "forgot_password": "パスワードをお忘れですか？",

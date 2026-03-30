@@ -1,0 +1,323 @@
+import { SearchMuseumsUseCase } from '@modules/museum/core/useCase/searchMuseums.useCase';
+import { InMemoryMuseumRepository } from 'tests/helpers/museum/inMemoryMuseumRepository';
+import type { OverpassMuseumResult } from '@shared/http/overpass.client';
+import type { CacheService } from '@shared/cache/cache.port';
+
+/* ------------------------------------------------------------------ */
+/*  Mock: Overpass client                                              */
+/* ------------------------------------------------------------------ */
+const mockQueryOverpassMuseums = jest.fn<Promise<OverpassMuseumResult[]>, []>();
+
+jest.mock('@shared/http/overpass.client', () => ({
+  queryOverpassMuseums: (...args: unknown[]) => mockQueryOverpassMuseums(...(args as [])),
+}));
+
+/* ------------------------------------------------------------------ */
+/*  Mock: env (needed for cache TTL)                                   */
+/* ------------------------------------------------------------------ */
+jest.mock('@src/config/env', () => ({
+  env: { overpassCacheTtlSeconds: 3600 },
+}));
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+/** Paris coordinates (reference point for all tests). */
+const PARIS = { lat: 48.8566, lng: 2.3522 };
+
+/** Creates an OSM result near a given offset from Paris. */
+const makeOsmResult = (
+  name: string,
+  latOffset: number,
+  lonOffset: number,
+  osmId = 100,
+): OverpassMuseumResult => ({
+  name,
+  address: null,
+  latitude: PARIS.lat + latOffset,
+  longitude: PARIS.lng + lonOffset,
+  osmId,
+});
+
+/** Creates a minimal in-memory cache for testing. */
+function createMockCache(): CacheService {
+  const store = new Map<string, unknown>();
+  return {
+    get: jest.fn(async (key: string) => {
+      return store.get(key) ?? null;
+    }) as CacheService['get'],
+    set: jest.fn(async (key: string, value: unknown, _ttl?: number) => {
+      store.set(key, value);
+    }) as CacheService['set'],
+    del: jest.fn(async () => {}),
+    delByPrefix: jest.fn(async () => {}),
+    setNx: jest.fn(async () => true) as CacheService['setNx'],
+    ping: jest.fn(async () => true),
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Tests                                                              */
+/* ------------------------------------------------------------------ */
+
+describe('SearchMuseumsUseCase', () => {
+  let repo: InMemoryMuseumRepository;
+  let useCase: SearchMuseumsUseCase;
+
+  beforeEach(() => {
+    repo = new InMemoryMuseumRepository();
+    useCase = new SearchMuseumsUseCase(repo);
+    mockQueryOverpassMuseums.mockReset();
+    mockQueryOverpassMuseums.mockResolvedValue([]);
+  });
+
+  it('returns merged results from Overpass + local DB', async () => {
+    await repo.create({
+      name: 'Louvre',
+      slug: 'louvre',
+      latitude: 48.8606,
+      longitude: 2.3376,
+    });
+
+    mockQueryOverpassMuseums.mockResolvedValueOnce([
+      makeOsmResult('Palais de Tokyo', 0.005, -0.05, 200),
+    ]);
+
+    const result = await useCase.execute({ ...PARIS, radiusMeters: 10_000 });
+
+    expect(result.museums).toHaveLength(2);
+    expect(result.count).toBe(2);
+
+    const names = result.museums.map((m) => m.name);
+    expect(names).toContain('Louvre');
+    expect(names).toContain('Palais de Tokyo');
+  });
+
+  it('deduplicates by proximity — prefers local when within 100m', async () => {
+    // Local museum at exact coords
+    await repo.create({
+      name: 'Louvre (local)',
+      slug: 'louvre-local',
+      latitude: 48.8606,
+      longitude: 2.3376,
+    });
+
+    // OSM result within ~10m of the local museum
+    mockQueryOverpassMuseums.mockResolvedValueOnce([
+      {
+        name: 'Louvre (osm)',
+        address: null,
+        latitude: 48.8607,
+        longitude: 2.3377,
+        osmId: 999,
+      },
+    ]);
+
+    const result = await useCase.execute({ ...PARIS, radiusMeters: 10_000 });
+
+    // Only the local version should survive
+    expect(result.museums).toHaveLength(1);
+    expect(result.museums[0].name).toBe('Louvre (local)');
+    expect(result.museums[0].source).toBe('local');
+  });
+
+  it('calculates distance correctly (haversine)', async () => {
+    // Place museum ~1km north of PARIS center
+    // ~0.009 degrees latitude is approximately 1km
+    await repo.create({
+      name: 'Nearby Museum',
+      slug: 'nearby',
+      latitude: PARIS.lat + 0.009,
+      longitude: PARIS.lng,
+    });
+
+    const result = await useCase.execute({ ...PARIS, radiusMeters: 5000 });
+
+    expect(result.museums).toHaveLength(1);
+    // Distance should be ~1000m (haversine allows some tolerance)
+    expect(result.museums[0].distance).toBeGreaterThan(900);
+    expect(result.museums[0].distance).toBeLessThan(1100);
+  });
+
+  it('sorts results by distance ascending', async () => {
+    // Far museum
+    await repo.create({
+      name: 'Far Museum',
+      slug: 'far',
+      latitude: PARIS.lat + 0.04,
+      longitude: PARIS.lng,
+    });
+
+    // Close museum
+    await repo.create({
+      name: 'Close Museum',
+      slug: 'close',
+      latitude: PARIS.lat + 0.001,
+      longitude: PARIS.lng,
+    });
+
+    // Medium museum
+    await repo.create({
+      name: 'Medium Museum',
+      slug: 'medium',
+      latitude: PARIS.lat + 0.02,
+      longitude: PARIS.lng,
+    });
+
+    const result = await useCase.execute({ ...PARIS, radiusMeters: 50_000 });
+
+    expect(result.museums.map((m) => m.name)).toEqual([
+      'Close Museum',
+      'Medium Museum',
+      'Far Museum',
+    ]);
+  });
+
+  it('respects max radius (caps at 50km)', async () => {
+    // Museum at ~60km away (~0.54 degrees latitude)
+    await repo.create({
+      name: 'Very Far Museum',
+      slug: 'very-far',
+      latitude: PARIS.lat + 0.54,
+      longitude: PARIS.lng,
+    });
+
+    // Museum within 50km
+    await repo.create({
+      name: 'Within Range',
+      slug: 'within-range',
+      latitude: PARIS.lat + 0.1,
+      longitude: PARIS.lng,
+    });
+
+    // Request radius of 100km — should be capped to 50km
+    const result = await useCase.execute({ ...PARIS, radiusMeters: 100_000 });
+
+    expect(result.museums).toHaveLength(1);
+    expect(result.museums[0].name).toBe('Within Range');
+  });
+
+  it('falls back to local-only when Overpass fails', async () => {
+    await repo.create({
+      name: 'Louvre',
+      slug: 'louvre',
+      latitude: 48.8606,
+      longitude: 2.3376,
+    });
+
+    // Overpass returns empty on failure (the client catches errors internally)
+    mockQueryOverpassMuseums.mockResolvedValueOnce([]);
+
+    const result = await useCase.execute({ ...PARIS, radiusMeters: 10_000 });
+
+    expect(result.museums).toHaveLength(1);
+    expect(result.museums[0].name).toBe('Louvre');
+    expect(result.museums[0].source).toBe('local');
+  });
+
+  it('uses cache on second call', async () => {
+    const cache = createMockCache();
+    const cachedUseCase = new SearchMuseumsUseCase(repo, cache);
+
+    const osmResults = [makeOsmResult('Cached Museum', 0.001, 0.001, 300)];
+    mockQueryOverpassMuseums.mockResolvedValueOnce(osmResults);
+
+    // First call — should fetch from Overpass and cache
+    await cachedUseCase.execute({ ...PARIS, radiusMeters: 10_000 });
+    expect(mockQueryOverpassMuseums).toHaveBeenCalledTimes(1);
+    expect(cache.set).toHaveBeenCalledTimes(1);
+
+    // Second call — should use cache, not call Overpass again
+    await cachedUseCase.execute({ ...PARIS, radiusMeters: 10_000 });
+    expect(mockQueryOverpassMuseums).toHaveBeenCalledTimes(1); // still 1
+    expect(cache.get).toHaveBeenCalledTimes(2);
+  });
+
+  it('filters results by q parameter', async () => {
+    await repo.create({
+      name: 'Louvre Museum',
+      slug: 'louvre',
+      latitude: 48.8606,
+      longitude: 2.3376,
+    });
+
+    await repo.create({
+      name: "Musee d'Orsay",
+      slug: 'orsay',
+      latitude: 48.8599,
+      longitude: 2.3266,
+    });
+
+    mockQueryOverpassMuseums.mockResolvedValueOnce([
+      makeOsmResult('Palais de Tokyo', 0.005, -0.05, 200),
+    ]);
+
+    const result = await useCase.execute({ ...PARIS, radiusMeters: 10_000, q: 'louvre' });
+
+    expect(result.museums).toHaveLength(1);
+    expect(result.museums[0].name).toBe('Louvre Museum');
+  });
+
+  it('returns source "local" for DB museums and "osm" for Overpass results', async () => {
+    await repo.create({
+      name: 'Local Museum',
+      slug: 'local',
+      latitude: PARIS.lat + 0.001,
+      longitude: PARIS.lng,
+    });
+
+    mockQueryOverpassMuseums.mockResolvedValueOnce([makeOsmResult('OSM Museum', 0.01, 0.01, 500)]);
+
+    const result = await useCase.execute({ ...PARIS, radiusMeters: 10_000 });
+
+    const local = result.museums.find((m) => m.name === 'Local Museum');
+    const osm = result.museums.find((m) => m.name === 'OSM Museum');
+
+    expect(local?.source).toBe('local');
+    expect(osm?.source).toBe('osm');
+  });
+
+  it('uses default radius of 10km when not provided', async () => {
+    // Museum at ~8km (within default 10km radius)
+    await repo.create({
+      name: 'Within Default',
+      slug: 'within-default',
+      latitude: PARIS.lat + 0.07,
+      longitude: PARIS.lng,
+    });
+
+    // Museum at ~15km (outside default 10km radius)
+    await repo.create({
+      name: 'Outside Default',
+      slug: 'outside-default',
+      latitude: PARIS.lat + 0.14,
+      longitude: PARIS.lng,
+    });
+
+    const result = await useCase.execute({ lat: PARIS.lat, lng: PARIS.lng });
+
+    expect(result.museums).toHaveLength(1);
+    expect(result.museums[0].name).toBe('Within Default');
+  });
+
+  it('excludes local museums without coordinates', async () => {
+    await repo.create({
+      name: 'No Coords Museum',
+      slug: 'no-coords',
+      // no latitude/longitude
+    });
+
+    await repo.create({
+      name: 'Has Coords Museum',
+      slug: 'has-coords',
+      latitude: PARIS.lat + 0.001,
+      longitude: PARIS.lng,
+    });
+
+    const result = await useCase.execute({ ...PARIS, radiusMeters: 10_000 });
+
+    expect(result.museums).toHaveLength(1);
+    expect(result.museums[0].name).toBe('Has Coords Museum');
+  });
+});

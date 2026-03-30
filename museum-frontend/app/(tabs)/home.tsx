@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
@@ -35,6 +35,7 @@ export default function HomeScreen() {
         museumMode: settings.defaultMuseumMode,
       });
 
+      Keyboard.dismiss();
       const suffix = intent === 'default' ? '' : `?intent=${intent}`;
       router.push(`/(stack)/chat/${response.session.id}${suffix}`);
       setMenuStatus(

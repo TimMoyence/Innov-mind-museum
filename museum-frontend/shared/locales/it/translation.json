@@ -28,6 +28,7 @@
     "sign_in_subtitle": "Accedi per continuare il tuo percorso culturale.",
     "sign_up_subtitle": "Crea un account Musaium per salvare e riprendere le tue visite.",
     "fill_all_fields": "Compila tutti i campi",
+    "enter_email_for_reset": "Inserisci il tuo indirizzo email per reimpostare la password",
     "login_failed": "Accesso fallito - risposta di autenticazione non valida",
     "registration_complete": "Registrazione completata. Effettua l'accesso.",
     "forgot_password": "Password dimenticata?",

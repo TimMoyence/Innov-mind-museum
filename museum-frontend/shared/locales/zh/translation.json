@@ -28,6 +28,7 @@
     "sign_in_subtitle": "登录以继续您的文化之旅。",
     "sign_up_subtitle": "创建 Musaium 账户，保存并恢复您的参观记录。",
     "fill_all_fields": "请填写所有字段",
+    "enter_email_for_reset": "请输入您的电子邮件地址以重置密码",
     "login_failed": "登录失败 - 无效的认证响应",
     "registration_complete": "注册成功，请登录。",
     "forgot_password": "忘记密码？",
