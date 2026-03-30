@@ -50,7 +50,7 @@
     "expo-local-authentication": "~16.0.5",
     "expo-localization": "~16.1.6",
     "expo-location": "~18.1.6",
-    "expo-router": "~5.1.11",
+    "expo-router": "~55.0.8",
     "expo-secure-store": "~14.2.4",
     "expo-splash-screen": "~0.30.10",
     "expo-status-bar": "^2.0.1",
