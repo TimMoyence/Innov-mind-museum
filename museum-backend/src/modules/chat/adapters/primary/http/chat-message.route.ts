@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { AppError, badRequest } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
+import { dailyChatLimit } from '@src/helpers/middleware/daily-chat-limit.middleware';
 import {
   bySession,
   createRateLimitMiddleware,
@@ -48,6 +49,7 @@ export const createMessageRouter = (
   router.post(
     '/sessions/:id/messages',
     isAuthenticated,
+    dailyChatLimit,
     sessionLimiter,
     ...(uploadAdmission ? [uploadAdmission] : []),
     upload.single('image'),
@@ -104,6 +106,7 @@ export const createMessageRouter = (
   router.post(
     '/sessions/:id/messages/stream',
     isAuthenticated,
+    dailyChatLimit,
     sessionLimiter,
     // eslint-disable-next-line complexity -- SSE streaming handler manages setup, timeout, error handling, and cleanup
     async (req, res) => {

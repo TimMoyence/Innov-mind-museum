@@ -145,6 +145,8 @@ interface AppEnv {
     userMemory: boolean;
     knowledgeBase: boolean;
   };
+  /** Maximum chat messages a free-tier user can send per calendar day. */
+  freeTierDailyChatLimit: number;
   /** TTL in seconds for Overpass API museum search cache entries. */
   overpassCacheTtlSeconds: number;
   /** Knowledge base (Wikidata) configuration. */
@@ -319,6 +321,7 @@ const env: AppEnv = {
     userMemory: toBoolean(process.env.FEATURE_FLAG_USER_MEMORY, false),
     knowledgeBase: toBoolean(process.env.FEATURE_FLAG_KNOWLEDGE_BASE, false),
   },
+  freeTierDailyChatLimit: toNumber(process.env.FREE_TIER_DAILY_CHAT_LIMIT, 100),
   overpassCacheTtlSeconds: toNumber(process.env.OVERPASS_CACHE_TTL_SECONDS, 86400),
   knowledgeBase: {
     timeoutMs: toNumber(process.env.KB_TIMEOUT_MS, 500),
