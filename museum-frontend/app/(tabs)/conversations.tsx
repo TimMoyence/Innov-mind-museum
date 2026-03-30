@@ -81,6 +81,7 @@ export default function ConversationsScreen() {
 
   const startConversation = useCallback(async () => {
     if (isCreating) return;
+    Keyboard.dismiss();
     setIsCreating(true);
     try {
       const settings = await loadRuntimeSettings();
@@ -88,7 +89,6 @@ export default function ConversationsScreen() {
         locale: settings.defaultLocale,
         museumMode: settings.defaultMuseumMode,
       });
-      Keyboard.dismiss();
       router.push(`/(stack)/chat/${response.session.id}`);
     } catch (createError) {
       setError(String(createError instanceof Error ? createError.message : createError));
