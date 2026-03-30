@@ -200,16 +200,6 @@ async function main(): Promise<void> {
   console.log('Database connected.');
 
   const repo = AppDataSource.getRepository(Museum);
-  const existingCount = await repo.count();
-
-  if (existingCount > 0) {
-    console.log(
-      `Skipped: ${existingCount} museum(s) already exist. Drop them first if you want to re-seed.`,
-    );
-    await AppDataSource.destroy();
-    process.exit(0);
-  }
-
   const result = await repo
     .createQueryBuilder()
     .insert()
