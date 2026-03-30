@@ -31,7 +31,8 @@
     "migration:run": "npm run typeorm -- migration:run",
     "migration:show": "npm run typeorm -- migration:show",
     "migration:revert": "npm run typeorm -- migration:revert",
-    "purge:tokens": "ts-node -r tsconfig-paths/register scripts/purge-expired-tokens.ts"
+    "purge:tokens": "ts-node -r tsconfig-paths/register scripts/purge-expired-tokens.ts",
+    "seed:museums": "ts-node -r tsconfig-paths/register scripts/seed-museums.ts"
   },
   "keywords": [],
   "author": "",

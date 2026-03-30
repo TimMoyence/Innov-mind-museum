@@ -87,6 +87,19 @@ export interface Dictionary {
       support: string;
     };
   };
+  resetPassword: {
+    title: string;
+    newPassword: string;
+    confirmPassword: string;
+    submit: string;
+    success: string;
+    successHint: string;
+    backToLogin: string;
+    passwordMismatch: string;
+    passwordTooShort: string;
+    invalidToken: string;
+    error: string;
+  };
   admin: {
     dashboard: string;
     users: string;

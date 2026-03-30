@@ -127,6 +127,19 @@
       "support": "Aide"
     }
   },
+  "resetPassword": {
+    "title": "Réinitialiser votre mot de passe",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "submit": "Réinitialiser",
+    "success": "Mot de passe mis à jour avec succès !",
+    "successHint": "Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
+    "backToLogin": "Retour à la connexion",
+    "passwordMismatch": "Les mots de passe ne correspondent pas",
+    "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères",
+    "invalidToken": "Lien de réinitialisation invalide ou expiré",
+    "error": "Erreur lors de la réinitialisation"
+  },
   "admin": {
     "dashboard": "Tableau de bord",
     "users": "Utilisateurs",
