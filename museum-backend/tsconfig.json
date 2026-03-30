@@ -33,6 +33,6 @@
     "outDir": "./dist",
     "lib": ["ES2023"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"],
+  "include": ["src/**/*.ts", "tests/**/*.ts", "scripts/seed-museums.ts"],
   "exclude": ["node_modules"]
 }
