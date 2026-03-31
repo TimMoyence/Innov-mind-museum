@@ -1,4 +1,9 @@
 import { renderHook, act } from '@testing-library/react-native';
+
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
+
 import { useImagePicker } from '@/features/chat/application/useImagePicker';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────

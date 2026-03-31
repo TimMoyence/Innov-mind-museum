@@ -15,7 +15,7 @@ function handleEvictedMessages(messages: QueuedMessage[]): void {
   const uris = messages
     .map((m) => m.imageUri)
     .filter((uri): uri is string => typeof uri === 'string');
-  cleanupOfflineImages(uris);
+  void cleanupOfflineImages(uris);
 }
 
 export const useOfflineQueue = () => {
@@ -35,11 +35,11 @@ export const useOfflineQueue = () => {
   );
 
   const enqueue = useCallback(
-    (msg: Omit<QueuedMessage, 'id' | 'createdAt' | 'retryCount'>) => {
+    async (msg: Omit<QueuedMessage, 'id' | 'createdAt' | 'retryCount'>) => {
       let imageUri = msg.imageUri;
       if (imageUri) {
         try {
-          imageUri = persistOfflineImage(imageUri);
+          imageUri = await persistOfflineImage(imageUri);
         } catch {
           console.warn('[OfflineQueue] Image persistence failed, enqueueing without image');
           imageUri = undefined;
@@ -54,7 +54,7 @@ export const useOfflineQueue = () => {
   const dequeue = useCallback(() => {
     const item = queue.dequeue();
     if (item?.imageUri) {
-      cleanupOfflineImage(item.imageUri);
+      void cleanupOfflineImage(item.imageUri);
     }
     return item;
   }, [queue]);
@@ -71,7 +71,7 @@ export const useOfflineQueue = () => {
         const all = queue.getAll();
         const target = all.find((m) => m.id === id);
         if (target?.imageUri) {
-          cleanupOfflineImage(target.imageUri);
+          void cleanupOfflineImage(target.imageUri);
         }
         queue.remove(id);
       },
