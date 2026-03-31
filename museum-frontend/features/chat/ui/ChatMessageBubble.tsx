@@ -343,6 +343,7 @@ export const ChatMessageBubble = React.memo(
       prev.message.text === next.message.text &&
       prev.message.image?.url === next.message.image?.url &&
       prev.message.sendFailed === next.message.sendFailed &&
+      prev.locale === next.locale &&
       prev.ttsPlaying === next.ttsPlaying &&
       prev.ttsLoading === next.ttsLoading &&
       prev.feedbackValue === next.feedbackValue

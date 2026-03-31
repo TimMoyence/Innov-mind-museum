@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { Audio } from 'expo-av';
 
@@ -138,6 +138,13 @@ export function useTextToSpeech(): UseTextToSpeech {
     },
     [activeMessageId, stopPlayback, cleanup],
   );
+
+  // Cleanup on unmount: stop playback and release audio resources
+  useEffect(() => {
+    return () => {
+      void cleanup();
+    };
+  }, [cleanup]);
 
   return { isPlaying, isLoading, activeMessageId, togglePlayback, stopPlayback };
 }
