@@ -34,10 +34,6 @@ jest.mock('@/features/auth/routes', () => ({
   HOME_ROUTE: '/(tabs)/home',
 }));
 
-jest.mock('@/shared/lib/errors', () => ({
-  getErrorMessage: (err: unknown) => String(err),
-}));
-
 jest.mock('expo-apple-authentication', () => {
   const { View } = require('react-native');
   return {

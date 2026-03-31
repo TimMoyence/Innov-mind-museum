@@ -3,25 +3,12 @@ import { ChangePasswordUseCase } from '@modules/auth/core/useCase/changePassword
 import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
 import type { IRefreshTokenRepository } from '@modules/auth/core/domain/refresh-token.repository.interface';
 import type { User } from '@modules/auth/core/domain/user.entity';
+import { makeUser } from '../../helpers/auth/user.fixtures';
 
 jest.mock('bcrypt', () => ({
   ...jest.requireActual('bcrypt'),
   compare: jest.fn(),
 }));
-
-const HASHED_PASSWORD = '$2b$12$existinghash';
-
-const makeUser = (overrides: Partial<User> = {}): User =>
-  ({
-    id: 1,
-    email: 'user@test.com',
-    password: HASHED_PASSWORD,
-    firstname: 'Test',
-    lastname: 'User',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  }) as User;
 
 const makeUserRepo = (user: User | null) =>
   ({

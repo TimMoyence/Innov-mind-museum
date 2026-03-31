@@ -7,7 +7,6 @@ import type {
   StoredRefreshTokenRow,
 } from '@modules/auth/core/domain/refresh-token.repository.interface';
 import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
-import type { User } from '@modules/auth/core/domain/user.entity';
 import { env } from '@src/config/env';
 
 jest.mock('@modules/auth/core/useCase/login-rate-limiter', () => ({
@@ -30,19 +29,7 @@ const mockClearLoginAttempts = clearLoginAttempts as jest.MockedFunction<typeof 
 
 // ── Helpers ────────────────────────────────────────────────────────
 
-const makeUser = (overrides: Partial<User> = {}): User =>
-  ({
-    id: 1,
-    email: 'user@test.com',
-    password: '$2b$12$hashedpassword',
-    firstname: 'Test',
-    lastname: 'User',
-    role: 'visitor',
-    museumId: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  }) as User;
+import { makeUser } from '../../helpers/auth/user.fixtures';
 
 const sha256 = (value: string): string => crypto.createHash('sha256').update(value).digest('hex');
 

@@ -1,21 +1,8 @@
 import { VerifyEmailUseCase } from '@modules/auth/core/useCase/verifyEmail.useCase';
 import { RegisterUseCase } from '@modules/auth/core/useCase/register.useCase';
 import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
-import type { User } from '@modules/auth/core/domain/user.entity';
 import type { EmailService } from '@shared/email/email.port';
-
-const makeUser = (overrides: Partial<User> = {}): User =>
-  ({
-    id: 1,
-    email: 'test@example.com',
-    password: '$2b$12$hash',
-    firstname: 'Test',
-    lastname: 'User',
-    email_verified: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  }) as User;
+import { makeUser } from '../../helpers/auth/user.fixtures';
 
 describe('VerifyEmailUseCase', () => {
   it('returns { verified: true } for a valid token', async () => {

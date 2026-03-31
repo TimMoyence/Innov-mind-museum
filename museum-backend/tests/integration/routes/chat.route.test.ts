@@ -1,11 +1,11 @@
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
-import { createApp } from '@src/app';
-import { env } from '@src/config/env';
 import {
-  clearRateLimitBuckets,
+  createRouteTestApp,
+  resetRateLimits,
   stopRateLimitSweep,
-} from '@src/helpers/middleware/rate-limit.middleware';
+} from '../../helpers/http/route-test-setup';
+import { userToken } from '../../helpers/auth/token.helpers';
 
 /**
  * Chat route integration tests — auth enforcement + basic validation.
@@ -13,22 +13,11 @@ import {
  * Routes that pass validation but need DB/ChatService will 500 — those are NOT tested here.
  */
 
-const app = createApp({
-  healthCheck: async () => ({ database: 'up' }),
-});
-
-const makeToken = (overrides: Record<string, unknown> = {}) =>
-  jwt.sign(
-    { sub: '1', type: 'access', jti: 'test-jti', role: 'visitor', ...overrides },
-    env.auth.accessTokenSecret,
-    { expiresIn: '5m' },
-  );
-
-const userToken = () => makeToken();
+const { app } = createRouteTestApp();
 
 describe('Chat Routes — HTTP Layer', () => {
   beforeEach(() => {
-    clearRateLimitBuckets();
+    resetRateLimits();
   });
 
   afterAll(() => {

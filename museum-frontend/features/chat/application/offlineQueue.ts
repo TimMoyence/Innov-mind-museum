@@ -18,6 +18,8 @@ export interface OfflineQueueOptions {
   storage?: QueueStorage;
   maxQueueSize?: number;
   maxAgeMs?: number;
+  /** Called with messages that were evicted during hydrate or prune. */
+  onEvict?: (messages: QueuedMessage[]) => void;
 }
 
 const DEFAULT_MAX_QUEUE_SIZE = 50;
@@ -30,6 +32,7 @@ export class OfflineQueue {
   private storage: QueueStorage | null;
   private maxQueueSize: number;
   private maxAgeMs: number;
+  private onEvict: ((messages: QueuedMessage[]) => void) | null;
 
   constructor(options?: QueueStorage | OfflineQueueOptions) {
     if (options && typeof options === 'object' && 'getItem' in options) {
@@ -37,11 +40,13 @@ export class OfflineQueue {
       this.storage = options;
       this.maxQueueSize = DEFAULT_MAX_QUEUE_SIZE;
       this.maxAgeMs = DEFAULT_MAX_AGE_MS;
+      this.onEvict = null;
     } else {
-      const opts = (options) ?? {};
+      const opts = options ?? {};
       this.storage = opts.storage ?? null;
       this.maxQueueSize = opts.maxQueueSize ?? DEFAULT_MAX_QUEUE_SIZE;
       this.maxAgeMs = opts.maxAgeMs ?? DEFAULT_MAX_AGE_MS;
+      this.onEvict = opts.onEvict ?? null;
     }
   }
 
@@ -57,9 +62,22 @@ export class OfflineQueue {
         const parsed: unknown = JSON.parse(raw);
         if (Array.isArray(parsed)) {
           const now = Date.now();
-          this.queue = (parsed as QueuedMessage[]).filter((m) => now - m.createdAt < this.maxAgeMs);
+          const all = parsed as QueuedMessage[];
+          const kept: QueuedMessage[] = [];
+          const evicted: QueuedMessage[] = [];
+          for (const m of all) {
+            if (now - m.createdAt < this.maxAgeMs) {
+              kept.push(m);
+            } else {
+              evicted.push(m);
+            }
+          }
+          this.queue = kept;
           this.notify();
           void this.persist();
+          if (evicted.length > 0) {
+            this.onEvict?.(evicted);
+          }
         }
       }
     } catch {
@@ -124,11 +142,20 @@ export class OfflineQueue {
    */
   prune(): void {
     const now = Date.now();
-    const before = this.queue.length;
-    this.queue = this.queue.filter((m) => now - m.createdAt < this.maxAgeMs);
-    if (this.queue.length !== before) {
+    const kept: QueuedMessage[] = [];
+    const evicted: QueuedMessage[] = [];
+    for (const m of this.queue) {
+      if (now - m.createdAt < this.maxAgeMs) {
+        kept.push(m);
+      } else {
+        evicted.push(m);
+      }
+    }
+    if (evicted.length > 0) {
+      this.queue = kept;
       this.notify();
       void this.persist();
+      this.onEvict?.(evicted);
     }
   }
 

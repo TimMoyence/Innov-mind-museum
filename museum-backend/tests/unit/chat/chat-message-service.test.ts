@@ -715,7 +715,7 @@ describe('ChatMessageService', () => {
           text: 'What painting is this?',
           image: {
             source: 'base64',
-            value: 'data:image/jpeg;base64,/9j/4AAQ',
+            value: 'data:image/jpeg;base64,/9j/4AAQSkZJRgAB',
             mimeType: 'image/jpeg',
           },
         },
@@ -740,7 +740,7 @@ describe('ChatMessageService', () => {
           text: 'What painting is this?',
           image: {
             source: 'base64',
-            value: 'data:image/jpeg;base64,/9j/4AAQ',
+            value: 'data:image/jpeg;base64,/9j/4AAQSkZJRgAB',
             mimeType: 'image/jpeg',
           },
         },

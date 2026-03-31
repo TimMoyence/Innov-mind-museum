@@ -1,9 +1,14 @@
 import { buildChatTestService } from 'tests/helpers/chat/chatTestApp';
 import { FakeOcrService } from 'tests/helpers/chat/fakeOcrService';
 
+// Valid JPEG magic bytes (FF D8 FF E0) followed by padding — minimum 12 bytes for magic check
+const JPEG_MAGIC = Buffer.from([
+  0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+]).toString('base64');
+
 const TINY_IMAGE = {
   source: 'upload' as const,
-  value: 'aGVsbG8=',
+  value: JPEG_MAGIC,
   mimeType: 'image/jpeg',
   sizeBytes: 100,
 };

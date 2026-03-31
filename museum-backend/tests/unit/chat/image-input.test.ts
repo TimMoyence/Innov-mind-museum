@@ -1,6 +1,8 @@
 import {
   assertImageSize,
+  assertMagicBytes,
   decodeBase64Image,
+  detectImageMimeFromBytes,
   isSafeImageUrl,
 } from '@modules/chat/application/image-input';
 
@@ -53,5 +55,84 @@ describe('image-input', () => {
 
   it('blocks IPv4-mapped IPv6 ::ffff:10.0.0.1', () => {
     expect(isSafeImageUrl('https://[::ffff:10.0.0.1]/image.jpg')).toBe(false);
+  });
+});
+
+describe('magic bytes validation', () => {
+  // Real magic-byte prefixes encoded as base64
+  const jpegBase64 = Buffer.from([
+    0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  ]).toString('base64');
+  const pngBase64 = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+  ]).toString('base64');
+  const gifBase64 = Buffer.from([
+    0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  ]).toString('base64');
+  // RIFF header (bytes 0-3) + file size placeholder (bytes 4-7) + WEBP marker (bytes 8-11)
+  const webpBase64 = Buffer.from([
+    0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
+  ]).toString('base64');
+
+  describe('detectImageMimeFromBytes', () => {
+    it('detects JPEG from magic bytes', () => {
+      expect(detectImageMimeFromBytes(jpegBase64)).toBe('image/jpeg');
+    });
+
+    it('detects PNG from magic bytes', () => {
+      expect(detectImageMimeFromBytes(pngBase64)).toBe('image/png');
+    });
+
+    it('detects GIF from magic bytes', () => {
+      expect(detectImageMimeFromBytes(gifBase64)).toBe('image/gif');
+    });
+
+    it('detects WebP from magic bytes', () => {
+      expect(detectImageMimeFromBytes(webpBase64)).toBe('image/webp');
+    });
+
+    it('returns null for random bytes', () => {
+      const randomBase64 = Buffer.from([0x00, 0x01, 0x02, 0x03, 0x04]).toString('base64');
+      expect(detectImageMimeFromBytes(randomBase64)).toBeNull();
+    });
+
+    it('returns null for too-short input', () => {
+      const shortBase64 = Buffer.from([0xff, 0xd8]).toString('base64');
+      expect(detectImageMimeFromBytes(shortBase64)).toBeNull();
+    });
+
+    it('returns null for empty base64', () => {
+      expect(detectImageMimeFromBytes('')).toBeNull();
+    });
+  });
+
+  describe('assertMagicBytes', () => {
+    it('does not throw for valid JPEG bytes', () => {
+      expect(() => assertMagicBytes(jpegBase64)).not.toThrow();
+    });
+
+    it('does not throw for valid PNG bytes', () => {
+      expect(() => assertMagicBytes(pngBase64)).not.toThrow();
+    });
+
+    it('throws for random non-image bytes', () => {
+      const textBase64 = Buffer.from('Hello, this is not an image').toString('base64');
+      expect(() => assertMagicBytes(textBase64)).toThrow(
+        'Uploaded file does not appear to be a valid image',
+      );
+    });
+
+    it('throws for empty input', () => {
+      expect(() => assertMagicBytes('')).toThrow(
+        'Uploaded file does not appear to be a valid image',
+      );
+    });
+
+    it('throws for too-short input', () => {
+      const shortBase64 = Buffer.from([0x89, 0x50]).toString('base64');
+      expect(() => assertMagicBytes(shortBase64)).toThrow(
+        'Uploaded file does not appear to be a valid image',
+      );
+    });
   });
 });
