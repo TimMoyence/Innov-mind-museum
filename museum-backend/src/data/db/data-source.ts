@@ -53,7 +53,7 @@ export const AppDataSource = new DataSource({
   migrations: isCompiledRuntime
     ? ['dist/src/data/db/migrations/*.js']
     : ['src/data/db/migrations/*.ts'],
-  ssl: env.nodeEnv === 'production' ? { rejectUnauthorized: env.dbSsl } : false,
+  ssl: env.nodeEnv === 'production' && env.dbSsl ? { rejectUnauthorized: false } : false,
   synchronize: env.nodeEnv === 'production' ? false : env.dbSynchronize,
   logging: false,
   extra: {
