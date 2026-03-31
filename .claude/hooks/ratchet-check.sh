@@ -63,12 +63,12 @@ elif [ "$CURRENT_AS_ANY" -lt "$BASELINE_AS_ANY" ] 2>/dev/null; then
 fi
 
 # Frontend test count ratchet
-FE_TEST_OUTPUT=$(cd "$REPO_ROOT/museum-frontend" && npm test 2>&1 | grep -oE '[0-9]+ passed' | head -1)
+FE_TEST_OUTPUT=$(cd "$REPO_ROOT/museum-frontend" && npm test 2>&1 | grep -E 'Tests:' | grep -oE '[0-9]+ passed' | head -1)
 FE_CURRENT_TESTS=$(echo "$FE_TEST_OUTPUT" | grep -oE '[0-9]+' | head -1)
 FE_BASELINE=$(jq -r '.frontendTestCount // 0' "$RATCHET_FILE")
 if [ -n "$FE_CURRENT_TESTS" ] && [ "$FE_CURRENT_TESTS" -lt "$FE_BASELINE" ] 2>/dev/null; then
   echo "RATCHET REGRESSION: Frontend tests $FE_CURRENT_TESTS < baseline $FE_BASELINE"
-  REGRESSION=1
+  REGRESSION=true
 fi
 if [ -n "$FE_CURRENT_TESTS" ] && [ "$FE_CURRENT_TESTS" -gt "$FE_BASELINE" ] 2>/dev/null; then
   jq --argjson v "$FE_CURRENT_TESTS" '.frontendTestCount = $v' "$RATCHET_FILE" > "$RATCHET_FILE.tmp" && mv "$RATCHET_FILE.tmp" "$RATCHET_FILE"
@@ -76,12 +76,12 @@ if [ -n "$FE_CURRENT_TESTS" ] && [ "$FE_CURRENT_TESTS" -gt "$FE_BASELINE" ] 2>/d
 fi
 
 # Web test count ratchet
-WEB_TEST_OUTPUT=$(cd "$REPO_ROOT/museum-web" && pnpm test 2>&1 | grep -oE '[0-9]+ passed' | head -1)
+WEB_TEST_OUTPUT=$(cd "$REPO_ROOT/museum-web" && pnpm test 2>&1 | grep -E 'Tests:' | grep -oE '[0-9]+ passed' | head -1)
 WEB_CURRENT_TESTS=$(echo "$WEB_TEST_OUTPUT" | grep -oE '[0-9]+' | head -1)
 WEB_BASELINE=$(jq -r '.webTestCount // 0' "$RATCHET_FILE")
 if [ -n "$WEB_CURRENT_TESTS" ] && [ "$WEB_CURRENT_TESTS" -lt "$WEB_BASELINE" ] 2>/dev/null; then
   echo "RATCHET REGRESSION: Web tests $WEB_CURRENT_TESTS < baseline $WEB_BASELINE"
-  REGRESSION=1
+  REGRESSION=true
 fi
 if [ -n "$WEB_CURRENT_TESTS" ] && [ "$WEB_CURRENT_TESTS" -gt "$WEB_BASELINE" ] 2>/dev/null; then
   jq --argjson v "$WEB_CURRENT_TESTS" '.webTestCount = $v' "$RATCHET_FILE" > "$RATCHET_FILE.tmp" && mv "$RATCHET_FILE.tmp" "$RATCHET_FILE"

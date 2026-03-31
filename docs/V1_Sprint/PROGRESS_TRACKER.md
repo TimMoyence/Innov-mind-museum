@@ -656,7 +656,7 @@
 - [x] FX-05: Xcode Cloud node setup (nvm → Homebrew node@22) (fdf9d56)
 - [x] FX-06: Audit fixes — daily art response, map coords, Zod validation (911acf0, 89351cc, 95fb3b7)
 
-### Verification (2026-03-31)
+### Verification (2026-03-31 AM)
 
 - [x] Backend: 1433 tests passing, 0 tsc errors, 0 lint errors
 - [x] Frontend: tsc PASS
@@ -666,7 +666,51 @@
 
 ---
 
-## Metriques globales (mise a jour 2026-03-31)
+## Chat UX + iOS Pipeline + Dependency Audit (2026-03-31 PM)
+
+> 16 commits. Chat UX overhaul, iOS build pipeline, image enrichment, dependency audit.
+> Commits: `a4dffff` to `dced522`
+
+### Chat UX Overhaul
+
+- [x] UX-01: WhatsApp-like instant local image preview + proactive signed URL refresh
+- [x] UX-02: TTS listen button on assistant messages (expo-av + backend endpoint)
+- [x] UX-03: Visit summary modal (artworks, rooms, duration, expertise)
+- [x] UX-04: Thumbs up/down feedback — full-stack (migration + entity + endpoint + UI)
+- [x] UX-05: Offline image failure alert + retry button on failed messages
+- [x] UX-06: Memory leak fixes (Sound cleanup, stale closure, locale memo)
+
+### Image Enrichment
+
+- [x] IE-01: Wikidata P18 + Unsplash pipeline with scoring, caching, dedup
+- [x] IE-02: Magic bytes validation for image uploads (JPEG/PNG/GIF/WebP)
+- [x] IE-03: OpenAPI types regenerated for enrichment schema
+
+### iOS Build Pipeline
+
+- [x] IOS-01: expo-file-system downgrade 55→18.1.11 + API migration (SDK 53 compat)
+- [x] IOS-02: Pod files alignment (xcconfigs, headers, codegen for Xcode Cloud)
+- [x] IOS-03: Resilient Node.js install (3-tier: Homebrew → nodejs.org → system)
+
+### Dependency Audit
+
+- [x] DA-01: Sound memory leak fix in useAudioRecorder (ref + unmount cleanup)
+- [x] DA-02: i18n permission alerts (8 languages, was hardcoded English)
+- [x] DA-03: Dead deps removed (@types/axios, @anthropic-ai/sdk)
+- [x] DA-04: AxiosHeaders.set() compliance (no-misused-spread fix)
+- [x] DA-05: DRY test factories directive + makeMessage/makeSession factories
+
+### Verification (2026-03-31 PM)
+
+- [x] Backend: 1457 tests passing (+24), 0 tsc errors, 0 lint errors
+- [x] Frontend: 146 tests passing (+5), 0 tsc errors, 22 warnings (0 errors)
+- [x] iOS: LOCAL XCODE BUILD VERIFIED (BUILD SUCCEEDED)
+- [x] as any: 1 (-3), eslint-disable: -35 net
+- [x] Quality ratchet: all metrics improved
+
+---
+
+## Metriques globales (mise a jour 2026-03-31 PM)
 
 | Sprint    | Taches  | Faites | %       | Tests backend | Tests frontend |
 | --------- | ------- | ------ | ------- | ------------- | -------------- |
@@ -688,4 +732,5 @@
 | V3 Sprints | 8      | 8      | 100%    | 1054 (+103)   | 161            |
 | R15       | 12      | 12     | 100%    | 1077 (+23)    | 161            |
 | Prod Hard | 22      | 22     | 100%    | 1433 (+356)   | 146            |
-| **Total** | **226** | **225** | **99%** | **1433**      | **146**        |
+| Chat UX   | 17      | 17     | 100%    | 1457 (+24)    | 146            |
+| **Total** | **243** | **242** | **99%** | **1457**      | **146**        |
