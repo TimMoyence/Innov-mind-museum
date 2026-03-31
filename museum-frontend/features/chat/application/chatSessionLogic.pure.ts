@@ -1,3 +1,13 @@
+/** A single enriched image attached to an assistant message (e.g. from Wikidata or Unsplash). */
+export interface ChatUiEnrichedImage {
+  url: string;
+  thumbnailUrl: string;
+  caption: string;
+  source: 'wikidata' | 'unsplash';
+  score: number;
+  attribution?: string | null;
+}
+
 /** Metadata attached to an assistant message, including artwork detection and follow-up suggestions. */
 export interface ChatUiMessageMetadata {
   detectedArtwork?: {
@@ -13,6 +23,7 @@ export interface ChatUiMessageMetadata {
   deeperContext?: string;
   openQuestion?: string;
   imageDescription?: string;
+  images?: ChatUiEnrichedImage[];
 }
 
 /** UI-layer representation of a single chat message (user, assistant, or system). */
@@ -33,8 +44,7 @@ export interface ChatUiMessage {
 /** Sorts messages by createdAt ascending (earliest first). */
 export const sortByTime = (messages: ChatUiMessage[]): ChatUiMessage[] => {
   return [...messages].sort(
-    (left, right) =>
-      new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
+    (left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
   );
 };
 

@@ -338,7 +338,10 @@
     "replace_image": "Ersetzen",
     "remove_image": "Entfernen",
     "share_response": "Teilen",
-    "crop": "Zuschneiden"
+    "crop": "Zuschneiden",
+    "imageAttribution": "Foto von {{photographer}} auf Unsplash",
+    "imageLoadError": "Bild konnte nicht geladen werden",
+    "viewFullscreen": "In voller Grosse anzeigen"
   },
   "chatInput": {
     "placeholder": "Fragen Sie zu einem Kunstwerk, Denkmal, oder senden Sie Sprache/Foto...",

@@ -41,6 +41,23 @@ const toFollowUpQuestions = (value: unknown): string[] | undefined => {
   return filtered.length ? filtered : undefined;
 };
 
+const toSuggestedImages = (
+  value: unknown,
+): { query: string; description: string }[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+
+  const filtered = value
+    .filter(
+      (item): item is { query: string; description: string } =>
+        typeof item === 'object' &&
+        item !== null &&
+        typeof (item as Record<string, unknown>).query === 'string' &&
+        typeof (item as Record<string, unknown>).description === 'string',
+    )
+    .slice(0, 3);
+  return filtered.length > 0 ? filtered : undefined;
+};
+
 const toOptionalString = (value: unknown): string | undefined => {
   if (typeof value === 'string' && value.trim().length > 0) {
     return value.trim();
@@ -97,6 +114,7 @@ export const extractMetadata = (parsed: Record<string, unknown>): ChatAssistantM
   metadata.openQuestion = toOptionalString(parsed.openQuestion);
   metadata.followUpQuestions = toFollowUpQuestions(parsed.followUpQuestions);
   metadata.imageDescription = toOptionalString(parsed.imageDescription);
+  metadata.suggestedImages = toSuggestedImages(parsed.suggestedImages);
 
   return metadata;
 };

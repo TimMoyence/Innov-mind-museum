@@ -338,7 +338,10 @@
     "share_response": "Partager",
     "replace_image": "Remplacer",
     "remove_image": "Supprimer",
-    "crop": "Recadrer"
+    "crop": "Recadrer",
+    "imageAttribution": "Photo par {{photographer}} sur Unsplash",
+    "imageLoadError": "L'image n'a pas pu etre chargee",
+    "viewFullscreen": "Voir en plein ecran"
   },
   "chatInput": {
     "placeholder": "Posez une question sur une œuvre, un monument, ou envoyez une photo/voix...",

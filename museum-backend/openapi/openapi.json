@@ -174,7 +174,35 @@
               "deeperContext": { "type": "string" },
               "openQuestion": { "type": "string" },
               "followUpQuestions": { "type": "array", "items": { "type": "string" } },
-              "imageDescription": { "type": "string" }
+              "imageDescription": { "type": "string" },
+              "images": {
+                "type": "array",
+                "description": "Enriched images from external sources (Wikidata, Unsplash)",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "url": { "type": "string", "format": "uri", "description": "Full resolution image URL" },
+                    "thumbnailUrl": { "type": "string", "format": "uri", "description": "Thumbnail URL (~300px)" },
+                    "caption": { "type": "string", "description": "Image description" },
+                    "source": { "type": "string", "enum": ["wikidata", "unsplash"], "description": "Image source" },
+                    "score": { "type": "number", "minimum": 0, "maximum": 1, "description": "Relevance score" },
+                    "attribution": { "type": "string", "description": "Photo credit (required for Unsplash)" }
+                  },
+                  "required": ["url", "thumbnailUrl", "caption", "source", "score"]
+                }
+              },
+              "suggestedImages": {
+                "type": "array",
+                "description": "LLM-suggested image search queries",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "query": { "type": "string", "description": "Search term for image lookup" },
+                    "description": { "type": "string", "description": "What the image should depict" }
+                  },
+                  "required": ["query", "description"]
+                }
+              }
             },
             "additionalProperties": true
           },
