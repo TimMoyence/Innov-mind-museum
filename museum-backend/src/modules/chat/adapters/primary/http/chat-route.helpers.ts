@@ -58,17 +58,8 @@ const enforceContextSizeLimit = (input: unknown): void => {
   }
 };
 
-/** Parses and validates the optional context object from the request body. */
-export const parseContext = (
-  input: unknown,
-  // eslint-disable-next-line sonarjs/cognitive-complexity, complexity -- context parsing requires sequential field validation
-): ParsedContext | undefined => {
-  if (input === undefined || input === null || input === '') {
-    return undefined;
-  }
-
-  enforceContextSizeLimit(input);
-
+/** Parses a JSON string or passes through a non-string value, validating it is an object. */
+const parseRawContextObject = (input: unknown): Record<string, unknown> => {
   let raw = input;
   if (typeof input === 'string') {
     try {
@@ -78,53 +69,72 @@ export const parseContext = (
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, sonarjs/different-types-comparison -- defensive: JSON.parse("null") returns null at runtime
+   
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
     throw badRequest('context must be an object');
   }
 
-  const value = raw as Record<string, unknown>;
+  return raw as Record<string, unknown>;
+};
+
+/** Validates and extracts context.location. */
+const parseLocation = (value: unknown): string | undefined => {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string') throw badRequest('context.location must be a string');
+  return value;
+};
+
+/** Validates and extracts context.museumMode (boolean or boolean-string). */
+const parseMuseumMode = (value: unknown): boolean | undefined => {
+  if (value === undefined) return undefined;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const lower = value.toLowerCase();
+    if (lower === 'true') return true;
+    if (lower === 'false') return false;
+  }
+  throw badRequest('context.museumMode must be a boolean');
+};
+
+/** Validates and extracts context.guideLevel. */
+const parseGuideLevel = (value: unknown): ParsedContext['guideLevel'] | undefined => {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string') throw badRequest('context.guideLevel must be a string');
+  if (!['beginner', 'intermediate', 'expert'].includes(value)) {
+    throw badRequest('context.guideLevel must be beginner, intermediate, or expert');
+  }
+  return value as 'beginner' | 'intermediate' | 'expert';
+};
+
+/** Validates and extracts context.locale. */
+const parseLocale = (value: unknown): string | undefined => {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string') throw badRequest('context.locale must be a string');
+  return value;
+};
+
+/** Parses and validates the optional context object from the request body. */
+export const parseContext = (input: unknown): ParsedContext | undefined => {
+  if (input === undefined || input === null || input === '') {
+    return undefined;
+  }
+
+  enforceContextSizeLimit(input);
+
+  const value = parseRawContextObject(input);
 
   const context: ParsedContext = {};
-  if (value.location !== undefined) {
-    if (typeof value.location !== 'string') {
-      throw badRequest('context.location must be a string');
-    }
-    context.location = value.location;
-  }
+  const location = parseLocation(value.location);
+  if (location !== undefined) context.location = location;
 
-  if (value.museumMode !== undefined) {
-    if (typeof value.museumMode === 'boolean') {
-      context.museumMode = value.museumMode;
-    } else if (typeof value.museumMode === 'string') {
-      if (value.museumMode.toLowerCase() === 'true') {
-        context.museumMode = true;
-      } else if (value.museumMode.toLowerCase() === 'false') {
-        context.museumMode = false;
-      } else {
-        throw badRequest('context.museumMode must be a boolean');
-      }
-    } else {
-      throw badRequest('context.museumMode must be a boolean');
-    }
-  }
+  const museumMode = parseMuseumMode(value.museumMode);
+  if (museumMode !== undefined) context.museumMode = museumMode;
 
-  if (value.guideLevel !== undefined) {
-    if (typeof value.guideLevel !== 'string') {
-      throw badRequest('context.guideLevel must be a string');
-    }
-    if (!['beginner', 'intermediate', 'expert'].includes(value.guideLevel)) {
-      throw badRequest('context.guideLevel must be beginner, intermediate, or expert');
-    }
-    context.guideLevel = value.guideLevel as 'beginner' | 'intermediate' | 'expert';
-  }
+  const guideLevel = parseGuideLevel(value.guideLevel);
+  if (guideLevel !== undefined) context.guideLevel = guideLevel;
 
-  if (value.locale !== undefined) {
-    if (typeof value.locale !== 'string') {
-      throw badRequest('context.locale must be a string');
-    }
-    context.locale = value.locale;
-  }
+  const locale = parseLocale(value.locale);
+  if (locale !== undefined) context.locale = locale;
 
   return context;
 };

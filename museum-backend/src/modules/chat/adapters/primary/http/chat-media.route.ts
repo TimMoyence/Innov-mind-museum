@@ -26,7 +26,103 @@ import { isS3ImageRef } from '../../secondary/image-storage.s3';
 import { resolveLocalImageFilePath } from '../../secondary/image-storage.stub';
 
 import type { ChatService } from '../../../application/chat.service';
-import type { RequestHandler } from 'express';
+import type { Request, Response, NextFunction, RequestHandler } from 'express';
+
+/** Handler factory: POST /sessions/:id/audio */
+function createAudioHandler(chatService: ChatService) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const currentUser = getRequestUser(req);
+      const parsedAudioContext = parseContext(req.body?.context);
+      const context = {
+        ...parsedAudioContext,
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
+        locale: parsedAudioContext?.locale || req.clientLocale,
+      };
+
+      if (!req.file) {
+        throw badRequest('audio file is required');
+      }
+
+      const result = await chatService.postAudioMessage(
+        req.params.id,
+        {
+          audio: {
+            base64: req.file.buffer.toString('base64'),
+            mimeType: req.file.mimetype,
+            sizeBytes: req.file.size,
+          },
+          context,
+        },
+        (req as { requestId?: string }).requestId,
+        currentUser?.id,
+      );
+
+      res.status(201).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+/** Handler factory: GET /messages/:messageId/image */
+function createImageServeHandler(chatService: ChatService) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const verification = verifySignedChatImageReadUrl({
+        messageId: req.params.messageId,
+        token: typeof req.query.token === 'string' ? req.query.token : undefined,
+        signature: typeof req.query.sig === 'string' ? req.query.sig : undefined,
+      });
+
+      if (!verification.ok) {
+        throw badRequest(verification.reason);
+      }
+
+      const image = await chatService.getMessageImageRef(req.params.messageId);
+      if (isS3ImageRef(image.imageRef)) {
+        const signed = buildImageReadUrl({
+          baseUrl: resolveRequestBaseUrl(req),
+          messageId: req.params.messageId,
+          imageRef: image.imageRef,
+        });
+        if (!signed) {
+          throw badRequest('Unable to generate image URL for current storage backend');
+        }
+
+        res.redirect(302, signed.url);
+        return;
+      }
+
+      const imagePath = resolveLocalImageFilePath(image.imageRef, env.storage.localUploadsDir);
+      if (!imagePath) {
+        res.status(501).json({
+          error: {
+            code: 'IMAGE_STORAGE_NOT_SUPPORTED',
+            message: 'This image backend is not yet supported for direct read URLs.',
+          },
+        });
+        return;
+      }
+
+      const fileStat = await stat(imagePath);
+      const ext = image.fileName?.split('.').pop()?.toLowerCase() ?? '';
+      const contentType =
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
+        image.contentType || contentTypeByExtension[ext] || 'application/octet-stream';
+
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Length', String(fileStat.size));
+      res.setHeader('Cache-Control', 'private, max-age=60');
+
+      const stream = createReadStream(imagePath);
+      stream.on('error', next);
+      stream.pipe(res);
+    } catch (error) {
+      next(error);
+    }
+  };
+}
 
 /**
  * Creates the media sub-router (audio upload, image serving, report, TTS).
@@ -35,7 +131,7 @@ import type { RequestHandler } from 'express';
  * @param uploadAdmission - Shared upload-admission middleware (concurrency limiter).
  * @returns Router handling audio, image, report, and TTS endpoints.
  */
-// eslint-disable-next-line max-lines-per-function -- sub-router registers all media endpoints
+// eslint-disable-next-line max-lines-per-function -- route factory wires audio/image/report/TTS endpoints with shared middleware
 export const createMediaRouter = (
   chatService: ChatService,
   uploadAdmission?: RequestHandler,
@@ -56,39 +152,7 @@ export const createMediaRouter = (
     sessionLimiter,
     ...(uploadAdmission ? [uploadAdmission] : []),
     audioUpload.single('audio'),
-    async (req, res, next) => {
-      try {
-        const currentUser = getRequestUser(req);
-        const parsedAudioContext = parseContext(req.body?.context);
-        const context = {
-          ...parsedAudioContext,
-          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-          locale: parsedAudioContext?.locale || req.clientLocale,
-        };
-
-        if (!req.file) {
-          throw badRequest('audio file is required');
-        }
-
-        const result = await chatService.postAudioMessage(
-          req.params.id,
-          {
-            audio: {
-              base64: req.file.buffer.toString('base64'),
-              mimeType: req.file.mimetype,
-              sizeBytes: req.file.size,
-            },
-            context,
-          },
-          (req as { requestId?: string }).requestId,
-          currentUser?.id,
-        );
-
-        res.status(201).json(result);
-      } catch (error) {
-        next(error);
-      }
-    },
+    createAudioHandler(chatService),
   );
 
   // POST /messages/:messageId/report — report a message
@@ -167,62 +231,7 @@ export const createMediaRouter = (
   );
 
   // GET /messages/:messageId/image — serve image via signed URL
-
-  router.get('/messages/:messageId/image', async (req, res, next) => {
-    try {
-      const verification = verifySignedChatImageReadUrl({
-        messageId: req.params.messageId,
-        token: typeof req.query.token === 'string' ? req.query.token : undefined,
-        signature: typeof req.query.sig === 'string' ? req.query.sig : undefined,
-      });
-
-      if (!verification.ok) {
-        throw badRequest(verification.reason);
-      }
-
-      const image = await chatService.getMessageImageRef(req.params.messageId);
-      if (isS3ImageRef(image.imageRef)) {
-        const signed = buildImageReadUrl({
-          baseUrl: resolveRequestBaseUrl(req),
-          messageId: req.params.messageId,
-          imageRef: image.imageRef,
-        });
-        if (!signed) {
-          throw badRequest('Unable to generate image URL for current storage backend');
-        }
-
-        res.redirect(302, signed.url);
-        return;
-      }
-
-      const imagePath = resolveLocalImageFilePath(image.imageRef, env.storage.localUploadsDir);
-      if (!imagePath) {
-        res.status(501).json({
-          error: {
-            code: 'IMAGE_STORAGE_NOT_SUPPORTED',
-            message: 'This image backend is not yet supported for direct read URLs.',
-          },
-        });
-        return;
-      }
-
-      const fileStat = await stat(imagePath);
-      const ext = image.fileName?.split('.').pop()?.toLowerCase() ?? '';
-      const contentType =
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-        image.contentType || contentTypeByExtension[ext] || 'application/octet-stream';
-
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Length', String(fileStat.size));
-      res.setHeader('Cache-Control', 'private, max-age=60');
-
-      const stream = createReadStream(imagePath);
-      stream.on('error', next);
-      stream.pipe(res);
-    } catch (error) {
-      next(error);
-    }
-  });
+  router.get('/messages/:messageId/image', createImageServeHandler(chatService));
 
   return router;
 };

@@ -495,10 +495,7 @@ describe('ChatMessageService', () => {
       const result = await service.postMessageStream(
         SESSION_ID,
         { text: 'Tell me about this painting' },
-        (text) => tokens.push(text),
-        undefined,
-        'req-1',
-        USER_ID,
+        { onToken: (text) => tokens.push(text), requestId: 'req-1', currentUserId: USER_ID },
       );
 
       expect(tokens.length).toBeGreaterThan(0);
@@ -513,10 +510,7 @@ describe('ChatMessageService', () => {
       const result = await service.postMessageStream(
         SESSION_ID,
         { text: 'You are an idiot' },
-        (text) => tokens.push(text),
-        undefined,
-        'req-1',
-        USER_ID,
+        { onToken: (text) => tokens.push(text), requestId: 'req-1', currentUserId: USER_ID },
       );
 
       expect(tokens).toHaveLength(0);
@@ -548,10 +542,7 @@ describe('ChatMessageService', () => {
       await service.postMessageStream(
         SESSION_ID,
         { text: 'Tell me about this painting' },
-        (text) => tokens.push(text),
-        undefined,
-        'req-1',
-        USER_ID,
+        { onToken: (text) => tokens.push(text), requestId: 'req-1', currentUserId: USER_ID },
       );
 
       const joined = tokens.join('');
@@ -575,10 +566,7 @@ describe('ChatMessageService', () => {
       await service.postMessageStream(
         SESSION_ID,
         { text: 'Tell me about this painting' },
-        (text) => tokens.push(text),
-        undefined,
-        'req-1',
-        USER_ID,
+        { onToken: (text) => tokens.push(text), requestId: 'req-1', currentUserId: USER_ID },
       );
 
       const joined = tokens.join('');
@@ -599,10 +587,7 @@ describe('ChatMessageService', () => {
       await service.postMessageStream(
         SESSION_ID,
         { text: 'Tell me about this painting' },
-        (text) => tokens.push(text),
-        undefined,
-        'req-1',
-        USER_ID,
+        { onToken: (text) => tokens.push(text), requestId: 'req-1', currentUserId: USER_ID },
       );
 
       const joined = tokens.join('');
@@ -618,11 +603,12 @@ describe('ChatMessageService', () => {
         service.postMessageStream(
           SESSION_ID,
           { text: 'Tell me about art' },
-          () => {},
-          undefined,
-          'req-1',
-          USER_ID,
-          controller.signal,
+          {
+            onToken: () => {},
+            requestId: 'req-1',
+            currentUserId: USER_ID,
+            signal: controller.signal,
+          },
         ),
       ).rejects.toThrow('Request aborted');
     });
@@ -643,11 +629,12 @@ describe('ChatMessageService', () => {
         service.postMessageStream(
           SESSION_ID,
           { text: 'Tell me about art' },
-          () => {},
-          undefined,
-          'req-1',
-          USER_ID,
-          controller.signal,
+          {
+            onToken: () => {},
+            requestId: 'req-1',
+            currentUserId: USER_ID,
+            signal: controller.signal,
+          },
         ),
       ).rejects.toThrow('Client disconnected');
     });
@@ -669,10 +656,12 @@ describe('ChatMessageService', () => {
       await service.postMessageStream(
         SESSION_ID,
         { text: 'Tell me about painting' },
-        () => {},
-        (_text, reason) => guardrailCalls.push(reason),
-        'req-1',
-        USER_ID,
+        {
+          onToken: () => {},
+          onGuardrail: (_text, reason) => guardrailCalls.push(reason),
+          requestId: 'req-1',
+          currentUserId: USER_ID,
+        },
       );
 
       // The output guardrail should fire since there's no art signal
@@ -685,10 +674,7 @@ describe('ChatMessageService', () => {
       await service.postMessageStream(
         SESSION_ID,
         { text: 'Tell me about this painting' },
-        () => {},
-        undefined,
-        'req-1',
-        USER_ID,
+        { onToken: () => {}, requestId: 'req-1', currentUserId: USER_ID },
       );
 
       expect(repo.persistMessage).toHaveBeenCalledTimes(2);
@@ -711,10 +697,7 @@ describe('ChatMessageService', () => {
         service.postMessageStream(
           SESSION_ID,
           { text: 'Tell me about art' },
-          () => {},
-          undefined,
-          'req-1',
-          USER_ID,
+          { onToken: () => {}, requestId: 'req-1', currentUserId: USER_ID },
         ),
       ).rejects.toThrow('LLM exploded');
     });

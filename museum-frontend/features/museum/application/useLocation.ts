@@ -28,13 +28,11 @@ export const useLocation = (): UseLocationResult => {
       setError(null);
 
       try {
-        const { status: permissionStatus } =
-          await Location.requestForegroundPermissionsAsync();
+        const { status: permissionStatus } = await Location.requestForegroundPermissionsAsync();
 
-         
         if (cancelled) return;
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- Expo permission status API
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- expo-location returns string-typed status from permission APIs
         if (permissionStatus !== 'granted') {
           setStatus('denied');
           return;
@@ -53,9 +51,7 @@ export const useLocation = (): UseLocationResult => {
         setLongitude(position.coords.longitude);
       } catch (err) {
         if (cancelled) return;
-        setError(
-          err instanceof Error ? err.message : 'Failed to get location',
-        );
+        setError(err instanceof Error ? err.message : 'Failed to get location');
       }
     };
 

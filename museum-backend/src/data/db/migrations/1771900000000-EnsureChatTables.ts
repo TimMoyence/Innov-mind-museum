@@ -7,7 +7,7 @@ export class EnsureChatTables1771900000000 implements MigrationInterface {
   name = 'EnsureChatTables1771900000000';
 
   /** Apply the EnsureChatTables migration. */
-  // eslint-disable-next-line max-lines-per-function -- migration must define all DDL statements in a single method
+  // eslint-disable-next-line max-lines-per-function -- migration: auto-generated SQL must live in a single up() method
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
 

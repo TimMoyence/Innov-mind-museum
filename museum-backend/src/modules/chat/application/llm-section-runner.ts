@@ -115,12 +115,70 @@ const jitteredDelay = (baseMs: number, attempt: number, remainingBudgetMs: numbe
   return Math.min(exponential + jitter, Math.max(0, remainingBudgetMs - 1));
 };
 
-// eslint-disable-next-line max-lines-per-function -- retry loop with timeout, backoff, and hook coordination
+/** Common fields used in hook events and failure results. */
+interface AttemptContext {
+  taskName: string;
+  attempt: number;
+  timeoutMs: number;
+  payloadBytes: number;
+  requestId?: string;
+}
+
+/** Fires the appropriate failure hook (onTimeout or onError) and returns a failure result. */
+const buildFailureResult = (
+  ctx: AttemptContext,
+  latencyMs: number,
+  isTimeout: boolean,
+  errorMsg: string,
+  hooks?: SectionRunnerHooks,
+): SectionRunFailure => {
+  const event = {
+    name: ctx.taskName,
+    attempt: ctx.attempt,
+    timeoutMs: ctx.timeoutMs,
+    payloadBytes: ctx.payloadBytes,
+    latencyMs,
+    error: errorMsg,
+    requestId: ctx.requestId,
+  };
+
+  if (isTimeout) {
+    hooks?.onTimeout?.(event);
+  } else {
+    hooks?.onError?.(event);
+  }
+
+  return {
+    name: ctx.taskName,
+    status: isTimeout ? 'timeout' : 'error',
+    error: errorMsg,
+    attempts: ctx.attempt,
+    latencyMs,
+    timeoutMs: ctx.timeoutMs,
+    payloadBytes: ctx.payloadBytes,
+  };
+};
+
+/** Creates an AbortController + timeout-promise pair. Caller must clearTimeout when done. */
+const createTimeoutRace = (
+  effectiveTimeoutMs: number,
+): { controller: AbortController; timeoutId: NodeJS.Timeout; timeoutPromise: Promise<never> } => {
+  const controller = new AbortController();
+  let timeoutId!: NodeJS.Timeout;
+  const timeoutPromise = new Promise<never>((_resolve, reject) => {
+    timeoutId = setTimeout(() => {
+      controller.abort(new Error(`LLM timeout after ${String(effectiveTimeoutMs)}ms`));
+      reject(new Error(`LLM timeout after ${String(effectiveTimeoutMs)}ms`));
+    }, effectiveTimeoutMs);
+  });
+  return { controller, timeoutId, timeoutPromise };
+};
+
+/* eslint-disable complexity, max-lines-per-function -- retry loop with timeout, jitter backoff, and hooks requires sequential branching that cannot be meaningfully decomposed */
 const executeTask = async <TValue>(
   task: SectionTask<TValue>,
   options: SectionRunnerOptions,
   deadlineMs: number,
-  // eslint-disable-next-line sonarjs/cognitive-complexity, complexity -- retry loop with timeout, backoff, and hook coordination requires inherent complexity
 ): Promise<SectionRunResult<TValue>> => {
   const now = options.now ?? defaultNow;
   const sleep = options.sleep ?? defaultSleep;
@@ -147,6 +205,13 @@ const executeTask = async <TValue>(
 
     const effectiveTimeoutMs = Math.max(1, Math.min(task.timeoutMs, remainingBudget));
     const startedAt = now();
+    const ctx: AttemptContext = {
+      taskName: task.name,
+      attempt: attempts,
+      timeoutMs: effectiveTimeoutMs,
+      payloadBytes: task.payloadBytes,
+      requestId: options.requestId,
+    };
 
     options.hooks?.onStart?.({
       name: task.name,
@@ -156,18 +221,11 @@ const executeTask = async <TValue>(
       requestId: options.requestId,
     });
 
-    const controller = new AbortController();
-    let timeoutId: NodeJS.Timeout | undefined;
-    const timeoutPromise = new Promise<never>((_resolve, reject) => {
-      timeoutId = setTimeout(() => {
-        controller.abort(new Error(`LLM timeout after ${String(effectiveTimeoutMs)}ms`));
-        reject(new Error(`LLM timeout after ${String(effectiveTimeoutMs)}ms`));
-      }, effectiveTimeoutMs);
-    });
+    const { controller, timeoutId, timeoutPromise } = createTimeoutRace(effectiveTimeoutMs);
 
     try {
       const value = await Promise.race([task.run(controller.signal), timeoutPromise]);
-      if (timeoutId) clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
 
       const latencyMs = now() - startedAt;
       options.hooks?.onSuccess?.({
@@ -189,12 +247,19 @@ const executeTask = async <TValue>(
         payloadBytes: task.payloadBytes,
       };
     } catch (error) {
-      if (timeoutId) clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
       const latencyMs = now() - startedAt;
       const timeout = controller.signal.aborted || isTimeoutError(error);
       const status: SectionRunStatus = timeout ? 'timeout' : 'error';
       const message = toErrorMessage(error);
 
+      const canRetry = attempts < maxAttempts && shouldRetry(error, status);
+
+      if (!canRetry) {
+        return buildFailureResult(ctx, latencyMs, timeout, message, options.hooks);
+      }
+
+      // Fire failure hook before retry
       if (timeout) {
         options.hooks?.onTimeout?.({
           name: task.name,
@@ -215,20 +280,6 @@ const executeTask = async <TValue>(
           error: message,
           requestId: options.requestId,
         });
-      }
-
-      const canRetry = attempts < maxAttempts && shouldRetry(error, status);
-
-      if (!canRetry) {
-        return {
-          name: task.name,
-          status: timeout ? 'timeout' : 'error',
-          error: message,
-          attempts,
-          latencyMs,
-          timeoutMs: effectiveTimeoutMs,
-          payloadBytes: task.payloadBytes,
-        };
       }
 
       options.hooks?.onRetry?.({
@@ -264,6 +315,7 @@ const executeTask = async <TValue>(
     payloadBytes: task.payloadBytes,
   };
 };
+/* eslint-enable complexity, max-lines-per-function */
 
 /**
  * Executes section tasks concurrently (bounded by {@link SectionRunnerOptions.maxConcurrent})

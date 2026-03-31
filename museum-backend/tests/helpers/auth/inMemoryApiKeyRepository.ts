@@ -37,13 +37,7 @@ export class InMemoryApiKeyRepository implements ApiKeyRepository {
     }
   }
 
-  /** Test helper: reset all stored keys. */
-  clear(): void {
-    this.keys = [];
-    this.nextId = 1;
-  }
-
-  /** Test helper: get raw internal state. */
+  /** Test helper: get all stored keys (including inactive). */
   getAll(): ApiKey[] {
     return [...this.keys];
   }

@@ -136,11 +136,7 @@ export const useAudioRecorder = () => {
 
       const blob = await new Promise<Blob>((resolve) => {
         mediaRecorder.onstop = () => {
-          const mimeType =
-            // eslint-disable-next-line @typescript-eslint/prefer-optional-chain -- complex condition
-            mediaRecorder.mimeType && mediaRecorder.mimeType.length
-              ? mediaRecorder.mimeType
-              : 'audio/webm';
+          const mimeType = mediaRecorder.mimeType?.length ? mediaRecorder.mimeType : 'audio/webm';
           resolve(new Blob(webAudioChunksRef.current, { type: mimeType }));
         };
         mediaRecorder.stop();

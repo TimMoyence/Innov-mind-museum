@@ -27,7 +27,161 @@ import {
 
 import type { ChatService } from '../../../application/chat.service';
 import type { ArtKeywordRepository } from '../../../domain/artKeyword.repository.interface';
-import type { RequestHandler } from 'express';
+import type { Request, Response, NextFunction, RequestHandler } from 'express';
+
+/** Handler factory: POST /sessions/:id/messages (non-streaming). */
+function createPostMessageHandler(chatService: ChatService) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const currentUser = getRequestUser(req);
+      const rawBody = (req.body ?? {}) as Record<string, unknown>;
+      const parseableBody =
+        typeof rawBody.context === 'string' ? { ...rawBody, context: undefined } : rawBody;
+      const bodyPayload = parsePostMessageRequest(parseableBody);
+
+      const parsedContext = parseContext(rawBody.context) ?? bodyPayload.context;
+      const context = {
+        ...parsedContext,
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
+        locale: parsedContext?.locale || req.clientLocale,
+      };
+
+      const imageFromBody = bodyPayload.image
+        ? {
+            source: toImageSource(bodyPayload.image),
+            value: bodyPayload.image,
+          }
+        : undefined;
+
+      const image = req.file
+        ? {
+            source: 'upload' as const,
+            value: req.file.buffer.toString('base64'),
+            mimeType: req.file.mimetype,
+            sizeBytes: req.file.size,
+          }
+        : imageFromBody;
+
+      const result = await chatService.postMessage(
+        req.params.id,
+        {
+          text: bodyPayload.text,
+          image,
+          context,
+        },
+        (req as { requestId?: string }).requestId,
+        currentUser?.id,
+      );
+
+      res.status(201).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+/** Sets up SSE keep-alive and hard-timeout timers; returns handles for cleanup. */
+function initSseTimers(
+  res: Response,
+  controller: AbortController,
+): { keepAliveTimer: NodeJS.Timeout; sseTimer: NodeJS.Timeout } {
+  const KEEP_ALIVE_MS = 15_000;
+  const keepAliveTimer = setInterval(() => {
+    if (!res.writableEnded && !res.destroyed) {
+      res.write(': keep-alive\n\n');
+    }
+  }, KEEP_ALIVE_MS);
+
+  const SSE_TIMEOUT_MS = env.llm.totalBudgetMs + 10_000;
+  const sseTimer = setTimeout(() => {
+    if (!res.writableEnded && !res.destroyed) {
+      sendSseError(
+        res,
+        'TIMEOUT',
+        `Stream timeout exceeded (${SSE_TIMEOUT_MS / 1_000}s). The response took too long.`,
+      );
+      controller.abort();
+      res.end();
+    }
+  }, SSE_TIMEOUT_MS);
+
+  return { keepAliveTimer, sseTimer };
+}
+
+/** Handler factory: POST /sessions/:id/messages/stream (SSE streaming). */
+function createStreamHandler(chatService: ChatService) {
+  // eslint-disable-next-line complexity -- SSE streaming handler requires branching for feature flags, input validation, guardrails, error recovery, and connection lifecycle
+  return async (req: Request, res: Response) => {
+    if (!env.featureFlags.streaming) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Streaming not enabled' } });
+      return;
+    }
+
+    res.setTimeout(0);
+    req.socket.setTimeout(0);
+    initSseResponse(res);
+
+    const controller = new AbortController();
+    res.on('close', () => {
+      controller.abort();
+    });
+
+    const { keepAliveTimer, sseTimer } = initSseTimers(res, controller);
+
+    try {
+      const currentUser = getRequestUser(req);
+      const rawBody = (req.body ?? {}) as Record<string, unknown>;
+      const parseableBody =
+        typeof rawBody.context === 'string' ? { ...rawBody, context: undefined } : rawBody;
+      const bodyPayload = parsePostMessageRequest(parseableBody);
+      const parsedContext = parseContext(rawBody.context) ?? bodyPayload.context;
+      const context = {
+        ...parsedContext,
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
+        locale: parsedContext?.locale || req.clientLocale,
+      };
+
+      const result = await chatService.postMessageStream(
+        req.params.id,
+        { text: bodyPayload.text, context },
+        {
+          onToken: (tokenText) => {
+            clearInterval(keepAliveTimer);
+            if (!res.writableEnded && !res.destroyed) sendSseToken(res, tokenText);
+          },
+          onGuardrail: (guardrailText, reason) => {
+            clearInterval(keepAliveTimer);
+            if (!res.writableEnded && !res.destroyed) sendSseGuardrail(res, guardrailText, reason);
+          },
+          requestId: (req as { requestId?: string }).requestId,
+          currentUserId: currentUser?.id,
+          signal: controller.signal,
+        },
+      );
+
+      if (!res.writableEnded && !res.destroyed) {
+        sendSseDone(res, {
+          messageId: result.message.id,
+          createdAt: result.message.createdAt,
+          metadata: result.metadata as Record<string, unknown>,
+        });
+      }
+    } catch (error) {
+      if (!res.writableEnded && !res.destroyed) {
+        const isKnown = error instanceof AppError;
+        sendSseError(
+          res,
+          isKnown ? error.code : 'INTERNAL_ERROR',
+          isKnown ? error.message : 'Internal server error',
+        );
+      }
+    } finally {
+      clearInterval(keepAliveTimer);
+      clearTimeout(sseTimer);
+      if (!res.writableEnded) res.end();
+    }
+  };
+}
 
 /**
  * Creates the message sub-router (send, stream, list, art-keywords).
@@ -37,7 +191,6 @@ import type { RequestHandler } from 'express';
  * @param uploadAdmission - Shared upload-admission middleware (concurrency limiter).
  * @returns Router handling message operations and art-keyword endpoints.
  */
-// eslint-disable-next-line max-lines-per-function -- sub-router registers all message endpoints
 export const createMessageRouter = (
   chatService: ChatService,
   artKeywordRepo?: ArtKeywordRepository,
@@ -60,53 +213,7 @@ export const createMessageRouter = (
     ...(uploadAdmission ? [uploadAdmission] : []),
     extendTimeoutForUpload,
     upload.single('image'),
-    async (req, res, next) => {
-      try {
-        const currentUser = getRequestUser(req);
-        const rawBody = (req.body ?? {}) as Record<string, unknown>;
-        const parseableBody =
-          typeof rawBody.context === 'string' ? { ...rawBody, context: undefined } : rawBody;
-        const bodyPayload = parsePostMessageRequest(parseableBody);
-
-        const parsedContext = parseContext(rawBody.context) ?? bodyPayload.context;
-        const context = {
-          ...parsedContext,
-          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-          locale: parsedContext?.locale || req.clientLocale,
-        };
-
-        const imageFromBody = bodyPayload.image
-          ? {
-              source: toImageSource(bodyPayload.image),
-              value: bodyPayload.image,
-            }
-          : undefined;
-
-        const image = req.file
-          ? {
-              source: 'upload' as const,
-              value: req.file.buffer.toString('base64'),
-              mimeType: req.file.mimetype,
-              sizeBytes: req.file.size,
-            }
-          : imageFromBody;
-
-        const result = await chatService.postMessage(
-          req.params.id,
-          {
-            text: bodyPayload.text,
-            image,
-            context,
-          },
-          (req as { requestId?: string }).requestId,
-          currentUser?.id,
-        );
-
-        res.status(201).json(result);
-      } catch (error) {
-        next(error);
-      }
-    },
+    createPostMessageHandler(chatService),
   );
 
   // POST /sessions/:id/messages/stream — SSE streaming message
@@ -115,98 +222,7 @@ export const createMessageRouter = (
     isAuthenticated,
     dailyChatLimit,
     sessionLimiter,
-    // eslint-disable-next-line complexity -- SSE streaming handler manages setup, timeout, error handling, and cleanup
-    async (req, res) => {
-      if (!env.featureFlags.streaming) {
-        res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Streaming not enabled' } });
-        return;
-      }
-
-      res.setTimeout(0);
-      req.socket.setTimeout(0);
-      initSseResponse(res);
-
-      const controller = new AbortController();
-      res.on('close', () => {
-        controller.abort();
-      });
-
-      // SSE keep-alive: send comment frames every 15s while waiting for
-      // semaphore slot / LLM provider so proxies don't drop the connection.
-      const KEEP_ALIVE_MS = 15_000;
-      const keepAliveTimer = setInterval(() => {
-        if (!res.writableEnded && !res.destroyed) {
-          res.write(': keep-alive\n\n');
-        }
-      }, KEEP_ALIVE_MS);
-
-      // Hard timeout: cut SSE after LLM budget + 10s headroom — if response takes
-      // longer, something is wrong (zombie connection or provider failure).
-      const SSE_TIMEOUT_MS = env.llm.totalBudgetMs + 10_000;
-      const sseTimer = setTimeout(() => {
-        if (!res.writableEnded && !res.destroyed) {
-          sendSseError(
-            res,
-            'TIMEOUT',
-            `Stream timeout exceeded (${SSE_TIMEOUT_MS / 1_000}s). The response took too long.`,
-          );
-          controller.abort();
-          res.end();
-        }
-      }, SSE_TIMEOUT_MS);
-
-      try {
-        const currentUser = getRequestUser(req);
-        const rawBody = (req.body ?? {}) as Record<string, unknown>;
-        const parseableBody =
-          typeof rawBody.context === 'string' ? { ...rawBody, context: undefined } : rawBody;
-        const bodyPayload = parsePostMessageRequest(parseableBody);
-        const parsedContext = parseContext(rawBody.context) ?? bodyPayload.context;
-        const context = {
-          ...parsedContext,
-          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-          locale: parsedContext?.locale || req.clientLocale,
-        };
-
-        const result = await chatService.postMessageStream(
-          req.params.id,
-          { text: bodyPayload.text, context },
-          (tokenText) => {
-            // First real token arrived — stop keep-alive, proxy timeout no longer a risk
-            clearInterval(keepAliveTimer);
-            if (!res.writableEnded && !res.destroyed) sendSseToken(res, tokenText);
-          },
-          (guardrailText, reason) => {
-            clearInterval(keepAliveTimer);
-            if (!res.writableEnded && !res.destroyed) sendSseGuardrail(res, guardrailText, reason);
-          },
-          (req as { requestId?: string }).requestId,
-          currentUser?.id,
-          controller.signal,
-        );
-
-        if (!res.writableEnded && !res.destroyed) {
-          sendSseDone(res, {
-            messageId: result.message.id,
-            createdAt: result.message.createdAt,
-            metadata: result.metadata as Record<string, unknown>,
-          });
-        }
-      } catch (error) {
-        if (!res.writableEnded && !res.destroyed) {
-          const isKnown = error instanceof AppError;
-          sendSseError(
-            res,
-            isKnown ? error.code : 'INTERNAL_ERROR',
-            isKnown ? error.message : 'Internal server error',
-          );
-        }
-      } finally {
-        clearInterval(keepAliveTimer);
-        clearTimeout(sseTimer);
-        if (!res.writableEnded) res.end();
-      }
-    },
+    createStreamHandler(chatService),
   );
 
   // GET /art-keywords — list art keywords by locale

@@ -1,4 +1,4 @@
-/* eslint-disable max-lines -- service orchestrates message lifecycle across image, guardrail, LLM, and persistence layers */
+/* eslint-disable max-lines -- message service orchestrates text/image/audio/stream posting with guardrails, already split from session and media sub-services */
 import { AppError, badRequest, conflict } from '@shared/errors/app.error';
 import { resolveLocale } from '@shared/i18n/locale';
 import { env } from '@src/config/env';
@@ -13,13 +13,15 @@ import { DisabledAudioTranscriber } from '../domain/ports/audio-transcriber.port
 import type { ArtTopicClassifier } from './art-topic-classifier';
 import type { GuardrailBlockReason } from './art-topic-guardrail';
 import type { PostMessageResult, PostAudioMessageResult } from './chat.service.types';
+import type { ImageEnrichmentService } from './image-enrichment.service';
 import type { KnowledgeBaseService } from './knowledge-base.service';
 import type { UserMemoryService } from './user-memory.service';
 import type { ChatRepository } from '../domain/chat.repository.interface';
-import type { PostAudioMessageInput, PostMessageInput } from '../domain/chat.types';
+import type { EnrichedImage, PostAudioMessageInput, PostMessageInput } from '../domain/chat.types';
 import type { AudioTranscriber } from '../domain/ports/audio-transcriber.port';
 import type { ChatOrchestrator, OrchestratorOutput } from '../domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '../domain/ports/image-storage.port';
+import type { ArtworkFacts } from '../domain/ports/knowledge-base.port';
 import type { OcrService } from '../domain/ports/ocr.port';
 import type { AuditService } from '@shared/audit/audit.service';
 import type { CacheService } from '@shared/cache/cache.port';
@@ -35,6 +37,7 @@ export interface ChatMessageServiceDeps {
   audit?: AuditService;
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
+  imageEnrichment?: ImageEnrichmentService;
   dynamicArtKeywords?: ReadonlySet<string>;
   artTopicClassifier?: ArtTopicClassifier;
   onArtKeywordDiscovered?: (keyword: string, locale: string) => void;
@@ -65,6 +68,29 @@ function extractSearchTerm(
   return null;
 }
 
+/** Successful preparation result with all data needed to invoke the LLM. */
+interface PrepareReady {
+  kind: 'ready';
+  session: Awaited<ReturnType<typeof ensureSessionAccess>>;
+  imageRef?: string;
+  orchestratorImage?: PostMessageInput['image'];
+  requestedLocale?: string;
+  history: Awaited<ReturnType<ChatRepository['listSessionHistory']>>;
+  redirectHint?: string;
+  ownerId?: number;
+  userMemoryBlock?: string;
+  knowledgeBaseBlock?: string;
+  enrichedImages?: EnrichedImage[];
+}
+
+/** Guardrail-refused preparation result. */
+interface PrepareRefused {
+  kind: 'refused';
+  result: PostMessageResult;
+}
+
+type PrepareResult = PrepareReady | PrepareRefused;
+
 /**
  * Handles the message lifecycle: prepare, post, stream, and commit assistant responses.
  */
@@ -77,6 +103,7 @@ export class ChatMessageService {
   private readonly cache?: CacheService;
   private readonly userMemory?: UserMemoryService;
   private readonly knowledgeBase?: KnowledgeBaseService;
+  private readonly imageEnrichment?: ImageEnrichmentService;
 
   constructor(deps: ChatMessageServiceDeps) {
     this.repository = deps.repository;
@@ -85,6 +112,7 @@ export class ChatMessageService {
     this.cache = deps.cache;
     this.userMemory = deps.userMemory;
     this.knowledgeBase = deps.knowledgeBase;
+    this.imageEnrichment = deps.imageEnrichment;
 
     this.imageProcessor = new ImageProcessingService({
       imageStorage: deps.imageStorage,
@@ -100,107 +128,22 @@ export class ChatMessageService {
     });
   }
 
-  /**
-   * Shared pre-LLM logic: validates session, processes image, runs input guardrail, persists user message.
-   *
-   * @returns Either a 'ready' preparation or a 'refused' result (guardrail blocked input).
-   */
-  // eslint-disable-next-line max-lines-per-function, complexity -- message preparation covers image processing, guardrail evaluation, and persistence in a single pipeline
-  private async prepareMessage(
-    sessionId: string,
-    input: PostMessageInput,
-    _requestId?: string,
-    currentUserId?: number,
-  ): Promise<
-    | {
-        kind: 'ready';
-        session: Awaited<ReturnType<typeof ensureSessionAccess>>;
-        imageRef?: string;
-        orchestratorImage?: PostMessageInput['image'];
-        requestedLocale?: string;
-        history: Awaited<ReturnType<ChatRepository['listSessionHistory']>>;
-        redirectHint?: string;
-        ownerId?: number;
-        userMemoryBlock?: string;
-        knowledgeBaseBlock?: string;
-      }
-    | {
-        kind: 'refused';
-        result: PostMessageResult;
-      }
-  > {
-    const session = await ensureSessionAccess(sessionId, this.repository, currentUserId);
-    const ownerId = session.user?.id;
-
-    const text = input.text?.trim();
-    if (text && text.length > env.llm.maxTextLength) {
-      throw badRequest(`text must be <= ${String(env.llm.maxTextLength)} characters`);
-    }
-
-    if (!text && !input.image) {
-      throw badRequest('Either text or image is required');
-    }
-
-    // Image processing (validation, decode, storage)
-    let imageRef: string | undefined;
-    let orchestratorImage: PostMessageInput['image'] | undefined;
-
-    if (input.image) {
-      const processed = await this.imageProcessor.processImage(
-        input.image,
-        sessionId,
-        ownerId ?? currentUserId,
-      );
-      imageRef = processed.imageRef;
-      orchestratorImage = processed.orchestratorImage;
-    }
-
-    // OCR injection guard
-    if (orchestratorImage) {
-      await this.imageProcessor.runOcrGuard(
-        orchestratorImage,
-        evaluateUserInputGuardrail,
-        sessionId,
-      );
-    }
-
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-    const requestedLocale = input.context?.locale?.trim() || session.locale || undefined;
-    const historyBeforeMessage = await this.repository.listSessionHistory(
-      sessionId,
-      env.llm.maxHistoryMessages,
-    );
-
-    const userGuardrail = await this.guardrail.evaluateInput(
-      text,
-      historyBeforeMessage,
-      requestedLocale,
-    );
-
-    await this.repository.persistMessage({
-      sessionId,
-      role: 'user',
-      text,
-      imageRef,
-    });
-
-    if (!userGuardrail.allow) {
-      const result = await this.guardrail.handleInputBlock({
-        sessionId,
-        reason: userGuardrail.reason,
-        requestedLocale,
-        userId: ownerId,
-      });
-      return { kind: 'refused', result };
-    }
-
-    const history = await this.repository.listSessionHistory(sessionId, env.llm.maxHistoryMessages);
-
-    // Fetch cross-session user memory + knowledge base prompt blocks (fail-open, parallel)
+  /** Fetches user memory, knowledge-base text, KB facts, and image enrichment in parallel (fail-open). */
+  private async fetchEnrichmentData(
+    history: Awaited<ReturnType<ChatRepository['listSessionHistory']>>,
+    inputText: string | undefined,
+    ownerId: number | undefined,
+  ): Promise<{
+    userMemoryBlock: string;
+    knowledgeBaseBlock: string;
+    enrichedImages: EnrichedImage[];
+  }> {
     let userMemoryBlock = '';
     let knowledgeBaseBlock = '';
+    let enrichedImages: EnrichedImage[] = [];
 
-    const searchTerm = extractSearchTerm(history, input.text?.trim());
+    const searchTerm = extractSearchTerm(history, inputText);
+    let kbFacts: ArtworkFacts | null = null;
 
     await Promise.all([
       this.userMemory && ownerId
@@ -223,7 +166,113 @@ export class ChatMessageService {
               /* fail-open */
             })
         : Promise.resolve(),
+      this.knowledgeBase && this.imageEnrichment && searchTerm
+        ? this.knowledgeBase
+            .lookupFacts(searchTerm)
+            .then((facts) => {
+              kbFacts = facts;
+            })
+            .catch(() => {
+              /* fail-open */
+            })
+        : Promise.resolve(),
+      this.imageEnrichment && searchTerm
+        ? this.imageEnrichment
+            .enrich(searchTerm)
+            .then((imgs) => {
+              enrichedImages = imgs;
+            })
+            .catch(() => {
+              /* fail-open */
+            })
+        : Promise.resolve(),
     ]);
+
+    // Merge Wikidata image into enriched images if KB returned a P18 imageUrl
+    const resolvedFacts = kbFacts as ArtworkFacts | null;
+    if (resolvedFacts?.imageUrl && this.imageEnrichment && searchTerm) {
+      enrichedImages = this.imageEnrichment.mergeWikidataImage(
+        enrichedImages,
+        resolvedFacts.imageUrl,
+        searchTerm,
+      );
+    }
+
+    return { userMemoryBlock, knowledgeBaseBlock, enrichedImages };
+  }
+
+  /** Processes and stores the image, then runs OCR injection guard. Returns refs or undefined. */
+  private async processInputImage(
+    image: PostMessageInput['image'],
+    sessionId: string,
+    ownerId: number | undefined,
+  ): Promise<{ imageRef?: string; orchestratorImage?: PostMessageInput['image'] }> {
+    if (!image) return {};
+
+    const processed = await this.imageProcessor.processImage(image, sessionId, ownerId);
+    await this.imageProcessor.runOcrGuard(
+      processed.orchestratorImage,
+      evaluateUserInputGuardrail,
+      sessionId,
+    );
+    return { imageRef: processed.imageRef, orchestratorImage: processed.orchestratorImage };
+  }
+
+  /** Shared pre-LLM logic: validates session, processes image, runs input guardrail, persists user message. */
+  private async prepareMessage(
+    sessionId: string,
+    input: PostMessageInput,
+    _requestId?: string,
+    currentUserId?: number,
+  ): Promise<PrepareResult> {
+    const session = await ensureSessionAccess(sessionId, this.repository, currentUserId);
+    const ownerId = session.user?.id;
+
+    const text = input.text?.trim();
+    if (text && text.length > env.llm.maxTextLength) {
+      throw badRequest(`text must be <= ${String(env.llm.maxTextLength)} characters`);
+    }
+    if (!text && !input.image) {
+      throw badRequest('Either text or image is required');
+    }
+
+    const { imageRef, orchestratorImage } = await this.processInputImage(
+      input.image,
+      sessionId,
+      ownerId ?? currentUserId,
+    );
+
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
+    const requestedLocale = input.context?.locale?.trim() || session.locale || undefined;
+    const historyBeforeMessage = await this.repository.listSessionHistory(
+      sessionId,
+      env.llm.maxHistoryMessages,
+    );
+
+    const userGuardrail = await this.guardrail.evaluateInput(
+      text,
+      historyBeforeMessage,
+      requestedLocale,
+    );
+
+    await this.repository.persistMessage({ sessionId, role: 'user', text, imageRef });
+
+    if (!userGuardrail.allow) {
+      const result = await this.guardrail.handleInputBlock({
+        sessionId,
+        reason: userGuardrail.reason,
+        requestedLocale,
+        userId: ownerId,
+      });
+      return { kind: 'refused', result };
+    }
+
+    const history = await this.repository.listSessionHistory(sessionId, env.llm.maxHistoryMessages);
+    const { userMemoryBlock, knowledgeBaseBlock, enrichedImages } = await this.fetchEnrichmentData(
+      history,
+      input.text?.trim(),
+      ownerId,
+    );
 
     return {
       kind: 'ready',
@@ -236,36 +285,28 @@ export class ChatMessageService {
       ownerId,
       userMemoryBlock,
       knowledgeBaseBlock,
+      enrichedImages,
     };
   }
 
-  /**
-   * Persists the assistant response and returns the result. Shared by postMessage and postMessageStream.
-   */
-  // eslint-disable-next-line max-lines-per-function, max-params, complexity -- commits assistant response with guardrail, session updates, artwork matching, cache invalidation
-  private async commitAssistantResponse(
-    sessionId: string,
+  /** Builds session updates and artwork match from the guardrail output and LLM result. */
+  private buildCommitPayload(
     session: Awaited<ReturnType<typeof ensureSessionAccess>>,
+    outputCheck: ReturnType<GuardrailEvaluationService['evaluateOutput']>,
     aiResult: OrchestratorOutput,
     requestedLocale: string | undefined,
-    history: Awaited<ReturnType<ChatRepository['listSessionHistory']>>,
-    ownerId: number | undefined,
-  ): Promise<PostMessageResult> {
-    const outputCheck = this.guardrail.evaluateOutput({
-      text: aiResult.text,
-      history,
-      metadata: aiResult.metadata,
-      requestedLocale,
-    });
-
-    const assistantText = outputCheck.text;
+    enrichedImages?: EnrichedImage[],
+  ) {
     const assistantMetadata = outputCheck.metadata;
+
+    if (enrichedImages && enrichedImages.length > 0) {
+      assistantMetadata.images = enrichedImages;
+    }
 
     const baseSessionUpdates = outputCheck.allowed
       ? computeSessionUpdates(session, assistantMetadata, 'pending')
       : undefined;
 
-    // Normalize locale before persisting to avoid garbage in DB
     const normalizedLocale = requestedLocale ? resolveLocale([requestedLocale]) : undefined;
     const localeChanged = normalizedLocale && normalizedLocale !== resolveLocale([session.locale]);
     const sessionUpdates = localeChanged
@@ -283,6 +324,56 @@ export class ChatMessageService {
             room: aiResult.metadata.detectedArtwork.room,
           }
         : undefined;
+
+    return { assistantText: outputCheck.text, assistantMetadata, sessionUpdates, artworkMatch };
+  }
+
+  /** Invalidates caches and triggers fire-and-forget user memory update. */
+  private async postCommitSideEffects(
+    sessionId: string,
+    ownerId: number | undefined,
+    sessionUpdates: ReturnType<typeof computeSessionUpdates> | undefined,
+  ): Promise<void> {
+    if (this.cache) {
+      await this.cache.delByPrefix(`session:${sessionId}:`);
+      if (ownerId) {
+        await this.cache.delByPrefix(`sessions:user:${String(ownerId)}:`);
+      }
+    }
+
+    if (this.userMemory && ownerId && sessionUpdates?.visitContext) {
+      this.userMemory
+        .updateAfterSession(ownerId, sessionUpdates.visitContext, sessionId)
+        .catch(() => {
+          // swallowed — user memory is non-critical
+        });
+    }
+  }
+
+  /**
+   * Persists the assistant response and returns the result. Shared by postMessage and postMessageStream.
+   */
+  private async commitAssistantResponse(
+    sessionId: string,
+    session: Awaited<ReturnType<typeof ensureSessionAccess>>,
+    aiResult: OrchestratorOutput,
+    options: {
+      requestedLocale: string | undefined;
+      history: Awaited<ReturnType<ChatRepository['listSessionHistory']>>;
+      ownerId: number | undefined;
+      enrichedImages?: EnrichedImage[];
+    },
+  ): Promise<PostMessageResult> {
+    const { requestedLocale, history, ownerId, enrichedImages } = options;
+    const outputCheck = this.guardrail.evaluateOutput({
+      text: aiResult.text,
+      history,
+      metadata: aiResult.metadata,
+      requestedLocale,
+    });
+
+    const { assistantText, assistantMetadata, sessionUpdates, artworkMatch } =
+      this.buildCommitPayload(session, outputCheck, aiResult, requestedLocale, enrichedImages);
 
     let assistantMessage;
     try {
@@ -310,21 +401,7 @@ export class ChatMessageService {
       }
     }
 
-    if (this.cache) {
-      await this.cache.delByPrefix(`session:${sessionId}:`);
-      if (ownerId) {
-        await this.cache.delByPrefix(`sessions:user:${String(ownerId)}:`);
-      }
-    }
-
-    // Fire-and-forget: update cross-session user memory
-    if (this.userMemory && ownerId && sessionUpdates?.visitContext) {
-      this.userMemory
-        .updateAfterSession(ownerId, sessionUpdates.visitContext, sessionId)
-        .catch(() => {
-          // swallowed — user memory is non-critical
-        });
-    }
+    await this.postCommitSideEffects(sessionId, ownerId, sessionUpdates);
 
     return {
       sessionId,
@@ -357,6 +434,7 @@ export class ChatMessageService {
       ownerId,
       userMemoryBlock,
       knowledgeBaseBlock,
+      enrichedImages,
     } = prep;
     const text = input.text?.trim();
 
@@ -377,53 +455,29 @@ export class ChatMessageService {
       knowledgeBaseBlock,
     });
 
-    return await this.commitAssistantResponse(
-      sessionId,
-      session,
-      aiResult,
+    return await this.commitAssistantResponse(sessionId, session, aiResult, {
       requestedLocale,
       history,
       ownerId,
-    );
+      enrichedImages,
+    });
   }
 
-  /** Posts a message with token-by-token streaming and incremental guardrail checks. */
-  // eslint-disable-next-line max-lines-per-function, max-params -- streaming variant needs onToken, onGuardrail, signal callbacks alongside standard params
-  async postMessageStream(
-    sessionId: string,
-    input: PostMessageInput,
-    onToken: (text: string) => void,
-    onGuardrail?: (text: string, reason: GuardrailBlockReason) => void,
-    requestId?: string,
-    currentUserId?: number,
-    signal?: AbortSignal,
-  ): Promise<PostMessageResult> {
-    const prep = await this.prepareMessage(sessionId, input, requestId, currentUserId);
-    if (prep.kind === 'refused') return prep.result;
-
-    const {
-      session,
-      orchestratorImage,
-      requestedLocale,
-      history,
-      redirectHint,
-      ownerId,
-      userMemoryBlock,
-      knowledgeBaseBlock,
-    } = prep;
-    const text = input.text?.trim();
-
-    if (signal?.aborted) {
-      throw new AppError({ message: 'Request aborted', statusCode: 499, code: 'ABORTED' });
-    }
-
-    // Incremental guardrail state
+  /** Builds a chunk handler that strips [META] blocks and runs incremental guardrail checks. */
+  private createStreamChunkHandler(opts: {
+    history: Awaited<ReturnType<ChatRepository['listSessionHistory']>>;
+    requestedLocale?: string;
+    onToken: (text: string) => void;
+    onGuardrail?: (text: string, reason: GuardrailBlockReason) => void;
+    signal?: AbortSignal;
+  }): (chunk: string) => void {
+    const { history, requestedLocale, onToken, onGuardrail, signal } = opts;
     let accumulated = '';
     let artSignalSeen = false;
     let metaStarted = false;
     const META_MARKER = '\n[META]';
 
-    const onChunk = (chunk: string) => {
+    return (chunk: string) => {
       if (signal?.aborted) {
         throw new AppError({ message: 'Client disconnected', statusCode: 499, code: 'ABORTED' });
       }
@@ -431,18 +485,12 @@ export class ChatMessageService {
       accumulated += chunk;
 
       let metaIdx = accumulated.indexOf(META_MARKER);
-      if (metaIdx === -1) {
-        // Fallback: LLM may omit the leading newline before [META]
-        metaIdx = accumulated.indexOf('[META]');
-      }
+      if (metaIdx === -1) metaIdx = accumulated.indexOf('[META]');
       if (metaIdx !== -1) {
         if (!metaStarted) {
           metaStarted = true;
-          const prevLen = accumulated.length - chunk.length;
-          const answerPartLen = metaIdx - prevLen;
-          if (answerPartLen > 0) {
-            onToken(chunk.slice(0, answerPartLen));
-          }
+          const answerPartLen = metaIdx - (accumulated.length - chunk.length);
+          if (answerPartLen > 0) onToken(chunk.slice(0, answerPartLen));
         }
         return;
       }
@@ -463,18 +511,56 @@ export class ChatMessageService {
 
       onToken(chunk);
     };
+  }
+
+  /** Posts a message with token-by-token streaming and incremental guardrail checks. */
+  async postMessageStream(
+    sessionId: string,
+    input: PostMessageInput,
+    callbacks: {
+      onToken: (text: string) => void;
+      onGuardrail?: (text: string, reason: GuardrailBlockReason) => void;
+      requestId?: string;
+      currentUserId?: number;
+      signal?: AbortSignal;
+    },
+  ): Promise<PostMessageResult> {
+    const { onToken, onGuardrail, requestId, currentUserId, signal } = callbacks;
+    const prep = await this.prepareMessage(sessionId, input, requestId, currentUserId);
+    if (prep.kind === 'refused') return prep.result;
+
+    const {
+      session,
+      orchestratorImage,
+      requestedLocale,
+      history,
+      redirectHint,
+      ownerId,
+      userMemoryBlock,
+      knowledgeBaseBlock,
+      enrichedImages,
+    } = prep;
+
+    if (signal?.aborted) {
+      throw new AppError({ message: 'Request aborted', statusCode: 499, code: 'ABORTED' });
+    }
+
+    const onChunk = this.createStreamChunkHandler({
+      history,
+      requestedLocale,
+      onToken,
+      onGuardrail,
+      signal,
+    });
 
     const aiResult: OrchestratorOutput = await this.orchestrator.generateStream(
       {
         history,
-        text,
+        text: input.text?.trim(),
         image: orchestratorImage,
         locale: requestedLocale,
         museumMode: input.context?.museumMode ?? session.museumMode,
-        context: {
-          location: input.context?.location,
-          guideLevel: input.context?.guideLevel,
-        },
+        context: { location: input.context?.location, guideLevel: input.context?.guideLevel },
         visitContext: session.visitContext,
         requestId,
         redirectHint,
@@ -484,14 +570,12 @@ export class ChatMessageService {
       onChunk,
     );
 
-    return await this.commitAssistantResponse(
-      sessionId,
-      session,
-      aiResult,
+    return await this.commitAssistantResponse(sessionId, session, aiResult, {
       requestedLocale,
       history,
       ownerId,
-    );
+      enrichedImages,
+    });
   }
 
   /** Transcribes an audio message then delegates to postMessage for LLM processing. */

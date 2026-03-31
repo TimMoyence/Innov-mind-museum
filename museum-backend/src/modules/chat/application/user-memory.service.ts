@@ -19,6 +19,67 @@ const MAX_ARTWORKS = 20;
 const CACHE_TTL_SECONDS = 3600; // 1 hour
 const CACHE_PREFIX = 'memory:prompt:';
 
+/** Merges preferred expertise from the visit context if enough signals were observed. */
+const mergeExpertise = (updates: UserMemoryUpdates, visitContext: VisitContext): void => {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: detectedExpertise may be empty string at runtime
+  if (visitContext.detectedExpertise && visitContext.expertiseSignals >= 3) {
+    updates.preferredExpertise = visitContext.detectedExpertise;
+  }
+};
+
+/** Appends a new museum to the visited list if not already present, capped at MAX_MUSEUMS. */
+const mergeMuseums = (
+  updates: UserMemoryUpdates,
+  existing: UserMemory | null,
+  museumName: string | undefined,
+): void => {
+  if (!museumName) return;
+  const existingMuseums = existing?.museumsVisited ?? [];
+  const lowerExisting = existingMuseums.map((m) => m.toLowerCase());
+  if (!lowerExisting.includes(museumName.toLowerCase())) {
+    updates.museumsVisited = [...existingMuseums, museumName].slice(-MAX_MUSEUMS);
+  }
+};
+
+/** Merges artworks discussed in this session into the persistent notable artworks list. */
+const mergeArtworks = (
+  updates: UserMemoryUpdates,
+  existing: UserMemory | null,
+  visitContext: VisitContext,
+  sessionId: string,
+): void => {
+  if (visitContext.artworksDiscussed.length === 0) return;
+  const existingArtworks: NotableArtwork[] = existing?.notableArtworks ?? [];
+  const newArtworks: NotableArtwork[] = visitContext.artworksDiscussed.map((a) => ({
+    title: a.title,
+    artist: a.artist,
+    museum: visitContext.museumName ?? undefined,
+    sessionId,
+    discussedAt: a.discussedAt,
+  }));
+  updates.notableArtworks = [...existingArtworks, ...newArtworks].slice(-MAX_ARTWORKS);
+  updates.totalArtworksDiscussed =
+    (existing?.totalArtworksDiscussed ?? 0) + visitContext.artworksDiscussed.length;
+};
+
+/** Merges unique artist names from discussed artworks, capped at MAX_ARTISTS. */
+const mergeArtists = (
+  updates: UserMemoryUpdates,
+  existing: UserMemory | null,
+  visitContext: VisitContext,
+): void => {
+  const newArtists = visitContext.artworksDiscussed
+    .map((a) => a.artist)
+    .filter((a): a is string => Boolean(a));
+  if (newArtists.length === 0) return;
+  const existingArtists = existing?.favoriteArtists ?? [];
+  const lowerExisting = existingArtists.map((a) => a.toLowerCase());
+  const deduped = newArtists.filter((a) => !lowerExisting.includes(a.toLowerCase()));
+  if (deduped.length > 0) {
+    updates.favoriteArtists = [...existingArtists, ...deduped].slice(-MAX_ARTISTS);
+  }
+};
+
 /**
  * Application service for cross-session user memory.
  * Reads/writes user memory, builds prompt blocks, and manages cache invalidation.
@@ -55,7 +116,6 @@ export class UserMemoryService {
    * Merges data from the completed session into the user's persistent memory.
    * Caps arrays to prevent unbounded growth.
    */
-  // eslint-disable-next-line complexity -- merges multiple memory dimensions (expertise, museums, artworks, artists) from visit context
   async updateAfterSession(
     userId: number,
     visitContext: VisitContext | null | undefined,
@@ -69,50 +129,10 @@ export class UserMemoryService {
     };
 
     if (visitContext) {
-      // Merge expertise
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: detectedExpertise may be empty string at runtime
-      if (visitContext.detectedExpertise && visitContext.expertiseSignals >= 3) {
-        updates.preferredExpertise = visitContext.detectedExpertise;
-      }
-
-      // Merge museums visited
-      if (visitContext.museumName) {
-        const existingMuseums = existing?.museumsVisited ?? [];
-        const lowerExisting = existingMuseums.map((m) => m.toLowerCase());
-        if (!lowerExisting.includes(visitContext.museumName.toLowerCase())) {
-          updates.museumsVisited = [...existingMuseums, visitContext.museumName].slice(
-            -MAX_MUSEUMS,
-          );
-        }
-      }
-
-      // Merge notable artworks
-      if (visitContext.artworksDiscussed.length > 0) {
-        const existingArtworks: NotableArtwork[] = existing?.notableArtworks ?? [];
-        const newArtworks: NotableArtwork[] = visitContext.artworksDiscussed.map((a) => ({
-          title: a.title,
-          artist: a.artist,
-          museum: visitContext.museumName ?? undefined,
-          sessionId,
-          discussedAt: a.discussedAt,
-        }));
-        updates.notableArtworks = [...existingArtworks, ...newArtworks].slice(-MAX_ARTWORKS);
-        updates.totalArtworksDiscussed =
-          (existing?.totalArtworksDiscussed ?? 0) + visitContext.artworksDiscussed.length;
-      }
-
-      // Merge favorite artists (unique, from discussed artworks)
-      const newArtists = visitContext.artworksDiscussed
-        .map((a) => a.artist)
-        .filter((a): a is string => Boolean(a));
-      if (newArtists.length > 0) {
-        const existingArtists = existing?.favoriteArtists ?? [];
-        const lowerExisting = existingArtists.map((a) => a.toLowerCase());
-        const deduped = newArtists.filter((a) => !lowerExisting.includes(a.toLowerCase()));
-        if (deduped.length > 0) {
-          updates.favoriteArtists = [...existingArtists, ...deduped].slice(-MAX_ARTISTS);
-        }
-      }
+      mergeExpertise(updates, visitContext);
+      mergeMuseums(updates, existing, visitContext.museumName);
+      mergeArtworks(updates, existing, visitContext, sessionId);
+      mergeArtists(updates, existing, visitContext);
     }
 
     try {

@@ -23,6 +23,7 @@ import { createSummaryFallback, type LlmSectionName } from '../../application/ll
 import { Semaphore } from '../../application/semaphore';
 
 import type { ChatAssistantDiagnostics, ChatAssistantMetadata } from '../../domain/chat.types';
+import type { ChatMessage } from '../../domain/chatMessage.entity';
 import type {
   OrchestratorInput,
   OrchestratorOutput,
@@ -113,6 +114,73 @@ interface LangChainChatOrchestratorDeps {
   circuitBreaker?: LLMCircuitBreaker;
 }
 
+/** Shared logging hooks for section runner — logs start, success, retry, timeout, and error events. */
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- dynamic import() avoids circular dependency with section runner module
+const sectionRunnerHooks: import('../../application/llm-section-runner').SectionRunnerHooks = {
+  onStart: (event) => {
+    logger.info('llm_section_start', {
+      requestId: event.requestId,
+      section: event.name,
+      attempt: event.attempt,
+      timeoutMs: event.timeoutMs,
+      payloadBytes: event.payloadBytes,
+      provider: env.llm.provider,
+      model: env.llm.model,
+    });
+  },
+  onSuccess: (event) => {
+    logger.info('llm_section_success', {
+      requestId: event.requestId,
+      section: event.name,
+      attempt: event.attempt,
+      latencyMs: event.latencyMs,
+      timeoutMs: event.timeoutMs,
+      payloadBytes: event.payloadBytes,
+      provider: env.llm.provider,
+      model: env.llm.model,
+    });
+  },
+  onRetry: (event) => {
+    logger.warn('llm_section_retry', {
+      requestId: event.requestId,
+      section: event.name,
+      attempt: event.attempt,
+      latencyMs: event.latencyMs,
+      timeoutMs: event.timeoutMs,
+      payloadBytes: event.payloadBytes,
+      error: event.error,
+      provider: env.llm.provider,
+      model: env.llm.model,
+    });
+  },
+  onTimeout: (event) => {
+    logger.warn('llm_section_timeout', {
+      requestId: event.requestId,
+      section: event.name,
+      attempt: event.attempt,
+      latencyMs: event.latencyMs,
+      timeoutMs: event.timeoutMs,
+      payloadBytes: event.payloadBytes,
+      error: event.error,
+      provider: env.llm.provider,
+      model: env.llm.model,
+    });
+  },
+  onError: (event) => {
+    logger.warn('llm_section_error', {
+      requestId: event.requestId,
+      section: event.name,
+      attempt: event.attempt,
+      latencyMs: event.latencyMs,
+      timeoutMs: event.timeoutMs,
+      payloadBytes: event.payloadBytes,
+      error: event.error,
+      provider: env.llm.provider,
+      model: env.llm.model,
+    });
+  },
+};
+
 /** LangChain-based implementation of {@link ChatOrchestrator} that delegates to OpenAI, Google, or Deepseek models. */
 export class LangChainChatOrchestrator implements ChatOrchestrator {
   private readonly model: ChatModel | null;
@@ -131,13 +199,173 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     return this.circuitBreaker.getState();
   }
 
+  /** Invokes the LLM for a single section behind circuit-breaker + semaphore, wrapped in a Sentry span. */
+  // eslint-disable-next-line max-params -- LLM invocation requires model, messages, signal, section name, timeout, and payload size
+  private async invokeSection(
+    model: ChatModel,
+    sectionMessages: unknown,
+    signal: AbortSignal,
+    sectionName: string,
+    timeoutMs: number,
+    payloadBytes: number,
+  ): Promise<string> {
+    return await startSpan(
+      {
+        name: `llm.section.${sectionName}`,
+        op: 'ai.invoke',
+        attributes: {
+          'llm.section': sectionName,
+          'llm.timeout_ms': timeoutMs,
+          'llm.payload_bytes': payloadBytes,
+        },
+      },
+      async () => {
+        const result = await this.circuitBreaker.execute(() =>
+          this.semaphore.use(async () => await model.invoke(sectionMessages, { signal })),
+        );
+        return toContentString(result.content);
+      },
+    );
+  }
+
+  /**
+   * Streams LLM output for a single section behind circuit-breaker + semaphore, wrapped in a Sentry span.
+   * Appends every chunk to `accumulator` so the caller can access partial content on error.
+   */
+  private async streamSection(
+    model: ChatModel,
+    sectionMessages: unknown,
+    signal: AbortSignal,
+    onChunk: (text: string) => void,
+    accumulator: { text: string },
+  ): Promise<string> {
+    return await startSpan({ name: 'llm.stream', op: 'ai.stream' }, async () => {
+      const stream = await model.stream(sectionMessages, { signal });
+      for await (const chunk of stream) {
+        const chunkText = toContentString(chunk.content);
+        if (chunkText) {
+          accumulator.text += chunkText;
+          onChunk(chunkText);
+        }
+      }
+      return accumulator.text;
+    });
+  }
+
+  /** Assembles diagnostics sections and logs orchestration completion. */
+  // eslint-disable-next-line max-lines-per-function, max-params -- response assembly aggregates all section results, diagnostics, and fallback logic into one coherent output
+  private assembleResponse(
+    input: OrchestratorInput,
+    sectionPlan: ReturnType<typeof buildOrchestratorMessages>['sectionPlan'],
+    bySection: Map<LlmSectionName, SectionRunResult<string>>,
+    recentHistory: ChatMessage[],
+    normalizedText: string | undefined,
+    startedAt: number,
+  ): OrchestratorOutput {
+    const summaryResult = bySection.get('summary');
+    let text: string;
+    let metadata: ChatAssistantMetadata = {};
+    let degraded = false;
+    let summaryFallbackApplied = false;
+
+    if (summaryResult?.status === 'success') {
+      const parsed = parseAssistantResponse(summaryResult.value);
+      text = parsed.answer;
+      metadata = parsed.metadata;
+    } else {
+      summaryFallbackApplied = true;
+      degraded = true;
+      text = createSummaryFallback({
+        history: recentHistory,
+        question: normalizedText,
+        location: input.context?.location,
+        locale: input.locale,
+        museumMode: input.museumMode,
+      });
+
+      logger.warn('llm_section_fallback', {
+        requestId: input.requestId,
+        section: 'summary',
+        reason:
+          summaryResult?.status === 'timeout'
+            ? 'timeout'
+            : (summaryResult?.status ?? 'missing-result'),
+      });
+    }
+
+    if (!text) {
+      text = 'I can help with artworks, artist context, and guided museum visits.';
+    }
+
+    const totalLatencyMs = Date.now() - startedAt;
+    const profile: ChatAssistantDiagnostics['profile'] = 'single_section';
+
+    const diagnosticsSections: ChatAssistantDiagnostics['sections'] = sectionPlan.map((section) => {
+      const result = bySection.get(section.name);
+
+      if (!result) {
+        return {
+          name: section.name,
+          status: summaryFallbackApplied ? 'fallback' : 'error',
+          attempts: 0,
+          latencyMs: 0,
+          timeoutMs: section.timeoutMs,
+          payloadBytes: 0,
+          error: 'No section result',
+        };
+      }
+
+      return {
+        name: section.name,
+        status: summaryFallbackApplied ? 'fallback' : result.status,
+        attempts: result.attempts,
+        latencyMs: result.latencyMs,
+        timeoutMs: result.timeoutMs,
+        payloadBytes: result.payloadBytes,
+        ...(result.status !== 'success' ? { error: result.error } : {}),
+      };
+    });
+
+    logger.info('llm_orchestration_complete', {
+      requestId: input.requestId,
+      profile,
+      provider: env.llm.provider,
+      model: env.llm.model,
+      degraded,
+      totalLatencyMs,
+      sections: diagnosticsSections.map((section) => ({
+        name: section.name,
+        status: section.status,
+        attempts: section.attempts,
+        latencyMs: section.latencyMs,
+      })),
+    });
+
+    if (env.llm.includeDiagnostics) {
+      metadata = {
+        ...metadata,
+        diagnostics: {
+          profile,
+          degraded,
+          totalLatencyMs,
+          sections: diagnosticsSections,
+        },
+      };
+    }
+
+    Sentry.getActiveSpan()?.setAttribute('llm.latency_ms', totalLatencyMs);
+    Sentry.getActiveSpan()?.setAttribute('llm.degraded', degraded);
+
+    return { text, metadata };
+  }
+
   /**
    * Builds section-based prompts, invokes the LLM with retry/timeout logic, and assembles the final response.
    *
    * @param input - Conversation history, user text/image, locale, museum context, etc.
    * @returns Generated text and metadata (citations, diagnostics).
    */
-  // eslint-disable-next-line max-lines-per-function -- orchestrator builds prompts, invokes LLM with retries, and parses response in a single traced span
+  // eslint-disable-next-line max-lines-per-function -- orchestration method wires section tasks, retry logic, and tracing into a single Sentry span
   async generate(input: OrchestratorInput): Promise<OrchestratorOutput> {
     return await startSpan(
       {
@@ -150,7 +378,6 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           'llm.history_length': input.history.length,
         },
       },
-      // eslint-disable-next-line max-lines-per-function -- traced span callback contains the full orchestration pipeline
       async () => {
         const startedAt = Date.now();
 
@@ -179,9 +406,11 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
             section.prompt,
             historyMessages,
             userMessage,
-            input.userMemoryBlock,
-            input.knowledgeBaseBlock,
-            input.redirectHint,
+            {
+              userMemoryBlock: input.userMemoryBlock,
+              knowledgeBaseBlock: input.knowledgeBaseBlock,
+              redirectHint: input.redirectHint,
+            },
           );
 
           const payloadBytes = estimatePayloadBytes(sectionMessages);
@@ -190,31 +419,15 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
             name: section.name,
             timeoutMs: section.timeoutMs,
             payloadBytes,
-            run: async (signal: AbortSignal) => {
-              return await startSpan(
-                {
-                  name: `llm.section.${section.name}`,
-                  op: 'ai.invoke',
-                  attributes: {
-                    'llm.section': section.name,
-                    'llm.timeout_ms': section.timeoutMs,
-                    'llm.payload_bytes': payloadBytes,
-                  },
-                },
-                // eslint-disable-next-line sonarjs/no-nested-functions -- tracing span callback wraps circuit-breaker + semaphore-guarded LLM invocation
-                async () => {
-                  const result = await this.circuitBreaker.execute(
-                    // eslint-disable-next-line max-nested-callbacks -- circuit breaker wraps semaphore + model invocation
-                    () =>
-                      this.semaphore.use(
-                        // eslint-disable-next-line max-nested-callbacks -- semaphore wraps model invocation
-                        async () => await model.invoke(sectionMessages, { signal }),
-                      ),
-                  );
-                  return toContentString(result.content);
-                },
-              );
-            },
+            run: async (signal: AbortSignal) =>
+              await this.invokeSection(
+                model,
+                sectionMessages,
+                signal,
+                section.name,
+                section.timeoutMs,
+                payloadBytes,
+              ),
           };
         });
 
@@ -228,70 +441,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
             if (status === 'timeout') return true;
             return isRetryableError(error);
           },
-          hooks: {
-            onStart: (event) => {
-              logger.info('llm_section_start', {
-                requestId: event.requestId,
-                section: event.name,
-                attempt: event.attempt,
-                timeoutMs: event.timeoutMs,
-                payloadBytes: event.payloadBytes,
-                provider: env.llm.provider,
-                model: env.llm.model,
-              });
-            },
-            onSuccess: (event) => {
-              logger.info('llm_section_success', {
-                requestId: event.requestId,
-                section: event.name,
-                attempt: event.attempt,
-                latencyMs: event.latencyMs,
-                timeoutMs: event.timeoutMs,
-                payloadBytes: event.payloadBytes,
-                provider: env.llm.provider,
-                model: env.llm.model,
-              });
-            },
-            onRetry: (event) => {
-              logger.warn('llm_section_retry', {
-                requestId: event.requestId,
-                section: event.name,
-                attempt: event.attempt,
-                latencyMs: event.latencyMs,
-                timeoutMs: event.timeoutMs,
-                payloadBytes: event.payloadBytes,
-                error: event.error,
-                provider: env.llm.provider,
-                model: env.llm.model,
-              });
-            },
-            onTimeout: (event) => {
-              logger.warn('llm_section_timeout', {
-                requestId: event.requestId,
-                section: event.name,
-                attempt: event.attempt,
-                latencyMs: event.latencyMs,
-                timeoutMs: event.timeoutMs,
-                payloadBytes: event.payloadBytes,
-                error: event.error,
-                provider: env.llm.provider,
-                model: env.llm.model,
-              });
-            },
-            onError: (event) => {
-              logger.warn('llm_section_error', {
-                requestId: event.requestId,
-                section: event.name,
-                attempt: event.attempt,
-                latencyMs: event.latencyMs,
-                timeoutMs: event.timeoutMs,
-                payloadBytes: event.payloadBytes,
-                error: event.error,
-                provider: env.llm.provider,
-                model: env.llm.model,
-              });
-            },
-          },
+          hooks: sectionRunnerHooks,
         });
 
         const bySection = new Map<LlmSectionName, SectionRunResult<string>>();
@@ -299,106 +449,14 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           bySection.set(result.name as LlmSectionName, result);
         }
 
-        const summaryResult = bySection.get('summary');
-        let text: string;
-        let metadata: ChatAssistantMetadata = {};
-        let degraded = false;
-        let summaryFallbackApplied = false;
-
-        if (summaryResult?.status === 'success') {
-          const parsed = parseAssistantResponse(summaryResult.value);
-          text = parsed.answer;
-          metadata = parsed.metadata;
-        } else {
-          summaryFallbackApplied = true;
-          degraded = true;
-          text = createSummaryFallback({
-            history: recentHistory,
-            question: normalizedText,
-            location: input.context?.location,
-            locale: input.locale,
-            museumMode: input.museumMode,
-          });
-
-          logger.warn('llm_section_fallback', {
-            requestId: input.requestId,
-            section: 'summary',
-            reason:
-              summaryResult?.status === 'timeout'
-                ? 'timeout'
-                : (summaryResult?.status ?? 'missing-result'),
-          });
-        }
-
-        if (!text) {
-          text = 'I can help with artworks, artist context, and guided museum visits.';
-        }
-
-        const totalLatencyMs = Date.now() - startedAt;
-        const profile: ChatAssistantDiagnostics['profile'] = 'single_section';
-
-        const diagnosticsSections: ChatAssistantDiagnostics['sections'] = sectionPlan.map(
-          (section) => {
-            const result = bySection.get(section.name);
-
-            if (!result) {
-              return {
-                name: section.name,
-                status: summaryFallbackApplied ? 'fallback' : 'error',
-                attempts: 0,
-                latencyMs: 0,
-                timeoutMs: section.timeoutMs,
-                payloadBytes: 0,
-                error: 'No section result',
-              };
-            }
-
-            return {
-              name: section.name,
-              status: summaryFallbackApplied ? 'fallback' : result.status,
-              attempts: result.attempts,
-              latencyMs: result.latencyMs,
-              timeoutMs: result.timeoutMs,
-              payloadBytes: result.payloadBytes,
-              ...(result.status !== 'success' ? { error: result.error } : {}),
-            };
-          },
+        return this.assembleResponse(
+          input,
+          sectionPlan,
+          bySection,
+          recentHistory,
+          normalizedText,
+          startedAt,
         );
-
-        logger.info('llm_orchestration_complete', {
-          requestId: input.requestId,
-          profile,
-          provider: env.llm.provider,
-          model: env.llm.model,
-          degraded,
-          totalLatencyMs,
-          sections: diagnosticsSections.map((section) => ({
-            name: section.name,
-            status: section.status,
-            attempts: section.attempts,
-            latencyMs: section.latencyMs,
-          })),
-        });
-
-        if (env.llm.includeDiagnostics) {
-          metadata = {
-            ...metadata,
-            diagnostics: {
-              profile,
-              degraded,
-              totalLatencyMs,
-              sections: diagnosticsSections,
-            },
-          };
-        }
-
-        Sentry.getActiveSpan()?.setAttribute('llm.latency_ms', totalLatencyMs);
-        Sentry.getActiveSpan()?.setAttribute('llm.degraded', degraded);
-
-        return {
-          text,
-          metadata,
-        };
       },
     ); // end startSpan('llm.orchestrate')
   }
@@ -411,7 +469,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
    * @param onChunk - Called with each text token as it arrives from the LLM.
    * @returns Generated text and metadata after the stream completes.
    */
-  // eslint-disable-next-line max-lines-per-function -- streaming orchestration requires setup, streaming loop, and response assembly
+  // eslint-disable-next-line max-lines-per-function -- streaming orchestration wires section tasks, chunk handling, and tracing into a single Sentry span
   async generateStream(
     input: OrchestratorInput,
     onChunk: (text: string) => void,
@@ -426,7 +484,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           'llm.has_image': !!input.image,
         },
       },
-      // eslint-disable-next-line max-lines-per-function -- traced span callback contains the full streaming pipeline
+      // eslint-disable-next-line max-lines-per-function -- streaming callback is the core of generateStream, extracting it would add indirection without reducing complexity
       async () => {
         const {
           normalizedText,
@@ -454,9 +512,11 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           section.prompt,
           historyMessages,
           userMessage,
-          input.userMemoryBlock,
-          input.knowledgeBaseBlock,
-          input.redirectHint,
+          {
+            userMemoryBlock: input.userMemoryBlock,
+            knowledgeBaseBlock: input.knowledgeBaseBlock,
+            redirectHint: input.redirectHint,
+          },
         );
 
         const timeoutMs = section.timeoutMs;
@@ -465,23 +525,19 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           controller.abort();
         }, timeoutMs);
 
-        let accumulated = '';
+        const accumulator = { text: '' };
         try {
           const rawContent = await this.circuitBreaker.execute(() =>
-            this.semaphore.use(async () => {
-              // eslint-disable-next-line sonarjs/no-nested-functions, max-nested-callbacks -- Sentry tracing span callback inside semaphore + circuit breaker
-              return await startSpan({ name: 'llm.stream', op: 'ai.stream' }, async () => {
-                const stream = await model.stream(sectionMessages, { signal: controller.signal });
-                for await (const chunk of stream) {
-                  const chunkText = toContentString(chunk.content);
-                  if (chunkText) {
-                    accumulated += chunkText;
-                    onChunk(chunkText);
-                  }
-                }
-                return accumulated;
-              });
-            }),
+            this.semaphore.use(
+              async () =>
+                await this.streamSection(
+                  model,
+                  sectionMessages,
+                  controller.signal,
+                  onChunk,
+                  accumulator,
+                ),
+            ),
           );
 
           clearTimeout(timeout);
@@ -519,8 +575,8 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           });
 
           // If we have partial content, try to parse what we have
-          if (accumulated.length > 0) {
-            const parsed = parseAssistantResponse(accumulated);
+          if (accumulator.text.length > 0) {
+            const parsed = parseAssistantResponse(accumulator.text);
             return { text: parsed.answer, metadata: parsed.metadata };
           }
 

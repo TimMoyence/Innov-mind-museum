@@ -263,6 +263,59 @@ export class TypeOrmChatRepository implements ChatRepository {
     return [...rows].reverse();
   }
 
+  /** Fetches message counts per session in a single query. */
+  private async fetchMessageCounts(sessionIds: string[]): Promise<Map<string, number>> {
+    const messageCounts = await this.messageRepo
+      .createQueryBuilder('message')
+      .select('message.sessionId', 'sessionId')
+      .addSelect('COUNT(message.id)', 'messageCount')
+      .where('message.sessionId IN (:...sessionIds)', { sessionIds })
+      .groupBy('message.sessionId')
+      .getRawMany<{ sessionId: string; messageCount: string }>();
+
+    const countBySessionId = new Map<string, number>();
+    for (const row of messageCounts) {
+      countBySessionId.set(row.sessionId, Number(row.messageCount) || 0);
+    }
+    return countBySessionId;
+  }
+
+  /** Fetches latest-message previews per session using DISTINCT ON. */
+  private async fetchMessagePreviews(
+    sessionIds: string[],
+  ): Promise<Map<string, { role: ChatRole; text: string | null; createdAt: Date }>> {
+    const previewRows = await this.messageRepo
+      .createQueryBuilder('message')
+      .select('message.sessionId', 'sessionId')
+      .addSelect('message.role', 'role')
+      .addSelect('message.text', 'text')
+      .addSelect('message.createdAt', 'createdAt')
+      .where('message.sessionId IN (:...sessionIds)', { sessionIds })
+      .distinctOn(['message.sessionId'])
+      .orderBy('message.sessionId', 'ASC')
+      .addOrderBy('message.createdAt', 'DESC')
+      .addOrderBy('message.id', 'DESC')
+      .getRawMany<{
+        sessionId: string;
+        role: ChatRole;
+        text: string | null;
+        createdAt: Date | string;
+      }>();
+
+    const previewBySessionId = new Map<
+      string,
+      { role: ChatRole; text: string | null; createdAt: Date }
+    >();
+    for (const row of previewRows) {
+      previewBySessionId.set(row.sessionId, {
+        role: row.role,
+        text: row.text,
+        createdAt: row.createdAt instanceof Date ? row.createdAt : new Date(row.createdAt),
+      });
+    }
+    return previewBySessionId;
+  }
+
   /**
    * Lists chat sessions for a user with cursor-based pagination, including message count and latest-message preview.
    *
@@ -272,7 +325,6 @@ export class TypeOrmChatRepository implements ChatRepository {
    * @param root0.cursor - Optional pagination cursor.
    * @returns A page of sessions with previews, message counts, `hasMore` flag, and `nextCursor`.
    */
-  // eslint-disable-next-line max-lines-per-function -- cursor pagination with message counts and previews requires multiple queries
   async listSessions({ userId, limit, cursor }: ListSessionsParams): Promise<ChatSessionsPage> {
     const effectiveLimit = Math.max(1, Math.min(limit, 50));
     const queryBuilder = this.sessionRepo
@@ -315,48 +367,10 @@ export class TypeOrmChatRepository implements ChatRepository {
       };
     }
 
-    const messageCounts = await this.messageRepo
-      .createQueryBuilder('message')
-      .select('message.sessionId', 'sessionId')
-      .addSelect('COUNT(message.id)', 'messageCount')
-      .where('message.sessionId IN (:...sessionIds)', { sessionIds })
-      .groupBy('message.sessionId')
-      .getRawMany<{ sessionId: string; messageCount: string }>();
-
-    const countBySessionId = new Map<string, number>();
-    for (const row of messageCounts) {
-      countBySessionId.set(row.sessionId, Number(row.messageCount) || 0);
-    }
-
-    const previewRows = await this.messageRepo
-      .createQueryBuilder('message')
-      .select('message.sessionId', 'sessionId')
-      .addSelect('message.role', 'role')
-      .addSelect('message.text', 'text')
-      .addSelect('message.createdAt', 'createdAt')
-      .where('message.sessionId IN (:...sessionIds)', { sessionIds })
-      .distinctOn(['message.sessionId'])
-      .orderBy('message.sessionId', 'ASC')
-      .addOrderBy('message.createdAt', 'DESC')
-      .addOrderBy('message.id', 'DESC')
-      .getRawMany<{
-        sessionId: string;
-        role: ChatRole;
-        text: string | null;
-        createdAt: Date | string;
-      }>();
-
-    const previewBySessionId = new Map<
-      string,
-      { role: ChatRole; text: string | null; createdAt: Date }
-    >();
-    for (const row of previewRows) {
-      previewBySessionId.set(row.sessionId, {
-        role: row.role,
-        text: row.text,
-        createdAt: row.createdAt instanceof Date ? row.createdAt : new Date(row.createdAt),
-      });
-    }
+    const [countBySessionId, previewBySessionId] = await Promise.all([
+      this.fetchMessageCounts(sessionIds),
+      this.fetchMessagePreviews(sessionIds),
+    ]);
 
     return {
       sessions: sessions.map((session) => ({

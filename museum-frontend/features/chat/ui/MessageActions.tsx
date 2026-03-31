@@ -38,6 +38,8 @@ export const MessageActions = ({
     return null;
   }
 
+  const { openQuestion } = metadata;
+
   return (
     <View style={styles.container}>
       {metadata.followUpQuestions?.length ? (
@@ -91,7 +93,7 @@ export const MessageActions = ({
         </View>
       ) : null}
 
-      {metadata.openQuestion ? (
+      {openQuestion ? (
         <Pressable
           style={[
             styles.openQuestionChip,
@@ -99,19 +101,18 @@ export const MessageActions = ({
             isSendingDisabled && styles.disabledChip,
           ]}
           accessibilityRole="button"
-          accessibilityLabel={metadata.openQuestion}
+          accessibilityLabel={openQuestion}
           accessibilityHint={t('a11y.chat.recommendation_hint')}
           onPress={() => {
             if (!isSendingDisabled) {
-              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guarded by conditional render
-              onRecommendationPress(metadata.openQuestion!);
+              onRecommendationPress(openQuestion);
             }
           }}
           disabled={isSendingDisabled}
         >
           <Ionicons name="bulb-outline" size={14} color={theme.primary} />
           <Text style={[styles.openQuestionText, { color: theme.primary }]} numberOfLines={2}>
-            {metadata.openQuestion}
+            {openQuestion}
           </Text>
         </Pressable>
       ) : null}

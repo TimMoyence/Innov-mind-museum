@@ -135,12 +135,12 @@ export const useChatSession = (sessionId: string) => {
                 : null,
           };
 
-          if (assistantMessage.transcription?.text) {
+          const transcriptionText = assistantMessage.transcription?.text;
+          if (transcriptionText) {
             setMessages((prev) =>
               prev.map((message) =>
                 message.id === optimisticMessage.id
-                  ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guarded by if check
-                    { ...message, text: `🎙 ${assistantMessage.transcription!.text}` }
+                  ? { ...message, text: `🎙 ${transcriptionText}` }
                   : message,
               ),
             );
