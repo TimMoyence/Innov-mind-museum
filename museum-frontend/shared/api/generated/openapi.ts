@@ -1048,6 +1048,54 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/chat/messages/{messageId}/feedback': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Set or toggle feedback (thumbs up/down) on an assistant message */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          messageId: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @enum {string} */
+            value: 'positive' | 'negative';
+          };
+        };
+      };
+      responses: {
+        /** @description Feedback set, updated, or removed (toggle) */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['FeedbackMessageResponse'];
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        404: components['responses']['NotFound'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/chat/messages/{messageId}/image-url': {
     parameters: {
       query?: never;
@@ -2336,6 +2384,12 @@ export interface components {
       /** Format: uuid */
       messageId: string;
       reported: boolean;
+    };
+    FeedbackMessageResponse: {
+      /** Format: uuid */
+      messageId: string;
+      /** @enum {string} */
+      status: 'created' | 'updated' | 'removed';
     };
     SignedImageUrlResponse: {
       /** Format: uri */

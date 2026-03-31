@@ -152,6 +152,45 @@ When modifying the chat pipeline:
 - Keep message ordering: `[SystemMessage(system), SystemMessage(section), ...history, HumanMessage(user)]`
 - The guardrail in `chat.service.ts` is the single source of truth for content filtering — do not add duplicate checks elsewhere
 
+## ESLint Discipline
+
+**`eslint-disable` is a last resort, not a first reflex.** If ESLint flags code, the rule exists for a reason — find the proper fix before reaching for a disable comment.
+
+### Decision tree
+
+1. **Understand the rule** — read the ESLint docs for the rule. What problem does it prevent?
+2. **Fix the code** — refactor to satisfy the rule. This is the correct path 90% of the time.
+3. **Only disable if ALL of these are true:**
+   - The rule is a false positive for this specific context (e.g., `require()` for RN image assets, `||` for intentional empty-string-as-falsy)
+   - No alternative code structure satisfies both the rule and the intent
+   - A `-- reason` comment explains WHY the disable is necessary
+
+### Common anti-patterns to avoid
+
+| Don't do this | Do this instead |
+|---|---|
+| `eslint-disable complexity` on a 60-line function | Extract helper functions to reduce cyclomatic complexity |
+| `eslint-disable max-lines-per-function` repeatedly | Split the function or extract sub-routines |
+| `eslint-disable max-params` with 7+ params | Use an options object: `fn(id, options: { ... })` |
+| `eslint-disable react/display-name` on `memo()` | `memo(function ComponentName() { ... })` |
+| `eslint-disable @typescript-eslint/no-misused-promises` | `onPress={() => { void handleAsync() }}` |
+| `eslint-disable @typescript-eslint/no-explicit-any` | Use `unknown` and narrow with type guards |
+| `eslint-disable max-lines` at file level | Split the file into focused modules |
+| `eslint-disable @typescript-eslint/prefer-optional-chain` | Use `foo?.bar` instead of `foo && foo.bar` |
+
+### Justified disable patterns (reference)
+
+These are the ONLY categories where `eslint-disable` is acceptable in this project:
+- `prefer-nullish-coalescing` when intentionally treating empty string as falsy (`||` vs `??`)
+- `no-unnecessary-condition` at trust boundaries (JWT payloads, raw DB rows, external API data)
+- `require-await` on no-op implementations of async interfaces (null-object pattern)
+- `no-unnecessary-type-parameters` on generic interface APIs where `T` constrains input
+- `no-require-imports` for React Native `require()` asset pattern and OpenTelemetry conditional loading
+- `no-control-regex` in input sanitization code
+- `sonarjs/hashing` for non-cryptographic checksums (S3 Content-MD5)
+- `sonarjs/pseudo-random` for jitter/backoff, not security
+- `react-hooks/refs` for React Native `Animated.Value` / `PanResponder` refs read once at creation (e.g. `useRef(new Animated.Value(0)).current`)
+
 ## Deployment
 
 - Backend: Docker image → GHCR → VPS OVH (see `docs/DEPLOYMENT_STEP_BY_STEP.md`)

@@ -14,6 +14,7 @@ import type {
   UserChatExportData,
 } from '@modules/chat/domain/chat.repository.interface';
 import type { CreateSessionInput } from '@modules/chat/domain/chat.types';
+import type { FeedbackValue } from '@modules/chat/domain/messageFeedback.entity';
 import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import { ChatSession } from '@modules/chat/domain/chatSession.entity';
 import { LocalImageStorage } from '@modules/chat/adapters/secondary/image-storage.stub';
@@ -32,6 +33,7 @@ class InMemoryChatRepository implements ChatRepository {
   private readonly messages = new Map<string, ChatMessage[]>();
   private readonly artworkMatches: PersistArtworkMatchInput[] = [];
   private readonly reports = new Map<string, Set<number>>();
+  private readonly feedback = new Map<string, FeedbackValue>();
 
   private decodeCursor(cursor: string): { updatedAt: string; id: string } | null {
     try {
@@ -223,6 +225,26 @@ class InMemoryChatRepository implements ChatRepository {
         };
       }),
     };
+  }
+
+  async upsertMessageFeedback(
+    messageId: string,
+    userId: number,
+    value: FeedbackValue,
+  ): Promise<void> {
+    this.feedback.set(`${messageId}:${String(userId)}`, value);
+  }
+
+  async deleteMessageFeedback(messageId: string, userId: number): Promise<void> {
+    this.feedback.delete(`${messageId}:${String(userId)}`);
+  }
+
+  async getMessageFeedback(
+    messageId: string,
+    userId: number,
+  ): Promise<{ value: FeedbackValue } | null> {
+    const value = this.feedback.get(`${messageId}:${String(userId)}`);
+    return value ? { value } : null;
   }
 
   async listSessions(params: ListSessionsParams): Promise<ChatSessionsPage> {

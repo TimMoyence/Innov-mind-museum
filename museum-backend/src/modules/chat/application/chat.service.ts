@@ -8,6 +8,7 @@ import type { GuardrailBlockReason } from './art-topic-guardrail';
 import type {
   CreateSessionResult,
   DeleteSessionResult,
+  FeedbackMessageResult,
   ListSessionsResult,
   PostAudioMessageResult,
   PostMessageResult,
@@ -25,6 +26,7 @@ import type {
   PostMessageInput,
   ReportReason,
 } from '../domain/chat.types';
+import type { FeedbackValue } from '../domain/messageFeedback.entity';
 import type { AudioTranscriber } from '../domain/ports/audio-transcriber.port';
 import type { ChatOrchestrator } from '../domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '../domain/ports/image-storage.port';
@@ -270,6 +272,23 @@ export class ChatService {
     comment?: string,
   ): Promise<ReportMessageResult> {
     return await this.media.reportMessage(messageId, reason, currentUserId, comment);
+  }
+
+  /**
+   * Sets or toggles feedback (thumbs up/down) on an assistant message.
+   *
+   * @param messageId - UUID of the assistant message to rate.
+   * @param currentUserId - Authenticated user id providing feedback.
+   * @param value - Feedback value ('positive' or 'negative').
+   * @returns The feedback status: 'created', 'updated', or 'removed'.
+   * @throws {AppError} 400 on invalid id or non-assistant message, 404 if not found.
+   */
+  async setMessageFeedback(
+    messageId: string,
+    currentUserId: number,
+    value: FeedbackValue,
+  ): Promise<FeedbackMessageResult> {
+    return await this.media.setMessageFeedback(messageId, currentUserId, value);
   }
 
   /**

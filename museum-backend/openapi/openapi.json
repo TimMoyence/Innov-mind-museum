@@ -293,6 +293,14 @@
           "reported": { "type": "boolean" }
         }
       },
+      "FeedbackMessageResponse": {
+        "type": "object",
+        "required": ["messageId", "status"],
+        "properties": {
+          "messageId": { "type": "string", "format": "uuid" },
+          "status": { "type": "string", "enum": ["created", "updated", "removed"] }
+        }
+      },
       "SignedImageUrlResponse": {
         "type": "object",
         "required": ["url", "expiresAt"],
@@ -1354,6 +1362,43 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/ReportMessageResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/chat/messages/{messageId}/feedback": {
+      "post": {
+        "tags": ["Chat"],
+        "summary": "Set or toggle feedback (thumbs up/down) on an assistant message",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "messageId", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["value"],
+                "properties": {
+                  "value": { "type": "string", "enum": ["positive", "negative"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Feedback set, updated, or removed (toggle)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FeedbackMessageResponse" }
               }
             }
           },

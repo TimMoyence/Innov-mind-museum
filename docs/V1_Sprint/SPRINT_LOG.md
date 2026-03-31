@@ -1826,3 +1826,66 @@ Run /team R15-refactor en 2 phases. Phase 4 : extraction de 5 services backend d
 2. **StyleSheet reste avec le composant** — pas de shared styles entre routes et composants extraits
 3. **Type cast pour i18n keys manquantes** (`as 'common.close'`) — compile maintenant, cles ajoutees plus tard
 4. **image-storage.s3.ts a -20% (pas -50%)** — les fonctions restantes (presigned URL, batch ops, HTTP) sont fortement couplees
+
+---
+
+## Production Hardening — Mars 29-31 (hors cycle /team)
+
+> 35 commits, travail effectue sans orchestration /team.
+> KB catchup execute 2026-03-31 apres constat de 3 jours sans mise a jour KB.
+> Commits: `0864a2b` (FlashList fix) a `58066cd` (DRY test infra)
+
+### Contexte
+
+Apres l'audit R16 (81/100 CONDITIONAL GO, 28 mars), du travail de development a ete effectue directement sans passer par le cycle /team. 35 commits sur 2 jours couvrant des features, fixes de production, refactors, et tests. Les 3 conditions GO de R16 (path-to-regexp ReDoS, langsmith SSRF, reset tokens non-hashes) ont ete resolues dans ce travail, mais n'ont pas ete capturees dans la KB.
+
+### Travail realise
+
+**Security (R16 GO conditions)**
+- path-to-regexp pin 8.4.0 (fix ReDoS) — `pnpm.overrides` dans package.json
+- langsmith pin >=0.4.6 (fix SSRF) — `pnpm.overrides` dans package.json
+- Reset tokens SHA-256 hashes — `forgotPassword.useCase.ts` + `resetPassword.useCase.ts`
+- LLMCircuitBreaker wire — importe dans `langchain.orchestrator.ts` + `api.router.ts`
+- Route tests 0% → 1313L — 7 fichiers supertest (admin, auth, chat, daily-art, museum, review, support)
+
+**Features (7)**
+- Image enrichment pipeline (Wikidata + Unsplash) — `a3d48c4`
+- Leaflet map view + user position dans Museums tab — `ab05961`
+- Quick wins (in-app review, open maps, share, daily art) — `9eb8a0d`
+- Chat core tests, free tier gate, Schema.org — `a7408ae`
+- Geolocation museum search via Overpass API — `b08224d`
+- Reset password page museum-web + museum seed script — `9c33344`
+- PgBouncer connection pooler + K6 200-VU stress test — `76d567e`
+
+**Refactors (4)**
+- 9 repos raw SQL → TypeORM — `6b8675a`
+- ChatModule singleton encapsulation — `ab9f9c3`
+- CI/CD 10 workflows → 3 pipelines paralleles — `995fcf9`
+- DRY test infrastructure + magic bytes fix — `58066cd`
+
+**Fixes (20)**
+- Production readiness audit (14 security/infra fixes + 55 tests) — `a4dffff`
+- DB_SSL=false respecte — `d566a70`
+- FlashList iOS crash fix — `0864a2b`
+- CI/CD: Xcode Cloud, npm ci→install, pgbouncer, continue-on-error — multiples commits
+- Audit fixes: daily art response, map coords, Zod validation, OCR — `911acf0`, `89351cc`, `95fb3b7`
+
+### Metriques
+
+| Metrique | Avant (R16) | Apres | Delta |
+|----------|:-----------:|:-----:|:-----:|
+| Tests backend | 1077 | 1433 | +356 |
+| Tests frontend | 105 | 146 | +41 |
+| Coverage stmts | 68.59% | 72.86% | +4.27pp |
+| Coverage branches | 53.55% | 57.61% | +4.06pp |
+| Typecheck errors | 0 | 0 | 0 |
+| as any | 0 | 4 | +4 |
+| Lint errors | 0 | 0 | 0 |
+| eslint-disable (new) | 0 | 0 | 0 |
+
+### Process — Lecons
+
+1. **AM-010 cree** : Tout travail hors cycle /team doit etre suivi d'un catchup KB dans les 24h
+2. **PE-023 cree** : Au demarrage /team, scanner git log pour commits non-trackes
+3. **5 recommendations R16 resolues** sans etre capturees — 3 jours de desynchronisation KB
+4. **Ratchet maintenu** malgre l'absence de gates — indicateur positif de maturite du code

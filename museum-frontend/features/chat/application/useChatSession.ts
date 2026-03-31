@@ -85,7 +85,7 @@ export const useChatSession = (sessionId: string) => {
           role: 'user',
           text: trimmedText ?? (params.imageUri ? '[Image sent]' : ''),
           createdAt: new Date().toISOString(),
-          image: null,
+          image: params.imageUri ? { url: params.imageUri, expiresAt: '' } : null,
         };
         setMessages((prev) => sortByTime([...prev, offlineMessage]));
         return true;
@@ -102,7 +102,7 @@ export const useChatSession = (sessionId: string) => {
               ? '[Image sent]'
               : ''),
         createdAt: new Date().toISOString(),
-        image: null,
+        image: params.imageUri ? { url: params.imageUri, expiresAt: '' } : null,
       };
 
       setMessages((prev) => sortByTime([...prev, optimisticMessage]));
@@ -206,8 +206,9 @@ export const useChatSession = (sessionId: string) => {
           },
         });
 
-        // Non-streaming fallback
-        if (response && !streamingIdRef.current) {
+        // Non-streaming fallback (image messages or streaming not available)
+        if (response && (!streamingIdRef.current || params.imageUri)) {
+          resetStreaming();
           if (response.message.text) {
             setMessages((prev) => {
               const hasPlaceholder = prev.some((m) => m.id === streamingPlaceholderId);
@@ -229,6 +230,11 @@ export const useChatSession = (sessionId: string) => {
               return prev;
             });
           }
+
+          // Replace local file:// preview with server signed URL
+          if (params.imageUri) {
+            void loadSession();
+          }
         }
 
         setIsStreaming(false);
@@ -243,9 +249,11 @@ export const useChatSession = (sessionId: string) => {
         resetStreaming();
 
         setMessages((prev) =>
-          prev.filter(
-            (message) => message.id !== optimisticMessage.id && !message.id.endsWith('-streaming'),
-          ),
+          prev
+            .filter((message) => !message.id.endsWith('-streaming'))
+            .map((message) =>
+              message.id === optimisticMessage.id ? { ...message, sendFailed: true } : message,
+            ),
         );
         setError(getErrorMessage(sendError));
         return false;
@@ -267,7 +275,19 @@ export const useChatSession = (sessionId: string) => {
       setError,
       streamTextRef,
       streamingIdRef,
+      loadSession,
     ],
+  );
+
+  const retryMessage = useCallback(
+    (failedMessage: ChatUiMessage) => {
+      setMessages((prev) => prev.filter((m) => m.id !== failedMessage.id));
+      void sendMessage({
+        text: failedMessage.text || undefined,
+        imageUri: failedMessage.image?.url ?? undefined,
+      });
+    },
+    [sendMessage],
   );
 
   const refreshMessageImageUrl = useCallback(async (messageId: string) => {
@@ -294,6 +314,7 @@ export const useChatSession = (sessionId: string) => {
     },
     reload: loadSession,
     sendMessage,
+    retryMessage,
     refreshMessageImageUrl,
     locale,
     museumMode,

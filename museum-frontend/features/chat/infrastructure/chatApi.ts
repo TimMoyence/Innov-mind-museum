@@ -281,6 +281,26 @@ export const chatApi = {
   },
 
   /**
+   * Sets or toggles feedback (thumbs up/down) on an assistant message.
+   * @param messageId - ID of the message to rate.
+   * @param value - 'positive' or 'negative'.
+   * @returns Feedback status: created, updated, or removed.
+   */
+  async setMessageFeedback(
+    messageId: string,
+    value: 'positive' | 'negative',
+  ): Promise<{ messageId: string; status: string }> {
+    const data = await openApiRequest({
+      path: '/api/chat/messages/{messageId}/feedback',
+      method: 'post',
+      pathParams: { messageId },
+      body: JSON.stringify({ value }),
+    });
+
+    return data as { messageId: string; status: string };
+  },
+
+  /**
    * Synthesizes speech from an assistant message and returns the audio buffer.
    * @param messageId - ID of the assistant message to synthesize.
    * @returns ArrayBuffer of audio/mpeg data, or null if the message has no text (204).

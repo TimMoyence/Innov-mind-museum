@@ -7,6 +7,7 @@ import type {
   VisitorContext,
 } from './chat.shared-types';
 import type { ReportReason } from '../../../domain/chat.types';
+import type { FeedbackValue } from '../../../domain/messageFeedback.entity';
 
 // Re-export shared types so existing consumers keep working
 export type {
@@ -165,6 +166,17 @@ export interface ReportMessageRequest {
 export interface ReportMessageResponse {
   messageId: string;
   reported: boolean;
+}
+
+/** Validated body for `POST /messages/:messageId/feedback`. */
+export interface FeedbackMessageRequest {
+  value: FeedbackValue;
+}
+
+/** Response shape for `POST /messages/:messageId/feedback`. */
+export interface FeedbackMessageResponse {
+  messageId: string;
+  status: 'created' | 'updated' | 'removed';
 }
 
 /** Standard API error envelope returned by all chat endpoints on failure. */
@@ -396,6 +408,38 @@ export const parseReportMessageRequest = (payload: unknown): ReportMessageReques
     reason: reason as ReportReason,
     comment,
   };
+};
+
+/** Validates and transforms a raw request body into a {@link FeedbackMessageRequest}. */
+export const parseFeedbackMessageRequest = (payload: unknown): FeedbackMessageRequest => {
+  if (!isRecord(payload)) {
+    throw badRequest('Payload must be an object');
+  }
+
+  const value = payload.value;
+  if (typeof value !== 'string' || !value.trim()) {
+    throw badRequest('value is required');
+  }
+
+  const allowedValues: FeedbackValue[] = ['positive', 'negative'];
+  if (!allowedValues.includes(value as FeedbackValue)) {
+    throw badRequest('value must be positive or negative');
+  }
+
+  return { value: value as FeedbackValue };
+};
+
+/** Type guard verifying a payload conforms to {@link FeedbackMessageResponse}. */
+export const isFeedbackMessageResponse = (payload: unknown): payload is FeedbackMessageResponse => {
+  if (!isRecord(payload)) {
+    return false;
+  }
+
+  return (
+    typeof payload.messageId === 'string' &&
+    typeof payload.status === 'string' &&
+    ['created', 'updated', 'removed'].includes(payload.status)
+  );
 };
 
 /** Type guard verifying a payload conforms to {@link ReportMessageResponse}. */

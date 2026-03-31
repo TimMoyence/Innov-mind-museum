@@ -39,6 +39,8 @@ export interface ChatUiMessage {
   } | null;
   metadata?: ChatUiMessageMetadata | null;
   transcription?: { text: string } | null;
+  /** When true the message failed to send and can be retried. */
+  sendFailed?: boolean;
 }
 
 /** Sorts messages by createdAt ascending (earliest first). */
@@ -71,6 +73,65 @@ export const mapApiMessageToUiMessage = (apiMsg: ApiMessage): ChatUiMessage => (
   metadata: (apiMsg.metadata as ChatUiMessageMetadata) ?? null,
 });
 
+/** Aggregated summary of a museum visit session, built from chat messages. */
+export interface VisitSummary {
+  museumName: string | null;
+  artworks: { title: string; artist?: string; room?: string; imageUrl?: string }[];
+  roomsVisited: string[];
+  duration: { startedAt: string; endedAt: string; minutes: number };
+  messageCount: number;
+  expertiseLevel: string | null;
+}
+
+/** Builds a visit summary by aggregating metadata from assistant messages. */
+export const buildVisitSummary = (
+  messages: ChatUiMessage[],
+  sessionTitle: string | null,
+): VisitSummary => {
+  const sorted = sortByTime(messages);
+  const seenTitles = new Set<string>();
+  const artworks: VisitSummary['artworks'] = [];
+  const roomSet = new Set<string>();
+  let lastExpertise: string | null = null;
+  let museumName: string | null = null;
+
+  for (const msg of sorted) {
+    if (msg.role !== 'assistant' || !msg.metadata) continue;
+
+    const { detectedArtwork, expertiseSignal, images } = msg.metadata;
+
+    if (detectedArtwork?.title && !seenTitles.has(detectedArtwork.title)) {
+      seenTitles.add(detectedArtwork.title);
+      artworks.push({
+        title: detectedArtwork.title,
+        artist: detectedArtwork.artist,
+        room: detectedArtwork.room,
+        imageUrl: images?.[0]?.thumbnailUrl ?? images?.[0]?.url,
+      });
+    }
+
+    if (detectedArtwork?.room) roomSet.add(detectedArtwork.room);
+    if (detectedArtwork?.museum && !museumName) museumName = detectedArtwork.museum;
+    if (expertiseSignal) lastExpertise = expertiseSignal;
+  }
+
+  const startedAt = sorted[0]?.createdAt ?? new Date().toISOString();
+  const endedAt = sorted[sorted.length - 1]?.createdAt ?? startedAt;
+  const minutes = Math.max(
+    0,
+    Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 60_000),
+  );
+
+  return {
+    museumName: museumName ?? sessionTitle,
+    artworks,
+    roomsVisited: [...roomSet],
+    duration: { startedAt, endedAt, minutes },
+    messageCount: sorted.length,
+    expertiseLevel: lastExpertise,
+  };
+};
+
 /**
  * Builds an optimistic user message for immediate display before the server responds.
  * @param text - User-provided text (may be empty for image-only messages).
@@ -87,6 +148,6 @@ export const buildOptimisticMessage = (
     role: 'user',
     text: trimmed || (imageUri ? '[Image sent]' : ''),
     createdAt: new Date().toISOString(),
-    image: null,
+    image: imageUri ? { url: imageUri, expiresAt: '' } : null,
   };
 };

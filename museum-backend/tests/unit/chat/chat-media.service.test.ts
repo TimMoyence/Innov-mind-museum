@@ -64,6 +64,9 @@ const makeRepo = (
   hasMessageReport: jest.fn().mockResolvedValue(false),
   persistMessageReport: jest.fn().mockResolvedValue(undefined),
   exportUserData: jest.fn(),
+  upsertMessageFeedback: jest.fn().mockResolvedValue(undefined),
+  deleteMessageFeedback: jest.fn().mockResolvedValue(undefined),
+  getMessageFeedback: jest.fn().mockResolvedValue(null),
 });
 
 const makeTts = (): jest.Mocked<TextToSpeechService> => ({

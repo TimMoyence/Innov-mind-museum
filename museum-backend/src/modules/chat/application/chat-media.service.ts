@@ -4,9 +4,10 @@ import { env } from '@src/config/env';
 import { resolveLocalImageMeta } from './chat-image.helpers';
 import { ensureMessageAccess } from './session-access';
 
-import type { ReportMessageResult } from './chat.service.types';
+import type { FeedbackMessageResult, ReportMessageResult } from './chat.service.types';
 import type { ChatRepository } from '../domain/chat.repository.interface';
 import type { ReportReason } from '../domain/chat.types';
+import type { FeedbackValue } from '../domain/messageFeedback.entity';
 import type { TextToSpeechService } from '../domain/ports/tts.port';
 import type { CacheService } from '@shared/cache/cache.port';
 
@@ -103,6 +104,38 @@ export class ChatMediaService {
     });
 
     return { messageId, reported: true };
+  }
+
+  /**
+   * Sets or toggles feedback (thumbs up/down) on an assistant message.
+   * If the existing feedback matches the submitted value, it is removed (toggle off).
+   *
+   * @param messageId - UUID of the assistant message to rate.
+   * @param currentUserId - Authenticated user id providing feedback.
+   * @param value - Feedback value ('positive' or 'negative').
+   * @returns The feedback status: 'created', 'updated', or 'removed'.
+   * @throws {AppError} 400 on invalid id or non-assistant message, 404 if not found.
+   */
+  async setMessageFeedback(
+    messageId: string,
+    currentUserId: number,
+    value: FeedbackValue,
+  ): Promise<FeedbackMessageResult> {
+    const row = await ensureMessageAccess(messageId, this.repository, currentUserId);
+
+    if (row.message.role !== 'assistant') {
+      throw badRequest('Only assistant messages can receive feedback');
+    }
+
+    const existing = await this.repository.getMessageFeedback(messageId, currentUserId);
+
+    if (existing?.value === value) {
+      await this.repository.deleteMessageFeedback(messageId, currentUserId);
+      return { messageId, status: 'removed' };
+    }
+
+    await this.repository.upsertMessageFeedback(messageId, currentUserId, value);
+    return { messageId, status: existing ? 'updated' : 'created' };
   }
 
   /**

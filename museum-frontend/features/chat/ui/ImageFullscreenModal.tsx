@@ -2,7 +2,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  Dimensions,
   Image,
   Modal,
   PanResponder,
@@ -10,6 +9,7 @@ import {
   SafeAreaView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +23,6 @@ interface ImageFullscreenModalProps {
   onClose: () => void;
 }
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = 150;
 const MODAL_BG = 'rgba(0,0,0,0.95)';
 const CAPTION_COLOR = '#FFFFFF';
@@ -37,9 +36,15 @@ const COUNTER_COLOR = '#FFFFFF';
 export const ImageFullscreenModal = React.memo(
   ({ images, initialIndex, visible, onClose }: ImageFullscreenModalProps) => {
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
+    const { width: screenWidth } = useWindowDimensions();
     const translateX = useRef(new Animated.Value(0)).current;
     const translateY = useRef(new Animated.Value(0)).current;
     const scale = useRef(new Animated.Value(1)).current;
+
+    const onCloseRef = useRef(onClose);
+    onCloseRef.current = onClose;
+    const imagesRef = useRef(images);
+    imagesRef.current = images;
 
     // Reset index when modal opens with a new initialIndex
     useEffect(() => {
@@ -83,7 +88,7 @@ export const ImageFullscreenModal = React.memo(
         onPanResponderRelease: (_evt, gestureState) => {
           // Swipe down to dismiss
           if (gestureState.dy > SWIPE_THRESHOLD) {
-            onClose();
+            onCloseRef.current();
             translateY.setValue(0);
             translateX.setValue(0);
             return;
@@ -92,7 +97,7 @@ export const ImageFullscreenModal = React.memo(
           // Horizontal swipe for navigation
           if (gestureState.dx < -SWIPE_THRESHOLD) {
             // Swipe left → next
-            setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : prev));
+            setCurrentIndex((prev) => (prev < imagesRef.current.length - 1 ? prev + 1 : prev));
           } else if (gestureState.dx > SWIPE_THRESHOLD) {
             // Swipe right → prev
             setCurrentIndex((prev) => (prev > 0 ? prev - 1 : prev));
@@ -169,7 +174,7 @@ export const ImageFullscreenModal = React.memo(
 
             <Image
               source={{ uri: current.url }}
-              style={styles.fullImage}
+              style={[styles.fullImage, { width: screenWidth }]}
               resizeMode="contain"
               accessibilityLabel={current.caption}
             />
@@ -228,7 +233,6 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   fullImage: {
-    width: SCREEN_WIDTH,
     height: '80%',
   },
   bottomBar: {

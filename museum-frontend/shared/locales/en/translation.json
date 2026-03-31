@@ -341,7 +341,13 @@
     "crop": "Crop",
     "imageAttribution": "Photo by {{photographer}} on Unsplash",
     "imageLoadError": "Image could not be loaded",
-    "viewFullscreen": "View full size"
+    "viewFullscreen": "View full size",
+    "listen": "Listen",
+    "listening": "Playing...",
+    "thumbsUp": "Helpful",
+    "thumbsDown": "Not helpful",
+    "sendFailed": "Failed to send",
+    "offlineImageFailed": "The image could not be saved for offline sending. Your message was queued without the image."
   },
   "chatInput": {
     "placeholder": "Ask about an artwork, monument, or send voice/photo...",
@@ -640,5 +646,14 @@
     "myTickets": "My Tickets",
     "createTicket": "Create Ticket",
     "ticketCreated": "Ticket created successfully"
+  },
+  "visitSummary": {
+    "visitSummary": "Visit Summary",
+    "artworksDiscussed": "Artworks Discussed",
+    "roomsVisited": "Rooms Visited",
+    "visitDuration": "Visit Duration",
+    "messages": "messages",
+    "expertiseLevel": "Level",
+    "noArtworks": "No artworks discussed"
   }
 }
