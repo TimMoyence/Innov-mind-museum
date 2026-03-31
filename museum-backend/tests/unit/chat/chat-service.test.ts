@@ -584,4 +584,31 @@ describe('ChatService (facade)', () => {
       });
     });
   });
+
+  describe('setMessageFeedback', () => {
+    it('delegates messageId, currentUserId and value', async () => {
+      const { service, mediaSvc } = buildService();
+      (mediaSvc.setMessageFeedback as jest.Mock).mockResolvedValue({
+        messageId: 'msg-001',
+        status: 'created',
+      });
+
+      const result = await service.setMessageFeedback('msg-001', 42, 'positive');
+
+      expect(mediaSvc.setMessageFeedback).toHaveBeenCalledWith('msg-001', 42, 'positive');
+      expect(result).toEqual({ messageId: 'msg-001', status: 'created' });
+    });
+
+    it('passes negative value through', async () => {
+      const { service, mediaSvc } = buildService();
+      (mediaSvc.setMessageFeedback as jest.Mock).mockResolvedValue({
+        messageId: 'msg-001',
+        status: 'created',
+      });
+
+      await service.setMessageFeedback('msg-001', 42, 'negative');
+
+      expect(mediaSvc.setMessageFeedback).toHaveBeenCalledWith('msg-001', 42, 'negative');
+    });
+  });
 });

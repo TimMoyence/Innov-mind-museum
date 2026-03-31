@@ -71,17 +71,16 @@ export const ChatMessageList = ({
     {},
   );
 
-  const handleFeedback = useCallback(
-    (messageId: string, value: 'positive' | 'negative') => {
-      const current = feedbackMap[messageId] ?? null;
+  const handleFeedback = useCallback((messageId: string, value: 'positive' | 'negative') => {
+    setFeedbackMap((prev) => {
+      const current = prev[messageId] ?? null;
       const next = current === value ? null : value;
-      setFeedbackMap((prev) => ({ ...prev, [messageId]: next }));
       chatApi.setMessageFeedback(messageId, value).catch(() => {
-        setFeedbackMap((prev) => ({ ...prev, [messageId]: current }));
+        setFeedbackMap((rollback) => ({ ...rollback, [messageId]: current }));
       });
-    },
-    [feedbackMap],
-  );
+      return { ...prev, [messageId]: next };
+    });
+  }, []);
 
   const lastAssistantMessage = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {

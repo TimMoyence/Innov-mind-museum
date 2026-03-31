@@ -231,7 +231,8 @@ export const useChatSession = (sessionId: string) => {
             });
           }
 
-          // Replace local file:// preview with server signed URL
+          // Replace local file:// preview with server signed URL.
+          // Must reload because the server assigns a new ID to the persisted user message.
           if (params.imageUri) {
             void loadSession();
           }
