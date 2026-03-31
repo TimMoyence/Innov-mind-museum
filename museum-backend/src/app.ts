@@ -44,16 +44,8 @@ const createHealthCheck = async (): Promise<{ database: 'up' | 'down' }> => {
   }
 };
 
-/**
- * Creates and configures the Express application with all middleware, routers, and error handling.
- *
- * @param options - Optional dependency overrides for testing.
- * @returns Fully configured Express application.
- */
-// eslint-disable-next-line max-lines-per-function -- app factory wires all middleware and routes in one place
-export const createApp = (options: CreateAppOptions = {}): Express => {
-  const app = express();
-
+/** Registers security, compression, timeout, and parsing middleware on the Express app. */
+function applyGlobalMiddleware(app: Express): void {
   app.set('trust proxy', env.trustProxy ? 1 : 0);
 
   app.use(requestIdMiddleware);
@@ -113,17 +105,15 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
     res.set('Cache-Control', 'no-store');
     next();
   });
+}
 
-  if (!isProd) {
-    setupSwagger(app);
+/** Resolves the cache service from options or environment configuration. */
+function resolveCacheService(options: CreateAppOptions): CacheService {
+  if (options.cacheService) {
+    return options.cacheService;
   }
 
-  const featureFlagService = options.featureFlagService ?? new StaticFeatureFlagService();
-
-  let cacheService: CacheService;
-  if (options.cacheService) {
-    cacheService = options.cacheService;
-  } else if (env.cache?.enabled) {
+  if (env.cache?.enabled) {
     const redisCacheService = new RedisCacheService({
       url: env.cache.url,
       defaultTtlSeconds: env.cache.sessionTtlSeconds,
@@ -133,11 +123,29 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
         error: err instanceof Error ? err.message : String(err),
       });
     });
-    cacheService = redisCacheService;
-  } else {
-    cacheService = new NoopCacheService();
+    return redisCacheService;
   }
 
+  return new NoopCacheService();
+}
+
+/**
+ * Creates and configures the Express application with all middleware, routers, and error handling.
+ *
+ * @param options - Optional dependency overrides for testing.
+ * @returns Fully configured Express application.
+ */
+export const createApp = (options: CreateAppOptions = {}): Express => {
+  const app = express();
+
+  applyGlobalMiddleware(app);
+
+  if (!isProd) {
+    setupSwagger(app);
+  }
+
+  const featureFlagService = options.featureFlagService ?? new StaticFeatureFlagService();
+  const cacheService = resolveCacheService(options);
   const chatService = options.chatService ?? buildChatService(AppDataSource, cacheService);
   const healthCheck = options.healthCheck ?? createHealthCheck;
 

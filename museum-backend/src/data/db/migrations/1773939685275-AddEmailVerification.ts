@@ -16,12 +16,10 @@ export class AddEmailVerification1773939685275 implements MigrationInterface {
     await queryRunner.query(
       `CREATE INDEX "idx_users_verification_token" ON "users" ("verification_token") WHERE "verification_token" IS NOT NULL`,
     );
-    await queryRunner.query(`ALTER TABLE "chat_sessions" ALTER COLUMN "version" DROP DEFAULT`);
   }
 
   /** Revert the AddEmailVerification migration. */
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE "chat_sessions" ALTER COLUMN "version" SET DEFAULT '1'`);
     await queryRunner.query(`DROP INDEX "idx_users_verification_token"`);
     await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "verification_token_expires"`);
     await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "verification_token"`);

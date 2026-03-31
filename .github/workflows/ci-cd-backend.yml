@@ -191,6 +191,7 @@ jobs:
           severity: CRITICAL,HIGH
           exit-code: '1'
           ignore-unfixed: true
+          trivyignores: .trivyignore
 
       - name: Push image to GHCR
         uses: docker/build-push-action@v7
@@ -342,6 +343,7 @@ jobs:
           severity: CRITICAL,HIGH
           exit-code: '1'
           ignore-unfixed: true
+          trivyignores: .trivyignore
 
       - name: Push staging image to GHCR
         uses: docker/build-push-action@v7

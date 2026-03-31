@@ -41,8 +41,7 @@ export default function ChatSessionScreen() {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const params = useLocalSearchParams<{ sessionId: string; intent?: string }>();
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion -- params may be string[]
-  const sessionId = useMemo(() => String(params.sessionId || ''), [params.sessionId]);
+  const sessionId = useMemo(() => params.sessionId || '', [params.sessionId]);
   const initialIntent = useMemo(() => {
     if (params.intent === 'camera' || params.intent === 'audio') return params.intent;
     return null;
@@ -165,7 +164,9 @@ export default function ChatSessionScreen() {
     const timer = setTimeout(() => {
       void toggleRecording();
     }, 500);
-    return () => { clearTimeout(timer); };
+    return () => {
+      clearTimeout(timer);
+    };
   }, [initialIntent, isIntentHandled, onTakePicture, toggleRecording]);
 
   const onClose = async () => {

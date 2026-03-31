@@ -200,11 +200,13 @@ export const buildSectionMessages = (
   sectionPrompt: string,
   historyMessages: ChatModelMessage[],
   userMessage: HumanMessage,
-  userMemoryBlock?: string,
-  knowledgeBaseBlock?: string,
-  redirectHint?: string,
-  // eslint-disable-next-line max-params -- prompt assembly requires all context pieces as separate parameters
+  options?: {
+    userMemoryBlock?: string;
+    knowledgeBaseBlock?: string;
+    redirectHint?: string;
+  },
 ): ChatModelMessage[] => {
+  const { userMemoryBlock, knowledgeBaseBlock, redirectHint } = options ?? {};
   const messages: ChatModelMessage[] = [
     new SystemMessage(systemPrompt),
     new SystemMessage(sectionPrompt),

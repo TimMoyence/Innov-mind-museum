@@ -121,19 +121,20 @@ export default function AuthScreen() {
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('common.send'),
-        // eslint-disable-next-line @typescript-eslint/no-misused-promises -- void handled by caller
-        onPress: async () => {
-          setIsLoading(true);
-          setErrorMessage(null);
-          setInfoMessage(null);
-          try {
-            await authService.forgotPassword(email);
-            Alert.alert(t('auth.email_sent_title'), t('auth.email_sent_message'));
-          } catch (error) {
-            setErrorMessage(getErrorMessage(error));
-          } finally {
-            setIsLoading(false);
-          }
+        onPress: () => {
+          void (async () => {
+            setIsLoading(true);
+            setErrorMessage(null);
+            setInfoMessage(null);
+            try {
+              await authService.forgotPassword(email);
+              Alert.alert(t('auth.email_sent_title'), t('auth.email_sent_message'));
+            } catch (error) {
+              setErrorMessage(getErrorMessage(error));
+            } finally {
+              setIsLoading(false);
+            }
+          })();
         },
       },
     ]);

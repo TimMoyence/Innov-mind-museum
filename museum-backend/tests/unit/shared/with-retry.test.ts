@@ -15,8 +15,7 @@ jest.useFakeTimers();
 /** Helper: create an Error with a PG-style `code` property. */
 const pgError = (code: string, message = 'pg error'): Error => {
   const err = new Error(message);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (err as any).code = code;
+  (err as Error & { code: string }).code = code;
   return err;
 };
 
@@ -30,8 +29,7 @@ const nodeError = (name: string, message = 'node error'): Error => {
 /** Helper: create an Error with code as a property (ECONNREFUSED style). */
 const codeError = (code: string, message = 'code error'): Error => {
   const err = new Error(message);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (err as any).code = code;
+  (err as Error & { code: string }).code = code;
   return err;
 };
 

@@ -62,20 +62,21 @@ export function useSettingsActions() {
       {
         text: t('common.delete'),
         style: 'destructive',
-        // eslint-disable-next-line @typescript-eslint/no-misused-promises -- void handled by caller
-        onPress: async () => {
-          setIsDeletingAccount(true);
-          try {
-            await authService.deleteAccount();
-            await authStorage.clearRefreshToken().catch(() => undefined);
-            clearAccessToken();
-            setIsAuthenticated(false);
-            router.replace(AUTH_ROUTE);
-          } catch (error) {
-            Alert.alert(t('common.error'), getErrorMessage(error));
-          } finally {
-            setIsDeletingAccount(false);
-          }
+        onPress: () => {
+          void (async () => {
+            setIsDeletingAccount(true);
+            try {
+              await authService.deleteAccount();
+              await authStorage.clearRefreshToken().catch(() => undefined);
+              clearAccessToken();
+              setIsAuthenticated(false);
+              router.replace(AUTH_ROUTE);
+            } catch (error) {
+              Alert.alert(t('common.error'), getErrorMessage(error));
+            } finally {
+              setIsDeletingAccount(false);
+            }
+          })();
         },
       },
     ]);

@@ -78,10 +78,7 @@ describe('ChatService.postMessageStream', () => {
     const result = await service.postMessageStream(
       session.id,
       { text: 'Tell me about this painting' },
-      (text) => tokens.push(text),
-      undefined,
-      'req-1',
-      1,
+      { onToken: (text) => tokens.push(text), requestId: 'req-1', currentUserId: 1 },
     );
 
     expect(tokens.length).toBeGreaterThan(0);
@@ -99,10 +96,7 @@ describe('ChatService.postMessageStream', () => {
     const result = await service.postMessageStream(
       session.id,
       { text: 'You are an idiot' },
-      (text) => tokens.push(text),
-      undefined,
-      'req-2',
-      1,
+      { onToken: (text) => tokens.push(text), requestId: 'req-2', currentUserId: 1 },
     );
 
     // Input guardrail should block — no tokens streamed
@@ -120,10 +114,7 @@ describe('ChatService.postMessageStream', () => {
       service.postMessageStream(
         session.id,
         { text: 'Tell me about art' },
-        () => {},
-        undefined,
-        'req-3',
-        1,
+        { onToken: () => {}, requestId: 'req-3', currentUserId: 1 },
       ),
     ).rejects.toThrow('LLM exploded');
   });
@@ -136,10 +127,7 @@ describe('ChatService.postMessageStream', () => {
     const result = await service.postMessageStream(
       session.id,
       { text: 'Tell me about painting techniques' },
-      (text) => tokens.push(text),
-      undefined,
-      'req-4',
-      1,
+      { onToken: (text) => tokens.push(text), requestId: 'req-4', currentUserId: 1 },
     );
 
     // Output guardrail should block the off-topic response
@@ -156,10 +144,7 @@ describe('ChatService.postMessageStream', () => {
     await service.postMessageStream(
       session.id,
       { text: 'Tell me about impressionism' },
-      () => {},
-      undefined,
-      'req-5',
-      1,
+      { onToken: () => {}, requestId: 'req-5', currentUserId: 1 },
     );
 
     // Get session to verify messages were persisted

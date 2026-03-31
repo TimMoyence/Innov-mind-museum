@@ -12,16 +12,29 @@ export const useImagePicker = () => {
 
   const onPickImage = useCallback(async () => {
     const { status } = await ImagePickerLib.requestMediaLibraryPermissionsAsync();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- Expo permission status API
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- expo-image-picker returns string-typed status from permission APIs
     if (status !== 'granted') {
+      Alert.alert(
+        'Gallery Access',
+        'Gallery permission is required. Please enable it in Settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Settings', onPress: () => void Linking.openSettings() },
+        ],
+      );
       return;
     }
 
-    const result = await ImagePickerLib.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: false,
-      quality: 0.8,
-    });
+    let result;
+    try {
+      result = await ImagePickerLib.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.8,
+      });
+    } catch {
+      return; // Picker failed or was cancelled abnormally
+    }
 
     if (!result.canceled && result.assets.length) {
       setPendingImage(result.assets[0].uri);
@@ -30,7 +43,7 @@ export const useImagePicker = () => {
 
   const onTakePicture = useCallback(async () => {
     const { status } = await ImagePickerLib.requestCameraPermissionsAsync();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- Expo permission status API
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- expo-image-picker returns string-typed status from permission APIs
     if (status !== 'granted') {
       Alert.alert('Camera Access', 'Camera permission is required. Please enable it in Settings.', [
         { text: 'Cancel', style: 'cancel' },
@@ -39,11 +52,16 @@ export const useImagePicker = () => {
       return;
     }
 
-    const result = await ImagePickerLib.launchCameraAsync({
-      mediaTypes: ['images'],
-      allowsEditing: false,
-      quality: 0.8,
-    });
+    let result;
+    try {
+      result = await ImagePickerLib.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.8,
+      });
+    } catch {
+      return; // Picker failed or was cancelled abnormally
+    }
 
     if (!result.canceled && result.assets.length) {
       setPendingImage(result.assets[0].uri);

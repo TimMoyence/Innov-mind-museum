@@ -14,6 +14,7 @@ import type {
   ReportMessageResult,
   SessionResult,
 } from './chat.service.types';
+import type { ImageEnrichmentService } from './image-enrichment.service';
 import type { KnowledgeBaseService } from './knowledge-base.service';
 import type { UserMemoryService } from './user-memory.service';
 import type { ChatRepository } from '../domain/chat.repository.interface';
@@ -55,6 +56,7 @@ export interface ChatServiceDeps {
   audit?: AuditService;
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
+  imageEnrichment?: ImageEnrichmentService;
   dynamicArtKeywords?: ReadonlySet<string>;
   artTopicClassifier?: ArtTopicClassifier;
   onArtKeywordDiscovered?: (keyword: string, locale: string) => void;
@@ -91,6 +93,7 @@ export class ChatService {
       audit: deps.audit,
       userMemory: deps.userMemory,
       knowledgeBase: deps.knowledgeBase,
+      imageEnrichment: deps.imageEnrichment,
       dynamicArtKeywords: deps.dynamicArtKeywords,
       artTopicClassifier: deps.artTopicClassifier,
       onArtKeywordDiscovered: deps.onArtKeywordDiscovered,
@@ -188,32 +191,26 @@ export class ChatService {
    *
    * @param sessionId - UUID of the target chat session.
    * @param input - User message payload (text only for streaming).
-   * @param onToken - Called with each text token as it streams from the LLM.
-   * @param onGuardrail - Called when the output guardrail blocks mid-stream.
-   * @param requestId - Optional correlation id for tracing.
-   * @param currentUserId - Authenticated user id for ownership checks.
-   * @param signal - AbortSignal to cancel the stream (e.g. on client disconnect).
+   * @param callbacks - Streaming callbacks and optional parameters.
+   * @param callbacks.onToken - Called for each streamed token.
+   * @param callbacks.onGuardrail - Called when a guardrail blocks content.
+   * @param callbacks.requestId - Optional correlation id for tracing.
+   * @param callbacks.currentUserId - Authenticated user id for ownership checks.
+   * @param callbacks.signal - Optional abort signal.
    * @returns The assistant's reply with metadata.
    */
-  // eslint-disable-next-line max-params -- delegates to message service, must pass through all streaming parameters
   async postMessageStream(
     sessionId: string,
     input: PostMessageInput,
-    onToken: (text: string) => void,
-    onGuardrail?: (text: string, reason: GuardrailBlockReason) => void,
-    requestId?: string,
-    currentUserId?: number,
-    signal?: AbortSignal,
+    callbacks: {
+      onToken: (text: string) => void;
+      onGuardrail?: (text: string, reason: GuardrailBlockReason) => void;
+      requestId?: string;
+      currentUserId?: number;
+      signal?: AbortSignal;
+    },
   ): Promise<PostMessageResult> {
-    return await this.messages.postMessageStream(
-      sessionId,
-      input,
-      onToken,
-      onGuardrail,
-      requestId,
-      currentUserId,
-      signal,
-    );
+    return await this.messages.postMessageStream(sessionId, input, callbacks);
   }
 
   /**

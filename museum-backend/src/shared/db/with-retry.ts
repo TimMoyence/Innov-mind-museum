@@ -43,12 +43,13 @@ export async function withDbRetry<T>(fn: () => Promise<T>, options: RetryOptions
 /** Returns true if the error is a transient PostgreSQL or network failure. */
 export function isTransient(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- PG errors carry a non-standard `code` property
-  const anyError = error as any;
-  const pgCode: unknown = anyError.code;
-  if (typeof pgCode === 'string' && TRANSIENT_PG_CODES.has(pgCode)) return true;
+  const code =
+    'code' in error && typeof (error as { code: unknown }).code === 'string'
+      ? (error as { code: string }).code
+      : undefined;
+  if (code && TRANSIENT_PG_CODES.has(code)) return true;
   if (TRANSIENT_ERROR_NAMES.has(error.name)) return true;
-  if (typeof anyError.code === 'string' && TRANSIENT_ERROR_NAMES.has(anyError.code)) return true;
+  if (code && TRANSIENT_ERROR_NAMES.has(code)) return true;
   return false;
 }
 

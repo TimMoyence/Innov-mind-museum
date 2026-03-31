@@ -1,0 +1,4 @@
+# picomatch CVE in Node.js base image's bundled npm (not in our runtime dependencies)
+# Affects: node_modules/npm/node_modules/picomatch inside node:22-bookworm-slim
+# Safe to ignore: picomatch is only used by npm's internal glob matching, not our application code
+CVE-2026-33671

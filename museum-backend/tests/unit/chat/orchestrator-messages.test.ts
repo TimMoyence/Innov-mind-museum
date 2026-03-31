@@ -259,13 +259,9 @@ describe('buildSectionMessages', () => {
   });
 
   it('adds SystemMessage for memoryBlock', () => {
-    const messages = buildSectionMessages(
-      systemPrompt,
-      sectionPrompt,
-      [],
-      userMsg,
-      'User prefers detailed responses.',
-    );
+    const messages = buildSectionMessages(systemPrompt, sectionPrompt, [], userMsg, {
+      userMemoryBlock: 'User prefers detailed responses.',
+    });
 
     // system + section + memory + user + anti-injection = 5
     expect(messages).toHaveLength(5);
@@ -273,29 +269,20 @@ describe('buildSectionMessages', () => {
   });
 
   it('adds SystemMessage for redirectHint', () => {
-    const messages = buildSectionMessages(
-      systemPrompt,
-      sectionPrompt,
-      [],
-      userMsg,
-      undefined,
-      'Please focus on impressionism.',
-    );
+    const messages = buildSectionMessages(systemPrompt, sectionPrompt, [], userMsg, {
+      knowledgeBaseBlock: 'Please focus on impressionism.',
+    });
 
     // system + section + redirect + user + anti-injection = 5
     expect(messages).toHaveLength(5);
     expect((messages[2] as SystemMessage).content).toBe('Please focus on impressionism.');
   });
 
-  it('adds both memoryBlock and redirectHint in correct order', () => {
-    const messages = buildSectionMessages(
-      systemPrompt,
-      sectionPrompt,
-      [],
-      userMsg,
-      'Memory block here.',
-      'Redirect hint here.',
-    );
+  it('adds both memoryBlock and knowledgeBaseBlock in correct order', () => {
+    const messages = buildSectionMessages(systemPrompt, sectionPrompt, [], userMsg, {
+      userMemoryBlock: 'Memory block here.',
+      knowledgeBaseBlock: 'Redirect hint here.',
+    });
 
     // system + section + memory + redirect + user + anti-injection = 6
     expect(messages).toHaveLength(6);
@@ -309,8 +296,7 @@ describe('buildSectionMessages', () => {
       sectionPrompt,
       [new HumanMessage('prior'), new AIMessage('response')],
       userMsg,
-      'Memory.',
-      'Redirect.',
+      { userMemoryBlock: 'Memory.', knowledgeBaseBlock: 'Redirect.' },
     );
 
     const last = messages[messages.length - 1];
@@ -326,14 +312,10 @@ describe('buildSectionMessages', () => {
       new AIMessage('previous answer'),
     ];
 
-    const messages = buildSectionMessages(
-      systemPrompt,
-      sectionPrompt,
-      historyMessages,
-      userMsg,
-      'Memory block.',
-      'Redirect hint.',
-    );
+    const messages = buildSectionMessages(systemPrompt, sectionPrompt, historyMessages, userMsg, {
+      userMemoryBlock: 'Memory block.',
+      knowledgeBaseBlock: 'Redirect hint.',
+    });
 
     // Total: system(0) + section(1) + memory(2) + redirect(3) + history(4,5) + user(6) + anti-injection(7) = 8
     expect(messages).toHaveLength(8);

@@ -1,5 +1,5 @@
-/* eslint-disable react-hooks/refs, react/display-name -- React.memo ref pattern + RN Animated */
-import React, { useEffect, useRef } from 'react';
+/* eslint-disable react-hooks/refs -- Animated.Value refs are stable objects read once at creation; safe RN pattern */
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -7,6 +7,8 @@ import * as Haptics from 'expo-haptics';
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { MarkdownBubble } from '@/features/chat/ui/MarkdownBubble';
 import { ArtworkCard } from '@/features/chat/ui/ArtworkCard';
+import { ImageCarousel } from '@/features/chat/ui/ImageCarousel';
+import { ImageFullscreenModal } from '@/features/chat/ui/ImageFullscreenModal';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
@@ -34,6 +36,7 @@ export const ChatMessageBubble = React.memo(
     const { theme } = useTheme();
     const { t } = useTranslation();
     const isAssistant = message.role === 'assistant';
+    const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
 
     // Blinking cursor animation for streaming
     const cursorOpacity = useRef(new Animated.Value(1)).current;
@@ -55,6 +58,14 @@ export const ChatMessageBubble = React.memo(
       <>
         {isAssistant ? (
           <View>
+            {!isStreaming && message.metadata?.images?.length ? (
+              <ImageCarousel
+                images={message.metadata.images}
+                onImagePress={(index) => {
+                  setFullscreenIndex(index);
+                }}
+              />
+            ) : null}
             <MarkdownBubble text={message.text} />
             {isStreaming ? (
               <Animated.Text
@@ -161,15 +172,31 @@ export const ChatMessageBubble = React.memo(
             confidence={message.metadata.detectedArtwork.confidence}
           />
         ) : null}
+
+        {fullscreenIndex !== null && message.metadata?.images ? (
+          <ImageFullscreenModal
+            images={message.metadata.images}
+            initialIndex={fullscreenIndex}
+            visible
+            onClose={() => {
+              setFullscreenIndex(null);
+            }}
+          />
+        ) : null}
       </View>
     );
   },
   (prev, next) => {
     // Always re-render during streaming
     if (prev.isStreaming || next.isStreaming) return false;
-    return prev.message.id === next.message.id && prev.message.text === next.message.text;
+    return (
+      prev.message.id === next.message.id &&
+      prev.message.text === next.message.text &&
+      prev.message.image?.url === next.message.image?.url
+    );
   },
 );
+ChatMessageBubble.displayName = 'ChatMessageBubble';
 
 const styles = StyleSheet.create({
   bubble: {

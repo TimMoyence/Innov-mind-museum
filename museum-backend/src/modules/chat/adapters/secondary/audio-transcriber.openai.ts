@@ -50,6 +50,105 @@ interface OpenAiTranscriptionPayload {
   };
 }
 
+/** Throws if the current LLM provider is not OpenAI or the API key is missing. */
+const assertOpenAiAvailable = (): void => {
+  if (env.llm.provider !== 'openai' || !env.llm.openAiApiKey) {
+    throw new AppError({
+      message: 'Audio transcription is currently available only when LLM provider is OpenAI.',
+      statusCode: 501,
+      code: 'FEATURE_UNAVAILABLE',
+    });
+  }
+};
+
+/** Decodes base64 audio to a Buffer, throwing 400 on empty/invalid input. */
+const decodeAudioPayload = (base64: string): Buffer => {
+  const normalizedBase64 = base64.trim();
+  if (!normalizedBase64) {
+    throw badRequest('Audio payload is empty');
+  }
+
+  const audioBuffer = Buffer.from(normalizedBase64, 'base64');
+  if (!audioBuffer.byteLength) {
+    throw badRequest('Audio payload is invalid');
+  }
+  return audioBuffer;
+};
+
+/** Builds the multipart FormData for the OpenAI transcription API. */
+const buildTranscriptionFormData = (
+  input: AudioTranscriberInput,
+  audioBuffer: Buffer,
+): FormData => {
+  const formData = new FormData();
+  formData.append(
+    'file',
+    new Blob([audioBuffer], { type: input.mimeType }),
+    toAudioFileName(input.mimeType),
+  );
+  formData.append('model', env.llm.audioTranscriptionModel);
+
+  const languageHint = toLanguageHint(input.locale);
+  if (languageHint) {
+    formData.append('language', languageHint);
+  }
+  return formData;
+};
+
+/** Sends the transcription request, wrapping timeout errors into AppError. */
+const fetchTranscription = async (formData: FormData): Promise<Response> => {
+  try {
+    return await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.llm.openAiApiKey}`,
+      },
+      body: formData,
+      signal: AbortSignal.timeout(env.llm.timeoutMs),
+    });
+  } catch (error: unknown) {
+    if (
+      error instanceof DOMException &&
+      (error.name === 'TimeoutError' || error.name === 'AbortError')
+    ) {
+      throw new AppError({
+        message: 'Audio transcription request timed out',
+        statusCode: 504,
+        code: 'UPSTREAM_TIMEOUT',
+      });
+    }
+    throw error;
+  }
+};
+
+/** Parses and validates the API response, returning the transcribed text. */
+const parseTranscriptionResponse = async (response: Response): Promise<string> => {
+  const payload = (await response.json().catch(() => null)) as OpenAiTranscriptionPayload | null;
+
+  if (!response.ok) {
+    const upstreamMessage =
+      typeof payload?.error?.message === 'string'
+        ? payload.error.message
+        : 'Audio transcription request failed';
+
+    throw new AppError({
+      message: upstreamMessage,
+      statusCode: 502,
+      code: 'UPSTREAM_AUDIO_TRANSCRIPTION_ERROR',
+    });
+  }
+
+  if (typeof payload?.text !== 'string' || !payload.text.trim()) {
+    throw new AppError({
+      message: 'Audio transcription returned an empty result',
+      statusCode: 502,
+      code: 'UPSTREAM_AUDIO_TRANSCRIPTION_INVALID',
+    });
+  }
+
+  return payload.text.trim();
+};
+
 /** OpenAI Whisper implementation of {@link AudioTranscriber}. */
 export class OpenAiAudioTranscriber implements AudioTranscriber {
   /**
@@ -60,7 +159,6 @@ export class OpenAiAudioTranscriber implements AudioTranscriber {
    * @throws {AppError} With code `FEATURE_UNAVAILABLE` if provider is not OpenAI.
    * @throws {AppError} With code `UPSTREAM_AUDIO_TRANSCRIPTION_ERROR` on API failure.
    */
-  // eslint-disable-next-line max-lines-per-function -- audio transcription has many validation and error-handling steps
   async transcribe(input: AudioTranscriberInput): Promise<AudioTranscriptionResult> {
     return await startSpan(
       {
@@ -71,90 +169,15 @@ export class OpenAiAudioTranscriber implements AudioTranscriber {
           'audio.model': env.llm.audioTranscriptionModel,
         },
       },
-      // eslint-disable-next-line complexity -- inner callback handles provider check, input validation, API call, and error mapping
       async () => {
-        if (env.llm.provider !== 'openai' || !env.llm.openAiApiKey) {
-          throw new AppError({
-            message: 'Audio transcription is currently available only when LLM provider is OpenAI.',
-            statusCode: 501,
-            code: 'FEATURE_UNAVAILABLE',
-          });
-        }
-
-        const normalizedBase64 = input.base64.trim();
-        if (!normalizedBase64) {
-          throw badRequest('Audio payload is empty');
-        }
-
-        const audioBuffer = Buffer.from(normalizedBase64, 'base64');
-        if (!audioBuffer.byteLength) {
-          throw badRequest('Audio payload is invalid');
-        }
-
-        const formData = new FormData();
-        formData.append(
-          'file',
-          new Blob([audioBuffer], { type: input.mimeType }),
-          toAudioFileName(input.mimeType),
-        );
-        formData.append('model', env.llm.audioTranscriptionModel);
-
-        const languageHint = toLanguageHint(input.locale);
-        if (languageHint) {
-          formData.append('language', languageHint);
-        }
-
-        let response: Response;
-        try {
-          response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${env.llm.openAiApiKey}`,
-            },
-            body: formData,
-            signal: AbortSignal.timeout(env.llm.timeoutMs),
-          });
-        } catch (error: unknown) {
-          if (
-            error instanceof DOMException &&
-            (error.name === 'TimeoutError' || error.name === 'AbortError')
-          ) {
-            throw new AppError({
-              message: 'Audio transcription request timed out',
-              statusCode: 504,
-              code: 'UPSTREAM_TIMEOUT',
-            });
-          }
-          throw error;
-        }
-
-        const payload = (await response
-          .json()
-          .catch(() => null)) as OpenAiTranscriptionPayload | null;
-
-        if (!response.ok) {
-          const upstreamMessage =
-            typeof payload?.error?.message === 'string'
-              ? payload.error.message
-              : 'Audio transcription request failed';
-
-          throw new AppError({
-            message: upstreamMessage,
-            statusCode: 502,
-            code: 'UPSTREAM_AUDIO_TRANSCRIPTION_ERROR',
-          });
-        }
-
-        if (typeof payload?.text !== 'string' || !payload.text.trim()) {
-          throw new AppError({
-            message: 'Audio transcription returned an empty result',
-            statusCode: 502,
-            code: 'UPSTREAM_AUDIO_TRANSCRIPTION_INVALID',
-          });
-        }
+        assertOpenAiAvailable();
+        const audioBuffer = decodeAudioPayload(input.base64);
+        const formData = buildTranscriptionFormData(input, audioBuffer);
+        const response = await fetchTranscription(formData);
+        const text = await parseTranscriptionResponse(response);
 
         return {
-          text: payload.text.trim(),
+          text,
           model: env.llm.audioTranscriptionModel,
           provider: 'openai',
         };

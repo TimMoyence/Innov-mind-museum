@@ -159,10 +159,7 @@ export const useMuseumDirectory = (
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = rawMuseums.filter(
-        (m) =>
-          m.name.toLowerCase().includes(query) ||
-          // eslint-disable-next-line @typescript-eslint/prefer-optional-chain -- complex condition
-          (m.address && m.address.toLowerCase().includes(query)),
+        (m) => m.name.toLowerCase().includes(query) || m.address?.toLowerCase().includes(query),
       );
     }
 

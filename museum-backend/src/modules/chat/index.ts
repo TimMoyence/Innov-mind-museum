@@ -12,9 +12,11 @@ import {
   OpenAiTextToSpeechService,
   DisabledTextToSpeechService,
 } from './adapters/secondary/text-to-speech.openai';
+import { UnsplashClient } from './adapters/secondary/unsplash.client';
 import { WikidataClient } from './adapters/secondary/wikidata.client';
 import { ArtTopicClassifier } from './application/art-topic-classifier';
 import { ChatService } from './application/chat.service';
+import { ImageEnrichmentService } from './application/image-enrichment.service';
 import { KnowledgeBaseService } from './application/knowledge-base.service';
 import { UserMemoryService } from './application/user-memory.service';
 import { TypeOrmArtKeywordRepository } from './infrastructure/artKeyword.repository.typeorm';
@@ -74,16 +76,8 @@ class ChatModule {
     }
   }
 
-  /**
-   * Wires the chat module dependency graph and returns a fully configured ChatService.
-   *
-   * @param dataSource - Initialized TypeORM DataSource for repository creation.
-   * @param cache - Optional cache service for session/memory caching.
-   * @returns ChatService with repository, orchestrator, image storage, and audio transcriber.
-   */
-  // eslint-disable-next-line complexity, max-lines-per-function -- dependency wiring requires conditional initialization of storage, audio, OCR, KB, and memory services
-  build(dataSource: DataSource, cache?: CacheService): ChatService {
-    let imageStorage: LocalImageStorage | S3CompatibleImageStorage;
+  /** Creates the image storage adapter (S3 or local) based on env config. */
+  private buildImageStorage(): LocalImageStorage | S3CompatibleImageStorage {
     if (env.storage.driver === 's3') {
       const s3 = env.storage.s3;
       if (!s3?.endpoint || !s3.region || !s3.bucket || !s3.accessKeyId || !s3.secretAccessKey) {
@@ -92,7 +86,7 @@ class ChatModule {
         );
       }
 
-      imageStorage = new S3CompatibleImageStorage({
+      return new S3CompatibleImageStorage({
         endpoint: s3.endpoint,
         region: s3.region,
         bucket: s3.bucket,
@@ -104,45 +98,52 @@ class ChatModule {
         objectKeyPrefix: s3.objectKeyPrefix,
         requestTimeoutMs: env.requestTimeoutMs,
       });
-    } else {
-      imageStorage = new LocalImageStorage(env.storage.localUploadsDir);
     }
+    return new LocalImageStorage(env.storage.localUploadsDir);
+  }
 
-    this._imageStorage = imageStorage;
+  /** Creates the user memory service if the feature flag is enabled. */
+  private buildUserMemory(
+    dataSource: DataSource,
+    cache?: CacheService,
+  ): UserMemoryService | undefined {
+    if (!env.featureFlags.userMemory) return undefined;
+    const repo = new TypeOrmUserMemoryRepository(dataSource);
+    const service = new UserMemoryService(repo, cache);
+    this._userMemoryService = service;
+    return service;
+  }
 
-    const repository = new TypeOrmChatRepository(dataSource);
-    this._repository = repository;
+  /** Creates the knowledge base service if the feature flag is enabled. */
+  private buildKnowledgeBase(): KnowledgeBaseService | undefined {
+    if (!env.featureFlags.knowledgeBase) return undefined;
+    const wikidataClient = new WikidataClient();
+    return new KnowledgeBaseService(wikidataClient, {
+      timeoutMs: env.knowledgeBase.timeoutMs,
+      cacheTtlSeconds: env.knowledgeBase.cacheTtlSeconds,
+      cacheMaxEntries: env.knowledgeBase.cacheMaxEntries,
+    });
+  }
 
-    const tts =
-      env.tts?.enabled && env.llm.openAiApiKey
-        ? new OpenAiTextToSpeechService()
-        : new DisabledTextToSpeechService();
+  /** Creates the image enrichment service if the feature flag is enabled. */
+  private buildImageEnrichment(): ImageEnrichmentService | undefined {
+    if (!env.featureFlags.imageEnrichment) return undefined;
+    const unsplashClient = env.imageEnrichment.unsplashAccessKey
+      ? new UnsplashClient(env.imageEnrichment.unsplashAccessKey)
+      : undefined;
+    return new ImageEnrichmentService(unsplashClient, {
+      cacheTtlMs: env.imageEnrichment.cacheTtlMs,
+      cacheMaxEntries: env.imageEnrichment.cacheMaxEntries,
+      fetchTimeoutMs: env.imageEnrichment.fetchTimeoutMs,
+      maxImagesPerResponse: env.imageEnrichment.maxImagesPerResponse,
+    });
+  }
 
-    const ocr = env.featureFlags.ocrGuard ? new TesseractOcrService() : new DisabledOcrService();
-    this._ocrService = ocr;
-
-    let userMemory: UserMemoryService | undefined;
-    if (env.featureFlags.userMemory) {
-      const userMemoryRepo = new TypeOrmUserMemoryRepository(dataSource);
-      userMemory = new UserMemoryService(userMemoryRepo, cache);
-      this._userMemoryService = userMemory;
-    }
-
-    let knowledgeBase: KnowledgeBaseService | undefined;
-    if (env.featureFlags.knowledgeBase) {
-      const wikidataClient = new WikidataClient();
-      knowledgeBase = new KnowledgeBaseService(wikidataClient, {
-        timeoutMs: env.knowledgeBase.timeoutMs,
-        cacheTtlSeconds: env.knowledgeBase.cacheTtlSeconds,
-        cacheMaxEntries: env.knowledgeBase.cacheMaxEntries,
-      });
-    }
-
-    const artKeywordRepo = new TypeOrmArtKeywordRepository(dataSource);
-    this._artKeywordRepository = artKeywordRepo;
-
-    const artTopicClassifier = new ArtTopicClassifier();
-
+  /** Sets up the dynamic art keyword set with periodic refresh from the database. */
+  private buildArtKeywordRefresh(artKeywordRepo: TypeOrmArtKeywordRepository): {
+    dynamicArtKeywords: Set<string>;
+    onArtKeywordDiscovered: (keyword: string, locale: string) => void;
+  } {
     const dynamicArtKeywords = new Set<string>();
     const refreshKeywords = async () => {
       try {
@@ -170,6 +171,41 @@ class ChatModule {
       fireAndForget(artKeywordRepo.upsert(normalized, locale), 'art_keyword_upsert');
     };
 
+    return { dynamicArtKeywords, onArtKeywordDiscovered };
+  }
+
+  /**
+   * Wires the chat module dependency graph and returns a fully configured ChatService.
+   *
+   * @param dataSource - Initialized TypeORM DataSource for repository creation.
+   * @param cache - Optional cache service for session/memory caching.
+   * @returns ChatService with repository, orchestrator, image storage, and audio transcriber.
+   */
+  build(dataSource: DataSource, cache?: CacheService): ChatService {
+    const imageStorage = this.buildImageStorage();
+    this._imageStorage = imageStorage;
+
+    const repository = new TypeOrmChatRepository(dataSource);
+    this._repository = repository;
+
+    const tts =
+      env.tts?.enabled && env.llm.openAiApiKey
+        ? new OpenAiTextToSpeechService()
+        : new DisabledTextToSpeechService();
+
+    const ocr = env.featureFlags.ocrGuard ? new TesseractOcrService() : new DisabledOcrService();
+    this._ocrService = ocr;
+
+    const userMemory = this.buildUserMemory(dataSource, cache);
+    const knowledgeBase = this.buildKnowledgeBase();
+    const imageEnrichment = this.buildImageEnrichment();
+
+    const artKeywordRepo = new TypeOrmArtKeywordRepository(dataSource);
+    this._artKeywordRepository = artKeywordRepo;
+
+    const { dynamicArtKeywords, onArtKeywordDiscovered } =
+      this.buildArtKeywordRefresh(artKeywordRepo);
+
     const orchestrator = new LangChainChatOrchestrator();
     this._orchestrator = orchestrator;
 
@@ -184,8 +220,9 @@ class ChatModule {
       audit: auditService,
       userMemory,
       knowledgeBase,
+      imageEnrichment,
       dynamicArtKeywords,
-      artTopicClassifier,
+      artTopicClassifier: new ArtTopicClassifier(),
       onArtKeywordDiscovered,
     });
   }

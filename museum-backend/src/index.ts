@@ -24,12 +24,120 @@ import { RedisRateLimitStore } from '@src/helpers/middleware/redis-rate-limit-st
 import { createApp } from './app';
 
 import type { CacheService } from '@shared/cache/cache.port';
+import type { Server } from 'node:http';
 
 /** Grace period for in-flight requests to complete before forced exit (ms). */
 const SHUTDOWN_TIMEOUT_MS = 30_000;
 
+/** Initializes cache and rate-limit Redis connections from environment config. */
+function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Redis | undefined } {
+  if (env.cache?.enabled) {
+    const redisCacheService = new RedisCacheService({
+      url: env.cache.url,
+      defaultTtlSeconds: env.cache.sessionTtlSeconds,
+    });
+    void redisCacheService.connect().catch((err: unknown) => {
+      logger.error('redis_connection_failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+
+    // Create a dedicated Redis connection for rate limiting
+    const redisClient = new Redis(env.cache.url, {
+      maxRetriesPerRequest: 1,
+      lazyConnect: false,
+      enableReadyCheck: false,
+      connectionName: 'rate-limit',
+    });
+    redisClient.on('error', (err) => {
+      logger.warn('redis_rate_limit_connection_error', {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: err.message may be undefined at runtime
+        error: err.message ?? 'unknown',
+      });
+    });
+    const redisRateLimitStore = new RedisRateLimitStore(redisClient);
+    setRedisRateLimitStore(redisRateLimitStore);
+    setDailyChatLimitCacheService(redisCacheService);
+    logger.info('redis_rate_limit_store_enabled');
+
+    return { cacheService: redisCacheService, redisClient };
+  }
+
+  if (env.nodeEnv === 'production') {
+    logger.warn('redis_disabled_in_production', {
+      message:
+        'Redis is disabled in production. Rate limiting will use in-memory store (not distributed). Set CACHE_ENABLED=true and REDIS_URL for multi-instance deployments.',
+    });
+  }
+
+  return { cacheService: new NoopCacheService(), redisClient: undefined };
+}
+
+/** Registers SIGINT/SIGTERM handlers that drain connections and clean up resources. */
+function registerShutdownHandlers(
+  server: Server,
+  tokenCleanup: TokenCleanupService,
+  redisClient: Redis | undefined,
+): void {
+  let isShuttingDown = false;
+
+  const shutdown = async (signal: string): Promise<void> => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+
+    logger.info('server_shutdown_start', { signal, timeoutMs: SHUTDOWN_TIMEOUT_MS });
+
+    // 1. Stop accepting new connections
+    tokenCleanup.stopScheduler();
+    stopRateLimitSweep();
+    stopArtKeywordsRefresh();
+    await shutdownOpenTelemetry();
+    const ocr = getOcrService();
+    if (ocr?.destroy) await ocr.destroy();
+
+    // 2. Close the HTTP server — stops accepting new connections,
+    //    waits for in-flight requests to complete
+    server.close(() => {
+      logger.info('server_connections_drained');
+      void (async () => {
+        try {
+          if (AppDataSource.isInitialized) {
+            await AppDataSource.destroy();
+            logger.info('database_closed');
+          }
+        } finally {
+          // 3. Close Redis connections
+          if (redisClient) {
+            try {
+              await redisClient.quit();
+              logger.info('redis_rate_limit_closed');
+            } catch {
+              // Best-effort
+            }
+          }
+          process.exit(0);
+        }
+      })();
+    });
+
+    // Force exit after grace period if connections don't drain in time
+    setTimeout(() => {
+      logger.warn('server_shutdown_forced', {
+        reason: 'drain timeout exceeded',
+        timeoutMs: SHUTDOWN_TIMEOUT_MS,
+      });
+      process.exit(1);
+    }, SHUTDOWN_TIMEOUT_MS).unref();
+  };
+
+  for (const sig of ['SIGINT', 'SIGTERM']) {
+    process.on(sig as NodeJS.Signals, () => {
+      void shutdown(sig);
+    });
+  }
+}
+
 /** Initializes the database, starts the HTTP server, and registers graceful shutdown handlers. */
-// eslint-disable-next-line max-lines-per-function -- server bootstrap must wire all subsystems in one place
 const start = async (): Promise<void> => {
   initSentry();
 
@@ -40,47 +148,7 @@ const start = async (): Promise<void> => {
       database: env.db.database,
     });
 
-    let cacheService: CacheService;
-    let redisClient: Redis | undefined;
-
-    if (env.cache?.enabled) {
-      const redisCacheService = new RedisCacheService({
-        url: env.cache.url,
-        defaultTtlSeconds: env.cache.sessionTtlSeconds,
-      });
-      void redisCacheService.connect().catch((err: unknown) => {
-        logger.error('redis_connection_failed', {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-      cacheService = redisCacheService;
-
-      // Create a dedicated Redis connection for rate limiting
-      redisClient = new Redis(env.cache.url, {
-        maxRetriesPerRequest: 1,
-        lazyConnect: false,
-        enableReadyCheck: false,
-        connectionName: 'rate-limit',
-      });
-      redisClient.on('error', (err) => {
-        logger.warn('redis_rate_limit_connection_error', {
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: err.message may be undefined at runtime
-          error: err.message ?? 'unknown',
-        });
-      });
-      const redisRateLimitStore = new RedisRateLimitStore(redisClient);
-      setRedisRateLimitStore(redisRateLimitStore);
-      setDailyChatLimitCacheService(cacheService);
-      logger.info('redis_rate_limit_store_enabled');
-    } else if (env.nodeEnv === 'production') {
-      logger.warn('redis_disabled_in_production', {
-        message:
-          'Redis is disabled in production. Rate limiting will use in-memory store (not distributed). Set CACHE_ENABLED=true and REDIS_URL for multi-instance deployments.',
-      });
-      cacheService = new NoopCacheService();
-    } else {
-      cacheService = new NoopCacheService();
-    }
+    const { cacheService, redisClient } = initCacheAndRateLimit();
 
     const app = createApp({ cacheService });
     const server = app.listen(env.port, () => {
@@ -96,62 +164,7 @@ const start = async (): Promise<void> => {
     );
     tokenCleanup.startScheduler();
 
-    let isShuttingDown = false;
-
-    const shutdown = async (signal: string): Promise<void> => {
-      if (isShuttingDown) return;
-      isShuttingDown = true;
-
-      logger.info('server_shutdown_start', { signal, timeoutMs: SHUTDOWN_TIMEOUT_MS });
-
-      // 1. Stop accepting new connections
-      tokenCleanup.stopScheduler();
-      stopRateLimitSweep();
-      stopArtKeywordsRefresh();
-      await shutdownOpenTelemetry();
-      const ocr = getOcrService();
-      if (ocr?.destroy) await ocr.destroy();
-
-      // 2. Close the HTTP server — stops accepting new connections,
-      //    waits for in-flight requests to complete
-      server.close(() => {
-        logger.info('server_connections_drained');
-        void (async () => {
-          try {
-            if (AppDataSource.isInitialized) {
-              await AppDataSource.destroy();
-              logger.info('database_closed');
-            }
-          } finally {
-            // 3. Close Redis connections
-            if (redisClient) {
-              try {
-                await redisClient.quit();
-                logger.info('redis_rate_limit_closed');
-              } catch {
-                // Best-effort
-              }
-            }
-            process.exit(0);
-          }
-        })();
-      });
-
-      // Force exit after grace period if connections don't drain in time
-      setTimeout(() => {
-        logger.warn('server_shutdown_forced', {
-          reason: 'drain timeout exceeded',
-          timeoutMs: SHUTDOWN_TIMEOUT_MS,
-        });
-        process.exit(1);
-      }, SHUTDOWN_TIMEOUT_MS).unref();
-    };
-
-    for (const sig of ['SIGINT', 'SIGTERM']) {
-      process.on(sig as NodeJS.Signals, () => {
-        void shutdown(sig);
-      });
-    }
+    registerShutdownHandlers(server, tokenCleanup, redisClient);
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message || util.inspect(error) : util.inspect(error);

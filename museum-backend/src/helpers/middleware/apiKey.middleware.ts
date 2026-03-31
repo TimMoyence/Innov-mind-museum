@@ -26,6 +26,37 @@ export function setUserRoleResolver(resolver: (userId: number) => Promise<UserRo
   userRoleResolver = resolver;
 }
 
+/** Sends a 401 JSON response with a standard error shape. */
+function sendUnauthorized(res: Response, message: string): void {
+  res.status(401).json({ error: { code: 'UNAUTHORIZED', message } });
+}
+
+/** Checks whether the API key is expired or revoked. Returns an error message or null if valid. */
+function checkApiKeyValidity(apiKey: {
+  expiresAt?: Date | string | null;
+  isActive: boolean;
+}): string | null {
+  if (apiKey.expiresAt && new Date(apiKey.expiresAt) < new Date()) {
+    return 'API key has expired';
+  }
+  if (!apiKey.isActive) {
+    return 'API key has been revoked';
+  }
+  return null;
+}
+
+/** Verifies the token hash using timing-safe HMAC comparison. */
+function verifyTokenHash(token: string, salt: string, storedHash: string): boolean {
+  const expectedHash = crypto.createHmac('sha256', salt).update(token).digest('hex');
+  const expectedBuffer = Buffer.from(expectedHash, 'hex');
+  const actualBuffer = Buffer.from(storedHash, 'hex');
+
+  return (
+    expectedBuffer.length === actualBuffer.length &&
+    crypto.timingSafeEqual(expectedBuffer, actualBuffer)
+  );
+}
+
 /**
  * Validates a Bearer token that starts with `msk_` against the API key store.
  * On success, sets `req.user = { id: <userId> }` and updates `lastUsedAt` asynchronously.
@@ -35,7 +66,6 @@ export function setUserRoleResolver(resolver: (userId: number) => Promise<UserRo
  * @param res - Express response (used to send 401 on failure).
  * @param next - Express next function.
  */
-// eslint-disable-next-line complexity, max-lines-per-function -- validates API key with multiple error paths
 export async function validateApiKey(
   token: string,
   req: Request,
@@ -43,16 +73,14 @@ export async function validateApiKey(
   next: NextFunction,
 ): Promise<void> {
   if (!apiKeyRepo) {
-    res
-      .status(401)
-      .json({ error: { code: 'UNAUTHORIZED', message: 'API key authentication not available' } });
+    sendUnauthorized(res, 'API key authentication not available');
     return;
   }
 
   // Prefix = chars 4..12 of the token (skip "msk_")
   const keyBody = token.slice(4); // everything after "msk_"
   if (keyBody.length < 8) {
-    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid API key format' } });
+    sendUnauthorized(res, 'Invalid API key format');
     return;
   }
 
@@ -61,34 +89,18 @@ export async function validateApiKey(
   try {
     const apiKey = await apiKeyRepo.findByPrefix(prefix);
     if (!apiKey) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid API key' } });
+      sendUnauthorized(res, 'Invalid API key');
       return;
     }
 
-    // Check expiration
-    if (apiKey.expiresAt && new Date(apiKey.expiresAt) < new Date()) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'API key has expired' } });
+    const validityError = checkApiKeyValidity(apiKey);
+    if (validityError) {
+      sendUnauthorized(res, validityError);
       return;
     }
 
-    // Check active status
-    if (!apiKey.isActive) {
-      res
-        .status(401)
-        .json({ error: { code: 'UNAUTHORIZED', message: 'API key has been revoked' } });
-      return;
-    }
-
-    // Verify HMAC using timing-safe comparison
-    const expectedHash = crypto.createHmac('sha256', apiKey.salt).update(token).digest('hex');
-    const expectedBuffer = Buffer.from(expectedHash, 'hex');
-    const actualBuffer = Buffer.from(apiKey.hash, 'hex');
-
-    if (
-      expectedBuffer.length !== actualBuffer.length ||
-      !crypto.timingSafeEqual(expectedBuffer, actualBuffer)
-    ) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid API key' } });
+    if (!verifyTokenHash(token, apiKey.salt, apiKey.hash)) {
+      sendUnauthorized(res, 'Invalid API key');
       return;
     }
 
@@ -119,6 +131,6 @@ export async function validateApiKey(
 
     next();
   } catch {
-    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'API key validation failed' } });
+    sendUnauthorized(res, 'API key validation failed');
   }
 }

@@ -25,8 +25,9 @@ interface OnboardingSlideProps {
 }
 
 /** Single onboarding slide with Reanimated entrance animations. */
-// eslint-disable-next-line react/display-name -- memo wrapped component
-export const OnboardingSlide = React.memo(({ slide }: OnboardingSlideProps) => {
+export const OnboardingSlide = React.memo(function OnboardingSlide({
+  slide,
+}: OnboardingSlideProps) {
   const { theme } = useTheme();
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(20);
@@ -51,13 +52,22 @@ export const OnboardingSlide = React.memo(({ slide }: OnboardingSlideProps) => {
           <Ionicons name={slide.icon} size={48} color={theme.primary} />
         </View>
 
-        <Text style={[styles.title, { color: theme.textPrimary }]} accessibilityRole="header">{slide.title}</Text>
+        <Text style={[styles.title, { color: theme.textPrimary }]} accessibilityRole="header">
+          {slide.title}
+        </Text>
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>{slide.subtitle}</Text>
 
         <GlassCard style={styles.card} intensity={50}>
           {slide.bullets.map((bullet, i) => (
             <View key={i} style={styles.bulletRow}>
-              <Text style={[styles.bulletNumber, { color: theme.primary, backgroundColor: theme.primaryTint }]}>{i + 1}</Text>
+              <Text
+                style={[
+                  styles.bulletNumber,
+                  { color: theme.primary, backgroundColor: theme.primaryTint },
+                ]}
+              >
+                {i + 1}
+              </Text>
               <Text style={[styles.bulletText, { color: theme.textSecondary }]}>{bullet}</Text>
             </View>
           ))}

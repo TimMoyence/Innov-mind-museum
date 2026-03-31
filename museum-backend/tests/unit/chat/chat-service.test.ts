@@ -364,21 +364,25 @@ describe('ChatService (facade)', () => {
       const result = await service.postMessageStream(
         STUB_SESSION.id,
         { text: 'Describe this painting' },
-        onToken,
-        onGuardrail,
-        'req-stream-1',
-        42,
-        signal,
+        {
+          onToken,
+          onGuardrail,
+          requestId: 'req-stream-1',
+          currentUserId: 42,
+          signal,
+        },
       );
 
       expect(messagesSvc.postMessageStream).toHaveBeenCalledWith(
         STUB_SESSION.id,
         { text: 'Describe this painting' },
-        onToken,
-        onGuardrail,
-        'req-stream-1',
-        42,
-        signal,
+        {
+          onToken,
+          onGuardrail,
+          requestId: 'req-stream-1',
+          currentUserId: 42,
+          signal,
+        },
       );
       expect(result).toBe(STUB_POST_MESSAGE);
     });
@@ -388,16 +392,12 @@ describe('ChatService (facade)', () => {
       (messagesSvc.postMessageStream as jest.Mock).mockResolvedValue(STUB_POST_MESSAGE);
 
       const onToken = jest.fn();
-      await service.postMessageStream(STUB_SESSION.id, { text: 'Hello' }, onToken);
+      await service.postMessageStream(STUB_SESSION.id, { text: 'Hello' }, { onToken });
 
       expect(messagesSvc.postMessageStream).toHaveBeenCalledWith(
         STUB_SESSION.id,
         { text: 'Hello' },
-        onToken,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
+        { onToken },
       );
     });
 
@@ -406,7 +406,7 @@ describe('ChatService (facade)', () => {
       (messagesSvc.postMessageStream as jest.Mock).mockRejectedValue(new Error('stream failed'));
 
       await expect(
-        service.postMessageStream(STUB_SESSION.id, { text: 'Hello' }, jest.fn()),
+        service.postMessageStream(STUB_SESSION.id, { text: 'Hello' }, { onToken: jest.fn() }),
       ).rejects.toThrow('stream failed');
     });
   });
