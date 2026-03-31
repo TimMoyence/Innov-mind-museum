@@ -57,7 +57,7 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Expo Doctor
         run: npx expo-doctor
@@ -107,7 +107,7 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Validate preview iOS build env
         run: |
@@ -146,7 +146,7 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Validate preview Android build env
         run: |
@@ -186,7 +186,7 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Validate internal Android build env
         run: |
@@ -232,7 +232,7 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Validate production iOS build env
         run: |
@@ -272,7 +272,7 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Validate production Android build env
         run: |
@@ -315,7 +315,7 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Validate iOS submit env
         run: |
@@ -357,7 +357,7 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Validate Android submit env
         run: |
