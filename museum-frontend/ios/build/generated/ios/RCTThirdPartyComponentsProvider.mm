@@ -35,6 +35,7 @@
 			@"RNSScreenStackHeaderSubview": NSClassFromString(@"RNSScreenStackHeaderSubview"), // react-native-screens
 			@"RNSScreenStack": NSClassFromString(@"RNSScreenStackView"), // react-native-screens
 			@"RNSSearchBar": NSClassFromString(@"RNSSearchBar"), // react-native-screens
+			@"RNCWebView": NSClassFromString(@"RNCWebView"), // react-native-webview
     };
   });
 
