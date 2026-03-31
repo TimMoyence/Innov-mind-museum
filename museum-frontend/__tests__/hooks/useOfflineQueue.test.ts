@@ -23,7 +23,7 @@ jest.mock('@/shared/infrastructure/connectivity/useConnectivity', () => ({
   useConnectivity: () => ({ isConnected: mockIsConnected }),
 }));
 
-const mockPersistOfflineImage = jest.fn((uri: string) => `persistent://${uri}`);
+const mockPersistOfflineImage = jest.fn((uri: string) => Promise.resolve(`persistent://${uri}`));
 const mockCleanupOfflineImage = jest.fn();
 const mockCleanupOfflineImages = jest.fn();
 
@@ -39,7 +39,9 @@ describe('useOfflineQueue', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockIsConnected = true;
-    mockPersistOfflineImage.mockImplementation((uri: string) => `persistent://${uri}`);
+    mockPersistOfflineImage.mockImplementation((uri: string) =>
+      Promise.resolve(`persistent://${uri}`),
+    );
     // Clear fake store
     // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- test cleanup
     for (const key of Object.keys(fakeStore)) delete fakeStore[key];
@@ -53,11 +55,11 @@ describe('useOfflineQueue', () => {
     expect(result.current.pendingMessages).toEqual([]);
   });
 
-  it('enqueue adds a message and increments pendingCount', () => {
+  it('enqueue adds a message and increments pendingCount', async () => {
     const { result } = renderHook(() => useOfflineQueue());
 
-    act(() => {
-      result.current.enqueue({ sessionId: 's1', text: 'hello' });
+    await act(async () => {
+      await result.current.enqueue({ sessionId: 's1', text: 'hello' });
     });
 
     expect(result.current.pendingCount).toBe(1);
@@ -67,12 +69,12 @@ describe('useOfflineQueue', () => {
     });
   });
 
-  it('dequeue removes a message and decrements pendingCount', () => {
+  it('dequeue removes a message and decrements pendingCount', async () => {
     const { result } = renderHook(() => useOfflineQueue());
 
-    act(() => {
-      result.current.enqueue({ sessionId: 's1', text: 'first' });
-      result.current.enqueue({ sessionId: 's1', text: 'second' });
+    await act(async () => {
+      await result.current.enqueue({ sessionId: 's1', text: 'first' });
+      await result.current.enqueue({ sessionId: 's1', text: 'second' });
     });
 
     expect(result.current.pendingCount).toBe(2);
@@ -100,11 +102,11 @@ describe('useOfflineQueue', () => {
 
   // ── Image persistence tests ──────────────────────────────────────────────
 
-  it('enqueue with imageUri persists the image before storing', () => {
+  it('enqueue with imageUri persists the image before storing', async () => {
     const { result } = renderHook(() => useOfflineQueue());
 
-    act(() => {
-      result.current.enqueue({
+    await act(async () => {
+      await result.current.enqueue({
         sessionId: 's1',
         text: 'photo',
         imageUri: 'file:///tmp/photo.jpg',
@@ -117,25 +119,23 @@ describe('useOfflineQueue', () => {
     });
   });
 
-  it('enqueue without imageUri does not call persistOfflineImage', () => {
+  it('enqueue without imageUri does not call persistOfflineImage', async () => {
     const { result } = renderHook(() => useOfflineQueue());
 
-    act(() => {
-      result.current.enqueue({ sessionId: 's1', text: 'no image' });
+    await act(async () => {
+      await result.current.enqueue({ sessionId: 's1', text: 'no image' });
     });
 
     expect(mockPersistOfflineImage).not.toHaveBeenCalled();
   });
 
-  it('enqueue still succeeds if image persistence fails', () => {
-    mockPersistOfflineImage.mockImplementation(() => {
-      throw new Error('disk full');
-    });
+  it('enqueue still succeeds if image persistence fails', async () => {
+    mockPersistOfflineImage.mockRejectedValue(new Error('disk full'));
 
     const { result } = renderHook(() => useOfflineQueue());
 
-    act(() => {
-      result.current.enqueue({
+    await act(async () => {
+      await result.current.enqueue({
         sessionId: 's1',
         text: 'fallback',
         imageUri: 'file:///tmp/photo.jpg',
@@ -147,11 +147,11 @@ describe('useOfflineQueue', () => {
     expect(result.current.pendingMessages[0].imageUri).toBeUndefined();
   });
 
-  it('dequeue cleans up the persisted image', () => {
+  it('dequeue cleans up the persisted image', async () => {
     const { result } = renderHook(() => useOfflineQueue());
 
-    act(() => {
-      result.current.enqueue({
+    await act(async () => {
+      await result.current.enqueue({
         sessionId: 's1',
         text: 'photo',
         imageUri: 'file:///tmp/photo.jpg',
@@ -165,12 +165,12 @@ describe('useOfflineQueue', () => {
     expect(mockCleanupOfflineImage).toHaveBeenCalledWith('persistent://file:///tmp/photo.jpg');
   });
 
-  it('remove cleans up the persisted image', () => {
+  it('remove cleans up the persisted image', async () => {
     const { result } = renderHook(() => useOfflineQueue());
 
     let messageId = '';
-    act(() => {
-      const entry = result.current.enqueue({
+    await act(async () => {
+      const entry = await result.current.enqueue({
         sessionId: 's1',
         text: 'photo',
         imageUri: 'file:///tmp/photo.jpg',

@@ -78,7 +78,7 @@ export const useChatSession = (sessionId: string) => {
 
       // Offline: queue and add optimistic entry
       if (isOffline) {
-        const queued = enqueue({ sessionId, text: trimmedText, imageUri: params.imageUri });
+        const queued = await enqueue({ sessionId, text: trimmedText, imageUri: params.imageUri });
         if (!queued) return false;
         const offlineMessage: ChatUiMessage = {
           id: queued.id,
