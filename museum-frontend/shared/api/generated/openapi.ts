@@ -2250,6 +2250,37 @@ export interface components {
         openQuestion?: string;
         followUpQuestions?: string[];
         imageDescription?: string;
+        /** @description Enriched images from external sources (Wikidata, Unsplash) */
+        images?: {
+          /**
+           * Format: uri
+           * @description Full resolution image URL
+           */
+          url: string;
+          /**
+           * Format: uri
+           * @description Thumbnail URL (~300px)
+           */
+          thumbnailUrl: string;
+          /** @description Image description */
+          caption: string;
+          /**
+           * @description Image source
+           * @enum {string}
+           */
+          source: 'wikidata' | 'unsplash';
+          /** @description Relevance score */
+          score: number;
+          /** @description Photo credit (required for Unsplash) */
+          attribution?: string;
+        }[];
+        /** @description LLM-suggested image search queries */
+        suggestedImages?: {
+          /** @description Search term for image lookup */
+          query: string;
+          /** @description What the image should depict */
+          description: string;
+        }[];
       } & {
         [key: string]: unknown;
       };
