@@ -10,8 +10,12 @@ let mockItems: DashboardSessionCard[] = [];
 let mockIsLoadingResponse = true;
 
 const mockStore = {
-  get items() { return mockItems; },
-  setItems: jest.fn((newItems: DashboardSessionCard[]) => { mockItems = newItems; }),
+  get items() {
+    return mockItems;
+  },
+  setItems: jest.fn((newItems: DashboardSessionCard[]) => {
+    mockItems = newItems;
+  }),
   appendItems: jest.fn(),
   clearItems: jest.fn(),
   savedSessionIds: [] as string[],
@@ -31,7 +35,9 @@ const mockListSessions = jest.fn();
 
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   chatApi: {
-    get listSessions() { return mockListSessions; },
+    get listSessions() {
+      return mockListSessions;
+    },
   },
 }));
 
@@ -40,15 +46,14 @@ jest.mock('@/features/settings/runtimeSettings', () => ({
 }));
 
 jest.mock('@/features/chat/domain/dashboard-session', () => ({
-  mapSessionsToDashboardCards: jest.fn(
-    (sessions: { id: string }[]) =>
-      sessions.map((s) => ({
-        id: s.id,
-        title: `Session ${s.id}`,
-        subtitle: 'Test subtitle',
-        timeLabel: 'Just now',
-        messageCount: 3,
-      })),
+  mapSessionsToDashboardCards: jest.fn((sessions: { id: string }[]) =>
+    sessions.map((s) => ({
+      id: s.id,
+      title: `Session ${s.id}`,
+      subtitle: 'Test subtitle',
+      timeLabel: 'Just now',
+      messageCount: 3,
+    })),
   ),
 }));
 
@@ -60,10 +65,6 @@ jest.mock('@/features/conversation/ui/ConversationSearchBar', () => {
     ),
   };
 });
-
-jest.mock('@/shared/lib/errors', () => ({
-  getErrorMessage: (err: unknown) => String(err),
-}));
 
 import ConversationsScreen from '@/app/(tabs)/conversations';
 
@@ -92,8 +93,18 @@ describe('ConversationsScreen', () => {
 
   it('renders conversation cards after loading', async () => {
     const sessions = [
-      { id: 'sess-1', messages: [], createdAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z' },
-      { id: 'sess-2', messages: [], createdAt: '2025-01-02T00:00:00Z', updatedAt: '2025-01-02T00:00:00Z' },
+      {
+        id: 'sess-1',
+        messages: [],
+        createdAt: '2025-01-01T00:00:00Z',
+        updatedAt: '2025-01-01T00:00:00Z',
+      },
+      {
+        id: 'sess-2',
+        messages: [],
+        createdAt: '2025-01-02T00:00:00Z',
+        updatedAt: '2025-01-02T00:00:00Z',
+      },
     ];
 
     mockListSessions.mockResolvedValue({
@@ -103,8 +114,20 @@ describe('ConversationsScreen', () => {
 
     // Pre-populate the store with mapped items (simulating what loadDashboard does)
     mockItems = [
-      { id: 'sess-1', title: 'Session sess-1', subtitle: 'Test subtitle', timeLabel: 'Just now', messageCount: 3 },
-      { id: 'sess-2', title: 'Session sess-2', subtitle: 'Test subtitle', timeLabel: 'Just now', messageCount: 3 },
+      {
+        id: 'sess-1',
+        title: 'Session sess-1',
+        subtitle: 'Test subtitle',
+        timeLabel: 'Just now',
+        messageCount: 3,
+      },
+      {
+        id: 'sess-2',
+        title: 'Session sess-2',
+        subtitle: 'Test subtitle',
+        timeLabel: 'Just now',
+        messageCount: 3,
+      },
     ];
 
     render(<ConversationsScreen />);

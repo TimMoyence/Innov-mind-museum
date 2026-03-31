@@ -262,6 +262,64 @@ describe('OfflineQueue', () => {
 
       assert.equal(q.size(), 2);
     });
+
+    it('hydrate calls onEvict with expired messages', async () => {
+      const now = Date.now();
+      const stored = JSON.stringify([
+        {
+          id: 'old-1',
+          sessionId: 's1',
+          text: 'old',
+          imageUri: 'file:///tmp/img.jpg',
+          createdAt: now - 90_000,
+          retryCount: 0,
+        },
+        { id: 'fresh-1', sessionId: 's1', text: 'fresh', createdAt: now - 10_000, retryCount: 0 },
+      ]);
+
+      const storage: QueueStorage = {
+        getItem: () => Promise.resolve(stored),
+        setItem: () => Promise.resolve(),
+      };
+
+      const evicted: { id: string; imageUri?: string }[] = [];
+      const q = new OfflineQueue({
+        storage,
+        maxAgeMs: 60_000,
+        onEvict: (msgs) => {
+          evicted.push(...msgs);
+        },
+      });
+      await q.hydrate();
+
+      assert.equal(evicted.length, 1);
+      assert.equal(evicted[0].id, 'old-1');
+      assert.equal(evicted[0].imageUri, 'file:///tmp/img.jpg');
+    });
+
+    it('hydrate does not call onEvict when nothing is expired', async () => {
+      const now = Date.now();
+      const stored = JSON.stringify([
+        { id: 'a', sessionId: 's1', text: 'a', createdAt: now - 1_000, retryCount: 0 },
+      ]);
+
+      const storage: QueueStorage = {
+        getItem: () => Promise.resolve(stored),
+        setItem: () => Promise.resolve(),
+      };
+
+      let evictCalled = false;
+      const q = new OfflineQueue({
+        storage,
+        maxAgeMs: 60_000,
+        onEvict: () => {
+          evictCalled = true;
+        },
+      });
+      await q.hydrate();
+
+      assert.equal(evictCalled, false, 'onEvict should not be called when nothing expired');
+    });
   });
 
   describe('prune', () => {
@@ -324,6 +382,42 @@ describe('OfflineQueue', () => {
 
       q.prune();
       assert.equal(notified, false, 'listener should not be notified when nothing pruned');
+    });
+
+    it('prune calls onEvict with expired messages', () => {
+      const evicted: { id: string; imageUri?: string }[] = [];
+      const q = new OfflineQueue({
+        maxQueueSize: 100,
+        maxAgeMs: 1,
+        onEvict: (msgs) => {
+          evicted.push(...msgs);
+        },
+      });
+      q.enqueue({ sessionId: 's1', text: 'will-expire', imageUri: 'file:///tmp/photo.jpg' });
+
+      const start = Date.now();
+      while (Date.now() - start < 5) {
+        // busy-wait
+      }
+
+      q.prune();
+      assert.equal(evicted.length, 1, 'onEvict should receive the pruned message');
+      assert.equal(evicted[0].imageUri, 'file:///tmp/photo.jpg');
+    });
+
+    it('prune does not call onEvict if nothing was pruned', () => {
+      let evictCalled = false;
+      const q = new OfflineQueue({
+        maxQueueSize: 100,
+        maxAgeMs: 60_000,
+        onEvict: () => {
+          evictCalled = true;
+        },
+      });
+      q.enqueue({ sessionId: 's1', text: 'fresh' });
+
+      q.prune();
+      assert.equal(evictCalled, false, 'onEvict should not be called when nothing pruned');
     });
   });
 });

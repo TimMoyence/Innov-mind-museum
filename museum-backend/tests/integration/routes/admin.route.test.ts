@@ -1,34 +1,21 @@
 import request from 'supertest';
-import jwt from 'jsonwebtoken';
-import { createApp } from '@src/app';
-import { env } from '@src/config/env';
 import {
-  clearRateLimitBuckets,
+  createRouteTestApp,
+  resetRateLimits,
   stopRateLimitSweep,
-} from '@src/helpers/middleware/rate-limit.middleware';
+} from '../../helpers/http/route-test-setup';
+import { adminToken, visitorToken } from '../../helpers/auth/token.helpers';
 
 /**
  * Admin route integration tests — RBAC enforcement + validation.
  * No DB required — tests that admin routes require authentication and proper role.
  */
 
-const app = createApp({
-  healthCheck: async () => ({ database: 'up' }),
-});
-
-const makeToken = (overrides: Record<string, unknown> = {}) =>
-  jwt.sign(
-    { sub: '1', type: 'access', jti: 'test-jti', role: 'visitor', ...overrides },
-    env.auth.accessTokenSecret,
-    { expiresIn: '5m' },
-  );
-
-const adminToken = () => makeToken({ role: 'admin' });
-const visitorToken = () => makeToken({ role: 'visitor' });
+const { app } = createRouteTestApp();
 
 describe('Admin Routes — RBAC Enforcement', () => {
   beforeEach(() => {
-    clearRateLimitBuckets();
+    resetRateLimits();
   });
 
   afterAll(() => {

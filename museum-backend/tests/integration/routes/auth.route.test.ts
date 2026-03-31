@@ -1,11 +1,11 @@
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
-import { createApp } from '@src/app';
-import { env } from '@src/config/env';
 import {
-  clearRateLimitBuckets,
+  createRouteTestApp,
+  resetRateLimits,
   stopRateLimitSweep,
-} from '@src/helpers/middleware/rate-limit.middleware';
+} from '../../helpers/http/route-test-setup';
+import { makeToken } from '../../helpers/auth/token.helpers';
 
 /**
  * Auth route integration tests — HTTP layer validation + middleware.
@@ -17,18 +17,11 @@ import {
  * (all supertest calls share 127.0.0.1 and the in-memory store is a module singleton).
  */
 
-const app = createApp({ healthCheck: async () => ({ database: 'up' }) });
-
-const makeToken = (overrides: Record<string, unknown> = {}) =>
-  jwt.sign(
-    { sub: '1', type: 'access', jti: 'test-jti', role: 'visitor', ...overrides },
-    env.auth.accessTokenSecret,
-    { expiresIn: '5m' },
-  );
+const { app } = createRouteTestApp();
 
 describe('Auth Routes — HTTP Layer', () => {
   beforeEach(() => {
-    clearRateLimitBuckets();
+    resetRateLimits();
   });
 
   afterAll(() => {

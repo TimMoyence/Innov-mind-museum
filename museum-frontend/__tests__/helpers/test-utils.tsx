@@ -101,9 +101,13 @@ jest.mock('expo-haptics', () => ({
 jest.mock('expo-linear-gradient', () => {
   const { View } = require('react-native');
   return {
-    LinearGradient: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
-      <View {...props}>{children}</View>
-    ),
+    LinearGradient: ({
+      children,
+      ...props
+    }: {
+      children: React.ReactNode;
+      [key: string]: unknown;
+    }) => <View {...props}>{children}</View>,
   };
 });
 
@@ -169,11 +173,14 @@ jest.mock('@/shared/ui/SkeletonConversationCard', () => {
 jest.mock('@/shared/ui/ErrorNotice', () => {
   const { Text } = require('react-native');
   return {
-    ErrorNotice: ({ message }: { message: string }) => (
-      <Text testID="error-notice">{message}</Text>
-    ),
+    ErrorNotice: ({ message }: { message: string }) => <Text testID="error-notice">{message}</Text>,
   };
 });
+
+// ── @/shared/lib/errors ─────────────────────────────────────────────────────
+jest.mock('@/shared/lib/errors', () => ({
+  getErrorMessage: (err: unknown) => String(err),
+}));
 
 // ── FlashList → FlatList (native RecyclerView not available in tests) ────────
 jest.mock('@shopify/flash-list', () => {

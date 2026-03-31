@@ -12,7 +12,7 @@ jest.mock('@/shared/infrastructure/storage', () => ({
       fakeStore[key] = value;
     }),
     removeItem: jest.fn((key: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- test cleanup
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- test cleanup
       delete fakeStore[key];
     }),
   },
@@ -23,14 +23,25 @@ jest.mock('@/shared/infrastructure/connectivity/useConnectivity', () => ({
   useConnectivity: () => ({ isConnected: mockIsConnected }),
 }));
 
+const mockPersistOfflineImage = jest.fn((uri: string) => `persistent://${uri}`);
+const mockCleanupOfflineImage = jest.fn();
+const mockCleanupOfflineImages = jest.fn();
+
+jest.mock('@/features/chat/application/offlineImageStorage', () => ({
+  persistOfflineImage: (...args: unknown[]) => mockPersistOfflineImage(...(args as [string])),
+  cleanupOfflineImage: (...args: unknown[]) => mockCleanupOfflineImage(...(args as [string])),
+  cleanupOfflineImages: (...args: unknown[]) => mockCleanupOfflineImages(...(args as [string[]])),
+}));
+
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useOfflineQueue', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockIsConnected = true;
+    mockPersistOfflineImage.mockImplementation((uri: string) => `persistent://${uri}`);
     // Clear fake store
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- test cleanup
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- test cleanup
     for (const key of Object.keys(fakeStore)) delete fakeStore[key];
   });
 
@@ -85,5 +96,92 @@ describe('useOfflineQueue', () => {
 
     expect(result.current.pendingCount).toBe(0);
     expect(result.current.pendingMessages).toEqual([]);
+  });
+
+  // ── Image persistence tests ──────────────────────────────────────────────
+
+  it('enqueue with imageUri persists the image before storing', () => {
+    const { result } = renderHook(() => useOfflineQueue());
+
+    act(() => {
+      result.current.enqueue({
+        sessionId: 's1',
+        text: 'photo',
+        imageUri: 'file:///tmp/photo.jpg',
+      });
+    });
+
+    expect(mockPersistOfflineImage).toHaveBeenCalledWith('file:///tmp/photo.jpg');
+    expect(result.current.pendingMessages[0]).toMatchObject({
+      imageUri: 'persistent://file:///tmp/photo.jpg',
+    });
+  });
+
+  it('enqueue without imageUri does not call persistOfflineImage', () => {
+    const { result } = renderHook(() => useOfflineQueue());
+
+    act(() => {
+      result.current.enqueue({ sessionId: 's1', text: 'no image' });
+    });
+
+    expect(mockPersistOfflineImage).not.toHaveBeenCalled();
+  });
+
+  it('enqueue still succeeds if image persistence fails', () => {
+    mockPersistOfflineImage.mockImplementation(() => {
+      throw new Error('disk full');
+    });
+
+    const { result } = renderHook(() => useOfflineQueue());
+
+    act(() => {
+      result.current.enqueue({
+        sessionId: 's1',
+        text: 'fallback',
+        imageUri: 'file:///tmp/photo.jpg',
+      });
+    });
+
+    expect(result.current.pendingCount).toBe(1);
+    // imageUri should be cleared since persistence failed
+    expect(result.current.pendingMessages[0].imageUri).toBeUndefined();
+  });
+
+  it('dequeue cleans up the persisted image', () => {
+    const { result } = renderHook(() => useOfflineQueue());
+
+    act(() => {
+      result.current.enqueue({
+        sessionId: 's1',
+        text: 'photo',
+        imageUri: 'file:///tmp/photo.jpg',
+      });
+    });
+
+    act(() => {
+      result.current.dequeue();
+    });
+
+    expect(mockCleanupOfflineImage).toHaveBeenCalledWith('persistent://file:///tmp/photo.jpg');
+  });
+
+  it('remove cleans up the persisted image', () => {
+    const { result } = renderHook(() => useOfflineQueue());
+
+    let messageId = '';
+    act(() => {
+      const entry = result.current.enqueue({
+        sessionId: 's1',
+        text: 'photo',
+        imageUri: 'file:///tmp/photo.jpg',
+      });
+      messageId = entry?.id ?? '';
+    });
+
+    act(() => {
+      result.current.remove(messageId);
+    });
+
+    expect(mockCleanupOfflineImage).toHaveBeenCalledWith('persistent://file:///tmp/photo.jpg');
   });
 });

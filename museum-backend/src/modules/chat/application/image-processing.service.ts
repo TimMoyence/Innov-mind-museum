@@ -3,7 +3,13 @@ import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
 import { buildChatImageObjectKey } from './chat-image.helpers';
-import { assertImageSize, assertMimeType, decodeBase64Image, isSafeImageUrl } from './image-input';
+import {
+  assertImageSize,
+  assertMagicBytes,
+  assertMimeType,
+  decodeBase64Image,
+  isSafeImageUrl,
+} from './image-input';
 
 import type { evaluateUserInputGuardrail } from './art-topic-guardrail';
 import type { PostMessageInput } from '../domain/chat.types';
@@ -71,6 +77,7 @@ export class ImageProcessingService {
 
       assertMimeType(mimeType, env.upload.allowedMimeTypes);
       assertImageSize(sizeBytes ?? 0, env.llm.maxImageBytes);
+      assertMagicBytes(normalizedBase64);
 
       const imageRef = await this.imageStorage.save({
         base64: normalizedBase64,
@@ -88,6 +95,7 @@ export class ImageProcessingService {
     const decoded = decodeBase64Image(image.value);
     assertMimeType(decoded.mimeType, env.upload.allowedMimeTypes);
     assertImageSize(decoded.sizeBytes, env.llm.maxImageBytes);
+    assertMagicBytes(decoded.base64);
 
     const imageRef = await this.imageStorage.save({
       base64: decoded.base64,

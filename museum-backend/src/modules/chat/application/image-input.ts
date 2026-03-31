@@ -102,3 +102,45 @@ export const assertMimeType = (mimeType: string, allowed: string[]): void => {
     throw badRequest(`Unsupported image mime type: ${mimeType}`);
   }
 };
+
+/** Known image format magic byte signatures. */
+const IMAGE_SIGNATURES: { mime: string; bytes: number[]; offset?: number }[] = [
+  { mime: 'image/jpeg', bytes: [0xff, 0xd8, 0xff] },
+  { mime: 'image/png', bytes: [0x89, 0x50, 0x4e, 0x47] },
+  { mime: 'image/gif', bytes: [0x47, 0x49, 0x46, 0x38] },
+  { mime: 'image/webp', bytes: [0x57, 0x45, 0x42, 0x50], offset: 8 },
+];
+
+/**
+ * Detects the MIME type of a base64-encoded image by inspecting its leading magic bytes.
+ *
+ * @param base64 - Raw base64-encoded image data (no data-URL prefix).
+ * @returns The detected MIME type string, or null if no known signature matches.
+ */
+export const detectImageMimeFromBytes = (base64: string): string | null => {
+  const buffer = Buffer.from(base64, 'base64');
+  if (buffer.length < 12) return null;
+
+  for (const sig of IMAGE_SIGNATURES) {
+    const offset = sig.offset ?? 0;
+    if (buffer.length < offset + sig.bytes.length) continue;
+    if (sig.bytes.every((b, i) => buffer[offset + i] === b)) {
+      return sig.mime;
+    }
+  }
+  return null;
+};
+
+/**
+ * Throws a 400 error if the base64 data does not start with a known image magic byte signature.
+ * This is a defense-in-depth check that validates actual file content, not just the declared MIME type.
+ *
+ * @param base64 - Raw base64-encoded image data (no data-URL prefix).
+ * @throws {AppError} 400 when no known image signature is found.
+ */
+export const assertMagicBytes = (base64: string): void => {
+  const detected = detectImageMimeFromBytes(base64);
+  if (!detected) {
+    throw badRequest('Uploaded file does not appear to be a valid image');
+  }
+};

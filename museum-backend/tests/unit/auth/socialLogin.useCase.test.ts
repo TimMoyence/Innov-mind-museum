@@ -3,20 +3,7 @@ import type { IUserRepository } from '@modules/auth/core/domain/user.repository.
 import type { ISocialAccountRepository } from '@modules/auth/core/domain/socialAccount.repository.interface';
 import type { AuthSessionService } from '@modules/auth/core/useCase/authSession.service';
 import type { SocialTokenVerifier } from '@modules/auth/core/domain/social-token-verifier.port';
-import type { User } from '@modules/auth/core/domain/user.entity';
-
-const makeUser = (overrides: Partial<User> = {}): User =>
-  ({
-    id: 1,
-    email: 'user@test.com',
-    password: '$2b$12$hash',
-    firstname: 'Test',
-    lastname: 'User',
-    role: 'visitor',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  }) as User;
+import { makeUser } from '../../helpers/auth/user.fixtures';
 
 const sessionResponse = {
   accessToken: 'access-jwt',
