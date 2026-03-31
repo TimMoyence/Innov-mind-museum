@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Alert, Linking } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import * as ImagePickerLib from 'expo-image-picker';
 
 /**
@@ -7,6 +8,7 @@ import * as ImagePickerLib from 'expo-image-picker';
  * Supports gallery picking and native camera capture.
  */
 export const useImagePicker = () => {
+  const { t } = useTranslation();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<string | null>(null);
 
@@ -14,14 +16,10 @@ export const useImagePicker = () => {
     const { status } = await ImagePickerLib.requestMediaLibraryPermissionsAsync();
     // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- expo-image-picker returns string-typed status from permission APIs
     if (status !== 'granted') {
-      Alert.alert(
-        'Gallery Access',
-        'Gallery permission is required. Please enable it in Settings.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Settings', onPress: () => void Linking.openSettings() },
-        ],
-      );
+      Alert.alert(t('permissions.galleryTitle'), t('permissions.galleryMessage'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.settings'), onPress: () => void Linking.openSettings() },
+      ]);
       return;
     }
 
@@ -39,15 +37,15 @@ export const useImagePicker = () => {
     if (!result.canceled && result.assets.length) {
       setPendingImage(result.assets[0].uri);
     }
-  }, []);
+  }, [t]);
 
   const onTakePicture = useCallback(async () => {
     const { status } = await ImagePickerLib.requestCameraPermissionsAsync();
     // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- expo-image-picker returns string-typed status from permission APIs
     if (status !== 'granted') {
-      Alert.alert('Camera Access', 'Camera permission is required. Please enable it in Settings.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Settings', onPress: () => void Linking.openSettings() },
+      Alert.alert(t('permissions.cameraTitle'), t('permissions.cameraMessage'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.settings'), onPress: () => void Linking.openSettings() },
       ]);
       return;
     }
@@ -66,7 +64,7 @@ export const useImagePicker = () => {
     if (!result.canceled && result.assets.length) {
       setPendingImage(result.assets[0].uri);
     }
-  }, []);
+  }, [t]);
 
   const confirmPendingImage = useCallback((uri: string) => {
     setSelectedImage(uri);

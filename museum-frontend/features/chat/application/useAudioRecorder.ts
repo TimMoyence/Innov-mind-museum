@@ -30,6 +30,7 @@ export const useAudioRecorder = () => {
   const webAudioChunksRef = useRef<BlobPart[]>([]);
   const webAudioObjectUrlRef = useRef<string | null>(null);
   const webAudioPlaybackRef = useRef<HTMLAudioElement | null>(null);
+  const nativePlaybackSoundRef = useRef<Audio.Sound | null>(null);
 
   const revokeWebAudioObjectUrl = useCallback(() => {
     if (webAudioObjectUrlRef.current) {
@@ -59,6 +60,10 @@ export const useAudioRecorder = () => {
         webMediaRecorderRef.current.stop();
       }
       stopWebAudioStreamTracks();
+      if (nativePlaybackSoundRef.current) {
+        nativePlaybackSoundRef.current.unloadAsync().catch(() => undefined);
+        nativePlaybackSoundRef.current = null;
+      }
       if (webAudioPlaybackRef.current) {
         webAudioPlaybackRef.current.pause();
         webAudioPlaybackRef.current = null;
@@ -220,18 +225,27 @@ export const useAudioRecorder = () => {
         return;
       }
 
+      // Unload any previous playback sound before creating a new one
+      if (nativePlaybackSoundRef.current) {
+        nativePlaybackSoundRef.current.unloadAsync().catch(() => undefined);
+        nativePlaybackSoundRef.current = null;
+      }
+
       const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true });
+      nativePlaybackSoundRef.current = sound;
 
       sound.setOnPlaybackStatusUpdate((status) => {
         if (!status.isLoaded) {
           setIsPlayingAudio(false);
           sound.unloadAsync().catch(() => undefined);
+          nativePlaybackSoundRef.current = null;
           return;
         }
 
         if (status.didJustFinish) {
           setIsPlayingAudio(false);
           sound.unloadAsync().catch(() => undefined);
+          nativePlaybackSoundRef.current = null;
         }
       });
     } catch {

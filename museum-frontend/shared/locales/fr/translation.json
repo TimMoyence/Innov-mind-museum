@@ -15,7 +15,14 @@
     "enabled": "Activé",
     "disabled": "Désactivé",
     "not_configured": "Non configuré",
-    "or_continue_with": "ou continuer avec"
+    "or_continue_with": "ou continuer avec",
+    "settings": "Réglages"
+  },
+  "permissions": {
+    "galleryTitle": "Accès galerie",
+    "galleryMessage": "L'accès à la galerie est requis. Veuillez l'activer dans les Réglages.",
+    "cameraTitle": "Accès caméra",
+    "cameraMessage": "L'accès à la caméra est requis. Veuillez l'activer dans les Réglages."
   },
   "tabs": {
     "dashboard": "Tableau de bord",

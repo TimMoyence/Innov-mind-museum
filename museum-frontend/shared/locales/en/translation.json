@@ -15,7 +15,14 @@
     "enabled": "Enabled",
     "disabled": "Disabled",
     "not_configured": "Not configured",
-    "or_continue_with": "or continue with"
+    "or_continue_with": "or continue with",
+    "settings": "Settings"
+  },
+  "permissions": {
+    "galleryTitle": "Gallery Access",
+    "galleryMessage": "Gallery permission is required. Please enable it in Settings.",
+    "cameraTitle": "Camera Access",
+    "cameraMessage": "Camera permission is required. Please enable it in Settings."
   },
   "tabs": {
     "dashboard": "Dashboard",

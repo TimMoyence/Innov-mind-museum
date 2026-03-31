@@ -152,6 +152,45 @@ When modifying the chat pipeline:
 - Keep message ordering: `[SystemMessage(system), SystemMessage(section), ...history, HumanMessage(user)]`
 - The guardrail in `chat.service.ts` is the single source of truth for content filtering — do not add duplicate checks elsewhere
 
+## Test Discipline — DRY Factories
+
+**Tests MUST use shared factories. Inline object creation is forbidden.**
+
+### Principle
+
+Every test entity (User, ChatMessage, ChatSession, etc.) MUST be created via a shared factory function in `tests/helpers/`. No test file should define its own `makeUser()`, `makeMessage()`, or `makeSession()` inline.
+
+### Existing factories (use them)
+
+| Factory | Location | Creates |
+|---------|----------|---------|
+| `makeUser(overrides?)` | `tests/helpers/auth/user.fixtures.ts` | `User` entity with defaults |
+| `makeToken(overrides?)` | `tests/helpers/auth/token.helpers.ts` | JWT access token |
+| `adminToken()` / `visitorToken()` | `tests/helpers/auth/token.helpers.ts` | Role-specific tokens |
+| `makeMessage(overrides?)` | `tests/helpers/chat/message.fixtures.ts` | `ChatMessage` entity |
+| `makeSession(overrides?)` | `tests/helpers/chat/message.fixtures.ts` | `ChatSession` entity |
+| `buildChatTestService()` | `tests/helpers/chat/chatTestApp.ts` | Full ChatService with in-memory deps |
+| `createRouteTestApp()` | `tests/helpers/http/route-test-setup.ts` | Express test app |
+| `createE2EHarness()` | `tests/helpers/e2e/e2e-app-harness.ts` | Full E2E environment |
+
+### Rules
+
+1. **New entity?** → Create a factory in `tests/helpers/<module>/<entity>.fixtures.ts` FIRST
+2. **Need a mock repo?** → Check if an in-memory repo exists in `tests/helpers/`. If not, create one.
+3. **Override pattern**: `makeEntity({ field: value })` — factory provides sensible defaults, test overrides only what matters
+4. **Frontend**: Use `test-utils.tsx` for shared mocks. Create factories in `__tests__/helpers/` for data objects.
+5. **Never** duplicate `jest.mock()` calls that already exist in `test-utils.tsx`
+
+### Anti-patterns to avoid
+
+| Don't do this | Do this instead |
+|---|---|
+| `const user = { id: 1, email: '...', ... } as User` inline | `const user = makeUser()` or `makeUser({ email: 'custom@test.com' })` |
+| `const msg = { id: 'x', role: 'user', text: '...' } as ChatMessage` inline | `const msg = makeMessage({ text: 'my text' })` |
+| Local `makeUser()` in each test file | Import from `tests/helpers/auth/user.fixtures.ts` |
+| Copy-paste mock repo in each test | Create shared in-memory repo in `tests/helpers/` |
+| `jest.mock('@sentry/react-native')` in each test | Import `test-utils.tsx` which already mocks it |
+
 ## ESLint Discipline
 
 **`eslint-disable` is a last resort, not a first reflex.** If ESLint flags code, the rule exists for a reason — find the proper fix before reaching for a disable comment.

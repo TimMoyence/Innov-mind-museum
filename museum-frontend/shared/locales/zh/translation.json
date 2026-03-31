@@ -15,7 +15,14 @@
     "enabled": "已启用",
     "disabled": "已禁用",
     "not_configured": "未配置",
-    "or_continue_with": "或通过以下方式继续"
+    "or_continue_with": "或通过以下方式继续",
+    "settings": "设置"
+  },
+  "permissions": {
+    "galleryTitle": "相册访问",
+    "galleryMessage": "需要相册访问权限。请在设置中启用。",
+    "cameraTitle": "相机访问",
+    "cameraMessage": "需要相机访问权限。请在设置中启用。"
   },
   "tabs": {
     "dashboard": "仪表盘",
