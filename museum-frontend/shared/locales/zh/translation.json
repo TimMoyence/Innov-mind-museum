@@ -338,7 +338,10 @@
     "replace_image": "替换",
     "remove_image": "删除",
     "share_response": "分享",
-    "crop": "裁剪"
+    "crop": "裁剪",
+    "imageAttribution": "{{photographer}} 拍摄 (Unsplash)",
+    "imageLoadError": "无法加载图片",
+    "viewFullscreen": "查看大图"
   },
   "chatInput": {
     "placeholder": "询问关于艺术品、古迹的问题，或发送语音/照片...",

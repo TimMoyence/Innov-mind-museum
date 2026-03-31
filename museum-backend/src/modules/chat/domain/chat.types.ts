@@ -1,3 +1,13 @@
+/** An image enriched from external sources (Wikidata, Unsplash). */
+export interface EnrichedImage {
+  url: string;
+  thumbnailUrl: string;
+  caption: string;
+  source: 'wikidata' | 'unsplash';
+  score: number;
+  attribution?: string;
+}
+
 /** Role of a message within a chat session. */
 export type ChatRole = 'user' | 'assistant' | 'system';
 
@@ -119,5 +129,9 @@ export interface ChatAssistantMetadata {
   openQuestion?: string;
   followUpQuestions?: string[];
   imageDescription?: string;
+  /** Enriched images fetched from external sources (Wikidata, Unsplash). */
+  images?: EnrichedImage[];
+  /** LLM-suggested image search queries for post-streaming enrichment. */
+  suggestedImages?: { query: string; description: string }[];
   diagnostics?: ChatAssistantDiagnostics;
 }

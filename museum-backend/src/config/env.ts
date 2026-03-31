@@ -145,6 +145,7 @@ interface AppEnv {
     multiTenancy: boolean;
     userMemory: boolean;
     knowledgeBase: boolean;
+    imageEnrichment: boolean;
   };
   /** Maximum chat messages a free-tier user can send per calendar day. */
   freeTierDailyChatLimit: number;
@@ -155,6 +156,14 @@ interface AppEnv {
     timeoutMs: number;
     cacheTtlSeconds: number;
     cacheMaxEntries: number;
+  };
+  /** Image enrichment (Unsplash + Wikidata P18) configuration. */
+  imageEnrichment: {
+    unsplashAccessKey?: string;
+    cacheTtlMs: number;
+    cacheMaxEntries: number;
+    fetchTimeoutMs: number;
+    maxImagesPerResponse: number;
   };
 }
 
@@ -322,6 +331,7 @@ const env: AppEnv = {
     multiTenancy: toBoolean(process.env.FEATURE_FLAG_MULTI_TENANCY, false),
     userMemory: toBoolean(process.env.FEATURE_FLAG_USER_MEMORY, false),
     knowledgeBase: toBoolean(process.env.FEATURE_FLAG_KNOWLEDGE_BASE, false),
+    imageEnrichment: toBoolean(process.env.FEATURE_FLAG_IMAGE_ENRICHMENT, false),
   },
   freeTierDailyChatLimit: toNumber(process.env.FREE_TIER_DAILY_CHAT_LIMIT, 100),
   overpassCacheTtlSeconds: toNumber(process.env.OVERPASS_CACHE_TTL_SECONDS, 86400),
@@ -329,6 +339,13 @@ const env: AppEnv = {
     timeoutMs: toNumber(process.env.KB_TIMEOUT_MS, 500),
     cacheTtlSeconds: toNumber(process.env.KB_CACHE_TTL_SECONDS, 3600),
     cacheMaxEntries: toNumber(process.env.KB_CACHE_MAX_ENTRIES, 500),
+  },
+  imageEnrichment: {
+    unsplashAccessKey: toOptionalString(process.env.UNSPLASH_ACCESS_KEY),
+    cacheTtlMs: toNumber(process.env.IMAGE_ENRICHMENT_CACHE_TTL_MS, 3600000),
+    cacheMaxEntries: toNumber(process.env.IMAGE_ENRICHMENT_CACHE_MAX_ENTRIES, 200),
+    fetchTimeoutMs: toNumber(process.env.IMAGE_ENRICHMENT_FETCH_TIMEOUT_MS, 3000),
+    maxImagesPerResponse: toNumber(process.env.IMAGE_ENRICHMENT_MAX_IMAGES, 5),
   },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
   storage: {

@@ -126,7 +126,7 @@ export class WikidataClient implements KnowledgeBaseProvider {
     if (!/^Q\d+$/.test(qid)) return null;
 
     const sparql = `
-      SELECT ?creatorLabel ?inception ?materialLabel ?collectionLabel ?movementLabel ?genreLabel
+      SELECT ?creatorLabel ?inception ?materialLabel ?collectionLabel ?movementLabel ?genreLabel ?image
       WHERE {
         BIND(wd:${qid} AS ?item)
         OPTIONAL { ?item wdt:P170 ?creator. }
@@ -135,6 +135,7 @@ export class WikidataClient implements KnowledgeBaseProvider {
         OPTIONAL { ?item wdt:P195 ?collection. }
         OPTIONAL { ?item wdt:P135 ?movement. }
         OPTIONAL { ?item wdt:P136 ?genre. }
+        OPTIONAL { ?item wdt:P18 ?image. }
         SERVICE wikibase:label { bd:serviceParam wikibase:language "${language},en". }
       }
       LIMIT 1`;
@@ -168,6 +169,7 @@ export class WikidataClient implements KnowledgeBaseProvider {
       collection: val('collectionLabel'),
       movement: val('movementLabel'),
       genre: val('genreLabel'),
+      imageUrl: val('image') ?? undefined,
     };
   }
 }

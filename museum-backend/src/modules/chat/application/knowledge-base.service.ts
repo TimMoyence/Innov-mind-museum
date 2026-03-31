@@ -33,25 +33,25 @@ export class KnowledgeBaseService {
   ) {}
 
   /**
-   * Looks up artwork facts and returns a formatted prompt block.
+   * Looks up artwork facts and returns the raw data.
    *
-   * Returns `''` on any failure (timeout, provider error, empty search term,
-   * or when the provider returns `null`).
+   * Returns `null` on any failure (timeout, provider error, empty search term,
+   * or when the provider returns `null`). Results are cached.
    *
    * @param searchTerm - The artwork name or identifier to look up.
    * @param language - Optional language code for localised results.
-   * @returns A formatted `[KNOWLEDGE BASE]` prompt block, or `''`.
+   * @returns Raw artwork facts, or `null`.
    */
-  async lookup(searchTerm: string, language?: string): Promise<string> {
+  async lookupFacts(searchTerm: string, language?: string): Promise<ArtworkFacts | null> {
     const key = searchTerm.toLowerCase().trim();
-    if (!key) return '';
+    if (!key) return null;
 
     // Check cache
     const cached = this.cache.get(key);
     if (cached) {
       if (Date.now() < cached.expiresAt) {
         logger.info('kb_cache_hit', { searchTerm: key });
-        return buildKnowledgeBasePromptBlock(cached.facts);
+        return cached.facts;
       }
       this.cache.delete(key); // expired
     }
@@ -81,7 +81,7 @@ export class KnowledgeBaseService {
         });
 
         logger.info('kb_lookup_success', { searchTerm: key, found: facts !== null });
-        return buildKnowledgeBasePromptBlock(facts);
+        return facts;
       } finally {
         clearTimeout(timeout);
       }
@@ -92,8 +92,23 @@ export class KnowledgeBaseService {
       } else {
         logger.warn('kb_lookup_error', { searchTerm: key, error: message });
       }
-      return '';
+      return null;
     }
+  }
+
+  /**
+   * Looks up artwork facts and returns a formatted prompt block.
+   *
+   * Returns `''` on any failure (timeout, provider error, empty search term,
+   * or when the provider returns `null`).
+   *
+   * @param searchTerm - The artwork name or identifier to look up.
+   * @param language - Optional language code for localised results.
+   * @returns A formatted `[KNOWLEDGE BASE]` prompt block, or `''`.
+   */
+  async lookup(searchTerm: string, language?: string): Promise<string> {
+    const facts = await this.lookupFacts(searchTerm, language);
+    return buildKnowledgeBasePromptBlock(facts);
   }
 
   /**

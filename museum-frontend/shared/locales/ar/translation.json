@@ -338,7 +338,10 @@
     "replace_image": "استبدال",
     "remove_image": "إزالة",
     "share_response": "مشاركة",
-    "crop": "اقتصاص"
+    "crop": "اقتصاص",
+    "imageAttribution": "تصوير {{photographer}} على Unsplash",
+    "imageLoadError": "تعذر تحميل الصورة",
+    "viewFullscreen": "عرض بالحجم الكامل"
   },
   "chatInput": {
     "placeholder": "اسأل عن عمل فني أو معلم، أو أرسل صوتًا/صورة...",

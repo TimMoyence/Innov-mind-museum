@@ -338,7 +338,10 @@
     "share_response": "Share",
     "replace_image": "Replace",
     "remove_image": "Remove",
-    "crop": "Crop"
+    "crop": "Crop",
+    "imageAttribution": "Photo by {{photographer}} on Unsplash",
+    "imageLoadError": "Image could not be loaded",
+    "viewFullscreen": "View full size"
   },
   "chatInput": {
     "placeholder": "Ask about an artwork, monument, or send voice/photo...",

@@ -16,6 +16,8 @@ export interface ArtworkFacts {
   movement?: string;
   /** Genre (e.g., "portrait"). */
   genre?: string;
+  /** Primary image URL from Wikidata (P18 property). */
+  imageUrl?: string;
 }
 
 /** Query input for knowledge base lookup. */

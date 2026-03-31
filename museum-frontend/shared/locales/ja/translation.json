@@ -338,7 +338,10 @@
     "replace_image": "置き換え",
     "remove_image": "削除",
     "share_response": "共有",
-    "crop": "切り抜き"
+    "crop": "切り抜き",
+    "imageAttribution": "{{photographer}} 撮影 (Unsplash)",
+    "imageLoadError": "画像を読み込めませんでした",
+    "viewFullscreen": "フルサイズで表示"
   },
   "chatInput": {
     "placeholder": "美術品や建造物について質問、または音声・写真を送信...",
