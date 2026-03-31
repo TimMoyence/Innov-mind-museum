@@ -30,6 +30,7 @@ import ExpoLocation
 import ExpoHead
 import ExpoSecureStore
 import ExpoSplashScreen
+import ExpoStoreReview
 import ExpoSystemUI
 import ExpoTrackingTransparency
 import EXUpdates
@@ -54,7 +55,7 @@ public class ExpoModulesProvider: ModulesProvider {
       ConstantsModule.self,
       EASClientModule.self,
       FileSystemModule.self,
-      FileSystemNextModule.self,
+      FileSystemLegacyModule.self,
       FontLoaderModule.self,
       FontUtilsModule.self,
       HapticsModule.self,
@@ -69,6 +70,7 @@ public class ExpoModulesProvider: ModulesProvider {
       ExpoHeadModule.self,
       SecureStoreModule.self,
       SplashScreenModule.self,
+      StoreReviewModule.self,
       ExpoSystemUIModule.self,
       TrackingTransparencyModule.self,
       UpdatesModule.self,
@@ -93,7 +95,7 @@ public class ExpoModulesProvider: ModulesProvider {
       ConstantsModule.self,
       EASClientModule.self,
       FileSystemModule.self,
-      FileSystemNextModule.self,
+      FileSystemLegacyModule.self,
       FontLoaderModule.self,
       FontUtilsModule.self,
       HapticsModule.self,
@@ -108,6 +110,7 @@ public class ExpoModulesProvider: ModulesProvider {
       ExpoHeadModule.self,
       SecureStoreModule.self,
       SplashScreenModule.self,
+      StoreReviewModule.self,
       ExpoSystemUIModule.self,
       TrackingTransparencyModule.self,
       UpdatesModule.self,
