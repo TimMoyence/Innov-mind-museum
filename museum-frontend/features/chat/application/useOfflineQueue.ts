@@ -1,4 +1,6 @@
 import { useRef, useEffect, useSyncExternalStore, useCallback } from 'react';
+import { Alert } from 'react-native';
+import i18n from '@/shared/i18n/i18n';
 import type { QueuedMessage } from './offlineQueue';
 import { OfflineQueue } from './offlineQueue';
 import { useConnectivity } from '@/shared/infrastructure/connectivity/useConnectivity';
@@ -39,9 +41,9 @@ export const useOfflineQueue = () => {
         try {
           imageUri = persistOfflineImage(imageUri);
         } catch {
-          // If image persistence fails, enqueue without the image
-          // rather than losing the entire message
+          console.warn('[OfflineQueue] Image persistence failed, enqueueing without image');
           imageUri = undefined;
+          Alert.alert(i18n.t('common.error'), i18n.t('chat.offlineImageFailed'));
         }
       }
       return queue.enqueue({ ...msg, imageUri });

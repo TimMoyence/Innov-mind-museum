@@ -341,7 +341,13 @@
     "crop": "切り抜き",
     "imageAttribution": "{{photographer}} 撮影 (Unsplash)",
     "imageLoadError": "画像を読み込めませんでした",
-    "viewFullscreen": "フルサイズで表示"
+    "viewFullscreen": "フルサイズで表示",
+    "listen": "聴く",
+    "listening": "再生中...",
+    "thumbsUp": "役に立った",
+    "thumbsDown": "役に立たなかった",
+    "sendFailed": "送信に失敗しました",
+    "offlineImageFailed": "オフライン送信用に画像を保存できませんでした。画像なしでメッセージがキューに追加されました。"
   },
   "chatInput": {
     "placeholder": "美術品や建造物について質問、または音声・写真を送信...",
@@ -640,5 +646,14 @@
     "myTickets": "マイチケット",
     "createTicket": "チケットを作成",
     "ticketCreated": "チケットが正常に作成されました"
+  },
+  "visitSummary": {
+    "visitSummary": "訪問の概要",
+    "artworksDiscussed": "議論した作品",
+    "roomsVisited": "訪問した展示室",
+    "visitDuration": "訪問時間",
+    "messages": "メッセージ",
+    "expertiseLevel": "レベル",
+    "noArtworks": "議論した作品はありません"
   }
 }

@@ -6,6 +6,7 @@ import { CursorCodec } from '@shared/pagination/cursor-codec';
 import { ArtworkMatch } from '../domain/artworkMatch.entity';
 import { ChatMessage } from '../domain/chatMessage.entity';
 import { ChatSession } from '../domain/chatSession.entity';
+import { MessageFeedback } from '../domain/messageFeedback.entity';
 import { MessageReport } from '../domain/messageReport.entity';
 
 import type {
@@ -20,6 +21,7 @@ import type {
   UserChatExportData,
 } from '../domain/chat.repository.interface';
 import type { ChatRole, CreateSessionInput } from '../domain/chat.types';
+import type { FeedbackValue } from '../domain/messageFeedback.entity';
 
 const messageCursor = new CursorCodec(z.object({ createdAt: z.string(), id: z.string() }));
 const sessionCursor = new CursorCodec(z.object({ updatedAt: z.string(), id: z.string() }));
@@ -29,12 +31,14 @@ export class TypeOrmChatRepository implements ChatRepository {
   private readonly sessionRepo: Repository<ChatSession>;
   private readonly messageRepo: Repository<ChatMessage>;
   private readonly reportRepo: Repository<MessageReport>;
+  private readonly feedbackRepo: Repository<MessageFeedback>;
 
   /** Creates a new TypeORM chat repository. \@param dataSource - Active TypeORM DataSource used to obtain entity repositories. */
   constructor(dataSource: DataSource) {
     this.sessionRepo = dataSource.getRepository(ChatSession);
     this.messageRepo = dataSource.getRepository(ChatMessage);
     this.reportRepo = dataSource.getRepository(MessageReport);
+    this.feedbackRepo = dataSource.getRepository(MessageFeedback);
   }
 
   /**
@@ -482,5 +486,56 @@ export class TypeOrmChatRepository implements ChatRepository {
 
       return { sessions: allSessions };
     });
+  }
+
+  /**
+   * Inserts or updates a feedback entry for a message/user pair.
+   *
+   * @param messageId - UUID of the message.
+   * @param userId - Numeric user ID.
+   * @param value - Feedback value ('positive' or 'negative').
+   */
+  async upsertMessageFeedback(
+    messageId: string,
+    userId: number,
+    value: FeedbackValue,
+  ): Promise<void> {
+    await this.feedbackRepo
+      .createQueryBuilder()
+      .insert()
+      .into(MessageFeedback)
+      .values({ messageId, userId, value })
+      .orUpdate(['value'], ['messageId', 'userId'])
+      .execute();
+  }
+
+  /**
+   * Deletes a feedback entry for a message/user pair.
+   *
+   * @param messageId - UUID of the message.
+   * @param userId - Numeric user ID.
+   */
+  async deleteMessageFeedback(messageId: string, userId: number): Promise<void> {
+    await this.feedbackRepo.delete({ message: { id: messageId }, userId });
+  }
+
+  /**
+   * Retrieves the current feedback for a message by a user.
+   *
+   * @param messageId - UUID of the message.
+   * @param userId - Numeric user ID.
+   * @returns The feedback value, or `null` if none exists.
+   */
+  async getMessageFeedback(
+    messageId: string,
+    userId: number,
+  ): Promise<{ value: FeedbackValue } | null> {
+    const row = await this.feedbackRepo.findOne({
+      where: { message: { id: messageId }, userId },
+      select: ['value'],
+    });
+
+    if (!row) return null;
+    return { value: row.value };
   }
 }

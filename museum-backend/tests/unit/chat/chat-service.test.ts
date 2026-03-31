@@ -13,10 +13,12 @@ import type {
   SessionResult,
 } from '@modules/chat/application/chat.service.types';
 import type { ChatRepository } from '@modules/chat/domain/chat.repository.interface';
+import type { AudioTranscriber } from '@modules/chat/domain/ports/audio-transcriber.port';
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
 import type { GuardrailBlockReason } from '@modules/chat/application/art-topic-guardrail';
+import type { CacheService } from '@shared/cache/cache.port';
 
 // ── Mock sub-services so ChatService delegates without executing real logic ──
 
@@ -43,6 +45,9 @@ const makeRepo = (): ChatRepository =>
     hasMessageReport: jest.fn(),
     persistMessageReport: jest.fn(),
     exportUserData: jest.fn(),
+    upsertMessageFeedback: jest.fn(),
+    deleteMessageFeedback: jest.fn(),
+    getMessageFeedback: jest.fn(),
   }) as unknown as ChatRepository;
 
 const makeOrchestrator = (): ChatOrchestrator => ({
@@ -170,7 +175,7 @@ describe('ChatService (facade)', () => {
         setNx: jest.fn(),
         ping: jest.fn(),
       };
-      buildService({ repository: repo, cache: cache as any });
+      buildService({ repository: repo, cache: cache as unknown as CacheService });
 
       expect(MockedSessionService).toHaveBeenCalledWith(
         expect.objectContaining({ repository: repo, cache }),
@@ -201,16 +206,24 @@ describe('ChatService (facade)', () => {
     it('uses DisabledAudioTranscriber when none provided', () => {
       buildService({ audioTranscriber: undefined });
 
-      const msgDeps = MockedMessageService.mock.calls.at(-1)![0] as any;
+      const msgDeps = MockedMessageService.mock.calls.at(-1)![0] as unknown as Record<
+        string,
+        unknown
+      >;
       expect(msgDeps.audioTranscriber).not.toBeNull();
-      expect(msgDeps.audioTranscriber.constructor.name).toBe('DisabledAudioTranscriber');
+      expect((msgDeps.audioTranscriber as { constructor: { name: string } }).constructor.name).toBe(
+        'DisabledAudioTranscriber',
+      );
     });
 
     it('uses provided audioTranscriber when supplied', () => {
       const transcriber = { transcribe: jest.fn() };
-      buildService({ audioTranscriber: transcriber as any });
+      buildService({ audioTranscriber: transcriber as unknown as AudioTranscriber });
 
-      const msgDeps = MockedMessageService.mock.calls.at(-1)![0] as any;
+      const msgDeps = MockedMessageService.mock.calls.at(-1)![0] as unknown as Record<
+        string,
+        unknown
+      >;
       expect(msgDeps.audioTranscriber).toBe(transcriber);
     });
   });

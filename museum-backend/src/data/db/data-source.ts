@@ -9,6 +9,7 @@ import { ArtKeyword } from '@modules/chat/domain/artKeyword.entity';
 import { ArtworkMatch } from '@modules/chat/domain/artworkMatch.entity';
 import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import { ChatSession } from '@modules/chat/domain/chatSession.entity';
+import { MessageFeedback } from '@modules/chat/domain/messageFeedback.entity';
 import { MessageReport } from '@modules/chat/domain/messageReport.entity';
 import { UserMemory } from '@modules/chat/domain/userMemory.entity';
 import { Museum } from '@modules/museum/core/domain/museum.entity';
@@ -42,6 +43,7 @@ export const AppDataSource = new DataSource({
     ChatMessage,
     ArtKeyword,
     ArtworkMatch,
+    MessageFeedback,
     MessageReport,
     UserMemory,
     AuditLog,
@@ -53,7 +55,10 @@ export const AppDataSource = new DataSource({
   migrations: isCompiledRuntime
     ? ['dist/src/data/db/migrations/*.js']
     : ['src/data/db/migrations/*.ts'],
-  ssl: env.nodeEnv === 'production' && env.dbSsl ? { rejectUnauthorized: false } : false,
+  ssl:
+    env.nodeEnv === 'production' && env.dbSsl
+      ? { rejectUnauthorized: env.dbSslRejectUnauthorized }
+      : false,
   synchronize: env.nodeEnv === 'production' ? false : env.dbSynchronize,
   logging: false,
   extra: {

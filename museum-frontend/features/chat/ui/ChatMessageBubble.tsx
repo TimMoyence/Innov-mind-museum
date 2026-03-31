@@ -1,6 +1,14 @@
 /* eslint-disable react-hooks/refs -- Animated.Value refs are stable objects read once at creation; safe RN pattern */
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Animated,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
@@ -13,6 +21,11 @@ import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
 
+const PROACTIVE_REFRESH_MS = 5 * 60 * 1000;
+
+/** Returns true if the URL is a local file URI (not a server signed URL). */
+const isLocalFileUri = (url: string): boolean => url.startsWith('file://');
+
 interface ChatMessageBubbleProps {
   /** The message to render. */
   message: ChatUiMessage;
@@ -24,6 +37,18 @@ interface ChatMessageBubbleProps {
   onImageError: (messageId: string) => void;
   /** Called on long-press of an assistant message to report it. */
   onReport: (messageId: string) => void;
+  /** Whether TTS audio is currently playing for this message. */
+  ttsPlaying?: boolean;
+  /** Whether TTS audio is currently loading for this message. */
+  ttsLoading?: boolean;
+  /** Called to toggle TTS playback for this message. */
+  onToggleTts?: (messageId: string) => Promise<void>;
+  /** Called to retry sending a failed message. */
+  onRetry?: (message: ChatUiMessage) => void;
+  /** Current feedback value for this message (positive, negative, or null/undefined). */
+  feedbackValue?: 'positive' | 'negative' | null;
+  /** Called when user taps thumbs up or down. */
+  onFeedback?: (messageId: string, value: 'positive' | 'negative') => void;
 }
 
 /**
@@ -32,7 +57,19 @@ interface ChatMessageBubbleProps {
  * Memoized to prevent unnecessary re-renders; always re-renders during streaming.
  */
 export const ChatMessageBubble = React.memo(
-  ({ message, locale, isStreaming = false, onImageError, onReport }: ChatMessageBubbleProps) => {
+  ({
+    message,
+    locale,
+    isStreaming = false,
+    onImageError,
+    onReport,
+    ttsPlaying = false,
+    ttsLoading = false,
+    onToggleTts,
+    onRetry,
+    feedbackValue,
+    onFeedback,
+  }: ChatMessageBubbleProps) => {
     const { theme } = useTheme();
     const { t } = useTranslation();
     const isAssistant = message.role === 'assistant';
@@ -53,6 +90,39 @@ export const ChatMessageBubble = React.memo(
         animation.stop();
       };
     }, [isStreaming, cursorOpacity]);
+
+    // Proactive signed URL refresh: if expiresAt is within 5 minutes, refresh before it expires
+    const imageUrl = message.image?.url;
+    const imageExpiresAt = message.image?.expiresAt;
+    const handleImageError = useCallback(() => {
+      onImageError(message.id);
+    }, [onImageError, message.id]);
+
+    useEffect(() => {
+      if (!imageUrl || !imageExpiresAt) return;
+      if (isLocalFileUri(imageUrl)) return;
+
+      const expiresMs = new Date(imageExpiresAt).getTime();
+      const remainingMs = expiresMs - Date.now();
+
+      if (remainingMs <= 0) {
+        onImageError(message.id);
+        return;
+      }
+
+      if (remainingMs <= PROACTIVE_REFRESH_MS) {
+        onImageError(message.id);
+        return;
+      }
+
+      const timerId = setTimeout(() => {
+        onImageError(message.id);
+      }, remainingMs - PROACTIVE_REFRESH_MS);
+
+      return () => {
+        clearTimeout(timerId);
+      };
+    }, [imageUrl, imageExpiresAt, message.id, onImageError]);
 
     const bubbleContent = (
       <>
@@ -86,9 +156,7 @@ export const ChatMessageBubble = React.memo(
               { borderColor: theme.separator, backgroundColor: theme.surface },
             ]}
             resizeMode="cover"
-            onError={() => {
-              onImageError(message.id);
-            }}
+            onError={handleImageError}
           />
         ) : null}
         {!isStreaming ? (
@@ -100,21 +168,84 @@ export const ChatMessageBubble = React.memo(
               })}
             </Text>
             {isAssistant ? (
-              <Pressable
-                style={styles.reportButton}
-                onPress={() => {
-                  void Haptics.selectionAsync();
-                  onReport(message.id);
-                }}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel={t('messageMenu.report')}
-              >
-                <Ionicons name="flag-outline" size={13} color={theme.timestamp} />
-                <Text style={[styles.reportLabel, { color: theme.timestamp }]}>
-                  {t('messageMenu.report')}
-                </Text>
-              </Pressable>
+              <View style={styles.metaActions}>
+                {onFeedback ? (
+                  <>
+                    <Pressable
+                      style={styles.reportButton}
+                      onPress={() => {
+                        void Haptics.selectionAsync();
+                        onFeedback(message.id, 'positive');
+                      }}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('chat.thumbsUp')}
+                    >
+                      <Ionicons
+                        name={feedbackValue === 'positive' ? 'thumbs-up' : 'thumbs-up-outline'}
+                        size={13}
+                        color={feedbackValue === 'positive' ? '#34C759' : theme.timestamp}
+                      />
+                    </Pressable>
+                    <Pressable
+                      style={styles.reportButton}
+                      onPress={() => {
+                        void Haptics.selectionAsync();
+                        onFeedback(message.id, 'negative');
+                      }}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('chat.thumbsDown')}
+                    >
+                      <Ionicons
+                        name={feedbackValue === 'negative' ? 'thumbs-down' : 'thumbs-down-outline'}
+                        size={13}
+                        color={feedbackValue === 'negative' ? '#FF3B30' : theme.timestamp}
+                      />
+                    </Pressable>
+                  </>
+                ) : null}
+                {onToggleTts ? (
+                  <Pressable
+                    style={styles.reportButton}
+                    onPress={() => {
+                      void Haptics.selectionAsync();
+                      void onToggleTts(message.id);
+                    }}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={ttsPlaying ? t('chat.listening') : t('chat.listen')}
+                  >
+                    {ttsLoading ? (
+                      <ActivityIndicator size="small" color={theme.timestamp} />
+                    ) : (
+                      <Ionicons
+                        name={ttsPlaying ? 'pause-outline' : 'volume-high-outline'}
+                        size={13}
+                        color={theme.timestamp}
+                      />
+                    )}
+                    <Text style={[styles.reportLabel, { color: theme.timestamp }]}>
+                      {ttsPlaying ? t('chat.listening') : t('chat.listen')}
+                    </Text>
+                  </Pressable>
+                ) : null}
+                <Pressable
+                  style={styles.reportButton}
+                  onPress={() => {
+                    void Haptics.selectionAsync();
+                    onReport(message.id);
+                  }}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('messageMenu.report')}
+                >
+                  <Ionicons name="flag-outline" size={13} color={theme.timestamp} />
+                  <Text style={[styles.reportLabel, { color: theme.timestamp }]}>
+                    {t('messageMenu.report')}
+                  </Text>
+                </Pressable>
+              </View>
             ) : null}
           </View>
         ) : null}
@@ -163,6 +294,24 @@ export const ChatMessageBubble = React.memo(
           </View>
         )}
 
+        {message.sendFailed && onRetry ? (
+          <View style={styles.failedRow}>
+            <Text style={[styles.failedText, { color: theme.error }]}>{t('chat.sendFailed')}</Text>
+            <Pressable
+              style={[styles.retryButton, { borderColor: theme.error }]}
+              onPress={() => {
+                void Haptics.selectionAsync();
+                onRetry(message);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.retry')}
+            >
+              <Ionicons name="refresh-outline" size={14} color={theme.error} />
+              <Text style={[styles.retryLabel, { color: theme.error }]}>{t('common.retry')}</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         {!isStreaming && isAssistant && message.metadata?.detectedArtwork?.title ? (
           <ArtworkCard
             title={message.metadata.detectedArtwork.title}
@@ -192,7 +341,11 @@ export const ChatMessageBubble = React.memo(
     return (
       prev.message.id === next.message.id &&
       prev.message.text === next.message.text &&
-      prev.message.image?.url === next.message.image?.url
+      prev.message.image?.url === next.message.image?.url &&
+      prev.message.sendFailed === next.message.sendFailed &&
+      prev.ttsPlaying === next.ttsPlaying &&
+      prev.ttsLoading === next.ttsLoading &&
+      prev.feedbackValue === next.feedbackValue
     );
   },
 );
@@ -215,6 +368,11 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: 11,
   },
+  metaActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   reportButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -233,5 +391,29 @@ const styles = StyleSheet.create({
   cursor: {
     fontSize: 18,
     lineHeight: 22,
+  },
+  failedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 4,
+  },
+  failedText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  retryLabel: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 });

@@ -341,7 +341,13 @@
     "crop": "裁剪",
     "imageAttribution": "{{photographer}} 拍摄 (Unsplash)",
     "imageLoadError": "无法加载图片",
-    "viewFullscreen": "查看大图"
+    "viewFullscreen": "查看大图",
+    "listen": "听",
+    "listening": "播放中...",
+    "thumbsUp": "有帮助",
+    "thumbsDown": "没有帮助",
+    "sendFailed": "发送失败",
+    "offlineImageFailed": "无法保存图片以供离线发送。您的消息已在没有图片的情况下排队。"
   },
   "chatInput": {
     "placeholder": "询问关于艺术品、古迹的问题，或发送语音/照片...",
@@ -640,5 +646,14 @@
     "myTickets": "我的工单",
     "createTicket": "创建工单",
     "ticketCreated": "工单创建成功"
+  },
+  "visitSummary": {
+    "visitSummary": "访问摘要",
+    "artworksDiscussed": "讨论的作品",
+    "roomsVisited": "参观的展厅",
+    "visitDuration": "参观时长",
+    "messages": "条消息",
+    "expertiseLevel": "等级",
+    "noArtworks": "未讨论任何作品"
   }
 }

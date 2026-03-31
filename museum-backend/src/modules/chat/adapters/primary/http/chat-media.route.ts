@@ -20,7 +20,7 @@ import {
   buildImageReadUrl,
   contentTypeByExtension,
 } from './chat-route.helpers';
-import { parseReportMessageRequest } from './chat.contracts';
+import { parseFeedbackMessageRequest, parseReportMessageRequest } from './chat.contracts';
 import { verifySignedChatImageReadUrl } from './chat.image-url';
 import { isS3ImageRef } from '../../secondary/image-storage.s3';
 import { resolveLocalImageFilePath } from '../../secondary/image-storage.stub';
@@ -174,6 +174,29 @@ export const createMediaRouter = (
         payload.comment,
       );
       res.status(201).json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // POST /messages/:messageId/feedback — thumbs up/down
+  router.post('/messages/:messageId/feedback', isAuthenticated, async (req, res, next) => {
+    try {
+      const currentUser = getRequestUser(req);
+      if (!currentUser?.id) {
+        res.status(401).json({
+          error: { code: 'UNAUTHORIZED', message: 'Token required' },
+        });
+        return;
+      }
+
+      const payload = parseFeedbackMessageRequest(req.body ?? {});
+      const result = await chatService.setMessageFeedback(
+        req.params.messageId,
+        currentUser.id,
+        payload.value,
+      );
+      res.status(200).json(result);
     } catch (error) {
       next(error);
     }

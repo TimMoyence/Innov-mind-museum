@@ -44,6 +44,12 @@ export interface ReportMessageResult {
   reported: boolean;
 }
 
+/** Returned after a user sets or toggles feedback on an assistant message. */
+export interface FeedbackMessageResult {
+  messageId: string;
+  status: 'created' | 'updated' | 'removed';
+}
+
 /** A single session with its paginated messages. */
 export interface SessionResult {
   session: CreateSessionResult;

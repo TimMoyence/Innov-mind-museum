@@ -341,7 +341,13 @@
     "crop": "Recadrer",
     "imageAttribution": "Photo par {{photographer}} sur Unsplash",
     "imageLoadError": "L'image n'a pas pu etre chargee",
-    "viewFullscreen": "Voir en plein ecran"
+    "viewFullscreen": "Voir en plein ecran",
+    "listen": "Écouter",
+    "listening": "Lecture...",
+    "thumbsUp": "Utile",
+    "thumbsDown": "Pas utile",
+    "sendFailed": "Échec de l'envoi",
+    "offlineImageFailed": "L'image n'a pas pu être sauvegardée pour l'envoi hors ligne. Votre message a été mis en file d'attente sans l'image."
   },
   "chatInput": {
     "placeholder": "Posez une question sur une œuvre, un monument, ou envoyez une photo/voix...",
@@ -640,5 +646,14 @@
     "myTickets": "Mes tickets",
     "createTicket": "Créer un ticket",
     "ticketCreated": "Ticket créé avec succès"
+  },
+  "visitSummary": {
+    "visitSummary": "Résumé de visite",
+    "artworksDiscussed": "Œuvres discutées",
+    "roomsVisited": "Salles visitées",
+    "visitDuration": "Durée de visite",
+    "messages": "messages",
+    "expertiseLevel": "Niveau",
+    "noArtworks": "Aucune œuvre discutée"
   }
 }

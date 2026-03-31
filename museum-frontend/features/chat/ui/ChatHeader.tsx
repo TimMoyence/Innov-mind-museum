@@ -13,6 +13,7 @@ interface ChatHeaderProps {
   expertiseLevel?: 'beginner' | 'intermediate' | 'expert';
   isClosing: boolean;
   onClose: () => void;
+  onSummary?: () => void;
 }
 
 /** Chat session header with title, museum name, expertise badge, and close button. */
@@ -23,6 +24,7 @@ export function ChatHeader({
   expertiseLevel,
   isClosing,
   onClose,
+  onSummary,
 }: ChatHeaderProps) {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -41,22 +43,37 @@ export function ChatHeader({
             {expertiseLevel ? <ExpertiseBadge level={expertiseLevel} /> : null}
           </View>
         </View>
-        <Pressable
-          onPress={onClose}
-          style={[
-            styles.closeButton,
-            { borderColor: theme.inputBorder, backgroundColor: theme.surface },
-          ]}
-          disabled={isClosing}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.close')}
-        >
-          {isClosing ? (
-            <ActivityIndicator size="small" color={theme.textSecondary} />
-          ) : (
-            <Ionicons name="close" size={20} color={theme.textPrimary} />
-          )}
-        </Pressable>
+        <View style={styles.headerActions}>
+          {onSummary ? (
+            <Pressable
+              onPress={onSummary}
+              style={[
+                styles.closeButton,
+                { borderColor: theme.inputBorder, backgroundColor: theme.surface },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={t('visitSummary.visitSummary')}
+            >
+              <Ionicons name="document-text-outline" size={20} color={theme.primary} />
+            </Pressable>
+          ) : null}
+          <Pressable
+            onPress={onClose}
+            style={[
+              styles.closeButton,
+              { borderColor: theme.inputBorder, backgroundColor: theme.surface },
+            ]}
+            disabled={isClosing}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
+          >
+            {isClosing ? (
+              <ActivityIndicator size="small" color={theme.textSecondary} />
+            ) : (
+              <Ionicons name="close" size={20} color={theme.textPrimary} />
+            )}
+          </Pressable>
+        </View>
       </View>
     </GlassCard>
   );
@@ -73,6 +90,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerContent: {
     flex: 1,

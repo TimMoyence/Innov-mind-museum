@@ -1,6 +1,7 @@
 import type { CreateSessionInput, ChatRole, ReportReason, VisitContext } from './chat.types';
 import type { ChatMessage } from './chatMessage.entity';
 import type { ChatSession } from './chatSession.entity';
+import type { FeedbackValue } from './messageFeedback.entity';
 
 /** Cursor-based pagination parameters for listing session messages. */
 export interface ListSessionMessagesParams {
@@ -199,4 +200,30 @@ export interface ChatRepository {
    * @returns All sessions and messages belonging to the user.
    */
   exportUserData(userId: number): Promise<UserChatExportData>;
+
+  /**
+   * Upsert a feedback entry for a message (INSERT or UPDATE on conflict).
+   *
+   * @param messageId - The message UUID.
+   * @param userId - The user's numeric ID.
+   * @param value - Feedback value ('positive' or 'negative').
+   */
+  upsertMessageFeedback(messageId: string, userId: number, value: FeedbackValue): Promise<void>;
+
+  /**
+   * Delete a feedback entry for a message.
+   *
+   * @param messageId - The message UUID.
+   * @param userId - The user's numeric ID.
+   */
+  deleteMessageFeedback(messageId: string, userId: number): Promise<void>;
+
+  /**
+   * Get the current feedback for a message by a user.
+   *
+   * @param messageId - The message UUID.
+   * @param userId - The user's numeric ID.
+   * @returns The feedback value, or `null` if none exists.
+   */
+  getMessageFeedback(messageId: string, userId: number): Promise<{ value: FeedbackValue } | null>;
 }

@@ -613,3 +613,79 @@
 - [x] R15-10: settings.tsx decomposition (662L → 334L, -50%)
 - [x] R15-11: A11y ImagePreviewModal (+15 attributes)
 - [x] R15-12: A11y MessageActions (+6 attributes)
+
+---
+
+## Production Hardening — Mars 29-31 (hors cycle /team)
+
+> 35 commits, 55 nouveaux tests, 7 features, 20 fixes, 6 refactors.
+> Travail effectue hors cycle /team — KB catchup execute 2026-03-31.
+> Commits: `0864a2b` a `58066cd`
+
+### Security (R16 GO conditions — TOUTES RESOLUES)
+
+- [x] SEC-01: path-to-regexp pin 8.4.0 (fix ReDoS GHSA-j3q9-mxjg-w52f)
+- [x] SEC-02: langsmith pin >=0.4.6 (fix SSRF GHSA-v34v-rq6j-cj6p)
+- [x] SEC-03: Reset tokens SHA-256 hashed (forgotPassword + resetPassword useCases)
+- [x] SEC-04: LLMCircuitBreaker wire dans orchestrator + api.router
+- [x] SEC-05: Route tests (7 fichiers, 1313L — admin, auth, chat, daily-art, museum, review, support)
+
+### Features
+
+- [x] FT-01: Image enrichment pipeline — Wikidata + Unsplash image sources (a3d48c4)
+- [x] FT-02: Leaflet map view + user position dans Museums tab (ab05961)
+- [x] FT-03: Quick wins — in-app review, open maps, share, daily art (9eb8a0d)
+- [x] FT-04: Chat core tests, free tier gate, Schema.org (a7408ae)
+- [x] FT-05: Geolocation museum search via Overpass API (b08224d)
+- [x] FT-06: Reset password page museum-web + museum seed script (9c33344)
+- [x] FT-07: PgBouncer connection pooler + K6 200-VU stress test (76d567e)
+
+### Refactors
+
+- [x] RF-01: Migrate 9 repos raw SQL → TypeORM (6b8675a)
+- [x] RF-02: ChatModule singleton encapsulation + coverage threshold increase (ab9f9c3)
+- [x] RF-03: CI/CD consolidation 10 workflows → 3 parallel pipelines (995fcf9)
+- [x] RF-04: DRY test infrastructure + SEC-1 magic bytes + QA-2 offline image storage (58066cd)
+
+### Fixes (selection)
+
+- [x] FX-01: Production readiness audit — 14 security/infra fixes + 55 new tests (a4dffff)
+- [x] FX-02: DB_SSL=false respecte en production (d566a70)
+- [x] FX-03: ESLint cleanup + CI/CD pipeline fixes (e1c9562)
+- [x] FX-04: FlashList 1.7.6 → 2.3.1 fix iOS launch crash (0864a2b)
+- [x] FX-05: Xcode Cloud node setup (nvm → Homebrew node@22) (fdf9d56)
+- [x] FX-06: Audit fixes — daily art response, map coords, Zod validation (911acf0, 89351cc, 95fb3b7)
+
+### Verification (2026-03-31)
+
+- [x] Backend: 1433 tests passing, 0 tsc errors, 0 lint errors
+- [x] Frontend: tsc PASS
+- [x] Coverage: 72.86% statements, 57.61% branches
+- [x] as any: 4 (ratchet maintenu)
+- [x] Quality ratchet: aucune regression
+
+---
+
+## Metriques globales (mise a jour 2026-03-31)
+
+| Sprint    | Taches  | Faites | %       | Tests backend | Tests frontend |
+| --------- | ------- | ------ | ------- | ------------- | -------------- |
+| S1        | 37      | 37     | 100%    | 212           | 8              |
+| S1.5      | 5       | 5      | 100%    | 217 (+5)      | 11 (+3)        |
+| S2        | 25      | 24     | 96%     | 360 (+93)     | 26 (+13)       |
+| S3        | 18      | 18     | 100%    | 360           | 26             |
+| Audit     | 11      | 11     | 100%    | 364 (+4)      | 29 (+3)        |
+| S4        | 16      | 16     | 100%    | 416 (+52)     | 29             |
+| S5        | 3       | 3      | 100%    | 530 (+114)    | 29             |
+| S6        | 5       | 5      | 100%    | 693 (+163)    | 87 (+58)       |
+| S7        | 4       | 4      | 100%    | 786 (+93)     | 87             |
+| S8        | 4       | 4      | 100%    | 913 (+127)    | 106 (+19)      |
+| Phase 0   | 8       | 8      | 100%    | 909 (-4)      | 106            |
+| W1        | 16      | 16     | 100%    | 941 (+32)     | 106            |
+| W2        | 13      | 13     | 100%    | 951 (+10)     | 106            |
+| Store Sub | 7       | 7      | 100%    | 951           | 106            |
+| Tech Polish | 12    | 12     | 100%    | 951           | 161 (+55)      |
+| V3 Sprints | 8      | 8      | 100%    | 1054 (+103)   | 161            |
+| R15       | 12      | 12     | 100%    | 1077 (+23)    | 161            |
+| Prod Hard | 22      | 22     | 100%    | 1433 (+356)   | 146            |
+| **Total** | **226** | **225** | **99%** | **1433**      | **146**        |

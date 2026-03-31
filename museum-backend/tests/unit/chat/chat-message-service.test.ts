@@ -84,6 +84,9 @@ const makeRepo = (session: ChatSession | null = makeSession()): jest.Mocked<Chat
   hasMessageReport: jest.fn().mockResolvedValue(false),
   persistMessageReport: jest.fn(),
   exportUserData: jest.fn(),
+  upsertMessageFeedback: jest.fn().mockResolvedValue(undefined),
+  deleteMessageFeedback: jest.fn().mockResolvedValue(undefined),
+  getMessageFeedback: jest.fn().mockResolvedValue(null),
 });
 
 const makeOrchestrator = (

@@ -341,7 +341,13 @@
     "crop": "اقتصاص",
     "imageAttribution": "تصوير {{photographer}} على Unsplash",
     "imageLoadError": "تعذر تحميل الصورة",
-    "viewFullscreen": "عرض بالحجم الكامل"
+    "viewFullscreen": "عرض بالحجم الكامل",
+    "listen": "استماع",
+    "listening": "جاري التشغيل...",
+    "thumbsUp": "مفيد",
+    "thumbsDown": "غير مفيد",
+    "sendFailed": "فشل الإرسال",
+    "offlineImageFailed": "تعذّر حفظ الصورة للإرسال دون اتصال. تمت إضافة رسالتك إلى قائمة الانتظار بدون الصورة."
   },
   "chatInput": {
     "placeholder": "اسأل عن عمل فني أو معلم، أو أرسل صوتًا/صورة...",
@@ -640,5 +646,14 @@
     "myTickets": "تذاكري",
     "createTicket": "إنشاء تذكرة",
     "ticketCreated": "تم إنشاء التذكرة بنجاح"
+  },
+  "visitSummary": {
+    "visitSummary": "ملخص الزيارة",
+    "artworksDiscussed": "الأعمال الفنية التي تمت مناقشتها",
+    "roomsVisited": "القاعات التي تمت زيارتها",
+    "visitDuration": "مدة الزيارة",
+    "messages": "رسائل",
+    "expertiseLevel": "المستوى",
+    "noArtworks": "لم تتم مناقشة أي أعمال فنية"
   }
 }

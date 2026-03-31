@@ -47,6 +47,7 @@ interface AppEnv {
   requestTimeoutMs: number;
   dbSynchronize: boolean;
   dbSsl: boolean;
+  dbSslRejectUnauthorized: boolean;
   db: {
     host: string;
     port: number;
@@ -203,6 +204,7 @@ const env: AppEnv = {
   requestTimeoutMs: toNumber(process.env.REQUEST_TIMEOUT_MS, 20000),
   dbSynchronize: toBoolean(process.env.DB_SYNCHRONIZE, false),
   dbSsl: toBoolean(process.env.DB_SSL, true),
+  dbSslRejectUnauthorized: toBoolean(process.env.DB_SSL_REJECT_UNAUTHORIZED, false),
   db: {
     host: toOptionalString(process.env.DB_HOST) || 'localhost',
     port: toNumber(process.env.DB_PORT, 5432),

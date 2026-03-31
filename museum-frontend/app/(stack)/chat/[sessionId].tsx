@@ -17,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
 import { useChatSession } from '@/features/chat/application/useChatSession';
+import { buildVisitSummary } from '@/features/chat/application/chatSessionLogic.pure';
 import { useAudioRecorder } from '@/features/chat/application/useAudioRecorder';
 import { useImagePicker } from '@/features/chat/application/useImagePicker';
 import { useAiConsent } from '@/features/chat/application/useAiConsent';
@@ -29,6 +30,7 @@ import { ImagePreviewModal } from '@/features/chat/ui/ImagePreviewModal';
 import { MessageContextMenu } from '@/features/chat/ui/MessageContextMenu';
 import { OfflineBanner } from '@/features/chat/ui/OfflineBanner';
 import { AiConsentModal } from '@/features/chat/ui/AiConsentModal';
+import { VisitSummaryModal } from '@/features/chat/ui/VisitSummaryModal';
 import { useMessageActions } from '@/features/chat/application/useMessageActions';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { GlassCard } from '@/shared/ui/GlassCard';
@@ -55,6 +57,7 @@ export default function ChatSessionScreen() {
   const [contextMenuMessage, setContextMenuMessage] = useState<(typeof messages)[number] | null>(
     null,
   );
+  const [showSummary, setShowSummary] = useState(false);
   const imageRefreshInFlightRef = useRef(new Set());
 
   // --- Hooks ---
@@ -72,6 +75,7 @@ export default function ChatSessionScreen() {
     error,
     clearError,
     sendMessage,
+    retryMessage,
     refreshMessageImageUrl,
     locale,
     museumMode,
@@ -106,6 +110,11 @@ export default function ChatSessionScreen() {
     return null;
   }, [messages]);
   const expertiseLevel = lastAssistantMessage?.metadata?.expertiseSignal;
+
+  const visitSummary = useMemo(
+    () => buildVisitSummary(messages, sessionTitle),
+    [messages, sessionTitle],
+  );
 
   // --- Callbacks ---
   const clearMedia = useCallback(() => {
@@ -272,6 +281,9 @@ export default function ChatSessionScreen() {
             onClose={() => {
               void onClose();
             }}
+            onSummary={() => {
+              setShowSummary(true);
+            }}
           />
 
           {isOffline ? <OfflineBanner pendingCount={pendingCount} /> : null}
@@ -297,6 +309,7 @@ export default function ChatSessionScreen() {
                 onCamera={onTakePicture}
                 onImageError={onMessageImageError}
                 onReport={onMessageLongPress}
+                onRetry={retryMessage}
               />
             )}
           </GlassCard>
@@ -349,6 +362,14 @@ export default function ChatSessionScreen() {
             unsub();
             recheckConsent();
           });
+        }}
+      />
+
+      <VisitSummaryModal
+        visible={showSummary}
+        summary={visitSummary}
+        onClose={() => {
+          setShowSummary(false);
         }}
       />
     </LiquidScreen>

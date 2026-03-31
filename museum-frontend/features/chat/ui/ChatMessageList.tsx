@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
+import { chatApi } from '@/features/chat/infrastructure/chatApi';
+import { useTextToSpeech } from '@/features/chat/application/useTextToSpeech';
 import { ChatMessageBubble } from '@/features/chat/ui/ChatMessageBubble';
 import { MessageActions } from '@/features/chat/ui/MessageActions';
 import { TypingIndicator } from '@/features/chat/ui/TypingIndicator';
@@ -34,6 +36,8 @@ interface ChatMessageListProps {
   onImageError: (messageId: string) => void;
   /** Called on long-press of an assistant message. */
   onReport: (messageId: string) => void;
+  /** Called to retry sending a failed message. */
+  onRetry?: (message: ChatUiMessage) => void;
 }
 
 /**
@@ -52,10 +56,32 @@ export const ChatMessageList = ({
   onCamera,
   onImageError,
   onReport,
+  onRetry,
 }: ChatMessageListProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const listRef = useRef<FlashListRef<ChatUiMessage>>(null);
+  const {
+    isPlaying: ttsIsPlaying,
+    isLoading: ttsIsLoading,
+    activeMessageId: ttsActiveId,
+    togglePlayback: ttsToggle,
+  } = useTextToSpeech();
+  const [feedbackMap, setFeedbackMap] = useState<Record<string, 'positive' | 'negative' | null>>(
+    {},
+  );
+
+  const handleFeedback = useCallback(
+    (messageId: string, value: 'positive' | 'negative') => {
+      const current = feedbackMap[messageId] ?? null;
+      const next = current === value ? null : value;
+      setFeedbackMap((prev) => ({ ...prev, [messageId]: next }));
+      chatApi.setMessageFeedback(messageId, value).catch(() => {
+        setFeedbackMap((prev) => ({ ...prev, [messageId]: current }));
+      });
+    },
+    [feedbackMap],
+  );
 
   const lastAssistantMessage = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -115,6 +141,12 @@ export const ChatMessageList = ({
             isStreaming={isItemStreaming}
             onImageError={onImageError}
             onReport={onReport}
+            ttsPlaying={ttsActiveId === item.id ? ttsIsPlaying : false}
+            ttsLoading={ttsActiveId === item.id ? ttsIsLoading : false}
+            onToggleTts={isAssistant ? ttsToggle : undefined}
+            onRetry={onRetry}
+            feedbackValue={isAssistant ? (feedbackMap[item.id] ?? null) : undefined}
+            onFeedback={isAssistant ? handleFeedback : undefined}
           />
 
           {isAssistant && !isItemStreaming && item.text ? (
@@ -151,9 +183,16 @@ export const ChatMessageList = ({
       onRecommendationPress,
       onImageError,
       onReport,
+      onRetry,
+      feedbackMap,
+      handleFeedback,
       handleShare,
       t,
       theme.textTertiary,
+      ttsIsPlaying,
+      ttsIsLoading,
+      ttsActiveId,
+      ttsToggle,
     ],
   );
 

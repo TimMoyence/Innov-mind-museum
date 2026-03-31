@@ -341,7 +341,13 @@
     "crop": "Zuschneiden",
     "imageAttribution": "Foto von {{photographer}} auf Unsplash",
     "imageLoadError": "Bild konnte nicht geladen werden",
-    "viewFullscreen": "In voller Grosse anzeigen"
+    "viewFullscreen": "In voller Grosse anzeigen",
+    "listen": "Anhören",
+    "listening": "Wiedergabe...",
+    "thumbsUp": "Hilfreich",
+    "thumbsDown": "Nicht hilfreich",
+    "sendFailed": "Senden fehlgeschlagen",
+    "offlineImageFailed": "Das Bild konnte nicht für den Offline-Versand gespeichert werden. Ihre Nachricht wurde ohne Bild in die Warteschlange gestellt."
   },
   "chatInput": {
     "placeholder": "Fragen Sie zu einem Kunstwerk, Denkmal, oder senden Sie Sprache/Foto...",
@@ -640,5 +646,14 @@
     "myTickets": "Meine Tickets",
     "createTicket": "Ticket erstellen",
     "ticketCreated": "Ticket erfolgreich erstellt"
+  },
+  "visitSummary": {
+    "visitSummary": "Besuchszusammenfassung",
+    "artworksDiscussed": "Besprochene Kunstwerke",
+    "roomsVisited": "Besuchte Räume",
+    "visitDuration": "Besuchsdauer",
+    "messages": "Nachrichten",
+    "expertiseLevel": "Niveau",
+    "noArtworks": "Keine Kunstwerke besprochen"
   }
 }

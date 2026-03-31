@@ -37,6 +37,20 @@ jest.mock('@/features/chat/ui/WelcomeCard', () => {
   };
 });
 
+jest.mock('@/features/chat/infrastructure/chatApi', () => ({
+  chatApi: { setMessageFeedback: jest.fn() },
+}));
+
+jest.mock('@/features/chat/application/useTextToSpeech', () => ({
+  useTextToSpeech: () => ({
+    isPlaying: false,
+    isLoading: false,
+    activeMessageId: null,
+    togglePlayback: jest.fn(),
+    stopPlayback: jest.fn(),
+  }),
+}));
+
 import { ChatMessageList } from '@/features/chat/ui/ChatMessageList';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -90,9 +104,7 @@ describe('ChatMessageList', () => {
   });
 
   it('shows TypingIndicator when isSending=true and isStreaming=false', () => {
-    render(
-      <ChatMessageList {...defaultProps} messages={[]} isSending isStreaming={false} />,
-    );
+    render(<ChatMessageList {...defaultProps} messages={[]} isSending isStreaming={false} />);
 
     expect(screen.getByTestId('typing-indicator')).toBeTruthy();
   });
@@ -102,17 +114,13 @@ describe('ChatMessageList', () => {
       createMessage({ id: 'msg-1', role: 'assistant', text: 'Streaming...' }),
     ];
 
-    render(
-      <ChatMessageList {...defaultProps} messages={messages} isSending isStreaming />,
-    );
+    render(<ChatMessageList {...defaultProps} messages={messages} isSending isStreaming />);
 
     expect(screen.queryByTestId('typing-indicator')).toBeNull();
   });
 
   it('does NOT show WelcomeCard when there are messages', () => {
-    const messages: ChatUiMessage[] = [
-      createMessage({ id: 'msg-1', role: 'user', text: 'Hello' }),
-    ];
+    const messages: ChatUiMessage[] = [createMessage({ id: 'msg-1', role: 'user', text: 'Hello' })];
 
     render(<ChatMessageList {...defaultProps} messages={messages} />);
 
