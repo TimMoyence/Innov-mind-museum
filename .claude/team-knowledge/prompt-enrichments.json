@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-03-26",
+  "lastUpdated": "2026-03-31",
   "enrichments": [
     {
       "id": "PE-001",
@@ -155,8 +155,20 @@
       "source": "R16: Frontend scan reported settings.tsx 662L and conversations.tsx 644L — actual sizes were 327L and 331L after R15 refactor. Sentinelle corrected.",
       "inject_when": "agent performs architecture audit or god-file analysis",
       "severity": "HIGH"
+    },
+    {
+      "id": "PE-023",
+      "rule": "Au demarrage d'un run /team, scanner git log pour commits non-trackes depuis le dernier run (comparer date lastUpdated de velocity-metrics.json avec HEAD). Si > 10 commits non-trackes, forcer un recap KB avant de demarrer le cycle. Objectif: ne jamais laisser la KB diverger > 24h du codebase reel.",
+      "source": "KB catchup 2026-03-31: 35 commits (Mar 29-31) non-trackes, KB 3 jours en retard, 5 recommendations critiques resolues mais non capturees.",
+      "inject_when": "Tech Lead execute Step 2 (Load Context) d'un run /team",
+      "severity": "HIGH"
     }
   ],
+  "catchupSummary_2026_03_31": {
+    "newEnrichments": ["PE-023"],
+    "total": 23,
+    "notes": "KB catchup after 2-day untracked gap. AM-010 anti-recurrence rule. All R16 GO conditions verified resolved."
+  },
   "r16Summary": {
     "newEnrichments": ["PE-022"],
     "total": 22,

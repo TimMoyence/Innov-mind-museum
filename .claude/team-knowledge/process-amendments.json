@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-03-28",
+  "lastUpdated": "2026-03-31",
   "amendments": [
     {
       "id": "AM-002",
@@ -72,6 +72,18 @@
       "monitoringRuns": ["R13", "R14"],
       "monitoringCriteria": "0 agent scope creep incidents over 2 monitoring runs",
       "result": "R12-chore: LIMITES OPERATIONNELLES in 9 agents + SKILL.md mandate template + REGLES ABSOLUES rule 7"
+    },
+    {
+      "id": "AM-010",
+      "type": "MAJOR",
+      "date": "2026-03-31",
+      "title": "OUT_OF_CYCLE_KB_CATCHUP",
+      "target": "REGLES ABSOLUES + Step 2 context loading",
+      "status": "APPLIED",
+      "change": "Tout travail hors cycle /team (commits directs, dev sessions sans orchestration) doit etre suivi d'un /team chore de rattrapage KB dans les 24h. Le prochain /team doit scanner git log pour commits non-trackes et mettre a jour la KB avant de demarrer son propre cycle. Si > 10 commits non-trackes detectes, forcer un recap avant le run.",
+      "monitoringRuns": ["next-2-runs"],
+      "monitoringCriteria": "0 gap KB > 24h apres travail hors cycle",
+      "result": "Triggered by 2-day gap (Mar 29-31): 35 commits, 0 KB updates, 0 sprint tracking, 0 Sentinelle gates. All R16 GO conditions resolved but not captured."
     }
   ]
 }

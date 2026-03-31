@@ -248,4 +248,100 @@ describe('ChatMediaService', () => {
       });
     });
   });
+
+  // ── setMessageFeedback ──────────────────────────────────────────────
+
+  describe('setMessageFeedback', () => {
+    it('creates positive feedback on an assistant message', async () => {
+      const row = makeMessageRow({ role: 'assistant' });
+      const repo = makeRepo(row);
+      const svc = new ChatMediaService({ repository: repo });
+
+      const result = await svc.setMessageFeedback(MESSAGE_ID, 42, 'positive');
+
+      expect(result).toEqual({ messageId: MESSAGE_ID, status: 'created' });
+      expect(repo.getMessageFeedback).toHaveBeenCalledWith(MESSAGE_ID, 42);
+      expect(repo.upsertMessageFeedback).toHaveBeenCalledWith(MESSAGE_ID, 42, 'positive');
+      expect(repo.deleteMessageFeedback).not.toHaveBeenCalled();
+    });
+
+    it('creates negative feedback on an assistant message', async () => {
+      const row = makeMessageRow({ role: 'assistant' });
+      const repo = makeRepo(row);
+      const svc = new ChatMediaService({ repository: repo });
+
+      const result = await svc.setMessageFeedback(MESSAGE_ID, 42, 'negative');
+
+      expect(result).toEqual({ messageId: MESSAGE_ID, status: 'created' });
+      expect(repo.upsertMessageFeedback).toHaveBeenCalledWith(MESSAGE_ID, 42, 'negative');
+    });
+
+    it('toggles off when same value is submitted again', async () => {
+      const row = makeMessageRow({ role: 'assistant' });
+      const repo = makeRepo(row);
+      repo.getMessageFeedback.mockResolvedValue({ value: 'positive' });
+      const svc = new ChatMediaService({ repository: repo });
+
+      const result = await svc.setMessageFeedback(MESSAGE_ID, 42, 'positive');
+
+      expect(result).toEqual({ messageId: MESSAGE_ID, status: 'removed' });
+      expect(repo.deleteMessageFeedback).toHaveBeenCalledWith(MESSAGE_ID, 42);
+      expect(repo.upsertMessageFeedback).not.toHaveBeenCalled();
+    });
+
+    it('updates when switching from positive to negative', async () => {
+      const row = makeMessageRow({ role: 'assistant' });
+      const repo = makeRepo(row);
+      repo.getMessageFeedback.mockResolvedValue({ value: 'positive' });
+      const svc = new ChatMediaService({ repository: repo });
+
+      const result = await svc.setMessageFeedback(MESSAGE_ID, 42, 'negative');
+
+      expect(result).toEqual({ messageId: MESSAGE_ID, status: 'updated' });
+      expect(repo.upsertMessageFeedback).toHaveBeenCalledWith(MESSAGE_ID, 42, 'negative');
+      expect(repo.deleteMessageFeedback).not.toHaveBeenCalled();
+    });
+
+    it('updates when switching from negative to positive', async () => {
+      const row = makeMessageRow({ role: 'assistant' });
+      const repo = makeRepo(row);
+      repo.getMessageFeedback.mockResolvedValue({ value: 'negative' });
+      const svc = new ChatMediaService({ repository: repo });
+
+      const result = await svc.setMessageFeedback(MESSAGE_ID, 42, 'positive');
+
+      expect(result).toEqual({ messageId: MESSAGE_ID, status: 'updated' });
+      expect(repo.upsertMessageFeedback).toHaveBeenCalledWith(MESSAGE_ID, 42, 'positive');
+    });
+
+    it('throws 404 when message does not exist', async () => {
+      const repo = makeRepo(null);
+      const svc = new ChatMediaService({ repository: repo });
+
+      await expect(svc.setMessageFeedback(MESSAGE_ID, 42, 'positive')).rejects.toMatchObject({
+        statusCode: 404,
+      });
+    });
+
+    it('throws 400 when message is not from assistant', async () => {
+      const row = makeMessageRow({ role: 'user' });
+      const repo = makeRepo(row);
+      const svc = new ChatMediaService({ repository: repo });
+
+      await expect(svc.setMessageFeedback(MESSAGE_ID, 42, 'positive')).rejects.toMatchObject({
+        statusCode: 400,
+        message: 'Only assistant messages can receive feedback',
+      });
+    });
+
+    it('throws 400 for invalid message id format', async () => {
+      const repo = makeRepo();
+      const svc = new ChatMediaService({ repository: repo });
+
+      await expect(svc.setMessageFeedback('not-a-uuid', 42, 'positive')).rejects.toMatchObject({
+        statusCode: 400,
+        message: 'Invalid message id format',
+      });
+    });
+  });
 });

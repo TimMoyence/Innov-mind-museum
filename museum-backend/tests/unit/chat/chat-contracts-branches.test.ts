@@ -3,6 +3,7 @@ import {
   parsePostMessageRequest,
   parseListSessionsQuery,
   parseReportMessageRequest,
+  parseFeedbackMessageRequest,
   isCreateSessionResponse,
   isPostMessageResponse,
   isPostAudioMessageResponse,
@@ -10,6 +11,7 @@ import {
   isDeleteSessionResponse,
   isListSessionsResponse,
   isReportMessageResponse,
+  isFeedbackMessageResponse,
 } from '@modules/chat/adapters/primary/http/chat.contracts';
 
 describe('parseCreateSessionRequest — branch coverage', () => {
@@ -638,5 +640,73 @@ describe('type guard — negative branch coverage', () => {
         }),
       ).toBe(false);
     });
+  });
+});
+
+describe('parseFeedbackMessageRequest — branch coverage', () => {
+  it('throws for non-object payload', () => {
+    expect(() => parseFeedbackMessageRequest(null)).toThrow('Payload must be an object');
+    expect(() => parseFeedbackMessageRequest('string')).toThrow('Payload must be an object');
+    expect(() => parseFeedbackMessageRequest([])).toThrow('Payload must be an object');
+  });
+
+  it('throws when value is missing', () => {
+    expect(() => parseFeedbackMessageRequest({})).toThrow('value is required');
+  });
+
+  it('throws when value is empty string', () => {
+    expect(() => parseFeedbackMessageRequest({ value: '  ' })).toThrow('value is required');
+  });
+
+  it('throws when value is not a string', () => {
+    expect(() => parseFeedbackMessageRequest({ value: 42 })).toThrow('value is required');
+  });
+
+  it('throws when value is not positive or negative', () => {
+    expect(() => parseFeedbackMessageRequest({ value: 'neutral' })).toThrow(
+      'value must be positive or negative',
+    );
+  });
+
+  it('parses positive value', () => {
+    const result = parseFeedbackMessageRequest({ value: 'positive' });
+    expect(result).toEqual({ value: 'positive' });
+  });
+
+  it('parses negative value', () => {
+    const result = parseFeedbackMessageRequest({ value: 'negative' });
+    expect(result).toEqual({ value: 'negative' });
+  });
+});
+
+describe('isFeedbackMessageResponse — branch coverage', () => {
+  it('returns false for non-object', () => {
+    expect(isFeedbackMessageResponse(null)).toBe(false);
+    expect(isFeedbackMessageResponse('string')).toBe(false);
+    expect(isFeedbackMessageResponse(undefined)).toBe(false);
+  });
+
+  it('returns false when messageId is not a string', () => {
+    expect(isFeedbackMessageResponse({ messageId: 123, status: 'created' })).toBe(false);
+  });
+
+  it('returns false when status is not a string', () => {
+    expect(isFeedbackMessageResponse({ messageId: 'm1', status: 42 })).toBe(false);
+  });
+
+  it('returns false when status is not a valid value', () => {
+    expect(isFeedbackMessageResponse({ messageId: 'm1', status: 'unknown' })).toBe(false);
+  });
+
+  it('returns true for valid created response', () => {
+    expect(isFeedbackMessageResponse({ messageId: 'm1', status: 'created' })).toBe(true);
+  });
+
+  it('returns true for valid updated response', () => {
+    expect(isFeedbackMessageResponse({ messageId: 'm1', status: 'updated' })).toBe(true);
+  });
+
+  it('returns true for valid removed response', () => {
+    expect(isFeedbackMessageResponse({ messageId: 'm1', status: 'removed' })).toBe(true);
   });
 });

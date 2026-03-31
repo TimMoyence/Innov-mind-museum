@@ -96,6 +96,22 @@
       "estimation": "L",
       "result": "PASS",
       "notes": "Read-only audit. 6 scans (backend, frontend, security, tests, devops, langchain) + Sentinelle cross-validation. 7 corrections (1 refuted, 4 downgraded, 1 upgraded, 2 stale-data). Scan accuracy 78%. 2 CRITICAL, 5 HIGH, 14 MEDIUM, 12 LOW. 81/100 CONDITIONAL GO. 3 GO conditions (path-to-regexp, langsmith, reset token hashing)."
+    },
+    {
+      "id": "UNTRACKED-2026-03-29-31",
+      "date": "2026-03-29 to 2026-03-31",
+      "mode": "untracked (dev hors cycle /team)",
+      "score": "N/A",
+      "agentsSpawned": 0,
+      "filesTouched": 70,
+      "testsWritten": 55,
+      "filesPerAgent": "N/A",
+      "roiMoyen": "N/A",
+      "correctiveLoops": "N/A",
+      "firstPassRate": "N/A",
+      "estimation": "N/A",
+      "result": "N/A — no gates",
+      "notes": "35 commits hors cycle /team. 7 features (image enrichment, museum geo, PgBouncer, K6, reset password, daily art, chat tests). 20 fixes (prod readiness audit, SSL, CI/CD, iOS crash). 6 refactors (9 repos SQL->TypeORM, CI consolidation 10->3, ChatModule encapsulation). 55 new tests. All 5 R16 GO conditions resolved (path-to-regexp, langsmith, reset tokens, CircuitBreaker, route tests). Ratchet: 1433 tests, 0 tsc, 4 as-any, coverage 72.86%. KB catchup executed 2026-03-31."
     }
   ],
   "averages": {
@@ -103,11 +119,12 @@
     "filesPerAgent": 10.6,
     "correctiveLoops": 0.0,
     "firstPassRate": 1.0,
-    "roiMoyen": 4.38
+    "roiMoyen": 4.38,
+    "note": "Averages exclude UNTRACKED entry (no agent scoring). Next formal run will recalculate."
   },
   "trends": {
-    "scoreTrend": "STABLE (81-95 range over last 6 runs, lifetime avg 90.2) — R16 audit mode lower score expected (no code changes)",
-    "loopsTrend": "STABLE (0) — 17 runs lifetime, 0 corrective loops",
+    "scoreTrend": "STABLE (81-95 range over last 6 tracked runs) — 2-day untracked gap (Mar 29-31) with no scoring",
+    "loopsTrend": "STABLE (0) — 17 tracked runs lifetime, 0 corrective loops",
     "roiTrend": "STABLE HIGH (3.5-5.0) — lifetime avg 4.38"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-03-28",
+  "lastUpdated": "2026-03-31",
   "agents": {
     "Backend Architect": {
       "totalRuns": 7, "averageScore": 9.22, "averageROI": 4.46, "verdict": "ESSENTIEL",
@@ -105,5 +105,9 @@
     "totalRuns": 1, "agentTypesUsed": 7, "avgScore": 81, "avgROI": 4.0,
     "verdicts": {"ESSENTIEL": ["Backend Architect", "Frontend Architect", "Security Analyst", "QA Engineer", "DevOps Engineer", "Sentinelle"]},
     "notes": "R16 full-stack prod-readiness audit. 6 parallel scans + Sentinelle cross-validation. 81/100 CONDITIONAL GO. 7 Sentinelle corrections. Scan accuracy 78%. 3 GO conditions identified."
+  },
+  "untrackedGap_2026_03_29_31": {
+    "totalRuns": 0, "agentTypesUsed": 0, "avgScore": "N/A", "avgROI": "N/A",
+    "notes": "35 commits hors cycle /team (Mar 29-31). No agents spawned, no scoring. Work included: 7 features, 20 fixes, 6 refactors, 55 new tests. All 5 R16 GO conditions resolved. Quality ratchet maintained. KB catchup executed 2026-03-31. Next formal /team run will resume agent scoring."
   }
 }
