@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-03-26",
+  "lastUpdated": "2026-03-31",
   "patterns": [
     {
       "id": "EP-002", "name": "AS_ANY_INSTEAD_OF_JEST_MOCKED", "severity": 4,
@@ -64,6 +64,7 @@
     "total": 15, "open": 1, "fixed": 14,
     "prunedLowSeverity": "EP-001(sev3), EP-005(sev3), EP-010(sev3), EP-013(sev2) — all fixed+verified, removed during pruning",
     "openIds": ["EP-004"],
-    "unverifiedFixes": ["EP-014", "EP-015"]
+    "unverifiedFixes": ["EP-014", "EP-015"],
+    "catchupNote": "2026-03-31: 35 commits (Mar 29-31) produced 0 new error patterns. EP-014 (scope creep guard) not re-tested outside /team cycle. EP-015 (hallucination guard) not re-tested. Both remain unverified."
   }
 }

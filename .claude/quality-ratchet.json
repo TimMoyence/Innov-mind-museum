@@ -1,10 +1,10 @@
 {
   "lastUpdated": "2026-03-31",
-  "testCount": 1433,
+  "testCount": 1457,
   "frontendTestCount": 146,
   "webTestCount": 71,
   "typecheckErrors": 0,
-  "asAnyCount": 4,
+  "asAnyCount": 0,
   "coverageStatements": 72.72,
   "coverageBranches": 57.61,
   "lintErrors": 0,
