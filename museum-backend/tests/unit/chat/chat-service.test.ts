@@ -202,7 +202,7 @@ describe('ChatService (facade)', () => {
       buildService({ audioTranscriber: undefined });
 
       const msgDeps = MockedMessageService.mock.calls.at(-1)![0] as any;
-      expect(msgDeps.audioTranscriber).toBeDefined();
+      expect(msgDeps.audioTranscriber).not.toBeNull();
       expect(msgDeps.audioTranscriber.constructor.name).toBe('DisabledAudioTranscriber');
     });
 

@@ -86,11 +86,10 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
     }),
   );
 
-  app.use(
-    helmet({
-      contentSecurityPolicy: isProd ? undefined : false,
-    }),
-  );
+  const helmetOpts = isProd
+    ? { hsts: { maxAge: 31536000, includeSubDomains: true } }
+    : { contentSecurityPolicy: false as const, hsts: false as const };
+  app.use(helmet(helmetOpts));
   app.use(
     compression({
       filter: (req, res) => {

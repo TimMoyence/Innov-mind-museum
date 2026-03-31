@@ -6,7 +6,19 @@ import { env } from '@src/config/env';
 import { buildSignedChatImageReadUrl } from './chat.image-url';
 import { buildS3SignedReadUrlFromRef, isS3ImageRef } from '../../secondary/image-storage.s3';
 
-import type { Request } from 'express';
+import type { Request, RequestHandler } from 'express';
+
+/**
+ * Disables the global response timeout for multipart uploads (image messages).
+ * Must be placed BEFORE multer so the timeout doesn't fire during a slow upload.
+ * Uses a finite ceiling (LLM budget + 10 s headroom) instead of 0 (unlimited).
+ */
+export const extendTimeoutForUpload: RequestHandler = (req, res, next) => {
+  if (req.is('multipart/form-data')) {
+    res.setTimeout(env.llm.totalBudgetMs + 10_000);
+  }
+  next();
+};
 
 /** Parsed visitor context extracted from request body. */
 export interface ParsedContext {
@@ -34,6 +46,18 @@ export const audioUpload = multer({
   },
 });
 
+const MAX_CONTEXT_LENGTH = 2000;
+
+/** Throws 400 if the serialised context exceeds the size cap. */
+const enforceContextSizeLimit = (input: unknown): void => {
+  let len = 0;
+  if (typeof input === 'string') len = input.length;
+  else if (typeof input === 'object' && input !== null) len = JSON.stringify(input).length;
+  if (len > MAX_CONTEXT_LENGTH) {
+    throw badRequest('context payload too large');
+  }
+};
+
 /** Parses and validates the optional context object from the request body. */
 export const parseContext = (
   input: unknown,
@@ -42,6 +66,8 @@ export const parseContext = (
   if (input === undefined || input === null || input === '') {
     return undefined;
   }
+
+  enforceContextSizeLimit(input);
 
   let raw = input;
   if (typeof input === 'string') {

@@ -160,7 +160,8 @@ describe('evaluateUserInputGuardrail', () => {
       history: [],
     });
     expect(result.allow).toBe(true);
-    expect(result.redirectHint).toBeDefined();
+    expect(typeof result.redirectHint).toBe('string');
+    expect(result.redirectHint!.length).toBeGreaterThan(0);
   });
 
   it('allows off-topic "football" with redirectHint', async () => {
@@ -169,7 +170,8 @@ describe('evaluateUserInputGuardrail', () => {
       history: [],
     });
     expect(result.allow).toBe(true);
-    expect(result.redirectHint).toBeDefined();
+    expect(typeof result.redirectHint).toBe('string');
+    expect(result.redirectHint!.length).toBeGreaterThan(0);
   });
 
   it('allows off-topic "recipe" with redirectHint', async () => {
@@ -178,7 +180,8 @@ describe('evaluateUserInputGuardrail', () => {
       history: [],
     });
     expect(result.allow).toBe(true);
-    expect(result.redirectHint).toBeDefined();
+    expect(typeof result.redirectHint).toBe('string');
+    expect(result.redirectHint!.length).toBeGreaterThan(0);
   });
 
   // External actions — soft redirect (new behavior)
@@ -197,7 +200,8 @@ describe('evaluateUserInputGuardrail', () => {
       history: [],
     });
     expect(result.allow).toBe(true);
-    expect(result.redirectHint).toBeDefined();
+    expect(typeof result.redirectHint).toBe('string');
+    expect(result.redirectHint!.length).toBeGreaterThan(0);
   });
 
   it('allows "book a flight" with redirectHint (no art keyword)', async () => {
@@ -206,7 +210,8 @@ describe('evaluateUserInputGuardrail', () => {
       history: [],
     });
     expect(result.allow).toBe(true);
-    expect(result.redirectHint).toBeDefined();
+    expect(typeof result.redirectHint).toBe('string');
+    expect(result.redirectHint!.length).toBeGreaterThan(0);
   });
 
   it('allows external action FR "reserve" with art keyword — art signal takes priority', async () => {
@@ -238,7 +243,8 @@ describe('evaluateUserInputGuardrail', () => {
     const longText = 'pourquoi ' + 'a'.repeat(80);
     const result = await evaluateUserInputGuardrail({ text: longText, history: artHistory });
     expect(result.allow).toBe(true);
-    expect(result.redirectHint).toBeDefined();
+    expect(typeof result.redirectHint).toBe('string');
+    expect(result.redirectHint!.length).toBeGreaterThan(0);
   });
 
   // Priority ordering
@@ -265,7 +271,8 @@ describe('evaluateUserInputGuardrail', () => {
       history: [],
     });
     expect(result.allow).toBe(true);
-    expect(result.redirectHint).toBeDefined();
+    expect(typeof result.redirectHint).toBe('string');
+    expect(result.redirectHint!.length).toBeGreaterThan(0);
   });
 
   // Short message with art context

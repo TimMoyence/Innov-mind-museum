@@ -32,8 +32,9 @@ describe('AddTicketMessageUseCase', () => {
     expect(result.senderId).toBe(10);
     expect(result.senderRole).toBe('user');
     expect(result.text).toBe('Hello, I need help');
-    expect(result.id).toBeDefined();
-    expect(result.createdAt).toBeDefined();
+    expect(typeof result.id).toBe('string');
+    expect(result.id.length).toBeGreaterThan(0);
+    expect(new Date(result.createdAt).getTime()).not.toBeNaN();
   });
 
   it('adds a message from an admin (non-owner)', async () => {

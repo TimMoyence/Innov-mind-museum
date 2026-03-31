@@ -46,6 +46,7 @@ interface AppEnv {
   jsonBodyLimit: string;
   requestTimeoutMs: number;
   dbSynchronize: boolean;
+  dbSsl: boolean;
   db: {
     host: string;
     port: number;
@@ -192,6 +193,7 @@ const env: AppEnv = {
   jsonBodyLimit: process.env.JSON_BODY_LIMIT || '1mb',
   requestTimeoutMs: toNumber(process.env.REQUEST_TIMEOUT_MS, 20000),
   dbSynchronize: toBoolean(process.env.DB_SYNCHRONIZE, false),
+  dbSsl: toBoolean(process.env.DB_SSL, true),
   db: {
     host: toOptionalString(process.env.DB_HOST) || 'localhost',
     port: toNumber(process.env.DB_PORT, 5432),
@@ -362,10 +364,7 @@ if (env.nodeEnv === 'production') {
   required('JWT_REFRESH_SECRET', process.env.JWT_REFRESH_SECRET);
   required('PGDATABASE', process.env.PGDATABASE);
   required('CORS_ORIGINS', process.env.CORS_ORIGINS);
-  required(
-    'MEDIA_SIGNING_SECRET or JWT_ACCESS_SECRET/JWT_SECRET',
-    process.env.MEDIA_SIGNING_SECRET || process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET,
-  );
+  required('MEDIA_SIGNING_SECRET', process.env.MEDIA_SIGNING_SECRET);
 
   if (env.llm.provider === 'openai') {
     required('OPENAI_API_KEY', env.llm.openAiApiKey);

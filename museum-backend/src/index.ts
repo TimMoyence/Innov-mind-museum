@@ -14,6 +14,7 @@ import { shutdownOpenTelemetry } from '@shared/observability/opentelemetry';
 import { initSentry } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
 import { AppDataSource } from '@src/data/db/data-source';
+import { setDailyChatLimitCacheService } from '@src/helpers/middleware/daily-chat-limit.middleware';
 import {
   stopRateLimitSweep,
   setRedisRateLimitStore,
@@ -69,6 +70,7 @@ const start = async (): Promise<void> => {
       });
       const redisRateLimitStore = new RedisRateLimitStore(redisClient);
       setRedisRateLimitStore(redisRateLimitStore);
+      setDailyChatLimitCacheService(cacheService);
       logger.info('redis_rate_limit_store_enabled');
     } else if (env.nodeEnv === 'production') {
       logger.warn('redis_disabled_in_production', {

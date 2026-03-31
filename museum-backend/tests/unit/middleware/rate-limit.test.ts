@@ -1,11 +1,20 @@
 import type { Request, RequestHandler } from 'express';
+
+jest.mock('@shared/logger/logger', () => ({
+  logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+}));
+
+import { logger } from '@shared/logger/logger';
 import {
   createRateLimitMiddleware,
   byIp,
   bySession,
   byUserId,
+  setRedisRateLimitStore,
   clearRateLimitBuckets,
+  _resetRedisStore,
 } from '@src/helpers/middleware/rate-limit.middleware';
+import type { RedisRateLimitStore } from '@src/helpers/middleware/redis-rate-limit-store';
 
 const makeMockReq = (overrides: Record<string, unknown> = {}): Parameters<RequestHandler>[0] =>
   ({
@@ -122,5 +131,87 @@ describe('byUserId key generator', () => {
   it('falls back to IP when user has no id', () => {
     const req = makeMockReq({ user: {} });
     expect(byUserId(req)).toBe('10.0.0.1');
+  });
+});
+
+/** Creates a mock RedisRateLimitStore whose increment() always rejects. */
+const createFailingRedisStore = (): RedisRateLimitStore =>
+  ({
+    increment: jest.fn().mockRejectedValue(new Error('Redis connection refused')),
+    reset: jest.fn(),
+    clear: jest.fn(),
+    stopSweep: jest.fn(),
+  }) as unknown as RedisRateLimitStore;
+
+describe('rate-limit middleware — Redis fail-closed fallback', () => {
+  beforeEach(() => {
+    clearRateLimitBuckets();
+    _resetRedisStore();
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    _resetRedisStore();
+    clearRateLimitBuckets();
+  });
+
+  it('falls back to in-memory and allows request under limit when Redis rejects', async () => {
+    const failingStore = createFailingRedisStore();
+    setRedisRateLimitStore(failingStore);
+
+    const mw = createRateLimitMiddleware({ limit: 3, windowMs: 60_000, keyGenerator: byIp });
+    const req = makeMockReq();
+    const res = makeMockRes();
+    const next = jest.fn();
+
+    mw(req, res, next);
+
+    // Wait for the async Redis → catch path to resolve
+    await new Promise(process.nextTick);
+
+    expect(next).toHaveBeenCalledWith();
+    expect(next).not.toHaveBeenCalledWith(expect.objectContaining({ statusCode: 429 }));
+  });
+
+  it('returns 429 when Redis rejects and in-memory limit is exceeded', async () => {
+    const failingStore = createFailingRedisStore();
+    setRedisRateLimitStore(failingStore);
+
+    const mw = createRateLimitMiddleware({ limit: 2, windowMs: 60_000, keyGenerator: byIp });
+    const req = makeMockReq();
+    const res = makeMockRes();
+
+    // Exhaust the in-memory limit (2 requests)
+    for (let i = 0; i < 2; i++) {
+      const next = jest.fn();
+      mw(req, res, next);
+      await new Promise(process.nextTick);
+      expect(next).toHaveBeenCalledWith();
+    }
+
+    // Third request should be rejected via in-memory fallback
+    const next3 = jest.fn();
+    mw(req, res, next3);
+    await new Promise(process.nextTick);
+
+    expect(next3).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 429 }));
+    expect(res.setHeader).toHaveBeenCalledWith('Retry-After', expect.any(String));
+  });
+
+  it('logs a warning when Redis store rejects', async () => {
+    const failingStore = createFailingRedisStore();
+    setRedisRateLimitStore(failingStore);
+
+    const mw = createRateLimitMiddleware({ limit: 5, windowMs: 60_000, keyGenerator: byIp });
+    const req = makeMockReq();
+    const res = makeMockRes();
+    const next = jest.fn();
+
+    mw(req, res, next);
+    await new Promise(process.nextTick);
+
+    expect(logger.warn).toHaveBeenCalledWith('rate_limit_redis_fail_closed_fallback', {
+      key: '10.0.0.1',
+    });
   });
 });

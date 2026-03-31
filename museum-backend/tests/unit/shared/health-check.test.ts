@@ -16,7 +16,7 @@ describe('buildHealthPayload', () => {
     expect(payload.status).toBe('ok');
     expect(payload.checks.database).toBe('up');
     expect(payload.checks.llmConfigured).toBe(true);
-    expect(payload.timestamp).toBeDefined();
+    expect(new Date(payload.timestamp).getTime()).not.toBeNaN();
   });
 
   it('returns status "degraded" when database is down', () => {

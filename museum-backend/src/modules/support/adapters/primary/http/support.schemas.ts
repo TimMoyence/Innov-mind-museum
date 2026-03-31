@@ -10,3 +10,10 @@ export const createTicketSchema = z.object({
 export const addTicketMessageSchema = z.object({
   text: z.string().min(1).max(5000),
 });
+
+export const listTicketsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  status: z.enum(['open', 'in_progress', 'resolved', 'closed']).optional(),
+  priority: z.enum(['low', 'medium', 'high']).optional(),
+});

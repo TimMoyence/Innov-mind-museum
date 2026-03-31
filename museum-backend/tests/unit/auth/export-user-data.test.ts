@@ -53,7 +53,7 @@ describe('ExportUserDataUseCase', () => {
 
     const result = await useCase.execute(baseUser);
 
-    expect(result.exportedAt).toBeDefined();
+    expect(new Date(result.exportedAt).getTime()).not.toBeNaN();
     expect(result.user.id).toBe(1);
     expect(result.user.email).toBe('ada@example.com');
     expect(result.user.firstname).toBe('Ada');

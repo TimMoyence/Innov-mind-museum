@@ -9,7 +9,13 @@ import {
   createRateLimitMiddleware,
 } from '@src/helpers/middleware/rate-limit.middleware';
 
-import { upload, parseContext, toImageSource, getRequestUser } from './chat-route.helpers';
+import {
+  upload,
+  parseContext,
+  toImageSource,
+  getRequestUser,
+  extendTimeoutForUpload,
+} from './chat-route.helpers';
 import { parsePostMessageRequest } from './chat.contracts';
 import {
   initSseResponse,
@@ -52,6 +58,7 @@ export const createMessageRouter = (
     dailyChatLimit,
     sessionLimiter,
     ...(uploadAdmission ? [uploadAdmission] : []),
+    extendTimeoutForUpload,
     upload.single('image'),
     async (req, res, next) => {
       try {
@@ -133,15 +140,15 @@ export const createMessageRouter = (
         }
       }, KEEP_ALIVE_MS);
 
-      // Hard timeout: cut SSE after 60s — if response takes longer, something is wrong
-      // (LLM budget is 25s; beyond 60s = zombie connection or provider failure)
-      const SSE_TIMEOUT_MS = 60_000;
+      // Hard timeout: cut SSE after LLM budget + 10s headroom — if response takes
+      // longer, something is wrong (zombie connection or provider failure).
+      const SSE_TIMEOUT_MS = env.llm.totalBudgetMs + 10_000;
       const sseTimer = setTimeout(() => {
         if (!res.writableEnded && !res.destroyed) {
           sendSseError(
             res,
             'TIMEOUT',
-            'Stream timeout exceeded (60s). The response took too long.',
+            `Stream timeout exceeded (${SSE_TIMEOUT_MS / 1_000}s). The response took too long.`,
           );
           controller.abort();
           res.end();

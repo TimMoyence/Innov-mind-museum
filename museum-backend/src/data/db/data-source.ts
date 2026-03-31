@@ -21,6 +21,10 @@ import { env } from '@src/config/env';
 
 const isCompiledRuntime = __filename.endsWith('.js');
 
+if (env.nodeEnv === 'production' && env.dbSynchronize) {
+  throw new Error('DB_SYNCHRONIZE must not be true in production — use migrations instead.');
+}
+
 /** TypeORM DataSource for PostgreSQL, configured from environment variables. Synchronize is always disabled in production. */
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -49,6 +53,7 @@ export const AppDataSource = new DataSource({
   migrations: isCompiledRuntime
     ? ['dist/src/data/db/migrations/*.js']
     : ['src/data/db/migrations/*.ts'],
+  ssl: env.nodeEnv === 'production' ? { rejectUnauthorized: env.dbSsl } : false,
   synchronize: env.nodeEnv === 'production' ? false : env.dbSynchronize,
   logging: false,
   extra: {

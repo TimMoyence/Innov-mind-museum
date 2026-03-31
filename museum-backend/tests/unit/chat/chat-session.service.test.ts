@@ -70,7 +70,7 @@ describe('ChatSessionService', () => {
 
       const result = await svc.createSession({ userId: 42, locale: 'fr', museumMode: true });
 
-      expect(result.id).toBeDefined();
+      expect(result.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
       expect(repo.createSession).toHaveBeenCalledWith(
         expect.objectContaining({ userId: 42, locale: 'fr', museumMode: true }),
       );

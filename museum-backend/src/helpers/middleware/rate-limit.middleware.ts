@@ -1,4 +1,5 @@
 import { tooManyRequests } from '@shared/errors/app.error';
+import { logger } from '@shared/logger/logger';
 import { InMemoryBucketStore } from '@shared/rate-limit/in-memory-bucket-store';
 
 import type { RedisRateLimitStore } from './redis-rate-limit-store';
@@ -65,7 +66,26 @@ export const createRateLimitMiddleware = ({
           next();
         })
         .catch(() => {
-          // If Redis call fails entirely, allow the request (fail-open)
+          // Fail-closed: fall back to in-memory rate limiting when Redis is down
+          logger.warn('rate_limit_redis_fail_closed_fallback', { key });
+          const now = Date.now();
+          const current = store.get(key);
+
+          if (!current || current.resetAt <= now) {
+            store.set(key, { count: 1, resetAt: now + windowMs });
+            next();
+            return;
+          }
+
+          if (current.count >= limit) {
+            const retryAfterSec = Math.max(1, Math.ceil((current.resetAt - now) / 1000));
+            res.setHeader('Retry-After', retryAfterSec.toString());
+            next(tooManyRequests('Too many requests. Please retry later.'));
+            return;
+          }
+
+          current.count += 1;
+          store.set(key, current);
           next();
         });
       return;

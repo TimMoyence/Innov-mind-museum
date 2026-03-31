@@ -41,8 +41,8 @@ describe('session list — cursor edge cases', () => {
     const list = await chatService.listSessions({ limit: 2 }, 4);
     expect(list.sessions.length).toBe(2);
     expect(list.page.hasMore).toBe(true);
-    expect(list.page.nextCursor).toBeDefined();
-    expect(list.page.nextCursor).not.toBeNull();
+    expect(typeof list.page.nextCursor).toBe('string');
+    expect(list.page.nextCursor!.length).toBeGreaterThan(0);
 
     // Use the cursor to fetch the next page
     const nextPage = await chatService.listSessions({ limit: 2, cursor: list.page.nextCursor! }, 4);

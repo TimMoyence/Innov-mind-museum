@@ -19,7 +19,7 @@ describe('API Key Authentication', () => {
       expect(result.plaintext).toMatch(/^msk_/);
       expect(result.apiKey.prefix).toMatch(/^msk_[\w-]{8}\.\.\.$/);
       expect(result.apiKey.name).toBe('Test Key');
-      expect(result.apiKey.id).toBeDefined();
+      expect(typeof result.apiKey.id).toBe('number');
       expect(result.apiKey.createdAt).toBeInstanceOf(Date);
     });
 
@@ -128,9 +128,9 @@ describe('API Key Authentication', () => {
         expect(key).not.toHaveProperty('hash');
         expect(key).not.toHaveProperty('salt');
         expect(key.prefix).toMatch(/^msk_[\w-]{8}\.\.\.$/);
-        expect(key.name).toBeDefined();
-        expect(key.id).toBeDefined();
-        expect(key.isActive).toBeDefined();
+        expect(typeof key.name).toBe('string');
+        expect(typeof key.id).toBe('number');
+        expect(typeof key.isActive).toBe('boolean');
       }
     });
 
