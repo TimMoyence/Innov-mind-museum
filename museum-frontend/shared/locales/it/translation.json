@@ -15,7 +15,14 @@
     "enabled": "Attivato",
     "disabled": "Disattivato",
     "not_configured": "Non configurato",
-    "or_continue_with": "oppure continua con"
+    "or_continue_with": "oppure continua con",
+    "settings": "Impostazioni"
+  },
+  "permissions": {
+    "galleryTitle": "Accesso galleria",
+    "galleryMessage": "L'accesso alla galleria è necessario. Abilitalo nelle Impostazioni.",
+    "cameraTitle": "Accesso fotocamera",
+    "cameraMessage": "L'accesso alla fotocamera è necessario. Abilitalo nelle Impostazioni."
   },
   "tabs": {
     "dashboard": "Bacheca",

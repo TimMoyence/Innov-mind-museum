@@ -15,7 +15,14 @@
     "enabled": "مفعّل",
     "disabled": "معطّل",
     "not_configured": "غير مهيّأ",
-    "or_continue_with": "أو المتابعة باستخدام"
+    "or_continue_with": "أو المتابعة باستخدام",
+    "settings": "الإعدادات"
+  },
+  "permissions": {
+    "galleryTitle": "الوصول إلى المعرض",
+    "galleryMessage": "يلزم الوصول إلى المعرض. يرجى تفعيله في الإعدادات.",
+    "cameraTitle": "الوصول إلى الكاميرا",
+    "cameraMessage": "يلزم الوصول إلى الكاميرا. يرجى تفعيله في الإعدادات."
   },
   "tabs": {
     "dashboard": "لوحة المعلومات",

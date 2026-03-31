@@ -227,6 +227,73 @@ Si une team existante est detectee a l'invocation :
 8. **Hooks automatiques** — lint-on-edit, pre-commit-gate (cf. settings.local.json)
 9. **Quality Ratchet** — jamais de regression (cf. quality-ratchet.md)
 10. **KB = source de verite** — team-knowledge/*.json persiste entre sessions
+11. **eslint-disable INTERDIT sauf exception documentee** — cf. ci-dessous
+12. **Tests DRY avec factories** — jamais de creation d'entites inline, toujours via `tests/helpers/`
+
+## REGLE ESLINT-DISABLE (OBLIGATOIRE POUR TOUS LES AGENTS)
+
+**Principe : si ESLint l'interdit, c'est qu'il y a une autre maniere de faire. Cherche-la.**
+
+### Arbre de decision (AVANT tout eslint-disable)
+
+```
+1. LIRE la doc ESLint de la regle → comprendre POURQUOI elle existe
+2. REFACTORER le code pour satisfaire la regle :
+   - max-lines-per-function → extraire des helpers
+   - complexity → decomposer en sous-fonctions
+   - max-params → options object pattern
+   - react/display-name → memo(function Name() {})
+   - no-misused-promises → void wrapper
+   - no-explicit-any → unknown + type guard
+   - prefer-optional-chain → foo?.bar
+   - max-lines (fichier) → splitter en modules
+3. SEULEMENT si faux positif avere (trust boundary, pattern RN, interface async) :
+   - Ajouter eslint-disable-next-line avec `-- raison precise`
+   - La raison doit expliquer POURQUOI c'est un faux positif, pas juste repeter le nom de la regle
+```
+
+### Categories autorisees (allowlist)
+
+| Regle | Contexte autorise | Exemple |
+|-------|-------------------|---------|
+| `prefer-nullish-coalescing` | Traitement intentionnel de `""` comme falsy | `role \|\| 'visitor'` |
+| `no-unnecessary-condition` | Frontiere de confiance (JWT, DB row, API externe) | `payload.type !== 'access'` apres `as` cast |
+| `require-await` | Implementation no-op d'interface async | `NoopCacheService.get()` |
+| `no-unnecessary-type-parameters` | Generic API pour inference des callers | `CacheService.set<T>()` |
+| `no-require-imports` | Pattern React Native `require()` ou chargement conditionnel OTel | `require('./image.png')` |
+| `no-control-regex` | Sanitisation input | Regex control chars dans `input.ts` |
+| `sonarjs/hashing` | Checksum non-crypto (S3 Content-MD5) | `crypto.createHash('md5')` |
+| `sonarjs/pseudo-random` | Jitter/backoff, pas securite | `Math.random()` pour retry |
+
+**Tout autre `eslint-disable` = ECHEC de review. L'agent doit trouver la solution propre.**
+
+### Injection dans les mandats agents
+
+Chaque mandat DEV (backend-architect, frontend-architect) DOIT inclure :
+
+```
+REGLE ESLINT ABSOLUE: Tu ne dois JAMAIS ajouter de `eslint-disable` sauf pour les
+categories autorisees dans CLAUDE.md § "ESLint Discipline > Justified disable patterns".
+Si ESLint signale un probleme, tu DOIS refactorer le code pour satisfaire la regle.
+Cherche la doc, cherche l'alternative, change ta maniere de penser.
+
+REGLE TESTS DRY: Tu ne dois JAMAIS creer d'entites de test inline (as User, as ChatMessage, etc.).
+Utilise TOUJOURS les factories partagees de tests/helpers/ :
+- makeUser(overrides?) depuis tests/helpers/auth/user.fixtures.ts
+- makeMessage(overrides?) depuis tests/helpers/chat/message.fixtures.ts
+- makeSession(overrides?) depuis tests/helpers/chat/message.fixtures.ts
+- makeToken(overrides?) depuis tests/helpers/auth/token.helpers.ts
+Si une factory n'existe pas pour ton entite, cree-la dans tests/helpers/<module>/<entity>.fixtures.ts AVANT d'ecrire les tests.
+Chaque factory suit le pattern: valeurs par defaut sensees + overrides partiels.
+```
+
+### Verification Sentinelle
+
+La Sentinelle DOIT verifier a chaque porte :
+```bash
+git diff --cached -U0 | grep -c 'eslint-disable'
+```
+Si nouveaux `eslint-disable` detectes hors allowlist → **FAIL automatique** avec demande de correction.
 
 ---
 

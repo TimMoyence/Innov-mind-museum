@@ -1,9 +1,6 @@
 import axios from 'axios';
 
-import {
-  assertApiBaseUrlAllowed,
-  tryResolveInitialApiBaseUrl,
-} from './apiConfig';
+import { assertApiBaseUrlAllowed, tryResolveInitialApiBaseUrl } from './apiConfig';
 import { reportError } from '@/shared/observability/errorReporting';
 import { generateRequestId } from './requestId';
 import { mapAxiosError, toAxiosLikeError } from './httpErrorMapper';
@@ -30,9 +27,7 @@ export const setTokenProvider = (fn: TokenProvider | null): void => {
  * Registers a callback invoked when a 401 response is received on an authenticated request.
  * @param handler - Handler function, or `null` to unregister.
  */
-export const setUnauthorizedHandler = (
-  handler: UnauthorizedHandler | null,
-): void => {
+export const setUnauthorizedHandler = (handler: UnauthorizedHandler | null): void => {
   unauthorizedHandler = handler;
 };
 
@@ -40,9 +35,7 @@ export const setUnauthorizedHandler = (
  * Registers a handler that attempts to refresh the access token on 401 responses.
  * @param handler - Async function returning a new access token (or `null` on failure), or `null` to unregister.
  */
-export const setAuthRefreshHandler = (
-  handler: AuthRefreshHandler | null,
-): void => {
+export const setAuthRefreshHandler = (handler: AuthRefreshHandler | null): void => {
   authRefreshHandler = handler;
 };
 
@@ -54,11 +47,7 @@ type HttpRequestConfig = {
 
 const initialApiBaseUrlResolution = tryResolveInitialApiBaseUrl();
 if (initialApiBaseUrlResolution.error && __DEV__) {
-   
-  console.warn(
-    '[HTTP] Invalid API base URL configuration',
-    initialApiBaseUrlResolution.error,
-  );
+  console.warn('[HTTP] Invalid API base URL configuration', initialApiBaseUrlResolution.error);
 }
 
 const DEFAULT_BASE_URL = initialApiBaseUrlResolution.url;
@@ -107,26 +96,19 @@ httpClient.interceptors.request.use((config) => {
   finalConfig.baseURL = getApiBaseUrl();
 
   const requestId = generateRequestId();
-  finalConfig.headers = {
-    ...finalConfig.headers,
-    'Accept-Language': getLocale(),
-    'X-Request-Id': requestId,
-  };
+  finalConfig.headers.set('Accept-Language', getLocale());
+  finalConfig.headers.set('X-Request-Id', requestId);
 
   const shouldAttachAuth = finalConfig.requiresAuth !== false;
 
   if (shouldAttachAuth) {
     const token = tokenProvider?.() ?? null;
-    if (token && !finalConfig.headers.Authorization) {
-      finalConfig.headers = {
-        ...finalConfig.headers,
-        Authorization: `Bearer ${token}`,
-      };
+    if (token && !finalConfig.headers.get('Authorization')) {
+      finalConfig.headers.set('Authorization', `Bearer ${token}`);
     }
   }
 
   if (__DEV__) {
-     
     console.debug(
       '[HTTP] ->',
       finalConfig.method?.toUpperCase(),
@@ -142,7 +124,6 @@ httpClient.interceptors.request.use((config) => {
 httpClient.interceptors.response.use(
   (response) => {
     if (__DEV__) {
-       
       console.debug('[HTTP] <-', response.status, response.config.url);
     }
     return response;
@@ -152,7 +133,7 @@ httpClient.interceptors.response.use(
     const config = (axiosError?.config ?? {}) as HttpRequestConfig;
     const status = axiosError?.response?.status;
 
-      // eslint-disable-next-line @typescript-eslint/no-base-to-string -- config.url is always string at runtime
+    // eslint-disable-next-line @typescript-eslint/no-base-to-string -- config.url is always string at runtime
     const requestUrl = String(config.url ?? '');
     const isAuthRefreshRequest = requestUrl.includes('/api/auth/refresh');
     const isAuthRequired = config.requiresAuth !== false;
@@ -189,8 +170,7 @@ httpClient.interceptors.response.use(
     }
 
     const is429 = status === 429;
-    const retryable =
-      !status || status >= 500 || axiosError.code === 'ECONNABORTED' || is429;
+    const retryable = !status || status >= 500 || axiosError.code === 'ECONNABORTED' || is429;
     const retryCount = config._retryCount ?? 0;
     const maxRetries = is429 ? 3 : 2;
 
@@ -207,10 +187,7 @@ httpClient.interceptors.response.use(
           responseHeaders?.['retry-after'] ?? responseHeaders?.['Retry-After'];
         if (retryAfterValue) {
           const parsed = Number(retryAfterValue);
-          delayMs =
-            Number.isFinite(parsed) && parsed > 0
-              ? parsed * 1000
-              : 1000 * 2 ** retryCount;
+          delayMs = Number.isFinite(parsed) && parsed > 0 ? parsed * 1000 : 1000 * 2 ** retryCount;
         } else {
           delayMs = 1000 * 2 ** retryCount;
         }

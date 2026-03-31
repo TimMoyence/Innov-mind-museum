@@ -15,7 +15,14 @@
     "enabled": "有効",
     "disabled": "無効",
     "not_configured": "未設定",
-    "or_continue_with": "または以下で続行"
+    "or_continue_with": "または以下で続行",
+    "settings": "設定"
+  },
+  "permissions": {
+    "galleryTitle": "ギャラリーへのアクセス",
+    "galleryMessage": "ギャラリーへのアクセス許可が必要です。設定で有効にしてください。",
+    "cameraTitle": "カメラへのアクセス",
+    "cameraMessage": "カメラへのアクセス許可が必要です。設定で有効にしてください。"
   },
   "tabs": {
     "dashboard": "ダッシュボード",
