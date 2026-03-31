@@ -58,9 +58,7 @@ describe('ChangeEmailUseCase', () => {
 
     const token = await useCase.execute(1, 'new@test.com', 'ValidPass1');
 
-    expect(token).toBeDefined();
-    expect(typeof token).toBe('string');
-    expect(token.length).toBe(64); // 32 bytes hex
+    expect(token).toMatch(/^[0-9a-f]{64}$/); // 32 bytes hex
     expect(repo.getUserById).toHaveBeenCalledWith(1);
     expect(repo.getUserByEmail).toHaveBeenCalledWith('new@test.com');
     expect(repo.setEmailChangeToken).toHaveBeenCalledWith(
@@ -172,7 +170,7 @@ describe('ChangeEmailUseCase', () => {
 
     const token = await useCase.execute(1, 'new@test.com', 'ValidPass1');
 
-    expect(token).toBeDefined();
+    expect(token).toMatch(/^[0-9a-f]{64}$/); // 32 bytes hex
     expect(repo.setEmailChangeToken).toHaveBeenCalled();
   });
 

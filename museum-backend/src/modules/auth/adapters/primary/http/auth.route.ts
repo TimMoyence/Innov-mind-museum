@@ -389,8 +389,15 @@ authRouter.put(
   },
 );
 
+const emailVerificationLimiter = createRateLimitMiddleware({
+  limit: 10,
+  windowMs: 300_000,
+  keyGenerator: byIp,
+});
+
 authRouter.post(
   '/confirm-email-change',
+  emailVerificationLimiter,
   validateBody(confirmEmailChangeSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -463,6 +470,7 @@ authRouter.post(
 
 authRouter.post(
   '/verify-email',
+  emailVerificationLimiter,
   validateBody(verifyEmailSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {

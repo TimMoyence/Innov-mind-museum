@@ -42,9 +42,8 @@ describe('ForgotPasswordUseCase', () => {
 
     const token = await useCase.execute('user@test.com');
 
-    expect(token).toBeDefined();
     expect(typeof token).toBe('string');
-    expect(token!.length).toBe(64); // 32 bytes hex
+    expect(token).toMatch(/^[0-9a-f]{64}$/); // 32 bytes hex
     expect(repo.getUserByEmail).toHaveBeenCalledWith('user@test.com');
     // Stored token is SHA-256 hash (64 hex chars), not the raw token
     const storedToken = repo.setResetToken.mock.calls[0][1] as string;
@@ -64,7 +63,8 @@ describe('ForgotPasswordUseCase', () => {
 
     const token = await useCase.execute('user@test.com');
 
-    expect(token).toBeDefined();
+    expect(typeof token).toBe('string');
+    expect(token).toMatch(/^[0-9a-f]{64}$/); // 32 bytes hex
     expect(repo.setResetToken).toHaveBeenCalled();
     // No email service, so sendEmail should not have been called at all
   });
@@ -146,7 +146,8 @@ describe('ForgotPasswordUseCase', () => {
     // Should not throw
     const token = await useCase.execute('user@test.com');
 
-    expect(token).toBeDefined();
+    expect(typeof token).toBe('string');
+    expect(token).toMatch(/^[0-9a-f]{64}$/); // 32 bytes hex
     expect(repo.setResetToken).toHaveBeenCalled();
   });
 

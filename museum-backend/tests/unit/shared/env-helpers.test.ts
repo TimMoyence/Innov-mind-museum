@@ -72,9 +72,12 @@ describe('env config — branch verification', () => {
 
   it('auth secrets are populated in dev/test mode', () => {
     if (env.nodeEnv !== 'production') {
-      expect(env.auth.jwtSecret).toBeDefined();
-      expect(env.auth.accessTokenSecret).toBeDefined();
-      expect(env.auth.refreshTokenSecret).toBeDefined();
+      expect(typeof env.auth.jwtSecret).toBe('string');
+      expect(env.auth.jwtSecret.length).toBeGreaterThan(0);
+      expect(typeof env.auth.accessTokenSecret).toBe('string');
+      expect(env.auth.accessTokenSecret.length).toBeGreaterThan(0);
+      expect(typeof env.auth.refreshTokenSecret).toBe('string');
+      expect(env.auth.refreshTokenSecret.length).toBeGreaterThan(0);
     }
   });
 });

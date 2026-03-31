@@ -73,7 +73,8 @@ describe('S2-22: JWT PII strip', () => {
     const decoded = jwt.decode(session.accessToken) as Record<string, unknown>;
     expect(decoded.sub).toBe('42');
     expect(decoded.type).toBe('access');
-    expect(decoded.jti).toBeDefined();
+    expect(typeof decoded.jti).toBe('string');
+    expect((decoded.jti as string).length).toBeGreaterThan(0);
     expect(decoded.role).toBe('visitor');
     expect(decoded).not.toHaveProperty('email');
     expect(decoded).not.toHaveProperty('firstname');

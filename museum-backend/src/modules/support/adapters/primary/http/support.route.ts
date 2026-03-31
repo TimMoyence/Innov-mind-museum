@@ -2,8 +2,13 @@ import { type NextFunction, type Request, type Response, Router } from 'express'
 
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
 
-import { createTicketSchema, addTicketMessageSchema } from './support.schemas';
+import {
+  createTicketSchema,
+  addTicketMessageSchema,
+  listTicketsQuerySchema,
+} from './support.schemas';
 import {
   createTicketUseCase,
   listUserTicketsUseCase,
@@ -48,12 +53,15 @@ supportRouter.post(
 supportRouter.get(
   '/tickets',
   isAuthenticated,
+  validateQuery(listTicketsQuerySchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const page = Number.parseInt(req.query.page as string, 10) || 1;
-      const limit = Number.parseInt(req.query.limit as string, 10) || 20;
-      const status = (req.query.status as string) || undefined;
-      const priority = (req.query.priority as string) || undefined;
+      const { page, limit, status, priority } = req.query as unknown as {
+        page: number;
+        limit: number;
+        status?: string;
+        priority?: string;
+      };
 
       const result = await listUserTicketsUseCase.execute({
         userId: req.user?.id ?? 0,

@@ -13,7 +13,7 @@ describe('buildSignedChatImageReadUrl', () => {
     expect(result.url).toContain('/api/chat/messages/msg-123/image');
     expect(result.url).toContain('token=');
     expect(result.url).toContain('sig=');
-    expect(result.expiresAt).toBeDefined();
+    expect(new Date(result.expiresAt).getTime()).not.toBeNaN();
     expect(new Date(result.expiresAt).getTime()).toBeGreaterThan(Date.now());
   });
 

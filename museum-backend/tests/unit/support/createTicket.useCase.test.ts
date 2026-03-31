@@ -24,7 +24,8 @@ describe('CreateTicketUseCase', () => {
       description: 'When I tap login, the app crashes immediately.',
     });
 
-    expect(result.id).toBeDefined();
+    expect(typeof result.id).toBe('string');
+    expect(result.id.length).toBeGreaterThan(0);
     expect(result.userId).toBe(1);
     expect(result.subject).toBe('App crashes on login');
     expect(result.description).toBe('When I tap login, the app crashes immediately.');

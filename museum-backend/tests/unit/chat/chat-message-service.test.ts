@@ -1159,7 +1159,8 @@ describe('ChatMessageService', () => {
 
       // The assistant message persistence should include sessionUpdates
       const assistantCall = repo.persistMessage.mock.calls[1];
-      expect(assistantCall[0].sessionUpdates).toBeDefined();
+      expect(typeof assistantCall[0].sessionUpdates).toBe('object');
+      expect(assistantCall[0].sessionUpdates).not.toBeNull();
     });
 
     it('does not include session updates when output guardrail blocks', async () => {

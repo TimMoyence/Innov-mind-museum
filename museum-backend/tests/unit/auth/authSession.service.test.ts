@@ -134,8 +134,10 @@ describe('AuthSessionService', () => {
 
       const result = await service.login('user@test.com', 'ValidPass1');
 
-      expect(result.accessToken).toBeDefined();
-      expect(result.refreshToken).toBeDefined();
+      expect(typeof result.accessToken).toBe('string');
+      expect(result.accessToken.split('.')).toHaveLength(3); // JWT format
+      expect(typeof result.refreshToken).toBe('string');
+      expect(result.refreshToken.split('.')).toHaveLength(3); // JWT format
       expect(result.expiresIn).toBeGreaterThan(0);
       expect(result.refreshExpiresIn).toBeGreaterThan(0);
       expect(result.user.id).toBe(1);
@@ -294,8 +296,10 @@ describe('AuthSessionService', () => {
 
       const result = await service.refresh(loginResult.refreshToken);
 
-      expect(result.accessToken).toBeDefined();
-      expect(result.refreshToken).toBeDefined();
+      expect(typeof result.accessToken).toBe('string');
+      expect(result.accessToken.split('.')).toHaveLength(3); // JWT format
+      expect(typeof result.refreshToken).toBe('string');
+      expect(result.refreshToken.split('.')).toHaveLength(3); // JWT format
       expect(result.user.id).toBe(1);
       expect(result.user.onboardingCompleted).toBe(false);
       // Should have called rotate (since we have a rotateFrom)
@@ -678,8 +682,10 @@ describe('AuthSessionService', () => {
         role: 'visitor',
       });
 
-      expect(result.accessToken).toBeDefined();
-      expect(result.refreshToken).toBeDefined();
+      expect(typeof result.accessToken).toBe('string');
+      expect(result.accessToken.split('.')).toHaveLength(3); // JWT format
+      expect(typeof result.refreshToken).toBe('string');
+      expect(result.refreshToken.split('.')).toHaveLength(3); // JWT format
       expect(result.user.id).toBe(7);
       expect(result.user.email).toBe('social@test.com');
       expect(refreshTokenRepo.insert).toHaveBeenCalled();
@@ -698,7 +704,8 @@ describe('AuthSessionService', () => {
         role: 'visitor',
       });
 
-      expect(result.accessToken).toBeDefined();
+      expect(typeof result.accessToken).toBe('string');
+      expect(result.accessToken.split('.')).toHaveLength(3); // JWT format
     });
   });
 });

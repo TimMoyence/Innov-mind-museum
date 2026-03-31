@@ -4,7 +4,8 @@ import { SUPPORTED_LOCALES } from '@shared/i18n/locale';
 describe('guardrail refusals', () => {
   it('has entries for all 7 supported locales', () => {
     for (const locale of SUPPORTED_LOCALES) {
-      expect(GUARDRAIL_REFUSALS[locale]).toBeDefined();
+      expect(typeof GUARDRAIL_REFUSALS[locale]).toBe('object');
+      expect(GUARDRAIL_REFUSALS[locale]).not.toBeNull();
     }
   });
 
@@ -12,11 +13,11 @@ describe('guardrail refusals', () => {
     'locale "%s" has non-empty insult, external_request, and default',
     (locale) => {
       const messages = GUARDRAIL_REFUSALS[locale];
-      expect(messages.insult).toBeTruthy();
+      expect(typeof messages.insult).toBe('string');
       expect(messages.insult.length).toBeGreaterThan(10);
-      expect(messages.external_request).toBeTruthy();
+      expect(typeof messages.external_request).toBe('string');
       expect(messages.external_request.length).toBeGreaterThan(10);
-      expect(messages.default).toBeTruthy();
+      expect(typeof messages.default).toBe('string');
       expect(messages.default.length).toBeGreaterThan(10);
     },
   );

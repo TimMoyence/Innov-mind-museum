@@ -24,7 +24,7 @@ describe('logger', () => {
     const output = JSON.parse(logSpy.mock.calls[0][0]);
     expect(output.level).toBe('info');
     expect(output.message).toBe('test_info');
-    expect(output.timestamp).toBeDefined();
+    expect(new Date(output.timestamp).getTime()).not.toBeNaN();
     expect(output.service).toBe('museum-backend');
   });
 
@@ -76,9 +76,9 @@ describe('logger', () => {
     for (const spy of [logSpy, warnSpy, errorSpy]) {
       const output = JSON.parse(spy.mock.calls[0][0]);
       expect(output.service).toBe('museum-backend');
-      expect(output.environment).toBeDefined();
-      expect(output.version).toBeDefined();
-      expect(output.hostname).toBeDefined();
+      expect(typeof output.environment).toBe('string');
+      expect(typeof output.version).toBe('string');
+      expect(typeof output.hostname).toBe('string');
     }
   });
 

@@ -29,7 +29,8 @@ describe('evaluateUserInputGuardrail — dynamic keywords (step 5b)', () => {
       dynamicKeywords: new Set(),
     });
     expect(result.allow).toBe(true);
-    expect(result.redirectHint).toBeDefined();
+    expect(typeof result.redirectHint).toBe('string');
+    expect(result.redirectHint!.length).toBeGreaterThan(0);
   });
 
   it('falls through when dynamic keywords set is undefined', async () => {
@@ -38,7 +39,8 @@ describe('evaluateUserInputGuardrail — dynamic keywords (step 5b)', () => {
       history: [],
     });
     expect(result.allow).toBe(true);
-    expect(result.redirectHint).toBeDefined();
+    expect(typeof result.redirectHint).toBe('string');
+    expect(result.redirectHint!.length).toBeGreaterThan(0);
   });
 });
 
@@ -76,7 +78,8 @@ describe('evaluateUserInputGuardrail — classifier (step 9)', () => {
       classifier,
     });
     expect(result.allow).toBe(true);
-    expect(result.redirectHint).toBeDefined();
+    expect(typeof result.redirectHint).toBe('string');
+    expect(result.redirectHint!.length).toBeGreaterThan(0);
   });
 
   it('returns redirectHint (fail-open) when classifier throws', async () => {
@@ -88,7 +91,8 @@ describe('evaluateUserInputGuardrail — classifier (step 9)', () => {
     });
     // fail-open: classifier error should NOT block the user
     expect(result.allow).toBe(true);
-    expect(result.redirectHint).toBeDefined();
+    expect(typeof result.redirectHint).toBe('string');
+    expect(result.redirectHint!.length).toBeGreaterThan(0);
   });
 
   it('skips classifier when no classifier provided', async () => {
@@ -98,7 +102,8 @@ describe('evaluateUserInputGuardrail — classifier (step 9)', () => {
       // no classifier
     });
     expect(result.allow).toBe(true);
-    expect(result.redirectHint).toBeDefined();
+    expect(typeof result.redirectHint).toBe('string');
+    expect(result.redirectHint!.length).toBeGreaterThan(0);
   });
 
   it('does not call classifier when static keyword matches', async () => {

@@ -3,8 +3,9 @@ import { type NextFunction, type Request, type Response, Router } from 'express'
 import { unauthorized } from '@shared/errors/app.error';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
 
-import { createReviewSchema } from './review.schemas';
+import { createReviewSchema, listReviewsQuerySchema } from './review.schemas';
 import {
   createReviewUseCase,
   listApprovedReviewsUseCase,
@@ -45,21 +46,24 @@ reviewRouter.post(
 );
 
 // GET /api/reviews — Public: list approved reviews (paginated)
-reviewRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const page = Number.parseInt(req.query.page as string, 10) || 1;
-    const limit = Number.parseInt(req.query.limit as string, 10) || 20;
+reviewRouter.get(
+  '/',
+  validateQuery(listReviewsQuerySchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { page, limit } = req.query as unknown as { page: number; limit: number };
 
-    const result = await listApprovedReviewsUseCase.execute({
-      page,
-      limit,
-    });
+      const result = await listApprovedReviewsUseCase.execute({
+        page,
+        limit,
+      });
 
-    res.json(result);
-  } catch (error) {
-    next(error);
-  }
-});
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 // GET /api/reviews/stats — Public: get average rating + count
 reviewRouter.get('/stats', async (_req: Request, res: Response, next: NextFunction) => {
