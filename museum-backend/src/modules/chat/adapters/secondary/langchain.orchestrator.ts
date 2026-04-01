@@ -409,7 +409,6 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
             {
               userMemoryBlock: input.userMemoryBlock,
               knowledgeBaseBlock: input.knowledgeBaseBlock,
-              redirectHint: input.redirectHint,
             },
           );
 
@@ -515,7 +514,6 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           {
             userMemoryBlock: input.userMemoryBlock,
             knowledgeBaseBlock: input.knowledgeBaseBlock,
-            redirectHint: input.redirectHint,
           },
         );
 

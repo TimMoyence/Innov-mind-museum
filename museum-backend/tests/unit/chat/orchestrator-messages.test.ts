@@ -152,7 +152,7 @@ describe('buildOrchestratorMessages', () => {
     expect(result.hasImage).toBe(true);
     const content = result.userMessage.content;
     expect(Array.isArray(content)).toBe(true);
-    const parts = content as Array<{ type: string; image_url?: { url: string } }>;
+    const parts = content as { type: string; image_url?: { url: string } }[];
     const imagePart = parts.find((p) => p.type === 'image_url');
     expect(imagePart?.image_url?.url).toBe('https://example.com/painting.jpg');
   });
@@ -171,7 +171,7 @@ describe('buildOrchestratorMessages', () => {
 
     const content = result.userMessage.content;
     expect(Array.isArray(content)).toBe(true);
-    const parts = content as Array<{ type: string; image_url?: { url: string } }>;
+    const parts = content as { type: string; image_url?: { url: string } }[];
     const imagePart = parts.find((p) => p.type === 'image_url');
     expect(imagePart?.image_url?.url).toBe('data:image/png;base64,abc123==');
   });
@@ -247,7 +247,7 @@ describe('buildSectionMessages', () => {
   const sectionPrompt = '[SECTION:summary] Respond.';
   const userMsg = new HumanMessage('Hello');
 
-  it('returns minimal structure without memoryBlock or redirectHint', () => {
+  it('returns minimal structure without optional blocks', () => {
     const messages = buildSectionMessages(systemPrompt, sectionPrompt, [], userMsg);
 
     // system + section + user + anti-injection = 4
@@ -268,12 +268,12 @@ describe('buildSectionMessages', () => {
     expect((messages[2] as SystemMessage).content).toBe('User prefers detailed responses.');
   });
 
-  it('adds SystemMessage for redirectHint', () => {
+  it('adds SystemMessage for knowledgeBaseBlock', () => {
     const messages = buildSectionMessages(systemPrompt, sectionPrompt, [], userMsg, {
       knowledgeBaseBlock: 'Please focus on impressionism.',
     });
 
-    // system + section + redirect + user + anti-injection = 5
+    // system + section + kb + user + anti-injection = 5
     expect(messages).toHaveLength(5);
     expect((messages[2] as SystemMessage).content).toBe('Please focus on impressionism.');
   });
@@ -281,13 +281,13 @@ describe('buildSectionMessages', () => {
   it('adds both memoryBlock and knowledgeBaseBlock in correct order', () => {
     const messages = buildSectionMessages(systemPrompt, sectionPrompt, [], userMsg, {
       userMemoryBlock: 'Memory block here.',
-      knowledgeBaseBlock: 'Redirect hint here.',
+      knowledgeBaseBlock: 'KB block here.',
     });
 
-    // system + section + memory + redirect + user + anti-injection = 6
+    // system + section + memory + kb + user + anti-injection = 6
     expect(messages).toHaveLength(6);
     expect((messages[2] as SystemMessage).content).toBe('Memory block here.');
-    expect((messages[3] as SystemMessage).content).toBe('Redirect hint here.');
+    expect((messages[3] as SystemMessage).content).toBe('KB block here.');
   });
 
   it('always ends with the anti-injection reminder', () => {
@@ -296,7 +296,7 @@ describe('buildSectionMessages', () => {
       sectionPrompt,
       [new HumanMessage('prior'), new AIMessage('response')],
       userMsg,
-      { userMemoryBlock: 'Memory.', knowledgeBaseBlock: 'Redirect.' },
+      { userMemoryBlock: 'Memory.', knowledgeBaseBlock: 'KB block.' },
     );
 
     const last = messages[messages.length - 1];
@@ -306,7 +306,7 @@ describe('buildSectionMessages', () => {
     );
   });
 
-  it('preserves correct ordering: system > section > memory > redirect > history > user > anti-injection', () => {
+  it('preserves correct ordering: system > section > memory > kb > history > user > anti-injection', () => {
     const historyMessages = [
       new HumanMessage('previous question'),
       new AIMessage('previous answer'),
@@ -314,10 +314,10 @@ describe('buildSectionMessages', () => {
 
     const messages = buildSectionMessages(systemPrompt, sectionPrompt, historyMessages, userMsg, {
       userMemoryBlock: 'Memory block.',
-      knowledgeBaseBlock: 'Redirect hint.',
+      knowledgeBaseBlock: 'KB block.',
     });
 
-    // Total: system(0) + section(1) + memory(2) + redirect(3) + history(4,5) + user(6) + anti-injection(7) = 8
+    // Total: system(0) + section(1) + memory(2) + kb(3) + history(4,5) + user(6) + anti-injection(7) = 8
     expect(messages).toHaveLength(8);
 
     // system prompt
@@ -332,9 +332,9 @@ describe('buildSectionMessages', () => {
     expect(messages[2]).toBeInstanceOf(SystemMessage);
     expect((messages[2] as SystemMessage).content).toBe('Memory block.');
 
-    // redirect hint
+    // knowledge base block
     expect(messages[3]).toBeInstanceOf(SystemMessage);
-    expect((messages[3] as SystemMessage).content).toBe('Redirect hint.');
+    expect((messages[3] as SystemMessage).content).toBe('KB block.');
 
     // history
     expect(messages[4]).toBeInstanceOf(HumanMessage);

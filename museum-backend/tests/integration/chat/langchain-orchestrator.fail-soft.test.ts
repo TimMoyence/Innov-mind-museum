@@ -15,9 +15,9 @@ const createMessage = (id: string, role: 'user' | 'assistant', text: string): Ch
     artworkMatches: [],
   }) as ChatMessage;
 
-type InvokeOptions = {
+interface InvokeOptions {
   signal?: AbortSignal;
-};
+}
 
 class FakeSectionModel {
   async invoke(messages: unknown, _options?: InvokeOptions): Promise<{ content: unknown }> {
@@ -144,58 +144,5 @@ describe('LangChainChatOrchestrator fail-soft profile', () => {
     expect(result.text).toBeTruthy();
     expect(result.metadata.diagnostics?.degraded).toBe(true);
     expect(result.metadata.diagnostics?.sections[0].status).toBe('fallback');
-  });
-
-  it('injects redirectHint as system message when provided', async () => {
-    let capturedMessages: unknown = null;
-
-    const capturingModel = {
-      async invoke(messages: unknown): Promise<{ content: unknown }> {
-        capturedMessages = messages;
-        return {
-          content: JSON.stringify({
-            answer: 'Let me help you with art instead.',
-            followUpQuestions: ['What artwork is nearby?'],
-          }),
-        };
-      },
-      async stream(messages: unknown): Promise<AsyncIterable<{ content: unknown }>> {
-        const result = await this.invoke(messages);
-        return (async function* () {
-          yield result;
-        })();
-      },
-    };
-
-    Object.assign(env.llm, {
-      timeoutSummaryMs: 200,
-      totalBudgetMs: 500,
-      retries: 0,
-      retryBaseDelayMs: 1,
-      includeDiagnostics: false,
-    });
-
-    const orchestrator = new LangChainChatOrchestrator({
-      model: capturingModel,
-    });
-
-    const result = await orchestrator.generate({
-      history: [],
-      text: "What's the weather?",
-      locale: 'en-US',
-      museumMode: false,
-      requestId: 'redirect-test',
-      redirectHint: 'Acknowledge briefly then redirect to art topics.',
-    });
-
-    expect(result.text).toContain('Let me help you with art instead.');
-    expect(result.metadata.followUpQuestions).toEqual(['What artwork is nearby?']);
-
-    // Verify the redirectHint was injected as a message
-    const messages = capturedMessages as Array<{ content: string }>;
-    const hintMessage = messages.find(
-      (m) => typeof m.content === 'string' && m.content.includes('redirect to art topics'),
-    );
-    expect(hintMessage).toBeTruthy();
   });
 });

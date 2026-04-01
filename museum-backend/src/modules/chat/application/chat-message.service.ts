@@ -72,7 +72,6 @@ interface PrepareReady {
   orchestratorImage?: PostMessageInput['image'];
   requestedLocale?: string;
   history: Awaited<ReturnType<ChatRepository['listSessionHistory']>>;
-  redirectHint?: string;
   ownerId?: number;
   userMemoryBlock?: string;
   knowledgeBaseBlock?: string;
@@ -237,16 +236,8 @@ export class ChatMessageService {
 
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
     const requestedLocale = input.context?.locale?.trim() || session.locale || undefined;
-    const historyBeforeMessage = await this.repository.listSessionHistory(
-      sessionId,
-      env.llm.maxHistoryMessages,
-    );
 
-    const userGuardrail = await this.guardrail.evaluateInput(
-      text,
-      historyBeforeMessage,
-      requestedLocale,
-    );
+    const userGuardrail = await this.guardrail.evaluateInput(text);
 
     await this.repository.persistMessage({ sessionId, role: 'user', text, imageRef });
 
@@ -351,15 +342,13 @@ export class ChatMessageService {
     aiResult: OrchestratorOutput,
     options: {
       requestedLocale: string | undefined;
-      history: Awaited<ReturnType<ChatRepository['listSessionHistory']>>;
       ownerId: number | undefined;
       enrichedImages?: EnrichedImage[];
     },
   ): Promise<PostMessageResult> {
-    const { requestedLocale, history, ownerId, enrichedImages } = options;
+    const { requestedLocale, ownerId, enrichedImages } = options;
     const outputCheck = this.guardrail.evaluateOutput({
       text: aiResult.text,
-      history,
       metadata: aiResult.metadata,
       requestedLocale,
     });
@@ -422,7 +411,6 @@ export class ChatMessageService {
       orchestratorImage,
       requestedLocale,
       history,
-      redirectHint,
       ownerId,
       userMemoryBlock,
       knowledgeBaseBlock,
@@ -442,14 +430,12 @@ export class ChatMessageService {
       },
       visitContext: session.visitContext,
       requestId,
-      redirectHint,
       userMemoryBlock,
       knowledgeBaseBlock,
     });
 
     return await this.commitAssistantResponse(sessionId, session, aiResult, {
       requestedLocale,
-      history,
       ownerId,
       enrichedImages,
     });
@@ -457,13 +443,12 @@ export class ChatMessageService {
 
   /** Builds a chunk handler that strips [META] blocks and runs incremental guardrail checks. */
   private createStreamChunkHandler(opts: {
-    history: Awaited<ReturnType<ChatRepository['listSessionHistory']>>;
     requestedLocale?: string;
     onToken: (text: string) => void;
     onGuardrail?: (text: string, reason: GuardrailBlockReason) => void;
     signal?: AbortSignal;
   }): (chunk: string) => void {
-    const { history, requestedLocale, onToken, onGuardrail, signal } = opts;
+    const { requestedLocale, onToken, onGuardrail, signal } = opts;
     let accumulated = '';
     let artSignalSeen = false;
     let metaStarted = false;
@@ -490,7 +475,6 @@ export class ChatMessageService {
       if (!artSignalSeen && accumulated.length % 50 < chunk.length) {
         const guardrailResult = this.guardrail.evaluateOutput({
           text: accumulated,
-          history,
           metadata: {},
           requestedLocale,
         });
@@ -526,7 +510,6 @@ export class ChatMessageService {
       orchestratorImage,
       requestedLocale,
       history,
-      redirectHint,
       ownerId,
       userMemoryBlock,
       knowledgeBaseBlock,
@@ -538,7 +521,6 @@ export class ChatMessageService {
     }
 
     const onChunk = this.createStreamChunkHandler({
-      history,
       requestedLocale,
       onToken,
       onGuardrail,
@@ -555,7 +537,6 @@ export class ChatMessageService {
         context: { location: input.context?.location, guideLevel: input.context?.guideLevel },
         visitContext: session.visitContext,
         requestId,
-        redirectHint,
         userMemoryBlock,
         knowledgeBaseBlock,
       },
@@ -564,7 +545,6 @@ export class ChatMessageService {
 
     return await this.commitAssistantResponse(sessionId, session, aiResult, {
       requestedLocale,
-      history,
       ownerId,
       enrichedImages,
     });

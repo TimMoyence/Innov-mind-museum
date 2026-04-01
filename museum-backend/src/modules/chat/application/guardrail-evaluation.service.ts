@@ -11,7 +11,6 @@ import type { GuardrailBlockReason } from './art-topic-guardrail';
 import type { PostMessageResult } from './chat.service.types';
 import type { ChatRepository } from '../domain/chat.repository.interface';
 import type { ChatAssistantMetadata } from '../domain/chat.types';
-import type { ChatMessage } from '../domain/chatMessage.entity';
 import type { AuditService } from '@shared/audit/audit.service';
 
 /** Result of an input guardrail evaluation. */
@@ -43,16 +42,10 @@ export class GuardrailEvaluationService {
    * Evaluates user input against the guardrail rules.
    *
    * @param text - User message text.
-   * @param _history - Recent conversation history (unused, kept for caller compat).
-   * @param _requestedLocale - Locale (unused, kept for caller compat).
    * @returns Guardrail decision.
    */
   // eslint-disable-next-line @typescript-eslint/require-await -- async kept for caller compat; guardrail is now synchronous
-  async evaluateInput(
-    text: string | undefined,
-    _history: ChatMessage[],
-    _requestedLocale?: string,
-  ): Promise<InputGuardrailResult> {
+  async evaluateInput(text: string | undefined): Promise<InputGuardrailResult> {
     return evaluateUserInputGuardrail({ text });
   }
 
@@ -110,14 +103,12 @@ export class GuardrailEvaluationService {
    *
    * @param params - The LLM output text, metadata, and locale.
    * @param params.text - Raw LLM output text to evaluate.
-   * @param params.history - Kept for caller compat (unused).
    * @param params.metadata - Assistant metadata from the orchestrator.
    * @param params.requestedLocale - Locale for localised refusal text.
    * @returns The final text/metadata pair and whether the output was allowed.
    */
   evaluateOutput(params: {
     text: string;
-    history?: ChatMessage[];
     metadata: ChatAssistantMetadata;
     requestedLocale?: string;
   }): { text: string; metadata: ChatAssistantMetadata; allowed: boolean } {
