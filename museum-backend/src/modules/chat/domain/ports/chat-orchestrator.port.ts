@@ -18,7 +18,6 @@ export interface OrchestratorInput {
   };
   visitContext?: VisitContext | null;
   requestId?: string;
-  redirectHint?: string;
   userMemoryBlock?: string;
   knowledgeBaseBlock?: string;
 }

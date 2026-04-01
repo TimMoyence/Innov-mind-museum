@@ -203,10 +203,9 @@ export const buildSectionMessages = (
   options?: {
     userMemoryBlock?: string;
     knowledgeBaseBlock?: string;
-    redirectHint?: string;
   },
 ): ChatModelMessage[] => {
-  const { userMemoryBlock, knowledgeBaseBlock, redirectHint } = options ?? {};
+  const { userMemoryBlock, knowledgeBaseBlock } = options ?? {};
   const messages: ChatModelMessage[] = [
     new SystemMessage(systemPrompt),
     new SystemMessage(sectionPrompt),
@@ -218,10 +217,6 @@ export const buildSectionMessages = (
 
   if (knowledgeBaseBlock) {
     messages.push(new SystemMessage(knowledgeBaseBlock));
-  }
-
-  if (redirectHint) {
-    messages.push(new SystemMessage(redirectHint));
   }
 
   messages.push(...historyMessages, userMessage);
