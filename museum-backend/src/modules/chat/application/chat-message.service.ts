@@ -7,11 +7,13 @@ import { evaluateUserInputGuardrail } from './art-topic-guardrail';
 import { GuardrailEvaluationService } from './guardrail-evaluation.service';
 import { ImageProcessingService } from './image-processing.service';
 import { ensureSessionAccess } from './session-access';
+import { StreamBuffer } from './stream-buffer';
 import { computeSessionUpdates } from './visit-context';
 import { DisabledAudioTranscriber } from '../domain/ports/audio-transcriber.port';
 
 import type { GuardrailBlockReason } from './art-topic-guardrail';
 import type { PostMessageResult, PostAudioMessageResult } from './chat.service.types';
+import type { ArtTopicClassifierPort } from './guardrail-evaluation.service';
 import type { ImageEnrichmentService } from './image-enrichment.service';
 import type { KnowledgeBaseService } from './knowledge-base.service';
 import type { UserMemoryService } from './user-memory.service';
@@ -37,6 +39,7 @@ export interface ChatMessageServiceDeps {
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
   imageEnrichment?: ImageEnrichmentService;
+  artTopicClassifier?: ArtTopicClassifierPort;
 }
 
 /**
@@ -99,6 +102,7 @@ export class ChatMessageService {
   private readonly userMemory?: UserMemoryService;
   private readonly knowledgeBase?: KnowledgeBaseService;
   private readonly imageEnrichment?: ImageEnrichmentService;
+  private readonly artTopicClassifier?: ArtTopicClassifierPort;
 
   constructor(deps: ChatMessageServiceDeps) {
     this.repository = deps.repository;
@@ -108,6 +112,7 @@ export class ChatMessageService {
     this.userMemory = deps.userMemory;
     this.knowledgeBase = deps.knowledgeBase;
     this.imageEnrichment = deps.imageEnrichment;
+    this.artTopicClassifier = deps.artTopicClassifier;
 
     this.imageProcessor = new ImageProcessingService({
       imageStorage: deps.imageStorage,
@@ -117,6 +122,7 @@ export class ChatMessageService {
     this.guardrail = new GuardrailEvaluationService({
       repository: deps.repository,
       audit: deps.audit,
+      artTopicClassifier: deps.artTopicClassifier,
     });
   }
 
@@ -275,7 +281,7 @@ export class ChatMessageService {
   /** Builds session updates and artwork match from the guardrail output and LLM result. */
   private buildCommitPayload(
     session: Awaited<ReturnType<typeof ensureSessionAccess>>,
-    outputCheck: ReturnType<GuardrailEvaluationService['evaluateOutput']>,
+    outputCheck: Awaited<ReturnType<GuardrailEvaluationService['evaluateOutput']>>,
     aiResult: OrchestratorOutput,
     requestedLocale: string | undefined,
     enrichedImages?: EnrichedImage[],
@@ -347,7 +353,7 @@ export class ChatMessageService {
     },
   ): Promise<PostMessageResult> {
     const { requestedLocale, ownerId, enrichedImages } = options;
-    const outputCheck = this.guardrail.evaluateOutput({
+    const outputCheck = await this.guardrail.evaluateOutput({
       text: aiResult.text,
       metadata: aiResult.metadata,
       requestedLocale,
@@ -441,54 +447,6 @@ export class ChatMessageService {
     });
   }
 
-  /** Builds a chunk handler that strips [META] blocks and runs incremental guardrail checks. */
-  private createStreamChunkHandler(opts: {
-    requestedLocale?: string;
-    onToken: (text: string) => void;
-    onGuardrail?: (text: string, reason: GuardrailBlockReason) => void;
-    signal?: AbortSignal;
-  }): (chunk: string) => void {
-    const { requestedLocale, onToken, onGuardrail, signal } = opts;
-    let accumulated = '';
-    let artSignalSeen = false;
-    let metaStarted = false;
-    const META_MARKER = '\n[META]';
-
-    return (chunk: string) => {
-      if (signal?.aborted) {
-        throw new AppError({ message: 'Client disconnected', statusCode: 499, code: 'ABORTED' });
-      }
-
-      accumulated += chunk;
-
-      let metaIdx = accumulated.indexOf(META_MARKER);
-      if (metaIdx === -1) metaIdx = accumulated.indexOf('[META]');
-      if (metaIdx !== -1) {
-        if (!metaStarted) {
-          metaStarted = true;
-          const answerPartLen = metaIdx - (accumulated.length - chunk.length);
-          if (answerPartLen > 0) onToken(chunk.slice(0, answerPartLen));
-        }
-        return;
-      }
-
-      if (!artSignalSeen && accumulated.length % 50 < chunk.length) {
-        const guardrailResult = this.guardrail.evaluateOutput({
-          text: accumulated,
-          metadata: {},
-          requestedLocale,
-        });
-        if (guardrailResult.allowed) {
-          artSignalSeen = true;
-        } else if (accumulated.length > 100 && onGuardrail) {
-          onGuardrail(guardrailResult.text, 'unsafe_output');
-        }
-      }
-
-      onToken(chunk);
-    };
-  }
-
   /** Posts a message with token-by-token streaming and incremental guardrail checks. */
   async postMessageStream(
     sessionId: string,
@@ -520,12 +478,13 @@ export class ChatMessageService {
       throw new AppError({ message: 'Request aborted', statusCode: 499, code: 'ABORTED' });
     }
 
-    const onChunk = this.createStreamChunkHandler({
-      requestedLocale,
-      onToken,
-      onGuardrail,
+    const buffer = new StreamBuffer({
+      classifier: this.artTopicClassifier,
+      locale: requestedLocale,
       signal,
+      onGuardrail,
     });
+    buffer.onRelease(onToken);
 
     const aiResult: OrchestratorOutput = await this.orchestrator.generateStream(
       {
@@ -540,8 +499,28 @@ export class ChatMessageService {
         userMemoryBlock,
         knowledgeBaseBlock,
       },
-      onChunk,
+      (chunk) => {
+        buffer.push(chunk);
+      },
     );
+
+    buffer.finish();
+    await buffer.awaitPhase1();
+
+    // Wait for drain to complete with safety timeout
+    const drainTimeout = 30_000;
+    const drainStart = Date.now();
+    await new Promise<void>((resolve) => {
+      const check = (): void => {
+        if (buffer.isDone() || Date.now() - drainStart > drainTimeout) {
+          buffer.destroy();
+          resolve();
+          return;
+        }
+        setTimeout(check, 50);
+      };
+      check();
+    });
 
     return await this.commitAssistantResponse(sessionId, session, aiResult, {
       requestedLocale,

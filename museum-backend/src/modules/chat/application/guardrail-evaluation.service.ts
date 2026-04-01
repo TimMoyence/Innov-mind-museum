@@ -13,6 +13,11 @@ import type { ChatRepository } from '../domain/chat.repository.interface';
 import type { ChatAssistantMetadata } from '../domain/chat.types';
 import type { AuditService } from '@shared/audit/audit.service';
 
+/** Minimal interface for the art-topic classifier used by the guardrail service. */
+export interface ArtTopicClassifierPort {
+  isArtRelated(text: string): Promise<boolean>;
+}
+
 /** Result of an input guardrail evaluation. */
 export interface InputGuardrailResult {
   allow: boolean;
@@ -23,6 +28,7 @@ export interface InputGuardrailResult {
 export interface GuardrailEvaluationServiceDeps {
   repository: ChatRepository;
   audit?: AuditService;
+  artTopicClassifier?: ArtTopicClassifierPort;
 }
 
 /**
@@ -32,10 +38,12 @@ export interface GuardrailEvaluationServiceDeps {
 export class GuardrailEvaluationService {
   private readonly repository: ChatRepository;
   private readonly audit?: AuditService;
+  readonly artTopicClassifier?: ArtTopicClassifierPort;
 
   constructor(deps: GuardrailEvaluationServiceDeps) {
     this.repository = deps.repository;
     this.audit = deps.audit;
+    this.artTopicClassifier = deps.artTopicClassifier;
   }
 
   /**
@@ -101,29 +109,48 @@ export class GuardrailEvaluationService {
    * Evaluates the assistant output guardrail. If the output is blocked, returns
    * the sanitized refusal text and metadata; otherwise returns the original.
    *
+   * Runs safety keyword checks (insults, injections, empty) first, then an
+   * optional art-topic classifier check (fail-open on error).
+   *
    * @param params - The LLM output text, metadata, and locale.
    * @param params.text - Raw LLM output text to evaluate.
    * @param params.metadata - Assistant metadata from the orchestrator.
    * @param params.requestedLocale - Locale for localised refusal text.
    * @returns The final text/metadata pair and whether the output was allowed.
    */
-  evaluateOutput(params: {
+  async evaluateOutput(params: {
     text: string;
     metadata: ChatAssistantMetadata;
     requestedLocale?: string;
-  }): { text: string; metadata: ChatAssistantMetadata; allowed: boolean } {
+  }): Promise<{ text: string; metadata: ChatAssistantMetadata; allowed: boolean }> {
     const { text, metadata, requestedLocale } = params;
 
-    const decision = evaluateAssistantOutputGuardrail({ text });
-
-    if (decision.allow) {
-      return { text, metadata, allowed: true };
+    // Safety keyword checks (insults, injections, empty)
+    const safetyDecision = evaluateAssistantOutputGuardrail({ text });
+    if (!safetyDecision.allow) {
+      return {
+        text: buildGuardrailRefusal(requestedLocale, safetyDecision.reason),
+        metadata: withPolicyCitation(metadata, safetyDecision.reason),
+        allowed: false,
+      };
     }
 
-    return {
-      text: buildGuardrailRefusal(requestedLocale, decision.reason),
-      metadata: withPolicyCitation(metadata, decision.reason),
-      allowed: false,
-    };
+    // Art-topic classifier check (fail-open)
+    if (this.artTopicClassifier) {
+      try {
+        const isArt = await this.artTopicClassifier.isArtRelated(text);
+        if (!isArt) {
+          return {
+            text: buildGuardrailRefusal(requestedLocale, 'off_topic'),
+            metadata: withPolicyCitation(metadata, 'off_topic'),
+            allowed: false,
+          };
+        }
+      } catch {
+        // Fail-open: classifier error → allow
+      }
+    }
+
+    return { text, metadata, allowed: true };
   }
 }
