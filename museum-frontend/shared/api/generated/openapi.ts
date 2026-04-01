@@ -488,6 +488,93 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/auth/change-email': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            /** Format: email */
+            newEmail: string;
+            currentPassword: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Email change initiated; confirmation message sent to the new address */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ChangeEmailResponse'];
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/auth/confirm-email-change': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            token: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Email change confirmed */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ConfirmEmailChangeResponse'];
+          };
+        };
+        400: components['responses']['BadRequest'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/auth/verify-email': {
     parameters: {
       query?: never;
@@ -1219,6 +1306,225 @@ export interface paths {
         };
         400: components['responses']['BadRequest'];
         404: components['responses']['NotFound'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/chat/art-keywords': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List art keywords by locale, optionally filtered by creation date */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Locale filter (defaults to wildcard '%') */
+          locale?: string;
+          /** @description Only return keywords created at or after this ISO timestamp */
+          since?: string;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Art keywords list */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ArtKeywordListResponse'];
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        404: components['responses']['NotFound'];
+      };
+    };
+    put?: never;
+    /** Bulk upsert art keywords for guardrail enrichment */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            keywords: string[];
+            locale?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Keywords upserted */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ArtKeywordBulkUpsertResponse'];
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        404: components['responses']['NotFound'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/daily-art': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Return today's curated artwork */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Daily artwork payload */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DailyArtResponse'];
+          };
+        };
+        401: components['responses']['Unauthorized'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/reviews': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List approved reviews (public, paginated) */
+    get: {
+      parameters: {
+        query?: {
+          page?: number;
+          limit?: number;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Approved review list */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ReviewListResponse'];
+          };
+        };
+        400: components['responses']['BadRequest'];
+      };
+    };
+    put?: never;
+    /** Create a review (stored as pending for moderation) */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            rating: number;
+            comment: string;
+            userName: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Review created */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              review: components['schemas']['ReviewDTO'];
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/reviews/stats': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get average rating and approved review count */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Review statistics */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ReviewStatsResponse'];
+          };
+        };
       };
     };
     put?: never;
@@ -2003,6 +2309,56 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/support/contact': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Submit a public support contact request */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            name: string;
+            /** Format: email */
+            email: string;
+            message: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Contact request accepted */
+        202: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              accepted: true;
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        429: components['responses']['TooManyRequests'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/support/tickets': {
     parameters: {
       query?: never;
@@ -2421,6 +2777,57 @@ export interface components {
         expiresAt: string | null;
         isActive: boolean;
       }[];
+    };
+    ChangeEmailResponse: {
+      message: string;
+      /** @description Present in development only to simplify local testing. */
+      debugToken?: string;
+    };
+    ConfirmEmailChangeResponse: {
+      /** @enum {boolean} */
+      confirmed: true;
+    };
+    DailyArtwork: {
+      title: string;
+      artist: string;
+      year: string;
+      /** Format: uri */
+      imageUrl: string;
+      description: string;
+      funFact: string;
+      museum: string;
+    };
+    DailyArtResponse: {
+      artwork: components['schemas']['DailyArtwork'];
+    };
+    ReviewDTO: {
+      /** Format: uuid */
+      id: string;
+      userId: number;
+      userName: string;
+      rating: number;
+      comment: string;
+      /** @enum {string} */
+      status: 'pending' | 'approved' | 'rejected';
+      /** Format: date-time */
+      createdAt: string;
+    };
+    ReviewListResponse: {
+      data: components['schemas']['ReviewDTO'][];
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
+    ReviewStatsResponse: {
+      average: number;
+      count: number;
+    };
+    ArtKeywordListResponse: {
+      keywords: string[];
+    };
+    ArtKeywordBulkUpsertResponse: {
+      created: number;
     };
     PaginationMeta: {
       total: number;
