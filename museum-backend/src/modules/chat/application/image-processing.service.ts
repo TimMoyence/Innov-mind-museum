@@ -137,7 +137,7 @@ export class ImageProcessingService {
     try {
       const ocrResult = await this.ocr.extractText(orchestratorImage.value);
       if (ocrResult?.text) {
-        const ocrGuardrail = await evaluateGuardrail({ text: ocrResult.text, history: [] });
+        const ocrGuardrail = evaluateGuardrail({ text: ocrResult.text });
         if (!ocrGuardrail.allow) {
           throw badRequest('Image contains disallowed content');
         }

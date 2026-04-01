@@ -3,7 +3,6 @@ import { ChatMessageService } from './chat-message.service';
 import { ChatSessionService } from './chat-session.service';
 import { DisabledAudioTranscriber } from '../domain/ports/audio-transcriber.port';
 
-import type { ArtTopicClassifier } from './art-topic-classifier';
 import type { GuardrailBlockReason } from './art-topic-guardrail';
 import type {
   CreateSessionResult,
@@ -59,9 +58,6 @@ export interface ChatServiceDeps {
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
   imageEnrichment?: ImageEnrichmentService;
-  dynamicArtKeywords?: ReadonlySet<string>;
-  artTopicClassifier?: ArtTopicClassifier;
-  onArtKeywordDiscovered?: (keyword: string, locale: string) => void;
 }
 
 /**
@@ -96,9 +92,6 @@ export class ChatService {
       userMemory: deps.userMemory,
       knowledgeBase: deps.knowledgeBase,
       imageEnrichment: deps.imageEnrichment,
-      dynamicArtKeywords: deps.dynamicArtKeywords,
-      artTopicClassifier: deps.artTopicClassifier,
-      onArtKeywordDiscovered: deps.onArtKeywordDiscovered,
     });
 
     this.media = new ChatMediaService({
