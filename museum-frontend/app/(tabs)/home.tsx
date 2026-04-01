@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { ActivityIndicator, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Keyboard,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
@@ -56,133 +64,143 @@ export default function HomeScreen() {
   };
 
   return (
-    <LiquidScreen background={pickMuseumBackground(0)} contentStyle={styles.screen}>
-      <View style={styles.menuRow}>
-        <FloatingContextMenu
-          actions={[
-            {
-              id: 'discover',
-              icon: 'sparkles-outline',
-              label: t('home.menu.discover'),
-              onPress: () => {
-                setMenuStatus(t('home.messages.opening_discover'));
-                router.push('/(stack)/discover');
-              },
-            },
-            {
-              id: 'lens',
-              icon: 'camera-outline',
-              label: t('home.menu.lens'),
-              onPress: () => {
-                setMenuStatus(t('home.messages.opening_lens'));
-                void startConversation('camera');
-              },
-            },
-            {
-              id: 'audio',
-              icon: 'musical-notes-outline',
-              label: t('home.menu.audio'),
-              onPress: () => {
-                setMenuStatus(t('home.messages.opening_audio'));
-                void startConversation('audio');
-              },
-            },
-          ]}
-        />
-      </View>
-
-      {menuStatus ? (
-        <Text style={[styles.menuStatus, { color: theme.success }]}>{menuStatus}</Text>
-      ) : null}
-
-      <GlassCard style={styles.heroCard} intensity={62}>
-        <BrandMark variant="hero" />
-        <Text style={[styles.title, { color: theme.textPrimary }]}>{t('home.hero_title')}</Text>
-        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-          {t('home.hero_subtitle')}
-        </Text>
-        <Text style={[styles.settingsNote, { color: theme.textTertiary }]}>
-          {t('home.settings_note', { locale, mode: museumMode ? t('common.on') : t('common.off') })}
-        </Text>
-      </GlassCard>
-
-      {artwork && !dismissed && !isDailyArtLoading ? (
-        <DailyArtCard
-          artwork={artwork}
-          isSaved={isSaved}
-          onSave={() => void save()}
-          onSkip={() => void skip()}
-        />
-      ) : null}
-
-      {error ? (
-        <ErrorNotice
-          message={error}
-          onDismiss={() => {
-            setError(null);
-          }}
-        />
-      ) : null}
-
-      <Pressable
-        style={[
-          styles.primaryButton,
-          { backgroundColor: theme.primary, shadowColor: theme.shadowColor },
-        ]}
-        onPress={() => void startConversation('default')}
-        disabled={isCreating}
-        accessibilityRole="button"
-        accessibilityLabel={t('a11y.home.start_conversation')}
-        accessibilityHint={t('a11y.home.start_conversation_hint')}
-        accessibilityState={{ disabled: isCreating }}
+    <LiquidScreen background={pickMuseumBackground(0)}>
+      <ScrollView
+        contentContainerStyle={styles.screen}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        {isCreating ? (
-          <ActivityIndicator color={theme.primaryContrast} />
-        ) : (
-          <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
-            {t('home.start_conversation')}
-          </Text>
-        )}
-      </Pressable>
+        <View style={styles.menuRow}>
+          <FloatingContextMenu
+            actions={[
+              {
+                id: 'discover',
+                icon: 'sparkles-outline',
+                label: t('home.menu.discover'),
+                onPress: () => {
+                  setMenuStatus(t('home.messages.opening_discover'));
+                  router.push('/(stack)/discover');
+                },
+              },
+              {
+                id: 'lens',
+                icon: 'camera-outline',
+                label: t('home.menu.lens'),
+                onPress: () => {
+                  setMenuStatus(t('home.messages.opening_lens'));
+                  void startConversation('camera');
+                },
+              },
+              {
+                id: 'audio',
+                icon: 'musical-notes-outline',
+                label: t('home.menu.audio'),
+                onPress: () => {
+                  setMenuStatus(t('home.messages.opening_audio'));
+                  void startConversation('audio');
+                },
+              },
+            ]}
+          />
+        </View>
 
-      <View style={styles.secondaryRow}>
+        {menuStatus ? (
+          <Text style={[styles.menuStatus, { color: theme.success }]}>{menuStatus}</Text>
+        ) : null}
+
+        <GlassCard style={styles.heroCard} intensity={62}>
+          <BrandMark variant="hero" />
+          <Text style={[styles.title, { color: theme.textPrimary }]}>{t('home.hero_title')}</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+            {t('home.hero_subtitle')}
+          </Text>
+          <Text style={[styles.settingsNote, { color: theme.textTertiary }]}>
+            {t('home.settings_note', {
+              locale,
+              mode: museumMode ? t('common.on') : t('common.off'),
+            })}
+          </Text>
+        </GlassCard>
+
+        {artwork && !dismissed && !isDailyArtLoading ? (
+          <DailyArtCard
+            artwork={artwork}
+            isSaved={isSaved}
+            onSave={() => void save()}
+            onSkip={() => void skip()}
+          />
+        ) : null}
+
+        {error ? (
+          <ErrorNotice
+            message={error}
+            onDismiss={() => {
+              setError(null);
+            }}
+          />
+        ) : null}
+
         <Pressable
           style={[
-            styles.secondaryButton,
-            { borderColor: theme.inputBorder, backgroundColor: theme.surface },
+            styles.primaryButton,
+            { backgroundColor: theme.primary, shadowColor: theme.shadowColor },
           ]}
-          onPress={() => {
-            router.push(ONBOARDING_ROUTE);
-          }}
+          onPress={() => void startConversation('default')}
+          disabled={isCreating}
           accessibilityRole="button"
-          accessibilityLabel={t('a11y.home.onboarding')}
+          accessibilityLabel={t('a11y.home.start_conversation')}
+          accessibilityHint={t('a11y.home.start_conversation_hint')}
+          accessibilityState={{ disabled: isCreating }}
         >
-          <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
-            {t('home.onboarding')}
-          </Text>
+          {isCreating ? (
+            <ActivityIndicator color={theme.primaryContrast} />
+          ) : (
+            <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
+              {t('home.start_conversation')}
+            </Text>
+          )}
         </Pressable>
-        <Pressable
-          style={[
-            styles.secondaryButton,
-            { borderColor: theme.inputBorder, backgroundColor: theme.surface },
-          ]}
-          onPress={() => {
-            router.push('/(stack)/settings');
-          }}
-          accessibilityRole="button"
-          accessibilityLabel={t('a11y.home.settings')}
-        >
-          <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
-            {t('home.settings')}
-          </Text>
-        </Pressable>
-      </View>
+
+        <View style={styles.secondaryRow}>
+          <Pressable
+            style={[
+              styles.secondaryButton,
+              { borderColor: theme.inputBorder, backgroundColor: theme.surface },
+            ]}
+            onPress={() => {
+              router.push(ONBOARDING_ROUTE);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.home.onboarding')}
+          >
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+              {t('home.onboarding')}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[
+              styles.secondaryButton,
+              { borderColor: theme.inputBorder, backgroundColor: theme.surface },
+            ]}
+            onPress={() => {
+              router.push('/(stack)/settings');
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.home.settings')}
+          >
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+              {t('home.settings')}
+            </Text>
+          </Pressable>
+        </View>
+      </ScrollView>
     </LiquidScreen>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
+    flexGrow: 1,
     paddingHorizontal: 22,
     paddingBottom: 110,
     justifyContent: 'center',
