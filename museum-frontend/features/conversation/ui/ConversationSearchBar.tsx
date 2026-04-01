@@ -20,7 +20,12 @@ export const ConversationSearchBar = ({
   const { theme } = useTheme();
 
   return (
-    <View style={[styles.container, { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground }]}>
+    <View
+      style={[
+        styles.container,
+        { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground },
+      ]}
+    >
       <Ionicons name="search-outline" size={16} color={theme.placeholderText} style={styles.icon} />
       <TextInput
         style={[styles.input, { color: theme.textPrimary }]}

@@ -19,9 +19,7 @@ interface FloatingContextMenuProps {
 }
 
 /** Renders a blurred floating pill-shaped menu bar with icon-labeled action buttons. */
-export const FloatingContextMenu = ({
-  actions,
-}: FloatingContextMenuProps): JSX.Element => {
+export const FloatingContextMenu = ({ actions }: FloatingContextMenuProps): JSX.Element => {
   const { theme } = useTheme();
 
   const handleAction = (action: ContextMenuAction): void => {
@@ -35,13 +33,25 @@ export const FloatingContextMenu = ({
   };
 
   return (
-    <BlurView intensity={58} tint={theme.blurTint} style={[styles.menuShell, { borderColor: theme.glassBorder, backgroundColor: theme.glassBackground }]}>
+    <BlurView
+      intensity={58}
+      tint={theme.blurTint}
+      style={[
+        styles.menuShell,
+        { borderColor: theme.glassBorder, backgroundColor: theme.glassBackground },
+      ]}
+    >
       <View style={styles.menuRow}>
         {actions.map((action) => (
           <Pressable
             key={action.id}
-            onPress={() => { handleAction(action); }}
-            style={[styles.menuAction, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]}
+            onPress={() => {
+              handleAction(action);
+            }}
+            style={[
+              styles.menuAction,
+              { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+            ]}
             accessibilityRole="button"
             accessibilityLabel={action.label}
           >

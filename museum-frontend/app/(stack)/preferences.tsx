@@ -12,8 +12,7 @@ import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
-import type {
-  GuideLevel} from '@/features/settings/runtimeSettings';
+import type { GuideLevel } from '@/features/settings/runtimeSettings';
 import {
   loadRuntimeSettings,
   saveDefaultMuseumMode,
@@ -63,10 +62,7 @@ export default function PreferencesScreen() {
     setStatus(null);
 
     try {
-      await Promise.all([
-        saveDefaultMuseumMode(museumMode),
-        saveGuideLevel(guideLevel),
-      ]);
+      await Promise.all([saveDefaultMuseumMode(museumMode), saveGuideLevel(guideLevel)]);
       setStatus(t('preferences.saved'));
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
@@ -85,19 +81,25 @@ export default function PreferencesScreen() {
               id: 'guided',
               icon: 'walk-outline',
               label: t('preferences.menu.guided'),
-              onPress: () => { router.push('/(stack)/guided-museum-mode'); },
+              onPress: () => {
+                router.push('/(stack)/guided-museum-mode');
+              },
             },
             {
               id: 'privacy',
               icon: 'shield-checkmark-outline',
               label: t('preferences.menu.privacy'),
-              onPress: () => { router.push('/(stack)/privacy'); },
+              onPress: () => {
+                router.push('/(stack)/privacy');
+              },
             },
             {
               id: 'back',
               icon: 'arrow-back-outline',
               label: t('preferences.menu.settings'),
-              onPress: () => { router.push('/(stack)/settings'); },
+              onPress: () => {
+                router.push('/(stack)/settings');
+              },
             },
           ]}
         />
@@ -113,11 +115,15 @@ export default function PreferencesScreen() {
           {isLoading ? (
             <View style={styles.loadingRow}>
               <ActivityIndicator color={theme.primary} />
-              <Text style={[styles.hint, { color: theme.textSecondary }]}>{t('preferences.loading')}</Text>
+              <Text style={[styles.hint, { color: theme.textSecondary }]}>
+                {t('preferences.loading')}
+              </Text>
             </View>
           ) : (
             <>
-              <Text style={[styles.label, { color: theme.textPrimary }]}>{t('preferences.language_label')}</Text>
+              <Text style={[styles.label, { color: theme.textPrimary }]}>
+                {t('preferences.language_label')}
+              </Text>
               <Text style={[styles.hint, { color: theme.textSecondary }]}>
                 {t('preferences.language_hint')}
               </Text>
@@ -128,11 +134,18 @@ export default function PreferencesScreen() {
                     style={[
                       styles.languageButton,
                       { borderColor: theme.cardBorder, backgroundColor: theme.assistantBubble },
-                      language === option.code && { backgroundColor: theme.primary, borderColor: theme.primary },
+                      language === option.code && {
+                        backgroundColor: theme.primary,
+                        borderColor: theme.primary,
+                      },
                     ]}
-                    onPress={() => { setLanguage(option.code); }}
+                    onPress={() => {
+                      setLanguage(option.code);
+                    }}
                     accessibilityRole="button"
-                    accessibilityLabel={t('a11y.preferences.language_button', { language: option.nativeLabel })}
+                    accessibilityLabel={t('a11y.preferences.language_button', {
+                      language: option.nativeLabel,
+                    })}
                     accessibilityState={{ selected: language === option.code }}
                   >
                     <Text
@@ -150,15 +163,25 @@ export default function PreferencesScreen() {
 
               <View style={styles.switchRow}>
                 <View style={styles.switchTextWrap}>
-                  <Text style={[styles.label, { color: theme.textPrimary }]}>{t('preferences.museum_mode_label')}</Text>
+                  <Text style={[styles.label, { color: theme.textPrimary }]}>
+                    {t('preferences.museum_mode_label')}
+                  </Text>
                   <Text style={[styles.hint, { color: theme.textSecondary }]}>
                     {t('preferences.museum_mode_hint')}
                   </Text>
                 </View>
-                <Switch value={museumMode} onValueChange={setMuseumMode} accessibilityRole="switch" accessibilityLabel={t('a11y.preferences.museum_mode_switch')} accessibilityState={{ checked: museumMode }} />
+                <Switch
+                  value={museumMode}
+                  onValueChange={setMuseumMode}
+                  accessibilityRole="switch"
+                  accessibilityLabel={t('a11y.preferences.museum_mode_switch')}
+                  accessibilityState={{ checked: museumMode }}
+                />
               </View>
 
-              <Text style={[styles.label, { color: theme.textPrimary }]}>{t('preferences.guide_level_label')}</Text>
+              <Text style={[styles.label, { color: theme.textPrimary }]}>
+                {t('preferences.guide_level_label')}
+              </Text>
               <Text style={[styles.hint, { color: theme.textSecondary }]}>
                 {t('preferences.guide_level_hint')}
               </Text>
@@ -169,9 +192,14 @@ export default function PreferencesScreen() {
                     style={[
                       styles.levelButton,
                       { borderColor: theme.cardBorder, backgroundColor: theme.assistantBubble },
-                      guideLevel === level && { backgroundColor: theme.primary, borderColor: theme.primary },
+                      guideLevel === level && {
+                        backgroundColor: theme.primary,
+                        borderColor: theme.primary,
+                      },
                     ]}
-                    onPress={() => { setGuideLevel(level); }}
+                    onPress={() => {
+                      setGuideLevel(level);
+                    }}
                     accessibilityRole="button"
                     accessibilityLabel={t('a11y.preferences.guide_level_button', { level })}
                     accessibilityState={{ selected: guideLevel === level }}
@@ -193,21 +221,37 @@ export default function PreferencesScreen() {
 
           {status ? <Text style={[styles.status, { color: theme.success }]}>{status}</Text> : null}
 
-          <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => void onSave()} disabled={isSaving} accessibilityRole="button" accessibilityLabel={t('a11y.preferences.save')} accessibilityState={{ disabled: isSaving }}>
+          <Pressable
+            style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+            onPress={() => void onSave()}
+            disabled={isSaving}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.preferences.save')}
+            accessibilityState={{ disabled: isSaving }}
+          >
             {isSaving ? (
               <ActivityIndicator color={theme.primaryContrast} />
             ) : (
-              <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>{t('preferences.save_button')}</Text>
+              <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
+                {t('preferences.save_button')}
+              </Text>
             )}
           </Pressable>
 
           <Pressable
-            style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.cardBackground }]}
-            onPress={() => { router.push('/(stack)/guided-museum-mode'); }}
+            style={[
+              styles.secondaryButton,
+              { borderColor: theme.inputBorder, backgroundColor: theme.cardBackground },
+            ]}
+            onPress={() => {
+              router.push('/(stack)/guided-museum-mode');
+            }}
             accessibilityRole="button"
             accessibilityLabel={t('a11y.preferences.learn_guided')}
           >
-            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('preferences.learn_guided')}</Text>
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+              {t('preferences.learn_guided')}
+            </Text>
           </Pressable>
         </GlassCard>
       </ScrollView>

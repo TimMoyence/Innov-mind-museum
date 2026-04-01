@@ -21,30 +21,21 @@ export const MuseumCard = ({ museum, onPress }: MuseumCardProps) => {
         styles.card,
         { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground },
       ]}
-      onPress={() => { onPress(museum); }}
+      onPress={() => {
+        onPress(museum);
+      }}
       accessibilityRole="button"
       accessibilityLabel={museum.name}
     >
       <View style={styles.header}>
-        <Ionicons
-          name="business-outline"
-          size={20}
-          color={theme.primary}
-          style={styles.icon}
-        />
-        <Text
-          style={[styles.name, { color: theme.textPrimary }]}
-          numberOfLines={1}
-        >
+        <Ionicons name="business-outline" size={20} color={theme.primary} style={styles.icon} />
+        <Text style={[styles.name, { color: theme.textPrimary }]} numberOfLines={1}>
           {museum.name}
         </Text>
       </View>
 
       {museum.address ? (
-        <Text
-          style={[styles.address, { color: theme.textSecondary }]}
-          numberOfLines={2}
-        >
+        <Text style={[styles.address, { color: theme.textSecondary }]} numberOfLines={2}>
           {museum.address}
         </Text>
       ) : null}

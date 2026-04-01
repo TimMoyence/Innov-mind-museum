@@ -3,8 +3,7 @@ import assert from 'node:assert/strict';
 
 import { generateRequestId } from '../shared/infrastructure/requestId';
 
-const UUID_V4_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 describe('generateRequestId', () => {
   it('returns a v4-format UUID string', () => {

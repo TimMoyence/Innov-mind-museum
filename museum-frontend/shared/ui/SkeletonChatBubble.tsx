@@ -11,11 +11,16 @@ export const SkeletonChatBubble = ({ alignSelf = 'flex-start' }: SkeletonChatBub
   const { theme } = useTheme();
 
   return (
-  <View style={[styles.bubble, { alignSelf, borderColor: theme.cardBorder, backgroundColor: theme.cardBackground }]}>
-    <SkeletonBox width='100%' height={12} borderRadius={6} />
-    <SkeletonBox width='80%' height={12} borderRadius={6} style={{ marginTop: 6 }} />
-    <SkeletonBox width='40%' height={8} borderRadius={4} style={{ marginTop: 8 }} />
-  </View>
+    <View
+      style={[
+        styles.bubble,
+        { alignSelf, borderColor: theme.cardBorder, backgroundColor: theme.cardBackground },
+      ]}
+    >
+      <SkeletonBox width="100%" height={12} borderRadius={6} />
+      <SkeletonBox width="80%" height={12} borderRadius={6} style={{ marginTop: 6 }} />
+      <SkeletonBox width="40%" height={8} borderRadius={4} style={{ marginTop: 8 }} />
+    </View>
   );
 };
 

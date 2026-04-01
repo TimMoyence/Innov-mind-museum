@@ -18,13 +18,15 @@ export default function NotFoundScreen() {
       <LiquidScreen background={pickMuseumBackground(2)} contentStyle={styles.screen}>
         <GlassCard style={styles.card} intensity={60}>
           <Text style={[styles.title, { color: theme.textPrimary }]}>{t('notFound.title')}</Text>
-          <Link href='/' asChild>
+          <Link href="/" asChild>
             <Pressable
               style={[styles.button, { backgroundColor: theme.primary }]}
               accessibilityRole="link"
               accessibilityLabel={t('a11y.notFound.home')}
             >
-              <Text style={[styles.buttonText, { color: theme.primaryContrast }]}>{t('notFound.button')}</Text>
+              <Text style={[styles.buttonText, { color: theme.primaryContrast }]}>
+                {t('notFound.button')}
+              </Text>
             </Pressable>
           </Link>
         </GlassCard>

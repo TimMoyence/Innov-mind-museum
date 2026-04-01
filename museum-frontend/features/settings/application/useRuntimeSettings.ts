@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
 
-import type {
-  RuntimeSettings} from '@/features/settings/runtimeSettings';
-import {
-  loadRuntimeSettings
-} from '@/features/settings/runtimeSettings';
+import type { RuntimeSettings } from '@/features/settings/runtimeSettings';
+import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
 
 /**
  * Hook that loads runtime settings (locale, museumMode, guideLevel) from storage on mount.
@@ -30,7 +27,7 @@ export const useRuntimeSettings = () => {
   return {
     locale: settings?.defaultLocale ?? 'en-US',
     museumMode: settings?.defaultMuseumMode ?? true,
-    guideLevel: (settings?.guideLevel ?? 'beginner'),
+    guideLevel: settings?.guideLevel ?? 'beginner',
     isLoading,
     settings,
   };

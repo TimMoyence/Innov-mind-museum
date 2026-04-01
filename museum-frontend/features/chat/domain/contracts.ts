@@ -80,9 +80,7 @@ export const isCreateSessionResponseDTO = (
  * @param payload - Unknown value to validate.
  * @returns `true` if the payload matches the post-message response shape.
  */
-export const isPostMessageResponseDTO = (
-  payload: unknown,
-): payload is PostMessageResponseDTO => {
+export const isPostMessageResponseDTO = (payload: unknown): payload is PostMessageResponseDTO => {
   if (!isRecord(payload) || !isRecord(payload.message) || !isRecord(payload.metadata)) {
     return false;
   }
@@ -114,10 +112,13 @@ export const isPostMessageResponseDTO = (
  * @param payload - Unknown value to validate.
  * @returns `true` if the payload matches the get-session response shape.
  */
-export const isGetSessionResponseDTO = (
-  payload: unknown,
-): payload is GetSessionResponseDTO => {
-  if (!isRecord(payload) || !isRecord(payload.session) || !Array.isArray(payload.messages) || !isRecord(payload.page)) {
+export const isGetSessionResponseDTO = (payload: unknown): payload is GetSessionResponseDTO => {
+  if (
+    !isRecord(payload) ||
+    !isRecord(payload.session) ||
+    !Array.isArray(payload.messages) ||
+    !isRecord(payload.page)
+  ) {
     return false;
   }
 
@@ -147,10 +148,7 @@ export const isGetSessionResponseDTO = (
       if (!isRecord(item.image)) {
         return false;
       }
-      if (
-        typeof item.image.url !== 'string' ||
-        typeof item.image.expiresAt !== 'string'
-      ) {
+      if (typeof item.image.url !== 'string' || typeof item.image.expiresAt !== 'string') {
         return false;
       }
     }
@@ -175,10 +173,7 @@ export const isDeleteSessionResponseDTO = (
     return false;
   }
 
-  return (
-    typeof payload.sessionId === 'string' &&
-    typeof payload.deleted === 'boolean'
-  );
+  return typeof payload.sessionId === 'string' && typeof payload.deleted === 'boolean';
 };
 
 /**
@@ -193,10 +188,7 @@ export const isReportMessageResponseDTO = (
     return false;
   }
 
-  return (
-    typeof payload.messageId === 'string' &&
-    typeof payload.reported === 'boolean'
-  );
+  return typeof payload.messageId === 'string' && typeof payload.reported === 'boolean';
 };
 
 /**
@@ -204,14 +196,8 @@ export const isReportMessageResponseDTO = (
  * @param payload - Unknown value to validate.
  * @returns `true` if the payload matches the list-sessions response shape.
  */
-export const isListSessionsResponseDTO = (
-  payload: unknown,
-): payload is ListSessionsResponseDTO => {
-  if (
-    !isRecord(payload) ||
-    !Array.isArray(payload.sessions) ||
-    !isRecord(payload.page)
-  ) {
+export const isListSessionsResponseDTO = (payload: unknown): payload is ListSessionsResponseDTO => {
+  if (!isRecord(payload) || !Array.isArray(payload.sessions) || !isRecord(payload.page)) {
     return false;
   }
 

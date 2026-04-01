@@ -69,7 +69,6 @@ const parseRawContextObject = (input: unknown): Record<string, unknown> => {
     }
   }
 
-   
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
     throw badRequest('context must be an object');
   }

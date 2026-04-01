@@ -36,11 +36,7 @@ const resolveResponsiveSize = (variant: BrandMarkVariant, viewportWidth: number)
 };
 
 /** Displays the Musaium logo at a responsive size determined by the chosen variant (auth, hero, or header). */
-export const BrandMark = ({
-  variant = 'hero',
-  size,
-  style,
-}: BrandMarkProps) => {
+export const BrandMark = ({ variant = 'hero', size, style }: BrandMarkProps) => {
   const { width } = useWindowDimensions();
   const resolvedSize = size ?? resolveResponsiveSize(variant, width);
 
@@ -48,8 +44,8 @@ export const BrandMark = ({
     <View style={[styles.container, { width: resolvedSize, height: resolvedSize }, style]}>
       <Image
         source={musaiumLogo}
-        resizeMode='contain'
-        accessibilityLabel='Musaium logo'
+        resizeMode="contain"
+        accessibilityLabel="Musaium logo"
         style={styles.image}
       />
     </View>

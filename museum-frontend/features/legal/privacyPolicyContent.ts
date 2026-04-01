@@ -28,7 +28,7 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
   controllerName: 'InnovMind (Tim Moyence, Entrepreneur Individuel)',
   controllerAddress: 'France',
   contactEmail: 'tim.moyence@gmail.com',
-  dpoContact: 'Non désigné (non requis au titre de l\'article 37 du RGPD)',
+  dpoContact: "Non désigné (non requis au titre de l'article 37 du RGPD)",
   rightsSummary: [
     'Access your data',
     'Correct inaccurate data',
@@ -85,9 +85,9 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
       id: 'recipients',
       title: '5. Recipients / Processors',
       paragraphs: [
-        'Personnel interne autorisé, sur la base du besoin d\'en connaître.',
+        "Personnel interne autorisé, sur la base du besoin d'en connaître.",
         'Sous-traitants : OpenAI (États-Unis), Google Cloud (États-Unis/UE), DeepSeek (Chine), OVH SAS (France, données UE), Amazon Web Services (UE, données UE), Expo/EAS (États-Unis).',
-        'Aucun prestataire de paiement n\'est utilisé à ce jour.',
+        "Aucun prestataire de paiement n'est utilisé à ce jour.",
       ],
     },
     {
@@ -95,16 +95,16 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
       title: '6. International Transfers',
       paragraphs: [
         'Some processors may process data outside the EEA/UK/Switzerland. Where applicable, transfers are governed by appropriate safeguards such as SCCs, adequacy decisions, or equivalent mechanisms.',
-        'Les transferts vers les États-Unis sont encadrés par les conditions d\'utilisation des fournisseurs concernés. Les données hébergées chez OVH et AWS restent dans l\'Union européenne.',
+        "Les transferts vers les États-Unis sont encadrés par les conditions d'utilisation des fournisseurs concernés. Les données hébergées chez OVH et AWS restent dans l'Union européenne.",
       ],
     },
     {
       id: 'retention',
       title: '7. Retention Periods',
       paragraphs: [
-        'Données de compte, historique de conversations et images : conservés pendant la durée d\'utilisation du service, supprimés sur demande.',
+        "Données de compte, historique de conversations et images : conservés pendant la durée d'utilisation du service, supprimés sur demande.",
         'Fichiers audio (questions vocales) : non stockés — transmis pour transcription puis immédiatement supprimés.',
-        'Jetons d\'authentification : accès 15 minutes, renouvellement 30 jours.',
+        "Jetons d'authentification : accès 15 minutes, renouvellement 30 jours.",
       ],
     },
     {
@@ -127,7 +127,7 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
       title: '10. Exercising Rights / Complaints',
       paragraphs: [
         'To exercise your rights, contact: tim.moyence@gmail.com and include enough information to verify your request.',
-        'You may also lodge a complaint with your local supervisory authority. Lead authority (if applicable): la CNIL (Commission Nationale de l\'Informatique et des Libertés), 3 Place de Fontenoy, TSA 80715, 75334 Paris Cedex 07.',
+        "You may also lodge a complaint with your local supervisory authority. Lead authority (if applicable): la CNIL (Commission Nationale de l'Informatique et des Libertés), 3 Place de Fontenoy, TSA 80715, 75334 Paris Cedex 07.",
       ],
     },
     {

@@ -12,27 +12,32 @@ interface ErrorNoticeProps {
 }
 
 /** Displays a dismissible error banner with a red-tinted background, optional dismiss button, and optional retry button. */
-export const ErrorNotice = ({
-  message,
-  onDismiss,
-  onRetry,
-}: ErrorNoticeProps): JSX.Element => {
+export const ErrorNotice = ({ message, onDismiss, onRetry }: ErrorNoticeProps): JSX.Element => {
   const { theme } = useTheme();
   const { t } = useTranslation();
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.errorBackground, borderColor: theme.errorBackground }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.errorBackground, borderColor: theme.errorBackground },
+      ]}
+    >
       <Text style={[styles.text, { color: theme.error }]}>{message}</Text>
       {onDismiss || onRetry ? (
         <View style={styles.actionsRow}>
           {onRetry ? (
             <TouchableOpacity onPress={onRetry} style={styles.retryButton}>
-              <Text style={[styles.retryText, { color: theme.primary }]}>{t('errorNotice.retry')}</Text>
+              <Text style={[styles.retryText, { color: theme.primary }]}>
+                {t('errorNotice.retry')}
+              </Text>
             </TouchableOpacity>
           ) : null}
           {onDismiss ? (
             <TouchableOpacity onPress={onDismiss} style={styles.dismissButton}>
-              <Text style={[styles.dismissText, { color: theme.error }]}>{t('errorNotice.dismiss')}</Text>
+              <Text style={[styles.dismissText, { color: theme.error }]}>
+                {t('errorNotice.dismiss')}
+              </Text>
             </TouchableOpacity>
           ) : null}
         </View>

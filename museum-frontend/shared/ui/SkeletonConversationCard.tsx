@@ -7,16 +7,21 @@ export const SkeletonConversationCard = () => {
   const { theme } = useTheme();
 
   return (
-  <View style={[styles.card, { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground }]}>
-    <View style={styles.row}>
-      <SkeletonBox width={40} height={40} borderRadius={20} />
-      <View style={styles.textCol}>
-        <SkeletonBox width='70%' height={14} borderRadius={6} />
-        <SkeletonBox width='45%' height={10} borderRadius={4} style={{ marginTop: 6 }} />
+    <View
+      style={[
+        styles.card,
+        { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground },
+      ]}
+    >
+      <View style={styles.row}>
+        <SkeletonBox width={40} height={40} borderRadius={20} />
+        <View style={styles.textCol}>
+          <SkeletonBox width="70%" height={14} borderRadius={6} />
+          <SkeletonBox width="45%" height={10} borderRadius={4} style={{ marginTop: 6 }} />
+        </View>
       </View>
+      <SkeletonBox width="30%" height={10} borderRadius={4} style={{ marginTop: 8 }} />
     </View>
-    <SkeletonBox width='30%' height={10} borderRadius={4} style={{ marginTop: 8 }} />
-  </View>
   );
 };
 

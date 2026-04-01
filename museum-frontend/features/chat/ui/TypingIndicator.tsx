@@ -35,11 +35,7 @@ const Dot = ({ delay, color }: { delay: number; color: string }) => {
     opacity: opacity.value,
   }));
 
-  return (
-    <Animated.View
-      style={[styles.dot, { backgroundColor: color }, animatedStyle]}
-    />
-  );
+  return <Animated.View style={[styles.dot, { backgroundColor: color }, animatedStyle]} />;
 };
 
 /** Displays an animated three-dot typing indicator shown while the assistant is generating a response. */

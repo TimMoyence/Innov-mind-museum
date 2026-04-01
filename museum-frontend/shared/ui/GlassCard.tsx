@@ -11,11 +11,7 @@ interface GlassCardProps {
 }
 
 /** Renders a frosted-glass card container using BlurView with configurable intensity and rounded borders. */
-export const GlassCard = ({
-  children,
-  style,
-  intensity = 52,
-}: GlassCardProps) => {
+export const GlassCard = ({ children, style, intensity = 52 }: GlassCardProps) => {
   const { theme } = useTheme();
 
   return (

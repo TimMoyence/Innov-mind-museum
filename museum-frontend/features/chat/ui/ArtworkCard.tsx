@@ -31,8 +31,14 @@ export const ArtworkCard = ({ title, artist, museum, room, confidence }: Artwork
     <GlassCard style={styles.card} intensity={44}>
       <View style={styles.row}>
         <View style={styles.content}>
-          <Text style={[styles.title, { color: theme.textPrimary }]} numberOfLines={2}>{title}</Text>
-          {artist ? <Text style={[styles.detail, { color: theme.textTertiary }]} numberOfLines={1}>{artist}</Text> : null}
+          <Text style={[styles.title, { color: theme.textPrimary }]} numberOfLines={2}>
+            {title}
+          </Text>
+          {artist ? (
+            <Text style={[styles.detail, { color: theme.textTertiary }]} numberOfLines={1}>
+              {artist}
+            </Text>
+          ) : null}
           {museum || room ? (
             <Text style={[styles.location, { color: theme.placeholderText }]} numberOfLines={1}>
               {[museum, room].filter(Boolean).join(' — ')}

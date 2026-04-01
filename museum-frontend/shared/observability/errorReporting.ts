@@ -4,11 +4,7 @@ import type { AppError } from '@/shared/types/AppError';
 import { isAppError } from '@/shared/lib/errors';
 
 /** Error kinds that represent operational issues worth reporting to Sentry. */
-const REPORTABLE_KINDS: ReadonlySet<string> = new Set([
-  'Network',
-  'Timeout',
-  'Unknown',
-]);
+const REPORTABLE_KINDS: ReadonlySet<string> = new Set(['Network', 'Timeout', 'Unknown']);
 
 /**
  * Reports an error to Sentry if it represents an operational failure.
@@ -19,16 +15,11 @@ const REPORTABLE_KINDS: ReadonlySet<string> = new Set([
  * @param error - The caught error value.
  * @param context - Optional key/value pairs attached as Sentry extras.
  */
-export const reportError = (
-  error: unknown,
-  context?: Record<string, string>,
-): void => {
+export const reportError = (error: unknown, context?: Record<string, string>): void => {
   try {
     if (!Sentry.getClient()) return;
 
-    const appError: AppError | null = isAppError(error)
-      ? (error)
-      : null;
+    const appError: AppError | null = isAppError(error) ? error : null;
 
     if (appError?._reported) return;
 
