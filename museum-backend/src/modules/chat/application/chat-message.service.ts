@@ -508,19 +508,15 @@ export class ChatMessageService {
     await buffer.awaitPhase1();
 
     // Wait for drain to complete with safety timeout
-    const drainTimeout = 30_000;
-    const drainStart = Date.now();
-    await new Promise<void>((resolve) => {
-      const check = (): void => {
-        if (buffer.isDone() || Date.now() - drainStart > drainTimeout) {
+    await Promise.race([
+      buffer.awaitDone(),
+      new Promise<void>((resolve) =>
+        setTimeout(() => {
           buffer.destroy();
           resolve();
-          return;
-        }
-        setTimeout(check, 50);
-      };
-      check();
-    });
+        }, 30_000),
+      ),
+    ]);
 
     return await this.commitAssistantResponse(sessionId, session, aiResult, {
       requestedLocale,

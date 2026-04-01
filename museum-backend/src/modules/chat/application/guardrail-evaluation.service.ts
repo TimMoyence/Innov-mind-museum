@@ -38,7 +38,7 @@ export interface GuardrailEvaluationServiceDeps {
 export class GuardrailEvaluationService {
   private readonly repository: ChatRepository;
   private readonly audit?: AuditService;
-  readonly artTopicClassifier?: ArtTopicClassifierPort;
+  private readonly artTopicClassifier?: ArtTopicClassifierPort;
 
   constructor(deps: GuardrailEvaluationServiceDeps) {
     this.repository = deps.repository;
