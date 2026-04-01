@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useRouter, useSegments } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
-import { AUTH_ROUTE, HOME_ROUTE } from './routes';
+import { AUTH_ROUTE, HOME_ROUTE, ONBOARDING_ROUTE } from './routes';
 
 /**
  * Guards navigation based on authentication state.
@@ -31,7 +31,7 @@ export const useProtectedRoute = (): void => {
 
     if (isAuthenticated && isAuthRoute) {
       if (isFirstLaunch) {
-        router.replace('/(stack)/onboarding');
+        router.replace(ONBOARDING_ROUTE);
       } else {
         router.replace(HOME_ROUTE);
       }
@@ -40,7 +40,7 @@ export const useProtectedRoute = (): void => {
 
     // If authenticated, first launch, and not already on onboarding screen, redirect there
     if (isAuthenticated && isFirstLaunch && !isOnboardingRoute && !isAuthRoute) {
-      router.replace('/(stack)/onboarding');
+      router.replace(ONBOARDING_ROUTE);
     }
   }, [isAuthenticated, isLoading, isFirstLaunch, router, segments]);
 };

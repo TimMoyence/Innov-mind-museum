@@ -1,22 +1,60 @@
 import { type NextFunction, type Request, type Response, Router } from 'express';
 
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
+import { byIp, createRateLimitMiddleware } from '@src/helpers/middleware/rate-limit.middleware';
 import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
 
 import {
   createTicketSchema,
+  submitSupportContactSchema,
   addTicketMessageSchema,
   listTicketsQuerySchema,
 } from './support.schemas';
 import {
   createTicketUseCase,
+  submitSupportContactUseCase,
   listUserTicketsUseCase,
   getTicketDetailUseCase,
   addTicketMessageUseCase,
 } from '../../../useCase';
 
 const supportRouter: Router = Router();
+
+const supportContactLimiter = createRateLimitMiddleware({
+  limit: 5,
+  windowMs: 600_000,
+  keyGenerator: byIp,
+});
+
+// POST /api/support/contact — Public contact form submission
+supportRouter.post(
+  '/contact',
+  supportContactLimiter,
+  validateBody(submitSupportContactSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { name, email, message } = req.body as {
+        name: string;
+        email: string;
+        message: string;
+      };
+
+      await submitSupportContactUseCase.execute({
+        name,
+        email,
+        message,
+        ip: req.ip,
+        requestId: req.requestId,
+        userAgent: req.get('user-agent'),
+      });
+
+      res.status(202).json({ accepted: true });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 // POST /api/support/tickets — Authenticated user: create a support ticket
 supportRouter.post(

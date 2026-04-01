@@ -73,7 +73,9 @@ export interface Dictionary {
       emailPlaceholder: string;
       messagePlaceholder: string;
       submit: string;
+      sending: string;
       success: string;
+      error: string;
     };
   };
   privacy: {

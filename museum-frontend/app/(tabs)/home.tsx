@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
+import { ONBOARDING_ROUTE } from '@/features/auth/routes';
 import { useDailyArt } from '@/features/daily-art/application/useDailyArt';
 import { DailyArtCard } from '@/features/daily-art/ui/DailyArtCard';
 import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
@@ -151,7 +152,7 @@ export default function HomeScreen() {
             { borderColor: theme.inputBorder, backgroundColor: theme.surface },
           ]}
           onPress={() => {
-            router.push('/(stack)/onboarding');
+            router.push(ONBOARDING_ROUTE);
           }}
           accessibilityRole="button"
           accessibilityLabel={t('a11y.home.onboarding')}

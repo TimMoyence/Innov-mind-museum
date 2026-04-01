@@ -3,6 +3,8 @@ import { Alert, Linking } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import * as ImagePickerLib from 'expo-image-picker';
 
+import { optimizeImageForUpload } from './imageUploadOptimization';
+
 /**
  * Hook that manages image selection state and handlers for chat attachments.
  * Supports gallery picking and native camera capture.
@@ -11,6 +13,16 @@ export const useImagePicker = () => {
   const { t } = useTranslation();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<string | null>(null);
+
+  const setOptimizedPendingImage = useCallback(async (uri: string) => {
+    try {
+      const optimizedUri = await optimizeImageForUpload(uri);
+      setPendingImage(optimizedUri);
+    } catch {
+      // Keep upload flow functional even if local optimization fails.
+      setPendingImage(uri);
+    }
+  }, []);
 
   const onPickImage = useCallback(async () => {
     const { status } = await ImagePickerLib.requestMediaLibraryPermissionsAsync();
@@ -35,9 +47,9 @@ export const useImagePicker = () => {
     }
 
     if (!result.canceled && result.assets.length) {
-      setPendingImage(result.assets[0].uri);
+      await setOptimizedPendingImage(result.assets[0].uri);
     }
-  }, [t]);
+  }, [setOptimizedPendingImage, t]);
 
   const onTakePicture = useCallback(async () => {
     const { status } = await ImagePickerLib.requestCameraPermissionsAsync();
@@ -62,9 +74,9 @@ export const useImagePicker = () => {
     }
 
     if (!result.canceled && result.assets.length) {
-      setPendingImage(result.assets[0].uri);
+      await setOptimizedPendingImage(result.assets[0].uri);
     }
-  }, [t]);
+  }, [setOptimizedPendingImage, t]);
 
   const confirmPendingImage = useCallback((uri: string) => {
     setSelectedImage(uri);

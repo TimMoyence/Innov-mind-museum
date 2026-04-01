@@ -96,6 +96,7 @@ interface AppEnv {
     allowedAudioMimeTypes: string[];
   };
   brevoApiKey?: string;
+  supportInboxEmail: string;
   storage: {
     driver: StorageDriver;
     localUploadsDir: string;
@@ -350,6 +351,7 @@ const env: AppEnv = {
     maxImagesPerResponse: toNumber(process.env.IMAGE_ENRICHMENT_MAX_IMAGES, 5),
   },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
+  supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.app',
   storage: {
     driver: storageDriver,
     localUploadsDir: toOptionalString(process.env.LOCAL_UPLOADS_DIR) || 'tmp/uploads',

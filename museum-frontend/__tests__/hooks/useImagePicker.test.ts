@@ -8,6 +8,7 @@ import { useImagePicker } from '@/features/chat/application/useImagePicker';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
+const mockOptimizeImageForUpload = jest.fn<Promise<string>, [string]>();
 const mockRequestMediaLibraryPermissionsAsync = jest.fn<Promise<{ status: string }>, []>();
 const mockLaunchImageLibraryAsync = jest.fn<
   Promise<{ canceled: boolean; assets: { uri: string }[] }>,
@@ -27,11 +28,16 @@ jest.mock('expo-image-picker', () => ({
   launchCameraAsync: (...args: unknown[]) => mockLaunchCameraAsync(),
 }));
 
+jest.mock('@/features/chat/application/imageUploadOptimization', () => ({
+  optimizeImageForUpload: (...args: unknown[]) => mockOptimizeImageForUpload(args[0] as string),
+}));
+
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useImagePicker', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockOptimizeImageForUpload.mockImplementation(async (uri: string) => uri);
   });
 
   it('initialises with null selectedImage and null pendingImage', () => {
@@ -56,6 +62,7 @@ describe('useImagePicker', () => {
 
     expect(mockRequestMediaLibraryPermissionsAsync).toHaveBeenCalledTimes(1);
     expect(mockLaunchImageLibraryAsync).toHaveBeenCalledTimes(1);
+    expect(mockOptimizeImageForUpload).toHaveBeenCalledWith('file://photo.jpg');
     expect(result.current.pendingImage).toBe('file://photo.jpg');
     expect(result.current.selectedImage).toBeNull();
   });
@@ -105,7 +112,25 @@ describe('useImagePicker', () => {
 
     expect(mockRequestCameraPermissionsAsync).toHaveBeenCalledTimes(1);
     expect(mockLaunchCameraAsync).toHaveBeenCalledTimes(1);
+    expect(mockOptimizeImageForUpload).toHaveBeenCalledWith('file://camera-photo.jpg');
     expect(result.current.pendingImage).toBe('file://camera-photo.jpg');
+  });
+
+  it('falls back to original image URI when optimization fails', async () => {
+    mockRequestMediaLibraryPermissionsAsync.mockResolvedValue({ status: 'granted' });
+    mockLaunchImageLibraryAsync.mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: 'file://original.jpg' }],
+    });
+    mockOptimizeImageForUpload.mockRejectedValue(new Error('optimize failed'));
+
+    const { result } = renderHook(() => useImagePicker());
+
+    await act(async () => {
+      await result.current.onPickImage();
+    });
+
+    expect(result.current.pendingImage).toBe('file://original.jpg');
   });
 
   it('onTakePicture() does nothing when camera permission denied', async () => {

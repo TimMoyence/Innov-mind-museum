@@ -15,9 +15,16 @@ export type {
 
 /** Convert an AuthRefreshToken entity to a StoredRefreshTokenRow DTO. */
 function toRow(entity: AuthRefreshToken): StoredRefreshTokenRow {
+  const fallbackUserId = (entity as AuthRefreshToken & { userId?: number }).userId;
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- TypeORM relation may not be loaded at runtime
+  const userId = entity.user ? entity.user.id : fallbackUserId;
+  if (typeof userId !== 'number') {
+    throw new Error('Refresh token row is missing userId');
+  }
+
   return {
     id: entity.id,
-    userId: entity.user.id,
+    userId,
     jti: entity.jti,
     familyId: entity.familyId,
     tokenHash: entity.tokenHash,
@@ -68,7 +75,7 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
    * @returns The token row or `null`.
    */
   async findByJti(jti: string): Promise<StoredRefreshTokenRow | null> {
-    const entity = await this.repo.findOne({ where: { jti } });
+    const entity = await this.repo.findOne({ where: { jti }, relations: { user: true } });
     return entity ? toRow(entity) : null;
   }
 

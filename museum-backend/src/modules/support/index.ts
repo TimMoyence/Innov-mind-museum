@@ -1,5 +1,6 @@
 export {
   createTicketUseCase,
+  submitSupportContactUseCase,
   listUserTicketsUseCase,
   getTicketDetailUseCase,
   addTicketMessageUseCase,

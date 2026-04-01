@@ -51,6 +51,41 @@ describe('Support Routes — HTTP Layer', () => {
     });
   });
 
+  // ── Public contact endpoint (no auth) ─────────────────────────
+
+  describe('POST /api/support/contact — public form', () => {
+    it('accepts a valid payload without authentication', async () => {
+      const res = await request(app).post('/api/support/contact').send({
+        name: 'Visitor',
+        email: 'visitor@example.com',
+        message: 'Hello, I need help with the mobile app support flow.',
+      });
+
+      expect(res.status).toBe(202);
+      expect(res.body).toEqual({ accepted: true });
+    });
+
+    it('returns 400 for invalid email', async () => {
+      const res = await request(app).post('/api/support/contact').send({
+        name: 'Visitor',
+        email: 'invalid-email',
+        message: 'Hello, I need help with the mobile app support flow.',
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 for too-short message', async () => {
+      const res = await request(app).post('/api/support/contact').send({
+        name: 'Visitor',
+        email: 'visitor@example.com',
+        message: 'short',
+      });
+
+      expect(res.status).toBe(400);
+    });
+  });
+
   // ── Invalid token returns 401 ──────────────────────────────────
 
   describe('Invalid token returns 401', () => {

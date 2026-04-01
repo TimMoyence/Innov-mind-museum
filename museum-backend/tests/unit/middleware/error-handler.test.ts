@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { errorHandler } from '@src/helpers/middleware/error.middleware';
 import { AppError } from '@shared/errors/app.error';
+import { MulterError } from 'multer';
 
 // Silence logger output during tests
 jest.mock('@shared/logger/logger', () => ({
@@ -178,5 +179,24 @@ describe('errorHandler middleware', () => {
 
     expect(res.status).toHaveBeenCalledWith(429);
     expect(captureExceptionWithContext).not.toHaveBeenCalled();
+  });
+
+  it('maps multer file-size errors to 413 payload-too-large', () => {
+    const err = new MulterError('LIMIT_FILE_SIZE');
+    const req = mockReq({ requestId: 'req-upload' });
+    const res = mockRes();
+
+    errorHandler(err, req, res, noop);
+
+    expect(res.status).toHaveBeenCalledWith(413);
+    expect(res.json).toHaveBeenCalledWith({
+      error: {
+        code: 'PAYLOAD_TOO_LARGE',
+        message: 'File too large',
+        requestId: 'req-upload',
+      },
+    });
+    expect(captureExceptionWithContext).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
   });
 });
