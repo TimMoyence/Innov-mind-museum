@@ -14,7 +14,6 @@ import {
 } from './adapters/secondary/text-to-speech.openai';
 import { UnsplashClient } from './adapters/secondary/unsplash.client';
 import { WikidataClient } from './adapters/secondary/wikidata.client';
-import { ArtTopicClassifier } from './application/art-topic-classifier';
 import { ChatService } from './application/chat.service';
 import { ImageEnrichmentService } from './application/image-enrichment.service';
 import { KnowledgeBaseService } from './application/knowledge-base.service';
@@ -203,8 +202,7 @@ class ChatModule {
     const artKeywordRepo = new TypeOrmArtKeywordRepository(dataSource);
     this._artKeywordRepository = artKeywordRepo;
 
-    const { dynamicArtKeywords, onArtKeywordDiscovered } =
-      this.buildArtKeywordRefresh(artKeywordRepo);
+    this.buildArtKeywordRefresh(artKeywordRepo);
 
     const orchestrator = new LangChainChatOrchestrator();
     this._orchestrator = orchestrator;
@@ -221,9 +219,6 @@ class ChatModule {
       userMemory,
       knowledgeBase,
       imageEnrichment,
-      dynamicArtKeywords,
-      artTopicClassifier: new ArtTopicClassifier(),
-      onArtKeywordDiscovered,
     });
   }
 }

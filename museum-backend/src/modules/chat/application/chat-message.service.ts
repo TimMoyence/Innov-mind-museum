@@ -10,7 +10,6 @@ import { ensureSessionAccess } from './session-access';
 import { computeSessionUpdates } from './visit-context';
 import { DisabledAudioTranscriber } from '../domain/ports/audio-transcriber.port';
 
-import type { ArtTopicClassifier } from './art-topic-classifier';
 import type { GuardrailBlockReason } from './art-topic-guardrail';
 import type { PostMessageResult, PostAudioMessageResult } from './chat.service.types';
 import type { ImageEnrichmentService } from './image-enrichment.service';
@@ -38,9 +37,6 @@ export interface ChatMessageServiceDeps {
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
   imageEnrichment?: ImageEnrichmentService;
-  dynamicArtKeywords?: ReadonlySet<string>;
-  artTopicClassifier?: ArtTopicClassifier;
-  onArtKeywordDiscovered?: (keyword: string, locale: string) => void;
 }
 
 /**
@@ -122,9 +118,6 @@ export class ChatMessageService {
     this.guardrail = new GuardrailEvaluationService({
       repository: deps.repository,
       audit: deps.audit,
-      dynamicArtKeywords: deps.dynamicArtKeywords,
-      artTopicClassifier: deps.artTopicClassifier,
-      onArtKeywordDiscovered: deps.onArtKeywordDiscovered,
     });
   }
 
@@ -281,7 +274,6 @@ export class ChatMessageService {
       orchestratorImage,
       requestedLocale,
       history,
-      redirectHint: userGuardrail.redirectHint,
       ownerId,
       userMemoryBlock,
       knowledgeBaseBlock,

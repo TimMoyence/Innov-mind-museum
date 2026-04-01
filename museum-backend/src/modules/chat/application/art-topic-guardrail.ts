@@ -1,42 +1,19 @@
 import { GUARDRAIL_REFUSALS } from '@shared/i18n/guardrail-refusals';
 import { resolveLocale } from '@shared/i18n/locale';
 
-import type { ArtTopicClassifier } from './art-topic-classifier';
-import type { ChatMessage } from '../domain/chatMessage.entity';
-
 /** Reason why the guardrail blocked or flagged a message. */
-export type GuardrailBlockReason =
-  | 'insult'
-  | 'external_request'
-  | 'prompt_injection'
-  | 'off_topic'
-  | 'unsafe_output';
+export type GuardrailBlockReason = 'insult' | 'prompt_injection' | 'off_topic' | 'unsafe_output';
 
 /**
  * Result of a guardrail evaluation.
- * When `allow` is false the message is blocked; `redirectHint` asks the LLM to soft-redirect.
+ * When `allow` is false the message is blocked.
  */
 export interface GuardrailDecision {
   allow: boolean;
   reason?: GuardrailBlockReason;
-  /** Prompt hint injected into the LLM call to steer the response back on topic. */
-  redirectHint?: string;
 }
 
-interface EvaluateUserInputParams {
-  text?: string;
-  history: ChatMessage[];
-  dynamicKeywords?: ReadonlySet<string>;
-  classifier?: ArtTopicClassifier;
-  onKeywordDiscovered?: (keyword: string, locale: string) => void;
-}
-
-interface EvaluateAssistantOutputParams {
-  text: string;
-  history: ChatMessage[];
-}
-
-const normalize = (value: string): string => {
+export const normalize = (value: string): string => {
   return value
     .toLowerCase()
     .normalize('NFD')
@@ -44,74 +21,6 @@ const normalize = (value: string): string => {
     .replace(/\s+/g, ' ')
     .trim();
 };
-
-// prettier-ignore
-const ART_KEYWORDS = [
-  // English
-  'art', 'artist', 'artists', 'artwork', 'artworks', 'painting', 'paintings',
-  'sculpture', 'sculptures', 'museum', 'museums', 'gallery', 'galleries',
-  'monument', 'monuments', 'architecture', 'heritage', 'culture', 'cultural',
-  'exhibition', 'installation', 'portrait', 'landscape', 'canvas', 'fresco',
-  'mural', 'curator', 'renaissance', 'baroque', 'impressionism', 'modernism',
-  'architect', 'architects', 'street art', 'bridge', 'fountain', 'garden',
-  'square', 'facade', 'dome', 'tower', 'basilica', 'abbey', 'chapel',
-  'cloister', 'stained glass', 'mosaic', 'bas-relief', 'obelisk', 'statue',
-  'statues', 'bust',
-  // French
-  'oeuvre', 'oeuvres', 'peinture', 'tableau', 'toile', 'musee', 'musees',
-  'galerie', 'galeries', 'patrimoine', 'artistique', 'artiste', 'artistes',
-  'fresque', 'exposition', 'histoire de l art', 'cathedrale', 'palais',
-  'chateau', 'temple', 'architecte', 'architectes', 'art de rue', 'pont',
-  'fontaine', 'jardin', 'place', 'tour', 'basilique', 'abbaye', 'chapelle',
-  'cloitre', 'vitrail', 'mosaique', 'obelisque', 'buste',
-  // Spanish
-  'pintura', 'escultura', 'cuadro', 'galeria', 'arquitecto', 'arquitectura',
-  'catedral', 'puente', 'fuente', 'estatua', 'mosaico',
-  // German
-  'malerei', 'gemalde', 'skulptur', 'architekt', 'architektur', 'kathedrale',
-  'brucke', 'brunnen', 'mosaik',
-  // Italian
-  'pittura', 'dipinto', 'scultura', 'galleria', 'architetto', 'architettura',
-  'cattedrale', 'ponte', 'fontana',
-  // Japanese
-  '絵画', '美術', '博物館', '彫刻', '建築', '建築家', '大聖堂', '噴水', '橋', '像',
-  // Chinese
-  '绘画', '艺术', '博物馆', '雕塑', '建筑', '建筑师', '大教堂', '喷泉', '桥', '雕像',
-  // Arabic
-  'فن', 'متحف', 'نحت', 'لوحة', 'معمار', 'كاتدرائية',
-];
-
-const OFF_TOPIC_KEYWORDS = [
-  'bitcoin',
-  'crypto',
-  'stock',
-  'trading',
-  'bourse',
-  'football',
-  'soccer',
-  'nba',
-  'nfl',
-  'politic',
-  'election',
-  'president',
-  'recipe',
-  'cooking',
-  'medical',
-  'diagnosis',
-  'symptom',
-  'javascript',
-  'typescript',
-  'python',
-  'linux',
-  'docker',
-  'database',
-  'meteo',
-  'weather',
-  'flight',
-  'hotel',
-  'porn',
-  'sex',
-];
 
 const INSULT_KEYWORDS = [
   'idiot',
@@ -130,13 +39,6 @@ const INSULT_KEYWORDS = [
   'fdp',
   'nique ta mere',
   'ta gueule',
-];
-
-const EXTERNAL_ACTION_PATTERNS = [
-  /\b(send|email|call|contact|book|reserve|buy|purchase|order)\b/,
-  /\b(download|install|open|execute|wire|transfer|pay)\b/,
-  /\b(envoie|appelle|contacte|reserve|achete|commande)\b/,
-  /\b(telecharge|installe|virement|paie|paye)\b/,
 ];
 
 const INJECTION_PATTERNS = [
@@ -171,14 +73,6 @@ const INJECTION_PATTERNS = [
   'dan mode',
 ];
 
-const GREETING_PATTERN =
-  /^(hi|hello|hey|bonjour|salut|coucou|bonsoir|good morning|good evening|good afternoon|hola|ciao|hallo|こんにちは|你好)(\b|$)/;
-
-const FOLLOW_UP_PATTERNS = [
-  /^(et|pourquoi|comment|quand|ou|continue|plus de details)\b/,
-  /^(and|why|how|when|where|continue|more details)\b/,
-];
-
 const escapeRegExp = (value: string): string => {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
@@ -203,147 +97,41 @@ const includesAny = (normalizedText: string, keywords: string[]): boolean => {
   return keywords.some((keyword) => containsKeyword(normalizedText, keyword));
 };
 
-const hasArtSignal = (normalizedText: string): boolean => {
-  return includesAny(normalizedText, ART_KEYWORDS);
-};
-
-const hasDynamicArtSignal = (
-  normalizedText: string,
-  dynamicKeywords?: ReadonlySet<string>,
-): boolean => {
-  if (!dynamicKeywords || dynamicKeywords.size === 0) return false;
-  for (const keyword of dynamicKeywords) {
-    if (containsKeyword(normalizedText, keyword)) return true;
-  }
-  return false;
-};
-
-const hasOffTopicSignal = (normalizedText: string): boolean => {
-  return includesAny(normalizedText, OFF_TOPIC_KEYWORDS);
-};
-
-const hasInsultSignal = (normalizedText: string): boolean => {
+export const hasInsultSignal = (normalizedText: string): boolean => {
   return includesAny(normalizedText, INSULT_KEYWORDS);
 };
 
-const hasExternalActionSignal = (normalizedText: string): boolean => {
-  return EXTERNAL_ACTION_PATTERNS.some((pattern) => pattern.test(normalizedText));
-};
-
-const hasPromptInjectionSignal = (normalizedText: string): boolean => {
+export const hasPromptInjectionSignal = (normalizedText: string): boolean => {
   return includesAny(normalizedText, INJECTION_PATTERNS);
 };
 
-const hasGreetingSignal = (normalizedText: string): boolean => {
-  return GREETING_PATTERN.test(normalizedText);
-};
-
-const isShortInnocuousMessage = (normalizedText: string): boolean => {
-  return normalizedText.length > 0 && normalizedText.length < 15;
-};
-
-const looksLikeFollowUp = (normalizedText: string): boolean => {
-  if (normalizedText.length > 80) {
-    return false;
-  }
-
-  return FOLLOW_UP_PATTERNS.some((pattern) => pattern.test(normalizedText));
-};
-
-const hasArtContext = (history: ChatMessage[]): boolean => {
-  const recent = history.slice(-8);
-  return recent.some((message) => {
-    const value = normalize(message.text ?? '');
-    return value.length > 0 && hasArtSignal(value);
-  });
-};
-
-const REDIRECT_HINT_OFF_TOPIC =
-  'The visitor asked something outside your scope. Acknowledge briefly with warmth, then gently redirect to art and museum topics. Suggest 1-2 art-related follow-up questions in your followUpQuestions field.';
-
-const REDIRECT_HINT_EXTERNAL =
-  'The visitor asked for an external action you cannot perform. Acknowledge warmly that you cannot help with that, then redirect to art and museum topics. Suggest 1-2 art-related follow-up questions in your followUpQuestions field.';
-
 /**
- * Evaluates user input against layered keyword rules.
- * Hard-blocks insults and prompt injections; soft-redirects off-topic and external requests.
+ * Evaluates user input against guardrail rules.
+ * Hard-blocks insults and prompt injections; everything else is allowed.
  *
- * @param root0 - The user text and recent conversation history.
+ * @param root0 - The user text to evaluate.
  * @param root0.text - User message text to evaluate.
- * @param root0.history - Recent conversation messages for context.
  * @returns A guardrail decision indicating whether the message is allowed.
  */
-
-/** Evaluates static keyword-based rules (steps 1–7). Returns a decision or null if no rule matched. */
-function evaluateStaticRules(
-  normalizedText: string,
-  dynamicKeywords: ReadonlySet<string> | undefined,
-): GuardrailDecision | null {
-  if (hasInsultSignal(normalizedText)) return { allow: false, reason: 'insult' };
-  if (hasPromptInjectionSignal(normalizedText)) return { allow: false, reason: 'prompt_injection' };
-  if (hasGreetingSignal(normalizedText)) return { allow: true };
-  if (isShortInnocuousMessage(normalizedText) && !hasExternalActionSignal(normalizedText))
-    return { allow: true };
-  if (hasArtSignal(normalizedText)) return { allow: true };
-  if (hasDynamicArtSignal(normalizedText, dynamicKeywords)) return { allow: true };
-  if (hasExternalActionSignal(normalizedText))
-    return { allow: true, redirectHint: REDIRECT_HINT_EXTERNAL };
-  if (hasOffTopicSignal(normalizedText))
-    return { allow: true, redirectHint: REDIRECT_HINT_OFF_TOPIC };
-  return null;
-}
-
-export const evaluateUserInputGuardrail = async ({
-  text,
-  history,
-  dynamicKeywords,
-  classifier,
-  onKeywordDiscovered,
-}: EvaluateUserInputParams): Promise<GuardrailDecision> => {
+export const evaluateUserInputGuardrail = ({ text }: { text?: string }): GuardrailDecision => {
   const normalizedText = normalize(text ?? '');
   if (!normalizedText) return { allow: true };
 
-  // Steps 1-7: static keyword rules
-  const staticDecision = evaluateStaticRules(normalizedText, dynamicKeywords);
-  if (staticDecision) return staticDecision;
+  if (hasInsultSignal(normalizedText)) return { allow: false, reason: 'insult' };
+  if (hasPromptInjectionSignal(normalizedText)) return { allow: false, reason: 'prompt_injection' };
 
-  // 8. Follow-up + art context → allow
-  if (looksLikeFollowUp(normalizedText) && hasArtContext(history)) {
-    return { allow: true };
-  }
-
-  // 9. Classifier fallback (fail-open)
-  if (classifier && text) {
-    try {
-      const isArt = await classifier.isArtRelated(text);
-      if (isArt) {
-        const word = normalizedText.split(' ').find((w) => w.length > 3);
-        if (word && onKeywordDiscovered) {
-          onKeywordDiscovered(word, 'en');
-        }
-        return { allow: true };
-      }
-    } catch {
-      // Fail-open: classifier error should never block the user
-    }
-  }
-
-  return { allow: true, redirectHint: REDIRECT_HINT_OFF_TOPIC };
+  return { allow: true };
 };
 
 /**
- * Evaluates assistant LLM output for unsafe content, insults, injection leaks, or off-topic drift.
+ * Evaluates assistant LLM output for unsafe content, insults, or injection leaks.
  * Blocks the response if it fails any check.
  *
- * @param root0 - The assistant text and recent conversation history.
+ * @param root0 - The assistant text to evaluate.
  * @param root0.text - Assistant response text to evaluate.
- * @param root0.history - Recent conversation messages for context.
  * @returns A guardrail decision indicating whether the response is safe to return.
  */
-export const evaluateAssistantOutputGuardrail = ({
-  text,
-  history,
-}: EvaluateAssistantOutputParams): GuardrailDecision => {
+export const evaluateAssistantOutputGuardrail = ({ text }: { text: string }): GuardrailDecision => {
   const normalizedText = normalize(text);
   // 1. Empty -> block
   if (!normalizedText) {
@@ -357,24 +145,8 @@ export const evaluateAssistantOutputGuardrail = ({
   if (hasPromptInjectionSignal(normalizedText)) {
     return { allow: false, reason: 'unsafe_output' };
   }
-  // 4. Art signal -> ALLOW (moved before external action check)
-  if (hasArtSignal(normalizedText)) {
-    return { allow: true };
-  }
-  // 5. External action -> block
-  if (hasExternalActionSignal(normalizedText)) {
-    return { allow: false, reason: 'unsafe_output' };
-  }
-  // 6. Off-topic -> block
-  if (hasOffTopicSignal(normalizedText)) {
-    return { allow: false, reason: 'off_topic' };
-  }
-  // 7. Art context in history -> allow
-  if (hasArtContext(history)) {
-    return { allow: true };
-  }
-  // 8. Default -> block
-  return { allow: false, reason: 'off_topic' };
+  // 4. Default -> allow
+  return { allow: true };
 };
 
 /**
@@ -393,7 +165,6 @@ export const buildGuardrailRefusal = (
   const messages = GUARDRAIL_REFUSALS[resolved];
 
   if (reason === 'insult') return messages.insult;
-  if (reason === 'external_request') return messages.external_request;
   return messages.default;
 };
 
