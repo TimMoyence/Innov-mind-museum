@@ -6,15 +6,11 @@ import {
 } from './art-topic-guardrail';
 
 import type { GuardrailBlockReason } from './art-topic-guardrail';
-
-/** Minimal interface for the art-topic classifier used by the buffer. */
-interface ArtTopicClassifier {
-  isArtRelated(text: string): Promise<boolean>;
-}
+import type { ArtTopicClassifierPort } from './guardrail-evaluation.service';
 
 /** Configuration options for the StreamBuffer. */
 export interface StreamBufferOptions {
-  classifier?: ArtTopicClassifier;
+  classifier?: ArtTopicClassifierPort;
   tokenThreshold?: number;
   releaseIntervalMs?: number;
   classifierTimeoutMs?: number;
@@ -38,7 +34,7 @@ const META_MARKER_NO_NEWLINE = '[META]';
  * smooth typing UX. New tokens continue to accumulate via `push()`.
  */
 export class StreamBuffer {
-  private readonly classifier?: ArtTopicClassifier;
+  private readonly classifier?: ArtTopicClassifierPort;
   private readonly tokenThreshold: number;
   private readonly releaseIntervalMs: number;
   private readonly classifierTimeoutMs: number;
@@ -58,6 +54,9 @@ export class StreamBuffer {
   private phase1Resolve?: () => void;
   private readonly phase1Promise: Promise<void>;
 
+  private doneResolve?: () => void;
+  private readonly donePromise: Promise<void>;
+
   constructor(opts?: StreamBufferOptions) {
     this.classifier = opts?.classifier;
     this.tokenThreshold = opts?.tokenThreshold ?? 100;
@@ -69,6 +68,10 @@ export class StreamBuffer {
 
     this.phase1Promise = new Promise<void>((resolve) => {
       this.phase1Resolve = resolve;
+    });
+
+    this.donePromise = new Promise<void>((resolve) => {
+      this.doneResolve = resolve;
     });
 
     if (this.signal) {
@@ -161,6 +164,11 @@ export class StreamBuffer {
     await this.phase1Promise;
   }
 
+  /** Wait for the buffer to finish draining or be blocked. */
+  async awaitDone(): Promise<void> {
+    await this.donePromise;
+  }
+
   /** True when draining is complete or the buffer was blocked. */
   isDone(): boolean {
     return this.phase === 'done' || this.phase === 'blocked';
@@ -182,6 +190,8 @@ export class StreamBuffer {
     this.onGuardrailCb?.(refusalText, reason);
     this.phase1Resolve?.();
     this.phase1Resolve = undefined;
+    this.doneResolve?.();
+    this.doneResolve = undefined;
   }
 
   private triggerClassifier(): void {
@@ -263,5 +273,8 @@ export class StreamBuffer {
     // Resolve phase1 in case it hasn't been resolved yet
     this.phase1Resolve?.();
     this.phase1Resolve = undefined;
+    // Resolve done promise
+    this.doneResolve?.();
+    this.doneResolve = undefined;
   }
 }

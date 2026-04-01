@@ -9,25 +9,16 @@ describe('guardrail refusals', () => {
     }
   });
 
-  it.each(SUPPORTED_LOCALES)(
-    'locale "%s" has non-empty insult, external_request, and default',
-    (locale) => {
-      const messages = GUARDRAIL_REFUSALS[locale];
-      expect(typeof messages.insult).toBe('string');
-      expect(messages.insult.length).toBeGreaterThan(10);
-      expect(typeof messages.external_request).toBe('string');
-      expect(messages.external_request.length).toBeGreaterThan(10);
-      expect(typeof messages.default).toBe('string');
-      expect(messages.default.length).toBeGreaterThan(10);
-    },
-  );
+  it.each(SUPPORTED_LOCALES)('locale "%s" has non-empty insult and default', (locale) => {
+    const messages = GUARDRAIL_REFUSALS[locale];
+    expect(typeof messages.insult).toBe('string');
+    expect(messages.insult.length).toBeGreaterThan(10);
+    expect(typeof messages.default).toBe('string');
+    expect(messages.default.length).toBeGreaterThan(10);
+  });
 
-  it('produces 21 total refusal strings (7 locales x 3 variants)', () => {
-    const variants: (keyof (typeof GUARDRAIL_REFUSALS)['en'])[] = [
-      'insult',
-      'external_request',
-      'default',
-    ];
+  it('produces 14 total refusal strings (7 locales x 2 variants)', () => {
+    const variants: (keyof (typeof GUARDRAIL_REFUSALS)['en'])[] = ['insult', 'default'];
     let count = 0;
     for (const locale of SUPPORTED_LOCALES) {
       for (const variant of variants) {
@@ -35,7 +26,7 @@ describe('guardrail refusals', () => {
         count++;
       }
     }
-    expect(count).toBe(21);
+    expect(count).toBe(14);
   });
 
   it('en refusals mention art/museum/heritage', () => {
