@@ -83,7 +83,7 @@ const buildTranscriptionFormData = (
   const formData = new FormData();
   formData.append(
     'file',
-    new Blob([audioBuffer], { type: input.mimeType }),
+    new Blob([new Uint8Array(audioBuffer)], { type: input.mimeType }),
     toAudioFileName(input.mimeType),
   );
   formData.append('model', env.llm.audioTranscriptionModel);
