@@ -14,6 +14,7 @@ import {
 } from './adapters/secondary/text-to-speech.openai';
 import { UnsplashClient } from './adapters/secondary/unsplash.client';
 import { WikidataClient } from './adapters/secondary/wikidata.client';
+import { ArtTopicClassifier } from './application/art-topic-classifier';
 import { ChatService } from './application/chat.service';
 import { ImageEnrichmentService } from './application/image-enrichment.service';
 import { KnowledgeBaseService } from './application/knowledge-base.service';
@@ -207,6 +208,8 @@ class ChatModule {
     const orchestrator = new LangChainChatOrchestrator();
     this._orchestrator = orchestrator;
 
+    const artTopicClassifier = new ArtTopicClassifier();
+
     return new ChatService({
       repository,
       orchestrator,
@@ -219,6 +222,7 @@ class ChatModule {
       userMemory,
       knowledgeBase,
       imageEnrichment,
+      artTopicClassifier,
     });
   }
 }

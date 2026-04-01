@@ -14,6 +14,7 @@ import type {
   ReportMessageResult,
   SessionResult,
 } from './chat.service.types';
+import type { ArtTopicClassifierPort } from './guardrail-evaluation.service';
 import type { ImageEnrichmentService } from './image-enrichment.service';
 import type { KnowledgeBaseService } from './knowledge-base.service';
 import type { UserMemoryService } from './user-memory.service';
@@ -58,6 +59,7 @@ export interface ChatServiceDeps {
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
   imageEnrichment?: ImageEnrichmentService;
+  artTopicClassifier?: ArtTopicClassifierPort;
 }
 
 /**
@@ -92,6 +94,7 @@ export class ChatService {
       userMemory: deps.userMemory,
       knowledgeBase: deps.knowledgeBase,
       imageEnrichment: deps.imageEnrichment,
+      artTopicClassifier: deps.artTopicClassifier,
     });
 
     this.media = new ChatMediaService({

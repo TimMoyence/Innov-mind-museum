@@ -25,6 +25,7 @@ import type {
 import type { AudioTranscriber } from '@modules/chat/adapters/secondary/audio-transcriber.openai';
 import type { TextToSpeechService } from '@modules/chat/adapters/secondary/text-to-speech.openai';
 import type { OcrService } from '@modules/chat/adapters/secondary/ocr-service';
+import type { ArtTopicClassifierPort } from '@modules/chat/application/guardrail-evaluation.service';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /** Test utility: in-memory ChatRepository implementation that stores sessions and messages in Maps. */
@@ -339,6 +340,7 @@ interface BuildChatTestServiceOptions {
   tts?: TextToSpeechService;
   cache?: CacheService;
   ocr?: OcrService;
+  artTopicClassifier?: ArtTopicClassifierPort;
 }
 
 /**
@@ -366,6 +368,7 @@ export function buildChatTestService(
       tts: opts.tts,
       cache: opts.cache,
       ocr: opts.ocr,
+      artTopicClassifier: opts.artTopicClassifier,
     });
   }
 
