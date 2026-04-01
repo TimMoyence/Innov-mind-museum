@@ -113,7 +113,9 @@
       "emailPlaceholder": "Your email",
       "messagePlaceholder": "Describe your question or issue...",
       "submit": "Send",
-      "success": "Thank you! Your message has been sent. We'll get back to you as soon as possible."
+      "sending": "Sending...",
+      "success": "Thank you! Your message has been sent. We'll get back to you as soon as possible.",
+      "error": "Unable to send your message right now. Please try again in a few minutes."
     }
   },
   "privacy": {

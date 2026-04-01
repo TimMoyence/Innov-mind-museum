@@ -113,7 +113,9 @@
       "emailPlaceholder": "Votre email",
       "messagePlaceholder": "Décrivez votre question ou problème...",
       "submit": "Envoyer",
-      "success": "Merci ! Votre message a bien été envoyé. Nous vous répondrons dans les plus brefs délais."
+      "sending": "Envoi...",
+      "success": "Merci ! Votre message a bien été envoyé. Nous vous répondrons dans les plus brefs délais.",
+      "error": "Impossible d'envoyer votre message pour le moment. Veuillez réessayer dans quelques minutes."
     }
   },
   "privacy": {

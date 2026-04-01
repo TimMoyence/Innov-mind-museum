@@ -1,8 +1,8 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 import type { DashboardSessionCard } from '@/features/chat/domain/dashboard-session';
+import { storage } from '@/shared/infrastructure/storage';
 
 type SortMode = 'recent' | 'messages';
 
@@ -66,7 +66,7 @@ export const useConversationsStore = create<ConversationsState>()(
         // Only migrate if the store has no saved sessions yet
         if (get().savedSessionIds.length > 0) return;
         try {
-          const raw = await AsyncStorage.getItem(LEGACY_SAVED_SESSIONS_KEY);
+          const raw = await storage.getItem(LEGACY_SAVED_SESSIONS_KEY);
           if (!raw) return;
           const parsed: unknown = JSON.parse(raw);
           if (Array.isArray(parsed)) {
@@ -74,7 +74,7 @@ export const useConversationsStore = create<ConversationsState>()(
             if (ids.length > 0) {
               set({ savedSessionIds: ids });
               // Clean up legacy key after successful migration
-              await AsyncStorage.removeItem(LEGACY_SAVED_SESSIONS_KEY);
+              await storage.removeItem(LEGACY_SAVED_SESSIONS_KEY);
             }
           }
         } catch {
@@ -84,7 +84,7 @@ export const useConversationsStore = create<ConversationsState>()(
     }),
     {
       name: 'musaium.conversations',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => storage),
       version: 1,
       // Only persist savedSessionIds and sortMode — items are transient API data
       partialize: (state) => ({

@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { authService } from '@/features/auth/infrastructure/authApi';
 import { useSocialLogin } from '@/features/auth/application/useSocialLogin';
+import { ONBOARDING_ROUTE } from '@/features/auth/routes';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { BrandMark } from '@/shared/ui/BrandMark';
@@ -151,7 +152,7 @@ export default function AuthScreen() {
   };
 
   const openGuide = () => {
-    router.push('/(stack)/onboarding');
+    router.push(ONBOARDING_ROUTE);
   };
 
   const openTerms = () => {

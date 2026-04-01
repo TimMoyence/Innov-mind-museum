@@ -254,6 +254,19 @@ export default function ConversationsScreen() {
               <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
                 {isSavedOnly ? t('conversations.empty_saved') : t('conversations.empty_body')}
               </Text>
+              {!isSavedOnly ? (
+                <Pressable
+                  style={[styles.emptyActionButton, { backgroundColor: theme.primary }]}
+                  onPress={() => void startConversation()}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('a11y.conversations.start_new')}
+                  testID="empty-state-start-button"
+                >
+                  <Text style={[styles.emptyActionText, { color: theme.primaryContrast }]}>
+                    {t('conversations.start_new')}
+                  </Text>
+                </Pressable>
+              ) : null}
             </GlassCard>
           }
           ItemSeparatorComponent={ItemSeparator}
@@ -317,6 +330,16 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     marginTop: 6,
     lineHeight: 20,
+  },
+  emptyActionButton: {
+    marginTop: 12,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  emptyActionText: {
+    fontWeight: '700',
+    fontSize: 13,
   },
   card: {
     borderRadius: 18,

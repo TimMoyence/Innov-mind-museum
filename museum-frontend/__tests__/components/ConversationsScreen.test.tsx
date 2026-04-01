@@ -155,5 +155,6 @@ describe('ConversationsScreen', () => {
 
     expect(screen.getByText('conversations.empty_title')).toBeTruthy();
     expect(screen.getByText('conversations.empty_body')).toBeTruthy();
+    expect(screen.getByTestId('empty-state-start-button')).toBeTruthy();
   });
 });
