@@ -37,7 +37,7 @@ jest.mock('@/features/chat/application/imageUploadOptimization', () => ({
 describe('useImagePicker', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockOptimizeImageForUpload.mockImplementation(async (uri: string) => uri);
+    mockOptimizeImageForUpload.mockImplementation((uri: string) => Promise.resolve(uri));
   });
 
   it('initialises with null selectedImage and null pendingImage', () => {
