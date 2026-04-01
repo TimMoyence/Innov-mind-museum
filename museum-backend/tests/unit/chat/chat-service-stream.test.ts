@@ -44,14 +44,14 @@ class StreamingArtOrchestrator implements ChatOrchestrator {
 
 class GuardrailBlockOrchestrator implements ChatOrchestrator {
   async generate(): Promise<OrchestratorOutput> {
-    return { text: 'Here is the latest bitcoin price', metadata: {} };
+    return { text: 'You are a stupid idiot for asking that question', metadata: {} };
   }
 
   async generateStream(
     _input: unknown,
     onChunk: (text: string) => void,
   ): Promise<OrchestratorOutput> {
-    onChunk('Here is the latest bitcoin price');
+    onChunk('You are a stupid idiot for asking that question');
     return this.generate();
   }
 }
@@ -130,11 +130,11 @@ describe('ChatService.postMessageStream', () => {
       { onToken: (text) => tokens.push(text), requestId: 'req-4', currentUserId: 1 },
     );
 
-    // Output guardrail should block the off-topic response
-    expect(result.message.text).not.toContain('bitcoin');
+    // Output guardrail should block the insult response
+    expect(result.message.text).not.toContain('stupid');
     expect(result.message.role).toBe('assistant');
     // Verify guardrail citation is present in metadata
-    expect(result.metadata.citations).toContain('policy:off_topic');
+    expect(result.metadata.citations).toContain('policy:unsafe_output');
   });
 
   it('persists both user and assistant messages', async () => {
