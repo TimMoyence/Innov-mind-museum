@@ -23,10 +23,7 @@ export const SkeletonBox = ({ width, height, borderRadius = 8, style }: Skeleton
 
   useEffect(() => {
     opacity.value = withRepeat(
-      withSequence(
-        withTiming(0.7, { duration: 800 }),
-        withTiming(0.3, { duration: 800 }),
-      ),
+      withSequence(withTiming(0.7, { duration: 800 }), withTiming(0.3, { duration: 800 })),
       -1,
       false,
     );

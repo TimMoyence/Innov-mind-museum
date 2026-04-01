@@ -12,14 +12,20 @@ interface RecommendationChipsProps {
 }
 
 /** Renders a horizontal scrollable row of recommendation chips that the user can tap to populate the input. */
-export const RecommendationChips = ({ recommendations, onPress, disabled = false }: RecommendationChipsProps) => {
+export const RecommendationChips = ({
+  recommendations,
+  onPress,
+  disabled = false,
+}: RecommendationChipsProps) => {
   const { theme } = useTheme();
   const { t } = useTranslation();
   if (!recommendations.length) return null;
 
   return (
     <View>
-      <Text style={[styles.sectionLabel, { color: theme.placeholderText }]}>{t('recommendationChips.section_label')}</Text>
+      <Text style={[styles.sectionLabel, { color: theme.placeholderText }]}>
+        {t('recommendationChips.section_label')}
+      </Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -28,15 +34,23 @@ export const RecommendationChips = ({ recommendations, onPress, disabled = false
         {recommendations.map((recommendation) => (
           <Pressable
             key={recommendation}
-            style={[styles.chip, { borderColor: theme.separator, backgroundColor: theme.surface }, disabled && styles.chipDisabled]}
-            onPress={() => { onPress(recommendation); }}
+            style={[
+              styles.chip,
+              { borderColor: theme.separator, backgroundColor: theme.surface },
+              disabled && styles.chipDisabled,
+            ]}
+            onPress={() => {
+              onPress(recommendation);
+            }}
             disabled={disabled}
             accessibilityRole="button"
             accessibilityLabel={recommendation}
             accessibilityHint={t('a11y.chat.recommendation_hint')}
           >
-            <Ionicons name='create-outline' size={14} color={theme.primary} />
-            <Text style={[styles.chipText, { color: theme.primary }]} numberOfLines={1}>{recommendation}</Text>
+            <Ionicons name="create-outline" size={14} color={theme.primary} />
+            <Text style={[styles.chipText, { color: theme.primary }]} numberOfLines={1}>
+              {recommendation}
+            </Text>
           </Pressable>
         ))}
       </ScrollView>

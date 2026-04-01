@@ -20,7 +20,12 @@ interface Suggestion {
 }
 
 /** Displays a welcome greeting with suggestion buttons for starting a conversation or opening the camera. */
-export const WelcomeCard = ({ museumMode, onSuggestion, onCamera, disabled = false }: WelcomeCardProps) => {
+export const WelcomeCard = ({
+  museumMode,
+  onSuggestion,
+  onCamera,
+  disabled = false,
+}: WelcomeCardProps) => {
   const { theme } = useTheme();
   const { t } = useTranslation();
 
@@ -44,7 +49,11 @@ export const WelcomeCard = ({ museumMode, onSuggestion, onCamera, disabled = fal
         {suggestions.map((suggestion) => (
           <Pressable
             key={suggestion.text}
-            style={[styles.suggestionButton, { borderColor: theme.separator, backgroundColor: theme.surface }, disabled && styles.suggestionButtonDisabled]}
+            style={[
+              styles.suggestionButton,
+              { borderColor: theme.separator, backgroundColor: theme.surface },
+              disabled && styles.suggestionButtonDisabled,
+            ]}
             onPress={() => {
               if (suggestion.isCamera) {
                 onCamera();
@@ -55,10 +64,16 @@ export const WelcomeCard = ({ museumMode, onSuggestion, onCamera, disabled = fal
             disabled={disabled}
             accessibilityRole="button"
             accessibilityLabel={suggestion.text}
-            accessibilityHint={suggestion.isCamera ? t('a11y.chat.camera_suggestion_hint') : t('a11y.chat.suggestion_hint')}
+            accessibilityHint={
+              suggestion.isCamera
+                ? t('a11y.chat.camera_suggestion_hint')
+                : t('a11y.chat.suggestion_hint')
+            }
           >
             <Ionicons name={suggestion.icon} size={18} color={theme.primary} />
-            <Text style={[styles.suggestionText, { color: theme.textPrimary }]} numberOfLines={2}>{suggestion.text}</Text>
+            <Text style={[styles.suggestionText, { color: theme.textPrimary }]} numberOfLines={2}>
+              {suggestion.text}
+            </Text>
           </Pressable>
         ))}
       </View>

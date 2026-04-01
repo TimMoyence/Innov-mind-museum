@@ -34,19 +34,25 @@ export default function GuidedMuseumModeScreen() {
               id: 'prefs',
               icon: 'options-outline',
               label: t('guidedMode.menu.preferences'),
-              onPress: () => { router.push('/(stack)/preferences'); },
+              onPress: () => {
+                router.push('/(stack)/preferences');
+              },
             },
             {
               id: 'discover',
               icon: 'sparkles-outline',
               label: t('guidedMode.menu.discover'),
-              onPress: () => { router.push('/(stack)/discover'); },
+              onPress: () => {
+                router.push('/(stack)/discover');
+              },
             },
             {
               id: 'home',
               icon: 'home-outline',
               label: t('guidedMode.menu.home'),
-              onPress: () => { router.push('/(tabs)/home'); },
+              onPress: () => {
+                router.push('/(tabs)/home');
+              },
             },
           ]}
         />
@@ -59,46 +65,78 @@ export default function GuidedMuseumModeScreen() {
             {t('guidedMode.subtitle')}
           </Text>
           <Text style={[styles.stateLine, { color: theme.primary }]}>
-            {t('guidedMode.status_line', { status: museumMode ? t('common.enabled') : t('common.disabled'), level: guideLevel })}
+            {t('guidedMode.status_line', {
+              status: museumMode ? t('common.enabled') : t('common.disabled'),
+              level: guideLevel,
+            })}
           </Text>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={54}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('guidedMode.card1_title')}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
+            {t('guidedMode.card1_title')}
+          </Text>
           <Text style={[styles.cardText, { color: theme.textSecondary }]}>
             {t('guidedMode.card1_text')}
           </Text>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={52}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('guidedMode.card2_title')}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
+            {t('guidedMode.card2_title')}
+          </Text>
           <Text style={[styles.cardText, { color: theme.textSecondary }]}>
             {t('guidedMode.card2_text')}
           </Text>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={52}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('guidedMode.card3_title')}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
+            {t('guidedMode.card3_title')}
+          </Text>
           <Text style={[styles.cardText, { color: theme.textSecondary }]}>
             {t('guidedMode.card3_text')}
           </Text>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={52}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('guidedMode.card4_title')}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
+            {t('guidedMode.card4_title')}
+          </Text>
           <Text style={[styles.cardText, { color: theme.textSecondary }]}>
             {t('guidedMode.card4_text')}
           </Text>
         </GlassCard>
 
-        <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => { router.push('/(stack)/preferences'); }} accessibilityRole="button" accessibilityLabel={museumMode ? t('a11y.guidedMode.toggle_off') : t('a11y.guidedMode.toggle_on')}>
+        <Pressable
+          style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+          onPress={() => {
+            router.push('/(stack)/preferences');
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={
+            museumMode ? t('a11y.guidedMode.toggle_off') : t('a11y.guidedMode.toggle_on')
+          }
+        >
           <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
             {museumMode ? t('guidedMode.turn_off') : t('guidedMode.turn_on')}
           </Text>
         </Pressable>
 
-        <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.inputBackground }]} onPress={() => { router.push('/(stack)/discover'); }} accessibilityRole="button" accessibilityLabel={t('a11y.guidedMode.start_exploring')}>
-          <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('guidedMode.start_exploring')}</Text>
+        <Pressable
+          style={[
+            styles.secondaryButton,
+            { borderColor: theme.inputBorder, backgroundColor: theme.inputBackground },
+          ]}
+          onPress={() => {
+            router.push('/(stack)/discover');
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={t('a11y.guidedMode.start_exploring')}
+        >
+          <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+            {t('guidedMode.start_exploring')}
+          </Text>
         </Pressable>
       </ScrollView>
     </LiquidScreen>

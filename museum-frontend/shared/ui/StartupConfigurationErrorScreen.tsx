@@ -46,29 +46,19 @@ export function StartupConfigurationErrorScreen({
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>{t('startupError.staging_url')}</Text>
-            <Text style={styles.value}>
-              {snapshot.stagingBaseUrl ?? fallback}
-            </Text>
+            <Text style={styles.value}>{snapshot.stagingBaseUrl ?? fallback}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>{t('startupError.prod_url')}</Text>
-            <Text style={styles.value}>
-              {snapshot.productionBaseUrl ?? fallback}
-            </Text>
+            <Text style={styles.value}>{snapshot.productionBaseUrl ?? fallback}</Text>
           </View>
         </View>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t('startupError.how_to_fix')}</Text>
-          <Text style={styles.step}>
-            {t('startupError.step1')}
-          </Text>
-          <Text style={styles.step}>
-            {t('startupError.step2')}
-          </Text>
-          <Text style={styles.step}>
-            {t('startupError.step3')}
-          </Text>
+          <Text style={styles.step}>{t('startupError.step1')}</Text>
+          <Text style={styles.step}>{t('startupError.step2')}</Text>
+          <Text style={styles.step}>{t('startupError.step3')}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

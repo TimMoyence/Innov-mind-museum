@@ -1,10 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import {
-  defaults,
-  normalizeGuideLevel,
-} from '../features/settings/runtimeSettings.pure';
+import { defaults, normalizeGuideLevel } from '../features/settings/runtimeSettings.pure';
 
 test('defaults have expected values', () => {
   assert.equal(defaults.defaultLocale, 'en-US');

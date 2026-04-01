@@ -20,7 +20,8 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({ pendingCount }) =>
     >
       <Ionicons name="cloud-offline-outline" size={16} color={theme.error} />
       <Text style={[styles.text, { color: theme.error }]}>
-        {t('offline.title')}{pendingCount > 0 ? ` · ${t('offline.pending', { count: pendingCount })}` : ''}
+        {t('offline.title')}
+        {pendingCount > 0 ? ` · ${t('offline.pending', { count: pendingCount })}` : ''}
       </Text>
     </View>
   );

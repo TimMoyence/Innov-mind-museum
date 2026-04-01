@@ -51,10 +51,7 @@ const normalizeBaseUrl = (value: string): string => {
 };
 
 const readExtra = (): Record<string, unknown> => {
-  return (
-    (Constants.expoConfig as { extra?: Record<string, unknown> } | undefined)
-      ?.extra ?? {}
-  );
+  return (Constants.expoConfig as { extra?: Record<string, unknown> } | undefined)?.extra ?? {};
 };
 
 const resolveBuildVariant = (): BuildVariant => {
@@ -84,8 +81,7 @@ const resolveConfiguredBaseUrls = (): {
 } => {
   const extra = readExtra();
   const explicit =
-    trimOrUndefined(process.env.EXPO_PUBLIC_API_BASE_URL) ??
-    trimOrUndefined(extra.API_BASE_URL);
+    trimOrUndefined(process.env.EXPO_PUBLIC_API_BASE_URL) ?? trimOrUndefined(extra.API_BASE_URL);
 
   const staging =
     trimOrUndefined(process.env.EXPO_PUBLIC_API_BASE_URL_STAGING) ??
@@ -103,8 +99,7 @@ const resolveConfiguredBaseUrls = (): {
   };
 };
 
-const localhostPattern =
-  /^(localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0|\[::1\]|::1)$/i;
+const localhostPattern = /^(localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0|\[::1\]|::1)$/i;
 
 /**
  * Checks whether a URL points to a localhost address.
@@ -279,7 +274,9 @@ export const probeApiHealth = async (
   timeoutMs = 7000,
 ): Promise<ApiHealthProbeResult> => {
   const controller = new AbortController();
-  const timeout = setTimeout(() => { controller.abort(); }, timeoutMs);
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
 
   try {
     const response = await fetch(buildHealthUrl(baseUrl), {
@@ -287,9 +284,7 @@ export const probeApiHealth = async (
       signal: controller.signal,
     });
 
-    const payload = (await response
-      .json()
-      .catch(() => null)) as Record<string, unknown> | null;
+    const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
 
     return {
       ok: response.ok,
@@ -300,4 +295,3 @@ export const probeApiHealth = async (
     clearTimeout(timeout);
   }
 };
-

@@ -9,11 +9,10 @@ export const useImageManipulation = () => {
   const rotateImage = useCallback(async (uri: string): Promise<string> => {
     setIsProcessing(true);
     try {
-      const result = await ImageManipulator.manipulateAsync(
-        uri,
-        [{ rotate: 90 }],
-        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
-      );
+      const result = await ImageManipulator.manipulateAsync(uri, [{ rotate: 90 }], {
+        compress: 0.8,
+        format: ImageManipulator.SaveFormat.JPEG,
+      });
       return result.uri;
     } finally {
       setIsProcessing(false);
@@ -27,11 +26,10 @@ export const useImageManipulation = () => {
     ): Promise<string> => {
       setIsProcessing(true);
       try {
-        const result = await ImageManipulator.manipulateAsync(
-          uri,
-          [{ crop }],
-          { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
-        );
+        const result = await ImageManipulator.manipulateAsync(uri, [{ crop }], {
+          compress: 0.8,
+          format: ImageManipulator.SaveFormat.JPEG,
+        });
         return result.uri;
       } finally {
         setIsProcessing(false);

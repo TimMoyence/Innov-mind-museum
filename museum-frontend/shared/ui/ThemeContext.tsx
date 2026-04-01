@@ -19,7 +19,9 @@ const ThemeContext = createContext<ThemeContextValue>({
   theme: lightTheme,
   mode: 'system',
   isDark: false,
-  setMode: () => { /* noop */ },
+  setMode: () => {
+    /* noop */
+  },
 });
 
 export const useTheme = () => useContext(ThemeContext);
@@ -35,16 +37,19 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
           setModeState(stored);
         }
       })
-      .catch(() => { /* noop */ });
+      .catch(() => {
+        /* noop */
+      });
   }, []);
 
   const setMode = useCallback((newMode: ThemeMode) => {
     setModeState(newMode);
-    AsyncStorage.setItem(THEME_KEY, newMode).catch(() => { /* noop */ });
+    AsyncStorage.setItem(THEME_KEY, newMode).catch(() => {
+      /* noop */
+    });
   }, []);
 
-  const isDark =
-    mode === 'dark' || (mode === 'system' && systemScheme === 'dark');
+  const isDark = mode === 'dark' || (mode === 'system' && systemScheme === 'dark');
   const theme = isDark ? darkTheme : lightTheme;
 
   return (

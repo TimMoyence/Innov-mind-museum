@@ -29,24 +29,37 @@ type TicketStatus = TicketDetailDTO['status'];
 
 const statusColor = (status: TicketStatus): string => {
   switch (status) {
-    case 'open': return '#3B82F6';
-    case 'in_progress': return '#F59E0B';
-    case 'resolved': return '#22C55E';
-    case 'closed': return '#6B7280';
+    case 'open':
+      return '#3B82F6';
+    case 'in_progress':
+      return '#F59E0B';
+    case 'resolved':
+      return '#22C55E';
+    case 'closed':
+      return '#6B7280';
   }
 };
 
 const priorityColor = (priority: TicketDetailDTO['priority']): string => {
   switch (priority) {
-    case 'low': return '#6B7280';
-    case 'medium': return '#F59E0B';
-    case 'high': return '#EF4444';
+    case 'low':
+      return '#6B7280';
+    case 'medium':
+      return '#F59E0B';
+    case 'high':
+      return '#EF4444';
   }
 };
 
 const formatDate = (iso: string): string => {
   const d = new Date(iso);
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
 /** Renders a ticket detail screen with message thread and reply input. */
@@ -120,8 +133,16 @@ export default function TicketDetailScreen() {
           style={[
             styles.messageBubble,
             isVisitor
-              ? { alignSelf: 'flex-start', backgroundColor: theme.assistantBubble, borderColor: theme.assistantBubbleBorder }
-              : { alignSelf: 'flex-end', backgroundColor: theme.userBubble, borderColor: theme.userBubbleBorder },
+              ? {
+                  alignSelf: 'flex-start',
+                  backgroundColor: theme.assistantBubble,
+                  borderColor: theme.assistantBubbleBorder,
+                }
+              : {
+                  alignSelf: 'flex-end',
+                  backgroundColor: theme.userBubble,
+                  borderColor: theme.userBubbleBorder,
+                },
           ]}
         >
           <Text
@@ -148,7 +169,10 @@ export default function TicketDetailScreen() {
 
   if (isLoading) {
     return (
-      <LiquidScreen background={pickMuseumBackground(3)} contentStyle={[styles.screen, { paddingTop: insets.top + 12 }]}>
+      <LiquidScreen
+        background={pickMuseumBackground(3)}
+        contentStyle={[styles.screen, { paddingTop: insets.top + 12 }]}
+      >
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
@@ -158,14 +182,25 @@ export default function TicketDetailScreen() {
 
   if (error && !ticket) {
     return (
-      <LiquidScreen background={pickMuseumBackground(3)} contentStyle={[styles.screen, { paddingTop: insets.top + 12 }]}>
-        <ErrorNotice message={error} onDismiss={() => { setError(null); }} />
+      <LiquidScreen
+        background={pickMuseumBackground(3)}
+        contentStyle={[styles.screen, { paddingTop: insets.top + 12 }]}
+      >
+        <ErrorNotice
+          message={error}
+          onDismiss={() => {
+            setError(null);
+          }}
+        />
       </LiquidScreen>
     );
   }
 
   return (
-    <LiquidScreen background={pickMuseumBackground(3)} contentStyle={[styles.screen, { paddingTop: insets.top + 12 }]}>
+    <LiquidScreen
+      background={pickMuseumBackground(3)}
+      contentStyle={[styles.screen, { paddingTop: insets.top + 12 }]}
+    >
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -189,13 +224,18 @@ export default function TicketDetailScreen() {
                 {t('tickets.created')}: {formatDate(ticket.createdAt)}
               </Text>
               {ticket.category ? (
-                <Text style={[styles.meta, { color: theme.textSecondary }]}>
-                  {ticket.category}
-                </Text>
+                <Text style={[styles.meta, { color: theme.textSecondary }]}>{ticket.category}</Text>
               ) : null}
             </GlassCard>
 
-            {error ? <ErrorNotice message={error} onDismiss={() => { setError(null); }} /> : null}
+            {error ? (
+              <ErrorNotice
+                message={error}
+                onDismiss={() => {
+                  setError(null);
+                }}
+              />
+            ) : null}
 
             <FlatList
               ref={flatListRef}
@@ -215,9 +255,21 @@ export default function TicketDetailScreen() {
               }}
             />
 
-            <View style={[styles.replyBar, { borderTopColor: theme.separator, backgroundColor: theme.cardBackground }]}>
+            <View
+              style={[
+                styles.replyBar,
+                { borderTopColor: theme.separator, backgroundColor: theme.cardBackground },
+              ]}
+            >
               <TextInput
-                style={[styles.replyInput, { color: theme.textPrimary, backgroundColor: theme.inputBackground, borderColor: theme.inputBorder }]}
+                style={[
+                  styles.replyInput,
+                  {
+                    color: theme.textPrimary,
+                    backgroundColor: theme.inputBackground,
+                    borderColor: theme.inputBorder,
+                  },
+                ]}
                 value={replyText}
                 onChangeText={setReplyText}
                 placeholder={t('tickets.replyPlaceholder')}

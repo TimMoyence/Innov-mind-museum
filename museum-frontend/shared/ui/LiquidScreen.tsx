@@ -24,7 +24,7 @@ const isResponsiveBackground = (
 ): value is ResponsiveBackground => {
   return (
     typeof value === 'object' &&
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- responsive type guard
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- responsive type guard
     value !== null &&
     !Array.isArray(value) &&
     'mobile' in value &&
@@ -33,11 +33,7 @@ const isResponsiveBackground = (
 };
 
 /** Renders a full-screen layout with a gradient background, responsive background image, and centered content area. */
-export const LiquidScreen = ({
-  children,
-  background,
-  contentStyle,
-}: LiquidScreenProps) => {
+export const LiquidScreen = ({ children, background, contentStyle }: LiquidScreenProps) => {
   const { theme } = useTheme();
   const { width, height } = useWindowDimensions();
   const isDesktop = width >= viewportConfig.desktopBreakpoint;
@@ -50,9 +46,7 @@ export const LiquidScreen = ({
   const backgroundOpacity = isDesktop
     ? viewportConfig.desktopBackgroundOpacity
     : viewportConfig.mobileBackgroundOpacity;
-  const resizeMode = isDesktop
-    ? viewportConfig.desktopResizeMode
-    : viewportConfig.mobileResizeMode;
+  const resizeMode = isDesktop ? viewportConfig.desktopResizeMode : viewportConfig.mobileResizeMode;
 
   return (
     <View
@@ -78,13 +72,7 @@ export const LiquidScreen = ({
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-      <View
-        style={[
-          styles.content,
-          isDesktop && styles.desktopContent,
-          contentStyle,
-        ]}
-      >
+      <View style={[styles.content, isDesktop && styles.desktopContent, contentStyle]}>
         {children}
       </View>
     </View>

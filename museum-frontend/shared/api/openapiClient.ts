@@ -11,15 +11,12 @@ type AvailableMethodsForPath<P extends PathKey> = {
   [M in HttpMethod]: paths[P][M] extends undefined ? never : M;
 }[HttpMethod];
 
-type OperationFor<
-  P extends PathKey,
-  M extends AvailableMethodsForPath<P>,
-> = NonNullable<paths[P][M]>;
+type OperationFor<P extends PathKey, M extends AvailableMethodsForPath<P>> = NonNullable<
+  paths[P][M]
+>;
 
-type ResponsesFor<
-  P extends PathKey,
-  M extends AvailableMethodsForPath<P>,
-> = OperationFor<P, M> extends { responses: infer R } ? R : never;
+type ResponsesFor<P extends PathKey, M extends AvailableMethodsForPath<P>> =
+  OperationFor<P, M> extends { responses: infer R } ? R : never;
 
 type ResponseForStatus<
   P extends PathKey,
@@ -31,8 +28,8 @@ type JsonContent<T> = T extends {
   content: { 'application/json': infer Json };
 }
   ? Json
-  // eslint-disable-next-line @typescript-eslint/no-invalid-void-type -- generated type
-  : void;
+  : // eslint-disable-next-line @typescript-eslint/no-invalid-void-type -- generated type
+    void;
 
 type SuccessStatusFor<
   P extends PathKey,
@@ -55,16 +52,14 @@ export type OpenApiResponseFor<
 > = JsonContent<ResponseForStatus<P, M, S>>;
 
 /** Extracts the JSON request body type for a given OpenAPI path and method. */
-export type OpenApiJsonRequestBodyFor<
-  P extends PathKey,
-  M extends AvailableMethodsForPath<P>,
-> = OperationFor<P, M> extends {
-  requestBody?: {
-    content: { 'application/json': infer Body };
-  };
-}
-  ? Body
-  : never;
+export type OpenApiJsonRequestBodyFor<P extends PathKey, M extends AvailableMethodsForPath<P>> =
+  OperationFor<P, M> extends {
+    requestBody?: {
+      content: { 'application/json': infer Body };
+    };
+  }
+    ? Body
+    : never;
 
 type PathParamNames<T extends string> = T extends `${string}{${infer Param}}${infer Rest}`
   ? Param | PathParamNames<Rest>
@@ -80,7 +75,6 @@ const appendQuery = (path: string, query?: Record<string, QueryPrimitive>): stri
 
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
-     
     if (value === undefined || value === null) continue;
     search.set(key, String(value));
   }
@@ -144,4 +138,3 @@ export const openApiRequest = async <
     requiresAuth: params.requiresAuth,
   });
 };
-

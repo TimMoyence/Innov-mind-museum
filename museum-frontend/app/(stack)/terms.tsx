@@ -23,13 +23,17 @@ export default function TermsScreen() {
               id: 'privacy',
               icon: 'shield-checkmark-outline',
               label: t('terms.menu.privacy'),
-              onPress: () => { router.push('/(stack)/privacy'); },
+              onPress: () => {
+                router.push('/(stack)/privacy');
+              },
             },
             {
               id: 'settings',
               icon: 'settings-outline',
               label: t('terms.menu.settings'),
-              onPress: () => { router.push('/(stack)/settings'); },
+              onPress: () => {
+                router.push('/(stack)/settings');
+              },
             },
           ]}
         />
@@ -37,9 +41,14 @@ export default function TermsScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <GlassCard style={styles.heroCard} intensity={60}>
-          <Text style={[styles.title, { color: theme.textPrimary }]}>{TERMS_OF_SERVICE_CONTENT.title}</Text>
+          <Text style={[styles.title, { color: theme.textPrimary }]}>
+            {TERMS_OF_SERVICE_CONTENT.title}
+          </Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            {t('terms.version_note', { version: TERMS_OF_SERVICE_CONTENT.version, lastUpdated: TERMS_OF_SERVICE_CONTENT.lastUpdated })}
+            {t('terms.version_note', {
+              version: TERMS_OF_SERVICE_CONTENT.version,
+              lastUpdated: TERMS_OF_SERVICE_CONTENT.lastUpdated,
+            })}
           </Text>
         </GlassCard>
 
@@ -48,7 +57,10 @@ export default function TermsScreen() {
             <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{section.title}</Text>
             <View style={styles.paragraphGroup}>
               {section.paragraphs.map((paragraph, index) => (
-                <Text key={`${section.id}-${String(index)}`} style={[styles.paragraph, { color: theme.textSecondary }]}>
+                <Text
+                  key={`${section.id}-${String(index)}`}
+                  style={[styles.paragraph, { color: theme.textSecondary }]}
+                >
                   {paragraph}
                 </Text>
               ))}
@@ -58,11 +70,32 @@ export default function TermsScreen() {
 
         <GlassCard style={styles.ctaCard} intensity={54}>
           <View style={styles.ctaRow}>
-            <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => { router.push('/(stack)/privacy'); }} accessibilityRole="button" accessibilityLabel={t('a11y.terms.privacy_policy')}>
-              <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>{t('terms.privacy_policy')}</Text>
+            <Pressable
+              style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+              onPress={() => {
+                router.push('/(stack)/privacy');
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={t('a11y.terms.privacy_policy')}
+            >
+              <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
+                {t('terms.privacy_policy')}
+              </Text>
             </Pressable>
-            <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]} onPress={() => { router.push('/(stack)/settings'); }} accessibilityRole="button" accessibilityLabel={t('a11y.terms.back_settings')}>
-              <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('terms.back_settings')}</Text>
+            <Pressable
+              style={[
+                styles.secondaryButton,
+                { borderColor: theme.inputBorder, backgroundColor: theme.overlay },
+              ]}
+              onPress={() => {
+                router.push('/(stack)/settings');
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={t('a11y.terms.back_settings')}
+            >
+              <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+                {t('terms.back_settings')}
+              </Text>
             </Pressable>
           </View>
         </GlassCard>

@@ -43,7 +43,11 @@ export const mapSessionToDashboardCard = (
   const modeLabel = session.museumMode ? 'Guided mode' : 'Standard mode';
   // Skip museumName from subtitle when it's already the title (prevents duplication)
   const showMuseumInSubtitle = session.museumName && session.museumName !== session.title;
-  const parts = [modeLabel, showMuseumInSubtitle ? session.museumName : null, session.locale].filter(Boolean);
+  const parts = [
+    modeLabel,
+    showMuseumInSubtitle ? session.museumName : null,
+    session.locale,
+  ].filter(Boolean);
   const subtitle = parts.join(' • ');
   const timeSource = session.preview?.createdAt ?? session.updatedAt;
 

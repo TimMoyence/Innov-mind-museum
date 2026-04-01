@@ -14,19 +14,25 @@ interface UseMessageActionsOptions {
 export const useMessageActions = ({ onReport }: UseMessageActionsOptions) => {
   const { t } = useTranslation();
 
-  const copyText = useCallback(async (message: ChatUiMessage) => {
-    if (!message.text) return;
-    await Clipboard.setStringAsync(message.text);
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert(t('chat.copied_title'), t('chat.copied_body'));
-  }, [t]);
+  const copyText = useCallback(
+    async (message: ChatUiMessage) => {
+      if (!message.text) return;
+      await Clipboard.setStringAsync(message.text);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert(t('chat.copied_title'), t('chat.copied_body'));
+    },
+    [t],
+  );
 
-  const shareText = useCallback(async (message: ChatUiMessage) => {
-    if (!message.text) return;
-    const footer = t('chat.share_footer');
-    const shareBody = `${message.text}\n\n${footer}`;
-    await Share.share({ message: shareBody });
-  }, [t]);
+  const shareText = useCallback(
+    async (message: ChatUiMessage) => {
+      if (!message.text) return;
+      const footer = t('chat.share_footer');
+      const shareBody = `${message.text}\n\n${footer}`;
+      await Share.share({ message: shareBody });
+    },
+    [t],
+  );
 
   const reportMessage = useCallback(
     (messageId: string) => {

@@ -26,12 +26,10 @@ export const ConnectivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
         isInternetReachable: netState.isInternetReachable,
       });
     });
-    return () => { unsubscribe(); };
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
-  return (
-    <ConnectivityContext.Provider value={state}>
-      {children}
-    </ConnectivityContext.Provider>
-  );
+  return <ConnectivityContext.Provider value={state}>{children}</ConnectivityContext.Provider>;
 };

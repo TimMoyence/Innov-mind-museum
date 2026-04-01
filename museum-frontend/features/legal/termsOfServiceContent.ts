@@ -39,7 +39,7 @@ export const TERMS_OF_SERVICE_CONTENT: TermsOfServiceContent = {
       title: '3. User Accounts',
       paragraphs: [
         'You must provide accurate information when creating an account. You are responsible for maintaining the security of your credentials.',
-        'You may sign in with email/password, Apple Sign-In, or Google Sign-In. Social sign-in accounts are subject to the respective provider\'s terms.',
+        "You may sign in with email/password, Apple Sign-In, or Google Sign-In. Social sign-in accounts are subject to the respective provider's terms.",
         'You may delete your account at any time from the Settings screen. Deletion is immediate and permanent.',
       ],
     },
@@ -47,7 +47,7 @@ export const TERMS_OF_SERVICE_CONTENT: TermsOfServiceContent = {
       id: 'acceptable-use',
       title: '4. Acceptable Use',
       paragraphs: [
-        'You agree not to use Musaium to: submit offensive, abusive, or illegal content; attempt to bypass content filters or safety guardrails; reverse-engineer the service; or access other users\' data.',
+        "You agree not to use Musaium to: submit offensive, abusive, or illegal content; attempt to bypass content filters or safety guardrails; reverse-engineer the service; or access other users' data.",
         'We reserve the right to suspend or terminate accounts that violate these terms.',
       ],
     },
@@ -91,9 +91,7 @@ export const TERMS_OF_SERVICE_CONTENT: TermsOfServiceContent = {
     {
       id: 'contact',
       title: '10. Contact',
-      paragraphs: [
-        'For questions about these terms, contact: tim.moyence@gmail.com.',
-      ],
+      paragraphs: ['For questions about these terms, contact: tim.moyence@gmail.com.'],
     },
   ],
 };

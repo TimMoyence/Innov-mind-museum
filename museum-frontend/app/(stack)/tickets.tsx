@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -23,24 +16,40 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 type TicketDTO = components['schemas']['TicketDTO'];
 type TicketStatus = TicketDTO['status'];
 
-const STATUS_OPTIONS: (TicketStatus | 'all')[] = ['all', 'open', 'in_progress', 'resolved', 'closed'];
+const STATUS_OPTIONS: (TicketStatus | 'all')[] = [
+  'all',
+  'open',
+  'in_progress',
+  'resolved',
+  'closed',
+];
 
 const PAGE_LIMIT = 15;
 
 const statusColor = (status: TicketStatus, theme: ReturnType<typeof useTheme>['theme']): string => {
   switch (status) {
-    case 'open': return '#3B82F6';
-    case 'in_progress': return '#F59E0B';
-    case 'resolved': return theme.success;
-    case 'closed': return theme.textSecondary;
+    case 'open':
+      return '#3B82F6';
+    case 'in_progress':
+      return '#F59E0B';
+    case 'resolved':
+      return theme.success;
+    case 'closed':
+      return theme.textSecondary;
   }
 };
 
-const priorityColor = (priority: TicketDTO['priority'], theme: ReturnType<typeof useTheme>['theme']): string => {
+const priorityColor = (
+  priority: TicketDTO['priority'],
+  theme: ReturnType<typeof useTheme>['theme'],
+): string => {
   switch (priority) {
-    case 'low': return theme.textSecondary;
-    case 'medium': return '#F59E0B';
-    case 'high': return theme.danger;
+    case 'low':
+      return theme.textSecondary;
+    case 'medium':
+      return '#F59E0B';
+    case 'high':
+      return theme.danger;
   }
 };
 
@@ -65,37 +74,40 @@ export default function TicketsScreen() {
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
 
-  const loadTickets = useCallback(async (requestedPage: number, isRefresh = false) => {
-    if (isRefresh) {
-      setIsRefreshing(true);
-    } else if (requestedPage === 1) {
-      setIsLoading(true);
-    }
-    setError(null);
+  const loadTickets = useCallback(
+    async (requestedPage: number, isRefresh = false) => {
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else if (requestedPage === 1) {
+        setIsLoading(true);
+      }
+      setError(null);
 
-    try {
-      const response = await ticketApi.listTickets({
-        page: requestedPage,
-        limit: PAGE_LIMIT,
-        status: statusFilter === 'all' ? undefined : statusFilter,
-      });
-      if (requestedPage === 1) {
-        setTickets(response.data);
-      } else {
-        setTickets((prev) => [...prev, ...response.data]);
+      try {
+        const response = await ticketApi.listTickets({
+          page: requestedPage,
+          limit: PAGE_LIMIT,
+          status: statusFilter === 'all' ? undefined : statusFilter,
+        });
+        if (requestedPage === 1) {
+          setTickets(response.data);
+        } else {
+          setTickets((prev) => [...prev, ...response.data]);
+        }
+        setPage(response.page);
+        setTotalPages(response.totalPages);
+      } catch (loadError) {
+        setError(getErrorMessage(loadError));
+        if (requestedPage === 1) {
+          setTickets([]);
+        }
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
       }
-      setPage(response.page);
-      setTotalPages(response.totalPages);
-    } catch (loadError) {
-      setError(getErrorMessage(loadError));
-      if (requestedPage === 1) {
-        setTickets([]);
-      }
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [statusFilter]);
+    },
+    [statusFilter],
+  );
 
   const loadMore = useCallback(async () => {
     if (page >= totalPages || isLoadingMoreRef.current) return;
@@ -128,22 +140,30 @@ export default function TicketsScreen() {
     setPage(1);
   }, []);
 
-  const statusLabel = useCallback((s: TicketStatus | 'all'): string => {
-    if (s === 'all') return t('tickets.status');
-    const map: Record<TicketStatus, string> = {
-      open: t('tickets.statusOpen'),
-      in_progress: t('tickets.statusInProgress'),
-      resolved: t('tickets.statusResolved'),
-      closed: t('tickets.statusClosed'),
-    };
-    return map[s];
-  }, [t]);
+  const statusLabel = useCallback(
+    (s: TicketStatus | 'all'): string => {
+      if (s === 'all') return t('tickets.status');
+      const map: Record<TicketStatus, string> = {
+        open: t('tickets.statusOpen'),
+        in_progress: t('tickets.statusInProgress'),
+        resolved: t('tickets.statusResolved'),
+        closed: t('tickets.statusClosed'),
+      };
+      return map[s];
+    },
+    [t],
+  );
 
   const renderTicketItem = useCallback(
     ({ item }: { item: TicketDTO }) => (
       <Pressable
-        style={[styles.card, { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground }]}
-        onPress={() => { router.push({ pathname: '/(stack)/ticket-detail', params: { ticketId: item.id } }); }}
+        style={[
+          styles.card,
+          { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground },
+        ]}
+        onPress={() => {
+          router.push({ pathname: '/(stack)/ticket-detail', params: { ticketId: item.id } });
+        }}
         accessibilityRole="button"
         accessibilityLabel={item.subject}
       >
@@ -159,7 +179,9 @@ export default function TicketsScreen() {
           </View>
         </View>
         <View style={styles.metaRow}>
-          <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>{formatDate(item.createdAt)}</Text>
+          <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>
+            {formatDate(item.createdAt)}
+          </Text>
           {item.messageCount !== undefined && (
             <Text style={[styles.cardMeta, { color: theme.primary }]}>
               {t('tickets.messages')}: {String(item.messageCount)}
@@ -172,7 +194,10 @@ export default function TicketsScreen() {
   );
 
   return (
-    <LiquidScreen background={pickMuseumBackground(3)} contentStyle={[styles.screen, { paddingTop: insets.top + 12 }]}>
+    <LiquidScreen
+      background={pickMuseumBackground(3)}
+      contentStyle={[styles.screen, { paddingTop: insets.top + 12 }]}
+    >
       <GlassCard style={styles.headerCard} intensity={60}>
         <Text style={[styles.title, { color: theme.textPrimary }]}>{t('tickets.title')}</Text>
       </GlassCard>
@@ -188,7 +213,9 @@ export default function TicketsScreen() {
                 borderColor: statusFilter === s ? theme.primary : theme.cardBorder,
               },
             ]}
-            onPress={() => { handleStatusFilter(s); }}
+            onPress={() => {
+              handleStatusFilter(s);
+            }}
             accessibilityRole="button"
           >
             <Text
@@ -203,15 +230,29 @@ export default function TicketsScreen() {
         ))}
       </View>
 
-      {error ? <ErrorNotice message={error} onDismiss={() => { setError(null); }} /> : null}
+      {error ? (
+        <ErrorNotice
+          message={error}
+          onDismiss={() => {
+            setError(null);
+          }}
+        />
+      ) : null}
 
       <Pressable
-        style={[styles.primaryButton, { backgroundColor: theme.primary, shadowColor: theme.primary }]}
-        onPress={() => { router.push('/(stack)/create-ticket'); }}
+        style={[
+          styles.primaryButton,
+          { backgroundColor: theme.primary, shadowColor: theme.primary },
+        ]}
+        onPress={() => {
+          router.push('/(stack)/create-ticket');
+        }}
         accessibilityRole="button"
         accessibilityLabel={t('tickets.create')}
       >
-        <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>{t('tickets.create')}</Text>
+        <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
+          {t('tickets.create')}
+        </Text>
       </Pressable>
 
       {isLoading ? (
@@ -235,14 +276,22 @@ export default function TicketsScreen() {
           }
           ListEmptyComponent={
             <GlassCard style={styles.emptyState} intensity={48}>
-              <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>{t('tickets.noTickets')}</Text>
-              <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>{t('tickets.noTicketsDesc')}</Text>
+              <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>
+                {t('tickets.noTickets')}
+              </Text>
+              <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+                {t('tickets.noTicketsDesc')}
+              </Text>
               <Pressable
                 style={[styles.emptyButton, { backgroundColor: theme.primary }]}
-                onPress={() => { router.push('/(stack)/create-ticket'); }}
+                onPress={() => {
+                  router.push('/(stack)/create-ticket');
+                }}
                 accessibilityRole="button"
               >
-                <Text style={[styles.emptyButtonText, { color: theme.primaryContrast }]}>{t('tickets.createFirst')}</Text>
+                <Text style={[styles.emptyButtonText, { color: theme.primaryContrast }]}>
+                  {t('tickets.createFirst')}
+                </Text>
               </Pressable>
             </GlassCard>
           }

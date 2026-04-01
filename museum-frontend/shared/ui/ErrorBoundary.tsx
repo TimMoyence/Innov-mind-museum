@@ -58,7 +58,9 @@ export class ErrorBoundary extends Component<Props, State> {
           {i18n.t('error.boundaryTitle', { defaultValue: 'Something went wrong' })}
         </Text>
         <Text style={styles.subtitle}>
-          {i18n.t('error.boundarySubtitle', { defaultValue: 'The app encountered an unexpected error. Your data is safe.' })}
+          {i18n.t('error.boundarySubtitle', {
+            defaultValue: 'The app encountered an unexpected error. Your data is safe.',
+          })}
         </Text>
         <TouchableOpacity
           style={styles.button}

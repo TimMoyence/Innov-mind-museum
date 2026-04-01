@@ -1,13 +1,5 @@
 import { useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -26,9 +18,12 @@ const PRIORITIES: Priority[] = ['low', 'medium', 'high'];
 
 const priorityColor = (priority: Priority): string => {
   switch (priority) {
-    case 'low': return '#6B7280';
-    case 'medium': return '#F59E0B';
-    case 'high': return '#EF4444';
+    case 'low':
+      return '#6B7280';
+    case 'medium':
+      return '#F59E0B';
+    case 'high':
+      return '#EF4444';
   }
 };
 
@@ -64,7 +59,10 @@ export default function CreateTicketScreen() {
         priority,
       });
       Alert.alert(t('tickets.ticketCreated'));
-      router.replace({ pathname: '/(stack)/ticket-detail', params: { ticketId: response.ticket.id } });
+      router.replace({
+        pathname: '/(stack)/ticket-detail',
+        params: { ticketId: response.ticket.id },
+      });
     } catch (submitError) {
       Alert.alert(t('common.error'), getErrorMessage(submitError));
     } finally {
@@ -73,14 +71,30 @@ export default function CreateTicketScreen() {
   };
 
   return (
-    <LiquidScreen background={pickMuseumBackground(3)} contentStyle={[styles.screen, { paddingTop: insets.top + 12 }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+    <LiquidScreen
+      background={pickMuseumBackground(3)}
+      contentStyle={[styles.screen, { paddingTop: insets.top + 12 }]}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <GlassCard style={styles.formCard} intensity={60}>
-          <Text style={[styles.title, { color: theme.textPrimary }]}>{t('tickets.createTicket')}</Text>
+          <Text style={[styles.title, { color: theme.textPrimary }]}>
+            {t('tickets.createTicket')}
+          </Text>
 
           <Text style={[styles.label, { color: theme.textSecondary }]}>{t('tickets.subject')}</Text>
           <TextInput
-            style={[styles.input, { color: theme.textPrimary, backgroundColor: theme.inputBackground, borderColor: theme.inputBorder }]}
+            style={[
+              styles.input,
+              {
+                color: theme.textPrimary,
+                backgroundColor: theme.inputBackground,
+                borderColor: theme.inputBorder,
+              },
+            ]}
             value={subject}
             onChangeText={setSubject}
             placeholder={t('tickets.subjectPlaceholder')}
@@ -89,9 +103,19 @@ export default function CreateTicketScreen() {
             editable={!isSubmitting}
           />
 
-          <Text style={[styles.label, { color: theme.textSecondary }]}>{t('tickets.description')}</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>
+            {t('tickets.description')}
+          </Text>
           <TextInput
-            style={[styles.input, styles.multilineInput, { color: theme.textPrimary, backgroundColor: theme.inputBackground, borderColor: theme.inputBorder }]}
+            style={[
+              styles.input,
+              styles.multilineInput,
+              {
+                color: theme.textPrimary,
+                backgroundColor: theme.inputBackground,
+                borderColor: theme.inputBorder,
+              },
+            ]}
             value={description}
             onChangeText={setDescription}
             placeholder={t('tickets.descriptionPlaceholder')}
@@ -101,7 +125,9 @@ export default function CreateTicketScreen() {
             editable={!isSubmitting}
           />
 
-          <Text style={[styles.label, { color: theme.textSecondary }]}>{t('tickets.priority')}</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>
+            {t('tickets.priority')}
+          </Text>
           <View style={styles.priorityRow}>
             {PRIORITIES.map((p) => (
               <Pressable
@@ -113,7 +139,9 @@ export default function CreateTicketScreen() {
                     borderColor: priority === p ? priorityColor(p) : theme.cardBorder,
                   },
                 ]}
-                onPress={() => { setPriority(p); }}
+                onPress={() => {
+                  setPriority(p);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel={priorityLabel(p)}
               >

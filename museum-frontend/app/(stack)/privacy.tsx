@@ -27,10 +27,29 @@ function MetaRow({ label, value }: MetaItem) {
     <View style={styles.metaRow}>
       <Text style={[styles.metaLabel, { color: theme.textPrimary }]}>{label}</Text>
       <View style={styles.metaValueWrap}>
-        <Text style={[styles.metaValue, { color: theme.textSecondary }, isPlaceholder && [styles.metaValuePlaceholder, { color: theme.warningText }]]}>
+        <Text
+          style={[
+            styles.metaValue,
+            { color: theme.textSecondary },
+            isPlaceholder && [styles.metaValuePlaceholder, { color: theme.warningText }],
+          ]}
+        >
           {value}
         </Text>
-        {isPlaceholder ? <Text style={[styles.pendingBadge, { color: theme.warningText, backgroundColor: theme.warningBackground, borderColor: theme.warningBackground }]}>{t('privacy.pending_badge')}</Text> : null}
+        {isPlaceholder ? (
+          <Text
+            style={[
+              styles.pendingBadge,
+              {
+                color: theme.warningText,
+                backgroundColor: theme.warningBackground,
+                borderColor: theme.warningBackground,
+              },
+            ]}
+          >
+            {t('privacy.pending_badge')}
+          </Text>
+        ) : null}
       </View>
     </View>
   );
@@ -52,7 +71,9 @@ export default function PrivacyScreen() {
     [],
   );
 
-  const unresolvedMetaCount = metaItems.filter((item) => isPrivacyPlaceholderValue(item.value)).length;
+  const unresolvedMetaCount = metaItems.filter((item) =>
+    isPrivacyPlaceholderValue(item.value),
+  ).length;
   const hasReleaseWork = unresolvedMetaCount > 0;
 
   return (
@@ -64,19 +85,25 @@ export default function PrivacyScreen() {
               id: 'support',
               icon: 'headset-outline',
               label: t('privacy.menu.support'),
-              onPress: () => { router.push('/(stack)/support'); },
+              onPress: () => {
+                router.push('/(stack)/support');
+              },
             },
             {
               id: 'prefs',
               icon: 'options-outline',
               label: t('privacy.menu.preferences'),
-              onPress: () => { router.push('/(stack)/preferences'); },
+              onPress: () => {
+                router.push('/(stack)/preferences');
+              },
             },
             {
               id: 'settings',
               icon: 'settings-outline',
               label: t('privacy.menu.settings'),
-              onPress: () => { router.push('/(stack)/settings'); },
+              onPress: () => {
+                router.push('/(stack)/settings');
+              },
             },
           ]}
         />
@@ -85,10 +112,32 @@ export default function PrivacyScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <GlassCard style={styles.heroCard} intensity={60}>
           <View style={styles.heroHeader}>
-            <Text style={[styles.title, { color: theme.textPrimary }]}>{PRIVACY_POLICY_CONTENT.title}</Text>
-            <View style={[styles.statusPill, hasReleaseWork ? { backgroundColor: theme.warningBackground, borderColor: theme.warningBackground } : { backgroundColor: theme.successBackground, borderColor: theme.successBackground }]}>
-              <Text style={[styles.statusPillText, { color: hasReleaseWork ? theme.warningText : theme.success }]}>
-                {hasReleaseWork ? t('privacy.pending_count', { count: unresolvedMetaCount }) : t('privacy.status_ready')}
+            <Text style={[styles.title, { color: theme.textPrimary }]}>
+              {PRIVACY_POLICY_CONTENT.title}
+            </Text>
+            <View
+              style={[
+                styles.statusPill,
+                hasReleaseWork
+                  ? {
+                      backgroundColor: theme.warningBackground,
+                      borderColor: theme.warningBackground,
+                    }
+                  : {
+                      backgroundColor: theme.successBackground,
+                      borderColor: theme.successBackground,
+                    },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusPillText,
+                  { color: hasReleaseWork ? theme.warningText : theme.success },
+                ]}
+              >
+                {hasReleaseWork
+                  ? t('privacy.pending_count', { count: unresolvedMetaCount })
+                  : t('privacy.status_ready')}
               </Text>
             </View>
           </View>
@@ -105,19 +154,33 @@ export default function PrivacyScreen() {
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={54}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('privacy.quick_facts')}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
+            {t('privacy.quick_facts')}
+          </Text>
           <View style={styles.quickFactsList}>
             {PRIVACY_POLICY_CONTENT.quickFacts.map((fact) => (
-              <View key={fact.label} style={[styles.quickFactRow, { borderColor: theme.cardBorder, backgroundColor: theme.surface }]}>
-                <Text style={[styles.quickFactLabel, { color: theme.textPrimary }]}>{fact.label}</Text>
-                <Text style={[styles.quickFactValue, { color: theme.textSecondary }]}>{fact.value}</Text>
+              <View
+                key={fact.label}
+                style={[
+                  styles.quickFactRow,
+                  { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+                ]}
+              >
+                <Text style={[styles.quickFactLabel, { color: theme.textPrimary }]}>
+                  {fact.label}
+                </Text>
+                <Text style={[styles.quickFactValue, { color: theme.textSecondary }]}>
+                  {fact.value}
+                </Text>
               </View>
             ))}
           </View>
         </GlassCard>
 
         <GlassCard style={styles.card} intensity={54}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('privacy.gdpr_rights')}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
+            {t('privacy.gdpr_rights')}
+          </Text>
           <View style={styles.bulletGroup}>
             {PRIVACY_POLICY_CONTENT.rightsSummary.map((item) => (
               <Text key={item} style={[styles.bulletText, { color: theme.textSecondary }]}>
@@ -128,8 +191,13 @@ export default function PrivacyScreen() {
         </GlassCard>
 
         {hasReleaseWork ? (
-          <GlassCard style={[styles.warningCard, { borderColor: theme.warningBackground }]} intensity={58}>
-            <Text style={[styles.warningTitle, { color: theme.warningText }]}>{t('privacy.prerelease_title')}</Text>
+          <GlassCard
+            style={[styles.warningCard, { borderColor: theme.warningBackground }]}
+            intensity={58}
+          >
+            <Text style={[styles.warningTitle, { color: theme.warningText }]}>
+              {t('privacy.prerelease_title')}
+            </Text>
             <Text style={[styles.warningText, { color: theme.warningText }]}>
               {t('privacy.prerelease_text')}
             </Text>
@@ -144,10 +212,15 @@ export default function PrivacyScreen() {
         ) : null}
 
         <GlassCard style={styles.card} intensity={52}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('privacy.policy_contents')}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
+            {t('privacy.policy_contents')}
+          </Text>
           <View style={styles.sectionIndex}>
             {PRIVACY_POLICY_CONTENT.sections.map((section) => (
-              <Text key={section.id} style={[styles.sectionIndexItem, { color: theme.textSecondary }]}>
+              <Text
+                key={section.id}
+                style={[styles.sectionIndexItem, { color: theme.textSecondary }]}
+              >
                 • {section.title}
               </Text>
             ))}
@@ -159,7 +232,10 @@ export default function PrivacyScreen() {
             <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{section.title}</Text>
             <View style={styles.paragraphGroup}>
               {section.paragraphs.map((paragraph, index) => (
-                <Text key={`${section.id}-${String(index)}`} style={[styles.paragraph, { color: theme.textSecondary }]}>
+                <Text
+                  key={`${section.id}-${String(index)}`}
+                  style={[styles.paragraph, { color: theme.textSecondary }]}
+                >
                   {paragraph}
                 </Text>
               ))}
@@ -168,16 +244,39 @@ export default function PrivacyScreen() {
         ))}
 
         <GlassCard style={styles.ctaCard} intensity={54}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('privacy.request_title')}</Text>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
+            {t('privacy.request_title')}
+          </Text>
           <Text style={[styles.paragraph, { color: theme.textSecondary }]}>
             {t('privacy.request_text')}
           </Text>
           <View style={styles.ctaRow}>
-            <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => { router.push('/(stack)/support'); }} accessibilityRole="button" accessibilityLabel={t('a11y.privacy.open_support')}>
-              <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>{t('privacy.open_support')}</Text>
+            <Pressable
+              style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+              onPress={() => {
+                router.push('/(stack)/support');
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={t('a11y.privacy.open_support')}
+            >
+              <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
+                {t('privacy.open_support')}
+              </Text>
             </Pressable>
-            <Pressable style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]} onPress={() => { router.push('/(stack)/settings'); }} accessibilityRole="button" accessibilityLabel={t('a11y.privacy.back_settings')}>
-              <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('privacy.back_settings')}</Text>
+            <Pressable
+              style={[
+                styles.secondaryButton,
+                { borderColor: theme.inputBorder, backgroundColor: theme.overlay },
+              ]}
+              onPress={() => {
+                router.push('/(stack)/settings');
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={t('a11y.privacy.back_settings')}
+            >
+              <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+                {t('privacy.back_settings')}
+              </Text>
             </Pressable>
           </View>
         </GlassCard>

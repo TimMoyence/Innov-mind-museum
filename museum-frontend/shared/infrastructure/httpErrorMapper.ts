@@ -152,10 +152,7 @@ export const mapAxiosError = (error: unknown): AppError & Error => {
   }
 
   if (status === 403) {
-    if (
-      apiErrorCode === 'FORBIDDEN' &&
-      apiErrorMessage.includes('invalid token')
-    ) {
+    if (apiErrorCode === 'FORBIDDEN' && apiErrorMessage.includes('invalid token')) {
       return createAppError({
         kind: 'Unauthorized',
         message: 'Authentication required',

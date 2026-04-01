@@ -8,7 +8,12 @@ export {
   type GuideLevel,
   type RuntimeSettings,
 } from './runtimeSettings.pure';
-import { defaults, normalizeGuideLevel, type GuideLevel, type RuntimeSettings } from './runtimeSettings.pure';
+import {
+  defaults,
+  normalizeGuideLevel,
+  type GuideLevel,
+  type RuntimeSettings,
+} from './runtimeSettings.pure';
 
 const DEFAULT_LOCALE_KEY = 'runtime.defaultLocale';
 const DEFAULT_MUSEUM_MODE_KEY = 'runtime.defaultMuseumMode';
@@ -51,9 +56,7 @@ export const loadRuntimeSettings = async (): Promise<RuntimeSettings> => {
   return {
     defaultLocale: defaultLocale ?? defaults.defaultLocale,
     defaultMuseumMode:
-      defaultMuseumMode === null
-        ? defaults.defaultMuseumMode
-        : defaultMuseumMode === 'true',
+      defaultMuseumMode === null ? defaults.defaultMuseumMode : defaultMuseumMode === 'true',
     guideLevel: normalizeGuideLevel(guideLevel),
   };
 };

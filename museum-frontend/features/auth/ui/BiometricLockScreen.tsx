@@ -21,9 +21,7 @@ export const BiometricLockScreen = ({
   return (
     <View style={[styles.container, { backgroundColor: theme.pageGradient[0] }]}>
       <Ionicons name="lock-closed-outline" size={64} color={theme.primary} />
-      <Text style={[styles.title, { color: theme.textPrimary }]}>
-        {t('biometric.lock_title')}
-      </Text>
+      <Text style={[styles.title, { color: theme.textPrimary }]}>{t('biometric.lock_title')}</Text>
       <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
         {t('biometric.lock_subtitle')}
       </Text>
@@ -35,15 +33,13 @@ export const BiometricLockScreen = ({
         accessibilityLabel={t('biometric.unlock')}
       >
         <Text style={[styles.buttonText, { color: theme.primaryContrast }]}>
-          {failed
-            ? t('biometric.retry')
-            : `${t('biometric.unlock')} ${biometricLabel}`}
+          {failed ? t('biometric.retry') : `${t('biometric.unlock')} ${biometricLabel}`}
         </Text>
       </Pressable>
 
-      {failed ? <Text style={[styles.failedText, { color: theme.error }]}>
-          {t('biometric.failed')}
-        </Text> : null}
+      {failed ? (
+        <Text style={[styles.failedText, { color: theme.error }]}>{t('biometric.failed')}</Text>
+      ) : null}
     </View>
   );
 };

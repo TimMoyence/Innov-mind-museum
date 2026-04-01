@@ -75,7 +75,9 @@ export default function DiscoverScreen() {
               id: 'saved',
               icon: 'grid-outline',
               label: t('discover.menu.dashboard'),
-              onPress: () => { router.push('/(tabs)/conversations'); },
+              onPress: () => {
+                router.push('/(tabs)/conversations');
+              },
             },
           ]}
         />
@@ -87,12 +89,25 @@ export default function DiscoverScreen() {
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
             {t('discover.subtitle')}
           </Text>
-          {actionStatus ? <Text style={[styles.statusLine, { color: theme.primary }]}>{actionStatus}</Text> : null}
-          {error ? <ErrorNotice message={error} onDismiss={() => { setError(null); }} /> : null}
+          {actionStatus ? (
+            <Text style={[styles.statusLine, { color: theme.primary }]}>{actionStatus}</Text>
+          ) : null}
+          {error ? (
+            <ErrorNotice
+              message={error}
+              onDismiss={() => {
+                setError(null);
+              }}
+            />
+          ) : null}
         </GlassCard>
 
         <Pressable
-          style={[styles.actionCard, styles.primaryActionCard, { backgroundColor: theme.userBubble, borderColor: theme.userBubbleBorder }]}
+          style={[
+            styles.actionCard,
+            styles.primaryActionCard,
+            { backgroundColor: theme.userBubble, borderColor: theme.userBubbleBorder },
+          ]}
           onPress={() => void startConversation('camera')}
           disabled={isCreating}
           accessibilityRole="button"
@@ -100,57 +115,90 @@ export default function DiscoverScreen() {
           accessibilityHint={t('a11y.discover.photo_card_hint')}
           accessibilityState={{ disabled: isCreating }}
         >
-          <Text style={[styles.actionTitle, { color: theme.primaryContrast }]}>{t('discover.photo_title')}</Text>
+          <Text style={[styles.actionTitle, { color: theme.primaryContrast }]}>
+            {t('discover.photo_title')}
+          </Text>
           <Text style={[styles.actionText, { color: theme.primaryContrast }]}>
             {t('discover.photo_desc')}
           </Text>
-          {isCreating ? <ActivityIndicator color={theme.primaryContrast} /> : <Text style={[styles.actionCta, { color: theme.primaryContrast }]}>{t('discover.open_lens')}</Text>}
+          {isCreating ? (
+            <ActivityIndicator color={theme.primaryContrast} />
+          ) : (
+            <Text style={[styles.actionCta, { color: theme.primaryContrast }]}>
+              {t('discover.open_lens')}
+            </Text>
+          )}
         </Pressable>
 
         <GlassCard style={styles.actionGlassCard} intensity={56}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('discover.voice_title')}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
+            {t('discover.voice_title')}
+          </Text>
           <Text style={[styles.cardText, { color: theme.textSecondary }]}>
             {t('discover.voice_desc')}
           </Text>
           <Pressable
-            style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]}
+            style={[
+              styles.secondaryButton,
+              { borderColor: theme.inputBorder, backgroundColor: theme.overlay },
+            ]}
             onPress={() => void startConversation('audio')}
             disabled={isCreating}
             accessibilityRole="button"
             accessibilityLabel={t('a11y.discover.voice')}
             accessibilityState={{ disabled: isCreating }}
           >
-            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('discover.start_audio')}</Text>
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+              {t('discover.start_audio')}
+            </Text>
           </Pressable>
         </GlassCard>
 
         <GlassCard style={styles.actionGlassCard} intensity={54}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('discover.continue_title')}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
+            {t('discover.continue_title')}
+          </Text>
           <Text style={[styles.cardText, { color: theme.textSecondary }]}>
             {t('discover.continue_desc')}
           </Text>
           <Pressable
-            style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]}
-            onPress={() => { router.push('/(tabs)/conversations'); }}
+            style={[
+              styles.secondaryButton,
+              { borderColor: theme.inputBorder, backgroundColor: theme.overlay },
+            ]}
+            onPress={() => {
+              router.push('/(tabs)/conversations');
+            }}
             accessibilityRole="button"
             accessibilityLabel={t('a11y.discover.dashboard')}
           >
-            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('discover.open_dashboard')}</Text>
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+              {t('discover.open_dashboard')}
+            </Text>
           </Pressable>
         </GlassCard>
 
         <GlassCard style={styles.actionGlassCard} intensity={54}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('discover.guided_title')}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
+            {t('discover.guided_title')}
+          </Text>
           <Text style={[styles.cardText, { color: theme.textSecondary }]}>
             {t('discover.guided_desc')}
           </Text>
           <Pressable
-            style={[styles.secondaryButton, { borderColor: theme.inputBorder, backgroundColor: theme.overlay }]}
-            onPress={() => { router.push('/(stack)/guided-museum-mode'); }}
+            style={[
+              styles.secondaryButton,
+              { borderColor: theme.inputBorder, backgroundColor: theme.overlay },
+            ]}
+            onPress={() => {
+              router.push('/(stack)/guided-museum-mode');
+            }}
             accessibilityRole="button"
             accessibilityLabel={t('a11y.discover.guided')}
           >
-            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('discover.open_guided')}</Text>
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+              {t('discover.open_guided')}
+            </Text>
           </Pressable>
         </GlassCard>
       </ScrollView>

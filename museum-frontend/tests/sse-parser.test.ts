@@ -58,8 +58,7 @@ describe('parseSseChunk', () => {
   });
 
   it('parses error event', () => {
-    const buffer =
-      'event: error\ndata: {"code":"RATE_LIMIT","message":"Too many requests"}\n\n';
+    const buffer = 'event: error\ndata: {"code":"RATE_LIMIT","message":"Too many requests"}\n\n';
 
     const { events, remainder } = parseSseChunk(buffer);
 
@@ -89,8 +88,7 @@ describe('parseSseChunk', () => {
 
   it('skips malformed JSON data lines', () => {
     const buffer =
-      'event: token\ndata: {not valid json}\n\n' +
-      'event: token\ndata: {"t":"valid"}\n\n';
+      'event: token\ndata: {not valid json}\n\n' + 'event: token\ndata: {"t":"valid"}\n\n';
 
     const { events, remainder } = parseSseChunk(buffer);
 
