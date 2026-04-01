@@ -85,6 +85,33 @@ describe('StreamBuffer', () => {
       buf.destroy();
     });
 
+    it('fail-open: releases buffer when classifier times out', async () => {
+      const released: string[] = [];
+      const classifier = {
+        // Never resolves — simulates a hung classifier
+        isArtRelated: jest.fn().mockReturnValue(new Promise(() => {})),
+      };
+      const buf = new StreamBuffer({
+        classifier,
+        tokenThreshold: 2,
+        releaseIntervalMs: 10,
+        classifierTimeoutMs: 100,
+      });
+      buf.onRelease((t) => released.push(t));
+
+      buf.push('a');
+      buf.push('b');
+
+      // Advance past classifier timeout
+      jest.advanceTimersByTime(100);
+      await buf.awaitPhase1();
+
+      jest.advanceTimersByTime(50);
+      expect(released.length).toBeGreaterThan(0);
+
+      buf.destroy();
+    });
+
     it('fail-open: releases buffer when classifier throws', async () => {
       const released: string[] = [];
       const classifier = {

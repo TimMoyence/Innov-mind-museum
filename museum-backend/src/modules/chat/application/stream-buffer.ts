@@ -194,10 +194,12 @@ export class StreamBuffer {
     this.classifierRunning = true;
     const text = this.queue.join('');
 
+    let timeoutHandle: ReturnType<typeof setTimeout>;
+
     const classifierResult = Promise.race([
       this.classifier.isArtRelated(text),
       new Promise<boolean>((_resolve, reject) => {
-        setTimeout(() => {
+        timeoutHandle = setTimeout(() => {
           reject(new Error('classifier_timeout'));
         }, this.classifierTimeoutMs);
       }),
@@ -221,6 +223,7 @@ export class StreamBuffer {
         }
       })
       .finally(() => {
+        clearTimeout(timeoutHandle);
         this.classifierRunning = false;
       });
   }
