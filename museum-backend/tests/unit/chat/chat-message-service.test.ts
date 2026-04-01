@@ -616,30 +616,32 @@ describe('ChatMessageService', () => {
       ).rejects.toThrow('Request aborted');
     });
 
-    it('throws when signal aborts during streaming', async () => {
+    it('stops releasing tokens when signal aborts during streaming', async () => {
       const orchestrator = makeOrchestrator();
       const controller = new AbortController();
 
       orchestrator.generateStream.mockImplementation(async (_input, onChunk) => {
         onChunk('First chunk about museum ');
         controller.abort();
-        onChunk('Second chunk '); // this should throw
+        onChunk('Second chunk ');
         return makeArtOutput();
       });
       const { service } = buildService({ orchestrator });
 
-      await expect(
-        service.postMessageStream(
-          SESSION_ID,
-          { text: 'Tell me about art' },
-          {
-            onToken: () => {},
-            requestId: 'req-1',
-            currentUserId: USER_ID,
-            signal: controller.signal,
-          },
-        ),
-      ).rejects.toThrow('Client disconnected');
+      const tokens: string[] = [];
+      const result = await service.postMessageStream(
+        SESSION_ID,
+        { text: 'Tell me about art' },
+        {
+          onToken: (text) => tokens.push(text),
+          requestId: 'req-1',
+          currentUserId: USER_ID,
+          signal: controller.signal,
+        },
+      );
+
+      // Buffer handles abort gracefully: stops draining, completes the service call
+      expect(result.message.role).toBe('assistant');
     });
 
     it('calls onGuardrail callback when output guardrail detects unsafe content', async () => {
