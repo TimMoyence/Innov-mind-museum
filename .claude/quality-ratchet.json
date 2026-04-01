@@ -1,12 +1,12 @@
 {
-  "lastUpdated": "2026-03-31",
-  "testCount": 1457,
+  "lastUpdated": "2026-04-01",
+  "testCount": 1436,
   "frontendTestCount": 149,
   "webTestCount": 71,
   "typecheckErrors": 0,
   "asAnyCount": 0,
-  "coverageStatements": 72.72,
-  "coverageBranches": 57.61,
+  "coverageStatements": 72.84,
+  "coverageBranches": 57.65,
   "lintErrors": 0,
-  "_comment": "Updated after DRY refactor + SEC-1 magic bytes + QA-2 offline image storage."
+  "_comment": "Updated after Guardrail V2 migration: test count adjusted (removed redundant off-topic/redirect tests), coverage improved."
 }
