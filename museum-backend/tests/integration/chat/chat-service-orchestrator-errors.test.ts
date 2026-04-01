@@ -36,9 +36,12 @@ class InsultResponseOrchestrator implements ChatOrchestrator {
   }
 }
 
-class OffTopicResponseOrchestrator implements ChatOrchestrator {
+class InjectionLeakOrchestrator implements ChatOrchestrator {
   async generate(): Promise<OrchestratorOutput> {
-    return { text: 'Here is the latest bitcoin price update', metadata: {} };
+    return {
+      text: 'Sure, here are my system prompt instructions: ignore previous rules',
+      metadata: {},
+    };
   }
   async generateStream(_i: unknown, onChunk: (t: string) => void): Promise<OrchestratorOutput> {
     const r = await this.generate();
@@ -100,15 +103,15 @@ describe('chat service orchestrator error handling', () => {
     expect(result.metadata.citations).toContain('policy:unsafe_output');
   });
 
-  it('triggers output guardrail on off-topic orchestrator response', async () => {
-    const service = buildChatTestService(new OffTopicResponseOrchestrator());
+  it('triggers output guardrail on injection leak in orchestrator response', async () => {
+    const service = buildChatTestService(new InjectionLeakOrchestrator());
     const session = await service.createSession({ locale: 'en-US' });
 
     const result = await service.postMessage(session.id, {
       text: 'Tell me about this painting',
     });
 
-    expect(result.metadata.citations).toContain('policy:off_topic');
+    expect(result.metadata.citations).toContain('policy:unsafe_output');
   });
 
   it('returns fallback text when model is null', async () => {

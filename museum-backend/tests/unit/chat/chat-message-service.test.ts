@@ -456,7 +456,7 @@ describe('ChatMessageService', () => {
   describe('output guardrail', () => {
     it('blocks unsafe LLM output and returns policy-cited refusal', async () => {
       const unsafeOutput: OrchestratorOutput = {
-        text: 'Here is the latest bitcoin trading advice',
+        text: 'You are a stupid idiot for asking that question',
         metadata: {},
       };
       const orchestrator = makeOrchestrator(unsafeOutput);
@@ -470,8 +470,8 @@ describe('ChatMessageService', () => {
       );
 
       // Output should be replaced by guardrail refusal
-      expect(result.message.text).not.toContain('bitcoin');
-      expect(result.metadata.citations).toContain('policy:off_topic');
+      expect(result.message.text).not.toContain('stupid');
+      expect(result.metadata.citations).toContain('policy:unsafe_output');
     });
 
     it('allows art-related LLM output through', async () => {
@@ -1096,7 +1096,7 @@ describe('ChatMessageService', () => {
 
     it('does not persist artwork match when output guardrail blocks', async () => {
       const unsafeOutput: OrchestratorOutput = {
-        text: 'Here is the latest bitcoin price',
+        text: 'You are a stupid idiot for asking that question',
         metadata: {
           detectedArtwork: { title: 'Should Not Appear' },
         },
@@ -1151,7 +1151,7 @@ describe('ChatMessageService', () => {
 
     it('does not include session updates when output guardrail blocks', async () => {
       const unsafeOutput: OrchestratorOutput = {
-        text: 'Here is the latest bitcoin price',
+        text: 'You are a stupid idiot for asking that question',
         metadata: {},
       };
       const orchestrator = makeOrchestrator(unsafeOutput);

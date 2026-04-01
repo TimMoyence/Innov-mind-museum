@@ -59,7 +59,7 @@ describe('chat api smoke (service integration)', () => {
     expect(list.page.nextCursor).toBeNull();
   });
 
-  it('blocks non-art prompts with a policy response', async () => {
+  it('blocks insults with a policy response', async () => {
     const chatService = buildChatTestService();
 
     const session = await chatService.createSession({
@@ -70,13 +70,13 @@ describe('chat api smoke (service integration)', () => {
 
     const response = await chatService.postMessage(
       session.id,
-      { text: 'What is the weather in Paris today?' },
+      { text: 'You are an idiot' },
       undefined,
       444,
     );
 
-    expect(response.message.text).toContain('only');
-    expect(response.metadata.citations).toContain('policy:off_topic');
+    expect(response.message.role).toBe('assistant');
+    expect(response.metadata.citations).toContain('policy:insult');
   });
 
   it('deletes only empty sessions', async () => {

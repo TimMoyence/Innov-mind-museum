@@ -47,9 +47,9 @@ describe('chat service audio', () => {
     expect(result.message.text.length).toBeGreaterThan(0);
   });
 
-  it('transcribed off-topic text goes through input guardrail', async () => {
+  it('transcribed insult text goes through input guardrail', async () => {
     const transcriber = new MockAudioTranscriber({
-      text: 'What is the price of bitcoin today?',
+      text: 'You are an idiot',
       model: 'whisper-1',
       provider: 'openai',
     });
@@ -60,7 +60,7 @@ describe('chat service audio', () => {
       audio: { base64: 'dGVzdA==', mimeType: 'audio/mp3', sizeBytes: 100 },
     });
 
-    expect(result.metadata.citations).toContain('policy:off_topic');
+    expect(result.metadata.citations).toContain('policy:insult');
   });
 
   it('session messages reflect transcribed text after audio message', async () => {
