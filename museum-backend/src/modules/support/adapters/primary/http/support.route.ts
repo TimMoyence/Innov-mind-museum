@@ -94,7 +94,7 @@ supportRouter.get(
   validateQuery(listTicketsQuerySchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { page, limit, status, priority } = req.query as unknown as {
+      const { page, limit, status, priority } = res.locals.validatedQuery as {
         page: number;
         limit: number;
         status?: string;

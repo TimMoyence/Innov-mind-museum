@@ -32,10 +32,14 @@ export const listUsersQuerySchema = paginationQuery.extend({
 export const auditLogsQuerySchema = paginationQuery.extend({
   actorId: z.coerce.number().int().optional(),
   action: z.string().optional(),
+  targetType: z.string().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
 });
 
 export const listReportsQuerySchema = paginationQuery.extend({
   status: z.enum(['pending', 'reviewed', 'dismissed']).optional(),
+  reason: z.string().optional(),
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
 });

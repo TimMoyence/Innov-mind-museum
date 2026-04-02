@@ -47,9 +47,9 @@ const handleGetDirectory = async (
 const buildHandleSearch = (
   searchMuseumsUseCase: ReturnType<typeof buildSearchMuseumsUseCase>,
 ): ((req: Request, res: Response, next: NextFunction) => Promise<void>) => {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  return async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { lat, lng, radius, q } = req.query as unknown as {
+      const { lat, lng, radius, q } = res.locals.validatedQuery as {
         lat?: number;
         lng?: number;
         radius?: number;
