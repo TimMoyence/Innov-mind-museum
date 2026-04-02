@@ -1889,3 +1889,53 @@ Apres l'audit R16 (81/100 CONDITIONAL GO, 28 mars), du travail de development a 
 2. **PE-023 cree** : Au demarrage /team, scanner git log pour commits non-trackes
 3. **5 recommendations R16 resolues** sans etre capturees — 3 jours de desynchronisation KB
 4. **Ratchet maintenu** malgre l'absence de gates — indicateur positif de maturite du code
+
+---
+
+## Hotfix — Express 5 + Map Drag + Dashboard UI (2026-04-02)
+
+> 3 bugs prod + tests de couverture. Commits: `b51bf46` a `c23a4f0` (4 commits)
+> Travail hors cycle /team, suivi de tests enterprise-grade.
+
+### Bug 1 — Express 5 `req.query` read-only crash (PROD 500)
+
+**Severite**: CRITICAL — `/api/museums/search` renvoyait 500 en production.
+
+**Cause racine**: `validateQuery` middleware assignait `req.query = result.data` — impossible en Express 5 ou `req.query` est un getter read-only.
+
+**Solution**: Stocker les donnees validees/coercees dans `res.locals.validatedQuery`. Mise a jour des 5 routes consommant le middleware (museum, review, support, admin x2). Ajout de `targetType` et `reason/dateFrom/dateTo` dans les schemas Zod admin.
+
+**Fichiers**: `validate-query.middleware.ts`, `museum.route.ts`, `review.route.ts`, `support.route.ts`, `admin.route.ts`, `admin.schemas.ts`
+
+### Bug 2 — Map Leaflet sans refresh au deplacement
+
+**Severite**: MEDIUM — Deplacer la carte ne relancait pas la recherche de musees.
+
+**Solution**: Ajout listener `dragend` dans le HTML Leaflet → postMessage `mapMoved` vers React Native. `MuseumMapView` recoit les nouvelles coords et les propage a `useMuseumDirectory`. Seuil 500m (haversine) pour ignorer le jitter GPS. `fitBounds` skip apres un pan utilisateur.
+
+**Fichiers**: `leafletHtml.ts`, `MuseumMapView.tsx`, `useMuseumDirectory.ts`, `museums.tsx`
+
+### Bug 3 — Bouton "Modifier" degage du menu dashboard
+
+**Severite**: LOW — Le bouton etait un element separe hors de la pill FloatingContextMenu.
+
+**Solution**: Integration comme 4eme action dans le `FloatingContextMenu` avec support `active` prop (highlight bleu). Suppression du bouton standalone.
+
+**Fichiers**: `ConversationsHeader.tsx`, `FloatingContextMenu.tsx`
+
+### Tests enterprise-grade (3 agents paralleles)
+
+| Test | Suite | Tests | Couverture |
+|------|-------|-------|------------|
+| `validate-query.test.ts` | Backend | 9 | Coercion, Express 5 Object.freeze, errors, defaults |
+| `useMuseumDirectory.test.ts` | Frontend | +2 | Seuil 500m jitter, null→coords transition |
+| `FloatingContextMenu.test.tsx` | Frontend | 6 | Active prop highlight, border, mixed |
+
+### Metriques
+
+| Metrique | Avant | Apres | Delta |
+|----------|:-----:|:-----:|:-----:|
+| Tests backend | 1436 | 1445+ | +9 |
+| Tests frontend | 328 | 422 | +94 |
+| Typecheck errors | 0 | 0 | 0 |
+| as any | 0 | 0 | 0 |
