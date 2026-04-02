@@ -733,4 +733,59 @@
 | R15       | 12      | 12     | 100%    | 1077 (+23)    | 161            |
 | Prod Hard | 22      | 22     | 100%    | 1433 (+356)   | 146            |
 | Chat UX   | 17      | 17     | 100%    | 1457 (+24)    | 146            |
-| **Total** | **243** | **242** | **99%** | **1457**      | **146**        |
+
+---
+
+## Hotfix — Express 5 + Map Drag + Dashboard UI (2026-04-02)
+
+> 3 bugs prod + 17 tests enterprise-grade. Commits: `b51bf46` a `c23a4f0`.
+
+### Backend
+
+- [x] HF-01: Fix `validateQuery` Express 5 req.query read-only crash (prod 500)
+- [x] HF-02: Add missing schema fields (`targetType`, `reason`, `dateFrom`, `dateTo`)
+
+### Frontend
+
+- [x] HF-03: Map Leaflet refresh on drag (dragend → re-fetch with 500m threshold)
+- [x] HF-04: Integrate edit button into FloatingContextMenu pill
+
+### Tests
+
+- [x] HF-05: validateQuery middleware — 9 tests (coercion, Express 5 compat, errors)
+- [x] HF-06: useMuseumDirectory — 2 tests (jitter suppression, null→coords)
+- [x] HF-07: FloatingContextMenu — 6 tests (active prop, borders, mixed state)
+
+### Verification
+
+- [x] Backend: tsc PASS, 1445+ tests
+- [x] Frontend: tsc PASS, 422 tests (41 suites)
+- [x] as any: 0, eslint-disable: 0 new
+
+---
+
+## Metriques globales (mise a jour 2026-04-02)
+
+| Sprint    | Taches  | Faites | %       | Tests backend | Tests frontend |
+| --------- | ------- | ------ | ------- | ------------- | -------------- |
+| S1        | 37      | 37     | 100%    | 212           | 8              |
+| S1.5      | 5       | 5      | 100%    | 217 (+5)      | 11 (+3)        |
+| S2        | 25      | 24     | 96%     | 360 (+93)     | 26 (+13)       |
+| S3        | 18      | 18     | 100%    | 360           | 26             |
+| Audit     | 11      | 11     | 100%    | 364 (+4)      | 29 (+3)        |
+| S4        | 16      | 16     | 100%    | 416 (+52)     | 29             |
+| S5        | 3       | 3      | 100%    | 530 (+114)    | 29             |
+| S6        | 5       | 5      | 100%    | 693 (+163)    | 87 (+58)       |
+| S7        | 4       | 4      | 100%    | 786 (+93)     | 87             |
+| S8        | 4       | 4      | 100%    | 913 (+127)    | 106 (+19)      |
+| Phase 0   | 8       | 8      | 100%    | 909 (-4)      | 106            |
+| W1        | 16      | 16     | 100%    | 941 (+32)     | 106            |
+| W2        | 13      | 13     | 100%    | 951 (+10)     | 106            |
+| Store Sub | 7       | 7      | 100%    | 951           | 106            |
+| Tech Polish | 12    | 12     | 100%    | 951           | 161 (+55)      |
+| V3 Sprints | 8      | 8      | 100%    | 1054 (+103)   | 161            |
+| R15       | 12      | 12     | 100%    | 1077 (+23)    | 161            |
+| Prod Hard | 22      | 22     | 100%    | 1433 (+356)   | 146            |
+| Chat UX   | 17      | 17     | 100%    | 1457 (+24)    | 146            |
+| Hotfix 04-02 | 7   | 7      | 100%    | 1445+ (+9)    | 422 (+94)      |
+| **Total** | **250** | **249** | **99%** | **1445+**     | **422**        |
