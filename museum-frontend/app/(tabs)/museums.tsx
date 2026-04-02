@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,12 +24,27 @@ export default function MuseumsScreen() {
   const { theme } = useTheme();
 
   const { latitude, longitude, status } = useLocation();
+
+  // When user pans the map, override GPS coords with the map center for searches.
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+
+  const effectiveLat = viewMode === 'map' && mapCenter ? mapCenter.lat : latitude;
+  const effectiveLng = viewMode === 'map' && mapCenter ? mapCenter.lng : longitude;
+
   const { museums, isLoading, searchQuery, setSearchQuery, refresh } = useMuseumDirectory(
-    latitude,
-    longitude,
+    effectiveLat,
+    effectiveLng,
   );
 
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+    if (mode === 'list') setMapCenter(null); // reset to GPS coords
+  }, []);
+
+  const handleMapMoved = useCallback((lat: number, lng: number) => {
+    setMapCenter({ lat, lng });
+  }, []);
 
   const handleMuseumPress = (museum: MuseumWithDistance) => {
     router.push({
@@ -62,7 +77,7 @@ export default function MuseumsScreen() {
           </Text>
         )}
         <View style={styles.toggleRow}>
-          <ViewModeToggle mode={viewMode} onToggle={setViewMode} />
+          <ViewModeToggle mode={viewMode} onToggle={handleViewModeChange} />
         </View>
       </GlassCard>
 
@@ -77,7 +92,12 @@ export default function MuseumsScreen() {
             onRefresh={refresh}
           />
         ) : (
-          <MuseumMapView museums={museums} userLatitude={latitude} userLongitude={longitude} />
+          <MuseumMapView
+            museums={museums}
+            userLatitude={latitude}
+            userLongitude={longitude}
+            onMapMoved={handleMapMoved}
+          />
         )}
       </View>
     </LiquidScreen>

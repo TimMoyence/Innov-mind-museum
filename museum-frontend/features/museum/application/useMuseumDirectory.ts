@@ -60,9 +60,8 @@ export const useMuseumDirectory = (
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [debouncedQuery, setDebouncedQuery] = useState('');
 
-  // Track whether we already attempted a fetch so we can re-fetch when
-  // coordinates become available after the initial directory load.
-  const hasLocationRef = useRef(false);
+  // Track last fetched coordinates to avoid re-fetching for tiny GPS fluctuations.
+  const lastFetchCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
 
   /** Fallback: fetch all museums from the directory endpoint and enrich client-side. */
   const fetchFromDirectory = useCallback(async (lat: number | null, lng: number | null) => {
@@ -116,14 +115,24 @@ export const useMuseumDirectory = (
     [fetchFromSearch, fetchFromDirectory],
   );
 
-  // Initial fetch + re-fetch when coordinates become available
+  // Fetch museums when coordinates change (initial load, GPS obtained, or map pan).
+  // Skips re-fetch if coordinates moved less than ~500 m to ignore GPS jitter.
   useEffect(() => {
-    const locationNowAvailable = userLatitude !== null && userLongitude !== null;
+    const hasCoords = userLatitude !== null && userLongitude !== null;
 
-    // Skip redundant fetches: only re-fetch if location just became
-    // available for the first time (upgrade from directory to search).
-    if (hasLocationRef.current && locationNowAvailable) return;
-    if (locationNowAvailable) hasLocationRef.current = true;
+    if (hasCoords && lastFetchCoordsRef.current) {
+      const dist = haversineDistance(
+        userLatitude,
+        userLongitude,
+        lastFetchCoordsRef.current.lat,
+        lastFetchCoordsRef.current.lng,
+      );
+      if (dist < 0.5) return; // < 500 m — skip
+    }
+
+    if (hasCoords) {
+      lastFetchCoordsRef.current = { lat: userLatitude, lng: userLongitude };
+    }
 
     void fetchMuseums(userLatitude, userLongitude);
   }, [userLatitude, userLongitude, fetchMuseums]);
