@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { BrandMark } from '@/shared/ui/BrandMark';
@@ -54,20 +54,15 @@ export const ConversationsHeader = ({
                 void onShareDashboard();
               },
             },
+            {
+              id: 'edit',
+              icon: editMode ? 'close-outline' : 'create-outline',
+              label: editMode ? t('common.cancel') : t('conversations.edit'),
+              onPress: onToggleEdit,
+              active: editMode,
+            },
           ]}
         />
-        <Pressable
-          style={[styles.editButton, { borderColor: editMode ? theme.primary : theme.glassBorder }]}
-          onPress={onToggleEdit}
-          accessibilityRole="button"
-          accessibilityLabel={t('conversations.edit')}
-        >
-          <Text
-            style={[styles.editButtonText, { color: editMode ? theme.primary : theme.textPrimary }]}
-          >
-            {editMode ? t('common.cancel') : t('conversations.edit')}
-          </Text>
-        </Pressable>
       </View>
 
       <GlassCard style={styles.headerCard} intensity={60}>
@@ -87,20 +82,8 @@ export const ConversationsHeader = ({
 
 const styles = StyleSheet.create({
   menuRow: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: 12,
-  },
-  editButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  editButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
   },
   headerCard: {
     paddingHorizontal: 16,
