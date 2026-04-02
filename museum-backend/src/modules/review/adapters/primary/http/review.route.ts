@@ -49,9 +49,9 @@ reviewRouter.post(
 reviewRouter.get(
   '/',
   validateQuery(listReviewsQuerySchema),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (_req: Request, res: Response, next: NextFunction) => {
     try {
-      const { page, limit } = req.query as unknown as { page: number; limit: number };
+      const { page, limit } = res.locals.validatedQuery as { page: number; limit: number };
 
       const result = await listApprovedReviewsUseCase.execute({
         page,

@@ -5,12 +5,14 @@ import type { z } from 'zod';
 
 /**
  * Express middleware factory that validates `req.query` against a Zod schema.
- * On success the parsed (and potentially transformed) data is merged back into `req.query`.
+ * On success the parsed (and potentially coerced) data is stored in `res.locals.validatedQuery`.
  * On failure a 400 `BAD_REQUEST` AppError is thrown.
+ *
+ * Note: Express 5 makes `req.query` read-only, so we use `res.locals` instead.
  */
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 export function validateQuery<T extends z.ZodType>(schema: T) {
-  return (req: Request, _res: Response, next: NextFunction): void => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req.query);
     if (!result.success) {
       const message = result.error.issues
@@ -18,7 +20,7 @@ export function validateQuery<T extends z.ZodType>(schema: T) {
         .join(', ');
       throw badRequest(message);
     }
-    req.query = result.data as typeof req.query;
+    res.locals.validatedQuery = result.data;
     next();
   };
 }

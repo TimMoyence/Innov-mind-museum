@@ -40,9 +40,9 @@ adminRouter.get(
   isAuthenticated,
   requireRole('admin', 'moderator'),
   validateQuery(listUsersQuerySchema),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (_req: Request, res: Response, next: NextFunction) => {
     try {
-      const { page, limit, search, role } = req.query as unknown as {
+      const { page, limit, search, role } = res.locals.validatedQuery as {
         page: number;
         limit: number;
         search?: string;
@@ -96,17 +96,18 @@ adminRouter.get(
   isAuthenticated,
   requireRole('admin', 'moderator'),
   validateQuery(auditLogsQuerySchema),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (_req: Request, res: Response, next: NextFunction) => {
     try {
-      const { page, limit, action, actorId, dateFrom, dateTo } = req.query as unknown as {
+      const { page, limit, action, actorId, dateFrom, dateTo, targetType } = res.locals
+        .validatedQuery as {
         page: number;
         limit: number;
         action?: string;
         actorId?: number;
         dateFrom?: string;
         dateTo?: string;
+        targetType?: string;
       };
-      const targetType = (req.query.targetType as string) || undefined;
 
       const result = await listAuditLogsUseCase.execute({
         action,
@@ -147,16 +148,16 @@ adminRouter.get(
   isAuthenticated,
   requireRole('admin', 'moderator'),
   validateQuery(listReportsQuerySchema),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (_req: Request, res: Response, next: NextFunction) => {
     try {
-      const { page, limit, status } = req.query as unknown as {
+      const { page, limit, status, reason, dateFrom, dateTo } = res.locals.validatedQuery as {
         page: number;
         limit: number;
         status?: 'pending' | 'reviewed' | 'dismissed';
+        reason?: string;
+        dateFrom?: string;
+        dateTo?: string;
       };
-      const reason = (req.query.reason as string) || undefined;
-      const dateFrom = (req.query.dateFrom as string) || undefined;
-      const dateTo = (req.query.dateTo as string) || undefined;
 
       const result = await listReportsUseCase.execute({
         status,
