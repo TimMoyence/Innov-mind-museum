@@ -12,6 +12,8 @@ export interface ContextMenuAction {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress?: () => void;
+  /** When true the button is visually highlighted (e.g. active toggle). */
+  active?: boolean;
 }
 
 interface FloatingContextMenuProps {
@@ -50,13 +52,27 @@ export const FloatingContextMenu = ({ actions }: FloatingContextMenuProps): JSX.
             }}
             style={[
               styles.menuAction,
-              { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+              {
+                borderColor: action.active ? theme.primary : theme.cardBorder,
+                backgroundColor: theme.surface,
+              },
             ]}
             accessibilityRole="button"
             accessibilityLabel={action.label}
           >
-            <Ionicons name={action.icon} size={16} color={theme.textPrimary} />
-            <Text style={[styles.menuLabel, { color: theme.textPrimary }]}>{action.label}</Text>
+            <Ionicons
+              name={action.icon}
+              size={16}
+              color={action.active ? theme.primary : theme.textPrimary}
+            />
+            <Text
+              style={[
+                styles.menuLabel,
+                { color: action.active ? theme.primary : theme.textPrimary },
+              ]}
+            >
+              {action.label}
+            </Text>
           </Pressable>
         ))}
       </View>
