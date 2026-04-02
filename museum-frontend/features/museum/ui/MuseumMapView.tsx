@@ -12,6 +12,7 @@ interface MuseumMapViewProps {
   museums: MuseumWithDistance[];
   userLatitude: number | null;
   userLongitude: number | null;
+  onMapMoved?: (lat: number, lng: number) => void;
 }
 
 interface WebViewOutboundMessage {
@@ -23,11 +24,17 @@ interface WebViewOutboundMessage {
  * Renders an interactive Leaflet map inside a WebView showing museum markers
  * and the user's current position.
  */
-export const MuseumMapView = ({ museums, userLatitude, userLongitude }: MuseumMapViewProps) => {
+export const MuseumMapView = ({
+  museums,
+  userLatitude,
+  userLongitude,
+  onMapMoved,
+}: MuseumMapViewProps) => {
   const { theme, isDark } = useTheme();
   const webViewRef = useRef<WebView>(null);
   const isMapReady = useRef(false);
   const messageQueue = useRef<object[]>([]);
+  const userPannedRef = useRef(false);
 
   /** Safely send a JSON message to the WebView, queuing if the map is not ready yet. */
   const sendMessage = useCallback((msg: object) => {
@@ -69,6 +76,12 @@ export const MuseumMapView = ({ museums, userLatitude, userLongitude }: MuseumMa
     if (userLatitude !== null && userLongitude !== null) {
       sendMessage({ type: 'setUserPosition', lat: userLatitude, lng: userLongitude });
       points.push([userLatitude, userLongitude]);
+    }
+
+    // Skip fitBounds after user drag so the map stays where the user panned.
+    if (userPannedRef.current) {
+      userPannedRef.current = false;
+      return;
     }
 
     if (points.length >= 2) {
@@ -114,6 +127,11 @@ export const MuseumMapView = ({ museums, userLatitude, userLongitude }: MuseumMa
         syncMapState();
       }
 
+      if (data.type === 'mapMoved') {
+        userPannedRef.current = true;
+        onMapMoved?.(data.lat as number, data.lng as number);
+      }
+
       if (data.type === 'markerClick') {
         const museum = museums.find((m) => m.id === data.id);
         if (museum) {
@@ -133,7 +151,7 @@ export const MuseumMapView = ({ museums, userLatitude, userLongitude }: MuseumMa
         }
       }
     },
-    [museums, flushQueue, syncMapState],
+    [museums, flushQueue, syncMapState, onMapMoved],
   );
 
   const html = buildLeafletHtml({ isDark });

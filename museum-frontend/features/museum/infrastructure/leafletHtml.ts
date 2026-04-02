@@ -138,6 +138,16 @@ export const buildLeafletHtml = ({ isDark }: LeafletHtmlOptions): string => {
         }
       }
 
+      /* Notify React Native when user drags the map to a new area. */
+      var dragDebounce = null;
+      map.on('dragend', function () {
+        clearTimeout(dragDebounce);
+        dragDebounce = setTimeout(function () {
+          var center = map.getCenter();
+          postMessage({ type: 'mapMoved', lat: center.lat, lng: center.lng });
+        }, 300);
+      });
+
       /* React Native sends messages via both window.postMessage and document event */
       document.addEventListener('message', handleMessage);
       window.addEventListener('message', handleMessage);
