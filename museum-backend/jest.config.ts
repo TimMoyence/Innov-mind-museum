@@ -16,13 +16,21 @@ const config: Config.InitialOptions = {
   },
   collectCoverage: true,
   coverageReporters: ['text-summary', 'lcov'],
-  coveragePathIgnorePatterns: ['/node_modules/', '/dist/', '/tests/'],
+  coveragePathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+    '/tests/',
+    'src/index\\.ts$',
+    'src/instrumentation\\.ts$',
+    'src/data/db/run-migrations\\.ts$',
+    'src/data/db/migrations/',
+  ],
   coverageThreshold: {
     global: {
-      statements: 71,
-      branches: 55,
-      functions: 62,
-      lines: 71,
+      statements: 85,
+      branches: 71,
+      functions: 79,
+      lines: 85,
     },
   },
 };
