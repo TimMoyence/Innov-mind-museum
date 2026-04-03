@@ -38,7 +38,7 @@ export function UsersPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-slate-900">Users</h1>
+      <h1 className="mb-6 text-2xl font-bold text-text-primary">Users</h1>
 
       {/* Filters */}
       <div className="mb-4 flex flex-wrap gap-3">
@@ -47,12 +47,12 @@ export function UsersPage() {
           placeholder="Search by name or email..."
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
-          className="w-72 rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-72 rounded-lg border border-primary-200 px-3 py-2 text-sm shadow-sm placeholder:text-text-placeholder focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
         />
         <select
           value={role}
           onChange={(e) => handleRoleFilter(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="rounded-lg border border-primary-200 px-3 py-2 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
         >
           {roles.map((r) => (
             <option key={r.value} value={r.value}>
@@ -74,27 +74,27 @@ export function UsersPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="px-4 py-3 font-semibold text-slate-600">Name</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">Email</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">Role</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">Status</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">Created</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">Last Login</th>
+              <tr className="border-b border-primary-100 bg-surface-elevated">
+                <th className="px-4 py-3 font-semibold text-text-secondary">Name</th>
+                <th className="px-4 py-3 font-semibold text-text-secondary">Email</th>
+                <th className="px-4 py-3 font-semibold text-text-secondary">Role</th>
+                <th className="px-4 py-3 font-semibold text-text-secondary">Status</th>
+                <th className="px-4 py-3 font-semibold text-text-secondary">Created</th>
+                <th className="px-4 py-3 font-semibold text-text-secondary">Last Login</th>
               </tr>
             </thead>
             <tbody>
               {isLoading && (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500">
-                    <div className="mx-auto h-6 w-6 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+                  <td colSpan={6} className="py-12 text-center text-text-muted">
+                    <div className="mx-auto h-6 w-6 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
                   </td>
                 </tr>
               )}
 
               {data?.data.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500">
+                  <td colSpan={6} className="py-12 text-center text-text-muted">
                     No users found.
                   </td>
                 </tr>
@@ -103,26 +103,26 @@ export function UsersPage() {
               {data?.data.map((user, i) => (
                 <tr
                   key={user.id}
-                  className={`border-b border-slate-100 transition-colors hover:bg-slate-50 ${
+                  className={`border-b border-surface-muted transition-colors hover:bg-surface-elevated ${
                     i % 2 === 1 ? "bg-slate-25" : ""
                   }`}
                 >
                   <td className="px-4 py-3">
                     <Link
                       to={`/users/${user.id}`}
-                      className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                      className="font-medium text-primary-600 hover:text-primary-800 hover:underline"
                     >
                       {user.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{user.email}</td>
+                  <td className="px-4 py-3 text-text-secondary">{user.email}</td>
                   <td className="px-4 py-3">
                     <RoleBadge role={user.role} />
                   </td>
                   <td className="px-4 py-3">
                     <span
                       className={`inline-flex items-center gap-1.5 text-xs font-medium ${
-                        user.isActive ? "text-green-600" : "text-slate-400"
+                        user.isActive ? "text-green-600" : "text-text-placeholder"
                       }`}
                     >
                       <span
@@ -133,10 +133,10 @@ export function UsersPage() {
                       {user.isActive ? "Active" : "Inactive"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-500">
+                  <td className="px-4 py-3 text-text-muted">
                     {new Date(user.createdAt).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-3 text-slate-500">
+                  <td className="px-4 py-3 text-text-muted">
                     {user.lastLoginAt
                       ? new Date(user.lastLoginAt).toLocaleDateString()
                       : "Never"}
