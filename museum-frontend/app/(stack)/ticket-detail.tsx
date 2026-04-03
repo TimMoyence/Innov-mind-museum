@@ -132,17 +132,11 @@ export default function TicketDetailScreen() {
         <View
           style={[
             styles.messageBubble,
-            isVisitor
-              ? {
-                  alignSelf: 'flex-start',
-                  backgroundColor: theme.assistantBubble,
-                  borderColor: theme.assistantBubbleBorder,
-                }
-              : {
-                  alignSelf: 'flex-end',
-                  backgroundColor: theme.userBubble,
-                  borderColor: theme.userBubbleBorder,
-                },
+            isVisitor ? styles.visitorBubble : styles.staffBubble,
+            {
+              backgroundColor: isVisitor ? theme.assistantBubble : theme.userBubble,
+              borderColor: isVisitor ? theme.assistantBubbleBorder : theme.userBubbleBorder,
+            },
           ]}
         >
           <Text
@@ -156,7 +150,7 @@ export default function TicketDetailScreen() {
           <Text
             style={[
               styles.messageTime,
-              { color: isVisitor ? theme.textSecondary : 'rgba(255,255,255,0.7)' },
+              isVisitor ? { color: theme.textSecondary } : styles.staffMessageTimeColor,
             ]}
           >
             {formatDate(item.createdAt)}
@@ -353,6 +347,12 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 4,
   },
+  visitorBubble: {
+    alignSelf: 'flex-start',
+  },
+  staffBubble: {
+    alignSelf: 'flex-end',
+  },
   messageText: {
     fontSize: 14,
     lineHeight: 20,
@@ -360,6 +360,9 @@ const styles = StyleSheet.create({
   messageTime: {
     fontSize: 10,
     alignSelf: 'flex-end',
+  },
+  staffMessageTimeColor: {
+    color: 'rgba(255,255,255,0.7)',
   },
   emptyMessages: {
     textAlign: 'center',

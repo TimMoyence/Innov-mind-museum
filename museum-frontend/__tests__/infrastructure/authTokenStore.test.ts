@@ -1,0 +1,81 @@
+jest.mock('@react-native-async-storage/async-storage', () => {
+  const store: Record<string, string> = {};
+  return {
+    __esModule: true,
+    default: {
+      getItem: jest.fn((key: string) => Promise.resolve(store[key] ?? null)),
+      setItem: jest.fn((key: string, value: string) => {
+        store[key] = value;
+        return Promise.resolve();
+      }),
+      removeItem: jest.fn((key: string) => {
+        delete store[key];
+        return Promise.resolve();
+      }),
+    },
+  };
+});
+
+// Force web platform so SecureStore is not loaded (uses AsyncStorage fallback)
+jest.mock('react-native', () => ({
+  Platform: { OS: 'web' },
+}));
+
+import {
+  setAccessToken,
+  getAccessToken,
+  clearAccessToken,
+  authStorage,
+} from '@/features/auth/infrastructure/authTokenStore';
+
+describe('authTokenStore', () => {
+  describe('in-memory access token', () => {
+    afterEach(() => {
+      clearAccessToken();
+    });
+
+    it('setAccessToken / getAccessToken round trip', () => {
+      setAccessToken('jwt-abc-123');
+      expect(getAccessToken()).toBe('jwt-abc-123');
+    });
+
+    it('clearAccessToken sets token to empty string', () => {
+      setAccessToken('jwt-abc-123');
+      clearAccessToken();
+      expect(getAccessToken()).toBe('');
+    });
+
+    it('setAccessToken with null clears the token', () => {
+      setAccessToken('jwt-abc-123');
+      setAccessToken(null);
+      expect(getAccessToken()).toBe('');
+    });
+
+    it('setAccessToken with undefined clears the token', () => {
+      setAccessToken('jwt-abc-123');
+      setAccessToken(undefined);
+      expect(getAccessToken()).toBe('');
+    });
+  });
+
+  describe('persistent refresh token (web / AsyncStorage)', () => {
+    it('setRefreshToken persists via AsyncStorage', async () => {
+      await authStorage.setRefreshToken('refresh-abc');
+      const stored = await authStorage.getRefreshToken();
+      expect(stored).toBe('refresh-abc');
+    });
+
+    it('getRefreshToken returns null when nothing stored', async () => {
+      await authStorage.clearRefreshToken();
+      const result = await authStorage.getRefreshToken();
+      expect(result).toBeNull();
+    });
+
+    it('clearRefreshToken removes stored value', async () => {
+      await authStorage.setRefreshToken('refresh-xyz');
+      await authStorage.clearRefreshToken();
+      const result = await authStorage.getRefreshToken();
+      expect(result).toBeNull();
+    });
+  });
+});

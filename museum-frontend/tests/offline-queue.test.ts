@@ -234,8 +234,8 @@ describe('OfflineQueue', () => {
       ]);
 
       const storage: QueueStorage = {
-        getItem: async () => stored,
-        setItem: async () => {},
+        getItem: () => Promise.resolve(stored),
+        setItem: () => Promise.resolve(),
       };
 
       const q = new OfflineQueue({ storage, maxAgeMs: 60_000 });
@@ -253,8 +253,8 @@ describe('OfflineQueue', () => {
       ]);
 
       const storage: QueueStorage = {
-        getItem: async () => stored,
-        setItem: async () => {},
+        getItem: () => Promise.resolve(stored),
+        setItem: () => Promise.resolve(),
       };
 
       const q = new OfflineQueue({ storage, maxAgeMs: 60_000 });
