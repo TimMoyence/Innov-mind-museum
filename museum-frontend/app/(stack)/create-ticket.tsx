@@ -148,7 +148,7 @@ export default function CreateTicketScreen() {
                 <Text
                   style={[
                     styles.priorityPillText,
-                    { color: priority === p ? '#FFFFFF' : theme.textPrimary },
+                    priority === p ? styles.priorityPillTextSelected : { color: theme.textPrimary },
                   ]}
                 >
                   {priorityLabel(p)}
@@ -163,8 +163,8 @@ export default function CreateTicketScreen() {
             styles.submitButton,
             {
               backgroundColor: isValid ? theme.primary : theme.cardBorder,
-              shadowColor: isValid ? theme.primary : 'transparent',
             },
+            isValid ? { shadowColor: theme.primary } : styles.submitButtonNoShadow,
           ]}
           onPress={() => void handleSubmit()}
           disabled={!isValid || isSubmitting}
@@ -229,6 +229,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
   },
+  priorityPillTextSelected: {
+    color: '#FFFFFF',
+  },
   submitButton: {
     borderRadius: 14,
     paddingVertical: 14,
@@ -236,6 +239,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 8 },
+  },
+  submitButtonNoShadow: {
+    shadowColor: 'transparent',
   },
   submitButtonText: {
     fontWeight: '700',

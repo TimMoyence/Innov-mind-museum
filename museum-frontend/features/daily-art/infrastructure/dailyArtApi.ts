@@ -11,7 +11,7 @@ export interface DailyArtwork {
 }
 
 /** Fetches the daily artwork from the backend. */
-export const fetchDailyArt = async (): Promise<DailyArtwork> => {
-  const data = await httpRequest<{ artwork: DailyArtwork }>('/api/daily-art');
+export const fetchDailyArt = async (locale = 'en'): Promise<DailyArtwork> => {
+  const data = await httpRequest<{ artwork: DailyArtwork }>(`/api/daily-art?locale=${locale}`);
   return data.artwork;
 };

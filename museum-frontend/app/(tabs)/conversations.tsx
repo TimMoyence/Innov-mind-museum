@@ -212,7 +212,7 @@ export default function ConversationsScreen() {
         style={[
           styles.primaryButton,
           { backgroundColor: theme.primary, shadowColor: theme.primary },
-          isCreating && { opacity: 0.7 },
+          isCreating && styles.disabledOpacity,
         ]}
         onPress={() => void startConversation()}
         disabled={isCreating}
@@ -306,6 +306,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 8 },
+  },
+  disabledOpacity: {
+    opacity: 0.7,
   },
   primaryButtonText: {
     fontWeight: '700',

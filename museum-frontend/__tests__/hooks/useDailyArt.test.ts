@@ -225,7 +225,7 @@ describe('useDailyArt', () => {
     // Allow microtasks to flush
     await new Promise((r) => setTimeout(r, 0));
 
-    // If we got here without errors, the cancelled flag worked
-    expect(true).toBe(true);
+    // After unmount + late resolve, artwork should still be null (state not updated)
+    expect(result.current.artwork).toBeNull();
   });
 });
