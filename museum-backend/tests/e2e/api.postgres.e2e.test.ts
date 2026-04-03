@@ -178,7 +178,9 @@ describeE2E('api e2e (express + postgres container)', () => {
 
     const app = createApp({ chatService });
     await new Promise<void>((resolve) => {
-      server = app.listen(0, () => resolve());
+      server = app.listen(0, () => {
+        resolve();
+      });
     });
 
     const address = server.address() as AddressInfo | null;
@@ -235,7 +237,7 @@ describeE2E('api e2e (express + postgres container)', () => {
       body: JSON.stringify({
         email,
         password,
-        firstname: 'E2E',
+        firstname: 'Tester',
         lastname: 'User',
       }),
     });
@@ -370,7 +372,7 @@ describeE2E('api e2e (express + postgres container)', () => {
       body: JSON.stringify({ email, password }),
     });
     expect(login.status).toBe(200);
-    const token = (login.body as { accessToken?: string }).accessToken as string;
+    const token = (login.body as { accessToken?: string }).accessToken!;
 
     const createSession = await request(
       '/api/chat/sessions',
@@ -441,7 +443,7 @@ describeE2E('api e2e (express + postgres container)', () => {
       body: JSON.stringify({ email, password }),
     });
     expect(login.status).toBe(200);
-    const token = (login.body as { accessToken?: string }).accessToken as string;
+    const token = (login.body as { accessToken?: string }).accessToken!;
 
     const createSession = await request(
       '/api/chat/sessions',
@@ -494,12 +496,12 @@ describeE2E('api e2e (express + postgres container)', () => {
 
     const messages = (
       getSession.body as {
-        messages: Array<{
+        messages: {
           id: string;
           role: string;
           image?: { url: string; expiresAt: string } | null;
           imageRef?: string | null;
-        }>;
+        }[];
       }
     ).messages;
     const userImageMessage = messages.find(
@@ -546,7 +548,7 @@ describeE2E('api e2e (express + postgres container)', () => {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    const token = (login.body as { accessToken?: string }).accessToken as string;
+    const token = (login.body as { accessToken?: string }).accessToken!;
 
     const createA = await request(
       '/api/chat/sessions',
@@ -572,7 +574,7 @@ describeE2E('api e2e (express + postgres container)', () => {
 
     const listBefore = await request('/api/chat/sessions?limit=20', { method: 'GET' }, token);
     expect(listBefore.status).toBe(200);
-    const firstBefore = (listBefore.body as { sessions: Array<{ id: string }> }).sessions[0]?.id;
+    const firstBefore = (listBefore.body as { sessions: { id: string }[] }).sessions[0]?.id;
     expect(firstBefore).toBe(sessionB);
 
     const postToA = await request(
@@ -590,7 +592,7 @@ describeE2E('api e2e (express + postgres container)', () => {
 
     const listAfter = await request('/api/chat/sessions?limit=20', { method: 'GET' }, token);
     expect(listAfter.status).toBe(200);
-    const firstAfter = (listAfter.body as { sessions: Array<{ id: string }> }).sessions[0]?.id;
+    const firstAfter = (listAfter.body as { sessions: { id: string }[] }).sessions[0]?.id;
     expect(firstAfter).toBe(sessionA);
   });
 
@@ -614,7 +616,7 @@ describeE2E('api e2e (express + postgres container)', () => {
       body: JSON.stringify({ email, password }),
     });
     expect(login.status).toBe(200);
-    const token = (login.body as { accessToken?: string }).accessToken as string;
+    const token = (login.body as { accessToken?: string }).accessToken!;
 
     const createEmpty = await request(
       '/api/chat/sessions',

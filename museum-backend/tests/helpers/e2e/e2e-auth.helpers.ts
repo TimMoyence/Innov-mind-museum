@@ -31,6 +31,8 @@ interface RegisterAndLoginResult {
 /**
  * Registers a new user via POST /api/auth/register.
  * Returns the userId and email from the response.
+ * @param request
+ * @param overrides
  */
 export async function registerUser(
   request: RequestFn,
@@ -39,7 +41,7 @@ export async function registerUser(
   const email =
     overrides.email ?? `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@musaium.test`;
   const password = overrides.password ?? 'Password123!';
-  const firstname = overrides.firstname ?? 'E2E';
+  const firstname = overrides.firstname ?? 'Tester';
   const lastname = overrides.lastname ?? 'User';
 
   const res = await request('/api/auth/register', {
@@ -58,6 +60,9 @@ export async function registerUser(
 /**
  * Logs in a user via POST /api/auth/login.
  * Returns accessToken, refreshToken, and user object.
+ * @param request
+ * @param email
+ * @param password
  */
 export async function loginUser(
   request: RequestFn,
@@ -80,6 +85,8 @@ export async function loginUser(
 /**
  * Registers a new user and immediately logs in.
  * Returns token, userId, email, refreshToken, and password.
+ * @param request
+ * @param overrides
  */
 export async function registerAndLogin(
   request: RequestFn,

@@ -1,0 +1,61 @@
+import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
+import type { IRefreshTokenRepository } from '@modules/auth/core/domain/refresh-token.repository.interface';
+import type { User } from '@modules/auth/core/domain/user.entity';
+
+/**
+ * Creates a fully mocked IUserRepository.
+ *
+ * By default, `getUserById` and `getUserByEmail` return the given user
+ * (with email matching for `getUserByEmail`). Every method is a jest.fn().
+ *
+ * @param user - The user to return from finder methods (null = not found).
+ * @param overrides - Override specific method mocks.
+ */
+export const makeUserRepo = (
+  user: User | null = null,
+  overrides: Partial<Record<keyof IUserRepository, jest.Mock>> = {},
+): jest.Mocked<IUserRepository> => {
+  const repo: jest.Mocked<IUserRepository> = {
+    getUserByEmail: jest.fn().mockResolvedValue(user),
+    getUserById: jest.fn().mockResolvedValue(user),
+    registerUser: jest.fn().mockResolvedValue(user),
+    setResetToken: jest.fn().mockResolvedValue(user),
+    getUserByResetToken: jest.fn().mockResolvedValue(user),
+    updatePassword: jest.fn().mockResolvedValue(user),
+    registerSocialUser: jest.fn().mockResolvedValue(user),
+    consumeResetTokenAndUpdatePassword: jest.fn().mockResolvedValue(user),
+    deleteUser: jest.fn().mockResolvedValue(undefined),
+    setVerificationToken: jest.fn().mockResolvedValue(undefined),
+    verifyEmail: jest.fn().mockResolvedValue(user),
+    setEmailChangeToken: jest.fn().mockResolvedValue(undefined),
+    consumeEmailChangeToken: jest.fn().mockResolvedValue(user),
+    markOnboardingCompleted: jest.fn().mockResolvedValue(undefined),
+    ...overrides,
+  };
+
+  return repo;
+};
+
+/**
+ * Creates a fully mocked IRefreshTokenRepository.
+ *
+ * All methods are jest.fn() with sensible defaults.
+ *
+ * @param overrides - Override specific method mocks.
+ */
+export const makeRefreshTokenRepo = (
+  overrides: Partial<Record<keyof IRefreshTokenRepository, jest.Mock>> = {},
+): jest.Mocked<IRefreshTokenRepository> => {
+  const repo: jest.Mocked<IRefreshTokenRepository> = {
+    insert: jest.fn().mockResolvedValue(undefined),
+    findByJti: jest.fn().mockResolvedValue(null),
+    rotate: jest.fn().mockResolvedValue(undefined),
+    revokeByJti: jest.fn().mockResolvedValue(undefined),
+    deleteExpiredTokens: jest.fn().mockResolvedValue(0),
+    revokeAllForUser: jest.fn().mockResolvedValue(undefined),
+    revokeFamily: jest.fn().mockResolvedValue(undefined),
+    ...overrides,
+  };
+
+  return repo;
+};
