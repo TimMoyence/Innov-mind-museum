@@ -7,9 +7,30 @@ import {
 } from '../../helpers/http/route-test-setup';
 import { userToken } from '../../helpers/auth/token.helpers';
 
+// ── Mock use cases so handlers execute without DB ────────────────────
+
+const mockSubmitSupportContact = jest.fn();
+const mockCreateTicket = jest.fn();
+const mockListUserTickets = jest.fn();
+const mockGetTicketDetail = jest.fn();
+const mockAddTicketMessage = jest.fn();
+
+jest.mock('@modules/support/useCase', () => ({
+  submitSupportContactUseCase: {
+    execute: (...args: unknown[]) => mockSubmitSupportContact(...args),
+  },
+  createTicketUseCase: { execute: (...args: unknown[]) => mockCreateTicket(...args) },
+  listUserTicketsUseCase: { execute: (...args: unknown[]) => mockListUserTickets(...args) },
+  getTicketDetailUseCase: { execute: (...args: unknown[]) => mockGetTicketDetail(...args) },
+  addTicketMessageUseCase: { execute: (...args: unknown[]) => mockAddTicketMessage(...args) },
+  // Admin use cases also imported by admin.route — provide stubs
+  listAllTicketsUseCase: { execute: jest.fn() },
+  updateTicketStatusUseCase: { execute: jest.fn() },
+}));
+
 /**
- * Support route integration tests — auth enforcement + validation.
- * No DB required — tests that support routes require authentication and validate inputs.
+ * Support route integration tests — auth enforcement + validation + happy-path handler bodies.
+ * No DB required — use cases are mocked.
  */
 
 const { app } = createRouteTestApp();
@@ -17,6 +38,7 @@ const { app } = createRouteTestApp();
 describe('Support Routes — HTTP Layer', () => {
   beforeEach(() => {
     resetRateLimits();
+    jest.clearAllMocks();
   });
 
   afterAll(() => {
@@ -194,6 +216,135 @@ describe('Support Routes — HTTP Layer', () => {
       expect(res.status).toBe(400);
       expect(res.body).toHaveProperty('error');
       expect(res.body.error).toHaveProperty('message');
+    });
+  });
+
+  // ── Happy-path handler body coverage ─────────────────────────────
+
+  describe('Happy-path — handler bodies', () => {
+    it('POST /api/support/contact submits support contact', async () => {
+      mockSubmitSupportContact.mockResolvedValueOnce(undefined);
+
+      const res = await request(app).post('/api/support/contact').send({
+        name: 'Visitor',
+        email: 'visitor@example.com',
+        message: 'Hello, I need help with the mobile app support flow.',
+      });
+
+      expect(res.status).toBe(202);
+      expect(res.body).toEqual({ accepted: true });
+      expect(mockSubmitSupportContact).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Visitor',
+          email: 'visitor@example.com',
+          message: 'Hello, I need help with the mobile app support flow.',
+        }),
+      );
+    });
+
+    it('POST /api/support/tickets creates a ticket', async () => {
+      const ticket = {
+        id: 'tkt-uuid-1',
+        subject: 'Cannot log in',
+        description: 'I keep getting an error when logging in with my credentials.',
+        status: 'open',
+        priority: 'medium',
+      };
+      mockCreateTicket.mockResolvedValueOnce(ticket);
+
+      const res = await request(app)
+        .post('/api/support/tickets')
+        .set('Authorization', `Bearer ${userToken()}`)
+        .send({
+          subject: 'Cannot log in',
+          description: 'I keep getting an error when logging in with my credentials.',
+          priority: 'medium',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body).toEqual({ ticket });
+      expect(mockCreateTicket).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subject: 'Cannot log in',
+          priority: 'medium',
+          userId: 1,
+        }),
+      );
+    });
+
+    it('GET /api/support/tickets lists user tickets', async () => {
+      const result = {
+        data: [{ id: 'tkt-1', subject: 'Help', status: 'open' }],
+        total: 1,
+        page: 1,
+        limit: 20,
+      };
+      mockListUserTickets.mockResolvedValueOnce(result);
+
+      const res = await request(app)
+        .get('/api/support/tickets')
+        .set('Authorization', `Bearer ${userToken()}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(result);
+      expect(mockListUserTickets).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 1, page: 1, limit: 20 }),
+      );
+    });
+
+    it('GET /api/support/tickets/:id gets ticket detail', async () => {
+      const ticket = {
+        id: 'tkt-uuid-1',
+        subject: 'Help',
+        description: 'Details here',
+        messages: [],
+      };
+      mockGetTicketDetail.mockResolvedValueOnce(ticket);
+
+      const res = await request(app)
+        .get('/api/support/tickets/tkt-uuid-1')
+        .set('Authorization', `Bearer ${userToken()}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ ticket });
+      expect(mockGetTicketDetail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ticketId: 'tkt-uuid-1',
+          userId: 1,
+          userRole: 'visitor',
+        }),
+      );
+    });
+
+    it('POST /api/support/tickets/:id/messages adds a message', async () => {
+      const message = { id: 'msg-1', text: 'Thanks for the reply', senderId: 1 };
+      mockAddTicketMessage.mockResolvedValueOnce(message);
+
+      const res = await request(app)
+        .post('/api/support/tickets/tkt-uuid-1/messages')
+        .set('Authorization', `Bearer ${userToken()}`)
+        .send({ text: 'Thanks for the reply' });
+
+      expect(res.status).toBe(201);
+      expect(res.body).toEqual({ message });
+      expect(mockAddTicketMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ticketId: 'tkt-uuid-1',
+          senderId: 1,
+          senderRole: 'visitor',
+          text: 'Thanks for the reply',
+        }),
+      );
+    });
+
+    it('use case error is forwarded as 500', async () => {
+      mockGetTicketDetail.mockRejectedValueOnce(new Error('DB down'));
+
+      const res = await request(app)
+        .get('/api/support/tickets/tkt-uuid-1')
+        .set('Authorization', `Bearer ${userToken()}`);
+
+      expect(res.status).toBe(500);
     });
   });
 });

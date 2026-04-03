@@ -27,10 +27,10 @@ const config: Config.InitialOptions = {
   ],
   coverageThreshold: {
     global: {
-      statements: 85,
-      branches: 71,
-      functions: 79,
-      lines: 85,
+      statements: 87,
+      branches: 74,
+      functions: 82,
+      lines: 87,
     },
   },
 };
