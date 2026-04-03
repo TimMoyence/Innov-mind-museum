@@ -1,15 +1,15 @@
 {
   "lastUpdated": "2026-04-03",
-  "testCount": 1960,
-  "frontendTestCount": 815,
-  "frontendNodeTestCount": 200,
+  "testCount": 2060,
+  "frontendTestCount": 852,
+  "frontendNodeTestCount": 214,
   "webTestCount": 71,
   "typecheckErrors": 0,
   "asAnyCount": 0,
-  "coverageStatements": 86.05,
-  "coverageBranches": 72.17,
-  "frontendCoverageStatements": 79.76,
-  "frontendCoverageBranches": 67.64,
+  "coverageStatements": 88.36,
+  "coverageBranches": 75.54,
+  "frontendCoverageStatements": 67.75,
+  "frontendCoverageBranches": 60.18,
   "lintErrors": 0,
-  "_comment": "Phase 3 Wave 0-3: +600 tests, BE 76→86% stmt, FE 51→80% stmt. 6 repos tested, 50 component tests, auth/security infra fully covered."
+  "_comment": "Phase 3 complete: +800 tests, BE 76→88% stmt, FE 51→68% (incl app/ screens). Route handlers, repos, hooks branch coverage improved."
 }

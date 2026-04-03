@@ -20,7 +20,7 @@ export function validateQuery<T extends z.ZodType>(schema: T) {
         .join(', ');
       throw badRequest(message);
     }
-    res.locals.validatedQuery = result.data;
+    res.locals.validatedQuery = result.data as z.infer<T>;
     next();
   };
 }

@@ -420,4 +420,106 @@ describe('OfflineQueue', () => {
       assert.equal(evictCalled, false, 'onEvict should not be called when nothing pruned');
     });
   });
+
+  describe('legacy constructor', () => {
+    it('accepts a QueueStorage directly (legacy API)', async () => {
+      const storage: QueueStorage = {
+        getItem: () => Promise.resolve(null),
+        setItem: () => Promise.resolve(),
+      };
+
+      const q = new OfflineQueue(storage);
+      const entry = q.enqueue({ sessionId: 's1', text: 'legacy' });
+
+      assert.ok(entry !== null, 'enqueue should work with legacy constructor');
+      assert.equal(entry.text, 'legacy');
+    });
+
+    it('uses default maxQueueSize (50) with legacy constructor', async () => {
+      const storage: QueueStorage = {
+        getItem: () => Promise.resolve(null),
+        setItem: () => Promise.resolve(),
+      };
+
+      const q = new OfflineQueue(storage);
+      for (let i = 0; i < 50; i++) {
+        assert.ok(q.enqueue({ sessionId: 's1', text: `msg-${i}` }) !== null);
+      }
+      assert.equal(q.enqueue({ sessionId: 's1', text: 'overflow' }), null);
+    });
+  });
+
+  describe('hydrate with corrupted data', () => {
+    it('starts fresh when storage contains invalid JSON', async () => {
+      const storage: QueueStorage = {
+        getItem: () => Promise.resolve('not valid json {{{'),
+        setItem: () => Promise.resolve(),
+      };
+
+      const q = new OfflineQueue({ storage });
+      await q.hydrate();
+
+      assert.equal(q.size(), 0, 'queue should be empty after corrupted hydration');
+    });
+
+    it('starts fresh when storage rejects', async () => {
+      const storage: QueueStorage = {
+        getItem: () => Promise.reject(new Error('storage failure')),
+        setItem: () => Promise.resolve(),
+      };
+
+      const q = new OfflineQueue({ storage });
+      await q.hydrate();
+
+      assert.equal(q.size(), 0, 'queue should be empty after failed hydration');
+    });
+
+    it('does nothing when storage returns null', async () => {
+      const storage: QueueStorage = {
+        getItem: () => Promise.resolve(null),
+        setItem: () => Promise.resolve(),
+      };
+
+      const q = new OfflineQueue({ storage });
+      await q.hydrate();
+
+      assert.equal(q.size(), 0);
+    });
+
+    it('does nothing when no storage is configured', async () => {
+      const q = new OfflineQueue();
+      await q.hydrate();
+
+      assert.equal(q.size(), 0);
+    });
+  });
+
+  describe('persist error handling', () => {
+    it('queue remains in memory when storage.setItem fails', async () => {
+      const storage: QueueStorage = {
+        getItem: () => Promise.resolve(null),
+        setItem: () => Promise.reject(new Error('write failed')),
+      };
+
+      const q = new OfflineQueue({ storage });
+      const entry = q.enqueue({ sessionId: 's1', text: 'persist-fail' });
+
+      assert.ok(entry !== null, 'enqueue should succeed even if persist fails');
+      assert.equal(q.size(), 1, 'queue should still have the entry in memory');
+    });
+  });
+
+  describe('hydrate non-array data', () => {
+    it('ignores non-array parsed data', async () => {
+      const storage: QueueStorage = {
+        getItem: () => Promise.resolve('"just a string"'),
+        setItem: () => Promise.resolve(),
+      };
+
+      const q = new OfflineQueue({ storage });
+      await q.hydrate();
+
+      assert.equal(q.size(), 0, 'non-array data should be ignored');
+    });
+  });
 });

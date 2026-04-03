@@ -1,23 +1,47 @@
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
-import {
-  createRouteTestApp,
-  resetRateLimits,
-  stopRateLimitSweep,
-} from '../../helpers/http/route-test-setup';
+import { createApp } from '@src/app';
+import { resetRateLimits, stopRateLimitSweep } from '../../helpers/http/route-test-setup';
 import { userToken } from '../../helpers/auth/token.helpers';
 
-/**
- * Chat route integration tests — auth enforcement + basic validation.
- * No DB required — tests that chat routes require authentication and validate inputs.
- * Routes that pass validation but need DB/ChatService will 500 — those are NOT tested here.
- */
+import type { ChatService } from '@modules/chat/application/chat.service';
 
-const { app } = createRouteTestApp();
+// ── Build a mock ChatService for happy-path tests ────────────────────
+
+const mockCreateSession = jest.fn();
+const mockListSessions = jest.fn();
+const mockGetSession = jest.fn();
+const mockDeleteSessionIfEmpty = jest.fn();
+const mockPostMessage = jest.fn();
+const mockReportMessage = jest.fn();
+const mockGetMessageImageRef = jest.fn();
+const mockSetMessageFeedback = jest.fn();
+
+const mockChatService: Partial<ChatService> = {
+  createSession: mockCreateSession,
+  listSessions: mockListSessions,
+  getSession: mockGetSession,
+  deleteSessionIfEmpty: mockDeleteSessionIfEmpty,
+  postMessage: mockPostMessage,
+  reportMessage: mockReportMessage,
+  getMessageImageRef: mockGetMessageImageRef,
+  setMessageFeedback: mockSetMessageFeedback,
+};
+
+const app = createApp({
+  chatService: mockChatService as ChatService,
+  healthCheck: async () => ({ database: 'up' }),
+});
+
+/**
+ * Chat route integration tests — auth enforcement + basic validation + happy-path handler bodies.
+ * No DB required — chat service is mocked via createApp({ chatService }).
+ */
 
 describe('Chat Routes — HTTP Layer', () => {
   beforeEach(() => {
     resetRateLimits();
+    jest.clearAllMocks();
   });
 
   afterAll(() => {
@@ -174,6 +198,177 @@ describe('Chat Routes — HTTP Layer', () => {
       expect(res.status).toBe(401);
       expect(res.body).toHaveProperty('error');
       expect(res.body.error).toHaveProperty('code', 'UNAUTHORIZED');
+    });
+  });
+
+  // ── Happy-path handler body coverage ─────────────────────────────
+
+  describe('Happy-path — handler bodies', () => {
+    it('POST /api/chat/sessions creates a new session', async () => {
+      const session = {
+        id: 'session-uuid',
+        museumMode: false,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      };
+      mockCreateSession.mockResolvedValueOnce(session);
+
+      const res = await request(app)
+        .post('/api/chat/sessions')
+        .set('Authorization', `Bearer ${userToken()}`)
+        .send({});
+
+      expect(res.status).toBe(201);
+      expect(res.body).toEqual({ session });
+      expect(mockCreateSession).toHaveBeenCalledWith(expect.objectContaining({ userId: 1 }));
+    });
+
+    it('POST /api/chat/sessions passes museumId and locale', async () => {
+      const session = {
+        id: 'session-uuid-2',
+        museumMode: true,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      };
+      mockCreateSession.mockResolvedValueOnce(session);
+
+      const res = await request(app)
+        .post('/api/chat/sessions')
+        .set('Authorization', `Bearer ${userToken()}`)
+        .send({ museumId: 5, locale: 'fr', museumMode: true });
+
+      expect(res.status).toBe(201);
+      expect(mockCreateSession).toHaveBeenCalledWith(
+        expect.objectContaining({ museumId: 5, museumMode: true }),
+      );
+    });
+
+    it('GET /api/chat/sessions lists user sessions', async () => {
+      const result = {
+        sessions: [
+          {
+            id: 'session-1',
+            museumMode: false,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+            messageCount: 3,
+            preview: { text: 'Hello', createdAt: '2026-01-01T00:00:00.000Z', role: 'user' },
+          },
+        ],
+        page: { nextCursor: null, hasMore: false, limit: 20 },
+      };
+      mockListSessions.mockResolvedValueOnce(result);
+
+      const res = await request(app)
+        .get('/api/chat/sessions')
+        .set('Authorization', `Bearer ${userToken()}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(result);
+      expect(mockListSessions).toHaveBeenCalledWith(
+        expect.objectContaining({}),
+        1, // userId from token
+      );
+    });
+
+    it('GET /api/chat/sessions/:id returns session with messages', async () => {
+      const result = {
+        session: {
+          id: 'session-uuid',
+          museumMode: false,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+        messages: [
+          {
+            id: 'msg-1',
+            role: 'user',
+            text: 'Hello',
+            createdAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        page: { nextCursor: null, hasMore: false, limit: 20 },
+      };
+      mockGetSession.mockResolvedValueOnce(result);
+
+      const res = await request(app)
+        .get('/api/chat/sessions/session-uuid')
+        .set('Authorization', `Bearer ${userToken()}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.session.id).toBe('session-uuid');
+      expect(res.body.messages).toHaveLength(1);
+    });
+
+    it('DELETE /api/chat/sessions/:id deletes empty session', async () => {
+      const result = { sessionId: 'session-uuid', deleted: true };
+      mockDeleteSessionIfEmpty.mockResolvedValueOnce(result);
+
+      const res = await request(app)
+        .delete('/api/chat/sessions/session-uuid')
+        .set('Authorization', `Bearer ${userToken()}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(result);
+      expect(mockDeleteSessionIfEmpty).toHaveBeenCalledWith('session-uuid', 1);
+    });
+
+    it('POST /api/chat/sessions/:id/messages posts a message', async () => {
+      const result = {
+        sessionId: 'session-uuid',
+        message: {
+          id: 'msg-uuid',
+          role: 'assistant',
+          text: 'The Mona Lisa was painted by Leonardo da Vinci.',
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+        metadata: { detectedArtwork: { title: 'Mona Lisa' } },
+      };
+      mockPostMessage.mockResolvedValueOnce(result);
+
+      const res = await request(app)
+        .post('/api/chat/sessions/session-uuid/messages')
+        .set('Authorization', `Bearer ${userToken()}`)
+        .send({ text: 'Tell me about the Mona Lisa' });
+
+      expect(res.status).toBe(201);
+      expect(res.body).toEqual(result);
+      expect(mockPostMessage).toHaveBeenCalledWith(
+        'session-uuid',
+        expect.objectContaining({ text: 'Tell me about the Mona Lisa' }),
+        expect.any(String), // requestId
+        1, // userId
+      );
+    });
+
+    it('POST /api/chat/messages/:id/report reports a message', async () => {
+      const result = { messageId: 'msg-uuid', reported: true };
+      mockReportMessage.mockResolvedValueOnce(result);
+
+      const res = await request(app)
+        .post('/api/chat/messages/msg-uuid/report')
+        .set('Authorization', `Bearer ${userToken()}`)
+        .send({ reason: 'offensive', comment: 'Inappropriate content' });
+
+      expect(res.status).toBe(201);
+      expect(res.body).toEqual(result);
+      expect(mockReportMessage).toHaveBeenCalledWith(
+        'msg-uuid',
+        'offensive',
+        1, // userId
+        'Inappropriate content',
+      );
+    });
+
+    it('use case error is forwarded as 500', async () => {
+      mockCreateSession.mockRejectedValueOnce(new Error('DB down'));
+
+      const res = await request(app)
+        .post('/api/chat/sessions')
+        .set('Authorization', `Bearer ${userToken()}`)
+        .send({});
+
+      expect(res.status).toBe(500);
     });
   });
 });

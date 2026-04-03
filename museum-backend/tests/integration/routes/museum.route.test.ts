@@ -4,11 +4,34 @@ import {
   resetRateLimits,
   stopRateLimitSweep,
 } from '../../helpers/http/route-test-setup';
-import { adminToken, visitorToken } from '../../helpers/auth/token.helpers';
+import { adminToken, visitorToken, makeToken } from '../../helpers/auth/token.helpers';
+
+// ── Mock use cases so handlers execute without DB ────────────────────
+
+const mockListMuseums = jest.fn();
+const mockCreateMuseum = jest.fn();
+const mockGetMuseum = jest.fn();
+const mockUpdateMuseum = jest.fn();
+const mockSearchMuseums = jest.fn();
+
+jest.mock('@modules/museum/core/useCase', () => ({
+  listMuseumsUseCase: { execute: (...args: unknown[]) => mockListMuseums(...args) },
+  createMuseumUseCase: { execute: (...args: unknown[]) => mockCreateMuseum(...args) },
+  getMuseumUseCase: { execute: (...args: unknown[]) => mockGetMuseum(...args) },
+  updateMuseumUseCase: { execute: (...args: unknown[]) => mockUpdateMuseum(...args) },
+  buildSearchMuseumsUseCase: () => ({
+    execute: (...args: unknown[]) => mockSearchMuseums(...args),
+  }),
+  museumRepository: {},
+}));
+
+jest.mock('@shared/audit', () => ({
+  auditService: { log: jest.fn() },
+}));
 
 /**
- * Museum route integration tests — auth enforcement + RBAC + validation.
- * No DB required — tests that museum routes require authentication and validate inputs.
+ * Museum route integration tests — auth enforcement + RBAC + validation + happy-path handler bodies.
+ * No DB required — use cases are mocked.
  */
 
 const { app } = createRouteTestApp();
@@ -16,6 +39,7 @@ const { app } = createRouteTestApp();
 describe('Museum Routes — HTTP Layer', () => {
   beforeEach(() => {
     resetRateLimits();
+    jest.clearAllMocks();
   });
 
   afterAll(() => {
@@ -140,6 +164,140 @@ describe('Museum Routes — HTTP Layer', () => {
       expect(res.status).toBe(403);
       expect(res.body).toHaveProperty('error');
       expect(res.body.error).toHaveProperty('code', 'FORBIDDEN');
+    });
+  });
+
+  // ── Happy-path handler body coverage ─────────────────────────────
+
+  describe('Happy-path — handler bodies', () => {
+    it('GET /api/museums/directory returns museum list', async () => {
+      const museums = [
+        {
+          id: 1,
+          name: 'Louvre',
+          slug: 'louvre',
+          address: 'Paris',
+          description: 'Famous museum',
+          latitude: 48.86,
+          longitude: 2.33,
+        },
+      ];
+      mockListMuseums.mockResolvedValueOnce(museums);
+      const token = makeToken();
+
+      const res = await request(app)
+        .get('/api/museums/directory')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.museums).toHaveLength(1);
+      expect(res.body.museums[0]).toEqual({
+        id: 1,
+        name: 'Louvre',
+        slug: 'louvre',
+        address: 'Paris',
+        description: 'Famous museum',
+        latitude: 48.86,
+        longitude: 2.33,
+      });
+      expect(mockListMuseums).toHaveBeenCalledWith({ activeOnly: true });
+    });
+
+    it('GET /api/museums/search returns search results', async () => {
+      const searchResult = {
+        museums: [{ id: 1, name: 'Louvre', distance: 500 }],
+      };
+      mockSearchMuseums.mockResolvedValueOnce(searchResult);
+      const token = makeToken();
+
+      const res = await request(app)
+        .get('/api/museums/search?lat=48.86&lng=2.33')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(searchResult);
+      expect(mockSearchMuseums).toHaveBeenCalledWith(
+        expect.objectContaining({ lat: 48.86, lng: 2.33 }),
+      );
+    });
+
+    it('POST /api/museums creates museum (admin only)', async () => {
+      const created = { id: 10, name: 'New Museum', slug: 'new-museum' };
+      mockCreateMuseum.mockResolvedValueOnce(created);
+
+      const res = await request(app)
+        .post('/api/museums')
+        .set('Authorization', `Bearer ${adminToken()}`)
+        .send({ name: 'New Museum', slug: 'new-museum' });
+
+      expect(res.status).toBe(201);
+      expect(res.body).toEqual({ museum: created });
+    });
+
+    it('GET /api/museums/:idOrSlug returns single museum', async () => {
+      const museum = { id: 1, name: 'Louvre', slug: 'louvre' };
+      mockGetMuseum.mockResolvedValueOnce(museum);
+      const token = makeToken();
+
+      const res = await request(app)
+        .get('/api/museums/louvre')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ museum });
+      expect(mockGetMuseum).toHaveBeenCalledWith('louvre');
+    });
+
+    it('PUT /api/museums/:id updates museum (admin only)', async () => {
+      const updated = { id: 1, name: 'Updated Louvre', slug: 'louvre' };
+      mockUpdateMuseum.mockResolvedValueOnce(updated);
+
+      const res = await request(app)
+        .put('/api/museums/1')
+        .set('Authorization', `Bearer ${adminToken()}`)
+        .send({ name: 'Updated Louvre' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ museum: updated });
+      expect(mockUpdateMuseum).toHaveBeenCalledWith(1, { name: 'Updated Louvre' });
+    });
+
+    it('PUT /api/museums/abc returns 400 for non-numeric ID', async () => {
+      const res = await request(app)
+        .put('/api/museums/abc')
+        .set('Authorization', `Bearer ${adminToken()}`)
+        .send({ name: 'Test' });
+
+      expect(res.status).toBe(400);
+      expect(mockUpdateMuseum).not.toHaveBeenCalled();
+    });
+
+    it('GET /api/museums returns admin museum list', async () => {
+      const allMuseums = [
+        { id: 1, name: 'Louvre', active: true },
+        { id: 2, name: 'Orsay', active: false },
+      ];
+      mockListMuseums.mockResolvedValueOnce(allMuseums);
+
+      const res = await request(app)
+        .get('/api/museums')
+        .set('Authorization', `Bearer ${adminToken()}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ museums: allMuseums });
+      // Admin list calls without activeOnly
+      expect(mockListMuseums).toHaveBeenCalledWith();
+    });
+
+    it('use case error is forwarded as 500', async () => {
+      mockGetMuseum.mockRejectedValueOnce(new Error('DB down'));
+      const token = makeToken();
+
+      const res = await request(app)
+        .get('/api/museums/louvre')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(500);
     });
   });
 });
