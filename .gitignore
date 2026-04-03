@@ -103,6 +103,11 @@ bazel-out/
 recommendations.md
 museum-frontend/musaium-490413-b3472f10991e.json
 
+# Design system build artifacts
+design-system/node_modules/
+design-system/dist/
+design-system/package-lock.json
+
 # Build artifacts
 *.aab
 *.apk

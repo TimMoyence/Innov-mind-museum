@@ -27,7 +27,7 @@ export function AppLayout() {
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-blue-600 text-white"
+                    ? "bg-primary-600 text-white"
                     : "text-slate-300 hover:bg-slate-800 hover:text-white"
                 }`
               }
@@ -54,12 +54,12 @@ export function AppLayout() {
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="flex h-16 items-center justify-end border-b border-slate-200 bg-white px-6 shadow-sm">
+        <header className="flex h-16 items-center justify-end border-b border-primary-100 bg-surface px-6 shadow-sm">
           <div className="flex items-center gap-4">
-            <span className="text-sm text-slate-600">{user?.email}</span>
+            <span className="text-sm text-text-secondary">{user?.email}</span>
             <button
               onClick={logout}
-              className="rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200"
+              className="rounded-md bg-surface-muted px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-primary-100"
             >
               Logout
             </button>
@@ -67,7 +67,7 @@ export function AppLayout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto bg-slate-50 p-6">
+        <main className="flex-1 overflow-y-auto bg-surface-elevated p-6">
           <Outlet />
         </main>
       </div>

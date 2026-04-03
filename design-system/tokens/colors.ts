@@ -15,12 +15,18 @@ export const colors = {
     100: '#D8E8FF',
     200: '#B0CFFF',
     300: '#80B2FF',
+    350: '#60A5FA',
     400: '#5090FF',
     500: '#2563EB',
     600: '#1D4ED8',
     700: '#1E40AF',
     800: '#1E3A8A',
     900: '#172554',
+  },
+
+  /** Gradient endpoint used in mobile light theme */
+  gradient: {
+    lightEnd: '#D5F0FF',
   },
 
   accent: {

@@ -1,8 +1,8 @@
 import type { UserRole } from "@/api/types";
 
 const roleStyles: Record<UserRole, string> = {
-  visitor: "bg-slate-100 text-slate-700",
-  moderator: "bg-blue-100 text-blue-700",
+  visitor: "bg-surface-muted text-text-secondary",
+  moderator: "bg-primary-100 text-primary-700",
   museum_manager: "bg-green-100 text-green-700",
   admin: "bg-red-100 text-red-700",
 };

@@ -24,22 +24,22 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
   if (totalPages > 1) pages.push(totalPages);
 
   return (
-    <div className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-3">
-      <div className="text-sm text-slate-500">
+    <div className="flex items-center justify-between border-t border-primary-100 bg-surface px-4 py-3">
+      <div className="text-sm text-text-muted">
         Page {page} of {totalPages}
       </div>
       <div className="flex gap-1">
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-md border border-primary-200 px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-elevated disabled:cursor-not-allowed disabled:opacity-40"
         >
           Previous
         </button>
 
         {pages.map((p, i) =>
           p === "..." ? (
-            <span key={`ellipsis-${i}`} className="px-2 py-1.5 text-sm text-slate-400">
+            <span key={`ellipsis-${i}`} className="px-2 py-1.5 text-sm text-text-placeholder">
               ...
             </span>
           ) : (
@@ -48,8 +48,8 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
               onClick={() => onPageChange(p)}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 p === page
-                  ? "bg-blue-600 text-white"
-                  : "border border-slate-300 text-slate-700 hover:bg-slate-50"
+                  ? "bg-primary-600 text-white"
+                  : "border border-primary-200 text-text-secondary hover:bg-surface-elevated"
               }`}
             >
               {p}
@@ -60,7 +60,7 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
         <button
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-md border border-primary-200 px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-elevated disabled:cursor-not-allowed disabled:opacity-40"
         >
           Next
         </button>

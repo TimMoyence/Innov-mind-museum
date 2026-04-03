@@ -40,7 +40,7 @@ export function UserDetailPage() {
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
       </div>
     );
   }
@@ -57,15 +57,15 @@ export function UserDetailPage() {
     <div>
       <button
         onClick={() => navigate("/users")}
-        className="mb-4 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+        className="mb-4 text-sm text-primary-600 hover:text-primary-800 hover:underline"
       >
         &larr; Back to Users
       </button>
 
       <div className="overflow-hidden rounded-xl bg-white shadow-sm">
-        <div className="border-b border-slate-200 bg-slate-50 px-6 py-4">
-          <h1 className="text-xl font-bold text-slate-900">{data.name}</h1>
-          <p className="text-sm text-slate-500">{data.email}</p>
+        <div className="border-b border-primary-100 bg-surface-elevated px-6 py-4">
+          <h1 className="text-xl font-bold text-text-primary">{data.name}</h1>
+          <p className="text-sm text-text-muted">{data.email}</p>
         </div>
 
         <div className="grid grid-cols-1 gap-6 p-6 md:grid-cols-2">
@@ -94,15 +94,15 @@ export function UserDetailPage() {
 
           {/* Role change (admin only) */}
           {isAdmin && (
-            <div className="rounded-lg border border-slate-200 p-4">
-              <h2 className="mb-3 text-sm font-semibold text-slate-700">
+            <div className="rounded-lg border border-primary-100 p-4">
+              <h2 className="mb-3 text-sm font-semibold text-text-secondary">
                 Change Role
               </h2>
               <div className="flex gap-2">
                 <select
                   value={selectedRole || data.role}
                   onChange={(e) => setSelectedRole(e.target.value as UserRole)}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="rounded-lg border border-primary-200 px-3 py-2 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
                 >
                   {allRoles.map((r) => (
                     <option key={r} value={r}>
@@ -121,7 +121,7 @@ export function UserDetailPage() {
                     selectedRole === data.role ||
                     roleMutation.isPending
                   }
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {roleMutation.isPending ? "Saving..." : "Update"}
                 </button>
@@ -155,10 +155,10 @@ function InfoRow({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="w-24 shrink-0 text-sm font-medium text-slate-500">
+      <span className="w-24 shrink-0 text-sm font-medium text-text-muted">
         {label}
       </span>
-      {children ?? <span className="text-sm text-slate-900">{value}</span>}
+      {children ?? <span className="text-sm text-text-primary">{value}</span>}
     </div>
   );
 }

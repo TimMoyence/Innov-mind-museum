@@ -5,6 +5,7 @@ export const primaryScale = {
   '100': '#D8E8FF',
   '200': '#B0CFFF',
   '300': '#80B2FF',
+  '350': '#60A5FA',
   '400': '#5090FF',
   '500': '#2563EB',
   '600': '#1D4ED8',
@@ -86,4 +87,39 @@ export const lineHeight = {
   snug: 1.25,
   normal: 1.5,
   relaxed: 1.625,
+} as const;
+
+export const space = {
+  '1': 4,
+  '2': 8,
+  '3': 12,
+  '4': 16,
+  '5': 20,
+  '6': 24,
+  '7': 28,
+  '8': 32,
+  '10': 40,
+  '12': 48,
+  '16': 64,
+  '0.5': 2,
+  '1.5': 6,
+  '2.5': 10,
+  '3.5': 14,
+} as const;
+
+export const radius = {
+  xs: 4,
+  sm: 6,
+  md: 8,
+  DEFAULT: 10,
+  lg: 12,
+  xl: 14,
+  '2xl': 16,
+  '3xl': 20,
+  '4xl': 24,
+  full: 999,
+} as const;
+
+export const gradientColors = {
+  lightEnd: '#D5F0FF',
 } as const;

@@ -32,12 +32,12 @@ export function AuditLogsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-slate-900">Audit Logs</h1>
+      <h1 className="mb-6 text-2xl font-bold text-text-primary">Audit Logs</h1>
 
       {/* Filters */}
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-500">
+          <label className="mb-1 block text-xs font-medium text-text-muted">
             Action
           </label>
           <input
@@ -48,11 +48,11 @@ export function AuditLogsPage() {
               setAction(e.target.value);
               setPage(1);
             }}
-            className="w-52 rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-52 rounded-lg border border-primary-200 px-3 py-2 text-sm shadow-sm placeholder:text-text-placeholder focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-500">
+          <label className="mb-1 block text-xs font-medium text-text-muted">
             Start Date
           </label>
           <input
@@ -62,11 +62,11 @@ export function AuditLogsPage() {
               setStartDate(e.target.value);
               setPage(1);
             }}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="rounded-lg border border-primary-200 px-3 py-2 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-500">
+          <label className="mb-1 block text-xs font-medium text-text-muted">
             End Date
           </label>
           <input
@@ -76,12 +76,12 @@ export function AuditLogsPage() {
               setEndDate(e.target.value);
               setPage(1);
             }}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="rounded-lg border border-primary-200 px-3 py-2 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
           />
         </div>
         <button
           onClick={resetFilters}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
+          className="rounded-lg border border-primary-200 px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-muted"
         >
           Clear
         </button>
@@ -99,21 +99,21 @@ export function AuditLogsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="px-4 py-3 font-semibold text-slate-600">
+              <tr className="border-b border-primary-100 bg-surface-elevated">
+                <th className="px-4 py-3 font-semibold text-text-secondary">
                   Timestamp
                 </th>
-                <th className="px-4 py-3 font-semibold text-slate-600">
+                <th className="px-4 py-3 font-semibold text-text-secondary">
                   Action
                 </th>
-                <th className="px-4 py-3 font-semibold text-slate-600">User</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">
+                <th className="px-4 py-3 font-semibold text-text-secondary">User</th>
+                <th className="px-4 py-3 font-semibold text-text-secondary">
                   Resource
                 </th>
-                <th className="px-4 py-3 font-semibold text-slate-600">
+                <th className="px-4 py-3 font-semibold text-text-secondary">
                   IP Address
                 </th>
-                <th className="px-4 py-3 font-semibold text-slate-600">
+                <th className="px-4 py-3 font-semibold text-text-secondary">
                   Details
                 </th>
               </tr>
@@ -121,15 +121,15 @@ export function AuditLogsPage() {
             <tbody>
               {isLoading && (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500">
-                    <div className="mx-auto h-6 w-6 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+                  <td colSpan={6} className="py-12 text-center text-text-muted">
+                    <div className="mx-auto h-6 w-6 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
                   </td>
                 </tr>
               )}
 
               {data?.data.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500">
+                  <td colSpan={6} className="py-12 text-center text-text-muted">
                     No audit logs found.
                   </td>
                 </tr>
@@ -138,33 +138,33 @@ export function AuditLogsPage() {
               {data?.data.map((log, i) => (
                 <tr
                   key={log.id}
-                  className={`border-b border-slate-100 transition-colors hover:bg-slate-50 ${
+                  className={`border-b border-surface-muted transition-colors hover:bg-surface-elevated ${
                     i % 2 === 1 ? "bg-slate-25" : ""
                   }`}
                 >
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-500">
+                  <td className="whitespace-nowrap px-4 py-3 text-text-muted">
                     {new Date(log.createdAt).toLocaleString()}
                   </td>
                   <td className="px-4 py-3">
-                    <span className="inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                    <span className="inline-flex rounded-md bg-surface-muted px-2 py-0.5 text-xs font-medium text-text-secondary">
                       {log.action}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 text-text-secondary">
                     {log.userEmail || "System"}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 text-text-secondary">
                     {log.resource}
                     {log.resourceId && (
-                      <span className="ml-1 text-xs text-slate-400">
+                      <span className="ml-1 text-xs text-text-placeholder">
                         #{log.resourceId.slice(0, 8)}
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-500">
+                  <td className="px-4 py-3 font-mono text-xs text-text-muted">
                     {log.ipAddress || "-"}
                   </td>
-                  <td className="max-w-xs truncate px-4 py-3 text-xs text-slate-500">
+                  <td className="max-w-xs truncate px-4 py-3 text-xs text-text-muted">
                     {log.details ? JSON.stringify(log.details) : "-"}
                   </td>
                 </tr>

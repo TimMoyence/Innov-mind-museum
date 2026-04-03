@@ -15,6 +15,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { colors } from './tokens/colors';
 import { typography } from './tokens/typography';
+import { spacing, radii } from './tokens/spacing';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
@@ -73,6 +74,19 @@ function buildTailwindCSS(): string {
 
   for (const [name, val] of Object.entries(typography.lineHeight)) {
     lines.push(`  --line-height-${name}: ${val};`);
+  }
+  lines.push('');
+
+  // Spacing
+  for (const [name, val] of Object.entries(spacing)) {
+    lines.push(`  --spacing-${name}: ${val.rem};`);
+  }
+  lines.push('');
+
+  // Radii
+  for (const [name, val] of Object.entries(radii)) {
+    const suffix = name === 'DEFAULT' ? '' : `-${name}`;
+    lines.push(`  --radius${suffix}: ${val.rem};`);
   }
 
   lines.push('}', '');
@@ -156,6 +170,31 @@ function buildReactNativeTS(): string {
     lines.push(`  ${name}: ${val},`);
   }
   lines.push('} as const;', '');
+
+  // Spacing — px values for React Native
+  lines.push('export const space = {');
+  for (const [name, val] of Object.entries(spacing)) {
+    const key = /^\d/.test(name) || name.includes('.') ? `'${name}'` : name;
+    lines.push(`  ${key}: ${val.px},`);
+  }
+  lines.push('} as const;', '');
+
+  // Radii — px values for React Native
+  lines.push('export const radius = {');
+  for (const [name, val] of Object.entries(radii)) {
+    const key = /^\d/.test(name) ? `'${name}'` : name;
+    lines.push(`  ${key}: ${val.px},`);
+  }
+  lines.push('} as const;', '');
+
+  // Gradient colors
+  if (colors.gradient) {
+    lines.push('export const gradientColors = {');
+    for (const [name, hex] of Object.entries(colors.gradient)) {
+      lines.push(`  ${name}: '${hex}',`);
+    }
+    lines.push('} as const;', '');
+  }
 
   return lines.join('\n');
 }

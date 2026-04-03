@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getStats } from "@/api/admin.api";
 
 const statCards = [
-  { key: "totalUsers", label: "Total Users", color: "bg-blue-500" },
+  { key: "totalUsers", label: "Total Users", color: "bg-primary-500" },
   { key: "activeUsers", label: "Active Users", color: "bg-green-500" },
   { key: "totalConversations", label: "Conversations", color: "bg-purple-500" },
   { key: "totalMessages", label: "Total Messages", color: "bg-indigo-500" },
@@ -19,11 +19,11 @@ export function DashboardPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-slate-900">Dashboard</h1>
+      <h1 className="mb-6 text-2xl font-bold text-text-primary">Dashboard</h1>
 
       {isLoading && (
         <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
         </div>
       )}
 
@@ -46,8 +46,8 @@ export function DashboardPage() {
                     <div className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-500">{label}</p>
-                    <p className="mt-1 text-2xl font-bold text-slate-900">
+                    <p className="text-sm font-medium text-text-muted">{label}</p>
+                    <p className="mt-1 text-2xl font-bold text-text-primary">
                       {stats[key].toLocaleString()}
                     </p>
                   </div>

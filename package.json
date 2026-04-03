@@ -2,7 +2,8 @@
   "private": true,
   "name": "musaium-monorepo",
   "scripts": {
-    "prepare": "husky"
+    "prepare": "husky",
+    "build:tokens": "cd design-system && npm run build"
   },
   "devDependencies": {
     "husky": "^9.1.7"
