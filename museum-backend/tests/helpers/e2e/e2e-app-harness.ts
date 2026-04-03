@@ -81,6 +81,11 @@ export async function createE2EHarness(): Promise<E2EHarness> {
     { AddModerationColumnsToMessageReports1774400000000 },
     { CreateSupportTables1774400100000 },
     { AddMuseumCoordinates1774500000000 },
+    { CreateReviewsTable1774543500000 },
+    { AddEmailChangeColumns1774620968449 },
+    { AddOnboardingCompleted1774732556635 },
+    { AddMessageFeedback1774963405720 },
+    { CreateArtKeywordsTable1775100000000 },
     { ChatService },
     { TypeOrmChatRepository },
     { LocalImageStorage },
@@ -107,6 +112,11 @@ export async function createE2EHarness(): Promise<E2EHarness> {
     import('@src/data/db/migrations/1774400000000-AddModerationColumnsToMessageReports'),
     import('@src/data/db/migrations/1774400100000-CreateSupportTables'),
     import('@src/data/db/migrations/1774500000000-AddMuseumCoordinates'),
+    import('@src/data/db/migrations/1774543500000-CreateReviewsTable'),
+    import('@src/data/db/migrations/1774620968449-AddEmailChangeColumns'),
+    import('@src/data/db/migrations/1774732556635-AddOnboardingCompleted'),
+    import('@src/data/db/migrations/1774963405720-AddMessageFeedback'),
+    import('@src/data/db/migrations/1775100000000-CreateArtKeywordsTable'),
     import('@modules/chat/application/chat.service'),
     import('@modules/chat/infrastructure/chat.repository.typeorm'),
     import('@modules/chat/adapters/secondary/image-storage.stub'),
@@ -135,6 +145,11 @@ export async function createE2EHarness(): Promise<E2EHarness> {
     AddModerationColumnsToMessageReports1774400000000,
     CreateSupportTables1774400100000,
     AddMuseumCoordinates1774500000000,
+    CreateReviewsTable1774543500000,
+    AddEmailChangeColumns1774620968449,
+    AddOnboardingCompleted1774732556635,
+    AddMessageFeedback1774963405720,
+    CreateArtKeywordsTable1775100000000,
   ];
 
   await appDataSource.initialize();
@@ -183,7 +198,9 @@ export async function createE2EHarness(): Promise<E2EHarness> {
 
   let server: Server;
   await new Promise<void>((resolve) => {
-    server = app.listen(0, () => resolve());
+    server = app.listen(0, () => {
+      resolve();
+    });
   });
 
   const address = server!.address() as AddressInfo | null;

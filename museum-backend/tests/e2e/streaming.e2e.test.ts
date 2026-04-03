@@ -1,0 +1,112 @@
+import { createE2EHarness, E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
+import { registerAndLogin } from 'tests/helpers/e2e/e2e-auth.helpers';
+
+const shouldRunE2E = process.env.RUN_E2E === 'true';
+const describeE2E = shouldRunE2E ? describe : describe.skip;
+
+/** Parses raw SSE text into an array of { event, data } objects. */
+function parseSseEvents(raw: string): Array<{ event: string; data: string }> {
+  const events: Array<{ event: string; data: string }> = [];
+  const blocks = raw.split('\n\n').filter((b) => b.trim().length > 0);
+
+  for (const block of blocks) {
+    const lines = block.split('\n');
+    let event = '';
+    let data = '';
+
+    for (const line of lines) {
+      if (line.startsWith('event: ')) {
+        event = line.slice('event: '.length);
+      } else if (line.startsWith('data: ')) {
+        data = line.slice('data: '.length);
+      }
+    }
+
+    if (event && data) {
+      events.push({ event, data });
+    }
+  }
+
+  return events;
+}
+
+describeE2E('SSE streaming e2e', () => {
+  jest.setTimeout(180_000);
+
+  let harness: E2EHarness;
+
+  beforeAll(async () => {
+    // Enable streaming feature flag before creating the harness.
+    // The env var is read during dynamic import inside createE2EHarness.
+    process.env.FEATURE_FLAG_STREAMING = 'true';
+    harness = await createE2EHarness();
+  });
+
+  afterAll(async () => {
+    delete process.env.FEATURE_FLAG_STREAMING;
+    await harness?.stop();
+  });
+
+  it('streams tokens via SSE and ends with a done event', async () => {
+    const { token } = await registerAndLogin(harness.request);
+
+    // ── Create a session ──
+    const createRes = await harness.request(
+      '/api/chat/sessions',
+      {
+        method: 'POST',
+        body: JSON.stringify({ locale: 'en', museumMode: true }),
+      },
+      token,
+    );
+    expect(createRes.status).toBe(201);
+    const session = (createRes.body as { session: { id: string } }).session;
+
+    // ── Make a raw HTTP request to the streaming endpoint ──
+    const response = await fetch(
+      `${harness.baseUrl}/api/chat/sessions/${session.id}/messages/stream`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: 'Tell me about art',
+          context: { museumMode: true, locale: 'en', guideLevel: 'beginner' },
+        }),
+      },
+    );
+
+    // ── Verify SSE headers ──
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('text/event-stream');
+    expect(response.headers.get('cache-control')).toBe('no-cache');
+
+    // ── Read the full SSE response body ──
+    const rawBody = await response.text();
+    const events = parseSseEvents(rawBody);
+
+    // ── Verify at least one token event and one done event ──
+    const tokenEvents = events.filter((e) => e.event === 'token');
+    const doneEvents = events.filter((e) => e.event === 'done');
+
+    expect(tokenEvents.length).toBeGreaterThanOrEqual(1);
+    expect(doneEvents).toHaveLength(1);
+
+    // ── Verify token event shape ──
+    const firstToken = JSON.parse(tokenEvents[0].data) as { t: string };
+    expect(firstToken.t).toEqual(expect.any(String));
+    expect(firstToken.t.length).toBeGreaterThan(0);
+
+    // ── Verify done event shape ──
+    const donePayload = JSON.parse(doneEvents[0].data) as {
+      messageId: string;
+      createdAt: string;
+      metadata: Record<string, unknown>;
+    };
+    expect(donePayload.messageId).toEqual(expect.any(String));
+    expect(donePayload.createdAt).toEqual(expect.any(String));
+    expect(donePayload.metadata).toEqual(expect.any(Object));
+  });
+});

@@ -146,6 +146,49 @@ describe('useImagePicker', () => {
     expect(result.current.pendingImage).toBeNull();
   });
 
+  it('onTakePicture() does nothing when user cancels the camera', async () => {
+    mockRequestCameraPermissionsAsync.mockResolvedValue({ status: 'granted' });
+    mockLaunchCameraAsync.mockResolvedValue({
+      canceled: true,
+      assets: [],
+    });
+
+    const { result } = renderHook(() => useImagePicker());
+
+    await act(async () => {
+      await result.current.onTakePicture();
+    });
+
+    expect(result.current.pendingImage).toBeNull();
+    expect(result.current.selectedImage).toBeNull();
+  });
+
+  it('onTakePicture() handles camera launch failure gracefully', async () => {
+    mockRequestCameraPermissionsAsync.mockResolvedValue({ status: 'granted' });
+    mockLaunchCameraAsync.mockRejectedValue(new Error('Camera unavailable'));
+
+    const { result } = renderHook(() => useImagePicker());
+
+    await act(async () => {
+      await result.current.onTakePicture();
+    });
+
+    expect(result.current.pendingImage).toBeNull();
+  });
+
+  it('onPickImage() handles gallery launch failure gracefully', async () => {
+    mockRequestMediaLibraryPermissionsAsync.mockResolvedValue({ status: 'granted' });
+    mockLaunchImageLibraryAsync.mockRejectedValue(new Error('Gallery unavailable'));
+
+    const { result } = renderHook(() => useImagePicker());
+
+    await act(async () => {
+      await result.current.onPickImage();
+    });
+
+    expect(result.current.pendingImage).toBeNull();
+  });
+
   it('confirmPendingImage() promotes pendingImage to selectedImage', async () => {
     mockRequestCameraPermissionsAsync.mockResolvedValue({ status: 'granted' });
     mockLaunchCameraAsync.mockResolvedValue({
