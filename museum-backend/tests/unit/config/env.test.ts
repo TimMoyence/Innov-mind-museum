@@ -1,0 +1,342 @@
+/**
+ * Tests for the env.ts module's actual behavior at import time.
+ *
+ * Because env.ts is a singleton that runs on import, each test that needs
+ * different env vars must use jest.resetModules() and re-require.
+ *
+ * Complementary to env-helpers.test.ts which tests the helper functions
+ * via local copies. These tests exercise the real module.
+ */
+
+describe('env.ts module', () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    jest.resetModules();
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  /**
+   * Helper to import env.ts fresh with controlled env vars.
+   * @param envOverrides
+   */
+  function loadEnv(envOverrides: Record<string, string | undefined> = {}) {
+    // Set NODE_ENV to test by default to avoid production validation
+    process.env = {
+      ...originalEnv,
+      NODE_ENV: 'test',
+      ...envOverrides,
+    };
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic re-import needed for module-level singleton
+    const mod = require('@src/config/env') as typeof import('@src/config/env');
+    return mod.env;
+  }
+
+  describe('LLM provider fallback', () => {
+    it('defaults to openai when LLM_PROVIDER is not set', () => {
+      const env = loadEnv({ LLM_PROVIDER: undefined });
+      expect(env.llm.provider).toBe('openai');
+    });
+
+    it('uses google when LLM_PROVIDER is "google"', () => {
+      const env = loadEnv({ LLM_PROVIDER: 'google' });
+      expect(env.llm.provider).toBe('google');
+    });
+
+    it('uses deepseek when LLM_PROVIDER is "deepseek"', () => {
+      const env = loadEnv({ LLM_PROVIDER: 'deepseek' });
+      expect(env.llm.provider).toBe('deepseek');
+    });
+
+    it('falls back to openai for unknown provider', () => {
+      const env = loadEnv({ LLM_PROVIDER: 'unknown-llm' });
+      expect(env.llm.provider).toBe('openai');
+    });
+
+    it('handles case-insensitive provider', () => {
+      const env = loadEnv({ LLM_PROVIDER: 'Google' });
+      expect(env.llm.provider).toBe('google');
+    });
+  });
+
+  describe('CORS_ORIGINS parsing', () => {
+    it('parses comma-separated origins', () => {
+      const env = loadEnv({
+        CORS_ORIGINS: 'https://app.example.com,https://admin.example.com',
+      });
+      expect(env.corsOrigins).toEqual(['https://app.example.com', 'https://admin.example.com']);
+    });
+
+    it('returns empty array when CORS_ORIGINS is not set', () => {
+      const env = loadEnv({ CORS_ORIGINS: undefined });
+      expect(env.corsOrigins).toEqual([]);
+    });
+
+    it('trims whitespace in origins', () => {
+      const env = loadEnv({
+        CORS_ORIGINS: '  https://a.com , https://b.com  ',
+      });
+      expect(env.corsOrigins).toEqual(['https://a.com', 'https://b.com']);
+    });
+  });
+
+  describe('toOptionalString behavior (via env fields)', () => {
+    it('returns undefined for empty BREVO_API_KEY', () => {
+      const env = loadEnv({ BREVO_API_KEY: '' });
+      expect(env.brevoApiKey).toBeUndefined();
+    });
+
+    it('returns undefined for whitespace-only BREVO_API_KEY', () => {
+      const env = loadEnv({ BREVO_API_KEY: '   ' });
+      expect(env.brevoApiKey).toBeUndefined();
+    });
+
+    it('returns trimmed string for valid BREVO_API_KEY', () => {
+      const env = loadEnv({ BREVO_API_KEY: '  key-123  ' });
+      expect(env.brevoApiKey).toBe('key-123');
+    });
+
+    it('returns undefined for missing UNSPLASH_ACCESS_KEY', () => {
+      const env = loadEnv({ UNSPLASH_ACCESS_KEY: undefined });
+      expect(env.imageEnrichment.unsplashAccessKey).toBeUndefined();
+    });
+  });
+
+  describe('numeric defaults', () => {
+    it('uses 3000 as default port', () => {
+      const env = loadEnv({ PORT: undefined });
+      expect(env.port).toBe(3000);
+    });
+
+    it('parses PORT from env', () => {
+      const env = loadEnv({ PORT: '8080' });
+      expect(env.port).toBe(8080);
+    });
+
+    it('falls back to default for non-numeric PORT', () => {
+      const env = loadEnv({ PORT: 'not-a-number' });
+      expect(env.port).toBe(3000);
+    });
+
+    it('uses default LLM temperature of 0.3', () => {
+      const env = loadEnv({ LLM_TEMPERATURE: undefined });
+      expect(env.llm.temperature).toBeCloseTo(0.3);
+    });
+  });
+
+  describe('boolean defaults', () => {
+    it('DB_SYNCHRONIZE defaults to false', () => {
+      const env = loadEnv({ DB_SYNCHRONIZE: undefined });
+      expect(env.dbSynchronize).toBe(false);
+    });
+
+    it('TRUST_PROXY defaults to true', () => {
+      const env = loadEnv({ TRUST_PROXY: undefined });
+      expect(env.trustProxy).toBe(true);
+    });
+  });
+
+  describe('optional sections (TTS, cache, sentry, otel)', () => {
+    it('tts is undefined when TTS_ENABLED is not set', () => {
+      const env = loadEnv({ TTS_ENABLED: undefined });
+      expect(env.tts).toBeUndefined();
+    });
+
+    it('tts is populated when TTS_ENABLED is true', () => {
+      const env = loadEnv({ TTS_ENABLED: 'true', TTS_MODEL: 'tts-1-hd' });
+      expect(env.tts).toBeDefined();
+      expect(env.tts?.enabled).toBe(true);
+      expect(env.tts?.model).toBe('tts-1-hd');
+    });
+
+    it('cache is undefined when CACHE_ENABLED is not set', () => {
+      const env = loadEnv({ CACHE_ENABLED: undefined });
+      expect(env.cache).toBeUndefined();
+    });
+
+    it('cache is populated when CACHE_ENABLED is true', () => {
+      const env = loadEnv({
+        CACHE_ENABLED: 'true',
+        REDIS_URL: 'redis://custom:6380',
+      });
+      expect(env.cache?.enabled).toBe(true);
+      expect(env.cache?.url).toBe('redis://custom:6380');
+    });
+
+    it('sentry is undefined when SENTRY_DSN is not set', () => {
+      const env = loadEnv({ SENTRY_DSN: undefined });
+      expect(env.sentry).toBeUndefined();
+    });
+
+    it('sentry is populated when SENTRY_DSN is set', () => {
+      const env = loadEnv({ SENTRY_DSN: 'https://abc@sentry.io/123' });
+      expect(env.sentry?.dsn).toBe('https://abc@sentry.io/123');
+      expect(env.sentry?.environment).toBe('test');
+    });
+
+    it('otel is undefined when OTEL_ENABLED is not set', () => {
+      const env = loadEnv({ OTEL_ENABLED: undefined });
+      expect(env.otel).toBeUndefined();
+    });
+  });
+
+  describe('feature flags', () => {
+    it('all feature flags default to false when env vars are absent', () => {
+      const env = loadEnv({
+        FEATURE_FLAG_VOICE_MODE: '',
+        FEATURE_FLAG_OCR_GUARD: '',
+        FEATURE_FLAG_API_KEYS: '',
+        FEATURE_FLAG_STREAMING: '',
+        FEATURE_FLAG_MULTI_TENANCY: '',
+        FEATURE_FLAG_USER_MEMORY: '',
+        FEATURE_FLAG_KNOWLEDGE_BASE: '',
+        FEATURE_FLAG_IMAGE_ENRICHMENT: '',
+      });
+      expect(env.featureFlags.voiceMode).toBe(false);
+      expect(env.featureFlags.ocrGuard).toBe(false);
+      expect(env.featureFlags.apiKeys).toBe(false);
+      expect(env.featureFlags.streaming).toBe(false);
+      expect(env.featureFlags.multiTenancy).toBe(false);
+      expect(env.featureFlags.userMemory).toBe(false);
+      expect(env.featureFlags.knowledgeBase).toBe(false);
+      expect(env.featureFlags.imageEnrichment).toBe(false);
+    });
+
+    it('feature flags can be enabled individually', () => {
+      const env = loadEnv({
+        FEATURE_FLAG_VOICE_MODE: 'true',
+        FEATURE_FLAG_STREAMING: '1',
+      });
+      expect(env.featureFlags.voiceMode).toBe(true);
+      expect(env.featureFlags.streaming).toBe(true);
+      expect(env.featureFlags.ocrGuard).toBe(false);
+    });
+  });
+
+  describe('NODE_ENV validation', () => {
+    it('throws on invalid NODE_ENV', () => {
+      expect(() => {
+        loadEnv({ NODE_ENV: 'staging' });
+      }).toThrow('Invalid NODE_ENV="staging"');
+    });
+
+    it('accepts "development"', () => {
+      const env = loadEnv({ NODE_ENV: 'development' });
+      expect(env.nodeEnv).toBe('development');
+    });
+
+    it('accepts "production" (with required vars)', () => {
+      const env = loadEnv({
+        NODE_ENV: 'production',
+        JWT_ACCESS_SECRET: 'prod-secret',
+        JWT_REFRESH_SECRET: 'prod-refresh',
+        PGDATABASE: 'museum_prod',
+        CORS_ORIGINS: 'https://app.musaium.com',
+        MEDIA_SIGNING_SECRET: 'sign-secret',
+        OPENAI_API_KEY: 'sk-test',
+      });
+      expect(env.nodeEnv).toBe('production');
+    });
+  });
+
+  describe('production validation', () => {
+    it('throws when JWT_ACCESS_SECRET is missing in production', () => {
+      expect(() => {
+        loadEnv({
+          NODE_ENV: 'production',
+          JWT_ACCESS_SECRET: undefined,
+          JWT_SECRET: undefined,
+          JWT_REFRESH_SECRET: 'refresh',
+          PGDATABASE: 'db',
+          CORS_ORIGINS: 'https://x.com',
+          MEDIA_SIGNING_SECRET: 'sign',
+          OPENAI_API_KEY: 'sk-test',
+        });
+      }).toThrow(/Missing required environment variable/);
+    });
+
+    it('throws when PGDATABASE is missing in production', () => {
+      expect(() => {
+        loadEnv({
+          NODE_ENV: 'production',
+          JWT_ACCESS_SECRET: 'secret',
+          JWT_REFRESH_SECRET: 'refresh',
+          PGDATABASE: undefined,
+          CORS_ORIGINS: 'https://x.com',
+          MEDIA_SIGNING_SECRET: 'sign',
+          OPENAI_API_KEY: 'sk-test',
+        });
+      }).toThrow(/Missing required environment variable/);
+    });
+
+    it('throws when CORS_ORIGINS is missing in production', () => {
+      expect(() => {
+        loadEnv({
+          NODE_ENV: 'production',
+          JWT_ACCESS_SECRET: 'secret',
+          JWT_REFRESH_SECRET: 'refresh',
+          PGDATABASE: 'db',
+          CORS_ORIGINS: undefined,
+          MEDIA_SIGNING_SECRET: 'sign',
+          OPENAI_API_KEY: 'sk-test',
+        });
+      }).toThrow(/Missing required environment variable/);
+    });
+
+    it('does not throw for missing secrets in test mode', () => {
+      expect(() => {
+        loadEnv({
+          NODE_ENV: 'test',
+          JWT_ACCESS_SECRET: undefined,
+          JWT_SECRET: undefined,
+          JWT_REFRESH_SECRET: undefined,
+          PGDATABASE: undefined,
+        });
+      }).not.toThrow();
+    });
+  });
+
+  describe('LLM diagnostics', () => {
+    it('forces includeDiagnostics false in production', () => {
+      const env = loadEnv({
+        NODE_ENV: 'production',
+        LLM_INCLUDE_DIAGNOSTICS: 'true',
+        JWT_ACCESS_SECRET: 'secret',
+        JWT_REFRESH_SECRET: 'refresh',
+        PGDATABASE: 'db',
+        CORS_ORIGINS: 'https://x.com',
+        MEDIA_SIGNING_SECRET: 'sign',
+        OPENAI_API_KEY: 'sk-test',
+      });
+      expect(env.llm.includeDiagnostics).toBe(false);
+    });
+
+    it('allows includeDiagnostics true in test', () => {
+      const env = loadEnv({
+        NODE_ENV: 'test',
+        LLM_INCLUDE_DIAGNOSTICS: 'true',
+      });
+      expect(env.llm.includeDiagnostics).toBe(true);
+    });
+  });
+
+  describe('storage driver', () => {
+    it('defaults to local when OBJECT_STORAGE_DRIVER is not set', () => {
+      const env = loadEnv({ OBJECT_STORAGE_DRIVER: undefined });
+      expect(env.storage.driver).toBe('local');
+    });
+
+    it('uses s3 when OBJECT_STORAGE_DRIVER is "s3"', () => {
+      const env = loadEnv({ OBJECT_STORAGE_DRIVER: 's3' });
+      expect(env.storage.driver).toBe('s3');
+    });
+
+    it('falls back to local for unknown driver', () => {
+      const env = loadEnv({ OBJECT_STORAGE_DRIVER: 'gcs' });
+      expect(env.storage.driver).toBe('local');
+    });
+  });
+});
