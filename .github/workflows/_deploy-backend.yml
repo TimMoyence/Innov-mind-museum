@@ -1,0 +1,190 @@
+name: _deploy-backend (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: Deployment environment (production or staging)
+        required: true
+        type: string
+      image_prefix:
+        description: Docker image name prefix (e.g. museum-backend or museum-backend-staging)
+        required: true
+        type: string
+      compose_service:
+        description: Docker Compose service name (e.g. backend or backend-staging)
+        required: true
+        type: string
+    secrets:
+      GHCR_USER:
+        required: true
+      GHCR_TOKEN:
+        required: true
+      SENTRY_AUTH_TOKEN:
+        required: false
+      SENTRY_ORG:
+        required: false
+      SENTRY_PROJECT_BACKEND:
+        required: false
+      SERVER_HOST:
+        required: true
+      SERVER_USER:
+        required: true
+      SERVER_KEY:
+        required: true
+      SMOKE_API_BASE_URL:
+        required: true
+      SMOKE_TEST_EMAIL:
+        required: true
+      SMOKE_TEST_PASSWORD:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    env:
+      HAS_SENTRY_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: museum-backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: museum-backend
+        run: pnpm install --frozen-lockfile
+
+      - name: Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USER }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./museum-backend
+          file: ./museum-backend/deploy/Dockerfile.prod
+          load: true
+          tags: ${{ inputs.image_prefix }}:ci
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ${{ inputs.image_prefix }}:ci
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: true
+          trivyignores: .trivyignore
+
+      - name: Push image to GHCR
+        uses: docker/build-push-action@v7
+        with:
+          context: ./museum-backend
+          file: ./museum-backend/deploy/Dockerfile.prod
+          push: true
+          tags: |
+            ghcr.io/${{ secrets.GHCR_USER }}/${{ inputs.image_prefix }}:latest
+            ghcr.io/${{ secrets.GHCR_USER }}/${{ inputs.image_prefix }}:${{ github.sha }}
+
+      - name: Create Sentry release
+        if: env.HAS_SENTRY_TOKEN == 'true'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT_BACKEND }}
+        run: |
+          npx @sentry/cli releases new "${{ github.sha }}"
+          npx @sentry/cli releases set-commits "${{ github.sha }}" --auto || true
+          npx @sentry/cli releases finalize "${{ github.sha }}"
+
+      - name: Upload backend source maps to Sentry
+        if: env.HAS_SENTRY_TOKEN == 'true'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT_BACKEND }}
+        working-directory: museum-backend
+        run: |
+          pnpm build
+          npx @sentry/cli sourcemaps upload --release="${{ github.sha }}" dist/
+
+      - name: Deploy on VPS (zero-downtime)
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          script: |
+            set -e
+            cd /srv/museum
+
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin || true
+
+            # 1. Pull the new image
+            docker compose pull ${{ inputs.compose_service }}
+
+            # 2. Run migrations in an ephemeral container BEFORE restarting
+            docker compose run --rm --no-deps -T ${{ inputs.compose_service }} \
+              node ./node_modules/typeorm/cli.js migration:run -d dist/src/data/db/data-source.js
+
+            # 2b. Seed museum data (idempotent — ON CONFLICT DO NOTHING)
+            docker compose run --rm --no-deps -T ${{ inputs.compose_service }} \
+              node dist/scripts/seed-museums.js || echo "Seed skipped (non-fatal)"
+
+            # 3. Restart with 30s grace period for in-flight requests to drain
+            docker compose up -d --remove-orphans --timeout 30 ${{ inputs.compose_service }}
+
+            # 4. Wait for the new container to pass its healthcheck
+            echo "Waiting for ${{ inputs.compose_service }} healthcheck..."
+            TRIES=0
+            MAX_TRIES=20
+            until docker compose exec -T ${{ inputs.compose_service }} node -e "fetch('http://localhost:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))" 2>/dev/null; do
+              TRIES=$((TRIES + 1))
+              if [ "$TRIES" -ge "$MAX_TRIES" ]; then
+                echo "Healthcheck failed after ${MAX_TRIES} attempts"
+                exit 1
+              fi
+              echo "  attempt ${TRIES}/${MAX_TRIES}..."
+              sleep 3
+            done
+            echo "${{ inputs.compose_service }} is healthy."
+
+      - name: Validate smoke secrets
+        env:
+          SMOKE_API_BASE_URL: ${{ secrets.SMOKE_API_BASE_URL }}
+          SMOKE_TEST_EMAIL: ${{ secrets.SMOKE_TEST_EMAIL }}
+          SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
+        run: |
+          test -n "$SMOKE_API_BASE_URL"
+          test -n "$SMOKE_TEST_EMAIL"
+          test -n "$SMOKE_TEST_PASSWORD"
+
+      - name: Post-deploy smoke test
+        working-directory: museum-backend
+        env:
+          SMOKE_API_BASE_URL: ${{ secrets.SMOKE_API_BASE_URL }}
+          SMOKE_TEST_EMAIL: ${{ secrets.SMOKE_TEST_EMAIL }}
+          SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
+          SMOKE_TIMEOUT_MS: '20000'
+          SMOKE_HEALTH_RETRIES: '24'
+          SMOKE_HEALTH_RETRY_DELAY_MS: '5000'
+        run: node ./scripts/smoke-api.cjs

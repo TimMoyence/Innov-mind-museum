@@ -1,0 +1,147 @@
+appId: com.musaium.mobile.preview
+---
+# Auth Flow: Register a new user -> verify home screen -> logout -> login -> verify home screen
+#
+# Prerequisites:
+#   - Backend running on localhost:3000 (docker-compose)
+#   - Development build installed on simulator/device
+#   - App freshly launched (not logged in)
+#
+# This flow validates the complete authentication lifecycle.
+
+# ──────────────────────────────────────────────
+# Phase 1: Wait for app to load and reach auth screen
+# ──────────────────────────────────────────────
+- waitForAnimationToEnd
+
+# Auth screen starts in login mode — verify we see it
+- assertVisible: "Welcome back"
+
+# ──────────────────────────────────────────────
+# Phase 2: Switch to registration mode
+# ──────────────────────────────────────────────
+- tapOn: "No account? Sign up"
+- waitForAnimationToEnd
+- assertVisible: "Create your account"
+
+# ──────────────────────────────────────────────
+# Phase 3: Fill registration form
+# ──────────────────────────────────────────────
+
+# First name
+- tapOn:
+    text: "First name"
+- inputText: "E2E"
+
+# Last name
+- tapOn:
+    text: "Last name"
+- inputText: "Tester"
+
+# Email — generate unique email via JavaScript
+- runScript:
+    script: |
+      output.timestamp = Date.now().toString();
+
+- tapOn:
+    text: "Email"
+- inputText: "e2e-${output.timestamp}@test.musaium.dev"
+
+# Password
+- tapOn:
+    text: "Password"
+- inputText: "TestPassword123!"
+
+# Accept GDPR terms (tap the checkbox area)
+- tapOn:
+    text: "I agree to the.*"
+    optional: true
+
+# Scroll down to make sure Sign up button is visible
+- scrollUntilVisible:
+    element: "Sign up"
+    direction: DOWN
+
+# Submit registration
+- tapOn: "Sign up"
+
+# ──────────────────────────────────────────────
+# Phase 4: Handle post-registration flow
+# ──────────────────────────────────────────────
+
+# After successful registration, the app auto-logs in.
+# For first-launch users, onboarding appears first.
+# Handle onboarding if it shows up.
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# If onboarding screen appears, skip it
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 5: Verify home screen
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 10000
+- assertVisible: "Start Conversation"
+
+# ──────────────────────────────────────────────
+# Phase 6: Navigate to settings and sign out
+# ──────────────────────────────────────────────
+- tapOn: "Settings"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Settings"
+    timeout: 5000
+
+# Scroll to find Sign out button
+- scrollUntilVisible:
+    element: "Sign out"
+    direction: DOWN
+
+- tapOn: "Sign out"
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 7: Verify we are back on auth screen
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Welcome back"
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 8: Login with the same credentials
+# ──────────────────────────────────────────────
+
+# Auth screen defaults to login mode
+- tapOn:
+    text: "Email"
+- inputText: "e2e-test-login@test.musaium.dev"
+
+- tapOn:
+    text: "Password"
+- inputText: "TestPassword123!"
+
+- tapOn: "Log in"
+
+# ──────────────────────────────────────────────
+# Phase 9: Verify home screen after login
+# ──────────────────────────────────────────────
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Skip onboarding again if it appears
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 10000
+- assertVisible: "Start Conversation"

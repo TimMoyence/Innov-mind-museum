@@ -18,6 +18,7 @@ concurrency:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: museum-web
@@ -52,19 +53,27 @@ jobs:
     needs: quality
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 9
 
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: museum-web/pnpm-lock.yaml
 
       - name: Install & Build
         working-directory: museum-web
         run: |
-          npm install --no-audit --no-fund
-          npm run build
+          pnpm install --frozen-lockfile
+          pnpm run build
 
       - name: Lighthouse CI
         uses: treosh/lighthouse-ci-action@v12
@@ -76,6 +85,7 @@ jobs:
     needs: quality
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       packages: write
