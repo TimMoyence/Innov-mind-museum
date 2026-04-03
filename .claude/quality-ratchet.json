@@ -1,12 +1,15 @@
 {
-  "lastUpdated": "2026-04-01",
-  "testCount": 1436,
-  "frontendTestCount": 149,
+  "lastUpdated": "2026-04-03",
+  "testCount": 1960,
+  "frontendTestCount": 815,
+  "frontendNodeTestCount": 200,
   "webTestCount": 71,
   "typecheckErrors": 0,
   "asAnyCount": 0,
-  "coverageStatements": 72.84,
-  "coverageBranches": 57.65,
+  "coverageStatements": 86.05,
+  "coverageBranches": 72.17,
+  "frontendCoverageStatements": 79.76,
+  "frontendCoverageBranches": 67.64,
   "lintErrors": 0,
-  "_comment": "Updated after Guardrail V2 migration: test count adjusted (removed redundant off-topic/redirect tests), coverage improved."
+  "_comment": "Phase 3 Wave 0-3: +600 tests, BE 76→86% stmt, FE 51→80% stmt. 6 repos tested, 50 component tests, auth/security infra fully covered."
 }
