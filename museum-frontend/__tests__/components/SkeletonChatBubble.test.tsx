@@ -1,7 +1,13 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 
-import '../helpers/test-utils';
+// DO NOT import test-utils — it stubs SkeletonBox which SkeletonChatBubble uses
+jest.mock('@/shared/ui/ThemeContext', () => ({
+  useTheme: () => ({
+    theme: { cardBorder: '#ccc', cardBackground: '#fff', inputBackground: '#e2e8f0' },
+  }),
+}));
+
 import { SkeletonChatBubble } from '@/shared/ui/SkeletonChatBubble';
 
 describe('SkeletonChatBubble', () => {

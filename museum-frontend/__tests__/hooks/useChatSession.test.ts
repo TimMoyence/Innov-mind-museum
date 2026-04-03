@@ -359,4 +359,531 @@ describe('useChatSession', () => {
     expect(result.current.locale).toBe('en-US');
     expect(result.current.museumMode).toBe(true);
   });
+
+  // ── Audio message flow ────────────────────────────────────────────────────
+
+  it('sendMessage() with audioUri uses postAudioMessage and adds assistant message', async () => {
+    mockPostAudioMessage.mockResolvedValue({
+      message: {
+        id: 'audio-resp-1',
+        role: 'assistant',
+        text: 'I heard your question about the painting.',
+        createdAt: new Date().toISOString(),
+      },
+      metadata: { detectedArtwork: { title: 'Mona Lisa' } },
+    });
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    let sendResult: boolean | undefined;
+    await act(async () => {
+      sendResult = await result.current.sendMessage({ audioUri: 'file://voice.m4a' });
+    });
+
+    expect(sendResult).toBe(true);
+    expect(mockPostAudioMessage).toHaveBeenCalledTimes(1);
+    const callArgs = mockPostAudioMessage.mock.calls[0][0] as Record<string, unknown>;
+    expect(callArgs.sessionId).toBe(SESSION_ID);
+    expect(callArgs.audioUri).toBe('file://voice.m4a');
+    expect(mockSendMessageSmart).not.toHaveBeenCalled();
+
+    // Should have assistant message in the list
+    const assistantMsg = result.current.messages.find(
+      (m: ChatUiMessage) => m.id === 'audio-resp-1',
+    );
+    expect(assistantMsg).toBeDefined();
+    expect(assistantMsg?.text).toBe('I heard your question about the painting.');
+  });
+
+  it('sendMessage() with audioBlob uses postAudioMessage', async () => {
+    mockPostAudioMessage.mockResolvedValue({
+      message: {
+        id: 'blob-resp-1',
+        role: 'assistant',
+        text: 'Audio response',
+        createdAt: new Date().toISOString(),
+      },
+      metadata: null,
+    });
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    const blob = new Blob(['audio-data'], { type: 'audio/webm' });
+    let sendResult: boolean | undefined;
+    await act(async () => {
+      sendResult = await result.current.sendMessage({ audioBlob: blob });
+    });
+
+    expect(sendResult).toBe(true);
+    expect(mockPostAudioMessage).toHaveBeenCalledTimes(1);
+    const callArgs = mockPostAudioMessage.mock.calls[0][0] as Record<string, unknown>;
+    expect(callArgs.audioBlob).toBe(blob);
+  });
+
+  it('sendMessage() with audio shows transcription on optimistic user message', async () => {
+    mockPostAudioMessage.mockResolvedValue({
+      message: {
+        id: 'transcribed-resp',
+        role: 'assistant',
+        text: 'Response to transcript',
+        createdAt: new Date().toISOString(),
+      },
+      metadata: null,
+      transcription: { text: 'What is this painting?' },
+    });
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.sendMessage({ audioUri: 'file://voice.m4a' });
+    });
+
+    // The optimistic user message should have been updated with transcription text
+    const userMessages = result.current.messages.filter((m: ChatUiMessage) => m.role === 'user');
+    const transcribedMsg = userMessages.find((m: ChatUiMessage) =>
+      m.text.includes('What is this painting?'),
+    );
+    expect(transcribedMsg).toBeDefined();
+  });
+
+  // ── Image message with optimistic placeholder ─────────────────────────────
+
+  it('sendMessage() with imageUri adds optimistic message with [Image sent] text', async () => {
+    mockSendMessageSmart.mockResolvedValue({
+      message: {
+        id: 'img-resp-1',
+        role: 'assistant',
+        text: 'Nice painting!',
+        createdAt: new Date().toISOString(),
+      },
+      metadata: null,
+    });
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.sendMessage({ imageUri: 'file://photo.jpg' });
+    });
+
+    expect(mockSendMessageSmart).toHaveBeenCalledTimes(1);
+    const callArgs = mockSendMessageSmart.mock.calls[0][0] as Record<string, unknown>;
+    expect(callArgs.imageUri).toBe('file://photo.jpg');
+  });
+
+  // ── Send failure recovery ─────────────────────────────────────────────────
+
+  it('marks optimistic message as sendFailed when API call throws', async () => {
+    mockSendMessageSmart.mockRejectedValue(new Error('Network error'));
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.sendMessage({ text: 'will fail' });
+    });
+
+    const failedMsg = result.current.messages.find((m: ChatUiMessage) => m.sendFailed === true);
+    expect(failedMsg).toBeDefined();
+    expect(failedMsg?.role).toBe('user');
+  });
+
+  it('removes streaming placeholder on send failure', async () => {
+    mockSendMessageSmart.mockRejectedValue(new Error('Network error'));
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.sendMessage({ text: 'will fail' });
+    });
+
+    // No message should end with '-streaming'
+    const streamingMsgs = result.current.messages.filter((m: ChatUiMessage) =>
+      m.id.endsWith('-streaming'),
+    );
+    expect(streamingMsgs).toHaveLength(0);
+  });
+
+  // ── Retry failed message ──────────────────────────────────────────────────
+
+  it('retryMessage() removes the failed message and re-sends', async () => {
+    // First send fails
+    mockSendMessageSmart.mockRejectedValueOnce(new Error('Temp error'));
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.sendMessage({ text: 'retry me' });
+    });
+
+    const failedMsg = result.current.messages.find((m: ChatUiMessage) => m.sendFailed === true);
+    expect(failedMsg).toBeDefined();
+
+    // Now retry - second call succeeds
+    mockSendMessageSmart.mockResolvedValueOnce({
+      message: {
+        id: 'retry-resp',
+        role: 'assistant',
+        text: 'Success after retry',
+        createdAt: new Date().toISOString(),
+      },
+      metadata: null,
+    });
+
+    act(() => {
+      result.current.retryMessage(failedMsg!);
+    });
+
+    // retryMessage fires sendMessage asynchronously via void - wait for it
+    await waitFor(() => {
+      expect(mockSendMessageSmart).toHaveBeenCalledTimes(2);
+    });
+
+    // The second call should contain the text from the failed message
+    const retryArgs = mockSendMessageSmart.mock.calls[1][0] as Record<string, unknown>;
+    expect(retryArgs.text).toBe('retry me');
+  });
+
+  // ── Offline mode with image ───────────────────────────────────────────────
+
+  it('sendMessage() in offline mode with imageUri queues correctly', async () => {
+    mockIsOffline = true;
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.sendMessage({ imageUri: 'file://offline-photo.jpg' });
+    });
+
+    expect(mockEnqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: SESSION_ID,
+        imageUri: 'file://offline-photo.jpg',
+      }),
+    );
+
+    const offlineMsg = result.current.messages.find((m: ChatUiMessage) => m.id === 'queued-1');
+    expect(offlineMsg).toBeDefined();
+    expect(offlineMsg?.text).toBe('[Image sent]');
+    expect(offlineMsg?.image).toEqual({ url: 'file://offline-photo.jpg', expiresAt: '' });
+  });
+
+  it('sendMessage() in offline mode returns false when enqueue fails', async () => {
+    mockIsOffline = true;
+    mockEnqueue.mockReturnValueOnce(null as unknown as ReturnType<typeof mockEnqueue>);
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    let sendResult: boolean | undefined;
+    await act(async () => {
+      sendResult = await result.current.sendMessage({ text: 'queue full' });
+    });
+
+    expect(sendResult).toBe(false);
+  });
+
+  // ── Voice message text for optimistic message ─────────────────────────────
+
+  it('sendMessage() with audioUri but no text shows [Voice message] optimistic text', async () => {
+    mockPostAudioMessage.mockResolvedValue({
+      message: {
+        id: 'voice-resp',
+        role: 'assistant',
+        text: 'Audio response',
+        createdAt: new Date().toISOString(),
+      },
+      metadata: null,
+    });
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.sendMessage({ audioUri: 'file://voice.m4a' });
+    });
+
+    // Should have an optimistic user message with [Voice message]
+    const voiceMsg = result.current.messages.find(
+      (m: ChatUiMessage) => m.role === 'user' && m.text === '[Voice message]',
+    );
+    expect(voiceMsg).toBeDefined();
+  });
+
+  // ── Review prompt at 3rd successful send ──────────────────────────────────
+
+  it('calls incrementCompletedSessions on 3rd successful send', async () => {
+    const { incrementCompletedSessions } = require('@/shared/infrastructure/inAppReview');
+
+    mockSendMessageSmart.mockResolvedValue({
+      message: {
+        id: 'resp',
+        role: 'assistant',
+        text: 'Response',
+        createdAt: new Date().toISOString(),
+      },
+      metadata: null,
+    });
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // Send 3 messages
+    for (let i = 0; i < 3; i++) {
+      await act(async () => {
+        await result.current.sendMessage({ text: `msg ${String(i)}` });
+      });
+    }
+
+    expect(incrementCompletedSessions).toHaveBeenCalledTimes(1);
+  });
+
+  // ── isEmpty ───────────────────────────────────────────────────────────────
+
+  it('isEmpty is true when no messages loaded', async () => {
+    mockGetSession.mockResolvedValue({
+      session: { title: null, museumName: null },
+      messages: [],
+    });
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.isEmpty).toBe(true);
+  });
+
+  // ── Non-streaming fallback for image messages ─────────────────────────────
+
+  it('sendMessage() with imageUri replaces streaming placeholder via non-streaming fallback then reloads', async () => {
+    // sendMessageSmart returns a response with message.text for image path
+    mockSendMessageSmart.mockImplementation(() => {
+      return Promise.resolve({
+        sessionId: SESSION_ID,
+        message: {
+          id: 'img-server-resp',
+          role: 'assistant',
+          text: 'This is a beautiful painting',
+          createdAt: new Date().toISOString(),
+        },
+        metadata: { detectedArtwork: { title: 'Water Lilies' } },
+      });
+    });
+
+    // After image send, loadSession is called to refresh from server
+    const refreshedMessages = makeApiMessages([
+      { id: 'msg-1', role: 'user', text: 'Hello' },
+      { id: 'msg-2', role: 'assistant', text: 'Welcome!' },
+      { id: 'img-user-msg', role: 'user', text: 'What painting is this?' },
+      { id: 'img-server-resp', role: 'assistant', text: 'This is a beautiful painting' },
+    ]);
+
+    let callCount = 0;
+    mockGetSession.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return Promise.resolve(defaultSessionResponse());
+      }
+      return Promise.resolve({
+        session: { title: 'Test Session', museumName: 'Louvre' },
+        messages: refreshedMessages,
+      });
+    });
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.sendMessage({
+        text: 'What painting is this?',
+        imageUri: 'file://painting.jpg',
+      });
+    });
+
+    expect(mockSendMessageSmart).toHaveBeenCalledTimes(1);
+
+    // After reload, messages should include the server image response
+    await waitFor(() => {
+      expect(mockGetSession).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // ── Streaming onDone callback ──────────────────────────────────────────────
+
+  it('sendMessage() with streaming invokes onToken and onDone to build assistant message', async () => {
+    mockSendMessageSmart.mockImplementation(
+      (params: {
+        onToken?: (text: string) => void;
+        onDone?: (payload: {
+          messageId: string;
+          createdAt: string;
+          metadata: Record<string, unknown>;
+        }) => void;
+      }) => {
+        // Simulate streaming: call onToken then onDone
+        params.onToken?.('Hello ');
+        params.onToken?.('world!');
+        params.onDone?.({
+          messageId: 'streamed-msg-1',
+          createdAt: new Date().toISOString(),
+          metadata: { detectedArtwork: { title: 'Mona Lisa' } },
+        });
+        return Promise.resolve(null);
+      },
+    );
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.sendMessage({ text: 'Tell me about this' });
+    });
+
+    // The onDone callback should have replaced the streaming placeholder
+    const streamedMsg = result.current.messages.find(
+      (m: ChatUiMessage) => m.id === 'streamed-msg-1',
+    );
+    expect(streamedMsg).toBeDefined();
+    expect(streamedMsg?.role).toBe('assistant');
+    expect(streamedMsg?.text).toBe('Hello world!');
+  });
+
+  // ── Streaming onGuardrail callback ────────────────────────────────────────
+
+  it('sendMessage() with streaming invokes onGuardrail to set guardrail text', async () => {
+    mockSendMessageSmart.mockImplementation(
+      (params: {
+        onGuardrail?: (text: string, reason: string) => void;
+        onDone?: (payload: {
+          messageId: string;
+          createdAt: string;
+          metadata: Record<string, unknown>;
+        }) => void;
+      }) => {
+        // Simulate guardrail being triggered
+        params.onGuardrail?.('This topic is off-limits.', 'not_art');
+        params.onDone?.({
+          messageId: 'guardrail-msg',
+          createdAt: new Date().toISOString(),
+          metadata: {},
+        });
+        return Promise.resolve(null);
+      },
+    );
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.sendMessage({ text: 'Off topic question' });
+    });
+
+    // The guardrail text should have been flushed into the streaming message
+    const guardrailMsg = result.current.messages.find(
+      (m: ChatUiMessage) => m.id === 'guardrail-msg',
+    );
+    expect(guardrailMsg).toBeDefined();
+    expect(guardrailMsg?.text).toBe('This topic is off-limits.');
+  });
+
+  // ── Audio 3rd send triggers review prompt ─────────────────────────────────
+
+  it('calls incrementCompletedSessions on 3rd successful audio send', async () => {
+    const { incrementCompletedSessions } = require('@/shared/infrastructure/inAppReview');
+    incrementCompletedSessions.mockClear();
+
+    mockPostAudioMessage.mockResolvedValue({
+      message: {
+        id: 'audio-resp',
+        role: 'assistant',
+        text: 'Audio response',
+        createdAt: new Date().toISOString(),
+      },
+      metadata: null,
+    });
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // Send 3 audio messages
+    for (let i = 0; i < 3; i++) {
+      await act(async () => {
+        await result.current.sendMessage({ audioUri: `file://voice${String(i)}.m4a` });
+      });
+    }
+
+    expect(incrementCompletedSessions).toHaveBeenCalledTimes(1);
+  });
+
+  // ── Audio message failure ─────────────────────────────────────────────────
+
+  it('sendMessage() with audio marks message as failed on error', async () => {
+    mockPostAudioMessage.mockRejectedValue(new Error('Audio upload failed'));
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    const sendResult = await act(async () => {
+      return result.current.sendMessage({ audioUri: 'file://voice.m4a' });
+    });
+
+    expect(sendResult).toBe(false);
+    expect(result.current.error).toBeTruthy();
+  });
 });

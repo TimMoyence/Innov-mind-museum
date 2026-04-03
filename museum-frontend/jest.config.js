@@ -14,6 +14,8 @@ module.exports = {
     'features/**/*.{ts,tsx}',
     'shared/**/*.{ts,tsx}',
     'context/**/*.{ts,tsx}',
+    'app/**/*.{ts,tsx}',
+    '!app/**/_layout.tsx',
     '!**/*.d.ts',
     '!**/node_modules/**',
   ],
