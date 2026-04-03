@@ -65,7 +65,7 @@ export function ChatHeader({
             ]}
             disabled={isClosing}
             accessibilityRole="button"
-            accessibilityLabel={t('common.close')}
+            accessibilityLabel={t('a11y.chat.close')}
           >
             {isClosing ? (
               <ActivityIndicator size="small" color={theme.textSecondary} />

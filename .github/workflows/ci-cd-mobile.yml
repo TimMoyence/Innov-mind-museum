@@ -45,6 +45,7 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: museum-frontend
@@ -55,6 +56,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: museum-frontend/package-lock.json
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
@@ -91,6 +94,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'preview' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all') }}
     needs: quality
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: museum-frontend
@@ -105,6 +109,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: museum-frontend/package-lock.json
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
@@ -118,7 +124,7 @@ jobs:
         run: test -n "$EXPO_TOKEN"
 
       - name: Install EAS CLI
-        run: npm install -g eas-cli@latest
+        run: npm install -g eas-cli@18.5.0
 
       - name: Verify EAS CLI
         run: eas --version
@@ -130,6 +136,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'preview' && (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all') }}
     needs: quality
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: museum-frontend
@@ -144,6 +151,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: museum-frontend/package-lock.json
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
@@ -157,7 +166,7 @@ jobs:
         run: test -n "$EXPO_TOKEN"
 
       - name: Install EAS CLI
-        run: npm install -g eas-cli@latest
+        run: npm install -g eas-cli@18.5.0
 
       - name: Verify EAS CLI
         run: eas --version
@@ -169,6 +178,7 @@ jobs:
     if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'internal' && (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all')) || (github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, 'ios-only') && !contains(github.event.head_commit.message, 'ios only')) }}
     needs: quality
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: museum-frontend
@@ -184,6 +194,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: museum-frontend/package-lock.json
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
@@ -203,7 +215,7 @@ jobs:
         run: test -n "$EXPO_TOKEN"
 
       - name: Install EAS CLI
-        run: npm install -g eas-cli@latest
+        run: npm install -g eas-cli@18.5.0
 
       - name: Verify EAS CLI
         run: eas --version
@@ -215,6 +227,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all') }}
     needs: quality
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     environment: production
     defaults:
       run:
@@ -230,6 +243,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: museum-frontend/package-lock.json
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
@@ -243,7 +258,7 @@ jobs:
         run: test -n "$EXPO_TOKEN"
 
       - name: Install EAS CLI
-        run: npm install -g eas-cli@latest
+        run: npm install -g eas-cli@18.5.0
 
       - name: Verify EAS CLI
         run: eas --version
@@ -255,6 +270,7 @@ jobs:
     if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all')) || (startsWith(github.ref, 'refs/tags/v') && vars.AUTO_TAG_BUILD_ANDROID == 'true') }}
     needs: quality
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     environment: production
     defaults:
       run:
@@ -270,6 +286,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: museum-frontend/package-lock.json
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
@@ -283,7 +301,7 @@ jobs:
         run: test -n "$EXPO_TOKEN"
 
       - name: Install EAS CLI
-        run: npm install -g eas-cli@latest
+        run: npm install -g eas-cli@18.5.0
 
       - name: Verify EAS CLI
         run: eas --version
@@ -295,6 +313,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && github.event.inputs.submit == 'yes' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all') }}
     needs: build-production-ios
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     environment: production
     defaults:
       run:
@@ -313,6 +332,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: museum-frontend/package-lock.json
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
@@ -328,7 +349,7 @@ jobs:
         run: test -n "$EXPO_TOKEN"
 
       - name: Install EAS CLI
-        run: npm install -g eas-cli@latest
+        run: npm install -g eas-cli@18.5.0
 
       - name: Verify EAS CLI
         run: eas --version
@@ -340,6 +361,7 @@ jobs:
     if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && github.event.inputs.submit == 'yes' && (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all')) || (startsWith(github.ref, 'refs/tags/v') && vars.AUTO_TAG_BUILD_ANDROID == 'true') }}
     needs: build-production-android
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     environment: production
     defaults:
       run:
@@ -355,6 +377,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: museum-frontend/package-lock.json
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
@@ -373,7 +397,7 @@ jobs:
         run: test -n "$EXPO_TOKEN"
 
       - name: Install EAS CLI
-        run: npm install -g eas-cli@latest
+        run: npm install -g eas-cli@18.5.0
 
       - name: Verify EAS CLI
         run: eas --version

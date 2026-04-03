@@ -45,7 +45,7 @@ describe('ChatHeader', () => {
 
   it('fires onClose when close button is pressed', () => {
     render(<ChatHeader {...baseProps} />);
-    const closeButton = screen.getByLabelText('common.close');
+    const closeButton = screen.getByLabelText('a11y.chat.close');
     fireEvent.press(closeButton);
     expect(baseProps.onClose).toHaveBeenCalledTimes(1);
   });
