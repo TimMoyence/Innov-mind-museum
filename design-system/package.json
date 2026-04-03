@@ -1,0 +1,12 @@
+{
+  "name": "@musaium/design-system",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node --import tsx build.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
