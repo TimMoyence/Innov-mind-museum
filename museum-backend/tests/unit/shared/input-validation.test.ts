@@ -50,6 +50,17 @@ describe('sanitizePromptInput', () => {
     const input = '\uFEFFhello';
     expect(sanitizePromptInput(input)).toBe('hello');
   });
+
+  it('does not truncate string of exactly 200 characters', () => {
+    const exact = 'a'.repeat(200);
+    expect(sanitizePromptInput(exact)).toHaveLength(200);
+    expect(sanitizePromptInput(exact)).toBe(exact);
+  });
+
+  it('truncates string of 201 characters to 200', () => {
+    const oneOver = 'a'.repeat(201);
+    expect(sanitizePromptInput(oneOver)).toHaveLength(200);
+  });
 });
 
 describe('validateNameField', () => {
@@ -77,6 +88,11 @@ describe('validateNameField', () => {
   it('accepts Unicode names', () => {
     expect(validateNameField('日本太郎', 'firstname')).toBe('日本太郎');
     expect(validateNameField('François', 'firstname')).toBe('François');
+  });
+
+  it('accepts name of exactly 100 characters', () => {
+    const exact = 'a'.repeat(100);
+    expect(validateNameField(exact, 'firstname')).toBe(exact);
   });
 
   it('throws for name exceeding maxLength', () => {

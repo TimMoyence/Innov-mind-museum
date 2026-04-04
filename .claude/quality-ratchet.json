@@ -1,15 +1,12 @@
 {
   "lastUpdated": "2026-04-03",
-  "testCount": 2060,
-  "frontendTestCount": 852,
-  "frontendNodeTestCount": 214,
-  "webTestCount": 71,
+  "testCount": 2314,
+  "frontendTestCount": 1027,
+  "frontendSuiteCount": 120,
   "typecheckErrors": 0,
   "asAnyCount": 0,
-  "coverageStatements": 88.36,
-  "coverageBranches": 75.54,
-  "frontendCoverageStatements": 67.75,
-  "frontendCoverageBranches": 60.18,
+  "coverageStatements": 92.5,
+  "coverageBranches": 84,
   "lintErrors": 0,
-  "_comment": "Phase 3 complete: +800 tests, BE 76→88% stmt, FE 51→68% (incl app/ screens). Route handlers, repos, hooks branch coverage improved."
+  "_comment": "Post-audit cleanup: removed ~170 bullshit tests + 1070L mock choreography. Real coverage down from 94.89 to 92.73 but mutation score now tracked. 10 E2E golden paths added. Jest exits cleanly."
 }

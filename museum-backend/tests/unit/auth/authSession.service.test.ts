@@ -116,7 +116,7 @@ describe('AuthSessionService', () => {
       const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       // Use bcrypt to compare (real bcrypt)
-      const hashed = await bcrypt.hash('ValidPass1', 12);
+      const hashed = await bcrypt.hash('ValidPass1', 1);
       userRepo.getUserByEmail.mockResolvedValue(makeUser({ password: hashed }));
 
       const result = await service.login('user@test.com', 'ValidPass1');

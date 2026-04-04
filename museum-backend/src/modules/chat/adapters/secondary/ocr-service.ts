@@ -33,14 +33,17 @@ export class TesseractOcrService implements OcrService {
         const buffer = Buffer.from(imageBase64, 'base64');
         const timeoutMs = env.llm.timeoutMs;
 
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
         const { data } = await Promise.race([
           scheduler.addJob('recognize', buffer),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => {
+          new Promise<never>((_, reject) => {
+            timeoutId = setTimeout(() => {
               reject(new Error('OCR timed out'));
-            }, timeoutMs),
-          ),
-        ]);
+            }, timeoutMs);
+          }),
+        ]).finally(() => {
+          if (timeoutId !== undefined) clearTimeout(timeoutId);
+        });
 
         const text = data.text?.trim();
         if (!text) return null;

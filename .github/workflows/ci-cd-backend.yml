@@ -70,6 +70,134 @@ jobs:
       - name: Unit/Integration Tests (non-E2E)
         run: pnpm test -- --watchman=false --runInBand --forceExit --coverage --testPathIgnorePatterns=tests/e2e
 
+  # ─── 1b. Mutation testing (PR only, non-blocking) ────────────────────
+  mutation:
+    needs: quality
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: museum-backend
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: museum-backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Restore Stryker incremental report
+        uses: actions/cache@v4
+        with:
+          path: museum-backend/reports/stryker-incremental.json
+          key: stryker-incremental-${{ github.base_ref }}-${{ hashFiles('museum-backend/src/**/*.ts') }}
+          restore-keys: |
+            stryker-incremental-${{ github.base_ref }}-
+            stryker-incremental-
+
+      - name: Run Stryker (Phase 1 — critical files)
+        run: |
+          pnpm mutation:ci -- \
+            --mutate \
+            'src/modules/chat/application/art-topic-guardrail.ts' \
+            --mutate \
+            'src/modules/chat/application/guardrail-evaluation.service.ts' \
+            --mutate \
+            'src/shared/validation/input.ts' \
+            --mutate \
+            'src/shared/pagination/cursor-codec.ts' \
+            --mutate \
+            'src/modules/chat/application/llm-prompt-builder.ts' \
+            --mutate \
+            'src/modules/chat/application/history-window.ts' \
+            --mutate \
+            'src/modules/chat/application/llm-sections.ts'
+
+      - name: Upload mutation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stryker-mutation-report
+          path: museum-backend/reports/mutation/
+          retention-days: 14
+
+      - name: Post mutation score to PR
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'museum-backend/reports/mutation/mutation.json';
+            let body = '## Mutation Testing Report\n\n';
+            try {
+              const raw = fs.readFileSync(path, 'utf8');
+              const report = JSON.parse(raw);
+              const files = report.files || {};
+              let totalKilled = 0, totalSurvived = 0, totalNoCov = 0, totalTimeout = 0, totalTotal = 0;
+              const rows = [];
+              for (const [file, data] of Object.entries(files)) {
+                const m = data.mutants || [];
+                const killed = m.filter(x => x.status === 'Killed').length;
+                const survived = m.filter(x => x.status === 'Survived').length;
+                const noCov = m.filter(x => x.status === 'NoCoverage').length;
+                const timeout = m.filter(x => x.status === 'Timeout').length;
+                const total = m.length;
+                const score = total > 0 ? ((killed + timeout) / total * 100).toFixed(1) : 'N/A';
+                totalKilled += killed; totalSurvived += survived;
+                totalNoCov += noCov; totalTimeout += timeout; totalTotal += total;
+                const short = file.replace('src/', '');
+                rows.push(`| \`${short}\` | ${score}% | ${killed} | ${survived} | ${noCov} | ${total} |`);
+              }
+              const totalScore = totalTotal > 0
+                ? ((totalKilled + totalTimeout) / totalTotal * 100).toFixed(1)
+                : 'N/A';
+              const emoji = totalScore >= 80 ? '🟢' : totalScore >= 60 ? '🟡' : '🔴';
+              body += `**Overall mutation score: ${emoji} ${totalScore}%** (${totalKilled} killed / ${totalTotal} total)\n\n`;
+              body += '| File | Score | Killed | Survived | No Cov | Total |\n';
+              body += '|------|-------|--------|----------|--------|-------|\n';
+              body += rows.join('\n') + '\n\n';
+              body += `> Threshold: break at <50% · Phase 1 files only · [Full report in artifacts](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})`;
+            } catch (e) {
+              body += `⚠️ Could not parse mutation report: ${e.message}\n\n`;
+              body += 'Check the [workflow artifacts](' +
+                `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}` +
+                ') for the full Stryker output.';
+            }
+            // Upsert: delete previous bot comment if any
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const prev = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('## Mutation Testing Report')
+            );
+            if (prev) {
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: prev.id,
+              });
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
   # ─── 2. E2E tests (PR + nightly only) ────────────────────────────────
   e2e:
     needs: quality

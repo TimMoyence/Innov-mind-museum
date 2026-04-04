@@ -128,14 +128,17 @@ export class ImageEnrichmentService {
     if (!this.unsplashClient) return;
 
     try {
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
       const photos = await Promise.race([
         this.unsplashClient.searchPhotos(searchTerm),
         new Promise<never>((_, reject) => {
-          setTimeout(() => {
+          timeoutId = setTimeout(() => {
             reject(new Error('IMAGE_ENRICHMENT_TIMEOUT'));
           }, this.config.fetchTimeoutMs);
         }),
-      ]);
+      ]).finally(() => {
+        if (timeoutId !== undefined) clearTimeout(timeoutId);
+      });
 
       for (let i = 0; i < photos.length; i++) {
         candidates.push(this.mapUnsplashPhoto(photos[i], i, searchTerm));

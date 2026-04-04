@@ -14,6 +14,8 @@ jest.mock('@/shared/ui/ThemeContext', () => ({
   useTheme: () => ({
     theme: {
       pageGradient: ['#EAF2FF', '#D8E8FF', '#D5F0FF'],
+      overlay: 'rgba(255,255,255,0.70)',
+      surface: 'rgba(255,255,255,0.64)',
     },
   }),
 }));
@@ -57,5 +59,60 @@ describe('LiquidScreen', () => {
     );
 
     expect(screen.getByText('Responsive')).toBeTruthy();
+  });
+
+  it('renders with desktop viewport dimensions', () => {
+    // Mock useWindowDimensions to return desktop width
+    jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
+      width: 1280,
+      height: 800,
+      scale: 1,
+      fontScale: 1,
+    });
+
+    render(
+      <LiquidScreen background={background}>
+        <Text>Desktop View</Text>
+      </LiquidScreen>,
+    );
+
+    expect(screen.getByText('Desktop View')).toBeTruthy();
+
+    jest.restoreAllMocks();
+  });
+
+  it('renders with non-responsive (plain ImageSourcePropType) background', () => {
+    const plainBg = 42; // Numeric source (RN require() returns a number)
+
+    render(
+      <LiquidScreen background={plainBg}>
+        <Text>Plain BG</Text>
+      </LiquidScreen>,
+    );
+
+    expect(screen.getByText('Plain BG')).toBeTruthy();
+  });
+
+  it('accepts custom contentStyle', () => {
+    render(
+      <LiquidScreen background={background} contentStyle={{ padding: 20 }}>
+        <Text>Styled</Text>
+      </LiquidScreen>,
+    );
+
+    expect(screen.getByText('Styled')).toBeTruthy();
+  });
+
+  it('handles array as background (not responsive)', () => {
+    // Arrays are valid ImageSourcePropType but not ResponsiveBackground
+    const arrayBg = [{ uri: 'https://example.com/a.jpg' }];
+
+    render(
+      <LiquidScreen background={arrayBg as unknown as number}>
+        <Text>Array BG</Text>
+      </LiquidScreen>,
+    );
+
+    expect(screen.getByText('Array BG')).toBeTruthy();
   });
 });

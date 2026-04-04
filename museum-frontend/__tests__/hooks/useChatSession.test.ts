@@ -886,4 +886,180 @@ describe('useChatSession', () => {
     expect(sendResult).toBe(false);
     expect(result.current.error).toBeTruthy();
   });
+
+  // ── Audio error: sets error state and resets streaming ───────────────────
+
+  it('postAudioMessage error sets error string and resets isSending/isStreaming', async () => {
+    mockPostAudioMessage.mockRejectedValue(new Error('Audio codec unsupported'));
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    const sendResult = await act(async () => {
+      return result.current.sendMessage({ audioUri: 'file://bad.m4a' });
+    });
+
+    expect(sendResult).toBe(false);
+    expect(result.current.error).toBe('Audio codec unsupported');
+    expect(result.current.isSending).toBe(false);
+    expect(result.current.isStreaming).toBe(false);
+    // streaming placeholder should not remain
+    const streamingMsgs = result.current.messages.filter((m: ChatUiMessage) =>
+      m.id.endsWith('-streaming'),
+    );
+    expect(streamingMsgs).toHaveLength(0);
+  });
+
+  // ── Streaming with empty response.message.text in onDone ────────────────
+
+  it('onDone with empty final text still replaces streaming placeholder', async () => {
+    mockSendMessageSmart.mockImplementation(
+      (params: {
+        onToken?: (text: string) => void;
+        onDone?: (payload: {
+          messageId: string;
+          createdAt: string;
+          metadata: Record<string, unknown>;
+        }) => void;
+      }) => {
+        // No tokens sent, so streamTextRef stays empty
+        params.onDone?.({
+          messageId: 'empty-text-msg',
+          createdAt: new Date().toISOString(),
+          metadata: {},
+        });
+        return Promise.resolve(null);
+      },
+    );
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.sendMessage({ text: 'Hi' });
+    });
+
+    const doneMsg = result.current.messages.find((m: ChatUiMessage) => m.id === 'empty-text-msg');
+    expect(doneMsg).toBeDefined();
+    expect(doneMsg?.text).toBe('');
+  });
+
+  // ── getErrorMessage with non-Error object ───────────────────────────────
+
+  it('sets a string error when catch receives a non-Error thrown value', async () => {
+    mockSendMessageSmart.mockRejectedValue('plain string error');
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.sendMessage({ text: 'trigger non-error' });
+    });
+
+    // getErrorMessage returns the generic fallback for non-Error values
+    expect(result.current.error).toBeTruthy();
+    expect(typeof result.current.error).toBe('string');
+  });
+
+  // ── loadSession failure after image send ────────────────────────────────
+
+  it('loadSession failure after image send does not crash the hook', async () => {
+    mockSendMessageSmart.mockResolvedValue({
+      sessionId: SESSION_ID,
+      message: {
+        id: 'img-resp-2',
+        role: 'assistant',
+        text: 'Nice art',
+        createdAt: new Date().toISOString(),
+      },
+      metadata: null,
+    });
+
+    let callCount = 0;
+    mockGetSession.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return Promise.resolve(defaultSessionResponse());
+      }
+      // Second call (loadSession after image) fails
+      return Promise.reject(new Error('Reload failed'));
+    });
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.sendMessage({
+        text: 'Identify this',
+        imageUri: 'file://art.jpg',
+      });
+    });
+
+    // loadSession called for reload after image
+    await waitFor(() => {
+      expect(mockGetSession).toHaveBeenCalledTimes(2);
+    });
+
+    // The error from loadSession should be captured
+    await waitFor(() => {
+      expect(result.current.error).toBe('Reload failed');
+    });
+  });
+
+  // ── 3rd send increment: failure does NOT increment ──────────────────────
+
+  it('failed send on 3rd attempt does not trigger incrementCompletedSessions', async () => {
+    const { incrementCompletedSessions } = require('@/shared/infrastructure/inAppReview');
+    incrementCompletedSessions.mockClear();
+
+    // First two succeed
+    mockSendMessageSmart
+      .mockResolvedValueOnce({
+        message: {
+          id: 'r1',
+          role: 'assistant',
+          text: 'R1',
+          createdAt: new Date().toISOString(),
+        },
+        metadata: null,
+      })
+      .mockResolvedValueOnce({
+        message: {
+          id: 'r2',
+          role: 'assistant',
+          text: 'R2',
+          createdAt: new Date().toISOString(),
+        },
+        metadata: null,
+      })
+      // Third fails
+      .mockRejectedValueOnce(new Error('3rd fail'));
+
+    const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    for (let i = 0; i < 3; i++) {
+      await act(async () => {
+        await result.current.sendMessage({ text: `msg ${String(i)}` });
+      });
+    }
+
+    // successfulSendsRef only reached 2 (3rd failed), so no increment
+    expect(incrementCompletedSessions).not.toHaveBeenCalled();
+  });
 });

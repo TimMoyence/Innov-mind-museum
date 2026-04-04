@@ -2,20 +2,7 @@ import {
   createLlmSectionPlan,
   createSummaryFallback,
 } from '@modules/chat/application/llm-sections';
-import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
-
-const createMessage = (id: string, role: 'user' | 'assistant', text: string): ChatMessage =>
-  ({
-    id,
-    role,
-    text,
-    imageRef: null,
-    metadata: null,
-    createdAt: new Date('2026-02-18T10:00:00.000Z'),
-    session: undefined as never,
-    sessionId: 'test-session',
-    artworkMatches: [],
-  }) as ChatMessage;
+import { makeMessage } from '../../helpers/chat/message.fixtures';
 
 describe('llm-sections', () => {
   it('creates a single summary section', () => {
@@ -103,8 +90,8 @@ describe('llm-sections', () => {
   it('builds deterministic summary fallback', () => {
     const fallback = createSummaryFallback({
       history: [
-        createMessage('m1', 'assistant', 'The artist explores light contrast.'),
-        createMessage('m2', 'user', 'What should I observe next?'),
+        makeMessage({ id: 'm1', role: 'assistant', text: 'The artist explores light contrast.' }),
+        makeMessage({ id: 'm2', role: 'user', text: 'What should I observe next?' }),
       ],
       question: 'Tell me more',
       location: 'Room 12',
@@ -115,5 +102,83 @@ describe('llm-sections', () => {
     expect(fallback).toContain('Room 12');
     expect(fallback).toContain('Quick summary');
     expect(fallback).toContain('Next step');
+  });
+
+  it('includes expert guide level hint in prompt', () => {
+    const plan = createLlmSectionPlan({
+      locale: 'en-US',
+      museumMode: false,
+      guideLevel: 'expert',
+      timeoutSummaryMs: 10000,
+    });
+    expect(plan[0].prompt).toContain('advanced art-history vocabulary');
+  });
+
+  it('includes intermediate guide level hint in prompt', () => {
+    const plan = createLlmSectionPlan({
+      locale: 'en-US',
+      museumMode: false,
+      guideLevel: 'intermediate',
+      timeoutSummaryMs: 10000,
+    });
+    expect(plan[0].prompt).toContain('intermediate level');
+  });
+
+  it('uses 150 word limit for museumMode and 250 for regular', () => {
+    const museumPlan = createLlmSectionPlan({
+      locale: 'en-US',
+      museumMode: true,
+      guideLevel: 'beginner',
+      timeoutSummaryMs: 10000,
+    });
+    expect(museumPlan[0].prompt).toContain('150 words');
+
+    const regularPlan = createLlmSectionPlan({
+      locale: 'en-US',
+      museumMode: false,
+      guideLevel: 'beginner',
+      timeoutSummaryMs: 10000,
+    });
+    expect(regularPlan[0].prompt).toContain('250 words');
+  });
+});
+
+describe('createSummaryFallback — edge cases', () => {
+  it('uses question as recap when history is empty', () => {
+    const fallback = createSummaryFallback({
+      history: [],
+      question: 'Tell me about Monet',
+      locale: 'en-US',
+      museumMode: false,
+    });
+    expect(fallback).toContain('Tell me about Monet');
+  });
+
+  it('uses defaultQuestion when history is empty and no question', () => {
+    const fallback = createSummaryFallback({
+      history: [],
+      locale: 'en-US',
+      museumMode: false,
+    });
+    expect(fallback).toContain('Artwork question.');
+  });
+
+  it('uses defaultQuestion when history is empty and question is whitespace', () => {
+    const fallback = createSummaryFallback({
+      history: [],
+      question: '   ',
+      locale: 'en-US',
+      museumMode: false,
+    });
+    expect(fallback).toContain('Artwork question.');
+  });
+
+  it('omits location prefix when no location is provided', () => {
+    const fallback = createSummaryFallback({
+      history: [makeMessage({ role: 'assistant', text: 'Art details.' })],
+      locale: 'en-US',
+      museumMode: false,
+    });
+    expect(fallback).not.toContain('You are currently near');
   });
 });
