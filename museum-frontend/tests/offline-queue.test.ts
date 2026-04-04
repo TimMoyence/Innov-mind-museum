@@ -422,7 +422,7 @@ describe('OfflineQueue', () => {
   });
 
   describe('legacy constructor', () => {
-    it('accepts a QueueStorage directly (legacy API)', async () => {
+    it('accepts a QueueStorage directly (legacy API)', () => {
       const storage: QueueStorage = {
         getItem: () => Promise.resolve(null),
         setItem: () => Promise.resolve(),
@@ -435,7 +435,7 @@ describe('OfflineQueue', () => {
       assert.equal(entry.text, 'legacy');
     });
 
-    it('uses default maxQueueSize (50) with legacy constructor', async () => {
+    it('uses default maxQueueSize (50) with legacy constructor', () => {
       const storage: QueueStorage = {
         getItem: () => Promise.resolve(null),
         setItem: () => Promise.resolve(),
@@ -495,7 +495,7 @@ describe('OfflineQueue', () => {
   });
 
   describe('persist error handling', () => {
-    it('queue remains in memory when storage.setItem fails', async () => {
+    it('queue remains in memory when storage.setItem fails', () => {
       const storage: QueueStorage = {
         getItem: () => Promise.resolve(null),
         setItem: () => Promise.reject(new Error('write failed')),
