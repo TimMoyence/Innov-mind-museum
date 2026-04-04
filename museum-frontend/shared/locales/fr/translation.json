@@ -151,9 +151,11 @@
     "security": "Sécurité",
     "biometric_lock": "Verrouillage biométrique",
     "change_password": "Changer le mot de passe",
+    "change_email": "Changer d'email",
     "export_data": "Exporter mes données",
     "export_data_desc": "Télécharger toutes vos données personnelles (RGPD)",
-    "export_data_success": "Données exportées avec succès"
+    "export_data_success": "Données exportées avec succès",
+    "rate_musaium": "Noter Musaium"
   },
   "change_password": {
     "title": "Changer le mot de passe",
@@ -164,6 +166,15 @@
     "success": "Mot de passe mis à jour avec succès",
     "error_mismatch": "Les mots de passe ne correspondent pas",
     "error_short": "Le mot de passe doit contenir au moins 8 caractères"
+  },
+  "change_email": {
+    "title": "Changer d'email",
+    "new_email": "Nouvelle adresse email",
+    "password": "Mot de passe actuel",
+    "submit": "Envoyer la vérification",
+    "success": "Consultez votre nouvel email pour le lien de vérification",
+    "error_taken": "Cet email est déjà utilisé",
+    "error_password": "Mot de passe incorrect"
   },
   "preferences": {
     "title": "Préférences",
@@ -550,7 +561,14 @@
       "sign_out": "Se déconnecter",
       "sign_out_hint": "Se déconnecte et retourne à la connexion",
       "change_password": "Changer le mot de passe du compte",
-      "export_data": "Exporter toutes vos données personnelles"
+      "change_email": "Changer l'adresse email du compte",
+      "export_data": "Exporter toutes vos données personnelles",
+      "rate_musaium": "Ouvrir les avis"
+    },
+    "reviews": {
+      "name_input": "Votre nom d'affichage",
+      "comment_input": "Votre commentaire d'avis",
+      "star_button": "Donner {{count}} étoiles"
     },
     "preferences": {
       "language_button": "Sélectionner la langue {{language}}",
@@ -663,5 +681,19 @@
     "messages": "messages",
     "expertiseLevel": "Niveau",
     "noArtworks": "Aucune œuvre discutée"
+  },
+  "reviews": {
+    "title": "Avis",
+    "writeReview": "Écrire un avis",
+    "averageRating": "Note moyenne",
+    "ratingLabel": "Votre note",
+    "namePlaceholder": "Votre nom",
+    "commentPlaceholder": "Partagez votre expérience...",
+    "submit": "Envoyer l'avis",
+    "success": "Merci pour votre avis !",
+    "alreadyReviewed": "Vous avez déjà soumis un avis",
+    "empty": "Aucun avis pour le moment. Soyez le premier !",
+    "reviewCount": "{{count}} avis",
+    "submitFailed": "Échec de l'envoi. Veuillez réessayer."
   }
 }

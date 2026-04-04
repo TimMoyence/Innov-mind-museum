@@ -151,9 +151,11 @@
     "security": "セキュリティ",
     "biometric_lock": "生体認証ロック",
     "change_password": "パスワードを変更",
+    "change_email": "メールアドレスを変更",
     "export_data": "データをエクスポート",
     "export_data_desc": "すべての個人データをダウンロード（GDPR）",
-    "export_data_success": "データのエクスポートに成功しました"
+    "export_data_success": "データのエクスポートに成功しました",
+    "rate_musaium": "Musaiumを評価"
   },
   "change_password": {
     "title": "パスワードの変更",
@@ -164,6 +166,15 @@
     "success": "パスワードが正常に更新されました",
     "error_mismatch": "パスワードが一致しません",
     "error_short": "パスワードは8文字以上にしてください"
+  },
+  "change_email": {
+    "title": "メールアドレスを変更",
+    "new_email": "新しいメールアドレス",
+    "password": "現在のパスワード",
+    "submit": "確認メールを送信",
+    "success": "新しいメールアドレスに確認リンクを送信しました",
+    "error_taken": "このメールアドレスはすでに使用されています",
+    "error_password": "パスワードが正しくありません"
   },
   "preferences": {
     "title": "環境設定",
@@ -550,7 +561,14 @@
       "sign_out": "サインアウト",
       "sign_out_hint": "サインアウトしてログイン画面に戻ります",
       "change_password": "アカウントのパスワードを変更",
-      "export_data": "すべての個人データをエクスポート"
+      "change_email": "アカウントのメールアドレスを変更",
+      "export_data": "すべての個人データをエクスポート",
+      "rate_musaium": "レビューを開く"
+    },
+    "reviews": {
+      "name_input": "表示名",
+      "comment_input": "レビューコメント",
+      "star_button": "{{count}}つ星を設定"
     },
     "preferences": {
       "language_button": "{{language}}言語を選択",
@@ -663,5 +681,19 @@
     "messages": "メッセージ",
     "expertiseLevel": "レベル",
     "noArtworks": "議論した作品はありません"
+  },
+  "reviews": {
+    "title": "レビュー",
+    "writeReview": "レビューを書く",
+    "averageRating": "平均評価",
+    "ratingLabel": "あなたの評価",
+    "namePlaceholder": "あなたの名前",
+    "commentPlaceholder": "体験を共有してください...",
+    "submit": "レビューを送信",
+    "success": "レビューありがとうございます！",
+    "alreadyReviewed": "すでにレビューを送信済みです",
+    "empty": "まだレビューがありません。最初のレビューを書きましょう！",
+    "reviewCount": "{{count}}件のレビュー",
+    "submitFailed": "送信に失敗しました。もう一度お試しください。"
   }
 }

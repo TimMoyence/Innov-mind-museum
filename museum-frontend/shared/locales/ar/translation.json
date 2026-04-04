@@ -151,9 +151,11 @@
     "security": "الأمان",
     "biometric_lock": "القفل البيومتري",
     "change_password": "تغيير كلمة المرور",
+    "change_email": "تغيير البريد الإلكتروني",
     "export_data": "تصدير بياناتي",
     "export_data_desc": "تنزيل جميع بياناتك الشخصية (GDPR)",
-    "export_data_success": "تم تصدير البيانات بنجاح"
+    "export_data_success": "تم تصدير البيانات بنجاح",
+    "rate_musaium": "تقييم Musaium"
   },
   "change_password": {
     "title": "تغيير كلمة المرور",
@@ -164,6 +166,15 @@
     "success": "تم تحديث كلمة المرور بنجاح",
     "error_mismatch": "كلمات المرور غير متطابقة",
     "error_short": "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل"
+  },
+  "change_email": {
+    "title": "تغيير البريد الإلكتروني",
+    "new_email": "عنوان البريد الإلكتروني الجديد",
+    "password": "كلمة المرور الحالية",
+    "submit": "إرسال التحقق",
+    "success": "تحقق من بريدك الإلكتروني الجديد للحصول على رابط التحقق",
+    "error_taken": "هذا البريد الإلكتروني مستخدم بالفعل",
+    "error_password": "كلمة المرور غير صحيحة"
   },
   "preferences": {
     "title": "التفضيلات",
@@ -550,7 +561,14 @@
       "sign_out": "تسجيل الخروج",
       "sign_out_hint": "تسجيل الخروج والعودة إلى شاشة الدخول",
       "change_password": "تغيير كلمة مرور الحساب",
-      "export_data": "تصدير جميع بياناتك الشخصية"
+      "change_email": "تغيير عنوان البريد الإلكتروني للحساب",
+      "export_data": "تصدير جميع بياناتك الشخصية",
+      "rate_musaium": "فتح التقييمات"
+    },
+    "reviews": {
+      "name_input": "اسم العرض الخاص بك",
+      "comment_input": "تعليق تقييمك",
+      "star_button": "تعيين تقييم {{count}} نجوم"
     },
     "preferences": {
       "language_button": "اختيار لغة {{language}}",
@@ -663,5 +681,19 @@
     "messages": "رسائل",
     "expertiseLevel": "المستوى",
     "noArtworks": "لم تتم مناقشة أي أعمال فنية"
+  },
+  "reviews": {
+    "title": "التقييمات",
+    "writeReview": "كتابة تقييم",
+    "averageRating": "متوسط التقييم",
+    "ratingLabel": "تقييمك",
+    "namePlaceholder": "اسمك",
+    "commentPlaceholder": "شارك تجربتك...",
+    "submit": "إرسال التقييم",
+    "success": "شكراً لتقييمك!",
+    "alreadyReviewed": "لقد قمت بإرسال تقييم بالفعل",
+    "empty": "لا توجد تقييمات حتى الآن. كن أول من يقيّم!",
+    "reviewCount": "{{count}} تقييمات",
+    "submitFailed": "فشل الإرسال. يرجى المحاولة مرة أخرى."
   }
 }

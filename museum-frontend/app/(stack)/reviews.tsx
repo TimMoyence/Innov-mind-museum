@@ -139,7 +139,7 @@ export default function ReviewsScreen() {
             accessibilityLabel={t('a11y.reviews.comment_input')}
           />
 
-          {submitError !== undefined && submitError !== 'already_reviewed' && (
+          {submitError !== null && submitError !== 'already_reviewed' && (
             <Text style={[styles.errorText, { color: theme.error }]}>
               {t('reviews.submitFailed')}
             </Text>
@@ -227,7 +227,7 @@ export default function ReviewsScreen() {
           ListEmptyComponent={renderEmpty}
           ListFooterComponent={renderFooter}
           contentContainerStyle={styles.listContent}
-          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
           onEndReached={loadMore}
           onEndReachedThreshold={0.3}
           showsVerticalScrollIndicator={false}
@@ -334,6 +334,9 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     paddingVertical: 40,
+  },
+  separator: {
+    height: 10,
   },
   emptyText: {
     fontSize: 14,
