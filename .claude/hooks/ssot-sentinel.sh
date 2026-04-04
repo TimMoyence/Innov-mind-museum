@@ -56,7 +56,7 @@ check_color() {
 
 # ── Get changed files ───────────────────────────────────────────────────────
 CHANGED_FILES=$(cd "$REPO_ROOT" && git diff --name-only HEAD 2>/dev/null; cd "$REPO_ROOT" && git diff --name-only --cached 2>/dev/null; cd "$REPO_ROOT" && git ls-files --others --exclude-standard 2>/dev/null)
-CHANGED_FILES=$(echo "$CHANGED_FILES" | sort -u | grep -E '\.(ts|tsx|css)$' | grep -E '^(museum-frontend|museum-web|museum-admin)/' | grep -v 'tokens\.generated' | grep -v 'node_modules')
+CHANGED_FILES=$(echo "$CHANGED_FILES" | sort -u | grep -E '\.(ts|tsx|css)$' | grep -E '^(museum-frontend|museum-web)/' | grep -v 'tokens\.generated' | grep -v 'node_modules')
 
 [[ -z "$CHANGED_FILES" ]] && exit 0
 
