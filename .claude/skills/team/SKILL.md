@@ -284,7 +284,10 @@ Utilise TOUJOURS les factories partagees de tests/helpers/ :
 - makeMessage(overrides?) depuis tests/helpers/chat/message.fixtures.ts
 - makeSession(overrides?) depuis tests/helpers/chat/message.fixtures.ts
 - makeToken(overrides?) depuis tests/helpers/auth/token.helpers.ts
-Si une factory n'existe pas pour ton entite, cree-la dans tests/helpers/<module>/<entity>.fixtures.ts AVANT d'ecrire les tests.
+- makeRepo(overrides?) depuis tests/helpers/chat/repo.fixtures.ts
+- makeCache(overrides?) depuis tests/helpers/chat/cache.fixtures.ts
+Si une factory partagee n'existe pas encore pour ton entite/mock, tu DOIS la creer
+dans tests/helpers/<module>/<entity>.fixtures.ts AVANT de l'utiliser dans tes tests.
 Chaque factory suit le pattern: valeurs par defaut sensees + overrides partiels.
 ```
 

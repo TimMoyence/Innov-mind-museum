@@ -1,0 +1,11 @@
+{
+  "currentLevel": 1,
+  "score": 0,
+  "lastEvaluation": null,
+  "history": [],
+  "criteria": {
+    "consecutivePassWithoutEscalation": 0,
+    "userOverrides": 0,
+    "totalRuns": 0
+  }
+}

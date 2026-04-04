@@ -1,0 +1,16 @@
+{
+  "backend": {
+    "testCount": 0,
+    "asAnyCount": 0,
+    "eslintDisableCount": 0,
+    "tscErrors": 0
+  },
+  "frontend": {
+    "testCount": 0,
+    "asAnyCount": 0,
+    "eslintDisableCount": 0,
+    "tscErrors": 0
+  },
+  "lastUpdated": null,
+  "history": []
+}
