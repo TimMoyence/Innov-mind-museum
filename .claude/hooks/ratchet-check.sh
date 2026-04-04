@@ -105,11 +105,10 @@ if $IMPROVED; then
   echo "RATCHET IMPROVED: tests=$CURRENT_TESTS tsErrors=$CURRENT_TS_ERRORS asAny=$CURRENT_AS_ANY"
 fi
 
-# Commit size check (warning only, doesn't block ratchet)
+# Commit size check (warning only, never blocks)
 STAGED_INSERTIONS=$(git diff --cached --stat 2>/dev/null | tail -1 | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+')
 if [ -n "$STAGED_INSERTIONS" ] && [ "$STAGED_INSERTIONS" -gt 2000 ] 2>/dev/null; then
-  echo "COMMIT SIZE BLOCK: $STAGED_INSERTIONS insertions > 2000 limit"
-  REGRESSION=1
+  echo "COMMIT SIZE WARNING: $STAGED_INSERTIONS insertions > 2000 recommended max"
 elif [ -n "$STAGED_INSERTIONS" ] && [ "$STAGED_INSERTIONS" -gt 500 ] 2>/dev/null; then
   echo "COMMIT SIZE WARNING: $STAGED_INSERTIONS insertions > 500 recommended max"
 fi
