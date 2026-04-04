@@ -53,6 +53,7 @@
     "has_account": "¿Ya tienes una cuenta? Inicia sesión",
     "sign_in_google": "Iniciar sesión con Google",
     "agree_terms": "Acepto los Términos de Servicio y la Política de Privacidad",
+    "agree_terms_rich": "Acepto los <terms>Términos de Servicio</terms> y la <privacy>Política de Privacidad</privacy>",
     "legal_notice": "Al iniciar sesión, aceptas nuestros Términos de Servicio y Política de Privacidad.",
     "terms_of_service": "Términos de Servicio",
     "privacy_policy": "Política de Privacidad",

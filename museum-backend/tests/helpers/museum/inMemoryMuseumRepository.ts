@@ -1,9 +1,6 @@
-import { Museum } from '@modules/museum/core/domain/museum.entity';
-import type { IMuseumRepository } from '@modules/museum/core/domain/museum.repository.interface';
-import type {
-  CreateMuseumInput,
-  UpdateMuseumInput,
-} from '@modules/museum/core/domain/museum.types';
+import { Museum } from '@modules/museum/domain/museum.entity';
+import type { IMuseumRepository } from '@modules/museum/domain/museum.repository.interface';
+import type { CreateMuseumInput, UpdateMuseumInput } from '@modules/museum/domain/museum.types';
 
 /** In-memory implementation of IMuseumRepository for unit tests. */
 export class InMemoryMuseumRepository implements IMuseumRepository {

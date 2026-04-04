@@ -1,9 +1,9 @@
 import '../helpers/test-utils';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
+import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 
 const mockCreateSession = jest.fn();
-const mockLoadRuntimeSettings = jest.fn();
 
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   chatApi: {
@@ -11,19 +11,16 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   },
 }));
 
-jest.mock('@/features/settings/runtimeSettings', () => ({
-  loadRuntimeSettings: () => mockLoadRuntimeSettings(),
-}));
-
 import DiscoverScreen from '@/app/(stack)/discover';
 
 describe('DiscoverScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockLoadRuntimeSettings.mockResolvedValue({
+    useRuntimeSettingsStore.setState({
+      defaultLocale: 'en',
       defaultMuseumMode: true,
       guideLevel: 'beginner',
-      defaultLocale: 'en',
+      _hydrated: true,
     });
     mockCreateSession.mockResolvedValue({ session: { id: 'new-session' } });
   });

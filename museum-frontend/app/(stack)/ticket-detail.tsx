@@ -15,6 +15,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { ticketApi } from '@/features/support/infrastructure/ticketApi';
+import {
+  BADGE_TEXT_COLOR,
+  statusColor,
+  priorityColor,
+  formatDateWithTime,
+} from '@/features/support/ui/ticketHelpers';
 import type { components } from '@/shared/api/generated/openapi';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
@@ -23,47 +29,11 @@ import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
-const BADGE_TEXT_COLOR = '#FFFFFF';
 const STAFF_TIME_COLOR = 'rgba(255,255,255,0.7)';
 
 type TicketDetailDTO = components['schemas']['TicketDetailDTO'];
 type TicketMessageDTO = components['schemas']['TicketMessageDTO'];
 type TicketStatus = TicketDetailDTO['status'];
-
-const statusColor = (status: TicketStatus): string => {
-  switch (status) {
-    case 'open':
-      return '#3B82F6';
-    case 'in_progress':
-      return '#F59E0B';
-    case 'resolved':
-      return '#22C55E';
-    case 'closed':
-      return '#6B7280';
-  }
-};
-
-const priorityColor = (priority: TicketDetailDTO['priority']): string => {
-  switch (priority) {
-    case 'low':
-      return '#6B7280';
-    case 'medium':
-      return '#F59E0B';
-    case 'high':
-      return '#EF4444';
-  }
-};
-
-const formatDate = (iso: string): string => {
-  const d = new Date(iso);
-  return d.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
 
 /** Renders a ticket detail screen with message thread and reply input. */
 export default function TicketDetailScreen() {
@@ -156,7 +126,7 @@ export default function TicketDetailScreen() {
               isVisitor ? { color: theme.textSecondary } : styles.staffMessageTimeColor,
             ]}
           >
-            {formatDate(item.createdAt)}
+            {formatDateWithTime(item.createdAt)}
           </Text>
         </View>
       );
@@ -218,7 +188,7 @@ export default function TicketDetailScreen() {
                 </View>
               </View>
               <Text style={[styles.meta, { color: theme.textSecondary }]}>
-                {t('tickets.created')}: {formatDate(ticket.createdAt)}
+                {t('tickets.created')}: {formatDateWithTime(ticket.createdAt)}
               </Text>
               {ticket.category ? (
                 <Text style={[styles.meta, { color: theme.textSecondary }]}>{ticket.category}</Text>

@@ -1,15 +1,15 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import { AuthSessionService } from '@modules/auth/core/useCase/authSession.service';
+import { AuthSessionService } from '@modules/auth/useCase/authSession.service';
 import type {
   IRefreshTokenRepository,
   StoredRefreshTokenRow,
-} from '@modules/auth/core/domain/refresh-token.repository.interface';
-import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
+} from '@modules/auth/domain/refresh-token.repository.interface';
+import type { IUserRepository } from '@modules/auth/domain/user.repository.interface';
 import { env } from '@src/config/env';
 
-jest.mock('@modules/auth/core/useCase/login-rate-limiter', () => ({
+jest.mock('@modules/auth/useCase/login-rate-limiter', () => ({
   checkLoginRateLimit: jest.fn(),
   recordFailedLogin: jest.fn(),
   clearLoginAttempts: jest.fn(),
@@ -19,7 +19,7 @@ import {
   checkLoginRateLimit,
   recordFailedLogin,
   clearLoginAttempts,
-} from '@modules/auth/core/useCase/login-rate-limiter';
+} from '@modules/auth/useCase/login-rate-limiter';
 
 const mockCheckLoginRateLimit = checkLoginRateLimit as jest.MockedFunction<
   typeof checkLoginRateLimit

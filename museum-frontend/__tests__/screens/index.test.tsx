@@ -8,7 +8,7 @@ jest.mock('@/features/auth/routes', () => ({
 }));
 
 const mockUseAuth = jest.fn();
-jest.mock('@/context/AuthContext', () => ({
+jest.mock('@/features/auth/application/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
 }));
 

@@ -4,7 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 
 // ── Screen-specific mocks ────────────────────────────────────────────────────
 
-jest.mock('@/context/AuthContext', () => ({
+jest.mock('@/features/auth/application/AuthContext', () => ({
   useAuth: () => ({ setIsAuthenticated: jest.fn() }),
 }));
 

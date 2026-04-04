@@ -194,6 +194,7 @@ const storageDriver: StorageDriver = ['local', 's3'].includes(storageDriverRaw)
   : 'local';
 
 const isDev = nodeEnv === 'development' || nodeEnv === 'test';
+const isProduction = nodeEnv === 'production';
 
 /** Resolved application configuration singleton, validated at startup. */
 const env: AppEnv = {
@@ -205,7 +206,7 @@ const env: AppEnv = {
   requestTimeoutMs: toNumber(process.env.REQUEST_TIMEOUT_MS, 20000),
   dbSynchronize: toBoolean(process.env.DB_SYNCHRONIZE, false),
   dbSsl: toBoolean(process.env.DB_SSL, true),
-  dbSslRejectUnauthorized: toBoolean(process.env.DB_SSL_REJECT_UNAUTHORIZED, false),
+  dbSslRejectUnauthorized: toBoolean(process.env.DB_SSL_REJECT_UNAUTHORIZED, isProduction),
   db: {
     host: toOptionalString(process.env.DB_HOST) || 'localhost',
     port: toNumber(process.env.DB_PORT, 5432),

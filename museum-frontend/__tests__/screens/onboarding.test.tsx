@@ -4,7 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 // ── Screen-specific mocks ────────────────────────────────────────────────────
 
 const mockMarkOnboardingComplete = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/context/AuthContext', () => ({
+jest.mock('@/features/auth/application/AuthContext', () => ({
   useAuth: () => ({ markOnboardingComplete: mockMarkOnboardingComplete }),
 }));
 

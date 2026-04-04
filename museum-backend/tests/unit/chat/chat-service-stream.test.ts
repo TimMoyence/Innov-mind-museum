@@ -1,7 +1,7 @@
-import {
+import type {
   ChatOrchestrator,
   OrchestratorOutput,
-} from '@modules/chat/adapters/secondary/langchain.orchestrator';
+} from '@modules/chat/domain/ports/chat-orchestrator.port';
 import { buildChatTestService } from 'tests/helpers/chat/chatTestApp';
 
 class StreamingArtOrchestrator implements ChatOrchestrator {

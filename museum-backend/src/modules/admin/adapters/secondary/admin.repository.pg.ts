@@ -1,4 +1,4 @@
-import { User } from '@modules/auth/core/domain/user.entity';
+import { User } from '@modules/auth/domain/user.entity';
 import { ArtworkMatch } from '@modules/chat/domain/artworkMatch.entity';
 import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import { ChatSession } from '@modules/chat/domain/chatSession.entity';

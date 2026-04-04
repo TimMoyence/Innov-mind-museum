@@ -1,10 +1,10 @@
 import { performance } from 'perf_hooks';
 
-import { ChatService } from '@modules/chat/application/chat.service';
+import { ChatService } from '@modules/chat/useCase/chat.service';
 import type {
   ChatOrchestrator,
   OrchestratorOutput,
-} from '@modules/chat/adapters/secondary/langchain.orchestrator';
+} from '@modules/chat/domain/ports/chat-orchestrator.port';
 import { buildChatTestService } from 'tests/helpers/chat/chatTestApp';
 
 const wait = async (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));

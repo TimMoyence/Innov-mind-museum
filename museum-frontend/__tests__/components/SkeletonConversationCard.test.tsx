@@ -11,8 +11,14 @@ jest.mock('@/shared/ui/ThemeContext', () => ({
 import { SkeletonConversationCard } from '@/shared/ui/SkeletonConversationCard';
 
 describe('SkeletonConversationCard', () => {
-  it('renders without crashing', () => {
+  it('renders card with avatar circle, two text lines, and a meta line', () => {
     const { toJSON } = render(<SkeletonConversationCard />);
-    expect(toJSON()).toBeTruthy();
+    const tree = toJSON();
+    expect(tree).not.toBeNull();
+    // Root card has 2 children: the row View and the meta SkeletonBox
+    expect(tree!.children).toHaveLength(2);
+    // First child is the row containing avatar + text column
+    const row = tree!.children![0] as { children: unknown[] };
+    expect(row.children).toHaveLength(2);
   });
 });

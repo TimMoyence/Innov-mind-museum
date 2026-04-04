@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import type { DataSource, Repository, UpdateResult } from 'typeorm';
 
-import { User } from '@modules/auth/core/domain/user.entity';
+import { User } from '@modules/auth/domain/user.entity';
 import { AppError } from '@shared/errors/app.error';
 
 import { UserRepositoryPg } from '@modules/auth/adapters/secondary/user.repository.pg';

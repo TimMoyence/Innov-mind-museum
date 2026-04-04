@@ -1,6 +1,6 @@
-import { VerifyEmailUseCase } from '@modules/auth/core/useCase/verifyEmail.useCase';
-import { RegisterUseCase } from '@modules/auth/core/useCase/register.useCase';
-import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
+import { VerifyEmailUseCase } from '@modules/auth/useCase/verifyEmail.useCase';
+import { RegisterUseCase } from '@modules/auth/useCase/register.useCase';
+import type { IUserRepository } from '@modules/auth/domain/user.repository.interface';
 import type { EmailService } from '@shared/email/email.port';
 import { makeUser } from '../../helpers/auth/user.fixtures';
 

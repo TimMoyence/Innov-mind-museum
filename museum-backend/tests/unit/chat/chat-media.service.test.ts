@@ -1,4 +1,4 @@
-import { ChatMediaService } from '@modules/chat/application/chat-media.service';
+import { ChatMediaService } from '@modules/chat/useCase/chat-media.service';
 import type {
   ChatRepository,
   ChatMessageWithSessionOwnership,

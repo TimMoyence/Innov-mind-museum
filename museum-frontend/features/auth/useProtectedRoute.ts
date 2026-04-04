@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useRouter, useSegments } from 'expo-router';
 
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth/application/AuthContext';
 import { AUTH_ROUTE, HOME_ROUTE, ONBOARDING_ROUTE } from './routes';
 
 /**

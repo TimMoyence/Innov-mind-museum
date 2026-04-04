@@ -53,6 +53,7 @@
     "has_account": "Bereits ein Konto? Anmelden",
     "sign_in_google": "Mit Google anmelden",
     "agree_terms": "Ich stimme den Nutzungsbedingungen und der Datenschutzerklärung zu",
+    "agree_terms_rich": "Ich stimme den <terms>Nutzungsbedingungen</terms> und der <privacy>Datenschutzerklärung</privacy> zu",
     "legal_notice": "Mit Ihrer Anmeldung stimmen Sie unseren Nutzungsbedingungen und unserer Datenschutzerklärung zu.",
     "terms_of_service": "Nutzungsbedingungen",
     "privacy_policy": "Datenschutzerklärung",

@@ -53,6 +53,7 @@
     "has_account": "Déjà un compte ? Se connecter",
     "sign_in_google": "Se connecter avec Google",
     "agree_terms": "J'accepte les Conditions d'utilisation et la Politique de confidentialité",
+    "agree_terms_rich": "J'accepte les <terms>Conditions d'utilisation</terms> et la <privacy>Politique de confidentialité</privacy>",
     "legal_notice": "En vous connectant, vous acceptez nos Conditions d'utilisation et notre Politique de confidentialité.",
     "terms_of_service": "Conditions d'utilisation",
     "privacy_policy": "Politique de confidentialité",

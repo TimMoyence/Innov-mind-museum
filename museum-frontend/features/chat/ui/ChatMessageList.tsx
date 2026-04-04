@@ -200,6 +200,7 @@ export const ChatMessageList = ({
 
   return (
     <FlashList
+      testID="message-list"
       ref={listRef}
       data={messages}
       keyExtractor={(item) => item.id}

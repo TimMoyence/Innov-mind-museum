@@ -1,5 +1,5 @@
 import { makeSession, makeMessage } from 'tests/helpers/chat/message.fixtures';
-import { GuardrailEvaluationService } from '@modules/chat/application/guardrail-evaluation.service';
+import { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail-evaluation.service';
 import type {
   ChatRepository,
   PersistMessageInput,

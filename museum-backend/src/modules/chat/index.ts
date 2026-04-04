@@ -3,7 +3,9 @@ import { logger } from '@shared/logger/logger';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
+import { TypeOrmArtKeywordRepository } from './adapters/secondary/artKeyword.repository.typeorm';
 import { OpenAiAudioTranscriber } from './adapters/secondary/audio-transcriber.openai';
+import { TypeOrmChatRepository } from './adapters/secondary/chat.repository.typeorm';
 import { S3CompatibleImageStorage } from './adapters/secondary/image-storage.s3';
 import { LocalImageStorage } from './adapters/secondary/image-storage.stub';
 import { LangChainChatOrchestrator } from './adapters/secondary/langchain.orchestrator';
@@ -13,15 +15,13 @@ import {
   DisabledTextToSpeechService,
 } from './adapters/secondary/text-to-speech.openai';
 import { UnsplashClient } from './adapters/secondary/unsplash.client';
+import { TypeOrmUserMemoryRepository } from './adapters/secondary/userMemory.repository.typeorm';
 import { WikidataClient } from './adapters/secondary/wikidata.client';
-import { ArtTopicClassifier } from './application/art-topic-classifier';
-import { ChatService } from './application/chat.service';
-import { ImageEnrichmentService } from './application/image-enrichment.service';
-import { KnowledgeBaseService } from './application/knowledge-base.service';
-import { UserMemoryService } from './application/user-memory.service';
-import { TypeOrmArtKeywordRepository } from './infrastructure/artKeyword.repository.typeorm';
-import { TypeOrmChatRepository } from './infrastructure/chat.repository.typeorm';
-import { TypeOrmUserMemoryRepository } from './infrastructure/userMemory.repository.typeorm';
+import { ArtTopicClassifier } from './useCase/art-topic-classifier';
+import { ChatService } from './useCase/chat.service';
+import { ImageEnrichmentService } from './useCase/image-enrichment.service';
+import { KnowledgeBaseService } from './useCase/knowledge-base.service';
+import { UserMemoryService } from './useCase/user-memory.service';
 
 import type { ArtKeywordRepository } from './domain/artKeyword.repository.interface';
 import type { OcrService } from './domain/ports/ocr.port';

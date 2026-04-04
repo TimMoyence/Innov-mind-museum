@@ -31,14 +31,12 @@ describe('SwipeableConversationCard', () => {
   });
 
   it('renders children inside plain View when editMode is true', () => {
-    const { toJSON } = render(
+    render(
       <SwipeableConversationCard onDelete={onDelete} editMode>
         <Text>Edit Mode Content</Text>
       </SwipeableConversationCard>,
     );
     expect(screen.getByText('Edit Mode Content')).toBeTruthy();
-    // In edit mode, it should be a simple View wrapper (no Swipeable)
-    expect(toJSON()).toBeTruthy();
   });
 
   it('renders children inside Swipeable when editMode is false', () => {

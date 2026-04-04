@@ -6,7 +6,7 @@ import { artworks } from './artworks.data';
 
 import type { Artwork } from './artworks.data';
 import type { CacheService } from '@shared/cache/cache.port';
-import type { NextFunction, Request, Response } from 'express';
+import type { Request, Response } from 'express';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -55,37 +55,29 @@ export const createDailyArtRouter = (cacheService?: CacheService): Router => {
   const dailyArtRouter: Router = Router();
 
   // GET /api/daily-art — returns 1 artwork per day (deterministic rotation)
-  dailyArtRouter.get(
-    '/',
-    isAuthenticated,
-    async (_req: Request, res: Response, next: NextFunction) => {
-      try {
-        const now = new Date();
-        const dateStr = toDateString(now);
-        const cacheKey = `daily-art:${dateStr}`;
+  dailyArtRouter.get('/', isAuthenticated, async (_req: Request, res: Response) => {
+    const now = new Date();
+    const dateStr = toDateString(now);
+    const cacheKey = `daily-art:${dateStr}`;
 
-        // Try cache first
-        if (cacheService) {
-          const cached = await cacheService.get<Artwork>(cacheKey);
-          if (cached) {
-            res.json({ artwork: cached });
-            return;
-          }
-        }
-
-        const artwork = selectArtworkForDate(now);
-
-        // Store in cache if available
-        if (cacheService) {
-          await cacheService.set(cacheKey, artwork, CACHE_TTL_SECONDS);
-        }
-
-        res.json({ artwork });
-      } catch (error) {
-        next(error);
+    // Try cache first
+    if (cacheService) {
+      const cached = await cacheService.get<Artwork>(cacheKey);
+      if (cached) {
+        res.json({ artwork: cached });
+        return;
       }
-    },
-  );
+    }
+
+    const artwork = selectArtworkForDate(now);
+
+    // Store in cache if available
+    if (cacheService) {
+      await cacheService.set(cacheKey, artwork, CACHE_TTL_SECONDS);
+    }
+
+    res.json({ artwork });
+  });
 
   return dailyArtRouter;
 };

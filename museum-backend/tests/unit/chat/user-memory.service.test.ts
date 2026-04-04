@@ -1,4 +1,4 @@
-import { UserMemoryService } from '@modules/chat/application/user-memory.service';
+import { UserMemoryService } from '@modules/chat/useCase/user-memory.service';
 import type { UserMemoryRepository } from '@modules/chat/domain/userMemory.repository.interface';
 import type { UserMemory } from '@modules/chat/domain/userMemory.entity';
 import type { VisitContext } from '@modules/chat/domain/chat.types';

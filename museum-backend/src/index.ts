@@ -5,7 +5,7 @@ import util from 'node:util';
 import Redis from 'ioredis';
 
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/refresh-token.repository.pg';
-import { TokenCleanupService } from '@modules/auth/core/useCase/tokenCleanup.service';
+import { TokenCleanupService } from '@modules/auth/useCase/tokenCleanup.service';
 import { getOcrService, stopArtKeywordsRefresh } from '@modules/chat';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';

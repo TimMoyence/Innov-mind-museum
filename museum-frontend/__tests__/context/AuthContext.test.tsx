@@ -1,6 +1,6 @@
 import type React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
-import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { AuthProvider, useAuth } from '@/features/auth/application/AuthContext';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -62,7 +62,7 @@ jest.mock('@/shared/observability/errorReporting', () => ({
   reportError: jest.fn(),
 }));
 
-jest.mock('@/context/authLogic.pure', () => ({
+jest.mock('@/features/auth/domain/authLogic.pure', () => ({
   extractUserIdFromToken: jest.fn(() => 'user-123'),
 }));
 

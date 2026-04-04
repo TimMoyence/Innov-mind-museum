@@ -2,7 +2,7 @@ import { buildChatTestService } from 'tests/helpers/chat/chatTestApp';
 import type {
   ChatOrchestrator,
   OrchestratorOutput,
-} from '@modules/chat/adapters/secondary/langchain.orchestrator';
+} from '@modules/chat/domain/ports/chat-orchestrator.port';
 import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/langchain.orchestrator';
 
 class ThrowingOrchestrator implements ChatOrchestrator {

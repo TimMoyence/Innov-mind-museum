@@ -39,6 +39,7 @@ exports[`ChatInput snapshots matches snapshot in default state 1`] = `
         },
       ]
     }
+    testID="chat-input"
     value=""
   />
   <View
@@ -88,6 +89,7 @@ exports[`ChatInput snapshots matches snapshot in default state 1`] = `
         },
       ]
     }
+    testID="send-button"
   >
     <Text
       color="#FFFFFF"
@@ -138,6 +140,7 @@ exports[`ChatInput snapshots matches snapshot in sending state 1`] = `
         },
       ]
     }
+    testID="chat-input"
     value="Hello"
   />
   <View
@@ -187,6 +190,7 @@ exports[`ChatInput snapshots matches snapshot in sending state 1`] = `
         },
       ]
     }
+    testID="send-button"
   >
     <ActivityIndicator
       color="#FFFFFF"

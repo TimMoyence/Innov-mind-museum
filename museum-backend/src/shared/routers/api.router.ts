@@ -11,7 +11,7 @@ import supportRouter from '@modules/support/adapters/primary/http/support.route'
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { env } from '@src/config/env';
 
-import type { ChatService } from '@modules/chat/application/chat.service';
+import type { ChatService } from '@modules/chat/useCase/chat.service';
 import type { CacheService } from '@shared/cache/cache.port';
 import type { FeatureFlagService } from '@shared/feature-flags/feature-flags.port';
 

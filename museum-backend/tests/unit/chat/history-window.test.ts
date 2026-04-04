@@ -1,4 +1,4 @@
-import { applyHistoryWindow } from '@modules/chat/application/history-window';
+import { applyHistoryWindow } from '@modules/chat/useCase/history-window';
 import { makeMessage } from '../../helpers/chat/message.fixtures';
 
 describe('applyHistoryWindow', () => {

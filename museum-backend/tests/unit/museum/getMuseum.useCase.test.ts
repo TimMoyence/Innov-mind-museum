@@ -1,4 +1,4 @@
-import { GetMuseumUseCase } from '@modules/museum/core/useCase/getMuseum.useCase';
+import { GetMuseumUseCase } from '@modules/museum/useCase/getMuseum.useCase';
 import { InMemoryMuseumRepository } from 'tests/helpers/museum/inMemoryMuseumRepository';
 
 describe('GetMuseumUseCase', () => {

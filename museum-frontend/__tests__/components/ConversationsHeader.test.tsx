@@ -30,8 +30,8 @@ describe('ConversationsHeader', () => {
     expect(getByText(/conversations\.saved_filter_on/)).toBeTruthy();
   });
 
-  it('renders without crashing in edit mode', () => {
-    const { toJSON } = render(<ConversationsHeader {...defaultProps} editMode />);
-    expect(toJSON()).toBeTruthy();
+  it('renders title in edit mode', () => {
+    const { getByText } = render(<ConversationsHeader {...defaultProps} editMode />);
+    expect(getByText('conversations.title')).toBeTruthy();
   });
 });

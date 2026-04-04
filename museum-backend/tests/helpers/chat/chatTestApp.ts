@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 
-import { ChatService } from '@modules/chat/application/chat.service';
+import { ChatService } from '@modules/chat/useCase/chat.service';
 import type {
   ChatSessionsPage,
   ChatRepository,
@@ -21,11 +21,11 @@ import { LocalImageStorage } from '@modules/chat/adapters/secondary/image-storag
 import type {
   ChatOrchestrator,
   OrchestratorOutput,
-} from '@modules/chat/adapters/secondary/langchain.orchestrator';
-import type { AudioTranscriber } from '@modules/chat/adapters/secondary/audio-transcriber.openai';
+} from '@modules/chat/domain/ports/chat-orchestrator.port';
+import type { AudioTranscriber } from '@modules/chat/domain/ports/audio-transcriber.port';
 import type { TextToSpeechService } from '@modules/chat/adapters/secondary/text-to-speech.openai';
 import type { OcrService } from '@modules/chat/adapters/secondary/ocr-service';
-import type { ArtTopicClassifierPort } from '@modules/chat/application/guardrail-evaluation.service';
+import type { ArtTopicClassifierPort } from '@modules/chat/useCase/guardrail-evaluation.service';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /** Test utility: in-memory ChatRepository implementation that stores sessions and messages in Maps. */

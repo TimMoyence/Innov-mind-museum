@@ -13,11 +13,8 @@ import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
 import type { GuideLevel } from '@/features/settings/runtimeSettings';
-import {
-  loadRuntimeSettings,
-  saveDefaultMuseumMode,
-  saveGuideLevel,
-} from '@/features/settings/runtimeSettings';
+import { saveDefaultMuseumMode, saveGuideLevel } from '@/features/settings/runtimeSettings';
+import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { LANGUAGE_OPTIONS } from '@/shared/config/supportedLocales';
 import { useI18n } from '@/shared/i18n/I18nContext';
@@ -33,25 +30,24 @@ export default function PreferencesScreen() {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const { language, setLanguage } = useI18n();
-  const [museumMode, setMuseumMode] = useState(true);
-  const [guideLevel, setGuideLevel] = useState<GuideLevel>('beginner');
-  const [isLoading, setIsLoading] = useState(true);
+  const storeMuseumMode = useRuntimeSettingsStore((s) => s.defaultMuseumMode);
+  const storeGuideLevel = useRuntimeSettingsStore((s) => s.guideLevel);
+  const storeHydrated = useRuntimeSettingsStore((s) => s._hydrated);
+  const [museumMode, setMuseumMode] = useState(storeMuseumMode);
+  const [guideLevel, setGuideLevel] = useState<GuideLevel>(storeGuideLevel);
+  const isLoading = !storeHydrated;
   const [isSaving, setIsSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    loadRuntimeSettings()
-      .then((settings) => {
-        setMuseumMode(settings.defaultMuseumMode);
-        setGuideLevel(settings.guideLevel);
-      })
-      .catch((error: unknown) => {
-        setStatus(t('preferences.load_failed', { error: getErrorMessage(error) }));
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, [t]);
+    if (storeHydrated) {
+      setMuseumMode(storeMuseumMode);
+      setGuideLevel(storeGuideLevel);
+    }
+  }, [storeHydrated, storeMuseumMode, storeGuideLevel]);
+
+  const storeSetMuseumMode = useRuntimeSettingsStore((s) => s.setDefaultMuseumMode);
+  const storeSetGuideLevel = useRuntimeSettingsStore((s) => s.setGuideLevel);
 
   const onSave = async () => {
     if (isSaving) {
@@ -63,6 +59,8 @@ export default function PreferencesScreen() {
 
     try {
       await Promise.all([saveDefaultMuseumMode(museumMode), saveGuideLevel(guideLevel)]);
+      storeSetMuseumMode(museumMode);
+      storeSetGuideLevel(guideLevel);
       setStatus(t('preferences.saved'));
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {

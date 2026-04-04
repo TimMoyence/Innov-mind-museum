@@ -1,4 +1,4 @@
-import { type NextFunction, type Request, type Response, Router } from 'express';
+import { type Request, type Response, Router } from 'express';
 
 import { moderateReviewSchema } from '@modules/review/adapters/primary/http/review.schemas';
 import {
@@ -40,25 +40,21 @@ adminRouter.get(
   isAuthenticated,
   requireRole('admin', 'moderator'),
   validateQuery(listUsersQuerySchema),
-  async (_req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { page, limit, search, role } = res.locals.validatedQuery as {
-        page: number;
-        limit: number;
-        search?: string;
-        role?: string;
-      };
+  async (_req: Request, res: Response) => {
+    const { page, limit, search, role } = res.locals.validatedQuery as {
+      page: number;
+      limit: number;
+      search?: string;
+      role?: string;
+    };
 
-      const result = await listUsersUseCase.execute({
-        search,
-        role,
-        pagination: { page, limit },
-      });
+    const result = await listUsersUseCase.execute({
+      search,
+      role,
+      pagination: { page, limit },
+    });
 
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
+    res.json(result);
   },
 );
 
@@ -68,25 +64,21 @@ adminRouter.patch(
   isAuthenticated,
   requireRole('admin'),
   validateBody(changeUserRoleSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const userId = Number.parseInt(req.params.id, 10);
-      if (Number.isNaN(userId)) throw badRequest('Invalid user ID');
+  async (req: Request, res: Response) => {
+    const userId = Number.parseInt(req.params.id, 10);
+    if (Number.isNaN(userId)) throw badRequest('Invalid user ID');
 
-      const { role } = req.body as { role: string };
+    const { role } = req.body as { role: string };
 
-      const updated = await changeUserRoleUseCase.execute({
-        userId,
-        newRole: role,
-        actorId: req.user?.id ?? 0,
-        ip: req.ip,
-        requestId: req.requestId,
-      });
+    const updated = await changeUserRoleUseCase.execute({
+      userId,
+      newRole: role,
+      actorId: req.user?.id ?? 0,
+      ip: req.ip,
+      requestId: req.requestId,
+    });
 
-      res.json({ user: updated });
-    } catch (error) {
-      next(error);
-    }
+    res.json({ user: updated });
   },
 );
 
@@ -96,32 +88,28 @@ adminRouter.get(
   isAuthenticated,
   requireRole('admin', 'moderator'),
   validateQuery(auditLogsQuerySchema),
-  async (_req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { page, limit, action, actorId, dateFrom, dateTo, targetType } = res.locals
-        .validatedQuery as {
-        page: number;
-        limit: number;
-        action?: string;
-        actorId?: number;
-        dateFrom?: string;
-        dateTo?: string;
-        targetType?: string;
-      };
+  async (_req: Request, res: Response) => {
+    const { page, limit, action, actorId, dateFrom, dateTo, targetType } = res.locals
+      .validatedQuery as {
+      page: number;
+      limit: number;
+      action?: string;
+      actorId?: number;
+      dateFrom?: string;
+      dateTo?: string;
+      targetType?: string;
+    };
 
-      const result = await listAuditLogsUseCase.execute({
-        action,
-        actorId,
-        targetType,
-        dateFrom,
-        dateTo,
-        pagination: { page, limit },
-      });
+    const result = await listAuditLogsUseCase.execute({
+      action,
+      actorId,
+      targetType,
+      dateFrom,
+      dateTo,
+      pagination: { page, limit },
+    });
 
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
+    res.json(result);
   },
 );
 
@@ -130,13 +118,9 @@ adminRouter.get(
   '/stats',
   isAuthenticated,
   requireRole('admin', 'moderator'),
-  async (_req: Request, res: Response, next: NextFunction) => {
-    try {
-      const stats = await getStatsUseCase.execute();
-      res.json(stats);
-    } catch (error) {
-      next(error);
-    }
+  async (_req: Request, res: Response) => {
+    const stats = await getStatsUseCase.execute();
+    res.json(stats);
   },
 );
 
@@ -148,29 +132,25 @@ adminRouter.get(
   isAuthenticated,
   requireRole('admin', 'moderator'),
   validateQuery(listReportsQuerySchema),
-  async (_req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { page, limit, status, reason, dateFrom, dateTo } = res.locals.validatedQuery as {
-        page: number;
-        limit: number;
-        status?: 'pending' | 'reviewed' | 'dismissed';
-        reason?: string;
-        dateFrom?: string;
-        dateTo?: string;
-      };
+  async (_req: Request, res: Response) => {
+    const { page, limit, status, reason, dateFrom, dateTo } = res.locals.validatedQuery as {
+      page: number;
+      limit: number;
+      status?: 'pending' | 'reviewed' | 'dismissed';
+      reason?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    };
 
-      const result = await listReportsUseCase.execute({
-        status,
-        reason,
-        dateFrom,
-        dateTo,
-        pagination: { page, limit },
-      });
+    const result = await listReportsUseCase.execute({
+      status,
+      reason,
+      dateFrom,
+      dateTo,
+      pagination: { page, limit },
+    });
 
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
+    res.json(result);
   },
 );
 
@@ -180,27 +160,23 @@ adminRouter.patch(
   isAuthenticated,
   requireRole('admin', 'moderator'),
   validateBody(resolveReportSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const reportId = req.params.id;
-      const { status, reviewerNotes } = req.body as {
-        status: string;
-        reviewerNotes?: string;
-      };
+  async (req: Request, res: Response) => {
+    const reportId = req.params.id;
+    const { status, reviewerNotes } = req.body as {
+      status: string;
+      reviewerNotes?: string;
+    };
 
-      const result = await resolveReportUseCase.execute({
-        reportId,
-        status,
-        reviewerNotes,
-        reviewedBy: req.user?.id ?? 0,
-        ip: req.ip,
-        requestId: req.requestId,
-      });
+    const result = await resolveReportUseCase.execute({
+      reportId,
+      status,
+      reviewerNotes,
+      reviewedBy: req.user?.id ?? 0,
+      ip: req.ip,
+      requestId: req.requestId,
+    });
 
-      res.json({ report: result });
-    } catch (error) {
-      next(error);
-    }
+    res.json({ report: result });
   },
 );
 
@@ -211,24 +187,20 @@ adminRouter.get(
   '/analytics/usage',
   isAuthenticated,
   requireRole('admin', 'moderator'),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const granularity = (req.query.granularity as string) || undefined;
-      const from = (req.query.from as string) || undefined;
-      const to = (req.query.to as string) || undefined;
-      const days = req.query.days ? Number.parseInt(req.query.days as string, 10) : undefined;
+  async (req: Request, res: Response) => {
+    const granularity = (req.query.granularity as string) || undefined;
+    const from = (req.query.from as string) || undefined;
+    const to = (req.query.to as string) || undefined;
+    const days = req.query.days ? Number.parseInt(req.query.days as string, 10) : undefined;
 
-      const result = await getUsageAnalyticsUseCase.execute({
-        granularity: granularity as 'daily' | 'weekly' | 'monthly' | undefined,
-        from,
-        to,
-        days,
-      });
+    const result = await getUsageAnalyticsUseCase.execute({
+      granularity: granularity as 'daily' | 'weekly' | 'monthly' | undefined,
+      from,
+      to,
+      days,
+    });
 
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
+    res.json(result);
   },
 );
 
@@ -237,18 +209,14 @@ adminRouter.get(
   '/analytics/content',
   isAuthenticated,
   requireRole('admin', 'moderator'),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const from = (req.query.from as string) || undefined;
-      const to = (req.query.to as string) || undefined;
-      const limit = req.query.limit ? Number.parseInt(req.query.limit as string, 10) : undefined;
+  async (req: Request, res: Response) => {
+    const from = (req.query.from as string) || undefined;
+    const to = (req.query.to as string) || undefined;
+    const limit = req.query.limit ? Number.parseInt(req.query.limit as string, 10) : undefined;
 
-      const result = await getContentAnalyticsUseCase.execute({ from, to, limit });
+    const result = await getContentAnalyticsUseCase.execute({ from, to, limit });
 
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
+    res.json(result);
   },
 );
 
@@ -257,17 +225,13 @@ adminRouter.get(
   '/analytics/engagement',
   isAuthenticated,
   requireRole('admin', 'moderator'),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const from = (req.query.from as string) || undefined;
-      const to = (req.query.to as string) || undefined;
+  async (req: Request, res: Response) => {
+    const from = (req.query.from as string) || undefined;
+    const to = (req.query.to as string) || undefined;
 
-      const result = await getEngagementAnalyticsUseCase.execute({ from, to });
+    const result = await getEngagementAnalyticsUseCase.execute({ from, to });
 
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
+    res.json(result);
   },
 );
 
@@ -278,24 +242,20 @@ adminRouter.get(
   '/tickets',
   isAuthenticated,
   requireRole('admin', 'moderator'),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const page = Number.parseInt(req.query.page as string, 10) || 1;
-      const limit = Number.parseInt(req.query.limit as string, 10) || 20;
-      const status = (req.query.status as string) || undefined;
-      const priority = (req.query.priority as string) || undefined;
+  async (req: Request, res: Response) => {
+    const page = Number.parseInt(req.query.page as string, 10) || 1;
+    const limit = Number.parseInt(req.query.limit as string, 10) || 20;
+    const status = (req.query.status as string) || undefined;
+    const priority = (req.query.priority as string) || undefined;
 
-      const result = await listAllTicketsUseCase.execute({
-        status,
-        priority,
-        page,
-        limit,
-      });
+    const result = await listAllTicketsUseCase.execute({
+      status,
+      priority,
+      page,
+      limit,
+    });
 
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
+    res.json(result);
   },
 );
 
@@ -305,29 +265,25 @@ adminRouter.patch(
   isAuthenticated,
   requireRole('admin', 'moderator'),
   validateBody(updateTicketSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const ticketId = req.params.id;
-      const { status, priority, assignedTo } = req.body as {
-        status?: string;
-        priority?: string;
-        assignedTo?: number | null;
-      };
+  async (req: Request, res: Response) => {
+    const ticketId = req.params.id;
+    const { status, priority, assignedTo } = req.body as {
+      status?: string;
+      priority?: string;
+      assignedTo?: number | null;
+    };
 
-      const updated = await updateTicketStatusUseCase.execute({
-        ticketId,
-        status,
-        priority,
-        assignedTo,
-        actorId: req.user?.id ?? 0,
-        ip: req.ip,
-        requestId: req.requestId,
-      });
+    const updated = await updateTicketStatusUseCase.execute({
+      ticketId,
+      status,
+      priority,
+      assignedTo,
+      actorId: req.user?.id ?? 0,
+      ip: req.ip,
+      requestId: req.requestId,
+    });
 
-      res.json({ ticket: updated });
-    } catch (error) {
-      next(error);
-    }
+    res.json({ ticket: updated });
   },
 );
 
@@ -338,22 +294,18 @@ adminRouter.get(
   '/reviews',
   isAuthenticated,
   requireRole('admin', 'moderator'),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const page = Number.parseInt(req.query.page as string, 10) || 1;
-      const limit = Number.parseInt(req.query.limit as string, 10) || 20;
-      const status = (req.query.status as string) || undefined;
+  async (req: Request, res: Response) => {
+    const page = Number.parseInt(req.query.page as string, 10) || 1;
+    const limit = Number.parseInt(req.query.limit as string, 10) || 20;
+    const status = (req.query.status as string) || undefined;
 
-      const result = await listAllReviewsUseCaseInstance.execute({
-        status,
-        page,
-        limit,
-      });
+    const result = await listAllReviewsUseCaseInstance.execute({
+      status,
+      page,
+      limit,
+    });
 
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
+    res.json(result);
   },
 );
 
@@ -363,20 +315,16 @@ adminRouter.patch(
   isAuthenticated,
   requireRole('admin', 'moderator'),
   validateBody(moderateReviewSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const reviewId = req.params.id;
-      const { status } = req.body as { status: string };
+  async (req: Request, res: Response) => {
+    const reviewId = req.params.id;
+    const { status } = req.body as { status: string };
 
-      const updated = await moderateReviewUseCaseInstance.execute({
-        reviewId,
-        status,
-      });
+    const updated = await moderateReviewUseCaseInstance.execute({
+      reviewId,
+      status,
+    });
 
-      res.json({ review: updated });
-    } catch (error) {
-      next(error);
-    }
+    res.json({ review: updated });
   },
 );
 

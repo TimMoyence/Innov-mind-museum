@@ -18,7 +18,7 @@ jest.mock('@src/config/env', () => ({
   },
 }));
 
-import { ImageProcessingService } from '@modules/chat/application/image-processing.service';
+import { ImageProcessingService } from '@modules/chat/useCase/image-processing.service';
 import { AppError } from '@shared/errors/app.error';
 
 import type { ImageStorage, SaveImageInput } from '@modules/chat/domain/ports/image-storage.port';

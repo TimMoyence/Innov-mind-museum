@@ -4,11 +4,6 @@ import { render, screen } from '@testing-library/react-native';
 import TermsScreen from '@/app/(stack)/terms';
 
 describe('TermsScreen', () => {
-  it('renders without crashing', () => {
-    render(<TermsScreen />);
-    expect(screen.getByText('Terms of Service')).toBeTruthy();
-  });
-
   it('renders the document title', () => {
     render(<TermsScreen />);
     expect(screen.getByText('Terms of Service')).toBeTruthy();

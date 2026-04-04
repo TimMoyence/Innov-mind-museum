@@ -4,7 +4,7 @@ import { createApp } from '@src/app';
 import { resetRateLimits, stopRateLimitSweep } from '../../helpers/http/route-test-setup';
 import { userToken } from '../../helpers/auth/token.helpers';
 
-import type { ChatService } from '@modules/chat/application/chat.service';
+import type { ChatService } from '@modules/chat/useCase/chat.service';
 
 // ── Build a mock ChatService for happy-path tests ────────────────────
 

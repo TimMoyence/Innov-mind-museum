@@ -3,8 +3,8 @@ import crypto from 'node:crypto';
 import { logger } from '@shared/logger/logger';
 import { setUser } from '@shared/observability/sentry';
 
-import type { ApiKeyRepository } from '@modules/auth/core/domain/apiKey.repository.interface';
-import type { UserRole } from '@modules/auth/core/domain/user-role';
+import type { ApiKeyRepository } from '@modules/auth/domain/apiKey.repository.interface';
+import type { UserRole } from '@modules/auth/domain/user-role';
 import type { Request, Response, NextFunction } from 'express';
 
 /** Singleton reference set during auth module initialization. */

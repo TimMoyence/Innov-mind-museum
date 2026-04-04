@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth/application/AuthContext';
 import { authService } from '@/features/auth/infrastructure/authApi';
 import { authStorage, clearAccessToken } from '@/features/auth/infrastructure/authTokenStore';
 import { AUTH_ROUTE } from '@/features/auth/routes';

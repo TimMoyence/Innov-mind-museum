@@ -1,6 +1,6 @@
 import type { DataSource, Repository } from 'typeorm';
 
-import { Museum } from '@modules/museum/core/domain/museum.entity';
+import { Museum } from '@modules/museum/domain/museum.entity';
 import { AppError } from '@shared/errors/app.error';
 
 import { MuseumRepositoryPg } from '@modules/museum/adapters/secondary/museum.repository.pg';

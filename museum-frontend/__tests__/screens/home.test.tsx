@@ -1,20 +1,18 @@
 import '../helpers/test-utils';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 
 // ── Screen-specific mocks ────────────────────────────────────────────────────
 
-const mockCreateSession = jest.fn();
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
-  chatApi: { createSession: mockCreateSession },
+  chatApi: { createSession: jest.fn() },
 }));
 
-const mockLoadRuntimeSettings = jest.fn().mockResolvedValue({
-  defaultLocale: 'en-US',
-  defaultMuseumMode: false,
-});
-jest.mock('@/features/settings/runtimeSettings', () => ({
-  loadRuntimeSettings: (...args: any[]) => mockLoadRuntimeSettings(...args),
-}));
+// Access the mock through the mocked module so we have the actual reference
+const { chatApi } = jest.requireMock<{ chatApi: { createSession: jest.Mock } }>(
+  '@/features/chat/infrastructure/chatApi',
+);
+const mockCreateSession = chatApi.createSession;
 
 jest.mock('@/features/settings/application/useRuntimeSettings', () => ({
   useRuntimeSettings: () => ({
@@ -45,9 +43,11 @@ import HomeScreen from '@/app/(tabs)/home';
 describe('HomeScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockLoadRuntimeSettings.mockResolvedValue({
+    useRuntimeSettingsStore.setState({
       defaultLocale: 'en-US',
       defaultMuseumMode: false,
+      guideLevel: 'beginner',
+      _hydrated: true,
     });
     mockUseDailyArt.mockReturnValue({
       artwork: null,
@@ -114,7 +114,10 @@ describe('HomeScreen', () => {
     render(<HomeScreen />);
     fireEvent.press(screen.getByLabelText('a11y.home.start_conversation'));
     await waitFor(() => {
-      expect(mockLoadRuntimeSettings).toHaveBeenCalledTimes(1);
+      expect(mockCreateSession).toHaveBeenCalledWith({
+        locale: 'en-US',
+        museumMode: false,
+      });
     });
   });
 

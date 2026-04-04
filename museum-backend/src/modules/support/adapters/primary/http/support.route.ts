@@ -1,4 +1,4 @@
-import { type NextFunction, type Request, type Response, Router } from 'express';
+import { type Request, type Response, Router } from 'express';
 
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import { byIp, createRateLimitMiddleware } from '@src/helpers/middleware/rate-limit.middleware';
@@ -32,27 +32,23 @@ supportRouter.post(
   '/contact',
   supportContactLimiter,
   validateBody(submitSupportContactSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { name, email, message } = req.body as {
-        name: string;
-        email: string;
-        message: string;
-      };
+  async (req: Request, res: Response) => {
+    const { name, email, message } = req.body as {
+      name: string;
+      email: string;
+      message: string;
+    };
 
-      await submitSupportContactUseCase.execute({
-        name,
-        email,
-        message,
-        ip: req.ip,
-        requestId: req.requestId,
-        userAgent: req.get('user-agent'),
-      });
+    await submitSupportContactUseCase.execute({
+      name,
+      email,
+      message,
+      ip: req.ip,
+      requestId: req.requestId,
+      userAgent: req.get('user-agent'),
+    });
 
-      res.status(202).json({ accepted: true });
-    } catch (error) {
-      next(error);
-    }
+    res.status(202).json({ accepted: true });
   },
 );
 
@@ -61,29 +57,25 @@ supportRouter.post(
   '/tickets',
   isAuthenticated,
   validateBody(createTicketSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { subject, description, priority, category } = req.body as {
-        subject: string;
-        description: string;
-        priority?: string;
-        category?: string;
-      };
+  async (req: Request, res: Response) => {
+    const { subject, description, priority, category } = req.body as {
+      subject: string;
+      description: string;
+      priority?: string;
+      category?: string;
+    };
 
-      const ticket = await createTicketUseCase.execute({
-        userId: req.user?.id ?? 0,
-        subject,
-        description,
-        priority,
-        category,
-        ip: req.ip,
-        requestId: req.requestId,
-      });
+    const ticket = await createTicketUseCase.execute({
+      userId: req.user?.id ?? 0,
+      subject,
+      description,
+      priority,
+      category,
+      ip: req.ip,
+      requestId: req.requestId,
+    });
 
-      res.status(201).json({ ticket });
-    } catch (error) {
-      next(error);
-    }
+    res.status(201).json({ ticket });
   },
 );
 
@@ -92,69 +84,53 @@ supportRouter.get(
   '/tickets',
   isAuthenticated,
   validateQuery(listTicketsQuerySchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { page, limit, status, priority } = res.locals.validatedQuery as {
-        page: number;
-        limit: number;
-        status?: string;
-        priority?: string;
-      };
+  async (req: Request, res: Response) => {
+    const { page, limit, status, priority } = res.locals.validatedQuery as {
+      page: number;
+      limit: number;
+      status?: string;
+      priority?: string;
+    };
 
-      const result = await listUserTicketsUseCase.execute({
-        userId: req.user?.id ?? 0,
-        status,
-        priority,
-        page,
-        limit,
-      });
+    const result = await listUserTicketsUseCase.execute({
+      userId: req.user?.id ?? 0,
+      status,
+      priority,
+      page,
+      limit,
+    });
 
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
+    res.json(result);
   },
 );
 
 // GET /api/support/tickets/:id — Authenticated user: get ticket detail (ownership check)
-supportRouter.get(
-  '/tickets/:id',
-  isAuthenticated,
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const ticket = await getTicketDetailUseCase.execute({
-        ticketId: req.params.id,
-        userId: req.user?.id ?? 0,
-        userRole: req.user?.role ?? 'visitor',
-      });
+supportRouter.get('/tickets/:id', isAuthenticated, async (req: Request, res: Response) => {
+  const ticket = await getTicketDetailUseCase.execute({
+    ticketId: req.params.id,
+    userId: req.user?.id ?? 0,
+    userRole: req.user?.role ?? 'visitor',
+  });
 
-      res.json({ ticket });
-    } catch (error) {
-      next(error);
-    }
-  },
-);
+  res.json({ ticket });
+});
 
 // POST /api/support/tickets/:id/messages — Authenticated user: add message (ownership check)
 supportRouter.post(
   '/tickets/:id/messages',
   isAuthenticated,
   validateBody(addTicketMessageSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { text } = req.body as { text: string };
+  async (req: Request, res: Response) => {
+    const { text } = req.body as { text: string };
 
-      const message = await addTicketMessageUseCase.execute({
-        ticketId: req.params.id,
-        senderId: req.user?.id ?? 0,
-        senderRole: req.user?.role ?? 'visitor',
-        text,
-      });
+    const message = await addTicketMessageUseCase.execute({
+      ticketId: req.params.id,
+      senderId: req.user?.id ?? 0,
+      senderRole: req.user?.role ?? 'visitor',
+      text,
+    });
 
-      res.status(201).json({ message });
-    } catch (error) {
-      next(error);
-    }
+    res.status(201).json({ message });
   },
 );
 

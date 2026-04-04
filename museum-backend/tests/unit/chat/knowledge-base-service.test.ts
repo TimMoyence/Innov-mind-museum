@@ -1,4 +1,4 @@
-import { KnowledgeBaseService } from '@modules/chat/application/knowledge-base.service';
+import { KnowledgeBaseService } from '@modules/chat/useCase/knowledge-base.service';
 import type {
   ArtworkFacts,
   KnowledgeBaseProvider,

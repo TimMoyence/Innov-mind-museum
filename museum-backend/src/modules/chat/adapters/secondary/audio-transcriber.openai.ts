@@ -1,4 +1,5 @@
 import { AppError, badRequest } from '@shared/errors/app.error';
+import { extensionByMime } from '@shared/media/mime-extensions';
 import { startSpan } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
 
@@ -7,14 +8,6 @@ import type {
   AudioTranscriptionResult,
   AudioTranscriber,
 } from '../../domain/ports/audio-transcriber.port';
-
-// Re-export domain port types so existing consumers that imported from here keep working
-export type {
-  AudioTranscriberInput,
-  AudioTranscriptionResult,
-  AudioTranscriber,
-} from '../../domain/ports/audio-transcriber.port';
-export { DisabledAudioTranscriber } from '../../domain/ports/audio-transcriber.port';
 
 const toLanguageHint = (locale?: string): string | undefined => {
   const candidate = locale?.trim();
@@ -26,20 +19,8 @@ const toLanguageHint = (locale?: string): string | undefined => {
   return normalized && normalized.length <= 8 ? normalized : undefined;
 };
 
-const extensionByMimeType: Record<string, string> = {
-  'audio/mpeg': 'mp3',
-  'audio/mp3': 'mp3',
-  'audio/mp4': 'm4a',
-  'audio/x-m4a': 'm4a',
-  'audio/wav': 'wav',
-  'audio/x-wav': 'wav',
-  'audio/webm': 'webm',
-  'audio/ogg': 'ogg',
-  'audio/aac': 'aac',
-};
-
 const toAudioFileName = (mimeType: string): string => {
-  const extension = extensionByMimeType[mimeType] || 'm4a';
+  const extension = extensionByMime[mimeType] || 'm4a';
   return `voice-input.${extension}`;
 };
 

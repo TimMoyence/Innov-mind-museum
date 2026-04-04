@@ -1,10 +1,11 @@
 import crypto from 'node:crypto';
 
 import bcrypt from 'bcrypt';
-import { ResetPasswordUseCase } from '@modules/auth/core/useCase/resetPassword.useCase';
-import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
-import type { User } from '@modules/auth/core/domain/user.entity';
+import { ResetPasswordUseCase } from '@modules/auth/useCase/resetPassword.useCase';
+import type { IUserRepository } from '@modules/auth/domain/user.repository.interface';
 import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
+import { makeUser } from '../../helpers/auth/user.fixtures';
+import { makeUserRepo } from '../../helpers/auth/user-repo.mock';
 
 jest.mock('bcrypt', () => ({
   ...jest.requireActual('bcrypt'),
@@ -12,22 +13,6 @@ jest.mock('bcrypt', () => ({
 }));
 
 const mockHash = bcrypt.hash as jest.MockedFunction<typeof bcrypt.hash>;
-
-const makeUser = (overrides: Partial<User> = {}): User =>
-  ({
-    id: 1,
-    email: 'user@test.com',
-    password: '$2b$12$newhash',
-    firstname: 'Test',
-    lastname: 'User',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  }) as User;
-
-const makeUserRepo = (user: User | null = makeUser()) => ({
-  consumeResetTokenAndUpdatePassword: jest.fn().mockResolvedValue(user),
-});
 
 describe('ResetPasswordUseCase', () => {
   beforeEach(() => {
@@ -38,7 +23,7 @@ describe('ResetPasswordUseCase', () => {
   // ── Happy path ───────────────────────────────────────────────────
 
   it('resets password with a valid token and valid password', async () => {
-    const repo = makeUserRepo();
+    const repo = makeUserRepo(makeUser());
     const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
 
     const result = await useCase.execute('valid-reset-token', 'NewValid1');
@@ -56,7 +41,7 @@ describe('ResetPasswordUseCase', () => {
   });
 
   it('passes hashed password to repo, never plaintext', async () => {
-    const repo = makeUserRepo();
+    const repo = makeUserRepo(makeUser());
     const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
 
     await useCase.execute('token', 'SecurePass1');
@@ -67,7 +52,7 @@ describe('ResetPasswordUseCase', () => {
   });
 
   it('uses BCRYPT_ROUNDS constant for hashing', async () => {
-    const repo = makeUserRepo();
+    const repo = makeUserRepo(makeUser());
     const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
 
     await useCase.execute('token', 'SecurePass1');
@@ -79,7 +64,7 @@ describe('ResetPasswordUseCase', () => {
   // ── Password validation errors ──────────────────────────────────
 
   it('throws 400 for password too short (< 8 chars)', async () => {
-    const repo = makeUserRepo();
+    const repo = makeUserRepo(makeUser());
     const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
 
     await expect(useCase.execute('token', 'Ab1')).rejects.toMatchObject({
@@ -90,7 +75,7 @@ describe('ResetPasswordUseCase', () => {
   });
 
   it('throws 400 for password without uppercase letter', async () => {
-    const repo = makeUserRepo();
+    const repo = makeUserRepo(makeUser());
     const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
 
     await expect(useCase.execute('token', 'lowercase1')).rejects.toMatchObject({
@@ -100,7 +85,7 @@ describe('ResetPasswordUseCase', () => {
   });
 
   it('throws 400 for password without lowercase letter', async () => {
-    const repo = makeUserRepo();
+    const repo = makeUserRepo(makeUser());
     const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
 
     await expect(useCase.execute('token', 'UPPERCASE1')).rejects.toMatchObject({
@@ -110,7 +95,7 @@ describe('ResetPasswordUseCase', () => {
   });
 
   it('throws 400 for password without digit', async () => {
-    const repo = makeUserRepo();
+    const repo = makeUserRepo(makeUser());
     const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
 
     await expect(useCase.execute('token', 'NoDigitHere')).rejects.toMatchObject({
@@ -120,7 +105,7 @@ describe('ResetPasswordUseCase', () => {
   });
 
   it('throws 400 for password too long (> 128 chars)', async () => {
-    const repo = makeUserRepo();
+    const repo = makeUserRepo(makeUser());
     const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
     const longPassword = 'Aa1' + 'x'.repeat(126);
 
@@ -143,7 +128,7 @@ describe('ResetPasswordUseCase', () => {
   });
 
   it('does not call bcrypt.hash when password validation fails', async () => {
-    const repo = makeUserRepo();
+    const repo = makeUserRepo(makeUser());
     const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
 
     await expect(useCase.execute('token', 'weak')).rejects.toMatchObject({
