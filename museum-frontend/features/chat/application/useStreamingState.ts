@@ -24,12 +24,10 @@ export const useStreamingState = (
   }, [setMessages]);
 
   const scheduleFlush = useCallback(() => {
-    if (!updateTimerRef.current) {
-      updateTimerRef.current = setTimeout(() => {
-        updateTimerRef.current = null;
-        flushStreamText();
-      }, FLUSH_INTERVAL_MS);
-    }
+    updateTimerRef.current ??= setTimeout(() => {
+      updateTimerRef.current = null;
+      flushStreamText();
+    }, FLUSH_INTERVAL_MS);
   }, [flushStreamText]);
 
   const resetStreaming = useCallback(() => {

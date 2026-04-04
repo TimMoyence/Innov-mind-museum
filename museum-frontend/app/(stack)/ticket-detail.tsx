@@ -23,6 +23,9 @@ import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
+const BADGE_TEXT_COLOR = '#FFFFFF';
+const STAFF_TIME_COLOR = 'rgba(255,255,255,0.7)';
+
 type TicketDetailDTO = components['schemas']['TicketDetailDTO'];
 type TicketMessageDTO = components['schemas']['TicketMessageDTO'];
 type TicketStatus = TicketDetailDTO['status'];
@@ -323,7 +326,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   badgeText: {
-    color: '#FFFFFF',
+    color: BADGE_TEXT_COLOR,
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'capitalize',
@@ -362,7 +365,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
   },
   staffMessageTimeColor: {
-    color: 'rgba(255,255,255,0.7)',
+    color: STAFF_TIME_COLOR,
   },
   emptyMessages: {
     textAlign: 'center',

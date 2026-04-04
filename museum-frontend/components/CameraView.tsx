@@ -31,7 +31,6 @@ export const CustomCameraView = ({ onClose, onCapture }: CameraViewProps) => {
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
       });
-      if (!photo) return;
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onCapture(photo.uri);
     } catch {

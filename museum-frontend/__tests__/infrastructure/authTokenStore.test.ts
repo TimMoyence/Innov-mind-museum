@@ -1,15 +1,15 @@
 jest.mock('@react-native-async-storage/async-storage', () => {
-  const store: Record<string, string> = {};
+  const store = new Map<string, string>();
   return {
     __esModule: true,
     default: {
-      getItem: jest.fn((key: string) => Promise.resolve(store[key] ?? null)),
+      getItem: jest.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
       setItem: jest.fn((key: string, value: string) => {
-        store[key] = value;
+        store.set(key, value);
         return Promise.resolve();
       }),
       removeItem: jest.fn((key: string) => {
-        delete store[key];
+        store.delete(key);
         return Promise.resolve();
       }),
     },

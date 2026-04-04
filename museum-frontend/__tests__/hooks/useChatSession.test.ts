@@ -557,7 +557,8 @@ describe('useChatSession', () => {
     });
 
     act(() => {
-      result.current.retryMessage(failedMsg!);
+      if (!failedMsg) throw new Error('Expected failedMsg to be defined');
+      result.current.retryMessage(failedMsg);
     });
 
     // retryMessage fires sendMessage asynchronously via void - wait for it

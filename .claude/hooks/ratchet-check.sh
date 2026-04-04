@@ -76,7 +76,7 @@ if [ -n "$FE_CURRENT_TESTS" ] && [ "$FE_CURRENT_TESTS" -gt "$FE_BASELINE" ] 2>/d
 fi
 
 # Web test count ratchet
-WEB_TEST_OUTPUT=$(cd "$REPO_ROOT/museum-web" && pnpm test 2>&1 | grep -E 'Tests:' | grep -oE '[0-9]+ passed' | head -1)
+WEB_TEST_OUTPUT=$(cd "$REPO_ROOT/museum-web" && pnpm test 2>&1 | grep -oE '[0-9]+ passed' | head -1 || true)
 WEB_CURRENT_TESTS=$(echo "$WEB_TEST_OUTPUT" | grep -oE '[0-9]+' | head -1)
 WEB_BASELINE=$(jq -r '.webTestCount // 0' "$RATCHET_FILE")
 if [ -n "$WEB_CURRENT_TESTS" ] && [ "$WEB_CURRENT_TESTS" -lt "$WEB_BASELINE" ] 2>/dev/null; then
@@ -106,7 +106,7 @@ if $IMPROVED; then
 fi
 
 # Commit size check (warning only, never blocks)
-STAGED_INSERTIONS=$(git diff --cached --stat 2>/dev/null | tail -1 | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+')
+STAGED_INSERTIONS=$(git diff --cached --stat 2>/dev/null | tail -1 | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+' || true)
 if [ -n "$STAGED_INSERTIONS" ] && [ "$STAGED_INSERTIONS" -gt 2000 ] 2>/dev/null; then
   echo "COMMIT SIZE WARNING: $STAGED_INSERTIONS insertions > 2000 recommended max"
 elif [ -n "$STAGED_INSERTIONS" ] && [ "$STAGED_INSERTIONS" -gt 500 ] 2>/dev/null; then

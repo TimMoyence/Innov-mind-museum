@@ -4,17 +4,17 @@ import { makeDashboardSessionCard } from '@/__tests__/helpers/factories';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-const mockStorage: Record<string, string> = {};
+const mockStorage = new Map<string, string>();
 
 jest.mock('@/shared/infrastructure/storage', () => ({
   storage: {
-    getItem: jest.fn((key: string) => Promise.resolve(mockStorage[key] ?? null)),
+    getItem: jest.fn((key: string) => Promise.resolve(mockStorage.get(key) ?? null)),
     setItem: jest.fn((key: string, value: string) => {
-      mockStorage[key] = value;
+      mockStorage.set(key, value);
       return Promise.resolve();
     }),
     removeItem: jest.fn((key: string) => {
-      delete mockStorage[key];
+      mockStorage.delete(key);
       return Promise.resolve();
     }),
   },
@@ -38,9 +38,7 @@ const resetStore = () => {
     sortMode: 'recent',
   });
   // Clear mock storage
-  for (const key of Object.keys(mockStorage)) {
-    delete mockStorage[key];
-  }
+  mockStorage.clear();
 };
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -201,7 +199,7 @@ describe('conversationsStore', () => {
 
   describe('migrateLegacySavedSessions', () => {
     it('imports legacy saved session IDs from storage', async () => {
-      mockStorage['dashboard.savedSessions'] = JSON.stringify(['legacy-1', 'legacy-2']);
+      mockStorage.set('dashboard.savedSessions', JSON.stringify(['legacy-1', 'legacy-2']));
 
       await useConversationsStore.getState().migrateLegacySavedSessions();
 
@@ -209,7 +207,7 @@ describe('conversationsStore', () => {
     });
 
     it('removes legacy key after successful migration', async () => {
-      mockStorage['dashboard.savedSessions'] = JSON.stringify(['legacy-1']);
+      mockStorage.set('dashboard.savedSessions', JSON.stringify(['legacy-1']));
 
       await useConversationsStore.getState().migrateLegacySavedSessions();
 
@@ -218,7 +216,7 @@ describe('conversationsStore', () => {
 
     it('skips migration when savedSessionIds already exist', async () => {
       useConversationsStore.setState({ savedSessionIds: ['existing'] });
-      mockStorage['dashboard.savedSessions'] = JSON.stringify(['should-not-import']);
+      mockStorage.set('dashboard.savedSessions', JSON.stringify(['should-not-import']));
 
       await useConversationsStore.getState().migrateLegacySavedSessions();
 
@@ -232,7 +230,7 @@ describe('conversationsStore', () => {
     });
 
     it('handles malformed JSON in legacy key gracefully', async () => {
-      mockStorage['dashboard.savedSessions'] = 'not-valid-json';
+      mockStorage.set('dashboard.savedSessions', 'not-valid-json');
 
       await useConversationsStore.getState().migrateLegacySavedSessions();
 
@@ -240,7 +238,10 @@ describe('conversationsStore', () => {
     });
 
     it('filters out non-string values from legacy data', async () => {
-      mockStorage['dashboard.savedSessions'] = JSON.stringify(['valid-id', 42, null, 'another-id']);
+      mockStorage.set(
+        'dashboard.savedSessions',
+        JSON.stringify(['valid-id', 42, null, 'another-id']),
+      );
 
       await useConversationsStore.getState().migrateLegacySavedSessions();
 

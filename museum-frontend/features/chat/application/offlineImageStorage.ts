@@ -3,7 +3,7 @@ import * as FileSystem from 'expo-file-system';
 const OFFLINE_IMAGE_DIR_NAME = 'offline-images';
 
 function getOfflineImageDirUri(): string {
-  return `${FileSystem.documentDirectory}${OFFLINE_IMAGE_DIR_NAME}/`;
+  return `${FileSystem.documentDirectory ?? ''}${OFFLINE_IMAGE_DIR_NAME}/`;
 }
 
 /**

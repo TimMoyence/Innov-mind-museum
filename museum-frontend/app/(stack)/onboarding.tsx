@@ -112,7 +112,7 @@ export default function OnboardingScreen() {
       contentStyle={[styles.screen, { paddingTop: insets.top + 16 }]}
     >
       <Pressable
-        onPress={handleSkip}
+        onPress={() => void handleSkip()}
         style={styles.skipButton}
         accessibilityRole="button"
         accessibilityLabel={t('a11y.onboarding.skip')}
@@ -147,7 +147,7 @@ export default function OnboardingScreen() {
       <View style={styles.footer}>
         <Pressable
           style={[styles.primaryButton, { backgroundColor: theme.primary }]}
-          onPress={handleNext}
+          onPress={() => void handleNext()}
           accessibilityRole="button"
           accessibilityLabel={isLast ? t('a11y.onboarding.get_started') : t('a11y.onboarding.next')}
         >

@@ -15,6 +15,7 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 type Priority = components['schemas']['TicketDTO']['priority'];
 
 const PRIORITIES: Priority[] = ['low', 'medium', 'high'];
+const SHADOW_TRANSPARENT = 'transparent';
 
 const priorityColor = (priority: Priority): string => {
   switch (priority) {
@@ -148,7 +149,9 @@ export default function CreateTicketScreen() {
                 <Text
                   style={[
                     styles.priorityPillText,
-                    priority === p ? styles.priorityPillTextSelected : { color: theme.textPrimary },
+                    {
+                      color: priority === p ? theme.primaryContrast : theme.textPrimary,
+                    },
                   ]}
                 >
                   {priorityLabel(p)}
@@ -164,7 +167,7 @@ export default function CreateTicketScreen() {
             {
               backgroundColor: isValid ? theme.primary : theme.cardBorder,
             },
-            isValid ? { shadowColor: theme.primary } : styles.submitButtonNoShadow,
+            { shadowColor: isValid ? theme.primary : SHADOW_TRANSPARENT },
           ]}
           onPress={() => void handleSubmit()}
           disabled={!isValid || isSubmitting}
@@ -229,9 +232,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
   },
-  priorityPillTextSelected: {
-    color: '#FFFFFF',
-  },
   submitButton: {
     borderRadius: 14,
     paddingVertical: 14,
@@ -239,9 +239,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 8 },
-  },
-  submitButtonNoShadow: {
-    shadowColor: 'transparent',
   },
   submitButtonText: {
     fontWeight: '700',

@@ -95,7 +95,8 @@ describe('useLocation', () => {
     unmount();
 
     // Resolve after unmount — should not throw
-    resolvePermission!({ status: 'granted' });
+    if (!resolvePermission) throw new Error('Expected resolvePermission to be assigned');
+    resolvePermission({ status: 'granted' });
 
     // No assertion needed beyond no-throw — the cancelled flag prevents setState
   });
@@ -185,7 +186,8 @@ describe('useLocation', () => {
     unmount();
 
     // Resolve position after unmount — cancelled flag prevents setState
-    resolvePosition!({ coords: { latitude: 48.86, longitude: 2.34 } });
+    if (!resolvePosition) throw new Error('Expected resolvePosition to be assigned');
+    resolvePosition({ coords: { latitude: 48.86, longitude: 2.34 } });
 
     // No assertion beyond no-throw — the cancelled guard prevents state updates
   });

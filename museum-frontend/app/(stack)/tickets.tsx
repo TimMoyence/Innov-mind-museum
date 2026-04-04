@@ -13,6 +13,8 @@ import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
+const BADGE_TEXT_COLOR = '#FFFFFF';
+
 type TicketDTO = components['schemas']['TicketDTO'];
 type TicketStatus = TicketDTO['status'];
 
@@ -377,7 +379,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   badgeText: {
-    color: '#FFFFFF',
+    color: BADGE_TEXT_COLOR,
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'capitalize',
