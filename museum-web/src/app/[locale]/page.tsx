@@ -298,7 +298,7 @@ export default async function LandingPage({ params }: LandingPageProps) {
               </AnimatedSection>
             </div>
 
-            {/* Right: Remotion hero animation */}
+            {/* Right: Hero animation */}
             <AnimatedSection delay={0.2} direction="right" className="flex justify-center">
               <HeroPlayerLoader />
             </AnimatedSection>

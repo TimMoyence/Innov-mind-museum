@@ -4,16 +4,10 @@ import { render, screen } from '@testing-library/react-native';
 import TermsScreen from '@/app/(stack)/terms';
 
 describe('TermsScreen', () => {
-  it('renders the document title', () => {
+  it('renders navigation buttons', () => {
     render(<TermsScreen />);
-    expect(screen.getByText('Terms of Service')).toBeTruthy();
-  });
-
-  it('renders section titles', () => {
-    render(<TermsScreen />);
-    expect(screen.getByText('1. Acceptance of Terms')).toBeTruthy();
-    expect(screen.getByText('2. Description of Service')).toBeTruthy();
-    expect(screen.getByText('3. User Accounts')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'a11y.terms.privacy_policy' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'a11y.terms.back_settings' })).toBeTruthy();
   });
 
   it('renders version note', () => {
@@ -21,13 +15,8 @@ describe('TermsScreen', () => {
     expect(screen.getByText('terms.version_note')).toBeTruthy();
   });
 
-  it('renders privacy policy button', () => {
+  it('renders context menu', () => {
     render(<TermsScreen />);
-    expect(screen.getByText('terms.privacy_policy')).toBeTruthy();
-  });
-
-  it('renders back to settings button', () => {
-    render(<TermsScreen />);
-    expect(screen.getByText('terms.back_settings')).toBeTruthy();
+    expect(screen.getByTestId('floating-context-menu')).toBeTruthy();
   });
 });

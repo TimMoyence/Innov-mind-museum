@@ -1,13 +1,13 @@
 {
-  "lastUpdated": "2026-04-03",
+  "lastUpdated": "2026-04-04",
   "testCount": 2314,
-  "frontendTestCount": 1026,
-  "frontendSuiteCount": 120,
+  "frontendTestCount": 1035,
+  "frontendSuiteCount": 122,
   "typecheckErrors": 0,
   "asAnyCount": 0,
   "coverageStatements": 92.5,
   "coverageBranches": 84,
   "lintErrors": 0,
-  "_comment": "Post-audit cleanup: removed ~170 bullshit tests + 1070L mock choreography. Real coverage down from 94.89 to 92.73 but mutation score now tracked. 10 E2E golden paths added. Jest exits cleanly.",
+  "_comment": "Removed 11 low-value tests (mock choreography, renders-children, static text assertions). Replaced by structure tests. Extracted 18+11 jest.mock() from test files into shared setup helpers.",
   "webTestCount": 12
 }

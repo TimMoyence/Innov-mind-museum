@@ -21,10 +21,7 @@ const INNER_R = 43;
  */
 export default function HeroAnimation() {
   return (
-    <div
-      className="relative w-full"
-      style={{ maxWidth: 500, aspectRatio: '3 / 4' }}
-    >
+    <div className="relative w-full" style={{ maxWidth: 500, aspectRatio: '3 / 4' }}>
       <div
         style={{
           width: '100%',
@@ -50,8 +47,7 @@ export default function HeroAnimation() {
             width: 300,
             height: 300,
             borderRadius: '50%',
-            background:
-              'radial-gradient(circle, rgba(37, 99, 235, 0.25) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(37, 99, 235, 0.25) 0%, transparent 70%)',
             top: '10%',
             left: '10%',
             filter: 'blur(40px)',
@@ -70,8 +66,7 @@ export default function HeroAnimation() {
             width: 250,
             height: 250,
             borderRadius: '50%',
-            background:
-              'radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, transparent 70%)',
             bottom: '15%',
             right: '10%',
             filter: 'blur(35px)',
@@ -90,8 +85,7 @@ export default function HeroAnimation() {
             width: 200,
             height: 200,
             borderRadius: '50%',
-            background:
-              'radial-gradient(circle, rgba(212, 168, 83, 0.15) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(212, 168, 83, 0.15) 0%, transparent 70%)',
             top: '50%',
             left: '50%',
             marginTop: -100,
@@ -107,6 +101,7 @@ export default function HeroAnimation() {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', damping: 80, stiffness: 100, mass: 1 }}
+          style={{ perspective: 1000 }}
         >
           {/* Continuous float + rotation */}
           <motion.div
@@ -132,7 +127,6 @@ export default function HeroAnimation() {
               },
             }}
             style={{
-              perspective: 1000,
               transformStyle: 'preserve-3d',
               position: 'relative',
               zIndex: 1,
@@ -157,11 +151,9 @@ export default function HeroAnimation() {
                 width: PHONE_WIDTH,
                 height: PHONE_HEIGHT,
                 borderRadius: OUTER_R,
-                background:
-                  'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 50%, #111 100%)',
+                background: 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 50%, #111 100%)',
                 padding: BEZEL,
-                boxShadow:
-                  '0 25px 60px rgba(0,0,0,0.4), 0 10px 20px rgba(0,0,0,0.2)',
+                boxShadow: '0 25px 60px rgba(0,0,0,0.4), 0 10px 20px rgba(0,0,0,0.2)',
                 position: 'relative',
               }}
             >
@@ -206,8 +198,7 @@ export default function HeroAnimation() {
                   position: 'absolute',
                   inset: 0,
                   borderRadius: OUTER_R,
-                  background:
-                    'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 45%)',
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 45%)',
                   pointerEvents: 'none',
                 }}
               />
