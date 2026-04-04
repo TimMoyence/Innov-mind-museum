@@ -151,9 +151,11 @@
     "security": "Seguridad",
     "biometric_lock": "Bloqueo biométrico",
     "change_password": "Cambiar contraseña",
+    "change_email": "Cambiar email",
     "export_data": "Exportar mis datos",
     "export_data_desc": "Descargar todos tus datos personales (RGPD)",
-    "export_data_success": "Datos exportados correctamente"
+    "export_data_success": "Datos exportados correctamente",
+    "rate_musaium": "Valorar Musaium"
   },
   "change_password": {
     "title": "Cambiar contraseña",
@@ -164,6 +166,15 @@
     "success": "Contraseña actualizada correctamente",
     "error_mismatch": "Las contraseñas no coinciden",
     "error_short": "La contraseña debe tener al menos 8 caracteres"
+  },
+  "change_email": {
+    "title": "Cambiar email",
+    "new_email": "Nueva dirección de email",
+    "password": "Contraseña actual",
+    "submit": "Enviar verificación",
+    "success": "Revisa tu nuevo email para el enlace de verificación",
+    "error_taken": "Este email ya está en uso",
+    "error_password": "Contraseña incorrecta"
   },
   "preferences": {
     "title": "Preferencias",
@@ -550,7 +561,14 @@
       "sign_out": "Cerrar sesión",
       "sign_out_hint": "Cierra sesión y vuelve al inicio de sesión",
       "change_password": "Cambiar la contraseña de tu cuenta",
-      "export_data": "Exportar todos tus datos personales"
+      "change_email": "Cambiar la dirección de email de la cuenta",
+      "export_data": "Exportar todos tus datos personales",
+      "rate_musaium": "Abrir reseñas"
+    },
+    "reviews": {
+      "name_input": "Tu nombre visible",
+      "comment_input": "Tu comentario de reseña",
+      "star_button": "Dar {{count}} estrellas"
     },
     "preferences": {
       "language_button": "Seleccionar idioma {{language}}",
@@ -663,5 +681,19 @@
     "messages": "mensajes",
     "expertiseLevel": "Nivel",
     "noArtworks": "Ninguna obra discutida"
+  },
+  "reviews": {
+    "title": "Reseñas",
+    "writeReview": "Escribir una reseña",
+    "averageRating": "Valoración media",
+    "ratingLabel": "Tu valoración",
+    "namePlaceholder": "Tu nombre",
+    "commentPlaceholder": "Comparte tu experiencia...",
+    "submit": "Enviar reseña",
+    "success": "¡Gracias por tu reseña!",
+    "alreadyReviewed": "Ya has enviado una reseña",
+    "empty": "Aún no hay reseñas. ¡Sé el primero!",
+    "reviewCount": "{{count}} reseñas",
+    "submitFailed": "Error al enviar. Inténtalo de nuevo."
   }
 }

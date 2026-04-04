@@ -151,9 +151,11 @@
     "security": "安全",
     "biometric_lock": "生物识别锁定",
     "change_password": "修改密码",
+    "change_email": "更改邮箱",
     "export_data": "导出我的数据",
     "export_data_desc": "下载所有个人数据（GDPR）",
-    "export_data_success": "数据导出成功"
+    "export_data_success": "数据导出成功",
+    "rate_musaium": "评价Musaium"
   },
   "change_password": {
     "title": "修改密码",
@@ -164,6 +166,15 @@
     "success": "密码更新成功",
     "error_mismatch": "两次输入的密码不一致",
     "error_short": "密码长度至少为8个字符"
+  },
+  "change_email": {
+    "title": "更改邮箱",
+    "new_email": "新邮箱地址",
+    "password": "当前密码",
+    "submit": "发送验证",
+    "success": "请查看您的新邮箱以获取验证链接",
+    "error_taken": "该邮箱已被使用",
+    "error_password": "密码不正确"
   },
   "preferences": {
     "title": "偏好设置",
@@ -550,7 +561,14 @@
       "sign_out": "退出登录",
       "sign_out_hint": "退出登录并返回登录页面",
       "change_password": "更改账户密码",
-      "export_data": "导出所有个人数据"
+      "change_email": "更改账户邮箱地址",
+      "export_data": "导出所有个人数据",
+      "rate_musaium": "打开评价"
+    },
+    "reviews": {
+      "name_input": "你的显示名称",
+      "comment_input": "你的评价内容",
+      "star_button": "设置{{count}}星评分"
     },
     "preferences": {
       "language_button": "选择{{language}}语言",
@@ -663,5 +681,19 @@
     "messages": "条消息",
     "expertiseLevel": "等级",
     "noArtworks": "未讨论任何作品"
+  },
+  "reviews": {
+    "title": "评价",
+    "writeReview": "写评价",
+    "averageRating": "平均评分",
+    "ratingLabel": "你的评分",
+    "namePlaceholder": "你的名字",
+    "commentPlaceholder": "分享你的体验...",
+    "submit": "提交评价",
+    "success": "感谢你的评价！",
+    "alreadyReviewed": "你已经提交过评价",
+    "empty": "暂无评价，快来写第一条吧！",
+    "reviewCount": "{{count}}条评价",
+    "submitFailed": "提交失败，请重试。"
   }
 }

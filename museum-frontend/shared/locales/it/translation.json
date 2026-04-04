@@ -151,9 +151,11 @@
     "security": "Sicurezza",
     "biometric_lock": "Blocco biometrico",
     "change_password": "Cambia password",
+    "change_email": "Cambia email",
     "export_data": "Esporta i miei dati",
     "export_data_desc": "Scarica tutti i tuoi dati personali (GDPR)",
-    "export_data_success": "Dati esportati con successo"
+    "export_data_success": "Dati esportati con successo",
+    "rate_musaium": "Valuta Musaium"
   },
   "change_password": {
     "title": "Cambia password",
@@ -164,6 +166,15 @@
     "success": "Password aggiornata con successo",
     "error_mismatch": "Le password non corrispondono",
     "error_short": "La password deve contenere almeno 8 caratteri"
+  },
+  "change_email": {
+    "title": "Cambia email",
+    "new_email": "Nuovo indirizzo email",
+    "password": "Password attuale",
+    "submit": "Invia verifica",
+    "success": "Controlla la tua nuova email per il link di verifica",
+    "error_taken": "Questa email è già in uso",
+    "error_password": "Password errata"
   },
   "preferences": {
     "title": "Preferenze",
@@ -550,7 +561,14 @@
       "sign_out": "Esci",
       "sign_out_hint": "Esce e torna all'accesso",
       "change_password": "Cambia la password del tuo account",
-      "export_data": "Esporta tutti i tuoi dati personali"
+      "change_email": "Cambia l'indirizzo email dell'account",
+      "export_data": "Esporta tutti i tuoi dati personali",
+      "rate_musaium": "Apri le recensioni"
+    },
+    "reviews": {
+      "name_input": "Il tuo nome visualizzato",
+      "comment_input": "Il tuo commento di recensione",
+      "star_button": "Assegna {{count}} stelle"
     },
     "preferences": {
       "language_button": "Seleziona lingua {{language}}",
@@ -663,5 +681,19 @@
     "messages": "messaggi",
     "expertiseLevel": "Livello",
     "noArtworks": "Nessuna opera discussa"
+  },
+  "reviews": {
+    "title": "Recensioni",
+    "writeReview": "Scrivi una recensione",
+    "averageRating": "Valutazione media",
+    "ratingLabel": "La tua valutazione",
+    "namePlaceholder": "Il tuo nome",
+    "commentPlaceholder": "Condividi la tua esperienza...",
+    "submit": "Invia recensione",
+    "success": "Grazie per la tua recensione!",
+    "alreadyReviewed": "Hai già inviato una recensione",
+    "empty": "Ancora nessuna recensione. Sii il primo!",
+    "reviewCount": "{{count}} recensioni",
+    "submitFailed": "Invio fallito. Riprova."
   }
 }

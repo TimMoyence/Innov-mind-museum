@@ -151,9 +151,11 @@
     "security": "Security",
     "biometric_lock": "Biometric Lock",
     "change_password": "Change password",
+    "change_email": "Change email",
     "export_data": "Export my data",
     "export_data_desc": "Download all your personal data (GDPR)",
-    "export_data_success": "Data exported successfully"
+    "export_data_success": "Data exported successfully",
+    "rate_musaium": "Rate Musaium"
   },
   "change_password": {
     "title": "Change Password",
@@ -164,6 +166,15 @@
     "success": "Password updated successfully",
     "error_mismatch": "Passwords do not match",
     "error_short": "Password must be at least 8 characters"
+  },
+  "change_email": {
+    "title": "Change Email",
+    "new_email": "New email address",
+    "password": "Current password",
+    "submit": "Send verification",
+    "success": "Check your new email for a verification link",
+    "error_taken": "This email is already in use",
+    "error_password": "Incorrect password"
   },
   "preferences": {
     "title": "Preferences",
@@ -550,7 +561,14 @@
       "sign_out": "Sign out",
       "sign_out_hint": "Signs out and returns to login",
       "change_password": "Change your account password",
-      "export_data": "Export all your personal data"
+      "change_email": "Change your account email",
+      "export_data": "Export all your personal data",
+      "rate_musaium": "Open reviews"
+    },
+    "reviews": {
+      "name_input": "Your display name",
+      "comment_input": "Your review comment",
+      "star_button": "Set {{count}} star rating"
     },
     "preferences": {
       "language_button": "Select {{language}} language",
@@ -663,5 +681,19 @@
     "messages": "messages",
     "expertiseLevel": "Level",
     "noArtworks": "No artworks discussed"
+  },
+  "reviews": {
+    "title": "Reviews",
+    "writeReview": "Write a Review",
+    "averageRating": "Average Rating",
+    "ratingLabel": "Your Rating",
+    "namePlaceholder": "Your name",
+    "commentPlaceholder": "Share your experience...",
+    "submit": "Submit Review",
+    "success": "Thank you for your review!",
+    "alreadyReviewed": "You have already submitted a review",
+    "empty": "No reviews yet. Be the first!",
+    "reviewCount": "{{count}} reviews",
+    "submitFailed": "Failed to submit review. Please try again."
   }
 }

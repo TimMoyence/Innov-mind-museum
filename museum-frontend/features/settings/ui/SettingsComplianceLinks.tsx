@@ -11,6 +11,7 @@ type SettingsRoute =
   | '/(stack)/support'
   | '/(stack)/guided-museum-mode'
   | '/(stack)/onboarding'
+  | '/(stack)/reviews'
   | '/(tabs)/home';
 
 interface SettingsComplianceLinksProps {

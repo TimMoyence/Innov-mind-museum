@@ -23,6 +23,7 @@ type SettingsRoute =
   | '/(stack)/support'
   | '/(stack)/guided-museum-mode'
   | '/(stack)/onboarding'
+  | '/(stack)/reviews'
   | '/(tabs)/home';
 
 /** Renders the settings hub with preferences summary, compliance links, account deletion, and sign-out actions. */
@@ -184,6 +185,19 @@ export default function SettingsScreen() {
           onExportData={() => void onExportData()}
           isExporting={isExporting}
         />
+
+        <Pressable
+          style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+          onPress={() => {
+            open('/(stack)/reviews');
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={t('a11y.settings.rate_musaium')}
+        >
+          <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
+            {t('settings.rate_musaium')}
+          </Text>
+        </Pressable>
 
         <SettingsDangerZone
           onDeleteAccount={onDeleteAccount}

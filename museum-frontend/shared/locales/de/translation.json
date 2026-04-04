@@ -151,9 +151,11 @@
     "security": "Sicherheit",
     "biometric_lock": "Biometrische Sperre",
     "change_password": "Passwort ändern",
+    "change_email": "E-Mail ändern",
     "export_data": "Meine Daten exportieren",
     "export_data_desc": "Alle persönlichen Daten herunterladen (DSGVO)",
-    "export_data_success": "Daten erfolgreich exportiert"
+    "export_data_success": "Daten erfolgreich exportiert",
+    "rate_musaium": "Musaium bewerten"
   },
   "change_password": {
     "title": "Passwort ändern",
@@ -164,6 +166,15 @@
     "success": "Passwort erfolgreich aktualisiert",
     "error_mismatch": "Passwörter stimmen nicht überein",
     "error_short": "Das Passwort muss mindestens 8 Zeichen lang sein"
+  },
+  "change_email": {
+    "title": "E-Mail ändern",
+    "new_email": "Neue E-Mail-Adresse",
+    "password": "Aktuelles Passwort",
+    "submit": "Bestätigung senden",
+    "success": "Überprüfen Sie Ihre neue E-Mail für den Bestätigungslink",
+    "error_taken": "Diese E-Mail wird bereits verwendet",
+    "error_password": "Falsches Passwort"
   },
   "preferences": {
     "title": "Einstellungen",
@@ -550,7 +561,14 @@
       "sign_out": "Abmelden",
       "sign_out_hint": "Meldet ab und kehrt zur Anmeldung zurück",
       "change_password": "Kontopasswort ändern",
-      "export_data": "Alle persönlichen Daten exportieren"
+      "change_email": "E-Mail-Adresse des Kontos ändern",
+      "export_data": "Alle persönlichen Daten exportieren",
+      "rate_musaium": "Bewertungen öffnen"
+    },
+    "reviews": {
+      "name_input": "Dein Anzeigename",
+      "comment_input": "Dein Bewertungskommentar",
+      "star_button": "{{count}} Sterne vergeben"
     },
     "preferences": {
       "language_button": "Sprache {{language}} auswählen",
@@ -663,5 +681,19 @@
     "messages": "Nachrichten",
     "expertiseLevel": "Niveau",
     "noArtworks": "Keine Kunstwerke besprochen"
+  },
+  "reviews": {
+    "title": "Bewertungen",
+    "writeReview": "Bewertung schreiben",
+    "averageRating": "Durchschnittsbewertung",
+    "ratingLabel": "Deine Bewertung",
+    "namePlaceholder": "Dein Name",
+    "commentPlaceholder": "Teile deine Erfahrung...",
+    "submit": "Bewertung abschicken",
+    "success": "Vielen Dank für deine Bewertung!",
+    "alreadyReviewed": "Du hast bereits eine Bewertung abgegeben",
+    "empty": "Noch keine Bewertungen. Sei der Erste!",
+    "reviewCount": "{{count}} Bewertungen",
+    "submitFailed": "Senden fehlgeschlagen. Bitte erneut versuchen."
   }
 }
