@@ -133,70 +133,27 @@ jobs:
           path: museum-backend/reports/mutation/
           retention-days: 14
 
-      - name: Post mutation score to PR
-        if: always() && github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const path = 'museum-backend/reports/mutation/mutation.json';
-            let body = '## Mutation Testing Report\n\n';
-            try {
-              const raw = fs.readFileSync(path, 'utf8');
-              const report = JSON.parse(raw);
-              const files = report.files || {};
-              let totalKilled = 0, totalSurvived = 0, totalNoCov = 0, totalTimeout = 0, totalTotal = 0;
-              const rows = [];
-              for (const [file, data] of Object.entries(files)) {
-                const m = data.mutants || [];
-                const killed = m.filter(x => x.status === 'Killed').length;
-                const survived = m.filter(x => x.status === 'Survived').length;
-                const noCov = m.filter(x => x.status === 'NoCoverage').length;
-                const timeout = m.filter(x => x.status === 'Timeout').length;
-                const total = m.length;
-                const score = total > 0 ? ((killed + timeout) / total * 100).toFixed(1) : 'N/A';
-                totalKilled += killed; totalSurvived += survived;
-                totalNoCov += noCov; totalTimeout += timeout; totalTotal += total;
-                const short = file.replace('src/', '');
-                rows.push(`| \`${short}\` | ${score}% | ${killed} | ${survived} | ${noCov} | ${total} |`);
+      - name: Print mutation summary
+        if: always()
+        run: |
+          if [ -f reports/mutation/mutation.json ]; then
+            echo "## Stryker Mutation Report"
+            node -e "
+              const r = require('./reports/mutation/mutation.json');
+              const files = r.files || {};
+              let k=0, s=0, t=0;
+              for (const [f, d] of Object.entries(files)) {
+                const m = d.mutants || [];
+                k += m.filter(x => x.status==='Killed'||x.status==='Timeout').length;
+                s += m.filter(x => x.status==='Survived').length;
+                t += m.length;
               }
-              const totalScore = totalTotal > 0
-                ? ((totalKilled + totalTimeout) / totalTotal * 100).toFixed(1)
-                : 'N/A';
-              const emoji = totalScore >= 80 ? '🟢' : totalScore >= 60 ? '🟡' : '🔴';
-              body += `**Overall mutation score: ${emoji} ${totalScore}%** (${totalKilled} killed / ${totalTotal} total)\n\n`;
-              body += '| File | Score | Killed | Survived | No Cov | Total |\n';
-              body += '|------|-------|--------|----------|--------|-------|\n';
-              body += rows.join('\n') + '\n\n';
-              body += `> Threshold: break at <50% · Phase 1 files only · [Full report in artifacts](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})`;
-            } catch (e) {
-              body += `⚠️ Could not parse mutation report: ${e.message}\n\n`;
-              body += 'Check the [workflow artifacts](' +
-                `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}` +
-                ') for the full Stryker output.';
-            }
-            // Upsert: delete previous bot comment if any
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-            const prev = comments.find(c =>
-              c.user.type === 'Bot' && c.body.includes('## Mutation Testing Report')
-            );
-            if (prev) {
-              await github.rest.issues.deleteComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: prev.id,
-              });
-            }
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body,
-            });
+              const score = t > 0 ? (k/t*100).toFixed(1) : 'N/A';
+              console.log('Score: ' + score + '% (' + k + ' killed / ' + t + ' total, ' + s + ' survived)');
+            "
+          else
+            echo "No mutation report found"
+          fi
 
   # ─── 2. E2E tests (PR + nightly only) ────────────────────────────────
   e2e:
