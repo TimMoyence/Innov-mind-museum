@@ -253,12 +253,19 @@ export const toContentString = (content: unknown): string => {
     try {
       return JSON.stringify(content);
     } catch {
-      // eslint-disable-next-line @typescript-eslint/no-base-to-string
-      return String(content);
+      // Object that can't be JSON-stringified — extract toString if available
+      const toStr = (content as { toString?: () => string }).toString;
+      if (typeof toStr === 'function' && toStr !== Object.prototype.toString) {
+        return toStr.call(content);
+      }
+      return '[object]';
     }
   }
-  // eslint-disable-next-line @typescript-eslint/no-base-to-string
-  return content === undefined || content === null ? '' : String(content);
+  if (content === undefined || content === null) return '';
+  if (typeof content === 'number' || typeof content === 'boolean' || typeof content === 'bigint') {
+    return String(content);
+  }
+  return '';
 };
 
 /** Estimates the byte size of a message array for diagnostics/logging. */

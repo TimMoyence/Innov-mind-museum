@@ -180,7 +180,66 @@ const createTimeoutRace = (
   return { controller, timeoutId, timeoutPromise };
 };
 
-/* eslint-disable complexity, max-lines-per-function -- retry loop with timeout, jitter backoff, and hooks requires sequential branching that cannot be meaningfully decomposed */
+/** Classifies a caught error as timeout or generic error with a human-readable message. */
+const classifyAttemptError = (
+  controller: AbortController,
+  error: unknown,
+): { isTimeout: boolean; status: SectionRunStatus; message: string } => {
+  const isTimeout = controller.signal.aborted || isTimeoutError(error);
+  return {
+    isTimeout,
+    status: isTimeout ? 'timeout' : 'error',
+    message: toErrorMessage(error),
+  };
+};
+
+/** Fires failure + retry hooks for a retryable error. */
+const fireRetryHooks = (
+  hooks: SectionRunnerHooks | undefined,
+  ctx: AttemptContext,
+  latencyMs: number,
+  isTimeout: boolean,
+  errorMsg: string,
+): void => {
+  const event = {
+    name: ctx.taskName,
+    attempt: ctx.attempt,
+    timeoutMs: ctx.timeoutMs,
+    payloadBytes: ctx.payloadBytes,
+    latencyMs,
+    error: errorMsg,
+    requestId: ctx.requestId,
+  };
+  if (isTimeout) {
+    hooks?.onTimeout?.(event);
+  } else {
+    hooks?.onError?.(event);
+  }
+  hooks?.onRetry?.(event);
+};
+
+/** Converts AttemptContext to a hook start event. */
+const toStartEvent = (ctx: AttemptContext): SectionStartEvent => ({
+  name: ctx.taskName,
+  attempt: ctx.attempt,
+  timeoutMs: ctx.timeoutMs,
+  payloadBytes: ctx.payloadBytes,
+  requestId: ctx.requestId,
+});
+
+/** Sleeps for a jittered exponential-backoff delay, capped by remaining budget. */
+const sleepWithBackoff = async (
+  sleepFn: (ms: number) => Promise<void>,
+  baseMs: number,
+  attempt: number,
+  remainingBudgetMs: number,
+): Promise<void> => {
+  const delayMs = jitteredDelay(Math.max(1, baseMs), attempt, remainingBudgetMs);
+  if (delayMs > 0) {
+    await sleepFn(delayMs);
+  }
+};
+
 const executeTask = async <TValue>(
   task: SectionTask<TValue>,
   options: SectionRunnerOptions,
@@ -188,10 +247,8 @@ const executeTask = async <TValue>(
 ): Promise<SectionRunResult<TValue>> => {
   const now = options.now ?? defaultNow;
   const sleep = options.sleep ?? defaultSleep;
-  const retries = Math.max(0, options.retries);
-  const maxAttempts = retries + 1;
+  const maxAttempts = Math.max(0, options.retries) + 1;
   const shouldRetry = options.shouldRetry ?? (() => false);
-
   let attempts = 0;
 
   while (attempts < maxAttempts) {
@@ -208,7 +265,6 @@ const executeTask = async <TValue>(
         payloadBytes: task.payloadBytes,
       };
     }
-
     const effectiveTimeoutMs = Math.max(1, Math.min(task.timeoutMs, remainingBudget));
     const startedAt = now();
     const ctx: AttemptContext = {
@@ -219,30 +275,14 @@ const executeTask = async <TValue>(
       requestId: options.requestId,
     };
 
-    options.hooks?.onStart?.({
-      name: task.name,
-      attempt: attempts,
-      timeoutMs: effectiveTimeoutMs,
-      payloadBytes: task.payloadBytes,
-      requestId: options.requestId,
-    });
-
+    options.hooks?.onStart?.(toStartEvent(ctx));
     const { controller, timeoutId, timeoutPromise } = createTimeoutRace(effectiveTimeoutMs);
 
     try {
       const value = await Promise.race([task.run(controller.signal), timeoutPromise]);
       clearTimeout(timeoutId);
-
       const latencyMs = now() - startedAt;
-      options.hooks?.onSuccess?.({
-        name: task.name,
-        attempt: attempts,
-        timeoutMs: effectiveTimeoutMs,
-        payloadBytes: task.payloadBytes,
-        latencyMs,
-        requestId: options.requestId,
-      });
-
+      options.hooks?.onSuccess?.({ ...toStartEvent(ctx), latencyMs });
       return {
         name: task.name,
         status: 'success',
@@ -255,59 +295,20 @@ const executeTask = async <TValue>(
     } catch (error) {
       clearTimeout(timeoutId);
       const latencyMs = now() - startedAt;
-      const timeout = controller.signal.aborted || isTimeoutError(error);
-      const status: SectionRunStatus = timeout ? 'timeout' : 'error';
-      const message = toErrorMessage(error);
+      const classified = classifyAttemptError(controller, error);
 
-      const canRetry = attempts < maxAttempts && shouldRetry(error, status);
-
-      if (!canRetry) {
-        return buildFailureResult(ctx, latencyMs, timeout, message, options.hooks);
-      }
-
-      // Fire failure hook before retry
-      if (timeout) {
-        options.hooks?.onTimeout?.({
-          name: task.name,
-          attempt: attempts,
-          timeoutMs: effectiveTimeoutMs,
-          payloadBytes: task.payloadBytes,
+      if (attempts >= maxAttempts || !shouldRetry(error, classified.status)) {
+        return buildFailureResult(
+          ctx,
           latencyMs,
-          error: message,
-          requestId: options.requestId,
-        });
-      } else {
-        options.hooks?.onError?.({
-          name: task.name,
-          attempt: attempts,
-          timeoutMs: effectiveTimeoutMs,
-          payloadBytes: task.payloadBytes,
-          latencyMs,
-          error: message,
-          requestId: options.requestId,
-        });
+          classified.isTimeout,
+          classified.message,
+          options.hooks,
+        );
       }
 
-      options.hooks?.onRetry?.({
-        name: task.name,
-        attempt: attempts,
-        timeoutMs: effectiveTimeoutMs,
-        payloadBytes: task.payloadBytes,
-        latencyMs,
-        error: message,
-        requestId: options.requestId,
-      });
-
-      const remainingForDelay = deadlineMs - now();
-      const delayMs = jitteredDelay(
-        Math.max(1, options.retryBaseDelayMs),
-        attempts,
-        remainingForDelay,
-      );
-
-      if (delayMs > 0) {
-        await sleep(delayMs);
-      }
+      fireRetryHooks(options.hooks, ctx, latencyMs, classified.isTimeout, classified.message);
+      await sleepWithBackoff(sleep, options.retryBaseDelayMs, attempts, deadlineMs - now());
     }
   }
 
@@ -321,7 +322,6 @@ const executeTask = async <TValue>(
     payloadBytes: task.payloadBytes,
   };
 };
-/* eslint-enable complexity, max-lines-per-function */
 
 /**
  * Executes section tasks concurrently (bounded by {@link SectionRunnerOptions.maxConcurrent})

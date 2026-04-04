@@ -229,6 +229,8 @@ These are the ONLY categories where `eslint-disable` is acceptable in this proje
 - `sonarjs/hashing` for non-cryptographic checksums (S3 Content-MD5)
 - `sonarjs/pseudo-random` for jitter/backoff, not security
 - `react-hooks/refs` for React Native `Animated.Value` / `PanResponder` refs read once at creation (e.g. `useRef(new Animated.Value(0)).current`)
+- `no-namespace` for Express `declare global { namespace Express }` Request augmentation — the standard pattern required by `@types/express`
+- `max-lines-per-function` on TypeORM migration files — single atomic `up()` cannot be split
 
 ## Deployment
 
@@ -239,7 +241,7 @@ These are the ONLY categories where `eslint-disable` is acceptable in this proje
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **InnovMind** (4448 symbols, 11690 relationships, 298 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **InnovMind** (4444 symbols, 11687 relationships, 297 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -335,16 +337,16 @@ To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.
 | Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
 | Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-| Work in the Application area (209 symbols) | `.claude/skills/generated/application/SKILL.md` |
-| Work in the Secondary area (137 symbols) | `.claude/skills/generated/secondary/SKILL.md` |
-| Work in the Chat area (131 symbols) | `.claude/skills/generated/chat/SKILL.md` |
-| Work in the Http area (88 symbols) | `.claude/skills/generated/http/SKILL.md` |
-| Work in the Domain area (77 symbols) | `.claude/skills/generated/domain/SKILL.md` |
-| Work in the Infrastructure area (77 symbols) | `.claude/skills/generated/infrastructure/SKILL.md` |
-| Work in the UseCase area (44 symbols) | `.claude/skills/generated/usecase/SKILL.md` |
-| Work in the Ui area (41 symbols) | `.claude/skills/generated/ui/SKILL.md` |
+| Work in the Application area (204 symbols) | `.claude/skills/generated/application/SKILL.md` |
+| Work in the Secondary area (126 symbols) | `.claude/skills/generated/secondary/SKILL.md` |
+| Work in the Chat area (116 symbols) | `.claude/skills/generated/chat/SKILL.md` |
+| Work in the Http area (86 symbols) | `.claude/skills/generated/http/SKILL.md` |
+| Work in the Infrastructure area (78 symbols) | `.claude/skills/generated/infrastructure/SKILL.md` |
+| Work in the Domain area (61 symbols) | `.claude/skills/generated/domain/SKILL.md` |
+| Work in the Middleware area (60 symbols) | `.claude/skills/generated/middleware/SKILL.md` |
+| Work in the UseCase area (58 symbols) | `.claude/skills/generated/usecase/SKILL.md` |
+| Work in the Ui area (40 symbols) | `.claude/skills/generated/ui/SKILL.md` |
 | Work in the (stack) area (32 symbols) | `.claude/skills/generated/stack/SKILL.md` |
-| Work in the Middleware area (32 symbols) | `.claude/skills/generated/middleware/SKILL.md` |
 | Work in the Auth area (22 symbols) | `.claude/skills/generated/auth/SKILL.md` |
 | Work in the Support area (21 symbols) | `.claude/skills/generated/support/SKILL.md` |
 | Work in the Admin area (18 symbols) | `.claude/skills/generated/admin/SKILL.md` |
@@ -354,6 +356,6 @@ To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.
 | Work in the Context area (13 symbols) | `.claude/skills/generated/context/SKILL.md` |
 | Work in the E2e area (12 symbols) | `.claude/skills/generated/e2e/SKILL.md` |
 | Work in the [locale] area (11 symbols) | `.claude/skills/generated/locale/SKILL.md` |
-| Work in the Api area (11 symbols) | `.claude/skills/generated/api/SKILL.md` |
+| Work in the Analytics area (11 symbols) | `.claude/skills/generated/analytics/SKILL.md` |
 
 <!-- gitnexus:end -->

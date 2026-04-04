@@ -29,6 +29,18 @@ const sessionCursor = new CursorCodec(z.object({ updatedAt: z.string(), id: z.st
 /** Maximum number of items per page for cursor-based pagination queries. */
 const MAX_PAGE_SIZE = 50;
 
+/** Applies optional session update fields to a session entity. */
+const applySessionUpdates = (
+  session: ChatSession,
+  updates: PersistMessageInput['sessionUpdates'],
+): void => {
+  if (!updates) return;
+  if (updates.title !== undefined) session.title = updates.title;
+  if (updates.museumName !== undefined) session.museumName = updates.museumName;
+  if (updates.visitContext !== undefined) session.visitContext = updates.visitContext;
+  if (updates.locale !== undefined) session.locale = updates.locale;
+};
+
 /** TypeORM/PG implementation of {@link ChatRepository}. */
 export class TypeOrmChatRepository implements ChatRepository {
   private readonly sessionRepo: Repository<ChatSession>;
@@ -143,7 +155,6 @@ export class TypeOrmChatRepository implements ChatRepository {
    * @returns The persisted ChatMessage entity.
    */
   async persistMessage(input: PersistMessageInput): Promise<ChatMessage> {
-    // eslint-disable-next-line complexity -- transaction must handle message, artwork match, and session updates atomically
     return await this.messageRepo.manager.transaction(async (transactionManager) => {
       const messageRepository = transactionManager.getRepository(ChatMessage);
       const sessionRepository = transactionManager.getRepository(ChatSession);
@@ -175,20 +186,7 @@ export class TypeOrmChatRepository implements ChatRepository {
       const session = await sessionRepository.findOneBy({ id: input.sessionId });
       if (session) {
         session.updatedAt = new Date();
-        if (input.sessionUpdates) {
-          if (input.sessionUpdates.title !== undefined) {
-            session.title = input.sessionUpdates.title;
-          }
-          if (input.sessionUpdates.museumName !== undefined) {
-            session.museumName = input.sessionUpdates.museumName;
-          }
-          if (input.sessionUpdates.visitContext !== undefined) {
-            session.visitContext = input.sessionUpdates.visitContext;
-          }
-          if (input.sessionUpdates.locale !== undefined) {
-            session.locale = input.sessionUpdates.locale;
-          }
-        }
+        applySessionUpdates(session, input.sessionUpdates);
         await sessionRepository.save(session);
       }
 

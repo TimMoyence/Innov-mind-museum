@@ -17,6 +17,7 @@ import {
 import {
   runSectionTasks,
   type SectionRunResult,
+  type SectionRunnerHooks,
   type SectionTask,
 } from '../../useCase/llm-section-runner';
 import { createSummaryFallback, type LlmSectionName } from '../../useCase/llm-sections';
@@ -103,14 +104,33 @@ const isRetryableError = (error: unknown): boolean => {
 
 // ---------------------------------------------------------------------------
 
+/** Parameters for a single section LLM invocation. */
+interface InvokeSectionInput {
+  model: ChatModel;
+  sectionMessages: unknown;
+  signal: AbortSignal;
+  sectionName: string;
+  timeoutMs: number;
+  payloadBytes: number;
+}
+
+/** Parameters for assembling the final orchestrator response. */
+interface AssembleResponseInput {
+  input: OrchestratorInput;
+  sectionPlan: ReturnType<typeof buildOrchestratorMessages>['sectionPlan'];
+  bySection: Map<LlmSectionName, SectionRunResult<string>>;
+  recentHistory: ChatMessage[];
+  normalizedText: string | undefined;
+  startedAt: number;
+}
+
 interface LangChainChatOrchestratorDeps {
   model?: ChatModel | null;
   semaphore?: Semaphore;
   circuitBreaker?: LLMCircuitBreaker;
 }
 
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- dynamic import() avoids circular dependency with section runner module
-const buildLoggingHooks = (): import('../../useCase/llm-section-runner').SectionRunnerHooks => {
+const buildLoggingHooks = (): SectionRunnerHooks => {
   const logEvent = (
     level: 'info' | 'warn',
     label: string,
@@ -177,28 +197,22 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
   }
 
   /** Invokes the LLM for a single section behind circuit-breaker + semaphore, wrapped in a Sentry span. */
-  // eslint-disable-next-line max-params -- LLM invocation requires model, messages, signal, section name, timeout, and payload size
-  private async invokeSection(
-    model: ChatModel,
-    sectionMessages: unknown,
-    signal: AbortSignal,
-    sectionName: string,
-    timeoutMs: number,
-    payloadBytes: number,
-  ): Promise<string> {
+  private async invokeSection(input: InvokeSectionInput): Promise<string> {
     return await startSpan(
       {
-        name: `llm.section.${sectionName}`,
+        name: `llm.section.${input.sectionName}`,
         op: 'ai.invoke',
         attributes: {
-          'llm.section': sectionName,
-          'llm.timeout_ms': timeoutMs,
-          'llm.payload_bytes': payloadBytes,
+          'llm.section': input.sectionName,
+          'llm.timeout_ms': input.timeoutMs,
+          'llm.payload_bytes': input.payloadBytes,
         },
       },
       async () => {
         const result = await this.circuitBreaker.execute(() =>
-          this.semaphore.use(async () => await model.invoke(sectionMessages, { signal })),
+          this.semaphore.use(
+            async () => await input.model.invoke(input.sectionMessages, { signal: input.signal }),
+          ),
         );
         return toContentString(result.content);
       },
@@ -312,15 +326,8 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
   }
 
   /** Assembles diagnostics sections and logs orchestration completion. */
-  // eslint-disable-next-line max-params -- response assembly aggregates section results, diagnostics, and fallback logic
-  private assembleResponse(
-    input: OrchestratorInput,
-    sectionPlan: ReturnType<typeof buildOrchestratorMessages>['sectionPlan'],
-    bySection: Map<LlmSectionName, SectionRunResult<string>>,
-    recentHistory: ChatMessage[],
-    normalizedText: string | undefined,
-    startedAt: number,
-  ): OrchestratorOutput {
+  private assembleResponse(params: AssembleResponseInput): OrchestratorOutput {
+    const { input, sectionPlan, bySection, recentHistory, normalizedText, startedAt } = params;
     const {
       text,
       metadata: baseMeta,
@@ -409,14 +416,14 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           bySection.set(result.name as LlmSectionName, result);
         }
 
-        return this.assembleResponse(
+        return this.assembleResponse({
           input,
           sectionPlan,
           bySection,
           recentHistory,
           normalizedText,
           startedAt,
-        );
+        });
       },
     ); // end startSpan('llm.orchestrate')
   }
@@ -445,14 +452,14 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         timeoutMs: section.timeoutMs,
         payloadBytes,
         run: async (signal: AbortSignal) =>
-          await this.invokeSection(
+          await this.invokeSection({
             model,
             sectionMessages,
             signal,
-            section.name,
-            section.timeoutMs,
+            sectionName: section.name,
+            timeoutMs: section.timeoutMs,
             payloadBytes,
-          ),
+          }),
       };
     });
   }

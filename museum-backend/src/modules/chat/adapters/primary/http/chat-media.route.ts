@@ -116,6 +116,79 @@ function createImageServeHandler(chatService: ChatService) {
   };
 }
 
+/** Handler factory: POST /messages/:messageId/report */
+function createReportHandler(chatService: ChatService) {
+  return async (req: Request, res: Response) => {
+    const currentUser = getRequestUser(req);
+    if (!currentUser?.id) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token required' } });
+      return;
+    }
+    const payload = parseReportMessageRequest(req.body ?? {});
+    const result = await chatService.reportMessage(
+      req.params.messageId,
+      payload.reason,
+      currentUser.id,
+      payload.comment,
+    );
+    res.status(201).json(result);
+  };
+}
+
+/** Handler factory: POST /messages/:messageId/feedback */
+function createFeedbackHandler(chatService: ChatService) {
+  return async (req: Request, res: Response) => {
+    const currentUser = getRequestUser(req);
+    if (!currentUser?.id) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token required' } });
+      return;
+    }
+    const payload = parseFeedbackMessageRequest(req.body ?? {});
+    const result = await chatService.setMessageFeedback(
+      req.params.messageId,
+      currentUser.id,
+      payload.value,
+    );
+    res.status(200).json(result);
+  };
+}
+
+/** Handler factory: POST /messages/:messageId/image-url */
+function createImageUrlHandler(chatService: ChatService) {
+  return async (req: Request, res: Response) => {
+    const currentUser = getRequestUser(req);
+    const image = await chatService.getMessageImageRef(req.params.messageId, currentUser?.id);
+    const signed = buildImageReadUrl({
+      baseUrl: resolveRequestBaseUrl(req),
+      messageId: req.params.messageId,
+      imageRef: image.imageRef,
+    });
+    if (!signed) {
+      throw badRequest('Unable to generate image URL for current storage backend');
+    }
+    res.status(200).json(signed);
+  };
+}
+
+/** Handler factory: POST /messages/:messageId/tts */
+function createTtsHandler(chatService: ChatService) {
+  return async (req: Request, res: Response) => {
+    if (!env.featureFlags.voiceMode) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Voice mode is not enabled' } });
+      return;
+    }
+    const currentUser = getRequestUser(req);
+    const result = await chatService.synthesizeSpeech(req.params.messageId, currentUser?.id);
+    if (!result) {
+      res.status(204).end();
+      return;
+    }
+    res.set('Content-Type', result.contentType);
+    res.set('Content-Length', String(result.audio.length));
+    res.send(result.audio);
+  };
+}
+
 /**
  * Creates the media sub-router (audio upload, image serving, report, TTS).
  *
@@ -123,7 +196,6 @@ function createImageServeHandler(chatService: ChatService) {
  * @param uploadAdmission - Shared upload-admission middleware (concurrency limiter).
  * @returns Router handling audio, image, report, and TTS endpoints.
  */
-// eslint-disable-next-line max-lines-per-function -- route factory wires audio/image/report/TTS endpoints with shared middleware
 export const createMediaRouter = (
   chatService: ChatService,
   uploadAdmission?: RequestHandler,
@@ -136,7 +208,6 @@ export const createMediaRouter = (
     keyGenerator: bySession,
   });
 
-  // POST /sessions/:id/audio — upload audio for transcription
   router.post(
     '/sessions/:id/audio',
     isAuthenticated,
@@ -146,83 +217,19 @@ export const createMediaRouter = (
     audioUpload.single('audio'),
     createAudioHandler(chatService),
   );
-
-  // POST /messages/:messageId/report — report a message
-  router.post('/messages/:messageId/report', isAuthenticated, async (req, res) => {
-    const currentUser = getRequestUser(req);
-    if (!currentUser?.id) {
-      res.status(401).json({
-        error: { code: 'UNAUTHORIZED', message: 'Token required' },
-      });
-      return;
-    }
-
-    const payload = parseReportMessageRequest(req.body ?? {});
-    const result = await chatService.reportMessage(
-      req.params.messageId,
-      payload.reason,
-      currentUser.id,
-      payload.comment,
-    );
-    res.status(201).json(result);
-  });
-
-  // POST /messages/:messageId/feedback — thumbs up/down
-  router.post('/messages/:messageId/feedback', isAuthenticated, async (req, res) => {
-    const currentUser = getRequestUser(req);
-    if (!currentUser?.id) {
-      res.status(401).json({
-        error: { code: 'UNAUTHORIZED', message: 'Token required' },
-      });
-      return;
-    }
-
-    const payload = parseFeedbackMessageRequest(req.body ?? {});
-    const result = await chatService.setMessageFeedback(
-      req.params.messageId,
-      currentUser.id,
-      payload.value,
-    );
-    res.status(200).json(result);
-  });
-
-  // POST /messages/:messageId/image-url — get signed image URL
-  router.post('/messages/:messageId/image-url', isAuthenticated, async (req, res) => {
-    const currentUser = getRequestUser(req);
-    const image = await chatService.getMessageImageRef(req.params.messageId, currentUser?.id);
-    const signed = buildImageReadUrl({
-      baseUrl: resolveRequestBaseUrl(req),
-      messageId: req.params.messageId,
-      imageRef: image.imageRef,
-    });
-    if (!signed) {
-      throw badRequest('Unable to generate image URL for current storage backend');
-    }
-
-    res.status(200).json(signed);
-  });
-
-  // POST /messages/:messageId/tts — text-to-speech synthesis
-  router.post('/messages/:messageId/tts', isAuthenticated, sessionLimiter, async (req, res) => {
-    if (!env.featureFlags.voiceMode) {
-      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Voice mode is not enabled' } });
-      return;
-    }
-
-    const currentUser = getRequestUser(req);
-    const result = await chatService.synthesizeSpeech(req.params.messageId, currentUser?.id);
-
-    if (!result) {
-      res.status(204).end();
-      return;
-    }
-
-    res.set('Content-Type', result.contentType);
-    res.set('Content-Length', String(result.audio.length));
-    res.send(result.audio);
-  });
-
-  // GET /messages/:messageId/image — serve image via signed URL
+  router.post('/messages/:messageId/report', isAuthenticated, createReportHandler(chatService));
+  router.post('/messages/:messageId/feedback', isAuthenticated, createFeedbackHandler(chatService));
+  router.post(
+    '/messages/:messageId/image-url',
+    isAuthenticated,
+    createImageUrlHandler(chatService),
+  );
+  router.post(
+    '/messages/:messageId/tts',
+    isAuthenticated,
+    sessionLimiter,
+    createTtsHandler(chatService),
+  );
   router.get('/messages/:messageId/image', createImageServeHandler(chatService));
 
   return router;

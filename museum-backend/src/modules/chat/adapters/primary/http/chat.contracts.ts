@@ -315,63 +315,53 @@ export const isPostAudioMessageResponse = (
     return false;
   }
 
-  const record = payload as unknown as RecordValue;
-  if (!isRecord(record.transcription)) {
+  const withTranscription = payload as PostMessageResponse & { transcription?: unknown };
+  if (!isRecord(withTranscription.transcription)) {
     return false;
   }
 
+  const t = withTranscription.transcription;
+  return typeof t.text === 'string' && typeof t.model === 'string' && t.provider === 'openai';
+};
+
+const isValidSessionInfo = (session: unknown): boolean =>
+  isRecord(session) &&
+  typeof session.id === 'string' &&
+  typeof session.museumMode === 'boolean' &&
+  typeof session.createdAt === 'string' &&
+  typeof session.updatedAt === 'string';
+
+const isValidPageInfo = (page: unknown): boolean =>
+  isRecord(page) &&
+  (page.nextCursor === null || typeof page.nextCursor === 'string') &&
+  typeof page.hasMore === 'boolean' &&
+  typeof page.limit === 'number';
+
+const isValidMessageItem = (item: unknown): boolean => {
+  if (!isRecord(item)) return false;
+  if (item.image !== undefined && item.image !== null) {
+    if (!isRecord(item.image)) return false;
+    if (typeof item.image.url !== 'string' || typeof item.image.expiresAt !== 'string') {
+      return false;
+    }
+  }
   return (
-    typeof record.transcription.text === 'string' &&
-    typeof record.transcription.model === 'string' &&
-    record.transcription.provider === 'openai'
+    typeof item.id === 'string' &&
+    ['user', 'assistant', 'system'].includes(String(item.role)) &&
+    typeof item.createdAt === 'string'
   );
 };
 
 /** Type guard verifying a payload conforms to {@link GetSessionResponse}. */
-export const isGetSessionResponse = (
-  payload: unknown,
-  // eslint-disable-next-line complexity -- type guard must check many fields
-): payload is GetSessionResponse => {
-  if (
-    !isRecord(payload) ||
-    !isRecord(payload.session) ||
-    !Array.isArray(payload.messages) ||
-    !isRecord(payload.page)
-  ) {
+export const isGetSessionResponse = (payload: unknown): payload is GetSessionResponse => {
+  if (!isRecord(payload) || !Array.isArray(payload.messages) || !isRecord(payload.page)) {
     return false;
   }
-
-  if (
-    typeof payload.session.id !== 'string' ||
-    typeof payload.session.museumMode !== 'boolean' ||
-    typeof payload.session.createdAt !== 'string' ||
-    typeof payload.session.updatedAt !== 'string'
-  ) {
-    return false;
-  }
-
-  if (
-    !(payload.page.nextCursor === null || typeof payload.page.nextCursor === 'string') ||
-    typeof payload.page.hasMore !== 'boolean' ||
-    typeof payload.page.limit !== 'number'
-  ) {
-    return false;
-  }
-
-  return payload.messages.every((item) => {
-    if (!isRecord(item)) return false;
-    if (item.image !== undefined && item.image !== null) {
-      if (!isRecord(item.image)) return false;
-      if (typeof item.image.url !== 'string' || typeof item.image.expiresAt !== 'string') {
-        return false;
-      }
-    }
-    return (
-      typeof item.id === 'string' &&
-      ['user', 'assistant', 'system'].includes(String(item.role)) &&
-      typeof item.createdAt === 'string'
-    );
-  });
+  return (
+    isValidSessionInfo(payload.session) &&
+    isValidPageInfo(payload.page) &&
+    payload.messages.every(isValidMessageItem)
+  );
 };
 
 /** Type guard verifying a payload conforms to {@link DeleteSessionResponse}. */
