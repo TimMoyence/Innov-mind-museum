@@ -1,4 +1,4 @@
-import { type NextFunction, type Request, type Response, Router } from 'express';
+import { type Request, type Response, Router } from 'express';
 
 import { unauthorized } from '@shared/errors/app.error';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
@@ -19,29 +19,25 @@ reviewRouter.post(
   '/',
   isAuthenticated,
   validateBody(createReviewSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      if (!req.user?.id) {
-        throw unauthorized('User authentication required');
-      }
-
-      const { rating, comment, userName } = req.body as {
-        rating: number;
-        comment: string;
-        userName: string;
-      };
-
-      const review = await createReviewUseCase.execute({
-        userId: req.user.id,
-        userName,
-        rating,
-        comment,
-      });
-
-      res.status(201).json({ review });
-    } catch (error) {
-      next(error);
+  async (req: Request, res: Response) => {
+    if (!req.user?.id) {
+      throw unauthorized('User authentication required');
     }
+
+    const { rating, comment, userName } = req.body as {
+      rating: number;
+      comment: string;
+      userName: string;
+    };
+
+    const review = await createReviewUseCase.execute({
+      userId: req.user.id,
+      userName,
+      rating,
+      comment,
+    });
+
+    res.status(201).json({ review });
   },
 );
 
@@ -49,30 +45,22 @@ reviewRouter.post(
 reviewRouter.get(
   '/',
   validateQuery(listReviewsQuerySchema),
-  async (_req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { page, limit } = res.locals.validatedQuery as { page: number; limit: number };
+  async (_req: Request, res: Response) => {
+    const { page, limit } = res.locals.validatedQuery as { page: number; limit: number };
 
-      const result = await listApprovedReviewsUseCase.execute({
-        page,
-        limit,
-      });
+    const result = await listApprovedReviewsUseCase.execute({
+      page,
+      limit,
+    });
 
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
+    res.json(result);
   },
 );
 
 // GET /api/reviews/stats — Public: get average rating + count
-reviewRouter.get('/stats', async (_req: Request, res: Response, next: NextFunction) => {
-  try {
-    const stats = await getReviewStatsUseCase.execute();
-    res.json(stats);
-  } catch (error) {
-    next(error);
-  }
+reviewRouter.get('/stats', async (_req: Request, res: Response) => {
+  const stats = await getReviewStatsUseCase.execute();
+  res.json(stats);
 });
 
 export default reviewRouter;

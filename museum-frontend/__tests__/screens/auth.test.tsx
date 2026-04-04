@@ -5,7 +5,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 // ── Screen-specific mocks ────────────────────────────────────────────────────
 
 const mockLoginWithSession = jest.fn();
-jest.mock('@/context/AuthContext', () => ({
+jest.mock('@/features/auth/application/AuthContext', () => ({
   useAuth: () => ({ loginWithSession: mockLoginWithSession }),
 }));
 

@@ -87,8 +87,8 @@ export interface MessagePageQuery {
   limit?: number;
 }
 
-/** Name of an LLM response section in the chat pipeline. */
-export type ChatSectionName = 'summary';
+/** Identifier for a named LLM prompt section. */
+export type LlmSectionName = 'summary';
 
 /** Outcome status of a single LLM section execution. */
 export type ChatSectionStatus = 'success' | 'timeout' | 'error' | 'fallback';
@@ -100,7 +100,7 @@ export interface ChatAssistantDiagnostics {
   degraded: boolean;
   totalLatencyMs: number;
   sections: {
-    name: ChatSectionName;
+    name: LlmSectionName;
     status: ChatSectionStatus;
     attempts: number;
     latencyMs: number;

@@ -3,7 +3,7 @@ import {
   recordFailedLogin,
   clearLoginAttempts,
   _resetAllAttempts,
-} from '@modules/auth/core/useCase/login-rate-limiter';
+} from '@modules/auth/useCase/login-rate-limiter';
 
 beforeEach(() => {
   _resetAllAttempts();

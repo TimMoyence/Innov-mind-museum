@@ -1,8 +1,8 @@
 import bcrypt from 'bcrypt';
-import { ChangePasswordUseCase } from '@modules/auth/core/useCase/changePassword.useCase';
-import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
-import type { IRefreshTokenRepository } from '@modules/auth/core/domain/refresh-token.repository.interface';
-import type { User } from '@modules/auth/core/domain/user.entity';
+import { ChangePasswordUseCase } from '@modules/auth/useCase/changePassword.useCase';
+import type { IUserRepository } from '@modules/auth/domain/user.repository.interface';
+import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token.repository.interface';
+import type { User } from '@modules/auth/domain/user.entity';
 import { makeUser } from '../../helpers/auth/user.fixtures';
 
 jest.mock('bcrypt', () => ({

@@ -53,6 +53,7 @@
     "has_account": "Hai già un account? Accedi",
     "sign_in_google": "Accedi con Google",
     "agree_terms": "Accetto i Termini di Servizio e l'Informativa sulla Privacy",
+    "agree_terms_rich": "Accetto i <terms>Termini di Servizio</terms> e l'<privacy>Informativa sulla Privacy</privacy>",
     "legal_notice": "Accedendo, accetti i nostri Termini di Servizio e l'Informativa sulla Privacy.",
     "terms_of_service": "Termini di Servizio",
     "privacy_policy": "Informativa sulla Privacy",

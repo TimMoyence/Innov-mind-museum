@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
@@ -14,8 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
-import { chatApi } from '@/features/chat/infrastructure/chatApi';
-import { getErrorMessage } from '@/shared/lib/errors';
+import { useStartConversation } from '@/features/chat/application/useStartConversation';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -39,8 +37,7 @@ export default function MuseumDetailScreen() {
     distance: string;
   }>();
 
-  const [isCreating, setIsCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { isCreating, error, setError, startConversation } = useStartConversation();
 
   const hasCoordinates = Boolean(params.latitude && params.longitude);
 
@@ -57,22 +54,13 @@ export default function MuseumDetailScreen() {
     void Linking.openURL(url);
   };
 
-  const handleStartChat = async () => {
-    setIsCreating(true);
-    setError(null);
-
-    try {
-      const museumId = parseInt(params.id, 10);
-      const response = await chatApi.createSession({
-        museumMode: true,
-        museumId: isNaN(museumId) ? undefined : museumId,
-      });
-      router.push(`/(stack)/chat/${response.session.id}`);
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setIsCreating(false);
-    }
+  const handleStartChat = () => {
+    const museumId = parseInt(params.id, 10);
+    void startConversation({
+      museumMode: true,
+      museumId: isNaN(museumId) ? undefined : museumId,
+      skipSettings: true,
+    });
   };
 
   return (
@@ -161,7 +149,7 @@ export default function MuseumDetailScreen() {
             styles.primaryButton,
             { backgroundColor: theme.primary, shadowColor: theme.shadowColor },
           ]}
-          onPress={() => void handleStartChat()}
+          onPress={handleStartChat}
           disabled={isCreating}
           accessibilityRole="button"
           accessibilityLabel={t('museumDirectory.start_chat')}

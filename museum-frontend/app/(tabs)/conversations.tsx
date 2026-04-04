@@ -1,22 +1,19 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import type { DashboardSessionCard } from '@/features/chat/domain/dashboard-session';
+import { useStartConversation } from '@/features/chat/application/useStartConversation';
 import { useConversationsData } from '@/features/conversation/application/useConversationsData';
 import { useConversationsActions } from '@/features/conversation/application/useConversationsActions';
 import { useConversationsBulkMode } from '@/features/conversation/application/useConversationsBulkMode';
 import { ConversationsHeader } from '@/features/conversation/ui/ConversationsHeader';
 import { ConversationsBulkBar } from '@/features/conversation/ui/ConversationsBulkBar';
+import { ConversationItem } from '@/features/conversation/ui/ConversationItem';
 import { ConversationSearchBar } from '@/features/conversation/ui/ConversationSearchBar';
-import { SwipeableConversationCard } from '@/features/conversation/ui/SwipeableConversationCard';
 import { useConversationsStore } from '@/features/conversation/infrastructure/conversationsStore';
-import { chatApi } from '@/features/chat/infrastructure/chatApi';
-import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -30,7 +27,7 @@ export default function ConversationsScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
-  const [isCreating, setIsCreating] = useState(false);
+  const { isCreating, error: createError, startConversation } = useStartConversation();
 
   const items = useConversationsStore((s) => s.items);
 
@@ -79,97 +76,25 @@ export default function ConversationsScreen() {
       getVisibleItems: () => visibleItems,
     });
 
-  const startConversation = useCallback(async () => {
-    if (isCreating) return;
-    Keyboard.dismiss();
-    setIsCreating(true);
-    try {
-      const settings = await loadRuntimeSettings();
-      const response = await chatApi.createSession({
-        locale: settings.defaultLocale,
-        museumMode: settings.defaultMuseumMode,
-      });
-      router.push(`/(stack)/chat/${response.session.id}`);
-    } catch (createError) {
-      setError(String(createError instanceof Error ? createError.message : createError));
-    } finally {
-      setIsCreating(false);
-    }
-  }, [isCreating, setError]);
-
   const handleConfirmDeleteSelected = useCallback(() => {
     confirmDeleteSelected(selectedIds);
     resetSelection();
   }, [confirmDeleteSelected, selectedIds, resetSelection]);
 
   const renderConversationItem = useCallback(
-    ({ item }: { item: DashboardSessionCard }) => {
-      const cardContent = (
-        <Pressable
-          style={[
-            styles.card,
-            { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground },
-          ]}
-          onPress={() => {
-            if (editMode) {
-              toggleSelection(item.id);
-            } else {
-              router.push(`/(stack)/chat/${item.id}`);
-            }
-          }}
-          onLongPress={() => {
-            if (!editMode) {
-              toggleSavedSession(item.id);
-            }
-          }}
-          accessibilityRole="button"
-          accessibilityLabel={item.title}
-          accessibilityHint={editMode ? undefined : t('a11y.conversations.card_hint')}
-        >
-          <View style={styles.cardRow}>
-            {editMode ? (
-              <View style={styles.checkboxContainer}>
-                <Ionicons
-                  name={selectedIds.has(item.id) ? 'checkbox' : 'square-outline'}
-                  size={24}
-                  color={selectedIds.has(item.id) ? theme.primary : theme.textSecondary}
-                />
-              </View>
-            ) : null}
-            <View style={styles.cardContent}>
-              <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{item.title}</Text>
-              <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>{item.subtitle}</Text>
-              <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>
-                {item.timeLabel}
-              </Text>
-              <Text style={[styles.cardTags, { color: theme.primary }]}>
-                {t('conversations.message_count', { count: item.messageCount })}
-              </Text>
-              <Text style={[styles.savedHint, { color: theme.timestamp }]}>
-                {savedSessionIds.includes(item.id)
-                  ? t('conversations.saved_hint')
-                  : t('conversations.unsaved_hint')}
-              </Text>
-            </View>
-          </View>
-        </Pressable>
-      );
-
-      return (
-        <SwipeableConversationCard
-          editMode={editMode}
-          onDelete={() => {
-            confirmDeleteSingle(item.id);
-          }}
-        >
-          {cardContent}
-        </SwipeableConversationCard>
-      );
-    },
+    ({ item }: { item: DashboardSessionCard }) => (
+      <ConversationItem
+        item={item}
+        editMode={editMode}
+        selectedIds={selectedIds}
+        savedSessionIds={savedSessionIds}
+        toggleSelection={toggleSelection}
+        toggleSavedSession={toggleSavedSession}
+        confirmDeleteSingle={confirmDeleteSingle}
+      />
+    ),
     [
-      theme,
       savedSessionIds,
-      t,
       toggleSavedSession,
       editMode,
       selectedIds,
@@ -197,9 +122,9 @@ export default function ConversationsScreen() {
         <Text style={[styles.menuStatus, { color: theme.success }]}>{menuStatus}</Text>
       ) : null}
 
-      {error ? (
+      {(error ?? createError) ? (
         <ErrorNotice
-          message={error}
+          message={(error ?? createError)!}
           onDismiss={() => {
             setError(null);
           }}
@@ -236,6 +161,7 @@ export default function ConversationsScreen() {
         </View>
       ) : (
         <FlashList
+          testID="conversation-list"
           data={visibleItems}
           keyExtractor={(item) => item.id}
           renderItem={renderConversationItem}
@@ -343,40 +269,5 @@ const styles = StyleSheet.create({
   emptyActionText: {
     fontWeight: '700',
     fontSize: 13,
-  },
-  card: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 14,
-    gap: 4,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  checkboxContainer: {
-    paddingTop: 2,
-  },
-  cardContent: {
-    flex: 1,
-    gap: 4,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  cardMeta: {
-    fontSize: 13,
-  },
-  cardTags: {
-    marginTop: 4,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  savedHint: {
-    marginTop: 6,
-    fontSize: 11,
-    fontWeight: '600',
   },
 });

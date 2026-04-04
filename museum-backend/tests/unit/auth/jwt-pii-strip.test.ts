@@ -1,9 +1,10 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { AuthSessionService } from '@modules/auth/core/useCase/authSession.service';
-import { GetProfileUseCase } from '@modules/auth/core/useCase/getProfile.useCase';
-import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
-import type { User } from '@modules/auth/core/domain/user.entity';
+import { AuthSessionService } from '@modules/auth/useCase/authSession.service';
+import { GetProfileUseCase } from '@modules/auth/useCase/getProfile.useCase';
+import type { IUserRepository } from '@modules/auth/domain/user.repository.interface';
+import type { User } from '@modules/auth/domain/user.entity';
+import { makeUser } from '../../helpers/auth/user.fixtures';
 
 jest.mock('bcrypt', () => ({
   ...jest.requireActual('bcrypt'),
@@ -16,19 +17,16 @@ import { env } from '@src/config/env';
 
 const getAccessSecret = () => env.auth.accessTokenSecret;
 
-const makeUser = (overrides: Partial<User> = {}): User =>
-  ({
-    id: 42,
-    email: 'alice@example.com',
-    password: '$2b$12$hashed',
-    firstname: 'Alice',
-    lastname: 'Doe',
-    role: 'visitor',
-    onboarding_completed: false,
-    createdAt: new Date('2025-01-01'),
-    updatedAt: new Date('2025-06-01'),
-    ...overrides,
-  }) as User;
+const USER_DEFAULTS = {
+  id: 42,
+  email: 'alice@example.com',
+  password: '$2b$12$hashed',
+  firstname: 'Alice',
+  lastname: 'Doe',
+  onboarding_completed: false,
+  createdAt: new Date('2025-01-01'),
+  updatedAt: new Date('2025-06-01'),
+} as const;
 
 const makeUserRepo = (user: User | null): IUserRepository =>
   ({
@@ -48,7 +46,10 @@ const makeRefreshTokenRepo = () =>
 
 describe('S2-22: JWT PII strip', () => {
   it('verifyAccessToken returns { id, role } only — no email, firstname, lastname', () => {
-    const service = new AuthSessionService(makeUserRepo(makeUser()), makeRefreshTokenRepo());
+    const service = new AuthSessionService(
+      makeUserRepo(makeUser(USER_DEFAULTS)),
+      makeRefreshTokenRepo(),
+    );
 
     const token = jwt.sign(
       { sub: '42', type: 'access', jti: 'test-jti', role: 'visitor' },
@@ -65,7 +66,7 @@ describe('S2-22: JWT PII strip', () => {
 
   it('issued access token contains role but no PII fields when decoded', async () => {
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-    const user = makeUser();
+    const user = makeUser(USER_DEFAULTS);
     const service = new AuthSessionService(makeUserRepo(user), makeRefreshTokenRepo());
 
     const session = await service.login('alice@example.com', 'ValidPass1');
@@ -83,7 +84,7 @@ describe('S2-22: JWT PII strip', () => {
 
   it('login response body still includes user with PII (SafeUser)', async () => {
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-    const user = makeUser();
+    const user = makeUser(USER_DEFAULTS);
     const service = new AuthSessionService(makeUserRepo(user), makeRefreshTokenRepo());
 
     const session = await service.login('alice@example.com', 'ValidPass1');
@@ -101,7 +102,7 @@ describe('S2-22: JWT PII strip', () => {
 
 describe('GetProfileUseCase', () => {
   it('returns full profile for existing user', async () => {
-    const user = makeUser();
+    const user = makeUser(USER_DEFAULTS);
     const useCase = new GetProfileUseCase(makeUserRepo(user));
 
     const result = await useCase.execute(42);

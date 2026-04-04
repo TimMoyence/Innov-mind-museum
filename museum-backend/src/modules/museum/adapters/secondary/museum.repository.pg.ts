@@ -1,9 +1,9 @@
 import { conflict } from '@shared/errors/app.error';
 
-import { Museum } from '../../core/domain/museum.entity';
+import { Museum } from '../../domain/museum.entity';
 
-import type { IMuseumRepository } from '../../core/domain/museum.repository.interface';
-import type { CreateMuseumInput, UpdateMuseumInput } from '../../core/domain/museum.types';
+import type { IMuseumRepository } from '../../domain/museum.repository.interface';
+import type { CreateMuseumInput, UpdateMuseumInput } from '../../domain/museum.types';
 import type { DataSource, Repository } from 'typeorm';
 
 /** TypeORM implementation of the museum repository. */

@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 
 // Mock the auth session service BEFORE importing the middleware
-jest.mock('@modules/auth/core/useCase', () => ({
+jest.mock('@modules/auth/useCase', () => ({
   authSessionService: {
     verifyAccessToken: jest.fn(),
   },
@@ -28,7 +28,7 @@ import {
   isAuthenticated,
   isAuthenticatedJwtOnly,
 } from '@src/helpers/middleware/authenticated.middleware';
-import { authSessionService } from '@modules/auth/core/useCase';
+import { authSessionService } from '@modules/auth/useCase';
 
 const mockRes = (): Response => {
   const res = {

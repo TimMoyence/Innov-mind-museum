@@ -129,6 +129,7 @@ export function MediaAttachmentPanel({
           onPress={() => {
             onTakePicture();
           }}
+          testID="camera-button"
           accessibilityRole="button"
           accessibilityLabel={t('chat.lens')}
         >
@@ -141,6 +142,7 @@ export function MediaAttachmentPanel({
             { borderColor: theme.cardBorder, backgroundColor: theme.surface },
           ]}
           onPress={() => void toggleRecording()}
+          testID="record-button"
           accessibilityRole="button"
           accessibilityLabel={isRecording ? t('chat.stop_audio') : t('chat.audio')}
         >

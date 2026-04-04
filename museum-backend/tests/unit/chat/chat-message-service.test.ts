@@ -1,5 +1,5 @@
-import { ChatMessageService } from '@modules/chat/application/chat-message.service';
-import type { ChatMessageServiceDeps } from '@modules/chat/application/chat-message.service';
+import { ChatMessageService } from '@modules/chat/useCase/chat-message.service';
+import type { ChatMessageServiceDeps } from '@modules/chat/useCase/chat-message.service';
 import type {
   ChatRepository,
   SessionMessagesPage,

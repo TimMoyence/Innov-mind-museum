@@ -49,7 +49,7 @@ import {
   LLMCircuitBreaker,
   CircuitOpenError,
 } from '@modules/chat/adapters/secondary/llm-circuit-breaker';
-import { Semaphore } from '@modules/chat/application/semaphore';
+import { Semaphore } from '@modules/chat/useCase/semaphore';
 import { makeMessage } from 'tests/helpers/chat/message.fixtures';
 
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';

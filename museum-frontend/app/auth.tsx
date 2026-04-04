@@ -2,19 +2,20 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth/application/AuthContext';
 import { authService } from '@/features/auth/infrastructure/authApi';
 import { useSocialLogin } from '@/features/auth/application/useSocialLogin';
 import { ONBOARDING_ROUTE } from '@/features/auth/routes';
@@ -22,6 +23,7 @@ import { getErrorMessage } from '@/shared/lib/errors';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { BrandMark } from '@/shared/ui/BrandMark';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
+import { FormInput } from '@/shared/ui/FormInput';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
@@ -193,261 +195,232 @@ export default function AuthScreen() {
         />
       </View>
 
-      <GlassCard style={styles.panel} intensity={66}>
-        <View style={styles.header}>
-          <BrandMark variant="auth" />
-          <Text style={[styles.title, { color: theme.textPrimary }]}>
-            {isLogin ? t('auth.welcome_back') : t('auth.create_account')}
-          </Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            {isLogin ? t('auth.sign_in_subtitle') : t('auth.sign_up_subtitle')}
-          </Text>
-        </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.flex}
+      >
+        <GlassCard style={styles.panel} intensity={66}>
+          <View style={styles.header}>
+            <BrandMark variant="auth" />
+            <Text style={[styles.title, { color: theme.textPrimary }]}>
+              {isLogin ? t('auth.welcome_back') : t('auth.create_account')}
+            </Text>
+            <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+              {isLogin ? t('auth.sign_in_subtitle') : t('auth.sign_up_subtitle')}
+            </Text>
+          </View>
 
-        <View style={styles.form}>
-          {errorMessage ? (
-            <ErrorNotice
-              message={errorMessage}
-              onDismiss={() => {
-                setErrorMessage(null);
-              }}
-            />
-          ) : null}
-          {infoMessage ? (
-            <Text style={[styles.infoText, { color: theme.success }]}>{infoMessage}</Text>
-          ) : null}
+          <View style={styles.form}>
+            {errorMessage ? (
+              <ErrorNotice
+                message={errorMessage}
+                onDismiss={() => {
+                  setErrorMessage(null);
+                }}
+              />
+            ) : null}
+            {infoMessage ? (
+              <Text style={[styles.infoText, { color: theme.success }]}>{infoMessage}</Text>
+            ) : null}
 
-          {!isLogin ? (
-            <>
-              <View
-                style={[
-                  styles.inputShell,
-                  { borderColor: theme.cardBorder, backgroundColor: theme.inputBackground },
-                ]}
-              >
-                <Ionicons name="person-outline" size={20} color={theme.textSecondary} />
-                <TextInput
-                  style={[styles.input, { color: theme.textPrimary }]}
+            {!isLogin ? (
+              <>
+                <FormInput
+                  icon="person-outline"
                   placeholder={t('auth.first_name')}
-                  placeholderTextColor={theme.placeholderText}
                   value={firstname}
                   onChangeText={setFirstname}
                   accessibilityLabel={t('a11y.auth.firstname_input')}
                 />
-              </View>
-              <View
-                style={[
-                  styles.inputShell,
-                  { borderColor: theme.cardBorder, backgroundColor: theme.inputBackground },
-                ]}
-              >
-                <Ionicons name="person-outline" size={20} color={theme.textSecondary} />
-                <TextInput
-                  style={[styles.input, { color: theme.textPrimary }]}
+                <FormInput
+                  icon="person-outline"
                   placeholder={t('auth.last_name')}
-                  placeholderTextColor={theme.placeholderText}
                   value={lastname}
                   onChangeText={setLastname}
                   accessibilityLabel={t('a11y.auth.lastname_input')}
                 />
-              </View>
-            </>
-          ) : null}
+              </>
+            ) : null}
 
-          <View
-            style={[
-              styles.inputShell,
-              { borderColor: theme.cardBorder, backgroundColor: theme.inputBackground },
-            ]}
-          >
-            <Ionicons name="mail-outline" size={20} color={theme.textSecondary} />
-            <TextInput
-              style={[styles.input, { color: theme.textPrimary }]}
+            <FormInput
+              icon="mail-outline"
               placeholder={t('auth.email')}
-              placeholderTextColor={theme.placeholderText}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
+              testID="email-input"
               accessibilityLabel={t('a11y.auth.email_input')}
             />
-          </View>
 
-          <View
-            style={[
-              styles.inputShell,
-              { borderColor: theme.cardBorder, backgroundColor: theme.inputBackground },
-            ]}
-          >
-            <Ionicons name="lock-closed-outline" size={20} color={theme.textSecondary} />
-            <TextInput
-              style={[styles.input, { color: theme.textPrimary }]}
+            <FormInput
+              icon="lock-closed-outline"
               placeholder={t('auth.password')}
-              placeholderTextColor={theme.placeholderText}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
+              testID="password-input"
               accessibilityLabel={t('a11y.auth.password_input')}
             />
-          </View>
 
-          {isLogin ? (
-            <Pressable
-              style={styles.forgotPasswordButton}
-              onPress={handleForgotPassword}
-              accessibilityRole="button"
-              accessibilityLabel={t('a11y.auth.forgot_password')}
-              accessibilityHint={t('a11y.auth.forgot_password_hint')}
-            >
-              <Text style={[styles.forgotPasswordText, { color: theme.primary }]}>
-                {t('auth.forgot_password')}
-              </Text>
-            </Pressable>
-          ) : null}
-
-          {!isLogin ? (
-            <Pressable
-              style={styles.gdprRow}
-              onPress={() => {
-                setGdprAccepted((v) => !v);
-              }}
-              accessibilityRole="checkbox"
-              accessibilityLabel={t('a11y.auth.gdpr_checkbox')}
-              accessibilityState={{ checked: gdprAccepted }}
-            >
-              <View
-                style={[
-                  styles.checkbox,
-                  { borderColor: theme.inputBorder, backgroundColor: theme.inputBackground },
-                  gdprAccepted && { backgroundColor: theme.primary, borderColor: theme.primary },
-                ]}
+            {isLogin ? (
+              <Pressable
+                style={styles.forgotPasswordButton}
+                onPress={handleForgotPassword}
+                accessibilityRole="button"
+                accessibilityLabel={t('a11y.auth.forgot_password')}
+                accessibilityHint={t('a11y.auth.forgot_password_hint')}
               >
-                {gdprAccepted ? (
-                  <Ionicons name="checkmark" size={14} color={theme.primaryContrast} />
-                ) : null}
-              </View>
-              <Text style={[styles.gdprText, { color: theme.textSecondary }]}>
-                {t('auth.agree_terms').split(t('auth.terms_of_service'))[0]}
-                <Text
-                  style={[styles.gdprLink, { color: theme.primary }]}
-                  onPress={openTerms}
-                  accessibilityRole="link"
-                  accessibilityLabel={t('a11y.auth.terms_link')}
-                >
-                  {t('auth.terms_of_service')}
+                <Text style={[styles.forgotPasswordText, { color: theme.primary }]}>
+                  {t('auth.forgot_password')}
                 </Text>
-                {
-                  t('auth.agree_terms')
-                    .split(t('auth.terms_of_service'))[1]
-                    ?.split(t('auth.privacy_policy'))[0]
-                }
-                <Text
-                  style={[styles.gdprLink, { color: theme.primary }]}
-                  onPress={openPrivacy}
-                  accessibilityRole="link"
-                  accessibilityLabel={t('a11y.auth.privacy_link')}
+              </Pressable>
+            ) : null}
+
+            {!isLogin ? (
+              <Pressable
+                style={styles.gdprRow}
+                onPress={() => {
+                  setGdprAccepted((v) => !v);
+                }}
+                accessibilityRole="checkbox"
+                accessibilityLabel={t('a11y.auth.gdpr_checkbox')}
+                accessibilityState={{ checked: gdprAccepted }}
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    { borderColor: theme.inputBorder, backgroundColor: theme.inputBackground },
+                    gdprAccepted && { backgroundColor: theme.primary, borderColor: theme.primary },
+                  ]}
                 >
-                  {t('auth.privacy_policy')}
+                  {gdprAccepted ? (
+                    <Ionicons name="checkmark" size={14} color={theme.primaryContrast} />
+                  ) : null}
+                </View>
+                <Text style={[styles.gdprText, { color: theme.textSecondary }]}>
+                  <Trans
+                    i18nKey="auth.agree_terms_rich"
+                    components={{
+                      terms: (
+                        <Text
+                          style={[styles.gdprLink, { color: theme.primary }]}
+                          onPress={openTerms}
+                          accessibilityRole="link"
+                          accessibilityLabel={t('a11y.auth.terms_link')}
+                        />
+                      ),
+                      privacy: (
+                        <Text
+                          style={[styles.gdprLink, { color: theme.primary }]}
+                          onPress={openPrivacy}
+                          accessibilityRole="link"
+                          accessibilityLabel={t('a11y.auth.privacy_link')}
+                        />
+                      ),
+                    }}
+                  />
                 </Text>
+              </Pressable>
+            ) : null}
+
+            <Pressable
+              style={[
+                styles.submitButton,
+                { backgroundColor: theme.primary, shadowColor: theme.shadowColor },
+                (isLoading || isSocialLoading || (!isLogin && !gdprAccepted)) &&
+                  styles.submitButtonDisabled,
+              ]}
+              onPress={() => {
+                void (isLogin ? handleLogin() : handleRegister());
+              }}
+              disabled={isLoading || isSocialLoading || (!isLogin && !gdprAccepted)}
+              testID="auth-submit"
+              accessibilityRole="button"
+              accessibilityLabel={
+                isLogin ? t('a11y.auth.login_button') : t('a11y.auth.register_button')
+              }
+              accessibilityState={{
+                disabled: isLoading || isSocialLoading || (!isLogin && !gdprAccepted),
+              }}
+            >
+              {isLoading || isSocialLoading ? (
+                <ActivityIndicator color={theme.primaryContrast} />
+              ) : (
+                <Text style={[styles.submitButtonText, { color: theme.primaryContrast }]}>
+                  {isLogin ? t('auth.log_in') : t('auth.sign_up')}
+                </Text>
+              )}
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.switchButton,
+                { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground },
+              ]}
+              onPress={toggleAuthMode}
+              disabled={isLoading || isSocialLoading}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isLogin ? t('a11y.auth.toggle_register') : t('a11y.auth.toggle_login')
+              }
+            >
+              <Text style={[styles.switchButtonText, { color: theme.textPrimary }]}>
+                {isLogin ? t('auth.no_account') : t('auth.has_account')}
               </Text>
             </Pressable>
-          ) : null}
 
-          <Pressable
-            style={[
-              styles.submitButton,
-              { backgroundColor: theme.primary, shadowColor: theme.shadowColor },
-              (isLoading || isSocialLoading || (!isLogin && !gdprAccepted)) &&
-                styles.submitButtonDisabled,
-            ]}
-            onPress={() => {
-              void (isLogin ? handleLogin() : handleRegister());
-            }}
-            disabled={isLoading || isSocialLoading || (!isLogin && !gdprAccepted)}
-            accessibilityRole="button"
-            accessibilityLabel={
-              isLogin ? t('a11y.auth.login_button') : t('a11y.auth.register_button')
-            }
-            accessibilityState={{
-              disabled: isLoading || isSocialLoading || (!isLogin && !gdprAccepted),
-            }}
-          >
-            {isLoading || isSocialLoading ? (
-              <ActivityIndicator color={theme.primaryContrast} />
-            ) : (
-              <Text style={[styles.submitButtonText, { color: theme.primaryContrast }]}>
-                {isLogin ? t('auth.log_in') : t('auth.sign_up')}
+            <View style={styles.separator}>
+              <View style={[styles.separatorLine, { backgroundColor: theme.separator }]} />
+              <Text style={[styles.separatorText, { color: theme.textSecondary }]}>
+                {t('common.or_continue_with')}
               </Text>
-            )}
-          </Pressable>
-
-          <Pressable
-            style={[
-              styles.switchButton,
-              { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground },
-            ]}
-            onPress={toggleAuthMode}
-            disabled={isLoading || isSocialLoading}
-            accessibilityRole="button"
-            accessibilityLabel={
-              isLogin ? t('a11y.auth.toggle_register') : t('a11y.auth.toggle_login')
-            }
-          >
-            <Text style={[styles.switchButtonText, { color: theme.textPrimary }]}>
-              {isLogin ? t('auth.no_account') : t('auth.has_account')}
-            </Text>
-          </Pressable>
-
-          <View style={styles.separator}>
-            <View style={[styles.separatorLine, { backgroundColor: theme.separator }]} />
-            <Text style={[styles.separatorText, { color: theme.textSecondary }]}>
-              {t('common.or_continue_with')}
-            </Text>
-            <View style={[styles.separatorLine, { backgroundColor: theme.separator }]} />
-          </View>
-
-          {/* eslint-disable react-native/no-inline-styles -- dynamic opacity for GDPR gate */}
-          {appleAuthAvailable ? (
-            <View
-              style={{ opacity: !isLogin && !gdprAccepted ? 0.5 : 1 }}
-              pointerEvents={!isLogin && !gdprAccepted ? 'none' : 'auto'}
-              accessibilityRole="button"
-              accessibilityLabel={t('a11y.auth.apple_signin')}
-            >
-              <AppleAuthentication.AppleAuthenticationButton
-                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                cornerRadius={14}
-                style={styles.appleButton}
-                onPress={() => void handleAppleSignIn()}
-              />
+              <View style={[styles.separatorLine, { backgroundColor: theme.separator }]} />
             </View>
-          ) : null}
 
-          <Pressable
-            style={[
-              styles.googleButton,
-              { borderColor: theme.cardBorder, backgroundColor: theme.assistantBubble },
-              !isLogin && !gdprAccepted && { opacity: 0.5 },
-            ]}
-            onPress={() => void handleGoogleSignIn()}
-            disabled={isLoading || isSocialLoading || (!isLogin && !gdprAccepted)}
-            accessibilityRole="button"
-            accessibilityLabel={t('a11y.auth.google_signin')}
-          >
-            <Ionicons name="logo-google" size={20} color={theme.textPrimary} />
-            <Text style={[styles.googleButtonText, { color: theme.textPrimary }]}>
-              {t('auth.sign_in_google')}
-            </Text>
-          </Pressable>
+            {/* eslint-disable react-native/no-inline-styles -- dynamic opacity for GDPR gate */}
+            {appleAuthAvailable ? (
+              <View
+                style={{ opacity: !isLogin && !gdprAccepted ? 0.5 : 1 }}
+                pointerEvents={!isLogin && !gdprAccepted ? 'none' : 'auto'}
+                accessibilityRole="button"
+                accessibilityLabel={t('a11y.auth.apple_signin')}
+              >
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                  cornerRadius={14}
+                  style={styles.appleButton}
+                  onPress={() => void handleAppleSignIn()}
+                />
+              </View>
+            ) : null}
 
-          {isLogin ? (
-            <Text style={[styles.legalText, { color: theme.textSecondary }]}>
-              {t('auth.legal_notice')}
-            </Text>
-          ) : null}
-        </View>
-      </GlassCard>
+            <Pressable
+              style={[
+                styles.googleButton,
+                { borderColor: theme.cardBorder, backgroundColor: theme.assistantBubble },
+                !isLogin && !gdprAccepted && { opacity: 0.5 },
+              ]}
+              onPress={() => void handleGoogleSignIn()}
+              disabled={isLoading || isSocialLoading || (!isLogin && !gdprAccepted)}
+              accessibilityRole="button"
+              accessibilityLabel={t('a11y.auth.google_signin')}
+            >
+              <Ionicons name="logo-google" size={20} color={theme.textPrimary} />
+              <Text style={[styles.googleButtonText, { color: theme.textPrimary }]}>
+                {t('auth.sign_in_google')}
+              </Text>
+            </Pressable>
+
+            {isLogin ? (
+              <Text style={[styles.legalText, { color: theme.textSecondary }]}>
+                {t('auth.legal_notice')}
+              </Text>
+            ) : null}
+          </View>
+        </GlassCard>
+      </KeyboardAvoidingView>
     </LiquidScreen>
   );
 }
@@ -458,6 +431,9 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
     justifyContent: 'center',
     gap: 12,
+  },
+  flex: {
+    flex: 1,
   },
   menuWrap: {
     alignItems: 'center',
@@ -489,20 +465,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 13,
     marginBottom: 6,
-  },
-  inputShell: {
-    borderRadius: 14,
-    borderWidth: 1,
-    minHeight: 50,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    paddingVertical: 8,
   },
   forgotPasswordButton: {
     alignSelf: 'flex-end',

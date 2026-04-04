@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
-import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
+import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -13,17 +12,8 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 export default function GuidedMuseumModeScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
-  const [museumMode, setMuseumMode] = useState(true);
-  const [guideLevel, setGuideLevel] = useState<'beginner' | 'intermediate' | 'expert'>('beginner');
-
-  useEffect(() => {
-    loadRuntimeSettings()
-      .then((settings) => {
-        setMuseumMode(settings.defaultMuseumMode);
-        setGuideLevel(settings.guideLevel);
-      })
-      .catch(() => undefined);
-  }, []);
+  const museumMode = useRuntimeSettingsStore((s) => s.defaultMuseumMode);
+  const guideLevel = useRuntimeSettingsStore((s) => s.guideLevel);
 
   return (
     <LiquidScreen background={pickMuseumBackground(3)} contentStyle={styles.screen}>

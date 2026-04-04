@@ -1,26 +1,10 @@
 import {
   DeleteAccountUseCase,
   ImageCleanupPort,
-} from '@modules/auth/core/useCase/deleteAccount.useCase';
-import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
-import type { User } from '@modules/auth/core/domain/user.entity';
-
-const makeUser = (overrides: Partial<User> = {}): User =>
-  ({
-    id: 1,
-    email: 'user@test.com',
-    password: '$2b$12$hash',
-    firstname: 'Test',
-    lastname: 'User',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  }) as User;
-
-const makeUserRepo = (user: User | null = makeUser()) => ({
-  getUserById: jest.fn().mockResolvedValue(user),
-  deleteUser: jest.fn().mockResolvedValue(undefined),
-});
+} from '@modules/auth/useCase/deleteAccount.useCase';
+import type { IUserRepository } from '@modules/auth/domain/user.repository.interface';
+import { makeUser } from '../../helpers/auth/user.fixtures';
+import { makeUserRepo } from '../../helpers/auth/user-repo.mock';
 
 const makeImageStorage = (): jest.Mocked<ImageCleanupPort> => ({
   deleteByPrefix: jest.fn().mockResolvedValue(undefined),
@@ -34,7 +18,7 @@ describe('DeleteAccountUseCase', () => {
   // ── Happy paths ──────────────────────────────────────────────────
 
   it('deletes user and cleans up images when imageStorage is provided', async () => {
-    const repo = makeUserRepo();
+    const repo = makeUserRepo(makeUser());
     const imageStorage = makeImageStorage();
     const useCase = new DeleteAccountUseCase(repo as unknown as IUserRepository, imageStorage);
 
@@ -46,7 +30,7 @@ describe('DeleteAccountUseCase', () => {
   });
 
   it('deletes user without image cleanup when imageStorage is not provided', async () => {
-    const repo = makeUserRepo();
+    const repo = makeUserRepo(makeUser());
     const useCase = new DeleteAccountUseCase(repo as unknown as IUserRepository);
 
     await useCase.execute(1);
@@ -72,7 +56,7 @@ describe('DeleteAccountUseCase', () => {
   // ── Edge cases (RGPD resilience) ─────────────────────────────────
 
   it('continues deletion when imageStorage.deleteByPrefix fails (RGPD resilience)', async () => {
-    const repo = makeUserRepo();
+    const repo = makeUserRepo(makeUser());
     const imageStorage = makeImageStorage();
     imageStorage.deleteByPrefix.mockRejectedValue(new Error('S3 connection timeout'));
     const useCase = new DeleteAccountUseCase(repo as unknown as IUserRepository, imageStorage);
@@ -86,7 +70,7 @@ describe('DeleteAccountUseCase', () => {
   });
 
   it('calls deleteByPrefix before deleteUser (images before user)', async () => {
-    const repo = makeUserRepo();
+    const repo = makeUserRepo(makeUser());
     const imageStorage = makeImageStorage();
     const callOrder: string[] = [];
 
@@ -115,7 +99,7 @@ describe('DeleteAccountUseCase', () => {
   });
 
   it('does not call deleteUser when getUserById throws', async () => {
-    const repo = makeUserRepo();
+    const repo = makeUserRepo(makeUser());
     repo.getUserById.mockRejectedValue(new Error('DB connection lost'));
     const useCase = new DeleteAccountUseCase(repo as unknown as IUserRepository);
 

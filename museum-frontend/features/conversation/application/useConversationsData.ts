@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
 import { mapSessionsToDashboardCards } from '@/features/chat/domain/dashboard-session';
 import { useConversationsStore } from '@/features/conversation/infrastructure/conversationsStore';
-import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
+import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 import { getErrorMessage } from '@/shared/lib/errors';
 
 /** Manages dashboard data fetching, pagination, and legacy migration. */
@@ -36,9 +36,9 @@ export function useConversationsData() {
       setError(null);
 
       try {
-        const settings = await loadRuntimeSettings();
+        const locale = useRuntimeSettingsStore.getState().defaultLocale;
         const response = await chatApi.listSessions({ limit: 20 });
-        const mapped = mapSessionsToDashboardCards(response.sessions, settings.defaultLocale);
+        const mapped = mapSessionsToDashboardCards(response.sessions, locale);
         setItems(mapped);
         setNextCursor(response.page.nextCursor);
         setHasMore(response.page.hasMore);
@@ -58,9 +58,9 @@ export function useConversationsData() {
     isLoadingMoreRef.current = true;
     setIsLoadingMore(true);
     try {
-      const settings = await loadRuntimeSettings();
+      const locale = useRuntimeSettingsStore.getState().defaultLocale;
       const response = await chatApi.listSessions({ limit: 20, cursor: nextCursor });
-      const mapped = mapSessionsToDashboardCards(response.sessions, settings.defaultLocale);
+      const mapped = mapSessionsToDashboardCards(response.sessions, locale);
       appendItems(mapped);
       setNextCursor(response.page.nextCursor);
       setHasMore(response.page.hasMore);

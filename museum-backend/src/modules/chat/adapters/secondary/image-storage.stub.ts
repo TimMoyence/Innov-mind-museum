@@ -2,16 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { extensionByMime } from '@shared/media/mime-extensions';
+
 import type { SaveImageInput, ImageStorage } from '../../domain/ports/image-storage.port';
-
-// Re-export domain port types so existing consumers that imported from here keep working
-export type { SaveImageInput, ImageStorage } from '../../domain/ports/image-storage.port';
-
-const extensionByMime: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-};
 
 /** Default directory for local image uploads (`<cwd>/tmp/uploads`). */
 export const DEFAULT_LOCAL_UPLOADS_DIR = path.join(process.cwd(), 'tmp', 'uploads');

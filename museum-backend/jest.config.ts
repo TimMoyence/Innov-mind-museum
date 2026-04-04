@@ -33,7 +33,7 @@ const config: Config.InitialOptions = {
     'src/data/db/migrations/',
     'src/data/db/data-source\\.ts$',
     'src/modules/chat/index\\.ts$',
-    'src/modules/auth/core/useCase/index\\.ts$',
+    'src/modules/auth/useCase/index\\.ts$',
     'src/modules/support/useCase/index\\.ts$',
     'src/shared/audit/index\\.ts$',
     'src/shared/cache/noop-cache\\.service\\.ts$',

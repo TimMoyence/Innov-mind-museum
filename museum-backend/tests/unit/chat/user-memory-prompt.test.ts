@@ -1,4 +1,4 @@
-import { buildUserMemoryPromptBlock } from '@modules/chat/application/user-memory.prompt';
+import { buildUserMemoryPromptBlock } from '@modules/chat/useCase/user-memory.prompt';
 import type { UserMemory } from '@modules/chat/domain/userMemory.entity';
 
 const makeMemory = (overrides: Partial<UserMemory> = {}): UserMemory =>

@@ -1,4 +1,4 @@
-import { authSessionService } from '@modules/auth/core/useCase';
+import { authSessionService } from '@modules/auth/useCase';
 import { setUser } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
 

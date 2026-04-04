@@ -4,11 +4,6 @@ import { render, screen } from '@testing-library/react-native';
 import PrivacyScreen from '@/app/(stack)/privacy';
 
 describe('PrivacyScreen', () => {
-  it('renders without crashing', () => {
-    render(<PrivacyScreen />);
-    expect(screen.getByText('Privacy Policy (GDPR / RGPD)')).toBeTruthy();
-  });
-
   it('renders the document title', () => {
     render(<PrivacyScreen />);
     expect(screen.getByText('Privacy Policy (GDPR / RGPD)')).toBeTruthy();

@@ -47,6 +47,7 @@ export const ChatInput = ({
         placeholderTextColor={theme.textSecondary}
         multiline
         editable={!disabled}
+        testID="chat-input"
         accessibilityLabel={t('a11y.chat.message_input')}
       />
       <Pressable
@@ -56,6 +57,7 @@ export const ChatInput = ({
           onSend();
         }}
         disabled={isSending || disabled}
+        testID="send-button"
         accessibilityRole="button"
         accessibilityLabel={t('a11y.chat.send')}
         accessibilityHint={t('a11y.chat.send_hint')}

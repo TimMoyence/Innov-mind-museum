@@ -2,8 +2,8 @@ import { buildChatTestService } from 'tests/helpers/chat/chatTestApp';
 import type {
   AudioTranscriber,
   AudioTranscriptionResult,
-} from '@modules/chat/adapters/secondary/audio-transcriber.openai';
-import { DisabledAudioTranscriber } from '@modules/chat/adapters/secondary/audio-transcriber.openai';
+} from '@modules/chat/domain/ports/audio-transcriber.port';
+import { DisabledAudioTranscriber } from '@modules/chat/domain/ports/audio-transcriber.port';
 
 class MockAudioTranscriber implements AudioTranscriber {
   constructor(

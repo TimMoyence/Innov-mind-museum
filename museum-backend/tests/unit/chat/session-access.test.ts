@@ -1,7 +1,4 @@
-import {
-  ensureSessionAccess,
-  ensureSessionOwnership,
-} from '@modules/chat/application/session-access';
+import { ensureSessionAccess, ensureSessionOwnership } from '@modules/chat/useCase/session-access';
 import type { ChatRepository } from '@modules/chat/domain/chat.repository.interface';
 
 describe('ensureSessionOwnership', () => {

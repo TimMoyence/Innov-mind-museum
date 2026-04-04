@@ -1,7 +1,7 @@
 import { Redirect } from 'expo-router';
 import { View } from 'react-native';
 
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth/application/AuthContext';
 import { AUTH_ROUTE, HOME_ROUTE } from '@/features/auth/routes';
 
 /** Renders a redirect to the home or auth screen based on the current authentication state. */

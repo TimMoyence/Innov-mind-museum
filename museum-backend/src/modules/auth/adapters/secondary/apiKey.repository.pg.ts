@@ -1,6 +1,6 @@
-import { ApiKey } from '../../core/domain/apiKey.entity';
+import { ApiKey } from '../../domain/apiKey.entity';
 
-import type { ApiKeyRepository } from '../../core/domain/apiKey.repository.interface';
+import type { ApiKeyRepository } from '../../domain/apiKey.repository.interface';
 import type { DataSource, Repository } from 'typeorm';
 
 /** TypeORM implementation of {@link ApiKeyRepository}. */

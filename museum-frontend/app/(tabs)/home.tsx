@@ -1,23 +1,13 @@
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Keyboard,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
-import { chatApi } from '@/features/chat/infrastructure/chatApi';
+import { useStartConversation } from '@/features/chat/application/useStartConversation';
 import { ONBOARDING_ROUTE } from '@/features/auth/routes';
 import { useDailyArt } from '@/features/daily-art/application/useDailyArt';
 import { DailyArtCard } from '@/features/daily-art/ui/DailyArtCard';
-import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
 import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSettings';
-import { getErrorMessage } from '@/shared/lib/errors';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { BrandMark } from '@/shared/ui/BrandMark';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
@@ -30,37 +20,20 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 export default function HomeScreen() {
   const { t } = useTranslation();
   const { theme } = useTheme();
-  const [isCreating, setIsCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { isCreating, error, setError, startConversation } = useStartConversation();
   const [menuStatus, setMenuStatus] = useState<string | null>(null);
   const { locale, museumMode } = useRuntimeSettings();
   const { artwork, isLoading: isDailyArtLoading, isSaved, dismissed, save, skip } = useDailyArt();
 
-  const startConversation = async (intent: 'default' | 'camera' | 'audio' = 'default') => {
-    Keyboard.dismiss();
-    setIsCreating(true);
-    setError(null);
-
-    try {
-      const settings = await loadRuntimeSettings();
-      const response = await chatApi.createSession({
-        locale: settings.defaultLocale,
-        museumMode: settings.defaultMuseumMode,
-      });
-      const suffix = intent === 'default' ? '' : `?intent=${intent}`;
-      router.push(`/(stack)/chat/${response.session.id}${suffix}`);
-      setMenuStatus(
-        intent === 'camera'
-          ? t('home.messages.lens_opened')
-          : intent === 'audio'
-            ? t('home.messages.audio_opened')
-            : t('home.messages.conversation_opened'),
-      );
-    } catch (createError) {
-      setError(getErrorMessage(createError));
-    } finally {
-      setIsCreating(false);
-    }
+  const handleStartConversation = async (intent: 'default' | 'camera' | 'audio' = 'default') => {
+    await startConversation({ intent });
+    setMenuStatus(
+      intent === 'camera'
+        ? t('home.messages.lens_opened')
+        : intent === 'audio'
+          ? t('home.messages.audio_opened')
+          : t('home.messages.conversation_opened'),
+    );
   };
 
   return (
@@ -88,7 +61,7 @@ export default function HomeScreen() {
                 label: t('home.menu.lens'),
                 onPress: () => {
                   setMenuStatus(t('home.messages.opening_lens'));
-                  void startConversation('camera');
+                  void handleStartConversation('camera');
                 },
               },
               {
@@ -97,7 +70,7 @@ export default function HomeScreen() {
                 label: t('home.menu.audio'),
                 onPress: () => {
                   setMenuStatus(t('home.messages.opening_audio'));
-                  void startConversation('audio');
+                  void handleStartConversation('audio');
                 },
               },
             ]}
@@ -145,7 +118,7 @@ export default function HomeScreen() {
             styles.primaryButton,
             { backgroundColor: theme.primary, shadowColor: theme.shadowColor },
           ]}
-          onPress={() => void startConversation('default')}
+          onPress={() => void handleStartConversation('default')}
           disabled={isCreating}
           accessibilityRole="button"
           accessibilityLabel={t('a11y.home.start_conversation')}

@@ -53,6 +53,7 @@
     "has_account": "すでにアカウントをお持ちの方はログイン",
     "sign_in_google": "Googleでログイン",
     "agree_terms": "利用規約およびプライバシーポリシーに同意します",
+    "agree_terms_rich": "<terms>利用規約</terms>および<privacy>プライバシーポリシー</privacy>に同意します",
     "legal_notice": "ログインすることで、利用規約およびプライバシーポリシーに同意したものとみなされます。",
     "terms_of_service": "利用規約",
     "privacy_policy": "プライバシーポリシー",

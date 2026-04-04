@@ -1,4 +1,4 @@
-import { ArtTopicClassifier } from '@modules/chat/application/art-topic-classifier';
+import { ArtTopicClassifier } from '@modules/chat/useCase/art-topic-classifier';
 
 const mockInvoke = jest.fn();
 
@@ -148,7 +148,7 @@ describe('ArtTopicClassifier', () => {
       }));
 
       const { ArtTopicClassifier: FreshClassifier } =
-        await import('@modules/chat/application/art-topic-classifier');
+        await import('@modules/chat/useCase/art-topic-classifier');
       const classifier = new FreshClassifier();
 
       const result = await classifier.isArtRelated('Anything at all');

@@ -53,6 +53,7 @@
     "has_account": "Already have an account? Log in",
     "sign_in_google": "Sign in with Google",
     "agree_terms": "I agree to the Terms of Service and Privacy Policy",
+    "agree_terms_rich": "I agree to the <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>",
     "legal_notice": "By signing in, you agree to our Terms of Service and Privacy Policy.",
     "terms_of_service": "Terms of Service",
     "privacy_policy": "Privacy Policy",

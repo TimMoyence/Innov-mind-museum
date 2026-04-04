@@ -1,13 +1,12 @@
 import '../helpers/test-utils';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 
 // ── Screen-specific mocks ────────────────────────────────────────────────────
 
-const mockLoadRuntimeSettings = jest.fn();
 const mockSaveDefaultMuseumMode = jest.fn();
 const mockSaveGuideLevel = jest.fn();
 jest.mock('@/features/settings/runtimeSettings', () => ({
-  loadRuntimeSettings: (...args: any[]) => mockLoadRuntimeSettings(...args),
   saveDefaultMuseumMode: (...args: any[]) => mockSaveDefaultMuseumMode(...args),
   saveGuideLevel: (...args: any[]) => mockSaveGuideLevel(...args),
 }));
@@ -33,71 +32,60 @@ import PreferencesScreen from '@/app/(stack)/preferences';
 describe('PreferencesScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockLoadRuntimeSettings.mockResolvedValue({
+    useRuntimeSettingsStore.setState({
+      defaultLocale: 'en-US',
       defaultMuseumMode: true,
       guideLevel: 'beginner',
+      _hydrated: true,
     });
     mockSaveDefaultMuseumMode.mockResolvedValue(undefined);
     mockSaveGuideLevel.mockResolvedValue(undefined);
   });
 
-  it('loads settings on mount', async () => {
+  it('reads settings from the Zustand store on mount', () => {
     render(<PreferencesScreen />);
-    await waitFor(() => {
-      expect(mockLoadRuntimeSettings).toHaveBeenCalledTimes(1);
-    });
+    // The screen reads from the store, so guide level buttons should already be visible
+    expect(screen.getByText('beginner')).toBeTruthy();
+    expect(screen.getByText('preferences.museum_mode_label')).toBeTruthy();
   });
 
-  it('shows loading indicator before settings load', () => {
-    mockLoadRuntimeSettings.mockReturnValue(new Promise(() => {})); // never resolves
+  it('shows loading indicator when store is not hydrated', () => {
+    useRuntimeSettingsStore.setState({ _hydrated: false });
     render(<PreferencesScreen />);
     expect(screen.getByText('preferences.loading')).toBeTruthy();
   });
 
-  it('renders title and subtitle', async () => {
+  it('renders title and subtitle', () => {
     render(<PreferencesScreen />);
-    await waitFor(() => {
-      expect(screen.getByText('preferences.title')).toBeTruthy();
-    });
+    expect(screen.getByText('preferences.title')).toBeTruthy();
     expect(screen.getByText('preferences.subtitle')).toBeTruthy();
   });
 
-  it('renders language options after loading', async () => {
+  it('renders language options after loading', () => {
     render(<PreferencesScreen />);
-    await waitFor(() => {
-      expect(screen.getByText('English')).toBeTruthy();
-    });
+    expect(screen.getByText('English')).toBeTruthy();
     expect(screen.getByText('Fran\u00e7ais')).toBeTruthy();
   });
 
-  it('renders guide level buttons after loading', async () => {
+  it('renders guide level buttons after loading', () => {
     render(<PreferencesScreen />);
-    await waitFor(() => {
-      expect(screen.getByText('beginner')).toBeTruthy();
-    });
+    expect(screen.getByText('beginner')).toBeTruthy();
     expect(screen.getByText('intermediate')).toBeTruthy();
     expect(screen.getByText('expert')).toBeTruthy();
   });
 
-  it('renders museum mode switch after loading', async () => {
+  it('renders museum mode switch after loading', () => {
     render(<PreferencesScreen />);
-    await waitFor(() => {
-      expect(screen.getByText('preferences.museum_mode_label')).toBeTruthy();
-    });
+    expect(screen.getByText('preferences.museum_mode_label')).toBeTruthy();
   });
 
-  it('renders save button', async () => {
+  it('renders save button', () => {
     render(<PreferencesScreen />);
-    await waitFor(() => {
-      expect(screen.getByLabelText('a11y.preferences.save')).toBeTruthy();
-    });
+    expect(screen.getByLabelText('a11y.preferences.save')).toBeTruthy();
   });
 
   it('calls save functions when save button is pressed', async () => {
     render(<PreferencesScreen />);
-    await waitFor(() => {
-      expect(screen.getByLabelText('a11y.preferences.save')).toBeTruthy();
-    });
     fireEvent.press(screen.getByLabelText('a11y.preferences.save'));
     await waitFor(() => {
       expect(mockSaveDefaultMuseumMode).toHaveBeenCalled();
@@ -105,10 +93,8 @@ describe('PreferencesScreen', () => {
     });
   });
 
-  it('renders learn guided button', async () => {
+  it('renders learn guided button', () => {
     render(<PreferencesScreen />);
-    await waitFor(() => {
-      expect(screen.getByLabelText('a11y.preferences.learn_guided')).toBeTruthy();
-    });
+    expect(screen.getByLabelText('a11y.preferences.learn_guided')).toBeTruthy();
   });
 });

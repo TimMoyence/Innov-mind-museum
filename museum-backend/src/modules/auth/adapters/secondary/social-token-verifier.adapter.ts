@@ -4,7 +4,7 @@ import type {
   SocialTokenVerifier,
   SocialProvider,
   SocialTokenPayload,
-} from '../../core/domain/social-token-verifier.port';
+} from '../../domain/social-token-verifier.port';
 
 /**
  * Adapter that implements the {@link SocialTokenVerifier} port

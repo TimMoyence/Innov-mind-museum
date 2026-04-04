@@ -10,13 +10,13 @@ jest.mock('expo-router', () => ({
   useSegments: jest.fn(() => ['(tabs)']),
 }));
 
-jest.mock('@/context/AuthContext', () => ({
+jest.mock('@/features/auth/application/AuthContext', () => ({
   useAuth: jest.fn(() => ({ isAuthenticated: false, isLoading: true, isFirstLaunch: null })),
 }));
 
 // Pull the mocked functions so we can change return values per test
 import { useSegments } from 'expo-router';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth/application/AuthContext';
 
 const mockedUseSegments = useSegments as jest.Mock;
 const mockedUseAuth = useAuth as jest.Mock;

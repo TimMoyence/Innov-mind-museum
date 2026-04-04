@@ -1,4 +1,4 @@
-import { TypeOrmArtKeywordRepository } from '@modules/chat/infrastructure/artKeyword.repository.typeorm';
+import { TypeOrmArtKeywordRepository } from '@modules/chat/adapters/secondary/artKeyword.repository.typeorm';
 import { ArtKeyword } from '@modules/chat/domain/artKeyword.entity';
 
 import type { Repository, SelectQueryBuilder } from 'typeorm';

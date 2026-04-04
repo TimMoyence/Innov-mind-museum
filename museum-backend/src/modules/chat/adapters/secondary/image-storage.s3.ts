@@ -2,6 +2,7 @@ import crypto, { randomUUID } from 'node:crypto';
 import http from 'node:http';
 import https from 'node:https';
 
+import { extensionByMime } from '@shared/media/mime-extensions';
 import { startSpan } from '@shared/observability/sentry';
 
 import {
@@ -14,7 +15,7 @@ import {
 } from './s3-path-utils';
 import { sha256Hex, toAmzDate, buildCanonicalHeaders, signString } from './s3-signing';
 
-import type { ImageStorage, SaveImageInput } from './image-storage.stub';
+import type { ImageStorage, SaveImageInput } from '../../domain/ports/image-storage.port';
 
 /** Configuration for an S3-compatible image storage backend. */
 export interface S3ImageStorageConfig {
@@ -29,12 +30,6 @@ export interface S3ImageStorageConfig {
   objectKeyPrefix?: string;
   requestTimeoutMs?: number;
 }
-
-const extensionByMime: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-};
 
 const canonicalQueryString = (query: [string, string][]): string => {
   return [...query]

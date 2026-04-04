@@ -25,7 +25,7 @@ const mockConfirmEmailChange = jest.fn();
 const mockVerifyEmail = jest.fn();
 const mockCompleteOnboarding = jest.fn();
 
-jest.mock('@modules/auth/core/useCase', () => {
+jest.mock('@modules/auth/useCase', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factory runs before ESM imports
   const jwtLib = require('jsonwebtoken');
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factory runs before ESM imports

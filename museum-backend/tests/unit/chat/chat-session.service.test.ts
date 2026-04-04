@@ -1,4 +1,4 @@
-import { ChatSessionService } from '@modules/chat/application/chat-session.service';
+import { ChatSessionService } from '@modules/chat/useCase/chat-session.service';
 import type {
   ChatRepository,
   ChatSessionsPage,

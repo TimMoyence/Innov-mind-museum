@@ -4,7 +4,7 @@ import {
   decodeBase64Image,
   detectImageMimeFromBytes,
   isSafeImageUrl,
-} from '@modules/chat/application/image-input';
+} from '@modules/chat/useCase/image-input';
 
 describe('image-input', () => {
   it('accepts safe https URLs only', () => {

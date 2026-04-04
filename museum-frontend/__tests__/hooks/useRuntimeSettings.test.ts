@@ -1,5 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSettings';
+import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 import type { RuntimeSettings } from '@/features/settings/runtimeSettings';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
@@ -26,6 +27,13 @@ jest.mock('@/features/settings/runtimeSettings', () => ({
 describe('useRuntimeSettings', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Reset store to hydrated state with defaults for most tests
+    useRuntimeSettingsStore.setState({
+      defaultLocale: 'en-US',
+      defaultMuseumMode: true,
+      guideLevel: 'beginner',
+      _hydrated: true,
+    });
     mockLoadRuntimeSettings.mockResolvedValue({
       defaultLocale: 'en-US',
       defaultMuseumMode: true,
@@ -33,8 +41,10 @@ describe('useRuntimeSettings', () => {
     });
   });
 
-  it('returns default values before settings are loaded', () => {
-    // Make the promise never resolve during this test
+  it('returns default values before settings are hydrated', () => {
+    // Set store to not-yet-hydrated state
+    useRuntimeSettingsStore.setState({ _hydrated: false });
+    // Prevent loadRuntimeSettings from resolving during this test
     mockLoadRuntimeSettings.mockReturnValue(new Promise(() => {}));
 
     const { result } = renderHook(() => useRuntimeSettings());
@@ -45,59 +55,57 @@ describe('useRuntimeSettings', () => {
     expect(result.current.isLoading).toBe(true);
   });
 
-  it('loads settings from storage and updates the returned values', async () => {
-    mockLoadRuntimeSettings.mockResolvedValue({
+  it('returns stored values when the store is hydrated', () => {
+    useRuntimeSettingsStore.setState({
       defaultLocale: 'fr-FR',
       defaultMuseumMode: false,
       guideLevel: 'expert',
+      _hydrated: true,
     });
 
     const { result } = renderHook(() => useRuntimeSettings());
 
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
+    expect(result.current.isLoading).toBe(false);
     expect(result.current.locale).toBe('fr-FR');
     expect(result.current.museumMode).toBe(false);
     expect(result.current.guideLevel).toBe('expert');
   });
 
-  it('returns intermediate guideLevel when stored value is intermediate', async () => {
-    mockLoadRuntimeSettings.mockResolvedValue({
+  it('returns intermediate guideLevel when store has intermediate', () => {
+    useRuntimeSettingsStore.setState({
       defaultLocale: 'en-US',
       defaultMuseumMode: true,
       guideLevel: 'intermediate',
+      _hydrated: true,
     });
 
     const { result } = renderHook(() => useRuntimeSettings());
 
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
+    expect(result.current.isLoading).toBe(false);
     expect(result.current.guideLevel).toBe('intermediate');
   });
 
-  it('exposes the full settings object after loading', async () => {
+  it('exposes the full settings object after hydration', () => {
     const fullSettings: RuntimeSettings = {
       defaultLocale: 'de-DE',
       defaultMuseumMode: true,
       guideLevel: 'beginner',
     };
-    mockLoadRuntimeSettings.mockResolvedValue(fullSettings);
+    useRuntimeSettingsStore.setState({
+      ...fullSettings,
+      _hydrated: true,
+    });
 
     const { result } = renderHook(() => useRuntimeSettings());
 
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
+    expect(result.current.isLoading).toBe(false);
     expect(result.current.settings).toEqual(fullSettings);
   });
 
   it('handles the cancelled effect cleanup (no stale update)', () => {
-    // Simulate an unmount before the promise resolves
+    // Start with non-hydrated store so the effect triggers loadRuntimeSettings
+    useRuntimeSettingsStore.setState({ _hydrated: false });
+
     let resolvePromise: (value: RuntimeSettings) => void;
     mockLoadRuntimeSettings.mockReturnValue(
       new Promise<RuntimeSettings>((resolve) => {
@@ -124,13 +132,12 @@ describe('useRuntimeSettings', () => {
     // confirming no error was thrown. The cancelled flag prevents setState.
   });
 
-  it('calls loadRuntimeSettings exactly once on mount', async () => {
+  it('does not call loadRuntimeSettings when store is already hydrated', () => {
+    useRuntimeSettingsStore.setState({ _hydrated: true });
+
     const { result } = renderHook(() => useRuntimeSettings());
 
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(mockLoadRuntimeSettings).toHaveBeenCalledTimes(1);
+    expect(result.current.isLoading).toBe(false);
+    expect(mockLoadRuntimeSettings).not.toHaveBeenCalled();
   });
 });

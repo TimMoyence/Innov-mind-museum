@@ -1,8 +1,8 @@
-import { SocialLoginUseCase } from '@modules/auth/core/useCase/socialLogin.useCase';
-import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
-import type { ISocialAccountRepository } from '@modules/auth/core/domain/socialAccount.repository.interface';
-import type { AuthSessionService } from '@modules/auth/core/useCase/authSession.service';
-import type { SocialTokenVerifier } from '@modules/auth/core/domain/social-token-verifier.port';
+import { SocialLoginUseCase } from '@modules/auth/useCase/socialLogin.useCase';
+import type { IUserRepository } from '@modules/auth/domain/user.repository.interface';
+import type { ISocialAccountRepository } from '@modules/auth/domain/socialAccount.repository.interface';
+import type { AuthSessionService } from '@modules/auth/useCase/authSession.service';
+import type { SocialTokenVerifier } from '@modules/auth/domain/social-token-verifier.port';
 import { makeUser } from '../../helpers/auth/user.fixtures';
 
 const sessionResponse = {

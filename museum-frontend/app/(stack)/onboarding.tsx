@@ -13,7 +13,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth/application/AuthContext';
 import { useOnboarding } from '@/features/onboarding/application/useOnboarding';
 import { OnboardingSlide, type SlideData } from '@/features/onboarding/ui/OnboardingSlide';
 import { StepIndicator } from '@/features/onboarding/ui/StepIndicator';

@@ -1,6 +1,6 @@
-import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
-import type { IRefreshTokenRepository } from '@modules/auth/core/domain/refresh-token.repository.interface';
-import type { User } from '@modules/auth/core/domain/user.entity';
+import type { IUserRepository } from '@modules/auth/domain/user.repository.interface';
+import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token.repository.interface';
+import type { User } from '@modules/auth/domain/user.entity';
 
 /**
  * Creates a fully mocked IUserRepository.

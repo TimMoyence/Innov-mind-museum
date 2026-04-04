@@ -1,7 +1,4 @@
-import {
-  parseAssistantResponse,
-  extractMetadata,
-} from '@modules/chat/application/assistant-response';
+import { parseAssistantResponse, extractMetadata } from '@modules/chat/useCase/assistant-response';
 
 describe('parseAssistantResponse', () => {
   it('extracts answer and metadata from valid JSON', () => {

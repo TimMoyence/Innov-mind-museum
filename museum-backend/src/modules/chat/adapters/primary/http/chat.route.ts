@@ -6,8 +6,8 @@ import { createMediaRouter } from './chat-media.route';
 import { createMessageRouter } from './chat-message.route';
 import { createSessionRouter } from './chat-session.route';
 
-import type { ChatService } from '../../../application/chat.service';
 import type { ArtKeywordRepository } from '../../../domain/artKeyword.repository.interface';
+import type { ChatService } from '../../../useCase/chat.service';
 
 /**
  * Builds Express router for chat endpoints by composing session, message, and media sub-routers.

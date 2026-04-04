@@ -8,7 +8,7 @@ import { useSettingsActions } from '@/features/settings/application/useSettingsA
 const mockLogout = jest.fn<Promise<void>, []>().mockResolvedValue(undefined);
 const mockSetIsAuthenticated = jest.fn();
 
-jest.mock('@/context/AuthContext', () => ({
+jest.mock('@/features/auth/application/AuthContext', () => ({
   useAuth: () => ({
     logout: mockLogout,
     setIsAuthenticated: mockSetIsAuthenticated,

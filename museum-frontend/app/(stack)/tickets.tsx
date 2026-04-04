@@ -5,6 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { ticketApi } from '@/features/support/infrastructure/ticketApi';
+import {
+  BADGE_TEXT_COLOR,
+  statusColor,
+  priorityColor,
+  formatDate,
+} from '@/features/support/ui/ticketHelpers';
 import type { components } from '@/shared/api/generated/openapi';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
@@ -12,8 +18,6 @@ import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
-
-const BADGE_TEXT_COLOR = '#FFFFFF';
 
 type TicketDTO = components['schemas']['TicketDTO'];
 type TicketStatus = TicketDTO['status'];
@@ -27,38 +31,6 @@ const STATUS_OPTIONS: (TicketStatus | 'all')[] = [
 ];
 
 const PAGE_LIMIT = 15;
-
-const statusColor = (status: TicketStatus, theme: ReturnType<typeof useTheme>['theme']): string => {
-  switch (status) {
-    case 'open':
-      return '#3B82F6';
-    case 'in_progress':
-      return '#F59E0B';
-    case 'resolved':
-      return theme.success;
-    case 'closed':
-      return theme.textSecondary;
-  }
-};
-
-const priorityColor = (
-  priority: TicketDTO['priority'],
-  theme: ReturnType<typeof useTheme>['theme'],
-): string => {
-  switch (priority) {
-    case 'low':
-      return theme.textSecondary;
-    case 'medium':
-      return '#F59E0B';
-    case 'high':
-      return theme.danger;
-  }
-};
-
-const formatDate = (iso: string): string => {
-  const d = new Date(iso);
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-};
 
 /** Renders the paginated ticket list screen with status filter pills, FAB to create, and navigation to detail. */
 export default function TicketsScreen() {
@@ -173,10 +145,10 @@ export default function TicketsScreen() {
           {item.subject}
         </Text>
         <View style={styles.badgeRow}>
-          <View style={[styles.badge, { backgroundColor: statusColor(item.status, theme) }]}>
+          <View style={[styles.badge, { backgroundColor: statusColor(item.status) }]}>
             <Text style={styles.badgeText}>{statusLabel(item.status)}</Text>
           </View>
-          <View style={[styles.badge, { backgroundColor: priorityColor(item.priority, theme) }]}>
+          <View style={[styles.badge, { backgroundColor: priorityColor(item.priority) }]}>
             <Text style={styles.badgeText}>{item.priority}</Text>
           </View>
         </View>

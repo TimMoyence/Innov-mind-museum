@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { extractUserIdFromToken } from '../context/authLogic.pure';
+import { extractUserIdFromToken } from '../features/auth/domain/authLogic.pure';
 
 /** Helper: builds a fake JWT with the given payload (no real signature). */
 const fakeJwt = (payload: Record<string, unknown>): string => {

@@ -53,6 +53,7 @@
     "has_account": "لديك حساب بالفعل؟ سجّل الدخول",
     "sign_in_google": "تسجيل الدخول عبر Google",
     "agree_terms": "أوافق على شروط الخدمة وسياسة الخصوصية",
+    "agree_terms_rich": "أوافق على <terms>شروط الخدمة</terms> و<privacy>سياسة الخصوصية</privacy>",
     "legal_notice": "بتسجيل الدخول، فإنك توافق على شروط الخدمة وسياسة الخصوصية الخاصة بنا.",
     "terms_of_service": "شروط الخدمة",
     "privacy_policy": "سياسة الخصوصية",

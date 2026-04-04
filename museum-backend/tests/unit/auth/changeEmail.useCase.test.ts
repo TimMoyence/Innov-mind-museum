@@ -1,41 +1,21 @@
 import bcrypt from 'bcrypt';
-import { ChangeEmailUseCase } from '@modules/auth/core/useCase/changeEmail.useCase';
-import { ConfirmEmailChangeUseCase } from '@modules/auth/core/useCase/confirmEmailChange.useCase';
-import type { IUserRepository } from '@modules/auth/core/domain/user.repository.interface';
-import type { User } from '@modules/auth/core/domain/user.entity';
+import { ChangeEmailUseCase } from '@modules/auth/useCase/changeEmail.useCase';
+import { ConfirmEmailChangeUseCase } from '@modules/auth/useCase/confirmEmailChange.useCase';
+import type { User } from '@modules/auth/domain/user.entity';
 import type { EmailService } from '@shared/email/email.port';
+import { makeUser } from '../../helpers/auth/user.fixtures';
+import { makeUserRepo as makeUserRepoBase } from '../../helpers/auth/user-repo.mock';
 
 jest.mock('bcrypt', () => ({
   ...jest.requireActual('bcrypt'),
   compare: jest.fn(),
 }));
 
-const HASHED_PASSWORD = '$2b$12$existinghash';
-
-const makeUser = (overrides: Partial<User> = {}): User =>
-  ({
-    id: 1,
-    email: 'user@test.com',
-    password: HASHED_PASSWORD,
-    firstname: 'Test',
-    lastname: 'User',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  }) as User;
-
+/** Wraps the shared factory: getUserByEmail defaults to null (email not taken). */
 const makeUserRepo = (user: User | null = makeUser()) =>
-  ({
-    getUserById: jest.fn().mockResolvedValue(user),
+  makeUserRepoBase(user, {
     getUserByEmail: jest.fn().mockResolvedValue(null),
-    setEmailChangeToken: jest.fn().mockResolvedValue(undefined),
-    consumeEmailChangeToken: jest.fn().mockResolvedValue(user),
-  }) as unknown as jest.Mocked<
-    Pick<
-      IUserRepository,
-      'getUserById' | 'getUserByEmail' | 'setEmailChangeToken' | 'consumeEmailChangeToken'
-    >
-  >;
+  });
 
 const makeEmailService = (): jest.Mocked<EmailService> => ({
   sendEmail: jest.fn().mockResolvedValue(undefined),
@@ -50,11 +30,7 @@ describe('ChangeEmailUseCase', () => {
     (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true);
     const repo = makeUserRepo();
     const emailService = makeEmailService();
-    const useCase = new ChangeEmailUseCase(
-      repo as unknown as IUserRepository,
-      emailService,
-      'https://app.musaium.com',
-    );
+    const useCase = new ChangeEmailUseCase(repo, emailService, 'https://app.musaium.com');
 
     const token = await useCase.execute(1, 'new@test.com', 'ValidPass1');
 
@@ -77,7 +53,7 @@ describe('ChangeEmailUseCase', () => {
   it('rejects wrong current password', async () => {
     (bcrypt.compare as jest.Mock).mockResolvedValueOnce(false);
     const repo = makeUserRepo();
-    const useCase = new ChangeEmailUseCase(repo as unknown as IUserRepository);
+    const useCase = new ChangeEmailUseCase(repo);
 
     await expect(useCase.execute(1, 'new@test.com', 'wrongPass')).rejects.toMatchObject({
       message: 'Current password is incorrect',
@@ -87,7 +63,7 @@ describe('ChangeEmailUseCase', () => {
 
   it('rejects social-only account (no password)', async () => {
     const repo = makeUserRepo(makeUser({ password: null }));
-    const useCase = new ChangeEmailUseCase(repo as unknown as IUserRepository);
+    const useCase = new ChangeEmailUseCase(repo);
 
     await expect(useCase.execute(1, 'new@test.com', 'anything')).rejects.toMatchObject({
       message: 'Cannot change email for social-only accounts',
@@ -97,7 +73,7 @@ describe('ChangeEmailUseCase', () => {
 
   it('throws 404 for non-existent user', async () => {
     const repo = makeUserRepo(null);
-    const useCase = new ChangeEmailUseCase(repo as unknown as IUserRepository);
+    const useCase = new ChangeEmailUseCase(repo);
 
     await expect(useCase.execute(999, 'new@test.com', 'pass')).rejects.toMatchObject({
       message: 'User not found',
@@ -108,7 +84,7 @@ describe('ChangeEmailUseCase', () => {
   it('rejects same email as current', async () => {
     (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true);
     const repo = makeUserRepo(makeUser({ email: 'same@test.com' }));
-    const useCase = new ChangeEmailUseCase(repo as unknown as IUserRepository);
+    const useCase = new ChangeEmailUseCase(repo);
 
     await expect(useCase.execute(1, 'same@test.com', 'ValidPass1')).rejects.toMatchObject({
       message: 'New email must be different from current email',
@@ -122,7 +98,7 @@ describe('ChangeEmailUseCase', () => {
     (repo.getUserByEmail as jest.Mock).mockResolvedValueOnce(
       makeUser({ id: 2, email: 'taken@test.com' }),
     );
-    const useCase = new ChangeEmailUseCase(repo as unknown as IUserRepository);
+    const useCase = new ChangeEmailUseCase(repo);
 
     await expect(useCase.execute(1, 'taken@test.com', 'ValidPass1')).rejects.toMatchObject({
       message: 'This email is already in use',
@@ -133,7 +109,7 @@ describe('ChangeEmailUseCase', () => {
   it('rejects invalid email format', async () => {
     (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true);
     const repo = makeUserRepo();
-    const useCase = new ChangeEmailUseCase(repo as unknown as IUserRepository);
+    const useCase = new ChangeEmailUseCase(repo);
 
     await expect(useCase.execute(1, 'not-an-email', 'ValidPass1')).rejects.toMatchObject({
       message: 'Invalid email format',
@@ -144,7 +120,7 @@ describe('ChangeEmailUseCase', () => {
   it('normalizes email to lowercase and trimmed', async () => {
     (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true);
     const repo = makeUserRepo();
-    const useCase = new ChangeEmailUseCase(repo as unknown as IUserRepository);
+    const useCase = new ChangeEmailUseCase(repo);
 
     await useCase.execute(1, '  NEW@Test.COM  ', 'ValidPass1');
 
@@ -162,11 +138,7 @@ describe('ChangeEmailUseCase', () => {
     const repo = makeUserRepo();
     const emailService = makeEmailService();
     emailService.sendEmail.mockRejectedValue(new Error('SMTP timeout'));
-    const useCase = new ChangeEmailUseCase(
-      repo as unknown as IUserRepository,
-      emailService,
-      'https://app.musaium.com',
-    );
+    const useCase = new ChangeEmailUseCase(repo, emailService, 'https://app.musaium.com');
 
     const token = await useCase.execute(1, 'new@test.com', 'ValidPass1');
 
@@ -177,7 +149,7 @@ describe('ChangeEmailUseCase', () => {
   it('sets token expiration roughly 1 hour in the future', async () => {
     (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true);
     const repo = makeUserRepo();
-    const useCase = new ChangeEmailUseCase(repo as unknown as IUserRepository);
+    const useCase = new ChangeEmailUseCase(repo);
 
     const before = Date.now();
     await useCase.execute(1, 'new@test.com', 'ValidPass1');
@@ -193,7 +165,7 @@ describe('ConfirmEmailChangeUseCase', () => {
   it('confirms email change with valid token', async () => {
     const updatedUser = makeUser({ email: 'new@test.com' });
     const repo = makeUserRepo(updatedUser);
-    const useCase = new ConfirmEmailChangeUseCase(repo as unknown as IUserRepository);
+    const useCase = new ConfirmEmailChangeUseCase(repo);
 
     const result = await useCase.execute('abcd1234');
 
@@ -204,7 +176,7 @@ describe('ConfirmEmailChangeUseCase', () => {
   it('rejects invalid or expired token', async () => {
     const repo = makeUserRepo();
     (repo.consumeEmailChangeToken as jest.Mock).mockResolvedValueOnce(null);
-    const useCase = new ConfirmEmailChangeUseCase(repo as unknown as IUserRepository);
+    const useCase = new ConfirmEmailChangeUseCase(repo);
 
     await expect(useCase.execute('invalid-token')).rejects.toMatchObject({
       message: 'Invalid or expired email change token',
@@ -214,7 +186,7 @@ describe('ConfirmEmailChangeUseCase', () => {
 
   it('rejects empty token', async () => {
     const repo = makeUserRepo();
-    const useCase = new ConfirmEmailChangeUseCase(repo as unknown as IUserRepository);
+    const useCase = new ConfirmEmailChangeUseCase(repo);
 
     await expect(useCase.execute('   ')).rejects.toMatchObject({
       message: 'Email change token is required',

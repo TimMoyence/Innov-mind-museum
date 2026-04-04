@@ -6,6 +6,8 @@ module.exports = {
   testMatch: ['<rootDir>/__tests__/**/*.test.{ts,tsx}'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    '^@react-native-async-storage/async-storage$':
+      '@react-native-async-storage/async-storage/jest/async-storage-mock',
   },
   transformIgnorePatterns: [
     'node_modules/(?!\\.pnpm|((jest-)?react-native|@react-native(-community)?(/.*)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|@shopify/flash-list|native-base|react-native-svg|@faker-js/faker)',
@@ -13,7 +15,6 @@ module.exports = {
   collectCoverageFrom: [
     'features/**/*.{ts,tsx}',
     'shared/**/*.{ts,tsx}',
-    'context/**/*.{ts,tsx}',
     'app/**/*.{ts,tsx}',
     '!app/**/_layout.tsx',
     '!**/*.d.ts',
@@ -29,7 +30,7 @@ module.exports = {
     'shared/ui/tokens\\.generated\\.ts$',
     'shared/ui/themes\\.ts$',
     'app/styles/',
-    'context/authLogic\\.pure\\.ts$',
+    'features/auth/domain/authLogic\\.pure\\.ts$',
     'features/chat/application/chatSessionLogic\\.pure\\.ts$',
     'features/chat/domain/dashboard-session\\.ts$',
     'features/museum/infrastructure/haversine\\.ts$',

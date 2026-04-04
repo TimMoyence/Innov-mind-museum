@@ -1,8 +1,8 @@
-import { ChatService } from '@modules/chat/application/chat.service';
-import { ChatSessionService } from '@modules/chat/application/chat-session.service';
-import { ChatMessageService } from '@modules/chat/application/chat-message.service';
-import { ChatMediaService } from '@modules/chat/application/chat-media.service';
-import type { ChatServiceDeps } from '@modules/chat/application/chat.service';
+import { ChatService } from '@modules/chat/useCase/chat.service';
+import { ChatSessionService } from '@modules/chat/useCase/chat-session.service';
+import { ChatMessageService } from '@modules/chat/useCase/chat-message.service';
+import { ChatMediaService } from '@modules/chat/useCase/chat-media.service';
+import type { ChatServiceDeps } from '@modules/chat/useCase/chat.service';
 import type {
   CreateSessionResult,
   DeleteSessionResult,
@@ -11,20 +11,20 @@ import type {
   PostMessageResult,
   ReportMessageResult,
   SessionResult,
-} from '@modules/chat/application/chat.service.types';
+} from '@modules/chat/useCase/chat.service.types';
 import type { ChatRepository } from '@modules/chat/domain/chat.repository.interface';
 import type { AudioTranscriber } from '@modules/chat/domain/ports/audio-transcriber.port';
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
-import type { GuardrailBlockReason } from '@modules/chat/application/art-topic-guardrail';
+import type { GuardrailBlockReason } from '@modules/chat/useCase/art-topic-guardrail';
 import type { CacheService } from '@shared/cache/cache.port';
 
 // ── Mock sub-services so ChatService delegates without executing real logic ──
 
-jest.mock('@modules/chat/application/chat-session.service');
-jest.mock('@modules/chat/application/chat-message.service');
-jest.mock('@modules/chat/application/chat-media.service');
+jest.mock('@modules/chat/useCase/chat-session.service');
+jest.mock('@modules/chat/useCase/chat-message.service');
+jest.mock('@modules/chat/useCase/chat-media.service');
 
 const MockedSessionService = ChatSessionService as jest.MockedClass<typeof ChatSessionService>;
 const MockedMessageService = ChatMessageService as jest.MockedClass<typeof ChatMessageService>;

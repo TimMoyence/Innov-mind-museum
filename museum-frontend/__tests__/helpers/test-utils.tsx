@@ -9,9 +9,13 @@
 import type React from 'react';
 
 // ── react-i18next ────────────────────────────────────────────────────────────
-jest.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
-}));
+jest.mock('react-i18next', () => {
+  const { Text } = require('react-native');
+  return {
+    useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
+    Trans: ({ i18nKey }: { i18nKey: string }) => <Text>{i18nKey}</Text>,
+  };
+});
 
 // ── Theme — light theme values from shared/ui/themes.ts ─────────────────────
 jest.mock('@/shared/ui/ThemeContext', () => ({

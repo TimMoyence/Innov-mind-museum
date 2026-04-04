@@ -109,8 +109,8 @@ describeE2E('api e2e (express + postgres container)', () => {
       import('@src/data/db/migrations/1773823617791-AddSocialAccountsAndNullablePassword'),
       import('@src/data/db/migrations/1774000000000-AddSessionVersionColumn'),
       import('@src/data/db/migrations/1773852493401-RecreateRefreshTokenIndexes'),
-      import('@modules/chat/application/chat.service'),
-      import('@modules/chat/infrastructure/chat.repository.typeorm'),
+      import('@modules/chat/useCase/chat.service'),
+      import('@modules/chat/adapters/secondary/chat.repository.typeorm'),
       import('@modules/chat/adapters/secondary/image-storage.stub'),
       import('@modules/chat/adapters/primary/http/chat.contracts'),
     ]);

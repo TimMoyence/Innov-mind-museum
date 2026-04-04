@@ -1,17 +1,17 @@
-import { AuthRefreshToken } from '../../core/domain/authRefreshToken.entity';
+import { AuthRefreshToken } from '../../domain/authRefreshToken.entity';
 
 import type {
   IRefreshTokenRepository,
   StoredRefreshTokenRow,
   InsertRefreshTokenInput,
-} from '../../core/domain/refresh-token.repository.interface';
+} from '../../domain/refresh-token.repository.interface';
 import type { DataSource, Repository } from 'typeorm';
 
 // Re-export domain types so existing consumers that imported from here keep working
 export type {
   StoredRefreshTokenRow,
   InsertRefreshTokenInput,
-} from '../../core/domain/refresh-token.repository.interface';
+} from '../../domain/refresh-token.repository.interface';
 
 /** Convert an AuthRefreshToken entity to a StoredRefreshTokenRow DTO. */
 function toRow(entity: AuthRefreshToken): StoredRefreshTokenRow {

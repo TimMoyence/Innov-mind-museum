@@ -4,9 +4,9 @@ import { type DataSource, MoreThan, type Repository } from 'typeorm';
 import { conflict } from '@shared/errors/app.error';
 import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
 
-import { User } from '../../core/domain/user.entity';
+import { User } from '../../domain/user.entity';
 
-import type { IUserRepository } from '../../core/domain/user.repository.interface';
+import type { IUserRepository } from '../../domain/user.repository.interface';
 
 /** TypeORM implementation of {@link IUserRepository}. */
 export class UserRepositoryPg implements IUserRepository {

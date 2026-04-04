@@ -1,18 +1,11 @@
 /* eslint-disable react-hooks/refs -- Animated.Value refs are stable objects read once at creation; safe RN pattern */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Animated,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
+import { AssistantMetaActions } from '@/features/chat/ui/AssistantMetaActions';
 import { MarkdownBubble } from '@/features/chat/ui/MarkdownBubble';
 import { ArtworkCard } from '@/features/chat/ui/ArtworkCard';
 import { ImageCarousel } from '@/features/chat/ui/ImageCarousel';
@@ -168,84 +161,15 @@ export const ChatMessageBubble = React.memo(
               })}
             </Text>
             {isAssistant ? (
-              <View style={styles.metaActions}>
-                {onFeedback ? (
-                  <>
-                    <Pressable
-                      style={styles.reportButton}
-                      onPress={() => {
-                        void Haptics.selectionAsync();
-                        onFeedback(message.id, 'positive');
-                      }}
-                      hitSlop={8}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('chat.thumbsUp')}
-                    >
-                      <Ionicons
-                        name={feedbackValue === 'positive' ? 'thumbs-up' : 'thumbs-up-outline'}
-                        size={13}
-                        color={feedbackValue === 'positive' ? '#34C759' : theme.timestamp}
-                      />
-                    </Pressable>
-                    <Pressable
-                      style={styles.reportButton}
-                      onPress={() => {
-                        void Haptics.selectionAsync();
-                        onFeedback(message.id, 'negative');
-                      }}
-                      hitSlop={8}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('chat.thumbsDown')}
-                    >
-                      <Ionicons
-                        name={feedbackValue === 'negative' ? 'thumbs-down' : 'thumbs-down-outline'}
-                        size={13}
-                        color={feedbackValue === 'negative' ? '#FF3B30' : theme.timestamp}
-                      />
-                    </Pressable>
-                  </>
-                ) : null}
-                {onToggleTts ? (
-                  <Pressable
-                    style={styles.reportButton}
-                    onPress={() => {
-                      void Haptics.selectionAsync();
-                      void onToggleTts(message.id);
-                    }}
-                    hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityLabel={ttsPlaying ? t('chat.listening') : t('chat.listen')}
-                  >
-                    {ttsLoading ? (
-                      <ActivityIndicator size="small" color={theme.timestamp} />
-                    ) : (
-                      <Ionicons
-                        name={ttsPlaying ? 'pause-outline' : 'volume-high-outline'}
-                        size={13}
-                        color={theme.timestamp}
-                      />
-                    )}
-                    <Text style={[styles.reportLabel, { color: theme.timestamp }]}>
-                      {ttsPlaying ? t('chat.listening') : t('chat.listen')}
-                    </Text>
-                  </Pressable>
-                ) : null}
-                <Pressable
-                  style={styles.reportButton}
-                  onPress={() => {
-                    void Haptics.selectionAsync();
-                    onReport(message.id);
-                  }}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('messageMenu.report')}
-                >
-                  <Ionicons name="flag-outline" size={13} color={theme.timestamp} />
-                  <Text style={[styles.reportLabel, { color: theme.timestamp }]}>
-                    {t('messageMenu.report')}
-                  </Text>
-                </Pressable>
-              </View>
+              <AssistantMetaActions
+                messageId={message.id}
+                feedbackValue={feedbackValue}
+                onFeedback={onFeedback}
+                ttsPlaying={ttsPlaying}
+                ttsLoading={ttsLoading}
+                onToggleTts={onToggleTts}
+                onReport={onReport}
+              />
             ) : null}
           </View>
         ) : null}
@@ -367,19 +291,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   timestamp: {
-    fontSize: 11,
-  },
-  metaActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  reportButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  reportLabel: {
     fontSize: 11,
   },
   messageImage: {

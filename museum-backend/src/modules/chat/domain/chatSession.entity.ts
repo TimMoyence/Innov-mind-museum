@@ -9,7 +9,7 @@ import {
   VersionColumn,
 } from 'typeorm';
 
-import { User } from '@modules/auth/core/domain/user.entity';
+import { User } from '@modules/auth/domain/user.entity';
 
 import { ChatMessage } from './chatMessage.entity';
 

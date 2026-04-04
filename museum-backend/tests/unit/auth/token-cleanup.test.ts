@@ -1,5 +1,5 @@
-import { TokenCleanupService } from '@modules/auth/core/useCase/tokenCleanup.service';
-import type { IRefreshTokenRepository } from '@modules/auth/core/domain/refresh-token.repository.interface';
+import { TokenCleanupService } from '@modules/auth/useCase/tokenCleanup.service';
+import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token.repository.interface';
 
 jest.mock('@shared/logger/logger', () => ({
   logger: {

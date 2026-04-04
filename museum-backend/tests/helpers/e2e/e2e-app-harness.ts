@@ -117,8 +117,8 @@ export async function createE2EHarness(): Promise<E2EHarness> {
     import('@src/data/db/migrations/1774732556635-AddOnboardingCompleted'),
     import('@src/data/db/migrations/1774963405720-AddMessageFeedback'),
     import('@src/data/db/migrations/1775100000000-CreateArtKeywordsTable'),
-    import('@modules/chat/application/chat.service'),
-    import('@modules/chat/infrastructure/chat.repository.typeorm'),
+    import('@modules/chat/useCase/chat.service'),
+    import('@modules/chat/adapters/secondary/chat.repository.typeorm'),
     import('@modules/chat/adapters/secondary/image-storage.stub'),
   ]);
 

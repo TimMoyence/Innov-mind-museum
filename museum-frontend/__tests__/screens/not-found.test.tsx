@@ -9,11 +9,6 @@ expoRouter.Link = ({ children }: { children: React.ReactNode }) => children;
 import NotFoundScreen from '@/app/+not-found';
 
 describe('NotFoundScreen', () => {
-  it('renders without crashing', () => {
-    render(<NotFoundScreen />);
-    expect(screen.getByText('notFound.title')).toBeTruthy();
-  });
-
   it('renders the title', () => {
     render(<NotFoundScreen />);
     expect(screen.getByText('notFound.title')).toBeTruthy();

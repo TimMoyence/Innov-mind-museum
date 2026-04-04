@@ -1,4 +1,4 @@
-import { buildKnowledgeBasePromptBlock } from '@modules/chat/application/knowledge-base.prompt';
+import { buildKnowledgeBasePromptBlock } from '@modules/chat/useCase/knowledge-base.prompt';
 import type { ArtworkFacts } from '@modules/chat/domain/ports/knowledge-base.port';
 
 const fullFacts: ArtworkFacts = {

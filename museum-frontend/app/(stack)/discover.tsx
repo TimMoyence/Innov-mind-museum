@@ -3,9 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
-import { chatApi } from '@/features/chat/infrastructure/chatApi';
-import { loadRuntimeSettings } from '@/features/settings/runtimeSettings';
-import { getErrorMessage } from '@/shared/lib/errors';
+import { useStartConversation } from '@/features/chat/application/useStartConversation';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
@@ -18,17 +16,10 @@ type ConversationIntent = 'default' | 'camera' | 'audio';
 export default function DiscoverScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
-  const [isCreating, setIsCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { isCreating, error, setError, startConversation } = useStartConversation();
   const [actionStatus, setActionStatus] = useState<string | null>(null);
 
-  const startConversation = async (intent: ConversationIntent) => {
-    if (isCreating) {
-      return;
-    }
-
-    setIsCreating(true);
-    setError(null);
+  const handleStartConversation = async (intent: ConversationIntent) => {
     setActionStatus(
       intent === 'camera'
         ? t('discover.messages.opening_camera')
@@ -37,21 +28,7 @@ export default function DiscoverScreen() {
           : t('discover.messages.opening_default'),
     );
 
-    try {
-      const settings = await loadRuntimeSettings();
-      const response = await chatApi.createSession({
-        locale: settings.defaultLocale,
-        museumMode: settings.defaultMuseumMode,
-      });
-
-      const suffix = intent === 'default' ? '' : `?intent=${intent}`;
-      router.push(`/(stack)/chat/${response.session.id}${suffix}`);
-    } catch (createError) {
-      setError(getErrorMessage(createError));
-      setActionStatus(null);
-    } finally {
-      setIsCreating(false);
-    }
+    await startConversation({ intent });
   };
 
   return (
@@ -63,13 +40,13 @@ export default function DiscoverScreen() {
               id: 'lens',
               icon: 'camera-outline',
               label: t('discover.menu.lens'),
-              onPress: () => void startConversation('camera'),
+              onPress: () => void handleStartConversation('camera'),
             },
             {
               id: 'audio',
               icon: 'mic-outline',
               label: t('discover.menu.audio'),
-              onPress: () => void startConversation('audio'),
+              onPress: () => void handleStartConversation('audio'),
             },
             {
               id: 'saved',
@@ -108,7 +85,7 @@ export default function DiscoverScreen() {
             styles.primaryActionCard,
             { backgroundColor: theme.userBubble, borderColor: theme.userBubbleBorder },
           ]}
-          onPress={() => void startConversation('camera')}
+          onPress={() => void handleStartConversation('camera')}
           disabled={isCreating}
           accessibilityRole="button"
           accessibilityLabel={t('a11y.discover.photo_card')}
@@ -142,7 +119,7 @@ export default function DiscoverScreen() {
               styles.secondaryButton,
               { borderColor: theme.inputBorder, backgroundColor: theme.overlay },
             ]}
-            onPress={() => void startConversation('audio')}
+            onPress={() => void handleStartConversation('audio')}
             disabled={isCreating}
             accessibilityRole="button"
             accessibilityLabel={t('a11y.discover.voice')}

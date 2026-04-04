@@ -21,6 +21,7 @@ import {
   AUDIT_AUTH_ONBOARDING_COMPLETED,
 } from '@shared/audit/audit.types';
 import { AppError, badRequest } from '@shared/errors/app.error';
+import { requireUser } from '@shared/http/requireUser';
 import { env } from '@src/config/env';
 import {
   isAuthenticated,
@@ -64,7 +65,7 @@ import {
   revokeApiKeyUseCase,
   listApiKeysUseCase,
   completeOnboarding,
-} from '../../../core/useCase';
+} from '../../../useCase';
 
 /**
  * Express router for authentication endpoints (register, login, refresh, logout, social-login,
@@ -88,23 +89,19 @@ authRouter.post(
   '/register',
   registerLimiter,
   validateBody(registerSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { email, password, firstname, lastname } = req.body;
-      const user = await registerUseCase.execute(email, password, firstname, lastname);
-      auditService.log({
-        action: AUDIT_AUTH_REGISTER,
-        actorType: 'user',
-        actorId: user.id,
-        targetType: 'user',
-        targetId: String(user.id),
-        ip: req.ip,
-        requestId: req.requestId,
-      });
-      res.status(201).json({ user: { id: user.id, email: user.email } });
-    } catch (error) {
-      next(error);
-    }
+  async (req: Request, res: Response) => {
+    const { email, password, firstname, lastname } = req.body;
+    const user = await registerUseCase.execute(email, password, firstname, lastname);
+    auditService.log({
+      action: AUDIT_AUTH_REGISTER,
+      actorType: 'user',
+      actorId: user.id,
+      targetType: 'user',
+      targetId: String(user.id),
+      ip: req.ip,
+      requestId: req.requestId,
+    });
+    res.status(201).json({ user: { id: user.id, email: user.email } });
   },
 );
 
@@ -150,201 +147,125 @@ authRouter.post(
   },
 );
 
-authRouter.post(
-  '/refresh',
-  validateBody(refreshSchema),
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { refreshToken } = req.body;
-      const session = await authSessionService.refresh(refreshToken);
-      res.status(200).json(session);
-    } catch (error) {
-      next(error);
-    }
-  },
-);
+authRouter.post('/refresh', validateBody(refreshSchema), async (req: Request, res: Response) => {
+  const { refreshToken } = req.body;
+  const session = await authSessionService.refresh(refreshToken);
+  res.status(200).json(session);
+});
 
-authRouter.post(
-  '/logout',
-  validateBody(logoutSchema),
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { refreshToken } = req.body;
-      await authSessionService.logout(refreshToken);
-      auditService.log({
-        action: AUDIT_AUTH_LOGOUT,
-        actorType: 'anonymous',
-        ip: req.ip,
-        requestId: req.requestId,
-      });
-      res.status(200).json({ success: true });
-    } catch (error) {
-      next(error);
-    }
-  },
-);
+authRouter.post('/logout', validateBody(logoutSchema), async (req: Request, res: Response) => {
+  const { refreshToken } = req.body;
+  await authSessionService.logout(refreshToken);
+  auditService.log({
+    action: AUDIT_AUTH_LOGOUT,
+    actorType: 'anonymous',
+    ip: req.ip,
+    requestId: req.requestId,
+  });
+  res.status(200).json({ success: true });
+});
 
-authRouter.get(
-  '/me',
-  isAuthenticated,
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const jwtUser = (req as Request & { user?: { id: number } }).user;
-    if (!jwtUser?.id) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
-      return;
-    }
+authRouter.get('/me', isAuthenticated, async (req: Request, res: Response) => {
+  const jwtUser = requireUser(req);
+  const profile = await getProfileUseCase.execute(jwtUser.id);
+  if (!profile) {
+    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'User not found' } });
+    return;
+  }
 
-    try {
-      const profile = await getProfileUseCase.execute(jwtUser.id);
-      if (!profile) {
-        res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'User not found' } });
-        return;
-      }
-
-      res.status(200).json({
-        user: {
-          id: profile.id,
-          email: profile.email,
-          firstname: profile.firstname ?? null,
-          lastname: profile.lastname ?? null,
-          role: profile.role,
-          onboardingCompleted: profile.onboardingCompleted,
-        },
-      });
-    } catch (error) {
-      next(error);
-    }
-  },
-);
+  res.status(200).json({
+    user: {
+      id: profile.id,
+      email: profile.email,
+      firstname: profile.firstname ?? null,
+      lastname: profile.lastname ?? null,
+      role: profile.role,
+      onboardingCompleted: profile.onboardingCompleted,
+    },
+  });
+});
 
 authRouter.post(
   '/social-login',
   validateBody(socialLoginSchema),
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { provider, idToken } = req.body;
-      const session = await socialLoginUseCase.execute(provider, idToken);
-      auditService.log({
-        action: AUDIT_AUTH_SOCIAL_LOGIN,
-        actorType: 'user',
-        actorId: session.user.id,
-        targetType: 'user',
-        targetId: String(session.user.id),
-        metadata: { provider },
-        ip: req.ip,
-        requestId: req.requestId,
-      });
-      res.status(200).json(session);
-    } catch (error) {
-      next(error);
-    }
+  async (req: Request, res: Response) => {
+    const { provider, idToken } = req.body;
+    const session = await socialLoginUseCase.execute(provider, idToken);
+    auditService.log({
+      action: AUDIT_AUTH_SOCIAL_LOGIN,
+      actorType: 'user',
+      actorId: session.user.id,
+      targetType: 'user',
+      targetId: String(session.user.id),
+      metadata: { provider },
+      ip: req.ip,
+      requestId: req.requestId,
+    });
+    res.status(200).json(session);
   },
 );
 
-authRouter.delete(
-  '/account',
-  isAuthenticated,
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const user = (
-      req as Request & {
-        user?: { id?: number };
-      }
-    ).user;
+authRouter.delete('/account', isAuthenticated, async (req: Request, res: Response) => {
+  const user = requireUser(req);
+  auditService.log({
+    action: AUDIT_ACCOUNT_DELETED,
+    actorType: 'user',
+    actorId: user.id,
+    targetType: 'user',
+    targetId: String(user.id),
+    ip: req.ip,
+    requestId: req.requestId,
+  });
+  await deleteAccountUseCase.execute(user.id);
+  res.status(200).json({ deleted: true });
+});
 
-    if (!user?.id) {
-      res.status(401).json({
-        error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
-      });
-      return;
-    }
+authRouter.get('/export-data', isAuthenticated, async (req: Request, res: Response) => {
+  const jwtUser = requireUser(req);
+  const profile = await getProfileUseCase.execute(jwtUser.id);
+  if (!profile) {
+    res.status(404).json({ error: { code: 'NOT_FOUND', message: 'User not found' } });
+    return;
+  }
 
-    try {
-      auditService.log({
-        action: AUDIT_ACCOUNT_DELETED,
-        actorType: 'user',
-        actorId: user.id,
-        targetType: 'user',
-        targetId: String(user.id),
-        ip: req.ip,
-        requestId: req.requestId,
-      });
-      await deleteAccountUseCase.execute(user.id);
-      res.status(200).json({ deleted: true });
-    } catch (error) {
-      next(error);
-    }
-  },
-);
-
-authRouter.get(
-  '/export-data',
-  isAuthenticated,
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const jwtUser = (req as Request & { user?: { id: number } }).user;
-
-    if (!jwtUser?.id) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
-      return;
-    }
-
-    try {
-      const profile = await getProfileUseCase.execute(jwtUser.id);
-      if (!profile) {
-        res.status(404).json({ error: { code: 'NOT_FOUND', message: 'User not found' } });
-        return;
-      }
-
-      const result = await exportUserDataUseCase.execute({
-        id: profile.id,
-        email: profile.email,
-        firstname: profile.firstname,
-        lastname: profile.lastname,
-        createdAt: profile.createdAt,
-        updatedAt: profile.updatedAt,
-      });
-      auditService.log({
-        action: AUDIT_DATA_EXPORT,
-        actorType: 'user',
-        actorId: jwtUser.id,
-        targetType: 'user',
-        targetId: String(jwtUser.id),
-        ip: req.ip,
-        requestId: req.requestId,
-      });
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  },
-);
+  const result = await exportUserDataUseCase.execute({
+    id: profile.id,
+    email: profile.email,
+    firstname: profile.firstname,
+    lastname: profile.lastname,
+    createdAt: profile.createdAt,
+    updatedAt: profile.updatedAt,
+  });
+  auditService.log({
+    action: AUDIT_DATA_EXPORT,
+    actorType: 'user',
+    actorId: jwtUser.id,
+    targetType: 'user',
+    targetId: String(jwtUser.id),
+    ip: req.ip,
+    requestId: req.requestId,
+  });
+  res.json(result);
+});
 
 authRouter.put(
   '/change-password',
   isAuthenticated,
   validateBody(changePasswordSchema),
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const jwtUser = (req as Request & { user?: { id: number } }).user;
-    if (!jwtUser?.id) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
-      return;
-    }
-
-    try {
-      const { currentPassword, newPassword } = req.body;
-      await changePasswordUseCase.execute(jwtUser.id, currentPassword, newPassword);
-      auditService.log({
-        action: AUDIT_AUTH_PASSWORD_CHANGE,
-        actorType: 'user',
-        actorId: jwtUser.id,
-        targetType: 'user',
-        targetId: String(jwtUser.id),
-        ip: req.ip,
-        requestId: req.requestId,
-      });
-      res.status(200).json({ message: 'Password changed successfully.' });
-    } catch (error) {
-      next(error);
-    }
+  async (req: Request, res: Response) => {
+    const jwtUser = requireUser(req);
+    const { currentPassword, newPassword } = req.body;
+    await changePasswordUseCase.execute(jwtUser.id, currentPassword, newPassword);
+    auditService.log({
+      action: AUDIT_AUTH_PASSWORD_CHANGE,
+      actorType: 'user',
+      actorId: jwtUser.id,
+      targetType: 'user',
+      targetId: String(jwtUser.id),
+      ip: req.ip,
+      requestId: req.requestId,
+    });
+    res.status(200).json({ message: 'Password changed successfully.' });
   },
 );
 
@@ -359,33 +280,24 @@ authRouter.put(
   isAuthenticated,
   changeEmailLimiter,
   validateBody(changeEmailSchema),
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const jwtUser = (req as Request & { user?: { id: number } }).user;
-    if (!jwtUser?.id) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
-      return;
-    }
-
-    try {
-      const { newEmail, currentPassword } = req.body;
-      const token = await changeEmailUseCase.execute(jwtUser.id, newEmail, currentPassword);
-      auditService.log({
-        action: AUDIT_AUTH_EMAIL_CHANGE_REQUEST,
-        actorType: 'user',
-        actorId: jwtUser.id,
-        targetType: 'user',
-        targetId: String(jwtUser.id),
-        metadata: { newEmail },
-        ip: req.ip,
-        requestId: req.requestId,
-      });
-      res.status(200).json({
-        message: 'A confirmation email has been sent to the new address.',
-        ...(env.nodeEnv === 'development' ? { debugToken: token } : {}),
-      });
-    } catch (error) {
-      next(error);
-    }
+  async (req: Request, res: Response) => {
+    const jwtUser = requireUser(req);
+    const { newEmail, currentPassword } = req.body;
+    const token = await changeEmailUseCase.execute(jwtUser.id, newEmail, currentPassword);
+    auditService.log({
+      action: AUDIT_AUTH_EMAIL_CHANGE_REQUEST,
+      actorType: 'user',
+      actorId: jwtUser.id,
+      targetType: 'user',
+      targetId: String(jwtUser.id),
+      metadata: { newEmail },
+      ip: req.ip,
+      requestId: req.requestId,
+    });
+    res.status(200).json({
+      message: 'A confirmation email has been sent to the new address.',
+      ...(env.nodeEnv === 'development' ? { debugToken: token } : {}),
+    });
   },
 );
 
@@ -399,20 +311,16 @@ authRouter.post(
   '/confirm-email-change',
   emailVerificationLimiter,
   validateBody(confirmEmailChangeSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { token } = req.body;
-      const result = await confirmEmailChangeUseCase.execute(token);
-      auditService.log({
-        action: AUDIT_AUTH_EMAIL_CHANGE_CONFIRMED,
-        actorType: 'anonymous',
-        ip: req.ip,
-        requestId: req.requestId,
-      });
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
+  async (req: Request, res: Response) => {
+    const { token } = req.body;
+    const result = await confirmEmailChangeUseCase.execute(token);
+    auditService.log({
+      action: AUDIT_AUTH_EMAIL_CHANGE_CONFIRMED,
+      actorType: 'anonymous',
+      ip: req.ip,
+      requestId: req.requestId,
+    });
+    res.json(result);
   },
 );
 
@@ -426,24 +334,20 @@ authRouter.post(
   '/forgot-password',
   passwordResetLimiter,
   validateBody(forgotPasswordSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { email } = req.body;
-      const token = await forgotPasswordUseCase.execute(email);
-      auditService.log({
-        action: AUDIT_AUTH_PASSWORD_RESET_REQUEST,
-        actorType: 'anonymous',
-        metadata: { email },
-        ip: req.ip,
-        requestId: req.requestId,
-      });
-      res.json({
-        message: 'If this email exists, a reset link has been sent.',
-        ...(env.nodeEnv === 'development' ? { debugResetToken: token } : {}),
-      });
-    } catch (error) {
-      next(error);
-    }
+  async (req: Request, res: Response) => {
+    const { email } = req.body;
+    const token = await forgotPasswordUseCase.execute(email);
+    auditService.log({
+      action: AUDIT_AUTH_PASSWORD_RESET_REQUEST,
+      actorType: 'anonymous',
+      metadata: { email },
+      ip: req.ip,
+      requestId: req.requestId,
+    });
+    res.json({
+      message: 'If this email exists, a reset link has been sent.',
+      ...(env.nodeEnv === 'development' ? { debugResetToken: token } : {}),
+    });
   },
 );
 
@@ -451,20 +355,16 @@ authRouter.post(
   '/reset-password',
   passwordResetLimiter,
   validateBody(resetPasswordSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { token, newPassword } = req.body;
-      await resetPasswordUseCase.execute(token, newPassword);
-      auditService.log({
-        action: AUDIT_AUTH_PASSWORD_RESET,
-        actorType: 'anonymous',
-        ip: req.ip,
-        requestId: req.requestId,
-      });
-      res.json({ message: 'Password updated successfully.' });
-    } catch (error) {
-      next(error);
-    }
+  async (req: Request, res: Response) => {
+    const { token, newPassword } = req.body;
+    await resetPasswordUseCase.execute(token, newPassword);
+    auditService.log({
+      action: AUDIT_AUTH_PASSWORD_RESET,
+      actorType: 'anonymous',
+      ip: req.ip,
+      requestId: req.requestId,
+    });
+    res.json({ message: 'Password updated successfully.' });
   },
 );
 
@@ -472,50 +372,33 @@ authRouter.post(
   '/verify-email',
   emailVerificationLimiter,
   validateBody(verifyEmailSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { token } = req.body;
-      const result = await verifyEmailUseCase.execute(token);
-      auditService.log({
-        action: AUDIT_AUTH_EMAIL_VERIFIED,
-        actorType: 'anonymous',
-        ip: req.ip,
-        requestId: req.requestId,
-      });
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
+  async (req: Request, res: Response) => {
+    const { token } = req.body;
+    const result = await verifyEmailUseCase.execute(token);
+    auditService.log({
+      action: AUDIT_AUTH_EMAIL_VERIFIED,
+      actorType: 'anonymous',
+      ip: req.ip,
+      requestId: req.requestId,
+    });
+    res.json(result);
   },
 );
 
-authRouter.patch(
-  '/onboarding-complete',
-  isAuthenticated,
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const jwtUser = (req as Request & { user?: { id: number } }).user;
-    if (!jwtUser?.id) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
-      return;
-    }
-
-    try {
-      await completeOnboarding(jwtUser.id);
-      auditService.log({
-        action: AUDIT_AUTH_ONBOARDING_COMPLETED,
-        actorType: 'user',
-        actorId: jwtUser.id,
-        targetType: 'user',
-        targetId: String(jwtUser.id),
-        ip: req.ip,
-        requestId: req.requestId,
-      });
-      res.status(204).end();
-    } catch (error) {
-      next(error);
-    }
-  },
-);
+authRouter.patch('/onboarding-complete', isAuthenticated, async (req: Request, res: Response) => {
+  const jwtUser = requireUser(req);
+  await completeOnboarding(jwtUser.id);
+  auditService.log({
+    action: AUDIT_AUTH_ONBOARDING_COMPLETED,
+    actorType: 'user',
+    actorId: jwtUser.id,
+    targetType: 'user',
+    targetId: String(jwtUser.id),
+    ip: req.ip,
+    requestId: req.requestId,
+  });
+  res.status(204).end();
+});
 
 // ─── API Key Management (B2B) ─── gated behind feature flag ───
 const apiKeyLimiter = createRateLimitMiddleware({
@@ -530,88 +413,51 @@ if (env.featureFlags.apiKeys) {
     isAuthenticatedJwtOnly,
     apiKeyLimiter,
     validateBody(createApiKeySchema),
-    async (req: Request, res: Response, next: NextFunction) => {
-      const jwtUser = (req as Request & { user?: { id: number } }).user;
-      if (!jwtUser?.id) {
-        res
-          .status(401)
-          .json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
-        return;
-      }
-
-      try {
-        const { name, expiresAt } = req.body;
-        const expiry = expiresAt ? new Date(expiresAt) : undefined;
-        const result = await generateApiKeyUseCase.execute(jwtUser.id, name, expiry);
-        auditService.log({
-          action: AUDIT_API_KEY_CREATED,
-          actorType: 'user',
-          actorId: jwtUser.id,
-          targetType: 'api_key',
-          targetId: result.apiKey.prefix,
-          metadata: { name },
-          ip: req.ip,
-          requestId: req.requestId,
-        });
-        res.status(201).json(result);
-      } catch (error) {
-        next(error);
-      }
+    async (req: Request, res: Response) => {
+      const jwtUser = requireUser(req);
+      const { name, expiresAt } = req.body;
+      const expiry = expiresAt ? new Date(expiresAt) : undefined;
+      const result = await generateApiKeyUseCase.execute(jwtUser.id, name, expiry);
+      auditService.log({
+        action: AUDIT_API_KEY_CREATED,
+        actorType: 'user',
+        actorId: jwtUser.id,
+        targetType: 'api_key',
+        targetId: result.apiKey.prefix,
+        metadata: { name },
+        ip: req.ip,
+        requestId: req.requestId,
+      });
+      res.status(201).json(result);
     },
   );
 
-  authRouter.get(
-    '/api-keys',
-    isAuthenticatedJwtOnly,
-    async (req: Request, res: Response, next: NextFunction) => {
-      const jwtUser = (req as Request & { user?: { id: number } }).user;
-      if (!jwtUser?.id) {
-        res
-          .status(401)
-          .json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
-        return;
-      }
-
-      try {
-        const result = await listApiKeysUseCase.execute(jwtUser.id);
-        res.status(200).json(result);
-      } catch (error) {
-        next(error);
-      }
-    },
-  );
+  authRouter.get('/api-keys', isAuthenticatedJwtOnly, async (req: Request, res: Response) => {
+    const jwtUser = requireUser(req);
+    const result = await listApiKeysUseCase.execute(jwtUser.id);
+    res.status(200).json(result);
+  });
 
   authRouter.delete(
     '/api-keys/:id',
     isAuthenticatedJwtOnly,
-    async (req: Request, res: Response, next: NextFunction) => {
-      const jwtUser = (req as Request & { user?: { id: number } }).user;
-      if (!jwtUser?.id) {
-        res
-          .status(401)
-          .json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
-        return;
+    async (req: Request, res: Response) => {
+      const jwtUser = requireUser(req);
+      const keyId = Number.parseInt(req.params.id, 10);
+      if (Number.isNaN(keyId)) {
+        throw badRequest('Invalid API key ID');
       }
-
-      try {
-        const keyId = Number.parseInt(req.params.id, 10);
-        if (Number.isNaN(keyId)) {
-          throw badRequest('Invalid API key ID');
-        }
-        const result = await revokeApiKeyUseCase.execute(keyId, jwtUser.id);
-        auditService.log({
-          action: AUDIT_API_KEY_REVOKED,
-          actorType: 'user',
-          actorId: jwtUser.id,
-          targetType: 'api_key',
-          targetId: String(keyId),
-          ip: req.ip,
-          requestId: req.requestId,
-        });
-        res.status(200).json(result);
-      } catch (error) {
-        next(error);
-      }
+      const result = await revokeApiKeyUseCase.execute(keyId, jwtUser.id);
+      auditService.log({
+        action: AUDIT_API_KEY_REVOKED,
+        actorType: 'user',
+        actorId: jwtUser.id,
+        targetType: 'api_key',
+        targetId: String(keyId),
+        ip: req.ip,
+        requestId: req.requestId,
+      });
+      res.status(200).json(result);
     },
   );
 }

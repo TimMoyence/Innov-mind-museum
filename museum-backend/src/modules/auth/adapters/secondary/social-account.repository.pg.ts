@@ -1,9 +1,9 @@
-import { SocialAccount } from '../../core/domain/socialAccount.entity';
+import { SocialAccount } from '../../domain/socialAccount.entity';
 
 import type {
   ISocialAccountRepository,
   SocialAccountRow,
-} from '../../core/domain/socialAccount.repository.interface';
+} from '../../domain/socialAccount.repository.interface';
 import type { DataSource, Repository } from 'typeorm';
 
 /** Helper to convert a SocialAccount entity to a plain SocialAccountRow DTO. */

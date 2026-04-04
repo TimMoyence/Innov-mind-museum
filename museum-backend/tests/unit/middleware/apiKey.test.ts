@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
-import type { ApiKeyRepository } from '@modules/auth/core/domain/apiKey.repository.interface';
+import type { ApiKeyRepository } from '@modules/auth/domain/apiKey.repository.interface';
 
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
