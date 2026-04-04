@@ -1,97 +1,78 @@
-# 🏛️ Musaium – Assistant IA muséal interactif
+# Musaium — Interactive Museum AI Assistant
 
-_Application mobile interactive basée sur LangChain, GPT‑4 et reconnaissance visuelle_
+_Interactive mobile app powered by LangChain, Multi-LLM (OpenAI/Deepseek/Google) and visual recognition_
 
-## ⚠️ Current Implementation Notes (Repo Reality)
+## Overview
 
-This README includes product/vision material and some older architecture wording.
+Musaium is an **intelligent mobile application** that lets museum visitors interact directly with exhibited artworks through artificial intelligence.
+By photographing an artwork or typing its name, users get **enriched, contextualized and personalized information** far beyond traditional audioguides.
 
-For the current operational source of truth, use:
-- backend runtime/API doc: `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-backend/README.md`
-- deployment runbook (local / preprod / prod): `/Users/Tim/Desktop/all/dev/Pro/InnovMind/docs/DEPLOYMENT_STEP_BY_STEP.md`
-- backend OpenAPI spec (active routes): `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-backend/openapi/openapi.json`
-- env templates:
-  - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-backend/.env.local.example`
-  - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-backend/.env.staging.example`
-  - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-backend/.env.production.example`
-  - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/.env.local.example`
-  - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/.env.preview.example`
-  - `/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/.env.production.example`
+> **Goal**: make art **accessible**, **engaging** and **immersive** for all audiences — newcomers, enthusiasts, tourists and families.
 
 ---
 
-## 📌 Présentation
+## Key Features
 
-Musaium est une **application mobile intelligente** permettant aux visiteurs de musées d’interagir directement avec les œuvres exposées grâce à l’intelligence artificielle.
-En prenant en photo une œuvre ou en saisissant son nom, l’utilisateur peut **obtenir des informations enrichies, contextualisées et personnalisées**, allant bien au-delà des audioguides traditionnels.
-
-> 🎯 **Objectif** : rendre l’art **accessible**, **ludique** et **immersif** pour tous les publics — novices, passionnés, touristes ou familles.
-
----
-
-## ✨ Fonctionnalités principales
-
-- 📸 **Reconnaissance d’œuvres** : l’utilisateur prend une photo d’un tableau ou d’une sculpture, l’application identifie l’œuvre.
-- 💬 **Dialogue IA contextuel** : poser des questions sur l’artiste, le mouvement ou l’histoire de l’œuvre.
-- 🧠 **Mémoire conversationnelle** : l’IA se souvient des œuvres déjà vues et personnalise les suggestions.
-- 🗂️ **Classement thématique** : navigation par tags (périodes, styles, techniques…).
-- 🌍 **Multilingue** : expérience fluide pour les visiteurs internationaux.
-- 📱 **Interface mobile intuitive** : design moderne, accessible et adapté à un usage en visite.
+- **Artwork Recognition**: photograph a painting or sculpture, the app identifies the artwork.
+- **Contextual AI Chat**: ask questions about the artist, art movement or history of the artwork.
+- **Conversational Memory**: the AI remembers previously viewed artworks and personalizes suggestions.
+- **Thematic Browsing**: navigate by tags (periods, styles, techniques...).
+- **Multilingual**: seamless experience for international visitors.
+- **Intuitive Mobile UI**: modern, accessible design tailored for museum visits.
 
 ---
 
-## 🏗️ Architecture technique
+## Technical Architecture
 
-Musaium repose sur une **architecture hexagonale** afin de séparer clairement les **couches métier**, **infrastructure** et **interfaces utilisateur**.
-L’ensemble du backend est conteneurisé via **Docker** et hébergé sur un **VPS OVH**.
+Musaium uses a **hexagonal architecture** (Ports & Adapters) to cleanly separate **business logic**, **infrastructure** and **user interfaces**.
+The backend is containerized via **Docker** and hosted on an **OVH VPS**.
 
-### **Schéma simplifié**
+### Simplified Diagram
 
 ```
-┌─────────────────────┐       ┌────────────────────────────┐
-│      Mobile App     │       │        LangChain / GPT‑4    │
-│  React Native + TS  │──────▶│   Orchestration IA + Vision │
-│  Tailwind CSS       │       └────────────────────────────┘
-└─────────▲───────────┘
+┌─────────────────────┐       ┌──────────────────────────────┐
+│      Mobile App     │       │   LangChain / Multi-LLM      │
+│  React Native + TS  │──────>│   AI Orchestration + Vision  │
+└─────────▲───────────┘       └──────────────────────────────┘
           │ REST API
 ┌─────────┴───────────┐
 │      Backend        │
 │ Node.js + Express   │
-│ Archi Hexagonale    │
-│ Services IA         │
+│ Hexagonal Arch      │
+│ AI Services         │
 └─────────▲───────────┘
           │ TypeORM
 ┌─────────┴───────────┐
-│     PostgreSQL      │  ← Volume Docker persistant
+│     PostgreSQL      │  <- Persistent Docker volume
 └─────────────────────┘
 ```
 
 ---
 
-## 🛠️ Stack technique
+## Tech Stack
 
-| **Domaine**          | **Technologie utilisée**               | **Rôle**                                                    |
-| -------------------- | -------------------------------------- | ----------------------------------------------------------- |
-| **Frontend**         | React Native 0.79, Expo 53, TypeScript | Application mobile multiplateforme (iOS/Android)            |
-| **Backend**          | Node.js 22, Express 5, TypeORM         | API REST, logique métier, intégration IA                    |
-| **Architecture**     | Hexagonale (Ports & Adapters)          | Séparation stricte des responsabilités                      |
-| **Base de données**  | PostgreSQL 16                          | Persistance des conversations, œuvres et utilisateurs       |
-| **IA**               | LangChain + Multi-provider LLM         | Analyse visuelle, génération de réponses et recommandations |
-| **Conteneurisation** | Docker                                 | Encapsulation du backend + volumes persistants              |
-| **Hébergement**      | VPS OVH                                | Déploiement et gestion autonome du projet                   |
+| Domain | Technology | Role |
+|--------|-----------|------|
+| **Frontend** | React Native 0.79, Expo 53, TypeScript | Cross-platform mobile app (iOS/Android) |
+| **Backend** | Node.js 22, Express 5, TypeORM | REST API, business logic, AI integration |
+| **Architecture** | Hexagonal (Ports & Adapters) | Strict separation of concerns |
+| **Database** | PostgreSQL 16 | Conversations, artworks and user persistence |
+| **AI** | LangChain + Multi-provider LLM | Visual analysis, response generation and recommendations |
+| **Containers** | Docker | Backend encapsulation + persistent volumes |
+| **Hosting** | VPS OVH | Autonomous project deployment and management |
 
 ---
 
-## 🚀 Installation & lancement
+## Getting Started
 
-### **1. Cloner le projet**
+### 1. Clone the project
 
 ```bash
-git clone https://github.com/<votre_repo>/musaium.git
+git clone https://github.com/<your_repo>/musaium.git
 cd musaium
 ```
 
-### **2. Lancer le backend**
+### 2. Start the backend
 
 ```bash
 cd museum-backend
@@ -100,10 +81,10 @@ pnpm install
 pnpm dev
 ```
 
-- API disponible sur : `http://localhost:3000`
-- Base PostgreSQL sur port `5433` via Docker
+- API available at: `http://localhost:3000`
+- PostgreSQL on port `5433` via Docker
 
-### **3. Lancer l’application mobile**
+### 3. Start the mobile app
 
 ```bash
 cd museum-frontend
@@ -111,73 +92,72 @@ npm install
 npm run dev
 ```
 
-> 📱 Utilisez **Expo** pour tester l’application sur simulateur ou appareil physique.
+> Use **Expo** to test the app on simulator or physical device.
 
 ---
 
-## 📂 Structure du projet
+## Project Structure
 
 ```
 musaium/
-│
 ├── museum-backend/
 │   ├── src/
-│   │   ├── config/          # Variables d'environnement validées
+│   │   ├── config/          # Validated environment variables
 │   │   ├── modules/
-│   │   │   ├── auth/        # Hexagonal : domain → useCase → adapters (HTTP, PG)
-│   │   │   └── chat/        # Hexagonal : domain → application → infrastructure
+│   │   │   ├── auth/        # Hexagonal: domain -> useCase -> adapters (HTTP, PG)
+│   │   │   └── chat/        # Hexagonal: domain -> application -> infrastructure
 │   │   ├── shared/          # Errors, logger, cache, i18n, observability
 │   │   └── helpers/         # Middlewares (auth, rate-limit, error handler)
-│   ├── openapi/             # Spec OpenAPI (source de vérité contrat API)
+│   ├── openapi/             # OpenAPI spec (API contract source of truth)
 │   ├── deploy/              # Dockerfile.prod, nginx config
 │   └── package.json
 │
 ├── museum-frontend/
 │   ├── app/                 # Expo Router (file-based routing)
-│   │   ├── (tabs)/          # Onglets (Dashboard, Home)
-│   │   └── (stack)/         # Écrans empilés (chat, settings, onboarding…)
-│   ├── features/            # Logique métier par domaine (auth, chat, conversation…)
-│   ├── shared/              # API client, i18n, thème, composants UI, observability
+│   │   ├── (tabs)/          # Tab navigator (Home, Conversations, Museums)
+│   │   └── (stack)/         # Stack screens (chat, settings, onboarding...)
+│   ├── features/            # Business logic by domain (auth, chat, conversation...)
+│   ├── shared/              # API client, i18n, theme, UI components, observability
 │   └── package.json
 │
-├── docs/                    # Documentation technique et sprint tracking
+├── docs/                    # Technical documentation and sprint tracking
 └── README.md
 ```
 
 ---
 
-## 🔐 Gestion des secrets
+## Secret Management
 
-Les clés API OpenAI et configurations sensibles sont gérées via des **variables d’environnement** dans un fichier `.env` non versionné.
+API keys and sensitive configuration are managed via **environment variables** in an unversioned `.env` file.
 
-Exemple `.env` :
-
-```env
-OPENAI_API_KEY=sk-xxxxxx
-DATABASE_URL=postgres://user:pass@db:5432/musaium
-```
+Reference templates:
+- `museum-backend/.env.local.example`
+- `museum-frontend/.env.local.example`
 
 ---
 
-## 📌 État d’avancement
+## Current Status
 
-- ✅ Authentification utilisateurs
-- ✅ Upload et traitement des images d’œuvres
-- ✅ Chat IA contextuel via GPT‑4 + LangChain
-- ✅ Persistance des conversations et œuvres consultées
-- ⏳ Interface finale en cours de refonte graphique
-- ⏳ Optimisation des performances IA
-
----
-
-## 👥 Équipe projet
-
-- **Tim Moyence** — Développeur backend & intégration IA
-- **Cristelle Almodar** — UX & UI mobile
+- Authenticated user flows (email, Apple, Google)
+- Image upload and artwork processing
+- Contextual AI chat via Multi-LLM + LangChain
+- Conversation and artwork persistence
+- SSE streaming chat responses
+- Museum directory with geolocation
+- Multi-tenancy support
+- Admin dashboard (museum-web)
+- Full observability (Sentry + OpenTelemetry)
 
 ---
 
-## 📜 Licence
+## Team
 
-Projet développé dans le cadre du titre **RNCP36581 — Expert en ingénierie de l’intelligence artificielle**.
-Licence MIT – libre d’utilisation pour la recherche et la formation.
+- **Tim Moyence** — Backend developer & AI integration
+- **Cristelle Almodar** — UX & mobile UI
+
+---
+
+## License
+
+Developed as part of the **RNCP36581 — Expert in Artificial Intelligence Engineering** certification.
+MIT License — free to use for research and education.

@@ -1,6 +1,6 @@
 # Musaium — Release Checklist & Remaining Work
 
-> Last updated: 2026-03-24 | Sprint 6 complete | Overall: 111/112 tasks (99%)
+> Last updated: 2026-04-04 | Sprint 6 complete | Overall: 111/112 tasks (99%)
 
 ---
 
@@ -591,10 +591,12 @@ eas submit --platform android --profile production --latest
 
 ## 10. Admin Dashboard Deployment
 
+> Admin panel is now `museum-web` (Next.js 15), replacing the former `museum-admin` (Vite+React, deleted 2026-04-04).
+
 - [ ] Choose hosting: Vercel / Netlify / CloudFlare Pages / VPS static
-- [ ] Build: `cd museum-admin && npm run build`
-- [ ] Deploy `dist/` to static hosting
-- [ ] Set `VITE_API_BASE_URL` to production backend URL
+- [ ] Build: `cd museum-web && npm run build`
+- [ ] Deploy to hosting platform
+- [ ] Set API base URL environment variable to production backend URL
 - [ ] Add admin URL to backend `CORS_ORIGINS`
 
 ---
