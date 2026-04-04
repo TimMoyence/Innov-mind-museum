@@ -1,0 +1,346 @@
+import { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+
+import { useReviews } from '@/features/review/application/useReviews';
+import { ReviewCard } from '@/features/review/ui/ReviewCard';
+import { StarRating } from '@/features/review/ui/StarRating';
+import type { ReviewDTO } from '@/features/review/infrastructure/reviewApi';
+import { GlassCard } from '@/shared/ui/GlassCard';
+import { LiquidScreen } from '@/shared/ui/LiquidScreen';
+import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { useTheme } from '@/shared/ui/ThemeContext';
+
+/** Reviews screen: view stats, browse reviews, and submit a new review. */
+export default function ReviewsScreen() {
+  const { t } = useTranslation();
+  const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
+
+  const {
+    reviews,
+    stats,
+    loading,
+    error,
+    hasMore,
+    submitLoading,
+    submitError,
+    loadMore,
+    submitReview,
+    clearSubmitError,
+  } = useReviews();
+
+  const [showForm, setShowForm] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [userName, setUserName] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  const onSubmit = useCallback(async () => {
+    if (rating === 0 || comment.trim().length === 0 || userName.trim().length === 0) return;
+    const ok = await submitReview(rating, comment.trim(), userName.trim());
+    if (ok) {
+      setSubmitted(true);
+      setShowForm(false);
+      setRating(0);
+      setComment('');
+      setUserName('');
+    }
+  }, [rating, comment, userName, submitReview]);
+
+  const renderHeader = () => (
+    <View style={styles.headerSection}>
+      {/* Stats header */}
+      <GlassCard style={styles.statsCard} intensity={60}>
+        {stats ? (
+          <View style={styles.statsRow}>
+            <View style={styles.statsLeft}>
+              <Text style={[styles.avgNumber, { color: theme.textPrimary }]}>
+                {stats.average.toFixed(1)}
+              </Text>
+              <StarRating rating={stats.average} size={18} />
+            </View>
+            <Text style={[styles.reviewCount, { color: theme.textSecondary }]}>
+              {t('reviews.reviewCount', { count: stats.count })}
+            </Text>
+          </View>
+        ) : loading ? (
+          <ActivityIndicator color={theme.primary} />
+        ) : null}
+      </GlassCard>
+
+      {/* Submit form or button */}
+      {submitted ? (
+        <GlassCard style={styles.successCard} intensity={52}>
+          <Text style={[styles.successText, { color: theme.success }]}>{t('reviews.success')}</Text>
+        </GlassCard>
+      ) : submitError === 'already_reviewed' ? (
+        <GlassCard style={styles.successCard} intensity={52}>
+          <Text style={[styles.infoText, { color: theme.textSecondary }]}>
+            {t('reviews.alreadyReviewed')}
+          </Text>
+        </GlassCard>
+      ) : showForm ? (
+        <GlassCard style={styles.formCard} intensity={52}>
+          <Text style={[styles.formTitle, { color: theme.textPrimary }]}>
+            {t('reviews.writeReview')}
+          </Text>
+
+          <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>
+            {t('reviews.ratingLabel')}
+          </Text>
+          <StarRating rating={rating} size={32} interactive onRatingChange={setRating} />
+
+          <TextInput
+            style={[
+              styles.input,
+              {
+                color: theme.textPrimary,
+                borderColor: theme.inputBorder,
+                backgroundColor: theme.inputBackground,
+              },
+            ]}
+            placeholder={t('reviews.namePlaceholder')}
+            placeholderTextColor={theme.placeholderText}
+            value={userName}
+            onChangeText={setUserName}
+            maxLength={50}
+            accessibilityLabel={t('a11y.reviews.name_input')}
+          />
+
+          <TextInput
+            style={[
+              styles.input,
+              styles.commentInput,
+              {
+                color: theme.textPrimary,
+                borderColor: theme.inputBorder,
+                backgroundColor: theme.inputBackground,
+              },
+            ]}
+            placeholder={t('reviews.commentPlaceholder')}
+            placeholderTextColor={theme.placeholderText}
+            value={comment}
+            onChangeText={(text) => {
+              setComment(text);
+              clearSubmitError();
+            }}
+            multiline
+            maxLength={500}
+            accessibilityLabel={t('a11y.reviews.comment_input')}
+          />
+
+          {submitError !== undefined && submitError !== 'already_reviewed' && (
+            <Text style={[styles.errorText, { color: theme.error }]}>
+              {t('reviews.submitFailed')}
+            </Text>
+          )}
+
+          <Pressable
+            style={[
+              styles.submitButton,
+              {
+                backgroundColor:
+                  rating > 0 && comment.trim() && userName.trim() ? theme.primary : theme.separator,
+              },
+            ]}
+            onPress={() => void onSubmit()}
+            disabled={submitLoading || rating === 0 || !comment.trim() || !userName.trim()}
+            accessibilityRole="button"
+            accessibilityLabel={t('reviews.submit')}
+          >
+            {submitLoading ? (
+              <ActivityIndicator color={theme.primaryContrast} />
+            ) : (
+              <Text style={[styles.submitButtonText, { color: theme.primaryContrast }]}>
+                {t('reviews.submit')}
+              </Text>
+            )}
+          </Pressable>
+        </GlassCard>
+      ) : (
+        <Pressable
+          style={[styles.writeButton, { backgroundColor: theme.primary }]}
+          onPress={() => {
+            setShowForm(true);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={t('reviews.writeReview')}
+        >
+          <Text style={[styles.writeButtonText, { color: theme.primaryContrast }]}>
+            {t('reviews.writeReview')}
+          </Text>
+        </Pressable>
+      )}
+    </View>
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: ReviewDTO }) => <ReviewCard review={item} />,
+    [],
+  );
+
+  const renderEmpty = () => {
+    if (loading) return null;
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>{t('reviews.empty')}</Text>
+      </View>
+    );
+  };
+
+  const renderFooter = () => {
+    if (!hasMore || !loading) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator color={theme.primary} />
+      </View>
+    );
+  };
+
+  return (
+    <LiquidScreen
+      background={pickMuseumBackground(5)}
+      contentStyle={[styles.screen, { paddingTop: insets.top + 8 }]}
+    >
+      <Text style={[styles.screenTitle, { color: theme.textPrimary }]}>{t('reviews.title')}</Text>
+
+      {error && !reviews.length ? (
+        <View style={styles.emptyContainer}>
+          <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={reviews}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          ListHeaderComponent={renderHeader}
+          ListEmptyComponent={renderEmpty}
+          ListFooterComponent={renderFooter}
+          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.3}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+    </LiquidScreen>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    paddingHorizontal: 18,
+    paddingBottom: 16,
+  },
+  screenTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  headerSection: {
+    gap: 12,
+    marginBottom: 14,
+  },
+  statsCard: {
+    padding: 16,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  statsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  avgNumber: {
+    fontSize: 32,
+    fontWeight: '700',
+  },
+  reviewCount: {
+    fontSize: 14,
+  },
+  writeButton: {
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  writeButtonText: {
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  formCard: {
+    padding: 16,
+    gap: 10,
+  },
+  formTitle: {
+    fontWeight: '700',
+    fontSize: 17,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  input: {
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+  },
+  commentInput: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  submitButton: {
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  submitButtonText: {
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  successCard: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  successText: {
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  infoText: {
+    fontSize: 14,
+  },
+  errorText: {
+    fontSize: 13,
+  },
+  listContent: {
+    paddingBottom: 20,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  footerLoader: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+});
