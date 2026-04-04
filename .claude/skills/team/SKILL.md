@@ -265,6 +265,7 @@ Si une team existante est detectee a l'invocation :
 | `no-control-regex` | Sanitisation input | Regex control chars dans `input.ts` |
 | `sonarjs/hashing` | Checksum non-crypto (S3 Content-MD5) | `crypto.createHash('md5')` |
 | `sonarjs/pseudo-random` | Jitter/backoff, pas securite | `Math.random()` pour retry |
+| `react-hooks/refs` | React Native `Animated.Value` / `PanResponder` refs read once at creation | `useRef(new Animated.Value(0)).current` |
 
 **Tout autre `eslint-disable` = ECHEC de review. L'agent doit trouver la solution propre.**
 
@@ -284,8 +285,8 @@ Utilise TOUJOURS les factories partagees de tests/helpers/ :
 - makeMessage(overrides?) depuis tests/helpers/chat/message.fixtures.ts
 - makeSession(overrides?) depuis tests/helpers/chat/message.fixtures.ts
 - makeToken(overrides?) depuis tests/helpers/auth/token.helpers.ts
-- makeRepo(overrides?) depuis tests/helpers/chat/repo.fixtures.ts
-- makeCache(overrides?) depuis tests/helpers/chat/cache.fixtures.ts
+- makeRepo(overrides?) depuis tests/helpers/chat/repo.fixtures.ts (a creer si inexistant)
+- makeCache(overrides?) depuis tests/helpers/chat/cache.fixtures.ts (a creer si inexistant)
 Si une factory partagee n'existe pas encore pour ton entite/mock, tu DOIS la creer
 dans tests/helpers/<module>/<entity>.fixtures.ts AVANT de l'utiliser dans tes tests.
 Chaque factory suit le pattern: valeurs par defaut sensees + overrides partiels.

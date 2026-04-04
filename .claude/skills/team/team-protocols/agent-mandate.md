@@ -45,6 +45,7 @@ Allowlist (seules exceptions autorisees):
 - no-control-regex — sanitisation input
 - sonarjs/hashing — checksum non-crypto (S3 Content-MD5)
 - sonarjs/pseudo-random — jitter/backoff, pas securite
+- react-hooks/refs — React Native Animated.Value / PanResponder refs read once at creation
 
 REGLE TESTS DRY: Tu ne dois JAMAIS creer d'entites de test inline (as User, as ChatMessage, etc.).
 Utilise TOUJOURS les factories partagees de tests/helpers/ :
@@ -52,8 +53,8 @@ Utilise TOUJOURS les factories partagees de tests/helpers/ :
 - makeMessage(overrides?) depuis tests/helpers/chat/message.fixtures.ts
 - makeSession(overrides?) depuis tests/helpers/chat/message.fixtures.ts
 - makeToken(overrides?) depuis tests/helpers/auth/token.helpers.ts
-- makeRepo(overrides?) depuis tests/helpers/chat/repo.fixtures.ts
-- makeCache(overrides?) depuis tests/helpers/chat/cache.fixtures.ts
+- makeRepo(overrides?) depuis tests/helpers/chat/repo.fixtures.ts (a creer si inexistant)
+- makeCache(overrides?) depuis tests/helpers/chat/cache.fixtures.ts (a creer si inexistant)
 
 Si une factory partagee n'existe pas encore pour ton entite/mock, tu DOIS la creer
 dans tests/helpers/<module>/<entity>.fixtures.ts AVANT de l'utiliser dans tes tests.
