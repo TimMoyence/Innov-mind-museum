@@ -1,0 +1,29 @@
+appId: com.musaium.mobile.preview
+---
+# Helper: Quick login with a known test account
+#
+# This flow is used by other flows via `runFlow` when they detect
+# the auth screen is showing. It assumes the test account already exists
+# in the backend database.
+#
+# Test account: e2e-test-login@test.musaium.dev / TestPassword123!
+# This account must be seeded in the backend before running E2E tests.
+
+- tapOn:
+    text: "Email"
+- inputText: "e2e-test-login@test.musaium.dev"
+
+- tapOn:
+    text: "Password"
+- inputText: "TestPassword123!"
+
+- tapOn: "Log in"
+
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Handle onboarding if it appears after login
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd

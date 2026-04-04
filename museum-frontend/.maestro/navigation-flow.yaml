@@ -1,0 +1,113 @@
+appId: com.musaium.mobile.preview
+---
+# Navigation Flow: Verify tab navigation and key screen transitions
+#
+# Prerequisites:
+#   - User is already logged in
+#   - Backend running on localhost:3000
+#
+# This flow validates the tab navigator and stack navigation.
+
+# ──────────────────────────────────────────────
+# Phase 1: Ensure we are on home screen
+# ──────────────────────────────────────────────
+- waitForAnimationToEnd
+
+# If we land on auth, do a quick login
+- runFlow:
+    when:
+      visible: "Welcome back"
+    file: helpers/quick-login.yaml
+
+# Skip onboarding if shown
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 2: Navigate to Dashboard tab
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "Dashboard"
+- waitForAnimationToEnd
+
+- assertVisible: "Dashboard"
+
+# ──────────────────────────────────────────────
+# Phase 3: Navigate to Museums tab
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "Museums"
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 4: Navigate back to Home tab
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "Home"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 5000
+
+# ──────────────────────────────────────────────
+# Phase 5: Navigate to Settings (stack screen)
+# ──────────────────────────────────────────────
+- tapOn: "Settings"
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 6: Navigate to Preferences from Settings
+# ──────────────────────────────────────────────
+- scrollUntilVisible:
+    element: "Open Preferences"
+    direction: DOWN
+
+- tapOn: "Open Preferences"
+- waitForAnimationToEnd
+
+- assertVisible: "Preferences"
+
+# ──────────────────────────────────────────────
+# Phase 7: Go back to Settings
+# ──────────────────────────────────────────────
+- back
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 8: Return to Home from Settings
+# ──────────────────────────────────────────────
+- scrollUntilVisible:
+    element: "Back to Home"
+    direction: DOWN
+
+- tapOn: "Back to Home"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 5000
+
+# ──────────────────────────────────────────────
+# Phase 9: Navigate to Onboarding from Home
+# ──────────────────────────────────────────────
+- tapOn: "Onboarding"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Welcome to Musaium"
+    timeout: 5000
+
+# Skip onboarding to return to home
+- tapOn: "Skip"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 10000

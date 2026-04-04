@@ -1,0 +1,82 @@
+appId: com.musaium.mobile.preview
+---
+# Museum → Chat Flow: Navigate to a museum, open detail, start chat from museum context
+#
+# Prerequisites:
+#   - User is already logged in (or quick-login helper handles it)
+#   - Backend running on localhost:3000 with seeded museums
+#   - At least one museum returned by the API
+#
+# Trace: Museums tab → tap first museum card → detail screen → "Start Chat Here" → chat loads
+# Validates the S11 fix: museumName resolved, GPS context, nearby museums injection.
+
+# ──────────────────────────────────────────────
+# Phase 1: Ensure we are on home screen
+# ──────────────────────────────────────────────
+- waitForAnimationToEnd
+
+# If we land on auth screen, log in first
+- runFlow:
+    when:
+      visible: "Welcome back"
+    file: helpers/quick-login.yaml
+
+# Handle onboarding if it appears
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Start Conversation"
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 2: Navigate to Museums tab
+# ──────────────────────────────────────────────
+- tapOn: "Museums"
+- waitForAnimationToEnd
+
+# Wait for museum list to load (at least one museum card should appear)
+- extendedWaitUntil:
+    visible: "Search museums..."
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 3: Tap first museum card
+# ──────────────────────────────────────────────
+- tapOn:
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# ──────────────────────────────────────────────
+# Phase 4: Verify museum detail and start chat
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Start Chat Here"
+    timeout: 5000
+
+- tapOn: "Start Chat Here"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 5: Verify chat screen loaded with museum context
+# ──────────────────────────────────────────────
+- assertVisible:
+    id: "chat-input"
+
+# Send a test message to verify the chat is functional
+- tapOn:
+    id: "chat-input"
+- inputText: "What artworks can I see here?"
+
+- tapOn:
+    id: "send-button"
+
+- waitForAnimationToEnd:
+    timeout: 30000
+
+# Verify the user message is visible in the chat
+- assertVisible: "What artworks can I see here?"

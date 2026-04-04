@@ -1,0 +1,87 @@
+appId: com.musaium.mobile.preview
+---
+# Onboarding Flow: Navigate through all onboarding slides and complete
+#
+# Prerequisites:
+#   - User has just registered (first launch) or onboarding screen is open
+#   - This can be reached from Home > Onboarding button
+#
+# This flow validates the onboarding carousel experience.
+
+# ──────────────────────────────────────────────
+# Phase 1: Ensure we are on a screen that can navigate to onboarding
+# ──────────────────────────────────────────────
+- waitForAnimationToEnd
+
+# If we land on auth, do a quick login
+- runFlow:
+    when:
+      visible: "Welcome back"
+    file: helpers/quick-login.yaml
+
+# Skip onboarding if already shown (to get to home)
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 2: Navigate to onboarding from home
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Start Conversation"
+    timeout: 10000
+
+- tapOn: "Onboarding"
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 3: Slide 1 — Welcome to Musaium
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Welcome to Musaium"
+    timeout: 5000
+
+# Verify Skip button is available
+- assertVisible: "Skip"
+
+# Verify Next button
+- assertVisible: "Next"
+
+# Navigate to next slide
+- tapOn: "Next"
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 4: Slide 2 — Practical Tips
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Practical Tips"
+    timeout: 5000
+
+# Navigate to next slide
+- tapOn: "Next"
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 5: Slide 3 — Help & Support (last slide)
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Help & Support"
+    timeout: 5000
+
+# On the last slide, the button says "Get Started"
+- assertVisible: "Get Started"
+
+# Complete onboarding
+- tapOn: "Get Started"
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# ──────────────────────────────────────────────
+# Phase 6: Verify we land on home screen
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 10000
+- assertVisible: "Start Conversation"

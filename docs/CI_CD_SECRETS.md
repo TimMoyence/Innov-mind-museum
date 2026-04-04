@@ -40,6 +40,15 @@ Note mobile:
   - `feature/ios-only` (ou `ios only`) => skip Android internal testing.
   - `feature/android-only` (ou `android only`) => skip iOS preview.
 
+## Secrets Maestro E2E (Mobile)
+
+### `MAESTRO_CLOUD_API_KEY`
+- Rôle: API key for Maestro Cloud, used to run E2E mobile tests on cloud devices.
+- Utilisé par:
+  - `ci-cd-mobile.yml` (`maestro-e2e` job)
+- Portée recommandée: repository.
+- Configuration: Generate from [maestro.mobile.dev](https://maestro.mobile.dev) dashboard → API Keys.
+
 ## Secrets Backend Deploy (GHCR + VPS)
 
 ### `GHCR_USER`

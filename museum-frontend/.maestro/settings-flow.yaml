@@ -1,0 +1,109 @@
+appId: com.musaium.mobile.preview
+---
+# Settings Flow: Explore settings, change theme, visit compliance screens
+#
+# Prerequisites:
+#   - User is already logged in
+#   - Backend running on localhost:3000
+#
+# This flow validates the settings hub and its sub-screens.
+
+# ──────────────────────────────────────────────
+# Phase 1: Ensure we are on home screen
+# ──────────────────────────────────────────────
+- waitForAnimationToEnd
+
+# If we land on auth, do a quick login
+- runFlow:
+    when:
+      visible: "Welcome back"
+    file: helpers/quick-login.yaml
+
+# Skip onboarding if shown
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Start Conversation"
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 2: Navigate to Settings
+# ──────────────────────────────────────────────
+- tapOn: "Settings"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Settings"
+    timeout: 5000
+
+# ──────────────────────────────────────────────
+# Phase 3: Try switching themes
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "Dark"
+    optional: true
+- waitForAnimationToEnd
+
+# Switch back to system
+- tapOn:
+    text: "System"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 4: Visit Privacy screen
+# ──────────────────────────────────────────────
+- scrollUntilVisible:
+    element: "Privacy (RGPD)"
+    direction: DOWN
+
+- tapOn: "Privacy (RGPD)"
+- waitForAnimationToEnd
+
+- back
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 5: Visit Terms of Service screen
+# ──────────────────────────────────────────────
+- scrollUntilVisible:
+    element: "Terms of Service"
+    direction: DOWN
+
+- tapOn: "Terms of Service"
+- waitForAnimationToEnd
+
+- back
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 6: Visit Support screen
+# ──────────────────────────────────────────────
+- scrollUntilVisible:
+    element: "Support"
+    direction: DOWN
+
+- tapOn:
+    text: "Support"
+    index: 0
+- waitForAnimationToEnd
+
+- back
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 7: Return to home
+# ──────────────────────────────────────────────
+- scrollUntilVisible:
+    element: "Back to Home"
+    direction: DOWN
+
+- tapOn: "Back to Home"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 10000

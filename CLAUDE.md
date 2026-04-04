@@ -238,6 +238,13 @@ These are the ONLY categories where `eslint-disable` is acceptable in this proje
 - Mobile: EAS Build → App Store / Google Play (see `docs/MOBILE_INTERNAL_TESTING_FLOW.md`)
 - Secrets & CI config documented in `docs/CI_CD_SECRETS.md`
 
+## Dependency Monitoring
+
+### TypeORM
+TypeORM docs repo archived March 2026. v1.0 planned H1 2026 with breaking changes.
+Current assessment: works, migration not urgent, but monitor releases.
+Alternatives for future: Drizzle (S-tier 2026), Prisma 7, Kysely.
+
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
