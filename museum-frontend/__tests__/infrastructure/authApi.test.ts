@@ -172,6 +172,35 @@ describe('authApi', () => {
     });
   });
 
+  it('changeEmail sends newEmail and currentPassword', async () => {
+    const response = { message: 'Verification email sent' };
+    mockOpenApiRequest.mockResolvedValue(response);
+
+    const result = await authService.changeEmail('new@test.com', 'myPassword');
+
+    expect(mockOpenApiRequest).toHaveBeenCalledWith({
+      path: '/api/auth/change-email',
+      method: 'put',
+      body: JSON.stringify({ newEmail: 'new@test.com', currentPassword: 'myPassword' }),
+    });
+    expect(result).toEqual(response);
+  });
+
+  it('confirmEmailChange sends token with requiresAuth=false', async () => {
+    const response = { message: 'Email changed successfully' };
+    mockOpenApiRequest.mockResolvedValue(response);
+
+    const result = await authService.confirmEmailChange('confirm-token-abc');
+
+    expect(mockOpenApiRequest).toHaveBeenCalledWith({
+      path: '/api/auth/confirm-email-change',
+      method: 'post',
+      body: JSON.stringify({ token: 'confirm-token-abc' }),
+      requiresAuth: false,
+    });
+    expect(result).toEqual(response);
+  });
+
   it('exportData calls GET /api/auth/export-data', async () => {
     const exportPayload = { user: { id: 1 }, sessions: [] };
     mockOpenApiRequest.mockResolvedValue(exportPayload);

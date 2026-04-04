@@ -1,25 +1,19 @@
 import { makeSession, makeMessage } from 'tests/helpers/chat/message.fixtures';
 import { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail-evaluation.service';
-import type {
-  ChatRepository,
-  PersistMessageInput,
-} from '@modules/chat/domain/chat.repository.interface';
+import type { PersistMessageInput } from '@modules/chat/domain/chat.repository.interface';
 import type { AuditService } from '@shared/audit/audit.service';
 import type { AuditLogEntry } from '@shared/audit/audit.types';
 import { AUDIT_SECURITY_GUARDRAIL_BLOCK } from '@shared/audit/audit.types';
+import { makeChatRepo } from 'tests/helpers/chat/repo.fixtures';
+
 /**
  * Creates a mock ChatRepository with a controllable persistMessage stub.
  * @param overrides
  */
-const createMockRepository = (
-  overrides: Partial<ChatRepository> = {},
-): jest.Mocked<Pick<ChatRepository, 'persistMessage'>> & ChatRepository => {
+const createMockRepository = (overrides: Partial<Parameters<typeof makeChatRepo>[0]> = {}) => {
   const session = makeSession();
-  return {
-    createSession: jest.fn(),
+  return makeChatRepo({
     getSessionById: jest.fn().mockResolvedValue(session),
-    getMessageById: jest.fn(),
-    deleteSessionIfEmpty: jest.fn(),
     persistMessage: jest.fn().mockImplementation((input: PersistMessageInput) => {
       const msg = makeMessage({
         id: 'refusal-msg-001',
@@ -30,17 +24,8 @@ const createMockRepository = (
       });
       return Promise.resolve(msg);
     }),
-    listSessionMessages: jest.fn(),
-    listSessionHistory: jest.fn(),
-    listSessions: jest.fn(),
-    hasMessageReport: jest.fn(),
-    persistMessageReport: jest.fn(),
-    exportUserData: jest.fn(),
-    upsertMessageFeedback: jest.fn(),
-    deleteMessageFeedback: jest.fn(),
-    getMessageFeedback: jest.fn(),
     ...overrides,
-  } as jest.Mocked<Pick<ChatRepository, 'persistMessage'>> & ChatRepository;
+  });
 };
 
 /** Creates a mock AuditService with a jest.fn() log method. */

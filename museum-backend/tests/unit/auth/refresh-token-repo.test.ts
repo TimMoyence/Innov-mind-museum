@@ -3,26 +3,13 @@ import type { DataSource, Repository } from 'typeorm';
 import { AuthRefreshToken } from '@modules/auth/domain/authRefreshToken.entity';
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/refresh-token.repository.pg';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
+import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 
 import type { InsertRefreshTokenInput } from '@modules/auth/domain/refresh-token.repository.interface';
 
-// ─── QueryBuilder mock factory ───
-function makeMockQb() {
-  const qb: Record<string, jest.Mock> = {
-    update: jest.fn().mockReturnThis(),
-    set: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    andWhere: jest.fn().mockReturnThis(),
-    execute: jest.fn().mockResolvedValue({ affected: 1 }),
-    delete: jest.fn().mockReturnThis(),
-    from: jest.fn().mockReturnThis(),
-  };
-  return qb;
-}
-
 // ─── TypeORM repo + DataSource mock factory ───
 function buildMocks() {
-  const qb = makeMockQb();
+  const qb = makeMockQb({ execute: jest.fn().mockResolvedValue({ affected: 1 }) });
 
   const repo = {
     findOne: jest.fn(),

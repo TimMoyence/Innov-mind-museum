@@ -6,6 +6,9 @@ export interface CreateSessionRequestDTO {
   locale?: string;
   museumMode?: boolean;
   museumId?: number;
+  museumName?: string;
+  museumAddress?: string;
+  coordinates?: { lat: number; lng: number };
 }
 
 type Schemas = components['schemas'];

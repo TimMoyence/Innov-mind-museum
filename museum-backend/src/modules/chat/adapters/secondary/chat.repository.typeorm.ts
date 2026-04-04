@@ -1,8 +1,12 @@
-import { type DataSource, In, type Repository } from 'typeorm';
 import { z } from 'zod';
 
 import { CursorCodec } from '@shared/pagination/cursor-codec';
 
+import {
+  fetchMessageCounts,
+  fetchMessagePreviews,
+  exportUserChatData,
+} from './chat-repository-queries';
 import { ArtworkMatch } from '../../domain/artworkMatch.entity';
 import { ChatMessage } from '../../domain/chatMessage.entity';
 import { ChatSession } from '../../domain/chatSession.entity';
@@ -20,8 +24,9 @@ import type {
   SessionMessagesPage,
   UserChatExportData,
 } from '../../domain/chat.repository.interface';
-import type { ChatRole, CreateSessionInput } from '../../domain/chat.types';
+import type { CreateSessionInput } from '../../domain/chat.types';
 import type { FeedbackValue } from '../../domain/messageFeedback.entity';
+import type { DataSource, Repository } from 'typeorm';
 
 const messageCursor = new CursorCodec(z.object({ createdAt: z.string(), id: z.string() }));
 const sessionCursor = new CursorCodec(z.object({ updatedAt: z.string(), id: z.string() }));
@@ -69,6 +74,9 @@ export class TypeOrmChatRepository implements ChatRepository {
       museumMode: input.museumMode ?? false,
       user: input.userId ? ({ id: input.userId } as ChatSession['user']) : null,
       museumId: input.museumId ?? null,
+      museumName: input.museumName ?? null,
+      coordinates: input.coordinates ?? null,
+      visitContext: input.visitContext ?? null,
     });
 
     return await this.sessionRepo.save(session);
@@ -268,59 +276,6 @@ export class TypeOrmChatRepository implements ChatRepository {
     return [...rows].reverse();
   }
 
-  /** Fetches message counts per session in a single query. */
-  private async fetchMessageCounts(sessionIds: string[]): Promise<Map<string, number>> {
-    const messageCounts = await this.messageRepo
-      .createQueryBuilder('message')
-      .select('message.sessionId', 'sessionId')
-      .addSelect('COUNT(message.id)', 'messageCount')
-      .where('message.sessionId IN (:...sessionIds)', { sessionIds })
-      .groupBy('message.sessionId')
-      .getRawMany<{ sessionId: string; messageCount: string }>();
-
-    const countBySessionId = new Map<string, number>();
-    for (const row of messageCounts) {
-      countBySessionId.set(row.sessionId, Number(row.messageCount) || 0);
-    }
-    return countBySessionId;
-  }
-
-  /** Fetches latest-message previews per session using DISTINCT ON. */
-  private async fetchMessagePreviews(
-    sessionIds: string[],
-  ): Promise<Map<string, { role: ChatRole; text: string | null; createdAt: Date }>> {
-    const previewRows = await this.messageRepo
-      .createQueryBuilder('message')
-      .select('message.sessionId', 'sessionId')
-      .addSelect('message.role', 'role')
-      .addSelect('message.text', 'text')
-      .addSelect('message.createdAt', 'createdAt')
-      .where('message.sessionId IN (:...sessionIds)', { sessionIds })
-      .distinctOn(['message.sessionId'])
-      .orderBy('message.sessionId', 'ASC')
-      .addOrderBy('message.createdAt', 'DESC')
-      .addOrderBy('message.id', 'DESC')
-      .getRawMany<{
-        sessionId: string;
-        role: ChatRole;
-        text: string | null;
-        createdAt: Date | string;
-      }>();
-
-    const previewBySessionId = new Map<
-      string,
-      { role: ChatRole; text: string | null; createdAt: Date }
-    >();
-    for (const row of previewRows) {
-      previewBySessionId.set(row.sessionId, {
-        role: row.role,
-        text: row.text,
-        createdAt: row.createdAt instanceof Date ? row.createdAt : new Date(row.createdAt),
-      });
-    }
-    return previewBySessionId;
-  }
-
   /**
    * Lists chat sessions for a user with cursor-based pagination, including message count and latest-message preview.
    *
@@ -373,8 +328,8 @@ export class TypeOrmChatRepository implements ChatRepository {
     }
 
     const [countBySessionId, previewBySessionId] = await Promise.all([
-      this.fetchMessageCounts(sessionIds),
-      this.fetchMessagePreviews(sessionIds),
+      fetchMessageCounts(this.messageRepo, sessionIds),
+      fetchMessagePreviews(this.messageRepo, sessionIds),
     ]);
 
     return {
@@ -425,66 +380,7 @@ export class TypeOrmChatRepository implements ChatRepository {
    * @returns Structured export payload containing all sessions and their messages.
    */
   async exportUserData(userId: number): Promise<UserChatExportData> {
-    return await this.sessionRepo.manager.transaction('REPEATABLE READ', async (em) => {
-      const sessionRepo = em.getRepository(ChatSession);
-      const messageRepo = em.getRepository(ChatMessage);
-
-      const allSessions: UserChatExportData['sessions'] = [];
-      let offset = 0;
-
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      while (true) {
-        const sessionBatch = await sessionRepo.find({
-          where: { user: { id: userId } },
-          order: { createdAt: 'DESC' },
-          take: MAX_PAGE_SIZE,
-          skip: offset,
-        });
-
-        if (sessionBatch.length === 0) break;
-
-        const sessionIds = sessionBatch.map((s) => s.id);
-        const messages = await messageRepo.find({
-          where: { session: { id: In(sessionIds) } },
-          relations: ['session'],
-          order: { createdAt: 'ASC' },
-        });
-
-        const messagesBySessionId = new Map<string, ChatMessage[]>();
-        for (const msg of messages) {
-          const sessionId = msg.session.id;
-          const list = messagesBySessionId.get(sessionId) ?? [];
-          list.push(msg);
-          messagesBySessionId.set(sessionId, list);
-        }
-
-        for (const session of sessionBatch) {
-          const sessionMessages = messagesBySessionId.get(session.id) ?? [];
-          allSessions.push({
-            id: session.id,
-            locale: session.locale,
-            museumMode: session.museumMode,
-            title: session.title ?? null,
-            museumName: session.museumName ?? null,
-            createdAt: session.createdAt.toISOString(),
-            updatedAt: session.updatedAt.toISOString(),
-            messages: sessionMessages.map((msg) => ({
-              id: msg.id,
-              role: msg.role,
-              text: msg.text,
-              imageRef: msg.imageRef,
-              createdAt: msg.createdAt.toISOString(),
-              metadata: msg.metadata,
-            })),
-          });
-        }
-
-        if (sessionBatch.length < MAX_PAGE_SIZE) break;
-        offset += MAX_PAGE_SIZE;
-      }
-
-      return { sessions: allSessions };
-    });
+    return await exportUserChatData(this.sessionRepo, userId);
   }
 
   /**

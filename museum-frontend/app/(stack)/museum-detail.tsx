@@ -56,9 +56,19 @@ export default function MuseumDetailScreen() {
 
   const handleStartChat = () => {
     const museumId = parseInt(params.id, 10);
+    const lat = params.latitude ? Number(params.latitude) : undefined;
+    const lng = params.longitude ? Number(params.longitude) : undefined;
+    const coordinates =
+      lat != null && lng != null && !Number.isNaN(lat) && !Number.isNaN(lng)
+        ? { lat, lng }
+        : undefined;
+
     void startConversation({
       museumMode: true,
       museumId: isNaN(museumId) ? undefined : museumId,
+      museumName: params.name || undefined,
+      museumAddress: params.address || undefined,
+      coordinates,
       skipSettings: true,
     });
   };

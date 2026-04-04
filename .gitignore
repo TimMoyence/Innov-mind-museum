@@ -116,3 +116,4 @@ design-system/package-lock.json
 *.aab
 *.apk
 *.ipa
+.gitnexus

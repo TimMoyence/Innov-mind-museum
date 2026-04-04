@@ -10,7 +10,7 @@ description: "Skill for the I18n area of InnovMind. 16 symbols across 8 files."
 ## When to Use
 
 - Working with code in `museum-backend/`
-- Understanding how isSupportedLocale, toSupportedLocale, isRTLLocale work
+- Understanding how isRTLLocale, applyRTLLayout, needsRTLReload work
 - Modifying i18n-related functionality
 
 ## Key Files
@@ -30,21 +30,21 @@ description: "Skill for the I18n area of InnovMind. 16 symbols across 8 files."
 
 Start here when exploring this area:
 
-- **`isSupportedLocale`** (Function) — `museum-frontend/shared/config/supportedLocales.ts:20`
-- **`toSupportedLocale`** (Function) — `museum-frontend/shared/config/supportedLocales.ts:28`
 - **`isRTLLocale`** (Function) — `museum-frontend/shared/i18n/rtl.ts:4`
 - **`applyRTLLayout`** (Function) — `museum-frontend/shared/i18n/rtl.ts:8`
 - **`needsRTLReload`** (Function) — `museum-frontend/shared/i18n/rtl.ts:16`
+- **`isSupportedLocale`** (Function) — `museum-frontend/shared/config/supportedLocales.ts:20`
+- **`toSupportedLocale`** (Function) — `museum-frontend/shared/config/supportedLocales.ts:28`
 
 ## Key Symbols
 
 | Symbol | Type | File | Line |
 |--------|------|------|------|
-| `isSupportedLocale` | Function | `museum-frontend/shared/config/supportedLocales.ts` | 20 |
-| `toSupportedLocale` | Function | `museum-frontend/shared/config/supportedLocales.ts` | 28 |
 | `isRTLLocale` | Function | `museum-frontend/shared/i18n/rtl.ts` | 4 |
 | `applyRTLLayout` | Function | `museum-frontend/shared/i18n/rtl.ts` | 8 |
 | `needsRTLReload` | Function | `museum-frontend/shared/i18n/rtl.ts` | 16 |
+| `isSupportedLocale` | Function | `museum-frontend/shared/config/supportedLocales.ts` | 20 |
+| `toSupportedLocale` | Function | `museum-frontend/shared/config/supportedLocales.ts` | 28 |
 | `I18nProvider` | Function | `museum-frontend/shared/i18n/I18nContext.tsx` | 48 |
 | `isSupportedLocale` | Function | `museum-backend/src/shared/i18n/locale.ts` | 15 |
 | `extractLangCode` | Function | `museum-backend/src/shared/i18n/locale.ts` | 22 |
@@ -78,6 +78,6 @@ Start here when exploring this area:
 
 ## How to Explore
 
-1. `gitnexus_context({name: "isSupportedLocale"})` — see callers and callees
+1. `gitnexus_context({name: "isRTLLocale"})` — see callers and callees
 2. `gitnexus_query({query: "i18n"})` — find related execution flows
 3. Read key files listed above for implementation details

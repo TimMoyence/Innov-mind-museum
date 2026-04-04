@@ -26,6 +26,7 @@ import { UserMemoryService } from './useCase/user-memory.service';
 import type { ArtKeywordRepository } from './domain/artKeyword.repository.interface';
 import type { ImageStorage } from './domain/ports/image-storage.port';
 import type { OcrService } from './domain/ports/ocr.port';
+import type { IMuseumRepository } from '@modules/museum/domain/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
 import type { DataSource } from 'typeorm';
 
@@ -177,9 +178,14 @@ class ChatModule {
    *
    * @param dataSource - Initialized TypeORM DataSource for repository creation.
    * @param cache - Optional cache service for session/memory caching.
+   * @param museumRepository - Optional museum repository for resolving museum info at session creation.
    * @returns Built module with all services guaranteed initialized.
    */
-  build(dataSource: DataSource, cache?: CacheService): BuiltChatModule {
+  build(
+    dataSource: DataSource,
+    cache?: CacheService,
+    museumRepository?: IMuseumRepository,
+  ): BuiltChatModule {
     const imageStorage = this.buildImageStorage();
 
     const repository = new TypeOrmChatRepository(dataSource);
@@ -217,6 +223,7 @@ class ChatModule {
       knowledgeBase,
       imageEnrichment,
       artTopicClassifier,
+      museumRepository,
     });
 
     const built: BuiltChatModule = {
@@ -238,8 +245,11 @@ class ChatModule {
 export const chatModule = new ChatModule();
 
 /** Wires the chat module and returns a configured ChatService. */
-export const buildChatService = (dataSource: DataSource, cache?: CacheService): ChatService =>
-  chatModule.build(dataSource, cache).chatService;
+export const buildChatService = (
+  dataSource: DataSource,
+  cache?: CacheService,
+  museumRepository?: IMuseumRepository,
+): ChatService => chatModule.build(dataSource, cache, museumRepository).chatService;
 
 /** Returns the shared image storage instance. Throws if module is not built. */
 export const getImageStorage = (): ImageStorage => chatModule.getBuilt().imageStorage;

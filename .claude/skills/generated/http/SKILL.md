@@ -1,11 +1,11 @@
 ---
 name: http
-description: "Skill for the Http area of InnovMind. 88 symbols across 37 files."
+description: "Skill for the Http area of InnovMind. 86 symbols across 34 files."
 ---
 
 # Http
 
-88 symbols | 37 files | Cohesion: 76%
+86 symbols | 34 files | Cohesion: 70%
 
 ## When to Use
 
@@ -25,8 +25,8 @@ description: "Skill for the Http area of InnovMind. 88 symbols across 37 files."
 | `museum-backend/src/modules/chat/adapters/primary/http/chat.image-url.ts` | toBase64Url, signPayload, buildSignedChatImageReadUrl, verifySignedChatImageReadUrl |
 | `museum-backend/src/modules/chat/adapters/primary/http/chat-message.route.ts` | createPostMessageHandler, initSseTimers, createStreamHandler |
 | `museum-backend/src/modules/chat/adapters/primary/http/chat-media.route.ts` | createAudioHandler, createImageServeHandler, createMediaRouter |
-| `museum-backend/src/modules/review/domain/review.repository.interface.ts` | createReview, listReviews |
 | `museum-backend/src/modules/support/domain/support.repository.interface.ts` | createTicket, listTickets |
+| `museum-backend/src/modules/review/domain/review.repository.interface.ts` | createReview, listReviews |
 
 ## Entry Points
 
@@ -52,16 +52,16 @@ Start here when exploring this area:
 | `parseListSessionsQuery` | Function | `museum-backend/src/modules/chat/adapters/primary/http/chat.contracts.ts` | 252 |
 | `parseReportMessageRequest` | Function | `museum-backend/src/modules/chat/adapters/primary/http/chat.contracts.ts` | 386 |
 | `parseContext` | Function | `museum-backend/src/modules/chat/adapters/primary/http/chat-route.helpers.ts` | 115 |
-| `createApiRouter` | Function | `museum-backend/src/shared/routers/api.router.ts` | 122 |
 | `createUploadAdmissionMiddleware` | Function | `museum-backend/src/helpers/middleware/upload-admission.middleware.ts` | 9 |
-| `requireRole` | Function | `museum-backend/src/helpers/middleware/require-role.middleware.ts` | 10 |
-| `errorHandler` | Function | `museum-backend/src/helpers/middleware/error.middleware.ts` | 39 |
-| `isAuthenticated` | Function | `museum-backend/src/helpers/middleware/authenticated.middleware.ts` | 15 |
-| `isAuthenticatedJwtOnly` | Function | `museum-backend/src/helpers/middleware/authenticated.middleware.ts` | 43 |
 | `createChatRouter` | Function | `museum-backend/src/modules/chat/adapters/primary/http/chat.route.ts` | 18 |
 | `createSessionRouter` | Function | `museum-backend/src/modules/chat/adapters/primary/http/chat-session.route.ts` | 15 |
 | `getRequestUser` | Function | `museum-backend/src/modules/chat/adapters/primary/http/chat-route.helpers.ts` | 172 |
 | `createMediaRouter` | Function | `museum-backend/src/modules/chat/adapters/primary/http/chat-media.route.ts` | 134 |
+| `isCreateSessionResponse` | Function | `museum-backend/src/modules/chat/adapters/primary/http/chat.contracts.ts` | 282 |
+| `isPostMessageResponse` | Function | `museum-backend/src/modules/chat/adapters/primary/http/chat.contracts.ts` | 293 |
+| `isPostAudioMessageResponse` | Function | `museum-backend/src/modules/chat/adapters/primary/http/chat.contracts.ts` | 310 |
+| `isGetSessionResponse` | Function | `museum-backend/src/modules/chat/adapters/primary/http/chat.contracts.ts` | 330 |
+| `isDeleteSessionResponse` | Function | `museum-backend/src/modules/chat/adapters/primary/http/chat.contracts.ts` | 377 |
 
 ## Execution Flows
 
@@ -84,11 +84,10 @@ Start here when exploring this area:
 |------|-------------|
 | Application | 5 calls |
 | Middleware | 4 calls |
-| Secondary | 2 calls |
-| Infrastructure | 2 calls |
-| Perf | 2 calls |
+| Infrastructure | 3 calls |
 | Chat | 2 calls |
-| Domain | 1 calls |
+| Perf | 2 calls |
+| Secondary | 1 calls |
 | UseCase | 1 calls |
 
 ## How to Explore

@@ -52,7 +52,7 @@ description: "Skill for the Scripts area of InnovMind. 14 symbols across 3 files
 
 | Area | Connections |
 |------|-------------|
-| Chat | 1 calls |
+| Middleware | 1 calls |
 
 ## How to Explore
 

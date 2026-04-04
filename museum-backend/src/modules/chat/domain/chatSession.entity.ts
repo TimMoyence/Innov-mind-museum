@@ -40,6 +40,9 @@ export class ChatSession {
   museumId?: number | null;
 
   @Column({ type: 'jsonb', nullable: true })
+  coordinates?: { lat: number; lng: number } | null;
+
+  @Column({ type: 'jsonb', nullable: true })
   visitContext?: VisitContext | null;
 
   @OneToMany(() => ChatMessage, (message) => message.session, {

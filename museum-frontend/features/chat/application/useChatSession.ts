@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/react-native';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { incrementCompletedSessions } from '@/shared/infrastructure/inAppReview';
 import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSettings';
+import { useLocation } from '@/features/museum/application/useLocation';
 import { useConnectivity } from '@/shared/infrastructure/connectivity/useConnectivity';
 import { useOfflineQueue } from './useOfflineQueue';
 import { chatApi } from '../infrastructure/chatApi';
@@ -36,15 +37,17 @@ export const useChatSession = (sessionId: string) => {
   const isSendingRef = useRef(false);
   const successfulSendsRef = useRef(0);
 
-  const { locale, museumMode, guideLevel } = useRuntimeSettings();
+  const { locale, museumMode: settingsMuseumMode, guideLevel } = useRuntimeSettings();
+  const { latitude, longitude } = useLocation();
   const { isOffline, enqueue, dequeue, peek, pendingCount } = useOfflineQueue();
   const { isConnected } = useConnectivity();
 
   // Sub-hooks
-  const { isLoading, error, setError, sessionTitle, museumName, loadSession } = useSessionLoader(
-    sessionId,
-    setMessages,
-  );
+  const { isLoading, error, setError, sessionTitle, museumName, sessionMuseumMode, loadSession } =
+    useSessionLoader(sessionId, setMessages);
+
+  // Session-level museumMode takes priority over settings (museum-initiated sessions)
+  const museumMode = sessionMuseumMode ?? settingsMuseumMode;
 
   const { streamTextRef, streamingIdRef, flushStreamText, scheduleFlush, resetStreaming } =
     useStreamingState(setMessages);
@@ -120,6 +123,10 @@ export const useChatSession = (sessionId: string) => {
             museumMode,
             guideLevel,
             locale,
+            location:
+              latitude != null && longitude != null
+                ? `lat:${String(latitude)},lng:${String(longitude)}`
+                : undefined,
           });
 
           const assistantMessage: ChatUiMessage = {
@@ -177,6 +184,10 @@ export const useChatSession = (sessionId: string) => {
           museumMode,
           guideLevel,
           locale,
+          location:
+            latitude != null && longitude != null
+              ? `lat:${String(latitude)},lng:${String(longitude)}`
+              : undefined,
           onToken: (chunk) => {
             streamTextRef.current += chunk;
             scheduleFlush();
@@ -269,6 +280,8 @@ export const useChatSession = (sessionId: string) => {
       guideLevel,
       sessionId,
       isOffline,
+      latitude,
+      longitude,
       enqueue,
       scheduleFlush,
       flushStreamText,

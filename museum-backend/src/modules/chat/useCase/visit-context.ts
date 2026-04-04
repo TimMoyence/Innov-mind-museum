@@ -128,6 +128,10 @@ export const buildVisitContextPromptBlock = (ctx: VisitContext | null | undefine
     lines.push(`Museum: ${sanitizePromptInput(ctx.museumName)}`);
   }
 
+  if (ctx.museumAddress) {
+    lines.push(`Address: ${sanitizePromptInput(ctx.museumAddress)}`);
+  }
+
   for (const artwork of ctx.artworksDiscussed.slice(-5)) {
     const parts = [sanitizePromptInput(artwork.title)];
     if (artwork.artist) parts.push(`by ${sanitizePromptInput(artwork.artist)}`);
@@ -144,9 +148,17 @@ export const buildVisitContextPromptBlock = (ctx: VisitContext | null | undefine
     );
   }
 
+  if (ctx.nearbyMuseums && ctx.nearbyMuseums.length > 0) {
+    lines.push('Nearby museums:');
+    for (const nm of ctx.nearbyMuseums) {
+      const distKm = (nm.distance / 1000).toFixed(1);
+      lines.push(`- ${sanitizePromptInput(nm.name)} (${distKm}km)`);
+    }
+  }
+
   lines.push(`Expertise: ${ctx.detectedExpertise}`);
 
-  return lines.join('\n').slice(0, 500);
+  return lines.join('\n').slice(0, 800);
 };
 
 /** Fields to patch on the session entity after an assistant response. */

@@ -2,6 +2,7 @@ import { badRequest } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 
 import { isValidSessionListCursor } from './chat-image.helpers';
+import { findNearbyMuseums } from './nearby-museums.provider';
 import { ensureSessionAccess } from './session-access';
 
 import type {
@@ -15,8 +16,9 @@ import type {
   ChatSessionsPage,
   SessionMessagesPage,
 } from '../domain/chat.repository.interface';
-import type { CreateSessionInput, MessagePageQuery } from '../domain/chat.types';
+import type { CreateSessionInput, MessagePageQuery, VisitContext } from '../domain/chat.types';
 import type { ChatSession } from '../domain/chatSession.entity';
+import type { IMuseumRepository } from '@modules/museum/domain/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
 
 const toSessionDTO = (session: ChatSession): CreateSessionResult => ({
@@ -33,6 +35,7 @@ const toSessionDTO = (session: ChatSession): CreateSessionResult => ({
 export interface ChatSessionServiceDeps {
   repository: ChatRepository;
   cache?: CacheService;
+  museumRepository?: IMuseumRepository;
 }
 
 /**
@@ -41,16 +44,20 @@ export interface ChatSessionServiceDeps {
 export class ChatSessionService {
   private readonly repository: ChatRepository;
   private readonly cache?: CacheService;
+  private readonly museumRepository?: IMuseumRepository;
 
   constructor(deps: ChatSessionServiceDeps) {
     this.repository = deps.repository;
     this.cache = deps.cache;
+    this.museumRepository = deps.museumRepository;
   }
 
   /**
-   * Creates a new chat session.
+   * Creates a new chat session. When a museumId is provided and a museum repository
+   * is available, resolves museum name/address from the database and seeds the visit
+   * context. When coordinates are provided, finds nearby museums via haversine.
    *
-   * @param input - Session creation parameters (userId, locale, museumMode).
+   * @param input - Session creation parameters (userId, locale, museumMode, museumId, coordinates).
    * @returns The newly created session.
    * @throws {AppError} 400 if userId is not a positive integer.
    */
@@ -59,19 +66,74 @@ export class ChatSessionService {
       throw badRequest('userId must be a positive integer');
     }
 
+    const { museumName, visitContext } = await this.resolveMuseumInfo(input);
+
     const session = await this.repository.createSession({
       userId: input.userId,
       locale: input.locale,
       museumMode: input.museumMode,
       museumId: input.museumId,
+      museumName,
+      coordinates: input.coordinates,
+      visitContext,
     });
 
-    // Invalidate session list cache so new session appears immediately
     if (this.cache && input.userId) {
       await this.cache.delByPrefix(`sessions:user:${String(input.userId)}:`);
     }
 
     return toSessionDTO(session);
+  }
+
+  private async resolveMuseumInfo(input: CreateSessionInput): Promise<{
+    museumName: string | undefined;
+    visitContext: VisitContext | undefined;
+  }> {
+    let museumName = input.museumName;
+    let museumAddress = input.museumAddress;
+
+    if (input.museumId && this.museumRepository && !museumName) {
+      const museum = await this.museumRepository.findById(input.museumId);
+      if (museum) {
+        museumName = museum.name;
+        museumAddress = museumAddress ?? museum.address ?? undefined;
+      }
+    }
+
+    let visitContext: VisitContext | undefined;
+    if (museumName) {
+      visitContext = {
+        museumName,
+        museumAddress,
+        museumConfidence: 1,
+        artworksDiscussed: [],
+        roomsVisited: [],
+        detectedExpertise: 'beginner',
+        expertiseSignals: 0,
+        lastUpdated: new Date().toISOString(),
+      };
+    }
+
+    if (input.coordinates && this.museumRepository) {
+      const nearby = await findNearbyMuseums(
+        input.coordinates.lat,
+        input.coordinates.lng,
+        this.museumRepository,
+      );
+      if (nearby.length > 0) {
+        visitContext ??= {
+          museumConfidence: 0,
+          artworksDiscussed: [],
+          roomsVisited: [],
+          detectedExpertise: 'beginner',
+          expertiseSignals: 0,
+          lastUpdated: new Date().toISOString(),
+        };
+        visitContext.nearbyMuseums = nearby;
+      }
+    }
+
+    return { museumName, visitContext };
   }
 
   /**

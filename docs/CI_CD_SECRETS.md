@@ -24,11 +24,11 @@ Recommandation:
 
 ## Workflows concernés
 
-- `/Users/Tim/Desktop/all/dev/Pro/InnovMind/.github/workflows/ci-backend.yml`
-- `/Users/Tim/Desktop/all/dev/Pro/InnovMind/.github/workflows/ci-frontend.yml`
-- `/Users/Tim/Desktop/all/dev/Pro/InnovMind/.github/workflows/deploy-backend.yml`
-- `/Users/Tim/Desktop/all/dev/Pro/InnovMind/.github/workflows/deploy-backend-staging.yml`
-- `/Users/Tim/Desktop/all/dev/Pro/InnovMind/.github/workflows/mobile-release.yml`
+- `.github/workflows/ci-backend.yml`
+- `.github/workflows/ci-frontend.yml`
+- `.github/workflows/deploy-backend.yml`
+- `.github/workflows/deploy-backend-staging.yml`
+- `.github/workflows/mobile-release.yml`
 
 Note mobile:
 - `mobile-release.yml` est désormais orienté release mobile uniquement.

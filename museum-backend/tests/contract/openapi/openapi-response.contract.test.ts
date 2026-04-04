@@ -245,7 +245,25 @@ describe('openapi response contracts (active API)', () => {
       path: '/api/chat/art-keywords',
       method: 'get',
       statusCode: 200,
-      payload: { keywords: ['renaissance', 'baroque'] },
+      payload: {
+        keywords: [
+          {
+            id: '550e8400-e29b-41d4-a716-446655440000',
+            keyword: 'renaissance',
+            locale: 'en',
+            category: 'general',
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: '550e8400-e29b-41d4-a716-446655440001',
+            keyword: 'baroque',
+            locale: 'en',
+            category: 'general',
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+        syncedAt: new Date().toISOString(),
+      },
     });
     assertMatchesOpenApiResponse({
       path: '/api/chat/art-keywords',

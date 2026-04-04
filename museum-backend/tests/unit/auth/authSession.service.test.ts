@@ -30,6 +30,7 @@ const mockClearLoginAttempts = clearLoginAttempts as jest.MockedFunction<typeof 
 // ── Helpers ────────────────────────────────────────────────────────
 
 import { makeUser } from '../../helpers/auth/user.fixtures';
+import { makeUserRepo, makeRefreshTokenRepo } from '../../helpers/auth/user-repo.mock';
 
 const sha256 = (value: string): string => crypto.createHash('sha256').update(value).digest('hex');
 
@@ -51,36 +52,10 @@ const makeStoredToken = (
   ...overrides,
 });
 
-const makeMockRepos = () => {
-  const userRepo: jest.Mocked<IUserRepository> = {
-    getUserByEmail: jest.fn(),
-    getUserById: jest.fn(),
-    registerUser: jest.fn(),
-    setResetToken: jest.fn(),
-    getUserByResetToken: jest.fn(),
-    updatePassword: jest.fn(),
-    registerSocialUser: jest.fn(),
-    consumeResetTokenAndUpdatePassword: jest.fn(),
-    deleteUser: jest.fn(),
-    setVerificationToken: jest.fn(),
-    verifyEmail: jest.fn(),
-    setEmailChangeToken: jest.fn(),
-    consumeEmailChangeToken: jest.fn(),
-    markOnboardingCompleted: jest.fn().mockResolvedValue(undefined),
-  };
-
-  const refreshTokenRepo: jest.Mocked<IRefreshTokenRepository> = {
-    findByJti: jest.fn(),
-    revokeFamily: jest.fn().mockResolvedValue(undefined),
-    revokeByJti: jest.fn().mockResolvedValue(undefined),
-    rotate: jest.fn().mockResolvedValue(undefined),
-    insert: jest.fn().mockResolvedValue(undefined),
-    deleteExpiredTokens: jest.fn().mockResolvedValue(0),
-    revokeAllForUser: jest.fn().mockResolvedValue(undefined),
-  };
-
-  return { userRepo, refreshTokenRepo };
-};
+const makeMockRepos = () => ({
+  userRepo: makeUserRepo(),
+  refreshTokenRepo: makeRefreshTokenRepo(),
+});
 
 const createService = (
   userRepo?: jest.Mocked<IUserRepository>,

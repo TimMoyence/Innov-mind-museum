@@ -3,6 +3,7 @@ import type { DataSource, Repository, UpdateResult } from 'typeorm';
 import { Review } from '@modules/review/domain/review.entity';
 
 import { ReviewRepositoryPg } from '@modules/review/adapters/secondary/review.repository.pg';
+import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 
 // ─── Review factory ───
 function makeReview(overrides: Partial<Review> = {}): Review {
@@ -17,22 +18,6 @@ function makeReview(overrides: Partial<Review> = {}): Review {
     updatedAt: new Date('2025-06-01'),
     ...overrides,
   } as Review;
-}
-
-function makeMockQb() {
-  const qb: Record<string, jest.Mock> = {
-    where: jest.fn().mockReturnThis(),
-    andWhere: jest.fn().mockReturnThis(),
-    orderBy: jest.fn().mockReturnThis(),
-    skip: jest.fn().mockReturnThis(),
-    take: jest.fn().mockReturnThis(),
-    getMany: jest.fn(),
-    getCount: jest.fn(),
-    select: jest.fn().mockReturnThis(),
-    addSelect: jest.fn().mockReturnThis(),
-    getRawOne: jest.fn(),
-  };
-  return qb;
 }
 
 function buildMocks() {

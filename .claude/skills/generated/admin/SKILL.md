@@ -48,9 +48,9 @@ Start here when exploring this area:
 | `fetchStats` | Function | `museum-web/src/app/[locale]/admin/page.tsx` | 51 |
 | `TicketsPage` | Function | `museum-web/src/app/[locale]/admin/tickets/page.tsx` | 27 |
 | `handleUpdate` | Function | `museum-web/src/app/[locale]/admin/tickets/page.tsx` | 82 |
-| `AdminLoginPage` | Function | `museum-web/src/app/[locale]/admin/login/page.tsx` | 5 |
 | `ReportsPage` | Function | `museum-web/src/app/[locale]/admin/reports/page.tsx` | 20 |
 | `handleReview` | Function | `museum-web/src/app/[locale]/admin/reports/page.tsx` | 72 |
+| `AdminLoginPage` | Function | `museum-web/src/app/[locale]/admin/login/page.tsx` | 5 |
 | `AuditLogsPage` | Function | `museum-web/src/app/[locale]/admin/audit-logs/page.tsx` | 8 |
 | `AuthenticatedLayout` | Function | `museum-web/src/components/admin/AdminShell.tsx` | 37 |
 | `isActive` | Function | `museum-web/src/components/admin/AdminShell.tsx` | 50 |

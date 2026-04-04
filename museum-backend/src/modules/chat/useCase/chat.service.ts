@@ -34,6 +34,7 @@ import type { ChatOrchestrator } from '../domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '../domain/ports/image-storage.port';
 import type { OcrService } from '../domain/ports/ocr.port';
 import type { TextToSpeechService } from '../domain/ports/tts.port';
+import type { IMuseumRepository } from '@modules/museum/domain/museum.repository.interface';
 import type { AuditService } from '@shared/audit/audit.service';
 import type { CacheService } from '@shared/cache/cache.port';
 
@@ -62,6 +63,7 @@ export interface ChatServiceDeps {
   knowledgeBase?: KnowledgeBaseService;
   imageEnrichment?: ImageEnrichmentService;
   artTopicClassifier?: ArtTopicClassifierPort;
+  museumRepository?: IMuseumRepository;
 }
 
 /**
@@ -83,6 +85,7 @@ export class ChatService {
     this.sessions = new ChatSessionService({
       repository: deps.repository,
       cache: deps.cache,
+      museumRepository: deps.museumRepository,
     });
 
     this.messages = new ChatMessageService({

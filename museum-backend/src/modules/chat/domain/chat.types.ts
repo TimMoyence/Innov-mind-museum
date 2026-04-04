@@ -31,6 +31,7 @@ export interface VisitedArtwork {
 /** Accumulated context about a museum visit across a chat session. */
 export interface VisitContext {
   museumName?: string;
+  museumAddress?: string;
   /** Confidence score (0-1) that the detected museum name is correct. */
   museumConfidence: number;
   artworksDiscussed: VisitedArtwork[];
@@ -40,6 +41,8 @@ export interface VisitContext {
   expertiseSignals: number;
   /** ISO-8601 timestamp of the last context update. */
   lastUpdated: string;
+  /** Nearby museums resolved from coordinates at session creation. */
+  nearbyMuseums?: { name: string; distance: number }[];
 }
 
 /** Parameters for creating a new chat session. */
@@ -48,6 +51,11 @@ export interface CreateSessionInput {
   locale?: string;
   museumMode?: boolean;
   museumId?: number;
+  museumName?: string;
+  museumAddress?: string;
+  coordinates?: { lat: number; lng: number };
+  /** Pre-seeded visit context (set by ChatSessionService when resolving museum info). */
+  visitContext?: VisitContext;
 }
 
 /** Client-provided context attached to each chat message request. */

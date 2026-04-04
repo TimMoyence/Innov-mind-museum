@@ -4,6 +4,7 @@ import { SupportTicket } from '@modules/support/domain/supportTicket.entity';
 import { TicketMessage } from '@modules/support/domain/ticketMessage.entity';
 
 import { SupportRepositoryPg } from '@modules/support/adapters/secondary/support.repository.pg';
+import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 
 // ─── Factories ───
 function makeTicket(overrides: Partial<SupportTicket> = {}): SupportTicket {
@@ -32,29 +33,6 @@ function makeTicketMessage(overrides: Partial<TicketMessage> = {}): TicketMessag
     createdAt: new Date('2025-06-01'),
     ...overrides,
   } as TicketMessage;
-}
-
-function makeMockQb() {
-  const qb: Record<string, jest.Mock> = {
-    where: jest.fn().mockReturnThis(),
-    andWhere: jest.fn().mockReturnThis(),
-    orderBy: jest.fn().mockReturnThis(),
-    skip: jest.fn().mockReturnThis(),
-    take: jest.fn().mockReturnThis(),
-    offset: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockReturnThis(),
-    getCount: jest.fn(),
-    getMany: jest.fn(),
-    getManyAndCount: jest.fn(),
-    clone: jest.fn(),
-    addSelect: jest.fn().mockReturnThis(),
-    getRawAndEntities: jest.fn(),
-    select: jest.fn().mockReturnThis(),
-    from: jest.fn().mockReturnThis(),
-  };
-  // clone returns the same qb for chaining
-  qb.clone.mockReturnValue(qb);
-  return qb;
 }
 
 function buildMocks() {

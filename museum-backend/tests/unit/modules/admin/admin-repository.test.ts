@@ -8,33 +8,7 @@ import { AuditLog } from '@shared/audit/auditLog.entity';
 
 import { AdminRepositoryPg } from '@modules/admin/adapters/secondary/admin.repository.pg';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
-
-// ─── QueryBuilder mock factory ───
-function makeMockQb() {
-  const qb: Record<string, jest.Mock> = {
-    where: jest.fn().mockReturnThis(),
-    andWhere: jest.fn().mockReturnThis(),
-    orderBy: jest.fn().mockReturnThis(),
-    addOrderBy: jest.fn().mockReturnThis(),
-    skip: jest.fn().mockReturnThis(),
-    take: jest.fn().mockReturnThis(),
-    getMany: jest.fn(),
-    getCount: jest.fn(),
-    getManyAndCount: jest.fn(),
-    leftJoinAndSelect: jest.fn().mockReturnThis(),
-    leftJoin: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    addSelect: jest.fn().mockReturnThis(),
-    groupBy: jest.fn().mockReturnThis(),
-    addGroupBy: jest.fn().mockReturnThis(),
-    getRawMany: jest.fn(),
-    getRawOne: jest.fn(),
-    limit: jest.fn().mockReturnThis(),
-    from: jest.fn().mockReturnThis(),
-    distinctOn: jest.fn().mockReturnThis(),
-  };
-  return qb;
-}
+import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 
 // ─── Report factory ───
 function makeReport(overrides: Partial<MessageReport> = {}): MessageReport {

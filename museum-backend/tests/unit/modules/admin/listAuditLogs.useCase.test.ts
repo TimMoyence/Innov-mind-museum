@@ -1,13 +1,14 @@
 import { ListAuditLogsUseCase } from '@modules/admin/useCase/listAuditLogs.useCase';
 import type { IAdminRepository } from '@modules/admin/domain/admin.repository.interface';
+import { makeAdminRepo } from 'tests/helpers/admin/repo.fixtures';
 
 const mockRepo = (overrides: Partial<IAdminRepository> = {}): IAdminRepository =>
-  ({
+  makeAdminRepo({
     listAuditLogs: jest
       .fn()
       .mockResolvedValue({ items: [], total: 0, page: 1, limit: 20, totalPages: 0 }),
     ...overrides,
-  }) as unknown as IAdminRepository;
+  });
 
 describe('ListAuditLogsUseCase', () => {
   it('throws for non-integer page', async () => {

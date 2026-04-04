@@ -1939,3 +1939,61 @@ Apres l'audit R16 (81/100 CONDITIONAL GO, 28 mars), du travail de development a 
 | Tests frontend | 328 | 422 | +94 |
 | Typecheck errors | 0 | 0 | 0 |
 | as any | 0 | 0 | 0 |
+
+---
+
+## Session S11 — Fix "Start Chat Here" Museum Context (2026-04-04)
+
+**Scope**: Bug fix — 4 problems in the museum-detail → chat flow. Full-stack.
+**Mode**: /team bug
+**Stats**: 13 files modified, 3 new files, +13 tests, migration.
+
+### Resume executif
+
+Critical UX bug: clicking "Start Chat Here" on a museum created a chat session where the LLM had no idea which museum the visitor was in. Four interconnected problems fixed:
+
+1. **museumName never resolved**: `ChatSessionService.createSession()` stored `museumId` but never looked up the museum. Now resolves via `IMuseumRepository.findById()` and seeds `visitContext` with museum name + confidence 1.0.
+2. **museumMode overridden by settings**: Frontend `useChatSession` used runtime settings `museumMode` instead of the session's. Now `sessionMuseumMode` from the loaded session takes priority.
+3. **GPS never sent**: `useChatSession` never passed coordinates. Now imports `useLocation` and sends `lat:{lat},lng:{lng}` in message context.
+4. **No "what's around me?"**: Created `nearby-museums.provider.ts` using haversine formula. Nearby museums seeded into `visitContext` at session creation, rendered in `buildVisitContextPromptBlock`.
+
+### Architecture decisions
+
+- Museum resolution at **session creation** (not per-message), seeded into `visitContext`. Avoids touching `chat-message.service.ts` (381L, split in S8).
+- `visitContext` extended with `museumAddress` and `nearbyMuseums` — prompt builder renders them automatically.
+- New `IMuseumRepository` dependency: `ChatServiceDeps` → `ChatSessionServiceDeps` → wired in `chat/index.ts`.
+- GPS per-message uses existing `context.location` mechanism in prompt builder.
+- Migration: single `ALTER TABLE` for `coordinates` jsonb column.
+
+### Fichiers
+
+| Fichier | Couche | Modification |
+|---------|--------|-------------|
+| `tests/helpers/auth/user.fixtures.ts` | BE Test | Pre-existing: `onboarding_completed: false` |
+| `chat/domain/chat.types.ts` | BE Domain | Extended CreateSessionInput + VisitContext |
+| `chat/domain/chatSession.entity.ts` | BE Domain | Added coordinates column |
+| `chat/adapters/secondary/chat.repository.typeorm.ts` | BE Secondary | Map new fields |
+| `chat/adapters/primary/http/chat.contracts.ts` | BE HTTP | Parse museumName, museumAddress, coordinates |
+| `chat/useCase/chat-session.service.ts` | BE UseCase | Museum resolution + nearby + visitContext |
+| `chat/useCase/chat.service.ts` | BE UseCase | Wire museumRepository |
+| `chat/index.ts` | BE Module | Import museumRepository |
+| `chat/useCase/visit-context.ts` | BE UseCase | Render museumAddress + nearbyMuseums |
+| **NEW** `chat/useCase/nearby-museums.provider.ts` | BE UseCase | Haversine nearby provider |
+| **NEW** `tests/helpers/museum/museum.fixtures.ts` | BE Test | makeMuseum + makeMuseumRepo |
+| **NEW** `tests/unit/chat/nearby-museums.provider.test.ts` | BE Test | 5 tests |
+| Migration `AddCoordinatesToChatSession` | BE Migration | coordinates jsonb |
+| `chat/domain/contracts.ts` | FE Domain | Extended CreateSessionRequestDTO |
+| `chat/application/useStartConversation.ts` | FE App | Pass museum info + coordinates |
+| `app/(stack)/museum-detail.tsx` | FE Stack | Extract museum info from params |
+| `chat/application/useSessionLoader.ts` | FE App | Expose sessionMuseumMode |
+| `chat/application/useChatSession.ts` | FE App | GPS + session museumMode priority |
+
+### Metriques
+
+| Metrique | Avant | Apres | Delta |
+|----------|:-----:|:-----:|:-----:|
+| Tests backend | 2281 | 2294 | +13 |
+| Tests frontend | 1042 | 1042 | 0 |
+| Typecheck errors | 0 | 0 | 0 |
+| as any | 0 | 0 | 0 |
+| eslint-disable (new) | 0 | 0 | 0 |

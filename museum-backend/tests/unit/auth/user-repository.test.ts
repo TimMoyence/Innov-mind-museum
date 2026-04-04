@@ -6,25 +6,12 @@ import { AppError } from '@shared/errors/app.error';
 
 import { UserRepositoryPg } from '@modules/auth/adapters/secondary/user.repository.pg';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
+import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 
 // ─── Mock bcrypt ───
 jest.mock('bcrypt', () => ({
   hash: jest.fn().mockResolvedValue('$2b$12$hashed_result'),
 }));
-
-// ─── QueryBuilder mock factory ───
-function makeMockQb() {
-  const qb: Record<string, jest.Mock> = {
-    update: jest.fn().mockReturnThis(),
-    set: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    returning: jest.fn().mockReturnThis(),
-    execute: jest.fn(),
-    delete: jest.fn().mockReturnThis(),
-    from: jest.fn().mockReturnThis(),
-  };
-  return qb;
-}
 
 // ─── TypeORM repo + DataSource mock factory ───
 function buildMocks() {
