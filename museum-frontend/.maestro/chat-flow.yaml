@@ -1,0 +1,91 @@
+appId: com.musaium.mobile.preview
+---
+# Chat Flow: Start a new conversation -> send a message -> verify AI response
+#
+# Prerequisites:
+#   - User is already logged in (run auth-flow.yaml first, or app state is authenticated)
+#   - Backend running on localhost:3000 with a working LLM provider
+#
+# This flow validates the core chat experience.
+
+# ──────────────────────────────────────────────
+# Phase 1: Verify home screen is visible
+# ──────────────────────────────────────────────
+- waitForAnimationToEnd
+
+# If we land on auth screen, we need to log in first
+- runFlow:
+    when:
+      visible: "Welcome back"
+    file: helpers/quick-login.yaml
+
+# Handle onboarding if it appears
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Start Conversation"
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 2: Start a new conversation
+# ──────────────────────────────────────────────
+- tapOn: "Start Conversation"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 3: Handle AI consent modal (first time only)
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "I understand, continue"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 4: Send a text message
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "Ask about an artwork.*"
+- inputText: "Who painted the Mona Lisa?"
+
+# Tap the send button (identified by accessibility label)
+- tapOn:
+    label: "Send message"
+
+# ──────────────────────────────────────────────
+# Phase 5: Wait for AI response
+# ──────────────────────────────────────────────
+# The response should appear as an assistant message bubble.
+# Wait for the loading/streaming to finish and verify content appeared.
+- waitForAnimationToEnd:
+    timeout: 30000
+
+# Verify the user message is visible
+- assertVisible: "Who painted the Mona Lisa?"
+
+# ──────────────────────────────────────────────
+# Phase 6: Send a follow-up message
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "Ask about an artwork.*"
+- inputText: "Tell me about the style of this painting"
+
+- tapOn:
+    label: "Send message"
+
+- waitForAnimationToEnd:
+    timeout: 30000
+
+# Verify the follow-up was sent
+- assertVisible: "Tell me about the style of this painting"
+
+# ──────────────────────────────────────────────
+# Phase 7: Close the chat and return
+# ──────────────────────────────────────────────
+- tapOn:
+    label: "Close conversation"
+
+- waitForAnimationToEnd

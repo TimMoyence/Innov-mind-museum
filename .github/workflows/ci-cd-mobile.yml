@@ -90,6 +90,32 @@ jobs:
       - name: Test
         run: npm test
 
+  maestro-e2e:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    needs: quality
+    runs-on: macos-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: museum-frontend
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run Maestro E2E tests via Maestro Cloud
+        uses: mobile-dev-inc/action-maestro-cloud@v2
+        with:
+          api-key: ${{ secrets.MAESTRO_CLOUD_API_KEY }}
+          app-file: ${{ github.workspace }}/museum-frontend/.maestro/config.yaml
+          workspace: museum-frontend/.maestro
+        # Note: Requires a development build (.app or .apk) artifact.
+        # Until EAS build artifact download is wired up, this job serves
+        # as a valid skeleton. Replace app-file with the actual build
+        # artifact path once available.
+        #
+        # Local alternative (no Maestro Cloud):
+        #   - run: brew install maestro
+        #   - run: maestro test museum-frontend/.maestro/
+
   build-preview-ios:
     if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'preview' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all') }}
     needs: quality
