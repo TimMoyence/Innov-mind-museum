@@ -1,16 +1,10 @@
 import { AuditService } from '@shared/audit/audit.service';
-import type { IAuditLogRepository } from '@shared/audit/audit.repository.interface';
 import type { AuditLogEntry } from '@shared/audit/audit.types';
-
-const makeRepo = (overrides: Partial<IAuditLogRepository> = {}): IAuditLogRepository => ({
-  insert: jest.fn().mockResolvedValue(undefined),
-  insertBatch: jest.fn().mockResolvedValue(undefined),
-  ...overrides,
-});
+import { makeAuditRepo } from '../../helpers/audit/repo.fixtures';
 
 describe('AuditService', () => {
   it('calls repository.insert with the entry', () => {
-    const repo = makeRepo();
+    const repo = makeAuditRepo();
     const service = new AuditService(repo);
 
     const entry: AuditLogEntry = {
@@ -26,7 +20,7 @@ describe('AuditService', () => {
   });
 
   it('does not throw when repository.insert rejects', async () => {
-    const repo = makeRepo({
+    const repo = makeAuditRepo({
       insert: jest.fn().mockRejectedValue(new Error('DB down')),
     });
     const service = new AuditService(repo);
@@ -39,7 +33,7 @@ describe('AuditService', () => {
   });
 
   it('calls repository.insertBatch for logBatch', () => {
-    const repo = makeRepo();
+    const repo = makeAuditRepo();
     const service = new AuditService(repo);
 
     const entries: AuditLogEntry[] = [
@@ -53,7 +47,7 @@ describe('AuditService', () => {
   });
 
   it('skips insertBatch for empty array', () => {
-    const repo = makeRepo();
+    const repo = makeAuditRepo();
     const service = new AuditService(repo);
 
     service.logBatch([]);
@@ -62,7 +56,7 @@ describe('AuditService', () => {
   });
 
   it('does not throw when insertBatch rejects', async () => {
-    const repo = makeRepo({
+    const repo = makeAuditRepo({
       insertBatch: jest.fn().mockRejectedValue(new Error('DB down')),
     });
     const service = new AuditService(repo);
@@ -73,7 +67,7 @@ describe('AuditService', () => {
   });
 
   it('logs non-Error rejection from insert as string', async () => {
-    const repo = makeRepo({
+    const repo = makeAuditRepo({
       insert: jest.fn().mockRejectedValue('string error'),
     });
     const service = new AuditService(repo);
@@ -85,7 +79,7 @@ describe('AuditService', () => {
   });
 
   it('logs non-Error rejection from insertBatch as string', async () => {
-    const repo = makeRepo({
+    const repo = makeAuditRepo({
       insertBatch: jest.fn().mockRejectedValue(42),
     });
     const service = new AuditService(repo);

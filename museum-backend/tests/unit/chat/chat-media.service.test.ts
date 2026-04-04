@@ -1,32 +1,16 @@
 import { ChatMediaService } from '@modules/chat/useCase/chat-media.service';
-import type {
-  ChatRepository,
-  ChatMessageWithSessionOwnership,
-} from '@modules/chat/domain/chat.repository.interface';
+import type { ChatMessageWithSessionOwnership } from '@modules/chat/domain/chat.repository.interface';
 import type { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import type { ChatSession } from '@modules/chat/domain/chatSession.entity';
 import type { TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
-import type { CacheService } from '@shared/cache/cache.port';
+import { makeSession } from '../../helpers/chat/message.fixtures';
+import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
+import { makeCache } from '../../helpers/chat/cache.fixtures';
 
 // ── Factories ──────────────────────────────────────────────────────────
 
 const SESSION_ID = 'a0a0a0a0-b1b1-4c2c-8d3d-e4e4e4e4e4e4';
 const MESSAGE_ID = 'b1b1b1b1-c2c2-4d3d-9e4e-f5f5f5f5f5f5';
-
-const makeSession = (overrides: Partial<ChatSession> = {}): ChatSession =>
-  ({
-    id: SESSION_ID,
-    locale: 'en',
-    museumMode: false,
-    title: null,
-    museumName: null,
-    messages: [],
-    version: 1,
-    user: { id: 42 },
-    createdAt: new Date('2026-01-01T00:00:00Z'),
-    updatedAt: new Date('2026-01-01T00:00:00Z'),
-    ...overrides,
-  }) as ChatSession;
 
 const makeMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage =>
   ({
@@ -36,7 +20,7 @@ const makeMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage =>
     imageRef: null,
     metadata: null,
     createdAt: new Date('2026-01-01T00:00:00Z'),
-    session: makeSession(),
+    session: makeSession({ id: SESSION_ID, user: { id: 42 } as ChatSession['user'] }),
     artworkMatches: [],
     ...overrides,
   }) as ChatMessage;
@@ -45,44 +29,30 @@ const makeMessageRow = (
   msgOverrides: Partial<ChatMessage> = {},
   sessionOverrides: Partial<ChatSession> = {},
 ): ChatMessageWithSessionOwnership => {
-  const session = makeSession(sessionOverrides);
+  const session = makeSession({
+    id: SESSION_ID,
+    user: { id: 42 } as ChatSession['user'],
+    ...sessionOverrides,
+  });
   const message = makeMessage({ ...msgOverrides, session });
   return { message, session };
 };
 
-const makeRepo = (
-  messageRow: ChatMessageWithSessionOwnership | null = makeMessageRow(),
-): jest.Mocked<ChatRepository> => ({
-  createSession: jest.fn(),
-  getSessionById: jest.fn(),
-  getMessageById: jest.fn().mockResolvedValue(messageRow),
-  deleteSessionIfEmpty: jest.fn(),
-  persistMessage: jest.fn(),
-  listSessionMessages: jest.fn(),
-  listSessionHistory: jest.fn(),
-  listSessions: jest.fn(),
-  hasMessageReport: jest.fn().mockResolvedValue(false),
-  persistMessageReport: jest.fn().mockResolvedValue(undefined),
-  exportUserData: jest.fn(),
-  upsertMessageFeedback: jest.fn().mockResolvedValue(undefined),
-  deleteMessageFeedback: jest.fn().mockResolvedValue(undefined),
-  getMessageFeedback: jest.fn().mockResolvedValue(null),
-});
+const makeRepo = (messageRow: ChatMessageWithSessionOwnership | null = makeMessageRow()) =>
+  makeChatRepo({
+    getMessageById: jest.fn().mockResolvedValue(messageRow),
+    hasMessageReport: jest.fn().mockResolvedValue(false),
+    persistMessageReport: jest.fn().mockResolvedValue(undefined),
+    upsertMessageFeedback: jest.fn().mockResolvedValue(undefined),
+    deleteMessageFeedback: jest.fn().mockResolvedValue(undefined),
+    getMessageFeedback: jest.fn().mockResolvedValue(null),
+  });
 
 const makeTts = (): jest.Mocked<TextToSpeechService> => ({
   synthesize: jest.fn().mockResolvedValue({
     audio: Buffer.from('fake-audio'),
     contentType: 'audio/mpeg',
   }),
-});
-
-const makeCache = (): jest.Mocked<CacheService> => ({
-  get: jest.fn().mockResolvedValue(null),
-  set: jest.fn().mockResolvedValue(undefined),
-  del: jest.fn().mockResolvedValue(undefined),
-  delByPrefix: jest.fn().mockResolvedValue(undefined),
-  setNx: jest.fn().mockResolvedValue(true),
-  ping: jest.fn().mockResolvedValue(true),
 });
 
 // ── Tests ──────────────────────────────────────────────────────────────

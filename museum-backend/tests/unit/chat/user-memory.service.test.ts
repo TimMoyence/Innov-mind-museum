@@ -2,8 +2,8 @@ import { UserMemoryService } from '@modules/chat/useCase/user-memory.service';
 import type { UserMemoryRepository } from '@modules/chat/domain/userMemory.repository.interface';
 import type { UserMemory } from '@modules/chat/domain/userMemory.entity';
 import type { VisitContext } from '@modules/chat/domain/chat.types';
-import type { CacheService } from '@shared/cache/cache.port';
 import { makeMemory } from 'tests/helpers/chat/userMemory.fixtures';
+import { makeCache } from '../../helpers/chat/cache.fixtures';
 
 const makeRepo = (memory: UserMemory | null = null): jest.Mocked<UserMemoryRepository> => ({
   getByUserId: jest.fn().mockResolvedValue(memory),
@@ -12,15 +12,6 @@ const makeRepo = (memory: UserMemory | null = null): jest.Mocked<UserMemoryRepos
     ...updates,
   })),
   deleteByUserId: jest.fn().mockResolvedValue(undefined),
-});
-
-const makeCache = (): jest.Mocked<CacheService> => ({
-  get: jest.fn().mockResolvedValue(null),
-  set: jest.fn().mockResolvedValue(undefined),
-  del: jest.fn().mockResolvedValue(undefined),
-  delByPrefix: jest.fn().mockResolvedValue(undefined),
-  setNx: jest.fn().mockResolvedValue(true),
-  ping: jest.fn().mockResolvedValue(true),
 });
 
 const makeVisitContext = (overrides: Partial<VisitContext> = {}): VisitContext => ({
