@@ -4,7 +4,6 @@
  * This is the single source of truth for all colors across:
  * - museum-frontend (React Native / Expo)
  * - museum-web (Next.js / Tailwind 4)
- * - museum-admin (Vite / Tailwind 4)
  *
  * Run `node --import tsx design-system/build.ts` to regenerate platform outputs.
  */

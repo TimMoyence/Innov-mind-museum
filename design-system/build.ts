@@ -5,7 +5,6 @@
  * Reads canonical tokens from ./tokens/ and generates platform-specific files:
  *   - museum-frontend/shared/ui/tokens.generated.ts  (React Native)
  *   - museum-web/src/tokens.generated.css             (Tailwind 4 @theme)
- *   - museum-admin/src/tokens.generated.css            (Tailwind 4 @theme)
  *
  * Usage: node --import tsx design-system/build.ts
  */
@@ -211,11 +210,6 @@ const outputs = [
     path: resolve(root, 'museum-web/src/tokens.generated.css'),
     content: buildTailwindCSS(),
     label: 'museum-web',
-  },
-  {
-    path: resolve(root, 'museum-admin/src/tokens.generated.css'),
-    content: buildTailwindCSS(),
-    label: 'museum-admin',
   },
 ];
 
