@@ -49,7 +49,7 @@ export default function MuseumDetailScreen() {
     const lat = Number(params.latitude);
     const lng = Number(params.longitude);
     if (Number.isNaN(lat) || Number.isNaN(lng)) return;
-    const name = encodeURIComponent(params.name ?? '');
+    const name = encodeURIComponent(params.name);
     const url =
       Platform.OS === 'ios'
         ? `https://maps.apple.com/?ll=${String(lat)},${String(lng)}&q=${name}`

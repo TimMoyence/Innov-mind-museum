@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { Text, Pressable } from 'react-native';
 import * as RN from 'react-native';
 
@@ -71,11 +71,11 @@ describe('ThemeContext', () => {
       </ThemeProvider>,
     );
 
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('set-dark'));
-    });
+    fireEvent.press(screen.getByTestId('set-dark'));
 
-    expect(screen.getByTestId('mode').props.children).toBe('dark');
+    await waitFor(() => {
+      expect(screen.getByTestId('mode').props.children).toBe('dark');
+    });
     expect(screen.getByTestId('isDark').props.children).toBe('true');
     expect(AsyncStorage.setItem).toHaveBeenCalledWith('app.themeMode', 'dark');
   });
@@ -148,12 +148,12 @@ describe('ThemeContext', () => {
       </ThemeProvider>,
     );
 
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('set-dark'));
-    });
+    fireEvent.press(screen.getByTestId('set-dark'));
 
     // Mode should still change in memory even if persistence fails
-    expect(screen.getByTestId('mode').props.children).toBe('dark');
+    await waitFor(() => {
+      expect(screen.getByTestId('mode').props.children).toBe('dark');
+    });
   });
 
   it('provides default noop setMode outside provider', () => {
@@ -186,15 +186,15 @@ describe('ThemeContext', () => {
       </ThemeProvider>,
     );
 
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('set-dark'));
+    fireEvent.press(screen.getByTestId('set-dark'));
+    await waitFor(() => {
+      expect(screen.getByTestId('isDark').props.children).toBe('true');
     });
-    expect(screen.getByTestId('isDark').props.children).toBe('true');
 
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('set-light'));
+    fireEvent.press(screen.getByTestId('set-light'));
+    await waitFor(() => {
+      expect(screen.getByTestId('isDark').props.children).toBe('false');
     });
-    expect(screen.getByTestId('isDark').props.children).toBe('false');
     expect(screen.getByTestId('mode').props.children).toBe('light');
   });
 
@@ -205,12 +205,14 @@ describe('ThemeContext', () => {
       </ThemeProvider>,
     );
 
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('set-dark'));
+    fireEvent.press(screen.getByTestId('set-dark'));
+    await waitFor(() => {
+      expect(screen.getByTestId('mode').props.children).toBe('dark');
     });
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('set-system'));
+
+    fireEvent.press(screen.getByTestId('set-system'));
+    await waitFor(() => {
+      expect(screen.getByTestId('mode').props.children).toBe('system');
     });
-    expect(screen.getByTestId('mode').props.children).toBe('system');
   });
 });

@@ -141,7 +141,7 @@ export const useAudioRecorder = () => {
 
       const blob = await new Promise<Blob>((resolve) => {
         mediaRecorder.onstop = () => {
-          const mimeType = mediaRecorder.mimeType?.length ? mediaRecorder.mimeType : 'audio/webm';
+          const mimeType = mediaRecorder.mimeType.length ? mediaRecorder.mimeType : 'audio/webm';
           resolve(new Blob(webAudioChunksRef.current, { type: mimeType }));
         };
         mediaRecorder.stop();

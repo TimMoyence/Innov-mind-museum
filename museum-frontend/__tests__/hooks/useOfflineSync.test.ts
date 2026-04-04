@@ -363,7 +363,7 @@ describe('useOfflineSync', () => {
 
   // ── Empty queue: peek returns undefined → skips refetch entirely ────────
 
-  it('skips refetch when queue is empty (peek returns undefined)', async () => {
+  it('skips refetch when queue is empty (peek returns undefined)', () => {
     const params = makeDefaultParams({
       isConnected: true,
       peekQueue: [],

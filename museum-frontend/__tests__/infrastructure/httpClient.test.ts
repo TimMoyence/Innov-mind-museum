@@ -364,7 +364,8 @@ describe('httpClient', () => {
 
   describe('httpClient instance', () => {
     it('is an Axios instance with default Accept header including application/json', () => {
-      const acceptHeader = String(httpClient.defaults.headers.common?.Accept ?? '');
+      const rawAccept = httpClient.defaults.headers.common?.Accept;
+      const acceptHeader = typeof rawAccept === 'string' ? rawAccept : '';
       expect(acceptHeader).toContain('application/json');
     });
 

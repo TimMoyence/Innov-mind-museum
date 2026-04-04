@@ -306,7 +306,7 @@ export default function ChatSessionScreen() {
                 onFollowUpPress={onFollowUpPress}
                 onRecommendationPress={onRecommendationPress}
                 onSuggestion={(suggestion) => void onSend(suggestion)}
-                onCamera={onTakePicture}
+                onCamera={() => void onTakePicture()}
                 onImageError={onMessageImageError}
                 onReport={onMessageLongPress}
                 onRetry={retryMessage}
@@ -323,7 +323,7 @@ export default function ChatSessionScreen() {
             isRecording={isRecording}
             playRecordedAudio={playRecordedAudio}
             clearMedia={clearMedia}
-            onTakePicture={onTakePicture}
+            onTakePicture={() => void onTakePicture()}
             toggleRecording={toggleRecording}
           />
 
