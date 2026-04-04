@@ -56,7 +56,7 @@ export class SocialLoginUseCase {
           code: 'USER_NOT_FOUND',
         });
       }
-      return await this.authSessionService.socialLogin(user as unknown as Record<string, unknown>);
+      return await this.authSessionService.socialLogin(user);
     }
 
     // Check if email matches existing user (account linking)
@@ -74,9 +74,7 @@ export class SocialLoginUseCase {
           providerUserId: payload.providerUserId,
           email: normalizedEmail,
         });
-        return await this.authSessionService.socialLogin(
-          existingUser as unknown as Record<string, unknown>,
-        );
+        return await this.authSessionService.socialLogin(existingUser);
       }
     }
 
@@ -96,6 +94,6 @@ export class SocialLoginUseCase {
       email: normalizedEmail,
     });
 
-    return await this.authSessionService.socialLogin(newUser as unknown as Record<string, unknown>);
+    return await this.authSessionService.socialLogin(newUser);
   }
 }

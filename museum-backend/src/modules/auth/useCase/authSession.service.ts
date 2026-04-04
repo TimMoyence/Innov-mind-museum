@@ -13,6 +13,7 @@ import type {
   StoredRefreshTokenRow,
 } from '../domain/refresh-token.repository.interface';
 import type { UserRole } from '../domain/user-role';
+import type { User } from '../domain/user.entity';
 import type { IUserRepository } from '../domain/user.repository.interface';
 
 interface SafeUser {
@@ -87,24 +88,19 @@ const sha256 = (value: string): string => {
   return crypto.createHash('sha256').update(value).digest('hex');
 };
 
-/** Resolves museum_id / museumId from a raw DB row (column name may vary). */
-const resolveMuseumId = (user: Record<string, unknown>): number | null => {
-  if (typeof user.museum_id === 'number') return user.museum_id;
-  if (typeof user.museumId === 'number') return user.museumId;
-  return null;
+const resolveMuseumId = (user: User): number | null => {
+  return user.museumId ?? null;
 };
 
-const sanitizeUser = (user: Record<string, unknown>): SafeUser => {
+const sanitizeUser = (user: User): SafeUser => {
   return {
-    id: Number(user.id),
-    email: String(user.email),
-    firstname:
-      typeof user.firstname === 'string' || user.firstname === null ? user.firstname : null,
-    lastname: typeof user.lastname === 'string' || user.lastname === null ? user.lastname : null,
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: role may be undefined at runtime from raw DB row
-    role: (user.role as UserRole) || 'visitor',
+    id: user.id,
+    email: user.email,
+    firstname: user.firstname ?? null,
+    lastname: user.lastname ?? null,
+    role: user.role,
     museumId: resolveMuseumId(user),
-    onboardingCompleted: user.onboarding_completed === true,
+    onboardingCompleted: user.onboarding_completed,
   };
 };
 
@@ -154,7 +150,7 @@ export class AuthSessionService {
     clearLoginAttempts(normalizedEmail);
 
     const session = await this.issueSession({
-      user: sanitizeUser(user as unknown as Record<string, unknown>),
+      user: sanitizeUser(user),
     });
     this.refreshTokenRepository.deleteExpiredTokens().catch(() => {
       /* noop */
@@ -191,7 +187,7 @@ export class AuthSessionService {
     }
 
     return await this.issueSession({
-      user: sanitizeUser(user as unknown as Record<string, unknown>),
+      user: sanitizeUser(user),
       familyId: stored.familyId,
       rotateFrom: stored,
     });
@@ -219,10 +215,10 @@ export class AuthSessionService {
   /**
    * Issue a session for a user authenticated via social sign-in.
    *
-   * @param user - Raw user record (sanitized internally).
+   * @param user - User entity (sanitized internally).
    * @returns Access/refresh tokens and user info.
    */
-  async socialLogin(user: Record<string, unknown>): Promise<AuthSessionResponse> {
+  async socialLogin(user: User): Promise<AuthSessionResponse> {
     const session = await this.issueSession({
       user: sanitizeUser(user),
     });
