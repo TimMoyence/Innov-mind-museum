@@ -1,0 +1,17 @@
+# iOS build artifacts (Expo/React Native)
+ios/
+*.swift
+
+# Android build artifacts
+android/
+
+# Node modules (already excluded by default, but explicit)
+node_modules/
+
+# Build outputs
+museum-backend/dist/
+museum-frontend/.test-dist/
+museum-web/.next/
+
+# Large binary files
+.gitnexus/lbug

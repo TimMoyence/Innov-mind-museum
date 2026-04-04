@@ -49,6 +49,17 @@ Le Tech Lead injecte ici tes metriques depuis `agent-performance.json`:
 - [EP-XXX] [pattern] → fix: [fix connu]
 - [PE-XXX] [regle apprise] → respecter obligatoirement
 
+### GitNexus — Code Intelligence (obligatoire)
+
+AVANT de modifier un symbole existant (fonction, classe, methode), tu DOIS :
+
+1. `gitnexus_impact({target: "<nom du symbole>", direction: "upstream"})` — verifier le blast radius
+2. Si d=1 dependants > 5 : `gitnexus_context({name: "<symbole>"})` — comprendre tous les usages
+3. Si risk HIGH ou CRITICAL : **STOP** — signaler au Tech Lead dans ton rapport. NE PAS modifier sans validation.
+4. Pour les renames : `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` — JAMAIS de rename manuel find-and-replace
+
+**Rappel** : `gitnexus_detect_changes` sera execute par la Sentinelle a la Porte 3. Si tu as modifie des processes non planifies, la Sentinelle le detectera et ton score baissera.
+
 ### Community Skills (injectes par le Tech Lead selon scope)
 Le Tech Lead selectionne les skills communautaires pertinents (cf. context-loading.json > community_skills) :
 - [skill-name] : [quand l'utiliser dans ce mandat]
@@ -129,6 +140,8 @@ Tous les agents utilisent **model: opus**.
 | Feature museum-web E2E | Frontend + QA + browser-use | Frontend seul (pas de smoke test) |
 | Nouvelle dependance npm | DevOps + supply-chain-auditor | DevOps seul (oubli audit deps) |
 | Requirements complexes | Product Owner en ANALYSE | Deviner les requirements |
+| Refactor multi-fichier | Backend/Frontend + gitnexus_rename | Find-and-replace manuel |
+| Feature impactant shared/ | Backend + gitnexus_impact obligatoire | Backend seul (blast radius inconnu) |
 
 ---
 

@@ -37,7 +37,7 @@ if [ -n "$STAGED_TS" ]; then
 fi
 
 # 4. Tests backend (bail on first failure for speed, only changed files)
-if ! (cd "$REPO_ROOT/museum-backend" && pnpm test -- --bail --changedSince=HEAD &>/dev/null); then
+if ! (cd "$REPO_ROOT/museum-backend" && pnpm test -- --bail --changedSince=HEAD --coverage=false &>/dev/null); then
   ERRORS="${ERRORS}Backend tests FAIL. "
 fi
 
