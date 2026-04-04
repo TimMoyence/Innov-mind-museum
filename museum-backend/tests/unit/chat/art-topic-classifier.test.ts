@@ -17,14 +17,12 @@ jest.mock('@shared/logger/logger', () => ({
   logger: { warn: jest.fn() },
 }));
 
+jest.mock('@src/config/env', () => ({
+  env: { llm: { openAiApiKey: 'test-key', googleApiKey: '', deepseekApiKey: '' } },
+}));
+
 describe('ArtTopicClassifier', () => {
   describe('with model configured (OpenAI key)', () => {
-    beforeAll(() => {
-      jest.mock('@src/config/env', () => ({
-        env: { llm: { openAiApiKey: 'test-key', googleApiKey: '', deepseekApiKey: '' } },
-      }));
-    });
-
     let classifier: ArtTopicClassifier;
 
     beforeEach(() => {
@@ -81,9 +79,7 @@ describe('ArtTopicClassifier', () => {
     });
 
     it('logs a warning when LLM throws an error', async () => {
-      const { logger } = jest.requireMock('@shared/logger/logger') as {
-        logger: { warn: jest.Mock };
-      };
+      const { logger } = jest.requireMock('@shared/logger/logger');
       mockInvoke.mockRejectedValue(new Error('Rate limit exceeded'));
 
       await classifier.isArtRelated('Some text');
