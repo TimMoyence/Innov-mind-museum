@@ -661,13 +661,9 @@ describe('AuthSessionService', () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
       const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
-      const result = await service.socialLogin({
-        id: 7,
-        email: 'social@test.com',
-        firstname: 'Social',
-        lastname: 'User',
-        role: 'visitor',
-      });
+      const result = await service.socialLogin(
+        makeUser({ id: 7, email: 'social@test.com', firstname: 'Social', lastname: 'User' }),
+      );
 
       expect(typeof result.accessToken).toBe('string');
       expect(result.accessToken.split('.')).toHaveLength(3); // JWT format
@@ -685,11 +681,7 @@ describe('AuthSessionService', () => {
       const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       // Should NOT throw even if deleteExpiredTokens fails
-      const result = await service.socialLogin({
-        id: 1,
-        email: 'social@test.com',
-        role: 'visitor',
-      });
+      const result = await service.socialLogin(makeUser({ id: 1, email: 'social@test.com' }));
 
       expect(typeof result.accessToken).toBe('string');
       expect(result.accessToken.split('.')).toHaveLength(3); // JWT format
