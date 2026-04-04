@@ -24,41 +24,41 @@ import { KnowledgeBaseService } from './useCase/knowledge-base.service';
 import { UserMemoryService } from './useCase/user-memory.service';
 
 import type { ArtKeywordRepository } from './domain/artKeyword.repository.interface';
+import type { ImageStorage } from './domain/ports/image-storage.port';
 import type { OcrService } from './domain/ports/ocr.port';
 import type { CacheService } from '@shared/cache/cache.port';
 import type { DataSource } from 'typeorm';
 
+/** Typed result of building the chat module — all services guaranteed initialized. */
+export interface BuiltChatModule {
+  chatService: ChatService;
+  imageStorage: ImageStorage;
+  repository: TypeOrmChatRepository;
+  ocrService: OcrService;
+  userMemoryService: UserMemoryService | undefined;
+  artKeywordRepository: ArtKeywordRepository;
+}
+
 /**
  * Encapsulates the chat module dependency graph and lifecycle.
- * All services are lazily initialized via {@link build} and accessible via typed getters.
+ * Call {@link build} to wire all dependencies; access them via {@link getBuilt}.
  */
 class ChatModule {
-  private _imageStorage: LocalImageStorage | S3CompatibleImageStorage | undefined;
-  private _repository: TypeOrmChatRepository | undefined;
-  private _ocrService: OcrService | undefined;
-  private _userMemoryService: UserMemoryService | undefined;
-  private _artKeywordRepository: ArtKeywordRepository | undefined;
+  private _built: BuiltChatModule | undefined;
   private _orchestrator: LangChainChatOrchestrator | undefined;
   private _artKeywordsRefreshTimer: ReturnType<typeof setInterval> | undefined;
 
-  get imageStorage(): LocalImageStorage | S3CompatibleImageStorage | undefined {
-    return this._imageStorage;
+  /** Returns true if the module has been built. */
+  isBuilt(): boolean {
+    return this._built !== undefined;
   }
 
-  get repository(): TypeOrmChatRepository | undefined {
-    return this._repository;
-  }
-
-  get ocrService(): OcrService | undefined {
-    return this._ocrService;
-  }
-
-  get userMemoryService(): UserMemoryService | undefined {
-    return this._userMemoryService;
-  }
-
-  get artKeywordRepository(): ArtKeywordRepository | undefined {
-    return this._artKeywordRepository;
+  /** Returns the built module or throws if {@link build} hasn't been called. */
+  getBuilt(): BuiltChatModule {
+    if (!this._built) {
+      throw new Error('ChatModule.build() must be called before accessing services');
+    }
+    return this._built;
   }
 
   /** Returns the LLM circuit breaker state for the health endpoint. */
@@ -109,9 +109,7 @@ class ChatModule {
   ): UserMemoryService | undefined {
     if (!env.featureFlags.userMemory) return undefined;
     const repo = new TypeOrmUserMemoryRepository(dataSource);
-    const service = new UserMemoryService(repo, cache);
-    this._userMemoryService = service;
-    return service;
+    return new UserMemoryService(repo, cache);
   }
 
   /** Creates the knowledge base service if the feature flag is enabled. */
@@ -175,18 +173,16 @@ class ChatModule {
   }
 
   /**
-   * Wires the chat module dependency graph and returns a fully configured ChatService.
+   * Wires the chat module dependency graph and returns all services as a typed object.
    *
    * @param dataSource - Initialized TypeORM DataSource for repository creation.
    * @param cache - Optional cache service for session/memory caching.
-   * @returns ChatService with repository, orchestrator, image storage, and audio transcriber.
+   * @returns Built module with all services guaranteed initialized.
    */
-  build(dataSource: DataSource, cache?: CacheService): ChatService {
+  build(dataSource: DataSource, cache?: CacheService): BuiltChatModule {
     const imageStorage = this.buildImageStorage();
-    this._imageStorage = imageStorage;
 
     const repository = new TypeOrmChatRepository(dataSource);
-    this._repository = repository;
 
     const tts =
       env.tts?.enabled && env.llm.openAiApiKey
@@ -194,14 +190,12 @@ class ChatModule {
         : new DisabledTextToSpeechService();
 
     const ocr = env.featureFlags.ocrGuard ? new TesseractOcrService() : new DisabledOcrService();
-    this._ocrService = ocr;
 
     const userMemory = this.buildUserMemory(dataSource, cache);
     const knowledgeBase = this.buildKnowledgeBase();
     const imageEnrichment = this.buildImageEnrichment();
 
     const artKeywordRepo = new TypeOrmArtKeywordRepository(dataSource);
-    this._artKeywordRepository = artKeywordRepo;
 
     this.buildArtKeywordRefresh(artKeywordRepo);
 
@@ -210,7 +204,7 @@ class ChatModule {
 
     const artTopicClassifier = new ArtTopicClassifier();
 
-    return new ChatService({
+    const chatService = new ChatService({
       repository,
       orchestrator,
       imageStorage,
@@ -224,32 +218,45 @@ class ChatModule {
       imageEnrichment,
       artTopicClassifier,
     });
+
+    const built: BuiltChatModule = {
+      chatService,
+      imageStorage,
+      repository,
+      ocrService: ocr,
+      userMemoryService: userMemory,
+      artKeywordRepository: artKeywordRepo,
+    };
+    this._built = built;
+    return built;
   }
 }
 
-// ── Module singleton + backward-compatible exports ──────────────────────────
+// ── Module singleton + typed exports ─────────────────────────────────────────
 
 /** Module singleton. Use the getter functions below for cross-module access. */
 export const chatModule = new ChatModule();
 
 /** Wires the chat module and returns a configured ChatService. */
 export const buildChatService = (dataSource: DataSource, cache?: CacheService): ChatService =>
-  chatModule.build(dataSource, cache);
+  chatModule.build(dataSource, cache).chatService;
 
-/** Returns the shared image storage instance (available after buildChatService). */
-export const getImageStorage = () => chatModule.imageStorage;
+/** Returns the shared image storage instance. Throws if module is not built. */
+export const getImageStorage = (): ImageStorage => chatModule.getBuilt().imageStorage;
 
-/** Returns the shared chat repository instance (available after buildChatService). */
-export const getChatRepository = () => chatModule.repository;
+/** Returns the shared chat repository instance. Throws if module is not built. */
+export const getChatRepository = (): TypeOrmChatRepository => chatModule.getBuilt().repository;
 
-/** Returns the shared OCR service instance (available after buildChatService). */
-export const getOcrService = () => chatModule.ocrService;
+/** Returns the shared OCR service instance. Throws if module is not built. */
+export const getOcrService = (): OcrService => chatModule.getBuilt().ocrService;
 
-/** Returns the shared user-memory service instance (available after buildChatService). */
-export const getUserMemoryService = () => chatModule.userMemoryService;
+/** Returns the shared user-memory service (feature-flag gated, may be undefined). */
+export const getUserMemoryService = (): UserMemoryService | undefined =>
+  chatModule.getBuilt().userMemoryService;
 
-/** Returns the shared art keyword repository (available after buildChatService). */
-export const getArtKeywordRepository = () => chatModule.artKeywordRepository;
+/** Returns the shared art keyword repository, or undefined if module is not yet built. */
+export const getArtKeywordRepository = (): ArtKeywordRepository | undefined =>
+  chatModule.isBuilt() ? chatModule.getBuilt().artKeywordRepository : undefined;
 
 /** Returns the LLM circuit breaker state for the health endpoint. */
 export const getLlmCircuitBreakerState = () => chatModule.getLlmCircuitBreakerState();

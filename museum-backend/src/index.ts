@@ -93,7 +93,7 @@ function registerShutdownHandlers(
     stopArtKeywordsRefresh();
     await shutdownOpenTelemetry();
     const ocr = getOcrService();
-    if (ocr?.destroy) await ocr.destroy();
+    if (ocr.destroy) await ocr.destroy();
 
     // 2. Close the HTTP server — stops accepting new connections,
     //    waits for in-flight requests to complete

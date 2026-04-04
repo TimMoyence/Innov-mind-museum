@@ -3,8 +3,8 @@ import { logger } from '@shared/logger/logger';
 import { scoreImage } from './image-scoring';
 
 import type { ImageCandidate } from './image-scoring';
-import type { UnsplashClient, UnsplashPhoto } from '../adapters/secondary/unsplash.client';
 import type { EnrichedImage } from '../domain/chat.types';
+import type { ImageSourceClient, ImageSourcePhoto } from '../domain/ports/image-source.port';
 
 /** Configuration for the image enrichment service. */
 export interface ImageEnrichmentConfig {
@@ -30,7 +30,7 @@ export class ImageEnrichmentService {
   private readonly cache = new Map<string, CacheEntry>();
 
   constructor(
-    private readonly unsplashClient: UnsplashClient | undefined,
+    private readonly unsplashClient: ImageSourceClient | undefined,
     private readonly config: ImageEnrichmentConfig,
   ) {}
 
@@ -149,7 +149,11 @@ export class ImageEnrichmentService {
     }
   }
 
-  private mapUnsplashPhoto(photo: UnsplashPhoto, index: number, searchTerm: string): EnrichedImage {
+  private mapUnsplashPhoto(
+    photo: ImageSourcePhoto,
+    index: number,
+    searchTerm: string,
+  ): EnrichedImage {
     const candidate: ImageCandidate = {
       caption: photo.caption,
       source: 'unsplash',

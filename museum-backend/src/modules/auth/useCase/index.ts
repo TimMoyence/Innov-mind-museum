@@ -66,8 +66,7 @@ const imageCleanupProxy: ImageCleanupPort = {
   async deleteByPrefix(prefix: string): Promise<void> {
     // Late-bind to avoid circular init: chat module initializes after auth module
     const { getImageStorage } = await import('@modules/chat/index');
-    const storage = getImageStorage();
-    if (storage) await storage.deleteByPrefix(prefix);
+    await getImageStorage().deleteByPrefix(prefix);
   },
 };
 const deleteAccountUseCase = new DeleteAccountUseCase(userRepository, imageCleanupProxy);
@@ -76,9 +75,7 @@ const deleteAccountUseCase = new DeleteAccountUseCase(userRepository, imageClean
 const chatDataExportProxy: ChatDataExportPort = {
   async getAllUserData(userId: number) {
     const { getChatRepository } = await import('@modules/chat/index');
-    const repo = getChatRepository();
-    if (!repo) throw new Error('Chat repository not initialized');
-    return await repo.exportUserData(userId);
+    return await getChatRepository().exportUserData(userId);
   },
 };
 const exportUserDataUseCase = new ExportUserDataUseCase({ chatDataExport: chatDataExportProxy });
