@@ -1,14 +1,13 @@
-/* eslint-disable max-lines -- message service orchestrates text/image/audio/stream posting with guardrails, already split from session and media sub-services */
-import { AppError, badRequest, conflict } from '@shared/errors/app.error';
-import { resolveLocale } from '@shared/i18n/locale';
+import { AppError, badRequest } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 
 import { evaluateUserInputGuardrail } from './art-topic-guardrail';
+import { fetchEnrichmentData } from './enrichment-fetcher';
 import { GuardrailEvaluationService } from './guardrail-evaluation.service';
 import { ImageProcessingService } from './image-processing.service';
+import { commitAssistantResponse } from './message-commit';
 import { ensureSessionAccess } from './session-access';
 import { StreamBuffer } from './stream-buffer';
-import { computeSessionUpdates } from './visit-context';
 import { DisabledAudioTranscriber } from '../domain/ports/audio-transcriber.port';
 
 import type { GuardrailBlockReason } from './art-topic-guardrail';
@@ -22,7 +21,6 @@ import type { EnrichedImage, PostAudioMessageInput, PostMessageInput } from '../
 import type { AudioTranscriber } from '../domain/ports/audio-transcriber.port';
 import type { ChatOrchestrator, OrchestratorOutput } from '../domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '../domain/ports/image-storage.port';
-import type { ArtworkFacts } from '../domain/ports/knowledge-base.port';
 import type { OcrService } from '../domain/ports/ocr.port';
 import type { AuditService } from '@shared/audit/audit.service';
 import type { CacheService } from '@shared/cache/cache.port';
@@ -40,31 +38,6 @@ export interface ChatMessageServiceDeps {
   knowledgeBase?: KnowledgeBaseService;
   imageEnrichment?: ImageEnrichmentService;
   artTopicClassifier?: ArtTopicClassifierPort;
-}
-
-/**
- * Extracts a search term for knowledge base lookup from conversation history or input text.
- * Searches for the last assistant message with a detected artwork title, falling back to input text if 3+ words.
- */
-function extractSearchTerm(
-  history: { role: string; metadata?: Record<string, unknown> | null }[],
-  inputText?: string,
-): string | null {
-  // Search history for last assistant message with detectedArtwork.title
-  for (let i = history.length - 1; i >= 0; i--) {
-    const msg = history[i];
-    if (msg.role === 'assistant' && msg.metadata) {
-      const meta = msg.metadata as { detectedArtwork?: { title?: string } };
-      if (meta.detectedArtwork?.title) {
-        return meta.detectedArtwork.title;
-      }
-    }
-  }
-  // Fallback: use input text if it has 3+ words
-  if (inputText && inputText.split(/\s+/).length >= 3) {
-    return inputText;
-  }
-  return null;
 }
 
 /** Successful preparation result with all data needed to invoke the LLM. */
@@ -126,79 +99,6 @@ export class ChatMessageService {
     });
   }
 
-  /** Fetches user memory, knowledge-base text, KB facts, and image enrichment in parallel (fail-open). */
-  private async fetchEnrichmentData(
-    history: Awaited<ReturnType<ChatRepository['listSessionHistory']>>,
-    inputText: string | undefined,
-    ownerId: number | undefined,
-  ): Promise<{
-    userMemoryBlock: string;
-    knowledgeBaseBlock: string;
-    enrichedImages: EnrichedImage[];
-  }> {
-    let userMemoryBlock = '';
-    let knowledgeBaseBlock = '';
-    let enrichedImages: EnrichedImage[] = [];
-
-    const searchTerm = extractSearchTerm(history, inputText);
-    let kbFacts: ArtworkFacts | null = null;
-
-    await Promise.all([
-      this.userMemory && ownerId
-        ? this.userMemory
-            .getMemoryForPrompt(ownerId)
-            .then((b: string) => {
-              userMemoryBlock = b;
-            })
-            .catch(() => {
-              /* fail-open */
-            })
-        : Promise.resolve(),
-      this.knowledgeBase && searchTerm
-        ? this.knowledgeBase
-            .lookup(searchTerm)
-            .then((b: string) => {
-              knowledgeBaseBlock = b;
-            })
-            .catch(() => {
-              /* fail-open */
-            })
-        : Promise.resolve(),
-      this.knowledgeBase && this.imageEnrichment && searchTerm
-        ? this.knowledgeBase
-            .lookupFacts(searchTerm)
-            .then((facts) => {
-              kbFacts = facts;
-            })
-            .catch(() => {
-              /* fail-open */
-            })
-        : Promise.resolve(),
-      this.imageEnrichment && searchTerm
-        ? this.imageEnrichment
-            .enrich(searchTerm)
-            .then((imgs) => {
-              enrichedImages = imgs;
-            })
-            .catch(() => {
-              /* fail-open */
-            })
-        : Promise.resolve(),
-    ]);
-
-    // Merge Wikidata image into enriched images if KB returned a P18 imageUrl
-    const resolvedFacts = kbFacts as ArtworkFacts | null;
-    if (resolvedFacts?.imageUrl && this.imageEnrichment && searchTerm) {
-      enrichedImages = this.imageEnrichment.mergeWikidataImage(
-        enrichedImages,
-        resolvedFacts.imageUrl,
-        searchTerm,
-      );
-    }
-
-    return { userMemoryBlock, knowledgeBaseBlock, enrichedImages };
-  }
-
   /** Processes and stores the image, then runs OCR injection guard. Returns refs or undefined. */
   private async processInputImage(
     image: PostMessageInput['image'],
@@ -258,7 +158,12 @@ export class ChatMessageService {
     }
 
     const history = await this.repository.listSessionHistory(sessionId, env.llm.maxHistoryMessages);
-    const { userMemoryBlock, knowledgeBaseBlock, enrichedImages } = await this.fetchEnrichmentData(
+    const { userMemoryBlock, knowledgeBaseBlock, enrichedImages } = await fetchEnrichmentData(
+      {
+        userMemory: this.userMemory,
+        knowledgeBase: this.knowledgeBase,
+        imageEnrichment: this.imageEnrichment,
+      },
       history,
       input.text?.trim(),
       ownerId,
@@ -275,130 +180,6 @@ export class ChatMessageService {
       userMemoryBlock,
       knowledgeBaseBlock,
       enrichedImages,
-    };
-  }
-
-  /** Builds session updates and artwork match from the guardrail output and LLM result. */
-  private buildCommitPayload(
-    session: Awaited<ReturnType<typeof ensureSessionAccess>>,
-    outputCheck: Awaited<ReturnType<GuardrailEvaluationService['evaluateOutput']>>,
-    aiResult: OrchestratorOutput,
-    requestedLocale: string | undefined,
-    enrichedImages?: EnrichedImage[],
-  ) {
-    const assistantMetadata = outputCheck.metadata;
-
-    if (enrichedImages && enrichedImages.length > 0) {
-      assistantMetadata.images = enrichedImages;
-    }
-
-    const baseSessionUpdates = outputCheck.allowed
-      ? computeSessionUpdates(session, assistantMetadata, 'pending')
-      : undefined;
-
-    const normalizedLocale = requestedLocale ? resolveLocale([requestedLocale]) : undefined;
-    const localeChanged = normalizedLocale && normalizedLocale !== resolveLocale([session.locale]);
-    const sessionUpdates = localeChanged
-      ? { ...baseSessionUpdates, locale: normalizedLocale }
-      : baseSessionUpdates;
-
-    const artworkMatch =
-      outputCheck.allowed && aiResult.metadata.detectedArtwork
-        ? {
-            artworkId: aiResult.metadata.detectedArtwork.artworkId,
-            title: aiResult.metadata.detectedArtwork.title,
-            artist: aiResult.metadata.detectedArtwork.artist,
-            confidence: aiResult.metadata.detectedArtwork.confidence,
-            source: aiResult.metadata.detectedArtwork.source,
-            room: aiResult.metadata.detectedArtwork.room,
-          }
-        : undefined;
-
-    return { assistantText: outputCheck.text, assistantMetadata, sessionUpdates, artworkMatch };
-  }
-
-  /** Invalidates caches and triggers fire-and-forget user memory update. */
-  private async postCommitSideEffects(
-    sessionId: string,
-    ownerId: number | undefined,
-    sessionUpdates: ReturnType<typeof computeSessionUpdates> | undefined,
-  ): Promise<void> {
-    if (this.cache) {
-      await this.cache.delByPrefix(`session:${sessionId}:`);
-      if (ownerId) {
-        await this.cache.delByPrefix(`sessions:user:${String(ownerId)}:`);
-      }
-    }
-
-    if (this.userMemory && ownerId && sessionUpdates?.visitContext) {
-      this.userMemory
-        .updateAfterSession(ownerId, sessionUpdates.visitContext, sessionId)
-        .catch(() => {
-          // swallowed — user memory is non-critical
-        });
-    }
-  }
-
-  /**
-   * Persists the assistant response and returns the result. Shared by postMessage and postMessageStream.
-   */
-  private async commitAssistantResponse(
-    sessionId: string,
-    session: Awaited<ReturnType<typeof ensureSessionAccess>>,
-    aiResult: OrchestratorOutput,
-    options: {
-      requestedLocale: string | undefined;
-      ownerId: number | undefined;
-      enrichedImages?: EnrichedImage[];
-    },
-  ): Promise<PostMessageResult> {
-    const { requestedLocale, ownerId, enrichedImages } = options;
-    const outputCheck = await this.guardrail.evaluateOutput({
-      text: aiResult.text,
-      metadata: aiResult.metadata,
-      requestedLocale,
-    });
-
-    const { assistantText, assistantMetadata, sessionUpdates, artworkMatch } =
-      this.buildCommitPayload(session, outputCheck, aiResult, requestedLocale, enrichedImages);
-
-    let assistantMessage;
-    try {
-      assistantMessage = await this.repository.persistMessage({
-        sessionId,
-        role: 'assistant',
-        text: assistantText,
-        metadata: assistantMetadata as Record<string, unknown>,
-        sessionUpdates,
-        artworkMatch,
-      });
-    } catch (error) {
-      if ((error as Error).name === 'OptimisticLockVersionMismatchError') {
-        throw conflict('Session was modified concurrently');
-      }
-      throw error;
-    }
-
-    if (outputCheck.allowed && sessionUpdates?.visitContext) {
-      const pendingArtwork = sessionUpdates.visitContext.artworksDiscussed.find(
-        (a) => a.messageId === 'pending',
-      );
-      if (pendingArtwork) {
-        pendingArtwork.messageId = assistantMessage.id;
-      }
-    }
-
-    await this.postCommitSideEffects(sessionId, ownerId, sessionUpdates);
-
-    return {
-      sessionId,
-      message: {
-        id: assistantMessage.id,
-        role: 'assistant',
-        text: assistantText,
-        createdAt: assistantMessage.createdAt.toISOString(),
-      },
-      metadata: assistantMetadata,
     };
   }
 
@@ -440,11 +221,18 @@ export class ChatMessageService {
       knowledgeBaseBlock,
     });
 
-    return await this.commitAssistantResponse(sessionId, session, aiResult, {
-      requestedLocale,
-      ownerId,
-      enrichedImages,
-    });
+    return await commitAssistantResponse(
+      {
+        guardrail: this.guardrail,
+        repository: this.repository,
+        cache: this.cache,
+        userMemory: this.userMemory,
+      },
+      sessionId,
+      session,
+      aiResult,
+      { requestedLocale, ownerId, enrichedImages },
+    );
   }
 
   /** Posts a message with token-by-token streaming and incremental guardrail checks. */
@@ -521,11 +309,18 @@ export class ChatMessageService {
       if (drainTimeoutId !== undefined) clearTimeout(drainTimeoutId);
     });
 
-    return await this.commitAssistantResponse(sessionId, session, aiResult, {
-      requestedLocale,
-      ownerId,
-      enrichedImages,
-    });
+    return await commitAssistantResponse(
+      {
+        guardrail: this.guardrail,
+        repository: this.repository,
+        cache: this.cache,
+        userMemory: this.userMemory,
+      },
+      sessionId,
+      session,
+      aiResult,
+      { requestedLocale, ownerId, enrichedImages },
+    );
   }
 
   /** Transcribes an audio message then delegates to postMessage for LLM processing. */
@@ -537,29 +332,11 @@ export class ChatMessageService {
   ): Promise<PostAudioMessageResult> {
     const session = await ensureSessionAccess(sessionId, this.repository, currentUserId);
 
-    const audio = input.audio;
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: audio fields may be undefined from external API input
-    if (!audio?.base64?.trim()) {
-      throw badRequest('Audio payload is required');
-    }
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: mimeType may be undefined from external API input
-    if (!audio.mimeType?.trim()) {
-      throw badRequest('Audio mime type is required');
-    }
-    if (
-      !Number.isFinite(audio.sizeBytes) ||
-      audio.sizeBytes <= 0 ||
-      audio.sizeBytes > env.llm.maxAudioBytes
-    ) {
-      throw badRequest(`Audio exceeds max size of ${String(env.llm.maxAudioBytes)} bytes`);
-    }
-    if (!env.upload.allowedAudioMimeTypes.includes(audio.mimeType)) {
-      throw badRequest(`Unsupported audio mime type: ${audio.mimeType}`);
-    }
+    validateAudioInput(input.audio);
 
     const transcription = await this.audioTranscriber.transcribe({
-      base64: audio.base64,
-      mimeType: audio.mimeType,
+      base64: input.audio.base64,
+      mimeType: input.audio.mimeType,
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
       locale: input.context?.locale || session.locale || undefined,
       requestId,
@@ -579,5 +356,26 @@ export class ChatMessageService {
       ...response,
       transcription,
     };
+  }
+}
+
+function validateAudioInput(audio: PostAudioMessageInput['audio']): void {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: audio fields may be undefined from external API input
+  if (!audio?.base64?.trim()) {
+    throw badRequest('Audio payload is required');
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: mimeType may be undefined from external API input
+  if (!audio.mimeType?.trim()) {
+    throw badRequest('Audio mime type is required');
+  }
+  if (
+    !Number.isFinite(audio.sizeBytes) ||
+    audio.sizeBytes <= 0 ||
+    audio.sizeBytes > env.llm.maxAudioBytes
+  ) {
+    throw badRequest(`Audio exceeds max size of ${String(env.llm.maxAudioBytes)} bytes`);
+  }
+  if (!env.upload.allowedAudioMimeTypes.includes(audio.mimeType)) {
+    throw badRequest(`Unsupported audio mime type: ${audio.mimeType}`);
   }
 }

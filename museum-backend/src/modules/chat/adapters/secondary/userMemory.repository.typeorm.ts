@@ -37,9 +37,10 @@ export class TypeOrmUserMemoryRepository implements UserMemoryRepository {
 
     // Return the freshly-written row.
     const row = await this.repo.findOne({ where: { userId } });
-    // Should always exist after upsert, but guard defensively.
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- row always exists after upsert
-    return row!;
+    if (!row) {
+      throw new Error('User memory row missing after upsert');
+    }
+    return row;
   }
 
   /** Deletes the user memory record for a given user. */

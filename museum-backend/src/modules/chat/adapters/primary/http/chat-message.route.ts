@@ -25,25 +25,34 @@ import {
   sendSseGuardrail,
 } from './sse.helpers';
 
+import type { PostMessageRequest } from './chat.contracts';
 import type { ArtKeywordRepository } from '../../../domain/artKeyword.repository.interface';
 import type { ChatService } from '../../../useCase/chat.service';
 import type { Request, Response, RequestHandler } from 'express';
+
+/** Parses and validates message input from an Express request. */
+function parseMessageInput(req: Request): {
+  bodyPayload: PostMessageRequest;
+  context: PostMessageRequest['context'];
+} {
+  const rawBody = (req.body ?? {}) as Record<string, unknown>;
+  const parseableBody =
+    typeof rawBody.context === 'string' ? { ...rawBody, context: undefined } : rawBody;
+  const bodyPayload = parsePostMessageRequest(parseableBody);
+  const parsedContext = parseContext(rawBody.context) ?? bodyPayload.context;
+  const context = {
+    ...parsedContext,
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
+    locale: parsedContext?.locale || req.clientLocale,
+  };
+  return { bodyPayload, context };
+}
 
 /** Handler factory: POST /sessions/:id/messages (non-streaming). */
 function createPostMessageHandler(chatService: ChatService) {
   return async (req: Request, res: Response) => {
     const currentUser = getRequestUser(req);
-    const rawBody = (req.body ?? {}) as Record<string, unknown>;
-    const parseableBody =
-      typeof rawBody.context === 'string' ? { ...rawBody, context: undefined } : rawBody;
-    const bodyPayload = parsePostMessageRequest(parseableBody);
-
-    const parsedContext = parseContext(rawBody.context) ?? bodyPayload.context;
-    const context = {
-      ...parsedContext,
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-      locale: parsedContext?.locale || req.clientLocale,
-    };
+    const { bodyPayload, context } = parseMessageInput(req);
 
     const imageFromBody = bodyPayload.image
       ? {
@@ -106,7 +115,6 @@ function initSseTimers(
 
 /** Handler factory: POST /sessions/:id/messages/stream (SSE streaming). */
 function createStreamHandler(chatService: ChatService) {
-  // eslint-disable-next-line complexity -- SSE streaming handler requires branching for feature flags, input validation, guardrails, error recovery, and connection lifecycle
   return async (req: Request, res: Response) => {
     if (!env.featureFlags.streaming) {
       res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Streaming not enabled' } });
@@ -126,16 +134,7 @@ function createStreamHandler(chatService: ChatService) {
 
     try {
       const currentUser = getRequestUser(req);
-      const rawBody = (req.body ?? {}) as Record<string, unknown>;
-      const parseableBody =
-        typeof rawBody.context === 'string' ? { ...rawBody, context: undefined } : rawBody;
-      const bodyPayload = parsePostMessageRequest(parseableBody);
-      const parsedContext = parseContext(rawBody.context) ?? bodyPayload.context;
-      const context = {
-        ...parsedContext,
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-        locale: parsedContext?.locale || req.clientLocale,
-      };
+      const { bodyPayload, context } = parseMessageInput(req);
 
       const result = await chatService.postMessageStream(
         req.params.id,

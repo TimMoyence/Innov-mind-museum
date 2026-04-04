@@ -116,19 +116,14 @@ export const buildHealthPayload = (params: {
  * @param root0 - Injected dependencies.
  * @param root0.chatService - Chat service instance for the chat sub-router.
  * @param root0.healthCheck - Async function returning database health status.
- * @param root0.featureFlagService - Feature flag service for route-level gating.
  * @param root0.cacheService - Optional cache service for health check and route-level caching.
  * @returns Configured Express Router.
  */
 export const createApiRouter = ({
   chatService,
   healthCheck,
-  featureFlagService,
   cacheService,
 }: ApiRouterDeps): Router => {
-  // featureFlagService available for route-level gating (S3-10 OCR, S3-16 API Keys)
-  // eslint-disable-next-line sonarjs/void-use -- intentional no-op to suppress unused param warning
-  void featureFlagService;
   const router = Router();
 
   const REDIS_PING_TIMEOUT_MS = 2_000;

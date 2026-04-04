@@ -139,11 +139,10 @@ export class ChatSessionService {
    * @throws {AppError} 400 if userId is missing/invalid or cursor is malformed.
    */
   async listSessions(page: MessagePageQuery, currentUserId?: number): Promise<ListSessionsResult> {
-    if (!Number.isInteger(currentUserId) || Number(currentUserId) <= 0) {
+    if (currentUserId === undefined || !Number.isInteger(currentUserId) || currentUserId <= 0) {
       throw badRequest('Authenticated user id is required');
     }
-    // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style -- using `as number` over `!` for clarity after Number.isInteger guard
-    const userId = currentUserId as number;
+    const userId = currentUserId;
 
     if (page.cursor && !isValidSessionListCursor(page.cursor)) {
       throw badRequest('Invalid cursor format');

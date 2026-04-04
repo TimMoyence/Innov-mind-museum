@@ -49,18 +49,11 @@ export const buildSignedChatImageReadUrl = (params: {
  * @param params.signature - HMAC signature from the query string.
  * @returns `{ ok: true, expiresAtMs }` on success, or `{ ok: false, reason }` on failure.
  */
-export const verifySignedChatImageReadUrl = (params: {
-  messageId: string;
-  token?: string;
-  signature?: string;
-  // eslint-disable-next-line complexity -- signed URL verification requires many validation steps
-}): { ok: true; expiresAtMs: number } | { ok: false; reason: string } => {
-  const token = params.token?.trim();
-  const signature = params.signature?.trim();
-  if (!token || !signature) {
-    return { ok: false, reason: 'Missing token or signature' };
-  }
-
+/** Decodes and validates a base64url token, returning the payload string. */
+const decodeToken = (
+  token: string,
+  expectedMessageId: string,
+): { ok: true; payload: string } | { ok: false; reason: string } => {
   let decoded: string;
   try {
     decoded = Buffer.from(token, 'base64url').toString('utf8');
@@ -69,20 +62,42 @@ export const verifySignedChatImageReadUrl = (params: {
   }
 
   const [messageId, expiresAtRaw] = decoded.split('.');
-  if (!messageId || !expiresAtRaw || messageId !== params.messageId) {
+  if (!messageId || !expiresAtRaw || messageId !== expectedMessageId) {
     return { ok: false, reason: 'Invalid token payload' };
   }
 
-  const expectedSignature = signPayload(decoded);
+  return { ok: true, payload: decoded };
+};
+
+/** Verifies the HMAC signature matches the expected value. */
+const verifySignature = (payload: string, signature: string): boolean => {
+  const expectedSignature = signPayload(payload);
   const sigBuffer = Buffer.from(signature);
   const expectedBuffer = Buffer.from(expectedSignature);
-  if (
-    sigBuffer.length !== expectedBuffer.length ||
-    !crypto.timingSafeEqual(sigBuffer, expectedBuffer)
-  ) {
+  return (
+    sigBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(sigBuffer, expectedBuffer)
+  );
+};
+
+export const verifySignedChatImageReadUrl = (params: {
+  messageId: string;
+  token?: string;
+  signature?: string;
+}): { ok: true; expiresAtMs: number } | { ok: false; reason: string } => {
+  const token = params.token?.trim();
+  const signature = params.signature?.trim();
+  if (!token || !signature) {
+    return { ok: false, reason: 'Missing token or signature' };
+  }
+
+  const decoded = decodeToken(token, params.messageId);
+  if (!decoded.ok) return decoded;
+
+  if (!verifySignature(decoded.payload, signature)) {
     return { ok: false, reason: 'Invalid signature' };
   }
 
+  const expiresAtRaw = decoded.payload.split('.')[1];
   const expiresAtMs = Number(expiresAtRaw);
   if (!Number.isFinite(expiresAtMs)) {
     return { ok: false, reason: 'Invalid expiry' };
