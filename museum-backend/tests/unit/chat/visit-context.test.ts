@@ -4,17 +4,7 @@ import {
   buildVisitContextPromptBlock,
 } from '@modules/chat/useCase/visit-context';
 import type { ChatAssistantMetadata, VisitContext } from '@modules/chat/domain/chat.types';
-import type { ChatSession } from '@modules/chat/domain/chatSession.entity';
-
-const makeSession = (overrides: Partial<ChatSession> = {}): ChatSession =>
-  ({
-    id: 'session-1',
-    museumMode: true,
-    messages: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  }) as ChatSession;
+import { makeSession } from '../../helpers/chat/message.fixtures';
 
 describe('updateVisitContext', () => {
   it('creates initial context when existing is null', () => {

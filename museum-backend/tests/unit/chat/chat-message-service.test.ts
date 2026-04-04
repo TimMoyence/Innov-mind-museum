@@ -13,27 +13,15 @@ import type {
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { CacheService } from '@shared/cache/cache.port';
+import { makeSession } from '../../helpers/chat/message.fixtures';
+import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
+import { makeCache } from '../../helpers/chat/cache.fixtures';
 
 // ── Factories ──────────────────────────────────────────────────────────
 
 const SESSION_ID = 'a0a0a0a0-b1b1-4c2c-8d3d-e4e4e4e4e4e4';
 const MESSAGE_ID = 'b1b1b1b1-c2c2-4d3d-9e4e-f5f5f5f5f5f5';
 const USER_ID = 42;
-
-const makeSession = (overrides: Partial<ChatSession> = {}): ChatSession =>
-  ({
-    id: SESSION_ID,
-    locale: 'en',
-    museumMode: false,
-    title: null,
-    museumName: null,
-    messages: [],
-    version: 1,
-    user: { id: USER_ID },
-    createdAt: new Date('2026-01-01T00:00:00Z'),
-    updatedAt: new Date('2026-01-01T00:00:00Z'),
-    ...overrides,
-  }) as ChatSession;
 
 const makeMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage =>
   ({
@@ -64,30 +52,30 @@ const makeArtOutput = (overrides: Partial<OrchestratorOutput> = {}): Orchestrato
   ...overrides,
 });
 
-const makeRepo = (session: ChatSession | null = makeSession()): jest.Mocked<ChatRepository> => ({
-  createSession: jest.fn().mockResolvedValue(session),
-  getSessionById: jest.fn().mockResolvedValue(session),
-  getMessageById: jest.fn().mockResolvedValue(null),
-  deleteSessionIfEmpty: jest.fn().mockResolvedValue(true),
-  persistMessage: jest.fn().mockResolvedValue(makeMessage()),
-  listSessionMessages: jest.fn().mockResolvedValue({
-    messages: [],
-    nextCursor: null,
-    hasMore: false,
-  } satisfies SessionMessagesPage),
-  listSessionHistory: jest.fn().mockResolvedValue([]),
-  listSessions: jest.fn().mockResolvedValue({
-    sessions: [],
-    nextCursor: null,
-    hasMore: false,
-  } satisfies ChatSessionsPage),
-  hasMessageReport: jest.fn().mockResolvedValue(false),
-  persistMessageReport: jest.fn(),
-  exportUserData: jest.fn(),
-  upsertMessageFeedback: jest.fn().mockResolvedValue(undefined),
-  deleteMessageFeedback: jest.fn().mockResolvedValue(undefined),
-  getMessageFeedback: jest.fn().mockResolvedValue(null),
-});
+const makeRepo = (
+  session: ChatSession | null = makeSession({
+    id: SESSION_ID,
+    user: { id: USER_ID } as ChatSession['user'],
+  }),
+): jest.Mocked<ChatRepository> =>
+  makeChatRepo({
+    createSession: jest.fn().mockResolvedValue(session),
+    getSessionById: jest.fn().mockResolvedValue(session),
+    getMessageById: jest.fn().mockResolvedValue(null),
+    deleteSessionIfEmpty: jest.fn().mockResolvedValue(true),
+    persistMessage: jest.fn().mockResolvedValue(makeMessage()),
+    listSessionMessages: jest.fn().mockResolvedValue({
+      messages: [],
+      nextCursor: null,
+      hasMore: false,
+    } satisfies SessionMessagesPage),
+    listSessionHistory: jest.fn().mockResolvedValue([]),
+    listSessions: jest.fn().mockResolvedValue({
+      sessions: [],
+      nextCursor: null,
+      hasMore: false,
+    } satisfies ChatSessionsPage),
+  });
 
 const makeOrchestrator = (
   output: OrchestratorOutput = makeArtOutput(),
@@ -105,15 +93,6 @@ const makeOrchestrator = (
 const makeImageStorage = (): jest.Mocked<ImageStorage> => ({
   save: jest.fn().mockResolvedValue('local://test-image.jpg'),
   deleteByPrefix: jest.fn().mockResolvedValue(undefined),
-});
-
-const makeCache = (): jest.Mocked<CacheService> => ({
-  get: jest.fn().mockResolvedValue(null),
-  set: jest.fn().mockResolvedValue(undefined),
-  del: jest.fn().mockResolvedValue(undefined),
-  delByPrefix: jest.fn().mockResolvedValue(undefined),
-  setNx: jest.fn().mockResolvedValue(true),
-  ping: jest.fn().mockResolvedValue(true),
 });
 
 const buildService = (

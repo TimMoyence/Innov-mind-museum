@@ -1,7 +1,7 @@
 import { ChangeUserRoleUseCase } from '@modules/admin/useCase/changeUserRole.useCase';
-import type { IAdminRepository } from '@modules/admin/domain/admin.repository.interface';
 import type { AdminUserDTO, PaginatedResult } from '@modules/admin/domain/admin.types';
 import { AppError } from '@shared/errors/app.error';
+import { makeAdminRepo } from '../../../helpers/admin/repo.fixtures';
 
 // Mock the audit service module
 jest.mock('@shared/audit', () => ({
@@ -31,31 +31,16 @@ const makePaginatedAdmins = (admins: AdminUserDTO[]): PaginatedResult<AdminUserD
   totalPages: 1,
 });
 
-const makeRepo = (overrides: Partial<IAdminRepository> = {}): IAdminRepository => ({
-  listUsers: jest.fn().mockResolvedValue(makePaginatedAdmins([])),
-  changeUserRole: jest.fn().mockResolvedValue(makeUser({ role: 'moderator' })),
-  countAdmins: jest.fn().mockResolvedValue(2),
-  listAuditLogs: jest
-    .fn()
-    .mockResolvedValue({ data: [], total: 0, page: 1, limit: 20, totalPages: 0 }),
-  getStats: jest.fn(),
-  listReports: jest
-    .fn()
-    .mockResolvedValue({ data: [], total: 0, page: 1, limit: 20, totalPages: 0 }),
-  resolveReport: jest.fn().mockResolvedValue(null),
-  getUsageAnalytics: jest.fn(),
-  getContentAnalytics: jest.fn(),
-  getEngagementAnalytics: jest.fn(),
-  ...overrides,
-});
-
 describe('ChangeUserRoleUseCase', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('rejects invalid role values', async () => {
-    const repo = makeRepo();
+    const repo = makeAdminRepo({
+      changeUserRole: jest.fn().mockResolvedValue(makeUser({ role: 'moderator' })),
+      countAdmins: jest.fn().mockResolvedValue(2),
+    });
     const uc = new ChangeUserRoleUseCase(repo);
 
     await expect(uc.execute({ userId: 1, newRole: 'superadmin', actorId: 99 })).rejects.toThrow(
@@ -68,7 +53,10 @@ describe('ChangeUserRoleUseCase', () => {
   });
 
   it('allows valid role values', async () => {
-    const repo = makeRepo();
+    const repo = makeAdminRepo({
+      changeUserRole: jest.fn().mockResolvedValue(makeUser({ role: 'moderator' })),
+      countAdmins: jest.fn().mockResolvedValue(2),
+    });
     const uc = new ChangeUserRoleUseCase(repo);
 
     const result = await uc.execute({ userId: 1, newRole: 'moderator', actorId: 99 });
@@ -79,7 +67,7 @@ describe('ChangeUserRoleUseCase', () => {
 
   it('prevents removing the last admin', async () => {
     const lastAdmin = makeUser({ id: 5, role: 'admin' });
-    const repo = makeRepo({
+    const repo = makeAdminRepo({
       countAdmins: jest.fn().mockResolvedValue(1),
       listUsers: jest.fn().mockResolvedValue(makePaginatedAdmins([lastAdmin])),
     });
@@ -95,7 +83,7 @@ describe('ChangeUserRoleUseCase', () => {
   });
 
   it('allows demoting a non-last admin', async () => {
-    const repo = makeRepo({
+    const repo = makeAdminRepo({
       countAdmins: jest.fn().mockResolvedValue(2),
       changeUserRole: jest.fn().mockResolvedValue(makeUser({ id: 5, role: 'visitor' })),
     });
@@ -108,7 +96,7 @@ describe('ChangeUserRoleUseCase', () => {
 
   it('allows demoting when target user is not admin (even if 1 admin exists)', async () => {
     const adminUser = makeUser({ id: 5, role: 'admin' });
-    const repo = makeRepo({
+    const repo = makeAdminRepo({
       countAdmins: jest.fn().mockResolvedValue(1),
       // The listUsers with role=admin returns the single admin (id=5), not the target (id=10)
       listUsers: jest.fn().mockResolvedValue(makePaginatedAdmins([adminUser])),
@@ -123,7 +111,10 @@ describe('ChangeUserRoleUseCase', () => {
   });
 
   it('logs an audit event on success', async () => {
-    const repo = makeRepo();
+    const repo = makeAdminRepo({
+      changeUserRole: jest.fn().mockResolvedValue(makeUser({ role: 'moderator' })),
+      countAdmins: jest.fn().mockResolvedValue(2),
+    });
     const uc = new ChangeUserRoleUseCase(repo);
 
     await uc.execute({
@@ -149,7 +140,7 @@ describe('ChangeUserRoleUseCase', () => {
   });
 
   it('does not log audit when user is not found', async () => {
-    const repo = makeRepo({
+    const repo = makeAdminRepo({
       changeUserRole: jest.fn().mockResolvedValue(null),
     });
     const uc = new ChangeUserRoleUseCase(repo);
@@ -162,7 +153,7 @@ describe('ChangeUserRoleUseCase', () => {
   });
 
   it('throws 404 when user does not exist', async () => {
-    const repo = makeRepo({
+    const repo = makeAdminRepo({
       changeUserRole: jest.fn().mockResolvedValue(null),
     });
     const uc = new ChangeUserRoleUseCase(repo);

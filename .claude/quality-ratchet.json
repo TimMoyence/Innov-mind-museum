@@ -1,13 +1,13 @@
 {
   "lastUpdated": "2026-04-04",
-  "testCount": 2314,
-  "frontendTestCount": 1035,
-  "frontendSuiteCount": 122,
+  "testCount": 2279,
+  "frontendTestCount": 1042,
+  "frontendSuiteCount": 123,
   "typecheckErrors": 0,
   "asAnyCount": 0,
   "coverageStatements": 92.5,
   "coverageBranches": 84,
   "lintErrors": 0,
-  "_comment": "Removed 11 low-value tests (mock choreography, renders-children, static text assertions). Replaced by structure tests. Extracted 18+11 jest.mock() from test files into shared setup helpers.",
+  "_comment": "Consolidated test factories into tests/helpers/. Removed 33 delegation tests from chat-service.test.ts (sub-services have own exhaustive tests). Added 7 reviews screen tests. Net -26 backend tests (intentional DRY refactor).",
   "webTestCount": 12
 }

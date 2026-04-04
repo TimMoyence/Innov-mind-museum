@@ -1,63 +1,41 @@
 import { ChatSessionService } from '@modules/chat/useCase/chat-session.service';
 import type {
-  ChatRepository,
   ChatSessionsPage,
   SessionMessagesPage,
 } from '@modules/chat/domain/chat.repository.interface';
 import type { ChatSession } from '@modules/chat/domain/chatSession.entity';
-import type { CacheService } from '@shared/cache/cache.port';
 import { AppError } from '@shared/errors/app.error';
+import { makeSession } from '../../helpers/chat/message.fixtures';
+import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
+import { makeCache } from '../../helpers/chat/cache.fixtures';
 
 // ── Factories ──────────────────────────────────────────────────────────
 
-const makeSession = (overrides: Partial<ChatSession> = {}): ChatSession =>
-  ({
-    id: 'a0a0a0a0-b1b1-4c2c-8d3d-e4e4e4e4e4e4',
-    locale: 'en',
-    museumMode: false,
-    title: null,
-    museumName: null,
-    messages: [],
-    version: 1,
-    user: { id: 42 },
-    createdAt: new Date('2026-01-01T00:00:00Z'),
-    updatedAt: new Date('2026-01-01T00:00:00Z'),
-    ...overrides,
-  }) as ChatSession;
+const SESSION_ID = 'a0a0a0a0-b1b1-4c2c-8d3d-e4e4e4e4e4e4';
 
-const makeRepo = (session: ChatSession | null = makeSession()): jest.Mocked<ChatRepository> => ({
-  createSession: jest.fn().mockResolvedValue(session),
-  getSessionById: jest.fn().mockResolvedValue(session),
-  getMessageById: jest.fn().mockResolvedValue(null),
-  deleteSessionIfEmpty: jest.fn().mockResolvedValue(true),
-  persistMessage: jest.fn(),
-  listSessionMessages: jest.fn().mockResolvedValue({
-    messages: [],
-    nextCursor: null,
-    hasMore: false,
-  } satisfies SessionMessagesPage),
-  listSessionHistory: jest.fn().mockResolvedValue([]),
-  listSessions: jest.fn().mockResolvedValue({
-    sessions: [],
-    nextCursor: null,
-    hasMore: false,
-  } satisfies ChatSessionsPage),
-  hasMessageReport: jest.fn().mockResolvedValue(false),
-  persistMessageReport: jest.fn(),
-  exportUserData: jest.fn(),
-  upsertMessageFeedback: jest.fn().mockResolvedValue(undefined),
-  deleteMessageFeedback: jest.fn().mockResolvedValue(undefined),
-  getMessageFeedback: jest.fn().mockResolvedValue(null),
-});
-
-const makeCache = (): jest.Mocked<CacheService> => ({
-  get: jest.fn().mockResolvedValue(null),
-  set: jest.fn().mockResolvedValue(undefined),
-  del: jest.fn().mockResolvedValue(undefined),
-  delByPrefix: jest.fn().mockResolvedValue(undefined),
-  setNx: jest.fn().mockResolvedValue(true),
-  ping: jest.fn().mockResolvedValue(true),
-});
+const makeRepo = (
+  session: ChatSession | null = makeSession({
+    id: SESSION_ID,
+    user: { id: 42 } as ChatSession['user'],
+  }),
+) =>
+  makeChatRepo({
+    createSession: jest.fn().mockResolvedValue(session),
+    getSessionById: jest.fn().mockResolvedValue(session),
+    getMessageById: jest.fn().mockResolvedValue(null),
+    deleteSessionIfEmpty: jest.fn().mockResolvedValue(true),
+    listSessionMessages: jest.fn().mockResolvedValue({
+      messages: [],
+      nextCursor: null,
+      hasMore: false,
+    } satisfies SessionMessagesPage),
+    listSessionHistory: jest.fn().mockResolvedValue([]),
+    listSessions: jest.fn().mockResolvedValue({
+      sessions: [],
+      nextCursor: null,
+      hasMore: false,
+    } satisfies ChatSessionsPage),
+  });
 
 // ── Tests ──────────────────────────────────────────────────────────────
 
