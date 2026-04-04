@@ -502,4 +502,376 @@ describe('isListSessionsResponseDTO', () => {
   it('rejects undefined', () => {
     assert.equal(isListSessionsResponseDTO(undefined), false);
   });
+
+  it('rejects when session.museumMode is not a boolean', () => {
+    assert.equal(
+      isListSessionsResponseDTO({
+        sessions: [
+          { id: 'sess-1', museumMode: 'yes', createdAt: now, updatedAt: now, messageCount: 1 },
+        ],
+        page: { nextCursor: null, hasMore: false, limit: 20 },
+      }),
+      false,
+    );
+  });
+
+  it('rejects when session.createdAt is not a string', () => {
+    assert.equal(
+      isListSessionsResponseDTO({
+        sessions: [
+          { id: 'sess-1', museumMode: true, createdAt: 12345, updatedAt: now, messageCount: 1 },
+        ],
+        page: { nextCursor: null, hasMore: false, limit: 20 },
+      }),
+      false,
+    );
+  });
+
+  it('rejects when session.updatedAt is not a string', () => {
+    assert.equal(
+      isListSessionsResponseDTO({
+        sessions: [
+          { id: 'sess-1', museumMode: true, createdAt: now, updatedAt: null, messageCount: 1 },
+        ],
+        page: { nextCursor: null, hasMore: false, limit: 20 },
+      }),
+      false,
+    );
+  });
+
+  it('rejects when preview is not a record', () => {
+    assert.equal(
+      isListSessionsResponseDTO({
+        sessions: [
+          {
+            ...validSession,
+            preview: 'not-an-object',
+          },
+        ],
+        page: { nextCursor: null, hasMore: false, limit: 20 },
+      }),
+      false,
+    );
+  });
+
+  it('rejects when preview.createdAt is not a string', () => {
+    assert.equal(
+      isListSessionsResponseDTO({
+        sessions: [
+          {
+            ...validSession,
+            preview: { text: 'hello', createdAt: 12345, role: 'user' },
+          },
+        ],
+        page: { nextCursor: null, hasMore: false, limit: 20 },
+      }),
+      false,
+    );
+  });
+
+  it('rejects when page.nextCursor is neither null nor string', () => {
+    assert.equal(
+      isListSessionsResponseDTO({
+        sessions: [],
+        page: { nextCursor: 42, hasMore: false, limit: 20 },
+      }),
+      false,
+    );
+  });
+
+  it('rejects when session item is not a record', () => {
+    assert.equal(
+      isListSessionsResponseDTO({
+        sessions: ['not-a-record'],
+        page: { nextCursor: null, hasMore: false, limit: 20 },
+      }),
+      false,
+    );
+  });
+});
+
+// ── Additional negative-path tests ──────────────────────────────────────────
+
+describe('isCreateSessionResponseDTO — additional negatives', () => {
+  it('rejects when session is null', () => {
+    assert.equal(isCreateSessionResponseDTO({ session: null }), false);
+  });
+
+  it('rejects when session.id is missing', () => {
+    assert.equal(
+      isCreateSessionResponseDTO({
+        session: { museumMode: true, createdAt: now, updatedAt: now },
+      }),
+      false,
+    );
+  });
+
+  it('rejects when updatedAt is not a string', () => {
+    assert.equal(
+      isCreateSessionResponseDTO({
+        session: { id: 'sess-1', museumMode: true, createdAt: now, updatedAt: 123 },
+      }),
+      false,
+    );
+  });
+
+  it('rejects when createdAt is a number', () => {
+    assert.equal(
+      isCreateSessionResponseDTO({
+        session: { id: 'sess-1', museumMode: true, createdAt: 12345, updatedAt: now },
+      }),
+      false,
+    );
+  });
+
+  it('rejects when session is an array', () => {
+    assert.equal(isCreateSessionResponseDTO({ session: [] }), false);
+  });
+
+  it('rejects a primitive string', () => {
+    assert.equal(isCreateSessionResponseDTO('string'), false);
+  });
+
+  it('rejects a number', () => {
+    assert.equal(isCreateSessionResponseDTO(42), false);
+  });
+});
+
+describe('isPostMessageResponseDTO — additional negatives', () => {
+  const validMsg = { id: 'msg-1', role: 'assistant', text: 'hi', createdAt: now };
+
+  it('rejects when transcription.model is not a string', () => {
+    assert.equal(
+      isPostMessageResponseDTO({
+        sessionId: 'sess-1',
+        message: validMsg,
+        metadata: {},
+        transcription: { text: 'spoken', model: 123, provider: 'openai' },
+      }),
+      false,
+    );
+  });
+
+  it('rejects when transcription is not a record', () => {
+    assert.equal(
+      isPostMessageResponseDTO({
+        sessionId: 'sess-1',
+        message: validMsg,
+        metadata: {},
+        transcription: 'invalid',
+      }),
+      false,
+    );
+  });
+
+  it('rejects when message.id is not a string', () => {
+    assert.equal(
+      isPostMessageResponseDTO({
+        sessionId: 'sess-1',
+        message: { id: 42, role: 'assistant', text: 'hi', createdAt: now },
+        metadata: {},
+      }),
+      false,
+    );
+  });
+
+  it('rejects when message.createdAt is not a string', () => {
+    assert.equal(
+      isPostMessageResponseDTO({
+        sessionId: 'sess-1',
+        message: { id: 'msg-1', role: 'assistant', text: 'hi', createdAt: 12345 },
+        metadata: {},
+      }),
+      false,
+    );
+  });
+
+  it('rejects when message is not a record', () => {
+    assert.equal(
+      isPostMessageResponseDTO({
+        sessionId: 'sess-1',
+        message: 'not-obj',
+        metadata: {},
+      }),
+      false,
+    );
+  });
+
+  it('rejects when metadata is not a record', () => {
+    assert.equal(
+      isPostMessageResponseDTO({
+        sessionId: 'sess-1',
+        message: validMsg,
+        metadata: 'not-obj',
+      }),
+      false,
+    );
+  });
+});
+
+describe('isGetSessionResponseDTO — additional negatives', () => {
+  const validSession = { id: 'sess-1', museumMode: true, createdAt: now, updatedAt: now };
+  const validPage = { nextCursor: null, hasMore: false, limit: 20 };
+
+  it('rejects when page.nextCursor is a number (not null or string)', () => {
+    assert.equal(
+      isGetSessionResponseDTO({
+        session: validSession,
+        messages: [],
+        page: { nextCursor: 42, hasMore: false, limit: 20 },
+      }),
+      false,
+    );
+  });
+
+  it('rejects when message.id is not a string', () => {
+    assert.equal(
+      isGetSessionResponseDTO({
+        session: validSession,
+        messages: [{ id: 42, role: 'user', createdAt: now }],
+        page: validPage,
+      }),
+      false,
+    );
+  });
+
+  it('rejects when message.createdAt is not a string', () => {
+    assert.equal(
+      isGetSessionResponseDTO({
+        session: validSession,
+        messages: [{ id: 'msg-1', role: 'user', createdAt: 12345 }],
+        page: validPage,
+      }),
+      false,
+    );
+  });
+
+  it('rejects when message item is not a record', () => {
+    assert.equal(
+      isGetSessionResponseDTO({
+        session: validSession,
+        messages: ['not-a-record'],
+        page: validPage,
+      }),
+      false,
+    );
+  });
+
+  it('rejects when message image is missing expiresAt', () => {
+    assert.equal(
+      isGetSessionResponseDTO({
+        session: validSession,
+        messages: [{ id: 'msg-1', role: 'user', createdAt: now, image: { url: 'http://x' } }],
+        page: validPage,
+      }),
+      false,
+    );
+  });
+
+  it('rejects when message image is missing url', () => {
+    assert.equal(
+      isGetSessionResponseDTO({
+        session: validSession,
+        messages: [{ id: 'msg-1', role: 'user', createdAt: now, image: { expiresAt: now } }],
+        page: validPage,
+      }),
+      false,
+    );
+  });
+
+  it('rejects when message image is not a record', () => {
+    assert.equal(
+      isGetSessionResponseDTO({
+        session: validSession,
+        messages: [{ id: 'msg-1', role: 'user', createdAt: now, image: 'not-obj' }],
+        page: validPage,
+      }),
+      false,
+    );
+  });
+
+  it('rejects when session.museumMode is not a boolean', () => {
+    assert.equal(
+      isGetSessionResponseDTO({
+        session: { ...validSession, museumMode: 'true' },
+        messages: [],
+        page: validPage,
+      }),
+      false,
+    );
+  });
+
+  it('rejects when page is not a record', () => {
+    assert.equal(
+      isGetSessionResponseDTO({
+        session: validSession,
+        messages: [],
+        page: 'not-obj',
+      }),
+      false,
+    );
+  });
+
+  it('rejects when session is not a record', () => {
+    assert.equal(
+      isGetSessionResponseDTO({
+        session: 'not-obj',
+        messages: [],
+        page: validPage,
+      }),
+      false,
+    );
+  });
+});
+
+describe('isDeleteSessionResponseDTO — additional negatives', () => {
+  it('rejects when deleted is 1 (number, not boolean)', () => {
+    assert.equal(isDeleteSessionResponseDTO({ sessionId: 'sess-1', deleted: 1 }), false);
+  });
+
+  it('rejects when deleted is "true" (string, not boolean)', () => {
+    assert.equal(isDeleteSessionResponseDTO({ sessionId: 'sess-1', deleted: 'true' }), false);
+  });
+
+  it('rejects when sessionId is missing', () => {
+    assert.equal(isDeleteSessionResponseDTO({ deleted: true }), false);
+  });
+
+  it('rejects when deleted is null', () => {
+    assert.equal(isDeleteSessionResponseDTO({ sessionId: 'sess-1', deleted: null }), false);
+  });
+
+  it('rejects an array', () => {
+    assert.equal(isDeleteSessionResponseDTO([]), false);
+  });
+
+  it('rejects a primitive', () => {
+    assert.equal(isDeleteSessionResponseDTO(42), false);
+  });
+});
+
+describe('isReportMessageResponseDTO — additional negatives', () => {
+  it('rejects when reported is 1 (number, not boolean)', () => {
+    assert.equal(isReportMessageResponseDTO({ messageId: 'msg-1', reported: 1 }), false);
+  });
+
+  it('rejects when reported is "true" (string, not boolean)', () => {
+    assert.equal(isReportMessageResponseDTO({ messageId: 'msg-1', reported: 'true' }), false);
+  });
+
+  it('rejects when messageId is missing', () => {
+    assert.equal(isReportMessageResponseDTO({ reported: true }), false);
+  });
+
+  it('rejects when reported is null', () => {
+    assert.equal(isReportMessageResponseDTO({ messageId: 'msg-1', reported: null }), false);
+  });
+
+  it('rejects an array', () => {
+    assert.equal(isReportMessageResponseDTO([]), false);
+  });
+
+  it('rejects a primitive', () => {
+    assert.equal(isReportMessageResponseDTO('string'), false);
+  });
 });

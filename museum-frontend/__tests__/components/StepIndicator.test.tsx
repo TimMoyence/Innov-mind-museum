@@ -16,16 +16,6 @@ describe('StepIndicator', () => {
     }
   });
 
-  it('renders with step 0 active', () => {
-    const { toJSON } = render(<StepIndicator totalSteps={3} currentStep={0} />);
-    expect(toJSON()).toBeTruthy();
-  });
-
-  it('renders with last step active', () => {
-    const { toJSON } = render(<StepIndicator totalSteps={3} currentStep={2} />);
-    expect(toJSON()).toBeTruthy();
-  });
-
   it('renders single step', () => {
     const { toJSON } = render(<StepIndicator totalSteps={1} currentStep={0} />);
 

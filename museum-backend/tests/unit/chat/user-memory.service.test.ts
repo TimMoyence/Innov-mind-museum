@@ -3,28 +3,7 @@ import type { UserMemoryRepository } from '@modules/chat/domain/userMemory.repos
 import type { UserMemory } from '@modules/chat/domain/userMemory.entity';
 import type { VisitContext } from '@modules/chat/domain/chat.types';
 import type { CacheService } from '@shared/cache/cache.port';
-
-// ── Factories ──────────────────────────────────────────────────────────
-
-const makeMemory = (overrides: Partial<UserMemory> = {}): UserMemory =>
-  ({
-    id: 'mem-uuid',
-    userId: 42,
-    preferredExpertise: 'beginner',
-    favoritePeriods: [],
-    favoriteArtists: ['Monet'],
-    museumsVisited: ['Louvre'],
-    totalArtworksDiscussed: 3,
-    notableArtworks: [],
-    interests: [],
-    summary: null,
-    sessionCount: 2,
-    lastSessionId: 'sess-prev',
-    version: 1,
-    createdAt: new Date('2026-01-01'),
-    updatedAt: new Date('2026-01-01'),
-    ...overrides,
-  }) as UserMemory;
+import { makeMemory } from 'tests/helpers/chat/userMemory.fixtures';
 
 const makeRepo = (memory: UserMemory | null = null): jest.Mocked<UserMemoryRepository> => ({
   getByUserId: jest.fn().mockResolvedValue(memory),
@@ -216,6 +195,228 @@ describe('UserMemoryService', () => {
 
       await expect(svc.deleteUserMemory(42)).resolves.toBeUndefined();
       expect(repo.deleteByUserId).toHaveBeenCalledWith(42);
+    });
+  });
+
+  // ── getUserMemory (GDPR export) ─────────────────────────────────────
+
+  describe('getUserMemory', () => {
+    it('returns memory entity for existing user', async () => {
+      const memory = makeMemory({ userId: 42 });
+      const repo = makeRepo(memory);
+      const svc = new UserMemoryService(repo);
+
+      const result = await svc.getUserMemory(42);
+
+      expect(result).toEqual(memory);
+      expect(repo.getByUserId).toHaveBeenCalledWith(42);
+    });
+
+    it('returns null for user with no memory', async () => {
+      const repo = makeRepo(null);
+      const svc = new UserMemoryService(repo);
+
+      const result = await svc.getUserMemory(42);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  // ── updateAfterSession (uncovered branches) ─────────────────────────
+
+  describe('updateAfterSession — uncovered branches', () => {
+    it('does not merge expertise when expertiseSignals < 3', async () => {
+      const repo = makeRepo(null);
+      const svc = new UserMemoryService(repo);
+      const ctx = makeVisitContext({
+        detectedExpertise: 'expert',
+        expertiseSignals: 2,
+      });
+
+      await svc.updateAfterSession(42, ctx, 'sess-1');
+
+      const upsertCall = repo.upsert.mock.calls[0][1];
+      expect(upsertCall.preferredExpertise).toBeUndefined();
+    });
+
+    it('merges expertise when detectedExpertise is set and signals >= 3', async () => {
+      const repo = makeRepo(null);
+      const svc = new UserMemoryService(repo);
+      const ctx = makeVisitContext({
+        detectedExpertise: 'expert',
+        expertiseSignals: 5,
+      });
+
+      await svc.updateAfterSession(42, ctx, 'sess-1');
+
+      const upsertCall = repo.upsert.mock.calls[0][1];
+      expect(upsertCall.preferredExpertise).toBe('expert');
+    });
+
+    it('does not merge museum when museumName is undefined', async () => {
+      const repo = makeRepo(null);
+      const svc = new UserMemoryService(repo);
+      const ctx = makeVisitContext({ museumName: undefined });
+
+      await svc.updateAfterSession(42, ctx, 'sess-1');
+
+      const upsertCall = repo.upsert.mock.calls[0][1];
+      expect(upsertCall.museumsVisited).toBeUndefined();
+    });
+
+    it('does not merge artists when no artworks have artist names', async () => {
+      const repo = makeRepo(null);
+      const svc = new UserMemoryService(repo);
+      const ctx = makeVisitContext({
+        artworksDiscussed: [
+          {
+            title: 'Unknown Painting',
+            artist: undefined,
+            messageId: 'msg-1',
+            discussedAt: '2026-01-01T00:00:00Z',
+          },
+        ],
+      });
+
+      await svc.updateAfterSession(42, ctx, 'sess-1');
+
+      const upsertCall = repo.upsert.mock.calls[0][1];
+      expect(upsertCall.favoriteArtists).toBeUndefined();
+    });
+
+    it('deduplicates artists (case-insensitive)', async () => {
+      const existing = makeMemory({ favoriteArtists: ['Monet'] });
+      const repo = makeRepo(existing);
+      const svc = new UserMemoryService(repo);
+      const ctx = makeVisitContext({
+        artworksDiscussed: [
+          {
+            title: 'Painting',
+            artist: 'monet',
+            messageId: 'msg-1',
+            discussedAt: '2026-01-01T00:00:00Z',
+          },
+        ],
+      });
+
+      await svc.updateAfterSession(42, ctx, 'sess-1');
+
+      const upsertCall = repo.upsert.mock.calls[0][1];
+      expect(upsertCall.favoriteArtists).toBeUndefined(); // duplicate, no update
+    });
+
+    it('adds new artists that are not duplicates', async () => {
+      const existing = makeMemory({ favoriteArtists: ['Monet'] });
+      const repo = makeRepo(existing);
+      const svc = new UserMemoryService(repo);
+      const ctx = makeVisitContext({
+        artworksDiscussed: [
+          {
+            title: 'Painting',
+            artist: 'Renoir',
+            messageId: 'msg-1',
+            discussedAt: '2026-01-01T00:00:00Z',
+          },
+        ],
+      });
+
+      await svc.updateAfterSession(42, ctx, 'sess-1');
+
+      const upsertCall = repo.upsert.mock.calls[0][1];
+      expect(upsertCall.favoriteArtists).toEqual(['Monet', 'Renoir']);
+    });
+
+    it('does not merge artworks when artworksDiscussed is empty', async () => {
+      const repo = makeRepo(null);
+      const svc = new UserMemoryService(repo);
+      const ctx = makeVisitContext({ artworksDiscussed: [] });
+
+      await svc.updateAfterSession(42, ctx, 'sess-1');
+
+      const upsertCall = repo.upsert.mock.calls[0][1];
+      expect(upsertCall.notableArtworks).toBeUndefined();
+      expect(upsertCall.totalArtworksDiscussed).toBeUndefined();
+    });
+
+    it('sets museum on notable artwork from visit context', async () => {
+      const existing = makeMemory({ notableArtworks: [], totalArtworksDiscussed: 0 });
+      const repo = makeRepo(existing);
+      const svc = new UserMemoryService(repo);
+      const ctx = makeVisitContext({ museumName: 'Orsay' });
+
+      await svc.updateAfterSession(42, ctx, 'sess-1');
+
+      const upsertCall = repo.upsert.mock.calls[0][1];
+      expect(upsertCall.notableArtworks![0].museum).toBe('Orsay');
+    });
+
+    it('sets museum to undefined when museumName is null-like', async () => {
+      const existing = makeMemory({ notableArtworks: [], totalArtworksDiscussed: 0 });
+      const repo = makeRepo(existing);
+      const svc = new UserMemoryService(repo);
+      const ctx = makeVisitContext({ museumName: undefined });
+      // Override artworksDiscussed to have at least one entry
+      ctx.artworksDiscussed = [
+        {
+          title: 'Art',
+          artist: 'Artist',
+          messageId: 'msg-1',
+          discussedAt: '2026-01-01T00:00:00Z',
+        },
+      ];
+
+      await svc.updateAfterSession(42, ctx, 'sess-1');
+
+      const upsertCall = repo.upsert.mock.calls[0][1];
+      expect(upsertCall.notableArtworks![0].museum).toBeUndefined();
+    });
+  });
+
+  // ── invalidateCache ─────────────────────────────────────────────────
+
+  describe('invalidateCache', () => {
+    it('does nothing when no cache is configured', async () => {
+      const repo = makeRepo();
+      const svc = new UserMemoryService(repo);
+
+      await expect(svc.invalidateCache(42)).resolves.toBeUndefined();
+    });
+
+    it('deletes cache key when cache is configured', async () => {
+      const repo = makeRepo();
+      const cache = makeCache();
+      const svc = new UserMemoryService(repo, cache);
+
+      await svc.invalidateCache(42);
+
+      expect(cache.del).toHaveBeenCalledWith('memory:prompt:42');
+    });
+  });
+
+  // ── getMemoryForPrompt (uncovered branch: cache miss, no cache) ─────
+
+  describe('getMemoryForPrompt — uncovered branches', () => {
+    it('fetches from repo and does not store when no cache configured', async () => {
+      const repo = makeRepo(makeMemory({ sessionCount: 1 }));
+      const svc = new UserMemoryService(repo);
+
+      const result = await svc.getMemoryForPrompt(42);
+
+      expect(repo.getByUserId).toHaveBeenCalledWith(42);
+      expect(result).toContain('[USER MEMORY]');
+    });
+
+    it('fetches from repo when cache returns null', async () => {
+      const repo = makeRepo(makeMemory({ sessionCount: 1 }));
+      const cache = makeCache();
+      cache.get.mockResolvedValue(null);
+      const svc = new UserMemoryService(repo, cache);
+
+      const result = await svc.getMemoryForPrompt(42);
+
+      expect(repo.getByUserId).toHaveBeenCalledWith(42);
+      expect(cache.set).toHaveBeenCalled();
+      expect(result).toContain('[USER MEMORY]');
     });
   });
 });

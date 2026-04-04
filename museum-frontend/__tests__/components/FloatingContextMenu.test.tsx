@@ -46,7 +46,8 @@ jest.mock('@expo/vector-icons', () => {
 // ── Imports ─────────────────────────────────────────────────────────────────
 
 import type React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { Alert } from 'react-native';
+import { render, screen, fireEvent } from '@testing-library/react-native';
 
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import type { ContextMenuAction } from '@/shared/ui/FloatingContextMenu';
@@ -164,5 +165,39 @@ describe('FloatingContextMenu — active prop', () => {
     const inactiveButton = screen.getByLabelText('Inactive');
     expect(flatStyle(inactiveButton).borderColor).toBe(THEME_CARD_BORDER);
     expect(screen.getByText('moon').props.color).toBe(THEME_TEXT_PRIMARY);
+  });
+});
+
+describe('FloatingContextMenu — handleAction', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('calls onPress when action has an onPress handler', () => {
+    const onPress = jest.fn();
+    const actions = [makeAction({ id: 'with-handler', label: 'With Handler', onPress })];
+    render(<FloatingContextMenu actions={actions} />);
+
+    fireEvent.press(screen.getByLabelText('With Handler'));
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls through to Alert.alert when action has no onPress', () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    const actions = [{ id: 'no-handler', icon: 'star' as const, label: 'No Handler' }];
+    render(<FloatingContextMenu actions={actions} />);
+
+    fireEvent.press(screen.getByLabelText('No Handler'));
+    expect(alertSpy).toHaveBeenCalledWith('No Handler', 'No Handler action is available.');
+    alertSpy.mockRestore();
+  });
+
+  it('triggers haptic feedback on press', () => {
+    const Haptics = require('expo-haptics') as { selectionAsync: jest.Mock };
+    const actions = [makeAction({ id: 'haptic', label: 'Haptic' })];
+    render(<FloatingContextMenu actions={actions} />);
+
+    fireEvent.press(screen.getByLabelText('Haptic'));
+    expect(Haptics.selectionAsync).toHaveBeenCalled();
   });
 });

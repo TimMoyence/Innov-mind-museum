@@ -1,0 +1,81 @@
+/** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
+export default {
+  packageManager: 'pnpm',
+  reporters: ['html', 'json', 'clear-text', 'progress'],
+  testRunner: 'jest',
+  jest: {
+    configFile: 'jest.config.ts',
+    enableFindRelatedTests: false,
+    config: {
+      // Remove .stryker-tmp/ from ignore — Stryker runs Jest inside its sandbox
+      testPathIgnorePatterns: ['/dist/', '/node_modules/', '/tests/ai/'],
+    },
+  },
+  coverageAnalysis: 'perTest',
+  ignoreStatic: true,
+  incremental: true,
+  incrementalFile: 'reports/stryker-incremental.json',
+  // pnpm strict hoisting: jest-runner must be explicitly listed
+  appendPlugins: ['@stryker-mutator/jest-runner'],
+  mutate: [
+    // Phase 1 — original 7 files
+    'src/modules/chat/application/art-topic-guardrail.ts',
+    'src/modules/chat/application/guardrail-evaluation.service.ts',
+    'src/shared/validation/input.ts',
+    'src/shared/pagination/cursor-codec.ts',
+    'src/modules/chat/application/llm-prompt-builder.ts',
+    'src/modules/chat/application/history-window.ts',
+    'src/modules/chat/application/llm-sections.ts',
+    // Phase 2 Wave 1 — pure functions & validation
+    'src/shared/validation/email.ts',
+    'src/shared/validation/password.ts',
+    'src/shared/i18n/locale.ts',
+    'src/shared/i18n/fallback-messages.ts',
+    'src/shared/i18n/guardrail-refusals.ts',
+    'src/modules/chat/application/image-scoring.ts',
+    'src/modules/chat/application/assistant-response.ts',
+    'src/modules/chat/application/visit-context.ts',
+    'src/modules/chat/application/chat-image.helpers.ts',
+    'src/modules/chat/application/art-topic-classifier.ts',
+    // Phase 2 Wave 2 — security & infrastructure
+    'src/modules/auth/core/useCase/login-rate-limiter.ts',
+    'src/shared/rate-limit/in-memory-bucket-store.ts',
+    'src/modules/chat/application/session-access.ts',
+    'src/shared/security/bcrypt.ts',
+    'src/modules/chat/application/semaphore.ts',
+    'src/shared/db/with-retry.ts',
+    'src/shared/utils/fire-and-forget.ts',
+    'src/shared/cache/noop-cache.service.ts',
+    // Phase 2 Wave 3 — middleware
+    'src/helpers/middleware/require-role.middleware.ts',
+    'src/helpers/middleware/authenticated.middleware.ts',
+    'src/helpers/middleware/error.middleware.ts',
+    'src/helpers/middleware/rate-limit.middleware.ts',
+    'src/helpers/middleware/accept-language.middleware.ts',
+    'src/helpers/middleware/daily-chat-limit.middleware.ts',
+    'src/helpers/middleware/validate-body.middleware.ts',
+    'src/helpers/middleware/validate-query.middleware.ts',
+    'src/helpers/middleware/apiKey.middleware.ts',
+    // Phase 2 Wave 4 — use cases
+    'src/modules/auth/core/useCase/register.useCase.ts',
+    'src/modules/auth/core/useCase/changePassword.useCase.ts',
+    'src/modules/auth/core/useCase/verifyEmail.useCase.ts',
+    'src/modules/auth/core/useCase/generateApiKey.useCase.ts',
+    'src/modules/auth/core/useCase/revokeApiKey.useCase.ts',
+    'src/modules/review/useCase/moderateReview.useCase.ts',
+    'src/modules/review/useCase/createReview.useCase.ts',
+    'src/modules/admin/core/useCase/resolveReport.useCase.ts',
+    // Exclusions
+    '!src/**/*.entity.ts',
+    '!src/**/*.migration.ts',
+    '!src/**/*.d.ts',
+    '!src/**/*.types.ts',
+  ],
+  thresholds: {
+    high: 80,
+    low: 60,
+    break: 50,
+  },
+  timeoutMS: 30000,
+  concurrency: 2,
+};

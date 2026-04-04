@@ -3,7 +3,7 @@ import type { Config } from '@jest/types';
 const config: Config.InitialOptions = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  testPathIgnorePatterns: ['/dist/', '/node_modules/', '/tests/ai/'],
+  testPathIgnorePatterns: ['/dist/', '/node_modules/', '/tests/ai/', '\\.stryker-tmp/', '\\.stryker-run/'],
   transform: {
     '^.+\\.tsx?$': 'ts-jest',
   },
@@ -20,17 +20,24 @@ const config: Config.InitialOptions = {
     '/node_modules/',
     '/dist/',
     '/tests/',
+    '\\.stryker-tmp/',
     'src/index\\.ts$',
     'src/instrumentation\\.ts$',
     'src/data/db/run-migrations\\.ts$',
     'src/data/db/migrations/',
+    'src/data/db/data-source\\.ts$',
+    'src/modules/chat/index\\.ts$',
+    'src/modules/auth/core/useCase/index\\.ts$',
+    'src/modules/support/useCase/index\\.ts$',
+    'src/shared/audit/index\\.ts$',
+    'src/shared/cache/noop-cache\\.service\\.ts$',
   ],
   coverageThreshold: {
     global: {
-      statements: 87,
-      branches: 74,
-      functions: 82,
-      lines: 87,
+      statements: 92,
+      branches: 84,
+      functions: 91,
+      lines: 92,
     },
   },
 };

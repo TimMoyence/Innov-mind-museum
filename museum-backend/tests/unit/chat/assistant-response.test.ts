@@ -1,7 +1,6 @@
 import {
   parseAssistantResponse,
   extractMetadata,
-  META_DELIMITER,
 } from '@modules/chat/application/assistant-response';
 
 describe('parseAssistantResponse', () => {
@@ -223,7 +222,185 @@ describe('parseAssistantResponse', () => {
     expect(meta.detectedArtwork?.museum).toBe('Louvre');
   });
 
-  it('META_DELIMITER constant is correct', () => {
-    expect(META_DELIMITER).toBe('\n[META]');
+  // --- Uncovered branch: [META] with non-object parsed JSON ---
+
+  it('returns empty metadata when [META] JSON parses to a non-object (array)', () => {
+    const raw = 'Some answer\n[META]\n[1, 2, 3]';
+    const parsed = parseAssistantResponse(raw);
+
+    expect(parsed.answer).toBe('Some answer');
+    expect(parsed.metadata).toEqual({});
+  });
+
+  it('returns empty metadata when [META] JSON parses to a primitive', () => {
+    const raw = 'Answer text\n[META]\n"just a string"';
+    const parsed = parseAssistantResponse(raw);
+
+    expect(parsed.answer).toBe('Answer text');
+    expect(parsed.metadata).toEqual({});
+  });
+
+  // --- Uncovered branch: legacy JSON is valid but not an object ---
+
+  it('falls back to raw text when legacy JSON parses to an array', () => {
+    const raw = '[1, 2, 3]';
+    const parsed = parseAssistantResponse(raw);
+
+    expect(parsed.answer).toBe(raw);
+    expect(parsed.metadata).toEqual({});
+  });
+
+  // --- Uncovered branch: legacy JSON is object but no answer field ---
+
+  it('falls back to raw text when legacy JSON has no answer field', () => {
+    const raw = JSON.stringify({ noAnswer: true, title: 'test' });
+    const parsed = parseAssistantResponse(raw);
+
+    expect(parsed.answer).toBe(raw);
+    expect(parsed.metadata).toEqual({});
+  });
+
+  // --- Uncovered branches in extractMetadata helper functions ---
+
+  it('returns undefined citations when value is not an array', () => {
+    const meta = extractMetadata({ citations: 'not-an-array' });
+    expect(meta.citations).toBeUndefined();
+  });
+
+  it('returns undefined citations when array contains only non-strings', () => {
+    const meta = extractMetadata({ citations: [123, true, null] });
+    expect(meta.citations).toBeUndefined();
+  });
+
+  it('filters non-string items from citations array', () => {
+    const meta = extractMetadata({ citations: ['valid', 42, 'also-valid'] });
+    expect(meta.citations).toEqual(['valid', 'also-valid']);
+  });
+
+  it('returns undefined recommendations when not an array', () => {
+    const meta = extractMetadata({ recommendations: 'single-string' });
+    expect(meta.recommendations).toBeUndefined();
+  });
+
+  it('returns undefined recommendations when all items are empty or non-string', () => {
+    const meta = extractMetadata({ recommendations: ['', '  ', 42] });
+    expect(meta.recommendations).toBeUndefined();
+  });
+
+  it('caps recommendations at 5 items', () => {
+    const meta = extractMetadata({
+      recommendations: ['r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7'],
+    });
+    expect(meta.recommendations).toHaveLength(5);
+  });
+
+  it('returns undefined followUpQuestions when all items are empty strings', () => {
+    const meta = extractMetadata({ followUpQuestions: ['', '   '] });
+    expect(meta.followUpQuestions).toBeUndefined();
+  });
+
+  it('caps followUpQuestions at 3 items', () => {
+    const meta = extractMetadata({
+      followUpQuestions: ['q1', 'q2', 'q3', 'q4'],
+    });
+    expect(meta.followUpQuestions).toHaveLength(3);
+  });
+
+  it('returns undefined for empty-string deeperContext', () => {
+    const meta = extractMetadata({ deeperContext: '   ' });
+    expect(meta.deeperContext).toBeUndefined();
+  });
+
+  it('returns undefined for non-string deeperContext', () => {
+    const meta = extractMetadata({ deeperContext: 42 });
+    expect(meta.deeperContext).toBeUndefined();
+  });
+
+  it('returns undefined for empty-string openQuestion', () => {
+    const meta = extractMetadata({ openQuestion: '' });
+    expect(meta.openQuestion).toBeUndefined();
+  });
+
+  it('trims toOptionalString values', () => {
+    const meta = extractMetadata({ deeperContext: '  trimmed  ' });
+    expect(meta.deeperContext).toBe('trimmed');
+  });
+
+  it('returns undefined expertiseSignal for invalid level', () => {
+    const meta = extractMetadata({ expertiseSignal: 'master' });
+    expect(meta.expertiseSignal).toBeUndefined();
+  });
+
+  it('returns undefined expertiseSignal for non-string value', () => {
+    const meta = extractMetadata({ expertiseSignal: 42 });
+    expect(meta.expertiseSignal).toBeUndefined();
+  });
+
+  it('returns undefined suggestedImages when not an array', () => {
+    const meta = extractMetadata({ suggestedImages: 'not-array' });
+    expect(meta.suggestedImages).toBeUndefined();
+  });
+
+  it('filters invalid items from suggestedImages', () => {
+    const meta = extractMetadata({
+      suggestedImages: [
+        { query: 'valid', description: 'desc' },
+        { query: 'missing-desc' },
+        'not-an-object',
+        null,
+        { query: 123, description: 'wrong type' },
+      ],
+    });
+    expect(meta.suggestedImages).toEqual([{ query: 'valid', description: 'desc' }]);
+  });
+
+  it('returns undefined suggestedImages when all items are invalid', () => {
+    const meta = extractMetadata({
+      suggestedImages: [null, 'string', { noQuery: true }],
+    });
+    expect(meta.suggestedImages).toBeUndefined();
+  });
+
+  it('caps suggestedImages at 3 items', () => {
+    const meta = extractMetadata({
+      suggestedImages: [
+        { query: 'q1', description: 'd1' },
+        { query: 'q2', description: 'd2' },
+        { query: 'q3', description: 'd3' },
+        { query: 'q4', description: 'd4' },
+      ],
+    });
+    expect(meta.suggestedImages).toHaveLength(3);
+  });
+
+  // --- detectedArtwork validation (valid + invalid) ---
+
+  it('skips detectedArtwork when it is not an object', () => {
+    const meta = extractMetadata({ detectedArtwork: 'not-object' });
+    expect(meta.detectedArtwork).toBeUndefined();
+
+    const metaNull = extractMetadata({ detectedArtwork: null });
+    expect(metaNull.detectedArtwork).toBeUndefined();
+  });
+
+  it('handles detectedArtwork with mixed valid and invalid field types', () => {
+    const meta = extractMetadata({
+      detectedArtwork: {
+        artworkId: 123, // non-string → dropped
+        title: 'Test',
+        confidence: 'high', // non-number → dropped
+        source: 42, // non-string → dropped
+        artist: ['arr'], // non-string → dropped
+        museum: true, // non-string → dropped
+        room: 5, // non-string → dropped
+      },
+    });
+    expect(meta.detectedArtwork?.title).toBe('Test');
+    expect(meta.detectedArtwork?.artworkId).toBeUndefined();
+    expect(meta.detectedArtwork?.confidence).toBeUndefined();
+    expect(meta.detectedArtwork?.source).toBeUndefined();
+    expect(meta.detectedArtwork?.artist).toBeUndefined();
+    expect(meta.detectedArtwork?.museum).toBeUndefined();
+    expect(meta.detectedArtwork?.room).toBeUndefined();
   });
 });

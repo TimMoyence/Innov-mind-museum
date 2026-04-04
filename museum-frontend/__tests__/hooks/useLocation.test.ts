@@ -113,4 +113,80 @@ describe('useLocation', () => {
       expect(result.current.status).toBe('granted');
     });
   });
+
+  // ── Permission request throws exception ──────────────────────────────────
+
+  it('sets error when requestForegroundPermissionsAsync throws', async () => {
+    mockRequestForegroundPermissionsAsync.mockRejectedValue(new Error('Permission API crashed'));
+
+    const { result } = renderHook(() => useLocation());
+
+    await waitFor(() => {
+      expect(result.current.error).toBe('Permission API crashed');
+    });
+
+    expect(result.current.latitude).toBeNull();
+    expect(result.current.longitude).toBeNull();
+  });
+
+  // ── Permission status is unexpected value (not 'granted') ────────────────
+
+  it('sets status to denied for unexpected permission status value', async () => {
+    mockRequestForegroundPermissionsAsync.mockResolvedValue({ status: 'undetermined' });
+
+    const { result } = renderHook(() => useLocation());
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('denied');
+    });
+
+    expect(result.current.latitude).toBeNull();
+    expect(result.current.longitude).toBeNull();
+    expect(result.current.error).toBeNull();
+  });
+
+  // ── Position coords have NaN values ──────────────────────────────────────
+
+  it('stores NaN coordinates when position returns NaN values', async () => {
+    mockGetCurrentPositionAsync.mockResolvedValue({
+      coords: { latitude: NaN, longitude: NaN },
+    });
+
+    const { result } = renderHook(() => useLocation());
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('granted');
+    });
+
+    expect(result.current.latitude).toBeNaN();
+    expect(result.current.longitude).toBeNaN();
+  });
+
+  // ── Rapid unmount during async permission request → cancelled flag ──────
+
+  it('does not update state when unmounted during getCurrentPositionAsync', async () => {
+    let resolvePosition:
+      | ((val: { coords: { latitude: number; longitude: number } }) => void)
+      | undefined;
+    mockGetCurrentPositionAsync.mockReturnValue(
+      new Promise<{ coords: { latitude: number; longitude: number } }>((resolve) => {
+        resolvePosition = resolve;
+      }),
+    );
+
+    const { result, unmount } = renderHook(() => useLocation());
+
+    // Wait for permission to be granted (position still pending)
+    await waitFor(() => {
+      expect(result.current.status).toBe('granted');
+    });
+
+    // Unmount before position resolves
+    unmount();
+
+    // Resolve position after unmount — cancelled flag prevents setState
+    resolvePosition!({ coords: { latitude: 48.86, longitude: 2.34 } });
+
+    // No assertion beyond no-throw — the cancelled guard prevents state updates
+  });
 });

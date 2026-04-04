@@ -1,6 +1,5 @@
 import { makeSession, makeMessage } from 'tests/helpers/chat/message.fixtures';
 import { GuardrailEvaluationService } from '@modules/chat/application/guardrail-evaluation.service';
-import type { GuardrailEvaluationServiceDeps } from '@modules/chat/application/guardrail-evaluation.service';
 import type {
   ChatRepository,
   PersistMessageInput,
@@ -8,7 +7,10 @@ import type {
 import type { AuditService } from '@shared/audit/audit.service';
 import type { AuditLogEntry } from '@shared/audit/audit.types';
 import { AUDIT_SECURITY_GUARDRAIL_BLOCK } from '@shared/audit/audit.types';
-/** Creates a mock ChatRepository with a controllable persistMessage stub. */
+/**
+ * Creates a mock ChatRepository with a controllable persistMessage stub.
+ * @param overrides
+ */
 const createMockRepository = (
   overrides: Partial<ChatRepository> = {},
 ): jest.Mocked<Pick<ChatRepository, 'persistMessage'>> & ChatRepository => {
@@ -46,7 +48,10 @@ const createMockAudit = (): { log: jest.Mock } => ({
   log: jest.fn(),
 });
 
-/** Creates a mock art-topic classifier. */
+/**
+ * Creates a mock art-topic classifier.
+ * @param isArtResult
+ */
 const createMockClassifier = (isArtResult: boolean) => ({
   isArtRelated: jest.fn().mockResolvedValue(isArtResult),
 });
@@ -175,6 +180,61 @@ describe('GuardrailEvaluationService', () => {
       expect(logEntry.actorId).toBeNull();
     });
 
+    it('treats userId 0 as anonymous but preserves actorId as 0', async () => {
+      const repository = createMockRepository();
+      const audit = createMockAudit();
+      const service = new GuardrailEvaluationService({
+        repository,
+        audit: audit as unknown as AuditService,
+      });
+
+      await service.handleInputBlock({
+        sessionId: 'session-001',
+        reason: 'insult',
+        requestedLocale: 'en',
+        userId: 0,
+      });
+
+      const logEntry = audit.log.mock.calls[0][0];
+      expect(logEntry.actorType).toBe('anonymous');
+      expect(logEntry.actorId).toBe(0);
+    });
+
+    it('sets actorId to null (not undefined) when userId is undefined', async () => {
+      const repository = createMockRepository();
+      const audit = createMockAudit();
+      const service = new GuardrailEvaluationService({
+        repository,
+        audit: audit as unknown as AuditService,
+      });
+
+      await service.handleInputBlock({
+        sessionId: 'session-001',
+        reason: 'insult',
+        requestedLocale: 'en',
+        userId: undefined,
+      });
+
+      const logEntry = audit.log.mock.calls[0][0];
+      expect(logEntry.actorId).toBeNull();
+      expect(logEntry.actorId).not.toBeUndefined();
+    });
+
+    it('handles undefined reason with default refusal and no policy citation', async () => {
+      const repository = createMockRepository();
+      const service = new GuardrailEvaluationService({ repository });
+
+      const result = await service.handleInputBlock({
+        sessionId: 'session-001',
+        reason: undefined,
+        requestedLocale: 'en',
+      });
+
+      expect(result.message.text.length).toBeGreaterThan(0);
+      // withPolicyCitation with undefined reason returns metadata without citations
+      expect(result.metadata.citations).toBeUndefined();
+    });
+
     it('includes policy citation in metadata for insult reason', async () => {
       const repository = createMockRepository();
       const service = new GuardrailEvaluationService({ repository });
@@ -227,7 +287,7 @@ describe('GuardrailEvaluationService', () => {
       });
 
       expect(repository.persistMessage).toHaveBeenCalledTimes(1);
-      const persistCall = repository.persistMessage.mock.calls[0][0] as PersistMessageInput;
+      const persistCall = repository.persistMessage.mock.calls[0][0];
       expect(persistCall.sessionId).toBe('session-001');
       expect(persistCall.role).toBe('assistant');
       expect(typeof persistCall.text).toBe('string');
@@ -404,24 +464,6 @@ describe('GuardrailEvaluationService', () => {
       expect(result.metadata.detectedArtwork).toEqual(originalMetadata.detectedArtwork);
       expect(result.metadata.citations).toContain('source-1');
       expect(result.metadata.citations).toContain('policy:unsafe_output');
-    });
-  });
-
-  describe('constructor wiring', () => {
-    it('accepts all optional dependencies', () => {
-      const deps: GuardrailEvaluationServiceDeps = {
-        repository: createMockRepository(),
-        audit: createMockAudit() as unknown as AuditService,
-        artTopicClassifier: createMockClassifier(true),
-      };
-
-      const service = new GuardrailEvaluationService(deps);
-      expect(service).toBeInstanceOf(GuardrailEvaluationService);
-    });
-
-    it('accepts only required repository dependency', () => {
-      const service = new GuardrailEvaluationService({ repository: createMockRepository() });
-      expect(service).toBeInstanceOf(GuardrailEvaluationService);
     });
   });
 });

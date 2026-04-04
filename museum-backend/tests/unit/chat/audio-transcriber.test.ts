@@ -151,7 +151,7 @@ describe('DisabledAudioTranscriber', () => {
   it('throws 501 FEATURE_UNAVAILABLE', async () => {
     const disabled = new DisabledAudioTranscriber();
 
-    await expect(disabled.transcribe(validInput)).rejects.toMatchObject({
+    await expect(disabled.transcribe()).rejects.toMatchObject({
       statusCode: 501,
       code: 'FEATURE_UNAVAILABLE',
     });

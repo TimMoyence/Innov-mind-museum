@@ -54,6 +54,10 @@ dist/
 coverage/
 **/coverage/
 
+# Stryker mutation testing
+**/.stryker-tmp/
+**/reports/mutation/
+
 # Environment variables
 .env
 **/.env

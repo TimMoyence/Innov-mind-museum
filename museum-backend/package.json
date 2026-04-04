@@ -32,7 +32,9 @@
     "migration:show": "npm run typeorm -- migration:show",
     "migration:revert": "npm run typeorm -- migration:revert",
     "purge:tokens": "ts-node -r tsconfig-paths/register scripts/purge-expired-tokens.ts",
-    "seed:museums": "ts-node -r tsconfig-paths/register scripts/seed-museums.ts"
+    "seed:museums": "ts-node -r tsconfig-paths/register scripts/seed-museums.ts",
+    "mutation": "stryker run",
+    "mutation:ci": "stryker run --incremental --concurrency 2"
   },
   "keywords": [],
   "author": "",
@@ -58,6 +60,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@stryker-mutator/core": "^9.6.0",
+    "@stryker-mutator/jest-runner": "^9.6.0",
+    "@stryker-mutator/typescript-checker": "^9.6.0",
     "@jest/types": "^29.6.3",
     "@types/bcrypt": "^5.0.2",
     "@types/compression": "^1.8.1",

@@ -269,4 +269,115 @@ describe('useOfflineSync', () => {
       }),
     );
   });
+
+  // ── First item fails: loop breaks, no further processing ────────────────
+
+  it('breaks immediately when the first queue item fails', async () => {
+    mockPostMessage.mockRejectedValue(new Error('Server down'));
+
+    const params = makeDefaultParams({
+      isConnected: true,
+      peekQueue: [
+        { sessionId: SESSION_ID, text: 'first fails' },
+        { sessionId: SESSION_ID, text: 'should not run' },
+      ],
+    });
+
+    renderHook(() => {
+      useOfflineSync(params);
+    });
+
+    await waitFor(() => {
+      expect(mockPostMessage).toHaveBeenCalledTimes(1);
+    });
+
+    // No messages dequeued since the first one failed
+    expect(params.dequeue).not.toHaveBeenCalled();
+    // No refetch since flushedAny is false
+    expect(mockGetSession).not.toHaveBeenCalled();
+    expect(params.setMessages).not.toHaveBeenCalled();
+  });
+
+  // ── Partial flush: 2 of 3 succeed, 3rd fails → refetch for successful ones
+
+  it('refetches session after partial flush (2 succeed, 3rd fails)', async () => {
+    mockPostMessage
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(new Error('Third fails'));
+
+    const sessionResponse = makeGetSessionResponse();
+    mockGetSession.mockResolvedValue(sessionResponse);
+
+    const params = makeDefaultParams({
+      isConnected: true,
+      peekQueue: [
+        { sessionId: SESSION_ID, text: 'msg1' },
+        { sessionId: SESSION_ID, text: 'msg2' },
+        { sessionId: SESSION_ID, text: 'msg3 fails' },
+      ],
+    });
+
+    renderHook(() => {
+      useOfflineSync(params);
+    });
+
+    await waitFor(() => {
+      expect(mockPostMessage).toHaveBeenCalledTimes(3);
+    });
+
+    // 2 successful dequeues
+    expect(params.dequeue).toHaveBeenCalledTimes(2);
+    // flushedAny is true so getSession is called
+    expect(mockGetSession).toHaveBeenCalledTimes(1);
+    expect(params.setMessages).toHaveBeenCalled();
+  });
+
+  // ── getSession throws after successful posts → no crash ─────────────────
+
+  it('catches getSession error silently after successful posts', async () => {
+    mockPostMessage.mockResolvedValue({});
+    mockGetSession.mockRejectedValue(new Error('Session fetch exploded'));
+
+    const params = makeDefaultParams({
+      isConnected: true,
+      peekQueue: [
+        { sessionId: SESSION_ID, text: 'msg1' },
+        { sessionId: SESSION_ID, text: 'msg2' },
+      ],
+    });
+
+    renderHook(() => {
+      useOfflineSync(params);
+    });
+
+    await waitFor(() => {
+      expect(mockPostMessage).toHaveBeenCalledTimes(2);
+    });
+
+    expect(params.dequeue).toHaveBeenCalledTimes(2);
+    expect(mockGetSession).toHaveBeenCalledTimes(1);
+    // setMessages NOT called because getSession threw
+    expect(params.setMessages).not.toHaveBeenCalled();
+  });
+
+  // ── Empty queue: peek returns undefined → skips refetch entirely ────────
+
+  it('skips refetch when queue is empty (peek returns undefined)', async () => {
+    const params = makeDefaultParams({
+      isConnected: true,
+      peekQueue: [],
+    });
+
+    renderHook(() => {
+      useOfflineSync(params);
+    });
+
+    // peek is called once and returns undefined
+    expect(params.peek).toHaveBeenCalled();
+    expect(mockPostMessage).not.toHaveBeenCalled();
+    expect(params.dequeue).not.toHaveBeenCalled();
+    expect(mockGetSession).not.toHaveBeenCalled();
+    expect(params.setMessages).not.toHaveBeenCalled();
+  });
 });

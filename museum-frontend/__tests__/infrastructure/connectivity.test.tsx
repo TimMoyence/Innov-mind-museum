@@ -65,6 +65,22 @@ describe('ConnectivityProvider', () => {
     expect(result.current.isInternetReachable).toBe(false);
   });
 
+  it('defaults isConnected to true when NetInfo reports null', () => {
+    const wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+      <ConnectivityProvider>{children}</ConnectivityProvider>
+    );
+
+    const { result } = renderHook(() => React.useContext(ConnectivityContext), {
+      wrapper,
+    });
+
+    act(() => {
+      netInfoCallback?.({ isConnected: null as unknown as boolean, isInternetReachable: null });
+    });
+
+    expect(result.current.isConnected).toBe(true);
+  });
+
   it('unsubscribes from NetInfo on unmount', () => {
     const { unmount } = render(
       <ConnectivityProvider>

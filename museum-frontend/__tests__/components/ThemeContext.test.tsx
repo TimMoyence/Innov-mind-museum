@@ -22,9 +22,24 @@ const TestConsumer = () => {
     <>
       <Text testID="mode">{mode}</Text>
       <Text testID="isDark">{String(isDark)}</Text>
-      <Pressable testID="set-dark" onPress={() => { setMode('dark'); }} />
-      <Pressable testID="set-light" onPress={() => { setMode('light'); }} />
-      <Pressable testID="set-system" onPress={() => { setMode('system'); }} />
+      <Pressable
+        testID="set-dark"
+        onPress={() => {
+          setMode('dark');
+        }}
+      />
+      <Pressable
+        testID="set-light"
+        onPress={() => {
+          setMode('light');
+        }}
+      />
+      <Pressable
+        testID="set-system"
+        onPress={() => {
+          setMode('system');
+        }}
+      />
     </>
   );
 };
@@ -91,6 +106,110 @@ describe('ThemeContext', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('isDark').props.children).toBe('true');
+    });
+    expect(screen.getByTestId('mode').props.children).toBe('system');
+  });
+
+  it('ignores invalid stored mode and stays at system default', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue('bogus');
+
+    render(
+      <ThemeProvider>
+        <TestConsumer />
+      </ThemeProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('mode').props.children).toBe('system');
+    });
+  });
+
+  it('handles AsyncStorage.getItem failure gracefully', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockRejectedValue(new Error('storage fail'));
+
+    render(
+      <ThemeProvider>
+        <TestConsumer />
+      </ThemeProvider>,
+    );
+
+    // Should not crash — stays at default system mode
+    await waitFor(() => {
+      expect(screen.getByTestId('mode').props.children).toBe('system');
+    });
+  });
+
+  it('handles AsyncStorage.setItem failure gracefully', async () => {
+    (AsyncStorage.setItem as jest.Mock).mockRejectedValue(new Error('write fail'));
+
+    render(
+      <ThemeProvider>
+        <TestConsumer />
+      </ThemeProvider>,
+    );
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('set-dark'));
+    });
+
+    // Mode should still change in memory even if persistence fails
+    expect(screen.getByTestId('mode').props.children).toBe('dark');
+  });
+
+  it('provides default noop setMode outside provider', () => {
+    const Orphan = () => {
+      const { setMode, mode } = useTheme();
+      return (
+        <>
+          <Text testID="orphan-mode">{mode}</Text>
+          <Pressable
+            testID="orphan-set"
+            onPress={() => {
+              setMode('dark');
+            }}
+          />
+        </>
+      );
+    };
+
+    render(<Orphan />);
+    expect(screen.getByTestId('orphan-mode').props.children).toBe('system');
+    // Should not crash — noop
+    fireEvent.press(screen.getByTestId('orphan-set'));
+    expect(screen.getByTestId('orphan-mode').props.children).toBe('system');
+  });
+
+  it('switches from dark back to light', async () => {
+    render(
+      <ThemeProvider>
+        <TestConsumer />
+      </ThemeProvider>,
+    );
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('set-dark'));
+    });
+    expect(screen.getByTestId('isDark').props.children).toBe('true');
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('set-light'));
+    });
+    expect(screen.getByTestId('isDark').props.children).toBe('false');
+    expect(screen.getByTestId('mode').props.children).toBe('light');
+  });
+
+  it('switches to system mode', async () => {
+    render(
+      <ThemeProvider>
+        <TestConsumer />
+      </ThemeProvider>,
+    );
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('set-dark'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('set-system'));
     });
     expect(screen.getByTestId('mode').props.children).toBe('system');
   });
