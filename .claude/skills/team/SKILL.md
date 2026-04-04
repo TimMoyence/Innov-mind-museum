@@ -38,6 +38,7 @@ Tu es le **Tech Lead**. Tu orchestres un cycle SDLC iteratif :
 | `team-protocols/quality-ratchet.md` | Metriques a cliquet, mesure, write-on-improve |
 | `team-protocols/conflict-resolution.md` | Evidence → cross-validation → synthese → escalade |
 | `team-protocols/finalize.md` | KB update, report, autonomie, detection proactive, IL |
+| `team-protocols/gitnexus-integration.md` | Code intelligence : outils, phases, clusters, generated skills, index freshness |
 
 ## TEMPLATES D'EQUIPE
 
@@ -307,6 +308,15 @@ Si nouveaux `eslint-disable` detectes hors allowlist → **FAIL automatique** av
 - **/test-routes** — Validation endpoints API
 - **/rollback** — Rollback atomique
 
+### GitNexus — Code Intelligence
+- **gitnexus-exploring** — Naviguer le code via le knowledge graph
+- **gitnexus-debugging** — Tracer les bugs via les call chains
+- **gitnexus-impact-analysis** — Blast radius avant modification
+- **gitnexus-refactoring** — Rename/extract/split coordonnes via le graph
+- **gitnexus-cli** — Index, status, clean, wiki, analyze --skills
+- **gitnexus-guide** — Reference outils, ressources, schema
+- **Generated cluster skills** — `.claude/skills/generated/*.md` (auto-genere par `analyze --skills`)
+
 ### Skills Communautaires — Tier 1 (HIGH VALUE)
 - **/langchain-fundamentals** + **/langchain-rag** + **/langchain-middleware** — 3 skills LangChain → Backend Architect (scope chat/LLM)
 - **/skill-creator** — Meta-skill amelioration → Tech Lead uniquement
@@ -358,6 +368,12 @@ Le Tech Lead peut chainer des skills avant/dans un run via la directive COMPOSE.
 
 /team compose:pentest-checklist,semgrep,codeql,security-compliance "audit securite full"
   → Full security audit: pentest methodology + SAST + compliance
+
+/team compose:gitnexus-impact-analysis,refactor "rename authService → authenticationService"
+  → Execute impact analysis d'abord, identifie tous les callers, puis refactor coordonne
+
+/team compose:gitnexus-exploring,feature-backend "comprendre le pipeline chat avant d'ajouter streaming"
+  → Explore le knowledge graph, trace les execution flows, puis feature avec contexte
 ```
 
 ### Contrats Input/Output
@@ -378,6 +394,8 @@ Chaque skill doit declarer son output dans un format consommable :
 | /browser-use | `{pages[], screenshots[], assertions[], verdict}` |
 | /pentest-checklist | `{categories[], checked[], findings[], verdict}` |
 | /security-compliance | `{framework, controls[], gaps[], verdict}` |
+| gitnexus-impact-analysis | `{target, direction, depth, dependants[], risk, processes[]}` |
+| gitnexus-exploring | `{query, processes[], symbols[], clusters[]}` |
 
 ### Execution
 

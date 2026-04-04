@@ -79,6 +79,17 @@ Le pre-flight est execute AVANT toute phase. Il mesure la sante du repo et peut 
 5. Lire le dernier rapport Sentinelle pour recommandations pendantes
 6. Si scope large → spawner agents specialises
 7. Resumer : mode, scope, modules, fichiers, risques, recommandations, baseline
+8. **GitNexus Context** (obligatoire) :
+   a. `gitnexus_query({query: "<scope description>"})` — trouver les execution flows pertinents
+   b. Pour chaque symbole cle : `gitnexus_context({name: "<symbole>"})` — vue 360°
+   c. `READ gitnexus://repo/InnovMind/clusters` — identifier les clusters impactes
+   d. Inclure dans l'output :
+      ```
+      GitNexus Context:
+        Execution flows: [liste des processes]
+        Clusters impactes: [liste]
+        Symboles cles: [avec callers/callees count]
+      ```
 
 **Adaptation par mode** :
 - `feature` / `refactor` : scan complet
@@ -132,6 +143,10 @@ Contenu obligatoire :
    - **L** (Large) : facteur **1.4** — 40% buffer pour imprevu
 8. Criteres de succes
 9. Recommandations Sentinelle a appliquer
+10. **Blast Radius (GitNexus)** — pour chaque symbole a modifier : `gitnexus_impact({target, direction: "upstream"})`.
+    - d=1 (WILL BREAK) → ajouter a la whitelist agent
+    - d=2 (LIKELY AFFECTED) → ajouter aux fichiers a tester
+    - Si risk HIGH/CRITICAL → ajuster estimation (+0.2 correction factor)
 
 → **PORTE SENTINELLE 1** : Plan complet ? Estimation coherente ?
 
@@ -151,6 +166,7 @@ Contenu obligatoire :
 3. Verifier la coherence architecturale (hexagonale backend, feature-driven frontend)
 4. Reevaluer les risques post-challenge
 5. Identifier les simplifications possibles
+6. **GitNexus Cluster Validation** — `READ gitnexus://repo/InnovMind/clusters` et verifier que le plan ne traverse pas de frontieres de cluster sans justification
 
 > ⛔ **BLOQUANT** : NE PAS CONTINUER sans **USER APPROVAL** apres le challenge.
 > Exception : hotfix, bug evident.
@@ -168,7 +184,7 @@ Contenu obligatoire :
 **Gate** : Sentinelle verifie que le code est implemente, lint+prettier par agent, pipeline results, erreurs classifiees. FAIL si typecheck FAIL ou lint non execute par agent.
 
 **Actions** :
-1. Impact Analysis sur les fichiers du plan
+1. **GitNexus Impact Analysis** — pour chaque symbole a modifier : `gitnexus_impact({target, direction: "upstream"})`. Si HIGH/CRITICAL → notifier Sentinelle immediatement.
 2. Spawner agents dev avec **mandats formels** (cf. `agent-mandate.md`)
 3. Agents en **parallele reel** via Agent Teams (backend ⫽ frontend ⫽ api)
 4. Chaque agent fait **lint + prettier** sur son scope (self-verification)
@@ -193,6 +209,7 @@ Contenu obligatoire :
 
 **Actions** :
 1. Analyser le delta de code (fichiers nouveaux/modifies)
+1b. `gitnexus_impact({target: "<symbole modifie>", direction: "upstream", depth: 3})` — identifier les dependants transitifs pour guider la couverture de tests
 2. Identifier les tests manquants pour le nouveau code
 3. Si tests manquants → spawner `/test-writer` pour generer les tests cibles
 4. Executer les nouveaux tests — ils doivent PASS
@@ -211,6 +228,7 @@ Contenu obligatoire :
 **Gate** : Sentinelle verifie eslint --quiet 0 erreurs et security scan clean. FAIL si erreur eslint ou vulnerabilite detectee.
 
 **Actions** :
+0. **GitNexus Scope Check** — `gitnexus_detect_changes({scope: "all"})` pour valider que les changements correspondent au scope planifie. Si process non planifie affecte → signaler a la Sentinelle.
 1. Executer `eslint --quiet` sur tous les fichiers changes
 2. Executer `/security-scan changed` sur les fichiers modifies
 3. Si erreurs eslint → corriger immediatement (pas de report)
@@ -314,6 +332,7 @@ Contenu obligatoire :
    cd museum-frontend && npm run lint && npm test
    ```
 4. Sprint Tracking : PROGRESS_TRACKER.md + SPRINT_LOG.md
+5. **GitNexus Re-index** — `gitnexus analyze --skills` pour mettre a jour le knowledge graph et regenerer les cluster skills dans `.claude/skills/generated/`.
 
 **Sprint Tracking Gate** (AM-004) : Sentinelle verifie que `docs/V1_Sprint/PROGRESS_TRACKER.md` et `SPRINT_LOG.md` sont mis a jour avec les items du run courant. FAIL si manquant.
 
@@ -343,6 +362,7 @@ Migration a reverter: [nom] ou "aucune"
 3. Feedback loop : identifier les apprentissages du run
 4. KB update : mettre a jour la knowledge base avec les decisions et patterns
 5. Rapport Sentinelle final → `team-reports/YYYY-MM-DD.md`
+5b. **GitNexus Index Check** — `READ gitnexus://repo/InnovMind/context` pour verifier que l'index est frais (lastCommit = HEAD). Si stale, signaler.
 6. obra/verification-before-completion : derniere passe verification
 
 → **PORTE SENTINELLE FINALE** : Rapport complet → `team-reports/YYYY-MM-DD.md`

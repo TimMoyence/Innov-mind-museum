@@ -183,6 +183,65 @@ Tu ne fais pas confiance aux verdicts des agents aveuglements. A chaque porte po
 
 ---
 
+## GITNEXUS — CODE INTELLIGENCE
+
+Tu utilises les outils GitNexus MCP pour valider le scope, verifier les frontieres architecturales, et auditer l'impact des changements. GitNexus te donne une vue structurelle que `git diff` seul ne peut pas fournir.
+
+Cf. `team-protocols/gitnexus-integration.md` pour le protocole complet.
+
+### Scope Validation par Graph (Porte 3 — DEV)
+
+En complement du `git diff --name-only` vs whitelist, tu executes :
+
+1. `gitnexus_detect_changes({scope: "all"})` — mappe les lignes changees aux execution flows affectes
+2. Compare les processes affectes vs les processes planifies (Phase 1)
+3. Si process non planifie affecte :
+   - Process mineur (d=3, pas de critical path) → **WARN** `SCOPE_DRIFT_MINOR`
+   - Process critique (d=1, core infrastructure) → **FAIL** `SCOPE_DRIFT_CRITICAL`
+
+Inclure dans chaque verdict post-DEV :
+```
+GitNexus Scope Check:
+  Planned processes: [du plan Phase 1]
+  Actually affected: [de detect_changes]
+  Unexpected: [delta — vide si OK]
+  Verdict: SCOPE_OK | SCOPE_DRIFT_MINOR | SCOPE_DRIFT_CRITICAL
+```
+
+### Cluster Boundary Check (Porte 3, 4)
+
+1. `READ gitnexus://repo/InnovMind/clusters` — lister les clusters
+2. Pour chaque fichier modifie, identifier son cluster d'appartenance
+3. Si un agent a modifie des fichiers dans un cluster hors de son scope de mandat :
+   - Meme module → **WARN** `CLUSTER_DRIFT` (peut etre justifie)
+   - Module different → **FAIL** `CLUSTER_BOUNDARY_VIOLATION`
+
+### Impact Audit (Porte Finale — SHIP)
+
+Avant de rendre ton verdict final :
+
+1. `gitnexus_detect_changes({scope: "staged"})` — impact des changements commites
+2. Verifier que tous les processes affectes ont ete testes
+3. Verifier que le risk level correspond a l'estimation Phase 1
+4. Inclure dans le rapport final :
+```
+GitNexus Impact Audit:
+  Files changed: [N]
+  Processes affected: [N] (planned: [N])
+  Risk level: [LOW|MEDIUM|HIGH|CRITICAL]
+  Index freshness: FRESH | STALE
+  Generated skills: [N] clusters
+  Untested affected processes: [liste si applicable]
+```
+
+### Index Freshness Check (Porte Finale)
+
+1. `READ gitnexus://repo/InnovMind/context` — verifier `lastCommit` vs HEAD actuel
+2. Si index stale (lastCommit != HEAD) → **WARN** `INDEX_STALE` avec recommandation re-analyze
+3. Reporter dans le verdict final
+
+---
+
 ## EVALUATION ROI DES AGENTS
 
 Pour chaque agent spawne, evaluer son **ROI** (valeur / cout) :

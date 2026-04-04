@@ -53,5 +53,15 @@
   "knowledgeBase": {
     "preamble": "AVANT de coder, lire: (1) error-patterns.json pour les patterns pertinents a ton scope, (2) prompt-enrichments.json pour les regles PE-* applicables, (3) appliquer les patterns connus AVANT de coder.",
     "path": ".claude/team-knowledge/"
+  },
+  "codeIntelligence": {
+    "tool": "GitNexus",
+    "version": "1.5.3",
+    "indexPath": ".gitnexus/",
+    "generatedSkillsPath": ".claude/skills/generated/",
+    "protocol": "team-protocols/gitnexus-integration.md",
+    "mcpTools": ["query", "context", "impact", "detect_changes", "rename", "cypher"],
+    "reindex": "gitnexus analyze --skills",
+    "note": "Agents DEV doivent consulter gitnexus_impact avant de modifier un symbole existant"
   }
 }

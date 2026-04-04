@@ -74,6 +74,19 @@
         "applies_to": ["feature", "feature-frontend", "feature-fullstack", "mockup"],
         "condition": "museum-web/ files in scope",
         "skills": ["browser-use"]
+      },
+      {
+        "id": "gitnexus-generated",
+        "applies_to": ["feature", "feature-backend", "feature-frontend", "feature-fullstack", "bug", "refactor"],
+        "condition": "Load generated cluster skills matching scope modules from .claude/skills/generated/",
+        "skills_path": ".claude/skills/generated/",
+        "loading": "Tech Lead identifies impacted clusters via gitnexus_query or gitnexus://repo/InnovMind/clusters, then loads matching SKILL.md files"
+      },
+      {
+        "id": "gitnexus-core",
+        "applies_to": ["feature", "feature-backend", "feature-frontend", "feature-fullstack", "bug", "refactor", "hotfix", "audit"],
+        "condition": "always — code intelligence protocol",
+        "skills": ["gitnexus-exploring", "gitnexus-impact-analysis", "gitnexus-debugging", "gitnexus-refactoring"]
       }
     ]
   },

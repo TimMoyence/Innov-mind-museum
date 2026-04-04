@@ -27,6 +27,15 @@ FINALIZE:
   8. Consolider les DISCOVERIES des agents (problemes hors scope)
   9. Produire le NEXT_RUN_RECOMMENDATION
   10. Ecrire/enrichir le rapport journalier (summary + detail)
+  11. GitNexus Re-index + Generated Skills
+      ```bash
+      gitnexus analyze --skills
+      ```
+      - Met a jour le knowledge graph avec les commits du run
+      - Regenere `.claude/skills/generated/*.md` (1 skill par cluster fonctionnel)
+      - Si `meta.json > stats.embeddings > 0` : ajouter `--embeddings`
+      - Verifier : `cat .gitnexus/meta.json` — lastCommit doit matcher HEAD
+      - Reporter dans le rapport : `GitNexus: re-indexed [N] nodes, [N] clusters, [N] generated skills`
 ```
 
 ---
@@ -86,6 +95,16 @@ Chaque rapport (`team-reports/YYYY-MM-DD.md`) DOIT commencer par un **Executive 
 
 ### Quality Ratchet
 | Metrique | Debut | Fin | Delta |
+
+### GitNexus Index
+| Metrique | Valeur |
+|----------|--------|
+| Nodes | [N] |
+| Edges | [N] |
+| Clusters | [N] |
+| Processes | [N] |
+| Generated Skills | [N] |
+| Last Indexed | [commit hash] |
 
 ### Prochaine etape
 [1 phrase]

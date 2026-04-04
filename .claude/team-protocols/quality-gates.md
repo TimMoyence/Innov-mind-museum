@@ -120,18 +120,50 @@ Scans SAST executes en parallele avec l'etape 3, apres chaque gate post-DEV :
 
 Les resultats SAST sont consolides avec /security-scan et envoyes a la Sentinelle.
 
+### Etape 3c: Scope Verification (GitNexus)
+
+Execute par la **Sentinelle** a chaque gate post-DEV :
+
+| Check | Outil | Verdict |
+|-------|-------|---------|
+| Scope drift | `gitnexus_detect_changes` | SCOPE_OK / SCOPE_DRIFT |
+| Cluster boundary | `gitnexus://repo/InnovMind/clusters` | OK / CLUSTER_DRIFT |
+| Index freshness | `gitnexus://repo/InnovMind/context` | FRESH / STALE |
+
+**Verdicts GitNexus** :
+- Scope drift mineur (process d=3) → **WARN**
+- Scope drift critique (core process non planifie) → **FAIL**
+- Cluster boundary violation (agent cross-module) → **FAIL**
+- Index stale → **WARN** + recommandation re-analyze
+
 ---
 
-## Impact Analysis
+## Impact Analysis (GitNexus)
 
-Avant de modifier un fichier, identifier ses **dependants** :
+Avant de modifier un fichier, identifier ses **dependants** via le knowledge graph :
 
 ```bash
+# Graph-based (preferred — understands call chains, not just imports)
+gitnexus_impact({target: "<symbole>", direction: "upstream"})
+
+# Fallback si GitNexus indisponible
 rg "from.*<module-path>" museum-backend/src/ --files-with-matches
-rg "import.*<module-path>" museum-backend/src/ --files-with-matches
 ```
 
+**Depth mapping** :
+| Depth | Meaning | Action |
+|-------|---------|--------|
+| d=1 | WILL BREAK — direct callers | MUST update + whitelist |
+| d=2 | LIKELY AFFECTED — indirect | MUST test |
+| d=3 | MAY NEED TESTING — transitive | Test si critical path |
+
 Si fichier partage (ex: `@shared/errors/app.error.ts`) modifie → blast radius large → TEST full.
+
+**Scope Verification** (post-DEV, executed by Sentinelle):
+```bash
+gitnexus_detect_changes({scope: "all"})
+```
+Compare processes affectes vs processes planifies. Drift = WARN ou FAIL selon criticite.
 
 ---
 
