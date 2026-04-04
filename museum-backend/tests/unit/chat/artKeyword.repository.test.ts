@@ -1,15 +1,11 @@
 import { TypeOrmArtKeywordRepository } from '@modules/chat/adapters/secondary/artKeyword.repository.typeorm';
 import { ArtKeyword } from '@modules/chat/domain/artKeyword.entity';
+import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 
-import type { Repository, SelectQueryBuilder } from 'typeorm';
+import type { Repository } from 'typeorm';
 
 const createMockRepo = () => {
-  const mockQb = {
-    where: jest.fn().mockReturnThis(),
-    andWhere: jest.fn().mockReturnThis(),
-    orderBy: jest.fn().mockReturnThis(),
-    getMany: jest.fn().mockResolvedValue([]),
-  } as unknown as jest.Mocked<SelectQueryBuilder<ArtKeyword>>;
+  const mockQb = makeMockQb();
 
   const repo: jest.Mocked<Repository<ArtKeyword>> = {
     find: jest.fn().mockResolvedValue([]),
@@ -17,7 +13,7 @@ const createMockRepo = () => {
     save: jest
       .fn()
       .mockImplementation((entity) =>
-        Promise.resolve({ id: 'uuid-1', createdAt: new Date(), ...entity }),
+        Promise.resolve({ id: 'uuid-1', createdAt: new Date(), updatedAt: new Date(), ...entity }),
       ),
     create: jest.fn().mockImplementation((data) => data),
     createQueryBuilder: jest.fn().mockReturnValue(mockQb),
@@ -55,6 +51,7 @@ describe('TypeOrmArtKeywordRepository', () => {
       locale: 'en',
       hitCount: 3,
       createdAt: new Date(),
+      updatedAt: new Date(),
     } as ArtKeyword;
     repo.findOne.mockResolvedValue(existing);
 
@@ -89,7 +86,7 @@ describe('TypeOrmArtKeywordRepository', () => {
 
     await repository.findByLocaleSince('fr', since);
 
-    expect(mockQb.where).toHaveBeenCalledWith('kw.createdAt > :since', { since });
+    expect(mockQb.where).toHaveBeenCalledWith('kw.updatedAt > :since', { since });
     expect(mockQb.andWhere).toHaveBeenCalledWith('kw.locale = :locale', { locale: 'fr' });
     expect(mockQb.getMany).toHaveBeenCalled();
   });
@@ -104,6 +101,7 @@ describe('TypeOrmArtKeywordRepository', () => {
     const [sql, params] = (repo.query as jest.Mock).mock.calls[0];
     expect(sql).toContain('INSERT INTO "art_keywords"');
     expect(sql).toContain('ON CONFLICT');
+    expect(sql).toContain('"updatedAt" = NOW()');
     expect(params).toEqual(['mosaic', 'en', 'fresco', 'en']);
   });
 });

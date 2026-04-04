@@ -27,7 +27,7 @@ export const ImagePreviewModal = ({ imageUri, onConfirm, onCancel }: ImagePrevie
   // Sync with external imageUri changes
   useEffect(() => {
     if (imageUri !== null && !isProcessing) {
-      // eslint-disable-next-line -- prop sync requires setState in effect
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- prop-to-state sync: external imageUri must override local preview URI
       setCurrentUri(imageUri);
     }
   }, [imageUri, isProcessing]);

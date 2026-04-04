@@ -76,8 +76,8 @@ Start here when exploring this area:
 
 | Area | Connections |
 |------|-------------|
-| Chat | 2 calls |
-| Application | 1 calls |
+| Middleware | 2 calls |
+| Analytics | 1 calls |
 | Admin | 1 calls |
 
 ## How to Explore

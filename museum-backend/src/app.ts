@@ -4,6 +4,7 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 
 import { buildChatService } from '@modules/chat';
+import { museumRepository } from '@modules/museum';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
 import { StaticFeatureFlagService } from '@shared/feature-flags/feature-flags.port';
@@ -146,7 +147,8 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
 
   const featureFlagService = options.featureFlagService ?? new StaticFeatureFlagService();
   const cacheService = resolveCacheService(options);
-  const chatService = options.chatService ?? buildChatService(AppDataSource, cacheService);
+  const chatService =
+    options.chatService ?? buildChatService(AppDataSource, cacheService, museumRepository);
   const healthCheck = options.healthCheck ?? createHealthCheck;
 
   app.use('/api', createApiRouter({ chatService, healthCheck, featureFlagService, cacheService }));

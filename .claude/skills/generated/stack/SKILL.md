@@ -55,13 +55,13 @@ Start here when exploring this area:
 | `startConversation` | Function | `museum-frontend/app/(stack)/discover.tsx` | 24 |
 | `ChangePasswordScreen` | Function | `museum-frontend/app/(stack)/change-password.tsx` | 15 |
 | `onSubmit` | Function | `museum-frontend/app/(stack)/change-password.tsx` | 26 |
-| `TicketDetailScreen` | Function | `museum-frontend/app/(stack)/ticket-detail.tsx` | 65 |
-| `handleSend` | Function | `museum-frontend/app/(stack)/ticket-detail.tsx` | 97 |
-| `TicketsScreen` | Function | `museum-frontend/app/(stack)/tickets.tsx` | 61 |
-| `statusLabel` | Function | `museum-frontend/app/(stack)/ticket-detail.tsx` | 117 |
-| `CreateTicketScreen` | Function | `museum-frontend/app/(stack)/create-ticket.tsx` | 30 |
-| `priorityLabel` | Function | `museum-frontend/app/(stack)/create-ticket.tsx` | 40 |
-| `handleSubmit` | Function | `museum-frontend/app/(stack)/create-ticket.tsx` | 51 |
+| `TicketDetailScreen` | Function | `museum-frontend/app/(stack)/ticket-detail.tsx` | 68 |
+| `handleSend` | Function | `museum-frontend/app/(stack)/ticket-detail.tsx` | 100 |
+| `TicketsScreen` | Function | `museum-frontend/app/(stack)/tickets.tsx` | 63 |
+| `statusLabel` | Function | `museum-frontend/app/(stack)/ticket-detail.tsx` | 120 |
+| `CreateTicketScreen` | Function | `museum-frontend/app/(stack)/create-ticket.tsx` | 31 |
+| `priorityLabel` | Function | `museum-frontend/app/(stack)/create-ticket.tsx` | 41 |
+| `handleSubmit` | Function | `museum-frontend/app/(stack)/create-ticket.tsx` | 52 |
 
 ## Execution Flows
 

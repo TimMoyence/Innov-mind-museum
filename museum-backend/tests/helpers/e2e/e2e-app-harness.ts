@@ -86,6 +86,7 @@ export async function createE2EHarness(): Promise<E2EHarness> {
     { AddOnboardingCompleted1774732556635 },
     { AddMessageFeedback1774963405720 },
     { CreateArtKeywordsTable1775100000000 },
+    { AddArtKeywordCategoryAndUpdatedAt1775400000000 },
     { ChatService },
     { TypeOrmChatRepository },
     { LocalImageStorage },
@@ -117,6 +118,7 @@ export async function createE2EHarness(): Promise<E2EHarness> {
     import('@src/data/db/migrations/1774732556635-AddOnboardingCompleted'),
     import('@src/data/db/migrations/1774963405720-AddMessageFeedback'),
     import('@src/data/db/migrations/1775100000000-CreateArtKeywordsTable'),
+    import('@src/data/db/migrations/1775400000000-AddArtKeywordCategoryAndUpdatedAt'),
     import('@modules/chat/useCase/chat.service'),
     import('@modules/chat/adapters/secondary/chat.repository.typeorm'),
     import('@modules/chat/adapters/secondary/image-storage.stub'),
@@ -150,6 +152,7 @@ export async function createE2EHarness(): Promise<E2EHarness> {
     AddOnboardingCompleted1774732556635,
     AddMessageFeedback1774963405720,
     CreateArtKeywordsTable1775100000000,
+    AddArtKeywordCategoryAndUpdatedAt1775400000000,
   ];
 
   await appDataSource.initialize();

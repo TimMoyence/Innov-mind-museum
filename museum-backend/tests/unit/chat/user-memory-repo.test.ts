@@ -2,22 +2,12 @@ import type { DataSource, Repository } from 'typeorm';
 
 import { UserMemory } from '@modules/chat/domain/userMemory.entity';
 import { TypeOrmUserMemoryRepository } from '@modules/chat/adapters/secondary/userMemory.repository.typeorm';
+import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 
 // ─── Mock helpers ─────────────────────────────────────────────────────
 
-function makeMockQb() {
-  const qb: Record<string, jest.Mock> = {
-    insert: jest.fn().mockReturnThis(),
-    into: jest.fn().mockReturnThis(),
-    values: jest.fn().mockReturnThis(),
-    orUpdate: jest.fn().mockReturnThis(),
-    execute: jest.fn().mockResolvedValue({}),
-  };
-  return qb;
-}
-
 function buildMocks() {
-  const qb = makeMockQb();
+  const qb = makeMockQb({ execute: jest.fn().mockResolvedValue({}) });
 
   const repo = {
     findOne: jest.fn(),

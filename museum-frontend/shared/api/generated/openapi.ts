@@ -2823,8 +2823,19 @@ export interface components {
       average: number;
       count: number;
     };
+    ArtKeywordDTO: {
+      /** Format: uuid */
+      id: string;
+      keyword: string;
+      locale: string;
+      category: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
     ArtKeywordListResponse: {
-      keywords: string[];
+      keywords: components['schemas']['ArtKeywordDTO'][];
+      /** Format: date-time */
+      syncedAt: string;
     };
     ArtKeywordBulkUpsertResponse: {
       created: number;

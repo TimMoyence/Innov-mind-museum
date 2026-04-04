@@ -1,5 +1,6 @@
 import { ResolveReportUseCase } from '@modules/admin/useCase/resolveReport.useCase';
 import type { IAdminRepository } from '@modules/admin/domain/admin.repository.interface';
+import { makeAdminRepo } from 'tests/helpers/admin/repo.fixtures';
 
 // Silence audit logging
 jest.mock('@shared/audit', () => ({
@@ -18,10 +19,10 @@ const fakeReport = {
 };
 
 const mockRepo = (overrides: Partial<IAdminRepository> = {}): IAdminRepository =>
-  ({
+  makeAdminRepo({
     resolveReport: jest.fn().mockResolvedValue(fakeReport),
     ...overrides,
-  }) as unknown as IAdminRepository;
+  });
 
 describe('ResolveReportUseCase', () => {
   it('throws for invalid status', async () => {

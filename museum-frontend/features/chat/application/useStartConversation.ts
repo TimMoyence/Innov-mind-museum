@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
 import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 import { getErrorMessage } from '@/shared/lib/errors';
+import type { CreateSessionRequestDTO } from '../domain/contracts';
 
 type ConversationIntent = 'default' | 'camera' | 'audio';
 
@@ -13,6 +14,9 @@ interface StartConversationOptions {
   museumMode?: boolean;
   museumId?: number;
   skipSettings?: boolean;
+  museumName?: string;
+  museumAddress?: string;
+  coordinates?: { lat: number; lng: number };
 }
 
 interface UseStartConversationReturn {
@@ -37,11 +41,14 @@ export const useStartConversation = (): UseStartConversationReturn => {
     try {
       const intent = options?.intent ?? 'default';
 
-      const payload: { locale?: string; museumMode?: boolean; museumId?: number } = {};
+      const payload: CreateSessionRequestDTO = {};
 
       if (options?.skipSettings) {
         payload.museumMode = options.museumMode;
         payload.museumId = options.museumId;
+        payload.museumName = options.museumName;
+        payload.museumAddress = options.museumAddress;
+        payload.coordinates = options.coordinates;
       } else {
         const { defaultLocale, defaultMuseumMode } = useRuntimeSettingsStore.getState();
         payload.locale = defaultLocale;

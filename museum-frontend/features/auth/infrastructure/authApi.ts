@@ -167,6 +167,37 @@ export const authService = {
   },
 
   /**
+   * Initiates an email change — sends a verification link to the new address.
+   * @param newEmail - The new email address to switch to.
+   * @param currentPassword - The user's current password for confirmation.
+   */
+  async changeEmail(
+    newEmail: string,
+    currentPassword: string,
+  ): Promise<OpenApiResponseFor<'/api/auth/change-email', 'put'>> {
+    return openApiRequest({
+      path: '/api/auth/change-email',
+      method: 'put',
+      body: JSON.stringify({ newEmail, currentPassword }),
+    });
+  },
+
+  /**
+   * Confirms an email change using the token from the verification link.
+   * @param token - The email-change confirmation token.
+   */
+  async confirmEmailChange(
+    token: string,
+  ): Promise<OpenApiResponseFor<'/api/auth/confirm-email-change', 'post'>> {
+    return openApiRequest({
+      path: '/api/auth/confirm-email-change',
+      method: 'post',
+      body: JSON.stringify({ token }),
+      requiresAuth: false,
+    });
+  },
+
+  /**
    * Exports the authenticated user's personal data (GDPR).
    * @returns The user's exported data payload.
    */

@@ -234,7 +234,16 @@ export const createMessageRouter = (
     const keywords = sinceRaw
       ? await artKeywordRepo.findByLocaleSince(locale, new Date(sinceRaw))
       : await artKeywordRepo.findByLocale(locale);
-    res.status(200).json({ keywords: keywords.map((k: { keyword: string }) => k.keyword) });
+    res.status(200).json({
+      keywords: keywords.map((k) => ({
+        id: k.id,
+        keyword: k.keyword,
+        locale: k.locale,
+        category: k.category,
+        updatedAt: k.updatedAt.toISOString(),
+      })),
+      syncedAt: new Date().toISOString(),
+    });
   });
 
   // POST /art-keywords — bulk upsert art keywords

@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from '@/features/auth/application/AuthContext';
 import { useBiometricAuth } from '@/features/auth/application/useBiometricAuth';
 import { BiometricLockScreen } from '@/features/auth/ui/BiometricLockScreen';
 import { useProtectedRoute } from '@/features/auth/useProtectedRoute';
+import { useArtKeywordsSync } from '@/features/art-keywords/application/useArtKeywordsSync';
 import { applyRuntimeSettings, saveDefaultLocale } from '@/features/settings/runtimeSettings';
 import i18n from '@/shared/i18n/i18n';
 import { I18nProvider, setOnLanguageChange } from '@/shared/i18n/I18nContext';
@@ -46,6 +47,7 @@ Sentry.init({
 
 function AuthenticationGuard({ children }: { children: ReactNode }) {
   useProtectedRoute();
+  useArtKeywordsSync();
   return <>{children}</>;
 }
 

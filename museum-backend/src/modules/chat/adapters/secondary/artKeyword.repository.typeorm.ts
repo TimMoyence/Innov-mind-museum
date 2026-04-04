@@ -21,11 +21,11 @@ export class TypeOrmArtKeywordRepository implements ArtKeywordRepository {
     return await this.repo.find({ where: { locale }, order: { hitCount: 'DESC' } });
   }
 
-  /** Finds art keywords created after the given date, optionally filtered by locale. */
+  /** Finds art keywords updated after the given date, optionally filtered by locale. */
   async findByLocaleSince(locale: string, since: Date): Promise<ArtKeyword[]> {
     const qb = this.repo
       .createQueryBuilder('kw')
-      .where('kw.createdAt > :since', { since })
+      .where('kw.updatedAt > :since', { since })
       .orderBy('kw.hitCount', 'DESC');
     if (locale !== '%') {
       qb.andWhere('kw.locale = :locale', { locale });
@@ -56,7 +56,7 @@ export class TypeOrmArtKeywordRepository implements ArtKeywordRepository {
     await this.repo.query(
       `INSERT INTO "art_keywords" ("keyword", "locale", "hitCount")
        VALUES ${values}
-       ON CONFLICT ("keyword", "locale") DO UPDATE SET "hitCount" = "art_keywords"."hitCount" + 1`,
+       ON CONFLICT ("keyword", "locale") DO UPDATE SET "hitCount" = "art_keywords"."hitCount" + 1, "updatedAt" = NOW()`,
       params,
     );
   }

@@ -64,6 +64,21 @@ export const SettingsSecurityCard = ({
           {t('settings.change_password')}
         </Text>
       </Pressable>
+      <Pressable
+        style={[
+          styles.secondaryButton,
+          { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+        ]}
+        onPress={() => {
+          router.push('/(stack)/change-email');
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={t('a11y.settings.change_email')}
+      >
+        <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+          {t('settings.change_email')}
+        </Text>
+      </Pressable>
     </GlassCard>
   );
 };

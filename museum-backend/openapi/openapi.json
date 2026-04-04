@@ -418,11 +418,23 @@
           "count": { "type": "integer" }
         }
       },
+      "ArtKeywordDTO": {
+        "type": "object",
+        "required": ["id", "keyword", "locale", "category", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "keyword": { "type": "string" },
+          "locale": { "type": "string" },
+          "category": { "type": "string" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
       "ArtKeywordListResponse": {
         "type": "object",
-        "required": ["keywords"],
+        "required": ["keywords", "syncedAt"],
         "properties": {
-          "keywords": { "type": "array", "items": { "type": "string" } }
+          "keywords": { "type": "array", "items": { "$ref": "#/components/schemas/ArtKeywordDTO" } },
+          "syncedAt": { "type": "string", "format": "date-time" }
         }
       },
       "ArtKeywordBulkUpsertResponse": {

@@ -8,6 +8,7 @@ import { AppError } from '@shared/errors/app.error';
 import { makeSession } from '../../helpers/chat/message.fixtures';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 import { makeCache } from '../../helpers/chat/cache.fixtures';
+import { makeMuseum, makeMuseumRepo } from '../../helpers/museum/museum.fixtures';
 
 // ── Factories ──────────────────────────────────────────────────────────
 
@@ -84,6 +85,86 @@ describe('ChatSessionService', () => {
 
       await expect(svc.createSession({ userId: -1 })).rejects.toThrow(AppError);
       await expect(svc.createSession({ userId: 0 })).rejects.toMatchObject({ statusCode: 400 });
+    });
+
+    it('resolves museum name from museumId when museumRepository is provided', async () => {
+      const museum = makeMuseum({ id: 42, name: 'Louvre', address: '75001 Paris' });
+      const museumRepo = makeMuseumRepo({
+        findById: jest.fn().mockResolvedValue(museum),
+      });
+      const repo = makeRepo();
+      const svc = new ChatSessionService({ repository: repo, museumRepository: museumRepo });
+
+      await svc.createSession({ userId: 42, museumId: 42, museumMode: true });
+
+      expect(museumRepo.findById).toHaveBeenCalledWith(42);
+      expect(repo.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          museumName: 'Louvre',
+          visitContext: expect.objectContaining({
+            museumName: 'Louvre',
+            museumAddress: '75001 Paris',
+            museumConfidence: 1.0,
+          }),
+        }),
+      );
+    });
+
+    it('finds nearby museums when coordinates are provided', async () => {
+      const museumRepo = makeMuseumRepo({
+        findAll: jest
+          .fn()
+          .mockResolvedValue([
+            makeMuseum({ id: 1, name: 'Louvre', latitude: 48.8606, longitude: 2.3376 }),
+            makeMuseum({ id: 2, name: 'Orsay', latitude: 48.86, longitude: 2.3266 }),
+          ]),
+      });
+      const repo = makeRepo();
+      const svc = new ChatSessionService({ repository: repo, museumRepository: museumRepo });
+
+      await svc.createSession({ userId: 42, coordinates: { lat: 48.8606, lng: 2.3376 } });
+
+      expect(repo.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          visitContext: expect.objectContaining({
+            nearbyMuseums: expect.arrayContaining([expect.objectContaining({ name: 'Louvre' })]),
+          }),
+        }),
+      );
+    });
+
+    it('creates session without museum resolution when no museumRepository', async () => {
+      const repo = makeRepo();
+      const svc = new ChatSessionService({ repository: repo });
+
+      await svc.createSession({ userId: 42, museumId: 99, museumMode: true });
+
+      expect(repo.createSession).toHaveBeenCalledWith(expect.objectContaining({ museumId: 99 }));
+      // visitContext should be undefined since no museum name and no coordinates repo
+      expect(repo.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({ visitContext: undefined }),
+      );
+    });
+
+    it('skips museum lookup when museumName is already provided', async () => {
+      const museumRepo = makeMuseumRepo();
+      const repo = makeRepo();
+      const svc = new ChatSessionService({ repository: repo, museumRepository: museumRepo });
+
+      await svc.createSession({
+        userId: 42,
+        museumId: 1,
+        museumName: 'Custom Name',
+        museumMode: true,
+      });
+
+      expect(museumRepo.findById).not.toHaveBeenCalled();
+      expect(repo.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          museumName: 'Custom Name',
+          visitContext: expect.objectContaining({ museumName: 'Custom Name' }),
+        }),
+      );
     });
   });
 

@@ -1,16 +1,24 @@
 {
   "backend": {
-    "testCount": 0,
+    "testCount": 2294,
     "asAnyCount": 0,
     "eslintDisableCount": 0,
     "tscErrors": 0
   },
   "frontend": {
-    "testCount": 0,
+    "testCount": 1042,
     "asAnyCount": 0,
     "eslintDisableCount": 0,
     "tscErrors": 0
   },
-  "lastUpdated": null,
-  "history": []
+  "lastUpdated": "2026-04-04T18:00:00.000Z",
+  "history": [
+    {
+      "date": "2026-04-04",
+      "mode": "bug",
+      "description": "Fix Start Chat Here museum context flow",
+      "backend": { "testsBefore": 2281, "testsAfter": 2294, "delta": 13 },
+      "frontend": { "testsBefore": 1042, "testsAfter": 1042, "delta": 0 }
+    }
+  ]
 }

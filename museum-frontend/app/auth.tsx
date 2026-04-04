@@ -378,9 +378,9 @@ export default function AuthScreen() {
               <View style={[styles.separatorLine, { backgroundColor: theme.separator }]} />
             </View>
 
-            {/* eslint-disable react-native/no-inline-styles -- dynamic opacity for GDPR gate */}
             {appleAuthAvailable ? (
               <View
+                // eslint-disable-next-line react-native/no-inline-styles -- dynamic opacity for GDPR gate: computed from login + consent state
                 style={{ opacity: !isLogin && !gdprAccepted ? 0.5 : 1 }}
                 pointerEvents={!isLogin && !gdprAccepted ? 'none' : 'auto'}
                 accessibilityRole="button"
@@ -400,6 +400,7 @@ export default function AuthScreen() {
               style={[
                 styles.googleButton,
                 { borderColor: theme.cardBorder, backgroundColor: theme.assistantBubble },
+                // eslint-disable-next-line react-native/no-inline-styles -- dynamic opacity for GDPR gate: computed from login + consent state
                 !isLogin && !gdprAccepted && { opacity: 0.5 },
               ]}
               onPress={() => void handleGoogleSignIn()}

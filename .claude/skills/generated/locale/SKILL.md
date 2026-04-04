@@ -23,8 +23,8 @@ description: "Skill for the [locale] area of InnovMind. 11 symbols across 8 file
 | `museum-web/src/lib/privacy-content.ts` | getPrivacyContent |
 | `museum-web/src/lib/i18n.ts` | getDictionary |
 | `museum-web/src/app/[locale]/layout.tsx` | LocaleLayout |
-| `museum-web/src/app/[locale]/admin/layout.tsx` | AdminLayout |
 | `museum-web/src/app/[locale]/reset-password/page.tsx` | ResetPasswordPage |
+| `museum-web/src/app/[locale]/admin/layout.tsx` | AdminLayout |
 
 ## Entry Points
 
@@ -47,10 +47,10 @@ Start here when exploring this area:
 | `LocaleLayout` | Function | `museum-web/src/app/[locale]/layout.tsx` | 10 |
 | `generateMetadata` | Function | `museum-web/src/app/[locale]/support/page.tsx` | 8 |
 | `SupportPage` | Function | `museum-web/src/app/[locale]/support/page.tsx` | 14 |
-| `AdminLayout` | Function | `museum-web/src/app/[locale]/admin/layout.tsx` | 9 |
+| `ResetPasswordPage` | Function | `museum-web/src/app/[locale]/reset-password/page.tsx` | 7 |
 | `generateMetadata` | Function | `museum-web/src/app/[locale]/privacy/page.tsx` | 8 |
 | `PrivacyPage` | Function | `museum-web/src/app/[locale]/privacy/page.tsx` | 14 |
-| `ResetPasswordPage` | Function | `museum-web/src/app/[locale]/reset-password/page.tsx` | 7 |
+| `AdminLayout` | Function | `museum-web/src/app/[locale]/admin/layout.tsx` | 9 |
 
 ## How to Explore
 

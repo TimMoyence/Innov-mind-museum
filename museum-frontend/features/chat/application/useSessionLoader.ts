@@ -24,6 +24,7 @@ export const useSessionLoader = (
   const [error, setError] = useState<string | null>(null);
   const [sessionTitle, setSessionTitle] = useState<string | null>(null);
   const [museumName, setMuseumName] = useState<string | null>(null);
+  const [sessionMuseumMode, setSessionMuseumMode] = useState<boolean | null>(null);
 
   const loadSession = useCallback(async () => {
     setIsLoading(true);
@@ -35,6 +36,7 @@ export const useSessionLoader = (
       const museum = response.session.museumName ?? null;
       setSessionTitle(title);
       setMuseumName(museum);
+      setSessionMuseumMode(response.session.museumMode);
       const sorted = sortByTime(
         response.messages.map((message) => ({
           id: message.id,
@@ -67,6 +69,7 @@ export const useSessionLoader = (
     setError,
     sessionTitle,
     museumName,
+    sessionMuseumMode,
     loadSession,
   };
 };
