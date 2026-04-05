@@ -5,5 +5,20 @@
     "totalRecorded": 0,
     "totalFixed": 0,
     "totalUnfixed": 0
+  },
+  "_schema": {
+    "pattern": {
+      "id": "EP-NNN",
+      "type": "import-broken|type-mismatch|missing-export|scope-overflow|test-regression|lint-violation|runtime-error",
+      "description": "string — what happened",
+      "agent": "string — which agent caused it",
+      "phase": "string — which phase it occurred in",
+      "fix": "string — how it was fixed or mitigated",
+      "occurrences": "number — how many times this pattern recurred",
+      "status": "unfixed|fixed|mitigated",
+      "firstSeen": "YYYY-MM-DD",
+      "lastSeen": "YYYY-MM-DD"
+    },
+    "_note": "Agents read unfixed patterns at spawn to avoid repeating. Tech Lead records after each corrective loop."
   }
 }

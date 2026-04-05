@@ -2,5 +2,18 @@
   "recommendations": [],
   "blockers": [],
   "priorities": [],
-  "lastUpdated": null
+  "lastUpdated": null,
+  "_schema": {
+    "recommendation": {
+      "id": "NR-NNN",
+      "description": "string — what should be done next",
+      "priority": "number 1-10 (10 = most urgent)",
+      "source": "sentinelle|tech-lead|auto-escalade",
+      "created": "YYYY-MM-DD",
+      "staleness_runs": "number — how many runs this has been unaddressed",
+      "auto_apply_at": 3,
+      "status": "pending|applied|dismissed"
+    },
+    "_auto_apply": "If staleness_runs >= auto_apply_at AND status = pending → auto-apply at next run start. Log in velocity-metrics."
+  }
 }

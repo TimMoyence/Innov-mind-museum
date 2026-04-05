@@ -2,8 +2,20 @@
   "estimates": [],
   "lastUpdated": null,
   "accuracy": {
-    "avgDeviationPercent": 0,
-    "totalEstimated": 0,
-    "totalActual": 0
+    "avgRatio": 0,
+    "totalEstimated": 0
+  },
+  "_schema": {
+    "estimate": {
+      "run_id": "RUN-YYYYMMDD-HHMM",
+      "estimated_files": "number",
+      "actual_files": "number",
+      "estimated_lines": "number",
+      "actual_lines": "number",
+      "estimated_duration_min": "number",
+      "actual_duration_min": "number",
+      "ratio": "actual / estimated (1.0 = perfect, >1 = underestimate, <1 = overestimate)"
+    },
+    "_note": "Used to calibrate future estimates. Ratios consistently >1.5 suggest scope creep or underestimation bias."
   }
 }

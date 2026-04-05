@@ -5,5 +5,28 @@
   "lastUpdated": null,
   "stats": {
     "totalEvaluations": 0
+  },
+  "_schema": {
+    "agent_entry": {
+      "runs": "number — total runs for this agent",
+      "avgScore": "number 1-10 — average quality score across runs",
+      "specializations": {
+        "<task-type>": "number — avg score for this task type (api-endpoint, migration, ui-component, test-writing, refactor, etc.)"
+      },
+      "weaknessHistory": ["EP-NNN: description x count"],
+      "roi": "high|medium|low|watch|retired"
+    },
+    "_roi_lifecycle": {
+      "high": "avgScore >= 8.0, no recurring weaknesses",
+      "medium": "avgScore 6.0-7.9, or some recurring weaknesses",
+      "low": "avgScore < 6.0 on 5+ runs → put on watch",
+      "watch": "3 more runs on watch with no improvement → propose retirement to user",
+      "retired": "user confirmed retirement, agent no longer allocated"
+    },
+    "_allocation": {
+      "prefer": "avgScore > 9.0 for task type AND roi = high",
+      "avoid": "avgScore < 7.0 for task type on 3+ runs OR roi = watch/retired",
+      "fallback": "use template default if no strong signal"
+    }
   }
 }
