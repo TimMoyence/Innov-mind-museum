@@ -34,16 +34,10 @@ import ExpoStoreReview
 import ExpoSystemUI
 import ExpoTrackingTransparency
 import EXUpdates
-import ExpoWebBrowser
-#if EXPO_CONFIGURATION_DEBUG
-import EXDevLauncher
-import EXDevMenu
-#endif
 
 @objc(ExpoModulesProvider)
 public class ExpoModulesProvider: ModulesProvider {
   public override func getModuleClasses() -> [AnyModule.Type] {
-    #if EXPO_CONFIGURATION_DEBUG
     return [
       ExpoFetchModule.self,
       AppleAuthenticationModule.self,
@@ -73,63 +67,11 @@ public class ExpoModulesProvider: ModulesProvider {
       StoreReviewModule.self,
       ExpoSystemUIModule.self,
       TrackingTransparencyModule.self,
-      UpdatesModule.self,
-      WebBrowserModule.self,
-      DevLauncherInternal.self,
-      DevLauncherAuth.self,
-      RNCSafeAreaProviderManager.self,
-      DevMenuModule.self,
-      DevMenuInternalModule.self,
-      DevMenuPreferences.self,
-      RNCSafeAreaProviderManager.self
+      UpdatesModule.self
     ]
-    #else
-    return [
-      ExpoFetchModule.self,
-      AppleAuthenticationModule.self,
-      AssetModule.self,
-      VideoViewModule.self,
-      BlurViewModule.self,
-      CameraViewModule.self,
-      ClipboardModule.self,
-      ConstantsModule.self,
-      EASClientModule.self,
-      FileSystemModule.self,
-      FileSystemNextModule.self,
-      FontLoaderModule.self,
-      FontUtilsModule.self,
-      HapticsModule.self,
-      ImageManipulatorModule.self,
-      ImagePickerModule.self,
-      KeepAwakeModule.self,
-      LinearGradientModule.self,
-      ExpoLinkingModule.self,
-      LocalAuthenticationModule.self,
-      LocalizationModule.self,
-      LocationModule.self,
-      ExpoHeadModule.self,
-      SecureStoreModule.self,
-      SplashScreenModule.self,
-      StoreReviewModule.self,
-      ExpoSystemUIModule.self,
-      TrackingTransparencyModule.self,
-      UpdatesModule.self,
-      WebBrowserModule.self
-    ]
-    #endif
   }
 
   public override func getAppDelegateSubscribers() -> [ExpoAppDelegateSubscriber.Type] {
-    #if EXPO_CONFIGURATION_DEBUG
-    return [
-      GoogleSignInAppDelegate.self,
-      FileSystemBackgroundSessionHandler.self,
-      LinkingAppDelegateSubscriber.self,
-      ExpoHeadAppDelegateSubscriber.self,
-      SplashScreenAppDelegateSubscriber.self,
-      ExpoDevLauncherAppDelegateSubscriber.self
-    ]
-    #else
     return [
       GoogleSignInAppDelegate.self,
       FileSystemBackgroundSessionHandler.self,
@@ -137,21 +79,12 @@ public class ExpoModulesProvider: ModulesProvider {
       ExpoHeadAppDelegateSubscriber.self,
       SplashScreenAppDelegateSubscriber.self
     ]
-    #endif
   }
 
   public override func getReactDelegateHandlers() -> [ExpoReactDelegateHandlerTupleType] {
-    #if EXPO_CONFIGURATION_DEBUG
-    return [
-      (packageName: "expo-updates", handler: ExpoUpdatesReactDelegateHandler.self),
-      (packageName: "expo-dev-launcher", handler: ExpoDevLauncherReactDelegateHandler.self),
-      (packageName: "expo-dev-menu", handler: ExpoDevMenuReactDelegateHandler.self)
-    ]
-    #else
     return [
       (packageName: "expo-updates", handler: ExpoUpdatesReactDelegateHandler.self)
     ]
-    #endif
   }
 
   public override func getAppCodeSignEntitlements() -> AppCodeSignEntitlements {

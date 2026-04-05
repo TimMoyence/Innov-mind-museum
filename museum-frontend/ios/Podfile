@@ -59,7 +59,10 @@ target 'Musaium' do
         'defined(__apple_build_version__) && __apple_build_version__ < 14000029L',
         'defined(__apple_build_version__)'
       )
-      File.write(fmt_base, patched) if patched != content
+      if patched != content
+        File.chmod(0644, fmt_base)
+        File.write(fmt_base, patched)
+      end
     end
 
     # This is necessary for Xcode 14, because it signs resource bundles by default

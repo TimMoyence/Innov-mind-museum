@@ -8,11 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		1AE9537261414B4F9B4BC0C9 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 6587CCC68C794B03B23F58CB /* PrivacyInfo.xcprivacy */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		889E1E7A3D064F10AE976DBA /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 98779CCFE0444E1A876F13D2 /* PrivacyInfo.xcprivacy */; };
-		95A0F6F6F8A76A03ECF8F76D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B9F147FAC9AF61243470D0B /* ExpoModulesProvider.swift */; };
-		97A32EE4A9A3197ECE4CDF94 /* libPods-Musaium.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C0A0008410187098972DB5CC /* libPods-Musaium.a */; };
+		698F786266E87F458927417F /* libPods-Musaium.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BB93C2A932BF09CDEA825CB /* libPods-Musaium.a */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		BE48367FAC4869E3B7F48533 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE62998E1F4F3F3AB9C45F97 /* ExpoModulesProvider.swift */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
@@ -20,13 +20,13 @@
 		13B07F961A680F5B00A75B9A /* Musaium.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Musaium.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Musaium/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Musaium/Info.plist; sourceTree = "<group>"; };
-		41606DFBA26793AC0AD17C43 /* Pods-Musaium.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Musaium.debug.xcconfig"; path = "Target Support Files/Pods-Musaium/Pods-Musaium.debug.xcconfig"; sourceTree = "<group>"; };
-		46B77D8C858446A17879F3F4 /* Pods-Musaium.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Musaium.release.xcconfig"; path = "Target Support Files/Pods-Musaium/Pods-Musaium.release.xcconfig"; sourceTree = "<group>"; };
-		98779CCFE0444E1A876F13D2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = PrivacyInfo.xcprivacy; path = Musaium/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		9B9F147FAC9AF61243470D0B /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Musaium/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		5BB93C2A932BF09CDEA825CB /* libPods-Musaium.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Musaium.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6587CCC68C794B03B23F58CB /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = PrivacyInfo.xcprivacy; path = Musaium/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		6D9A8482B3A00F198C3E94B3 /* Pods-Musaium.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Musaium.debug.xcconfig"; path = "Target Support Files/Pods-Musaium/Pods-Musaium.debug.xcconfig"; sourceTree = "<group>"; };
+		6E585B870088548691C031CA /* Pods-Musaium.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Musaium.release.xcconfig"; path = "Target Support Files/Pods-Musaium/Pods-Musaium.release.xcconfig"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Musaium/SplashScreen.storyboard; sourceTree = "<group>"; };
+		AE62998E1F4F3F3AB9C45F97 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Musaium/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		C0A0008410187098972DB5CC /* libPods-Musaium.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Musaium.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Musaium/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* Musaium-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Musaium-Bridging-Header.h"; path = "Musaium/Musaium-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -37,21 +37,13 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				97A32EE4A9A3197ECE4CDF94 /* libPods-Musaium.a in Frameworks */,
+				698F786266E87F458927417F /* libPods-Musaium.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		0A02B728F3ECC126B7BACA5C /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				CB060352B95E346C72F93CC1 /* Musaium */,
-			);
-			name = ExpoModulesProviders;
-			sourceTree = "<group>";
-		};
 		13B07FAE1A68108700A75B9A /* Musaium */ = {
 			isa = PBXGroup;
 			children = (
@@ -61,18 +53,44 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				98779CCFE0444E1A876F13D2 /* PrivacyInfo.xcprivacy */,
+				6587CCC68C794B03B23F58CB /* PrivacyInfo.xcprivacy */,
 			);
 			name = Musaium;
+			sourceTree = "<group>";
+		};
+		216B0D4BEE5BD33B22C610E4 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				6D9A8482B3A00F198C3E94B3 /* Pods-Musaium.debug.xcconfig */,
+				6E585B870088548691C031CA /* Pods-Musaium.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				C0A0008410187098972DB5CC /* libPods-Musaium.a */,
+				5BB93C2A932BF09CDEA825CB /* libPods-Musaium.a */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		4CDA740E62F75B35AF1D9AE6 /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				72D0698FF97C5450E484997F /* Musaium */,
+			);
+			name = ExpoModulesProviders;
+			sourceTree = "<group>";
+		};
+		72D0698FF97C5450E484997F /* Musaium */ = {
+			isa = PBXGroup;
+			children = (
+				AE62998E1F4F3F3AB9C45F97 /* ExpoModulesProvider.swift */,
+			);
+			name = Musaium;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -89,8 +107,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				CA19BE83B3188AFEC5E229D3 /* Pods */,
-				0A02B728F3ECC126B7BACA5C /* ExpoModulesProviders */,
+				216B0D4BEE5BD33B22C610E4 /* Pods */,
+				4CDA740E62F75B35AF1D9AE6 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -114,24 +132,6 @@
 			path = Musaium/Supporting;
 			sourceTree = "<group>";
 		};
-		CA19BE83B3188AFEC5E229D3 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				41606DFBA26793AC0AD17C43 /* Pods-Musaium.debug.xcconfig */,
-				46B77D8C858446A17879F3F4 /* Pods-Musaium.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
-			sourceTree = "<group>";
-		};
-		CB060352B95E346C72F93CC1 /* Musaium */ = {
-			isa = PBXGroup;
-			children = (
-				9B9F147FAC9AF61243470D0B /* ExpoModulesProvider.swift */,
-			);
-			name = Musaium;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -140,14 +140,14 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Musaium" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				DE2B51AFAF65605060291FA0 /* [Expo] Configure project */,
+				2184EE0D4A5BA9E49DACFAE0 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				CC27C9F984484965BD6748E3 /* Upload Debug Symbols to Sentry */,
-				10578FD82276795E8A6E1097 /* [CP] Embed Pods Frameworks */,
+				BCCD031CE2C842388B1AC265 /* Upload Debug Symbols to Sentry */,
+				B5CA639CBB62CD3866E354E7 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -197,7 +197,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				889E1E7A3D064F10AE976DBA /* PrivacyInfo.xcprivacy in Resources */,
+				1AE9537261414B4F9B4BC0C9 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -241,23 +241,24 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		10578FD82276795E8A6E1097 /* [CP] Embed Pods Frameworks */ = {
+		2184EE0D4A5BA9E49DACFAE0 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-Musaium/Pods-Musaium-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			inputFileListPaths = (
 			);
-			name = "[CP] Embed Pods Frameworks";
+			inputPaths = (
+			);
+			name = "[Expo] Configure project";
+			outputFileListPaths = (
+			);
 			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Musaium/Pods-Musaium-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-Musaium/expo-configure-project.sh\"\n";
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -286,8 +287,6 @@
 				"${PODS_CONFIGURATION_BUILD_DIR}/SDWebImage/SDWebImage.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/Sentry/Sentry.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/boost/boost_privacy.bundle",
-				"${PODS_CONFIGURATION_BUILD_DIR}/expo-dev-launcher/EXDevLauncher.bundle",
-				"${PODS_CONFIGURATION_BUILD_DIR}/expo-dev-menu/EXDevMenu.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/glog/glog_privacy.bundle",
 			);
 			name = "[CP] Copy Pods Resources";
@@ -312,8 +311,6 @@
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/SDWebImage.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Sentry.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/boost_privacy.bundle",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EXDevLauncher.bundle",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EXDevMenu.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/glog_privacy.bundle",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -321,7 +318,25 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Musaium/Pods-Musaium-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		CC27C9F984484965BD6748E3 /* Upload Debug Symbols to Sentry */ = {
+		B5CA639CBB62CD3866E354E7 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Musaium/Pods-Musaium-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Musaium/Pods-Musaium-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		BCCD031CE2C842388B1AC265 /* Upload Debug Symbols to Sentry */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -335,25 +350,6 @@
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh `${NODE_BINARY:-node} --print \"require('path').dirname(require.resolve('@sentry/react-native/package.json')) + '/scripts/sentry-xcode-debug-files.sh'\"`";
 		};
-		DE2B51AFAF65605060291FA0 /* [Expo] Configure project */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "[Expo] Configure project";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-Musaium/expo-configure-project.sh\"\n";
-		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -362,7 +358,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				95A0F6F6F8A76A03ECF8F76D /* ExpoModulesProvider.swift in Sources */,
+				BE48367FAC4869E3B7F48533 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -371,7 +367,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 41606DFBA26793AC0AD17C43 /* Pods-Musaium.debug.xcconfig */;
+			baseConfigurationReference = 6D9A8482B3A00F198C3E94B3 /* Pods-Musaium.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -407,7 +403,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 46B77D8C858446A17879F3F4 /* Pods-Musaium.release.xcconfig */;
+			baseConfigurationReference = 6E585B870088548691C031CA /* Pods-Musaium.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
