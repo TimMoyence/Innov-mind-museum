@@ -4,6 +4,27 @@
   "averages": {
     "durationMinutes": 0,
     "tasksPerRun": 0,
-    "correctiveLoops": 0
+    "correctiveLoops": 0,
+    "escalations": 0,
+    "tscFailsPostAgent": 0
+  },
+  "_schema": {
+    "run": {
+      "id": "RUN-YYYYMMDD-HHMM",
+      "date": "YYYY-MM-DD",
+      "mode": "feature|bug|refactor|hotfix|chore|mockup|audit",
+      "pipeline": "micro|standard|enterprise",
+      "escalated": "false | {from, to, reason}",
+      "duration_minutes": "number",
+      "agents_spawned": "number",
+      "tasks_completed": "number",
+      "corrective_loops": "number",
+      "tsc_fails_post_agent": "number — import coherence metric",
+      "discoveries_flagged": "number",
+      "files_modified": "number",
+      "lines_changed": "number",
+      "tests_added": "number",
+      "verdict": "PASS|PASS_WITH_WARNINGS|ESCALATED"
+    }
   }
 }

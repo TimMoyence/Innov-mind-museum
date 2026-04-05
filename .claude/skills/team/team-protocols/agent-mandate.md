@@ -29,6 +29,32 @@ Chaque agent DEV recoit un mandat formel avec cette structure :
 - Ne PAS ecrire dans team-knowledge/ ni team-reports/
 - Ne PAS ajouter de deps sans validation
 
+### COHERENCE IMPORTS (OBLIGATOIRE)
+
+AVANT de modifier/supprimer/renommer un symbole ou fichier :
+1. Run gitnexus_impact({target: "symbolName", direction: "upstream"})
+2. Lire la liste des dependants d=1 (WILL BREAK)
+3. Si dependants d=1 dans ton scope → les inclure dans tes modifications
+4. Si dependants d=1 hors scope → FLAG comme Discovery (NE PAS modifier)
+5. NE JAMAIS supprimer un fichier sans traiter ses importers (gitnexus_context)
+6. NE JAMAIS renommer sans gitnexus_rename({dry_run: true}) d'abord
+
+AVANT de creer un nouveau fichier :
+1. Utiliser les path aliases (@src/, @/, @modules/) pour les imports
+2. Mettre a jour le barrel index.ts parent si necessaire
+
+LOG OBLIGATOIRE : Dans ton rapport de self-verification, lister CHAQUE appel GitNexus :
+```
+### GitNexus Calls Log
+- gitnexus_impact({target: "X", direction: "upstream"}) → N dependants d=1, traites: [liste]
+- gitnexus_context({name: "Y"}) → N importers, traites: [liste]
+- gitnexus_rename({symbol_name: "Z", dry_run: true}) → N fichiers touches
+```
+Si aucun symbole existant modifie → ecrire: "Aucun symbole existant modifie — 0 appels GitNexus requis"
+La Sentinelle verifie ce log. Absence de log = FAIL de porte.
+
+Violation = FAIL de porte automatique.
+
 ### REGLES TECHNIQUES
 
 REGLE ESLINT ABSOLUE: Tu ne dois JAMAIS ajouter de `eslint-disable` sauf pour les

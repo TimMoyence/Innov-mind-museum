@@ -1,11 +1,22 @@
 {
-  "currentLevel": 1,
-  "score": 0,
-  "lastEvaluation": null,
+  "level": "L1",
   "history": [],
-  "criteria": {
-    "consecutivePassWithoutEscalation": 0,
-    "userOverrides": 0,
-    "totalRuns": 0
+  "lastUpdated": null,
+  "_schema": {
+    "levels": {
+      "L1": "Full supervision — user approves plan, reviews each phase",
+      "L2": "Notification — user notified at plan phase, not blocking",
+      "L3": "Autonomous standard — user notified at end only",
+      "L4": "Full autonomous — no notifications except blockers"
+    },
+    "promotion": "Sentinelle proposes after 3+ consecutive PASS runs → user confirms",
+    "demotion": "Any BLOCK failure → immediate reset to L1",
+    "history_entry": {
+      "date": "YYYY-MM-DD",
+      "from": "L1",
+      "to": "L2",
+      "reason": "string",
+      "approved_by": "user|auto-reset"
+    }
   }
 }

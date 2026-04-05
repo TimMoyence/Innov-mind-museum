@@ -1,8 +1,91 @@
 {
-  "enrichments": [],
-  "lastUpdated": null,
+  "enrichments": [
+    {
+      "id": "PE-001",
+      "rule": "AVANT de supprimer un fichier, toujours run gitnexus_context pour lister tous les importers. Traiter chaque importer avant de supprimer.",
+      "inject_when": ["mode:feature", "mode:refactor", "mode:bug"],
+      "inject_to": ["backend-architect", "frontend-architect"],
+      "score": 3.0,
+      "runs_evaluated": 0,
+      "status": "active",
+      "created": "2026-04-05",
+      "lastEvaluated": null
+    },
+    {
+      "id": "PE-002",
+      "rule": "AVANT de modifier la signature d'une fonction exportee, run gitnexus_impact upstream pour identifier tous les callers. Mettre a jour chaque caller dans ton scope.",
+      "inject_when": ["mode:feature", "mode:refactor"],
+      "inject_to": ["backend-architect", "frontend-architect"],
+      "score": 3.0,
+      "runs_evaluated": 0,
+      "status": "active",
+      "created": "2026-04-05",
+      "lastEvaluated": null
+    },
+    {
+      "id": "PE-003",
+      "rule": "Utiliser les path aliases (@src/, @modules/, @shared/ pour backend, @/ pour frontend) pour tous les imports. Jamais de chemins relatifs profonds (../../..).",
+      "inject_when": ["mode:feature", "mode:refactor", "mode:bug"],
+      "inject_to": ["backend-architect", "frontend-architect"],
+      "score": 3.0,
+      "runs_evaluated": 0,
+      "status": "active",
+      "created": "2026-04-05",
+      "lastEvaluated": null
+    },
+    {
+      "id": "PE-004",
+      "rule": "Quand tu crees un nouveau fichier qui exporte des symboles, verifier que le barrel index.ts parent re-exporte si necessaire. Ne pas creer d'exports orphelins.",
+      "inject_when": ["mode:feature"],
+      "inject_to": ["backend-architect", "frontend-architect"],
+      "score": 3.0,
+      "runs_evaluated": 0,
+      "status": "active",
+      "created": "2026-04-05",
+      "lastEvaluated": null
+    },
+    {
+      "id": "PE-005",
+      "rule": "Apres avoir fini tes modifications, relire la liste complete des imports de chaque fichier modifie. Supprimer les imports inutilises. Verifier que chaque import pointe vers un fichier/symbole existant.",
+      "inject_when": ["mode:feature", "mode:refactor", "mode:bug"],
+      "inject_to": ["backend-architect", "frontend-architect"],
+      "score": 3.0,
+      "runs_evaluated": 0,
+      "status": "active",
+      "created": "2026-04-05",
+      "lastEvaluated": null
+    }
+  ],
+  "lastUpdated": "2026-04-05",
   "stats": {
-    "totalActive": 0,
+    "totalActive": 5,
+    "totalReformulated": 0,
     "totalRetired": 0
+  },
+  "_schema": {
+    "enrichment": {
+      "id": "PE-NNN",
+      "rule": "string — the enrichment instruction",
+      "inject_when": ["mode:feature", "mode:refactor"],
+      "inject_to": ["backend-architect", "frontend-architect"],
+      "score": "number 0-5, average over last 3 evaluated runs",
+      "runs_evaluated": "number — how many runs this PE was evaluated in",
+      "status": "active|reformulate|retired",
+      "created": "YYYY-MM-DD",
+      "lastEvaluated": "YYYY-MM-DD"
+    },
+    "_scoring": {
+      "5": "PE directly prevented an error that occurred in a previous run",
+      "4": "PE was followed and contributed to clean output",
+      "3": "PE was followed but had no measurable impact",
+      "2": "PE was partially followed or unclear",
+      "1": "PE was ignored by the agent",
+      "0": "PE was counterproductive or caused confusion"
+    },
+    "_lifecycle": {
+      "score < 2 on 3+ runs": "status → reformulate (Sentinelle proposes new wording)",
+      "score = 0 on 5+ runs": "status → retired",
+      "reformulated PE": "resets runs_evaluated to 0, keeps id with suffix -R1, -R2"
+    }
   }
 }

@@ -120,6 +120,12 @@ AVANT de creer un nouveau fichier :
 1. Utiliser les path aliases (@src/, @/, @modules/) pour les imports
 2. Verifier que le barrel index.ts parent est mis a jour si necessaire
 
+LOG OBLIGATOIRE dans le rapport de self-verification :
+### GitNexus Calls Log
+- Lister CHAQUE appel gitnexus_impact/context/rename avec symbole + resultat
+- Si aucun symbole existant modifie → "0 appels GitNexus requis"
+- Absence de log = FAIL de porte
+
 Si tu ne respectes pas ce protocole → FAIL de porte automatique.
 ```
 

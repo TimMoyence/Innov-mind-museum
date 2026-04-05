@@ -103,11 +103,53 @@ Chaque agent DEV doit, AVANT de rendre son travail :
 
 ```
 1. Relire chaque fichier modifie en entier
-2. Verifier la coherence des imports
+2. Verifier la coherence des imports (gitnexus_impact sur chaque symbole modifie)
 3. S'assurer que les types compilent (tsc mental check)
 4. Verifier qu'aucun console.log de debug ne reste
 5. Confirmer que les tests couvrent le code ajoute
+6. Reporter toute Discovery hors-scope dans le rapport de self-verification
+7. Produire le GitNexus Calls Log (cf. agent-mandate.md § COHERENCE IMPORTS)
+   - Lister CHAQUE appel gitnexus_impact/context/rename avec symbole + resultat
+   - Si aucun symbole existant modifie → ecrire "0 appels requis"
+   - Absence de log = FAIL de porte
 ```
+
+### Step 6b — Verification GitNexus Calls Log (Sentinelle)
+
+La Sentinelle verifie le GitNexus Calls Log de chaque agent :
+```
+1. Le log est-il present ? (absent = FAIL immediat)
+2. Pour chaque fichier modifie par l'agent qui existait deja :
+   - Un appel gitnexus_impact est-il logue pour ce symbole ? (absent = WARN)
+3. Pour chaque fichier supprime :
+   - Un appel gitnexus_context est-il logue ? (absent = FAIL)
+4. Pour chaque rename :
+   - Un appel gitnexus_rename dry_run est-il logue ? (absent = FAIL)
+5. Les dependants d=1 listes sont-ils traites ou FLAGS comme Discovery ?
+```
+
+### Step 7 — Inter-Agent Scoped tsc (standard + enterprise)
+
+Execute par le Tech Lead apres chaque agent DEV, AVANT la porte Sentinelle.
+Cf. `import-coherence.md` niveau 2 pour le protocole complet.
+
+```bash
+# Lister fichiers modifies
+CHANGED=$(git diff --name-only HEAD)
+
+# Scoped tsc backend (si fichiers backend modifies)
+cd museum-backend && npx tsc --noEmit 2>&1 | head -20
+
+# Scoped tsc frontend (si fichiers frontend modifies)
+cd museum-frontend && npx tsc --noEmit 2>&1 | head -20
+```
+
+| Resultat | Action |
+|----------|--------|
+| 0 erreurs | PASS — continuer |
+| Erreurs dans fichiers de l'agent | Renvoyer au meme agent (max 2 retours) |
+| Erreurs cascade (fichiers non modifies) | Tech Lead resout |
+| 3e echec | Escalade utilisateur |
 
 ---
 
