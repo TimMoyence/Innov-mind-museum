@@ -23,6 +23,7 @@ platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
 prepare_react_native_project!
 
 target 'Musaium' do
+  inhibit_all_warnings!
   use_expo_modules!
 
   if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
@@ -84,6 +85,19 @@ target 'Musaium' do
       target.build_phases.each do |phase|
         if phase.respond_to?(:name) && phase.name&.include?('Generate Specs')
           phase.always_out_of_date = "1"
+        end
+      end
+    end
+
+    # Suppress third-party pod warnings (nullability, deprecated APIs, etc.)
+    # inhibit_all_warnings! doesn't propagate to autolinked Expo/RN pods,
+    # so we set the flags directly on all pod targets.
+    noisy_swift_pods = %w[Sentry RNSentry ExpoModulesCore ExpoModulesJSI]
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['GCC_WARN_INHIBIT_ALL_WARNINGS'] = 'YES'
+        if noisy_swift_pods.include?(target.name)
+          config.build_settings['SWIFT_SUPPRESS_WARNINGS'] = 'YES'
         end
       end
     end

@@ -46,6 +46,18 @@ else
   echo "WARNING: CI_BUILD_NUMBER not set — build number unchanged"
 fi
 
+# Patch HERMES_CLI_PATH — pod install bakes the developer's absolute local
+# path into xcconfig files, which breaks on Xcode Cloud. Replace with the
+# PODS_ROOT-relative path to the hermesc binary committed in Pods/.
+for XCCONFIG in \
+  "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios/Pods/Target Support Files/Pods-Musaium/Pods-Musaium.debug.xcconfig" \
+  "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios/Pods/Target Support Files/Pods-Musaium/Pods-Musaium.release.xcconfig"; do
+  if [ -f "$XCCONFIG" ]; then
+    sed -i '' 's|HERMES_CLI_PATH = /.*hermesc$|HERMES_CLI_PATH = $(PODS_ROOT)/hermes-engine/destroot/bin/hermesc|' "$XCCONFIG"
+    echo "Patched HERMES_CLI_PATH in $(basename "$XCCONFIG")"
+  fi
+done
+
 # Patch expo-configure-project.sh — pod install embeds absolute paths
 # from the dev machine, which break on Xcode Cloud. Replace with $PODS_ROOT.
 EXPO_SCRIPT="$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios/Pods/Target Support Files/Pods-Musaium/expo-configure-project.sh"
