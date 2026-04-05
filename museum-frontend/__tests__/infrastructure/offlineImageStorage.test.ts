@@ -12,7 +12,7 @@ const mockMakeDirectoryAsync = jest.fn().mockResolvedValue(undefined);
 const mockCopyAsync = jest.fn().mockResolvedValue(undefined);
 const mockDeleteAsync = jest.fn().mockResolvedValue(undefined);
 
-jest.mock('expo-file-system', () => ({
+jest.mock('expo-file-system/legacy', () => ({
   // Must be a plain string literal — hoisted above const declarations
   documentDirectory: 'file:///data/user/0/com.musaium/files/',
   getInfoAsync: (...args: unknown[]) => mockGetInfoAsync(...args),

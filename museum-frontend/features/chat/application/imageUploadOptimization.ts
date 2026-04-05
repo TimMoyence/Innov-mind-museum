@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-deprecated -- expo-image-manipulator API migration pending */
 import { Image } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 
 const TARGET_IMAGE_BYTES = 2_700_000;
@@ -29,7 +29,7 @@ const getImageDimensions = async (uri: string): Promise<ImageDimensions | null> 
 };
 
 const getFileSize = async (uri: string): Promise<number | undefined> => {
-  const info = await FileSystem.getInfoAsync(uri, { size: true });
+  const info = await FileSystem.getInfoAsync(uri);
   if (!info.exists || typeof info.size !== 'number') {
     return undefined;
   }

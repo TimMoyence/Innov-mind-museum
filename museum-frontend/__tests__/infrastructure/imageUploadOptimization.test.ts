@@ -7,7 +7,7 @@ const mockManipulateAsync = jest.fn();
 let mockGetSizeCallback: ((width: number, height: number) => void) | undefined;
 let mockGetSizeErrorCallback: ((error: unknown) => void) | undefined;
 
-jest.mock('expo-file-system', () => ({
+jest.mock('expo-file-system/legacy', () => ({
   getInfoAsync: (...args: unknown[]) => mockGetInfoAsync(...args),
 }));
 

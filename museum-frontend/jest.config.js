@@ -8,9 +8,11 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/$1',
     '^@react-native-async-storage/async-storage$':
       '@react-native-async-storage/async-storage/jest/async-storage-mock',
+    '^react-native-worklets(.*)$': '<rootDir>/__tests__/mocks/react-native-worklets.js',
+    '^react-native-reanimated$': '<rootDir>/__tests__/mocks/react-native-reanimated.js',
   },
   transformIgnorePatterns: [
-    'node_modules/(?!\\.pnpm|((jest-)?react-native|@react-native(-community)?(/.*)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|@shopify/flash-list|native-base|react-native-svg|@faker-js/faker)',
+    'node_modules/(?!\\.pnpm|((jest-)?react-native|@react-native(-community)?(/.*)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|@shopify/flash-list|native-base|react-native-svg|@faker-js/faker|react-native-worklets)',
   ],
   collectCoverageFrom: [
     'features/**/*.{ts,tsx}',

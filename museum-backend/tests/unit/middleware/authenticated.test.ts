@@ -1,5 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 
+import { AppError } from '@shared/errors/app.error';
+
 // Mock the auth session service BEFORE importing the middleware
 jest.mock('@modules/auth/useCase', () => ({
   authSessionService: {
@@ -38,32 +40,36 @@ const mockRes = (): Response => {
   return res;
 };
 
+const expectUnauthorized = (fn: () => void, message: string): void => {
+  try {
+    fn();
+    fail('Expected AppError to be thrown');
+  } catch (error) {
+    expect(error).toBeInstanceOf(AppError);
+    expect((error as AppError).statusCode).toBe(401);
+    expect((error as AppError).code).toBe('UNAUTHORIZED');
+    expect((error as AppError).message).toBe(message);
+  }
+};
+
 describe('isAuthenticated middleware', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('returns 401 when no Authorization header is present', () => {
+  it('throws 401 AppError when no Authorization header is present', () => {
     const req = { headers: {} } as Request;
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
-    isAuthenticated(req, res, next);
-
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({
-      error: { code: 'UNAUTHORIZED', message: 'Token required' },
-    });
+    expectUnauthorized(() => isAuthenticated(req, res, next), 'Token required');
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('returns 401 when Authorization header has no Bearer token', () => {
+  it('throws 401 AppError when Authorization header has no Bearer token', () => {
     const req = { headers: { authorization: 'Bearer' } } as unknown as Request;
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
-    isAuthenticated(req, res, next);
-
-    // split('Bearer')[1] is undefined
-    expect(res.status).toHaveBeenCalledWith(401);
+    expectUnauthorized(() => isAuthenticated(req, res, next), 'Token required');
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -100,7 +106,7 @@ describe('isAuthenticated middleware', () => {
     expect(req.museumId).toBe(42);
   });
 
-  it('returns 401 when JWT verification throws', () => {
+  it('throws 401 AppError when JWT verification throws', () => {
     (authSessionService.verifyAccessToken as jest.Mock).mockImplementation(() => {
       throw new Error('invalid token');
     });
@@ -109,16 +115,11 @@ describe('isAuthenticated middleware', () => {
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
-    isAuthenticated(req, res, next);
-
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({
-      error: { code: 'UNAUTHORIZED', message: 'Invalid token' },
-    });
+    expectUnauthorized(() => isAuthenticated(req, res, next), 'Invalid token');
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('handles msk_ token — falls through to JWT when apiKeys flag is false', () => {
+  it('throws 401 AppError when msk_ token and apiKeys flag is false', () => {
     // In test env, apiKeys flag is false, so msk_ tokens should fall to JWT
     (authSessionService.verifyAccessToken as jest.Mock).mockImplementation(() => {
       throw new Error('not a JWT');
@@ -128,10 +129,8 @@ describe('isAuthenticated middleware', () => {
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
-    isAuthenticated(req, res, next);
-
     // Should fail as JWT since apiKeys is not enabled
-    expect(res.status).toHaveBeenCalledWith(401);
+    expectUnauthorized(() => isAuthenticated(req, res, next), 'Invalid token');
   });
 
   // Note: The msk_ + apiKeys=true branch (lines 26-27) cannot be unit-tested here
@@ -159,17 +158,12 @@ describe('isAuthenticated middleware', () => {
 describe('isAuthenticatedJwtOnly middleware', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('returns 401 when no token is present', () => {
+  it('throws 401 AppError when no token is present', () => {
     const req = { headers: {} } as Request;
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
-    isAuthenticatedJwtOnly(req, res, next);
-
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({
-      error: { code: 'UNAUTHORIZED', message: 'Token required' },
-    });
+    expectUnauthorized(() => isAuthenticatedJwtOnly(req, res, next), 'Token required');
   });
 
   it('rejects msk_ tokens with specific error message', () => {
@@ -177,12 +171,10 @@ describe('isAuthenticatedJwtOnly middleware', () => {
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
-    isAuthenticatedJwtOnly(req, res, next);
-
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({
-      error: { code: 'UNAUTHORIZED', message: 'JWT authentication required for this endpoint' },
-    });
+    expectUnauthorized(
+      () => isAuthenticatedJwtOnly(req, res, next),
+      'JWT authentication required for this endpoint',
+    );
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -203,7 +195,7 @@ describe('isAuthenticatedJwtOnly middleware', () => {
     expect(req.user).toEqual({ id: 5, role: 'admin', museumId: null });
   });
 
-  it('returns 401 when JWT verification throws', () => {
+  it('throws 401 AppError when JWT verification throws', () => {
     (authSessionService.verifyAccessToken as jest.Mock).mockImplementation(() => {
       throw new Error('expired');
     });
@@ -212,11 +204,6 @@ describe('isAuthenticatedJwtOnly middleware', () => {
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
-    isAuthenticatedJwtOnly(req, res, next);
-
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({
-      error: { code: 'UNAUTHORIZED', message: 'Invalid token' },
-    });
+    expectUnauthorized(() => isAuthenticatedJwtOnly(req, res, next), 'Invalid token');
   });
 });

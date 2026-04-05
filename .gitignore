@@ -12,6 +12,26 @@
 !docs/store-listing/
 !docs/store-listing/**
 !docs/GOOGLE_PLAY_DATA_SAFETY.md
+!docs/RUNBOOK.md
+!docs/DB_BACKUP_RESTORE.md
+!docs/DEPLOYMENT_STEP_BY_STEP.md
+!docs/UPTIME_MONITORING.md
+!docs/SOCIAL_AUTH_SETUP.md
+!docs/FEATURE_KNOWLEDGE_BASE_WIKIDATA.md
+!docs/CDN_CLOUDFLARE_SETUP.md
+!docs/HORIZONTAL_SCALING.md
+!docs/RELEASE_CHECKLIST.md
+!docs/walk/
+!docs/walk/**
+!docs/superpowers/
+!docs/superpowers/**
+
+# frontend docs
+!museum-frontend/docs/
+!museum-frontend/docs/ARCHITECTURE_MAP.md
+!museum-frontend/docs/QUALITY_GUIDE.md
+!museum-frontend/docs/DEPLOYMENT.md
+!museum-frontend/docs/NEXT_LEVEL_MOBILE_PRODUCTION_AND_TEST.md
 
 # OS X
 **/.DS_Store*

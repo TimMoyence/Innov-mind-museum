@@ -1,10 +1,14 @@
 import { authSessionService } from '@modules/auth/useCase';
+import { AppError } from '@shared/errors/app.error';
 import { setUser } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
 
 import { validateApiKey } from './apiKey.middleware';
 
 import type { Request, Response, NextFunction } from 'express';
+
+const unauthorized = (message: string): AppError =>
+  new AppError({ message, statusCode: 401, code: 'UNAUTHORIZED' });
 
 /**
  * Extracts and validates the Bearer token from the Authorization header.
@@ -16,8 +20,7 @@ import type { Request, Response, NextFunction } from 'express';
 export function isAuthenticated(req: Request, res: Response, next: NextFunction): void {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
-    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token required' } });
-    return;
+    throw unauthorized('Token required');
   }
 
   // Route to API key validation if the token has the msk_ prefix
@@ -33,7 +36,7 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
     setUser({ id: String(user.id) });
     next();
   } catch {
-    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid token' } });
+    throw unauthorized('Invalid token');
   }
 }
 
@@ -41,18 +44,14 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
  * Middleware that only allows JWT authentication (no API keys).
  * Used for sensitive endpoints like API key management itself.
  */
-export function isAuthenticatedJwtOnly(req: Request, res: Response, next: NextFunction): void {
+export function isAuthenticatedJwtOnly(req: Request, _res: Response, next: NextFunction): void {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
-    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token required' } });
-    return;
+    throw unauthorized('Token required');
   }
 
   if (token.startsWith('msk_')) {
-    res.status(401).json({
-      error: { code: 'UNAUTHORIZED', message: 'JWT authentication required for this endpoint' },
-    });
-    return;
+    throw unauthorized('JWT authentication required for this endpoint');
   }
 
   try {
@@ -62,6 +61,6 @@ export function isAuthenticatedJwtOnly(req: Request, res: Response, next: NextFu
     setUser({ id: String(user.id) });
     next();
   } catch {
-    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid token' } });
+    throw unauthorized('Invalid token');
   }
 }

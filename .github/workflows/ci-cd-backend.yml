@@ -44,8 +44,19 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Audit dependencies
-        run: pnpm audit --audit-level=critical
+        run: pnpm audit --audit-level=high
+
+      - name: Generate SBOM
+        run: npx @cyclonedx/cyclonedx-npm --output-file sbom.json --spec-version 1.5 --output-reproducible
         continue-on-error: true
+
+      - name: Upload SBOM artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-backend
+          path: museum-backend/sbom.json
+          retention-days: 90
 
       - name: Lint
         run: pnpm run lint

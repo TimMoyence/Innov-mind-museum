@@ -3,7 +3,7 @@ import type { ChatMessageWithSessionOwnership } from '@modules/chat/domain/chat.
 import type { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import type { ChatSession } from '@modules/chat/domain/chatSession.entity';
 import type { TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
-import { makeSession } from '../../helpers/chat/message.fixtures';
+import { makeSession, makeMessage } from '../../helpers/chat/message.fixtures';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 import { makeCache } from '../../helpers/chat/cache.fixtures';
 
@@ -11,19 +11,6 @@ import { makeCache } from '../../helpers/chat/cache.fixtures';
 
 const SESSION_ID = 'a0a0a0a0-b1b1-4c2c-8d3d-e4e4e4e4e4e4';
 const MESSAGE_ID = 'b1b1b1b1-c2c2-4d3d-9e4e-f5f5f5f5f5f5';
-
-const makeMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage =>
-  ({
-    id: MESSAGE_ID,
-    role: 'assistant',
-    text: 'This is a painting by Monet.',
-    imageRef: null,
-    metadata: null,
-    createdAt: new Date('2026-01-01T00:00:00Z'),
-    session: makeSession({ id: SESSION_ID, user: { id: 42 } as ChatSession['user'] }),
-    artworkMatches: [],
-    ...overrides,
-  }) as ChatMessage;
 
 const makeMessageRow = (
   msgOverrides: Partial<ChatMessage> = {},

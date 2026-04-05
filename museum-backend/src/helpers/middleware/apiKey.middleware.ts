@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 
+import { AppError } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { setUser } from '@shared/observability/sentry';
 
@@ -26,10 +27,8 @@ export function setUserRoleResolver(resolver: (userId: number) => Promise<UserRo
   userRoleResolver = resolver;
 }
 
-/** Sends a 401 JSON response with a standard error shape. */
-function sendUnauthorized(res: Response, message: string): void {
-  res.status(401).json({ error: { code: 'UNAUTHORIZED', message } });
-}
+const unauthorized = (message: string): AppError =>
+  new AppError({ message, statusCode: 401, code: 'UNAUTHORIZED' });
 
 /** Checks whether the API key is expired or revoked. Returns an error message or null if valid. */
 function checkApiKeyValidity(apiKey: {
@@ -63,25 +62,23 @@ function verifyTokenHash(token: string, salt: string, storedHash: string): boole
  *
  * @param token - The full `msk_...` token from the Authorization header.
  * @param req - Express request (mutated on success).
- * @param res - Express response (used to send 401 on failure).
+ * @param _res - Express response (unused — errors thrown as AppError).
  * @param next - Express next function.
  */
 export async function validateApiKey(
   token: string,
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction,
 ): Promise<void> {
   if (!apiKeyRepo) {
-    sendUnauthorized(res, 'API key authentication not available');
-    return;
+    throw unauthorized('API key authentication not available');
   }
 
   // Prefix = chars 4..12 of the token (skip "msk_")
   const keyBody = token.slice(4); // everything after "msk_"
   if (keyBody.length < 8) {
-    sendUnauthorized(res, 'Invalid API key format');
-    return;
+    throw unauthorized('Invalid API key format');
   }
 
   const prefix = keyBody.slice(0, 8);
@@ -89,19 +86,16 @@ export async function validateApiKey(
   try {
     const apiKey = await apiKeyRepo.findByPrefix(prefix);
     if (!apiKey) {
-      sendUnauthorized(res, 'Invalid API key');
-      return;
+      throw unauthorized('Invalid API key');
     }
 
     const validityError = checkApiKeyValidity(apiKey);
     if (validityError) {
-      sendUnauthorized(res, validityError);
-      return;
+      throw unauthorized(validityError);
     }
 
     if (!verifyTokenHash(token, apiKey.salt, apiKey.hash)) {
-      sendUnauthorized(res, 'Invalid API key');
-      return;
+      throw unauthorized('Invalid API key');
     }
 
     // Resolve user role (defaults to visitor if resolver unavailable)
@@ -130,7 +124,8 @@ export async function validateApiKey(
     });
 
     next();
-  } catch {
-    sendUnauthorized(res, 'API key validation failed');
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    throw unauthorized('API key validation failed');
   }
 }

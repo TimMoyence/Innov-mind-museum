@@ -21,6 +21,7 @@ export default tseslint.config(
       'eslint.config.mjs',
       'scripts/',
       'coverage/',
+      '__tests__/mocks/*.js',
     ],
   },
 

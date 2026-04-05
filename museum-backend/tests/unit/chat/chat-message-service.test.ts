@@ -5,7 +5,6 @@ import type {
   SessionMessagesPage,
   ChatSessionsPage,
 } from '@modules/chat/domain/chat.repository.interface';
-import type { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import type { ChatSession } from '@modules/chat/domain/chatSession.entity';
 import type {
   ChatOrchestrator,
@@ -13,29 +12,14 @@ import type {
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { CacheService } from '@shared/cache/cache.port';
-import { makeSession } from '../../helpers/chat/message.fixtures';
+import { makeSession, makeMessage } from '../../helpers/chat/message.fixtures';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 import { makeCache } from '../../helpers/chat/cache.fixtures';
 
 // ── Factories ──────────────────────────────────────────────────────────
 
 const SESSION_ID = 'a0a0a0a0-b1b1-4c2c-8d3d-e4e4e4e4e4e4';
-const MESSAGE_ID = 'b1b1b1b1-c2c2-4d3d-9e4e-f5f5f5f5f5f5';
 const USER_ID = 42;
-
-const makeMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage =>
-  ({
-    id: MESSAGE_ID,
-    role: 'assistant',
-    text: 'This is a painting by Monet about impressionism.',
-    imageRef: null,
-    metadata: null,
-    createdAt: new Date('2026-01-01T00:01:00Z'),
-    session: { id: SESSION_ID } as ChatSession,
-    sessionId: SESSION_ID,
-    artworkMatches: [],
-    ...overrides,
-  }) as ChatMessage;
 
 const makeArtOutput = (overrides: Partial<OrchestratorOutput> = {}): OrchestratorOutput => ({
   text: 'This painting by Monet captures the essence of impressionism.',
@@ -63,7 +47,7 @@ const makeRepo = (
     getSessionById: jest.fn().mockResolvedValue(session),
     getMessageById: jest.fn().mockResolvedValue(null),
     deleteSessionIfEmpty: jest.fn().mockResolvedValue(true),
-    persistMessage: jest.fn().mockResolvedValue(makeMessage()),
+    persistMessage: jest.fn().mockResolvedValue(makeMessage({ role: 'assistant' })),
     listSessionMessages: jest.fn().mockResolvedValue({
       messages: [],
       nextCursor: null,
