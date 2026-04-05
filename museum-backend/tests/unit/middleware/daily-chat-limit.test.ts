@@ -7,6 +7,11 @@ import {
   _resetDailyChatLimitCacheService,
 } from '@src/helpers/middleware/daily-chat-limit.middleware';
 
+/** Flush multiple microtask cycles — needed for rejected promise .catch() chains */
+const flushAsync = async (): Promise<void> => {
+  for (let i = 0; i < 5; i++) await new Promise(process.nextTick);
+};
+
 const makeMockReq = (overrides: Record<string, unknown> = {}): Parameters<RequestHandler>[0] =>
   ({
     ip: '10.0.0.1',
@@ -160,7 +165,7 @@ describe('dailyChatLimit middleware — Redis distributed path', () => {
     dailyChatLimit(req, res, next);
 
     // Wait for the async chain to settle
-    await new Promise(process.nextTick);
+    await flushAsync();
 
     const expectedKey = `daily-chat:100:${todayStr()}`;
     expect(cache.get).toHaveBeenCalledWith(expectedKey);
@@ -186,7 +191,7 @@ describe('dailyChatLimit middleware — Redis distributed path', () => {
 
     dailyChatLimit(req, res, next);
 
-    await new Promise(process.nextTick);
+    await flushAsync();
 
     expect(next).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -211,7 +216,7 @@ describe('dailyChatLimit middleware — Redis distributed path', () => {
 
     dailyChatLimit(req, res, next);
 
-    await new Promise(process.nextTick);
+    await flushAsync();
 
     expect(next).toHaveBeenCalledWith();
     expect(cache.set).toHaveBeenCalledWith(`daily-chat:300:${todayStr()}`, 43, expect.any(Number));
@@ -229,7 +234,7 @@ describe('dailyChatLimit middleware — Redis distributed path', () => {
 
     dailyChatLimit(req, res, next);
 
-    await new Promise(process.nextTick);
+    await flushAsync();
 
     // Request should still pass via in-memory fallback
     expect(next).toHaveBeenCalledWith();
@@ -250,7 +255,7 @@ describe('dailyChatLimit middleware — Redis distributed path', () => {
 
     dailyChatLimit(req, res, next);
 
-    await new Promise(process.nextTick);
+    await flushAsync();
 
     // cache.set was called but rejected — falls back to in-memory
     expect(cache.set).toHaveBeenCalled();
