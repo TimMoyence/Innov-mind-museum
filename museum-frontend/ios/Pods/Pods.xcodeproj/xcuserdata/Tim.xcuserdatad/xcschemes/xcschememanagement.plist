@@ -19,17 +19,7 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>DoubleConversion.xcscheme</key>
-		<dict>
-			<key>isShown</key>
-			<false/>
-		</dict>
 		<key>EASClient.xcscheme</key>
-		<dict>
-			<key>isShown</key>
-			<false/>
-		</dict>
-		<key>EXAV.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -45,11 +35,6 @@
 			<false/>
 		</dict>
 		<key>EXConstants.xcscheme</key>
-		<dict>
-			<key>isShown</key>
-			<false/>
-		</dict>
-		<key>EXImageLoader.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -104,6 +89,11 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
+		<key>ExpoAudio.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
 		<key>ExpoBlur.xcscheme</key>
 		<dict>
 			<key>isShown</key>
@@ -115,6 +105,11 @@
 			<false/>
 		</dict>
 		<key>ExpoClipboard.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>ExpoDomWebView.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -134,12 +129,17 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
+		<key>ExpoGlassEffect.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
 		<key>ExpoHaptics.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>ExpoHead.xcscheme</key>
+		<key>ExpoImage.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -189,7 +189,22 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
+		<key>ExpoLogBox.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
 		<key>ExpoModulesCore.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>ExpoModulesJSI.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>ExpoRouter.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -205,6 +220,11 @@
 			<false/>
 		</dict>
 		<key>ExpoStoreReview.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>ExpoSymbols.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -284,22 +304,22 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>RCT-Folly-RCT-Folly_privacy.xcscheme</key>
-		<dict>
-			<key>isShown</key>
-			<false/>
-		</dict>
-		<key>RCT-Folly.xcscheme</key>
-		<dict>
-			<key>isShown</key>
-			<false/>
-		</dict>
 		<key>RCTDeprecation.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
 		</dict>
 		<key>RCTRequired.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>RCTSwiftUI.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>RCTSwiftUIWrapper.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -344,6 +364,11 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
+		<key>RNWorklets.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
 		<key>ReachabilitySwift-ReachabilitySwift.xcscheme</key>
 		<dict>
 			<key>isShown</key>
@@ -355,6 +380,11 @@
 			<false/>
 		</dict>
 		<key>React-Core-React-Core_privacy.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>React-Core-prebuilt.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -534,6 +564,11 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
+		<key>React-intersectionobservernativemodule.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
 		<key>React-jserrorhandler.xcscheme</key>
 		<dict>
 			<key>isShown</key>
@@ -550,6 +585,16 @@
 			<false/>
 		</dict>
 		<key>React-jsinspector.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>React-jsinspectorcdp.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>React-jsinspectornetwork.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -579,12 +624,22 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
+		<key>React-networking.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
 		<key>React-oscompat.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
 		</dict>
 		<key>React-perflogger.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>React-performancecdpmetrics.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -609,11 +664,6 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>React-rncore.xcscheme</key>
-		<dict>
-			<key>isShown</key>
-			<false/>
-		</dict>
 		<key>React-runtimeexecutor.xcscheme</key>
 		<dict>
 			<key>isShown</key>
@@ -630,6 +680,11 @@
 			<false/>
 		</dict>
 		<key>React-utils.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>React-webperformancenativemodule.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -654,12 +709,27 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
+		<key>ReactNativeDependencies.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
 		<key>SDWebImage-SDWebImage.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
 		</dict>
 		<key>SDWebImage.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>SDWebImageAVIFCoder.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>SDWebImageSVGCoder.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -679,11 +749,6 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>SocketRocket.xcscheme</key>
-		<dict>
-			<key>isShown</key>
-			<false/>
-		</dict>
 		<key>Yoga.xcscheme</key>
 		<dict>
 			<key>isShown</key>
@@ -694,37 +759,47 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>boost-boost_privacy.xcscheme</key>
+		<key>expo-dev-client.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>boost.xcscheme</key>
+		<key>expo-dev-launcher-EXDevLauncher.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>fast_float.xcscheme</key>
+		<key>expo-dev-launcher.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>fmt.xcscheme</key>
+		<key>expo-dev-menu-EXDevMenu.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>glog-glog_privacy.xcscheme</key>
+		<key>expo-dev-menu-interface.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>glog.xcscheme</key>
+		<key>expo-dev-menu.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
 		</dict>
 		<key>hermes-engine.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>libavif.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>libdav1d.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>

@@ -43,9 +43,11 @@ NODE_NOT_FOUND
 
 with_node \
   --no-warnings \
-  --eval "require(require.resolve('expo-modules-autolinking', { paths: [require.resolve('expo/package.json')] }))(process.argv.slice(1))" \
+  --eval "require('expo/bin/autolinking')" \
+  expo-modules-autolinking \
   generate-modules-provider  \
   --target "/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/ios/Pods/Target Support Files/Pods-Musaium/ExpoModulesProvider.swift" \
   --entitlement "/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/ios/Musaium/Musaium.entitlements" \
+   \
   --platform "apple" \
-  --packages "@react-native-google-signin/google-signin" "expo" "expo-apple-authentication" "expo-asset" "expo-av" "expo-blur" "expo-camera" "expo-clipboard" "expo-constants" "expo-eas-client" "expo-file-system" "expo-font" "expo-haptics" "expo-image-manipulator" "expo-image-picker" "expo-keep-awake" "expo-linear-gradient" "expo-linking" "expo-local-authentication" "expo-localization" "expo-location" "expo-router" "expo-secure-store" "expo-splash-screen" "expo-store-review" "expo-system-ui" "expo-tracking-transparency" "expo-updates"
+  --packages "@expo/dom-webview" "@react-native-google-signin/google-signin" "expo" "expo-apple-authentication" "expo-asset" "expo-audio" "expo-blur" "expo-camera" "expo-clipboard" "expo-constants" "expo-dev-launcher" "expo-dev-menu" "expo-eas-client" "expo-file-system" "expo-font" "expo-glass-effect" "expo-haptics" "expo-image" "expo-image-manipulator" "expo-image-picker" "expo-keep-awake" "expo-linear-gradient" "expo-linking" "expo-local-authentication" "expo-localization" "expo-location" "expo-router" "expo-secure-store" "expo-splash-screen" "expo-store-review" "expo-symbols" "expo-system-ui" "expo-tracking-transparency" "expo-updates"

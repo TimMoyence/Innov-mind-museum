@@ -1,6 +1,6 @@
 {
   "name": "RCTRequired",
-  "version": "0.79.6",
+  "version": "0.83.4",
   "summary": "-",
   "homepage": "https://reactnative.dev/",
   "license": "MIT",
@@ -10,8 +10,8 @@
   },
   "source": {
     "git": "https://github.com/facebook/react-native.git",
-    "tag": "v0.79.6"
+    "tag": "v0.83.4"
   },
-  "source_files": "**/*.{c,h,m,mm,cpp}",
+  "source_files": "**/*.h",
   "header_dir": "RCTRequired"
 }

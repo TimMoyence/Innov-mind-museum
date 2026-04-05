@@ -1,1 +1,1 @@
-../../../../build/generated/ios/RCTModuleProviders.h
+../../../../build/generated/ios/ReactCodegen/RCTModuleProviders.h

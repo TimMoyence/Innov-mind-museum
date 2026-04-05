@@ -1,6 +1,6 @@
 {
   "name": "ExpoSplashScreen",
-  "version": "0.30.10",
+  "version": "55.0.15",
   "summary": "Provides a module to allow keeping the native Splash Screen visible until you choose to hide it.",
   "description": "Provides a module to allow keeping the native Splash Screen visible until you choose to hide it.",
   "license": "MIT",
@@ -17,10 +17,9 @@
   "dependencies": {
     "ExpoModulesCore": []
   },
+  "source_files": "**/*.swift",
   "pod_target_xcconfig": {
     "DEFINES_MODULE": "YES",
-    "SWIFT_COMPILATION_MODE": "wholemodule",
-    "OTHER_SWIFT_FLAGS": "$(inherited) -DRCT_NEW_ARCH_ENABLED"
-  },
-  "source_files": "**/*.{h,m,swift}"
+    "SWIFT_COMPILATION_MODE": "wholemodule"
+  }
 }

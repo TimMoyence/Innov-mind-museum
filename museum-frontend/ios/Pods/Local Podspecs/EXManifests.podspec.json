@@ -1,6 +1,6 @@
 {
   "name": "EXManifests",
-  "version": "0.16.6",
+  "version": "55.0.13",
   "summary": "Code to parse and use Expo and Expo Updates manifests.",
   "description": "Code to parse and use Expo and Expo Updates manifests.",
   "license": "MIT",
@@ -8,9 +8,10 @@
   "homepage": "https://docs.expo.dev/versions/latest/sdk/manifests/",
   "platforms": {
     "ios": "15.1",
-    "tvos": "15.1"
+    "tvos": "15.1",
+    "osx": "11.0"
   },
-  "swift_versions": "5.4",
+  "swift_versions": "5.9",
   "source": {
     "git": "https://github.com/expo/expo.git"
   },
@@ -18,16 +19,16 @@
   "dependencies": {
     "ExpoModulesCore": []
   },
+  "user_target_xcconfig": {
+    "HEADER_SEARCH_PATHS": "\"${PODS_CONFIGURATION_BUILD_DIR}/EXManifests/Swift Compatibility Header\""
+  },
+  "source_files": "EXManifests/**/*.{h,m,swift}",
   "pod_target_xcconfig": {
     "GCC_TREAT_INCOMPATIBLE_POINTER_TYPE_WARNINGS_AS_ERRORS": "YES",
     "GCC_TREAT_IMPLICIT_FUNCTION_DECLARATIONS_AS_ERRORS": "YES",
     "DEFINES_MODULE": "YES",
     "SWIFT_COMPILATION_MODE": "wholemodule"
   },
-  "user_target_xcconfig": {
-    "HEADER_SEARCH_PATHS": "\"${PODS_CONFIGURATION_BUILD_DIR}/EXManifests/Swift Compatibility Header\""
-  },
-  "source_files": "EXManifests/**/*.{h,m,swift}",
   "exclude_files": "Tests/",
   "testspecs": [
     {
@@ -39,5 +40,5 @@
       "source_files": "Tests/*.{h,m,swift}"
     }
   ],
-  "swift_version": "5.4"
+  "swift_version": "5.9"
 }

@@ -11,8 +11,7 @@
 #endif
 
 #import "EXUpdates.h"
-#import "EXUpdatesMultipartStreamReader.h"
-#import "EXUpdatesParameterParser.h"
+#import "EXUpdatesBSPatch.h"
 #import "EXDeferredRCTRootView.h"
 
 FOUNDATION_EXPORT double EXUpdatesVersionNumber;

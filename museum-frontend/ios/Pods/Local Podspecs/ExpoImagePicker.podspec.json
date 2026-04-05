@@ -1,6 +1,6 @@
 {
   "name": "ExpoImagePicker",
-  "version": "16.1.4",
+  "version": "55.0.16",
   "summary": "Provides access to the system's UI for selecting images and videos from the phone's library or taking a photo with the camera.",
   "description": "Provides access to the system's UI for selecting images and videos from the phone's library or taking a photo with the camera.",
   "license": "MIT",
@@ -9,7 +9,7 @@
   "platforms": {
     "ios": "15.1"
   },
-  "swift_versions": "5.4",
+  "swift_versions": "5.9",
   "source": {
     "git": "https://github.com/expo/expo.git"
   },
@@ -17,10 +17,10 @@
   "dependencies": {
     "ExpoModulesCore": []
   },
+  "source_files": "**/*.{h,m,swift}",
   "pod_target_xcconfig": {
     "DEFINES_MODULE": "YES",
     "SWIFT_COMPILATION_MODE": "wholemodule"
   },
-  "source_files": "**/*.{h,m,swift}",
-  "swift_version": "5.4"
+  "swift_version": "5.9"
 }
