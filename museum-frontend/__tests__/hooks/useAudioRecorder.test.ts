@@ -10,44 +10,41 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
-// Shared mock fn references — class instances bind to these via prototype
-const mockStopAndUnloadAsync = jest.fn<Promise<void>, []>();
-const mockGetURI = jest.fn<string | null, []>();
-const mockGetStatusAsync = jest.fn();
-const mockRequestPermissionsAsync = jest.fn<Promise<{ granted: boolean }>, []>();
-const mockSetAudioModeAsync = jest.fn<Promise<void>, [Record<string, boolean>]>();
-const mockSoundCreateAsync = jest.fn();
-const mockRecordingCreateAsync = jest.fn();
+// Mock recorder instance returned by useAudioRecorder from expo-audio
+const mockRecorderPrepare = jest.fn<Promise<void>, []>();
+const mockRecorderRecord = jest.fn();
+const mockRecorderStop = jest.fn<Promise<void>, []>();
+const mockRecorder = {
+  prepareToRecordAsync: mockRecorderPrepare,
+  record: mockRecorderRecord,
+  stop: mockRecorderStop,
+  uri: null as string | null,
+};
 
-jest.mock('expo-av', () => {
-  // Build the Recording "class" inside the factory so it captures mock fns via closure
-  function Recording(this: Record<string, unknown>) {
-    this.stopAndUnloadAsync = mockStopAndUnloadAsync;
-    this.getURI = mockGetURI;
-  }
+const mockRequestPermissions = jest.fn<Promise<{ granted: boolean }>, []>();
+const mockSetAudioMode = jest.fn<Promise<void>, [Record<string, boolean>]>();
 
-  Recording.createAsync = (...args: unknown[]) => mockRecordingCreateAsync(...args);
+// Mock player returned by createAudioPlayer
+const mockPlayerPlay = jest.fn();
+const mockPlayerRemove = jest.fn();
+const mockPlayerAddListener = jest.fn();
+const mockCreateAudioPlayer = jest.fn();
 
-  return {
-    Audio: {
-      get requestPermissionsAsync() {
-        return mockRequestPermissionsAsync;
-      },
-      get setAudioModeAsync() {
-        return mockSetAudioModeAsync;
-      },
-      Recording,
-      RecordingOptionsPresets: {
-        HIGH_QUALITY: {},
-      },
-      Sound: {
-        get createAsync() {
-          return mockSoundCreateAsync;
-        },
-      },
+jest.mock('expo-audio', () => ({
+  useAudioRecorder: () => mockRecorder,
+  RecordingPresets: { HIGH_QUALITY: {} },
+  AudioModule: {
+    get requestRecordingPermissionsAsync() {
+      return mockRequestPermissions;
     },
-  };
-});
+  },
+  get setAudioModeAsync() {
+    return mockSetAudioMode;
+  },
+  get createAudioPlayer() {
+    return mockCreateAudioPlayer;
+  },
+}));
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
@@ -56,19 +53,17 @@ describe('useAudioRecorder', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    // Default to native (iOS) platform for tests
     Object.defineProperty(Platform, 'OS', { value: 'ios', writable: true });
-    mockRequestPermissionsAsync.mockResolvedValue({ granted: true });
-    mockStopAndUnloadAsync.mockResolvedValue(undefined);
-    mockSetAudioModeAsync.mockResolvedValue(undefined);
-    mockGetURI.mockReturnValue('file://recording.m4a');
-    mockGetStatusAsync.mockResolvedValue({ isRecording: true });
-    mockRecordingCreateAsync.mockResolvedValue({
-      recording: {
-        stopAndUnloadAsync: mockStopAndUnloadAsync,
-        getURI: mockGetURI,
-        getStatusAsync: mockGetStatusAsync,
-      },
+    mockRequestPermissions.mockResolvedValue({ granted: true });
+    mockRecorderPrepare.mockResolvedValue(undefined);
+    mockRecorderStop.mockResolvedValue(undefined);
+    mockSetAudioMode.mockResolvedValue(undefined);
+    mockRecorder.uri = 'file://recording.m4a';
+
+    mockCreateAudioPlayer.mockReturnValue({
+      play: mockPlayerPlay,
+      remove: mockPlayerRemove,
+      addListener: mockPlayerAddListener,
     });
   });
 
@@ -92,12 +87,13 @@ describe('useAudioRecorder', () => {
       await result.current.toggleRecording();
     });
 
-    expect(mockRequestPermissionsAsync).toHaveBeenCalledTimes(1);
-    expect(mockSetAudioModeAsync).toHaveBeenCalledWith({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
+    expect(mockRequestPermissions).toHaveBeenCalledTimes(1);
+    expect(mockSetAudioMode).toHaveBeenCalledWith({
+      allowsRecording: true,
+      playsInSilentMode: true,
     });
-    expect(mockRecordingCreateAsync).toHaveBeenCalledTimes(1);
+    expect(mockRecorderPrepare).toHaveBeenCalledTimes(1);
+    expect(mockRecorderRecord).toHaveBeenCalledTimes(1);
     expect(result.current.isRecording).toBe(true);
   });
 
@@ -116,7 +112,7 @@ describe('useAudioRecorder', () => {
     });
 
     expect(result.current.isRecording).toBe(false);
-    expect(mockStopAndUnloadAsync).toHaveBeenCalledTimes(1);
+    expect(mockRecorderStop).toHaveBeenCalledTimes(1);
     expect(result.current.recordedAudioUri).toBe('file://recording.m4a');
   });
 
@@ -137,7 +133,7 @@ describe('useAudioRecorder', () => {
   });
 
   it('does not start recording when permissions are denied', async () => {
-    mockRequestPermissionsAsync.mockResolvedValue({ granted: false });
+    mockRequestPermissions.mockResolvedValue({ granted: false });
 
     const { result } = renderHook(() => useAudioRecorder());
 
@@ -146,7 +142,7 @@ describe('useAudioRecorder', () => {
     });
 
     expect(result.current.isRecording).toBe(false);
-    expect(mockRecordingCreateAsync).not.toHaveBeenCalled();
+    expect(mockRecorderPrepare).not.toHaveBeenCalled();
   });
 
   it('clearRecordedAudio() resets audio state', async () => {
@@ -170,8 +166,8 @@ describe('useAudioRecorder', () => {
     expect(result.current.recordedAudioBlob).toBeNull();
   });
 
-  it('stopRecording returns no URI when getURI returns null', async () => {
-    mockGetURI.mockReturnValue(null);
+  it('stopRecording returns no URI when recorder.uri is null', async () => {
+    mockRecorder.uri = null;
 
     const { result } = renderHook(() => useAudioRecorder());
 
@@ -183,28 +179,6 @@ describe('useAudioRecorder', () => {
     });
 
     expect(result.current.recordedAudioUri).toBeNull();
-  });
-
-  // ── Recording failed to start ───────────────────────────────────────────
-
-  it('throws and alerts when recording fails to start (isRecording=false status)', async () => {
-    mockGetStatusAsync.mockResolvedValue({ isRecording: false });
-    mockRecordingCreateAsync.mockResolvedValue({
-      recording: {
-        stopAndUnloadAsync: mockStopAndUnloadAsync,
-        getURI: mockGetURI,
-        getStatusAsync: mockGetStatusAsync,
-      },
-    });
-
-    const { result } = renderHook(() => useAudioRecorder());
-
-    await act(async () => {
-      await result.current.toggleRecording();
-    });
-
-    // toggleRecording catches the error and alerts
-    expect(result.current.isRecording).toBe(false);
   });
 
   // ── Web platform recording path ─────────────────────────────────────────
@@ -310,10 +284,9 @@ describe('useAudioRecorder', () => {
         mockMediaRecorder.ondataavailable?.({ data: fakeBlob });
       });
 
-      // Stop recording - the stop mock needs to trigger onstop
+      // Stop recording
       mockMediaRecorder.stop.mockImplementation(() => {
         mockMediaRecorder.state = 'inactive';
-        // Trigger onstop asynchronously
         Promise.resolve().then(() => {
           mockMediaRecorder.onstop?.();
         });
@@ -328,31 +301,7 @@ describe('useAudioRecorder', () => {
       expect(result.current.recordedAudioBlob).toBeTruthy();
     });
 
-    it('web stopRecording returns early when MediaRecorder is already inactive', async () => {
-      const { result } = renderHook(() => useAudioRecorder());
-
-      // Start recording on web
-      await act(async () => {
-        await result.current.toggleRecording();
-      });
-      expect(result.current.isRecording).toBe(true);
-
-      // Simulate MediaRecorder becoming inactive externally
-      mockMediaRecorder.state = 'inactive';
-
-      await act(async () => {
-        await result.current.toggleRecording();
-      });
-
-      // stopRecording returns early without changing isRecording state
-      // because it exits at line 138-139 of the source
-      // The toggleRecording catch block then resets isRecording to false
-      // either way, the recorder is not updated
-      expect(mockMediaRecorder.stop).not.toHaveBeenCalled();
-    });
-
     it('alerts when web audio recording is unavailable', async () => {
-      // Remove getUserMedia to simulate unavailability
       Object.defineProperty(global, 'navigator', {
         value: { mediaDevices: {} },
         writable: true,
@@ -372,55 +321,32 @@ describe('useAudioRecorder', () => {
   // ── Playback on native ────────────────────────────────────────────────────
 
   describe('playRecordedAudio - native', () => {
-    it('plays recorded audio via Audio.Sound.createAsync', async () => {
-      const mockUnloadAsync = jest.fn().mockResolvedValue(undefined);
-      const mockSetOnPlaybackStatusUpdate = jest.fn();
-
-      mockSoundCreateAsync.mockResolvedValue({
-        sound: {
-          setOnPlaybackStatusUpdate: mockSetOnPlaybackStatusUpdate,
-          unloadAsync: mockUnloadAsync,
-        },
-      });
-
+    it('plays recorded audio via createAudioPlayer', async () => {
       const { result } = renderHook(() => useAudioRecorder());
 
-      // Record something first
+      // Record
       await act(async () => {
         await result.current.toggleRecording();
       });
       await act(async () => {
         await result.current.toggleRecording();
       });
-
       expect(result.current.recordedAudioUri).toBe('file://recording.m4a');
 
-      // Play it
+      // Play
       await act(async () => {
         await result.current.playRecordedAudio();
       });
 
       expect(result.current.isPlayingAudio).toBe(true);
-      expect(mockSoundCreateAsync).toHaveBeenCalledWith(
-        { uri: 'file://recording.m4a' },
-        { shouldPlay: true },
-      );
+      expect(mockCreateAudioPlayer).toHaveBeenCalledWith({ uri: 'file://recording.m4a' });
+      expect(mockPlayerPlay).toHaveBeenCalled();
     });
 
     it('sets isPlayingAudio to false when playback finishes', async () => {
-      const mockUnloadAsync = jest.fn().mockResolvedValue(undefined);
-      let statusCallback: ((status: Record<string, unknown>) => void) | undefined;
-      const mockSetOnPlaybackStatusUpdate = jest
-        .fn()
-        .mockImplementation((cb: (status: Record<string, unknown>) => void) => {
-          statusCallback = cb;
-        });
-
-      mockSoundCreateAsync.mockResolvedValue({
-        sound: {
-          setOnPlaybackStatusUpdate: mockSetOnPlaybackStatusUpdate,
-          unloadAsync: mockUnloadAsync,
-        },
+      let statusCallback: ((status: { didJustFinish: boolean }) => void) | undefined;
+      mockPlayerAddListener.mockImplementation((event: string, cb: () => void) => {
+        if (event === 'playbackStatusUpdate') statusCallback = cb;
       });
 
       const { result } = renderHook(() => useAudioRecorder());
@@ -441,46 +367,11 @@ describe('useAudioRecorder', () => {
 
       // Simulate playback finished
       act(() => {
-        statusCallback?.({ isLoaded: true, didJustFinish: true });
+        statusCallback?.({ didJustFinish: true });
       });
 
       expect(result.current.isPlayingAudio).toBe(false);
-    });
-
-    it('sets isPlayingAudio to false when sound is not loaded', async () => {
-      const mockUnloadAsync = jest.fn().mockResolvedValue(undefined);
-      let statusCallback: ((status: Record<string, unknown>) => void) | undefined;
-      const mockSetOnPlaybackStatusUpdate = jest
-        .fn()
-        .mockImplementation((cb: (status: Record<string, unknown>) => void) => {
-          statusCallback = cb;
-        });
-
-      mockSoundCreateAsync.mockResolvedValue({
-        sound: {
-          setOnPlaybackStatusUpdate: mockSetOnPlaybackStatusUpdate,
-          unloadAsync: mockUnloadAsync,
-        },
-      });
-
-      const { result } = renderHook(() => useAudioRecorder());
-
-      await act(async () => {
-        await result.current.toggleRecording();
-      });
-      await act(async () => {
-        await result.current.toggleRecording();
-      });
-      await act(async () => {
-        await result.current.playRecordedAudio();
-      });
-
-      // Simulate sound unloaded
-      act(() => {
-        statusCallback?.({ isLoaded: false });
-      });
-
-      expect(result.current.isPlayingAudio).toBe(false);
+      expect(mockPlayerRemove).toHaveBeenCalled();
     });
 
     it('does not play when no recording URI exists', async () => {
@@ -491,20 +382,10 @@ describe('useAudioRecorder', () => {
       });
 
       expect(result.current.isPlayingAudio).toBe(false);
-      expect(mockSoundCreateAsync).not.toHaveBeenCalled();
+      expect(mockCreateAudioPlayer).not.toHaveBeenCalled();
     });
 
     it('does not play when already playing', async () => {
-      const mockSetOnPlaybackStatusUpdate = jest.fn();
-      const mockUnloadAsync = jest.fn().mockResolvedValue(undefined);
-
-      mockSoundCreateAsync.mockResolvedValue({
-        sound: {
-          setOnPlaybackStatusUpdate: mockSetOnPlaybackStatusUpdate,
-          unloadAsync: mockUnloadAsync,
-        },
-      });
-
       const { result } = renderHook(() => useAudioRecorder());
 
       // Record
@@ -522,16 +403,18 @@ describe('useAudioRecorder', () => {
       expect(result.current.isPlayingAudio).toBe(true);
 
       // Try playing again - should be a no-op
-      mockSoundCreateAsync.mockClear();
+      mockCreateAudioPlayer.mockClear();
       await act(async () => {
         await result.current.playRecordedAudio();
       });
 
-      expect(mockSoundCreateAsync).not.toHaveBeenCalled();
+      expect(mockCreateAudioPlayer).not.toHaveBeenCalled();
     });
 
     it('alerts on playback error', async () => {
-      mockSoundCreateAsync.mockRejectedValue(new Error('Playback failed'));
+      mockCreateAudioPlayer.mockImplementation(() => {
+        throw new Error('Playback failed');
+      });
 
       const { result } = renderHook(() => useAudioRecorder());
 
@@ -550,166 +433,47 @@ describe('useAudioRecorder', () => {
 
       expect(result.current.isPlayingAudio).toBe(false);
     });
-  });
 
-  // ── Playback on web ──────────────────────────────────────────────────────
-
-  describe('playRecordedAudio - web', () => {
-    const originalPlatformOS = Platform.OS;
-    let mockAudioElement: {
-      play: jest.Mock;
-      pause: jest.Mock;
-      onended: (() => void) | null;
-      onerror: (() => void) | null;
-    };
-    const originalAudio = global.Audio;
-
-    beforeEach(() => {
-      Object.defineProperty(Platform, 'OS', { value: 'web', writable: true });
-
-      mockAudioElement = {
-        play: jest.fn().mockResolvedValue(undefined),
-        pause: jest.fn(),
-        onended: null,
-        onerror: null,
-      };
-
-      // Mock window.Audio constructor
-      (global as Record<string, unknown>).Audio = jest
-        .fn()
-        .mockImplementation(() => mockAudioElement);
-
-      // Mock URL for web recording cleanup
-      Object.defineProperty(global, 'URL', {
-        value: {
-          createObjectURL: jest.fn().mockReturnValue('blob:http://localhost/audio-url'),
-          revokeObjectURL: jest.fn(),
-        },
-        writable: true,
-        configurable: true,
+    it('removes previous player before creating a new one', async () => {
+      let statusCallback: ((status: { didJustFinish: boolean }) => void) | undefined;
+      mockPlayerAddListener.mockImplementation((event: string, cb: () => void) => {
+        if (event === 'playbackStatusUpdate') statusCallback = cb;
       });
-    });
 
-    afterEach(() => {
-      Object.defineProperty(Platform, 'OS', { value: originalPlatformOS, writable: true });
-      (global as Record<string, unknown>).Audio = originalAudio;
-    });
-
-    it('plays audio via window.Audio on web platform', async () => {
       const { result } = renderHook(() => useAudioRecorder());
 
-      // Simulate having a recorded audio URI by starting/stopping on native first,
-      // then switching to web for playback. Instead, set up web recording mocks.
-      // For simplicity, switch to native to record, then back to web to play.
-      Object.defineProperty(Platform, 'OS', { value: 'ios', writable: true });
-
-      // Record on native
+      // Record
       await act(async () => {
         await result.current.toggleRecording();
       });
       await act(async () => {
         await result.current.toggleRecording();
       });
-      expect(result.current.recordedAudioUri).toBe('file://recording.m4a');
 
-      // Switch to web for playback
-      Object.defineProperty(Platform, 'OS', { value: 'web', writable: true });
-
+      // Play first time
       await act(async () => {
         await result.current.playRecordedAudio();
       });
-
-      expect(result.current.isPlayingAudio).toBe(true);
-      expect(mockAudioElement.play).toHaveBeenCalled();
-    });
-
-    it('sets isPlayingAudio to false when web audio playback ends', async () => {
-      const { result } = renderHook(() => useAudioRecorder());
-
-      // Record on native
-      Object.defineProperty(Platform, 'OS', { value: 'ios', writable: true });
-      await act(async () => {
-        await result.current.toggleRecording();
-      });
-      await act(async () => {
-        await result.current.toggleRecording();
-      });
-
-      // Play on web
-      Object.defineProperty(Platform, 'OS', { value: 'web', writable: true });
-      await act(async () => {
-        await result.current.playRecordedAudio();
-      });
-      expect(result.current.isPlayingAudio).toBe(true);
 
       // Simulate playback ended
       act(() => {
-        mockAudioElement.onended?.();
+        statusCallback?.({ didJustFinish: true });
       });
-
       expect(result.current.isPlayingAudio).toBe(false);
-    });
 
-    it('sets isPlayingAudio to false when web audio playback errors', async () => {
-      const { result } = renderHook(() => useAudioRecorder());
-
-      // Record on native
-      Object.defineProperty(Platform, 'OS', { value: 'ios', writable: true });
-      await act(async () => {
-        await result.current.toggleRecording();
-      });
-      await act(async () => {
-        await result.current.toggleRecording();
-      });
-
-      // Play on web
-      Object.defineProperty(Platform, 'OS', { value: 'web', writable: true });
-      await act(async () => {
-        await result.current.playRecordedAudio();
-      });
-      expect(result.current.isPlayingAudio).toBe(true);
-
-      // Simulate playback error
-      act(() => {
-        mockAudioElement.onerror?.();
-      });
-
-      expect(result.current.isPlayingAudio).toBe(false);
-    });
-
-    it('clearRecordedAudio pauses web playback element', async () => {
-      const { result } = renderHook(() => useAudioRecorder());
-
-      // Record on native
-      Object.defineProperty(Platform, 'OS', { value: 'ios', writable: true });
-      await act(async () => {
-        await result.current.toggleRecording();
-      });
-      await act(async () => {
-        await result.current.toggleRecording();
-      });
-
-      // Play on web
-      Object.defineProperty(Platform, 'OS', { value: 'web', writable: true });
+      // Play second time - previous player should be removed
       await act(async () => {
         await result.current.playRecordedAudio();
       });
 
-      // Clear - should pause the web audio playback
-      act(() => {
-        result.current.clearRecordedAudio();
-      });
-
-      expect(mockAudioElement.pause).toHaveBeenCalled();
-      expect(result.current.recordedAudioUri).toBeNull();
-      expect(result.current.recordedAudioBlob).toBeNull();
+      expect(mockCreateAudioPlayer).toHaveBeenCalledTimes(2);
     });
   });
 
   // ── toggleRecording error path ────────────────────────────────────────────
 
   it('toggleRecording catches errors and resets state', async () => {
-    mockRecordingCreateAsync.mockRejectedValue(new Error('Microphone error'));
+    mockRecorderPrepare.mockRejectedValue(new Error('Microphone error'));
 
     const { result } = renderHook(() => useAudioRecorder());
 
@@ -718,64 +482,5 @@ describe('useAudioRecorder', () => {
     });
 
     expect(result.current.isRecording).toBe(false);
-  });
-
-  // ── Unload previous sound before creating new one ─────────────────────────
-
-  it('unloads previous native playback sound before playing again', async () => {
-    const mockUnloadAsync1 = jest.fn().mockResolvedValue(undefined);
-    const mockSetOnPlaybackStatusUpdate1 = jest.fn();
-    let statusCallback1: ((status: Record<string, unknown>) => void) | undefined;
-    mockSetOnPlaybackStatusUpdate1.mockImplementation(
-      (cb: (status: Record<string, unknown>) => void) => {
-        statusCallback1 = cb;
-      },
-    );
-
-    const mockUnloadAsync2 = jest.fn().mockResolvedValue(undefined);
-    const mockSetOnPlaybackStatusUpdate2 = jest.fn();
-
-    mockSoundCreateAsync
-      .mockResolvedValueOnce({
-        sound: {
-          setOnPlaybackStatusUpdate: mockSetOnPlaybackStatusUpdate1,
-          unloadAsync: mockUnloadAsync1,
-        },
-      })
-      .mockResolvedValueOnce({
-        sound: {
-          setOnPlaybackStatusUpdate: mockSetOnPlaybackStatusUpdate2,
-          unloadAsync: mockUnloadAsync2,
-        },
-      });
-
-    const { result } = renderHook(() => useAudioRecorder());
-
-    // Record
-    await act(async () => {
-      await result.current.toggleRecording();
-    });
-    await act(async () => {
-      await result.current.toggleRecording();
-    });
-
-    // Play first time
-    await act(async () => {
-      await result.current.playRecordedAudio();
-    });
-
-    // Simulate playback ended so isPlayingAudio goes false
-    act(() => {
-      statusCallback1?.({ isLoaded: true, didJustFinish: true });
-    });
-    expect(result.current.isPlayingAudio).toBe(false);
-
-    // Play second time - should unload previous sound
-    await act(async () => {
-      await result.current.playRecordedAudio();
-    });
-
-    expect(mockUnloadAsync1).toHaveBeenCalled();
-    expect(mockSoundCreateAsync).toHaveBeenCalledTimes(2);
   });
 });

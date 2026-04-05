@@ -60,7 +60,13 @@ npm run check:openapi-types      # verify generated types are up to date
 
 ### CI
 
-GitHub Actions: `ci-backend.yml` (lint + test), `ci-frontend.yml` (lint + test), `deploy-backend.yml` / `deploy-backend-staging.yml` (Docker build + VPS deploy), `mobile-release.yml` (EAS build + submit).
+GitHub Actions workflows (`.github/workflows/`):
+- `ci-cd-backend.yml` — quality gate (tsc + ESLint + tests + OpenAPI validate + audit) → E2E (PR/nightly) → deploy prod (push main) / staging (push staging) with Trivy scan + Sentry release + smoke test
+- `ci-cd-web.yml` — quality gate (lint + build + test + audit) → Lighthouse CI (PR) → deploy Vercel (push main)
+- `ci-cd-mobile.yml` — quality gate (Expo Doctor + OpenAPI sync + audit + i18n + lint + tests) → Maestro E2E (dispatch) → EAS build + store submit (dispatch/tag)
+- `_deploy-backend.yml` — reusable deploy workflow (called by ci-cd-backend)
+- `deploy-privacy-policy.yml` — privacy policy static page deploy
+- `semgrep.yml` — SAST static analysis scanning
 
 ## Architecture
 

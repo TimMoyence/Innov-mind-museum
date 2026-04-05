@@ -134,7 +134,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     icon: BRAND_ICON,
     scheme: APP_SCHEME,
     userInterfaceStyle: 'automatic',
-    newArchEnabled: true,
     runtimeVersion: '1.0.0',
     splash: {
       image: BRAND_SPLASH_IMAGE,
@@ -277,7 +276,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
       ],
       [
-        'expo-av',
+        'expo-audio',
         {
           microphonePermission:
             'Allow $(PRODUCT_NAME) to access your microphone for voice questions about artworks.',
@@ -290,6 +289,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
       ],
       'expo-apple-authentication',
+      'expo-font',
+      'expo-localization',
+      'expo-secure-store',
       [
         'expo-tracking-transparency',
         {

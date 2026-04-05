@@ -260,10 +260,6 @@ export const getChatRepository = (): TypeOrmChatRepository => chatModule.getBuil
 /** Returns the shared OCR service instance. Throws if module is not built. */
 export const getOcrService = (): OcrService => chatModule.getBuilt().ocrService;
 
-/** Returns the shared user-memory service (feature-flag gated, may be undefined). */
-export const getUserMemoryService = (): UserMemoryService | undefined =>
-  chatModule.getBuilt().userMemoryService;
-
 /** Returns the shared art keyword repository, or undefined if module is not yet built. */
 export const getArtKeywordRepository = (): ArtKeywordRepository | undefined =>
   chatModule.isBuilt() ? chatModule.getBuilt().artKeywordRepository : undefined;

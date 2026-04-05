@@ -13,21 +13,19 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   },
 }));
 
-const mockUnloadAsync = jest.fn<Promise<void>, []>().mockResolvedValue(undefined);
-const mockSetOnPlaybackStatusUpdate = jest.fn<undefined, [unknown]>();
+const mockPlayerPlay = jest.fn();
+const mockPlayerRemove = jest.fn();
+const mockPlayerAddListener = jest.fn();
 
-const mockSound = {
-  unloadAsync: mockUnloadAsync,
-  setOnPlaybackStatusUpdate: mockSetOnPlaybackStatusUpdate,
-};
+const mockCreateAudioPlayer = jest.fn().mockReturnValue({
+  play: mockPlayerPlay,
+  remove: mockPlayerRemove,
+  addListener: mockPlayerAddListener,
+});
 
-const mockCreateAsync = jest.fn().mockResolvedValue({ sound: mockSound });
-
-jest.mock('expo-av', () => ({
-  Audio: {
-    Sound: {
-      createAsync: (...args: unknown[]) => mockCreateAsync(...args),
-    },
+jest.mock('expo-audio', () => ({
+  get createAudioPlayer() {
+    return mockCreateAudioPlayer;
   },
 }));
 
@@ -36,7 +34,7 @@ jest.mock('expo-av', () => ({
 /** Creates a minimal ArrayBuffer to simulate audio data. */
 const makeFakeAudioBuffer = (): ArrayBuffer => {
   const encoder = new TextEncoder();
-  return encoder.encode('fake-mp3-data').buffer as ArrayBuffer;
+  return encoder.encode('fake-mp3-data').buffer;
 };
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -47,6 +45,11 @@ describe('useTextToSpeech', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     Object.defineProperty(Platform, 'OS', { value: 'ios', writable: true });
+    mockCreateAudioPlayer.mockReturnValue({
+      play: mockPlayerPlay,
+      remove: mockPlayerRemove,
+      addListener: mockPlayerAddListener,
+    });
   });
 
   afterEach(() => {
@@ -71,7 +74,8 @@ describe('useTextToSpeech', () => {
     });
 
     expect(mockSynthesizeSpeech).toHaveBeenCalledWith('msg-1');
-    expect(mockCreateAsync).toHaveBeenCalledTimes(1);
+    expect(mockCreateAudioPlayer).toHaveBeenCalledTimes(1);
+    expect(mockPlayerPlay).toHaveBeenCalled();
     expect(result.current.isPlaying).toBe(true);
     expect(result.current.isLoading).toBe(false);
     expect(result.current.activeMessageId).toBe('msg-1');
@@ -110,12 +114,12 @@ describe('useTextToSpeech', () => {
 
     expect(result.current.activeMessageId).toBe('msg-1');
 
-    // Start different message — should unload old, play new
+    // Start different message — should remove old player, play new
     await act(async () => {
       await result.current.togglePlayback('msg-2');
     });
 
-    expect(mockUnloadAsync).toHaveBeenCalled();
+    expect(mockPlayerRemove).toHaveBeenCalled();
     expect(result.current.activeMessageId).toBe('msg-2');
     expect(result.current.isPlaying).toBe(true);
   });
@@ -158,8 +162,8 @@ describe('useTextToSpeech', () => {
 
     expect(result.current.isPlaying).toBe(true);
 
-    await act(async () => {
-      await result.current.stopPlayback();
+    act(() => {
+      result.current.stopPlayback();
     });
 
     expect(result.current.isPlaying).toBe(false);
@@ -167,56 +171,32 @@ describe('useTextToSpeech', () => {
     expect(result.current.activeMessageId).toBeNull();
   });
 
-  it('playback status callback resets state when didJustFinish', async () => {
+  it('playToEnd event resets state when playback finishes', async () => {
     mockSynthesizeSpeech.mockResolvedValue(makeFakeAudioBuffer());
+    let statusCallback: ((status: { didJustFinish: boolean }) => void) | undefined;
+    mockPlayerAddListener.mockImplementation((event: string, cb: () => void) => {
+      if (event === 'playbackStatusUpdate') statusCallback = cb;
+    });
 
     const { result } = renderHook(() => useTextToSpeech());
 
     await act(async () => {
       await result.current.togglePlayback('msg-1');
     });
-
-    // Extract the callback that was passed to setOnPlaybackStatusUpdate
-    const statusCallback = mockSetOnPlaybackStatusUpdate.mock.calls[0][0] as (
-      status: Record<string, unknown>,
-    ) => void;
 
     // Simulate playback finishing
     act(() => {
-      statusCallback({ isLoaded: true, didJustFinish: true });
+      statusCallback?.({ didJustFinish: true });
     });
 
     await waitFor(() => {
       expect(result.current.isPlaying).toBe(false);
     });
     expect(result.current.activeMessageId).toBeNull();
+    expect(mockPlayerRemove).toHaveBeenCalled();
   });
 
-  it('playback status callback handles unloaded status', async () => {
-    mockSynthesizeSpeech.mockResolvedValue(makeFakeAudioBuffer());
-
-    const { result } = renderHook(() => useTextToSpeech());
-
-    await act(async () => {
-      await result.current.togglePlayback('msg-1');
-    });
-
-    const statusCallback = mockSetOnPlaybackStatusUpdate.mock.calls[0][0] as (
-      status: Record<string, unknown>,
-    ) => void;
-
-    // Simulate sound becoming unloaded
-    act(() => {
-      statusCallback({ isLoaded: false });
-    });
-
-    await waitFor(() => {
-      expect(result.current.isPlaying).toBe(false);
-    });
-    expect(result.current.activeMessageId).toBeNull();
-  });
-
-  it('cleanup on unmount calls cleanup (no error thrown)', async () => {
+  it('cleanup on unmount calls remove (no error thrown)', async () => {
     mockSynthesizeSpeech.mockResolvedValue(makeFakeAudioBuffer());
 
     const { result, unmount } = renderHook(() => useTextToSpeech());
@@ -228,7 +208,6 @@ describe('useTextToSpeech', () => {
     // Unmount should not throw
     unmount();
 
-    // Verify unload was attempted during cleanup
-    expect(mockUnloadAsync).toHaveBeenCalled();
+    expect(mockPlayerRemove).toHaveBeenCalled();
   });
 });

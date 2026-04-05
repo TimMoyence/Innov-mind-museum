@@ -1,0 +1,61 @@
+// Mock for react-native-reanimated v4 (SDK 55) — native worklets unavailable in Jest
+const { View } = require('react-native');
+
+const noop = () => {};
+const identity = (v) => v;
+const noopHook = () => ({});
+
+module.exports = {
+  __esModule: true,
+  default: { View, Text: View, Image: View, ScrollView: View, FlatList: View, addListener: noop, removeListener: noop, createAnimatedComponent: (C) => C ?? View },
+  useSharedValue: (init) => ({ value: init }),
+  useAnimatedStyle: (fn) => fn(),
+  useAnimatedProps: (fn) => fn(),
+  useDerivedValue: (fn) => ({ value: fn() }),
+  useAnimatedRef: () => ({ current: null }),
+  useAnimatedScrollHandler: () => noop,
+  useAnimatedGestureHandler: () => noop,
+  useAnimatedReaction: noop,
+  withTiming: identity,
+  withSpring: identity,
+  withDecay: identity,
+  withDelay: (_d, v) => v,
+  withSequence: (...args) => args[args.length - 1],
+  withRepeat: identity,
+  cancelAnimation: noop,
+  interpolate: identity,
+  Extrapolation: { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' },
+  Easing: {
+    linear: identity,
+    ease: identity,
+    bezier: () => identity,
+    in: identity,
+    out: identity,
+    inOut: identity,
+  },
+  runOnJS: (fn) => fn,
+  runOnUI: (fn) => fn,
+  createAnimatedComponent: (Component) => Component ?? require('react-native').View,
+  FadeIn: { duration: () => ({ build: noopHook }) },
+  FadeOut: { duration: () => ({ build: noopHook }) },
+  SlideInDown: { duration: () => ({ build: noopHook }) },
+  SlideOutDown: { duration: () => ({ build: noopHook }) },
+  Layout: { duration: () => ({ build: noopHook }) },
+  ZoomIn: { duration: () => ({ build: noopHook }) },
+  ZoomOut: { duration: () => ({ build: noopHook }) },
+  FadeInDown: { duration: () => ({ build: noopHook }) },
+  FadeInUp: { duration: () => ({ build: noopHook }) },
+  FadeOutUp: { duration: () => ({ build: noopHook }) },
+  FadeOutDown: { duration: () => ({ build: noopHook }) },
+  BaseAnimationBuilder: {},
+  ComplexAnimationBuilder: {},
+  measure: () => ({ width: 0, height: 0, x: 0, y: 0, pageX: 0, pageY: 0 }),
+  scrollTo: noop,
+  setGestureState: noop,
+  // Animated components
+  View,
+  Text: View,
+  Image: View,
+  ScrollView: View,
+  FlatList: View,
+};

@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Audio } from 'expo-av';
+import {
+  useAudioRecorder as useExpoRecorder,
+  RecordingPresets,
+  AudioModule,
+  setAudioModeAsync,
+  createAudioPlayer,
+} from 'expo-audio';
+import type { AudioPlayer } from 'expo-audio';
 
 /**
  * Hook that manages audio recording and playback for chat voice messages.
- * Handles platform-specific logic for both web (MediaRecorder) and native (expo-av).
+ * Handles platform-specific logic for both web (MediaRecorder) and native (expo-audio).
  */
 export const useAudioRecorder = () => {
   const { t } = useTranslation();
@@ -24,13 +31,15 @@ export const useAudioRecorder = () => {
   isPlayingAudioRef.current = isPlayingAudio;
   /* eslint-enable react-hooks/refs */
 
-  const nativeRecordingRef = useRef<Audio.Recording | null>(null);
+  // Native recorder from expo-audio
+  const nativeRecorder = useExpoRecorder(RecordingPresets.HIGH_QUALITY);
+
   const webMediaRecorderRef = useRef<MediaRecorder | null>(null);
   const webMediaStreamRef = useRef<MediaStream | null>(null);
   const webAudioChunksRef = useRef<BlobPart[]>([]);
   const webAudioObjectUrlRef = useRef<string | null>(null);
   const webAudioPlaybackRef = useRef<HTMLAudioElement | null>(null);
-  const nativePlaybackSoundRef = useRef<Audio.Sound | null>(null);
+  const nativePlayerRef = useRef<AudioPlayer | null>(null);
 
   const revokeWebAudioObjectUrl = useCallback(() => {
     if (webAudioObjectUrlRef.current) {
@@ -53,16 +62,10 @@ export const useAudioRecorder = () => {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (nativeRecordingRef.current) {
-        nativeRecordingRef.current.stopAndUnloadAsync().catch(() => undefined);
-      }
-      if (webMediaRecorderRef.current && webMediaRecorderRef.current.state !== 'inactive') {
-        webMediaRecorderRef.current.stop();
-      }
       stopWebAudioStreamTracks();
-      if (nativePlaybackSoundRef.current) {
-        nativePlaybackSoundRef.current.unloadAsync().catch(() => undefined);
-        nativePlaybackSoundRef.current = null;
+      if (nativePlayerRef.current) {
+        nativePlayerRef.current.remove();
+        nativePlayerRef.current = null;
       }
       if (webAudioPlaybackRef.current) {
         webAudioPlaybackRef.current.pause();
@@ -106,31 +109,21 @@ export const useAudioRecorder = () => {
       return;
     }
 
-    const permission = await Audio.requestPermissionsAsync();
+    const permission = await AudioModule.requestRecordingPermissionsAsync();
     if (!permission.granted) {
       Alert.alert(t('audio.permission_title'), t('audio.permission_body'));
       return;
     }
 
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
+    await setAudioModeAsync({
+      allowsRecording: true,
+      playsInSilentMode: true,
     });
 
-    const { recording: nextRecording } = await Audio.Recording.createAsync(
-      Audio.RecordingOptionsPresets.HIGH_QUALITY,
-    );
-
-    // Verify recording actually started (can silently fail during navigation transitions)
-    const status = await nextRecording.getStatusAsync();
-    if (!status.isRecording) {
-      await nextRecording.stopAndUnloadAsync().catch(() => undefined);
-      throw new Error('Recording failed to start');
-    }
-
-    nativeRecordingRef.current = nextRecording;
+    await nativeRecorder.prepareToRecordAsync();
+    nativeRecorder.record();
     setIsRecording(true);
-  }, [revokeWebAudioObjectUrl, t]);
+  }, [nativeRecorder, revokeWebAudioObjectUrl, t]);
 
   const stopRecording = useCallback(async () => {
     if (Platform.OS === 'web') {
@@ -161,26 +154,20 @@ export const useAudioRecorder = () => {
       return;
     }
 
-    const recording = nativeRecordingRef.current;
-    if (!recording) {
-      return;
-    }
-
-    await recording.stopAndUnloadAsync();
-    const uri = recording.getURI();
-    nativeRecordingRef.current = null;
+    await nativeRecorder.stop();
+    const uri = nativeRecorder.uri;
     setIsRecording(false);
 
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      playsInSilentModeIOS: true,
+    await setAudioModeAsync({
+      allowsRecording: false,
+      playsInSilentMode: true,
     });
 
     if (uri) {
       setRecordedAudioBlob(null);
       setRecordedAudioUri(uri);
     }
-  }, [revokeWebAudioObjectUrl, stopWebAudioStreamTracks]);
+  }, [nativeRecorder, revokeWebAudioObjectUrl, stopWebAudioStreamTracks]);
 
   const toggleRecording = useCallback(async () => {
     try {
@@ -191,7 +178,6 @@ export const useAudioRecorder = () => {
       }
     } catch {
       setIsRecording(false);
-      nativeRecordingRef.current = null;
       Alert.alert(t('audio.error_title'), t('audio.error_body'));
     }
   }, [startRecording, stopRecording, t]);
@@ -225,29 +211,24 @@ export const useAudioRecorder = () => {
         return;
       }
 
-      // Unload any previous playback sound before creating a new one
-      if (nativePlaybackSoundRef.current) {
-        nativePlaybackSoundRef.current.unloadAsync().catch(() => undefined);
-        nativePlaybackSoundRef.current = null;
+      // Unload any previous playback before creating a new one
+      if (nativePlayerRef.current) {
+        nativePlayerRef.current.remove();
+        nativePlayerRef.current = null;
       }
 
-      const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true });
-      nativePlaybackSoundRef.current = sound;
+      const player = createAudioPlayer({ uri });
+      nativePlayerRef.current = player;
 
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (!status.isLoaded) {
-          setIsPlayingAudio(false);
-          sound.unloadAsync().catch(() => undefined);
-          nativePlaybackSoundRef.current = null;
-          return;
-        }
-
+      player.addListener('playbackStatusUpdate', (status) => {
         if (status.didJustFinish) {
           setIsPlayingAudio(false);
-          sound.unloadAsync().catch(() => undefined);
-          nativePlaybackSoundRef.current = null;
+          player.remove();
+          nativePlayerRef.current = null;
         }
       });
+
+      player.play();
     } catch {
       setIsPlayingAudio(false);
       Alert.alert(t('audio.playback_error_title'), t('audio.playback_error_body'));

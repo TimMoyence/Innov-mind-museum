@@ -76,7 +76,7 @@ jobs:
           pnpm run openapi:validate
 
       - name: Audit dependencies
-        run: npm audit --audit-level=critical
+        run: npm audit --audit-level=high
 
       - name: Check i18n completeness
         run: npm run check:i18n

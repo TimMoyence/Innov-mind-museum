@@ -35,6 +35,14 @@ const makeFakeApiKeyRepo = (
   ...overrides,
 });
 
+const expectUnauthorizedAsync = async (promise: Promise<void>, message: string): Promise<void> => {
+  await expect(promise).rejects.toMatchObject({
+    statusCode: 401,
+    code: 'UNAUTHORIZED',
+    message,
+  });
+};
+
 describe('validateApiKey middleware', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -46,9 +54,7 @@ describe('validateApiKey middleware', () => {
     expect(getApiKeyRepository()).toBe(fakeRepo);
   });
 
-  it('returns 401 when apiKeyRepo is null', async () => {
-    // Reset the repo to null by setting it to null via the internal state
-    // We need to use jest.isolateModules to get a fresh module
+  it('throws 401 AppError when apiKeyRepo is null', async () => {
     await jest.isolateModulesAsync(async () => {
       const {
         validateApiKey: freshValidateApiKey,
@@ -57,17 +63,15 @@ describe('validateApiKey middleware', () => {
       const res = mockRes();
       const next = jest.fn() as NextFunction;
 
-      await freshValidateApiKey('msk_12345678rest', req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({
-        error: { code: 'UNAUTHORIZED', message: 'API key authentication not available' },
-      });
+      await expectUnauthorizedAsync(
+        freshValidateApiKey('msk_12345678rest', req, res, next),
+        'API key authentication not available',
+      );
       expect(next).not.toHaveBeenCalled();
     });
   });
 
-  it('returns 401 when token body is too short (<8 chars after msk_)', async () => {
+  it('throws 401 AppError when token body is too short (<8 chars after msk_)', async () => {
     const fakeRepo = makeFakeApiKeyRepo();
     setApiKeyRepository(fakeRepo);
 
@@ -75,16 +79,14 @@ describe('validateApiKey middleware', () => {
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
-    await validateApiKey('msk_short', req, res, next);
-
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({
-      error: { code: 'UNAUTHORIZED', message: 'Invalid API key format' },
-    });
+    await expectUnauthorizedAsync(
+      validateApiKey('msk_short', req, res, next),
+      'Invalid API key format',
+    );
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('returns 401 when no API key found for prefix', async () => {
+  it('throws 401 AppError when no API key found for prefix', async () => {
     const fakeRepo = makeFakeApiKeyRepo({
       findByPrefix: jest.fn().mockResolvedValue(null),
     });
@@ -94,16 +96,14 @@ describe('validateApiKey middleware', () => {
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
-    await validateApiKey('msk_12345678rest', req, res, next);
-
+    await expectUnauthorizedAsync(
+      validateApiKey('msk_12345678rest', req, res, next),
+      'Invalid API key',
+    );
     expect(fakeRepo.findByPrefix).toHaveBeenCalledWith('12345678');
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({
-      error: { code: 'UNAUTHORIZED', message: 'Invalid API key' },
-    });
   });
 
-  it('returns 401 when API key is expired', async () => {
+  it('throws 401 AppError when API key is expired', async () => {
     const fakeRepo = makeFakeApiKeyRepo({
       findByPrefix: jest.fn().mockResolvedValue({
         id: 1,
@@ -121,15 +121,13 @@ describe('validateApiKey middleware', () => {
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
-    await validateApiKey('msk_12345678rest', req, res, next);
-
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({
-      error: { code: 'UNAUTHORIZED', message: 'API key has expired' },
-    });
+    await expectUnauthorizedAsync(
+      validateApiKey('msk_12345678rest', req, res, next),
+      'API key has expired',
+    );
   });
 
-  it('returns 401 when API key is revoked (not active)', async () => {
+  it('throws 401 AppError when API key is revoked (not active)', async () => {
     const fakeRepo = makeFakeApiKeyRepo({
       findByPrefix: jest.fn().mockResolvedValue({
         id: 1,
@@ -147,15 +145,13 @@ describe('validateApiKey middleware', () => {
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
-    await validateApiKey('msk_12345678rest', req, res, next);
-
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({
-      error: { code: 'UNAUTHORIZED', message: 'API key has been revoked' },
-    });
+    await expectUnauthorizedAsync(
+      validateApiKey('msk_12345678rest', req, res, next),
+      'API key has been revoked',
+    );
   });
 
-  it('returns 401 when HMAC hash does not match', async () => {
+  it('throws 401 AppError when HMAC hash does not match', async () => {
     const token = 'msk_12345678restofthekey';
     const salt = 'testsalt';
     const wrongHash = 'a'.repeat(64); // wrong hash
@@ -177,12 +173,7 @@ describe('validateApiKey middleware', () => {
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
-    await validateApiKey(token, req, res, next);
-
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({
-      error: { code: 'UNAUTHORIZED', message: 'Invalid API key' },
-    });
+    await expectUnauthorizedAsync(validateApiKey(token, req, res, next), 'Invalid API key');
   });
 
   it('calls next() and sets req.user when HMAC matches', async () => {
@@ -277,7 +268,7 @@ describe('validateApiKey middleware', () => {
     expect(req.user!.role).toBe('visitor');
   });
 
-  it('returns 401 when findByPrefix throws', async () => {
+  it('throws 401 AppError when findByPrefix throws', async () => {
     const fakeRepo = makeFakeApiKeyRepo({
       findByPrefix: jest.fn().mockRejectedValue(new Error('DB error')),
     });
@@ -287,12 +278,10 @@ describe('validateApiKey middleware', () => {
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
-    await validateApiKey('msk_12345678rest', req, res, next);
-
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({
-      error: { code: 'UNAUTHORIZED', message: 'API key validation failed' },
-    });
+    await expectUnauthorizedAsync(
+      validateApiKey('msk_12345678rest', req, res, next),
+      'API key validation failed',
+    );
   });
 
   it('handles updateLastUsed failure gracefully (fire-and-forget)', async () => {

@@ -3,7 +3,7 @@ import { stat } from 'node:fs/promises';
 
 import { Router } from 'express';
 
-import { badRequest } from '@shared/errors/app.error';
+import { AppError, badRequest } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import { dailyChatLimit } from '@src/helpers/middleware/daily-chat-limit.middleware';
@@ -121,8 +121,7 @@ function createReportHandler(chatService: ChatService) {
   return async (req: Request, res: Response) => {
     const currentUser = getRequestUser(req);
     if (!currentUser?.id) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token required' } });
-      return;
+      throw new AppError({ message: 'Token required', statusCode: 401, code: 'UNAUTHORIZED' });
     }
     const payload = parseReportMessageRequest(req.body ?? {});
     const result = await chatService.reportMessage(
@@ -140,8 +139,7 @@ function createFeedbackHandler(chatService: ChatService) {
   return async (req: Request, res: Response) => {
     const currentUser = getRequestUser(req);
     if (!currentUser?.id) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token required' } });
-      return;
+      throw new AppError({ message: 'Token required', statusCode: 401, code: 'UNAUTHORIZED' });
     }
     const payload = parseFeedbackMessageRequest(req.body ?? {});
     const result = await chatService.setMessageFeedback(

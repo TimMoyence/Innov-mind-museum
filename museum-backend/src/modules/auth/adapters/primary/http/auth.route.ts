@@ -169,8 +169,7 @@ authRouter.get('/me', isAuthenticated, async (req: Request, res: Response) => {
   const jwtUser = requireUser(req);
   const profile = await getProfileUseCase.execute(jwtUser.id);
   if (!profile) {
-    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'User not found' } });
-    return;
+    throw new AppError({ message: 'User not found', statusCode: 401, code: 'UNAUTHORIZED' });
   }
 
   res.status(200).json({

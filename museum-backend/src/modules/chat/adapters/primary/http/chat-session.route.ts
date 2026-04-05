@@ -1,5 +1,6 @@
 import { type Request, Router } from 'express';
 
+import { AppError } from '@shared/errors/app.error';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 
 import { getRequestUser, resolveRequestBaseUrl, buildImageReadUrl } from './chat-route.helpers';
@@ -34,10 +35,7 @@ export const createSessionRouter = (chatService: ChatService): Router => {
   router.get('/sessions', isAuthenticated, async (req, res) => {
     const currentUser = getRequestUser(req);
     if (!currentUser?.id) {
-      res.status(401).json({
-        error: { code: 'UNAUTHORIZED', message: 'Token required' },
-      });
-      return;
+      throw new AppError({ message: 'Token required', statusCode: 401, code: 'UNAUTHORIZED' });
     }
 
     const query = parseListSessionsQuery(req.query);
