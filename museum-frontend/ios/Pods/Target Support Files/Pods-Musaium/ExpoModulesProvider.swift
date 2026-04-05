@@ -5,73 +5,141 @@
  * but only these that are written in Swift and use the new API for creating Expo modules.
  */
 
-import ExpoModulesCore
-import ExpoAdapterGoogleSignIn
-import Expo
-import ExpoAppleAuthentication
-import ExpoAsset
-import EXAV
-import ExpoBlur
-import ExpoCamera
-import ExpoClipboard
-import EXConstants
-import EASClient
-import ExpoFileSystem
-import ExpoFont
-import ExpoHaptics
-import ExpoImageManipulator
-import ExpoImagePicker
-import ExpoKeepAwake
-import ExpoLinearGradient
-import ExpoLinking
-import ExpoLocalAuthentication
-import ExpoLocalization
-import ExpoLocation
-import ExpoHead
-import ExpoSecureStore
-import ExpoSplashScreen
-import ExpoStoreReview
-import ExpoSystemUI
-import ExpoTrackingTransparency
-import EXUpdates
+internal import ExpoModulesCore
+internal import ExpoDomWebView
+internal import ExpoAdapterGoogleSignIn
+internal import Expo
+internal import ExpoAppleAuthentication
+internal import ExpoAsset
+internal import ExpoAudio
+internal import ExpoBlur
+internal import ExpoCamera
+internal import ExpoClipboard
+internal import EXConstants
+internal import EASClient
+internal import ExpoFileSystem
+internal import ExpoFont
+internal import ExpoGlassEffect
+internal import ExpoHaptics
+internal import ExpoImage
+internal import ExpoImageManipulator
+internal import ExpoImagePicker
+internal import ExpoKeepAwake
+internal import ExpoLinearGradient
+internal import ExpoLinking
+internal import ExpoLocalAuthentication
+internal import ExpoLocalization
+internal import ExpoLocation
+internal import ExpoRouter
+internal import ExpoSecureStore
+internal import ExpoSplashScreen
+internal import ExpoStoreReview
+internal import ExpoSymbols
+internal import ExpoSystemUI
+internal import ExpoTrackingTransparency
+internal import EXUpdates
+#if EXPO_CONFIGURATION_DEBUG
+internal import EXDevLauncher
+internal import EXDevMenu
+#endif
 
 @objc(ExpoModulesProvider)
-public class ExpoModulesProvider: ModulesProvider {
-  public override func getModuleClasses() -> [AnyModule.Type] {
+internal class ExpoModulesProvider: ModulesProvider {
+  public override func getModuleClasses() -> [ExpoModuleTupleType] {
+    #if EXPO_CONFIGURATION_DEBUG
     return [
-      ExpoFetchModule.self,
-      AppleAuthenticationModule.self,
-      AssetModule.self,
-      VideoViewModule.self,
-      BlurViewModule.self,
-      CameraViewModule.self,
-      ClipboardModule.self,
-      ConstantsModule.self,
-      EASClientModule.self,
-      FileSystemModule.self,
-      FileSystemNextModule.self,
-      FontLoaderModule.self,
-      FontUtilsModule.self,
-      HapticsModule.self,
-      ImageManipulatorModule.self,
-      ImagePickerModule.self,
-      KeepAwakeModule.self,
-      LinearGradientModule.self,
-      ExpoLinkingModule.self,
-      LocalAuthenticationModule.self,
-      LocalizationModule.self,
-      LocationModule.self,
-      ExpoHeadModule.self,
-      SecureStoreModule.self,
-      SplashScreenModule.self,
-      StoreReviewModule.self,
-      ExpoSystemUIModule.self,
-      TrackingTransparencyModule.self,
-      UpdatesModule.self
+      (module: DomWebViewModule.self, name: nil),
+      (module: ExpoFetchModule.self, name: nil),
+      (module: AppleAuthenticationModule.self, name: nil),
+      (module: AssetModule.self, name: nil),
+      (module: AudioModule.self, name: nil),
+      (module: BlurViewModule.self, name: nil),
+      (module: CameraViewModule.self, name: nil),
+      (module: ClipboardModule.self, name: nil),
+      (module: ConstantsModule.self, name: nil),
+      (module: EASClientModule.self, name: nil),
+      (module: FileSystemModule.self, name: nil),
+      (module: FileSystemLegacyModule.self, name: nil),
+      (module: FontLoaderModule.self, name: nil),
+      (module: FontUtilsModule.self, name: nil),
+      (module: GlassEffectModule.self, name: nil),
+      (module: HapticsModule.self, name: nil),
+      (module: ImageModule.self, name: nil),
+      (module: ImageManipulatorModule.self, name: nil),
+      (module: ImagePickerModule.self, name: nil),
+      (module: KeepAwakeModule.self, name: nil),
+      (module: LinearGradientModule.self, name: nil),
+      (module: ExpoLinkingModule.self, name: nil),
+      (module: LocalAuthenticationModule.self, name: nil),
+      (module: LocalizationModule.self, name: nil),
+      (module: LocationModule.self, name: nil),
+      (module: ExpoHeadModule.self, name: nil),
+      (module: LinkPreviewNativeModule.self, name: nil),
+      (module: RouterToolbarModule.self, name: nil),
+      (module: SecureStoreModule.self, name: nil),
+      (module: SplashScreenModule.self, name: nil),
+      (module: StoreReviewModule.self, name: nil),
+      (module: SymbolModule.self, name: nil),
+      (module: ExpoSystemUIModule.self, name: nil),
+      (module: TrackingTransparencyModule.self, name: nil),
+      (module: UpdatesModule.self, name: nil),
+      (module: DevLauncherModule.self, name: nil),
+      (module: DevMenuModule.self, name: nil),
+      (module: DevMenuInternalModule.self, name: nil),
+      (module: DevMenuPreferences.self, name: nil)
     ]
+    #else
+    return [
+      (module: DomWebViewModule.self, name: nil),
+      (module: ExpoFetchModule.self, name: nil),
+      (module: AppleAuthenticationModule.self, name: nil),
+      (module: AssetModule.self, name: nil),
+      (module: AudioModule.self, name: nil),
+      (module: BlurViewModule.self, name: nil),
+      (module: CameraViewModule.self, name: nil),
+      (module: ClipboardModule.self, name: nil),
+      (module: ConstantsModule.self, name: nil),
+      (module: EASClientModule.self, name: nil),
+      (module: FileSystemModule.self, name: nil),
+      (module: FileSystemLegacyModule.self, name: nil),
+      (module: FontLoaderModule.self, name: nil),
+      (module: FontUtilsModule.self, name: nil),
+      (module: GlassEffectModule.self, name: nil),
+      (module: HapticsModule.self, name: nil),
+      (module: ImageModule.self, name: nil),
+      (module: ImageManipulatorModule.self, name: nil),
+      (module: ImagePickerModule.self, name: nil),
+      (module: KeepAwakeModule.self, name: nil),
+      (module: LinearGradientModule.self, name: nil),
+      (module: ExpoLinkingModule.self, name: nil),
+      (module: LocalAuthenticationModule.self, name: nil),
+      (module: LocalizationModule.self, name: nil),
+      (module: LocationModule.self, name: nil),
+      (module: ExpoHeadModule.self, name: nil),
+      (module: LinkPreviewNativeModule.self, name: nil),
+      (module: RouterToolbarModule.self, name: nil),
+      (module: SecureStoreModule.self, name: nil),
+      (module: SplashScreenModule.self, name: nil),
+      (module: StoreReviewModule.self, name: nil),
+      (module: SymbolModule.self, name: nil),
+      (module: ExpoSystemUIModule.self, name: nil),
+      (module: TrackingTransparencyModule.self, name: nil),
+      (module: UpdatesModule.self, name: nil)
+    ]
+    #endif
   }
 
   public override func getAppDelegateSubscribers() -> [ExpoAppDelegateSubscriber.Type] {
+    #if EXPO_CONFIGURATION_DEBUG
+    return [
+      GoogleSignInAppDelegate.self,
+      FileSystemBackgroundSessionHandler.self,
+      LinkingAppDelegateSubscriber.self,
+      ExpoHeadAppDelegateSubscriber.self,
+      SplashScreenAppDelegateSubscriber.self,
+      ExpoDevLauncherAppDelegateSubscriber.self
+    ]
+    #else
     return [
       GoogleSignInAppDelegate.self,
       FileSystemBackgroundSessionHandler.self,
@@ -79,12 +147,21 @@ public class ExpoModulesProvider: ModulesProvider {
       ExpoHeadAppDelegateSubscriber.self,
       SplashScreenAppDelegateSubscriber.self
     ]
+    #endif
   }
 
   public override func getReactDelegateHandlers() -> [ExpoReactDelegateHandlerTupleType] {
+    #if EXPO_CONFIGURATION_DEBUG
+    return [
+      (packageName: "expo-updates", handler: ExpoUpdatesReactDelegateHandler.self),
+      (packageName: "expo-dev-launcher", handler: ExpoDevLauncherReactDelegateHandler.self),
+      (packageName: "expo-dev-menu", handler: ExpoDevMenuReactDelegateHandler.self)
+    ]
+    #else
     return [
       (packageName: "expo-updates", handler: ExpoUpdatesReactDelegateHandler.self)
     ]
+    #endif
   }
 
   public override func getAppCodeSignEntitlements() -> AppCodeSignEntitlements {

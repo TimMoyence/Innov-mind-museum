@@ -1,1 +1,1 @@
-../../../../build/generated/ios/RCTThirdPartyComponentsProvider.h
+../../../../build/generated/ios/ReactCodegen/RCTThirdPartyComponentsProvider.h

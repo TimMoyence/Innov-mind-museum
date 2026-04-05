@@ -11,8 +11,8 @@
 #endif
 
 #import "Expo/EXAppDelegatesLoader.h"
-#import "Expo/EXAppDelegateWrapper.h"
 #import "Expo/EXLegacyAppDelegateWrapper.h"
+#import "Expo/ExpoReactNativeFactory.h"
 #import "Expo/EXReactRootViewFactory.h"
 #import "Expo/RCTAppDelegateUmbrella.h"
 #import "Expo/EXAppDefinesLoader.h"

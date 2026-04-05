@@ -1,6 +1,6 @@
 {
   "name": "ExpoClipboard",
-  "version": "7.1.5",
+  "version": "55.0.11",
   "summary": "Provides an interface for getting and setting Clipboard content on Android, iOS and Web.",
   "description": "Provides an interface for getting and setting Clipboard content on Android, iOS and Web.",
   "license": "MIT",
@@ -9,7 +9,7 @@
   "platforms": {
     "ios": "15.1"
   },
-  "swift_versions": "5.4",
+  "swift_versions": "5.9",
   "source": {
     "git": "https://github.com/expo/expo.git"
   },
@@ -17,11 +17,11 @@
   "dependencies": {
     "ExpoModulesCore": []
   },
+  "source_files": "**/*.{h,m,swift}",
   "pod_target_xcconfig": {
     "DEFINES_MODULE": "YES",
     "SWIFT_COMPILATION_MODE": "wholemodule"
   },
-  "source_files": "**/*.{h,m,swift}",
   "exclude_files": "Tests/",
   "testspecs": [
     {
@@ -33,5 +33,5 @@
       "source_files": "Tests/**/*.{m,swift}"
     }
   ],
-  "swift_version": "5.4"
+  "swift_version": "5.9"
 }

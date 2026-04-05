@@ -1,1 +1,1 @@
-../../../../build/generated/ios/RNSentrySpecJSI.h
+../../../../build/generated/ios/ReactCodegen/RNSentrySpecJSI.h

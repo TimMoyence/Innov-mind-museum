@@ -1,6 +1,6 @@
 {
   "name": "ExpoAppleAuthentication",
-  "version": "7.2.4",
+  "version": "55.0.11",
   "summary": "A package that provides 'Sign in with Apple' capability for Expo and React Native apps.",
   "description": "A package that provides 'Sign in with Apple' capability for Expo and React Native apps.",
   "license": "MIT",
@@ -9,18 +9,18 @@
   "platforms": {
     "ios": "15.1"
   },
-  "swift_versions": "5.4",
+  "swift_versions": "5.9",
   "source": {
     "git": "https://github.com/expo/expo.git"
   },
-  "static_framework": true,
   "dependencies": {
     "ExpoModulesCore": []
   },
+  "static_framework": true,
+  "source_files": "**/*.{h,m,swift}",
   "pod_target_xcconfig": {
     "DEFINES_MODULE": "YES",
     "SWIFT_COMPILATION_MODE": "wholemodule"
   },
-  "source_files": "**/*.{h,m,swift}",
-  "swift_version": "5.4"
+  "swift_version": "5.9"
 }

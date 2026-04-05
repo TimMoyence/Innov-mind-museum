@@ -1,1 +1,1 @@
-../../../../build/generated/ios/rnscreensJSI.h
+../../../../build/generated/ios/ReactCodegen/rnscreensJSI.h

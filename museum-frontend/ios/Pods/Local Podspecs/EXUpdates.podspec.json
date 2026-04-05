@@ -1,6 +1,6 @@
 {
   "name": "EXUpdates",
-  "version": "0.28.18",
+  "version": "55.0.18",
   "summary": "Fetches and manages remotely-hosted assets and updates to your app's JS bundle.",
   "description": "Fetches and manages remotely-hosted assets and updates to your app's JS bundle.",
   "license": "MIT",
@@ -8,9 +8,10 @@
   "homepage": "https://docs.expo.dev/versions/latest/sdk/updates/",
   "platforms": {
     "ios": "15.1",
-    "tvos": "15.1"
+    "tvos": "15.1",
+    "osx": "11.0"
   },
-  "swift_versions": "5.4",
+  "swift_versions": "5.9",
   "source": {
     "git": "https://github.com/expo/expo.git"
   },
@@ -23,10 +24,6 @@
     "EXManifests": [],
     "EASClient": [],
     "ReachabilitySwift": [],
-    "RCT-Folly": [
-      "2024.11.18.00"
-    ],
-    "glog": [],
     "React-RCTFabric": [],
     "ReactCodegen": [],
     "RCTRequired": [],
@@ -42,14 +39,16 @@
     "React-debug": [],
     "React-ImageManager": [],
     "React-rendererdebug": [],
-    "DoubleConversion": [],
     "React-jsi": [],
     "React-renderercss": [],
     "hermes-engine": [],
-    "React-hermes": []
+    "ReactNativeDependencies": [],
+    "React-Core-prebuilt": []
   },
-  "compiler_flags": "-DRCT_NEW_ARCH_ENABLED=1 -DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1 -DFOLLY_CFG_NO_COROUTINES=1 -DFOLLY_HAVE_CLOCK_GETTIME=1 -Wno-comma -Wno-shorten-64-to-32",
+  "libraries": "bz2",
+  "compiler_flags": "-DRCT_NEW_ARCH_ENABLED=1",
   "pod_target_xcconfig": {
+    "HEADER_SEARCH_PATHS": "$(inherited) \"$(PODS_TARGET_SRCROOT)/EXUpdates/BSPatch\"",
     "GCC_TREAT_INCOMPATIBLE_POINTER_TYPE_WARNINGS_AS_ERRORS": "YES",
     "GCC_TREAT_IMPLICIT_FUNCTION_DECLARATIONS_AS_ERRORS": "YES",
     "DEFINES_MODULE": "YES",
@@ -62,7 +61,10 @@
   "user_target_xcconfig": {
     "HEADER_SEARCH_PATHS": "\"${PODS_CONFIGURATION_BUILD_DIR}/EXUpdates/Swift Compatibility Header\""
   },
-  "source_files": "EXUpdates/**/*.{h,m,swift}",
+  "source_files": [
+    "EXUpdates/**/*.{h,m,swift}",
+    "EXUpdates/BSPatch/*.{c}"
+  ],
   "script_phases": {
     "name": "Generate updates resources for expo-updates",
     "script": "bash -l -c \"$PODS_TARGET_SRCROOT/../scripts/create-updates-resources-ios.sh\"",
@@ -90,5 +92,5 @@
       }
     }
   ],
-  "swift_version": "5.4"
+  "swift_version": "5.9"
 }

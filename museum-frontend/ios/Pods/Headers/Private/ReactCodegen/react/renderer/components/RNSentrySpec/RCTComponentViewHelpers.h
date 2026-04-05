@@ -1,1 +1,1 @@
-../../../../../../../../build/generated/ios/react/renderer/components/RNSentrySpec/RCTComponentViewHelpers.h
+../../../../../../../../build/generated/ios/ReactCodegen/react/renderer/components/RNSentrySpec/RCTComponentViewHelpers.h

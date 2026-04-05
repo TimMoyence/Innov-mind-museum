@@ -1,1 +1,1 @@
-../../../../../../../../build/generated/ios/react/renderer/components/safeareacontext/ComponentDescriptors.h
+../../../../../../../../build/generated/ios/ReactCodegen/react/renderer/components/safeareacontext/ComponentDescriptors.h

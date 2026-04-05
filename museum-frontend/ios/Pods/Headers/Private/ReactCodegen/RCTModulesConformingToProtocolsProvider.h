@@ -1,1 +1,1 @@
-../../../../build/generated/ios/RCTModulesConformingToProtocolsProvider.h
+../../../../build/generated/ios/ReactCodegen/RCTModulesConformingToProtocolsProvider.h

@@ -1,1 +1,1 @@
-../../../../../../../../build/generated/ios/react/renderer/components/RNSentrySpec/EventEmitters.h
+../../../../../../../../build/generated/ios/ReactCodegen/react/renderer/components/RNSentrySpec/EventEmitters.h
