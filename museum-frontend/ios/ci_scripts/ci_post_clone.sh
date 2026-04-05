@@ -69,20 +69,23 @@ npm install --no-audit --no-fund
 # Pods/ is committed to the repo — no pod install needed.
 # If Podfile.lock changes, run `pod install` locally and commit Pods/.
 
-# Regenerate React Native codegen files (New Architecture)
-# These live in ios/build/generated/ and may be stale or missing if
-# the gitignore wasn't updated. This ensures they're always fresh.
-cd "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios"
-if [ ! -f "build/generated/ios/ReactCodegen.podspec" ]; then
-  echo "Codegen files missing — regenerating..."
-  cd "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend"
-  node node_modules/react-native/scripts/generate-codegen-artifacts.js \
-    --path "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend" \
-    --outputPath "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios/build/generated" \
-    --targetPlatform ios
-  echo "Codegen generation complete"
-else
-  echo "Codegen files present — skipping regeneration"
-fi
+# Always regenerate React Native codegen files (New Architecture).
+# Even when build/generated/ is committed to git, the codegen output must
+# match the exact native module versions installed by `npm install` above.
+# A stale commit (e.g. missing States.cpp for a new module) causes:
+#   "Build input file cannot be found" for States.cpp / ShadowNodes.cpp / *-generated.mm
+echo "Regenerating React Native codegen files..."
+cd "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend"
+node node_modules/react-native/scripts/generate-codegen-artifacts.js \
+  --path "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend" \
+  --outputPath "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios/build/generated" \
+  --targetPlatform ios
+echo "Codegen generation complete"
+
+# Write the CI node path into .xcode.env.local so Xcode build phases
+# (e.g. [CP-User] Generate Specs) find the same node binary.
+NODE_PATH=$(which node)
+echo "export NODE_BINARY=$NODE_PATH" > "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios/.xcode.env.local"
+echo "Wrote .xcode.env.local: NODE_BINARY=$NODE_PATH"
 
 echo "=== ci_post_clone.sh done ==="

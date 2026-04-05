@@ -77,6 +77,17 @@ target 'Musaium' do
       end
     end
 
+    # Force ReactCodegen "Generate Specs" script phase to always run.
+    # Without this, Xcode's dependency analysis may skip it (empty inputPaths)
+    # and the build fails with "Build input file cannot be found" for States.cpp etc.
+    installer.pods_project.targets.each do |target|
+      target.build_phases.each do |phase|
+        if phase.respond_to?(:name) && phase.name&.include?('Generate Specs')
+          phase.always_out_of_date = "1"
+        end
+      end
+    end
+
     # This is necessary for Xcode 14, because it signs resource bundles by default
     # when building for devices.
     installer.target_installation_results.pod_target_installation_results
