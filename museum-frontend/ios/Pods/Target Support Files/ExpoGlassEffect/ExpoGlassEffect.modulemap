@@ -1,0 +1,6 @@
+module ExpoGlassEffect {
+  umbrella header "ExpoGlassEffect-umbrella.h"
+
+  export *
+  module * { export * }
+}

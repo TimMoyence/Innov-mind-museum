@@ -1,0 +1,36 @@
+{
+  "name": "ExpoRouter",
+  "version": "55.0.10",
+  "summary": "Expo Router is a file-based router for React Native and web applications.",
+  "description": "Expo Router is a file-based router for React Native and web applications.",
+  "license": "MIT",
+  "authors": "650 Industries, Inc.",
+  "homepage": "https://docs.expo.dev/routing/introduction/",
+  "platforms": {
+    "ios": "15.1"
+  },
+  "swift_versions": "5.9",
+  "source": {
+    "git": "https://github.com/expo/expo.git"
+  },
+  "static_framework": true,
+  "dependencies": {
+    "ExpoModulesCore": [],
+    "RNScreens": []
+  },
+  "pod_target_xcconfig": {
+    "DEFINES_MODULE": "YES",
+    "SWIFT_COMPILATION_MODE": "wholemodule",
+    "OTHER_SWIFT_FLAGS": "$(inherited)  -DRCT_NEW_ARCH_ENABLED"
+  },
+  "exclude_files": "Tests/**/*",
+  "source_files": "**/*.{h,m,swift,mm,cpp}",
+  "testspecs": [
+    {
+      "name": "Tests",
+      "test_type": "unit",
+      "source_files": "Tests/**/*.{m,swift}"
+    }
+  ],
+  "swift_version": "5.9"
+}

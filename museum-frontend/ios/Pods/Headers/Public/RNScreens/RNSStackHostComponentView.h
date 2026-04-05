@@ -1,0 +1,1 @@
+../../../../../node_modules/react-native-screens/ios/gamma/stack/host/RNSStackHostComponentView.h
