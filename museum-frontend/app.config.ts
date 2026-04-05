@@ -317,8 +317,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       typedRoutes: false,
     },
     updates: {
-      enabled: true,
-      checkAutomatically: 'ON_LOAD',
+      enabled: false,
+      checkAutomatically: 'NEVER',
       fallbackToCacheTimeout: 0,
       ...(projectId ? { url: `https://u.expo.dev/${projectId}` } : {}),
     },
