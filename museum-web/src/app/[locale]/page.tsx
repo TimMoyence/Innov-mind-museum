@@ -8,6 +8,9 @@ import StoreButton from '@/components/marketing/StoreButton';
 import PhoneMockup from '@/components/marketing/PhoneMockup';
 import HeroPlayerLoader from '@/components/marketing/HeroPlayerLoader';
 import ScrollIndicator from '@/components/marketing/ScrollIndicator';
+import ScrollProgress from '@/components/marketing/ScrollProgress';
+import HeroOrbs from '@/components/marketing/HeroOrbs';
+import AnimatedLine from '@/components/marketing/AnimatedLine';
 import ShowcaseSection from '@/components/marketing/ShowcaseSection';
 import DemoChat from '@/components/marketing/DemoChat';
 import MultiDeviceShowcase from '@/components/marketing/MultiDeviceShowcase';
@@ -241,6 +244,7 @@ export default async function LandingPage({ params }: LandingPageProps) {
 
   return (
     <>
+      <ScrollProgress />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(appJsonLd) }}
@@ -315,23 +319,8 @@ export default async function LandingPage({ params }: LandingPageProps) {
       {/* SECTION 1: HERO (dark, full viewport)                           */}
       {/* ================================================================ */}
       <section className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#000] via-[#050510] to-[#0a0a1a]">
-        {/* Animated orbs on dark bg */}
-        <div
-          className="pointer-events-none absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full bg-primary-500/15 blur-3xl orb"
-          aria-hidden="true"
-        />
-        <div
-          className="pointer-events-none absolute -right-32 top-1/4 h-[400px] w-[400px] rounded-full bg-accent-400/10 blur-3xl orb orb-delay-1"
-          aria-hidden="true"
-        />
-        <div
-          className="pointer-events-none absolute bottom-20 left-1/3 h-[350px] w-[500px] rounded-full bg-gold-400/8 blur-3xl orb orb-delay-2"
-          aria-hidden="true"
-        />
-        <div
-          className="pointer-events-none absolute right-1/4 top-1/2 h-[300px] w-[300px] rounded-full bg-purple-500/8 blur-3xl orb orb-delay-3"
-          aria-hidden="true"
-        />
+        {/* Parallax orbs on dark bg */}
+        <HeroOrbs />
 
         <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8 lg:py-40">
           <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
@@ -411,15 +400,8 @@ export default async function LandingPage({ params }: LandingPageProps) {
           </AnimatedSection>
 
           <div className="relative mt-20">
-            {/* Gradient connecting line */}
-            <div
-              className="absolute left-0 right-0 top-10 hidden h-px sm:block"
-              style={{
-                background:
-                  'linear-gradient(90deg, transparent 5%, rgba(37, 99, 235, 0.2) 20%, rgba(37, 99, 235, 0.4) 50%, rgba(37, 99, 235, 0.2) 80%, transparent 95%)',
-              }}
-              aria-hidden="true"
-            />
+            {/* Animated connecting line */}
+            <AnimatedLine />
 
             <div className="grid gap-12 sm:grid-cols-3">
               {dict.features.items.map((item, i) => (

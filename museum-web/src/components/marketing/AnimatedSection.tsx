@@ -3,7 +3,7 @@
 import { type ReactNode, useRef, Children } from 'react';
 import { motion, useInView, useReducedMotion } from 'framer-motion';
 
-type AnimationVariant = 'slide' | 'scale' | 'fade';
+type AnimationVariant = 'slide' | 'scale' | 'fade' | 'blur-scale';
 
 interface AnimatedSectionProps {
   children: ReactNode;
@@ -29,6 +29,11 @@ const springTransition = { type: 'spring' as const, stiffness: 100, damping: 20 
 
 function getVariants(variant: AnimationVariant, direction: string) {
   switch (variant) {
+    case 'blur-scale':
+      return {
+        hidden: { opacity: 0, scale: 0.95, filter: 'blur(8px)' },
+        visible: { opacity: 1, scale: 1, filter: 'blur(0px)' },
+      };
     case 'scale':
       return {
         hidden: { opacity: 0, scale: 0.95 },
