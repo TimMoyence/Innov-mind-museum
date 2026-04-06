@@ -2090,6 +2090,163 @@ export interface paths {
     };
     trace?: never;
   };
+  '/api/museums/search': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Search museums by location or text query */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Latitude (must be provided with lng) */
+          lat?: number;
+          /** @description Longitude (must be provided with lat) */
+          lng?: number;
+          /** @description Search radius in meters (default 30000) */
+          radius?: number;
+          /** @description Text search query (name filter or geocode input) */
+          q?: string;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Search results with distance and source */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              museums: {
+                name: string;
+                address?: string | null;
+                latitude: number;
+                longitude: number;
+                /** @description Distance in meters from search origin */
+                distance: number;
+                /** @enum {string} */
+                source: 'local' | 'osm';
+              }[];
+              count: number;
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        429: components['responses']['TooManyRequests'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/admin/reviews': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Paginated list of all reviews (admin/moderator) */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number */
+          page?: number;
+          /** @description Items per page */
+          limit?: number;
+          /** @description Filter by review status */
+          status?: 'pending' | 'approved' | 'rejected';
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Paginated review list */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ReviewListResponse'];
+          };
+        };
+        401: components['responses']['Unauthorized'];
+        403: components['responses']['Forbidden'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/admin/reviews/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Moderate a review (approve/reject) */
+    patch: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          /** @description Review ID */
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @enum {string} */
+            status: 'approved' | 'rejected';
+          };
+        };
+      };
+      responses: {
+        /** @description Review moderated */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              review: components['schemas']['ReviewDTO'];
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        403: components['responses']['Forbidden'];
+        404: components['responses']['NotFound'];
+      };
+    };
+    trace?: never;
+  };
   '/api/museums/directory': {
     parameters: {
       query?: never;

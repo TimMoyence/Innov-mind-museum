@@ -77,6 +77,10 @@ namespace JS {
                      reject:(RCTPromiseRejectBlock)reject;
 - (void)fetchNativeFrames:(RCTPromiseResolveBlock)resolve
                    reject:(RCTPromiseRejectBlock)reject;
+- (void)fetchNativeFramesDelay:(double)startTimestampSeconds
+           endTimestampSeconds:(double)endTimestampSeconds
+                       resolve:(RCTPromiseResolveBlock)resolve
+                        reject:(RCTPromiseRejectBlock)reject;
 - (void)initNativeSdk:(NSDictionary *)options
               resolve:(RCTPromiseResolveBlock)resolve
                reject:(RCTPromiseRejectBlock)reject;
