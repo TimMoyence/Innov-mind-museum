@@ -40,7 +40,7 @@ export default function ShowcaseSection({
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className={`grid items-center gap-12 lg:grid-cols-2 lg:gap-16${reverse ? '' : ''}`}>
           {/* Text column */}
-          <div className={reverse ? 'lg:order-2' : ''}>
+          <div className={`min-w-0 ${reverse ? 'lg:order-2' : ''}`}>
             <AnimatedSection>
               <h2
                 className={`text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl ${isDark ? 'text-white' : 'text-text-primary'}`}
@@ -69,7 +69,7 @@ export default function ShowcaseSection({
           </div>
 
           {/* Device column */}
-          <AnimatedSection delay={0.2} direction={reverse ? 'left' : 'right'}>
+          <AnimatedSection delay={0.2} direction={reverse ? 'left' : 'right'} className="min-w-0">
             {children}
           </AnimatedSection>
         </div>

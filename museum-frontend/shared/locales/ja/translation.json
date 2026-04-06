@@ -489,6 +489,8 @@
     "distance_km": "{{distance}} km",
     "distance_unknown": "距離不明",
     "location_denied": "位置情報のアクセスが拒否されました",
+    "map_empty": "このエリアにミュージアムはありません",
+    "search_this_area": "このエリアの結果を表示",
     "start_chat": "ここでチャットを開始",
     "detail_title": "ミュージアムの詳細",
     "open_in_maps": "マップで開く"
@@ -611,6 +613,13 @@
       "toggle_on": "ミュージアムモードをオンにする",
       "toggle_off": "ミュージアムモードをオフにする",
       "start_exploring": "探索を開始"
+    },
+    "museum": {
+      "search_input": "ミュージアムを検索",
+      "skeleton_loading": "ミュージアムを読み込み中",
+      "list_view": "リスト表示",
+      "map_view": "マップ表示",
+      "results_count": "{{count}}件のミュージアムが見つかりました"
     },
     "notFound": {
       "home": "ホーム画面に移動"

@@ -489,6 +489,8 @@
     "distance_km": "{{distance}} 公里",
     "distance_unknown": "距离不可用",
     "location_denied": "位置访问被拒绝",
+    "map_empty": "此区域没有博物馆",
+    "search_this_area": "显示此区域的结果",
     "start_chat": "在此开始聊天",
     "detail_title": "博物馆详情",
     "open_in_maps": "在地图中打开"
@@ -611,6 +613,13 @@
       "toggle_on": "开启博物馆模式",
       "toggle_off": "关闭博物馆模式",
       "start_exploring": "开始探索"
+    },
+    "museum": {
+      "search_input": "搜索博物馆",
+      "skeleton_loading": "正在加载博物馆",
+      "list_view": "列表视图",
+      "map_view": "地图视图",
+      "results_count": "找到 {{count}} 家博物馆"
     },
     "notFound": {
       "home": "前往主页"

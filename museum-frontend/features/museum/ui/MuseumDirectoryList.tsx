@@ -33,7 +33,11 @@ export const MuseumDirectoryList = ({
 
   if (isLoading) {
     return (
-      <View style={styles.skeletonList}>
+      <View
+        style={styles.skeletonList}
+        accessibilityRole="progressbar"
+        accessibilityLabel={t('a11y.museum.skeleton_loading')}
+      >
         {Array.from({ length: 5 }).map((_, i) => (
           <SkeletonConversationCard key={i} />
         ))}
@@ -58,6 +62,7 @@ export const MuseumDirectoryList = ({
           autoCapitalize="none"
           autoCorrect={false}
           clearButtonMode="while-editing"
+          accessibilityLabel={t('a11y.museum.search_input')}
         />
       </View>
 

@@ -78,7 +78,7 @@ export default function AnimatedSection({
   stagger = false,
 }: AnimatedSectionProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: '-80px' });
+  const isInView = useInView(ref, { once: true, margin: '-150px' });
   const shouldReduceMotion = useReducedMotion();
 
   if (shouldReduceMotion) {

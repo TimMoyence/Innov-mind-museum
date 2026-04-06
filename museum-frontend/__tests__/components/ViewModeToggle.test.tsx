@@ -13,41 +13,41 @@ describe('ViewModeToggle', () => {
   it('renders list and map toggle buttons', () => {
     render(<ViewModeToggle mode="list" onToggle={onToggle} />);
 
-    expect(screen.getByLabelText('List view')).toBeTruthy();
-    expect(screen.getByLabelText('Map view')).toBeTruthy();
+    expect(screen.getByLabelText('a11y.museum.list_view')).toBeTruthy();
+    expect(screen.getByLabelText('a11y.museum.map_view')).toBeTruthy();
   });
 
   it('marks list as selected when mode is list', () => {
     render(<ViewModeToggle mode="list" onToggle={onToggle} />);
 
-    const listButton = screen.getByLabelText('List view');
+    const listButton = screen.getByLabelText('a11y.museum.list_view');
     expect(listButton.props.accessibilityState.selected).toBe(true);
 
-    const mapButton = screen.getByLabelText('Map view');
+    const mapButton = screen.getByLabelText('a11y.museum.map_view');
     expect(mapButton.props.accessibilityState.selected).toBe(false);
   });
 
   it('marks map as selected when mode is map', () => {
     render(<ViewModeToggle mode="map" onToggle={onToggle} />);
 
-    const mapButton = screen.getByLabelText('Map view');
+    const mapButton = screen.getByLabelText('a11y.museum.map_view');
     expect(mapButton.props.accessibilityState.selected).toBe(true);
 
-    const listButton = screen.getByLabelText('List view');
+    const listButton = screen.getByLabelText('a11y.museum.list_view');
     expect(listButton.props.accessibilityState.selected).toBe(false);
   });
 
   it('fires onToggle with list when list button is pressed', () => {
     render(<ViewModeToggle mode="map" onToggle={onToggle} />);
 
-    fireEvent.press(screen.getByLabelText('List view'));
+    fireEvent.press(screen.getByLabelText('a11y.museum.list_view'));
     expect(onToggle).toHaveBeenCalledWith('list');
   });
 
   it('fires onToggle with map when map button is pressed', () => {
     render(<ViewModeToggle mode="list" onToggle={onToggle} />);
 
-    fireEvent.press(screen.getByLabelText('Map view'));
+    fireEvent.press(screen.getByLabelText('a11y.museum.map_view'));
     expect(onToggle).toHaveBeenCalledWith('map');
   });
 

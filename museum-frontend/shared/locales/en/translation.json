@@ -489,6 +489,8 @@
     "distance_km": "{{distance}} km",
     "distance_unknown": "Distance unavailable",
     "location_denied": "Location access denied",
+    "map_empty": "No museums in this area",
+    "search_this_area": "Showing results for this area",
     "start_chat": "Start Chat Here",
     "detail_title": "Museum Details",
     "open_in_maps": "Open in Maps"
@@ -611,6 +613,13 @@
       "toggle_on": "Turn on museum mode",
       "toggle_off": "Turn off museum mode",
       "start_exploring": "Start exploring"
+    },
+    "museum": {
+      "search_input": "Search museums",
+      "skeleton_loading": "Loading museums",
+      "list_view": "List view",
+      "map_view": "Map view",
+      "results_count": "{{count}} museums found"
     },
     "notFound": {
       "home": "Go to home screen"

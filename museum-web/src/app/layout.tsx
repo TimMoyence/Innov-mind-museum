@@ -18,8 +18,11 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_SITE_URL ?? 'https://musaium.com',
   ),
   icons: {
-    icon: '/images/favicon.png',
-    apple: '/images/logo.png',
+    icon: [
+      { url: '/images/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/images/favicon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: '/images/apple-touch-icon.png',
   },
 };
 

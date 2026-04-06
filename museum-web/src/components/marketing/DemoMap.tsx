@@ -38,7 +38,13 @@ export default function DemoMap() {
       style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
       center: [2.3376, 48.862],
       zoom: 12.5,
+      // Allow drag/pan for tactile feel, but lock zoom & rotate to avoid scroll hijack
       scrollZoom: false,
+      doubleClickZoom: false,
+      touchZoomRotate: false,
+      dragRotate: false,
+      keyboard: false,
+      dragPan: true,
       attributionControl: false,
     });
 
@@ -50,6 +56,7 @@ export default function DemoMap() {
         el.style.borderRadius = '50%';
         el.style.backgroundColor = '#2563eb';
         el.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.3)';
+        el.style.cursor = 'pointer';
         el.style.animation = 'pulse-marker 2s ease-in-out infinite';
 
         new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
@@ -68,8 +75,133 @@ export default function DemoMap() {
           0%, 100% { box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.3); }
           50% { box-shadow: 0 0 0 8px rgba(37, 99, 235, 0.1); }
         }
+        @keyframes pulse-location {
+          0%, 100% { transform: scale(1); opacity: 0.4; }
+          50% { transform: scale(1.6); opacity: 0; }
+        }
       `}</style>
-      <div ref={mapRef} style={{ width: '100%', height: '100%', position: 'relative' }} />
+      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <div
+          ref={mapRef}
+          style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}
+        />
+
+        {/* Search bar overlay (under iOS status bar at top: 44px) */}
+        <div
+          className="pointer-events-none absolute z-10"
+          style={{ top: 44, left: 8, right: 8 }}
+          aria-hidden="true"
+        >
+          <div
+            style={{
+              borderRadius: 14,
+              background: 'rgba(255,255,255,0.88)',
+              backdropFilter: 'blur(20px) saturate(1.4)',
+              WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
+              padding: '9px 12px',
+              fontSize: 12,
+              color: '#475569',
+              border: '1px solid rgba(148,163,184,0.25)',
+              boxShadow: '0 2px 10px rgba(15,23,42,0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <svg
+              width={13}
+              height={13}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#94a3b8"
+              strokeWidth={2.2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx={11} cy={11} r={8} />
+              <line x1={21} y1={21} x2={16.65} y2={16.65} />
+            </svg>
+            <span>Rechercher un musée…</span>
+          </div>
+        </div>
+
+        {/* "My location" pulsing dot — center */}
+        <div
+          className="pointer-events-none absolute left-1/2 top-1/2 z-10"
+          style={{ transform: 'translate(-50%, -50%)' }}
+          aria-hidden="true"
+        >
+          <div style={{ position: 'relative', width: 14, height: 14 }}>
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '50%',
+                background: '#3b82f6',
+                animation: 'pulse-location 2.2s ease-out infinite',
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                inset: 3,
+                borderRadius: '50%',
+                background: '#1d4ed8',
+                border: '1.5px solid #ffffff',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Bottom sheet — decorative */}
+        <div
+          className="pointer-events-none absolute bottom-0 left-0 right-0 z-10"
+          aria-hidden="true"
+        >
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.92)',
+              backdropFilter: 'blur(24px) saturate(1.5)',
+              WebkitBackdropFilter: 'blur(24px) saturate(1.5)',
+              borderTopLeftRadius: 18,
+              borderTopRightRadius: 18,
+              padding: '8px 14px 14px',
+              borderTop: '1px solid rgba(148,163,184,0.25)',
+              boxShadow: '0 -4px 14px rgba(15,23,42,0.08)',
+            }}
+          >
+            {/* Drag handle */}
+            <div
+              style={{
+                width: 36,
+                height: 4,
+                borderRadius: 2,
+                background: 'rgba(148,163,184,0.55)',
+                margin: '0 auto 8px',
+              }}
+            />
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: '#0f172a',
+              }}
+            >
+              20 musées à proximité
+            </div>
+            <div
+              style={{
+                fontSize: 10,
+                color: '#64748b',
+                marginTop: 2,
+              }}
+            >
+              Triés par distance
+            </div>
+          </div>
+        </div>
+      </div>
     </>
   );
 }
