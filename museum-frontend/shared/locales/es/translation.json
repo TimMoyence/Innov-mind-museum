@@ -155,7 +155,9 @@
     "export_data": "Exportar mis datos",
     "export_data_desc": "Descargar todos tus datos personales (RGPD)",
     "export_data_success": "Datos exportados correctamente",
-    "rate_musaium": "Valorar Musaium"
+    "rate_musaium": "Valorar Musaium",
+    "ai_memory": "Personalización IA",
+    "ai_memory_hint": "Utiliza tus preferencias artísticas e historial de visitas para personalizar las respuestas de la IA"
   },
   "change_password": {
     "title": "Cambiar contraseña",
@@ -631,7 +633,13 @@
     "info_privacy": "Tus datos se procesan de acuerdo con nuestra política de privacidad.",
     "info_report": "Puedes reportar cualquier respuesta problemática usando el botón de bandera.",
     "read_privacy": "Leer nuestra política de privacidad",
-    "accept": "Entendido, continuar"
+    "accept": "Entendido, continuar",
+    "data_shared_title": "Datos compartidos con la IA",
+    "data_text": "Mensajes de texto que envías",
+    "data_images": "Fotos que compartes (metadatos eliminados)",
+    "data_audio": "Mensajes de voz (solo transcritos, el audio no es almacenado por la IA)",
+    "data_location": "Tu ubicación (si decides compartirla)",
+    "data_profile": "Tus preferencias artísticas e historial de visitas (para personalizar las respuestas)"
   },
   "dailyArt": {
     "title": "Obra del Día",

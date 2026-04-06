@@ -155,7 +155,9 @@
     "export_data": "Meine Daten exportieren",
     "export_data_desc": "Alle persönlichen Daten herunterladen (DSGVO)",
     "export_data_success": "Daten erfolgreich exportiert",
-    "rate_musaium": "Musaium bewerten"
+    "rate_musaium": "Musaium bewerten",
+    "ai_memory": "KI-Personalisierung",
+    "ai_memory_hint": "Verwendet Ihre Kunstpräferenzen und Besuchshistorie, um KI-Antworten zu personalisieren"
   },
   "change_password": {
     "title": "Passwort ändern",
@@ -631,7 +633,13 @@
     "info_privacy": "Ihre Daten werden gemäß unserer Datenschutzrichtlinie verarbeitet.",
     "info_report": "Sie können jede problematische Antwort über die Flaggen-Schaltfläche melden.",
     "read_privacy": "Unsere Datenschutzrichtlinie lesen",
-    "accept": "Verstanden, weiter"
+    "accept": "Verstanden, weiter",
+    "data_shared_title": "Mit der KI geteilte Daten",
+    "data_text": "Textnachrichten, die Sie senden",
+    "data_images": "Fotos, die Sie teilen (Metadaten entfernt)",
+    "data_audio": "Sprachnachrichten (nur transkribiert, Audio wird nicht von der KI gespeichert)",
+    "data_location": "Ihr Standort (wenn Sie ihn teilen möchten)",
+    "data_profile": "Ihre Kunstpräferenzen und Besuchshistorie (zur Personalisierung der Antworten)"
   },
   "dailyArt": {
     "title": "Kunstwerk des Tages",

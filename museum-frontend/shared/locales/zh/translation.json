@@ -155,7 +155,9 @@
     "export_data": "导出我的数据",
     "export_data_desc": "下载所有个人数据（GDPR）",
     "export_data_success": "数据导出成功",
-    "rate_musaium": "评价Musaium"
+    "rate_musaium": "评价Musaium",
+    "ai_memory": "AI个性化",
+    "ai_memory_hint": "使用您的艺术偏好和参观历史来个性化AI回复"
   },
   "change_password": {
     "title": "修改密码",
@@ -631,7 +633,13 @@
     "info_privacy": "您的数据按照我们的隐私政策进行处理。",
     "info_report": "您可以使用旗帜按钮举报任何有问题的回复。",
     "read_privacy": "阅读我们的隐私政策",
-    "accept": "我已了解，继续"
+    "accept": "我已了解，继续",
+    "data_shared_title": "与AI共享的数据",
+    "data_text": "您发送的文字消息",
+    "data_images": "您分享的照片（元数据已移除）",
+    "data_audio": "语音消息（仅转录，音频不被AI存储）",
+    "data_location": "您的位置（如果您选择分享）",
+    "data_profile": "您的艺术偏好和参观历史（用于个性化回复）"
   },
   "dailyArt": {
     "title": "每日艺术",

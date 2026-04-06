@@ -1,6 +1,24 @@
 {
-  "runs": [],
-  "lastUpdated": null,
+  "runs": [
+    {
+      "id": "RUN-20260406-0715",
+      "date": "2026-04-06",
+      "mode": "feature",
+      "pipeline": "enterprise",
+      "escalated": false,
+      "duration_minutes": 20,
+      "agents_spawned": 3,
+      "tasks_completed": 12,
+      "corrective_loops": 0,
+      "tsc_fails_post_agent": 0,
+      "discoveries_flagged": 1,
+      "files_modified": 24,
+      "lines_changed": 900,
+      "tests_added": 23,
+      "verdict": "PASS"
+    }
+  ],
+  "lastUpdated": "2026-04-06T07:30:00.000Z",
   "averages": {
     "durationMinutes": 0,
     "tasksPerRun": 0,

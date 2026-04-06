@@ -33,6 +33,7 @@ import type { AudioTranscriber } from '../domain/ports/audio-transcriber.port';
 import type { ChatOrchestrator } from '../domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '../domain/ports/image-storage.port';
 import type { OcrService } from '../domain/ports/ocr.port';
+import type { PiiSanitizer } from '../domain/ports/pii-sanitizer.port';
 import type { TextToSpeechService } from '../domain/ports/tts.port';
 import type { IMuseumRepository } from '@modules/museum/domain/museum.repository.interface';
 import type { AuditService } from '@shared/audit/audit.service';
@@ -63,6 +64,7 @@ export interface ChatServiceDeps {
   knowledgeBase?: KnowledgeBaseService;
   imageEnrichment?: ImageEnrichmentService;
   artTopicClassifier?: ArtTopicClassifierPort;
+  piiSanitizer?: PiiSanitizer;
   museumRepository?: IMuseumRepository;
 }
 
@@ -100,6 +102,7 @@ export class ChatService {
       knowledgeBase: deps.knowledgeBase,
       imageEnrichment: deps.imageEnrichment,
       artTopicClassifier: deps.artTopicClassifier,
+      piiSanitizer: deps.piiSanitizer,
     });
 
     this.media = new ChatMediaService({

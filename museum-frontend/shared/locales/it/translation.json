@@ -155,7 +155,9 @@
     "export_data": "Esporta i miei dati",
     "export_data_desc": "Scarica tutti i tuoi dati personali (GDPR)",
     "export_data_success": "Dati esportati con successo",
-    "rate_musaium": "Valuta Musaium"
+    "rate_musaium": "Valuta Musaium",
+    "ai_memory": "Personalizzazione IA",
+    "ai_memory_hint": "Utilizza le tue preferenze artistiche e la cronologia delle visite per personalizzare le risposte dell'IA"
   },
   "change_password": {
     "title": "Cambia password",
@@ -631,7 +633,13 @@
     "info_privacy": "I tuoi dati sono trattati in conformità con la nostra informativa sulla privacy.",
     "info_report": "Puoi segnalare qualsiasi risposta problematica usando il pulsante bandiera.",
     "read_privacy": "Leggi la nostra informativa sulla privacy",
-    "accept": "Ho capito, continua"
+    "accept": "Ho capito, continua",
+    "data_shared_title": "Dati condivisi con l'IA",
+    "data_text": "Messaggi di testo che invii",
+    "data_images": "Foto che condividi (metadati rimossi)",
+    "data_audio": "Messaggi vocali (solo trascritti, l'audio non viene memorizzato dall'IA)",
+    "data_location": "La tua posizione (se scegli di condividerla)",
+    "data_profile": "Le tue preferenze artistiche e la cronologia delle visite (per personalizzare le risposte)"
   },
   "dailyArt": {
     "title": "Opera del Giorno",

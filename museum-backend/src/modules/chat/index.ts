@@ -10,6 +10,7 @@ import { S3CompatibleImageStorage } from './adapters/secondary/image-storage.s3'
 import { LocalImageStorage } from './adapters/secondary/image-storage.stub';
 import { LangChainChatOrchestrator } from './adapters/secondary/langchain.orchestrator';
 import { TesseractOcrService, DisabledOcrService } from './adapters/secondary/ocr-service';
+import { RegexPiiSanitizer } from './adapters/secondary/pii-sanitizer.regex';
 import {
   OpenAiTextToSpeechService,
   DisabledTextToSpeechService,
@@ -223,6 +224,7 @@ class ChatModule {
       knowledgeBase,
       imageEnrichment,
       artTopicClassifier,
+      piiSanitizer: new RegexPiiSanitizer(),
       museumRepository,
     });
 
@@ -259,6 +261,10 @@ export const getChatRepository = (): TypeOrmChatRepository => chatModule.getBuil
 
 /** Returns the shared OCR service instance. Throws if module is not built. */
 export const getOcrService = (): OcrService => chatModule.getBuilt().ocrService;
+
+/** Returns the shared user memory service, or undefined if module is not yet built. */
+export const getUserMemoryService = (): UserMemoryService | undefined =>
+  chatModule.isBuilt() ? chatModule.getBuilt().userMemoryService : undefined;
 
 /** Returns the shared art keyword repository, or undefined if module is not yet built. */
 export const getArtKeywordRepository = (): ArtKeywordRepository | undefined =>

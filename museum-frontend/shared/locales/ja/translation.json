@@ -155,7 +155,9 @@
     "export_data": "データをエクスポート",
     "export_data_desc": "すべての個人データをダウンロード（GDPR）",
     "export_data_success": "データのエクスポートに成功しました",
-    "rate_musaium": "Musaiumを評価"
+    "rate_musaium": "Musaiumを評価",
+    "ai_memory": "AIパーソナライゼーション",
+    "ai_memory_hint": "アートの好みと訪問履歴を使用してAIの回答をパーソナライズします"
   },
   "change_password": {
     "title": "パスワードの変更",
@@ -631,7 +633,13 @@
     "info_privacy": "お客様のデータはプライバシーポリシーに従って処理されます。",
     "info_report": "問題のある回答はフラグボタンで報告できます。",
     "read_privacy": "プライバシーポリシーを読む",
-    "accept": "理解しました、続ける"
+    "accept": "理解しました、続ける",
+    "data_shared_title": "AIと共有されるデータ",
+    "data_text": "送信するテキストメッセージ",
+    "data_images": "共有する写真（メタデータは削除されます）",
+    "data_audio": "音声メッセージ（文字起こしのみ、音声はAIに保存されません）",
+    "data_location": "あなたの位置情報（共有を選択した場合）",
+    "data_profile": "アートの好みと訪問履歴（回答のパーソナライズに使用）"
   },
   "dailyArt": {
     "title": "今日のアートワーク",

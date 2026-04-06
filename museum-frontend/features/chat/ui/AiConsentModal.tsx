@@ -53,6 +53,47 @@ export const AiConsentModal = ({ visible, onAccept, onPrivacy }: AiConsentModalP
             </View>
           </View>
 
+          <View
+            style={[
+              styles.infoCard,
+              { backgroundColor: theme.surface, borderColor: theme.cardBorder },
+            ]}
+          >
+            <Text style={[styles.dataTitle, { color: theme.textPrimary }]}>
+              {t('consent.data_shared_title')}
+            </Text>
+            <View style={styles.infoRow}>
+              <Ionicons name="chatbubble-outline" size={20} color={theme.primary} />
+              <Text style={[styles.infoText, { color: theme.textSecondary }]}>
+                {t('consent.data_text')}
+              </Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Ionicons name="image-outline" size={20} color={theme.primary} />
+              <Text style={[styles.infoText, { color: theme.textSecondary }]}>
+                {t('consent.data_images')}
+              </Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Ionicons name="mic-outline" size={20} color={theme.primary} />
+              <Text style={[styles.infoText, { color: theme.textSecondary }]}>
+                {t('consent.data_audio')}
+              </Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Ionicons name="location-outline" size={20} color={theme.primary} />
+              <Text style={[styles.infoText, { color: theme.textSecondary }]}>
+                {t('consent.data_location')}
+              </Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Ionicons name="person-outline" size={20} color={theme.primary} />
+              <Text style={[styles.infoText, { color: theme.textSecondary }]}>
+                {t('consent.data_profile')}
+              </Text>
+            </View>
+          </View>
+
           <Pressable
             onPress={onPrivacy}
             accessibilityRole="link"
@@ -126,6 +167,11 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     lineHeight: 20,
+  },
+  dataTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
   },
   link: {
     fontSize: 14,

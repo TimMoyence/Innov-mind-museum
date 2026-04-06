@@ -16,6 +16,7 @@ export function makeMemory(overrides: Partial<UserMemory> = {}): UserMemory {
     notableArtworks: [],
     interests: [],
     summary: null,
+    disabledByUser: false,
     sessionCount: 2,
     lastSessionId: 'sess-prev',
     version: 1,

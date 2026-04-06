@@ -16,12 +16,13 @@ describe('SkeletonChatBubble', () => {
     const tree = toJSON();
     // Root bubble View exists
     expect(tree).not.toBeNull();
+    if (tree === null) return; // type narrowing — tests above guarantee this won't happen
     // Contains 3 SkeletonBox children (full-width, 80%, 40% lines)
-    expect(tree!.children).toHaveLength(3);
+    expect(tree.children).toHaveLength(3);
     // Default alignSelf is flex-start
-    const flatStyle = Array.isArray(tree!.props.style)
-      ? Object.assign({}, ...tree!.props.style)
-      : tree!.props.style;
+    const flatStyle = Array.isArray(tree.props.style)
+      ? Object.assign({}, ...tree.props.style)
+      : tree.props.style;
     expect(flatStyle.alignSelf).toBe('flex-start');
   });
 
@@ -29,9 +30,10 @@ describe('SkeletonChatBubble', () => {
     const { toJSON } = render(<SkeletonChatBubble alignSelf="flex-end" />);
     const tree = toJSON();
     expect(tree).not.toBeNull();
-    const flatStyle = Array.isArray(tree!.props.style)
-      ? Object.assign({}, ...tree!.props.style)
-      : tree!.props.style;
+    if (tree === null) return; // type narrowing — tests above guarantee this won't happen
+    const flatStyle = Array.isArray(tree.props.style)
+      ? Object.assign({}, ...tree.props.style)
+      : tree.props.style;
     expect(flatStyle.alignSelf).toBe('flex-end');
   });
 });
