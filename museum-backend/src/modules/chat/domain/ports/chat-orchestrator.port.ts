@@ -20,6 +20,8 @@ export interface OrchestratorInput {
   requestId?: string;
   userMemoryBlock?: string;
   knowledgeBaseBlock?: string;
+  /** When true, prompts include accessibility-oriented audio description instructions. */
+  audioDescriptionMode?: boolean;
 }
 
 /** Result returned by {@link ChatOrchestrator.generate}. */

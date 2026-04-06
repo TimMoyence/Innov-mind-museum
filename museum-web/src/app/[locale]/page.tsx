@@ -7,7 +7,6 @@ import FeatureCard from '@/components/marketing/FeatureCard';
 import StoreButton from '@/components/marketing/StoreButton';
 import PhoneMockup from '@/components/marketing/PhoneMockup';
 import HeroPlayerLoader from '@/components/marketing/HeroPlayerLoader';
-import ScrollIndicator from '@/components/marketing/ScrollIndicator';
 import ScrollProgress from '@/components/marketing/ScrollProgress';
 import HeroOrbs from '@/components/marketing/HeroOrbs';
 import AnimatedLine from '@/components/marketing/AnimatedLine';
@@ -263,13 +262,11 @@ export default async function LandingPage({ params }: LandingPageProps) {
           __html: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'FAQPage',
-            mainEntity: dict.faq.items.map(
-              (item: { question: string; answer: string }) => ({
-                '@type': 'Question',
-                name: item.question,
-                acceptedAnswer: { '@type': 'Answer', text: item.answer },
-              }),
-            ),
+            mainEntity: dict.faq.items.map((item: { question: string; answer: string }) => ({
+              '@type': 'Question',
+              name: item.question,
+              acceptedAnswer: { '@type': 'Answer', text: item.answer },
+            })),
           }),
         }}
       />
@@ -376,8 +373,6 @@ export default async function LandingPage({ params }: LandingPageProps) {
           </div>
         </div>
 
-        <ScrollIndicator />
-
         {/* Bottom gradient fade to light */}
         <div
           className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent"
@@ -406,12 +401,12 @@ export default async function LandingPage({ params }: LandingPageProps) {
             <div className="grid gap-12 sm:grid-cols-3">
               {dict.features.items.map((item, i) => (
                 <AnimatedSection key={i} delay={i * 0.15} variant="scale">
-                  <div className="relative flex flex-col items-center text-center">
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold text-primary-400">
+                  <div className="flex flex-col items-center text-center">
+                    <div className="mb-3 text-xs font-bold text-primary-400">
                       {String(i + 1).padStart(2, '0')}
                     </div>
                     <div
-                      className="liquid-glass relative z-10 flex h-20 w-20 items-center justify-center !rounded-3xl"
+                      className="liquid-glass flex h-20 w-20 items-center justify-center !rounded-3xl"
                       style={{
                         background: 'rgba(255, 255, 255, 0.7)',
                         backdropFilter: 'blur(20px) saturate(1.5)',
@@ -454,9 +449,19 @@ export default async function LandingPage({ params }: LandingPageProps) {
         theme="light"
         reverse
       >
-        <PhoneMockup variant="floating">
-          <DemoMapLoader />
-        </PhoneMockup>
+        <div className="flex items-end justify-center gap-4">
+          <PhoneMockup scale={0.8}>
+            <Image
+              src="/images/screenshots/iPhone 16 Pro Max /iPhone 16 Pro Max - list Nearby museum.png"
+              alt="Museum list view"
+              fill
+              style={{ objectFit: 'cover' }}
+            />
+          </PhoneMockup>
+          <PhoneMockup variant="floating">
+            <DemoMapLoader />
+          </PhoneMockup>
+        </div>
       </ShowcaseSection>
 
       {/* ================================================================ */}

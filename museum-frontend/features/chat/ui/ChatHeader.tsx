@@ -14,6 +14,8 @@ interface ChatHeaderProps {
   isClosing: boolean;
   onClose: () => void;
   onSummary?: () => void;
+  audioDescriptionEnabled?: boolean;
+  onToggleAudioDescription?: () => void;
 }
 
 /** Chat session header with title, museum name, expertise badge, and close button. */
@@ -25,6 +27,8 @@ export function ChatHeader({
   isClosing,
   onClose,
   onSummary,
+  audioDescriptionEnabled,
+  onToggleAudioDescription,
 }: ChatHeaderProps) {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -44,6 +48,28 @@ export function ChatHeader({
           </View>
         </View>
         <View style={styles.headerActions}>
+          {onToggleAudioDescription ? (
+            <Pressable
+              onPress={onToggleAudioDescription}
+              style={[
+                styles.closeButton,
+                {
+                  borderColor: audioDescriptionEnabled ? theme.primary : theme.inputBorder,
+                  backgroundColor: theme.surface,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={
+                audioDescriptionEnabled ? t('chat.audio_mode_off') : t('chat.audio_mode_on')
+              }
+            >
+              <Ionicons
+                name={audioDescriptionEnabled ? 'headset' : 'headset-outline'}
+                size={20}
+                color={audioDescriptionEnabled ? theme.primary : theme.textSecondary}
+              />
+            </Pressable>
+          ) : null}
           {onSummary ? (
             <Pressable
               onPress={onSummary}

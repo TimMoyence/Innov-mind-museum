@@ -157,7 +157,10 @@
     "export_data_success": "Données exportées avec succès",
     "rate_musaium": "Noter Musaium",
     "ai_memory": "Personnalisation IA",
-    "ai_memory_hint": "Utilise vos préférences artistiques et historique de visites pour personnaliser les réponses de l'IA"
+    "ai_memory_hint": "Utilise vos préférences artistiques et historique de visites pour personnaliser les réponses de l'IA",
+    "accessibility": "Accessibilité",
+    "audio_description": "Audiodescription",
+    "audio_description_hint": "Lecture vocale des réponses IA avec descriptions visuelles détaillées pour l'accessibilité"
   },
   "change_password": {
     "title": "Changer le mot de passe",
@@ -368,7 +371,9 @@
     "thumbsUp": "Utile",
     "thumbsDown": "Pas utile",
     "sendFailed": "Échec de l'envoi",
-    "offlineImageFailed": "L'image n'a pas pu être sauvegardée pour l'envoi hors ligne. Votre message a été mis en file d'attente sans l'image."
+    "offlineImageFailed": "L'image n'a pas pu être sauvegardée pour l'envoi hors ligne. Votre message a été mis en file d'attente sans l'image.",
+    "audio_mode_on": "Audiodescription activée",
+    "audio_mode_off": "Audiodescription désactivée"
   },
   "chatInput": {
     "placeholder": "Posez une question sur une œuvre, un monument, ou envoyez une photo/voix...",

@@ -25,6 +25,8 @@ interface LlmSectionPlanInput {
   /** Pre-built visit context block to inject into the prompt. */
   visitContextBlock?: string;
   hasImage?: boolean;
+  /** When true, increases word limits for richer audio-friendly descriptions. */
+  audioDescriptionMode?: boolean;
 }
 
 const buildGuideLevelHint = (guideLevel: 'beginner' | 'intermediate' | 'expert'): string => {
@@ -39,19 +41,27 @@ const buildGuideLevelHint = (guideLevel: 'beginner' | 'intermediate' | 'expert')
   return 'Use simple, clear, beginner-friendly language.';
 };
 
-const buildSummaryPrompt = (
-  locale: string | undefined,
-  museumMode: boolean,
-  guideLevel: 'beginner' | 'intermediate' | 'expert',
-  visitContextBlock?: string,
-  hasImage?: boolean,
-): string => {
+const resolveWordLimit = (museumMode: boolean, audioDescriptionMode?: boolean): number => {
+  if (audioDescriptionMode) return museumMode ? 300 : 400;
+  return museumMode ? 150 : 250;
+};
+
+const buildSummaryPrompt = (input: {
+  locale?: string;
+  museumMode: boolean;
+  guideLevel: 'beginner' | 'intermediate' | 'expert';
+  visitContextBlock?: string;
+  hasImage?: boolean;
+  audioDescriptionMode?: boolean;
+}): string => {
+  const { locale, museumMode, guideLevel, visitContextBlock, hasImage, audioDescriptionMode } =
+    input;
   const language = localeToLanguageName(resolveLocale([locale]));
   const modeLine = museumMode
     ? 'Visitor is in guided museum mode: include one concrete next-step recommendation.'
     : 'Visitor is in regular mode: stay concise and practical.';
 
-  const wordLimit = museumMode ? 150 : 250;
+  const wordLimit = resolveWordLimit(museumMode, audioDescriptionMode);
 
   const parts = [
     '[SECTION:summary]',
@@ -105,13 +115,14 @@ export const createLlmSectionPlan = (input: LlmSectionPlanInput): LlmSectionDefi
     name: 'summary',
     timeoutMs: input.timeoutSummaryMs,
     required: true,
-    prompt: buildSummaryPrompt(
-      input.locale,
-      input.museumMode,
-      input.guideLevel,
-      input.visitContextBlock,
-      input.hasImage,
-    ),
+    prompt: buildSummaryPrompt({
+      locale: input.locale,
+      museumMode: input.museumMode,
+      guideLevel: input.guideLevel,
+      visitContextBlock: input.visitContextBlock,
+      hasImage: input.hasImage,
+      audioDescriptionMode: input.audioDescriptionMode,
+    }),
   };
 
   return [summary];

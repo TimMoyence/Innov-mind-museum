@@ -157,7 +157,10 @@
     "export_data_success": "Data exported successfully",
     "rate_musaium": "Rate Musaium",
     "ai_memory": "AI Personalization",
-    "ai_memory_hint": "Uses your art preferences and visit history to personalize AI responses"
+    "ai_memory_hint": "Uses your art preferences and visit history to personalize AI responses",
+    "accessibility": "Accessibility",
+    "audio_description": "Audio Description",
+    "audio_description_hint": "Read AI responses aloud with rich visual descriptions for accessibility"
   },
   "change_password": {
     "title": "Change Password",
@@ -368,7 +371,9 @@
     "thumbsUp": "Helpful",
     "thumbsDown": "Not helpful",
     "sendFailed": "Failed to send",
-    "offlineImageFailed": "The image could not be saved for offline sending. Your message was queued without the image."
+    "offlineImageFailed": "The image could not be saved for offline sending. Your message was queued without the image.",
+    "audio_mode_on": "Audio description on",
+    "audio_mode_off": "Audio description off"
   },
   "chatInput": {
     "placeholder": "Ask about an artwork, monument, or send voice/photo...",

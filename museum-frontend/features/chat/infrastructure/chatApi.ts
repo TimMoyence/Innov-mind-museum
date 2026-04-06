@@ -104,8 +104,20 @@ export const chatApi = {
     location?: string;
     guideLevel?: GuideLevel;
     locale?: string;
+    preClassified?: 'art';
+    audioDescriptionMode?: boolean;
   }): Promise<PostMessageResponseDTO> {
-    const { sessionId, text, imageUri, museumMode, location, guideLevel, locale } = params;
+    const {
+      sessionId,
+      text,
+      imageUri,
+      museumMode,
+      location,
+      guideLevel,
+      locale,
+      preClassified,
+      audioDescriptionMode,
+    } = params;
 
     let payload: unknown;
 
@@ -117,7 +129,17 @@ export const chatApi = {
       if (text?.trim()) {
         formData.append('text', text.trim());
       }
-      formData.append('context', JSON.stringify({ museumMode, location, guideLevel, locale }));
+      formData.append(
+        'context',
+        JSON.stringify({
+          museumMode,
+          location,
+          guideLevel,
+          locale,
+          preClassified,
+          audioDescriptionMode,
+        }),
+      );
       formData.append('image', {
         uri: imageUri,
         name: fileName,
@@ -133,6 +155,8 @@ export const chatApi = {
           location,
           guideLevel,
           locale,
+          preClassified,
+          audioDescriptionMode,
         },
       });
     }
@@ -159,8 +183,20 @@ export const chatApi = {
     location?: string;
     guideLevel?: GuideLevel;
     locale?: string;
+    preClassified?: 'art';
+    audioDescriptionMode?: boolean;
   }): Promise<PostMessageResponseDTO> {
-    const { sessionId, audioUri, audioBlob, museumMode, location, guideLevel, locale } = params;
+    const {
+      sessionId,
+      audioUri,
+      audioBlob,
+      museumMode,
+      location,
+      guideLevel,
+      locale,
+      preClassified,
+      audioDescriptionMode,
+    } = params;
 
     if (!audioUri && !audioBlob) {
       throw new Error('audioUri or audioBlob is required');
@@ -176,7 +212,17 @@ export const chatApi = {
     const mimeType = audioBlob?.type ?? (audioMimeByExtension[extension] || 'audio/mp4');
 
     const formData = new FormData();
-    formData.append('context', JSON.stringify({ museumMode, location, guideLevel, locale }));
+    formData.append(
+      'context',
+      JSON.stringify({
+        museumMode,
+        location,
+        guideLevel,
+        locale,
+        preClassified,
+        audioDescriptionMode,
+      }),
+    );
     if (audioBlob) {
       formData.append('audio', audioBlob, fileName);
     } else {
@@ -347,6 +393,8 @@ export const chatApi = {
     museumMode?: boolean;
     guideLevel?: GuideLevel;
     locale?: string;
+    preClassified?: 'art';
+    audioDescriptionMode?: boolean;
     onToken: (text: string) => void;
     onDone: (payload: {
       messageId: string;
@@ -403,6 +451,8 @@ export const chatApi = {
           museumMode: params.museumMode,
           guideLevel: params.guideLevel,
           locale: params.locale,
+          preClassified: params.preClassified,
+          audioDescriptionMode: params.audioDescriptionMode,
         },
       }),
       signal: combinedSignal,
@@ -505,6 +555,8 @@ export const chatApi = {
     location?: string;
     guideLevel?: GuideLevel;
     locale?: string;
+    preClassified?: 'art';
+    audioDescriptionMode?: boolean;
     onToken?: (text: string) => void;
     onDone?: (payload: {
       messageId: string;

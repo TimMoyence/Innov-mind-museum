@@ -21,6 +21,8 @@ import { buildVisitSummary } from '@/features/chat/application/chatSessionLogic.
 import { useAudioRecorder } from '@/features/chat/application/useAudioRecorder';
 import { useImagePicker } from '@/features/chat/application/useImagePicker';
 import { useAiConsent } from '@/features/chat/application/useAiConsent';
+import { useAutoTts } from '@/features/chat/application/useAutoTts';
+import { useAudioDescriptionMode } from '@/features/settings/application/useAudioDescriptionMode';
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
 import { ChatMessageList } from '@/features/chat/ui/ChatMessageList';
 import { ChatInput } from '@/features/chat/ui/ChatInput';
@@ -102,6 +104,12 @@ export default function ChatSessionScreen() {
     cancelPendingImage,
     clearSelectedImage,
   } = useImagePicker();
+
+  const { enabled: audioDescEnabled } = useAudioDescriptionMode();
+  const [sessionAudioOverride, setSessionAudioOverride] = useState<boolean | null>(null);
+  const effectiveAudioDesc = sessionAudioOverride ?? audioDescEnabled;
+
+  useAutoTts({ messages, enabled: effectiveAudioDesc });
 
   const lastAssistantMessage = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -283,6 +291,10 @@ export default function ChatSessionScreen() {
             }}
             onSummary={() => {
               setShowSummary(true);
+            }}
+            audioDescriptionEnabled={effectiveAudioDesc}
+            onToggleAudioDescription={() => {
+              setSessionAudioOverride((prev) => !(prev ?? audioDescEnabled));
             }}
           />
 

@@ -19,12 +19,18 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   removeItem: jest.fn().mockResolvedValue(undefined),
 }));
 
+const mockIsConnected = { value: true };
+jest.mock('@/shared/infrastructure/connectivity/useConnectivity', () => ({
+  useConnectivity: () => ({ isConnected: mockIsConnected.value, isInternetReachable: true }),
+}));
+
 import { useArtKeywordsSync } from '@/features/art-keywords/application/useArtKeywordsSync';
 import { useArtKeywordsStore } from '@/features/art-keywords/infrastructure/artKeywordsStore';
 
 describe('useArtKeywordsSync', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockIsConnected.value = true;
     useArtKeywordsStore.setState({ keywordsByLocale: {}, lastSyncedAt: {} });
   });
 
@@ -54,9 +60,8 @@ describe('useArtKeywordsSync', () => {
     expect(useArtKeywordsStore.getState().getKeywords('fr')).toHaveLength(1);
   });
 
-  it('skips sync when last sync is recent', async () => {
-    const recentSync = new Date().toISOString();
-    useArtKeywordsStore.setState({ lastSyncedAt: { fr: recentSync } });
+  it('skips sync when offline', async () => {
+    mockIsConnected.value = false;
 
     renderHook(() => {
       useArtKeywordsSync();

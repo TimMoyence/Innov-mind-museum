@@ -20,6 +20,7 @@ import { TypeOrmUserMemoryRepository } from './adapters/secondary/userMemory.rep
 import { WikidataClient } from './adapters/secondary/wikidata.client';
 import { ArtTopicClassifier } from './useCase/art-topic-classifier';
 import { ChatService } from './useCase/chat.service';
+import { DescribeService } from './useCase/describe.service';
 import { ImageEnrichmentService } from './useCase/image-enrichment.service';
 import { KnowledgeBaseService } from './useCase/knowledge-base.service';
 import { UserMemoryService } from './useCase/user-memory.service';
@@ -34,6 +35,7 @@ import type { DataSource } from 'typeorm';
 /** Typed result of building the chat module — all services guaranteed initialized. */
 interface BuiltChatModule {
   chatService: ChatService;
+  describeService: DescribeService;
   imageStorage: ImageStorage;
   repository: TypeOrmChatRepository;
   ocrService: OcrService;
@@ -228,8 +230,11 @@ class ChatModule {
       museumRepository,
     });
 
+    const describeService = new DescribeService({ orchestrator, tts });
+
     const built: BuiltChatModule = {
       chatService,
+      describeService,
       imageStorage,
       repository,
       ocrService: ocr,
@@ -269,6 +274,10 @@ export const getUserMemoryService = (): UserMemoryService | undefined =>
 /** Returns the shared art keyword repository, or undefined if module is not yet built. */
 export const getArtKeywordRepository = (): ArtKeywordRepository | undefined =>
   chatModule.isBuilt() ? chatModule.getBuilt().artKeywordRepository : undefined;
+
+/** Returns the shared describe service, or undefined if module is not yet built. */
+export const getDescribeService = (): DescribeService | undefined =>
+  chatModule.isBuilt() ? chatModule.getBuilt().describeService : undefined;
 
 /** Returns the LLM circuit breaker state for the health endpoint. */
 export const getLlmCircuitBreakerState = () => chatModule.getLlmCircuitBreakerState();

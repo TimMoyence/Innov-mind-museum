@@ -157,7 +157,10 @@
     "export_data_success": "Dati esportati con successo",
     "rate_musaium": "Valuta Musaium",
     "ai_memory": "Personalizzazione IA",
-    "ai_memory_hint": "Utilizza le tue preferenze artistiche e la cronologia delle visite per personalizzare le risposte dell'IA"
+    "ai_memory_hint": "Utilizza le tue preferenze artistiche e la cronologia delle visite per personalizzare le risposte dell'IA",
+    "accessibility": "Accessibilità",
+    "audio_description": "Audiodescrizione",
+    "audio_description_hint": "Leggi ad alta voce le risposte IA con descrizioni visive dettagliate per l'accessibilità"
   },
   "change_password": {
     "title": "Cambia password",
@@ -368,7 +371,9 @@
     "thumbsUp": "Utile",
     "thumbsDown": "Non utile",
     "sendFailed": "Invio fallito",
-    "offlineImageFailed": "L'immagine non è stata salvata per l'invio offline. Il messaggio è stato accodato senza immagine."
+    "offlineImageFailed": "L'immagine non è stata salvata per l'invio offline. Il messaggio è stato accodato senza immagine.",
+    "audio_mode_on": "Audiodescrizione attiva",
+    "audio_mode_off": "Audiodescrizione disattiva"
   },
   "chatInput": {
     "placeholder": "Chiedi di un'opera, un monumento, oppure invia voce/foto...",

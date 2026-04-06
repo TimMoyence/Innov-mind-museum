@@ -44,6 +44,14 @@ jest.mock('@/features/chat/application/useImagePicker', () => ({
   }),
 }));
 
+jest.mock('@/features/chat/application/useAutoTts', () => ({
+  useAutoTts: () => ({ stopAutoPlay: jest.fn() }),
+}));
+
+jest.mock('@/features/settings/application/useAudioDescriptionMode', () => ({
+  useAudioDescriptionMode: () => ({ enabled: false, isLoading: false, toggle: jest.fn() }),
+}));
+
 jest.mock('@/features/chat/application/useAiConsent', () => ({
   useAiConsent: () => ({
     showAiConsent: false,

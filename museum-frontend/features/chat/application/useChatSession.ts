@@ -6,6 +6,8 @@ import { incrementCompletedSessions } from '@/shared/infrastructure/inAppReview'
 import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSettings';
 import { useLocation } from '@/features/museum/application/useLocation';
 import { useConnectivity } from '@/shared/infrastructure/connectivity/useConnectivity';
+import { useArtKeywordsClassifier } from '@/features/art-keywords/application/useArtKeywordsClassifier';
+import { useAudioDescriptionMode } from '@/features/settings/application/useAudioDescriptionMode';
 import { useOfflineQueue } from './useOfflineQueue';
 import { chatApi } from '../infrastructure/chatApi';
 import { useChatSessionStore } from '../infrastructure/chatSessionStore';
@@ -41,6 +43,8 @@ export const useChatSession = (sessionId: string) => {
   const { latitude, longitude } = useLocation();
   const { isOffline, enqueue, dequeue, peek, pendingCount } = useOfflineQueue();
   const { isConnected } = useConnectivity();
+  const { classifyText } = useArtKeywordsClassifier();
+  const { enabled: audioDescriptionMode } = useAudioDescriptionMode();
 
   // Sub-hooks
   const { isLoading, error, setError, sessionTitle, museumName, sessionMuseumMode, loadSession } =
@@ -127,6 +131,7 @@ export const useChatSession = (sessionId: string) => {
               latitude != null && longitude != null
                 ? `lat:${String(latitude)},lng:${String(longitude)}`
                 : undefined,
+            audioDescriptionMode: audioDescriptionMode || undefined,
           });
 
           const assistantMessage: ChatUiMessage = {
@@ -177,6 +182,9 @@ export const useChatSession = (sessionId: string) => {
         setMessages((prev) => sortByTime([...prev, streamingPlaceholder]));
         setIsStreaming(true);
 
+        const preClassified =
+          trimmedText && classifyText(trimmedText, locale) === 'art' ? ('art' as const) : undefined;
+
         const response = await chatApi.sendMessageSmart({
           sessionId,
           text: trimmedText,
@@ -188,6 +196,8 @@ export const useChatSession = (sessionId: string) => {
             latitude != null && longitude != null
               ? `lat:${String(latitude)},lng:${String(longitude)}`
               : undefined,
+          preClassified,
+          audioDescriptionMode: audioDescriptionMode || undefined,
           onToken: (chunk) => {
             streamTextRef.current += chunk;
             scheduleFlush();
@@ -290,6 +300,8 @@ export const useChatSession = (sessionId: string) => {
       streamTextRef,
       streamingIdRef,
       loadSession,
+      classifyText,
+      audioDescriptionMode,
     ],
   );
 

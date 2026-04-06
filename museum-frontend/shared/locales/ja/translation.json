@@ -157,7 +157,10 @@
     "export_data_success": "データのエクスポートに成功しました",
     "rate_musaium": "Musaiumを評価",
     "ai_memory": "AIパーソナライゼーション",
-    "ai_memory_hint": "アートの好みと訪問履歴を使用してAIの回答をパーソナライズします"
+    "ai_memory_hint": "アートの好みと訪問履歴を使用してAIの回答をパーソナライズします",
+    "accessibility": "アクセシビリティ",
+    "audio_description": "音声ガイド",
+    "audio_description_hint": "アクセシビリティ向上のため、AIの回答を詳細な視覚的説明とともに音声で読み上げます"
   },
   "change_password": {
     "title": "パスワードの変更",
@@ -368,7 +371,9 @@
     "thumbsUp": "役に立った",
     "thumbsDown": "役に立たなかった",
     "sendFailed": "送信に失敗しました",
-    "offlineImageFailed": "オフライン送信用に画像を保存できませんでした。画像なしでメッセージがキューに追加されました。"
+    "offlineImageFailed": "オフライン送信用に画像を保存できませんでした。画像なしでメッセージがキューに追加されました。",
+    "audio_mode_on": "音声ガイド オン",
+    "audio_mode_off": "音声ガイド オフ"
   },
   "chatInput": {
     "placeholder": "美術品や建造物について質問、または音声・写真を送信...",

@@ -65,6 +65,10 @@ interface ChatRequestContext {
   museumMode?: boolean;
   guideLevel?: 'beginner' | 'intermediate' | 'expert';
   locale?: string;
+  /** Frontend pre-classification hint: when 'art', the backend skips the LLM art-topic classifier. */
+  preClassified?: 'art';
+  /** When true, the LLM prompt includes accessibility-oriented audio description instructions. */
+  audioDescriptionMode?: boolean;
 }
 
 /** Payload for posting a text or image message to a chat session. */
