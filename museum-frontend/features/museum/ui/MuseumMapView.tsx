@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { WebView } from 'react-native-webview';
 import type { WebViewMessageEvent } from 'react-native-webview';
+import { useTranslation } from 'react-i18next';
 
+import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import type { MuseumWithDistance } from '../application/useMuseumDirectory';
 import { buildLeafletHtml } from '../infrastructure/leafletHtml';
@@ -31,6 +33,7 @@ export const MuseumMapView = ({
   onMapMoved,
 }: MuseumMapViewProps) => {
   const { theme, isDark } = useTheme();
+  const { t } = useTranslation();
   const webViewRef = useRef<WebView>(null);
   const isMapReady = useRef(false);
   const messageQueue = useRef<object[]>([]);
@@ -155,33 +158,73 @@ export const MuseumMapView = ({
   );
 
   const html = buildLeafletHtml({ isDark });
+  const isEmpty = museums.length === 0;
 
   return (
-    <WebView
-      ref={webViewRef}
-      source={{ html }}
-      originWhitelist={['*']}
-      onMessage={handleMessage}
-      style={[
-        styles.webView,
-        {
-          borderColor: theme.cardBorder,
-          backgroundColor: theme.pageGradient[0],
-        },
-      ]}
-      scrollEnabled={false}
-      javaScriptEnabled
-      domStorageEnabled
-      startInLoadingState
-    />
+    <View style={styles.container}>
+      <WebView
+        ref={webViewRef}
+        source={{ html }}
+        originWhitelist={['*']}
+        onMessage={handleMessage}
+        style={[
+          styles.webView,
+          {
+            borderColor: theme.cardBorder,
+            backgroundColor: theme.pageGradient[0],
+          },
+        ]}
+        scrollEnabled={false}
+        javaScriptEnabled
+        domStorageEnabled
+        startInLoadingState
+      />
+      {isEmpty ? (
+        <View style={styles.emptyOverlay} pointerEvents="box-none">
+          <GlassCard style={styles.emptyCard} intensity={60}>
+            <Text
+              style={[styles.emptyText, { color: theme.textPrimary }]}
+              accessibilityRole="alert"
+              accessibilityLiveRegion="polite"
+            >
+              {t('museumDirectory.map_empty')}
+            </Text>
+          </GlassCard>
+        </View>
+      ) : null}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    position: 'relative',
+  },
   webView: {
     flex: 1,
     borderRadius: 18,
     borderWidth: 1,
     overflow: 'hidden',
+  },
+  emptyOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  emptyCard: {
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

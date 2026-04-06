@@ -449,16 +449,17 @@ export default async function LandingPage({ params }: LandingPageProps) {
         theme="light"
         reverse
       >
-        <div className="flex items-end justify-center gap-4">
-          <PhoneMockup scale={0.8}>
+        <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-end sm:justify-center sm:gap-4">
+          <PhoneMockup scale={0.7}>
             <Image
               src="/images/screenshots/iPhone 16 Pro Max /iPhone 16 Pro Max - list Nearby museum.png"
               alt="Museum list view"
               fill
+              sizes="210px"
               style={{ objectFit: 'cover' }}
             />
           </PhoneMockup>
-          <PhoneMockup variant="floating">
+          <PhoneMockup variant="floating" scale={0.85}>
             <DemoMapLoader />
           </PhoneMockup>
         </div>

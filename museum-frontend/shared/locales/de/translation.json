@@ -489,6 +489,8 @@
     "distance_km": "{{distance}} km",
     "distance_unknown": "Entfernung nicht verfügbar",
     "location_denied": "Standortzugriff verweigert",
+    "map_empty": "Keine Museen in diesem Bereich",
+    "search_this_area": "Ergebnisse für diesen Bereich",
     "start_chat": "Chat hier starten",
     "detail_title": "Museumsdetails",
     "open_in_maps": "In Karten öffnen"
@@ -611,6 +613,13 @@
       "toggle_on": "Museumsmodus einschalten",
       "toggle_off": "Museumsmodus ausschalten",
       "start_exploring": "Erkundung starten"
+    },
+    "museum": {
+      "search_input": "Museen suchen",
+      "skeleton_loading": "Museen werden geladen",
+      "list_view": "Listenansicht",
+      "map_view": "Kartenansicht",
+      "results_count": "{{count}} Museen gefunden"
     },
     "notFound": {
       "home": "Zum Startbildschirm gehen"

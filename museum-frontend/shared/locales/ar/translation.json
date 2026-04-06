@@ -479,6 +479,8 @@
     "distance_km": "{{distance}} كم",
     "distance_unknown": "المسافة غير متاحة",
     "location_denied": "تم رفض الوصول إلى الموقع",
+    "map_empty": "لا توجد متاحف في هذه المنطقة",
+    "search_this_area": "عرض نتائج هذه المنطقة",
     "start_chat": "ابدأ المحادثة هنا",
     "detail_title": "تفاصيل المتحف",
     "open_in_maps": "فتح في الخرائط"
@@ -611,6 +613,13 @@
       "toggle_on": "تفعيل وضع المتحف",
       "toggle_off": "إيقاف وضع المتحف",
       "start_exploring": "بدء الاستكشاف"
+    },
+    "museum": {
+      "search_input": "البحث عن متاحف",
+      "skeleton_loading": "جارٍ تحميل المتاحف",
+      "list_view": "عرض القائمة",
+      "map_view": "عرض الخريطة",
+      "results_count": "تم العثور على {{count}} متاحف"
     },
     "notFound": {
       "home": "الذهاب إلى الشاشة الرئيسية"

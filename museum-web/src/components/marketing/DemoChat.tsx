@@ -28,7 +28,7 @@ const messageVariants = {
 
 export default function DemoChat({ messages }: DemoChatProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: '-60px' });
+  const isInView = useInView(ref, { once: true, margin: '-150px' });
   const shouldReduceMotion = useReducedMotion();
 
   const renderMessages = (msgs: Message[]) =>

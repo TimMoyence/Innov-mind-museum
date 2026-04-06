@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
 
@@ -16,6 +17,7 @@ interface ViewModeToggleProps {
  */
 export const ViewModeToggle = ({ mode, onToggle }: ViewModeToggleProps) => {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View
@@ -32,7 +34,7 @@ export const ViewModeToggle = ({ mode, onToggle }: ViewModeToggleProps) => {
         }}
         accessibilityRole="radio"
         accessibilityState={{ selected: mode === 'list' }}
-        accessibilityLabel="List view"
+        accessibilityLabel={t('a11y.museum.list_view')}
       >
         <Ionicons
           name="list-outline"
@@ -48,7 +50,7 @@ export const ViewModeToggle = ({ mode, onToggle }: ViewModeToggleProps) => {
         }}
         accessibilityRole="radio"
         accessibilityState={{ selected: mode === 'map' }}
-        accessibilityLabel="Map view"
+        accessibilityLabel={t('a11y.museum.map_view')}
       >
         <Ionicons
           name="map-outline"
