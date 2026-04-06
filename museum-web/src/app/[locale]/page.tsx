@@ -2,13 +2,18 @@ import { getDictionary, type Locale } from '@/lib/i18n';
 import { getAlternates, getOpenGraph } from '@/lib/seo';
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import Link from 'next/link';
 import AnimatedSection from '@/components/marketing/AnimatedSection';
 import FeatureCard from '@/components/marketing/FeatureCard';
 import StoreButton from '@/components/marketing/StoreButton';
-import DeviceShowcase from '@/components/marketing/DeviceShowcase';
+import PhoneMockup from '@/components/marketing/PhoneMockup';
 import HeroPlayerLoader from '@/components/marketing/HeroPlayerLoader';
 import ScrollIndicator from '@/components/marketing/ScrollIndicator';
+import ShowcaseSection from '@/components/marketing/ShowcaseSection';
+import DemoChat from '@/components/marketing/DemoChat';
+import MultiDeviceShowcase from '@/components/marketing/MultiDeviceShowcase';
+import StatsSection from '@/components/marketing/StatsSection';
+import FAQSection from '@/components/marketing/FAQSection';
+import DemoMapLoader from '@/components/marketing/DemoMapLoader';
 
 interface LandingPageProps {
   params: Promise<{ locale: string }>;
@@ -248,6 +253,22 @@ export default async function LandingPage({ params }: LandingPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: dict.faq.items.map(
+              (item: { question: string; answer: string }) => ({
+                '@type': 'Question',
+                name: item.question,
+                acceptedAnswer: { '@type': 'Answer', text: item.answer },
+              }),
+            ),
+          }),
+        }}
+      />
       {/* SVG filter definitions for liquid glass effects */}
       <svg style={{ position: 'absolute', width: 0, height: 0 }} aria-hidden="true">
         <defs>
@@ -428,40 +449,58 @@ export default async function LandingPage({ params }: LandingPageProps) {
       </section>
 
       {/* ================================================================ */}
-      {/* SECTION 3: APP SHOWCASE (dark gradient)                         */}
+      {/* SECTION 3: CHAT IA SHOWCASE (dark)                              */}
       {/* ================================================================ */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#0a0a1a] via-[#080820] to-[#0a0a1a] py-24 sm:py-32">
-        {/* Ambient orbs */}
-        <div
-          className="pointer-events-none absolute left-1/4 top-10 h-[350px] w-[350px] rounded-full bg-primary-500/10 blur-3xl orb"
-          aria-hidden="true"
-        />
-        <div
-          className="pointer-events-none absolute bottom-10 right-1/4 h-[300px] w-[300px] rounded-full bg-accent-400/8 blur-3xl orb orb-delay-1"
-          aria-hidden="true"
-        />
+      <ShowcaseSection
+        title={dict.chatShowcase.title}
+        subtitle={dict.chatShowcase.subtitle}
+        bullets={dict.chatShowcase.bullets}
+        theme="dark"
+      >
+        <PhoneMockup variant="floating">
+          <DemoChat messages={dict.chatShowcase.messages} />
+        </PhoneMockup>
+      </ShowcaseSection>
 
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <AnimatedSection variant="fade">
+      {/* ================================================================ */}
+      {/* SECTION 4: MAPS SHOWCASE (light)                                */}
+      {/* ================================================================ */}
+      <ShowcaseSection
+        title={dict.mapsShowcase.title}
+        subtitle={dict.mapsShowcase.subtitle}
+        bullets={dict.mapsShowcase.bullets}
+        theme="light"
+        reverse
+      >
+        <PhoneMockup variant="floating">
+          <DemoMapLoader />
+        </PhoneMockup>
+      </ShowcaseSection>
+
+      {/* ================================================================ */}
+      {/* SECTION 5: MULTI-DEVICE                                         */}
+      {/* ================================================================ */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-white via-primary-50/40 to-white py-24 sm:py-32">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <AnimatedSection variant="scale">
             <div className="mx-auto max-w-2xl text-center">
               <h2
-                className="text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl"
+                className="text-3xl font-bold tracking-tight text-text-primary sm:text-4xl lg:text-5xl"
                 style={{ letterSpacing: '-0.03em' }}
               >
-                {dict.showcase.sectionTitle}
+                {dict.multiDevice.title}
               </h2>
-              <p className="mt-4 text-lg text-white/60">{dict.showcase.sectionSubtitle}</p>
+              <p className="mt-4 text-lg text-text-secondary">{dict.multiDevice.subtitle}</p>
             </div>
           </AnimatedSection>
-
-          <div className="mt-16">
-            <DeviceShowcase />
-          </div>
+          <AnimatedSection delay={0.2}>
+            <MultiDeviceShowcase />
+          </AnimatedSection>
         </div>
       </section>
 
       {/* ================================================================ */}
-      {/* SECTION 4: FEATURE GRID (light, mesh gradient)                  */}
+      {/* SECTION 6: FEATURE GRID (light, mesh gradient)                  */}
       {/* ================================================================ */}
       <section className="relative overflow-hidden mesh-gradient py-24 sm:py-32">
         {/* Subtle orbs */}
@@ -507,63 +546,17 @@ export default async function LandingPage({ params }: LandingPageProps) {
       </section>
 
       {/* ================================================================ */}
-      {/* SECTION 5: REVIEWS (dark gradient with gold)                    */}
+      {/* SECTION 7: STATS (replaces Reviews)                             */}
       {/* ================================================================ */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#0a0a1a] via-[#0d0d20] to-[#0a0a1a] py-24 sm:py-32">
-        {/* Gold-tinted orbs */}
-        <div
-          className="pointer-events-none absolute left-1/2 top-0 h-64 w-[500px] -translate-x-1/2 rounded-full bg-gold-400/8 blur-3xl orb"
-          aria-hidden="true"
-        />
-        <div
-          className="pointer-events-none absolute -left-20 bottom-0 h-48 w-48 rounded-full bg-gold-500/6 blur-3xl orb orb-delay-1"
-          aria-hidden="true"
-        />
-
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <AnimatedSection variant="fade">
-            <div className="mx-auto max-w-2xl text-center">
-              <h2
-                className="text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl"
-                style={{ letterSpacing: '-0.03em' }}
-              >
-                {dict.reviews.title}
-              </h2>
-              <p className="mt-4 text-lg text-white/60">{dict.reviews.subtitle}</p>
-            </div>
-          </AnimatedSection>
-
-          <AnimatedSection delay={0.2}>
-            <div className="mx-auto mt-12 max-w-lg">
-              <div className="liquid-glass !rounded-3xl p-8 text-center sm:p-10">
-                {/* Stars decoration — gold */}
-                <div className="flex justify-center gap-1">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <svg
-                      key={i}
-                      className="h-8 w-8 text-gold-400"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                <p className="mt-6 text-lg font-medium text-white/90">{dict.reviews.ctaSubtitle}</p>
-                <Link
-                  href={`/${locale}/support`}
-                  className="mt-6 inline-flex items-center justify-center rounded-2xl bg-primary-500 px-8 py-3 text-base font-semibold text-white shadow-lg shadow-primary-500/30 transition-all hover:bg-primary-400 hover:shadow-xl active:scale-[0.98]"
-                >
-                  {dict.reviews.cta}
-                </Link>
-              </div>
-            </div>
-          </AnimatedSection>
-        </div>
-      </section>
+      <StatsSection title={dict.stats.title} items={dict.stats.items} />
 
       {/* ================================================================ */}
-      {/* SECTION 6: DOWNLOAD CTA (light gradient)                        */}
+      {/* SECTION 8: FAQ                                                   */}
+      {/* ================================================================ */}
+      <FAQSection title={dict.faq.title} items={dict.faq.items} />
+
+      {/* ================================================================ */}
+      {/* SECTION 9: DOWNLOAD CTA (light gradient)                        */}
       {/* ================================================================ */}
       <section
         id="download"

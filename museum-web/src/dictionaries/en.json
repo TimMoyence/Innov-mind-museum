@@ -86,6 +86,55 @@
     "appStorePrefix": "Download on the",
     "googlePlayPrefix": "Get it on"
   },
+  "chatShowcase": {
+    "title": "Point. Discover. Understand.",
+    "subtitle": "Aim your camera at any artwork. Within seconds, AI reveals its history, technique, and cultural significance.",
+    "bullets": [
+      "Instant identification through computer vision",
+      "Detailed answers backed by verified sources",
+      "Natural conversation — ask follow-up questions"
+    ],
+    "messages": [
+      { "role": "user", "text": "Venus de milo" },
+      { "role": "assistant", "text": "The Venus de Milo is a famous ancient Greek sculpture from the 2nd century BC. It represents Aphrodite, the goddess of love and beauty. Despite missing arms, it radiates remarkable elegance through the draping of its robes." },
+      { "role": "user", "text": "What about this painting?" },
+      { "role": "assistant", "text": "This is The Raft of the Medusa by Théodore Géricault, painted in 1818-1819. It depicts a group of shipwrecked sailors fighting for survival on a raft, showcasing dramatic realism and human desperation." }
+    ]
+  },
+  "mapsShowcase": {
+    "title": "Every museum. Right around you.",
+    "subtitle": "Wherever you are, Musaium locates nearby museums on an interactive map. From Paris to San Francisco, your guide travels with you.",
+    "bullets": [
+      "Interactive map with geolocation",
+      "List or map view — your choice",
+      "Worldwide coverage — all referenced museums"
+    ]
+  },
+  "multiDevice": {
+    "title": "A companion on every screen.",
+    "subtitle": "iPhone, iPad, Android — Musaium adapts natively to your device for an optimal experience, wherever you are."
+  },
+  "stats": {
+    "title": "Musaium by the numbers",
+    "items": [
+      { "value": 3, "suffix": "", "label": "Interaction modes" },
+      { "value": 10, "suffix": "+", "label": "Languages supported" },
+      { "value": 3, "suffix": "", "label": "Platforms" },
+      { "value": 100, "suffix": "%", "label": "Free" }
+    ]
+  },
+  "faq": {
+    "title": "Frequently asked questions",
+    "items": [
+      { "question": "Is the app free?", "answer": "Yes, Musaium is completely free. Some advanced features may be offered as premium in the future." },
+      { "question": "Which museums are compatible?", "answer": "Musaium works in all museums. The AI recognizes artworks through computer vision and enriches responses via Wikidata." },
+      { "question": "Is my data protected?", "answer": "Absolutely. Your photos are never shared with third parties. See our privacy policy for full details." },
+      { "question": "Can the AI be wrong?", "answer": "Yes, that's why Musaium displays a transparency disclaimer before each session. Responses are AI-generated and may contain inaccuracies. We encourage you to verify important facts." },
+      { "question": "Do I need an internet connection?", "answer": "A connection is needed for new conversations. However, your previous conversations are accessible offline." },
+      { "question": "In which countries does Musaium work?", "answer": "Musaium works worldwide. The app uses geolocation to find nearby museums, and the AI can analyze artworks from any origin." },
+      { "question": "How do I contact support?", "answer": "Use the contact form on our support page or reach us on social media." }
+    ]
+  },
   "support": {
     "title": "Help Center",
     "subtitle": "Find answers to your questions or contact us directly.",

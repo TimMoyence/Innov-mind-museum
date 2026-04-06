@@ -63,6 +63,29 @@ export interface Dictionary {
     appStorePrefix: string;
     googlePlayPrefix: string;
   };
+  chatShowcase: {
+    title: string;
+    subtitle: string;
+    bullets: string[];
+    messages: { role: string; text: string }[];
+  };
+  mapsShowcase: {
+    title: string;
+    subtitle: string;
+    bullets: string[];
+  };
+  multiDevice: {
+    title: string;
+    subtitle: string;
+  };
+  stats: {
+    title: string;
+    items: { value: number; suffix: string; label: string }[];
+  };
+  faq: {
+    title: string;
+    items: { question: string; answer: string }[];
+  };
   support: {
     title: string;
     subtitle: string;
