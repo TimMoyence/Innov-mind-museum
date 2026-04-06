@@ -84,7 +84,7 @@ export async function exportUserChatData(
     const allSessions: UserChatExportData['sessions'] = [];
     let offset = 0;
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- infinite pagination loop
     while (true) {
       const sessionBatch = await sessionEM.find({
         where: { user: { id: userId } },

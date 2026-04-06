@@ -1,6 +1,7 @@
 /* eslint-disable react-native/no-color-literals -- fatal error fallback screen with custom palette */
 import type { StyleProp, ViewStyle } from 'react-native';
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import type { ApiConfigurationSnapshot } from '@/shared/infrastructure/apiConfig';

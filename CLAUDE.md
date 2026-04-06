@@ -6,9 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Musaium — an interactive museum assistant mobile app. Visitors photograph artworks or ask questions and get AI-powered contextual responses via LangChain + LLM (OpenAI/Deepseek/Google).
 
-Monorepo with two independent apps:
+Monorepo with three independent apps:
 - **`museum-backend/`** — Node.js 22 + Express 5 + TypeORM + PostgreSQL 16 (pnpm)
-- **`museum-frontend/`** — React Native 0.79 + Expo 53 + Expo Router (npm)
+- **`museum-frontend/`** — React Native 0.83 + Expo 55 + Expo Router (npm)
+- **`museum-web/`** — Next.js 15 + React 19 + Tailwind 4 + Framer Motion (pnpm) — landing page + admin panel
 
 ## Progress Tracking
 
@@ -58,11 +59,27 @@ npm run generate:openapi-types   # regenerate API types from backend OpenAPI spe
 npm run check:openapi-types      # verify generated types are up to date
 ```
 
+### Web (`cd museum-web`)
+
+```bash
+pnpm install                     # install deps
+pnpm dev                         # Next.js dev server (port 3001)
+pnpm build                       # production build
+pnpm lint                        # ESLint + typecheck (tsc --noEmit)
+pnpm test                        # Vitest unit tests
+```
+
+### Design System (`cd design-system`)
+
+```bash
+pnpm build:tokens                # build design tokens → museum-frontend/shared/ui/tokens.generated.ts
+```
+
 ### CI
 
 GitHub Actions workflows (`.github/workflows/`):
 - `ci-cd-backend.yml` — quality gate (tsc + ESLint + tests + OpenAPI validate + audit) → E2E (PR/nightly) → deploy prod (push main) / staging (push staging) with Trivy scan + Sentry release + smoke test
-- `ci-cd-web.yml` — quality gate (lint + build + test + audit) → Lighthouse CI (PR) → deploy Vercel (push main)
+- `ci-cd-web.yml` — quality gate (lint + build + test + audit) → Lighthouse CI (PR) → deploy Docker/GHCR → VPS (push main)
 - `ci-cd-mobile.yml` — quality gate (Expo Doctor + OpenAPI sync + audit + i18n + lint + tests) → Maestro E2E (dispatch) → EAS build + store submit (dispatch/tag)
 - `_deploy-backend.yml` — reusable deploy workflow (called by ci-cd-backend)
 - `deploy-privacy-policy.yml` — privacy policy static page deploy
@@ -77,8 +94,13 @@ src/
 ├── config/env.ts          # all env vars parsed & validated in one place
 ├── data/db/               # TypeORM data-source + migrations/
 ├── modules/
+│   ├── admin/             # hexagonal: admin dashboard, RBAC, analytics, audit logs
 │   ├── auth/              # hexagonal: domain → useCase → adapters (primary=HTTP, secondary=PG repos)
-│   └── chat/              # hexagonal: domain → application → infrastructure (primary=HTTP, secondary=PG+S3+LangChain)
+│   ├── chat/              # hexagonal: domain → useCase → adapters (primary=HTTP, secondary=PG+S3+LangChain)
+│   ├── daily-art/         # simplified: flat structure (static artwork rotation)
+│   ├── museum/            # hexagonal: museum directory, geo search, multi-tenancy
+│   ├── review/            # hexagonal: public reviews, moderation
+│   └── support/           # hexagonal: ticket system, contact form
 ├── shared/                # cross-cutting: errors, logger, routers, validation, domain types
 ├── helpers/               # middleware (error handler, rate limit, request ID/logger), swagger setup
 ├── app.ts                 # Express app factory (middleware chain + router mount)
@@ -104,11 +126,17 @@ app/                       # Expo Router file-based routing
 └── (stack)/               # stack screens (chat session, settings, onboarding, etc.)
 
 features/                  # business logic by domain
+├── art-keywords/          # offline art-topic classification (WIP)
 ├── auth/                  # login/register, token storage, protected route hook
-├── chat/                  # chat session hook, contracts, API calls
+├── chat/                  # chat session hook, contracts, API calls, streaming, TTS
 ├── conversation/          # conversation list/dashboard
-├── legal/                 # privacy policy content
-└── settings/              # runtime settings
+├── daily-art/             # daily artwork card, saved artworks
+├── legal/                 # privacy policy, terms of service content
+├── museum/                # museum directory, map view, geolocation
+├── onboarding/            # first-launch carousel
+├── review/                # public reviews, star rating
+├── settings/              # runtime settings, theme, security, compliance
+└── support/               # ticket system, contact form
 
 shared/                    # cross-feature utilities
 ├── api/                   # Axios client, generated OpenAPI types
@@ -124,11 +152,34 @@ Key patterns:
 - Auth tokens stored via `expo-secure-store`
 - App variants (development/preview/production) configured in `app.config.ts` via `APP_VARIANT` / `EAS_BUILD_PROFILE`
 
+### Web — Next.js 15 (App Router)
+
+```
+src/
+├── app/[locale]/          # i18n routing (FR/EN)
+│   ├── page.tsx           # landing page (6 animated sections)
+│   ├── support/           # FAQ + contact form
+│   ├── privacy/           # GDPR privacy policy
+│   └── admin/             # admin panel (dashboard, users, analytics, tickets, reports)
+├── components/            # shared React components
+├── hooks/                 # custom hooks (auth, API)
+├── lib/                   # utilities, API client, i18n config
+└── styles/                # global CSS + Tailwind config
+```
+
+Key patterns:
+- Admin panel uses JWT auth with refresh token interceptor
+- i18n via next-intl (FR/EN)
+- Framer Motion for landing page animations
+- Recharts for analytics dashboards
+
 ## Path Aliases
 
 **Backend:** `@src/*` → `src/*`, `@modules/*` → `src/modules/*`, `@data/*` → `src/data/*`, `@shared/*` → `src/shared/*`
 
 **Frontend:** `@/*` → `./*`
+
+**Web:** `@/*` → `./src/*`
 
 ## Environment Setup
 
@@ -254,7 +305,7 @@ Alternatives for future: Drizzle (S-tier 2026), Prisma 7, Kysely.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **InnovMind** (4444 symbols, 11687 relationships, 297 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **InnovMind** (4821 symbols, 12337 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -350,25 +401,5 @@ To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.
 | Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
 | Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-| Work in the Application area (204 symbols) | `.claude/skills/generated/application/SKILL.md` |
-| Work in the Secondary area (126 symbols) | `.claude/skills/generated/secondary/SKILL.md` |
-| Work in the Chat area (116 symbols) | `.claude/skills/generated/chat/SKILL.md` |
-| Work in the Http area (86 symbols) | `.claude/skills/generated/http/SKILL.md` |
-| Work in the Infrastructure area (78 symbols) | `.claude/skills/generated/infrastructure/SKILL.md` |
-| Work in the Domain area (61 symbols) | `.claude/skills/generated/domain/SKILL.md` |
-| Work in the Middleware area (60 symbols) | `.claude/skills/generated/middleware/SKILL.md` |
-| Work in the UseCase area (58 symbols) | `.claude/skills/generated/usecase/SKILL.md` |
-| Work in the Ui area (40 symbols) | `.claude/skills/generated/ui/SKILL.md` |
-| Work in the (stack) area (32 symbols) | `.claude/skills/generated/stack/SKILL.md` |
-| Work in the Auth area (22 symbols) | `.claude/skills/generated/auth/SKILL.md` |
-| Work in the Support area (21 symbols) | `.claude/skills/generated/support/SKILL.md` |
-| Work in the Admin area (18 symbols) | `.claude/skills/generated/admin/SKILL.md` |
-| Work in the I18n area (16 symbols) | `.claude/skills/generated/i18n/SKILL.md` |
-| Work in the App area (15 symbols) | `.claude/skills/generated/app/SKILL.md` |
-| Work in the Scripts area (14 symbols) | `.claude/skills/generated/scripts/SKILL.md` |
-| Work in the Context area (13 symbols) | `.claude/skills/generated/context/SKILL.md` |
-| Work in the E2e area (12 symbols) | `.claude/skills/generated/e2e/SKILL.md` |
-| Work in the [locale] area (11 symbols) | `.claude/skills/generated/locale/SKILL.md` |
-| Work in the Analytics area (11 symbols) | `.claude/skills/generated/analytics/SKILL.md` |
 
 <!-- gitnexus:end -->

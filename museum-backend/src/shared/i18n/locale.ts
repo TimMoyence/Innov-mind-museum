@@ -2,7 +2,7 @@ export const SUPPORTED_LOCALES = ['en', 'fr', 'es', 'de', 'it', 'ja', 'zh'] as c
 /** Union type of all supported two-letter locale codes. */
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
-export const LOCALE_TO_LANGUAGE: Record<SupportedLocale, string> = {
+const LOCALE_TO_LANGUAGE: Record<SupportedLocale, string> = {
   en: 'English',
   fr: 'French',
   es: 'Spanish',

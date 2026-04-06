@@ -14,7 +14,7 @@ export interface QueueStorage {
 
 const STORAGE_KEY = 'musaium.offline.queue';
 
-export interface OfflineQueueOptions {
+interface OfflineQueueOptions {
   storage?: QueueStorage;
   maxQueueSize?: number;
   maxAgeMs?: number;

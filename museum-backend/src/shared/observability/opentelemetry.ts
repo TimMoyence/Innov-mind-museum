@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
+/* eslint-disable @typescript-eslint/no-require-imports -- OpenTelemetry conditional loading requires CJS require() */
 import { env } from '@src/config/env';
 
 let sdkInstance: any = null;

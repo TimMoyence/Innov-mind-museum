@@ -9,7 +9,7 @@ import type { ApiKeyRepository } from '../domain/apiKey.repository.interface';
 const MAX_KEYS_PER_USER = 5;
 
 /** Result returned to the caller after key generation. The plaintext key is shown only once. */
-export interface GenerateApiKeyResult {
+interface GenerateApiKeyResult {
   apiKey: {
     id: number;
     prefix: string;

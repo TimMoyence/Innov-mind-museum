@@ -11,7 +11,7 @@ export class CircuitOpenError extends Error {
 /**
  *
  */
-export type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
 
 interface CircuitBreakerOptions {
   failureThreshold?: number;

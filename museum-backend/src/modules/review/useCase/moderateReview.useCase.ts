@@ -4,7 +4,7 @@ import type { IReviewRepository } from '../domain/review.repository.interface';
 import type { ReviewDTO, ReviewStatus } from '../domain/review.types';
 
 /** Input for the moderate-review use case. */
-export interface ModerateReviewUseCaseInput {
+interface ModerateReviewUseCaseInput {
   reviewId: string;
   status: string;
 }

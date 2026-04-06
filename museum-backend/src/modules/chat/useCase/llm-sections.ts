@@ -8,7 +8,7 @@ import type { ChatMessage } from '../domain/chatMessage.entity';
 export type { LlmSectionName } from '../domain/chat.types';
 
 /** Defines a single LLM section with its name, timeout budget, and prompt text. */
-export interface LlmSectionDefinition {
+interface LlmSectionDefinition {
   name: LlmSectionName;
   timeoutMs: number;
   /** Whether the orchestrator must fail when this section fails. */
@@ -17,7 +17,7 @@ export interface LlmSectionDefinition {
 }
 
 /** Input parameters used to build the LLM section plan. */
-export interface LlmSectionPlanInput {
+interface LlmSectionPlanInput {
   locale?: string;
   museumMode: boolean;
   guideLevel: ExpertiseLevel;
@@ -118,7 +118,7 @@ export const createLlmSectionPlan = (input: LlmSectionPlanInput): LlmSectionDefi
 };
 
 /** Input for building a best-effort summary fallback when the LLM section fails. */
-export interface SummaryFallbackInput {
+interface SummaryFallbackInput {
   history: ChatMessage[];
   question?: string;
   location?: string;

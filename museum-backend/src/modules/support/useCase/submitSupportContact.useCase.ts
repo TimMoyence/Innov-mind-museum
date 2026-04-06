@@ -7,7 +7,7 @@ import type {
 } from '../domain/support-contact-notifier.port';
 
 /** Input accepted from the public support-contact endpoint. */
-export interface SubmitSupportContactInput {
+interface SubmitSupportContactInput {
   name: string;
   email: string;
   message: string;

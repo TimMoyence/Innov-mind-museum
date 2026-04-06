@@ -99,7 +99,7 @@ export const buildSystemPrompt = (
 };
 
 /** All derived values needed by the orchestrator for a single LLM request. */
-export interface OrchestratorPrepared {
+interface OrchestratorPrepared {
   normalizedText: string;
   recentHistory: ChatMessage[];
   guideLevel: 'beginner' | 'intermediate' | 'expert';

@@ -6,12 +6,12 @@ import {
   Modal,
   PanResponder,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import type { ChatUiEnrichedImage } from '@/features/chat/application/chatSessionLogic.pure';
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tapZoneContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     flexDirection: 'row',
     zIndex: 5,
   },

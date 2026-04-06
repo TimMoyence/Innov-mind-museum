@@ -120,7 +120,7 @@ export const extractMetadata = (parsed: Record<string, unknown>): ChatAssistantM
 };
 
 /** Delimiter separating the answer text from the JSON metadata section. */
-export const META_DELIMITER = '\n[META]';
+const META_DELIMITER = '\n[META]';
 
 /**
  * Parses the raw LLM output string into a structured response.

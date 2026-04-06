@@ -9,7 +9,7 @@ import type { GuardrailBlockReason } from './art-topic-guardrail';
 import type { ArtTopicClassifierPort } from './guardrail-evaluation.service';
 
 /** Configuration options for the StreamBuffer. */
-export interface StreamBufferOptions {
+interface StreamBufferOptions {
   classifier?: ArtTopicClassifierPort;
   tokenThreshold?: number;
   releaseIntervalMs?: number;

@@ -1,10 +1,10 @@
 import Constants from 'expo-constants';
 
 /** Target API environment the app is configured to communicate with. */
-export type ApiEnvironment = 'staging' | 'production' | 'custom';
+type ApiEnvironment = 'staging' | 'production' | 'custom';
 
 /** EAS / Expo build variant determining app behavior and allowed configurations. */
-export type BuildVariant = 'development' | 'preview' | 'production';
+type BuildVariant = 'development' | 'preview' | 'production';
 
 /** Snapshot of the resolved API configuration at a point in time, used for diagnostics. */
 export interface ApiConfigurationSnapshot {
@@ -119,7 +119,7 @@ export const isLocalhostApiBaseUrl = (value: string): boolean => {
  * Determines the default API environment from env vars, Expo config, or the build variant.
  * @returns The resolved {@link ApiEnvironment}.
  */
-export const getDefaultApiEnvironment = (): ApiEnvironment => {
+const getDefaultApiEnvironment = (): ApiEnvironment => {
   const extra = readExtra();
   const explicit =
     normalizeApiEnvironment(process.env.EXPO_PUBLIC_API_ENVIRONMENT) ??
@@ -138,10 +138,7 @@ export const getDefaultApiEnvironment = (): ApiEnvironment => {
  * @param customUrl - Optional user-provided URL used when environment is `'custom'`.
  * @returns Normalized base URL string without a trailing slash.
  */
-export const resolveRuntimeApiBaseUrl = (
-  environment: ApiEnvironment,
-  customUrl?: string,
-): string => {
+const resolveRuntimeApiBaseUrl = (environment: ApiEnvironment, customUrl?: string): string => {
   const configured = resolveConfiguredBaseUrls();
   const custom = trimOrUndefined(customUrl);
 
@@ -254,44 +251,4 @@ export const buildApiUrl = (baseUrl: string, path: string): string => {
  */
 export const buildHealthUrl = (baseUrl: string): string => {
   return buildApiUrl(baseUrl, HEALTH_PATH);
-};
-
-/** Result of a health-check probe against the backend API. */
-export interface ApiHealthProbeResult {
-  ok: boolean;
-  status: number;
-  payload: Record<string, unknown> | null;
-}
-
-/**
- * Probes the backend health endpoint with an abort-controlled timeout.
- * @param baseUrl - Backend base URL to probe.
- * @param timeoutMs - Maximum wait time in milliseconds (defaults to 7000).
- * @returns An {@link ApiHealthProbeResult} with status and parsed JSON payload.
- */
-export const probeApiHealth = async (
-  baseUrl: string,
-  timeoutMs = 7000,
-): Promise<ApiHealthProbeResult> => {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => {
-    controller.abort();
-  }, timeoutMs);
-
-  try {
-    const response = await fetch(buildHealthUrl(baseUrl), {
-      method: 'GET',
-      signal: controller.signal,
-    });
-
-    const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
-
-    return {
-      ok: response.ok,
-      status: response.status,
-      payload,
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
 };

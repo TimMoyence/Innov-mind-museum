@@ -119,7 +119,7 @@ export default function AnalyticsPage() {
 
     void fetchAll();
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only effect
   }, []);
 
   // ── Re-fetch only usage when filters change ──────────────────────────
@@ -143,7 +143,7 @@ export default function AnalyticsPage() {
       return;
     }
     void fetchUsage();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- useCallback-wrapped fetch is stable
   }, [fetchUsage]);
 
   // ── Derived data ──────────────────────────────────────────────────────

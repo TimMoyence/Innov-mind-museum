@@ -10,7 +10,7 @@ export interface OverpassMuseumResult {
 }
 
 /** Parameters for querying nearby museums via Overpass. */
-export interface OverpassSearchParams {
+interface OverpassSearchParams {
   lat: number;
   lng: number;
   radiusMeters: number;

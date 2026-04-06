@@ -12,7 +12,7 @@ import type { TextToSpeechService } from '../domain/ports/tts.port';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /** Dependencies for the media sub-service. */
-export interface ChatMediaServiceDeps {
+interface ChatMediaServiceDeps {
   repository: ChatRepository;
   tts?: TextToSpeechService;
   cache?: CacheService;

@@ -5,7 +5,7 @@ import type { IAdminRepository } from '../domain/admin.repository.interface';
 import type { AdminReportDTO, ReportStatus } from '../domain/admin.types';
 
 /** Input for the resolve-report use case. */
-export interface ResolveReportUseCaseInput {
+interface ResolveReportUseCaseInput {
   reportId: string;
   status: string;
   reviewerNotes?: string;

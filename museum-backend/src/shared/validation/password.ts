@@ -5,7 +5,7 @@
  */
 
 /** Result of a password validation check. */
-export interface PasswordValidationResult {
+interface PasswordValidationResult {
   valid: boolean;
   reason?: string;
 }

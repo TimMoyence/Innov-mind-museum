@@ -13,7 +13,7 @@ import type { OrchestratorOutput } from '../domain/ports/chat-orchestrator.port'
 import type { CacheService } from '@shared/cache/cache.port';
 
 /** Dependencies needed by commitAssistantResponse. */
-export interface CommitDeps {
+interface CommitDeps {
   guardrail: GuardrailEvaluationService;
   repository: ChatRepository;
   cache?: CacheService;
@@ -21,7 +21,7 @@ export interface CommitDeps {
 }
 
 /** Builds session updates and artwork match from the guardrail output and LLM result. */
-export function buildCommitPayload(
+function buildCommitPayload(
   session: Awaited<ReturnType<typeof ensureSessionAccess>>,
   outputCheck: Awaited<ReturnType<GuardrailEvaluationService['evaluateOutput']>>,
   aiResult: OrchestratorOutput,

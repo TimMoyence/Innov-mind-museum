@@ -1,7 +1,7 @@
 export const SUPPORTED_LOCALES = ['en', 'fr', 'es', 'de', 'it', 'ja', 'zh', 'ar'] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
-export interface LanguageOption {
+interface LanguageOption {
   code: SupportedLocale;
   label: string;
   nativeLabel: string;

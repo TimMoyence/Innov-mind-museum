@@ -11,7 +11,7 @@ export interface ListSessionMessagesParams {
 }
 
 /** Optional session-level fields to update atomically when persisting a message. */
-export interface PersistMessageSessionUpdates {
+interface PersistMessageSessionUpdates {
   title?: string;
   museumName?: string;
   visitContext?: VisitContext;
@@ -63,7 +63,7 @@ export interface ListSessionsParams {
 }
 
 /** A session summary including the latest message preview and total count. */
-export interface ChatSessionSummary {
+interface ChatSessionSummary {
   session: ChatSession;
   /** Preview of the most recent message in the session. */
   preview?: {

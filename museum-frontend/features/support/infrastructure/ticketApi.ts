@@ -5,14 +5,14 @@ type TicketDTO = components['schemas']['TicketDTO'];
 type TicketDetailDTO = components['schemas']['TicketDetailDTO'];
 type TicketMessageDTO = components['schemas']['TicketMessageDTO'];
 
-export interface ListTicketsParams {
+interface ListTicketsParams {
   page?: number;
   limit?: number;
   status?: TicketDTO['status'];
   priority?: TicketDTO['priority'];
 }
 
-export interface ListTicketsResponse {
+interface ListTicketsResponse {
   data: TicketDTO[];
   total: number;
   page: number;
@@ -20,7 +20,7 @@ export interface ListTicketsResponse {
   totalPages: number;
 }
 
-export interface CreateTicketBody {
+interface CreateTicketBody {
   subject: string;
   description: string;
   priority?: TicketDTO['priority'];

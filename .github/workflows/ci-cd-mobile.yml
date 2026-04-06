@@ -42,6 +42,10 @@ on:
       - 'museum-backend/openapi/**'
       - '.github/workflows/ci-cd-mobile.yml'
 
+concurrency:
+  group: ci-cd-mobile-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -88,7 +92,7 @@ jobs:
         run: npm run typecheck
 
       - name: Test
-        run: npm test
+        run: npm test -- --coverage
 
   maestro-e2e:
     if: ${{ github.event_name == 'workflow_dispatch' }}

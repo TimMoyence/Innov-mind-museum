@@ -1,5 +1,5 @@
 /** Discriminated category for application-level errors. */
-export type AppErrorKind =
+type AppErrorKind =
   | 'Network'
   | 'Unauthorized'
   | 'Forbidden'

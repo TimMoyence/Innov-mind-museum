@@ -27,7 +27,7 @@ function granularityToTrunc(g: AnalyticsGranularity): string {
 }
 
 /** Repository bundle passed to analytics query functions. */
-export interface AnalyticsRepositories {
+interface AnalyticsRepositories {
   dataSource: DataSource;
   sessionRepo: Repository<ChatSession>;
   messageRepo: Repository<ChatMessage>;

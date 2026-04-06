@@ -4,7 +4,7 @@ import type { ISupportRepository } from '../domain/support.repository.interface'
 import type { TicketDetailDTO } from '../domain/support.types';
 
 /** Input for retrieving a support ticket with messages. */
-export interface GetTicketDetailInput {
+interface GetTicketDetailInput {
   ticketId: string;
   userId: number;
   userRole: string;
