@@ -245,3 +245,28 @@ body {
   pointer-events: none;
   z-index: -1;
 }
+
+/* ── Accessibility — Reduced motion ────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .orb,
+  .orb-delay-1,
+  .orb-delay-2,
+  .orb-delay-3 {
+    animation: none;
+  }
+
+  .liquid-glass::after,
+  .liquid-glass-heavy::after,
+  .liquid-glass-card::after {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

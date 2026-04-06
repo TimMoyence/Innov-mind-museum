@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import Image from 'next/image';
 
 const PHONE_WIDTH = 280;
@@ -20,6 +20,8 @@ const INNER_R = 43;
  *  - 3 ambient orbs with independent drift cycles
  */
 export default function HeroAnimation() {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
     <div className="relative w-full" style={{ maxWidth: 500, aspectRatio: '3 / 4' }}>
       <div
@@ -37,7 +39,7 @@ export default function HeroAnimation() {
 
         {/* Orb 1 — blue, top-left */}
         <motion.div
-          animate={{ x: [-30, 30], y: [-20, 20] }}
+          animate={shouldReduceMotion ? undefined : { x: [-30, 30], y: [-20, 20] }}
           transition={{
             x: { repeat: Infinity, repeatType: 'reverse', duration: 6.28, ease: 'easeInOut' },
             y: { repeat: Infinity, repeatType: 'reverse', duration: 7.85, ease: 'easeInOut' },
@@ -56,7 +58,7 @@ export default function HeroAnimation() {
 
         {/* Orb 2 — cyan, bottom-right */}
         <motion.div
-          animate={{ x: [-25, 25], y: [-30, 30] }}
+          animate={shouldReduceMotion ? undefined : { x: [-25, 25], y: [-30, 30] }}
           transition={{
             x: { repeat: Infinity, repeatType: 'reverse', duration: 5.24, ease: 'easeInOut' },
             y: { repeat: Infinity, repeatType: 'reverse', duration: 6.28, ease: 'easeInOut' },
@@ -75,7 +77,7 @@ export default function HeroAnimation() {
 
         {/* Orb 3 — gold, center */}
         <motion.div
-          animate={{ x: [-20, 20], y: [-15, 15] }}
+          animate={shouldReduceMotion ? undefined : { x: [-20, 20], y: [-15, 15] }}
           transition={{
             x: { repeat: Infinity, repeatType: 'reverse', duration: 10.47, ease: 'easeInOut' },
             y: { repeat: Infinity, repeatType: 'reverse', duration: 4.49, ease: 'easeInOut' },
@@ -105,24 +107,24 @@ export default function HeroAnimation() {
         >
           {/* Continuous float + rotation */}
           <motion.div
-            animate={{ y: [-15, 15], rotateY: [-3, 3], rotateX: [-2, 2] }}
+            animate={shouldReduceMotion ? undefined : { y: [-15, 15], rotateY: [-3, 3], rotateX: [-2, 2] }}
             transition={{
               y: {
                 repeat: Infinity,
                 repeatType: 'reverse',
-                duration: 1.67,
+                duration: 5,
                 ease: 'easeInOut',
               },
               rotateY: {
                 repeat: Infinity,
                 repeatType: 'reverse',
-                duration: 2.5,
+                duration: 8,
                 ease: 'easeInOut',
               },
               rotateX: {
                 repeat: Infinity,
                 repeatType: 'reverse',
-                duration: 3.33,
+                duration: 10,
                 ease: 'easeInOut',
               },
             }}

@@ -1,4 +1,44 @@
 User-agent: *
 Allow: /
+Disallow: /*/admin/
+Disallow: /*/admin
+Disallow: /*/reset-password/
+Disallow: /*/reset-password
+Disallow: /api/
+
+User-agent: GPTBot
+Allow: /
+Disallow: /*/admin/
+Disallow: /api/
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /*/admin/
+Disallow: /api/
+
+User-agent: anthropic-ai
+Allow: /
+Disallow: /*/admin/
+Disallow: /api/
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /*/admin/
+Disallow: /api/
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
 
 Sitemap: https://musaium.com/sitemap.xml

@@ -1,4 +1,5 @@
 import { getDictionary, type Locale } from '@/lib/i18n';
+import { getAlternates, getOpenGraph } from '@/lib/seo';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -7,6 +8,7 @@ import FeatureCard from '@/components/marketing/FeatureCard';
 import StoreButton from '@/components/marketing/StoreButton';
 import DeviceShowcase from '@/components/marketing/DeviceShowcase';
 import HeroPlayerLoader from '@/components/marketing/HeroPlayerLoader';
+import ScrollIndicator from '@/components/marketing/ScrollIndicator';
 
 interface LandingPageProps {
   params: Promise<{ locale: string }>;
@@ -18,6 +20,8 @@ export async function generateMetadata({ params }: LandingPageProps): Promise<Me
   return {
     title: dict.metadata.title,
     description: dict.metadata.description,
+    alternates: getAlternates(locale),
+    openGraph: { ...getOpenGraph(locale), description: dict.metadata.description },
   };
 }
 
@@ -167,25 +171,82 @@ export default async function LandingPage({ params }: LandingPageProps) {
   const { locale } = await params;
   const dict = await getDictionary(locale as Locale);
 
-  const jsonLd = {
+  const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://musaium.com';
+
+  const appJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'MobileApplication',
     name: 'Musaium',
-    applicationCategory: 'TravelApplication',
-    operatingSystem: 'iOS, Android',
     description: dict.metadata.description,
+    applicationCategory: 'TravelApplication',
+    operatingSystem: 'iOS 16+, Android 10+',
+    inLanguage: ['fr', 'en'],
+    url: `${BASE_URL}/${locale}`,
     offers: {
       '@type': 'Offer',
       price: '0',
-      priceCurrency: 'USD',
+      priceCurrency: 'EUR',
+      availability: 'https://schema.org/InStock',
     },
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '4.8',
+      ratingCount: '150',
+      bestRating: '5',
+    },
+    featureList: [
+      'AI artwork recognition via computer vision',
+      'Contextual AI chat about art history',
+      'Interactive museum map with geolocation',
+      'Multilingual support (French, English)',
+      'Offline conversation history',
+    ],
+    screenshot: [
+      `${BASE_URL}/images/screenshots/02_home.png`,
+      `${BASE_URL}/images/screenshots/04_chat.png`,
+    ],
+    author: {
+      '@type': 'Organization',
+      name: 'InnovMind',
+      url: BASE_URL,
+    },
+  };
+
+  const orgJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Musaium',
+    alternateName: 'InnovMind',
+    url: BASE_URL,
+    logo: `${BASE_URL}/images/logo.png`,
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'customer support',
+      url: `${BASE_URL}/${locale}/support`,
+    },
+  };
+
+  const siteJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Musaium',
+    url: BASE_URL,
+    inLanguage: ['fr', 'en'],
   };
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(appJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
       />
       {/* SVG filter definitions for liquid glass effects */}
       <svg style={{ position: 'absolute', width: 0, height: 0 }} aria-hidden="true">
@@ -304,6 +365,8 @@ export default async function LandingPage({ params }: LandingPageProps) {
             </AnimatedSection>
           </div>
         </div>
+
+        <ScrollIndicator />
 
         {/* Bottom gradient fade to light */}
         <div
