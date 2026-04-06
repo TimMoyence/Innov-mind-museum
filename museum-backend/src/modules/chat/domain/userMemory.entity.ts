@@ -50,6 +50,9 @@ export class UserMemory {
   @Column({ type: 'text', nullable: true })
   summary!: string | null;
 
+  @Column({ type: 'boolean', default: false })
+  disabledByUser!: boolean;
+
   @Column({ type: 'integer', default: 0 })
   sessionCount!: number;
 

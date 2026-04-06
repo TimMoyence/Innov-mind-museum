@@ -3,7 +3,11 @@ import { Router } from 'express';
 import adminRouter from '@modules/admin/adapters/primary/http/admin.route';
 import authRouter from '@modules/auth/adapters/primary/http/auth.route';
 import { createChatRouter } from '@modules/chat/adapters/primary/http/chat.route';
-import { getArtKeywordRepository, getLlmCircuitBreakerState } from '@modules/chat/index';
+import {
+  getArtKeywordRepository,
+  getLlmCircuitBreakerState,
+  getUserMemoryService,
+} from '@modules/chat/index';
 import { createDailyArtRouter } from '@modules/daily-art/daily-art.route';
 import { createMuseumRouter } from '@modules/museum/adapters/primary/http/museum.route';
 import reviewRouter from '@modules/review/adapters/primary/http/review.route';
@@ -170,7 +174,10 @@ export const createApiRouter = ({
     res.status(httpStatus).json(payload);
   });
 
-  router.use('/chat', createChatRouter(chatService, getArtKeywordRepository()));
+  router.use(
+    '/chat',
+    createChatRouter(chatService, getArtKeywordRepository(), getUserMemoryService()),
+  );
   router.use('/auth', authRouter);
   router.use('/daily-art', createDailyArtRouter(cacheService));
   router.use('/museums', createMuseumRouter(cacheService));

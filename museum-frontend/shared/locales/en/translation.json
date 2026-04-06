@@ -155,7 +155,9 @@
     "export_data": "Export my data",
     "export_data_desc": "Download all your personal data (GDPR)",
     "export_data_success": "Data exported successfully",
-    "rate_musaium": "Rate Musaium"
+    "rate_musaium": "Rate Musaium",
+    "ai_memory": "AI Personalization",
+    "ai_memory_hint": "Uses your art preferences and visit history to personalize AI responses"
   },
   "change_password": {
     "title": "Change Password",
@@ -631,7 +633,13 @@
     "info_privacy": "Your data is processed in accordance with our privacy policy.",
     "info_report": "You can report any problematic response using the flag button.",
     "read_privacy": "Read our Privacy Policy",
-    "accept": "I understand, continue"
+    "accept": "I understand, continue",
+    "data_shared_title": "Data shared with AI",
+    "data_text": "Text messages you send",
+    "data_images": "Photos you share (metadata removed)",
+    "data_audio": "Voice messages (transcribed only, audio not stored by AI)",
+    "data_location": "Your location (if you choose to share it)",
+    "data_profile": "Your art preferences and visit history (to personalize responses)"
   },
   "dailyArt": {
     "title": "Artwork of the Day",

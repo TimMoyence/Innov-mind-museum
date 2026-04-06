@@ -3,11 +3,13 @@ import { Router } from 'express';
 import { createUploadAdmissionMiddleware } from '@src/helpers/middleware/upload-admission.middleware';
 
 import { createMediaRouter } from './chat-media.route';
+import { createMemoryRouter } from './chat-memory.route';
 import { createMessageRouter } from './chat-message.route';
 import { createSessionRouter } from './chat-session.route';
 
 import type { ArtKeywordRepository } from '../../../domain/artKeyword.repository.interface';
 import type { ChatService } from '../../../useCase/chat.service';
+import type { UserMemoryService } from '../../../useCase/user-memory.service';
 
 /**
  * Builds Express router for chat endpoints by composing session, message, and media sub-routers.
@@ -19,6 +21,7 @@ import type { ChatService } from '../../../useCase/chat.service';
 export const createChatRouter = (
   chatService: ChatService,
   artKeywordRepo?: ArtKeywordRepository,
+  userMemoryService?: UserMemoryService,
 ): Router => {
   const router = Router();
 
@@ -29,6 +32,9 @@ export const createChatRouter = (
   router.use('/', createSessionRouter(chatService));
   router.use('/', createMessageRouter(chatService, artKeywordRepo, uploadAdmission));
   router.use('/', createMediaRouter(chatService, uploadAdmission));
+  if (userMemoryService) {
+    router.use('/', createMemoryRouter(userMemoryService));
+  }
 
   return router;
 };

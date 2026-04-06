@@ -253,18 +253,18 @@ NON envoye au LLM : email, nom, user ID, password, tokens, device info
 
 ## Top 10 Actions Prioritaires
 
-| # | Action | Sev | Effort | Impact |
-|---|--------|-----|--------|--------|
-| 1 | **Privacy : Creer PiiSanitizer port** — detection regex email/tel/noms avant envoi LLM | MEDIUM | S (2 sem) | Comble le gap privacy #1 |
-| 2 | **Privacy : Enrichir AI Consent modal** — lister explicitement toutes les donnees partagees avec les LLM | MEDIUM | S (3 jours) | Conformite GDPR "consentement eclaire" |
-| 3 | **Privacy : Toggle user memory LLM** — permettre a l'utilisateur de desactiver le profil comportemental dans les prompts | MEDIUM | S (1 sem) | Controle utilisateur sur ses donnees |
-| 4 | **Docs : Mettre a jour CLAUDE.md** — versions RN/Expo, description chat module, ajouter museum-web | MEDIUM | XS (1h) | Evite confusion pour tout contributeur |
-| 5 | **TypeScript : Corriger 16 warnings frontend** — migrer SafeAreaView deprecated, fix non-null assertion | HIGH | S (2h) | Zero warnings = quality gate propre |
-| 6 | **OpenAPI : Ajouter 3 routes manquantes** au spec + regenerer types frontend | MEDIUM | XS (1h) | Contrat API complet |
-| 7 | **Cleanup : Batch supprimer ~58 exports morts** | LOW-MED | S (2h) | Codebase plus lisible, imports clairs |
-| 8 | **Cleanup : Supprimer dep redondante** `@react-navigation/bottom-tabs` + verifier `expo-system-ui` | MEDIUM | XS (15min) | Deps propres |
-| 9 | **CI : Activer --coverage mobile + concurrency group** | LOW | XS (30min) | Coverage gate enforcee en CI |
-| 10 | **Privacy : Stripper EXIF images** avant envoi LLM | LOW | S (1 jour) | Elimine fuite GPS/faces dans les photos |
+| # | Action | Sev | Effort | Impact | Statut | Commentaire |
+|---|--------|-----|--------|--------|--------|-------------|
+| 1 | **Privacy : Creer PiiSanitizer port** — detection regex email/tel/noms avant envoi LLM | MEDIUM | S (2 sem) | Comble le gap privacy #1 | ✅ | Port hexagonal + regex adapter (email/phone), 12 tests |
+| 2 | **Privacy : Enrichir AI Consent modal** — lister explicitement toutes les donnees partagees avec les LLM | MEDIUM | S (3 jours) | Conformite GDPR "consentement eclaire" | ✅ | 5 categories listees explicitement, 8 langues |
+| 3 | **Privacy : Toggle user memory LLM** — permettre a l'utilisateur de desactiver le profil comportemental dans les prompts | MEDIUM | S (1 sem) | Controle utilisateur sur ses donnees | ✅ | Toggle UI + endpoint PATCH + migration, 8 tests |
+| 4 | **Docs : Mettre a jour CLAUDE.md** — versions RN/Expo, description chat module, ajouter museum-web | MEDIUM | XS (1h) | Evite confusion pour tout contributeur | ✅ | commit 42235aa6 |
+| 5 | **TypeScript : Corriger 16 warnings frontend** — migrer SafeAreaView deprecated, fix non-null assertion | HIGH | S (2h) | Zero warnings = quality gate propre | ✅ | 0 warnings (etait 10), null guards dans 2 test files |
+| 6 | **OpenAPI : Ajouter 3 routes manquantes** au spec + regenerer types frontend | MEDIUM | XS (1h) | Contrat API complet | ✅ | commit 42235aa6 |
+| 7 | **Cleanup : Batch supprimer ~58 exports morts** | LOW-MED | S (2h) | Codebase plus lisible, imports clairs | ✅ | commit 42235aa6 — 57 exports supprimes |
+| 8 | **Cleanup : Supprimer dep redondante** `@react-navigation/bottom-tabs` + verifier `expo-system-ui` | MEDIUM | XS (15min) | Deps propres | ✅ | commit 42235aa6 |
+| 9 | **CI : Activer --coverage mobile + concurrency group** | LOW | XS (30min) | Coverage gate enforcee en CI | ✅ | commit 42235aa6 |
+| 10 | **Privacy : Stripper EXIF images** avant envoi LLM | LOW | S (1 jour) | Elimine fuite GPS/faces dans les photos | ✅ | expo-image-manipulator re-encode JPEG strip EXIF |
 
 ---
 
@@ -272,46 +272,46 @@ NON envoye au LLM : email, nom, user ID, password, tokens, device info
 
 ### Phase 1 — Privacy & Polish (4-6 semaines)
 
-| Feature | Effort | Prerequis |
-|---------|--------|-----------|
-| PII Stripping Proxy (Tier 1 privacy) | 2 sem | Nouveau port PiiSanitizer |
-| Audio Description Mode (accessibilite) | 1 sem | TTS existant |
-| Art Keywords Classifier (finir WIP) | 1 sem | Code deja partiellement ecrit |
-| Museum Analytics Dashboard (B2B) | 2 sem | Admin dashboard existant |
-| Multi-Museum UX polish | 1 sem | Museum directory existant |
+| Done | Feature | Effort | Prerequis | Commentaire |
+|------|---------|--------|-----------|-------------|
+| ☐ | PII Stripping Proxy (Tier 1 privacy) | 2 sem | Nouveau port PiiSanitizer | |
+| ☐ | Audio Description Mode (accessibilite) | 1 sem | TTS existant | |
+| ☐ | Art Keywords Classifier (finir WIP) | 1 sem | Code deja partiellement ecrit | |
+| ☐ | Museum Analytics Dashboard (B2B) | 2 sem | Admin dashboard existant | |
+| ☐ | Multi-Museum UX polish | 1 sem | Museum directory existant | |
 
 **Rationale :** Privacy-first est le plus fort argument B2B et une exigence reglementaire. Ce sont des quick wins construits sur l'infrastructure existante.
 
 ### Phase 2 — Navigation & Offline (6-8 semaines)
 
-| Feature | Effort | Prerequis |
-|---------|--------|-----------|
-| **Walking Guide to Museum** (navigation + contexte progressif) | 4 sem | Maps SDK, Directions API, geofencing |
-| Full Offline Mode (content packs) | 3 sem | SQLite/MMKV, download manager |
-| On-device image classification (privacy Tier 2) | 2 sem | CoreML/ONNX, MobileNetV3 fine-tune |
-| On-device STT whisper.cpp (privacy Tier 2) | 2 sem | react-native-whisper |
+| Done | Feature | Effort | Prerequis | Commentaire |
+|------|---------|--------|-----------|-------------|
+| ☐ | **Walking Guide to Museum** (navigation + contexte progressif) | 4 sem | Maps SDK, Directions API, geofencing | |
+| ☐ | Full Offline Mode (content packs) | 3 sem | SQLite/MMKV, download manager | |
+| ☐ | On-device image classification (privacy Tier 2) | 2 sem | CoreML/ONNX, MobileNetV3 fine-tune | |
+| ☐ | On-device STT whisper.cpp (privacy Tier 2) | 2 sem | react-native-whisper | |
 
 **Rationale :** La navigation est la feature que ZERO concurrent IA propose. L'offline est critique en environnement musee. Le on-device avance la story privacy.
 
 ### Phase 3 — City Explorer & Social (8-12 semaines)
 
-| Feature | Effort | Prerequis |
-|---------|--------|-----------|
-| **Urban Cultural Walking Guide** (explorateur ville) | 6 sem | Overpass API, Wikidata SPARQL, background location |
-| Social Features (partage visite, communaute) | 3 sem | Deep linking, expo-sharing |
-| Gamification (badges, parcours, quiz) | 3 sem | User memory existant, nouveau module |
-| Notifications geolocalisees (POI culturels) | 2 sem | Geofencing, expo-notifications |
+| Done | Feature | Effort | Prerequis | Commentaire |
+|------|---------|--------|-----------|-------------|
+| ☐ | **Urban Cultural Walking Guide** (explorateur ville) | 6 sem | Overpass API, Wikidata SPARQL, background location | |
+| ☐ | Social Features (partage visite, communaute) | 3 sem | Deep linking, expo-sharing | |
+| ☐ | Gamification (badges, parcours, quiz) | 3 sem | User memory existant, nouveau module | |
+| ☐ | Notifications geolocalisees (POI culturels) | 2 sem | Geofencing, expo-notifications | |
 
 **Rationale :** Transforme Musaium de "app musee" en "compagnon culturel". Expansion massive du TAM — de visiteurs de musee a tous les touristes culturels.
 
 ### Phase 4 — Enterprise & AR (12-16 semaines)
 
-| Feature | Effort | Prerequis |
-|---------|--------|-----------|
-| Self-Hosted LLM (privacy Tier 3, B2B) | 4 sem | ChatOrchestrator port deja abstrait |
-| Integration billetterie musee | 3 sem | API partenaires |
-| AR Overlay prototype | 6 sem | expo-camera, modele reconnaissance |
-| Navigation indoor (plans d'etage) | 4 sem | Donnees partenaires musee |
+| Done | Feature | Effort | Prerequis | Commentaire |
+|------|---------|--------|-----------|-------------|
+| ☐ | Self-Hosted LLM (privacy Tier 3, B2B) | 4 sem | ChatOrchestrator port deja abstrait | |
+| ☐ | Integration billetterie musee | 3 sem | API partenaires | |
+| ☐ | AR Overlay prototype | 6 sem | expo-camera, modele reconnaissance | |
+| ☐ | Navigation indoor (plans d'etage) | 4 sem | Donnees partenaires musee | |
 
 **Rationale :** Features enterprise pour grands clients institutionnels. AR = fort pour demos et presse.
 

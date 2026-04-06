@@ -8,6 +8,7 @@ import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSe
 import { useSettingsActions } from '@/features/settings/application/useSettingsActions';
 import { SettingsThemeCard } from '@/features/settings/ui/SettingsThemeCard';
 import { SettingsSecurityCard } from '@/features/settings/ui/SettingsSecurityCard';
+import { SettingsPrivacyCard } from '@/features/settings/ui/SettingsPrivacyCard';
 import { SettingsComplianceLinks } from '@/features/settings/ui/SettingsComplianceLinks';
 import { SettingsDangerZone } from '@/features/settings/ui/SettingsDangerZone';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
@@ -179,6 +180,8 @@ export default function SettingsScreen() {
             </Text>
           </Pressable>
         </GlassCard>
+
+        <SettingsPrivacyCard />
 
         <SettingsComplianceLinks
           onNavigate={open}

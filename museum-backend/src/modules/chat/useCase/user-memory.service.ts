@@ -103,6 +103,7 @@ export class UserMemoryService {
     }
 
     const memory = await this.repository.getByUserId(userId);
+    if (memory?.disabledByUser) return '';
     const block = buildUserMemoryPromptBlock(memory);
 
     if (this.cache) {
@@ -157,6 +158,18 @@ export class UserMemoryService {
   /** Returns the raw entity for GDPR data export. */
   async getUserMemory(userId: number): Promise<UserMemory | null> {
     return await this.repository.getByUserId(userId);
+  }
+
+  /** Sets or clears the user's opt-out flag for memory-powered personalisation. */
+  async setDisabledByUser(userId: number, disabled: boolean): Promise<void> {
+    await this.repository.upsert(userId, { disabledByUser: disabled });
+    await this.invalidateCache(userId);
+  }
+
+  /** Returns whether the user has opted out of memory-powered personalisation. */
+  async isDisabledByUser(userId: number): Promise<boolean> {
+    const memory = await this.repository.getByUserId(userId);
+    return memory?.disabledByUser ?? false;
   }
 
   /** Invalidates cached prompt block for a user. */

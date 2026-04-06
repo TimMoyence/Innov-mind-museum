@@ -9,6 +9,7 @@ import { commitAssistantResponse } from './message-commit';
 import { ensureSessionAccess } from './session-access';
 import { StreamBuffer } from './stream-buffer';
 import { DisabledAudioTranscriber } from '../domain/ports/audio-transcriber.port';
+import { DisabledPiiSanitizer } from '../domain/ports/pii-sanitizer.port';
 
 import type { GuardrailBlockReason } from './art-topic-guardrail';
 import type { PostMessageResult, PostAudioMessageResult } from './chat.service.types';
@@ -22,6 +23,7 @@ import type { AudioTranscriber } from '../domain/ports/audio-transcriber.port';
 import type { ChatOrchestrator, OrchestratorOutput } from '../domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '../domain/ports/image-storage.port';
 import type { OcrService } from '../domain/ports/ocr.port';
+import type { PiiSanitizer } from '../domain/ports/pii-sanitizer.port';
 import type { AuditService } from '@shared/audit/audit.service';
 import type { CacheService } from '@shared/cache/cache.port';
 
@@ -38,6 +40,7 @@ export interface ChatMessageServiceDeps {
   knowledgeBase?: KnowledgeBaseService;
   imageEnrichment?: ImageEnrichmentService;
   artTopicClassifier?: ArtTopicClassifierPort;
+  piiSanitizer?: PiiSanitizer;
 }
 
 /** Successful preparation result with all data needed to invoke the LLM. */
@@ -76,6 +79,7 @@ export class ChatMessageService {
   private readonly knowledgeBase?: KnowledgeBaseService;
   private readonly imageEnrichment?: ImageEnrichmentService;
   private readonly artTopicClassifier?: ArtTopicClassifierPort;
+  private readonly piiSanitizer: PiiSanitizer;
 
   constructor(deps: ChatMessageServiceDeps) {
     this.repository = deps.repository;
@@ -86,6 +90,7 @@ export class ChatMessageService {
     this.knowledgeBase = deps.knowledgeBase;
     this.imageEnrichment = deps.imageEnrichment;
     this.artTopicClassifier = deps.artTopicClassifier;
+    this.piiSanitizer = deps.piiSanitizer ?? new DisabledPiiSanitizer();
 
     this.imageProcessor = new ImageProcessingService({
       imageStorage: deps.imageStorage,
@@ -204,10 +209,11 @@ export class ChatMessageService {
       enrichedImages,
     } = prep;
     const text = input.text?.trim();
+    const sanitizedText = this.piiSanitizer.sanitize(text ?? '').sanitizedText;
 
     const aiResult: OrchestratorOutput = await this.orchestrator.generate({
       history,
-      text,
+      text: sanitizedText,
       image: orchestratorImage,
       locale: requestedLocale,
       museumMode: input.context?.museumMode ?? session.museumMode,
@@ -273,11 +279,12 @@ export class ChatMessageService {
       onGuardrail,
     });
     buffer.onRelease(onToken);
+    const sanitizedText = this.piiSanitizer.sanitize(input.text?.trim() ?? '').sanitizedText;
 
     const aiResult: OrchestratorOutput = await this.orchestrator.generateStream(
       {
         history,
-        text: input.text?.trim(),
+        text: sanitizedText,
         image: orchestratorImage,
         locale: requestedLocale,
         museumMode: input.context?.museumMode ?? session.museumMode,

@@ -14,6 +14,7 @@ export type UserMemoryUpdates = Partial<
     | 'summary'
     | 'sessionCount'
     | 'lastSessionId'
+    | 'disabledByUser'
   >
 >;
 
