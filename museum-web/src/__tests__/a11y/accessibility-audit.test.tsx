@@ -64,6 +64,11 @@ const mockDict: Dictionary = {
     appStorePrefix: '',
     googlePlayPrefix: '',
   },
+  chatShowcase: { title: '', subtitle: '', bullets: [], messages: [] },
+  mapsShowcase: { title: '', subtitle: '', bullets: [] },
+  multiDevice: { title: '', subtitle: '' },
+  stats: { title: '', items: [] },
+  faq: { title: '', items: [] },
   support: {
     title: '',
     subtitle: '',
