@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import type { Dictionary, Locale } from '@/lib/i18n';
 import LanguageSwitcher from '@/components/shared/LanguageSwitcher';
 
@@ -13,6 +14,10 @@ interface HeaderProps {
 
 export default function Header({ dict, locale }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { scrollY } = useScroll();
+  const headerBg = useTransform(scrollY, [0, 100], ['rgba(255,255,255,0)', 'rgba(255,255,255,0.72)']);
+  const headerBorder = useTransform(scrollY, [0, 100], ['rgba(255,255,255,0)', 'rgba(255,255,255,0.15)']);
+  const headerBlur = useTransform(scrollY, [0, 100], ['blur(0px)', 'blur(16px)']);
 
   const navLinks = [
     { href: `/${locale}`, label: dict.nav.home },
@@ -21,7 +26,15 @@ export default function Header({ dict, locale }: HeaderProps) {
   ];
 
   return (
-    <header className="liquid-glass-heavy sticky top-0 z-50 !rounded-none !border-x-0 !border-t-0 border-b border-b-white/15">
+    <motion.header
+      className="sticky top-0 z-50"
+      style={{
+        backgroundColor: headerBg,
+        borderBottom: headerBorder,
+        backdropFilter: headerBlur,
+        WebkitBackdropFilter: headerBlur,
+      }}
+    >
       <div className="relative mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link
@@ -110,6 +123,6 @@ export default function Header({ dict, locale }: HeaderProps) {
           </ul>
         </nav>
       )}
-    </header>
+    </motion.header>
   );
 }
