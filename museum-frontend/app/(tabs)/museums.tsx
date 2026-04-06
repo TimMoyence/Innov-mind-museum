@@ -1,6 +1,15 @@
-import { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  AccessibilityInfo,
+  Animated,
+  Easing,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -17,6 +26,8 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 
 type ViewMode = 'list' | 'map';
 
+const FADE_DURATION_MS = 180;
+
 /** Renders the museum directory tab screen listing nearby museums with distance. */
 export default function MuseumsScreen() {
   const { t } = useTranslation();
@@ -29,6 +40,10 @@ export default function MuseumsScreen() {
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
 
+  // Crossfade animation for view mode transitions.
+  // eslint-disable-next-line react-hooks/refs -- Animated.Value created once, persisted via useRef
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
   const effectiveLat = viewMode === 'map' && mapCenter ? mapCenter.lat : latitude;
   const effectiveLng = viewMode === 'map' && mapCenter ? mapCenter.lng : longitude;
 
@@ -37,13 +52,51 @@ export default function MuseumsScreen() {
     effectiveLng,
   );
 
-  const handleViewModeChange = useCallback((mode: ViewMode) => {
-    setViewMode(mode);
-    if (mode === 'list') setMapCenter(null); // reset to GPS coords
-  }, []);
+  // Live region: announce result count changes via VoiceOver/TalkBack.
+  // Skips the initial loading phase to avoid empty announcements.
+  const previousCountRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (isLoading) return;
+    const count = museums.length;
+    if (previousCountRef.current === null) {
+      previousCountRef.current = count;
+      return;
+    }
+    if (previousCountRef.current !== count) {
+      previousCountRef.current = count;
+      AccessibilityInfo.announceForAccessibility(t('a11y.museum.results_count', { count }));
+    }
+  }, [museums, isLoading, t]);
+
+  const handleViewModeChange = useCallback(
+    (mode: ViewMode) => {
+      if (mode === viewMode) return;
+      // Crossfade: fade out → switch mode → fade in.
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: FADE_DURATION_MS,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start(() => {
+        setViewMode(mode);
+        if (mode === 'list') setMapCenter(null); // reset to GPS coords
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: FADE_DURATION_MS,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }).start();
+      });
+    },
+    [viewMode, fadeAnim],
+  );
 
   const handleMapMoved = useCallback((lat: number, lng: number) => {
     setMapCenter({ lat, lng });
+  }, []);
+
+  const handleResetMapCenter = useCallback(() => {
+    setMapCenter(null);
   }, []);
 
   const handleMuseumPress = (museum: MuseumWithDistance) => {
@@ -62,6 +115,8 @@ export default function MuseumsScreen() {
     });
   };
 
+  const showSearchAreaChip = viewMode === 'map' && mapCenter !== null;
+
   return (
     <LiquidScreen
       background={pickMuseumBackground(3)}
@@ -72,7 +127,11 @@ export default function MuseumsScreen() {
           {t('museumDirectory.title')}
         </Text>
         {status === 'denied' && (
-          <Text style={[styles.locationDenied, { color: theme.error }]}>
+          <Text
+            style={[styles.locationDenied, { color: theme.error }]}
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+          >
             {t('museumDirectory.location_denied')}
           </Text>
         )}
@@ -81,7 +140,24 @@ export default function MuseumsScreen() {
         </View>
       </GlassCard>
 
-      <View style={styles.contentContainer}>
+      <Animated.View style={[styles.contentContainer, { opacity: fadeAnim }]}>
+        {showSearchAreaChip ? (
+          <Pressable
+            style={[
+              styles.searchAreaChip,
+              { backgroundColor: theme.primary + '1A', borderColor: theme.primary },
+            ]}
+            onPress={handleResetMapCenter}
+            accessibilityRole="button"
+            accessibilityLabel={t('museumDirectory.search_this_area')}
+          >
+            <Ionicons name="locate-outline" size={14} color={theme.primary} />
+            <Text style={[styles.searchAreaText, { color: theme.primary }]}>
+              {t('museumDirectory.search_this_area')}
+            </Text>
+            <Ionicons name="close" size={14} color={theme.primary} />
+          </Pressable>
+        ) : null}
         {viewMode === 'list' ? (
           <MuseumDirectoryList
             museums={museums}
@@ -99,7 +175,7 @@ export default function MuseumsScreen() {
             onMapMoved={handleMapMoved}
           />
         )}
-      </View>
+      </Animated.View>
     </LiquidScreen>
   );
 }
@@ -129,5 +205,20 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
+  },
+  searchAreaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  searchAreaText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 });
