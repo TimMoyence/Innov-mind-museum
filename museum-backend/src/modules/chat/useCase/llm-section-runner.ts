@@ -7,7 +7,7 @@
 import { Semaphore } from './semaphore';
 
 /** Terminal status of a single section execution attempt. */
-export type SectionRunStatus = 'success' | 'timeout' | 'error';
+type SectionRunStatus = 'success' | 'timeout' | 'error';
 
 /** A unit of work to execute within the section runner (typically a single LLM call). */
 export interface SectionTask<TValue> {
@@ -19,7 +19,7 @@ export interface SectionTask<TValue> {
 }
 
 /** Successful section result carrying the resolved value. */
-export interface SectionRunSuccess<TValue> {
+interface SectionRunSuccess<TValue> {
   name: string;
   status: 'success';
   value: TValue;
@@ -30,7 +30,7 @@ export interface SectionRunSuccess<TValue> {
 }
 
 /** Failed section result carrying the error description. */
-export interface SectionRunFailure {
+interface SectionRunFailure {
   name: string;
   status: 'timeout' | 'error';
   error: string;
@@ -75,7 +75,7 @@ export interface SectionRunnerHooks {
 }
 
 /** Configuration for the section runner including concurrency, retry policy, and time budget. */
-export interface SectionRunnerOptions {
+interface SectionRunnerOptions {
   maxConcurrent: number;
   retries: number;
   retryBaseDelayMs: number;

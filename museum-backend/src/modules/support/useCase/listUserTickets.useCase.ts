@@ -12,7 +12,7 @@ import type {
 import type { PaginatedResult } from '@modules/admin/domain/admin.types';
 
 /** Input for listing a specific user's support tickets. */
-export interface ListUserTicketsInput {
+interface ListUserTicketsInput {
   userId: number;
   status?: string;
   priority?: string;

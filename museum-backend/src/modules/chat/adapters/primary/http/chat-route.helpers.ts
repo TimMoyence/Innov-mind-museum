@@ -21,7 +21,7 @@ export const extendTimeoutForUpload: RequestHandler = (req, res, next) => {
 };
 
 /** Parsed visitor context extracted from request body. */
-export interface ParsedContext {
+interface ParsedContext {
   location?: string;
   museumMode?: boolean;
   guideLevel?: 'beginner' | 'intermediate' | 'expert';

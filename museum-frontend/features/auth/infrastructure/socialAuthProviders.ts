@@ -4,10 +4,10 @@ import Constants from 'expo-constants';
 import { Linking, Platform } from 'react-native';
 
 /** Supported social identity providers for sign-in. */
-export type SocialProvider = 'apple' | 'google';
+type SocialProvider = 'apple' | 'google';
 
 /** Result of a successful social sign-in containing the provider name and its identity token. */
-export interface SocialAuthResult {
+interface SocialAuthResult {
   provider: SocialProvider;
   idToken: string;
 }

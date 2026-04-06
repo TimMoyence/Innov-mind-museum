@@ -16,7 +16,7 @@ import type { CacheService } from '@shared/cache/cache.port';
 import type { FeatureFlagService } from '@shared/feature-flags/feature-flags.port';
 
 /** Dependencies required to build the top-level API router. */
-export interface ApiRouterDeps {
+interface ApiRouterDeps {
   chatService: ChatService;
   healthCheck: () => Promise<{ database: 'up' | 'down' }>;
   featureFlagService: FeatureFlagService;

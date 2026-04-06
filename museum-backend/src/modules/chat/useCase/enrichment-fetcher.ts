@@ -5,7 +5,7 @@ import type { EnrichedImage } from '../domain/chat.types';
 import type { ArtworkFacts } from '../domain/ports/knowledge-base.port';
 
 /** Dependencies needed by fetchEnrichmentData (subset of ChatMessageServiceDeps). */
-export interface EnrichmentDeps {
+interface EnrichmentDeps {
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
   imageEnrichment?: ImageEnrichmentService;

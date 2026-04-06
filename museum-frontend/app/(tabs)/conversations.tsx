@@ -124,7 +124,7 @@ export default function ConversationsScreen() {
 
       {(error ?? createError) ? (
         <ErrorNotice
-          message={(error ?? createError)!}
+          message={error ?? createError ?? ''}
           onDismiss={() => {
             setError(null);
           }}

@@ -32,7 +32,7 @@ const toSessionDTO = (session: ChatSession): CreateSessionResult => ({
 });
 
 /** Dependencies for the session sub-service. */
-export interface ChatSessionServiceDeps {
+interface ChatSessionServiceDeps {
   repository: ChatRepository;
   cache?: CacheService;
   museumRepository?: IMuseumRepository;

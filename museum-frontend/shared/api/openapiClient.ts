@@ -66,7 +66,7 @@ type PathParamNames<T extends string> = T extends `${string}{${infer Param}}${in
   : never;
 
 /** Maps path template parameters to a record of string/number values. Resolves to an empty record when no params exist. */
-export type PathParamsFor<P extends PathKey> = [PathParamNames<P>] extends [never]
+type PathParamsFor<P extends PathKey> = [PathParamNames<P>] extends [never]
   ? Record<string, never>
   : Record<PathParamNames<P>, string | number>;
 

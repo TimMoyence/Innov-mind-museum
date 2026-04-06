@@ -19,13 +19,13 @@ export interface ArtTopicClassifierPort {
 }
 
 /** Result of an input guardrail evaluation. */
-export interface InputGuardrailResult {
+interface InputGuardrailResult {
   allow: boolean;
   reason?: GuardrailBlockReason;
 }
 
 /** Dependencies for the guardrail evaluation service. */
-export interface GuardrailEvaluationServiceDeps {
+interface GuardrailEvaluationServiceDeps {
   repository: ChatRepository;
   audit?: AuditService;
   artTopicClassifier?: ArtTopicClassifierPort;

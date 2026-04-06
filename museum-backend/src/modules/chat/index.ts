@@ -31,7 +31,7 @@ import type { CacheService } from '@shared/cache/cache.port';
 import type { DataSource } from 'typeorm';
 
 /** Typed result of building the chat module — all services guaranteed initialized. */
-export interface BuiltChatModule {
+interface BuiltChatModule {
   chatService: ChatService;
   imageStorage: ImageStorage;
   repository: TypeOrmChatRepository;
@@ -242,7 +242,7 @@ class ChatModule {
 // ── Module singleton + typed exports ─────────────────────────────────────────
 
 /** Module singleton. Use the getter functions below for cross-module access. */
-export const chatModule = new ChatModule();
+const chatModule = new ChatModule();
 
 /** Wires the chat module and returns a configured ChatService. */
 export const buildChatService = (

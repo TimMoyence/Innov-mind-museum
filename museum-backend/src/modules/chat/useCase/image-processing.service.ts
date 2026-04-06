@@ -17,13 +17,13 @@ import type { ImageStorage } from '../domain/ports/image-storage.port';
 import type { OcrService } from '../domain/ports/ocr.port';
 
 /** Result of image processing: the storage reference and the orchestrator-ready payload. */
-export interface ProcessedImage {
+interface ProcessedImage {
   imageRef: string;
   orchestratorImage: NonNullable<PostMessageInput['image']>;
 }
 
 /** Dependencies for the image processing service. */
-export interface ImageProcessingServiceDeps {
+interface ImageProcessingServiceDeps {
   imageStorage: ImageStorage;
   ocr?: OcrService;
 }

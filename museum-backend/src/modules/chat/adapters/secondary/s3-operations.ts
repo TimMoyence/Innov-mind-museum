@@ -24,7 +24,7 @@ export const canonicalQueryString = (query: [string, string][]): string => {
 };
 
 /** Performs a low-level HTTP request and returns status + body. */
-export const httpRequest = async (params: {
+const httpRequest = async (params: {
   method: string;
   url: URL;
   headers: Record<string, string>;

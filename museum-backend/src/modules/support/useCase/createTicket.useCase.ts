@@ -5,7 +5,7 @@ import type { ISupportRepository } from '../domain/support.repository.interface'
 import type { CreateTicketInput, TicketDTO } from '../domain/support.types';
 
 /** Input for the create-ticket use case. */
-export interface CreateTicketUseCaseInput {
+interface CreateTicketUseCaseInput {
   userId: number;
   subject: string;
   description: string;

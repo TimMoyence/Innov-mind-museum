@@ -13,14 +13,14 @@ import { buildGuardrailCitation } from './art-topic-guardrail';
 import type { ChatAssistantMetadata } from '../domain/chat.types';
 
 /** Maps image MIME types to file extensions. */
-export const imageExtensionByMimeType: Record<string, string> = {
+const imageExtensionByMimeType: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
 };
 
 /** Regex matching `local://<filename>` image references. */
-export const localImageRefPattern = /^local:\/\/([a-zA-Z0-9._-]+)$/;
+const localImageRefPattern = /^local:\/\/([a-zA-Z0-9._-]+)$/;
 
 /**
  * Extracts the local file name from a `local://` image reference.

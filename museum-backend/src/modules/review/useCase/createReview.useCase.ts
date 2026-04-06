@@ -4,7 +4,7 @@ import type { IReviewRepository } from '../domain/review.repository.interface';
 import type { CreateReviewInput, ReviewDTO } from '../domain/review.types';
 
 /** Input for the create-review use case. */
-export interface CreateReviewUseCaseInput {
+interface CreateReviewUseCaseInput {
   userId: number;
   userName: string;
   rating: number;

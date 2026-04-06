@@ -1,12 +1,12 @@
 /** A single numbered section within the terms of service document. */
-export interface TermsSection {
+interface TermsSection {
   id: string;
   title: string;
   paragraphs: string[];
 }
 
 /** Structured content of the terms of service, rendered in the legal screen. */
-export interface TermsOfServiceContent {
+interface TermsOfServiceContent {
   title: string;
   version: string;
   lastUpdated: string;

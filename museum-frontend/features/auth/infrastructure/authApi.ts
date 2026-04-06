@@ -208,6 +208,3 @@ export const authService = {
     });
   },
 };
-
-/** Inferred type of the {@link authService} object, useful for dependency injection. */
-export type AuthService = typeof authService;

@@ -59,7 +59,7 @@ export interface CreateSessionInput {
 }
 
 /** Client-provided context attached to each chat message request. */
-export interface ChatRequestContext {
+interface ChatRequestContext {
   /** Free-text location hint (e.g. museum name or room). */
   location?: string;
   museumMode?: boolean;
@@ -99,7 +99,7 @@ export interface MessagePageQuery {
 export type LlmSectionName = 'summary';
 
 /** Outcome status of a single LLM section execution. */
-export type ChatSectionStatus = 'success' | 'timeout' | 'error' | 'fallback';
+type ChatSectionStatus = 'success' | 'timeout' | 'error' | 'fallback';
 
 /** Diagnostics for an assistant response, detailing per-section LLM performance. */
 export interface ChatAssistantDiagnostics {

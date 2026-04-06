@@ -5,7 +5,7 @@ import type { ReviewDTO, ListReviewsFilters } from '../domain/review.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 
 /** Input for listing approved reviews (public). */
-export interface ListApprovedReviewsInput {
+interface ListApprovedReviewsInput {
   page: number;
   limit: number;
 }

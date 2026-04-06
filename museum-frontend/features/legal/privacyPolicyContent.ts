@@ -1,12 +1,12 @@
 /** A single numbered section within the privacy policy document. */
-export interface PrivacyPolicySection {
+interface PrivacyPolicySection {
   id: string;
   title: string;
   paragraphs: string[];
 }
 
 /** Structured content of the full GDPR-compliant privacy policy, rendered in the legal screen. */
-export interface PrivacyPolicyContent {
+interface PrivacyPolicyContent {
   title: string;
   version: string;
   lastUpdated: string;

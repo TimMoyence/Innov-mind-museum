@@ -110,7 +110,7 @@ export interface ResolveReportInput {
 export type AnalyticsGranularity = 'daily' | 'weekly' | 'monthly';
 
 /** A single time-series data point. */
-export interface TimeSeriesPoint {
+interface TimeSeriesPoint {
   date: string;
   count: number;
 }

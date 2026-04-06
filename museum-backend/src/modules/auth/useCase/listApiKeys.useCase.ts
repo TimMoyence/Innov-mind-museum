@@ -1,7 +1,7 @@
 import type { ApiKeyRepository } from '../domain/apiKey.repository.interface';
 
 /** Public API key info — never includes hash or salt. */
-export interface ApiKeyListItem {
+interface ApiKeyListItem {
   id: number;
   prefix: string;
   name: string;

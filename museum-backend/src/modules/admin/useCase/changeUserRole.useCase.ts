@@ -6,7 +6,7 @@ import type { IAdminRepository } from '../domain/admin.repository.interface';
 import type { AdminUserDTO } from '../domain/admin.types';
 
 /** Input for the change-user-role use case. */
-export interface ChangeUserRoleInput {
+interface ChangeUserRoleInput {
   userId: number;
   newRole: string;
   actorId: number;

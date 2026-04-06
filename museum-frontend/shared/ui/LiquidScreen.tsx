@@ -94,6 +94,6 @@ const styles = StyleSheet.create({
     maxWidth: viewportConfig.desktopMaxContentWidth,
   },
   backgroundImage: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
 });

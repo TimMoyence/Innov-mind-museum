@@ -1,5 +1,5 @@
 /** Audit actor types. */
-export type AuditActorType = 'user' | 'system' | 'anonymous';
+type AuditActorType = 'user' | 'system' | 'anonymous';
 
 /** Structured input for creating an audit log entry. */
 export interface AuditLogEntry {

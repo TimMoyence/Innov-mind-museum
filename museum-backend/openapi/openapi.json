@@ -2189,6 +2189,121 @@
         }
       }
     },
+    "/api/museums/search": {
+      "get": {
+        "tags": ["Museum"],
+        "summary": "Search museums by location or text query",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "lat", "required": false, "schema": { "type": "number", "minimum": -90, "maximum": 90 }, "description": "Latitude (must be provided with lng)" },
+          { "in": "query", "name": "lng", "required": false, "schema": { "type": "number", "minimum": -180, "maximum": 180 }, "description": "Longitude (must be provided with lat)" },
+          { "in": "query", "name": "radius", "required": false, "schema": { "type": "integer", "minimum": 1000, "maximum": 50000 }, "description": "Search radius in meters (default 30000)" },
+          { "in": "query", "name": "q", "required": false, "schema": { "type": "string", "maxLength": 200 }, "description": "Text search query (name filter or geocode input)" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results with distance and source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["museums", "count"],
+                  "properties": {
+                    "museums": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["name", "latitude", "longitude", "distance", "source"],
+                        "properties": {
+                          "name": { "type": "string" },
+                          "address": { "type": ["string", "null"] },
+                          "latitude": { "type": "number" },
+                          "longitude": { "type": "number" },
+                          "distance": { "type": "integer", "description": "Distance in meters from search origin" },
+                          "source": { "type": "string", "enum": ["local", "osm"] }
+                        }
+                      }
+                    },
+                    "count": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/admin/reviews": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Paginated list of all reviews (admin/moderator)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "page", "required": false, "schema": { "type": "integer", "default": 1 }, "description": "Page number" },
+          { "in": "query", "name": "limit", "required": false, "schema": { "type": "integer", "default": 20 }, "description": "Items per page" },
+          { "in": "query", "name": "status", "required": false, "schema": { "type": "string", "enum": ["pending", "approved", "rejected"] }, "description": "Filter by review status" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated review list",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReviewListResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/admin/reviews/{id}": {
+      "patch": {
+        "tags": ["Admin"],
+        "summary": "Moderate a review (approve/reject)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "id", "required": true, "schema": { "type": "string", "format": "uuid" }, "description": "Review ID" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["status"],
+                "properties": {
+                  "status": { "type": "string", "enum": ["approved", "rejected"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Review moderated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["review"],
+                  "properties": {
+                    "review": { "$ref": "#/components/schemas/ReviewDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/api/museums/directory": {
       "get": {
         "tags": ["Museum"],
