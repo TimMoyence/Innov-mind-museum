@@ -1,4 +1,5 @@
 import { getDictionary, type Locale } from '@/lib/i18n';
+import { getAlternates, getOpenGraph } from '@/lib/seo';
 import type { Metadata } from 'next';
 import ContactForm from './ContactForm';
 
@@ -9,7 +10,11 @@ interface SupportPageProps {
 export async function generateMetadata({ params }: SupportPageProps): Promise<Metadata> {
   const { locale } = await params;
   const dict = await getDictionary(locale as Locale);
-  return { title: dict.support.title };
+  return {
+    title: dict.support.title,
+    alternates: getAlternates(locale, '/support'),
+    openGraph: getOpenGraph(locale),
+  };
 }
 
 export default async function SupportPage({ params }: SupportPageProps) {

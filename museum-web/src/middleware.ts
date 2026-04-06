@@ -27,16 +27,19 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Already has a locale prefix — pass through
+  // Already has a locale prefix — inject x-locale header for root layout
   if (pathnameHasLocale(pathname)) {
-    return NextResponse.next();
+    const locale = pathname.split('/')[1];
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-locale', locale);
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // Detect preferred locale and redirect
+  // Detect preferred locale and redirect (301 permanent for SEO)
   const locale = getPreferredLocale(request);
   const url = request.nextUrl.clone();
   url.pathname = `/${locale}${pathname}`;
-  return NextResponse.redirect(url);
+  return NextResponse.redirect(url, 301);
 }
 
 export const config = {

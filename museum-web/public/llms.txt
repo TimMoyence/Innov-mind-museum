@@ -1,0 +1,28 @@
+# Musaium
+
+> Musaium is a free AI-powered museum assistant mobile app. Visitors photograph artworks or ask questions and receive instant historical, artistic, and cultural context via AI. Available on iOS and Android.
+
+Musaium uses computer vision to identify artworks and a LangChain-based AI pipeline enriched by Wikidata to provide accurate, sourced cultural information. The app supports French and English.
+
+## Key Pages
+
+- [Home](https://musaium.com/en): Landing page with app features, how it works, and download links
+- [Support & FAQ](https://musaium.com/en/support): Frequently asked questions and contact form
+- [Privacy Policy](https://musaium.com/en/privacy): Data protection and privacy practices
+
+## App Details
+
+- Name: Musaium
+- Developer: InnovMind
+- Price: Free
+- Platforms: iOS 16+, Android 10+
+- Languages: French, English
+- Category: Travel / Museum / Education
+- Key Features: AI artwork recognition, contextual art history chat, multilingual, offline history, nearby museum map with geolocation
+
+## FAQ
+
+- Is the app free? Yes, Musaium is completely free.
+- Which museums are compatible? Musaium works in all museums. The AI recognizes artworks through computer vision and enriches responses via Wikidata.
+- Is my data protected? Yes. Photos are never shared. See the privacy policy for full details.
+- How to contact support? Use the contact form on the support page.

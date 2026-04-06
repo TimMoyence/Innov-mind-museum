@@ -3,6 +3,9 @@ import { withSentryConfig } from '@sentry/nextjs';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  images: {
+    formats: ['image/avif', 'image/webp'],
+  },
 
   // Proxy /api calls to the backend in development
   async rewrites() {

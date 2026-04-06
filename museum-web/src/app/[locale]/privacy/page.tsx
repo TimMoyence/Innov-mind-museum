@@ -1,4 +1,5 @@
 import { getDictionary, type Locale } from '@/lib/i18n';
+import { getAlternates, getOpenGraph } from '@/lib/seo';
 import { getPrivacyContent } from '@/lib/privacy-content';
 import type { Metadata } from 'next';
 
@@ -9,7 +10,11 @@ interface PrivacyPageProps {
 export async function generateMetadata({ params }: PrivacyPageProps): Promise<Metadata> {
   const { locale } = await params;
   const dict = await getDictionary(locale as Locale);
-  return { title: dict.privacy.title };
+  return {
+    title: dict.privacy.title,
+    alternates: getAlternates(locale, '/privacy'),
+    openGraph: getOpenGraph(locale),
+  };
 }
 
 export default async function PrivacyPage({ params }: PrivacyPageProps) {

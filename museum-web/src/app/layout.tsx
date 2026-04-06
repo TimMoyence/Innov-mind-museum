@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { headers } from 'next/headers';
 import './globals.css';
 
 const inter = Inter({
@@ -11,10 +12,8 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: {
     template: '%s | Musaium',
-    default: 'Musaium — L\'assistant muséal intelligent',
+    default: 'Musaium',
   },
-  description:
-    'Photographiez une œuvre, posez une question, et laissez l\'IA vous guider.',
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? 'https://musaium.com',
   ),
@@ -22,21 +21,18 @@ export const metadata: Metadata = {
     icon: '/images/favicon.png',
     apple: '/images/logo.png',
   },
-  openGraph: {
-    type: 'website',
-    siteName: 'Musaium',
-    locale: 'fr_FR',
-    images: [{ url: '/images/logo.png', width: 1024, height: 1024, alt: 'Musaium' }],
-  },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const headersList = await headers();
+  const locale = headersList.get('x-locale') ?? 'fr';
+
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
         {children}
       </body>

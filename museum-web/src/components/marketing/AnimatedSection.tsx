@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode, useRef, Children } from 'react';
-import { motion, useInView } from 'framer-motion';
+import { motion, useInView, useReducedMotion } from 'framer-motion';
 
 type AnimationVariant = 'slide' | 'scale' | 'fade';
 
@@ -74,6 +74,11 @@ export default function AnimatedSection({
 }: AnimatedSectionProps) {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-80px' });
+  const shouldReduceMotion = useReducedMotion();
+
+  if (shouldReduceMotion) {
+    return <div ref={ref} className={className}>{children}</div>;
+  }
 
   if (stagger) {
     return (
