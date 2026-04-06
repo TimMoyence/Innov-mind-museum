@@ -95,6 +95,10 @@ namespace facebook::react {
       return static_cast<ObjCTurboModule&>(turboModule).invokeObjCMethod(rt, PromiseKind, "fetchNativeFrames", @selector(fetchNativeFrames:reject:), args, count);
     }
 
+    static facebook::jsi::Value __hostFunction_NativeRNSentrySpecJSI_fetchNativeFramesDelay(facebook::jsi::Runtime& rt, TurboModule &turboModule, const facebook::jsi::Value* args, size_t count) {
+      return static_cast<ObjCTurboModule&>(turboModule).invokeObjCMethod(rt, PromiseKind, "fetchNativeFramesDelay", @selector(fetchNativeFramesDelay:endTimestampSeconds:resolve:reject:), args, count);
+    }
+
     static facebook::jsi::Value __hostFunction_NativeRNSentrySpecJSI_initNativeSdk(facebook::jsi::Runtime& rt, TurboModule &turboModule, const facebook::jsi::Value* args, size_t count) {
       return static_cast<ObjCTurboModule&>(turboModule).invokeObjCMethod(rt, PromiseKind, "initNativeSdk", @selector(initNativeSdk:resolve:reject:), args, count);
     }
@@ -240,6 +244,9 @@ namespace facebook::react {
         
         
         methodMap_["fetchNativeFrames"] = MethodMetadata {0, __hostFunction_NativeRNSentrySpecJSI_fetchNativeFrames};
+        
+        
+        methodMap_["fetchNativeFramesDelay"] = MethodMetadata {2, __hostFunction_NativeRNSentrySpecJSI_fetchNativeFramesDelay};
         
         
         methodMap_["initNativeSdk"] = MethodMetadata {1, __hostFunction_NativeRNSentrySpecJSI_initNativeSdk};

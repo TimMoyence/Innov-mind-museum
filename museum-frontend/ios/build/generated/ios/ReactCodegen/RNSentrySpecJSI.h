@@ -492,6 +492,7 @@ protected:
     methodMap_["fetchNativeLogAttributes"] = MethodMetadata {.argCount = 0, .invoker = __fetchNativeLogAttributes};
     methodMap_["fetchNativeAppStart"] = MethodMetadata {.argCount = 0, .invoker = __fetchNativeAppStart};
     methodMap_["fetchNativeFrames"] = MethodMetadata {.argCount = 0, .invoker = __fetchNativeFrames};
+    methodMap_["fetchNativeFramesDelay"] = MethodMetadata {.argCount = 2, .invoker = __fetchNativeFramesDelay};
     methodMap_["initNativeSdk"] = MethodMetadata {.argCount = 1, .invoker = __initNativeSdk};
     methodMap_["setUser"] = MethodMetadata {.argCount = 2, .invoker = __setUser};
     methodMap_["setContext"] = MethodMetadata {.argCount = 2, .invoker = __setContext};
@@ -634,6 +635,15 @@ private:
       bridging::getParameterCount(&T::fetchNativeFrames) == 1,
       "Expected fetchNativeFrames(...) to have 1 parameters");
     return bridging::callFromJs<jsi::Value>(rt, &T::fetchNativeFrames,  static_cast<NativeRNSentryCxxSpec*>(&turboModule)->jsInvoker_, static_cast<T*>(&turboModule));
+  }
+
+  static jsi::Value __fetchNativeFramesDelay(jsi::Runtime &rt, TurboModule &turboModule, const jsi::Value* args, size_t count) {
+    static_assert(
+      bridging::getParameterCount(&T::fetchNativeFramesDelay) == 3,
+      "Expected fetchNativeFramesDelay(...) to have 3 parameters");
+    return bridging::callFromJs<jsi::Value>(rt, &T::fetchNativeFramesDelay,  static_cast<NativeRNSentryCxxSpec*>(&turboModule)->jsInvoker_, static_cast<T*>(&turboModule),
+      count <= 0 ? throw jsi::JSError(rt, "Expected argument in position 0 to be passed") : args[0].asNumber(),
+      count <= 1 ? throw jsi::JSError(rt, "Expected argument in position 1 to be passed") : args[1].asNumber());
   }
 
   static jsi::Value __initNativeSdk(jsi::Runtime &rt, TurboModule &turboModule, const jsi::Value* args, size_t count) {

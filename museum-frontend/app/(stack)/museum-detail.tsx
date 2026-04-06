@@ -65,7 +65,7 @@ export default function MuseumDetailScreen() {
 
     void startConversation({
       museumMode: true,
-      museumId: isNaN(museumId) ? undefined : museumId,
+      museumId: isNaN(museumId) || museumId <= 0 ? undefined : museumId,
       museumName: params.name || undefined,
       museumAddress: params.address || undefined,
       coordinates,
