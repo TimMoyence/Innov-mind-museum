@@ -86,6 +86,55 @@
     "appStorePrefix": "Téléchargez sur",
     "googlePlayPrefix": "Disponible sur"
   },
+  "chatShowcase": {
+    "title": "Photographiez. Comprenez.",
+    "subtitle": "Pointez votre caméra vers une œuvre. En quelques secondes, l'IA vous révèle son histoire, sa technique et son contexte culturel.",
+    "bullets": [
+      "Identification instantanée par vision artificielle",
+      "Réponses détaillées avec sources vérifiées",
+      "Conversation naturelle — posez vos questions de suivi"
+    ],
+    "messages": [
+      { "role": "user", "text": "Vénus de Milo" },
+      { "role": "assistant", "text": "La Vénus de Milo est une célèbre sculpture grecque datant du IIe siècle avant J.-C. Elle représente Aphrodite, déesse de l'amour et de la beauté. Malgré ses bras manquants, elle dégage une élégance remarquable à travers le drapé de sa robe." },
+      { "role": "user", "text": "Et ce tableau ?" },
+      { "role": "assistant", "text": "Il s'agit du Radeau de la Méduse de Théodore Géricault, peint en 1818-1819. Il représente un groupe de naufragés luttant pour leur survie sur un radeau, mêlant réalisme dramatique et désespoir humain." }
+    ]
+  },
+  "mapsShowcase": {
+    "title": "Tous les musées. Autour de vous.",
+    "subtitle": "Où que vous soyez, Musaium localise les musées à proximité sur une carte interactive. De Paris à San Francisco, votre guide vous accompagne partout.",
+    "bullets": [
+      "Carte interactive avec géolocalisation",
+      "Vue liste ou carte selon votre préférence",
+      "Couverture mondiale — tous les musées référencés"
+    ]
+  },
+  "multiDevice": {
+    "title": "Un compagnon sur chaque écran.",
+    "subtitle": "iPhone, iPad, Android — Musaium s'adapte nativement à votre appareil pour une expérience optimale, où que vous soyez."
+  },
+  "stats": {
+    "title": "Musaium en chiffres",
+    "items": [
+      { "value": 3, "suffix": "", "label": "Modes d'interaction" },
+      { "value": 10, "suffix": "+", "label": "Langues supportées" },
+      { "value": 3, "suffix": "", "label": "Plateformes" },
+      { "value": 100, "suffix": "%", "label": "Gratuit" }
+    ]
+  },
+  "faq": {
+    "title": "Questions fréquentes",
+    "items": [
+      { "question": "L'application est-elle gratuite ?", "answer": "Oui, Musaium est entièrement gratuit. Certaines fonctionnalités avancées pourront être proposées en premium à l'avenir." },
+      { "question": "Quels musées sont compatibles ?", "answer": "Musaium fonctionne dans tous les musées. L'IA reconnaît les œuvres par vision artificielle et enrichit ses réponses via Wikidata." },
+      { "question": "Mes données sont-elles protégées ?", "answer": "Absolument. Vos photos ne sont jamais partagées avec des tiers. Consultez notre politique de confidentialité pour plus de détails." },
+      { "question": "L'IA peut-elle se tromper ?", "answer": "Oui, c'est pourquoi Musaium affiche un avertissement de transparence avant chaque session. Les réponses sont générées par IA et peuvent contenir des inexactitudes. Nous vous encourageons à vérifier les faits importants." },
+      { "question": "Faut-il une connexion internet ?", "answer": "Une connexion est nécessaire pour les nouvelles conversations. Cependant, vos conversations précédentes sont accessibles hors-ligne." },
+      { "question": "Dans quels pays Musaium fonctionne-t-il ?", "answer": "Musaium fonctionne dans le monde entier. L'application utilise la géolocalisation pour trouver les musées à proximité, et l'IA peut analyser des œuvres de toute origine." },
+      { "question": "Comment contacter le support ?", "answer": "Utilisez le formulaire de contact sur notre page support ou contactez-nous sur les réseaux sociaux." }
+    ]
+  },
   "support": {
     "title": "Centre d'aide",
     "subtitle": "Trouvez des réponses à vos questions ou contactez-nous directement.",
