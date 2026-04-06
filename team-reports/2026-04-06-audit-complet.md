@@ -274,9 +274,9 @@ NON envoye au LLM : email, nom, user ID, password, tokens, device info
 
 | Done | Feature | Effort | Prerequis | Commentaire |
 |------|---------|--------|-----------|-------------|
-| ☐ | PII Stripping Proxy (Tier 1 privacy) | 2 sem | Nouveau port PiiSanitizer | |
-| ☐ | Audio Description Mode (accessibilite) | 1 sem | TTS existant | |
-| ☐ | Art Keywords Classifier (finir WIP) | 1 sem | Code deja partiellement ecrit | |
+| ✅ | PII Stripping Proxy (Tier 1 privacy) | 2 sem | Nouveau port PiiSanitizer | Port hexagonal + regex adapter (email/phone), 12 tests — commit 4bb952c9 |
+| ✅ | Audio Description Mode (accessibilite) | 1 sem | TTS existant | Auto-TTS + prompt WCAG + /describe endpoint + toggle settings/chat header |
+| ✅ | Art Keywords Classifier (finir WIP) | 1 sem | Code deja partiellement ecrit | Pre-filtre frontend + hint preClassified + keyword discovery loop evolutif |
 | ☐ | Museum Analytics Dashboard (B2B) | 2 sem | Admin dashboard existant | |
 | ☐ | Multi-Museum UX polish | 1 sem | Museum directory existant | |
 

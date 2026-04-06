@@ -48,13 +48,27 @@ export class GuardrailEvaluationService {
 
   /**
    * Evaluates user input against the guardrail rules.
+   * When preClassified is 'art', the soft off-topic check is skipped (classifier bypass)
+   * but hard blocks (insults, prompt injection) always run.
    *
    * @param text - User message text.
+   * @param preClassified - Optional frontend pre-classification hint.
    * @returns Guardrail decision.
    */
   // eslint-disable-next-line @typescript-eslint/require-await -- async kept for caller compat; guardrail is now synchronous
-  async evaluateInput(text: string | undefined): Promise<InputGuardrailResult> {
-    return evaluateUserInputGuardrail({ text });
+  async evaluateInput(
+    text: string | undefined,
+    preClassified?: 'art',
+  ): Promise<InputGuardrailResult> {
+    // Hard blocks (insults, injection) always run regardless of preClassified
+    const decision = evaluateUserInputGuardrail({ text });
+    if (!decision.allow) return decision;
+
+    // When preClassified === 'art', skip the soft off-topic classifier — trust frontend hint
+    if (preClassified === 'art') return { allow: true };
+
+    // Default: no soft check in the synchronous guardrail (LLM classifier runs on output side)
+    return decision;
   }
 
   /**

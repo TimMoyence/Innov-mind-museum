@@ -65,19 +65,19 @@ describe('buildSystemPrompt', () => {
   });
 
   it('includes greeting phase instructions when conversationPhase is greeting', () => {
-    const prompt = buildSystemPrompt('en', false, 'beginner', undefined, 'greeting');
+    const prompt = buildSystemPrompt('en', false, 'beginner', { conversationPhase: 'greeting' });
     expect(prompt).toContain('start of the conversation');
     expect(prompt).toContain('welcome them warmly');
   });
 
   it('includes deep phase instructions when conversationPhase is deep', () => {
-    const prompt = buildSystemPrompt('en', false, 'beginner', undefined, 'deep');
+    const prompt = buildSystemPrompt('en', false, 'beginner', { conversationPhase: 'deep' });
     expect(prompt).toContain('conversation is well underway');
     expect(prompt).toContain('Reference artworks already discussed');
   });
 
   it('does not include phase-specific instructions for active phase (default)', () => {
-    const prompt = buildSystemPrompt('en', false, 'beginner', undefined, 'active');
+    const prompt = buildSystemPrompt('en', false, 'beginner', { conversationPhase: 'active' });
     expect(prompt).not.toContain('start of the conversation');
     expect(prompt).not.toContain('conversation is well underway');
   });
@@ -90,7 +90,7 @@ describe('buildSystemPrompt', () => {
 
   it('includes visit context block when provided', () => {
     const contextBlock = 'The visitor is currently in the Impressionism wing.';
-    const prompt = buildSystemPrompt('en', true, 'beginner', contextBlock);
+    const prompt = buildSystemPrompt('en', true, 'beginner', { visitContextBlock: contextBlock });
     expect(prompt).toContain(contextBlock);
   });
 
@@ -117,7 +117,7 @@ describe('buildSystemPrompt', () => {
   });
 
   it('combines all parameters correctly: fr + museum + expert + deep', () => {
-    const prompt = buildSystemPrompt('fr', true, 'expert', undefined, 'deep');
+    const prompt = buildSystemPrompt('fr', true, 'expert', { conversationPhase: 'deep' });
     expect(prompt).toContain('Respond in French.');
     expect(prompt).toContain('physically in a museum');
     expect(prompt).toContain('advanced art-history vocabulary');
@@ -135,6 +135,18 @@ describe('buildSystemPrompt', () => {
     const prompt = buildSystemPrompt('en', false, 'beginner');
     expect(prompt).toContain('Artist name alone');
     expect(prompt).toContain('NEVER dump a full Wikipedia-style biography');
+  });
+
+  it('includes audio description mode instructions when enabled', () => {
+    const prompt = buildSystemPrompt('en', true, 'beginner', { audioDescriptionMode: true });
+    expect(prompt).toContain('AUDIO DESCRIPTION MODE');
+    expect(prompt).toContain('colors, textures, composition');
+    expect(prompt).toContain('foreground-to-background');
+  });
+
+  it('does not include audio description instructions when disabled', () => {
+    const prompt = buildSystemPrompt('en', true, 'beginner');
+    expect(prompt).not.toContain('AUDIO DESCRIPTION MODE');
   });
 });
 

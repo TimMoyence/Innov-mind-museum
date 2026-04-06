@@ -5,6 +5,7 @@ import authRouter from '@modules/auth/adapters/primary/http/auth.route';
 import { createChatRouter } from '@modules/chat/adapters/primary/http/chat.route';
 import {
   getArtKeywordRepository,
+  getDescribeService,
   getLlmCircuitBreakerState,
   getUserMemoryService,
 } from '@modules/chat/index';
@@ -176,7 +177,12 @@ export const createApiRouter = ({
 
   router.use(
     '/chat',
-    createChatRouter(chatService, getArtKeywordRepository(), getUserMemoryService()),
+    createChatRouter(
+      chatService,
+      getArtKeywordRepository(),
+      getUserMemoryService(),
+      getDescribeService(),
+    ),
   );
   router.use('/auth', authRouter);
   router.use('/daily-art', createDailyArtRouter(cacheService));

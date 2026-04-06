@@ -148,7 +148,7 @@ export class ChatMessageService {
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
     const requestedLocale = input.context?.locale?.trim() || session.locale || undefined;
 
-    const userGuardrail = await this.guardrail.evaluateInput(text);
+    const userGuardrail = await this.guardrail.evaluateInput(text, input.context?.preClassified);
 
     await this.repository.persistMessage({ sessionId, role: 'user', text, imageRef });
 
@@ -225,6 +225,7 @@ export class ChatMessageService {
       requestId,
       userMemoryBlock,
       knowledgeBaseBlock,
+      audioDescriptionMode: input.context?.audioDescriptionMode,
     });
 
     return await commitAssistantResponse(
@@ -293,6 +294,7 @@ export class ChatMessageService {
         requestId,
         userMemoryBlock,
         knowledgeBaseBlock,
+        audioDescriptionMode: input.context?.audioDescriptionMode,
       },
       (chunk) => {
         buffer.push(chunk);

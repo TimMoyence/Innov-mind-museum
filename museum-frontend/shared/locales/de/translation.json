@@ -157,7 +157,10 @@
     "export_data_success": "Daten erfolgreich exportiert",
     "rate_musaium": "Musaium bewerten",
     "ai_memory": "KI-Personalisierung",
-    "ai_memory_hint": "Verwendet Ihre Kunstpräferenzen und Besuchshistorie, um KI-Antworten zu personalisieren"
+    "ai_memory_hint": "Verwendet Ihre Kunstpräferenzen und Besuchshistorie, um KI-Antworten zu personalisieren",
+    "accessibility": "Barrierefreiheit",
+    "audio_description": "Audiobeschreibung",
+    "audio_description_hint": "KI-Antworten mit detaillierten visuellen Beschreibungen für die Barrierefreiheit vorlesen"
   },
   "change_password": {
     "title": "Passwort ändern",
@@ -368,7 +371,9 @@
     "thumbsUp": "Hilfreich",
     "thumbsDown": "Nicht hilfreich",
     "sendFailed": "Senden fehlgeschlagen",
-    "offlineImageFailed": "Das Bild konnte nicht für den Offline-Versand gespeichert werden. Ihre Nachricht wurde ohne Bild in die Warteschlange gestellt."
+    "offlineImageFailed": "Das Bild konnte nicht für den Offline-Versand gespeichert werden. Ihre Nachricht wurde ohne Bild in die Warteschlange gestellt.",
+    "audio_mode_on": "Audiobeschreibung ein",
+    "audio_mode_off": "Audiobeschreibung aus"
   },
   "chatInput": {
     "placeholder": "Fragen Sie zu einem Kunstwerk, Denkmal, oder senden Sie Sprache/Foto...",

@@ -30,9 +30,13 @@ export const buildSystemPrompt = (
   locale: string | undefined,
   museumMode: boolean,
   guideLevel: 'beginner' | 'intermediate' | 'expert',
-  visitContextBlock?: string,
-  conversationPhase: ConversationPhase = 'active',
+  options?: {
+    visitContextBlock?: string;
+    conversationPhase?: ConversationPhase;
+    audioDescriptionMode?: boolean;
+  },
 ): string => {
+  const { visitContextBlock, conversationPhase = 'active', audioDescriptionMode } = options ?? {};
   const language = localeToLanguageName(resolveLocale([locale]));
   const guidanceStyles: Record<string, string> = {
     expert: 'Use advanced art-history vocabulary and deeper context.',
@@ -55,6 +59,12 @@ export const buildSystemPrompt = (
     );
   } else {
     parts.push('The visitor is exploring remotely. You can be more expansive in your answers.');
+  }
+
+  if (audioDescriptionMode) {
+    parts.push(
+      'AUDIO DESCRIPTION MODE: The visitor uses audio descriptions for accessibility. When describing artworks: include colors, textures, composition, spatial arrangement, emotional atmosphere, and size/scale. Be vivid and sensory. Structure descriptions foreground-to-background. Keep sentences flowing naturally for listening — no bullet points or numbered lists.',
+    );
   }
 
   parts.push('Stay focused on art, museum context, and cultural interpretation.');
@@ -125,13 +135,11 @@ export const buildOrchestratorMessages = (input: OrchestratorInput): Orchestrato
   const conversationPhase = deriveConversationPhase(recentHistory.length);
   const visitContextBlock = buildVisitContextPromptBlock(input.visitContext);
 
-  const systemPrompt = buildSystemPrompt(
-    input.locale,
-    input.museumMode,
-    guideLevel,
-    visitContextBlock || undefined,
+  const systemPrompt = buildSystemPrompt(input.locale, input.museumMode, guideLevel, {
+    visitContextBlock: visitContextBlock || undefined,
     conversationPhase,
-  );
+    audioDescriptionMode: input.audioDescriptionMode,
+  });
 
   const historyMessages: ChatModelMessage[] = recentHistory.map((message) => {
     if (message.role === 'assistant') return new AIMessage(message.text ?? '');
@@ -174,6 +182,7 @@ export const buildOrchestratorMessages = (input: OrchestratorInput): Orchestrato
     timeoutSummaryMs: env.llm.timeoutSummaryMs,
     visitContextBlock: visitContextBlock || undefined,
     hasImage,
+    audioDescriptionMode: input.audioDescriptionMode,
   });
 
   return {
