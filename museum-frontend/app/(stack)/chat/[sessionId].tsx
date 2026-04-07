@@ -298,7 +298,7 @@ export default function ChatSessionScreen() {
             }}
           />
 
-          {isOffline ? <OfflineBanner pendingCount={pendingCount} /> : null}
+          <OfflineBanner pendingCount={pendingCount} isOffline={isOffline} />
           {error ? <ErrorNotice message={error} onDismiss={clearError} /> : null}
 
           <GlassCard style={styles.chatSurface} intensity={42}>

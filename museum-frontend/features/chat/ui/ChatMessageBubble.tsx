@@ -236,6 +236,12 @@ export const ChatMessageBubble = React.memo(
           </View>
         ) : null}
 
+        {!isStreaming && isAssistant && message.cached ? (
+          <Text style={[styles.cachedBadge, { color: theme.timestamp }]}>
+            {t('chat.cachedResponse')}
+          </Text>
+        ) : null}
+
         {!isStreaming && isAssistant && message.metadata?.detectedArtwork?.title ? (
           <ArtworkCard
             title={message.metadata.detectedArtwork.title}
@@ -267,6 +273,7 @@ export const ChatMessageBubble = React.memo(
       prev.message.text === next.message.text &&
       prev.message.image?.url === next.message.image?.url &&
       prev.message.sendFailed === next.message.sendFailed &&
+      prev.message.cached === next.message.cached &&
       prev.locale === next.locale &&
       prev.ttsPlaying === next.ttsPlaying &&
       prev.ttsLoading === next.ttsLoading &&
@@ -327,5 +334,11 @@ const styles = StyleSheet.create({
   retryLabel: {
     fontSize: 11,
     fontWeight: '600',
+  },
+  cachedBadge: {
+    fontSize: 10,
+    fontStyle: 'italic',
+    marginTop: 4,
+    alignSelf: 'flex-start',
   },
 });
