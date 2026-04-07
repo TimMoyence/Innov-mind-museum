@@ -16,6 +16,7 @@
     "features/chat/application/offlineQueue.ts",
     "features/chat/application/chatSessionLogic.pure.ts",
     "features/chat/infrastructure/sseParser.ts",
+    "features/chat/application/computeLocalCacheKey.ts",
     "features/settings/runtimeSettings.pure.ts",
     "shared/lib/errors.ts",
     "shared/types/AppError.ts",
