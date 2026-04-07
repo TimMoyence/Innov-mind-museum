@@ -24,6 +24,8 @@ export interface OrchestratorInput {
   audioDescriptionMode?: boolean;
   /** When true, generate a shorter response (low-data mode). */
   lowDataMode?: boolean;
+  /** Session-level museum ID, used for cache key scoping. */
+  museumId?: number | null;
 }
 
 /** Result returned by {@link ChatOrchestrator.generate}. */
