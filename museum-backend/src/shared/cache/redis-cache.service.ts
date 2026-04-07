@@ -106,4 +106,27 @@ export class RedisCacheService implements CacheService {
       return false;
     }
   }
+
+  /** Increments a member's score in a sorted set using ZINCRBY. */
+  async zadd(key: string, member: string, increment: number): Promise<void> {
+    try {
+      await this.redis.zincrby(key, increment, member);
+    } catch {
+      // Cache write failure is non-fatal
+    }
+  }
+
+  /** Returns the top N members of a sorted set by score descending using ZREVRANGE. */
+  async ztop(key: string, n: number): Promise<{ member: string; score: number }[]> {
+    try {
+      const raw = await this.redis.zrevrange(key, 0, n - 1, 'WITHSCORES');
+      const results: { member: string; score: number }[] = [];
+      for (let i = 0; i < raw.length; i += 2) {
+        results.push({ member: raw[i], score: Number(raw[i + 1]) });
+      }
+      return results;
+    } catch {
+      return [];
+    }
+  }
 }

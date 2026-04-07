@@ -24,4 +24,10 @@ export interface CacheService {
 
   /** Check if the cache backend is reachable. Returns true if healthy. */
   ping(): Promise<boolean>;
+
+  /** Increment a member's score in a sorted set (popularity tracking). */
+  zadd(key: string, member: string, increment: number): Promise<void>;
+
+  /** Get top N members of a sorted set by score descending. */
+  ztop(key: string, n: number): Promise<{ member: string; score: number }[]>;
 }
