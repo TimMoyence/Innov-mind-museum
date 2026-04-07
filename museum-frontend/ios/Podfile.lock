@@ -215,7 +215,7 @@ PODS:
     - ExpoModulesCore
   - ExpoGlassEffect (55.0.10):
     - ExpoModulesCore
-  - ExpoHaptics (55.0.11):
+  - ExpoHaptics (55.0.12):
     - ExpoModulesCore
   - ExpoImage (55.0.8):
     - ExpoModulesCore
@@ -2317,7 +2317,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNReanimated (4.3.0):
+  - RNReanimated (4.2.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2339,11 +2339,10 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-    - RNReanimated/apple (= 4.3.0)
-    - RNReanimated/common (= 4.3.0)
+    - RNReanimated/reanimated (= 4.2.1)
     - RNWorklets
     - Yoga
-  - RNReanimated/apple (4.3.0):
+  - RNReanimated/reanimated (4.2.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2365,9 +2364,10 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
+    - RNReanimated/reanimated/apple (= 4.2.1)
     - RNWorklets
     - Yoga
-  - RNReanimated/common (4.3.0):
+  - RNReanimated/reanimated/apple (4.2.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2462,7 +2462,7 @@ PODS:
     - ReactNativeDependencies
     - Sentry (= 9.8.0)
     - Yoga
-  - RNWorklets (0.8.1):
+  - RNWorklets (0.7.2):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2484,10 +2484,9 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-    - RNWorklets/apple (= 0.8.1)
-    - RNWorklets/common (= 0.8.1)
+    - RNWorklets/worklets (= 0.7.2)
     - Yoga
-  - RNWorklets/apple (0.8.1):
+  - RNWorklets/worklets (0.7.2):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2509,8 +2508,9 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
+    - RNWorklets/worklets/apple (= 0.7.2)
     - Yoga
-  - RNWorklets/common (0.8.1):
+  - RNWorklets/worklets/apple (0.7.2):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2981,7 +2981,7 @@ SPEC CHECKSUMS:
   ExpoFileSystem: 05e8c679738bd90263f9ed32bfa221f7b52ebbe5
   ExpoFont: cdd7a1d574a376fa003c713eff49e0a4df8672c7
   ExpoGlassEffect: 72bcb9dc634262c59897ff7c53c16e2ff03990d0
-  ExpoHaptics: de693bae4eb861f25b6651d63c035f772ccab523
+  ExpoHaptics: c871fcc3507df90ea36dc6ee62d60f100caff0df
   ExpoImage: ef931bba1fd3e907c2262216d17eb21095c9ac2b
   ExpoImageManipulator: ef065aaf853b142811260b940edbd80b58a2d18c
   ExpoImagePicker: ca47c5ac15d1ccde2fbc765485e612c2a5a385d0
@@ -3091,10 +3091,10 @@ SPEC CHECKSUMS:
   RNCAsyncStorage: 3a4f5e2777dae1688b781a487923a08569e27fe4
   RNGestureHandler: 0ea8153746a92b3744d4eaadade647debedf646e
   RNGoogleSignin: 104dd7238c56fe354e4b0a8fd267f866039ffdf3
-  RNReanimated: 992be09c2cb476a7ce23a4a71c865cc3a457b2e2
+  RNReanimated: 86e5991396f1aa514db90d6c79d4c3e37a37bb10
   RNScreens: 02e62f995ceb94ea465864b3bf4d4767b87f0362
   RNSentry: c60f22ba4945e650f727ee40ee3b2ac73bca065a
-  RNWorklets: 9e58fb4eb675a5e582cb38aee96698ae86e905c9
+  RNWorklets: 0e736f568c3c61cb3326cdcda767c4daee56a8a9
   SDWebImage: e9fc87c1aab89a8ab1bbd74eba378c6f53be8abf
   SDWebImageAVIFCoder: afe194a084e851f70228e4be35ef651df0fc5c57
   SDWebImageSVGCoder: 15a300a97ec1c8ac958f009c02220ac0402e936c
