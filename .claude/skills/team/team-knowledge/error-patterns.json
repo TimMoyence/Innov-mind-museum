@@ -1,5 +1,30 @@
 {
-  "patterns": [],
+  "patterns": [
+    {
+      "id": "EP-001",
+      "type": "type-mismatch",
+      "description": "Adding methods to CacheService interface breaks all partial mocks in test files that create CacheService without the new methods",
+      "agent": "task1-zadd-ztop",
+      "phase": "DEVELOPPER",
+      "fix": "Created dedicated fix agent to add zadd/ztop stubs to all CacheService mocks (4 files fixed: cache.fixtures, token-cleanup, search-museums, daily-chat-limit)",
+      "occurrences": 1,
+      "status": "fixed",
+      "firstSeen": "2026-04-07",
+      "lastSeen": "2026-04-07"
+    },
+    {
+      "id": "EP-002",
+      "type": "lint-violation",
+      "description": "Adding inline cache invalidation logic in setMessageFeedback exceeded ESLint complexity limit (16 > 15)",
+      "agent": "tasks12-13-feedback-kb",
+      "phase": "DEVELOPPER",
+      "fix": "Extracted invalidateCacheForFeedback() private method to reduce cyclomatic complexity",
+      "occurrences": 1,
+      "status": "fixed",
+      "firstSeen": "2026-04-07",
+      "lastSeen": "2026-04-07"
+    }
+  ],
   "lastUpdated": "2026-04-06T07:30:00.000Z",
   "stats": {
     "totalRecorded": 0,
