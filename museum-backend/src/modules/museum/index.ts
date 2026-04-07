@@ -4,6 +4,7 @@ export {
   listMuseumsUseCase,
   updateMuseumUseCase,
   buildSearchMuseumsUseCase,
+  buildLowDataPackService,
   museumRepository,
 } from './useCase';
 export type { Museum } from './domain/museum.entity';

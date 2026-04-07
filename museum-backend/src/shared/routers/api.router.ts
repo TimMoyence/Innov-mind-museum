@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import adminRouter from '@modules/admin/adapters/primary/http/admin.route';
+import { createCachePurgeRouter } from '@modules/admin/adapters/primary/http/cache-purge.route';
 import authRouter from '@modules/auth/adapters/primary/http/auth.route';
 import { createChatRouter } from '@modules/chat/adapters/primary/http/chat.route';
 import {
@@ -10,6 +11,8 @@ import {
   getUserMemoryService,
 } from '@modules/chat/index';
 import { createDailyArtRouter } from '@modules/daily-art/daily-art.route';
+import { buildLowDataPackService } from '@modules/museum';
+import { createLowDataPackRouter } from '@modules/museum/adapters/primary/http/low-data-pack.route';
 import { createMuseumRouter } from '@modules/museum/adapters/primary/http/museum.route';
 import reviewRouter from '@modules/review/adapters/primary/http/review.route';
 import supportRouter from '@modules/support/adapters/primary/http/support.route';
@@ -175,6 +178,17 @@ export const createApiRouter = ({
     res.status(httpStatus).json(payload);
   });
 
+  mountDomainRouters(router, chatService, cacheService);
+
+  return router;
+};
+
+/** Mounts all domain sub-routers onto the top-level API router. */
+function mountDomainRouters(
+  router: Router,
+  chatService: ChatService,
+  cacheService?: CacheService,
+): void {
   router.use(
     '/chat',
     createChatRouter(
@@ -187,9 +201,13 @@ export const createApiRouter = ({
   router.use('/auth', authRouter);
   router.use('/daily-art', createDailyArtRouter(cacheService));
   router.use('/museums', createMuseumRouter(cacheService));
+
+  const resolvedCache = cacheService ?? new NoopCacheService();
+  const lowDataPackService = buildLowDataPackService(resolvedCache);
+  router.use('/', createLowDataPackRouter(lowDataPackService));
+
   router.use('/admin', adminRouter);
+  router.use('/admin', createCachePurgeRouter(resolvedCache));
   router.use('/support', supportRouter);
   router.use('/reviews', reviewRouter);
-
-  return router;
-};
+}
