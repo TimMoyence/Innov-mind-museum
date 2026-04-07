@@ -10,6 +10,7 @@ import { SettingsThemeCard } from '@/features/settings/ui/SettingsThemeCard';
 import { SettingsSecurityCard } from '@/features/settings/ui/SettingsSecurityCard';
 import { SettingsPrivacyCard } from '@/features/settings/ui/SettingsPrivacyCard';
 import { SettingsAccessibilityCard } from '@/features/settings/ui/SettingsAccessibilityCard';
+import { DataModeSettingsSection } from '@/features/settings/ui/DataModeSettingsSection';
 import { SettingsComplianceLinks } from '@/features/settings/ui/SettingsComplianceLinks';
 import { SettingsDangerZone } from '@/features/settings/ui/SettingsDangerZone';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
@@ -185,6 +186,8 @@ export default function SettingsScreen() {
         <SettingsPrivacyCard />
 
         <SettingsAccessibilityCard />
+
+        <DataModeSettingsSection />
 
         <SettingsComplianceLinks
           onNavigate={open}

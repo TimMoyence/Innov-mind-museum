@@ -160,7 +160,14 @@
     "ai_memory_hint": "Verwendet Ihre Kunstpräferenzen und Besuchshistorie, um KI-Antworten zu personalisieren",
     "accessibility": "Barrierefreiheit",
     "audio_description": "Audiobeschreibung",
-    "audio_description_hint": "KI-Antworten mit detaillierten visuellen Beschreibungen für die Barrierefreiheit vorlesen"
+    "audio_description_hint": "KI-Antworten mit detaillierten visuellen Beschreibungen für die Barrierefreiheit vorlesen",
+    "dataMode": {
+      "title": "Datenspar-Modus",
+      "auto": "Automatisch",
+      "low": "Sparen aktiviert",
+      "normal": "Deaktiviert",
+      "description": "Die App erkennt Ihre Verbindungsqualität"
+    }
   },
   "change_password": {
     "title": "Passwort ändern",
@@ -373,7 +380,10 @@
     "sendFailed": "Senden fehlgeschlagen",
     "offlineImageFailed": "Das Bild konnte nicht für den Offline-Versand gespeichert werden. Ihre Nachricht wurde ohne Bild in die Warteschlange gestellt.",
     "audio_mode_on": "Audiobeschreibung ein",
-    "audio_mode_off": "Audiobeschreibung aus"
+    "audio_mode_off": "Audiobeschreibung aus",
+    "lowDataActive": "Datenspar-Modus aktiv",
+    "cachedResponse": "Antwort aus lokalem Cache",
+    "savedForLater": "Frage für später gespeichert"
   },
   "chatInput": {
     "placeholder": "Fragen Sie zu einem Kunstwerk, Denkmal, oder senden Sie Sprache/Foto...",

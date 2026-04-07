@@ -160,7 +160,14 @@
     "ai_memory_hint": "Uses your art preferences and visit history to personalize AI responses",
     "accessibility": "Accessibility",
     "audio_description": "Audio Description",
-    "audio_description_hint": "Read AI responses aloud with rich visual descriptions for accessibility"
+    "audio_description_hint": "Read AI responses aloud with rich visual descriptions for accessibility",
+    "dataMode": {
+      "title": "Data saving mode",
+      "auto": "Automatic",
+      "low": "Saving enabled",
+      "normal": "Disabled",
+      "description": "The app detects your connection quality"
+    }
   },
   "change_password": {
     "title": "Change Password",
@@ -373,7 +380,10 @@
     "sendFailed": "Failed to send",
     "offlineImageFailed": "The image could not be saved for offline sending. Your message was queued without the image.",
     "audio_mode_on": "Audio description on",
-    "audio_mode_off": "Audio description off"
+    "audio_mode_off": "Audio description off",
+    "lowDataActive": "Data saving mode active",
+    "cachedResponse": "Response from local cache",
+    "savedForLater": "Question saved for later"
   },
   "chatInput": {
     "placeholder": "Ask about an artwork, monument, or send voice/photo...",
