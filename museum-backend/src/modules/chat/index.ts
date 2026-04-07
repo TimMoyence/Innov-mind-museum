@@ -5,6 +5,7 @@ import { env } from '@src/config/env';
 
 import { TypeOrmArtKeywordRepository } from './adapters/secondary/artKeyword.repository.typeorm';
 import { OpenAiAudioTranscriber } from './adapters/secondary/audio-transcriber.openai';
+import { CachingChatOrchestrator } from './adapters/secondary/caching-chat-orchestrator';
 import { TypeOrmChatRepository } from './adapters/secondary/chat.repository.typeorm';
 import { S3CompatibleImageStorage } from './adapters/secondary/image-storage.s3';
 import { LocalImageStorage } from './adapters/secondary/image-storage.stub';
@@ -211,11 +212,22 @@ class ChatModule {
     const orchestrator = new LangChainChatOrchestrator();
     this._orchestrator = orchestrator;
 
+    // Wrap with caching decorator if cache is available
+    const effectiveOrchestrator = cache
+      ? new CachingChatOrchestrator({
+          delegate: orchestrator,
+          cache,
+          ttlSeconds: env.cache?.llmTtlSeconds ?? 604_800,
+          popularityZsetTtlSeconds: env.cache?.llmPopularityTtlSeconds ?? 2_592_000,
+          piiSanitizer: new RegexPiiSanitizer(),
+        })
+      : orchestrator;
+
     const artTopicClassifier = new ArtTopicClassifier();
 
     const chatService = new ChatService({
       repository,
-      orchestrator,
+      orchestrator: effectiveOrchestrator,
       imageStorage,
       audioTranscriber: new OpenAiAudioTranscriber(),
       tts,
@@ -230,7 +242,7 @@ class ChatModule {
       museumRepository,
     });
 
-    const describeService = new DescribeService({ orchestrator, tts });
+    const describeService = new DescribeService({ orchestrator: effectiveOrchestrator, tts });
 
     const built: BuiltChatModule = {
       chatService,
