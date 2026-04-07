@@ -18,6 +18,7 @@ import { setErrorTranslate } from '@/shared/lib/errors';
 // Wire i18n into error message formatting so getErrorMessage() returns localised strings.
 // The key is always a valid `error.*` path defined in our translation files.
 setErrorTranslate((key, opts) => i18n.t(key as 'error.network', opts));
+import { DataModeProvider } from '@/features/chat/application/DataModeProvider';
 import { ThemeProvider, useTheme } from '@/shared/ui/ThemeContext';
 import { ConnectivityProvider } from '@/shared/infrastructure/connectivity/ConnectivityProvider';
 import {
@@ -153,36 +154,38 @@ function RootLayout() {
         <ThemeProvider>
           <AuthProvider>
             <ConnectivityProvider>
-              <BiometricGate>
-                <AuthenticationGuard>
-                  <Stack screenOptions={{ headerShown: false }}>
-                    <Stack.Screen name="auth" />
-                    <Stack.Screen name="(tabs)" />
-                    <Stack.Screen
-                      name="(stack)/chat/[sessionId]"
-                      options={{
-                        headerShown: false,
-                        gestureEnabled: true,
-                      }}
-                    />
-                    <Stack.Screen name="(stack)/settings" />
-                    <Stack.Screen name="(stack)/change-password" />
-                    <Stack.Screen name="(stack)/preferences" />
-                    <Stack.Screen name="(stack)/guided-museum-mode" />
-                    <Stack.Screen name="(stack)/discover" />
-                    <Stack.Screen name="(stack)/museum-detail" />
-                    <Stack.Screen name="(stack)/support" />
-                    <Stack.Screen name="(stack)/tickets" />
-                    <Stack.Screen name="(stack)/ticket-detail" />
-                    <Stack.Screen name="(stack)/create-ticket" />
-                    <Stack.Screen name="(stack)/privacy" />
-                    <Stack.Screen name="(stack)/terms" />
-                    <Stack.Screen name="(stack)/onboarding" />
-                    <Stack.Screen name="+not-found" />
-                  </Stack>
-                  <ThemedStatusBar />
-                </AuthenticationGuard>
-              </BiometricGate>
+              <DataModeProvider>
+                <BiometricGate>
+                  <AuthenticationGuard>
+                    <Stack screenOptions={{ headerShown: false }}>
+                      <Stack.Screen name="auth" />
+                      <Stack.Screen name="(tabs)" />
+                      <Stack.Screen
+                        name="(stack)/chat/[sessionId]"
+                        options={{
+                          headerShown: false,
+                          gestureEnabled: true,
+                        }}
+                      />
+                      <Stack.Screen name="(stack)/settings" />
+                      <Stack.Screen name="(stack)/change-password" />
+                      <Stack.Screen name="(stack)/preferences" />
+                      <Stack.Screen name="(stack)/guided-museum-mode" />
+                      <Stack.Screen name="(stack)/discover" />
+                      <Stack.Screen name="(stack)/museum-detail" />
+                      <Stack.Screen name="(stack)/support" />
+                      <Stack.Screen name="(stack)/tickets" />
+                      <Stack.Screen name="(stack)/ticket-detail" />
+                      <Stack.Screen name="(stack)/create-ticket" />
+                      <Stack.Screen name="(stack)/privacy" />
+                      <Stack.Screen name="(stack)/terms" />
+                      <Stack.Screen name="(stack)/onboarding" />
+                      <Stack.Screen name="+not-found" />
+                    </Stack>
+                    <ThemedStatusBar />
+                  </AuthenticationGuard>
+                </BiometricGate>
+              </DataModeProvider>
             </ConnectivityProvider>
           </AuthProvider>
         </ThemeProvider>
