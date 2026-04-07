@@ -128,7 +128,10 @@ describe('dailyChatLimit middleware', () => {
 // Redis distributed path
 // ---------------------------------------------------------------------------
 
-/** Creates a mock CacheService with jest.fn() stubs for every method. */
+/**
+ * Creates a mock CacheService with jest.fn() stubs for every method.
+ * @param overrides
+ */
 const makeMockCacheService = (
   overrides: Partial<Record<keyof CacheService, jest.Mock>> = {},
 ): CacheService & Record<keyof CacheService, jest.Mock> =>
@@ -139,6 +142,8 @@ const makeMockCacheService = (
     delByPrefix: jest.fn().mockResolvedValue(undefined),
     setNx: jest.fn().mockResolvedValue(true),
     ping: jest.fn().mockResolvedValue(true),
+    zadd: jest.fn().mockResolvedValue(undefined),
+    ztop: jest.fn().mockResolvedValue([]),
     ...overrides,
   }) as unknown as CacheService & Record<keyof CacheService, jest.Mock>;
 
