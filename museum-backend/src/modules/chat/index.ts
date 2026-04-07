@@ -118,14 +118,18 @@ class ChatModule {
   }
 
   /** Creates the knowledge base service if the feature flag is enabled. */
-  private buildKnowledgeBase(): KnowledgeBaseService | undefined {
+  private buildKnowledgeBase(cache?: CacheService): KnowledgeBaseService | undefined {
     if (!env.featureFlags.knowledgeBase) return undefined;
     const wikidataClient = new WikidataClient();
-    return new KnowledgeBaseService(wikidataClient, {
-      timeoutMs: env.knowledgeBase.timeoutMs,
-      cacheTtlSeconds: env.knowledgeBase.cacheTtlSeconds,
-      cacheMaxEntries: env.knowledgeBase.cacheMaxEntries,
-    });
+    return new KnowledgeBaseService(
+      wikidataClient,
+      {
+        timeoutMs: env.knowledgeBase.timeoutMs,
+        cacheTtlSeconds: env.knowledgeBase.cacheTtlSeconds,
+        cacheMaxEntries: env.knowledgeBase.cacheMaxEntries,
+      },
+      cache,
+    );
   }
 
   /** Creates the image enrichment service if the feature flag is enabled. */
@@ -202,7 +206,7 @@ class ChatModule {
     const ocr = env.featureFlags.ocrGuard ? new TesseractOcrService() : new DisabledOcrService();
 
     const userMemory = this.buildUserMemory(dataSource, cache);
-    const knowledgeBase = this.buildKnowledgeBase();
+    const knowledgeBase = this.buildKnowledgeBase(cache);
     const imageEnrichment = this.buildImageEnrichment();
 
     const artKeywordRepo = new TypeOrmArtKeywordRepository(dataSource);
