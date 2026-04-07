@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { sha256 } from 'js-sha256';
 
 export interface LocalCacheKeyInput {
   text: string;
@@ -35,6 +35,6 @@ export function computeLocalCacheKey(input: LocalCacheKeyInput): string {
     input.guideLevel ?? 'beginner',
     input.audioDescriptionMode ? '1' : '0',
   ].join('|');
-  const hash = createHash('sha256').update(components).digest('hex').slice(0, 16);
+  const hash = sha256(components).slice(0, 16);
   return `chat:llm:${input.museumId}:${hash}`;
 }
