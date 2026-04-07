@@ -69,6 +69,8 @@ interface ChatRequestContext {
   preClassified?: 'art';
   /** When true, the LLM prompt includes accessibility-oriented audio description instructions. */
   audioDescriptionMode?: boolean;
+  /** When true, generate a shorter response for low-bandwidth connections. */
+  lowDataMode?: boolean;
 }
 
 /** Payload for posting a text or image message to a chat session. */
