@@ -126,6 +126,12 @@ interface AppEnv {
     url: string;
     sessionTtlSeconds: number;
     listTtlSeconds: number;
+    /** TTL for LLM response cache entries (seconds). Default 7 days. */
+    llmTtlSeconds: number;
+    /** TTL for popularity ZSET entries (seconds). Default 30 days. */
+    llmPopularityTtlSeconds: number;
+    /** Maximum entries per museum in low-data pack. Default 30. */
+    lowDataPackMaxEntries: number;
   };
   sentry?: {
     dsn: string;
@@ -308,6 +314,9 @@ const env: AppEnv = {
         url: process.env.REDIS_URL || 'redis://localhost:6379',
         sessionTtlSeconds: toNumber(process.env.CACHE_SESSION_TTL_SECONDS, 3600),
         listTtlSeconds: toNumber(process.env.CACHE_LIST_TTL_SECONDS, 300),
+        llmTtlSeconds: toNumber(process.env.CACHE_LLM_TTL_SECONDS, 604_800),
+        llmPopularityTtlSeconds: toNumber(process.env.CACHE_LLM_POPULARITY_TTL_SECONDS, 2_592_000),
+        lowDataPackMaxEntries: toNumber(process.env.LOW_DATA_PACK_MAX_ENTRIES, 30),
       }
     : undefined,
   sentry: toOptionalString(process.env.SENTRY_DSN)
