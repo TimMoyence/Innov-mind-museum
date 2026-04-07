@@ -7,29 +7,27 @@ import type {
   KnowledgeBaseProvider,
   KnowledgeBaseServiceConfig,
 } from '../domain/ports/knowledge-base.port';
+import type { CacheService } from '@shared/cache/cache.port';
 
-/** Internal cache entry storing facts and expiration timestamp. */
+/** Internal cache entry storing facts. */
 interface CacheEntry {
   facts: ArtworkFacts | null;
-  expiresAt: number;
 }
 
 /**
- * Knowledge base service with in-memory LRU cache, timeout, and fail-open behavior.
+ * Knowledge base service with Redis cache, timeout, and fail-open behavior.
  *
  * Wraps a {@link KnowledgeBaseProvider} with:
- * - **Cache**: in-memory Map with TTL and max-entries eviction (insertion-order LRU).
+ * - **Cache**: Redis-backed via {@link CacheService} with TTL (falls back to no-cache when unavailable).
  * - **Timeout**: aborts the provider call after `config.timeoutMs`.
- * - **Fail-open**: any error (timeout, network, etc.) returns `''` so the chat
+ * - **Fail-open**: any error (timeout, network, cache, etc.) returns `''` so the chat
  *   pipeline continues without knowledge-base enrichment.
  */
 export class KnowledgeBaseService {
-  /** In-memory cache keyed by normalised search term. */
-  private readonly cache = new Map<string, CacheEntry>();
-
   constructor(
     private readonly provider: KnowledgeBaseProvider,
     private readonly config: KnowledgeBaseServiceConfig,
+    private readonly cacheService?: CacheService,
   ) {}
 
   /**
@@ -46,14 +44,19 @@ export class KnowledgeBaseService {
     const key = searchTerm.toLowerCase().trim();
     if (!key) return null;
 
-    // Check cache
-    const cached = this.cache.get(key);
-    if (cached) {
-      if (Date.now() < cached.expiresAt) {
-        logger.info('kb_cache_hit', { searchTerm: key });
-        return cached.facts;
+    const cacheKey = `kb:wikidata:${key}`;
+
+    // Check cache (fail-open: cache errors fall through to provider)
+    if (this.cacheService) {
+      try {
+        const cached = await this.cacheService.get<CacheEntry>(cacheKey);
+        if (cached) {
+          logger.info('kb_cache_hit', { searchTerm: key });
+          return cached.facts;
+        }
+      } catch {
+        // fail-open: cache read error, proceed to provider
       }
-      this.cache.delete(key); // expired
     }
 
     // Fetch with timeout
@@ -73,12 +76,14 @@ export class KnowledgeBaseService {
           }),
         ]);
 
-        // Store in cache
-        this.evictIfNeeded();
-        this.cache.set(key, {
-          facts,
-          expiresAt: Date.now() + this.config.cacheTtlSeconds * 1000,
-        });
+        // Store in cache (fail-open: cache write errors are swallowed)
+        if (this.cacheService) {
+          try {
+            await this.cacheService.set(cacheKey, { facts }, this.config.cacheTtlSeconds);
+          } catch {
+            // fail-open: cache write error does not affect the response
+          }
+        }
 
         logger.info('kb_lookup_success', { searchTerm: key, found: facts !== null });
         return facts;
@@ -109,18 +114,5 @@ export class KnowledgeBaseService {
   async lookup(searchTerm: string, language?: string): Promise<string> {
     const facts = await this.lookupFacts(searchTerm, language);
     return buildKnowledgeBasePromptBlock(facts);
-  }
-
-  /**
-   * Evicts the oldest entry when the cache has reached its maximum size.
-   * Uses Map insertion order as a simple LRU approximation.
-   */
-  private evictIfNeeded(): void {
-    if (this.cache.size < this.config.cacheMaxEntries) return;
-    // Evict oldest entry (Map preserves insertion order)
-    const oldestKey = this.cache.keys().next().value;
-    if (oldestKey !== undefined) {
-      this.cache.delete(oldestKey);
-    }
   }
 }

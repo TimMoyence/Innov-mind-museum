@@ -1,4 +1,5 @@
 import { KnowledgeBaseService } from '@modules/chat/useCase/knowledge-base.service';
+import { makeMockCache } from '../../helpers/chat/cacheService.fixtures';
 import type {
   ArtworkFacts,
   KnowledgeBaseProvider,
@@ -46,7 +47,8 @@ const defaultConfig: KnowledgeBaseServiceConfig = {
 const makeService = (
   provider: FakeProvider = new FakeProvider(),
   config: KnowledgeBaseServiceConfig = defaultConfig,
-) => ({ service: new KnowledgeBaseService(provider, config), provider });
+  cache = makeMockCache(),
+) => ({ service: new KnowledgeBaseService(provider, config, cache), provider, cache });
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -92,12 +94,14 @@ describe('KnowledgeBaseService', () => {
 
   // 4. Caches results (2 calls same term, provider called once)
   it('caches results — second call does not hit provider', async () => {
-    const { service, provider } = makeService();
+    const { service, provider, cache } = makeService();
 
     await service.lookup('Mona Lisa');
     await service.lookup('Mona Lisa');
 
     expect(provider.callCount).toBe(1);
+    // Verify cache was populated
+    expect(cache.store.has('kb:wikidata:mona lisa')).toBe(true);
   });
 
   // 5. Cache key is normalized (case-insensitive)
@@ -110,54 +114,26 @@ describe('KnowledgeBaseService', () => {
     expect(provider.callCount).toBe(1);
   });
 
-  // 6. Cache respects TTL (use jest.useFakeTimers to advance past TTL)
-  it('cache respects TTL — expired entry triggers new fetch', async () => {
-    jest.useFakeTimers();
-
-    const provider = new FakeProvider();
+  // 6. Cache TTL is passed to CacheService
+  it('passes TTL to cache service on store', async () => {
+    const cache = makeMockCache();
+    const setSpy = jest.spyOn(cache, 'set');
     const config: KnowledgeBaseServiceConfig = {
       ...defaultConfig,
-      cacheTtlSeconds: 60, // 60 seconds TTL
+      cacheTtlSeconds: 60,
     };
-    const { service } = makeService(provider, config);
+    const { service } = makeService(new FakeProvider(), config, cache);
 
-    // First call — populates cache
     await service.lookup('Mona Lisa');
-    expect(provider.callCount).toBe(1);
 
-    // Advance past TTL
-    jest.advanceTimersByTime(61_000);
-
-    // Second call — cache expired, should hit provider again
-    await service.lookup('Mona Lisa');
-    expect(provider.callCount).toBe(2);
+    expect(setSpy).toHaveBeenCalledWith(
+      'kb:wikidata:mona lisa',
+      { facts: expect.objectContaining({ title: 'Mona Lisa' }) },
+      60,
+    );
   });
 
-  // 7. Cache evicts when max entries reached
-  it('evicts oldest entry when cache is full', async () => {
-    const provider = new FakeProvider();
-    const config: KnowledgeBaseServiceConfig = {
-      ...defaultConfig,
-      cacheMaxEntries: 2,
-    };
-    const { service } = makeService(provider, config);
-
-    await service.lookup('artwork-a');
-    await service.lookup('artwork-b');
-    await service.lookup('artwork-c'); // should evict 'artwork-a'
-
-    expect(provider.callCount).toBe(3);
-
-    // artwork-b should still be cached
-    await service.lookup('artwork-b');
-    expect(provider.callCount).toBe(3);
-
-    // artwork-a was evicted — should trigger new fetch
-    await service.lookup('artwork-a');
-    expect(provider.callCount).toBe(4);
-  });
-
-  // 8. Does not throw on provider error
+  // 7. Does not throw on provider error
   it('does not throw on provider error — returns empty string', async () => {
     const provider = new FakeProvider();
     provider.shouldThrow = true;
@@ -168,12 +144,70 @@ describe('KnowledgeBaseService', () => {
     expect(result).toBe('');
   });
 
-  // 9. Returns '' for empty search term
+  // 8. Returns '' for empty search term
   it('returns empty string for empty search term', async () => {
     const { service, provider } = makeService();
 
     expect(await service.lookup('')).toBe('');
     expect(await service.lookup('   ')).toBe('');
     expect(provider.callCount).toBe(0);
+  });
+
+  // 9. Works without cache service (no-cache fallback)
+  it('works without cache service — always hits provider', async () => {
+    const provider = new FakeProvider();
+    const service = new KnowledgeBaseService(provider, defaultConfig); // no cache
+
+    await service.lookup('Mona Lisa');
+    await service.lookup('Mona Lisa');
+
+    expect(provider.callCount).toBe(2);
+  });
+
+  // 10. Cache read failure falls through to provider (fail-open)
+  it('falls through to provider when cache read fails', async () => {
+    const cache = makeMockCache();
+    // Make cache.get throw on read
+    cache.get = jest.fn().mockRejectedValue(new Error('Redis down'));
+    const provider = new FakeProvider();
+    const service = new KnowledgeBaseService(provider, defaultConfig, cache);
+
+    const result = await service.lookup('Mona Lisa');
+
+    expect(result).toContain('Mona Lisa');
+    expect(provider.callCount).toBe(1);
+  });
+
+  // 11. Cache write failure does not affect response (fail-open)
+  it('returns result even when cache write fails', async () => {
+    const cache = makeMockCache();
+    cache.set = jest.fn().mockRejectedValue(new Error('Redis full'));
+    const provider = new FakeProvider();
+    const service = new KnowledgeBaseService(provider, defaultConfig, cache);
+
+    const result = await service.lookup('Mona Lisa');
+
+    expect(result).toContain('Mona Lisa');
+    expect(provider.callCount).toBe(1);
+  });
+
+  // 12. lookupFacts returns raw data from cache
+  it('lookupFacts returns cached facts on cache hit', async () => {
+    const cache = makeMockCache();
+    const expectedFacts: ArtworkFacts = {
+      qid: 'Q12418',
+      title: 'Mona Lisa',
+      artist: 'Leonardo da Vinci',
+    };
+    // Pre-populate cache
+    await cache.set('kb:wikidata:mona lisa', { facts: expectedFacts });
+
+    const provider = new FakeProvider();
+    const service = new KnowledgeBaseService(provider, defaultConfig, cache);
+
+    const result = await service.lookupFacts('Mona Lisa');
+
+    expect(result).toEqual(expectedFacts);
+    expect(provider.callCount).toBe(0); // Should not hit provider
   });
 });
