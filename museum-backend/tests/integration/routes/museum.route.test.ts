@@ -22,6 +22,11 @@ jest.mock('@modules/museum/useCase', () => ({
   buildSearchMuseumsUseCase: () => ({
     execute: (...args: unknown[]) => mockSearchMuseums(...args),
   }),
+  buildLowDataPackService: () => ({
+    getLowDataPack: jest
+      .fn()
+      .mockResolvedValue({ museumId: '', locale: 'fr', generatedAt: '', entries: [] }),
+  }),
   museumRepository: {},
 }));
 
