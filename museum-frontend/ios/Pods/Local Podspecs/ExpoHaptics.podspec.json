@@ -1,6 +1,6 @@
 {
   "name": "ExpoHaptics",
-  "version": "55.0.11",
+  "version": "55.0.12",
   "summary": "Provides access to the system's haptics engine on iOS, vibration effects on Android, and Web Vibration API on web.",
   "description": "Provides access to the system's haptics engine on iOS, vibration effects on Android, and Web Vibration API on web.",
   "license": "MIT",

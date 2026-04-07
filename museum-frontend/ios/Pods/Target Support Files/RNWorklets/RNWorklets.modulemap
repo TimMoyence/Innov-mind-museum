@@ -1,4 +1,4 @@
-module worklets {
+module RNWorklets {
   umbrella header "RNWorklets-umbrella.h"
 
   export *
