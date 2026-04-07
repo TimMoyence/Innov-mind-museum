@@ -9,9 +9,7 @@ jest.mock('@shared/logger/logger', () => ({
   },
 }));
 
-const { logger } = jest.requireMock('@shared/logger/logger') as {
-  logger: { info: jest.Mock; warn: jest.Mock; error: jest.Mock };
-};
+const { logger } = jest.requireMock('@shared/logger/logger');
 
 const makeRefreshTokenRepo = (deleteResult = 5) => ({
   deleteExpiredTokens: jest.fn().mockResolvedValue(deleteResult),
@@ -24,6 +22,8 @@ const makeCacheService = (setNxResult = true) => ({
   delByPrefix: jest.fn(),
   setNx: jest.fn().mockResolvedValue(setNxResult),
   ping: jest.fn().mockResolvedValue(true),
+  zadd: jest.fn().mockResolvedValue(undefined),
+  ztop: jest.fn().mockResolvedValue([]),
 });
 
 describe('TokenCleanupService', () => {
@@ -173,7 +173,9 @@ describe('TokenCleanupService', () => {
       );
 
       // Should not throw
-      expect(() => service.stopScheduler()).not.toThrow();
+      expect(() => {
+        service.stopScheduler();
+      }).not.toThrow();
     });
   });
 });
