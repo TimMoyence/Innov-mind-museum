@@ -277,21 +277,21 @@ NON envoye au LLM : email, nom, user ID, password, tokens, device info
 | ✅ | PII Stripping Proxy (Tier 1 privacy) | 2 sem | Nouveau port PiiSanitizer | Port hexagonal + regex adapter (email/phone), 12 tests — commit 4bb952c9 |
 | ✅ | Audio Description Mode (accessibilite) | 1 sem | TTS existant | Auto-TTS + prompt WCAG + /describe endpoint + toggle settings/chat header |
 | ✅ | Art Keywords Classifier (finir WIP) | 1 sem | Code deja partiellement ecrit | Pre-filtre frontend + hint preClassified + keyword discovery loop evolutif |
-| ☐ | Museum Analytics Dashboard (B2B) | 2 sem | Admin dashboard existant | |
+| REPORTÉ | Museum Analytics Dashboard (B2B) | 2 sem | Admin dashboard existant | Reporté après sortie app + premiers retours utilisateurs |
 | ☐ | Multi-Museum UX polish | 1 sem | Museum directory existant | |
 
 **Rationale :** Privacy-first est le plus fort argument B2B et une exigence reglementaire. Ce sont des quick wins construits sur l'infrastructure existante.
 
-### Phase 2 — Navigation & Offline (6-8 semaines)
+### Phase 2 — Navigation & Low-Data Resilience (6-8 semaines)
 
 | Done | Feature | Effort | Prerequis | Commentaire |
 |------|---------|--------|-----------|-------------|
 | ☐ | **Walking Guide to Museum** (navigation + contexte progressif) | 4 sem | Maps SDK, Directions API, geofencing | |
-| ☐ | Full Offline Mode (content packs) | 3 sem | SQLite/MMKV, download manager | |
+| ☐ | **Smart Low-Data Mode** (cache LLM partage + pre-fetch contextuel + degradation gracieuse) | 3 sem | Redis cache responses, expo-sqlite local, adaptive prompts | Remplace "Full Offline Mode" — le segment cible n'est pas offline complet mais low-data en musee |
 | ☐ | On-device image classification (privacy Tier 2) | 2 sem | CoreML/ONNX, MobileNetV3 fine-tune | |
 | ☐ | On-device STT whisper.cpp (privacy Tier 2) | 2 sem | react-native-whisper | |
 
-**Rationale :** La navigation est la feature que ZERO concurrent IA propose. L'offline est critique en environnement musee. Le on-device avance la story privacy.
+**Rationale :** La navigation est la feature que ZERO concurrent IA propose. Le Smart Low-Data Mode preserve l'experience IA conversationnelle en signal faible/intermittent (realite des musees) plutot que de la remplacer par du contenu statique. Le on-device avance la story privacy.
 
 ### Phase 3 — City Explorer & Social (8-12 semaines)
 
