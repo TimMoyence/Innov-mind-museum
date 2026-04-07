@@ -106,6 +106,7 @@ export const chatApi = {
     locale?: string;
     preClassified?: 'art';
     audioDescriptionMode?: boolean;
+    lowDataMode?: boolean;
   }): Promise<PostMessageResponseDTO> {
     const {
       sessionId,
@@ -117,6 +118,7 @@ export const chatApi = {
       locale,
       preClassified,
       audioDescriptionMode,
+      lowDataMode,
     } = params;
 
     let payload: unknown;
@@ -164,6 +166,7 @@ export const chatApi = {
     const data = await httpRequest<unknown>(`${CHAT_BASE}/sessions/${sessionId}/messages`, {
       method: 'POST',
       body: payload,
+      headers: { 'X-Data-Mode': lowDataMode ? 'low' : 'normal' },
     });
 
     return ensureContract(data, isPostMessageResponseDTO, 'post-message');
@@ -395,6 +398,7 @@ export const chatApi = {
     locale?: string;
     preClassified?: 'art';
     audioDescriptionMode?: boolean;
+    lowDataMode?: boolean;
     onToken: (text: string) => void;
     onDone: (payload: {
       messageId: string;
@@ -442,6 +446,7 @@ export const chatApi = {
         Accept: 'text/event-stream',
         'Accept-Language': getLocale(),
         'X-Request-Id': requestId,
+        'X-Data-Mode': params.lowDataMode ? 'low' : 'normal',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...traceHeaders,
       },
@@ -557,6 +562,7 @@ export const chatApi = {
     locale?: string;
     preClassified?: 'art';
     audioDescriptionMode?: boolean;
+    lowDataMode?: boolean;
     onToken?: (text: string) => void;
     onDone?: (payload: {
       messageId: string;
@@ -583,6 +589,7 @@ export const chatApi = {
           museumMode: params.museumMode,
           guideLevel: params.guideLevel,
           locale: params.locale,
+          lowDataMode: params.lowDataMode,
           onToken: params.onToken,
           onDone: (payload) => {
             result = {

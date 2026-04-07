@@ -8,6 +8,8 @@ import { useLocation } from '@/features/museum/application/useLocation';
 import { useConnectivity } from '@/shared/infrastructure/connectivity/useConnectivity';
 import { useArtKeywordsClassifier } from '@/features/art-keywords/application/useArtKeywordsClassifier';
 import { useAudioDescriptionMode } from '@/features/settings/application/useAudioDescriptionMode';
+import { useDataMode } from './DataModeProvider';
+import { useChatLocalCacheStore } from './chatLocalCache';
 import { useOfflineQueue } from './useOfflineQueue';
 import { chatApi } from '../infrastructure/chatApi';
 import { useChatSessionStore } from '../infrastructure/chatSessionStore';
@@ -45,6 +47,10 @@ export const useChatSession = (sessionId: string) => {
   const { isConnected } = useConnectivity();
   const { classifyText } = useArtKeywordsClassifier();
   const { enabled: audioDescriptionMode } = useAudioDescriptionMode();
+  const { isLowData } = useDataMode();
+  const cacheLookup = useChatLocalCacheStore((s) => s.lookup);
+  const cacheStore = useChatLocalCacheStore((s) => s.store);
+  const messagesLengthRef = useRef(0);
 
   // Sub-hooks
   const { isLoading, error, setError, sessionTitle, museumName, sessionMuseumMode, loadSession } =
@@ -70,6 +76,7 @@ export const useChatSession = (sessionId: string) => {
   // Sync local messages to persistent Zustand store (skip during streaming)
   const isStreamingRef = useRef(false);
   isStreamingRef.current = isStreaming;
+  messagesLengthRef.current = messages.length;
   useEffect(() => {
     if (isStreamingRef.current) return;
     if (messages.length === 0) return;
@@ -82,6 +89,51 @@ export const useChatSession = (sessionId: string) => {
 
       const trimmedText = params.text?.trim();
       if (!trimmedText && !params.imageUri && !params.audioUri && !params.audioBlob) return false;
+
+      const isFirstTurn = messagesLengthRef.current === 0;
+
+      // Low-data cache-first: text-only first turn in a museum session
+      if (isLowData && museumName && trimmedText && !params.imageUri && isFirstTurn) {
+        const cached = cacheLookup({
+          text: trimmedText,
+          museumId: museumName,
+          locale,
+          guideLevel,
+        });
+
+        if (cached) {
+          const userMsg: ChatUiMessage = {
+            id: `${String(Date.now())}-user`,
+            role: 'user',
+            text: trimmedText,
+            createdAt: new Date().toISOString(),
+          };
+          const assistantMsg: ChatUiMessage = {
+            id: `${String(Date.now())}-cached`,
+            role: 'assistant',
+            text: cached.answer,
+            createdAt: new Date().toISOString(),
+            metadata: (cached.metadata as ChatUiMessageMetadata) ?? null,
+            cached: true,
+          };
+          setMessages((prev) => sortByTime([...prev, userMsg, assistantMsg]));
+          return true;
+        }
+
+        // Low-data + offline → queue for later
+        if (!isConnected) {
+          const queued = await enqueue({ sessionId, text: trimmedText });
+          if (!queued) return false;
+          const offlineMessage: ChatUiMessage = {
+            id: queued.id,
+            role: 'user',
+            text: trimmedText,
+            createdAt: new Date().toISOString(),
+          };
+          setMessages((prev) => sortByTime([...prev, offlineMessage]));
+          return true;
+        }
+      }
 
       // Offline: queue and add optimistic entry
       if (isOffline) {
@@ -198,6 +250,7 @@ export const useChatSession = (sessionId: string) => {
               : undefined,
           preClassified,
           audioDescriptionMode: audioDescriptionMode || undefined,
+          lowDataMode: isLowData,
           onToken: (chunk) => {
             streamTextRef.current += chunk;
             scheduleFlush();
@@ -260,6 +313,21 @@ export const useChatSession = (sessionId: string) => {
         }
 
         setIsStreaming(false);
+
+        // Cache successful text-only first-turn responses for future low-data hits
+        if (response && museumName && trimmedText && !params.imageUri && isFirstTurn) {
+          cacheStore({
+            question: trimmedText,
+            answer: response.message.text,
+            metadata: response.metadata as Record<string, unknown> | undefined,
+            museumId: museumName,
+            locale,
+            guideLevel,
+            cachedAt: Date.now(),
+            source: 'previous-call',
+          });
+        }
+
         successfulSendsRef.current += 1;
         if (successfulSendsRef.current === 3) {
           void incrementCompletedSessions();
@@ -302,6 +370,11 @@ export const useChatSession = (sessionId: string) => {
       loadSession,
       classifyText,
       audioDescriptionMode,
+      isLowData,
+      isConnected,
+      cacheLookup,
+      cacheStore,
+      museumName,
     ],
   );
 
