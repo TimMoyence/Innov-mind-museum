@@ -160,7 +160,14 @@
     "ai_memory_hint": "Utilizza le tue preferenze artistiche e la cronologia delle visite per personalizzare le risposte dell'IA",
     "accessibility": "Accessibilità",
     "audio_description": "Audiodescrizione",
-    "audio_description_hint": "Leggi ad alta voce le risposte IA con descrizioni visive dettagliate per l'accessibilità"
+    "audio_description_hint": "Leggi ad alta voce le risposte IA con descrizioni visive dettagliate per l'accessibilità",
+    "dataMode": {
+      "title": "Modalità risparmio dati",
+      "auto": "Automatico",
+      "low": "Risparmio attivato",
+      "normal": "Disattivato",
+      "description": "L'app rileva la qualità della connessione"
+    }
   },
   "change_password": {
     "title": "Cambia password",
@@ -373,7 +380,10 @@
     "sendFailed": "Invio fallito",
     "offlineImageFailed": "L'immagine non è stata salvata per l'invio offline. Il messaggio è stato accodato senza immagine.",
     "audio_mode_on": "Audiodescrizione attiva",
-    "audio_mode_off": "Audiodescrizione disattiva"
+    "audio_mode_off": "Audiodescrizione disattiva",
+    "lowDataActive": "Modalità risparmio dati attiva",
+    "cachedResponse": "Risposta dalla cache locale",
+    "savedForLater": "Domanda salvata per dopo"
   },
   "chatInput": {
     "placeholder": "Chiedi di un'opera, un monumento, oppure invia voce/foto...",

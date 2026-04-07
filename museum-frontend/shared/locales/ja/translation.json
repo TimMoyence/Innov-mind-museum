@@ -160,7 +160,14 @@
     "ai_memory_hint": "アートの好みと訪問履歴を使用してAIの回答をパーソナライズします",
     "accessibility": "アクセシビリティ",
     "audio_description": "音声ガイド",
-    "audio_description_hint": "アクセシビリティ向上のため、AIの回答を詳細な視覚的説明とともに音声で読み上げます"
+    "audio_description_hint": "アクセシビリティ向上のため、AIの回答を詳細な視覚的説明とともに音声で読み上げます",
+    "dataMode": {
+      "title": "データ節約モード",
+      "auto": "自動",
+      "low": "節約有効",
+      "normal": "無効",
+      "description": "アプリが接続品質を検出します"
+    }
   },
   "change_password": {
     "title": "パスワードの変更",
@@ -373,7 +380,10 @@
     "sendFailed": "送信に失敗しました",
     "offlineImageFailed": "オフライン送信用に画像を保存できませんでした。画像なしでメッセージがキューに追加されました。",
     "audio_mode_on": "音声ガイド オン",
-    "audio_mode_off": "音声ガイド オフ"
+    "audio_mode_off": "音声ガイド オフ",
+    "lowDataActive": "データ節約モードが有効です",
+    "cachedResponse": "ローカルキャッシュからの応答",
+    "savedForLater": "質問を後で送信するために保存しました"
   },
   "chatInput": {
     "placeholder": "美術品や建造物について質問、または音声・写真を送信...",

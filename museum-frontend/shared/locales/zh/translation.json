@@ -160,7 +160,14 @@
     "ai_memory_hint": "使用您的艺术偏好和参观历史来个性化AI回复",
     "accessibility": "无障碍",
     "audio_description": "音频描述",
-    "audio_description_hint": "为无障碍体验朗读AI回复，包含丰富的视觉描述"
+    "audio_description_hint": "为无障碍体验朗读AI回复，包含丰富的视觉描述",
+    "dataMode": {
+      "title": "数据节省模式",
+      "auto": "自动",
+      "low": "节省已启用",
+      "normal": "已禁用",
+      "description": "应用检测您的连接质量"
+    }
   },
   "change_password": {
     "title": "修改密码",
@@ -373,7 +380,10 @@
     "sendFailed": "发送失败",
     "offlineImageFailed": "无法保存图片以供离线发送。您的消息已在没有图片的情况下排队。",
     "audio_mode_on": "音频描述已开启",
-    "audio_mode_off": "音频描述已关闭"
+    "audio_mode_off": "音频描述已关闭",
+    "lowDataActive": "数据节省模式已激活",
+    "cachedResponse": "来自本地缓存的响应",
+    "savedForLater": "问题已保存以便稍后发送"
   },
   "chatInput": {
     "placeholder": "询问关于艺术品、古迹的问题，或发送语音/照片...",
