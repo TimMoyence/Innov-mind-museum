@@ -10,11 +10,11 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 
 const OPTIONS: DataModePreference[] = ['auto', 'low', 'normal'];
 
-const OPTION_LABEL_KEY: Record<DataModePreference, string> = {
+const OPTION_LABEL_KEY = {
   auto: 'settings.dataMode.auto',
   low: 'settings.dataMode.low',
   normal: 'settings.dataMode.normal',
-};
+} as const;
 
 /** Data-mode picker: auto / low / normal with description. */
 export const DataModeSettingsSection = () => {
