@@ -34,4 +34,15 @@ export class NoopCacheService implements CacheService {
   async ping(): Promise<boolean> {
     return true;
   }
+
+  /** Does nothing (no-op). */
+  async zadd(): Promise<void> {
+    // no-op
+  }
+
+  /** Always returns empty array (no-op). */
+  // eslint-disable-next-line @typescript-eslint/require-await -- must match async CacheService interface
+  async ztop(): Promise<{ member: string; score: number }[]> {
+    return [];
+  }
 }

@@ -3,6 +3,7 @@ import type { CacheService } from '@shared/cache/cache.port';
 /** In-memory CacheService for tests. Supports TTL tracking but does not auto-expire. */
 export class InMemoryCacheService implements CacheService {
   private readonly store = new Map<string, { value: unknown; expiresAt?: number }>();
+  private readonly sortedSets = new Map<string, Map<string, number>>();
 
   async get<T>(key: string): Promise<T | null> {
     const entry = this.store.get(key);
@@ -44,6 +45,21 @@ export class InMemoryCacheService implements CacheService {
     return true;
   }
 
+  async zadd(key: string, member: string, increment: number): Promise<void> {
+    const sorted = this.sortedSets.get(key) ?? new Map<string, number>();
+    sorted.set(member, (sorted.get(member) ?? 0) + increment);
+    this.sortedSets.set(key, sorted);
+  }
+
+  async ztop(key: string, n: number): Promise<{ member: string; score: number }[]> {
+    const sorted = this.sortedSets.get(key);
+    if (!sorted) return [];
+    return [...sorted.entries()]
+      .map(([member, score]) => ({ member, score }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, n);
+  }
+
   /**
    * Test helper: check if a key exists.
    * @param key
@@ -55,5 +71,6 @@ export class InMemoryCacheService implements CacheService {
   /** Test helper: clear all entries. */
   clear(): void {
     this.store.clear();
+    this.sortedSets.clear();
   }
 }
