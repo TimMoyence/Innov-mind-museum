@@ -1,6 +1,8 @@
 import { AppError, badRequest, notFound } from '@shared/errors/app.error';
+import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
+import { buildCacheKey } from './chat-cache-key.util';
 import { resolveLocalImageMeta } from './chat-image.helpers';
 import { ensureMessageAccess } from './session-access';
 
@@ -135,7 +137,42 @@ export class ChatMediaService {
     }
 
     await this.repository.upsertMessageFeedback(messageId, currentUserId, value);
+
+    if (value === 'negative') {
+      await this.invalidateCacheForFeedback(messageId, row);
+    }
+
     return { messageId, status: existing ? 'updated' : 'created' };
+  }
+
+  /** Invalidates the cached LLM response for the question that preceded this assistant message. Fail-open. */
+  private async invalidateCacheForFeedback(
+    messageId: string,
+    row: Awaited<ReturnType<typeof ensureMessageAccess>>,
+  ): Promise<void> {
+    if (!this.cache) return;
+    try {
+      const history = await this.repository.listSessionHistory(row.message.sessionId, 50);
+      const assistantIdx = history.findIndex((m) => m.id === messageId);
+      const userMsg = assistantIdx > 0 ? history[assistantIdx - 1] : null;
+
+      if (userMsg?.text && userMsg.role === 'user' && row.session.museumId) {
+        const key = buildCacheKey({
+          text: userMsg.text,
+          museumId: String(row.session.museumId),
+          locale: row.session.locale ?? 'fr',
+          guideLevel: row.session.visitContext?.detectedExpertise ?? 'beginner',
+          audioDescriptionMode: false,
+        });
+        await this.cache.del(key);
+        logger.info('llm_cache_invalidated_by_feedback', {
+          museumId: row.session.museumId,
+          key,
+        });
+      }
+    } catch {
+      // fail-open: cache invalidation failure must not affect the feedback response
+    }
   }
 
   /**
