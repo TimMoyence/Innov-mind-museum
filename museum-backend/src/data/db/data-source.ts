@@ -13,6 +13,7 @@ import { MessageFeedback } from '@modules/chat/domain/messageFeedback.entity';
 import { MessageReport } from '@modules/chat/domain/messageReport.entity';
 import { UserMemory } from '@modules/chat/domain/userMemory.entity';
 import { Museum } from '@modules/museum/domain/museum.entity';
+import { MuseumQaSeed } from '@modules/museum/domain/museumQaSeed.entity';
 import { Review } from '@modules/review/domain/review.entity';
 import { SupportTicket } from '@modules/support/domain/supportTicket.entity';
 import { TicketMessage } from '@modules/support/domain/ticketMessage.entity';
@@ -48,6 +49,7 @@ export const AppDataSource = new DataSource({
     UserMemory,
     AuditLog,
     Museum,
+    MuseumQaSeed,
     Review,
     SupportTicket,
     TicketMessage,
