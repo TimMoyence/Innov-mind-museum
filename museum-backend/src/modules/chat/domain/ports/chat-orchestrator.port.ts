@@ -22,6 +22,8 @@ export interface OrchestratorInput {
   knowledgeBaseBlock?: string;
   /** When true, prompts include accessibility-oriented audio description instructions. */
   audioDescriptionMode?: boolean;
+  /** When true, generate a shorter response (low-data mode). */
+  lowDataMode?: boolean;
 }
 
 /** Result returned by {@link ChatOrchestrator.generate}. */
