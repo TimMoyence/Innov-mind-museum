@@ -2,12 +2,12 @@ import type React from 'react';
 import type { NetInfoState } from '@react-native-community/netinfo';
 
 // ── NetInfo mock ────────────────────────────────────────────────────────────
-let mockNetInfoState: Partial<NetInfoState> = {
-  type: 'wifi' as NetInfoState['type'],
+let mockNetInfoState = {
+  type: 'wifi',
   isConnected: true,
   isInternetReachable: true,
-  details: { isConnectionExpensive: false } as NetInfoState['details'],
-};
+  details: { isConnectionExpensive: false },
+} as unknown as Partial<NetInfoState>;
 
 jest.mock('@react-native-community/netinfo', () => ({
   __esModule: true,
@@ -155,11 +155,11 @@ describe('DataModeProvider + useDataMode hook', () => {
   beforeEach(() => {
     mockPreference = 'auto';
     mockNetInfoState = {
-      type: 'wifi' as NetInfoState['type'],
+      type: 'wifi',
       isConnected: true,
       isInternetReachable: true,
-      details: { isConnectionExpensive: false } as NetInfoState['details'],
-    };
+      details: { isConnectionExpensive: false },
+    } as unknown as Partial<NetInfoState>;
     jest.clearAllMocks();
   });
 
@@ -173,14 +173,14 @@ describe('DataModeProvider + useDataMode hook', () => {
 
   it('resolves to low on auto + 2G cellular', () => {
     mockNetInfoState = {
-      type: 'cellular' as NetInfoState['type'],
+      type: 'cellular',
       isConnected: true,
       isInternetReachable: true,
       details: {
         isConnectionExpensive: false,
         cellularGeneration: '2g',
-      } as NetInfoState['details'],
-    };
+      },
+    } as unknown as Partial<NetInfoState>;
 
     const { result } = renderHook(() => useDataMode(), { wrapper });
 
@@ -201,11 +201,11 @@ describe('DataModeProvider + useDataMode hook', () => {
   it('resolves to normal when forced normal even if disconnected', () => {
     mockPreference = 'normal';
     mockNetInfoState = {
-      type: 'none' as NetInfoState['type'],
+      type: 'none',
       isConnected: false,
       isInternetReachable: false,
       details: null,
-    };
+    } as unknown as Partial<NetInfoState>;
 
     const { result } = renderHook(() => useDataMode(), { wrapper });
 
