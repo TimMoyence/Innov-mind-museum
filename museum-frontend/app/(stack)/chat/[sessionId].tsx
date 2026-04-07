@@ -23,6 +23,7 @@ import { useImagePicker } from '@/features/chat/application/useImagePicker';
 import { useAiConsent } from '@/features/chat/application/useAiConsent';
 import { useAutoTts } from '@/features/chat/application/useAutoTts';
 import { useAudioDescriptionMode } from '@/features/settings/application/useAudioDescriptionMode';
+import { useMuseumPrefetch } from '@/features/museum/application/useMuseumPrefetch';
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
 import { ChatMessageList } from '@/features/chat/ui/ChatMessageList';
 import { ChatInput } from '@/features/chat/ui/ChatInput';
@@ -84,6 +85,8 @@ export default function ChatSessionScreen() {
     sessionTitle,
     museumName,
   } = useChatSession(sessionId);
+
+  useMuseumPrefetch(museumName ?? null, locale);
 
   const {
     isRecording,
