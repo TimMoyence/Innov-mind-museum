@@ -35,7 +35,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @protocol NativeWorkletsModuleSpec <RCTBridgeModule, RCTTurboModule>
 
-- (NSNumber *)installTurboModule:(BOOL)bundleModeEnabled;
+- (NSNumber *)installTurboModule;
 
 @end
 
