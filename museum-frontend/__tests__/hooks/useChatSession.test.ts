@@ -117,6 +117,20 @@ jest.mock('@/features/chat/application/useOfflineQueue', () => ({
   }),
 }));
 
+// DataMode
+let mockIsLowData = false;
+jest.mock('@/features/chat/application/DataModeProvider', () => ({
+  useDataMode: () => ({ isLowData: mockIsLowData }),
+}));
+
+// chatLocalCache
+const mockCacheLookup = jest.fn().mockReturnValue(null);
+const mockCacheStore = jest.fn();
+jest.mock('@/features/chat/application/chatLocalCache', () => ({
+  useChatLocalCacheStore: (selector: (state: { lookup: jest.Mock; store: jest.Mock }) => unknown) =>
+    selector({ lookup: mockCacheLookup, store: mockCacheStore }),
+}));
+
 // Zustand session store
 const mockSetSession = jest.fn();
 const mockUpdateMessages = jest.fn();
@@ -166,9 +180,11 @@ describe('useChatSession', () => {
     jest.clearAllMocks();
     mockIsConnected = true;
     mockIsOffline = false;
+    mockIsLowData = false;
     mockPendingCount = 0;
     mockGetSession.mockResolvedValue(defaultSessionResponse());
     mockPeek.mockReturnValue(undefined);
+    mockCacheLookup.mockReturnValue(null);
   });
 
   it('initialises with isLoading=true, loads session via API, and updates messages', async () => {
@@ -1062,5 +1078,168 @@ describe('useChatSession', () => {
 
     // successfulSendsRef only reached 2 (3rd failed), so no increment
     expect(incrementCompletedSessions).not.toHaveBeenCalled();
+  });
+
+  // ── Low-data mode cache-first ──────────────────────────────────────────────
+
+  describe('low-data mode cache-first', () => {
+    const emptySessionResponse = () => ({
+      session: { title: 'Museum Chat', museumName: 'Louvre' },
+      messages: [],
+    });
+
+    it('returns cached response without API call in low-data mode on cache hit', async () => {
+      mockIsLowData = true;
+      mockGetSession.mockResolvedValue(emptySessionResponse());
+      mockCacheLookup.mockReturnValue({
+        question: 'Who painted the Mona Lisa?',
+        answer: 'Leonardo da Vinci',
+        metadata: { detectedArtwork: { title: 'Mona Lisa' } },
+        museumId: 'Louvre',
+        locale: 'en-US',
+        cachedAt: Date.now(),
+        source: 'prefetch' as const,
+      });
+
+      const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      let sendResult: boolean | undefined;
+      await act(async () => {
+        sendResult = await result.current.sendMessage({ text: 'Who painted the Mona Lisa?' });
+      });
+
+      expect(sendResult).toBe(true);
+      // Should NOT call the API
+      expect(mockSendMessageSmart).not.toHaveBeenCalled();
+
+      // Should have both user and cached assistant messages
+      expect(result.current.messages).toHaveLength(2);
+      const assistantMsg = result.current.messages.find(
+        (m: ChatUiMessage) => m.role === 'assistant',
+      );
+      expect(assistantMsg?.text).toBe('Leonardo da Vinci');
+      expect(assistantMsg?.cached).toBe(true);
+    });
+
+    it('enqueues to offline queue in low-data mode when cache miss + offline', async () => {
+      mockIsLowData = true;
+      mockIsConnected = false;
+      mockGetSession.mockResolvedValue(emptySessionResponse());
+      mockCacheLookup.mockReturnValue(null);
+
+      const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      let sendResult: boolean | undefined;
+      await act(async () => {
+        sendResult = await result.current.sendMessage({ text: 'Tell me about this painting' });
+      });
+
+      expect(sendResult).toBe(true);
+      expect(mockEnqueue).toHaveBeenCalledTimes(1);
+      expect(mockSendMessageSmart).not.toHaveBeenCalled();
+    });
+
+    it('calls API with lowDataMode flag in low-data mode on cache miss + online', async () => {
+      mockIsLowData = true;
+      mockGetSession.mockResolvedValue(emptySessionResponse());
+      mockCacheLookup.mockReturnValue(null);
+      mockSendMessageSmart.mockResolvedValue({
+        message: {
+          id: 'resp-low',
+          role: 'assistant',
+          text: 'AI response in low mode',
+          createdAt: new Date().toISOString(),
+        },
+        metadata: null,
+      });
+
+      const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.sendMessage({ text: 'What is this?' });
+      });
+
+      expect(mockSendMessageSmart).toHaveBeenCalledTimes(1);
+      const callArgs = mockSendMessageSmart.mock.calls[0][0] as Record<string, unknown>;
+      expect(callArgs.lowDataMode).toBe(true);
+    });
+
+    it('does not lookup cache in normal mode (always API)', async () => {
+      mockIsLowData = false;
+      mockGetSession.mockResolvedValue(emptySessionResponse());
+      mockSendMessageSmart.mockResolvedValue({
+        message: {
+          id: 'resp-normal',
+          role: 'assistant',
+          text: 'Normal response',
+          createdAt: new Date().toISOString(),
+        },
+        metadata: null,
+      });
+
+      const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.sendMessage({ text: 'Hello' });
+      });
+
+      // cacheLookup should not have been called
+      expect(mockCacheLookup).not.toHaveBeenCalled();
+      expect(mockSendMessageSmart).toHaveBeenCalledTimes(1);
+      const callArgs = mockSendMessageSmart.mock.calls[0][0] as Record<string, unknown>;
+      expect(callArgs.lowDataMode).toBe(false);
+    });
+
+    it('stores successful API response in chatLocalCache for first-turn museum session', async () => {
+      mockIsLowData = true;
+      mockGetSession.mockResolvedValue(emptySessionResponse());
+      mockCacheLookup.mockReturnValue(null);
+      mockSendMessageSmart.mockResolvedValue({
+        message: {
+          id: 'resp-store',
+          role: 'assistant',
+          text: 'The Mona Lisa was painted by Leonardo da Vinci.',
+          createdAt: new Date().toISOString(),
+        },
+        metadata: { detectedArtwork: { title: 'Mona Lisa' } },
+      });
+
+      const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.sendMessage({ text: 'Who painted the Mona Lisa?' });
+      });
+
+      expect(mockCacheStore).toHaveBeenCalledTimes(1);
+      expect(mockCacheStore).toHaveBeenCalledWith(
+        expect.objectContaining({
+          question: 'Who painted the Mona Lisa?',
+          answer: 'The Mona Lisa was painted by Leonardo da Vinci.',
+          museumId: 'Louvre',
+          locale: 'en-US',
+          source: 'previous-call',
+        }),
+      );
+    });
   });
 });

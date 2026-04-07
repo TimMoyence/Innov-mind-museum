@@ -41,6 +41,8 @@ export interface ChatUiMessage {
   transcription?: { text: string } | null;
   /** When true the message failed to send and can be retried. */
   sendFailed?: boolean;
+  /** When true the response was served from local cache (low-data mode). */
+  cached?: boolean;
 }
 
 /** Sorts messages by createdAt ascending (earliest first). */
