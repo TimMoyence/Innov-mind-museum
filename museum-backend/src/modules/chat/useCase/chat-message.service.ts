@@ -65,6 +65,22 @@ interface PrepareRefused {
 
 type PrepareResult = PrepareReady | PrepareRefused;
 
+/** Awaits stream drain with a safety timeout to prevent indefinite hangs. */
+async function awaitDrainWithTimeout(buffer: StreamBuffer, timeoutMs = 30_000): Promise<void> {
+  let drainTimeoutId: ReturnType<typeof setTimeout> | undefined;
+  await Promise.race([
+    buffer.awaitDone(),
+    new Promise<void>((resolve) => {
+      drainTimeoutId = setTimeout(() => {
+        buffer.destroy();
+        resolve();
+      }, timeoutMs);
+    }),
+  ]).finally(() => {
+    if (drainTimeoutId !== undefined) clearTimeout(drainTimeoutId);
+  });
+}
+
 /**
  * Handles the message lifecycle: prepare, post, stream, and commit assistant responses.
  */
@@ -226,6 +242,7 @@ export class ChatMessageService {
       userMemoryBlock,
       knowledgeBaseBlock,
       audioDescriptionMode: input.context?.audioDescriptionMode,
+      lowDataMode: input.context?.lowDataMode ?? false,
     });
 
     return await commitAssistantResponse(
@@ -295,6 +312,7 @@ export class ChatMessageService {
         userMemoryBlock,
         knowledgeBaseBlock,
         audioDescriptionMode: input.context?.audioDescriptionMode,
+        lowDataMode: input.context?.lowDataMode ?? false,
       },
       (chunk) => {
         buffer.push(chunk);
@@ -303,20 +321,7 @@ export class ChatMessageService {
 
     buffer.finish();
     await buffer.awaitPhase1();
-
-    // Wait for drain to complete with safety timeout
-    let drainTimeoutId: ReturnType<typeof setTimeout> | undefined;
-    await Promise.race([
-      buffer.awaitDone(),
-      new Promise<void>((resolve) => {
-        drainTimeoutId = setTimeout(() => {
-          buffer.destroy();
-          resolve();
-        }, 30_000);
-      }),
-    ]).finally(() => {
-      if (drainTimeoutId !== undefined) clearTimeout(drainTimeoutId);
-    });
+    await awaitDrainWithTimeout(buffer);
 
     return await commitAssistantResponse(
       {

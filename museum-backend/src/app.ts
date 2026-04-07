@@ -64,6 +64,7 @@ function applyGlobalMiddleware(app: Express): void {
         'Content-Type',
         'Authorization',
         'X-Request-Id',
+        'X-Data-Mode',
         'Accept-Language',
         'sentry-trace',
         'baggage',

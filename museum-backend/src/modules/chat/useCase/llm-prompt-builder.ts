@@ -26,6 +26,20 @@ export const deriveConversationPhase = (historyLength: number): ConversationPhas
   return 'deep';
 };
 
+/** Appends conversational rules for short/ambiguous visitor inputs to the prompt parts array. */
+const appendConversationalRules = (parts: string[]): void => {
+  parts.push(
+    'CONVERSATIONAL RULES — when the visitor sends a short or ambiguous input:',
+    '- Artist name alone (e.g. "Picasso", "Michel-Ange"): Ask which work, period, or aspect interests them. Suggest 2-3 famous works to choose from.',
+    '- Architect name alone (e.g. "Le Corbusier", "Zaha Hadid"): Ask which building or project. Suggest 2-3 iconic works.',
+    '- City or country name (e.g. "Paris", "Italie"): Ask if they are visiting a museum, exploring the streets, or curious about art history of that place. Suggest key museums or monuments.',
+    '- Monument or landmark (e.g. "Tour Eiffel", "Colosseum"): Provide a brief artistic/architectural context, then ask what angle interests them: history, architecture, symbolism, or nearby art.',
+    '- Street or neighborhood (e.g. "Montmartre", "Rue de Rivoli"): Connect to art history of that place — which artists lived/worked there, what to see today.',
+    '- Generic art term (e.g. "impressionnisme", "baroque"): Give a brief definition, then ask if they want to explore key artists, techniques, or specific works.',
+    'NEVER dump a full Wikipedia-style biography. Always engage in dialogue: brief context + 1 follow-up question.',
+  );
+};
+
 export const buildSystemPrompt = (
   locale: string | undefined,
   museumMode: boolean,
@@ -34,9 +48,15 @@ export const buildSystemPrompt = (
     visitContextBlock?: string;
     conversationPhase?: ConversationPhase;
     audioDescriptionMode?: boolean;
+    lowDataMode?: boolean;
   },
 ): string => {
-  const { visitContextBlock, conversationPhase = 'active', audioDescriptionMode } = options ?? {};
+  const {
+    visitContextBlock,
+    conversationPhase = 'active',
+    audioDescriptionMode,
+    lowDataMode,
+  } = options ?? {};
   const language = localeToLanguageName(resolveLocale([locale]));
   const guidanceStyles: Record<string, string> = {
     expert: 'Use advanced art-history vocabulary and deeper context.',
@@ -85,16 +105,13 @@ export const buildSystemPrompt = (
     'If the visitor says goodbye or thanks, respond warmly with a brief recap of highlights discussed.',
   );
 
-  parts.push(
-    'CONVERSATIONAL RULES — when the visitor sends a short or ambiguous input:',
-    '- Artist name alone (e.g. "Picasso", "Michel-Ange"): Ask which work, period, or aspect interests them. Suggest 2-3 famous works to choose from.',
-    '- Architect name alone (e.g. "Le Corbusier", "Zaha Hadid"): Ask which building or project. Suggest 2-3 iconic works.',
-    '- City or country name (e.g. "Paris", "Italie"): Ask if they are visiting a museum, exploring the streets, or curious about art history of that place. Suggest key museums or monuments.',
-    '- Monument or landmark (e.g. "Tour Eiffel", "Colosseum"): Provide a brief artistic/architectural context, then ask what angle interests them: history, architecture, symbolism, or nearby art.',
-    '- Street or neighborhood (e.g. "Montmartre", "Rue de Rivoli"): Connect to art history of that place — which artists lived/worked there, what to see today.',
-    '- Generic art term (e.g. "impressionnisme", "baroque"): Give a brief definition, then ask if they want to explore key artists, techniques, or specific works.',
-    'NEVER dump a full Wikipedia-style biography. Always engage in dialogue: brief context + 1 follow-up question.',
-  );
+  appendConversationalRules(parts);
+
+  if (lowDataMode) {
+    parts.push(
+      'IMPORTANT: The user is on a low-bandwidth connection. Provide a concise factual answer in 100-150 words maximum. Skip elaborate descriptions.',
+    );
+  }
 
   if (visitContextBlock) {
     parts.push(visitContextBlock);
@@ -139,6 +156,7 @@ export const buildOrchestratorMessages = (input: OrchestratorInput): Orchestrato
     visitContextBlock: visitContextBlock || undefined,
     conversationPhase,
     audioDescriptionMode: input.audioDescriptionMode,
+    lowDataMode: input.lowDataMode,
   });
 
   const historyMessages: ChatModelMessage[] = recentHistory.map((message) => {
