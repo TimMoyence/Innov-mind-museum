@@ -53,11 +53,13 @@ The backend is containerized via **Docker** and hosted on an **OVH VPS**.
 
 | Domain | Technology | Role |
 |--------|-----------|------|
-| **Frontend** | React Native 0.79, Expo 53, TypeScript | Cross-platform mobile app (iOS/Android) |
-| **Backend** | Node.js 22, Express 5, TypeORM | REST API, business logic, AI integration |
+| **Mobile** | React Native 0.83, Expo SDK 55, TypeScript, Expo Router | Cross-platform mobile app (iOS/Android) |
+| **Web** | Next.js 15, React 19, Tailwind 4, Framer Motion | Landing page + admin panel + SEO |
+| **Backend** | Node.js 22, Express 5, TypeORM, pnpm | REST API, business logic, AI integration |
 | **Architecture** | Hexagonal (Ports & Adapters) | Strict separation of concerns |
-| **Database** | PostgreSQL 16 | Conversations, artworks and user persistence |
-| **AI** | LangChain + Multi-provider LLM | Visual analysis, response generation and recommendations |
+| **Database** | PostgreSQL 16 + Redis 7 | Persistence + cache/rate-limit/distributed locks |
+| **AI** | LangChain + Multi-provider LLM (OpenAI/Deepseek/Google) | Visual analysis, response generation, streaming SSE |
+| **Observability** | Sentry, OpenTelemetry, Promtail/Loki | APM, distributed tracing, structured logging |
 | **Containers** | Docker | Backend encapsulation + persistent volumes |
 | **Hosting** | VPS OVH | Autonomous project deployment and management |
 

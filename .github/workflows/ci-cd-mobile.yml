@@ -46,6 +46,11 @@ concurrency:
   group: ci-cd-mobile-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Top-level least-privilege default. EAS build/submit jobs do not need write
+# scopes (they delegate to Expo) so contents:read is sufficient for all jobs.
+permissions:
+  contents: read
+
 jobs:
   quality:
     runs-on: ubuntu-latest
