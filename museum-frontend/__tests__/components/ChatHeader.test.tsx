@@ -13,8 +13,6 @@ jest.mock('@/features/chat/ui/ExpertiseBadge', () => {
 describe('ChatHeader', () => {
   const baseProps = {
     sessionTitle: 'Art Session',
-    museumName: 'Louvre Museum',
-    sessionId: 'abc123def456ghi',
     isClosing: false,
     onClose: jest.fn(),
   };
@@ -31,16 +29,6 @@ describe('ChatHeader', () => {
   it('renders fallback title when sessionTitle is null', () => {
     render(<ChatHeader {...baseProps} sessionTitle={null} />);
     expect(screen.getByText('chat.fallback_title')).toBeTruthy();
-  });
-
-  it('renders museum name', () => {
-    render(<ChatHeader {...baseProps} />);
-    expect(screen.getByText('Louvre Museum')).toBeTruthy();
-  });
-
-  it('renders truncated sessionId when museumName is null', () => {
-    render(<ChatHeader {...baseProps} museumName={null} />);
-    expect(screen.getByText('abc123def456...')).toBeTruthy();
   });
 
   it('fires onClose when close button is pressed', () => {

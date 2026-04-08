@@ -286,8 +286,6 @@ export default function ChatSessionScreen() {
 
           <ChatHeader
             sessionTitle={sessionTitle}
-            museumName={museumName}
-            sessionId={sessionId}
             expertiseLevel={expertiseLevel}
             isClosing={isClosing}
             onClose={() => {

@@ -8,8 +8,6 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 
 interface ChatHeaderProps {
   sessionTitle: string | null;
-  museumName: string | null;
-  sessionId: string;
   expertiseLevel?: 'beginner' | 'intermediate' | 'expert';
   isClosing: boolean;
   onClose: () => void;
@@ -21,8 +19,6 @@ interface ChatHeaderProps {
 /** Chat session header with title, museum name, expertise badge, and close button. */
 export function ChatHeader({
   sessionTitle,
-  museumName,
-  sessionId,
   expertiseLevel,
   isClosing,
   onClose,
@@ -40,12 +36,7 @@ export function ChatHeader({
           <Text style={[styles.header, { color: theme.textPrimary }]} numberOfLines={1}>
             {sessionTitle ?? t('chat.fallback_title')}
           </Text>
-          <View style={styles.headerSubRow}>
-            <Text style={[styles.subheader, { color: theme.textTertiary }]} numberOfLines={1}>
-              {museumName ?? `${sessionId.slice(0, 12)}...`}
-            </Text>
-            {expertiseLevel ? <ExpertiseBadge level={expertiseLevel} /> : null}
-          </View>
+          {expertiseLevel ? <ExpertiseBadge level={expertiseLevel} /> : null}
         </View>
         <View style={styles.headerActions}>
           {onToggleAudioDescription ? (
@@ -128,15 +119,6 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 24,
     fontWeight: '700',
-  },
-  headerSubRow: {
-    marginTop: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  subheader: {
-    fontSize: 12,
   },
   closeButton: {
     borderRadius: 999,
