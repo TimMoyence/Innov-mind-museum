@@ -51,8 +51,10 @@ jobs:
         run: pnpm audit --audit-level=high
 
       - name: Generate SBOM
-        # Enforced (no continue-on-error) — EU CRA compliance + supply chain audit trail
-        run: npx @cyclonedx/cyclonedx-npm --output-file sbom.json --spec-version 1.5 --output-reproducible
+        # Enforced (no continue-on-error) — EU CRA compliance + supply chain audit trail.
+        # --ignore-npm-errors: pnpm hoisted node_modules trips npm-ls on missing peer
+        # devDependencies; the SBOM still captures the full transitive graph.
+        run: npx @cyclonedx/cyclonedx-npm --ignore-npm-errors --output-file sbom.json --spec-version 1.5 --output-reproducible
 
       - name: Upload SBOM artifact
         if: always()
