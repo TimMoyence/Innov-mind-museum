@@ -87,6 +87,17 @@ describe('ChatSessionService', () => {
       await expect(svc.createSession({ userId: 0 })).rejects.toMatchObject({ statusCode: 400 });
     });
 
+    it('passes museumName for title initialization when provided directly', async () => {
+      const repo = makeRepo();
+      const svc = new ChatSessionService({ repository: repo });
+
+      await svc.createSession({ userId: 42, museumName: 'CAPC', museumMode: true });
+
+      expect(repo.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({ museumName: 'CAPC' }),
+      );
+    });
+
     it('resolves museum name from museumId when museumRepository is provided', async () => {
       const museum = makeMuseum({ id: 42, name: 'Louvre', address: '75001 Paris' });
       const museumRepo = makeMuseumRepo({

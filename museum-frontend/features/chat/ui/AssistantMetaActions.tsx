@@ -81,12 +81,10 @@ export const AssistantMetaActions = React.memo(function AssistantMetaActions({
         <Pressable
           style={[styles.actionButton, ttsFailed && styles.actionDisabled]}
           onPress={() => {
-            if (ttsFailed) return;
             void Haptics.selectionAsync();
             void onToggleTts(messageId);
           }}
           hitSlop={8}
-          disabled={ttsFailed}
           accessibilityRole="button"
           accessibilityLabel={
             ttsFailed
