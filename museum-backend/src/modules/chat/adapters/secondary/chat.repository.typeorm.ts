@@ -75,6 +75,7 @@ export class TypeOrmChatRepository implements ChatRepository {
       user: input.userId ? ({ id: input.userId } as ChatSession['user']) : null,
       museumId: input.museumId ?? null,
       museumName: input.museumName ?? null,
+      title: input.museumName ?? null,
       coordinates: input.coordinates ?? null,
       visitContext: input.visitContext ?? null,
     });
