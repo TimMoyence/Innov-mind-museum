@@ -36,6 +36,7 @@ import { VisitSummaryModal } from '@/features/chat/ui/VisitSummaryModal';
 import { useMessageActions } from '@/features/chat/application/useMessageActions';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { GlassCard } from '@/shared/ui/GlassCard';
+import { InAppBrowser } from '@/shared/ui/InAppBrowser';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
@@ -60,6 +61,7 @@ export default function ChatSessionScreen() {
     null,
   );
   const [showSummary, setShowSummary] = useState(false);
+  const [browserUrl, setBrowserUrl] = useState<string | null>(null);
   const imageRefreshInFlightRef = useRef(new Set());
 
   // --- Hooks ---
@@ -242,6 +244,15 @@ export default function ChatSessionScreen() {
     [messages],
   );
 
+  const onMessageLinkPress = useCallback((url: string): boolean => {
+    if (!url) return false;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      setBrowserUrl(url);
+      return true;
+    }
+    return false;
+  }, []);
+
   const onMessageImageError = useCallback(
     (messageId: string) => {
       if (imageRefreshInFlightRef.current.has(messageId)) return;
@@ -314,6 +325,7 @@ export default function ChatSessionScreen() {
                 onCamera={() => void onTakePicture()}
                 onImageError={onMessageImageError}
                 onReport={onMessageLongPress}
+                onLinkPress={onMessageLinkPress}
                 onRetry={retryMessage}
               />
             )}
@@ -340,6 +352,13 @@ export default function ChatSessionScreen() {
           />
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
+
+      <InAppBrowser
+        url={browserUrl}
+        onClose={() => {
+          setBrowserUrl(null);
+        }}
+      />
 
       <MessageContextMenu
         message={contextMenuMessage}

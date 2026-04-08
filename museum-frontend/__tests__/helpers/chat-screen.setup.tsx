@@ -116,6 +116,11 @@ jest.mock('@/features/chat/ui/VisitSummaryModal', () => {
   return { VisitSummaryModal: () => <View testID="visit-summary-modal" /> };
 });
 
+jest.mock('@/shared/ui/InAppBrowser', () => {
+  const { View } = require('react-native');
+  return { InAppBrowser: () => <View testID="in-app-browser" /> };
+});
+
 export function defaultChatSession() {
   return {
     messages: [],

@@ -36,6 +36,8 @@ interface ChatMessageListProps {
   onImageError: (messageId: string) => void;
   /** Called on long-press of an assistant message. */
   onReport: (messageId: string) => void;
+  /** Called when the user taps a link in an assistant message. Return `true` to mark as handled. */
+  onLinkPress?: (url: string) => boolean;
   /** Called to retry sending a failed message. */
   onRetry?: (message: ChatUiMessage) => void;
 }
@@ -56,6 +58,7 @@ export const ChatMessageList = ({
   onCamera,
   onImageError,
   onReport,
+  onLinkPress,
   onRetry,
 }: ChatMessageListProps) => {
   const { t } = useTranslation();
@@ -144,6 +147,7 @@ export const ChatMessageList = ({
             ttsPlaying={ttsActiveId === item.id ? ttsIsPlaying : false}
             ttsLoading={ttsActiveId === item.id ? ttsIsLoading : false}
             ttsFailed={ttsFailedId === item.id}
+            onLinkPress={onLinkPress}
             onToggleTts={isAssistant ? ttsToggle : undefined}
             onRetry={onRetry}
             feedbackValue={isAssistant ? (feedbackMap[item.id] ?? null) : undefined}
@@ -184,6 +188,7 @@ export const ChatMessageList = ({
       onRecommendationPress,
       onImageError,
       onReport,
+      onLinkPress,
       onRetry,
       feedbackMap,
       handleFeedback,
