@@ -383,7 +383,7 @@ describe('GuardrailEvaluationService', () => {
       expect(result.text).toContain('Monet');
     });
 
-    it('fails open when art-topic classifier throws an error', async () => {
+    it('fails CLOSED when art-topic classifier throws an error (security hardening)', async () => {
       const classifier = {
         isArtRelated: jest.fn().mockRejectedValue(new Error('Classifier unavailable')),
       };
@@ -398,9 +398,32 @@ describe('GuardrailEvaluationService', () => {
         requestedLocale: 'en',
       });
 
-      // Fail-open: classifier error means allow
-      expect(result.allowed).toBe(true);
-      expect(result.text).toBe('Some interesting text about gardens.');
+      // Fail-closed: classifier error means suppress LLM output and return safe refusal
+      expect(result.allowed).toBe(false);
+      expect(result.text).not.toBe('Some interesting text about gardens.');
+      expect(result.text.length).toBeGreaterThan(0);
+      expect(result.metadata.citations).toContain('policy:unsafe_output');
+    });
+
+    it('fail-closed refusal is localized for fr locale when classifier throws', async () => {
+      const classifier = {
+        isArtRelated: jest.fn().mockRejectedValue(new Error('boom')),
+      };
+      const service = new GuardrailEvaluationService({
+        repository: createMockRepository(),
+        artTopicClassifier: classifier,
+      });
+
+      const result = await service.evaluateOutput({
+        text: 'Some text about gardens.',
+        metadata: {},
+        requestedLocale: 'fr-FR',
+      });
+
+      expect(result.allowed).toBe(false);
+      // French refusal should differ from English and contain localized phrasing
+      expect(result.text).toContain('uniquement');
+      expect(result.metadata.citations).toContain('policy:unsafe_output');
     });
 
     it('skips classifier when artTopicClassifier is not provided', async () => {

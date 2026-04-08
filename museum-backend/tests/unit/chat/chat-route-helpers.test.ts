@@ -5,6 +5,8 @@ import {
   resolveRequestBaseUrl,
   getRequestUser,
   contentTypeByExtension,
+  upload,
+  audioUpload,
 } from '@modules/chat/adapters/primary/http/chat-route.helpers';
 
 jest.mock('@modules/chat/adapters/primary/http/chat.image-url', () => ({
@@ -29,6 +31,10 @@ jest.mock('@src/config/env', () => ({
       maxImageBytes: 10 * 1024 * 1024,
       maxAudioBytes: 25 * 1024 * 1024,
     },
+    upload: {
+      allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+      allowedAudioMimeTypes: ['audio/mp4', 'audio/mpeg', 'audio/webm', 'audio/wav', 'audio/x-m4a'],
+    },
     storage: {
       s3: {
         endpoint: 'https://s3.example.com',
@@ -44,6 +50,38 @@ jest.mock('@src/config/env', () => ({
     },
   },
 }));
+
+/**
+ * Extracts the multer fileFilter from a multer instance. The typings don't
+ * expose it, but at runtime it is stored on the instance we configured.
+ */
+type FileFilterFn = (
+  req: unknown,
+  file: { mimetype: string },
+  cb: (err: Error | null, acceptFile?: boolean) => void,
+) => void;
+
+const getFileFilter = (multerInstance: unknown): FileFilterFn => {
+  const filter = (multerInstance as { fileFilter?: FileFilterFn }).fileFilter;
+  if (typeof filter !== 'function') {
+    throw new Error('multer instance is missing a fileFilter');
+  }
+  return filter;
+};
+
+const runFilter = (
+  multerInstance: unknown,
+  mimetype: string,
+): { err: Error | null; accept: boolean | undefined } => {
+  const filter = getFileFilter(multerInstance);
+  let err: Error | null = null;
+  let accept: boolean | undefined;
+  filter({}, { mimetype }, (cbErr, cbAccept) => {
+    err = cbErr;
+    accept = cbAccept;
+  });
+  return { err, accept };
+};
 
 describe('chat-route.helpers — uncovered branches', () => {
   describe('parseContext — field validation branches', () => {
@@ -246,6 +284,89 @@ describe('chat-route.helpers — uncovered branches', () => {
     it('returns undefined when user is not on request', () => {
       const req = {} as never;
       expect(getRequestUser(req)).toBeUndefined();
+    });
+  });
+
+  describe('upload fileFilter (image)', () => {
+    it('accepts image/jpeg', () => {
+      const { err, accept } = runFilter(upload, 'image/jpeg');
+      expect(err).toBeNull();
+      expect(accept).toBe(true);
+    });
+
+    it('accepts image/png', () => {
+      const { err, accept } = runFilter(upload, 'image/png');
+      expect(err).toBeNull();
+      expect(accept).toBe(true);
+    });
+
+    it('accepts image/webp', () => {
+      const { err, accept } = runFilter(upload, 'image/webp');
+      expect(err).toBeNull();
+      expect(accept).toBe(true);
+    });
+
+    it('is case-insensitive on the incoming mimetype', () => {
+      const { err, accept } = runFilter(upload, 'IMAGE/JPEG');
+      expect(err).toBeNull();
+      expect(accept).toBe(true);
+    });
+
+    it('rejects image/gif with a 400-style error', () => {
+      const { err } = runFilter(upload, 'image/gif');
+      expect(err).toBeInstanceOf(Error);
+      expect(err?.message).toContain('Unsupported image content type');
+      expect(err?.message).toContain('image/gif');
+    });
+
+    it('rejects application/pdf disguised as an image upload', () => {
+      const { err } = runFilter(upload, 'application/pdf');
+      expect(err).toBeInstanceOf(Error);
+      expect(err?.message).toContain('Unsupported image content type');
+    });
+
+    it('rejects empty/missing mimetype', () => {
+      const { err } = runFilter(upload, '');
+      expect(err).toBeInstanceOf(Error);
+      expect(err?.message).toContain('Unsupported image content type');
+    });
+  });
+
+  describe('audioUpload fileFilter (audio)', () => {
+    it('accepts audio/mp4', () => {
+      const { err, accept } = runFilter(audioUpload, 'audio/mp4');
+      expect(err).toBeNull();
+      expect(accept).toBe(true);
+    });
+
+    it('accepts audio/mpeg', () => {
+      const { err, accept } = runFilter(audioUpload, 'audio/mpeg');
+      expect(err).toBeNull();
+      expect(accept).toBe(true);
+    });
+
+    it('accepts audio/webm', () => {
+      const { err, accept } = runFilter(audioUpload, 'audio/webm');
+      expect(err).toBeNull();
+      expect(accept).toBe(true);
+    });
+
+    it('accepts audio/x-m4a (iOS recorder output)', () => {
+      const { err, accept } = runFilter(audioUpload, 'audio/x-m4a');
+      expect(err).toBeNull();
+      expect(accept).toBe(true);
+    });
+
+    it('rejects image/jpeg on the audio endpoint', () => {
+      const { err } = runFilter(audioUpload, 'image/jpeg');
+      expect(err).toBeInstanceOf(Error);
+      expect(err?.message).toContain('Unsupported audio content type');
+    });
+
+    it('rejects application/octet-stream', () => {
+      const { err } = runFilter(audioUpload, 'application/octet-stream');
+      expect(err).toBeInstanceOf(Error);
+      expect(err?.message).toContain('Unsupported audio content type');
     });
   });
 
