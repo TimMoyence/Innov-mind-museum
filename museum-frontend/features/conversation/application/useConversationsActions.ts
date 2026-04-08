@@ -21,13 +21,23 @@ export function useConversationsActions() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const toggleSortMode = () => {
-    const next = sortMode === 'recent' ? 'messages' : 'recent';
-    setSortMode(next);
-    setMenuStatus(
-      next === 'recent'
-        ? t('conversations.sorted_by_recency')
-        : t('conversations.sorted_by_messages'),
-    );
+    Alert.alert(t('conversations.sort_title'), undefined, [
+      {
+        text: t('conversations.sort_option_recent'),
+        onPress: () => {
+          setSortMode('recent');
+          setMenuStatus(t('conversations.sorted_by_recency'));
+        },
+      },
+      {
+        text: t('conversations.sort_option_messages'),
+        onPress: () => {
+          setSortMode('messages');
+          setMenuStatus(t('conversations.sorted_by_messages'));
+        },
+      },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
   };
 
   const toggleSavedFilter = () => {

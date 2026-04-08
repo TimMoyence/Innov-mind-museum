@@ -82,23 +82,60 @@ describe('useConversationsActions', () => {
     mockStoreState.sortMode = 'recent';
   });
 
-  it('toggleSortMode switches from recent to messages', () => {
+  it('toggleSortMode shows an alert with sort options', () => {
     const { result } = renderHook(() => useConversationsActions());
 
     act(() => {
       result.current.toggleSortMode();
     });
 
-    expect(mockSetSortMode).toHaveBeenCalledWith('messages');
-    expect(result.current.menuStatus).toBe('conversations.sorted_by_messages');
+    expect(mockAlertAlert).toHaveBeenCalledWith(
+      'conversations.sort_title',
+      undefined,
+      expect.arrayContaining([
+        expect.objectContaining({ text: 'conversations.sort_option_recent' }),
+        expect.objectContaining({ text: 'conversations.sort_option_messages' }),
+        expect.objectContaining({ text: 'common.cancel', style: 'cancel' }),
+      ]),
+    );
   });
 
-  it('toggleSortMode switches from messages back to recent', () => {
-    mockStoreState.sortMode = 'messages';
+  it('toggleSortMode "most messages" option sets sort to messages', () => {
     const { result } = renderHook(() => useConversationsActions());
 
     act(() => {
       result.current.toggleSortMode();
+    });
+
+    const buttons = mockAlertAlert.mock.calls[0][2] as {
+      text: string;
+      onPress?: () => void;
+    }[];
+    const messagesOption = buttons.find((b) => b.text === 'conversations.sort_option_messages');
+
+    act(() => {
+      messagesOption?.onPress?.();
+    });
+
+    expect(mockSetSortMode).toHaveBeenCalledWith('messages');
+    expect(result.current.menuStatus).toBe('conversations.sorted_by_messages');
+  });
+
+  it('toggleSortMode "most recent" option sets sort to recent', () => {
+    const { result } = renderHook(() => useConversationsActions());
+
+    act(() => {
+      result.current.toggleSortMode();
+    });
+
+    const buttons = mockAlertAlert.mock.calls[0][2] as {
+      text: string;
+      onPress?: () => void;
+    }[];
+    const recentOption = buttons.find((b) => b.text === 'conversations.sort_option_recent');
+
+    act(() => {
+      recentOption?.onPress?.();
     });
 
     expect(mockSetSortMode).toHaveBeenCalledWith('recent');
