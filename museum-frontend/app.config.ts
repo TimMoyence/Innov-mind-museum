@@ -148,7 +148,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSCameraUsageDescription:
-          'Allow $(PRODUCT_NAME) to access your camera to photograph artworks and monuments for AI analysis.',
+          'Musaium uses your camera so you can photograph artworks, monuments and museum exhibits — the captured image is sent to our AI assistant which identifies the piece and gives you historical and contextual information about it.',
         NSMicrophoneUsageDescription:
           'Allow $(PRODUCT_NAME) to access your microphone for voice questions about artworks.',
         NSPhotoLibraryUsageDescription:
@@ -156,7 +156,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         NSPhotoLibraryAddUsageDescription:
           'Allow $(PRODUCT_NAME) to save images to your photo library.',
         NSFaceIDUsageDescription: 'Allow $(PRODUCT_NAME) to use Face ID to unlock the app.',
-        NSLocationWhenInUseUsageDescription: 'Allow Musaium to show museums near you.',
+        NSLocationWhenInUseUsageDescription:
+          'Musaium uses your location to find museums and cultural sites near you, show them on the map, and recommend nearby visits — your location is never tracked or shared with third parties.',
       },
       privacyManifests: {
         NSPrivacyTracking: false,
@@ -271,7 +272,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         'expo-camera',
         {
-          cameraPermission: 'Allow $(PRODUCT_NAME) to access your camera',
+          cameraPermission:
+            'Musaium uses your camera so you can photograph artworks, monuments and museum exhibits — the captured image is sent to our AI assistant which identifies the piece and gives you historical and contextual information about it.',
           recordAudioAndroid: false,
         },
       ],
@@ -285,7 +287,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         'expo-location',
         {
-          locationWhenInUsePermission: 'Allow Musaium to find museums near your location.',
+          locationWhenInUsePermission:
+            'Musaium uses your location to find museums and cultural sites near you, show them on the map, and recommend nearby visits — your location is never tracked or shared with third parties.',
         },
       ],
       'expo-apple-authentication',
