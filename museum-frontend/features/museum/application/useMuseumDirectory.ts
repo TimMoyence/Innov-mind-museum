@@ -5,9 +5,12 @@ import type { MuseumSearchEntry } from '../infrastructure/museumApi';
 import { museumApi } from '../infrastructure/museumApi';
 import { haversineDistance } from './haversine';
 
+export type { MuseumCategory } from '../infrastructure/museumApi';
+
 /** Museum entry enriched with optional distance from the user. */
 export interface MuseumWithDistance extends MuseumDirectoryEntry {
   distance: number | null;
+  source: 'local' | 'osm';
 }
 
 interface UseMuseumDirectoryResult {
@@ -34,6 +37,8 @@ const mapSearchEntryToMuseumWithDistance = (
   latitude: entry.latitude,
   longitude: entry.longitude,
   distance: Math.round(entry.distance * 10) / 10,
+  source: entry.source,
+  museumType: entry.museumType,
 });
 
 /**
@@ -74,7 +79,7 @@ export const useMuseumDirectory = (
         distance = Math.round(distance * 10) / 10;
       }
 
-      return { ...museum, distance };
+      return { ...museum, distance, source: 'local' as const };
     });
   }, []);
 
@@ -82,7 +87,7 @@ export const useMuseumDirectory = (
   const fetchFromSearch = useCallback(
     async (lat: number | null, lng: number | null, q?: string) => {
       const { museums } = await museumApi.searchMuseums({
-        ...(lat !== null && lng !== null ? { lat, lng, radius: 30_000 } : {}),
+        ...(lat !== null && lng !== null ? { lat, lng, radius: 3_000 } : {}),
         ...(q ? { q } : {}),
       });
       return museums.map(mapSearchEntryToMuseumWithDistance);

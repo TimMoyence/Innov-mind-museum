@@ -39,6 +39,11 @@ export default function OnboardingScreen() {
         t('onboarding.slide0.tip3'),
         t('onboarding.slide0.tip4'),
       ],
+      navPreviewTabs: [
+        { icon: 'home-outline', label: t('tabs.home') },
+        { icon: 'business-outline', label: t('tabs.museums') },
+        { icon: 'grid-outline', label: t('tabs.dashboard') },
+      ],
     },
     {
       icon: 'bulb-outline',

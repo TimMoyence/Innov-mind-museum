@@ -29,7 +29,6 @@ import { ChatMessageList } from '@/features/chat/ui/ChatMessageList';
 import { ChatInput } from '@/features/chat/ui/ChatInput';
 import { ChatHeader } from '@/features/chat/ui/ChatHeader';
 import { MediaAttachmentPanel } from '@/features/chat/ui/MediaAttachmentPanel';
-import { ImagePreviewModal } from '@/features/chat/ui/ImagePreviewModal';
 import { MessageContextMenu } from '@/features/chat/ui/MessageContextMenu';
 import { OfflineBanner } from '@/features/chat/ui/OfflineBanner';
 import { AiConsentModal } from '@/features/chat/ui/AiConsentModal';
@@ -98,15 +97,7 @@ export default function ChatSessionScreen() {
     clearRecordedAudio,
   } = useAudioRecorder();
 
-  const {
-    selectedImage,
-    pendingImage,
-    onPickImage,
-    onTakePicture,
-    confirmPendingImage,
-    cancelPendingImage,
-    clearSelectedImage,
-  } = useImagePicker();
+  const { selectedImage, onPickImage, onTakePicture, clearSelectedImage } = useImagePicker();
 
   const { enabled: audioDescEnabled } = useAudioDescriptionMode();
   const [sessionAudioOverride, setSessionAudioOverride] = useState<boolean | null>(null);
@@ -329,14 +320,12 @@ export default function ChatSessionScreen() {
           </GlassCard>
 
           <MediaAttachmentPanel
-            selectedImage={selectedImage}
-            onPickImage={() => void onPickImage()}
-            clearSelectedImage={clearSelectedImage}
             recordedAudioUri={recordedAudioUri}
             isPlayingAudio={isPlayingAudio}
             isRecording={isRecording}
             playRecordedAudio={playRecordedAudio}
             clearMedia={clearMedia}
+            onPickImage={() => void onPickImage()}
             onTakePicture={() => void onTakePicture()}
             toggleRecording={toggleRecording}
           />
@@ -346,15 +335,11 @@ export default function ChatSessionScreen() {
             onChangeText={setText}
             onSend={() => void onSend()}
             isSending={isSending || !consentResolved || showAiConsent}
+            imageUri={selectedImage}
+            onClearImage={clearSelectedImage}
           />
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
-
-      <ImagePreviewModal
-        imageUri={pendingImage}
-        onConfirm={confirmPendingImage}
-        onCancel={cancelPendingImage}
-      />
 
       <MessageContextMenu
         message={contextMenuMessage}

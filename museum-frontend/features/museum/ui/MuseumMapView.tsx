@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import type { MuseumWithDistance } from '../application/useMuseumDirectory';
+import type { MuseumCategory, MuseumWithDistance } from '../application/useMuseumDirectory';
 import { buildLeafletHtml } from '../infrastructure/leafletHtml';
 
 interface MuseumMapViewProps {
@@ -63,12 +63,26 @@ export const MuseumMapView = ({
   /** Push markers + user position + fit bounds whenever data changes. */
   const syncMapState = useCallback(() => {
     // Markers — collect only museums with valid coordinates
-    const markers: { id: number; name: string; lat: number; lng: number }[] = [];
+    const markers: {
+      id: number;
+      name: string;
+      lat: number;
+      lng: number;
+      source: 'local' | 'osm';
+      museumType: MuseumCategory;
+    }[] = [];
     const points: [number, number][] = [];
 
     for (const m of museums) {
       if (m.latitude !== null && m.longitude !== null) {
-        markers.push({ id: m.id, name: m.name, lat: m.latitude, lng: m.longitude });
+        markers.push({
+          id: m.id,
+          name: m.name,
+          lat: m.latitude,
+          lng: m.longitude,
+          source: m.source,
+          museumType: m.museumType,
+        });
         points.push([m.latitude, m.longitude]);
       }
     }

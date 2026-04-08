@@ -8,19 +8,19 @@ import { optimizeImageForUpload } from './imageUploadOptimization';
 /**
  * Hook that manages image selection state and handlers for chat attachments.
  * Supports gallery picking and native camera capture.
+ * After selection, the image goes directly to `selectedImage` (no pending/confirm step).
  */
 export const useImagePicker = () => {
   const { t } = useTranslation();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [pendingImage, setPendingImage] = useState<string | null>(null);
 
-  const setOptimizedPendingImage = useCallback(async (uri: string) => {
+  const setOptimizedImage = useCallback(async (uri: string) => {
     try {
       const optimizedUri = await optimizeImageForUpload(uri);
-      setPendingImage(optimizedUri);
+      setSelectedImage(optimizedUri);
     } catch {
       // Keep upload flow functional even if local optimization fails.
-      setPendingImage(uri);
+      setSelectedImage(uri);
     }
   }, []);
 
@@ -47,9 +47,9 @@ export const useImagePicker = () => {
     }
 
     if (!result.canceled && result.assets.length) {
-      await setOptimizedPendingImage(result.assets[0].uri);
+      await setOptimizedImage(result.assets[0].uri);
     }
-  }, [setOptimizedPendingImage, t]);
+  }, [setOptimizedImage, t]);
 
   const onTakePicture = useCallback(async () => {
     const { status } = await ImagePickerLib.requestCameraPermissionsAsync();
@@ -74,18 +74,9 @@ export const useImagePicker = () => {
     }
 
     if (!result.canceled && result.assets.length) {
-      await setOptimizedPendingImage(result.assets[0].uri);
+      await setOptimizedImage(result.assets[0].uri);
     }
-  }, [setOptimizedPendingImage, t]);
-
-  const confirmPendingImage = useCallback((uri: string) => {
-    setSelectedImage(uri);
-    setPendingImage(null);
-  }, []);
-
-  const cancelPendingImage = useCallback(() => {
-    setPendingImage(null);
-  }, []);
+  }, [setOptimizedImage, t]);
 
   const clearSelectedImage = useCallback(() => {
     setSelectedImage(null);
@@ -93,11 +84,8 @@ export const useImagePicker = () => {
 
   return {
     selectedImage,
-    pendingImage,
     onPickImage,
     onTakePicture,
-    confirmPendingImage,
-    cancelPendingImage,
     clearSelectedImage,
   };
 };

@@ -17,6 +17,7 @@ import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
+import { LANGUAGE_OPTIONS } from '@/shared/config/supportedLocales';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
 type SettingsRoute =
@@ -133,7 +134,9 @@ export default function SettingsScreen() {
           ) : (
             <>
               <Text style={[styles.metaLine, { color: theme.textPrimary }]}>
-                {t('settings.locale_label', { locale })}
+                {t('settings.locale_label', {
+                  locale: LANGUAGE_OPTIONS.find((o) => o.code === locale)?.nativeLabel ?? locale,
+                })}
               </Text>
               <Text style={[styles.metaLine, { color: theme.textPrimary }]}>
                 {t('settings.museum_mode_label', {

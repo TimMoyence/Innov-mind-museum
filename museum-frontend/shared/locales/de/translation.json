@@ -220,20 +220,20 @@
       "title": "Willkommen bei Musaium",
       "subtitle": "Ihr persönlicher Museumsführer. Fotografieren Sie Kunstwerke oder stellen Sie Fragen, um KI-gestützte Einblicke zu erhalten.",
       "tip1": "Öffnen Sie die Startseite und wählen Sie Entdecken, Kamera, Audio oder Gespräch starten.",
-      "tip2": "Kamera erstellt einen Chat und öffnet die Kamera, um ein Kunstwerk aufzunehmen.",
-      "tip3": "Audio erstellt einen Chat und startet die Sprachaufnahme für gesprochene Fragen.",
+      "tip2": "Tippen Sie auf Kamera, um ein Kunstwerk zu fotografieren und eine KI-Analyse zu starten.",
+      "tip3": "Tippen Sie auf Audio, um Ihre Frage laut zu stellen.",
       "tip4": "Besuchen Sie die Übersicht, um gespeicherte oder kürzliche Gespräche aufzurufen."
     },
     "slide1": {
       "title": "Praktische Tipps",
       "subtitle": "Erhalten Sie bessere Antworten im Museum durch gezielte Bild- und Audioeingaben.",
-      "tip1": "Rahmen Sie jeweils ein Kunstwerk oder Denkmaldetail für eine klarere Analyse ein.",
+      "tip1": "Rahmen Sie jeweils ein Kunstwerk oder ein Detail für eine klarere Analyse ein.",
       "tip2": "Stellen Sie kunstbezogene Fragen (Künstler, Stil, Epoche, Symbolik).",
       "tip3": "Nutzen Sie den geführten Museumsmodus für Empfehlungen zum nächsten Halt bei Besuchen.",
       "tip4": "Wählen Sie Einsteiger oder Experte als Führungsniveau für die Fachvokabulartiefe."
     },
     "slide2": {
-      "title": "Hilfe & Support",
+      "title": "Hilfe und Support",
       "subtitle": "Finden Sie schnell Support-Kanäle und Datenschutzinformationen.",
       "tip1": "Nutzen Sie den Support bei Kontoproblemen, Fehlern und Feedback.",
       "tip2": "Die Datenschutzseite zeigt Informationen zur Datenverarbeitung und Ihre Rechte.",
@@ -378,6 +378,7 @@
     "viewFullscreen": "In voller Grosse anzeigen",
     "listen": "Anhören",
     "listening": "Wiedergabe...",
+    "tts_unavailable": "Audio nicht verfügbar",
     "thumbsUp": "Hilfreich",
     "thumbsDown": "Nicht hilfreich",
     "sendFailed": "Senden fehlgeschlagen",

@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, StyleSheet, TextInput } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -17,21 +17,44 @@ interface ChatInputProps {
   isSending: boolean;
   /** Whether the input and send button should be disabled. */
   disabled?: boolean;
+  /** URI of the attached image to show as inline thumbnail. */
+  imageUri?: string | null;
+  /** Called when user taps the × on the thumbnail. */
+  onClearImage?: () => void;
 }
 
-/** Renders the chat text input with a send button, wrapped in a glass card. */
+/** Renders the chat text input with optional image thumbnail and a send button. */
 export const ChatInput = ({
   value,
   onChangeText,
   onSend,
   isSending,
   disabled = false,
+  imageUri,
+  onClearImage,
 }: ChatInputProps) => {
   const { theme } = useTheme();
   const { t } = useTranslation();
 
   return (
     <GlassCard style={styles.inputRow} intensity={56}>
+      {imageUri ? (
+        <View style={styles.thumbWrap}>
+          <Image
+            source={{ uri: imageUri }}
+            style={[styles.thumb, { borderColor: theme.inputBorder }]}
+          />
+          <Pressable
+            style={[styles.thumbDismiss, { backgroundColor: theme.error }]}
+            onPress={onClearImage}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.remove_image')}
+          >
+            <Ionicons name="close" size={12} color="#fff" />
+          </Pressable>
+        </View>
+      ) : null}
       <TextInput
         style={[
           styles.input,
@@ -94,6 +117,25 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     width: 44,
     height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thumbWrap: {
+    position: 'relative',
+  },
+  thumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  thumbDismiss: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },

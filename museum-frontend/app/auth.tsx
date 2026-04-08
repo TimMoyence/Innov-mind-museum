@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -199,228 +200,237 @@ export default function AuthScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
       >
-        <GlassCard style={styles.panel} intensity={66}>
-          <View style={styles.header}>
-            <BrandMark variant="auth" />
-            <Text style={[styles.title, { color: theme.textPrimary }]}>
-              {isLogin ? t('auth.welcome_back') : t('auth.create_account')}
-            </Text>
-            <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-              {isLogin ? t('auth.sign_in_subtitle') : t('auth.sign_up_subtitle')}
-            </Text>
-          </View>
-
-          <View style={styles.form}>
-            {errorMessage ? (
-              <ErrorNotice
-                message={errorMessage}
-                onDismiss={() => {
-                  setErrorMessage(null);
-                }}
-              />
-            ) : null}
-            {infoMessage ? (
-              <Text style={[styles.infoText, { color: theme.success }]}>{infoMessage}</Text>
-            ) : null}
-
-            {!isLogin ? (
-              <>
-                <FormInput
-                  icon="person-outline"
-                  placeholder={t('auth.first_name')}
-                  value={firstname}
-                  onChangeText={setFirstname}
-                  accessibilityLabel={t('a11y.auth.firstname_input')}
-                />
-                <FormInput
-                  icon="person-outline"
-                  placeholder={t('auth.last_name')}
-                  value={lastname}
-                  onChangeText={setLastname}
-                  accessibilityLabel={t('a11y.auth.lastname_input')}
-                />
-              </>
-            ) : null}
-
-            <FormInput
-              icon="mail-outline"
-              placeholder={t('auth.email')}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              testID="email-input"
-              accessibilityLabel={t('a11y.auth.email_input')}
-            />
-
-            <FormInput
-              icon="lock-closed-outline"
-              placeholder={t('auth.password')}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              testID="password-input"
-              accessibilityLabel={t('a11y.auth.password_input')}
-            />
-
-            {isLogin ? (
-              <Pressable
-                style={styles.forgotPasswordButton}
-                onPress={handleForgotPassword}
-                accessibilityRole="button"
-                accessibilityLabel={t('a11y.auth.forgot_password')}
-                accessibilityHint={t('a11y.auth.forgot_password_hint')}
-              >
-                <Text style={[styles.forgotPasswordText, { color: theme.primary }]}>
-                  {t('auth.forgot_password')}
-                </Text>
-              </Pressable>
-            ) : null}
-
-            {!isLogin ? (
-              <Pressable
-                style={styles.gdprRow}
-                onPress={() => {
-                  setGdprAccepted((v) => !v);
-                }}
-                accessibilityRole="checkbox"
-                accessibilityLabel={t('a11y.auth.gdpr_checkbox')}
-                accessibilityState={{ checked: gdprAccepted }}
-              >
-                <View
-                  style={[
-                    styles.checkbox,
-                    { borderColor: theme.inputBorder, backgroundColor: theme.inputBackground },
-                    gdprAccepted && { backgroundColor: theme.primary, borderColor: theme.primary },
-                  ]}
-                >
-                  {gdprAccepted ? (
-                    <Ionicons name="checkmark" size={14} color={theme.primaryContrast} />
-                  ) : null}
-                </View>
-                <Text style={[styles.gdprText, { color: theme.textSecondary }]}>
-                  <Trans
-                    i18nKey="auth.agree_terms_rich"
-                    components={{
-                      terms: (
-                        <Text
-                          style={[styles.gdprLink, { color: theme.primary }]}
-                          onPress={openTerms}
-                          accessibilityRole="link"
-                          accessibilityLabel={t('a11y.auth.terms_link')}
-                        />
-                      ),
-                      privacy: (
-                        <Text
-                          style={[styles.gdprLink, { color: theme.primary }]}
-                          onPress={openPrivacy}
-                          accessibilityRole="link"
-                          accessibilityLabel={t('a11y.auth.privacy_link')}
-                        />
-                      ),
-                    }}
-                  />
-                </Text>
-              </Pressable>
-            ) : null}
-
-            <Pressable
-              style={[
-                styles.submitButton,
-                { backgroundColor: theme.primary, shadowColor: theme.shadowColor },
-                (isLoading || isSocialLoading || (!isLogin && !gdprAccepted)) &&
-                  styles.submitButtonDisabled,
-              ]}
-              onPress={() => {
-                void (isLogin ? handleLogin() : handleRegister());
-              }}
-              disabled={isLoading || isSocialLoading || (!isLogin && !gdprAccepted)}
-              testID="auth-submit"
-              accessibilityRole="button"
-              accessibilityLabel={
-                isLogin ? t('a11y.auth.login_button') : t('a11y.auth.register_button')
-              }
-              accessibilityState={{
-                disabled: isLoading || isSocialLoading || (!isLogin && !gdprAccepted),
-              }}
-            >
-              {isLoading || isSocialLoading ? (
-                <ActivityIndicator color={theme.primaryContrast} />
-              ) : (
-                <Text style={[styles.submitButtonText, { color: theme.primaryContrast }]}>
-                  {isLogin ? t('auth.log_in') : t('auth.sign_up')}
-                </Text>
-              )}
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.switchButton,
-                { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground },
-              ]}
-              onPress={toggleAuthMode}
-              disabled={isLoading || isSocialLoading}
-              accessibilityRole="button"
-              accessibilityLabel={
-                isLogin ? t('a11y.auth.toggle_register') : t('a11y.auth.toggle_login')
-              }
-            >
-              <Text style={[styles.switchButtonText, { color: theme.textPrimary }]}>
-                {isLogin ? t('auth.no_account') : t('auth.has_account')}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <GlassCard style={styles.panel} intensity={66}>
+            <View style={styles.header}>
+              <BrandMark variant="auth" />
+              <Text style={[styles.title, { color: theme.textPrimary }]}>
+                {isLogin ? t('auth.welcome_back') : t('auth.create_account')}
               </Text>
-            </Pressable>
-
-            <View style={styles.separator}>
-              <View style={[styles.separatorLine, { backgroundColor: theme.separator }]} />
-              <Text style={[styles.separatorText, { color: theme.textSecondary }]}>
-                {t('common.or_continue_with')}
+              <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+                {isLogin ? t('auth.sign_in_subtitle') : t('auth.sign_up_subtitle')}
               </Text>
-              <View style={[styles.separatorLine, { backgroundColor: theme.separator }]} />
             </View>
 
-            {appleAuthAvailable ? (
-              <View
-                // eslint-disable-next-line react-native/no-inline-styles -- dynamic opacity for GDPR gate: computed from login + consent state
-                style={{ opacity: !isLogin && !gdprAccepted ? 0.5 : 1 }}
-                pointerEvents={!isLogin && !gdprAccepted ? 'none' : 'auto'}
-                accessibilityRole="button"
-                accessibilityLabel={t('a11y.auth.apple_signin')}
-              >
-                <AppleAuthentication.AppleAuthenticationButton
-                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                  cornerRadius={14}
-                  style={styles.appleButton}
-                  onPress={() => void handleAppleSignIn()}
+            <View style={styles.form}>
+              {errorMessage ? (
+                <ErrorNotice
+                  message={errorMessage}
+                  onDismiss={() => {
+                    setErrorMessage(null);
+                  }}
                 />
+              ) : null}
+              {infoMessage ? (
+                <Text style={[styles.infoText, { color: theme.success }]}>{infoMessage}</Text>
+              ) : null}
+
+              {!isLogin ? (
+                <>
+                  <FormInput
+                    icon="person-outline"
+                    placeholder={t('auth.first_name')}
+                    value={firstname}
+                    onChangeText={setFirstname}
+                    accessibilityLabel={t('a11y.auth.firstname_input')}
+                  />
+                  <FormInput
+                    icon="person-outline"
+                    placeholder={t('auth.last_name')}
+                    value={lastname}
+                    onChangeText={setLastname}
+                    accessibilityLabel={t('a11y.auth.lastname_input')}
+                  />
+                </>
+              ) : null}
+
+              <FormInput
+                icon="mail-outline"
+                placeholder={t('auth.email')}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                testID="email-input"
+                accessibilityLabel={t('a11y.auth.email_input')}
+              />
+
+              <FormInput
+                icon="lock-closed-outline"
+                placeholder={t('auth.password')}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                testID="password-input"
+                accessibilityLabel={t('a11y.auth.password_input')}
+              />
+
+              {isLogin ? (
+                <Pressable
+                  style={styles.forgotPasswordButton}
+                  onPress={handleForgotPassword}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('a11y.auth.forgot_password')}
+                  accessibilityHint={t('a11y.auth.forgot_password_hint')}
+                >
+                  <Text style={[styles.forgotPasswordText, { color: theme.primary }]}>
+                    {t('auth.forgot_password')}
+                  </Text>
+                </Pressable>
+              ) : null}
+
+              {!isLogin ? (
+                <Pressable
+                  style={styles.gdprRow}
+                  onPress={() => {
+                    setGdprAccepted((v) => !v);
+                  }}
+                  accessibilityRole="checkbox"
+                  accessibilityLabel={t('a11y.auth.gdpr_checkbox')}
+                  accessibilityState={{ checked: gdprAccepted }}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      { borderColor: theme.inputBorder, backgroundColor: theme.inputBackground },
+                      gdprAccepted && {
+                        backgroundColor: theme.primary,
+                        borderColor: theme.primary,
+                      },
+                    ]}
+                  >
+                    {gdprAccepted ? (
+                      <Ionicons name="checkmark" size={14} color={theme.primaryContrast} />
+                    ) : null}
+                  </View>
+                  <Text style={[styles.gdprText, { color: theme.textSecondary }]}>
+                    <Trans
+                      i18nKey="auth.agree_terms_rich"
+                      components={{
+                        terms: (
+                          <Text
+                            style={[styles.gdprLink, { color: theme.primary }]}
+                            onPress={openTerms}
+                            accessibilityRole="link"
+                            accessibilityLabel={t('a11y.auth.terms_link')}
+                          />
+                        ),
+                        privacy: (
+                          <Text
+                            style={[styles.gdprLink, { color: theme.primary }]}
+                            onPress={openPrivacy}
+                            accessibilityRole="link"
+                            accessibilityLabel={t('a11y.auth.privacy_link')}
+                          />
+                        ),
+                      }}
+                    />
+                  </Text>
+                </Pressable>
+              ) : null}
+
+              <Pressable
+                style={[
+                  styles.submitButton,
+                  { backgroundColor: theme.primary, shadowColor: theme.shadowColor },
+                  (isLoading || isSocialLoading || (!isLogin && !gdprAccepted)) &&
+                    styles.submitButtonDisabled,
+                ]}
+                onPress={() => {
+                  void (isLogin ? handleLogin() : handleRegister());
+                }}
+                disabled={isLoading || isSocialLoading || (!isLogin && !gdprAccepted)}
+                testID="auth-submit"
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isLogin ? t('a11y.auth.login_button') : t('a11y.auth.register_button')
+                }
+                accessibilityState={{
+                  disabled: isLoading || isSocialLoading || (!isLogin && !gdprAccepted),
+                }}
+              >
+                {isLoading || isSocialLoading ? (
+                  <ActivityIndicator color={theme.primaryContrast} />
+                ) : (
+                  <Text style={[styles.submitButtonText, { color: theme.primaryContrast }]}>
+                    {isLogin ? t('auth.log_in') : t('auth.sign_up')}
+                  </Text>
+                )}
+              </Pressable>
+
+              <Pressable
+                style={[
+                  styles.switchButton,
+                  { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground },
+                ]}
+                onPress={toggleAuthMode}
+                disabled={isLoading || isSocialLoading}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isLogin ? t('a11y.auth.toggle_register') : t('a11y.auth.toggle_login')
+                }
+              >
+                <Text style={[styles.switchButtonText, { color: theme.textPrimary }]}>
+                  {isLogin ? t('auth.no_account') : t('auth.has_account')}
+                </Text>
+              </Pressable>
+
+              <View style={styles.separator}>
+                <View style={[styles.separatorLine, { backgroundColor: theme.separator }]} />
+                <Text style={[styles.separatorText, { color: theme.textSecondary }]}>
+                  {t('common.or_continue_with')}
+                </Text>
+                <View style={[styles.separatorLine, { backgroundColor: theme.separator }]} />
               </View>
-            ) : null}
 
-            <Pressable
-              style={[
-                styles.googleButton,
-                { borderColor: theme.cardBorder, backgroundColor: theme.assistantBubble },
-                // eslint-disable-next-line react-native/no-inline-styles -- dynamic opacity for GDPR gate: computed from login + consent state
-                !isLogin && !gdprAccepted && { opacity: 0.5 },
-              ]}
-              onPress={() => void handleGoogleSignIn()}
-              disabled={isLoading || isSocialLoading || (!isLogin && !gdprAccepted)}
-              accessibilityRole="button"
-              accessibilityLabel={t('a11y.auth.google_signin')}
-            >
-              <Ionicons name="logo-google" size={20} color={theme.textPrimary} />
-              <Text style={[styles.googleButtonText, { color: theme.textPrimary }]}>
-                {t('auth.sign_in_google')}
-              </Text>
-            </Pressable>
+              {appleAuthAvailable ? (
+                <View
+                  // eslint-disable-next-line react-native/no-inline-styles -- dynamic opacity for GDPR gate: computed from login + consent state
+                  style={{ opacity: !isLogin && !gdprAccepted ? 0.5 : 1 }}
+                  pointerEvents={!isLogin && !gdprAccepted ? 'none' : 'auto'}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('a11y.auth.apple_signin')}
+                >
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                    cornerRadius={14}
+                    style={styles.appleButton}
+                    onPress={() => void handleAppleSignIn()}
+                  />
+                </View>
+              ) : null}
 
-            {isLogin ? (
-              <Text style={[styles.legalText, { color: theme.textSecondary }]}>
-                {t('auth.legal_notice')}
-              </Text>
-            ) : null}
-          </View>
-        </GlassCard>
+              <Pressable
+                style={[
+                  styles.googleButton,
+                  { borderColor: theme.cardBorder, backgroundColor: theme.assistantBubble },
+                  // eslint-disable-next-line react-native/no-inline-styles -- dynamic opacity for GDPR gate: computed from login + consent state
+                  !isLogin && !gdprAccepted && { opacity: 0.5 },
+                ]}
+                onPress={() => void handleGoogleSignIn()}
+                disabled={isLoading || isSocialLoading || (!isLogin && !gdprAccepted)}
+                accessibilityRole="button"
+                accessibilityLabel={t('a11y.auth.google_signin')}
+              >
+                <Ionicons name="logo-google" size={20} color={theme.textPrimary} />
+                <Text style={[styles.googleButtonText, { color: theme.textPrimary }]}>
+                  {t('auth.sign_in_google')}
+                </Text>
+              </Pressable>
+
+              {isLogin ? (
+                <Text style={[styles.legalText, { color: theme.textSecondary }]}>
+                  {t('auth.legal_notice')}
+                </Text>
+              ) : null}
+            </View>
+          </GlassCard>
+        </ScrollView>
       </KeyboardAvoidingView>
     </LiquidScreen>
   );
@@ -430,8 +440,11 @@ const styles = StyleSheet.create({
   screen: {
     paddingHorizontal: 16,
     paddingBottom: 18,
-    justifyContent: 'center',
     gap: 12,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   flex: {
     flex: 1,

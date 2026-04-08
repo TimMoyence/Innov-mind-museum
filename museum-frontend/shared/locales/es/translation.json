@@ -220,8 +220,8 @@
       "title": "Bienvenido a Musaium",
       "subtitle": "Tu guía personal de museo. Fotografía obras de arte o haz preguntas para obtener análisis con IA.",
       "tip1": "Abre Inicio y elige Descubrir, Cámara, Audio o Iniciar conversación.",
-      "tip2": "Cámara crea un chat y abre la cámara para capturar una obra de arte.",
-      "tip3": "Audio crea un chat e inicia la grabación de voz para preguntas habladas.",
+      "tip2": "Pulsa Cámara para fotografiar una obra y obtener un análisis IA.",
+      "tip3": "Pulsa Audio para hacer tu pregunta en voz alta.",
       "tip4": "Visita el Panel para revisar conversaciones guardadas o recientes."
     },
     "slide1": {
@@ -378,6 +378,7 @@
     "viewFullscreen": "Ver en pantalla completa",
     "listen": "Escuchar",
     "listening": "Reproduciendo...",
+    "tts_unavailable": "Audio no disponible",
     "thumbsUp": "Útil",
     "thumbsDown": "No útil",
     "sendFailed": "Error al enviar",

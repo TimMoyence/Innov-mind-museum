@@ -54,6 +54,7 @@ describe('useMuseumDirectory', () => {
           longitude: 2.3376,
           distance: 0.5,
           source: 'local' as const,
+          museumType: 'general' as const,
         },
       ],
       count: 1,
@@ -104,7 +105,7 @@ describe('useMuseumDirectory', () => {
       expect.objectContaining({
         lat: userLocation.latitude,
         lng: userLocation.longitude,
-        radius: 30_000,
+        radius: 3_000,
       }),
     );
   });
@@ -235,7 +236,7 @@ describe('useMuseumDirectory', () => {
     });
 
     expect(mockSearchMuseums).toHaveBeenCalledWith(
-      expect.objectContaining({ lat: 48.8566, lng: 2.3522, radius: 30_000 }),
+      expect.objectContaining({ lat: 48.8566, lng: 2.3522, radius: 3_000 }),
     );
   });
 
