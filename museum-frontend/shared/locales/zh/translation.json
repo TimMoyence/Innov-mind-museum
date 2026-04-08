@@ -18,6 +18,9 @@
     "or_continue_with": "或通过以下方式继续",
     "settings": "设置"
   },
+  "inAppBrowser": {
+    "openSystem": "在浏览器中打开"
+  },
   "permissions": {
     "galleryTitle": "相册访问",
     "galleryMessage": "需要相册访问权限。请在设置中启用。",
