@@ -65,6 +65,7 @@ export const ChatMessageList = ({
     isPlaying: ttsIsPlaying,
     isLoading: ttsIsLoading,
     activeMessageId: ttsActiveId,
+    failedMessageId: ttsFailedId,
     togglePlayback: ttsToggle,
   } = useTextToSpeech();
   const [feedbackMap, setFeedbackMap] = useState<Record<string, 'positive' | 'negative' | null>>(
@@ -142,6 +143,7 @@ export const ChatMessageList = ({
             onReport={onReport}
             ttsPlaying={ttsActiveId === item.id ? ttsIsPlaying : false}
             ttsLoading={ttsActiveId === item.id ? ttsIsLoading : false}
+            ttsFailed={ttsFailedId === item.id}
             onToggleTts={isAssistant ? ttsToggle : undefined}
             onRetry={onRetry}
             feedbackValue={isAssistant ? (feedbackMap[item.id] ?? null) : undefined}
@@ -191,6 +193,7 @@ export const ChatMessageList = ({
       ttsIsPlaying,
       ttsIsLoading,
       ttsActiveId,
+      ttsFailedId,
       ttsToggle,
     ],
   );

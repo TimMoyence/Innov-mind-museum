@@ -17,6 +17,8 @@ interface AssistantMetaActionsProps {
   ttsPlaying: boolean;
   /** Whether TTS audio is currently loading for this message. */
   ttsLoading: boolean;
+  /** Whether TTS failed for this message (disables the listen button). */
+  ttsFailed?: boolean;
   /** Called to toggle TTS playback for this message. */
   onToggleTts?: (messageId: string) => Promise<void>;
   /** Called to report a message. */
@@ -30,6 +32,7 @@ export const AssistantMetaActions = React.memo(function AssistantMetaActions({
   onFeedback,
   ttsPlaying,
   ttsLoading,
+  ttsFailed = false,
   onToggleTts,
   onReport,
 }: AssistantMetaActionsProps) {
@@ -76,26 +79,44 @@ export const AssistantMetaActions = React.memo(function AssistantMetaActions({
       ) : null}
       {onToggleTts ? (
         <Pressable
-          style={styles.actionButton}
+          style={[styles.actionButton, ttsFailed && styles.actionDisabled]}
           onPress={() => {
+            if (ttsFailed) return;
             void Haptics.selectionAsync();
             void onToggleTts(messageId);
           }}
           hitSlop={8}
+          disabled={ttsFailed}
           accessibilityRole="button"
-          accessibilityLabel={ttsPlaying ? t('chat.listening') : t('chat.listen')}
+          accessibilityLabel={
+            ttsFailed
+              ? t('chat.tts_unavailable')
+              : ttsPlaying
+                ? t('chat.listening')
+                : t('chat.listen')
+          }
         >
           {ttsLoading ? (
             <ActivityIndicator size="small" color={theme.timestamp} />
           ) : (
             <Ionicons
-              name={ttsPlaying ? 'pause-outline' : 'volume-high-outline'}
+              name={
+                ttsFailed
+                  ? 'volume-mute-outline'
+                  : ttsPlaying
+                    ? 'pause-outline'
+                    : 'volume-high-outline'
+              }
               size={13}
-              color={theme.timestamp}
+              color={ttsFailed ? theme.error : theme.timestamp}
             />
           )}
-          <Text style={[styles.actionLabel, { color: theme.timestamp }]}>
-            {ttsPlaying ? t('chat.listening') : t('chat.listen')}
+          <Text style={[styles.actionLabel, { color: ttsFailed ? theme.error : theme.timestamp }]}>
+            {ttsFailed
+              ? t('chat.tts_unavailable')
+              : ttsPlaying
+                ? t('chat.listening')
+                : t('chat.listen')}
           </Text>
         </Pressable>
       ) : null}
@@ -128,6 +149,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
+  },
+  actionDisabled: {
+    opacity: 0.5,
   },
   actionLabel: {
     fontSize: 11,
