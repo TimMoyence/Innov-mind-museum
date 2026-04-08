@@ -2,6 +2,9 @@ import { httpRequest } from '@/shared/api/httpRequest';
 
 const MUSEUM_BASE = '/api/museums';
 
+/** Normalized museum category derived from OSM tags or stored in the DB. */
+export type MuseumCategory = 'art' | 'history' | 'science' | 'specialized' | 'general';
+
 /** Public museum entry returned by the directory endpoint. */
 export interface MuseumDirectoryEntry {
   id: number;
@@ -11,6 +14,7 @@ export interface MuseumDirectoryEntry {
   description: string | null;
   latitude: number | null;
   longitude: number | null;
+  museumType: MuseumCategory;
 }
 
 /** Entry returned by the search endpoint (includes OSM results without id/slug). */
@@ -21,6 +25,7 @@ export interface MuseumSearchEntry {
   longitude: number;
   distance: number;
   source: 'local' | 'osm';
+  museumType: MuseumCategory;
 }
 
 /** Response shape for GET /api/museums/search. */

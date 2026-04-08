@@ -35,16 +35,23 @@ fi
 
 cat "$ENV_LOCAL"
 
-# Set build number from Xcode Cloud's auto-incrementing CI_BUILD_NUMBER.
-# Without this, CFBundleVersion stays "1" (hardcoded in Info.plist) and
-# App Store Connect silently rejects duplicate uploads → nothing on TestFlight.
-if [ -n "$CI_BUILD_NUMBER" ]; then
-  cd "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios"
-  agvtool new-version -all "$CI_BUILD_NUMBER"
-  echo "Set CFBundleVersion (build number) to $CI_BUILD_NUMBER"
+# Set build number using max(CI_BUILD_NUMBER, plist_floor).
+# The CFBundleVersion committed in Info.plist acts as a floor — Xcode Cloud's
+# auto-incrementing CI_BUILD_NUMBER is used only if it exceeds the floor.
+# This protects against CI_BUILD_NUMBER being reset (new workflow) or lower
+# than builds already uploaded to App Store Connect.
+PLIST_PATH="$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios/Musaium/Info.plist"
+PLIST_FLOOR=$(plutil -extract CFBundleVersion raw "$PLIST_PATH" 2>/dev/null || echo "1")
+
+if [ -n "$CI_BUILD_NUMBER" ] && [ "$CI_BUILD_NUMBER" -gt "$PLIST_FLOOR" ]; then
+  TARGET_BUILD="$CI_BUILD_NUMBER"
 else
-  echo "WARNING: CI_BUILD_NUMBER not set — build number unchanged"
+  TARGET_BUILD="$PLIST_FLOOR"
 fi
+
+cd "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios"
+agvtool new-version -all "$TARGET_BUILD"
+echo "Set CFBundleVersion to $TARGET_BUILD (plist floor=$PLIST_FLOOR, CI_BUILD_NUMBER=${CI_BUILD_NUMBER:-unset})"
 
 # Patch HERMES_CLI_PATH — pod install bakes the developer's absolute local
 # path into xcconfig files, which breaks on Xcode Cloud. Replace with the

@@ -5,14 +5,12 @@ import { MediaAttachmentPanel } from '@/features/chat/ui/MediaAttachmentPanel';
 
 describe('MediaAttachmentPanel', () => {
   const defaultProps = {
-    selectedImage: null,
-    onPickImage: jest.fn(),
-    clearSelectedImage: jest.fn(),
     recordedAudioUri: null,
     isPlayingAudio: false,
     isRecording: false,
     playRecordedAudio: jest.fn().mockResolvedValue(undefined),
     clearMedia: jest.fn(),
+    onPickImage: jest.fn(),
     onTakePicture: jest.fn(),
     toggleRecording: jest.fn().mockResolvedValue(undefined),
   };
@@ -49,12 +47,6 @@ describe('MediaAttachmentPanel', () => {
   it('shows stop label when recording', () => {
     render(<MediaAttachmentPanel {...defaultProps} isRecording />);
     expect(screen.getByLabelText('chat.stop_audio')).toBeTruthy();
-  });
-
-  it('shows image preview when selectedImage is set', () => {
-    render(<MediaAttachmentPanel {...defaultProps} selectedImage="file:///tmp/photo.jpg" />);
-    // The floating context menu is mocked; the image preview wrap should be rendered
-    expect(screen.getByTestId('floating-context-menu')).toBeTruthy();
   });
 
   it('shows audio card when recordedAudioUri is set', () => {

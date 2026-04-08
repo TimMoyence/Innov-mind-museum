@@ -13,6 +13,8 @@ const makeMuseum = (overrides?: Partial<MuseumWithDistance>): MuseumWithDistance
   latitude: 48.8606,
   longitude: 2.3376,
   distance: 1.2,
+  source: 'local',
+  museumType: 'general',
   ...overrides,
 });
 

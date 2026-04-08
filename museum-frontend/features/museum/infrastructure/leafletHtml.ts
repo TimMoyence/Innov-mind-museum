@@ -37,22 +37,27 @@ export const buildLeafletHtml = ({ isDark }: LeafletHtmlOptions): string => {
     html, body, #map { width: 100%; height: 100%; }
     body { background: ${isDark ? '#0F172A' : '#EAF2FF'}; }
 
-    /* Museum marker */
-    .museum-marker {
-      width: 14px; height: 14px;
-      border-radius: 50%;
-      background: #1D4ED8;
-      border: 2.5px solid #fff;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-    }
+    /* Museum markers by category */
+    .museum-marker { width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+    .museum-marker-art         { background: #7C3AED; } /* violet */
+    .museum-marker-history     { background: #DC2626; } /* red */
+    .museum-marker-science     { background: #0891B2; } /* cyan */
+    .museum-marker-specialized { background: #EA580C; } /* orange */
+    .museum-marker-general     { background: #2563EB; } /* blue */
 
-    /* User position marker */
+    /* User position marker (green + pulse) */
     .user-marker {
-      width: 16px; height: 16px;
+      width: 18px; height: 18px;
       border-radius: 50%;
-      background: #3B82F6;
+      background: #16A34A;
       border: 3px solid #fff;
-      box-shadow: 0 0 0 4px rgba(59,130,246,0.25), 0 1px 4px rgba(0,0,0,0.3);
+      box-shadow: 0 0 0 5px rgba(22,163,74,0.3), 0 1px 4px rgba(0,0,0,0.3);
+      animation: pulse 2s ease-out infinite;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(22,163,74,0.5), 0 1px 4px rgba(0,0,0,0.3); }
+      70%  { box-shadow: 0 0 0 12px rgba(22,163,74,0), 0 1px 4px rgba(0,0,0,0.3); }
+      100% { box-shadow: 0 0 0 0 rgba(22,163,74,0), 0 1px 4px rgba(0,0,0,0.3); }
     }
 
     /* Popup styling */
@@ -76,26 +81,29 @@ export const buildLeafletHtml = ({ isDark }: LeafletHtmlOptions): string => {
       var map = L.map('map', {
         zoomControl: false,
         attributionControl: true
-      }).setView([48.8566, 2.3522], 12);
+      }).setView([48.8566, 2.3522], 14);
 
       L.tileLayer('${tileUrl}', {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/">CARTO</a>'
       }).addTo(map);
 
-      var museumIcon = L.divIcon({
-        className: '',
-        html: '<div class="museum-marker"></div>',
-        iconSize: [14, 14],
-        iconAnchor: [7, 7],
-        popupAnchor: [0, -10]
+      var typeIcons = {};
+      ['art', 'history', 'science', 'specialized', 'general'].forEach(function (t) {
+        typeIcons[t] = L.divIcon({
+          className: '',
+          html: '<div class="museum-marker museum-marker-' + t + '"></div>',
+          iconSize: [14, 14],
+          iconAnchor: [7, 7],
+          popupAnchor: [0, -10]
+        });
       });
 
       var userIcon = L.divIcon({
         className: '',
         html: '<div class="user-marker"></div>',
-        iconSize: [16, 16],
-        iconAnchor: [8, 8]
+        iconSize: [18, 18],
+        iconAnchor: [9, 9]
       });
 
       var markerLayer = L.layerGroup().addTo(map);
@@ -116,7 +124,8 @@ export const buildLeafletHtml = ({ isDark }: LeafletHtmlOptions): string => {
         if (data.type === 'setMarkers') {
           markerLayer.clearLayers();
           (data.markers || []).forEach(function (m) {
-            var marker = L.marker([m.lat, m.lng], { icon: museumIcon })
+            var icon = typeIcons[m.museumType] || typeIcons['general'];
+            var marker = L.marker([m.lat, m.lng], { icon: icon })
               .bindPopup(m.name);
             marker.on('click', function () {
               postMessage({ type: 'markerClick', id: m.id });

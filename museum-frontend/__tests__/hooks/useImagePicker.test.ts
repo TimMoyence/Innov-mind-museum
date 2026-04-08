@@ -40,14 +40,12 @@ describe('useImagePicker', () => {
     mockOptimizeImageForUpload.mockImplementation((uri: string) => Promise.resolve(uri));
   });
 
-  it('initialises with null selectedImage and null pendingImage', () => {
+  it('initialises with null selectedImage', () => {
     const { result } = renderHook(() => useImagePicker());
-
     expect(result.current.selectedImage).toBeNull();
-    expect(result.current.pendingImage).toBeNull();
   });
 
-  it('onPickImage() requests permissions and sets pendingImage on success', async () => {
+  it('onPickImage() requests permissions and sets selectedImage on success', async () => {
     mockRequestMediaLibraryPermissionsAsync.mockResolvedValue({ status: 'granted' });
     mockLaunchImageLibraryAsync.mockResolvedValue({
       canceled: false,
@@ -63,8 +61,7 @@ describe('useImagePicker', () => {
     expect(mockRequestMediaLibraryPermissionsAsync).toHaveBeenCalledTimes(1);
     expect(mockLaunchImageLibraryAsync).toHaveBeenCalledTimes(1);
     expect(mockOptimizeImageForUpload).toHaveBeenCalledWith('file://photo.jpg');
-    expect(result.current.pendingImage).toBe('file://photo.jpg');
-    expect(result.current.selectedImage).toBeNull();
+    expect(result.current.selectedImage).toBe('file://photo.jpg');
   });
 
   it('onPickImage() does nothing when user cancels the picker', async () => {
@@ -80,7 +77,6 @@ describe('useImagePicker', () => {
       await result.current.onPickImage();
     });
 
-    expect(result.current.pendingImage).toBeNull();
     expect(result.current.selectedImage).toBeNull();
   });
 
@@ -94,10 +90,10 @@ describe('useImagePicker', () => {
     });
 
     expect(mockLaunchImageLibraryAsync).not.toHaveBeenCalled();
-    expect(result.current.pendingImage).toBeNull();
+    expect(result.current.selectedImage).toBeNull();
   });
 
-  it('onTakePicture() launches native camera and sets pendingImage on capture', async () => {
+  it('onTakePicture() launches native camera and sets selectedImage on capture', async () => {
     mockRequestCameraPermissionsAsync.mockResolvedValue({ status: 'granted' });
     mockLaunchCameraAsync.mockResolvedValue({
       canceled: false,
@@ -113,7 +109,7 @@ describe('useImagePicker', () => {
     expect(mockRequestCameraPermissionsAsync).toHaveBeenCalledTimes(1);
     expect(mockLaunchCameraAsync).toHaveBeenCalledTimes(1);
     expect(mockOptimizeImageForUpload).toHaveBeenCalledWith('file://camera-photo.jpg');
-    expect(result.current.pendingImage).toBe('file://camera-photo.jpg');
+    expect(result.current.selectedImage).toBe('file://camera-photo.jpg');
   });
 
   it('falls back to original image URI when optimization fails', async () => {
@@ -130,7 +126,7 @@ describe('useImagePicker', () => {
       await result.current.onPickImage();
     });
 
-    expect(result.current.pendingImage).toBe('file://original.jpg');
+    expect(result.current.selectedImage).toBe('file://original.jpg');
   });
 
   it('onTakePicture() does nothing when camera permission denied', async () => {
@@ -143,7 +139,7 @@ describe('useImagePicker', () => {
     });
 
     expect(mockLaunchCameraAsync).not.toHaveBeenCalled();
-    expect(result.current.pendingImage).toBeNull();
+    expect(result.current.selectedImage).toBeNull();
   });
 
   it('onTakePicture() does nothing when user cancels the camera', async () => {
@@ -159,7 +155,6 @@ describe('useImagePicker', () => {
       await result.current.onTakePicture();
     });
 
-    expect(result.current.pendingImage).toBeNull();
     expect(result.current.selectedImage).toBeNull();
   });
 
@@ -173,7 +168,7 @@ describe('useImagePicker', () => {
       await result.current.onTakePicture();
     });
 
-    expect(result.current.pendingImage).toBeNull();
+    expect(result.current.selectedImage).toBeNull();
   });
 
   it('onPickImage() handles gallery launch failure gracefully', async () => {
@@ -186,50 +181,6 @@ describe('useImagePicker', () => {
       await result.current.onPickImage();
     });
 
-    expect(result.current.pendingImage).toBeNull();
-  });
-
-  it('confirmPendingImage() promotes pendingImage to selectedImage', async () => {
-    mockRequestCameraPermissionsAsync.mockResolvedValue({ status: 'granted' });
-    mockLaunchCameraAsync.mockResolvedValue({
-      canceled: false,
-      assets: [{ uri: 'file://confirmed.jpg' }],
-    });
-
-    const { result } = renderHook(() => useImagePicker());
-
-    await act(async () => {
-      await result.current.onTakePicture();
-    });
-    expect(result.current.pendingImage).toBe('file://confirmed.jpg');
-
-    act(() => {
-      result.current.confirmPendingImage('file://confirmed.jpg');
-    });
-
-    expect(result.current.selectedImage).toBe('file://confirmed.jpg');
-    expect(result.current.pendingImage).toBeNull();
-  });
-
-  it('cancelPendingImage() clears pendingImage without affecting selectedImage', async () => {
-    mockRequestCameraPermissionsAsync.mockResolvedValue({ status: 'granted' });
-    mockLaunchCameraAsync.mockResolvedValue({
-      canceled: false,
-      assets: [{ uri: 'file://to-cancel.jpg' }],
-    });
-
-    const { result } = renderHook(() => useImagePicker());
-
-    await act(async () => {
-      await result.current.onTakePicture();
-    });
-    expect(result.current.pendingImage).toBe('file://to-cancel.jpg');
-
-    act(() => {
-      result.current.cancelPendingImage();
-    });
-
-    expect(result.current.pendingImage).toBeNull();
     expect(result.current.selectedImage).toBeNull();
   });
 
@@ -244,9 +195,6 @@ describe('useImagePicker', () => {
 
     await act(async () => {
       await result.current.onTakePicture();
-    });
-    act(() => {
-      result.current.confirmPendingImage('file://to-clear.jpg');
     });
     expect(result.current.selectedImage).toBe('file://to-clear.jpg');
 

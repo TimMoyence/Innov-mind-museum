@@ -13,11 +13,17 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+export interface NavPreviewTab {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+}
+
 export interface SlideData {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   subtitle: string;
   bullets: string[];
+  navPreviewTabs?: NavPreviewTab[];
 }
 
 interface OnboardingSlideProps {
@@ -56,6 +62,24 @@ export const OnboardingSlide = React.memo(function OnboardingSlide({
           {slide.title}
         </Text>
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>{slide.subtitle}</Text>
+
+        {slide.navPreviewTabs ? (
+          <View
+            style={[
+              styles.navPreview,
+              { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder },
+            ]}
+          >
+            {slide.navPreviewTabs.map((tab) => (
+              <View key={tab.icon} style={styles.navTab}>
+                <Ionicons name={tab.icon} size={20} color={theme.primary} />
+                <Text style={[styles.navTabLabel, { color: theme.textSecondary }]}>
+                  {tab.label}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         <GlassCard style={styles.card} intensity={50}>
           {slide.bullets.map((bullet, i) => (
@@ -97,6 +121,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 20,
+  },
+  navPreview: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 24,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  navTab: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  navTabLabel: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   card: {
     padding: 16,

@@ -43,6 +43,8 @@ const makeMuseum = (overrides: Record<string, unknown> = {}) => ({
   latitude: 48.8566,
   longitude: 2.3522,
   distance: 1.5,
+  source: 'local' as const,
+  museumType: 'general' as const,
   ...overrides,
 });
 

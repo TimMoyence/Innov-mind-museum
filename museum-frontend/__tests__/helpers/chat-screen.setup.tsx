@@ -99,11 +99,6 @@ jest.mock('@/features/chat/ui/MediaAttachmentPanel', () => {
   return { MediaAttachmentPanel: () => <View testID="media-attachment-panel" /> };
 });
 
-jest.mock('@/features/chat/ui/ImagePreviewModal', () => {
-  const { View } = require('react-native');
-  return { ImagePreviewModal: () => <View testID="image-preview-modal" /> };
-});
-
 jest.mock('@/features/chat/ui/MessageContextMenu', () => {
   const { View } = require('react-native');
   return { MessageContextMenu: () => <View testID="message-context-menu" /> };

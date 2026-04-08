@@ -1,16 +1,11 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
-import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
 interface MediaAttachmentPanelProps {
-  // Image preview
-  selectedImage: string | null;
-  onPickImage: () => void;
-  clearSelectedImage: () => void;
   // Audio preview
   recordedAudioUri: string | null;
   isPlayingAudio: boolean;
@@ -18,20 +13,19 @@ interface MediaAttachmentPanelProps {
   playRecordedAudio: () => Promise<void>;
   clearMedia: () => void;
   // Attach actions
+  onPickImage: () => void;
   onTakePicture: () => void;
   toggleRecording: () => Promise<void>;
 }
 
-/** Image/audio preview area and gallery/lens/audio attachment buttons. */
+/** Audio preview area and gallery/lens/audio attachment buttons. */
 export function MediaAttachmentPanel({
-  selectedImage,
-  onPickImage,
-  clearSelectedImage,
   recordedAudioUri,
   isPlayingAudio,
   isRecording,
   playRecordedAudio,
   clearMedia,
+  onPickImage,
   onTakePicture,
   toggleRecording,
 }: MediaAttachmentPanelProps) {
@@ -40,35 +34,6 @@ export function MediaAttachmentPanel({
 
   return (
     <>
-      {selectedImage ? (
-        <View style={styles.previewWrap}>
-          <Image
-            source={{ uri: selectedImage }}
-            style={[styles.preview, { borderColor: theme.inputBorder }]}
-          />
-          <View style={styles.previewMenu}>
-            <FloatingContextMenu
-              actions={[
-                {
-                  id: 'replace',
-                  icon: 'images-outline',
-                  label: t('chat.replace_image'),
-                  onPress: () => {
-                    onPickImage();
-                  },
-                },
-                {
-                  id: 'clear-image',
-                  icon: 'trash-outline',
-                  label: t('chat.remove_image'),
-                  onPress: clearSelectedImage,
-                },
-              ]}
-            />
-          </View>
-        </View>
-      ) : null}
-
       {recordedAudioUri ? (
         <GlassCard style={styles.audioCard} intensity={56}>
           <Text style={[styles.audioTitle, { color: theme.textPrimary }]}>
@@ -161,18 +126,6 @@ export function MediaAttachmentPanel({
 }
 
 const styles = StyleSheet.create({
-  previewWrap: {
-    marginTop: 8,
-  },
-  preview: {
-    width: 100,
-    height: 100,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  previewMenu: {
-    marginTop: 6,
-  },
   audioCard: {
     marginTop: 10,
     padding: 10,
