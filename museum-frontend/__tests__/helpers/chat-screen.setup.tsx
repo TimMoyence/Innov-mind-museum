@@ -35,11 +35,8 @@ jest.mock('@/features/chat/application/useAudioRecorder', () => ({
 jest.mock('@/features/chat/application/useImagePicker', () => ({
   useImagePicker: () => ({
     selectedImage: null,
-    pendingImage: null,
     onPickImage: jest.fn(),
     onTakePicture: jest.fn(),
-    confirmPendingImage: jest.fn(),
-    cancelPendingImage: jest.fn(),
     clearSelectedImage: jest.fn(),
   }),
 }));
