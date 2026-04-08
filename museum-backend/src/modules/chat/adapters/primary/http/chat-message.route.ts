@@ -6,6 +6,7 @@ import { isAuthenticated } from '@src/helpers/middleware/authenticated.middlewar
 import { dailyChatLimit } from '@src/helpers/middleware/daily-chat-limit.middleware';
 import {
   bySession,
+  byUserId,
   createRateLimitMiddleware,
 } from '@src/helpers/middleware/rate-limit.middleware';
 
@@ -183,50 +184,9 @@ function createStreamHandler(chatService: ChatService) {
   };
 }
 
-/**
- * Creates the message sub-router (send, stream, list, art-keywords).
- *
- * @param chatService - Injected chat application service.
- * @param artKeywordRepo - Optional art keyword repository for keyword endpoints.
- * @param uploadAdmission - Shared upload-admission middleware (concurrency limiter).
- * @returns Router handling message operations and art-keyword endpoints.
- */
-export const createMessageRouter = (
-  chatService: ChatService,
-  artKeywordRepo?: ArtKeywordRepository,
-  uploadAdmission?: RequestHandler,
-): Router => {
-  const router = Router();
-
-  const sessionLimiter = createRateLimitMiddleware({
-    limit: env.rateLimit.sessionLimit,
-    windowMs: env.rateLimit.windowMs,
-    keyGenerator: bySession,
-  });
-
-  // POST /sessions/:id/messages — send a message (non-streaming)
-  router.post(
-    '/sessions/:id/messages',
-    isAuthenticated,
-    dailyChatLimit,
-    sessionLimiter,
-    ...(uploadAdmission ? [uploadAdmission] : []),
-    extendTimeoutForUpload,
-    upload.single('image'),
-    createPostMessageHandler(chatService),
-  );
-
-  // POST /sessions/:id/messages/stream — SSE streaming message
-  router.post(
-    '/sessions/:id/messages/stream',
-    isAuthenticated,
-    dailyChatLimit,
-    sessionLimiter,
-    createStreamHandler(chatService),
-  );
-
-  // GET /art-keywords — list art keywords by locale
-  router.get('/art-keywords', isAuthenticated, async (req, res) => {
+/** Handler factory: GET /art-keywords (list keywords by locale, optional since filter). */
+function createListArtKeywordsHandler(artKeywordRepo?: ArtKeywordRepository) {
+  return async (req: Request, res: Response): Promise<void> => {
     if (!artKeywordRepo) {
       res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Art keywords not enabled' } });
       return;
@@ -249,10 +209,12 @@ export const createMessageRouter = (
       })),
       syncedAt: new Date().toISOString(),
     });
-  });
+  };
+}
 
-  // POST /art-keywords — bulk upsert art keywords
-  router.post('/art-keywords', isAuthenticated, async (req, res) => {
+/** Handler factory: POST /art-keywords (bulk upsert with input validation). */
+function createBulkUpsertArtKeywordsHandler(artKeywordRepo?: ArtKeywordRepository) {
+  return async (req: Request, res: Response): Promise<void> => {
     if (!artKeywordRepo) {
       res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Art keywords not enabled' } });
       return;
@@ -275,7 +237,67 @@ export const createMessageRouter = (
     }
     await artKeywordRepo.bulkUpsert(validated, locale ?? 'en');
     res.status(201).json({ created: validated.length });
+  };
+}
+
+/**
+ * Creates the message sub-router (send, stream, list, art-keywords).
+ *
+ * @param chatService - Injected chat application service.
+ * @param artKeywordRepo - Optional art keyword repository for keyword endpoints.
+ * @param uploadAdmission - Shared upload-admission middleware (concurrency limiter).
+ * @returns Router handling message operations and art-keyword endpoints.
+ */
+export const createMessageRouter = (
+  chatService: ChatService,
+  artKeywordRepo?: ArtKeywordRepository,
+  uploadAdmission?: RequestHandler,
+): Router => {
+  const router = Router();
+
+  const sessionLimiter = createRateLimitMiddleware({
+    limit: env.rateLimit.sessionLimit,
+    windowMs: env.rateLimit.windowMs,
+    keyGenerator: bySession,
   });
+
+  // SEC-20 (2026-04-08): per-authenticated-user limiter complementing the
+  // per-session limiter. Without this, a single user can multiply throughput
+  // by spawning many sessions in parallel (each gets its own session bucket).
+  // Mounted AFTER `isAuthenticated` so byUserId resolves req.user; falls back
+  // to byIp for any code path that bypasses auth (defensive).
+  const userLimiter = createRateLimitMiddleware({
+    limit: env.rateLimit.userLimit,
+    windowMs: env.rateLimit.windowMs,
+    keyGenerator: byUserId,
+  });
+
+  // POST /sessions/:id/messages — send a message (non-streaming)
+  router.post(
+    '/sessions/:id/messages',
+    isAuthenticated,
+    dailyChatLimit,
+    userLimiter,
+    sessionLimiter,
+    ...(uploadAdmission ? [uploadAdmission] : []),
+    extendTimeoutForUpload,
+    upload.single('image'),
+    createPostMessageHandler(chatService),
+  );
+
+  // POST /sessions/:id/messages/stream — SSE streaming message
+  router.post(
+    '/sessions/:id/messages/stream',
+    isAuthenticated,
+    dailyChatLimit,
+    userLimiter,
+    sessionLimiter,
+    createStreamHandler(chatService),
+  );
+
+  // Art-keywords offline-sync endpoints (handlers extracted for max-lines-per-function compliance).
+  router.get('/art-keywords', isAuthenticated, createListArtKeywordsHandler(artKeywordRepo));
+  router.post('/art-keywords', isAuthenticated, createBulkUpsertArtKeywordsHandler(artKeywordRepo));
 
   return router;
 };

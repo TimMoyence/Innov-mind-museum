@@ -9,6 +9,7 @@ import { isAuthenticated } from '@src/helpers/middleware/authenticated.middlewar
 import { dailyChatLimit } from '@src/helpers/middleware/daily-chat-limit.middleware';
 import {
   bySession,
+  byUserId,
   createRateLimitMiddleware,
 } from '@src/helpers/middleware/rate-limit.middleware';
 
@@ -206,25 +207,45 @@ export const createMediaRouter = (
     keyGenerator: bySession,
   });
 
+  // SEC-20: per-authenticated-user limiter (see chat-message.route.ts).
+  const userLimiter = createRateLimitMiddleware({
+    limit: env.rateLimit.userLimit,
+    windowMs: env.rateLimit.windowMs,
+    keyGenerator: byUserId,
+  });
+
   router.post(
     '/sessions/:id/audio',
     isAuthenticated,
     dailyChatLimit,
+    userLimiter,
     sessionLimiter,
     ...(uploadAdmission ? [uploadAdmission] : []),
     audioUpload.single('audio'),
     createAudioHandler(chatService),
   );
-  router.post('/messages/:messageId/report', isAuthenticated, createReportHandler(chatService));
-  router.post('/messages/:messageId/feedback', isAuthenticated, createFeedbackHandler(chatService));
+  router.post(
+    '/messages/:messageId/report',
+    isAuthenticated,
+    userLimiter,
+    createReportHandler(chatService),
+  );
+  router.post(
+    '/messages/:messageId/feedback',
+    isAuthenticated,
+    userLimiter,
+    createFeedbackHandler(chatService),
+  );
   router.post(
     '/messages/:messageId/image-url',
     isAuthenticated,
+    userLimiter,
     createImageUrlHandler(chatService),
   );
   router.post(
     '/messages/:messageId/tts',
     isAuthenticated,
+    userLimiter,
     sessionLimiter,
     createTtsHandler(chatService),
   );

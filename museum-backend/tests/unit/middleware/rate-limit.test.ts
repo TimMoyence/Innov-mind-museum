@@ -134,6 +134,81 @@ describe('byUserId key generator', () => {
   });
 });
 
+// SEC-20 (2026-04-08): per-user limiter must catch abuse spread across many
+// sessions. Without it, a single user can multiply throughput by spawning
+// new chat sessions in parallel — each session would get its own bucket under
+// `bySession`, but the byUserId limiter shares one bucket per user.
+describe('byUserId limiter — multi-session abuse (SEC-20)', () => {
+  beforeEach(() => clearRateLimitBuckets());
+  afterEach(() => clearRateLimitBuckets());
+
+  it('caps a single user at the limit even across many session ids', () => {
+    const mw = createRateLimitMiddleware({ limit: 3, windowMs: 60_000, keyGenerator: byUserId });
+    const res = makeMockRes();
+
+    // Same user user.id=42, three different session ids (would each get its
+    // own bucket under bySession). The byUserId limiter must collapse them.
+    const sessionIds = ['s1', 's2', 's3', 's4'];
+    const calls: jest.Mock[] = [];
+    for (const id of sessionIds) {
+      const req = makeMockReq({ user: { id: 42 }, params: { id } }) as unknown as Request;
+      const next = jest.fn();
+      mw(req, res, next);
+      calls.push(next);
+    }
+
+    // First 3 pass, 4th rejected (limit=3 per user-bucket regardless of session).
+    expect(calls[0]).toHaveBeenCalledWith();
+    expect(calls[1]).toHaveBeenCalledWith();
+    expect(calls[2]).toHaveBeenCalledWith();
+    expect(calls[3]).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 429 }));
+  });
+
+  it('does not bleed between distinct users', () => {
+    const mw = createRateLimitMiddleware({ limit: 1, windowMs: 60_000, keyGenerator: byUserId });
+    const res = makeMockRes();
+
+    // Two distinct users, each at the limit ceiling. Neither should affect
+    // the other's bucket.
+    const reqA1 = makeMockReq({ user: { id: 1 } }) as unknown as Request;
+    const reqA2 = makeMockReq({ user: { id: 1 } }) as unknown as Request;
+    const reqB1 = makeMockReq({ user: { id: 2 } }) as unknown as Request;
+
+    const nextA1 = jest.fn();
+    const nextA2 = jest.fn();
+    const nextB1 = jest.fn();
+
+    mw(reqA1, res, nextA1);
+    mw(reqA2, res, nextA2);
+    mw(reqB1, res, nextB1);
+
+    expect(nextA1).toHaveBeenCalledWith();
+    expect(nextA2).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 429 }));
+    expect(nextB1).toHaveBeenCalledWith();
+  });
+
+  it('isolates anonymous (IP-fallback) callers from authenticated buckets', () => {
+    const mw = createRateLimitMiddleware({ limit: 1, windowMs: 60_000, keyGenerator: byUserId });
+    const res = makeMockRes();
+
+    // Authenticated user 42 hits the limit.
+    const reqUser = makeMockReq({ user: { id: 42 } }) as unknown as Request;
+    const reqUser2 = makeMockReq({ user: { id: 42 } }) as unknown as Request;
+    const nextUser = jest.fn();
+    const nextUser2 = jest.fn();
+    mw(reqUser, res, nextUser);
+    mw(reqUser2, res, nextUser2);
+    expect(nextUser).toHaveBeenCalledWith();
+    expect(nextUser2).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 429 }));
+
+    // Unauthenticated request from a different IP must NOT collide.
+    const reqAnon = makeMockReq({ ip: '203.0.113.5', user: undefined });
+    const nextAnon = jest.fn();
+    mw(reqAnon, res, nextAnon);
+    expect(nextAnon).toHaveBeenCalledWith();
+  });
+});
+
 /** Creates a mock RedisRateLimitStore whose increment() always rejects. */
 const createFailingRedisStore = (): RedisRateLimitStore =>
   ({
