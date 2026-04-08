@@ -15,6 +15,7 @@ export const makeMuseumListItem = (
   description: faker.lorem.sentence(),
   latitude: faker.location.latitude(),
   longitude: faker.location.longitude(),
+  museumType: 'art',
   ...overrides,
 });
 
