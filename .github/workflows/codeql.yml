@@ -1,0 +1,82 @@
+name: codeql
+
+# Semantic SAST — taint tracking, prototype pollution, second-order injection.
+# Complements Semgrep (pattern-based) with deeper interprocedural analysis.
+# Created: 2026-04-07 (Tier 1 audit fix)
+
+on:
+  pull_request:
+    paths:
+      - 'museum-backend/src/**'
+      - 'museum-frontend/features/**'
+      - 'museum-frontend/shared/**'
+      - 'museum-frontend/app/**'
+      - 'museum-web/src/**'
+      - '.github/workflows/codeql.yml'
+  push:
+    branches: ['main']
+    paths:
+      - 'museum-backend/src/**'
+      - 'museum-frontend/features/**'
+      - 'museum-frontend/shared/**'
+      - 'museum-frontend/app/**'
+      - 'museum-web/src/**'
+      - '.github/workflows/codeql.yml'
+  schedule:
+    # Nightly deep scan at 03:30 UTC (after Semgrep nightly at 04:30)
+    - cron: '30 3 * * *'
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  analyze:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['javascript-typescript']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # security-extended pulls additional queries beyond default (taint tracking,
+          # prototype pollution, unsafe deserialization, regex injection, etc.)
+          queries: security-extended,security-and-quality
+          config: |
+            paths:
+              - museum-backend/src
+              - museum-frontend/features
+              - museum-frontend/shared
+              - museum-frontend/app
+              - museum-web/src
+            paths-ignore:
+              - '**/*.test.ts'
+              - '**/*.test.tsx'
+              - '**/tests/**'
+              - '**/__tests__/**'
+              - '**/__mocks__/**'
+              - '**/dist/**'
+              - '**/.next/**'
+              - '**/coverage/**'
+              - '**/.stryker-tmp/**'
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:${{ matrix.language }}'
+          # upload: always — push results to GitHub Security tab
+          upload: always

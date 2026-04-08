@@ -11,6 +11,10 @@ on:
       - '.github/workflows/ci-cd-web.yml'
     branches: ['main']
 
+# Top-level least-privilege default. Deploy job overrides with packages: write.
+permissions:
+  contents: read
+
 concurrency:
   group: ci-cd-web-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}

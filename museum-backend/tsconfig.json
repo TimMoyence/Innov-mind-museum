@@ -34,5 +34,5 @@
     "lib": ["ES2023"]
   },
   "include": ["src/**/*.ts", "tests/**/*.ts", "scripts/seed-museums.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", ".stryker-tmp", ".stryker-run", "dist", "coverage"]
 }

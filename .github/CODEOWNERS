@@ -1,0 +1,63 @@
+# Musaium CODEOWNERS — security-critical paths require owner review
+#
+# Format: <pattern> <user/team>
+# Last matching pattern wins. Place general rules first, specific rules last.
+#
+# This file enforces approval gates on security-critical, contract, and CI files.
+# Created: 2026-04-07 (Tier 0 audit fix)
+
+# ─── Default ownership ────────────────────────────────────────────────
+*       @TimKraken
+
+# ─── Backend security-critical ────────────────────────────────────────
+# Auth module — JWT, login, password reset, social, RBAC
+museum-backend/src/modules/auth/                    @TimKraken
+museum-backend/tests/unit/auth/                     @TimKraken
+museum-backend/tests/integration/auth/              @TimKraken
+museum-backend/tests/e2e/auth.e2e.test.ts           @TimKraken
+museum-backend/tests/e2e/rbac.e2e.test.ts           @TimKraken
+museum-backend/tests/e2e/isolation.e2e.test.ts      @TimKraken
+
+# AI Safety — guardrails, sanitization, prompt isolation
+museum-backend/src/modules/chat/useCase/art-topic-guardrail.ts          @TimKraken
+museum-backend/src/modules/chat/useCase/session-access.ts               @TimKraken
+museum-backend/src/modules/chat/application/                            @TimKraken
+museum-backend/src/shared/security/                                     @TimKraken
+museum-backend/src/shared/validation/                                   @TimKraken
+museum-backend/tests/unit/chat/art-topic-guardrail.test.ts              @TimKraken
+museum-backend/tests/unit/chat/orchestrator-messages.test.ts            @TimKraken
+
+# Crypto + secrets surface
+museum-backend/src/modules/chat/adapters/secondary/s3-signing.ts        @TimKraken
+museum-backend/src/modules/chat/adapters/secondary/s3-path-utils.ts     @TimKraken
+museum-backend/src/modules/auth/adapters/secondary/social-token-verifier.adapter.ts  @TimKraken
+
+# Multi-tenancy + B2B
+museum-backend/src/modules/museum/                                      @TimKraken
+museum-backend/src/modules/admin/                                       @TimKraken
+
+# OpenAPI contract — API surface
+museum-backend/openapi/                                                 @TimKraken
+museum-backend/tests/contracts/                                         @TimKraken
+
+# Migrations — schema irreversibility
+museum-backend/src/data/db/migrations/                                  @TimKraken
+
+# ─── CI/CD + workflows ────────────────────────────────────────────────
+.github/workflows/                                  @TimKraken
+.github/CODEOWNERS                                  @TimKraken
+.github/dependabot.yml                              @TimKraken
+
+# ─── Frontend security surface ────────────────────────────────────────
+museum-frontend/features/auth/                                          @TimKraken
+museum-frontend/shared/api/                                             @TimKraken
+museum-frontend/shared/infrastructure/                                  @TimKraken
+
+# ─── Web admin (RBAC) ─────────────────────────────────────────────────
+museum-web/src/app/[locale]/admin/                                      @TimKraken
+museum-web/src/lib/api.ts                                               @TimKraken
+museum-web/src/hooks/useAuth.tsx                                        @TimKraken
+
+# ─── Project guidance ─────────────────────────────────────────────────
+CLAUDE.md                                           @TimKraken
+docs/V1_Sprint/                                     @TimKraken
