@@ -69,6 +69,7 @@ describe('queryOverpassMuseums', () => {
       latitude: 48.8606,
       longitude: 2.3376,
       osmId: 1,
+      museumType: 'general',
     });
 
     expect(results[1]).toEqual({
@@ -77,6 +78,7 @@ describe('queryOverpassMuseums', () => {
       latitude: 48.8599,
       longitude: 2.3266,
       osmId: 2,
+      museumType: 'general',
     });
 
     expect(results[2]).toEqual({
@@ -85,6 +87,7 @@ describe('queryOverpassMuseums', () => {
       latitude: 48.8611,
       longitude: 2.2877,
       osmId: 3,
+      museumType: 'general',
     });
   });
 

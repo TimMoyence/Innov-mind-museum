@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+const museumTypeSchema = z.enum(['art', 'history', 'science', 'specialized', 'general']);
+
 export const createMuseumSchema = z.object({
   name: z.string().min(1).max(200),
   slug: z.string().min(1).max(200),
@@ -8,6 +10,7 @@ export const createMuseumSchema = z.object({
   latitude: z.number().nullable().optional(),
   longitude: z.number().nullable().optional(),
   config: z.record(z.unknown()).optional(),
+  museumType: museumTypeSchema.optional(),
 });
 
 export const updateMuseumSchema = z.object({
@@ -19,6 +22,7 @@ export const updateMuseumSchema = z.object({
   longitude: z.number().nullable().optional(),
   config: z.record(z.unknown()).optional(),
   isActive: z.boolean().optional(),
+  museumType: museumTypeSchema.optional(),
 });
 
 export const searchMuseumsQuerySchema = z

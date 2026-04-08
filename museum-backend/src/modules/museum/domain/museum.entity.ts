@@ -6,6 +6,8 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+import type { MuseumCategory } from '@shared/http/overpass.client';
+
 /** Represents a museum tenant in the B2B multi-tenancy model. Mapped to `museums`. */
 @Entity({ name: 'museums' })
 export class Museum {
@@ -26,6 +28,9 @@ export class Museum {
 
   @Column({ type: 'jsonb', default: '{}' })
   config!: Record<string, unknown>;
+
+  @Column({ type: 'varchar', length: 32, default: 'general' })
+  museumType!: MuseumCategory;
 
   @Column({ type: 'double precision', nullable: true })
   latitude?: number | null;

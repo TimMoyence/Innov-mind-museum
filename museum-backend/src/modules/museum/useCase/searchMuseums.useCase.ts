@@ -1,10 +1,16 @@
 import { geocodeWithNominatim } from '@shared/http/nominatim.client';
-import { queryOverpassMuseums, type OverpassMuseumResult } from '@shared/http/overpass.client';
+import {
+  queryOverpassMuseums,
+  type MuseumCategory,
+  type OverpassMuseumResult,
+} from '@shared/http/overpass.client';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
 import type { IMuseumRepository } from '../domain/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
+
+export type { MuseumCategory } from '@shared/http/overpass.client';
 
 /** Input for the museum search use case. */
 export interface SearchMuseumsInput {
@@ -22,6 +28,7 @@ export interface SearchMuseumEntry {
   longitude: number;
   distance: number;
   source: 'local' | 'osm';
+  museumType: MuseumCategory;
 }
 
 /** Search results returned by the use case. */
@@ -59,6 +66,7 @@ interface LocalMuseumWithCoords {
   address: string | null;
   latitude: number;
   longitude: number;
+  museumType: MuseumCategory;
 }
 
 /** Fetches active local museums from the DB, returning only those with coordinates. */
@@ -75,6 +83,7 @@ async function fetchLocalMuseumsWithCoords(
           address: m.address ?? null,
           latitude: m.latitude,
           longitude: m.longitude,
+          museumType: m.museumType,
         });
       }
     }
@@ -100,7 +109,12 @@ function mergeResults(
   for (const m of localMuseums) {
     const distance = haversineDistance(lat, lng, m.latitude, m.longitude);
     if (distance <= radius) {
-      entries.push({ ...m, distance: Math.round(distance), source: 'local' });
+      entries.push({
+        ...m,
+        distance: Math.round(distance),
+        source: 'local',
+        museumType: m.museumType,
+      });
     }
   }
 
@@ -119,6 +133,7 @@ function mergeResults(
         longitude: osm.longitude,
         distance: Math.round(distance),
         source: 'osm',
+        museumType: osm.museumType,
       });
     }
   }
@@ -156,6 +171,7 @@ export class SearchMuseumsUseCase {
         ...m,
         distance: 0,
         source: 'local' as const,
+        museumType: m.museumType,
       }));
 
       if (q) {
