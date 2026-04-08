@@ -124,7 +124,10 @@ export class GuardrailEvaluationService {
    * the sanitized refusal text and metadata; otherwise returns the original.
    *
    * Runs safety keyword checks (insults, injections, empty) first, then an
-   * optional art-topic classifier check (fail-open on error).
+   * optional art-topic classifier check. SECURITY: the classifier is now
+   * fail-CLOSED — if it throws, the LLM output is suppressed and a generic
+   * safe refusal is returned (OWASP LLM 2026 guidance: never pass unverified
+   * model output when a safety check fails to execute).
    *
    * @param params - The LLM output text, metadata, and locale.
    * @param params.text - Raw LLM output text to evaluate.
@@ -149,19 +152,26 @@ export class GuardrailEvaluationService {
       };
     }
 
-    // Art-topic classifier check (fail-open)
+    // Art-topic classifier check (FAIL-CLOSED on error).
+    // If the classifier throws, we cannot guarantee the output is safe — return
+    // a generic unsafe_output refusal rather than leaking unverified LLM text.
     if (this.artTopicClassifier) {
+      let isArt: boolean;
       try {
-        const isArt = await this.artTopicClassifier.isArtRelated(text);
-        if (!isArt) {
-          return {
-            text: buildGuardrailRefusal(requestedLocale, 'off_topic'),
-            metadata: withPolicyCitation(metadata, 'off_topic'),
-            allowed: false,
-          };
-        }
+        isArt = await this.artTopicClassifier.isArtRelated(text);
       } catch {
-        // Fail-open: classifier error → allow
+        return {
+          text: buildGuardrailRefusal(requestedLocale, 'unsafe_output'),
+          metadata: withPolicyCitation(metadata, 'unsafe_output'),
+          allowed: false,
+        };
+      }
+      if (!isArt) {
+        return {
+          text: buildGuardrailRefusal(requestedLocale, 'off_topic'),
+          metadata: withPolicyCitation(metadata, 'off_topic'),
+          allowed: false,
+        };
       }
     }
 

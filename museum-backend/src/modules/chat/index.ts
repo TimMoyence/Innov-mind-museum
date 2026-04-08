@@ -12,6 +12,7 @@ import { LocalImageStorage } from './adapters/secondary/image-storage.stub';
 import { LangChainChatOrchestrator } from './adapters/secondary/langchain.orchestrator';
 import { TesseractOcrService, DisabledOcrService } from './adapters/secondary/ocr-service';
 import { RegexPiiSanitizer } from './adapters/secondary/pii-sanitizer.regex';
+import { TavilyClient } from './adapters/secondary/tavily.client';
 import {
   OpenAiTextToSpeechService,
   DisabledTextToSpeechService,
@@ -25,6 +26,7 @@ import { DescribeService } from './useCase/describe.service';
 import { ImageEnrichmentService } from './useCase/image-enrichment.service';
 import { KnowledgeBaseService } from './useCase/knowledge-base.service';
 import { UserMemoryService } from './useCase/user-memory.service';
+import { WebSearchService } from './useCase/web-search.service';
 
 import type { ArtKeywordRepository } from './domain/artKeyword.repository.interface';
 import type { ImageStorage } from './domain/ports/image-storage.port';
@@ -146,6 +148,27 @@ class ChatModule {
     });
   }
 
+  /** Creates the web search service if the feature flag and Tavily API key are set. */
+  private buildWebSearch(cache?: CacheService): WebSearchService | undefined {
+    if (!env.featureFlags.webSearch) return undefined;
+    if (!env.webSearch.tavilyApiKey) {
+      logger.warn('web_search_disabled_no_key', {
+        reason: 'TAVILY_API_KEY missing while FEATURE_FLAG_WEB_SEARCH=true',
+      });
+      return undefined;
+    }
+    const tavilyClient = new TavilyClient(env.webSearch.tavilyApiKey);
+    return new WebSearchService(
+      tavilyClient,
+      {
+        timeoutMs: env.webSearch.timeoutMs,
+        cacheTtlSeconds: env.webSearch.cacheTtlSeconds,
+        maxResults: env.webSearch.maxResults,
+      },
+      cache,
+    );
+  }
+
   /** Sets up the dynamic art keyword set with periodic refresh from the database. */
   private buildArtKeywordRefresh(artKeywordRepo: TypeOrmArtKeywordRepository): {
     dynamicArtKeywords: Set<string>;
@@ -208,6 +231,7 @@ class ChatModule {
     const userMemory = this.buildUserMemory(dataSource, cache);
     const knowledgeBase = this.buildKnowledgeBase(cache);
     const imageEnrichment = this.buildImageEnrichment();
+    const webSearch = this.buildWebSearch(cache);
 
     const artKeywordRepo = new TypeOrmArtKeywordRepository(dataSource);
 
@@ -241,6 +265,7 @@ class ChatModule {
       userMemory,
       knowledgeBase,
       imageEnrichment,
+      webSearch,
       artTopicClassifier,
       piiSanitizer: new RegexPiiSanitizer(),
       museumRepository,

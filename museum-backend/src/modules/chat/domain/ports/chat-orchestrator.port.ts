@@ -20,6 +20,7 @@ export interface OrchestratorInput {
   requestId?: string;
   userMemoryBlock?: string;
   knowledgeBaseBlock?: string;
+  webSearchBlock?: string;
   /** When true, prompts include accessibility-oriented audio description instructions. */
   audioDescriptionMode?: boolean;
   /** When true, generate a shorter response (low-data mode). */

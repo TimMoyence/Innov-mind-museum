@@ -4,12 +4,29 @@ import { resolveLocale, localeToLanguageName } from '@shared/i18n/locale';
 import { sanitizePromptInput } from '@shared/validation/input';
 import { env } from '@src/config/env';
 
+import { evaluateUserInputGuardrail } from './art-topic-guardrail';
 import { applyHistoryWindow } from './history-window';
 import { createLlmSectionPlan } from './llm-sections';
 import { buildVisitContextPromptBlock } from './visit-context';
 
 import type { ChatMessage } from '../domain/chatMessage.entity';
 import type { OrchestratorInput } from '../domain/ports/chat-orchestrator.port';
+
+/**
+ * Applies the prompt-injection guardrail to a free-text context field (e.g. `location`).
+ * If the value fails the guardrail (insult or injection pattern), the entire block
+ * is dropped rather than included — preventing semantic injection via context fields
+ * that bypass the user-message guardrail (audit finding M4).
+ *
+ * @param raw - Raw user-controlled context value, or undefined.
+ * @returns Sanitized value safe to inject, or null if the value was blocked/absent.
+ */
+const safeContextValue = (raw: string | undefined): string | null => {
+  if (!raw) return null;
+  const decision = evaluateUserInputGuardrail({ text: raw });
+  if (!decision.allow) return null;
+  return sanitizePromptInput(raw);
+};
 
 /**
  *
@@ -165,8 +182,12 @@ export const buildOrchestratorMessages = (input: OrchestratorInput): Orchestrato
     return new HumanMessage(message.text ?? '');
   });
 
-  const contextLine = input.context?.location
-    ? `<visitor_context>Visitor location: ${sanitizePromptInput(input.context.location)}.</visitor_context>`
+  // Validate + sanitize the visitor-supplied location through the guardrail
+  // before injecting it into the prompt. If the raw value contains an
+  // injection pattern or insult, the block is dropped entirely (audit M4).
+  const safeLocation = safeContextValue(input.context?.location);
+  const contextLine = safeLocation
+    ? `<visitor_context>Visitor location: ${safeLocation}.</visitor_context>`
     : '';
 
   const rawText = normalizedText || 'Please analyze the image.';
@@ -230,9 +251,10 @@ export const buildSectionMessages = (
   options?: {
     userMemoryBlock?: string;
     knowledgeBaseBlock?: string;
+    webSearchBlock?: string;
   },
 ): ChatModelMessage[] => {
-  const { userMemoryBlock, knowledgeBaseBlock } = options ?? {};
+  const { userMemoryBlock, knowledgeBaseBlock, webSearchBlock } = options ?? {};
   const messages: ChatModelMessage[] = [
     new SystemMessage(systemPrompt),
     new SystemMessage(sectionPrompt),
@@ -244,6 +266,10 @@ export const buildSectionMessages = (
 
   if (knowledgeBaseBlock) {
     messages.push(new SystemMessage(knowledgeBaseBlock));
+  }
+
+  if (webSearchBlock) {
+    messages.push(new SystemMessage(webSearchBlock));
   }
 
   messages.push(...historyMessages, userMessage);
