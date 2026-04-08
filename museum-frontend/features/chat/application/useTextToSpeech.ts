@@ -12,6 +12,8 @@ interface UseTextToSpeech {
   isLoading: boolean;
   /** The message ID whose audio is currently active (loading or playing). */
   activeMessageId: string | null;
+  /** The message ID whose TTS request failed (shown as error state on the button). */
+  failedMessageId: string | null;
   /** Toggle playback for a message: plays if idle, stops if already active. */
   togglePlayback: (messageId: string) => Promise<void>;
   /** Stops any active playback and resets state. */
@@ -35,6 +37,7 @@ export function useTextToSpeech(): UseTextToSpeech {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
+  const [failedMessageId, setFailedMessageId] = useState<string | null>(null);
 
   const nativePlayerRef = useRef<AudioPlayer | null>(null);
   const webAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -72,6 +75,7 @@ export function useTextToSpeech(): UseTextToSpeech {
 
       // Stop any existing playback first
       cleanup();
+      setFailedMessageId(null);
 
       setIsLoading(true);
       setActiveMessageId(messageId);
@@ -127,8 +131,9 @@ export function useTextToSpeech(): UseTextToSpeech {
 
         player.play();
       } catch {
-        // 501 (TTS unavailable) or network error — silently reset
+        const failedId = messageId;
         cleanup();
+        setFailedMessageId(failedId);
       }
     },
     [activeMessageId, stopPlayback, cleanup],
@@ -141,5 +146,5 @@ export function useTextToSpeech(): UseTextToSpeech {
     };
   }, [cleanup]);
 
-  return { isPlaying, isLoading, activeMessageId, togglePlayback, stopPlayback };
+  return { isPlaying, isLoading, activeMessageId, failedMessageId, togglePlayback, stopPlayback };
 }

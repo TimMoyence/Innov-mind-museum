@@ -220,20 +220,20 @@
       "title": "Bienvenue sur Musaium",
       "subtitle": "Votre guide de musée personnel. Photographiez des œuvres ou posez des questions pour obtenir des analyses IA.",
       "tip1": "Ouvrez l'Accueil et choisissez Découvrir, Caméra, Audio ou Démarrer une conversation.",
-      "tip2": "Caméra crée un chat et ouvre l'appareil photo pour capturer une œuvre.",
-      "tip3": "Audio crée un chat et démarre l'enregistrement vocal pour les questions parlées.",
+      "tip2": "Appuyez sur Caméra pour photographier une œuvre et lancer une analyse IA.",
+      "tip3": "Appuyez sur Audio pour poser votre question à voix haute.",
       "tip4": "Visitez le Tableau de bord pour retrouver vos conversations enregistrées ou récentes."
     },
     "slide1": {
       "title": "Astuces pratiques",
       "subtitle": "Obtenez de meilleures réponses avec des images et des entrées audio ciblées.",
-      "tip1": "Cadrez une seule œuvre ou détail à la fois pour une analyse plus précise.",
+      "tip1": "Cadrez une seule œuvre ou un détail à la fois pour une analyse plus précise.",
       "tip2": "Posez des questions centrées sur l'art (artiste, style, période, symbolisme).",
       "tip3": "Utilisez le Mode Guidé pour des suggestions d'étapes suivantes pendant les visites.",
       "tip4": "Choisissez le niveau Débutant ou Expert pour la profondeur du vocabulaire."
     },
     "slide2": {
-      "title": "Aide & Support",
+      "title": "Aide et Support",
       "subtitle": "Trouvez rapidement les canaux de support et les informations de confidentialité.",
       "tip1": "Utilisez le Support pour les problèmes de compte, bugs et retours.",
       "tip2": "La page Confidentialité montre le traitement des données et vos droits.",
@@ -378,6 +378,7 @@
     "viewFullscreen": "Voir en plein ecran",
     "listen": "Écouter",
     "listening": "Lecture...",
+    "tts_unavailable": "Audio indisponible",
     "thumbsUp": "Utile",
     "thumbsDown": "Pas utile",
     "sendFailed": "Échec de l'envoi",

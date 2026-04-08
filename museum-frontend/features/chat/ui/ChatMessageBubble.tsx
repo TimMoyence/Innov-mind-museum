@@ -34,6 +34,8 @@ interface ChatMessageBubbleProps {
   ttsPlaying?: boolean;
   /** Whether TTS audio is currently loading for this message. */
   ttsLoading?: boolean;
+  /** Whether TTS failed for this message. */
+  ttsFailed?: boolean;
   /** Called to toggle TTS playback for this message. */
   onToggleTts?: (messageId: string) => Promise<void>;
   /** Called to retry sending a failed message. */
@@ -58,6 +60,7 @@ export const ChatMessageBubble = React.memo(
     onReport,
     ttsPlaying = false,
     ttsLoading = false,
+    ttsFailed = false,
     onToggleTts,
     onRetry,
     feedbackValue,
@@ -167,6 +170,7 @@ export const ChatMessageBubble = React.memo(
                 onFeedback={onFeedback}
                 ttsPlaying={ttsPlaying}
                 ttsLoading={ttsLoading}
+                ttsFailed={ttsFailed}
                 onToggleTts={onToggleTts}
                 onReport={onReport}
               />
@@ -277,6 +281,7 @@ export const ChatMessageBubble = React.memo(
       prev.locale === next.locale &&
       prev.ttsPlaying === next.ttsPlaying &&
       prev.ttsLoading === next.ttsLoading &&
+      prev.ttsFailed === next.ttsFailed &&
       prev.feedbackValue === next.feedbackValue
     );
   },

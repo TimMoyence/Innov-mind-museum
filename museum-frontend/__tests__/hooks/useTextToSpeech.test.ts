@@ -62,6 +62,7 @@ describe('useTextToSpeech', () => {
     expect(result.current.isPlaying).toBe(false);
     expect(result.current.isLoading).toBe(false);
     expect(result.current.activeMessageId).toBeNull();
+    expect(result.current.failedMessageId).toBeNull();
   });
 
   it('togglePlayback starts audio for a message', async () => {
@@ -137,7 +138,7 @@ describe('useTextToSpeech', () => {
     expect(result.current.activeMessageId).toBeNull();
   });
 
-  it('recovers from API errors silently', async () => {
+  it('sets failedMessageId on API error', async () => {
     mockSynthesizeSpeech.mockRejectedValue(new Error('501 TTS unavailable'));
 
     const { result } = renderHook(() => useTextToSpeech());
@@ -149,6 +150,26 @@ describe('useTextToSpeech', () => {
     expect(result.current.isPlaying).toBe(false);
     expect(result.current.isLoading).toBe(false);
     expect(result.current.activeMessageId).toBeNull();
+    expect(result.current.failedMessageId).toBe('msg-1');
+  });
+
+  it('clears failedMessageId when starting new playback', async () => {
+    mockSynthesizeSpeech
+      .mockRejectedValueOnce(new Error('501'))
+      .mockResolvedValueOnce(makeFakeAudioBuffer());
+
+    const { result } = renderHook(() => useTextToSpeech());
+
+    await act(async () => {
+      await result.current.togglePlayback('msg-1');
+    });
+    expect(result.current.failedMessageId).toBe('msg-1');
+
+    await act(async () => {
+      await result.current.togglePlayback('msg-2');
+    });
+    expect(result.current.failedMessageId).toBeNull();
+    expect(result.current.isPlaying).toBe(true);
   });
 
   it('stopPlayback resets all state', async () => {

@@ -220,20 +220,20 @@
       "title": "Welcome to Musaium",
       "subtitle": "Your personal museum guide. Photograph artworks or ask questions to get AI-powered insights.",
       "tip1": "Open Home and choose Discover, Camera, Audio, or Start Conversation.",
-      "tip2": "Camera creates a chat and opens the camera to capture an artwork.",
-      "tip3": "Audio creates a chat and starts voice recording for spoken questions.",
+      "tip2": "Tap Camera to photograph an artwork and get an AI analysis.",
+      "tip3": "Tap Audio to ask your question out loud.",
       "tip4": "Visit Dashboard to revisit saved or recent conversations."
     },
     "slide1": {
       "title": "Practical Tips",
       "subtitle": "Get better museum answers with focused image and audio inputs.",
-      "tip1": "Frame one artwork or monument detail at a time for cleaner analysis.",
+      "tip1": "Frame one artwork or one detail at a time for cleaner analysis.",
       "tip2": "Ask art-focused questions (artist, style, period, symbolism).",
       "tip3": "Use Guided Museum Mode for next-stop suggestions during visits.",
       "tip4": "Choose Beginner or Expert guide level for vocabulary depth."
     },
     "slide2": {
-      "title": "Help & Support",
+      "title": "Help and Support",
       "subtitle": "Find support channels and privacy information quickly.",
       "tip1": "Use Support for account issues, bugs, and feedback.",
       "tip2": "Privacy page shows data processing information and your rights.",
@@ -378,6 +378,7 @@
     "viewFullscreen": "View full size",
     "listen": "Listen",
     "listening": "Playing...",
+    "tts_unavailable": "Audio unavailable",
     "thumbsUp": "Helpful",
     "thumbsDown": "Not helpful",
     "sendFailed": "Failed to send",
