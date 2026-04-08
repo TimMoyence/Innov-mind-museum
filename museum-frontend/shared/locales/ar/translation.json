@@ -18,6 +18,9 @@
     "or_continue_with": "أو المتابعة باستخدام",
     "settings": "الإعدادات"
   },
+  "inAppBrowser": {
+    "openSystem": "فتح في المتصفح"
+  },
   "permissions": {
     "galleryTitle": "الوصول إلى المعرض",
     "galleryMessage": "يلزم الوصول إلى المعرض. يرجى تفعيله في الإعدادات.",

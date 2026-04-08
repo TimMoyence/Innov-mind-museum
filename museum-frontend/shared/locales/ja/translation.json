@@ -18,6 +18,9 @@
     "or_continue_with": "または以下で続行",
     "settings": "設定"
   },
+  "inAppBrowser": {
+    "openSystem": "ブラウザで開く"
+  },
   "permissions": {
     "galleryTitle": "ギャラリーへのアクセス",
     "galleryMessage": "ギャラリーへのアクセス許可が必要です。設定で有効にしてください。",

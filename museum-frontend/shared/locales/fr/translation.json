@@ -18,6 +18,9 @@
     "or_continue_with": "ou continuer avec",
     "settings": "Réglages"
   },
+  "inAppBrowser": {
+    "openSystem": "Ouvrir dans le navigateur"
+  },
   "permissions": {
     "galleryTitle": "Accès galerie",
     "galleryMessage": "L'accès à la galerie est requis. Veuillez l'activer dans les Réglages.",
