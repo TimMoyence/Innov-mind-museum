@@ -2132,6 +2132,11 @@ export interface paths {
                 distance: number;
                 /** @enum {string} */
                 source: 'local' | 'osm';
+                /**
+                 * @description Museum category derived from OSM tags
+                 * @enum {string}
+                 */
+                museumType: 'art' | 'history' | 'science' | 'specialized' | 'general';
               }[];
               count: number;
             };
@@ -2697,6 +2702,207 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/chat/describe': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Generate standalone AI description from image or text */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['DescribeRequest'];
+        };
+      };
+      responses: {
+        /** @description Description JSON (or binary audio when format=audio) */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DescribeResponse'];
+            'audio/mpeg': string;
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        429: components['responses']['TooManyRequests'];
+        500: components['responses']['InternalError'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/chat/memory/preference': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get current memory-opt-in preference for the authenticated user */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Memory preference state */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MemoryPreferenceResponse'];
+          };
+        };
+        401: components['responses']['Unauthorized'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Toggle memory opt-in preference for the authenticated user */
+    patch: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @description true to enable conversation memory, false to disable it */
+            enabled: boolean;
+          };
+        };
+      };
+      responses: {
+        /** @description Updated memory preference state */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MemoryPreferenceResponse'];
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+      };
+    };
+    trace?: never;
+  };
+  '/api/museums/{id}/low-data-pack': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Offline low-data Q&A pack for a museum
+     * @description Returns a merged list of popular cached LLM answers and seeded Q&A entries for offline use.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Locale filter (defaults to fr) */
+          locale?: string;
+        };
+        header?: never;
+        path: {
+          /** @description Museum ID */
+          id: number;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Low-data pack payload */
+        200: {
+          headers: {
+            /** @description public, max-age=3600 */
+            'Cache-Control'?: string;
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['LowDataPack'];
+          };
+        };
+        404: components['responses']['NotFound'];
+        500: components['responses']['InternalError'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/admin/museums/{id}/cache/purge': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Purge LLM cache entries for a museum (admin only) */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          /** @description Museum ID */
+          id: number;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Cache purge summary */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['CachePurgeResponse'];
+          };
+        };
+        401: components['responses']['Unauthorized'];
+        403: components['responses']['Forbidden'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3100,6 +3306,11 @@ export interface components {
       description?: string | null;
       latitude?: number | null;
       longitude?: number | null;
+      /**
+       * @description Museum category
+       * @enum {string}
+       */
+      museumType: 'art' | 'history' | 'science' | 'specialized' | 'general';
       config: {
         [key: string]: unknown;
       };
@@ -3117,6 +3328,11 @@ export interface components {
       description?: string | null;
       latitude?: number | null;
       longitude?: number | null;
+      /**
+       * @description Museum category
+       * @enum {string}
+       */
+      museumType: 'art' | 'history' | 'science' | 'specialized' | 'general';
     };
     TicketDTO: {
       /** Format: uuid */
@@ -3149,6 +3365,64 @@ export interface components {
     };
     TicketDetailDTO: components['schemas']['TicketDTO'] & {
       messages: components['schemas']['TicketMessageDTO'][];
+    };
+    /** @description Describe request — either text or image is required */
+    DescribeRequest: {
+      image?: {
+        /** @enum {string} */
+        source: 'base64' | 'url';
+        value: string;
+        mimeType?: string;
+      };
+      text?: string;
+      /** @default en */
+      locale: string;
+      /**
+       * @default beginner
+       * @enum {string}
+       */
+      guideLevel: 'beginner' | 'intermediate' | 'expert';
+      /**
+       * @default text
+       * @enum {string}
+       */
+      format: 'text' | 'audio' | 'both';
+    };
+    DescribeResponse: {
+      description: string;
+      /** @description Base64-encoded audio, present only when format=both */
+      audio?: string;
+      /** @description MIME type of the audio payload when format=both */
+      audioContentType?: string;
+      metadata: {
+        [key: string]: unknown;
+      };
+    };
+    MemoryPreferenceResponse: {
+      /** @description true when conversation memory is enabled for the user */
+      enabled: boolean;
+    };
+    LowDataPackEntry: {
+      question: string;
+      answer: string;
+      metadata?: {
+        [key: string]: unknown;
+      };
+      /** @description Popularity score from cache ranking (cache entries only) */
+      hits?: number;
+      /** @enum {string} */
+      source: 'cache' | 'seeded';
+    };
+    LowDataPack: {
+      museumId: string;
+      locale: string;
+      /** Format: date-time */
+      generatedAt: string;
+      entries: components['schemas']['LowDataPackEntry'][];
+    };
+    CachePurgeResponse: {
+      museumId: string;
+      durationMs: number;
     };
   };
   responses: {
