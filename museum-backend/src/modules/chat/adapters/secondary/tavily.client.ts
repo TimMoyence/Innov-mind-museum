@@ -50,6 +50,7 @@ export class TavilyClient implements WebSearchProvider {
           search_depth: 'basic',
           include_answer: false,
         }),
+        signal: query.signal,
       });
 
       if (!response.ok) {
