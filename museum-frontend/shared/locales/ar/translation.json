@@ -19,7 +19,8 @@
     "settings": "الإعدادات"
   },
   "inAppBrowser": {
-    "openSystem": "فتح في المتصفح"
+    "openSystem": "فتح في المتصفح",
+    "loadError": "تعذر تحميل الصفحة"
   },
   "permissions": {
     "galleryTitle": "الوصول إلى المعرض",

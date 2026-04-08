@@ -17,7 +17,10 @@ import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
 import { useChatSession } from '@/features/chat/application/useChatSession';
-import { buildVisitSummary } from '@/features/chat/application/chatSessionLogic.pure';
+import {
+  buildVisitSummary,
+  decideMarkdownLinkAction,
+} from '@/features/chat/application/chatSessionLogic.pure';
 import { useAudioRecorder } from '@/features/chat/application/useAudioRecorder';
 import { useImagePicker } from '@/features/chat/application/useImagePicker';
 import { useAiConsent } from '@/features/chat/application/useAiConsent';
@@ -244,13 +247,25 @@ export default function ChatSessionScreen() {
     [messages],
   );
 
+  /**
+   * Markdown link tap handler.
+   *
+   * `@ronradtke/react-native-markdown-display`'s contract: returning `true`
+   * lets the library call `Linking.openURL(url)` (system browser); returning
+   * `false` suppresses it. To open the link in the in-app browser without
+   * also opening Safari/Chrome, we MUST return `false` after handling.
+   *
+   * The mapping (`in-app`/`system`/`ignore` → boolean) lives in
+   * `decideMarkdownLinkAction` so it can be unit-tested in isolation.
+   */
   const onMessageLinkPress = useCallback((url: string): boolean => {
-    if (!url) return false;
-    if (url.startsWith('http://') || url.startsWith('https://')) {
+    const action = decideMarkdownLinkAction(url);
+    if (action === 'in-app') {
       setBrowserUrl(url);
-      return true;
+      return false; // handled in-app — suppress the library's Linking.openURL
     }
-    return false;
+    if (action === 'system') return true; // mailto:, tel:, etc.
+    return false; // ignore empty URLs
   }, []);
 
   const onMessageImageError = useCallback(

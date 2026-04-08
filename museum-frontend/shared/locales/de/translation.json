@@ -19,7 +19,8 @@
     "settings": "Einstellungen"
   },
   "inAppBrowser": {
-    "openSystem": "Im Browser öffnen"
+    "openSystem": "Im Browser öffnen",
+    "loadError": "Seite konnte nicht geladen werden"
   },
   "permissions": {
     "galleryTitle": "Galeriezugriff",

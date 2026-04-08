@@ -153,3 +153,27 @@ export const buildOptimisticMessage = (
     image: imageUri ? { url: imageUri, expiresAt: '' } : null,
   };
 };
+
+/**
+ * Decides what to do when the user taps a markdown link inside a chat bubble.
+ *
+ * Returns an action object describing whether to handle the link in-app
+ * (`'in-app'`), let the system handler take it (`'system'`), or ignore it
+ * (`'ignore'`). Pure function — no React state, no side effects — so it can
+ * be unit-tested in isolation.
+ *
+ * IMPORTANT: this is wired into `@ronradtke/react-native-markdown-display`,
+ * whose `onLinkPress` contract is:
+ *   - return `true`  → library calls `Linking.openURL(url)` (system browser)
+ *   - return `false` → library does NOT open the URL (we handled it ourselves)
+ *
+ * The contract is the OPPOSITE of what the prop name suggests, which is why
+ * this helper exists: callers pick the action by name, not by boolean.
+ */
+export type MarkdownLinkAction = 'in-app' | 'system' | 'ignore';
+
+export function decideMarkdownLinkAction(url: string | undefined | null): MarkdownLinkAction {
+  if (!url) return 'ignore';
+  if (url.startsWith('http://') || url.startsWith('https://')) return 'in-app';
+  return 'system';
+}

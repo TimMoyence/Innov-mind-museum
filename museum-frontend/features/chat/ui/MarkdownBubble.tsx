@@ -7,7 +7,14 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 
 interface MarkdownBubbleProps {
   text: string;
-  /** Called when the user taps a markdown link. Returning `false` lets the default handler open the URL externally. */
+  /**
+   * Called when the user taps a markdown link.
+   *
+   * The underlying `@ronradtke/react-native-markdown-display` library calls
+   * `Linking.openURL(url)` when this returns `true`. Return `false` to suppress
+   * that and handle the link entirely in your callback (e.g. opening it in
+   * an in-app browser).
+   */
   onLinkPress?: (url: string) => boolean;
 }
 

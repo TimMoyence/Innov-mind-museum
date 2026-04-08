@@ -39,6 +39,7 @@ export const InAppBrowser = ({ url, onClose }: InAppBrowserProps) => {
   const [loading, setLoading] = useState(true);
   const [canGoBack, setCanGoBack] = useState(false);
   const [currentUrl, setCurrentUrl] = useState(url ?? '');
+  const [loadError, setLoadError] = useState(false);
 
   const handleOpenSystem = useCallback(() => {
     if (currentUrl) void Linking.openURL(currentUrl);
@@ -88,7 +89,7 @@ export const InAppBrowser = ({ url, onClose }: InAppBrowserProps) => {
             onPress={handleOpenSystem}
             style={styles.headerButton}
             accessibilityRole="button"
-            accessibilityLabel="Open in system browser"
+            accessibilityLabel={t('inAppBrowser.openSystem')}
           >
             <Ionicons name="open-outline" size={22} color={theme.textPrimary} />
           </Pressable>
@@ -100,19 +101,60 @@ export const InAppBrowser = ({ url, onClose }: InAppBrowserProps) => {
           </View>
         ) : null}
 
+        {loadError ? (
+          <View style={styles.errorOverlay}>
+            <Ionicons name="cloud-offline-outline" size={48} color={theme.textTertiary} />
+            <Text style={[styles.errorText, { color: theme.textSecondary }]}>
+              {t('inAppBrowser.loadError')}
+            </Text>
+            <Pressable
+              onPress={handleOpenSystem}
+              style={[styles.errorButton, { backgroundColor: theme.primary }]}
+              accessibilityRole="button"
+              accessibilityLabel={t('inAppBrowser.openSystem')}
+            >
+              <Text style={[styles.errorButtonText, { color: theme.primaryContrast }]}>
+                {t('inAppBrowser.openSystem')}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         <WebView
           ref={webRef}
           source={{ uri: url }}
           onLoadStart={() => {
             setLoading(true);
+            setLoadError(false);
           }}
           onLoadEnd={() => {
             setLoading(false);
           }}
-          onNavigationStateChange={(navState) => {
-            setCanGoBack(navState.canGoBack);
-            setCurrentUrl(navState.url);
+          onError={() => {
+            setLoading(false);
+            setLoadError(true);
           }}
+          onHttpError={(syntheticEvent) => {
+            const status = syntheticEvent.nativeEvent.statusCode;
+            if (status >= 400) {
+              setLoading(false);
+              setLoadError(true);
+            }
+          }}
+          onShouldStartLoadWithRequest={(request) => {
+            // Scheme allowlist: only http/https in the WebView. Hand off
+            // mailto:/tel: to the system handler; block javascript:/file:/data:
+            // and any other scheme to prevent in-page navigation hijacks.
+            const next = request.url;
+            if (next.startsWith('http://') || next.startsWith('https://')) return true;
+            if (next.startsWith('mailto:') || next.startsWith('tel:')) {
+              void Linking.openURL(next);
+              return false;
+            }
+            return false;
+          }}
+          originWhitelist={['http://*', 'https://*']}
+          javaScriptCanOpenWindowsAutomatically={false}
           startInLoadingState
           allowsBackForwardNavigationGestures={Platform.OS === 'ios'}
           style={styles.webview}
@@ -163,6 +205,31 @@ const styles = StyleSheet.create({
   },
   webview: {
     flex: 1,
+  },
+  errorOverlay: {
+    position: 'absolute',
+    top: 60,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    gap: 16,
+    zIndex: 20,
+  },
+  errorText: {
+    fontSize: 15,
+    textAlign: 'center',
+  },
+  errorButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  errorButtonText: {
+    fontWeight: '700',
+    fontSize: 15,
   },
   loadingOverlay: {
     position: 'absolute',

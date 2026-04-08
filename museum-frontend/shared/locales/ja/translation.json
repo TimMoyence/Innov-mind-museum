@@ -19,7 +19,8 @@
     "settings": "設定"
   },
   "inAppBrowser": {
-    "openSystem": "ブラウザで開く"
+    "openSystem": "ブラウザで開く",
+    "loadError": "ページを読み込めませんでした"
   },
   "permissions": {
     "galleryTitle": "ギャラリーへのアクセス",
