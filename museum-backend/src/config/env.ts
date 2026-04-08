@@ -89,6 +89,13 @@ interface AppEnv {
   rateLimit: {
     ipLimit: number;
     sessionLimit: number;
+    /**
+     * Per-authenticated-user message budget within `windowMs`.
+     * Complements `sessionLimit`: catches abuse spread across many sessions
+     * (a single user could otherwise multiply throughput by spawning sessions).
+     * SEC-20 (2026-04-08).
+     */
+    userLimit: number;
     windowMs: number;
   };
   upload: {
@@ -278,6 +285,7 @@ const env: AppEnv = {
   rateLimit: {
     ipLimit: toNumber(process.env.RATE_LIMIT_IP, 200),
     sessionLimit: toNumber(process.env.RATE_LIMIT_SESSION, 120),
+    userLimit: toNumber(process.env.RATE_LIMIT_USER, 200),
     windowMs: toNumber(process.env.RATE_LIMIT_WINDOW_MS, 60000),
   },
   upload: {
