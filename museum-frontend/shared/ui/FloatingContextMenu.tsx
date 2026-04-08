@@ -1,5 +1,5 @@
 import type { JSX } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -18,10 +18,19 @@ export interface ContextMenuAction {
 
 interface FloatingContextMenuProps {
   actions: ContextMenuAction[];
+  /**
+   * When true, the pill is wrapped in a horizontal ScrollView so its content
+   * can scroll horizontally if it exceeds the available width. Defaults to false
+   * to preserve the existing layout for callers that rely on the static pill.
+   */
+  scrollable?: boolean;
 }
 
 /** Renders a blurred floating pill-shaped menu bar with icon-labeled action buttons. */
-export const FloatingContextMenu = ({ actions }: FloatingContextMenuProps): JSX.Element => {
+export const FloatingContextMenu = ({
+  actions,
+  scrollable = false,
+}: FloatingContextMenuProps): JSX.Element => {
   const { theme } = useTheme();
 
   const handleAction = (action: ContextMenuAction): void => {
@@ -34,7 +43,7 @@ export const FloatingContextMenu = ({ actions }: FloatingContextMenuProps): JSX.
     Alert.alert(action.label, `${action.label} action is available.`);
   };
 
-  return (
+  const pill = (
     <BlurView
       intensity={58}
       tint={theme.blurTint}
@@ -78,6 +87,20 @@ export const FloatingContextMenu = ({ actions }: FloatingContextMenuProps): JSX.
       </View>
     </BlurView>
   );
+
+  if (scrollable) {
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {pill}
+      </ScrollView>
+    );
+  }
+
+  return pill;
 };
 
 const styles = StyleSheet.create({
@@ -105,5 +128,8 @@ const styles = StyleSheet.create({
   menuLabel: {
     fontSize: 11,
     fontWeight: '600',
+  },
+  scrollContent: {
+    paddingHorizontal: 4,
   },
 });
