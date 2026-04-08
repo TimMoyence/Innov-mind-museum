@@ -36,19 +36,19 @@ export function extractSearchTerm(
   return null;
 }
 
-/** Wraps a promise so any error is swallowed (fail-open). Returns `undefined` on error. */
+/** Wraps a promise so any error is swallowed (fail-open). Resolves to `undefined` on error. */
 function failOpen<T>(p: Promise<T>): Promise<T | undefined> {
-  return p.catch(() => {
-    return;
-  });
+  return p.catch<undefined>(() => Promise.resolve() as Promise<undefined>);
 }
+
+const NONE: Promise<undefined> = Promise.resolve() as Promise<undefined>;
 
 /** Fetches user memory block (or empty) — fail-open. */
 function fetchMemory(
   deps: EnrichmentDeps,
   ownerId: number | undefined,
 ): Promise<string | undefined> {
-  if (!deps.userMemory || !ownerId) return Promise.resolve();
+  if (!deps.userMemory || !ownerId) return NONE;
   return failOpen(deps.userMemory.getMemoryForPrompt(ownerId));
 }
 
@@ -57,7 +57,7 @@ function fetchKnowledgeBase(
   deps: EnrichmentDeps,
   searchTerm: string | null,
 ): Promise<string | undefined> {
-  if (!deps.knowledgeBase || !searchTerm) return Promise.resolve();
+  if (!deps.knowledgeBase || !searchTerm) return NONE;
   return failOpen(deps.knowledgeBase.lookup(searchTerm));
 }
 
@@ -67,7 +67,7 @@ function fetchKbFacts(
   searchTerm: string | null,
 ): Promise<ArtworkFacts | null | undefined> {
   if (!deps.knowledgeBase || !deps.imageEnrichment || !searchTerm) {
-    return Promise.resolve();
+    return NONE;
   }
   return failOpen(deps.knowledgeBase.lookupFacts(searchTerm));
 }
@@ -77,7 +77,7 @@ function fetchImages(
   deps: EnrichmentDeps,
   searchTerm: string | null,
 ): Promise<EnrichedImage[] | undefined> {
-  if (!deps.imageEnrichment || !searchTerm) return Promise.resolve();
+  if (!deps.imageEnrichment || !searchTerm) return NONE;
   return failOpen(deps.imageEnrichment.enrich(searchTerm));
 }
 
@@ -86,7 +86,7 @@ function fetchWebSearch(
   deps: EnrichmentDeps,
   searchTerm: string | null,
 ): Promise<string | undefined> {
-  if (!deps.webSearch || !searchTerm) return Promise.resolve();
+  if (!deps.webSearch || !searchTerm) return NONE;
   return failOpen(deps.webSearch.search(searchTerm));
 }
 
