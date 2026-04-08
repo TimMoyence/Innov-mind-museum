@@ -59,6 +59,8 @@ import { ConversationsHeader } from '@/features/conversation/ui/ConversationsHea
 describe('ConversationsHeader', () => {
   const defaultProps = {
     editMode: false,
+    isSavedOnly: false,
+    sortMode: 'recent',
     onToggleEdit: jest.fn(),
     onToggleSortMode: jest.fn(),
     onToggleSavedFilter: jest.fn(),

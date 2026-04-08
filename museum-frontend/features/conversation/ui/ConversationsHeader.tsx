@@ -5,6 +5,8 @@ import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 
 interface ConversationsHeaderProps {
   editMode: boolean;
+  isSavedOnly: boolean;
+  sortMode: string;
   onToggleEdit: () => void;
   onToggleSortMode: () => void;
   onToggleSavedFilter: () => void;
@@ -14,6 +16,8 @@ interface ConversationsHeaderProps {
 /** Top context menu row for the conversations dashboard. */
 export const ConversationsHeader = ({
   editMode,
+  isSavedOnly,
+  sortMode,
   onToggleEdit,
   onToggleSortMode,
   onToggleSavedFilter,
@@ -31,12 +35,14 @@ export const ConversationsHeader = ({
             icon: 'filter-outline',
             label: t('conversations.filter'),
             onPress: onToggleSortMode,
+            active: sortMode !== 'recent',
           },
           {
             id: 'bookmark',
-            icon: 'bookmark-outline',
+            icon: isSavedOnly ? 'bookmark' : 'bookmark-outline',
             label: t('conversations.saved'),
             onPress: onToggleSavedFilter,
+            active: isSavedOnly,
           },
           {
             id: 'share',

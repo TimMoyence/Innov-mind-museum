@@ -209,6 +209,8 @@ export default function ConversationsScreen() {
     <View>
       <ConversationsHeader
         editMode={editMode}
+        isSavedOnly={isSavedOnly}
+        sortMode={sortMode}
         onToggleEdit={toggleEditMode}
         onToggleSortMode={toggleSortMode}
         onToggleSavedFilter={toggleSavedFilter}
