@@ -2,26 +2,47 @@ import { ensureSessionAccess, ensureSessionOwnership } from '@modules/chat/useCa
 import type { ChatRepository } from '@modules/chat/domain/chat.repository.interface';
 
 describe('ensureSessionOwnership', () => {
-  it('does not throw when ownerId is null', () => {
-    expect(() => ensureSessionOwnership(null, 1)).not.toThrow();
+  describe('authenticated caller', () => {
+    it('does not throw when ownerId equals currentUserId', () => {
+      expect(() => ensureSessionOwnership(42, 42)).not.toThrow();
+    });
+
+    it('throws when IDs differ', () => {
+      expect(() => ensureSessionOwnership(42, 99)).toThrow('Chat session not found');
+    });
+
+    // SEC-16: ownerId == 0 must still trigger the comparison (the != null guard
+    // prevents the legacy `&&` falsy bypass).
+    it('throws when ownerId is 0 and currentUserId is 1 - SEC-16', () => {
+      expect(() => ensureSessionOwnership(0, 1)).toThrow('Chat session not found');
+    });
+
+    // SEC-19 (orphan adoption fix, 2026-04-08): a null ownerId means the session
+    // was orphaned by a user deletion (onDelete: SET NULL on the FK). An authenticated
+    // user MUST NOT be able to read a deleted user's chat history.
+    it('throws when ownerId is null (orphaned session) - SEC-19', () => {
+      expect(() => ensureSessionOwnership(null, 1)).toThrow('Chat session not found');
+    });
+
+    it('throws when ownerId is undefined (orphaned session) - SEC-19', () => {
+      expect(() => ensureSessionOwnership(undefined, 1)).toThrow('Chat session not found');
+    });
   });
 
-  it('does not throw when currentUserId is undefined', () => {
-    expect(() => ensureSessionOwnership(42, undefined)).not.toThrow();
-  });
+  describe('anonymous caller', () => {
+    // Symmetric guard: an anonymous request must not be able to reach an owned
+    // session, even by guessing the UUID. Defensive — every chat route currently
+    // mounts isAuthenticated, but this locks the service contract.
+    it('throws when ownerId is set but currentUserId is undefined - SEC-19', () => {
+      expect(() => ensureSessionOwnership(42, undefined)).toThrow('Chat session not found');
+    });
 
-  it('does not throw when both match', () => {
-    expect(() => ensureSessionOwnership(42, 42)).not.toThrow();
-  });
-
-  it('throws when IDs differ', () => {
-    expect(() => ensureSessionOwnership(42, 99)).toThrow('Chat session not found');
-  });
-
-  it('does not throw when ownerId is 0 (falsy but not null) - SEC-16', () => {
-    // ownerId == 0 is truthy for != null but falsy for &&
-    // Our fix uses != null so this should trigger the comparison
-    expect(() => ensureSessionOwnership(0, 1)).toThrow('Chat session not found');
+    // Legitimate service-level anonymous flow (no route exposes it today, but
+    // the chat-message-service supports it for future demo/guest endpoints).
+    it('does not throw when both are nullish (anonymous-anonymous)', () => {
+      expect(() => ensureSessionOwnership(null, undefined)).not.toThrow();
+      expect(() => ensureSessionOwnership(undefined, undefined)).not.toThrow();
+    });
   });
 });
 

@@ -246,7 +246,13 @@ describe('ChatMessageService', () => {
         expertiseSignals: 1,
         lastUpdated: new Date().toISOString(),
       };
-      const session = makeSession({ museumMode: true, visitContext });
+      // Session must be owned by USER_ID — SEC-19 (orphan adoption fix) rejects
+      // an authenticated request reaching a session with no/mismatched ownerId.
+      const session = makeSession({
+        museumMode: true,
+        visitContext,
+        user: { id: USER_ID } as ChatSession['user'],
+      });
       const repo = makeRepo(session);
       const { service, orchestrator } = buildService({ repository: repo });
 
@@ -266,7 +272,11 @@ describe('ChatMessageService', () => {
     });
 
     it('uses context.museumMode override when provided in input', async () => {
-      const session = makeSession({ museumMode: false });
+      // Session ownership required — see SEC-19 note above.
+      const session = makeSession({
+        museumMode: false,
+        user: { id: USER_ID } as ChatSession['user'],
+      });
       const repo = makeRepo(session);
       const { service, orchestrator } = buildService({ repository: repo });
 
@@ -867,7 +877,11 @@ describe('ChatMessageService', () => {
     });
 
     it('falls back to session locale when input locale is empty', async () => {
-      const session = makeSession({ locale: 'de' });
+      // Session ownership required — see SEC-19 note above.
+      const session = makeSession({
+        locale: 'de',
+        user: { id: USER_ID } as ChatSession['user'],
+      });
       const repo = makeRepo(session);
       const { service, orchestrator } = buildService({ repository: repo });
 

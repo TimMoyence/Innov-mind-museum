@@ -198,10 +198,16 @@ describe('openapi response contracts (active API)', () => {
       payload: createPayload,
     });
 
-    const postPayload = await chatService.postMessage(emptySession.id, {
-      text: 'Bonjour',
-      context: { locale: 'fr-FR' },
-    });
+    // SEC-19: pass currentUserId so the session-ownership check sees a matching auth.
+    const postPayload = await chatService.postMessage(
+      emptySession.id,
+      {
+        text: 'Bonjour',
+        context: { locale: 'fr-FR' },
+      },
+      undefined,
+      77,
+    );
     assertMatchesOpenApiResponse({
       path: '/api/chat/sessions/{id}/messages',
       method: 'post',

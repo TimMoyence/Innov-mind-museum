@@ -13,18 +13,44 @@ import type { ChatRepository } from '../domain/chat.repository.interface';
 import type { ChatSession } from '../domain/chatSession.entity';
 
 /**
- * Asserts that the given owner ID matches the current authenticated user.
- * Uses strict null check (`!= null`) to prevent bypass with null/0 values (SEC-16).
+ * Asserts that the given owner ID is consistent with the current request identity.
  *
- * @param ownerId - The session owner's user ID (may be null/undefined for anonymous sessions).
- * @param currentUserId - The authenticated user's ID (may be undefined).
- * @throws {AppError} 404 if ownership check fails.
+ * Security model (SEC-19, hardened 2026-04-08 — orphan adoption fix):
+ *
+ *  Authenticated request (`currentUserId != null`):
+ *    - The session MUST have a non-null ownerId equal to currentUserId.
+ *    - Rejects "orphan adoption" — auth users cannot read sessions whose owner was
+ *      deleted (FK SET NULL after account deletion). A deleted user's chat history
+ *      is GDPR-protected. Admin moderation must use a dedicated bypass path, not
+ *      this helper.
+ *    - The strict `!= null` comparison still guards SEC-16 (treat `0` as a real id).
+ *
+ *  Anonymous request (`currentUserId == null`):
+ *    - The session MUST also be anonymous (ownerId == null). An unauthenticated
+ *      caller cannot reach an owned session — this prevents the symmetric bypass
+ *      where a route that drops `isAuthenticated` would silently allow reads of
+ *      any session.
+ *    - The all-null case remains supported for the legitimate service-level
+ *      anonymous chat flow (no route currently exposes it, but the contract is
+ *      preserved for future demo/guest endpoints).
+ *
+ * @param ownerId - The session owner's user ID (null when orphaned or anonymous).
+ * @param currentUserId - The authenticated user's ID (undefined for anonymous calls).
+ * @throws {AppError} 404 on orphan adoption, owner mismatch, or anonymous→owned access.
  */
 export const ensureSessionOwnership = (
   ownerId: number | null | undefined,
   currentUserId: number | undefined,
 ): void => {
-  if (ownerId != null && currentUserId != null && ownerId !== currentUserId) {
+  if (currentUserId != null) {
+    // Authenticated: must own a real (non-orphaned) session.
+    if (ownerId == null || ownerId !== currentUserId) {
+      throw notFound('Chat session not found');
+    }
+    return;
+  }
+  // Anonymous request: only anonymous sessions are accessible.
+  if (ownerId != null) {
     throw notFound('Chat session not found');
   }
 };
