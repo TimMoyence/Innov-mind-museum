@@ -28,22 +28,85 @@ interface ParsedContext {
   locale?: string;
 }
 
-/** Multer instance for image uploads (single file, size-limited). */
+/**
+ * Default MIME types accepted by the image uploader when no explicit allowlist
+ * is configured via `env.upload.allowedMimeTypes`. Matches the formats enforced
+ * by `ImageProcessingService.assertMimeType` (jpeg / png / webp), which is what
+ * the downstream LLM vision pipeline can process.
+ */
+const DEFAULT_IMAGE_MIME_TYPES: readonly string[] = ['image/jpeg', 'image/png', 'image/webp'];
+
+/**
+ * Default MIME types accepted by the audio uploader. Covers the common mobile
+ * recorder outputs (iOS m4a, Android 3gp/webm, generic mp4/mpeg/wav) aligned
+ * with `env.upload.allowedAudioMimeTypes`.
+ */
+const DEFAULT_AUDIO_MIME_TYPES: readonly string[] = [
+  'audio/mp4',
+  'audio/mpeg',
+  'audio/webm',
+  'audio/wav',
+  'audio/x-m4a',
+];
+
+const resolveAllowedImageMimeTypes = (): Set<string> => {
+  const configured = env.upload.allowedMimeTypes;
+  const list = configured.length > 0 ? configured : DEFAULT_IMAGE_MIME_TYPES;
+  return new Set(list.map((type) => type.toLowerCase()));
+};
+
+const resolveAllowedAudioMimeTypes = (): Set<string> => {
+  const configured = env.upload.allowedAudioMimeTypes;
+  const list = configured.length > 0 ? configured : DEFAULT_AUDIO_MIME_TYPES;
+  return new Set(list.map((type) => type.toLowerCase()));
+};
+
+const allowedImageMimeTypes = resolveAllowedImageMimeTypes();
+const allowedAudioMimeTypes = resolveAllowedAudioMimeTypes();
+
+/**
+ * Multer fileFilter that rejects an upload *before* it is buffered in memory
+ * when the declared Content-Type is not in the allowlist. This is a pre-flight
+ * guard to cap memory pressure under concurrent upload load (SEC-M2); the
+ * authoritative validation (magic bytes + size) still runs in
+ * `ImageProcessingService` / audio ingestion for defense-in-depth.
+ */
+const imageFileFilter: NonNullable<multer.Options['fileFilter']> = (_req, file, cb) => {
+  const mime = (file.mimetype || '').toLowerCase();
+  if (allowedImageMimeTypes.has(mime)) {
+    cb(null, true);
+    return;
+  }
+  cb(badRequest(`Unsupported image content type: ${file.mimetype || 'unknown'}`));
+};
+
+const audioFileFilter: NonNullable<multer.Options['fileFilter']> = (_req, file, cb) => {
+  const mime = (file.mimetype || '').toLowerCase();
+  if (allowedAudioMimeTypes.has(mime)) {
+    cb(null, true);
+    return;
+  }
+  cb(badRequest(`Unsupported audio content type: ${file.mimetype || 'unknown'}`));
+};
+
+/** Multer instance for image uploads (single file, size-limited, MIME-filtered). */
 export const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: env.llm.maxImageBytes,
     files: 1,
   },
+  fileFilter: imageFileFilter,
 });
 
-/** Multer instance for audio uploads (single file, size-limited). */
+/** Multer instance for audio uploads (single file, size-limited, MIME-filtered). */
 export const audioUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: env.llm.maxAudioBytes,
     files: 1,
   },
+  fileFilter: audioFileFilter,
 });
 
 const MAX_CONTEXT_LENGTH = 2000;

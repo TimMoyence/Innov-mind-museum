@@ -42,6 +42,7 @@ const INSULT_KEYWORDS = [
 ];
 
 const INJECTION_PATTERNS = [
+  // English
   'ignore previous',
   'ignore all instructions',
   'ignore above',
@@ -49,9 +50,6 @@ const INJECTION_PATTERNS = [
   'disregard previous',
   'disregard all',
   'disregard instructions',
-  'ignore les instructions',
-  'ignore tout ce qui precede',
-  'oublie les instructions',
   'bypass',
   'jailbreak',
   'system prompt',
@@ -60,8 +58,6 @@ const INJECTION_PATTERNS = [
   'print your system',
   'repeat your instructions',
   'developer mode',
-  'mode developpeur',
-  'contourne les regles',
   'override instructions',
   'new instructions',
   'act as if',
@@ -71,6 +67,65 @@ const INJECTION_PATTERNS = [
   'roleplay as',
   'do anything now',
   'dan mode',
+  // French
+  'ignore les instructions',
+  'ignore tout ce qui precede',
+  'oublie les instructions',
+  'oublie toutes les regles',
+  'mode developpeur',
+  'contourne les regles',
+  'tu es maintenant',
+  'agis comme si',
+  // German
+  'ignoriere die vorherigen',
+  'ignoriere alle anweisungen',
+  'vergiss alle anweisungen',
+  'vergiss die regeln',
+  'du bist jetzt',
+  'tu so als ob',
+  'entwicklermodus',
+  'systemaufforderung',
+  // Spanish
+  'ignora las instrucciones anteriores',
+  'ignora todas las instrucciones',
+  'olvida todas las reglas',
+  'olvida las instrucciones',
+  'ahora eres',
+  'actua como si',
+  'modo desarrollador',
+  // Italian
+  'ignora le istruzioni precedenti',
+  'ignora tutte le istruzioni',
+  'dimentica tutte le regole',
+  'dimentica le istruzioni',
+  'ora sei',
+  'fai finta di essere',
+  'modalita sviluppatore',
+  // Japanese (CJK — matched via includes())
+  '前の指示を無視',
+  'すべての指示を無視',
+  'すべてのルールを忘れて',
+  '指示を忘れて',
+  '開発者モード',
+  'システムプロンプト',
+  // Japanese romaji fallback
+  'mae no shiji wo mushi',
+  'kaihatsusha mode',
+  // Chinese (CJK — matched via includes())
+  '忽略之前的指令',
+  '忽略所有指令',
+  '忘记所有规则',
+  '忘记指令',
+  '开发者模式',
+  '系统提示',
+  '你现在是',
+  // Arabic (matched via includes())
+  'تجاهل التعليمات السابقة',
+  'تجاهل جميع التعليمات',
+  'انسى كل القواعد',
+  'انسى التعليمات',
+  'وضع المطور',
+  'أنت الآن',
 ];
 
 const escapeRegExp = (value: string): string => {
@@ -78,19 +133,27 @@ const escapeRegExp = (value: string): string => {
 };
 
 const isCjk = (s: string): boolean => /[\u3000-\u9fff\uf900-\ufaff]/.test(s);
+const isArabic = (s: string): boolean =>
+  /[\u0600-\u06ff\u0750-\u077f\ufb50-\ufdff\ufe70-\ufeff]/.test(s);
 
 const containsKeyword = (normalizedText: string, keyword: string): boolean => {
-  // CJK characters don't have word boundaries — always use includes()
-  if (isCjk(keyword)) {
-    return normalizedText.includes(keyword);
+  // Apply the same normalization to the keyword as to the input text so NFD
+  // decomposition (e.g. Japanese dakuten, Latin accents) is consistent on both sides.
+  const normalizedKeyword = normalize(keyword);
+
+  // CJK and Arabic scripts don't have ASCII word boundaries — always use includes().
+  // Arabic combining marks are stripped by normalize() via the \u0300-\u036f range, but
+  // Arabic diacritics (\u064b-\u0652) remain — includes() stays safe either way.
+  if (isCjk(normalizedKeyword) || isArabic(normalizedKeyword)) {
+    return normalizedText.includes(normalizedKeyword);
   }
 
-  if (keyword.includes(' ') || keyword.length <= 3) {
-    const pattern = new RegExp(`(^|\\b)${escapeRegExp(keyword)}(\\b|$)`);
+  if (normalizedKeyword.includes(' ') || normalizedKeyword.length <= 3) {
+    const pattern = new RegExp(`(^|\\b)${escapeRegExp(normalizedKeyword)}(\\b|$)`);
     return pattern.test(normalizedText);
   }
 
-  return normalizedText.includes(keyword);
+  return normalizedText.includes(normalizedKeyword);
 };
 
 const includesAny = (normalizedText: string, keywords: string[]): boolean => {

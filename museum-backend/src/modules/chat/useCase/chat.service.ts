@@ -20,6 +20,7 @@ import type { ArtTopicClassifierPort } from './guardrail-evaluation.service';
 import type { ImageEnrichmentService } from './image-enrichment.service';
 import type { KnowledgeBaseService } from './knowledge-base.service';
 import type { UserMemoryService } from './user-memory.service';
+import type { WebSearchService } from './web-search.service';
 import type { ChatRepository } from '../domain/chat.repository.interface';
 import type {
   CreateSessionInput,
@@ -63,6 +64,7 @@ export interface ChatServiceDeps {
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
   imageEnrichment?: ImageEnrichmentService;
+  webSearch?: WebSearchService;
   artTopicClassifier?: ArtTopicClassifierPort;
   piiSanitizer?: PiiSanitizer;
   museumRepository?: IMuseumRepository;
@@ -101,6 +103,7 @@ export class ChatService {
       userMemory: deps.userMemory,
       knowledgeBase: deps.knowledgeBase,
       imageEnrichment: deps.imageEnrichment,
+      webSearch: deps.webSearch,
       artTopicClassifier: deps.artTopicClassifier,
       piiSanitizer: deps.piiSanitizer,
     });

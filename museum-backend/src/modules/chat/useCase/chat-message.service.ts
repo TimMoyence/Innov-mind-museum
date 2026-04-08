@@ -17,6 +17,7 @@ import type { ArtTopicClassifierPort } from './guardrail-evaluation.service';
 import type { ImageEnrichmentService } from './image-enrichment.service';
 import type { KnowledgeBaseService } from './knowledge-base.service';
 import type { UserMemoryService } from './user-memory.service';
+import type { WebSearchService } from './web-search.service';
 import type { ChatRepository } from '../domain/chat.repository.interface';
 import type { EnrichedImage, PostAudioMessageInput, PostMessageInput } from '../domain/chat.types';
 import type { AudioTranscriber } from '../domain/ports/audio-transcriber.port';
@@ -39,6 +40,7 @@ export interface ChatMessageServiceDeps {
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
   imageEnrichment?: ImageEnrichmentService;
+  webSearch?: WebSearchService;
   artTopicClassifier?: ArtTopicClassifierPort;
   piiSanitizer?: PiiSanitizer;
 }
@@ -54,6 +56,7 @@ interface PrepareReady {
   ownerId?: number;
   userMemoryBlock?: string;
   knowledgeBaseBlock?: string;
+  webSearchBlock?: string;
   enrichedImages?: EnrichedImage[];
 }
 
@@ -94,6 +97,7 @@ export class ChatMessageService {
   private readonly userMemory?: UserMemoryService;
   private readonly knowledgeBase?: KnowledgeBaseService;
   private readonly imageEnrichment?: ImageEnrichmentService;
+  private readonly webSearch?: WebSearchService;
   private readonly artTopicClassifier?: ArtTopicClassifierPort;
   private readonly piiSanitizer: PiiSanitizer;
 
@@ -105,6 +109,7 @@ export class ChatMessageService {
     this.userMemory = deps.userMemory;
     this.knowledgeBase = deps.knowledgeBase;
     this.imageEnrichment = deps.imageEnrichment;
+    this.webSearch = deps.webSearch;
     this.artTopicClassifier = deps.artTopicClassifier;
     this.piiSanitizer = deps.piiSanitizer ?? new DisabledPiiSanitizer();
 
@@ -179,16 +184,18 @@ export class ChatMessageService {
     }
 
     const history = await this.repository.listSessionHistory(sessionId, env.llm.maxHistoryMessages);
-    const { userMemoryBlock, knowledgeBaseBlock, enrichedImages } = await fetchEnrichmentData(
-      {
-        userMemory: this.userMemory,
-        knowledgeBase: this.knowledgeBase,
-        imageEnrichment: this.imageEnrichment,
-      },
-      history,
-      input.text?.trim(),
-      ownerId,
-    );
+    const { userMemoryBlock, knowledgeBaseBlock, webSearchBlock, enrichedImages } =
+      await fetchEnrichmentData(
+        {
+          userMemory: this.userMemory,
+          knowledgeBase: this.knowledgeBase,
+          imageEnrichment: this.imageEnrichment,
+          webSearch: this.webSearch,
+        },
+        history,
+        input.text?.trim(),
+        ownerId,
+      );
 
     return {
       kind: 'ready',
@@ -200,6 +207,7 @@ export class ChatMessageService {
       ownerId,
       userMemoryBlock,
       knowledgeBaseBlock,
+      webSearchBlock,
       enrichedImages,
     };
   }
@@ -222,6 +230,7 @@ export class ChatMessageService {
       ownerId,
       userMemoryBlock,
       knowledgeBaseBlock,
+      webSearchBlock,
       enrichedImages,
     } = prep;
     const text = input.text?.trim();
@@ -241,6 +250,7 @@ export class ChatMessageService {
       requestId,
       userMemoryBlock,
       knowledgeBaseBlock,
+      webSearchBlock,
       audioDescriptionMode: input.context?.audioDescriptionMode,
       lowDataMode: input.context?.lowDataMode ?? false,
     });
@@ -283,6 +293,7 @@ export class ChatMessageService {
       ownerId,
       userMemoryBlock,
       knowledgeBaseBlock,
+      webSearchBlock,
       enrichedImages,
     } = prep;
 
@@ -311,6 +322,7 @@ export class ChatMessageService {
         requestId,
         userMemoryBlock,
         knowledgeBaseBlock,
+        webSearchBlock,
         audioDescriptionMode: input.context?.audioDescriptionMode,
         lowDataMode: input.context?.lowDataMode ?? false,
       },

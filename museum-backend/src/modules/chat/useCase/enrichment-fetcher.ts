@@ -1,6 +1,7 @@
 import type { ImageEnrichmentService } from './image-enrichment.service';
 import type { KnowledgeBaseService } from './knowledge-base.service';
 import type { UserMemoryService } from './user-memory.service';
+import type { WebSearchService } from './web-search.service';
 import type { EnrichedImage } from '../domain/chat.types';
 import type { ArtworkFacts } from '../domain/ports/knowledge-base.port';
 
@@ -9,6 +10,7 @@ interface EnrichmentDeps {
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
   imageEnrichment?: ImageEnrichmentService;
+  webSearch?: WebSearchService;
 }
 
 /**
@@ -19,7 +21,6 @@ export function extractSearchTerm(
   history: { role: string; metadata?: Record<string, unknown> | null }[],
   inputText?: string,
 ): string | null {
-  // Search history for last assistant message with detectedArtwork.title
   for (let i = history.length - 1; i >= 0; i--) {
     const msg = history[i];
     if (msg.role === 'assistant' && msg.metadata) {
@@ -29,14 +30,67 @@ export function extractSearchTerm(
       }
     }
   }
-  // Fallback: use input text if it has 3+ words
   if (inputText && inputText.split(/\s+/).length >= 3) {
     return inputText;
   }
   return null;
 }
 
-/** Fetches user memory, knowledge-base text, KB facts, and image enrichment in parallel (fail-open). */
+/** Wraps a promise so any error is swallowed (fail-open). Returns `undefined` on error. */
+function failOpen<T>(p: Promise<T>): Promise<T | undefined> {
+  return p.catch(() => {
+    return;
+  });
+}
+
+/** Fetches user memory block (or empty) — fail-open. */
+function fetchMemory(
+  deps: EnrichmentDeps,
+  ownerId: number | undefined,
+): Promise<string | undefined> {
+  if (!deps.userMemory || !ownerId) return Promise.resolve();
+  return failOpen(deps.userMemory.getMemoryForPrompt(ownerId));
+}
+
+/** Fetches knowledge-base prompt block (or empty) — fail-open. */
+function fetchKnowledgeBase(
+  deps: EnrichmentDeps,
+  searchTerm: string | null,
+): Promise<string | undefined> {
+  if (!deps.knowledgeBase || !searchTerm) return Promise.resolve();
+  return failOpen(deps.knowledgeBase.lookup(searchTerm));
+}
+
+/** Fetches raw KB facts for image merging — fail-open. */
+function fetchKbFacts(
+  deps: EnrichmentDeps,
+  searchTerm: string | null,
+): Promise<ArtworkFacts | null | undefined> {
+  if (!deps.knowledgeBase || !deps.imageEnrichment || !searchTerm) {
+    return Promise.resolve();
+  }
+  return failOpen(deps.knowledgeBase.lookupFacts(searchTerm));
+}
+
+/** Fetches image enrichment results — fail-open. */
+function fetchImages(
+  deps: EnrichmentDeps,
+  searchTerm: string | null,
+): Promise<EnrichedImage[] | undefined> {
+  if (!deps.imageEnrichment || !searchTerm) return Promise.resolve();
+  return failOpen(deps.imageEnrichment.enrich(searchTerm));
+}
+
+/** Fetches web search prompt block (or empty) — fail-open. */
+function fetchWebSearch(
+  deps: EnrichmentDeps,
+  searchTerm: string | null,
+): Promise<string | undefined> {
+  if (!deps.webSearch || !searchTerm) return Promise.resolve();
+  return failOpen(deps.webSearch.search(searchTerm));
+}
+
+/** Fetches user memory, knowledge-base text, KB facts, web search, and image enrichment in parallel (fail-open). */
 export async function fetchEnrichmentData(
   deps: EnrichmentDeps,
   history: { role: string; metadata?: Record<string, unknown> | null }[],
@@ -45,67 +99,32 @@ export async function fetchEnrichmentData(
 ): Promise<{
   userMemoryBlock: string;
   knowledgeBaseBlock: string;
+  webSearchBlock: string;
   enrichedImages: EnrichedImage[];
 }> {
-  let userMemoryBlock = '';
-  let knowledgeBaseBlock = '';
-  let enrichedImages: EnrichedImage[] = [];
-
   const searchTerm = extractSearchTerm(history, inputText);
-  let kbFacts: ArtworkFacts | null = null;
 
-  await Promise.all([
-    deps.userMemory && ownerId
-      ? deps.userMemory
-          .getMemoryForPrompt(ownerId)
-          .then((b: string) => {
-            userMemoryBlock = b;
-          })
-          .catch(() => {
-            /* fail-open */
-          })
-      : Promise.resolve(),
-    deps.knowledgeBase && searchTerm
-      ? deps.knowledgeBase
-          .lookup(searchTerm)
-          .then((b: string) => {
-            knowledgeBaseBlock = b;
-          })
-          .catch(() => {
-            /* fail-open */
-          })
-      : Promise.resolve(),
-    deps.knowledgeBase && deps.imageEnrichment && searchTerm
-      ? deps.knowledgeBase
-          .lookupFacts(searchTerm)
-          .then((facts) => {
-            kbFacts = facts;
-          })
-          .catch(() => {
-            /* fail-open */
-          })
-      : Promise.resolve(),
-    deps.imageEnrichment && searchTerm
-      ? deps.imageEnrichment
-          .enrich(searchTerm)
-          .then((imgs) => {
-            enrichedImages = imgs;
-          })
-          .catch(() => {
-            /* fail-open */
-          })
-      : Promise.resolve(),
+  const [memory, kb, kbFacts, images, web] = await Promise.all([
+    fetchMemory(deps, ownerId),
+    fetchKnowledgeBase(deps, searchTerm),
+    fetchKbFacts(deps, searchTerm),
+    fetchImages(deps, searchTerm),
+    fetchWebSearch(deps, searchTerm),
   ]);
 
-  // Merge Wikidata image into enriched images if KB returned a P18 imageUrl
-  const resolvedFacts = kbFacts as ArtworkFacts | null;
-  if (resolvedFacts?.imageUrl && deps.imageEnrichment && searchTerm) {
+  let enrichedImages = images ?? [];
+  if (kbFacts?.imageUrl && deps.imageEnrichment && searchTerm) {
     enrichedImages = deps.imageEnrichment.mergeWikidataImage(
       enrichedImages,
-      resolvedFacts.imageUrl,
+      kbFacts.imageUrl,
       searchTerm,
     );
   }
 
-  return { userMemoryBlock, knowledgeBaseBlock, enrichedImages };
+  return {
+    userMemoryBlock: memory ?? '',
+    knowledgeBaseBlock: kb ?? '',
+    webSearchBlock: web ?? '',
+    enrichedImages,
+  };
 }

@@ -1,13 +1,10 @@
 import dotenv from 'dotenv';
 
-dotenv.config();
+import { validateProductionEnv } from './env.production-validation';
 
-/** Allowed Node.js runtime environments. */
-type NodeEnv = 'development' | 'test' | 'production';
-/** Supported LLM provider identifiers. */
-type LlmProvider = 'openai' | 'deepseek' | 'google';
-/** Supported object-storage driver identifiers. */
-type StorageDriver = 'local' | 's3';
+import type { AppEnv, LlmProvider, NodeEnv, StorageDriver } from './env.types';
+
+dotenv.config();
 
 const toNumber = (value: string | undefined, fallback: number): number => {
   if (!value) return fallback;
@@ -36,151 +33,6 @@ const toOptionalString = (value: string | undefined): string | undefined => {
   const trimmed = value.trim();
   return trimmed.length ? trimmed : undefined;
 };
-
-/** Application configuration loaded from environment variables. */
-interface AppEnv {
-  nodeEnv: NodeEnv;
-  port: number;
-  trustProxy: boolean;
-  corsOrigins: string[];
-  jsonBodyLimit: string;
-  requestTimeoutMs: number;
-  dbSynchronize: boolean;
-  dbSsl: boolean;
-  dbSslRejectUnauthorized: boolean;
-  db: {
-    host: string;
-    port: number;
-    user?: string;
-    password?: string;
-    database: string;
-    poolMax: number;
-  };
-  auth: {
-    jwtSecret: string;
-    accessTokenSecret: string;
-    refreshTokenSecret: string;
-    accessTokenTtl: string;
-    refreshTokenTtl: string;
-    appleClientId: string;
-    googleClientIds: string[];
-  };
-  llm: {
-    provider: LlmProvider;
-    model: string;
-    audioTranscriptionModel: string;
-    temperature: number;
-    timeoutMs: number;
-    timeoutSummaryMs: number;
-    totalBudgetMs: number;
-    retries: number;
-    retryBaseDelayMs: number;
-    maxConcurrent: number;
-    maxHistoryMessages: number;
-    maxTextLength: number;
-    maxImageBytes: number;
-    maxAudioBytes: number;
-    maxOutputTokens: number;
-    includeDiagnostics: boolean;
-    openAiApiKey?: string;
-    deepseekApiKey?: string;
-    googleApiKey?: string;
-  };
-  rateLimit: {
-    ipLimit: number;
-    sessionLimit: number;
-    /**
-     * Per-authenticated-user message budget within `windowMs`.
-     * Complements `sessionLimit`: catches abuse spread across many sessions
-     * (a single user could otherwise multiply throughput by spawning sessions).
-     * SEC-20 (2026-04-08).
-     */
-    userLimit: number;
-    windowMs: number;
-  };
-  upload: {
-    allowedMimeTypes: string[];
-    allowedAudioMimeTypes: string[];
-  };
-  brevoApiKey?: string;
-  supportInboxEmail: string;
-  storage: {
-    driver: StorageDriver;
-    localUploadsDir: string;
-    signedUrlTtlSeconds: number;
-    signingSecret: string;
-    s3?: {
-      endpoint?: string;
-      region?: string;
-      bucket?: string;
-      accessKeyId?: string;
-      secretAccessKey?: string;
-      sessionToken?: string;
-      publicBaseUrl?: string;
-      objectKeyPrefix?: string;
-    };
-  };
-  tts?: {
-    enabled: boolean;
-    model: string;
-    voice: string;
-    speed: number;
-    maxTextLength: number;
-    cacheTtlSeconds: number;
-  };
-  cache?: {
-    enabled: boolean;
-    url: string;
-    sessionTtlSeconds: number;
-    listTtlSeconds: number;
-    /** TTL for LLM response cache entries (seconds). Default 7 days. */
-    llmTtlSeconds: number;
-    /** TTL for popularity ZSET entries (seconds). Default 30 days. */
-    llmPopularityTtlSeconds: number;
-    /** Maximum entries per museum in low-data pack. Default 30. */
-    lowDataPackMaxEntries: number;
-  };
-  sentry?: {
-    dsn: string;
-    environment: string;
-    release: string;
-    tracesSampleRate: number;
-    profilesSampleRate: number;
-  };
-  otel?: {
-    enabled: boolean;
-    exporterEndpoint: string;
-    serviceName: string;
-  };
-  featureFlags: {
-    voiceMode: boolean;
-    ocrGuard: boolean;
-    apiKeys: boolean;
-    streaming: boolean;
-    multiTenancy: boolean;
-    userMemory: boolean;
-    knowledgeBase: boolean;
-    imageEnrichment: boolean;
-  };
-  /** Maximum chat messages a free-tier user can send per calendar day. */
-  freeTierDailyChatLimit: number;
-  /** TTL in seconds for Overpass API museum search cache entries. */
-  overpassCacheTtlSeconds: number;
-  /** Knowledge base (Wikidata) configuration. */
-  knowledgeBase: {
-    timeoutMs: number;
-    cacheTtlSeconds: number;
-    cacheMaxEntries: number;
-  };
-  /** Image enrichment (Unsplash + Wikidata P18) configuration. */
-  imageEnrichment: {
-    unsplashAccessKey?: string;
-    cacheTtlMs: number;
-    cacheMaxEntries: number;
-    fetchTimeoutMs: number;
-    maxImagesPerResponse: number;
-  };
-}
 
 const required = (name: string, value: string | undefined): string => {
   if (!value?.trim()) {
@@ -353,6 +205,7 @@ const env: AppEnv = {
     userMemory: toBoolean(process.env.FEATURE_FLAG_USER_MEMORY, false),
     knowledgeBase: toBoolean(process.env.FEATURE_FLAG_KNOWLEDGE_BASE, false),
     imageEnrichment: toBoolean(process.env.FEATURE_FLAG_IMAGE_ENRICHMENT, false),
+    webSearch: toBoolean(process.env.FEATURE_FLAG_WEB_SEARCH, false),
   },
   freeTierDailyChatLimit: toNumber(process.env.FREE_TIER_DAILY_CHAT_LIMIT, 100),
   overpassCacheTtlSeconds: toNumber(process.env.OVERPASS_CACHE_TTL_SECONDS, 86400),
@@ -367,6 +220,12 @@ const env: AppEnv = {
     cacheMaxEntries: toNumber(process.env.IMAGE_ENRICHMENT_CACHE_MAX_ENTRIES, 200),
     fetchTimeoutMs: toNumber(process.env.IMAGE_ENRICHMENT_FETCH_TIMEOUT_MS, 3000),
     maxImagesPerResponse: toNumber(process.env.IMAGE_ENRICHMENT_MAX_IMAGES, 5),
+  },
+  webSearch: {
+    tavilyApiKey: toOptionalString(process.env.TAVILY_API_KEY),
+    timeoutMs: toNumber(process.env.WEB_SEARCH_TIMEOUT_MS, 3000),
+    cacheTtlSeconds: toNumber(process.env.WEB_SEARCH_CACHE_TTL_SECONDS, 3600),
+    maxResults: toNumber(process.env.WEB_SEARCH_MAX_RESULTS, 5),
   },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
   supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.app',
@@ -393,35 +252,7 @@ const env: AppEnv = {
 };
 
 if (env.nodeEnv === 'production') {
-  if (!env.brevoApiKey) {
-    console.warn('BREVO_API_KEY not set \u2014 password reset emails will not be sent');
-  }
-  required(
-    'JWT_ACCESS_SECRET or JWT_SECRET',
-    process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET,
-  );
-  required('JWT_REFRESH_SECRET', process.env.JWT_REFRESH_SECRET);
-  required('PGDATABASE', process.env.PGDATABASE);
-  required('CORS_ORIGINS', process.env.CORS_ORIGINS);
-  required('MEDIA_SIGNING_SECRET', process.env.MEDIA_SIGNING_SECRET);
-
-  if (env.llm.provider === 'openai') {
-    required('OPENAI_API_KEY', env.llm.openAiApiKey);
-  }
-  if (env.llm.provider === 'deepseek') {
-    required('DEEPSEEK_API_KEY', env.llm.deepseekApiKey);
-  }
-  if (env.llm.provider === 'google') {
-    required('GOOGLE_API_KEY', env.llm.googleApiKey);
-  }
-
-  if (env.storage.driver === 's3') {
-    required('S3_ENDPOINT', env.storage.s3?.endpoint);
-    required('S3_REGION', env.storage.s3?.region);
-    required('S3_BUCKET', env.storage.s3?.bucket);
-    required('S3_ACCESS_KEY_ID', env.storage.s3?.accessKeyId);
-    required('S3_SECRET_ACCESS_KEY', env.storage.s3?.secretAccessKey);
-  }
+  validateProductionEnv(env);
 }
 
 export { env };
