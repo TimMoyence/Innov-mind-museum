@@ -135,6 +135,7 @@ export default function ChatSessionScreen() {
 
   const onSend = useCallback(
     async (overrideText?: string) => {
+      Keyboard.dismiss();
       const nextText = (overrideText ?? text).trim();
       if (!nextText && !selectedImage && !recordedAudioUri) return;
 
