@@ -583,7 +583,7 @@
       },
       "MuseumDTO": {
         "type": "object",
-        "required": ["id", "name", "slug", "config", "isActive", "createdAt", "updatedAt"],
+        "required": ["id", "name", "slug", "museumType", "config", "isActive", "createdAt", "updatedAt"],
         "properties": {
           "id": { "type": "integer" },
           "name": { "type": "string" },
@@ -592,6 +592,7 @@
           "description": { "type": ["string", "null"] },
           "latitude": { "type": ["number", "null"] },
           "longitude": { "type": ["number", "null"] },
+          "museumType": { "type": "string", "enum": ["art", "history", "science", "specialized", "general"], "description": "Museum category" },
           "config": { "type": "object", "additionalProperties": true },
           "isActive": { "type": "boolean" },
           "createdAt": { "type": "string", "format": "date-time" },
@@ -600,7 +601,7 @@
       },
       "MuseumDirectoryDTO": {
         "type": "object",
-        "required": ["id", "name", "slug"],
+        "required": ["id", "name", "slug", "museumType"],
         "properties": {
           "id": { "type": "integer" },
           "name": { "type": "string" },
@@ -608,7 +609,8 @@
           "address": { "type": ["string", "null"] },
           "description": { "type": ["string", "null"] },
           "latitude": { "type": ["number", "null"] },
-          "longitude": { "type": ["number", "null"] }
+          "longitude": { "type": ["number", "null"] },
+          "museumType": { "type": "string", "enum": ["art", "history", "science", "specialized", "general"], "description": "Museum category" }
         }
       },
       "TicketDTO": {
@@ -2213,14 +2215,15 @@
                       "type": "array",
                       "items": {
                         "type": "object",
-                        "required": ["name", "latitude", "longitude", "distance", "source"],
+                        "required": ["name", "latitude", "longitude", "distance", "source", "museumType"],
                         "properties": {
                           "name": { "type": "string" },
                           "address": { "type": ["string", "null"] },
                           "latitude": { "type": "number" },
                           "longitude": { "type": "number" },
                           "distance": { "type": "integer", "description": "Distance in meters from search origin" },
-                          "source": { "type": "string", "enum": ["local", "osm"] }
+                          "source": { "type": "string", "enum": ["local", "osm"] },
+                          "museumType": { "type": "string", "enum": ["art", "history", "science", "specialized", "general"], "description": "Museum category derived from OSM tags" }
                         }
                       }
                     },

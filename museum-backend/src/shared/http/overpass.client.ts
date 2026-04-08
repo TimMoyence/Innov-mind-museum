@@ -1,5 +1,12 @@
 import { logger } from '@shared/logger/logger';
 
+/** Normalized museum category derived from OSM tags or stored in the DB. */
+export const MUSEUM_CATEGORIES = ['art', 'history', 'science', 'specialized', 'general'] as const;
+/**
+ *
+ */
+export type MuseumCategory = (typeof MUSEUM_CATEGORIES)[number];
+
 /** Raw museum result parsed from the Overpass API response. */
 export interface OverpassMuseumResult {
   name: string;
@@ -7,6 +14,7 @@ export interface OverpassMuseumResult {
   latitude: number;
   longitude: number;
   osmId: number;
+  museumType: MuseumCategory;
 }
 
 /** Parameters for querying nearby museums via Overpass. */
@@ -74,6 +82,32 @@ const extractAddress = (tags: Record<string, string> | undefined): string | null
   return parts.length > 0 ? parts.join(', ') : null;
 };
 
+/** Maps an OSM `museum` tag value to a normalized category. */
+const classifyMuseumType = (tags: Record<string, string> | undefined): MuseumCategory => {
+  const raw = tags?.museum ?? tags?.subject ?? '';
+  const lower = raw.toLowerCase();
+
+  if (['art', 'arts', 'fine_arts', 'modern_art', 'contemporary_art'].includes(lower)) return 'art';
+  if (['history', 'archaeology', 'archaeological', 'local_history', 'ethnography'].includes(lower))
+    return 'history';
+  if (['science', 'technology', 'natural_history', 'natural', 'nature', 'geology'].includes(lower))
+    return 'science';
+  if (
+    [
+      'railway',
+      'aviation',
+      'maritime',
+      'military',
+      'transport',
+      'industrial',
+      'automobile',
+    ].includes(lower)
+  )
+    return 'specialized';
+
+  return 'general';
+};
+
 /** Parses a single Overpass element into a museum result, or null if unusable. */
 const parseElement = (el: OverpassElement): OverpassMuseumResult | null => {
   const name = el.tags?.name;
@@ -98,6 +132,7 @@ const parseElement = (el: OverpassElement): OverpassMuseumResult | null => {
     latitude,
     longitude,
     osmId: el.id,
+    museumType: classifyMuseumType(el.tags),
   };
 };
 

@@ -31,6 +31,7 @@ const handleGetDirectory = async (_req: Request, res: Response) => {
     description: m.description ?? null,
     latitude: m.latitude ?? null,
     longitude: m.longitude ?? null,
+    museumType: m.museumType,
   }));
   res.json({ museums: directory });
 };
@@ -58,12 +59,13 @@ const buildHandleSearch = (searchMuseumsUseCase: ReturnType<typeof buildSearchMu
 
 /** Handler: POST /api/museums — create a museum (admin only). */
 const handleCreateMuseum = async (req: Request, res: Response) => {
-  const { name, slug, address, description, config } = req.body as {
+  const { name, slug, address, description, config, museumType } = req.body as {
     name: string;
     slug: string;
     address?: string;
     description?: string;
     config?: Record<string, unknown>;
+    museumType?: string;
   };
   const museum = await createMuseumUseCase.execute({
     name,
@@ -71,6 +73,9 @@ const handleCreateMuseum = async (req: Request, res: Response) => {
     address,
     description,
     config,
+    ...(museumType
+      ? { museumType: museumType as 'art' | 'history' | 'science' | 'specialized' | 'general' }
+      : {}),
   });
   auditService.log({
     action: 'MUSEUM_CREATED',

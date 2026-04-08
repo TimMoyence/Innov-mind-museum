@@ -54,6 +54,7 @@ const makeOsmResult = (
   latitude: PARIS.lat + latOffset,
   longitude: PARIS.lng + lonOffset,
   osmId,
+  museumType: 'general',
 });
 
 /** Creates a minimal in-memory cache for testing. */
@@ -131,6 +132,7 @@ describe('SearchMuseumsUseCase', () => {
         latitude: 48.8607,
         longitude: 2.3377,
         osmId: 999,
+        museumType: 'art',
       },
     ]);
 
@@ -364,6 +366,7 @@ describe('SearchMuseumsUseCase', () => {
         latitude: 45.767,
         longitude: 4.833,
         osmId: 400,
+        museumType: 'art',
       },
     ]);
 
