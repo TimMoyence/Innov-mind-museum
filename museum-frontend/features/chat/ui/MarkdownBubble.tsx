@@ -7,10 +7,12 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 
 interface MarkdownBubbleProps {
   text: string;
+  /** Called when the user taps a markdown link. Returning `false` lets the default handler open the URL externally. */
+  onLinkPress?: (url: string) => boolean;
 }
 
 /** Renders markdown-formatted text inside a chat bubble using the liquid theme typography. */
-export const MarkdownBubble = ({ text }: MarkdownBubbleProps) => {
+export const MarkdownBubble = ({ text, onLinkPress }: MarkdownBubbleProps) => {
   const { theme } = useTheme();
 
   const markdownStyles = useMemo(
@@ -83,5 +85,9 @@ export const MarkdownBubble = ({ text }: MarkdownBubbleProps) => {
     [theme],
   );
 
-  return <Markdown style={markdownStyles}>{text}</Markdown>;
+  return (
+    <Markdown style={markdownStyles} onLinkPress={onLinkPress}>
+      {text}
+    </Markdown>
+  );
 };

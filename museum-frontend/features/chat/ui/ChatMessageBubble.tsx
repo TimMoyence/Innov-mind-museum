@@ -36,6 +36,8 @@ interface ChatMessageBubbleProps {
   ttsLoading?: boolean;
   /** Whether TTS failed for this message. */
   ttsFailed?: boolean;
+  /** Called when the user taps a markdown link inside the bubble. Return `true` to mark as handled. */
+  onLinkPress?: (url: string) => boolean;
   /** Called to toggle TTS playback for this message. */
   onToggleTts?: (messageId: string) => Promise<void>;
   /** Called to retry sending a failed message. */
@@ -61,6 +63,7 @@ export const ChatMessageBubble = React.memo(
     ttsPlaying = false,
     ttsLoading = false,
     ttsFailed = false,
+    onLinkPress,
     onToggleTts,
     onRetry,
     feedbackValue,
@@ -132,7 +135,7 @@ export const ChatMessageBubble = React.memo(
                 }}
               />
             ) : null}
-            <MarkdownBubble text={message.text} />
+            <MarkdownBubble text={message.text} onLinkPress={onLinkPress} />
             {isStreaming ? (
               <Animated.Text
                 style={[styles.cursor, { color: theme.primary, opacity: cursorOpacity }]}
