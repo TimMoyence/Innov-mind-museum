@@ -36,7 +36,6 @@ internal import ExpoSplashScreen
 internal import ExpoStoreReview
 internal import ExpoSymbols
 internal import ExpoSystemUI
-internal import ExpoTrackingTransparency
 internal import EXUpdates
 #if EXPO_CONFIGURATION_DEBUG
 internal import EXDevLauncher
@@ -81,7 +80,6 @@ internal class ExpoModulesProvider: ModulesProvider {
       (module: StoreReviewModule.self, name: nil),
       (module: SymbolModule.self, name: nil),
       (module: ExpoSystemUIModule.self, name: nil),
-      (module: TrackingTransparencyModule.self, name: nil),
       (module: UpdatesModule.self, name: nil),
       (module: DevLauncherModule.self, name: nil),
       (module: DevMenuModule.self, name: nil),
@@ -123,7 +121,6 @@ internal class ExpoModulesProvider: ModulesProvider {
       (module: StoreReviewModule.self, name: nil),
       (module: SymbolModule.self, name: nil),
       (module: ExpoSystemUIModule.self, name: nil),
-      (module: TrackingTransparencyModule.self, name: nil),
       (module: UpdatesModule.self, name: nil)
     ]
     #endif
