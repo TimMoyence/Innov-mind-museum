@@ -105,18 +105,6 @@ function RootLayout() {
   const [runtimeStartupError, setRuntimeStartupError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (Platform.OS === 'ios') {
-      import('expo-tracking-transparency')
-        .then(({ requestTrackingPermissionsAsync }) => {
-          void requestTrackingPermissionsAsync();
-        })
-        .catch(() => {
-          /* fire-and-forget */
-        });
-    }
-  }, []);
-
-  useEffect(() => {
     if (startupConfiguration.error) {
       return;
     }

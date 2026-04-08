@@ -286,8 +286,6 @@ PODS:
     - ExpoModulesCore
   - ExpoSystemUI (55.0.13):
     - ExpoModulesCore
-  - ExpoTrackingTransparency (55.0.11):
-    - ExpoModulesCore
   - EXStructuredHeaders (55.0.2)
   - EXUpdates (55.0.18):
     - EASClient
@@ -2594,7 +2592,6 @@ DEPENDENCIES:
   - ExpoStoreReview (from `../node_modules/expo-store-review/ios`)
   - ExpoSymbols (from `../node_modules/expo-symbols/ios`)
   - ExpoSystemUI (from `../node_modules/expo-system-ui/ios`)
-  - ExpoTrackingTransparency (from `../node_modules/expo-tracking-transparency/ios`)
   - EXStructuredHeaders (from `../node_modules/expo-structured-headers/ios`)
   - EXUpdates (from `../node_modules/expo-updates/ios`)
   - EXUpdatesInterface (from `../node_modules/expo-updates-interface/ios`)
@@ -2782,8 +2779,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-symbols/ios"
   ExpoSystemUI:
     :path: "../node_modules/expo-system-ui/ios"
-  ExpoTrackingTransparency:
-    :path: "../node_modules/expo-tracking-transparency/ios"
   EXStructuredHeaders:
     :path: "../node_modules/expo-structured-headers/ios"
   EXUpdates:
@@ -3000,7 +2995,6 @@ SPEC CHECKSUMS:
   ExpoStoreReview: 2414090702bd2747f882156e61b59ff0d70b11ab
   ExpoSymbols: 8b63e859ba013df1f2fc666f535fddb3d5270569
   ExpoSystemUI: 4d04b94370a12492d7a8f3ef9202bbedab434497
-  ExpoTrackingTransparency: 02317961a3b7981a3831567b73890b286a55d0c2
   EXStructuredHeaders: 93ad4f31a2eec124428675e28aca11de243ee1e4
   EXUpdates: 77684d6051c611e8e40e886a4bcf99e15dff48ab
   EXUpdatesInterface: 39d05400a9226c438565dbaaa8447b5f0672ba45

@@ -296,13 +296,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'expo-localization',
       'expo-secure-store',
       [
-        'expo-tracking-transparency',
-        {
-          userTrackingPermission:
-            '$(PRODUCT_NAME) uses tracking to improve your museum experience with personalized artwork recommendations.',
-        },
-      ],
-      [
         '@react-native-google-signin/google-signin',
         {
           iosUrlScheme: googleIosUrlScheme,

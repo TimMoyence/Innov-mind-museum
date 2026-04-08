@@ -239,11 +239,6 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>ExpoTrackingTransparency.xcscheme</key>
-		<dict>
-			<key>isShown</key>
-			<false/>
-		</dict>
 		<key>FBLazyVector.xcscheme</key>
 		<dict>
 			<key>isShown</key>
