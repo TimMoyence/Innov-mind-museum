@@ -14,6 +14,8 @@ export interface WebSearchQuery {
   query: string;
   /** Maximum results to return (capped at 10). */
   maxResults?: number;
+  /** Optional abort signal so callers can cancel an in-flight request when their timeout fires. */
+  signal?: AbortSignal;
 }
 
 /** Configuration for the web search service. */

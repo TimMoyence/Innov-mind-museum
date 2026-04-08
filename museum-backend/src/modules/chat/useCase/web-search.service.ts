@@ -70,6 +70,7 @@ export class WebSearchService {
           this.provider.search({
             query: searchQuery,
             maxResults: this.config.maxResults,
+            signal: controller.signal,
           }),
           new Promise<SearchResult[]>((_, reject) => {
             controller.signal.addEventListener('abort', () => {

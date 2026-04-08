@@ -136,6 +136,11 @@ export class CachingChatOrchestrator implements ChatOrchestrator {
     if (input.history.length > 0) return false;
     if (!input.text || input.text.length > MAX_TEXT_LENGTH) return false;
     if (input.userMemoryBlock) return false;
+    // Dynamic enrichment blocks must NOT be cached: KB lookups and web search
+    // results carry time-sensitive context (e.g., "current exhibitions") that
+    // would go stale within the 7-day cache TTL.
+    if (input.knowledgeBaseBlock) return false;
+    if (input.webSearchBlock) return false;
     if (this.piiSanitizer.sanitize(input.text).detectedPiiCount > 0) return false;
     if (!this.extractMuseumId(input)) return false;
     return true;
