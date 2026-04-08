@@ -91,10 +91,6 @@
     <string>$(PRODUCT_NAME) uses tracking to improve your museum experience with personalized artwork recommendations.</string>
     <key>RCTNewArchEnabled</key>
     <true/>
-    <key>UIBackgroundModes</key>
-    <array>
-      <string>audio</string>
-    </array>
     <key>UILaunchStoryboardName</key>
     <string>SplashScreen</string>
     <key>UIRequiredDeviceCapabilities</key>
