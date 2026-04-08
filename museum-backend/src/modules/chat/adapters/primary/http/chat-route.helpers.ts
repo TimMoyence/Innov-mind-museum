@@ -61,19 +61,23 @@ const resolveAllowedAudioMimeTypes = (): Set<string> => {
   return new Set(list.map((type) => type.toLowerCase()));
 };
 
-const allowedImageMimeTypes = resolveAllowedImageMimeTypes();
-const allowedAudioMimeTypes = resolveAllowedAudioMimeTypes();
-
 /**
  * Multer fileFilter that rejects an upload *before* it is buffered in memory
  * when the declared Content-Type is not in the allowlist. This is a pre-flight
  * guard to cap memory pressure under concurrent upload load (SEC-M2); the
  * authoritative validation (magic bytes + size) still runs in
  * `ImageProcessingService` / audio ingestion for defense-in-depth.
+ *
+ * Note: the allowlist is resolved lazily on the first call (then memoized) so
+ * that test suites can mock `@src/config/env` after the module has loaded.
  */
+let cachedAllowedImageMimeTypes: Set<string> | null = null;
+let cachedAllowedAudioMimeTypes: Set<string> | null = null;
+
 const imageFileFilter: NonNullable<multer.Options['fileFilter']> = (_req, file, cb) => {
+  cachedAllowedImageMimeTypes ??= resolveAllowedImageMimeTypes();
   const mime = (file.mimetype || '').toLowerCase();
-  if (allowedImageMimeTypes.has(mime)) {
+  if (cachedAllowedImageMimeTypes.has(mime)) {
     cb(null, true);
     return;
   }
@@ -81,8 +85,9 @@ const imageFileFilter: NonNullable<multer.Options['fileFilter']> = (_req, file, 
 };
 
 const audioFileFilter: NonNullable<multer.Options['fileFilter']> = (_req, file, cb) => {
+  cachedAllowedAudioMimeTypes ??= resolveAllowedAudioMimeTypes();
   const mime = (file.mimetype || '').toLowerCase();
-  if (allowedAudioMimeTypes.has(mime)) {
+  if (cachedAllowedAudioMimeTypes.has(mime)) {
     cb(null, true);
     return;
   }
