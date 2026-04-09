@@ -21,7 +21,8 @@ const screenshots = [
   {
     key: 'chat',
     label: 'Chat',
-    iphone: '/images/screenshots/iPhone 16 Pro Max /iPhone 16 Pro Max - chatSessionWithDiscussion.png',
+    iphone:
+      '/images/screenshots/iPhone 16 Pro Max /iPhone 16 Pro Max - chatSessionWithDiscussion.png',
     ipad: '/images/screenshots/iPad Pro 13/iPad Pro 13 - ChatSessionWithMessages.png',
     android: '/images/screenshots/android/Android - ChatSessionWithMessages.png',
   },
@@ -124,10 +125,14 @@ export default function MultiDeviceShowcase() {
                 zIndex: transform.zIndex,
                 transformStyle: 'preserve-3d',
               }}
-              initial={shouldReduceMotion ? false : {
-                opacity: 0,
-                scale: 0.6,
-              }}
+              initial={
+                shouldReduceMotion
+                  ? false
+                  : {
+                      opacity: 0,
+                      scale: 0.6,
+                    }
+              }
               animate={
                 isInView
                   ? {
@@ -147,10 +152,7 @@ export default function MultiDeviceShowcase() {
               }}
             >
               {device.type === 'ipad' ? (
-                <TabletMockup
-                  scale={0.75}
-                  variant={isActive ? 'floating' : 'default'}
-                >
+                <TabletMockup scale={0.75} variant={isActive ? 'floating' : 'default'}>
                   <ScreenshotCrossfade
                     src={src}
                     alt={`${device.alt} — ${screenshot.label}`}
@@ -207,9 +209,8 @@ export default function MultiDeviceShowcase() {
             className="h-2 rounded-full transition-all duration-300"
             style={{
               width: i === screenshotIndex ? 28 : 8,
-              backgroundColor: i === screenshotIndex
-                ? 'rgb(37, 99, 235)'
-                : 'rgba(148, 163, 184, 0.45)',
+              backgroundColor:
+                i === screenshotIndex ? 'var(--color-primary-500)' : 'var(--fn-input-border)',
             }}
           />
         ))}

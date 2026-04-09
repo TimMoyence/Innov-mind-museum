@@ -59,9 +59,10 @@ export default function PhoneMockup({
     setTilt({ rotateX: 0, rotateY: 0 });
   }, []);
 
-  const floatingShadow = variant === 'floating'
-    ? '0 25px 60px rgba(0, 0, 0, 0.35), 0 10px 20px rgba(0, 0, 0, 0.2)'
-    : undefined;
+  const floatingShadow =
+    variant === 'floating'
+      ? '0 25px 60px rgba(0, 0, 0, 0.35), 0 10px 20px rgba(0, 0, 0, 0.2)'
+      : undefined;
 
   const content = (
     <div
@@ -79,7 +80,8 @@ export default function PhoneMockup({
         <div
           className="pointer-events-none absolute inset-0 z-0"
           style={{
-            background: 'radial-gradient(ellipse 70% 50% at 50% 60%, rgba(37, 99, 235, 0.15) 0%, transparent 70%)',
+            background:
+              'radial-gradient(ellipse 70% 50% at 50% 60%, var(--fn-primary-glow-medium) 0%, transparent 70%)',
             filter: 'blur(30px)',
             transform: 'scale(1.3)',
           }}
@@ -97,7 +99,8 @@ export default function PhoneMockup({
           borderRadius: OUTER_RADIUS * scale,
           background: 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 50%, #111111 100%)',
           padding: BEZEL_WIDTH * scale,
-          boxShadow: floatingShadow ?? '0 20px 50px rgba(0, 0, 0, 0.3), 0 8px 16px rgba(0, 0, 0, 0.15)',
+          boxShadow:
+            floatingShadow ?? '0 20px 50px rgba(0, 0, 0, 0.3), 0 8px 16px rgba(0, 0, 0, 0.15)',
           transformStyle: 'preserve-3d',
         }}
         animate={{
@@ -117,9 +120,7 @@ export default function PhoneMockup({
           }}
         >
           {/* Screenshot content fills the full screen */}
-          <div className="absolute inset-0">
-            {children}
-          </div>
+          <div className="absolute inset-0">{children}</div>
 
           {/* iOS Status Bar overlay (above the camera notch) */}
           {showStatusBar && <StatusBar scale={scale} />}
@@ -160,7 +161,8 @@ export default function PhoneMockup({
           className="pointer-events-none absolute inset-0 z-30"
           style={{
             borderRadius: OUTER_RADIUS * scale,
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 30%, transparent 55%)',
+            background:
+              'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 30%, transparent 55%)',
           }}
           aria-hidden="true"
         />
@@ -169,7 +171,8 @@ export default function PhoneMockup({
         <div
           className="pointer-events-none absolute left-[10%] right-[10%] top-0 z-30 h-px"
           style={{
-            background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 30%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.15) 70%, transparent 100%)',
+            background:
+              'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 30%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.15) 70%, transparent 100%)',
           }}
           aria-hidden="true"
         />
@@ -207,9 +210,10 @@ function StatusBar({ scale }: { scale: number }) {
           left: sidePadding,
           fontSize,
           fontWeight: 600,
-          color: '#ffffff',
+          color: 'var(--color-surface)',
           textShadow,
-          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif',
+          fontFamily:
+            '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif',
           letterSpacing: '-0.02em',
           lineHeight: 1,
         }}
@@ -225,18 +229,13 @@ function StatusBar({ scale }: { scale: number }) {
           top: topPosition + 1,
           right: sidePadding,
           gap: 5 * scale,
-          color: '#ffffff',
+          color: 'var(--color-surface)',
           filter: `drop-shadow(${textShadow})`,
         }}
         aria-hidden="true"
       >
         {/* Signal — 4 bars */}
-        <svg
-          width={iconHeight + 6}
-          height={iconHeight}
-          viewBox="0 0 18 12"
-          fill="currentColor"
-        >
+        <svg width={iconHeight + 6} height={iconHeight} viewBox="0 0 18 12" fill="currentColor">
           <rect x={0} y={8} width={3} height={4} rx={0.5} />
           <rect x={5} y={5} width={3} height={7} rx={0.5} />
           <rect x={10} y={2} width={3} height={10} rx={0.5} />
@@ -260,12 +259,7 @@ function StatusBar({ scale }: { scale: number }) {
         </svg>
 
         {/* Battery — outline + fill + nub */}
-        <svg
-          width={iconHeight + 13}
-          height={iconHeight}
-          viewBox="0 0 25 12"
-          fill="none"
-        >
+        <svg width={iconHeight + 13} height={iconHeight} viewBox="0 0 25 12" fill="none">
           <rect
             x={0.6}
             y={0.6}

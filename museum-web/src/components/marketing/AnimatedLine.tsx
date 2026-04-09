@@ -18,12 +18,7 @@ export default function AnimatedLine() {
       className="pointer-events-none absolute left-0 right-0 top-[9.25rem] hidden sm:block"
       aria-hidden="true"
     >
-      <svg
-        className="h-2 w-full"
-        viewBox="0 0 1200 8"
-        preserveAspectRatio="none"
-        fill="none"
-      >
+      <svg className="h-2 w-full" viewBox="0 0 1200 8" preserveAspectRatio="none" fill="none">
         {/* Connecting line — passes through center of icon boxes (cx=200, 600, 1000) */}
         <motion.line
           x1={200}
