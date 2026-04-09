@@ -129,4 +129,55 @@
   --sem-status-badge-priority-medium: #F59E0B;
   --sem-status-badge-priority-high: #EF4444;
 
+  /* deviceChrome */
+  --sem-device-chrome-bezel: #000000;
+  --sem-device-chrome-bezel-alt: #0a0a0a;
+  --sem-device-chrome-frame: #111111;
+  --sem-device-chrome-frame-dark: #1a1a1a;
+  --sem-device-chrome-frame-accent: #2a2a2a;
+  --sem-device-chrome-notch: #000000;
+  --sem-device-chrome-speaker: #000000;
+
+  /* sectionDark */
+  --sem-section-dark-background: #0a0a1a;
+  --sem-section-dark-background-alt: #080820;
+  --sem-section-dark-background-deep: #0a0a0b;
+  --sem-section-dark-background-mid: #0d0d12;
+  --sem-section-dark-background-accent: #111118;
+
+  /* mapMarker */
+  --sem-map-marker-museum: #7C3AED;
+  --sem-map-marker-restaurant: #DC2626;
+  --sem-map-marker-cafe: #0891B2;
+  --sem-map-marker-shop: #EA580C;
+  --sem-map-marker-default: #2563EB;
+  --sem-map-marker-user: #16A34A;
+  --sem-map-marker-user-border: #FFFFFF;
+  --sem-map-marker-marker-border: #FFFFFF;
+  --sem-map-marker-success: #34C759;
+  --sem-map-marker-error: #FF3B30;
+
+  /* chart */
+  --sem-chart-primary: #2563eb;
+  --sem-chart-secondary: #16a34a;
+  --sem-chart-tertiary: #d97706;
+  --sem-chart-quaternary: #6366f1;
+
+  /* media */
+  --sem-media-image-preview: 13.75rem;
+  --sem-media-artwork-height: 11.25rem;
+  --sem-media-send-button-size: 2.75rem;
+  --sem-media-avatar-small: 1.75rem;
+  --sem-media-avatar-medium: 2.125rem;
+  --sem-media-tab-bar-height: 5.25rem;
+  --sem-media-safe-area-top: 3.75rem;
+  --sem-media-home-bottom-pad: 6.875rem;
+
+  /* fullscreenModal */
+  --sem-fullscreen-modal-background: #FFFFFF;
+  --sem-fullscreen-modal-caption-color: #AAAAAA;
+  --sem-fullscreen-modal-counter-color: #FFFFFF;
+
+  --sem-web-auth-gradient: #D5F0FF;
+
 }

@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: semantic.screen.paddingXL,
-    paddingTop: 60,
+    paddingTop: semantic.media.safeAreaTop,
     paddingBottom: semantic.screen.paddingLarge,
     gap: semantic.modal.padding,
     alignItems: 'center',
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   body: {
-    fontSize: 15,
+    fontSize: fontSize['base-'],
     lineHeight: semantic.chat.iconSize,
     textAlign: 'center',
   },
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     lineHeight: semantic.modal.padding,
   },
   dataTitle: {
-    fontSize: 15,
+    fontSize: fontSize['base-'],
     fontWeight: '600',
     marginBottom: space['0.5'],
   },
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   acceptText: {
-    fontSize: 17,
+    fontSize: fontSize['lg-'],
     fontWeight: '700',
   },
 });

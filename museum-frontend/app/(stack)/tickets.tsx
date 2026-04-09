@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     gap: semantic.list.itemGapSmall,
   },
   cardTitle: {
-    fontSize: 15,
+    fontSize: fontSize['base-'],
     fontWeight: '700',
   },
   badgeRow: {

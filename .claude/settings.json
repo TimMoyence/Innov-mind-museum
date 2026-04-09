@@ -1,5 +1,19 @@
 {
   "enabledPlugins": {
     "superpowers@superpowers-marketplace": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "condition": "tool_input.command =~ /^git commit/",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/scripts/count-design-debt.py\" --fail-on-debt"
+          }
+        ]
+      }
+    ]
   }
 }

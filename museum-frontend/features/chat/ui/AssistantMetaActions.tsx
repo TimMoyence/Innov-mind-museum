@@ -58,7 +58,7 @@ export const AssistantMetaActions = React.memo(function AssistantMetaActions({
             <Ionicons
               name={feedbackValue === 'positive' ? 'thumbs-up' : 'thumbs-up-outline'}
               size={13}
-              color={feedbackValue === 'positive' ? '#34C759' : theme.timestamp}
+              color={feedbackValue === 'positive' ? semantic.mapMarker.success : theme.timestamp}
             />
           </Pressable>
           <Pressable
@@ -74,7 +74,7 @@ export const AssistantMetaActions = React.memo(function AssistantMetaActions({
             <Ionicons
               name={feedbackValue === 'negative' ? 'thumbs-down' : 'thumbs-down-outline'}
               size={13}
-              color={feedbackValue === 'negative' ? '#FF3B30' : theme.timestamp}
+              color={feedbackValue === 'negative' ? semantic.mapMarker.error : theme.timestamp}
             />
           </Pressable>
         </>

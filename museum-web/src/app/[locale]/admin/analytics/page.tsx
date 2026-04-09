@@ -270,7 +270,7 @@ export default function AnalyticsPage() {
                   type="monotone"
                   dataKey="sessions"
                   name={adminDict.analyticsPage.sessions}
-                  stroke="#2563eb"
+                  stroke="var(--sem-chart-primary)"
                   strokeWidth={2}
                   dot={false}
                 />
@@ -278,7 +278,7 @@ export default function AnalyticsPage() {
                   type="monotone"
                   dataKey="messages"
                   name={adminDict.analyticsPage.messagesSent}
-                  stroke="#16a34a"
+                  stroke="var(--sem-chart-secondary)"
                   strokeWidth={2}
                   dot={false}
                 />
@@ -286,7 +286,7 @@ export default function AnalyticsPage() {
                   type="monotone"
                   dataKey="activeUsers"
                   name={adminDict.analyticsPage.activeUsers}
-                  stroke="#d97706"
+                  stroke="var(--sem-chart-tertiary)"
                   strokeWidth={2}
                   dot={false}
                 />
@@ -324,7 +324,7 @@ export default function AnalyticsPage() {
                       tick={{ fontSize: 11 }}
                     />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#6366f1" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="count" fill="var(--sem-chart-quaternary)" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

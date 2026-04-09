@@ -97,7 +97,7 @@ export default function PhoneMockup({
           height: PHONE_HEIGHT * scale,
           maxWidth: '100%',
           borderRadius: OUTER_RADIUS * scale,
-          background: 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 50%, #111111 100%)',
+          background: 'linear-gradient(145deg, var(--sem-device-chrome-frame-accent) 0%, var(--sem-device-chrome-frame-dark) 50%, var(--sem-device-chrome-frame) 100%)',
           padding: BEZEL_WIDTH * scale,
           boxShadow:
             floatingShadow ?? '0 20px 50px rgba(0, 0, 0, 0.3), 0 8px 16px rgba(0, 0, 0, 0.15)',
@@ -116,7 +116,7 @@ export default function PhoneMockup({
             width: '100%',
             height: '100%',
             borderRadius: INNER_RADIUS * scale,
-            background: '#000',
+            background: 'var(--sem-device-chrome-bezel)',
           }}
         >
           {/* Screenshot content fills the full screen */}
@@ -134,8 +134,8 @@ export default function PhoneMockup({
                 height: 28 * scale,
                 top: 10 * scale,
                 transform: 'translateX(-50%)',
-                borderRadius: 9999,
-                background: '#000',
+                borderRadius: 'var(--radius-full)',
+                background: 'var(--sem-device-chrome-notch)',
               }}
               aria-hidden="true"
             />
@@ -147,8 +147,8 @@ export default function PhoneMockup({
                 height: 14 * scale,
                 top: 12 * scale,
                 transform: 'translateX(-50%)',
-                borderRadius: 9999,
-                background: '#000',
+                borderRadius: 'var(--radius-full)',
+                background: 'var(--sem-device-chrome-notch)',
                 boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.05)',
               }}
               aria-hidden="true"
@@ -215,7 +215,7 @@ function StatusBar({ scale }: { scale: number }) {
           fontFamily:
             '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif',
           letterSpacing: '-0.02em',
-          lineHeight: 1,
+          lineHeight: 'var(--line-height-tight)',
         }}
         aria-hidden="true"
       >

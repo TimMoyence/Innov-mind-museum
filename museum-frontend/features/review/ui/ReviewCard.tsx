@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
+import { space, radius, fontSize, lineHeightPx } from '@/shared/ui/tokens.generated';
 
 import type { ReviewDTO } from '../infrastructure/reviewApi';
 
@@ -72,6 +72,6 @@ const styles = StyleSheet.create({
   },
   comment: {
     fontSize: semantic.form.labelSize,
-    lineHeight: 19,
+    lineHeight: lineHeightPx['19'],
   },
 });

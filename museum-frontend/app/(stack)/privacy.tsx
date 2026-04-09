@@ -9,7 +9,7 @@ import {
 } from '@/features/legal/privacyPolicyContent';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
+import { space, radius, fontSize, lineHeightPx } from '@/shared/ui/tokens.generated';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: semantic.form.labelSize,
-    lineHeight: 19,
+    lineHeight: lineHeightPx['19'],
   },
   metaList: {
     gap: semantic.card.gapSmall,
@@ -368,15 +368,15 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: fontSize['base-'],
   },
   warningTitle: {
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: fontSize['base-'],
   },
   warningText: {
     fontSize: semantic.form.labelSize,
-    lineHeight: 19,
+    lineHeight: lineHeightPx['19'],
   },
   warningBullet: {
     fontSize: semantic.form.labelSize,
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: fontSize['base-'],
   },
   paragraphGroup: {
     gap: semantic.card.gapSmall,

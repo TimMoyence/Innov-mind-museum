@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderTopWidth: 1,
     backgroundColor: 'transparent',
-    height: 84,
+    height: semantic.media.tabBarHeight,
     paddingBottom: semantic.form.gapLarge,
     paddingTop: semantic.card.gapSmall,
     marginHorizontal: semantic.form.gapLarge,

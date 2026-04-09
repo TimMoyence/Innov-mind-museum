@@ -3,6 +3,8 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from './ThemeContext';
+import { semantic } from './tokens.semantic';
+import { fontSize as fontSizeTokens, radius, space } from './tokens.generated';
 
 interface ErrorNoticeProps {
   message: string;
@@ -48,34 +50,34 @@ export const ErrorNotice = ({ message, onDismiss, onRetry }: ErrorNoticeProps): 
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 12,
-    marginBottom: 12,
+    borderRadius: radius.xl,
+    borderWidth: semantic.input.borderWidth,
+    padding: semantic.card.paddingCompact,
+    marginBottom: semantic.card.paddingCompact,
   },
   text: {
-    fontSize: 14,
+    fontSize: fontSizeTokens.sm,
   },
   actionsRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 12,
-    marginTop: 8,
+    gap: semantic.card.gap,
+    marginTop: space['2'],
   },
   retryButton: {
-    paddingHorizontal: 4,
-    paddingVertical: 2,
+    paddingHorizontal: space['1'],
+    paddingVertical: space['0.5'],
   },
   retryText: {
-    fontSize: 12,
+    fontSize: fontSizeTokens.xs,
     fontWeight: '700',
   },
   dismissButton: {
-    paddingHorizontal: 4,
-    paddingVertical: 2,
+    paddingHorizontal: space['1'],
+    paddingVertical: space['0.5'],
   },
   dismissText: {
-    fontSize: 12,
+    fontSize: fontSizeTokens.xs,
     fontWeight: '700',
   },
 });

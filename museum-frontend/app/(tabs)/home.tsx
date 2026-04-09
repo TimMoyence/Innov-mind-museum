@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   screen: {
     flexGrow: 1,
     paddingHorizontal: space['5.5'],
-    paddingBottom: 110,
+    paddingBottom: semantic.media.homeBottomPad,
     justifyContent: 'center',
     gap: semantic.screen.gap,
   },

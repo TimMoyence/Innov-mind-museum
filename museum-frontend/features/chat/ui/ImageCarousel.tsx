@@ -9,7 +9,7 @@ import { semantic } from '@/shared/ui/tokens.semantic';
 import { space, radius } from '@/shared/ui/tokens.generated';
 
 const ATTRIBUTION_BG = 'rgba(0,0,0,0.5)';
-const ATTRIBUTION_COLOR = '#FFFFFF';
+const ATTRIBUTION_COLOR = semantic.fullscreenModal.background;
 
 interface ImageCarouselProps {
   images: ChatUiEnrichedImage[];

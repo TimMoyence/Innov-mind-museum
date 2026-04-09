@@ -5,6 +5,8 @@ import * as Sentry from '@sentry/react-native';
 import * as Updates from 'expo-updates';
 import i18n from '@/shared/i18n/i18n';
 import { darkTheme } from './themes';
+import { semantic } from './tokens.semantic';
+import { fontSize as fontSizeTokens, radius, space, lineHeightPx } from './tokens.generated';
 
 interface Props {
   children: ReactNode;
@@ -77,7 +79,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-const CRASH_ERROR_COLOR = '#EF4444';
+const CRASH_ERROR_COLOR = semantic.statusBadge.priorityHigh;
 const CRASH_BUTTON_COLOR = darkTheme.primary;
 
 const styles = StyleSheet.create({
@@ -86,37 +88,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: darkTheme.pageGradient[0],
-    padding: 32,
+    padding: space['8'],
   },
   emoji: {
-    fontSize: 48,
+    fontSize: fontSizeTokens['5xl'],
     fontWeight: '700',
     color: CRASH_ERROR_COLOR,
-    marginBottom: 16,
+    marginBottom: space['4'],
   },
   title: {
-    fontSize: 22,
+    fontSize: fontSizeTokens.xl,
     fontWeight: '700',
     color: darkTheme.textPrimary,
-    marginBottom: 8,
+    marginBottom: space['2'],
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: fontSizeTokens['base-'],
     color: darkTheme.textSecondary,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 32,
+    lineHeight: lineHeightPx['22'],
+    marginBottom: space['8'],
   },
   button: {
     backgroundColor: CRASH_BUTTON_COLOR,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingHorizontal: space['8'],
+    paddingVertical: semantic.button.paddingYCompact,
+    borderRadius: radius.lg,
   },
   buttonText: {
     color: darkTheme.primaryContrast,
-    fontSize: 16,
+    fontSize: fontSizeTokens.base,
     fontWeight: '600',
   },
 });

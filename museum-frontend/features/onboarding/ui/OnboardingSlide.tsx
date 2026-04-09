@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     marginBottom: space['5'],
   },
   title: {
-    fontSize: 26,
+    fontSize: fontSize['2xl+'],
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: space['2'],
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   bulletNumber: {
     width: space['5.5'],
     height: space['5.5'],
-    borderRadius: 11,
+    borderRadius: radius.DEFAULT,
     fontSize: fontSize.xs,
     fontWeight: '700',
     textAlign: 'center',

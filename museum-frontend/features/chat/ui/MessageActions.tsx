@@ -8,7 +8,7 @@ import { FollowUpButtons } from '@/features/chat/ui/FollowUpButtons';
 import { RecommendationChips } from '@/features/chat/ui/RecommendationChips';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic } from '@/shared/ui/tokens.semantic';
-import { space } from '@/shared/ui/tokens.generated';
+import { space, lineHeightPx } from '@/shared/ui/tokens.generated';
 
 interface MessageActionsProps {
   /** Metadata from the last assistant message. */
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   deeperContextText: {
     marginTop: semantic.chat.gap,
     fontSize: semantic.form.labelSize,
-    lineHeight: 19,
+    lineHeight: lineHeightPx['19'],
   },
   openQuestionChip: {
     marginTop: space['0.5'],

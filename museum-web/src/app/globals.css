@@ -17,17 +17,17 @@ body {
 /* ── Legacy Glass utilities (backwards compat) ────────────────────────── */
 
 .glass {
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--fn-web-glass);
   backdrop-filter: blur(24px) saturate(1.4);
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid var(--fn-web-glass-border);
   box-shadow:
-    0 8px 32px rgba(37, 99, 235, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    0 8px 32px var(--fn-primary-glow),
+    inset 0 1px 0 var(--fn-web-glass-inset);
 }
 
 .glass-heavy {
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--fn-web-glass-heavy);
   backdrop-filter: blur(32px) saturate(1.6);
   -webkit-backdrop-filter: blur(32px) saturate(1.6);
   border: 1px solid rgba(255, 255, 255, 0.45);
@@ -37,7 +37,7 @@ body {
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--fn-web-glass-card);
   backdrop-filter: blur(20px) saturate(1.3);
   -webkit-backdrop-filter: blur(20px) saturate(1.3);
   border: 1px solid rgba(255, 255, 255, 0.3);
@@ -48,10 +48,10 @@ body {
 }
 
 .glass-card:hover {
-  background: rgba(255, 255, 255, 0.65);
+  background: var(--fn-web-glass-card-hover);
   box-shadow:
-    0 8px 32px rgba(37, 99, 235, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    0 8px 32px var(--fn-primary-glow-medium),
+    inset 0 1px 0 var(--fn-web-glass-inset);
   transform: translateY(-2px);
 }
 
@@ -59,13 +59,13 @@ body {
 
 .liquid-glass {
   position: relative;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--fn-web-liquid-glass);
   backdrop-filter: blur(40px) saturate(1.8);
   -webkit-backdrop-filter: blur(40px) saturate(1.8);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid var(--fn-web-liquid-glass-border);
   border-radius: 2rem;
   box-shadow:
-    0 8px 32px rgba(31, 38, 135, 0.15),
+    0 8px 32px var(--fn-web-specular-highlight),
     inset 0 1px 0 rgba(255, 255, 255, 0.4),
     inset 0 -1px 0 rgba(255, 255, 255, 0.1);
   overflow: hidden;
@@ -111,12 +111,12 @@ body {
 /* Heavy variant — more opacity and blur for nav bars */
 .liquid-glass-heavy {
   position: relative;
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--fn-web-liquid-glass-heavy);
   backdrop-filter: blur(48px) saturate(2);
   -webkit-backdrop-filter: blur(48px) saturate(2);
   border: 1px solid rgba(255, 255, 255, 0.22);
   box-shadow:
-    0 12px 40px rgba(31, 38, 135, 0.18),
+    0 12px 40px var(--fn-web-specular-heavy),
     inset 0 1px 0 rgba(255, 255, 255, 0.5),
     inset 0 -1px 0 rgba(255, 255, 255, 0.12);
   overflow: hidden;
@@ -138,7 +138,7 @@ body {
 /* Card variant — for feature cards and interactive elements */
 .liquid-glass-card {
   position: relative;
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--fn-web-liquid-glass-card);
   backdrop-filter: blur(30px) saturate(1.6);
   -webkit-backdrop-filter: blur(30px) saturate(1.6);
   border: 1px solid rgba(255, 255, 255, 0.3);
@@ -167,12 +167,12 @@ body {
 }
 
 .liquid-glass-card:hover {
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--fn-web-liquid-glass-card-hover);
   transform: translateY(-3px);
   box-shadow:
-    0 8px 32px rgba(37, 99, 235, 0.12),
+    0 8px 32px var(--fn-primary-glow-medium),
     0 2px 8px rgba(31, 38, 135, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 1px 0 var(--fn-web-glass-inset),
     inset 0 -1px 0 rgba(255, 255, 255, 0.1);
 }
 
@@ -223,14 +223,23 @@ body {
 
 /* App gradient background matching mobile app */
 .app-gradient-bg {
-  background: linear-gradient(180deg, #eaf2ff 0%, #d8e8ff 50%, #d5f0ff 100%);
+  background: linear-gradient(
+    180deg,
+    var(--color-primary-50) 0%,
+    var(--color-primary-100) 50%,
+    var(--sem-web-auth-gradient) 100%
+  );
 }
 
 /* ── Dark section ─────────────────────────────────────────────────────── */
 
 .section-dark {
-  background: linear-gradient(180deg, #000000 0%, #0a0a1a 100%);
-  color: #ffffff;
+  background: linear-gradient(
+    180deg,
+    var(--sem-device-chrome-bezel) 0%,
+    var(--sem-section-dark-background) 100%
+  );
+  color: var(--color-surface);
 }
 
 /* ── Apple-style typography utilities ─────────────────────────────────── */
@@ -318,6 +327,40 @@ body {
   z-index: -1;
 }
 
+/* Scroll indicator bounce */
+@keyframes scroll-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(6px);
+    opacity: 0.3;
+  }
+}
+.animate-scroll-bounce {
+  animation: scroll-bounce 2s ease-in-out infinite;
+}
+
+/* ── Scan-line animation (bento feature grid) ────────────────────────── */
+
+@keyframes scan-line {
+  0%,
+  100% {
+    top: 15%;
+    opacity: 0.8;
+  }
+  50% {
+    top: 85%;
+    opacity: 0.4;
+  }
+}
+
+.animate-scan-line {
+  animation: scan-line 2.5s ease-in-out infinite;
+}
+
 /* ── Accessibility — Reduced motion ────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
@@ -331,6 +374,14 @@ body {
   .liquid-glass::after,
   .liquid-glass-heavy::after,
   .liquid-glass-card::after {
+    animation: none;
+  }
+
+  .animate-scroll-bounce {
+    animation: none;
+  }
+
+  .animate-scan-line {
     animation: none;
   }
 

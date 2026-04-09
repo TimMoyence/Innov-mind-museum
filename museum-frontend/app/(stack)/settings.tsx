@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontWeight: '700',
-    fontSize: 17,
+    fontSize: fontSize['lg-'],
   },
   cardBody: {
     lineHeight: space['5'],
@@ -350,6 +350,6 @@ const styles = StyleSheet.create({
   },
   logoutButtonText: {
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: fontSize['base-'],
   },
 });

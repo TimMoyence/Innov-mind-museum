@@ -54,11 +54,11 @@ export default function DemoChat({ messages }: DemoChatProps) {
         <div>
           <p
             className="text-base font-bold"
-            style={{ color: 'var(--color-text-primary)', fontSize: 18 }}
+            style={{ color: 'var(--color-text-primary)', fontSize: 'var(--font-size-lg)' }}
           >
             Art Session
           </p>
-          <p className="mt-0.5" style={{ color: 'var(--color-text-tertiary)', fontSize: 10 }}>
+          <p className="mt-0.5" style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-xs-)' }}>
             a213b2e3-e00...
           </p>
         </div>
@@ -69,9 +69,9 @@ export default function DemoChat({ messages }: DemoChatProps) {
               key={i}
               className="flex items-center justify-center"
               style={{
-                width: 28,
-                height: 28,
-                borderRadius: 999,
+                width: 'var(--sem-media-avatar-small)',
+                height: 'var(--sem-media-avatar-small)',
+                borderRadius: 'var(--radius-full)',
                 border: '1px solid var(--fn-input-border)',
                 background: 'var(--fn-surface)',
               }}
@@ -109,7 +109,7 @@ export default function DemoChat({ messages }: DemoChatProps) {
             key={btn.label}
             className="flex items-center gap-1.5"
             style={{
-              borderRadius: 12,
+              borderRadius: 'var(--radius-lg)',
               border: '1px solid var(--fn-assistant-bubble-border)',
               background: 'var(--fn-surface)',
               padding: '6px 10px',
@@ -135,8 +135,8 @@ export default function DemoChat({ messages }: DemoChatProps) {
         <div
           className="flex-1"
           style={{
-            minHeight: 34,
-            borderRadius: 14,
+            minHeight: 'var(--sem-media-avatar-medium)',
+            borderRadius: 'var(--radius-xl)',
             border: '1px solid var(--fn-input-border)',
             background: 'var(--fn-input-background)',
             padding: '7px 10px',
@@ -149,9 +149,9 @@ export default function DemoChat({ messages }: DemoChatProps) {
         <div
           className="flex shrink-0 items-center justify-center"
           style={{
-            width: 34,
-            height: 34,
-            borderRadius: 999,
+            width: 'var(--sem-media-avatar-medium)',
+            height: 'var(--sem-media-avatar-medium)',
+            borderRadius: 'var(--radius-full)',
             background: 'var(--color-primary-600)',
           }}
         >
@@ -184,12 +184,12 @@ function MessageBubble({ message, isLast }: { message: Message; isLast: boolean 
       <div
         style={{
           maxWidth: '85%',
-          borderRadius: 16,
-          padding: 12,
+          borderRadius: 'var(--radius-2xl)',
+          padding: 'var(--spacing-3)',
           border: `1px solid ${isUser ? 'var(--fn-user-bubble-border)' : 'var(--fn-assistant-bubble-border)'}`,
           background: isUser ? 'var(--fn-user-bubble)' : 'var(--fn-assistant-bubble)',
           color: isUser ? 'var(--color-surface)' : 'var(--color-text-primary)',
-          fontSize: 12,
+          fontSize: 'var(--font-size-xs)',
           lineHeight: '17px',
         }}
       >
@@ -199,7 +199,7 @@ function MessageBubble({ message, isLast }: { message: Message; isLast: boolean 
       {!isUser && (
         <div
           className="mt-1 flex items-center gap-2.5"
-          style={{ fontSize: 9, color: 'var(--fn-timestamp)' }}
+          style={{ fontSize: 'var(--font-size-2xs)', color: 'var(--fn-timestamp)' }}
         >
           <span>21:35</span>
           <span className="flex items-center gap-0.5">

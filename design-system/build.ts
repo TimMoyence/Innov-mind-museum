@@ -78,6 +78,13 @@ function buildTailwindCSS(): string {
   }
   lines.push('');
 
+  if (typography.lineHeightPx) {
+    for (const [name, val] of Object.entries(typography.lineHeightPx)) {
+      lines.push(`  --line-height-px-${name}: ${val.rem};`);
+    }
+    lines.push('');
+  }
+
   // Spacing
   for (const [name, val] of Object.entries(spacing)) {
     lines.push(`  --spacing-${name}: ${val.rem};`);
@@ -154,14 +161,14 @@ function buildReactNativeTS(): string {
   // Typography — px values for React Native
   lines.push('export const fontSize = {');
   for (const [name, val] of Object.entries(typography.fontSize)) {
-    const key = /^\d/.test(name) ? `'${name}'` : name;
+    const key = /^\d|[^a-zA-Z0-9_$]/.test(name) ? `'${name}'` : name;
     lines.push(`  ${key}: ${val.px},`);
   }
   lines.push('} as const;', '');
 
   lines.push('export const fontWeight = {');
   for (const [name, val] of Object.entries(typography.fontWeight)) {
-    const key = /^\d/.test(name) ? `'${name}'` : name;
+    const key = /^\d|[^a-zA-Z0-9_$]/.test(name) ? `'${name}'` : name;
     lines.push(`  ${key}: '${val.css}',`);
   }
   lines.push('} as const;', '');
@@ -171,6 +178,16 @@ function buildReactNativeTS(): string {
     lines.push(`  ${name}: ${val},`);
   }
   lines.push('} as const;', '');
+
+  // Absolute line heights — px values for React Native
+  if (typography.lineHeightPx) {
+    lines.push('export const lineHeightPx = {');
+    for (const [name, val] of Object.entries(typography.lineHeightPx)) {
+      const key = /^\d|[^a-zA-Z0-9_$]/.test(name) ? `'${name}'` : name;
+      lines.push(`  ${key}: ${val.px},`);
+    }
+    lines.push('} as const;', '');
+  }
 
   // Spacing — px values for React Native
   lines.push('export const space = {');
@@ -183,7 +200,7 @@ function buildReactNativeTS(): string {
   // Radii — px values for React Native
   lines.push('export const radius = {');
   for (const [name, val] of Object.entries(radii)) {
-    const key = /^\d/.test(name) ? `'${name}'` : name;
+    const key = /^\d|[^a-zA-Z0-9_$]/.test(name) ? `'${name}'` : name;
     lines.push(`  ${key}: ${val.px},`);
   }
   lines.push('} as const;', '');
@@ -287,6 +304,21 @@ function buildSemanticCSS(): string {
   const lines: string[] = [HEADER, '', '@theme {'];
 
   for (const [category, tokens] of Object.entries(semantic)) {
+    // Top-level string values (e.g., webAuthGradient: '#D5F0FF')
+    if (typeof tokens === 'string') {
+      const cssKey = `--sem-${category}`.replace(/([A-Z])/g, '-$1').toLowerCase();
+      lines.push(`  ${cssKey}: ${tokens};`);
+      lines.push('');
+      continue;
+    }
+    // Top-level number values
+    if (typeof tokens === 'number') {
+      const cssKey = `--sem-${category}`.replace(/([A-Z])/g, '-$1').toLowerCase();
+      const remVal = tokens === 0 ? '0' : `${tokens / 16}rem`;
+      lines.push(`  ${cssKey}: ${remVal};`);
+      lines.push('');
+      continue;
+    }
     lines.push(`  /* ${category} */`);
     for (const [key, val] of Object.entries(tokens as Record<string, unknown>)) {
       if (typeof val === 'object' && val !== null) {

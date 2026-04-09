@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, radius } from '@/shared/ui/tokens.generated';
+import { space, radius, surfaceColors } from '@/shared/ui/tokens.generated';
 
 interface ChatInputProps {
   /** Current text value. */
@@ -53,7 +53,7 @@ export const ChatInput = ({
             accessibilityRole="button"
             accessibilityLabel={t('chat.remove_image')}
           >
-            <Ionicons name="close" size={12} color="#fff" />
+            <Ionicons name="close" size={12} color={surfaceColors.default} />
           </Pressable>
         </View>
       ) : null}
@@ -117,8 +117,8 @@ const styles = StyleSheet.create({
   },
   sendButton: {
     borderRadius: radius.full,
-    width: 44,
-    height: 44,
+    width: semantic.media.sendButtonSize,
+    height: semantic.media.sendButtonSize,
     alignItems: 'center',
     justifyContent: 'center',
   },

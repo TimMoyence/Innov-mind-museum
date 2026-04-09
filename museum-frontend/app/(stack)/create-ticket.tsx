@@ -11,6 +11,7 @@ import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { semantic } from '@/shared/ui/tokens.semantic';
 import { space, fontSize } from '@/shared/ui/tokens.generated';
+
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
@@ -22,11 +23,11 @@ const SHADOW_TRANSPARENT = 'transparent';
 const priorityColor = (priority: Priority): string => {
   switch (priority) {
     case 'low':
-      return '#6B7280';
+      return semantic.statusBadge.closed;
     case 'medium':
-      return '#F59E0B';
+      return semantic.statusBadge.inProgress;
     case 'high':
-      return '#EF4444';
+      return semantic.statusBadge.priorityHigh;
   }
 };
 
@@ -244,6 +245,6 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: fontSize['base-'],
   },
 });

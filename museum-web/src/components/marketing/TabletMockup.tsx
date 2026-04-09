@@ -93,7 +93,7 @@ export default function TabletMockup({
           height: TABLET_HEIGHT * scale,
           maxWidth: '100%',
           borderRadius: OUTER_RADIUS * scale,
-          background: 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 50%, #111111 100%)',
+          background: 'linear-gradient(145deg, var(--sem-device-chrome-frame-accent) 0%, var(--sem-device-chrome-frame-dark) 50%, var(--sem-device-chrome-frame) 100%)',
           padding: BEZEL_WIDTH * scale,
           boxShadow:
             floatingShadow ?? '0 24px 60px rgba(0, 0, 0, 0.3), 0 10px 20px rgba(0, 0, 0, 0.15)',
@@ -112,7 +112,7 @@ export default function TabletMockup({
             width: '100%',
             height: '100%',
             borderRadius: INNER_RADIUS * scale,
-            background: '#000',
+            background: 'var(--sem-device-chrome-bezel)',
           }}
         >
           {/* Screenshot content */}
@@ -129,8 +129,8 @@ export default function TabletMockup({
               height: 5 * scale,
               top: 4 * scale,
               transform: 'translateX(-50%)',
-              borderRadius: 9999,
-              background: '#0a0a0a',
+              borderRadius: 'var(--radius-full)',
+              background: 'var(--sem-device-chrome-bezel-alt)',
               boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.04)',
             }}
             aria-hidden="true"
@@ -196,7 +196,7 @@ function TabletStatusBar({ scale }: { scale: number }) {
           fontFamily:
             '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif',
           letterSpacing: '-0.02em',
-          lineHeight: 1,
+          lineHeight: 'var(--line-height-tight)',
         }}
         aria-hidden="true"
       >

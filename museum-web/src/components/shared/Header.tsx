@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useMotionValueEvent, useScroll, useTransform } from 'framer-motion';
 import type { Dictionary, Locale } from '@/lib/i18n';
 import LanguageSwitcher from '@/components/shared/LanguageSwitcher';
 
@@ -26,6 +26,11 @@ export default function Header({ dict, locale }: HeaderProps) {
     ['rgba(255,255,255,0)', 'var(--fn-web-liquid-glass-border)'],
   );
   const headerBlur = useTransform(scrollY, [0, 100], ['blur(0px)', 'blur(16px)']);
+
+  const [isDarkHeader, setIsDarkHeader] = useState(true);
+  useMotionValueEvent(scrollY, 'change', (latest) => {
+    setIsDarkHeader(latest < 80);
+  });
 
   const navLinks = [
     { href: `/${locale}`, label: dict.nav.home },
@@ -56,7 +61,11 @@ export default function Header({ dict, locale }: HeaderProps) {
             height={36}
             className="rounded-lg"
           />
-          <span className="text-lg font-semibold tracking-tight text-text-primary">Musaium</span>
+          <span
+            className={`text-lg font-semibold tracking-tight transition-colors duration-300 ${isDarkHeader ? 'text-white' : 'text-text-primary'}`}
+          >
+            Musaium
+          </span>
         </Link>
 
         {/* Desktop nav */}
@@ -65,7 +74,7 @@ export default function Header({ dict, locale }: HeaderProps) {
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-text-secondary transition-colors hover:text-primary-600"
+              className={`text-sm font-medium transition-colors duration-300 ${isDarkHeader ? 'text-white/65 hover:text-white' : 'text-text-secondary hover:text-primary-600'}`}
             >
               {link.label}
             </Link>
@@ -82,7 +91,7 @@ export default function Header({ dict, locale }: HeaderProps) {
         {/* Mobile hamburger */}
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-lg p-2 text-text-secondary transition-colors hover:bg-white/50 md:hidden"
+          className={`inline-flex items-center justify-center rounded-lg p-2 transition-colors duration-300 md:hidden ${isDarkHeader ? 'text-white/70 hover:bg-white/10' : 'text-text-secondary hover:bg-white/50'}`}
           aria-label="Toggle menu"
           aria-expanded={menuOpen}
           onClick={() => {
@@ -128,7 +137,7 @@ export default function Header({ dict, locale }: HeaderProps) {
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="block rounded-lg px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-white/50 hover:text-primary-600"
+                  className={`block rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-300 ${isDarkHeader ? 'text-white/65 hover:bg-white/10 hover:text-white' : 'text-text-secondary hover:bg-white/50 hover:text-primary-600'}`}
                   onClick={() => {
                     setMenuOpen(false);
                   }}
