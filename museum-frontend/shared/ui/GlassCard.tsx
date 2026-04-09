@@ -3,6 +3,8 @@ import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
 
 import { useTheme } from './ThemeContext';
+import { semantic } from './tokens.semantic';
+import { radius } from './tokens.generated';
 
 interface GlassCardProps {
   children: ReactNode;
@@ -34,8 +36,8 @@ export const GlassCard = ({ children, style, intensity = 52 }: GlassCardProps) =
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 24,
-    borderWidth: 1,
+    borderRadius: radius['4xl'],
+    borderWidth: semantic.input.borderWidth,
     overflow: 'hidden',
   },
 });

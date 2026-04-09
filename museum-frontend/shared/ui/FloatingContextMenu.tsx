@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 import { useTheme } from './ThemeContext';
+import { semantic } from './tokens.semantic';
+import { space } from './tokens.generated';
 
 /** Describes a single action item rendered inside a FloatingContextMenu. */
 export interface ContextMenuAction {
@@ -105,31 +107,31 @@ export const FloatingContextMenu = ({
 
 const styles = StyleSheet.create({
   menuShell: {
-    borderRadius: 999,
-    borderWidth: 1,
+    borderRadius: semantic.badge.radiusFull,
+    borderWidth: semantic.input.borderWidth,
     overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: space['2.5'],
+    paddingVertical: semantic.badge.paddingX,
   },
   menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: semantic.card.gapSmall,
   },
   menuAction: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
+    gap: semantic.card.gapTiny,
+    paddingHorizontal: semantic.card.paddingCompact,
+    paddingVertical: semantic.badge.paddingX,
+    borderRadius: semantic.badge.radiusFull,
+    borderWidth: semantic.input.borderWidth,
   },
   menuLabel: {
-    fontSize: 11,
+    fontSize: semantic.badge.fontSizeSmall,
     fontWeight: '600',
   },
   scrollContent: {
-    paddingHorizontal: 4,
+    paddingHorizontal: space['1'],
   },
 });

@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from './tokens.semantic';
+import { space } from './tokens.generated';
 
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
@@ -68,17 +70,17 @@ export function FormInput({
 
 const styles = StyleSheet.create({
   inputShell: {
-    borderRadius: 14,
-    borderWidth: 1,
-    minHeight: 50,
-    paddingHorizontal: 12,
+    borderRadius: semantic.input.radius,
+    borderWidth: semantic.input.borderWidth,
+    minHeight: semantic.button.heightApple,
+    paddingHorizontal: semantic.input.paddingCompact,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: semantic.card.gapSmall,
   },
   input: {
     flex: 1,
     fontSize: 15,
-    paddingVertical: 8,
+    paddingVertical: space['2'],
   },
 });

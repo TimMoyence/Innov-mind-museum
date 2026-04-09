@@ -1,10 +1,10 @@
-/* eslint-disable react-native/no-color-literals -- fatal error fallback screen with custom palette */
 import type { StyleProp, ViewStyle } from 'react-native';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import type { ApiConfigurationSnapshot } from '@/shared/infrastructure/apiConfig';
+import { semantic } from './tokens.semantic';
 
 interface StartupConfigurationErrorScreenProps {
   error: Error;
@@ -69,72 +69,72 @@ export function StartupConfigurationErrorScreen({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#130f0d',
+    backgroundColor: semantic.errorScreen.background,
   },
   content: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 28,
-    gap: 18,
+    paddingHorizontal: semantic.screen.paddingLarge,
+    paddingVertical: semantic.screen.paddingXL,
+    gap: semantic.card.paddingLarge,
   },
   badge: {
     alignSelf: 'flex-start',
-    borderRadius: 999,
+    borderRadius: semantic.badge.radiusFull,
     borderWidth: 1,
-    borderColor: '#70584a',
-    backgroundColor: '#231915',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderColor: semantic.errorScreen.badgeBorder,
+    backgroundColor: semantic.errorScreen.badgeBackground,
+    paddingHorizontal: semantic.card.paddingCompact,
+    paddingVertical: semantic.list.itemGapSmall,
   },
   badgeText: {
-    color: '#f5d7c2',
-    fontSize: 12,
+    color: semantic.errorScreen.textAccent,
+    fontSize: semantic.card.captionSize,
     fontWeight: '700',
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
   title: {
-    color: '#fff7f1',
-    fontSize: 28,
+    color: semantic.errorScreen.textPrimary,
+    fontSize: semantic.section.titleSizeHero,
     fontWeight: '700',
     lineHeight: 34,
   },
   message: {
-    color: '#e4cfc2',
-    fontSize: 16,
-    lineHeight: 24,
+    color: semantic.errorScreen.textSecondary,
+    fontSize: semantic.section.subtitleSize,
+    lineHeight: semantic.section.titleSizeLarge,
   },
   card: {
-    borderRadius: 20,
+    borderRadius: semantic.card.radius,
     borderWidth: 1,
-    borderColor: '#3b2d25',
-    backgroundColor: '#1b1411',
-    padding: 18,
-    gap: 12,
+    borderColor: semantic.errorScreen.cardBorder,
+    backgroundColor: semantic.errorScreen.cardBackground,
+    padding: semantic.card.paddingLarge,
+    gap: semantic.card.gap,
   },
   cardTitle: {
-    color: '#fff7f1',
-    fontSize: 16,
+    color: semantic.errorScreen.textPrimary,
+    fontSize: semantic.section.subtitleSize,
     fontWeight: '700',
   },
   row: {
-    gap: 4,
+    gap: semantic.card.gapTiny,
   },
   label: {
-    color: '#c7a58e',
-    fontSize: 12,
+    color: semantic.errorScreen.textLabel,
+    fontSize: semantic.card.captionSize,
     fontWeight: '700',
     letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
   value: {
-    color: '#f6ebe4',
-    fontSize: 15,
-    lineHeight: 22,
+    color: semantic.errorScreen.textValue,
+    fontSize: semantic.chat.fontSizeSmall,
+    lineHeight: semantic.chat.iconSize,
   },
   step: {
-    color: '#f6ebe4',
-    fontSize: 15,
-    lineHeight: 22,
+    color: semantic.errorScreen.textValue,
+    fontSize: semantic.chat.fontSizeSmall,
+    lineHeight: semantic.chat.iconSize,
   },
 });

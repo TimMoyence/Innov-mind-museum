@@ -1,7 +1,8 @@
-/* eslint-disable react-native/no-inline-styles -- small static spacing values */
 import { StyleSheet, View } from 'react-native';
 import { SkeletonBox } from './SkeletonBox';
 import { useTheme } from './ThemeContext';
+import { semantic } from './tokens.semantic';
+import { space, radius, fontSize } from './tokens.generated';
 
 interface SkeletonChatBubbleProps {
   alignSelf?: 'flex-start' | 'flex-end';
@@ -17,9 +18,19 @@ export const SkeletonChatBubble = ({ alignSelf = 'flex-start' }: SkeletonChatBub
         { alignSelf, borderColor: theme.cardBorder, backgroundColor: theme.cardBackground },
       ]}
     >
-      <SkeletonBox width="100%" height={12} borderRadius={6} />
-      <SkeletonBox width="80%" height={12} borderRadius={6} style={{ marginTop: 6 }} />
-      <SkeletonBox width="40%" height={8} borderRadius={4} style={{ marginTop: 8 }} />
+      <SkeletonBox width="100%" height={fontSize.xs} borderRadius={radius.sm} />
+      <SkeletonBox
+        width="80%"
+        height={fontSize.xs}
+        borderRadius={radius.sm}
+        style={{ marginTop: space['1.5'] }}
+      />
+      <SkeletonBox
+        width="40%"
+        height={semantic.chat.gap}
+        borderRadius={radius.xs}
+        style={{ marginTop: semantic.chat.gap }}
+      />
     </View>
   );
 };
@@ -27,9 +38,9 @@ export const SkeletonChatBubble = ({ alignSelf = 'flex-start' }: SkeletonChatBub
 const styles = StyleSheet.create({
   bubble: {
     maxWidth: '75%',
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    marginBottom: 10,
+    borderRadius: semantic.chat.bubbleRadius,
+    padding: semantic.chat.bubblePadding,
+    borderWidth: semantic.input.borderWidth,
+    marginBottom: space['2.5'],
   },
 });
