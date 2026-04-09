@@ -4,6 +4,8 @@ import { Platform, StyleSheet } from 'react-native';
 import Markdown from '@ronradtke/react-native-markdown-display';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
 
 interface MarkdownBubbleProps {
   text: string;
@@ -27,8 +29,8 @@ export const MarkdownBubble = ({ text, onLinkPress }: MarkdownBubbleProps) => {
       StyleSheet.create({
         body: {
           color: theme.textPrimary,
-          fontSize: 14,
-          lineHeight: 20,
+          fontSize: semantic.chat.fontSizeSmall,
+          lineHeight: semantic.modal.padding,
         },
         strong: {
           fontWeight: '700',
@@ -37,29 +39,29 @@ export const MarkdownBubble = ({ text, onLinkPress }: MarkdownBubbleProps) => {
           fontStyle: 'italic',
         },
         bullet_list: {
-          marginVertical: 4,
+          marginVertical: semantic.card.gapTiny,
         },
         ordered_list: {
-          marginVertical: 4,
+          marginVertical: semantic.card.gapTiny,
         },
         list_item: {
-          marginVertical: 2,
+          marginVertical: space['0.5'],
         },
         paragraph: {
           marginTop: 0,
-          marginBottom: 4,
+          marginBottom: semantic.card.gapTiny,
         },
         heading1: {
-          fontSize: 18,
+          fontSize: fontSize.lg,
           fontWeight: '700',
           color: theme.textPrimary,
-          marginBottom: 4,
+          marginBottom: semantic.card.gapTiny,
         },
         heading2: {
-          fontSize: 16,
+          fontSize: fontSize.base,
           fontWeight: '700',
           color: theme.textPrimary,
-          marginBottom: 4,
+          marginBottom: semantic.card.gapTiny,
         },
         link: {
           color: theme.primary,
@@ -67,25 +69,25 @@ export const MarkdownBubble = ({ text, onLinkPress }: MarkdownBubbleProps) => {
         blockquote: {
           borderLeftWidth: 3,
           borderLeftColor: theme.cardBorder,
-          paddingLeft: 10,
-          marginVertical: 4,
+          paddingLeft: space['2.5'],
+          marginVertical: semantic.card.gapTiny,
         },
         code_inline: {
           backgroundColor: theme.primaryTint,
           color: theme.primary,
-          paddingHorizontal: 4,
-          borderRadius: 4,
-          fontSize: 13,
+          paddingHorizontal: space['1'],
+          borderRadius: radius.xs,
+          fontSize: semantic.form.labelSize,
           fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
         },
         fence: {
           backgroundColor: theme.inputBackground,
           color: theme.textPrimary,
           borderColor: theme.cardBorder,
-          borderWidth: 1,
-          borderRadius: 8,
-          padding: 10,
-          fontSize: 13,
+          borderWidth: semantic.input.borderWidth,
+          borderRadius: radius.md,
+          padding: space['2.5'],
+          fontSize: semantic.form.labelSize,
           fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
         },
       }),

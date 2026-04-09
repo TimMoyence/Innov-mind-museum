@@ -3,6 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 interface FollowUpButtonsProps {
   questions: string[];
@@ -48,33 +50,33 @@ export const FollowUpButtons = ({ questions, onPress, disabled = false }: Follow
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 6,
-    gap: 6,
+    marginTop: semantic.chat.gapSmall,
+    gap: semantic.chat.gapSmall,
     maxWidth: '85%',
     alignSelf: 'flex-end',
   },
   sectionLabel: {
-    fontSize: 11,
+    fontSize: semantic.section.labelSize,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 2,
+    marginBottom: space['0.5'],
   },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    gap: semantic.chat.gap,
+    borderRadius: semantic.button.radius,
+    borderWidth: semantic.input.borderWidth,
+    paddingHorizontal: space['3.5'],
+    paddingVertical: space['2.5'],
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     fontWeight: '500',
   },
 });

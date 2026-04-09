@@ -12,6 +12,8 @@ import { MessageActions } from '@/features/chat/ui/MessageActions';
 import { TypingIndicator } from '@/features/chat/ui/TypingIndicator';
 import { WelcomeCard } from '@/features/chat/ui/WelcomeCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 interface ChatMessageListProps {
   /** Array of chat messages to render. */
@@ -237,22 +239,22 @@ const ItemSeparator = () => <View style={styles.separator} />;
 
 const styles = StyleSheet.create({
   listContent: {
-    paddingBottom: 16,
+    paddingBottom: semantic.screen.padding,
   },
   separator: {
-    height: 10,
+    height: space['2.5'],
   },
   shareButton: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-end',
-    gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    marginTop: 2,
+    gap: space['1'],
+    paddingVertical: semantic.badge.paddingY,
+    paddingHorizontal: semantic.badge.paddingX,
+    marginTop: space['0.5'],
   },
   shareButtonText: {
-    fontSize: 11,
+    fontSize: semantic.section.labelSize,
     fontWeight: '500',
   },
 });

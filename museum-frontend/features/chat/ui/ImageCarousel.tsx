@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 
 import type { ChatUiEnrichedImage } from '@/features/chat/application/chatSessionLogic.pure';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, radius } from '@/shared/ui/tokens.generated';
 
 const ATTRIBUTION_BG = 'rgba(0,0,0,0.5)';
 const ATTRIBUTION_COLOR = '#FFFFFF';
@@ -104,18 +106,18 @@ ImageCarousel.displayName = 'ImageCarousel';
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 8,
+    marginBottom: semantic.chat.gap,
   },
   contentContainer: {
     flexDirection: 'row',
   },
   thumbPressable: {
-    marginRight: 8,
+    marginRight: semantic.chat.gap,
   },
   thumbContainer: {
     height: THUMB_HEIGHT,
     width: THUMB_WIDTH,
-    borderRadius: 8,
+    borderRadius: radius.md,
     overflow: 'hidden',
   },
   thumbImage: {
@@ -128,11 +130,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: ATTRIBUTION_BG,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
+    paddingHorizontal: space['1'],
+    paddingVertical: space['0.5'],
   },
   attributionText: {
     color: ATTRIBUTION_COLOR,
-    fontSize: 8,
+    fontSize: space['2'],
   },
 });

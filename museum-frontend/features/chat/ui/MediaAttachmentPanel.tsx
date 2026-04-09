@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, radius } from '@/shared/ui/tokens.generated';
 
 interface MediaAttachmentPanelProps {
   // Audio preview
@@ -127,31 +129,31 @@ export function MediaAttachmentPanel({
 
 const styles = StyleSheet.create({
   audioCard: {
-    marginTop: 10,
-    padding: 10,
-    gap: 8,
+    marginTop: space['2.5'],
+    padding: space['2.5'],
+    gap: semantic.chat.gap,
   },
   audioTitle: {
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
   },
   audioRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: semantic.chat.gap,
   },
   attachRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
+    gap: semantic.chat.gap,
+    marginTop: space['2.5'],
   },
   attachButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    gap: semantic.chat.gapSmall,
+    borderRadius: radius.lg,
+    borderWidth: semantic.input.borderWidth,
+    paddingHorizontal: semantic.card.paddingCompact,
+    paddingVertical: space['2.5'],
   },
   attachText: {
     fontWeight: '600',

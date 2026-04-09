@@ -1,5 +1,8 @@
 import { StyleSheet } from 'react-native';
 
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
+
 /**
  * Shared styles for the authentication screen and its sub-components
  * (login form, register form, social login buttons). Extracted so the
@@ -7,9 +10,9 @@ import { StyleSheet } from 'react-native';
  */
 export const authStyles = StyleSheet.create({
   screen: {
-    paddingHorizontal: 16,
-    paddingBottom: 18,
-    gap: 12,
+    paddingHorizontal: semantic.screen.padding,
+    paddingBottom: semantic.card.paddingLarge,
+    gap: semantic.screen.gapSmall,
   },
   scrollContent: {
     flexGrow: 1,
@@ -20,51 +23,51 @@ export const authStyles = StyleSheet.create({
   },
   menuWrap: {
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: space['2'],
   },
   panel: {
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-    gap: 14,
+    paddingHorizontal: semantic.card.paddingLarge,
+    paddingVertical: semantic.card.paddingLarge,
+    gap: semantic.form.gapLarge,
   },
   header: {
     alignItems: 'center',
-    gap: 6,
+    gap: semantic.section.gapTight,
   },
   title: {
-    fontSize: 28,
+    fontSize: semantic.section.titleSizeHero,
     fontWeight: '700',
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: fontSize.sm,
     textAlign: 'center',
     lineHeight: 21,
   },
   form: {
-    gap: 10,
+    gap: semantic.form.gap,
   },
   infoText: {
     fontWeight: '600',
-    fontSize: 13,
-    marginBottom: 6,
+    fontSize: semantic.form.labelSize,
+    marginBottom: space['1.5'],
   },
   forgotPasswordButton: {
     alignSelf: 'flex-end',
-    marginTop: 4,
+    marginTop: space['1'],
   },
   forgotPasswordText: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     fontWeight: '600',
   },
   submitButton: {
-    marginTop: 8,
-    borderRadius: 14,
-    paddingVertical: 14,
+    marginTop: space['2'],
+    borderRadius: semantic.button.radius,
+    paddingVertical: semantic.button.paddingYCompact,
     alignItems: 'center',
     shadowOpacity: 0.2,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: radius.lg,
+    shadowOffset: { width: 0, height: space['2'] },
   },
   submitButtonDisabled: {
     opacity: 0.72,
@@ -74,41 +77,41 @@ export const authStyles = StyleSheet.create({
     fontSize: 15,
   },
   switchButton: {
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingVertical: 12,
+    borderRadius: semantic.button.radiusSmall,
+    borderWidth: semantic.input.borderWidth,
+    paddingVertical: semantic.button.paddingY,
     alignItems: 'center',
   },
   switchButtonText: {
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: semantic.button.fontSize,
   },
   separator: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginVertical: 4,
+    gap: space['2.5'],
+    marginVertical: space['1'],
   },
   separatorLine: {
     flex: 1,
-    height: 1,
+    height: semantic.list.separatorWidth,
   },
   separatorText: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     fontWeight: '500',
   },
   appleButton: {
-    height: 50,
+    height: semantic.button.heightApple,
     width: '100%',
   },
   googleButton: {
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingVertical: 14,
+    borderRadius: semantic.button.radius,
+    borderWidth: semantic.input.borderWidth,
+    paddingVertical: semantic.button.paddingYCompact,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 10,
+    gap: space['2.5'],
   },
   googleButtonText: {
     fontWeight: '700',
@@ -117,13 +120,13 @@ export const authStyles = StyleSheet.create({
   gdprRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
-    marginTop: 4,
+    gap: space['2.5'],
+    marginTop: space['1'],
   },
   checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
+    width: semantic.chat.iconSize,
+    height: semantic.chat.iconSize,
+    borderRadius: radius.sm,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
@@ -131,16 +134,16 @@ export const authStyles = StyleSheet.create({
   },
   gdprText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: semantic.badge.fontSize,
     lineHeight: 18,
   },
   gdprLink: {
     fontWeight: '600',
   },
   legalText: {
-    fontSize: 11,
+    fontSize: semantic.section.labelSize,
     textAlign: 'center',
     lineHeight: 16,
-    marginTop: 4,
+    marginTop: space['1'],
   },
 });

@@ -3,6 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
 
 interface AiConsentModalProps {
   visible: boolean;
@@ -127,65 +129,65 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 28,
+    paddingHorizontal: semantic.screen.paddingXL,
     paddingTop: 60,
-    paddingBottom: 24,
-    gap: 20,
+    paddingBottom: semantic.screen.paddingLarge,
+    gap: semantic.modal.padding,
     alignItems: 'center',
   },
   iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: space['18'],
+    height: space['18'],
+    borderRadius: radius['5xl'],
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: semantic.card.gapTiny,
   },
   title: {
-    fontSize: 24,
+    fontSize: fontSize['2xl'],
     fontWeight: '700',
     textAlign: 'center',
   },
   body: {
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: semantic.chat.iconSize,
     textAlign: 'center',
   },
   infoCard: {
     width: '100%',
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 16,
-    gap: 14,
+    borderRadius: semantic.button.radius,
+    borderWidth: semantic.input.borderWidth,
+    padding: semantic.card.padding,
+    gap: semantic.form.gapLarge,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: space['2.5'],
   },
   infoText: {
     flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: fontSize.sm,
+    lineHeight: semantic.modal.padding,
   },
   dataTitle: {
     fontSize: 15,
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: space['0.5'],
   },
   link: {
-    fontSize: 14,
+    fontSize: fontSize.sm,
     fontWeight: '600',
     textDecorationLine: 'underline',
   },
   footer: {
-    paddingHorizontal: 28,
-    paddingVertical: 20,
+    paddingHorizontal: semantic.screen.paddingXL,
+    paddingVertical: semantic.modal.padding,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   acceptButton: {
-    borderRadius: 14,
-    paddingVertical: 16,
+    borderRadius: semantic.button.radius,
+    paddingVertical: semantic.card.padding,
     alignItems: 'center',
   },
   acceptText: {

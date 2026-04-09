@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { ExpertiseBadge } from '@/features/chat/ui/ExpertiseBadge';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
 
 interface ChatHeaderProps {
   sessionTitle: string | null;
@@ -98,33 +100,33 @@ export function ChatHeader({
 
 const styles = StyleSheet.create({
   headerShell: {
-    marginBottom: 12,
+    marginBottom: semantic.section.gap,
   },
   headerRow: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: semantic.chat.bubblePaddingX,
+    paddingVertical: semantic.list.itemPaddingY,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: space['2.5'],
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: semantic.chat.gap,
   },
   headerContent: {
     flex: 1,
   },
   header: {
-    fontSize: 24,
+    fontSize: fontSize['2xl'],
     fontWeight: '700',
   },
   closeButton: {
-    borderRadius: 999,
-    borderWidth: 1,
-    width: 36,
-    height: 36,
+    borderRadius: radius.full,
+    borderWidth: semantic.input.borderWidth,
+    width: space['9'],
+    height: space['9'],
     alignItems: 'center',
     justifyContent: 'center',
   },

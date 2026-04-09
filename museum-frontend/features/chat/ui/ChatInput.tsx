@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, radius } from '@/shared/ui/tokens.generated';
 
 interface ChatInputProps {
   /** Current text value. */
@@ -99,22 +101,22 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 8,
-    marginTop: 12,
-    padding: 8,
+    gap: semantic.chat.gap,
+    marginTop: semantic.screen.gapSmall,
+    padding: space['2'],
   },
   input: {
     flex: 1,
     minHeight: 44,
     maxHeight: 120,
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: semantic.input.radius,
+    borderWidth: semantic.input.borderWidth,
+    paddingHorizontal: semantic.input.paddingCompact,
+    paddingVertical: space['2.5'],
     writingDirection: 'auto',
   },
   sendButton: {
-    borderRadius: 999,
+    borderRadius: radius.full,
     width: 44,
     height: 44,
     alignItems: 'center',
@@ -124,18 +126,18 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   thumb: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-    borderWidth: 1,
+    width: semantic.chat.thumbnailSize,
+    height: semantic.chat.thumbnailSize,
+    borderRadius: radius.DEFAULT,
+    borderWidth: semantic.input.borderWidth,
   },
   thumbDismiss: {
     position: 'absolute',
     top: -6,
     right: -6,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: space['5'],
+    height: space['5'],
+    borderRadius: radius.DEFAULT,
     alignItems: 'center',
     justifyContent: 'center',
   },

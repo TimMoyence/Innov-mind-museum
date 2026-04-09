@@ -15,6 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import type { ChatUiEnrichedImage } from '@/features/chat/application/chatSessionLogic.pure';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, fontSize } from '@/shared/ui/tokens.generated';
 
 interface ImageFullscreenModalProps {
   images: ChatUiEnrichedImage[];
@@ -208,8 +210,8 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 50,
-    right: 16,
+    top: space['12.5'],
+    right: semantic.screen.padding,
     zIndex: 10,
   },
   imageArea: {
@@ -236,22 +238,22 @@ const styles = StyleSheet.create({
     height: '80%',
   },
   bottomBar: {
-    paddingHorizontal: 16,
-    paddingBottom: 24,
-    paddingTop: 12,
+    paddingHorizontal: semantic.screen.padding,
+    paddingBottom: semantic.screen.paddingLarge,
+    paddingTop: semantic.card.gap,
   },
   caption: {
     color: CAPTION_COLOR,
-    fontSize: 14,
-    marginBottom: 4,
+    fontSize: fontSize.sm,
+    marginBottom: semantic.card.gapTiny,
   },
   attribution: {
     color: ATTRIBUTION_COLOR,
-    fontSize: 12,
-    marginBottom: 4,
+    fontSize: fontSize.xs,
+    marginBottom: semantic.card.gapTiny,
   },
   counter: {
     color: COUNTER_COLOR,
-    fontSize: 12,
+    fontSize: fontSize.xs,
   },
 });
