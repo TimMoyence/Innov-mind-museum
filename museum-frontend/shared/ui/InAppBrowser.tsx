@@ -16,6 +16,8 @@ import { WebView } from 'react-native-webview';
 import type { WebView as WebViewType } from 'react-native-webview';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from './tokens.semantic';
+import { space } from './tokens.generated';
 
 interface InAppBrowserProps {
   /** URL to load. `null` hides the modal. */
@@ -180,14 +182,14 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    paddingHorizontal: semantic.badge.paddingX,
+    paddingVertical: semantic.badge.paddingX,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 4,
+    gap: semantic.card.gapTiny,
   },
   headerButton: {
-    width: 40,
-    height: 40,
+    width: space['10'],
+    height: space['10'],
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -196,10 +198,10 @@ const styles = StyleSheet.create({
   },
   urlBar: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: semantic.badge.paddingX,
   },
   urlText: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     fontWeight: '500',
     textAlign: 'center',
   },
@@ -214,8 +216,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 16,
+    paddingHorizontal: space['8'],
+    gap: semantic.screen.gap,
     zIndex: 20,
   },
   errorText: {
@@ -223,9 +225,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   errorButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: semantic.button.paddingX,
+    paddingVertical: semantic.button.paddingY,
+    borderRadius: semantic.button.radiusSmall,
   },
   errorButtonText: {
     fontWeight: '700',
@@ -237,7 +239,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    paddingTop: 20,
+    paddingTop: semantic.modal.padding,
     zIndex: 10,
   },
 });

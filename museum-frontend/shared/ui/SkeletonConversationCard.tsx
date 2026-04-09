@@ -1,7 +1,8 @@
-/* eslint-disable react-native/no-inline-styles -- small static spacing values */
 import { StyleSheet, View } from 'react-native';
 import { SkeletonBox } from './SkeletonBox';
 import { useTheme } from './ThemeContext';
+import { semantic } from './tokens.semantic';
+import { space, radius, fontSize } from './tokens.generated';
 
 export const SkeletonConversationCard = () => {
   const { theme } = useTheme();
@@ -14,28 +15,38 @@ export const SkeletonConversationCard = () => {
       ]}
     >
       <View style={styles.row}>
-        <SkeletonBox width={40} height={40} borderRadius={20} />
+        <SkeletonBox width={space['10']} height={space['10']} borderRadius={semantic.card.radius} />
         <View style={styles.textCol}>
-          <SkeletonBox width="70%" height={14} borderRadius={6} />
-          <SkeletonBox width="45%" height={10} borderRadius={4} style={{ marginTop: 6 }} />
+          <SkeletonBox width="70%" height={fontSize.sm} borderRadius={radius.sm} />
+          <SkeletonBox
+            width="45%"
+            height={space['2.5']}
+            borderRadius={radius.xs}
+            style={{ marginTop: space['1.5'] }}
+          />
         </View>
       </View>
-      <SkeletonBox width="30%" height={10} borderRadius={4} style={{ marginTop: 8 }} />
+      <SkeletonBox
+        width="30%"
+        height={space['2.5']}
+        borderRadius={radius.xs}
+        style={{ marginTop: semantic.card.gapSmall }}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    marginBottom: 10,
+    borderRadius: semantic.chat.bubbleRadius,
+    padding: space['3.5'],
+    borderWidth: semantic.input.borderWidth,
+    marginBottom: space['2.5'],
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: semantic.card.gap,
   },
   textCol: {
     flex: 1,
