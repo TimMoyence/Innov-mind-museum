@@ -3,8 +3,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, fontSize, lineHeightPx } from '@/shared/ui/tokens.generated';
+import { semantic, space, fontSize, lineHeightPx } from '@/shared/ui/tokens';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';

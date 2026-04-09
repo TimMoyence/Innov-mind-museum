@@ -5,7 +5,7 @@ import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
+import { semantic } from '@/shared/ui/tokens';
 
 /** Renders the bottom tab navigator with Dashboard and Home tabs using a frosted-glass tab bar. */
 export default function TabLayout() {

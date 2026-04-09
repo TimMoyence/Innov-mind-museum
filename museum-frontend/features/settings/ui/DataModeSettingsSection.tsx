@@ -7,8 +7,7 @@ import {
 } from '@/features/settings/dataModeStore';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space } from '@/shared/ui/tokens.generated';
+import { semantic, space } from '@/shared/ui/tokens';
 
 const OPTIONS: DataModePreference[] = ['auto', 'low', 'normal'];
 

@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useMemoryPreference } from '@/features/settings/application/useMemoryPreference';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space } from '@/shared/ui/tokens.generated';
+import { semantic, space } from '@/shared/ui/tokens';
 
 /** Privacy card: AI memory (personalization) toggle. */
 export const SettingsPrivacyCard = () => {

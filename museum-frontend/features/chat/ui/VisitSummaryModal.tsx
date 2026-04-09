@@ -6,8 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { VisitSummary } from '@/features/chat/application/chatSessionLogic.pure';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
+import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
 
 interface VisitSummaryModalProps {
   visible: boolean;

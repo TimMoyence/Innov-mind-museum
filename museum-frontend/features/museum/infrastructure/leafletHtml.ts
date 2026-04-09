@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions -- HTML template with numeric design tokens injected as px values */
-import { semantic } from '@/shared/ui/tokens.semantic';
 import {
+  semantic,
   space,
   radius,
   primaryScale,
@@ -8,7 +8,7 @@ import {
   darkTextColors,
   surfaceColors,
   darkSurfaceColors,
-} from '@/shared/ui/tokens.generated';
+} from '@/shared/ui/tokens';
 
 /**
  * Generates a self-contained HTML string for a Leaflet map rendered inside a WebView.

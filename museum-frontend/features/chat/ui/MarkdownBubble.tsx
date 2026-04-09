@@ -4,8 +4,7 @@ import { Platform, StyleSheet } from 'react-native';
 import Markdown from '@ronradtke/react-native-markdown-display';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
+import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
 
 interface MarkdownBubbleProps {
   text: string;

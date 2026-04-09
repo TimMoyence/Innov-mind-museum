@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { fontSize } from '@/shared/ui/tokens.generated';
+import { semantic, fontSize } from '@/shared/ui/tokens';
 
 type SettingsRoute =
   | '/(stack)/preferences'

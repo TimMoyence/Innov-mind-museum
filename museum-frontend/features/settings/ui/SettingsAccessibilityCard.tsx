@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAudioDescriptionMode } from '@/features/settings/application/useAudioDescriptionMode';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space } from '@/shared/ui/tokens.generated';
+import { semantic, space } from '@/shared/ui/tokens';
 
 /** Accessibility card: audio description mode toggle. */
 export const SettingsAccessibilityCard = () => {

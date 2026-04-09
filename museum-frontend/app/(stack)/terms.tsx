@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { TERMS_OF_SERVICE_CONTENT } from '@/features/legal/termsOfServiceContent';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, fontSize, lineHeightPx } from '@/shared/ui/tokens.generated';
+import { semantic, space, fontSize, lineHeightPx } from '@/shared/ui/tokens';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';

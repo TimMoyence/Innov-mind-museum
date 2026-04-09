@@ -34,14 +34,10 @@ export const spacing = {
   '10': { px: 40, rem: '2.5rem' },
   /** 48px */
   '12': { px: 48, rem: '3rem' },
-  /** 64px — page-level spacing */
-  '16': { px: 64, rem: '4rem' },
   /** 18px — comfortable padding */
   '4.5': { px: 18, rem: '1.125rem' },
   /** 22px — generous padding */
   '5.5': { px: 22, rem: '1.375rem' },
-  /** 34px — title line height */
-  '8.5': { px: 34, rem: '2.125rem' },
   /** 36px — large element */
   '9': { px: 36, rem: '2.25rem' },
   /** 50px — button height (Apple login) */
@@ -52,8 +48,6 @@ export const spacing = {
   '18': { px: 72, rem: '4.5rem' },
   /** 80px — page spacing */
   '20': { px: 80, rem: '5rem' },
-  /** 96px — large page spacing */
-  '24': { px: 96, rem: '6rem' },
 } as const;
 
 export const radii = {

@@ -12,8 +12,7 @@ import { MessageActions } from '@/features/chat/ui/MessageActions';
 import { TypingIndicator } from '@/features/chat/ui/TypingIndicator';
 import { WelcomeCard } from '@/features/chat/ui/WelcomeCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space } from '@/shared/ui/tokens.generated';
+import { semantic, space } from '@/shared/ui/tokens';
 
 interface ChatMessageListProps {
   /** Array of chat messages to render. */

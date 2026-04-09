@@ -21,8 +21,7 @@ import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { SkeletonConversationCard } from '@/shared/ui/SkeletonConversationCard';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, fontSize, radius } from '@/shared/ui/tokens.generated';
+import { semantic, space, fontSize, radius } from '@/shared/ui/tokens';
 
 type ListRow =
   | { kind: 'sticky' }

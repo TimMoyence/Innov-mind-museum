@@ -4,8 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useDataMode } from '@/features/chat/application/DataModeProvider';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space } from '@/shared/ui/tokens.generated';
+import { semantic, space } from '@/shared/ui/tokens';
 
 interface OfflineBannerProps {
   pendingCount: number;

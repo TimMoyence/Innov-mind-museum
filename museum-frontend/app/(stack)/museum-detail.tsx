@@ -14,8 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, fontSize, radius } from '@/shared/ui/tokens.generated';
+import { semantic, space, fontSize, radius } from '@/shared/ui/tokens';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';

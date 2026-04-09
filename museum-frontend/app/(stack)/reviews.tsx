@@ -12,8 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useReviews } from '@/features/review/application/useReviews';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, fontSize, radius } from '@/shared/ui/tokens.generated';
+import { semantic, space, fontSize, radius } from '@/shared/ui/tokens';
 import { ReviewCard } from '@/features/review/ui/ReviewCard';
 import { StarRating } from '@/features/review/ui/StarRating';
 import type { ReviewDTO } from '@/features/review/infrastructure/reviewApi';

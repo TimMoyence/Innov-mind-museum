@@ -3,8 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from './ThemeContext';
-import { semantic } from './tokens.semantic';
-import { fontSize as fontSizeTokens, radius, space } from './tokens.generated';
+import { semantic, fontSize as fontSizeTokens, radius, space } from './tokens';
 
 interface ErrorNoticeProps {
   message: string;

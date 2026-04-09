@@ -1,5 +1,5 @@
 import type { components } from '@/shared/api/generated/openapi';
-import { semantic } from '@/shared/ui/tokens.semantic';
+import { semantic } from '@/shared/ui/tokens';
 
 type TicketStatus = components['schemas']['TicketDTO']['status'];
 type TicketPriority = components['schemas']['TicketDTO']['priority'];

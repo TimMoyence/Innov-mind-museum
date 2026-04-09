@@ -15,8 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import type { ChatUiEnrichedImage } from '@/features/chat/application/chatSessionLogic.pure';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, fontSize } from '@/shared/ui/tokens.generated';
+import { semantic, space, fontSize } from '@/shared/ui/tokens';
 
 interface ImageFullscreenModalProps {
   images: ChatUiEnrichedImage[];

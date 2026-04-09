@@ -9,7 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useTheme } from './ThemeContext';
-import { radius } from './tokens.generated';
+import { radius } from './tokens';
 
 interface SkeletonBoxProps {
   width: DimensionValue;

@@ -384,4 +384,51 @@ for (const { path, content, label } of outputs) {
   console.log(`  ✓ ${label} → ${path.replace(root + '/', '')}`);
 }
 
-console.log(`\n  Done — ${outputs.length} files generated from design-system/tokens/`);
+// ─── Barrel: single consumer import (React Native) ──────────────────────────
+
+const rnBarrel = [
+  TS_HEADER,
+  '',
+  '// Unified design system barrel — import everything from here',
+  '// Usage: import { space, fontSize, semantic, functional, withOpacity } from \'@/shared/ui/tokens\';',
+  '',
+  '// Layer 1 — Primitives',
+  "export { primaryScale, accentScale, goldScale, textColors, darkTextColors, surfaceColors, darkSurfaceColors, statusColors, fontSize, fontWeight, lineHeight, lineHeightPx, space, radius, gradientColors } from './tokens.generated';",
+  '',
+  '// Layer 2 — Functional (RGBA + utility)',
+  "export { functional, withOpacity } from './tokens.functional';",
+  '',
+  '// Layer 3 — Semantic (component tokens)',
+  "export { semantic } from './tokens.semantic';",
+  '',
+].join('\n');
+
+writeFileSync(
+  resolve(root, 'museum-frontend/shared/ui/tokens.ts'),
+  rnBarrel,
+  'utf-8',
+);
+console.log(`  ✓ museum-frontend (barrel) → museum-frontend/shared/ui/tokens.ts`);
+
+// ─── Barrel: single CSS import (Web) ────────────────────────────────────────
+
+const cssBarrel = [
+  HEADER,
+  '',
+  '/* Unified design system — import this single file in globals.css */',
+  "/* All 3 layers merged: primitives + functional + semantic */",
+  '',
+  "@import './tokens.generated.css';",
+  "@import './tokens.functional.css';",
+  "@import './tokens.semantic.css';",
+  '',
+].join('\n');
+
+writeFileSync(
+  resolve(root, 'museum-web/src/tokens.css'),
+  cssBarrel,
+  'utf-8',
+);
+console.log(`  ✓ museum-web (barrel) → museum-web/src/tokens.css`);
+
+console.log(`\n  Done — ${outputs.length + 2} files generated from design-system/tokens/`);

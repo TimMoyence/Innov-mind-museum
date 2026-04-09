@@ -6,8 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { authService } from '@/features/auth/infrastructure/authApi';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, fontSize } from '@/shared/ui/tokens.generated';
+import { semantic, space, fontSize } from '@/shared/ui/tokens';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';

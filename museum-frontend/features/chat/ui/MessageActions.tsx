@@ -7,8 +7,7 @@ import type { ChatUiMessageMetadata } from '@/features/chat/application/useChatS
 import { FollowUpButtons } from '@/features/chat/ui/FollowUpButtons';
 import { RecommendationChips } from '@/features/chat/ui/RecommendationChips';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, lineHeightPx } from '@/shared/ui/tokens.generated';
+import { semantic, space, lineHeightPx } from '@/shared/ui/tokens';
 
 interface MessageActionsProps {
   /** Metadata from the last assistant message. */

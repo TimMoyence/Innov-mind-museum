@@ -16,8 +16,7 @@ import { WebView } from 'react-native-webview';
 import type { WebView as WebViewType } from 'react-native-webview';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from './tokens.semantic';
-import { space, fontSize as fontSizeTokens } from './tokens.generated';
+import { semantic, space, fontSize as fontSizeTokens } from './tokens';
 
 interface InAppBrowserProps {
   /** URL to load. `null` hides the modal. */

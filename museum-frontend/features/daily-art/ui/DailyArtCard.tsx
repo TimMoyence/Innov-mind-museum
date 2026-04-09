@@ -6,8 +6,7 @@ import { useTranslation } from 'react-i18next';
 import type { DailyArtwork } from '../infrastructure/dailyArtApi';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, lineHeightPx } from '@/shared/ui/tokens.generated';
+import { semantic, space, lineHeightPx } from '@/shared/ui/tokens';
 
 interface DailyArtCardProps {
   artwork: DailyArtwork;
