@@ -12,8 +12,6 @@ import HeroOrbs from '@/components/marketing/HeroOrbs';
 import AnimatedLine from '@/components/marketing/AnimatedLine';
 import ShowcaseSection from '@/components/marketing/ShowcaseSection';
 import DemoChat from '@/components/marketing/DemoChat';
-import MultiDeviceShowcase from '@/components/marketing/MultiDeviceShowcase';
-import StatsSection from '@/components/marketing/StatsSection';
 import FAQSection from '@/components/marketing/FAQSection';
 import DemoMapLoader from '@/components/marketing/DemoMapLoader';
 
@@ -315,7 +313,7 @@ export default async function LandingPage({ params }: LandingPageProps) {
       {/* ================================================================ */}
       {/* SECTION 1: HERO (dark, full viewport)                           */}
       {/* ================================================================ */}
-      <section className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#000] via-[#050510] to-[#0a0a1a]">
+      <section className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#0a0a0b] via-[#0d0d12] to-[#111118]">
         {/* Parallax orbs on dark bg */}
         <HeroOrbs />
 
@@ -375,13 +373,68 @@ export default async function LandingPage({ params }: LandingPageProps) {
 
         {/* Bottom gradient fade to light */}
         <div
-          className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent"
+          className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#EAF2FF] to-transparent"
           aria-hidden="true"
         />
       </section>
 
       {/* ================================================================ */}
-      {/* SECTION 2: HOW IT WORKS (light)                                 */}
+      {/* SECTION 2: APP PREVIEW — The app's world                        */}
+      {/* ================================================================ */}
+      <section
+        className="relative overflow-hidden py-16 sm:py-24"
+        style={{ background: 'linear-gradient(180deg, #EAF2FF 0%, #D8E8FF 50%, #D5F0FF 100%)' }}
+      >
+        {/* Museum background image at low opacity — like the mobile app */}
+        <div className="pointer-events-none absolute inset-0 opacity-[0.12]" aria-hidden="true">
+          <Image
+            src="/images/screenshots/02_home.png"
+            alt=""
+            fill
+            className="object-cover blur-[2px]"
+          />
+        </div>
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <AnimatedSection variant="scale">
+            <div className="mx-auto max-w-2xl text-center">
+              <p className="mb-4 text-sm font-medium uppercase tracking-[0.08em] text-primary-600">
+                {dict.showcase.sectionTitle}
+              </p>
+              <h2
+                className="text-3xl font-bold tracking-tight text-text-primary sm:text-4xl lg:text-5xl"
+                style={{ letterSpacing: '-0.03em' }}
+              >
+                {dict.showcase.title}
+              </h2>
+              <p className="mt-4 text-lg leading-relaxed text-text-secondary">
+                {dict.showcase.description}
+              </p>
+            </div>
+          </AnimatedSection>
+
+          {/* Pill buttons matching the app — Discover, Camera, Audio */}
+          <AnimatedSection delay={0.15}>
+            <div className="mt-8 flex justify-center gap-3">
+              {['Discover', 'Camera', 'Audio'].map((label) => (
+                <div
+                  key={label}
+                  className="liquid-glass-card flex items-center gap-2 !rounded-full px-5 py-2.5"
+                  style={{
+                    background: 'rgba(255,255,255,0.65)',
+                    backdropFilter: 'blur(20px) saturate(1.5)',
+                  }}
+                >
+                  <span className="text-sm font-semibold text-text-primary">{label}</span>
+                </div>
+              ))}
+            </div>
+          </AnimatedSection>
+        </div>
+      </section>
+
+      {/* ================================================================ */}
+      {/* SECTION 3: HOW IT WORKS (light)                                 */}
       {/* ================================================================ */}
       <section id="how-it-works" className="relative overflow-hidden bg-white py-24 sm:py-32">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -426,7 +479,7 @@ export default async function LandingPage({ params }: LandingPageProps) {
       </section>
 
       {/* ================================================================ */}
-      {/* SECTION 3: CHAT IA SHOWCASE (dark)                              */}
+      {/* SECTION 4: CHAT IA SHOWCASE (dark)                              */}
       {/* ================================================================ */}
       <ShowcaseSection
         title={dict.chatShowcase.title}
@@ -440,7 +493,7 @@ export default async function LandingPage({ params }: LandingPageProps) {
       </ShowcaseSection>
 
       {/* ================================================================ */}
-      {/* SECTION 4: MAPS SHOWCASE (light)                                */}
+      {/* SECTION 5: MAPS SHOWCASE (light)                                */}
       {/* ================================================================ */}
       <ShowcaseSection
         title={dict.mapsShowcase.title}
@@ -464,28 +517,6 @@ export default async function LandingPage({ params }: LandingPageProps) {
           </PhoneMockup>
         </div>
       </ShowcaseSection>
-
-      {/* ================================================================ */}
-      {/* SECTION 5: MULTI-DEVICE                                         */}
-      {/* ================================================================ */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-white via-primary-50/40 to-white py-24 sm:py-32">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <AnimatedSection variant="scale">
-            <div className="mx-auto max-w-2xl text-center">
-              <h2
-                className="text-3xl font-bold tracking-tight text-text-primary sm:text-4xl lg:text-5xl"
-                style={{ letterSpacing: '-0.03em' }}
-              >
-                {dict.multiDevice.title}
-              </h2>
-              <p className="mt-4 text-lg text-text-secondary">{dict.multiDevice.subtitle}</p>
-            </div>
-          </AnimatedSection>
-          <AnimatedSection delay={0.2}>
-            <MultiDeviceShowcase />
-          </AnimatedSection>
-        </div>
-      </section>
 
       {/* ================================================================ */}
       {/* SECTION 6: FEATURE GRID (light, mesh gradient)                  */}
@@ -534,28 +565,24 @@ export default async function LandingPage({ params }: LandingPageProps) {
       </section>
 
       {/* ================================================================ */}
-      {/* SECTION 7: STATS (replaces Reviews)                             */}
-      {/* ================================================================ */}
-      <StatsSection title={dict.stats.title} items={dict.stats.items} />
-
-      {/* ================================================================ */}
-      {/* SECTION 8: FAQ                                                   */}
+      {/* SECTION 7: FAQ                                                   */}
       {/* ================================================================ */}
       <FAQSection title={dict.faq.title} items={dict.faq.items} />
 
       {/* ================================================================ */}
-      {/* SECTION 9: DOWNLOAD CTA (light gradient)                        */}
+      {/* SECTION 8: DOWNLOAD CTA (dark, mirrors hero)                    */}
       {/* ================================================================ */}
       <section
         id="download"
-        className="relative overflow-hidden bg-gradient-to-b from-white via-primary-50/40 to-primary-100/20 py-24 sm:py-32"
+        className="relative overflow-hidden py-24 sm:py-32"
+        style={{ background: 'linear-gradient(180deg, #0a0a1a 0%, #080820 50%, #0a0a1a 100%)' }}
       >
         <div
-          className="pointer-events-none absolute -right-20 top-0 h-64 w-64 rounded-full bg-accent-400/10 blur-3xl orb"
+          className="pointer-events-none absolute left-1/4 top-10 h-[350px] w-[350px] rounded-full bg-primary-500/10 blur-3xl orb"
           aria-hidden="true"
         />
         <div
-          className="pointer-events-none absolute -left-20 bottom-0 h-64 w-64 rounded-full bg-primary-300/15 blur-3xl orb orb-delay-1"
+          className="pointer-events-none absolute bottom-10 right-1/4 h-[300px] w-[300px] rounded-full bg-accent-400/8 blur-3xl orb orb-delay-1"
           aria-hidden="true"
         />
 
@@ -567,15 +594,15 @@ export default async function LandingPage({ params }: LandingPageProps) {
                 alt="Musaium"
                 width={72}
                 height={72}
-                className="mx-auto mb-6 rounded-2xl shadow-lg"
+                className="mx-auto mb-6 rounded-2xl shadow-lg shadow-primary-500/20"
               />
               <h2
-                className="text-3xl font-bold tracking-tight text-text-primary sm:text-4xl lg:text-5xl"
+                className="text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl"
                 style={{ letterSpacing: '-0.03em' }}
               >
                 {dict.download.title}
               </h2>
-              <p className="mt-4 text-lg text-text-secondary">{dict.download.subtitle}</p>
+              <p className="mt-4 text-lg text-white/60">{dict.download.subtitle}</p>
             </div>
           </AnimatedSection>
 

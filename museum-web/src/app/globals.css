@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 @import '../tokens.generated.css';
+@import '../tokens.functional.css';
+@import '../tokens.semantic.css';
 
 /* ── Base ─────────────────────────────────────────────────────────────── */
 
@@ -90,19 +92,20 @@ body {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(
-    circle at 30% 30%,
-    rgba(255, 255, 255, 0.15) 0%,
-    transparent 60%
-  );
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);
   border-radius: inherit;
   pointer-events: none;
   animation: specular-shift 8s ease-in-out infinite;
 }
 
 @keyframes specular-shift {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(5%, 5%); }
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(5%, 5%);
+  }
 }
 
 /* Heavy variant — more opacity and blur for nav bars */
@@ -173,6 +176,56 @@ body {
     inset 0 -1px 0 rgba(255, 255, 255, 0.1);
 }
 
+/* Animated border highlight — specular sweep on hover (Linear/Stripe style) */
+@property --border-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.liquid-glass-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--border-angle),
+    transparent 60%,
+    rgba(37, 99, 235, 0.4) 78%,
+    rgba(56, 189, 248, 0.3) 82%,
+    transparent 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.liquid-glass-card:hover::after {
+  opacity: 1;
+  animation: border-rotate 3s linear infinite;
+}
+
+@keyframes border-rotate {
+  to {
+    --border-angle: 360deg;
+  }
+}
+
+/* App gradient background matching mobile app */
+.app-gradient-bg {
+  background: linear-gradient(180deg, #eaf2ff 0%, #d8e8ff 50%, #d5f0ff 100%);
+}
+
 /* ── Dark section ─────────────────────────────────────────────────────── */
 
 .section-dark {
@@ -210,19 +263,38 @@ body {
 /* ── Animated gradient orbs ───────────────────────────────────────────── */
 
 @keyframes float-orb {
-  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.7; }
-  25% { transform: translate(15px, -25px) scale(1.08); opacity: 0.9; }
-  50% { transform: translate(-5px, 10px) scale(0.95); opacity: 0.6; }
-  75% { transform: translate(-15px, -10px) scale(1.04); opacity: 0.85; }
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.7;
+  }
+  25% {
+    transform: translate(15px, -25px) scale(1.08);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate(-5px, 10px) scale(0.95);
+    opacity: 0.6;
+  }
+  75% {
+    transform: translate(-15px, -10px) scale(1.04);
+    opacity: 0.85;
+  }
 }
 
 .orb {
   animation: float-orb 14s ease-in-out infinite;
 }
 
-.orb-delay-1 { animation-delay: -5s; }
-.orb-delay-2 { animation-delay: -9s; }
-.orb-delay-3 { animation-delay: -12s; }
+.orb-delay-1 {
+  animation-delay: -5s;
+}
+.orb-delay-2 {
+  animation-delay: -9s;
+}
+.orb-delay-3 {
+  animation-delay: -12s;
+}
 
 /* ── Device glow ──────────────────────────────────────────────────────── */
 
