@@ -10,6 +10,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -103,64 +105,64 @@ export const OnboardingSlide = React.memo(function OnboardingSlide({
 
 const styles = StyleSheet.create({
   slide: {
-    paddingHorizontal: 18,
+    paddingHorizontal: semantic.card.paddingLarge,
     justifyContent: 'center',
   },
   iconWrap: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: space['5'],
   },
   title: {
     fontSize: 26,
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: space['2'],
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: fontSize.sm,
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
+    lineHeight: space['5'],
+    marginBottom: space['5'],
   },
   navPreview: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 24,
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    gap: space['6'],
+    borderRadius: radius['2xl'],
+    borderWidth: semantic.input.borderWidth,
+    paddingVertical: space['2.5'],
+    paddingHorizontal: semantic.screen.padding,
+    marginBottom: semantic.section.gap,
   },
   navTab: {
     alignItems: 'center',
-    gap: 4,
+    gap: semantic.card.gapTiny,
   },
   navTabLabel: {
-    fontSize: 11,
+    fontSize: semantic.section.labelSize,
     fontWeight: '600',
   },
   card: {
-    padding: 16,
-    gap: 12,
+    padding: semantic.card.padding,
+    gap: semantic.card.gap,
   },
   bulletRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: space['2.5'],
     alignItems: 'flex-start',
   },
   bulletNumber: {
-    width: 22,
-    height: 22,
+    width: space['5.5'],
+    height: space['5.5'],
     borderRadius: 11,
-    fontSize: 12,
+    fontSize: fontSize.xs,
     fontWeight: '700',
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: space['5.5'],
   },
   bulletText: {
     flex: 1,
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: semantic.form.labelSize,
+    lineHeight: space['5'],
   },
 });

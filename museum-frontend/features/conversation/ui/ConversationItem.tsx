@@ -7,6 +7,8 @@ import { useTranslation } from 'react-i18next';
 import type { DashboardSessionCard } from '@/features/chat/domain/dashboard-session';
 import { SwipeableConversationCard } from '@/features/conversation/ui/SwipeableConversationCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, fontSize } from '@/shared/ui/tokens.generated';
 
 interface ConversationItemProps {
   /** The session card data to render. */
@@ -101,38 +103,38 @@ export const ConversationItem = React.memo(function ConversationItem({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 14,
-    gap: 4,
+    borderRadius: semantic.card.paddingLarge,
+    borderWidth: semantic.input.borderWidth,
+    padding: space['3.5'],
+    gap: semantic.card.gapTiny,
   },
   cardRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: semantic.form.gap,
   },
   checkboxContainer: {
-    paddingTop: 2,
+    paddingTop: space['0.5'],
   },
   cardContent: {
     flex: 1,
-    gap: 4,
+    gap: semantic.card.gapTiny,
   },
   cardTitle: {
-    fontSize: 15,
+    fontSize: fontSize.sm,
     fontWeight: '700',
   },
   cardMeta: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
   },
   cardTags: {
-    marginTop: 4,
-    fontSize: 12,
+    marginTop: space['1'],
+    fontSize: semantic.card.captionSize,
     fontWeight: '700',
   },
   savedHint: {
-    marginTop: 6,
-    fontSize: 11,
+    marginTop: space['1.5'],
+    fontSize: semantic.badge.fontSizeSmall,
     fontWeight: '600',
   },
 });

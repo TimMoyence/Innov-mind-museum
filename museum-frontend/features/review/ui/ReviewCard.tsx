@@ -2,6 +2,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
 
 import type { ReviewDTO } from '../infrastructure/reviewApi';
 
@@ -51,10 +53,10 @@ export const ReviewCard = ({ review }: ReviewCardProps) => {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 14,
-    gap: 6,
+    borderRadius: radius.xl,
+    borderWidth: semantic.input.borderWidth,
+    padding: space['3.5'],
+    gap: space['1.5'],
   },
   header: {
     flexDirection: 'row',
@@ -63,13 +65,13 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: fontSize.sm,
   },
   date: {
-    fontSize: 12,
+    fontSize: fontSize.xs,
   },
   comment: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     lineHeight: 19,
   },
 });

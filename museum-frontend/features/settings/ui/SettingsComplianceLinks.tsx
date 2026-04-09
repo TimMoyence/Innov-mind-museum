@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { fontSize } from '@/shared/ui/tokens.generated';
 
 type SettingsRoute =
   | '/(stack)/preferences'
@@ -134,28 +136,28 @@ export const SettingsComplianceLinks = ({
 
 const styles = StyleSheet.create({
   card: {
-    padding: 16,
-    gap: 10,
+    padding: semantic.card.padding,
+    gap: semantic.form.gap,
   },
   cardTitle: {
     fontWeight: '700',
-    fontSize: 17,
+    fontSize: semantic.card.titleSize,
   },
   linkList: {
-    gap: 8,
+    gap: semantic.card.gapSmall,
   },
   linkRow: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-    gap: 4,
+    borderRadius: semantic.card.radiusCompact,
+    borderWidth: semantic.input.borderWidth,
+    padding: semantic.card.paddingCompact,
+    gap: semantic.card.gapTiny,
   },
   linkTitle: {
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: semantic.card.bodySize,
   },
   linkDescription: {
-    lineHeight: 18,
-    fontSize: 12,
+    lineHeight: fontSize.lg,
+    fontSize: semantic.card.captionSize,
   },
 });

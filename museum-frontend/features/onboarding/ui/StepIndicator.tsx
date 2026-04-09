@@ -1,6 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, radius } from '@/shared/ui/tokens.generated';
 
 interface StepIndicatorProps {
   totalSteps: number;
@@ -33,18 +35,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 16,
+    gap: space['2'],
+    paddingVertical: semantic.screen.padding,
   },
   dot: {
-    borderRadius: 999,
+    borderRadius: radius.full,
   },
   activeDot: {
-    width: 24,
-    height: 8,
+    width: space['6'],
+    height: space['2'],
   },
   inactiveDot: {
-    width: 8,
-    height: 8,
+    width: space['2'],
+    height: space['2'],
   },
 });

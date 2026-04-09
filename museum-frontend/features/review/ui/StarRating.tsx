@@ -2,6 +2,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 interface StarRatingProps {
   rating: number;
@@ -18,7 +20,7 @@ export const StarRating = ({
   onRatingChange,
 }: StarRatingProps) => {
   const { theme } = useTheme();
-  const starColor = '#F59E0B';
+  const starColor = semantic.statusBadge.inProgress;
 
   return (
     <View
@@ -60,6 +62,6 @@ export const StarRating = ({
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    gap: 2,
+    gap: space['0.5'],
   },
 });
