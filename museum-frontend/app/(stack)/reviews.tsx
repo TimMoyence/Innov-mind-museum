@@ -12,6 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useReviews } from '@/features/review/application/useReviews';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, fontSize, radius } from '@/shared/ui/tokens.generated';
 import { ReviewCard } from '@/features/review/ui/ReviewCard';
 import { StarRating } from '@/features/review/ui/StarRating';
 import type { ReviewDTO } from '@/features/review/infrastructure/reviewApi';
@@ -240,20 +242,20 @@ export default function ReviewsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    paddingHorizontal: 18,
-    paddingBottom: 16,
+    paddingHorizontal: space['4.5'],
+    paddingBottom: semantic.screen.padding,
   },
   screenTitle: {
-    fontSize: 28,
+    fontSize: semantic.section.titleSizeHero,
     fontWeight: '700',
-    marginBottom: 12,
+    marginBottom: semantic.section.gap,
   },
   headerSection: {
-    gap: 12,
-    marginBottom: 14,
+    gap: semantic.screen.gapSmall,
+    marginBottom: semantic.form.gapLarge,
   },
   statsCard: {
-    padding: 16,
+    padding: semantic.card.padding,
   },
   statsRow: {
     flexDirection: 'row',
@@ -263,18 +265,18 @@ const styles = StyleSheet.create({
   statsLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: space['2.5'],
   },
   avgNumber: {
-    fontSize: 32,
+    fontSize: space['8'],
     fontWeight: '700',
   },
   reviewCount: {
-    fontSize: 14,
+    fontSize: fontSize.sm,
   },
   writeButton: {
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: semantic.button.radiusSmall,
+    paddingVertical: semantic.button.paddingYCompact,
     alignItems: 'center',
   },
   writeButtonText: {
@@ -282,68 +284,68 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   formCard: {
-    padding: 16,
-    gap: 10,
+    padding: semantic.card.padding,
+    gap: semantic.form.gap,
   },
   formTitle: {
     fontWeight: '700',
     fontSize: 17,
   },
   fieldLabel: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     fontWeight: '600',
   },
   input: {
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
+    borderRadius: radius.DEFAULT,
+    borderWidth: semantic.input.borderWidth,
+    paddingHorizontal: semantic.input.paddingCompact,
+    paddingVertical: space['2.5'],
+    fontSize: fontSize.sm,
   },
   commentInput: {
     minHeight: 80,
     textAlignVertical: 'top',
   },
   submitButton: {
-    borderRadius: 12,
+    borderRadius: semantic.button.radiusSmall,
     paddingVertical: 13,
     alignItems: 'center',
-    marginTop: 2,
+    marginTop: space['0.5'],
   },
   submitButtonText: {
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: semantic.button.fontSize,
   },
   successCard: {
-    padding: 16,
+    padding: semantic.card.padding,
     alignItems: 'center',
   },
   successText: {
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: fontSize.sm,
   },
   infoText: {
-    fontSize: 14,
+    fontSize: fontSize.sm,
   },
   errorText: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
   },
   listContent: {
-    paddingBottom: 20,
+    paddingBottom: space['5'],
   },
   emptyContainer: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: space['10'],
   },
   separator: {
-    height: 10,
+    height: space['2.5'],
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: fontSize.sm,
     textAlign: 'center',
   },
   footerLoader: {
-    paddingVertical: 16,
+    paddingVertical: semantic.card.padding,
     alignItems: 'center',
   },
 });

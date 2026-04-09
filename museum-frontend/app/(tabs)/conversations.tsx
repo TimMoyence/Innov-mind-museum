@@ -21,6 +21,8 @@ import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { SkeletonConversationCard } from '@/shared/ui/SkeletonConversationCard';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, fontSize, radius } from '@/shared/ui/tokens.generated';
 
 type ListRow =
   | { kind: 'sticky' }
@@ -247,7 +249,7 @@ export default function ConversationsScreen() {
   return (
     <LiquidScreen
       background={pickMuseumBackground(2)}
-      contentStyle={[styles.screen, { paddingTop: insets.top + 12 }]}
+      contentStyle={[styles.screen, { paddingTop: insets.top + semantic.screen.gapSmall }]}
     >
       <FlashList
         testID="conversation-list"
@@ -258,7 +260,10 @@ export default function ConversationsScreen() {
         stickyHeaderIndices={[1]}
         ListHeaderComponent={listHeader}
         extraData={editMode ? selectedIds.size : 0}
-        contentContainerStyle={{ ...styles.listContent, paddingBottom: insets.bottom + 24 }}
+        contentContainerStyle={{
+          ...styles.listContent,
+          paddingBottom: insets.bottom + semantic.section.marginBottom,
+        }}
         refreshing={isRefreshing}
         onRefresh={() => void loadDashboard(true)}
         onEndReached={() => void loadMore()}
@@ -279,29 +284,29 @@ export default function ConversationsScreen() {
   );
 }
 
-const separatorStyle = { height: 10 } as const;
+const separatorStyle = { height: semantic.form.gap } as const;
 const ItemSeparator = () => <View style={separatorStyle} />;
 
 const styles = StyleSheet.create({
   screen: {
-    paddingHorizontal: 18,
+    paddingHorizontal: semantic.card.paddingLarge,
   },
   menuStatus: {
-    marginTop: 8,
-    marginBottom: 4,
-    fontSize: 12,
+    marginTop: semantic.card.gapSmall,
+    marginBottom: semantic.card.gapTiny,
+    fontSize: semantic.card.captionSize,
     fontWeight: '700',
   },
   listContent: {
-    paddingTop: 16,
+    paddingTop: semantic.screen.padding,
   },
   stickyBar: {
-    paddingVertical: 10,
+    paddingVertical: semantic.list.itemPaddingYCompact,
   },
   primaryButton: {
-    marginTop: 14,
-    borderRadius: 14,
-    paddingVertical: 12,
+    marginTop: semantic.form.gapLarge,
+    borderRadius: semantic.button.radius,
+    paddingVertical: semantic.button.paddingY,
     alignItems: 'center',
     shadowOpacity: 0.2,
     shadowRadius: 10,
@@ -312,54 +317,54 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: semantic.button.fontSize,
   },
   headerCard: {
-    marginTop: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    marginTop: semantic.card.gap,
+    paddingHorizontal: semantic.card.padding,
+    paddingVertical: semantic.card.padding,
     alignItems: 'center',
   },
   brand: {
-    marginBottom: 6,
+    marginBottom: semantic.section.gapTight,
   },
   title: {
-    fontSize: 30,
+    fontSize: fontSize['3xl'],
     fontWeight: '700',
     textAlign: 'center',
   },
   subtitle: {
-    marginTop: 6,
-    fontSize: 14,
-    lineHeight: 20,
+    marginTop: semantic.section.gapTight,
+    fontSize: semantic.card.bodySize,
+    lineHeight: space['5'],
     textAlign: 'center',
   },
   metaLine: {
-    marginTop: 6,
-    fontSize: 12,
+    marginTop: semantic.section.gapTight,
+    fontSize: semantic.card.captionSize,
     fontWeight: '700',
     textAlign: 'center',
   },
   emptyState: {
-    marginTop: 28,
-    padding: 16,
+    marginTop: space['7'],
+    padding: semantic.card.padding,
   },
   emptyTitle: {
-    fontSize: 16,
+    fontSize: semantic.section.subtitleSize,
     fontWeight: '700',
   },
   emptySubtitle: {
-    marginTop: 6,
-    lineHeight: 20,
+    marginTop: semantic.section.gapTight,
+    lineHeight: space['5'],
   },
   emptyActionButton: {
-    marginTop: 12,
-    borderRadius: 10,
-    paddingVertical: 10,
+    marginTop: semantic.card.gap,
+    borderRadius: radius.DEFAULT,
+    paddingVertical: semantic.list.itemPaddingYCompact,
     alignItems: 'center',
   },
   emptyActionText: {
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
   },
 });

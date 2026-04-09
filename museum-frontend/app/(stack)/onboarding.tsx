@@ -20,6 +20,7 @@ import { StepIndicator } from '@/features/onboarding/ui/StepIndicator';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -114,7 +115,7 @@ export default function OnboardingScreen() {
   return (
     <LiquidScreen
       background={pickMuseumBackground(3)}
-      contentStyle={[styles.screen, { paddingTop: insets.top + 16 }]}
+      contentStyle={[styles.screen, { paddingTop: insets.top + semantic.screen.padding }]}
     >
       <Pressable
         onPress={() => void handleSkip()}
@@ -167,17 +168,17 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    paddingHorizontal: 18,
-    paddingBottom: 16,
+    paddingHorizontal: semantic.card.paddingLarge,
+    paddingBottom: semantic.screen.padding,
   },
   skipButton: {
     alignSelf: 'flex-end',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: semantic.card.gapSmall,
+    paddingHorizontal: semantic.card.paddingCompact,
   },
   skipText: {
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: semantic.button.fontSize,
   },
   carousel: {
     flex: 1,
@@ -186,16 +187,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   footer: {
-    paddingTop: 8,
-    gap: 12,
+    paddingTop: semantic.card.gapSmall,
+    gap: semantic.screen.gapSmall,
   },
   primaryButton: {
-    borderRadius: 14,
+    borderRadius: semantic.button.radius,
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: semantic.button.paddingYCompact,
   },
   primaryButtonText: {
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: semantic.button.fontSizeLarge,
   },
 });

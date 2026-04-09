@@ -16,6 +16,8 @@ import { getErrorMessage } from '@/shared/lib/errors';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
@@ -276,44 +278,44 @@ export default function TicketsScreen() {
   );
 }
 
-const separatorStyle = { height: 10 } as const;
+const separatorStyle = { height: space['2.5'] } as const;
 const ItemSeparator = () => <View style={separatorStyle} />;
 
 const styles = StyleSheet.create({
   screen: {
-    paddingHorizontal: 18,
+    paddingHorizontal: semantic.card.paddingLarge,
   },
   headerCard: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: semantic.card.padding,
+    paddingVertical: semantic.card.padding,
     alignItems: 'center',
   },
   title: {
-    fontSize: 28,
+    fontSize: semantic.section.titleSizeHero,
     fontWeight: '700',
     textAlign: 'center',
   },
   filterRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 12,
-    marginBottom: 4,
+    gap: semantic.card.gapSmall,
+    marginTop: semantic.screen.gapSmall,
+    marginBottom: space['1'],
   },
   filterPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
+    paddingHorizontal: semantic.card.paddingCompact,
+    paddingVertical: semantic.section.gapTight,
+    borderRadius: radius['2xl'],
+    borderWidth: semantic.input.borderWidth,
   },
   filterPillText: {
-    fontSize: 12,
+    fontSize: fontSize.xs,
     fontWeight: '600',
   },
   primaryButton: {
-    marginTop: 12,
-    borderRadius: 14,
-    paddingVertical: 12,
+    marginTop: semantic.screen.gapSmall,
+    borderRadius: semantic.button.radius,
+    paddingVertical: semantic.button.paddingY,
     alignItems: 'center',
     shadowOpacity: 0.2,
     shadowRadius: 10,
@@ -321,21 +323,21 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: semantic.button.fontSize,
   },
   loadingWrap: {
-    marginTop: 40,
+    marginTop: space['10'],
     alignItems: 'center',
   },
   listContent: {
-    paddingTop: 16,
-    paddingBottom: 24,
+    paddingTop: semantic.card.padding,
+    paddingBottom: semantic.screen.paddingLarge,
   },
   card: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 14,
-    gap: 6,
+    borderRadius: semantic.card.titleSize,
+    borderWidth: semantic.input.borderWidth,
+    padding: space['3.5'],
+    gap: semantic.list.itemGapSmall,
   },
   cardTitle: {
     fontSize: 15,
@@ -343,16 +345,16 @@ const styles = StyleSheet.create({
   },
   badgeRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: semantic.card.gapSmall,
   },
   badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+    paddingHorizontal: semantic.badge.paddingX,
+    paddingVertical: semantic.badge.paddingYTight,
+    borderRadius: semantic.badge.radius,
   },
   badgeText: {
     color: BADGE_TEXT_COLOR,
-    fontSize: 11,
+    fontSize: semantic.badge.fontSizeSmall,
     fontWeight: '700',
     textTransform: 'capitalize',
   },
@@ -362,32 +364,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardMeta: {
-    fontSize: 12,
+    fontSize: fontSize.xs,
   },
   emptyState: {
-    marginTop: 28,
-    padding: 16,
-    gap: 8,
+    marginTop: semantic.screen.paddingXL,
+    padding: semantic.card.padding,
+    gap: semantic.card.gapSmall,
   },
   emptyTitle: {
-    fontSize: 16,
+    fontSize: fontSize.base,
     fontWeight: '700',
   },
   emptySubtitle: {
-    lineHeight: 20,
-    fontSize: 14,
+    lineHeight: space['5'],
+    fontSize: fontSize.sm,
   },
   emptyButton: {
-    marginTop: 8,
-    borderRadius: 12,
-    paddingVertical: 10,
+    marginTop: semantic.card.gapSmall,
+    borderRadius: semantic.button.radiusSmall,
+    paddingVertical: space['2.5'],
     alignItems: 'center',
   },
   emptyButtonText: {
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
   },
   footerLoader: {
-    marginVertical: 16,
+    marginVertical: semantic.card.padding,
   },
 });

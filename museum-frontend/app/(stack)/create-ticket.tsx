@@ -9,6 +9,8 @@ import type { components } from '@/shared/api/generated/openapi';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, fontSize } from '@/shared/ui/tokens.generated';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
@@ -185,32 +187,32 @@ export default function CreateTicketScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    paddingHorizontal: 18,
+    paddingHorizontal: semantic.card.paddingLarge,
   },
   scrollContent: {
-    gap: 12,
-    paddingBottom: 32,
+    gap: semantic.screen.gapSmall,
+    paddingBottom: space['8'],
   },
   formCard: {
-    padding: 18,
-    gap: 10,
+    padding: semantic.card.paddingLarge,
+    gap: semantic.form.gap,
   },
   title: {
-    fontSize: 24,
+    fontSize: semantic.section.titleSizeLarge,
     fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: space['1'],
   },
   label: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     fontWeight: '600',
-    marginTop: 4,
+    marginTop: space['1'],
   },
   input: {
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
+    borderRadius: semantic.input.radius,
+    borderWidth: semantic.input.borderWidth,
+    paddingHorizontal: semantic.chat.bubblePaddingX,
+    paddingVertical: semantic.button.paddingY,
+    fontSize: fontSize.sm,
   },
   multilineInput: {
     minHeight: 120,
@@ -218,23 +220,23 @@ const styles = StyleSheet.create({
   },
   priorityRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
+    gap: space['2.5'],
+    marginTop: space['1'],
   },
   priorityPill: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
+    paddingVertical: space['2.5'],
+    borderRadius: semantic.button.radiusSmall,
+    borderWidth: semantic.input.borderWidth,
     alignItems: 'center',
   },
   priorityPillText: {
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
   },
   submitButton: {
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderRadius: semantic.button.radius,
+    paddingVertical: semantic.button.paddingYCompact,
     alignItems: 'center',
     shadowOpacity: 0.2,
     shadowRadius: 10,

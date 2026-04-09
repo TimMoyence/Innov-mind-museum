@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
 
 /** Renders the bottom tab navigator with Dashboard and Home tabs using a frosted-glass tab bar. */
 export default function TabLayout() {
@@ -71,18 +72,18 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     backgroundColor: 'transparent',
     height: 84,
-    paddingBottom: 14,
-    paddingTop: 8,
-    marginHorizontal: 14,
-    marginBottom: 12,
-    borderRadius: 999,
+    paddingBottom: semantic.form.gapLarge,
+    paddingTop: semantic.card.gapSmall,
+    marginHorizontal: semantic.form.gapLarge,
+    marginBottom: semantic.card.gap,
+    borderRadius: semantic.badge.radiusFull,
     overflow: 'hidden',
     shadowOpacity: 0.12,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
   },
   tabLabel: {
-    fontSize: 11,
+    fontSize: semantic.badge.fontSizeSmall,
     fontWeight: '700',
   },
 });

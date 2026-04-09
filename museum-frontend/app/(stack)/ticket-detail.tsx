@@ -26,6 +26,8 @@ import { getErrorMessage } from '@/shared/lib/errors';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, fontSize } from '@/shared/ui/tokens.generated';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
@@ -267,42 +269,42 @@ export default function TicketDetailScreen() {
   );
 }
 
-const msgSepStyle = { height: 8 } as const;
+const msgSepStyle = { height: semantic.chat.gap } as const;
 const MessageSeparator = () => <View style={msgSepStyle} />;
 
 const styles = StyleSheet.create({
   screen: {
-    paddingHorizontal: 18,
+    paddingHorizontal: semantic.card.paddingLarge,
   },
   flex: {
     flex: 1,
   },
   headerCard: {
-    padding: 16,
-    gap: 6,
-    marginBottom: 8,
+    padding: semantic.card.padding,
+    gap: semantic.list.itemGapSmall,
+    marginBottom: semantic.card.gapSmall,
   },
   title: {
-    fontSize: 20,
+    fontSize: semantic.section.titleSize,
     fontWeight: '700',
   },
   badgeRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: semantic.card.gapSmall,
   },
   badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+    paddingHorizontal: semantic.badge.paddingX,
+    paddingVertical: semantic.badge.paddingYTight,
+    borderRadius: semantic.badge.radius,
   },
   badgeText: {
     color: BADGE_TEXT_COLOR,
-    fontSize: 11,
+    fontSize: semantic.badge.fontSizeSmall,
     fontWeight: '700',
     textTransform: 'capitalize',
   },
   meta: {
-    fontSize: 12,
+    fontSize: fontSize.xs,
   },
   loadingWrap: {
     flex: 1,
@@ -310,15 +312,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   messageList: {
-    paddingVertical: 12,
-    paddingHorizontal: 4,
+    paddingVertical: semantic.chat.bubblePadding,
+    paddingHorizontal: space['1'],
   },
   messageBubble: {
     maxWidth: '80%',
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 12,
-    gap: 4,
+    borderRadius: semantic.chat.bubbleRadius,
+    borderWidth: semantic.input.borderWidth,
+    padding: semantic.chat.bubblePadding,
+    gap: semantic.card.gapTiny,
   },
   visitorBubble: {
     alignSelf: 'flex-start',
@@ -327,11 +329,11 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
   },
   messageText: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: fontSize.sm,
+    lineHeight: space['5'],
   },
   messageTime: {
-    fontSize: 10,
+    fontSize: space['2.5'],
     alignSelf: 'flex-end',
   },
   staffMessageTimeColor: {
@@ -339,35 +341,35 @@ const styles = StyleSheet.create({
   },
   emptyMessages: {
     textAlign: 'center',
-    marginTop: 24,
-    fontSize: 14,
+    marginTop: semantic.screen.paddingLarge,
+    fontSize: fontSize.sm,
   },
   replyBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    borderTopWidth: 1,
+    gap: semantic.chat.gap,
+    paddingVertical: space['2.5'],
+    paddingHorizontal: space['1'],
+    borderTopWidth: semantic.input.borderWidth,
   },
   replyInput: {
     flex: 1,
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
+    borderRadius: semantic.input.radius,
+    borderWidth: semantic.input.borderWidth,
+    paddingHorizontal: semantic.chat.bubblePaddingX,
+    paddingVertical: space['2.5'],
+    fontSize: fontSize.sm,
     maxHeight: 100,
   },
   sendButton: {
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    borderRadius: semantic.input.radius,
+    paddingHorizontal: semantic.card.padding,
+    paddingVertical: space['2.5'],
     alignItems: 'center',
     justifyContent: 'center',
   },
   sendButtonText: {
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
   },
 });

@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, fontSize, radius } from '@/shared/ui/tokens.generated';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -182,28 +184,28 @@ export default function MuseumDetailScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    paddingHorizontal: 18,
-    paddingBottom: 16,
+    paddingHorizontal: space['4.5'],
+    paddingBottom: semantic.screen.padding,
   },
   backButton: {
-    marginBottom: 8,
+    marginBottom: semantic.card.gapSmall,
     alignSelf: 'flex-start',
-    padding: 4,
+    padding: space['1'],
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
-    gap: 12,
-    paddingBottom: 22,
+    gap: semantic.screen.gapSmall,
+    paddingBottom: space['5.5'],
   },
   heroCard: {
-    padding: 20,
+    padding: semantic.modal.padding,
     alignItems: 'center',
-    gap: 10,
+    gap: space['2.5'],
   },
   heroIcon: {
-    marginBottom: 4,
+    marginBottom: space['1'],
   },
   title: {
     fontSize: 26,
@@ -213,59 +215,59 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: semantic.section.gapTight,
   },
   infoText: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: fontSize.sm,
+    lineHeight: space['5'],
     flex: 1,
   },
   distanceBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
+    gap: semantic.card.gapTiny,
+    paddingHorizontal: space['2.5'],
     paddingVertical: 5,
-    borderRadius: 10,
+    borderRadius: radius.DEFAULT,
   },
   distanceText: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     fontWeight: '700',
   },
   descCard: {
-    padding: 16,
-    gap: 8,
+    padding: semantic.card.padding,
+    gap: semantic.card.gapSmall,
   },
   sectionTitle: {
     fontSize: 17,
     fontWeight: '700',
   },
   description: {
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: fontSize.sm,
+    lineHeight: space['5.5'],
   },
   mapsButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    gap: semantic.section.gapTight,
+    borderWidth: semantic.input.borderWidth,
+    borderRadius: radius.DEFAULT,
+    paddingHorizontal: space['3.5'],
+    paddingVertical: space['2'],
   },
   mapsButtonText: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     fontWeight: '600',
   },
   primaryButton: {
-    marginTop: 4,
-    borderRadius: 14,
-    paddingVertical: 14,
+    marginTop: space['1'],
+    borderRadius: semantic.button.radius,
+    paddingVertical: semantic.button.paddingYCompact,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 8,
+    gap: semantic.card.gapSmall,
     shadowOpacity: 0.2,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 8 },
