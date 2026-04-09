@@ -1,8 +1,8 @@
 # Feature: Knowledge Base Wikidata
 
-> **Status**: Specification (pre-implementation)
+> **Status**: IMPLEMENTED (feature-flagged)
 > **Module**: `museum-backend/src/modules/chat`
-> **Estimated effort**: ~17h
+> **Implementation**: `adapters/secondary/wikidata.client.ts` + `useCase/knowledge-base.service.ts`
 > **Prerequisites**: Node.js 22 (native `fetch`), existing chat pipeline with user memory
 
 ---

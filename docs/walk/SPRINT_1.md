@@ -1,5 +1,7 @@
 # Sprint 1 — Quick Wins
 
+> ⚠️ **STATUS**: NOT STARTED — planning doc only, 0 code.
+>
 > **Duree**: 1 semaine | **Priorite**: IMMEDIATE (pendant review stores) | **Dependances**: S0 complete
 
 ## Goal

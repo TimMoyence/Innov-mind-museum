@@ -1,5 +1,7 @@
 # Sprint 5 — Scale + Polish
 
+> ⚠️ **STATUS**: NOT STARTED — planning doc only, 0 code.
+>
 > **Duree**: 2 semaines | **Priorite**: Post-traction | **Dependances**: S3, S4
 
 ## Goal

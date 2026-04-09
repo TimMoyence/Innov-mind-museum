@@ -167,7 +167,7 @@
 - [x] S3-08: Conversation search + infinite scroll (ConversationSearchBar + cursor pagination + onEndReached)
 - [x] S3-14: +5 langues (ES, DE, IT, JA, ZH) — 296 keys x 7 langues, CI completeness check
 - [x] S3-15: Haptic feedback (expo-haptics on 5 callsites: send, long-press, menu, capture, error)
-- [x] S3-18a: ATTrackingManager (expo-tracking-transparency + iOS permission prompt + app.config.ts plugin)
+- [ ] S3-18a: ATTrackingManager (expo-tracking-transparency NOT installed — removed from package.json; revisit if App Store requires ATT prompt)
 - [x] S3-18b: Dashboard title museum name priority (deriveSessionTitle + dashboard-session.ts dedup fix + 5 new tests)
 
 ### Backend

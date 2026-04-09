@@ -1,5 +1,7 @@
 # Sprint 3 — Walk Phase B: GPS + Narration
 
+> ⚠️ **STATUS**: NOT STARTED — planning doc only, 0 code.
+>
 > **Duree**: 2 semaines | **Priorite**: Post-traction | **Dependances**: S2
 
 ## Goal
