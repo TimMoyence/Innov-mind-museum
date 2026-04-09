@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { TERMS_OF_SERVICE_CONTENT } from '@/features/legal/termsOfServiceContent';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { semantic } from '@/shared/ui/tokens.semantic';
-import { space } from '@/shared/ui/tokens.generated';
+import { space, fontSize, lineHeightPx } from '@/shared/ui/tokens.generated';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: semantic.form.labelSize,
-    lineHeight: 19,
+    lineHeight: lineHeightPx['19'],
   },
   sectionCard: {
     padding: semantic.card.padding,
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: fontSize['base-'],
   },
   paragraphGroup: {
     gap: semantic.card.gapSmall,

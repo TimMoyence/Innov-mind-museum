@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
 import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, fontSize } from '@/shared/ui/tokens.generated';
+import { space, fontSize, lineHeightPx } from '@/shared/ui/tokens.generated';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   },
   cardText: {
     fontSize: semantic.form.labelSize,
-    lineHeight: 19,
+    lineHeight: lineHeightPx['19'],
   },
   secondaryButton: {
     marginTop: space['0.5'],

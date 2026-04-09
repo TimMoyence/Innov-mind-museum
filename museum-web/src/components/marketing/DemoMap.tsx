@@ -94,18 +94,18 @@ export default function DemoMap() {
         >
           <div
             style={{
-              borderRadius: 14,
+              borderRadius: 'var(--radius-xl)',
               background: 'rgba(255,255,255,0.88)',
               backdropFilter: 'blur(20px) saturate(1.4)',
               WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
               padding: '9px 12px',
-              fontSize: 12,
+              fontSize: 'var(--font-size-xs)',
               color: 'var(--color-text-tertiary)',
               border: '1px solid var(--fn-dark-card-border)',
               boxShadow: '0 2px 10px rgba(15,23,42,0.08)',
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
+              gap: 'var(--spacing-2)',
             }}
           >
             <svg
@@ -131,7 +131,7 @@ export default function DemoMap() {
           style={{ transform: 'translate(-50%, -50%)' }}
           aria-hidden="true"
         >
-          <div style={{ position: 'relative', width: 14, height: 14 }}>
+          <div style={{ position: 'relative', width: 'var(--spacing-3.5)', height: 'var(--spacing-3.5)' }}>
             <div
               style={{
                 position: 'absolute',
@@ -176,14 +176,14 @@ export default function DemoMap() {
               style={{
                 width: 36,
                 height: 4,
-                borderRadius: 2,
+                borderRadius: 'var(--radius-xs)',
                 background: 'rgba(148,163,184,0.55)',
                 margin: '0 auto 8px',
               }}
             />
             <div
               style={{
-                fontSize: 13,
+                fontSize: 'var(--font-size-sm-)',
                 fontWeight: 600,
                 color: 'var(--color-text-primary)',
               }}
@@ -192,7 +192,7 @@ export default function DemoMap() {
             </div>
             <div
               style={{
-                fontSize: 10,
+                fontSize: 'var(--font-size-xs-)',
                 color: 'var(--color-text-placeholder)',
                 marginTop: 2,
               }}

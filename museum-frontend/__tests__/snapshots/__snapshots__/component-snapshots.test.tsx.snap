@@ -452,7 +452,7 @@ exports[`ErrorBoundary snapshots matches snapshot when showing fallback after er
     style={
       {
         "color": "#F8FAFC",
-        "fontSize": 22,
+        "fontSize": 20,
         "fontWeight": "700",
         "marginBottom": 8,
         "textAlign": "center",

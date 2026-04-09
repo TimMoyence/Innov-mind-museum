@@ -7,7 +7,7 @@ import type { DailyArtwork } from '../infrastructure/dailyArtApi';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic } from '@/shared/ui/tokens.semantic';
-import { space } from '@/shared/ui/tokens.generated';
+import { space, lineHeightPx } from '@/shared/ui/tokens.generated';
 
 interface DailyArtCardProps {
   artwork: DailyArtwork;
@@ -147,12 +147,12 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    height: 180,
+    height: semantic.media.artworkHeight,
     borderRadius: semantic.card.radiusCompact,
   },
   imageFallback: {
     width: '100%',
-    height: 180,
+    height: semantic.media.artworkHeight,
     borderRadius: semantic.card.radiusCompact,
     alignItems: 'center',
     justifyContent: 'center',
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   },
   funFactText: {
     fontSize: semantic.form.labelSize,
-    lineHeight: 19,
+    lineHeight: lineHeightPx['19'],
     textAlign: 'center',
   },
   actions: {

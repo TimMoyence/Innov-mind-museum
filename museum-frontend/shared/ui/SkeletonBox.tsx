@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useTheme } from './ThemeContext';
+import { radius } from './tokens.generated';
 
 interface SkeletonBoxProps {
   width: DimensionValue;
@@ -17,7 +18,12 @@ interface SkeletonBoxProps {
   style?: StyleProp<ViewStyle>;
 }
 
-export const SkeletonBox = ({ width, height, borderRadius = 8, style }: SkeletonBoxProps) => {
+export const SkeletonBox = ({
+  width,
+  height,
+  borderRadius = radius.md,
+  style,
+}: SkeletonBoxProps) => {
   const { theme } = useTheme();
   const opacity = useSharedValue(0.3);
 

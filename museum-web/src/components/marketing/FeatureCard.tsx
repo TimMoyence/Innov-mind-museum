@@ -11,10 +11,10 @@ export default function FeatureCard({ icon, title, description }: FeatureCardPro
     <div className="liquid-glass-card group p-6 sm:p-8">
       <div className="relative flex h-12 w-12 items-center justify-center rounded-xl text-primary-500 shadow-sm transition-all duration-300 group-hover:shadow-md"
         style={{
-          background: 'rgba(255, 255, 255, 0.6)',
+          background: 'var(--fn-web-glass-inset)',
           backdropFilter: 'blur(12px) saturate(1.4)',
           WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
-          border: '1px solid rgba(255, 255, 255, 0.4)',
+          border: '1px solid var(--fn-web-glass-border)',
         }}
       >
         {icon}

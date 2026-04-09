@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   artworkTitle: {
-    fontSize: 15,
+    fontSize: fontSize['base-'],
     fontWeight: '600',
   },
   artworkDetail: {

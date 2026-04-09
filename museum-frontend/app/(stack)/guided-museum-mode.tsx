@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, fontSize } from '@/shared/ui/tokens.generated';
+import { space, fontSize, lineHeightPx } from '@/shared/ui/tokens.generated';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -171,16 +171,16 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: fontSize['base-'],
   },
   cardText: {
     fontSize: semantic.form.labelSize,
-    lineHeight: 19,
+    lineHeight: lineHeightPx['19'],
   },
   primaryButton: {
     borderRadius: semantic.button.radius,
     alignItems: 'center',
-    paddingVertical: 13,
+    paddingVertical: space['3'],
     paddingHorizontal: space['3.5'],
   },
   primaryButtonText: {
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     borderRadius: semantic.button.radius,
     borderWidth: semantic.input.borderWidth,
     alignItems: 'center',
-    paddingVertical: 13,
+    paddingVertical: space['3'],
   },
   secondaryButtonText: {
     fontWeight: '700',

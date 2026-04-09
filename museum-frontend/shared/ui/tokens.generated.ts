@@ -65,14 +65,21 @@ export const statusColors = {
 } as const;
 
 export const fontSize = {
+  '2xs': 9,
+  'xs-': 10,
   xs: 12,
+  'sm-': 13,
   sm: 14,
+  'base-': 15,
   base: 16,
+  'lg-': 17,
   lg: 18,
   xl: 20,
   '2xl': 24,
+  '2xl+': 26,
   '3xl': 30,
   '4xl': 36,
+  '5xl': 48,
 } as const;
 
 export const fontWeight = {
@@ -87,6 +94,15 @@ export const lineHeight = {
   snug: 1.25,
   normal: 1.5,
   relaxed: 1.625,
+} as const;
+
+export const lineHeightPx = {
+  '16': 16,
+  '18': 18,
+  '19': 19,
+  '21': 21,
+  '22': 22,
+  '24': 24,
 } as const;
 
 export const space = {

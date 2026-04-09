@@ -1,6 +1,14 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions -- HTML template with numeric design tokens injected as px values */
 import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, radius } from '@/shared/ui/tokens.generated';
+import {
+  space,
+  radius,
+  primaryScale,
+  textColors,
+  darkTextColors,
+  surfaceColors,
+  darkSurfaceColors,
+} from '@/shared/ui/tokens.generated';
 
 /**
  * Generates a self-contained HTML string for a Leaflet map rendered inside a WebView.
@@ -25,8 +33,8 @@ export const buildLeafletHtml = ({ isDark }: LeafletHtmlOptions): string => {
     ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
     : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 
-  const popupTextColor = isDark ? '#F8FAFC' : '#0F172A';
-  const popupBg = isDark ? '#1E293B' : '#FFFFFF';
+  const popupTextColor = isDark ? darkTextColors.primary : textColors.primary;
+  const popupBg = isDark ? darkSurfaceColors.elevated : surfaceColors.default;
 
   return /* html */ `
 <!DOCTYPE html>
@@ -39,22 +47,22 @@ export const buildLeafletHtml = ({ isDark }: LeafletHtmlOptions): string => {
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body, #map { width: 100%; height: 100%; }
-    body { background: ${isDark ? '#0F172A' : '#EAF2FF'}; }
+    body { background: ${isDark ? darkSurfaceColors.default : primaryScale['50']}; }
 
     /* Museum markers by category */
-    .museum-marker { width: ${space['3.5']}px; height: ${space['3.5']}px; border-radius: 50%; border: 2.5px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
-    .museum-marker-art         { background: #7C3AED; } /* violet */
-    .museum-marker-history     { background: #DC2626; } /* red */
-    .museum-marker-science     { background: #0891B2; } /* cyan */
-    .museum-marker-specialized { background: #EA580C; } /* orange */
-    .museum-marker-general     { background: #2563EB; } /* blue */
+    .museum-marker { width: ${space['3.5']}px; height: ${space['3.5']}px; border-radius: 50%; border: 2.5px solid ${semantic.mapMarker.markerBorder}; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+    .museum-marker-art         { background: ${semantic.mapMarker.museum}; } /* violet */
+    .museum-marker-history     { background: ${semantic.mapMarker.restaurant}; } /* red */
+    .museum-marker-science     { background: ${semantic.mapMarker.cafe}; } /* cyan */
+    .museum-marker-specialized { background: ${semantic.mapMarker.shop}; } /* orange */
+    .museum-marker-general     { background: ${semantic.mapMarker.default}; } /* blue */
 
     /* User position marker (green + pulse) */
     .user-marker {
       width: ${semantic.card.paddingLarge}px; height: ${semantic.card.paddingLarge}px;
       border-radius: 50%;
-      background: #16A34A;
-      border: 3px solid #fff;
+      background: ${semantic.mapMarker.user};
+      border: 3px solid ${semantic.mapMarker.userBorder};
       box-shadow: 0 0 0 5px rgba(22,163,74,0.3), 0 1px 4px rgba(0,0,0,0.3);
       animation: pulse 2s ease-out infinite;
     }

@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   successText: {
-    fontSize: 15,
+    fontSize: fontSize['base-'],
     fontWeight: '600',
     lineHeight: space['5.5'],
   },

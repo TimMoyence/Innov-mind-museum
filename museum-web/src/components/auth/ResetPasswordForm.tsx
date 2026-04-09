@@ -25,7 +25,7 @@ function ResetPasswordFormInner({ dict }: ResetPasswordFormProps) {
 
   if (!token) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-50 via-primary-100 to-[#D5F0FF] px-4">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-50 via-primary-100 to-[var(--sem-web-auth-gradient)] px-4">
         <div className="w-full max-w-md rounded-2xl border border-primary-100 bg-white p-8 shadow-lg text-center">
           <div className="mb-4 text-4xl">🔗</div>
           <h1 className="text-xl font-bold text-primary-700">{dict.invalidToken}</h1>
@@ -42,7 +42,7 @@ function ResetPasswordFormInner({ dict }: ResetPasswordFormProps) {
 
   if (isSuccess) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-50 via-primary-100 to-[#D5F0FF] px-4">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-50 via-primary-100 to-[var(--sem-web-auth-gradient)] px-4">
         <div className="w-full max-w-md rounded-2xl border border-primary-100 bg-white p-8 shadow-lg text-center">
           <div className="mb-4 text-4xl">✓</div>
           <h1 className="text-xl font-bold text-primary-700">{dict.success}</h1>
@@ -84,7 +84,7 @@ function ResetPasswordFormInner({ dict }: ResetPasswordFormProps) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-50 via-primary-100 to-[#D5F0FF] px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-50 via-primary-100 to-[var(--sem-web-auth-gradient)] px-4">
       <div className="w-full max-w-md rounded-2xl border border-primary-100 bg-white p-8 shadow-lg">
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-bold text-primary-700">Musaium</h1>

@@ -149,6 +149,70 @@ export const semantic = {
     priorityMedium: '#F59E0B',
     priorityHigh: '#EF4444',
   },
+
+  /** Device chrome colors (hardware simulation for mockup components) */
+  deviceChrome: {
+    bezel: '#000000',
+    bezelAlt: '#0a0a0a',
+    frame: '#111111',
+    frameDark: '#1a1a1a',
+    frameAccent: '#2a2a2a',
+    notch: '#000000',
+    speaker: '#000000',
+  },
+
+  /** Section dark backgrounds (landing page dark sections) */
+  sectionDark: {
+    background: '#0a0a1a',
+    backgroundAlt: '#080820',
+    backgroundDeep: '#0a0a0b',
+    backgroundMid: '#0d0d12',
+    backgroundAccent: '#111118',
+  },
+
+  /** Map marker colors (Leaflet) */
+  mapMarker: {
+    museum: '#7C3AED',
+    restaurant: '#DC2626',
+    cafe: '#0891B2',
+    shop: '#EA580C',
+    default: '#2563EB',
+    user: '#16A34A',
+    userBorder: '#FFFFFF',
+    markerBorder: '#FFFFFF',
+    success: '#34C759',
+    error: '#FF3B30',
+  },
+
+  /** Chart colors (Recharts analytics dashboard) */
+  chart: {
+    primary: '#2563eb',
+    secondary: '#16a34a',
+    tertiary: '#d97706',
+    quaternary: '#6366f1',
+  },
+
+  /** Image/media component sizes */
+  media: {
+    imagePreview: 220,           // chat image preview
+    artworkHeight: 180,          // daily art card image
+    sendButtonSize: 44,          // chat send button
+    avatarSmall: 28,             // chat avatar
+    avatarMedium: 34,            // chat input avatar
+    tabBarHeight: 84,            // bottom tab bar
+    safeAreaTop: 60,             // safe area offset
+    homeBottomPad: 110,          // home screen bottom padding
+  },
+
+  /** Fullscreen modal overlay */
+  fullscreenModal: {
+    background: '#FFFFFF',
+    captionColor: '#AAAAAA',
+    counterColor: '#FFFFFF',
+  },
+
+  /** Web auth form gradient endpoint */
+  webAuthGradient: '#D5F0FF',
 } as const;
 
 export type Semantic = typeof semantic;

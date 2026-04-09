@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     marginBottom: space['1'],
   },
   title: {
-    fontSize: 26,
+    fontSize: fontSize['2xl+'],
     fontWeight: '700',
     textAlign: 'center',
   },
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: semantic.card.gapTiny,
     paddingHorizontal: space['2.5'],
-    paddingVertical: 5,
+    paddingVertical: space['1'],
     borderRadius: radius.DEFAULT,
   },
   distanceText: {
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     gap: semantic.card.gapSmall,
   },
   sectionTitle: {
-    fontSize: 17,
+    fontSize: fontSize['lg-'],
     fontWeight: '700',
   },
   description: {
@@ -274,6 +274,6 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: fontSize['base-'],
   },
 });

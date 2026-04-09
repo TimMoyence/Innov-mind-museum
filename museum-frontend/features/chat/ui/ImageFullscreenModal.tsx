@@ -27,9 +27,9 @@ interface ImageFullscreenModalProps {
 
 const SWIPE_THRESHOLD = 150;
 const MODAL_BG = 'rgba(0,0,0,0.95)';
-const CAPTION_COLOR = '#FFFFFF';
-const ATTRIBUTION_COLOR = '#AAAAAA';
-const COUNTER_COLOR = '#FFFFFF';
+const CAPTION_COLOR = semantic.fullscreenModal.background;
+const ATTRIBUTION_COLOR = semantic.fullscreenModal.captionColor;
+const COUNTER_COLOR = semantic.fullscreenModal.counterColor;
 
 /**
  * Fullscreen modal for viewing enriched images with swipe navigation.

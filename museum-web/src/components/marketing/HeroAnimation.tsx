@@ -155,7 +155,7 @@ export default function HeroAnimation() {
                 width: PHONE_WIDTH,
                 height: PHONE_HEIGHT,
                 borderRadius: OUTER_R,
-                background: 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 50%, #111 100%)',
+                background: 'linear-gradient(145deg, var(--sem-device-chrome-frame-accent) 0%, var(--sem-device-chrome-frame-dark) 50%, var(--sem-device-chrome-frame) 100%)',
                 padding: BEZEL,
                 boxShadow: '0 25px 60px rgba(0,0,0,0.4), 0 10px 20px rgba(0,0,0,0.2)',
                 position: 'relative',
@@ -169,7 +169,7 @@ export default function HeroAnimation() {
                   borderRadius: INNER_R,
                   overflow: 'hidden',
                   position: 'relative',
-                  background: '#000',
+                  background: 'var(--sem-device-chrome-bezel)',
                 }}
               >
                 <Image
@@ -189,8 +189,8 @@ export default function HeroAnimation() {
                     top: 9,
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    borderRadius: 9999,
-                    background: '#000',
+                    borderRadius: 'var(--radius-full)',
+                    background: 'var(--sem-device-chrome-notch)',
                     zIndex: 2,
                   }}
                 />
@@ -215,7 +215,7 @@ export default function HeroAnimation() {
                   top: 0,
                   left: '10%',
                   right: '10%',
-                  height: 1,
+                  height: '1px',
                   background:
                     'linear-gradient(90deg, transparent, rgba(255,255,255,0.15) 30%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.15) 70%, transparent)',
                   pointerEvents: 'none',

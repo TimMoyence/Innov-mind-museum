@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   },
   writeButtonText: {
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: fontSize['base-'],
   },
   formCard: {
     padding: semantic.card.padding,
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   },
   formTitle: {
     fontWeight: '700',
-    fontSize: 17,
+    fontSize: fontSize['lg-'],
   },
   fieldLabel: {
     fontSize: semantic.form.labelSize,
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     borderRadius: semantic.button.radiusSmall,
-    paddingVertical: 13,
+    paddingVertical: space['3'],
     alignItems: 'center',
     marginTop: space['0.5'],
   },

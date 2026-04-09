@@ -17,7 +17,7 @@ import type { WebView as WebViewType } from 'react-native-webview';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic } from './tokens.semantic';
-import { space } from './tokens.generated';
+import { space, fontSize as fontSizeTokens } from './tokens.generated';
 
 interface InAppBrowserProps {
   /** URL to load. `null` hides the modal. */
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   },
   errorOverlay: {
     position: 'absolute',
-    top: 60,
+    top: semantic.media.safeAreaTop,
     left: 0,
     right: 0,
     bottom: 0,
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   errorText: {
-    fontSize: 15,
+    fontSize: fontSizeTokens['base-'],
     textAlign: 'center',
   },
   errorButton: {
@@ -231,11 +231,11 @@ const styles = StyleSheet.create({
   },
   errorButtonText: {
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: fontSizeTokens['base-'],
   },
   loadingOverlay: {
     position: 'absolute',
-    top: 60,
+    top: semantic.media.safeAreaTop,
     left: 0,
     right: 0,
     alignItems: 'center',

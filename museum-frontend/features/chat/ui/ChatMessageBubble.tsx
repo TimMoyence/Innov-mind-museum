@@ -312,8 +312,8 @@ const styles = StyleSheet.create({
   },
   messageImage: {
     marginTop: space['2'],
-    width: 220,
-    height: 220,
+    width: semantic.media.imagePreview,
+    height: semantic.media.imagePreview,
     borderRadius: radius.lg,
     borderWidth: semantic.input.borderWidth,
   },
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   cachedBadge: {
-    fontSize: 10,
+    fontSize: fontSize['xs-'],
     fontStyle: 'italic',
     marginTop: space['1'],
     alignSelf: 'flex-start',

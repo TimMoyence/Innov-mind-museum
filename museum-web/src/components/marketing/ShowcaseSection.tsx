@@ -40,8 +40,8 @@ export default function ShowcaseSection({
       className="relative overflow-hidden py-24 sm:py-32"
       style={
         isDark
-          ? { background: 'linear-gradient(180deg, #0a0a1a 0%, #080820 50%, #0a0a1a 100%)' }
-          : { background: '#fff' }
+          ? { background: 'linear-gradient(180deg, var(--sem-section-dark-background) 0%, var(--sem-section-dark-background-alt) 50%, var(--sem-section-dark-background) 100%)' }
+          : { background: 'var(--color-surface)' }
       }
     >
       {isDark && (

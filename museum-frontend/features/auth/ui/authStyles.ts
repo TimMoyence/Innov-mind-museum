@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
+import { space, radius, fontSize, lineHeightPx } from '@/shared/ui/tokens.generated';
 
 /**
  * Shared styles for the authentication screen and its sub-components
@@ -42,7 +42,7 @@ export const authStyles = StyleSheet.create({
   subtitle: {
     fontSize: fontSize.sm,
     textAlign: 'center',
-    lineHeight: 21,
+    lineHeight: lineHeightPx['21'],
   },
   form: {
     gap: semantic.form.gap,
@@ -74,7 +74,7 @@ export const authStyles = StyleSheet.create({
   },
   submitButtonText: {
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: fontSize['base-'],
   },
   switchButton: {
     borderRadius: semantic.button.radiusSmall,
@@ -115,7 +115,7 @@ export const authStyles = StyleSheet.create({
   },
   googleButtonText: {
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: fontSize['base-'],
   },
   gdprRow: {
     flexDirection: 'row',
@@ -135,7 +135,7 @@ export const authStyles = StyleSheet.create({
   gdprText: {
     flex: 1,
     fontSize: semantic.badge.fontSize,
-    lineHeight: 18,
+    lineHeight: lineHeightPx['18'],
   },
   gdprLink: {
     fontWeight: '600',
@@ -143,7 +143,7 @@ export const authStyles = StyleSheet.create({
   legalText: {
     fontSize: semantic.section.labelSize,
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: lineHeightPx['16'],
     marginTop: space['1'],
   },
 });

@@ -3,7 +3,7 @@ import { getAlternates, getOpenGraph } from '@/lib/seo';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import AnimatedSection from '@/components/marketing/AnimatedSection';
-import FeatureCard from '@/components/marketing/FeatureCard';
+import BentoFeatureGrid from '@/components/marketing/BentoFeatureGrid';
 import StoreButton from '@/components/marketing/StoreButton';
 import PhoneMockup from '@/components/marketing/PhoneMockup';
 import HeroPlayerLoader from '@/components/marketing/HeroPlayerLoader';
@@ -313,7 +313,13 @@ export default async function LandingPage({ params }: LandingPageProps) {
       {/* ================================================================ */}
       {/* SECTION 1: HERO (dark, full viewport)                           */}
       {/* ================================================================ */}
-      <section className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#0a0a0b] via-[#0d0d12] to-[#111118]">
+      <section
+        className="relative min-h-screen overflow-hidden"
+        style={{
+          background:
+            'linear-gradient(to bottom, var(--sem-section-dark-background-deep), var(--sem-section-dark-background-mid), var(--sem-section-dark-background-accent))',
+        }}
+      >
         {/* Parallax orbs on dark bg */}
         <HeroOrbs />
 
@@ -371,9 +377,22 @@ export default async function LandingPage({ params }: LandingPageProps) {
           </div>
         </div>
 
+        {/* Scroll indicator */}
+        <div
+          className="pointer-events-none absolute bottom-8 left-1/2 -translate-x-1/2 z-10"
+          aria-hidden="true"
+        >
+          <div className="flex flex-col items-center gap-2 opacity-60">
+            <div className="h-8 w-5 rounded-full border-2 border-white/30 p-1">
+              <div className="h-2 w-1 rounded-full bg-white/50 animate-scroll-bounce mx-auto" />
+            </div>
+          </div>
+        </div>
+
         {/* Bottom gradient fade to light */}
         <div
-          className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#EAF2FF] to-transparent"
+          className="pointer-events-none absolute bottom-0 left-0 right-0 h-32"
+          style={{ background: 'linear-gradient(to top, var(--color-primary-50), transparent)' }}
           aria-hidden="true"
         />
       </section>
@@ -383,7 +402,10 @@ export default async function LandingPage({ params }: LandingPageProps) {
       {/* ================================================================ */}
       <section
         className="relative overflow-hidden py-16 sm:py-24"
-        style={{ background: 'linear-gradient(180deg, #EAF2FF 0%, #D8E8FF 50%, #D5F0FF 100%)' }}
+        style={{
+          background:
+            'linear-gradient(180deg, var(--color-primary-50) 0%, var(--color-primary-100) 50%, var(--sem-web-auth-gradient) 100%)',
+        }}
       >
         {/* Museum background image at low opacity — like the mobile app */}
         <div className="pointer-events-none absolute inset-0 opacity-[0.12]" aria-hidden="true">
@@ -416,18 +438,95 @@ export default async function LandingPage({ params }: LandingPageProps) {
           {/* Pill buttons matching the app — Discover, Camera, Audio */}
           <AnimatedSection delay={0.15}>
             <div className="mt-8 flex justify-center gap-3">
-              {['Discover', 'Camera', 'Audio'].map((label) => (
-                <div
-                  key={label}
-                  className="liquid-glass-card flex items-center gap-2 !rounded-full px-5 py-2.5"
-                  style={{
-                    background: 'rgba(255,255,255,0.65)',
-                    backdropFilter: 'blur(20px) saturate(1.5)',
-                  }}
+              {/* Discover pill */}
+              <div
+                className="liquid-glass-card flex items-center gap-2 !rounded-full px-5 py-2.5"
+                style={{
+                  background: 'rgba(255,255,255,0.65)',
+                  backdropFilter: 'blur(20px) saturate(1.5)',
+                }}
+              >
+                <svg
+                  className="h-4 w-4 text-primary-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
                 >
-                  <span className="text-sm font-semibold text-text-primary">{label}</span>
-                </div>
-              ))}
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803a7.5 7.5 0 0010.607 0z"
+                  />
+                </svg>
+                <span className="text-sm font-semibold text-text-primary">Discover</span>
+              </div>
+              {/* Camera pill */}
+              <div
+                className="liquid-glass-card flex items-center gap-2 !rounded-full px-5 py-2.5"
+                style={{
+                  background: 'rgba(255,255,255,0.65)',
+                  backdropFilter: 'blur(20px) saturate(1.5)',
+                }}
+              >
+                <svg
+                  className="h-4 w-4 text-primary-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"
+                  />
+                </svg>
+                <span className="text-sm font-semibold text-text-primary">Camera</span>
+              </div>
+              {/* Audio pill */}
+              <div
+                className="liquid-glass-card flex items-center gap-2 !rounded-full px-5 py-2.5"
+                style={{
+                  background: 'rgba(255,255,255,0.65)',
+                  backdropFilter: 'blur(20px) saturate(1.5)',
+                }}
+              >
+                <svg
+                  className="h-4 w-4 text-primary-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"
+                  />
+                </svg>
+                <span className="text-sm font-semibold text-text-primary">Audio</span>
+              </div>
+            </div>
+          </AnimatedSection>
+
+          {/* Phone mockup showing the home screen */}
+          <AnimatedSection delay={0.25} variant="scale">
+            <div className="mt-12 flex justify-center">
+              <PhoneMockup>
+                <Image
+                  src="/images/screenshots/02_home.png"
+                  alt="Musaium home screen"
+                  fill
+                  sizes="300px"
+                  style={{ objectFit: 'cover' }}
+                />
+              </PhoneMockup>
             </div>
           </AnimatedSection>
         </div>
@@ -547,19 +646,8 @@ export default async function LandingPage({ params }: LandingPageProps) {
             </div>
           </AnimatedSection>
 
-          <AnimatedSection
-            delay={0.1}
-            stagger
-            className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            {dict.features.grid.map((feature, i) => (
-              <FeatureCard
-                key={i}
-                icon={featureIcons[i]}
-                title={feature.title}
-                description={feature.description}
-              />
-            ))}
+          <AnimatedSection delay={0.1}>
+            <BentoFeatureGrid features={dict.features.grid} icons={featureIcons} />
           </AnimatedSection>
         </div>
       </section>
@@ -575,7 +663,10 @@ export default async function LandingPage({ params }: LandingPageProps) {
       <section
         id="download"
         className="relative overflow-hidden py-24 sm:py-32"
-        style={{ background: 'linear-gradient(180deg, #0a0a1a 0%, #080820 50%, #0a0a1a 100%)' }}
+        style={{
+          background:
+            'linear-gradient(180deg, var(--sem-section-dark-background) 0%, var(--sem-section-dark-background-alt) 50%, var(--sem-section-dark-background) 100%)',
+        }}
       >
         <div
           className="pointer-events-none absolute left-1/4 top-10 h-[350px] w-[350px] rounded-full bg-primary-500/10 blur-3xl orb"

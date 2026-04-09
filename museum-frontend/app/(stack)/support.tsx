@@ -10,7 +10,7 @@ import {
   type SupportChannelKey,
 } from '@/shared/config/supportLinks';
 import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, fontSize } from '@/shared/ui/tokens.generated';
+import { space, fontSize, lineHeightPx } from '@/shared/ui/tokens.generated';
 import { FloatingContextMenu, type ContextMenuAction } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     fontSize: semantic.section.subtitleSize,
   },
   cardText: {
-    lineHeight: 19,
+    lineHeight: lineHeightPx['19'],
     fontSize: semantic.form.labelSize,
   },
   primaryButton: {
