@@ -10,8 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space } from '@/shared/ui/tokens.generated';
+import { semantic, space } from '@/shared/ui/tokens';
 
 const DOT_SIZE = 8;
 const DOT_COUNT = 3;

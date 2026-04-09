@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
+import { semantic } from '@/shared/ui/tokens';
 
 interface ExpertiseBadgeProps {
   level: 'beginner' | 'intermediate' | 'expert';

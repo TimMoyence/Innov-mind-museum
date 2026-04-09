@@ -1,7 +1,5 @@
 @import 'tailwindcss';
-@import '../tokens.generated.css';
-@import '../tokens.functional.css';
-@import '../tokens.semantic.css';
+@import '../tokens.css';
 
 /* ── Base ─────────────────────────────────────────────────────────────── */
 

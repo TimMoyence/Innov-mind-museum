@@ -9,8 +9,7 @@ import type { components } from '@/shared/api/generated/openapi';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, fontSize } from '@/shared/ui/tokens.generated';
+import { semantic, space, fontSize } from '@/shared/ui/tokens';
 
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';

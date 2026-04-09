@@ -16,8 +16,7 @@ import { getErrorMessage } from '@/shared/lib/errors';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
+import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 

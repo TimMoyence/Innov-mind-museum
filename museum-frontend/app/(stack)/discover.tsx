@@ -4,8 +4,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, fontSize, lineHeightPx } from '@/shared/ui/tokens.generated';
+import { semantic, space, fontSize, lineHeightPx } from '@/shared/ui/tokens';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';

@@ -6,8 +6,8 @@ import {
   darkSurfaceColors,
   statusColors,
   gradientColors,
-} from './tokens.generated';
-import { functional } from './tokens.functional';
+  functional,
+} from './tokens';
 
 export interface ThemePalette {
   pageGradient: readonly [string, string, ...string[]];

@@ -5,8 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ExpertiseBadge } from '@/features/chat/ui/ExpertiseBadge';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
+import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
 
 interface ChatHeaderProps {
   sessionTitle: string | null;

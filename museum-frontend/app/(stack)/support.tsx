@@ -9,8 +9,7 @@ import {
   isValidSupportUrl,
   type SupportChannelKey,
 } from '@/shared/config/supportLinks';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, fontSize, lineHeightPx } from '@/shared/ui/tokens.generated';
+import { semantic, space, fontSize, lineHeightPx } from '@/shared/ui/tokens';
 import { FloatingContextMenu, type ContextMenuAction } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';

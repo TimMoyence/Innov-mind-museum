@@ -1,8 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, radius } from '@/shared/ui/tokens.generated';
+import { semantic, space, radius } from '@/shared/ui/tokens';
 
 interface StepIndicatorProps {
   totalSteps: number;

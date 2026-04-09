@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import type { ApiConfigurationSnapshot } from '@/shared/infrastructure/apiConfig';
-import { semantic } from './tokens.semantic';
+import { semantic } from './tokens';
 
 interface StartupConfigurationErrorScreenProps {
   error: Error;

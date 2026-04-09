@@ -5,8 +5,7 @@ import * as Sentry from '@sentry/react-native';
 import * as Updates from 'expo-updates';
 import i18n from '@/shared/i18n/i18n';
 import { darkTheme } from './themes';
-import { semantic } from './tokens.semantic';
-import { fontSize as fontSizeTokens, radius, space, lineHeightPx } from './tokens.generated';
+import { semantic, fontSize as fontSizeTokens, radius, space, lineHeightPx } from './tokens';
 
 interface Props {
   children: ReactNode;

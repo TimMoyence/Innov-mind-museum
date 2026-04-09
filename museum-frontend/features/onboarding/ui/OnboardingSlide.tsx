@@ -10,8 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
+import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

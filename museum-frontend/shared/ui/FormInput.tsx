@@ -4,8 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from './tokens.semantic';
-import { space } from './tokens.generated';
+import { semantic, space } from './tokens';
 
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 

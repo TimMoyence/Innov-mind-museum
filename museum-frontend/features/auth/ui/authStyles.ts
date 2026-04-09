@@ -1,7 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, radius, fontSize, lineHeightPx } from '@/shared/ui/tokens.generated';
+import { semantic, space, radius, fontSize, lineHeightPx } from '@/shared/ui/tokens';
 
 /**
  * Shared styles for the authentication screen and its sub-components
@@ -143,7 +142,7 @@ export const authStyles = StyleSheet.create({
   legalText: {
     fontSize: semantic.section.labelSize,
     textAlign: 'center',
-    lineHeight: lineHeightPx['16'],
+    lineHeight: lineHeightPx['18'],
     marginTop: space['1'],
   },
 });

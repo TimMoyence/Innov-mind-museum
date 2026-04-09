@@ -23,8 +23,7 @@ import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { fontSize } from '@/shared/ui/tokens.generated';
+import { semantic, fontSize } from '@/shared/ui/tokens';
 
 type ViewMode = 'list' | 'map';
 

@@ -47,12 +47,10 @@ export const typography = {
 
   /** Absolute line heights in px (React Native) — for cases where relative values don't apply */
   lineHeightPx: {
-    '16': { px: 16, rem: '1rem' },
     '18': { px: 18, rem: '1.125rem' },
     '19': { px: 19, rem: '1.1875rem' },
     '21': { px: 21, rem: '1.3125rem' },
     '22': { px: 22, rem: '1.375rem' },
-    '24': { px: 24, rem: '1.5rem' },
   },
 
   fontFamily: {

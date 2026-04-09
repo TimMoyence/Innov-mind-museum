@@ -1,8 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { SkeletonBox } from './SkeletonBox';
 import { useTheme } from './ThemeContext';
-import { semantic } from './tokens.semantic';
-import { space, radius, fontSize } from './tokens.generated';
+import { semantic, space, radius, fontSize } from './tokens';
 
 interface SkeletonChatBubbleProps {
   alignSelf?: 'flex-start' | 'flex-end';

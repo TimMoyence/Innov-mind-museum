@@ -8,8 +8,7 @@ import {
   isPrivacyPlaceholderValue,
 } from '@/features/legal/privacyPolicyContent';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, radius, fontSize, lineHeightPx } from '@/shared/ui/tokens.generated';
+import { semantic, space, radius, fontSize, lineHeightPx } from '@/shared/ui/tokens';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';

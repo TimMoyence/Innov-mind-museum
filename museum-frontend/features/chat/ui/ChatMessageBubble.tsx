@@ -13,8 +13,7 @@ import { ImageFullscreenModal } from '@/features/chat/ui/ImageFullscreenModal';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
+import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
 
 const PROACTIVE_REFRESH_MS = 5 * 60 * 1000;
 

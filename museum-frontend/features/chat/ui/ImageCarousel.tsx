@@ -5,8 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { ChatUiEnrichedImage } from '@/features/chat/application/chatSessionLogic.pure';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, radius } from '@/shared/ui/tokens.generated';
+import { semantic, space, radius } from '@/shared/ui/tokens';
 
 const ATTRIBUTION_BG = 'rgba(0,0,0,0.5)';
 const ATTRIBUTION_COLOR = semantic.fullscreenModal.background;

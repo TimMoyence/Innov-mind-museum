@@ -15,8 +15,7 @@ import { SettingsComplianceLinks } from '@/features/settings/ui/SettingsComplian
 import { SettingsDangerZone } from '@/features/settings/ui/SettingsDangerZone';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, fontSize } from '@/shared/ui/tokens.generated';
+import { semantic, space, fontSize } from '@/shared/ui/tokens';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { LANGUAGE_OPTIONS } from '@/shared/config/supportedLocales';

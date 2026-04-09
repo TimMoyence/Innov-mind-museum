@@ -5,8 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 import { useTheme } from './ThemeContext';
-import { semantic } from './tokens.semantic';
-import { space } from './tokens.generated';
+import { semantic, space } from './tokens';
 
 /** Describes a single action item rendered inside a FloatingContextMenu. */
 export interface ContextMenuAction {

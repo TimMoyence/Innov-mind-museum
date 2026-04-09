@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
+import { semantic } from '@/shared/ui/tokens';
 import type { MuseumCategory, MuseumWithDistance } from '../application/useMuseumDirectory';
 import { buildLeafletHtml } from '../infrastructure/leafletHtml';
 

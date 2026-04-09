@@ -7,8 +7,7 @@ import { useTranslation } from 'react-i18next';
 import type { DashboardSessionCard } from '@/features/chat/domain/dashboard-session';
 import { SwipeableConversationCard } from '@/features/conversation/ui/SwipeableConversationCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic } from '@/shared/ui/tokens.semantic';
-import { space, fontSize } from '@/shared/ui/tokens.generated';
+import { semantic, space, fontSize } from '@/shared/ui/tokens';
 
 interface ConversationItemProps {
   /** The session card data to render. */

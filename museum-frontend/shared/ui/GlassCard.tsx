@@ -3,8 +3,7 @@ import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
 
 import { useTheme } from './ThemeContext';
-import { semantic } from './tokens.semantic';
-import { radius } from './tokens.generated';
+import { semantic, radius } from './tokens';
 
 interface GlassCardProps {
   children: ReactNode;
