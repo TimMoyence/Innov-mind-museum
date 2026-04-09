@@ -7,6 +7,8 @@ import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 interface SwipeableConversationCardProps {
   /** The conversation card content to render. */
@@ -83,17 +85,17 @@ const styles = StyleSheet.create({
   deleteAction: {
     justifyContent: 'center',
     alignItems: 'center',
-    width: 80,
-    borderTopRightRadius: 18,
-    borderBottomRightRadius: 18,
+    width: space['20'],
+    borderTopRightRadius: semantic.card.paddingLarge,
+    borderBottomRightRadius: semantic.card.paddingLarge,
   },
   deleteContent: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: space['1'],
   },
   deleteText: {
-    fontSize: 12,
+    fontSize: semantic.card.captionSize,
     fontWeight: '600',
   },
 });

@@ -3,6 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 interface ConversationSearchBarProps {
   value: string;
@@ -47,17 +49,17 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    marginTop: 12,
+    borderRadius: semantic.input.radiusSmall,
+    borderWidth: semantic.input.borderWidth,
+    paddingHorizontal: semantic.input.paddingCompact,
+    marginTop: semantic.section.gap,
   },
   icon: {
-    marginEnd: 8,
+    marginEnd: space['2'],
   },
   input: {
     flex: 1,
-    paddingVertical: 10,
-    fontSize: 14,
+    paddingVertical: space['2.5'],
+    fontSize: semantic.card.bodySize,
   },
 });

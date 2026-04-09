@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 interface SettingsDangerZoneProps {
   onDeleteAccount: () => void;
@@ -46,25 +48,25 @@ export const SettingsDangerZone = ({
 
 const styles = StyleSheet.create({
   dangerCard: {
-    padding: 16,
-    gap: 10,
+    padding: semantic.card.padding,
+    gap: semantic.form.gap,
   },
   dangerTitle: {
     fontWeight: '700',
-    fontSize: 17,
+    fontSize: semantic.card.titleSize,
   },
   cardBody: {
-    lineHeight: 20,
-    fontSize: 13,
+    lineHeight: space['5'],
+    fontSize: semantic.form.labelSize,
   },
   deleteButton: {
-    marginTop: 2,
-    borderRadius: 12,
+    marginTop: space['0.5'],
+    borderRadius: semantic.button.radiusSmall,
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: semantic.button.paddingY,
   },
   deleteButtonText: {
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: semantic.button.fontSize,
   },
 });

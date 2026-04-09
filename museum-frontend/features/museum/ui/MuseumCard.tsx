@@ -3,6 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
 import type { MuseumWithDistance } from '../application/useMuseumDirectory';
 
 interface MuseumCardProps {
@@ -60,48 +62,48 @@ export const MuseumCard = ({ museum, onPress }: MuseumCardProps) => {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 14,
-    gap: 6,
+    borderRadius: semantic.card.paddingLarge,
+    borderWidth: semantic.input.borderWidth,
+    padding: space['3.5'],
+    gap: space['1.5'],
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: semantic.card.gapSmall,
   },
   icon: {
     marginTop: 1,
   },
   name: {
-    fontSize: 16,
+    fontSize: fontSize.base,
     fontWeight: '700',
     flex: 1,
   },
   address: {
-    fontSize: 13,
-    lineHeight: 18,
-    paddingLeft: 28,
+    fontSize: semantic.form.labelSize,
+    lineHeight: semantic.card.paddingLarge,
+    paddingLeft: semantic.screen.paddingXL,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 28,
-    marginTop: 2,
+    paddingLeft: semantic.screen.paddingXL,
+    marginTop: space['0.5'],
   },
   distanceBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
+    gap: semantic.card.gapTiny,
+    paddingHorizontal: semantic.badge.paddingX,
+    paddingVertical: semantic.badge.paddingY,
+    borderRadius: radius.DEFAULT,
   },
   distanceText: {
-    fontSize: 12,
+    fontSize: semantic.badge.fontSize,
     fontWeight: '700',
   },
   distanceUnknown: {
-    fontSize: 12,
+    fontSize: semantic.badge.fontSize,
   },
 });

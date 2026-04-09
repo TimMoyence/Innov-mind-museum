@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 interface SettingsSecurityCardProps {
   biometricAvailable: boolean;
@@ -85,12 +87,12 @@ export const SettingsSecurityCard = ({
 
 const styles = StyleSheet.create({
   card: {
-    padding: 16,
-    gap: 10,
+    padding: semantic.card.padding,
+    gap: semantic.form.gap,
   },
   cardTitle: {
     fontWeight: '700',
-    fontSize: 17,
+    fontSize: semantic.card.titleSize,
   },
   biometricRow: {
     flexDirection: 'row',
@@ -99,24 +101,24 @@ const styles = StyleSheet.create({
   },
   biometricInfo: {
     flex: 1,
-    gap: 2,
+    gap: space['0.5'],
   },
   biometricLabel: {
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: semantic.card.bodySize,
   },
   biometricHint: {
-    fontSize: 12,
+    fontSize: semantic.card.captionSize,
   },
   secondaryButton: {
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingVertical: 12,
+    borderRadius: semantic.button.radiusSmall,
+    borderWidth: semantic.input.borderWidth,
+    paddingVertical: semantic.button.paddingY,
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: semantic.card.paddingCompact,
   },
   secondaryButtonText: {
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: semantic.button.fontSize,
   },
 });

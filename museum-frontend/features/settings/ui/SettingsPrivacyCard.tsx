@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useMemoryPreference } from '@/features/settings/application/useMemoryPreference';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 /** Privacy card: AI memory (personalization) toggle. */
 export const SettingsPrivacyCard = () => {
@@ -41,12 +43,12 @@ export const SettingsPrivacyCard = () => {
 
 const styles = StyleSheet.create({
   card: {
-    padding: 16,
-    gap: 10,
+    padding: semantic.card.padding,
+    gap: semantic.form.gap,
   },
   cardTitle: {
     fontWeight: '700',
-    fontSize: 17,
+    fontSize: semantic.card.titleSize,
   },
   row: {
     flexDirection: 'row',
@@ -55,13 +57,13 @@ const styles = StyleSheet.create({
   },
   info: {
     flex: 1,
-    gap: 2,
+    gap: space['0.5'],
   },
   label: {
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: semantic.card.bodySize,
   },
   hint: {
-    fontSize: 12,
+    fontSize: semantic.card.captionSize,
   },
 });

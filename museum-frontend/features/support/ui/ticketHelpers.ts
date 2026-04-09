@@ -1,31 +1,32 @@
 import type { components } from '@/shared/api/generated/openapi';
+import { semantic } from '@/shared/ui/tokens.semantic';
 
 type TicketStatus = components['schemas']['TicketDTO']['status'];
 type TicketPriority = components['schemas']['TicketDTO']['priority'];
 
-export const BADGE_TEXT_COLOR = '#FFFFFF';
+export const BADGE_TEXT_COLOR = semantic.statusBadge.textColor;
 
 export const statusColor = (status: TicketStatus): string => {
   switch (status) {
     case 'open':
-      return '#3B82F6';
+      return semantic.statusBadge.open;
     case 'in_progress':
-      return '#F59E0B';
+      return semantic.statusBadge.inProgress;
     case 'resolved':
-      return '#22C55E';
+      return semantic.statusBadge.resolved;
     case 'closed':
-      return '#6B7280';
+      return semantic.statusBadge.closed;
   }
 };
 
 export const priorityColor = (priority: TicketPriority): string => {
   switch (priority) {
     case 'low':
-      return '#6B7280';
+      return semantic.statusBadge.priorityLow;
     case 'medium':
-      return '#F59E0B';
+      return semantic.statusBadge.priorityMedium;
     case 'high':
-      return '#EF4444';
+      return semantic.statusBadge.priorityHigh;
   }
 };
 

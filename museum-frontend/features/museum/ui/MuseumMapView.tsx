@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
 import type { MuseumCategory, MuseumWithDistance } from '../application/useMuseumDirectory';
 import { buildLeafletHtml } from '../infrastructure/leafletHtml';
 
@@ -217,8 +218,8 @@ const styles = StyleSheet.create({
   },
   webView: {
     flex: 1,
-    borderRadius: 18,
-    borderWidth: 1,
+    borderRadius: semantic.card.paddingLarge,
+    borderWidth: semantic.input.borderWidth,
     overflow: 'hidden',
   },
   emptyOverlay: {
@@ -229,15 +230,15 @@ const styles = StyleSheet.create({
     bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: semantic.screen.paddingLarge,
   },
   emptyCard: {
-    paddingVertical: 14,
-    paddingHorizontal: 18,
+    paddingVertical: semantic.button.paddingYCompact,
+    paddingHorizontal: semantic.card.paddingLarge,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: semantic.card.bodySize,
     fontWeight: '600',
     textAlign: 'center',
   },

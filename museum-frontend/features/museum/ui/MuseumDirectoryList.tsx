@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, fontSize } from '@/shared/ui/tokens.generated';
 import { SkeletonConversationCard } from '@/shared/ui/SkeletonConversationCard';
 import type { MuseumWithDistance } from '../application/useMuseumDirectory';
 import { MuseumCard } from './MuseumCard';
@@ -86,34 +88,34 @@ export const MuseumDirectoryList = ({
   );
 };
 
-const separatorStyle = { height: 10 } as const;
+const separatorStyle = { height: space['2.5'] } as const;
 const ItemSeparator = () => <View style={separatorStyle} />;
 
 const styles = StyleSheet.create({
   searchBar: {
-    marginBottom: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    marginBottom: semantic.screen.gapSmall,
+    borderRadius: semantic.input.radius,
+    borderWidth: semantic.input.borderWidth,
+    paddingHorizontal: space['3.5'],
+    paddingVertical: semantic.list.itemPaddingYCompact,
   },
   searchInput: {
-    fontSize: 15,
+    fontSize: fontSize.base,
   },
   skeletonList: {
-    marginTop: 16,
-    paddingBottom: 24,
+    marginTop: semantic.screen.gap,
+    paddingBottom: semantic.screen.paddingLarge,
   },
   listContent: {
-    paddingBottom: 24,
+    paddingBottom: semantic.screen.paddingLarge,
   },
   emptyState: {
-    marginTop: 28,
-    padding: 16,
+    marginTop: semantic.screen.paddingXL,
+    padding: semantic.card.padding,
     alignItems: 'center',
   },
   emptyTitle: {
-    fontSize: 16,
+    fontSize: semantic.button.fontSizeLarge,
     fontWeight: '700',
   },
 });

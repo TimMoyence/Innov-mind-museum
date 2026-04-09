@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import type { DailyArtwork } from '../infrastructure/dailyArtApi';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 interface DailyArtCardProps {
   artwork: DailyArtwork;
@@ -133,11 +135,11 @@ export const DailyArtCard = ({ artwork, isSaved, onSave, onSkip }: DailyArtCardP
 
 const styles = StyleSheet.create({
   card: {
-    padding: 16,
-    gap: 8,
+    padding: semantic.card.padding,
+    gap: semantic.card.gapSmall,
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: semantic.card.captionSize,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -146,61 +148,61 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: 180,
-    borderRadius: 12,
+    borderRadius: semantic.card.radiusCompact,
   },
   imageFallback: {
     width: '100%',
     height: 180,
-    borderRadius: 12,
+    borderRadius: semantic.card.radiusCompact,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
-    fontSize: 18,
+    fontSize: semantic.card.titleSize,
     fontWeight: '700',
     textAlign: 'center',
   },
   artist: {
-    fontSize: 14,
+    fontSize: semantic.card.bodySize,
     textAlign: 'center',
   },
   museum: {
-    fontSize: 12,
+    fontSize: semantic.card.captionSize,
     textAlign: 'center',
   },
   funFactToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'center',
-    gap: 4,
-    paddingVertical: 4,
+    gap: semantic.card.gapTiny,
+    paddingVertical: space['1'],
   },
   funFactLabel: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     fontWeight: '600',
   },
   funFactText: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     lineHeight: 19,
     textAlign: 'center',
   },
   actions: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
+    gap: space['2.5'],
+    marginTop: space['1'],
   },
   actionButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 10,
+    gap: space['1.5'],
+    borderWidth: semantic.input.borderWidth,
+    borderRadius: semantic.card.radiusCompact,
+    paddingVertical: space['2.5'],
   },
   actionText: {
-    fontSize: 14,
+    fontSize: semantic.button.fontSize,
     fontWeight: '600',
   },
 });

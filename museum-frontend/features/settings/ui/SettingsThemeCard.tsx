@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 type ThemeMode = 'system' | 'light' | 'dark';
 
@@ -70,26 +72,26 @@ export const SettingsThemeCard = ({ mode, onSetMode }: SettingsThemeCardProps) =
 
 const styles = StyleSheet.create({
   card: {
-    padding: 16,
-    gap: 10,
+    padding: semantic.card.padding,
+    gap: semantic.form.gap,
   },
   cardTitle: {
     fontWeight: '700',
-    fontSize: 17,
+    fontSize: semantic.card.titleSize,
   },
   themeRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: semantic.card.gapSmall,
   },
   themeButton: {
     flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingVertical: 10,
+    borderRadius: semantic.card.radiusCompact,
+    borderWidth: semantic.input.borderWidth,
+    paddingVertical: space['2.5'],
     alignItems: 'center',
   },
   themeButtonText: {
-    fontSize: 14,
+    fontSize: semantic.card.bodySize,
     fontWeight: '600',
   },
 });

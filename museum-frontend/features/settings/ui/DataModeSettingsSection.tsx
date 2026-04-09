@@ -7,6 +7,8 @@ import {
 } from '@/features/settings/dataModeStore';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 const OPTIONS: DataModePreference[] = ['auto', 'low', 'normal'];
 
@@ -73,29 +75,29 @@ export const DataModeSettingsSection = () => {
 
 const styles = StyleSheet.create({
   card: {
-    padding: 16,
-    gap: 10,
+    padding: semantic.card.padding,
+    gap: semantic.form.gap,
   },
   cardTitle: {
     fontWeight: '700',
-    fontSize: 17,
+    fontSize: semantic.card.titleSize,
   },
   optionsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: semantic.card.gapSmall,
   },
   optionButton: {
     flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingVertical: 10,
+    borderRadius: semantic.card.radiusCompact,
+    borderWidth: semantic.input.borderWidth,
+    paddingVertical: space['2.5'],
     alignItems: 'center',
   },
   optionLabel: {
     fontWeight: '600',
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
   },
   description: {
-    fontSize: 12,
+    fontSize: semantic.card.captionSize,
   },
 });

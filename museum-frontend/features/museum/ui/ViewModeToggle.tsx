@@ -3,6 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 type ViewMode = 'list' | 'map';
 
@@ -65,14 +67,14 @@ export const ViewModeToggle = ({ mode, onToggle }: ViewModeToggleProps) => {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: semantic.card.radiusCompact,
+    borderWidth: semantic.input.borderWidth,
     overflow: 'hidden',
     alignSelf: 'center',
   },
   button: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: space['3.5'],
+    paddingVertical: semantic.card.gapSmall,
     alignItems: 'center',
     justifyContent: 'center',
   },

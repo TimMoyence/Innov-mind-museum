@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/restrict-template-expressions -- HTML template with numeric design tokens injected as px values */
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, radius } from '@/shared/ui/tokens.generated';
+
 /**
  * Generates a self-contained HTML string for a Leaflet map rendered inside a WebView.
  *
@@ -38,7 +42,7 @@ export const buildLeafletHtml = ({ isDark }: LeafletHtmlOptions): string => {
     body { background: ${isDark ? '#0F172A' : '#EAF2FF'}; }
 
     /* Museum markers by category */
-    .museum-marker { width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+    .museum-marker { width: ${space['3.5']}px; height: ${space['3.5']}px; border-radius: 50%; border: 2.5px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
     .museum-marker-art         { background: #7C3AED; } /* violet */
     .museum-marker-history     { background: #DC2626; } /* red */
     .museum-marker-science     { background: #0891B2; } /* cyan */
@@ -47,7 +51,7 @@ export const buildLeafletHtml = ({ isDark }: LeafletHtmlOptions): string => {
 
     /* User position marker (green + pulse) */
     .user-marker {
-      width: 18px; height: 18px;
+      width: ${semantic.card.paddingLarge}px; height: ${semantic.card.paddingLarge}px;
       border-radius: 50%;
       background: #16A34A;
       border: 3px solid #fff;
@@ -63,13 +67,13 @@ export const buildLeafletHtml = ({ isDark }: LeafletHtmlOptions): string => {
     /* Popup styling */
     .leaflet-popup-content-wrapper {
       background: ${popupBg};
-      border-radius: 10px;
+      border-radius: ${radius.DEFAULT}px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.18);
     }
     .leaflet-popup-content {
-      margin: 8px 12px;
+      margin: ${semantic.card.gapSmall}px ${semantic.card.gap}px;
       color: ${popupTextColor};
-      font: 600 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font: 600 ${semantic.form.labelSize}px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
     .leaflet-popup-tip { background: ${popupBg}; }
   </style>
@@ -93,17 +97,17 @@ export const buildLeafletHtml = ({ isDark }: LeafletHtmlOptions): string => {
         typeIcons[t] = L.divIcon({
           className: '',
           html: '<div class="museum-marker museum-marker-' + t + '"></div>',
-          iconSize: [14, 14],
-          iconAnchor: [7, 7],
-          popupAnchor: [0, -10]
+          iconSize: [${space['3.5']}, ${space['3.5']}],
+          iconAnchor: [${space['3.5'] / 2}, ${space['3.5'] / 2}],
+          popupAnchor: [0, -${space['2.5']}]
         });
       });
 
       var userIcon = L.divIcon({
         className: '',
         html: '<div class="user-marker"></div>',
-        iconSize: [18, 18],
-        iconAnchor: [9, 9]
+        iconSize: [${semantic.card.paddingLarge}, ${semantic.card.paddingLarge}],
+        iconAnchor: [${semantic.card.paddingLarge / 2}, ${semantic.card.paddingLarge / 2}]
       });
 
       var markerLayer = L.layerGroup().addTo(map);
@@ -143,7 +147,7 @@ export const buildLeafletHtml = ({ isDark }: LeafletHtmlOptions): string => {
         }
 
         if (data.type === 'fitBounds') {
-          map.fitBounds(data.bounds, { padding: [40, 40], maxZoom: 15 });
+          map.fitBounds(data.bounds, { padding: [${space['10']}, ${space['10']}], maxZoom: 15 });
         }
       }
 

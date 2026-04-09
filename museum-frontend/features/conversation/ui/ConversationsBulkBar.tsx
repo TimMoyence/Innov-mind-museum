@@ -3,6 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, radius } from '@/shared/ui/tokens.generated';
 
 interface ConversationsBulkBarProps {
   selectedCount: number;
@@ -60,22 +62,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    gap: 12,
+    paddingHorizontal: semantic.list.itemPaddingX,
+    paddingVertical: semantic.list.itemPaddingY,
+    borderTopWidth: semantic.list.separatorWidth,
+    gap: semantic.section.gap,
   },
   bulkBarButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
+    gap: semantic.section.gapTight,
+    paddingHorizontal: space['3.5'],
+    paddingVertical: space['2.5'],
+    borderRadius: radius.DEFAULT,
+    borderWidth: semantic.input.borderWidth,
   },
   bulkBarButtonText: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     fontWeight: '600',
   },
 });
