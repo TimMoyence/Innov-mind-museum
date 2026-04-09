@@ -12,7 +12,13 @@ interface ShowcaseSectionProps {
 }
 
 const checkIcon = (
-  <svg className="h-5 w-5 shrink-0 text-primary-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+  <svg
+    className="h-5 w-5 shrink-0 text-primary-400"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+  >
     <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
   </svg>
 );
@@ -29,11 +35,25 @@ export default function ShowcaseSection({
   const isDark = theme === 'dark';
 
   return (
-    <section id={id} className="relative overflow-hidden py-24 sm:py-32" style={isDark ? { background: 'linear-gradient(180deg, #0a0a1a 0%, #080820 50%, #0a0a1a 100%)' } : { background: '#fff' }}>
+    <section
+      id={id}
+      className="relative overflow-hidden py-24 sm:py-32"
+      style={
+        isDark
+          ? { background: 'linear-gradient(180deg, #0a0a1a 0%, #080820 50%, #0a0a1a 100%)' }
+          : { background: '#fff' }
+      }
+    >
       {isDark && (
         <>
-          <div className="pointer-events-none absolute left-1/4 top-10 h-[350px] w-[350px] rounded-full bg-primary-500/10 blur-3xl orb" aria-hidden="true" />
-          <div className="pointer-events-none absolute bottom-10 right-1/4 h-[300px] w-[300px] rounded-full bg-accent-400/8 blur-3xl orb orb-delay-1" aria-hidden="true" />
+          <div
+            className="pointer-events-none absolute left-1/4 top-10 h-[350px] w-[350px] rounded-full bg-primary-500/10 blur-3xl orb"
+            aria-hidden="true"
+          />
+          <div
+            className="pointer-events-none absolute bottom-10 right-1/4 h-[300px] w-[300px] rounded-full bg-accent-400/8 blur-3xl orb orb-delay-1"
+            aria-hidden="true"
+          />
         </>
       )}
 
@@ -50,7 +70,9 @@ export default function ShowcaseSection({
               </h2>
             </AnimatedSection>
             <AnimatedSection delay={0.1}>
-              <p className={`mt-4 text-lg leading-relaxed ${isDark ? 'text-white/60' : 'text-text-secondary'}`}>
+              <p
+                className={`mt-4 text-lg leading-relaxed ${isDark ? 'text-white/60' : 'text-text-secondary'}`}
+              >
                 {subtitle}
               </p>
             </AnimatedSection>
@@ -58,7 +80,10 @@ export default function ShowcaseSection({
               <AnimatedSection delay={0.2} stagger>
                 <ul className="mt-6 space-y-3">
                   {bullets.map((bullet) => (
-                    <li key={bullet} className={`flex items-start gap-3 text-base ${isDark ? 'text-white/80' : 'text-text-primary'}`}>
+                    <li
+                      key={bullet}
+                      className={`flex items-start gap-3 text-base ${isDark ? 'text-white/80' : 'text-text-primary'}`}
+                    >
                       {checkIcon}
                       <span>{bullet}</span>
                     </li>

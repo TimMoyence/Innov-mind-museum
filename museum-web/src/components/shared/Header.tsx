@@ -15,8 +15,16 @@ interface HeaderProps {
 export default function Header({ dict, locale }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { scrollY } = useScroll();
-  const headerBg = useTransform(scrollY, [0, 100], ['rgba(255,255,255,0)', 'rgba(255,255,255,0.72)']);
-  const headerBorder = useTransform(scrollY, [0, 100], ['rgba(255,255,255,0)', 'rgba(255,255,255,0.15)']);
+  const headerBg = useTransform(
+    scrollY,
+    [0, 100],
+    ['rgba(255,255,255,0)', 'var(--fn-web-glass-heavy)'],
+  );
+  const headerBorder = useTransform(
+    scrollY,
+    [0, 100],
+    ['rgba(255,255,255,0)', 'var(--fn-web-liquid-glass-border)'],
+  );
   const headerBlur = useTransform(scrollY, [0, 100], ['blur(0px)', 'blur(16px)']);
 
   const navLinks = [
@@ -48,9 +56,7 @@ export default function Header({ dict, locale }: HeaderProps) {
             height={36}
             className="rounded-lg"
           />
-          <span className="text-lg font-semibold tracking-tight text-text-primary">
-            Musaium
-          </span>
+          <span className="text-lg font-semibold tracking-tight text-text-primary">Musaium</span>
         </Link>
 
         {/* Desktop nav */}
@@ -79,15 +85,33 @@ export default function Header({ dict, locale }: HeaderProps) {
           className="inline-flex items-center justify-center rounded-lg p-2 text-text-secondary transition-colors hover:bg-white/50 md:hidden"
           aria-label="Toggle menu"
           aria-expanded={menuOpen}
-          onClick={() => { setMenuOpen((prev) => !prev); }}
+          onClick={() => {
+            setMenuOpen((prev) => !prev);
+          }}
         >
           {menuOpen ? (
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <svg
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           ) : (
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
+            <svg
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5"
+              />
             </svg>
           )}
         </button>
@@ -95,14 +119,19 @@ export default function Header({ dict, locale }: HeaderProps) {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <nav className="border-t border-white/15 bg-white/60 px-4 pb-4 pt-2 backdrop-blur-xl md:hidden" aria-label="Mobile">
+        <nav
+          className="border-t border-white/15 bg-white/60 px-4 pb-4 pt-2 backdrop-blur-xl md:hidden"
+          aria-label="Mobile"
+        >
           <ul className="flex flex-col gap-2">
             {navLinks.map((link) => (
               <li key={link.href}>
                 <Link
                   href={link.href}
                   className="block rounded-lg px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-white/50 hover:text-primary-600"
-                  onClick={() => { setMenuOpen(false); }}
+                  onClick={() => {
+                    setMenuOpen(false);
+                  }}
                 >
                   {link.label}
                 </Link>
@@ -115,7 +144,9 @@ export default function Header({ dict, locale }: HeaderProps) {
               <Link
                 href={`/${locale}#download`}
                 className="block rounded-xl bg-primary-500 px-4 py-2 text-center text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-600"
-                onClick={() => { setMenuOpen(false); }}
+                onClick={() => {
+                  setMenuOpen(false);
+                }}
               >
                 {dict.nav.download}
               </Link>

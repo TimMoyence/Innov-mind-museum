@@ -37,22 +37,28 @@ export default function DemoChat({ messages }: DemoChatProps) {
   return (
     <div
       className="flex h-full w-full flex-col"
-      style={{ background: 'linear-gradient(180deg, #f0f4ff 0%, #e8f0ff 100%)' }}
+      style={{
+        background:
+          'linear-gradient(180deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%)',
+      }}
     >
       {/* Header — glass card (matches Expo ChatHeader) */}
       <div
         className="flex items-center justify-between px-3.5 py-3"
         style={{
-          background: 'rgba(255,255,255,0.72)',
+          background: 'var(--fn-assistant-bubble)',
           backdropFilter: 'blur(24px) saturate(1.5)',
-          borderBottom: '1px solid rgba(148,163,184,0.22)',
+          borderBottom: '1px solid var(--fn-assistant-bubble-border)',
         }}
       >
         <div>
-          <p className="text-base font-bold" style={{ color: '#0F172A', fontSize: 18 }}>
+          <p
+            className="text-base font-bold"
+            style={{ color: 'var(--color-text-primary)', fontSize: 18 }}
+          >
             Art Session
           </p>
-          <p className="mt-0.5" style={{ color: '#475569', fontSize: 10 }}>
+          <p className="mt-0.5" style={{ color: 'var(--color-text-tertiary)', fontSize: 10 }}>
             a213b2e3-e00...
           </p>
         </div>
@@ -66,8 +72,8 @@ export default function DemoChat({ messages }: DemoChatProps) {
                 width: 28,
                 height: 28,
                 borderRadius: 999,
-                border: '1px solid rgba(148,163,184,0.45)',
-                background: 'rgba(255,255,255,0.64)',
+                border: '1px solid var(--fn-input-border)',
+                background: 'var(--fn-surface)',
               }}
             >
               {icon}
@@ -104,12 +110,12 @@ export default function DemoChat({ messages }: DemoChatProps) {
             className="flex items-center gap-1.5"
             style={{
               borderRadius: 12,
-              border: '1px solid rgba(148,163,184,0.22)',
-              background: 'rgba(255,255,255,0.64)',
+              border: '1px solid var(--fn-assistant-bubble-border)',
+              background: 'var(--fn-surface)',
               padding: '6px 10px',
               fontSize: 11,
               fontWeight: 600,
-              color: '#0F172A',
+              color: 'var(--color-text-primary)',
             }}
           >
             {btn.icon}
@@ -122,7 +128,7 @@ export default function DemoChat({ messages }: DemoChatProps) {
       <div
         className="flex items-end gap-2 px-2.5 py-2"
         style={{
-          background: 'rgba(255,255,255,0.72)',
+          background: 'var(--fn-assistant-bubble)',
           backdropFilter: 'blur(24px) saturate(1.5)',
         }}
       >
@@ -131,11 +137,11 @@ export default function DemoChat({ messages }: DemoChatProps) {
           style={{
             minHeight: 34,
             borderRadius: 14,
-            border: '1px solid rgba(148,163,184,0.45)',
-            background: 'rgba(255,255,255,0.7)',
+            border: '1px solid var(--fn-input-border)',
+            background: 'var(--fn-input-background)',
             padding: '7px 10px',
             fontSize: 11,
-            color: '#334155',
+            color: 'var(--color-text-secondary)',
           }}
         >
           Ask about an artwork, monument, or send voice/photo...
@@ -146,7 +152,7 @@ export default function DemoChat({ messages }: DemoChatProps) {
             width: 34,
             height: 34,
             borderRadius: 999,
-            background: '#1D4ED8',
+            background: 'var(--color-primary-600)',
           }}
         >
           <svg
@@ -180,9 +186,9 @@ function MessageBubble({ message, isLast }: { message: Message; isLast: boolean 
           maxWidth: '85%',
           borderRadius: 16,
           padding: 12,
-          border: `1px solid ${isUser ? 'rgba(191,219,254,0.6)' : 'rgba(148,163,184,0.22)'}`,
-          background: isUser ? 'rgba(30,64,175,0.88)' : 'rgba(255,255,255,0.72)',
-          color: isUser ? '#FFFFFF' : '#0F172A',
+          border: `1px solid ${isUser ? 'var(--fn-user-bubble-border)' : 'var(--fn-assistant-bubble-border)'}`,
+          background: isUser ? 'var(--fn-user-bubble)' : 'var(--fn-assistant-bubble)',
+          color: isUser ? 'var(--color-surface)' : 'var(--color-text-primary)',
           fontSize: 12,
           lineHeight: '17px',
         }}
@@ -193,7 +199,7 @@ function MessageBubble({ message, isLast }: { message: Message; isLast: boolean 
       {!isUser && (
         <div
           className="mt-1 flex items-center gap-2.5"
-          style={{ fontSize: 9, color: 'rgba(100,116,139,0.92)' }}
+          style={{ fontSize: 9, color: 'var(--fn-timestamp)' }}
         >
           <span>21:35</span>
           <span className="flex items-center gap-0.5">
@@ -202,7 +208,7 @@ function MessageBubble({ message, isLast }: { message: Message; isLast: boolean 
           <span className="flex items-center gap-0.5">{volumeIcon} Listen</span>
           <span className="flex items-center gap-0.5">{flagIcon} Report</span>
           {isLast && (
-            <span className="ml-auto" style={{ color: '#1D4ED8' }}>
+            <span className="ml-auto" style={{ color: 'var(--color-primary-600)' }}>
               Share
             </span>
           )}
@@ -270,7 +276,7 @@ const headsetIcon = (
     height={14}
     viewBox="0 0 24 24"
     fill="none"
-    stroke="#334155"
+    stroke="var(--color-text-secondary)"
     strokeWidth={1.5}
     strokeLinecap="round"
     strokeLinejoin="round"
@@ -286,7 +292,7 @@ const docIcon = (
     height={14}
     viewBox="0 0 24 24"
     fill="none"
-    stroke="#1D4ED8"
+    stroke="var(--color-primary-600)"
     strokeWidth={1.5}
     strokeLinecap="round"
     strokeLinejoin="round"
@@ -304,7 +310,7 @@ const closeIcon = (
     height={14}
     viewBox="0 0 24 24"
     fill="none"
-    stroke="#0F172A"
+    stroke="var(--color-text-primary)"
     strokeWidth={1.5}
     strokeLinecap="round"
     strokeLinejoin="round"

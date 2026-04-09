@@ -107,7 +107,9 @@ export default function HeroAnimation() {
         >
           {/* Continuous float + rotation */}
           <motion.div
-            animate={shouldReduceMotion ? undefined : { y: [-15, 15], rotateY: [-3, 3], rotateX: [-2, 2] }}
+            animate={
+              shouldReduceMotion ? undefined : { y: [-15, 15], rotateY: [-3, 3], rotateX: [-2, 2] }
+            }
             transition={{
               y: {
                 repeat: Infinity,
@@ -200,7 +202,8 @@ export default function HeroAnimation() {
                   position: 'absolute',
                   inset: 0,
                   borderRadius: OUTER_R,
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 45%)',
+                  background:
+                    'linear-gradient(135deg, var(--fn-web-liquid-glass) 0%, transparent 45%)',
                   pointerEvents: 'none',
                 }}
               />

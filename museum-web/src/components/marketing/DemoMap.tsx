@@ -54,8 +54,8 @@ export default function DemoMap() {
         el.style.width = '12px';
         el.style.height = '12px';
         el.style.borderRadius = '50%';
-        el.style.backgroundColor = '#2563eb';
-        el.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.3)';
+        el.style.backgroundColor = 'var(--color-primary-500)';
+        el.style.boxShadow = '0 0 0 4px var(--fn-primary-glow-medium)';
         el.style.cursor = 'pointer';
         el.style.animation = 'pulse-marker 2s ease-in-out infinite';
 
@@ -100,8 +100,8 @@ export default function DemoMap() {
               WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
               padding: '9px 12px',
               fontSize: 12,
-              color: '#475569',
-              border: '1px solid rgba(148,163,184,0.25)',
+              color: 'var(--color-text-tertiary)',
+              border: '1px solid var(--fn-dark-card-border)',
               boxShadow: '0 2px 10px rgba(15,23,42,0.08)',
               display: 'flex',
               alignItems: 'center',
@@ -113,7 +113,7 @@ export default function DemoMap() {
               height={13}
               viewBox="0 0 24 24"
               fill="none"
-              stroke="#94a3b8"
+              stroke="var(--color-text-muted)"
               strokeWidth={2.2}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -137,7 +137,7 @@ export default function DemoMap() {
                 position: 'absolute',
                 inset: 0,
                 borderRadius: '50%',
-                background: '#3b82f6',
+                background: 'var(--color-primary-350)',
                 animation: 'pulse-location 2.2s ease-out infinite',
               }}
             />
@@ -146,8 +146,8 @@ export default function DemoMap() {
                 position: 'absolute',
                 inset: 3,
                 borderRadius: '50%',
-                background: '#1d4ed8',
-                border: '1.5px solid #ffffff',
+                background: 'var(--color-primary-600)',
+                border: '1.5px solid var(--color-surface)',
                 boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
               }}
             />
@@ -167,7 +167,7 @@ export default function DemoMap() {
               borderTopLeftRadius: 18,
               borderTopRightRadius: 18,
               padding: '8px 14px 14px',
-              borderTop: '1px solid rgba(148,163,184,0.25)',
+              borderTop: '1px solid var(--fn-dark-card-border)',
               boxShadow: '0 -4px 14px rgba(15,23,42,0.08)',
             }}
           >
@@ -185,7 +185,7 @@ export default function DemoMap() {
               style={{
                 fontSize: 13,
                 fontWeight: 600,
-                color: '#0f172a',
+                color: 'var(--color-text-primary)',
               }}
             >
               20 musées à proximité
@@ -193,7 +193,7 @@ export default function DemoMap() {
             <div
               style={{
                 fontSize: 10,
-                color: '#64748b',
+                color: 'var(--color-text-placeholder)',
                 marginTop: 2,
               }}
             >
