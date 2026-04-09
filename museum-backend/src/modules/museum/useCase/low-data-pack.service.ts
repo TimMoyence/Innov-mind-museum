@@ -46,7 +46,7 @@ export class LowDataPackService {
     try {
       const popular = await this.cache.ztop(`chat:llm:popular:${museumId}`, this.maxEntries);
       const resolved = await Promise.all(
-        popular.map(async ({ member, score }) => {
+        popular.map(async ({ member, score }): Promise<LowDataPackEntry | null> => {
           const value = await this.cache.get<CachedEntry>(member);
           if (value?.locale === locale) {
             return {
@@ -60,7 +60,7 @@ export class LowDataPackService {
           return null;
         }),
       );
-      cachedAnswers = resolved.filter((e) => e !== null);
+      cachedAnswers = resolved.filter((e): e is LowDataPackEntry => e !== null);
     } catch (error) {
       logger.warn('low_data_pack_cache_error', {
         museumId,

@@ -1,5 +1,7 @@
 # Sprint 0 — Foundation + Store Submission
 
+> ⚠️ **STATUS**: NOT STARTED — planning doc only, 0 code.
+>
 > **Duree**: 2 semaines | **Priorite**: IMMEDIATE | **Dependances**: aucune
 
 ## Goal

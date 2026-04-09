@@ -1,6 +1,8 @@
 # MUSAIUM — Backlog
 
-> **Derniere MAJ**: 2026-03-30 | **Source**: V2_MUSEUM_WALK_STRATEGY.md, FEATURE_MUSEUM_WALK.md, V3_REVIEW_AND_PLAN.md
+> ⚠️ **IMPLEMENTATION STATUS**: NOT STARTED — 0 lines of code exist for Museum Walk feature.
+>
+> **Derniere MAJ**: 2026-03-30 | **Source**: (archived: V2_MUSEUM_WALK_STRATEGY.md, FEATURE_MUSEUM_WALK.md, V3_REVIEW_AND_PLAN.md)
 > Chaque item est documenté pour permettre de piocher et implementer independamment.
 
 **Legende**: `P0` = critique | `P1` = haute valeur | `P2` = nice-to-have | `P3` = futur

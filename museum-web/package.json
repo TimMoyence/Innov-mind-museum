@@ -45,5 +45,10 @@
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": "eslint --fix"
+  },
+  "pnpm": {
+    "overrides": {
+      "vite": ">=8.0.5"
+    }
   }
 }

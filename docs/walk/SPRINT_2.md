@@ -1,5 +1,7 @@
 # Sprint 2 — Walk Phase A: Map + Routes
 
+> ⚠️ **STATUS**: NOT STARTED — planning doc only, 0 code.
+>
 > **Duree**: 2 semaines | **Priorite**: Post-traction | **Dependances**: S0, S1
 
 ## Goal

@@ -1,13 +1,13 @@
 {
   "lastUpdated": "2026-04-08",
-  "testCount": 2380,
-  "frontendTestCount": 1093,
-  "frontendSuiteCount": 123,
+  "testCount": 2456,
+  "frontendTestCount": 1083,
+  "frontendSuiteCount": 128,
   "typecheckErrors": 0,
   "asAnyCount": 0,
-  "coverageStatements": 92.5,
-  "coverageBranches": 84,
+  "coverageStatements": 93.06,
+  "coverageBranches": 83,
   "lintErrors": 0,
-  "_comment": "Consolidated test factories into tests/helpers/. Removed 33 delegation tests from chat-service.test.ts (sub-services have own exhaustive tests). Added 7 reviews screen tests. Net -26 backend tests (intentional DRY refactor).",
+  "_comment": "Audit 2026-04-08: +76 backend tests (guardrails multi-lang +28, login-rl-redis +6, multer filter +13, openapi contract +4, misc +25). AI guardrails hardened (fail-closed + DE/ES/IT/JA/ZH/AR patterns + location guardrail). Login rate limiter distributed via Redis. Multer pre-filters Content-Type. 5 OpenAPI routes added. auth.tsx split 577→191L. JWT access/refresh secrets distinct validation. Vite bumped to >=8.0.5 (CVE GHSA-4w7w-66w2-5vf9). Doc cleanup (3 obsolete audits deleted, walk disclaimers).",
   "webTestCount": 12
 }
