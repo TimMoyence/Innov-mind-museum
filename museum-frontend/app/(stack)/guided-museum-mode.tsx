@@ -3,6 +3,8 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, fontSize } from '@/shared/ui/tokens.generated';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -135,65 +137,65 @@ export default function GuidedMuseumModeScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    paddingHorizontal: 18,
-    paddingTop: 28,
-    paddingBottom: 14,
+    paddingHorizontal: space['4.5'],
+    paddingTop: semantic.screen.paddingXL,
+    paddingBottom: semantic.form.gapLarge,
   },
   menuWrap: {
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: space['2.5'],
   },
   scrollContent: {
-    gap: 12,
-    paddingBottom: 20,
+    gap: semantic.screen.gapSmall,
+    paddingBottom: space['5'],
   },
   heroCard: {
-    padding: 18,
-    gap: 8,
+    padding: semantic.card.paddingLarge,
+    gap: semantic.card.gapSmall,
   },
   title: {
-    fontSize: 28,
+    fontSize: semantic.section.titleSizeHero,
     fontWeight: '700',
   },
   subtitle: {
-    lineHeight: 20,
-    fontSize: 14,
+    lineHeight: space['5'],
+    fontSize: fontSize.sm,
   },
   stateLine: {
     fontWeight: '700',
-    fontSize: 12,
+    fontSize: semantic.card.captionSize,
   },
   card: {
-    padding: 16,
-    gap: 6,
+    padding: semantic.card.padding,
+    gap: semantic.section.gapTight,
   },
   cardTitle: {
     fontWeight: '700',
     fontSize: 15,
   },
   cardText: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     lineHeight: 19,
   },
   primaryButton: {
-    borderRadius: 14,
+    borderRadius: semantic.button.radius,
     alignItems: 'center',
     paddingVertical: 13,
-    paddingHorizontal: 14,
+    paddingHorizontal: space['3.5'],
   },
   primaryButtonText: {
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     textAlign: 'center',
   },
   secondaryButton: {
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: semantic.button.radius,
+    borderWidth: semantic.input.borderWidth,
     alignItems: 'center',
     paddingVertical: 13,
   },
   secondaryButtonText: {
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
   },
 });

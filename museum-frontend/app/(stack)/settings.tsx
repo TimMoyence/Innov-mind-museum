@@ -15,6 +15,8 @@ import { SettingsComplianceLinks } from '@/features/settings/ui/SettingsComplian
 import { SettingsDangerZone } from '@/features/settings/ui/SettingsDangerZone';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, fontSize } from '@/shared/ui/tokens.generated';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { LANGUAGE_OPTIONS } from '@/shared/config/supportedLocales';
@@ -261,89 +263,89 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    paddingHorizontal: 18,
-    paddingBottom: 16,
+    paddingHorizontal: semantic.card.paddingLarge,
+    paddingBottom: semantic.card.padding,
   },
   menuWrap: {
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: space['2.5'],
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
-    gap: 12,
-    paddingBottom: 22,
+    gap: semantic.screen.gapSmall,
+    paddingBottom: space['5.5'],
   },
   heroCard: {
-    padding: 18,
-    gap: 8,
+    padding: semantic.card.paddingLarge,
+    gap: semantic.card.gapSmall,
   },
   title: {
-    fontSize: 30,
+    fontSize: fontSize['3xl'],
     fontWeight: '700',
   },
   subtitle: {
-    lineHeight: 20,
-    fontSize: 14,
+    lineHeight: space['5'],
+    fontSize: fontSize.sm,
   },
   buildNotice: {
-    fontSize: 12,
+    fontSize: fontSize.xs,
     fontWeight: '700',
-    lineHeight: 18,
+    lineHeight: semantic.card.paddingLarge,
   },
   card: {
-    padding: 16,
-    gap: 10,
+    padding: semantic.card.padding,
+    gap: space['2.5'],
   },
   cardTitle: {
     fontWeight: '700',
     fontSize: 17,
   },
   cardBody: {
-    lineHeight: 20,
-    fontSize: 13,
+    lineHeight: space['5'],
+    fontSize: semantic.form.labelSize,
   },
   loadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: semantic.card.gapSmall,
   },
   loadingText: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
   },
   metaLine: {
     fontWeight: '600',
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
   },
   primaryButton: {
-    marginTop: 2,
-    borderRadius: 12,
+    marginTop: space['0.5'],
+    borderRadius: semantic.button.radiusSmall,
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: semantic.button.paddingY,
   },
   primaryButtonText: {
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: semantic.button.fontSize,
   },
   secondaryButton: {
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingVertical: 12,
+    borderRadius: semantic.button.radiusSmall,
+    borderWidth: semantic.input.borderWidth,
+    paddingVertical: semantic.button.paddingY,
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: semantic.card.paddingCompact,
   },
   secondaryButtonText: {
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: semantic.button.fontSize,
   },
   footerRow: {
-    gap: 10,
+    gap: space['2.5'],
   },
   logoutButton: {
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingVertical: 12,
+    borderRadius: semantic.button.radiusSmall,
+    borderWidth: semantic.input.borderWidth,
+    paddingVertical: semantic.button.paddingY,
     alignItems: 'center',
   },
   logoutButtonText: {

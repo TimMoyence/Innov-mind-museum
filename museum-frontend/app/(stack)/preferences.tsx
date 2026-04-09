@@ -20,6 +20,8 @@ import { LANGUAGE_OPTIONS } from '@/shared/config/supportedLocales';
 import { useI18n } from '@/shared/i18n/I18nContext';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, fontSize } from '@/shared/ui/tokens.generated';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
@@ -259,109 +261,109 @@ export default function PreferencesScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    paddingHorizontal: 18,
-    paddingTop: 28,
-    paddingBottom: 16,
+    paddingHorizontal: semantic.card.paddingLarge,
+    paddingTop: semantic.screen.paddingXL,
+    paddingBottom: semantic.card.padding,
   },
   menuWrap: {
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: space['2.5'],
   },
   scrollContent: {
-    paddingBottom: 18,
+    paddingBottom: semantic.card.paddingLarge,
   },
   card: {
-    padding: 18,
-    gap: 10,
+    padding: semantic.card.paddingLarge,
+    gap: space['2.5'],
   },
   title: {
-    fontSize: 28,
+    fontSize: semantic.section.titleSizeHero,
     fontWeight: '700',
   },
   subtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 2,
+    fontSize: fontSize.sm,
+    lineHeight: space['5'],
+    marginBottom: space['0.5'],
   },
   loadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
+    gap: semantic.card.gapSmall,
+    paddingVertical: semantic.card.gapSmall,
   },
   label: {
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: fontSize.sm,
   },
   hint: {
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: fontSize.xs,
+    lineHeight: semantic.card.paddingLarge,
   },
   languageRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: semantic.card.gapSmall,
     flexWrap: 'wrap',
   },
   languageButton: {
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderRadius: semantic.button.radiusSmall,
+    borderWidth: semantic.input.borderWidth,
+    paddingVertical: semantic.card.gapSmall,
+    paddingHorizontal: semantic.card.paddingCompact,
   },
   languageButtonText: {
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
   },
   switchRow: {
-    marginTop: 6,
+    marginTop: semantic.section.gapTight,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: semantic.card.gapSmall,
   },
   switchTextWrap: {
     flex: 1,
-    gap: 4,
+    gap: semantic.card.gapTiny,
   },
   levelRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: semantic.card.gapSmall,
     flexWrap: 'wrap',
   },
   levelButton: {
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderRadius: semantic.button.radiusSmall,
+    borderWidth: semantic.input.borderWidth,
+    paddingVertical: semantic.card.gapSmall,
+    paddingHorizontal: semantic.card.paddingCompact,
   },
   levelButtonText: {
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
   },
   status: {
     fontWeight: '700',
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: fontSize.xs,
+    marginTop: space['0.5'],
   },
   primaryButton: {
-    marginTop: 6,
-    borderRadius: 12,
+    marginTop: semantic.section.gapTight,
+    borderRadius: semantic.button.radiusSmall,
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: semantic.button.paddingY,
   },
   primaryButtonText: {
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: semantic.button.fontSize,
   },
   secondaryButton: {
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: semantic.button.radiusSmall,
+    borderWidth: semantic.input.borderWidth,
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
+    paddingVertical: semantic.button.paddingY,
+    paddingHorizontal: space['2.5'],
   },
   secondaryButtonText: {
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
   },
 });

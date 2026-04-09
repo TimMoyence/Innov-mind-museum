@@ -23,6 +23,8 @@ import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { fontSize } from '@/shared/ui/tokens.generated';
 
 type ViewMode = 'list' | 'map';
 
@@ -120,7 +122,7 @@ export default function MuseumsScreen() {
   return (
     <LiquidScreen
       background={pickMuseumBackground(3)}
-      contentStyle={[styles.screen, { paddingTop: insets.top + 12 }]}
+      contentStyle={[styles.screen, { paddingTop: insets.top + semantic.screen.gapSmall }]}
     >
       <GlassCard style={styles.headerCard} intensity={60}>
         <Text style={[styles.title, { color: theme.textPrimary }]}>
@@ -182,26 +184,26 @@ export default function MuseumsScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    paddingHorizontal: 18,
+    paddingHorizontal: semantic.card.paddingLarge,
   },
   headerCard: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: semantic.card.padding,
+    paddingVertical: semantic.card.padding,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: semantic.card.gap,
   },
   title: {
-    fontSize: 30,
+    fontSize: fontSize['3xl'],
     fontWeight: '700',
     textAlign: 'center',
   },
   locationDenied: {
-    marginTop: 6,
-    fontSize: 12,
+    marginTop: semantic.section.gapTight,
+    fontSize: semantic.card.captionSize,
     fontWeight: '600',
   },
   toggleRow: {
-    marginTop: 10,
+    marginTop: semantic.form.gap,
   },
   contentContainer: {
     flex: 1,
@@ -210,15 +212,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    gap: semantic.section.gapTight,
+    paddingHorizontal: semantic.card.paddingCompact,
+    paddingVertical: semantic.section.gapTight,
+    borderRadius: semantic.modal.radius,
     borderWidth: 1,
-    marginBottom: 10,
+    marginBottom: semantic.form.gap,
   },
   searchAreaText: {
-    fontSize: 12,
+    fontSize: semantic.card.captionSize,
     fontWeight: '700',
   },
 });

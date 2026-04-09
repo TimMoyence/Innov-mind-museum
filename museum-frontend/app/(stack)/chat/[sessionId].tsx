@@ -43,6 +43,8 @@ import { InAppBrowser } from '@/shared/ui/InAppBrowser';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 /** Renders the chat session screen with message history, text/image/audio input, and assistant response display. */
 export default function ChatSessionScreen() {
@@ -287,7 +289,7 @@ export default function ChatSessionScreen() {
   return (
     <LiquidScreen
       background={pickMuseumBackground(4)}
-      contentStyle={[styles.screen, { paddingTop: insets.top + 8 }]}
+      contentStyle={[styles.screen, { paddingTop: insets.top + semantic.card.gapSmall }]}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView
@@ -410,9 +412,18 @@ export default function ChatSessionScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { paddingHorizontal: 14, paddingBottom: 12 },
+  screen: { paddingHorizontal: space['3.5'], paddingBottom: semantic.card.paddingCompact },
   flex: { flex: 1 },
-  recordingStatus: { marginBottom: 10, textAlign: 'center', fontWeight: '700', fontSize: 12 },
-  chatSurface: { flex: 1, paddingHorizontal: 10, paddingVertical: 10 },
-  skeletonChat: { flex: 1, justifyContent: 'flex-start', paddingTop: 12 },
+  recordingStatus: {
+    marginBottom: semantic.form.gap,
+    textAlign: 'center',
+    fontWeight: '700',
+    fontSize: semantic.card.captionSize,
+  },
+  chatSurface: {
+    flex: 1,
+    paddingHorizontal: semantic.form.gap,
+    paddingVertical: semantic.form.gap,
+  },
+  skeletonChat: { flex: 1, justifyContent: 'flex-start', paddingTop: semantic.card.paddingCompact },
 });

@@ -8,6 +8,8 @@ import {
   isPrivacyPlaceholderValue,
 } from '@/features/legal/privacyPolicyContent';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
@@ -287,82 +289,82 @@ export default function PrivacyScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    paddingTop: 28,
-    paddingHorizontal: 18,
-    paddingBottom: 14,
+    paddingTop: semantic.screen.paddingXL,
+    paddingHorizontal: semantic.card.paddingLarge,
+    paddingBottom: space['3.5'],
   },
   menuWrap: {
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: space['2.5'],
   },
   scrollContent: {
-    gap: 12,
-    paddingBottom: 22,
+    gap: semantic.screen.gapSmall,
+    paddingBottom: space['5.5'],
   },
   heroCard: {
-    padding: 18,
-    gap: 10,
+    padding: semantic.card.paddingLarge,
+    gap: space['2.5'],
   },
   heroHeader: {
-    gap: 8,
+    gap: semantic.card.gapSmall,
   },
   title: {
-    fontSize: 24,
+    fontSize: semantic.section.titleSizeLarge,
     fontWeight: '700',
   },
   statusPill: {
     alignSelf: 'flex-start',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderWidth: 1,
+    borderRadius: radius.full,
+    paddingHorizontal: space['2.5'],
+    paddingVertical: space['1.5'],
+    borderWidth: semantic.input.borderWidth,
   },
   statusPillText: {
-    fontSize: 11,
+    fontSize: semantic.badge.fontSizeSmall,
     fontWeight: '700',
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     lineHeight: 19,
   },
   metaList: {
-    gap: 8,
+    gap: semantic.card.gapSmall,
   },
   metaRow: {
-    gap: 4,
+    gap: semantic.card.gapTiny,
   },
   metaLabel: {
-    fontSize: 12,
+    fontSize: semantic.card.captionSize,
     fontWeight: '700',
   },
   metaValueWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: semantic.card.gapSmall,
     flexWrap: 'wrap',
   },
   metaValue: {
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: semantic.card.captionSize,
+    lineHeight: semantic.card.paddingLarge,
   },
   metaValuePlaceholder: {
     fontWeight: '700',
   },
   pendingBadge: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    borderWidth: semantic.input.borderWidth,
+    borderRadius: radius.full,
+    paddingHorizontal: semantic.badge.paddingX,
+    paddingVertical: semantic.badge.paddingYTight,
     fontWeight: '700',
-    fontSize: 10,
+    fontSize: space['2.5'],
   },
   card: {
-    padding: 16,
-    gap: 8,
+    padding: semantic.card.padding,
+    gap: semantic.card.gapSmall,
   },
   warningCard: {
-    padding: 16,
-    gap: 8,
+    padding: semantic.card.padding,
+    gap: semantic.card.gapSmall,
   },
   cardTitle: {
     fontWeight: '700',
@@ -373,84 +375,84 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   warningText: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     lineHeight: 19,
   },
   warningBullet: {
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: semantic.form.labelSize,
+    lineHeight: space['5'],
   },
   quickFactsList: {
-    gap: 8,
+    gap: semantic.card.gapSmall,
   },
   quickFactRow: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 10,
-    gap: 3,
+    borderRadius: semantic.card.radiusCompact,
+    borderWidth: semantic.input.borderWidth,
+    padding: space['2.5'],
+    gap: semantic.badge.paddingYTight,
   },
   quickFactLabel: {
     fontWeight: '700',
-    fontSize: 12,
+    fontSize: semantic.card.captionSize,
   },
   quickFactValue: {
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: semantic.card.captionSize,
+    lineHeight: semantic.card.paddingLarge,
   },
   bulletGroup: {
-    gap: 7,
+    gap: space['2'],
   },
   bulletText: {
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: semantic.form.labelSize,
+    lineHeight: space['5'],
   },
   sectionIndex: {
-    gap: 6,
+    gap: semantic.section.gapTight,
   },
   sectionIndexItem: {
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: semantic.card.captionSize,
+    lineHeight: semantic.card.paddingLarge,
   },
   sectionCard: {
-    padding: 16,
-    gap: 8,
+    padding: semantic.card.padding,
+    gap: semantic.card.gapSmall,
   },
   sectionTitle: {
     fontWeight: '700',
     fontSize: 15,
   },
   paragraphGroup: {
-    gap: 8,
+    gap: semantic.card.gapSmall,
   },
   paragraph: {
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: semantic.form.labelSize,
+    lineHeight: space['5'],
   },
   ctaCard: {
-    padding: 16,
-    gap: 8,
+    padding: semantic.card.padding,
+    gap: semantic.card.gapSmall,
   },
   ctaRow: {
-    gap: 10,
-    marginTop: 2,
+    gap: space['2.5'],
+    marginTop: space['0.5'],
   },
   primaryButton: {
-    borderRadius: 12,
+    borderRadius: semantic.button.radiusSmall,
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: semantic.button.paddingY,
   },
   primaryButtonText: {
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
   },
   secondaryButton: {
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: semantic.button.radiusSmall,
+    borderWidth: semantic.input.borderWidth,
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: semantic.button.paddingY,
   },
   secondaryButtonText: {
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
   },
 });

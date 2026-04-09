@@ -4,6 +4,8 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, fontSize } from '@/shared/ui/tokens.generated';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
@@ -185,76 +187,76 @@ export default function DiscoverScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    paddingTop: 28,
-    paddingHorizontal: 18,
-    paddingBottom: 16,
+    paddingTop: semantic.screen.paddingXL,
+    paddingHorizontal: space['4.5'],
+    paddingBottom: semantic.screen.padding,
   },
   menuWrap: {
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: space['2.5'],
   },
   scrollContent: {
-    gap: 12,
-    paddingBottom: 20,
+    gap: semantic.screen.gapSmall,
+    paddingBottom: space['5'],
   },
   heroCard: {
-    padding: 18,
-    gap: 8,
+    padding: semantic.card.paddingLarge,
+    gap: semantic.card.gapSmall,
   },
   title: {
-    fontSize: 30,
+    fontSize: fontSize['3xl'],
     fontWeight: '700',
   },
   subtitle: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: fontSize.sm,
+    lineHeight: space['5'],
   },
   statusLine: {
     fontWeight: '700',
-    fontSize: 12,
+    fontSize: semantic.card.captionSize,
   },
   actionCard: {
-    borderRadius: 20,
-    padding: 18,
-    gap: 8,
+    borderRadius: semantic.card.radius,
+    padding: semantic.card.paddingLarge,
+    gap: semantic.card.gapSmall,
   },
   primaryActionCard: {
-    borderWidth: 1,
+    borderWidth: semantic.input.borderWidth,
   },
   actionTitle: {
     fontWeight: '700',
-    fontSize: 18,
+    fontSize: semantic.card.titleSize,
   },
   actionText: {
-    lineHeight: 20,
-    fontSize: 13,
+    lineHeight: space['5'],
+    fontSize: semantic.form.labelSize,
   },
   actionCta: {
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
   },
   actionGlassCard: {
-    padding: 16,
-    gap: 8,
+    padding: semantic.card.padding,
+    gap: semantic.card.gapSmall,
   },
   cardTitle: {
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: semantic.section.subtitleSize,
   },
   cardText: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     lineHeight: 19,
   },
   secondaryButton: {
-    marginTop: 2,
-    borderRadius: 12,
-    borderWidth: 1,
+    marginTop: space['0.5'],
+    borderRadius: semantic.button.radiusSmall,
+    borderWidth: semantic.input.borderWidth,
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingVertical: semantic.button.paddingY,
+    paddingHorizontal: semantic.input.paddingCompact,
   },
   secondaryButtonText: {
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
   },
 });

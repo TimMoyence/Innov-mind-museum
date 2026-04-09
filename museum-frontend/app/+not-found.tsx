@@ -6,6 +6,8 @@ import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 /** Displays a 404-style screen with a link to navigate back to the home page. */
 export default function NotFoundScreen() {
@@ -40,27 +42,27 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    padding: semantic.modal.padding,
   },
   card: {
     width: '100%',
     maxWidth: 420,
-    padding: 20,
-    gap: 12,
+    padding: semantic.modal.padding,
+    gap: semantic.card.gap,
   },
   title: {
-    fontSize: 22,
+    fontSize: space['5.5'],
     fontWeight: '700',
     textAlign: 'center',
   },
   button: {
-    marginTop: 4,
-    borderRadius: 12,
-    paddingVertical: 12,
+    marginTop: semantic.card.gapTiny,
+    borderRadius: semantic.card.radiusCompact,
+    paddingVertical: semantic.button.paddingY,
     alignItems: 'center',
   },
   buttonText: {
-    fontSize: 14,
+    fontSize: semantic.button.fontSize,
     fontWeight: '700',
   },
 });

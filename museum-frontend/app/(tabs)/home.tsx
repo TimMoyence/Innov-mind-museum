@@ -15,6 +15,8 @@ import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 /** Renders the home screen with branding, runtime settings summary, and actions to start new conversations. */
 export default function HomeScreen() {
@@ -174,66 +176,66 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   screen: {
     flexGrow: 1,
-    paddingHorizontal: 22,
+    paddingHorizontal: space['5.5'],
     paddingBottom: 110,
     justifyContent: 'center',
-    gap: 16,
+    gap: semantic.screen.gap,
   },
   menuRow: {
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: semantic.card.gapSmall,
   },
   menuStatus: {
     textAlign: 'center',
-    fontSize: 12,
+    fontSize: semantic.card.captionSize,
     fontWeight: '700',
-    marginBottom: 2,
+    marginBottom: space['0.5'],
   },
   heroCard: {
-    padding: 20,
-    gap: 10,
+    padding: semantic.modal.padding,
+    gap: semantic.form.gap,
   },
   title: {
-    fontSize: 32,
+    fontSize: space['8'],
     fontWeight: '700',
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: semantic.section.subtitleSize,
+    lineHeight: space['6'],
     textAlign: 'center',
   },
   settingsNote: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     fontWeight: '600',
     textAlign: 'center',
   },
   primaryButton: {
-    marginTop: 6,
-    borderRadius: 16,
-    paddingVertical: 14,
+    marginTop: semantic.section.gapTight,
+    borderRadius: semantic.modal.radius,
+    paddingVertical: semantic.button.paddingYCompact,
     alignItems: 'center',
     shadowOpacity: 0.22,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 10 },
   },
   primaryButtonText: {
-    fontSize: 16,
+    fontSize: semantic.button.fontSizeLarge,
     fontWeight: '700',
   },
   secondaryRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: semantic.form.gap,
   },
   secondaryButton: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: 14,
-    paddingVertical: 12,
+    borderRadius: semantic.button.radius,
+    paddingVertical: semantic.button.paddingY,
     alignItems: 'center',
   },
   secondaryButtonText: {
-    fontSize: 15,
+    fontSize: semantic.button.fontSizeLarge,
     fontWeight: '600',
   },
 });

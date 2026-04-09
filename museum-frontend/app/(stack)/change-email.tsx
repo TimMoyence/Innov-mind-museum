@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { authService } from '@/features/auth/infrastructure/authApi';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, fontSize } from '@/shared/ui/tokens.generated';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -143,67 +145,67 @@ export default function ChangeEmailScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    paddingHorizontal: 18,
-    paddingBottom: 16,
+    paddingHorizontal: space['4.5'],
+    paddingBottom: semantic.screen.padding,
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
-    gap: 12,
-    paddingBottom: 22,
+    gap: semantic.screen.gapSmall,
+    paddingBottom: space['5.5'],
   },
   heroCard: {
-    padding: 18,
-    gap: 8,
+    padding: semantic.card.paddingLarge,
+    gap: semantic.card.gapSmall,
   },
   title: {
-    fontSize: 30,
+    fontSize: fontSize['3xl'],
     fontWeight: '700',
   },
   card: {
-    padding: 16,
-    gap: 10,
+    padding: semantic.card.padding,
+    gap: semantic.form.gap,
   },
   label: {
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: fontSize.sm,
   },
   input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    fontSize: 14,
+    borderWidth: semantic.input.borderWidth,
+    borderRadius: semantic.input.radiusSmall,
+    paddingVertical: semantic.button.paddingY,
+    paddingHorizontal: space['3.5'],
+    fontSize: fontSize.sm,
   },
   errorText: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     fontWeight: '600',
   },
   successText: {
     fontSize: 15,
     fontWeight: '600',
-    lineHeight: 22,
+    lineHeight: space['5.5'],
   },
   primaryButton: {
-    marginTop: 2,
-    borderRadius: 12,
+    marginTop: space['0.5'],
+    borderRadius: semantic.button.radiusSmall,
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: semantic.button.paddingY,
   },
   primaryButtonText: {
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: semantic.button.fontSize,
   },
   secondaryButton: {
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingVertical: 12,
+    borderRadius: semantic.button.radiusSmall,
+    borderWidth: semantic.input.borderWidth,
+    paddingVertical: semantic.button.paddingY,
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: semantic.input.paddingCompact,
   },
   secondaryButtonText: {
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: semantic.button.fontSize,
   },
 });
