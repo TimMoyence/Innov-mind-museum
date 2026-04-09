@@ -5,6 +5,8 @@ import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 interface AssistantMetaActionsProps {
   /** The message ID used for feedback and report callbacks. */
@@ -141,7 +143,7 @@ const styles = StyleSheet.create({
   metaActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: space['2.5'],
   },
   actionButton: {
     flexDirection: 'row',
@@ -152,6 +154,6 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   actionLabel: {
-    fontSize: 11,
+    fontSize: semantic.section.labelSize,
   },
 });

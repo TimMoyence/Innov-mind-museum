@@ -3,6 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, fontSize } from '@/shared/ui/tokens.generated';
 
 interface BiometricLockScreenProps {
   biometricLabel: string;
@@ -49,30 +51,30 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
-    gap: 16,
+    paddingHorizontal: space['8'],
+    gap: semantic.screen.gap,
   },
   title: {
-    fontSize: 24,
+    fontSize: fontSize['2xl'],
     fontWeight: '700',
-    marginTop: 16,
+    marginTop: semantic.screen.padding,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: fontSize.sm,
     textAlign: 'center',
   },
   button: {
-    marginTop: 24,
-    borderRadius: 14,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
+    marginTop: semantic.screen.paddingLarge,
+    borderRadius: semantic.button.radius,
+    paddingHorizontal: space['8'],
+    paddingVertical: semantic.button.paddingYCompact,
   },
   buttonText: {
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: semantic.button.fontSizeLarge,
   },
   failedText: {
-    marginTop: 8,
-    fontSize: 13,
+    marginTop: space['2'],
+    fontSize: semantic.form.labelSize,
   },
 });

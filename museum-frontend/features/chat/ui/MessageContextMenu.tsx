@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, fontSize } from '@/shared/ui/tokens.generated';
 
 interface MenuAction {
   id: string;
@@ -139,41 +141,41 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 36,
+    borderTopLeftRadius: semantic.card.radius,
+    borderTopRightRadius: semantic.card.radius,
+    paddingHorizontal: semantic.modal.padding,
+    paddingTop: semantic.card.paddingCompact,
+    paddingBottom: space['9'],
   },
   handle: {
     alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    marginBottom: 16,
+    width: space['9'],
+    height: space['1'],
+    borderRadius: space['0.5'],
+    marginBottom: semantic.screen.gap,
   },
   title: {
-    fontSize: 13,
-    marginBottom: 12,
+    fontSize: semantic.form.labelSize,
+    marginBottom: semantic.card.gap,
   },
   action: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 14,
+    gap: semantic.card.gap,
+    paddingVertical: space['3.5'],
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   actionLabel: {
-    fontSize: 16,
+    fontSize: fontSize.base,
     fontWeight: '500',
   },
   cancelAction: {
-    marginTop: 12,
+    marginTop: semantic.card.gap,
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: space['3.5'],
   },
   cancelLabel: {
-    fontSize: 16,
+    fontSize: fontSize.base,
     fontWeight: '600',
   },
 });

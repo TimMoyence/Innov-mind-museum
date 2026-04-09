@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useDataMode } from '@/features/chat/application/DataModeProvider';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 interface OfflineBannerProps {
   pendingCount: number;
@@ -50,12 +52,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    gap: 8,
+    paddingVertical: space['2'],
+    paddingHorizontal: semantic.screen.padding,
+    gap: semantic.chat.gap,
   },
   text: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     fontWeight: '600',
   },
 });

@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, fontSize } from '@/shared/ui/tokens.generated';
 
 interface WelcomeCardProps {
   museumMode: boolean;
@@ -83,35 +85,35 @@ export const WelcomeCard = ({
 
 const styles = StyleSheet.create({
   card: {
-    padding: 20,
-    marginHorizontal: 4,
+    padding: semantic.modal.padding,
+    marginHorizontal: space['1'],
   },
   title: {
-    fontSize: 20,
+    fontSize: semantic.section.titleSize,
     fontWeight: '700',
     textAlign: 'center',
   },
   subtitle: {
-    marginTop: 4,
-    fontSize: 14,
+    marginTop: space['1'],
+    fontSize: fontSize.sm,
     textAlign: 'center',
   },
   suggestions: {
-    marginTop: 16,
-    gap: 10,
+    marginTop: semantic.screen.gap,
+    gap: semantic.form.gap,
   },
   suggestionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    gap: semantic.form.gap,
+    borderRadius: semantic.button.radius,
+    borderWidth: semantic.input.borderWidth,
+    paddingHorizontal: space['3.5'],
+    paddingVertical: semantic.button.paddingY,
   },
   suggestionText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: fontSize.sm,
     fontWeight: '500',
   },
   suggestionButtonDisabled: {

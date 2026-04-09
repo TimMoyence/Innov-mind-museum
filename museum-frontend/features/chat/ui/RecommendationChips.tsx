@@ -3,6 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, fontSize } from '@/shared/ui/tokens.generated';
 
 interface RecommendationChipsProps {
   recommendations: string[];
@@ -60,31 +62,31 @@ export const RecommendationChips = ({
 
 const styles = StyleSheet.create({
   sectionLabel: {
-    fontSize: 11,
+    fontSize: semantic.section.labelSize,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 4,
+    marginBottom: space['1'],
   },
   container: {
-    paddingVertical: 4,
-    gap: 8,
+    paddingVertical: space['1'],
+    gap: semantic.chat.gap,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    gap: semantic.chat.gapSmall,
+    borderRadius: semantic.card.radiusCompact,
+    borderWidth: semantic.input.borderWidth,
+    paddingHorizontal: semantic.card.paddingCompact,
+    paddingVertical: semantic.badge.paddingX,
     maxWidth: 220,
   },
   chipDisabled: {
     opacity: 0.5,
   },
   chipText: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     fontWeight: '500',
   },
 });

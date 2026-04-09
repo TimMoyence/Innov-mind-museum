@@ -10,6 +10,8 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 const DOT_SIZE = 8;
 const DOT_COUNT = 3;
@@ -63,11 +65,11 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: space['1'],
     alignSelf: 'flex-start',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
+    borderRadius: semantic.chat.bubbleRadius,
+    padding: semantic.chat.bubblePaddingX,
+    borderWidth: semantic.input.borderWidth,
   },
   dot: {
     width: DOT_SIZE,

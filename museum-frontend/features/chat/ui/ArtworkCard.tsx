@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, fontSize } from '@/shared/ui/tokens.generated';
 
 interface ArtworkCardProps {
   title: string;
@@ -57,39 +59,39 @@ export const ArtworkCard = ({ title, artist, museum, room, confidence }: Artwork
 
 const styles = StyleSheet.create({
   card: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginTop: 6,
+    paddingHorizontal: semantic.chat.bubblePaddingX,
+    paddingVertical: semantic.list.itemPaddingYCompact,
+    marginTop: semantic.chat.gapSmall,
     maxWidth: '85%',
     alignSelf: 'flex-start',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: space['2.5'],
   },
   content: {
     flex: 1,
   },
   title: {
-    fontSize: 14,
+    fontSize: fontSize.sm,
     fontWeight: '700',
   },
   detail: {
-    marginTop: 2,
-    fontSize: 12,
+    marginTop: space['0.5'],
+    fontSize: fontSize.xs,
   },
   location: {
-    marginTop: 2,
-    fontSize: 11,
+    marginTop: space['0.5'],
+    fontSize: semantic.section.labelSize,
   },
   badge: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    borderRadius: semantic.badge.radius,
+    paddingHorizontal: semantic.badge.paddingX,
+    paddingVertical: semantic.badge.paddingYTight,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: space['2.5'],
     fontWeight: '700',
   },
 });

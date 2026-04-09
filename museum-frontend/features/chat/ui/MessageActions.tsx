@@ -7,6 +7,8 @@ import type { ChatUiMessageMetadata } from '@/features/chat/application/useChatS
 import { FollowUpButtons } from '@/features/chat/ui/FollowUpButtons';
 import { RecommendationChips } from '@/features/chat/ui/RecommendationChips';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space } from '@/shared/ui/tokens.generated';
 
 interface MessageActionsProps {
   /** Metadata from the last assistant message. */
@@ -122,49 +124,49 @@ export const MessageActions = ({
 
 const styles = StyleSheet.create({
   container: {
-    gap: 6,
+    gap: semantic.chat.gapSmall,
     alignItems: 'flex-end',
   },
   deeperContextWrap: {
-    marginTop: 4,
+    marginTop: space['1'],
     maxWidth: '85%',
     alignSelf: 'flex-end',
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 10,
+    borderRadius: semantic.card.radiusCompact,
+    borderWidth: semantic.input.borderWidth,
+    padding: space['2.5'],
   },
   deeperContextToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: semantic.chat.gapSmall,
   },
   deeperContextLabel: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     fontWeight: '600',
   },
   deeperContextText: {
-    marginTop: 8,
-    fontSize: 13,
+    marginTop: semantic.chat.gap,
+    fontSize: semantic.form.labelSize,
     lineHeight: 19,
   },
   openQuestionChip: {
-    marginTop: 2,
+    marginTop: space['0.5'],
     maxWidth: '85%',
     alignSelf: 'flex-end',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    gap: semantic.chat.gap,
+    borderRadius: semantic.card.radiusCompact,
+    borderWidth: semantic.input.borderWidth,
+    paddingHorizontal: semantic.card.paddingCompact,
+    paddingVertical: semantic.badge.paddingX,
   },
   disabledChip: {
     opacity: 0.5,
   },
   openQuestionText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     fontWeight: '500',
   },
 });

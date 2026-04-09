@@ -13,6 +13,8 @@ import { ImageFullscreenModal } from '@/features/chat/ui/ImageFullscreenModal';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
 
 const PROACTIVE_REFRESH_MS = 5 * 60 * 1000;
 
@@ -293,60 +295,60 @@ ChatMessageBubble.displayName = 'ChatMessageBubble';
 
 const styles = StyleSheet.create({
   bubble: {
-    borderRadius: 16,
-    padding: 12,
+    borderRadius: semantic.chat.bubbleRadius,
+    padding: semantic.chat.bubblePadding,
     maxWidth: '85%',
-    borderWidth: 1,
+    borderWidth: semantic.input.borderWidth,
   },
   userText: {},
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 6,
+    marginTop: semantic.chat.gapSmall,
   },
   timestamp: {
-    fontSize: 11,
+    fontSize: semantic.section.labelSize,
   },
   messageImage: {
-    marginTop: 8,
+    marginTop: space['2'],
     width: 220,
     height: 220,
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: radius.lg,
+    borderWidth: semantic.input.borderWidth,
   },
   cursor: {
-    fontSize: 18,
-    lineHeight: 22,
+    fontSize: fontSize.lg,
+    lineHeight: semantic.chat.iconSize,
   },
   failedRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 8,
-    marginTop: 4,
+    gap: semantic.chat.gap,
+    marginTop: space['1'],
   },
   failedText: {
-    fontSize: 11,
+    fontSize: semantic.section.labelSize,
     fontWeight: '500',
   },
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    borderWidth: 1,
+    gap: space['1'],
+    paddingVertical: semantic.badge.paddingY,
+    paddingHorizontal: semantic.badge.paddingX,
+    borderRadius: radius.lg,
+    borderWidth: semantic.input.borderWidth,
   },
   retryLabel: {
-    fontSize: 11,
+    fontSize: semantic.section.labelSize,
     fontWeight: '600',
   },
   cachedBadge: {
     fontSize: 10,
     fontStyle: 'italic',
-    marginTop: 4,
+    marginTop: space['1'],
     alignSelf: 'flex-start',
   },
 });

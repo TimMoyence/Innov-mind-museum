@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 
 import type { VisitSummary } from '@/features/chat/application/chatSessionLogic.pure';
 import { useTheme } from '@/shared/ui/ThemeContext';
+import { semantic } from '@/shared/ui/tokens.semantic';
+import { space, radius, fontSize } from '@/shared/ui/tokens.generated';
 
 interface VisitSummaryModalProps {
   visible: boolean;
@@ -13,7 +15,7 @@ interface VisitSummaryModalProps {
   onClose: () => void;
 }
 
-const THUMBNAIL_SIZE = 48;
+const THUMBNAIL_SIZE = semantic.chat.thumbnailSize;
 
 /** Modal that displays an aggregated summary of a museum visit session. */
 export const VisitSummaryModal = React.memo(function VisitSummaryModal({
@@ -194,30 +196,30 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: semantic.modal.padding,
   },
   card: {
     width: '100%',
-    maxHeight: '85%',
-    borderRadius: 16,
+    maxHeight: semantic.modal.maxHeight,
+    borderRadius: semantic.modal.radius,
     overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: semantic.screen.padding,
+    paddingVertical: space['3.5'],
   },
   headerTitleArea: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginRight: 12,
+    gap: semantic.chat.gap,
+    marginRight: semantic.card.gap,
   },
   title: {
-    fontSize: 18,
+    fontSize: semantic.card.titleSize,
     fontWeight: '700',
     flexShrink: 1,
   },
@@ -225,37 +227,37 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingHorizontal: semantic.screen.padding,
+    paddingBottom: semantic.modal.padding,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: semantic.screen.padding,
+    marginBottom: semantic.section.gapSmall,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: fontSize.sm,
     fontStyle: 'italic',
   },
   artworkRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: space['2'],
     borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 10,
+    gap: space['2.5'],
   },
   thumbnail: {
     width: THUMBNAIL_SIZE,
     height: THUMBNAIL_SIZE,
-    borderRadius: 6,
+    borderRadius: radius.sm,
   },
   thumbnailPlaceholder: {
     width: THUMBNAIL_SIZE,
     height: THUMBNAIL_SIZE,
-    borderRadius: 6,
+    borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -267,35 +269,35 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   artworkDetail: {
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: fontSize.xs,
+    marginTop: space['0.5'],
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: semantic.chat.gap,
   },
   chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
+    paddingHorizontal: semantic.card.paddingCompact,
+    paddingVertical: semantic.chat.gapSmall,
+    borderRadius: semantic.chat.bubbleRadius,
+    borderWidth: semantic.input.borderWidth,
   },
   chipText: {
-    fontSize: 13,
+    fontSize: semantic.form.labelSize,
     fontWeight: '500',
   },
   statsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: semantic.screen.gap,
   },
   statItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: semantic.chat.gapSmall,
   },
   statText: {
-    fontSize: 14,
+    fontSize: fontSize.sm,
   },
 });
