@@ -57,7 +57,7 @@
     "expo-store-review": "~55.0.11",
     "expo-system-ui": "~55.0.13",
     "expo-updates": "~55.0.18",
-    "i18next": "^25.8.20",
+    "i18next": "^26.0.4",
     "intl-pluralrules": "^2.0.1",
     "js-sha256": "^0.11.1",
     "react": "19.2.0",
