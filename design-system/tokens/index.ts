@@ -4,3 +4,7 @@ export { typography } from './typography';
 export type { Typography } from './typography';
 export { spacing, radii } from './spacing';
 export type { Spacing, Radii } from './spacing';
+export { functional, withOpacity } from './functional';
+export type { Functional } from './functional';
+export { semantic } from './semantic';
+export type { Semantic } from './semantic';

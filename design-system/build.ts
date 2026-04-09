@@ -15,6 +15,8 @@ import { fileURLToPath } from 'node:url';
 import { colors } from './tokens/colors';
 import { typography } from './tokens/typography';
 import { spacing, radii } from './tokens/spacing';
+import { functional } from './tokens/functional';
+import { semantic } from './tokens/semantic';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
@@ -198,18 +200,150 @@ function buildReactNativeTS(): string {
   return lines.join('\n');
 }
 
+// ─── React Native: Functional tokens ────────────────────────────────────────
+
+function buildReactNativeFunctional(): string {
+  const lines: string[] = [TS_HEADER, ''];
+
+  lines.push('/**');
+  lines.push(' * Converts a hex color to rgba with the given alpha.');
+  lines.push(' * Works with 3-char (#fff), 6-char (#ffffff), and 8-char (#ffffffaa) hex.');
+  lines.push(' */');
+  lines.push('export function withOpacity(hex: string, alpha: number): string {');
+  lines.push("  const clean = hex.replace('#', '');");
+  lines.push('  let r: number, g: number, b: number;');
+  lines.push('  if (clean.length === 3) {');
+  lines.push('    r = parseInt(clean[0] + clean[0], 16);');
+  lines.push('    g = parseInt(clean[1] + clean[1], 16);');
+  lines.push('    b = parseInt(clean[2] + clean[2], 16);');
+  lines.push('  } else {');
+  lines.push('    r = parseInt(clean.slice(0, 2), 16);');
+  lines.push('    g = parseInt(clean.slice(2, 4), 16);');
+  lines.push('    b = parseInt(clean.slice(4, 6), 16);');
+  lines.push('  }');
+  lines.push('  return `rgba(${r}, ${g}, ${b}, ${alpha})`;');
+  lines.push('}');
+  lines.push('');
+
+  lines.push('export const functional = {');
+  for (const [key, val] of Object.entries(functional)) {
+    lines.push(`  ${key}: '${val}',`);
+  }
+  lines.push('} as const;');
+  lines.push('');
+
+  return lines.join('\n');
+}
+
+// ─── React Native: Semantic tokens ──────────────────────────────────────────
+
+function buildReactNativeSemantic(): string {
+  const lines: string[] = [TS_HEADER, ''];
+
+  function writeEntries(obj: Record<string, unknown>, depth: number): void {
+    const indent = '  '.repeat(depth);
+    for (const [key, val] of Object.entries(obj)) {
+      if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+        lines.push(`${indent}${key}: {`);
+        writeEntries(val as Record<string, unknown>, depth + 1);
+        lines.push(`${indent}},`);
+      } else if (typeof val === 'string') {
+        lines.push(`${indent}${key}: '${val}',`);
+      } else {
+        lines.push(`${indent}${key}: ${String(val)},`);
+      }
+    }
+  }
+
+  lines.push('export const semantic = {');
+  for (const [category, tokens] of Object.entries(semantic)) {
+    lines.push(`  ${category}: {`);
+    writeEntries(tokens as Record<string, unknown>, 2);
+    lines.push('  },');
+  }
+  lines.push('} as const;');
+  lines.push('');
+
+  return lines.join('\n');
+}
+
+// ─── Web CSS: Functional tokens ─────────────────────────────────────────────
+
+function buildFunctionalCSS(): string {
+  const lines: string[] = [HEADER, '', '@theme {'];
+
+  for (const [key, val] of Object.entries(functional)) {
+    const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+    lines.push(`  --fn-${cssKey}: ${val};`);
+  }
+
+  lines.push('}', '');
+  return lines.join('\n');
+}
+
+// ─── Web CSS: Semantic tokens ───────────────────────────────────────────────
+
+function buildSemanticCSS(): string {
+  const lines: string[] = [HEADER, '', '@theme {'];
+
+  for (const [category, tokens] of Object.entries(semantic)) {
+    lines.push(`  /* ${category} */`);
+    for (const [key, val] of Object.entries(tokens as Record<string, unknown>)) {
+      if (typeof val === 'object' && val !== null) {
+        for (const [subKey, subVal] of Object.entries(val as Record<string, unknown>)) {
+          if (typeof subVal === 'string') {
+            const cssKey = `--sem-${category}-${key}-${subKey}`.replace(/([A-Z])/g, '-$1').toLowerCase();
+            lines.push(`  ${cssKey}: ${subVal};`);
+          }
+        }
+      } else if (typeof val === 'number') {
+        const cssKey = `--sem-${category}-${key}`.replace(/([A-Z])/g, '-$1').toLowerCase();
+        const remVal = val === 0 ? '0' : `${val / 16}rem`;
+        lines.push(`  ${cssKey}: ${remVal};`);
+      } else if (typeof val === 'string') {
+        const cssKey = `--sem-${category}-${key}`.replace(/([A-Z])/g, '-$1').toLowerCase();
+        lines.push(`  ${cssKey}: ${val};`);
+      }
+    }
+    lines.push('');
+  }
+
+  lines.push('}', '');
+  return lines.join('\n');
+}
+
 // ─── Write outputs ──────────────────────────────────────────────────────────
 
 const outputs = [
   {
     path: resolve(root, 'museum-frontend/shared/ui/tokens.generated.ts'),
     content: buildReactNativeTS(),
-    label: 'museum-frontend',
+    label: 'museum-frontend (primitives)',
+  },
+  {
+    path: resolve(root, 'museum-frontend/shared/ui/tokens.functional.ts'),
+    content: buildReactNativeFunctional(),
+    label: 'museum-frontend (functional)',
+  },
+  {
+    path: resolve(root, 'museum-frontend/shared/ui/tokens.semantic.ts'),
+    content: buildReactNativeSemantic(),
+    label: 'museum-frontend (semantic)',
   },
   {
     path: resolve(root, 'museum-web/src/tokens.generated.css'),
     content: buildTailwindCSS(),
-    label: 'museum-web',
+    label: 'museum-web (primitives)',
+  },
+  {
+    path: resolve(root, 'museum-web/src/tokens.functional.css'),
+    content: buildFunctionalCSS(),
+    label: 'museum-web (functional)',
+  },
+  {
+    path: resolve(root, 'museum-web/src/tokens.semantic.css'),
+    content: buildSemanticCSS(),
+    label: 'museum-web (semantic)',
   },
 ];
 
