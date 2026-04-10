@@ -18,8 +18,9 @@ docs/
 *.md
 !README.md
 
-# Scripts (not needed in image)
-scripts/
+# Scripts (only keep those needed at runtime: seed-museums for deploy seed step)
+scripts/*
+!scripts/seed-museums.ts
 
 # Docker configs (avoid recursive context)
 docker-compose*.yml
