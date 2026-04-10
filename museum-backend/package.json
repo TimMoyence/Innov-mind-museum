@@ -111,7 +111,7 @@
     "@opentelemetry/resources": "^2.6.1",
     "@opentelemetry/sdk-node": "^0.214.0",
     "@opentelemetry/semantic-conventions": "^1.40.0",
-    "@sentry/node": "^10.46.0",
+    "@sentry/node": "^10.48.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.73.4",
     "cheerio": "^1.2.0",
