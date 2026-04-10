@@ -28,7 +28,7 @@ interface BraveApiResponse {
  * any error returns an empty array so the caller can fail-open.
  */
 export class BraveSearchClient implements WebSearchProvider {
-  readonly name = 'brave-search';
+  readonly name = 'brave';
 
   constructor(private readonly apiKey: string) {}
 
