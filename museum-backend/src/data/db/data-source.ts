@@ -12,6 +12,9 @@ import { ChatSession } from '@modules/chat/domain/chatSession.entity';
 import { MessageFeedback } from '@modules/chat/domain/messageFeedback.entity';
 import { MessageReport } from '@modules/chat/domain/messageReport.entity';
 import { UserMemory } from '@modules/chat/domain/userMemory.entity';
+import { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge.entity';
+import { ExtractedContent } from '@modules/knowledge-extraction/domain/extracted-content.entity';
+import { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-enrichment.entity';
 import { Museum } from '@modules/museum/domain/museum.entity';
 import { MuseumQaSeed } from '@modules/museum/domain/museumQaSeed.entity';
 import { Review } from '@modules/review/domain/review.entity';
@@ -53,6 +56,9 @@ export const AppDataSource = new DataSource({
     Review,
     SupportTicket,
     TicketMessage,
+    ExtractedContent,
+    ArtworkKnowledge,
+    MuseumEnrichment,
   ],
   migrations: isCompiledRuntime
     ? ['dist/src/data/db/migrations/*.js']
