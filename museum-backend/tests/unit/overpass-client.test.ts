@@ -109,7 +109,7 @@ describe('queryOverpassMuseums', () => {
     const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 });
 
     expect(results).toEqual([]);
-    expect(fetchSpy).toHaveBeenCalledTimes(2); // main + kumi
+    expect(fetchSpy).toHaveBeenCalledTimes(3); // main + kumi + private.coffee
   });
 
   it('returns empty array when all endpoints time out', async () => {

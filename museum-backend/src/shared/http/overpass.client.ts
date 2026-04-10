@@ -41,20 +41,26 @@ interface OverpassResponse {
 
 /**
  * Ordered list of Overpass API endpoints tried in sequence on failure.
- * Main instance first (fastest when it admits the query), Kumi Systems
- * mirror as resilient fallback.
+ * Main instance first (fastest when it admits the query), community
+ * mirrors as fallback chain.
+ *
+ * - overpass-api.de: main DE instance, fastest but throttles cloud IPs
+ * - kumi.systems: community-funded mirror, strong hardware
+ * - private.coffee: Austrian non-profit, explicitly no rate limit
+ *
+ * Source: https://wiki.openstreetmap.org/wiki/Overpass_API#Public_Overpass_API_instances
  */
 const OVERPASS_ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
 ];
 /**
  * Client-side fetch timeout per endpoint. Kept low so worst-case chain
- * (main fails → kumi tries) stays under the VPS nginx gateway timeout
- * (≈ 20s). Real queries with [timeout:180] take < 2s in practice; 8s
- * is enough slack to catch the happy path.
+ * (3 endpoints × 6s) stays under the VPS nginx gateway timeout (≈ 20s).
+ * Real queries with [timeout:180] take < 3s in practice.
  */
-const DEFAULT_TIMEOUT_MS = 8_000;
+const DEFAULT_TIMEOUT_MS = 6_000;
 /**
  * Overpass QL `[timeout:N]` directive — acts as a RESOURCE ADMISSION BUDGET,
  * not a real timeout. The server refuses to run the query if N seems
