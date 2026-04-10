@@ -35,6 +35,7 @@ import { UserMemoryService } from './useCase/user-memory.service';
 import { WebSearchService } from './useCase/web-search.service';
 
 import type { ArtKeywordRepository } from './domain/artKeyword.repository.interface';
+import type { ChatOrchestrator } from './domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from './domain/ports/image-storage.port';
 import type { OcrService } from './domain/ports/ocr.port';
 import type { WebSearchProvider } from './domain/ports/web-search.port';
@@ -62,6 +63,7 @@ class ChatModule {
   private _built: BuiltChatModule | undefined;
   private _orchestrator: LangChainChatOrchestrator | undefined;
   private _artKeywordsRefreshTimer: ReturnType<typeof setInterval> | undefined;
+  private _knowledgeExtractionClose: (() => Promise<void>) | undefined;
 
   /** Returns true if the module has been built. */
   isBuilt(): boolean {
@@ -89,6 +91,11 @@ class ChatModule {
       clearInterval(this._artKeywordsRefreshTimer);
       this._artKeywordsRefreshTimer = undefined;
     }
+  }
+
+  /** Gracefully shuts down the knowledge extraction BullMQ worker. */
+  async stopKnowledgeExtraction(): Promise<void> {
+    await this._knowledgeExtractionClose?.();
   }
 
   /** Creates the image storage adapter (S3 or local) based on env config. */
@@ -283,6 +290,7 @@ class ChatModule {
     const effectiveOrchestrator = this.buildEffectiveOrchestrator(orchestrator, cache);
 
     const knowledgeExtraction = this.buildKnowledgeExtraction(dataSource);
+    this._knowledgeExtractionClose = knowledgeExtraction.close;
     const chatService = new ChatService({
       repository,
       orchestrator: effectiveOrchestrator,
@@ -358,4 +366,9 @@ export const getLlmCircuitBreakerState = () => chatModule.getLlmCircuitBreakerSt
 /** Stops the periodic art-keywords refresh timer. Call during graceful shutdown. */
 export const stopArtKeywordsRefresh = () => {
   chatModule.stopArtKeywordsRefresh();
+};
+
+/** Gracefully shuts down the knowledge extraction BullMQ worker. */
+export const stopKnowledgeExtraction = async () => {
+  await chatModule.stopKnowledgeExtraction();
 };

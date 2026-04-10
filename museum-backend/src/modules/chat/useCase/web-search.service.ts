@@ -43,7 +43,7 @@ export class WebSearchService {
     const key = searchQuery.toLowerCase().trim();
     if (!key) return [];
 
-    const cacheKey = `ws:tavily:${key}`;
+    const cacheKey = `ws:search:${key}`;
 
     // Check cache (fail-open: cache errors fall through to provider)
     if (this.cacheService) {

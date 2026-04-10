@@ -1,11 +1,8 @@
-// Mock heavy deps before importing the module under test to avoid ESM chain issues
-// jsdom@29 has transitive ESM-only deps (@exodus/bytes) that ts-jest cannot transform.
-jest.mock('jsdom', () => {
+// Mock heavy deps before importing the module under test.
+jest.mock('linkedom', () => {
   return {
-    JSDOM: jest.fn().mockImplementation((html: string, _opts?: unknown) => ({
-      window: {
-        document: { __html: html, title: '' },
-      },
+    parseHTML: jest.fn().mockImplementation((html: string) => ({
+      document: { __html: html, title: '' },
     })),
   };
 });

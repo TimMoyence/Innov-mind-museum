@@ -6,7 +6,7 @@ import Redis from 'ioredis';
 
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/refresh-token.repository.pg';
 import { TokenCleanupService } from '@modules/auth/useCase/tokenCleanup.service';
-import { getOcrService, stopArtKeywordsRefresh } from '@modules/chat';
+import { getOcrService, stopArtKeywordsRefresh, stopKnowledgeExtraction } from '@modules/chat';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
 import { logger } from '@shared/logger/logger';
@@ -91,6 +91,7 @@ function registerShutdownHandlers(
     tokenCleanup.stopScheduler();
     stopRateLimitSweep();
     stopArtKeywordsRefresh();
+    await stopKnowledgeExtraction();
     await shutdownOpenTelemetry();
     const ocr = getOcrService();
     if (ocr.destroy) await ocr.destroy();
