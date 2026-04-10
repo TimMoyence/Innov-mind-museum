@@ -41,16 +41,27 @@ interface OverpassResponse {
 
 /**
  * Ordered list of Overpass API endpoints tried in sequence on failure.
- * - Main instance: overpass-api.de (primary)
- * - Kumi Systems: kumi.systems (fast mirror, community-funded)
+ * Main instance first (fastest when it admits the query), Kumi Systems
+ * mirror as resilient fallback.
  */
 const OVERPASS_ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
 ];
-const DEFAULT_TIMEOUT_MS = 30_000;
-/** Overpass QL server-side timeout directive (must be ≤ client timeout). */
-const QL_TIMEOUT_SECONDS = 25;
+/** Client-side fetch timeout per endpoint (real queries take <2s in practice). */
+const DEFAULT_TIMEOUT_MS = 15_000;
+/**
+ * Overpass QL `[timeout:N]` directive — acts as a RESOURCE ADMISSION BUDGET,
+ * not a real timeout. The server refuses to run the query if N seems
+ * insufficient for its internal resource estimate.
+ *
+ * Empirically (2026-04-10): `timeout:25` was rejected with 504 in ~5s
+ * ("query admission denied") on dense zones. `timeout:180` (the Overpass
+ * default) is admitted and the query completes in <2s. Counter-intuitive
+ * but documented in Overpass commons:
+ * https://dev.overpass-api.de/overpass-doc/en/preface/commons.html
+ */
+const QL_TIMEOUT_SECONDS = 180;
 /**
  * Identifying User-Agent per OSM Operations convention
  * (https://operations.osmfoundation.org/policies/api/).
@@ -60,9 +71,11 @@ const USER_AGENT = 'Musaium/1.0 (+https://musaium.com; contact@musaium.com)';
 
 /**
  * Builds an Overpass QL query for museums within a radius of a given point.
- * Uses the `nwr` shortcut (node+way+relation in one pass) — ~4x faster than
- * a 3-query union on dense areas like Paris or Bordeaux, which was causing
- * server-side 504s with the previous implementation.
+ *
+ * Uses the `nwr` shortcut purely for readability (same execution plan as
+ * `(node; way; relation;)` — Overpass-API issue #504). The real fix for
+ * the 504s is the `[timeout:180]` admission budget — see QL_TIMEOUT_SECONDS
+ * for the full explanation.
  */
 const buildQuery = (lat: number, lng: number, radiusMeters: number): string => {
   const r = String(radiusMeters);
