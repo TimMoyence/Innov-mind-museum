@@ -30,6 +30,8 @@ export interface WebSearchServiceConfig {
 
 /** Port for web search providers (e.g., Tavily). */
 export interface WebSearchProvider {
+  /** Human-readable provider name for logging. */
+  readonly name?: string;
   /** Searches the web. Returns empty array if not found or on any error. */
   search(query: WebSearchQuery): Promise<SearchResult[]>;
 }
