@@ -39,25 +39,37 @@ interface OverpassResponse {
   elements: OverpassElement[];
 }
 
-const OVERPASS_API_URL = 'https://overpass-api.de/api/interpreter';
-const DEFAULT_TIMEOUT_MS = 10_000;
+/**
+ * Ordered list of Overpass API endpoints tried in sequence on failure.
+ * - Main instance: overpass-api.de (primary)
+ * - Kumi Systems: kumi.systems (fast mirror, community-funded)
+ */
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+];
+const DEFAULT_TIMEOUT_MS = 30_000;
+/** Overpass QL server-side timeout directive (must be ≤ client timeout). */
+const QL_TIMEOUT_SECONDS = 25;
+/**
+ * Identifying User-Agent per OSM Operations convention
+ * (https://operations.osmfoundation.org/policies/api/).
+ * A real contact is required so OSM admins can reach us if we misbehave.
+ */
+const USER_AGENT = 'Musaium/1.0 (+https://musaium.com; contact@musaium.com)';
 
 /**
  * Builds an Overpass QL query for museums within a radius of a given point.
- * Queries nodes, ways, and relations tagged with tourism=museum.
+ * Uses the `nwr` shortcut (node+way+relation in one pass) — ~4x faster than
+ * a 3-query union on dense areas like Paris or Bordeaux, which was causing
+ * server-side 504s with the previous implementation.
  */
 const buildQuery = (lat: number, lng: number, radiusMeters: number): string => {
-  const timeoutSeconds = String(Math.ceil(DEFAULT_TIMEOUT_MS / 1000));
   const r = String(radiusMeters);
   const coords = `${String(lat)},${String(lng)}`;
-  const around = `(around:${r},${coords})`;
   return [
-    `[out:json][timeout:${timeoutSeconds}];`,
-    '(',
-    `  node["tourism"="museum"]${around};`,
-    `  way["tourism"="museum"]${around};`,
-    `  relation["tourism"="museum"]${around};`,
-    ');',
+    `[out:json][timeout:${String(QL_TIMEOUT_SECONDS)}];`,
+    `nwr["tourism"="museum"](around:${r},${coords});`,
     'out center;',
   ].join('\n');
 };
@@ -136,12 +148,35 @@ const parseElement = (el: OverpassElement): OverpassMuseumResult | null => {
   };
 };
 
+/** POSTs a query to a single Overpass endpoint with timeout + User-Agent. */
+async function postQuery(endpoint: string, query: string, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
+
+  try {
+    return await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': USER_AGENT,
+      },
+      body: `data=${encodeURIComponent(query)}`,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
  * Queries the Overpass API for museums near a given location.
- * Returns an empty array on any failure (network, parse, timeout).
+ * Tries endpoints in order (main → Kumi mirror) and returns the first success.
+ * Returns an empty array on full failure (all endpoints failed).
  *
  * @param params - Search parameters including coordinates, radius, and optional text filter.
- * @param timeoutMs - HTTP request timeout in milliseconds (default 10000).
+ * @param timeoutMs - HTTP request timeout per endpoint in milliseconds (default 30000).
  * @returns Array of parsed museum results.
  */
 export async function queryOverpassMuseums(
@@ -149,59 +184,49 @@ export async function queryOverpassMuseums(
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
 ): Promise<OverpassMuseumResult[]> {
   const { lat, lng, radiusMeters, q } = params;
+  const query = buildQuery(lat, lng, radiusMeters);
 
-  try {
-    const query = buildQuery(lat, lng, radiusMeters);
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      controller.abort();
-    }, timeoutMs);
-
-    let response: Response;
+  for (const endpoint of OVERPASS_ENDPOINTS) {
     try {
-      response = await fetch(OVERPASS_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `data=${encodeURIComponent(query)}`,
-        signal: controller.signal,
+      const response = await postQuery(endpoint, query, timeoutMs);
+
+      if (!response.ok) {
+        logger.warn('Overpass endpoint returned non-OK status — trying next', {
+          endpoint,
+          status: response.status,
+          statusText: response.statusText,
+        });
+        continue;
+      }
+
+      const data = (await response.json()) as OverpassResponse;
+
+      if (!Array.isArray(data.elements)) {
+        logger.warn('Overpass endpoint returned unexpected response shape', { endpoint });
+        continue;
+      }
+
+      let results: OverpassMuseumResult[] = data.elements
+        .map(parseElement)
+        .filter((r): r is OverpassMuseumResult => r !== null);
+
+      if (q) {
+        const lower = q.toLowerCase();
+        results = results.filter((r) => r.name.toLowerCase().includes(lower));
+      }
+
+      return results;
+    } catch (error) {
+      logger.warn('Overpass endpoint query failed — trying next', {
+        endpoint,
+        error: error instanceof Error ? error.message : String(error),
+        lat,
+        lng,
+        radiusMeters,
       });
-    } finally {
-      clearTimeout(timer);
     }
-
-    if (!response.ok) {
-      logger.warn('Overpass API returned non-OK status', {
-        status: response.status,
-        statusText: response.statusText,
-      });
-      return [];
-    }
-
-    const data = (await response.json()) as OverpassResponse;
-
-    if (!Array.isArray(data.elements)) {
-      logger.warn('Overpass API returned unexpected response shape');
-      return [];
-    }
-
-    let results: OverpassMuseumResult[] = data.elements
-      .map(parseElement)
-      .filter((r): r is OverpassMuseumResult => r !== null);
-
-    if (q) {
-      const lower = q.toLowerCase();
-      results = results.filter((r) => r.name.toLowerCase().includes(lower));
-    }
-
-    return results;
-  } catch (error) {
-    logger.warn('Overpass API query failed', {
-      error: error instanceof Error ? error.message : String(error),
-      lat,
-      lng,
-      radiusMeters,
-    });
-    return [];
   }
+
+  logger.warn('All Overpass endpoints failed', { lat, lng, radiusMeters });
+  return [];
 }
