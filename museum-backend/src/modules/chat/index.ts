@@ -5,13 +5,18 @@ import { env } from '@src/config/env';
 
 import { TypeOrmArtKeywordRepository } from './adapters/secondary/artKeyword.repository.typeorm';
 import { OpenAiAudioTranscriber } from './adapters/secondary/audio-transcriber.openai';
+import { BraveSearchClient } from './adapters/secondary/brave-search.client';
 import { CachingChatOrchestrator } from './adapters/secondary/caching-chat-orchestrator';
 import { TypeOrmChatRepository } from './adapters/secondary/chat.repository.typeorm';
+import { DuckDuckGoClient } from './adapters/secondary/duckduckgo.client';
+import { FallbackSearchProvider } from './adapters/secondary/fallback-search.provider';
+import { GoogleCseClient } from './adapters/secondary/google-cse.client';
 import { S3CompatibleImageStorage } from './adapters/secondary/image-storage.s3';
 import { LocalImageStorage } from './adapters/secondary/image-storage.stub';
 import { LangChainChatOrchestrator } from './adapters/secondary/langchain.orchestrator';
 import { TesseractOcrService, DisabledOcrService } from './adapters/secondary/ocr-service';
 import { RegexPiiSanitizer } from './adapters/secondary/pii-sanitizer.regex';
+import { SearXNGClient } from './adapters/secondary/searxng.client';
 import { TavilyClient } from './adapters/secondary/tavily.client';
 import {
   OpenAiTextToSpeechService,
@@ -31,6 +36,7 @@ import { WebSearchService } from './useCase/web-search.service';
 import type { ArtKeywordRepository } from './domain/artKeyword.repository.interface';
 import type { ImageStorage } from './domain/ports/image-storage.port';
 import type { OcrService } from './domain/ports/ocr.port';
+import type { WebSearchProvider } from './domain/ports/web-search.port';
 import type { IMuseumRepository } from '@modules/museum/domain/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
 import type { DataSource } from 'typeorm';
@@ -148,18 +154,35 @@ class ChatModule {
     });
   }
 
-  /** Creates the web search service if the feature flag and Tavily API key are set. */
+  /** Creates the web search service with multi-provider fallback chain. */
   private buildWebSearch(cache?: CacheService): WebSearchService | undefined {
     if (!env.featureFlags.webSearch) return undefined;
-    if (!env.webSearch.tavilyApiKey) {
-      logger.warn('web_search_disabled_no_key', {
-        reason: 'TAVILY_API_KEY missing while FEATURE_FLAG_WEB_SEARCH=true',
-      });
-      return undefined;
+
+    const providers: WebSearchProvider[] = [];
+
+    if (env.webSearch.tavilyApiKey) {
+      providers.push(new TavilyClient(env.webSearch.tavilyApiKey));
     }
-    const tavilyClient = new TavilyClient(env.webSearch.tavilyApiKey);
+    if (env.webSearch.googleCseApiKey && env.webSearch.googleCseId) {
+      providers.push(new GoogleCseClient(env.webSearch.googleCseApiKey, env.webSearch.googleCseId));
+    }
+    if (env.webSearch.braveSearchApiKey) {
+      providers.push(new BraveSearchClient(env.webSearch.braveSearchApiKey));
+    }
+    if (env.webSearch.searxngInstances.length > 0) {
+      providers.push(new SearXNGClient(env.webSearch.searxngInstances));
+    }
+    // DuckDuckGo: always available, no key needed — last resort
+    providers.push(new DuckDuckGoClient());
+
+    logger.info('web_search_providers_configured', {
+      providers: providers.map((p) => p.name ?? 'unknown'),
+      count: providers.length,
+    });
+
+    const fallbackProvider = new FallbackSearchProvider(providers);
     return new WebSearchService(
-      tavilyClient,
+      fallbackProvider,
       {
         timeoutMs: env.webSearch.timeoutMs,
         cacheTtlSeconds: env.webSearch.cacheTtlSeconds,

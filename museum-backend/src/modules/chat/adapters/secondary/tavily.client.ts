@@ -26,6 +26,8 @@ interface TavilyApiResponse {
  * any error returns an empty array so the caller can fail-open.
  */
 export class TavilyClient implements WebSearchProvider {
+  readonly name = 'tavily';
+
   constructor(private readonly apiKey: string) {}
 
   /**
