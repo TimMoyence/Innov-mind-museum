@@ -39,6 +39,8 @@ export interface SearchMuseumsResult {
 
 const DEFAULT_RADIUS = 30_000;
 const MAX_RADIUS = 50_000;
+/** Cache empty Overpass results for 5 minutes to avoid hammering a failing API. */
+const NEGATIVE_CACHE_TTL_SECONDS = 300;
 /** Distance threshold in meters below which an OSM result is considered a duplicate of a local museum. */
 const DEDUP_THRESHOLD_METERS = 100;
 
@@ -216,9 +218,10 @@ export class SearchMuseumsUseCase {
 
     const results = await queryOverpassMuseums({ lat, lng, radiusMeters: radius });
 
-    if (this.cache && results.length > 0) {
+    if (this.cache) {
       try {
-        await this.cache.set(cacheKey, results, env.overpassCacheTtlSeconds);
+        const ttl = results.length > 0 ? env.overpassCacheTtlSeconds : NEGATIVE_CACHE_TTL_SECONDS;
+        await this.cache.set(cacheKey, results, ttl);
       } catch {
         // Cache write failure is non-fatal
       }

@@ -5,7 +5,7 @@ import helmet from 'helmet';
 
 import { buildChatService } from '@modules/chat';
 import { museumRepository } from '@modules/museum';
-import { NoopCacheService } from '@shared/cache/noop-cache.service';
+import { MemoryCacheService } from '@shared/cache/memory-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
 import { StaticFeatureFlagService } from '@shared/feature-flags/feature-flags.port';
 import { logger } from '@shared/logger/logger';
@@ -128,7 +128,10 @@ function resolveCacheService(options: CreateAppOptions): CacheService {
     return redisCacheService;
   }
 
-  return new NoopCacheService();
+  logger.info('cache_memory_fallback', {
+    reason: 'CACHE_ENABLED=false — using in-memory cache (Overpass, LLM, etc.)',
+  });
+  return new MemoryCacheService();
 }
 
 /**
