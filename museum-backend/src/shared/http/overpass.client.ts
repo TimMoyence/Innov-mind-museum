@@ -48,8 +48,13 @@ const OVERPASS_ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
 ];
-/** Client-side fetch timeout per endpoint (real queries take <2s in practice). */
-const DEFAULT_TIMEOUT_MS = 15_000;
+/**
+ * Client-side fetch timeout per endpoint. Kept low so worst-case chain
+ * (main fails → kumi tries) stays under the VPS nginx gateway timeout
+ * (≈ 20s). Real queries with [timeout:180] take < 2s in practice; 8s
+ * is enough slack to catch the happy path.
+ */
+const DEFAULT_TIMEOUT_MS = 8_000;
 /**
  * Overpass QL `[timeout:N]` directive — acts as a RESOURCE ADMISSION BUDGET,
  * not a real timeout. The server refuses to run the query if N seems
