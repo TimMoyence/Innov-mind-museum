@@ -4,6 +4,8 @@ import type { UserMemoryService } from './user-memory.service';
 import type { WebSearchService } from './web-search.service';
 import type { EnrichedImage } from '../domain/chat.types';
 import type { ArtworkFacts } from '../domain/ports/knowledge-base.port';
+import type { SearchResult } from '../domain/ports/web-search.port';
+import type { DbLookupService } from '@modules/knowledge-extraction/useCase/db-lookup.service';
 
 /** Dependencies needed by fetchEnrichmentData (subset of ChatMessageServiceDeps). */
 interface EnrichmentDeps {
@@ -11,6 +13,7 @@ interface EnrichmentDeps {
   knowledgeBase?: KnowledgeBaseService;
   imageEnrichment?: ImageEnrichmentService;
   webSearch?: WebSearchService;
+  dbLookup?: DbLookupService;
 }
 
 /**
@@ -81,36 +84,61 @@ function fetchImages(
   return failOpen(deps.imageEnrichment.enrich(searchTerm));
 }
 
-/** Fetches web search prompt block (or empty) — fail-open. */
-function fetchWebSearch(
+/** Fetches raw web search results for prompt building and URL enqueuing — fail-open. */
+function fetchWebSearchRaw(
   deps: EnrichmentDeps,
   searchTerm: string | null,
-): Promise<string | undefined> {
+): Promise<SearchResult[] | undefined> {
   if (!deps.webSearch || !searchTerm) return NONE;
-  return failOpen(deps.webSearch.search(searchTerm));
+  return failOpen(deps.webSearch.searchRaw(searchTerm));
 }
 
-/** Fetches user memory, knowledge-base text, KB facts, web search, and image enrichment in parallel (fail-open). */
+/** Fetches local knowledge block from the extraction DB — fail-open. */
+function fetchLocalKnowledge(
+  deps: EnrichmentDeps,
+  searchTerm: string | null,
+  locale: string,
+): Promise<string | undefined> {
+  if (!deps.dbLookup || !searchTerm) return NONE;
+  return failOpen(deps.dbLookup.lookup(searchTerm, locale));
+}
+
+/** Fetches all enrichment sources in parallel (fail-open): memory, KB, local knowledge, web search, images. */
 export async function fetchEnrichmentData(
   deps: EnrichmentDeps,
   history: { role: string; metadata?: Record<string, unknown> | null }[],
   inputText: string | undefined,
   ownerId: number | undefined,
+  locale?: string,
 ): Promise<{
   userMemoryBlock: string;
   knowledgeBaseBlock: string;
+  localKnowledgeBlock: string;
   webSearchBlock: string;
+  webSearchResults: SearchResult[];
   enrichedImages: EnrichedImage[];
 }> {
   const searchTerm = extractSearchTerm(history, inputText);
+  const resolvedLocale = locale ?? 'en';
 
-  const [memory, kb, kbFacts, images, web] = await Promise.all([
+  const [memory, kb, kbFacts, images, webResults, localKb] = await Promise.all([
     fetchMemory(deps, ownerId),
     fetchKnowledgeBase(deps, searchTerm),
     fetchKbFacts(deps, searchTerm),
     fetchImages(deps, searchTerm),
-    fetchWebSearch(deps, searchTerm),
+    fetchWebSearchRaw(deps, searchTerm),
+    fetchLocalKnowledge(deps, searchTerm, resolvedLocale),
   ]);
+
+  const safeWebResults = webResults ?? [];
+
+  // Build web search prompt block from raw results
+  let webSearchBlock = '';
+  if (safeWebResults.length > 0 && deps.webSearch) {
+    // Re-use the prompt builder that WebSearchService.search() uses internally
+    const { buildWebSearchPromptBlock } = await import('./web-search.prompt');
+    webSearchBlock = buildWebSearchPromptBlock(safeWebResults);
+  }
 
   let enrichedImages = images ?? [];
   if (kbFacts?.imageUrl && deps.imageEnrichment && searchTerm) {
@@ -124,7 +152,9 @@ export async function fetchEnrichmentData(
   return {
     userMemoryBlock: memory ?? '',
     knowledgeBaseBlock: kb ?? '',
-    webSearchBlock: web ?? '',
+    localKnowledgeBlock: localKb ?? '',
+    webSearchBlock,
+    webSearchResults: safeWebResults,
     enrichedImages,
   };
 }

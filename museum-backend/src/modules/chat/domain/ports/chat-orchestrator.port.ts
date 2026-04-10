@@ -21,6 +21,8 @@ export interface OrchestratorInput {
   userMemoryBlock?: string;
   knowledgeBaseBlock?: string;
   webSearchBlock?: string;
+  /** Pre-verified local knowledge block from the extraction DB (highest priority enrichment). */
+  localKnowledgeBlock?: string;
   /** When true, prompts include accessibility-oriented audio description instructions. */
   audioDescriptionMode?: boolean;
   /** When true, generate a shorter response (low-data mode). */

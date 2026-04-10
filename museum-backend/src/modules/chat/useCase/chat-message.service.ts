@@ -1,4 +1,5 @@
 import { AppError, badRequest } from '@shared/errors/app.error';
+import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
 import { evaluateUserInputGuardrail } from './art-topic-guardrail';
@@ -25,6 +26,9 @@ import type { ChatOrchestrator, OrchestratorOutput } from '../domain/ports/chat-
 import type { ImageStorage } from '../domain/ports/image-storage.port';
 import type { OcrService } from '../domain/ports/ocr.port';
 import type { PiiSanitizer } from '../domain/ports/pii-sanitizer.port';
+import type { SearchResult } from '../domain/ports/web-search.port';
+import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
+import type { DbLookupService } from '@modules/knowledge-extraction/useCase/db-lookup.service';
 import type { AuditService } from '@shared/audit/audit.service';
 import type { CacheService } from '@shared/cache/cache.port';
 
@@ -43,6 +47,8 @@ export interface ChatMessageServiceDeps {
   webSearch?: WebSearchService;
   artTopicClassifier?: ArtTopicClassifierPort;
   piiSanitizer?: PiiSanitizer;
+  dbLookup?: DbLookupService;
+  extractionQueue?: ExtractionQueuePort;
 }
 
 /** Successful preparation result with all data needed to invoke the LLM. */
@@ -56,6 +62,7 @@ interface PrepareReady {
   ownerId?: number;
   userMemoryBlock?: string;
   knowledgeBaseBlock?: string;
+  localKnowledgeBlock?: string;
   webSearchBlock?: string;
   enrichedImages?: EnrichedImage[];
 }
@@ -100,6 +107,8 @@ export class ChatMessageService {
   private readonly webSearch?: WebSearchService;
   private readonly artTopicClassifier?: ArtTopicClassifierPort;
   private readonly piiSanitizer: PiiSanitizer;
+  private readonly dbLookup?: DbLookupService;
+  private readonly extractionQueue?: ExtractionQueuePort;
 
   constructor(deps: ChatMessageServiceDeps) {
     this.repository = deps.repository;
@@ -112,6 +121,8 @@ export class ChatMessageService {
     this.webSearch = deps.webSearch;
     this.artTopicClassifier = deps.artTopicClassifier;
     this.piiSanitizer = deps.piiSanitizer ?? new DisabledPiiSanitizer();
+    this.dbLookup = deps.dbLookup;
+    this.extractionQueue = deps.extractionQueue;
 
     this.imageProcessor = new ImageProcessingService({
       imageStorage: deps.imageStorage,
@@ -123,6 +134,32 @@ export class ChatMessageService {
       audit: deps.audit,
       artTopicClassifier: deps.artTopicClassifier,
     });
+  }
+
+  /** Validates that the message input has text or image and respects length limits. */
+  private validateMessageInput(text: string | undefined, image: PostMessageInput['image']): void {
+    if (text && text.length > env.llm.maxTextLength) {
+      throw badRequest(`text must be <= ${String(env.llm.maxTextLength)} characters`);
+    }
+    if (!text && !image) {
+      throw badRequest('Either text or image is required');
+    }
+  }
+
+  /** Fire-and-forget: enqueues web search URLs for background extraction. */
+  private enqueueForExtraction(
+    results: SearchResult[],
+    text: string | undefined,
+    locale: string | undefined,
+  ): void {
+    if (!this.extractionQueue || results.length === 0 || !locale) return;
+    const searchTerm = text ?? '';
+    fireAndForget(
+      this.extractionQueue.enqueueUrls(
+        results.slice(0, 5).map((r) => ({ url: r.url, searchTerm, locale })),
+      ),
+      'extraction_enqueue_web_results',
+    );
   }
 
   /** Processes and stores the image, then runs OCR injection guard. Returns refs or undefined. */
@@ -153,12 +190,7 @@ export class ChatMessageService {
     const ownerId = session.user?.id;
 
     const text = input.text?.trim();
-    if (text && text.length > env.llm.maxTextLength) {
-      throw badRequest(`text must be <= ${String(env.llm.maxTextLength)} characters`);
-    }
-    if (!text && !input.image) {
-      throw badRequest('Either text or image is required');
-    }
+    this.validateMessageInput(text, input.image);
 
     const { imageRef, orchestratorImage } = await this.processInputImage(
       input.image,
@@ -184,18 +216,28 @@ export class ChatMessageService {
     }
 
     const history = await this.repository.listSessionHistory(sessionId, env.llm.maxHistoryMessages);
-    const { userMemoryBlock, knowledgeBaseBlock, webSearchBlock, enrichedImages } =
-      await fetchEnrichmentData(
-        {
-          userMemory: this.userMemory,
-          knowledgeBase: this.knowledgeBase,
-          imageEnrichment: this.imageEnrichment,
-          webSearch: this.webSearch,
-        },
-        history,
-        input.text?.trim(),
-        ownerId,
-      );
+    const {
+      userMemoryBlock,
+      knowledgeBaseBlock,
+      localKnowledgeBlock,
+      webSearchBlock,
+      webSearchResults,
+      enrichedImages,
+    } = await fetchEnrichmentData(
+      {
+        userMemory: this.userMemory,
+        knowledgeBase: this.knowledgeBase,
+        imageEnrichment: this.imageEnrichment,
+        webSearch: this.webSearch,
+        dbLookup: this.dbLookup,
+      },
+      history,
+      input.text?.trim(),
+      ownerId,
+      requestedLocale,
+    );
+
+    this.enqueueForExtraction(webSearchResults, input.text?.trim(), requestedLocale);
 
     return {
       kind: 'ready',
@@ -207,6 +249,7 @@ export class ChatMessageService {
       ownerId,
       userMemoryBlock,
       knowledgeBaseBlock,
+      localKnowledgeBlock,
       webSearchBlock,
       enrichedImages,
     };
@@ -230,6 +273,7 @@ export class ChatMessageService {
       ownerId,
       userMemoryBlock,
       knowledgeBaseBlock,
+      localKnowledgeBlock,
       webSearchBlock,
       enrichedImages,
     } = prep;
@@ -250,6 +294,7 @@ export class ChatMessageService {
       requestId,
       userMemoryBlock,
       knowledgeBaseBlock,
+      localKnowledgeBlock,
       webSearchBlock,
       audioDescriptionMode: input.context?.audioDescriptionMode,
       lowDataMode: input.context?.lowDataMode ?? false,
@@ -293,6 +338,7 @@ export class ChatMessageService {
       ownerId,
       userMemoryBlock,
       knowledgeBaseBlock,
+      localKnowledgeBlock,
       webSearchBlock,
       enrichedImages,
     } = prep;
@@ -322,6 +368,7 @@ export class ChatMessageService {
         requestId,
         userMemoryBlock,
         knowledgeBaseBlock,
+        localKnowledgeBlock,
         webSearchBlock,
         audioDescriptionMode: input.context?.audioDescriptionMode,
         lowDataMode: input.context?.lowDataMode ?? false,
