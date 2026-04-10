@@ -151,9 +151,13 @@ export interface AppEnv {
     fetchTimeoutMs: number;
     maxImagesPerResponse: number;
   };
-  /** Web search (Tavily) configuration. */
+  /** Web search multi-provider configuration. */
   webSearch: {
     tavilyApiKey?: string;
+    googleCseApiKey?: string;
+    googleCseId?: string;
+    braveSearchApiKey?: string;
+    searxngInstances: string[];
     timeoutMs: number;
     cacheTtlSeconds: number;
     maxResults: number;

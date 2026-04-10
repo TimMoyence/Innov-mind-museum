@@ -223,6 +223,13 @@ const env: AppEnv = {
   },
   webSearch: {
     tavilyApiKey: toOptionalString(process.env.TAVILY_API_KEY),
+    googleCseApiKey: toOptionalString(process.env.GOOGLE_CSE_API_KEY),
+    googleCseId: toOptionalString(process.env.GOOGLE_CSE_ID),
+    braveSearchApiKey: toOptionalString(process.env.BRAVE_SEARCH_API_KEY),
+    searxngInstances: (process.env.SEARXNG_INSTANCES ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
     timeoutMs: toNumber(process.env.WEB_SEARCH_TIMEOUT_MS, 3000),
     cacheTtlSeconds: toNumber(process.env.WEB_SEARCH_CACHE_TTL_SECONDS, 3600),
     maxResults: toNumber(process.env.WEB_SEARCH_MAX_RESULTS, 5),
