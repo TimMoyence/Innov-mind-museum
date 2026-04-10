@@ -25,6 +25,7 @@ export class TypeOrmArtworkKnowledgeRepo {
       .createQueryBuilder('ak')
       .where('ak.title ILIKE :term', { term: `%${searchTerm}%` })
       .andWhere('ak.locale = :locale', { locale })
+      .andWhere('ak.needsReview = :needsReview', { needsReview: false })
       .andWhere('ak.confidence >= :threshold', { threshold: 0.4 })
       .orderBy('ak.confidence', 'DESC')
       .limit(limit)

@@ -36,6 +36,8 @@ import type { ImageStorage } from '../domain/ports/image-storage.port';
 import type { OcrService } from '../domain/ports/ocr.port';
 import type { PiiSanitizer } from '../domain/ports/pii-sanitizer.port';
 import type { TextToSpeechService } from '../domain/ports/tts.port';
+import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
+import type { DbLookupService } from '@modules/knowledge-extraction/useCase/db-lookup.service';
 import type { IMuseumRepository } from '@modules/museum/domain/museum.repository.interface';
 import type { AuditService } from '@shared/audit/audit.service';
 import type { CacheService } from '@shared/cache/cache.port';
@@ -68,6 +70,8 @@ export interface ChatServiceDeps {
   artTopicClassifier?: ArtTopicClassifierPort;
   piiSanitizer?: PiiSanitizer;
   museumRepository?: IMuseumRepository;
+  dbLookup?: DbLookupService;
+  extractionQueue?: ExtractionQueuePort;
 }
 
 /**
@@ -106,6 +110,8 @@ export class ChatService {
       webSearch: deps.webSearch,
       artTopicClassifier: deps.artTopicClassifier,
       piiSanitizer: deps.piiSanitizer,
+      dbLookup: deps.dbLookup,
+      extractionQueue: deps.extractionQueue,
     });
 
     this.media = new ChatMediaService({

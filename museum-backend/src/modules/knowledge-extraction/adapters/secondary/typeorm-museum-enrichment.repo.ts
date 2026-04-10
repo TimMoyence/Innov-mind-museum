@@ -25,6 +25,7 @@ export class TypeOrmMuseumEnrichmentRepo {
       .createQueryBuilder('me')
       .where('me.name ILIKE :term', { term: `%${searchTerm}%` })
       .andWhere('me.locale = :locale', { locale })
+      .andWhere('me.needsReview = :needsReview', { needsReview: false })
       .andWhere('me.confidence >= :threshold', { threshold: 0.4 })
       .orderBy('me.confidence', 'DESC')
       .limit(limit)
