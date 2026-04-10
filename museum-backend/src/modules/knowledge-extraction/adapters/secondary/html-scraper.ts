@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { Readability } from '@mozilla/readability';
 import * as cheerio from 'cheerio';
-import { JSDOM } from 'jsdom';
+import { parseHTML } from 'linkedom';
 
 import { logger } from '@shared/logger/logger';
 
@@ -82,8 +82,8 @@ export class HtmlScraper implements ScraperPort {
   }
 
   private extractContent(url: string, html: string): ScrapedPage | null {
-    const dom = new JSDOM(html, { url });
-    const reader = new Readability(dom.window.document);
+    const { document } = parseHTML(html);
+    const reader = new Readability(document);
     const article = reader.parse();
 
     if (!article?.textContent) {
@@ -96,7 +96,7 @@ export class HtmlScraper implements ScraperPort {
       const truncated = text.slice(0, this.config.maxContentBytes);
       return {
         url,
-         
+
         title: $('title').text().trim() || url,
         textContent: truncated,
         contentHash: createHash('sha256').update(truncated).digest('hex').slice(0, 16),
