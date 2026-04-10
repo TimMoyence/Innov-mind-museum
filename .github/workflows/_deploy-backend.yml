@@ -148,7 +148,7 @@ jobs:
 
             # 2b. Seed museum data (idempotent — ON CONFLICT DO NOTHING)
             docker compose run --rm --no-deps -T ${{ inputs.compose_service }} \
-              node dist/scripts/seed-museums.js || echo "Seed skipped (non-fatal)"
+              node dist/scripts/seed-museums.js
 
             # 3. Restart with 30s grace period for in-flight requests to drain
             docker compose up -d --remove-orphans --timeout 30 ${{ inputs.compose_service }}
