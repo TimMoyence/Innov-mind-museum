@@ -102,16 +102,18 @@ describe('queryOverpassMuseums', () => {
     expect(results).toEqual([]);
   });
 
-  it('returns empty array on network error', async () => {
-    fetchSpy.mockRejectedValueOnce(new Error('Network failure'));
+  it('returns empty array when all endpoints fail with network error', async () => {
+    // Both main + Kumi mirror fail
+    fetchSpy.mockRejectedValue(new Error('Network failure'));
 
     const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 });
 
     expect(results).toEqual([]);
+    expect(fetchSpy).toHaveBeenCalledTimes(2); // main + kumi
   });
 
-  it('returns empty array on timeout (abort signal)', async () => {
-    fetchSpy.mockImplementationOnce(
+  it('returns empty array when all endpoints time out', async () => {
+    fetchSpy.mockImplementation(
       () =>
         new Promise((_resolve, reject) => {
           setTimeout(() => {
@@ -126,6 +128,31 @@ describe('queryOverpassMuseums', () => {
     );
 
     expect(results).toEqual([]);
+  });
+
+  it('falls back to second endpoint when first returns non-OK', async () => {
+    // Main instance 504, Kumi returns data
+    fetchSpy
+      .mockResolvedValueOnce({ ok: false, status: 504, statusText: 'Gateway Timeout' })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          makeOverpassResponse([
+            {
+              type: 'node',
+              id: 42,
+              lat: 48.86,
+              lon: 2.34,
+              tags: { name: 'Fallback Museum' },
+            },
+          ]),
+      });
+
+    const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 });
+
+    expect(results).toHaveLength(1);
+    expect(results[0].name).toBe('Fallback Museum');
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
   it('filters results by q parameter (case-insensitive)', async () => {
@@ -203,16 +230,16 @@ describe('queryOverpassMuseums', () => {
     expect(results[0].name).toBe('Named Museum');
   });
 
-  it('returns empty array on non-OK HTTP status', async () => {
-    fetchSpy.mockResolvedValueOnce({ ok: false, status: 429, statusText: 'Too Many Requests' });
+  it('returns empty array when all endpoints return non-OK HTTP status', async () => {
+    fetchSpy.mockResolvedValue({ ok: false, status: 429, statusText: 'Too Many Requests' });
 
     const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 });
 
     expect(results).toEqual([]);
   });
 
-  it('returns empty array when response shape is unexpected', async () => {
-    fetchSpy.mockResolvedValueOnce({
+  it('returns empty array when all endpoints return unexpected response shape', async () => {
+    fetchSpy.mockResolvedValue({
       ok: true,
       json: async () => ({ unexpected: 'shape' }),
     });
