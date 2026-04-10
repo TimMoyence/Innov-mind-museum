@@ -219,8 +219,13 @@ async function main(): Promise<void> {
     .orIgnore() // ON CONFLICT DO NOTHING — safe to re-run
     .execute();
 
-  const inserted = result.identifiers.filter((id) => id.id != null).length;
-  console.log(`Seeded ${inserted} museum(s) (${MUSEUMS.length} in seed list).`);
+  // With orIgnore(), rows already present produce undefined entries in identifiers.
+  // Count only entries where id.id is a valid number.
+  const inserted = result.identifiers.filter((id) => id?.id != null).length;
+  const totalInDb = await repo.count();
+  console.log(
+    `Seeded ${inserted} new museum(s) (${MUSEUMS.length} in seed list, ${totalInDb} total in DB).`,
+  );
 
   await AppDataSource.destroy();
   process.exit(0);
