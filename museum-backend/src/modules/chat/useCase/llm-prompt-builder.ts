@@ -252,9 +252,11 @@ export const buildSectionMessages = (
     userMemoryBlock?: string;
     knowledgeBaseBlock?: string;
     webSearchBlock?: string;
+    localKnowledgeBlock?: string;
   },
 ): ChatModelMessage[] => {
-  const { userMemoryBlock, knowledgeBaseBlock, webSearchBlock } = options ?? {};
+  const { userMemoryBlock, knowledgeBaseBlock, webSearchBlock, localKnowledgeBlock } =
+    options ?? {};
   const messages: ChatModelMessage[] = [
     new SystemMessage(systemPrompt),
     new SystemMessage(sectionPrompt),
@@ -262,6 +264,11 @@ export const buildSectionMessages = (
 
   if (userMemoryBlock) {
     messages.push(new SystemMessage(userMemoryBlock));
+  }
+
+  // Local knowledge (verified DB data) has highest enrichment priority — placed before Wikidata KB
+  if (localKnowledgeBlock) {
+    messages.push(new SystemMessage(localKnowledgeBlock));
   }
 
   if (knowledgeBaseBlock) {

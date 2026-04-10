@@ -1,3 +1,4 @@
+import { KnowledgeExtractionModule } from '@modules/knowledge-extraction/index';
 import { auditService } from '@shared/audit';
 import { logger } from '@shared/logger/logger';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
@@ -37,6 +38,7 @@ import type { ArtKeywordRepository } from './domain/artKeyword.repository.interf
 import type { ImageStorage } from './domain/ports/image-storage.port';
 import type { OcrService } from './domain/ports/ocr.port';
 import type { WebSearchProvider } from './domain/ports/web-search.port';
+import type { BuiltKnowledgeExtractionModule } from '@modules/knowledge-extraction/index';
 import type { IMuseumRepository } from '@modules/museum/domain/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
 import type { DataSource } from 'typeorm';
@@ -154,6 +156,26 @@ class ChatModule {
     });
   }
 
+  /** Builds the knowledge extraction module (DB lookup + background pipeline). */
+  private buildKnowledgeExtraction(dataSource: DataSource): BuiltKnowledgeExtractionModule {
+    return new KnowledgeExtractionModule().build(dataSource);
+  }
+
+  /** Wraps orchestrator with caching decorator if cache is available. */
+  private buildEffectiveOrchestrator(
+    orchestrator: LangChainChatOrchestrator,
+    cache?: CacheService,
+  ): ChatOrchestrator {
+    if (!cache) return orchestrator;
+    return new CachingChatOrchestrator({
+      delegate: orchestrator,
+      cache,
+      ttlSeconds: env.cache?.llmTtlSeconds ?? 604_800,
+      popularityZsetTtlSeconds: env.cache?.llmPopularityTtlSeconds ?? 2_592_000,
+      piiSanitizer: new RegexPiiSanitizer(),
+    });
+  }
+
   /** Creates the web search service with multi-provider fallback chain. */
   private buildWebSearch(cache?: CacheService): WebSearchService | undefined {
     if (!env.featureFlags.webSearch) return undefined;
@@ -241,16 +263,12 @@ class ChatModule {
     museumRepository?: IMuseumRepository,
   ): BuiltChatModule {
     const imageStorage = this.buildImageStorage();
-
     const repository = new TypeOrmChatRepository(dataSource);
-
     const tts =
       env.tts?.enabled && env.llm.openAiApiKey
         ? new OpenAiTextToSpeechService()
         : new DisabledTextToSpeechService();
-
     const ocr = env.featureFlags.ocrGuard ? new TesseractOcrService() : new DisabledOcrService();
-
     const userMemory = this.buildUserMemory(dataSource, cache);
     const knowledgeBase = this.buildKnowledgeBase(cache);
     const imageEnrichment = this.buildImageEnrichment();
@@ -262,20 +280,9 @@ class ChatModule {
 
     const orchestrator = new LangChainChatOrchestrator();
     this._orchestrator = orchestrator;
+    const effectiveOrchestrator = this.buildEffectiveOrchestrator(orchestrator, cache);
 
-    // Wrap with caching decorator if cache is available
-    const effectiveOrchestrator = cache
-      ? new CachingChatOrchestrator({
-          delegate: orchestrator,
-          cache,
-          ttlSeconds: env.cache?.llmTtlSeconds ?? 604_800,
-          popularityZsetTtlSeconds: env.cache?.llmPopularityTtlSeconds ?? 2_592_000,
-          piiSanitizer: new RegexPiiSanitizer(),
-        })
-      : orchestrator;
-
-    const artTopicClassifier = new ArtTopicClassifier();
-
+    const knowledgeExtraction = this.buildKnowledgeExtraction(dataSource);
     const chatService = new ChatService({
       repository,
       orchestrator: effectiveOrchestrator,
@@ -289,9 +296,11 @@ class ChatModule {
       knowledgeBase,
       imageEnrichment,
       webSearch,
-      artTopicClassifier,
+      artTopicClassifier: new ArtTopicClassifier(),
       piiSanitizer: new RegexPiiSanitizer(),
       museumRepository,
+      dbLookup: knowledgeExtraction.dbLookup,
+      extractionQueue: knowledgeExtraction.extractionQueue,
     });
 
     const describeService = new DescribeService({ orchestrator: effectiveOrchestrator, tts });

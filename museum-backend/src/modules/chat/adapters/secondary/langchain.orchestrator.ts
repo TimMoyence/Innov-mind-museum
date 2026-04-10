@@ -308,6 +308,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           userMemoryBlock: input.userMemoryBlock,
           knowledgeBaseBlock: input.knowledgeBaseBlock,
           webSearchBlock: input.webSearchBlock,
+          localKnowledgeBlock: input.localKnowledgeBlock,
         },
       );
       const payloadBytes = estimatePayloadBytes(sectionMessages);
@@ -359,6 +360,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         userMemoryBlock: input.userMemoryBlock,
         knowledgeBaseBlock: input.knowledgeBaseBlock,
         webSearchBlock: input.webSearchBlock,
+        localKnowledgeBlock: input.localKnowledgeBlock,
       },
     );
   }

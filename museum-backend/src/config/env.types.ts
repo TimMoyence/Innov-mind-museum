@@ -132,6 +132,7 @@ export interface AppEnv {
     knowledgeBase: boolean;
     imageEnrichment: boolean;
     webSearch: boolean;
+    knowledgeExtraction: boolean;
   };
   /** Maximum chat messages a free-tier user can send per calendar day. */
   freeTierDailyChatLimit: number;
@@ -161,5 +162,22 @@ export interface AppEnv {
     timeoutMs: number;
     cacheTtlSeconds: number;
     maxResults: number;
+  };
+  /** Knowledge extraction pipeline configuration. */
+  extraction: {
+    queueConcurrency: number;
+    queueRateLimit: number;
+    scrapeTimeoutMs: number;
+    contentMaxBytes: number;
+    refetchAfterDays: number;
+    llmModel: string;
+    confidenceThreshold: number;
+    reviewThreshold: number;
+  };
+  /** Redis connection configuration for BullMQ and other Redis-backed services. */
+  redis: {
+    host: string;
+    port: number;
+    password?: string;
   };
 }
