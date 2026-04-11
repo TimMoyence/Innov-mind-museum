@@ -821,22 +821,8 @@ async function main(): Promise<void> {
     .createQueryBuilder()
     .insert()
     .into(MuseumEnrichment)
-    .values(
-      MUSEUM_ENRICHMENTS.map((m) => ({
-        name: m.name,
-        museumId: m.museumId,
-        openingHours: m.openingHours,
-        admissionFees: m.admissionFees,
-        website: m.website,
-        collections: m.collections,
-        currentExhibitions: m.currentExhibitions,
-        accessibility: m.accessibility,
-        sourceUrls: m.sourceUrls,
-        confidence: m.confidence,
-        needsReview: false,
-        locale: m.locale,
-      })),
-    )
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TypeORM _QueryDeepPartialEntity cannot represent nullable JSONB columns; safe in seed script
+    .values(MUSEUM_ENRICHMENTS as any)
     .orIgnore() // ON CONFLICT DO NOTHING — safe to re-run
     .execute();
 

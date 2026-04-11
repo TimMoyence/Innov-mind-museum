@@ -266,6 +266,10 @@ jobs:
             docker compose run --rm --no-deps -T backend \
               node dist/scripts/seed-museums.js
 
+            # 2c. Seed knowledge extraction data (idempotent — ON CONFLICT DO NOTHING)
+            docker compose run --rm --no-deps -T backend \
+              node dist/scripts/seed-knowledge.js
+
             # 3. Restart with 30s grace period for in-flight requests to drain
             docker compose up -d --remove-orphans --timeout 30 backend
 
@@ -416,6 +420,10 @@ jobs:
             # 2b. Seed museum data (idempotent — ON CONFLICT DO NOTHING)
             docker compose run --rm --no-deps -T backend-staging \
               node dist/scripts/seed-museums.js
+
+            # 2c. Seed knowledge extraction data (idempotent — ON CONFLICT DO NOTHING)
+            docker compose run --rm --no-deps -T backend-staging \
+              node dist/scripts/seed-knowledge.js
 
             # 3. Restart with 30s grace period for in-flight requests to drain
             docker compose up -d --remove-orphans --timeout 30 backend-staging
