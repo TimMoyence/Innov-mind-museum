@@ -1,3 +1,11 @@
+/**
+ * Seed script for knowledge extraction data.
+ * Populates artwork_knowledge and museum_enrichment tables with real museum data.
+ * Idempotent — uses ON CONFLICT DO NOTHING for safe re-runs.
+ *
+ * Usage: pnpm seed:knowledge
+ * Deploy: runs automatically after migrations in CI deploy pipeline.
+ */
 import 'dotenv/config';
 import 'reflect-metadata';
 
