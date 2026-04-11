@@ -393,6 +393,11 @@
     "cachedResponse": "Antwort aus lokalem Cache",
     "savedForLater": "Frage für später gespeichert"
   },
+  "dailyLimit": {
+    "title": "Tageslimit erreicht",
+    "body": "Sie haben alle Ihre Nachrichten für heute verbraucht. Kommen Sie morgen wieder, um weiter zu erkunden!",
+    "reset_hint": "Ihr Nachrichtenkontingent wird um Mitternacht (UTC) zurückgesetzt."
+  },
   "chatInput": {
     "placeholder": "Fragen Sie zu einem Kunstwerk, Denkmal, oder senden Sie Sprache/Foto...",
     "send": "Senden"
@@ -453,6 +458,7 @@
     "notFound": "Inhalt nicht gefunden.",
     "validation": "Bitte überprüfen Sie Ihre Eingabe und versuchen Sie es erneut.",
     "rateLimited": "Zu viele Anfragen. Bitte warten Sie einen Moment.",
+    "dailyLimitReached": "Tageslimit für Nachrichten erreicht. Kommen Sie morgen wieder!",
     "unknown": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
     "boundaryTitle": "Etwas ist schiefgelaufen",
     "boundarySubtitle": "Die App hat einen unerwarteten Fehler festgestellt. Ihre Daten sind sicher.",

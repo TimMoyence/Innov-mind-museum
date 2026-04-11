@@ -182,6 +182,16 @@ export const mapAxiosError = (error: unknown): AppError & Error => {
   }
 
   if (status === 429) {
+    if (apiErrorCode === 'DAILY_LIMIT_REACHED') {
+      return createAppError({
+        kind: 'DailyLimitReached',
+        message: 'Daily chat limit reached',
+        status,
+        details: axiosLike.response?.data,
+        requestId,
+      });
+    }
+
     return createAppError({
       kind: 'RateLimited',
       message: 'Too many requests',

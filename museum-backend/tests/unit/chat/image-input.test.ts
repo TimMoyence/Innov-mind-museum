@@ -22,7 +22,9 @@ describe('image-input', () => {
   });
 
   it('throws when image is too large', () => {
-    expect(() => assertImageSize(200, 100)).toThrow('Image exceeds max size');
+    expect(() => {
+      assertImageSize(200, 100);
+    }).toThrow('Image exceeds max size');
   });
 
   it('blocks 0.0.0.0', () => {
@@ -55,6 +57,176 @@ describe('image-input', () => {
 
   it('blocks IPv4-mapped IPv6 ::ffff:10.0.0.1', () => {
     expect(isSafeImageUrl('https://[::ffff:10.0.0.1]/image.jpg')).toBe(false);
+  });
+
+  describe('SSRF protection', () => {
+    // --- Protocol enforcement ---
+
+    it('rejects http:// (non-HTTPS)', () => {
+      expect(isSafeImageUrl('http://example.com/image.jpg')).toBe(false);
+    });
+
+    it('rejects ftp:// protocol', () => {
+      expect(isSafeImageUrl('ftp://internal/image.jpg')).toBe(false);
+    });
+
+    it('rejects file:// protocol', () => {
+      expect(isSafeImageUrl('file:///etc/passwd')).toBe(false);
+    });
+
+    it('rejects invalid URL', () => {
+      expect(isSafeImageUrl('not-a-url')).toBe(false);
+    });
+
+    // --- IPv4 private ranges ---
+
+    it('rejects IPv4 loopback 127.0.0.1', () => {
+      expect(isSafeImageUrl('https://127.0.0.1/image.jpg')).toBe(false);
+    });
+
+    it('rejects IPv4 loopback 127.255.255.255', () => {
+      expect(isSafeImageUrl('https://127.255.255.255/image.jpg')).toBe(false);
+    });
+
+    it('rejects private class A 10.0.0.1', () => {
+      expect(isSafeImageUrl('https://10.0.0.1/image.jpg')).toBe(false);
+    });
+
+    it('rejects private class A 10.255.255.255', () => {
+      expect(isSafeImageUrl('https://10.255.255.255/image.jpg')).toBe(false);
+    });
+
+    it('rejects private class B 172.16.0.1', () => {
+      expect(isSafeImageUrl('https://172.16.0.1/image.jpg')).toBe(false);
+    });
+
+    it('rejects private class B 172.31.255.255', () => {
+      expect(isSafeImageUrl('https://172.31.255.255/image.jpg')).toBe(false);
+    });
+
+    it('allows non-private 172.15.0.1 (below class B range)', () => {
+      expect(isSafeImageUrl('https://172.15.0.1/image.jpg')).toBe(true);
+    });
+
+    it('allows non-private 172.32.0.1 (above class B range)', () => {
+      expect(isSafeImageUrl('https://172.32.0.1/image.jpg')).toBe(true);
+    });
+
+    it('rejects private class C 192.168.0.1', () => {
+      expect(isSafeImageUrl('https://192.168.0.1/image.jpg')).toBe(false);
+    });
+
+    it('rejects private class C 192.168.255.255', () => {
+      expect(isSafeImageUrl('https://192.168.255.255/image.jpg')).toBe(false);
+    });
+
+    // --- Special addresses ---
+
+    it('rejects unspecified address 0.0.0.0', () => {
+      expect(isSafeImageUrl('https://0.0.0.0/image.jpg')).toBe(false);
+    });
+
+    it('rejects localhost hostname', () => {
+      expect(isSafeImageUrl('https://localhost/image.jpg')).toBe(false);
+    });
+
+    it('rejects LOCALHOST (case insensitive)', () => {
+      expect(isSafeImageUrl('https://LOCALHOST/image.jpg')).toBe(false);
+    });
+
+    it('rejects AWS metadata 169.254.169.254', () => {
+      expect(isSafeImageUrl('https://169.254.169.254/latest/meta-data')).toBe(false);
+    });
+
+    it('rejects link-local 169.254.0.1', () => {
+      expect(isSafeImageUrl('https://169.254.0.1/image.jpg')).toBe(false);
+    });
+
+    // --- Carrier-grade NAT (100.64.0.0/10) ---
+
+    it('rejects CGNAT 100.64.0.1', () => {
+      expect(isSafeImageUrl('https://100.64.0.1/image.jpg')).toBe(false);
+    });
+
+    it('rejects CGNAT 100.127.255.255', () => {
+      expect(isSafeImageUrl('https://100.127.255.255/image.jpg')).toBe(false);
+    });
+
+    // --- IPv6 ---
+
+    it('rejects IPv6 loopback [::1]', () => {
+      expect(isSafeImageUrl('https://[::1]/image.jpg')).toBe(false);
+    });
+
+    it('rejects IPv6 link-local [fe80::1]', () => {
+      expect(isSafeImageUrl('https://[fe80::1]/image.jpg')).toBe(false);
+    });
+
+    it('rejects IPv6 unique local fc (e.g. [fc00::1])', () => {
+      expect(isSafeImageUrl('https://[fc00::1]/image.jpg')).toBe(false);
+    });
+
+    it('rejects IPv6 unique local fd (e.g. [fd12::1])', () => {
+      expect(isSafeImageUrl('https://[fd12::1]/image.jpg')).toBe(false);
+    });
+
+    // --- IPv4-mapped IPv6 ---
+
+    it('rejects IPv4-mapped IPv6 [::ffff:127.0.0.1]', () => {
+      expect(isSafeImageUrl('https://[::ffff:127.0.0.1]/image.jpg')).toBe(false);
+    });
+
+    it('rejects IPv4-mapped IPv6 [::ffff:10.0.0.1]', () => {
+      expect(isSafeImageUrl('https://[::ffff:10.0.0.1]/image.jpg')).toBe(false);
+    });
+
+    it('rejects IPv4-mapped IPv6 [::ffff:192.168.1.1]', () => {
+      expect(isSafeImageUrl('https://[::ffff:192.168.1.1]/image.jpg')).toBe(false);
+    });
+
+    // --- Hex-encoded IPs ---
+
+    it('rejects hex-encoded IP 0x7f000001 (127.0.0.1)', () => {
+      expect(isSafeImageUrl('https://0x7f000001/image.jpg')).toBe(false);
+    });
+
+    it('rejects hex-encoded IP 0x0a000001 (10.0.0.1)', () => {
+      expect(isSafeImageUrl('https://0x0a000001/image.jpg')).toBe(false);
+    });
+
+    // --- Octal-encoded IPs ---
+
+    it('rejects octal-encoded IP 0177.0.0.1 (127.0.0.1)', () => {
+      expect(isSafeImageUrl('https://0177.0.0.1/image.jpg')).toBe(false);
+    });
+
+    it('rejects octal-encoded IP 012.0.0.1 (10.0.0.1)', () => {
+      expect(isSafeImageUrl('https://012.0.0.1/image.jpg')).toBe(false);
+    });
+
+    // --- Port enforcement ---
+
+    it('rejects non-443 port', () => {
+      expect(isSafeImageUrl('https://example.com:8080/image.jpg')).toBe(false);
+    });
+
+    it('rejects port 80', () => {
+      expect(isSafeImageUrl('https://example.com:80/image.jpg')).toBe(false);
+    });
+
+    it('allows port 443 explicitly', () => {
+      expect(isSafeImageUrl('https://example.com:443/image.jpg')).toBe(true);
+    });
+
+    // --- Legitimate URLs ---
+
+    it('allows legitimate HTTPS image URL', () => {
+      expect(isSafeImageUrl('https://cdn.example.com/images/art.jpg')).toBe(true);
+    });
+
+    it('allows legitimate HTTPS URL with path and query', () => {
+      expect(isSafeImageUrl('https://images.museum.org/api/v2/image?id=123&size=large')).toBe(true);
+    });
   });
 });
 
@@ -108,31 +280,35 @@ describe('magic bytes validation', () => {
 
   describe('assertMagicBytes', () => {
     it('does not throw for valid JPEG bytes', () => {
-      expect(() => assertMagicBytes(jpegBase64)).not.toThrow();
+      expect(() => {
+        assertMagicBytes(jpegBase64);
+      }).not.toThrow();
     });
 
     it('does not throw for valid PNG bytes', () => {
-      expect(() => assertMagicBytes(pngBase64)).not.toThrow();
+      expect(() => {
+        assertMagicBytes(pngBase64);
+      }).not.toThrow();
     });
 
     it('throws for random non-image bytes', () => {
       const textBase64 = Buffer.from('Hello, this is not an image').toString('base64');
-      expect(() => assertMagicBytes(textBase64)).toThrow(
-        'Uploaded file does not appear to be a valid image',
-      );
+      expect(() => {
+        assertMagicBytes(textBase64);
+      }).toThrow('Uploaded file does not appear to be a valid image');
     });
 
     it('throws for empty input', () => {
-      expect(() => assertMagicBytes('')).toThrow(
-        'Uploaded file does not appear to be a valid image',
-      );
+      expect(() => {
+        assertMagicBytes('');
+      }).toThrow('Uploaded file does not appear to be a valid image');
     });
 
     it('throws for too-short input', () => {
       const shortBase64 = Buffer.from([0x89, 0x50]).toString('base64');
-      expect(() => assertMagicBytes(shortBase64)).toThrow(
-        'Uploaded file does not appear to be a valid image',
-      );
+      expect(() => {
+        assertMagicBytes(shortBase64);
+      }).toThrow('Uploaded file does not appear to be a valid image');
     });
   });
 });

@@ -1997,3 +1997,64 @@ Critical UX bug: clicking "Start Chat Here" on a museum created a chat session w
 | Typecheck errors | 0 | 0 | 0 |
 | as any | 0 | 0 | 0 |
 | eslint-disable (new) | 0 | 0 | 0 |
+
+---
+
+## Production Hardening & V2 Features (2026-04-03 → 2026-04-11)
+
+**Scope**: ~120 commits across 9 days. Testing fortress, iOS/Apple review, museum UX, Smart Low-Data Mode, design system, web landing redesign, web search multi-provider, knowledge extraction module.
+**Mode**: Mixed — /team sessions + direct dev
+**Stats**: Major feature additions (design system, web search, knowledge extraction, low-data mode), production hardening, Apple review fixes.
+
+### Resume executif
+
+Massive push covering multiple work streams in parallel. Started with test quality hardening and iOS stabilization (April 3-5), then museum UX and Smart Low-Data Mode (April 6-7), followed by Apple review fixes, security hardening, and chat UX (April 8), design system creation and full codebase migration (April 9), and finally Overpass fixes, web search multi-provider, and knowledge extraction module (April 10).
+
+### Testing & Quality Excellence (April 3-4)
+
+Wave 3 test completion: route handler tests, hooks tests, ratchet lock. 10 E2E golden path tests added. Stryker mutation testing integrated into CI. All 37 frontend ESLint warnings resolved. Quality excellence sprint brought score from 6.9 to 10/10. Mock walls eliminated, test factories consolidated into shared helpers. Five double-cast typing hacks replaced with proper generics in auth module. chat-message.service.ts split (583 → 381L) with enrichment extraction. Maestro E2E integrated into mobile CI.
+
+### iOS Pipeline & Apple Review (April 4-8)
+
+Expo 55 upgrade required full ios/ regeneration, new pods, Xcode Cloud HERMES_CLI_PATH fix. expo-updates disabled to fix SIGABRT crash on launch. Sentry React Native upgraded 8.5.0 → 8.7.0 for iOS native crash fix. Uncaught exception handler added for crash diagnostics. Apple review rejections addressed: removed UIBackgroundModes audio (2.5.4), improved camera/location purpose strings (5.1.1), removed ATT framework (2.1). CFBundleVersion bumped for resubmission.
+
+### Smart Low-Data Mode (April 7)
+
+Full-stack feature. Backend: CachingChatOrchestrator decorator wrapping existing orchestrator with Redis cache (sorted sets via zadd/ztop on CacheService). Shared cache key builder with contract tests. X-Data-Mode header parsed in chat routes to adapt prompt length. MuseumQaSeed entity + REST endpoint for museum-specific Q&A packs. LLM cache invalidated on negative user feedback. KnowledgeBaseService cache migrated from in-memory to Redis. Frontend: DataModeProvider with NetInfo auto-detect + manual override. Zustand chatLocalCache store with LRU eviction. Local cache key computation matching backend contract. Settings section with i18n. Cached response badge + low-data banner in chat UI. cache-first logic in useChatSession. useMuseumPrefetch hook for proactive low-data pack download.
+
+### Design System (April 9)
+
+Created 3-layer design token system: primitives (raw values), functional (component-level), semantic (intent-based). Full codebase migration: themes.ts + shared/ui components, 22 chat/auth files, remaining feature modules, all 21 stack/tab screens, museum-web. V2 enterprise: extended typography + semantic tokens. Zero hex debt achieved. Dead tokens pruned, single barrel export.
+
+### Web Landing Page Redesign (April 6 + 9)
+
+5 sprints: SEO foundations + animation fixes, visual sections with live components, premium scroll animations, 14 visual fixes from production review. Hero animation migrated from Remotion to Framer Motion. "App Mirror" redesign aligned with mobile design system.
+
+### Security (April 6-10)
+
+PiiSanitizer implementation (privacy module). CI security: CODEOWNERS for protected paths, top-level `permissions: read-all` on workflows, blocking SBOM generation, CodeQL nightly scan. SEC-19: reject orphan session adoption with symmetric anti-theft protection. SEC-20: per-user rate limiter on chat + media routes. SSRF protection on HTML scraper URLs. Prompt injection mitigation hardened. Review filter security fix.
+
+### Overpass / Museum Fixes (April 10)
+
+Production stability: cache empty Overpass results + in-memory cache fallback for resilience. nwr shortcut query with User-Agent header. Timeout admission budget [timeout:180] to fix 504 on dense areas. Client timeout lowered to 8s to avoid VPS nginx 502. Private Coffee added as 3rd fallback mirror. Docker build context and seed script fixes.
+
+### Web Search Multi-Provider (April 10)
+
+5 search provider clients: Google Custom Search, Brave Search, SearXNG (multi-instance), DuckDuckGo Instant Answer — all with tests. FallbackSearchProvider with sequential failover. Wired as fallback chain: Tavily → Google → Brave → SearXNG → DuckDuckGo. Added to existing Tavily enrichment block in chat pipeline.
+
+### Knowledge Extraction Module (April 10)
+
+New hexagonal module: 3 entities (ExtractedContent, ContentClassification, ExtractionJob), ports and test factories. HTML scraper (Readability + Cheerio) with SSRF protection. LangChain content classifier with structured output. TypeORM repos with upsert + partial update. Extraction job service orchestrating scrape → classify → store pipeline. BullMQ extraction worker with rate limiting. DB lookup service with LOCAL KNOWLEDGE prompt block wired into chat enrichment loop. Migration for 3 extraction tables. jsdom replaced with linkedom for ESM compat in Jest.
+
+### Chat UX (April 8)
+
+In-app browser for links with markdown tap interception. Tavily web search enrichment block integrated. Code review fixes: skip cache for dynamic enrichment, abort timeout. Critical link interception bug fixed. i18n key added for inAppBrowser.openSystem across 8 locales.
+
+### Misc
+
+- Vite 8.0.7 pinned as direct devDependency (CVE GHSA-4w7w-66w2-5vf9)
+- jsdom replaced with linkedom for ESM compat in Jest
+- Quality ratchet updated (1091 FE tests baseline)
+- App icon, favicon, feature graphic refreshed
+- Comprehensive security + quality hardening audit
+- Museum-web hero animation migrated from Remotion to Framer Motion

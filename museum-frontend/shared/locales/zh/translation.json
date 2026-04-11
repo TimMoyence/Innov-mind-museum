@@ -393,6 +393,11 @@
     "cachedResponse": "来自本地缓存的响应",
     "savedForLater": "问题已保存以便稍后发送"
   },
+  "dailyLimit": {
+    "title": "已达每日上限",
+    "body": "您今天的消息已全部用完。明天再来继续探索吧！",
+    "reset_hint": "您的消息配额将在午夜（UTC）重置。"
+  },
   "chatInput": {
     "placeholder": "询问关于艺术品、古迹的问题，或发送语音/照片...",
     "send": "发送"
@@ -452,7 +457,8 @@
     "forbidden": "您无权执行此操作。",
     "notFound": "未找到内容。",
     "validation": "请检查输入后重试。",
-    "rateLimited": "请求过多。请稍候片刻。",
+    "rateLimited": "请求过多。请稍候片刻���",
+    "dailyLimitReached": "已达每日消息上限。明天再来吧！",
     "unknown": "出了点问题。请重试。",
     "boundaryTitle": "出了点问题",
     "boundarySubtitle": "应用遇到了意外错误。您的数据是安全的。",

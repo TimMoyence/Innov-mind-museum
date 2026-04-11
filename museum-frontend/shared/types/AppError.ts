@@ -6,6 +6,7 @@ type AppErrorKind =
   | 'NotFound'
   | 'Validation'
   | 'RateLimited'
+  | 'DailyLimitReached'
   | 'Timeout'
   | 'Unknown';
 

@@ -35,6 +35,7 @@ import { MediaAttachmentPanel } from '@/features/chat/ui/MediaAttachmentPanel';
 import { MessageContextMenu } from '@/features/chat/ui/MessageContextMenu';
 import { OfflineBanner } from '@/features/chat/ui/OfflineBanner';
 import { AiConsentModal } from '@/features/chat/ui/AiConsentModal';
+import { DailyLimitModal } from '@/features/chat/ui/DailyLimitModal';
 import { VisitSummaryModal } from '@/features/chat/ui/VisitSummaryModal';
 import { useMessageActions } from '@/features/chat/application/useMessageActions';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
@@ -82,6 +83,8 @@ export default function ChatSessionScreen() {
     pendingCount,
     error,
     clearError,
+    dailyLimitReached,
+    clearDailyLimit,
     sendMessage,
     retryMessage,
     refreshMessageImageUrl,
@@ -406,6 +409,8 @@ export default function ChatSessionScreen() {
           setShowSummary(false);
         }}
       />
+
+      <DailyLimitModal visible={dailyLimitReached} onDismiss={clearDailyLimit} />
     </LiquidScreen>
   );
 }

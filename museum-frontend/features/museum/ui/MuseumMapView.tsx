@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { WebView } from 'react-native-webview';
 import type { WebViewMessageEvent } from 'react-native-webview';
@@ -180,7 +180,19 @@ export const MuseumMapView = ({
       <WebView
         ref={webViewRef}
         source={{ html }}
-        originWhitelist={['*']}
+        originWhitelist={['http://*', 'https://*']}
+        onShouldStartLoadWithRequest={(request) => {
+          // Scheme allowlist: only http/https in the WebView. Hand off
+          // mailto:/tel: to the system handler; block javascript:/file:/data:
+          // and any other scheme to prevent navigation hijacks.
+          const next = request.url;
+          if (next.startsWith('http://') || next.startsWith('https://')) return true;
+          if (next.startsWith('mailto:') || next.startsWith('tel:')) {
+            void Linking.openURL(next);
+            return false;
+          }
+          return false;
+        }}
         onMessage={handleMessage}
         style={[
           styles.webView,

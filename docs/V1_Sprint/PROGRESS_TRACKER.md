@@ -789,3 +789,186 @@
 | Chat UX   | 17      | 17     | 100%    | 1457 (+24)    | 146            |
 | Hotfix 04-02 | 7   | 7      | 100%    | 1445+ (+9)    | 422 (+94)      |
 | **Total** | **250** | **249** | **99%** | **1445+**     | **422**        |
+
+---
+
+## Production Hardening & V2 Features (2026-04-03 → 2026-04-11)
+
+> ~120 commits. Test fortress, QE refactors, iOS fixes, Apple review, museum UX, Smart Low-Data Mode, design system, web search, knowledge extraction.
+> Commits: `13a37b2d` a `588262f9`
+
+### Testing & Quality (April 3-4)
+
+- [x] QE-01: Wave 3 final — route handler tests + hooks tests + ratchet lock
+- [x] QE-02: 10 E2E golden path tests + Stryker mutation testing CI integration
+- [x] QE-03: CI hardening — fix 9 audit issues across workflows
+- [x] QE-04: Resolve all 37 ESLint warnings across frontend (0 warnings)
+- [x] QE-05: QE sprint — quality excellence 6.9 → 10/10 across codebase
+- [x] QE-06: Eliminate mock walls + low-value frontend tests refactor
+- [x] QE-07: Consolidate test factories into shared helpers
+- [x] QE-08: Replace 5 double-cast typing hacks with proper generics (auth module)
+- [x] QE-09: Extract ImageSourceClient port, ChatModule dependency cleanup
+- [x] QE-10: Split chat-message.service.ts (583 → 381L) with enrichment extraction
+- [x] QE-11: Maestro E2E integration into mobile CI + tracking
+- [x] QE-12: Fix 6 audit items (9/10 → 10/10) — ESLint green, dead exports cleaned
+
+### iOS & App Store (April 4-8)
+
+- [x] IOS-01: Expo 55 upgrade — regenerate ios/ project, new pods, restore test coverage
+- [x] IOS-02: Fix Xcode Cloud build — HERMES_CLI_PATH + suppress prebuild
+- [x] IOS-03: Disable expo-updates to fix SIGABRT crash on launch
+- [x] IOS-04: Uncaught exception handler for crash diagnostics
+- [x] IOS-05: Upgrade @sentry/react-native 8.5.0 → 8.7.0 — fix iOS native crash
+- [x] IOS-06: CFBundleVersion bump for App Store resubmission
+
+### Apple Review Fixes (April 8)
+
+- [x] AR-01: Remove UIBackgroundModes audio (rejection 2.5.4)
+- [x] AR-02: Improve camera/location permission purpose strings (rejection 5.1.1)
+- [x] AR-03: Remove ATT framework (rejection 2.1)
+
+### Session S11 — Museum Chat Context Fix (April 4)
+
+- [x] S11-01: Fix museumName never resolved in chat session creation
+- [x] S11-02: Fix museumMode overridden by settings — session mode priority
+- [x] S11-03: GPS coordinates sent per-message via useLocation
+- [x] S11-04: Nearby museums provider (haversine) + visitContext seeding
+- [x] S11-05: Migration: coordinates jsonb column on chat_sessions
+- [x] S11-06: +13 tests (nearby-museums, fixtures)
+
+### Frontend Features (April 4-6)
+
+- [x] FE-01: Change Email screen + API + settings link + i18n 8 langues
+- [x] FE-02: Museum UX crossfade, search-area animation (Sprint B)
+- [x] FE-03: OpenAPI types sync + expo-asset peer dep fix
+
+### Privacy & Security (April 6-8)
+
+- [x] SEC-01: PiiSanitizer + 4 audit priorities (privacy module)
+- [x] SEC-02: CI security — CODEOWNERS, top-level permissions, blocking SBOM, CodeQL nightly
+- [x] SEC-03: SEC-19 — reject orphan session adoption + symmetric anti-theft
+- [x] SEC-04: SEC-20 — per-user rate limiter on chat + media routes
+- [x] SEC-05: SSRF protection on HTML scraper
+- [x] SEC-06: Prompt injection mitigation improvements
+- [x] SEC-07: Review filter security fix
+
+### Web Landing Page Redesign (April 6)
+
+- [x] WEB-01: Sprint 1 — SEO foundations + animation fixes
+- [x] WEB-02: Sprint 2 — visual sections with live components
+- [x] WEB-03: Sprint 3 — premium scroll animations
+- [x] WEB-04: Sprint 4-5 — 14 visual fixes from production review
+- [x] WEB-05: Hero animation migrate from Remotion to Framer Motion
+
+### Smart Low-Data Mode (April 7)
+
+- [x] LDM-01: Backend — CachingChatOrchestrator decorator with Redis + sorted sets (zadd/ztop)
+- [x] LDM-02: Backend — shared cache key builder with contract tests
+- [x] LDM-03: Backend — X-Data-Mode header parsing + prompt adaptation
+- [x] LDM-04: Backend — MuseumQaSeed entity + GET /museums/:id/low-data-pack endpoint
+- [x] LDM-05: Backend — invalidate LLM cache on negative feedback
+- [x] LDM-06: Backend — migrate KnowledgeBaseService cache from in-memory to Redis
+- [x] LDM-07: Frontend — DataModeProvider with NetInfo auto-detect + manual override
+- [x] LDM-08: Frontend — chatLocalCache Zustand store with LRU eviction
+- [x] LDM-09: Frontend — computeLocalCacheKey matching backend contract
+- [x] LDM-10: Frontend — DataMode settings section with i18n (8 langues)
+- [x] LDM-11: Frontend — cached response badge + low-data banner
+- [x] LDM-12: Frontend — cache-first logic in useChatSession with X-Data-Mode header
+- [x] LDM-13: Frontend — useMuseumPrefetch hook + lowDataPackApi
+
+### Chat UX Improvements (April 8)
+
+- [x] CUX-01: In-app browser for links + intercept markdown taps
+- [x] CUX-02: Tavily web search enrichment block in chat pipeline
+- [x] CUX-03: Code review fixes — skip cache for dynamic enrichment + abort timeout
+- [x] CUX-04: Critical link interception bug fix (Sprint 2 review)
+- [x] CUX-05: inAppBrowser.openSystem i18n key for all 8 locales
+
+### Design System (April 9)
+
+- [x] DS-01: 3-layer design token system (primitives + functional + semantic)
+- [x] DS-02: Migrate themes.ts + shared/ui components to design tokens
+- [x] DS-03: Migrate 22 chat/auth files to design tokens
+- [x] DS-04: Migrate remaining feature modules to design tokens
+- [x] DS-05: Migrate all 21 stack/tab screens to design tokens
+- [x] DS-06: Migrate museum-web to design system tokens
+- [x] DS-07: V2 enterprise — extend typography + semantic tokens, zero hex debt
+- [x] DS-08: Centralize — prune dead tokens + single barrel export
+
+### Web Landing Page Redesign (April 9)
+
+- [x] WEB-06: "App Mirror" redesign — align with mobile design system
+
+### Overpass / Museum Fixes (April 10)
+
+- [x] OV-01: Cache empty Overpass results + in-memory cache fallback
+- [x] OV-02: nwr shortcut query + User-Agent + mirror fallback chain
+- [x] OV-03: Use [timeout:180] admission budget — fixes 504 on dense areas
+- [x] OV-04: Lower client timeout to 8s — avoid VPS nginx 502
+- [x] OV-05: Add Private Coffee as 3rd fallback mirror
+- [x] OV-06: Include seed-museums.ts in Docker build context
+- [x] OV-07: Handle undefined identifiers in seed when all rows exist
+
+### Web Search Multi-Provider (April 10)
+
+- [x] WS-01: Google Custom Search client with tests
+- [x] WS-02: Brave Search client with tests
+- [x] WS-03: SearXNG multi-instance client with tests
+- [x] WS-04: DuckDuckGo Instant Answer client with tests
+- [x] WS-05: FallbackSearchProvider with sequential failover
+- [x] WS-06: Wire multi-provider fallback chain (Tavily → Google → Brave → SearXNG → DuckDuckGo)
+
+### Knowledge Extraction Module (April 10)
+
+- [x] KE-01: Entities, ports, and test factories (3 entities: ExtractedContent, ContentClassification, ExtractionJob)
+- [x] KE-02: HTML scraper with Readability + Cheerio
+- [x] KE-03: LangChain content classifier with structured output
+- [x] KE-04: TypeORM repos with upsert + partial update
+- [x] KE-05: Extraction job service (scrape → classify → store)
+- [x] KE-06: BullMQ extraction worker with rate limiting
+- [x] KE-07: DB lookup service with LOCAL KNOWLEDGE prompt block
+- [x] KE-08: Wire module + enrichment loop integration
+- [x] KE-09: DB migration for 3 extraction tables
+
+### Misc (April 8-10)
+
+- [x] MISC-01: Comprehensive security + quality hardening sprint (audit)
+- [x] MISC-02: Vite 8.0.7 pinned as direct devDependency (CVE GHSA-4w7w-66w2-5vf9)
+- [x] MISC-03: Replace jsdom with linkedom for ESM compat in Jest
+- [x] MISC-04: Quality ratchet updated (1091 FE tests)
+- [x] MISC-05: App icon, favicon, feature graphic refresh
+
+### Verification (2026-04-11)
+
+- [x] Backend: tsc PASS
+- [x] Frontend: tsc PASS
+- [x] Quality ratchet: maintained
+
+---
+
+## Metriques globales (mise a jour 2026-04-11)
+
+| Sprint    | Taches  | Faites | %       | Tests backend | Tests frontend |
+| --------- | ------- | ------ | ------- | ------------- | -------------- |
+| S1        | 37      | 37     | 100%    | 212           | 8              |
+| S1.5      | 5       | 5      | 100%    | 217 (+5)      | 11 (+3)        |
+| S2        | 25      | 24     | 96%     | 360 (+93)     | 26 (+13)       |
+| S3        | 18      | 18     | 100%    | 360           | 26             |
+| Audit     | 11      | 11     | 100%    | 364 (+4)      | 29 (+3)        |
+| S4        | 16      | 16     | 100%    | 416 (+52)     | 29             |
+| S5        | 3       | 3      | 100%    | 530 (+114)    | 29             |
+| S6        | 5       | 5      | 100%    | 693 (+163)    | 87 (+58)       |
+| S7        | 4       | 4      | 100%    | 786 (+93)     | 87             |
+| S8        | 4       | 4      | 100%    | 913 (+127)    | 106 (+19)      |
+| Phase 0   | 8       | 8      | 100%    | 909 (-4)      | 106            |
+| W1        | 16      | 16     | 100%    | 941 (+32)     | 106            |
+| W2        | 13      | 13     | 100%    | 951 (+10)     | 106            |
+| Store Sub | 7       | 7      | 100%    | 951           | 106            |
+| Tech Polish | 12    | 12     | 100%    | 951           | 161 (+55)      |
+| V3 Sprints | 8      | 8      | 100%    | 1054 (+103)   | 161            |
+| R15       | 12      | 12     | 100%    | 1077 (+23)    | 161            |
+| Prod Hard | 22      | 22     | 100%    | 1433 (+356)   | 146            |
+| Chat UX   | 17      | 17     | 100%    | 1457 (+24)    | 146            |
+| Hotfix 04-02 | 7   | 7      | 100%    | 1445+ (+9)    | 422 (+94)      |
+| V2 Features | 96    | 96     | 100%    | 2294+         | 1091+          |
+| **Total** | **346** | **345** | **99%** | **2294+**     | **1091+**      |

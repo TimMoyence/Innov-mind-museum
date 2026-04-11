@@ -193,12 +193,6 @@ export default async function LandingPage({ params }: LandingPageProps) {
       priceCurrency: 'EUR',
       availability: 'https://schema.org/InStock',
     },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.8',
-      ratingCount: '150',
-      bestRating: '5',
-    },
     featureList: [
       'AI artwork recognition via computer vision',
       'Contextual AI chat about art history',
