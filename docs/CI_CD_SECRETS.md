@@ -12,7 +12,7 @@ Ce document liste les secrets GitHub Actions utilisés par les workflows CI/CD d
 ### `AUTO_TAG_BUILD_ANDROID`
 - Type: `Repository variable` (pas un secret).
 - Valeur recommandée par défaut: `false` (ou non définie).
-- Rôle: contrôle si les tags `v*` déclenchent aussi le build/submit Android dans `mobile-release.yml`.
+- Rôle: contrôle si les tags `v*` déclenchent aussi le build/submit Android dans `ci-cd-mobile.yml`.
 - Comportement:
   - `false` / absent: tags `v*` = flux iOS uniquement.
   - `true`: tags `v*` = iOS + Android.
@@ -24,14 +24,16 @@ Recommandation:
 
 ## Workflows concernés
 
-- `.github/workflows/ci-backend.yml`
-- `.github/workflows/ci-frontend.yml`
-- `.github/workflows/deploy-backend.yml`
-- `.github/workflows/deploy-backend-staging.yml`
-- `.github/workflows/mobile-release.yml`
+- `.github/workflows/ci-cd-backend.yml` — quality gate + E2E + deploy prod/staging
+- `.github/workflows/ci-cd-web.yml` — quality gate + Lighthouse CI + deploy Docker/GHCR → VPS
+- `.github/workflows/ci-cd-mobile.yml` — quality gate + Maestro E2E + EAS build + store submit
+- `.github/workflows/_deploy-backend.yml` — reusable deploy workflow (called by ci-cd-backend)
+- `.github/workflows/deploy-privacy-policy.yml` — privacy policy static page deploy
+- `.github/workflows/codeql.yml` — CodeQL security analysis (security-extended + security-and-quality)
+- `.github/workflows/semgrep.yml` — SAST static analysis scanning
 
 Note mobile:
-- `mobile-release.yml` est désormais orienté release mobile uniquement.
+- `ci-cd-mobile.yml` est désormais orienté release mobile uniquement.
 - Il ne se déclenche plus sur `push` backend.
 - Déclencheurs actifs: `workflow_dispatch`, `push main` (frontend only), `tag v*`.
 - Les submits stores sont séparés en jobs iOS et Android.
@@ -54,36 +56,31 @@ Note mobile:
 ### `GHCR_USER`
 - Rôle: username pour push/pull d’images sur GHCR (`ghcr.io`).
 - Utilisé par:
-  - `deploy-backend.yml`
-  - `deploy-backend-staging.yml`
+  - `_deploy-backend.yml` (reusable deploy workflow, called by `ci-cd-backend.yml`)
 - Portée recommandée: repository (ou organization si mutualisé).
 
 ### `GHCR_TOKEN`
 - Rôle: token GitHub (ou PAT) avec permission `packages:write`/`packages:read` pour GHCR.
 - Utilisé par:
-  - `deploy-backend.yml`
-  - `deploy-backend-staging.yml`
+  - `_deploy-backend.yml` (reusable deploy workflow, called by `ci-cd-backend.yml`)
 - Portée recommandée: repository / organization.
 
 ### `SERVER_HOST`
 - Rôle: hostname/IP du VPS cible (deploy backend).
 - Utilisé par:
-  - `deploy-backend.yml`
-  - `deploy-backend-staging.yml`
+  - `_deploy-backend.yml` (reusable deploy workflow, called by `ci-cd-backend.yml`)
 - Portée recommandée: environment (`staging`, `production`) si serveurs différents.
 
 ### `SERVER_USER`
 - Rôle: utilisateur SSH pour le déploiement (ex: `deploy`).
 - Utilisé par:
-  - `deploy-backend.yml`
-  - `deploy-backend-staging.yml`
+  - `_deploy-backend.yml` (reusable deploy workflow, called by `ci-cd-backend.yml`)
 - Portée recommandée: environment.
 
 ### `SERVER_KEY`
 - Rôle: clé privée SSH du compte de déploiement.
 - Utilisé par:
-  - `deploy-backend.yml`
-  - `deploy-backend-staging.yml`
+  - `_deploy-backend.yml` (reusable deploy workflow, called by `ci-cd-backend.yml`)
 - Portée recommandée: environment (jamais repository si prod/staging distincts).
 
 ## Secrets Smoke Tests Post-Deploy (Strictement requis)
@@ -95,44 +92,44 @@ Ces secrets sont **maintenant bloquants** dans les workflows de déploiement bac
 #### `STAGING_SMOKE_API_BASE_URL`
 - Rôle: URL base de l’API staging (ex: `https://api-staging.example.com`).
 - Utilisé par:
-  - `deploy-backend-staging.yml`
+  - `ci-cd-backend.yml` (staging deploy job)
 - Doit pointer vers l’API exposant `/api/health`, `/api/auth/*`, `/api/chat/*`.
 
 #### `STAGING_SMOKE_TEST_EMAIL`
 - Rôle: email du compte de test utilisé pour les smoke tests staging.
 - Utilisé par:
-  - `deploy-backend-staging.yml`
+  - `ci-cd-backend.yml` (staging deploy job)
 - Note: le script peut créer le compte s’il n’existe pas encore (register fallback).
 
 #### `STAGING_SMOKE_TEST_PASSWORD`
 - Rôle: mot de passe du compte de test smoke staging.
 - Utilisé par:
-  - `deploy-backend-staging.yml`
+  - `ci-cd-backend.yml` (staging deploy job)
 
 ### Production
 
 #### `PROD_SMOKE_API_BASE_URL`
 - Rôle: URL base de l’API prod (ex: `https://api.example.com`).
 - Utilisé par:
-  - `deploy-backend.yml`
+  - `ci-cd-backend.yml` (production deploy job via `_deploy-backend.yml`)
 
 #### `PROD_SMOKE_TEST_EMAIL`
 - Rôle: email du compte de test smoke prod.
 - Utilisé par:
-  - `deploy-backend.yml`
+  - `ci-cd-backend.yml` (production deploy job via `_deploy-backend.yml`)
 - Recommandation: compte dédié, permissions minimales, surveillé.
 
 #### `PROD_SMOKE_TEST_PASSWORD`
 - Rôle: mot de passe du compte de test smoke prod.
 - Utilisé par:
-  - `deploy-backend.yml`
+  - `ci-cd-backend.yml` (production deploy job via `_deploy-backend.yml`)
 
 ## Secrets Mobile (Expo / EAS)
 
 ### `EXPO_TOKEN`
 - Rôle: authentification Expo/EAS CLI pour builds et submissions.
 - Utilisé par:
-  - `mobile-release.yml`
+  - `ci-cd-mobile.yml`
 - Requis pour:
   - preview builds
   - production builds
@@ -141,13 +138,13 @@ Ces secrets sont **maintenant bloquants** dans les workflows de déploiement bac
 ### `EXPO_PUBLIC_API_BASE_URL_STAGING`
 - Rôle: base URL API staging injectée au build Expo.
 - Utilisé par:
-  - `mobile-release.yml`
+  - `ci-cd-mobile.yml`
 - Vérifié explicitement avant build preview/prod.
 
 ### `EXPO_PUBLIC_API_BASE_URL_PROD`
 - Rôle: base URL API prod injectée au build Expo.
 - Utilisé par:
-  - `mobile-release.yml`
+  - `ci-cd-mobile.yml`
 - Vérifié explicitement avant build preview/prod/submit.
 
 ### `EXPO_PUBLIC_EAS_PROJECT_ID`
@@ -160,28 +157,28 @@ Ces secrets sont **maintenant bloquants** dans les workflows de déploiement bac
 ### `APPLE_APP_SPECIFIC_PASSWORD`
 - Rôle: mot de passe spécifique app Apple pour soumission iOS.
 - Utilisé par:
-  - `mobile-release.yml` (`submit-production-ios`)
+  - `ci-cd-mobile.yml` (`submit-production-ios`)
 
 ### `APPLE_ID`
 - Rôle: identifiant Apple Developer / App Store Connect.
 - Utilisé par:
-  - `mobile-release.yml` (`submit-production-ios`)
+  - `ci-cd-mobile.yml` (`submit-production-ios`)
 
 ### `ASC_APP_ID`
 - Rôle: identifiant App Store Connect de l’app.
 - Utilisé par:
-  - `mobile-release.yml` (`submit-production-ios`)
+  - `ci-cd-mobile.yml` (`submit-production-ios`)
 
 ### `APPLE_TEAM_ID`
 - Rôle: team ID Apple Developer.
 - Utilisé par:
-  - `mobile-release.yml` (`submit-production-ios`)
+  - `ci-cd-mobile.yml` (`submit-production-ios`)
 
 ### `GOOGLE_SERVICE_ACCOUNT_JSON`
 - Rôle: JSON du service account Google Play pour soumission Android.
 - Utilisé par:
-  - `mobile-release.yml` (`build-internal-android`)
-  - `mobile-release.yml` (`submit-production-android`)
+  - `ci-cd-mobile.yml` (`build-internal-android`)
+  - `ci-cd-mobile.yml` (`submit-production-android`)
 - Le workflow écrit ce JSON dans `.secrets/google-service-account.json` au runtime CI.
 - Note: requis aussi pour le flux auto `push -> Google Play Internal testing`.
 
@@ -280,7 +277,7 @@ If a secret is compromised:
 
 | Secret | Role | Used by | Scope |
 |--------|------|---------|-------|
-| `SENTRY_AUTH_TOKEN` | Authentication for Sentry CLI (source map upload, release creation) | `deploy-backend.yml`, `deploy-backend-staging.yml`, EAS builds (via `eas secret:create`) | repository |
+| `SENTRY_AUTH_TOKEN` | Authentication for Sentry CLI (source map upload, release creation) | `_deploy-backend.yml` (called by `ci-cd-backend.yml`), EAS builds (via `eas secret:create`) | repository |
 | `SENTRY_ORG` | Sentry organization slug | Deploy workflows | repository |
 | `SENTRY_PROJECT_BACKEND` | Sentry project slug for the backend API | Deploy workflows | repository |
 
@@ -305,5 +302,5 @@ Set `EXPO_PUBLIC_SENTRY_DSN_ANDROID` and `EXPO_PUBLIC_SENTRY_DSN_IOS` in the fro
 3. Configurer les secrets smoke prod (`PROD_SMOKE_*`).
 4. Configurer les secrets Expo/EAS (`EXPO_*`).
 5. Configurer les secrets store submission Apple/Google.
-6. Déclencher `deploy-backend-staging` et vérifier que le smoke test passe.
-7. Déclencher `deploy-backend` et vérifier que le smoke test passe.
+6. Déclencher `ci-cd-backend` (staging job) et vérifier que le smoke test passe.
+7. Déclencher `ci-cd-backend` (production job) et vérifier que le smoke test passe.

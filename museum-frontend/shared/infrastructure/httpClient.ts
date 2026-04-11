@@ -3,7 +3,7 @@ import axios from 'axios';
 import { assertApiBaseUrlAllowed, tryResolveInitialApiBaseUrl } from './apiConfig';
 import { reportError } from '@/shared/observability/errorReporting';
 import { generateRequestId } from './requestId';
-import { mapAxiosError, toAxiosLikeError } from './httpErrorMapper';
+import { getApiErrorCode, mapAxiosError, toAxiosLikeError } from './httpErrorMapper';
 
 type UnauthorizedHandler = () => void;
 type AuthRefreshHandler = () => Promise<string | null>;
@@ -170,7 +170,11 @@ httpClient.interceptors.response.use(
     }
 
     const is429 = status === 429;
-    const retryable = !status || status >= 500 || axiosError.code === 'ECONNABORTED' || is429;
+    // Daily chat limit (DAILY_LIMIT_REACHED) is permanent until midnight — retrying is pointless.
+    const isDailyLimit =
+      is429 && getApiErrorCode(axiosError?.response?.data) === 'DAILY_LIMIT_REACHED';
+    const retryable =
+      !isDailyLimit && (!status || status >= 500 || axiosError.code === 'ECONNABORTED' || is429);
     const retryCount = config._retryCount ?? 0;
     const maxRetries = is429 ? 3 : 2;
 

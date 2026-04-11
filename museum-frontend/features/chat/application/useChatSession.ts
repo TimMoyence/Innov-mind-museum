@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Sentry from '@sentry/react-native';
 
-import { getErrorMessage } from '@/shared/lib/errors';
+import { getErrorMessage, isDailyLimitError } from '@/shared/lib/errors';
 import { incrementCompletedSessions } from '@/shared/infrastructure/inAppReview';
 import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSettings';
 import { useLocation } from '@/features/museum/application/useLocation';
@@ -38,6 +38,7 @@ export const useChatSession = (sessionId: string) => {
   );
   const [isSending, setIsSending] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [dailyLimitReached, setDailyLimitReached] = useState(false);
   const isSendingRef = useRef(false);
   const successfulSendsRef = useRef(0);
 
@@ -345,7 +346,12 @@ export const useChatSession = (sessionId: string) => {
               message.id === optimisticMessage.id ? { ...message, sendFailed: true } : message,
             ),
         );
-        setError(getErrorMessage(sendError));
+
+        if (isDailyLimitError(sendError)) {
+          setDailyLimitReached(true);
+        } else {
+          setError(getErrorMessage(sendError));
+        }
         return false;
       } finally {
         setIsSending(false);
@@ -410,6 +416,10 @@ export const useChatSession = (sessionId: string) => {
     error,
     clearError: () => {
       setError(null);
+    },
+    dailyLimitReached,
+    clearDailyLimit: () => {
+      setDailyLimitReached(false);
     },
     reload: loadSession,
     sendMessage,

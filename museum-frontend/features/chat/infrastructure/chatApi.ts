@@ -471,6 +471,18 @@ export const chatApi = {
         // Throw so sendMessageSmart falls back to Axios path (which has refresh interceptor)
         throw new Error('STREAMING_UNAUTHORIZED');
       }
+      // Extract backend error code from response body for precise error classification
+      if (response.status === 429) {
+        try {
+          const body = (await response.json()) as { error?: { code?: string } };
+          if (body.error?.code === 'DAILY_LIMIT_REACHED') {
+            params.onError('DAILY_LIMIT_REACHED', 'Daily chat limit reached', requestId);
+            return;
+          }
+        } catch {
+          /* body parse failed — fall through to generic error */
+        }
+      }
       params.onError('HTTP_ERROR', `HTTP ${String(response.status)}`, requestId);
       return;
     }

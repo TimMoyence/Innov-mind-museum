@@ -393,6 +393,11 @@
     "cachedResponse": "Response from local cache",
     "savedForLater": "Question saved for later"
   },
+  "dailyLimit": {
+    "title": "Daily limit reached",
+    "body": "You've used all your messages for today. Come back tomorrow to continue exploring!",
+    "reset_hint": "Your message allowance resets at midnight (UTC)."
+  },
   "chatInput": {
     "placeholder": "Ask about an artwork, monument, or send voice/photo...",
     "send": "Send"
@@ -453,6 +458,7 @@
     "notFound": "Content not found.",
     "validation": "Please review your input and try again.",
     "rateLimited": "Too many requests. Please wait a moment.",
+    "dailyLimitReached": "Daily message limit reached. Come back tomorrow!",
     "unknown": "Something went wrong. Please try again.",
     "boundaryTitle": "Something went wrong",
     "boundarySubtitle": "The app encountered an unexpected error. Your data is safe.",

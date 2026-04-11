@@ -1,13 +1,13 @@
 {
-  "lastUpdated": "2026-04-08",
-  "testCount": 2456,
+  "lastUpdated": "2026-04-11",
+  "testCount": 2604,
   "frontendTestCount": 1091,
-  "frontendSuiteCount": 128,
+  "frontendSuiteCount": 129,
   "typecheckErrors": 0,
   "asAnyCount": 0,
-  "coverageStatements": 93.06,
-  "coverageBranches": 83,
+  "coverageStatements": 91.94,
+  "coverageBranches": 81.99,
   "lintErrors": 0,
-  "_comment": "Audit 2026-04-08: +76 backend tests (guardrails multi-lang +28, login-rl-redis +6, multer filter +13, openapi contract +4, misc +25). AI guardrails hardened (fail-closed + DE/ES/IT/JA/ZH/AR patterns + location guardrail). Login rate limiter distributed via Redis. Multer pre-filters Content-Type. 5 OpenAPI routes added. auth.tsx split 577→191L. JWT access/refresh secrets distinct validation. Vite bumped to >=8.0.5 (CVE GHSA-4w7w-66w2-5vf9). Doc cleanup (3 obsolete audits deleted, walk disclaimers).",
-  "webTestCount": 12
+  "_comment": "Audit 2026-04-11: Full transverse audit (9 agents) → 7-agent fix sprint. +52 BE tests (46 SSRF protection + 6 misc). Fixed real IPv6 SSRF bypass in image-input.ts. +25 web admin tests (auth+dashboard+users). WebView originWhitelist hardened. DailyLimitModal paywall UI. Knowledge seed script (26 artworks + 8 museums). Docs: CI_CD_SECRETS fixed (5 wrong workflow names), backend README 14→57 endpoints, CLAUDE.md deduped+updated, PROGRESS_TRACKER +96 items. Fake JSON-LD review stats removed.",
+  "webTestCount": 100
 }

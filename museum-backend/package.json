@@ -33,6 +33,7 @@
     "migration:revert": "npm run typeorm -- migration:revert",
     "purge:tokens": "ts-node -r tsconfig-paths/register scripts/purge-expired-tokens.ts",
     "seed:museums": "ts-node -r tsconfig-paths/register scripts/seed-museums.ts",
+    "seed:knowledge": "ts-node -r tsconfig-paths/register scripts/seed-knowledge.ts",
     "mutation": "stryker run",
     "mutation:ci": "stryker run --incremental --concurrency 2"
   },

@@ -36,6 +36,16 @@ export const isAppError = (error: unknown): error is AppError => {
 };
 
 /**
+ * Returns `true` when the error is a daily chat limit error (backend code `DAILY_LIMIT_REACHED`).
+ * @param error - The caught error value.
+ */
+export const isDailyLimitError = (error: unknown): boolean => {
+  if (isAppError(error) && error.kind === 'DailyLimitReached') return true;
+  if (error instanceof Error && error.message.includes('DAILY_LIMIT_REACHED')) return true;
+  return false;
+};
+
+/**
  * Extracts a user-facing error message from an unknown thrown value.
  * Returns a localized hint for known {@link AppError} kinds, falls back to a generic message otherwise.
  * @param error - The caught error value.
@@ -56,6 +66,8 @@ export const getErrorMessage = (error: unknown): string => {
         return t('error.validation', 'Please review your input and try again.');
       case 'RateLimited':
         return t('error.rateLimited', 'Too many requests. Please wait a moment.');
+      case 'DailyLimitReached':
+        return t('error.dailyLimitReached', 'Daily message limit reached. Come back tomorrow!');
       case 'Timeout':
         return t('error.timeout', 'Request timed out. Please try again.');
       default:

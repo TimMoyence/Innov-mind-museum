@@ -393,6 +393,11 @@
     "cachedResponse": "Respuesta desde caché local",
     "savedForLater": "Pregunta guardada para más tarde"
   },
+  "dailyLimit": {
+    "title": "Limite diario alcanzado",
+    "body": "Has utilizado todos tus mensajes de hoy. Vuelve manana para seguir explorando.",
+    "reset_hint": "Tu cuota de mensajes se restablece a medianoche (UTC)."
+  },
   "chatInput": {
     "placeholder": "Pregunta sobre una obra de arte, monumento, o envía voz/foto...",
     "send": "Enviar"
@@ -453,6 +458,7 @@
     "notFound": "Contenido no encontrado.",
     "validation": "Revisa tu entrada e inténtalo de nuevo.",
     "rateLimited": "Demasiadas solicitudes. Espera un momento.",
+    "dailyLimitReached": "Limite diario de mensajes alcanzado. Vuelve manana.",
     "unknown": "Algo salió mal. Inténtalo de nuevo.",
     "boundaryTitle": "Algo salió mal",
     "boundarySubtitle": "La aplicación encontró un error inesperado. Tus datos están seguros.",
