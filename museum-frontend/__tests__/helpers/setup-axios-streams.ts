@@ -9,4 +9,4 @@
  * By removing the global fetch before axios loads, it falls back to the
  * XMLHttpRequest adapter which works correctly in the test environment.
  */
-delete globalThis.fetch;
+(globalThis as { fetch?: typeof fetch }).fetch = undefined;

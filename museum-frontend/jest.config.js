@@ -3,7 +3,7 @@ process.env.TZ = 'UTC';
 
 module.exports = {
   preset: 'jest-expo',
-  setupFiles: ['<rootDir>/__tests__/helpers/setup-axios-streams.js'],
+  setupFiles: ['<rootDir>/__tests__/helpers/setup-axios-streams.ts'],
   testMatch: ['<rootDir>/__tests__/**/*.test.{ts,tsx}'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
