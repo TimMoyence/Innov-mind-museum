@@ -349,6 +349,7 @@
     "button": "Ir a Inicio"
   },
   "chat": {
+    "typing_announcement": "El asistente está escribiendo…",
     "fallback_title": "Sesión de arte",
     "report_thanks_title": "Gracias",
     "report_thanks_body": "Tu reporte ha sido enviado.",

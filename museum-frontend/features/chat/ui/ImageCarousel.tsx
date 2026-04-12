@@ -4,6 +4,7 @@ import { Animated, Image, Pressable, ScrollView, StyleSheet, Text, View } from '
 import { useTranslation } from 'react-i18next';
 
 import type { ChatUiEnrichedImage } from '@/features/chat/application/chatSessionLogic.pure';
+import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, radius } from '@/shared/ui/tokens';
 
@@ -32,9 +33,15 @@ const CarouselThumb = React.memo(
     placeholderBg: string;
   }) => {
     const { t } = useTranslation();
-    const opacity = useRef(new Animated.Value(0)).current;
+    const reduceMotion = useReducedMotion();
+    const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
 
     const handleLoad = () => {
+      if (reduceMotion) {
+        // WCAG 2.3.3: show the thumbnail instantly, no fade-in.
+        opacity.setValue(1);
+        return;
+      }
       Animated.timing(opacity, {
         toValue: 1,
         duration: 300,

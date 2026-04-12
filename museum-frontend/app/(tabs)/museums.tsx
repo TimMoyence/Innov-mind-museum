@@ -20,6 +20,7 @@ import { MuseumDirectoryList } from '@/features/museum/ui/MuseumDirectoryList';
 import { MuseumMapView } from '@/features/museum/ui/MuseumMapView';
 import { ViewModeToggle } from '@/features/museum/ui/ViewModeToggle';
 import { GlassCard } from '@/shared/ui/GlassCard';
+import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
@@ -40,6 +41,7 @@ export default function MuseumsScreen() {
   // When user pans the map, override GPS coords with the map center for searches.
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const reduceMotion = useReducedMotion();
 
   // Crossfade animation for view mode transitions.
   // eslint-disable-next-line react-hooks/refs -- Animated.Value created once, persisted via useRef
@@ -72,6 +74,13 @@ export default function MuseumsScreen() {
   const handleViewModeChange = useCallback(
     (mode: ViewMode) => {
       if (mode === viewMode) return;
+      if (reduceMotion) {
+        // WCAG 2.3.3: instant switch, no crossfade animation.
+        fadeAnim.setValue(1);
+        setViewMode(mode);
+        if (mode === 'list') setMapCenter(null);
+        return;
+      }
       // Crossfade: fade out → switch mode → fade in.
       Animated.timing(fadeAnim, {
         toValue: 0,
@@ -89,7 +98,7 @@ export default function MuseumsScreen() {
         }).start();
       });
     },
-    [viewMode, fadeAnim],
+    [viewMode, fadeAnim, reduceMotion],
   );
 
   const handleMapMoved = useCallback((lat: number, lng: number) => {

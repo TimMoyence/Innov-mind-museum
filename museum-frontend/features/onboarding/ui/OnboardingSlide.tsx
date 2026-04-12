@@ -9,6 +9,7 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
+import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
 
@@ -36,13 +37,20 @@ export const OnboardingSlide = React.memo(function OnboardingSlide({
   slide,
 }: OnboardingSlideProps) {
   const { theme } = useTheme();
-  const opacity = useSharedValue(0);
-  const translateY = useSharedValue(20);
+  const reduceMotion = useReducedMotion();
+  const opacity = useSharedValue(reduceMotion ? 1 : 0);
+  const translateY = useSharedValue(reduceMotion ? 0 : 20);
 
   useEffect(() => {
+    if (reduceMotion) {
+      // WCAG 2.3.3: skip the decorative entrance fade + slide.
+      opacity.value = 1;
+      translateY.value = 0;
+      return;
+    }
     opacity.value = withDelay(100, withTiming(1, { duration: 400 }));
     translateY.value = withDelay(100, withTiming(0, { duration: 400 }));
-  }, [opacity, translateY]);
+  }, [opacity, translateY, reduceMotion]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
