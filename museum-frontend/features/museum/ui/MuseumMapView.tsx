@@ -182,10 +182,9 @@ export const MuseumMapView = ({
         source={{ html }}
         originWhitelist={['http://*', 'https://*']}
         onShouldStartLoadWithRequest={(request) => {
-          // Scheme allowlist: only http/https in the WebView. Hand off
-          // mailto:/tel: to the system handler; block javascript:/file:/data:
-          // and any other scheme to prevent navigation hijacks.
           const next = request.url;
+          // Allow inline-HTML bootstrap (source={{ html }} resolves to about:blank).
+          if (next === 'about:blank' || next.startsWith('about:')) return true;
           if (next.startsWith('http://') || next.startsWith('https://')) return true;
           if (next.startsWith('mailto:') || next.startsWith('tel:')) {
             void Linking.openURL(next);
