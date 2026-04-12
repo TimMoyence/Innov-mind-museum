@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { PaginatedResult } from '@modules/admin/domain/admin.types';
+import type { PaginatedResult } from '@shared/types/pagination';
 import type { ISupportRepository } from '@modules/support/domain/support.repository.interface';
 import type {
   CreateTicketInput,

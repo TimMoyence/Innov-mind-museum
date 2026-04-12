@@ -1,17 +1,4 @@
-/** Pagination parameters for list endpoints. */
-export interface PaginationParams {
-  page: number;
-  limit: number;
-}
-
-/** Generic paginated result wrapper. */
-export interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+import type { PaginationParams } from '@shared/types/pagination';
 
 /** Safe user DTO exposed by admin endpoints (no password, tokens, etc.). */
 export interface AdminUserDTO {
