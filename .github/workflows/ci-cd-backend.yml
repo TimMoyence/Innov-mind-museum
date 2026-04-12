@@ -264,16 +264,10 @@ jobs:
 
             # 2. Run migrations in an ephemeral container BEFORE restarting
             #    Uses the same env as the running service but in a throwaway container.
+            #    Migrations must run against the old container's schema BEFORE
+            #    the new container boots (zero-downtime pattern).
             docker compose run --rm --no-deps -T backend \
               node ./node_modules/typeorm/cli.js migration:run -d dist/src/data/db/data-source.js
-
-            # 2b. Seed museum data (idempotent — ON CONFLICT DO NOTHING)
-            docker compose run --rm --no-deps -T backend \
-              node dist/scripts/seed-museums.js
-
-            # 2c. Seed knowledge extraction data (idempotent — ON CONFLICT DO NOTHING)
-            docker compose run --rm --no-deps -T backend \
-              node dist/scripts/seed-knowledge.js
 
             # 3. Restart with 30s grace period for in-flight requests to drain
             docker compose up -d --remove-orphans --timeout 30 backend
@@ -292,6 +286,14 @@ jobs:
               sleep 3
             done
             echo "Backend is healthy."
+
+            # 5. Seed museum data (idempotent — ON CONFLICT DO NOTHING)
+            #    Runs AFTER the new container is up + healthy so the seed
+            #    script sees the new code and a ready DB connection.
+            docker compose exec -T backend node dist/scripts/seed-museums.js
+
+            # 6. Seed knowledge extraction data (idempotent — ON CONFLICT DO NOTHING)
+            docker compose exec -T backend node dist/scripts/seed-knowledge.js
 
       - name: Validate prod smoke secrets
         env:
@@ -423,16 +425,10 @@ jobs:
             docker compose pull backend-staging
 
             # 2. Run migrations in an ephemeral container BEFORE restarting
+            #    Migrations must run against the old container's schema BEFORE
+            #    the new container boots (zero-downtime pattern).
             docker compose run --rm --no-deps -T backend-staging \
               node ./node_modules/typeorm/cli.js migration:run -d dist/src/data/db/data-source.js
-
-            # 2b. Seed museum data (idempotent — ON CONFLICT DO NOTHING)
-            docker compose run --rm --no-deps -T backend-staging \
-              node dist/scripts/seed-museums.js
-
-            # 2c. Seed knowledge extraction data (idempotent — ON CONFLICT DO NOTHING)
-            docker compose run --rm --no-deps -T backend-staging \
-              node dist/scripts/seed-knowledge.js
 
             # 3. Restart with 30s grace period for in-flight requests to drain
             docker compose up -d --remove-orphans --timeout 30 backend-staging
@@ -451,6 +447,14 @@ jobs:
               sleep 3
             done
             echo "Backend-staging is healthy."
+
+            # 5. Seed museum data (idempotent — ON CONFLICT DO NOTHING)
+            #    Runs AFTER the new container is up + healthy so the seed
+            #    script sees the new code and a ready DB connection.
+            docker compose exec -T backend-staging node dist/scripts/seed-museums.js
+
+            # 6. Seed knowledge extraction data (idempotent — ON CONFLICT DO NOTHING)
+            docker compose exec -T backend-staging node dist/scripts/seed-knowledge.js
 
       - name: Validate staging smoke secrets
         env:

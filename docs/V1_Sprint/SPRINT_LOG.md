@@ -6,6 +6,14 @@
 
 ---
 
+## 2026-04-12 — audit-phase2 infra ops
+
+- **Dev image rebuild required**: `museum-backend/Dockerfile.dev` bumped pnpm 8→9 in commit `7066a7ec`. Devs with cached images pre-2026-04-12 must run `docker compose -f docker-compose.dev.yml build --no-cache backend` to regenerate the backend dev image. Note added to `museum-backend/README.md` Troubleshooting section.
+- **Nginx CSP carve-out for `/api/docs`** (`museum-backend/deploy/nginx/site.conf.production`): Swagger UI was blank in prod because the strict `default-src 'none'` CSP set on `location /api/` blocked inline CSS/JS. Added a `location ^~ /api/docs` block BEFORE `location /api/` with a swagger-compatible CSP (`default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'`). All other security headers (HSTS, X-Frame-Options DENY, Referrer-Policy, etc.) preserved.
+- **CI seed steps moved after `docker compose up -d` + health wait** (`.github/workflows/ci-cd-backend.yml`, prod and staging deploy blocks): seeds were running in ephemeral `docker compose run --rm --no-deps` containers BEFORE the new container booted, so they ran against the old image and a potentially unready DB. Migrations still run BEFORE `up -d` (zero-downtime pattern), but seeds now run via `docker compose exec` AFTER the readiness loop confirms `/api/health` is OK. Same change applied to both prod and staging SSH script blocks.
+
+---
+
 ## Sprint 1 — Stabilisation (2026-03-18)
 
 **Scope**: 37 taches, correction bugs critiques, securite, refactoring architecture.
