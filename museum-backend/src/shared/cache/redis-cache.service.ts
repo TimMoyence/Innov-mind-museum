@@ -5,6 +5,8 @@ import type { CacheService } from './cache.port';
 interface RedisCacheOptions {
   /** Redis connection URL (e.g. redis://localhost:6379). */
   url: string;
+  /** Optional password — overrides any password embedded in the URL. */
+  password?: string;
   /** Default TTL in seconds when not specified per-call. */
   defaultTtlSeconds?: number;
 }
@@ -19,6 +21,7 @@ export class RedisCacheService implements CacheService {
       maxRetriesPerRequest: 1,
       lazyConnect: true,
       enableReadyCheck: false,
+      ...(options.password ? { password: options.password } : {}),
     });
     this.defaultTtl = options.defaultTtlSeconds ?? 300;
   }

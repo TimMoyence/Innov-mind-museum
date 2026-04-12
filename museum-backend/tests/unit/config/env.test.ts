@@ -166,6 +166,33 @@ describe('env.ts module', () => {
       expect(env.cache?.url).toBe('redis://custom:6380');
     });
 
+    it('cache.password reflects REDIS_PASSWORD env var', () => {
+      const env = loadEnv({
+        CACHE_ENABLED: 'true',
+        REDIS_URL: 'redis://custom:6380',
+        REDIS_PASSWORD: 'my-strong-pw',
+      });
+      expect(env.cache?.password).toBe('my-strong-pw');
+    });
+
+    it('cache.password falls back to URL-embedded password', () => {
+      const env = loadEnv({
+        CACHE_ENABLED: 'true',
+        REDIS_URL: 'redis://:url-pw@custom:6380',
+        REDIS_PASSWORD: undefined,
+      });
+      expect(env.cache?.password).toBe('url-pw');
+    });
+
+    it('cache.password prefers REDIS_PASSWORD over URL-embedded password', () => {
+      const env = loadEnv({
+        CACHE_ENABLED: 'true',
+        REDIS_URL: 'redis://:url-pw@custom:6380',
+        REDIS_PASSWORD: 'env-pw',
+      });
+      expect(env.cache?.password).toBe('env-pw');
+    });
+
     it('sentry is undefined when SENTRY_DSN is not set', () => {
       const env = loadEnv({ SENTRY_DSN: undefined });
       expect(env.sentry).toBeUndefined();

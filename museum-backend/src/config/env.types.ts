@@ -101,6 +101,8 @@ export interface AppEnv {
   cache?: {
     enabled: boolean;
     url: string;
+    /** Optional password used to authenticate against Redis (overrides URL-embedded password). */
+    password?: string;
     sessionTtlSeconds: number;
     listTtlSeconds: number;
     /** TTL for LLM response cache entries (seconds). Default 7 days. */

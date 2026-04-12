@@ -32,8 +32,10 @@ const SHUTDOWN_TIMEOUT_MS = 30_000;
 /** Initializes cache and rate-limit Redis connections from environment config. */
 function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Redis | undefined } {
   if (env.cache?.enabled) {
+    const redisPassword = env.cache.password;
     const redisCacheService = new RedisCacheService({
       url: env.cache.url,
+      password: redisPassword,
       defaultTtlSeconds: env.cache.sessionTtlSeconds,
     });
     void redisCacheService.connect().catch((err: unknown) => {
@@ -48,6 +50,7 @@ function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Red
       lazyConnect: false,
       enableReadyCheck: false,
       connectionName: 'rate-limit',
+      ...(redisPassword ? { password: redisPassword } : {}),
     });
     redisClient.on('error', (err) => {
       logger.warn('redis_rate_limit_connection_error', {

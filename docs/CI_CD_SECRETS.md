@@ -198,6 +198,7 @@ Ces secrets sont **maintenant bloquants** dans les workflows de déploiement bac
 | `OPENAI_API_KEY` | On compromise only | Regenerate in OpenAI dashboard, update VPS `.env` | Brief (chat outage during update) |
 | `DEEPSEEK_API_KEY` | On compromise only | Regenerate in provider dashboard, update VPS `.env` | Brief |
 | `GOOGLE_API_KEY` | On compromise only | Regenerate in Google Cloud Console, update VPS `.env` | Brief |
+| `REDIS_PASSWORD` | Quarterly | Rotate via `CONFIG SET requirepass` + update VPS `.env` + restart (see below) | Brief (cache + rate-limit re-auth) |
 | `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Annually | Create new key in provider, update VPS `.env`, delete old | Zero (if done sequentially) |
 | `EXPO_TOKEN` | Annually | Regenerate in Expo dashboard, update GitHub secret | Zero |
 | Smoke test passwords | Quarterly | Change in app + update GitHub secret | Zero |
@@ -245,6 +246,37 @@ curl -X POST https://musaium.com/api/auth/login \
 4. Verify with health check: `curl https://musaium.com/api/health | jq .`
 5. Test the specific service (send test email, ask test question)
 6. Delete old API key in provider dashboard
+
+**Redis Password**:
+
+Redis runs inside the private docker network with `--requirepass` enforced by `deploy/docker-compose.prod.yml`. The backend reads `REDIS_PASSWORD` from the VPS `.env`; both the cache service and the rate-limit store pass it as an explicit ioredis option so it overrides anything embedded in `REDIS_URL`.
+
+1. Generate a new password on a trusted host:
+   ```bash
+   openssl rand -base64 32
+   ```
+2. Apply it live without dropping existing sessions:
+   ```bash
+   ssh vps 'docker compose -f /opt/museum/docker-compose.prod.yml exec redis \
+     redis-cli -a "$REDIS_PASSWORD" CONFIG SET requirepass "<new-password>"'
+   ```
+3. Update `REDIS_PASSWORD` in the VPS `.env` file (so the next restart keeps the new value).
+4. Restart the backend so both the cache client and the rate-limit client pick up the new secret:
+   ```bash
+   ssh vps 'docker compose -f /opt/museum/docker-compose.prod.yml restart backend'
+   ```
+5. Verify:
+   ```bash
+   ssh vps 'docker compose -f /opt/museum/docker-compose.prod.yml exec redis \
+     redis-cli -a "$REDIS_PASSWORD" PING'
+   # → PONG
+   curl -sf https://api.musaium.com/api/health | jq .
+   ```
+
+Notes:
+- The redis container's healthcheck uses `REDIS_PASSWORD`, so the container will report unhealthy if the env file is stale — this is the signal to re-run the sequence above.
+- `REDIS_PASSWORD` is **not** a GitHub secret — it lives only in the VPS `.env` file (same as `DB_PASSWORD`, `OPENAI_API_KEY`, etc.).
+- Keep the old password in a paste buffer for ~30 seconds in case a rollback is needed; do not write it to disk.
 
 **S3 Storage**:
 1. Create new access key in provider dashboard
