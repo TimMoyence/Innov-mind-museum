@@ -219,3 +219,13 @@ This includes:
 - staging/prod smoke tests
 - EAS mobile preview/prod build and submission
 - rollback and incident runbook
+
+## Troubleshooting
+
+### Dev image rebuild after 2026-04-12
+
+Le `Dockerfile.dev` a ete aligne sur pnpm 9 (avant : pnpm 8). Si tu avais une image Docker cachee avant 2026-04-12, tu verras `Lockfile is incompatible` au demarrage. Fix :
+
+```bash
+docker compose -f docker-compose.dev.yml build --no-cache backend
+```
