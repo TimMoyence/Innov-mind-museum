@@ -129,7 +129,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: APP_NAME,
     slug: APP_SLUG,
-    version: '1.0.0',
+    version: '1.0.3',
     orientation: 'portrait',
     icon: BRAND_ICON,
     scheme: APP_SCHEME,
@@ -308,6 +308,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           project: String(process.env.SENTRY_PROJECT ?? 'apple-ios'),
         },
       ],
+      ['./plugins/withNetworkSecurity', { variant }],
     ],
     experiments: {
       typedRoutes: false,
