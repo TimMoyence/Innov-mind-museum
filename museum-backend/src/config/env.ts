@@ -69,14 +69,20 @@ function parseRedisUrlFallback(): { host: string; port: number; password: string
       return {
         host: url.hostname || 'localhost',
         port: url.port ? Number(url.port) : 6379,
-        password: url.password || undefined,
+        password:
+          toOptionalString(process.env.REDIS_PASSWORD) ||
+          (url.password ? decodeURIComponent(url.password) : undefined),
       };
     } catch {
       /* malformed URL — fall through to defaults */
     }
   }
 
-  return { host: 'localhost', port: 6379, password: undefined };
+  return {
+    host: 'localhost',
+    port: 6379,
+    password: toOptionalString(process.env.REDIS_PASSWORD),
+  };
 }
 
 const nodeEnvRaw = (process.env.NODE_ENV || 'development') as NodeEnv;
@@ -209,6 +215,7 @@ const env: AppEnv = {
     ? {
         enabled: true,
         url: process.env.REDIS_URL || 'redis://localhost:6379',
+        password: parseRedisUrlFallback().password,
         sessionTtlSeconds: toNumber(process.env.CACHE_SESSION_TTL_SECONDS, 3600),
         listTtlSeconds: toNumber(process.env.CACHE_LIST_TTL_SECONDS, 300),
         llmTtlSeconds: toNumber(process.env.CACHE_LLM_TTL_SECONDS, 604_800),
