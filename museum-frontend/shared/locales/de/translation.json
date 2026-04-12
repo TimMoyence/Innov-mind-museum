@@ -349,6 +349,7 @@
     "button": "Zur Startseite"
   },
   "chat": {
+    "typing_announcement": "Der Assistent schreibt…",
     "fallback_title": "Kunstsitzung",
     "report_thanks_title": "Vielen Dank",
     "report_thanks_body": "Ihre Meldung wurde übermittelt.",

@@ -349,6 +349,7 @@
     "button": "Vai alla Home"
   },
   "chat": {
+    "typing_announcement": "L'assistente sta scrivendo…",
     "fallback_title": "Sessione artistica",
     "report_thanks_title": "Grazie",
     "report_thanks_body": "La tua segnalazione è stata inviata.",

@@ -12,6 +12,7 @@ import { ImageCarousel } from '@/features/chat/ui/ImageCarousel';
 import { ImageFullscreenModal } from '@/features/chat/ui/ImageFullscreenModal';
 import { useTranslation } from 'react-i18next';
 
+import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
 
@@ -72,6 +73,7 @@ export const ChatMessageBubble = React.memo(
   }: ChatMessageBubbleProps) => {
     const { theme } = useTheme();
     const { t } = useTranslation();
+    const reduceMotion = useReducedMotion();
     const isAssistant = message.role === 'assistant';
     const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
 
@@ -79,6 +81,11 @@ export const ChatMessageBubble = React.memo(
     const cursorOpacity = useRef(new Animated.Value(1)).current;
     useEffect(() => {
       if (!isStreaming) return;
+      if (reduceMotion) {
+        // WCAG 2.3.3: show a steady cursor instead of a blink loop.
+        cursorOpacity.setValue(1);
+        return;
+      }
       const animation = Animated.loop(
         Animated.sequence([
           Animated.timing(cursorOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
@@ -89,7 +96,7 @@ export const ChatMessageBubble = React.memo(
       return () => {
         animation.stop();
       };
-    }, [isStreaming, cursorOpacity]);
+    }, [isStreaming, cursorOpacity, reduceMotion]);
 
     // Proactive signed URL refresh: if expiresAt is within 5 minutes, refresh before it expires
     const imageUrl = message.image?.url;

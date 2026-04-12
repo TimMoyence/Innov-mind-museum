@@ -9,6 +9,9 @@ import Animated, {
   withDelay,
 } from 'react-native-reanimated';
 
+import { useTranslation } from 'react-i18next';
+
+import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
 
@@ -16,10 +19,21 @@ const DOT_SIZE = 8;
 const DOT_COUNT = 3;
 const ANIMATION_DURATION = 400;
 
-const Dot = ({ delay, color }: { delay: number; color: string }) => {
-  const opacity = useSharedValue(0.3);
+interface DotProps {
+  delay: number;
+  color: string;
+  reduceMotion: boolean;
+}
+
+const Dot = ({ delay, color, reduceMotion }: DotProps) => {
+  const opacity = useSharedValue(reduceMotion ? 0.7 : 0.3);
 
   useEffect(() => {
+    if (reduceMotion) {
+      // WCAG 2.3.3: replace the pulsing sequence with a static mid-opacity dot.
+      opacity.value = 0.7;
+      return;
+    }
     opacity.value = withDelay(
       delay,
       withRepeat(
@@ -30,7 +44,7 @@ const Dot = ({ delay, color }: { delay: number; color: string }) => {
         -1,
       ),
     );
-  }, [delay, opacity]);
+  }, [delay, opacity, reduceMotion]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -42,9 +56,15 @@ const Dot = ({ delay, color }: { delay: number; color: string }) => {
 /** Displays an animated three-dot typing indicator shown while the assistant is generating a response. */
 export const TypingIndicator = () => {
   const { theme } = useTheme();
+  const reduceMotion = useReducedMotion();
+  const { t } = useTranslation();
 
   return (
     <View
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={t('chat.typing_announcement')}
+      accessibilityLiveRegion="polite"
       style={[
         styles.container,
         {
@@ -54,7 +74,12 @@ export const TypingIndicator = () => {
       ]}
     >
       {Array.from({ length: DOT_COUNT }).map((_, index) => (
-        <Dot key={index} delay={index * 160} color={theme.textSecondary} />
+        <Dot
+          key={index}
+          delay={index * 160}
+          color={theme.textSecondary}
+          reduceMotion={reduceMotion}
+        />
       ))}
     </View>
   );

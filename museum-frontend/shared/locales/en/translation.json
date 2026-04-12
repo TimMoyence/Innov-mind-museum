@@ -349,6 +349,7 @@
     "button": "Go to Home"
   },
   "chat": {
+    "typing_announcement": "The assistant is writing…",
     "fallback_title": "Art Session",
     "report_thanks_title": "Thank you",
     "report_thanks_body": "Your report has been submitted.",

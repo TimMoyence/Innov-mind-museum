@@ -349,6 +349,7 @@
     "button": "ホームに移動"
   },
   "chat": {
+    "typing_announcement": "アシスタントが入力中…",
     "fallback_title": "アートセッション",
     "report_thanks_title": "ありがとうございます",
     "report_thanks_body": "報告が送信されました。",

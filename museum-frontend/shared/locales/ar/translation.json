@@ -349,6 +349,7 @@
     "button": "الذهاب إلى الرئيسية"
   },
   "chat": {
+    "typing_announcement": "المساعد يكتب…",
     "fallback_title": "جلسة فنية",
     "report_thanks_title": "شكرًا",
     "report_thanks_body": "تم إرسال بلاغك.",

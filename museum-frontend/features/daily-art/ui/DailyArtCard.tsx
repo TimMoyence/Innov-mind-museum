@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { DailyArtwork } from '../infrastructure/dailyArtApi';
 import { GlassCard } from '@/shared/ui/GlassCard';
+import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, lineHeightPx } from '@/shared/ui/tokens';
 
@@ -19,18 +20,24 @@ interface DailyArtCardProps {
 export const DailyArtCard = ({ artwork, isSaved, onSave, onSkip }: DailyArtCardProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const reduceMotion = useReducedMotion();
   const [funFactExpanded, setFunFactExpanded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  const fadeAnim = useMemo(() => new Animated.Value(0), []);
+  const fadeAnim = useMemo(() => new Animated.Value(reduceMotion ? 1 : 0), [reduceMotion]);
 
   useEffect(() => {
+    if (reduceMotion) {
+      // WCAG 2.3.3: skip the entrance fade.
+      fadeAnim.setValue(1);
+      return;
+    }
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 400,
       useNativeDriver: true,
     }).start();
-  }, [fadeAnim]);
+  }, [fadeAnim, reduceMotion]);
 
   return (
     <Animated.View style={{ opacity: fadeAnim }}>
