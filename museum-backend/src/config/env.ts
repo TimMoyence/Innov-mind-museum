@@ -42,6 +42,43 @@ const required = (name: string, value: string | undefined): string => {
   return value;
 };
 
+/**
+ * Resolves Redis connection config with a URL fallback.
+ *
+ * Priority:
+ *   1. REDIS_HOST (+ REDIS_PORT / REDIS_PASSWORD) — explicit discrete vars
+ *   2. REDIS_URL — parsed via URL() for managed-Redis providers (e.g. prod)
+ *   3. localhost:6379 defaults
+ *
+ * Prevents ECONNREFUSED floods when only REDIS_URL is set in production.
+ */
+function parseRedisUrlFallback(): { host: string; port: number; password: string | undefined } {
+  const host = toOptionalString(process.env.REDIS_HOST);
+  if (host) {
+    return {
+      host,
+      port: toNumber(process.env.REDIS_PORT, 6379),
+      password: toOptionalString(process.env.REDIS_PASSWORD),
+    };
+  }
+
+  const urlStr = toOptionalString(process.env.REDIS_URL);
+  if (urlStr) {
+    try {
+      const url = new URL(urlStr);
+      return {
+        host: url.hostname || 'localhost',
+        port: url.port ? Number(url.port) : 6379,
+        password: url.password || undefined,
+      };
+    } catch {
+      /* malformed URL — fall through to defaults */
+    }
+  }
+
+  return { host: 'localhost', port: 6379, password: undefined };
+}
+
 const nodeEnvRaw = (process.env.NODE_ENV || 'development') as NodeEnv;
 if (!['development', 'test', 'production'].includes(nodeEnvRaw)) {
   throw new Error(`Invalid NODE_ENV="${nodeEnvRaw}". Must be development, test, or production.`);
@@ -245,11 +282,7 @@ const env: AppEnv = {
     confidenceThreshold: toNumber(process.env.EXTRACTION_CONFIDENCE_THRESHOLD, 0.7),
     reviewThreshold: toNumber(process.env.EXTRACTION_REVIEW_THRESHOLD, 0.4),
   },
-  redis: {
-    host: toOptionalString(process.env.REDIS_HOST) ?? 'localhost',
-    port: toNumber(process.env.REDIS_PORT, 6379),
-    password: toOptionalString(process.env.REDIS_PASSWORD),
-  },
+  redis: parseRedisUrlFallback(),
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
   supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.app',
   storage: {

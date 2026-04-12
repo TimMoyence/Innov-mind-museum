@@ -323,6 +323,68 @@ describe('env.ts module', () => {
     });
   });
 
+  describe('redis URL fallback (parseRedisUrlFallback)', () => {
+    it('prefers REDIS_HOST over REDIS_URL when both are set', () => {
+      const env = loadEnv({
+        REDIS_HOST: 'explicit-host',
+        REDIS_PORT: '6399',
+        REDIS_PASSWORD: 'explicit-pw',
+        REDIS_URL: 'redis://ignored-host:1234',
+      });
+      expect(env.redis.host).toBe('explicit-host');
+      expect(env.redis.port).toBe(6399);
+      expect(env.redis.password).toBe('explicit-pw');
+    });
+
+    it('parses REDIS_URL host/port when REDIS_HOST is absent', () => {
+      const env = loadEnv({
+        REDIS_HOST: undefined,
+        REDIS_PORT: undefined,
+        REDIS_PASSWORD: undefined,
+        REDIS_URL: 'redis://redis:6379',
+      });
+      expect(env.redis.host).toBe('redis');
+      expect(env.redis.port).toBe(6379);
+      expect(env.redis.password).toBeUndefined();
+    });
+
+    it('parses REDIS_URL with password and custom port', () => {
+      const env = loadEnv({
+        REDIS_HOST: undefined,
+        REDIS_PORT: undefined,
+        REDIS_PASSWORD: undefined,
+        REDIS_URL: 'redis://:mypass@myhost:6380',
+      });
+      expect(env.redis.host).toBe('myhost');
+      expect(env.redis.port).toBe(6380);
+      expect(env.redis.password).toBe('mypass');
+    });
+
+    it('defaults to localhost:6379 when neither REDIS_HOST nor REDIS_URL is set', () => {
+      const env = loadEnv({
+        REDIS_HOST: undefined,
+        REDIS_PORT: undefined,
+        REDIS_PASSWORD: undefined,
+        REDIS_URL: undefined,
+      });
+      expect(env.redis.host).toBe('localhost');
+      expect(env.redis.port).toBe(6379);
+      expect(env.redis.password).toBeUndefined();
+    });
+
+    it('falls back to defaults when REDIS_URL is malformed', () => {
+      const env = loadEnv({
+        REDIS_HOST: undefined,
+        REDIS_PORT: undefined,
+        REDIS_PASSWORD: undefined,
+        REDIS_URL: 'not-a-valid-url:::',
+      });
+      expect(env.redis.host).toBe('localhost');
+      expect(env.redis.port).toBe(6379);
+      expect(env.redis.password).toBeUndefined();
+    });
+  });
+
   describe('storage driver', () => {
     it('defaults to local when OBJECT_STORAGE_DRIVER is not set', () => {
       const env = loadEnv({ OBJECT_STORAGE_DRIVER: undefined });
