@@ -1,7 +1,9 @@
 import { badRequest } from '@shared/errors/app.error';
 
+
 import type { IAdminRepository } from '../domain/admin.repository.interface';
-import type { PaginatedResult, AdminReportDTO, ListReportsFilters } from '../domain/admin.types';
+import type { AdminReportDTO, ListReportsFilters } from '../domain/admin.types';
+import type { PaginatedResult } from '@shared/types/pagination';
 
 /** Validates pagination and delegates to the repository. */
 export class ListReportsUseCase {

@@ -1,5 +1,4 @@
 import type {
-  PaginatedResult,
   AdminUserDTO,
   ListUsersFilters,
   AdminAuditLogDTO,
@@ -15,6 +14,8 @@ import type {
   EngagementAnalytics,
   EngagementAnalyticsFilters,
 } from './admin.types';
+import type { PaginatedResult } from '@shared/types/pagination';
+
 
 /** Port for admin dashboard data access. */
 export interface IAdminRepository {

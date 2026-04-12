@@ -9,8 +9,6 @@ export type {
   AdminUserDTO,
   AdminAuditLogDTO,
   AdminStats,
-  PaginatedResult,
-  PaginationParams,
   ListUsersFilters,
   ListAuditLogsFilters,
 } from './domain/admin.types';

@@ -12,7 +12,6 @@ import {
 
 import type { IAdminRepository } from '../../domain/admin.repository.interface';
 import type {
-  PaginatedResult,
   AdminUserDTO,
   ListUsersFilters,
   AdminAuditLogDTO,
@@ -28,6 +27,7 @@ import type {
   EngagementAnalytics,
   EngagementAnalyticsFilters,
 } from '../../domain/admin.types';
+import type { PaginatedResult } from '@shared/types/pagination';
 import type { DataSource, Repository } from 'typeorm';
 
 /** Map a User entity to an AdminUserDTO with ISO date strings. */
