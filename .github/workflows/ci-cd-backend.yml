@@ -26,6 +26,7 @@ jobs:
   # ─── 1. Quality gate (always runs) ───────────────────────────────────
   quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: museum-backend
@@ -199,6 +200,8 @@ jobs:
           file: ./museum-backend/deploy/Dockerfile.prod
           load: true
           tags: museum-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Trivy image scan
         uses: aquasecurity/trivy-action@0.35.0
@@ -219,6 +222,8 @@ jobs:
           tags: |
             ghcr.io/${{ secrets.GHCR_USER }}/museum-backend:latest
             ghcr.io/${{ secrets.GHCR_USER }}/museum-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Create Sentry release
         if: env.HAS_SENTRY_TOKEN == 'true'
@@ -355,6 +360,8 @@ jobs:
           file: ./museum-backend/deploy/Dockerfile.prod
           load: true
           tags: museum-backend-staging:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Trivy image scan
         uses: aquasecurity/trivy-action@0.35.0
@@ -375,6 +382,8 @@ jobs:
           tags: |
             ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging:latest
             ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Create Sentry release
         if: env.HAS_SENTRY_TOKEN == 'true'

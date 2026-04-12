@@ -9,7 +9,7 @@ import type {
   TicketStatus,
   TicketPriority,
 } from '../domain/support.types';
-import type { PaginatedResult } from '@modules/admin/domain/admin.types';
+import type { PaginatedResult } from '@shared/types/pagination';
 
 /** Input for listing all support tickets (admin/moderator view). */
 interface ListAllTicketsInput {

@@ -11,7 +11,7 @@ import type {
   TicketMessageDTO,
   UpdateTicketInput,
 } from '../../domain/support.types';
-import type { PaginatedResult } from '@modules/admin/domain/admin.types';
+import type { PaginatedResult } from '@shared/types/pagination';
 import type { DataSource, Repository } from 'typeorm';
 
 /** Map a SupportTicket entity to a TicketDTO. */
