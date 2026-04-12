@@ -1,4 +1,4 @@
-import type { PaginationParams } from '@modules/admin/domain/admin.types';
+import type { PaginationParams } from '@shared/types/pagination';
 
 // ─── Enums ───
 

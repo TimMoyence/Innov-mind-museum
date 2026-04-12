@@ -10,6 +10,14 @@ const USER_AGENT = 'Musaium/1.0 (https://musaium.app; contact@musaium.app)';
 const WIKIDATA_API = 'https://www.wikidata.org/w/api.php';
 const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
 
+/**
+ * Validates a Wikidata language code (2-3 lowercase letters).
+ * Used as defense-in-depth before SPARQL interpolation.
+ */
+function isValidLanguageCode(lang: string): boolean {
+  return /^[a-z]{2,3}$/i.test(lang);
+}
+
 const ART_KEYWORDS = [
   'painting',
   'sculpture',
@@ -51,7 +59,7 @@ export class WikidataClient implements KnowledgeBaseProvider {
   async lookup(query: KnowledgeBaseQuery): Promise<ArtworkFacts | null> {
     try {
       const rawLang = query.language ?? 'en';
-      const lang = /^[a-z]{2,3}$/i.test(rawLang) ? rawLang.toLowerCase() : 'en';
+      const lang = isValidLanguageCode(rawLang) ? rawLang.toLowerCase() : 'en';
       const entity = await this.searchEntity(query.searchTerm, lang);
       if (!entity) return null;
       return await this.fetchProperties(entity.id, entity.label, lang);
@@ -122,8 +130,10 @@ export class WikidataClient implements KnowledgeBaseProvider {
     label: string,
     language: string,
   ): Promise<ArtworkFacts | null> {
-    // Validate QID format to prevent SPARQL injection
+    // Defense-in-depth: validate QID and language format before SPARQL interpolation,
+    // even if callers (e.g. lookup()) already validate. Protects against direct calls.
     if (!/^Q\d+$/.test(qid)) return null;
+    if (!isValidLanguageCode(language)) return null;
 
     const sparql = `
       SELECT ?creatorLabel ?inception ?materialLabel ?collectionLabel ?movementLabel ?genreLabel ?image
