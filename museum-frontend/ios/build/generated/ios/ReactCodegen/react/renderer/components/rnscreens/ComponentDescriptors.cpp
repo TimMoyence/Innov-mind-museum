@@ -16,8 +16,6 @@ namespace facebook::react {
 
 void rnscreens_registerComponentDescriptorsFromCodegen(
   std::shared_ptr<const ComponentDescriptorProviderRegistry> registry) {
-registry->add(concreteComponentDescriptorProvider<RNSBottomTabsAccessoryContentComponentDescriptor>());
-registry->add(concreteComponentDescriptorProvider<RNSBottomTabsScreenComponentDescriptor>());
 registry->add(concreteComponentDescriptorProvider<RNSSplitViewHostComponentDescriptor>());
 registry->add(concreteComponentDescriptorProvider<RNSStackHostComponentDescriptor>());
 registry->add(concreteComponentDescriptorProvider<RNSStackScreenComponentDescriptor>());
@@ -27,6 +25,8 @@ registry->add(concreteComponentDescriptorProvider<RNSScreenFooterComponentDescri
 registry->add(concreteComponentDescriptorProvider<RNSScreenNavigationContainerComponentDescriptor>());
 registry->add(concreteComponentDescriptorProvider<RNSScreenStackComponentDescriptor>());
 registry->add(concreteComponentDescriptorProvider<RNSSearchBarComponentDescriptor>());
+registry->add(concreteComponentDescriptorProvider<RNSTabsBottomAccessoryContentComponentDescriptor>());
+registry->add(concreteComponentDescriptorProvider<RNSTabsScreenComponentDescriptor>());
 }
 
 } // namespace facebook::react

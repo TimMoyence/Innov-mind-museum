@@ -18,28 +18,6 @@
 
 namespace facebook::react {
 
-JSI_EXPORT extern const char RNSBottomTabsAccessoryContentComponentName[];
-
-/*
- * `ShadowNode` for <RNSBottomTabsAccessoryContent> component.
- */
-using RNSBottomTabsAccessoryContentShadowNode = ConcreteViewShadowNode<
-    RNSBottomTabsAccessoryContentComponentName,
-    RNSBottomTabsAccessoryContentProps,
-    RNSBottomTabsAccessoryContentEventEmitter,
-    RNSBottomTabsAccessoryContentState>;
-
-JSI_EXPORT extern const char RNSBottomTabsScreenComponentName[];
-
-/*
- * `ShadowNode` for <RNSBottomTabsScreen> component.
- */
-using RNSBottomTabsScreenShadowNode = ConcreteViewShadowNode<
-    RNSBottomTabsScreenComponentName,
-    RNSBottomTabsScreenProps,
-    RNSBottomTabsScreenEventEmitter,
-    RNSBottomTabsScreenState>;
-
 JSI_EXPORT extern const char RNSSplitViewHostComponentName[];
 
 /*
@@ -138,5 +116,27 @@ using RNSSearchBarShadowNode = ConcreteViewShadowNode<
     RNSSearchBarProps,
     RNSSearchBarEventEmitter,
     RNSSearchBarState>;
+
+JSI_EXPORT extern const char RNSTabsBottomAccessoryContentComponentName[];
+
+/*
+ * `ShadowNode` for <RNSTabsBottomAccessoryContent> component.
+ */
+using RNSTabsBottomAccessoryContentShadowNode = ConcreteViewShadowNode<
+    RNSTabsBottomAccessoryContentComponentName,
+    RNSTabsBottomAccessoryContentProps,
+    RNSTabsBottomAccessoryContentEventEmitter,
+    RNSTabsBottomAccessoryContentState>;
+
+JSI_EXPORT extern const char RNSTabsScreenComponentName[];
+
+/*
+ * `ShadowNode` for <RNSTabsScreen> component.
+ */
+using RNSTabsScreenShadowNode = ConcreteViewShadowNode<
+    RNSTabsScreenComponentName,
+    RNSTabsScreenProps,
+    RNSTabsScreenEventEmitter,
+    RNSTabsScreenState>;
 
 } // namespace facebook::react

@@ -16,344 +16,6 @@
 
 namespace facebook::react {
 
-RNSBottomTabsAccessoryContentProps::RNSBottomTabsAccessoryContentProps(
-    const PropsParserContext &context,
-    const RNSBottomTabsAccessoryContentProps &sourceProps,
-    const RawProps &rawProps): ViewProps(context, sourceProps, rawProps),
-
-    environment(convertRawProp(context, rawProps, "environment", sourceProps.environment, {RNSBottomTabsAccessoryContentEnvironment::Regular})) {}
-    
-#ifdef RN_SERIALIZABLE_STATE
-ComponentName RNSBottomTabsAccessoryContentProps::getDiffPropsImplementationTarget() const {
-  return "RNSBottomTabsAccessoryContent";
-}
-
-folly::dynamic RNSBottomTabsAccessoryContentProps::getDiffProps(
-    const Props* prevProps) const {
-  static const auto defaultProps = RNSBottomTabsAccessoryContentProps();
-  const RNSBottomTabsAccessoryContentProps* oldProps = prevProps == nullptr
-      ? &defaultProps
-      : static_cast<const RNSBottomTabsAccessoryContentProps*>(prevProps);
-  if (this == oldProps) {
-    return folly::dynamic::object();
-  }
-  folly::dynamic result = HostPlatformViewProps::getDiffProps(prevProps);
-  
-  if (environment != oldProps->environment) {
-    result["environment"] = toDynamic(environment);
-  }
-  return result;
-}
-#endif
-RNSBottomTabsAccessoryProps::RNSBottomTabsAccessoryProps(
-    const PropsParserContext &context,
-    const RNSBottomTabsAccessoryProps &sourceProps,
-    const RawProps &rawProps): ViewProps(context, sourceProps, rawProps)
-
-     {}
-    
-#ifdef RN_SERIALIZABLE_STATE
-ComponentName RNSBottomTabsAccessoryProps::getDiffPropsImplementationTarget() const {
-  return "RNSBottomTabsAccessory";
-}
-
-folly::dynamic RNSBottomTabsAccessoryProps::getDiffProps(
-    const Props* prevProps) const {
-  static const auto defaultProps = RNSBottomTabsAccessoryProps();
-  const RNSBottomTabsAccessoryProps* oldProps = prevProps == nullptr
-      ? &defaultProps
-      : static_cast<const RNSBottomTabsAccessoryProps*>(prevProps);
-  if (this == oldProps) {
-    return folly::dynamic::object();
-  }
-  folly::dynamic result = HostPlatformViewProps::getDiffProps(prevProps);
-  
-  return result;
-}
-#endif
-RNSBottomTabsProps::RNSBottomTabsProps(
-    const PropsParserContext &context,
-    const RNSBottomTabsProps &sourceProps,
-    const RawProps &rawProps): ViewProps(context, sourceProps, rawProps),
-
-    tabBarHidden(convertRawProp(context, rawProps, "tabBarHidden", sourceProps.tabBarHidden, {false})),
-    nativeContainerBackgroundColor(convertRawProp(context, rawProps, "nativeContainerBackgroundColor", sourceProps.nativeContainerBackgroundColor, {})),
-    tabBarBackgroundColor(convertRawProp(context, rawProps, "tabBarBackgroundColor", sourceProps.tabBarBackgroundColor, {})),
-    tabBarItemTitleFontFamily(convertRawProp(context, rawProps, "tabBarItemTitleFontFamily", sourceProps.tabBarItemTitleFontFamily, {})),
-    tabBarItemTitleFontSize(convertRawProp(context, rawProps, "tabBarItemTitleFontSize", sourceProps.tabBarItemTitleFontSize, {0.0})),
-    tabBarItemTitleFontSizeActive(convertRawProp(context, rawProps, "tabBarItemTitleFontSizeActive", sourceProps.tabBarItemTitleFontSizeActive, {0.0})),
-    tabBarItemTitleFontWeight(convertRawProp(context, rawProps, "tabBarItemTitleFontWeight", sourceProps.tabBarItemTitleFontWeight, {})),
-    tabBarItemTitleFontStyle(convertRawProp(context, rawProps, "tabBarItemTitleFontStyle", sourceProps.tabBarItemTitleFontStyle, {})),
-    tabBarItemTitleFontColor(convertRawProp(context, rawProps, "tabBarItemTitleFontColor", sourceProps.tabBarItemTitleFontColor, {})),
-    tabBarItemTitleFontColorActive(convertRawProp(context, rawProps, "tabBarItemTitleFontColorActive", sourceProps.tabBarItemTitleFontColorActive, {})),
-    tabBarItemIconColor(convertRawProp(context, rawProps, "tabBarItemIconColor", sourceProps.tabBarItemIconColor, {})),
-    tabBarItemIconColorActive(convertRawProp(context, rawProps, "tabBarItemIconColorActive", sourceProps.tabBarItemIconColorActive, {})),
-    tabBarItemActiveIndicatorColor(convertRawProp(context, rawProps, "tabBarItemActiveIndicatorColor", sourceProps.tabBarItemActiveIndicatorColor, {})),
-    tabBarItemActiveIndicatorEnabled(convertRawProp(context, rawProps, "tabBarItemActiveIndicatorEnabled", sourceProps.tabBarItemActiveIndicatorEnabled, {true})),
-    tabBarItemRippleColor(convertRawProp(context, rawProps, "tabBarItemRippleColor", sourceProps.tabBarItemRippleColor, {})),
-    tabBarItemLabelVisibilityMode(convertRawProp(context, rawProps, "tabBarItemLabelVisibilityMode", sourceProps.tabBarItemLabelVisibilityMode, {RNSBottomTabsTabBarItemLabelVisibilityMode::Auto})),
-    tabBarTintColor(convertRawProp(context, rawProps, "tabBarTintColor", sourceProps.tabBarTintColor, {})),
-    tabBarMinimizeBehavior(convertRawProp(context, rawProps, "tabBarMinimizeBehavior", sourceProps.tabBarMinimizeBehavior, {RNSBottomTabsTabBarMinimizeBehavior::Automatic})),
-    tabBarControllerMode(convertRawProp(context, rawProps, "tabBarControllerMode", sourceProps.tabBarControllerMode, {RNSBottomTabsTabBarControllerMode::Automatic})),
-    controlNavigationStateInJS(convertRawProp(context, rawProps, "controlNavigationStateInJS", sourceProps.controlNavigationStateInJS, {false})) {}
-    
-#ifdef RN_SERIALIZABLE_STATE
-ComponentName RNSBottomTabsProps::getDiffPropsImplementationTarget() const {
-  return "RNSBottomTabs";
-}
-
-folly::dynamic RNSBottomTabsProps::getDiffProps(
-    const Props* prevProps) const {
-  static const auto defaultProps = RNSBottomTabsProps();
-  const RNSBottomTabsProps* oldProps = prevProps == nullptr
-      ? &defaultProps
-      : static_cast<const RNSBottomTabsProps*>(prevProps);
-  if (this == oldProps) {
-    return folly::dynamic::object();
-  }
-  folly::dynamic result = HostPlatformViewProps::getDiffProps(prevProps);
-  
-  if (tabBarHidden != oldProps->tabBarHidden) {
-    result["tabBarHidden"] = tabBarHidden;
-  }
-    
-  if (nativeContainerBackgroundColor != oldProps->nativeContainerBackgroundColor) {
-    result["nativeContainerBackgroundColor"] = *nativeContainerBackgroundColor;
-  }
-    
-  if (tabBarBackgroundColor != oldProps->tabBarBackgroundColor) {
-    result["tabBarBackgroundColor"] = *tabBarBackgroundColor;
-  }
-    
-  if (tabBarItemTitleFontFamily != oldProps->tabBarItemTitleFontFamily) {
-    result["tabBarItemTitleFontFamily"] = tabBarItemTitleFontFamily;
-  }
-    
-  if ((tabBarItemTitleFontSize != oldProps->tabBarItemTitleFontSize) && !(std::isnan(tabBarItemTitleFontSize) && std::isnan(oldProps->tabBarItemTitleFontSize))) {
-    result["tabBarItemTitleFontSize"] = tabBarItemTitleFontSize;
-  }
-    
-  if ((tabBarItemTitleFontSizeActive != oldProps->tabBarItemTitleFontSizeActive) && !(std::isnan(tabBarItemTitleFontSizeActive) && std::isnan(oldProps->tabBarItemTitleFontSizeActive))) {
-    result["tabBarItemTitleFontSizeActive"] = tabBarItemTitleFontSizeActive;
-  }
-    
-  if (tabBarItemTitleFontWeight != oldProps->tabBarItemTitleFontWeight) {
-    result["tabBarItemTitleFontWeight"] = tabBarItemTitleFontWeight;
-  }
-    
-  if (tabBarItemTitleFontStyle != oldProps->tabBarItemTitleFontStyle) {
-    result["tabBarItemTitleFontStyle"] = tabBarItemTitleFontStyle;
-  }
-    
-  if (tabBarItemTitleFontColor != oldProps->tabBarItemTitleFontColor) {
-    result["tabBarItemTitleFontColor"] = *tabBarItemTitleFontColor;
-  }
-    
-  if (tabBarItemTitleFontColorActive != oldProps->tabBarItemTitleFontColorActive) {
-    result["tabBarItemTitleFontColorActive"] = *tabBarItemTitleFontColorActive;
-  }
-    
-  if (tabBarItemIconColor != oldProps->tabBarItemIconColor) {
-    result["tabBarItemIconColor"] = *tabBarItemIconColor;
-  }
-    
-  if (tabBarItemIconColorActive != oldProps->tabBarItemIconColorActive) {
-    result["tabBarItemIconColorActive"] = *tabBarItemIconColorActive;
-  }
-    
-  if (tabBarItemActiveIndicatorColor != oldProps->tabBarItemActiveIndicatorColor) {
-    result["tabBarItemActiveIndicatorColor"] = *tabBarItemActiveIndicatorColor;
-  }
-    
-  if (tabBarItemActiveIndicatorEnabled != oldProps->tabBarItemActiveIndicatorEnabled) {
-    result["tabBarItemActiveIndicatorEnabled"] = tabBarItemActiveIndicatorEnabled;
-  }
-    
-  if (tabBarItemRippleColor != oldProps->tabBarItemRippleColor) {
-    result["tabBarItemRippleColor"] = *tabBarItemRippleColor;
-  }
-    
-  if (tabBarItemLabelVisibilityMode != oldProps->tabBarItemLabelVisibilityMode) {
-    result["tabBarItemLabelVisibilityMode"] = toDynamic(tabBarItemLabelVisibilityMode);
-  }
-    
-  if (tabBarTintColor != oldProps->tabBarTintColor) {
-    result["tabBarTintColor"] = *tabBarTintColor;
-  }
-    
-  if (tabBarMinimizeBehavior != oldProps->tabBarMinimizeBehavior) {
-    result["tabBarMinimizeBehavior"] = toDynamic(tabBarMinimizeBehavior);
-  }
-    
-  if (tabBarControllerMode != oldProps->tabBarControllerMode) {
-    result["tabBarControllerMode"] = toDynamic(tabBarControllerMode);
-  }
-    
-  if (controlNavigationStateInJS != oldProps->controlNavigationStateInJS) {
-    result["controlNavigationStateInJS"] = controlNavigationStateInJS;
-  }
-  return result;
-}
-#endif
-RNSBottomTabsScreenProps::RNSBottomTabsScreenProps(
-    const PropsParserContext &context,
-    const RNSBottomTabsScreenProps &sourceProps,
-    const RawProps &rawProps): ViewProps(context, sourceProps, rawProps),
-
-    isFocused(convertRawProp(context, rawProps, "isFocused", sourceProps.isFocused, {false})),
-    tabKey(convertRawProp(context, rawProps, "tabKey", sourceProps.tabKey, {})),
-    title(convertRawProp(context, rawProps, "title", sourceProps.title, {})),
-    isTitleUndefined(convertRawProp(context, rawProps, "isTitleUndefined", sourceProps.isTitleUndefined, {true})),
-    badgeValue(convertRawProp(context, rawProps, "badgeValue", sourceProps.badgeValue, {})),
-    tabBarItemTestID(convertRawProp(context, rawProps, "tabBarItemTestID", sourceProps.tabBarItemTestID, {})),
-    tabBarItemAccessibilityLabel(convertRawProp(context, rawProps, "tabBarItemAccessibilityLabel", sourceProps.tabBarItemAccessibilityLabel, {})),
-    orientation(convertRawProp(context, rawProps, "orientation", sourceProps.orientation, {RNSBottomTabsScreenOrientation::Inherit})),
-    drawableIconResourceName(convertRawProp(context, rawProps, "drawableIconResourceName", sourceProps.drawableIconResourceName, {})),
-    imageIconResource(convertRawProp(context, rawProps, "imageIconResource", sourceProps.imageIconResource, {})),
-    tabBarItemBadgeTextColor(convertRawProp(context, rawProps, "tabBarItemBadgeTextColor", sourceProps.tabBarItemBadgeTextColor, {})),
-    tabBarItemBadgeBackgroundColor(convertRawProp(context, rawProps, "tabBarItemBadgeBackgroundColor", sourceProps.tabBarItemBadgeBackgroundColor, {})),
-    standardAppearance(convertRawProp(context, rawProps, "standardAppearance", sourceProps.standardAppearance, {})),
-    scrollEdgeAppearance(convertRawProp(context, rawProps, "scrollEdgeAppearance", sourceProps.scrollEdgeAppearance, {})),
-    iconType(convertRawProp(context, rawProps, "iconType", sourceProps.iconType, {RNSBottomTabsScreenIconType::SfSymbol})),
-    iconImageSource(convertRawProp(context, rawProps, "iconImageSource", sourceProps.iconImageSource, {})),
-    iconResourceName(convertRawProp(context, rawProps, "iconResourceName", sourceProps.iconResourceName, {})),
-    selectedIconImageSource(convertRawProp(context, rawProps, "selectedIconImageSource", sourceProps.selectedIconImageSource, {})),
-    selectedIconResourceName(convertRawProp(context, rawProps, "selectedIconResourceName", sourceProps.selectedIconResourceName, {})),
-    systemItem(convertRawProp(context, rawProps, "systemItem", sourceProps.systemItem, {RNSBottomTabsScreenSystemItem::None})),
-    specialEffects(convertRawProp(context, rawProps, "specialEffects", sourceProps.specialEffects, {})),
-    overrideScrollViewContentInsetAdjustmentBehavior(convertRawProp(context, rawProps, "overrideScrollViewContentInsetAdjustmentBehavior", sourceProps.overrideScrollViewContentInsetAdjustmentBehavior, {true})),
-    bottomScrollEdgeEffect(convertRawProp(context, rawProps, "bottomScrollEdgeEffect", sourceProps.bottomScrollEdgeEffect, {RNSBottomTabsScreenBottomScrollEdgeEffect::Automatic})),
-    leftScrollEdgeEffect(convertRawProp(context, rawProps, "leftScrollEdgeEffect", sourceProps.leftScrollEdgeEffect, {RNSBottomTabsScreenLeftScrollEdgeEffect::Automatic})),
-    rightScrollEdgeEffect(convertRawProp(context, rawProps, "rightScrollEdgeEffect", sourceProps.rightScrollEdgeEffect, {RNSBottomTabsScreenRightScrollEdgeEffect::Automatic})),
-    topScrollEdgeEffect(convertRawProp(context, rawProps, "topScrollEdgeEffect", sourceProps.topScrollEdgeEffect, {RNSBottomTabsScreenTopScrollEdgeEffect::Automatic})),
-    userInterfaceStyle(convertRawProp(context, rawProps, "userInterfaceStyle", sourceProps.userInterfaceStyle, {RNSBottomTabsScreenUserInterfaceStyle::Unspecified})) {}
-    
-#ifdef RN_SERIALIZABLE_STATE
-ComponentName RNSBottomTabsScreenProps::getDiffPropsImplementationTarget() const {
-  return "RNSBottomTabsScreen";
-}
-
-folly::dynamic RNSBottomTabsScreenProps::getDiffProps(
-    const Props* prevProps) const {
-  static const auto defaultProps = RNSBottomTabsScreenProps();
-  const RNSBottomTabsScreenProps* oldProps = prevProps == nullptr
-      ? &defaultProps
-      : static_cast<const RNSBottomTabsScreenProps*>(prevProps);
-  if (this == oldProps) {
-    return folly::dynamic::object();
-  }
-  folly::dynamic result = HostPlatformViewProps::getDiffProps(prevProps);
-  
-  if (isFocused != oldProps->isFocused) {
-    result["isFocused"] = isFocused;
-  }
-    
-  if (tabKey != oldProps->tabKey) {
-    result["tabKey"] = tabKey;
-  }
-    
-  if (title != oldProps->title) {
-    result["title"] = title;
-  }
-    
-  if (isTitleUndefined != oldProps->isTitleUndefined) {
-    result["isTitleUndefined"] = isTitleUndefined;
-  }
-    
-  if (badgeValue != oldProps->badgeValue) {
-    result["badgeValue"] = badgeValue;
-  }
-    
-  if (tabBarItemTestID != oldProps->tabBarItemTestID) {
-    result["tabBarItemTestID"] = tabBarItemTestID;
-  }
-    
-  if (tabBarItemAccessibilityLabel != oldProps->tabBarItemAccessibilityLabel) {
-    result["tabBarItemAccessibilityLabel"] = tabBarItemAccessibilityLabel;
-  }
-    
-  if (orientation != oldProps->orientation) {
-    result["orientation"] = toDynamic(orientation);
-  }
-    
-  if (drawableIconResourceName != oldProps->drawableIconResourceName) {
-    result["drawableIconResourceName"] = drawableIconResourceName;
-  }
-    
-  if (imageIconResource != oldProps->imageIconResource) {
-    result["imageIconResource"] = toDynamic(imageIconResource);
-  }
-    
-  if (tabBarItemBadgeTextColor != oldProps->tabBarItemBadgeTextColor) {
-    result["tabBarItemBadgeTextColor"] = *tabBarItemBadgeTextColor;
-  }
-    
-  if (tabBarItemBadgeBackgroundColor != oldProps->tabBarItemBadgeBackgroundColor) {
-    result["tabBarItemBadgeBackgroundColor"] = *tabBarItemBadgeBackgroundColor;
-  }
-    
-  if (standardAppearance != oldProps->standardAppearance) {
-    result["standardAppearance"] = standardAppearance;
-  }
-    
-  if (scrollEdgeAppearance != oldProps->scrollEdgeAppearance) {
-    result["scrollEdgeAppearance"] = scrollEdgeAppearance;
-  }
-    
-  if (iconType != oldProps->iconType) {
-    result["iconType"] = toDynamic(iconType);
-  }
-    
-  if (iconImageSource != oldProps->iconImageSource) {
-    result["iconImageSource"] = toDynamic(iconImageSource);
-  }
-    
-  if (iconResourceName != oldProps->iconResourceName) {
-    result["iconResourceName"] = iconResourceName;
-  }
-    
-  if (selectedIconImageSource != oldProps->selectedIconImageSource) {
-    result["selectedIconImageSource"] = toDynamic(selectedIconImageSource);
-  }
-    
-  if (selectedIconResourceName != oldProps->selectedIconResourceName) {
-    result["selectedIconResourceName"] = selectedIconResourceName;
-  }
-    
-  if (systemItem != oldProps->systemItem) {
-    result["systemItem"] = toDynamic(systemItem);
-  }
-    
-  if (specialEffects != oldProps->specialEffects) {
-    result["specialEffects"] = toDynamic(specialEffects);
-  }
-    
-  if (overrideScrollViewContentInsetAdjustmentBehavior != oldProps->overrideScrollViewContentInsetAdjustmentBehavior) {
-    result["overrideScrollViewContentInsetAdjustmentBehavior"] = overrideScrollViewContentInsetAdjustmentBehavior;
-  }
-    
-  if (bottomScrollEdgeEffect != oldProps->bottomScrollEdgeEffect) {
-    result["bottomScrollEdgeEffect"] = toDynamic(bottomScrollEdgeEffect);
-  }
-    
-  if (leftScrollEdgeEffect != oldProps->leftScrollEdgeEffect) {
-    result["leftScrollEdgeEffect"] = toDynamic(leftScrollEdgeEffect);
-  }
-    
-  if (rightScrollEdgeEffect != oldProps->rightScrollEdgeEffect) {
-    result["rightScrollEdgeEffect"] = toDynamic(rightScrollEdgeEffect);
-  }
-    
-  if (topScrollEdgeEffect != oldProps->topScrollEdgeEffect) {
-    result["topScrollEdgeEffect"] = toDynamic(topScrollEdgeEffect);
-  }
-    
-  if (userInterfaceStyle != oldProps->userInterfaceStyle) {
-    result["userInterfaceStyle"] = toDynamic(userInterfaceStyle);
-  }
-  return result;
-}
-#endif
 RNSFullWindowOverlayProps::RNSFullWindowOverlayProps(
     const PropsParserContext &context,
     const RNSFullWindowOverlayProps &sourceProps,
@@ -396,6 +58,7 @@ RNSSplitViewHostProps::RNSSplitViewHostProps(
     columnMetrics(convertRawProp(context, rawProps, "columnMetrics", sourceProps.columnMetrics, {})),
     orientation(convertRawProp(context, rawProps, "orientation", sourceProps.orientation, {RNSSplitViewHostOrientation::Inherit})),
     primaryBackgroundStyle(convertRawProp(context, rawProps, "primaryBackgroundStyle", sourceProps.primaryBackgroundStyle, {RNSSplitViewHostPrimaryBackgroundStyle::Default})),
+    topColumnForCollapsing(convertRawProp(context, rawProps, "topColumnForCollapsing", sourceProps.topColumnForCollapsing, {RNSSplitViewHostTopColumnForCollapsing::Default})),
     presentsWithGesture(convertRawProp(context, rawProps, "presentsWithGesture", sourceProps.presentsWithGesture, {true})),
     showInspector(convertRawProp(context, rawProps, "showInspector", sourceProps.showInspector, {false})) {}
     
@@ -445,6 +108,10 @@ folly::dynamic RNSSplitViewHostProps::getDiffProps(
     
   if (primaryBackgroundStyle != oldProps->primaryBackgroundStyle) {
     result["primaryBackgroundStyle"] = toDynamic(primaryBackgroundStyle);
+  }
+    
+  if (topColumnForCollapsing != oldProps->topColumnForCollapsing) {
+    result["topColumnForCollapsing"] = toDynamic(topColumnForCollapsing);
   }
     
   if (presentsWithGesture != oldProps->presentsWithGesture) {
@@ -518,7 +185,8 @@ RNSStackScreenProps::RNSStackScreenProps(
     const RawProps &rawProps): ViewProps(context, sourceProps, rawProps),
 
     activityMode(convertRawProp(context, rawProps, "activityMode", sourceProps.activityMode, {RNSStackScreenActivityMode::Detached})),
-    screenKey(convertRawProp(context, rawProps, "screenKey", sourceProps.screenKey, {})) {}
+    screenKey(convertRawProp(context, rawProps, "screenKey", sourceProps.screenKey, {})),
+    preventNativeDismiss(convertRawProp(context, rawProps, "preventNativeDismiss", sourceProps.preventNativeDismiss, {false})) {}
     
 #ifdef RN_SERIALIZABLE_STATE
 ComponentName RNSStackScreenProps::getDiffPropsImplementationTarget() const {
@@ -542,6 +210,10 @@ folly::dynamic RNSStackScreenProps::getDiffProps(
     
   if (screenKey != oldProps->screenKey) {
     result["screenKey"] = screenKey;
+  }
+    
+  if (preventNativeDismiss != oldProps->preventNativeDismiss) {
+    result["preventNativeDismiss"] = preventNativeDismiss;
   }
   return result;
 }
@@ -901,7 +573,8 @@ RNSScreenProps::RNSScreenProps(
     rightScrollEdgeEffect(convertRawProp(context, rawProps, "rightScrollEdgeEffect", sourceProps.rightScrollEdgeEffect, {RNSScreenRightScrollEdgeEffect::Automatic})),
     topScrollEdgeEffect(convertRawProp(context, rawProps, "topScrollEdgeEffect", sourceProps.topScrollEdgeEffect, {RNSScreenTopScrollEdgeEffect::Automatic})),
     synchronousShadowStateUpdatesEnabled(convertRawProp(context, rawProps, "synchronousShadowStateUpdatesEnabled", sourceProps.synchronousShadowStateUpdatesEnabled, {false})),
-    androidResetScreenShadowStateOnOrientationChangeEnabled(convertRawProp(context, rawProps, "androidResetScreenShadowStateOnOrientationChangeEnabled", sourceProps.androidResetScreenShadowStateOnOrientationChangeEnabled, {true})) {}
+    androidResetScreenShadowStateOnOrientationChangeEnabled(convertRawProp(context, rawProps, "androidResetScreenShadowStateOnOrientationChangeEnabled", sourceProps.androidResetScreenShadowStateOnOrientationChangeEnabled, {true})),
+    ios26AllowInteractionsDuringTransition(convertRawProp(context, rawProps, "ios26AllowInteractionsDuringTransition", sourceProps.ios26AllowInteractionsDuringTransition, {true})) {}
     
 #ifdef RN_SERIALIZABLE_STATE
 ComponentName RNSScreenProps::getDiffPropsImplementationTarget() const {
@@ -1077,6 +750,10 @@ folly::dynamic RNSScreenProps::getDiffProps(
     
   if (androidResetScreenShadowStateOnOrientationChangeEnabled != oldProps->androidResetScreenShadowStateOnOrientationChangeEnabled) {
     result["androidResetScreenShadowStateOnOrientationChangeEnabled"] = androidResetScreenShadowStateOnOrientationChangeEnabled;
+  }
+    
+  if (ios26AllowInteractionsDuringTransition != oldProps->ios26AllowInteractionsDuringTransition) {
+    result["ios26AllowInteractionsDuringTransition"] = ios26AllowInteractionsDuringTransition;
   }
   return result;
 }
@@ -1335,7 +1012,7 @@ RNSScreenStackProps::RNSScreenStackProps(
     const RNSScreenStackProps &sourceProps,
     const RawProps &rawProps): ViewProps(context, sourceProps, rawProps),
 
-    iosPreventReattachmentOfDismissedScreens(convertRawProp(context, rawProps, "iosPreventReattachmentOfDismissedScreens", sourceProps.iosPreventReattachmentOfDismissedScreens, {false})) {}
+    iosPreventReattachmentOfDismissedScreens(convertRawProp(context, rawProps, "iosPreventReattachmentOfDismissedScreens", sourceProps.iosPreventReattachmentOfDismissedScreens, {true})) {}
     
 #ifdef RN_SERIALIZABLE_STATE
 ComponentName RNSScreenStackProps::getDiffPropsImplementationTarget() const {
@@ -1464,6 +1141,344 @@ folly::dynamic RNSSearchBarProps::getDiffProps(
     
   if (shouldShowHintSearchIcon != oldProps->shouldShowHintSearchIcon) {
     result["shouldShowHintSearchIcon"] = shouldShowHintSearchIcon;
+  }
+  return result;
+}
+#endif
+RNSTabsBottomAccessoryContentProps::RNSTabsBottomAccessoryContentProps(
+    const PropsParserContext &context,
+    const RNSTabsBottomAccessoryContentProps &sourceProps,
+    const RawProps &rawProps): ViewProps(context, sourceProps, rawProps),
+
+    environment(convertRawProp(context, rawProps, "environment", sourceProps.environment, {RNSTabsBottomAccessoryContentEnvironment::Regular})) {}
+    
+#ifdef RN_SERIALIZABLE_STATE
+ComponentName RNSTabsBottomAccessoryContentProps::getDiffPropsImplementationTarget() const {
+  return "RNSTabsBottomAccessoryContent";
+}
+
+folly::dynamic RNSTabsBottomAccessoryContentProps::getDiffProps(
+    const Props* prevProps) const {
+  static const auto defaultProps = RNSTabsBottomAccessoryContentProps();
+  const RNSTabsBottomAccessoryContentProps* oldProps = prevProps == nullptr
+      ? &defaultProps
+      : static_cast<const RNSTabsBottomAccessoryContentProps*>(prevProps);
+  if (this == oldProps) {
+    return folly::dynamic::object();
+  }
+  folly::dynamic result = HostPlatformViewProps::getDiffProps(prevProps);
+  
+  if (environment != oldProps->environment) {
+    result["environment"] = toDynamic(environment);
+  }
+  return result;
+}
+#endif
+RNSTabsBottomAccessoryProps::RNSTabsBottomAccessoryProps(
+    const PropsParserContext &context,
+    const RNSTabsBottomAccessoryProps &sourceProps,
+    const RawProps &rawProps): ViewProps(context, sourceProps, rawProps)
+
+     {}
+    
+#ifdef RN_SERIALIZABLE_STATE
+ComponentName RNSTabsBottomAccessoryProps::getDiffPropsImplementationTarget() const {
+  return "RNSTabsBottomAccessory";
+}
+
+folly::dynamic RNSTabsBottomAccessoryProps::getDiffProps(
+    const Props* prevProps) const {
+  static const auto defaultProps = RNSTabsBottomAccessoryProps();
+  const RNSTabsBottomAccessoryProps* oldProps = prevProps == nullptr
+      ? &defaultProps
+      : static_cast<const RNSTabsBottomAccessoryProps*>(prevProps);
+  if (this == oldProps) {
+    return folly::dynamic::object();
+  }
+  folly::dynamic result = HostPlatformViewProps::getDiffProps(prevProps);
+  
+  return result;
+}
+#endif
+RNSTabsHostProps::RNSTabsHostProps(
+    const PropsParserContext &context,
+    const RNSTabsHostProps &sourceProps,
+    const RawProps &rawProps): ViewProps(context, sourceProps, rawProps),
+
+    tabBarHidden(convertRawProp(context, rawProps, "tabBarHidden", sourceProps.tabBarHidden, {false})),
+    nativeContainerBackgroundColor(convertRawProp(context, rawProps, "nativeContainerBackgroundColor", sourceProps.nativeContainerBackgroundColor, {})),
+    tabBarBackgroundColor(convertRawProp(context, rawProps, "tabBarBackgroundColor", sourceProps.tabBarBackgroundColor, {})),
+    tabBarItemTitleFontFamily(convertRawProp(context, rawProps, "tabBarItemTitleFontFamily", sourceProps.tabBarItemTitleFontFamily, {})),
+    tabBarItemTitleFontSize(convertRawProp(context, rawProps, "tabBarItemTitleFontSize", sourceProps.tabBarItemTitleFontSize, {0.0})),
+    tabBarItemTitleFontSizeActive(convertRawProp(context, rawProps, "tabBarItemTitleFontSizeActive", sourceProps.tabBarItemTitleFontSizeActive, {0.0})),
+    tabBarItemTitleFontWeight(convertRawProp(context, rawProps, "tabBarItemTitleFontWeight", sourceProps.tabBarItemTitleFontWeight, {})),
+    tabBarItemTitleFontStyle(convertRawProp(context, rawProps, "tabBarItemTitleFontStyle", sourceProps.tabBarItemTitleFontStyle, {})),
+    tabBarItemTitleFontColor(convertRawProp(context, rawProps, "tabBarItemTitleFontColor", sourceProps.tabBarItemTitleFontColor, {})),
+    tabBarItemTitleFontColorActive(convertRawProp(context, rawProps, "tabBarItemTitleFontColorActive", sourceProps.tabBarItemTitleFontColorActive, {})),
+    tabBarItemIconColor(convertRawProp(context, rawProps, "tabBarItemIconColor", sourceProps.tabBarItemIconColor, {})),
+    tabBarItemIconColorActive(convertRawProp(context, rawProps, "tabBarItemIconColorActive", sourceProps.tabBarItemIconColorActive, {})),
+    tabBarItemActiveIndicatorColor(convertRawProp(context, rawProps, "tabBarItemActiveIndicatorColor", sourceProps.tabBarItemActiveIndicatorColor, {})),
+    tabBarItemActiveIndicatorEnabled(convertRawProp(context, rawProps, "tabBarItemActiveIndicatorEnabled", sourceProps.tabBarItemActiveIndicatorEnabled, {true})),
+    tabBarItemRippleColor(convertRawProp(context, rawProps, "tabBarItemRippleColor", sourceProps.tabBarItemRippleColor, {})),
+    tabBarItemLabelVisibilityMode(convertRawProp(context, rawProps, "tabBarItemLabelVisibilityMode", sourceProps.tabBarItemLabelVisibilityMode, {RNSTabsHostTabBarItemLabelVisibilityMode::Auto})),
+    tabBarTintColor(convertRawProp(context, rawProps, "tabBarTintColor", sourceProps.tabBarTintColor, {})),
+    tabBarMinimizeBehavior(convertRawProp(context, rawProps, "tabBarMinimizeBehavior", sourceProps.tabBarMinimizeBehavior, {RNSTabsHostTabBarMinimizeBehavior::Automatic})),
+    tabBarControllerMode(convertRawProp(context, rawProps, "tabBarControllerMode", sourceProps.tabBarControllerMode, {RNSTabsHostTabBarControllerMode::Automatic})),
+    controlNavigationStateInJS(convertRawProp(context, rawProps, "controlNavigationStateInJS", sourceProps.controlNavigationStateInJS, {false})) {}
+    
+#ifdef RN_SERIALIZABLE_STATE
+ComponentName RNSTabsHostProps::getDiffPropsImplementationTarget() const {
+  return "RNSTabsHost";
+}
+
+folly::dynamic RNSTabsHostProps::getDiffProps(
+    const Props* prevProps) const {
+  static const auto defaultProps = RNSTabsHostProps();
+  const RNSTabsHostProps* oldProps = prevProps == nullptr
+      ? &defaultProps
+      : static_cast<const RNSTabsHostProps*>(prevProps);
+  if (this == oldProps) {
+    return folly::dynamic::object();
+  }
+  folly::dynamic result = HostPlatformViewProps::getDiffProps(prevProps);
+  
+  if (tabBarHidden != oldProps->tabBarHidden) {
+    result["tabBarHidden"] = tabBarHidden;
+  }
+    
+  if (nativeContainerBackgroundColor != oldProps->nativeContainerBackgroundColor) {
+    result["nativeContainerBackgroundColor"] = *nativeContainerBackgroundColor;
+  }
+    
+  if (tabBarBackgroundColor != oldProps->tabBarBackgroundColor) {
+    result["tabBarBackgroundColor"] = *tabBarBackgroundColor;
+  }
+    
+  if (tabBarItemTitleFontFamily != oldProps->tabBarItemTitleFontFamily) {
+    result["tabBarItemTitleFontFamily"] = tabBarItemTitleFontFamily;
+  }
+    
+  if ((tabBarItemTitleFontSize != oldProps->tabBarItemTitleFontSize) && !(std::isnan(tabBarItemTitleFontSize) && std::isnan(oldProps->tabBarItemTitleFontSize))) {
+    result["tabBarItemTitleFontSize"] = tabBarItemTitleFontSize;
+  }
+    
+  if ((tabBarItemTitleFontSizeActive != oldProps->tabBarItemTitleFontSizeActive) && !(std::isnan(tabBarItemTitleFontSizeActive) && std::isnan(oldProps->tabBarItemTitleFontSizeActive))) {
+    result["tabBarItemTitleFontSizeActive"] = tabBarItemTitleFontSizeActive;
+  }
+    
+  if (tabBarItemTitleFontWeight != oldProps->tabBarItemTitleFontWeight) {
+    result["tabBarItemTitleFontWeight"] = tabBarItemTitleFontWeight;
+  }
+    
+  if (tabBarItemTitleFontStyle != oldProps->tabBarItemTitleFontStyle) {
+    result["tabBarItemTitleFontStyle"] = tabBarItemTitleFontStyle;
+  }
+    
+  if (tabBarItemTitleFontColor != oldProps->tabBarItemTitleFontColor) {
+    result["tabBarItemTitleFontColor"] = *tabBarItemTitleFontColor;
+  }
+    
+  if (tabBarItemTitleFontColorActive != oldProps->tabBarItemTitleFontColorActive) {
+    result["tabBarItemTitleFontColorActive"] = *tabBarItemTitleFontColorActive;
+  }
+    
+  if (tabBarItemIconColor != oldProps->tabBarItemIconColor) {
+    result["tabBarItemIconColor"] = *tabBarItemIconColor;
+  }
+    
+  if (tabBarItemIconColorActive != oldProps->tabBarItemIconColorActive) {
+    result["tabBarItemIconColorActive"] = *tabBarItemIconColorActive;
+  }
+    
+  if (tabBarItemActiveIndicatorColor != oldProps->tabBarItemActiveIndicatorColor) {
+    result["tabBarItemActiveIndicatorColor"] = *tabBarItemActiveIndicatorColor;
+  }
+    
+  if (tabBarItemActiveIndicatorEnabled != oldProps->tabBarItemActiveIndicatorEnabled) {
+    result["tabBarItemActiveIndicatorEnabled"] = tabBarItemActiveIndicatorEnabled;
+  }
+    
+  if (tabBarItemRippleColor != oldProps->tabBarItemRippleColor) {
+    result["tabBarItemRippleColor"] = *tabBarItemRippleColor;
+  }
+    
+  if (tabBarItemLabelVisibilityMode != oldProps->tabBarItemLabelVisibilityMode) {
+    result["tabBarItemLabelVisibilityMode"] = toDynamic(tabBarItemLabelVisibilityMode);
+  }
+    
+  if (tabBarTintColor != oldProps->tabBarTintColor) {
+    result["tabBarTintColor"] = *tabBarTintColor;
+  }
+    
+  if (tabBarMinimizeBehavior != oldProps->tabBarMinimizeBehavior) {
+    result["tabBarMinimizeBehavior"] = toDynamic(tabBarMinimizeBehavior);
+  }
+    
+  if (tabBarControllerMode != oldProps->tabBarControllerMode) {
+    result["tabBarControllerMode"] = toDynamic(tabBarControllerMode);
+  }
+    
+  if (controlNavigationStateInJS != oldProps->controlNavigationStateInJS) {
+    result["controlNavigationStateInJS"] = controlNavigationStateInJS;
+  }
+  return result;
+}
+#endif
+RNSTabsScreenProps::RNSTabsScreenProps(
+    const PropsParserContext &context,
+    const RNSTabsScreenProps &sourceProps,
+    const RawProps &rawProps): ViewProps(context, sourceProps, rawProps),
+
+    isFocused(convertRawProp(context, rawProps, "isFocused", sourceProps.isFocused, {false})),
+    tabKey(convertRawProp(context, rawProps, "tabKey", sourceProps.tabKey, {})),
+    title(convertRawProp(context, rawProps, "title", sourceProps.title, {})),
+    isTitleUndefined(convertRawProp(context, rawProps, "isTitleUndefined", sourceProps.isTitleUndefined, {true})),
+    badgeValue(convertRawProp(context, rawProps, "badgeValue", sourceProps.badgeValue, {})),
+    tabBarItemTestID(convertRawProp(context, rawProps, "tabBarItemTestID", sourceProps.tabBarItemTestID, {})),
+    tabBarItemAccessibilityLabel(convertRawProp(context, rawProps, "tabBarItemAccessibilityLabel", sourceProps.tabBarItemAccessibilityLabel, {})),
+    orientation(convertRawProp(context, rawProps, "orientation", sourceProps.orientation, {RNSTabsScreenOrientation::Inherit})),
+    drawableIconResourceName(convertRawProp(context, rawProps, "drawableIconResourceName", sourceProps.drawableIconResourceName, {})),
+    imageIconResource(convertRawProp(context, rawProps, "imageIconResource", sourceProps.imageIconResource, {})),
+    tabBarItemBadgeTextColor(convertRawProp(context, rawProps, "tabBarItemBadgeTextColor", sourceProps.tabBarItemBadgeTextColor, {})),
+    tabBarItemBadgeBackgroundColor(convertRawProp(context, rawProps, "tabBarItemBadgeBackgroundColor", sourceProps.tabBarItemBadgeBackgroundColor, {})),
+    standardAppearance(convertRawProp(context, rawProps, "standardAppearance", sourceProps.standardAppearance, {})),
+    scrollEdgeAppearance(convertRawProp(context, rawProps, "scrollEdgeAppearance", sourceProps.scrollEdgeAppearance, {})),
+    iconType(convertRawProp(context, rawProps, "iconType", sourceProps.iconType, {RNSTabsScreenIconType::SfSymbol})),
+    iconImageSource(convertRawProp(context, rawProps, "iconImageSource", sourceProps.iconImageSource, {})),
+    iconResourceName(convertRawProp(context, rawProps, "iconResourceName", sourceProps.iconResourceName, {})),
+    selectedIconImageSource(convertRawProp(context, rawProps, "selectedIconImageSource", sourceProps.selectedIconImageSource, {})),
+    selectedIconResourceName(convertRawProp(context, rawProps, "selectedIconResourceName", sourceProps.selectedIconResourceName, {})),
+    systemItem(convertRawProp(context, rawProps, "systemItem", sourceProps.systemItem, {RNSTabsScreenSystemItem::None})),
+    specialEffects(convertRawProp(context, rawProps, "specialEffects", sourceProps.specialEffects, {})),
+    overrideScrollViewContentInsetAdjustmentBehavior(convertRawProp(context, rawProps, "overrideScrollViewContentInsetAdjustmentBehavior", sourceProps.overrideScrollViewContentInsetAdjustmentBehavior, {true})),
+    bottomScrollEdgeEffect(convertRawProp(context, rawProps, "bottomScrollEdgeEffect", sourceProps.bottomScrollEdgeEffect, {RNSTabsScreenBottomScrollEdgeEffect::Automatic})),
+    leftScrollEdgeEffect(convertRawProp(context, rawProps, "leftScrollEdgeEffect", sourceProps.leftScrollEdgeEffect, {RNSTabsScreenLeftScrollEdgeEffect::Automatic})),
+    rightScrollEdgeEffect(convertRawProp(context, rawProps, "rightScrollEdgeEffect", sourceProps.rightScrollEdgeEffect, {RNSTabsScreenRightScrollEdgeEffect::Automatic})),
+    topScrollEdgeEffect(convertRawProp(context, rawProps, "topScrollEdgeEffect", sourceProps.topScrollEdgeEffect, {RNSTabsScreenTopScrollEdgeEffect::Automatic})),
+    userInterfaceStyle(convertRawProp(context, rawProps, "userInterfaceStyle", sourceProps.userInterfaceStyle, {RNSTabsScreenUserInterfaceStyle::Unspecified})) {}
+    
+#ifdef RN_SERIALIZABLE_STATE
+ComponentName RNSTabsScreenProps::getDiffPropsImplementationTarget() const {
+  return "RNSTabsScreen";
+}
+
+folly::dynamic RNSTabsScreenProps::getDiffProps(
+    const Props* prevProps) const {
+  static const auto defaultProps = RNSTabsScreenProps();
+  const RNSTabsScreenProps* oldProps = prevProps == nullptr
+      ? &defaultProps
+      : static_cast<const RNSTabsScreenProps*>(prevProps);
+  if (this == oldProps) {
+    return folly::dynamic::object();
+  }
+  folly::dynamic result = HostPlatformViewProps::getDiffProps(prevProps);
+  
+  if (isFocused != oldProps->isFocused) {
+    result["isFocused"] = isFocused;
+  }
+    
+  if (tabKey != oldProps->tabKey) {
+    result["tabKey"] = tabKey;
+  }
+    
+  if (title != oldProps->title) {
+    result["title"] = title;
+  }
+    
+  if (isTitleUndefined != oldProps->isTitleUndefined) {
+    result["isTitleUndefined"] = isTitleUndefined;
+  }
+    
+  if (badgeValue != oldProps->badgeValue) {
+    result["badgeValue"] = badgeValue;
+  }
+    
+  if (tabBarItemTestID != oldProps->tabBarItemTestID) {
+    result["tabBarItemTestID"] = tabBarItemTestID;
+  }
+    
+  if (tabBarItemAccessibilityLabel != oldProps->tabBarItemAccessibilityLabel) {
+    result["tabBarItemAccessibilityLabel"] = tabBarItemAccessibilityLabel;
+  }
+    
+  if (orientation != oldProps->orientation) {
+    result["orientation"] = toDynamic(orientation);
+  }
+    
+  if (drawableIconResourceName != oldProps->drawableIconResourceName) {
+    result["drawableIconResourceName"] = drawableIconResourceName;
+  }
+    
+  if (imageIconResource != oldProps->imageIconResource) {
+    result["imageIconResource"] = toDynamic(imageIconResource);
+  }
+    
+  if (tabBarItemBadgeTextColor != oldProps->tabBarItemBadgeTextColor) {
+    result["tabBarItemBadgeTextColor"] = *tabBarItemBadgeTextColor;
+  }
+    
+  if (tabBarItemBadgeBackgroundColor != oldProps->tabBarItemBadgeBackgroundColor) {
+    result["tabBarItemBadgeBackgroundColor"] = *tabBarItemBadgeBackgroundColor;
+  }
+    
+  if (standardAppearance != oldProps->standardAppearance) {
+    result["standardAppearance"] = standardAppearance;
+  }
+    
+  if (scrollEdgeAppearance != oldProps->scrollEdgeAppearance) {
+    result["scrollEdgeAppearance"] = scrollEdgeAppearance;
+  }
+    
+  if (iconType != oldProps->iconType) {
+    result["iconType"] = toDynamic(iconType);
+  }
+    
+  if (iconImageSource != oldProps->iconImageSource) {
+    result["iconImageSource"] = toDynamic(iconImageSource);
+  }
+    
+  if (iconResourceName != oldProps->iconResourceName) {
+    result["iconResourceName"] = iconResourceName;
+  }
+    
+  if (selectedIconImageSource != oldProps->selectedIconImageSource) {
+    result["selectedIconImageSource"] = toDynamic(selectedIconImageSource);
+  }
+    
+  if (selectedIconResourceName != oldProps->selectedIconResourceName) {
+    result["selectedIconResourceName"] = selectedIconResourceName;
+  }
+    
+  if (systemItem != oldProps->systemItem) {
+    result["systemItem"] = toDynamic(systemItem);
+  }
+    
+  if (specialEffects != oldProps->specialEffects) {
+    result["specialEffects"] = toDynamic(specialEffects);
+  }
+    
+  if (overrideScrollViewContentInsetAdjustmentBehavior != oldProps->overrideScrollViewContentInsetAdjustmentBehavior) {
+    result["overrideScrollViewContentInsetAdjustmentBehavior"] = overrideScrollViewContentInsetAdjustmentBehavior;
+  }
+    
+  if (bottomScrollEdgeEffect != oldProps->bottomScrollEdgeEffect) {
+    result["bottomScrollEdgeEffect"] = toDynamic(bottomScrollEdgeEffect);
+  }
+    
+  if (leftScrollEdgeEffect != oldProps->leftScrollEdgeEffect) {
+    result["leftScrollEdgeEffect"] = toDynamic(leftScrollEdgeEffect);
+  }
+    
+  if (rightScrollEdgeEffect != oldProps->rightScrollEdgeEffect) {
+    result["rightScrollEdgeEffect"] = toDynamic(rightScrollEdgeEffect);
+  }
+    
+  if (topScrollEdgeEffect != oldProps->topScrollEdgeEffect) {
+    result["topScrollEdgeEffect"] = toDynamic(topScrollEdgeEffect);
+  }
+    
+  if (userInterfaceStyle != oldProps->userInterfaceStyle) {
+    result["userInterfaceStyle"] = toDynamic(userInterfaceStyle);
   }
   return result;
 }
