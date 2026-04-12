@@ -76,7 +76,9 @@ if [ -n "$FE_CURRENT_TESTS" ] && [ "$FE_CURRENT_TESTS" -gt "$FE_BASELINE" ] 2>/d
 fi
 
 # Web test count ratchet
-WEB_TEST_OUTPUT=$(cd "$REPO_ROOT/museum-web" && pnpm test 2>&1 | grep -oE '[0-9]+ passed' | head -1 || true)
+# vitest prints "Test Files N passed" BEFORE "Tests N passed"; the file line would
+# match first and mis-report a regression, so we anchor on the "Tests" line only.
+WEB_TEST_OUTPUT=$(cd "$REPO_ROOT/museum-web" && pnpm test 2>&1 | grep -E '^[[:space:]]*Tests[[:space:]]+[0-9]+ passed' | grep -oE '[0-9]+ passed' | head -1 || true)
 WEB_CURRENT_TESTS=$(echo "$WEB_TEST_OUTPUT" | grep -oE '[0-9]+' | head -1)
 WEB_BASELINE=$(jq -r '.webTestCount // 0' "$RATCHET_FILE")
 if [ -n "$WEB_CURRENT_TESTS" ] && [ "$WEB_CURRENT_TESTS" -lt "$WEB_BASELINE" ] 2>/dev/null; then

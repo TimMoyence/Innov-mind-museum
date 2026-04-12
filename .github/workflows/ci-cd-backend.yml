@@ -71,6 +71,9 @@ jobs:
       - name: Typecheck
         run: pnpm run typecheck
 
+      - name: Migrations are reversible (down() present)
+        run: node scripts/check-migration-down.cjs
+
       - name: OpenAPI Spec Validate
         run: pnpm run openapi:validate
 
@@ -247,7 +250,49 @@ jobs:
           pnpm build
           npx @sentry/cli sourcemaps upload --release="${{ github.sha }}" dist/
 
+      - name: Upload rollback helper to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          source: museum-backend/deploy/rollback.sh
+          target: /srv/museum
+          strip_components: 2
+
+      - name: Capture pre-deploy rollback state (prod)
+        id: pre_deploy
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          script: |
+            set -e
+            cd /srv/museum
+            chmod +x rollback.sh || true
+
+            IMAGE_REF="ghcr.io/${{ secrets.GHCR_USER }}/museum-backend"
+            STATE_DIR="/srv/museum/.rollback/backend"
+            mkdir -p "${STATE_DIR}"
+
+            # Tag whatever :latest currently is on this host as :previous BEFORE pulling.
+            # If :latest doesn't exist yet (first deploy), skip silently.
+            if docker image inspect "${IMAGE_REF}:latest" >/dev/null 2>&1; then
+              docker tag "${IMAGE_REF}:latest" "${IMAGE_REF}:previous"
+              echo "[pre-deploy] tagged ${IMAGE_REF}:latest → :previous"
+            else
+              echo "[pre-deploy] no existing :latest on host — first deploy, skipping :previous tag"
+            fi
+
+            # Capture pre-run migration count for the rollback delta.
+            # Use the currently-running container (old code) — safe SELECT only.
+            PRE_COUNT="$(docker compose exec -T backend node scripts/count-applied-migrations.cjs 2>/dev/null || echo 0)"
+            echo "${PRE_COUNT}" > "${STATE_DIR}/pre-count.txt"
+            echo "[pre-deploy] pre-migration count: ${PRE_COUNT}"
+
       - name: Deploy on VPS (zero-downtime)
+        id: deploy
         uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -259,6 +304,10 @@ jobs:
 
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin || true
 
+            IMAGE_REF="ghcr.io/${{ secrets.GHCR_USER }}/museum-backend"
+            STATE_DIR="/srv/museum/.rollback/backend"
+            mkdir -p "${STATE_DIR}"
+
             # 1. Pull the new image
             docker compose pull backend
 
@@ -268,6 +317,15 @@ jobs:
             #    the new container boots (zero-downtime pattern).
             docker compose run --rm --no-deps -T backend \
               node ./node_modules/typeorm/cli.js migration:run -d dist/src/data/db/data-source.js
+
+            # 2b. Compute how many migrations were actually applied — this is the
+            #     exact number of migration:revert calls the rollback flow needs.
+            POST_COUNT="$(docker compose run --rm --no-deps -T backend node scripts/count-applied-migrations.cjs 2>/dev/null || echo 0)"
+            PRE_COUNT="$(cat "${STATE_DIR}/pre-count.txt" 2>/dev/null || echo 0)"
+            APPLIED="$(( POST_COUNT - PRE_COUNT ))"
+            if [ "${APPLIED}" -lt 0 ]; then APPLIED=0; fi
+            echo "${APPLIED}" > "${STATE_DIR}/applied-count.txt"
+            echo "[deploy] migrations applied this deploy: ${APPLIED}"
 
             # 3. Restart with 30s grace period for in-flight requests to drain
             docker compose up -d --remove-orphans --timeout 30 backend
@@ -306,6 +364,7 @@ jobs:
           test -n "$PROD_SMOKE_TEST_PASSWORD"
 
       - name: Post-deploy smoke test (prod)
+        id: smoke
         working-directory: museum-backend
         env:
           SMOKE_API_BASE_URL: ${{ secrets.PROD_SMOKE_API_BASE_URL }}
@@ -315,6 +374,37 @@ jobs:
           SMOKE_HEALTH_RETRIES: '24'
           SMOKE_HEALTH_RETRY_DELAY_MS: '5000'
         run: node ./scripts/smoke-api.cjs
+
+      - name: Auto-rollback on deploy or smoke failure (prod)
+        id: rollback
+        if: failure() && (steps.deploy.outcome == 'failure' || steps.smoke.outcome == 'failure')
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          script: |
+            set -e
+            cd /srv/museum
+            chmod +x rollback.sh
+            ./rollback.sh docker-compose.yml backend "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend"
+
+      - name: Notify Sentry of rollback (prod)
+        if: failure() && steps.rollback.outcome == 'success' && env.HAS_SENTRY_TOKEN == 'true'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT_BACKEND }}
+        run: |
+          npx @sentry/cli releases deploys "${{ github.sha }}" new \
+            -e production \
+            --name "rollback-${{ github.sha }}" || true
+
+      - name: Fail job after successful rollback
+        if: failure() && steps.rollback.outcome == 'success'
+        run: |
+          echo "::error::Production deploy rolled back — see docs/RUNBOOKS/auto-rollback.md"
+          exit 1
 
   # ─── 5. Deploy to staging (push to staging) ──────────────────────────
   deploy-staging:
@@ -409,7 +499,45 @@ jobs:
           pnpm build
           npx @sentry/cli sourcemaps upload --release="${{ github.sha }}" dist/
 
+      - name: Upload rollback helper to VPS (staging)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          source: museum-backend/deploy/rollback.sh
+          target: /srv/museum
+          strip_components: 2
+
+      - name: Capture pre-deploy rollback state (staging)
+        id: pre_deploy_staging
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          script: |
+            set -e
+            cd /srv/museum
+            chmod +x rollback.sh || true
+
+            IMAGE_REF="ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging"
+            STATE_DIR="/srv/museum/.rollback/backend-staging"
+            mkdir -p "${STATE_DIR}"
+
+            if docker image inspect "${IMAGE_REF}:latest" >/dev/null 2>&1; then
+              docker tag "${IMAGE_REF}:latest" "${IMAGE_REF}:previous"
+              echo "[pre-deploy] tagged ${IMAGE_REF}:latest → :previous"
+            else
+              echo "[pre-deploy] no existing :latest on host — first deploy, skipping :previous tag"
+            fi
+
+            PRE_COUNT="$(docker compose exec -T backend-staging node scripts/count-applied-migrations.cjs 2>/dev/null || echo 0)"
+            echo "${PRE_COUNT}" > "${STATE_DIR}/pre-count.txt"
+            echo "[pre-deploy] pre-migration count: ${PRE_COUNT}"
+
       - name: Deploy on VPS staging (zero-downtime)
+        id: deploy_staging
         uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -421,6 +549,9 @@ jobs:
 
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin || true
 
+            STATE_DIR="/srv/museum/.rollback/backend-staging"
+            mkdir -p "${STATE_DIR}"
+
             # 1. Pull the new image
             docker compose pull backend-staging
 
@@ -429,6 +560,14 @@ jobs:
             #    the new container boots (zero-downtime pattern).
             docker compose run --rm --no-deps -T backend-staging \
               node ./node_modules/typeorm/cli.js migration:run -d dist/src/data/db/data-source.js
+
+            # 2b. Compute how many migrations were newly applied.
+            POST_COUNT="$(docker compose run --rm --no-deps -T backend-staging node scripts/count-applied-migrations.cjs 2>/dev/null || echo 0)"
+            PRE_COUNT="$(cat "${STATE_DIR}/pre-count.txt" 2>/dev/null || echo 0)"
+            APPLIED="$(( POST_COUNT - PRE_COUNT ))"
+            if [ "${APPLIED}" -lt 0 ]; then APPLIED=0; fi
+            echo "${APPLIED}" > "${STATE_DIR}/applied-count.txt"
+            echo "[deploy] migrations applied this deploy: ${APPLIED}"
 
             # 3. Restart with 30s grace period for in-flight requests to drain
             docker compose up -d --remove-orphans --timeout 30 backend-staging
@@ -467,6 +606,7 @@ jobs:
           test -n "$STAGING_SMOKE_TEST_PASSWORD"
 
       - name: Post-deploy smoke test (staging)
+        id: smoke_staging
         working-directory: museum-backend
         env:
           SMOKE_API_BASE_URL: ${{ secrets.STAGING_SMOKE_API_BASE_URL }}
@@ -476,3 +616,34 @@ jobs:
           SMOKE_HEALTH_RETRIES: '24'
           SMOKE_HEALTH_RETRY_DELAY_MS: '5000'
         run: node ./scripts/smoke-api.cjs
+
+      - name: Auto-rollback on deploy or smoke failure (staging)
+        id: rollback_staging
+        if: failure() && (steps.deploy_staging.outcome == 'failure' || steps.smoke_staging.outcome == 'failure')
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          script: |
+            set -e
+            cd /srv/museum
+            chmod +x rollback.sh
+            ./rollback.sh docker-compose.yml backend-staging "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging"
+
+      - name: Notify Sentry of rollback (staging)
+        if: failure() && steps.rollback_staging.outcome == 'success' && env.HAS_SENTRY_TOKEN == 'true'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT_BACKEND }}
+        run: |
+          npx @sentry/cli releases deploys "${{ github.sha }}" new \
+            -e staging \
+            --name "rollback-${{ github.sha }}" || true
+
+      - name: Fail staging job after successful rollback
+        if: failure() && steps.rollback_staging.outcome == 'success'
+        run: |
+          echo "::error::Staging deploy rolled back — see docs/RUNBOOKS/auto-rollback.md"
+          exit 1
