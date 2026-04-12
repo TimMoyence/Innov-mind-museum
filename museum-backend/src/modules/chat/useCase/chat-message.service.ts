@@ -153,10 +153,14 @@ export class ChatMessageService {
     locale: string | undefined,
   ): void {
     if (!this.extractionQueue || results.length === 0 || !locale) return;
+    const queue = this.extractionQueue;
     const searchTerm = text ?? '';
+    // Wrap in Promise.resolve().then so a sync throw (e.g. queue closed with
+    // enableOfflineQueue: false when Redis is down) becomes a rejection that
+    // fireAndForget logs, instead of bubbling into the chat hot path.
     fireAndForget(
-      this.extractionQueue.enqueueUrls(
-        results.slice(0, 5).map((r) => ({ url: r.url, searchTerm, locale })),
+      Promise.resolve().then(() =>
+        queue.enqueueUrls(results.slice(0, 5).map((r) => ({ url: r.url, searchTerm, locale }))),
       ),
       'extraction_enqueue_web_results',
     );

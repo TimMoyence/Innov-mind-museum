@@ -13,7 +13,15 @@ const QUEUE_NAME = 'knowledge-extraction';
 interface ExtractionWorkerConfig {
   concurrency: number;
   rateLimitMax: number;
-  connection: { host: string; port: number; password?: string };
+  connection: {
+    host: string;
+    port: number;
+    password?: string;
+    /** BullMQ Worker requires this to be null (per BullMQ docs). */
+    maxRetriesPerRequest?: number | null;
+    /** Fail fast instead of buffering commands when Redis is unreachable. */
+    enableOfflineQueue?: boolean;
+  };
 }
 
 /**

@@ -75,7 +75,16 @@ export class KnowledgeExtractionModule {
     const worker = new ExtractionWorker(jobService, {
       concurrency: env.extraction.queueConcurrency,
       rateLimitMax: env.extraction.queueRateLimit,
-      connection: { host: env.redis.host, port: env.redis.port, password: env.redis.password },
+      connection: {
+        host: env.redis.host,
+        port: env.redis.port,
+        password: env.redis.password,
+        // BullMQ Worker REQUIRES this to be null (https://docs.bullmq.io/guide/connections).
+        maxRetriesPerRequest: null,
+        // Circuit-breaker: fail fast when Redis is down instead of buffering commands
+        // and paying 20x retries per chat message.
+        enableOfflineQueue: false,
+      },
     });
 
     worker.start();
