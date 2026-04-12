@@ -15,10 +15,8 @@ describe('SkeletonConversationCard', () => {
     const { toJSON } = render(<SkeletonConversationCard />);
     const tree = toJSON();
     expect(tree).not.toBeNull();
-    if (tree === null) return; // type narrowing — tests above guarantee this won't happen
-    // Root card has 2 children: the row View and the meta SkeletonBox
+    if (tree === null || Array.isArray(tree)) return;
     expect(tree.children).toHaveLength(2);
-    // First child is the row containing avatar + text column
     const row = (tree.children ?? [])[0] as { children: unknown[] };
     expect(row.children).toHaveLength(2);
   });

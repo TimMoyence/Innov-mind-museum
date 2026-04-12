@@ -28,7 +28,8 @@ RNGestureHandlerButtonProps::RNGestureHandlerButtonProps(
     touchSoundDisabled(convertRawProp(context, rawProps, "touchSoundDisabled", sourceProps.touchSoundDisabled, {false})),
     borderWidth(convertRawProp(context, rawProps, "borderWidth", sourceProps.borderWidth, {0.0})),
     borderColor(convertRawProp(context, rawProps, "borderColor", sourceProps.borderColor, {})),
-    borderStyle(convertRawProp(context, rawProps, "borderStyle", sourceProps.borderStyle, {std::string{"solid"}})) {}
+    borderStyle(convertRawProp(context, rawProps, "borderStyle", sourceProps.borderStyle, {std::string{"solid"}})),
+    pointerEvents(convertRawProp(context, rawProps, "pointerEvents", sourceProps.pointerEvents, {RNGestureHandlerButtonPointerEvents::Auto})) {}
     
 #ifdef RN_SERIALIZABLE_STATE
 ComponentName RNGestureHandlerButtonProps::getDiffPropsImplementationTarget() const {
@@ -84,6 +85,10 @@ folly::dynamic RNGestureHandlerButtonProps::getDiffProps(
     
   if (borderStyle != oldProps->borderStyle) {
     result["borderStyle"] = borderStyle;
+  }
+    
+  if (pointerEvents != oldProps->pointerEvents) {
+    result["pointerEvents"] = toDynamic(pointerEvents);
   }
   return result;
 }

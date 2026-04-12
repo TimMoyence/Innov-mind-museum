@@ -16,6 +16,32 @@
 
 namespace facebook::react {
 
+enum class RNGestureHandlerButtonPointerEvents { BoxNone, None, BoxOnly, Auto };
+
+static inline void fromRawValue(const PropsParserContext& context, const RawValue &value, RNGestureHandlerButtonPointerEvents &result) {
+  auto string = (std::string)value;
+  if (string == "box-none") { result = RNGestureHandlerButtonPointerEvents::BoxNone; return; }
+  if (string == "none") { result = RNGestureHandlerButtonPointerEvents::None; return; }
+  if (string == "box-only") { result = RNGestureHandlerButtonPointerEvents::BoxOnly; return; }
+  if (string == "auto") { result = RNGestureHandlerButtonPointerEvents::Auto; return; }
+  abort();
+}
+
+static inline std::string toString(const RNGestureHandlerButtonPointerEvents &value) {
+  switch (value) {
+    case RNGestureHandlerButtonPointerEvents::BoxNone: return "box-none";
+    case RNGestureHandlerButtonPointerEvents::None: return "none";
+    case RNGestureHandlerButtonPointerEvents::BoxOnly: return "box-only";
+    case RNGestureHandlerButtonPointerEvents::Auto: return "auto";
+  }
+}
+
+#ifdef RN_SERIALIZABLE_STATE
+static inline folly::dynamic toDynamic(const RNGestureHandlerButtonPointerEvents &value) {
+  return toString(value);
+}
+#endif
+
 class RNGestureHandlerButtonProps final : public ViewProps {
  public:
   RNGestureHandlerButtonProps() = default;
@@ -33,6 +59,7 @@ class RNGestureHandlerButtonProps final : public ViewProps {
   Float borderWidth{0.0};
   SharedColor borderColor{};
   std::string borderStyle{std::string{"solid"}};
+  RNGestureHandlerButtonPointerEvents pointerEvents{RNGestureHandlerButtonPointerEvents::Auto};
 
   #ifdef RN_SERIALIZABLE_STATE
   ComponentName getDiffPropsImplementationTarget() const override;
