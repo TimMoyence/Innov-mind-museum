@@ -2,12 +2,13 @@ import type {
   ExtractedContent,
   ExtractedContentStatus,
 } from '../../domain/extracted-content.entity';
+import type { ExtractedContentRepoPort } from '../../domain/ports/extracted-content-repo.port';
 import type { Repository } from 'typeorm';
 
 /**
  *
  */
-export class TypeOrmExtractedContentRepo {
+export class TypeOrmExtractedContentRepo implements ExtractedContentRepoPort {
   constructor(private readonly repo: Repository<ExtractedContent>) {}
 
   /** Finds extracted content by its source URL. */

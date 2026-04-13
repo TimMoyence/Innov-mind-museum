@@ -78,6 +78,11 @@ describe('Museum Routes — HTTP Layer', () => {
       const res = await request(app).put('/api/museums/1').send({ name: 'Updated' });
       expect(res.status).toBe(401);
     });
+
+    it('GET /api/museums/search returns 401 without token', async () => {
+      const res = await request(app).get('/api/museums/search?lat=48.86&lng=2.33');
+      expect(res.status).toBe(401);
+    });
   });
 
   // ── Visitor role (non-admin) RBAC ──────────────────────────────
@@ -147,6 +152,38 @@ describe('Museum Routes — HTTP Layer', () => {
         .put('/api/museums/1')
         .set('Authorization', `Bearer ${adminToken()}`)
         .send({ name: 'a'.repeat(201) });
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // ── Query validation on search ──────────────────────────────────
+
+  describe('GET /api/museums/search — query validation', () => {
+    it('returns 400 when lat is provided without lng', async () => {
+      const res = await request(app)
+        .get('/api/museums/search?lat=48.86')
+        .set('Authorization', `Bearer ${makeToken()}`);
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when lng is provided without lat', async () => {
+      const res = await request(app)
+        .get('/api/museums/search?lng=2.33')
+        .set('Authorization', `Bearer ${makeToken()}`);
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when lat is out of range', async () => {
+      const res = await request(app)
+        .get('/api/museums/search?lat=100&lng=2.33')
+        .set('Authorization', `Bearer ${makeToken()}`);
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when radius is below minimum (1000)', async () => {
+      const res = await request(app)
+        .get('/api/museums/search?lat=48.86&lng=2.33&radius=500')
+        .set('Authorization', `Bearer ${makeToken()}`);
       expect(res.status).toBe(400);
     });
   });
@@ -303,6 +340,34 @@ describe('Museum Routes — HTTP Layer', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(500);
+    });
+  });
+
+  // ── GET /api/museums/:id/low-data-pack (public, no auth) ────────
+
+  describe('GET /api/museums/:id/low-data-pack', () => {
+    it('returns 200 with low data pack (default locale fr)', async () => {
+      const res = await request(app).get('/api/museums/42/low-data-pack');
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('museumId');
+      expect(res.body).toHaveProperty('locale');
+      expect(res.body).toHaveProperty('entries');
+    });
+
+    it('returns 200 with explicit locale query param', async () => {
+      const res = await request(app).get('/api/museums/42/low-data-pack?locale=en');
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('entries');
+    });
+
+    it('sets Cache-Control header', async () => {
+      const res = await request(app).get('/api/museums/42/low-data-pack');
+
+      expect(res.status).toBe(200);
+      expect(res.headers['cache-control']).toContain('public');
+      expect(res.headers['cache-control']).toContain('max-age=3600');
     });
   });
 });

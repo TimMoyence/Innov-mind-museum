@@ -79,17 +79,20 @@ export function startPoolMonitor(intervalMs = 60_000): NodeJS.Timeout {
   return setInterval(() => {
     if (!AppDataSource.isInitialized) return;
     try {
-      const pool = (AppDataSource.driver as any).master;
+      const driver = AppDataSource.driver as unknown as {
+        master?: { totalCount: number; idleCount: number; waitingCount: number };
+      };
+      const pool = driver.master;
       if (!pool) return;
 
       const { totalCount, idleCount, waitingCount } = pool;
-      const active = (totalCount as number) - (idleCount as number);
-      const utilization = (totalCount as number) > 0 ? active / env.db.poolMax : 0;
+      const active = totalCount - idleCount;
+      const utilization = totalCount > 0 ? active / env.db.poolMax : 0;
       if (utilization >= 0.8) {
         logger.warn('db_pool_high_utilization', {
           active,
-          idle: idleCount as number,
-          waiting: waitingCount as number,
+          idle: idleCount,
+          waiting: waitingCount,
           max: env.db.poolMax,
           utilization: Math.round(utilization * 100),
         });

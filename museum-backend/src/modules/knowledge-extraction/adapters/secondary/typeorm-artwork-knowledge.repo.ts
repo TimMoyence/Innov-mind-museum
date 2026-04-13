@@ -1,10 +1,11 @@
 import type { ArtworkKnowledge } from '../../domain/artwork-knowledge.entity';
+import type { ArtworkKnowledgeRepoPort } from '../../domain/ports/artwork-knowledge-repo.port';
 import type { Repository } from 'typeorm';
 
 /**
  *
  */
-export class TypeOrmArtworkKnowledgeRepo {
+export class TypeOrmArtworkKnowledgeRepo implements ArtworkKnowledgeRepoPort {
   constructor(private readonly repo: Repository<ArtworkKnowledge>) {}
 
   /** Finds artwork by exact title match (case-insensitive) and locale. */

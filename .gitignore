@@ -141,3 +141,4 @@ design-system/package-lock.json
 # Ephemeral agent reports (not source, not docs-for-humans)
 team-reports/
 museum-backend/reports/
+new.md

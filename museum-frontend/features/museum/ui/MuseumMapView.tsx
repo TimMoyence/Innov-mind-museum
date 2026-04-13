@@ -2,14 +2,20 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { WebView } from 'react-native-webview';
-import type { WebViewMessageEvent } from 'react-native-webview';
+import type {
+  WebViewErrorEvent,
+  WebViewHttpErrorEvent,
+  WebViewMessageEvent,
+} from 'react-native-webview/lib/WebViewTypes';
 import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic } from '@/shared/ui/tokens';
+import { reportError } from '@/shared/observability/errorReporting';
 import type { MuseumCategory, MuseumWithDistance } from '../application/useMuseumDirectory';
 import { buildLeafletHtml } from '../infrastructure/leafletHtml';
+import { shouldAllowNavigation } from '../infrastructure/webViewNavigation';
 
 interface MuseumMapViewProps {
   museums: MuseumWithDistance[];
@@ -135,7 +141,12 @@ export const MuseumMapView = ({
       let data: WebViewOutboundMessage;
       try {
         data = JSON.parse(event.nativeEvent.data) as WebViewOutboundMessage;
-      } catch {
+      } catch (error) {
+        reportError(error, {
+          component: 'MuseumMapView',
+          reason: 'webview_message_parse_failed',
+          rawPreview: event.nativeEvent.data.slice(0, 200),
+        });
         return;
       }
 
@@ -175,24 +186,45 @@ export const MuseumMapView = ({
   const html = buildLeafletHtml({ isDark });
   const isEmpty = museums.length === 0;
 
+  const handleShouldStartLoad = useCallback((request: { url: string }) => {
+    const decision = shouldAllowNavigation(request.url);
+    if (decision === 'external') {
+      void Linking.openURL(request.url);
+      return false;
+    }
+    return decision === 'allow';
+  }, []);
+
+  const handleWebViewError = useCallback((event: WebViewErrorEvent) => {
+    const { code, description, url } = event.nativeEvent;
+    reportError(new Error(`MuseumMapView WebView error: ${description}`), {
+      component: 'MuseumMapView',
+      reason: 'webview_load_error',
+      code: String(code),
+      url: url.slice(0, 200),
+    });
+  }, []);
+
+  const handleWebViewHttpError = useCallback((event: WebViewHttpErrorEvent) => {
+    const { statusCode, url } = event.nativeEvent;
+    reportError(new Error(`MuseumMapView WebView HTTP error ${String(statusCode)}`), {
+      component: 'MuseumMapView',
+      reason: 'webview_http_error',
+      statusCode: String(statusCode),
+      url: url.slice(0, 200),
+    });
+  }, []);
+
   return (
     <View style={styles.container}>
       <WebView
         ref={webViewRef}
         source={{ html }}
-        originWhitelist={['http://*', 'https://*']}
-        onShouldStartLoadWithRequest={(request) => {
-          const next = request.url;
-          // Allow inline-HTML bootstrap (source={{ html }} resolves to about:blank).
-          if (next === 'about:blank' || next.startsWith('about:')) return true;
-          if (next.startsWith('http://') || next.startsWith('https://')) return true;
-          if (next.startsWith('mailto:') || next.startsWith('tel:')) {
-            void Linking.openURL(next);
-            return false;
-          }
-          return false;
-        }}
+        originWhitelist={['http://*', 'https://*', 'about:*']}
+        onShouldStartLoadWithRequest={handleShouldStartLoad}
         onMessage={handleMessage}
+        onError={handleWebViewError}
+        onHttpError={handleWebViewHttpError}
         style={[
           styles.webView,
           {

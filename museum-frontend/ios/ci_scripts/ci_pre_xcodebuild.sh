@@ -35,6 +35,13 @@ fi
 
 cat "$ENV_LOCAL"
 
+# Set marketing version from package.json — single source of truth.
+# Expo generates Info.plist with hardcoded values (not $(MARKETING_VERSION)),
+# so we must patch the plist directly to keep it in sync.
+MARKETING_VERSION=$(node -p "require('$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/package.json').version")
+plutil -replace CFBundleShortVersionString -string "$MARKETING_VERSION" "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios/Musaium/Info.plist"
+echo "Set CFBundleShortVersionString to $MARKETING_VERSION (from package.json)"
+
 # Set build number using max(CI_BUILD_NUMBER, plist_floor).
 # The CFBundleVersion committed in Info.plist acts as a floor — Xcode Cloud's
 # auto-incrementing CI_BUILD_NUMBER is used only if it exceeds the floor.

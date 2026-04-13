@@ -75,7 +75,7 @@
 - Create: `src/modules/chat/adapters/secondary/google-cse.client.ts`
 - Test: `tests/unit/chat/google-cse-client.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // tests/unit/chat/google-cse-client.test.ts
@@ -191,12 +191,12 @@ describe('GoogleCseClient', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/chat/google-cse-client`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```typescript
 // src/modules/chat/adapters/secondary/google-cse.client.ts
@@ -276,12 +276,12 @@ export class GoogleCseClient implements WebSearchProvider {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/chat/google-cse-client`
 Expected: PASS (all 7 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd museum-backend && git add src/modules/chat/adapters/secondary/google-cse.client.ts tests/unit/chat/google-cse-client.test.ts
@@ -296,7 +296,7 @@ git commit -m "feat(web-search): add Google Custom Search client with tests"
 - Create: `src/modules/chat/adapters/secondary/brave-search.client.ts`
 - Test: `tests/unit/chat/brave-search-client.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // tests/unit/chat/brave-search-client.test.ts
@@ -396,12 +396,12 @@ describe('BraveSearchClient', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/chat/brave-search-client`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```typescript
 // src/modules/chat/adapters/secondary/brave-search.client.ts
@@ -483,12 +483,12 @@ export class BraveSearchClient implements WebSearchProvider {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/chat/brave-search-client`
 Expected: PASS (all 6 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd museum-backend && git add src/modules/chat/adapters/secondary/brave-search.client.ts tests/unit/chat/brave-search-client.test.ts
@@ -503,7 +503,7 @@ git commit -m "feat(web-search): add Brave Search client with tests"
 - Create: `src/modules/chat/adapters/secondary/searxng.client.ts`
 - Test: `tests/unit/chat/searxng-client.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // tests/unit/chat/searxng-client.test.ts
@@ -605,12 +605,12 @@ describe('SearxngClient', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/chat/searxng-client`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```typescript
 // src/modules/chat/adapters/secondary/searxng.client.ts
@@ -709,12 +709,12 @@ export class SearxngClient implements WebSearchProvider {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/chat/searxng-client`
 Expected: PASS (all 5 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd museum-backend && git add src/modules/chat/adapters/secondary/searxng.client.ts tests/unit/chat/searxng-client.test.ts
@@ -729,7 +729,7 @@ git commit -m "feat(web-search): add SearXNG multi-instance client with tests"
 - Create: `src/modules/chat/adapters/secondary/duckduckgo.client.ts`
 - Test: `tests/unit/chat/duckduckgo-client.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // tests/unit/chat/duckduckgo-client.test.ts
@@ -840,12 +840,12 @@ describe('DuckDuckGoClient', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/chat/duckduckgo-client`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```typescript
 // src/modules/chat/adapters/secondary/duckduckgo.client.ts
@@ -954,12 +954,12 @@ export class DuckDuckGoClient implements WebSearchProvider {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/chat/duckduckgo-client`
 Expected: PASS (all 6 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd museum-backend && git add src/modules/chat/adapters/secondary/duckduckgo.client.ts tests/unit/chat/duckduckgo-client.test.ts
@@ -975,7 +975,7 @@ git commit -m "feat(web-search): add DuckDuckGo Instant Answer client with tests
 - Modify: `src/modules/chat/domain/ports/web-search.port.ts`
 - Test: `tests/unit/chat/fallback-search-provider.test.ts`
 
-- [ ] **Step 1: Add `name` to WebSearchProvider port**
+- [x] **Step 1: Add `name` to WebSearchProvider port**
 
 In `src/modules/chat/domain/ports/web-search.port.ts`, add an optional `name` field:
 
@@ -989,7 +989,7 @@ export interface WebSearchProvider {
 }
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 ```typescript
 // tests/unit/chat/fallback-search-provider.test.ts
@@ -1077,12 +1077,12 @@ describe('FallbackSearchProvider', () => {
 });
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/chat/fallback-search-provider`
 Expected: FAIL — module not found
 
-- [ ] **Step 4: Write the implementation**
+- [x] **Step 4: Write the implementation**
 
 ```typescript
 // src/modules/chat/adapters/secondary/fallback-search.provider.ts
@@ -1138,12 +1138,12 @@ export class FallbackSearchProvider implements WebSearchProvider {
 }
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/chat/fallback-search-provider`
 Expected: PASS (all 6 tests)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd museum-backend && git add src/modules/chat/domain/ports/web-search.port.ts src/modules/chat/adapters/secondary/fallback-search.provider.ts tests/unit/chat/fallback-search-provider.test.ts
@@ -1159,7 +1159,7 @@ git commit -m "feat(web-search): add FallbackSearchProvider with sequential fail
 - Modify: `src/config/env.ts`
 - Modify: `src/modules/chat/index.ts`
 
-- [ ] **Step 1: Update env.types.ts — add provider config types**
+- [x] **Step 1: Update env.types.ts — add provider config types**
 
 Add after the existing `webSearch` type block:
 
@@ -1176,7 +1176,7 @@ webSearch: {
 };
 ```
 
-- [ ] **Step 2: Update env.ts — add provider env vars**
+- [x] **Step 2: Update env.ts — add provider env vars**
 
 Replace the `webSearch` section with:
 
@@ -1196,7 +1196,7 @@ webSearch: {
 },
 ```
 
-- [ ] **Step 3: Update chat/index.ts — rebuild buildWebSearch() for fallback chain**
+- [x] **Step 3: Update chat/index.ts — rebuild buildWebSearch() for fallback chain**
 
 Replace the `buildWebSearch()` method:
 
@@ -1258,7 +1258,7 @@ private buildWebSearch(cache?: CacheService): WebSearchService | undefined {
 }
 ```
 
-- [ ] **Step 4: Add `name` to existing TavilyClient**
+- [x] **Step 4: Add `name` to existing TavilyClient**
 
 In `src/modules/chat/adapters/secondary/tavily.client.ts`, add inside the class:
 
@@ -1266,17 +1266,17 @@ In `src/modules/chat/adapters/secondary/tavily.client.ts`, add inside the class:
 readonly name = 'tavily';
 ```
 
-- [ ] **Step 5: Run existing tests to verify no regression**
+- [x] **Step 5: Run existing tests to verify no regression**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/chat/`
 Expected: ALL PASS (existing tavily tests + all new provider tests)
 
-- [ ] **Step 6: Run typecheck**
+- [x] **Step 6: Run typecheck**
 
 Run: `cd museum-backend && pnpm lint`
 Expected: 0 errors
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 cd museum-backend && git add src/config/env.ts src/config/env.types.ts src/modules/chat/index.ts src/modules/chat/adapters/secondary/tavily.client.ts
@@ -1292,11 +1292,11 @@ git commit -m "feat(web-search): wire multi-provider fallback chain (Tavily→Go
 **Files:**
 - Modify: `package.json`
 
-- [ ] **Step 1: Install production dependencies**
+- [x] **Step 1: Install production dependencies**
 
 Run: `cd museum-backend && pnpm add bullmq cheerio @mozilla/readability robots-parser`
 
-- [ ] **Step 2: Install type definitions**
+- [x] **Step 2: Install type definitions**
 
 Run: `cd museum-backend && pnpm add -D @types/jsdom`
 
@@ -1304,12 +1304,12 @@ Note: `@mozilla/readability` requires a DOM parser. We'll use `jsdom` (already a
 
 Run: `cd museum-backend && pnpm add jsdom && pnpm add -D @types/jsdom`
 
-- [ ] **Step 3: Verify install**
+- [x] **Step 3: Verify install**
 
 Run: `cd museum-backend && pnpm lint`
 Expected: 0 errors
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd museum-backend && git add package.json pnpm-lock.yaml
@@ -1323,7 +1323,7 @@ git commit -m "chore: add bullmq, cheerio, readability, robots-parser deps"
 **Files:**
 - Create: `tests/helpers/knowledge-extraction/extraction.fixtures.ts`
 
-- [ ] **Step 1: Create test factories**
+- [x] **Step 1: Create test factories**
 
 ```typescript
 // tests/helpers/knowledge-extraction/extraction.fixtures.ts
@@ -1392,7 +1392,7 @@ export function makeMuseumEnrichment(
 
 Note: this file will compile once entities are created in Task 9. Keep it ready.
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 cd museum-backend && git add tests/helpers/knowledge-extraction/extraction.fixtures.ts
@@ -1409,7 +1409,7 @@ git commit -m "test: add knowledge-extraction test factories"
 - Create: `src/modules/knowledge-extraction/domain/museum-enrichment.entity.ts`
 - Modify: `src/data/db/data-source.ts`
 
-- [ ] **Step 1: Create ExtractedContent entity**
+- [x] **Step 1: Create ExtractedContent entity**
 
 ```typescript
 // src/modules/knowledge-extraction/domain/extracted-content.entity.ts
@@ -1458,7 +1458,7 @@ export class ExtractedContent {
 }
 ```
 
-- [ ] **Step 2: Create ArtworkKnowledge entity**
+- [x] **Step 2: Create ArtworkKnowledge entity**
 
 ```typescript
 // src/modules/knowledge-extraction/domain/artwork-knowledge.entity.ts
@@ -1523,7 +1523,7 @@ export class ArtworkKnowledge {
 }
 ```
 
-- [ ] **Step 3: Create MuseumEnrichment entity**
+- [x] **Step 3: Create MuseumEnrichment entity**
 
 ```typescript
 // src/modules/knowledge-extraction/domain/museum-enrichment.entity.ts
@@ -1592,7 +1592,7 @@ export class MuseumEnrichment {
 }
 ```
 
-- [ ] **Step 4: Register entities in data-source.ts**
+- [x] **Step 4: Register entities in data-source.ts**
 
 Add imports and include in the `entities` array:
 
@@ -1607,12 +1607,12 @@ import { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-en
   MuseumEnrichment,
 ```
 
-- [ ] **Step 5: Run typecheck**
+- [x] **Step 5: Run typecheck**
 
 Run: `cd museum-backend && pnpm lint`
 Expected: 0 errors
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd museum-backend && git add src/modules/knowledge-extraction/domain/ src/data/db/data-source.ts
@@ -1626,27 +1626,27 @@ git commit -m "feat(knowledge-extraction): add ExtractedContent, ArtworkKnowledg
 **Files:**
 - Create: `src/data/db/migrations/<timestamp>-CreateKnowledgeExtractionTables.ts` (auto-generated)
 
-- [ ] **Step 1: Start local DB if not running**
+- [x] **Step 1: Start local DB if not running**
 
 Run: `cd museum-backend && docker compose -f docker-compose.dev.yml up -d`
 
-- [ ] **Step 2: Run pending migrations (ensure clean state)**
+- [x] **Step 2: Run pending migrations (ensure clean state)**
 
 Run: `cd museum-backend && pnpm migration:run`
 
-- [ ] **Step 3: Generate migration**
+- [x] **Step 3: Generate migration**
 
 Run: `cd museum-backend && node scripts/migration-cli.cjs generate --name=CreateKnowledgeExtractionTables`
 Expected: creates a migration file in `src/data/db/migrations/`
 
-- [ ] **Step 4: Review the generated migration**
+- [x] **Step 4: Review the generated migration**
 
 Read the generated file. Verify it creates:
 - `extracted_content` table with all columns
 - `artwork_knowledge` table with all columns + unique index
 - `museum_enrichment` table with all columns + unique index + FK to museums
 
-- [ ] **Step 5: Add pg_trgm extension and GIN indexes to the migration**
+- [x] **Step 5: Add pg_trgm extension and GIN indexes to the migration**
 
 Manually add to the `up()` method of the generated migration, at the top:
 
@@ -1668,17 +1668,17 @@ await queryRunner.query(`DROP INDEX IF EXISTS "IDX_museum_enrichment_name_trgm"`
 await queryRunner.query(`DROP INDEX IF EXISTS "IDX_artwork_knowledge_title_trgm"`);
 ```
 
-- [ ] **Step 6: Apply the migration**
+- [x] **Step 6: Apply the migration**
 
 Run: `cd museum-backend && pnpm migration:run`
 Expected: migration applied successfully
 
-- [ ] **Step 7: Verify no schema drift**
+- [x] **Step 7: Verify no schema drift**
 
 Run: `cd museum-backend && node scripts/migration-cli.cjs generate --name=Check`
 Expected: empty migration (no drift). Delete the empty migration file.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 cd museum-backend && git add src/data/db/migrations/
@@ -1694,7 +1694,7 @@ git commit -m "feat(knowledge-extraction): add DB migrations for 3 extraction ta
 - Create: `src/modules/knowledge-extraction/domain/ports/content-classifier.port.ts`
 - Create: `src/modules/knowledge-extraction/domain/ports/extraction-queue.port.ts`
 
-- [ ] **Step 1: Create scraper port**
+- [x] **Step 1: Create scraper port**
 
 ```typescript
 // src/modules/knowledge-extraction/domain/ports/scraper.port.ts
@@ -1714,7 +1714,7 @@ export interface ScraperPort {
 }
 ```
 
-- [ ] **Step 2: Create content classifier port**
+- [x] **Step 2: Create content classifier port**
 
 ```typescript
 // src/modules/knowledge-extraction/domain/ports/content-classifier.port.ts
@@ -1755,7 +1755,7 @@ export interface ContentClassifierPort {
 }
 ```
 
-- [ ] **Step 3: Create extraction queue port**
+- [x] **Step 3: Create extraction queue port**
 
 ```typescript
 // src/modules/knowledge-extraction/domain/ports/extraction-queue.port.ts
@@ -1774,7 +1774,7 @@ export interface ExtractionQueuePort {
 }
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd museum-backend && git add src/modules/knowledge-extraction/domain/ports/
@@ -1789,7 +1789,7 @@ git commit -m "feat(knowledge-extraction): add scraper, classifier, and queue do
 - Create: `src/modules/knowledge-extraction/adapters/secondary/html-scraper.ts`
 - Test: `tests/unit/knowledge-extraction/html-scraper.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // tests/unit/knowledge-extraction/html-scraper.test.ts
@@ -1894,12 +1894,12 @@ describe('HtmlScraper', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/knowledge-extraction/html-scraper`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```typescript
 // src/modules/knowledge-extraction/adapters/secondary/html-scraper.ts
@@ -2011,12 +2011,12 @@ export class HtmlScraper implements ScraperPort {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/knowledge-extraction/html-scraper`
 Expected: PASS (all 6 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd museum-backend && git add src/modules/knowledge-extraction/adapters/secondary/html-scraper.ts tests/unit/knowledge-extraction/html-scraper.test.ts
@@ -2031,7 +2031,7 @@ git commit -m "feat(knowledge-extraction): add HTML scraper with readability + c
 - Create: `src/modules/knowledge-extraction/useCase/content-classifier.service.ts`
 - Test: `tests/unit/knowledge-extraction/content-classifier.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // tests/unit/knowledge-extraction/content-classifier.test.ts
@@ -2136,12 +2136,12 @@ describe('ContentClassifierService', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/knowledge-extraction/content-classifier`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```typescript
 // src/modules/knowledge-extraction/useCase/content-classifier.service.ts
@@ -2256,12 +2256,12 @@ export class ContentClassifierService implements ContentClassifierPort {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/knowledge-extraction/content-classifier`
 Expected: PASS (all 5 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd museum-backend && git add src/modules/knowledge-extraction/useCase/content-classifier.service.ts tests/unit/knowledge-extraction/content-classifier.test.ts
@@ -2277,7 +2277,7 @@ git commit -m "feat(knowledge-extraction): add LangChain content classifier with
 - Create: `src/modules/knowledge-extraction/adapters/secondary/typeorm-artwork-knowledge.repo.ts`
 - Create: `src/modules/knowledge-extraction/adapters/secondary/typeorm-museum-enrichment.repo.ts`
 
-- [ ] **Step 1: Create ExtractedContent repository**
+- [x] **Step 1: Create ExtractedContent repository**
 
 ```typescript
 // src/modules/knowledge-extraction/adapters/secondary/typeorm-extracted-content.repo.ts
@@ -2323,7 +2323,7 @@ export class TypeOrmExtractedContentRepo {
 }
 ```
 
-- [ ] **Step 2: Create ArtworkKnowledge repository**
+- [x] **Step 2: Create ArtworkKnowledge repository**
 
 ```typescript
 // src/modules/knowledge-extraction/adapters/secondary/typeorm-artwork-knowledge.repo.ts
@@ -2402,7 +2402,7 @@ export class TypeOrmArtworkKnowledgeRepo {
 }
 ```
 
-- [ ] **Step 3: Create MuseumEnrichment repository**
+- [x] **Step 3: Create MuseumEnrichment repository**
 
 ```typescript
 // src/modules/knowledge-extraction/adapters/secondary/typeorm-museum-enrichment.repo.ts
@@ -2479,12 +2479,12 @@ export class TypeOrmMuseumEnrichmentRepo {
 }
 ```
 
-- [ ] **Step 4: Run typecheck**
+- [x] **Step 4: Run typecheck**
 
 Run: `cd museum-backend && pnpm lint`
 Expected: 0 errors
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd museum-backend && git add src/modules/knowledge-extraction/adapters/secondary/typeorm-*.ts
@@ -2499,7 +2499,7 @@ git commit -m "feat(knowledge-extraction): add TypeORM repos with upsert + parti
 - Create: `src/modules/knowledge-extraction/useCase/extraction-job.service.ts`
 - Test: `tests/unit/knowledge-extraction/extraction-job.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // tests/unit/knowledge-extraction/extraction-job.test.ts
@@ -2677,12 +2677,12 @@ describe('ExtractionJobService', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/knowledge-extraction/extraction-job`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```typescript
 // src/modules/knowledge-extraction/useCase/extraction-job.service.ts
@@ -2813,12 +2813,12 @@ export class ExtractionJobService {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/knowledge-extraction/extraction-job`
 Expected: PASS (all 5 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd museum-backend && git add src/modules/knowledge-extraction/useCase/extraction-job.service.ts tests/unit/knowledge-extraction/extraction-job.test.ts
@@ -2832,7 +2832,7 @@ git commit -m "feat(knowledge-extraction): add extraction job service (scrape→
 **Files:**
 - Create: `src/modules/knowledge-extraction/adapters/primary/extraction.worker.ts`
 
-- [ ] **Step 1: Write the implementation**
+- [x] **Step 1: Write the implementation**
 
 ```typescript
 // src/modules/knowledge-extraction/adapters/primary/extraction.worker.ts
@@ -2943,12 +2943,12 @@ export class ExtractionWorker implements ExtractionQueuePort {
 }
 ```
 
-- [ ] **Step 2: Run typecheck**
+- [x] **Step 2: Run typecheck**
 
 Run: `cd museum-backend && pnpm lint`
 Expected: 0 errors
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 cd museum-backend && git add src/modules/knowledge-extraction/adapters/primary/extraction.worker.ts
@@ -2964,7 +2964,7 @@ git commit -m "feat(knowledge-extraction): add BullMQ extraction worker with rat
 - Create: `src/modules/knowledge-extraction/useCase/db-lookup.prompt.ts`
 - Test: `tests/unit/knowledge-extraction/db-lookup.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // tests/unit/knowledge-extraction/db-lookup.test.ts
@@ -3043,12 +3043,12 @@ describe('DbLookupService', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/knowledge-extraction/db-lookup`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Write the prompt builder**
+- [x] **Step 3: Write the prompt builder**
 
 ```typescript
 // src/modules/knowledge-extraction/useCase/db-lookup.prompt.ts
@@ -3105,7 +3105,7 @@ export function buildLocalKnowledgeBlock(
 }
 ```
 
-- [ ] **Step 4: Write the service**
+- [x] **Step 4: Write the service**
 
 ```typescript
 // src/modules/knowledge-extraction/useCase/db-lookup.service.ts
@@ -3158,12 +3158,12 @@ export class DbLookupService {
 }
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `cd museum-backend && pnpm test -- --testPathPattern=tests/unit/knowledge-extraction/db-lookup`
 Expected: PASS (all 5 tests)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd museum-backend && git add src/modules/knowledge-extraction/useCase/db-lookup.service.ts src/modules/knowledge-extraction/useCase/db-lookup.prompt.ts tests/unit/knowledge-extraction/db-lookup.test.ts
@@ -3180,7 +3180,7 @@ git commit -m "feat(knowledge-extraction): add DB lookup service with LOCAL KNOW
 - Modify: `src/modules/chat/useCase/chat-message.service.ts`
 - Modify: `src/modules/chat/adapters/secondary/langchain.orchestrator.ts`
 
-- [ ] **Step 1: Update EnrichmentDeps in enrichment-fetcher.ts**
+- [x] **Step 1: Update EnrichmentDeps in enrichment-fetcher.ts**
 
 Add the two new dependencies to the `EnrichmentDeps` interface:
 
@@ -3198,7 +3198,7 @@ interface EnrichmentDeps {
 }
 ```
 
-- [ ] **Step 2: Add `locale` parameter + 6th parallel source + URL enqueue**
+- [x] **Step 2: Add `locale` parameter + 6th parallel source + URL enqueue**
 
 Add `locale: string` as a new parameter to `fetchEnrichmentData()`:
 
@@ -3281,7 +3281,7 @@ return {
 
 The URL enqueue is handled in `chat-message.service.ts` (Step 4) — not in the fetcher — to keep the fetcher side-effect-free.
 
-- [ ] **Step 3: Update llm-prompt-builder.ts**
+- [x] **Step 3: Update llm-prompt-builder.ts**
 
 Add `localKnowledgeBlock` to the options type and inject it as the first enrichment SystemMessage (highest priority):
 
@@ -3325,7 +3325,7 @@ export const buildSectionMessages = (
   // ... rest unchanged
 ```
 
-- [ ] **Step 4: Update chat-message.service.ts**
+- [x] **Step 4: Update chat-message.service.ts**
 
 Add `dbLookup` and `extractionQueue` to `ChatMessageServiceDeps`:
 
@@ -3390,7 +3390,7 @@ if (this.extractionQueue && webSearchResults.length > 0) {
 
 Pass `localKnowledgeBlock` to the orchestrator alongside the other blocks.
 
-- [ ] **Step 5: Update langchain.orchestrator.ts**
+- [x] **Step 5: Update langchain.orchestrator.ts**
 
 Add `localKnowledgeBlock` to `OrchestratorInput` and pass it to `buildSectionMessages`:
 
@@ -3417,12 +3417,12 @@ const messages = buildSectionMessages(
 );
 ```
 
-- [ ] **Step 6: Run typecheck + existing tests**
+- [x] **Step 6: Run typecheck + existing tests**
 
 Run: `cd museum-backend && pnpm lint && pnpm test`
 Expected: 0 errors, all tests pass
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 cd museum-backend && git add src/modules/chat/useCase/enrichment-fetcher.ts src/modules/chat/useCase/llm-prompt-builder.ts src/modules/chat/useCase/chat-message.service.ts src/modules/chat/adapters/secondary/langchain.orchestrator.ts
@@ -3439,7 +3439,7 @@ git commit -m "feat(knowledge-extraction): integrate DB lookup as 6th enrichment
 - Modify: `src/config/env.types.ts`
 - Modify: `src/modules/chat/index.ts`
 
-- [ ] **Step 1: Add extraction config to env.types.ts**
+- [x] **Step 1: Add extraction config to env.types.ts**
 
 ```typescript
 extraction: {
@@ -3454,7 +3454,7 @@ extraction: {
 };
 ```
 
-- [ ] **Step 2: Add extraction config to env.ts**
+- [x] **Step 2: Add extraction config to env.ts**
 
 ```typescript
 extraction: {
@@ -3478,7 +3478,7 @@ featureFlags: {
 },
 ```
 
-- [ ] **Step 3: Create module wiring (index.ts)**
+- [x] **Step 3: Create module wiring (index.ts)**
 
 ```typescript
 // src/modules/knowledge-extraction/index.ts
@@ -3589,7 +3589,7 @@ export class KnowledgeExtractionModule {
 }
 ```
 
-- [ ] **Step 4: Wire into chat/index.ts**
+- [x] **Step 4: Wire into chat/index.ts**
 
 In `ChatModule.build()`, after building web search, build the knowledge extraction module and pass its services to `ChatMessageService`:
 
@@ -3608,17 +3608,17 @@ const chatService = new ChatMessageService({
 
 Add `close` to the module's return type so it can be called on shutdown.
 
-- [ ] **Step 5: Run typecheck**
+- [x] **Step 5: Run typecheck**
 
 Run: `cd museum-backend && pnpm lint`
 Expected: 0 errors
 
-- [ ] **Step 6: Run full test suite**
+- [x] **Step 6: Run full test suite**
 
 Run: `cd museum-backend && pnpm test`
 Expected: ALL PASS
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 cd museum-backend && git add src/modules/knowledge-extraction/index.ts src/config/env.ts src/config/env.types.ts src/modules/chat/index.ts
@@ -3629,21 +3629,21 @@ git commit -m "feat(knowledge-extraction): wire module with BullMQ worker, DB lo
 
 ### Task 20: Final Verification
 
-- [ ] **Step 1: Run full typecheck**
+- [x] **Step 1: Run full typecheck**
 
 Run: `cd museum-backend && pnpm lint`
 Expected: 0 errors
 
-- [ ] **Step 2: Run full test suite**
+- [x] **Step 2: Run full test suite**
 
 Run: `cd museum-backend && pnpm test`
 Expected: ALL PASS, count should be previous (2457) + new tests (~30)
 
-- [ ] **Step 3: Update .env.local.example with new env vars**
+- [x] **Step 3: Update .env.local.example with new env vars**
 
 Add the new provider keys and extraction config as commented examples.
 
-- [ ] **Step 4: Verify DB migration on clean state**
+- [x] **Step 4: Verify DB migration on clean state**
 
 Run:
 ```bash
@@ -3651,12 +3651,12 @@ cd museum-backend && pnpm migration:revert && pnpm migration:revert && pnpm migr
 ```
 Expected: all migrations apply cleanly
 
-- [ ] **Step 5: Run drift check**
+- [x] **Step 5: Run drift check**
 
 Run: `cd museum-backend && node scripts/migration-cli.cjs generate --name=DriftCheck`
 Expected: empty migration (no drift). Delete the empty file.
 
-- [ ] **Step 6: Final commit**
+- [x] **Step 6: Final commit**
 
 ```bash
 cd museum-backend && git add .

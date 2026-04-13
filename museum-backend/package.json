@@ -1,6 +1,6 @@
 {
   "name": "musaium-backend",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "",
   "packageManager": "pnpm@9.15.3",
   "main": "index.ts",

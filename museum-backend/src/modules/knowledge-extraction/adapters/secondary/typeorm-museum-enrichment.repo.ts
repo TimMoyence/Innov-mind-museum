@@ -1,10 +1,11 @@
 import type { MuseumEnrichment } from '../../domain/museum-enrichment.entity';
+import type { MuseumEnrichmentRepoPort } from '../../domain/ports/museum-enrichment-repo.port';
 import type { Repository } from 'typeorm';
 
 /**
  *
  */
-export class TypeOrmMuseumEnrichmentRepo {
+export class TypeOrmMuseumEnrichmentRepo implements MuseumEnrichmentRepoPort {
   constructor(private readonly repo: Repository<MuseumEnrichment>) {}
 
   /** Finds museum enrichment by exact name match (case-insensitive) and locale. */
