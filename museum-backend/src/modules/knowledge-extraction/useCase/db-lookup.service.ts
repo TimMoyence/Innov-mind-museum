@@ -2,8 +2,8 @@ import { logger } from '@shared/logger/logger';
 
 import { buildLocalKnowledgeBlock } from './db-lookup.prompt';
 
-import type { TypeOrmArtworkKnowledgeRepo } from '../adapters/secondary/typeorm-artwork-knowledge.repo';
-import type { TypeOrmMuseumEnrichmentRepo } from '../adapters/secondary/typeorm-museum-enrichment.repo';
+import type { ArtworkKnowledgeRepoPort } from '../domain/ports/artwork-knowledge-repo.port';
+import type { MuseumEnrichmentRepoPort } from '../domain/ports/museum-enrichment-repo.port';
 
 /**
  * Queries the local knowledge DB for artwork/museum data and returns a formatted prompt block.
@@ -11,8 +11,8 @@ import type { TypeOrmMuseumEnrichmentRepo } from '../adapters/secondary/typeorm-
  */
 export class DbLookupService {
   constructor(
-    private readonly artworkRepo: TypeOrmArtworkKnowledgeRepo,
-    private readonly museumRepo: TypeOrmMuseumEnrichmentRepo,
+    private readonly artworkRepo: ArtworkKnowledgeRepoPort,
+    private readonly museumRepo: MuseumEnrichmentRepoPort,
   ) {}
 
   /**

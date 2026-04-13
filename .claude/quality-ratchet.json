@@ -1,13 +1,13 @@
 {
-  "lastUpdated": "2026-04-12",
-  "testCount": 2612,
+  "lastUpdated": "2026-04-13",
+  "testCount": 2620,
   "frontendTestCount": 1096,
   "frontendSuiteCount": 129,
   "typecheckErrors": 0,
   "asAnyCount": 0,
-  "coverageStatements": 91.94,
-  "coverageBranches": 81.99,
+  "coverageStatements": 92,
+  "coverageBranches": 82.07,
   "lintErrors": 0,
-  "_comment": "Audit 2026-04-11: Full transverse audit (9 agents) → 7-agent fix sprint. +52 BE tests (46 SSRF protection + 6 misc). Fixed real IPv6 SSRF bypass in image-input.ts. +25 web admin tests (auth+dashboard+users). WebView originWhitelist hardened. DailyLimitModal paywall UI. Knowledge seed script (26 artworks + 8 museums). Docs: CI_CD_SECRETS fixed (5 wrong workflow names), backend README 14→57 endpoints, CLAUDE.md deduped+updated, PROGRESS_TRACKER +96 items. Fake JSON-LD review stats removed.",
+  "_comment": "T20 final verification: +8 BE tests (knowledge-extraction module). Multi-provider web search (5 clients + fallback) + knowledge extraction pipeline (scrape→classify→store) fully integrated. Port extraction for hexagonal compliance. Ratchet hook fixed to measure src/ not tests/.",
   "webTestCount": 100
 }

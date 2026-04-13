@@ -2,10 +2,10 @@ import { logger } from '@shared/logger/logger';
 
 import { ExtractedContentStatus } from '../domain/extracted-content.entity';
 
-import type { TypeOrmArtworkKnowledgeRepo } from '../adapters/secondary/typeorm-artwork-knowledge.repo';
-import type { TypeOrmExtractedContentRepo } from '../adapters/secondary/typeorm-extracted-content.repo';
-import type { TypeOrmMuseumEnrichmentRepo } from '../adapters/secondary/typeorm-museum-enrichment.repo';
+import type { ArtworkKnowledgeRepoPort } from '../domain/ports/artwork-knowledge-repo.port';
 import type { ContentClassifierPort } from '../domain/ports/content-classifier.port';
+import type { ExtractedContentRepoPort } from '../domain/ports/extracted-content-repo.port';
+import type { MuseumEnrichmentRepoPort } from '../domain/ports/museum-enrichment-repo.port';
 import type { ScraperPort } from '../domain/ports/scraper.port';
 
 /** Configuration thresholds and TTL for the extraction pipeline. */
@@ -22,18 +22,18 @@ interface ExtractionJobConfig {
 interface ExtractionJobDeps {
   scraper: ScraperPort;
   classifier: ContentClassifierPort;
-  contentRepo: TypeOrmExtractedContentRepo;
-  artworkRepo: TypeOrmArtworkKnowledgeRepo;
-  museumRepo: TypeOrmMuseumEnrichmentRepo;
+  contentRepo: ExtractedContentRepoPort;
+  artworkRepo: ArtworkKnowledgeRepoPort;
+  museumRepo: MuseumEnrichmentRepoPort;
 }
 
 /** Orchestrates the full extraction pipeline for a single URL: dedup → scrape → classify → store. */
 export class ExtractionJobService {
   private readonly scraper: ScraperPort;
   private readonly classifier: ContentClassifierPort;
-  private readonly contentRepo: TypeOrmExtractedContentRepo;
-  private readonly artworkRepo: TypeOrmArtworkKnowledgeRepo;
-  private readonly museumRepo: TypeOrmMuseumEnrichmentRepo;
+  private readonly contentRepo: ExtractedContentRepoPort;
+  private readonly artworkRepo: ArtworkKnowledgeRepoPort;
+  private readonly museumRepo: MuseumEnrichmentRepoPort;
 
   constructor(
     deps: ExtractionJobDeps,
