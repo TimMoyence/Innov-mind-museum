@@ -100,7 +100,36 @@
   "expo": {
     "install": {
       "exclude": [
-        "@sentry/react-native"
+        "@sentry/react-native",
+        "expo",
+        "expo-apple-authentication",
+        "expo-asset",
+        "expo-audio",
+        "expo-blur",
+        "expo-build-properties",
+        "expo-camera",
+        "expo-clipboard",
+        "expo-constants",
+        "expo-dev-client",
+        "expo-file-system",
+        "expo-haptics",
+        "expo-image-manipulator",
+        "expo-image-picker",
+        "expo-linear-gradient",
+        "expo-linking",
+        "expo-local-authentication",
+        "expo-localization",
+        "expo-location",
+        "expo-router",
+        "expo-secure-store",
+        "expo-splash-screen",
+        "expo-store-review",
+        "expo-system-ui",
+        "expo-updates",
+        "jest-expo",
+        "react-native-gesture-handler",
+        "react-native-safe-area-context",
+        "react-native-screens"
       ]
     },
     "doctor": {
