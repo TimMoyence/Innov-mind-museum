@@ -104,10 +104,27 @@ const storageDriver: StorageDriver = ['local', 's3'].includes(storageDriverRaw)
 const isDev = nodeEnv === 'development' || nodeEnv === 'test';
 const isProduction = nodeEnv === 'production';
 
+const resolvedAppVersion = (() => {
+  const explicit = toOptionalString(process.env.APP_VERSION);
+  if (explicit) return explicit;
+  const pkg = toOptionalString(process.env.npm_package_version);
+  if (pkg) return pkg;
+  return 'unknown';
+})();
+
+const resolvedCommitSha = (() => {
+  const source = process.env.COMMIT_SHA || process.env.GITHUB_SHA;
+  const trimmed = source?.trim();
+  return trimmed?.length ? trimmed : undefined;
+})();
+
 /** Resolved application configuration singleton, validated at startup. */
 const env: AppEnv = {
   nodeEnv,
   port: toNumber(process.env.PORT, 3000),
+  appVersion: resolvedAppVersion,
+  commitSha: resolvedCommitSha,
+  frontendUrl: toOptionalString(process.env.FRONTEND_URL),
   trustProxy: toBoolean(process.env.TRUST_PROXY, true),
   corsOrigins: toList(process.env.CORS_ORIGINS),
   jsonBodyLimit: process.env.JSON_BODY_LIMIT || '1mb',
@@ -227,8 +244,7 @@ const env: AppEnv = {
     ? {
         dsn: (process.env.SENTRY_DSN ?? '').trim(),
         environment: nodeEnv,
-        release:
-          toOptionalString(process.env.APP_VERSION) || process.env.npm_package_version || '1.0.0',
+        release: resolvedAppVersion === 'unknown' ? '1.0.0' : resolvedAppVersion,
         tracesSampleRate: toNumber(process.env.SENTRY_TRACES_SAMPLE_RATE, 0.1),
         profilesSampleRate: toNumber(process.env.SENTRY_PROFILES_SAMPLE_RATE, 0),
       }

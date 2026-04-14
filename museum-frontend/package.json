@@ -17,6 +17,7 @@
     "test": "npm run test:node && npm run test:rn",
     "test:node": "rm -rf .test-dist && tsc -p tsconfig.test.json && node --test .test-dist/tests/*.test.js",
     "test:rn": "jest",
+    "test:coverage": "jest --coverage",
     "android": "expo run:android",
     "ios": "expo run:ios"
   },
@@ -134,9 +135,7 @@
     },
     "doctor": {
       "reactNativeDirectoryCheck": {
-        "exclude": [
-          "expo-av"
-        ]
+        "exclude": []
       }
     }
   },

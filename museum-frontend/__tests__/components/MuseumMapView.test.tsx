@@ -33,20 +33,7 @@ jest.mock('react-native-webview', () => {
 
 import { render, screen } from '@testing-library/react-native';
 import { MuseumMapView } from '@/features/museum/ui/MuseumMapView';
-
-const makeMuseum = (overrides: Record<string, unknown> = {}) => ({
-  id: 1,
-  name: 'Test Museum',
-  slug: 'test-museum',
-  address: '123 Main St',
-  description: 'A test museum',
-  latitude: 48.8566,
-  longitude: 2.3522,
-  distance: 1.5,
-  source: 'local' as const,
-  museumType: 'general' as const,
-  ...overrides,
-});
+import { makeMuseumWithDistance as makeMuseum } from '../helpers/factories/museum.factories';
 
 describe('MuseumMapView', () => {
   it('renders WebView', () => {

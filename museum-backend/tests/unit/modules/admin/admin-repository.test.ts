@@ -7,47 +7,9 @@ import { MessageReport } from '@modules/chat/domain/messageReport.entity';
 import { AuditLog } from '@shared/audit/auditLog.entity';
 
 import { AdminRepositoryPg } from '@modules/admin/adapters/secondary/admin.repository.pg';
+import { makeReport, makeAuditLog } from 'tests/helpers/admin/admin.fixtures';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
-
-// ─── Report factory ───
-function makeReport(overrides: Partial<MessageReport> = {}): MessageReport {
-  return {
-    id: 'report-001',
-    messageId: 'msg-001',
-    userId: 1,
-    reason: 'offensive',
-    comment: null,
-    status: 'pending',
-    reviewedBy: null,
-    reviewedAt: null,
-    reviewerNotes: null,
-    createdAt: new Date('2025-06-01'),
-    message: {
-      id: 'msg-001',
-      text: 'Bad content',
-      role: 'assistant',
-      sessionId: 'session-001',
-    } as ChatMessage,
-    ...overrides,
-  } as MessageReport;
-}
-
-function makeAuditLog(overrides: Partial<AuditLog> = {}): AuditLog {
-  return {
-    id: 'log-001',
-    action: 'USER_LOGIN',
-    actorType: 'user',
-    actorId: 1,
-    targetType: null,
-    targetId: null,
-    metadata: null,
-    ip: '127.0.0.1',
-    requestId: null,
-    createdAt: new Date('2025-06-01'),
-    ...overrides,
-  } as AuditLog;
-}
 
 function buildMocks() {
   const userQb = makeMockQb();

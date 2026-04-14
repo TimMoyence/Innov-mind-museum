@@ -43,8 +43,7 @@ const emailService: EmailService | undefined = env.brevoApiKey
   ? new BrevoEmailService(env.brevoApiKey)
   : undefined;
 
-// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-const frontendUrl = process.env.FRONTEND_URL || undefined;
+const frontendUrl = env.frontendUrl;
 
 /** Singleton instance of {@link RegisterUseCase}. */
 const registerUseCase = new RegisterUseCase(userRepository, emailService, frontendUrl);

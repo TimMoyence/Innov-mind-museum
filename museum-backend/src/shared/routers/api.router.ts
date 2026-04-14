@@ -47,27 +47,6 @@ export interface HealthPayload {
   responseTimeMs?: number;
 }
 
-const resolveAppVersion = (): string => {
-  const explicitVersion = process.env.APP_VERSION?.trim();
-  if (explicitVersion) {
-    return explicitVersion;
-  }
-
-  const packageVersion = process.env.npm_package_version?.trim();
-  if (packageVersion) {
-    return packageVersion;
-  }
-
-  return 'unknown';
-};
-
-const resolveCommitSha = (): string | undefined => {
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-  const source = process.env.COMMIT_SHA || process.env.GITHUB_SHA;
-  const trimmed = source?.trim();
-  return trimmed?.length ? trimmed : undefined;
-};
-
 /**
  * Builds a health-check response payload from the current system state.
  *
@@ -98,7 +77,7 @@ export const buildHealthPayload = (params: {
       llmConfigured: params.llmConfigured,
     },
     environment: env.nodeEnv,
-    version: resolveAppVersion(),
+    version: env.appVersion,
     timestamp: new Date().toISOString(),
   };
 
@@ -110,9 +89,8 @@ export const buildHealthPayload = (params: {
     payload.checks.llmCircuitBreaker = params.checks.llmCircuitBreaker;
   }
 
-  const commitSha = resolveCommitSha();
-  if (commitSha) {
-    payload.commitSha = commitSha;
+  if (env.commitSha) {
+    payload.commitSha = env.commitSha;
   }
 
   return payload;

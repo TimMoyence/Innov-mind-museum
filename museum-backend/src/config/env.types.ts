@@ -11,6 +11,12 @@ export type StorageDriver = 'local' | 's3';
 export interface AppEnv {
   nodeEnv: NodeEnv;
   port: number;
+  /** Resolved application version (APP_VERSION → npm_package_version → 'unknown'). */
+  appVersion: string;
+  /** Git commit SHA from CI (COMMIT_SHA or GITHUB_SHA), undefined locally. */
+  commitSha?: string;
+  /** Frontend base URL for email links (e.g. password reset). */
+  frontendUrl?: string;
   trustProxy: boolean;
   corsOrigins: string[];
   jsonBodyLimit: string;

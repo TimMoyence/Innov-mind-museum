@@ -3,22 +3,8 @@ import type { DataSource, Repository, UpdateResult } from 'typeorm';
 import { Review } from '@modules/review/domain/review.entity';
 
 import { ReviewRepositoryPg } from '@modules/review/adapters/secondary/review.repository.pg';
+import { makeReview } from 'tests/helpers/review/review.fixtures';
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
-
-// ─── Review factory ───
-function makeReview(overrides: Partial<Review> = {}): Review {
-  return {
-    id: 'review-001',
-    userId: 1,
-    userName: 'Test User',
-    rating: 4,
-    comment: 'Great app!',
-    status: 'pending',
-    createdAt: new Date('2025-06-01'),
-    updatedAt: new Date('2025-06-01'),
-    ...overrides,
-  } as Review;
-}
 
 function buildMocks() {
   const qb = makeMockQb();

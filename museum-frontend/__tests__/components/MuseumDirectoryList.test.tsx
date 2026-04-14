@@ -2,6 +2,7 @@ import '../helpers/test-utils';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 
 import type { MuseumWithDistance } from '@/features/museum/application/useMuseumDirectory';
+import { makeMuseumWithDistance as makeMuseum } from '../helpers/factories/museum.factories';
 
 // Mock MuseumCard since it's a separate component
 jest.mock('@/features/museum/ui/MuseumCard', () => {
@@ -27,20 +28,6 @@ jest.mock('@/features/museum/ui/MuseumCard', () => {
 });
 
 import { MuseumDirectoryList } from '@/features/museum/ui/MuseumDirectoryList';
-
-const makeMuseum = (overrides?: Partial<MuseumWithDistance>): MuseumWithDistance => ({
-  id: 1,
-  name: 'Louvre Museum',
-  slug: 'louvre-museum',
-  address: '75001 Paris',
-  description: 'Famous museum',
-  latitude: 48.86,
-  longitude: 2.34,
-  distance: 1.2,
-  source: 'local',
-  museumType: 'general',
-  ...overrides,
-});
 
 describe('MuseumDirectoryList', () => {
   const onSearchChange = jest.fn();
