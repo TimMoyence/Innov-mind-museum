@@ -4,6 +4,9 @@ import { locales, defaultLocale, type Locale } from '@/lib/i18n';
 /** Paths that should never be rewritten by the i18n middleware. */
 const IGNORED_PREFIXES = ['/_next', '/api', '/images', '/favicon.ico'];
 
+/** File extensions served directly from public/ (verification files, etc.). */
+const STATIC_EXTENSIONS = ['.xml', '.html', '.txt', '.ico', '.png', '.svg'];
+
 function getPreferredLocale(request: NextRequest): Locale {
   const acceptLang = request.headers.get('accept-language') ?? '';
   // Simple parser: pick the first locale that matches
@@ -14,9 +17,7 @@ function getPreferredLocale(request: NextRequest): Locale {
 }
 
 function pathnameHasLocale(pathname: string): boolean {
-  return locales.some(
-    (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`,
-  );
+  return locales.some((locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`);
 }
 
 export function middleware(request: NextRequest) {
@@ -24,6 +25,11 @@ export function middleware(request: NextRequest) {
 
   // Skip static assets, API routes, and Next.js internals
   if (IGNORED_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+    return NextResponse.next();
+  }
+
+  // Skip root-level static files (verification files, robots.txt, etc.)
+  if (STATIC_EXTENSIONS.some((ext) => pathname.endsWith(ext)) && !pathname.slice(1).includes('/')) {
     return NextResponse.next();
   }
 
