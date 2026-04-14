@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import type { ChatUiEnrichedImage } from '@/features/chat/application/chatSessionLogic.pure';
+import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
 import { semantic, space, fontSize } from '@/shared/ui/tokens';
 
 interface ImageFullscreenModalProps {
@@ -37,6 +38,7 @@ const COUNTER_COLOR = semantic.fullscreenModal.counterColor;
 export const ImageFullscreenModal = React.memo(
   ({ images, initialIndex, visible, onClose }: ImageFullscreenModalProps) => {
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
+    const reduceMotion = useReducedMotion();
     const { width: screenWidth } = useWindowDimensions();
     const translateX = useRef(new Animated.Value(0)).current;
     const translateY = useRef(new Animated.Value(0)).current;
@@ -58,6 +60,11 @@ export const ImageFullscreenModal = React.memo(
     }, [visible, initialIndex, translateX, translateY, scale]);
 
     const goTo = (nextIndex: number) => {
+      if (reduceMotion) {
+        // WCAG 2.3.3: skip the decorative scale bounce, switch image instantly.
+        setCurrentIndex(nextIndex);
+        return;
+      }
       Animated.timing(scale, {
         toValue: 0.9,
         duration: 100,

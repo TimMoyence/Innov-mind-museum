@@ -53,6 +53,13 @@ function validateS3Storage(env: AppEnv): void {
   required('S3_SECRET_ACCESS_KEY', env.storage.s3?.secretAccessKey);
 }
 
+/** Validates Redis credentials when cache is enabled. */
+function validateRedis(env: AppEnv): void {
+  if (!env.cache?.enabled) return;
+  required('REDIS_PASSWORD', env.cache.password);
+  required('REDIS_URL or REDIS_HOST', process.env.REDIS_URL || process.env.REDIS_HOST);
+}
+
 /**
  * Validates required environment variables for production deployments.
  * Called from env.ts only when `NODE_ENV === 'production'`.
@@ -72,4 +79,5 @@ export function validateProductionEnv(env: AppEnv): void {
 
   validateLlmProviderKey(env);
   validateS3Storage(env);
+  validateRedis(env);
 }

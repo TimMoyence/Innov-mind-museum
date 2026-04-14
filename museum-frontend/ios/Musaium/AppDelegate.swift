@@ -13,22 +13,6 @@ class AppDelegate: ExpoAppDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
-    // Capture uncaught exceptions so the crash report includes the real error message.
-    NSSetUncaughtExceptionHandler { exception in
-      let info = """
-      *** Uncaught Exception ***
-      Name: \(exception.name.rawValue)
-      Reason: \(exception.reason ?? "nil")
-      User Info: \(exception.userInfo ?? [:])
-      Stack: \(exception.callStackSymbols.joined(separator: "\n"))
-      """
-      NSLog("%@", info)
-      // Persist to disk so it survives the crash and appears in device logs / next-launch diagnostics.
-      let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?
-        .appendingPathComponent("last_crash.log")
-      try? info.write(to: url!, atomically: true, encoding: .utf8)
-    }
-
     let delegate = ReactNativeDelegate()
     let factory = ExpoReactNativeFactory(delegate: delegate)
     delegate.dependencyProvider = RCTAppDependencyProvider()

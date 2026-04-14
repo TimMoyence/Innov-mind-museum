@@ -23,7 +23,6 @@ platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
 prepare_react_native_project!
 
 target 'Musaium' do
-  inhibit_all_warnings!
   use_expo_modules!
 
   if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
@@ -75,41 +74,6 @@ target 'Musaium' do
       if patched != content
         File.chmod(0644, fmt_base)
         File.write(fmt_base, patched)
-      end
-    end
-
-    # Force ReactCodegen "Generate Specs" script phase to always run.
-    # Without this, Xcode's dependency analysis may skip it (empty inputPaths)
-    # and the build fails with "Build input file cannot be found" for States.cpp etc.
-    installer.pods_project.targets.each do |target|
-      target.build_phases.each do |phase|
-        if phase.respond_to?(:name) && phase.name&.include?('Generate Specs')
-          phase.always_out_of_date = "1"
-        end
-      end
-    end
-
-    # Suppress third-party pod warnings (nullability, deprecated APIs, etc.)
-    # inhibit_all_warnings! doesn't propagate to autolinked Expo/RN pods,
-    # so we set the flags directly on all pod targets.
-    noisy_swift_pods = %w[Sentry RNSentry ExpoModulesCore ExpoModulesJSI]
-    installer.pods_project.targets.each do |target|
-      target.build_configurations.each do |config|
-        config.build_settings['GCC_WARN_INHIBIT_ALL_WARNINGS'] = 'YES'
-        if noisy_swift_pods.include?(target.name)
-          config.build_settings['SWIFT_SUPPRESS_WARNINGS'] = 'YES'
-        end
-      end
-    end
-
-    # This is necessary for Xcode 14, because it signs resource bundles by default
-    # when building for devices.
-    installer.target_installation_results.pod_target_installation_results
-      .each do |pod_name, target_installation_result|
-      target_installation_result.resource_bundle_targets.each do |resource_bundle_target|
-        resource_bundle_target.build_configurations.each do |config|
-          config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
-        end
       end
     end
   end

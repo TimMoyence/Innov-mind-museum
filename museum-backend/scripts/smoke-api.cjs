@@ -212,6 +212,13 @@ async function main() {
   if (health.json?.status !== 'ok' && health.json?.status !== 'degraded') {
     throw new Error(`Unexpected health payload status: ${JSON.stringify(health.json)}`);
   }
+  const requireRedis = getEnv('SMOKE_REQUIRE_REDIS', 'false').toLowerCase() === 'true';
+  if (requireRedis && health.json?.checks?.redis !== 'up') {
+    throw new Error(
+      `Redis is not healthy (checks.redis=${JSON.stringify(health.json?.checks?.redis)}). ` +
+        'Check REDIS_PASSWORD / REDIS_URL — the API returns 200 but Redis auth may be misconfigured.',
+    );
+  }
   console.log('[smoke:api] health OK');
 
   const session = await ensureLogin(baseUrl, email, password, timeoutMs);
