@@ -9,6 +9,7 @@ import { applyHistoryWindow } from './history-window';
 import { createLlmSectionPlan } from './llm-sections';
 import { buildVisitContextPromptBlock } from './visit-context';
 
+import type { ResolvedLocation } from './location-resolver';
 import type { ChatMessage } from '../domain/chatMessage.entity';
 import type { OrchestratorInput } from '../domain/ports/chat-orchestrator.port';
 
@@ -157,6 +158,39 @@ interface OrchestratorPrepared {
 }
 
 /**
+ * Formats nearby museums into a concise list for prompt injection.
+ */
+const formatNearbyMuseumsList = (nearbyMuseums: ResolvedLocation['nearbyMuseums']): string =>
+  nearbyMuseums.map((m) => `${m.name} (${(m.distance / 1000).toFixed(1)}km)`).join(', ');
+
+/**
+ * Builds the `<visitor_context>` line injected into the user message based on
+ * the resolved location (preferred) or the raw location string (fallback).
+ */
+const buildVisitorContextLine = (input: OrchestratorInput): string => {
+  const rl = input.resolvedLocation;
+  if (!rl) {
+    const safeLocation = safeContextValue(input.context?.location);
+    return safeLocation
+      ? `<visitor_context>Visitor location: ${safeLocation}.</visitor_context>`
+      : '';
+  }
+  if (rl.isInsideMuseum && rl.nearbyMuseums.length > 0) {
+    return `<visitor_context>The visitor is currently inside or very near: ${rl.nearbyMuseums[0].name}. Any artwork photo is most likely from this museum's collection.</visitor_context>`;
+  }
+  if (rl.reverseGeocode) {
+    const nearbyList = formatNearbyMuseumsList(rl.nearbyMuseums);
+    const nearbySuffix = nearbyList ? ` Nearby museums: ${nearbyList}.` : '';
+    return `<visitor_context>The visitor is outdoors at: ${rl.reverseGeocode}. They may be photographing a monument, statue, fountain, building facade, or public art at this exact location.${nearbySuffix}</visitor_context>`;
+  }
+  if (rl.nearbyMuseums.length > 0) {
+    const nearbyList = formatNearbyMuseumsList(rl.nearbyMuseums);
+    return `<visitor_context>The visitor is in the city near: ${nearbyList}. They may be photographing outdoor monuments or public art.</visitor_context>`;
+  }
+  return '';
+};
+
+/**
  * Derives all shared values from an OrchestratorInput: normalised text,
  * recent history window, system prompt, LangChain history/user messages,
  * and the LLM section plan.
@@ -182,13 +216,7 @@ export const buildOrchestratorMessages = (input: OrchestratorInput): Orchestrato
     return new HumanMessage(message.text ?? '');
   });
 
-  // Validate + sanitize the visitor-supplied location through the guardrail
-  // before injecting it into the prompt. If the raw value contains an
-  // injection pattern or insult, the block is dropped entirely (audit M4).
-  const safeLocation = safeContextValue(input.context?.location);
-  const contextLine = safeLocation
-    ? `<visitor_context>Visitor location: ${safeLocation}.</visitor_context>`
-    : '';
+  const contextLine = buildVisitorContextLine(input);
 
   const rawText = normalizedText || 'Please analyze the image.';
   const escapedText = rawText.replace(/</g, '＜').replace(/>/g, '＞');

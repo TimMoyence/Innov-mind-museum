@@ -5,6 +5,7 @@ import {
   type OverpassMuseumResult,
 } from '@shared/http/overpass.client';
 import { logger } from '@shared/logger/logger';
+import { haversineDistanceMeters } from '@shared/utils/haversine';
 import { env } from '@src/config/env';
 
 import type { IMuseumRepository } from '../domain/museum.repository.interface';
@@ -43,25 +44,6 @@ const MAX_RADIUS = 50_000;
 const NEGATIVE_CACHE_TTL_SECONDS = 300;
 /** Distance threshold in meters below which an OSM result is considered a duplicate of a local museum. */
 const DEDUP_THRESHOLD_METERS = 100;
-
-/**
- * Calculates the great-circle distance between two points using the haversine formula.
- *
- * @returns Distance in meters.
- */
-function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6_371_000; // Earth radius in meters
-  const toRad = (deg: number): number => (deg * Math.PI) / 180;
-
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
-}
 
 interface LocalMuseumWithCoords {
   name: string;
@@ -109,7 +91,7 @@ function mergeResults(
   const entries: SearchMuseumEntry[] = [];
 
   for (const m of localMuseums) {
-    const distance = haversineDistance(lat, lng, m.latitude, m.longitude);
+    const distance = haversineDistanceMeters(lat, lng, m.latitude, m.longitude);
     if (distance <= radius) {
       entries.push({
         ...m,
@@ -123,11 +105,11 @@ function mergeResults(
   for (const osm of osmResults) {
     const isDuplicate = localMuseums.some(
       (local) =>
-        haversineDistance(local.latitude, local.longitude, osm.latitude, osm.longitude) <
+        haversineDistanceMeters(local.latitude, local.longitude, osm.latitude, osm.longitude) <
         DEDUP_THRESHOLD_METERS,
     );
     if (!isDuplicate) {
-      const distance = haversineDistance(lat, lng, osm.latitude, osm.longitude);
+      const distance = haversineDistanceMeters(lat, lng, osm.latitude, osm.longitude);
       entries.push({
         name: osm.name,
         address: osm.address,

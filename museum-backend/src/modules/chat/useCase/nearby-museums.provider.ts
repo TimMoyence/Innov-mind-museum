@@ -1,20 +1,11 @@
+import { haversineDistanceMeters } from '@shared/utils/haversine';
+
 import type { IMuseumRepository } from '@modules/museum/domain/museum.repository.interface';
 
 /** A museum within range of the user's coordinates, with haversine distance. */
 export interface NearbyMuseum {
   name: string;
   distance: number;
-}
-
-function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6_371_000;
-  const toRad = (deg: number): number => (deg * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 const MAX_NEARBY = 5;
@@ -38,7 +29,7 @@ export async function findNearbyMuseums(
 
   for (const museum of museums) {
     if (museum.latitude == null || museum.longitude == null) continue;
-    const distance = haversineDistance(lat, lng, museum.latitude, museum.longitude);
+    const distance = haversineDistanceMeters(lat, lng, museum.latitude, museum.longitude);
     if (distance <= MAX_DISTANCE_METERS) {
       nearby.push({ name: museum.name, distance: Math.round(distance) });
     }

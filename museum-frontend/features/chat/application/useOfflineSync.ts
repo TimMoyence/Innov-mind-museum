@@ -12,6 +12,7 @@ interface UseOfflineSyncParams {
   sessionId: string;
   isConnected: boolean;
   museumMode: boolean;
+  location?: string;
   guideLevel: GuideLevel;
   locale: string;
   peek: () => { sessionId: string; text?: string; imageUri?: string } | undefined;
@@ -27,6 +28,7 @@ export const useOfflineSync = ({
   sessionId,
   isConnected,
   museumMode,
+  location,
   guideLevel,
   locale,
   peek,
@@ -46,6 +48,7 @@ export const useOfflineSync = ({
             text: next.text,
             imageUri: next.imageUri,
             museumMode,
+            location,
             guideLevel,
             locale,
           });
@@ -78,5 +81,15 @@ export const useOfflineSync = ({
     };
 
     void flush();
-  }, [isConnected, dequeue, peek, museumMode, guideLevel, locale, sessionId, setMessages]);
+  }, [
+    isConnected,
+    dequeue,
+    peek,
+    museumMode,
+    location,
+    guideLevel,
+    locale,
+    sessionId,
+    setMessages,
+  ]);
 };

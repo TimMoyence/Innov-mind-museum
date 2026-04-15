@@ -19,6 +19,7 @@ import type {
 import type { ArtTopicClassifierPort } from './guardrail-evaluation.service';
 import type { ImageEnrichmentService } from './image-enrichment.service';
 import type { KnowledgeBaseService } from './knowledge-base.service';
+import type { LocationResolver } from './location-resolver';
 import type { UserMemoryService } from './user-memory.service';
 import type { WebSearchService } from './web-search.service';
 import type { ChatRepository } from '../domain/chat.repository.interface';
@@ -72,6 +73,7 @@ export interface ChatServiceDeps {
   museumRepository?: IMuseumRepository;
   dbLookup?: DbLookupService;
   extractionQueue?: ExtractionQueuePort;
+  locationResolver?: LocationResolver;
 }
 
 /**
@@ -112,6 +114,7 @@ export class ChatService {
       piiSanitizer: deps.piiSanitizer,
       dbLookup: deps.dbLookup,
       extractionQueue: deps.extractionQueue,
+      locationResolver: deps.locationResolver,
     });
 
     this.media = new ChatMediaService({

@@ -63,10 +63,16 @@ export const useChatSession = (sessionId: string) => {
   const { streamTextRef, streamingIdRef, flushStreamText, scheduleFlush, resetStreaming } =
     useStreamingState(setMessages);
 
+  const locationString =
+    latitude != null && longitude != null
+      ? `lat:${String(latitude)},lng:${String(longitude)}`
+      : undefined;
+
   useOfflineSync({
     sessionId,
     isConnected,
     museumMode,
+    location: locationString,
     guideLevel,
     locale,
     peek,

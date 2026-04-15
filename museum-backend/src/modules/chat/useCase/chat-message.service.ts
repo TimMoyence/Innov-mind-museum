@@ -3,9 +3,11 @@ import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
 import { evaluateUserInputGuardrail } from './art-topic-guardrail';
+import { validateAudioInput } from './audio-validation';
 import { fetchEnrichmentData } from './enrichment-fetcher';
 import { GuardrailEvaluationService } from './guardrail-evaluation.service';
 import { ImageProcessingService } from './image-processing.service';
+import { resolveLocationForMessage } from './location-resolver';
 import { commitAssistantResponse } from './message-commit';
 import { ensureSessionAccess } from './session-access';
 import { StreamBuffer } from './stream-buffer';
@@ -17,6 +19,7 @@ import type { PostMessageResult, PostAudioMessageResult } from './chat.service.t
 import type { ArtTopicClassifierPort } from './guardrail-evaluation.service';
 import type { ImageEnrichmentService } from './image-enrichment.service';
 import type { KnowledgeBaseService } from './knowledge-base.service';
+import type { LocationResolver, ResolvedLocation } from './location-resolver';
 import type { UserMemoryService } from './user-memory.service';
 import type { WebSearchService } from './web-search.service';
 import type { ChatRepository } from '../domain/chat.repository.interface';
@@ -49,6 +52,7 @@ export interface ChatMessageServiceDeps {
   piiSanitizer?: PiiSanitizer;
   dbLookup?: DbLookupService;
   extractionQueue?: ExtractionQueuePort;
+  locationResolver?: LocationResolver;
 }
 
 /** Successful preparation result with all data needed to invoke the LLM. */
@@ -65,6 +69,7 @@ interface PrepareReady {
   localKnowledgeBlock?: string;
   webSearchBlock?: string;
   enrichedImages?: EnrichedImage[];
+  resolvedLocation?: ResolvedLocation;
 }
 
 /** Guardrail-refused preparation result. */
@@ -109,6 +114,7 @@ export class ChatMessageService {
   private readonly piiSanitizer: PiiSanitizer;
   private readonly dbLookup?: DbLookupService;
   private readonly extractionQueue?: ExtractionQueuePort;
+  private readonly locationResolver?: LocationResolver;
 
   constructor(deps: ChatMessageServiceDeps) {
     this.repository = deps.repository;
@@ -123,6 +129,7 @@ export class ChatMessageService {
     this.piiSanitizer = deps.piiSanitizer ?? new DisabledPiiSanitizer();
     this.dbLookup = deps.dbLookup;
     this.extractionQueue = deps.extractionQueue;
+    this.locationResolver = deps.locationResolver;
 
     this.imageProcessor = new ImageProcessingService({
       imageStorage: deps.imageStorage,
@@ -242,6 +249,12 @@ export class ChatMessageService {
     );
 
     this.enqueueForExtraction(webSearchResults, input.text?.trim(), requestedLocale);
+    const rawLoc = input.context?.location;
+    const resolvedLocation = await resolveLocationForMessage(
+      this.locationResolver,
+      rawLoc,
+      session,
+    );
 
     return {
       kind: 'ready',
@@ -256,6 +269,7 @@ export class ChatMessageService {
       localKnowledgeBlock,
       webSearchBlock,
       enrichedImages,
+      resolvedLocation,
     };
   }
 
@@ -280,6 +294,7 @@ export class ChatMessageService {
       localKnowledgeBlock,
       webSearchBlock,
       enrichedImages,
+      resolvedLocation,
     } = prep;
     const text = input.text?.trim();
     const sanitizedText = this.piiSanitizer.sanitize(text ?? '').sanitizedText;
@@ -302,6 +317,7 @@ export class ChatMessageService {
       webSearchBlock,
       audioDescriptionMode: input.context?.audioDescriptionMode,
       lowDataMode: input.context?.lowDataMode ?? false,
+      resolvedLocation,
     });
 
     return await commitAssistantResponse(
@@ -345,6 +361,7 @@ export class ChatMessageService {
       localKnowledgeBlock,
       webSearchBlock,
       enrichedImages,
+      resolvedLocation,
     } = prep;
 
     if (signal?.aborted) {
@@ -376,6 +393,7 @@ export class ChatMessageService {
         webSearchBlock,
         audioDescriptionMode: input.context?.audioDescriptionMode,
         lowDataMode: input.context?.lowDataMode ?? false,
+        resolvedLocation,
       },
       (chunk) => {
         buffer.push(chunk);
@@ -433,26 +451,5 @@ export class ChatMessageService {
       ...response,
       transcription,
     };
-  }
-}
-
-function validateAudioInput(audio: PostAudioMessageInput['audio']): void {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: audio fields may be undefined from external API input
-  if (!audio?.base64?.trim()) {
-    throw badRequest('Audio payload is required');
-  }
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: mimeType may be undefined from external API input
-  if (!audio.mimeType?.trim()) {
-    throw badRequest('Audio mime type is required');
-  }
-  if (
-    !Number.isFinite(audio.sizeBytes) ||
-    audio.sizeBytes <= 0 ||
-    audio.sizeBytes > env.llm.maxAudioBytes
-  ) {
-    throw badRequest(`Audio exceeds max size of ${String(env.llm.maxAudioBytes)} bytes`);
-  }
-  if (!env.upload.allowedAudioMimeTypes.includes(audio.mimeType)) {
-    throw badRequest(`Unsupported audio mime type: ${audio.mimeType}`);
   }
 }

@@ -1,3 +1,4 @@
+import type { ResolvedLocation } from '../../useCase/location-resolver';
 import type { ChatAssistantMetadata, VisitContext } from '../chat.types';
 import type { ChatMessage } from '../chatMessage.entity';
 
@@ -29,6 +30,8 @@ export interface OrchestratorInput {
   lowDataMode?: boolean;
   /** Session-level museum ID, used for cache key scoping. */
   museumId?: number | null;
+  /** Resolved geolocation context from per-message GPS coordinates. */
+  resolvedLocation?: ResolvedLocation;
 }
 
 /** Result returned by {@link ChatOrchestrator.generate}. */

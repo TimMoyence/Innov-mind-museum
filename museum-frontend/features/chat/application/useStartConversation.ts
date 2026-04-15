@@ -54,6 +54,7 @@ export const useStartConversation = (): UseStartConversationReturn => {
         payload.locale = defaultLocale;
         payload.museumMode = options?.museumMode ?? defaultMuseumMode;
         payload.museumId = options?.museumId;
+        payload.coordinates = options?.coordinates;
       }
 
       const response = await chatApi.createSession(payload);

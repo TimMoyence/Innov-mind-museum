@@ -394,6 +394,7 @@ export const chatApi = {
     sessionId: string;
     text?: string;
     museumMode?: boolean;
+    location?: string;
     guideLevel?: GuideLevel;
     locale?: string;
     preClassified?: 'art';
@@ -454,6 +455,7 @@ export const chatApi = {
         text: params.text?.trim() ?? undefined,
         context: {
           museumMode: params.museumMode,
+          location: params.location,
           guideLevel: params.guideLevel,
           locale: params.locale,
           preClassified: params.preClassified,
@@ -599,6 +601,7 @@ export const chatApi = {
           sessionId: params.sessionId,
           text: params.text,
           museumMode: params.museumMode,
+          location: params.location,
           guideLevel: params.guideLevel,
           locale: params.locale,
           lowDataMode: params.lowDataMode,

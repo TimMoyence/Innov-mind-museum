@@ -1,17 +1,23 @@
 {
   "backend": {
-    "testCount": 2374,
+    "testCount": 2645,
     "asAnyCount": 0,
     "eslintDisableCount": 0,
     "tscErrors": 0
   },
   "frontend": {
-    "testCount": 1091,
+    "testCount": 1096,
     "asAnyCount": 0,
     "eslintDisableCount": 0,
     "tscErrors": 0
   },
-  "lastUpdated": "2026-04-07T15:00:00.000Z",
+  "web": {
+    "testCount": 179,
+    "asAnyCount": 0,
+    "eslintDisableCount": 0,
+    "tscErrors": 0
+  },
+  "lastUpdated": "2026-04-15T00:00:00.000Z",
   "history": [
     {
       "date": "2026-04-04",
@@ -40,6 +46,21 @@
       "description": "Smart Low-Data Mode: shared LLM cache, contextual pre-fetch, graceful degradation",
       "backend": { "testsBefore": 2331, "testsAfter": 2374, "delta": 43 },
       "frontend": { "testsBefore": 1052, "testsAfter": 1091, "delta": 39 }
+    },
+    {
+      "date": "2026-04-14",
+      "mode": "refactor",
+      "description": "Audit remediation: 7 findings (DRY factories, dead code, admin tests, env centralization, DI refactor)",
+      "backend": { "testsBefore": 2620, "testsAfter": 2604, "delta": -16 },
+      "frontend": { "testsBefore": 1096, "testsAfter": 1096, "delta": 0 },
+      "web": { "testsBefore": 100, "testsAfter": 179, "delta": 79 }
+    },
+    {
+      "date": "2026-04-15",
+      "mode": "feature",
+      "description": "Geolocation per-message pipeline: LocationResolver with smart cache + Nominatim reverse geocoding + fix 4 frontend bugs + haversine dedup",
+      "backend": { "testsBefore": 2604, "testsAfter": 2645, "delta": 41 },
+      "frontend": { "testsBefore": 1096, "testsAfter": 1096, "delta": 0 }
     }
   ]
 }

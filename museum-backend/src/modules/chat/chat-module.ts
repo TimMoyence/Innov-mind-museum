@@ -31,6 +31,7 @@ import { ChatService } from './useCase/chat.service';
 import { DescribeService } from './useCase/describe.service';
 import { ImageEnrichmentService } from './useCase/image-enrichment.service';
 import { KnowledgeBaseService } from './useCase/knowledge-base.service';
+import { LocationResolver } from './useCase/location-resolver';
 import { UserMemoryService } from './useCase/user-memory.service';
 import { WebSearchService } from './useCase/web-search.service';
 
@@ -289,6 +290,10 @@ export class ChatModule {
     this._orchestrator = orchestrator;
     const effectiveOrchestrator = this.buildEffectiveOrchestrator(orchestrator, cache);
 
+    const locationResolver = museumRepository
+      ? new LocationResolver(museumRepository, cache)
+      : undefined;
+
     const knowledgeExtraction = this.buildKnowledgeExtraction(dataSource);
     this._knowledgeExtractionClose = knowledgeExtraction.close;
     const chatService = new ChatService({
@@ -309,6 +314,7 @@ export class ChatModule {
       museumRepository,
       dbLookup: knowledgeExtraction.dbLookup,
       extractionQueue: knowledgeExtraction.extractionQueue,
+      locationResolver,
     });
 
     const describeService = new DescribeService({ orchestrator: effectiveOrchestrator, tts });
