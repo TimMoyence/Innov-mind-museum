@@ -944,6 +944,16 @@
 - [x] Frontend: tsc PASS
 - [x] Quality ratchet: maintained
 
+### Bugfix — Museum Distance Unit (April 15)
+
+- [x] BF-01: Fix distance unit mismatch — backend returns meters, frontend displayed as km
+- [x] BF-02: Rename `haversineDistance` → `haversineDistanceMeters` (return meters, align with backend)
+- [x] BF-03: Rename `MuseumWithDistance.distance` → `distanceMeters` (type-level unit safety)
+- [x] BF-04: New `formatDistance()` smart formatter (< 1 km → "450 m", ≥ 1 km → "2.3 km")
+- [x] BF-05: Add `distance_m` i18n key to all 8 locales
+- [x] BF-06: Update nav params, MuseumCard, museum-detail, MuseumMapView
+- [x] BF-07: Update tests — haversine, formatDistance, MuseumCard, useMuseumDirectory, museum-detail
+
 ---
 
 ## Metriques globales (mise a jour 2026-04-11)

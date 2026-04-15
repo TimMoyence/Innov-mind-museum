@@ -11,6 +11,7 @@ export const makeUser = (overrides: Partial<User> = {}): User =>
     museumId: null,
     email_verified: false,
     onboarding_completed: false,
+    contentPreferences: [],
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,

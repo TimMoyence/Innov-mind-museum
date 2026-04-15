@@ -501,6 +501,7 @@
     "title": "متاحف قريبة",
     "search_placeholder": "البحث عن متاحف...",
     "no_results": "لم يتم العثور على متاحف",
+    "distance_m": "{{distance}} م",
     "distance_km": "{{distance}} كم",
     "distance_unknown": "المسافة غير متاحة",
     "location_denied": "تم رفض الوصول إلى الموقع",

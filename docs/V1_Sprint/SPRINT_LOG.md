@@ -2066,3 +2066,163 @@ In-app browser for links with markdown tap interception. Tavily web search enric
 - App icon, favicon, feature graphic refreshed
 - Comprehensive security + quality hardening audit
 - Museum-web hero animation migrated from Remotion to Framer Motion
+
+---
+
+## Hybrid Product Refactor — P0 Museum Intro + P1 Content Preferences (2026-04-15)
+
+**Scope**: Full-stack, 40 files (20 backend / 7 frontend / 13 tests). Enterprise-grade /team pipeline with 2 code-review cycles.
+**Mode**: Autonomous /team, 3 sprints (A: stash verify, B: P0, C: P1).
+**Stats**: Backend 2657 → 2669 tests (+12). Frontend 1096 → 1096 (stable, UI-only additions). Zero ESLint errors, zero tsc errors both sides.
+
+### Resume executif
+
+Product-promise gap analysis revealed Musaium is a reactive Q&A assistant (not the structured guided-visit orchestrator originally promised). Decision: keep reactive as core, add **proactive at transitions**. Two targeted features:
+
+1. **P0 Museum intro (proactive)** — when a session is created with a museumId, the LLM spontaneously presents the museum's history in its first response, based on `Museum.description` injected into the visit context block. The existing `sanitizePromptInput` default-maxLength bug was caught by code review and fixed (explicit 600-char cap).
+2. **P1 Content preferences (personalization)** — users opt into 1-3 preferred aspects (history, technique, artist) via a new settings card. Preferences flow: Zustand store (local-first) → chat context → backend `ChatRequestContext` → LLM section prompt as a soft "emphasize when relevant" hint.
+
+### Backend
+
+- New migration `1776276072750-AddUserContentPreferences` (NOT NULL DEFAULT '{}', zero downtime)
+- New domain type `ContentPreference` in `auth/domain/content-preference.ts` with type guard + exhaustive list
+- `User.contentPreferences` TypeORM column, `IUserRepository.updateContentPreferences`
+- `UpdateContentPreferencesUseCase` with dedup, canonical ordering, anti-DoS cap (50), runtime validation
+- `PATCH /api/auth/content-preferences` endpoint with Zod schema + audit log `AUTH_CONTENT_PREFERENCES_UPDATED`
+- `GetProfileUseCase` returns `contentPreferences`; `/me` exposes it
+- Chat pipeline: `ChatRequestContext.contentPreferences` → `OrchestratorInput.contentPreferences` → `llm-sections.ts::buildContentPreferencesHint` — single soft hint injected into section prompt with PREFERENCE_LABELS record for compile-time exhaustiveness
+- P0: `VisitContext.museumDescription` seeded at session creation, injected into visit-context prompt block (max 600 chars, cap block at 1600), LLM instructed to present museum on generic greeting but skip for specific questions
+- Collateral bug fix: `wikidata.client.ts` `getFullYear()` → `getUTCFullYear()` (Europe/Paris pre-1891 timezone drift made the test flaky)
+- DRY: chat module imports `ContentPreference` from auth domain via `chat.types.ts` re-export (single backend source of truth)
+
+### Frontend
+
+- New `shared/types/content-preference.ts` (single frontend source of truth)
+- New `features/settings/infrastructure/userProfileApi.ts` + `userProfileStore.ts` (Zustand persist, local-first pattern documented)
+- New `features/settings/application/useContentPreferences.ts` — optimistic-update hook with ref-based mutex to serialize rapid toggles, Sentry tagging, rollback on failure
+- New `features/settings/ui/ContentPreferencesCard.tsx` — 3 toggles + error banner (tappable dismiss) + i18n (FR/EN)
+- `app/(stack)/preferences.tsx` — integration below the existing settings card
+- `features/chat/application/useChatSession.ts` reads from `userProfileStore`, sends in context when non-empty (omitted via `length > 0 ? ... : undefined`)
+- `features/chat/infrastructure/chatApi.ts` threads `contentPreferences` through `postMessage`, `postAudioMessage`, `postMessageStream`, `sendMessageSmart`
+
+### Tech debt tracked
+
+- **TODO(openapi-regen)**: `userProfileApi.ts` uses raw `httpRequest` because the new PATCH endpoint isn't in the generated OpenAPI schema yet. Joins the existing list of same-pattern violations flagged in `team-reports/2026-04-15-dependency-tree-audit.md` (museum, daily-art, lowDataPack, memoryPreference). Follow-up: regenerate OpenAPI spec + migrate all 5 to `openApiRequest`.
+- **Cross-device hydration gap**: `userProfileStore` is not hydrated from `/me` on app start. This is consistent with `runtimeSettingsStore`, `dataModeStore`, and the audio description store — all local-first. Future refactor should introduce a unified `bootstrapProfile()` call hydrating all local-first stores from `/me`. Documented in `userProfileStore.ts` JSDoc.
+
+### Code review cycles
+
+- **Sprint B (P0)**: first pass found 1 HIGH (silent 200-char truncation via `sanitizePromptInput` default) + 3 MEDIUM + 5 LOW + 4 nits. HIGH fixed by passing `MAX_MUSEUM_DESCRIPTION_CHARS` explicitly. Test tightened from `toBeLessThanOrEqual` to strict `.toBe(600)`.
+- **Sprint C (P1)**: first pass found 3 HIGH + 4 MEDIUM + 5 LOW. Scope-drift HIGHs acknowledged as intentional (commit-at-end-of-day workflow). DRY MEDIUMs resolved via `ContentPreference` hoisting in both backend (chat→auth re-export) and frontend (`shared/types`). LOW fixes: mutex, getErrorMessage, error banner, unnecessary `?? []` removal, JSDoc documentation.
+- **Second pass**: APPROVE. Zero residual literal-union duplication, compile-time exhaustiveness via `Record<ContentPreference, string>`, hexagonal layering preserved.
+
+### Decision: reactive vs proactive
+
+Product philosophy formalized in memory (`project_hybrid_product_philosophy.md`): reject fixed 3-choice buttons, reject structured room-by-room forced paths, reject user age field. Embrace proactive at transitions (museum intro on session start, visit summary modal on close) + reactive during interaction (free chat, LLM-generated follow-ups).
+
+---
+
+## Tech-Debt Cleanup Wave — Sprints D–I (2026-04-15 cont.)
+
+**Scope**: Full-stack, 6 sprints delivered in sequence, all investigated-but-undelivered items from the dependency-tree audit + the SSE streaming issue that started the session.
+**Mode**: Autonomous /team, each sprint verified with tsc + tests before advancing.
+**Stats**: Backend 2669 → 2650 (-19 duplicate-test cleanup). Frontend 1096 → 1097 (+1 daily-art test update). Web 179 → 174 (-5 FeatureCard deletion). Zero ESLint errors, zero tsc errors on all 3 apps.
+
+### Sprint D — SSE streaming fix (Approach A, micro)
+
+Root cause: the "wall of text + clignotement" came from (1) `StreamBuffer.tokenThreshold = 100` causing a 3-5s initial delay before the first token reached the client; (2) beat-frequency stutter between 35ms backend release and 40ms frontend flush; (3) `React.memo` unconditionally bypassed during streaming, re-rendering on every flush.
+
+Fix: reduce `tokenThreshold` 100→20 (~500ms initial delay), `releaseIntervalMs` 35→30, `classifierTimeoutMs` 3000→1500, `FLUSH_INTERVAL_MS` 40→30 (aligned), `REPLAY_CHUNK_DELAY_MS` 25→30 (cache replay aligned). Fixed `ChatMessageBubble` memo comparator to return true when text is unchanged during streaming — re-renders now fire only when content changes.
+
+4 files modified: `stream-buffer.ts`, `caching-chat-orchestrator.ts`, `useStreamingState.ts`, `ChatMessageBubble.tsx`.
+
+### Sprint G — Dead code + test dedup (micro)
+
+Backend: deleted `brevo-email.service.test.ts` (superseded by `brevo-email-service.test.ts` with 2.5x coverage), `redis-cache.service.test.ts` (superseded by `redis-cache-service.test.ts`), `env-helpers.test.ts` shared variant (superseded by `config/env-helpers.test.ts`).
+Web: deleted `FeatureCard.tsx` + its test file (only referenced from tests, never from production). Updated `component-snapshots.test.tsx` + `accessibility-audit.test.tsx` + snapshot file to remove orphan references.
+Frontend: removed `@tsconfig/react-native` (never used — tsconfig extends `expo/tsconfig.base`) and `react-test-renderer` (replaced by `@testing-library/react-native`) from package.json.
+
+### Sprint H — Unify storage pattern (micro)
+
+Migrated 3 files from direct `AsyncStorage` import to the shared `@/shared/infrastructure/storage` wrapper, aligning with `runtimeSettingsStore` and `dataModeStore`:
+- `features/art-keywords/infrastructure/artKeywordsStore.ts` (Zustand persist)
+- `features/auth/infrastructure/biometricStore.ts` (direct get/set)
+- `features/settings/application/useAudioDescriptionMode.ts` (direct get/set)
+
+### Sprint E — Decouple conversation→chat (standard)
+
+Root cause: 5 files in `features/conversation/` imported directly from `features/chat/domain/dashboard-session` and `features/chat/infrastructure/chatApi`, violating feature encapsulation.
+
+Fix: created `features/chat/index.ts` barrel exporting the narrow public surface — `DashboardSessionCard` type, `mapSessionsToDashboardCards` function, and `chatApi` (the whole service, pragmatic — only dashboard endpoints are documented as "public" methods). Refactored 5 conversation files to import via `@/features/chat` instead of reaching into internal paths.
+
+The barrel's JSDoc documents the rule: "UI components and application hooks stay private — only data-layer primitives that the dashboard genuinely needs are exposed". Museum→chat cross-imports (`useMuseumPrefetch` → `chatLocalCache`) are out of Sprint E scope and remain as-is.
+
+### Sprint F — API layer migration to openApiRequest (standard)
+
+Migrated 4 frontend API modules from raw `httpRequest` with manually-maintained TypeScript interfaces to `openApiRequest` with types derived from the generated OpenAPI schema (`shared/api/generated/openapi.ts`). This eliminates the manual-type-drift risk flagged in the 2026-04-15 dependency audit (MEDIUM).
+
+- `features/museum/infrastructure/museumApi.ts` (3 endpoints: directory, search, getMuseum)
+- `features/daily-art/infrastructure/dailyArtApi.ts` (1 endpoint)
+- `features/museum/infrastructure/lowDataPackApi.ts` (1 endpoint)
+- `features/settings/application/useMemoryPreference.ts` (2 endpoints: GET + PATCH)
+
+Consumer side effects fixed: `useMuseumDirectory.ts` and `MuseumMapView.tsx` updated their null checks from `!== null` to `!= null` because the generated types now express `latitude?: number | null` (covering both). Test expectations in `museumApi.test.ts` and `dailyArtApi.test.ts` updated to match the new call signature (the URL arrives pre-formatted through `openApiRequest`).
+
+### Sprint I — Admin i18n cleanup (standard)
+
+**Architectural fix**: the locale-detection hack `const isFr = adminDict.dashboard === 'Tableau de bord'` (used in 6 admin pages) replaced with a proper context-based `useAdminLocale()` hook. `AdminDictContext` now carries both `dict` and `locale: 'fr' | 'en'`, seeded by `AdminShell` from the URL segment (`AdminShell({ locale })`). The old string-comparison was fragile — would break if the French translation changed — and has been fully eliminated.
+
+**String migration**: added 3 new nested sections to `admin.*` dictionary (`dashboardPage`, `auditLogsPage`, `usersPage`) + 2 shared `common` keys (`active`, `inactive`). Migrated 20+ hardcoded `isFr ? 'Fr' : 'En'` ternaries to typed dictionary references across `audit-logs/page.tsx`, `page.tsx` (dashboard), and `users/page.tsx`. Remaining `isFr` references are only for locale codes (`'fr-FR' | 'en-US'` passed to `toLocaleDateString`) — those are derived values, not UI strings, and are correctly driven by the new `useAdminLocale()` source of truth.
+
+**Test infrastructure**: updated 9 test files to pass `locale="en"` to `<AdminDictProvider>`, added new dictionary keys to the shared `admin-dict.fixture.ts` + 4 local `mockAdminDict` declarations.
+
+Files modified: `admin-dictionary.tsx`, `AdminShell.tsx`, 6 admin page files, `i18n.ts` (types), `en.json`/`fr.json` (dictionaries), 4 shared fixture updates.
+
+### Final verification
+
+| Check | Backend | Frontend | Web | Total |
+|-------|---------|----------|-----|-------|
+| tsc --noEmit | PASS | PASS | PASS | 3/3 |
+| Tests | 2650 | 1097 | 174 | **3921** |
+| ESLint errors | 0 | 0 | 0 | **0** |
+
+109 files modified/created, +1153 / -332 lines across the combined session (P0 + P1 + Sprints D–I).
+
+---
+
+## 2026-04-15 — fix(museum): distance unit mismatch in directory display
+
+**Severity**: HIGH user-visible bug — under the nominal geolocated flow, distances from the backend `searchMuseums` endpoint (meters) were rendered through the `distance_km` i18n key, so a museum 2 500 m away displayed as **"2500 km"**. The fallback directory path was correct (client-side `haversineDistance` returning km), so the bug was invisible without a GPS fix.
+
+**Root cause**: `useMuseumDirectory.ts` mapped `entry.distance` (meters from the backend contract) straight into `MuseumWithDistance.distance` without unit conversion, while the UI assumed kilometers. The field name `distance` carried no unit information at the type level, so the mismatch was silent.
+
+### Fix — Option B (quality, not minimal)
+
+Quality solution chosen over a one-line divide-by-1000 patch: the unit is now explicit in the type system, end-to-end, and the UI picks the right unit automatically.
+
+1. **Unify backend/frontend on meters** — renamed `haversineDistance` → `haversineDistanceMeters` (`features/museum/application/haversine.ts`), returning meters to match `museum-backend/src/shared/utils/haversine.ts`. The prior "frontend=km, backend=m (intentional)" split is obsolete now that presentation is owned by a dedicated formatter.
+2. **Type-level clarity** — renamed `MuseumWithDistance.distance` → `distanceMeters`. A future dev (or agent) can no longer mistakenly treat it as km — the compiler and the identifier both enforce the unit.
+3. **New `formatDistance()` helper** — `features/museum/application/formatDistance.ts`: pure function picking the right unit based on magnitude (`< 1 000 m` → `"450 m"` via new `distance_m` key, `≥ 1 000 m` → `"2.3 km"` via existing `distance_km` key). Decoupled from `i18next` via a minimal `DistanceTFunction` type, so it compiles cleanly under both the Jest/RN config and the standalone `node:test` runner.
+4. **Nav params renamed** — router params `distance` → `distanceMeters` in `museums.tsx` (tab), `MuseumMapView.tsx` (WebView marker click), and `museum-detail.tsx` (`useLocalSearchParams`). Destination parses back to number and uses `formatDistance()`.
+5. **i18n** — added `museumDirectory.distance_m` to all 8 locales (`fr`, `en`, `es`, `de`, `it`, `ar`, `zh`, `ja`) using localized unit suffixes (e.g. `"{{distance}} m"`, `"{{distance}} م"`, `"{{distance}} 米"`).
+6. **Jitter suppression** — `MIN_COORD_CHANGE_METERS = 500` replaces the `< 0.5 km` comparison, now operating directly on meters from the unified haversine.
+
+### Files
+
+**New (2)**: `features/museum/application/formatDistance.ts`, `tests/formatDistance.test.ts`
+
+**Modified (11)**: `features/museum/application/haversine.ts`, `features/museum/application/useMuseumDirectory.ts`, `features/museum/ui/MuseumCard.tsx`, `features/museum/ui/MuseumMapView.tsx`, `app/(tabs)/museums.tsx`, `app/(stack)/museum-detail.tsx`, 8 × `shared/locales/*/translation.json`, `__tests__/helpers/factories/museum.factories.ts`, `__tests__/components/MuseumCard.test.tsx` (+ new `< 1 km` case), `__tests__/hooks/useMuseumDirectory.test.ts` (mock now returns meters, jitter comment updated), `__tests__/screens/museum-detail.test.tsx` (param rename), `tests/haversine.test.ts` (expectations × 1000).
+
+### Verification
+
+| Check | Result |
+|---|---|
+| `tsc --noEmit` | PASS |
+| `npm run test:node` | 260/260 (+4 new formatDistance cases) |
+| `npm run test:rn` | 1097/1097 (130 suites) |
+| `npm run lint` | 0 errors, 16 warnings (pre-existing baseline, no regression) |
+
+### Non-goals / follow-ups
+
+- Backend contract unchanged — `SearchMuseumsResult.distance` stays in meters; frontend is now the side that aligned.
+- The `featureMuseum/infrastructure/haversine\.ts$` coverage ignore pattern in `jest.config.js` references an old path (`infrastructure/`); the current file lives at `application/haversine.ts`. Left untouched — this is a pre-existing dead pattern, not caused by this fix.

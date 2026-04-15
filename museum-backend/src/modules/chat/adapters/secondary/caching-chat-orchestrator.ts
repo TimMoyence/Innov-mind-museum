@@ -30,7 +30,8 @@ export interface CachingChatOrchestratorDeps {
 
 const MAX_TEXT_LENGTH = 500;
 const REPLAY_CHUNK_SIZE = 8;
-const REPLAY_CHUNK_DELAY_MS = 25;
+/** Aligned with StreamBuffer releaseIntervalMs and frontend FLUSH_INTERVAL_MS to avoid beat-frequency stutter. */
+const REPLAY_CHUNK_DELAY_MS = 30;
 
 /**
  * Decorator that wraps a {@link ChatOrchestrator} with a Redis cache layer.

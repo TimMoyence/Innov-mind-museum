@@ -318,6 +318,7 @@ export class ChatMessageService {
       audioDescriptionMode: input.context?.audioDescriptionMode,
       lowDataMode: input.context?.lowDataMode ?? false,
       resolvedLocation,
+      contentPreferences: input.context?.contentPreferences,
     });
 
     return await commitAssistantResponse(
@@ -394,6 +395,7 @@ export class ChatMessageService {
         audioDescriptionMode: input.context?.audioDescriptionMode,
         lowDataMode: input.context?.lowDataMode ?? false,
         resolvedLocation,
+        contentPreferences: input.context?.contentPreferences,
       },
       (chunk) => {
         buffer.push(chunk);

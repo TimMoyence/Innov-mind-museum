@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiGet, apiPatch } from '@/lib/api';
-import { useAdminDict } from '@/lib/admin-dictionary';
+import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import type { PaginatedResponse, Report, ReportStatus } from '@/lib/admin-types';
 
@@ -35,7 +35,7 @@ export default function ReportsPage() {
   const [reviewerNotes, setReviewerNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const isFr = adminDict.dashboard === 'Tableau de bord';
+  const isFr = useAdminLocale() === 'fr';
 
   // Reset page when filter changes
   useEffect(() => {

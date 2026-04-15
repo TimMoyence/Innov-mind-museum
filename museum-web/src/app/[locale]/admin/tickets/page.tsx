@@ -1,9 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { usePathname } from 'next/navigation';
 import { apiGet, apiPatch } from '@/lib/api';
-import { useAdminDict } from '@/lib/admin-dictionary';
+import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import type { PaginatedResponse, Ticket, TicketStatus, TicketPriority } from '@/lib/admin-types';
 import { TICKET_STATUSES, TICKET_PRIORITIES } from '@/lib/admin-types';
@@ -27,9 +26,8 @@ const PRIORITY_COLORS: Record<TicketPriority, string> = {
 
 export default function TicketsPage() {
   const adminDict = useAdminDict();
-  const pathname = usePathname();
-  const locale = pathname.split('/')[1] ?? 'fr';
-  const isFr = adminDict.dashboard === 'Tableau de bord';
+  const locale = useAdminLocale();
+  const isFr = locale === 'fr';
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [totalPages, setTotalPages] = useState(0);

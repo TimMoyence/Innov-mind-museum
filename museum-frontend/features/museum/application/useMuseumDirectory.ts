@@ -3,15 +3,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MuseumDirectoryEntry } from '../infrastructure/museumApi';
 import type { MuseumSearchEntry } from '../infrastructure/museumApi';
 import { museumApi } from '../infrastructure/museumApi';
-import { haversineDistance } from './haversine';
+import { haversineDistanceMeters } from './haversine';
 
 export type { MuseumCategory } from '../infrastructure/museumApi';
 
-/** Museum entry enriched with optional distance from the user. */
+/**
+ * Museum entry enriched with optional distance from the user.
+ *
+ * `distanceMeters` is always expressed in meters — matching the backend
+ * `searchMuseums` contract. UI components must format it via `formatDistance()`;
+ * never assume a unit from the raw number.
+ */
 export interface MuseumWithDistance extends MuseumDirectoryEntry {
-  distance: number | null;
+  distanceMeters: number | null;
   source: 'local' | 'osm';
 }
+
+/** GPS jitter suppression threshold: ignore coordinate changes smaller than this. */
+const MIN_COORD_CHANGE_METERS = 500;
 
 interface UseMuseumDirectoryResult {
   museums: MuseumWithDistance[];
@@ -24,6 +33,9 @@ interface UseMuseumDirectoryResult {
 /**
  * Maps a search result entry to the MuseumWithDistance shape expected by the UI.
  * OSM results lack id/slug/description — synthetic values are used.
+ *
+ * Backend `searchMuseums` returns `distance` in meters; we preserve the unit
+ * and only round to the nearest meter for a stable display value.
  */
 const mapSearchEntryToMuseumWithDistance = (
   entry: MuseumSearchEntry,
@@ -36,7 +48,7 @@ const mapSearchEntryToMuseumWithDistance = (
   description: null,
   latitude: entry.latitude,
   longitude: entry.longitude,
-  distance: Math.round(entry.distance * 10) / 10,
+  distanceMeters: Math.round(entry.distance),
   source: entry.source,
   museumType: entry.museumType,
 });
@@ -72,14 +84,15 @@ export const useMuseumDirectory = (
   const fetchFromDirectory = useCallback(async (lat: number | null, lng: number | null) => {
     const entries = await museumApi.listMuseumDirectory();
     return entries.map<MuseumWithDistance>((museum) => {
-      let distance: number | null = null;
+      let distanceMeters: number | null = null;
 
-      if (lat !== null && lng !== null && museum.latitude !== null && museum.longitude !== null) {
-        distance = haversineDistance(lat, lng, museum.latitude, museum.longitude);
-        distance = Math.round(distance * 10) / 10;
+      if (lat !== null && lng !== null && museum.latitude != null && museum.longitude != null) {
+        distanceMeters = Math.round(
+          haversineDistanceMeters(lat, lng, museum.latitude, museum.longitude),
+        );
       }
 
-      return { ...museum, distance, source: 'local' as const };
+      return { ...museum, distanceMeters, source: 'local' as const };
     });
   }, []);
 
@@ -121,18 +134,18 @@ export const useMuseumDirectory = (
   );
 
   // Fetch museums when coordinates change (initial load, GPS obtained, or map pan).
-  // Skips re-fetch if coordinates moved less than ~500 m to ignore GPS jitter.
+  // Skips re-fetch if coordinates moved less than MIN_COORD_CHANGE_METERS to ignore GPS jitter.
   useEffect(() => {
     const hasCoords = userLatitude !== null && userLongitude !== null;
 
     if (hasCoords && lastFetchCoordsRef.current) {
-      const dist = haversineDistance(
+      const dist = haversineDistanceMeters(
         userLatitude,
         userLongitude,
         lastFetchCoordsRef.current.lat,
         lastFetchCoordsRef.current.lng,
       );
-      if (dist < 0.5) return; // < 500 m — skip
+      if (dist < MIN_COORD_CHANGE_METERS) return;
     }
 
     if (hasCoords) {
@@ -179,11 +192,11 @@ export const useMuseumDirectory = (
 
     // Sort by distance if available, otherwise alphabetically
     return [...filtered].sort((a, b) => {
-      if (a.distance !== null && b.distance !== null) {
-        return a.distance - b.distance;
+      if (a.distanceMeters !== null && b.distanceMeters !== null) {
+        return a.distanceMeters - b.distanceMeters;
       }
-      if (a.distance !== null) return -1;
-      if (b.distance !== null) return 1;
+      if (a.distanceMeters !== null) return -1;
+      if (b.distanceMeters !== null) return 1;
       return a.name.localeCompare(b.name);
     });
   }, [rawMuseums, searchQuery]);

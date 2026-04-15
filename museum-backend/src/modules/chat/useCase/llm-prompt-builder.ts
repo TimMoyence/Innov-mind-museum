@@ -109,7 +109,7 @@ export const buildSystemPrompt = (
 
   if (conversationPhase === 'greeting') {
     parts.push(
-      'This is the start of the conversation. If the visitor sends a greeting or empty message, welcome them warmly and ask an opening question about what they would like to explore.',
+      'This is the start of the conversation. If the visitor sends a generic greeting, an empty message, or a broad opening question (e.g. "what should I see?", "tell me about this place"), and a "Museum description" is provided in the visit context, open with a warm 2-4 sentence presentation of the museum based on that description: its history, architectural significance, and 1-2 notable highlights. Then invite them with one concrete follow-up question. If instead the visitor asks a specific question about an artwork, an artist, or a topic, answer that question directly without the museum presentation.',
     );
   } else if (conversationPhase === 'deep') {
     parts.push(
@@ -250,6 +250,7 @@ export const buildOrchestratorMessages = (input: OrchestratorInput): Orchestrato
     visitContextBlock: visitContextBlock || undefined,
     hasImage,
     audioDescriptionMode: input.audioDescriptionMode,
+    contentPreferences: input.contentPreferences,
   });
 
   return {

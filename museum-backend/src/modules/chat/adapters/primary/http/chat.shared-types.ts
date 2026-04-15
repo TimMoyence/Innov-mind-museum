@@ -30,10 +30,18 @@ export interface ChatMessageResponse {
   metadata?: Record<string, unknown> | null;
 }
 
+import type { ContentPreference } from '../../../domain/chat.types';
+
 /** Visitor context sent with message requests. */
 export interface VisitorContext {
   location?: string;
   museumMode?: boolean;
   guideLevel?: 'beginner' | 'intermediate' | 'expert';
   locale?: string;
+  /**
+   * User's content preferences (cached from /me by the frontend): which aspects
+   * of an artwork the visitor wants emphasized. Backend does not store per message;
+   * the source of truth is the users.content_preferences column.
+   */
+  contentPreferences?: ContentPreference[];
 }

@@ -2,6 +2,7 @@ import { httpRequest } from '@/shared/api/httpRequest';
 import { openApiRequest } from '@/shared/api/openapiClient';
 import { getErrorMessage } from '@/shared/lib/errors';
 import type { components } from '@/shared/api/generated/openapi';
+import type { ContentPreference } from '@/shared/types/content-preference';
 import type { GuideLevel } from '@/features/settings/runtimeSettings';
 import { getAccessToken } from '@/features/auth/infrastructure/authTokenStore';
 import { getApiBaseUrl, getLocale } from '@/shared/infrastructure/httpClient';
@@ -107,6 +108,7 @@ export const chatApi = {
     preClassified?: 'art';
     audioDescriptionMode?: boolean;
     lowDataMode?: boolean;
+    contentPreferences?: ContentPreference[];
   }): Promise<PostMessageResponseDTO> {
     const {
       sessionId,
@@ -119,6 +121,7 @@ export const chatApi = {
       preClassified,
       audioDescriptionMode,
       lowDataMode,
+      contentPreferences,
     } = params;
 
     let payload: unknown;
@@ -140,6 +143,7 @@ export const chatApi = {
           locale,
           preClassified,
           audioDescriptionMode,
+          contentPreferences,
         }),
       );
       formData.append('image', {
@@ -159,6 +163,7 @@ export const chatApi = {
           locale,
           preClassified,
           audioDescriptionMode,
+          contentPreferences,
         },
       });
     }
@@ -188,6 +193,7 @@ export const chatApi = {
     locale?: string;
     preClassified?: 'art';
     audioDescriptionMode?: boolean;
+    contentPreferences?: ContentPreference[];
   }): Promise<PostMessageResponseDTO> {
     const {
       sessionId,
@@ -199,6 +205,7 @@ export const chatApi = {
       locale,
       preClassified,
       audioDescriptionMode,
+      contentPreferences,
     } = params;
 
     if (!audioUri && !audioBlob) {
@@ -224,6 +231,7 @@ export const chatApi = {
         locale,
         preClassified,
         audioDescriptionMode,
+        contentPreferences,
       }),
     );
     if (audioBlob) {
@@ -400,6 +408,7 @@ export const chatApi = {
     preClassified?: 'art';
     audioDescriptionMode?: boolean;
     lowDataMode?: boolean;
+    contentPreferences?: ContentPreference[];
     onToken: (text: string) => void;
     onDone: (payload: {
       messageId: string;
@@ -460,6 +469,7 @@ export const chatApi = {
           locale: params.locale,
           preClassified: params.preClassified,
           audioDescriptionMode: params.audioDescriptionMode,
+          contentPreferences: params.contentPreferences,
         },
       }),
       signal: combinedSignal,
@@ -577,6 +587,7 @@ export const chatApi = {
     preClassified?: 'art';
     audioDescriptionMode?: boolean;
     lowDataMode?: boolean;
+    contentPreferences?: ContentPreference[];
     onToken?: (text: string) => void;
     onDone?: (payload: {
       messageId: string;
@@ -605,6 +616,7 @@ export const chatApi = {
           guideLevel: params.guideLevel,
           locale: params.locale,
           lowDataMode: params.lowDataMode,
+          contentPreferences: params.contentPreferences,
           onToken: params.onToken,
           onDone: (payload) => {
             result = {

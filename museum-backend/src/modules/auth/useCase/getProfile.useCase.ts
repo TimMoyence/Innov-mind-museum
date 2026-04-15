@@ -1,3 +1,4 @@
+import type { ContentPreference } from '../domain/content-preference';
 import type { UserRole } from '../domain/user-role';
 import type { IUserRepository } from '../domain/user.repository.interface';
 
@@ -8,6 +9,7 @@ interface UserProfile {
   lastname?: string | null;
   role: UserRole;
   onboardingCompleted: boolean;
+  contentPreferences: ContentPreference[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,6 +31,8 @@ export class GetProfileUseCase {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: role may be undefined in legacy DB rows
       role: user.role || 'visitor',
       onboardingCompleted: user.onboarding_completed,
+      // Migration ensures NOT NULL DEFAULT '{}', so entity type guarantees this is never null.
+      contentPreferences: user.contentPreferences,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

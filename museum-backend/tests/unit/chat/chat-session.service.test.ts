@@ -157,8 +157,18 @@ describe('ChatSessionService', () => {
       );
     });
 
-    it('skips museum lookup when museumName is already provided', async () => {
-      const museumRepo = makeMuseumRepo();
+    it('still looks up museum when museumName is provided (to fetch description)', async () => {
+      // Museum description is only available from the DB — we must look up by id
+      // even when the caller already provided the name. The caller-provided name
+      // takes precedence, but description comes from the museum entity.
+      const museum = makeMuseum({
+        id: 1,
+        name: 'DB Name',
+        description: 'Founded 1850, famous for impressionist collection.',
+      });
+      const museumRepo = makeMuseumRepo({
+        findById: jest.fn().mockResolvedValue(museum),
+      });
       const repo = makeRepo();
       const svc = new ChatSessionService({ repository: repo, museumRepository: museumRepo });
 
@@ -169,11 +179,85 @@ describe('ChatSessionService', () => {
         museumMode: true,
       });
 
-      expect(museumRepo.findById).not.toHaveBeenCalled();
+      expect(museumRepo.findById).toHaveBeenCalledWith(1);
       expect(repo.createSession).toHaveBeenCalledWith(
         expect.objectContaining({
+          // Caller-provided name wins
           museumName: 'Custom Name',
-          visitContext: expect.objectContaining({ museumName: 'Custom Name' }),
+          visitContext: expect.objectContaining({
+            museumName: 'Custom Name',
+            museumDescription: expect.stringContaining('Founded 1850'),
+          }),
+        }),
+      );
+    });
+
+    it('seeds museum description into visitContext for first-message intro', async () => {
+      const museum = makeMuseum({
+        id: 42,
+        name: 'Louvre',
+        address: '75001 Paris',
+        description:
+          "Founded in 1793, the Louvre is the world's largest art museum, housed in the historic Louvre Palace on the Right Bank of the Seine.",
+      });
+      const museumRepo = makeMuseumRepo({
+        findById: jest.fn().mockResolvedValue(museum),
+      });
+      const repo = makeRepo();
+      const svc = new ChatSessionService({ repository: repo, museumRepository: museumRepo });
+
+      await svc.createSession({ userId: 42, museumId: 42, museumMode: true });
+
+      expect(repo.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          visitContext: expect.objectContaining({
+            museumName: 'Louvre',
+            museumDescription: expect.stringContaining('Founded in 1793'),
+          }),
+        }),
+      );
+    });
+
+    it('leaves museumDescription undefined when Museum.description is null', async () => {
+      const museum = makeMuseum({ id: 42, name: 'Louvre', description: null });
+      const museumRepo = makeMuseumRepo({
+        findById: jest.fn().mockResolvedValue(museum),
+      });
+      const repo = makeRepo();
+      const svc = new ChatSessionService({ repository: repo, museumRepository: museumRepo });
+
+      await svc.createSession({ userId: 42, museumId: 42, museumMode: true });
+
+      const call = (repo.createSession as jest.Mock).mock.calls[0][0] as {
+        visitContext?: { museumDescription?: string };
+      };
+      expect(call.visitContext?.museumDescription).toBeUndefined();
+    });
+
+    it('keeps caller museumName when museum repo returns null', async () => {
+      // External museumId not in our DB — caller-provided name must survive even
+      // when the DB lookup finds nothing, and visitContext must still be created.
+      const museumRepo = makeMuseumRepo({
+        findById: jest.fn().mockResolvedValue(null),
+      });
+      const repo = makeRepo();
+      const svc = new ChatSessionService({ repository: repo, museumRepository: museumRepo });
+
+      await svc.createSession({
+        userId: 42,
+        museumId: 999,
+        museumName: 'External Museum',
+        museumMode: true,
+      });
+
+      expect(museumRepo.findById).toHaveBeenCalledWith(999);
+      expect(repo.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          museumName: 'External Museum',
+          visitContext: expect.objectContaining({
+            museumName: 'External Museum',
+            museumDescription: undefined,
+          }),
         }),
       );
     });

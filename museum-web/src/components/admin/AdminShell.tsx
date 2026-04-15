@@ -160,14 +160,14 @@ export default function AdminShell({
 
   if (isLoginPage) {
     return (
-      <AdminDictProvider dict={adminDict}>
+      <AdminDictProvider dict={adminDict} locale={locale as 'fr' | 'en'}>
         <AuthProvider>{children}</AuthProvider>
       </AdminDictProvider>
     );
   }
 
   return (
-    <AdminDictProvider dict={adminDict}>
+    <AdminDictProvider dict={adminDict} locale={locale as 'fr' | 'en'}>
       <AuthProvider>
         <RoleGuard allowedRoles={['admin', 'moderator']}>
           <AuthenticatedLayout locale={locale}>

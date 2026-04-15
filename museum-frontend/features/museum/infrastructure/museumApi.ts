@@ -1,53 +1,26 @@
-import { httpRequest } from '@/shared/api/httpRequest';
+import { openApiRequest, type OpenApiResponseFor } from '@/shared/api/openapiClient';
 
-const MUSEUM_BASE = '/api/museums';
+/**
+ * Museum API — migrated to `openApiRequest` with generated types, removing the
+ * manually-maintained `MuseumDirectoryEntry`/`MuseumSearchEntry` interfaces that
+ * were drifting from the backend OpenAPI spec.
+ */
 
-/** Normalized museum category derived from OSM tags or stored in the DB. */
-export type MuseumCategory = 'art' | 'history' | 'science' | 'specialized' | 'general';
+type DirectoryResponse = OpenApiResponseFor<'/api/museums/directory', 'get'>;
+type GetMuseumResponse = OpenApiResponseFor<'/api/museums/{idOrSlug}', 'get'>;
+type SearchResponse = OpenApiResponseFor<'/api/museums/search', 'get'>;
 
 /** Public museum entry returned by the directory endpoint. */
-export interface MuseumDirectoryEntry {
-  id: number;
-  name: string;
-  slug: string;
-  address: string | null;
-  description: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  museumType: MuseumCategory;
-}
+export type MuseumDirectoryEntry = DirectoryResponse['museums'][number];
 
 /** Entry returned by the search endpoint (includes OSM results without id/slug). */
-export interface MuseumSearchEntry {
-  name: string;
-  address: string | null;
-  latitude: number;
-  longitude: number;
-  distance: number;
-  source: 'local' | 'osm';
-  museumType: MuseumCategory;
-}
+export type MuseumSearchEntry = SearchResponse['museums'][number];
 
-/** Response shape for GET /api/museums/search. */
-interface MuseumSearchResponse {
-  museums: MuseumSearchEntry[];
-  count: number;
-}
+/** Single museum shape returned by GET /api/museums/{idOrSlug}. */
+export type MuseumDetail = GetMuseumResponse['museum'];
 
-/** Response shape for GET /api/museums/directory. */
-interface MuseumDirectoryResponse {
-  museums: MuseumDirectoryEntry[];
-}
-
-/** Response shape for GET /api/museums/:idOrSlug. */
-interface GetMuseumResponse {
-  museum: MuseumDirectoryEntry & {
-    config: Record<string, unknown>;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
-  };
-}
+/** Re-exported for backward compatibility with consumers that type against the category union. */
+export type MuseumCategory = MuseumDirectoryEntry['museumType'];
 
 /** Service for museum API operations. */
 export const museumApi = {
@@ -56,8 +29,9 @@ export const museumApi = {
    * @returns Array of museum directory entries.
    */
   async listMuseumDirectory(): Promise<MuseumDirectoryEntry[]> {
-    const data = await httpRequest<MuseumDirectoryResponse>(`${MUSEUM_BASE}/directory`, {
-      method: 'GET',
+    const data = await openApiRequest({
+      path: '/api/museums/directory',
+      method: 'get',
     });
     return data.museums;
   },
@@ -67,11 +41,12 @@ export const museumApi = {
    * @param idOrSlug - Museum numeric ID or slug string.
    * @returns The museum data.
    */
-  async getMuseum(idOrSlug: string): Promise<GetMuseumResponse['museum']> {
-    const data = await httpRequest<GetMuseumResponse>(
-      `${MUSEUM_BASE}/${encodeURIComponent(idOrSlug)}`,
-      { method: 'GET' },
-    );
+  async getMuseum(idOrSlug: string): Promise<MuseumDetail> {
+    const data = await openApiRequest({
+      path: '/api/museums/{idOrSlug}',
+      method: 'get',
+      pathParams: { idOrSlug },
+    });
     return data.museum;
   },
 
@@ -87,16 +62,16 @@ export const museumApi = {
     radius?: number;
     q?: string;
   }): Promise<{ museums: MuseumSearchEntry[]; count: number }> {
-    const searchParams = new URLSearchParams();
-    if (params.lat !== undefined) searchParams.set('lat', String(params.lat));
-    if (params.lng !== undefined) searchParams.set('lng', String(params.lng));
-    if (params.radius !== undefined) searchParams.set('radius', String(params.radius));
-    if (params.q) searchParams.set('q', params.q);
-
-    const data = await httpRequest<MuseumSearchResponse>(
-      `${MUSEUM_BASE}/search?${searchParams.toString()}`,
-      { method: 'GET' },
-    );
+    const data = await openApiRequest({
+      path: '/api/museums/search',
+      method: 'get',
+      query: {
+        lat: params.lat,
+        lng: params.lng,
+        radius: params.radius,
+        q: params.q,
+      },
+    });
     return { museums: data.museums, count: data.count };
   },
 };

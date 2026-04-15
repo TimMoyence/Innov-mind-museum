@@ -168,7 +168,9 @@ export class WikidataClient implements KnowledgeBaseProvider {
     const val = (key: string): string | undefined =>
       (bindings[key] as { value: string } | undefined)?.value;
     const inception = val('inception');
-    const date = inception ? `c. ${new Date(inception).getFullYear().toString()}` : undefined;
+    // Use UTC year to avoid timezone drift (e.g., "1503-01-01T00:00:00Z" becomes
+    // 1502 when interpreted in Europe/Paris pre-1891 local mean time).
+    const date = inception ? `c. ${new Date(inception).getUTCFullYear().toString()}` : undefined;
 
     return {
       qid,

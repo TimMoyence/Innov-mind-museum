@@ -6,6 +6,7 @@ import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
 
 import { User } from '../../domain/user.entity';
 
+import type { ContentPreference } from '../../domain/content-preference';
 import type { IUserRepository } from '../../domain/user.repository.interface';
 
 /** TypeORM implementation of {@link IUserRepository}. */
@@ -228,6 +229,11 @@ export class UserRepositoryPg implements IUserRepository {
   /** Marks a user's onboarding as completed. */
   async markOnboardingCompleted(userId: number): Promise<void> {
     await this.repo.update(userId, { onboarding_completed: true });
+  }
+
+  /** Replaces the user's content preferences with the provided set. */
+  async updateContentPreferences(userId: number, preferences: ContentPreference[]): Promise<void> {
+    await this.repo.update(userId, { contentPreferences: preferences });
   }
 
   /**

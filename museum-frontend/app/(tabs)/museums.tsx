@@ -120,7 +120,7 @@ export default function MuseumsScreen() {
         description: museum.description ?? '',
         latitude: museum.latitude !== null ? String(museum.latitude) : '',
         longitude: museum.longitude !== null ? String(museum.longitude) : '',
-        distance: museum.distance !== null ? String(museum.distance) : '',
+        distanceMeters: museum.distanceMeters !== null ? String(museum.distanceMeters) : '',
       },
     });
   };

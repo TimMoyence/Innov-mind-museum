@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+import type { ContentPreference } from './content-preference';
 import type { UserRole } from './user-role';
 
 /** Represents a registered user account. Mapped to `users`. */
@@ -51,6 +52,20 @@ export class User {
 
   @Column({ type: 'boolean', default: false })
   onboarding_completed!: boolean;
+
+  /**
+   * Visitor's preferred aspects to learn about an artwork (zero or more of
+   * 'history', 'technique', 'artist'). Used by the LLM to emphasize relevant
+   * angles when naturally appropriate. Empty array means "no preference".
+   */
+  @Column({
+    type: 'text',
+    array: true,
+    nullable: false,
+    default: () => "'{}'",
+    name: 'content_preferences',
+  })
+  contentPreferences!: ContentPreference[];
 
   @Column({ nullable: true })
   verification_token?: string;

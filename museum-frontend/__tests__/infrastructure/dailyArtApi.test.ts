@@ -20,12 +20,18 @@ const sampleArtwork = {
 describe('fetchDailyArt', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('calls httpRequest with locale query parameter', async () => {
+  it('calls httpRequest with locale query parameter (via openApiRequest)', async () => {
     mockHttpRequest.mockResolvedValue({ artwork: sampleArtwork });
 
     const result = await fetchDailyArt('fr');
 
-    expect(mockHttpRequest).toHaveBeenCalledWith('/api/daily-art?locale=fr');
+    // openApiRequest now handles the query-string encoding, so the URL arrives
+    // at httpRequest already-formatted. The second arg is the openApiRequest
+    // options envelope (method/body/headers/requiresAuth).
+    expect(mockHttpRequest).toHaveBeenCalledWith(
+      '/api/daily-art?locale=fr',
+      expect.objectContaining({ method: 'GET' }),
+    );
     expect(result).toEqual(sampleArtwork);
   });
 
@@ -34,7 +40,10 @@ describe('fetchDailyArt', () => {
 
     await fetchDailyArt();
 
-    expect(mockHttpRequest).toHaveBeenCalledWith('/api/daily-art?locale=en');
+    expect(mockHttpRequest).toHaveBeenCalledWith(
+      '/api/daily-art?locale=en',
+      expect.objectContaining({ method: 'GET' }),
+    );
   });
 
   it('returns the artwork from the response envelope', async () => {

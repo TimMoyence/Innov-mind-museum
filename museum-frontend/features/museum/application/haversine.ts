@@ -1,16 +1,21 @@
-const EARTH_RADIUS_KM = 6371;
+const EARTH_RADIUS_METERS = 6_371_000;
 
 const toRadians = (degrees: number): number => (degrees * Math.PI) / 180;
 
 /**
  * Calculates the great-circle distance between two points on Earth using the Haversine formula.
+ *
+ * Returns meters to stay consistent with the backend (`haversineDistanceMeters` in
+ * `museum-backend/src/shared/utils/haversine.ts`). UI display is handled by
+ * `formatDistance()` which decides between "m" and "km" presentation.
+ *
  * @param lat1 - Latitude of point 1 in degrees.
  * @param lon1 - Longitude of point 1 in degrees.
  * @param lat2 - Latitude of point 2 in degrees.
  * @param lon2 - Longitude of point 2 in degrees.
- * @returns Distance in kilometers.
+ * @returns Distance in meters.
  */
-export const haversineDistance = (
+export const haversineDistanceMeters = (
   lat1: number,
   lon1: number,
   lat2: number,
@@ -25,5 +30,5 @@ export const haversineDistance = (
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-  return EARTH_RADIUS_KM * c;
+  return EARTH_RADIUS_METERS * c;
 };

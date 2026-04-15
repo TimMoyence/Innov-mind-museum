@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
-import type { DashboardSessionCard } from '@/features/chat/domain/dashboard-session';
+import type { DashboardSessionCard } from '@/features/chat';
 import { SwipeableConversationCard } from '@/features/conversation/ui/SwipeableConversationCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, fontSize } from '@/shared/ui/tokens';

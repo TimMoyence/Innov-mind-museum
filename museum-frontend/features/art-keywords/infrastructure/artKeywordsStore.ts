@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { storage } from '@/shared/infrastructure/storage';
+
 import type { ArtKeywordDTO, ArtKeywordsSyncState } from '../domain/contracts';
 
 interface ArtKeywordsStoreActions {
@@ -50,7 +52,7 @@ export const useArtKeywordsStore = create<ArtKeywordsStore>()(
     }),
     {
       name: 'musaium.artKeywords',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => storage),
       version: 1,
       partialize: (state) => ({
         keywordsByLocale: state.keywordsByLocale,

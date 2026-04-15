@@ -225,7 +225,32 @@
       "allStatuses": "Tous les statuts",
       "allPriorities": "Toutes les priorités",
       "noData": "Aucune donnée.",
-      "conversations": "Conversations"
+      "conversations": "Conversations",
+      "active": "Actif",
+      "inactive": "Inactif"
+    },
+    "dashboardPage": {
+      "subtitle": "Vue d'ensemble de votre plateforme Musaium."
+    },
+    "auditLogsPage": {
+      "subtitle": "Consultez les journaux d'audit du système.",
+      "filterPlaceholder": "Filtrer par action...",
+      "columnUser": "Utilisateur",
+      "columnAction": "Action",
+      "columnResource": "Ressource",
+      "columnDetails": "Détails",
+      "emptyState": "Aucun journal trouvé."
+    },
+    "usersPage": {
+      "subtitle": "Gérez les utilisateurs de la plateforme.",
+      "searchPlaceholder": "Rechercher...",
+      "allRoles": "Tous les rôles",
+      "columnName": "Nom",
+      "columnRole": "Rôle",
+      "columnStatus": "Statut",
+      "columnLastLogin": "Dernière connexion",
+      "emptyState": "Aucun utilisateur trouvé.",
+      "changeRole": "Changer le rôle"
     },
     "reportsPage": {
       "subtitle": "Consultez et modérez les signalements.",

@@ -281,8 +281,13 @@ export const ChatMessageBubble = React.memo(
     );
   },
   (prev, next) => {
-    // Always re-render during streaming
-    if (prev.isStreaming || next.isStreaming) return false;
+    // During streaming: only re-render when text actually changes OR when isStreaming flips.
+    // Previously we returned false unconditionally, causing the bubble to re-render on every
+    // flush (incl. TTS/feedback prop changes that never change during streaming) — this
+    // aggravated the "clignotement" effect. Now we let React.memo skip no-op re-renders.
+    if (prev.isStreaming || next.isStreaming) {
+      return prev.message.text === next.message.text && prev.isStreaming === next.isStreaming;
+    }
     return (
       prev.message.id === next.message.id &&
       prev.message.text === next.message.text &&

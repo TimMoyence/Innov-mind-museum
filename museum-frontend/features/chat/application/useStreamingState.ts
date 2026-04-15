@@ -2,8 +2,11 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import type { ChatUiMessage } from './chatSessionLogic.pure';
 
-/** Minimum interval (ms) between streaming text flushes for readable typing effect. */
-const FLUSH_INTERVAL_MS = 40;
+/**
+ * Minimum interval (ms) between streaming text flushes — aligned with backend
+ * StreamBuffer releaseIntervalMs (30ms) to eliminate beat-frequency stutter.
+ */
+const FLUSH_INTERVAL_MS = 30;
 
 /**
  * Manages streaming text accumulation with throttled flushes.

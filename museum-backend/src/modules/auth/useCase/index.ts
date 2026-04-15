@@ -24,6 +24,7 @@ import { RegisterUseCase } from './register.useCase';
 import { ResetPasswordUseCase } from './resetPassword.useCase';
 import { RevokeApiKeyUseCase } from './revokeApiKey.useCase';
 import { SocialLoginUseCase } from './socialLogin.useCase';
+import { UpdateContentPreferencesUseCase } from './updateContentPreferences.useCase';
 import { VerifyEmailUseCase } from './verifyEmail.useCase';
 import { ApiKeyRepositoryPg } from '../adapters/secondary/apiKey.repository.pg';
 import { RefreshTokenRepositoryPg } from '../adapters/secondary/refresh-token.repository.pg';
@@ -88,6 +89,8 @@ const changeEmailUseCase = new ChangeEmailUseCase(userRepository, emailService, 
 const confirmEmailChangeUseCase = new ConfirmEmailChangeUseCase(userRepository);
 /** Singleton instance of {@link VerifyEmailUseCase}. */
 const verifyEmailUseCase = new VerifyEmailUseCase(userRepository);
+/** Singleton instance of {@link UpdateContentPreferencesUseCase}. */
+const updateContentPreferencesUseCase = new UpdateContentPreferencesUseCase(userRepository);
 
 // API Key use cases — only wired when feature flag is enabled
 const apiKeyRepository = new ApiKeyRepositoryPg(AppDataSource);
@@ -125,5 +128,6 @@ export {
   generateApiKeyUseCase,
   revokeApiKeyUseCase,
   listApiKeysUseCase,
+  updateContentPreferencesUseCase,
   completeOnboarding,
 };

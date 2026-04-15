@@ -19,6 +19,16 @@ const mockAdminDict: Dictionary['admin'] = {
     date: '', status: '', priority: '', actions: '', messages: '', user: '',
     userId: '', subject: '', confirm: '', cancel: '', previous: '', next: '',
     pageOf: '', allStatuses: '', allPriorities: '', noData: '', conversations: '',
+    active: '', inactive: '',
+  },
+  dashboardPage: { subtitle: '' },
+  auditLogsPage: {
+    subtitle: '', filterPlaceholder: '', columnUser: '', columnAction: '',
+    columnResource: '', columnDetails: '', emptyState: '',
+  },
+  usersPage: {
+    subtitle: '', searchPlaceholder: '', allRoles: '', columnName: '',
+    columnRole: '', columnStatus: '', columnLastLogin: '', emptyState: '', changeRole: '',
   },
   reportsPage: {
     subtitle: '', reason: '', message: '', review: '', reviewReport: '',
@@ -38,7 +48,7 @@ const mockAdminDict: Dictionary['admin'] = {
 };
 
 function wrapper({ children }: { children: ReactNode }) {
-  return <AdminDictProvider dict={mockAdminDict}>{children}</AdminDictProvider>;
+  return <AdminDictProvider dict={mockAdminDict} locale="en">{children}</AdminDictProvider>;
 }
 
 describe('AdminDictProvider / useAdminDict', () => {

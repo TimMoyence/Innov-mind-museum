@@ -1,17 +1,16 @@
-import { httpRequest } from '@/shared/api/httpRequest';
+import { openApiRequest, type OpenApiResponseFor } from '@/shared/api/openapiClient';
 
-export interface DailyArtwork {
-  title: string;
-  artist: string;
-  year: string;
-  imageUrl: string;
-  description: string;
-  funFact: string;
-  museum: string;
-}
+type DailyArtResponse = OpenApiResponseFor<'/api/daily-art', 'get'>;
+
+/** Public shape of a daily-art artwork (derived from the generated OpenAPI types). */
+export type DailyArtwork = DailyArtResponse['artwork'];
 
 /** Fetches the daily artwork from the backend. */
 export const fetchDailyArt = async (locale = 'en'): Promise<DailyArtwork> => {
-  const data = await httpRequest<{ artwork: DailyArtwork }>(`/api/daily-art?locale=${locale}`);
+  const data = await openApiRequest({
+    path: '/api/daily-art',
+    method: 'get',
+    query: { locale },
+  });
   return data.artwork;
 };

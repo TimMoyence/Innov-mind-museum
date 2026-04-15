@@ -54,8 +54,13 @@ export class ChatSessionService {
 
   /**
    * Creates a new chat session. When a museumId is provided and a museum repository
-   * is available, resolves museum name/address from the database and seeds the visit
-   * context. When coordinates are provided, finds nearby museums via haversine.
+   * is available, resolves museum name/address/description from the database and seeds
+   * the visit context. When coordinates are provided, finds nearby museums via haversine.
+   *
+   * Note: when museumId is provided, a DB lookup is always performed to fetch the
+   * museum description (seeded into visitContext.museumDescription for the first-message
+   * intro), even if the caller already supplies museumName. Caller-provided museumName
+   * still takes precedence over the DB name via the `??=` operator.
    *
    * @param input - Session creation parameters (userId, locale, museumMode, museumId, coordinates).
    * @returns The newly created session.
@@ -91,12 +96,17 @@ export class ChatSessionService {
   }> {
     let museumName = input.museumName;
     let museumAddress = input.museumAddress;
+    let museumDescription: string | undefined;
 
-    if (input.museumId && this.museumRepository && !museumName) {
+    // Fetch the museum entity when museumId is provided, even if the caller
+    // already passed museumName. We need the description for the first-message
+    // intro — it lives only on the Museum DB entity.
+    if (input.museumId && this.museumRepository) {
       const museum = await this.museumRepository.findById(input.museumId);
       if (museum) {
-        museumName = museum.name;
-        museumAddress = museumAddress ?? museum.address ?? undefined;
+        museumName ??= museum.name;
+        museumAddress ??= museum.address ?? undefined;
+        museumDescription = museum.description ?? undefined;
       }
     }
 
@@ -105,6 +115,7 @@ export class ChatSessionService {
       visitContext = {
         museumName,
         museumAddress,
+        museumDescription,
         museumConfidence: 1,
         artworksDiscussed: [],
         roomsVisited: [],

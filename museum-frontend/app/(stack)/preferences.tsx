@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import type { GuideLevel } from '@/features/settings/runtimeSettings';
 import { saveDefaultMuseumMode, saveGuideLevel } from '@/features/settings/runtimeSettings';
 import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
+import { ContentPreferencesCard } from '@/features/settings/ui/ContentPreferencesCard';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { LANGUAGE_OPTIONS } from '@/shared/config/supportedLocales';
 import { useI18n } from '@/shared/i18n/I18nContext';
@@ -253,6 +254,10 @@ export default function PreferencesScreen() {
             </Text>
           </Pressable>
         </GlassCard>
+
+        <View style={styles.contentPreferencesWrap}>
+          <ContentPreferencesCard />
+        </View>
       </ScrollView>
     </LiquidScreen>
   );
@@ -364,5 +369,8 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontWeight: '700',
     fontSize: semantic.form.labelSize,
+  },
+  contentPreferencesWrap: {
+    marginTop: space['2.5'],
   },
 });

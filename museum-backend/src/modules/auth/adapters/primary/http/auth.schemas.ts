@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { CONTENT_PREFERENCES } from '../../../domain/content-preference';
+
 export const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(128),
@@ -55,4 +57,10 @@ export const confirmEmailChangeSchema = z.object({
 export const createApiKeySchema = z.object({
   name: z.string().min(1).max(100),
   expiresAt: z.string().datetime().optional(),
+});
+
+export const updateContentPreferencesSchema = z.object({
+  preferences: z
+    .array(z.enum(CONTENT_PREFERENCES as readonly [string, ...string[]]))
+    .max(CONTENT_PREFERENCES.length),
 });

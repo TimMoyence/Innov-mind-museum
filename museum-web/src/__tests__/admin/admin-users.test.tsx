@@ -84,6 +84,31 @@ const mockAdminDict: Dictionary['admin'] = {
     allPriorities: 'All priorities',
     noData: 'No data',
     conversations: 'Conversations',
+    active: 'Active',
+    inactive: 'Inactive',
+  },
+  dashboardPage: {
+    subtitle: 'Overview of your Musaium platform.',
+  },
+  auditLogsPage: {
+    subtitle: 'Review system audit logs.',
+    filterPlaceholder: 'Filter by action...',
+    columnUser: 'User',
+    columnAction: 'Action',
+    columnResource: 'Resource',
+    columnDetails: 'Details',
+    emptyState: 'No audit logs found.',
+  },
+  usersPage: {
+    subtitle: 'Manage platform users.',
+    searchPlaceholder: 'Search...',
+    allRoles: 'All roles',
+    columnName: 'Name',
+    columnRole: 'Role',
+    columnStatus: 'Status',
+    columnLastLogin: 'Last Login',
+    emptyState: 'No users found.',
+    changeRole: 'Change Role',
   },
   reportsPage: {
     subtitle: '',
@@ -185,7 +210,7 @@ function AuthenticatedUsersPage() {
 
 function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <AdminDictProvider dict={mockAdminDict}>
+    <AdminDictProvider dict={mockAdminDict} locale="en">
       <AuthProvider>{children}</AuthProvider>
     </AdminDictProvider>
   );

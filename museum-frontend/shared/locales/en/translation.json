@@ -168,6 +168,24 @@
     "accessibility": "Accessibility",
     "audio_description": "Audio Description",
     "audio_description_hint": "Read AI responses aloud with rich visual descriptions for accessibility",
+    "content_preferences": {
+      "title": "What you like to learn",
+      "subtitle": "Pick the aspects you care about most. The AI will emphasize them when relevant, without forcing them on you.",
+      "options": {
+        "history": {
+          "label": "Artwork history",
+          "hint": "Historical context, provenance, creation circumstances"
+        },
+        "technique": {
+          "label": "Technique and representation",
+          "hint": "Style, materials, composition, visual details"
+        },
+        "artist": {
+          "label": "Artist biography",
+          "hint": "Life of the artist, influences, evolution"
+        }
+      }
+    },
     "dataMode": {
       "title": "Data saving mode",
       "auto": "Automatic",
@@ -511,6 +529,7 @@
     "title": "Nearby Museums",
     "search_placeholder": "Search museums...",
     "no_results": "No museums found",
+    "distance_m": "{{distance}} m",
     "distance_km": "{{distance}} km",
     "distance_unknown": "Distance unavailable",
     "location_denied": "Location access denied",

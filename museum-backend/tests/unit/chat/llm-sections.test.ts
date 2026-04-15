@@ -138,6 +138,54 @@ describe('llm-sections', () => {
     });
     expect(regularPlan[0].prompt).toContain('250 words');
   });
+
+  it('omits the content-preferences hint when none are provided', () => {
+    const plan = createLlmSectionPlan({
+      locale: 'en-US',
+      museumMode: false,
+      guideLevel: 'beginner',
+      timeoutSummaryMs: 10000,
+    });
+    expect(plan[0].prompt).not.toContain('USER CONTENT PREFERENCES');
+  });
+
+  it('omits the content-preferences hint when an empty array is provided', () => {
+    const plan = createLlmSectionPlan({
+      locale: 'en-US',
+      museumMode: false,
+      guideLevel: 'beginner',
+      timeoutSummaryMs: 10000,
+      contentPreferences: [],
+    });
+    expect(plan[0].prompt).not.toContain('USER CONTENT PREFERENCES');
+  });
+
+  it('injects a single content preference as an emphasize-when-relevant hint', () => {
+    const plan = createLlmSectionPlan({
+      locale: 'en-US',
+      museumMode: true,
+      guideLevel: 'beginner',
+      timeoutSummaryMs: 10000,
+      contentPreferences: ['history'],
+    });
+    expect(plan[0].prompt).toContain('USER CONTENT PREFERENCES');
+    expect(plan[0].prompt).toContain('historical context');
+    expect(plan[0].prompt).toContain('Emphasize these angles when naturally relevant');
+    expect(plan[0].prompt).toContain('do not force them');
+  });
+
+  it('injects all three content preferences with their respective labels', () => {
+    const plan = createLlmSectionPlan({
+      locale: 'en-US',
+      museumMode: true,
+      guideLevel: 'intermediate',
+      timeoutSummaryMs: 10000,
+      contentPreferences: ['history', 'technique', 'artist'],
+    });
+    expect(plan[0].prompt).toContain('historical context');
+    expect(plan[0].prompt).toContain('visual representation');
+    expect(plan[0].prompt).toContain("artist's biography");
+  });
 });
 
 describe('createSummaryFallback — edge cases', () => {

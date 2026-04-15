@@ -7,7 +7,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import Button from '@/components/ui/Button';
-import FeatureCard from '@/components/marketing/FeatureCard';
 import StoreButton from '@/components/marketing/StoreButton';
 import Footer from '@/components/shared/Footer';
 import Header from '@/components/shared/Header';
@@ -119,23 +118,6 @@ describe('Button snapshots', () => {
       <Button variant="outline" size="lg">
         Large Outline
       </Button>,
-    );
-    expect(container.innerHTML).toMatchSnapshot();
-  });
-});
-
-// ============================================================================
-// FeatureCard snapshots
-// ============================================================================
-
-describe('FeatureCard snapshots', () => {
-  it('matches snapshot with icon, title, and description', () => {
-    const { container } = render(
-      <FeatureCard
-        icon={<span data-testid="icon">IC</span>}
-        title="AI Recognition"
-        description="Point your camera at any artwork"
-      />,
     );
     expect(container.innerHTML).toMatchSnapshot();
   });

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { apiGet } from '@/lib/api';
-import { useAdminDict } from '@/lib/admin-dictionary';
+import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
 import type { DashboardStats } from '@/lib/admin-types';
 
 interface StatCardDef {
@@ -42,9 +42,7 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Derive locale from dict (simple heuristic: dashboard label)
-  const isFr = adminDict.dashboard === 'Tableau de bord';
-  const locale = isFr ? 'fr' : 'en';
+  const locale = useAdminLocale();
 
   useEffect(() => {
     let cancelled = false;
@@ -73,9 +71,7 @@ export default function AdminDashboardPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-text-primary">{adminDict.dashboard}</h1>
-      <p className="mt-1 text-text-secondary">
-        {isFr ? 'Vue d\'ensemble de votre plateforme Musaium.' : 'Overview of your Musaium platform.'}
-      </p>
+      <p className="mt-1 text-text-secondary">{adminDict.dashboardPage.subtitle}</p>
 
       {loading && (
         <div className="mt-12 flex justify-center">

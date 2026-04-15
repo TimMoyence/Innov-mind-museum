@@ -53,9 +53,11 @@ export const updateVisitContext = (
       if (ctx.museumName?.toLowerCase() === artwork.museum.toLowerCase()) {
         ctx.museumConfidence = Math.min(1, ctx.museumConfidence + 0.3);
       } else {
-        // First museum or different museum — (re)set with initial confidence
+        // Different museum detected — reset confidence AND clear stale description
+        // (description was seeded from the original museumId and no longer applies).
         ctx.museumName = artwork.museum;
         ctx.museumConfidence = 0.3;
+        ctx.museumDescription = undefined;
       }
     }
   }
@@ -110,12 +112,21 @@ export const deriveSessionTitle = (
   return null;
 };
 
+/** Max characters of museum description injected into the prompt (prevents prompt bloat). */
+const MAX_MUSEUM_DESCRIPTION_CHARS = 600;
+
+/**
+ * Absolute cap on the whole visit context block (raised from 800 to accommodate description).
+ * Budget: ~600 description + ~200 museum/address/expertise + ~500 artworks/rooms + ~300 nearby = ~1600.
+ */
+const MAX_VISIT_CONTEXT_BLOCK_CHARS = 1600;
+
 /**
  * Builds a sanitized `[VISIT CONTEXT]` prompt block summarizing the museum, artworks discussed,
  * rooms visited, and detected expertise level. Returns an empty string when there is no context.
  *
  * @param ctx - The accumulated visit context.
- * @returns A prompt-safe text block (max 500 chars), or empty string.
+ * @returns A prompt-safe text block (max 1600 chars), or empty string.
  */
 export const buildVisitContextPromptBlock = (ctx: VisitContext | null | undefined): string => {
   if (!ctx || (!ctx.museumName && ctx.artworksDiscussed.length === 0)) {
@@ -130,6 +141,15 @@ export const buildVisitContextPromptBlock = (ctx: VisitContext | null | undefine
 
   if (ctx.museumAddress) {
     lines.push(`Address: ${sanitizePromptInput(ctx.museumAddress)}`);
+  }
+
+  if (ctx.museumDescription) {
+    // Pass maxLength explicitly — sanitizePromptInput defaults to 200 chars which would
+    // truncate the description before it reaches the LLM, defeating the 2-4 sentence intro.
+    const truncated = sanitizePromptInput(ctx.museumDescription, MAX_MUSEUM_DESCRIPTION_CHARS);
+    if (truncated) {
+      lines.push(`Museum description: ${truncated}`);
+    }
   }
 
   for (const artwork of ctx.artworksDiscussed.slice(-5)) {
@@ -158,7 +178,7 @@ export const buildVisitContextPromptBlock = (ctx: VisitContext | null | undefine
 
   lines.push(`Expertise: ${ctx.detectedExpertise}`);
 
-  return lines.join('\n').slice(0, 800);
+  return lines.join('\n').slice(0, MAX_VISIT_CONTEXT_BLOCK_CHARS);
 };
 
 /** Fields to patch on the session entity after an assistant response. */

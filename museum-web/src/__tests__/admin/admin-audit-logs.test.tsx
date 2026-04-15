@@ -48,7 +48,7 @@ vi.mock('@/lib/api', () => ({
 
 function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <AdminDictProvider dict={mockAdminDict}>
+    <AdminDictProvider dict={mockAdminDict} locale="en">
       <AuthProvider>{children}</AuthProvider>
     </AdminDictProvider>
   );

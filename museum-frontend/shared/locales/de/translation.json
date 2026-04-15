@@ -511,6 +511,7 @@
     "title": "Museen in der Nähe",
     "search_placeholder": "Museen suchen...",
     "no_results": "Keine Museen gefunden",
+    "distance_m": "{{distance}} m",
     "distance_km": "{{distance}} km",
     "distance_unknown": "Entfernung nicht verfügbar",
     "location_denied": "Standortzugriff verweigert",

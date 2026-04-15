@@ -2,7 +2,7 @@ import { buildLocalizedFallback, FALLBACK_TEMPLATES } from '@shared/i18n/fallbac
 import { resolveLocale, localeToLanguageName } from '@shared/i18n/locale';
 import { sanitizePromptInput } from '@shared/validation/input';
 
-import type { ExpertiseLevel, LlmSectionName } from '../domain/chat.types';
+import type { ContentPreference, ExpertiseLevel, LlmSectionName } from '../domain/chat.types';
 import type { ChatMessage } from '../domain/chatMessage.entity';
 
 export type { LlmSectionName } from '../domain/chat.types';
@@ -27,6 +27,8 @@ interface LlmSectionPlanInput {
   hasImage?: boolean;
   /** When true, increases word limits for richer audio-friendly descriptions. */
   audioDescriptionMode?: boolean;
+  /** User's content preference hints: 'history' | 'technique' | 'artist'. */
+  contentPreferences?: readonly ContentPreference[];
 }
 
 const buildGuideLevelHint = (guideLevel: 'beginner' | 'intermediate' | 'expert'): string => {
@@ -41,6 +43,25 @@ const buildGuideLevelHint = (guideLevel: 'beginner' | 'intermediate' | 'expert')
   return 'Use simple, clear, beginner-friendly language.';
 };
 
+/** Human-readable description of each content preference, used in the prompt hint. */
+const PREFERENCE_LABELS: Record<ContentPreference, string> = {
+  history: 'historical context and provenance of the work',
+  technique: 'visual representation, style, materials, and composition',
+  artist: "the artist's biography, influences, and life events",
+};
+
+/**
+ * Builds a non-forcing hint line from the user's content preferences.
+ * Returns an empty string when no preferences are set (respects zero-friction default).
+ */
+const buildContentPreferencesHint = (
+  preferences: readonly ContentPreference[] | undefined,
+): string => {
+  if (!preferences || preferences.length === 0) return '';
+  const labels = preferences.map((p) => PREFERENCE_LABELS[p]).join('; ');
+  return `USER CONTENT PREFERENCES: the visitor prefers to learn about — ${labels}. Emphasize these angles when naturally relevant to the current topic, but do not force them if the question is about something else.`;
+};
+
 const resolveWordLimit = (museumMode: boolean, audioDescriptionMode?: boolean): number => {
   if (audioDescriptionMode) return museumMode ? 300 : 400;
   return museumMode ? 150 : 250;
@@ -53,9 +74,17 @@ const buildSummaryPrompt = (input: {
   visitContextBlock?: string;
   hasImage?: boolean;
   audioDescriptionMode?: boolean;
+  contentPreferences?: readonly ContentPreference[];
 }): string => {
-  const { locale, museumMode, guideLevel, visitContextBlock, hasImage, audioDescriptionMode } =
-    input;
+  const {
+    locale,
+    museumMode,
+    guideLevel,
+    visitContextBlock,
+    hasImage,
+    audioDescriptionMode,
+    contentPreferences,
+  } = input;
   const language = localeToLanguageName(resolveLocale([locale]));
   const modeLine = museumMode
     ? 'Visitor is in guided museum mode: include one concrete next-step recommendation.'
@@ -69,6 +98,11 @@ const buildSummaryPrompt = (input: {
     buildGuideLevelHint(guideLevel),
     modeLine,
   ];
+
+  const preferencesHint = buildContentPreferencesHint(contentPreferences);
+  if (preferencesHint) {
+    parts.push(preferencesHint);
+  }
 
   if (visitContextBlock) {
     parts.push(visitContextBlock);
@@ -122,6 +156,7 @@ export const createLlmSectionPlan = (input: LlmSectionPlanInput): LlmSectionDefi
       visitContextBlock: input.visitContextBlock,
       hasImage: input.hasImage,
       audioDescriptionMode: input.audioDescriptionMode,
+      contentPreferences: input.contentPreferences,
     }),
   };
 

@@ -1,5 +1,5 @@
 import type { ResolvedLocation } from '../../useCase/location-resolver';
-import type { ChatAssistantMetadata, VisitContext } from '../chat.types';
+import type { ChatAssistantMetadata, ContentPreference, VisitContext } from '../chat.types';
 import type { ChatMessage } from '../chatMessage.entity';
 
 /** Input for the LLM orchestrator. */
@@ -32,6 +32,11 @@ export interface OrchestratorInput {
   museumId?: number | null;
   /** Resolved geolocation context from per-message GPS coordinates. */
   resolvedLocation?: ResolvedLocation;
+  /**
+   * User's content preferences — which aspects of an artwork they want emphasized
+   * (history, technique, artist). Read-only hint for the LLM; does not filter content.
+   */
+  contentPreferences?: readonly ContentPreference[];
 }
 
 /** Result returned by {@link ChatOrchestrator.generate}. */

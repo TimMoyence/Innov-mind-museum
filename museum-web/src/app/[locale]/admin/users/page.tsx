@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiGet, apiPatch } from '@/lib/api';
-import { useAdminDict } from '@/lib/admin-dictionary';
+import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
 import { useAuth } from '@/lib/auth';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import type { PaginatedResponse, User, UserRole } from '@/lib/admin-types';
@@ -52,7 +52,7 @@ export default function UsersPage() {
 
   const debouncedSearch = useDebouncedValue(search, 300);
 
-  const isFr = adminDict.dashboard === 'Tableau de bord';
+  const isFr = useAdminLocale() === 'fr';
 
   // Reset page when filters change
   useEffect(() => {
@@ -110,25 +110,27 @@ export default function UsersPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-text-primary">{adminDict.users}</h1>
-      <p className="mt-1 text-text-secondary">
-        {isFr ? 'Gérez les utilisateurs de la plateforme.' : 'Manage platform users.'}
-      </p>
+      <p className="mt-1 text-text-secondary">{adminDict.usersPage.subtitle}</p>
 
       {/* Filters */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <input
           type="text"
-          placeholder={isFr ? 'Rechercher...' : 'Search...'}
+          placeholder={adminDict.usersPage.searchPlaceholder}
           value={search}
-          onChange={(e) => { setSearch(e.target.value); }}
+          onChange={(e) => {
+            setSearch(e.target.value);
+          }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200 sm:max-w-xs"
         />
         <select
           value={roleFilter}
-          onChange={(e) => { setRoleFilter(e.target.value as UserRole | ''); }}
+          onChange={(e) => {
+            setRoleFilter(e.target.value as UserRole | '');
+          }}
           className="rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         >
-          <option value="">{isFr ? 'Tous les rôles' : 'All roles'}</option>
+          <option value="">{adminDict.usersPage.allRoles}</option>
           {ALL_ROLES.map((r) => (
             <option key={r} value={r}>
               {r}
@@ -159,20 +161,22 @@ export default function UsersPage() {
               <thead className="border-b border-primary-100 bg-surface-elevated">
                 <tr>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    {isFr ? 'Nom' : 'Name'}
+                    {adminDict.usersPage.columnName}
                   </th>
                   <th className="px-6 py-3 font-medium text-text-secondary">Email</th>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    {isFr ? 'Rôle' : 'Role'}
+                    {adminDict.usersPage.columnRole}
                   </th>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    {isFr ? 'Statut' : 'Status'}
+                    {adminDict.usersPage.columnStatus}
                   </th>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    {isFr ? 'Dernière connexion' : 'Last Login'}
+                    {adminDict.usersPage.columnLastLogin}
                   </th>
                   {isAdmin && (
-                    <th className="px-6 py-3 font-medium text-text-secondary">Actions</th>
+                    <th className="px-6 py-3 font-medium text-text-secondary">
+                      {adminDict.common.actions}
+                    </th>
                   )}
                 </tr>
               </thead>
@@ -183,7 +187,7 @@ export default function UsersPage() {
                       colSpan={isAdmin ? 6 : 5}
                       className="px-6 py-12 text-center text-text-muted"
                     >
-                      {isFr ? 'Aucun utilisateur trouvé.' : 'No users found.'}
+                      {adminDict.usersPage.emptyState}
                     </td>
                   </tr>
                 ) : (
@@ -210,9 +214,7 @@ export default function UsersPage() {
                               : 'bg-gray-100 text-gray-500'
                           }`}
                         >
-                          {u.isActive
-                            ? isFr ? 'Actif' : 'Active'
-                            : isFr ? 'Inactif' : 'Inactive'}
+                          {u.isActive ? adminDict.common.active : adminDict.common.inactive}
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
@@ -236,7 +238,7 @@ export default function UsersPage() {
                             }}
                             className="rounded-md px-3 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50"
                           >
-                            {isFr ? 'Changer le rôle' : 'Change Role'}
+                            {adminDict.usersPage.changeRole}
                           </button>
                         </td>
                       )}
@@ -274,7 +276,7 @@ export default function UsersPage() {
         >
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
             <h2 className="text-lg font-bold text-text-primary">
-              {isFr ? 'Changer le rôle' : 'Change Role'}
+              {adminDict.usersPage.changeRole}
             </h2>
             <p className="mt-1 text-sm text-text-secondary">
               {editingUser.name} ({editingUser.email})
@@ -295,10 +297,12 @@ export default function UsersPage() {
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => { setEditingUser(null); }}
+                onClick={() => {
+                  setEditingUser(null);
+                }}
                 className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted"
               >
-                {isFr ? 'Annuler' : 'Cancel'}
+                {adminDict.common.cancel}
               </button>
               <button
                 type="button"
@@ -306,9 +310,7 @@ export default function UsersPage() {
                 onClick={() => void handleChangeRole()}
                 className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {changingRole
-                  ? '...'
-                  : isFr ? 'Confirmer' : 'Confirm'}
+                {changingRole ? '...' : adminDict.common.confirm}
               </button>
             </div>
           </div>

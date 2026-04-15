@@ -79,7 +79,6 @@
     "@eslint/js": "^9.39.4",
     "@faker-js/faker": "^10.4.0",
     "@testing-library/react-native": "^13.3.3",
-    "@tsconfig/react-native": "^3.0.9",
     "@types/jest": "29.5.14",
     "@types/react": "~19.2.10",
     "babel-plugin-react-compiler": "^1.0.0",
@@ -94,7 +93,6 @@
     "lint-staged": "^16.4.0",
     "openapi-typescript": "^7.13.0",
     "prettier": "^3.8.1",
-    "react-test-renderer": "^19.2.0",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.58.1"
   },

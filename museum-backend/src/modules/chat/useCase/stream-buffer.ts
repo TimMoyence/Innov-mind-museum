@@ -59,9 +59,16 @@ export class StreamBuffer {
 
   constructor(opts?: StreamBufferOptions) {
     this.classifier = opts?.classifier;
-    this.tokenThreshold = opts?.tokenThreshold ?? 100;
-    this.releaseIntervalMs = opts?.releaseIntervalMs ?? 35;
-    this.classifierTimeoutMs = opts?.classifierTimeoutMs ?? 3000;
+    // Reduced from 100→20 tokens (Sprint D micro-buffering fix): the classifier
+    // only needs ~1-2 sentences to decide, and waiting for 100 tokens produced a
+    // visible 3-5s "wall of text" delay before the first token reached the user.
+    // With 20 tokens, the initial delay drops to ~500ms.
+    this.tokenThreshold = opts?.tokenThreshold ?? 20;
+    // Aligned with frontend FLUSH_INTERVAL_MS (30ms) to eliminate a beat-frequency
+    // stutter between backend release rate and frontend flush rate.
+    this.releaseIntervalMs = opts?.releaseIntervalMs ?? 30;
+    // Fail-open faster (1.5s vs 3s) to avoid prolonging the initial wait.
+    this.classifierTimeoutMs = opts?.classifierTimeoutMs ?? 1500;
     this.onGuardrailCb = opts?.onGuardrail;
     this.locale = opts?.locale;
     this.signal = opts?.signal;

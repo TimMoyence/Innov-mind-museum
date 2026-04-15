@@ -81,7 +81,7 @@ export const MuseumMapView = ({
     const points: [number, number][] = [];
 
     for (const m of museums) {
-      if (m.latitude !== null && m.longitude !== null) {
+      if (m.latitude != null && m.longitude != null) {
         markers.push({
           id: m.id,
           name: m.name,
@@ -174,7 +174,7 @@ export const MuseumMapView = ({
               description: museum.description ?? '',
               latitude: museum.latitude !== null ? String(museum.latitude) : '',
               longitude: museum.longitude !== null ? String(museum.longitude) : '',
-              distance: museum.distance !== null ? String(museum.distance) : '',
+              distanceMeters: museum.distanceMeters !== null ? String(museum.distanceMeters) : '',
             },
           });
         }

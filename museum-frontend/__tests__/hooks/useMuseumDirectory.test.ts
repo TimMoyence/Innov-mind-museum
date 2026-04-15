@@ -16,9 +16,10 @@ jest.mock('@/features/museum/infrastructure/museumApi', () => ({
 }));
 
 jest.mock('@/features/museum/application/haversine', () => ({
-  haversineDistance: jest.fn((lat1: number, lon1: number, lat2: number, lon2: number) => {
-    // Simplified: return absolute difference sum as fake distance in km
-    return Math.abs(lat2 - lat1) + Math.abs(lon2 - lon1);
+  haversineDistanceMeters: jest.fn((lat1: number, lon1: number, lat2: number, lon2: number) => {
+    // Simplified: return absolute difference sum × 1000 as a fake distance in meters.
+    // For the jitter suppression test, tiny deltas (~0.001) → ~1 m which is < 500 m threshold.
+    return (Math.abs(lat2 - lat1) + Math.abs(lon2 - lon1)) * 1000;
   }),
 }));
 
@@ -52,7 +53,7 @@ describe('useMuseumDirectory', () => {
           address: '75001 Paris',
           latitude: 48.8606,
           longitude: 2.3376,
-          distance: 0.5,
+          distance: 500, // meters — backend contract
           source: 'local' as const,
           museumType: 'general' as const,
         },
@@ -203,7 +204,7 @@ describe('useMuseumDirectory', () => {
 
     const callCountAfterFirst = mockSearchMuseums.mock.calls.length;
 
-    // Tiny GPS jitter: mock haversine returns |Δlat| + |Δlng| ≈ 0.002 km (< 0.5)
+    // Tiny GPS jitter: mock haversine returns (|Δlat| + |Δlng|) * 1000 ≈ 2 m (< 500 m).
     rerender({ lat: 48.8576, lng: 2.3532 });
 
     // Wait a tick to let any potential effect fire

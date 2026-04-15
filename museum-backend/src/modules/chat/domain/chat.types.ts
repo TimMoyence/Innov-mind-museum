@@ -1,3 +1,7 @@
+import type { ContentPreference } from '@modules/auth/domain/content-preference';
+
+export type { ContentPreference };
+
 /** An image enriched from external sources (Wikidata, Unsplash). */
 export interface EnrichedImage {
   url: string;
@@ -32,6 +36,12 @@ export interface VisitedArtwork {
 export interface VisitContext {
   museumName?: string;
   museumAddress?: string;
+  /**
+   * Short history/presentation of the museum (seeded from Museum.description at
+   * session creation). Used by the LLM to spontaneously introduce the museum
+   * during the greeting phase — the "visit starts before you walk in" promise.
+   */
+  museumDescription?: string;
   /** Confidence score (0-1) that the detected museum name is correct. */
   museumConfidence: number;
   artworksDiscussed: VisitedArtwork[];
@@ -71,6 +81,12 @@ interface ChatRequestContext {
   audioDescriptionMode?: boolean;
   /** When true, generate a shorter response for low-bandwidth connections. */
   lowDataMode?: boolean;
+  /**
+   * User's content preferences — which aspects of an artwork they prefer to learn about.
+   * Sent by the frontend (cached from /me) so the backend avoids an extra user lookup per message.
+   * The DB (via `UpdateContentPreferencesUseCase` + `/me`) remains the source of truth.
+   */
+  contentPreferences?: ContentPreference[];
 }
 
 /** Payload for posting a text or image message to a chat session. */

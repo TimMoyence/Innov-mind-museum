@@ -19,6 +19,7 @@ import {
   AUDIT_AUTH_EMAIL_CHANGE_REQUEST,
   AUDIT_AUTH_EMAIL_CHANGE_CONFIRMED,
   AUDIT_AUTH_ONBOARDING_COMPLETED,
+  AUDIT_AUTH_CONTENT_PREFERENCES_UPDATED,
 } from '@shared/audit/audit.types';
 import { AppError, badRequest } from '@shared/errors/app.error';
 import { requireUser } from '@shared/http/requireUser';
@@ -47,6 +48,7 @@ import {
   resetPasswordSchema,
   verifyEmailSchema,
   createApiKeySchema,
+  updateContentPreferencesSchema,
 } from './auth.schemas';
 import {
   authSessionService,
@@ -64,6 +66,7 @@ import {
   generateApiKeyUseCase,
   revokeApiKeyUseCase,
   listApiKeysUseCase,
+  updateContentPreferencesUseCase,
   completeOnboarding,
 } from '../../../useCase';
 
@@ -180,9 +183,32 @@ authRouter.get('/me', isAuthenticated, async (req: Request, res: Response) => {
       lastname: profile.lastname ?? null,
       role: profile.role,
       onboardingCompleted: profile.onboardingCompleted,
+      contentPreferences: profile.contentPreferences,
     },
   });
 });
+
+authRouter.patch(
+  '/content-preferences',
+  isAuthenticated,
+  validateBody(updateContentPreferencesSchema),
+  async (req: Request, res: Response) => {
+    const jwtUser = requireUser(req);
+    const { preferences } = req.body;
+    const result = await updateContentPreferencesUseCase.execute(jwtUser.id, preferences);
+    auditService.log({
+      action: AUDIT_AUTH_CONTENT_PREFERENCES_UPDATED,
+      actorType: 'user',
+      actorId: jwtUser.id,
+      targetType: 'user',
+      targetId: String(jwtUser.id),
+      metadata: { preferences: result.contentPreferences },
+      ip: req.ip,
+      requestId: req.requestId,
+    });
+    res.status(200).json({ contentPreferences: result.contentPreferences });
+  },
+);
 
 authRouter.post(
   '/social-login',

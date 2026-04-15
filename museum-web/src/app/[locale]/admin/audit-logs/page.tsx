@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { apiGet } from '@/lib/api';
-import { useAdminDict } from '@/lib/admin-dictionary';
+import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import type { AuditLog, PaginatedResponse } from '@/lib/admin-types';
 
 export default function AuditLogsPage() {
   const adminDict = useAdminDict();
-  const isFr = adminDict.dashboard === 'Tableau de bord';
+  const locale = useAdminLocale();
+  const isFr = locale === 'fr';
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [totalPages, setTotalPages] = useState(0);
@@ -52,17 +53,17 @@ export default function AuditLogsPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-text-primary">{adminDict.auditLogs}</h1>
-      <p className="mt-1 text-text-secondary">
-        {isFr ? 'Consultez les journaux d\'audit du système.' : 'Review system audit logs.'}
-      </p>
+      <p className="mt-1 text-text-secondary">{adminDict.auditLogsPage.subtitle}</p>
 
       {/* Filters */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <input
           type="text"
-          placeholder={isFr ? 'Filtrer par action...' : 'Filter by action...'}
+          placeholder={adminDict.auditLogsPage.filterPlaceholder}
           value={actionFilter}
-          onChange={(e) => { setActionFilter(e.target.value); }}
+          onChange={(e) => {
+            setActionFilter(e.target.value);
+          }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200 sm:max-w-xs"
         />
       </div>
@@ -88,16 +89,20 @@ export default function AuditLogsPage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-primary-100 bg-surface-elevated">
                 <tr>
-                  <th className="px-6 py-3 font-medium text-text-secondary">Date</th>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    {isFr ? 'Utilisateur' : 'User'}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">Action</th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {isFr ? 'Ressource' : 'Resource'}
+                    {adminDict.common.date}
                   </th>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    {isFr ? 'Détails' : 'Details'}
+                    {adminDict.auditLogsPage.columnUser}
+                  </th>
+                  <th className="px-6 py-3 font-medium text-text-secondary">
+                    {adminDict.auditLogsPage.columnAction}
+                  </th>
+                  <th className="px-6 py-3 font-medium text-text-secondary">
+                    {adminDict.auditLogsPage.columnResource}
+                  </th>
+                  <th className="px-6 py-3 font-medium text-text-secondary">
+                    {adminDict.auditLogsPage.columnDetails}
                   </th>
                   <th className="px-6 py-3 font-medium text-text-secondary">IP</th>
                 </tr>
@@ -106,7 +111,7 @@ export default function AuditLogsPage() {
                 {logs.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center text-text-muted">
-                      {isFr ? 'Aucun journal trouvé.' : 'No audit logs found.'}
+                      {adminDict.auditLogsPage.emptyState}
                     </td>
                   </tr>
                 ) : (

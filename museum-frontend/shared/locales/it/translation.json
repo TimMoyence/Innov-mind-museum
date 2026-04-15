@@ -511,6 +511,7 @@
     "title": "Musei nelle vicinanze",
     "search_placeholder": "Cerca musei...",
     "no_results": "Nessun museo trovato",
+    "distance_m": "{{distance}} m",
     "distance_km": "{{distance}} km",
     "distance_unknown": "Distanza non disponibile",
     "location_denied": "Accesso alla posizione negato",

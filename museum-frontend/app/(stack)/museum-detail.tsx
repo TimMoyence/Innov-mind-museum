@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
+import { formatDistance } from '@/features/museum/application/formatDistance';
 import { semantic, space, fontSize, radius } from '@/shared/ui/tokens';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { GlassCard } from '@/shared/ui/GlassCard';
@@ -35,8 +36,11 @@ export default function MuseumDetailScreen() {
     description: string;
     latitude: string;
     longitude: string;
-    distance: string;
+    distanceMeters: string;
   }>();
+
+  const parsedDistanceMeters = params.distanceMeters ? Number(params.distanceMeters) : NaN;
+  const hasDistance = !Number.isNaN(parsedDistanceMeters);
 
   const { isCreating, error, setError, startConversation } = useStartConversation();
 
@@ -108,11 +112,11 @@ export default function MuseumDetailScreen() {
             </View>
           ) : null}
 
-          {params.distance ? (
+          {hasDistance ? (
             <View style={[styles.distanceBadge, { backgroundColor: theme.primary + '1A' }]}>
               <Ionicons name="navigate-outline" size={14} color={theme.primary} />
               <Text style={[styles.distanceText, { color: theme.primary }]}>
-                {t('museumDirectory.distance_km', { distance: params.distance })}
+                {formatDistance(parsedDistanceMeters, t)}
               </Text>
             </View>
           ) : null}

@@ -1,3 +1,4 @@
+import type { ContentPreference } from './content-preference';
 import type { User } from './user.entity';
 
 /** Port for user persistence operations. Implemented by {@link UserRepositoryPg}. */
@@ -135,4 +136,13 @@ export interface IUserRepository {
    * @param userId - The user's ID.
    */
   markOnboardingCompleted(userId: number): Promise<void>;
+
+  /**
+   * Replace the user's content preferences with the provided set.
+   * Empty array clears all preferences.
+   *
+   * @param userId - The user's ID.
+   * @param preferences - The new preferences (deduplicated & validated upstream).
+   */
+  updateContentPreferences(userId: number, preferences: ContentPreference[]): Promise<void>;
 }

@@ -1,3 +1,8 @@
+import {
+  CONTENT_PREFERENCES,
+  isContentPreference,
+  type ContentPreference,
+} from '@modules/auth/domain/content-preference';
 import { badRequest } from '@shared/errors/app.error';
 
 import type {
@@ -192,6 +197,27 @@ export interface ApiErrorResponse {
   };
 }
 
+const parseOptionalContentPreferences = (payload: RecordValue): ContentPreference[] | undefined => {
+  const raw = payload.contentPreferences;
+  if (raw === undefined || raw === null) return undefined;
+  if (!Array.isArray(raw)) throw badRequest('context.contentPreferences must be an array');
+  if (raw.length > CONTENT_PREFERENCES.length) {
+    throw badRequest(
+      `context.contentPreferences may contain at most ${String(CONTENT_PREFERENCES.length)} items`,
+    );
+  }
+  const result: ContentPreference[] = [];
+  for (const value of raw) {
+    if (!isContentPreference(value)) {
+      throw badRequest(
+        `context.contentPreferences values must be one of: ${CONTENT_PREFERENCES.join(', ')}`,
+      );
+    }
+    result.push(value);
+  }
+  return result;
+};
+
 const parseOptionalCoordinates = (
   payload: RecordValue,
 ): { lat: number; lng: number } | undefined => {
@@ -258,11 +284,14 @@ export const parsePostMessageRequest = (payload: unknown): PostMessageRequest =>
       guideLevel = guideLevelRaw as 'beginner' | 'intermediate' | 'expert';
     }
 
+    const contentPreferences = parseOptionalContentPreferences(contextRaw);
+
     context = {
       location: optionalString(contextRaw, 'location'),
       museumMode: optionalBoolean(contextRaw, 'museumMode'),
       guideLevel,
       locale: optionalString(contextRaw, 'locale'),
+      contentPreferences,
     };
   }
 

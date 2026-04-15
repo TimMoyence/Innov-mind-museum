@@ -113,6 +113,7 @@ describe('GetProfileUseCase', () => {
       lastname: 'Doe',
       role: 'visitor',
       onboardingCompleted: false,
+      contentPreferences: [],
       createdAt: new Date('2025-01-01'),
       updatedAt: new Date('2025-06-01'),
     });

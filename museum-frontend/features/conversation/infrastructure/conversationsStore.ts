@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
-import type { DashboardSessionCard } from '@/features/chat/domain/dashboard-session';
+import type { DashboardSessionCard } from '@/features/chat';
 import { storage } from '@/shared/infrastructure/storage';
 
 type SortMode = 'recent' | 'messages';

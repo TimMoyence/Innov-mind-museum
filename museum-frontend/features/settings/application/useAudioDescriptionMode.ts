@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { storage } from '@/shared/infrastructure/storage';
 
 const STORAGE_KEY = 'settings.audio_description_mode';
 
@@ -13,7 +14,8 @@ export function useAudioDescriptionMode() {
 
   useEffect(() => {
     let cancelled = false;
-    void AsyncStorage.getItem(STORAGE_KEY)
+    void storage
+      .getItem(STORAGE_KEY)
       .then((value) => {
         if (!cancelled) {
           setEnabled(value === 'true');
@@ -31,7 +33,7 @@ export function useAudioDescriptionMode() {
   const toggle = useCallback(async () => {
     const next = !enabled;
     setEnabled(next);
-    await AsyncStorage.setItem(STORAGE_KEY, String(next));
+    await storage.setItem(STORAGE_KEY, String(next));
   }, [enabled]);
 
   return { enabled, isLoading, toggle };

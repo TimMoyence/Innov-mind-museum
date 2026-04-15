@@ -9,7 +9,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import Header from '@/components/shared/Header';
 import Footer from '@/components/shared/Footer';
 import Button from '@/components/ui/Button';
-import FeatureCard from '@/components/marketing/FeatureCard';
 import type { Dictionary } from '@/lib/i18n';
 
 // ── Next.js mocks ───────────────────────────────────────────────────────────
@@ -168,35 +167,5 @@ describe('Button a11y', () => {
     render(<Button>Focus</Button>);
     const btn = screen.getByRole('button');
     expect(btn.className).toContain('focus-visible:outline');
-  });
-});
-
-// ============================================================================
-// FeatureCard accessibility
-// ============================================================================
-
-describe('FeatureCard a11y', () => {
-  it('title uses an h3 heading element', () => {
-    render(
-      <FeatureCard
-        icon={<span>IC</span>}
-        title="Smart Recognition"
-        description="Identify artworks"
-      />,
-    );
-    const heading = screen.getByRole('heading', { level: 3 });
-    expect(heading).toBeInTheDocument();
-    expect(heading.textContent).toBe('Smart Recognition');
-  });
-
-  it('description text is present and readable', () => {
-    render(
-      <FeatureCard
-        icon={<span>IC</span>}
-        title="Title"
-        description="A detailed description of the feature"
-      />,
-    );
-    expect(screen.getByText('A detailed description of the feature')).toBeInTheDocument();
   });
 });

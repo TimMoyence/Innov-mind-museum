@@ -52,6 +52,7 @@ describe('WikidataClient', () => {
       collection: 'Louvre',
       movement: 'High Renaissance',
       genre: 'portrait',
+      imageUrl: undefined,
     });
   });
 

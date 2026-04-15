@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
+import { formatDistance } from '../application/formatDistance';
 import type { MuseumWithDistance } from '../application/useMuseumDirectory';
 
 interface MuseumCardProps {
@@ -42,11 +43,11 @@ export const MuseumCard = ({ museum, onPress }: MuseumCardProps) => {
       ) : null}
 
       <View style={styles.footer}>
-        {museum.distance !== null ? (
+        {museum.distanceMeters !== null ? (
           <View style={[styles.distanceBadge, { backgroundColor: theme.primary + '1A' }]}>
             <Ionicons name="location-outline" size={14} color={theme.primary} />
             <Text style={[styles.distanceText, { color: theme.primary }]}>
-              {t('museumDirectory.distance_km', { distance: museum.distance })}
+              {formatDistance(museum.distanceMeters, t)}
             </Text>
           </View>
         ) : (

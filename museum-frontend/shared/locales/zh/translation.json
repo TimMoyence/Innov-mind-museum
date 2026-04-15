@@ -511,6 +511,7 @@
     "title": "附近博物馆",
     "search_placeholder": "搜索博物馆...",
     "no_results": "未找到博物馆",
+    "distance_m": "{{distance}} 米",
     "distance_km": "{{distance}} 公里",
     "distance_unknown": "距离不可用",
     "location_denied": "位置访问被拒绝",

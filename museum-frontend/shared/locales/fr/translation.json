@@ -168,6 +168,24 @@
     "accessibility": "Accessibilité",
     "audio_description": "Audiodescription",
     "audio_description_hint": "Lecture vocale des réponses IA avec descriptions visuelles détaillées pour l'accessibilité",
+    "content_preferences": {
+      "title": "Ce que vous aimez apprendre",
+      "subtitle": "Choisissez les aspects qui vous intéressent le plus. L'IA mettra l'accent dessus quand c'est pertinent, sans vous les imposer.",
+      "options": {
+        "history": {
+          "label": "Histoire de l'œuvre",
+          "hint": "Contexte historique, provenance, circonstances de création"
+        },
+        "technique": {
+          "label": "Technique et représentation",
+          "hint": "Style, matériaux, composition, détails visuels"
+        },
+        "artist": {
+          "label": "Biographie de l'artiste",
+          "hint": "Vie de l'artiste, influences, évolution"
+        }
+      }
+    },
     "dataMode": {
       "title": "Mode économie de données",
       "auto": "Automatique",
@@ -511,6 +529,7 @@
     "title": "Musées à proximité",
     "search_placeholder": "Rechercher des musées...",
     "no_results": "Aucun musée trouvé",
+    "distance_m": "{{distance}} m",
     "distance_km": "{{distance}} km",
     "distance_unknown": "Distance indisponible",
     "location_denied": "Accès à la localisation refusé",

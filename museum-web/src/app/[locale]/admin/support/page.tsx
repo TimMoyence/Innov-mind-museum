@@ -1,10 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams, usePathname } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { apiGet, apiPost } from '@/lib/api';
-import { useAdminDict } from '@/lib/admin-dictionary';
+import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
 import type { TicketDetail, TicketMessage, TicketStatus, TicketPriority } from '@/lib/admin-types';
 
 // -- Badge colors (same as tickets page) ------------------------------------
@@ -43,10 +43,9 @@ function formatDate(iso: string, fr: boolean): string {
 export default function AdminSupportPage() {
   const adminDict = useAdminDict();
   const searchParams = useSearchParams();
-  const pathname = usePathname();
 
-  const locale = pathname.split('/')[1] ?? 'fr';
-  const isFr = adminDict.dashboard === 'Tableau de bord';
+  const locale = useAdminLocale();
+  const isFr = locale === 'fr';
   const ticketId = searchParams.get('ticket');
 
   const [ticket, setTicket] = useState<TicketDetail | null>(null);

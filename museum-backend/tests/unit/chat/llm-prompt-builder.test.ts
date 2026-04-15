@@ -67,7 +67,7 @@ describe('buildSystemPrompt', () => {
   it('includes greeting phase instructions when conversationPhase is greeting', () => {
     const prompt = buildSystemPrompt('en', false, 'beginner', { conversationPhase: 'greeting' });
     expect(prompt).toContain('start of the conversation');
-    expect(prompt).toContain('welcome them warmly');
+    expect(prompt).toContain('warm 2-4 sentence presentation');
   });
 
   it('includes deep phase instructions when conversationPhase is deep', () => {
@@ -92,6 +92,31 @@ describe('buildSystemPrompt', () => {
     const contextBlock = 'The visitor is currently in the Impressionism wing.';
     const prompt = buildSystemPrompt('en', true, 'beginner', { visitContextBlock: contextBlock });
     expect(prompt).toContain(contextBlock);
+  });
+
+  it('instructs the LLM to present the museum at greeting when a description is available', () => {
+    // End-to-end: the greeting-phase prompt must reference "Museum description"
+    // so the LLM knows to use it when the visitor opens with a generic greeting.
+    const prompt = buildSystemPrompt('en', true, 'beginner', {
+      conversationPhase: 'greeting',
+      visitContextBlock:
+        "[VISIT CONTEXT]\nMuseum: Louvre\nMuseum description: Founded in 1793, the Louvre is the world's largest art museum.",
+    });
+
+    expect(prompt).toContain('Museum description');
+    expect(prompt).toContain('Founded in 1793');
+    expect(prompt).toContain('2-4 sentence presentation');
+  });
+
+  it('does not force museum presentation when visitor asks a specific question', () => {
+    // The greeting instruction must include a conditional escape: if the user
+    // asks a specific artwork question, the LLM answers directly.
+    const prompt = buildSystemPrompt('en', true, 'beginner', {
+      conversationPhase: 'greeting',
+      visitContextBlock: '[VISIT CONTEXT]\nMuseum: Louvre\nMuseum description: Founded 1793.',
+    });
+
+    expect(prompt).toContain('answer that question directly');
   });
 
   it('does not include visit context when not provided', () => {

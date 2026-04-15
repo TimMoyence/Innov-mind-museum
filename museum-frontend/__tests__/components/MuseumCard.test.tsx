@@ -35,13 +35,18 @@ describe('MuseumCard', () => {
     expect(onPress).toHaveBeenCalledWith(museum);
   });
 
-  it('renders distance badge when distance is not null', () => {
-    render(<MuseumCard museum={makeMuseum({ distance: 2.5 })} onPress={onPress} />);
+  it('renders distance badge in km when distance is ≥ 1000 m', () => {
+    render(<MuseumCard museum={makeMuseum({ distanceMeters: 2_500 })} onPress={onPress} />);
     expect(screen.getByText('museumDirectory.distance_km')).toBeTruthy();
   });
 
+  it('renders distance badge in meters when distance is < 1000 m', () => {
+    render(<MuseumCard museum={makeMuseum({ distanceMeters: 450 })} onPress={onPress} />);
+    expect(screen.getByText('museumDirectory.distance_m')).toBeTruthy();
+  });
+
   it('renders unknown distance text when distance is null', () => {
-    render(<MuseumCard museum={makeMuseum({ distance: null })} onPress={onPress} />);
+    render(<MuseumCard museum={makeMuseum({ distanceMeters: null })} onPress={onPress} />);
     expect(screen.getByText('museumDirectory.distance_unknown')).toBeTruthy();
   });
 });

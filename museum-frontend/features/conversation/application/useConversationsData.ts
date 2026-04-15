@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { chatApi } from '@/features/chat/infrastructure/chatApi';
-import { mapSessionsToDashboardCards } from '@/features/chat/domain/dashboard-session';
+import { chatApi, mapSessionsToDashboardCards } from '@/features/chat';
 import { useConversationsStore } from '@/features/conversation/infrastructure/conversationsStore';
 import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 import { getErrorMessage } from '@/shared/lib/errors';

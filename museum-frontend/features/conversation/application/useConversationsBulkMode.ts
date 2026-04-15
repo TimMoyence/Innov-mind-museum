@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 
-import type { DashboardSessionCard } from '@/features/chat/domain/dashboard-session';
+import type { DashboardSessionCard } from '@/features/chat';
 
 /** Manages bulk edit mode: toggle, selection, select-all. */
 export function useConversationsBulkMode(visibleItemsDeps: {

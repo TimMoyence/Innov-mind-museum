@@ -511,6 +511,7 @@
     "title": "近くのミュージアム",
     "search_placeholder": "ミュージアムを検索...",
     "no_results": "ミュージアムが見つかりません",
+    "distance_m": "{{distance}} m",
     "distance_km": "{{distance}} km",
     "distance_unknown": "距離不明",
     "location_denied": "位置情報のアクセスが拒否されました",

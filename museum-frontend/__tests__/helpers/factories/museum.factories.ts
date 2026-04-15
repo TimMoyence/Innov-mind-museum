@@ -45,7 +45,7 @@ export const makeMuseumWithDistance = (
   latitude: faker.location.latitude(),
   longitude: faker.location.longitude(),
   museumType: 'general',
-  distance: 1.2,
+  distanceMeters: 1_200,
   source: 'local',
   ...overrides,
 });

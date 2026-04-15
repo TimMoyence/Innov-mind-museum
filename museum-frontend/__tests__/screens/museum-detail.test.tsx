@@ -11,7 +11,7 @@ expoRouter.useLocalSearchParams = () => ({
   description: 'The world-famous art museum.',
   latitude: '48.8606',
   longitude: '2.3376',
-  distance: '1.2',
+  distanceMeters: '1200',
 });
 
 const mockCreateSession = jest.fn();
@@ -43,7 +43,7 @@ describe('MuseumDetailScreen', () => {
     expect(screen.getByText('75001 Paris, France')).toBeTruthy();
   });
 
-  it('renders the distance badge', () => {
+  it('renders the distance badge in km when ≥ 1 km', () => {
     render(<MuseumDetailScreen />);
     expect(screen.getByText('museumDirectory.distance_km')).toBeTruthy();
   });

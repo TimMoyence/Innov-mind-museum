@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { httpRequest } from '@/shared/api/httpRequest';
+import { openApiRequest, type OpenApiJsonRequestBodyFor } from '@/shared/api/openapiClient';
 
-interface MemoryPreferenceResponse {
-  enabled: boolean;
-}
+type MemoryPatchBody = OpenApiJsonRequestBodyFor<'/api/chat/memory/preference', 'patch'>;
 
 /**
  * Manages the AI memory (personalization) toggle state with backend API calls.
@@ -16,7 +14,10 @@ export const useMemoryPreference = () => {
 
   useEffect(() => {
     let cancelled = false;
-    void httpRequest<MemoryPreferenceResponse>('/chat/memory/preference')
+    void openApiRequest({
+      path: '/api/chat/memory/preference',
+      method: 'get',
+    })
       .then((res) => {
         if (!cancelled) {
           setEnabled(res.enabled);
@@ -38,9 +39,11 @@ export const useMemoryPreference = () => {
       const previous = enabled;
       setEnabled(value);
       try {
-        const res = await httpRequest<MemoryPreferenceResponse>('/chat/memory/preference', {
-          method: 'PATCH',
-          body: { enabled: value },
+        const body: MemoryPatchBody = { enabled: value };
+        const res = await openApiRequest({
+          path: '/api/chat/memory/preference',
+          method: 'patch',
+          body: JSON.stringify(body),
         });
         setEnabled(res.enabled);
       } catch {

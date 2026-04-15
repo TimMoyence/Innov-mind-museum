@@ -160,6 +160,31 @@ export interface Dictionary {
       allPriorities: string;
       noData: string;
       conversations: string;
+      active: string;
+      inactive: string;
+    };
+    dashboardPage: {
+      subtitle: string;
+    };
+    auditLogsPage: {
+      subtitle: string;
+      filterPlaceholder: string;
+      columnUser: string;
+      columnAction: string;
+      columnResource: string;
+      columnDetails: string;
+      emptyState: string;
+    };
+    usersPage: {
+      subtitle: string;
+      searchPlaceholder: string;
+      allRoles: string;
+      columnName: string;
+      columnRole: string;
+      columnStatus: string;
+      columnLastLogin: string;
+      emptyState: string;
+      changeRole: string;
     };
     reportsPage: {
       subtitle: string;

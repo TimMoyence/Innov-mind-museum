@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Share } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { chatApi } from '@/features/chat/infrastructure/chatApi';
+import { chatApi } from '@/features/chat';
 import { useConversationsStore } from '@/features/conversation/infrastructure/conversationsStore';
 
 /** Manages conversation actions: sort, filter, share, save, delete. */

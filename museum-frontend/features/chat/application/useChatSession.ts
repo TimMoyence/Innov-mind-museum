@@ -8,6 +8,7 @@ import { useLocation } from '@/features/museum/application/useLocation';
 import { useConnectivity } from '@/shared/infrastructure/connectivity/useConnectivity';
 import { useArtKeywordsClassifier } from '@/features/art-keywords/application/useArtKeywordsClassifier';
 import { useAudioDescriptionMode } from '@/features/settings/application/useAudioDescriptionMode';
+import { useUserProfileStore } from '@/features/settings/infrastructure/userProfileStore';
 import { useDataMode } from './DataModeProvider';
 import { useChatLocalCacheStore } from './chatLocalCache';
 import { useOfflineQueue } from './useOfflineQueue';
@@ -48,6 +49,7 @@ export const useChatSession = (sessionId: string) => {
   const { isConnected } = useConnectivity();
   const { classifyText } = useArtKeywordsClassifier();
   const { enabled: audioDescriptionMode } = useAudioDescriptionMode();
+  const contentPreferences = useUserProfileStore((s) => s.contentPreferences);
   const { isLowData } = useDataMode();
   const cacheLookup = useChatLocalCacheStore((s) => s.lookup);
   const cacheStore = useChatLocalCacheStore((s) => s.store);
@@ -191,6 +193,7 @@ export const useChatSession = (sessionId: string) => {
                 ? `lat:${String(latitude)},lng:${String(longitude)}`
                 : undefined,
             audioDescriptionMode: audioDescriptionMode || undefined,
+            contentPreferences: contentPreferences.length > 0 ? contentPreferences : undefined,
           });
 
           const assistantMessage: ChatUiMessage = {
@@ -258,6 +261,7 @@ export const useChatSession = (sessionId: string) => {
           preClassified,
           audioDescriptionMode: audioDescriptionMode || undefined,
           lowDataMode: isLowData,
+          contentPreferences: contentPreferences.length > 0 ? contentPreferences : undefined,
           onToken: (chunk) => {
             streamTextRef.current += chunk;
             scheduleFlush();
@@ -382,6 +386,7 @@ export const useChatSession = (sessionId: string) => {
       loadSession,
       classifyText,
       audioDescriptionMode,
+      contentPreferences,
       isLowData,
       isConnected,
       cacheLookup,
