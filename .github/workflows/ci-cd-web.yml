@@ -45,14 +45,18 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Audit dependencies
-        # pnpm audit uses retired npm endpoints (/audits, /audits/quick both 410).
-        # npm 10 (Node 22) uses the new bulk advisory endpoint — generate a temporary
-        # package-lock.json for npm audit then clean it up.
-        working-directory: museum-web
-        run: |
-          npm install --package-lock-only --ignore-scripts
-          npm audit --audit-level=high
-          rm -f package-lock.json
+        # pnpm audit uses retired npm endpoints (both /audits and /audits/quick return 410).
+        # Trivy fs scan reads pnpm-lock.yaml directly — consistent with image scanning below.
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          scan-type: fs
+          scan-ref: museum-web
+          scanners: vuln
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+          trivyignores: .trivyignore
 
       - name: Lint
         run: pnpm run lint
