@@ -99,7 +99,9 @@ jobs:
           fi
 
       - name: Unit/Integration Tests (non-E2E)
-        run: pnpm test -- --watchman=false --runInBand --forceExit --coverage --testPathIgnorePatterns=tests/e2e
+        # pnpm 10 changed -- forwarding: args land as Jest patterns instead of flags.
+        # Use pnpm exec jest directly to pass flags without the -- ambiguity.
+        run: pnpm exec jest --watchman=false --runInBand --forceExit --coverage --testPathIgnorePatterns=tests/e2e
 
   # ─── 2. E2E tests (PR + nightly only) ────────────────────────────────
   e2e:
@@ -132,7 +134,7 @@ jobs:
         run: docker version
 
       - name: E2E Postgres (Testcontainers)
-        run: RUN_E2E=true pnpm test -- --watchman=false --runInBand --testPathPattern='tests/e2e/'
+        run: RUN_E2E=true pnpm exec jest --watchman=false --runInBand --testPathPattern='tests/e2e/'
 
   # ─── 3. AI integration tests (manual only) ───────────────────────────
   ai-tests:
