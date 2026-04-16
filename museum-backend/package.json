@@ -2,7 +2,7 @@
   "name": "musaium-backend",
   "version": "1.0.3",
   "description": "",
-  "packageManager": "pnpm@9.15.3",
+  "packageManager": "pnpm@10.8.0",
   "main": "index.ts",
   "scripts": {
     "dev": "nodemon --watch src --exec ts-node -r tsconfig-paths/register src/index.ts",

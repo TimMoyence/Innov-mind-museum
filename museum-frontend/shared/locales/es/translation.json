@@ -168,6 +168,24 @@
     "accessibility": "Accesibilidad",
     "audio_description": "Audiodescripción",
     "audio_description_hint": "Leer en voz alta las respuestas de IA con descripciones visuales detalladas para la accesibilidad",
+    "content_preferences": {
+      "title": "Lo que te gusta aprender",
+      "subtitle": "Elige los aspectos que más te interesan. La IA los destacará cuando sea pertinente, sin imponértelos.",
+      "options": {
+        "history": {
+          "label": "Historia de la obra",
+          "hint": "Contexto histórico, procedencia, circunstancias de creación"
+        },
+        "technique": {
+          "label": "Técnica y representación",
+          "hint": "Estilo, materiales, composición, detalles visuales"
+        },
+        "artist": {
+          "label": "Biografía del artista",
+          "hint": "Vida del artista, influencias, evolución"
+        }
+      }
+    },
     "dataMode": {
       "title": "Modo ahorro de datos",
       "auto": "Automático",

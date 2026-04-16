@@ -168,6 +168,24 @@
     "accessibility": "アクセシビリティ",
     "audio_description": "音声ガイド",
     "audio_description_hint": "アクセシビリティ向上のため、AIの回答を詳細な視覚的説明とともに音声で読み上げます",
+    "content_preferences": {
+      "title": "学びたいこと",
+      "subtitle": "最も興味のある側面を選んでください。AIは適切なときにそれらを強調しますが、押しつけることはありません。",
+      "options": {
+        "history": {
+          "label": "作品の歴史",
+          "hint": "歴史的背景、来歴、制作の経緯"
+        },
+        "technique": {
+          "label": "技法と表現",
+          "hint": "スタイル、素材、構図、視覚的詳細"
+        },
+        "artist": {
+          "label": "アーティスト略歴",
+          "hint": "アーティストの生涯、影響、変遷"
+        }
+      }
+    },
     "dataMode": {
       "title": "データ節約モード",
       "auto": "自動",

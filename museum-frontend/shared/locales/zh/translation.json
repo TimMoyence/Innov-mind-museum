@@ -168,6 +168,24 @@
     "accessibility": "无障碍",
     "audio_description": "音频描述",
     "audio_description_hint": "为无障碍体验朗读AI回复，包含丰富的视觉描述",
+    "content_preferences": {
+      "title": "您喜欢了解的内容",
+      "subtitle": "选择您最感兴趣的方面。AI会在相关时加以强调，但不会强制推送。",
+      "options": {
+        "history": {
+          "label": "作品历史",
+          "hint": "历史背景、来源、创作背景"
+        },
+        "technique": {
+          "label": "技法与表现",
+          "hint": "风格、材料、构图、视觉细节"
+        },
+        "artist": {
+          "label": "艺术家传记",
+          "hint": "艺术家生平、影响及演变"
+        }
+      }
+    },
     "dataMode": {
       "title": "数据节省模式",
       "auto": "自动",

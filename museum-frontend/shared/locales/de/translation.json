@@ -168,6 +168,24 @@
     "accessibility": "Barrierefreiheit",
     "audio_description": "Audiobeschreibung",
     "audio_description_hint": "KI-Antworten mit detaillierten visuellen Beschreibungen für die Barrierefreiheit vorlesen",
+    "content_preferences": {
+      "title": "Was Sie gerne lernen",
+      "subtitle": "Wählen Sie die Aspekte, die Sie am meisten interessieren. Die KI betont diese, wenn relevant, ohne sie aufzuzwingen.",
+      "options": {
+        "history": {
+          "label": "Geschichte des Kunstwerks",
+          "hint": "Historischer Kontext, Herkunft, Entstehungsumstände"
+        },
+        "technique": {
+          "label": "Technik und Darstellung",
+          "hint": "Stil, Materialien, Komposition, visuelle Details"
+        },
+        "artist": {
+          "label": "Biografie des Künstlers",
+          "hint": "Leben des Künstlers, Einflüsse, Entwicklung"
+        }
+      }
+    },
     "dataMode": {
       "title": "Datenspar-Modus",
       "auto": "Automatisch",
