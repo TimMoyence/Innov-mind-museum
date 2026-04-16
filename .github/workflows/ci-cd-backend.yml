@@ -49,7 +49,14 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Audit dependencies
-        run: pnpm audit --audit-level=high
+        # pnpm audit uses retired npm endpoints (/audits, /audits/quick both 410).
+        # npm 10 (Node 22) uses the new bulk advisory endpoint — generate a temporary
+        # package-lock.json for npm audit then clean it up.
+        working-directory: museum-backend
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          npm audit --audit-level=high
+          rm -f package-lock.json
 
       - name: Generate SBOM
         # Enforced (no continue-on-error) — EU CRA compliance + supply chain audit trail.
