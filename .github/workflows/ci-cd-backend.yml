@@ -296,10 +296,10 @@ jobs:
           script: |
             set -e
             cd /srv/museum
-            chmod +x rollback.sh || true
+            sudo chmod +x rollback.sh || true
 
             IMAGE_REF="ghcr.io/${{ secrets.GHCR_USER }}/museum-backend"
-            STATE_DIR="/srv/museum/.rollback/backend"
+            STATE_DIR="${HOME}/.museum-rollback/backend"
             mkdir -p "${STATE_DIR}"
 
             # Tag whatever :latest currently is on this host as :previous BEFORE pulling.
@@ -331,7 +331,7 @@ jobs:
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin || true
 
             IMAGE_REF="ghcr.io/${{ secrets.GHCR_USER }}/museum-backend"
-            STATE_DIR="/srv/museum/.rollback/backend"
+            STATE_DIR="${HOME}/.museum-rollback/backend"
             mkdir -p "${STATE_DIR}"
 
             # 1. Pull the new image
@@ -555,10 +555,10 @@ jobs:
           script: |
             set -e
             cd /srv/museum
-            chmod +x rollback.sh || true
+            sudo chmod +x rollback.sh || true
 
             IMAGE_REF="ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging"
-            STATE_DIR="/srv/museum/.rollback/backend-staging"
+            STATE_DIR="${HOME}/.museum-rollback/backend-staging"
             mkdir -p "${STATE_DIR}"
 
             if docker image inspect "${IMAGE_REF}:latest" >/dev/null 2>&1; then
@@ -585,7 +585,7 @@ jobs:
 
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin || true
 
-            STATE_DIR="/srv/museum/.rollback/backend-staging"
+            STATE_DIR="${HOME}/.museum-rollback/backend-staging"
             mkdir -p "${STATE_DIR}"
 
             # 1. Pull the new image

@@ -24,7 +24,7 @@ COMPOSE_FILE="${1:?compose file path required}"
 SERVICE="${2:?service name required}"
 IMAGE_REF="${3:?image ref required (e.g. ghcr.io/org/museum-backend)}"
 
-STATE_DIR="/srv/museum/.rollback/${SERVICE}"
+STATE_DIR="${HOME}/.museum-rollback/${SERVICE}"
 APPLIED_FILE="${STATE_DIR}/applied-count.txt"
 
 if [ ! -d "${STATE_DIR}" ]; then
