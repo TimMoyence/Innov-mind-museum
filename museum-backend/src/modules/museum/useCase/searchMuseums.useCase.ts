@@ -8,17 +8,22 @@ import { logger } from '@shared/logger/logger';
 import { haversineDistanceMeters } from '@shared/utils/haversine';
 import { env } from '@src/config/env';
 
-import type { IMuseumRepository } from '../domain/museum.repository.interface';
+import type { BoundingBox, IMuseumRepository } from '../domain/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
 
 export type { MuseumCategory } from '@shared/http/overpass.client';
 
-/** Input for the museum search use case. */
+/**
+ * Input for the museum search use case. Either `bbox` (rectangular search) or
+ * the `lat`/`lng`/`radiusMeters` triplet (circular search around a point) is
+ * accepted. When both are present, `bbox` wins.
+ */
 export interface SearchMuseumsInput {
   lat?: number;
   lng?: number;
   radiusMeters?: number;
   q?: string;
+  bbox?: BoundingBox;
 }
 
 /** A single museum entry in the search results. */
@@ -134,6 +139,75 @@ export class SearchMuseumsUseCase {
 
   /** Executes the search, merging OSM and local results with deduplication and distance sorting. */
   async execute(input: SearchMuseumsInput): Promise<SearchMuseumsResult> {
+    if (input.bbox) {
+      return await this.executeBboxSearch(input.bbox, input.q);
+    }
+    return await this.executeRadiusSearch(input);
+  }
+
+  /** Executes a rectangular bbox search; distance is measured from the bbox center. */
+  private async executeBboxSearch(
+    bbox: BoundingBox,
+    q: string | undefined,
+  ): Promise<SearchMuseumsResult> {
+    const [minLng, minLat, maxLng, maxLat] = bbox;
+    const centerLat = (minLat + maxLat) / 2;
+    const centerLng = (minLng + maxLng) / 2;
+
+    const localRows = await this.fetchLocalInBbox(bbox);
+    const osmResults = await this.fetchOsmResultsBbox(bbox);
+
+    const localWithCoords: LocalMuseumWithCoords[] = localRows.map((m) => ({
+      name: m.name,
+      address: m.address ?? null,
+      latitude: m.latitude,
+      longitude: m.longitude,
+      museumType: m.museumType,
+    }));
+
+    const entries: SearchMuseumEntry[] = [];
+    for (const m of localWithCoords) {
+      entries.push({
+        ...m,
+        distance: Math.round(
+          haversineDistanceMeters(centerLat, centerLng, m.latitude, m.longitude),
+        ),
+        source: 'local',
+      });
+    }
+    for (const osm of osmResults) {
+      const isDuplicate = localWithCoords.some(
+        (local) =>
+          haversineDistanceMeters(local.latitude, local.longitude, osm.latitude, osm.longitude) <
+          DEDUP_THRESHOLD_METERS,
+      );
+      if (!isDuplicate) {
+        entries.push({
+          name: osm.name,
+          address: osm.address,
+          latitude: osm.latitude,
+          longitude: osm.longitude,
+          distance: Math.round(
+            haversineDistanceMeters(centerLat, centerLng, osm.latitude, osm.longitude),
+          ),
+          source: 'osm',
+          museumType: osm.museumType,
+        });
+      }
+    }
+
+    let filtered = entries;
+    if (q) {
+      const lower = q.toLowerCase();
+      filtered = entries.filter((e) => e.name.toLowerCase().includes(lower));
+    }
+
+    filtered.sort((a, b) => a.distance - b.distance);
+    return { museums: filtered, count: filtered.length };
+  }
+
+  /** Executes the original center+radius search (with optional geocoding fallback). */
+  private async executeRadiusSearch(input: SearchMuseumsInput): Promise<SearchMuseumsResult> {
     const { q } = input;
     let { lat, lng } = input;
 
@@ -182,6 +256,39 @@ export class SearchMuseumsUseCase {
     return { museums: filtered, count: filtered.length };
   }
 
+  /** Loads local museums whose coordinates fall inside the bbox; non-fatal on failure. */
+  private async fetchLocalInBbox(bbox: BoundingBox): Promise<
+    {
+      name: string;
+      address: string | null;
+      latitude: number;
+      longitude: number;
+      museumType: MuseumCategory;
+    }[]
+  > {
+    try {
+      const rows = await this.repository.findInBoundingBox(bbox);
+      return rows
+        .filter(
+          (m): m is typeof m & { latitude: number; longitude: number } =>
+            m.latitude != null && m.longitude != null,
+        )
+        .map((m) => ({
+          name: m.name,
+          address: m.address ?? null,
+          latitude: m.latitude,
+          longitude: m.longitude,
+          museumType: m.museumType,
+        }));
+    } catch (error) {
+      logger.warn('Failed to fetch local museums in bbox', {
+        error: error instanceof Error ? error.message : String(error),
+        bbox,
+      });
+      return [];
+    }
+  }
+
   /** Fetches OSM results from cache or Overpass API, caching successful responses. */
   private async fetchOsmResults(
     cacheKey: string,
@@ -206,6 +313,34 @@ export class SearchMuseumsUseCase {
         await this.cache.set(cacheKey, results, ttl);
       } catch {
         // Cache write failure is non-fatal
+      }
+    }
+
+    return results;
+  }
+
+  /** Bbox variant of fetchOsmResults; key includes the rectangle corners at 2-decimal precision. */
+  private async fetchOsmResultsBbox(bbox: BoundingBox): Promise<OverpassMuseumResult[]> {
+    const [minLng, minLat, maxLng, maxLat] = bbox;
+    const cacheKey = `osm:museums:bbox:${minLng.toFixed(2)},${minLat.toFixed(2)},${maxLng.toFixed(2)},${maxLat.toFixed(2)}`;
+
+    if (this.cache) {
+      try {
+        const cached = await this.cache.get<OverpassMuseumResult[]>(cacheKey);
+        if (cached) return cached;
+      } catch {
+        // non-fatal
+      }
+    }
+
+    const results = await queryOverpassMuseums({ bbox });
+
+    if (this.cache) {
+      try {
+        const ttl = results.length > 0 ? env.overpassCacheTtlSeconds : NEGATIVE_CACHE_TTL_SECONDS;
+        await this.cache.set(cacheKey, results, ttl);
+      } catch {
+        // non-fatal
       }
     }
 

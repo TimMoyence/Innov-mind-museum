@@ -27,16 +27,11 @@
     "schemas": {
       "ApiError": {
         "type": "object",
-        "required": [
-          "error"
-        ],
+        "required": ["error"],
         "properties": {
           "error": {
             "type": "object",
-            "required": [
-              "code",
-              "message"
-            ],
+            "required": ["code", "message"],
             "properties": {
               "code": {
                 "type": "string"
@@ -54,34 +49,19 @@
       },
       "HealthResponse": {
         "type": "object",
-        "required": [
-          "status",
-          "checks",
-          "environment",
-          "version",
-          "timestamp"
-        ],
+        "required": ["status", "checks", "environment", "version", "timestamp"],
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "ok",
-              "degraded"
-            ]
+            "enum": ["ok", "degraded"]
           },
           "checks": {
             "type": "object",
-            "required": [
-              "database",
-              "llmConfigured"
-            ],
+            "required": ["database", "llmConfigured"],
             "properties": {
               "database": {
                 "type": "string",
-                "enum": [
-                  "up",
-                  "down"
-                ]
+                "enum": ["up", "down"]
               },
               "llmConfigured": {
                 "type": "boolean"
@@ -108,12 +88,7 @@
       },
       "AuthUser": {
         "type": "object",
-        "required": [
-          "id",
-          "email",
-          "role",
-          "onboardingCompleted"
-        ],
+        "required": ["id", "email", "role", "onboardingCompleted"],
         "properties": {
           "id": {
             "type": "integer"
@@ -123,25 +98,14 @@
             "format": "email"
           },
           "firstname": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "lastname": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "role": {
             "type": "string",
-            "enum": [
-              "visitor",
-              "moderator",
-              "museum_manager",
-              "admin"
-            ],
+            "enum": ["visitor", "moderator", "museum_manager", "admin"],
             "description": "User role for RBAC"
           },
           "onboardingCompleted": {
@@ -152,13 +116,7 @@
       },
       "AuthSessionResponse": {
         "type": "object",
-        "required": [
-          "accessToken",
-          "refreshToken",
-          "expiresIn",
-          "refreshExpiresIn",
-          "user"
-        ],
+        "required": ["accessToken", "refreshToken", "expiresIn", "refreshExpiresIn", "user"],
         "properties": {
           "accessToken": {
             "type": "string"
@@ -179,37 +137,23 @@
       },
       "SessionDTO": {
         "type": "object",
-        "required": [
-          "id",
-          "museumMode",
-          "createdAt",
-          "updatedAt"
-        ],
+        "required": ["id", "museumMode", "createdAt", "updatedAt"],
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid"
           },
           "locale": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "museumMode": {
             "type": "boolean"
           },
           "title": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "museumName": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "createdAt": {
             "type": "string",
@@ -223,10 +167,7 @@
       },
       "ChatMessageImage": {
         "type": "object",
-        "required": [
-          "url",
-          "expiresAt"
-        ],
+        "required": ["url", "expiresAt"],
         "properties": {
           "url": {
             "type": "string",
@@ -240,11 +181,7 @@
       },
       "ChatMessageDTO": {
         "type": "object",
-        "required": [
-          "id",
-          "role",
-          "createdAt"
-        ],
+        "required": ["id", "role", "createdAt"],
         "properties": {
           "id": {
             "type": "string",
@@ -252,23 +189,13 @@
           },
           "role": {
             "type": "string",
-            "enum": [
-              "user",
-              "assistant",
-              "system"
-            ]
+            "enum": ["user", "assistant", "system"]
           },
           "text": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "imageRef": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "image": {
             "oneOf": [
@@ -285,10 +212,7 @@
             "format": "date-time"
           },
           "metadata": {
-            "type": [
-              "object",
-              "null"
-            ],
+            "type": ["object", "null"],
             "additionalProperties": true
           }
         },
@@ -296,9 +220,7 @@
       },
       "CreateSessionResponse": {
         "type": "object",
-        "required": [
-          "session"
-        ],
+        "required": ["session"],
         "properties": {
           "session": {
             "$ref": "#/components/schemas/SessionDTO"
@@ -307,11 +229,7 @@
       },
       "PostMessageResponse": {
         "type": "object",
-        "required": [
-          "sessionId",
-          "message",
-          "metadata"
-        ],
+        "required": ["sessionId", "message", "metadata"],
         "properties": {
           "sessionId": {
             "type": "string",
@@ -319,12 +237,7 @@
           },
           "message": {
             "type": "object",
-            "required": [
-              "id",
-              "role",
-              "text",
-              "createdAt"
-            ],
+            "required": ["id", "role", "text", "createdAt"],
             "properties": {
               "id": {
                 "type": "string",
@@ -332,9 +245,7 @@
               },
               "role": {
                 "type": "string",
-                "enum": [
-                  "assistant"
-                ]
+                "enum": ["assistant"]
               },
               "text": {
                 "type": "string"
@@ -382,11 +293,7 @@
               },
               "expertiseSignal": {
                 "type": "string",
-                "enum": [
-                  "beginner",
-                  "intermediate",
-                  "expert"
-                ]
+                "enum": ["beginner", "intermediate", "expert"]
               },
               "citations": {
                 "type": "array",
@@ -431,10 +338,7 @@
                     },
                     "source": {
                       "type": "string",
-                      "enum": [
-                        "wikidata",
-                        "unsplash"
-                      ],
+                      "enum": ["wikidata", "unsplash"],
                       "description": "Image source"
                     },
                     "score": {
@@ -448,13 +352,7 @@
                       "description": "Photo credit (required for Unsplash)"
                     }
                   },
-                  "required": [
-                    "url",
-                    "thumbnailUrl",
-                    "caption",
-                    "source",
-                    "score"
-                  ]
+                  "required": ["url", "thumbnailUrl", "caption", "source", "score"]
                 }
               },
               "suggestedImages": {
@@ -472,10 +370,7 @@
                       "description": "What the image should depict"
                     }
                   },
-                  "required": [
-                    "query",
-                    "description"
-                  ]
+                  "required": ["query", "description"]
                 }
               }
             },
@@ -492,26 +387,16 @@
               },
               "provider": {
                 "type": "string",
-                "enum": [
-                  "openai"
-                ]
+                "enum": ["openai"]
               }
             },
-            "required": [
-              "text",
-              "model",
-              "provider"
-            ]
+            "required": ["text", "model", "provider"]
           }
         }
       },
       "GetSessionResponse": {
         "type": "object",
-        "required": [
-          "session",
-          "messages",
-          "page"
-        ],
+        "required": ["session", "messages", "page"],
         "properties": {
           "session": {
             "$ref": "#/components/schemas/SessionDTO"
@@ -524,17 +409,10 @@
           },
           "page": {
             "type": "object",
-            "required": [
-              "nextCursor",
-              "hasMore",
-              "limit"
-            ],
+            "required": ["nextCursor", "hasMore", "limit"],
             "properties": {
               "nextCursor": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "hasMore": {
                 "type": "boolean"
@@ -548,47 +426,29 @@
       },
       "ListSessionsResponse": {
         "type": "object",
-        "required": [
-          "sessions",
-          "page"
-        ],
+        "required": ["sessions", "page"],
         "properties": {
           "sessions": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "id",
-                "museumMode",
-                "createdAt",
-                "updatedAt",
-                "messageCount"
-              ],
+              "required": ["id", "museumMode", "createdAt", "updatedAt", "messageCount"],
               "properties": {
                 "id": {
                   "type": "string",
                   "format": "uuid"
                 },
                 "locale": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
+                  "type": ["string", "null"]
                 },
                 "museumMode": {
                   "type": "boolean"
                 },
                 "title": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
+                  "type": ["string", "null"]
                 },
                 "museumName": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
+                  "type": ["string", "null"]
                 },
                 "createdAt": {
                   "type": "string",
@@ -613,11 +473,7 @@
                     },
                     "role": {
                       "type": "string",
-                      "enum": [
-                        "user",
-                        "assistant",
-                        "system"
-                      ]
+                      "enum": ["user", "assistant", "system"]
                     }
                   }
                 }
@@ -626,17 +482,10 @@
           },
           "page": {
             "type": "object",
-            "required": [
-              "nextCursor",
-              "hasMore",
-              "limit"
-            ],
+            "required": ["nextCursor", "hasMore", "limit"],
             "properties": {
               "nextCursor": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "hasMore": {
                 "type": "boolean"
@@ -650,10 +499,7 @@
       },
       "DeleteSessionResponse": {
         "type": "object",
-        "required": [
-          "sessionId",
-          "deleted"
-        ],
+        "required": ["sessionId", "deleted"],
         "properties": {
           "sessionId": {
             "type": "string",
@@ -666,10 +512,7 @@
       },
       "ReportMessageResponse": {
         "type": "object",
-        "required": [
-          "messageId",
-          "reported"
-        ],
+        "required": ["messageId", "reported"],
         "properties": {
           "messageId": {
             "type": "string",
@@ -682,10 +525,7 @@
       },
       "FeedbackMessageResponse": {
         "type": "object",
-        "required": [
-          "messageId",
-          "status"
-        ],
+        "required": ["messageId", "status"],
         "properties": {
           "messageId": {
             "type": "string",
@@ -693,20 +533,13 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "created",
-              "updated",
-              "removed"
-            ]
+            "enum": ["created", "updated", "removed"]
           }
         }
       },
       "SignedImageUrlResponse": {
         "type": "object",
-        "required": [
-          "url",
-          "expiresAt"
-        ],
+        "required": ["url", "expiresAt"],
         "properties": {
           "url": {
             "type": "string",
@@ -720,19 +553,11 @@
       },
       "ApiKeyResponse": {
         "type": "object",
-        "required": [
-          "apiKey",
-          "plaintext"
-        ],
+        "required": ["apiKey", "plaintext"],
         "properties": {
           "apiKey": {
             "type": "object",
-            "required": [
-              "id",
-              "prefix",
-              "name",
-              "createdAt"
-            ],
+            "required": ["id", "prefix", "name", "createdAt"],
             "properties": {
               "id": {
                 "type": "integer"
@@ -757,9 +582,7 @@
       },
       "ApiKeyListResponse": {
         "type": "object",
-        "required": [
-          "apiKeys"
-        ],
+        "required": ["apiKeys"],
         "properties": {
           "apiKeys": {
             "type": "array",
@@ -789,17 +612,11 @@
                   "format": "date-time"
                 },
                 "lastUsedAt": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
+                  "type": ["string", "null"],
                   "format": "date-time"
                 },
                 "expiresAt": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
+                  "type": ["string", "null"],
                   "format": "date-time"
                 },
                 "isActive": {
@@ -812,9 +629,7 @@
       },
       "ChangeEmailResponse": {
         "type": "object",
-        "required": [
-          "message"
-        ],
+        "required": ["message"],
         "properties": {
           "message": {
             "type": "string"
@@ -827,29 +642,17 @@
       },
       "ConfirmEmailChangeResponse": {
         "type": "object",
-        "required": [
-          "confirmed"
-        ],
+        "required": ["confirmed"],
         "properties": {
           "confirmed": {
             "type": "boolean",
-            "enum": [
-              true
-            ]
+            "enum": [true]
           }
         }
       },
       "DailyArtwork": {
         "type": "object",
-        "required": [
-          "title",
-          "artist",
-          "year",
-          "imageUrl",
-          "description",
-          "funFact",
-          "museum"
-        ],
+        "required": ["title", "artist", "year", "imageUrl", "description", "funFact", "museum"],
         "properties": {
           "title": {
             "type": "string"
@@ -877,9 +680,7 @@
       },
       "DailyArtResponse": {
         "type": "object",
-        "required": [
-          "artwork"
-        ],
+        "required": ["artwork"],
         "properties": {
           "artwork": {
             "$ref": "#/components/schemas/DailyArtwork"
@@ -888,15 +689,7 @@
       },
       "ReviewDTO": {
         "type": "object",
-        "required": [
-          "id",
-          "userId",
-          "userName",
-          "rating",
-          "comment",
-          "status",
-          "createdAt"
-        ],
+        "required": ["id", "userId", "userName", "rating", "comment", "status", "createdAt"],
         "properties": {
           "id": {
             "type": "string",
@@ -918,11 +711,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "approved",
-              "rejected"
-            ]
+            "enum": ["pending", "approved", "rejected"]
           },
           "createdAt": {
             "type": "string",
@@ -932,13 +721,7 @@
       },
       "ReviewListResponse": {
         "type": "object",
-        "required": [
-          "data",
-          "total",
-          "page",
-          "limit",
-          "totalPages"
-        ],
+        "required": ["data", "total", "page", "limit", "totalPages"],
         "properties": {
           "data": {
             "type": "array",
@@ -962,10 +745,7 @@
       },
       "ReviewStatsResponse": {
         "type": "object",
-        "required": [
-          "average",
-          "count"
-        ],
+        "required": ["average", "count"],
         "properties": {
           "average": {
             "type": "number"
@@ -977,13 +757,7 @@
       },
       "ArtKeywordDTO": {
         "type": "object",
-        "required": [
-          "id",
-          "keyword",
-          "locale",
-          "category",
-          "updatedAt"
-        ],
+        "required": ["id", "keyword", "locale", "category", "updatedAt"],
         "properties": {
           "id": {
             "type": "string",
@@ -1006,10 +780,7 @@
       },
       "ArtKeywordListResponse": {
         "type": "object",
-        "required": [
-          "keywords",
-          "syncedAt"
-        ],
+        "required": ["keywords", "syncedAt"],
         "properties": {
           "keywords": {
             "type": "array",
@@ -1025,9 +796,7 @@
       },
       "ArtKeywordBulkUpsertResponse": {
         "type": "object",
-        "required": [
-          "created"
-        ],
+        "required": ["created"],
         "properties": {
           "created": {
             "type": "integer"
@@ -1036,12 +805,7 @@
       },
       "PaginationMeta": {
         "type": "object",
-        "required": [
-          "total",
-          "page",
-          "limit",
-          "totalPages"
-        ],
+        "required": ["total", "page", "limit", "totalPages"],
         "properties": {
           "total": {
             "type": "integer"
@@ -1059,14 +823,7 @@
       },
       "AdminUserDTO": {
         "type": "object",
-        "required": [
-          "id",
-          "email",
-          "role",
-          "emailVerified",
-          "createdAt",
-          "updatedAt"
-        ],
+        "required": ["id", "email", "role", "emailVerified", "createdAt", "updatedAt"],
         "properties": {
           "id": {
             "type": "integer"
@@ -1076,16 +833,10 @@
             "format": "email"
           },
           "firstname": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "lastname": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "role": {
             "type": "string"
@@ -1105,12 +856,7 @@
       },
       "AdminAuditLogDTO": {
         "type": "object",
-        "required": [
-          "id",
-          "action",
-          "actorType",
-          "createdAt"
-        ],
+        "required": ["id", "action", "actorType", "createdAt"],
         "properties": {
           "id": {
             "type": "string"
@@ -1122,35 +868,20 @@
             "type": "string"
           },
           "actorId": {
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "targetType": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "targetId": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "metadata": {
-            "type": [
-              "object",
-              "null"
-            ],
+            "type": ["object", "null"],
             "additionalProperties": true
           },
           "ip": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "createdAt": {
             "type": "string",
@@ -1218,47 +949,28 @@
             "type": "string"
           },
           "comment": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "reviewed",
-              "dismissed"
-            ]
+            "enum": ["pending", "reviewed", "dismissed"]
           },
           "reviewedBy": {
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "reviewedAt": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "format": "date-time"
           },
           "reviewerNotes": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "createdAt": {
             "type": "string",
             "format": "date-time"
           },
           "messageText": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "messageRole": {
             "type": "string"
@@ -1270,10 +982,7 @@
       },
       "TimeSeriesPoint": {
         "type": "object",
-        "required": [
-          "date",
-          "count"
-        ],
+        "required": ["date", "count"],
         "properties": {
           "date": {
             "type": "string"
@@ -1285,20 +994,11 @@
       },
       "UsageAnalytics": {
         "type": "object",
-        "required": [
-          "period",
-          "granularity",
-          "sessionsCreated",
-          "messagesSent",
-          "activeUsers"
-        ],
+        "required": ["period", "granularity", "sessionsCreated", "messagesSent", "activeUsers"],
         "properties": {
           "period": {
             "type": "object",
-            "required": [
-              "from",
-              "to"
-            ],
+            "required": ["from", "to"],
             "properties": {
               "from": {
                 "type": "string"
@@ -1310,11 +1010,7 @@
           },
           "granularity": {
             "type": "string",
-            "enum": [
-              "daily",
-              "weekly",
-              "monthly"
-            ]
+            "enum": ["daily", "weekly", "monthly"]
           },
           "sessionsCreated": {
             "type": "array",
@@ -1338,29 +1034,19 @@
       },
       "ContentAnalytics": {
         "type": "object",
-        "required": [
-          "topArtworks",
-          "topMuseums",
-          "guardrailBlockRate"
-        ],
+        "required": ["topArtworks", "topMuseums", "guardrailBlockRate"],
         "properties": {
           "topArtworks": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "title",
-                "count"
-              ],
+              "required": ["title", "count"],
               "properties": {
                 "title": {
                   "type": "string"
                 },
                 "artist": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
+                  "type": ["string", "null"]
                 },
                 "count": {
                   "type": "integer"
@@ -1372,10 +1058,7 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "name",
-                "count"
-              ],
+              "required": ["name", "count"],
               "properties": {
                 "name": {
                   "type": "string"
@@ -1441,38 +1124,20 @@
             "type": "string"
           },
           "address": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "description": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "latitude": {
-            "type": [
-              "number",
-              "null"
-            ]
+            "type": ["number", "null"]
           },
           "longitude": {
-            "type": [
-              "number",
-              "null"
-            ]
+            "type": ["number", "null"]
           },
           "museumType": {
             "type": "string",
-            "enum": [
-              "art",
-              "history",
-              "science",
-              "specialized",
-              "general"
-            ],
+            "enum": ["art", "history", "science", "specialized", "general"],
             "description": "Museum category"
           },
           "config": {
@@ -1494,12 +1159,7 @@
       },
       "MuseumDirectoryDTO": {
         "type": "object",
-        "required": [
-          "id",
-          "name",
-          "slug",
-          "museumType"
-        ],
+        "required": ["id", "name", "slug", "museumType"],
         "properties": {
           "id": {
             "type": "integer"
@@ -1511,38 +1171,20 @@
             "type": "string"
           },
           "address": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "description": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "latitude": {
-            "type": [
-              "number",
-              "null"
-            ]
+            "type": ["number", "null"]
           },
           "longitude": {
-            "type": [
-              "number",
-              "null"
-            ]
+            "type": ["number", "null"]
           },
           "museumType": {
             "type": "string",
-            "enum": [
-              "art",
-              "history",
-              "science",
-              "specialized",
-              "general"
-            ],
+            "enum": ["art", "history", "science", "specialized", "general"],
             "description": "Museum category"
           }
         }
@@ -1575,32 +1217,17 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "open",
-              "in_progress",
-              "resolved",
-              "closed"
-            ]
+            "enum": ["open", "in_progress", "resolved", "closed"]
           },
           "priority": {
             "type": "string",
-            "enum": [
-              "low",
-              "medium",
-              "high"
-            ]
+            "enum": ["low", "medium", "high"]
           },
           "category": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "assignedTo": {
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": ["integer", "null"]
           },
           "createdAt": {
             "type": "string",
@@ -1617,14 +1244,7 @@
       },
       "TicketMessageDTO": {
         "type": "object",
-        "required": [
-          "id",
-          "ticketId",
-          "senderId",
-          "senderRole",
-          "text",
-          "createdAt"
-        ],
+        "required": ["id", "ticketId", "senderId", "senderRole", "text", "createdAt"],
         "properties": {
           "id": {
             "type": "string",
@@ -1656,9 +1276,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "messages"
-            ],
+            "required": ["messages"],
             "properties": {
               "messages": {
                 "type": "array",
@@ -1676,17 +1294,11 @@
         "properties": {
           "image": {
             "type": "object",
-            "required": [
-              "source",
-              "value"
-            ],
+            "required": ["source", "value"],
             "properties": {
               "source": {
                 "type": "string",
-                "enum": [
-                  "base64",
-                  "url"
-                ]
+                "enum": ["base64", "url"]
               },
               "value": {
                 "type": "string",
@@ -1708,30 +1320,19 @@
           },
           "guideLevel": {
             "type": "string",
-            "enum": [
-              "beginner",
-              "intermediate",
-              "expert"
-            ],
+            "enum": ["beginner", "intermediate", "expert"],
             "default": "beginner"
           },
           "format": {
             "type": "string",
-            "enum": [
-              "text",
-              "audio",
-              "both"
-            ],
+            "enum": ["text", "audio", "both"],
             "default": "text"
           }
         }
       },
       "DescribeResponse": {
         "type": "object",
-        "required": [
-          "description",
-          "metadata"
-        ],
+        "required": ["description", "metadata"],
         "properties": {
           "description": {
             "type": "string"
@@ -1752,9 +1353,7 @@
       },
       "MemoryPreferenceResponse": {
         "type": "object",
-        "required": [
-          "enabled"
-        ],
+        "required": ["enabled"],
         "properties": {
           "enabled": {
             "type": "boolean",
@@ -1764,11 +1363,7 @@
       },
       "LowDataPackEntry": {
         "type": "object",
-        "required": [
-          "question",
-          "answer",
-          "source"
-        ],
+        "required": ["question", "answer", "source"],
         "properties": {
           "question": {
             "type": "string"
@@ -1786,21 +1381,13 @@
           },
           "source": {
             "type": "string",
-            "enum": [
-              "cache",
-              "seeded"
-            ]
+            "enum": ["cache", "seeded"]
           }
         }
       },
       "LowDataPack": {
         "type": "object",
-        "required": [
-          "museumId",
-          "locale",
-          "generatedAt",
-          "entries"
-        ],
+        "required": ["museumId", "locale", "generatedAt", "entries"],
         "properties": {
           "museumId": {
             "type": "string"
@@ -1822,10 +1409,7 @@
       },
       "CachePurgeResponse": {
         "type": "object",
-        "required": [
-          "museumId",
-          "durationMs"
-        ],
+        "required": ["museumId", "durationMs"],
         "properties": {
           "museumId": {
             "type": "string"
@@ -1923,9 +1507,7 @@
   "paths": {
     "/api/health": {
       "get": {
-        "tags": [
-          "Health"
-        ],
+        "tags": ["Health"],
         "security": [],
         "responses": {
           "200": {
@@ -1953,9 +1535,7 @@
     },
     "/api/auth/register": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [],
         "requestBody": {
           "required": true,
@@ -1963,12 +1543,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "email",
-                  "password",
-                  "firstname",
-                  "lastname"
-                ],
+                "required": ["email", "password", "firstname", "lastname"],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -1995,16 +1570,11 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "user"
-                  ],
+                  "required": ["user"],
                   "properties": {
                     "user": {
                       "type": "object",
-                      "required": [
-                        "id",
-                        "email"
-                      ],
+                      "required": ["id", "email"],
                       "properties": {
                         "id": {
                           "type": "integer"
@@ -2028,9 +1598,7 @@
     },
     "/api/auth/login": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [],
         "requestBody": {
           "required": true,
@@ -2038,10 +1606,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "email",
-                  "password"
-                ],
+                "required": ["email", "password"],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -2077,9 +1642,7 @@
     },
     "/api/auth/refresh": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [],
         "requestBody": {
           "required": true,
@@ -2087,9 +1650,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "refreshToken"
-                ],
+                "required": ["refreshToken"],
                 "properties": {
                   "refreshToken": {
                     "type": "string"
@@ -2121,9 +1682,7 @@
     },
     "/api/auth/logout": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [],
         "requestBody": {
           "required": false,
@@ -2147,9 +1706,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "success"
-                  ],
+                  "required": ["success"],
                   "properties": {
                     "success": {
                       "type": "boolean"
@@ -2164,9 +1721,7 @@
     },
     "/api/auth/me": {
       "get": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [
           {
             "bearerAuth": []
@@ -2179,9 +1734,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "user"
-                  ],
+                  "required": ["user"],
                   "properties": {
                     "user": {
                       "$ref": "#/components/schemas/AuthUser"
@@ -2199,9 +1752,7 @@
     },
     "/api/auth/social-login": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [],
         "requestBody": {
           "required": true,
@@ -2209,17 +1760,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "provider",
-                  "idToken"
-                ],
+                "required": ["provider", "idToken"],
                 "properties": {
                   "provider": {
                     "type": "string",
-                    "enum": [
-                      "apple",
-                      "google"
-                    ]
+                    "enum": ["apple", "google"]
                   },
                   "idToken": {
                     "type": "string"
@@ -2251,9 +1796,7 @@
     },
     "/api/auth/account": {
       "delete": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [
           {
             "bearerAuth": []
@@ -2266,9 +1809,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "deleted"
-                  ],
+                  "required": ["deleted"],
                   "properties": {
                     "deleted": {
                       "type": "boolean"
@@ -2289,9 +1830,7 @@
     },
     "/api/auth/forgot-password": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [],
         "requestBody": {
           "required": true,
@@ -2299,9 +1838,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "email"
-                ],
+                "required": ["email"],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -2319,9 +1856,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "message"
-                  ],
+                  "required": ["message"],
                   "properties": {
                     "message": {
                       "type": "string"
@@ -2336,9 +1871,7 @@
     },
     "/api/auth/reset-password": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [],
         "requestBody": {
           "required": true,
@@ -2346,10 +1879,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "token",
-                  "newPassword"
-                ],
+                "required": ["token", "newPassword"],
                 "properties": {
                   "token": {
                     "type": "string"
@@ -2369,9 +1899,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "message"
-                  ],
+                  "required": ["message"],
                   "properties": {
                     "message": {
                       "type": "string"
@@ -2389,9 +1917,7 @@
     },
     "/api/auth/change-password": {
       "put": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [
           {
             "bearerAuth": []
@@ -2403,10 +1929,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "currentPassword",
-                  "newPassword"
-                ],
+                "required": ["currentPassword", "newPassword"],
                 "properties": {
                   "currentPassword": {
                     "type": "string"
@@ -2426,9 +1949,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "message"
-                  ],
+                  "required": ["message"],
                   "properties": {
                     "message": {
                       "type": "string"
@@ -2449,9 +1970,7 @@
     },
     "/api/auth/change-email": {
       "put": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [
           {
             "bearerAuth": []
@@ -2463,10 +1982,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "newEmail",
-                  "currentPassword"
-                ],
+                "required": ["newEmail", "currentPassword"],
                 "properties": {
                   "newEmail": {
                     "type": "string",
@@ -2503,9 +2019,7 @@
     },
     "/api/auth/confirm-email-change": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [],
         "requestBody": {
           "required": true,
@@ -2513,9 +2027,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "token"
-                ],
+                "required": ["token"],
                 "properties": {
                   "token": {
                     "type": "string",
@@ -2545,9 +2057,7 @@
     },
     "/api/auth/verify-email": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [],
         "requestBody": {
           "required": true,
@@ -2555,9 +2065,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "token"
-                ],
+                "required": ["token"],
                 "properties": {
                   "token": {
                     "type": "string"
@@ -2574,9 +2082,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "verified"
-                  ],
+                  "required": ["verified"],
                   "properties": {
                     "verified": {
                       "type": "boolean"
@@ -2594,9 +2100,7 @@
     },
     "/api/auth/onboarding-complete": {
       "patch": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [
           {
             "bearerAuth": []
@@ -2614,9 +2118,7 @@
     },
     "/api/auth/export-data": {
       "get": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [
           {
             "bearerAuth": []
@@ -2629,11 +2131,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "exportedAt",
-                    "user",
-                    "chatData"
-                  ],
+                  "required": ["exportedAt", "user", "chatData"],
                   "properties": {
                     "exportedAt": {
                       "type": "string",
@@ -2641,12 +2139,7 @@
                     },
                     "user": {
                       "type": "object",
-                      "required": [
-                        "id",
-                        "email",
-                        "createdAt",
-                        "updatedAt"
-                      ],
+                      "required": ["id", "email", "createdAt", "updatedAt"],
                       "properties": {
                         "id": {
                           "type": "integer"
@@ -2656,16 +2149,10 @@
                           "format": "email"
                         },
                         "firstname": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
+                          "type": ["string", "null"]
                         },
                         "lastname": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
+                          "type": ["string", "null"]
                         },
                         "createdAt": {
                           "type": "string",
@@ -2697,9 +2184,7 @@
     },
     "/api/auth/api-keys": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Generate a new API key",
         "x-feature-flag": "apiKeys",
         "security": [
@@ -2713,9 +2198,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "name"
-                ],
+                "required": ["name"],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -2750,9 +2233,7 @@
         }
       },
       "get": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "List API keys for the current user",
         "x-feature-flag": "apiKeys",
         "security": [
@@ -2779,9 +2260,7 @@
     },
     "/api/auth/api-keys/{id}": {
       "delete": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Revoke an API key",
         "x-feature-flag": "apiKeys",
         "security": [
@@ -2806,9 +2285,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "revoked"
-                  ],
+                  "required": ["revoked"],
                   "properties": {
                     "revoked": {
                       "type": "boolean"
@@ -2829,9 +2306,7 @@
     },
     "/api/chat/sessions": {
       "post": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "security": [
           {
             "bearerAuth": []
@@ -2857,9 +2332,7 @@
         }
       },
       "get": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "security": [
           {
             "bearerAuth": []
@@ -2908,9 +2381,7 @@
     },
     "/api/chat/sessions/{id}": {
       "get": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "security": [
           {
             "bearerAuth": []
@@ -2968,9 +2439,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "security": [
           {
             "bearerAuth": []
@@ -3012,9 +2481,7 @@
     },
     "/api/chat/sessions/{id}/messages": {
       "post": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "security": [
           {
             "bearerAuth": []
@@ -3062,9 +2529,7 @@
     },
     "/api/chat/sessions/{id}/messages/stream": {
       "post": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "summary": "Post a text message and receive the assistant response as an SSE stream",
         "x-feature-flag": "streaming",
         "security": [
@@ -3104,11 +2569,7 @@
                       },
                       "guideLevel": {
                         "type": "string",
-                        "enum": [
-                          "beginner",
-                          "intermediate",
-                          "expert"
-                        ]
+                        "enum": ["beginner", "intermediate", "expert"]
                       },
                       "locale": {
                         "type": "string"
@@ -3148,9 +2609,7 @@
     },
     "/api/chat/sessions/{id}/audio": {
       "post": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "security": [
           {
             "bearerAuth": []
@@ -3198,9 +2657,7 @@
     },
     "/api/chat/messages/{messageId}/report": {
       "post": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "security": [
           {
             "bearerAuth": []
@@ -3223,18 +2680,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "reason"
-                ],
+                "required": ["reason"],
                 "properties": {
                   "reason": {
                     "type": "string",
-                    "enum": [
-                      "offensive",
-                      "inaccurate",
-                      "inappropriate",
-                      "other"
-                    ]
+                    "enum": ["offensive", "inaccurate", "inappropriate", "other"]
                   },
                   "comment": {
                     "type": "string"
@@ -3269,9 +2719,7 @@
     },
     "/api/chat/messages/{messageId}/feedback": {
       "post": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "summary": "Set or toggle feedback (thumbs up/down) on an assistant message",
         "security": [
           {
@@ -3295,16 +2743,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "value"
-                ],
+                "required": ["value"],
                 "properties": {
                   "value": {
                     "type": "string",
-                    "enum": [
-                      "positive",
-                      "negative"
-                    ]
+                    "enum": ["positive", "negative"]
                   }
                 }
               }
@@ -3336,9 +2779,7 @@
     },
     "/api/chat/messages/{messageId}/image-url": {
       "post": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "security": [
           {
             "bearerAuth": []
@@ -3380,9 +2821,7 @@
     },
     "/api/chat/messages/{messageId}/tts": {
       "post": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "summary": "Synthesize assistant message to speech",
         "x-feature-flag": "voiceMode",
         "security": [
@@ -3433,9 +2872,7 @@
     },
     "/api/chat/messages/{messageId}/image": {
       "get": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "security": [],
         "parameters": [
           {
@@ -3484,9 +2921,7 @@
     },
     "/api/chat/art-keywords": {
       "get": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "summary": "List art keywords by locale, optionally filtered by creation date",
         "security": [
           {
@@ -3537,9 +2972,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "summary": "Bulk upsert art keywords for guardrail enrichment",
         "security": [
           {
@@ -3552,9 +2985,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "keywords"
-                ],
+                "required": ["keywords"],
                 "properties": {
                   "keywords": {
                     "type": "array",
@@ -3600,9 +3031,7 @@
     },
     "/api/daily-art": {
       "get": {
-        "tags": [
-          "DailyArt"
-        ],
+        "tags": ["DailyArt"],
         "summary": "Return today's curated artwork",
         "security": [
           {
@@ -3628,9 +3057,7 @@
     },
     "/api/reviews": {
       "post": {
-        "tags": [
-          "Reviews"
-        ],
+        "tags": ["Reviews"],
         "summary": "Create a review (stored as pending for moderation)",
         "security": [
           {
@@ -3643,11 +3070,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "rating",
-                  "comment",
-                  "userName"
-                ],
+                "required": ["rating", "comment", "userName"],
                 "properties": {
                   "rating": {
                     "type": "integer",
@@ -3676,9 +3099,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "review"
-                  ],
+                  "required": ["review"],
                   "properties": {
                     "review": {
                       "$ref": "#/components/schemas/ReviewDTO"
@@ -3697,9 +3118,7 @@
         }
       },
       "get": {
-        "tags": [
-          "Reviews"
-        ],
+        "tags": ["Reviews"],
         "summary": "List approved reviews (public, paginated)",
         "security": [],
         "parameters": [
@@ -3744,9 +3163,7 @@
     },
     "/api/reviews/stats": {
       "get": {
-        "tags": [
-          "Reviews"
-        ],
+        "tags": ["Reviews"],
         "summary": "Get average rating and approved review count",
         "security": [],
         "responses": {
@@ -3765,9 +3182,7 @@
     },
     "/api/admin/users": {
       "get": {
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "summary": "Paginated user list",
         "security": [
           {
@@ -3821,13 +3236,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "data",
-                    "total",
-                    "page",
-                    "limit",
-                    "totalPages"
-                  ],
+                  "required": ["data", "total", "page", "limit", "totalPages"],
                   "properties": {
                     "data": {
                       "type": "array",
@@ -3863,9 +3272,7 @@
     },
     "/api/admin/users/{id}/role": {
       "patch": {
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "summary": "Change user role (admin only)",
         "security": [
           {
@@ -3889,18 +3296,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "role"
-                ],
+                "required": ["role"],
                 "properties": {
                   "role": {
                     "type": "string",
-                    "enum": [
-                      "visitor",
-                      "moderator",
-                      "museum_manager",
-                      "admin"
-                    ]
+                    "enum": ["visitor", "moderator", "museum_manager", "admin"]
                   }
                 }
               }
@@ -3914,9 +3314,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "user"
-                  ],
+                  "required": ["user"],
                   "properties": {
                     "user": {
                       "$ref": "#/components/schemas/AdminUserDTO"
@@ -3943,9 +3341,7 @@
     },
     "/api/admin/audit-logs": {
       "get": {
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "summary": "Paginated audit logs",
         "security": [
           {
@@ -4028,13 +3424,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "data",
-                    "total",
-                    "page",
-                    "limit",
-                    "totalPages"
-                  ],
+                  "required": ["data", "total", "page", "limit", "totalPages"],
                   "properties": {
                     "data": {
                       "type": "array",
@@ -4070,9 +3460,7 @@
     },
     "/api/admin/stats": {
       "get": {
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "summary": "Dashboard statistics",
         "security": [
           {
@@ -4101,9 +3489,7 @@
     },
     "/api/admin/reports": {
       "get": {
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "summary": "Paginated content reports",
         "security": [
           {
@@ -4137,11 +3523,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "reviewed",
-                "dismissed"
-              ]
+              "enum": ["pending", "reviewed", "dismissed"]
             },
             "description": "Filter by report status"
           },
@@ -4182,13 +3564,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "data",
-                    "total",
-                    "page",
-                    "limit",
-                    "totalPages"
-                  ],
+                  "required": ["data", "total", "page", "limit", "totalPages"],
                   "properties": {
                     "data": {
                       "type": "array",
@@ -4224,9 +3600,7 @@
     },
     "/api/admin/reports/{id}": {
       "patch": {
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "summary": "Resolve a content report",
         "security": [
           {
@@ -4250,17 +3624,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "status"
-                ],
+                "required": ["status"],
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "pending",
-                      "reviewed",
-                      "dismissed"
-                    ]
+                    "enum": ["pending", "reviewed", "dismissed"]
                   },
                   "reviewerNotes": {
                     "type": "string"
@@ -4277,9 +3645,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "report"
-                  ],
+                  "required": ["report"],
                   "properties": {
                     "report": {
                       "$ref": "#/components/schemas/AdminReportDTO"
@@ -4306,9 +3672,7 @@
     },
     "/api/admin/analytics/usage": {
       "get": {
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "summary": "Usage time-series analytics",
         "security": [
           {
@@ -4322,11 +3686,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "daily",
-                "weekly",
-                "monthly"
-              ]
+              "enum": ["daily", "weekly", "monthly"]
             },
             "description": "Time-series granularity"
           },
@@ -4382,9 +3742,7 @@
     },
     "/api/admin/analytics/content": {
       "get": {
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "summary": "Content analytics (top artworks, museums, guardrail rate)",
         "security": [
           {
@@ -4444,9 +3802,7 @@
     },
     "/api/admin/analytics/engagement": {
       "get": {
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "summary": "Engagement analytics (session duration, return rate)",
         "security": [
           {
@@ -4497,9 +3853,7 @@
     },
     "/api/admin/tickets": {
       "get": {
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "summary": "Paginated list of all support tickets (admin/moderator)",
         "security": [
           {
@@ -4533,12 +3887,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "open",
-                "in_progress",
-                "resolved",
-                "closed"
-              ]
+              "enum": ["open", "in_progress", "resolved", "closed"]
             },
             "description": "Filter by ticket status"
           },
@@ -4548,11 +3897,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "low",
-                "medium",
-                "high"
-              ]
+              "enum": ["low", "medium", "high"]
             },
             "description": "Filter by priority"
           }
@@ -4564,13 +3909,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "data",
-                    "total",
-                    "page",
-                    "limit",
-                    "totalPages"
-                  ],
+                  "required": ["data", "total", "page", "limit", "totalPages"],
                   "properties": {
                     "data": {
                       "type": "array",
@@ -4606,9 +3945,7 @@
     },
     "/api/admin/tickets/{id}": {
       "patch": {
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "summary": "Update ticket status, priority, or assignment",
         "security": [
           {
@@ -4636,26 +3973,14 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "open",
-                      "in_progress",
-                      "resolved",
-                      "closed"
-                    ]
+                    "enum": ["open", "in_progress", "resolved", "closed"]
                   },
                   "priority": {
                     "type": "string",
-                    "enum": [
-                      "low",
-                      "medium",
-                      "high"
-                    ]
+                    "enum": ["low", "medium", "high"]
                   },
                   "assignedTo": {
-                    "type": [
-                      "integer",
-                      "null"
-                    ]
+                    "type": ["integer", "null"]
                   }
                 }
               }
@@ -4669,9 +3994,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "ticket"
-                  ],
+                  "required": ["ticket"],
                   "properties": {
                     "ticket": {
                       "$ref": "#/components/schemas/TicketDTO"
@@ -4698,9 +4021,7 @@
     },
     "/api/museums/search": {
       "get": {
-        "tags": [
-          "Museum"
-        ],
+        "tags": ["Museum"],
         "summary": "Search museums by location or text query",
         "security": [
           {
@@ -4750,6 +4071,16 @@
               "maxLength": 200
             },
             "description": "Text search query (name filter or geocode input)"
+          },
+          {
+            "in": "query",
+            "name": "bbox",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^-?\\d+(?:\\.\\d+)?,-?\\d+(?:\\.\\d+)?,-?\\d+(?:\\.\\d+)?,-?\\d+(?:\\.\\d+)?$"
+            },
+            "description": "Bounding box \"minLng,minLat,maxLng,maxLat\" (WGS84). When provided, takes precedence over lat/lng/radius — distance is measured from the bbox center."
           }
         ],
         "responses": {
@@ -4759,10 +4090,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "museums",
-                    "count"
-                  ],
+                  "required": ["museums", "count"],
                   "properties": {
                     "museums": {
                       "type": "array",
@@ -4781,10 +4109,7 @@
                             "type": "string"
                           },
                           "address": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
+                            "type": ["string", "null"]
                           },
                           "latitude": {
                             "type": "number"
@@ -4798,20 +4123,11 @@
                           },
                           "source": {
                             "type": "string",
-                            "enum": [
-                              "local",
-                              "osm"
-                            ]
+                            "enum": ["local", "osm"]
                           },
                           "museumType": {
                             "type": "string",
-                            "enum": [
-                              "art",
-                              "history",
-                              "science",
-                              "specialized",
-                              "general"
-                            ],
+                            "enum": ["art", "history", "science", "specialized", "general"],
                             "description": "Museum category derived from OSM tags"
                           }
                         }
@@ -4839,9 +4155,7 @@
     },
     "/api/admin/reviews": {
       "get": {
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "summary": "Paginated list of all reviews (admin/moderator)",
         "security": [
           {
@@ -4875,11 +4189,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "approved",
-                "rejected"
-              ]
+              "enum": ["pending", "approved", "rejected"]
             },
             "description": "Filter by review status"
           }
@@ -4906,9 +4216,7 @@
     },
     "/api/admin/reviews/{id}": {
       "patch": {
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "summary": "Moderate a review (approve/reject)",
         "security": [
           {
@@ -4933,16 +4241,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "status"
-                ],
+                "required": ["status"],
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "approved",
-                      "rejected"
-                    ]
+                    "enum": ["approved", "rejected"]
                   }
                 }
               }
@@ -4956,9 +4259,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "review"
-                  ],
+                  "required": ["review"],
                   "properties": {
                     "review": {
                       "$ref": "#/components/schemas/ReviewDTO"
@@ -4985,9 +4286,7 @@
     },
     "/api/museums/directory": {
       "get": {
-        "tags": [
-          "Museum"
-        ],
+        "tags": ["Museum"],
         "summary": "Public directory of active museums",
         "security": [
           {
@@ -5001,9 +4300,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "museums"
-                  ],
+                  "required": ["museums"],
                   "properties": {
                     "museums": {
                       "type": "array",
@@ -5024,9 +4321,7 @@
     },
     "/api/museums": {
       "post": {
-        "tags": [
-          "Museum"
-        ],
+        "tags": ["Museum"],
         "summary": "Create a new museum (admin only)",
         "security": [
           {
@@ -5039,10 +4334,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "name",
-                  "slug"
-                ],
+                "required": ["name", "slug"],
                 "properties": {
                   "name": {
                     "type": "string"
@@ -5072,9 +4364,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "museum"
-                  ],
+                  "required": ["museum"],
                   "properties": {
                     "museum": {
                       "$ref": "#/components/schemas/MuseumDTO"
@@ -5096,9 +4386,7 @@
         }
       },
       "get": {
-        "tags": [
-          "Museum"
-        ],
+        "tags": ["Museum"],
         "summary": "List all museums (admin/moderator/museum_manager)",
         "security": [
           {
@@ -5112,9 +4400,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "museums"
-                  ],
+                  "required": ["museums"],
                   "properties": {
                     "museums": {
                       "type": "array",
@@ -5138,9 +4424,7 @@
     },
     "/api/museums/{idOrSlug}": {
       "get": {
-        "tags": [
-          "Museum"
-        ],
+        "tags": ["Museum"],
         "summary": "Get museum by ID or slug",
         "security": [
           {
@@ -5165,9 +4449,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "museum"
-                  ],
+                  "required": ["museum"],
                   "properties": {
                     "museum": {
                       "$ref": "#/components/schemas/MuseumDTO"
@@ -5188,9 +4470,7 @@
     },
     "/api/museums/{id}": {
       "put": {
-        "tags": [
-          "Museum"
-        ],
+        "tags": ["Museum"],
         "summary": "Update museum (admin only)",
         "security": [
           {
@@ -5222,28 +4502,16 @@
                     "type": "string"
                   },
                   "address": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
+                    "type": ["string", "null"]
                   },
                   "description": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
+                    "type": ["string", "null"]
                   },
                   "latitude": {
-                    "type": [
-                      "number",
-                      "null"
-                    ]
+                    "type": ["number", "null"]
                   },
                   "longitude": {
-                    "type": [
-                      "number",
-                      "null"
-                    ]
+                    "type": ["number", "null"]
                   },
                   "config": {
                     "type": "object",
@@ -5264,9 +4532,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "museum"
-                  ],
+                  "required": ["museum"],
                   "properties": {
                     "museum": {
                       "$ref": "#/components/schemas/MuseumDTO"
@@ -5293,9 +4559,7 @@
     },
     "/api/support/contact": {
       "post": {
-        "tags": [
-          "Support"
-        ],
+        "tags": ["Support"],
         "summary": "Submit a public support contact request",
         "security": [],
         "requestBody": {
@@ -5304,11 +4568,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "name",
-                  "email",
-                  "message"
-                ],
+                "required": ["name", "email", "message"],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -5337,15 +4597,11 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "accepted"
-                  ],
+                  "required": ["accepted"],
                   "properties": {
                     "accepted": {
                       "type": "boolean",
-                      "enum": [
-                        true
-                      ]
+                      "enum": [true]
                     }
                   }
                 }
@@ -5363,9 +4619,7 @@
     },
     "/api/support/tickets": {
       "post": {
-        "tags": [
-          "Support"
-        ],
+        "tags": ["Support"],
         "summary": "Create a support ticket",
         "security": [
           {
@@ -5378,10 +4632,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "subject",
-                  "description"
-                ],
+                "required": ["subject", "description"],
                 "properties": {
                   "subject": {
                     "type": "string",
@@ -5393,11 +4644,7 @@
                   },
                   "priority": {
                     "type": "string",
-                    "enum": [
-                      "low",
-                      "medium",
-                      "high"
-                    ]
+                    "enum": ["low", "medium", "high"]
                   },
                   "category": {
                     "type": "string",
@@ -5415,9 +4662,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "ticket"
-                  ],
+                  "required": ["ticket"],
                   "properties": {
                     "ticket": {
                       "$ref": "#/components/schemas/TicketDTO"
@@ -5436,9 +4681,7 @@
         }
       },
       "get": {
-        "tags": [
-          "Support"
-        ],
+        "tags": ["Support"],
         "summary": "List own support tickets",
         "security": [
           {
@@ -5472,12 +4715,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "open",
-                "in_progress",
-                "resolved",
-                "closed"
-              ]
+              "enum": ["open", "in_progress", "resolved", "closed"]
             },
             "description": "Filter by status"
           },
@@ -5487,11 +4725,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "low",
-                "medium",
-                "high"
-              ]
+              "enum": ["low", "medium", "high"]
             },
             "description": "Filter by priority"
           }
@@ -5503,13 +4737,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "data",
-                    "total",
-                    "page",
-                    "limit",
-                    "totalPages"
-                  ],
+                  "required": ["data", "total", "page", "limit", "totalPages"],
                   "properties": {
                     "data": {
                       "type": "array",
@@ -5542,9 +4770,7 @@
     },
     "/api/support/tickets/{id}": {
       "get": {
-        "tags": [
-          "Support"
-        ],
+        "tags": ["Support"],
         "summary": "Get ticket detail with messages",
         "security": [
           {
@@ -5570,9 +4796,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "ticket"
-                  ],
+                  "required": ["ticket"],
                   "properties": {
                     "ticket": {
                       "$ref": "#/components/schemas/TicketDetailDTO"
@@ -5596,9 +4820,7 @@
     },
     "/api/support/tickets/{id}/messages": {
       "post": {
-        "tags": [
-          "Support"
-        ],
+        "tags": ["Support"],
         "summary": "Add a message to a ticket",
         "security": [
           {
@@ -5623,9 +4845,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "text"
-                ],
+                "required": ["text"],
                 "properties": {
                   "text": {
                     "type": "string",
@@ -5643,9 +4863,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "message"
-                  ],
+                  "required": ["message"],
                   "properties": {
                     "message": {
                       "$ref": "#/components/schemas/TicketMessageDTO"
@@ -5672,9 +4890,7 @@
     },
     "/api/chat/describe": {
       "post": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "summary": "Generate standalone AI description from image or text",
         "security": [
           {
@@ -5725,9 +4941,7 @@
     },
     "/api/chat/memory/preference": {
       "get": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "summary": "Get current memory-opt-in preference for the authenticated user",
         "security": [
           {
@@ -5751,9 +4965,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "summary": "Toggle memory opt-in preference for the authenticated user",
         "security": [
           {
@@ -5766,9 +4978,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "enabled"
-                ],
+                "required": ["enabled"],
                 "properties": {
                   "enabled": {
                     "type": "boolean",
@@ -5801,9 +5011,7 @@
     },
     "/api/museums/{id}/low-data-pack": {
       "get": {
-        "tags": [
-          "Museum"
-        ],
+        "tags": ["Museum"],
         "summary": "Offline low-data Q&A pack for a museum",
         "description": "Returns a merged list of popular cached LLM answers and seeded Q&A entries for offline use.",
         "parameters": [
@@ -5858,9 +5066,7 @@
     },
     "/api/admin/museums/{id}/cache/purge": {
       "post": {
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "summary": "Purge LLM cache entries for a museum (admin only)",
         "security": [
           {

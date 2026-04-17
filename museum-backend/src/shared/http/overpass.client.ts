@@ -17,11 +17,19 @@ export interface OverpassMuseumResult {
   museumType: MuseumCategory;
 }
 
-/** Parameters for querying nearby museums via Overpass. */
+/** A WGS84 bounding box ordered as [minLng, minLat, maxLng, maxLat]. */
+export type OverpassBoundingBox = [number, number, number, number];
+
+/**
+ * Parameters for querying museums via Overpass. Either a center+radius
+ * (`lat`/`lng`/`radiusMeters`) or a `bbox` must be provided. When `bbox`
+ * is set, it takes precedence and the center+radius is ignored.
+ */
 interface OverpassSearchParams {
-  lat: number;
-  lng: number;
-  radiusMeters: number;
+  lat?: number;
+  lng?: number;
+  radiusMeters?: number;
+  bbox?: OverpassBoundingBox;
   /** Optional text filter applied to museum names after fetch. */
   q?: string;
 }
@@ -88,12 +96,26 @@ const USER_AGENT = 'Musaium/1.0 (+https://musaium.com; contact@musaium.com)';
  * the 504s is the `[timeout:180]` admission budget — see QL_TIMEOUT_SECONDS
  * for the full explanation.
  */
-const buildQuery = (lat: number, lng: number, radiusMeters: number): string => {
+const buildRadiusQuery = (lat: number, lng: number, radiusMeters: number): string => {
   const r = String(radiusMeters);
   const coords = `${String(lat)},${String(lng)}`;
   return [
     `[out:json][timeout:${String(QL_TIMEOUT_SECONDS)}];`,
     `nwr["tourism"="museum"](around:${r},${coords});`,
+    'out center;',
+  ].join('\n');
+};
+
+/**
+ * Builds an Overpass QL query for museums inside a bounding box.
+ * Overpass uses (south,west,north,east) ordering — opposite to GeoJSON.
+ */
+const buildBboxQuery = (bbox: OverpassBoundingBox): string => {
+  const [minLng, minLat, maxLng, maxLat] = bbox;
+  const filter = `${String(minLat)},${String(minLng)},${String(maxLat)},${String(maxLng)}`;
+  return [
+    `[out:json][timeout:${String(QL_TIMEOUT_SECONDS)}];`,
+    `nwr["tourism"="museum"](${filter});`,
     'out center;',
   ].join('\n');
 };
@@ -195,11 +217,58 @@ async function postQuery(endpoint: string, query: string, timeoutMs: number): Pr
 }
 
 /**
- * Queries the Overpass API for museums near a given location.
+ * Executes the built Overpass query against a single endpoint and parses the result.
+ * Returns null if the endpoint should be skipped (non-OK status or unexpected shape);
+ * the caller then falls through to the next endpoint.
+ *
+ * @param endpoint - Overpass endpoint URL.
+ * @param query - Pre-built Overpass QL query.
+ * @param timeoutMs - HTTP request timeout in milliseconds.
+ * @param q - Optional name-substring filter applied after parsing.
+ * @returns Parsed museum results on success, or null to try next endpoint.
+ */
+async function fetchFromEndpoint(
+  endpoint: string,
+  query: string,
+  timeoutMs: number,
+  q: string | undefined,
+): Promise<OverpassMuseumResult[] | null> {
+  const response = await postQuery(endpoint, query, timeoutMs);
+
+  if (!response.ok) {
+    logger.warn('Overpass endpoint returned non-OK status — trying next', {
+      endpoint,
+      status: response.status,
+      statusText: response.statusText,
+    });
+    return null;
+  }
+
+  const data = (await response.json()) as OverpassResponse;
+
+  if (!Array.isArray(data.elements)) {
+    logger.warn('Overpass endpoint returned unexpected response shape', { endpoint });
+    return null;
+  }
+
+  const results: OverpassMuseumResult[] = data.elements
+    .map(parseElement)
+    .filter((r): r is OverpassMuseumResult => r !== null);
+
+  if (q) {
+    const lower = q.toLowerCase();
+    return results.filter((r) => r.name.toLowerCase().includes(lower));
+  }
+
+  return results;
+}
+
+/**
+ * Queries the Overpass API for museums near a given location (or inside a bbox).
  * Tries endpoints in order (main → Kumi mirror) and returns the first success.
  * Returns an empty array on full failure (all endpoints failed).
  *
- * @param params - Search parameters including coordinates, radius, and optional text filter.
+ * @param params - Search parameters including coordinates, radius/bbox, and optional text filter.
  * @param timeoutMs - HTTP request timeout per endpoint in milliseconds (default 30000).
  * @returns Array of parsed museum results.
  */
@@ -207,39 +276,21 @@ export async function queryOverpassMuseums(
   params: OverpassSearchParams,
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
 ): Promise<OverpassMuseumResult[]> {
-  const { lat, lng, radiusMeters, q } = params;
-  const query = buildQuery(lat, lng, radiusMeters);
+  const { lat, lng, radiusMeters, bbox, q } = params;
+  let query: string;
+  if (bbox) {
+    query = buildBboxQuery(bbox);
+  } else if (lat != null && lng != null && radiusMeters != null) {
+    query = buildRadiusQuery(lat, lng, radiusMeters);
+  } else {
+    logger.warn('queryOverpassMuseums called without bbox or center+radius — skipping');
+    return [];
+  }
 
   for (const endpoint of OVERPASS_ENDPOINTS) {
     try {
-      const response = await postQuery(endpoint, query, timeoutMs);
-
-      if (!response.ok) {
-        logger.warn('Overpass endpoint returned non-OK status — trying next', {
-          endpoint,
-          status: response.status,
-          statusText: response.statusText,
-        });
-        continue;
-      }
-
-      const data = (await response.json()) as OverpassResponse;
-
-      if (!Array.isArray(data.elements)) {
-        logger.warn('Overpass endpoint returned unexpected response shape', { endpoint });
-        continue;
-      }
-
-      let results: OverpassMuseumResult[] = data.elements
-        .map(parseElement)
-        .filter((r): r is OverpassMuseumResult => r !== null);
-
-      if (q) {
-        const lower = q.toLowerCase();
-        results = results.filter((r) => r.name.toLowerCase().includes(lower));
-      }
-
-      return results;
+      const results = await fetchFromEndpoint(endpoint, query, timeoutMs, q);
+      if (results !== null) return results;
     } catch (error) {
       logger.warn('Overpass endpoint query failed — trying next', {
         endpoint,
@@ -247,10 +298,11 @@ export async function queryOverpassMuseums(
         lat,
         lng,
         radiusMeters,
+        bbox,
       });
     }
   }
 
-  logger.warn('All Overpass endpoints failed', { lat, lng, radiusMeters });
+  logger.warn('All Overpass endpoints failed', { lat, lng, radiusMeters, bbox });
   return [];
 }

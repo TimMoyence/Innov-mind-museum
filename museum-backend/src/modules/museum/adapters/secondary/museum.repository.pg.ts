@@ -1,8 +1,10 @@
+import { Between } from 'typeorm';
+
 import { conflict } from '@shared/errors/app.error';
 
 import { Museum } from '../../domain/museum.entity';
 
-import type { IMuseumRepository } from '../../domain/museum.repository.interface';
+import type { BoundingBox, IMuseumRepository } from '../../domain/museum.repository.interface';
 import type { CreateMuseumInput, UpdateMuseumInput } from '../../domain/museum.types';
 import type { DataSource, Repository } from 'typeorm';
 
@@ -74,6 +76,24 @@ export class MuseumRepositoryPg implements IMuseumRepository {
     const where = opts?.activeOnly ? { isActive: true } : {};
     return await this.repo.find({
       where,
+      order: { name: 'ASC' },
+    });
+  }
+
+  /**
+   * Finds active museums inside a bounding box. Uses simple BETWEEN filters on
+   * the latitude/longitude columns — no PostGIS dependency required. Antimeridian
+   * crossing (minLng > maxLng) is intentionally not supported; the frontend never
+   * produces such bboxes in practice.
+   */
+  async findInBoundingBox(bbox: BoundingBox): Promise<Museum[]> {
+    const [minLng, minLat, maxLng, maxLat] = bbox;
+    return await this.repo.find({
+      where: {
+        isActive: true,
+        latitude: Between(minLat, maxLat),
+        longitude: Between(minLng, maxLng),
+      },
       order: { name: 'ASC' },
     });
   }

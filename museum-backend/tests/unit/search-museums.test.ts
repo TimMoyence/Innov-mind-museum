@@ -435,4 +435,86 @@ describe('SearchMuseumsUseCase', () => {
     expect(mockQueryOverpassMuseums).toHaveBeenCalledTimes(1);
     expect(result.museums).toHaveLength(0);
   });
+
+  /* ---------------------------------------------------------------- */
+  /*  Bbox search branch                                              */
+  /* ---------------------------------------------------------------- */
+
+  describe('bbox search', () => {
+    /** Lisbon-ish bbox: ~5km square around 38.72/-9.14. */
+    const LISBON_BBOX: [number, number, number, number] = [-9.18, 38.69, -9.1, 38.75];
+
+    it('returns local museums whose coordinates fall inside the bbox', async () => {
+      await repo.create({
+        name: 'Museu Nacional do Azulejo',
+        slug: 'azulejo',
+        latitude: 38.7245,
+        longitude: -9.1133,
+      });
+      await repo.create({
+        name: 'Far Away',
+        slug: 'far-away',
+        latitude: 48.8566,
+        longitude: 2.3522,
+      });
+      mockQueryOverpassMuseums.mockResolvedValueOnce([]);
+
+      const result = await useCase.execute({ bbox: LISBON_BBOX });
+
+      expect(result.count).toBe(1);
+      expect(result.museums[0].name).toBe('Museu Nacional do Azulejo');
+    });
+
+    it('passes bbox (not lat/lng) to the Overpass client', async () => {
+      mockQueryOverpassMuseums.mockResolvedValueOnce([]);
+
+      await useCase.execute({ bbox: LISBON_BBOX });
+
+      expect(mockQueryOverpassMuseums).toHaveBeenCalledTimes(1);
+      const callArgs = (mockQueryOverpassMuseums.mock.calls[0] as unknown as unknown[])[0] as {
+        bbox?: number[];
+      };
+      expect(callArgs.bbox).toEqual(LISBON_BBOX);
+    });
+
+    it('takes precedence over lat/lng/radius when both are provided', async () => {
+      mockQueryOverpassMuseums.mockResolvedValueOnce([]);
+
+      await useCase.execute({ ...PARIS, radiusMeters: 5_000, bbox: LISBON_BBOX });
+
+      // Only the bbox query path should be used; the radius path uses a different cache key.
+      expect(mockQueryOverpassMuseums).toHaveBeenCalledTimes(1);
+      const callArgs = (mockQueryOverpassMuseums.mock.calls[0] as unknown as unknown[])[0] as {
+        bbox?: number[];
+        lat?: number;
+      };
+      expect(callArgs.bbox).toEqual(LISBON_BBOX);
+      expect(callArgs.lat).toBeUndefined();
+    });
+
+    it('does NOT trigger geocoding fallback even when q is set', async () => {
+      mockQueryOverpassMuseums.mockResolvedValueOnce([]);
+
+      await useCase.execute({ bbox: LISBON_BBOX, q: 'Lyon' });
+
+      expect(mockGeocodeWithNominatim).not.toHaveBeenCalled();
+    });
+
+    it('measures distance from the bbox center', async () => {
+      // bbox center ≈ (38.72, -9.14)
+      await repo.create({
+        name: 'Centro',
+        slug: 'centro',
+        latitude: 38.72,
+        longitude: -9.14,
+      });
+      mockQueryOverpassMuseums.mockResolvedValueOnce([]);
+
+      const result = await useCase.execute({ bbox: LISBON_BBOX });
+
+      expect(result.museums).toHaveLength(1);
+      // Distance from centro to bbox center should be small (<300m given rounding).
+      expect(result.museums[0].distance).toBeLessThan(300);
+    });
+  });
 });

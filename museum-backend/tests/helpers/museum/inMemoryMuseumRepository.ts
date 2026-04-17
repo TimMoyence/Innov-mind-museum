@@ -1,5 +1,8 @@
 import { Museum } from '@modules/museum/domain/museum.entity';
-import type { IMuseumRepository } from '@modules/museum/domain/museum.repository.interface';
+import type {
+  BoundingBox,
+  IMuseumRepository,
+} from '@modules/museum/domain/museum.repository.interface';
 import type { CreateMuseumInput, UpdateMuseumInput } from '@modules/museum/domain/museum.types';
 
 /** In-memory implementation of IMuseumRepository for unit tests. */
@@ -54,6 +57,20 @@ export class InMemoryMuseumRepository implements IMuseumRepository {
       return this.museums.filter((m) => m.isActive);
     }
     return [...this.museums];
+  }
+
+  async findInBoundingBox(bbox: BoundingBox): Promise<Museum[]> {
+    const [minLng, minLat, maxLng, maxLat] = bbox;
+    return this.museums.filter(
+      (m) =>
+        m.isActive &&
+        m.latitude != null &&
+        m.longitude != null &&
+        m.latitude >= minLat &&
+        m.latitude <= maxLat &&
+        m.longitude >= minLng &&
+        m.longitude <= maxLng,
+    );
   }
 
   async delete(id: number): Promise<void> {

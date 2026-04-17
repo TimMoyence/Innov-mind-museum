@@ -39,18 +39,24 @@ const handleGetDirectory = async (_req: Request, res: Response) => {
 /** Creates the handler for GET /api/museums/search. */
 const buildHandleSearch = (searchMuseumsUseCase: ReturnType<typeof buildSearchMuseumsUseCase>) => {
   return async (_req: Request, res: Response) => {
-    const { lat, lng, radius, q } = res.locals.validatedQuery as {
+    const { lat, lng, radius, q, bbox } = res.locals.validatedQuery as {
       lat?: number;
       lng?: number;
       radius?: number;
       q?: string;
+      bbox?: string;
     };
+
+    const parsedBbox = bbox
+      ? (bbox.split(',').map(Number) as [number, number, number, number])
+      : undefined;
 
     const result = await searchMuseumsUseCase.execute({
       lat,
       lng,
       radiusMeters: radius,
       q,
+      bbox: parsedBbox,
     });
 
     res.json(result);
