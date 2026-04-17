@@ -619,12 +619,40 @@ describe('chatApi', () => {
   // ── sendMessageSmart ───────────────────────────────────────────────────────
 
   describe('sendMessageSmart', () => {
+    const originalStreamingFlag = process.env.EXPO_PUBLIC_CHAT_STREAMING;
+
     beforeEach(() => {
       jest.useFakeTimers();
+      // Most tests below exercise the streaming path — enable the feature flag.
+      // Tests that verify the flag-off bypass explicitly override this.
+      process.env.EXPO_PUBLIC_CHAT_STREAMING = 'true';
     });
 
     afterEach(() => {
       jest.useRealTimers();
+      if (originalStreamingFlag === undefined) {
+        delete process.env.EXPO_PUBLIC_CHAT_STREAMING;
+      } else {
+        process.env.EXPO_PUBLIC_CHAT_STREAMING = originalStreamingFlag;
+      }
+    });
+
+    it('bypasses streaming when EXPO_PUBLIC_CHAT_STREAMING is disabled', async () => {
+      delete process.env.EXPO_PUBLIC_CHAT_STREAMING;
+      const response = makePostMessageResponse();
+      mockHttpRequest.mockResolvedValue(response);
+
+      const result = await chatApi.sendMessageSmart({
+        sessionId: 'sess-1',
+        text: 'Hello',
+        onToken: () => {
+          /* never called — streaming bypassed */
+        },
+      });
+
+      expect(result).toBeTruthy();
+      expect(mockHttpRequest).toHaveBeenCalled();
+      expect(mockExpoFetch).not.toHaveBeenCalled();
     });
 
     it('uses non-streaming path when imageUri is provided', async () => {

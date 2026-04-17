@@ -89,10 +89,11 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space['1'],
+    gap: space['1.5'],
     alignSelf: 'flex-start',
     borderRadius: semantic.chat.bubbleRadius,
-    padding: semantic.chat.bubblePaddingX,
+    paddingHorizontal: semantic.chat.bubblePaddingX,
+    paddingVertical: space['2.5'],
     borderWidth: semantic.input.borderWidth,
   },
   dot: {

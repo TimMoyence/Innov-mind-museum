@@ -35,6 +35,18 @@ type SignedImageUrlResponseDTO = components['schemas']['SignedImageUrlResponse']
 
 const CHAT_BASE = '/api/chat';
 
+/**
+ * Whether SSE streaming is enabled for chat messages.
+ *
+ * Controlled by `EXPO_PUBLIC_CHAT_STREAMING`. Defaults to `false` — the streaming
+ * path is not yet reliable enough for production, so the client falls back to a
+ * non-streaming POST and shows a WhatsApp-style typing indicator while waiting.
+ */
+const isChatStreamingEnabled = (): boolean => {
+  const raw = process.env.EXPO_PUBLIC_CHAT_STREAMING?.toLowerCase();
+  return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
+};
+
 const audioMimeByExtension: Record<string, string> = {
   m4a: 'audio/mp4',
   mp4: 'audio/mp4',
@@ -599,6 +611,12 @@ export const chatApi = {
   }): Promise<PostMessageResponseDTO | null> {
     // Image messages always use non-streaming path
     if (params.imageUri) {
+      return this.postMessage(params);
+    }
+
+    // SSE streaming feature flag — when disabled, skip the stream attempt entirely.
+    // The UI displays a WhatsApp-style typing indicator while waiting for the full response.
+    if (!isChatStreamingEnabled()) {
       return this.postMessage(params);
     }
 

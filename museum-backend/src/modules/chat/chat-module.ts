@@ -125,6 +125,11 @@ export class ChatModule {
     return new LocalImageStorage(env.storage.localUploadsDir);
   }
 
+  /** Creates the art-topic classifier if the feature flag is enabled. */
+  private buildArtTopicClassifier(): ArtTopicClassifier | undefined {
+    return env.featureFlags.artTopicClassifier ? new ArtTopicClassifier() : undefined;
+  }
+
   /** Creates the user memory service if the feature flag is enabled. */
   private buildUserMemory(
     dataSource: DataSource,
@@ -309,7 +314,7 @@ export class ChatModule {
       knowledgeBase,
       imageEnrichment,
       webSearch,
-      artTopicClassifier: new ArtTopicClassifier(),
+      artTopicClassifier: this.buildArtTopicClassifier(),
       piiSanitizer: new RegexPiiSanitizer(),
       museumRepository,
       dbLookup: knowledgeExtraction.dbLookup,

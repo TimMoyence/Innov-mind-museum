@@ -141,6 +141,12 @@ export interface AppEnv {
     imageEnrichment: boolean;
     webSearch: boolean;
     knowledgeExtraction: boolean;
+    /**
+     * When true, inject the output-side ArtTopicClassifier (LLM-based) that rejects
+     * responses unrelated to art/museums. Default false — discipline topique déléguée
+     * au system prompt LLM pour permettre digressions culturelles légitimes.
+     */
+    artTopicClassifier: boolean;
   };
   /** Maximum chat messages a free-tier user can send per calendar day. */
   freeTierDailyChatLimit: number;
