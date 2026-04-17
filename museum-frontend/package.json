@@ -137,6 +137,11 @@
       }
     }
   },
+  "overrides": {
+    "markdown-it": ">=14.0.0",
+    "follow-redirects": ">=1.15.12",
+    "@tootallnate/once": ">=2.0.1"
+  },
   "lint-staged": {
     "*.{ts,tsx}": [
       "prettier --write",
