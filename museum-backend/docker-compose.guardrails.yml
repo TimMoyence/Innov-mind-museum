@@ -1,0 +1,49 @@
+# Opt-in docker-compose overlay for the AI Guardrails V2 POC (plan NL-4).
+#
+# Activation:
+#   1. Copy the LLM Guard FastAPI reference app into `ops/llm-guard-sidecar/`.
+#   2. Set these env vars in `.env`:
+#        GUARDRAILS_V2_CANDIDATE=llm-guard
+#        GUARDRAILS_V2_LLM_GUARD_URL=http://llm-guard:8081
+#        GUARDRAILS_V2_OBSERVE_ONLY=true
+#   3. Start with the overlay:
+#        docker compose -f docker-compose.dev.yml -f docker-compose.guardrails.yml up -d
+#
+# When the overlay is not used, `env.guardrails.candidate` defaults to `off`
+# and the backend installs the noop adapter — no runtime cost, no dependency.
+
+services:
+  llm-guard:
+    # NOTE: no official OCI image is published by Protectai. The POC uses a
+    # community FastAPI wrapper that exposes /scan/prompt and /scan/output.
+    # Point `build.context` at a local checkout before enabling this overlay.
+    build:
+      context: ./ops/llm-guard-sidecar
+      dockerfile: Dockerfile
+    container_name: dev-llm-guard
+    ports:
+      - '8081:8081'
+    environment:
+      - LOG_LEVEL=INFO
+      # Scanners activated on the input path (comma-separated). Mirrors the
+      # gaps identified in NL-3.1 (semantic injection + PII + toxicity).
+      - INPUT_SCANNERS=PromptInjection,BanTopics,Anonymize,Toxicity
+      # Scanners activated on the output path.
+      - OUTPUT_SCANNERS=NoRefusal,Bias,Sensitive,Relevance
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:8081/health']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+
+  backend:
+    environment:
+      - GUARDRAILS_V2_CANDIDATE=${GUARDRAILS_V2_CANDIDATE:-llm-guard}
+      - GUARDRAILS_V2_LLM_GUARD_URL=${GUARDRAILS_V2_LLM_GUARD_URL:-http://llm-guard:8081}
+      - GUARDRAILS_V2_TIMEOUT_MS=${GUARDRAILS_V2_TIMEOUT_MS:-300}
+      - GUARDRAILS_V2_OBSERVE_ONLY=${GUARDRAILS_V2_OBSERVE_ONLY:-true}
+    depends_on:
+      llm-guard:
+        condition: service_healthy

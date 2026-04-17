@@ -2,7 +2,13 @@ import dotenv from 'dotenv';
 
 import { validateProductionEnv } from './env.production-validation';
 
-import type { AppEnv, LlmProvider, NodeEnv, StorageDriver } from './env.types';
+import type {
+  AppEnv,
+  GuardrailsV2Candidate,
+  LlmProvider,
+  NodeEnv,
+  StorageDriver,
+} from './env.types';
 
 dotenv.config();
 
@@ -95,6 +101,13 @@ const providerRaw = (process.env.LLM_PROVIDER || 'openai').toLowerCase();
 const provider: LlmProvider = ['openai', 'deepseek', 'google'].includes(providerRaw)
   ? (providerRaw as LlmProvider)
   : 'openai';
+
+const guardrailsCandidateRaw = (process.env.GUARDRAILS_V2_CANDIDATE || 'off').toLowerCase();
+const guardrailsCandidate: GuardrailsV2Candidate = (
+  ['off', 'llm-guard', 'nemo', 'prompt-armor'] as const
+).includes(guardrailsCandidateRaw as GuardrailsV2Candidate)
+  ? (guardrailsCandidateRaw as GuardrailsV2Candidate)
+  : 'off';
 
 const storageDriverRaw = (process.env.OBJECT_STORAGE_DRIVER || 'local').toLowerCase();
 const storageDriver: StorageDriver = ['local', 's3'].includes(storageDriverRaw)
@@ -307,6 +320,12 @@ const env: AppEnv = {
     reviewThreshold: toNumber(process.env.EXTRACTION_REVIEW_THRESHOLD, 0.4),
   },
   redis: parseRedisUrlFallback(),
+  guardrails: {
+    candidate: guardrailsCandidate,
+    llmGuardUrl: toOptionalString(process.env.GUARDRAILS_V2_LLM_GUARD_URL),
+    timeoutMs: toNumber(process.env.GUARDRAILS_V2_TIMEOUT_MS, 300),
+    observeOnly: toBoolean(process.env.GUARDRAILS_V2_OBSERVE_ONLY, true),
+  },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
   supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.app',
   storage: {

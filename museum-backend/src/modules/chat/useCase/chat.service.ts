@@ -31,6 +31,7 @@ import type {
   ReportReason,
 } from '../domain/chat.types';
 import type { FeedbackValue } from '../domain/messageFeedback.entity';
+import type { AdvancedGuardrail } from '../domain/ports/advanced-guardrail.port';
 import type { AudioTranscriber } from '../domain/ports/audio-transcriber.port';
 import type { ChatOrchestrator } from '../domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '../domain/ports/image-storage.port';
@@ -69,6 +70,8 @@ export interface ChatServiceDeps {
   imageEnrichment?: ImageEnrichmentService;
   webSearch?: WebSearchService;
   artTopicClassifier?: ArtTopicClassifierPort;
+  advancedGuardrail?: AdvancedGuardrail;
+  advancedGuardrailObserveOnly?: boolean;
   piiSanitizer?: PiiSanitizer;
   museumRepository?: IMuseumRepository;
   dbLookup?: DbLookupService;
@@ -111,6 +114,8 @@ export class ChatService {
       imageEnrichment: deps.imageEnrichment,
       webSearch: deps.webSearch,
       artTopicClassifier: deps.artTopicClassifier,
+      advancedGuardrail: deps.advancedGuardrail,
+      advancedGuardrailObserveOnly: deps.advancedGuardrailObserveOnly,
       piiSanitizer: deps.piiSanitizer,
       dbLookup: deps.dbLookup,
       extractionQueue: deps.extractionQueue,

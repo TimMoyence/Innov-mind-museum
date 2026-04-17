@@ -24,6 +24,7 @@ import type { UserMemoryService } from './user-memory.service';
 import type { WebSearchService } from './web-search.service';
 import type { ChatRepository } from '../domain/chat.repository.interface';
 import type { EnrichedImage, PostAudioMessageInput, PostMessageInput } from '../domain/chat.types';
+import type { AdvancedGuardrail } from '../domain/ports/advanced-guardrail.port';
 import type { AudioTranscriber } from '../domain/ports/audio-transcriber.port';
 import type {
   ChatOrchestrator,
@@ -53,6 +54,8 @@ export interface ChatMessageServiceDeps {
   imageEnrichment?: ImageEnrichmentService;
   webSearch?: WebSearchService;
   artTopicClassifier?: ArtTopicClassifierPort;
+  advancedGuardrail?: AdvancedGuardrail;
+  advancedGuardrailObserveOnly?: boolean;
   piiSanitizer?: PiiSanitizer;
   dbLookup?: DbLookupService;
   extractionQueue?: ExtractionQueuePort;
@@ -144,6 +147,8 @@ export class ChatMessageService {
       repository: deps.repository,
       audit: deps.audit,
       artTopicClassifier: deps.artTopicClassifier,
+      advancedGuardrail: deps.advancedGuardrail,
+      advancedGuardrailObserveOnly: deps.advancedGuardrailObserveOnly,
     });
   }
 

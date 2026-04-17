@@ -7,6 +7,9 @@ export type LlmProvider = 'openai' | 'deepseek' | 'google';
 /** Supported object-storage driver identifiers. */
 export type StorageDriver = 'local' | 's3';
 
+/** Advanced guardrail candidate for the V2 POC. `off` = noop adapter (default). */
+export type GuardrailsV2Candidate = 'off' | 'llm-guard' | 'nemo' | 'prompt-armor';
+
 /** Application configuration loaded from environment variables. */
 export interface AppEnv {
   nodeEnv: NodeEnv;
@@ -193,5 +196,20 @@ export interface AppEnv {
     host: string;
     port: number;
     password?: string;
+  };
+  /**
+   * Advanced guardrail V2 configuration. Controls the optional semantic guardrail
+   * layer that runs AFTER the deterministic keyword guardrail (kept as first defense).
+   * `candidate: 'off'` (default) installs the noop adapter and is a no-op at runtime.
+   */
+  guardrails: {
+    /** Candidate adapter to activate. Defaults to 'off'. */
+    candidate: GuardrailsV2Candidate;
+    /** Base URL of the LLM Guard sidecar (e.g. http://llm-guard:8081). Only used when candidate === 'llm-guard'. */
+    llmGuardUrl?: string;
+    /** Hard request timeout (ms) for advanced guardrail checks. Fail-CLOSED on elapsed. */
+    timeoutMs: number;
+    /** When true, never block — only log decisions (Phase A "observe" mode). */
+    observeOnly: boolean;
   };
 }

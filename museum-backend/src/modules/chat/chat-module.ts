@@ -12,6 +12,7 @@ import { TypeOrmChatRepository } from './adapters/secondary/chat.repository.type
 import { DuckDuckGoClient } from './adapters/secondary/duckduckgo.client';
 import { FallbackSearchProvider } from './adapters/secondary/fallback-search.provider';
 import { GoogleCseClient } from './adapters/secondary/google-cse.client';
+import { LLMGuardAdapter } from './adapters/secondary/guardrails/llm-guard.adapter';
 import { S3CompatibleImageStorage } from './adapters/secondary/image-storage.s3';
 import { LocalImageStorage } from './adapters/secondary/image-storage.stub';
 import { LangChainChatOrchestrator } from './adapters/secondary/langchain.orchestrator';
@@ -36,6 +37,7 @@ import { UserMemoryService } from './useCase/user-memory.service';
 import { WebSearchService } from './useCase/web-search.service';
 
 import type { ArtKeywordRepository } from './domain/artKeyword.repository.interface';
+import type { AdvancedGuardrail } from './domain/ports/advanced-guardrail.port';
 import type { ChatOrchestrator } from './domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from './domain/ports/image-storage.port';
 import type { OcrService } from './domain/ports/ocr.port';
@@ -128,6 +130,32 @@ export class ChatModule {
   /** Creates the art-topic classifier if the feature flag is enabled. */
   private buildArtTopicClassifier(): ArtTopicClassifier | undefined {
     return env.featureFlags.artTopicClassifier ? new ArtTopicClassifier() : undefined;
+  }
+
+  /**
+   * Creates the advanced guardrail V2 adapter when one is selected via env.
+   * Returns `undefined` when candidate is 'off' (default) so the service layer
+   * installs the noop path (no runtime cost).
+   */
+  private buildAdvancedGuardrail(): AdvancedGuardrail | undefined {
+    const candidate = env.guardrails.candidate;
+    if (candidate === 'off') return undefined;
+
+    if (candidate === 'llm-guard') {
+      const baseUrl = env.guardrails.llmGuardUrl;
+      if (!baseUrl) {
+        logger.warn('advanced_guardrail_misconfigured', {
+          candidate,
+          detail: 'GUARDRAILS_V2_LLM_GUARD_URL is required when candidate=llm-guard',
+        });
+        return undefined;
+      }
+      return new LLMGuardAdapter({ baseUrl, timeoutMs: env.guardrails.timeoutMs });
+    }
+
+    // nemo and prompt-armor adapters are not yet implemented; fall back to noop.
+    logger.info('advanced_guardrail_adapter_pending', { candidate });
+    return undefined;
   }
 
   /** Creates the user memory service if the feature flag is enabled. */
@@ -288,7 +316,6 @@ export class ChatModule {
     const webSearch = this.buildWebSearch(cache);
 
     const artKeywordRepo = new TypeOrmArtKeywordRepository(dataSource);
-
     this.buildArtKeywordRefresh(artKeywordRepo);
 
     const orchestrator = new LangChainChatOrchestrator();
@@ -301,25 +328,21 @@ export class ChatModule {
 
     const knowledgeExtraction = this.buildKnowledgeExtraction(dataSource);
     this._knowledgeExtractionClose = knowledgeExtraction.close;
-    const chatService = new ChatService({
+
+    const chatService = this.buildChatService({
       repository,
-      orchestrator: effectiveOrchestrator,
+      effectiveOrchestrator,
       imageStorage,
-      audioTranscriber: new OpenAiAudioTranscriber(),
       tts,
       cache,
       ocr,
-      audit: auditService,
       userMemory,
       knowledgeBase,
       imageEnrichment,
       webSearch,
-      artTopicClassifier: this.buildArtTopicClassifier(),
-      piiSanitizer: new RegexPiiSanitizer(),
       museumRepository,
-      dbLookup: knowledgeExtraction.dbLookup,
-      extractionQueue: knowledgeExtraction.extractionQueue,
       locationResolver,
+      knowledgeExtraction,
     });
 
     const describeService = new DescribeService({ orchestrator: effectiveOrchestrator, tts });
@@ -335,5 +358,49 @@ export class ChatModule {
     };
     this._built = built;
     return built;
+  }
+
+  /**
+   * Wires ChatService with all its dependencies. Extracted from build() to keep
+   * the orchestration flow (storage → caches → orchestrator → service) scannable
+   * in a single screen without tripping the max-lines-per-function rule.
+   */
+  private buildChatService(deps: {
+    repository: TypeOrmChatRepository;
+    effectiveOrchestrator: ChatOrchestrator;
+    imageStorage: LocalImageStorage | S3CompatibleImageStorage;
+    tts: OpenAiTextToSpeechService | DisabledTextToSpeechService;
+    cache?: CacheService;
+    ocr: TesseractOcrService | DisabledOcrService;
+    userMemory?: UserMemoryService;
+    knowledgeBase?: KnowledgeBaseService;
+    imageEnrichment?: ImageEnrichmentService;
+    webSearch?: WebSearchService;
+    museumRepository?: IMuseumRepository;
+    locationResolver?: LocationResolver;
+    knowledgeExtraction: ReturnType<ChatModule['buildKnowledgeExtraction']>;
+  }): ChatService {
+    return new ChatService({
+      repository: deps.repository,
+      orchestrator: deps.effectiveOrchestrator,
+      imageStorage: deps.imageStorage,
+      audioTranscriber: new OpenAiAudioTranscriber(),
+      tts: deps.tts,
+      cache: deps.cache,
+      ocr: deps.ocr,
+      audit: auditService,
+      userMemory: deps.userMemory,
+      knowledgeBase: deps.knowledgeBase,
+      imageEnrichment: deps.imageEnrichment,
+      webSearch: deps.webSearch,
+      artTopicClassifier: this.buildArtTopicClassifier(),
+      advancedGuardrail: this.buildAdvancedGuardrail(),
+      advancedGuardrailObserveOnly: env.guardrails.observeOnly,
+      piiSanitizer: new RegexPiiSanitizer(),
+      museumRepository: deps.museumRepository,
+      dbLookup: deps.knowledgeExtraction.dbLookup,
+      extractionQueue: deps.knowledgeExtraction.extractionQueue,
+      locationResolver: deps.locationResolver,
+    });
   }
 }
