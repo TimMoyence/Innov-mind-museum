@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
 import { WebView } from 'react-native-webview';
 import type {
   WebViewErrorEvent,
@@ -21,7 +20,13 @@ interface MuseumMapViewProps {
   museums: MuseumWithDistance[];
   userLatitude: number | null;
   userLongitude: number | null;
-  onMapMoved?: (lat: number, lng: number) => void;
+  /**
+   * Fired after the user pans the map. The `bbox` corresponds to the new
+   * visible area as `[minLng, minLat, maxLng, maxLat]` and is used by the
+   * "search in this area" button to query museums inside the viewport.
+   */
+  onMapMoved?: (lat: number, lng: number, bbox: [number, number, number, number]) => void;
+  onMuseumSelect?: (museum: MuseumWithDistance) => void;
 }
 
 interface WebViewOutboundMessage {
@@ -38,6 +43,7 @@ export const MuseumMapView = ({
   userLatitude,
   userLongitude,
   onMapMoved,
+  onMuseumSelect,
 }: MuseumMapViewProps) => {
   const { theme, isDark } = useTheme();
   const { t } = useTranslation();
@@ -158,29 +164,20 @@ export const MuseumMapView = ({
 
       if (data.type === 'mapMoved') {
         userPannedRef.current = true;
-        onMapMoved?.(data.lat as number, data.lng as number);
+        const bbox = data.bbox as [number, number, number, number] | undefined;
+        if (bbox) {
+          onMapMoved?.(data.lat as number, data.lng as number, bbox);
+        }
       }
 
       if (data.type === 'markerClick') {
         const museum = museums.find((m) => m.id === data.id);
         if (museum) {
-          router.push({
-            pathname: '/(stack)/museum-detail',
-            params: {
-              id: String(museum.id),
-              name: museum.name,
-              slug: museum.slug,
-              address: museum.address ?? '',
-              description: museum.description ?? '',
-              latitude: museum.latitude !== null ? String(museum.latitude) : '',
-              longitude: museum.longitude !== null ? String(museum.longitude) : '',
-              distanceMeters: museum.distanceMeters !== null ? String(museum.distanceMeters) : '',
-            },
-          });
+          onMuseumSelect?.(museum);
         }
       }
     },
-    [museums, flushQueue, syncMapState, onMapMoved],
+    [museums, flushQueue, syncMapState, onMapMoved, onMuseumSelect],
   );
 
   const html = buildLeafletHtml({ isDark });

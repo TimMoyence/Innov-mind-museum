@@ -713,7 +713,7 @@ describe('useChatSession', () => {
 
   // ── Non-streaming fallback for image messages ─────────────────────────────
 
-  it('sendMessage() with imageUri replaces streaming placeholder via non-streaming fallback then reloads', async () => {
+  it('sendMessage() with imageUri keeps optimistic local file:// preview and does not reload the session', async () => {
     // sendMessageSmart returns a response with message.text for image path
     mockSendMessageSmart.mockImplementation(() => {
       return Promise.resolve({
@@ -728,31 +728,15 @@ describe('useChatSession', () => {
       });
     });
 
-    // After image send, loadSession is called to refresh from server
-    const refreshedMessages = makeApiMessages([
-      { id: 'msg-1', role: 'user', text: 'Hello' },
-      { id: 'msg-2', role: 'assistant', text: 'Welcome!' },
-      { id: 'img-user-msg', role: 'user', text: 'What painting is this?' },
-      { id: 'img-server-resp', role: 'assistant', text: 'This is a beautiful painting' },
-    ]);
-
-    let callCount = 0;
-    mockGetSession.mockImplementation(() => {
-      callCount++;
-      if (callCount === 1) {
-        return Promise.resolve(defaultSessionResponse());
-      }
-      return Promise.resolve({
-        session: { title: 'Test Session', museumName: 'Louvre' },
-        messages: refreshedMessages,
-      });
-    });
+    mockGetSession.mockResolvedValue(defaultSessionResponse());
 
     const { result } = renderHook(() => useChatSession(SESSION_ID));
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
+
+    const initialGetSessionCalls = mockGetSession.mock.calls.length;
 
     await act(async () => {
       await result.current.sendMessage({
@@ -763,10 +747,18 @@ describe('useChatSession', () => {
 
     expect(mockSendMessageSmart).toHaveBeenCalledTimes(1);
 
-    // After reload, messages should include the server image response
-    await waitFor(() => {
-      expect(mockGetSession).toHaveBeenCalledTimes(2);
-    });
+    // No extra getSession call — the optimistic local preview is preserved.
+    expect(mockGetSession).toHaveBeenCalledTimes(initialGetSessionCalls);
+
+    // The optimistic user message is kept with its local file:// URI.
+    const userMsg = result.current.messages.find(
+      (m) => m.role === 'user' && m.text === 'What painting is this?',
+    );
+    expect(userMsg?.image?.url).toBe('file://painting.jpg');
+
+    // The assistant reply replaced the streaming placeholder.
+    const assistantMsg = result.current.messages.find((m) => m.id === 'img-server-resp');
+    expect(assistantMsg?.text).toBe('This is a beautiful painting');
   });
 
   // ── Streaming onDone callback ──────────────────────────────────────────────
@@ -987,9 +979,9 @@ describe('useChatSession', () => {
     expect(typeof result.current.error).toBe('string');
   });
 
-  // ── loadSession failure after image send ────────────────────────────────
+  // ── Image send no longer auto-reloads — no loadSession failure to surface ───
 
-  it('loadSession failure after image send does not crash the hook', async () => {
+  it('sending with an image does not trigger an extra getSession reload (no reload-error surface)', async () => {
     mockSendMessageSmart.mockResolvedValue({
       sessionId: SESSION_ID,
       message: {
@@ -1001,21 +993,15 @@ describe('useChatSession', () => {
       metadata: null,
     });
 
-    let callCount = 0;
-    mockGetSession.mockImplementation(() => {
-      callCount++;
-      if (callCount === 1) {
-        return Promise.resolve(defaultSessionResponse());
-      }
-      // Second call (loadSession after image) fails
-      return Promise.reject(new Error('Reload failed'));
-    });
+    mockGetSession.mockResolvedValue(defaultSessionResponse());
 
     const { result } = renderHook(() => useChatSession(SESSION_ID));
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
+
+    const initialGetSessionCalls = mockGetSession.mock.calls.length;
 
     await act(async () => {
       await result.current.sendMessage({
@@ -1024,15 +1010,8 @@ describe('useChatSession', () => {
       });
     });
 
-    // loadSession called for reload after image
-    await waitFor(() => {
-      expect(mockGetSession).toHaveBeenCalledTimes(2);
-    });
-
-    // The error from loadSession should be captured
-    await waitFor(() => {
-      expect(result.current.error).toBe('Reload failed');
-    });
+    expect(mockGetSession).toHaveBeenCalledTimes(initialGetSessionCalls);
+    expect(result.current.error).toBeNull();
   });
 
   // ── 3rd send increment: failure does NOT increment ──────────────────────

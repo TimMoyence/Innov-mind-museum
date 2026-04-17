@@ -22,12 +22,17 @@ export interface MuseumWithDistance extends MuseumDirectoryEntry {
 /** GPS jitter suppression threshold: ignore coordinate changes smaller than this. */
 const MIN_COORD_CHANGE_METERS = 500;
 
+/** Bounding box ordered as [minLng, minLat, maxLng, maxLat] (WGS84). */
+export type MapBoundingBox = [number, number, number, number];
+
 interface UseMuseumDirectoryResult {
   museums: MuseumWithDistance[];
   isLoading: boolean;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   refresh: () => void;
+  /** Re-fetches museums constrained to a visible map bounding box. */
+  searchInBounds: (bbox: MapBoundingBox) => void;
 }
 
 /**
@@ -205,5 +210,25 @@ export const useMuseumDirectory = (
     void fetchMuseums(userLatitude, userLongitude);
   }, [fetchMuseums, userLatitude, userLongitude]);
 
-  return { museums, isLoading, searchQuery, setSearchQuery, refresh };
+  /**
+   * Fires the backend search constrained to a map bbox. Bypasses the GPS
+   * jitter suppression so the user always gets fresh results when they
+   * explicitly ask for "search in this area".
+   */
+  const searchInBounds = useCallback((bbox: MapBoundingBox) => {
+    setIsLoading(true);
+    void museumApi
+      .searchMuseums({ bbox })
+      .then(({ museums: results }) => {
+        setRawMuseums(results.map(mapSearchEntryToMuseumWithDistance));
+      })
+      .catch(() => {
+        setRawMuseums([]);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []);
+
+  return { museums, isLoading, searchQuery, setSearchQuery, refresh, searchInBounds };
 };

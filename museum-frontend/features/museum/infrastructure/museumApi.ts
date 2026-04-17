@@ -51,9 +51,11 @@ export const museumApi = {
   },
 
   /**
-   * Searches museums near a geographic point using the backend search endpoint.
-   * Returns results sorted by distance, including OSM entries.
-   * @param params - Search parameters: lat, lng, optional radius (meters), optional text query.
+   * Searches museums via the backend search endpoint. Two mutually-exclusive
+   * geographic modes:
+   *   - center+radius: pass `lat`, `lng`, and optional `radius` (meters)
+   *   - bounding box: pass `bbox` as `[minLng, minLat, maxLng, maxLat]`
+   * When both are provided, the backend uses the bbox.
    * @returns Search results with museum entries and total count.
    */
   async searchMuseums(params: {
@@ -61,6 +63,7 @@ export const museumApi = {
     lng?: number;
     radius?: number;
     q?: string;
+    bbox?: [number, number, number, number];
   }): Promise<{ museums: MuseumSearchEntry[]; count: number }> {
     const data = await openApiRequest({
       path: '/api/museums/search',
@@ -70,6 +73,7 @@ export const museumApi = {
         lng: params.lng,
         radius: params.radius,
         q: params.q,
+        bbox: params.bbox ? params.bbox.join(',') : undefined,
       },
     });
     return { museums: data.museums, count: data.count };

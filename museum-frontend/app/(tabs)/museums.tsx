@@ -13,11 +13,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { useStartConversation } from '@/features/chat/application/useStartConversation';
 import { useLocation } from '@/features/museum/application/useLocation';
+import { openInNativeMaps } from '@/features/museum/application/openInNativeMaps';
 import type { MuseumWithDistance } from '@/features/museum/application/useMuseumDirectory';
 import { useMuseumDirectory } from '@/features/museum/application/useMuseumDirectory';
 import { MuseumDirectoryList } from '@/features/museum/ui/MuseumDirectoryList';
 import { MuseumMapView } from '@/features/museum/ui/MuseumMapView';
+import { MuseumSheet } from '@/features/museum/ui/MuseumSheet';
 import { ViewModeToggle } from '@/features/museum/ui/ViewModeToggle';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
@@ -38,22 +41,19 @@ export default function MuseumsScreen() {
 
   const { latitude, longitude, status } = useLocation();
 
-  // When user pans the map, override GPS coords with the map center for searches.
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
+  // Last visible map bbox — set on every drag, consumed by the "search in this area" chip.
+  const [mapBbox, setMapBbox] = useState<[number, number, number, number] | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [selectedMuseum, setSelectedMuseum] = useState<MuseumWithDistance | null>(null);
   const reduceMotion = useReducedMotion();
+  const { isCreating: isStartingChat, startConversation } = useStartConversation();
 
   // Crossfade animation for view mode transitions.
   // eslint-disable-next-line react-hooks/refs -- Animated.Value created once, persisted via useRef
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  const effectiveLat = viewMode === 'map' && mapCenter ? mapCenter.lat : latitude;
-  const effectiveLng = viewMode === 'map' && mapCenter ? mapCenter.lng : longitude;
-
-  const { museums, isLoading, searchQuery, setSearchQuery, refresh } = useMuseumDirectory(
-    effectiveLat,
-    effectiveLng,
-  );
+  const { museums, isLoading, searchQuery, setSearchQuery, refresh, searchInBounds } =
+    useMuseumDirectory(latitude, longitude);
 
   // Live region: announce result count changes via VoiceOver/TalkBack.
   // Skips the initial loading phase to avoid empty announcements.
@@ -78,7 +78,7 @@ export default function MuseumsScreen() {
         // WCAG 2.3.3: instant switch, no crossfade animation.
         fadeAnim.setValue(1);
         setViewMode(mode);
-        if (mode === 'list') setMapCenter(null);
+        if (mode === 'list') setMapBbox(null);
         return;
       }
       // Crossfade: fade out → switch mode → fade in.
@@ -89,7 +89,7 @@ export default function MuseumsScreen() {
         useNativeDriver: true,
       }).start(() => {
         setViewMode(mode);
-        if (mode === 'list') setMapCenter(null); // reset to GPS coords
+        if (mode === 'list') setMapBbox(null);
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: FADE_DURATION_MS,
@@ -101,15 +101,56 @@ export default function MuseumsScreen() {
     [viewMode, fadeAnim, reduceMotion],
   );
 
-  const handleMapMoved = useCallback((lat: number, lng: number) => {
-    setMapCenter({ lat, lng });
-  }, []);
+  const handleMapMoved = useCallback(
+    (_lat: number, _lng: number, bbox: [number, number, number, number]) => {
+      setMapBbox(bbox);
+    },
+    [],
+  );
 
-  const handleResetMapCenter = useCallback(() => {
-    setMapCenter(null);
-  }, []);
+  const handleSearchInVisibleArea = useCallback(() => {
+    if (mapBbox) {
+      searchInBounds(mapBbox);
+    }
+  }, [mapBbox, searchInBounds]);
 
   const handleMuseumPress = (museum: MuseumWithDistance) => {
+    setSelectedMuseum(museum);
+  };
+
+  const handleSheetClose = useCallback(() => {
+    setSelectedMuseum(null);
+  }, []);
+
+  const handleStartChat = useCallback(
+    (museum: MuseumWithDistance) => {
+      const coordinates =
+        museum.latitude != null && museum.longitude != null
+          ? { lat: museum.latitude, lng: museum.longitude }
+          : undefined;
+      setSelectedMuseum(null);
+      void startConversation({
+        museumMode: true,
+        museumId: museum.id > 0 ? museum.id : undefined,
+        museumName: museum.name,
+        museumAddress: museum.address ?? undefined,
+        coordinates,
+        skipSettings: true,
+      });
+    },
+    [startConversation],
+  );
+
+  const handleOpenInMaps = useCallback((museum: MuseumWithDistance) => {
+    openInNativeMaps({
+      latitude: museum.latitude,
+      longitude: museum.longitude,
+      name: museum.name,
+    });
+  }, []);
+
+  const handleViewDetails = useCallback((museum: MuseumWithDistance) => {
+    setSelectedMuseum(null);
     router.push({
       pathname: '/(stack)/museum-detail',
       params: {
@@ -123,9 +164,9 @@ export default function MuseumsScreen() {
         distanceMeters: museum.distanceMeters !== null ? String(museum.distanceMeters) : '',
       },
     });
-  };
+  }, []);
 
-  const showSearchAreaChip = viewMode === 'map' && mapCenter !== null;
+  const showSearchAreaChip = viewMode === 'map' && mapBbox !== null;
 
   return (
     <LiquidScreen
@@ -157,7 +198,7 @@ export default function MuseumsScreen() {
               styles.searchAreaChip,
               { backgroundColor: theme.primary + '1A', borderColor: theme.primary },
             ]}
-            onPress={handleResetMapCenter}
+            onPress={handleSearchInVisibleArea}
             accessibilityRole="button"
             accessibilityLabel={t('museumDirectory.search_this_area')}
           >
@@ -165,7 +206,6 @@ export default function MuseumsScreen() {
             <Text style={[styles.searchAreaText, { color: theme.primary }]}>
               {t('museumDirectory.search_this_area')}
             </Text>
-            <Ionicons name="close" size={14} color={theme.primary} />
           </Pressable>
         ) : null}
         {viewMode === 'list' ? (
@@ -183,9 +223,19 @@ export default function MuseumsScreen() {
             userLatitude={latitude}
             userLongitude={longitude}
             onMapMoved={handleMapMoved}
+            onMuseumSelect={setSelectedMuseum}
           />
         )}
       </Animated.View>
+
+      <MuseumSheet
+        museum={selectedMuseum}
+        isStartingChat={isStartingChat}
+        onClose={handleSheetClose}
+        onStartChat={handleStartChat}
+        onOpenInMaps={handleOpenInMaps}
+        onViewDetails={handleViewDetails}
+      />
     </LiquidScreen>
   );
 }

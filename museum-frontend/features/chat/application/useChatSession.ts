@@ -316,11 +316,10 @@ export const useChatSession = (sessionId: string) => {
             });
           }
 
-          // Replace local file:// preview with server signed URL.
-          // Must reload because the server assigns a new ID to the persisted user message.
-          if (params.imageUri) {
-            void loadSession();
-          }
+          // Keep the optimistic user message with its local file:// URL — it renders
+          // reliably on-device. The server-signed URL is fetched lazily on next session
+          // open via loadSession(); refreshing eagerly here risks overwriting a working
+          // local preview with an unreachable signed URL (e.g. Host header mismatch in dev).
         }
 
         setIsStreaming(false);
@@ -383,7 +382,6 @@ export const useChatSession = (sessionId: string) => {
       setError,
       streamTextRef,
       streamingIdRef,
-      loadSession,
       classifyText,
       audioDescriptionMode,
       contentPreferences,

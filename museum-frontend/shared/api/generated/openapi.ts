@@ -2109,6 +2109,8 @@ export interface paths {
           radius?: number;
           /** @description Text search query (name filter or geocode input) */
           q?: string;
+          /** @description Bounding box "minLng,minLat,maxLng,maxLat" (WGS84). When provided, takes precedence over lat/lng/radius — distance is measured from the bbox center. */
+          bbox?: string;
         };
         header?: never;
         path?: never;
