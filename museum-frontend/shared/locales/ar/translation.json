@@ -527,7 +527,16 @@
     "search_this_area": "عرض نتائج هذه المنطقة",
     "start_chat": "ابدأ المحادثة هنا",
     "detail_title": "تفاصيل المتحف",
-    "open_in_maps": "فتح في الخرائط"
+    "open_in_maps": "فتح في الخرائط",
+    "view_details": "عرض التفاصيل",
+    "close_sheet_a11y": "إغلاق",
+    "category": {
+      "art": "فن",
+      "history": "تاريخ",
+      "science": "علوم",
+      "specialized": "متخصص",
+      "general": "متحف"
+    }
   },
   "conversationSearch": {
     "placeholder": "البحث في المحادثات..."

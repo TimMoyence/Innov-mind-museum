@@ -537,7 +537,16 @@
     "search_this_area": "このエリアの結果を表示",
     "start_chat": "ここでチャットを開始",
     "detail_title": "ミュージアムの詳細",
-    "open_in_maps": "マップで開く"
+    "open_in_maps": "マップで開く",
+    "view_details": "詳細を見る",
+    "close_sheet_a11y": "閉じる",
+    "category": {
+      "art": "芸術",
+      "history": "歴史",
+      "science": "科学",
+      "specialized": "専門",
+      "general": "博物館"
+    }
   },
   "conversationSearch": {
     "placeholder": "会話を検索..."

@@ -537,7 +537,16 @@
     "search_this_area": "Risultati per questa zona",
     "start_chat": "Inizia chat qui",
     "detail_title": "Dettagli del museo",
-    "open_in_maps": "Apri in Mappe"
+    "open_in_maps": "Apri in Mappe",
+    "view_details": "Vedi dettagli",
+    "close_sheet_a11y": "Chiudi",
+    "category": {
+      "art": "Arte",
+      "history": "Storia",
+      "science": "Scienza",
+      "specialized": "Specializzato",
+      "general": "Museo"
+    }
   },
   "conversationSearch": {
     "placeholder": "Cerca conversazioni..."

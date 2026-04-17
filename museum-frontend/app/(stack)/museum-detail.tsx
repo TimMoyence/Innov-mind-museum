@@ -1,13 +1,4 @@
-import {
-  ActivityIndicator,
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
 import { formatDistance } from '@/features/museum/application/formatDistance';
+import { openInNativeMaps } from '@/features/museum/application/openInNativeMaps';
 import { semantic, space, fontSize, radius } from '@/shared/ui/tokens';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { GlassCard } from '@/shared/ui/GlassCard';
@@ -47,16 +39,11 @@ export default function MuseumDetailScreen() {
   const hasCoordinates = Boolean(params.latitude && params.longitude);
 
   const handleOpenInMaps = () => {
-    if (!params.latitude || !params.longitude) return;
-    const lat = Number(params.latitude);
-    const lng = Number(params.longitude);
-    if (Number.isNaN(lat) || Number.isNaN(lng)) return;
-    const name = encodeURIComponent(params.name);
-    const url =
-      Platform.OS === 'ios'
-        ? `https://maps.apple.com/?ll=${String(lat)},${String(lng)}&q=${name}`
-        : `https://www.google.com/maps/search/?api=1&query=${String(lat)},${String(lng)}`;
-    void Linking.openURL(url);
+    openInNativeMaps({
+      latitude: params.latitude,
+      longitude: params.longitude,
+      name: params.name,
+    });
   };
 
   const handleStartChat = () => {

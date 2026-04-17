@@ -42,6 +42,24 @@ jest.mock('@/features/museum/ui/ViewModeToggle', () => {
   };
 });
 
+jest.mock('@/features/museum/ui/MuseumSheet', () => {
+  const { View } = require('react-native');
+  return {
+    MuseumSheet: ({ museum }: { museum: unknown }) =>
+      museum ? <View testID="museum-sheet" /> : null,
+  };
+});
+
+const mockStartConversation = jest.fn();
+jest.mock('@/features/chat/application/useStartConversation', () => ({
+  useStartConversation: () => ({
+    isCreating: false,
+    error: null,
+    setError: jest.fn(),
+    startConversation: mockStartConversation,
+  }),
+}));
+
 import MuseumsScreen from '@/app/(tabs)/museums';
 
 describe('MuseumsScreen', () => {

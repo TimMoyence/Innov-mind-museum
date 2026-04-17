@@ -537,7 +537,16 @@
     "search_this_area": "Showing results for this area",
     "start_chat": "Start Chat Here",
     "detail_title": "Museum Details",
-    "open_in_maps": "Open in Maps"
+    "open_in_maps": "Open in Maps",
+    "view_details": "View details",
+    "close_sheet_a11y": "Close",
+    "category": {
+      "art": "Art",
+      "history": "History",
+      "science": "Science",
+      "specialized": "Specialized",
+      "general": "Museum"
+    }
   },
   "conversationSearch": {
     "placeholder": "Search conversations..."

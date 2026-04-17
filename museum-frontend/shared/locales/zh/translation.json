@@ -537,7 +537,16 @@
     "search_this_area": "显示此区域的结果",
     "start_chat": "在此开始聊天",
     "detail_title": "博物馆详情",
-    "open_in_maps": "在地图中打开"
+    "open_in_maps": "在地图中打开",
+    "view_details": "查看详情",
+    "close_sheet_a11y": "关闭",
+    "category": {
+      "art": "艺术",
+      "history": "历史",
+      "science": "科学",
+      "specialized": "专业",
+      "general": "博物馆"
+    }
   },
   "conversationSearch": {
     "placeholder": "搜索对话..."
