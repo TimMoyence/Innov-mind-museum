@@ -214,6 +214,7 @@ export const ChatMessageList = ({
       data={messages}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
+      getItemType={getMessageType}
       contentContainerStyle={styles.listContent}
       onContentSizeChange={handleContentSizeChange}
       keyboardDismissMode="on-drag"
@@ -233,6 +234,9 @@ export const ChatMessageList = ({
     />
   );
 };
+
+/** Per-message recycling hint: user vs assistant bubbles have distinct layouts. */
+const getMessageType = (item: ChatUiMessage): string => item.role;
 
 const ItemSeparator = () => <View style={styles.separator} />;
 

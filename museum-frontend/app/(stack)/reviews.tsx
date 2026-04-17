@@ -1,13 +1,6 @@
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -220,7 +213,7 @@ export default function ReviewsScreen() {
           <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>
         </View>
       ) : (
-        <FlatList
+        <FlashList
           data={reviews}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
@@ -228,7 +221,7 @@ export default function ReviewsScreen() {
           ListEmptyComponent={renderEmpty}
           ListFooterComponent={renderFooter}
           contentContainerStyle={styles.listContent}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ItemSeparatorComponent={ReviewSeparator}
           onEndReached={loadMore}
           onEndReachedThreshold={0.3}
           showsVerticalScrollIndicator={false}
@@ -237,6 +230,8 @@ export default function ReviewsScreen() {
     </LiquidScreen>
   );
 }
+
+const ReviewSeparator = () => <View style={styles.separator} />;
 
 const styles = StyleSheet.create({
   screen: {

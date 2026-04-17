@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -10,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -49,7 +49,7 @@ export default function TicketDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const flatListRef = useRef<FlatList<TicketMessageDTO>>(null);
+  const flatListRef = useRef<FlashListRef<TicketMessageDTO>>(null);
 
   const loadDetail = useCallback(async () => {
     if (!ticketId) return;
@@ -205,13 +205,13 @@ export default function TicketDetailScreen() {
               />
             ) : null}
 
-            <FlatList
+            <FlashList
               ref={flatListRef}
               data={ticket.messages}
               keyExtractor={(item) => item.id}
               renderItem={renderMessage}
+              getItemType={getTicketMessageType}
               contentContainerStyle={styles.messageList}
-              style={styles.flex}
               ListEmptyComponent={
                 <Text style={[styles.emptyMessages, { color: theme.textSecondary }]}>
                   {t('tickets.noMessages')}
@@ -270,6 +270,7 @@ export default function TicketDetailScreen() {
 
 const msgSepStyle = { height: semantic.chat.gap } as const;
 const MessageSeparator = () => <View style={msgSepStyle} />;
+const getTicketMessageType = (item: TicketMessageDTO): string => item.senderRole;
 
 const styles = StyleSheet.create({
   screen: {

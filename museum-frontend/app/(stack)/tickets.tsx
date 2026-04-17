@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -235,7 +236,7 @@ export default function TicketsScreen() {
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
       ) : (
-        <FlatList
+        <FlashList
           data={tickets}
           keyExtractor={(item) => item.id}
           renderItem={renderTicketItem}
