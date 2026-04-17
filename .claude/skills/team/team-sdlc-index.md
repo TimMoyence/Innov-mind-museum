@@ -173,7 +173,7 @@ Exemples :
 
 ## Memory utilisateur (référence)
 
-Index : `/Users/Tim/.claude/projects/-Users-Tim-Desktop-all-dev-Pro-InnovMind/memory/MEMORY.md`
+Index : `~/.claude/projects/<project-hash>/memory/MEMORY.md` (local, non versionné)
 
 Catégories clés :
 - `feedback_*` → encodées dans user-feedback-rules.json (UFR-001..012)

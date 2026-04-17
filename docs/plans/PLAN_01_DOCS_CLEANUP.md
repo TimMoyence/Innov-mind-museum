@@ -27,7 +27,7 @@ Le référentiel `docs/` compte 85 fichiers `.md`. L'audit a identifié 7 docs o
 
 Commande :
 ```bash
-cd /Users/Tim/Desktop/all/dev/Pro/InnovMind
+cd <repo-root>
 rm docs/archive/roadmaps/V2_MUSEUM_WALK_STRATEGY.md
 rm docs/archive/roadmaps/MASTER_ROADMAP_V2.md
 rm docs/walk/SPRINT_4.md

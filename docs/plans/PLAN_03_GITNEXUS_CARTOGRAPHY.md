@@ -17,7 +17,7 @@ GitNexus est la couche d'intelligence code du monorepo : 6 MCP tools actifs (que
 ### 1. Re-index monorepo complet
 
 ```bash
-cd /Users/Tim/Desktop/all/dev/Pro/InnovMind
+cd <repo-root>
 gitnexus analyze                       # incremental, si hook OK
 gitnexus status                        # vérifier fraîcheur
 gitnexus list-repos                    # confirmer InnovMind mappé

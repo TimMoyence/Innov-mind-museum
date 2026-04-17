@@ -74,7 +74,7 @@ Chaque plan produit des rapports dans `docs/plans/reports/` :
 
 ## Références
 
-- **Plan maître** : `/Users/Tim/.claude/plans/j-aimerais-que-tu-fasse-nested-boole.md`
+- **Plan maître** : session conversationnelle 2026-04-17 (hors repo, résumé dans README ci-dessus)
 - **Tracking** : `docs/V1_Sprint/PROGRESS_TRACKER.md`
 - **Journal** : `docs/V1_Sprint/SPRINT_LOG.md`
 - **Index docs** : `docs/DOCS_INDEX.md` (créé par P01)

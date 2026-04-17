@@ -959,7 +959,7 @@
 ## Next Level Roadmap — Plans Modulaires (2026-04-17)
 
 > Audit approfondi backend + mobile + docs + /team + GitNexus. 12 plans d'execution produits dans [docs/plans/](../plans/README.md).
-> Plan maitre : `/Users/Tim/.claude/plans/j-aimerais-que-tu-fasse-nested-boole.md`
+> Session 2026-04-17 (plan maitre issu de la conversation, resumé integré dans les plans).
 
 ### Phase 1 — Quick Wins (2-4 semaines)
 

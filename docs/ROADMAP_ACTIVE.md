@@ -48,4 +48,4 @@ Musaium à maturité V2.0 (auth + chat multimodal + conversations + museums + su
 - Tracking sprint : [`docs/V1_Sprint/PROGRESS_TRACKER.md`](V1_Sprint/PROGRESS_TRACKER.md)
 - Journal sprint : [`docs/V1_Sprint/SPRINT_LOG.md`](V1_Sprint/SPRINT_LOG.md)
 - Roadmap V2 complète : [`docs/V1_Sprint/MASTER_ROADMAP_V2.md`](V1_Sprint/MASTER_ROADMAP_V2.md)
-- Plan maître d'audit : `/Users/Tim/.claude/plans/j-aimerais-que-tu-fasse-nested-boole.md`
+- Plan maître d'audit : voir `docs/plans/README.md` + `docs/V1_Sprint/PROGRESS_TRACKER.md` section "Next Level Roadmap"

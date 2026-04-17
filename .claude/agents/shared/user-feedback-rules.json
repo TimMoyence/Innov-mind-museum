@@ -90,7 +90,8 @@
   ],
   "fallback": "Si un cas specifique semble justifier une exception, ne PAS l'appliquer silencieusement. Signale-le dans le rapport de self-verification, le Tech Lead decide.",
   "refs": {
-    "memoryPath": "/Users/Tim/.claude/projects/-Users-Tim-Desktop-all-dev-Pro-InnovMind/memory/",
-    "indexFile": "MEMORY.md"
+    "memoryPath": "~/.claude/projects/<project-hash>/memory/",
+    "indexFile": "MEMORY.md",
+    "note": "Memory is local/non-versioned. This JSON encodes the feedback_* memory content as portable rules."
   }
 }

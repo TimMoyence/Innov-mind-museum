@@ -31,10 +31,7 @@ ls -la features/art-keywords/ 2>/dev/null
 # attendu: 7 fichiers créés au Sprint R15
 ```
 
-Lire la mémoire :
-```bash
-cat /Users/Tim/.claude/projects/-Users-Tim-Desktop-all-dev-Pro-InnovMind/memory/project_smart_art_keywords_wip.md
-```
+Lire la mémoire (local `~/.claude/projects/<project-hash>/memory/project_smart_art_keywords_wip.md`).
 
 Identifier :
 - 7 nouveaux fichiers créés : lesquels existent encore, lesquels manquent

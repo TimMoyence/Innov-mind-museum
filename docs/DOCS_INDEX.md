@@ -98,4 +98,4 @@ Tous dans [`docs/plans/`](plans/README.md) :
 ## Références externes
 
 - CLAUDE.md (racine) — instructions globales pour Claude Code
-- Plan maître d'audit : `/Users/Tim/.claude/plans/j-aimerais-que-tu-fasse-nested-boole.md`
+- Plan maître d'audit : voir `docs/plans/README.md` pour l'index complet des 12 plans Phase 1-3
