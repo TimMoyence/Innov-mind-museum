@@ -209,7 +209,7 @@ node scripts/migration-cli.cjs generate --name=MigrationName
 
 Use the guided runbook:
 
-- `docs/DEPLOYMENT_STEP_BY_STEP.md`
+- `docs/OPS_DEPLOYMENT.md`
 
 This includes:
 

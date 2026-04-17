@@ -293,7 +293,7 @@ These are the ONLY categories where `eslint-disable` is acceptable in this proje
 
 ## Deployment
 
-- Backend: Docker image → GHCR → VPS OVH (see `docs/DEPLOYMENT_STEP_BY_STEP.md`)
+- Backend: Docker image → GHCR → VPS OVH (see `docs/OPS_DEPLOYMENT.md`)
 - Mobile: EAS Build → App Store / Google Play (see `docs/MOBILE_INTERNAL_TESTING_FLOW.md`)
 - Secrets & CI config documented in `docs/CI_CD_SECRETS.md`
 

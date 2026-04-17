@@ -12,9 +12,12 @@
 !docs/store-listing/
 !docs/store-listing/**
 !docs/GOOGLE_PLAY_DATA_SAFETY.md
-!docs/RUNBOOK.md
 !docs/DB_BACKUP_RESTORE.md
-!docs/DEPLOYMENT_STEP_BY_STEP.md
+!docs/OPS_DEPLOYMENT.md
+!docs/ROADMAP_ACTIVE.md
+!docs/DOCS_INDEX.md
+!docs/plans/
+!docs/plans/**
 !docs/UPTIME_MONITORING.md
 !docs/SOCIAL_AUTH_SETUP.md
 !docs/FEATURE_KNOWLEDGE_BASE_WIKIDATA.md

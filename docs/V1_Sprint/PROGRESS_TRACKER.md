@@ -9,7 +9,7 @@
 
 ## Pre-Sprint — Audit de code initial
 
-- [x] Analyse complete du codebase (13 rapports dans `docs/fullcodebase-analyse/`)
+- [x] Analyse complete du codebase (13 rapports dans `docs/archive/fullcodebase-analyse/`)
 - [x] Redaction MASTER_ROADMAP_V2.md (roadmap produit + tech)
 
 ---
@@ -563,7 +563,7 @@
 - [x] RW-03: Fixer Frontend Jest — `transformIgnorePatterns` + `.pnpm` (12 suites, 72 tests restored)
 - [x] RW-04: UI "Change Password" dans Settings — `app/(stack)/change-password.tsx` + authApi + i18n 8 langues
 - [x] RW-05: UI "Export My Data" dans Settings — bouton + Share.share() + authApi + i18n 8 langues
-- [x] RW-06: Procedure rollback production — `docs/RUNBOOK.md` (Docker, migration, DB restore, escalade)
+- [x] RW-06: Procedure rollback production — `docs/OPS_DEPLOYMENT.md` (Docker, migration, DB restore, escalade)
 - [x] RW-07: Politique rotation secrets — section ajoutee dans `docs/CI_CD_SECRETS.md` (15 secrets, dual-key JWT)
 
 ### TIER 2 — IMPORTANT — TERMINE 2026-03-27
@@ -953,6 +953,34 @@
 - [x] BF-05: Add `distance_m` i18n key to all 8 locales
 - [x] BF-06: Update nav params, MuseumCard, museum-detail, MuseumMapView
 - [x] BF-07: Update tests — haversine, formatDistance, MuseumCard, useMuseumDirectory, museum-detail
+
+---
+
+## Next Level Roadmap — Plans Modulaires (2026-04-17)
+
+> Audit approfondi backend + mobile + docs + /team + GitNexus. 12 plans d'execution produits dans [docs/plans/](../plans/README.md).
+> Plan maitre : `/Users/Tim/.claude/plans/j-aimerais-que-tu-fasse-nested-boole.md`
+
+### Phase 1 — Quick Wins (2-4 semaines)
+
+- [ ] [P01](../plans/PLAN_01_DOCS_CLEANUP.md) — Docs Cleanup (-8 obsoletes, +2 index, merge 3 runbooks)
+- [ ] [P02](../plans/PLAN_02_TEAM_HARDENING.md) — /team Skill Hardening (system prompts 9 agents + team-sdlc-index)
+- [ ] [P03](../plans/PLAN_03_GITNEXUS_CARTOGRAPHY.md) — GitNexus Cartography Refresh (6 MCP tools + 7 skills validation)
+
+### Phase 2 — Refactors Structurels (1-3 mois)
+
+- [ ] [P04](../plans/PLAN_04_BACKEND_CHAT_SLIM.md) — Backend Chat Slim (-50% LOC sur 3 files obeses)
+- [ ] [P05](../plans/PLAN_05_BACKEND_SHARED_TESTS.md) — Backend shared/ Tests (audit, cache, feature-flags)
+- [ ] [P06](../plans/PLAN_06_BACKEND_WEBSEARCH_UNIFY.md) — Web Search Providers Unify (5 adapters → 1 interface)
+- [ ] [P07](../plans/PLAN_07_MOBILE_TESTS_SETUP.md) — **CRITIQUE** Mobile Tests Setup (0% → 30%)
+- [ ] [P08](../plans/PLAN_08_MOBILE_CHAT_SPLIT.md) — Mobile Chat Split god-hooks (useChatSession 442→3, ChatMessageBubble 365→4)
+- [ ] [P09](../plans/PLAN_09_MOBILE_I18N_A11Y.md) — Mobile i18n + A11y (20% → 100% coverage)
+- [ ] [P10](../plans/PLAN_10_ART_KEYWORDS_R15_FINALIZE.md) — Art Keywords R15 Finalize (sprint WIP a finaliser)
+
+### Phase 3 — V2 Next Level (3-6 mois)
+
+- [ ] [P11](../plans/PLAN_11_AI_GUARDRAILS_V2.md) — AI Guardrails Layer V2 (POC NeMo/LLM Guard/Prompt Armor)
+- [ ] [P12](../plans/PLAN_12_MOBILE_PERF_V2.md) — Mobile Perf V2 (FlashList v2, Reanimated 3, Expo Router v7)
 
 ---
 

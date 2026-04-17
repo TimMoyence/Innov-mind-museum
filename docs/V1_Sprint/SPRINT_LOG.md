@@ -22,7 +22,7 @@
 
 ### Resume executif
 
-Sprint de stabilisation post-MVP. Correction de tous les bugs securite identifies par l'analyse du codebase (13 rapports dans `docs/fullcodebase-analyse/`). Refactoring majeur du chat screen frontend (extraction hooks), nettoyage dead code, ajout couverture tests.
+Sprint de stabilisation post-MVP. Correction de tous les bugs securite identifies par l'analyse du codebase (13 rapports dans `docs/archive/fullcodebase-analyse/`). Refactoring majeur du chat screen frontend (extraction hooks), nettoyage dead code, ajout couverture tests.
 
 ### Changements cles
 
@@ -1052,7 +1052,7 @@ Cloture des 4 items identifies par les audits forensiques Sprint 3: (1) OpenAPI 
   - Procedure restore staging puis prod
   - Note RGPD : retention max 35 jours
   - Integration monitoring heartbeat
-- `DEPLOYMENT_STEP_BY_STEP.md` : section 23 remplacee par reference vers backup doc
+- `OPS_DEPLOYMENT.md` (ex-DEPLOYMENT_STEP_BY_STEP) : section 23 remplacee par reference vers backup doc
 - `.env.local.example` : ajout vars backup (`BACKUP_DB_USER`, `BACKUP_DB_PASSWORD`, `BACKUP_DIR`, `BACKUP_HEARTBEAT_URL`)
 
 **Fichiers** : 2 crees (`backup-db.sh`, `DB_BACKUP_RESTORE.md`), 2 modifies
