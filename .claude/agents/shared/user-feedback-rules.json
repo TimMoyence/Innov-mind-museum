@@ -1,0 +1,96 @@
+{
+  "version": "1.0",
+  "description": "Regles non-negociables issues des retours utilisateur cumules (memory feedback_*). Reference unique pour tous les agents. Violation = FAIL immediat.",
+  "lastUpdated": "2026-04-17",
+  "rules": [
+    {
+      "id": "UFR-001",
+      "source": "feedback_ban_minimal_fixes",
+      "rule": "NE JAMAIS proposer de 'minimal fix' comme option viable. Toujours la solution qualite, meme si elle touche plus de fichiers.",
+      "severity": "BLOCK",
+      "applyWhen": "Proposer une solution ou un plan"
+    },
+    {
+      "id": "UFR-002",
+      "source": "feedback_dry_test_factories",
+      "rule": "Tous les tests DOIVENT utiliser les factories partagees dans tests/helpers/ (BE) ou __tests__/helpers/ (FE). Jamais d'entites inline.",
+      "severity": "BLOCK",
+      "applyWhen": "Ecrire un test"
+    },
+    {
+      "id": "UFR-003",
+      "source": "feedback_eslint_disable_discipline",
+      "rule": "eslint-disable est un DERNIER recours, pas un premier reflexe. Lire la doc de la regle, refactorer, puis disable avec raison explicite en commentaire.",
+      "severity": "WARN",
+      "applyWhen": "ESLint signale une erreur"
+    },
+    {
+      "id": "UFR-004",
+      "source": "feedback_no_code_piling",
+      "rule": "Verifier GitNexus AVANT de creer un composant. Remplacer plutot que empiler. Supprimer l'ancien quand on remplace.",
+      "severity": "BLOCK",
+      "applyWhen": "Creer un nouveau fichier/composant"
+    },
+    {
+      "id": "UFR-005",
+      "source": "feedback_verify_before_validate",
+      "rule": "Ne jamais prendre une doc ou un audit pour argent comptant. Toujours verifier contre le code/config reels AVANT de valider.",
+      "severity": "BLOCK",
+      "applyWhen": "Baser une decision sur une doc ou un rapport"
+    },
+    {
+      "id": "UFR-006",
+      "source": "feedback_product_first",
+      "rule": "Dev product-driven: tester les routes, verifier la DB, iterer, demander l'utilisateur en cas de doute. ESLint continu. Migrations via CLI seulement.",
+      "severity": "WARN",
+      "applyWhen": "Ajouter/modifier une feature metier"
+    },
+    {
+      "id": "UFR-007",
+      "source": "feedback_product_lifecycle_coherence",
+      "rule": "Aligner les propositions avec le stade de vie du produit. Pas de fake social proof pour une app en launch-phase.",
+      "severity": "WARN",
+      "applyWhen": "Proposer une feature UX/marketing"
+    },
+    {
+      "id": "UFR-008",
+      "source": "feedback_autonomy_100_only",
+      "rule": "Autonomie L2+ exige 100/100 score. L3 interdit en dessous.",
+      "severity": "BLOCK",
+      "applyWhen": "Evaluer l'autonomie de livraison"
+    },
+    {
+      "id": "UFR-009",
+      "source": "feedback_env_files_not_vuln",
+      "rule": "Les .env locaux sont gitignored — ne JAMAIS les classer comme vulnerabilite.",
+      "severity": "BLOCK",
+      "applyWhen": "Scanner pour vulnerabilites"
+    },
+    {
+      "id": "UFR-010",
+      "source": "feedback_all_agents_opus",
+      "rule": "Tous les agents /team DOIVENT utiliser model: opus. Excellence operationnelle, pas economie de tokens.",
+      "severity": "BLOCK",
+      "applyWhen": "Spawner un agent"
+    },
+    {
+      "id": "UFR-011",
+      "source": "feedback_ios_pods_xcloud",
+      "rule": "iOS buildent sur Xcode Cloud — Pods/ DOIT rester committe, pas de pod install au build time.",
+      "severity": "BLOCK",
+      "applyWhen": "Toucher a iOS build config"
+    },
+    {
+      "id": "UFR-012",
+      "source": "feedback_process_auditor_report",
+      "rule": "Process Auditor DOIT toujours ecrire son rapport dans team-reports/ — jamais skipper.",
+      "severity": "BLOCK",
+      "applyWhen": "Terminer une phase Sentinelle"
+    }
+  ],
+  "fallback": "Si un cas specifique semble justifier une exception, ne PAS l'appliquer silencieusement. Signale-le dans le rapport de self-verification, le Tech Lead decide.",
+  "refs": {
+    "memoryPath": "/Users/Tim/.claude/projects/-Users-Tim-Desktop-all-dev-Pro-InnovMind/memory/",
+    "indexFile": "MEMORY.md"
+  }
+}

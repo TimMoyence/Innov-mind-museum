@@ -1,6 +1,7 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "description": "Contexte technique partage du monorepo Musaium. Source unique pour les versions et structures.",
+  "lastUpdated": "2026-04-17",
   "monorepo": {
     "backend": {
       "dir": "museum-backend/",
@@ -16,23 +17,28 @@
         "dev": "pnpm dev",
         "lint": "pnpm lint",
         "test": "pnpm test",
-        "build": "pnpm build"
+        "testE2E": "pnpm test:e2e",
+        "testContract": "pnpm test:contract:openapi",
+        "build": "pnpm build",
+        "migrate": "pnpm migration:run",
+        "migrateRevert": "pnpm migration:revert"
       }
     },
     "frontend": {
       "dir": "museum-frontend/",
-      "framework": "React Native 0.79",
-      "platform": "Expo 53 (managed workflow)",
-      "routing": "Expo Router (file-based)",
+      "framework": "React Native 0.83",
+      "platform": "Expo 55 (New Architecture default)",
+      "routing": "Expo Router v7 (file-based)",
       "packageManager": "npm",
-      "tests": "Node.js test runner (compile vers .test-dist/) + jest-expo (hooks/components)",
+      "tests": "jest-expo (1120 tests, 132 suites)",
       "pathAliases": { "@/*": "./*" },
       "commands": {
         "install": "npm install",
         "dev": "npm run dev",
         "lint": "npm run lint",
         "test": "npm test",
-        "generateTypes": "npm run generate:openapi-types"
+        "generateTypes": "npm run generate:openapi-types",
+        "checkTypes": "npm run check:openapi-types"
       }
     },
     "web": {
@@ -40,7 +46,7 @@
       "framework": "Next.js 15 (App Router)",
       "rendering": "Server Components par defaut",
       "i18n": "next-intl",
-      "tests": "Vitest",
+      "tests": "Vitest (174 tests)",
       "commands": {
         "install": "pnpm install",
         "dev": "pnpm dev",
@@ -51,7 +57,7 @@
     }
   },
   "knowledgeBase": {
-    "preamble": "AVANT de coder, lire: (1) error-patterns.json pour les patterns pertinents a ton scope, (2) prompt-enrichments.json pour les regles PE-* applicables, (3) appliquer les patterns connus AVANT de coder.",
+    "preamble": "AVANT de coder, lire: (1) error-patterns.json pour les patterns pertinents a ton scope, (2) prompt-enrichments.json pour les regles PE-* applicables, (3) user-feedback-rules.json pour les regles UFR-* non-negociables, (4) appliquer les patterns connus AVANT de coder.",
     "path": ".claude/team-knowledge/"
   },
   "codeIntelligence": {
@@ -61,7 +67,7 @@
     "generatedSkillsPath": ".claude/skills/generated/",
     "protocol": "team-protocols/gitnexus-integration.md",
     "mcpTools": ["query", "context", "impact", "detect_changes", "rename", "cypher"],
-    "reindex": "gitnexus analyze --skills",
-    "note": "Agents DEV doivent consulter gitnexus_impact avant de modifier un symbole existant"
+    "reindex": "npx gitnexus analyze",
+    "note": "Agents DEV doivent consulter gitnexus_impact avant de modifier un symbole existant. Post-commit hook auto-reindexe."
   }
 }

@@ -1,6 +1,6 @@
 ---
 model: opus
-description: "Frontend Architect — React Native 0.79, Expo 53, Expo Router, feature-driven + mode mobile-ux pour le monorepo Musaium"
+description: "Frontend Architect — React Native 0.83, Expo 55 (New Architecture), Expo Router v7, feature-driven + mode mobile-ux pour le monorepo Musaium"
 allowedTools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write"]
 ---
 
@@ -16,6 +16,9 @@ Appliquer `.claude/agents/shared/discovery-protocol.json`. Tout probleme hors-sc
 
 ## CONTRAINTES
 Appliquer TOUTES les contraintes de `.claude/agents/shared/operational-constraints.json`. Violation = FAIL immediat.
+
+## REGLES UTILISATEUR
+Appliquer TOUTES les regles de `.claude/agents/shared/user-feedback-rules.json` (UFR-001 a UFR-012). Ces regles encodent les retours utilisateur cumules — violation = FAIL immediat.
 
 ## PENSER PRODUIT
 

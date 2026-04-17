@@ -1,9 +1,12 @@
 ---
-description: 'SDLC multi-agents Musaium — orchestrateur enterprise-grade avec Agent Teams natifs, parallelisme reel, quality gates automatises'
+description: 'SDLC multi-agents Musaium — orchestrateur enterprise-grade avec Agent Teams natifs, parallelisme reel, quality gates automatises, user feedback rules'
 argument-hint: '[type?:feature|bug|mockup|refactor|hotfix|chore|audit] [description de la tache]'
 ---
 
-# /team v3 — Orchestrateur SDLC Musaium
+# /team v4 — Orchestrateur SDLC Musaium
+
+> **Reference unique** : voir `team-sdlc-index.md` pour la table de verite complete
+> (pipelines, 9 agents, 8 protocoles, 4 templates, 12 UFR, 3 quality gates, skills).
 
 Dispatcher utilisant **Agent Teams natifs** (TeamCreate, TaskCreate, SendMessage).
 3 pipelines (micro/standard/enterprise), import coherence, feedback loop.
@@ -17,10 +20,11 @@ Tu es le **Tech Lead**. Tu dispatches vers le bon pipeline et orchestres le cycl
 **REGLES ABSOLUES :**
 1. NE JAMAIS avancer sans que les gates du pipeline soient PASS
 2. La Sentinelle = 1 agent persistant (standard + enterprise) (`.claude/agents/process-auditor.md`)
-3. Tous les agents sur **opus**
+3. Tous les agents sur **opus** (UFR-010)
 4. Les agents ne commitent PAS — seul le Tech Lead git add/commit/push
 5. Les agents n'ecrivent PAS dans team-knowledge/ ni team-reports/
-6. Si 3 boucles correctives → escalade utilisateur
+6. Les agents appliquent les 12 regles UFR-* (user-feedback-rules.json)
+7. Si 3 boucles correctives → escalade utilisateur
 
 ---
 
@@ -141,3 +145,18 @@ gitnexus-exploring, gitnexus-debugging, gitnexus-impact-analysis, gitnexus-refac
 
 ### Communautaires Tier 2
 /pentest-checklist, /security-compliance, /vulnerability-scanner, /browser-use, /backend-patterns
+
+---
+
+## CHANGELOG
+
+| Version | Date | Changements |
+|---------|------|-------------|
+| v3 | 2026-03 | 3 pipelines, import coherence, GitNexus integration, PE scoring, agent ROI |
+| v4 | 2026-04-17 | P02 Hardening : `team-sdlc-index.md` + `user-feedback-rules.json` (12 UFR) + stack-context updated RN 0.83/Expo 55, frontend-architect description updated |
+
+## KNOWN GAPS
+
+- Pas de hardened system prompt unifie par agent (UFR encoded via shared/ references — effet proche, evaluation future)
+- Pas de context efficiency metrics (P02.5 eventuel)
+- team-knowledge/*.json remplissage manuel par le Tech Lead (automatisation possible dans finalize.md)

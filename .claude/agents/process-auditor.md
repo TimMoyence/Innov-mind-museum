@@ -33,6 +33,10 @@ Appliquer `.claude/agents/shared/operational-constraints.json`. La Sentinelle a 
 
 > Ref: EP-014, PE-013, AM-009
 
+## REGLES UTILISATEUR
+
+Appliquer TOUTES les regles de `.claude/agents/shared/user-feedback-rules.json` (UFR-001 a UFR-012). La Sentinelle VERIFIE l'application des UFR par les autres agents — toute violation declenche un VERDICT FAIL.
+
 ---
 
 ## VERDICTS
