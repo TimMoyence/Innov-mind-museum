@@ -984,14 +984,35 @@
 - [x] NL-1.3 P10 art-keywords verify (commit 5f0705e5) — rapport `NL-1.3-art-keywords-closure.md`
 - [x] Tech Lead Review NL-1 + 2x challenge — Pass 1 fix optimistic placeholders i18n
 
-### Phase 3 — V2 Next Level (En cours — Sprint NL-2 + NL-3)
+### Phase 3 — V2 Next Level (lancée — code-possible portions DONE)
 
-- [ ] [P11](../plans/PLAN_11_AI_GUARDRAILS_V2.md) — AI Guardrails Layer V2 (POC NeMo/LLM Guard/Prompt Armor) — Sprint NL-3
-- [ ] [P12](../plans/PLAN_12_MOBILE_PERF_V2.md) — Mobile Perf V2 (FlashList v2, Reanimated 3, Expo Router v7) — Sprint NL-2
+- [~] [P11](../plans/PLAN_11_AI_GUARDRAILS_V2.md) — AI Guardrails Layer V2 POC scaffold (commit 254c4644). Cartography + frameworks comparison + AdvancedGuardrail port + dataset. Benchmark execution & decision hors session (require Python sidecar + API keys).
+- [~] [P12](../plans/PLAN_12_MOBILE_PERF_V2.md) — Mobile Perf V2 code-possible portions (commit d305d3d2). 3 FlatList → FlashList + getItemType recycling. NL-2.1 baseline & NL-2.5 after-measure hors session (require physical devices).
+
+### Sprint NL-2 — Mobile Perf V2 code-possible (2026-04-17)
+
+- [x] NL-2 FlashList migration tickets.tsx + reviews.tsx + ticket-detail.tsx
+- [x] getItemType recycling hint on ChatMessageList + ticket-detail
+- [x] Reanimated audit (0 migration — useNativeDriver already on UI thread, ROI <2%)
+- [x] Expo Router v7 Stack.Screen compliance verified (0 legacy navigation.setOptions)
+- [x] React Compiler actif verified (babel.config.js)
+- [x] Tech Lead Review NL-2 + 2x challenge
+
+### Sprint NL-3 — AI Guardrails V2 POC scaffold (2026-04-17)
+
+- [x] NL-3.1 current guardrails cartography (7 defense layers + estimated metrics)
+- [x] NL-3.2 frameworks comparison (NeMo / LLM Guard / Prompt Armor + recommendation LLM Guard first)
+- [x] NL-3.3 AdvancedGuardrail hexagonal port + noopAdvancedGuardrail + 7 contract tests (100% coverage)
+- [x] NL-3.3 benchmark dataset scaffold (45 prompts, 8 locales, 5 categories)
+- [ ] NL-3.3 LLMGuardAdapter (require Python sidecar infra — hors session)
+- [ ] NL-3.4 benchmark 220 prompts (require API keys + sidecar — hors session)
+- [ ] NL-3.5 go/no-go decision (post-benchmark — hors session)
+- [x] Tech Lead Review NL-3 + 2x challenge
 
 > **Master plan** : [`docs/plans/NL_MASTER_PLAN.md`](../plans/NL_MASTER_PLAN.md) (Phase 2 closure + Phase 3 launch)
-> **Bilan session 2026-04-17** : 7 commits (P01-P06), 2655 -> 2673 tests BE (+18), 0 regression.
-> **Bilan NL-1** : 4 commits, mobile tests 1120 jest + 291->293 node (+16 total), i18n 610->617 keys × 8 locales.
+> **Bilan session 2026-04-17 (P01-P06)** : 7 commits, 2655 -> 2673 tests BE (+18), 0 regression.
+> **Bilan sprints NL-1/NL-2/NL-3 (même date)** : 9 commits supplémentaires, BE 2673 -> 2680 (+7), FE 1120 jest stable + node 277 -> 293 (+16), i18n 610 -> 617 keys × 8 locales.
+> **Total session 2026-04-17** : 16 commits, 0 régression, Phase 2 close à 100%, Phase 3 launch en place (code-possible done, reste execution benchmark/devices).
 
 ---
 
