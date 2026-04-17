@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Sentry from '@sentry/react-native';
 
 import { getErrorMessage, isDailyLimitError } from '@/shared/lib/errors';
@@ -16,6 +16,9 @@ import { chatApi } from '../infrastructure/chatApi';
 import { useChatSessionStore } from '../infrastructure/chatSessionStore';
 import {
   sortByTime,
+  buildOptimisticMessage,
+  bumpSuccessfulSend,
+  formatLocation,
   type ChatUiMessage,
   type ChatUiMessageMetadata,
 } from './chatSessionLogic.pure';
@@ -65,10 +68,7 @@ export const useChatSession = (sessionId: string) => {
   const { streamTextRef, streamingIdRef, flushStreamText, scheduleFlush, resetStreaming } =
     useStreamingState(setMessages);
 
-  const locationString =
-    latitude != null && longitude != null
-      ? `lat:${String(latitude)},lng:${String(longitude)}`
-      : undefined;
+  const locationString = useMemo(() => formatLocation(latitude, longitude), [latitude, longitude]);
 
   useOfflineSync({
     sessionId,
@@ -111,12 +111,7 @@ export const useChatSession = (sessionId: string) => {
         });
 
         if (cached) {
-          const userMsg: ChatUiMessage = {
-            id: `${String(Date.now())}-user`,
-            role: 'user',
-            text: trimmedText,
-            createdAt: new Date().toISOString(),
-          };
+          const userMsg = buildOptimisticMessage({ text: trimmedText });
           const assistantMsg: ChatUiMessage = {
             id: `${String(Date.now())}-cached`,
             role: 'assistant',
@@ -133,12 +128,7 @@ export const useChatSession = (sessionId: string) => {
         if (!isConnected) {
           const queued = await enqueue({ sessionId, text: trimmedText });
           if (!queued) return false;
-          const offlineMessage: ChatUiMessage = {
-            id: queued.id,
-            role: 'user',
-            text: trimmedText,
-            createdAt: new Date().toISOString(),
-          };
+          const offlineMessage = buildOptimisticMessage({ text: trimmedText, id: queued.id });
           setMessages((prev) => sortByTime([...prev, offlineMessage]));
           return true;
         }
@@ -148,30 +138,20 @@ export const useChatSession = (sessionId: string) => {
       if (isOffline) {
         const queued = await enqueue({ sessionId, text: trimmedText, imageUri: params.imageUri });
         if (!queued) return false;
-        const offlineMessage: ChatUiMessage = {
+        const offlineMessage = buildOptimisticMessage({
+          text: trimmedText,
+          imageUri: params.imageUri,
           id: queued.id,
-          role: 'user',
-          text: trimmedText ?? (params.imageUri ? '[Image sent]' : ''),
-          createdAt: new Date().toISOString(),
-          image: params.imageUri ? { url: params.imageUri, expiresAt: '' } : null,
-        };
+        });
         setMessages((prev) => sortByTime([...prev, offlineMessage]));
         return true;
       }
 
-      const optimisticMessage: ChatUiMessage = {
-        id: `${String(Date.now())}-user`,
-        role: 'user',
-        text:
-          trimmedText ??
-          (params.audioUri || params.audioBlob
-            ? '[Voice message]'
-            : params.imageUri
-              ? '[Image sent]'
-              : ''),
-        createdAt: new Date().toISOString(),
-        image: params.imageUri ? { url: params.imageUri, expiresAt: '' } : null,
-      };
+      const optimisticMessage = buildOptimisticMessage({
+        text: trimmedText,
+        imageUri: params.imageUri,
+        hasAudio: Boolean(params.audioUri || params.audioBlob),
+      });
 
       setMessages((prev) => sortByTime([...prev, optimisticMessage]));
       setIsSending(true);
@@ -188,10 +168,7 @@ export const useChatSession = (sessionId: string) => {
             museumMode,
             guideLevel,
             locale,
-            location:
-              latitude != null && longitude != null
-                ? `lat:${String(latitude)},lng:${String(longitude)}`
-                : undefined,
+            location: locationString,
             audioDescriptionMode: audioDescriptionMode || undefined,
             contentPreferences: contentPreferences.length > 0 ? contentPreferences : undefined,
           });
@@ -221,8 +198,7 @@ export const useChatSession = (sessionId: string) => {
           }
 
           setMessages((prev) => sortByTime([...prev, assistantMessage]));
-          successfulSendsRef.current += 1;
-          if (successfulSendsRef.current === 3) {
+          if (bumpSuccessfulSend(successfulSendsRef)) {
             void incrementCompletedSessions();
           }
           return true;
@@ -254,10 +230,7 @@ export const useChatSession = (sessionId: string) => {
           museumMode,
           guideLevel,
           locale,
-          location:
-            latitude != null && longitude != null
-              ? `lat:${String(latitude)},lng:${String(longitude)}`
-              : undefined,
+          location: locationString,
           preClassified,
           audioDescriptionMode: audioDescriptionMode || undefined,
           lowDataMode: isLowData,
@@ -338,8 +311,7 @@ export const useChatSession = (sessionId: string) => {
           });
         }
 
-        successfulSendsRef.current += 1;
-        if (successfulSendsRef.current === 3) {
+        if (bumpSuccessfulSend(successfulSendsRef)) {
           void incrementCompletedSessions();
         }
         return true;
@@ -373,8 +345,7 @@ export const useChatSession = (sessionId: string) => {
       guideLevel,
       sessionId,
       isOffline,
-      latitude,
-      longitude,
+      locationString,
       enqueue,
       scheduleFlush,
       flushStreamText,

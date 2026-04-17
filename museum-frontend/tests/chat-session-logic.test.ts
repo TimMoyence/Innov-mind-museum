@@ -6,6 +6,8 @@ import {
   mapApiMessageToUiMessage,
   buildOptimisticMessage,
   buildVisitSummary,
+  bumpSuccessfulSend,
+  formatLocation,
 } from '../features/chat/application/chatSessionLogic.pure';
 import type { ChatUiMessage, ApiMessage } from '../features/chat/application/chatSessionLogic.pure';
 
@@ -111,7 +113,7 @@ describe('mapApiMessageToUiMessage', () => {
 
 describe('buildOptimisticMessage', () => {
   it('builds a user message with trimmed text', () => {
-    const msg = buildOptimisticMessage('  Hello world  ', undefined);
+    const msg = buildOptimisticMessage({ text: '  Hello world  ' });
 
     assert.equal(msg.role, 'user');
     assert.equal(msg.text, 'Hello world');
@@ -120,20 +122,52 @@ describe('buildOptimisticMessage', () => {
   });
 
   it('uses "[Image sent]" when text is empty and imageUri is provided', () => {
-    const msg = buildOptimisticMessage('', 'file:///photo.jpg');
+    const msg = buildOptimisticMessage({ text: '', imageUri: 'file:///photo.jpg' });
 
     assert.equal(msg.text, '[Image sent]');
+    assert.deepEqual(msg.image, { url: 'file:///photo.jpg', expiresAt: '' });
   });
 
-  it('uses empty string when both text and imageUri are undefined', () => {
-    const msg = buildOptimisticMessage(undefined, undefined);
+  it('uses "[Voice message]" when hasAudio is true and text is empty', () => {
+    const msg = buildOptimisticMessage({ hasAudio: true });
+
+    assert.equal(msg.text, '[Voice message]');
+    assert.equal(msg.image, null);
+  });
+
+  it('prefers text over audio fallback when both provided', () => {
+    const msg = buildOptimisticMessage({ text: 'transcript', hasAudio: true });
+
+    assert.equal(msg.text, 'transcript');
+  });
+
+  it('prefers voice over image fallback when both present and no text', () => {
+    const msg = buildOptimisticMessage({ imageUri: 'file://x.jpg', hasAudio: true });
+
+    assert.equal(msg.text, '[Voice message]');
+  });
+
+  it('uses empty string when no text, no image, no audio', () => {
+    const msg = buildOptimisticMessage({});
 
     assert.equal(msg.text, '');
   });
 
+  it('uses a custom id when provided (e.g. offline queued id)', () => {
+    const msg = buildOptimisticMessage({ text: 'hi', id: 'queued-42' });
+
+    assert.equal(msg.id, 'queued-42');
+  });
+
+  it('defaults to a timestamped id ending with -user', () => {
+    const msg = buildOptimisticMessage({ text: 'hi' });
+
+    assert.ok(msg.id.endsWith('-user'));
+  });
+
   it('sets createdAt to a valid ISO date string', () => {
     const before = new Date().toISOString();
-    const msg = buildOptimisticMessage('test', undefined);
+    const msg = buildOptimisticMessage({ text: 'test' });
     const after = new Date().toISOString();
 
     assert.ok(msg.createdAt >= before);
@@ -141,9 +175,59 @@ describe('buildOptimisticMessage', () => {
   });
 
   it('preserves sendFailed as undefined (not set) on optimistic message', () => {
-    const msg = buildOptimisticMessage('hello', undefined);
+    const msg = buildOptimisticMessage({ text: 'hello' });
 
     assert.equal(msg.sendFailed, undefined);
+  });
+
+  it('returns image fallback when whitespace-only text is provided with imageUri', () => {
+    const msg = buildOptimisticMessage({ text: '   ', imageUri: 'file://x.jpg' });
+
+    assert.equal(msg.text, '[Image sent]');
+  });
+});
+
+describe('bumpSuccessfulSend', () => {
+  it('increments the ref counter', () => {
+    const ref = { current: 0 };
+    bumpSuccessfulSend(ref);
+    assert.equal(ref.current, 1);
+  });
+
+  it('returns true exactly on threshold crossing (default 3)', () => {
+    const ref = { current: 0 };
+    assert.equal(bumpSuccessfulSend(ref), false);
+    assert.equal(bumpSuccessfulSend(ref), false);
+    assert.equal(bumpSuccessfulSend(ref), true);
+    assert.equal(bumpSuccessfulSend(ref), false);
+  });
+
+  it('respects a custom threshold', () => {
+    const ref = { current: 0 };
+    assert.equal(bumpSuccessfulSend(ref, 1), true);
+    assert.equal(bumpSuccessfulSend(ref, 1), false);
+  });
+});
+
+describe('formatLocation', () => {
+  it('returns undefined when latitude is null', () => {
+    assert.equal(formatLocation(null, 2.3), undefined);
+  });
+
+  it('returns undefined when longitude is null', () => {
+    assert.equal(formatLocation(48.8, null), undefined);
+  });
+
+  it('returns undefined when both are undefined', () => {
+    assert.equal(formatLocation(undefined, undefined), undefined);
+  });
+
+  it('formats "lat:LAT,lng:LNG" when both coordinates present', () => {
+    assert.equal(formatLocation(48.8566, 2.3522), 'lat:48.8566,lng:2.3522');
+  });
+
+  it('accepts zero coordinates (equator / prime meridian)', () => {
+    assert.equal(formatLocation(0, 0), 'lat:0,lng:0');
   });
 });
 

@@ -2,11 +2,7 @@ import { useEffect } from 'react';
 
 import type { GuideLevel } from '@/features/settings/runtimeSettings.pure';
 import { chatApi } from '../infrastructure/chatApi';
-import {
-  sortByTime,
-  type ChatUiMessage,
-  type ChatUiMessageMetadata,
-} from './chatSessionLogic.pure';
+import { sortByTime, mapApiMessageToUiMessage, type ChatUiMessage } from './chatSessionLogic.pure';
 
 interface UseOfflineSyncParams {
   sessionId: string;
@@ -63,17 +59,7 @@ export const useOfflineSync = ({
       if (flushedAny) {
         try {
           const response = await chatApi.getSession(sessionId);
-          const serverMessages: ChatUiMessage[] = response.messages.map((m) => ({
-            id: m.id,
-            role: m.role,
-            text: m.text ?? '',
-            createdAt: m.createdAt,
-            imageRef: m.imageRef,
-            image: m.image ?? null,
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
-            metadata: (m.metadata as ChatUiMessageMetadata) ?? null,
-          }));
-          setMessages(sortByTime(serverMessages));
+          setMessages(sortByTime(response.messages.map(mapApiMessageToUiMessage)));
         } catch {
           // Sync failure is non-critical; user can pull-to-refresh
         }

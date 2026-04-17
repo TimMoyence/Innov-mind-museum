@@ -52,11 +52,11 @@ export const sortByTime = (messages: ChatUiMessage[]): ChatUiMessage[] => {
   );
 };
 
-/** API message shape as returned by the backend. */
+/** API message shape as returned by the backend (OpenAPI-generated types allow null). */
 export interface ApiMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
-  text?: string;
+  text?: string | null;
   createdAt: string;
   imageRef?: string | null;
   image?: { url: string; expiresAt: string } | null;
@@ -136,22 +136,46 @@ export const buildVisitSummary = (
 
 /**
  * Builds an optimistic user message for immediate display before the server responds.
- * @param text - User-provided text (may be empty for image-only messages).
- * @param imageUri - Optional image URI.
- * @returns A ChatUiMessage with a temporary id.
+ * Handles text, image, and audio modalities with sensible fallback labels.
  */
-export const buildOptimisticMessage = (
-  text: string | undefined,
-  imageUri: string | undefined,
-): ChatUiMessage => {
-  const trimmed = text?.trim() ?? '';
+export interface BuildOptimisticMessageParams {
+  text?: string;
+  imageUri?: string;
+  hasAudio?: boolean;
+  id?: string;
+}
+
+export const buildOptimisticMessage = (params: BuildOptimisticMessageParams): ChatUiMessage => {
+  const trimmed = params.text?.trim() ?? '';
+  const fallback = params.hasAudio ? '[Voice message]' : params.imageUri ? '[Image sent]' : '';
   return {
-    id: `${String(Date.now())}-user`,
+    id: params.id ?? `${String(Date.now())}-user`,
     role: 'user',
-    text: trimmed || (imageUri ? '[Image sent]' : ''),
+    text: trimmed || fallback,
     createdAt: new Date().toISOString(),
-    image: imageUri ? { url: imageUri, expiresAt: '' } : null,
+    image: params.imageUri ? { url: params.imageUri, expiresAt: '' } : null,
   };
+};
+
+/**
+ * Tracks successful sends and signals when the in-app review threshold is reached.
+ * Mutates the ref atomically. Returns true exactly once on the threshold crossing.
+ */
+export const bumpSuccessfulSend = (ref: { current: number }, threshold = 3): boolean => {
+  ref.current += 1;
+  return ref.current === threshold;
+};
+
+/**
+ * Formats GPS coordinates into a stable string for the chat API location field.
+ * Returns undefined when either coordinate is missing.
+ */
+export const formatLocation = (
+  latitude: number | null | undefined,
+  longitude: number | null | undefined,
+): string | undefined => {
+  if (latitude == null || longitude == null) return undefined;
+  return `lat:${String(latitude)},lng:${String(longitude)}`;
 };
 
 /**

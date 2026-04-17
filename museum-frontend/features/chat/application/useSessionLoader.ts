@@ -4,11 +4,7 @@ import * as Sentry from '@sentry/react-native';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { chatApi } from '../infrastructure/chatApi';
 import { useChatSessionStore } from '../infrastructure/chatSessionStore';
-import {
-  sortByTime,
-  type ChatUiMessage,
-  type ChatUiMessageMetadata,
-} from './chatSessionLogic.pure';
+import { sortByTime, mapApiMessageToUiMessage, type ChatUiMessage } from './chatSessionLogic.pure';
 
 /**
  * Loads a chat session from the API, hydrating from the Zustand cache for instant display.
@@ -37,18 +33,7 @@ export const useSessionLoader = (
       setSessionTitle(title);
       setMuseumName(museum);
       setSessionMuseumMode(response.session.museumMode);
-      const sorted = sortByTime(
-        response.messages.map((message) => ({
-          id: message.id,
-          role: message.role,
-          text: message.text ?? '',
-          createdAt: message.createdAt,
-          imageRef: message.imageRef,
-          image: message.image ?? null,
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
-          metadata: (message.metadata as ChatUiMessageMetadata) ?? null,
-        })),
-      );
+      const sorted = sortByTime(response.messages.map(mapApiMessageToUiMessage));
       setMessages(sorted);
       storeSetSession(sessionId, sorted, title, museum);
     } catch (loadError) {
