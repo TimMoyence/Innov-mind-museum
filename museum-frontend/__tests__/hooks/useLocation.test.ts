@@ -1,6 +1,7 @@
 import '@/__tests__/helpers/test-utils';
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useLocation } from '@/features/museum/application/useLocation';
+import { locationCache } from '@/features/museum/infrastructure/locationCache';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -16,8 +17,9 @@ jest.mock('expo-location', () => ({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useLocation', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
+    await locationCache.clear();
     mockRequestForegroundPermissionsAsync.mockResolvedValue({ status: 'granted' });
     mockGetCurrentPositionAsync.mockResolvedValue({
       coords: { latitude: 48.8606, longitude: 2.3376 },
@@ -161,6 +163,57 @@ describe('useLocation', () => {
 
     expect(result.current.latitude).toBeNaN();
     expect(result.current.longitude).toBeNaN();
+  });
+
+  // ── precision field reflects fresh vs cached source ─────────────────────
+
+  it('reports precision=fresh after a successful GPS fix', async () => {
+    const { result } = renderHook(() => useLocation());
+
+    await waitFor(() => {
+      expect(result.current.precision).toBe('fresh');
+    });
+  });
+
+  it('hydrates from cache and reports precision=cached before GPS resolves', async () => {
+    await locationCache.save({ latitude: 38.7223, longitude: -9.1393 });
+
+    // Keep GPS pending so the cached value is what's surfaced.
+    mockGetCurrentPositionAsync.mockReturnValue(new Promise(() => {}));
+
+    const { result } = renderHook(() => useLocation());
+
+    await waitFor(() => {
+      expect(result.current.precision).toBe('cached');
+    });
+    expect(result.current.latitude).toBe(38.7223);
+    expect(result.current.longitude).toBe(-9.1393);
+  });
+
+  // ── GPS timeout falls back to cache ──────────────────────────────────────
+
+  it('falls back to cached position and sets error=timeout when GPS exceeds timeout', async () => {
+    jest.useFakeTimers();
+    await locationCache.save({ latitude: 38.7223, longitude: -9.1393 });
+
+    // GPS never resolves — must trigger the 8s timeout sentinel.
+    mockGetCurrentPositionAsync.mockReturnValue(new Promise(() => {}));
+
+    const { result } = renderHook(() => useLocation());
+
+    // Advance past the 8s GPS timeout (wrapped in act to flush React state updates).
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(8_500);
+    });
+
+    await waitFor(() => {
+      expect(result.current.error).toBe('timeout');
+    });
+    expect(result.current.latitude).toBe(38.7223);
+    expect(result.current.longitude).toBe(-9.1393);
+    expect(result.current.precision).toBe('cached');
+
+    jest.useRealTimers();
   });
 
   // ── Rapid unmount during async permission request → cancelled flag ──────
