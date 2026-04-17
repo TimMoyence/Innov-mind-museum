@@ -25,7 +25,11 @@ import type { WebSearchService } from './web-search.service';
 import type { ChatRepository } from '../domain/chat.repository.interface';
 import type { EnrichedImage, PostAudioMessageInput, PostMessageInput } from '../domain/chat.types';
 import type { AudioTranscriber } from '../domain/ports/audio-transcriber.port';
-import type { ChatOrchestrator, OrchestratorOutput } from '../domain/ports/chat-orchestrator.port';
+import type {
+  ChatOrchestrator,
+  OrchestratorInput,
+  OrchestratorOutput,
+} from '../domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '../domain/ports/image-storage.port';
 import type { OcrService } from '../domain/ports/ocr.port';
 import type { PiiSanitizer } from '../domain/ports/pii-sanitizer.port';
@@ -273,6 +277,60 @@ export class ChatMessageService {
     };
   }
 
+  /** Builds the OrchestratorInput shape shared by postMessage and postMessageStream. */
+  private buildOrchestratorInput(
+    prep: PrepareReady,
+    input: PostMessageInput,
+    sanitizedText: string,
+    requestId?: string,
+  ): OrchestratorInput {
+    return {
+      history: prep.history,
+      text: sanitizedText,
+      image: prep.orchestratorImage,
+      locale: prep.requestedLocale,
+      museumMode: input.context?.museumMode ?? prep.session.museumMode,
+      context: {
+        location: input.context?.location,
+        guideLevel: input.context?.guideLevel,
+      },
+      visitContext: prep.session.visitContext,
+      requestId,
+      userMemoryBlock: prep.userMemoryBlock,
+      knowledgeBaseBlock: prep.knowledgeBaseBlock,
+      localKnowledgeBlock: prep.localKnowledgeBlock,
+      webSearchBlock: prep.webSearchBlock,
+      audioDescriptionMode: input.context?.audioDescriptionMode,
+      lowDataMode: input.context?.lowDataMode ?? false,
+      resolvedLocation: prep.resolvedLocation,
+      contentPreferences: input.context?.contentPreferences,
+    };
+  }
+
+  /** Commits the assistant response with the shared deps used by all public methods. */
+  private async commitResponse(
+    sessionId: string,
+    prep: PrepareReady,
+    aiResult: OrchestratorOutput,
+  ): Promise<PostMessageResult> {
+    return await commitAssistantResponse(
+      {
+        guardrail: this.guardrail,
+        repository: this.repository,
+        cache: this.cache,
+        userMemory: this.userMemory,
+      },
+      sessionId,
+      prep.session,
+      aiResult,
+      {
+        requestedLocale: prep.requestedLocale,
+        ownerId: prep.ownerId,
+        enrichedImages: prep.enrichedImages,
+      },
+    );
+  }
+
   /** Posts a message and returns the assistant response (non-streaming). */
   async postMessage(
     sessionId: string,
@@ -283,56 +341,12 @@ export class ChatMessageService {
     const prep = await this.prepareMessage(sessionId, input, requestId, currentUserId);
     if (prep.kind === 'refused') return prep.result;
 
-    const {
-      session,
-      orchestratorImage,
-      requestedLocale,
-      history,
-      ownerId,
-      userMemoryBlock,
-      knowledgeBaseBlock,
-      localKnowledgeBlock,
-      webSearchBlock,
-      enrichedImages,
-      resolvedLocation,
-    } = prep;
-    const text = input.text?.trim();
-    const sanitizedText = this.piiSanitizer.sanitize(text ?? '').sanitizedText;
-
-    const aiResult: OrchestratorOutput = await this.orchestrator.generate({
-      history,
-      text: sanitizedText,
-      image: orchestratorImage,
-      locale: requestedLocale,
-      museumMode: input.context?.museumMode ?? session.museumMode,
-      context: {
-        location: input.context?.location,
-        guideLevel: input.context?.guideLevel,
-      },
-      visitContext: session.visitContext,
-      requestId,
-      userMemoryBlock,
-      knowledgeBaseBlock,
-      localKnowledgeBlock,
-      webSearchBlock,
-      audioDescriptionMode: input.context?.audioDescriptionMode,
-      lowDataMode: input.context?.lowDataMode ?? false,
-      resolvedLocation,
-      contentPreferences: input.context?.contentPreferences,
-    });
-
-    return await commitAssistantResponse(
-      {
-        guardrail: this.guardrail,
-        repository: this.repository,
-        cache: this.cache,
-        userMemory: this.userMemory,
-      },
-      sessionId,
-      session,
-      aiResult,
-      { requestedLocale, ownerId, enrichedImages },
+    const sanitizedText = this.piiSanitizer.sanitize(input.text?.trim() ?? '').sanitizedText;
+    const aiResult = await this.orchestrator.generate(
+      this.buildOrchestratorInput(prep, input, sanitizedText, requestId),
     );
+
+    return await this.commitResponse(sessionId, prep, aiResult);
   }
 
   /** Posts a message with token-by-token streaming and incremental guardrail checks. */
@@ -351,52 +365,21 @@ export class ChatMessageService {
     const prep = await this.prepareMessage(sessionId, input, requestId, currentUserId);
     if (prep.kind === 'refused') return prep.result;
 
-    const {
-      session,
-      orchestratorImage,
-      requestedLocale,
-      history,
-      ownerId,
-      userMemoryBlock,
-      knowledgeBaseBlock,
-      localKnowledgeBlock,
-      webSearchBlock,
-      enrichedImages,
-      resolvedLocation,
-    } = prep;
-
     if (signal?.aborted) {
       throw new AppError({ message: 'Request aborted', statusCode: 499, code: 'ABORTED' });
     }
 
     const buffer = new StreamBuffer({
       classifier: this.artTopicClassifier,
-      locale: requestedLocale,
+      locale: prep.requestedLocale,
       signal,
       onGuardrail,
     });
     buffer.onRelease(onToken);
     const sanitizedText = this.piiSanitizer.sanitize(input.text?.trim() ?? '').sanitizedText;
 
-    const aiResult: OrchestratorOutput = await this.orchestrator.generateStream(
-      {
-        history,
-        text: sanitizedText,
-        image: orchestratorImage,
-        locale: requestedLocale,
-        museumMode: input.context?.museumMode ?? session.museumMode,
-        context: { location: input.context?.location, guideLevel: input.context?.guideLevel },
-        visitContext: session.visitContext,
-        requestId,
-        userMemoryBlock,
-        knowledgeBaseBlock,
-        localKnowledgeBlock,
-        webSearchBlock,
-        audioDescriptionMode: input.context?.audioDescriptionMode,
-        lowDataMode: input.context?.lowDataMode ?? false,
-        resolvedLocation,
-        contentPreferences: input.context?.contentPreferences,
-      },
+    const aiResult = await this.orchestrator.generateStream(
+      this.buildOrchestratorInput(prep, input, sanitizedText, requestId),
       (chunk) => {
         buffer.push(chunk);
       },
@@ -406,18 +389,7 @@ export class ChatMessageService {
     await buffer.awaitPhase1();
     await awaitDrainWithTimeout(buffer);
 
-    return await commitAssistantResponse(
-      {
-        guardrail: this.guardrail,
-        repository: this.repository,
-        cache: this.cache,
-        userMemory: this.userMemory,
-      },
-      sessionId,
-      session,
-      aiResult,
-      { requestedLocale, ownerId, enrichedImages },
-    );
+    return await this.commitResponse(sessionId, prep, aiResult);
   }
 
   /** Transcribes an audio message then delegates to postMessage for LLM processing. */
