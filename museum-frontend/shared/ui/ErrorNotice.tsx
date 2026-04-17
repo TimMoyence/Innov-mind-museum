@@ -28,14 +28,24 @@ export const ErrorNotice = ({ message, onDismiss, onRetry }: ErrorNoticeProps): 
       {onDismiss || onRetry ? (
         <View style={styles.actionsRow}>
           {onRetry ? (
-            <TouchableOpacity onPress={onRetry} style={styles.retryButton}>
+            <TouchableOpacity
+              onPress={onRetry}
+              style={styles.retryButton}
+              accessibilityRole="button"
+              accessibilityLabel={t('errorNotice.retry')}
+            >
               <Text style={[styles.retryText, { color: theme.primary }]}>
                 {t('errorNotice.retry')}
               </Text>
             </TouchableOpacity>
           ) : null}
           {onDismiss ? (
-            <TouchableOpacity onPress={onDismiss} style={styles.dismissButton}>
+            <TouchableOpacity
+              onPress={onDismiss}
+              style={styles.dismissButton}
+              accessibilityRole="button"
+              accessibilityLabel={t('errorNotice.dismiss')}
+            >
               <Text style={[styles.dismissText, { color: theme.error }]}>
                 {t('errorNotice.dismiss')}
               </Text>

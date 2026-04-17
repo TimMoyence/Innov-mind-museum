@@ -56,7 +56,7 @@ describe('ImageFullscreenModal', () => {
   it('fires onClose when close button is pressed', () => {
     const images = [makeEnrichedImage()];
     render(<ImageFullscreenModal images={images} initialIndex={0} visible onClose={onClose} />);
-    fireEvent.press(screen.getByLabelText('Close'));
+    fireEvent.press(screen.getByLabelText('a11y.chat.fullscreen_close'));
     expect(onClose).toHaveBeenCalled();
   });
 });

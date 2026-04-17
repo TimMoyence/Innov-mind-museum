@@ -283,7 +283,8 @@
     "invalid_link_body": "The {{label}} link is not configured correctly.",
     "channel_opened": "{{label}} opened",
     "channel_failed": "{{label}} link failed",
-    "links_shared": "Support links shared"
+    "links_shared": "Support links shared",
+    "share_title": "Musaium support channels"
   },
   "discover": {
     "title": "Discover",
@@ -601,7 +602,11 @@
       "follow_up_hint": "Sends this follow-up question",
       "recommendation_hint": "Fills input with this suggestion",
       "suggestion_hint": "Starts conversation with this topic",
-      "camera_suggestion_hint": "Opens camera to photograph artwork"
+      "camera_suggestion_hint": "Opens camera to photograph artwork",
+      "fullscreen_close": "Close",
+      "previous_image": "Previous image",
+      "next_image": "Next image",
+      "messages_list": "Chat messages"
     },
     "onboarding": {
       "skip": "Skip onboarding",

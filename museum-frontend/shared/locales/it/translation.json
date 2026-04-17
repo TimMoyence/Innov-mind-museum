@@ -283,7 +283,8 @@
     "invalid_link_body": "Il link {{label}} non è configurato correttamente.",
     "channel_opened": "{{label}} aperto",
     "channel_failed": "Link {{label}} non riuscito",
-    "links_shared": "Link di supporto condivisi"
+    "links_shared": "Link di supporto condivisi",
+    "share_title": "Canali di assistenza Musaium"
   },
   "discover": {
     "title": "Scopri",
@@ -601,7 +602,11 @@
       "follow_up_hint": "Invia questa domanda di approfondimento",
       "recommendation_hint": "Compila il campo con questo suggerimento",
       "suggestion_hint": "Avvia la conversazione su questo argomento",
-      "camera_suggestion_hint": "Apre la fotocamera per fotografare un'opera d'arte"
+      "camera_suggestion_hint": "Apre la fotocamera per fotografare un'opera d'arte",
+      "fullscreen_close": "Chiudi",
+      "previous_image": "Immagine precedente",
+      "next_image": "Immagine successiva",
+      "messages_list": "Messaggi chat"
     },
     "onboarding": {
       "skip": "Salta l'introduzione",

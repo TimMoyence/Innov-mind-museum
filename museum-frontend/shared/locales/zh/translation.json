@@ -283,7 +283,8 @@
     "invalid_link_body": "{{label}}链接配置不正确。",
     "channel_opened": "{{label}}已打开",
     "channel_failed": "{{label}}链接失败",
-    "links_shared": "已分享支持链接"
+    "links_shared": "已分享支持链接",
+    "share_title": "Musaium 支持渠道"
   },
   "discover": {
     "title": "发现",
@@ -601,7 +602,11 @@
       "follow_up_hint": "发送此后续问题",
       "recommendation_hint": "用此建议填充输入框",
       "suggestion_hint": "以此主题开始对话",
-      "camera_suggestion_hint": "打开相机拍摄艺术品"
+      "camera_suggestion_hint": "打开相机拍摄艺术品",
+      "fullscreen_close": "关闭",
+      "previous_image": "上一张图片",
+      "next_image": "下一张图片",
+      "messages_list": "聊天消息"
     },
     "onboarding": {
       "skip": "跳过引导",

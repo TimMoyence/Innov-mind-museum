@@ -283,7 +283,8 @@
     "invalid_link_body": "Der {{label}}-Link ist nicht korrekt konfiguriert.",
     "channel_opened": "{{label}} geöffnet",
     "channel_failed": "{{label}}-Link fehlgeschlagen",
-    "links_shared": "Support-Links geteilt"
+    "links_shared": "Support-Links geteilt",
+    "share_title": "Musaium-Supportkanäle"
   },
   "discover": {
     "title": "Entdecken",
@@ -343,7 +344,7 @@
     "prerelease_text": "Diese Punkte sollten vor der Veröffentlichung in den App-Stores oder für Produktivnutzer validiert werden.",
     "policy_contents": "Inhalt der Richtlinie",
     "request_title": "Support für Datenschutzanfragen",
-    "request_text": "Für Auskunfts-, Lösch-, Berichtigungs- oder Widerspruchsanfragen kontaktieren Sie das Team über die Support-Seite und fügen Sie \u201EDatenschutzanfrage\u201C in Ihre Nachricht ein, bis ein dedizierter rechtlicher Ablauf finalisiert ist.",
+    "request_text": "Für Auskunfts-, Lösch-, Berichtigungs- oder Widerspruchsanfragen kontaktieren Sie das Team über die Support-Seite und fügen Sie „Datenschutzanfrage“ in Ihre Nachricht ein, bis ein dedizierter rechtlicher Ablauf finalisiert ist.",
     "open_support": "Support öffnen",
     "back_settings": "Zurück zu Einstellungen",
     "menu": {
@@ -601,7 +602,11 @@
       "follow_up_hint": "Sendet diese Folgefrage",
       "recommendation_hint": "Füllt das Eingabefeld mit diesem Vorschlag",
       "suggestion_hint": "Startet die Unterhaltung mit diesem Thema",
-      "camera_suggestion_hint": "Öffnet die Kamera zum Fotografieren eines Kunstwerks"
+      "camera_suggestion_hint": "Öffnet die Kamera zum Fotografieren eines Kunstwerks",
+      "fullscreen_close": "Schließen",
+      "previous_image": "Vorheriges Bild",
+      "next_image": "Nächstes Bild",
+      "messages_list": "Chat-Nachrichten"
     },
     "onboarding": {
       "skip": "Einführung überspringen",

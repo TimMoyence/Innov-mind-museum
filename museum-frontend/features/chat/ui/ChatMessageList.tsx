@@ -218,7 +218,7 @@ export const ChatMessageList = ({
       onContentSizeChange={handleContentSizeChange}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
-      accessibilityLabel="Chat messages"
+      accessibilityLabel={t('a11y.chat.messages_list')}
       accessibilityRole="list"
       ListEmptyComponent={
         <WelcomeCard

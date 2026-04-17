@@ -283,7 +283,8 @@
     "invalid_link_body": "{{label}}のリンクが正しく設定されていません。",
     "channel_opened": "{{label}}を開きました",
     "channel_failed": "{{label}}のリンクに失敗しました",
-    "links_shared": "サポートリンクを共有しました"
+    "links_shared": "サポートリンクを共有しました",
+    "share_title": "Musaium サポートチャネル"
   },
   "discover": {
     "title": "ディスカバー",
@@ -601,7 +602,11 @@
       "follow_up_hint": "このフォローアップ質問を送信します",
       "recommendation_hint": "この提案で入力欄を埋めます",
       "suggestion_hint": "このトピックで会話を開始します",
-      "camera_suggestion_hint": "カメラを開いて作品を撮影します"
+      "camera_suggestion_hint": "カメラを開いて作品を撮影します",
+      "fullscreen_close": "閉じる",
+      "previous_image": "前の画像",
+      "next_image": "次の画像",
+      "messages_list": "チャットメッセージ"
     },
     "onboarding": {
       "skip": "紹介をスキップ",

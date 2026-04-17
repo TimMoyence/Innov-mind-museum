@@ -283,7 +283,8 @@
     "invalid_link_body": "رابط {{label}} غير مهيّأ بشكل صحيح.",
     "channel_opened": "تم فتح {{label}}",
     "channel_failed": "فشل رابط {{label}}",
-    "links_shared": "تم مشاركة روابط الدعم"
+    "links_shared": "تم مشاركة روابط الدعم",
+    "share_title": "قنوات دعم Musaium"
   },
   "discover": {
     "title": "اكتشف",
@@ -601,7 +602,11 @@
       "follow_up_hint": "يرسل سؤال المتابعة هذا",
       "recommendation_hint": "يملأ حقل الإدخال بهذا الاقتراح",
       "suggestion_hint": "يبدأ المحادثة بهذا الموضوع",
-      "camera_suggestion_hint": "يفتح الكاميرا لتصوير عمل فني"
+      "camera_suggestion_hint": "يفتح الكاميرا لتصوير عمل فني",
+      "fullscreen_close": "إغلاق",
+      "previous_image": "الصورة السابقة",
+      "next_image": "الصورة التالية",
+      "messages_list": "رسائل الدردشة"
     },
     "onboarding": {
       "skip": "تخطي المقدمة",

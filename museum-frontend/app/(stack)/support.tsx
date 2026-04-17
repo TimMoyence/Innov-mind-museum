@@ -53,9 +53,10 @@ export default function SupportScreen() {
 
   const shareChannels = async () => {
     const channelLines = readyChannels.map(([, channel]) => `${channel.label}: ${channel.url}`);
+    const shareTitle = t('support.share_title');
     await Share.share({
-      title: 'Musaium support channels',
-      message: ['Musaium support channels', ...channelLines].join('\n'),
+      title: shareTitle,
+      message: [shareTitle, ...channelLines].join('\n'),
     });
     setStatus(t('support.links_shared'));
   };

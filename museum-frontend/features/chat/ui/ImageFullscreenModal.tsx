@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import type { ChatUiEnrichedImage } from '@/features/chat/application/chatSessionLogic.pure';
 import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
@@ -37,6 +38,7 @@ const COUNTER_COLOR = semantic.fullscreenModal.counterColor;
  */
 export const ImageFullscreenModal = React.memo(
   ({ images, initialIndex, visible, onClose }: ImageFullscreenModalProps) => {
+    const { t } = useTranslation();
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
     const reduceMotion = useReducedMotion();
     const { width: screenWidth } = useWindowDimensions();
@@ -146,7 +148,7 @@ export const ImageFullscreenModal = React.memo(
             style={styles.closeButton}
             onPress={onClose}
             accessibilityRole="button"
-            accessibilityLabel="Close"
+            accessibilityLabel={t('a11y.chat.fullscreen_close')}
             hitSlop={12}
           >
             <Ionicons name="close-circle" size={32} color={CAPTION_COLOR} />
@@ -169,14 +171,14 @@ export const ImageFullscreenModal = React.memo(
                 onPress={() => {
                   if (currentIndex > 0) goTo(currentIndex - 1);
                 }}
-                accessibilityLabel="Previous image"
+                accessibilityLabel={t('a11y.chat.previous_image')}
               />
               <Pressable
                 style={styles.tapZoneRight}
                 onPress={() => {
                   if (currentIndex < images.length - 1) goTo(currentIndex + 1);
                 }}
-                accessibilityLabel="Next image"
+                accessibilityLabel={t('a11y.chat.next_image')}
               />
             </View>
 
