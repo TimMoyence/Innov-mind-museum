@@ -15,6 +15,8 @@ export interface ContextMenuAction {
   onPress?: () => void;
   /** When true the button is visually highlighted (e.g. active toggle). */
   active?: boolean;
+  /** When true, only the icon is rendered; label is kept as accessibilityLabel. */
+  iconOnly?: boolean;
 }
 
 interface FloatingContextMenuProps {
@@ -62,6 +64,7 @@ export const FloatingContextMenu = ({
             }}
             style={[
               styles.menuAction,
+              action.iconOnly && styles.menuActionIconOnly,
               {
                 borderColor: action.active ? theme.primary : theme.cardBorder,
                 backgroundColor: theme.surface,
@@ -75,14 +78,16 @@ export const FloatingContextMenu = ({
               size={16}
               color={action.active ? theme.primary : theme.textPrimary}
             />
-            <Text
-              style={[
-                styles.menuLabel,
-                { color: action.active ? theme.primary : theme.textPrimary },
-              ]}
-            >
-              {action.label}
-            </Text>
+            {action.iconOnly ? null : (
+              <Text
+                style={[
+                  styles.menuLabel,
+                  { color: action.active ? theme.primary : theme.textPrimary },
+                ]}
+              >
+                {action.label}
+              </Text>
+            )}
           </Pressable>
         ))}
       </View>
@@ -125,6 +130,9 @@ const styles = StyleSheet.create({
     paddingVertical: semantic.badge.paddingX,
     borderRadius: semantic.badge.radiusFull,
     borderWidth: semantic.input.borderWidth,
+  },
+  menuActionIconOnly: {
+    paddingHorizontal: semantic.badge.paddingX,
   },
   menuLabel: {
     fontSize: semantic.badge.fontSizeSmall,

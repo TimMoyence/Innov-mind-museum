@@ -36,6 +36,7 @@ export const ConversationsHeader = ({
             label: t('conversations.filter'),
             onPress: onToggleSortMode,
             active: sortMode !== 'recent',
+            iconOnly: true,
           },
           {
             id: 'bookmark',
@@ -43,6 +44,7 @@ export const ConversationsHeader = ({
             label: t('conversations.saved'),
             onPress: onToggleSavedFilter,
             active: isSavedOnly,
+            iconOnly: true,
           },
           {
             id: 'share',

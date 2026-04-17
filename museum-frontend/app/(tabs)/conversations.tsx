@@ -234,13 +234,6 @@ export default function ConversationsScreen() {
       <GlassCard style={styles.headerCard} intensity={60}>
         <BrandMark variant="header" style={styles.brand} />
         <Text style={[styles.title, { color: theme.textPrimary }]}>{t('conversations.title')}</Text>
-        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-          {t('conversations.subtitle')}
-        </Text>
-        <Text style={[styles.metaLine, { color: theme.primary }]}>
-          {isSavedOnly ? t('conversations.saved_filter_on') : t('conversations.saved_filter_off')} •{' '}
-          {t('conversations.sort_label', { sortMode })}
-        </Text>
       </GlassCard>
     </View>
   );
@@ -329,18 +322,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: fontSize['3xl'],
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  subtitle: {
-    marginTop: semantic.section.gapTight,
-    fontSize: semantic.card.bodySize,
-    lineHeight: space['5'],
-    textAlign: 'center',
-  },
-  metaLine: {
-    marginTop: semantic.section.gapTight,
-    fontSize: semantic.card.captionSize,
     fontWeight: '700',
     textAlign: 'center',
   },

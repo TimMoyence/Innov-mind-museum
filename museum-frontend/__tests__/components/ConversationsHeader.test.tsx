@@ -67,14 +67,14 @@ describe('ConversationsHeader', () => {
     onShareDashboard: jest.fn().mockResolvedValue(undefined),
   };
 
-  it('renders the filter action label', () => {
-    const { getByText } = render(<ConversationsHeader {...defaultProps} />);
-    expect(getByText('conversations.filter')).toBeTruthy();
+  it('exposes the filter action via accessibility label (icon-only)', () => {
+    const { getByLabelText } = render(<ConversationsHeader {...defaultProps} />);
+    expect(getByLabelText('conversations.filter')).toBeTruthy();
   });
 
-  it('renders the saved action label', () => {
-    const { getByText } = render(<ConversationsHeader {...defaultProps} />);
-    expect(getByText('conversations.saved')).toBeTruthy();
+  it('exposes the saved action via accessibility label (icon-only)', () => {
+    const { getByLabelText } = render(<ConversationsHeader {...defaultProps} />);
+    expect(getByLabelText('conversations.saved')).toBeTruthy();
   });
 
   it('renders the share action label', () => {
