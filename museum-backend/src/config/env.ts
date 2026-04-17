@@ -267,6 +267,7 @@ const env: AppEnv = {
     imageEnrichment: toBoolean(process.env.FEATURE_FLAG_IMAGE_ENRICHMENT, false),
     webSearch: toBoolean(process.env.FEATURE_FLAG_WEB_SEARCH, false),
     knowledgeExtraction: toBoolean(process.env.FEATURE_FLAG_KNOWLEDGE_EXTRACTION, false),
+    artTopicClassifier: toBoolean(process.env.FEATURE_ART_TOPIC_CLASSIFIER, false),
   },
   freeTierDailyChatLimit: toNumber(process.env.FREE_TIER_DAILY_CHAT_LIMIT, 100),
   overpassCacheTtlSeconds: toNumber(process.env.OVERPASS_CACHE_TTL_SECONDS, 86400),
