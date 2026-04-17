@@ -411,7 +411,11 @@
     "audio_mode_off": "音频描述已关闭",
     "lowDataActive": "数据节省模式已激活",
     "cachedResponse": "来自本地缓存的响应",
-    "savedForLater": "问题已保存以便稍后发送"
+    "savedForLater": "问题已保存以便稍后发送",
+    "optimistic": {
+      "image_placeholder": "已发送图片",
+      "voice_placeholder": "语音消息"
+    }
   },
   "dailyLimit": {
     "title": "已达每日上限",

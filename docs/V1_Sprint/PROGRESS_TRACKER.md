@@ -967,23 +967,31 @@
 - [x] [P02](../plans/PLAN_02_TEAM_HARDENING.md) — /team Skill Hardening (commit bc93c5f2, 13 files)
 - [x] [P03](../plans/PLAN_03_GITNEXUS_CARTOGRAPHY.md) — GitNexus Cartography Refresh (commit 12d95b28)
 
-### Phase 2 — Refactors Structurels (partiellement terminee 2026-04-17)
+### Phase 2 — Refactors Structurels (TERMINEE 2026-04-17)
 
 - [x] [P04](../plans/PLAN_04_BACKEND_CHAT_SLIM.md) — DRY refactor chat-message (457->429 LOC, audit sur-prescriptif: fichier deja facade)
 - [x] [P05](../plans/PLAN_05_BACKEND_SHARED_TESTS.md) — MemoryCacheService tests (62.93% -> 93.7%, +18 tests)
 - [x] [P06](../plans/PLAN_06_BACKEND_WEBSEARCH_UNIFY.md) — Doc SEARCH_PROVIDERS.md (archi deja unifiee avant session)
-- [~] [P07](../plans/PLAN_07_MOBILE_TESTS_SETUP.md) — **DEJA DONE** 1120 tests, 132 suites, audit erronne
-- [~] [P08](../plans/PLAN_08_MOBILE_CHAT_SPLIT.md) — **MAJORITAIREMENT DONE** useChatSession deja facade composant 3 sub-hooks
-- [ ] [P09](../plans/PLAN_09_MOBILE_I18N_A11Y.md) — A auditer (8 locales actives, taux coverage UI a verifier)
-- [~] [P10](../plans/PLAN_10_ART_KEYWORDS_R15_FINALIZE.md) — **LARGEMENT DONE** hexagonal + tests en place
+- [x] [P07](../plans/PLAN_07_MOBILE_TESTS_SETUP.md) — **DONE** 1120 tests, 132 suites (audit erronne, deja en place)
+- [x] [P08](../plans/PLAN_08_MOBILE_CHAT_SPLIT.md) — **DONE** NL-1.1 DRY chat session: 3 helpers pure + fix offline image fallback (commit 5c374013)
+- [x] [P09](../plans/PLAN_09_MOBILE_I18N_A11Y.md) — **DONE** NL-1.2 i18n 100% + a11y 60/60 (commit 6b768dd9) + Pass 1 fix optimistic placeholders i18n (commit TBD)
+- [x] [P10](../plans/PLAN_10_ART_KEYWORDS_R15_FINALIZE.md) — **DONE** NL-1.3 closure report (commit 5f0705e5), architecture verifiee
 
-### Phase 3 — V2 Next Level (3-6 mois, hors session)
+### Sprint NL-1 — Phase 2 Closure (2026-04-17)
 
-- [ ] [P11](../plans/PLAN_11_AI_GUARDRAILS_V2.md) — AI Guardrails Layer V2 (POC NeMo/LLM Guard/Prompt Armor)
-- [ ] [P12](../plans/PLAN_12_MOBILE_PERF_V2.md) — Mobile Perf V2 (FlashList v2, Reanimated 3, Expo Router v7)
+- [x] NL-1.1 P08 DRY chat session (commit 5c374013) — rapport `docs/plans/reports/NL-1.1-chat-dry-audit.md`
+- [x] NL-1.2 P09 i18n + a11y (commit 6b768dd9) — rapports `NL-1.2-i18n-a11y-audit.md`
+- [x] NL-1.3 P10 art-keywords verify (commit 5f0705e5) — rapport `NL-1.3-art-keywords-closure.md`
+- [x] Tech Lead Review NL-1 + 2x challenge — Pass 1 fix optimistic placeholders i18n
 
-> **Bilan session 2026-04-17** : 7 commits, 2655 -> 2673 tests BE (+18), 0 regression.
-> Voir [`docs/plans/reports/SESSION_2026-04-17_FINAL.md`](../plans/reports/SESSION_2026-04-17_FINAL.md) pour details realite vs audit initial.
+### Phase 3 — V2 Next Level (En cours — Sprint NL-2 + NL-3)
+
+- [ ] [P11](../plans/PLAN_11_AI_GUARDRAILS_V2.md) — AI Guardrails Layer V2 (POC NeMo/LLM Guard/Prompt Armor) — Sprint NL-3
+- [ ] [P12](../plans/PLAN_12_MOBILE_PERF_V2.md) — Mobile Perf V2 (FlashList v2, Reanimated 3, Expo Router v7) — Sprint NL-2
+
+> **Master plan** : [`docs/plans/NL_MASTER_PLAN.md`](../plans/NL_MASTER_PLAN.md) (Phase 2 closure + Phase 3 launch)
+> **Bilan session 2026-04-17** : 7 commits (P01-P06), 2655 -> 2673 tests BE (+18), 0 regression.
+> **Bilan NL-1** : 4 commits, mobile tests 1120 jest + 291->293 node (+16 total), i18n 610->617 keys × 8 locales.
 
 ---
 

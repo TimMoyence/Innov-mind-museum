@@ -411,7 +411,11 @@
     "audio_mode_off": "Audiodescrizione disattiva",
     "lowDataActive": "Modalità risparmio dati attiva",
     "cachedResponse": "Risposta dalla cache locale",
-    "savedForLater": "Domanda salvata per dopo"
+    "savedForLater": "Domanda salvata per dopo",
+    "optimistic": {
+      "image_placeholder": "Immagine inviata",
+      "voice_placeholder": "Messaggio vocale"
+    }
   },
   "dailyLimit": {
     "title": "Limite giornaliero raggiunto",

@@ -121,18 +121,34 @@ describe('buildOptimisticMessage', () => {
     assert.equal(msg.image, null);
   });
 
-  it('uses "[Image sent]" when text is empty and imageUri is provided', () => {
+  it('uses default image fallback when text is empty and imageUri is provided', () => {
     const msg = buildOptimisticMessage({ text: '', imageUri: 'file:///photo.jpg' });
 
-    assert.equal(msg.text, '[Image sent]');
+    assert.equal(msg.text, 'Image sent');
     assert.deepEqual(msg.image, { url: 'file:///photo.jpg', expiresAt: '' });
   });
 
-  it('uses "[Voice message]" when hasAudio is true and text is empty', () => {
+  it('uses custom image fallback label when provided (i18n injection)', () => {
+    const msg = buildOptimisticMessage({
+      imageUri: 'file:///photo.jpg',
+      imageFallbackLabel: 'Image envoyée',
+    });
+    assert.equal(msg.text, 'Image envoyée');
+  });
+
+  it('uses default audio fallback when hasAudio is true and text is empty', () => {
     const msg = buildOptimisticMessage({ hasAudio: true });
 
-    assert.equal(msg.text, '[Voice message]');
+    assert.equal(msg.text, 'Voice message');
     assert.equal(msg.image, null);
+  });
+
+  it('uses custom audio fallback label when provided (i18n injection)', () => {
+    const msg = buildOptimisticMessage({
+      hasAudio: true,
+      audioFallbackLabel: 'Message vocal',
+    });
+    assert.equal(msg.text, 'Message vocal');
   });
 
   it('prefers text over audio fallback when both provided', () => {
@@ -142,9 +158,12 @@ describe('buildOptimisticMessage', () => {
   });
 
   it('prefers voice over image fallback when both present and no text', () => {
-    const msg = buildOptimisticMessage({ imageUri: 'file://x.jpg', hasAudio: true });
+    const msg = buildOptimisticMessage({
+      imageUri: 'file://x.jpg',
+      hasAudio: true,
+    });
 
-    assert.equal(msg.text, '[Voice message]');
+    assert.equal(msg.text, 'Voice message');
   });
 
   it('uses empty string when no text, no image, no audio', () => {
@@ -183,7 +202,7 @@ describe('buildOptimisticMessage', () => {
   it('returns image fallback when whitespace-only text is provided with imageUri', () => {
     const msg = buildOptimisticMessage({ text: '   ', imageUri: 'file://x.jpg' });
 
-    assert.equal(msg.text, '[Image sent]');
+    assert.equal(msg.text, 'Image sent');
   });
 });
 

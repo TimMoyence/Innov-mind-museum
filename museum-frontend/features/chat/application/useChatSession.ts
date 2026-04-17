@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Sentry from '@sentry/react-native';
+import { useTranslation } from 'react-i18next';
 
 import { getErrorMessage, isDailyLimitError } from '@/shared/lib/errors';
 import { incrementCompletedSessions } from '@/shared/infrastructure/inAppReview';
@@ -33,6 +34,7 @@ export type { ChatUiMessage, ChatUiMessageMetadata };
  * and useOfflineSync. Handles text/image/audio message sending with optimistic updates.
  */
 export const useChatSession = (sessionId: string) => {
+  const { t } = useTranslation();
   const cachedSession = useChatSessionStore((s) => s.sessions[sessionId]);
   const storeUpdateMessages = useChatSessionStore((s) => s.updateMessages);
 
@@ -69,6 +71,9 @@ export const useChatSession = (sessionId: string) => {
     useStreamingState(setMessages);
 
   const locationString = useMemo(() => formatLocation(latitude, longitude), [latitude, longitude]);
+
+  const imageFallbackLabel = t('chat.optimistic.image_placeholder');
+  const audioFallbackLabel = t('chat.optimistic.voice_placeholder');
 
   useOfflineSync({
     sessionId,
@@ -142,6 +147,7 @@ export const useChatSession = (sessionId: string) => {
           text: trimmedText,
           imageUri: params.imageUri,
           id: queued.id,
+          imageFallbackLabel,
         });
         setMessages((prev) => sortByTime([...prev, offlineMessage]));
         return true;
@@ -151,6 +157,8 @@ export const useChatSession = (sessionId: string) => {
         text: trimmedText,
         imageUri: params.imageUri,
         hasAudio: Boolean(params.audioUri || params.audioBlob),
+        imageFallbackLabel,
+        audioFallbackLabel,
       });
 
       setMessages((prev) => sortByTime([...prev, optimisticMessage]));
@@ -361,6 +369,8 @@ export const useChatSession = (sessionId: string) => {
       cacheLookup,
       cacheStore,
       museumName,
+      imageFallbackLabel,
+      audioFallbackLabel,
     ],
   );
 

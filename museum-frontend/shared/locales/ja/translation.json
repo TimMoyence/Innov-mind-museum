@@ -411,7 +411,11 @@
     "audio_mode_off": "音声ガイド オフ",
     "lowDataActive": "データ節約モードが有効です",
     "cachedResponse": "ローカルキャッシュからの応答",
-    "savedForLater": "質問を後で送信するために保存しました"
+    "savedForLater": "質問を後で送信するために保存しました",
+    "optimistic": {
+      "image_placeholder": "画像送信",
+      "voice_placeholder": "音声メッセージ"
+    }
   },
   "dailyLimit": {
     "title": "1日の上限に達しました",

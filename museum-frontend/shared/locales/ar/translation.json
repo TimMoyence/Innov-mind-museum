@@ -411,7 +411,11 @@
     "audio_mode_off": "الوصف الصوتي معطّل",
     "lowDataActive": "وضع توفير البيانات نشط",
     "cachedResponse": "إجابة من الذاكرة المحلية",
-    "savedForLater": "تم حفظ السؤال لوقت لاحق"
+    "savedForLater": "تم حفظ السؤال لوقت لاحق",
+    "optimistic": {
+      "image_placeholder": "تم إرسال الصورة",
+      "voice_placeholder": "رسالة صوتية"
+    }
   },
   "dailyLimit": {
     "title": "تم بلوغ الحد اليومي",

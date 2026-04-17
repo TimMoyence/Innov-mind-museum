@@ -136,18 +136,26 @@ export const buildVisitSummary = (
 
 /**
  * Builds an optimistic user message for immediate display before the server responds.
- * Handles text, image, and audio modalities with sensible fallback labels.
+ * Handles text, image, and audio modalities. When text is empty and media is attached,
+ * falls back to a short label — pass `imageFallbackLabel` / `audioFallbackLabel` from
+ * i18n (e.g. `t('chat.optimistic.image_placeholder')`) to localize.
  */
 export interface BuildOptimisticMessageParams {
   text?: string;
   imageUri?: string;
   hasAudio?: boolean;
   id?: string;
+  imageFallbackLabel?: string;
+  audioFallbackLabel?: string;
 }
 
 export const buildOptimisticMessage = (params: BuildOptimisticMessageParams): ChatUiMessage => {
   const trimmed = params.text?.trim() ?? '';
-  const fallback = params.hasAudio ? '[Voice message]' : params.imageUri ? '[Image sent]' : '';
+  const fallback = params.hasAudio
+    ? (params.audioFallbackLabel ?? 'Voice message')
+    : params.imageUri
+      ? (params.imageFallbackLabel ?? 'Image sent')
+      : '';
   return {
     id: params.id ?? `${String(Date.now())}-user`,
     role: 'user',

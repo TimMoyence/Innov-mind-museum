@@ -611,7 +611,8 @@ describe('useChatSession', () => {
 
     const offlineMsg = result.current.messages.find((m: ChatUiMessage) => m.id === 'queued-1');
     expect(offlineMsg).toBeDefined();
-    expect(offlineMsg?.text).toBe('[Image sent]');
+    // i18n mock returns key as-is; prod renders localized label via useTranslation
+    expect(offlineMsg?.text).toBe('chat.optimistic.image_placeholder');
     expect(offlineMsg?.image).toEqual({ url: 'file://offline-photo.jpg', expiresAt: '' });
   });
 
@@ -656,9 +657,9 @@ describe('useChatSession', () => {
       await result.current.sendMessage({ audioUri: 'file://voice.m4a' });
     });
 
-    // Should have an optimistic user message with [Voice message]
+    // Should have an optimistic user message with voice placeholder (i18n key in test mock)
     const voiceMsg = result.current.messages.find(
-      (m: ChatUiMessage) => m.role === 'user' && m.text === '[Voice message]',
+      (m: ChatUiMessage) => m.role === 'user' && m.text === 'chat.optimistic.voice_placeholder',
     );
     expect(voiceMsg).toBeDefined();
   });
