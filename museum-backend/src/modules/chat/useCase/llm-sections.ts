@@ -114,7 +114,7 @@ const buildSummaryPrompt = (input: {
 
   if (hasImage) {
     parts.push(
-      '[IMAGE ANALYSIS] The visitor shared a photograph. Follow this sequence: 1. Describe what you observe: medium, composition, colors, visible details. 2. Identify the artwork if possible (title, artist, period). State your confidence. 3. Provide contextual interpretation. 4. If you cannot identify it, describe what you see and offer possible interpretations. Do not fabricate attributions. Fill the imageDescription field with your visual description.',
+      '[IMAGE ANALYSIS] The visitor shared a photograph. If the <user_message> contains a specific question (e.g. asks who/what/why/which, or about an element visible in the image), ANSWER THAT QUESTION FIRST using the image as visual evidence — do not default to a generic description. Point to the specific visual details that support your answer (location in the frame, iconographic attributes, inscriptions, posture, symbols). Only after answering, add brief relevant context (1–2 sentences). If the user_message is empty or merely "[Image sent]", then describe what you observe, identify the artwork if possible (title, artist, period, confidence), and offer contextual interpretation. Never fabricate attributions. Always fill the imageDescription field with your visual description.',
     );
   }
 
