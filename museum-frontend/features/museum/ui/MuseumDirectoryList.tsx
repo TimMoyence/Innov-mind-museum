@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useTranslation } from 'react-i18next';
@@ -31,6 +32,13 @@ export const MuseumDirectoryList = ({
 }: MuseumDirectoryListProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
+
+  const renderItem = useCallback(
+    ({ item }: { item: MuseumWithDistance }) => (
+      <MuseumCard museum={item} onPress={onMuseumPress} />
+    ),
+    [onMuseumPress],
+  );
 
   if (isLoading) {
     return (
@@ -70,7 +78,7 @@ export const MuseumDirectoryList = ({
       <FlashList
         data={museums}
         keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => <MuseumCard museum={item} onPress={onMuseumPress} />}
+        renderItem={renderItem}
         contentContainerStyle={styles.listContent}
         refreshing={isRefreshing}
         onRefresh={onRefresh}
