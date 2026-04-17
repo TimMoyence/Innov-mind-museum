@@ -90,12 +90,19 @@ export const buildLeafletHtml = ({ isDark }: LeafletHtmlOptions): string => {
   <div id="map"></div>
   <script>
     (function () {
+      /**
+       * Initial viewport: low-zoom world view (~4 tiny tiles) instead of a
+       * hardcoded city. Avoids loading 16 useless tiles for a place the user
+       * is not — those in-flight requests interfere with the next setView,
+       * leaving blank tiles until manual zoom forces a redraw. RN sends a
+       * fitBounds() as soon as user/museum data arrives.
+       */
       var map = L.map('map', {
         zoomControl: false,
         attributionControl: true
-      }).setView([48.8566, 2.3522], 14);
+      }).setView([20, 0], 2);
 
-      L.tileLayer('${tileUrl}', {
+      var tileLayer = L.tileLayer('${tileUrl}', {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/">CARTO</a>'
       }).addTo(map);
@@ -155,7 +162,19 @@ export const buildLeafletHtml = ({ isDark }: LeafletHtmlOptions): string => {
         }
 
         if (data.type === 'fitBounds') {
-          map.fitBounds(data.bounds, { padding: [${space['10']}, ${space['10']}], maxZoom: 15 });
+          /**
+           * Fix tile race: when fitBounds happens just after mapReady (the
+           * common case — RN flushes its message queue then immediately
+           * sends bounds), Leaflet sometimes computes the new tile grid
+           * before the WebView has settled its layout, leaving holes.
+           * invalidateSize forces a recompute against the real container
+           * size; tileLayer.redraw() re-fetches any missing tile.
+           */
+          requestAnimationFrame(function () {
+            map.invalidateSize();
+            map.fitBounds(data.bounds, { padding: [${space['10']}, ${space['10']}], maxZoom: 15 });
+            tileLayer.redraw();
+          });
         }
       }
 
@@ -165,7 +184,13 @@ export const buildLeafletHtml = ({ isDark }: LeafletHtmlOptions): string => {
         clearTimeout(dragDebounce);
         dragDebounce = setTimeout(function () {
           var center = map.getCenter();
-          postMessage({ type: 'mapMoved', lat: center.lat, lng: center.lng });
+          var bounds = map.getBounds();
+          postMessage({
+            type: 'mapMoved',
+            lat: center.lat,
+            lng: center.lng,
+            bbox: [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()]
+          });
         }, 300);
       });
 
