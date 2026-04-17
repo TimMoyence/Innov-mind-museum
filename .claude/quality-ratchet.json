@@ -1,7 +1,7 @@
 {
-  "lastUpdated": "2026-04-13",
-  "testCount": 2620,
-  "frontendTestCount": 1096,
+  "lastUpdated": "2026-04-17",
+  "testCount": 2655,
+  "frontendTestCount": 1120,
   "frontendSuiteCount": 129,
   "typecheckErrors": 0,
   "asAnyCount": 0,
@@ -9,5 +9,5 @@
   "coverageBranches": 82.07,
   "lintErrors": 0,
   "_comment": "T20 final verification: +8 BE tests (knowledge-extraction module). Multi-provider web search (5 clients + fallback) + knowledge extraction pipeline (scrape→classify→store) fully integrated. Port extraction for hexagonal compliance. Ratchet hook fixed to measure src/ not tests/.",
-  "webTestCount": 100
+  "webTestCount": 174
 }
