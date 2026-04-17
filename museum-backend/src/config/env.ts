@@ -166,7 +166,7 @@ const env: AppEnv = {
           toOptionalString(process.env.JWT_REFRESH_SECRET) || process.env.JWT_SECRET,
         ),
     accessTokenTtl: process.env.JWT_ACCESS_TTL || '15m',
-    refreshTokenTtl: process.env.JWT_REFRESH_TTL || '30d',
+    refreshTokenTtl: process.env.JWT_REFRESH_TTL || '180d',
     appleClientId: process.env.APPLE_CLIENT_ID || 'com.musaium.mobile',
     googleClientIds: toList(process.env.GOOGLE_OAUTH_CLIENT_ID).length
       ? toList(process.env.GOOGLE_OAUTH_CLIENT_ID)

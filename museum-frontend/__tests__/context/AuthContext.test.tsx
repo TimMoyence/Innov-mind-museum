@@ -1,6 +1,7 @@
 import type React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { AuthProvider, useAuth } from '@/features/auth/application/AuthContext';
+import { createAppError } from '@/shared/types/AppError';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,9 @@ jest.mock('@/features/auth/infrastructure/authApi', () => ({
 const mockGetRefreshToken = jest.fn();
 const mockSetRefreshToken = jest.fn();
 const mockClearRefreshToken = jest.fn();
+const mockGetPersistedAccessToken = jest.fn();
+const mockSetPersistedAccessToken = jest.fn();
+const mockClearPersistedAccessToken = jest.fn();
 const mockSetAccessToken = jest.fn();
 const mockClearAccessToken = jest.fn();
 const mockGetAccessToken = jest.fn(() => '');
@@ -42,6 +46,9 @@ jest.mock('@/features/auth/infrastructure/authTokenStore', () => ({
     getRefreshToken: (...args: unknown[]) => mockGetRefreshToken(...args),
     setRefreshToken: (...args: unknown[]) => mockSetRefreshToken(...args),
     clearRefreshToken: (...args: unknown[]) => mockClearRefreshToken(...args),
+    getPersistedAccessToken: (...args: unknown[]) => mockGetPersistedAccessToken(...args),
+    setPersistedAccessToken: (...args: unknown[]) => mockSetPersistedAccessToken(...args),
+    clearPersistedAccessToken: (...args: unknown[]) => mockClearPersistedAccessToken(...args),
   },
   setAccessToken: (...args: unknown[]) => mockSetAccessToken(...args),
   clearAccessToken: (...args: unknown[]) => mockClearAccessToken(...args),
@@ -62,8 +69,15 @@ jest.mock('@/shared/observability/errorReporting', () => ({
   reportError: jest.fn(),
 }));
 
+const mockIsAccessTokenExpired = jest.fn();
 jest.mock('@/features/auth/domain/authLogic.pure', () => ({
   extractUserIdFromToken: jest.fn(() => 'user-123'),
+  isAccessTokenExpired: (...args: unknown[]) => mockIsAccessTokenExpired(...args),
+  isAuthInvalidError: (error: unknown): boolean => {
+    if (!error || typeof error !== 'object') return false;
+    const kind = (error as { kind?: string }).kind;
+    return kind === 'Unauthorized' || kind === 'Forbidden';
+  },
 }));
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -84,16 +98,37 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 describe('AuthProvider / useAuth', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Default: no stored refresh token
     mockGetRefreshToken.mockResolvedValue(null);
     mockSetRefreshToken.mockResolvedValue(undefined);
     mockClearRefreshToken.mockResolvedValue(undefined);
+    mockGetPersistedAccessToken.mockResolvedValue(null);
+    mockSetPersistedAccessToken.mockResolvedValue(undefined);
+    mockClearPersistedAccessToken.mockResolvedValue(undefined);
+    mockIsAccessTokenExpired.mockReturnValue(true);
     mockLogoutApi.mockResolvedValue({});
     mockCompleteOnboarding.mockResolvedValue(undefined);
   });
 
-  it('bootstrap with valid refreshToken sets isAuthenticated=true', async () => {
+  it('bootstrap with cached valid access token skips refresh call', async () => {
     mockGetRefreshToken.mockResolvedValue('valid-refresh');
+    mockGetPersistedAccessToken.mockResolvedValue('cached-access');
+    mockIsAccessTokenExpired.mockReturnValue(false);
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(mockRefresh).not.toHaveBeenCalled();
+    expect(mockSetAccessToken).toHaveBeenCalledWith('cached-access');
+  });
+
+  it('bootstrap with expired cached access token triggers refresh', async () => {
+    mockGetRefreshToken.mockResolvedValue('valid-refresh');
+    mockGetPersistedAccessToken.mockResolvedValue('expired-access');
+    mockIsAccessTokenExpired.mockReturnValue(true);
     mockRefresh.mockResolvedValue(makeSession());
 
     const { result } = renderHook(() => useAuth(), { wrapper });
@@ -103,7 +138,8 @@ describe('AuthProvider / useAuth', () => {
     });
 
     expect(result.current.isAuthenticated).toBe(true);
-    expect(mockSetAccessToken).toHaveBeenCalledWith('new-access');
+    expect(mockRefresh).toHaveBeenCalledWith('valid-refresh');
+    expect(mockSetPersistedAccessToken).toHaveBeenCalledWith('new-access');
     expect(mockSetRefreshToken).toHaveBeenCalledWith('new-refresh');
   });
 
@@ -120,9 +156,11 @@ describe('AuthProvider / useAuth', () => {
     expect(mockClearAccessToken).toHaveBeenCalled();
   });
 
-  it('bootstrap with failing refresh sets isAuthenticated=false and clears tokens', async () => {
+  it('bootstrap clears tokens on Unauthorized refresh error', async () => {
     mockGetRefreshToken.mockResolvedValue('stale-refresh');
-    mockRefresh.mockRejectedValue(new Error('refresh failed'));
+    mockRefresh.mockRejectedValue(
+      createAppError({ kind: 'Unauthorized', message: 'Invalid refresh' }),
+    );
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -132,13 +170,46 @@ describe('AuthProvider / useAuth', () => {
 
     expect(result.current.isAuthenticated).toBe(false);
     expect(mockClearRefreshToken).toHaveBeenCalled();
-    expect(mockClearAccessToken).toHaveBeenCalled();
+    expect(mockClearPersistedAccessToken).toHaveBeenCalled();
+  });
+
+  it('bootstrap keeps tokens and falls back to cached access on Network error', async () => {
+    mockGetRefreshToken.mockResolvedValue('good-refresh');
+    mockGetPersistedAccessToken.mockResolvedValue('stale-access');
+    mockIsAccessTokenExpired.mockReturnValue(true);
+    mockRefresh.mockRejectedValue(createAppError({ kind: 'Network', message: 'offline' }));
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(mockSetAccessToken).toHaveBeenCalledWith('stale-access');
+    expect(mockClearRefreshToken).not.toHaveBeenCalled();
+    expect(mockClearPersistedAccessToken).not.toHaveBeenCalled();
+  });
+
+  it('bootstrap on Network error without cached access stays unauthenticated but keeps refresh token', async () => {
+    mockGetRefreshToken.mockResolvedValue('good-refresh');
+    mockGetPersistedAccessToken.mockResolvedValue(null);
+    mockRefresh.mockRejectedValue(createAppError({ kind: 'Timeout', message: 'timeout' }));
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.isAuthenticated).toBe(false);
+    expect(mockClearRefreshToken).not.toHaveBeenCalled();
   });
 
   it('logout() clears tokens, sets isAuthenticated=false, and redirects', async () => {
-    // Start authenticated
     mockGetRefreshToken.mockResolvedValue('valid-refresh');
-    mockRefresh.mockResolvedValue(makeSession());
+    mockGetPersistedAccessToken.mockResolvedValue('cached');
+    mockIsAccessTokenExpired.mockReturnValue(false);
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -146,7 +217,6 @@ describe('AuthProvider / useAuth', () => {
       expect(result.current.isAuthenticated).toBe(true);
     });
 
-    // Now logout
     mockGetRefreshToken.mockResolvedValue('refresh');
     await act(async () => {
       await result.current.logout();
@@ -154,11 +224,11 @@ describe('AuthProvider / useAuth', () => {
 
     expect(result.current.isAuthenticated).toBe(false);
     expect(mockClearAccessToken).toHaveBeenCalled();
+    expect(mockClearPersistedAccessToken).toHaveBeenCalled();
     expect(mockReplace).toHaveBeenCalledWith('/auth');
   });
 
   it('checkTokenValidity() returns true on successful refresh', async () => {
-    // Bootstrap without token first
     mockGetRefreshToken.mockResolvedValue(null);
     const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -166,7 +236,6 @@ describe('AuthProvider / useAuth', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    // Now set up a successful refresh for checkTokenValidity
     mockGetRefreshToken.mockResolvedValue('good-refresh');
     mockRefresh.mockResolvedValue(
       makeSession({ accessToken: 'fresh-access', refreshToken: 'fresh-refresh' }),
@@ -199,12 +268,12 @@ describe('AuthProvider / useAuth', () => {
   });
 
   it('unlockBiometric() sets isBiometricLocked=false', async () => {
-    // Simulate biometric being enabled
     const biometricStore = require('@/features/auth/infrastructure/biometricStore');
     biometricStore.getBiometricEnabled.mockResolvedValue(true);
 
     mockGetRefreshToken.mockResolvedValue('valid-refresh');
-    mockRefresh.mockResolvedValue(makeSession());
+    mockGetPersistedAccessToken.mockResolvedValue('cached');
+    mockIsAccessTokenExpired.mockReturnValue(false);
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -212,7 +281,6 @@ describe('AuthProvider / useAuth', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    // After bootstrap with biometric enabled, should be locked
     expect(result.current.isBiometricLocked).toBe(true);
 
     act(() => {
@@ -224,8 +292,9 @@ describe('AuthProvider / useAuth', () => {
 
   // ── Onboarding state ──
 
-  it('bootstrap with onboardingCompleted=false sets isFirstLaunch=true', async () => {
+  it('bootstrap with onboardingCompleted=false (via refresh) sets isFirstLaunch=true', async () => {
     mockGetRefreshToken.mockResolvedValue('valid-refresh');
+    mockIsAccessTokenExpired.mockReturnValue(true);
     mockRefresh.mockResolvedValue(makeSession({ user: { onboardingCompleted: false } }));
 
     const { result } = renderHook(() => useAuth(), { wrapper });
@@ -237,8 +306,9 @@ describe('AuthProvider / useAuth', () => {
     expect(result.current.isFirstLaunch).toBe(true);
   });
 
-  it('bootstrap with onboardingCompleted=true sets isFirstLaunch=false', async () => {
+  it('bootstrap with onboardingCompleted=true (via refresh) sets isFirstLaunch=false', async () => {
     mockGetRefreshToken.mockResolvedValue('valid-refresh');
+    mockIsAccessTokenExpired.mockReturnValue(true);
     mockRefresh.mockResolvedValue(makeSession({ user: { onboardingCompleted: true } }));
 
     const { result } = renderHook(() => useAuth(), { wrapper });
@@ -264,6 +334,7 @@ describe('AuthProvider / useAuth', () => {
 
   it('markOnboardingComplete() calls API and sets isFirstLaunch=false', async () => {
     mockGetRefreshToken.mockResolvedValue('valid-refresh');
+    mockIsAccessTokenExpired.mockReturnValue(true);
     mockRefresh.mockResolvedValue(makeSession({ user: { onboardingCompleted: false } }));
 
     const { result } = renderHook(() => useAuth(), { wrapper });

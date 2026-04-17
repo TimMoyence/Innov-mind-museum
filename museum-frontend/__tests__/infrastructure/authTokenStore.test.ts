@@ -78,4 +78,37 @@ describe('authTokenStore', () => {
       expect(result).toBeNull();
     });
   });
+
+  describe('persistent access token (web / AsyncStorage)', () => {
+    it('setPersistedAccessToken persists via AsyncStorage', async () => {
+      await authStorage.setPersistedAccessToken('access-abc');
+      const stored = await authStorage.getPersistedAccessToken();
+      expect(stored).toBe('access-abc');
+    });
+
+    it('getPersistedAccessToken returns null when nothing stored', async () => {
+      await authStorage.clearPersistedAccessToken();
+      const result = await authStorage.getPersistedAccessToken();
+      expect(result).toBeNull();
+    });
+
+    it('clearPersistedAccessToken removes stored value', async () => {
+      await authStorage.setPersistedAccessToken('access-xyz');
+      await authStorage.clearPersistedAccessToken();
+      const result = await authStorage.getPersistedAccessToken();
+      expect(result).toBeNull();
+    });
+
+    it('persisted access and refresh tokens use distinct keys', async () => {
+      await authStorage.setPersistedAccessToken('only-access');
+      await authStorage.setRefreshToken('only-refresh');
+
+      expect(await authStorage.getPersistedAccessToken()).toBe('only-access');
+      expect(await authStorage.getRefreshToken()).toBe('only-refresh');
+
+      await authStorage.clearPersistedAccessToken();
+      expect(await authStorage.getPersistedAccessToken()).toBeNull();
+      expect(await authStorage.getRefreshToken()).toBe('only-refresh');
+    });
+  });
 });
