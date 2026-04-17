@@ -984,10 +984,10 @@
 - [x] NL-1.3 P10 art-keywords verify (commit 5f0705e5) — rapport `NL-1.3-art-keywords-closure.md`
 - [x] Tech Lead Review NL-1 + 2x challenge — Pass 1 fix optimistic placeholders i18n
 
-### Phase 3 — V2 Next Level (lancée — code-possible portions DONE)
+### Phase 3 — V2 Next Level (TERMINEE code-possible 2026-04-17)
 
-- [~] [P11](../plans/PLAN_11_AI_GUARDRAILS_V2.md) — AI Guardrails Layer V2 POC scaffold (commit 254c4644). Cartography + frameworks comparison + AdvancedGuardrail port + dataset. Benchmark execution & decision hors session (require Python sidecar + API keys).
-- [~] [P12](../plans/PLAN_12_MOBILE_PERF_V2.md) — Mobile Perf V2 code-possible portions (commit d305d3d2). 3 FlatList → FlashList + getItemType recycling. NL-2.1 baseline & NL-2.5 after-measure hors session (require physical devices).
+- [x] [P11](../plans/PLAN_11_AI_GUARDRAILS_V2.md) — AI Guardrails Layer V2 (commits 254c4644 + bda27e89). Scaffold + LLMGuardAdapter + wiring + 220-prompts dataset + benchmark script + docker-compose overlay. **Execution on-sidecar hors session** (requires Python sidecar infra + API keys for NL-3.4 benchmark run + NL-3.5 go/no-go decision).
+- [x] [P12](../plans/PLAN_12_MOBILE_PERF_V2.md) — Mobile Perf V2 (commits d305d3d2 + a365cfdb). FlashList migration (3 screens), getItemType (3 lists), renderItem stabilization, baseline protocol documented. **On-device baseline hors session** (requires iPhone 12 + Pixel 6 for NL-2.1 / NL-2.5).
 
 ### Sprint NL-2 — Mobile Perf V2 code-possible (2026-04-17)
 
