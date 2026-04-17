@@ -961,26 +961,29 @@
 > Audit approfondi backend + mobile + docs + /team + GitNexus. 12 plans d'execution produits dans [docs/plans/](../plans/README.md).
 > Session 2026-04-17 (plan maitre issu de la conversation, resumé integré dans les plans).
 
-### Phase 1 — Quick Wins (2-4 semaines)
+### Phase 1 — Quick Wins (TERMINEE 2026-04-17)
 
-- [ ] [P01](../plans/PLAN_01_DOCS_CLEANUP.md) — Docs Cleanup (-8 obsoletes, +2 index, merge 3 runbooks)
-- [ ] [P02](../plans/PLAN_02_TEAM_HARDENING.md) — /team Skill Hardening (system prompts 9 agents + team-sdlc-index)
-- [ ] [P03](../plans/PLAN_03_GITNEXUS_CARTOGRAPHY.md) — GitNexus Cartography Refresh (6 MCP tools + 7 skills validation)
+- [x] [P01](../plans/PLAN_01_DOCS_CLEANUP.md) — Docs Cleanup (commit f2c68305, 25 files)
+- [x] [P02](../plans/PLAN_02_TEAM_HARDENING.md) — /team Skill Hardening (commit bc93c5f2, 13 files)
+- [x] [P03](../plans/PLAN_03_GITNEXUS_CARTOGRAPHY.md) — GitNexus Cartography Refresh (commit 12d95b28)
 
-### Phase 2 — Refactors Structurels (1-3 mois)
+### Phase 2 — Refactors Structurels (partiellement terminee 2026-04-17)
 
-- [ ] [P04](../plans/PLAN_04_BACKEND_CHAT_SLIM.md) — Backend Chat Slim (-50% LOC sur 3 files obeses)
-- [ ] [P05](../plans/PLAN_05_BACKEND_SHARED_TESTS.md) — Backend shared/ Tests (audit, cache, feature-flags)
-- [ ] [P06](../plans/PLAN_06_BACKEND_WEBSEARCH_UNIFY.md) — Web Search Providers Unify (5 adapters → 1 interface)
-- [ ] [P07](../plans/PLAN_07_MOBILE_TESTS_SETUP.md) — **CRITIQUE** Mobile Tests Setup (0% → 30%)
-- [ ] [P08](../plans/PLAN_08_MOBILE_CHAT_SPLIT.md) — Mobile Chat Split god-hooks (useChatSession 442→3, ChatMessageBubble 365→4)
-- [ ] [P09](../plans/PLAN_09_MOBILE_I18N_A11Y.md) — Mobile i18n + A11y (20% → 100% coverage)
-- [ ] [P10](../plans/PLAN_10_ART_KEYWORDS_R15_FINALIZE.md) — Art Keywords R15 Finalize (sprint WIP a finaliser)
+- [x] [P04](../plans/PLAN_04_BACKEND_CHAT_SLIM.md) — DRY refactor chat-message (457->429 LOC, audit sur-prescriptif: fichier deja facade)
+- [x] [P05](../plans/PLAN_05_BACKEND_SHARED_TESTS.md) — MemoryCacheService tests (62.93% -> 93.7%, +18 tests)
+- [x] [P06](../plans/PLAN_06_BACKEND_WEBSEARCH_UNIFY.md) — Doc SEARCH_PROVIDERS.md (archi deja unifiee avant session)
+- [~] [P07](../plans/PLAN_07_MOBILE_TESTS_SETUP.md) — **DEJA DONE** 1120 tests, 132 suites, audit erronne
+- [~] [P08](../plans/PLAN_08_MOBILE_CHAT_SPLIT.md) — **MAJORITAIREMENT DONE** useChatSession deja facade composant 3 sub-hooks
+- [ ] [P09](../plans/PLAN_09_MOBILE_I18N_A11Y.md) — A auditer (8 locales actives, taux coverage UI a verifier)
+- [~] [P10](../plans/PLAN_10_ART_KEYWORDS_R15_FINALIZE.md) — **LARGEMENT DONE** hexagonal + tests en place
 
-### Phase 3 — V2 Next Level (3-6 mois)
+### Phase 3 — V2 Next Level (3-6 mois, hors session)
 
 - [ ] [P11](../plans/PLAN_11_AI_GUARDRAILS_V2.md) — AI Guardrails Layer V2 (POC NeMo/LLM Guard/Prompt Armor)
 - [ ] [P12](../plans/PLAN_12_MOBILE_PERF_V2.md) — Mobile Perf V2 (FlashList v2, Reanimated 3, Expo Router v7)
+
+> **Bilan session 2026-04-17** : 7 commits, 2655 -> 2673 tests BE (+18), 0 regression.
+> Voir [`docs/plans/reports/SESSION_2026-04-17_FINAL.md`](../plans/reports/SESSION_2026-04-17_FINAL.md) pour details realite vs audit initial.
 
 ---
 
