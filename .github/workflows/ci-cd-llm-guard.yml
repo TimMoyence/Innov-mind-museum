@@ -1,0 +1,88 @@
+name: llm-guard sidecar
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'museum-backend/ops/llm-guard-sidecar/**'
+      - '.github/workflows/ci-cd-llm-guard.yml'
+  push:
+    branches: ['main', 'staging']
+    paths:
+      - 'museum-backend/ops/llm-guard-sidecar/**'
+      - '.github/workflows/ci-cd-llm-guard.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-cd-llm-guard-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # ─── 1. Build + scan (PR and push) ─────────────────────────────────────
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build image (load locally for scan)
+        uses: docker/build-push-action@v7
+        with:
+          context: ./museum-backend/ops/llm-guard-sidecar
+          file: ./museum-backend/ops/llm-guard-sidecar/Dockerfile
+          load: true
+          tags: museum-llm-guard:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: museum-llm-guard:ci
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: true
+
+      - name: Smoke test /health endpoint
+        run: |
+          docker run -d --name lg-smoke -p 8081:8081 museum-llm-guard:ci
+          # Scanners load at startup; allow ~30s on cached HF layer.
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8081/health 2>/dev/null; then
+              echo "healthy after ${i}s"; exit 0
+            fi
+            sleep 2
+          done
+          echo "ERROR: sidecar never became healthy"
+          docker logs lg-smoke
+          exit 1
+
+      - name: Login to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USER }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Push image to GHCR
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v7
+        with:
+          context: ./museum-backend/ops/llm-guard-sidecar
+          file: ./museum-backend/ops/llm-guard-sidecar/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ secrets.GHCR_USER }}/museum-llm-guard:latest
+            ghcr.io/${{ secrets.GHCR_USER }}/museum-llm-guard:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

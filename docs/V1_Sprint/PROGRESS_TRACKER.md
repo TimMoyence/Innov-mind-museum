@@ -1009,8 +1009,9 @@
 - [x] NL-3.5 go/no-go décision — **CONDITIONAL GO Phase A (observe-only) avec config v3** (doc: `docs/plans/reports/P11-decision.md`, 2026-04-18). v3 : FP 5%, injection 96.7%, P95 375 ms sur MPS local
 - [x] NL-3.6 sidecar POC `museum-backend/ops/llm-guard-sidecar/` (app.py FastAPI + requirements + README) — exécutable via venv Python local, pas besoin de Docker pour le benchmark
 - [x] NL-3.7 docker-compose.guardrails.yml aligné sur config v3 (scanners + ANONYMIZE_ENTITIES + timeout 500 ms + start_period 240 s pour cold-start HF)
-- [ ] NL-3.8 Dockerfile sidecar prod (hors session — ops work pour Phase A deploy)
-- [ ] NL-3.9 Phase A observe-only 30j télémétrie (hors session — ops)
+- [x] NL-3.8 Dockerfile sidecar prod + docker-compose.prod.yml service + .env.production.example vars + CI workflow GHCR (scaffold prêt à merger, build/deploy hors session)
+- [ ] NL-3.9 Phase A observe-only — déploiement VPS + 30j télémétrie (hors session — ops)
+- [ ] NL-3.10 Phase B décision post-télémétrie (block si confidence ≥ 0.95)
 - [x] Tech Lead Review NL-3 + 2x challenge
 
 > **Master plan** : [`docs/plans/NL_MASTER_PLAN.md`](../plans/NL_MASTER_PLAN.md) (Phase 2 closure + Phase 3 launch)

@@ -31,6 +31,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      llm-guard:
+        condition: service_healthy
     volumes:
       - uploads:/app/tmp/uploads
     networks:
@@ -40,6 +42,37 @@ services:
           - museum-backend
     ports:
       - "127.0.0.1:3000:3000"
+    restart: unless-stopped
+
+  # AI Guardrails V2 sidecar (NL-4 / P11). Optional — when
+  # GUARDRAILS_V2_CANDIDATE=off the backend uses the noop adapter and this
+  # service's work is ignored (but it still needs to be healthy because of
+  # depends_on above; set condition: service_started if you want to run
+  # backend without the sidecar in an emergency).
+  #
+  # Exposed only on the private network — the sidecar never receives traffic
+  # from the internet, only from the backend.
+  llm-guard:
+    image: ghcr.io/timmoyence/museum-llm-guard:latest
+    hostname: llm-guard
+    environment:
+      - LOG_LEVEL=INFO
+      # v3 validated config — see docs/plans/reports/P11-decision.md
+      - INPUT_SCANNERS=PromptInjection,Anonymize,Toxicity
+      - OUTPUT_SCANNERS=NoRefusal,Bias,Sensitive,Relevance
+      - ANONYMIZE_ENTITIES=EMAIL_ADDRESS,PHONE_NUMBER,CREDIT_CARD,IBAN_CODE,IP_ADDRESS,US_SSN,US_PASSPORT,US_DRIVER_LICENSE,CRYPTO,URL,MEDICAL_LICENSE
+    networks:
+      - private
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 2G
     restart: unless-stopped
 
   pgbouncer:
