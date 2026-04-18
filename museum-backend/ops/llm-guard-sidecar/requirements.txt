@@ -1,0 +1,4 @@
+llm-guard>=0.3.14,<0.4
+fastapi>=0.115,<1
+uvicorn[standard]>=0.32,<1
+pydantic>=2.5,<3

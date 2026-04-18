@@ -1003,10 +1003,14 @@
 - [x] NL-3.1 current guardrails cartography (7 defense layers + estimated metrics)
 - [x] NL-3.2 frameworks comparison (NeMo / LLM Guard / Prompt Armor + recommendation LLM Guard first)
 - [x] NL-3.3 AdvancedGuardrail hexagonal port + noopAdvancedGuardrail + 7 contract tests (100% coverage)
-- [x] NL-3.3 benchmark dataset scaffold (45 prompts, 8 locales, 5 categories)
-- [ ] NL-3.3 LLMGuardAdapter (require Python sidecar infra — hors session)
-- [ ] NL-3.4 benchmark 220 prompts (require API keys + sidecar — hors session)
-- [ ] NL-3.5 go/no-go decision (post-benchmark — hors session)
+- [x] NL-3.3 benchmark dataset scaffold (45 prompts, 8 locales, 5 categories) — étendu à 220 en NL-4
+- [x] NL-3.3 LLMGuardAdapter (commit bda27e89, 14 tests fail-CLOSED + 10 intégration service)
+- [x] NL-3.4 benchmark 220 prompts exécuté — 3 itérations locales (v1 default / v2 sans BanTopics / v3 Anonymize PII-only). Artefacts : `museum-backend/reports/p11-bench{,-no-bantopics,-v3}.json`
+- [x] NL-3.5 go/no-go décision — **CONDITIONAL GO Phase A (observe-only) avec config v3** (doc: `docs/plans/reports/P11-decision.md`, 2026-04-18). v3 : FP 5%, injection 96.7%, P95 375 ms sur MPS local
+- [x] NL-3.6 sidecar POC `museum-backend/ops/llm-guard-sidecar/` (app.py FastAPI + requirements + README) — exécutable via venv Python local, pas besoin de Docker pour le benchmark
+- [x] NL-3.7 docker-compose.guardrails.yml aligné sur config v3 (scanners + ANONYMIZE_ENTITIES + timeout 500 ms + start_period 240 s pour cold-start HF)
+- [ ] NL-3.8 Dockerfile sidecar prod (hors session — ops work pour Phase A deploy)
+- [ ] NL-3.9 Phase A observe-only 30j télémétrie (hors session — ops)
 - [x] Tech Lead Review NL-3 + 2x challenge
 
 > **Master plan** : [`docs/plans/NL_MASTER_PLAN.md`](../plans/NL_MASTER_PLAN.md) (Phase 2 closure + Phase 3 launch)

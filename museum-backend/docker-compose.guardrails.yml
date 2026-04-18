@@ -1,8 +1,14 @@
-# Opt-in docker-compose overlay for the AI Guardrails V2 POC (plan NL-4).
+# Opt-in docker-compose overlay for the AI Guardrails V2 POC (plan NL-4 / P11).
+#
+# Config below reflects the v3 benchmark result (see docs/plans/reports/P11-decision.md):
+#   - BanTopics removed (was flagging art as adult/violence/politics — 44% FP)
+#   - Anonymize restricted to pure PII entities (PERSON flagged artist names as PII)
+#   - Timeout raised from 300ms to 500ms (v3 P95 measured at 375ms on MPS local)
 #
 # Activation:
-#   1. Copy the LLM Guard FastAPI reference app into `ops/llm-guard-sidecar/`.
-#   2. Set these env vars in `.env`:
+#   1. A Dockerfile must exist at `ops/llm-guard-sidecar/Dockerfile` (NOT YET BUILT —
+#      the current POC ran via local Python venv; see ops/llm-guard-sidecar/README.md).
+#   2. Set these env vars in `.env` (defaults kept Phase A safe):
 #        GUARDRAILS_V2_CANDIDATE=llm-guard
 #        GUARDRAILS_V2_LLM_GUARD_URL=http://llm-guard:8081
 #        GUARDRAILS_V2_OBSERVE_ONLY=true
@@ -14,9 +20,10 @@
 
 services:
   llm-guard:
-    # NOTE: no official OCI image is published by Protectai. The POC uses a
-    # community FastAPI wrapper that exposes /scan/prompt and /scan/output.
-    # Point `build.context` at a local checkout before enabling this overlay.
+    # NOTE: no official OCI image is published by Protectai. The POC uses our own
+    # FastAPI wrapper (ops/llm-guard-sidecar/app.py) that exposes /scan/prompt,
+    # /scan/output, /health. A Dockerfile still needs to be authored — see the
+    # "Phase A ops work" section in docs/plans/reports/P11-decision.md.
     build:
       context: ./ops/llm-guard-sidecar
       dockerfile: Dockerfile
@@ -25,24 +32,29 @@ services:
       - '8081:8081'
     environment:
       - LOG_LEVEL=INFO
-      # Scanners activated on the input path (comma-separated). Mirrors the
-      # gaps identified in NL-3.1 (semantic injection + PII + toxicity).
-      - INPUT_SCANNERS=PromptInjection,BanTopics,Anonymize,Toxicity
-      # Scanners activated on the output path.
+      # v3 validated config — see docs/plans/reports/P11-decision.md
+      - INPUT_SCANNERS=PromptInjection,Anonymize,Toxicity
       - OUTPUT_SCANNERS=NoRefusal,Bias,Sensitive,Relevance
+      # Anonymize restricted to pure PII — excludes PERSON/LOCATION/ORG/NRP/DATE_TIME
+      # which otherwise flag every artist/museum/painting name as PII.
+      - ANONYMIZE_ENTITIES=EMAIL_ADDRESS,PHONE_NUMBER,CREDIT_CARD,IBAN_CODE,IP_ADDRESS,US_SSN,US_PASSPORT,US_DRIVER_LICENSE,CRYPTO,URL,MEDICAL_LICENSE
     restart: unless-stopped
     healthcheck:
       test: ['CMD', 'curl', '-fsS', 'http://localhost:8081/health']
       interval: 10s
       timeout: 3s
       retries: 5
-      start_period: 15s
+      # First boot on a cold HF cache can take 3–4 min (model downloads).
+      # Subsequent boots land in ~20–30s once volume is warm.
+      start_period: 240s
 
   backend:
     environment:
       - GUARDRAILS_V2_CANDIDATE=${GUARDRAILS_V2_CANDIDATE:-llm-guard}
       - GUARDRAILS_V2_LLM_GUARD_URL=${GUARDRAILS_V2_LLM_GUARD_URL:-http://llm-guard:8081}
-      - GUARDRAILS_V2_TIMEOUT_MS=${GUARDRAILS_V2_TIMEOUT_MS:-300}
+      # Raised from 300ms to 500ms — v3 bench P95 was 375ms on local MPS; add
+      # 125ms margin for network RTT in the compose network + prod CPU-only infer.
+      - GUARDRAILS_V2_TIMEOUT_MS=${GUARDRAILS_V2_TIMEOUT_MS:-500}
       - GUARDRAILS_V2_OBSERVE_ONLY=${GUARDRAILS_V2_OBSERVE_ONLY:-true}
     depends_on:
       llm-guard:
