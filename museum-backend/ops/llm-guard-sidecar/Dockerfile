@@ -27,14 +27,18 @@ RUN apt-get update \
 
 COPY requirements.txt .
 # Install app deps, then force-upgrade transitive packages with known HIGH
-# CVEs (cryptography, wheel, jaraco.context). Trivy scans dist-info files so
-# the upgrade MUST happen in the same layer as the original install (else the
-# old METADATA persists in lower layers and still flags).
+# CVEs (cryptography, wheel, jaraco.context) and remove ghost dist-info
+# directories left behind by pip's self-bootstrap (it cannot cleanly
+# uninstall its own bundled wheel + jaraco.context dependencies — the old
+# METADATA persists alongside the new one and Trivy still flags it).
+# Everything in one layer so the layer tree never contains the old METADATA.
 RUN pip install --no-cache-dir -r requirements.txt \
     && pip install --no-cache-dir --upgrade \
          'cryptography>=46.0.5' \
          'wheel>=0.46.2' \
-         'jaraco.context>=6.1.0'
+         'jaraco.context>=6.1.0' \
+    && rm -rf /usr/local/lib/python3.11/site-packages/wheel-0.4[0-5]*.dist-info \
+    && rm -rf /usr/local/lib/python3.11/site-packages/jaraco.context-5*.dist-info
 
 COPY app.py ./
 
