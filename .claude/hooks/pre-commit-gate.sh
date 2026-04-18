@@ -1,11 +1,15 @@
 #!/bin/bash
-# PreToolUse: Bash — intercept git commit, run quality gate pipeline
+# PreToolUse: Bash — intercept git commit, run fast quality gate pipeline
 # Outputs JSON {"decision":"block","reason":"..."} to block the commit if quality fails
+#
+# Ratchet check moved to Stop hook (see .claude/settings.local.json) — runs full
+# test suites at session end, not on every commit. Rationale: ratchet takes 4–5 min
+# to run BE (2700+ tests) + FE (1120) + web (174) which exceeds pre-commit timeout
+# and would also timeout in CI. Pre-commit stays fast; ratchet stays recurring.
 
 set -euo pipefail
 
 REPO_ROOT="/Users/Tim/Desktop/all/dev/Pro/InnovMind"
-RATCHET_SCRIPT="$REPO_ROOT/.claude/hooks/ratchet-check.sh"
 
 # Read hook input from stdin
 INPUT=$(cat)
@@ -39,13 +43,6 @@ fi
 # 4. Tests backend (bail on first failure for speed, only changed files)
 if ! (cd "$REPO_ROOT/museum-backend" && pnpm test -- --bail --changedSince=HEAD --coverage=false &>/dev/null); then
   ERRORS="${ERRORS}Backend tests FAIL. "
-fi
-
-# 5. Ratchet check (if script exists and is executable)
-if [ -x "$RATCHET_SCRIPT" ]; then
-  RATCHET_RESULT=$("$RATCHET_SCRIPT" 2>&1) || {
-    ERRORS="${ERRORS}Quality ratchet: $RATCHET_RESULT. "
-  }
 fi
 
 # If any errors, block the commit
