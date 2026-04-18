@@ -1,12 +1,33 @@
-# Production docker-compose with PgBouncer connection pooler.
+# Musaium production docker-compose — single source of truth for what runs on the VPS.
 #
-# Architecture: backend → pgbouncer:6432 → db:5432
+# FILE LAYOUT (on the VPS, after you copy this file over):
+#   /srv/museum/docker-compose.yml        ← this file (renamed from docker-compose.prod.yml)
+#   /srv/museum/deploy/pgbouncer/...      ← pgbouncer.ini + entrypoint.sh (copied from repo)
+#   /srv/museum/.env                      ← secrets (see .env.production.example)
 #
-# Deploy: copy this file to the server and run:
-#   docker compose -f docker-compose.prod.yml up -d
+# The relative paths below (./deploy/pgbouncer/...) resolve to /srv/museum/deploy/pgbouncer/
+# on the VPS. They DO NOT resolve from the repo's museum-backend/deploy/ folder —
+# this compose is designed to be copied to the VPS, not run from the repo.
 #
-# .env must include: DB_USER, DB_PASSWORD, PGDATABASE
-# Set DB_HOST=pgbouncer and DB_PORT=6432 in .env so the backend connects via pgbouncer.
+# Architecture:
+#   internet → nginx (web network) → backend (museum-backend alias on web net)
+#                                  → museum-web (museum-web alias on web net)
+#   backend → pgbouncer:6432 → db:5432  (private net, no internet exposure)
+#   backend → redis:6379              (private net)
+#   backend → llm-guard:8081          (private net — AI Guardrails V2 sidecar, P11)
+#
+# Required env vars in /srv/museum/.env:
+#   DB_USER, DB_PASSWORD, PGDATABASE, REDIS_PASSWORD,
+#   JWT_*, LLM_PROVIDER + matching API key,
+#   GUARDRAILS_V2_CANDIDATE, GUARDRAILS_V2_LLM_GUARD_URL,
+#   GUARDRAILS_V2_TIMEOUT_MS, GUARDRAILS_V2_OBSERVE_ONLY
+#   (full list in museum-backend/.env.production.example)
+#
+# Deploy sequence on VPS:
+#   cd /srv/museum
+#   docker login ghcr.io -u <user> -p <PAT>
+#   docker compose pull <service>              # pulls from GHCR
+#   docker compose up -d <service>             # zero-downtime restart (30s grace)
 
 networks:
   web:
@@ -26,10 +47,17 @@ services:
     hostname: backend
     env_file:
       - .env
+    environment:
+      # Point backend at pgbouncer (not raw postgres) regardless of what .env says.
+      # Avoids accidentally connecting to db:5432 which bypasses pooling.
+      DB_HOST: pgbouncer
+      DB_PORT: 6432
     depends_on:
-      pgbouncer:
+      db:
         condition: service_healthy
       redis:
+        condition: service_started
+      pgbouncer:
         condition: service_healthy
       llm-guard:
         condition: service_healthy
@@ -41,30 +69,30 @@ services:
         aliases:
           - museum-backend
     ports:
-      - "127.0.0.1:3000:3000"
+      - '127.0.0.1:3000:3000'
     restart: unless-stopped
 
-  # AI Guardrails V2 sidecar (NL-4 / P11). Optional — when
-  # GUARDRAILS_V2_CANDIDATE=off the backend uses the noop adapter and this
-  # service's work is ignored (but it still needs to be healthy because of
-  # depends_on above; set condition: service_started if you want to run
-  # backend without the sidecar in an emergency).
-  #
-  # Exposed only on the private network — the sidecar never receives traffic
-  # from the internet, only from the backend.
+  # ── AI Guardrails V2 sidecar (P11 — docs/plans/reports/P11-decision.md) ──
+  # Runs the LLM Guard scanners (PromptInjection, Anonymize, Toxicity) behind
+  # an HTTP API the backend consumes via LLMGuardAdapter. Private network only —
+  # never receives traffic from the internet, only from the backend container.
+  # To disable: set GUARDRAILS_V2_CANDIDATE=off in .env and restart backend
+  # (backend will use noopAdvancedGuardrail; this service still runs but is idle).
   llm-guard:
     image: ghcr.io/timmoyence/museum-llm-guard:latest
     hostname: llm-guard
     environment:
       - LOG_LEVEL=INFO
-      # v3 validated config — see docs/plans/reports/P11-decision.md
+      # v3 validated config (benchmark 2026-04-18): injection 96.7%, FP 5%, P95 375 ms.
       - INPUT_SCANNERS=PromptInjection,Anonymize,Toxicity
       - OUTPUT_SCANNERS=NoRefusal,Bias,Sensitive,Relevance
+      # Anonymize excludes PERSON/LOCATION/ORG/NRP/DATE_TIME — those flag every
+      # artist/museum/painting name as PII in the art-museum context.
       - ANONYMIZE_ENTITIES=EMAIL_ADDRESS,PHONE_NUMBER,CREDIT_CARD,IBAN_CODE,IP_ADDRESS,US_SSN,US_PASSPORT,US_DRIVER_LICENSE,CRYPTO,URL,MEDICAL_LICENSE
     networks:
       - private
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8081/health"]
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:8081/health']
       interval: 30s
       timeout: 5s
       start_period: 30s
@@ -85,13 +113,13 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
-      - ./pgbouncer/entrypoint.sh:/entrypoint.sh:ro
-    entrypoint: ["sh", "/entrypoint.sh"]
+      - ./deploy/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./deploy/pgbouncer/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ['sh', '/entrypoint.sh']
     networks:
       - private
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 || exit 1"]
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -p 6432 || exit 1']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -113,7 +141,13 @@ services:
           - museum-web
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3001/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
       interval: 30s
       timeout: 5s
       start_period: 10s
@@ -125,13 +159,13 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${PGDATABASE}
-      POSTGRES_INITDB_ARGS: "--auth=scram-sha-256"
+      POSTGRES_INITDB_ARGS: '--auth=scram-sha-256'
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
       - private
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -140,11 +174,11 @@ services:
   redis:
     image: redis:7-alpine
     command:
-      - "redis-server"
-      - "--requirepass"
-      - "${REDIS_PASSWORD:?REDIS_PASSWORD must be set in .env for production}"
-      - "--appendonly"
-      - "yes"
+      - 'redis-server'
+      - '--requirepass'
+      - '${REDIS_PASSWORD:?REDIS_PASSWORD must be set in .env for production}'
+      - '--appendonly'
+      - 'yes'
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     volumes:
@@ -152,7 +186,7 @@ services:
     networks:
       - private
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" PING | grep -q PONG"]
+      test: ['CMD-SHELL', 'redis-cli -a "$$REDIS_PASSWORD" PING | grep -q PONG']
       interval: 10s
       timeout: 3s
       retries: 5
