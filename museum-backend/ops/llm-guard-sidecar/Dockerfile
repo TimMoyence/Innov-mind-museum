@@ -16,15 +16,25 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# curl for the healthcheck; build-essential is pulled in only if a wheel
-# isn't available for the current arch (kept minimal).
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      curl \
-      ca-certificates \
+# curl for the healthcheck; apt upgrade applies debian security patches
+# (fixes Trivy HIGH on openssl 3.5.5-1~deb13u1 → deb13u2).
+RUN apt-get update \
+    && apt-get -y upgrade \
+    && apt-get install -y --no-install-recommends \
+         curl \
+         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install app deps, then force-upgrade transitive packages with known HIGH
+# CVEs (cryptography, wheel, jaraco.context). Trivy scans dist-info files so
+# the upgrade MUST happen in the same layer as the original install (else the
+# old METADATA persists in lower layers and still flags).
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir --upgrade \
+         'cryptography>=46.0.5' \
+         'wheel>=0.46.2' \
+         'jaraco.context>=6.1.0'
 
 COPY app.py ./
 
