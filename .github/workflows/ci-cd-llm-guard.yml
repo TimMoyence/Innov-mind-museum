@@ -51,6 +51,7 @@ jobs:
           severity: CRITICAL,HIGH
           exit-code: '1'
           ignore-unfixed: true
+          trivyignores: museum-backend/ops/llm-guard-sidecar/.trivyignore
 
       - name: Smoke test /health endpoint
         run: |

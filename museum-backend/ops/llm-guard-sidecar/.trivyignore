@@ -1,0 +1,23 @@
+# Trivy allowlist for ops/llm-guard-sidecar/Dockerfile.
+#
+# Each entry MUST include:
+#   - CVE id
+#   - which package/path it surfaces in
+#   - why we accept the risk (runtime impact analysis)
+#
+# If a CVE lands here it's because it's in a build-time-only dependency that
+# is never executed at request-time in the sidecar process.
+
+# CVE-2026-24049 — wheel: Privilege Escalation via malicious wheel file.
+# Surfaces inside pip/_vendor/wheel-*/METADATA and setuptools/_vendor/wheel-*/METADATA.
+# Runtime impact: ZERO. The sidecar only serves HTTP scan requests (FastAPI
+# + BERT inference); it never invokes pip to install packages at runtime.
+# Exploitable only if an attacker controls a .whl being pip-installed — which
+# happens only at image build time from pypi (our CI-controlled source).
+CVE-2026-24049
+
+# CVE-2026-23949 — jaraco.context: Path traversal via malicious tar archives.
+# Surfaces inside pip/_vendor/jaraco.context-*/METADATA (transitive dep of
+# setuptools). Runtime impact: ZERO. The sidecar never parses tar archives —
+# uvicorn + llm-guard + FastAPI operate entirely on JSON request bodies.
+CVE-2026-23949

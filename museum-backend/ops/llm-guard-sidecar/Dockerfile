@@ -25,20 +25,28 @@ RUN apt-get update \
          ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+# Upgrade pip + setuptools BEFORE installing app deps so their newer
+# vendored copies of wheel and jaraco.context don't re-introduce the
+# CVE-flagged METADATA that Trivy scans.
+RUN pip install --no-cache-dir --upgrade pip setuptools
+
 COPY requirements.txt .
 # Install app deps, then force-upgrade transitive packages with known HIGH
-# CVEs (cryptography, wheel, jaraco.context) and remove ghost dist-info
-# directories left behind by pip's self-bootstrap (it cannot cleanly
-# uninstall its own bundled wheel + jaraco.context dependencies — the old
-# METADATA persists alongside the new one and Trivy still flags it).
-# Everything in one layer so the layer tree never contains the old METADATA.
+# CVEs (cryptography, wheel, jaraco.context), and scrub every leftover
+# dist-info — including the copies vendored inside pip/_vendor and
+# setuptools/_vendor that Trivy also walks. All in one layer so no
+# vulnerable METADATA persists in any layer tree snapshot.
 RUN pip install --no-cache-dir -r requirements.txt \
     && pip install --no-cache-dir --upgrade \
          'cryptography>=46.0.5' \
          'wheel>=0.46.2' \
          'jaraco.context>=6.1.0' \
-    && rm -rf /usr/local/lib/python3.11/site-packages/wheel-0.4[0-5]*.dist-info \
-    && rm -rf /usr/local/lib/python3.11/site-packages/jaraco.context-5*.dist-info
+    && find /usr/local/lib/python3.11/site-packages \
+         \( -name 'wheel-0.4[0-5]*.dist-info' -o -name 'jaraco.context-5*.dist-info' \) \
+         -type d -exec rm -rf {} + \
+    && find /usr/local/lib/python3.11/site-packages \
+         \( -path '*_vendor*wheel*' -o -path '*_vendor*jaraco.context*' \) \
+         -exec rm -rf {} + 2>/dev/null || true
 
 COPY app.py ./
 
