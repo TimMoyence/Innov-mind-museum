@@ -59,8 +59,14 @@ services:
         condition: service_started
       pgbouncer:
         condition: service_healthy
-      llm-guard:
-        condition: service_healthy
+      # llm-guard intentionally NOT in depends_on.
+      # Rationale: the V2 guardrail is optional (observe-only Phase A) and the
+      # LLMGuardAdapter is fail-CLOSED → if the sidecar is down, the backend
+      # logs a warning and degrades to V1-only (keyword guardrail). Blocking
+      # the backend on llm-guard health would create a cold-start deadlock on
+      # first rollout (backend deploy races the sidecar image build in CI).
+      # Operators must bring up llm-guard BEFORE the first request if they
+      # want Phase A telemetry — but backend itself will still boot alone.
     volumes:
       - uploads:/app/tmp/uploads
     networks:
