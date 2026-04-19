@@ -1026,10 +1026,34 @@
 - [x] Commit `07b613b8` refactor(mobile): Home v2 — 3 intent chips + hero gear + walk stub
 - [x] Tech Lead Review S6 + 2x challenge (DDD/KISS/DRY/clean archi PASS)
 
+### Feature Flags Audit (2026-04-19)
+
+> Décision produit : Musaium en Phase 1 prod = utilisateur reçoit toutes les features, pas la moitié. Flags résiduels bloquent l'effet wahoo V1.
+> Document : [`docs/plans/FEATURE_FLAGS_AUDIT.md`](../plans/FEATURE_FLAGS_AUDIT.md)
+
+- [x] Inventaire 11 flags (10 consommés, 1 mort `multiTenancy`)
+- [x] Découvertes : `multiTenancy` zombie, `FEATURE_ART_TOPIC_CLASSIFIER` nommage hors-convention, `.env.*.example` désynchronisés
+- [ ] **LOT 1 dans NL-4** — supprimer `voiceMode` + `streaming` (2 guards 404, 0 risque)
+- [ ] **LOT 2 post-voice-V1** — ticket séparé, décision flag-par-flag pour les 9 restants (`ocrGuard`, `apiKeys`, `multiTenancy`, `userMemory`, `knowledgeBase`, `imageEnrichment`, `webSearch`, `knowledgeExtraction`, `artTopicClassifier`)
+
 > **Master plan** : [`docs/plans/NL_MASTER_PLAN.md`](../plans/NL_MASTER_PLAN.md) (Phase 2 closure + Phase 3 launch)
 > **Bilan session 2026-04-17 (P01-P06)** : 7 commits, 2655 -> 2673 tests BE (+18), 0 regression.
 > **Bilan sprints NL-1/NL-2/NL-3 (même date)** : 9 commits supplémentaires, BE 2673 -> 2680 (+7), FE 1120 jest stable + node 277 -> 293 (+16), i18n 610 -> 617 keys × 8 locales.
 > **Total session 2026-04-17** : 16 commits, 0 régression, Phase 2 close à 100%, Phase 3 launch en place (code-possible done, reste execution benchmark/devices).
+
+### Sprint NL-4 — Onboarding v2 show don't tell (2026-04-19)
+
+> FE | challenge-roadmap 2026-04-18. Remplacement du carousel "tell" (3 slides bullets) par un parcours "show" : démo chat animée, value prop visuelle, chips d'entrée directe dans le chat.
+
+- [x] NL-4.1 `useTypewriter.ts` — reveal char-by-char (setTimeout), enabled=false → texte complet instantané, reset via runToken
+- [x] NL-4.2 `ChatDemoSlide.tsx` — machine à états user→typing→assistant→rest→loop, bubbles visuels dédiés (pas ChatMessageBubble), TypingIndicator réutilisé, reduced-motion aware
+- [x] NL-4.3 `ValuePropSlide.tsx` — 3 piliers Ionicons (camera/mic/map) avec entrée staggered (120ms), as const satisfies pattern
+- [x] NL-4.4 `FirstPromptChipsSlide.tsx` — 3 chips full-width (museum/masterpiece/tour), skip CTA, disabled state, testIDs
+- [x] NL-4.5 `onboarding.tsx` rewrite — SlideKey[] switch, Next masqué sur slide chips, wiring handleChip→completeOnboarding+startConversation
+- [x] NL-4.6 `chat/[sessionId].tsx` — param initialPrompt, isPromptHandled guard, auto-send onMount (attend !isLoading)
+- [x] NL-4.7 i18n — clés onboarding.v2.slide{1,2,3}.* dans 8 locales, anciennes clés slide{0,1,2} supprimées
+- [x] NL-4.8 Suppression `OnboardingSlide.tsx` (175L) + `OnboardingSlide.test.tsx` (45L) — `git rm`
+- [x] NL-4.9 Tests — 4 suites (useTypewriter + 3 composants), onboarding.test.tsx réécrit (9 tests), 1146 tests green, 0 lint error
 
 ---
 

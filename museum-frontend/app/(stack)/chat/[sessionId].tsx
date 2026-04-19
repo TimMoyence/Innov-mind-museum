@@ -50,17 +50,26 @@ import { semantic, space } from '@/shared/ui/tokens';
 export default function ChatSessionScreen() {
   const { t } = useTranslation();
   const { theme } = useTheme();
-  const params = useLocalSearchParams<{ sessionId: string; intent?: string }>();
+  const params = useLocalSearchParams<{
+    sessionId: string;
+    intent?: string;
+    initialPrompt?: string;
+  }>();
   const sessionId = useMemo(() => params.sessionId || '', [params.sessionId]);
   const initialIntent = useMemo(() => {
     if (params.intent === 'camera' || params.intent === 'audio') return params.intent;
     return null;
   }, [params.intent]);
+  const initialPrompt = useMemo(
+    () => (params.initialPrompt ? params.initialPrompt : null),
+    [params.initialPrompt],
+  );
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
   const [text, setText] = useState('');
   const [isIntentHandled, setIsIntentHandled] = useState(false);
+  const [isPromptHandled, setIsPromptHandled] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [contextMenuMessage, setContextMenuMessage] = useState<(typeof messages)[number] | null>(
     null,
@@ -189,6 +198,12 @@ export default function ChatSessionScreen() {
       clearTimeout(timer);
     };
   }, [initialIntent, isIntentHandled, onTakePicture, toggleRecording]);
+
+  useEffect(() => {
+    if (isPromptHandled || !initialPrompt || isLoading) return;
+    setIsPromptHandled(true);
+    void sendMessage({ text: initialPrompt });
+  }, [initialPrompt, isPromptHandled, isLoading, sendMessage]);
 
   const onClose = async () => {
     if (isClosing) return;

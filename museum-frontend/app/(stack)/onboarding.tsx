@@ -14,65 +14,34 @@ import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/features/auth/application/AuthContext';
+import { useStartConversation } from '@/features/chat/application/useStartConversation';
 import { useOnboarding } from '@/features/onboarding/application/useOnboarding';
-import { OnboardingSlide, type SlideData } from '@/features/onboarding/ui/OnboardingSlide';
+import { ChatDemoSlide } from '@/features/onboarding/ui/ChatDemoSlide';
+import {
+  FirstPromptChipsSlide,
+  type ChipDefinition,
+} from '@/features/onboarding/ui/FirstPromptChipsSlide';
 import { StepIndicator } from '@/features/onboarding/ui/StepIndicator';
+import { ValuePropSlide } from '@/features/onboarding/ui/ValuePropSlide';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic } from '@/shared/ui/tokens';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const SLIDE_COUNT = 3;
 
-/** Renders the onboarding carousel with swipeable slides, step indicator, and completion flow. */
+type SlideKey = 'demo' | 'value' | 'chips';
+
+/** Renders the Onboarding v2 carousel: animated chat demo → value prop → first-prompt chips. */
 export default function OnboardingScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
-
-  const slides: SlideData[] = [
-    {
-      icon: 'trail-sign-outline',
-      title: t('onboarding.slide0.title'),
-      subtitle: t('onboarding.slide0.subtitle'),
-      bullets: [
-        t('onboarding.slide0.tip1'),
-        t('onboarding.slide0.tip2'),
-        t('onboarding.slide0.tip3'),
-        t('onboarding.slide0.tip4'),
-      ],
-      navPreviewTabs: [
-        { icon: 'home-outline', label: t('tabs.home') },
-        { icon: 'business-outline', label: t('tabs.museums') },
-        { icon: 'grid-outline', label: t('tabs.dashboard') },
-      ],
-    },
-    {
-      icon: 'bulb-outline',
-      title: t('onboarding.slide1.title'),
-      subtitle: t('onboarding.slide1.subtitle'),
-      bullets: [
-        t('onboarding.slide1.tip1'),
-        t('onboarding.slide1.tip2'),
-        t('onboarding.slide1.tip3'),
-        t('onboarding.slide1.tip4'),
-      ],
-    },
-    {
-      icon: 'help-circle-outline',
-      title: t('onboarding.slide2.title'),
-      subtitle: t('onboarding.slide2.subtitle'),
-      bullets: [
-        t('onboarding.slide2.tip1'),
-        t('onboarding.slide2.tip2'),
-        t('onboarding.slide2.tip3'),
-        t('onboarding.slide2.tip4'),
-      ],
-    },
-  ];
   const insets = useSafeAreaInsets();
-  const flatListRef = useRef<FlatList<SlideData>>(null);
+  const flatListRef = useRef<FlatList<SlideKey>>(null);
   const { markOnboardingComplete } = useAuth();
-  const { currentStep, goToStep, next, isLast } = useOnboarding(slides.length);
+  const { startConversation } = useStartConversation();
+  const { currentStep, goToStep, next, isLast } = useOnboarding(SLIDE_COUNT);
   const [isCompleting, setIsCompleting] = useState(false);
 
   const onViewableItemsChanged = useCallback(
@@ -87,30 +56,64 @@ export default function OnboardingScreen() {
   // eslint-disable-next-line react-hooks/refs -- stable config ref pattern
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
-  const completeAndNavigate = useCallback(async () => {
-    if (isCompleting) return;
+  const completeOnboarding = useCallback(async () => {
+    if (isCompleting) return false;
     setIsCompleting(true);
     try {
       await markOnboardingComplete();
-      router.replace('/(tabs)/home');
+      return true;
     } catch {
       setIsCompleting(false);
       Alert.alert(t('common.error'), t('error.network'));
+      return false;
     }
   }, [isCompleting, markOnboardingComplete, t]);
 
-  const handleNext = useCallback(async () => {
-    if (isLast) {
-      await completeAndNavigate();
-      return;
-    }
+  const handleSkip = useCallback(async () => {
+    const ok = await completeOnboarding();
+    if (ok) router.replace('/(tabs)/home');
+  }, [completeOnboarding]);
+
+  const handleExplore = useCallback(async () => {
+    await handleSkip();
+  }, [handleSkip]);
+
+  const handleChip = useCallback(
+    async ({ prompt }: { id: ChipDefinition['id']; prompt: string }) => {
+      const ok = await completeOnboarding();
+      if (!ok) return;
+      await startConversation({ initialPrompt: prompt });
+    },
+    [completeOnboarding, startConversation],
+  );
+
+  const handleNext = useCallback(() => {
+    if (isLast) return;
     next();
     flatListRef.current?.scrollToIndex({ index: currentStep + 1, animated: true });
-  }, [isLast, next, currentStep, completeAndNavigate]);
+  }, [isLast, next, currentStep]);
 
-  const handleSkip = useCallback(async () => {
-    await completeAndNavigate();
-  }, [completeAndNavigate]);
+  const renderSlide = useCallback(
+    ({ item }: { item: SlideKey }) => {
+      switch (item) {
+        case 'demo':
+          return <ChatDemoSlide />;
+        case 'value':
+          return <ValuePropSlide />;
+        case 'chips':
+          return (
+            <FirstPromptChipsSlide
+              onChipPress={(args) => void handleChip(args)}
+              onSkip={() => void handleExplore()}
+              disabled={isCompleting}
+            />
+          );
+      }
+    },
+    [handleChip, handleExplore, isCompleting],
+  );
+
+  const slides: SlideKey[] = ['demo', 'value', 'chips'];
 
   return (
     <LiquidScreen
@@ -133,8 +136,8 @@ export default function OnboardingScreen() {
         data={slides}
         horizontal
         showsHorizontalScrollIndicator={false}
-        keyExtractor={(_, i) => String(i)}
-        renderItem={({ item }) => <OnboardingSlide slide={item} />}
+        keyExtractor={(key) => key}
+        renderItem={renderSlide}
         getItemLayout={(_, index) => ({
           length: SCREEN_WIDTH - 36,
           offset: (SCREEN_WIDTH - 36) * index,
@@ -148,20 +151,22 @@ export default function OnboardingScreen() {
         decelerationRate="fast"
       />
 
-      <StepIndicator totalSteps={slides.length} currentStep={currentStep} />
+      <StepIndicator totalSteps={SLIDE_COUNT} currentStep={currentStep} />
 
-      <View style={styles.footer}>
-        <Pressable
-          style={[styles.primaryButton, { backgroundColor: theme.primary }]}
-          onPress={() => void handleNext()}
-          accessibilityRole="button"
-          accessibilityLabel={isLast ? t('a11y.onboarding.get_started') : t('a11y.onboarding.next')}
-        >
-          <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
-            {isLast ? t('onboarding.get_started') : t('onboarding.next')}
-          </Text>
-        </Pressable>
-      </View>
+      {!isLast ? (
+        <View style={styles.footer}>
+          <Pressable
+            style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+            onPress={handleNext}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.onboarding.next')}
+          >
+            <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
+              {t('onboarding.next')}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
     </LiquidScreen>
   );
 }

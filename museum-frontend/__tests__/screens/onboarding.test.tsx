@@ -1,5 +1,5 @@
 import '../helpers/test-utils';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 // ── Screen-specific mocks ────────────────────────────────────────────────────
 
@@ -8,6 +8,19 @@ jest.mock('@/features/auth/application/AuthContext', () => ({
   useAuth: () => ({ markOnboardingComplete: mockMarkOnboardingComplete }),
 }));
 
+const mockStartConversation = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/chat/application/useStartConversation', () => ({
+  useStartConversation: () => ({
+    isCreating: false,
+    error: null,
+    setError: jest.fn(),
+    startConversation: mockStartConversation,
+  }),
+}));
+
+import { router as expoRouter } from 'expo-router';
+const mockRouterReplace = expoRouter.replace as jest.Mock;
+
 const mockNext = jest.fn();
 const mockGoToStep = jest.fn();
 const mockUseOnboarding = jest.fn();
@@ -15,12 +28,44 @@ jest.mock('@/features/onboarding/application/useOnboarding', () => ({
   useOnboarding: (...args: any[]) => mockUseOnboarding(...args),
 }));
 
-jest.mock('@/features/onboarding/ui/OnboardingSlide', () => {
+jest.mock('@/features/onboarding/ui/ChatDemoSlide', () => {
   const { View, Text } = require('react-native');
   return {
-    OnboardingSlide: ({ slide }: any) => (
-      <View testID="onboarding-slide">
-        <Text>{slide.title}</Text>
+    ChatDemoSlide: () => (
+      <View testID="slide-demo">
+        <Text>demo-slide</Text>
+      </View>
+    ),
+  };
+});
+
+jest.mock('@/features/onboarding/ui/ValuePropSlide', () => {
+  const { View, Text } = require('react-native');
+  return {
+    ValuePropSlide: () => (
+      <View testID="slide-value">
+        <Text>value-slide</Text>
+      </View>
+    ),
+  };
+});
+
+jest.mock('@/features/onboarding/ui/FirstPromptChipsSlide', () => {
+  const { View, Pressable, Text } = require('react-native');
+  return {
+    ONBOARDING_CHIPS: [],
+    FirstPromptChipsSlide: ({ onChipPress, onSkip, disabled }: any) => (
+      <View testID="slide-chips">
+        <Pressable
+          testID="mock-chip"
+          onPress={() => onChipPress({ id: 'museum', prompt: 'near-prompt' })}
+          disabled={disabled}
+        >
+          <Text>mock-chip</Text>
+        </Pressable>
+        <Pressable testID="mock-explore" onPress={onSkip} disabled={disabled}>
+          <Text>mock-explore</Text>
+        </Pressable>
       </View>
     ),
   };
@@ -39,7 +84,7 @@ jest.mock('@/features/onboarding/ui/StepIndicator', () => {
 
 import OnboardingScreen from '@/app/(stack)/onboarding';
 
-describe('OnboardingScreen', () => {
+describe('OnboardingScreen (v2)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseOnboarding.mockReturnValue({
@@ -50,30 +95,29 @@ describe('OnboardingScreen', () => {
     });
   });
 
-  it('renders first slide', () => {
+  it('renders the chat-demo slide first', () => {
     render(<OnboardingScreen />);
-    expect(screen.getByText('onboarding.slide0.title')).toBeTruthy();
+    expect(screen.getByTestId('slide-demo')).toBeTruthy();
   });
 
-  it('renders skip button', () => {
+  it('shows the skip button in the header', () => {
     render(<OnboardingScreen />);
     expect(screen.getByLabelText('a11y.onboarding.skip')).toBeTruthy();
     expect(screen.getByText('onboarding.skip')).toBeTruthy();
   });
 
-  it('renders step indicator with correct total', () => {
+  it('renders the 3-dot step indicator', () => {
     render(<OnboardingScreen />);
-    expect(screen.getByTestId('step-indicator')).toBeTruthy();
     expect(screen.getByText('0/3')).toBeTruthy();
   });
 
-  it('renders next button when not on last slide', () => {
+  it('shows Next button on slides 0 and 1', () => {
     render(<OnboardingScreen />);
     expect(screen.getByLabelText('a11y.onboarding.next')).toBeTruthy();
     expect(screen.getByText('onboarding.next')).toBeTruthy();
   });
 
-  it('renders get started button on last slide', () => {
+  it('hides Next button on the final (chips) slide', () => {
     mockUseOnboarding.mockReturnValue({
       currentStep: 2,
       goToStep: mockGoToStep,
@@ -81,19 +125,55 @@ describe('OnboardingScreen', () => {
       isLast: true,
     });
     render(<OnboardingScreen />);
-    expect(screen.getByLabelText('a11y.onboarding.get_started')).toBeTruthy();
-    expect(screen.getByText('onboarding.get_started')).toBeTruthy();
+    expect(screen.queryByLabelText('a11y.onboarding.next')).toBeNull();
   });
 
-  it('calls next when next button is pressed', () => {
+  it('advances to next slide when Next is pressed', () => {
     render(<OnboardingScreen />);
     fireEvent.press(screen.getByLabelText('a11y.onboarding.next'));
     expect(mockNext).toHaveBeenCalled();
   });
 
-  it('calls markOnboardingComplete when skip is pressed', () => {
+  it('marks onboarding complete and routes home when skip is pressed', async () => {
     render(<OnboardingScreen />);
     fireEvent.press(screen.getByLabelText('a11y.onboarding.skip'));
-    expect(mockMarkOnboardingComplete).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockMarkOnboardingComplete).toHaveBeenCalledTimes(1);
+    });
+    expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)/home');
+  });
+
+  it('marks complete + starts a conversation with initialPrompt when a chip is tapped', async () => {
+    mockUseOnboarding.mockReturnValue({
+      currentStep: 2,
+      goToStep: mockGoToStep,
+      next: mockNext,
+      isLast: true,
+    });
+    render(<OnboardingScreen />);
+    fireEvent.press(screen.getByTestId('mock-chip'));
+
+    await waitFor(() => {
+      expect(mockMarkOnboardingComplete).toHaveBeenCalledTimes(1);
+    });
+    expect(mockStartConversation).toHaveBeenCalledWith({ initialPrompt: 'near-prompt' });
+    expect(mockRouterReplace).not.toHaveBeenCalled();
+  });
+
+  it('marks complete + routes home when Explore is tapped', async () => {
+    mockUseOnboarding.mockReturnValue({
+      currentStep: 2,
+      goToStep: mockGoToStep,
+      next: mockNext,
+      isLast: true,
+    });
+    render(<OnboardingScreen />);
+    fireEvent.press(screen.getByTestId('mock-explore'));
+
+    await waitFor(() => {
+      expect(mockMarkOnboardingComplete).toHaveBeenCalledTimes(1);
+    });
+    expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)/home');
+    expect(mockStartConversation).not.toHaveBeenCalled();
   });
 });

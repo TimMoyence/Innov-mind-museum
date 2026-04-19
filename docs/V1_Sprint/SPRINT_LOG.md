@@ -2226,3 +2226,68 @@ Quality solution chosen over a one-line divide-by-1000 patch: the unit is now ex
 
 - Backend contract unchanged — `SearchMuseumsResult.distance` stays in meters; frontend is now the side that aligned.
 - The `featureMuseum/infrastructure/haversine\.ts$` coverage ignore pattern in `jest.config.js` references an old path (`infrastructure/`); the current file lives at `application/haversine.ts`. Left untouched — this is a pre-existing dead pattern, not caused by this fix.
+
+---
+
+## 2026-04-19 — feat(onboarding): v2 show-don't-tell (challenge-roadmap 2026-04-18)
+
+**Scope** : FE | Onboarding v2 show don't tell — slide 1 démo prompt animée, slide 2 value prop, slide 3 first-prompt chips | 2j
+**Pipeline** : standard | 13 fichiers staged (7 créés, 4 modifiés, 2 supprimés)
+
+### Contexte
+
+L'onboarding pre-2026-04-19 était un pur "tell" : 3 slides de bullets (conseils photo, navigation tabs, support). Zéro démo du produit, zéro valeur immédiate avant le premier message. L'audit UX 2026-04-18 (`team-reports/2026-04-18-NL-feature-audit/03_UX_RESEARCH.md:83-89`) converge sur les best-in-class (ChatGPT, Notion AI, Pi) : pitch live, first-prompt chips, aucune friction avant le "aha moment".
+
+### Nouveaux fichiers
+
+**`features/onboarding/application/useTypewriter.ts`**
+Hook char-by-char avec `runToken` comme clé de reset : incrémenter `runToken` réamorce l'effet sans démontage du composant. `enabled=false` (reduced motion) retourne `{visible: text, isDone: true}` immédiatement. Nettoyage `clearTimeout` sur unmount. `onDone` callback via ref stable pour éviter les boucles dans `useEffect`.
+
+**`features/onboarding/ui/ChatDemoSlide.tsx`**
+Machine à états à 4 phases : `user (900ms) → typing (1200ms) → assistant (typewriter ~5s) → rest (3000ms) → loop`. Deux sous-composants visuels dédiés `DemoUserBubble` / `DemoAssistantBubble` (visual-only, ~40L chacun) — `ChatMessageBubble` (365L, TTS/feedback/context-menu) n'est pas réutilisé directement. `useReducedMotion=true` → phase fixée à `'assistant'`, texte complet affiché statiquement.
+
+**`features/onboarding/ui/ValuePropSlide.tsx`**
+3 piliers Ionicons (`camera-outline` / `mic-outline` / `map-outline`) avec entrée staggered : opacity + translateX (-16→0), 120ms de delay entre chaque pilier. Pattern `as const satisfies readonly {icon: PillarIcon; labelKey: string; a11yKey: string;}[]` pour typage fort des clés i18n sans `ReadonlyArray<T>` (lint `@typescript-eslint/array-type`).
+
+**`features/onboarding/ui/FirstPromptChipsSlide.tsx`**
+3 chips full-width (museum / masterpiece / tour) avec layout icon+body+arrow, animations staggered. `ONBOARDING_CHIPS as const satisfies readonly {...}[]` + `type ChipDefinition = (typeof ONBOARDING_CHIPS)[number]` pour autocomplétion des ids. `onChipPress({id, prompt})` découplé de la logique de navigation. `testID="onboarding-chip-{id}"` pour les tests.
+
+### Fichiers modifiés
+
+**`app/(stack)/onboarding.tsx`** — Réécriture de 202L → 120L. `slides: SlideData[]` remplacé par `type SlideKey = 'demo' | 'value' | 'chips'` + `renderSlide` switch. Bouton "Suivant" masqué sur `isLast` (les chips + skip sont le seul CTA du slide 3). `handleChip({id, prompt})` enchaîne `completeOnboarding()` + `startConversation({initialPrompt: prompt})`. La FlatList horizontale + StepIndicator sont conservés.
+
+**`app/(stack)/chat/[sessionId].tsx`** — Ajout du param `initialPrompt?: string` dans `useLocalSearchParams`. `isPromptHandled` state (évite double-send sur re-render). `useEffect` auto-send garde `!isLoading` pour attendre que la session soit prête avant d'envoyer.
+
+**`features/chat/application/useStartConversation.ts`** — Déjà commité (commit `07b613b8` du Home v2). Param `initialPrompt?: string` ajouté, `encodeURIComponent` pour les caractères FR/spéciaux.
+
+**i18n** — 8 locales (en/fr/ar/de/es/it/ja/zh). Nouvelles clés : `onboarding.v2.slide1.{title,subtitle,demo_user,demo_assistant}`, `onboarding.v2.slide2.{title,subtitle,pillar_photo,pillar_voice,pillar_guide,pillar_*_a11y}`, `onboarding.v2.slide3.{title,subtitle,chip_museum_*,chip_masterpiece_*,chip_tour_*,skip_cta,skip_cta_a11y}`. Anciennes clés `onboarding.slide{0,1,2}.*` supprimées.
+
+### Fichiers supprimés (`git rm`)
+
+- `features/onboarding/ui/OnboardingSlide.tsx` (175L) — remplacé par 3 slides dédiés
+- `__tests__/components/OnboardingSlide.test.tsx` (45L) — test du composant supprimé
+
+### Tests (4 nouvelles suites)
+
+- `__tests__/hooks/useTypewriter.test.ts` — 6 tests (fake timers : delay, char-by-char, isDone, reset, reduced-motion instant, cleanup)
+- `__tests__/components/onboarding/ChatDemoSlide.test.tsx` — 3 tests (renders user bubble, accessibility role, reduced-motion static)
+- `__tests__/components/onboarding/ValuePropSlide.test.tsx` — 3 tests (renders 3 pillars, icons, accessible)
+- `__tests__/components/onboarding/FirstPromptChipsSlide.test.tsx` — 5 tests (chip render, onChipPress, skip, disabled, testIDs)
+- `__tests__/screens/onboarding.test.tsx` — réécrit : 9 tests (renders 3 slides, Next masqué sur chips, skip→home, chip→startConversation, explore→replace home)
+
+### Vérification finale
+
+| Check | Résultat |
+|---|---|
+| `tsc --noEmit` | PASS (0 erreurs) |
+| `npm test` (full suite) | 1146 tests, 137 suites, 0 échec |
+| ESLint | 0 erreurs |
+| as-any | 0 |
+| Reduced motion | Static text + no stagger (manual) |
+| i18n 8 locales | Toutes les clés v2 présentes |
+
+### Architecture décisions
+
+- `DemoUserBubble` / `DemoAssistantBubble` inline dans `ChatDemoSlide` plutôt que réutiliser `ChatMessageBubble` (365L) — le composant de prod embarque TTS, feedback, context-menu ; un subset visual-only de 40L est plus propre et sans couplage.
+- `initialPrompt` transmis via URL query param (Expo Router) plutôt que via AsyncStorage ou context — aligné sur le pattern `intent=camera|audio` existant, rétro-compat, stateless.
+- `isPromptHandled` state (pas un ref) — garantit que React re-render après la guard, nécessaire car `sendMessage` attend `!isLoading`.
