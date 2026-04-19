@@ -1034,8 +1034,8 @@
 
 - [x] Inventaire 11 flags (10 consommés, 1 mort `multiTenancy`)
 - [x] Découvertes : `multiTenancy` zombie, `FEATURE_ART_TOPIC_CLASSIFIER` nommage hors-convention, `.env.*.example` désynchronisés
-- [ ] **LOT 1 dans NL-4** — supprimer `voiceMode` + `streaming` (2 guards 404, 0 risque)
-- [ ] **LOT 2 post-voice-V1** — ticket séparé, décision flag-par-flag pour les 9 restants (`ocrGuard`, `apiKeys`, `multiTenancy`, `userMemory`, `knowledgeBase`, `imageEnrichment`, `webSearch`, `knowledgeExtraction`, `artTopicClassifier`)
+- [x] **LOT 1 dans NL-4** — `voiceMode` + `streaming` supprimés (commit `91c7faa2`)
+- [x] **LOT 2 post-voice-V1** — 7 flags retirés/activés (commit `9fde1972`): `ocrGuard`, `apiKeys`, `knowledgeBase`, `imageEnrichment`, `webSearch`, `knowledgeExtraction` activés ; `multiTenancy` zombie retiré
 
 > **Master plan** : [`docs/plans/NL_MASTER_PLAN.md`](../plans/NL_MASTER_PLAN.md) (Phase 2 closure + Phase 3 launch)
 > **Bilan session 2026-04-17 (P01-P06)** : 7 commits, 2655 -> 2673 tests BE (+18), 0 regression.
@@ -1058,7 +1058,49 @@
 
 ---
 
-## Metriques globales (mise a jour 2026-04-11)
+## CTO Audit Enterprise 2026-04-19 (TERMINÉ)
+
+> Audit CTO entreprise-grade : 5 phases, 4 agents scan parallèles, 2 passes challenge DDD/KISS/DRY/hexagonal.
+> Rapport complet : [`team-reports/2026-04-19.md`](../../team-reports/2026-04-19.md)
+> Commits : `e2fc6d57` (Sprint 1), `4b1c2a56` (Sprint 2)
+
+### Sprint 1 — Dead code + port types + migration safety + ESLint discipline
+
+- [x] Supprimer `precompute-tts.service.ts` (120L, 0 callers, 0 tests — NL-10 prématuré)
+- [x] Fix `chat-module.ts` : `buildAudioStorage()` retourne `AudioStorage` port (pas le concret)
+- [x] Fix migration `1776593907869-Check.ts` JSDoc : warning data-safety DROP+ADD sur `user_memories`
+- [x] Supprimer `env.tts.enabled` (champ toujours `true`, 0 consumers post-V1)
+- [x] Fix `text-to-speech.test.ts` : fixture model `'tts-1'` → `'gpt-4o-mini-tts'`
+- [x] Fix `feature-flags.test.ts` : remplacer flag retiré `USER_MEMORY` par `OCR_GUARD` actif
+- [x] Fix `env.test.ts` : supprimer assertion sur `env.tts.enabled` disparu
+- [x] Ajouter `-- reason` aux 5 `eslint-disable` sans justification (ports + middleware)
+- [x] Fix `useMuseumPrefetch.ts` : ref assignment dans `useEffect` (concurrent-safe)
+- [x] Fix `InAppBrowser.tsx` : wirer `onNavigationStateChange` → `setCanGoBack`/`setCurrentUrl` (back + URL bar fonctionnellement cassés)
+- [x] Fix `useTypewriter.ts` : supprimer `setState` dans branche `!enabled`, dériver valeurs de retour
+
+### Sprint 2 — S3 adapter decoupling (Challenge Loop #2)
+
+- [x] Déplacer `S3ImageStorageConfig` de `image-storage.s3.ts` vers `s3-operations.ts` (couche infra neutre)
+- [x] Déplacer `buildS3PresignedReadUrl` vers `s3-operations.ts`
+- [x] Fix `audio-storage.s3.ts` : import depuis `s3-operations` (élimine coupling adapter→adapter)
+- [x] Re-export `buildS3PresignedReadUrl` depuis `image-storage.s3.ts` (compat consommateurs existants)
+- [x] tsc PASS (0 erreurs), 2717 tests green, 0 regression
+
+### Vérification finale
+
+| Check | Résultat |
+|---|---|
+| BE `tsc --noEmit` | PASS (0 erreurs) |
+| BE tests | 2717 passed |
+| BE as-any | 0 |
+| FE `tsc --noEmit` | PASS (0 erreurs) |
+| FE tests | 1162 passed |
+| GitNexus re-index | DONE (5812 nodes / 14989 edges) |
+| Sentinelle gate | **PASS** |
+
+---
+
+## Metriques globales (mise a jour 2026-04-19)
 
 | Sprint    | Taches  | Faites | %       | Tests backend | Tests frontend |
 | --------- | ------- | ------ | ------- | ------------- | -------------- |
@@ -1083,4 +1125,5 @@
 | Chat UX   | 17      | 17     | 100%    | 1457 (+24)    | 146            |
 | Hotfix 04-02 | 7   | 7      | 100%    | 1445+ (+9)    | 422 (+94)      |
 | V2 Features | 96    | 96     | 100%    | 2294+         | 1091+          |
-| **Total** | **346** | **345** | **99%** | **2294+**     | **1091+**      |
+| CTO Audit 04-19 | 13 | 13  | 100%    | 2717 (+2)     | 1162 (+71)     |
+| **Total** | **359** | **358** | **99%** | **2717**     | **1162**       |

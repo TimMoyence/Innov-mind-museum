@@ -2415,3 +2415,97 @@ Décision produit : suppression des feature flags bloquants (philosophie "users 
 - `useStreamingState` : NE PAS marquer `@deprecated` — il gère l'accumulation de tokens (streaming token-by-token), pas le protocole SSE. Seuls `parseSseChunk`, `postMessageStream`, `SseStreamEvent` sont dépréciés (protocole fil SSE).
 - `DisabledTextToSpeechService` conservé : null-object pattern pour le cas sans OpenAI API key (pas de flag).
 - SSE route BE : kept for legacy clients — `logger.warn` à chaque hit permet de monitorer l'adoption et planifier la suppression définitive.
+
+---
+
+## CTO Audit Enterprise 2026-04-19
+
+**Mode** : audit enterprise-grade + corrections code  
+**Scope** : Voice V1, Feature Flags LOT 2, Home v2, Onboarding v2, NL-5 MapLibre (branche, pas encore mergée)  
+**Pipeline** : 5 phases + 2x challenge loop DDD/KISS/DRY/hexagonal  
+**Commits** : `e2fc6d57` (Sprint 1), `4b1c2a56` (Sprint 2)  
+**Rapport complet** : `team-reports/2026-04-19.md`
+
+### Résumé exécutif
+
+Audit post-livraison des sprints NL-4 (Onboarding v2), NL-5 S1 (MapLibre, branche), Voice V1 (STT→LLM→TTS), Feature Flags LOT 2. Aucun bug critique — codebase sain. 2 sprints correctifs exécutés.
+
+**Verdict Sentinelle : PASS**
+
+### Sprint 1 — Dead code + corrections ciblées (commit `e2fc6d57`)
+
+**Backend :**
+
+| Fichier | Problème | Fix |
+|---------|---------|-----|
+| `precompute-tts.service.ts` | 120L, 0 callers, 0 tests — NL-10 prématuré | `git rm` |
+| `chat-module.ts` | `buildAudioStorage()` retournait le type concret, pas le port | `AudioStorage \| undefined` |
+| `1776593907869-Check.ts` | JSDoc mentait "All changes are non-breaking" sur DROP+ADD `user_memories` | Warning data-safety + count check |
+| `env.ts` / `env.types.ts` | `tts.enabled: true` — champ toujours vrai, 0 consumers post-V1 | Supprimé |
+| `text-to-speech.test.ts` | Fixture model `'tts-1'` dépassée | `'gpt-4o-mini-tts'` |
+| `feature-flags.test.ts` | Test sur flag `USER_MEMORY` retiré de la prod | Remplacé par `OCR_GUARD` actif |
+| `env.test.ts` | Assertion sur `env.tts.enabled` disparu | Supprimée |
+| 5 fichiers ports/middleware | `eslint-disable` sans `-- reason` | Justifications ajoutées |
+
+**Frontend :**
+
+| Fichier | Problème | Fix |
+|---------|---------|-----|
+| `useMuseumPrefetch.ts` | `bulkStoreRef.current = bulkStore` en render (concurrent-unsafe) | Déplacé dans `useEffect` |
+| `InAppBrowser.tsx` | `onNavigationStateChange` absent → back button toujours disabled, URL bar gelée | Câblage `setCanGoBack`/`setCurrentUrl` |
+| `useTypewriter.ts` | `setState` dans branche `!enabled` de l'effect → react-hooks/set-state-in-effect | Dériver valeurs de retour sans state |
+
+### Sprint 2 — S3 adapter decoupling (commit `4b1c2a56`)
+
+**Problème** : `audio-storage.s3.ts` importait `S3ImageStorageConfig` et `buildS3PresignedReadUrl` depuis `image-storage.s3.ts` — coupling adapter→adapter (violation hexagonale). Deux adapteurs ne doivent pas se dépendre : seule l'infra neutre peut être partagée.
+
+**Solution** : déplacer les deux artefacts vers `s3-operations.ts` (couche infra partagée). `image-storage.s3.ts` re-exporte pour compatibilité descendante.
+
+```
+Avant : audio-storage.s3 → image-storage.s3 (adapter→adapter ❌)
+Après : audio-storage.s3 → s3-operations     (adapter→infra ✓)
+        image-storage.s3 → s3-operations     (adapter→infra ✓)
+```
+
+**Fichiers modifiés** : `s3-operations.ts` (+78L), `image-storage.s3.ts` (-89L), `audio-storage.s3.ts` (import 1L)
+
+### Challenge Loop #1 résultats
+
+Agents scan parallèles (code-quality, feature-verify, cleanup, architecture) — principaux findings :
+
+- `precompute-tts.service.ts` : dead code NL-10 — **CORRIGÉ**
+- `buildAudioStorage()` type concret au lieu du port — **CORRIGÉ**
+- `audio-storage.s3.ts` coupling adapter→adapter — **CORRIGÉ**
+- `useMuseumPrefetch` ref assignment render-phase — **CORRIGÉ**
+- `InAppBrowser` back button/URL bar non câblés — **CORRIGÉ**
+- `artTopicClassifier` signalé dead code par agent — **FAUX POSITIF** confirmé (branch active dans `guardrail-evaluation.service.ts:265`)
+- `postMessageStream @deprecated` absent — **FAUX POSITIF** (déjà présent ligne 360)
+
+### Challenge Loop #2 résultats
+
+Revue DDD/KISS/DRY/hexagonal post-sprint-1 :
+- Violation hexagonale S3 adapter-to-adapter — **CORRIGÉ Sprint 2**
+- Aucun autre finding bloquant — codebase conforme DDD
+
+### Vérification finale
+
+| Check | Résultat |
+|---|---|
+| BE `tsc --noEmit` | PASS (0 erreurs) |
+| BE tests | 2717 passed |
+| BE as-any | 0 |
+| FE `tsc --noEmit` | PASS (0 erreurs) |
+| FE tests | 1162 passed |
+| GitNexus re-index | DONE (5812 nodes, 14989 edges, 300 flows) |
+| Sentinelle gate | **PASS** |
+
+### Backlog moyen terme (non bloquant)
+
+Ces items ont été identifiés mais non traités (scope CTO audit = corrections sûres uniquement) :
+
+- `chat-media.service.ts` : S3 audio save fire-and-forget sans `void` explicite
+- `FakeAudioTranscriber` : pas de factory dans `tests/helpers/` — à créer lors du prochain sprint tests
+- `TypingIndicator` : dupliqué dans chat + onboarding — migration vers `shared/ui/` à planifier
+- `tokens.functional.ts` : `design-system/build:tokens` à vérifier si script casse après DS-08
+- Worker leak potentiel dans `useChatSession` streaming (à investiguer device réel)
+- NL-3.9 Phase A observe-only : déploiement VPS + 30j télémétrie (hors session — ops)
