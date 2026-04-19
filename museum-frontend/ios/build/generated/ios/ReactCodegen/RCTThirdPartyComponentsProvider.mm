@@ -20,6 +20,17 @@
 
   dispatch_once(&nativeComponentsToken, ^{
     thirdPartyComponents = @{
+		@"MLRNCallout": NSClassFromString(@"MLRNCalloutComponentView"), // @maplibre/maplibre-react-native
+		@"MLRNCamera": NSClassFromString(@"MLRNCameraComponentView"), // @maplibre/maplibre-react-native
+		@"MLRNImages": NSClassFromString(@"MLRNImagesComponentView"), // @maplibre/maplibre-react-native
+		@"MLRNImageSource": NSClassFromString(@"MLRNImageSourceComponentView"), // @maplibre/maplibre-react-native
+		@"MLRNLayer": NSClassFromString(@"MLRNLayerComponentView"), // @maplibre/maplibre-react-native
+		@"MLRNMapView": NSClassFromString(@"MLRNMapViewComponentView"), // @maplibre/maplibre-react-native
+		@"MLRNNativeUserLocation": NSClassFromString(@"MLRNNativeUserLocationComponentView"), // @maplibre/maplibre-react-native
+		@"MLRNPointAnnotation": NSClassFromString(@"MLRNPointAnnotationComponentView"), // @maplibre/maplibre-react-native
+		@"MLRNRasterSource": NSClassFromString(@"MLRNRasterSourceComponentView"), // @maplibre/maplibre-react-native
+		@"MLRNGeoJSONSource": NSClassFromString(@"MLRNGeoJSONSourceComponentView"), // @maplibre/maplibre-react-native
+		@"MLRNVectorSource": NSClassFromString(@"MLRNVectorSourceComponentView"), // @maplibre/maplibre-react-native
 		@"RNGoogleSignInButton": NSClassFromString(@"RNGoogleSignInButtonComponentView"), // @react-native-google-signin/google-signin
 		@"RNGestureHandlerButton": NSClassFromString(@"RNGestureHandlerButtonComponentView"), // react-native-gesture-handler
 		@"RNCSafeAreaProvider": NSClassFromString(@"RNCSafeAreaProviderComponentView"), // react-native-safe-area-context
