@@ -5,29 +5,15 @@ import { startSpan } from '@shared/observability/sentry';
 
 import {
   buildS3SignedHeadersForPut,
+  buildS3PresignedReadUrl,
   httpPut,
   listObjectsByPrefix,
   deleteObjectsBatch,
-  canonicalQueryString,
 } from './s3-operations';
-import { normalizeObjectKey, buildReadBaseUrlAndPath } from './s3-path-utils';
-import { toAmzDate, signString } from './s3-signing';
+import { normalizeObjectKey } from './s3-path-utils';
 
+import type { S3ImageStorageConfig } from './s3-operations';
 import type { ImageStorage, SaveImageInput } from '../../domain/ports/image-storage.port';
-
-/** Configuration for an S3-compatible image storage backend. */
-export interface S3ImageStorageConfig {
-  endpoint: string;
-  region: string;
-  bucket: string;
-  accessKeyId: string;
-  secretAccessKey: string;
-  signedUrlTtlSeconds: number;
-  publicBaseUrl?: string;
-  sessionToken?: string;
-  objectKeyPrefix?: string;
-  requestTimeoutMs?: number;
-}
 
 /**
  * Extracts the S3 object key from an `s3://` image reference.
@@ -93,77 +79,8 @@ export const buildS3SignedReadUrlFromRef = (params: {
   });
 };
 
-/**
- * Generates an AWS SigV4 pre-signed GET URL for an S3 object.
- *
- * @param params - Object key, S3 config, optional TTL and timestamp.
- * @param params.key - S3 object key.
- * @param params.config - S3 connection and bucket configuration.
- * @param params.ttlSeconds - Optional TTL in seconds for the signed URL.
- * @param params.now - Optional timestamp override for signature generation.
- * @returns The signed URL and its ISO-8601 expiry.
- */
-export const buildS3PresignedReadUrl = (params: {
-  key: string;
-  config: S3ImageStorageConfig;
-  ttlSeconds?: number;
-  now?: Date;
-}): { url: string; expiresAt: string } => {
-  const { url, objectPath } = buildReadBaseUrlAndPath({
-    endpoint: params.config.endpoint,
-    publicBaseUrl: params.config.publicBaseUrl,
-    bucket: params.config.bucket,
-    key: params.key,
-  });
-
-  const now = params.now ?? new Date();
-  const { amzDate, dateStamp } = toAmzDate(now);
-  const ttlSeconds = Math.max(
-    30,
-    Math.min(60 * 60 * 24 * 7, params.ttlSeconds ?? params.config.signedUrlTtlSeconds),
-  );
-  const query: [string, string][] = [
-    ['X-Amz-Algorithm', 'AWS4-HMAC-SHA256'],
-    [
-      'X-Amz-Credential',
-      `${params.config.accessKeyId}/${dateStamp}/${params.config.region}/s3/aws4_request`,
-    ],
-    ['X-Amz-Date', amzDate],
-    ['X-Amz-Expires', String(ttlSeconds)],
-    ['X-Amz-SignedHeaders', 'host'],
-  ];
-  if (params.config.sessionToken) {
-    query.push(['X-Amz-Security-Token', params.config.sessionToken]);
-  }
-
-  const canonicalRequest = [
-    'GET',
-    objectPath,
-    canonicalQueryString(query),
-    `host:${url.host}\n`,
-    'host',
-    'UNSIGNED-PAYLOAD',
-  ].join('\n');
-
-  const { signature } = signString({
-    secretAccessKey: params.config.secretAccessKey,
-    dateStamp,
-    region: params.config.region,
-    amzDate,
-    canonicalRequest,
-  });
-
-  query.push(['X-Amz-Signature', signature]);
-  url.search = canonicalQueryString(query);
-
-  return {
-    url: url.toString(),
-    expiresAt: new Date(now.getTime() + ttlSeconds * 1000).toISOString(),
-  };
-};
-
-// Re-export batch operations for external consumers
-export { listObjectsByPrefix, deleteObjectsBatch } from './s3-operations';
+// Re-export shared S3 operations for external consumers
+export { buildS3PresignedReadUrl, listObjectsByPrefix, deleteObjectsBatch } from './s3-operations';
 
 /** S3-compatible implementation of {@link ImageStorage} — uploads images via signed PUT requests. */
 export class S3CompatibleImageStorage implements ImageStorage {

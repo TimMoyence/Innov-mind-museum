@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { startSpan } from '@shared/observability/sentry';
 
-import { buildS3PresignedReadUrl, type S3ImageStorageConfig } from './image-storage.s3';
+import { buildS3PresignedReadUrl, type S3ImageStorageConfig } from './s3-operations';
 import { buildS3SignedHeadersForPut, deleteObjectsBatch, httpPut } from './s3-operations';
 import { normalizeObjectKey } from './s3-path-utils';
 

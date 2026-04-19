@@ -7,10 +7,23 @@ import {
   encodePathSegments,
   normalizeEndpoint,
   buildObjectPath,
+  buildReadBaseUrlAndPath,
 } from './s3-path-utils';
 import { sha256Hex, toAmzDate, buildCanonicalHeaders, signString } from './s3-signing';
 
-import type { S3ImageStorageConfig } from './image-storage.s3';
+/** Configuration for an S3-compatible storage backend (images and audio). */
+export interface S3ImageStorageConfig {
+  endpoint: string;
+  region: string;
+  bucket: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  signedUrlTtlSeconds: number;
+  publicBaseUrl?: string;
+  sessionToken?: string;
+  objectKeyPrefix?: string;
+  requestTimeoutMs?: number;
+}
 
 /** Sorts and encodes query-string pairs per the AWS SigV4 canonical format. */
 export const canonicalQueryString = (query: [string, string][]): string => {
@@ -350,4 +363,67 @@ export const deleteObjectsBatch = async (
   if (statusCode < 200 || statusCode >= 300) {
     throw new Error(`S3 DeleteObjects failed (${statusCode}): ${body.slice(0, 500)}`);
   }
+};
+
+/**
+ * Generates an AWS SigV4 pre-signed GET URL for an S3 object.
+ * Shared by image and audio storage adapters — extracted here to avoid adapter→adapter coupling.
+ */
+export const buildS3PresignedReadUrl = (params: {
+  key: string;
+  config: S3ImageStorageConfig;
+  ttlSeconds?: number;
+  now?: Date;
+}): { url: string; expiresAt: string } => {
+  const { url, objectPath } = buildReadBaseUrlAndPath({
+    endpoint: params.config.endpoint,
+    publicBaseUrl: params.config.publicBaseUrl,
+    bucket: params.config.bucket,
+    key: params.key,
+  });
+
+  const now = params.now ?? new Date();
+  const { amzDate, dateStamp } = toAmzDate(now);
+  const ttlSeconds = Math.max(
+    30,
+    Math.min(60 * 60 * 24 * 7, params.ttlSeconds ?? params.config.signedUrlTtlSeconds),
+  );
+  const query: [string, string][] = [
+    ['X-Amz-Algorithm', 'AWS4-HMAC-SHA256'],
+    [
+      'X-Amz-Credential',
+      `${params.config.accessKeyId}/${dateStamp}/${params.config.region}/s3/aws4_request`,
+    ],
+    ['X-Amz-Date', amzDate],
+    ['X-Amz-Expires', String(ttlSeconds)],
+    ['X-Amz-SignedHeaders', 'host'],
+  ];
+  if (params.config.sessionToken) {
+    query.push(['X-Amz-Security-Token', params.config.sessionToken]);
+  }
+
+  const canonicalReq = [
+    'GET',
+    objectPath,
+    canonicalQueryString(query),
+    `host:${url.host}\n`,
+    'host',
+    'UNSIGNED-PAYLOAD',
+  ].join('\n');
+
+  const { signature } = signString({
+    secretAccessKey: params.config.secretAccessKey,
+    dateStamp,
+    region: params.config.region,
+    amzDate,
+    canonicalRequest: canonicalReq,
+  });
+
+  query.push(['X-Amz-Signature', signature]);
+  url.search = canonicalQueryString(query);
+
+  return {
+    url: url.toString(),
+    expiresAt: new Date(now.getTime() + ttlSeconds * 1000).toISOString(),
+  };
 };
