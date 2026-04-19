@@ -1014,6 +1014,18 @@
 - [ ] NL-3.10 Phase B décision post-télémétrie (block si confidence ≥ 0.95)
 - [x] Tech Lead Review NL-3 + 2x challenge
 
+### Sprint S6 — Home v2 refactor (2026-04-19, challenge-roadmap 2026-04-18)
+
+- [x] S6.1 `features/home/ui/HomeIntentChips.tsx` (vertical 3 chips vocal/camera/walk, haptic + a11y + testIDs)
+- [x] S6.2 `features/home/ui/HeroSettingsButton.tsx` (gear icon top-right hero, 44×44 hit area)
+- [x] S6.3 `app/(stack)/walk-composer.tsx` (NL-5 placeholder screen + back)
+- [x] S6.4 `useStartConversation` walk intent — pure navigation, no session
+- [x] S6.5 `app/(tabs)/home.tsx` rewrite — 240L → 147L (−39%), FCM + menuStatus + secondaryRow removed
+- [x] S6.6 i18n sync 8 locales — `home.chips.*`, `a11y.home.settings_gear`, `walkComposer.*`; obsolete `home.menu/messages/onboarding` dropped
+- [x] S6.7 Tests — 3 suites (home, HomeIntentChips, walk-composer), 1146 tests green (+13 tests vs baseline)
+- [x] Commit `07b613b8` refactor(mobile): Home v2 — 3 intent chips + hero gear + walk stub
+- [x] Tech Lead Review S6 + 2x challenge (DDD/KISS/DRY/clean archi PASS)
+
 > **Master plan** : [`docs/plans/NL_MASTER_PLAN.md`](../plans/NL_MASTER_PLAN.md) (Phase 2 closure + Phase 3 launch)
 > **Bilan session 2026-04-17 (P01-P06)** : 7 commits, 2655 -> 2673 tests BE (+18), 0 regression.
 > **Bilan sprints NL-1/NL-2/NL-3 (même date)** : 9 commits supplémentaires, BE 2673 -> 2680 (+7), FE 1120 jest stable + node 277 -> 293 (+16), i18n 610 -> 617 keys × 8 locales.
