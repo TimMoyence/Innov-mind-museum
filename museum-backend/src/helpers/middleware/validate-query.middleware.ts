@@ -10,7 +10,7 @@ import type { z } from 'zod';
  *
  * Note: Express 5 makes `req.query` read-only, so we use `res.locals` instead.
  */
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- generic T constrains the Zod schema and infers the output type
 export function validateQuery<T extends z.ZodType>(schema: T) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req.query);

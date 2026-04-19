@@ -8,12 +8,10 @@ describe('StaticFeatureFlagService', () => {
 
   it('parses FEATURE_FLAG_* env vars', () => {
     const svc = new StaticFeatureFlagService({
-      FEATURE_FLAG_USER_MEMORY: 'true',
       FEATURE_FLAG_OCR_GUARD: '1',
       FEATURE_FLAG_API_KEYS: 'false',
       UNRELATED_VAR: 'true',
     });
-    expect(svc.isEnabled('user-memory')).toBe(true);
     expect(svc.isEnabled('ocr-guard')).toBe(true);
     expect(svc.isEnabled('api-keys')).toBe(false);
     expect(svc.isEnabled('unrelated-var')).toBe(false);
@@ -21,7 +19,7 @@ describe('StaticFeatureFlagService', () => {
 
   it('handles empty env', () => {
     const svc = new StaticFeatureFlagService({});
-    expect(svc.isEnabled('user-memory')).toBe(false);
+    expect(svc.isEnabled('ocr-guard')).toBe(false);
   });
 
   it('uses process.env when no argument is provided', () => {

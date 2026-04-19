@@ -6,7 +6,14 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  * and rebuilds all indexes to match current entity definitions.
  *
  * Generated via `migration-cli.cjs generate --name=Check` after Voice V1 entities.
- * All changes are non-breaking for existing data. Fully reversible via `down()`.
+ *
+ * ⚠️  DATA SAFETY: The user_memories column renames are implemented as DROP + ADD
+ * (TypeORM limitation — cannot detect renames). This destroys any existing rows'
+ * data in those columns. Verify `SELECT COUNT(*) FROM user_memories` is 0 before
+ * running in staging/prod. If non-empty, rewrite each pair as:
+ *   ALTER TABLE user_memories RENAME COLUMN old_name TO "newName"
+ *
+ * Fully reversible via `down()` (down() has the same DROP + ADD caveat).
  */
 export class Check1776593907869 implements MigrationInterface {
   name = 'Check1776593907869';

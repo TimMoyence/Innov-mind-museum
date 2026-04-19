@@ -142,6 +142,10 @@ export const InAppBrowser = ({ url, onClose }: InAppBrowserProps) => {
               setLoadError(true);
             }
           }}
+          onNavigationStateChange={(nav) => {
+            setCanGoBack(nav.canGoBack);
+            setCurrentUrl(nav.url);
+          }}
           onShouldStartLoadWithRequest={(request) => {
             // Scheme allowlist: only http/https in the WebView. Hand off
             // mailto:/tel: to the system handler; block javascript:/file:/data:

@@ -233,7 +233,6 @@ const env: AppEnv = {
   },
   // TTS_ENABLED retired (V1 2026-04) — voice pipeline always on. See docs/AI_VOICE.md.
   tts: {
-    enabled: true,
     model: process.env.TTS_MODEL || 'gpt-4o-mini-tts',
     voice: process.env.TTS_VOICE || 'alloy',
     speed: toNumber(process.env.TTS_SPEED, 1),

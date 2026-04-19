@@ -8,7 +8,7 @@ import type { z } from 'zod';
  * On success the parsed (and potentially transformed) data replaces `req.body`.
  * On failure a 400 `BAD_REQUEST` AppError is thrown.
  */
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- generic T constrains the Zod schema and infers the output type
 export function validateBody<T extends z.ZodType>(schema: T) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req.body);

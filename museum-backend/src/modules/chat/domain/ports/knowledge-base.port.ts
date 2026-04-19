@@ -47,7 +47,7 @@ export interface KnowledgeBaseProvider {
 /** Disabled stub that always returns null (fail-open). */
 export class DisabledKnowledgeBaseProvider implements KnowledgeBaseProvider {
   /** Returns null — knowledge base is disabled. */
-  // eslint-disable-next-line @typescript-eslint/require-await
+  // eslint-disable-next-line @typescript-eslint/require-await -- null-object pattern: interface requires async signature
   async lookup(): Promise<ArtworkFacts | null> {
     return null;
   }

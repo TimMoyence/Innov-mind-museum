@@ -5,7 +5,7 @@ jest.mock('@src/config/env', () => ({
       timeoutMs: 10000,
     },
     tts: {
-      model: 'tts-1',
+      model: 'gpt-4o-mini-tts',
       voice: 'alloy',
       speed: 1,
       maxTextLength: 4096,
@@ -49,7 +49,7 @@ describe('OpenAiTextToSpeechService', () => {
     expect(fetchCall[0]).toBe('https://api.openai.com/v1/audio/speech');
     const body = JSON.parse(fetchCall[1].body as string);
     expect(body.input).toBe('Hello world');
-    expect(body.model).toBe('tts-1');
+    expect(body.model).toBe('gpt-4o-mini-tts');
     expect(body.voice).toBe('alloy');
     expect(body.response_format).toBe('mp3');
   });

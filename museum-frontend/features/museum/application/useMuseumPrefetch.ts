@@ -24,7 +24,10 @@ export function useMuseumPrefetch(museumId: string | null, locale: string): void
   const bulkStore = useChatLocalCacheStore((s) => s.bulkStore);
   const { isLowData } = useDataMode();
   const bulkStoreRef = useRef(bulkStore);
-  bulkStoreRef.current = bulkStore;
+
+  useEffect(() => {
+    bulkStoreRef.current = bulkStore;
+  }, [bulkStore]);
 
   useEffect(() => {
     if (!museumId) return;

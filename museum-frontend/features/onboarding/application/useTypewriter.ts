@@ -44,11 +44,7 @@ export function useTypewriter({
   }, []);
 
   useEffect(() => {
-    if (!enabled) {
-      setVisible(text);
-      setIsDone(true);
-      return;
-    }
+    if (!enabled) return;
 
     const timers: ReturnType<typeof setTimeout>[] = [];
     let cancelled = false;
@@ -81,5 +77,5 @@ export function useTypewriter({
     };
   }, [text, enabled, charDelayMs, firstCharDelayMs, runToken]);
 
-  return { visible, isDone, reset };
+  return { visible: enabled ? visible : text, isDone: enabled ? isDone : true, reset };
 }

@@ -39,7 +39,7 @@ export interface WebSearchProvider {
 /** Disabled stub that always returns empty array (fail-open). */
 export class DisabledWebSearchProvider implements WebSearchProvider {
   /** Returns empty array — web search is disabled. */
-  // eslint-disable-next-line @typescript-eslint/require-await
+  // eslint-disable-next-line @typescript-eslint/require-await -- null-object pattern: interface requires async signature
   async search(): Promise<SearchResult[]> {
     return [];
   }

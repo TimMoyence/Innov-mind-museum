@@ -39,6 +39,7 @@ import { WebSearchService } from './useCase/web-search.service';
 
 import type { ArtKeywordRepository } from './domain/artKeyword.repository.interface';
 import type { AdvancedGuardrail } from './domain/ports/advanced-guardrail.port';
+import type { AudioStorage } from './domain/ports/audio-storage.port';
 import type { ChatOrchestrator } from './domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from './domain/ports/image-storage.port';
 import type { OcrService } from './domain/ports/ocr.port';
@@ -134,7 +135,7 @@ export class ChatModule {
    * key prefix (`chat-audios/`). Returns `undefined` when storage is misconfigured so
    * the chat service still operates (TTS just runs without long-term persistence).
    */
-  private buildAudioStorage(): LocalAudioStorage | S3CompatibleAudioStorage | undefined {
+  private buildAudioStorage(): AudioStorage | undefined {
     if (env.storage.driver === 's3') {
       const s3 = env.storage.s3;
       if (!s3?.endpoint || !s3.region || !s3.bucket || !s3.accessKeyId || !s3.secretAccessKey) {

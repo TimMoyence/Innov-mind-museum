@@ -143,7 +143,6 @@ describe('env.ts module', () => {
     it('tts is always populated (TTS_ENABLED was retired in V1)', () => {
       const env = loadEnv({});
       expect(env.tts).toBeDefined();
-      expect(env.tts.enabled).toBe(true);
       // Default model upgraded from tts-1 to gpt-4o-mini-tts in V1.
       expect(env.tts.model).toBe('gpt-4o-mini-tts');
     });

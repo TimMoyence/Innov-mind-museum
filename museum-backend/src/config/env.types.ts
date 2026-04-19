@@ -100,7 +100,6 @@ export interface AppEnv {
     };
   };
   tts: {
-    enabled: boolean;
     model: string;
     voice: string;
     speed: number;
