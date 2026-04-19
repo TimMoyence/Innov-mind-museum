@@ -10,13 +10,14 @@ import {
 import type { FeatureCollection, Point } from 'geojson';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { NativeSyntheticEvent } from 'react-native';
-import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { PerfOverlay } from '@/features/diagnostics/PerfOverlay';
 import { perfStore } from '@/features/diagnostics/perfStore';
 import { reportError } from '@/shared/observability/errorReporting';
 import { GlassCard } from '@/shared/ui/GlassCard';
+import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic } from '@/shared/ui/tokens';
 
@@ -110,24 +111,8 @@ export const MuseumMapView = ({
   const museumsSourceRef = useRef<GeoJSONSourceRef>(null);
   const userPannedRef = useRef(false);
   const hasFittedRef = useRef(false);
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const reduceMotion = useReducedMotion();
   const [hasLoadError, setHasLoadError] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then((enabled) => {
-        if (!cancelled) setReduceMotion(enabled);
-      })
-      .catch(() => {
-        // Silently default to animations-on if the native query fails.
-      });
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
-    return () => {
-      cancelled = true;
-      subscription.remove();
-    };
-  }, []);
 
   const mapStyle = useMemo(() => buildOsmRasterStyle(isDark), [isDark]);
   const museumCollection = useMemo(() => buildMuseumFeatureCollection(museums), [museums]);
