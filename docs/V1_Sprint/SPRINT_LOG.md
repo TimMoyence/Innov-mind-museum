@@ -6,6 +6,59 @@
 
 ---
 
+## NL-5 S1 — MapLibre Native (2026-04-19, branche feat/nl5-s1-map-native)
+
+**Scope**: Remplacement Leaflet/WebView → MapLibre Native v11. Offline packs 5 villes. Geofence auto opt-in. 2 passes code review enterprise-grade.
+**Commits**: 10 commits sur `feat/nl5-s1-map-native` (branche prete, gate perf device PENDING).
+**Stats**: 20 taches, 137 suites, 1150 tests, 0 erreurs lint.
+
+### Resume executif
+
+Remplacement complet du module carte Leaflet-WebView par MapLibre Native v11. La feature est production-grade: clustering natif `GeoJSONSource`, 5 couches (clusters/count/points/user-halo/user-dot), camera `fitBounds`/`flyTo`, offline packs 5 villes avec acquisition manuelle + auto geofence opt-in via `expo-secure-store`, HUD perf dev-only (`PerfOverlay`), 2 passes code review DDD/KISS/DRY/hexagonal.
+
+Deux pivots majeurs en cours de route:
+1. **PMTiles runtime impossible**: `@maplibre/maplibre-react-native` v11 n'expose pas `addProtocol()`. Fallback: tuiles CartoDB raster (meme provider que Leaflet, zero regression visuelle).
+2. **Dette connue offline tiles**: `OFFLINE_STYLE_URL` pointe vers demotiles (vector) alors que la carte en ligne rend CartoDB (raster). Le flow download/gestion fonctionne, mais les tuiles cachees ne sont pas celles rendues en ligne. Ticket `TD-OFFLINE-STYLE-SELF-HOST` pour fermer ce gap avant ship.
+
+### Changements cles
+
+| Domaine | Fichier | Action |
+|---|---|---|
+| Plugin | `plugins/withFmtConstevalPatch.js` | Expo config plugin — persiste patch Xcode 26 fmt consteval |
+| Infrastructure | `features/museum/infrastructure/mapLibreBootstrap.ts` | Singleton init MapLibre + Sentry, charge dans `app/_layout.tsx` |
+| Infrastructure | `features/museum/infrastructure/mapLibreStyle.ts` | Style CartoDB Positron/DarkMatter sans cle API |
+| Infrastructure | `features/museum/infrastructure/offlinePackManager.ts` | Wrapper OfflineManager en vocabulaire cityId |
+| Infrastructure | `features/museum/infrastructure/cityCatalog.ts` | 5 villes + propriete `CityId` (source unique) |
+| Application | `features/museum/application/useMapStyle.ts` | Hook application wrappant buildOsmRasterStyle (separation couches) |
+| Application | `features/museum/application/buildMuseumFeatureCollection.ts` | Pure fn MuseumWithDistance[] → FeatureCollection |
+| Application | `features/museum/application/useOfflinePacks.ts` | State pack par ville, download optimiste + revert echec |
+| Application | `features/museum/application/useGeofencePreCache.ts` | Haversine 500m + triggeredRef session-dedup |
+| UI | `features/museum/ui/MuseumMapView.tsx` | Rewrite complet, contrat props identique |
+| UI | `features/settings/ui/OfflineMapsSettings.tsx` | Settings offline: toggle auto + liste villes + progress |
+| Diagnostics | `features/diagnostics/perfStore.ts` + `useFpsMeter.ts` + `PerfOverlay.tsx` | HUD dev-only: P50 median (corrige calcul mean→median) + P5 FPS |
+| Bootstrap | `app/_layout.tsx` | Import bootstrap MapLibre (vs MuseumMapView pour isoler couche) |
+| Supprime | `leafletHtml.ts`, `webViewNavigation.ts` + leurs tests | Zero consommateurs |
+
+### Decisions architecturales
+
+- `CityId` defini dans `cityCatalog.ts` (domaine), pas dans `offlinePackManager.ts` (infra)
+- `useMapStyle()` hook application → `MuseumMapView` n'importe plus d'infrastructure
+- `mapLibreBootstrap` cote app root, pas cote composant UI
+- `download(city)` sans `mapStyleUrl` param — l'URL est une constante infra resolue en interne
+- `remove()` pattern optimiste-first (erase state → delete → refresh si echec)
+- `onProgress` optionnel dans `offlinePackManager.downloadPack` (default no-op)
+
+### Tests ajoutes
+
+- `MuseumMapView.test.tsx` (6), `offlinePackManager.test.ts` (8), `useOfflinePacks.test.tsx` (5), `useGeofencePreCache.test.tsx` (7), `offlineMapsPreferences.test.ts` (4), `perfStore.test.ts` (5), `generateSyntheticPois.test.ts` (5)
+- Tests couvrant: download failure revert, remove failure revert, triggeredRef dedup, reportError sur downloadPack reject, native error callback
+
+### Gate perf (PENDING device run)
+
+Voir `docs/plans/NL5_S1_MAP_NATIVE_REPORT.md` pour le tableau de metriques et la checklist E2E complete.
+
+---
+
 ## 2026-04-12 — audit-phase2 infra ops
 
 - **Dev image rebuild required**: `museum-backend/Dockerfile.dev` bumped pnpm 8→9 in commit `7066a7ec`. Devs with cached images pre-2026-04-12 must run `docker compose -f docker-compose.dev.yml build --no-cache backend` to regenerate the backend dev image. Note added to `museum-backend/README.md` Troubleshooting section.
