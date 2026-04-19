@@ -29,7 +29,6 @@ import {
 import { UnsplashClient } from './adapters/secondary/unsplash.client';
 import { TypeOrmUserMemoryRepository } from './adapters/secondary/userMemory.repository.typeorm';
 import { WikidataClient } from './adapters/secondary/wikidata.client';
-import { ArtTopicClassifier } from './useCase/art-topic-classifier';
 import { ChatService } from './useCase/chat.service';
 import { DescribeService } from './useCase/describe.service';
 import { ImageEnrichmentService } from './useCase/image-enrichment.service';
@@ -157,11 +156,6 @@ export class ChatModule {
     return new LocalAudioStorage();
   }
 
-  /** Creates the art-topic classifier if the feature flag is enabled. */
-  private buildArtTopicClassifier(): ArtTopicClassifier | undefined {
-    return env.featureFlags.artTopicClassifier ? new ArtTopicClassifier() : undefined;
-  }
-
   /**
    * Creates the advanced guardrail V2 adapter when one is selected via env.
    * Returns `undefined` when candidate is 'off' (default) so the service layer
@@ -188,19 +182,17 @@ export class ChatModule {
     return undefined;
   }
 
-  /** Creates the user memory service if the feature flag is enabled. */
+  /** Creates the user memory service (always active in V1). */
   private buildUserMemory(
     dataSource: DataSource,
     cache?: CacheService,
   ): UserMemoryService | undefined {
-    if (!env.featureFlags.userMemory) return undefined;
     const repo = new TypeOrmUserMemoryRepository(dataSource);
     return new UserMemoryService(repo, cache);
   }
 
-  /** Creates the knowledge base service if the feature flag is enabled. */
+  /** Creates the knowledge base service (Wikidata, always active in V1). */
   private buildKnowledgeBase(cache?: CacheService): KnowledgeBaseService | undefined {
-    if (!env.featureFlags.knowledgeBase) return undefined;
     const wikidataClient = new WikidataClient();
     return new KnowledgeBaseService(
       wikidataClient,
@@ -214,8 +206,8 @@ export class ChatModule {
   }
 
   /** Creates the image enrichment service if the feature flag is enabled. */
+  /** Creates image enrichment (Unsplash + Wikidata P18). Natural gate: Unsplash key presence. */
   private buildImageEnrichment(): ImageEnrichmentService | undefined {
-    if (!env.featureFlags.imageEnrichment) return undefined;
     const unsplashClient = env.imageEnrichment.unsplashAccessKey
       ? new UnsplashClient(env.imageEnrichment.unsplashAccessKey)
       : undefined;
@@ -247,10 +239,8 @@ export class ChatModule {
     });
   }
 
-  /** Creates the web search service with multi-provider fallback chain. */
+  /** Creates web search with multi-provider fallback. Natural gate: provider key presence. DuckDuckGo always included as last resort. */
   private buildWebSearch(cache?: CacheService): WebSearchService | undefined {
-    if (!env.featureFlags.webSearch) return undefined;
-
     const providers: WebSearchProvider[] = [];
 
     if (env.webSearch.tavilyApiKey) {
@@ -424,7 +414,7 @@ export class ChatModule {
       knowledgeBase: deps.knowledgeBase,
       imageEnrichment: deps.imageEnrichment,
       webSearch: deps.webSearch,
-      artTopicClassifier: this.buildArtTopicClassifier(),
+      artTopicClassifier: undefined,
       advancedGuardrail: this.buildAdvancedGuardrail(),
       advancedGuardrailObserveOnly: env.guardrails.observeOnly,
       piiSanitizer: new RegexPiiSanitizer(),

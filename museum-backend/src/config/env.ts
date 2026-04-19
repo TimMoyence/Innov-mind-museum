@@ -269,17 +269,15 @@ const env: AppEnv = {
       }
     : undefined,
   featureFlags: {
-    // voiceMode + streaming flags retired in V1 — voice pipeline (STT→LLM→TTS) and SSE
-    // are now always-on. SSE route remains @deprecated (see docs/adr/ADR-001-sse-streaming-deprecated.md).
+    // Only 2 flags remain (2026-04-19 audit). All others retired — features always-on.
+    // ocrGuard: kept pending CPU benchmark of Tesseract injection-guard.
+    // apiKeys: kept pending B2B API key programme spec (msk_* auth).
     ocrGuard: toBoolean(process.env.FEATURE_FLAG_OCR_GUARD, false),
     apiKeys: toBoolean(process.env.FEATURE_FLAG_API_KEYS, false),
-    multiTenancy: toBoolean(process.env.FEATURE_FLAG_MULTI_TENANCY, false),
-    userMemory: toBoolean(process.env.FEATURE_FLAG_USER_MEMORY, false),
-    knowledgeBase: toBoolean(process.env.FEATURE_FLAG_KNOWLEDGE_BASE, false),
-    imageEnrichment: toBoolean(process.env.FEATURE_FLAG_IMAGE_ENRICHMENT, false),
-    webSearch: toBoolean(process.env.FEATURE_FLAG_WEB_SEARCH, false),
-    knowledgeExtraction: toBoolean(process.env.FEATURE_FLAG_KNOWLEDGE_EXTRACTION, false),
-    artTopicClassifier: toBoolean(process.env.FEATURE_ART_TOPIC_CLASSIFIER, false),
+  },
+  adminFlags: {
+    // Operator-controlled pipeline flags (not user-facing rollouts).
+    enableExtraction: toBoolean(process.env.ADMIN_ENABLE_EXTRACTION, false),
   },
   freeTierDailyChatLimit: toNumber(process.env.FREE_TIER_DAILY_CHAT_LIMIT, 100),
   overpassCacheTtlSeconds: toNumber(process.env.OVERPASS_CACHE_TTL_SECONDS, 86400),

@@ -134,20 +134,15 @@ export interface AppEnv {
     serviceName: string;
   };
   featureFlags: {
+    /** Tesseract OCR-based injection-guard for uploaded images. Kept pending CPU benchmark. */
     ocrGuard: boolean;
+    /** B2B API key programme (msk_* auth). Kept pending spec validation. */
     apiKeys: boolean;
-    multiTenancy: boolean;
-    userMemory: boolean;
-    knowledgeBase: boolean;
-    imageEnrichment: boolean;
-    webSearch: boolean;
-    knowledgeExtraction: boolean;
-    /**
-     * When true, inject the output-side ArtTopicClassifier (LLM-based) that rejects
-     * responses unrelated to art/museums. Default false — discipline topique déléguée
-     * au system prompt LLM pour permettre digressions culturelles légitimes.
-     */
-    artTopicClassifier: boolean;
+  };
+  /** Operator-controlled pipeline flags (not user-facing rollouts). */
+  adminFlags: {
+    /** When true, activates the BullMQ knowledge-extraction pipeline (LLM cost — operator decision). */
+    enableExtraction: boolean;
   };
   /** Maximum chat messages a free-tier user can send per calendar day. */
   freeTierDailyChatLimit: number;

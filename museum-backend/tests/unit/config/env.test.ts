@@ -212,31 +212,26 @@ describe('env.ts module', () => {
   });
 
   describe('feature flags', () => {
-    it('all feature flags default to false when env vars are absent', () => {
-      const env = loadEnv({
-        FEATURE_FLAG_OCR_GUARD: '',
-        FEATURE_FLAG_API_KEYS: '',
-        FEATURE_FLAG_MULTI_TENANCY: '',
-        FEATURE_FLAG_USER_MEMORY: '',
-        FEATURE_FLAG_KNOWLEDGE_BASE: '',
-        FEATURE_FLAG_IMAGE_ENRICHMENT: '',
-      });
+    it('remaining feature flags default to false when env vars are absent', () => {
+      const env = loadEnv({ FEATURE_FLAG_OCR_GUARD: '', FEATURE_FLAG_API_KEYS: '' });
       expect(env.featureFlags.ocrGuard).toBe(false);
       expect(env.featureFlags.apiKeys).toBe(false);
-      expect(env.featureFlags.multiTenancy).toBe(false);
-      expect(env.featureFlags.userMemory).toBe(false);
-      expect(env.featureFlags.knowledgeBase).toBe(false);
-      expect(env.featureFlags.imageEnrichment).toBe(false);
     });
 
-    it('feature flags can be enabled individually', () => {
-      const env = loadEnv({
-        FEATURE_FLAG_USER_MEMORY: 'true',
-        FEATURE_FLAG_OCR_GUARD: '1',
-      });
-      expect(env.featureFlags.userMemory).toBe(true);
+    it('ocrGuard and apiKeys can be enabled individually', () => {
+      const env = loadEnv({ FEATURE_FLAG_OCR_GUARD: '1', FEATURE_FLAG_API_KEYS: 'true' });
       expect(env.featureFlags.ocrGuard).toBe(true);
-      expect(env.featureFlags.apiKeys).toBe(false);
+      expect(env.featureFlags.apiKeys).toBe(true);
+    });
+
+    it('adminFlags.enableExtraction reads ADMIN_ENABLE_EXTRACTION', () => {
+      const env = loadEnv({ ADMIN_ENABLE_EXTRACTION: 'true' });
+      expect(env.adminFlags.enableExtraction).toBe(true);
+    });
+
+    it('adminFlags.enableExtraction defaults to false', () => {
+      const env = loadEnv({ ADMIN_ENABLE_EXTRACTION: undefined });
+      expect(env.adminFlags.enableExtraction).toBe(false);
     });
   });
 

@@ -32,7 +32,7 @@ export class KnowledgeExtractionModule {
     const museumRepo = new TypeOrmMuseumEnrichmentRepo(dataSource.getRepository(MuseumEnrichment));
     const dbLookup = new DbLookupService(artworkRepo, museumRepo);
 
-    if (!env.featureFlags.knowledgeExtraction) {
+    if (!env.adminFlags.enableExtraction) {
       logger.info('knowledge_extraction_disabled');
       return { dbLookup, close: () => Promise.resolve() };
     }
