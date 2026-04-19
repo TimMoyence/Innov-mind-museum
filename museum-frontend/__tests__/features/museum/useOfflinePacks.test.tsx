@@ -9,19 +9,15 @@ jest.mock('@/features/museum/infrastructure/offlinePackManager', () => ({
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useOfflinePacks } from '@/features/museum/application/useOfflinePacks';
-import type { City } from '@/features/museum/infrastructure/cityCatalog';
+import { findCity } from '@/features/museum/infrastructure/cityCatalog';
 import { offlinePackManager } from '@/features/museum/infrastructure/offlinePackManager';
 
 const mockedList = offlinePackManager.listPacks as jest.Mock;
 const mockedDownload = offlinePackManager.downloadPack as jest.Mock;
 const mockedDelete = offlinePackManager.deletePackByCity as jest.Mock;
 
-const parisCity: City = {
-  id: 'paris',
-  name: 'Paris',
-  bounds: [2.224, 48.815, 2.47, 48.902],
-  center: [2.3522, 48.8566],
-};
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+const parisCity = findCity('paris')!;
 
 beforeEach(() => {
   mockedList.mockReset();

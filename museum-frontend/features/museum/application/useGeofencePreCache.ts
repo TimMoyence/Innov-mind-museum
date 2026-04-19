@@ -49,17 +49,11 @@ export const useGeofencePreCache = ({ latitude, longitude }: UseGeofencePreCache
         const already = await offlinePackManager.hasPack(city.id);
         if (already) continue;
         try {
-          await offlinePackManager.downloadPack(
-            {
-              cityId: city.id,
-              bounds: city.bounds,
-              mapStyleUrl: OFFLINE_STYLE_URL,
-            },
-            () => {
-              // Progress events are consumed by the settings screen when the
-              // user opens it; no local state here.
-            },
-          );
+          await offlinePackManager.downloadPack({
+            cityId: city.id,
+            bounds: city.bounds,
+            mapStyleUrl: OFFLINE_STYLE_URL,
+          });
         } catch (error) {
           reportError(error, {
             component: 'useGeofencePreCache',

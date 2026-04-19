@@ -66,31 +66,49 @@ export const useOfflinePacks = (): UseOfflinePacksResult => {
         ...current,
         [city.id]: { status: 'active', percentage: 0, bytesOnDisk: 0 },
       }));
-      await offlinePackManager.downloadPack(
-        {
-          cityId: city.id,
-          bounds: city.bounds,
-          mapStyleUrl,
-        },
-        (progress) => {
-          setPacksByCity((current) => ({
-            ...current,
-            [progress.cityId]: progressToState(progress),
-          }));
-        },
-      );
-      await refresh();
+      try {
+        await offlinePackManager.downloadPack(
+          {
+            cityId: city.id,
+            bounds: city.bounds,
+            mapStyleUrl,
+          },
+          (progress) => {
+            setPacksByCity((current) => ({
+              ...current,
+              [progress.cityId]: progressToState(progress),
+            }));
+          },
+        );
+        await refresh();
+      } catch (error) {
+        // Revert optimistic state so the row shows as absent (retryable).
+        setPacksByCity((current) => {
+          const { [city.id]: _removed, ...rest } = current;
+          return rest;
+        });
+        throw error;
+      }
     },
     [refresh],
   );
 
-  const remove = useCallback(async (cityId: CityId) => {
-    await offlinePackManager.deletePackByCity(cityId);
-    setPacksByCity((current) => {
-      const { [cityId]: _removed, ...rest } = current;
-      return rest;
-    });
-  }, []);
+  const remove = useCallback(
+    async (cityId: CityId) => {
+      try {
+        await offlinePackManager.deletePackByCity(cityId);
+      } catch (error) {
+        // Re-sync with native storage so UI state matches reality.
+        await refresh();
+        throw error;
+      }
+      setPacksByCity((current) => {
+        const { [cityId]: _removed, ...rest } = current;
+        return rest;
+      });
+    },
+    [refresh],
+  );
 
   return { packsByCity, isLoading, refresh, download, remove };
 };

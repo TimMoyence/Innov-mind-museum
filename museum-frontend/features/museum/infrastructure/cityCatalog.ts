@@ -1,4 +1,5 @@
-import type { CityId } from './offlinePackManager';
+/** Opaque string alias for city identifiers used across the offline pack system. */
+export type CityId = string;
 
 export interface City {
   id: CityId;

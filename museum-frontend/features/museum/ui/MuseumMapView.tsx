@@ -5,6 +5,7 @@ import {
   type GeoJSONSourceRef,
   Layer,
   Map,
+  type PressEventWithFeatures,
   type ViewStateChangeEvent,
 } from '@maplibre/maplibre-react-native';
 import type { FeatureCollection, Point } from 'geojson';
@@ -50,10 +51,6 @@ interface ClusterProperties {
 }
 
 type PressedProperties = ClusterProperties | MuseumFeatureProperties;
-
-interface PressEventWithFeatures {
-  features: { properties: PressedProperties | null }[];
-}
 
 const isClusterProperties = (props: PressedProperties | null): props is ClusterProperties =>
   props !== null && 'cluster' in props;
@@ -143,6 +140,7 @@ export const MuseumMapView = ({
       return;
     }
 
+    // First fit is always instant regardless of reduceMotion — no animation before first paint.
     const animationDuration = !hasFittedRef.current || reduceMotion ? 0 : FIT_DURATION_MS;
 
     if (points.length === 1) {
@@ -196,18 +194,17 @@ export const MuseumMapView = ({
   );
 
   const handleMuseumPress = useCallback(
-    (event: NativeSyntheticEvent<unknown>) => {
-      const nativeEvent = event.nativeEvent as PressEventWithFeatures;
-      const feature = nativeEvent.features.at(0);
+    (event: NativeSyntheticEvent<PressEventWithFeatures>) => {
+      const feature = event.nativeEvent.features.at(0);
       if (!feature) return;
-      const { properties } = feature;
+      const properties = feature.properties as PressedProperties | null;
       if (!properties) return;
 
       if (isClusterProperties(properties)) {
         userPannedRef.current = true;
         const source = museumsSourceRef.current;
-        const geometry = (feature as { geometry?: { coordinates?: [number, number] } }).geometry;
-        const center = geometry?.coordinates;
+        const point = feature.geometry?.type === 'Point' ? feature.geometry : null;
+        const center = point?.coordinates as [number, number] | undefined;
         if (!source || !center) return;
         const duration = reduceMotion ? 0 : CLUSTER_EXPAND_DURATION_MS;
         source
@@ -393,7 +390,7 @@ export const MuseumMapView = ({
           </GlassCard>
         </View>
       ) : null}
-      <PerfOverlay />
+      {__DEV__ ? <PerfOverlay /> : null}
     </View>
   );
 };

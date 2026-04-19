@@ -2,7 +2,8 @@ import { OfflineManager, type OfflinePack } from '@maplibre/maplibre-react-nativ
 
 import { reportError } from '@/shared/observability/errorReporting';
 
-export type CityId = string;
+import type { CityId } from './cityCatalog';
+export type { CityId };
 
 export interface CityPackRequest {
   cityId: CityId;
@@ -87,12 +88,23 @@ export const offlinePackManager = {
 
   async downloadPack(
     request: CityPackRequest,
-    onProgress: (progress: CityPackProgress) => void,
+    onProgress: (progress: CityPackProgress) => void = () => {},
   ): Promise<CityPackSummary> {
-    const existing = await this.listPacks();
-    const alreadyPresent = existing.find((pack) => pack.cityId === request.cityId);
-    if (alreadyPresent?.state === 'complete') {
-      return alreadyPresent;
+    // Check for an existing pack without calling status() on every pack in the catalog.
+    const allPacks = await OfflineManager.getPacks();
+    const existingPack = allPacks.find((p) => readCityId(p) === request.cityId);
+    if (existingPack) {
+      const status = await existingPack.status();
+      if (status.state === 'complete') {
+        return {
+          id: existingPack.id,
+          cityId: request.cityId,
+          bounds: existingPack.bounds,
+          bytesOnDisk: status.completedResourceSize,
+          percentage: status.percentage,
+          state: status.state,
+        };
+      }
     }
 
     const pack = await OfflineManager.createPack(
