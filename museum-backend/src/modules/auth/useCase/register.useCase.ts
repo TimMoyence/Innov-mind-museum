@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 
+import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
 import { badRequest } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { validateEmail } from '@shared/validation/email';
@@ -27,6 +28,7 @@ export class RegisterUseCase {
    * @param password - The user's chosen password.
    * @param firstname - Optional first name.
    * @param lastname - Optional last name.
+   * @param locale - Email locale for building the verification URL (defaults to `'fr'`).
    * @returns The newly created user.
    * @throws {AppError} 400 if validation fails.
    */
@@ -35,6 +37,7 @@ export class RegisterUseCase {
     password: string,
     firstname?: string,
     lastname?: string,
+    locale: EmailLocale = DEFAULT_EMAIL_LOCALE,
   ): Promise<User> {
     const normalizedEmail = email.trim().toLowerCase();
 
@@ -70,7 +73,7 @@ export class RegisterUseCase {
       await this.userRepository.setVerificationToken(user.id, token, expires);
 
       if (this.emailService && this.frontendUrl) {
-        const verifyLink = `${this.frontendUrl}/verify-email?token=${token}`;
+        const verifyLink = `${this.frontendUrl}/${locale}/verify-email?token=${token}`;
         const htmlContent =
           '<h1>Verify your email</h1>' +
           '<p>Welcome to Musaium! Click the link below to verify your email address.</p>' +

@@ -2509,3 +2509,85 @@ Ces items ont été identifiés mais non traités (scope CTO audit = corrections
 - `tokens.functional.ts` : `design-system/build:tokens` à vérifier si script casse après DS-08
 - Worker leak potentiel dans `useChatSession` streaming (à investiguer device réel)
 - NL-3.9 Phase A observe-only : déploiement VPS + 30j télémétrie (hors session — ops)
+
+---
+
+## 2026-04-19 EOD — i18n Email Auth Flow (BE + Web)
+
+### Contexte
+
+Ajout de la localisation (fr/en) des liens dans les emails transactionnels d'authentification
+(`verify-email`, `reset-password`, `confirm-email-change`). Sans locale, les liens pointaient
+systematiquement vers `/fr/...`, provoquant un 301 → 404 pour les comptes EN.
+
+### Backend
+
+**Nouveau module** : `src/shared/email/email-locale.ts` (49L)
+- `EmailLocale = 'fr' | 'en'`, `DEFAULT_EMAIL_LOCALE = 'fr'`
+- `resolveEmailLocale(input: unknown)` — allowlist stricte (anything !== 'fr'|'en' retombe a 'fr')
+- `localeFromAcceptLanguage(header)` — heuristique word-boundary regex (rejette `entrepreneur`,
+  `frankfurt`), input cape a 256 chars (hardening post security audit).
+
+**Routes** (`auth.route.ts`) — helper `pickEmailLocale(req)` avec priorite body.locale >
+Accept-Language > default, injecte dans `registerUseCase`, `forgotPasswordUseCase`,
+`changeEmailUseCase`.
+
+**Schemas** (`auth.schemas.ts`) — `locale: z.enum(['fr', 'en']).optional()` sur les 3 schemas
+concernes.
+
+**UseCases** — register / forgotPassword / changeEmail signent leur `execute` avec un parametre
+`locale: EmailLocale = DEFAULT_EMAIL_LOCALE`, et interpolent `${frontendUrl}/${locale}/...` dans
+l'URL du lien email.
+
+**Tests** :
+- `tests/unit/shared/email-locale.test.ts` (NOUVEAU — 16 tests : allowlist `resolveEmailLocale`
+  contre CRLF/traversal/URL-encode, word-boundary match pour `en-US`, rejet de substrings comme
+  `entrepreneur`, cap 256 chars, defaults).
+- Tests unit useCases etendus : assertions locale 'fr' par defaut + 'en' explicite dans l'URL.
+- Fix integration `auth.route.test.ts:409` : 5e arg `'fr'` attendu (default locale du helper).
+
+### Web (museum-web)
+
+**Nouveau composant** : `src/components/auth/EmailTokenFlow.tsx` (178L)
+- Shared flow pour les endpoints one-shot token (`verify-email`, `confirm-email-change`).
+- 4 states (loading / success / invalidToken / error).
+- A11y : `aria-live="polite"` sur container, `role="status"` sur spinner, `aria-hidden` sur
+  glyphes decoratifs, focus management (heading `tabIndex={-1}` + auto-focus au resolve).
+- Props : `endpoint`, `locale`, `dict`, `appScheme?` (default `musaium://`).
+
+**Pages** : `verify-email/page.tsx` + `confirm-email-change/page.tsx` avec `resolveLocale()`
+runtime guard (URL segment valide en allowlist `locales`, sinon fallback `defaultLocale`).
+
+**Thin wrappers** : `VerifyEmailForm.tsx` + `ConfirmEmailChangeForm.tsx` reduits a 14-16 lignes,
+delegant a `EmailTokenFlow` avec leur `endpoint` specifique. DRY violation resolue — plus de
+duplication de la state machine entre les deux flows.
+
+**i18n** : cles `verifyEmail` + `confirmEmailChange` ajoutees a `en.json` / `fr.json` + type
+`Dictionary` etendu dans `lib/i18n.ts`.
+
+### Verifications
+
+| Check | Resultat |
+|---|---|
+| BE `tsc --noEmit` | PASS |
+| BE tests | 2748 passed (+31 vs baseline matin 2717), 63 skipped, 0 failed |
+| BE as-any | 0 (stable) |
+| Web lint | PASS |
+| Web vitest | 174 passed (stable) |
+| Sentinelle security | PASS (2 LOW hardenings appliques : slice 256 + word-boundary) |
+| Sentinelle frontend | PASS (H1 DRY + H2 a11y + M1 guard + M2 prop appliques) |
+| Quality ratchet | UP (2717 → 2748) |
+
+### GitHub Actions
+
+Les runs ❌ observes (`semgrep` + `backend` scheduled, 2026-04-19 05:37 UTC) sont sur le SHA
+d'hier (`be84fb92`) — non lies au code d'aujourd'hui. Cause `e2e` : erreur d'env/DB CI
+pre-existante. Cause `semgrep` : `--error` flag sur findings pre-existants. Le push EOD
+(11 commits matin + ce commit i18n email) declenchera de nouveaux runs a surveiller.
+
+### Findings reportes (non-bloquants)
+
+- `APP_SCHEME_HOME = 'musaium://'` sur desktop — dead link. Option future : Universal Link ou QR.
+- Substring indexof plutot que regex q-value parsing dans `localeFromAcceptLanguage` — output
+  reste contraint par allowlist `EmailLocale`, donc non-exploitable.
+

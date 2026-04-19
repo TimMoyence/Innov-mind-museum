@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 
+import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
@@ -20,9 +21,13 @@ export class ForgotPasswordUseCase {
    * Returns `undefined` silently if the user does not exist (to prevent enumeration).
    *
    * @param email - The email to initiate reset for.
+   * @param locale - Email locale for building the reset URL (defaults to `'fr'`).
    * @returns The reset token string, or `undefined` if the user was not found.
    */
-  async execute(email: string): Promise<string | undefined> {
+  async execute(
+    email: string,
+    locale: EmailLocale = DEFAULT_EMAIL_LOCALE,
+  ): Promise<string | undefined> {
     if (!email) return;
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) return;
@@ -36,7 +41,7 @@ export class ForgotPasswordUseCase {
     await this.userRepository.setResetToken(normalizedEmail, hashedToken, expires);
 
     if (this.emailService && this.frontendUrl) {
-      const resetLink = this.frontendUrl + '/reset-password?token=' + token;
+      const resetLink = `${this.frontendUrl}/${locale}/reset-password?token=${token}`;
       const htmlContent =
         '<h1>Reset your password</h1>' +
         '<p>Click the link below to reset your Musaium password. This link expires in 1 hour.</p>' +

@@ -191,6 +191,30 @@
     "invalidToken": "Lien de réinitialisation invalide ou expiré",
     "error": "Erreur lors de la réinitialisation"
   },
+  "verifyEmail": {
+    "title": "Vérification de votre email",
+    "loading": "Vérification en cours…",
+    "success": "Email vérifié !",
+    "successHint": "Votre adresse email est maintenant confirmée. Vous pouvez retourner dans l'application Musaium.",
+    "invalidToken": "Lien de vérification invalide ou expiré",
+    "invalidTokenHint": "Le lien a peut-être déjà été utilisé ou a expiré après 24 heures. Réessayez depuis l'application.",
+    "error": "Impossible de vérifier votre email",
+    "errorHint": "Une erreur est survenue. Veuillez réessayer plus tard.",
+    "backToHome": "Retour à l'accueil",
+    "openApp": "Ouvrir Musaium"
+  },
+  "confirmEmailChange": {
+    "title": "Changement d'adresse email",
+    "loading": "Confirmation en cours…",
+    "success": "Adresse email mise à jour !",
+    "successHint": "Votre nouvelle adresse email est active. Utilisez-la pour vous connecter la prochaine fois.",
+    "invalidToken": "Lien de confirmation invalide ou expiré",
+    "invalidTokenHint": "Le lien a peut-être déjà été utilisé ou a expiré après 1 heure. Relancez la procédure depuis l'application.",
+    "error": "Impossible de confirmer le changement",
+    "errorHint": "Une erreur est survenue. Veuillez réessayer plus tard.",
+    "backToHome": "Retour à l'accueil",
+    "openApp": "Ouvrir Musaium"
+  },
   "admin": {
     "dashboard": "Tableau de bord",
     "users": "Utilisateurs",

@@ -191,6 +191,30 @@
     "invalidToken": "Invalid or expired reset link",
     "error": "Error resetting password"
   },
+  "verifyEmail": {
+    "title": "Email verification",
+    "loading": "Verifying…",
+    "success": "Email verified!",
+    "successHint": "Your email address is now confirmed. You can return to the Musaium app.",
+    "invalidToken": "Invalid or expired verification link",
+    "invalidTokenHint": "The link may have already been used or expired after 24 hours. Try again from the app.",
+    "error": "Unable to verify your email",
+    "errorHint": "Something went wrong. Please try again later.",
+    "backToHome": "Back to home",
+    "openApp": "Open Musaium"
+  },
+  "confirmEmailChange": {
+    "title": "Email address change",
+    "loading": "Confirming…",
+    "success": "Email address updated!",
+    "successHint": "Your new email address is active. Use it to sign in next time.",
+    "invalidToken": "Invalid or expired confirmation link",
+    "invalidTokenHint": "The link may have already been used or expired after 1 hour. Start the procedure again from the app.",
+    "error": "Unable to confirm the change",
+    "errorHint": "Something went wrong. Please try again later.",
+    "backToHome": "Back to home",
+    "openApp": "Open Musaium"
+  },
   "admin": {
     "dashboard": "Dashboard",
     "users": "Users",

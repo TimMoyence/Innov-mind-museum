@@ -144,7 +144,7 @@ describe('ForgotPasswordUseCase', () => {
     expect(repo.getUserByEmail).toHaveBeenCalledWith('user@test.com');
   });
 
-  it('includes reset link with frontendUrl in email HTML', async () => {
+  it('includes reset link with frontendUrl and default locale "fr" in email HTML', async () => {
     const repo = makeUserRepo(makeUser());
     const emailService = makeEmailService();
     const useCase = new ForgotPasswordUseCase(
@@ -156,7 +156,23 @@ describe('ForgotPasswordUseCase', () => {
     const token = await useCase.execute('user@test.com');
 
     const htmlArg = emailService.sendEmail.mock.calls[0][2];
-    expect(htmlArg).toContain('https://my-app.com/reset-password?token=' + token);
+    expect(htmlArg).toContain('https://my-app.com/fr/reset-password?token=' + token);
+  });
+
+  it('includes reset link with "en" locale when requested', async () => {
+    const repo = makeUserRepo(makeUser());
+    const emailService = makeEmailService();
+    const useCase = new ForgotPasswordUseCase(
+      repo as unknown as IUserRepository,
+      emailService,
+      'https://my-app.com',
+    );
+
+    const token = await useCase.execute('user@test.com', 'en');
+
+    const htmlArg = emailService.sendEmail.mock.calls[0][2];
+    expect(htmlArg).toContain('https://my-app.com/en/reset-password?token=' + token);
+    expect(htmlArg).not.toContain('/fr/reset-password');
   });
 
   it('generates unique tokens on successive calls', async () => {

@@ -21,6 +21,11 @@ import {
   AUDIT_AUTH_ONBOARDING_COMPLETED,
   AUDIT_AUTH_CONTENT_PREFERENCES_UPDATED,
 } from '@shared/audit/audit.types';
+import {
+  type EmailLocale,
+  localeFromAcceptLanguage,
+  resolveEmailLocale,
+} from '@shared/email/email-locale';
 import { AppError, badRequest } from '@shared/errors/app.error';
 import { requireUser } from '@shared/http/requireUser';
 import { env } from '@src/config/env';
@@ -76,6 +81,22 @@ import {
  */
 const authRouter: Router = Router();
 
+/**
+ * Pick the email locale for outgoing transactional emails.
+ *
+ * Priority order:
+ *   1. Explicit `locale` field in the request body (validated by Zod → `'fr' | 'en'`).
+ *   2. `Accept-Language` header (simple fr/en heuristic).
+ *   3. Default (`'fr'`).
+ */
+function pickEmailLocale(req: Request): EmailLocale {
+  const bodyLocale = (req.body as { locale?: unknown }).locale;
+  if (bodyLocale === 'fr' || bodyLocale === 'en') {
+    return resolveEmailLocale(bodyLocale);
+  }
+  return localeFromAcceptLanguage(req.headers['accept-language']);
+}
+
 const registerLimiter = createRateLimitMiddleware({
   limit: 5,
   windowMs: 600_000,
@@ -94,7 +115,8 @@ authRouter.post(
   validateBody(registerSchema),
   async (req: Request, res: Response) => {
     const { email, password, firstname, lastname } = req.body;
-    const user = await registerUseCase.execute(email, password, firstname, lastname);
+    const locale = pickEmailLocale(req);
+    const user = await registerUseCase.execute(email, password, firstname, lastname, locale);
     auditService.log({
       action: AUDIT_AUTH_REGISTER,
       actorType: 'user',
@@ -308,7 +330,8 @@ authRouter.put(
   async (req: Request, res: Response) => {
     const jwtUser = requireUser(req);
     const { newEmail, currentPassword } = req.body;
-    const token = await changeEmailUseCase.execute(jwtUser.id, newEmail, currentPassword);
+    const locale = pickEmailLocale(req);
+    const token = await changeEmailUseCase.execute(jwtUser.id, newEmail, currentPassword, locale);
     auditService.log({
       action: AUDIT_AUTH_EMAIL_CHANGE_REQUEST,
       actorType: 'user',
@@ -361,7 +384,8 @@ authRouter.post(
   validateBody(forgotPasswordSchema),
   async (req: Request, res: Response) => {
     const { email } = req.body;
-    const token = await forgotPasswordUseCase.execute(email);
+    const locale = pickEmailLocale(req);
+    const token = await forgotPasswordUseCase.execute(email, locale);
     auditService.log({
       action: AUDIT_AUTH_PASSWORD_RESET_REQUEST,
       actorType: 'anonymous',

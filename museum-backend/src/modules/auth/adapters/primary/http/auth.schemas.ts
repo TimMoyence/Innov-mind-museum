@@ -7,6 +7,7 @@ export const registerSchema = z.object({
   password: z.string().min(8).max(128),
   firstname: z.string().max(100).optional(),
   lastname: z.string().max(100).optional(),
+  locale: z.enum(['fr', 'en']).optional(),
 });
 
 export const loginSchema = z.object({
@@ -34,6 +35,7 @@ export const changePasswordSchema = z.object({
 
 export const forgotPasswordSchema = z.object({
   email: z.string().email(),
+  locale: z.enum(['fr', 'en']).optional(),
 });
 
 export const resetPasswordSchema = z.object({
@@ -48,6 +50,7 @@ export const verifyEmailSchema = z.object({
 export const changeEmailSchema = z.object({
   newEmail: z.string().email(),
   currentPassword: z.string().min(1),
+  locale: z.enum(['fr', 'en']).optional(),
 });
 
 export const confirmEmailChangeSchema = z.object({

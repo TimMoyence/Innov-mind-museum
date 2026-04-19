@@ -48,6 +48,22 @@ describe('ChangeEmailUseCase', () => {
       'Confirm your Musaium email change',
       expect.stringContaining(token),
     );
+    // Default locale 'fr' is prepended to the confirmation URL
+    const htmlArg = emailService.sendEmail.mock.calls[0][2];
+    expect(htmlArg).toContain('https://app.musaium.com/fr/confirm-email-change?token=' + token);
+  });
+
+  it('builds confirmation URL with "en" locale when requested', async () => {
+    (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true);
+    const repo = makeUserRepo();
+    const emailService = makeEmailService();
+    const useCase = new ChangeEmailUseCase(repo, emailService, 'https://app.musaium.com');
+
+    const token = await useCase.execute(1, 'new@test.com', 'ValidPass1', 'en');
+
+    const htmlArg = emailService.sendEmail.mock.calls[0][2];
+    expect(htmlArg).toContain('https://app.musaium.com/en/confirm-email-change?token=' + token);
+    expect(htmlArg).not.toContain('/fr/confirm-email-change');
   });
 
   it('rejects wrong current password', async () => {

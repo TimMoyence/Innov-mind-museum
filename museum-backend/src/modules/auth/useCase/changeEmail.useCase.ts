@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 
 import bcrypt from 'bcrypt';
 
+import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
 import { AppError, badRequest } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { validateEmail } from '@shared/validation/email';
@@ -27,9 +28,15 @@ export class ChangeEmailUseCase {
    * @param userId - The authenticated user's ID.
    * @param newEmail - The desired new email address.
    * @param currentPassword - The user's current password for re-authentication.
+   * @param locale - Email locale for building the confirmation URL (defaults to `'fr'`).
    * @returns The plain-text token (useful in dev/test; production relies on email).
    */
-  async execute(userId: number, newEmail: string, currentPassword: string): Promise<string> {
+  async execute(
+    userId: number,
+    newEmail: string,
+    currentPassword: string,
+    locale: EmailLocale = DEFAULT_EMAIL_LOCALE,
+  ): Promise<string> {
     const user = await this.userRepository.getUserById(userId);
     if (!user) {
       throw new AppError({ message: 'User not found', statusCode: 404, code: 'NOT_FOUND' });
@@ -67,7 +74,7 @@ export class ChangeEmailUseCase {
     await this.userRepository.setEmailChangeToken(userId, hashedToken, normalizedEmail, expires);
 
     if (this.emailService && this.frontendUrl) {
-      const confirmLink = `${this.frontendUrl}/confirm-email-change?token=${token}`;
+      const confirmLink = `${this.frontendUrl}/${locale}/confirm-email-change?token=${token}`;
       const htmlContent =
         '<h1>Confirm your email change</h1>' +
         '<p>You requested to change your Musaium email address. Click the link below to confirm.</p>' +

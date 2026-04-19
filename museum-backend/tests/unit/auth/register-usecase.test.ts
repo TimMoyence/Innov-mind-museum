@@ -125,6 +125,24 @@ describe('RegisterUseCase', () => {
       expect.stringContaining('Verify'),
       expect.stringContaining('verify-email'),
     );
+    // Default locale 'fr' is prepended to the verification URL
+    const htmlArg = emailService.sendEmail.mock.calls[0][2];
+    expect(htmlArg).toContain('https://app.example.com/fr/verify-email?token=');
+  });
+
+  it('builds verification URL with "en" locale when requested', async () => {
+    const registeredUser = makeUser({ id: 6 });
+    const userRepo = makeUserRepo(null, {
+      registerUser: jest.fn().mockResolvedValue(registeredUser),
+    });
+    const emailService = makeMockEmailService();
+
+    const useCase = new RegisterUseCase(userRepo, emailService, 'https://app.example.com');
+    await useCase.execute('user@test.com', 'StrongP@ss1!', undefined, undefined, 'en');
+
+    const htmlArg = emailService.sendEmail.mock.calls[0][2];
+    expect(htmlArg).toContain('https://app.example.com/en/verify-email?token=');
+    expect(htmlArg).not.toContain('/fr/verify-email');
   });
 
   it('registration succeeds even if email send fails (non-blocking)', async () => {

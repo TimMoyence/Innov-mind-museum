@@ -125,6 +125,30 @@ export interface Dictionary {
     invalidToken: string;
     error: string;
   };
+  verifyEmail: {
+    title: string;
+    loading: string;
+    success: string;
+    successHint: string;
+    invalidToken: string;
+    invalidTokenHint: string;
+    error: string;
+    errorHint: string;
+    backToHome: string;
+    openApp: string;
+  };
+  confirmEmailChange: {
+    title: string;
+    loading: string;
+    success: string;
+    successHint: string;
+    invalidToken: string;
+    invalidTokenHint: string;
+    error: string;
+    errorHint: string;
+    backToHome: string;
+    openApp: string;
+  };
   admin: {
     dashboard: string;
     users: string;
