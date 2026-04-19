@@ -28,13 +28,21 @@ jest.mock('@maplibre/maplibre-react-native', () => {
 
   return {
     __esModule: true,
-    Map: ({ children, onRegionDidChange, ...rest }: Record<string, unknown>) =>
+    Map: ({
+      children,
+      onRegionDidChange,
+      onDidFailLoadingMap,
+      accessibilityLabel,
+      accessibilityHint,
+    }: Record<string, unknown>) =>
       ReactMock.createElement(
         View,
         {
           testID: 'maplibre-map',
           onRegionDidChange,
-          accessibilityLabel: JSON.stringify({ hasStyle: Boolean(rest.mapStyle) }),
+          onDidFailLoadingMap,
+          accessibilityLabel,
+          accessibilityHint,
         },
         children,
       ),
@@ -47,7 +55,7 @@ jest.mock('@maplibre/maplibre-react-native', () => {
         {
           testID: `source-${String(id)}`,
           onPress,
-          accessibilityLabel: JSON.stringify(data),
+          accessibilityValue: { text: JSON.stringify(data) },
         },
         children,
       ),
@@ -61,7 +69,7 @@ jest.mock('@maplibre/maplibre-react-native', () => {
   };
 });
 
-import { render, screen } from '@testing-library/react-native';
+import { act, render, screen } from '@testing-library/react-native';
 
 import { MuseumMapView } from '@/features/museum/ui/MuseumMapView';
 
@@ -104,8 +112,42 @@ describe('MuseumMapView', () => {
       />,
     );
     const source = screen.getByTestId('source-museums');
-    const raw = source.props.accessibilityLabel as string;
+    const raw = (source.props.accessibilityValue as { text: string }).text;
     const payload = JSON.parse(raw) as { features: unknown[] };
     expect(payload.features).toHaveLength(1);
+  });
+
+  it('exposes the map a11y label and hint tied to the i18n keys', () => {
+    render(
+      <MuseumMapView
+        museums={[
+          makeMuseum({ latitude: 48.85, longitude: 2.35 }),
+          makeMuseum({ latitude: 48.86, longitude: 2.36 }),
+          makeMuseum({ latitude: null, longitude: null }),
+        ]}
+        userLatitude={null}
+        userLongitude={null}
+      />,
+    );
+    const map = screen.getByTestId('maplibre-map');
+    // react-i18next without a backend echoes the key itself — we only assert
+    // the component passed the right key to t(), and that the hint exists.
+    expect(map.props.accessibilityLabel).toBe('museumDirectory.map_a11y_label');
+    expect(map.props.accessibilityHint).toBe('museumDirectory.map_a11y_hint');
+  });
+
+  it('renders the load-error overlay when onDidFailLoadingMap fires', () => {
+    render(
+      <MuseumMapView
+        museums={[makeMuseum({ latitude: 48.85, longitude: 2.35 })]}
+        userLatitude={null}
+        userLongitude={null}
+      />,
+    );
+    const map = screen.getByTestId('maplibre-map');
+    act(() => {
+      (map.props.onDidFailLoadingMap as () => void)();
+    });
+    expect(screen.getByRole('alert')).toBeTruthy();
   });
 });

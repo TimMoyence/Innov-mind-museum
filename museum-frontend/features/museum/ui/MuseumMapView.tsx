@@ -8,9 +8,9 @@ import {
   type ViewStateChangeEvent,
 } from '@maplibre/maplibre-react-native';
 import type { FeatureCollection, Point } from 'geojson';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { NativeSyntheticEvent } from 'react-native';
-import { StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { PerfOverlay } from '@/features/diagnostics/PerfOverlay';
@@ -110,6 +110,24 @@ export const MuseumMapView = ({
   const museumsSourceRef = useRef<GeoJSONSourceRef>(null);
   const userPannedRef = useRef(false);
   const hasFittedRef = useRef(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const [hasLoadError, setHasLoadError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((enabled) => {
+        if (!cancelled) setReduceMotion(enabled);
+      })
+      .catch(() => {
+        // Silently default to animations-on if the native query fails.
+      });
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => {
+      cancelled = true;
+      subscription.remove();
+    };
+  }, []);
 
   const mapStyle = useMemo(() => buildOsmRasterStyle(isDark), [isDark]);
   const museumCollection = useMemo(() => buildMuseumFeatureCollection(museums), [museums]);
@@ -140,11 +158,13 @@ export const MuseumMapView = ({
       return;
     }
 
+    const animationDuration = !hasFittedRef.current || reduceMotion ? 0 : FIT_DURATION_MS;
+
     if (points.length === 1) {
       camera.flyTo({
         center: points[0],
         zoom: SINGLE_POINT_ZOOM,
-        duration: hasFittedRef.current ? FIT_DURATION_MS : 0,
+        duration: animationDuration,
       });
       hasFittedRef.current = true;
       return;
@@ -172,10 +192,10 @@ export const MuseumMapView = ({
 
     camera.fitBounds([minLng, minLat, maxLng, maxLat], {
       padding: { top: FIT_PADDING, right: FIT_PADDING, bottom: FIT_PADDING, left: FIT_PADDING },
-      duration: hasFittedRef.current ? FIT_DURATION_MS : 0,
+      duration: animationDuration,
     });
     hasFittedRef.current = true;
-  }, [museumCollection, userLatitude, userLongitude]);
+  }, [museumCollection, reduceMotion, userLatitude, userLongitude]);
 
   const handleRegionDidChange = useCallback(
     (event: NativeSyntheticEvent<ViewStateChangeEvent>) => {
@@ -204,20 +224,17 @@ export const MuseumMapView = ({
         const geometry = (feature as { geometry?: { coordinates?: [number, number] } }).geometry;
         const center = geometry?.coordinates;
         if (!source || !center) return;
+        const duration = reduceMotion ? 0 : CLUSTER_EXPAND_DURATION_MS;
         source
           .getClusterExpansionZoom(properties.cluster_id)
           .then((zoom) => {
-            cameraRef.current?.flyTo({
-              center,
-              zoom,
-              duration: CLUSTER_EXPAND_DURATION_MS,
-            });
+            cameraRef.current?.flyTo({ center, zoom, duration });
           })
           .catch(() => {
             cameraRef.current?.flyTo({
               center,
               zoom: CLUSTER_EXPAND_ZOOM_FALLBACK,
-              duration: CLUSTER_EXPAND_DURATION_MS,
+              duration,
             });
           });
         return;
@@ -229,14 +246,19 @@ export const MuseumMapView = ({
         onMuseumSelect(museum);
       }
     },
-    [museums, onMuseumSelect],
+    [museums, onMuseumSelect, reduceMotion],
   );
 
   const handleDidFailLoadingMap = useCallback(() => {
+    setHasLoadError(true);
     reportError(new Error('MuseumMapView failed to load map style'), {
       component: 'MuseumMapView',
       reason: 'maplibre_style_load_failed',
     });
+  }, []);
+
+  const handleDidFinishLoadingMap = useCallback(() => {
+    setHasLoadError(false);
   }, []);
 
   const handleDidFinishRenderingMapFully = useCallback(() => {
@@ -252,10 +274,14 @@ export const MuseumMapView = ({
   }, [museumCollection]);
 
   const isEmpty = museums.length === 0;
+  const visibleMuseumCount = museumCollection.features.length;
+  const mapA11yLabel = t('museumDirectory.map_a11y_label', { count: visibleMuseumCount });
 
   return (
     <View style={styles.container}>
       <Map
+        accessibilityLabel={mapA11yLabel}
+        accessibilityHint={t('museumDirectory.map_a11y_hint')}
         style={[
           styles.map,
           {
@@ -266,6 +292,7 @@ export const MuseumMapView = ({
         mapStyle={mapStyle}
         onRegionDidChange={handleRegionDidChange}
         onDidFailLoadingMap={handleDidFailLoadingMap}
+        onDidFinishLoadingMap={handleDidFinishLoadingMap}
         onDidFinishRenderingMapFully={handleDidFinishRenderingMapFully}
         attribution
         logo={false}
@@ -355,7 +382,7 @@ export const MuseumMapView = ({
           </GeoJSONSource>
         ) : null}
       </Map>
-      {isEmpty ? (
+      {isEmpty && !hasLoadError ? (
         <View style={styles.emptyOverlay} pointerEvents="box-none">
           <GlassCard style={styles.emptyCard} intensity={60}>
             <Text
@@ -364,6 +391,19 @@ export const MuseumMapView = ({
               accessibilityLiveRegion="polite"
             >
               {t('museumDirectory.map_empty')}
+            </Text>
+          </GlassCard>
+        </View>
+      ) : null}
+      {hasLoadError ? (
+        <View style={styles.emptyOverlay} pointerEvents="box-none">
+          <GlassCard style={styles.emptyCard} intensity={60}>
+            <Text
+              style={[styles.emptyText, { color: theme.textPrimary }]}
+              accessibilityRole="alert"
+              accessibilityLiveRegion="assertive"
+            >
+              {t('museumDirectory.map_error')}
             </Text>
           </GlassCard>
         </View>
