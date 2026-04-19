@@ -2,6 +2,7 @@ import {
   Camera,
   type CameraRef,
   GeoJSONSource,
+  type GeoJSONSourceRef,
   Layer,
   Map,
   type ViewStateChangeEvent,
@@ -38,15 +39,34 @@ interface MuseumMapViewProps {
   onMuseumSelect?: (museum: MuseumWithDistance) => void;
 }
 
-interface PressEventWithFeatures {
-  features: { properties: MuseumFeatureProperties | null }[];
+interface ClusterProperties {
+  cluster: true;
+  cluster_id: number;
+  point_count: number;
+  point_count_abbreviated: string;
 }
+
+type PressedProperties = ClusterProperties | MuseumFeatureProperties;
+
+interface PressEventWithFeatures {
+  features: { properties: PressedProperties | null }[];
+}
+
+const isClusterProperties = (props: PressedProperties | null): props is ClusterProperties =>
+  props !== null && 'cluster' in props;
 
 const MUSEUMS_SOURCE_ID = 'museums';
 const MUSEUM_POINTS_LAYER_ID = 'museum-points';
+const CLUSTER_CIRCLES_LAYER_ID = 'museum-clusters';
+const CLUSTER_COUNT_LAYER_ID = 'museum-cluster-count';
 const USER_SOURCE_ID = 'user-position';
 const USER_DOT_LAYER_ID = 'user-dot';
 const USER_HALO_LAYER_ID = 'user-halo';
+
+const CLUSTER_RADIUS_PX = 60;
+const CLUSTER_MAX_ZOOM = 14;
+const CLUSTER_EXPAND_ZOOM_FALLBACK = 16;
+const CLUSTER_EXPAND_DURATION_MS = 450;
 
 const DEFAULT_CENTER: [number, number] = [2.3522, 48.8566];
 const DEFAULT_ZOOM = 4;
@@ -85,6 +105,7 @@ export const MuseumMapView = ({
   const { theme, isDark } = useTheme();
   const { t } = useTranslation();
   const cameraRef = useRef<CameraRef>(null);
+  const museumsSourceRef = useRef<GeoJSONSourceRef>(null);
   const userPannedRef = useRef(false);
   const hasFittedRef = useRef(false);
 
@@ -169,10 +190,38 @@ export const MuseumMapView = ({
 
   const handleMuseumPress = useCallback(
     (event: NativeSyntheticEvent<unknown>) => {
-      if (!onMuseumSelect) return;
       const nativeEvent = event.nativeEvent as PressEventWithFeatures;
-      const properties = nativeEvent.features[0]?.properties ?? null;
+      const feature = nativeEvent.features.at(0);
+      if (!feature) return;
+      const { properties } = feature;
       if (!properties) return;
+
+      if (isClusterProperties(properties)) {
+        userPannedRef.current = true;
+        const source = museumsSourceRef.current;
+        const geometry = (feature as { geometry?: { coordinates?: [number, number] } }).geometry;
+        const center = geometry?.coordinates;
+        if (!source || !center) return;
+        source
+          .getClusterExpansionZoom(properties.cluster_id)
+          .then((zoom) => {
+            cameraRef.current?.flyTo({
+              center,
+              zoom,
+              duration: CLUSTER_EXPAND_DURATION_MS,
+            });
+          })
+          .catch(() => {
+            cameraRef.current?.flyTo({
+              center,
+              zoom: CLUSTER_EXPAND_ZOOM_FALLBACK,
+              duration: CLUSTER_EXPAND_DURATION_MS,
+            });
+          });
+        return;
+      }
+
+      if (!onMuseumSelect) return;
       const museum = museums.find((m) => m.id === properties.museumId);
       if (museum) {
         onMuseumSelect(museum);
@@ -208,10 +257,45 @@ export const MuseumMapView = ({
         compass={false}
       >
         <Camera ref={cameraRef} initialViewState={{ center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM }} />
-        <GeoJSONSource id={MUSEUMS_SOURCE_ID} data={museumCollection} onPress={handleMuseumPress}>
+        <GeoJSONSource
+          id={MUSEUMS_SOURCE_ID}
+          ref={museumsSourceRef}
+          data={museumCollection}
+          cluster
+          clusterRadius={CLUSTER_RADIUS_PX}
+          clusterMaxZoom={CLUSTER_MAX_ZOOM}
+          onPress={handleMuseumPress}
+        >
+          <Layer
+            id={CLUSTER_CIRCLES_LAYER_ID}
+            type="circle"
+            filter={['has', 'point_count']}
+            paint={{
+              'circle-color': theme.primary,
+              'circle-stroke-color': semantic.mapMarker.markerBorder,
+              'circle-stroke-width': 2,
+              'circle-radius': ['step', ['get', 'point_count'], 16, 10, 20, 50, 26, 200, 32],
+              'circle-opacity': 0.9,
+            }}
+          />
+          <Layer
+            id={CLUSTER_COUNT_LAYER_ID}
+            type="symbol"
+            filter={['has', 'point_count']}
+            layout={{
+              'text-field': ['get', 'point_count_abbreviated'],
+              'text-font': ['Noto Sans Regular'],
+              'text-size': 13,
+              'text-allow-overlap': true,
+            }}
+            paint={{
+              'text-color': semantic.mapMarker.markerBorder,
+            }}
+          />
           <Layer
             id={MUSEUM_POINTS_LAYER_ID}
             type="circle"
+            filter={['!', ['has', 'point_count']]}
             paint={{
               'circle-color': [
                 'match',

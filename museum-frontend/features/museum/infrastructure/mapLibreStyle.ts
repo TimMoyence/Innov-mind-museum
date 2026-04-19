@@ -19,6 +19,7 @@ const buildCartoTileUrls = (flavor: 'light_all' | 'dark_all'): string[] =>
  */
 export const buildOsmRasterStyle = (isDark: boolean): StyleSpecification => ({
   version: 8,
+  glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
   sources: {
     'osm-raster': {
       type: 'raster',
