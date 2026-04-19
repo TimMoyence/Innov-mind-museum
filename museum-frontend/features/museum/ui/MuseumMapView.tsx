@@ -13,6 +13,8 @@ import type { NativeSyntheticEvent } from 'react-native';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { PerfOverlay } from '@/features/diagnostics/PerfOverlay';
+import { perfStore } from '@/features/diagnostics/perfStore';
 import { reportError } from '@/shared/observability/errorReporting';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
@@ -237,6 +239,18 @@ export const MuseumMapView = ({
     });
   }, []);
 
+  const handleDidFinishRenderingMapFully = useCallback(() => {
+    if (__DEV__) {
+      perfStore.markRenderEnd();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (__DEV__) {
+      perfStore.markRenderStart();
+    }
+  }, [museumCollection]);
+
   const isEmpty = museums.length === 0;
 
   return (
@@ -252,6 +266,7 @@ export const MuseumMapView = ({
         mapStyle={mapStyle}
         onRegionDidChange={handleRegionDidChange}
         onDidFailLoadingMap={handleDidFailLoadingMap}
+        onDidFinishRenderingMapFully={handleDidFinishRenderingMapFully}
         attribution
         logo={false}
         compass={false}
@@ -353,6 +368,7 @@ export const MuseumMapView = ({
           </GlassCard>
         </View>
       ) : null}
+      <PerfOverlay />
     </View>
   );
 };

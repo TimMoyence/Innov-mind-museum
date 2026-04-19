@@ -18,6 +18,10 @@ jest.mock('expo-router', () => ({
   router: { push: jest.fn() },
 }));
 
+jest.mock('@/features/diagnostics/PerfOverlay', () => ({
+  PerfOverlay: () => null,
+}));
+
 jest.mock('@maplibre/maplibre-react-native', () => {
   const ReactMock = require('react');
   const { View } = require('react-native');
