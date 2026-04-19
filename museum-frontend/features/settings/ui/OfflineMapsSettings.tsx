@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { useOfflinePacks } from '@/features/museum/application/useOfflinePacks';
 import type { City } from '@/features/museum/infrastructure/cityCatalog';
 import { CITY_CATALOG } from '@/features/museum/infrastructure/cityCatalog';
-import { OFFLINE_STYLE_URL } from '@/features/museum/infrastructure/mapStyleUrl';
 import { useAutoPreCachePreference } from '@/features/settings/application/useAutoPreCachePreference';
 import { reportError } from '@/shared/observability/errorReporting';
 import { GlassCard } from '@/shared/ui/GlassCard';
@@ -34,7 +33,7 @@ export const OfflineMapsSettings = () => {
 
   const handleDownload = useCallback(
     (city: City) => {
-      void download(city, OFFLINE_STYLE_URL).catch((error: unknown) => {
+      void download(city).catch((error: unknown) => {
         reportError(error, {
           component: 'OfflineMapsSettings',
           action: 'download',

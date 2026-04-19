@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import type { City } from '../infrastructure/cityCatalog';
+import type { City, CityId } from '../infrastructure/cityCatalog';
 import {
-  type CityId,
   type CityPackProgress,
   type CityPackSummary,
   offlinePackManager,
 } from '../infrastructure/offlinePackManager';
+import { OFFLINE_STYLE_URL } from '../infrastructure/mapStyleUrl';
 
 export type CityPackState =
   | { status: 'absent' }
@@ -17,7 +17,7 @@ export interface UseOfflinePacksResult {
   packsByCity: Record<CityId, CityPackState>;
   isLoading: boolean;
   refresh: () => Promise<void>;
-  download: (city: City, mapStyleUrl: string) => Promise<void>;
+  download: (city: City) => Promise<void>;
   remove: (cityId: CityId) => Promise<void>;
 }
 
@@ -61,7 +61,7 @@ export const useOfflinePacks = (): UseOfflinePacksResult => {
   }, [refresh]);
 
   const download = useCallback(
-    async (city: City, mapStyleUrl: string) => {
+    async (city: City) => {
       setPacksByCity((current) => ({
         ...current,
         [city.id]: { status: 'active', percentage: 0, bytesOnDisk: 0 },
@@ -71,7 +71,7 @@ export const useOfflinePacks = (): UseOfflinePacksResult => {
           {
             cityId: city.id,
             bounds: city.bounds,
-            mapStyleUrl,
+            mapStyleUrl: OFFLINE_STYLE_URL,
           },
           (progress) => {
             setPacksByCity((current) => ({
@@ -95,17 +95,17 @@ export const useOfflinePacks = (): UseOfflinePacksResult => {
 
   const remove = useCallback(
     async (cityId: CityId) => {
-      try {
-        await offlinePackManager.deletePackByCity(cityId);
-      } catch (error) {
-        // Re-sync with native storage so UI state matches reality.
-        await refresh();
-        throw error;
-      }
       setPacksByCity((current) => {
         const { [cityId]: _removed, ...rest } = current;
         return rest;
       });
+      try {
+        await offlinePackManager.deletePackByCity(cityId);
+      } catch (error) {
+        // Native delete failed — re-sync so UI reflects actual storage state.
+        await refresh();
+        throw error;
+      }
     },
     [refresh],
   );

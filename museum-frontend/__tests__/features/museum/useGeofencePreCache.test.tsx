@@ -18,15 +18,18 @@ import { renderHook, waitFor } from '@testing-library/react-native';
 import { useGeofencePreCache } from '@/features/museum/application/useGeofencePreCache';
 import { offlinePackManager } from '@/features/museum/infrastructure/offlinePackManager';
 import { useAutoPreCachePreference } from '@/features/settings/application/useAutoPreCachePreference';
+import { reportError } from '@/shared/observability/errorReporting';
 
 const mockedHasPack = offlinePackManager.hasPack as jest.Mock;
 const mockedDownload = offlinePackManager.downloadPack as jest.Mock;
+const mockedReportError = reportError as jest.Mock;
 const mockedPref = useAutoPreCachePreference as jest.Mock;
 
 beforeEach(() => {
   mockedHasPack.mockReset();
   mockedDownload.mockReset();
   mockedPref.mockReset();
+  mockedReportError.mockReset();
 });
 
 describe('useGeofencePreCache', () => {
@@ -90,5 +93,52 @@ describe('useGeofencePreCache', () => {
     // Give the async loop a microtask to settle — no city should match.
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockedDownload).not.toHaveBeenCalled();
+  });
+
+  it('calls reportError with the city id when downloadPack rejects', async () => {
+    mockedPref.mockReturnValue({ enabled: true, isLoading: false, setEnabled: jest.fn() });
+    mockedHasPack.mockResolvedValue(false);
+    mockedDownload.mockRejectedValue(new Error('network'));
+
+    renderHook(() => {
+      useGeofencePreCache({ latitude: 48.8566, longitude: 2.3522 });
+    });
+
+    await waitFor(() => {
+      expect(mockedReportError).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({ component: 'useGeofencePreCache', cityId: 'paris' }),
+      );
+    });
+  });
+
+  it('does not re-trigger download for the same city on repeated GPS fixes', async () => {
+    mockedPref.mockReturnValue({ enabled: true, isLoading: false, setEnabled: jest.fn() });
+    mockedHasPack.mockResolvedValue(false);
+    mockedDownload.mockResolvedValue({
+      id: 'p1',
+      cityId: 'paris',
+      bounds: [0, 0, 0, 0],
+      bytesOnDisk: 0,
+      percentage: 0,
+      state: 'active',
+    });
+
+    const { rerender } = renderHook(
+      ({ lat, lng }: { lat: number; lng: number }) => {
+        useGeofencePreCache({ latitude: lat, longitude: lng });
+      },
+      { initialProps: { lat: 48.8566, lng: 2.3522 } },
+    );
+
+    await waitFor(() => {
+      expect(mockedDownload).toHaveBeenCalledTimes(1);
+    });
+
+    // Simulate GPS jitter — same city, slightly different coordinates.
+    rerender({ lat: 48.8567, lng: 2.3523 });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(mockedDownload).toHaveBeenCalledTimes(1);
   });
 });

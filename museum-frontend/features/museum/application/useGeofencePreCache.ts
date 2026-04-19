@@ -3,9 +3,9 @@ import { useEffect, useRef } from 'react';
 import { useAutoPreCachePreference } from '@/features/settings/application/useAutoPreCachePreference';
 import { reportError } from '@/shared/observability/errorReporting';
 
-import { CITY_CATALOG } from '../infrastructure/cityCatalog';
+import { type CityId, CITY_CATALOG } from '../infrastructure/cityCatalog';
 import { OFFLINE_STYLE_URL } from '../infrastructure/mapStyleUrl';
-import { type CityId, offlinePackManager } from '../infrastructure/offlinePackManager';
+import { offlinePackManager } from '../infrastructure/offlinePackManager';
 import { haversineDistanceMeters } from './haversine';
 
 /**

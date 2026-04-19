@@ -88,7 +88,7 @@ describe('useOfflinePacks', () => {
     });
 
     await act(async () => {
-      await result.current.download(parisCity, 'https://example.com/style.json');
+      await result.current.download(parisCity);
     });
 
     expect(mockedDownload).toHaveBeenCalled();
@@ -118,5 +118,56 @@ describe('useOfflinePacks', () => {
 
     expect(mockedDelete).toHaveBeenCalledWith('paris');
     expect(result.current.packsByCity.paris).toBeUndefined();
+  });
+
+  it('reverts optimistic active state when download fails', async () => {
+    mockedList.mockResolvedValue([]);
+    mockedDownload.mockRejectedValue(new Error('network error'));
+    const { result } = renderHook(() => useOfflinePacks());
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.download(parisCity).catch(() => {});
+    });
+
+    expect(result.current.packsByCity.paris).toBeUndefined();
+  });
+
+  it('re-syncs from native storage when remove fails', async () => {
+    mockedList
+      .mockResolvedValueOnce([
+        {
+          id: 'p1',
+          cityId: 'paris',
+          bounds: parisCity.bounds,
+          bytesOnDisk: 12345,
+          percentage: 100,
+          state: 'complete',
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'p1',
+          cityId: 'paris',
+          bounds: parisCity.bounds,
+          bytesOnDisk: 12345,
+          percentage: 100,
+          state: 'complete',
+        },
+      ]);
+    mockedDelete.mockRejectedValue(new Error('delete failed'));
+    const { result } = renderHook(() => useOfflinePacks());
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.remove('paris').catch(() => {});
+    });
+
+    // refresh() was called to re-sync — city is back in state.
+    expect(result.current.packsByCity.paris).toEqual({ status: 'complete', bytesOnDisk: 12345 });
   });
 });

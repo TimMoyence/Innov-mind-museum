@@ -26,9 +26,8 @@ import {
   buildMuseumFeatureCollection,
   type MuseumFeatureProperties,
 } from '../application/buildMuseumFeatureCollection';
+import { useMapStyle } from '../application/useMapStyle';
 import type { MuseumWithDistance } from '../application/useMuseumDirectory';
-import '../infrastructure/mapLibreBootstrap';
-import { buildOsmRasterStyle } from '../infrastructure/mapLibreStyle';
 
 interface MuseumMapViewProps {
   museums: MuseumWithDistance[];
@@ -102,7 +101,7 @@ export const MuseumMapView = ({
   onMapMoved,
   onMuseumSelect,
 }: MuseumMapViewProps) => {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const { t } = useTranslation();
   const cameraRef = useRef<CameraRef>(null);
   const museumsSourceRef = useRef<GeoJSONSourceRef>(null);
@@ -111,7 +110,7 @@ export const MuseumMapView = ({
   const reduceMotion = useReducedMotion();
   const [hasLoadError, setHasLoadError] = useState(false);
 
-  const mapStyle = useMemo(() => buildOsmRasterStyle(isDark), [isDark]);
+  const mapStyle = useMapStyle();
   const museumCollection = useMemo(() => buildMuseumFeatureCollection(museums), [museums]);
   const userCollection = useMemo(
     () =>

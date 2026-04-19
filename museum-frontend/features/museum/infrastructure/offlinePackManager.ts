@@ -3,7 +3,6 @@ import { OfflineManager, type OfflinePack } from '@maplibre/maplibre-react-nativ
 import { reportError } from '@/shared/observability/errorReporting';
 
 import type { CityId } from './cityCatalog';
-export type { CityId };
 
 export interface CityPackRequest {
   cityId: CityId;

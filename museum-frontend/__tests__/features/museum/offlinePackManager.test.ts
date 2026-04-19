@@ -14,10 +14,12 @@ import { OfflineManager } from '@maplibre/maplibre-react-native';
 
 import type { CityPackProgress } from '@/features/museum/infrastructure/offlinePackManager';
 import { offlinePackManager } from '@/features/museum/infrastructure/offlinePackManager';
+import { reportError } from '@/shared/observability/errorReporting';
 
 const mockedGetPacks = OfflineManager.getPacks as jest.Mock;
 const mockedDeletePack = OfflineManager.deletePack as jest.Mock;
 const mockedCreatePack = OfflineManager.createPack as jest.Mock;
+const mockedReportError = reportError as jest.Mock;
 
 const makePack = (
   id: string,
@@ -44,6 +46,7 @@ beforeEach(() => {
   mockedGetPacks.mockReset();
   mockedDeletePack.mockReset();
   mockedCreatePack.mockReset();
+  mockedReportError.mockReset();
 });
 
 describe('offlinePackManager', () => {
@@ -126,6 +129,31 @@ describe('offlinePackManager', () => {
       expect(progress).toHaveLength(1);
       expect(progress[0]).toMatchObject({ cityId: 'lyon', percentage: 42, state: 'active' });
       expect(result.cityId).toBe('lyon');
+    });
+
+    it('calls reportError via the native error callback when createPack fires its error handler', async () => {
+      mockedGetPacks.mockResolvedValue([]);
+      mockedCreatePack.mockImplementation(
+        (
+          _options: unknown,
+          _onProg: unknown,
+          onError: (p: unknown, error: { message: string }) => void,
+        ) => {
+          onError({}, { message: 'tile download timed out' });
+          return Promise.resolve(makePack('err-id', 'rome', 'active'));
+        },
+      );
+
+      await offlinePackManager.downloadPack({
+        cityId: 'rome',
+        bounds: [12.39, 41.82, 12.59, 41.95],
+        mapStyleUrl: 'https://example.com/style.json',
+      });
+
+      expect(mockedReportError).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({ component: 'offlinePackManager', cityId: 'rome' }),
+      );
     });
   });
 });

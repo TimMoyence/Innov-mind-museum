@@ -5,6 +5,8 @@ import { Stack, useNavigationContainerRef } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Sentry from '@sentry/react-native';
 
+import '@/features/museum/infrastructure/mapLibreBootstrap';
+
 import { AuthProvider, useAuth } from '@/features/auth/application/AuthContext';
 import { useBiometricAuth } from '@/features/auth/application/useBiometricAuth';
 import { BiometricLockScreen } from '@/features/auth/ui/BiometricLockScreen';
