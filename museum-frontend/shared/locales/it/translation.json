@@ -544,6 +544,9 @@
     "distance_unknown": "Distanza non disponibile",
     "location_denied": "Accesso alla posizione negato",
     "map_empty": "Nessun museo in questa zona",
+    "map_error": "Mappa non disponibile. Controlla la connessione e riprova.",
+    "map_a11y_label": "Mappa interattiva — {{count}} musei visibili",
+    "map_a11y_hint": "Scorri con due dita per spostare la mappa, tocca due volte per lo zoom.",
     "search_this_area": "Risultati per questa zona",
     "start_chat": "Inizia chat qui",
     "detail_title": "Dettagli del museo",
@@ -557,6 +560,20 @@
       "specialized": "Specializzato",
       "general": "Museo"
     }
+  },
+  "offlineMaps": {
+    "title": "Mappe offline",
+    "intro": "Scarica le città che visiti per tenere la mappa disponibile anche senza connessione.",
+    "open_cta": "Apri mappe offline",
+    "absent": "Non scaricata",
+    "downloading": "Download in corso…",
+    "ready_size": "Pronta · {{size}}",
+    "download": "Scarica",
+    "delete": "Elimina",
+    "download_a11y": "Scarica la mappa di {{city}}",
+    "delete_a11y": "Elimina la mappa di {{city}}",
+    "auto_precache": "Pre-cache automatico",
+    "auto_precache_hint": "Scarica le città vicine non appena ti avvicini."
   },
   "conversationSearch": {
     "placeholder": "Cerca conversazioni..."

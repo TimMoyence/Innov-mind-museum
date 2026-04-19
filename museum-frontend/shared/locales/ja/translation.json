@@ -544,6 +544,9 @@
     "distance_unknown": "距離不明",
     "location_denied": "位置情報のアクセスが拒否されました",
     "map_empty": "このエリアにミュージアムはありません",
+    "map_error": "地図を表示できません。接続を確認して再試行してください。",
+    "map_a11y_label": "インタラクティブ地図 — 表示中のミュージアム数 {{count}}",
+    "map_a11y_hint": "2本指でスワイプして地図を移動、ダブルタップで拡大できます。",
     "search_this_area": "このエリアの結果を表示",
     "start_chat": "ここでチャットを開始",
     "detail_title": "ミュージアムの詳細",
@@ -557,6 +560,20 @@
       "specialized": "専門",
       "general": "博物館"
     }
+  },
+  "offlineMaps": {
+    "title": "オフラインマップ",
+    "intro": "訪れる都市をダウンロードしておくと、電波がなくても地図を利用できます。",
+    "open_cta": "オフラインマップを開く",
+    "absent": "未ダウンロード",
+    "downloading": "ダウンロード中…",
+    "ready_size": "準備完了 · {{size}}",
+    "download": "ダウンロード",
+    "delete": "削除",
+    "download_a11y": "{{city}} の地図をダウンロード",
+    "delete_a11y": "{{city}} の地図を削除",
+    "auto_precache": "自動プリキャッシュ",
+    "auto_precache_hint": "近くの都市に到着すると自動的にダウンロードします。"
   },
   "conversationSearch": {
     "placeholder": "会話を検索..."

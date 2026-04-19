@@ -1,20 +1,33 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
-import { WebView } from 'react-native-webview';
-import type {
-  WebViewErrorEvent,
-  WebViewHttpErrorEvent,
-  WebViewMessageEvent,
-} from 'react-native-webview/lib/WebViewTypes';
+import {
+  Camera,
+  type CameraRef,
+  GeoJSONSource,
+  type GeoJSONSourceRef,
+  Layer,
+  Map,
+  type PressEventWithFeatures,
+  type ViewStateChangeEvent,
+} from '@maplibre/maplibre-react-native';
+import type { FeatureCollection, Point } from 'geojson';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { NativeSyntheticEvent } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { PerfOverlay } from '@/features/diagnostics/PerfOverlay';
+import { perfStore } from '@/features/diagnostics/perfStore';
+import { reportError } from '@/shared/observability/errorReporting';
 import { GlassCard } from '@/shared/ui/GlassCard';
+import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic } from '@/shared/ui/tokens';
-import { reportError } from '@/shared/observability/errorReporting';
-import type { MuseumCategory, MuseumWithDistance } from '../application/useMuseumDirectory';
-import { buildLeafletHtml } from '../infrastructure/leafletHtml';
-import { shouldAllowNavigation } from '../infrastructure/webViewNavigation';
+
+import {
+  buildMuseumFeatureCollection,
+  type MuseumFeatureProperties,
+} from '../application/buildMuseumFeatureCollection';
+import { useMapStyle } from '../application/useMapStyle';
+import type { MuseumWithDistance } from '../application/useMuseumDirectory';
 
 interface MuseumMapViewProps {
   museums: MuseumWithDistance[];
@@ -29,14 +42,57 @@ interface MuseumMapViewProps {
   onMuseumSelect?: (museum: MuseumWithDistance) => void;
 }
 
-interface WebViewOutboundMessage {
-  type: string;
-  [key: string]: unknown;
+interface ClusterProperties {
+  cluster: true;
+  cluster_id: number;
+  point_count: number;
+  point_count_abbreviated: string;
 }
 
+type PressedProperties = ClusterProperties | MuseumFeatureProperties;
+
+const isClusterProperties = (props: PressedProperties | null): props is ClusterProperties =>
+  props !== null && 'cluster' in props;
+
+const MUSEUMS_SOURCE_ID = 'museums';
+const MUSEUM_POINTS_LAYER_ID = 'museum-points';
+const CLUSTER_CIRCLES_LAYER_ID = 'museum-clusters';
+const CLUSTER_COUNT_LAYER_ID = 'museum-cluster-count';
+const USER_SOURCE_ID = 'user-position';
+const USER_DOT_LAYER_ID = 'user-dot';
+const USER_HALO_LAYER_ID = 'user-halo';
+
+const CLUSTER_RADIUS_PX = 60;
+const CLUSTER_MAX_ZOOM = 14;
+const CLUSTER_EXPAND_ZOOM_FALLBACK = 16;
+const CLUSTER_EXPAND_DURATION_MS = 450;
+
+const DEFAULT_CENTER: [number, number] = [2.3522, 48.8566];
+const DEFAULT_ZOOM = 4;
+const FIT_PADDING = 72;
+const FIT_MIN_SPAN_DEG = 0.01;
+const FIT_DURATION_MS = 600;
+const SINGLE_POINT_ZOOM = 14;
+
+const userPositionToCollection = (lat: number, lng: number): FeatureCollection<Point> => ({
+  type: 'FeatureCollection',
+  features: [
+    {
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [lng, lat] },
+      properties: {},
+    },
+  ],
+});
+
 /**
- * Renders an interactive Leaflet map inside a WebView showing museum markers
- * and the user's current position.
+ * Renders an interactive MapLibre Native map with museum markers and the
+ * user's current position. Tiles are OSM/CartoDB raster so offline packs
+ * created via `OfflineManager.createPack` cache the same imagery the app
+ * displays online.
+ *
+ * The component preserves the legacy Leaflet prop contract so
+ * `app/(tabs)/museums.tsx` integration does not change.
  */
 export const MuseumMapView = ({
   museums,
@@ -45,196 +101,269 @@ export const MuseumMapView = ({
   onMapMoved,
   onMuseumSelect,
 }: MuseumMapViewProps) => {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const { t } = useTranslation();
-  const webViewRef = useRef<WebView>(null);
-  const isMapReady = useRef(false);
-  const messageQueue = useRef<object[]>([]);
+  const cameraRef = useRef<CameraRef>(null);
+  const museumsSourceRef = useRef<GeoJSONSourceRef>(null);
   const userPannedRef = useRef(false);
+  const hasFittedRef = useRef(false);
+  const reduceMotion = useReducedMotion();
+  const [hasLoadError, setHasLoadError] = useState(false);
 
-  /** Safely send a JSON message to the WebView, queuing if the map is not ready yet. */
-  const sendMessage = useCallback((msg: object) => {
-    if (!isMapReady.current) {
-      messageQueue.current.push(msg);
-      return;
-    }
-    webViewRef.current?.injectJavaScript(
-      `window.postMessage(${JSON.stringify(JSON.stringify(msg))}, '*'); true;`,
-    );
-  }, []);
+  const mapStyle = useMapStyle();
+  const museumCollection = useMemo(() => buildMuseumFeatureCollection(museums), [museums]);
+  const userCollection = useMemo(
+    () =>
+      userLatitude !== null && userLongitude !== null
+        ? userPositionToCollection(userLatitude, userLongitude)
+        : null,
+    [userLatitude, userLongitude],
+  );
 
-  /** Flush any messages that were queued before the map was ready. */
-  const flushQueue = useCallback(() => {
-    for (const msg of messageQueue.current) {
-      webViewRef.current?.injectJavaScript(
-        `window.postMessage(${JSON.stringify(JSON.stringify(msg))}, '*'); true;`,
-      );
-    }
-    messageQueue.current = [];
-  }, []);
-
-  /** Push markers + user position + fit bounds whenever data changes. */
-  const syncMapState = useCallback(() => {
-    // Markers — collect only museums with valid coordinates
-    const markers: {
-      id: number;
-      name: string;
-      lat: number;
-      lng: number;
-      source: 'local' | 'osm';
-      museumType: MuseumCategory;
-    }[] = [];
-    const points: [number, number][] = [];
-
-    for (const m of museums) {
-      if (m.latitude != null && m.longitude != null) {
-        markers.push({
-          id: m.id,
-          name: m.name,
-          lat: m.latitude,
-          lng: m.longitude,
-          source: m.source,
-          museumType: m.museumType,
-        });
-        points.push([m.latitude, m.longitude]);
-      }
-    }
-
-    sendMessage({ type: 'setMarkers', markers });
-
-    // User position
-    if (userLatitude !== null && userLongitude !== null) {
-      sendMessage({ type: 'setUserPosition', lat: userLatitude, lng: userLongitude });
-      points.push([userLatitude, userLongitude]);
-    }
-
-    // Skip fitBounds after user drag so the map stays where the user panned.
-    if (userPannedRef.current) {
-      userPannedRef.current = false;
-      return;
-    }
-
-    if (points.length >= 2) {
-      const lats = points.map((p) => p[0]);
-      const lngs = points.map((p) => p[1]);
-      sendMessage({
-        type: 'fitBounds',
-        bounds: [
-          [Math.min(...lats), Math.min(...lngs)],
-          [Math.max(...lats), Math.max(...lngs)],
-        ],
-      });
-    } else if (points.length === 1) {
-      sendMessage({
-        type: 'fitBounds',
-        bounds: [
-          [points[0][0] - 0.01, points[0][1] - 0.01],
-          [points[0][0] + 0.01, points[0][1] + 0.01],
-        ],
-      });
-    }
-  }, [museums, userLatitude, userLongitude, sendMessage]);
-
-  // Re-sync whenever museums or user location change (only if map is ready).
+  // Fit the camera to show all points the first time data becomes available,
+  // and whenever the dataset meaningfully changes AFTER the user has not taken
+  // over the camera with a pan gesture.
   useEffect(() => {
-    if (isMapReady.current) {
-      syncMapState();
-    }
-  }, [syncMapState]);
+    if (userPannedRef.current) return;
+    const camera = cameraRef.current;
+    if (!camera) return;
 
-  const handleMessage = useCallback(
-    (event: WebViewMessageEvent) => {
-      let data: WebViewOutboundMessage;
-      try {
-        data = JSON.parse(event.nativeEvent.data) as WebViewOutboundMessage;
-      } catch (error) {
-        reportError(error, {
-          component: 'MuseumMapView',
-          reason: 'webview_message_parse_failed',
-          rawPreview: event.nativeEvent.data.slice(0, 200),
-        });
+    const points: [number, number][] = museumCollection.features.map(
+      (f) => f.geometry.coordinates as [number, number],
+    );
+    if (userLatitude !== null && userLongitude !== null) {
+      points.push([userLongitude, userLatitude]);
+    }
+
+    if (points.length === 0) {
+      return;
+    }
+
+    // First fit is always instant regardless of reduceMotion — no animation before first paint.
+    const animationDuration = !hasFittedRef.current || reduceMotion ? 0 : FIT_DURATION_MS;
+
+    if (points.length === 1) {
+      camera.flyTo({
+        center: points[0],
+        zoom: SINGLE_POINT_ZOOM,
+        duration: animationDuration,
+      });
+      hasFittedRef.current = true;
+      return;
+    }
+
+    let minLng = points[0][0];
+    let maxLng = points[0][0];
+    let minLat = points[0][1];
+    let maxLat = points[0][1];
+    for (const [lng, lat] of points) {
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    }
+    // Avoid a zero-area bbox collapsing the fitBounds call.
+    if (maxLng - minLng < FIT_MIN_SPAN_DEG) {
+      minLng -= FIT_MIN_SPAN_DEG / 2;
+      maxLng += FIT_MIN_SPAN_DEG / 2;
+    }
+    if (maxLat - minLat < FIT_MIN_SPAN_DEG) {
+      minLat -= FIT_MIN_SPAN_DEG / 2;
+      maxLat += FIT_MIN_SPAN_DEG / 2;
+    }
+
+    camera.fitBounds([minLng, minLat, maxLng, maxLat], {
+      padding: { top: FIT_PADDING, right: FIT_PADDING, bottom: FIT_PADDING, left: FIT_PADDING },
+      duration: animationDuration,
+    });
+    hasFittedRef.current = true;
+  }, [museumCollection, reduceMotion, userLatitude, userLongitude]);
+
+  const handleRegionDidChange = useCallback(
+    (event: NativeSyntheticEvent<ViewStateChangeEvent>) => {
+      const { center, bounds, userInteraction } = event.nativeEvent;
+      if (userInteraction) {
+        userPannedRef.current = true;
+      }
+      if (!onMapMoved) return;
+      const [lng, lat] = center;
+      onMapMoved(lat, lng, bounds);
+    },
+    [onMapMoved],
+  );
+
+  const handleMuseumPress = useCallback(
+    (event: NativeSyntheticEvent<PressEventWithFeatures>) => {
+      const feature = event.nativeEvent.features.at(0);
+      if (!feature) return;
+      const properties = feature.properties as PressedProperties | null;
+      if (!properties) return;
+
+      if (isClusterProperties(properties)) {
+        userPannedRef.current = true;
+        const source = museumsSourceRef.current;
+        const point = feature.geometry?.type === 'Point' ? feature.geometry : null;
+        const center = point?.coordinates as [number, number] | undefined;
+        if (!source || !center) return;
+        const duration = reduceMotion ? 0 : CLUSTER_EXPAND_DURATION_MS;
+        source
+          .getClusterExpansionZoom(properties.cluster_id)
+          .then((zoom) => {
+            cameraRef.current?.flyTo({ center, zoom, duration });
+          })
+          .catch(() => {
+            cameraRef.current?.flyTo({
+              center,
+              zoom: CLUSTER_EXPAND_ZOOM_FALLBACK,
+              duration,
+            });
+          });
         return;
       }
 
-      if (data.type === 'mapReady') {
-        isMapReady.current = true;
-        flushQueue();
-        syncMapState();
-      }
-
-      if (data.type === 'mapMoved') {
-        userPannedRef.current = true;
-        const bbox = data.bbox as [number, number, number, number] | undefined;
-        if (bbox) {
-          onMapMoved?.(data.lat as number, data.lng as number, bbox);
-        }
-      }
-
-      if (data.type === 'markerClick') {
-        const museum = museums.find((m) => m.id === data.id);
-        if (museum) {
-          onMuseumSelect?.(museum);
-        }
+      if (!onMuseumSelect) return;
+      const museum = museums.find((m) => m.id === properties.museumId);
+      if (museum) {
+        onMuseumSelect(museum);
       }
     },
-    [museums, flushQueue, syncMapState, onMapMoved, onMuseumSelect],
+    [museums, onMuseumSelect, reduceMotion],
   );
 
-  const html = buildLeafletHtml({ isDark });
-  const isEmpty = museums.length === 0;
+  const handleDidFailLoadingMap = useCallback(() => {
+    setHasLoadError(true);
+    reportError(new Error('MuseumMapView failed to load map style'), {
+      component: 'MuseumMapView',
+      reason: 'maplibre_style_load_failed',
+    });
+  }, []);
 
-  const handleShouldStartLoad = useCallback((request: { url: string }) => {
-    const decision = shouldAllowNavigation(request.url);
-    if (decision === 'external') {
-      void Linking.openURL(request.url);
-      return false;
+  const handleDidFinishLoadingMap = useCallback(() => {
+    setHasLoadError(false);
+  }, []);
+
+  const handleDidFinishRenderingMapFully = useCallback(() => {
+    if (__DEV__) {
+      perfStore.markRenderEnd();
     }
-    return decision === 'allow';
   }, []);
 
-  const handleWebViewError = useCallback((event: WebViewErrorEvent) => {
-    const { code, description, url } = event.nativeEvent;
-    reportError(new Error(`MuseumMapView WebView error: ${description}`), {
-      component: 'MuseumMapView',
-      reason: 'webview_load_error',
-      code: String(code),
-      url: url.slice(0, 200),
-    });
-  }, []);
+  useEffect(() => {
+    if (__DEV__) {
+      perfStore.markRenderStart();
+    }
+  }, [museumCollection]);
 
-  const handleWebViewHttpError = useCallback((event: WebViewHttpErrorEvent) => {
-    const { statusCode, url } = event.nativeEvent;
-    reportError(new Error(`MuseumMapView WebView HTTP error ${String(statusCode)}`), {
-      component: 'MuseumMapView',
-      reason: 'webview_http_error',
-      statusCode: String(statusCode),
-      url: url.slice(0, 200),
-    });
-  }, []);
+  const isEmpty = museums.length === 0;
+  const visibleMuseumCount = museumCollection.features.length;
+  const mapA11yLabel = t('museumDirectory.map_a11y_label', { count: visibleMuseumCount });
 
   return (
     <View style={styles.container}>
-      <WebView
-        ref={webViewRef}
-        source={{ html }}
-        originWhitelist={['http://*', 'https://*', 'about:*']}
-        onShouldStartLoadWithRequest={handleShouldStartLoad}
-        onMessage={handleMessage}
-        onError={handleWebViewError}
-        onHttpError={handleWebViewHttpError}
+      <Map
+        accessibilityLabel={mapA11yLabel}
+        accessibilityHint={t('museumDirectory.map_a11y_hint')}
         style={[
-          styles.webView,
+          styles.map,
           {
             borderColor: theme.cardBorder,
             backgroundColor: theme.pageGradient[0],
           },
         ]}
-        scrollEnabled={false}
-        javaScriptEnabled
-        domStorageEnabled
-        startInLoadingState
-      />
-      {isEmpty ? (
+        mapStyle={mapStyle}
+        onRegionDidChange={handleRegionDidChange}
+        onDidFailLoadingMap={handleDidFailLoadingMap}
+        onDidFinishLoadingMap={handleDidFinishLoadingMap}
+        onDidFinishRenderingMapFully={handleDidFinishRenderingMapFully}
+        attribution
+        logo={false}
+        compass={false}
+      >
+        <Camera ref={cameraRef} initialViewState={{ center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM }} />
+        <GeoJSONSource
+          id={MUSEUMS_SOURCE_ID}
+          ref={museumsSourceRef}
+          data={museumCollection}
+          cluster
+          clusterRadius={CLUSTER_RADIUS_PX}
+          clusterMaxZoom={CLUSTER_MAX_ZOOM}
+          onPress={handleMuseumPress}
+        >
+          <Layer
+            id={CLUSTER_CIRCLES_LAYER_ID}
+            type="circle"
+            filter={['has', 'point_count']}
+            paint={{
+              'circle-color': theme.primary,
+              'circle-stroke-color': semantic.mapMarker.markerBorder,
+              'circle-stroke-width': 2,
+              'circle-radius': ['step', ['get', 'point_count'], 16, 10, 20, 50, 26, 200, 32],
+              'circle-opacity': 0.9,
+            }}
+          />
+          <Layer
+            id={CLUSTER_COUNT_LAYER_ID}
+            type="symbol"
+            filter={['has', 'point_count']}
+            layout={{
+              'text-field': ['get', 'point_count_abbreviated'],
+              'text-font': ['Noto Sans Regular'],
+              'text-size': 13,
+              'text-allow-overlap': true,
+            }}
+            paint={{
+              'text-color': semantic.mapMarker.markerBorder,
+            }}
+          />
+          <Layer
+            id={MUSEUM_POINTS_LAYER_ID}
+            type="circle"
+            filter={['!', ['has', 'point_count']]}
+            paint={{
+              'circle-color': [
+                'match',
+                ['get', 'museumType'],
+                'art',
+                semantic.mapMarker.museum,
+                'history',
+                semantic.mapMarker.restaurant,
+                'science',
+                semantic.mapMarker.cafe,
+                'specialized',
+                semantic.mapMarker.shop,
+                semantic.mapMarker.default,
+              ],
+              'circle-radius': 7,
+              'circle-stroke-width': 2,
+              'circle-stroke-color': semantic.mapMarker.markerBorder,
+            }}
+          />
+        </GeoJSONSource>
+        {userCollection ? (
+          <GeoJSONSource id={USER_SOURCE_ID} data={userCollection}>
+            <Layer
+              id={USER_HALO_LAYER_ID}
+              type="circle"
+              paint={{
+                'circle-color': semantic.mapMarker.user,
+                'circle-radius': 18,
+                'circle-opacity': 0.25,
+              }}
+            />
+            <Layer
+              id={USER_DOT_LAYER_ID}
+              type="circle"
+              paint={{
+                'circle-color': semantic.mapMarker.user,
+                'circle-radius': 7,
+                'circle-stroke-width': 2,
+                'circle-stroke-color': semantic.mapMarker.userBorder,
+              }}
+            />
+          </GeoJSONSource>
+        ) : null}
+      </Map>
+      {isEmpty && !hasLoadError ? (
         <View style={styles.emptyOverlay} pointerEvents="box-none">
           <GlassCard style={styles.emptyCard} intensity={60}>
             <Text
@@ -247,6 +376,20 @@ export const MuseumMapView = ({
           </GlassCard>
         </View>
       ) : null}
+      {hasLoadError ? (
+        <View style={styles.emptyOverlay} pointerEvents="box-none">
+          <GlassCard style={styles.emptyCard} intensity={60}>
+            <Text
+              style={[styles.emptyText, { color: theme.textPrimary }]}
+              accessibilityRole="alert"
+              accessibilityLiveRegion="assertive"
+            >
+              {t('museumDirectory.map_error')}
+            </Text>
+          </GlassCard>
+        </View>
+      ) : null}
+      {__DEV__ ? <PerfOverlay /> : null}
     </View>
   );
 };
@@ -256,7 +399,7 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
   },
-  webView: {
+  map: {
     flex: 1,
     borderRadius: semantic.card.paddingLarge,
     borderWidth: semantic.input.borderWidth,

@@ -5,6 +5,8 @@ import { Stack, useNavigationContainerRef } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Sentry from '@sentry/react-native';
 
+import '@/features/museum/infrastructure/mapLibreBootstrap';
+
 import { AuthProvider, useAuth } from '@/features/auth/application/AuthContext';
 import { useBiometricAuth } from '@/features/auth/application/useBiometricAuth';
 import { BiometricLockScreen } from '@/features/auth/ui/BiometricLockScreen';
@@ -159,6 +161,7 @@ function RootLayout() {
                       <Stack.Screen name="(stack)/change-password" />
                       <Stack.Screen name="(stack)/preferences" />
                       <Stack.Screen name="(stack)/guided-museum-mode" />
+                      <Stack.Screen name="(stack)/offline-maps" />
                       <Stack.Screen name="(stack)/discover" />
                       <Stack.Screen name="(stack)/museum-detail" />
                       <Stack.Screen name="(stack)/support" />

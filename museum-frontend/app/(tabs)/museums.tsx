@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
+import { useGeofencePreCache } from '@/features/museum/application/useGeofencePreCache';
 import { useLocation } from '@/features/museum/application/useLocation';
 import { openInNativeMaps } from '@/features/museum/application/openInNativeMaps';
 import type { MuseumWithDistance } from '@/features/museum/application/useMuseumDirectory';
@@ -40,6 +41,7 @@ export default function MuseumsScreen() {
   const { theme } = useTheme();
 
   const { latitude, longitude, status } = useLocation();
+  useGeofencePreCache({ latitude, longitude });
 
   // Last visible map bbox — set on every drag, consumed by the "search in this area" chip.
   const [mapBbox, setMapBbox] = useState<[number, number, number, number] | null>(null);

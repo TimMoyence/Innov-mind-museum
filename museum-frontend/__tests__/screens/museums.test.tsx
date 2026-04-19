@@ -11,6 +11,10 @@ jest.mock('@/features/museum/application/useLocation', () => ({
   }),
 }));
 
+jest.mock('@/features/museum/application/useGeofencePreCache', () => ({
+  useGeofencePreCache: () => undefined,
+}));
+
 jest.mock('@/features/museum/application/useMuseumDirectory', () => ({
   useMuseumDirectory: () => ({
     museums: [],

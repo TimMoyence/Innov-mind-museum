@@ -544,6 +544,9 @@
     "distance_unknown": "Distance indisponible",
     "location_denied": "Accès à la localisation refusé",
     "map_empty": "Aucun musée dans cette zone",
+    "map_error": "Carte indisponible. Vérifiez votre connexion et réessayez.",
+    "map_a11y_label": "Carte interactive — {{count}} musées visibles",
+    "map_a11y_hint": "Balayez avec deux doigts pour déplacer la carte, double-tapez pour zoomer.",
     "search_this_area": "Résultats pour cette zone",
     "start_chat": "Démarrer un chat ici",
     "detail_title": "Détails du musée",
@@ -557,6 +560,20 @@
       "specialized": "Spécialisé",
       "general": "Musée"
     }
+  },
+  "offlineMaps": {
+    "title": "Cartes hors-ligne",
+    "intro": "Téléchargez les villes que vous visitez pour garder la carte disponible sans réseau.",
+    "open_cta": "Ouvrir cartes hors-ligne",
+    "absent": "Non téléchargée",
+    "downloading": "Téléchargement…",
+    "ready_size": "Prête · {{size}}",
+    "download": "Télécharger",
+    "delete": "Supprimer",
+    "download_a11y": "Télécharger la carte de {{city}}",
+    "delete_a11y": "Supprimer la carte de {{city}}",
+    "auto_precache": "Pré-téléchargement automatique",
+    "auto_precache_hint": "Télécharge les villes à proximité dès que vous les approchez."
   },
   "conversationSearch": {
     "placeholder": "Rechercher des conversations..."
