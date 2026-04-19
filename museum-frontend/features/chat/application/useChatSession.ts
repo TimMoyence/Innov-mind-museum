@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import * as Sentry from '@sentry/react-native';
 import { useTranslation } from 'react-i18next';
 
-import { getErrorMessage, isDailyLimitError } from '@/shared/lib/errors';
-import { incrementCompletedSessions } from '@/shared/infrastructure/inAppReview';
 import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSettings';
 import { useLocation } from '@/features/museum/application/useLocation';
 import { useConnectivity } from '@/shared/infrastructure/connectivity/useConnectivity';
@@ -16,13 +13,18 @@ import { useOfflineQueue } from './useOfflineQueue';
 import { chatApi } from '../infrastructure/chatApi';
 import { useChatSessionStore } from '../infrastructure/chatSessionStore';
 import {
-  sortByTime,
-  buildOptimisticMessage,
-  bumpSuccessfulSend,
   formatLocation,
   type ChatUiMessage,
   type ChatUiMessageMetadata,
 } from './chatSessionLogic.pure';
+import { pickSendStrategy, type SendAttempt } from './chatSessionStrategies.pure';
+import {
+  sendMessageAudio,
+  sendMessageCache,
+  sendMessageOffline,
+  sendMessageStreaming,
+  type SendMessageContext,
+} from './sendStrategies';
 import { useStreamingState } from './useStreamingState';
 import { useOfflineSync } from './useOfflineSync';
 import { useSessionLoader } from './useSessionLoader';
@@ -30,8 +32,9 @@ import { useSessionLoader } from './useSessionLoader';
 export type { ChatUiMessage, ChatUiMessageMetadata };
 
 /**
- * Orchestrates chat session state by composing useSessionLoader, useStreamingState,
- * and useOfflineSync. Handles text/image/audio message sending with optimistic updates.
+ * Orchestrates chat session state by composing useSessionLoader, useStreamingState
+ * and useOfflineSync, then dispatches outgoing messages to one of four strategies
+ * (cache / offline / audio / streaming) via `pickSendStrategy`.
  */
 export const useChatSession = (sessionId: string) => {
   const { t } = useTranslation();
@@ -60,7 +63,6 @@ export const useChatSession = (sessionId: string) => {
   const cacheStore = useChatLocalCacheStore((s) => s.store);
   const messagesLengthRef = useRef(0);
 
-  // Sub-hooks
   const { isLoading, error, setError, sessionTitle, museumName, sessionMuseumMode, loadSession } =
     useSessionLoader(sessionId, setMessages);
 
@@ -71,7 +73,6 @@ export const useChatSession = (sessionId: string) => {
     useStreamingState(setMessages);
 
   const locationString = useMemo(() => formatLocation(latitude, longitude), [latitude, longitude]);
-
   const imageFallbackLabel = t('chat.optimistic.image_placeholder');
   const audioFallbackLabel = t('chat.optimistic.voice_placeholder');
 
@@ -97,280 +98,116 @@ export const useChatSession = (sessionId: string) => {
     storeUpdateMessages(sessionId, messages);
   }, [messages, sessionId, storeUpdateMessages]);
 
-  const sendMessage = useCallback(
-    async (params: { text?: string; imageUri?: string; audioUri?: string; audioBlob?: Blob }) => {
-      if (isSendingRef.current) return false;
+  const runWithSending = useCallback(async (fn: () => Promise<boolean>): Promise<boolean> => {
+    setIsSending(true);
+    isSendingRef.current = true;
+    try {
+      return await fn();
+    } finally {
+      setIsSending(false);
+      isSendingRef.current = false;
+    }
+  }, []);
 
-      const trimmedText = params.text?.trim();
-      if (!trimmedText && !params.imageUri && !params.audioUri && !params.audioBlob) return false;
+  const sendMessage = useCallback(
+    async (params: SendAttempt): Promise<boolean> => {
+      if (isSendingRef.current) return false;
 
       const isFirstTurn = messagesLengthRef.current === 0;
 
-      // Low-data cache-first: text-only first turn in a museum session
-      if (isLowData && museumName && trimmedText && !params.imageUri && isFirstTurn) {
-        const cached = cacheLookup({
-          text: trimmedText,
-          museumId: museumName,
-          locale,
-          guideLevel,
-        });
+      const strategy = pickSendStrategy(params, {
+        isLowData,
+        isOffline,
+        isConnected,
+        museumName,
+        isFirstTurn,
+      });
+      if (!strategy) return false;
 
-        if (cached) {
-          const userMsg = buildOptimisticMessage({ text: trimmedText });
-          const assistantMsg: ChatUiMessage = {
-            id: `${String(Date.now())}-cached`,
-            role: 'assistant',
-            text: cached.answer,
-            createdAt: new Date().toISOString(),
-            metadata: (cached.metadata as ChatUiMessageMetadata) ?? null,
-            cached: true,
-          };
-          setMessages((prev) => sortByTime([...prev, userMsg, assistantMsg]));
-          return true;
-        }
-
-        // Low-data + offline → queue for later
-        if (!isConnected) {
-          const queued = await enqueue({ sessionId, text: trimmedText });
-          if (!queued) return false;
-          const offlineMessage = buildOptimisticMessage({ text: trimmedText, id: queued.id });
-          setMessages((prev) => sortByTime([...prev, offlineMessage]));
-          return true;
-        }
-      }
-
-      // Offline: queue and add optimistic entry
-      if (isOffline) {
-        const queued = await enqueue({ sessionId, text: trimmedText, imageUri: params.imageUri });
-        if (!queued) return false;
-        const offlineMessage = buildOptimisticMessage({
-          text: trimmedText,
-          imageUri: params.imageUri,
-          id: queued.id,
-          imageFallbackLabel,
-        });
-        setMessages((prev) => sortByTime([...prev, offlineMessage]));
-        return true;
-      }
-
-      const optimisticMessage = buildOptimisticMessage({
-        text: trimmedText,
-        imageUri: params.imageUri,
-        hasAudio: Boolean(params.audioUri || params.audioBlob),
+      const context: SendMessageContext = {
+        sessionId,
+        museumMode,
+        museumName,
+        guideLevel,
+        locale,
+        locationString,
+        audioDescriptionMode,
+        contentPreferences,
+        isLowData,
+        isConnected,
         imageFallbackLabel,
         audioFallbackLabel,
-      });
+        chatApi,
+        cacheLookup,
+        cacheStore,
+        enqueue,
+        classifyText,
+        setMessages,
+        setIsStreaming,
+        setError,
+        setDailyLimitReached,
+        streamTextRef,
+        streamingIdRef,
+        scheduleFlush,
+        flushStreamText,
+        resetStreaming,
+        successfulSendsRef,
+      };
 
-      setMessages((prev) => sortByTime([...prev, optimisticMessage]));
-      setIsSending(true);
-      isSendingRef.current = true;
-      setError(null);
+      const trimmedText = params.text?.trim();
 
-      try {
-        // Audio messages always use non-streaming path
-        if (params.audioUri || params.audioBlob) {
-          const response = await chatApi.postAudioMessage({
-            sessionId,
-            audioUri: params.audioUri,
-            audioBlob: params.audioBlob,
-            museumMode,
-            guideLevel,
-            locale,
-            location: locationString,
-            audioDescriptionMode: audioDescriptionMode || undefined,
-            contentPreferences: contentPreferences.length > 0 ? contentPreferences : undefined,
-          });
-
-          const assistantMessage: ChatUiMessage = {
-            id: response.message.id,
-            role: response.message.role,
-            text: response.message.text,
-            createdAt: response.message.createdAt,
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
-            metadata: (response.metadata as ChatUiMessageMetadata) ?? null,
-            transcription:
-              'transcription' in response && response.transcription
-                ? { text: (response.transcription as { text: string }).text }
-                : null,
-          };
-
-          const transcriptionText = assistantMessage.transcription?.text;
-          if (transcriptionText) {
-            setMessages((prev) =>
-              prev.map((message) =>
-                message.id === optimisticMessage.id
-                  ? { ...message, text: `🎙 ${transcriptionText}` }
-                  : message,
-              ),
-            );
-          }
-
-          setMessages((prev) => sortByTime([...prev, assistantMessage]));
-          if (bumpSuccessfulSend(successfulSendsRef)) {
-            void incrementCompletedSessions();
-          }
-          return true;
-        }
-
-        // Text/image: streaming via sendMessageSmart
-        const streamingPlaceholderId = `${String(Date.now())}-streaming`;
-        streamTextRef.current = '';
-        streamingIdRef.current = streamingPlaceholderId;
-
-        const streamingPlaceholder: ChatUiMessage = {
-          id: streamingPlaceholderId,
-          role: 'assistant',
-          text: '',
-          createdAt: new Date().toISOString(),
-          metadata: null,
-        };
-
-        setMessages((prev) => sortByTime([...prev, streamingPlaceholder]));
-        setIsStreaming(true);
-
-        const preClassified =
-          trimmedText && classifyText(trimmedText, locale) === 'art' ? ('art' as const) : undefined;
-
-        const response = await chatApi.sendMessageSmart({
-          sessionId,
-          text: trimmedText,
-          imageUri: params.imageUri,
-          museumMode,
-          guideLevel,
-          locale,
-          location: locationString,
-          preClassified,
-          audioDescriptionMode: audioDescriptionMode || undefined,
-          lowDataMode: isLowData,
-          contentPreferences: contentPreferences.length > 0 ? contentPreferences : undefined,
-          onToken: (chunk) => {
-            streamTextRef.current += chunk;
-            scheduleFlush();
-          },
-          onDone: (payload) => {
-            const finalText = streamTextRef.current;
-            resetStreaming();
-
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === streamingPlaceholderId
-                  ? {
-                      ...m,
-                      id: payload.messageId,
-                      text: finalText,
-                      createdAt: payload.createdAt,
-                      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
-                      metadata: (payload.metadata as ChatUiMessageMetadata) ?? null,
-                    }
-                  : m,
-              ),
-            );
-          },
-          onGuardrail: (guardrailText) => {
-            streamTextRef.current = guardrailText;
-            flushStreamText();
-          },
-        });
-
-        // Non-streaming fallback (image messages or streaming not available)
-        if (response && (!streamingIdRef.current || params.imageUri)) {
-          resetStreaming();
-          if (response.message.text) {
-            setMessages((prev) => {
-              const hasPlaceholder = prev.some((m) => m.id === streamingPlaceholderId);
-              if (hasPlaceholder) {
-                return prev.map((m) =>
-                  m.id === streamingPlaceholderId
-                    ? {
-                        id: response.message.id,
-                        role: response.message.role as 'assistant',
-                        text: response.message.text,
-                        createdAt: response.message.createdAt,
-                        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
-                        metadata: (response.metadata as ChatUiMessageMetadata) ?? null,
-                        image: null,
-                      }
-                    : m,
-                );
-              }
-              return prev;
-            });
-          }
-
-          // Keep the optimistic user message with its local file:// URL — it renders
-          // reliably on-device. The server-signed URL is fetched lazily on next session
-          // open via loadSession(); refreshing eagerly here risks overwriting a working
-          // local preview with an unreachable signed URL (e.g. Host header mismatch in dev).
-        }
-
-        setIsStreaming(false);
-
-        // Cache successful text-only first-turn responses for future low-data hits
-        if (response && museumName && trimmedText && !params.imageUri && isFirstTurn) {
-          cacheStore({
-            question: trimmedText,
-            answer: response.message.text,
-            metadata: response.metadata as Record<string, unknown> | undefined,
-            museumId: museumName,
-            locale,
-            guideLevel,
-            cachedAt: Date.now(),
-            source: 'previous-call',
-          });
-        }
-
-        if (bumpSuccessfulSend(successfulSendsRef)) {
-          void incrementCompletedSessions();
-        }
-        return true;
-      } catch (sendError) {
-        Sentry.captureException(sendError, { tags: { flow: 'chat.sendMessage' } });
-        setIsStreaming(false);
-        resetStreaming();
-
-        setMessages((prev) =>
-          prev
-            .filter((message) => !message.id.endsWith('-streaming'))
-            .map((message) =>
-              message.id === optimisticMessage.id ? { ...message, sendFailed: true } : message,
-            ),
-        );
-
-        if (isDailyLimitError(sendError)) {
-          setDailyLimitReached(true);
-        } else {
-          setError(getErrorMessage(sendError));
-        }
-        return false;
-      } finally {
-        setIsSending(false);
-        isSendingRef.current = false;
+      if (strategy === 'cache' && trimmedText) {
+        const outcome = await sendMessageCache({ text: trimmedText }, context);
+        if (outcome.kind === 'hit' || outcome.kind === 'queued') return true;
+        if (outcome.kind === 'failed') return false;
+        // miss → fall through to streaming
       }
+
+      if (strategy === 'offline') {
+        return sendMessageOffline({ text: trimmedText, imageUri: params.imageUri }, context);
+      }
+
+      if (strategy === 'audio') {
+        return runWithSending(() =>
+          sendMessageAudio(
+            { text: trimmedText, audioUri: params.audioUri, audioBlob: params.audioBlob },
+            context,
+          ),
+        );
+      }
+
+      return runWithSending(() =>
+        sendMessageStreaming(
+          { text: trimmedText, imageUri: params.imageUri, isFirstTurn },
+          context,
+        ),
+      );
     },
     [
       locale,
       museumMode,
+      museumName,
       guideLevel,
       sessionId,
       isOffline,
+      isConnected,
+      isLowData,
       locationString,
+      audioDescriptionMode,
+      contentPreferences,
+      imageFallbackLabel,
+      audioFallbackLabel,
       enqueue,
-      scheduleFlush,
-      flushStreamText,
-      resetStreaming,
+      cacheLookup,
+      cacheStore,
+      classifyText,
       setError,
       streamTextRef,
       streamingIdRef,
-      classifyText,
-      audioDescriptionMode,
-      contentPreferences,
-      isLowData,
-      isConnected,
-      cacheLookup,
-      cacheStore,
-      museumName,
-      imageFallbackLabel,
-      audioFallbackLabel,
+      scheduleFlush,
+      flushStreamText,
+      resetStreaming,
+      runWithSending,
     ],
   );
 

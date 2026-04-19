@@ -379,12 +379,9 @@ exports[`ChatMessageBubble snapshots matches snapshot for user message 1`] = `
   >
     <Text
       style={
-        [
-          {},
-          {
-            "color": "#FFFFFF",
-          },
-        ]
+        {
+          "color": "#FFFFFF",
+        }
       }
     >
       Hello, how can I help?
