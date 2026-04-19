@@ -556,6 +556,20 @@
       "general": "Museum"
     }
   },
+  "offlineMaps": {
+    "title": "Offline-Karten",
+    "intro": "Laden Sie die Städte herunter, die Sie besuchen, damit die Karte ohne Verbindung verfügbar bleibt.",
+    "open_cta": "Offline-Karten öffnen",
+    "absent": "Nicht heruntergeladen",
+    "downloading": "Wird geladen…",
+    "ready_size": "Bereit · {{size}}",
+    "download": "Herunterladen",
+    "delete": "Löschen",
+    "download_a11y": "Karte von {{city}} herunterladen",
+    "delete_a11y": "Karte von {{city}} löschen",
+    "auto_precache": "Automatisches Vorladen",
+    "auto_precache_hint": "Lädt nahegelegene Städte, sobald Sie sich ihnen nähern."
+  },
   "conversationSearch": {
     "placeholder": "Gespräche durchsuchen..."
   },

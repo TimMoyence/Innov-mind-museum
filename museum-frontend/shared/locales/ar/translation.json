@@ -546,6 +546,20 @@
       "general": "متحف"
     }
   },
+  "offlineMaps": {
+    "title": "الخرائط دون اتصال",
+    "intro": "نزّل المدن التي تزورها لإبقاء الخريطة متاحة بدون شبكة.",
+    "open_cta": "فتح الخرائط دون اتصال",
+    "absent": "لم يتم التنزيل",
+    "downloading": "جارٍ التنزيل…",
+    "ready_size": "جاهزة · {{size}}",
+    "download": "تنزيل",
+    "delete": "حذف",
+    "download_a11y": "تنزيل خريطة {{city}}",
+    "delete_a11y": "حذف خريطة {{city}}",
+    "auto_precache": "تنزيل تلقائي مسبق",
+    "auto_precache_hint": "ينزّل المدن المجاورة فور الاقتراب منها."
+  },
   "conversationSearch": {
     "placeholder": "البحث في المحادثات..."
   },

@@ -27,6 +27,7 @@ type SettingsRoute =
   | '/(stack)/terms'
   | '/(stack)/support'
   | '/(stack)/guided-museum-mode'
+  | '/(stack)/offline-maps'
   | '/(stack)/onboarding'
   | '/(stack)/reviews'
   | '/(tabs)/home';
@@ -183,6 +184,21 @@ export default function SettingsScreen() {
           >
             <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
               {t('settings.guided_mode_info')}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[
+              styles.secondaryButton,
+              { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+            ]}
+            onPress={() => {
+              open('/(stack)/offline-maps');
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t('offlineMaps.title')}
+          >
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+              {t('offlineMaps.open_cta')}
             </Text>
           </Pressable>
         </GlassCard>

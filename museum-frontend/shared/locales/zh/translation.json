@@ -556,6 +556,20 @@
       "general": "博物馆"
     }
   },
+  "offlineMaps": {
+    "title": "离线地图",
+    "intro": "下载您要访问的城市，即使没有网络也能使用地图。",
+    "open_cta": "打开离线地图",
+    "absent": "尚未下载",
+    "downloading": "下载中…",
+    "ready_size": "已就绪 · {{size}}",
+    "download": "下载",
+    "delete": "删除",
+    "download_a11y": "下载 {{city}} 的地图",
+    "delete_a11y": "删除 {{city}} 的地图",
+    "auto_precache": "自动预下载",
+    "auto_precache_hint": "当您接近附近城市时自动下载。"
+  },
   "conversationSearch": {
     "placeholder": "搜索对话..."
   },

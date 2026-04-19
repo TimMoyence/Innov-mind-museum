@@ -556,6 +556,20 @@
       "general": "Museum"
     }
   },
+  "offlineMaps": {
+    "title": "Offline maps",
+    "intro": "Download the cities you visit so the map stays available when you have no signal.",
+    "open_cta": "Open offline maps",
+    "absent": "Not downloaded",
+    "downloading": "Downloading…",
+    "ready_size": "Ready · {{size}}",
+    "download": "Download",
+    "delete": "Delete",
+    "download_a11y": "Download the {{city}} map",
+    "delete_a11y": "Delete the {{city}} map",
+    "auto_precache": "Automatic pre-cache",
+    "auto_precache_hint": "Downloads nearby cities as soon as you get close."
+  },
   "conversationSearch": {
     "placeholder": "Search conversations..."
   },

@@ -159,6 +159,7 @@ function RootLayout() {
                       <Stack.Screen name="(stack)/change-password" />
                       <Stack.Screen name="(stack)/preferences" />
                       <Stack.Screen name="(stack)/guided-museum-mode" />
+                      <Stack.Screen name="(stack)/offline-maps" />
                       <Stack.Screen name="(stack)/discover" />
                       <Stack.Screen name="(stack)/museum-detail" />
                       <Stack.Screen name="(stack)/support" />
