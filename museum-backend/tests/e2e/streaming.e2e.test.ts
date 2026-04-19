@@ -36,14 +36,13 @@ describeE2E('SSE streaming e2e', () => {
   let harness: E2EHarness;
 
   beforeAll(async () => {
-    // Enable streaming feature flag before creating the harness.
-    // The env var is read during dynamic import inside createE2EHarness.
-    process.env.FEATURE_FLAG_STREAMING = 'true';
+    // FEATURE_FLAG_STREAMING was retired in V1 — SSE route is now @deprecated but
+    // remains accessible for the legacy clients we still want to test against.
+    // See docs/adr/ADR-001-sse-streaming-deprecated.md.
     harness = await createE2EHarness();
   });
 
   afterAll(async () => {
-    delete process.env.FEATURE_FLAG_STREAMING;
     await harness?.stop();
   });
 

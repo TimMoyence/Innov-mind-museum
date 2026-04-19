@@ -38,6 +38,21 @@ export class ChatMessage {
   @Column({ type: 'jsonb', nullable: true })
   metadata?: Record<string, unknown> | null;
 
+  /**
+   * Storage reference for the cached TTS audio of this message (assistant only).
+   * Format: `s3://<key>` or `local-audio://<filename>`. `null` until first synthesize.
+   */
+  @Column({ type: 'text', nullable: true })
+  audioUrl?: string | null;
+
+  /** When the cached TTS audio was generated. Used to invalidate stale cache entries. */
+  @Column({ type: 'timestamp', nullable: true })
+  audioGeneratedAt?: Date | null;
+
+  /** OpenAI voice identifier used to generate the cached audio (e.g. `alloy`, `verse`). */
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  audioVoice?: string | null;
+
   @OneToMany(() => ArtworkMatch, (match) => match.message, {
     cascade: false,
     eager: false,

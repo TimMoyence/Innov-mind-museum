@@ -29,10 +29,10 @@ const fetchSpeech = async (apiKey: string, text: string, voice: string): Promise
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: env.tts?.model ?? 'tts-1',
+        model: env.tts.model,
         input: text,
         voice,
-        speed: env.tts?.speed ?? 1,
+        speed: env.tts.speed,
         response_format: 'mp3',
       }),
       signal: AbortSignal.timeout(env.llm.timeoutMs),
@@ -81,8 +81,8 @@ export class OpenAiTextToSpeechService implements TextToSpeechService {
    */
   async synthesize(input: { text: string; voice?: string }): Promise<TtsResult> {
     const apiKey = requireApiKey();
-    const text = input.text.slice(0, env.tts?.maxTextLength ?? 4096);
-    const voice = input.voice ?? env.tts?.voice ?? 'alloy';
+    const text = input.text.slice(0, env.tts.maxTextLength);
+    const voice = input.voice ?? env.tts.voice;
 
     const response = await fetchSpeech(apiKey, text, voice);
     const audio = await parseSpeechResponse(response);

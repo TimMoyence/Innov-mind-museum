@@ -18,5 +18,7 @@ export const makeChatRepo = (
   upsertMessageFeedback: jest.fn(),
   deleteMessageFeedback: jest.fn(),
   getMessageFeedback: jest.fn(),
+  updateMessageAudio: jest.fn(),
+  clearMessageAudio: jest.fn(),
   ...overrides,
 });

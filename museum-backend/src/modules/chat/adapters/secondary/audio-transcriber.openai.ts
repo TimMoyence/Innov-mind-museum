@@ -130,7 +130,12 @@ const parseTranscriptionResponse = async (response: Response): Promise<string> =
   return payload.text.trim();
 };
 
-/** OpenAI Whisper implementation of {@link AudioTranscriber}. */
+/**
+ * OpenAI transcription implementation of {@link AudioTranscriber}.
+ *
+ * Uses `gpt-4o-mini-transcribe` by default (configurable via `env.llm.audioTranscriptionModel`).
+ * Reuses the shared `OPENAI_API_KEY` — no separate Whisper key.
+ */
 export class OpenAiAudioTranscriber implements AudioTranscriber {
   /**
    * Sends audio to the OpenAI transcription API and returns the transcribed text.

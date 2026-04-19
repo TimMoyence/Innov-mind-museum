@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import { AppError, badRequest } from '@shared/errors/app.error';
+import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import { dailyChatLimit } from '@src/helpers/middleware/daily-chat-limit.middleware';
@@ -119,13 +120,17 @@ function initSseTimers(
   return { keepAliveTimer, sseTimer };
 }
 
-/** Handler factory: POST /sessions/:id/messages/stream (SSE streaming). */
+/**
+ * Handler factory: POST /sessions/:id/messages/stream (SSE streaming).
+ *
+ * @deprecated SSE streaming was retired in V1 — token-fluidity issues made it non-viable.
+ *   The route remains accessible for legacy clients but logs a warning per hit so
+ *   we can measure residual usage and remove the code completely once it falls below
+ *   ~10/day for 30 days. See `docs/adr/ADR-001-sse-streaming-deprecated.md`.
+ */
 function createStreamHandler(chatService: ChatService) {
   return async (req: Request, res: Response) => {
-    if (!env.featureFlags.streaming) {
-      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Streaming not enabled' } });
-      return;
-    }
+    logger.warn('sse.stream.deprecated.hit', { sessionId: req.params.id });
 
     res.setTimeout(0);
     req.socket.setTimeout(0);
@@ -142,6 +147,7 @@ function createStreamHandler(chatService: ChatService) {
       const currentUser = getRequestUser(req);
       const { bodyPayload, context } = parseMessageInput(req);
 
+      // eslint-disable-next-line @typescript-eslint/no-deprecated, sonarjs/deprecation -- this IS the deprecated SSE handler; maintained for legacy clients per ADR-001
       const result = await chatService.postMessageStream(
         req.params.id,
         { text: bodyPayload.text, context },
@@ -292,6 +298,7 @@ export const createMessageRouter = (
     dailyChatLimit,
     userLimiter,
     sessionLimiter,
+    // eslint-disable-next-line @typescript-eslint/no-deprecated, sonarjs/deprecation -- route retained for legacy clients; see ADR-001
     createStreamHandler(chatService),
   );
 

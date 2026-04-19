@@ -211,6 +211,19 @@ When modifying the chat pipeline:
 - Keep message ordering: `[SystemMessage(system), SystemMessage(section), ...history, HumanMessage(user)]`
 - The guardrail in `chat.service.ts` is the single source of truth for content filtering — do not add duplicate checks elsewhere
 
+### Voice V1 (2026-04)
+
+Pipeline classique STT → LLM → TTS, **toujours actif** (les feature flags `FEATURE_FLAG_VOICE_MODE` et `TTS_ENABLED` ont été retirés).
+
+- **STT** : `gpt-4o-mini-transcribe` (env `LLM_AUDIO_TRANSCRIPTION_MODEL`), même `OPENAI_API_KEY`. Pas de "clé Whisper" séparée.
+- **LLM** : LangChain orchestrator multi-provider (cf. existant).
+- **TTS** : `gpt-4o-mini-tts` (env `TTS_MODEL`), voix `alloy` par défaut. Audio MP3 retourné en buffer + persisté S3 (`ChatMessage.audioUrl`) pour replay offline.
+- **Guardrails** : appliqués au texte intermédiaire (transcrit + réponse LLM) — la voix hérite gratuitement de la sécurité du chat texte.
+- **SSE streaming** : @deprecated, voir `docs/adr/ADR-001-sse-streaming-deprecated.md`.
+- **Realtime WebRTC** : reporté V1.1 — réévaluation après mesure latence terrain de la pipeline V1.
+
+Spec complète : `docs/AI_VOICE.md`.
+
 ## Test Discipline — DRY Factories
 
 **Tests MUST use shared factories. Inline object creation is forbidden.**
@@ -307,7 +320,7 @@ Alternatives for future: Drizzle (S-tier 2026), Prisma 7, Kysely.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **InnovMind** (5550 symbols, 14483 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **InnovMind** (5752 symbols, 14824 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

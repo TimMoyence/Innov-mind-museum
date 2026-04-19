@@ -248,6 +248,33 @@ class InMemoryChatRepository implements ChatRepository {
     return value ? { value } : null;
   }
 
+  async updateMessageAudio(
+    messageId: string,
+    input: { audioUrl: string; audioGeneratedAt: Date; audioVoice: string },
+  ): Promise<void> {
+    const message = this.findMessage(messageId);
+    if (!message) return;
+    message.audioUrl = input.audioUrl;
+    message.audioGeneratedAt = input.audioGeneratedAt;
+    message.audioVoice = input.audioVoice;
+  }
+
+  async clearMessageAudio(messageId: string): Promise<void> {
+    const message = this.findMessage(messageId);
+    if (!message) return;
+    message.audioUrl = null;
+    message.audioGeneratedAt = null;
+    message.audioVoice = null;
+  }
+
+  private findMessage(messageId: string): ChatMessage | undefined {
+    for (const list of this.messages.values()) {
+      const found = list.find((m) => m.id === messageId);
+      if (found) return found;
+    }
+    return undefined;
+  }
+
   async listSessions(params: ListSessionsParams): Promise<ChatSessionsPage> {
     const limit = Math.max(1, Math.min(params.limit, 50));
     let sessions = [...this.sessions.values()]

@@ -1,7 +1,6 @@
 import request from 'supertest';
 
 import { AppError } from '@shared/errors/app.error';
-import { env } from '@src/config/env';
 import { createApp } from '@src/app';
 import { resetRateLimits, stopRateLimitSweep } from 'tests/helpers/http/route-test-setup';
 import { userToken, makeToken } from 'tests/helpers/auth/token.helpers';
@@ -69,43 +68,18 @@ function parseSseEvents(raw: string): Array<{ event: string; data: unknown }> {
 // ── Tests ──────────────────────────────────────────────────────────
 
 describe('chat-message.route — uncovered paths', () => {
-  const originalStreaming = env.featureFlags.streaming;
-
   beforeEach(() => {
     resetRateLimits();
     jest.clearAllMocks();
-    env.featureFlags.streaming = originalStreaming;
   });
 
   afterAll(() => {
-    env.featureFlags.streaming = originalStreaming;
     stopRateLimitSweep();
   });
 
-  // ── Streaming feature flag disabled ────────────────────────────
+  // ── Streaming SSE happy path + callbacks (route is @deprecated, see ADR-001) ─
 
-  describe('POST /api/chat/sessions/:id/messages/stream — feature flag OFF', () => {
-    it('returns 404 when streaming feature flag is disabled', async () => {
-      env.featureFlags.streaming = false;
-
-      const res = await request(app)
-        .post('/api/chat/sessions/session-uuid/messages/stream')
-        .set('Authorization', `Bearer ${userToken()}`)
-        .send({ text: 'hello' });
-
-      expect(res.status).toBe(404);
-      expect(res.body.error.code).toBe('NOT_FOUND');
-      expect(res.body.error.message).toBe('Streaming not enabled');
-    });
-  });
-
-  // ── Streaming SSE happy path + callbacks ───────────────────────
-
-  describe('POST /api/chat/sessions/:id/messages/stream — SSE streaming', () => {
-    beforeEach(() => {
-      env.featureFlags.streaming = true;
-    });
-
+  describe('POST /api/chat/sessions/:id/messages/stream — SSE streaming (deprecated)', () => {
     it('streams tokens via SSE and sends done event', async () => {
       mockPostMessageStream.mockImplementation(
         async (

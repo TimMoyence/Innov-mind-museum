@@ -1,7 +1,6 @@
 import request from 'supertest';
 
 import { AppError } from '@shared/errors/app.error';
-import { env } from '@src/config/env';
 import { createApp } from '@src/app';
 import { resetRateLimits, stopRateLimitSweep } from 'tests/helpers/http/route-test-setup';
 import { userToken } from 'tests/helpers/auth/token.helpers';
@@ -45,36 +44,19 @@ const app = createApp({
 // ── Tests ──────────────────────────────────────────────────────────
 
 describe('chat-media.route — uncovered paths', () => {
-  const originalVoiceMode = env.featureFlags.voiceMode;
-
   beforeEach(() => {
     resetRateLimits();
     jest.clearAllMocks();
-    env.featureFlags.voiceMode = originalVoiceMode;
   });
 
   afterAll(() => {
-    env.featureFlags.voiceMode = originalVoiceMode;
     stopRateLimitSweep();
   });
 
-  // ── POST /messages/:messageId/tts — voice mode OFF ─────────────
+  // ── POST /messages/:messageId/tts — voice always-on (V1) ────────
 
-  describe('POST /api/chat/messages/:id/tts — voice mode feature flag', () => {
-    it('returns 404 when voice mode feature flag is disabled', async () => {
-      env.featureFlags.voiceMode = false;
-
-      const res = await request(app)
-        .post('/api/chat/messages/msg-uuid/tts')
-        .set('Authorization', `Bearer ${userToken()}`);
-
-      expect(res.status).toBe(404);
-      expect(res.body.error.code).toBe('NOT_FOUND');
-      expect(res.body.error.message).toBe('Voice mode is not enabled');
-    });
-
-    it('returns audio buffer when voice mode is enabled', async () => {
-      env.featureFlags.voiceMode = true;
+  describe('POST /api/chat/messages/:id/tts — TTS handler', () => {
+    it('returns audio buffer on success', async () => {
       const audioBuffer = Buffer.from('fake-audio-data');
       mockSynthesizeSpeech.mockResolvedValueOnce({
         audio: audioBuffer,
@@ -91,7 +73,6 @@ describe('chat-media.route — uncovered paths', () => {
     });
 
     it('returns 204 when synthesizeSpeech returns null', async () => {
-      env.featureFlags.voiceMode = true;
       mockSynthesizeSpeech.mockResolvedValueOnce(null);
 
       const res = await request(app)
@@ -102,7 +83,6 @@ describe('chat-media.route — uncovered paths', () => {
     });
 
     it('forwards AppError from synthesizeSpeech', async () => {
-      env.featureFlags.voiceMode = true;
       mockSynthesizeSpeech.mockRejectedValueOnce(
         new AppError({
           message: 'TTS not available',

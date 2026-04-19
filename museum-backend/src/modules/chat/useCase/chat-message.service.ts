@@ -354,7 +354,12 @@ export class ChatMessageService {
     return await this.commitResponse(sessionId, prep, aiResult);
   }
 
-  /** Posts a message with token-by-token streaming and incremental guardrail checks. */
+  /**
+   * Posts a message with token-by-token streaming and incremental guardrail checks.
+   *
+   * @deprecated SSE streaming retired in V1 — see `docs/adr/ADR-001-sse-streaming-deprecated.md`.
+   *   Use `postMessage` instead.
+   */
   async postMessageStream(
     sessionId: string,
     input: PostMessageInput,

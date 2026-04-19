@@ -1,13 +1,13 @@
 {
-  "lastUpdated": "2026-04-18",
-  "testCount": 2717,
-  "frontendTestCount": 1120,
-  "frontendSuiteCount": 129,
+  "lastUpdated": "2026-04-19",
+  "testCount": 2715,
+  "frontendTestCount": 1146,
+  "frontendSuiteCount": 137,
   "typecheckErrors": 0,
   "asAnyCount": 0,
-  "coverageStatements": 92,
-  "coverageBranches": 82.07,
+  "coverageStatements": 90.12,
+  "coverageBranches": 80.07,
   "lintErrors": 0,
-  "_comment": "T20 final verification: +8 BE tests (knowledge-extraction module). Multi-provider web search (5 clients + fallback) + knowledge extraction pipeline (scrape→classify→store) fully integrated. Port extraction for hexagonal compliance. Ratchet hook fixed to measure src/ not tests/.",
+  "_comment": "Voice V1 (S1 BE pivot): retired feature flags FEATURE_FLAG_VOICE_MODE + FEATURE_FLAG_STREAMING + TTS_ENABLED → 2 obsolete flag-gate tests removed (2717→2715). Added audio-storage port + S3/local adapters + ChatMessage.audioUrl persistence (migration AddAudioToChatMessage) + precompute-tts.service. SSE marked @deprecated (ADR-001). FE: TTS local file-system cache via expo-file-system/legacy.",
   "webTestCount": 174
 }

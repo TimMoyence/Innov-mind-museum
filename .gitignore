@@ -28,6 +28,9 @@
 !docs/walk/**
 !docs/superpowers/
 !docs/superpowers/**
+!docs/AI_VOICE.md
+!docs/adr/
+!docs/adr/**
 
 # frontend docs
 !museum-frontend/docs/

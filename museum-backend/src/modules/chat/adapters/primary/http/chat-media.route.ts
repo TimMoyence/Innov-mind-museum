@@ -172,10 +172,6 @@ function createImageUrlHandler(chatService: ChatService) {
 /** Handler factory: POST /messages/:messageId/tts */
 function createTtsHandler(chatService: ChatService) {
   return async (req: Request, res: Response) => {
-    if (!env.featureFlags.voiceMode) {
-      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Voice mode is not enabled' } });
-      return;
-    }
     const currentUser = getRequestUser(req);
     const result = await chatService.synthesizeSpeech(req.params.messageId, currentUser?.id);
     if (!result) {

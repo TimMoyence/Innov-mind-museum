@@ -99,7 +99,7 @@ export interface AppEnv {
       objectKeyPrefix?: string;
     };
   };
-  tts?: {
+  tts: {
     enabled: boolean;
     model: string;
     voice: string;
@@ -134,10 +134,8 @@ export interface AppEnv {
     serviceName: string;
   };
   featureFlags: {
-    voiceMode: boolean;
     ocrGuard: boolean;
     apiKeys: boolean;
-    streaming: boolean;
     multiTenancy: boolean;
     userMemory: boolean;
     knowledgeBase: boolean;

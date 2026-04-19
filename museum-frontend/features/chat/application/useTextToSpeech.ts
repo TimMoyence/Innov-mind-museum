@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { createAudioPlayer } from 'expo-audio';
+import * as FileSystem from 'expo-file-system/legacy';
 import type { AudioPlayer } from 'expo-audio';
 
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
@@ -27,6 +28,56 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
     binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary);
+}
+
+/**
+ * Local file-system cache for TTS audio (native only).
+ *
+ * Stores per-message MP3 under `<cacheDir>/tts/<messageId>.mp3`. Subsequent plays
+ * read directly from disk — no network, no decoding from base64 — enabling offline
+ * replay and saving roundtrip latency for repeat listens.
+ *
+ * Web platform is excluded: `expo-file-system` returns no `cacheDirectory` and the
+ * browser's audio cache covers the same use case.
+ */
+const TTS_CACHE_DIR_NAME = 'tts';
+
+function getTtsCacheDir(): string | null {
+  if (Platform.OS === 'web') return null;
+  const base = FileSystem.cacheDirectory;
+  if (!base) return null;
+  return `${base}${TTS_CACHE_DIR_NAME}/`;
+}
+
+async function getCachedTtsUri(messageId: string): Promise<string | null> {
+  const dir = getTtsCacheDir();
+  if (!dir) return null;
+  const filePath = `${dir}${messageId}.mp3`;
+  try {
+    const info = await FileSystem.getInfoAsync(filePath);
+    return info.exists ? filePath : null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeTtsCache(messageId: string, base64: string): Promise<string | null> {
+  const dir = getTtsCacheDir();
+  if (!dir) return null;
+  try {
+    const dirInfo = await FileSystem.getInfoAsync(dir);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+    }
+    const filePath = `${dir}${messageId}.mp3`;
+    await FileSystem.writeAsStringAsync(filePath, base64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    return filePath;
+  } catch {
+    // best-effort: cache write failure must not affect playback
+    return null;
+  }
 }
 
 /**
@@ -81,16 +132,27 @@ export function useTextToSpeech(): UseTextToSpeech {
       setActiveMessageId(messageId);
 
       try {
-        const audioBuffer = await chatApi.synthesizeSpeech(messageId);
+        // 1. Try local file-system cache (native) — instant playback, offline-capable
+        const cachedUri = await getCachedTtsUri(messageId);
 
-        // 204 / empty response
-        if (!audioBuffer) {
-          cleanup();
-          return;
+        let uri: string;
+        if (cachedUri) {
+          uri = cachedUri;
+        } else {
+          const audioBuffer = await chatApi.synthesizeSpeech(messageId);
+
+          // 204 / empty response
+          if (!audioBuffer) {
+            cleanup();
+            return;
+          }
+
+          const base64 = arrayBufferToBase64(audioBuffer);
+
+          // 2. Persist to local cache for next plays (best-effort, native only)
+          const cachePath = await writeTtsCache(messageId, base64);
+          uri = cachePath ?? `data:audio/mpeg;base64,${base64}`;
         }
-
-        const base64 = arrayBufferToBase64(audioBuffer);
-        const uri = `data:audio/mpeg;base64,${base64}`;
 
         if (Platform.OS === 'web') {
           const audioElement = new window.Audio(uri);

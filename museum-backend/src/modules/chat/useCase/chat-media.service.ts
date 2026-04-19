@@ -10,6 +10,7 @@ import type { FeedbackMessageResult, ReportMessageResult } from './chat.service.
 import type { ChatRepository } from '../domain/chat.repository.interface';
 import type { ReportReason } from '../domain/chat.types';
 import type { FeedbackValue } from '../domain/messageFeedback.entity';
+import type { AudioStorage } from '../domain/ports/audio-storage.port';
 import type { TextToSpeechService } from '../domain/ports/tts.port';
 import type { CacheService } from '@shared/cache/cache.port';
 
@@ -18,6 +19,7 @@ interface ChatMediaServiceDeps {
   repository: ChatRepository;
   tts?: TextToSpeechService;
   cache?: CacheService;
+  audioStorage?: AudioStorage;
 }
 
 /**
@@ -27,11 +29,13 @@ export class ChatMediaService {
   private readonly repository: ChatRepository;
   private readonly tts?: TextToSpeechService;
   private readonly cache?: CacheService;
+  private readonly audioStorage?: AudioStorage;
 
   constructor(deps: ChatMediaServiceDeps) {
     this.repository = deps.repository;
     this.tts = deps.tts;
     this.cache = deps.cache;
+    this.audioStorage = deps.audioStorage;
   }
 
   /**
@@ -178,6 +182,12 @@ export class ChatMediaService {
   /**
    * Synthesizes speech from an assistant message's text content.
    *
+   * Cache strategy (most-recent first):
+   *   1. Redis hot cache (`tts:<messageId>`, default 1d) — sub-100ms repeat hits.
+   *   2. (After fresh synth) Persists S3 audio reference + voice + timestamp on the
+   *      `ChatMessage` row so downstream offline replay or pre-cache can reuse it.
+   *      Persistence is fire-and-forget — TTS request always returns the buffer.
+   *
    * @param messageId - UUID of the assistant message to synthesize.
    * @param currentUserId - Authenticated user id for ownership checks.
    * @returns Audio buffer with content type, or null if the message has no text.
@@ -207,6 +217,8 @@ export class ChatMediaService {
       });
     }
 
+    const targetVoice = env.tts.voice;
+
     const cacheKey = `tts:${messageId}`;
     if (this.cache) {
       const cached = await this.cache.get<{ audio: string; contentType: string }>(cacheKey);
@@ -215,16 +227,73 @@ export class ChatMediaService {
       }
     }
 
-    const result = await this.tts.synthesize({ text: row.message.text });
+    const result = await this.tts.synthesize({ text: row.message.text, voice: targetVoice });
 
     if (this.cache) {
       await this.cache.set(
         cacheKey,
         { audio: result.audio.toString('base64'), contentType: result.contentType },
-        env.tts?.cacheTtlSeconds ?? 86400,
+        env.tts.cacheTtlSeconds,
       );
     }
 
+    if (this.audioStorage) {
+      try {
+        const ref = await this.audioStorage.save({
+          buffer: result.audio,
+          contentType: result.contentType,
+        });
+        await this.repository.updateMessageAudio(messageId, {
+          audioUrl: ref,
+          audioGeneratedAt: new Date(),
+          audioVoice: targetVoice,
+        });
+      } catch (error: unknown) {
+        // fail-open: audio persistence is best-effort, must not affect TTS response
+        logger.warn('audio_storage_persist_failed', {
+          messageId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
     return result;
+  }
+
+  /**
+   * Returns a signed read URL for a message's cached TTS audio (if previously synthesized).
+   *
+   * Used by the mobile client to download audio directly from object storage,
+   * bypassing the API server (offline cache, lock-screen replay, walks pre-fetch).
+   *
+   * @param messageId - UUID of the assistant message.
+   * @param currentUserId - Authenticated user id for ownership checks.
+   * @returns Signed URL with expiry, or null if no cached audio exists or storage is not configured.
+   */
+  async getMessageAudioUrl(
+    messageId: string,
+    currentUserId?: number,
+  ): Promise<{ url: string; expiresAt: string; voice: string; generatedAt: string } | null> {
+    const row = await ensureMessageAccess(messageId, this.repository, currentUserId);
+
+    if (row.message.role !== 'assistant') {
+      throw badRequest('Audio URL is only available for assistant messages');
+    }
+
+    if (!row.message.audioUrl || !this.audioStorage) {
+      return null;
+    }
+
+    const signed = await this.audioStorage.getSignedReadUrl(row.message.audioUrl);
+    if (!signed) {
+      return null;
+    }
+
+    return {
+      url: signed.url,
+      expiresAt: signed.expiresAt,
+      voice: row.message.audioVoice ?? env.tts.voice,
+      generatedAt: row.message.audioGeneratedAt?.toISOString() ?? new Date(0).toISOString(),
+    };
   }
 }

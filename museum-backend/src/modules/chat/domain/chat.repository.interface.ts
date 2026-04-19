@@ -226,4 +226,25 @@ export interface ChatRepository {
    * @returns The feedback value, or `null` if none exists.
    */
   getMessageFeedback(messageId: string, userId: number): Promise<{ value: FeedbackValue } | null>;
+
+  /**
+   * Update the cached TTS audio reference for a message (assistant only).
+   *
+   * @param messageId - The message UUID.
+   * @param input - Audio storage reference, generation timestamp, and voice id.
+   * @param input.audioUrl - Storage reference (`s3://<key>` or `local-audio://<file>`).
+   * @param input.audioGeneratedAt - Timestamp when audio was generated.
+   * @param input.audioVoice - Voice id used at synthesis (e.g. `alloy`).
+   */
+  updateMessageAudio(
+    messageId: string,
+    input: { audioUrl: string; audioGeneratedAt: Date; audioVoice: string },
+  ): Promise<void>;
+
+  /**
+   * Clear the cached TTS audio reference for a message (e.g. after deletion in storage).
+   *
+   * @param messageId - The message UUID.
+   */
+  clearMessageAudio(messageId: string): Promise<void>;
 }

@@ -1,4 +1,8 @@
-/** Discriminated union of all SSE event types emitted by the streaming chat endpoint. */
+/**
+ * Discriminated union of all SSE event types emitted by the streaming chat endpoint.
+ *
+ * @deprecated SSE streaming retired in V1 — see `docs/adr/ADR-001-sse-streaming-deprecated.md`.
+ */
 export type SseStreamEvent =
   | { type: 'token'; text: string }
   | { type: 'guardrail'; text: string; reason: string }
@@ -8,6 +12,10 @@ export type SseStreamEvent =
 /**
  * Parses a raw SSE text buffer into structured events.
  * Returns parsed events and any remaining incomplete data.
+ *
+ * @deprecated SSE streaming retired in V1 — see `docs/adr/ADR-001-sse-streaming-deprecated.md`.
+ *   Kept for residual client compatibility. Do not use for new chat flows.
+ *
  * @param buffer - Raw text from a `text/event-stream` response.
  * @returns Parsed events and the unprocessed remainder of the buffer.
  */

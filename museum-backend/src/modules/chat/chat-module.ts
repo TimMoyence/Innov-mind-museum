@@ -5,6 +5,8 @@ import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
 import { TypeOrmArtKeywordRepository } from './adapters/secondary/artKeyword.repository.typeorm';
+import { S3CompatibleAudioStorage } from './adapters/secondary/audio-storage.s3';
+import { LocalAudioStorage } from './adapters/secondary/audio-storage.stub';
 import { OpenAiAudioTranscriber } from './adapters/secondary/audio-transcriber.openai';
 import { BraveSearchClient } from './adapters/secondary/brave-search.client';
 import { CachingChatOrchestrator } from './adapters/secondary/caching-chat-orchestrator';
@@ -125,6 +127,34 @@ export class ChatModule {
       });
     }
     return new LocalImageStorage(env.storage.localUploadsDir);
+  }
+
+  /**
+   * Creates the audio storage adapter (S3 or local). Mirrors {@link buildImageStorage}
+   * — TTS audio uses the same S3 backend / local dir as images, just under a different
+   * key prefix (`chat-audios/`). Returns `undefined` when storage is misconfigured so
+   * the chat service still operates (TTS just runs without long-term persistence).
+   */
+  private buildAudioStorage(): LocalAudioStorage | S3CompatibleAudioStorage | undefined {
+    if (env.storage.driver === 's3') {
+      const s3 = env.storage.s3;
+      if (!s3?.endpoint || !s3.region || !s3.bucket || !s3.accessKeyId || !s3.secretAccessKey) {
+        return undefined;
+      }
+      return new S3CompatibleAudioStorage({
+        endpoint: s3.endpoint,
+        region: s3.region,
+        bucket: s3.bucket,
+        accessKeyId: s3.accessKeyId,
+        secretAccessKey: s3.secretAccessKey,
+        signedUrlTtlSeconds: env.storage.signedUrlTtlSeconds,
+        publicBaseUrl: s3.publicBaseUrl,
+        sessionToken: s3.sessionToken,
+        objectKeyPrefix: s3.objectKeyPrefix,
+        requestTimeoutMs: env.requestTimeoutMs,
+      });
+    }
+    return new LocalAudioStorage();
   }
 
   /** Creates the art-topic classifier if the feature flag is enabled. */
@@ -305,10 +335,10 @@ export class ChatModule {
   ): BuiltChatModule {
     const imageStorage = this.buildImageStorage();
     const repository = new TypeOrmChatRepository(dataSource);
-    const tts =
-      env.tts?.enabled && env.llm.openAiApiKey
-        ? new OpenAiTextToSpeechService()
-        : new DisabledTextToSpeechService();
+    // TTS is always wired in V1 — falls back to Disabled only when no OpenAI key (dev safety).
+    const tts = env.llm.openAiApiKey
+      ? new OpenAiTextToSpeechService()
+      : new DisabledTextToSpeechService();
     const ocr = env.featureFlags.ocrGuard ? new TesseractOcrService() : new DisabledOcrService();
     const userMemory = this.buildUserMemory(dataSource, cache);
     const knowledgeBase = this.buildKnowledgeBase(cache);
@@ -385,6 +415,7 @@ export class ChatModule {
       orchestrator: deps.effectiveOrchestrator,
       imageStorage: deps.imageStorage,
       audioTranscriber: new OpenAiAudioTranscriber(),
+      audioStorage: this.buildAudioStorage(),
       tts: deps.tts,
       cache: deps.cache,
       ocr: deps.ocr,

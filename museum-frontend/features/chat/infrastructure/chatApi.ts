@@ -408,6 +408,10 @@ export const chatApi = {
   /**
    * Posts a text message via SSE streaming. Tokens arrive progressively via onToken.
    * Uses raw fetch() to access the text/event-stream response body.
+   *
+   * @deprecated SSE streaming retired in V1 — see `docs/adr/ADR-001-sse-streaming-deprecated.md`.
+   *   Use `postMessage` instead. Kept for residual client compatibility.
+   *
    * @param params - Session ID, text, context, and stream event callbacks.
    */
   async postMessageStream(params: {

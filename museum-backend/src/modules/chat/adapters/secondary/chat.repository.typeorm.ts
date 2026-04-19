@@ -434,4 +434,39 @@ export class TypeOrmChatRepository implements ChatRepository {
     if (!row) return null;
     return { value: row.value };
   }
+
+  /**
+   * Persists a TTS audio reference for a message (assistant only).
+   *
+   * @param messageId - UUID of the message.
+   * @param input - Audio storage reference, generation timestamp, voice id.
+   * @param input.audioUrl - Storage reference.
+   * @param input.audioGeneratedAt - Generation timestamp.
+   * @param input.audioVoice - Voice id.
+   */
+  async updateMessageAudio(
+    messageId: string,
+    input: { audioUrl: string; audioGeneratedAt: Date; audioVoice: string },
+  ): Promise<void> {
+    await this.messageRepo.update(
+      { id: messageId },
+      {
+        audioUrl: input.audioUrl,
+        audioGeneratedAt: input.audioGeneratedAt,
+        audioVoice: input.audioVoice,
+      },
+    );
+  }
+
+  /**
+   * Clears the cached TTS audio reference for a message.
+   *
+   * @param messageId - UUID of the message.
+   */
+  async clearMessageAudio(messageId: string): Promise<void> {
+    await this.messageRepo.update(
+      { id: messageId },
+      { audioUrl: null, audioGeneratedAt: null, audioVoice: null },
+    );
+  }
 }

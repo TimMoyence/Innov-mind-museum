@@ -140,16 +140,17 @@ describe('env.ts module', () => {
   });
 
   describe('optional sections (TTS, cache, sentry, otel)', () => {
-    it('tts is undefined when TTS_ENABLED is not set', () => {
-      const env = loadEnv({ TTS_ENABLED: undefined });
-      expect(env.tts).toBeUndefined();
+    it('tts is always populated (TTS_ENABLED was retired in V1)', () => {
+      const env = loadEnv({});
+      expect(env.tts).toBeDefined();
+      expect(env.tts.enabled).toBe(true);
+      // Default model upgraded from tts-1 to gpt-4o-mini-tts in V1.
+      expect(env.tts.model).toBe('gpt-4o-mini-tts');
     });
 
-    it('tts is populated when TTS_ENABLED is true', () => {
-      const env = loadEnv({ TTS_ENABLED: 'true', TTS_MODEL: 'tts-1-hd' });
-      expect(env.tts).toBeDefined();
-      expect(env.tts?.enabled).toBe(true);
-      expect(env.tts?.model).toBe('tts-1-hd');
+    it('tts model is overridable via TTS_MODEL', () => {
+      const env = loadEnv({ TTS_MODEL: 'tts-1-hd' });
+      expect(env.tts.model).toBe('tts-1-hd');
     });
 
     it('cache is undefined when CACHE_ENABLED is not set', () => {
@@ -213,19 +214,15 @@ describe('env.ts module', () => {
   describe('feature flags', () => {
     it('all feature flags default to false when env vars are absent', () => {
       const env = loadEnv({
-        FEATURE_FLAG_VOICE_MODE: '',
         FEATURE_FLAG_OCR_GUARD: '',
         FEATURE_FLAG_API_KEYS: '',
-        FEATURE_FLAG_STREAMING: '',
         FEATURE_FLAG_MULTI_TENANCY: '',
         FEATURE_FLAG_USER_MEMORY: '',
         FEATURE_FLAG_KNOWLEDGE_BASE: '',
         FEATURE_FLAG_IMAGE_ENRICHMENT: '',
       });
-      expect(env.featureFlags.voiceMode).toBe(false);
       expect(env.featureFlags.ocrGuard).toBe(false);
       expect(env.featureFlags.apiKeys).toBe(false);
-      expect(env.featureFlags.streaming).toBe(false);
       expect(env.featureFlags.multiTenancy).toBe(false);
       expect(env.featureFlags.userMemory).toBe(false);
       expect(env.featureFlags.knowledgeBase).toBe(false);
@@ -234,12 +231,12 @@ describe('env.ts module', () => {
 
     it('feature flags can be enabled individually', () => {
       const env = loadEnv({
-        FEATURE_FLAG_VOICE_MODE: 'true',
-        FEATURE_FLAG_STREAMING: '1',
+        FEATURE_FLAG_USER_MEMORY: 'true',
+        FEATURE_FLAG_OCR_GUARD: '1',
       });
-      expect(env.featureFlags.voiceMode).toBe(true);
-      expect(env.featureFlags.streaming).toBe(true);
-      expect(env.featureFlags.ocrGuard).toBe(false);
+      expect(env.featureFlags.userMemory).toBe(true);
+      expect(env.featureFlags.ocrGuard).toBe(true);
+      expect(env.featureFlags.apiKeys).toBe(false);
     });
   });
 

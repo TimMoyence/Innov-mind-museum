@@ -231,16 +231,15 @@ const env: AppEnv = {
           'audio/aac',
         ],
   },
-  tts: toBoolean(process.env.TTS_ENABLED, false)
-    ? {
-        enabled: true,
-        model: process.env.TTS_MODEL || 'tts-1',
-        voice: process.env.TTS_VOICE || 'alloy',
-        speed: toNumber(process.env.TTS_SPEED, 1),
-        maxTextLength: toNumber(process.env.TTS_MAX_TEXT_LENGTH, 4096),
-        cacheTtlSeconds: toNumber(process.env.TTS_CACHE_TTL_SECONDS, 86400),
-      }
-    : undefined,
+  // TTS_ENABLED retired (V1 2026-04) — voice pipeline always on. See docs/AI_VOICE.md.
+  tts: {
+    enabled: true,
+    model: process.env.TTS_MODEL || 'gpt-4o-mini-tts',
+    voice: process.env.TTS_VOICE || 'alloy',
+    speed: toNumber(process.env.TTS_SPEED, 1),
+    maxTextLength: toNumber(process.env.TTS_MAX_TEXT_LENGTH, 4096),
+    cacheTtlSeconds: toNumber(process.env.TTS_CACHE_TTL_SECONDS, 86400),
+  },
   cache: toBoolean(process.env.CACHE_ENABLED, false)
     ? {
         enabled: true,
@@ -270,10 +269,10 @@ const env: AppEnv = {
       }
     : undefined,
   featureFlags: {
-    voiceMode: toBoolean(process.env.FEATURE_FLAG_VOICE_MODE, false),
+    // voiceMode + streaming flags retired in V1 — voice pipeline (STT→LLM→TTS) and SSE
+    // are now always-on. SSE route remains @deprecated (see docs/adr/ADR-001-sse-streaming-deprecated.md).
     ocrGuard: toBoolean(process.env.FEATURE_FLAG_OCR_GUARD, false),
     apiKeys: toBoolean(process.env.FEATURE_FLAG_API_KEYS, false),
-    streaming: toBoolean(process.env.FEATURE_FLAG_STREAMING, false),
     multiTenancy: toBoolean(process.env.FEATURE_FLAG_MULTI_TENANCY, false),
     userMemory: toBoolean(process.env.FEATURE_FLAG_USER_MEMORY, false),
     knowledgeBase: toBoolean(process.env.FEATURE_FLAG_KNOWLEDGE_BASE, false),

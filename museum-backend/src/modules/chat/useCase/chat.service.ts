@@ -32,6 +32,7 @@ import type {
 } from '../domain/chat.types';
 import type { FeedbackValue } from '../domain/messageFeedback.entity';
 import type { AdvancedGuardrail } from '../domain/ports/advanced-guardrail.port';
+import type { AudioStorage } from '../domain/ports/audio-storage.port';
 import type { AudioTranscriber } from '../domain/ports/audio-transcriber.port';
 import type { ChatOrchestrator } from '../domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '../domain/ports/image-storage.port';
@@ -61,6 +62,7 @@ export interface ChatServiceDeps {
   orchestrator: ChatOrchestrator;
   imageStorage: ImageStorage;
   audioTranscriber?: AudioTranscriber;
+  audioStorage?: AudioStorage;
   tts?: TextToSpeechService;
   cache?: CacheService;
   ocr?: OcrService;
@@ -126,6 +128,7 @@ export class ChatService {
       repository: deps.repository,
       tts: deps.tts,
       cache: deps.cache,
+      audioStorage: deps.audioStorage,
     });
   }
 
@@ -224,6 +227,11 @@ export class ChatService {
    * Streams assistant response tokens via onToken callback while processing the message.
    * Uses shared prepareMessage/commitAssistantResponse logic.
    *
+   * @deprecated SSE streaming was retired in V1 — token-fluidity issues (cf. ADR-001)
+   *   made it non-viable. Use {@link postMessage} instead. Code conserved for residual
+   *   client compatibility, scheduled for removal in V1.1 if usage falls below 10/day.
+   *   See `docs/adr/ADR-001-sse-streaming-deprecated.md`.
+   *
    * @param sessionId - UUID of the target chat session.
    * @param input - User message payload (text only for streaming).
    * @param callbacks - Streaming callbacks and optional parameters.
@@ -251,6 +259,7 @@ export class ChatService {
       userId: callbacks.currentUserId,
       requestId: callbacks.requestId,
     });
+    // eslint-disable-next-line @typescript-eslint/no-deprecated, sonarjs/deprecation -- facade for the deprecated SSE path; ADR-001
     return await this.messages.postMessageStream(sessionId, input, callbacks);
   }
 
@@ -345,5 +354,19 @@ export class ChatService {
     currentUserId?: number,
   ): Promise<{ audio: Buffer; contentType: string } | null> {
     return await this.media.synthesizeSpeech(messageId, currentUserId);
+  }
+
+  /**
+   * Returns a signed read URL for a message's cached TTS audio (storage-backed).
+   *
+   * @param messageId - UUID of the assistant message.
+   * @param currentUserId - Authenticated user id for ownership checks.
+   * @returns Signed URL with expiry + voice + generation timestamp, or null if no cached audio.
+   */
+  async getMessageAudioUrl(
+    messageId: string,
+    currentUserId?: number,
+  ): Promise<{ url: string; expiresAt: string; voice: string; generatedAt: string } | null> {
+    return await this.media.getMessageAudioUrl(messageId, currentUserId);
   }
 }
