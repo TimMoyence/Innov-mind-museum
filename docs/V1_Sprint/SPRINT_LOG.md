@@ -2344,3 +2344,74 @@ Machine à états à 4 phases : `user (900ms) → typing (1200ms) → assistant 
 - `DemoUserBubble` / `DemoAssistantBubble` inline dans `ChatDemoSlide` plutôt que réutiliser `ChatMessageBubble` (365L) — le composant de prod embarque TTS, feedback, context-menu ; un subset visual-only de 40L est plus propre et sans couplage.
 - `initialPrompt` transmis via URL query param (Expo Router) plutôt que via AsyncStorage ou context — aligné sur le pattern `intent=camera|audio` existant, rétro-compat, stateless.
 - `isPromptHandled` state (pas un ref) — garantit que React re-render après la guard, nécessaire car `sendMessage` attend `!isLoading`.
+
+---
+
+## 2026-04-19 — Feature Flags LOT 1 : Voice V1 + SSE Deprecation + NL-4 Chat Split
+
+### Contexte
+
+Décision produit : suppression des feature flags bloquants (philosophie "users get ALL features, not half"). LOT 1 : `FEATURE_FLAG_VOICE_MODE` et `FEATURE_FLAG_STREAMING` retirés dans le même sprint que Voice V1 et NL-4.
+
+### Changements BE
+
+**Config (env.ts / env.types.ts)**
+- `tts` devient `required` (plus optional) — 4 optional chains `env.tts?.xxx` → `env.tts.xxx` dans `text-to-speech.openai.ts` et `chat-media.service.ts`
+- `featureFlags.voiceMode` et `featureFlags.streaming` supprimés
+
+**Chat module**
+- `chat-media.route.ts` : guard voiceMode supprimé, TTS toujours actif
+- `chat-message.route.ts` : guard streaming supprimé, handler SSE marqué `@deprecated` (ADR-001) + `logger.warn` à chaque hit
+- `chatMessage.entity.ts` : 3 colonnes audio (`audioUrl`, `audioGeneratedAt`, `audioVoice`)
+- `chat-media.service.ts` : Redis hot-cache + S3 persist pour TTS
+- `chat.service.ts` : facade `getMessageAudioUrl`
+- Migration `1776593841594-AddAudioToChatMessage` : colonnes audio sur `chat_messages`
+- Migration `1776593907869-Check` : sync schema drift (snake_case↔camelCase, enum status, FK constraints)
+
+**Nouveaux adapteurs hexagonaux**
+- `audio-storage.port.ts` — interface port
+- `audio-storage.s3.ts` — adaptateur S3
+- `audio-storage.stub.ts` — stub local (dev/test)
+- `precompute-tts.service.ts` — batch pré-synthèse TTS walk audio
+
+### Changements FE
+
+**sendStrategies/** (extraction de useChatSession)
+- `sendMessageAudio.ts`, `sendMessageCache.ts`, `sendMessageOffline.ts`, `sendMessageStreaming.ts`
+- `sendStrategy.shared.ts`, `sendStrategy.types.ts`, `index.ts`
+- `chatSessionStrategies.pure.ts` : helpers `hasContent` + `pickSendStrategy`
+
+**bubbleSections/** (NL-4.2 : split ChatMessageBubble 365L)
+- `FeedbackSection.tsx`, `ImageSection.tsx`, `StreamingBody.tsx`, `TtsSection.tsx`, `index.ts`
+- `ChatMessageBubble.tsx` → facade composant
+
+**SSE deprecation**
+- `sseParser.ts` + `useStreamingState.ts` : marqués `@deprecated` (sauf `useStreamingState` qui reste actif pour streaming token accumulation)
+- `chatApi.ts` : `postMessageStream` marqué `@deprecated`, appel interne kept for compat
+- ESLint : 22 disables ciblés dans les fichiers d'implémentation/tests SSE (légitimes — code intentionnellement déprécié)
+
+**TTS frontend**
+- `useTextToSpeech.ts` : expo-file-system legacy cache + offline replay
+
+### Documentation
+- `docs/AI_VOICE.md` : architecture Voice V1 complète
+- `docs/adr/ADR-001-sse-streaming-deprecated.md` : decision record SSE
+- `docs/plans/FEATURE_FLAGS_AUDIT.md` : plan LOT 2 (9 flags restants)
+
+### Vérification finale
+
+| Check | Résultat |
+|---|---|
+| BE `tsc --noEmit` | PASS (0 erreurs) |
+| FE `tsc --noEmit` | PASS (0 erreurs) |
+| FE ESLint | PASS (20/22 warnings) |
+| BE tests | 2715 passed |
+| Migrations | 2 migrations (audio + schema drift) |
+| Feature flags retirés | voiceMode + streaming |
+| Feature flags restants | 9 (LOT 2, post-voice-V1) |
+
+### Décisions architecturales
+
+- `useStreamingState` : NE PAS marquer `@deprecated` — il gère l'accumulation de tokens (streaming token-by-token), pas le protocole SSE. Seuls `parseSseChunk`, `postMessageStream`, `SseStreamEvent` sont dépréciés (protocole fil SSE).
+- `DisabledTextToSpeechService` conservé : null-object pattern pour le cas sans OpenAI API key (pas de flag).
+- SSE route BE : kept for legacy clients — `logger.warn` à chaque hit permet de monitorer l'adoption et planifier la suppression définitive.

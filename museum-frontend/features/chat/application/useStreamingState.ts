@@ -11,9 +11,6 @@ const FLUSH_INTERVAL_MS = 30;
 /**
  * Manages streaming text accumulation with throttled flushes.
  * Keeps streaming state in refs to avoid re-renders during rapid token accumulation.
- *
- * @deprecated SSE streaming was retired in V1 — see `docs/adr/ADR-001-sse-streaming-deprecated.md`.
- *   Kept for residual client compatibility. Do not use for new chat flows.
  */
 export const useStreamingState = (
   setMessages: React.Dispatch<React.SetStateAction<ChatUiMessage[]>>,

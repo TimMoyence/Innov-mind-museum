@@ -435,7 +435,7 @@ describe('chatApi', () => {
   });
 
   // ── postMessageStream ──────────────────────────────────────────────────────
-
+  /* eslint-disable @typescript-eslint/no-deprecated -- intentional: this block tests the deprecated SSE path retained for residual client compat (ADR-001) */
   describe('postMessageStream', () => {
     beforeEach(() => {
       jest.useFakeTimers();
@@ -1057,4 +1057,5 @@ describe('chatApi', () => {
       expect(tokens).toEqual(['Buffered']);
     });
   });
+  /* eslint-enable @typescript-eslint/no-deprecated */
 });

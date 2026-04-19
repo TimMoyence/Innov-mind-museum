@@ -1,5 +1,7 @@
 # PLAN 04 — Backend Chat Slim Down
 
+> **NOTE (2026-04-18 — audit NL feature tree)** : ce plan a été rédigé post-audit et décrit l'état *avant* un refactor déjà effectué en sprint antérieur (commit 5c374013, voir SPRINT_LOG section « Production Hardening & V2 Features » QE-10). Les références à `chat-message.service.ts` comme fichier obèse sont historiquement inexactes — le split a eu lieu avant l'écriture du plan. La cible actuelle de modularisation chat est déplacée dans `NL-8 BE Modular` (voir `.claude/skills/team/team-reports/2026-04-18-NL-feature-audit/04_IMPROVEMENTS_BACKLOG.md`).
+
 **Phase** : 2 (Refactor Structurel)
 **Effort** : 4-5 jours
 **Pipeline /team** : enterprise

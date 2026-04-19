@@ -515,6 +515,7 @@ export const chatApi = {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- deprecated type used within deprecated SSE function implementation (ADR-001)
     const processEvent = (event: SseStreamEvent) => {
       switch (event.type) {
         case 'token':
@@ -550,6 +551,7 @@ export const chatApi = {
             if (done) break;
 
             buffer += decoder.decode(value, { stream: true });
+            // eslint-disable-next-line @typescript-eslint/no-deprecated -- deprecated fn within deprecated SSE impl (ADR-001)
             const { events, remainder } = parseSseChunk(buffer);
             buffer = remainder;
             for (const event of events) {
@@ -558,6 +560,7 @@ export const chatApi = {
           }
           // Process any remaining buffer
           if (buffer.trim()) {
+            // eslint-disable-next-line @typescript-eslint/no-deprecated -- deprecated fn within deprecated SSE impl (ADR-001)
             const { events } = parseSseChunk(buffer + '\n\n');
             for (const event of events) {
               processEvent(event);
@@ -578,6 +581,7 @@ export const chatApi = {
       } else {
         // Fallback: read full response text and parse all events at once
         const text = await response.text();
+        // eslint-disable-next-line @typescript-eslint/no-deprecated -- deprecated fn within deprecated SSE impl (ADR-001)
         const { events } = parseSseChunk(text + '\n\n');
         for (const event of events) {
           processEvent(event);
@@ -630,6 +634,7 @@ export const chatApi = {
         let result: PostMessageResponseDTO | null = null;
         let streamError: { code: string; message: string } | null = null;
 
+        // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy SSE path kept for residual client compat (ADR-001); new clients use sendMessageSmart non-streaming fallback
         await this.postMessageStream({
           sessionId: params.sessionId,
           text: params.text,

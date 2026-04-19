@@ -19,7 +19,9 @@ export type SseStreamEvent =
  * @param buffer - Raw text from a `text/event-stream` response.
  * @returns Parsed events and the unprocessed remainder of the buffer.
  */
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- deprecated type used within deprecated function implementation
 export function parseSseChunk(buffer: string): { events: SseStreamEvent[]; remainder: string } {
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- deprecated type used within deprecated function implementation
   const events: SseStreamEvent[] = [];
   const blocks = buffer.split('\n\n');
   // Last block may be incomplete — keep it as remainder
