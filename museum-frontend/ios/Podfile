@@ -62,6 +62,13 @@ target 'Musaium' do
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
 
+    # @musaium/maplibre-spm-integration
+    # Wire the MapLibre Swift Package Manager dep into both the MapLibreReactNative
+    # target and every user target (Musaium.app). Without this call the `MapLibre`
+    # headers (`MapLibre/MapLibre.h`, `MapLibre/MLNNetworkConfiguration.h`) are not
+    # resolved and the build fails. See MapLibreReactNative.podspec for `$MLRN`.
+    $MLRN.post_install(installer) if defined?($MLRN)
+
     # @musaium/fmt-consteval-patch
     # Fix fmt consteval errors with Xcode 26+ Apple Clang regression.
     # Widen the Apple Clang guard to disable consteval on all versions.

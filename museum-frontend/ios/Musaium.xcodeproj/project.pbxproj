@@ -154,6 +154,9 @@
 			dependencies = (
 			);
 			name = Musaium;
+			packageProductDependencies = (
+				958E46644E6B21BB80BDC5EE /* MapLibre */,
+			);
 			productName = Musaium;
 			productReference = 13B07F961A680F5B00A75B9A /* Musaium.app */;
 			productType = "com.apple.product-type.application";
@@ -180,6 +183,9 @@
 				Base,
 			);
 			mainGroup = 83CBB9F61A601CBA00E9B192;
+			packageReferences = (
+				2F71E93E4FC11E359E36CEFB /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */,
+			);
 			productRefGroup = 83CBBA001A601CBA00E9B192 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -602,6 +608,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		2F71E93E4FC11E359E36CEFB /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/maplibre/maplibre-gl-native-distribution";
+			requirement = {
+				kind = exactVersion;
+				version = 6.25.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		958E46644E6B21BB80BDC5EE /* MapLibre */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2F71E93E4FC11E359E36CEFB /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */;
+			productName = MapLibre;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 83CBB9F71A601CBA00E9B192 /* Project object */;
 }
