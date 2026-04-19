@@ -70,20 +70,19 @@
     "hero_subtitle": "Explore artworks, monuments, and heritage with a focused AI guide built for real visits.",
     "settings_note": "Language: {{locale}} • Guided mode: {{mode}}",
     "start_conversation": "Start Conversation",
-    "onboarding": "Onboarding",
-    "settings": "Settings",
-    "menu": {
-      "discover": "Discover",
-      "lens": "Camera",
-      "audio": "Audio"
-    },
-    "messages": {
-      "lens_opened": "Camera conversation opened",
-      "audio_opened": "Audio conversation opened",
-      "conversation_opened": "Conversation opened",
-      "opening_discover": "Opening Discover",
-      "opening_lens": "Opening Camera",
-      "opening_audio": "Opening Audio"
+    "chips": {
+      "vocal": {
+        "label": "Voice question",
+        "hint": "Opens a voice-first chat to ask anything"
+      },
+      "camera": {
+        "label": "Identify an artwork",
+        "hint": "Opens the camera to recognize an artwork"
+      },
+      "walk": {
+        "label": "Cultural walk",
+        "hint": "Plans a guided cultural walk"
+      }
     }
   },
   "conversations": {
@@ -238,29 +237,35 @@
     "skip": "Skip",
     "next": "Next",
     "get_started": "Get Started",
-    "slide0": {
-      "title": "Welcome to Musaium",
-      "subtitle": "Your personal museum guide. Photograph artworks or ask questions to get AI-powered insights.",
-      "tip1": "Open Home and choose Discover, Camera, Audio, or Start Conversation.",
-      "tip2": "Tap Camera to photograph an artwork and get an AI analysis.",
-      "tip3": "Tap Audio to ask your question out loud.",
-      "tip4": "Visit Dashboard to revisit saved or recent conversations."
-    },
-    "slide1": {
-      "title": "Practical Tips",
-      "subtitle": "Get better museum answers with focused image and audio inputs.",
-      "tip1": "Frame one artwork or one detail at a time for cleaner analysis.",
-      "tip2": "Ask art-focused questions (artist, style, period, symbolism).",
-      "tip3": "Use Guided Museum Mode for next-stop suggestions during visits.",
-      "tip4": "Choose Beginner or Expert guide level for vocabulary depth."
-    },
-    "slide2": {
-      "title": "Help and Support",
-      "subtitle": "Find support channels and privacy information quickly.",
-      "tip1": "Use Support for account issues, bugs, and feedback.",
-      "tip2": "Privacy page shows data processing information and your rights.",
-      "tip3": "Settings is a hub for navigation and account actions.",
-      "tip4": "Your data is processed securely with GDPR compliance."
+    "v2": {
+      "slide1": {
+        "title": "Musaium speaks art",
+        "subtitle": "A live glimpse of what a conversation feels like.",
+        "demo_user": "Tell me about the Mona Lisa",
+        "demo_assistant": "The Mona Lisa, painted by Leonardo da Vinci around 1503, fascinates with her elusive smile. Want to know the secret behind the sfumato technique?"
+      },
+      "slide2": {
+        "title": "Sees, hears, and tells you",
+        "subtitle": "Three ways to explore art, right in your pocket.",
+        "pillar_photo": "Snap an artwork and receive its story.",
+        "pillar_photo_a11y": "Photo pillar: snap an artwork and receive its story.",
+        "pillar_voice": "Ask your question out loud, even in the gallery.",
+        "pillar_voice_a11y": "Voice pillar: ask your question out loud, even in the gallery.",
+        "pillar_guide": "Follow an enriched trail through the museum.",
+        "pillar_guide_a11y": "Guide pillar: follow an enriched trail through the museum."
+      },
+      "slide3": {
+        "title": "Where shall we start?",
+        "subtitle": "Pick a prompt and Musaium takes it from there.",
+        "chip_museum_label": "Museum near me",
+        "chip_museum_prompt": "Find a museum near me and tell me what to see first.",
+        "chip_masterpiece_label": "Tell me about a masterpiece",
+        "chip_masterpiece_prompt": "Pick an iconic artwork and walk me through its story.",
+        "chip_tour_label": "Start a guided tour",
+        "chip_tour_prompt": "Start a short guided tour of a museum I'd love.",
+        "skip_cta": "Explore on my own",
+        "skip_cta_a11y": "Skip chips and go to the home screen"
+      }
     }
   },
   "support": {
@@ -560,8 +565,8 @@
     "home": {
       "start_conversation": "Start a new conversation",
       "start_conversation_hint": "Creates a new chat session with the museum assistant",
-      "onboarding": "Open onboarding guide",
-      "settings": "Open settings"
+      "settings_gear": "Open settings",
+      "settings_gear_hint": "Opens the app settings"
     },
     "auth": {
       "email_input": "Email address",
@@ -779,5 +784,10 @@
     "empty": "No reviews yet. Be the first!",
     "reviewCount": "{{count}} reviews",
     "submitFailed": "Failed to submit review. Please try again."
+  },
+  "walkComposer": {
+    "title": "Cultural walk",
+    "subtitle": "Plan a guided cultural walk in your city — museums, landmarks, hidden gems.",
+    "coming_soon": "Coming soon"
   }
 }

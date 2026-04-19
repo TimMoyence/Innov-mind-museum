@@ -70,20 +70,19 @@
     "hero_subtitle": "Explorez les œuvres, monuments et patrimoines avec un guide IA dédié aux visites réelles.",
     "settings_note": "Langue : {{locale}} • Mode guidé : {{mode}}",
     "start_conversation": "Démarrer une conversation",
-    "onboarding": "Guide d'utilisation",
-    "settings": "Paramètres",
-    "menu": {
-      "discover": "Découvrir",
-      "lens": "Caméra",
-      "audio": "Audio"
-    },
-    "messages": {
-      "lens_opened": "Conversation Caméra ouverte",
-      "audio_opened": "Conversation Audio ouverte",
-      "conversation_opened": "Conversation ouverte",
-      "opening_discover": "Ouverture de Découvrir",
-      "opening_lens": "Ouverture de la Caméra",
-      "opening_audio": "Ouverture de l'Audio"
+    "chips": {
+      "vocal": {
+        "label": "Question vocale",
+        "hint": "Ouvre un échange en mode vocal"
+      },
+      "camera": {
+        "label": "Identifier une œuvre",
+        "hint": "Ouvre l'appareil photo pour reconnaître une œuvre"
+      },
+      "walk": {
+        "label": "Marche culturelle",
+        "hint": "Compose une balade guidée"
+      }
     }
   },
   "conversations": {
@@ -238,29 +237,35 @@
     "skip": "Passer",
     "next": "Suivant",
     "get_started": "Commencer",
-    "slide0": {
-      "title": "Bienvenue sur Musaium",
-      "subtitle": "Votre guide de musée personnel. Photographiez des œuvres ou posez des questions pour obtenir des analyses IA.",
-      "tip1": "Ouvrez l'Accueil et choisissez Découvrir, Caméra, Audio ou Démarrer une conversation.",
-      "tip2": "Appuyez sur Caméra pour photographier une œuvre et lancer une analyse IA.",
-      "tip3": "Appuyez sur Audio pour poser votre question à voix haute.",
-      "tip4": "Visitez le Tableau de bord pour retrouver vos conversations enregistrées ou récentes."
-    },
-    "slide1": {
-      "title": "Astuces pratiques",
-      "subtitle": "Obtenez de meilleures réponses avec des images et des entrées audio ciblées.",
-      "tip1": "Cadrez une seule œuvre ou un détail à la fois pour une analyse plus précise.",
-      "tip2": "Posez des questions centrées sur l'art (artiste, style, période, symbolisme).",
-      "tip3": "Utilisez le Mode Guidé pour des suggestions d'étapes suivantes pendant les visites.",
-      "tip4": "Choisissez le niveau Débutant ou Expert pour la profondeur du vocabulaire."
-    },
-    "slide2": {
-      "title": "Aide et Support",
-      "subtitle": "Trouvez rapidement les canaux de support et les informations de confidentialité.",
-      "tip1": "Utilisez le Support pour les problèmes de compte, bugs et retours.",
-      "tip2": "La page Confidentialité montre le traitement des données et vos droits.",
-      "tip3": "Les Paramètres sont un hub de navigation et d'actions sur le compte.",
-      "tip4": "Vos données sont traitées en toute sécurité conformément au RGPD."
+    "v2": {
+      "slide1": {
+        "title": "Musaium parle d'art",
+        "subtitle": "Un aperçu vivant de ce qu'est une conversation.",
+        "demo_user": "Parle-moi de La Joconde",
+        "demo_assistant": "La Joconde, peinte par Léonard de Vinci vers 1503, fascine par son sourire insaisissable. Veux-tu connaître le secret de sa technique sfumato ?"
+      },
+      "slide2": {
+        "title": "Un guide qui voit, écoute, raconte",
+        "subtitle": "Trois façons d'explorer l'art, à portée de main.",
+        "pillar_photo": "Prends une œuvre, reçois son histoire.",
+        "pillar_photo_a11y": "Pilier photo : prends une œuvre, reçois son histoire.",
+        "pillar_voice": "Pose ta question à voix haute, même en salle.",
+        "pillar_voice_a11y": "Pilier voix : pose ta question à voix haute, même en salle.",
+        "pillar_guide": "Suis un parcours enrichi dans le musée.",
+        "pillar_guide_a11y": "Pilier guide : suis un parcours enrichi dans le musée."
+      },
+      "slide3": {
+        "title": "Par quoi commencer ?",
+        "subtitle": "Choisis une piste et Musaium prend le relais.",
+        "chip_museum_label": "Musée proche de moi",
+        "chip_museum_prompt": "Trouve un musée proche et dis-moi quoi voir en premier.",
+        "chip_masterpiece_label": "Parle-moi d'un chef-d'œuvre",
+        "chip_masterpiece_prompt": "Choisis une œuvre iconique et raconte-moi son histoire.",
+        "chip_tour_label": "Commence une visite guidée",
+        "chip_tour_prompt": "Lance une visite guidée courte d'un musée qui me plairait.",
+        "skip_cta": "Explorer par moi-même",
+        "skip_cta_a11y": "Passer les suggestions et aller à l'accueil"
+      }
     }
   },
   "support": {
@@ -560,8 +565,8 @@
     "home": {
       "start_conversation": "Commencer une nouvelle conversation",
       "start_conversation_hint": "Crée une nouvelle session de chat avec l'assistant du musée",
-      "onboarding": "Ouvrir le guide de démarrage",
-      "settings": "Ouvrir les paramètres"
+      "settings_gear": "Ouvrir les paramètres",
+      "settings_gear_hint": "Ouvre les paramètres de l'application"
     },
     "auth": {
       "email_input": "Adresse e-mail",
@@ -779,5 +784,10 @@
     "empty": "Aucun avis pour le moment. Soyez le premier !",
     "reviewCount": "{{count}} avis",
     "submitFailed": "Échec de l'envoi. Veuillez réessayer."
+  },
+  "walkComposer": {
+    "title": "Marche culturelle",
+    "subtitle": "Composez une balade culturelle dans votre ville — musées, monuments, lieux insolites.",
+    "coming_soon": "Bientôt disponible"
   }
 }

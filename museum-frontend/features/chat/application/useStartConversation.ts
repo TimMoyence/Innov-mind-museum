@@ -7,7 +7,9 @@ import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runt
 import { getErrorMessage } from '@/shared/lib/errors';
 import type { CreateSessionRequestDTO } from '../domain/contracts';
 
-type ConversationIntent = 'default' | 'camera' | 'audio';
+type ConversationIntent = 'default' | 'camera' | 'audio' | 'walk';
+
+const WALK_COMPOSER_ROUTE = '/(stack)/walk-composer' as const;
 
 interface StartConversationOptions {
   intent?: ConversationIntent;
@@ -17,6 +19,8 @@ interface StartConversationOptions {
   museumName?: string;
   museumAddress?: string;
   coordinates?: { lat: number; lng: number };
+  /** When set, the chat screen auto-sends this prompt once the session is opened. */
+  initialPrompt?: string;
 }
 
 interface UseStartConversationReturn {
@@ -34,13 +38,20 @@ export const useStartConversation = (): UseStartConversationReturn => {
   const startConversation = useCallback(async (options?: StartConversationOptions) => {
     if (guardRef.current) return;
     Keyboard.dismiss();
+
+    const intent = options?.intent ?? 'default';
+
+    // Walk intent is a pure navigation — no chat session created.
+    if (intent === 'walk') {
+      router.push(WALK_COMPOSER_ROUTE);
+      return;
+    }
+
     guardRef.current = true;
     setIsCreating(true);
     setError(null);
 
     try {
-      const intent = options?.intent ?? 'default';
-
       const payload: CreateSessionRequestDTO = {};
 
       if (options?.skipSettings) {
@@ -58,7 +69,12 @@ export const useStartConversation = (): UseStartConversationReturn => {
       }
 
       const response = await chatApi.createSession(payload);
-      const suffix = intent === 'default' ? '' : `?intent=${intent}`;
+      const query: string[] = [];
+      if (intent !== 'default') query.push(`intent=${intent}`);
+      if (options?.initialPrompt) {
+        query.push(`initialPrompt=${encodeURIComponent(options.initialPrompt)}`);
+      }
+      const suffix = query.length ? `?${query.join('&')}` : '';
       router.push(`/(stack)/chat/${response.session.id}${suffix}`);
     } catch (createError) {
       setError(getErrorMessage(createError));

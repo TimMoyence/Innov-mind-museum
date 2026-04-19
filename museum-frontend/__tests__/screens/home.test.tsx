@@ -8,11 +8,14 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   chatApi: { createSession: jest.fn() },
 }));
 
-// Access the mock through the mocked module so we have the actual reference
 const { chatApi } = jest.requireMock<{ chatApi: { createSession: jest.Mock } }>(
   '@/features/chat/infrastructure/chatApi',
 );
 const mockCreateSession = chatApi.createSession;
+
+const { router } = jest.requireMock<{ router: { push: jest.Mock; back: jest.Mock } }>(
+  'expo-router',
+);
 
 jest.mock('@/features/settings/application/useRuntimeSettings', () => ({
   useRuntimeSettings: () => ({
@@ -33,10 +36,6 @@ jest.mock('@/features/daily-art/ui/DailyArtCard', () => {
     DailyArtCard: (props: any) => <View testID="daily-art-card" {...props} />,
   };
 });
-
-jest.mock('@/features/auth/routes', () => ({
-  ONBOARDING_ROUTE: '/(stack)/onboarding',
-}));
 
 import HomeScreen from '@/app/(tabs)/home';
 
@@ -64,10 +63,17 @@ describe('HomeScreen', () => {
     expect(screen.getByLabelText('a11y.home.start_conversation')).toBeTruthy();
   });
 
-  it('renders onboarding and settings buttons', () => {
+  it('renders the hero settings gear button', () => {
     render(<HomeScreen />);
-    expect(screen.getByLabelText('a11y.home.onboarding')).toBeTruthy();
-    expect(screen.getByLabelText('a11y.home.settings')).toBeTruthy();
+    expect(screen.getByTestId('hero-settings-button')).toBeTruthy();
+  });
+
+  it('renders the three home intent chips', () => {
+    render(<HomeScreen />);
+    expect(screen.getByTestId('home-intent-chips')).toBeTruthy();
+    expect(screen.getByTestId('home-intent-chip-vocal')).toBeTruthy();
+    expect(screen.getByTestId('home-intent-chip-camera')).toBeTruthy();
+    expect(screen.getByTestId('home-intent-chip-walk')).toBeTruthy();
   });
 
   it('renders DailyArtCard when artwork is available and not dismissed', () => {
@@ -130,8 +136,36 @@ describe('HomeScreen', () => {
     });
   });
 
-  it('renders floating context menu', () => {
+  it('opens settings when the hero gear button is pressed', () => {
     render(<HomeScreen />);
-    expect(screen.getByTestId('floating-context-menu')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('hero-settings-button'));
+    expect(router.push).toHaveBeenCalledWith('/(stack)/settings');
+  });
+
+  it('creates an audio session when the vocal chip is pressed', async () => {
+    mockCreateSession.mockResolvedValue({ session: { id: 'sess-audio' } });
+    render(<HomeScreen />);
+    fireEvent.press(screen.getByTestId('home-intent-chip-vocal'));
+    await waitFor(() => {
+      expect(mockCreateSession).toHaveBeenCalledTimes(1);
+    });
+    expect(router.push).toHaveBeenCalledWith('/(stack)/chat/sess-audio?intent=audio');
+  });
+
+  it('creates a camera session when the camera chip is pressed', async () => {
+    mockCreateSession.mockResolvedValue({ session: { id: 'sess-cam' } });
+    render(<HomeScreen />);
+    fireEvent.press(screen.getByTestId('home-intent-chip-camera'));
+    await waitFor(() => {
+      expect(mockCreateSession).toHaveBeenCalledTimes(1);
+    });
+    expect(router.push).toHaveBeenCalledWith('/(stack)/chat/sess-cam?intent=camera');
+  });
+
+  it('navigates to walk composer without creating a session when walk chip is pressed', () => {
+    render(<HomeScreen />);
+    fireEvent.press(screen.getByTestId('home-intent-chip-walk'));
+    expect(mockCreateSession).not.toHaveBeenCalled();
+    expect(router.push).toHaveBeenCalledWith('/(stack)/walk-composer');
   });
 });

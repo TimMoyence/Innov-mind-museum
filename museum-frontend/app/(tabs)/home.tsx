@@ -1,40 +1,40 @@
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
-import { ONBOARDING_ROUTE } from '@/features/auth/routes';
 import { useDailyArt } from '@/features/daily-art/application/useDailyArt';
 import { DailyArtCard } from '@/features/daily-art/ui/DailyArtCard';
+import { HeroSettingsButton } from '@/features/home/ui/HeroSettingsButton';
+import { HomeIntentChips, type HomeIntent } from '@/features/home/ui/HomeIntentChips';
 import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSettings';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { BrandMark } from '@/shared/ui/BrandMark';
-import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
 
-/** Renders the home screen with branding, runtime settings summary, and actions to start new conversations. */
+const INTENT_MAP: Record<HomeIntent, 'audio' | 'camera' | 'walk'> = {
+  vocal: 'audio',
+  camera: 'camera',
+  walk: 'walk',
+};
+
+/** Renders the home screen with branding, daily artwork, 3 intent chips, and a primary start-conversation CTA. */
 export default function HomeScreen() {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const { isCreating, error, setError, startConversation } = useStartConversation();
-  const [menuStatus, setMenuStatus] = useState<string | null>(null);
   const { locale, museumMode } = useRuntimeSettings();
   const { artwork, isLoading: isDailyArtLoading, isSaved, dismissed, save, skip } = useDailyArt();
 
-  const handleStartConversation = async (intent: 'default' | 'camera' | 'audio' = 'default') => {
-    await startConversation({ intent });
-    setMenuStatus(
-      intent === 'camera'
-        ? t('home.messages.lens_opened')
-        : intent === 'audio'
-          ? t('home.messages.audio_opened')
-          : t('home.messages.conversation_opened'),
-    );
+  const handleIntentPress = (intent: HomeIntent): void => {
+    void startConversation({ intent: INTENT_MAP[intent] });
+  };
+
+  const handleStartDefault = (): void => {
+    void startConversation({ intent: 'default' });
   };
 
   return (
@@ -44,45 +44,8 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.menuRow}>
-          <FloatingContextMenu
-            actions={[
-              {
-                id: 'discover',
-                icon: 'sparkles-outline',
-                label: t('home.menu.discover'),
-                onPress: () => {
-                  setMenuStatus(t('home.messages.opening_discover'));
-                  router.push('/(stack)/discover');
-                },
-              },
-              {
-                id: 'lens',
-                icon: 'camera-outline',
-                label: t('home.menu.lens'),
-                onPress: () => {
-                  setMenuStatus(t('home.messages.opening_lens'));
-                  void handleStartConversation('camera');
-                },
-              },
-              {
-                id: 'audio',
-                icon: 'musical-notes-outline',
-                label: t('home.menu.audio'),
-                onPress: () => {
-                  setMenuStatus(t('home.messages.opening_audio'));
-                  void handleStartConversation('audio');
-                },
-              },
-            ]}
-          />
-        </View>
-
-        {menuStatus ? (
-          <Text style={[styles.menuStatus, { color: theme.success }]}>{menuStatus}</Text>
-        ) : null}
-
         <GlassCard style={styles.heroCard} intensity={62}>
+          <HeroSettingsButton />
           <BrandMark variant="hero" />
           <Text style={[styles.title, { color: theme.textPrimary }]}>{t('home.hero_title')}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
@@ -105,6 +68,8 @@ export default function HomeScreen() {
           />
         ) : null}
 
+        <HomeIntentChips onPress={handleIntentPress} disabled={isCreating} />
+
         {error ? (
           <ErrorNotice
             message={error}
@@ -119,7 +84,7 @@ export default function HomeScreen() {
             styles.primaryButton,
             { backgroundColor: theme.primary, shadowColor: theme.shadowColor },
           ]}
-          onPress={() => void handleStartConversation('default')}
+          onPress={handleStartDefault}
           disabled={isCreating}
           accessibilityRole="button"
           accessibilityLabel={t('a11y.home.start_conversation')}
@@ -134,39 +99,6 @@ export default function HomeScreen() {
             </Text>
           )}
         </Pressable>
-
-        <View style={styles.secondaryRow}>
-          <Pressable
-            style={[
-              styles.secondaryButton,
-              { borderColor: theme.inputBorder, backgroundColor: theme.surface },
-            ]}
-            onPress={() => {
-              router.push(ONBOARDING_ROUTE);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={t('a11y.home.onboarding')}
-          >
-            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
-              {t('home.onboarding')}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.secondaryButton,
-              { borderColor: theme.inputBorder, backgroundColor: theme.surface },
-            ]}
-            onPress={() => {
-              router.push('/(stack)/settings');
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={t('a11y.home.settings')}
-          >
-            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
-              {t('home.settings')}
-            </Text>
-          </Pressable>
-        </View>
       </ScrollView>
     </LiquidScreen>
   );
@@ -179,16 +111,6 @@ const styles = StyleSheet.create({
     paddingBottom: semantic.media.homeBottomPad,
     justifyContent: 'center',
     gap: semantic.screen.gap,
-  },
-  menuRow: {
-    alignItems: 'center',
-    marginBottom: semantic.card.gapSmall,
-  },
-  menuStatus: {
-    textAlign: 'center',
-    fontSize: semantic.card.captionSize,
-    fontWeight: '700',
-    marginBottom: space['0.5'],
   },
   heroCard: {
     padding: semantic.modal.padding,
@@ -221,20 +143,5 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: semantic.button.fontSizeLarge,
     fontWeight: '700',
-  },
-  secondaryRow: {
-    flexDirection: 'row',
-    gap: semantic.form.gap,
-  },
-  secondaryButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: semantic.button.radius,
-    paddingVertical: semantic.button.paddingY,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    fontSize: semantic.button.fontSizeLarge,
-    fontWeight: '600',
   },
 });
