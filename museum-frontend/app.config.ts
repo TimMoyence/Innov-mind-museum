@@ -309,6 +309,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
       ],
       ['./plugins/withNetworkSecurity', { variant }],
+      './plugins/withFmtConstevalPatch',
+      '@maplibre/maplibre-react-native',
     ],
     experiments: {
       typedRoutes: false,

@@ -62,8 +62,9 @@ target 'Musaium' do
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
 
+    # @musaium/fmt-consteval-patch
     # Fix fmt consteval errors with Xcode 26+ Apple Clang regression.
-    # Widen the Apple Clang guard to disable consteval on all versions (constexpr fallback is safe).
+    # Widen the Apple Clang guard to disable consteval on all versions.
     fmt_base = File.join(__dir__, 'Pods', 'fmt', 'include', 'fmt', 'base.h')
     if File.exist?(fmt_base)
       content = File.read(fmt_base)
