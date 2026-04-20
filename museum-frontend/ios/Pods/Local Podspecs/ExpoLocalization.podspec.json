@@ -1,6 +1,6 @@
 {
   "name": "ExpoLocalization",
-  "version": "55.0.11",
+  "version": "55.0.13",
   "summary": "Provides an interface for native user localization information.",
   "description": "Provides an interface for native user localization information.",
   "license": "MIT",

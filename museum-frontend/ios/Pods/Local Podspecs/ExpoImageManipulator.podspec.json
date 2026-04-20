@@ -1,6 +1,6 @@
 {
   "name": "ExpoImageManipulator",
-  "version": "55.0.13",
+  "version": "55.0.15",
   "summary": "Provides functions that let you manipulation images on the local file system, eg: resize, crop.",
   "description": "Provides functions that let you manipulation images on the local file system, eg: resize, crop.",
   "license": "MIT",

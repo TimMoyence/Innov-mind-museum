@@ -84,5 +84,25 @@ target 'Musaium' do
         File.write(fmt_base, patched)
       end
     end
+
+    # @musaium/expo-updates-entry-file
+    # Workaround for expo-updates 55.0.18 + Metro: @expo/config strips `.js`
+    # from the resolved entry path (paths.js:227), then Metro's resolver 404s
+    # on `node_modules/expo-router/entry` during the "Generate updates
+    # resources" script phase. Forcing ENTRY_FILE with the explicit extension
+    # short-circuits resolveRelativeEntryPoint in createManifestForBuildAsync.
+    exu_target = installer.pods_project.targets.find { |t| t.name == 'EXUpdates' }
+    if exu_target
+      exu_inject = %(export ENTRY_FILE="node_modules/expo-router/entry.js"\n)
+      patched_phase = false
+      exu_target.build_phases.each do |phase|
+        next unless phase.is_a?(Xcodeproj::Project::Object::PBXShellScriptBuildPhase)
+        next unless phase.name&.include?('Generate updates resources')
+        next if phase.shell_script.start_with?(exu_inject)
+        phase.shell_script = exu_inject + phase.shell_script
+        patched_phase = true
+      end
+      installer.pods_project.save if patched_phase
+    end
   end
 end
