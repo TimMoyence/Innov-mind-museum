@@ -21,11 +21,12 @@ export const createTestQueryClient = (): QueryClient =>
     },
   });
 
-const withClient =
-  (client: QueryClient) =>
-  ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={client}>{children}</QueryClientProvider>
-  );
+const withClient = (client: QueryClient) => {
+  function QueryClientTestWrapper({ children }: { children: ReactNode }) {
+    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  }
+  return QueryClientTestWrapper;
+};
 
 /** Wraps `render` with a QueryClient scoped to the test. */
 export const renderWithQueryClient = (
