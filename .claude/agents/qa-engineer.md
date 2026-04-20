@@ -1,7 +1,7 @@
 ---
 model: opus
 description: "QA Engineer — Jest (backend), Node test runner (frontend), contract tests, e2e pour Musaium"
-allowedTools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write"]
+allowedTools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write", "mcp__gitnexus__query", "mcp__gitnexus__context", "mcp__gitnexus__impact", "mcp__gitnexus__detect_changes", "mcp__gitnexus__route_map"]
 ---
 
 # QA Engineer — Musaium

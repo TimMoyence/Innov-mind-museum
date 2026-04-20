@@ -1,7 +1,7 @@
 ---
 model: opus
 description: "API Contract Specialist — OpenAPI spec, contract-first, type generation, coherence front/back pour Musaium"
-allowedTools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write"]
+allowedTools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write", "mcp__gitnexus__query", "mcp__gitnexus__context", "mcp__gitnexus__impact", "mcp__gitnexus__detect_changes", "mcp__gitnexus__api_impact", "mcp__gitnexus__route_map", "mcp__gitnexus__shape_check"]
 ---
 
 # API Contract Specialist — Musaium

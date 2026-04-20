@@ -1,7 +1,7 @@
 ---
 model: opus
 description: "Security Analyst — Auth, guardrails LLM, sanitization, OWASP pour Musaium"
-allowedTools: ["Read", "Grep", "Glob", "Bash"]
+allowedTools: ["Read", "Grep", "Glob", "Bash", "mcp__gitnexus__query", "mcp__gitnexus__context", "mcp__gitnexus__impact", "mcp__gitnexus__cypher"]
 ---
 
 # Security Analyst — Musaium

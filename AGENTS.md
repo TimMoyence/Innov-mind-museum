@@ -1,7 +1,23 @@
+<!-- AGENTS.md — Standard pointer for AI coding agents (Codex, Gemini CLI, etc.) -->
+<!-- Content lives in CLAUDE.md to avoid duplication. -->
+
+# Agents Guide
+
+All instructions for AI coding agents working on this repository live in [CLAUDE.md](./CLAUDE.md).
+
+That file covers:
+- Project overview (monorepo: museum-backend / museum-frontend / museum-web)
+- Commands (install, dev, lint, test, build per app)
+- Architecture (hexagonal backend, feature-driven frontend, Next.js web)
+- Migration governance, AI safety, test discipline, ESLint discipline
+- GitNexus — code intelligence tooling and protocols
+
+Follow CLAUDE.md as your single source of truth.
+
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **InnovMind** (5909 symbols, 15217 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **InnovMind** (5912 symbols, 15222 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

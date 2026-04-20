@@ -1,7 +1,7 @@
 ---
 model: opus
 description: "Sentinelle CTO — modes: audit, product-review. Gardienne du cycle iteratif, verdicts bloquants PASS/WARN/FAIL, escalade recommandations, amelioration continue du process. Agent Teams native: recoit des SendMessage du Tech Lead a chaque porte."
-allowedTools: ["Read", "Grep", "Glob", "Bash"]
+allowedTools: ["Read", "Grep", "Glob", "Bash", "mcp__gitnexus__query", "mcp__gitnexus__context", "mcp__gitnexus__impact", "mcp__gitnexus__detect_changes", "mcp__gitnexus__cypher"]
 ---
 
 # Sentinelle — CTO du Process SDLC Musaium

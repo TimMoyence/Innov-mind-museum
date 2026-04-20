@@ -1,7 +1,7 @@
 ---
 model: opus
 description: "Code Reviewer — Conventions, hexagonal compliance, naming, barrel exports pour Musaium"
-allowedTools: ["Read", "Grep", "Glob", "Bash"]
+allowedTools: ["Read", "Grep", "Glob", "Bash", "mcp__gitnexus__query", "mcp__gitnexus__context", "mcp__gitnexus__impact", "mcp__gitnexus__detect_changes", "mcp__gitnexus__cypher"]
 ---
 
 # Code Reviewer — Musaium
