@@ -420,6 +420,10 @@
     "optimistic": {
       "image_placeholder": "Image envoyée",
       "voice_placeholder": "Message vocal"
+    },
+    "lowDataDetails": "Mode data économe : TTS désactivé, images compressées",
+    "tts": {
+      "disabled_low_data": "Désactivé en mode data économe. Changez de mode dans Réglages."
     }
   },
   "dailyLimit": {
@@ -491,7 +495,35 @@
     "unknown": "Une erreur est survenue. Veuillez réessayer.",
     "boundaryTitle": "Une erreur est survenue",
     "boundarySubtitle": "L'application a rencontré une erreur inattendue. Vos données sont en sécurité.",
-    "boundaryReload": "Recharger"
+    "boundaryReload": "Recharger",
+    "socialAuth": {
+      "generic": "Échec de la connexion. Veuillez réessayer.",
+      "google_cancelled": "Connexion Google annulée.",
+      "google_no_id_token": "Impossible de finaliser la connexion Google. Veuillez réessayer.",
+      "google_in_progress": "Une connexion Google est déjà en cours.",
+      "apple_no_identity_token": "Connexion Apple interrompue. Veuillez réessayer.",
+      "ios_unavailable": "La connexion Google n'est pas disponible sur cette version. Utilisez Apple ou email."
+    },
+    "chat": {
+      "contract_invalid": "Réponse du serveur invalide. Veuillez réessayer.",
+      "audio_missing": "Aucun audio à envoyer.",
+      "streaming_unavailable": "Connexion en direct indisponible, bascule en mode classique."
+    },
+    "location": {
+      "generic": "Impossible de déterminer votre position.",
+      "timeout": "La géolocalisation a expiré.",
+      "permission_denied": "Autorisation de localisation refusée."
+    },
+    "offlinePack": {
+      "download_failed": "Le téléchargement de la carte hors-ligne a échoué. Veuillez réessayer."
+    },
+    "review": {
+      "generic": "Impossible de charger les avis pour le moment.",
+      "load_failed": "Impossible de charger les avis.",
+      "load_more_failed": "Impossible de charger davantage d'avis.",
+      "already_reviewed": "Vous avez déjà soumis un avis.",
+      "submit_failed": "L'envoi de l'avis a échoué. Veuillez réessayer."
+    }
   },
   "errorNotice": {
     "retry": "Réessayer",

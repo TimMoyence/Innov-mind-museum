@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 
 import type { ReviewDTO, ReviewStatsResponse } from '../infrastructure/reviewApi';
 import { reviewApi } from '../infrastructure/reviewApi';
+import { getErrorMessage } from '@/shared/lib/errors';
+import { createAppError } from '@/shared/types/AppError';
 
 interface UseReviewsReturn {
   reviews: ReviewDTO[];
@@ -44,7 +46,15 @@ export const useReviews = (): UseReviewsReturn => {
         setTotalPages(reviewsRes.totalPages);
         setPage(1);
       } catch {
-        setError('Failed to load reviews');
+        setError(
+          getErrorMessage(
+            createAppError({
+              kind: 'Review',
+              code: 'load_failed',
+              message: 'Failed to load reviews',
+            }),
+          ),
+        );
       } finally {
         setLoading(false);
       }
@@ -65,7 +75,15 @@ export const useReviews = (): UseReviewsReturn => {
         setPage(nextPage);
       })
       .catch(() => {
-        setError('Failed to load more reviews');
+        setError(
+          getErrorMessage(
+            createAppError({
+              kind: 'Review',
+              code: 'load_more_failed',
+              message: 'Failed to load more reviews',
+            }),
+          ),
+        );
       })
       .finally(() => {
         setLoading(false);
@@ -91,11 +109,11 @@ export const useReviews = (): UseReviewsReturn => {
         );
         return true;
       } catch (err) {
-        const message =
+        const code =
           err instanceof Error && err.message.includes('409')
             ? 'already_reviewed'
             : 'submit_failed';
-        setSubmitError(message);
+        setSubmitError(getErrorMessage(createAppError({ kind: 'Review', code, message: code })));
         return false;
       } finally {
         setSubmitLoading(false);

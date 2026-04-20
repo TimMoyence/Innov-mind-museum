@@ -40,7 +40,7 @@ describe('OfflineBanner', () => {
     const { getByText, getByLabelText } = render(
       <OfflineBanner pendingCount={0} isOffline={false} />,
     );
-    expect(getByText('chat.lowDataActive')).toBeTruthy();
+    expect(getByText('chat.lowDataDetails')).toBeTruthy();
     expect(getByLabelText('chat.lowDataActive')).toBeTruthy();
   });
 });

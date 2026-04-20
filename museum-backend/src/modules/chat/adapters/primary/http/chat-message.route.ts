@@ -43,14 +43,11 @@ function parseMessageInput(req: Request): {
   const bodyPayload = parsePostMessageRequest(parseableBody);
   const parsedContext = parseContext(rawBody.context) ?? bodyPayload.context;
 
-  const dataMode = req.headers['x-data-mode'];
-  const lowDataMode = dataMode === 'low';
-
   const context = {
     ...parsedContext,
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
     locale: parsedContext?.locale || req.clientLocale,
-    lowDataMode,
+    lowDataMode: req.dataMode === 'low',
   };
   return { bodyPayload, context };
 }

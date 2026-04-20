@@ -1,9 +1,11 @@
 import axios from 'axios';
+import * as Sentry from '@sentry/react-native';
 
 import { assertApiBaseUrlAllowed, tryResolveInitialApiBaseUrl } from './apiConfig';
 import { reportError } from '@/shared/observability/errorReporting';
 import { generateRequestId } from './requestId';
 import { getApiErrorCode, mapAxiosError, toAxiosLikeError } from './httpErrorMapper';
+import { getCurrentDataMode } from './dataMode/currentDataMode';
 
 type UnauthorizedHandler = () => void;
 type AuthRefreshHandler = () => Promise<string | null>;
@@ -43,6 +45,7 @@ type HttpRequestConfig = {
   requiresAuth?: boolean;
   _retryCount?: number;
   _retriedAfterAuthRefresh?: boolean;
+  _startedAt?: number;
 } & Record<string, unknown>;
 
 const initialApiBaseUrlResolution = tryResolveInitialApiBaseUrl();
@@ -94,10 +97,15 @@ const wait = async (ms: number): Promise<void> => {
 httpClient.interceptors.request.use((config) => {
   const finalConfig = config as typeof config & HttpRequestConfig;
   finalConfig.baseURL = getApiBaseUrl();
+  finalConfig._startedAt = Date.now();
 
   const requestId = generateRequestId();
   finalConfig.headers.set('Accept-Language', getLocale());
   finalConfig.headers.set('X-Request-Id', requestId);
+
+  if (!finalConfig.headers.get('X-Data-Mode')) {
+    finalConfig.headers.set('X-Data-Mode', getCurrentDataMode());
+  }
 
   const shouldAttachAuth = finalConfig.requiresAuth !== false;
 
@@ -121,11 +129,37 @@ httpClient.interceptors.request.use((config) => {
   return finalConfig;
 });
 
+const emitHttpBreadcrumb = (
+  config: HttpRequestConfig,
+  status: number | undefined,
+  level: 'info' | 'warning' | 'error',
+): void => {
+  try {
+    if (!Sentry.getClient()) return;
+    const startedAt = typeof config._startedAt === 'number' ? config._startedAt : undefined;
+    const durationMs = startedAt ? Date.now() - startedAt : undefined;
+    Sentry.addBreadcrumb({
+      category: 'http',
+      level,
+      type: 'http',
+      data: {
+        method: typeof config.method === 'string' ? config.method.toUpperCase() : 'GET',
+        url: typeof config.url === 'string' ? config.url : '',
+        status_code: status,
+        duration_ms: durationMs,
+      },
+    });
+  } catch {
+    // Never let breadcrumb recording break the request flow.
+  }
+};
+
 httpClient.interceptors.response.use(
   (response) => {
     if (__DEV__) {
       console.debug('[HTTP] <-', response.status, response.config.url);
     }
+    emitHttpBreadcrumb(response.config as unknown as HttpRequestConfig, response.status, 'info');
     return response;
   },
   async (error: unknown) => {
@@ -204,6 +238,7 @@ httpClient.interceptors.response.use(
     }
 
     const mapped = mapAxiosError(error);
+    emitHttpBreadcrumb(config, status, status && status >= 500 ? 'error' : 'warning');
     reportError(mapped);
     return Promise.reject(mapped);
   },

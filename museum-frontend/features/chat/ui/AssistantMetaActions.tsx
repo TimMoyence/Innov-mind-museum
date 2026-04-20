@@ -20,6 +20,12 @@ interface AssistantMetaActionsProps {
   ttsLoading: boolean;
   /** Whether TTS failed for this message (disables the listen button). */
   ttsFailed?: boolean;
+  /**
+   * Whether TTS synthesis was intentionally skipped for this message due to
+   * the active low-data mode. Distinct from `ttsFailed`: we surface a
+   * "data saver" affordance rather than an error state.
+   */
+  ttsSkippedLowData?: boolean;
   /** Called to toggle TTS playback for this message. */
   onToggleTts?: (messageId: string) => Promise<void>;
   /** Called to report a message. */
@@ -34,6 +40,7 @@ export const AssistantMetaActions = React.memo(function AssistantMetaActions({
   ttsPlaying,
   ttsLoading,
   ttsFailed = false,
+  ttsSkippedLowData = false,
   onToggleTts,
   onReport,
 }: AssistantMetaActionsProps) {
@@ -80,7 +87,7 @@ export const AssistantMetaActions = React.memo(function AssistantMetaActions({
       ) : null}
       {onToggleTts ? (
         <Pressable
-          style={[styles.actionButton, ttsFailed && styles.actionDisabled]}
+          style={[styles.actionButton, (ttsFailed || ttsSkippedLowData) && styles.actionDisabled]}
           onPress={() => {
             void Haptics.selectionAsync();
             void onToggleTts(messageId);
@@ -88,11 +95,13 @@ export const AssistantMetaActions = React.memo(function AssistantMetaActions({
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={
-            ttsFailed
-              ? t('chat.tts_unavailable')
-              : ttsPlaying
-                ? t('chat.listening')
-                : t('chat.listen')
+            ttsSkippedLowData
+              ? t('chat.tts.disabled_low_data')
+              : ttsFailed
+                ? t('chat.tts_unavailable')
+                : ttsPlaying
+                  ? t('chat.listening')
+                  : t('chat.listen')
           }
         >
           {ttsLoading ? (
@@ -100,22 +109,39 @@ export const AssistantMetaActions = React.memo(function AssistantMetaActions({
           ) : (
             <Ionicons
               name={
-                ttsFailed
-                  ? 'volume-mute-outline'
-                  : ttsPlaying
-                    ? 'pause-outline'
-                    : 'volume-high-outline'
+                ttsSkippedLowData
+                  ? 'cellular-outline'
+                  : ttsFailed
+                    ? 'volume-mute-outline'
+                    : ttsPlaying
+                      ? 'pause-outline'
+                      : 'volume-high-outline'
               }
               size={13}
-              color={ttsFailed ? theme.error : theme.timestamp}
+              color={
+                ttsSkippedLowData ? theme.warningText : ttsFailed ? theme.error : theme.timestamp
+              }
             />
           )}
-          <Text style={[styles.actionLabel, { color: ttsFailed ? theme.error : theme.timestamp }]}>
-            {ttsFailed
-              ? t('chat.tts_unavailable')
-              : ttsPlaying
-                ? t('chat.listening')
-                : t('chat.listen')}
+          <Text
+            style={[
+              styles.actionLabel,
+              {
+                color: ttsSkippedLowData
+                  ? theme.warningText
+                  : ttsFailed
+                    ? theme.error
+                    : theme.timestamp,
+              },
+            ]}
+          >
+            {ttsSkippedLowData
+              ? t('chat.tts.disabled_low_data')
+              : ttsFailed
+                ? t('chat.tts_unavailable')
+                : ttsPlaying
+                  ? t('chat.listening')
+                  : t('chat.listen')}
           </Text>
         </Pressable>
       ) : null}

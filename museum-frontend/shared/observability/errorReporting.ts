@@ -4,7 +4,15 @@ import type { AppError } from '@/shared/types/AppError';
 import { isAppError } from '@/shared/lib/errors';
 
 /** Error kinds that represent operational issues worth reporting to Sentry. */
-const REPORTABLE_KINDS: ReadonlySet<string> = new Set(['Network', 'Timeout', 'Unknown']);
+const REPORTABLE_KINDS: ReadonlySet<string> = new Set([
+  'Network',
+  'Timeout',
+  'Unknown',
+  'Contract',
+  'Streaming',
+  'OfflinePack',
+  'Location',
+]);
 
 /**
  * Reports an error to Sentry if it represents an operational failure.

@@ -1,6 +1,7 @@
 import { OfflineManager, type OfflinePack } from '@maplibre/maplibre-react-native';
 
 import { reportError } from '@/shared/observability/errorReporting';
+import { createAppError } from '@/shared/types/AppError';
 
 import type { CityId } from './cityCatalog';
 
@@ -123,10 +124,18 @@ export const offlinePackManager = {
         });
       },
       (_pack, error) => {
-        reportError(new Error(`OfflinePack download failed: ${error.message}`), {
-          component: 'offlinePackManager',
-          cityId: request.cityId,
-        });
+        reportError(
+          createAppError({
+            kind: 'OfflinePack',
+            code: 'download_failed',
+            message: `OfflinePack download failed: ${error.message}`,
+            details: { nativeMessage: error.message },
+          }),
+          {
+            component: 'offlinePackManager',
+            cityId: request.cityId,
+          },
+        );
       },
     );
 

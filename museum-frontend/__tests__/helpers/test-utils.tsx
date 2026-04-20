@@ -188,8 +188,20 @@ jest.mock('@/shared/ui/ErrorNotice', () => {
 });
 
 // ── @/shared/lib/errors ─────────────────────────────────────────────────────
+// Mirrors the production getErrorMessage() contract in a minimal way:
+// an AppError's .message (carried by the Error instance) is returned.
+// The real hook walks the i18n table; tests assert on the raw message,
+// so returning `err.message` keeps tests aligned with production semantics.
 jest.mock('@/shared/lib/errors', () => ({
-  getErrorMessage: (err: unknown) => String(err),
+  getErrorMessage: (err: unknown) =>
+    err instanceof Error ? err.message : typeof err === 'string' ? err : String(err),
+  isAppError: (err: unknown): boolean =>
+    !!err && typeof err === 'object' && 'kind' in err && 'message' in err,
+  isDailyLimitError: (err: unknown): boolean =>
+    !!err &&
+    typeof err === 'object' &&
+    'kind' in err &&
+    (err as { kind: unknown }).kind === 'DailyLimitReached',
 }));
 
 // ── FlashList → FlatList (native RecyclerView not available in tests) ────────

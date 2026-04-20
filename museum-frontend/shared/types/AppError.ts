@@ -1,5 +1,5 @@
 /** Discriminated category for application-level errors. */
-type AppErrorKind =
+export type AppErrorKind =
   | 'Network'
   | 'Unauthorized'
   | 'Forbidden'
@@ -8,11 +8,23 @@ type AppErrorKind =
   | 'RateLimited'
   | 'DailyLimitReached'
   | 'Timeout'
+  | 'SocialAuth'
+  | 'Contract'
+  | 'Streaming'
+  | 'Location'
+  | 'OfflinePack'
+  | 'Review'
   | 'Unknown';
 
 /** Structured application error with a discriminating kind, human message, and optional HTTP status. */
 export interface AppError {
   kind: AppErrorKind;
+  /**
+   * Optional sub-code that discriminates further within a kind.
+   * Used by {@link getErrorMessage} to resolve a nested i18n key
+   * (e.g. `kind: 'SocialAuth', code: 'google_no_id_token'`).
+   */
+  code?: string;
   message: string;
   /** HTTP status code when the error originated from an API response. */
   status?: number;
@@ -32,6 +44,7 @@ export interface AppError {
 export const createAppError = (params: AppError): AppError & Error => {
   const error = new Error(params.message) as AppError & Error;
   error.kind = params.kind;
+  if (params.code !== undefined) error.code = params.code;
   error.status = params.status;
   error.details = params.details;
   error.requestId = params.requestId;

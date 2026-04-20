@@ -420,6 +420,10 @@
     "optimistic": {
       "image_placeholder": "Imagen enviada",
       "voice_placeholder": "Mensaje de voz"
+    },
+    "lowDataDetails": "Ahorro de datos — TTS desactivado, imágenes comprimidas",
+    "tts": {
+      "disabled_low_data": "Desactivado en modo ahorro de datos. Cámbialo en Ajustes."
     }
   },
   "dailyLimit": {
@@ -491,7 +495,35 @@
     "unknown": "Algo salió mal. Inténtalo de nuevo.",
     "boundaryTitle": "Algo salió mal",
     "boundarySubtitle": "La aplicación encontró un error inesperado. Tus datos están seguros.",
-    "boundaryReload": "Recargar"
+    "boundaryReload": "Recargar",
+    "socialAuth": {
+      "generic": "Error al iniciar sesión. Inténtalo de nuevo.",
+      "google_cancelled": "Inicio de sesión con Google cancelado.",
+      "google_no_id_token": "El inicio de sesión con Google no se completó. Inténtalo de nuevo.",
+      "google_in_progress": "Ya hay un inicio de sesión con Google en curso.",
+      "apple_no_identity_token": "Se interrumpió el inicio de sesión con Apple. Inténtalo de nuevo.",
+      "ios_unavailable": "El inicio de sesión con Google no está disponible en esta versión. Usa Apple o correo."
+    },
+    "chat": {
+      "contract_invalid": "Respuesta del servidor inesperada. Inténtalo de nuevo.",
+      "audio_missing": "No hay audio para enviar.",
+      "streaming_unavailable": "Respuesta en vivo no disponible, cambiando al modo estándar."
+    },
+    "location": {
+      "generic": "No se pudo determinar tu ubicación.",
+      "timeout": "La búsqueda de ubicación ha expirado.",
+      "permission_denied": "Permiso de ubicación denegado."
+    },
+    "offlinePack": {
+      "download_failed": "La descarga del mapa sin conexión ha fallado. Inténtalo de nuevo."
+    },
+    "review": {
+      "generic": "No se pueden cargar las opiniones en este momento.",
+      "load_failed": "No se pudieron cargar las opiniones.",
+      "load_more_failed": "No se pudieron cargar más opiniones.",
+      "already_reviewed": "Ya has enviado una opinión.",
+      "submit_failed": "El envío de la opinión ha fallado. Inténtalo de nuevo."
+    }
   },
   "errorNotice": {
     "retry": "Reintentar",

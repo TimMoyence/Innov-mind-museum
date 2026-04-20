@@ -71,7 +71,7 @@ describe('ChangeEmailScreen', () => {
     fireEvent.press(screen.getByLabelText('change_email.submit'));
 
     await waitFor(() => {
-      expect(screen.getByText('Error: Email already taken')).toBeTruthy();
+      expect(screen.getByText('Email already taken')).toBeTruthy();
     });
   });
 });

@@ -13,6 +13,7 @@ interface TtsSectionProps {
   ttsPlaying?: boolean;
   ttsLoading?: boolean;
   ttsFailed?: boolean;
+  ttsSkippedLowData?: boolean;
   onToggleTts?: (messageId: string) => Promise<void>;
   onReport: (messageId: string) => void;
   feedbackValue?: 'positive' | 'negative' | null;
@@ -32,6 +33,7 @@ export const TtsSection = memo(function TtsSection({
   ttsPlaying = false,
   ttsLoading = false,
   ttsFailed = false,
+  ttsSkippedLowData = false,
   onToggleTts,
   onReport,
   feedbackValue,
@@ -55,6 +57,7 @@ export const TtsSection = memo(function TtsSection({
           ttsPlaying={ttsPlaying}
           ttsLoading={ttsLoading}
           ttsFailed={ttsFailed}
+          ttsSkippedLowData={ttsSkippedLowData}
           onToggleTts={onToggleTts}
           onReport={onReport}
         />

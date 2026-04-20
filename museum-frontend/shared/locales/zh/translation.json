@@ -420,6 +420,10 @@
     "optimistic": {
       "image_placeholder": "已发送图片",
       "voice_placeholder": "语音消息"
+    },
+    "lowDataDetails": "省流量模式 — TTS 已停用，图片已压缩",
+    "tts": {
+      "disabled_low_data": "省流量模式下已停用。在设置中更改模式。"
     }
   },
   "dailyLimit": {
@@ -491,7 +495,35 @@
     "unknown": "出了点问题。请重试。",
     "boundaryTitle": "出了点问题",
     "boundarySubtitle": "应用遇到了意外错误。您的数据是安全的。",
-    "boundaryReload": "重新加载"
+    "boundaryReload": "重新加载",
+    "socialAuth": {
+      "generic": "登录失败，请重试。",
+      "google_cancelled": "Google 登录已取消。",
+      "google_no_id_token": "Google 登录无法完成，请重试。",
+      "google_in_progress": "Google 登录正在进行中。",
+      "apple_no_identity_token": "Apple 登录已中断，请重试。",
+      "ios_unavailable": "此版本不支持 Google 登录，请使用 Apple 或邮箱。"
+    },
+    "chat": {
+      "contract_invalid": "服务器返回无效响应，请重试。",
+      "audio_missing": "没有可发送的音频。",
+      "streaming_unavailable": "实时响应不可用,切换到标准模式。"
+    },
+    "location": {
+      "generic": "无法确定您的位置。",
+      "timeout": "位置查询超时。",
+      "permission_denied": "位置权限被拒绝。"
+    },
+    "offlinePack": {
+      "download_failed": "离线地图下载失败,请重试。"
+    },
+    "review": {
+      "generic": "暂时无法加载评价。",
+      "load_failed": "加载评价失败。",
+      "load_more_failed": "无法加载更多评价。",
+      "already_reviewed": "您已提交过评价。",
+      "submit_failed": "评价提交失败,请重试。"
+    }
   },
   "errorNotice": {
     "retry": "重试",

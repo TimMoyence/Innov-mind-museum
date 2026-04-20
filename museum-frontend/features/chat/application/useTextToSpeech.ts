@@ -5,6 +5,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import type { AudioPlayer } from 'expo-audio';
 
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
+import { getCurrentDataMode } from '@/shared/infrastructure/dataMode/currentDataMode';
 
 interface UseTextToSpeech {
   /** Whether audio is currently playing. */
@@ -15,6 +16,11 @@ interface UseTextToSpeech {
   activeMessageId: string | null;
   /** The message ID whose TTS request failed (shown as error state on the button). */
   failedMessageId: string | null;
+  /**
+   * The message ID whose TTS synthesis was intentionally skipped due to the
+   * user's low-data mode. Consumers surface this as a tooltip on the button.
+   */
+  skippedLowDataMessageId: string | null;
   /** Toggle playback for a message: plays if idle, stops if already active. */
   togglePlayback: (messageId: string) => Promise<void>;
   /** Stops any active playback and resets state. */
@@ -89,6 +95,7 @@ export function useTextToSpeech(): UseTextToSpeech {
   const [isLoading, setIsLoading] = useState(false);
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [failedMessageId, setFailedMessageId] = useState<string | null>(null);
+  const [skippedLowDataMessageId, setSkippedLowDataMessageId] = useState<string | null>(null);
 
   const nativePlayerRef = useRef<AudioPlayer | null>(null);
   const webAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -127,6 +134,7 @@ export function useTextToSpeech(): UseTextToSpeech {
       // Stop any existing playback first
       cleanup();
       setFailedMessageId(null);
+      setSkippedLowDataMessageId(null);
 
       setIsLoading(true);
       setActiveMessageId(messageId);
@@ -139,6 +147,13 @@ export function useTextToSpeech(): UseTextToSpeech {
         if (cachedUri) {
           uri = cachedUri;
         } else {
+          // In low-data mode, never download fresh TTS audio. Replay from cache
+          // is still free and handled above; only the network fetch is gated.
+          if (getCurrentDataMode() === 'low') {
+            cleanup();
+            setSkippedLowDataMessageId(messageId);
+            return;
+          }
           const audioBuffer = await chatApi.synthesizeSpeech(messageId);
 
           // 204 / empty response
@@ -208,5 +223,13 @@ export function useTextToSpeech(): UseTextToSpeech {
     };
   }, [cleanup]);
 
-  return { isPlaying, isLoading, activeMessageId, failedMessageId, togglePlayback, stopPlayback };
+  return {
+    isPlaying,
+    isLoading,
+    activeMessageId,
+    failedMessageId,
+    skippedLowDataMessageId,
+    togglePlayback,
+    stopPlayback,
+  };
 }
