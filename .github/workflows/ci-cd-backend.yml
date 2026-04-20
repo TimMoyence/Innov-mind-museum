@@ -267,7 +267,7 @@ jobs:
         # Upload to /tmp first (always writable), then sudo mv to /srv/museum.
         # Direct upload to /srv/museum fails when rollback.sh is owned by root
         # from a previous deploy (tar cannot overwrite, Permission denied).
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
@@ -526,7 +526,7 @@ jobs:
           npx @sentry/cli sourcemaps upload --release="${{ github.sha }}" dist/
 
       - name: Upload rollback helper to VPS (staging)
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
