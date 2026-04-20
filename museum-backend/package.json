@@ -109,7 +109,7 @@
     "@mozilla/readability": "^0.6.0",
     "@opentelemetry/auto-instrumentations-node": "^0.73.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.215.0",
-    "@opentelemetry/resources": "^2.6.1",
+    "@opentelemetry/resources": "^2.7.0",
     "@opentelemetry/sdk-node": "^0.215.0",
     "@opentelemetry/semantic-conventions": "^1.40.0",
     "@sentry/node": "^10.49.0",
