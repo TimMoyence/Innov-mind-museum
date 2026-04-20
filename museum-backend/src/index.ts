@@ -81,6 +81,7 @@ function registerShutdownHandlers(
   server: Server,
   tokenCleanup: TokenCleanupService,
   redisClient: Redis | undefined,
+  cacheService: CacheService,
 ): void {
   let isShuttingDown = false;
 
@@ -98,6 +99,7 @@ function registerShutdownHandlers(
     await shutdownOpenTelemetry();
     const ocr = getOcrService();
     if (ocr.destroy) await ocr.destroy();
+    if (cacheService.destroy) await cacheService.destroy();
 
     // 2. Close the HTTP server — stops accepting new connections,
     //    waits for in-flight requests to complete
@@ -168,7 +170,7 @@ const start = async (): Promise<void> => {
     );
     tokenCleanup.startScheduler();
 
-    registerShutdownHandlers(server, tokenCleanup, redisClient);
+    registerShutdownHandlers(server, tokenCleanup, redisClient, cacheService);
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message || util.inspect(error) : util.inspect(error);

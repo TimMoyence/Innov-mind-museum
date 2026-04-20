@@ -7,9 +7,9 @@
 
 | Doc | Path |
 |---|---|
-| Progress Tracker | [`docs/V1_Sprint/PROGRESS_TRACKER.md`](V1_Sprint/PROGRESS_TRACKER.md) |
-| Sprint Log (journal technique) | [`docs/V1_Sprint/SPRINT_LOG.md`](V1_Sprint/SPRINT_LOG.md) |
-| Master Roadmap V2 | [`docs/V1_Sprint/MASTER_ROADMAP_V2.md`](V1_Sprint/MASTER_ROADMAP_V2.md) |
+| Progress Tracker (archived) | [`docs/archive/v1-sprint-2026-04/PROGRESS_TRACKER.md`](archive/v1-sprint-2026-04/PROGRESS_TRACKER.md) |
+| Sprint Log (archived) | [`docs/archive/v1-sprint-2026-04/SPRINT_LOG.md`](archive/v1-sprint-2026-04/SPRINT_LOG.md) |
+| Roadmap V2 | [`docs/ROADMAP_V2.md`](ROADMAP_V2.md) |
 | Roadmap Active (résumé) | [`docs/ROADMAP_ACTIVE.md`](ROADMAP_ACTIVE.md) |
 
 ## Plans Modulaires (Next Level 2026-04-17)

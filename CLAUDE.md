@@ -13,12 +13,14 @@ Monorepo with three independent apps:
 
 ## Progress Tracking
 
-All tracking lives in **`docs/V1_Sprint/`**:
-- **`PROGRESS_TRACKER.md`** — checkbox tracker per sprint/item (quick status)
-- **`SPRINT_LOG.md`** — detailed technical journal (what, how, why, which files)
-- **`MASTER_ROADMAP_V2.md`** — product roadmap (read-only reference)
+Active roadmap reference: **`docs/ROADMAP_V2.md`** (moved from `docs/V1_Sprint/MASTER_ROADMAP_V2.md` during 2026-04-20 enterprise cleanup).
 
-After completing sprint work, update both PROGRESS_TRACKER and SPRINT_LOG.
+Historical sprint journals are archived in **`docs/archive/v1-sprint-2026-04/`**:
+- `PROGRESS_TRACKER.md` — checkbox tracker per sprint/item
+- `SPRINT_LOG.md` — detailed technical journal
+- `*_AUDIT_2026-04-0*.md` — prior audit reports
+
+Post-2026-04-20 tracking: `.claude/tasks/` (task lists) + `team-reports/` (audit outputs) are the active sources of truth.
 
 ## Common Commands
 
@@ -183,6 +185,23 @@ Key patterns:
 
 **Web:** `@/*` → `./src/*`
 
+## Token Discipline — Files NOT to Read in full
+
+These files are auto-generated, massive, or pure data. Reading them fully wastes tokens and rarely helps.
+
+| File | Size | Why | How to access instead |
+|---|---|---|---|
+| `museum-frontend/shared/api/generated/openapi.ts` | 83 KB / 3 510 lines | Auto-generated from backend OpenAPI spec | Use `Grep` for the specific type/operation name, or read only the relevant ±50 lines with `offset`/`limit` |
+| `museum-frontend/package-lock.json` / `pnpm-lock.yaml` / `museum-backend/pnpm-lock.yaml` / `museum-web/pnpm-lock.yaml` | multi-MB | Lockfiles | Never read directly — use `pnpm list <pkg>` or `npm ls <pkg>` |
+| `museum-backend/src/data/db/migrations/*.ts` (34 files) | ~5 KB each, 172 KB total | TypeORM migrations — immutable once run | Read only the specific migration relevant to current work |
+| `museum-backend/src/modules/daily-art/artworks.data.ts` | 17 KB / 373 lines | Static artwork catalog | Grep for specific artwork ID or title |
+| `museum-frontend/shared/ui/tokens.generated.ts` | generated | Design tokens output | Edit `design-system/` source instead |
+| `docs/archive/v1-sprint-2026-04/SPRINT_LOG.md` | 169 KB | Historical journal (archived) | Read with offset for a specific date range, never in full |
+| `docs/ROADMAP_V2.md` | 57 KB | Product roadmap reference | Grep by feature name, read only relevant section |
+| `docs/archive/v1-sprint-2026-04/PROGRESS_TRACKER.md` | 57 KB | Sprint tracker (archived) | Read the latest sprint section only |
+
+When in doubt: use `Grep` with a specific pattern first, then `Read` only the relevant block with `offset`/`limit`.
+
 ## Environment Setup
 
 1. Copy `.env.local.example` → `.env` in both `museum-backend/` and `museum-frontend/`
@@ -320,7 +339,7 @@ Alternatives for future: Drizzle (S-tier 2026), Prisma 7, Kysely.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **InnovMind** (5909 symbols, 15217 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **InnovMind** (5912 symbols, 15222 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

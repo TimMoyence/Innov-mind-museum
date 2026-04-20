@@ -14,7 +14,7 @@ Le module chat embarque deux modes de réponse assistant :
 1. **Synchrone** — `POST /api/chat/sessions/:id/messages` retourne la réponse complète une fois LLM + guardrails terminés. Mode de référence.
 2. **Streaming SSE** — `POST /api/chat/sessions/:id/messages/stream` ouvre un `text/event-stream` et émet les tokens au fur et à mesure que le LLM les produit, avec un buffer guardrail incrémental.
 
-Le SSE a été ajouté début 2026 (cf. `docs/V1_Sprint/SPRINT_LOG.md:358-376`). Il était gated par `FEATURE_FLAG_STREAMING` (`OFF` partout en prod/staging/local). En pratique :
+Le SSE a été ajouté début 2026 (cf. `docs/archive/v1-sprint-2026-04/SPRINT_LOG.md:358-376`). Il était gated par `FEATURE_FLAG_STREAMING` (`OFF` partout en prod/staging/local). En pratique :
 
 - La libération de tokens **n'est pas fluide** : le buffer guardrail force un flush par chunks de 15 updates/sec, ce qui produit un rendu mobile saccadé indistinguable de réponses paquet (mauvais perçu UX).
 - Le coût opérationnel (heartbeat 15s, abort handling, reconnect Last-Event-ID, timers) ne se justifie pas pour un gain perçu nul.
@@ -61,6 +61,6 @@ Décision produit complémentaire (2026-04-19) : suppression de tous les feature
 ## Liens
 
 - `docs/AI_VOICE.md` — pipeline voice V1 (raison du retrait du flag).
-- `docs/V1_Sprint/SPRINT_LOG.md:358-376` — historique de l'ajout SSE.
+- `docs/archive/v1-sprint-2026-04/SPRINT_LOG.md:358-376` — historique de l'ajout SSE.
 - `museum-backend/src/modules/chat/adapters/primary/http/chat-message.route.ts:288` — route deprecated.
 - `museum-frontend/features/chat/infrastructure/sseParser.ts` — parser FE deprecated.
