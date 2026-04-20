@@ -85,6 +85,27 @@ target 'Musaium' do
       end
     end
 
+    # @musaium/maplibre-dedup-signature
+    # Workaround: @maplibre/maplibre-react-native's post_install adds MapLibre
+    # SPM to BOTH the MapLibreReactNative pod target AND every user target
+    # (Musaium.app). Each produces its own MapLibre.xcframework-ios.signature
+    # under Release-iphoneos/, then the Archive "Copy Signatures" phase
+    # fails with NSCocoaErrorDomain 516 (file already exists). Remove the
+    # redundant signature from the pod's BUILT_PRODUCTS_DIR as the final
+    # build phase so Archive only sees the app-target copy.
+    mlrn_target = installer.pods_project.targets.find { |t| t.name == 'MapLibreReactNative' }
+    if mlrn_target
+      mlrn_phase_name = '[Musaium] Remove duplicate MapLibre signature'
+      already_patched = mlrn_target.build_phases.any? do |p|
+        p.is_a?(Xcodeproj::Project::Object::PBXShellScriptBuildPhase) && p.name == mlrn_phase_name
+      end
+      unless already_patched
+        phase = mlrn_target.new_shell_script_build_phase(mlrn_phase_name)
+        phase.shell_script = %(rm -f "${BUILT_PRODUCTS_DIR}/MapLibre.xcframework-ios.signature"\n)
+        installer.pods_project.save
+      end
+    end
+
     # @musaium/expo-updates-entry-file
     # Workaround for expo-updates 55.0.18 + Metro: @expo/config strips `.js`
     # from the resolved entry path (paths.js:227), then Metro's resolver 404s
