@@ -108,6 +108,8 @@ describe('chat-message.route — uncovered paths', () => {
 
       expect(res.status).toBe(200);
       expect(res.headers['content-type']).toContain('text/event-stream');
+      expect(res.headers['deprecation']).toBe('true');
+      expect(res.headers['sunset']).toBeDefined();
 
       const events = parseSseEvents(res.text);
       const tokenEvents = events.filter((e) => e.event === 'token');
