@@ -101,6 +101,8 @@ export async function createE2EHarness(): Promise<E2EHarness> {
     { CreateKnowledgeExtractionTables1775852800000 },
     { AddUserContentPreferences1776276072750 },
     { AddAudioToChatMessage1776593841594 },
+    { Check1776593907869 },
+    { AddUserNotifyOnReviewModeration1776600000000 },
     { ChatService },
     { TypeOrmChatRepository },
     { LocalImageStorage },
@@ -141,6 +143,8 @@ export async function createE2EHarness(): Promise<E2EHarness> {
     import('@src/data/db/migrations/1775852800000-CreateKnowledgeExtractionTables'),
     import('@src/data/db/migrations/1776276072750-AddUserContentPreferences'),
     import('@src/data/db/migrations/1776593841594-AddAudioToChatMessage'),
+    import('@src/data/db/migrations/1776593907869-Check'),
+    import('@src/data/db/migrations/1776600000000-AddUserNotifyOnReviewModeration'),
     import('@modules/chat/useCase/chat.service'),
     import('@modules/chat/adapters/secondary/chat.repository.typeorm'),
     import('@modules/chat/adapters/secondary/image-storage.stub'),
@@ -185,6 +189,8 @@ export async function createE2EHarness(): Promise<E2EHarness> {
     CreateKnowledgeExtractionTables1775852800000,
     AddUserContentPreferences1776276072750,
     AddAudioToChatMessage1776593841594,
+    Check1776593907869,
+    AddUserNotifyOnReviewModeration1776600000000,
   ];
 
   await appDataSource.initialize();
