@@ -162,6 +162,15 @@ class InMemoryChatRepository implements ChatRepository {
     return row;
   }
 
+  async persistBlockedExchange(input: {
+    userMessage: PersistMessageInput;
+    refusal: PersistMessageInput;
+  }): Promise<{ userMessage: ChatMessage; refusal: ChatMessage }> {
+    const userMessage = await this.persistMessage(input.userMessage);
+    const refusal = await this.persistMessage(input.refusal);
+    return { userMessage, refusal };
+  }
+
   /** @deprecated Use artworkMatch field in persistMessage */
   async persistArtworkMatch(input: PersistArtworkMatchInput): Promise<void> {
     this.artworkMatches.push(input);

@@ -3,6 +3,9 @@
   "main": "expo-router/entry",
   "version": "1.0.5",
   "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "EXPO_NO_TELEMETRY=1 expo start",
     "build:web": "expo export --platform web",
