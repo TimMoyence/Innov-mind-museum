@@ -52,7 +52,7 @@ describeE2E('golden path e2e flows', () => {
           email,
           password,
           firstname: 'Golden',
-          lastname: 'Path1',
+          lastname: 'PathOne',
         }),
       });
 
@@ -196,12 +196,15 @@ describeE2E('golden path e2e flows', () => {
       expect(createRes.status).toBe(201);
       const sessionId = (createRes.body as { session: { id: string } }).session.id;
 
-      // Build a minimal 1x1 PNG buffer
-      const pngHeader = Buffer.from('89504e470d0a1a0a', 'hex');
+      // Real minimal 1x1 transparent PNG (67 bytes — passes backend magic-byte validation)
+      const minimalPng = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX///+nxBvIAAAAC0lEQVQI12NgAAIAAAUAAeImBZsAAAAASUVORK5CYII=',
+        'base64',
+      );
 
       // Upload image + text via multipart form
       const formData = new FormData();
-      formData.append('image', new Blob([pngHeader], { type: 'image/png' }), 'artwork.png');
+      formData.append('image', new Blob([minimalPng], { type: 'image/png' }), 'artwork.png');
       formData.append(
         'context',
         JSON.stringify({

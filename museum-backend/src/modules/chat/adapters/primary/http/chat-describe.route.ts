@@ -62,6 +62,7 @@ export const createDescribeRouter = (describeService: DescribeService): Router =
 
       if (input.format === 'audio' && result.audio) {
         res.set('Content-Type', result.contentType ?? 'audio/mpeg');
+        // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write -- binary audio Buffer from OpenAI TTS, not user-controlled HTML
         res.send(result.audio);
         return;
       }

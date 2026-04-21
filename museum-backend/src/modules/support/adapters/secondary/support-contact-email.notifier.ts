@@ -7,6 +7,7 @@ import type {
 import type { EmailService } from '@shared/email/email.port';
 
 const escapeHtml = (value: string): string => {
+  // nosemgrep: javascript.audit.detect-replaceall-sanitization.detect-replaceall-sanitization -- intentional HTML-entity escape chain for server-side email template; order matters (& must be first)
   return value
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')

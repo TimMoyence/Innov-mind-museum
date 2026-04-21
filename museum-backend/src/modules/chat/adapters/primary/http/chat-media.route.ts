@@ -180,6 +180,7 @@ function createTtsHandler(chatService: ChatService) {
     }
     res.set('Content-Type', result.contentType);
     res.set('Content-Length', String(result.audio.length));
+    // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write -- binary audio Buffer from TTS service, not user-controlled HTML
     res.send(result.audio);
   };
 }

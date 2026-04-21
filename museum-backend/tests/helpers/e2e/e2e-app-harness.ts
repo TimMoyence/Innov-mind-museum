@@ -54,6 +54,13 @@ export async function createE2EHarness(): Promise<E2EHarness> {
   process.env.JWT_REFRESH_SECRET = 'e2e-refresh-secret';
   process.env.RATE_LIMIT_IP = '1000';
   process.env.RATE_LIMIT_SESSION = '1000';
+  // Auth register/login limits are hardcoded tight in prod (5/10min and 10/5min).
+  // Bumped high for e2e because `--runInBand` shares a single in-memory store
+  // across all 62 e2e tests from the same 127.0.0.1.
+  process.env.AUTH_REGISTER_RATE_LIMIT = '10000';
+  process.env.AUTH_REGISTER_RATE_WINDOW_MS = '60000';
+  process.env.AUTH_LOGIN_RATE_LIMIT = '10000';
+  process.env.AUTH_LOGIN_RATE_WINDOW_MS = '60000';
   process.env.LLM_PROVIDER = 'openai';
   process.env.OPENAI_API_KEY = 'e2e-fake-openai-key';
 
@@ -97,6 +104,7 @@ export async function createE2EHarness(): Promise<E2EHarness> {
     { ChatService },
     { TypeOrmChatRepository },
     { LocalImageStorage },
+    { clearRateLimitBuckets },
   ] = await Promise.all([
     import('@src/app'),
     import('@src/data/db/data-source'),
@@ -136,7 +144,10 @@ export async function createE2EHarness(): Promise<E2EHarness> {
     import('@modules/chat/useCase/chat.service'),
     import('@modules/chat/adapters/secondary/chat.repository.typeorm'),
     import('@modules/chat/adapters/secondary/image-storage.stub'),
+    import('@src/helpers/middleware/rate-limit.middleware'),
   ]);
+
+  clearRateLimitBuckets();
 
   const appDataSource = AppDataSource;
 

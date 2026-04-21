@@ -166,34 +166,18 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
   // ---------------------------------------------------------------------------
   describe('GP6: rate limit -> 429 -> retry after', () => {
     it('triggers 429 on rapid requests and includes Retry-After header', async () => {
-      // The E2E harness sets RATE_LIMIT_IP=1000 and RATE_LIMIT_SESSION=1000,
-      // which is too high to trigger in a test. Instead, we target the login
-      // route which has its own tighter rate limit: 10 requests per 5 minutes.
-      // We use an intentionally wrong password so each request is fast.
+      // The harness relaxes the register/login limiters so the e2e suite can churn
+      // through dozens of auth calls in one process. We target /forgot-password
+      // instead — it keeps its hardcoded 5/5min IP budget and reliably triggers 429.
 
-      const email = `e2e-ratelimit-${Date.now()}@musaium.test`;
-      const password = 'Password123!';
-
-      // Register first so the email exists (login rate limit still applies)
-      await harness.request('/api/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({
-          email,
-          password,
-          firstname: 'Rate',
-          lastname: 'Limit',
-        }),
-      });
-
-      // Fire 11 rapid login attempts with wrong password to exceed the limit of 10
-      // Use raw fetch to check response headers (Retry-After)
+      // Fire 8 rapid forgot-password attempts to exceed the limit of 5
       const results: { status: number; retryAfter: string | null }[] = [];
 
-      for (let i = 0; i < 12; i++) {
-        const response = await fetch(`${harness.baseUrl}/api/auth/login`, {
+      for (let i = 0; i < 8; i++) {
+        const response = await fetch(`${harness.baseUrl}/api/auth/forgot-password`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password: 'WrongPassword999!' }),
+          body: JSON.stringify({ email: `e2e-ratelimit-${Date.now()}-${i}@musaium.test` }),
         });
         results.push({
           status: response.status,
@@ -213,10 +197,10 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
       const retryAfterSeconds = Number(firstRateLimited.retryAfter);
       expect(retryAfterSeconds).toBeGreaterThanOrEqual(1);
 
-      // Verify that a legitimate login still works after the rate limit window
-      // (we won't wait 5 minutes, but we verify the correct password works
-      // from a different "identity" -- a fresh user not subject to the same bucket)
+      // Verify a legitimate register+login flow still works for an unrelated user
+      // (forgot-password bucket does not affect register/login buckets).
       const freshEmail = `e2e-ratelimit-fresh-${Date.now()}@musaium.test`;
+      const password = 'Password123!';
       await harness.request('/api/auth/register', {
         method: 'POST',
         body: JSON.stringify({
@@ -236,17 +220,14 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
     });
 
     it('returns proper 429 error structure', async () => {
-      // Use the register endpoint which has a 5-per-10-minute limit
+      // forgot-password keeps its 5-per-5-minute hardcoded limit; flood it to 429.
       const responses: { status: number; body: unknown }[] = [];
 
-      for (let i = 0; i < 7; i++) {
-        const res = await harness.request('/api/auth/register', {
+      for (let i = 0; i < 8; i++) {
+        const res = await harness.request('/api/auth/forgot-password', {
           method: 'POST',
           body: JSON.stringify({
-            email: `e2e-reg-flood-${Date.now()}-${i}@musaium.test`,
-            password: 'Password123!',
-            firstname: 'Flood',
-            lastname: 'Test',
+            email: `e2e-fp-flood-${Date.now()}-${i}@musaium.test`,
           }),
         });
         responses.push(res);
