@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
@@ -17,6 +18,7 @@ type ConversationIntent = 'default' | 'camera' | 'audio';
 export default function DiscoverScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const { isCreating, error, setError, startConversation } = useStartConversation();
   const [actionStatus, setActionStatus] = useState<string | null>(null);
 
@@ -33,7 +35,10 @@ export default function DiscoverScreen() {
   };
 
   return (
-    <LiquidScreen background={pickMuseumBackground(0)} contentStyle={styles.screen}>
+    <LiquidScreen
+      background={pickMuseumBackground(0)}
+      contentStyle={[styles.screen, { paddingTop: insets.top + semantic.screen.gapSmall }]}
+    >
       <View style={styles.menuWrap}>
         <FloatingContextMenu
           actions={[
@@ -61,7 +66,13 @@ export default function DiscoverScreen() {
         />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + semantic.screen.padding },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <GlassCard style={styles.heroCard} intensity={62}>
           <Text style={[styles.title, { color: theme.textPrimary }]}>{t('discover.title')}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
@@ -186,9 +197,7 @@ export default function DiscoverScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    paddingTop: semantic.screen.paddingXL,
     paddingHorizontal: space['4.5'],
-    paddingBottom: semantic.screen.padding,
   },
   menuWrap: {
     alignItems: 'center',
@@ -196,7 +205,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     gap: semantic.screen.gapSmall,
-    paddingBottom: space['5'],
   },
   heroCard: {
     padding: semantic.card.paddingLarge,

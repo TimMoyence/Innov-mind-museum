@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -60,6 +61,7 @@ function MetaRow({ label, value }: MetaItem) {
 export default function PrivacyScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const metaItems = useMemo<MetaItem[]>(
     () => [
       { label: 'Version', value: PRIVACY_POLICY_CONTENT.version },
@@ -78,7 +80,10 @@ export default function PrivacyScreen() {
   const hasReleaseWork = unresolvedMetaCount > 0;
 
   return (
-    <LiquidScreen background={pickMuseumBackground(4)} contentStyle={styles.screen}>
+    <LiquidScreen
+      background={pickMuseumBackground(4)}
+      contentStyle={[styles.screen, { paddingTop: insets.top + semantic.screen.gapSmall }]}
+    >
       <View style={styles.menuWrap}>
         <FloatingContextMenu
           actions={[
@@ -110,7 +115,13 @@ export default function PrivacyScreen() {
         />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + semantic.screen.padding },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <GlassCard style={styles.heroCard} intensity={60}>
           <View style={styles.heroHeader}>
             <Text style={[styles.title, { color: theme.textPrimary }]}>

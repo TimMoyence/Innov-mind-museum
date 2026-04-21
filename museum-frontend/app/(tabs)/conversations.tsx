@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -33,6 +34,7 @@ type ListRow =
 export default function ConversationsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const { isCreating, error: createError, startConversation } = useStartConversation();
@@ -254,7 +256,7 @@ export default function ConversationsScreen() {
         extraData={editMode ? selectedIds.size : 0}
         contentContainerStyle={{
           ...styles.listContent,
-          paddingBottom: insets.bottom + semantic.section.marginBottom,
+          paddingBottom: tabBarHeight,
         }}
         refreshing={isRefreshing}
         onRefresh={() => void loadDashboard(true)}

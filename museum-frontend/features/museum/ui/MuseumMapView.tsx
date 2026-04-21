@@ -67,8 +67,13 @@ const CLUSTER_MAX_ZOOM = 14;
 const CLUSTER_EXPAND_ZOOM_FALLBACK = 16;
 const CLUSTER_EXPAND_DURATION_MS = 450;
 
-const DEFAULT_CENTER: [number, number] = [2.3522, 48.8566];
-const DEFAULT_ZOOM = 4;
+// Fallback world-centered view used only when the map loads with no user
+// location AND no museum data. Any actual data — cached GPS from a previous
+// session, OSM results, or the fresh GPS fix — takes precedence and is
+// applied before the first frame via `initialViewState` or the fit effect.
+const DEFAULT_CENTER: [number, number] = [0, 20];
+const DEFAULT_ZOOM = 1;
+const USER_ONLY_ZOOM = 13;
 const FIT_PADDING = 72;
 const FIT_MIN_SPAN_DEG = 0.01;
 const FIT_DURATION_MS = 600;
@@ -120,10 +125,24 @@ export const MuseumMapView = ({
     [userLatitude, userLongitude],
   );
 
-  // Fit the camera to show all points the first time data becomes available,
-  // and whenever the dataset meaningfully changes AFTER the user has not taken
-  // over the camera with a pan gesture.
-  useEffect(() => {
+  // Camera starts on the user's cached/current position when available so the
+  // first frame lands on the right region even before the fit effect runs.
+  // Paris was previously the hardcoded start — dropped because it made the
+  // map visibly incorrect for any user outside France on first render.
+  const initialViewState = useMemo(() => {
+    if (userLatitude !== null && userLongitude !== null) {
+      return { center: [userLongitude, userLatitude] as [number, number], zoom: USER_ONLY_ZOOM };
+    }
+    return { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM };
+    // Only consumed on first mount — intentional single capture.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fits the camera around museums + user position. Guards against the
+  // MapLibre Camera ref being populated asynchronously (the ref is set only
+  // after the native map view mounts, so the first effect invocation on new
+  // data can land before the ref is ready — we retry on load completion).
+  const fitCameraToData = useCallback(() => {
     if (userPannedRef.current) return;
     const camera = cameraRef.current;
     if (!camera) return;
@@ -162,7 +181,6 @@ export const MuseumMapView = ({
       if (lat < minLat) minLat = lat;
       if (lat > maxLat) maxLat = lat;
     }
-    // Avoid a zero-area bbox collapsing the fitBounds call.
     if (maxLng - minLng < FIT_MIN_SPAN_DEG) {
       minLng -= FIT_MIN_SPAN_DEG / 2;
       maxLng += FIT_MIN_SPAN_DEG / 2;
@@ -178,6 +196,10 @@ export const MuseumMapView = ({
     });
     hasFittedRef.current = true;
   }, [museumCollection, reduceMotion, userLatitude, userLongitude]);
+
+  useEffect(() => {
+    fitCameraToData();
+  }, [fitCameraToData]);
 
   const handleRegionDidChange = useCallback(
     (event: NativeSyntheticEvent<ViewStateChangeEvent>) => {
@@ -240,7 +262,10 @@ export const MuseumMapView = ({
 
   const handleDidFinishLoadingMap = useCallback(() => {
     setHasLoadError(false);
-  }, []);
+    // Re-attempt the data fit once the native map is ready: the first effect
+    // invocation on mount can fire before `cameraRef.current` is populated.
+    fitCameraToData();
+  }, [fitCameraToData]);
 
   const handleDidFinishRenderingMapFully = useCallback(() => {
     if (__DEV__) {
@@ -279,7 +304,7 @@ export const MuseumMapView = ({
         logo={false}
         compass={false}
       >
-        <Camera ref={cameraRef} initialViewState={{ center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM }} />
+        <Camera ref={cameraRef} initialViewState={initialViewState} />
         <GeoJSONSource
           id={MUSEUMS_SOURCE_ID}
           ref={museumsSourceRef}

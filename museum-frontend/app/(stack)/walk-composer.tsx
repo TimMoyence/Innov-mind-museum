@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
@@ -12,9 +13,19 @@ import { semantic, space } from '@/shared/ui/tokens';
 export default function WalkComposerScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   return (
-    <LiquidScreen background={pickMuseumBackground(2)} contentStyle={styles.screen}>
+    <LiquidScreen
+      background={pickMuseumBackground(2)}
+      contentStyle={[
+        styles.screen,
+        {
+          paddingTop: insets.top + semantic.screen.gapSmall,
+          paddingBottom: insets.bottom + semantic.screen.gapSmall,
+        },
+      ]}
+    >
       <View style={styles.headerRow}>
         <Pressable
           testID="walk-composer-back"
@@ -61,8 +72,6 @@ export default function WalkComposerScreen() {
 const styles = StyleSheet.create({
   screen: {
     paddingHorizontal: space['4.5'],
-    paddingTop: semantic.screen.paddingXL,
-    paddingBottom: semantic.form.gapLarge,
     gap: semantic.screen.gap,
   },
   headerRow: {

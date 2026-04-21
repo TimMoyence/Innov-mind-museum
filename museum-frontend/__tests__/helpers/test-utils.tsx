@@ -78,6 +78,14 @@ jest.mock('react-native-safe-area-context', () => {
   };
 });
 
+// ── @react-navigation/bottom-tabs ────────────────────────────────────────────
+// Tab screens call useBottomTabBarHeight() at render time. Outside a tab
+// navigator the real hook throws — mock returns 0 (the resolved layout value
+// tests should assume; they do not assert on the padding itself).
+jest.mock('@react-navigation/bottom-tabs', () => ({
+  useBottomTabBarHeight: () => 0,
+}));
+
 // ── Ionicons — render icon name as text ──────────────────────────────────────
 jest.mock('@expo/vector-icons', () => {
   const { Text } = require('react-native');
@@ -211,4 +219,3 @@ jest.mock('@shopify/flash-list', () => {
     FlashList: FlatList,
   };
 });
-

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -38,6 +39,7 @@ const FADE_DURATION_MS = 180;
 export default function MuseumsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
 
   const { latitude, longitude, status } = useLocation();
@@ -173,7 +175,13 @@ export default function MuseumsScreen() {
   return (
     <LiquidScreen
       background={pickMuseumBackground(3)}
-      contentStyle={[styles.screen, { paddingTop: insets.top + semantic.screen.gapSmall }]}
+      contentStyle={[
+        styles.screen,
+        {
+          paddingTop: insets.top + semantic.screen.gapSmall,
+          paddingBottom: tabBarHeight,
+        },
+      ]}
     >
       <GlassCard style={styles.headerCard} intensity={60}>
         <Text style={[styles.title, { color: theme.textPrimary }]}>
@@ -194,22 +202,6 @@ export default function MuseumsScreen() {
       </GlassCard>
 
       <Animated.View style={[styles.contentContainer, { opacity: fadeAnim }]}>
-        {showSearchAreaChip ? (
-          <Pressable
-            style={[
-              styles.searchAreaChip,
-              { backgroundColor: theme.primary + '1A', borderColor: theme.primary },
-            ]}
-            onPress={handleSearchInVisibleArea}
-            accessibilityRole="button"
-            accessibilityLabel={t('museumDirectory.search_this_area')}
-          >
-            <Ionicons name="locate-outline" size={14} color={theme.primary} />
-            <Text style={[styles.searchAreaText, { color: theme.primary }]}>
-              {t('museumDirectory.search_this_area')}
-            </Text>
-          </Pressable>
-        ) : null}
         {viewMode === 'list' ? (
           <MuseumDirectoryList
             museums={museums}
@@ -220,13 +212,31 @@ export default function MuseumsScreen() {
             onRefresh={refresh}
           />
         ) : (
-          <MuseumMapView
-            museums={museums}
-            userLatitude={latitude}
-            userLongitude={longitude}
-            onMapMoved={handleMapMoved}
-            onMuseumSelect={setSelectedMuseum}
-          />
+          <View style={styles.mapContainer}>
+            <MuseumMapView
+              museums={museums}
+              userLatitude={latitude}
+              userLongitude={longitude}
+              onMapMoved={handleMapMoved}
+              onMuseumSelect={setSelectedMuseum}
+            />
+            {showSearchAreaChip ? (
+              <Pressable
+                style={[
+                  styles.searchAreaChip,
+                  { backgroundColor: theme.primary, shadowColor: theme.primary },
+                ]}
+                onPress={handleSearchInVisibleArea}
+                accessibilityRole="button"
+                accessibilityLabel={t('museumDirectory.search_this_area')}
+              >
+                <Ionicons name="locate-outline" size={14} color={theme.primaryContrast} />
+                <Text style={[styles.searchAreaText, { color: theme.primaryContrast }]}>
+                  {t('museumDirectory.search_this_area')}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
         )}
       </Animated.View>
 
@@ -248,12 +258,12 @@ const styles = StyleSheet.create({
   },
   headerCard: {
     paddingHorizontal: semantic.card.padding,
-    paddingVertical: semantic.card.padding,
+    paddingVertical: semantic.card.paddingCompact,
     alignItems: 'center',
-    marginBottom: semantic.card.gap,
+    marginBottom: semantic.card.gapSmall,
   },
   title: {
-    fontSize: fontSize['3xl'],
+    fontSize: fontSize['2xl'],
     fontWeight: '700',
     textAlign: 'center',
   },
@@ -263,21 +273,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   toggleRow: {
-    marginTop: semantic.form.gap,
+    marginTop: semantic.section.gapTight,
   },
   contentContainer: {
     flex: 1,
   },
+  mapContainer: {
+    flex: 1,
+    position: 'relative',
+  },
   searchAreaChip: {
+    position: 'absolute',
+    top: semantic.card.gap,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'center',
     gap: semantic.section.gapTight,
-    paddingHorizontal: semantic.card.paddingCompact,
+    paddingHorizontal: semantic.card.padding,
     paddingVertical: semantic.section.gapTight,
-    borderRadius: semantic.modal.radius,
-    borderWidth: 1,
-    marginBottom: semantic.form.gap,
+    borderRadius: semantic.badge.radiusFull,
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   searchAreaText: {
     fontSize: semantic.card.captionSize,

@@ -1,4 +1,6 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
@@ -25,6 +27,8 @@ const INTENT_MAP: Record<HomeIntent, 'audio' | 'camera' | 'walk'> = {
 export default function HomeScreen() {
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const { isCreating, error, setError, startConversation } = useStartConversation();
   const { locale, museumMode } = useRuntimeSettings();
   const { artwork, isLoading: isDailyArtLoading, isSaved, dismissed, save, skip } = useDailyArt();
@@ -40,7 +44,10 @@ export default function HomeScreen() {
   return (
     <LiquidScreen background={pickMuseumBackground(0)}>
       <ScrollView
-        contentContainerStyle={styles.screen}
+        contentContainerStyle={[
+          styles.screen,
+          { paddingTop: insets.top + semantic.screen.gapSmall, paddingBottom: tabBarHeight },
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -108,7 +115,6 @@ const styles = StyleSheet.create({
   screen: {
     flexGrow: 1,
     paddingHorizontal: space['5.5'],
-    paddingBottom: semantic.media.homeBottomPad,
     justifyContent: 'center',
     gap: semantic.screen.gap,
   },

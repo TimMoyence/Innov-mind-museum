@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
@@ -13,11 +14,15 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 export default function GuidedMuseumModeScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const museumMode = useRuntimeSettingsStore((s) => s.defaultMuseumMode);
   const guideLevel = useRuntimeSettingsStore((s) => s.guideLevel);
 
   return (
-    <LiquidScreen background={pickMuseumBackground(3)} contentStyle={styles.screen}>
+    <LiquidScreen
+      background={pickMuseumBackground(3)}
+      contentStyle={[styles.screen, { paddingTop: insets.top + semantic.screen.gapSmall }]}
+    >
       <View style={styles.menuWrap}>
         <FloatingContextMenu
           actions={[
@@ -49,7 +54,13 @@ export default function GuidedMuseumModeScreen() {
         />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + semantic.screen.padding },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <GlassCard style={styles.heroCard} intensity={60}>
           <Text style={[styles.title, { color: theme.textPrimary }]}>{t('guidedMode.title')}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>

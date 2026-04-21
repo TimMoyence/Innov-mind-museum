@@ -1,5 +1,6 @@
 import { ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { TERMS_OF_SERVICE_CONTENT } from '@/features/legal/termsOfServiceContent';
@@ -14,9 +15,13 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 export default function TermsScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   return (
-    <LiquidScreen background={pickMuseumBackground(4)} contentStyle={styles.screen}>
+    <LiquidScreen
+      background={pickMuseumBackground(4)}
+      contentStyle={[styles.screen, { paddingTop: insets.top + semantic.screen.gapSmall }]}
+    >
       <View style={styles.menuWrap}>
         <FloatingContextMenu
           actions={[
@@ -40,7 +45,13 @@ export default function TermsScreen() {
         />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + semantic.screen.padding },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <GlassCard style={styles.heroCard} intensity={60}>
           <Text style={[styles.title, { color: theme.textPrimary }]}>
             {TERMS_OF_SERVICE_CONTENT.title}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -24,6 +25,7 @@ const supportChannelIcon: Record<SupportChannelKey, ContextMenuAction['icon']> =
 export default function SupportScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const [status, setStatus] = useState<string | null>(null);
   const readyChannels = getReadySupportChannels();
 
@@ -79,12 +81,21 @@ export default function SupportScreen() {
   ];
 
   return (
-    <LiquidScreen background={pickMuseumBackground(2)} contentStyle={styles.screen}>
+    <LiquidScreen
+      background={pickMuseumBackground(2)}
+      contentStyle={[styles.screen, { paddingTop: insets.top + semantic.screen.gapSmall }]}
+    >
       <View style={styles.menuWrap}>
         <FloatingContextMenu actions={menuActions} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + semantic.screen.padding },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <GlassCard style={styles.heroCard} intensity={60}>
           <Text style={[styles.title, { color: theme.textPrimary }]}>{t('support.title')}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>

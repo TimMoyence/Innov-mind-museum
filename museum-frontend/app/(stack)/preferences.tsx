@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import type { GuideLevel } from '@/features/settings/runtimeSettings';
@@ -31,6 +32,7 @@ const GUIDE_LEVELS: GuideLevel[] = ['beginner', 'intermediate', 'expert'];
 export default function PreferencesScreen() {
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { language, setLanguage } = useI18n();
   const storeMuseumMode = useRuntimeSettingsStore((s) => s.defaultMuseumMode);
   const storeGuideLevel = useRuntimeSettingsStore((s) => s.guideLevel);
@@ -73,7 +75,10 @@ export default function PreferencesScreen() {
   };
 
   return (
-    <LiquidScreen background={pickMuseumBackground(1)} contentStyle={styles.screen}>
+    <LiquidScreen
+      background={pickMuseumBackground(1)}
+      contentStyle={[styles.screen, { paddingTop: insets.top + semantic.screen.gapSmall }]}
+    >
       <View style={styles.menuWrap}>
         <FloatingContextMenu
           actions={[
@@ -105,7 +110,13 @@ export default function PreferencesScreen() {
         />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + semantic.screen.padding },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <GlassCard style={styles.card} intensity={60}>
           <Text style={[styles.title, { color: theme.textPrimary }]}>{t('preferences.title')}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
