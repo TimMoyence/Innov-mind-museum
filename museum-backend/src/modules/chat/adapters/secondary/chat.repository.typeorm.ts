@@ -26,7 +26,7 @@ import type {
 } from '../../domain/chat.repository.interface';
 import type { CreateSessionInput } from '../../domain/chat.types';
 import type { FeedbackValue } from '../../domain/messageFeedback.entity';
-import type { DataSource, Repository } from 'typeorm';
+import type { DataSource, EntityManager, Repository } from 'typeorm';
 
 const messageCursor = new CursorCodec(z.object({ createdAt: z.string(), id: z.string() }));
 const sessionCursor = new CursorCodec(z.object({ updatedAt: z.string(), id: z.string() }));
@@ -158,48 +158,82 @@ export class TypeOrmChatRepository implements ChatRepository {
   }
 
   /**
+   * Persists a chat message, optional artwork match, and session updates within the
+   * provided TypeORM {@link EntityManager}. Extracted from {@link persistMessage}
+   * so multi-message atomic operations (e.g. {@link persistBlockedExchange}) can
+   * share the same transaction scope.
+   */
+  private async persistMessageWithinTx(
+    transactionManager: EntityManager,
+    input: PersistMessageInput,
+  ): Promise<ChatMessage> {
+    const messageRepository = transactionManager.getRepository(ChatMessage);
+    const sessionRepository = transactionManager.getRepository(ChatSession);
+
+    const entity = messageRepository.create({
+      role: input.role,
+      text: input.text ?? null,
+      imageRef: input.imageRef ?? null,
+      metadata: input.metadata ?? null,
+      session: { id: input.sessionId } as ChatSession,
+    });
+
+    const saved = await messageRepository.save(entity);
+
+    if (input.artworkMatch) {
+      const artworkMatchRepo = transactionManager.getRepository(ArtworkMatch);
+      const match = artworkMatchRepo.create({
+        artworkId: input.artworkMatch.artworkId ?? null,
+        title: input.artworkMatch.title ?? null,
+        artist: input.artworkMatch.artist ?? null,
+        confidence: input.artworkMatch.confidence ?? 0,
+        source: input.artworkMatch.source ?? null,
+        room: input.artworkMatch.room ?? null,
+        message: { id: saved.id } as ChatMessage,
+      });
+      await artworkMatchRepo.save(match);
+    }
+
+    const session = await sessionRepository.findOneBy({ id: input.sessionId });
+    if (session) {
+      session.updatedAt = new Date();
+      applySessionUpdates(session, input.sessionUpdates);
+      await sessionRepository.save(session);
+    }
+
+    return saved;
+  }
+
+  /**
    * Persists a chat message, optional artwork match, and session updates in a single transaction.
    *
    * @param input - Message content, role, optional artwork match, and session update fields.
    * @returns The persisted ChatMessage entity.
    */
   async persistMessage(input: PersistMessageInput): Promise<ChatMessage> {
-    return await this.messageRepo.manager.transaction(async (transactionManager) => {
-      const messageRepository = transactionManager.getRepository(ChatMessage);
-      const sessionRepository = transactionManager.getRepository(ChatSession);
+    return await this.messageRepo.manager.transaction((tx) =>
+      this.persistMessageWithinTx(tx, input),
+    );
+  }
 
-      const entity = messageRepository.create({
-        role: input.role,
-        text: input.text ?? null,
-        imageRef: input.imageRef ?? null,
-        metadata: input.metadata ?? null,
-        session: { id: input.sessionId } as ChatSession,
-      });
-
-      const saved = await messageRepository.save(entity);
-
-      if (input.artworkMatch) {
-        const artworkMatchRepo = transactionManager.getRepository(ArtworkMatch);
-        const match = artworkMatchRepo.create({
-          artworkId: input.artworkMatch.artworkId ?? null,
-          title: input.artworkMatch.title ?? null,
-          artist: input.artworkMatch.artist ?? null,
-          confidence: input.artworkMatch.confidence ?? 0,
-          source: input.artworkMatch.source ?? null,
-          room: input.artworkMatch.room ?? null,
-          message: { id: saved.id } as ChatMessage,
-        });
-        await artworkMatchRepo.save(match);
-      }
-
-      const session = await sessionRepository.findOneBy({ id: input.sessionId });
-      if (session) {
-        session.updatedAt = new Date();
-        applySessionUpdates(session, input.sessionUpdates);
-        await sessionRepository.save(session);
-      }
-
-      return saved;
+  /**
+   * Atomically persists the blocked user message and the assistant refusal in one
+   * transaction. If either write fails both rows are rolled back — no orphan user
+   * row can survive on its own.
+   *
+   * @param input - User message and refusal message to persist atomically.
+   * @param input.userMessage - The user's blocked attempt to persist.
+   * @param input.refusal - The assistant refusal message to persist.
+   * @returns The two persisted rows.
+   */
+  async persistBlockedExchange(input: {
+    userMessage: PersistMessageInput;
+    refusal: PersistMessageInput;
+  }): Promise<{ userMessage: ChatMessage; refusal: ChatMessage }> {
+    return await this.messageRepo.manager.transaction(async (tx) => {
+      const userMessage = await this.persistMessageWithinTx(tx, input.userMessage);
+      const refusal = await this.persistMessageWithinTx(tx, input.refusal);
+      return { userMessage, refusal };
     });
   }
 

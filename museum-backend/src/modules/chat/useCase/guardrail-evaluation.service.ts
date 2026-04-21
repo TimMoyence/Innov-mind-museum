@@ -10,7 +10,7 @@ import { withPolicyCitation } from './chat-image.helpers';
 
 import type { GuardrailBlockReason } from './art-topic-guardrail';
 import type { PostMessageResult } from './chat.service.types';
-import type { ChatRepository } from '../domain/chat.repository.interface';
+import type { ChatRepository, PersistMessageInput } from '../domain/chat.repository.interface';
 import type { ChatAssistantMetadata } from '../domain/chat.types';
 import type { AdvancedGuardrail } from '../domain/ports/advanced-guardrail.port';
 import type { AuditService } from '@shared/audit/audit.service';
@@ -162,13 +162,21 @@ export class GuardrailEvaluationService {
   }
 
   /**
-   * Handles a blocked input: logs audit event and persists the refusal response.
+   * Handles a blocked input: logs the audit event and persists both the attempted
+   * user message and the assistant refusal in a single atomic transaction.
    *
-   * @param params - Session context, guardrail reason, and locale.
+   * The `userMessage` parameter is required: the product decision is to preserve
+   * the user's blocked attempt for audit/moderation (see
+   * `chat-message-service.test.ts:403/:414`). Passing it through to the repo's
+   * `persistBlockedExchange` guarantees both rows land together or neither does —
+   * no more orphan user row if the refusal write fails.
+   *
+   * @param params - Session context, guardrail reason, locale, and the user message to persist atomically.
    * @param params.sessionId - Chat session identifier.
    * @param params.reason - Guardrail block reason category.
    * @param params.requestedLocale - Locale for localised refusal text.
    * @param params.userId - Owner id for audit trail.
+   * @param params.userMessage - The user's blocked message to persist atomically with the refusal.
    * @returns The refusal message result ready to return to the caller.
    */
   async handleInputBlock(params: {
@@ -176,8 +184,9 @@ export class GuardrailEvaluationService {
     reason?: GuardrailBlockReason;
     requestedLocale?: string;
     userId?: number;
+    userMessage: PersistMessageInput;
   }): Promise<PostMessageResult> {
-    const { sessionId, reason, requestedLocale, userId } = params;
+    const { sessionId, reason, requestedLocale, userId, userMessage } = params;
 
     this.audit?.log({
       action: AUDIT_SECURITY_GUARDRAIL_BLOCK,
@@ -190,20 +199,23 @@ export class GuardrailEvaluationService {
 
     const refusalText = buildGuardrailRefusal(requestedLocale, reason);
     const refusalMetadata = withPolicyCitation({}, reason);
-    const assistantMessage = await this.repository.persistMessage({
-      sessionId,
-      role: 'assistant',
-      text: refusalText,
-      metadata: refusalMetadata as Record<string, unknown>,
+    const { refusal } = await this.repository.persistBlockedExchange({
+      userMessage,
+      refusal: {
+        sessionId,
+        role: 'assistant',
+        text: refusalText,
+        metadata: refusalMetadata as Record<string, unknown>,
+      },
     });
 
     return {
       sessionId,
       message: {
-        id: assistantMessage.id,
+        id: refusal.id,
         role: 'assistant',
         text: refusalText,
-        createdAt: assistantMessage.createdAt.toISOString(),
+        createdAt: refusal.createdAt.toISOString(),
       },
       metadata: refusalMetadata,
     };

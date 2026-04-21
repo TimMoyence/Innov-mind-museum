@@ -1,6 +1,9 @@
 import type { ChatRepository } from '@modules/chat/domain/chat.repository.interface';
 
-/** Shared mock ChatRepository factory. All methods default to jest.fn(). */
+/**
+ * Shared mock ChatRepository factory. All methods default to jest.fn().
+ * @param overrides
+ */
 export const makeChatRepo = (
   overrides: Partial<jest.Mocked<ChatRepository>> = {},
 ): jest.Mocked<ChatRepository> => ({
@@ -9,6 +12,7 @@ export const makeChatRepo = (
   getMessageById: jest.fn(),
   deleteSessionIfEmpty: jest.fn(),
   persistMessage: jest.fn(),
+  persistBlockedExchange: jest.fn(),
   listSessionMessages: jest.fn(),
   listSessionHistory: jest.fn(),
   listSessions: jest.fn(),
