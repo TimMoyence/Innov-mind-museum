@@ -277,7 +277,12 @@ describe('rate-limit middleware — Redis fail-closed fallback', () => {
     const failingStore = createFailingRedisStore();
     setRedisRateLimitStore(failingStore);
 
-    const mw = createRateLimitMiddleware({ limit: 5, windowMs: 60_000, keyGenerator: byIp });
+    const mw = createRateLimitMiddleware({
+      limit: 5,
+      windowMs: 60_000,
+      keyGenerator: byIp,
+      bucketName: 'redis-fail-test',
+    });
     const req = makeMockReq();
     const res = makeMockRes();
     const next = jest.fn();
@@ -286,7 +291,7 @@ describe('rate-limit middleware — Redis fail-closed fallback', () => {
     await new Promise(process.nextTick);
 
     expect(logger.warn).toHaveBeenCalledWith('rate_limit_redis_fail_closed_fallback', {
-      key: '10.0.0.1',
+      key: 'redis-fail-test:10.0.0.1',
     });
   });
 });
