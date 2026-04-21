@@ -55,8 +55,26 @@ function makeHtmlResponse(html: string, contentType = 'text/html; charset=utf-8'
   return {
     ok: true,
     status: 200,
-    headers: { get: (key: string) => (key === 'content-type' ? contentType : null) },
+    headers: {
+      get: (key: string) => (key.toLowerCase() === 'content-type' ? contentType : null),
+      has: (key: string) => key.toLowerCase() === 'content-type',
+    },
     text: async () => html,
+    arrayBuffer: async () => new ArrayBuffer(0),
+  };
+}
+
+/** Builds a `3xx` response carrying a `Location` header, used to drive the manual redirect loop. */
+function makeRedirectResponse(location: string, status = 302) {
+  return {
+    ok: false,
+    status,
+    headers: {
+      get: (key: string) => (key.toLowerCase() === 'location' ? location : null),
+      has: (key: string) => key.toLowerCase() === 'location',
+    },
+    text: async () => '',
+    arrayBuffer: async () => new ArrayBuffer(0),
   };
 }
 
@@ -327,6 +345,96 @@ describe('HtmlScraper', () => {
 
       expect(result).toBeNull();
       expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('rejects cloud-metadata hostname (metadata.google.internal) before DNS', async () => {
+      const result = await scraper.scrape('http://metadata.google.internal/latest');
+
+      expect(result).toBeNull();
+      expect(fetchSpy).not.toHaveBeenCalled();
+      // Blocked at hostname policy — DNS lookup never fires.
+      expect(mockLookup).not.toHaveBeenCalled();
+    });
+
+    it('rejects IPv4-mapped IPv6 private address (::ffff:192.168.1.1)', async () => {
+      mockLookup.mockResolvedValue({ address: '::ffff:192.168.1.1', family: 6 });
+
+      const result = await scraper.scrape('http://internal.example/data');
+
+      expect(result).toBeNull();
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('SSRF protection — manual redirect chain', () => {
+    let fetchSpy: jest.Mock;
+
+    beforeEach(() => {
+      mockLookup.mockResolvedValue({ address: '93.184.216.34', family: 4 });
+      fetchSpy = jest.fn();
+      global.fetch = fetchSpy as unknown as typeof fetch;
+    });
+
+    it('blocks a 302 redirect targeting a private IPv4 (169.254.169.254)', async () => {
+      fetchSpy.mockResolvedValueOnce(makeRedirectResponse('http://169.254.169.254/latest'));
+
+      const result = await scraper.scrape('https://evil.example/start');
+
+      expect(result).toBeNull();
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('blocks a 302 redirect to file:// scheme', async () => {
+      fetchSpy.mockResolvedValueOnce(makeRedirectResponse('file:///etc/passwd'));
+
+      const result = await scraper.scrape('https://evil.example/start');
+
+      expect(result).toBeNull();
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('blocks a 302 redirect to a cloud-metadata hostname', async () => {
+      fetchSpy.mockResolvedValueOnce(
+        makeRedirectResponse('http://metadata.google.internal/latest'),
+      );
+
+      const result = await scraper.scrape('https://evil.example/start');
+
+      expect(result).toBeNull();
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('blocks a rebinding chain (public → public → private)', async () => {
+      fetchSpy.mockResolvedValueOnce(makeRedirectResponse('https://second-hop.example/next', 301));
+      fetchSpy.mockResolvedValueOnce(makeRedirectResponse('http://10.0.0.5/secret'));
+
+      const result = await scraper.scrape('https://start.example/path');
+
+      expect(result).toBeNull();
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('follows a safe redirect chain to a valid HTML page', async () => {
+      fetchSpy.mockResolvedValueOnce(
+        makeRedirectResponse('https://final-hop.example/article', 302),
+      );
+      fetchSpy.mockResolvedValueOnce(makeHtmlResponse(ARTICLE_HTML));
+
+      const result = await scraper.scrape('https://chain.example/start');
+
+      expect(result).not.toBeNull();
+      expect(result!.url).toBe('https://final-hop.example/article');
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('blocks a chain exceeding MAX_REDIRECTS (5)', async () => {
+      // Always-redirecting mock; loop must abort after MAX_REDIRECTS + 1 fetches.
+      fetchSpy.mockResolvedValue(makeRedirectResponse('https://next-hop.example/step'));
+
+      const result = await scraper.scrape('https://too-many.example/start');
+
+      expect(result).toBeNull();
+      expect(fetchSpy).toHaveBeenCalledTimes(6);
     });
   });
 });
