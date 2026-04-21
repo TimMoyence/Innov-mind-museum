@@ -1,5 +1,5 @@
 import { TokenCleanupService } from '@modules/auth/useCase/tokenCleanup.service';
-import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token.repository.interface';
+import { makeRefreshTokenRepo as makeFullRefreshTokenRepo } from '../../helpers/auth/user-repo.mock';
 
 jest.mock('@shared/logger/logger', () => ({
   logger: {
@@ -11,9 +11,8 @@ jest.mock('@shared/logger/logger', () => ({
 
 const { logger } = jest.requireMock('@shared/logger/logger');
 
-const makeRefreshTokenRepo = (deleteResult = 5) => ({
-  deleteExpiredTokens: jest.fn().mockResolvedValue(deleteResult),
-});
+const makeRefreshTokenRepo = (deleteResult = 5) =>
+  makeFullRefreshTokenRepo({ deleteExpiredTokens: jest.fn().mockResolvedValue(deleteResult) });
 
 const makeCacheService = (setNxResult = true) => ({
   get: jest.fn(),
@@ -36,7 +35,7 @@ describe('TokenCleanupService', () => {
   it('runs cleanup when lock is acquired (setNx returns true)', async () => {
     const repo = makeRefreshTokenRepo(42);
     const cache = makeCacheService(true);
-    const service = new TokenCleanupService(repo as unknown as IRefreshTokenRepository, cache);
+    const service = new TokenCleanupService(repo, cache);
 
     const deleted = await service.runCleanup();
 
@@ -48,7 +47,7 @@ describe('TokenCleanupService', () => {
   it('skips cleanup when lock is held (setNx returns false)', async () => {
     const repo = makeRefreshTokenRepo();
     const cache = makeCacheService(false);
-    const service = new TokenCleanupService(repo as unknown as IRefreshTokenRepository, cache);
+    const service = new TokenCleanupService(repo, cache);
 
     const deleted = await service.runCleanup();
 
@@ -60,7 +59,7 @@ describe('TokenCleanupService', () => {
 
   it('runs cleanup without cache (no lock)', async () => {
     const repo = makeRefreshTokenRepo(10);
-    const service = new TokenCleanupService(repo as unknown as IRefreshTokenRepository, undefined);
+    const service = new TokenCleanupService(repo, undefined);
 
     const deleted = await service.runCleanup();
 
@@ -71,7 +70,7 @@ describe('TokenCleanupService', () => {
   it('returns 0 and logs error if deleteExpiredTokens throws', async () => {
     const repo = makeRefreshTokenRepo();
     repo.deleteExpiredTokens.mockRejectedValue(new Error('DB down'));
-    const service = new TokenCleanupService(repo as unknown as IRefreshTokenRepository, undefined);
+    const service = new TokenCleanupService(repo, undefined);
 
     const deleted = await service.runCleanup();
 
@@ -81,7 +80,7 @@ describe('TokenCleanupService', () => {
 
   it('logs completed with count when tokens were deleted', async () => {
     const repo = makeRefreshTokenRepo(15);
-    const service = new TokenCleanupService(repo as unknown as IRefreshTokenRepository, undefined);
+    const service = new TokenCleanupService(repo, undefined);
 
     await service.runCleanup();
 
@@ -90,7 +89,7 @@ describe('TokenCleanupService', () => {
 
   it('does not log completed when no tokens were deleted', async () => {
     const repo = makeRefreshTokenRepo(0);
-    const service = new TokenCleanupService(repo as unknown as IRefreshTokenRepository, undefined);
+    const service = new TokenCleanupService(repo, undefined);
 
     await service.runCleanup();
 
@@ -110,10 +109,7 @@ describe('TokenCleanupService', () => {
 
     it('startScheduler fires runCleanup at the specified interval', async () => {
       const repo = makeRefreshTokenRepo(3);
-      const service = new TokenCleanupService(
-        repo as unknown as IRefreshTokenRepository,
-        undefined,
-      );
+      const service = new TokenCleanupService(repo, undefined);
 
       service.startScheduler(1000);
       expect(logger.info).toHaveBeenCalledWith('token_cleanup_scheduler_started', {
@@ -132,10 +128,7 @@ describe('TokenCleanupService', () => {
 
     it('stopScheduler halts the interval', async () => {
       const repo = makeRefreshTokenRepo(1);
-      const service = new TokenCleanupService(
-        repo as unknown as IRefreshTokenRepository,
-        undefined,
-      );
+      const service = new TokenCleanupService(repo, undefined);
 
       service.startScheduler(500);
       service.stopScheduler();
@@ -148,10 +141,7 @@ describe('TokenCleanupService', () => {
 
     it('startScheduler called twice is a no-op on second call', () => {
       const repo = makeRefreshTokenRepo();
-      const service = new TokenCleanupService(
-        repo as unknown as IRefreshTokenRepository,
-        undefined,
-      );
+      const service = new TokenCleanupService(repo, undefined);
 
       service.startScheduler(1000);
       service.startScheduler(1000);
@@ -167,10 +157,7 @@ describe('TokenCleanupService', () => {
 
     it('stopScheduler is safe to call when no scheduler is running', () => {
       const repo = makeRefreshTokenRepo();
-      const service = new TokenCleanupService(
-        repo as unknown as IRefreshTokenRepository,
-        undefined,
-      );
+      const service = new TokenCleanupService(repo, undefined);
 
       // Should not throw
       expect(() => {

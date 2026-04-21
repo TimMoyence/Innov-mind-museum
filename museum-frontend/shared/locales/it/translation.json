@@ -420,6 +420,10 @@
     "optimistic": {
       "image_placeholder": "Immagine inviata",
       "voice_placeholder": "Messaggio vocale"
+    },
+    "lowDataDetails": "Risparmio dati — TTS disattivato, immagini compresse",
+    "tts": {
+      "disabled_low_data": "Disattivato in modalità risparmio dati. Modifica in Impostazioni."
     }
   },
   "dailyLimit": {
@@ -491,7 +495,35 @@
     "unknown": "Qualcosa è andato storto. Riprova.",
     "boundaryTitle": "Qualcosa è andato storto",
     "boundarySubtitle": "L'app ha riscontrato un errore imprevisto. I tuoi dati sono al sicuro.",
-    "boundaryReload": "Ricarica"
+    "boundaryReload": "Ricarica",
+    "socialAuth": {
+      "generic": "Accesso non riuscito. Riprova.",
+      "google_cancelled": "Accesso Google annullato.",
+      "google_no_id_token": "Impossibile completare l'accesso con Google. Riprova.",
+      "google_in_progress": "Un accesso Google è già in corso.",
+      "apple_no_identity_token": "Accesso Apple interrotto. Riprova.",
+      "ios_unavailable": "L'accesso Google non è disponibile in questa build. Usa Apple o email."
+    },
+    "chat": {
+      "contract_invalid": "Risposta del server non valida. Riprova.",
+      "audio_missing": "Nessun audio da inviare.",
+      "streaming_unavailable": "Risposta in diretta non disponibile, passaggio alla modalità standard."
+    },
+    "location": {
+      "generic": "Impossibile determinare la tua posizione.",
+      "timeout": "La ricerca della posizione è scaduta.",
+      "permission_denied": "Autorizzazione alla posizione negata."
+    },
+    "offlinePack": {
+      "download_failed": "Download della mappa offline non riuscito. Riprova."
+    },
+    "review": {
+      "generic": "Impossibile caricare le recensioni al momento.",
+      "load_failed": "Impossibile caricare le recensioni.",
+      "load_more_failed": "Impossibile caricare altre recensioni.",
+      "already_reviewed": "Hai già inviato una recensione.",
+      "submit_failed": "Invio della recensione non riuscito. Riprova."
+    }
   },
   "errorNotice": {
     "retry": "Riprova",

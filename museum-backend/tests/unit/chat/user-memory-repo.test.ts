@@ -1,24 +1,16 @@
-import type { DataSource, Repository } from 'typeorm';
+import type { Repository } from 'typeorm';
 
 import { UserMemory } from '@modules/chat/domain/userMemory.entity';
 import { TypeOrmUserMemoryRepository } from '@modules/chat/adapters/secondary/userMemory.repository.typeorm';
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
+import { makeMockTypeOrmRepo, makeMockDataSource } from 'tests/helpers/shared/mock-deps';
 
 // ─── Mock helpers ─────────────────────────────────────────────────────
 
 function buildMocks() {
   const qb = makeMockQb({ execute: jest.fn().mockResolvedValue({}) });
-
-  const repo = {
-    findOne: jest.fn(),
-    delete: jest.fn(),
-    createQueryBuilder: jest.fn(() => qb),
-  } as unknown as jest.Mocked<Repository<UserMemory>>;
-
-  const dataSource = {
-    getRepository: jest.fn().mockReturnValue(repo),
-  } as unknown as DataSource;
-
+  const { repo } = makeMockTypeOrmRepo<UserMemory>({ qb });
+  const dataSource = makeMockDataSource(repo);
   return { repo, qb, dataSource };
 }
 

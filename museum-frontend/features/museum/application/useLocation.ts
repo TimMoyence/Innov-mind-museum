@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import * as Location from 'expo-location';
 
 import { locationCache } from '../infrastructure/locationCache';
+import { getErrorMessage } from '@/shared/lib/errors';
+import { createAppError } from '@/shared/types/AppError';
 
 type LocationStatus = 'idle' | 'requesting' | 'granted' | 'denied';
 type LocationPrecision = 'fresh' | 'cached' | null;
@@ -84,7 +86,11 @@ export const useLocation = (): UseLocationResult => {
 
         if (result === TIMEOUT_SENTINEL) {
           // Keep cached position if any; surface a soft error so the UI can show a hint.
-          setError('timeout');
+          setError(
+            getErrorMessage(
+              createAppError({ kind: 'Location', code: 'timeout', message: 'timeout' }),
+            ),
+          );
           return;
         }
 
@@ -98,7 +104,16 @@ export const useLocation = (): UseLocationResult => {
       } catch (err) {
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- async cancellation guard mutated by useEffect cleanup
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : 'Failed to get location');
+        setError(
+          getErrorMessage(
+            createAppError({
+              kind: 'Location',
+              code: 'generic',
+              message: err instanceof Error ? err.message : 'Failed to get location',
+              details: err,
+            }),
+          ),
+        );
       }
     };
 

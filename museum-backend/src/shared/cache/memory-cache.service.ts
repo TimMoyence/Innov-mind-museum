@@ -18,7 +18,7 @@ export class MemoryCacheService implements CacheService {
   private readonly store = new Map<string, CacheEntry>();
   private readonly defaultTtlSeconds: number;
   private readonly maxEntries: number;
-  private readonly gcTimer: ReturnType<typeof setInterval> | null = null;
+  private gcTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(opts?: { defaultTtlSeconds?: number; maxEntries?: number }) {
     this.defaultTtlSeconds = opts?.defaultTtlSeconds ?? 3600;
@@ -120,5 +120,15 @@ export class MemoryCacheService implements CacheService {
     if (evicted > 0) {
       logger.info('memory_cache_gc', { evicted, remaining: this.store.size });
     }
+  }
+
+  /** Clears the GC timer and empties the store. Safe to call multiple times. */
+  // eslint-disable-next-line @typescript-eslint/require-await -- matches async CacheService.destroy signature
+  async destroy(): Promise<void> {
+    if (this.gcTimer !== null) {
+      clearInterval(this.gcTimer);
+      this.gcTimer = null;
+    }
+    this.store.clear();
   }
 }

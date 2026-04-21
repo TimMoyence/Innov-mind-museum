@@ -3,6 +3,26 @@
  * Import AFTER test-utils (which provides global mocks for theme, router, etc.).
  */
 
+// Locally declared so babel-jest allows them in the jest.mock factory below.
+const mockChatApiCreate = jest.fn();
+const mockChatApiDeleteSessionIfEmpty = jest.fn();
+const mockChatApiReportMessage = jest.fn();
+
+jest.mock('@/features/chat/infrastructure/chatApi', () => ({
+  chatApi: {
+    createSession: mockChatApiCreate,
+    deleteSessionIfEmpty: mockChatApiDeleteSessionIfEmpty,
+    reportMessage: mockChatApiReportMessage,
+  },
+}));
+
+/** Exported handles for test files that import this setup. */
+export const chatScreenApiMocks = {
+  createSession: mockChatApiCreate,
+  deleteSessionIfEmpty: mockChatApiDeleteSessionIfEmpty,
+  reportMessage: mockChatApiReportMessage,
+};
+
 // Override useLocalSearchParams from the test-utils expo-router mock
 const mockExpoRouter = jest.requireMock<Record<string, unknown>>('expo-router');
 mockExpoRouter.useLocalSearchParams = () => ({ sessionId: 'test-session-123' });
@@ -65,10 +85,6 @@ jest.mock('@/features/chat/application/useMessageActions', () => ({
 
 jest.mock('@/features/chat/application/chatSessionLogic.pure', () => ({
   buildVisitSummary: () => ({ title: 'Visit Summary', artworks: [], totalMessages: 0 }),
-}));
-
-jest.mock('@/features/chat/infrastructure/chatApi', () => ({
-  chatApi: { createSession: jest.fn(), deleteSessionIfEmpty: jest.fn(), reportMessage: jest.fn() },
 }));
 
 jest.mock('@/shared/ui/SkeletonChatBubble', () => {

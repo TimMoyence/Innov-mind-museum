@@ -6,9 +6,7 @@ import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runt
 const mockCreateSession = jest.fn();
 
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
-  chatApi: {
-    createSession: (...args: unknown[]) => mockCreateSession(...args),
-  },
+  chatApi: { createSession: (...args: unknown[]) => mockCreateSession(...args) },
 }));
 
 import DiscoverScreen from '@/app/(stack)/discover';

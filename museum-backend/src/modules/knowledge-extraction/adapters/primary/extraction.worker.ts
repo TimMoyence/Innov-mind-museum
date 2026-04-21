@@ -1,12 +1,61 @@
 import { Queue, Worker } from 'bullmq';
 
 import { logger } from '@shared/logger/logger';
+import { captureExceptionWithContext } from '@shared/observability/sentry';
+
+import { canonicalizeUrl } from '../../domain/canonical-url';
 
 import type {
   ExtractionJobPayload,
   ExtractionQueuePort,
 } from '../../domain/ports/extraction-queue.port';
 import type { ExtractionJobService } from '../../useCase/extraction-job.service';
+
+/** Minimal BullMQ job snapshot used in the failure handler (avoids coupling to BullMQ types). */
+export interface FailedJobSnapshot {
+  id?: string;
+  data: { url?: string };
+  attemptsMade: number;
+  opts: { attempts?: number };
+}
+
+/** Injectable side-effect sinks for the failure handler — enables pure unit testing. */
+export interface JobFailureSinks {
+  log: (event: string, meta: Record<string, unknown>) => void;
+  capture: (err: unknown, context?: Record<string, string | undefined>) => void;
+}
+
+/**
+ * Pure function: classifies a BullMQ failure event and routes it to the correct sinks.
+ * Pages Sentry only on the final attempt (dead-letter semantics).
+ */
+export function handleJobFailure(
+  job: FailedJobSnapshot | null,
+  err: Error,
+  sinks: JobFailureSinks,
+): void {
+  const attemptsMax = job?.opts.attempts ?? 0;
+  const attemptsMade = job?.attemptsMade ?? 0;
+  const finalAttempt = attemptsMax > 0 && attemptsMade >= attemptsMax;
+
+  sinks.log('extraction_job_failed', {
+    jobId: job?.id,
+    url: job?.data.url,
+    error: err.message,
+    attemptsMade,
+    attemptsMax,
+    finalAttempt,
+  });
+
+  if (finalAttempt) {
+    sinks.capture(err, {
+      queue: 'knowledge-extraction',
+      jobId: job?.id,
+      url: job?.data.url,
+      attemptsMade: String(attemptsMade),
+    });
+  }
+}
 
 const QUEUE_NAME = 'knowledge-extraction';
 
@@ -73,11 +122,27 @@ export class ExtractionWorker implements ExtractionQueuePort {
     });
 
     this.worker.on('failed', (job, err) => {
-      logger.warn('extraction_job_failed', {
-        jobId: job?.id,
-        url: job?.data.url,
-        error: err.message,
-      });
+      handleJobFailure(
+        job
+          ? {
+              id: job.id,
+              data: { url: job.data.url },
+              attemptsMade: job.attemptsMade,
+              opts: { attempts: job.opts.attempts },
+            }
+          : null,
+        err,
+        {
+          log: (e, m) => {
+            logger.warn(e, m);
+          },
+          capture: captureExceptionWithContext,
+        },
+      );
+    });
+
+    this.worker.on('error', (err) => {
+      captureExceptionWithContext(err, { queue: QUEUE_NAME, kind: 'worker_error' });
     });
 
     logger.info('extraction_worker_started', {
@@ -93,7 +158,7 @@ export class ExtractionWorker implements ExtractionQueuePort {
         jobs.map((payload) => ({
           name: 'extract',
           data: payload,
-          opts: { jobId: `extract:${payload.url}` },
+          opts: { jobId: `extract:${canonicalizeUrl(payload.url)}` },
         })),
       );
       logger.info('extraction_urls_enqueued', { count: jobs.length });

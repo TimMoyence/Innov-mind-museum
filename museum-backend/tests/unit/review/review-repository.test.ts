@@ -1,26 +1,16 @@
-import type { DataSource, Repository, UpdateResult } from 'typeorm';
+import type { Repository, UpdateResult } from 'typeorm';
 
 import { Review } from '@modules/review/domain/review.entity';
 
 import { ReviewRepositoryPg } from '@modules/review/adapters/secondary/review.repository.pg';
 import { makeReview } from 'tests/helpers/review/review.fixtures';
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
+import { makeMockTypeOrmRepo, makeMockDataSource } from 'tests/helpers/shared/mock-deps';
 
 function buildMocks() {
   const qb = makeMockQb();
-
-  const repo = {
-    findOne: jest.fn(),
-    save: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-    createQueryBuilder: jest.fn(() => qb),
-  } as unknown as jest.Mocked<Repository<Review>>;
-
-  const dataSource = {
-    getRepository: jest.fn().mockReturnValue(repo),
-  } as unknown as DataSource;
-
+  const { repo } = makeMockTypeOrmRepo<Review>({ qb });
+  const dataSource = makeMockDataSource(repo);
   return { repo, qb, dataSource };
 }
 
@@ -171,7 +161,11 @@ describe('ReviewRepositoryPg', () => {
     });
 
     it('returns null when affected is undefined', async () => {
-      repo.update.mockResolvedValue({ affected: undefined } as unknown as UpdateResult);
+      repo.update.mockResolvedValue({
+        affected: undefined,
+        raw: [],
+        generatedMaps: [],
+      } as UpdateResult);
 
       const result = await sut.moderateReview({
         reviewId: 'x',

@@ -21,6 +21,7 @@ interface ChatMessageBubbleProps {
   ttsPlaying?: boolean;
   ttsLoading?: boolean;
   ttsFailed?: boolean;
+  ttsSkippedLowData?: boolean;
   onLinkPress?: (url: string) => boolean;
   onToggleTts?: (messageId: string) => Promise<void>;
   onRetry?: (message: ChatUiMessage) => void;
@@ -44,6 +45,7 @@ export const ChatMessageBubble = React.memo(
     ttsPlaying = false,
     ttsLoading = false,
     ttsFailed = false,
+    ttsSkippedLowData = false,
     onLinkPress,
     onToggleTts,
     onRetry,
@@ -93,6 +95,7 @@ export const ChatMessageBubble = React.memo(
             ttsPlaying={ttsPlaying}
             ttsLoading={ttsLoading}
             ttsFailed={ttsFailed}
+            ttsSkippedLowData={ttsSkippedLowData}
             onToggleTts={onToggleTts}
             onReport={onReport}
             feedbackValue={feedbackValue}
@@ -190,6 +193,7 @@ export const ChatMessageBubble = React.memo(
       prev.ttsPlaying === next.ttsPlaying &&
       prev.ttsLoading === next.ttsLoading &&
       prev.ttsFailed === next.ttsFailed &&
+      prev.ttsSkippedLowData === next.ttsSkippedLowData &&
       prev.feedbackValue === next.feedbackValue
     );
   },

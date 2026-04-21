@@ -1,23 +1,14 @@
-import type { DataSource, Repository, UpdateResult } from 'typeorm';
+import type { Repository, UpdateResult } from 'typeorm';
 
 import { ApiKey } from '@modules/auth/domain/apiKey.entity';
 import { ApiKeyRepositoryPg } from '@modules/auth/adapters/secondary/apiKey.repository.pg';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
+import { makeMockTypeOrmRepo, makeMockDataSource } from 'tests/helpers/shared/mock-deps';
 
 // ─── TypeORM repo + DataSource mock factory ───
 function buildMocks() {
-  const repo = {
-    findOne: jest.fn(),
-    find: jest.fn(),
-    save: jest.fn(),
-    create: jest.fn().mockImplementation((data: unknown) => data),
-    update: jest.fn(),
-  } as unknown as jest.Mocked<Repository<ApiKey>>;
-
-  const dataSource = {
-    getRepository: jest.fn().mockReturnValue(repo),
-  } as unknown as DataSource;
-
+  const { repo } = makeMockTypeOrmRepo<ApiKey>();
+  const dataSource = makeMockDataSource(repo);
   return { repo, dataSource };
 }
 
@@ -187,7 +178,11 @@ describe('ApiKeyRepositoryPg', () => {
     });
 
     it('returns false when affected is undefined', async () => {
-      repo.update.mockResolvedValue({ affected: undefined } as unknown as UpdateResult);
+      repo.update.mockResolvedValue({
+        affected: undefined,
+        raw: [],
+        generatedMaps: [],
+      } as UpdateResult);
 
       const result = await sut.remove(5, 1);
 

@@ -13,7 +13,7 @@ import { logger } from '@shared/logger/logger';
 import { shutdownOpenTelemetry } from '@shared/observability/opentelemetry';
 import { initSentry } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
-import { AppDataSource } from '@src/data/db/data-source';
+import { AppDataSource, startPoolMonitor } from '@src/data/db/data-source';
 import { setDailyChatLimitCacheService } from '@src/helpers/middleware/daily-chat-limit.middleware';
 import {
   stopRateLimitSweep,
@@ -81,6 +81,8 @@ function registerShutdownHandlers(
   server: Server,
   tokenCleanup: TokenCleanupService,
   redisClient: Redis | undefined,
+  cacheService: CacheService,
+  poolMonitor: NodeJS.Timeout,
 ): void {
   let isShuttingDown = false;
 
@@ -92,12 +94,14 @@ function registerShutdownHandlers(
 
     // 1. Stop accepting new connections
     tokenCleanup.stopScheduler();
+    clearInterval(poolMonitor);
     stopRateLimitSweep();
     stopArtKeywordsRefresh();
     await stopKnowledgeExtraction();
     await shutdownOpenTelemetry();
     const ocr = getOcrService();
     if (ocr.destroy) await ocr.destroy();
+    if (cacheService.destroy) await cacheService.destroy();
 
     // 2. Close the HTTP server — stops accepting new connections,
     //    waits for in-flight requests to complete
@@ -168,7 +172,8 @@ const start = async (): Promise<void> => {
     );
     tokenCleanup.startScheduler();
 
-    registerShutdownHandlers(server, tokenCleanup, redisClient);
+    const poolMonitor = startPoolMonitor();
+    registerShutdownHandlers(server, tokenCleanup, redisClient, cacheService, poolMonitor);
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message || util.inspect(error) : util.inspect(error);

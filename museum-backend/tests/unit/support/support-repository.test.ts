@@ -5,6 +5,7 @@ import { TicketMessage } from '@modules/support/domain/ticketMessage.entity';
 
 import { SupportRepositoryPg } from '@modules/support/adapters/secondary/support.repository.pg';
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
+import { makeMockTypeOrmRepo, makeMockDataSourceMulti } from 'tests/helpers/shared/mock-deps';
 
 // ─── Factories ───
 function makeTicket(overrides: Partial<SupportTicket> = {}): SupportTicket {
@@ -38,39 +39,18 @@ function makeTicketMessage(overrides: Partial<TicketMessage> = {}): TicketMessag
 function buildMocks() {
   const qb = makeMockQb();
 
-  const ticketRepo = {
-    findOne: jest.fn(),
-    find: jest.fn(),
-    save: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-    count: jest.fn(),
-    createQueryBuilder: jest.fn(() => qb),
-  } as unknown as jest.Mocked<Repository<SupportTicket>>;
+  const { repo: ticketRepo } = makeMockTypeOrmRepo<SupportTicket>({ qb });
+  const { repo: messageRepo } = makeMockTypeOrmRepo<TicketMessage>();
 
-  const messageRepo = {
-    findOne: jest.fn(),
-    find: jest.fn(),
-    save: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-  } as unknown as jest.Mocked<Repository<TicketMessage>>;
+  const txMsgRepo = { create: jest.fn(), save: jest.fn() };
+  const txTktRepo = { update: jest.fn() };
 
-  // Transaction mock: calls the callback with a manager that returns proper repos
-  const txMsgRepo = {
-    create: jest.fn(),
-    save: jest.fn(),
-  };
-  const txTktRepo = {
-    update: jest.fn(),
-  };
-
+  const repoMap = new Map<unknown, unknown>([
+    [SupportTicket, ticketRepo],
+    [TicketMessage, messageRepo],
+  ]);
   const dataSource = {
-    getRepository: jest.fn((entity: unknown) => {
-      if (entity === SupportTicket) return ticketRepo;
-      if (entity === TicketMessage) return messageRepo;
-      return ticketRepo;
-    }),
+    ...makeMockDataSourceMulti(repoMap, ticketRepo),
     transaction: jest.fn(
       (cb: (manager: { getRepository: (e: unknown) => unknown }) => Promise<unknown>) =>
         cb({

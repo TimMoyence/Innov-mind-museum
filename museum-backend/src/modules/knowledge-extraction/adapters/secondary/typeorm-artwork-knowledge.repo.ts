@@ -53,22 +53,50 @@ export class TypeOrmArtworkKnowledgeRepo implements ArtworkKnowledgeRepoPort {
           createdAt: existing.createdAt,
         });
       } else {
-        for (const key of [
+        type NullableField =
+          | 'artist'
+          | 'period'
+          | 'technique'
+          | 'historicalContext'
+          | 'dimensions'
+          | 'currentLocation';
+        const nullableFields: NullableField[] = [
           'artist',
           'period',
           'technique',
           'historicalContext',
           'dimensions',
           'currentLocation',
-        ] as const) {
-          if (existing[key] === null && data[key] !== null) {
-            (existing as unknown as Record<string, unknown>)[key] = data[key];
+        ];
+        const patch: Partial<Pick<ArtworkKnowledge, NullableField>> = {};
+        for (const key of nullableFields) {
+          const incoming = data[key];
+          if (existing[key] === null && incoming !== null) {
+            patch[key] = incoming;
           }
         }
+        Object.assign(existing, patch);
       }
       existing.needsReview = data.needsReview;
       return await this.repo.save(existing);
     }
     return await this.repo.save(this.repo.create({ ...data, sourceUrls: [sourceUrl] }));
+  }
+
+  /** Returns all artwork knowledge items flagged for human review, newest first. */
+  async findNeedsReview(limit = 50): Promise<ArtworkKnowledge[]> {
+    return await this.repo.find({
+      where: { needsReview: true },
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
+  }
+
+  /** Clears the needsReview flag for a given item. Returns null if the item does not exist. */
+  async approve(id: string): Promise<ArtworkKnowledge | null> {
+    const item = await this.repo.findOne({ where: { id } });
+    if (!item) return null;
+    item.needsReview = false;
+    return await this.repo.save(item);
   }
 }

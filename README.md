@@ -58,7 +58,7 @@ The backend is containerized via **Docker** and hosted on an **OVH VPS**.
 | **Backend** | Node.js 22, Express 5, TypeORM, pnpm | REST API, business logic, AI integration |
 | **Architecture** | Hexagonal (Ports & Adapters) | Strict separation of concerns |
 | **Database** | PostgreSQL 16 + Redis 7 | Persistence + cache/rate-limit/distributed locks |
-| **AI** | LangChain + Multi-provider LLM (OpenAI/Deepseek/Google) | Visual analysis, response generation, streaming SSE |
+| **AI** | LangChain + Multi-provider LLM (OpenAI/Deepseek/Google) | Visual analysis, response generation (SSE streaming deprecated — see ADR-001) |
 | **Observability** | Sentry, OpenTelemetry, Promtail/Loki | APM, distributed tracing, structured logging |
 | **Containers** | Docker | Backend encapsulation + persistent volumes |
 | **Hosting** | VPS OVH | Autonomous project deployment and management |
@@ -144,7 +144,7 @@ Reference templates:
 - Image upload and artwork processing
 - Contextual AI chat via Multi-LLM + LangChain
 - Conversation and artwork persistence
-- SSE streaming chat responses
+- SSE streaming chat responses (deprecated as of ADR-001, classic JSON responses in use)
 - Museum directory with geolocation
 - Multi-tenancy support
 - Admin dashboard (museum-web)

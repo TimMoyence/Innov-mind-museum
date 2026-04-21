@@ -222,6 +222,7 @@
     "reports": "Reports",
     "analytics": "Analytics",
     "tickets": "Tickets",
+    "reviewsAdmin": "Reviews",
     "supportAdmin": "Support",
     "accessDenied": "Access Denied",
     "goToHomepage": "Go to homepage",
@@ -293,6 +294,22 @@
       "view": "View",
       "updateTicket": "Update Ticket",
       "noTickets": "No tickets found."
+    },
+    "reviewsPage": {
+      "subtitle": "Moderate user-submitted reviews.",
+      "filterStatus": "Status",
+      "rating": "Rating",
+      "comment": "Comment",
+      "author": "Author",
+      "approve": "Approve",
+      "reject": "Reject",
+      "confirmApprove": "Approve this review?",
+      "confirmReject": "Reject this review?",
+      "moderated": "Moderated",
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "noReviews": "No reviews found."
     },
     "supportPage": {
       "subtitle": "View and respond to support tickets.",

@@ -4,6 +4,7 @@
 > All sprint task checkboxes below are planning targets, not actual progress.
 >
 > **Date**: 2026-03-30 | **Planning status**: APPROUVE | **Priorite**: S0 + S1 immediat, S2-S5 post-traction
+> **Feature spec**: see [`docs/FEATURE_MUSEUM_WALK.md`](../FEATURE_MUSEUM_WALK.md)
 
 ## Vision
 

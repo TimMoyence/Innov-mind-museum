@@ -157,6 +157,7 @@ export interface Dictionary {
     analytics: string;
     tickets: string;
     supportAdmin: string;
+    reviewsAdmin: string;
     accessDenied: string;
     goToHomepage: string;
     login: {
@@ -227,6 +228,22 @@ export interface Dictionary {
       view: string;
       updateTicket: string;
       noTickets: string;
+    };
+    reviewsPage: {
+      subtitle: string;
+      filterStatus: string;
+      rating: string;
+      comment: string;
+      author: string;
+      approve: string;
+      reject: string;
+      confirmApprove: string;
+      confirmReject: string;
+      moderated: string;
+      pending: string;
+      approved: string;
+      rejected: string;
+      noReviews: string;
     };
     supportPage: {
       subtitle: string;

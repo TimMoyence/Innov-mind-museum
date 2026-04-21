@@ -4,6 +4,14 @@ import { Platform } from 'react-native';
 import { Stack, useNavigationContainerRef } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Sentry from '@sentry/react-native';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+
+import {
+  persistBuster,
+  persistMaxAge,
+  queryClient,
+  queryPersister,
+} from '@/shared/data/queryClient';
 
 import '@/features/museum/infrastructure/mapLibreBootstrap';
 
@@ -140,47 +148,56 @@ function RootLayout() {
 
   return (
     <ErrorBoundary>
-      <I18nProvider>
-        <ThemeProvider>
-          <AuthProvider>
-            <ConnectivityProvider>
-              <DataModeProvider>
-                <BiometricGate>
-                  <AuthenticationGuard>
-                    <Stack screenOptions={{ headerShown: false }}>
-                      <Stack.Screen name="auth" />
-                      <Stack.Screen name="(tabs)" />
-                      <Stack.Screen
-                        name="(stack)/chat/[sessionId]"
-                        options={{
-                          headerShown: false,
-                          gestureEnabled: true,
-                        }}
-                      />
-                      <Stack.Screen name="(stack)/settings" />
-                      <Stack.Screen name="(stack)/change-password" />
-                      <Stack.Screen name="(stack)/preferences" />
-                      <Stack.Screen name="(stack)/guided-museum-mode" />
-                      <Stack.Screen name="(stack)/offline-maps" />
-                      <Stack.Screen name="(stack)/discover" />
-                      <Stack.Screen name="(stack)/museum-detail" />
-                      <Stack.Screen name="(stack)/support" />
-                      <Stack.Screen name="(stack)/tickets" />
-                      <Stack.Screen name="(stack)/ticket-detail" />
-                      <Stack.Screen name="(stack)/create-ticket" />
-                      <Stack.Screen name="(stack)/privacy" />
-                      <Stack.Screen name="(stack)/terms" />
-                      <Stack.Screen name="(stack)/onboarding" />
-                      <Stack.Screen name="+not-found" />
-                    </Stack>
-                    <ThemedStatusBar />
-                  </AuthenticationGuard>
-                </BiometricGate>
-              </DataModeProvider>
-            </ConnectivityProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </I18nProvider>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{
+          persister: queryPersister,
+          maxAge: persistMaxAge,
+          buster: persistBuster,
+        }}
+      >
+        <I18nProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <ConnectivityProvider>
+                <DataModeProvider>
+                  <BiometricGate>
+                    <AuthenticationGuard>
+                      <Stack screenOptions={{ headerShown: false }}>
+                        <Stack.Screen name="auth" />
+                        <Stack.Screen name="(tabs)" />
+                        <Stack.Screen
+                          name="(stack)/chat/[sessionId]"
+                          options={{
+                            headerShown: false,
+                            gestureEnabled: true,
+                          }}
+                        />
+                        <Stack.Screen name="(stack)/settings" />
+                        <Stack.Screen name="(stack)/change-password" />
+                        <Stack.Screen name="(stack)/preferences" />
+                        <Stack.Screen name="(stack)/guided-museum-mode" />
+                        <Stack.Screen name="(stack)/offline-maps" />
+                        <Stack.Screen name="(stack)/discover" />
+                        <Stack.Screen name="(stack)/museum-detail" />
+                        <Stack.Screen name="(stack)/support" />
+                        <Stack.Screen name="(stack)/tickets" />
+                        <Stack.Screen name="(stack)/ticket-detail" />
+                        <Stack.Screen name="(stack)/create-ticket" />
+                        <Stack.Screen name="(stack)/privacy" />
+                        <Stack.Screen name="(stack)/terms" />
+                        <Stack.Screen name="(stack)/onboarding" />
+                        <Stack.Screen name="+not-found" />
+                      </Stack>
+                      <ThemedStatusBar />
+                    </AuthenticationGuard>
+                  </BiometricGate>
+                </DataModeProvider>
+              </ConnectivityProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </I18nProvider>
+      </PersistQueryClientProvider>
     </ErrorBoundary>
   );
 }

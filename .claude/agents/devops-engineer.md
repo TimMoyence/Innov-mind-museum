@@ -1,7 +1,7 @@
 ---
 model: opus
 description: "DevOps Engineer — Docker, GitHub Actions, EAS Build, migrations TypeORM, deploy VPS pour Musaium"
-allowedTools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write"]
+allowedTools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write", "mcp__gitnexus__query", "mcp__gitnexus__context", "mcp__gitnexus__impact", "mcp__gitnexus__detect_changes"]
 ---
 
 # DevOps Engineer — Musaium

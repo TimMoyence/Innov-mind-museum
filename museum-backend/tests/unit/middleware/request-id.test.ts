@@ -1,20 +1,20 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
 import { requestIdMiddleware } from '@src/helpers/middleware/request-id.middleware';
+import { makePartialRequest } from '../../helpers/http/express-mock.helpers';
 
-const mockReq = (headers: Record<string, string | undefined> = {}): Request =>
-  ({
-    header: (name: string) => headers[name.toLowerCase()],
-    headers,
-  }) as unknown as Request;
+const mockReq = (headers: Record<string, string | undefined> = {}) =>
+  makePartialRequest({ headers });
 
-const mockRes = (): Response & { headers: Record<string, string> } => {
+type MockRes = Response & { headers: Record<string, string> };
+const mockRes = (): MockRes => {
   const headers: Record<string, string> = {};
-  return {
+  const res = {
     headers,
     setHeader: jest.fn((name: string, value: string) => {
       headers[name] = value;
     }),
-  } as unknown as Response & { headers: Record<string, string> };
+  };
+  return res as unknown as MockRes;
 };
 
 describe('requestIdMiddleware', () => {
@@ -25,7 +25,7 @@ describe('requestIdMiddleware', () => {
 
     requestIdMiddleware(req, res, next);
 
-    expect((req as unknown as { requestId: string }).requestId).toBe('incoming-id-123');
+    expect(req.requestId).toBe('incoming-id-123');
     expect(res.setHeader).toHaveBeenCalledWith('x-request-id', 'incoming-id-123');
     expect(next).toHaveBeenCalledTimes(1);
   });
@@ -37,7 +37,7 @@ describe('requestIdMiddleware', () => {
 
     requestIdMiddleware(req, res, next);
 
-    const requestId = (req as unknown as { requestId: string }).requestId;
+    const requestId = req.requestId;
     // UUID v4 pattern (also validates it's defined and non-empty)
     expect(requestId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(res.setHeader).toHaveBeenCalledWith('x-request-id', requestId);
@@ -51,7 +51,7 @@ describe('requestIdMiddleware', () => {
 
     requestIdMiddleware(req, res, next);
 
-    const requestId = (req as unknown as { requestId: string }).requestId;
+    const requestId = req.requestId;
     // Should not be whitespace — should be a generated UUID
     expect(requestId).toMatch(/^[0-9a-f]{8}-/);
     expect(next).toHaveBeenCalledTimes(1);

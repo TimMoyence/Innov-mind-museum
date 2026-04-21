@@ -1,6 +1,10 @@
 import '../helpers/test-utils';
 import { render, screen } from '@testing-library/react-native';
 
+jest.mock('@/features/chat/infrastructure/chatApi', () => ({
+  chatApi: { createSession: jest.fn() },
+}));
+
 // Patch useLocalSearchParams to return museum data
 const expoRouter = require('expo-router');
 expoRouter.useLocalSearchParams = () => ({
@@ -13,13 +17,6 @@ expoRouter.useLocalSearchParams = () => ({
   longitude: '2.3376',
   distanceMeters: '1200',
 });
-
-const mockCreateSession = jest.fn();
-jest.mock('@/features/chat/infrastructure/chatApi', () => ({
-  chatApi: {
-    createSession: (...args: unknown[]) => mockCreateSession(...args),
-  },
-}));
 
 import MuseumDetailScreen from '@/app/(stack)/museum-detail';
 

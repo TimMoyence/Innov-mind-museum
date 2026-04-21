@@ -54,6 +54,14 @@ export class User {
   onboarding_completed!: boolean;
 
   /**
+   * Opt-in flag for receiving an email when a moderator approves or rejects
+   * one of the user's reviews. Default `false` to respect GDPR Art. 6(1)(a)
+   * consent — the user must explicitly opt-in via profile settings.
+   */
+  @Column({ type: 'boolean', default: false, name: 'notify_on_review_moderation' })
+  notifyOnReviewModeration!: boolean;
+
+  /**
    * Visitor's preferred aspects to learn about an artwork (zero or more of
    * 'history', 'technique', 'artist'). Used by the LLM to emphasize relevant
    * angles when naturally appropriate. Empty array means "no preference".

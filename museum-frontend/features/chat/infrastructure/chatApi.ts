@@ -1,11 +1,13 @@
 import { httpRequest } from '@/shared/api/httpRequest';
 import { openApiRequest } from '@/shared/api/openapiClient';
 import { getErrorMessage } from '@/shared/lib/errors';
+import { createAppError } from '@/shared/types/AppError';
 import type { components } from '@/shared/api/generated/openapi';
 import type { ContentPreference } from '@/shared/types/content-preference';
 import type { GuideLevel } from '@/features/settings/runtimeSettings';
 import { getAccessToken } from '@/features/auth/infrastructure/authTokenStore';
 import { getApiBaseUrl, getLocale } from '@/shared/infrastructure/httpClient';
+import { getCurrentDataMode } from '@/shared/infrastructure/dataMode/currentDataMode';
 import { generateRequestId } from '@/shared/infrastructure/requestId';
 import { fetch as expoFetch } from 'expo/fetch';
 import { getTraceData, isInitialized } from '@sentry/core';
@@ -80,7 +82,12 @@ const ensureContract = <T>(
   label: string,
 ): T => {
   if (!validator(payload)) {
-    throw new Error(`Invalid ${label} contract`);
+    throw createAppError({
+      kind: 'Contract',
+      code: 'invalid',
+      message: `Invalid ${label} contract`,
+      details: { label },
+    });
   }
 
   return payload;
@@ -183,7 +190,9 @@ export const chatApi = {
     const data = await httpRequest<unknown>(`${CHAT_BASE}/sessions/${sessionId}/messages`, {
       method: 'POST',
       body: payload,
-      headers: { 'X-Data-Mode': lowDataMode ? 'low' : 'normal' },
+      ...(lowDataMode === undefined
+        ? {}
+        : { headers: { 'X-Data-Mode': lowDataMode ? 'low' : 'normal' } }),
     });
 
     return ensureContract(data, isPostMessageResponseDTO, 'post-message');
@@ -221,7 +230,11 @@ export const chatApi = {
     } = params;
 
     if (!audioUri && !audioBlob) {
-      throw new Error('audioUri or audioBlob is required');
+      throw createAppError({
+        kind: 'Contract',
+        code: 'audio_missing',
+        message: 'audioUri or audioBlob is required',
+      });
     }
 
     const fallbackExt = audioBlob?.type.includes('webm') ? 'webm' : 'm4a';
@@ -472,7 +485,12 @@ export const chatApi = {
         Accept: 'text/event-stream',
         'Accept-Language': getLocale(),
         'X-Request-Id': requestId,
-        'X-Data-Mode': params.lowDataMode ? 'low' : 'normal',
+        'X-Data-Mode':
+          params.lowDataMode === undefined
+            ? getCurrentDataMode()
+            : params.lowDataMode
+              ? 'low'
+              : 'normal',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...traceHeaders,
       },
@@ -493,11 +511,21 @@ export const chatApi = {
 
     if (!response.ok) {
       if (response.status === 404) {
-        throw new Error('STREAMING_NOT_AVAILABLE');
+        throw createAppError({
+          kind: 'Streaming',
+          code: 'unavailable',
+          message: 'STREAMING_NOT_AVAILABLE',
+          status: 404,
+        });
       }
       if (response.status === 401) {
         // Throw so sendMessageSmart falls back to Axios path (which has refresh interceptor)
-        throw new Error('STREAMING_UNAUTHORIZED');
+        throw createAppError({
+          kind: 'Streaming',
+          code: 'unauthorized',
+          message: 'STREAMING_UNAUTHORIZED',
+          status: 401,
+        });
       }
       // Extract backend error code from response body for precise error classification
       if (response.status === 429) {
@@ -667,7 +695,12 @@ export const chatApi = {
 
         const err = streamError as { code: string; message: string } | null;
         if (err) {
-          throw new Error(`${err.code}: ${err.message}`);
+          throw createAppError({
+            kind: 'Streaming',
+            code: 'server_error',
+            message: `${err.code}: ${err.message}`,
+            details: err,
+          });
         }
 
         return result;

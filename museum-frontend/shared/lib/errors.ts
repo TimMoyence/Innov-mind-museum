@@ -45,6 +45,94 @@ export const isDailyLimitError = (error: unknown): boolean => {
   return false;
 };
 
+const DEFAULT_SOCIAL_AUTH = 'Sign-in failed. Please try again.';
+const DEFAULT_CONTRACT = 'Unexpected server response. Please try again.';
+const DEFAULT_STREAMING = 'Live response unavailable, retrying in standard mode.';
+const DEFAULT_LOCATION = 'Unable to determine your location.';
+const DEFAULT_OFFLINE_PACK = 'Offline map download failed. Please retry.';
+const DEFAULT_REVIEW = 'Unable to load reviews right now.';
+
+const socialAuthMessage = (code: string | undefined): string => {
+  switch (code) {
+    case 'google_cancelled':
+      return t('error.socialAuth.google_cancelled', 'Google sign-in cancelled.');
+    case 'google_no_id_token':
+      return t(
+        'error.socialAuth.google_no_id_token',
+        'Google sign-in could not complete. Please try again.',
+      );
+    case 'google_in_progress':
+      return t('error.socialAuth.google_in_progress', 'Google sign-in is already running.');
+    case 'apple_no_identity_token':
+      return t(
+        'error.socialAuth.apple_no_identity_token',
+        'Apple sign-in was interrupted. Please try again.',
+      );
+    case 'ios_unavailable':
+      return t(
+        'error.socialAuth.ios_unavailable',
+        'Google sign-in is unavailable on this build. Use Apple or email instead.',
+      );
+    default:
+      return t('error.socialAuth.generic', DEFAULT_SOCIAL_AUTH);
+  }
+};
+
+const contractMessage = (code: string | undefined): string => {
+  switch (code) {
+    case 'invalid':
+      return t('error.chat.contract_invalid', DEFAULT_CONTRACT);
+    case 'audio_missing':
+      return t('error.chat.audio_missing', 'No audio to send.');
+    default:
+      return t('error.chat.contract_invalid', DEFAULT_CONTRACT);
+  }
+};
+
+const streamingMessage = (code: string | undefined): string => {
+  switch (code) {
+    case 'unauthorized':
+      return t('error.unauthorized', 'Session expired. Please log in again.');
+    case 'unavailable':
+    default:
+      return t('error.chat.streaming_unavailable', DEFAULT_STREAMING);
+  }
+};
+
+const locationMessage = (code: string | undefined): string => {
+  switch (code) {
+    case 'timeout':
+      return t('error.location.timeout', 'Location lookup timed out.');
+    case 'permission_denied':
+      return t('error.location.permission_denied', 'Location permission denied.');
+    default:
+      return t('error.location.generic', DEFAULT_LOCATION);
+  }
+};
+
+const offlinePackMessage = (code: string | undefined): string => {
+  switch (code) {
+    case 'download_failed':
+    default:
+      return t('error.offlinePack.download_failed', DEFAULT_OFFLINE_PACK);
+  }
+};
+
+const reviewMessage = (code: string | undefined): string => {
+  switch (code) {
+    case 'load_failed':
+      return t('error.review.load_failed', 'Failed to load reviews.');
+    case 'load_more_failed':
+      return t('error.review.load_more_failed', 'Failed to load more reviews.');
+    case 'already_reviewed':
+      return t('error.review.already_reviewed', 'You have already submitted a review.');
+    case 'submit_failed':
+      return t('error.review.submit_failed', 'Review submission failed. Please try again.');
+    default:
+      return t('error.review.generic', DEFAULT_REVIEW);
+  }
+};
+
 /**
  * Extracts a user-facing error message from an unknown thrown value.
  * Returns a localized hint for known {@link AppError} kinds, falls back to a generic message otherwise.
@@ -70,6 +158,18 @@ export const getErrorMessage = (error: unknown): string => {
         return t('error.dailyLimitReached', 'Daily message limit reached. Come back tomorrow!');
       case 'Timeout':
         return t('error.timeout', 'Request timed out. Please try again.');
+      case 'SocialAuth':
+        return socialAuthMessage(error.code);
+      case 'Contract':
+        return contractMessage(error.code);
+      case 'Streaming':
+        return streamingMessage(error.code);
+      case 'Location':
+        return locationMessage(error.code);
+      case 'OfflinePack':
+        return offlinePackMessage(error.code);
+      case 'Review':
+        return reviewMessage(error.code);
       default:
         return error.message || t('error.unknown', 'Something went wrong. Please try again.');
     }

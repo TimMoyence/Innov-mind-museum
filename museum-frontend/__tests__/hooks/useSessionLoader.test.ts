@@ -27,16 +27,23 @@ jest.mock('@/shared/lib/errors', () => ({
 }));
 
 const mockSetSession = jest.fn();
+// Mutable sessions map — mutate in tests, reset in beforeEach.
+// Declared with `let` so we can replace the whole map; the mock factory captures it lazily.
+let mockStoreSessions: Record<
+  string,
+  { messages: ChatUiMessage[]; title: string | null; museumName: string | null; updatedAt: number }
+> = {};
 
-jest.mock('@/features/chat/infrastructure/chatSessionStore', () => ({
-  useChatSessionStore: (
-    selector: (state: { sessions: Record<string, unknown>; setSession: jest.Mock }) => unknown,
-  ) =>
-    selector({
-      sessions: {},
-      setSession: mockSetSession,
-    }),
-}));
+jest.mock('@/features/chat/infrastructure/chatSessionStore', () => {
+  const hook = Object.assign(
+    (selector: (state: { sessions: typeof mockStoreSessions; setSession: jest.Mock }) => unknown) =>
+      selector({ sessions: mockStoreSessions, setSession: mockSetSession }),
+    {
+      getState: () => ({ sessions: mockStoreSessions, setSession: mockSetSession }),
+    },
+  );
+  return { useChatSessionStore: hook };
+});
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn().mockResolvedValue(null),
@@ -63,6 +70,7 @@ const renderLoader = (sessionId = SESSION_ID) => {
 describe('useSessionLoader', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockStoreSessions = {};
   });
 
   it('starts with isLoading true and loads session from API', async () => {
@@ -283,5 +291,53 @@ describe('useSessionLoader', () => {
     });
 
     expect(result.current.error).toBeNull();
+  });
+
+  it('hydrates messages from Zustand cache when API fails and a cached entry exists', async () => {
+    const cachedMessages: ChatUiMessage[] = [
+      {
+        id: 'cached-msg-1',
+        role: 'user',
+        text: 'Hi',
+        imageRef: null,
+        createdAt: '2025-01-01T00:01:00Z',
+        metadata: null,
+      },
+    ];
+    mockStoreSessions[SESSION_ID] = {
+      messages: cachedMessages,
+      title: 'Cached Title',
+      museumName: 'Cached Museum',
+      updatedAt: Date.now(),
+    };
+    mockGetSession.mockRejectedValue(new Error('Network failure'));
+
+    const result = renderLoader();
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // Messages hydrated from cache
+    expect(result.current.messages).toHaveLength(1);
+    expect(result.current.messages[0].id).toBe('cached-msg-1');
+    expect(result.current.sessionTitle).toBe('Cached Title');
+    expect(result.current.museumName).toBe('Cached Museum');
+    // Error is still set so the user knows the API is down
+    expect(result.current.error).toBe('Network failure');
+  });
+
+  it('leaves messages empty when API fails and no cache entry exists', async () => {
+    // mockStoreSessions is empty (reset in beforeEach)
+    mockGetSession.mockRejectedValue(new Error('API down'));
+
+    const result = renderLoader();
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.messages).toHaveLength(0);
+    expect(result.current.error).toBe('API down');
   });
 });

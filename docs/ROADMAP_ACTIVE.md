@@ -47,7 +47,7 @@ Audit enterprise du 2026-04-18 → **6 sprints NL-4 à NL-9** pour porter Musaiu
 
 ## Sprint courant
 
-Voir [`docs/V1_Sprint/PROGRESS_TRACKER.md`](V1_Sprint/PROGRESS_TRACKER.md) section "Next Level Roadmap — Plans Modulaires" pour l'état d'avancement.
+Voir [`docs/archive/v1-sprint-2026-04/PROGRESS_TRACKER.md`](archive/v1-sprint-2026-04/PROGRESS_TRACKER.md) section "Next Level Roadmap — Plans Modulaires" pour l'historique d'avancement. Suivi actif désormais via `.claude/tasks/` + `team-reports/`.
 
 ## Vision V3 (contexte historique)
 
@@ -61,8 +61,8 @@ Musaium à maturité V2.0 (auth + chat multimodal + conversations + museums + su
 
 ## Références
 
-- Plans modulaires détaillés : [`docs/plans/README.md`](plans/README.md)
-- Tracking sprint : [`docs/V1_Sprint/PROGRESS_TRACKER.md`](V1_Sprint/PROGRESS_TRACKER.md)
-- Journal sprint : [`docs/V1_Sprint/SPRINT_LOG.md`](V1_Sprint/SPRINT_LOG.md)
-- Roadmap V2 complète : [`docs/V1_Sprint/MASTER_ROADMAP_V2.md`](V1_Sprint/MASTER_ROADMAP_V2.md)
-- Plan maître d'audit : voir `docs/plans/README.md` + `docs/V1_Sprint/PROGRESS_TRACKER.md` section "Next Level Roadmap"
+- Plans modulaires archivés : [`docs/archive/plans-2026-04-17/`](archive/plans-2026-04-17/)
+- Tracking sprint archivé : [`docs/archive/v1-sprint-2026-04/PROGRESS_TRACKER.md`](archive/v1-sprint-2026-04/PROGRESS_TRACKER.md)
+- Journal sprint archivé : [`docs/archive/v1-sprint-2026-04/SPRINT_LOG.md`](archive/v1-sprint-2026-04/SPRINT_LOG.md)
+- Roadmap V2 complète : [`docs/ROADMAP_V2.md`](ROADMAP_V2.md)
+- Audit enterprise-grade 2026-04-20 : [`docs/plans/MASTER_PLAN.md`](plans/MASTER_PLAN.md)

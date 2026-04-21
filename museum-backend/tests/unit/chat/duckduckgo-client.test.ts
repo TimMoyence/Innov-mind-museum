@@ -1,4 +1,9 @@
 import { DuckDuckGoClient } from '@modules/chat/adapters/secondary/duckduckgo.client';
+import { mockFetch } from '../../helpers/fetch/fetch-mock.helpers';
+import {
+  makeDuckDuckGoApiResponse,
+  makeDuckDuckGoRelatedTopic,
+} from '../../helpers/search-clients/duckduckgo.fixture';
 
 // Silence logger
 jest.mock('@shared/logger/logger', () => ({
@@ -18,15 +23,13 @@ describe('DuckDuckGoClient', () => {
   });
 
   it('returns AbstractText as first result when present', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
+    global.fetch = mockFetch({
+      body: makeDuckDuckGoApiResponse({
         AbstractText: 'Claude Monet was a French Impressionist painter.',
         AbstractURL: 'https://en.wikipedia.org/wiki/Claude_Monet',
         Heading: 'Claude Monet',
-        RelatedTopics: [],
       }),
-    }) as unknown as typeof fetch;
+    });
 
     const client = new DuckDuckGoClient();
     const results = await client.search({ query: 'Claude Monet' });
@@ -39,24 +42,20 @@ describe('DuckDuckGoClient', () => {
   });
 
   it('returns RelatedTopics as additional results', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        AbstractText: '',
-        AbstractURL: '',
-        Heading: '',
+    global.fetch = mockFetch({
+      body: makeDuckDuckGoApiResponse({
         RelatedTopics: [
-          {
+          makeDuckDuckGoRelatedTopic({
             FirstURL: 'https://example.com/topic-a',
-            Text: 'Topic A \u2014 Description of topic A',
-          },
-          {
+            Text: 'Topic A — Description of topic A',
+          }),
+          makeDuckDuckGoRelatedTopic({
             FirstURL: 'https://example.com/topic-b',
-            Text: 'Topic B \u2014 Description of topic B',
-          },
+            Text: 'Topic B — Description of topic B',
+          }),
         ],
       }),
-    }) as unknown as typeof fetch;
+    });
 
     const client = new DuckDuckGoClient();
     const results = await client.search({ query: 'impressionism' });
@@ -70,17 +69,13 @@ describe('DuckDuckGoClient', () => {
   });
 
   it('parses Text without em-dash separator as both title and snippet', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
+    global.fetch = mockFetch({
+      body: makeDuckDuckGoApiResponse({
         RelatedTopics: [
-          {
-            FirstURL: 'https://example.com/plain',
-            Text: 'Plain text with no separator',
-          },
+          { FirstURL: 'https://example.com/plain', Text: 'Plain text with no separator' },
         ],
       }),
-    }) as unknown as typeof fetch;
+    });
 
     const client = new DuckDuckGoClient();
     const results = await client.search({ query: 'test' });
@@ -90,29 +85,19 @@ describe('DuckDuckGoClient', () => {
   });
 
   it('flattens nested Topics groups', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
+    global.fetch = mockFetch({
+      body: makeDuckDuckGoApiResponse({
         RelatedTopics: [
           {
             Topics: [
-              {
-                FirstURL: 'https://example.com/nested-a',
-                Text: 'Nested A \u2014 Inside a group',
-              },
-              {
-                FirstURL: 'https://example.com/nested-b',
-                Text: 'Nested B \u2014 Also inside a group',
-              },
+              { FirstURL: 'https://example.com/nested-a', Text: 'Nested A — Inside a group' },
+              { FirstURL: 'https://example.com/nested-b', Text: 'Nested B — Also inside a group' },
             ],
           },
-          {
-            FirstURL: 'https://example.com/top-level',
-            Text: 'Top Level \u2014 Not nested',
-          },
+          { FirstURL: 'https://example.com/top-level', Text: 'Top Level — Not nested' },
         ],
       }),
-    }) as unknown as typeof fetch;
+    });
 
     const client = new DuckDuckGoClient();
     const results = await client.search({ query: 'art' });
@@ -124,17 +109,16 @@ describe('DuckDuckGoClient', () => {
   });
 
   it('skips RelatedTopics entries missing FirstURL or Text', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
+    global.fetch = mockFetch({
+      body: makeDuckDuckGoApiResponse({
         RelatedTopics: [
-          { FirstURL: 'https://example.com/ok', Text: 'Good \u2014 Has both fields' },
+          { FirstURL: 'https://example.com/ok', Text: 'Good — Has both fields' },
           { FirstURL: 'https://example.com/no-text' },
           { Text: 'No URL' },
           { FirstURL: '', Text: '' },
         ],
       }),
-    }) as unknown as typeof fetch;
+    });
 
     const client = new DuckDuckGoClient();
     const results = await client.search({ query: 'test' });
@@ -150,11 +134,7 @@ describe('DuckDuckGoClient', () => {
   });
 
   it('returns empty array on HTTP error response', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: false,
-      status: 503,
-      json: async () => ({}),
-    }) as unknown as typeof fetch;
+    global.fetch = mockFetch({ ok: false, status: 503 });
 
     const client = new DuckDuckGoClient();
     const results = await client.search({ query: 'something' });
@@ -163,9 +143,7 @@ describe('DuckDuckGoClient', () => {
   });
 
   it('returns empty array when fetch throws', async () => {
-    global.fetch = jest
-      .fn()
-      .mockRejectedValue(new Error('network down')) as unknown as typeof fetch;
+    global.fetch = mockFetch(new Error('network down'));
 
     const client = new DuckDuckGoClient();
     const results = await client.search({ query: 'something' });
@@ -174,10 +152,7 @@ describe('DuckDuckGoClient', () => {
   });
 
   it('handles missing RelatedTopics field gracefully', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({}),
-    }) as unknown as typeof fetch;
+    global.fetch = mockFetch({ body: {} });
 
     const client = new DuckDuckGoClient();
     const results = await client.search({ query: 'something' });
@@ -186,18 +161,19 @@ describe('DuckDuckGoClient', () => {
   });
 
   it('caps total results at maxResults', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
+    global.fetch = mockFetch({
+      body: makeDuckDuckGoApiResponse({
         AbstractText: 'Abstract text',
         AbstractURL: 'https://example.com/abstract',
         Heading: 'Heading',
-        RelatedTopics: Array.from({ length: 20 }, (_, i) => ({
-          FirstURL: `https://example.com/${i}`,
-          Text: `Topic ${i} \u2014 Description ${i}`,
-        })),
+        RelatedTopics: Array.from({ length: 20 }, (_, i) =>
+          makeDuckDuckGoRelatedTopic({
+            FirstURL: `https://example.com/${i}`,
+            Text: `Topic ${i} — Description ${i}`,
+          }),
+        ),
       }),
-    }) as unknown as typeof fetch;
+    });
 
     const client = new DuckDuckGoClient();
     const results = await client.search({ query: 'q', maxResults: 5 });
@@ -206,18 +182,19 @@ describe('DuckDuckGoClient', () => {
   });
 
   it('caps total results at HARD_RESULT_LIMIT of 10', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
+    global.fetch = mockFetch({
+      body: makeDuckDuckGoApiResponse({
         AbstractText: 'Abstract text',
         AbstractURL: 'https://example.com/abstract',
         Heading: 'Heading',
-        RelatedTopics: Array.from({ length: 20 }, (_, i) => ({
-          FirstURL: `https://example.com/${i}`,
-          Text: `Topic ${i} \u2014 Description ${i}`,
-        })),
+        RelatedTopics: Array.from({ length: 20 }, (_, i) =>
+          makeDuckDuckGoRelatedTopic({
+            FirstURL: `https://example.com/${i}`,
+            Text: `Topic ${i} — Description ${i}`,
+          }),
+        ),
       }),
-    }) as unknown as typeof fetch;
+    });
 
     const client = new DuckDuckGoClient();
     const results = await client.search({ query: 'q', maxResults: 50 });
@@ -226,15 +203,16 @@ describe('DuckDuckGoClient', () => {
   });
 
   it('uses default 5 max results when not specified', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        RelatedTopics: Array.from({ length: 20 }, (_, i) => ({
-          FirstURL: `https://example.com/${i}`,
-          Text: `Topic ${i} \u2014 Description ${i}`,
-        })),
+    global.fetch = mockFetch({
+      body: makeDuckDuckGoApiResponse({
+        RelatedTopics: Array.from({ length: 20 }, (_, i) =>
+          makeDuckDuckGoRelatedTopic({
+            FirstURL: `https://example.com/${i}`,
+            Text: `Topic ${i} — Description ${i}`,
+          }),
+        ),
       }),
-    }) as unknown as typeof fetch;
+    });
 
     const client = new DuckDuckGoClient();
     const results = await client.search({ query: 'q' });
@@ -243,16 +221,13 @@ describe('DuckDuckGoClient', () => {
   });
 
   it('includes correct query params in request URL', async () => {
-    const fetchSpy = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({}),
-    }) as unknown as jest.Mock;
-    global.fetch = fetchSpy as unknown as typeof fetch;
+    const fetchSpy = mockFetch({ body: {} });
+    global.fetch = fetchSpy;
 
     const client = new DuckDuckGoClient();
     await client.search({ query: 'museum Louvre' });
 
-    const callUrl = (fetchSpy.mock.calls[0] as [string])[0];
+    const callUrl = fetchSpy.mock.calls[0]![0] as string;
     const url = new URL(callUrl);
     expect(url.searchParams.get('q')).toBe('museum Louvre');
     expect(url.searchParams.get('format')).toBe('json');

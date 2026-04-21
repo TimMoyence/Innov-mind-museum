@@ -1,14 +1,12 @@
 import { VerifyEmailUseCase } from '@modules/auth/useCase/verifyEmail.useCase';
 import { RegisterUseCase } from '@modules/auth/useCase/register.useCase';
-import type { IUserRepository } from '@modules/auth/domain/user.repository.interface';
 import type { EmailService } from '@shared/email/email.port';
 import { makeUser } from '../../helpers/auth/user.fixtures';
+import { makeUserRepo } from '../../helpers/auth/user-repo.mock';
 
 describe('VerifyEmailUseCase', () => {
   it('returns { verified: true } for a valid token', async () => {
-    const repo = {
-      verifyEmail: jest.fn().mockResolvedValue(makeUser()),
-    } as unknown as IUserRepository;
+    const repo = makeUserRepo(makeUser());
     const useCase = new VerifyEmailUseCase(repo);
 
     const result = await useCase.execute('valid-token');
@@ -18,9 +16,7 @@ describe('VerifyEmailUseCase', () => {
   });
 
   it('throws 400 for expired/invalid token', async () => {
-    const repo = {
-      verifyEmail: jest.fn().mockResolvedValue(null),
-    } as unknown as IUserRepository;
+    const repo = makeUserRepo(null);
     const useCase = new VerifyEmailUseCase(repo);
 
     await expect(useCase.execute('expired-token')).rejects.toMatchObject({
@@ -30,9 +26,7 @@ describe('VerifyEmailUseCase', () => {
   });
 
   it('throws 400 for empty token', async () => {
-    const repo = {
-      verifyEmail: jest.fn(),
-    } as unknown as IUserRepository;
+    const repo = makeUserRepo(null);
     const useCase = new VerifyEmailUseCase(repo);
 
     await expect(useCase.execute('')).rejects.toMatchObject({
@@ -45,11 +39,8 @@ describe('VerifyEmailUseCase', () => {
 describe('RegisterUseCase — verification email', () => {
   it('generates token and calls email service after registration', async () => {
     const user = makeUser();
-    const repo = {
-      getUserByEmail: jest.fn().mockResolvedValue(null),
-      registerUser: jest.fn().mockResolvedValue(user),
-      setVerificationToken: jest.fn().mockResolvedValue(undefined),
-    } as unknown as IUserRepository;
+    const repo = makeUserRepo(user);
+    repo.getUserByEmail.mockResolvedValue(null);
     const emailService: EmailService = {
       sendEmail: jest.fn().mockResolvedValue(undefined),
     };
@@ -71,11 +62,8 @@ describe('RegisterUseCase — verification email', () => {
 
   it('succeeds even if email sending fails', async () => {
     const user = makeUser();
-    const repo = {
-      getUserByEmail: jest.fn().mockResolvedValue(null),
-      registerUser: jest.fn().mockResolvedValue(user),
-      setVerificationToken: jest.fn().mockResolvedValue(undefined),
-    } as unknown as IUserRepository;
+    const repo = makeUserRepo(user);
+    repo.getUserByEmail.mockResolvedValue(null);
     const emailService: EmailService = {
       sendEmail: jest.fn().mockRejectedValue(new Error('SMTP down')),
     };

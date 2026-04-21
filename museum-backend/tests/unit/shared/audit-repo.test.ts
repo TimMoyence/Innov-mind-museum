@@ -1,21 +1,14 @@
-import type { DataSource, Repository } from 'typeorm';
-
+import type { Repository } from 'typeorm';
 import { AuditLog } from '@shared/audit/auditLog.entity';
 import { AuditRepositoryPg } from '@shared/audit/audit.repository.pg';
-
 import type { AuditLogEntry } from '@shared/audit/audit.types';
+import { makeAuditLog } from 'tests/helpers/admin/admin.fixtures';
+import { makeMockTypeOrmRepo, makeMockDataSource } from 'tests/helpers/shared/mock-deps';
 
 // ─── TypeORM repo + DataSource mock factory ───
 function buildMocks() {
-  const repo = {
-    save: jest.fn(),
-    create: jest.fn().mockImplementation((data: unknown) => data),
-  } as unknown as jest.Mocked<Repository<AuditLog>>;
-
-  const dataSource = {
-    getRepository: jest.fn().mockReturnValue(repo),
-  } as unknown as DataSource;
-
+  const { repo } = makeMockTypeOrmRepo<AuditLog>();
+  const dataSource = makeMockDataSource(repo);
   return { repo, dataSource };
 }
 
@@ -153,7 +146,7 @@ describe('AuditRepositoryPg', () => {
         makeAuditEntry({ action: 'AUTH_LOGOUT', actorId: 2 }),
         makeAuditEntry({ action: 'AUTH_REGISTER', actorId: 3 }),
       ];
-      repo.save.mockResolvedValue([] as unknown as AuditLog);
+      repo.save.mockResolvedValue(makeAuditLog());
 
       await sut.insertBatch(entries);
 
@@ -196,7 +189,7 @@ describe('AuditRepositoryPg', () => {
         makeAuditEntry({ action: 'API_KEY_CREATED' }),
         makeAuditEntry({ action: 'API_KEY_REVOKED' }),
       ];
-      repo.save.mockResolvedValue([] as unknown as AuditLog);
+      repo.save.mockResolvedValue(makeAuditLog());
 
       await sut.insertBatch(entries);
 
@@ -217,7 +210,7 @@ describe('AuditRepositoryPg', () => {
           requestId: undefined,
         }),
       ];
-      repo.save.mockResolvedValue([] as unknown as AuditLog);
+      repo.save.mockResolvedValue(makeAuditLog());
 
       await sut.insertBatch(entries);
 
@@ -235,7 +228,7 @@ describe('AuditRepositoryPg', () => {
 
     it('handles a single-entry batch', async () => {
       const entries = [makeAuditEntry({ action: 'ACCOUNT_DELETED' })];
-      repo.save.mockResolvedValue([] as unknown as AuditLog);
+      repo.save.mockResolvedValue(makeAuditLog());
 
       await sut.insertBatch(entries);
 

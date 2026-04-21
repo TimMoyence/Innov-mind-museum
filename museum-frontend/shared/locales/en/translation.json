@@ -420,6 +420,10 @@
     "optimistic": {
       "image_placeholder": "Image sent",
       "voice_placeholder": "Voice message"
+    },
+    "lowDataDetails": "Data saver on — TTS disabled, images compressed",
+    "tts": {
+      "disabled_low_data": "Disabled in data saver mode. Change mode in Settings."
     }
   },
   "dailyLimit": {
@@ -491,7 +495,35 @@
     "unknown": "Something went wrong. Please try again.",
     "boundaryTitle": "Something went wrong",
     "boundarySubtitle": "The app encountered an unexpected error. Your data is safe.",
-    "boundaryReload": "Reload"
+    "boundaryReload": "Reload",
+    "socialAuth": {
+      "generic": "Sign-in failed. Please try again.",
+      "google_cancelled": "Google sign-in cancelled.",
+      "google_no_id_token": "Google sign-in could not complete. Please try again.",
+      "google_in_progress": "Google sign-in is already running.",
+      "apple_no_identity_token": "Apple sign-in was interrupted. Please try again.",
+      "ios_unavailable": "Google sign-in is unavailable on this build. Use Apple or email instead."
+    },
+    "chat": {
+      "contract_invalid": "Unexpected server response. Please try again.",
+      "audio_missing": "No audio to send.",
+      "streaming_unavailable": "Live response unavailable, retrying in standard mode."
+    },
+    "location": {
+      "generic": "Unable to determine your location.",
+      "timeout": "Location lookup timed out.",
+      "permission_denied": "Location permission denied."
+    },
+    "offlinePack": {
+      "download_failed": "Offline map download failed. Please retry."
+    },
+    "review": {
+      "generic": "Unable to load reviews right now.",
+      "load_failed": "Failed to load reviews.",
+      "load_more_failed": "Failed to load more reviews.",
+      "already_reviewed": "You have already submitted a review.",
+      "submit_failed": "Review submission failed. Please try again."
+    }
   },
   "errorNotice": {
     "retry": "Retry",

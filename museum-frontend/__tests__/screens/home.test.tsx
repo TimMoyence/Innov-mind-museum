@@ -8,10 +8,9 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   chatApi: { createSession: jest.fn() },
 }));
 
-const { chatApi } = jest.requireMock<{ chatApi: { createSession: jest.Mock } }>(
+const mockCreateSession = jest.requireMock<{ chatApi: { createSession: jest.Mock } }>(
   '@/features/chat/infrastructure/chatApi',
-);
-const mockCreateSession = chatApi.createSession;
+).chatApi.createSession;
 
 const { router } = jest.requireMock<{ router: { push: jest.Mock; back: jest.Mock } }>(
   'expo-router',

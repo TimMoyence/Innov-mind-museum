@@ -1,5 +1,8 @@
 import type { IUserRepository } from '@modules/auth/domain/user.repository.interface';
 import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token.repository.interface';
+import type { ISocialAccountRepository } from '@modules/auth/domain/socialAccount.repository.interface';
+import type { AuthSessionService } from '@modules/auth/useCase/authSession.service';
+import type { AuthSessionResponse } from '@modules/auth/useCase/authSession.service';
 import type { User } from '@modules/auth/domain/user.entity';
 
 /**
@@ -60,3 +63,43 @@ export const makeRefreshTokenRepo = (
 
   return repo;
 };
+
+export const makeSocialAccountRepo = (
+  overrides: Partial<Record<keyof ISocialAccountRepository, jest.Mock>> = {},
+): jest.Mocked<ISocialAccountRepository> => {
+  const repo: jest.Mocked<ISocialAccountRepository> = {
+    findByProviderAndProviderUserId: jest.fn().mockResolvedValue(null),
+    findByUserId: jest.fn().mockResolvedValue([]),
+    create: jest.fn().mockResolvedValue(null),
+    deleteByUserId: jest.fn().mockResolvedValue(undefined),
+    ...overrides,
+  };
+  return repo;
+};
+
+const defaultSessionResponse: AuthSessionResponse = {
+  accessToken: 'access-jwt',
+  refreshToken: 'refresh-jwt',
+  expiresIn: 900,
+  refreshExpiresIn: 2592000,
+  user: {
+    id: 1,
+    email: 'user@test.com',
+    firstname: 'Test',
+    lastname: 'User',
+    role: 'visitor',
+    museumId: null,
+    onboardingCompleted: false,
+  },
+};
+
+export const makeAuthSessionServiceMock = (
+  sessionResponse: AuthSessionResponse = defaultSessionResponse,
+): jest.Mocked<AuthSessionService> =>
+  ({
+    socialLogin: jest.fn().mockResolvedValue(sessionResponse),
+    login: jest.fn().mockResolvedValue(sessionResponse),
+    refresh: jest.fn().mockResolvedValue(sessionResponse),
+    logout: jest.fn().mockResolvedValue(undefined),
+    verifyAccessToken: jest.fn().mockResolvedValue(null),
+  }) as unknown as jest.Mocked<AuthSessionService>;

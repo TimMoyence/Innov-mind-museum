@@ -1,4 +1,4 @@
-import type { RequestHandler } from 'express';
+import type { Request, Response } from 'express';
 import type { CacheService } from '@shared/cache/cache.port';
 import {
   dailyChatLimit,
@@ -6,27 +6,27 @@ import {
   setDailyChatLimitCacheService,
   _resetDailyChatLimitCacheService,
 } from '@src/helpers/middleware/daily-chat-limit.middleware';
+import { makePartialRequest } from '../../helpers/http/express-mock.helpers';
 
 /** Flush multiple microtask cycles — needed for rejected promise .catch() chains */
 const flushAsync = async (): Promise<void> => {
   for (let i = 0; i < 5; i++) await new Promise(process.nextTick);
 };
 
-const makeMockReq = (overrides: Record<string, unknown> = {}): Parameters<RequestHandler>[0] =>
-  ({
+const makeMockReq = (overrides: Record<string, unknown> = {}): Request =>
+  makePartialRequest({
     ip: '10.0.0.1',
     socket: { remoteAddress: '10.0.0.1' },
-    params: {},
-    body: {},
     ...overrides,
-  }) as unknown as Parameters<RequestHandler>[0];
+  });
 
-const makeMockRes = () => {
+type MockRes = Response & { status: jest.Mock; json: jest.Mock };
+const makeMockRes = (): MockRes => {
   const res = {
     status: jest.fn().mockReturnThis(),
     json: jest.fn().mockReturnThis(),
   };
-  return res as unknown as Parameters<RequestHandler>[1];
+  return res as unknown as MockRes;
 };
 
 describe('dailyChatLimit middleware', () => {
@@ -45,7 +45,7 @@ describe('dailyChatLimit middleware', () => {
     dailyChatLimit(req, res, next);
 
     expect(next).toHaveBeenCalledWith();
-    expect((res as unknown as { status: jest.Mock }).status).not.toHaveBeenCalled();
+    expect(res.status).not.toHaveBeenCalled();
   });
 
   it('blocks requests at the limit with 429', () => {
@@ -110,7 +110,7 @@ describe('dailyChatLimit middleware', () => {
     dailyChatLimit(req, res, next);
 
     expect(next).toHaveBeenCalledWith();
-    expect((res as unknown as { status: jest.Mock }).status).not.toHaveBeenCalled();
+    expect(res.status).not.toHaveBeenCalled();
   });
 
   it('skips if user has no id', () => {
@@ -132,10 +132,11 @@ describe('dailyChatLimit middleware', () => {
  * Creates a mock CacheService with jest.fn() stubs for every method.
  * @param overrides
  */
+type MockCacheService = CacheService & Record<keyof CacheService, jest.Mock>;
 const makeMockCacheService = (
   overrides: Partial<Record<keyof CacheService, jest.Mock>> = {},
-): CacheService & Record<keyof CacheService, jest.Mock> =>
-  ({
+): MockCacheService => {
+  const svc = {
     get: jest.fn().mockResolvedValue(null),
     set: jest.fn().mockResolvedValue(undefined),
     del: jest.fn().mockResolvedValue(undefined),
@@ -145,7 +146,9 @@ const makeMockCacheService = (
     zadd: jest.fn().mockResolvedValue(undefined),
     ztop: jest.fn().mockResolvedValue([]),
     ...overrides,
-  }) as unknown as CacheService & Record<keyof CacheService, jest.Mock>;
+  };
+  return svc as unknown as MockCacheService;
+};
 
 describe('dailyChatLimit middleware — Redis distributed path', () => {
   beforeEach(() => {

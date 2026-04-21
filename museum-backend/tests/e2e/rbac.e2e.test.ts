@@ -57,8 +57,8 @@ describeE2E('rbac e2e (role-based access control)', () => {
     // GET /api/admin/users should now succeed
     const usersRes = await harness.request('/api/admin/users', { method: 'GET' }, adminToken);
     expect(usersRes.status).toBe(200);
-    const usersBody = usersRes.body as { users?: unknown[]; total?: number };
-    expect(Array.isArray(usersBody.users)).toBe(true);
+    const usersBody = usersRes.body as { data?: unknown[]; total?: number };
+    expect(Array.isArray(usersBody.data)).toBe(true);
     expect(typeof usersBody.total).toBe('number');
 
     // GET /api/admin/stats should succeed

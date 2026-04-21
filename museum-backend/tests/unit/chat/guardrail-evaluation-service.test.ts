@@ -7,31 +7,39 @@ import { AUDIT_SECURITY_GUARDRAIL_BLOCK } from '@shared/audit/audit.types';
 import { makeChatRepo } from 'tests/helpers/chat/repo.fixtures';
 
 /**
- * Creates a mock ChatRepository with a controllable persistMessage stub.
+ * Creates a mock ChatRepository with controllable persistMessage/persistBlockedExchange stubs.
  * @param overrides
  */
 const createMockRepository = (overrides: Partial<Parameters<typeof makeChatRepo>[0]> = {}) => {
   const session = makeSession();
+  const makeMsgStub = (input: PersistMessageInput) =>
+    makeMessage({
+      id: 'refusal-msg-001',
+      role: input.role as 'user' | 'assistant' | 'system',
+      text: input.text ?? null,
+      session,
+      createdAt: new Date('2025-06-01T12:00:00.000Z'),
+    });
   return makeChatRepo({
     getSessionById: jest.fn().mockResolvedValue(session),
-    persistMessage: jest.fn().mockImplementation((input: PersistMessageInput) => {
-      const msg = makeMessage({
-        id: 'refusal-msg-001',
-        role: input.role as 'user' | 'assistant' | 'system',
-        text: input.text ?? null,
-        session,
-        createdAt: new Date('2025-06-01T12:00:00.000Z'),
-      });
-      return Promise.resolve(msg);
-    }),
+    persistMessage: jest
+      .fn()
+      .mockImplementation((input: PersistMessageInput) => Promise.resolve(makeMsgStub(input))),
+    persistBlockedExchange: jest
+      .fn()
+      .mockImplementation(
+        (input: { userMessage: PersistMessageInput; refusal: PersistMessageInput }) =>
+          Promise.resolve({
+            userMessage: makeMsgStub(input.userMessage),
+            refusal: makeMsgStub(input.refusal),
+          }),
+      ),
     ...overrides,
   });
 };
 
-/** Creates a mock AuditService with a jest.fn() log method. */
-const createMockAudit = (): { log: jest.Mock } => ({
-  log: jest.fn(),
-});
+const createMockAudit = (): jest.Mocked<AuditService> =>
+  ({ log: jest.fn(), logBatch: jest.fn() }) as unknown as jest.Mocked<AuditService>;
 
 /**
  * Creates a mock art-topic classifier.
@@ -111,6 +119,7 @@ describe('GuardrailEvaluationService', () => {
         reason: 'insult',
         requestedLocale: 'en',
         userId: 42,
+        userMessage: { sessionId: 'session-001', role: 'user', text: 'test input' },
       });
 
       expect(result.sessionId).toBe('session-001');
@@ -126,7 +135,7 @@ describe('GuardrailEvaluationService', () => {
       const audit = createMockAudit();
       const service = new GuardrailEvaluationService({
         repository,
-        audit: audit as unknown as AuditService,
+        audit,
       });
 
       await service.handleInputBlock({
@@ -134,6 +143,7 @@ describe('GuardrailEvaluationService', () => {
         reason: 'prompt_injection',
         requestedLocale: 'en',
         userId: 99,
+        userMessage: { sessionId: 'session-001', role: 'user', text: 'test input' },
       });
 
       expect(audit.log).toHaveBeenCalledTimes(1);
@@ -151,13 +161,14 @@ describe('GuardrailEvaluationService', () => {
       const audit = createMockAudit();
       const service = new GuardrailEvaluationService({
         repository,
-        audit: audit as unknown as AuditService,
+        audit,
       });
 
       await service.handleInputBlock({
         sessionId: 'session-001',
         reason: 'insult',
         requestedLocale: 'en',
+        userMessage: { sessionId: 'session-001', role: 'user', text: 'test input' },
       });
 
       const logEntry: AuditLogEntry = audit.log.mock.calls[0][0];
@@ -170,7 +181,7 @@ describe('GuardrailEvaluationService', () => {
       const audit = createMockAudit();
       const service = new GuardrailEvaluationService({
         repository,
-        audit: audit as unknown as AuditService,
+        audit,
       });
 
       await service.handleInputBlock({
@@ -178,6 +189,7 @@ describe('GuardrailEvaluationService', () => {
         reason: 'insult',
         requestedLocale: 'en',
         userId: 0,
+        userMessage: { sessionId: 'session-001', role: 'user', text: 'test input' },
       });
 
       const logEntry = audit.log.mock.calls[0][0];
@@ -190,7 +202,7 @@ describe('GuardrailEvaluationService', () => {
       const audit = createMockAudit();
       const service = new GuardrailEvaluationService({
         repository,
-        audit: audit as unknown as AuditService,
+        audit,
       });
 
       await service.handleInputBlock({
@@ -198,6 +210,7 @@ describe('GuardrailEvaluationService', () => {
         reason: 'insult',
         requestedLocale: 'en',
         userId: undefined,
+        userMessage: { sessionId: 'session-001', role: 'user', text: 'test input' },
       });
 
       const logEntry = audit.log.mock.calls[0][0];
@@ -213,6 +226,7 @@ describe('GuardrailEvaluationService', () => {
         sessionId: 'session-001',
         reason: undefined,
         requestedLocale: 'en',
+        userMessage: { sessionId: 'session-001', role: 'user', text: 'test input' },
       });
 
       expect(result.message.text.length).toBeGreaterThan(0);
@@ -228,6 +242,7 @@ describe('GuardrailEvaluationService', () => {
         sessionId: 'session-001',
         reason: 'insult',
         requestedLocale: 'en',
+        userMessage: { sessionId: 'session-001', role: 'user', text: 'test input' },
       });
 
       expect(result.metadata.citations).toContain('policy:insult');
@@ -241,6 +256,7 @@ describe('GuardrailEvaluationService', () => {
         sessionId: 'session-001',
         reason: 'prompt_injection',
         requestedLocale: 'fr',
+        userMessage: { sessionId: 'session-001', role: 'user', text: 'test input' },
       });
 
       expect(result.metadata.citations).toContain('policy:prompt_injection');
@@ -256,12 +272,13 @@ describe('GuardrailEvaluationService', () => {
         reason: 'insult',
         requestedLocale: 'en',
         userId: 42,
+        userMessage: { sessionId: 'session-001', role: 'user', text: 'test input' },
       });
 
       expect(result.sessionId).toBe('session-001');
     });
 
-    it('calls repository.persistMessage with correct arguments', async () => {
+    it('calls repository.persistBlockedExchange with correct arguments', async () => {
       const repository = createMockRepository();
       const service = new GuardrailEvaluationService({ repository });
 
@@ -269,14 +286,17 @@ describe('GuardrailEvaluationService', () => {
         sessionId: 'session-001',
         reason: 'insult',
         requestedLocale: 'en',
+        userMessage: { sessionId: 'session-001', role: 'user', text: 'test input' },
       });
 
-      expect(repository.persistMessage).toHaveBeenCalledTimes(1);
-      const persistCall = repository.persistMessage.mock.calls[0][0];
-      expect(persistCall.sessionId).toBe('session-001');
-      expect(persistCall.role).toBe('assistant');
-      expect(typeof persistCall.text).toBe('string');
-      expect(persistCall.metadata).toBeDefined();
+      expect(repository.persistBlockedExchange).toHaveBeenCalledTimes(1);
+      const persistCall = repository.persistBlockedExchange.mock.calls[0][0];
+      expect(persistCall.refusal.sessionId).toBe('session-001');
+      expect(persistCall.refusal.role).toBe('assistant');
+      expect(typeof persistCall.refusal.text).toBe('string');
+      expect(persistCall.refusal.metadata).toBeDefined();
+      expect(persistCall.userMessage.sessionId).toBe('session-001');
+      expect(persistCall.userMessage.role).toBe('user');
     });
   });
 

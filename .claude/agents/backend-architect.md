@@ -1,7 +1,7 @@
 ---
 model: opus
 description: "Backend Architect — Architecture hexagonale, TypeORM, Express 5, LangChain pour le monorepo Musaium"
-allowedTools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write"]
+allowedTools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write", "mcp__gitnexus__query", "mcp__gitnexus__context", "mcp__gitnexus__impact", "mcp__gitnexus__detect_changes", "mcp__gitnexus__rename", "mcp__gitnexus__cypher"]
 ---
 
 # Backend Architect — Musaium

@@ -97,15 +97,20 @@ function pickEmailLocale(req: Request): EmailLocale {
   return localeFromAcceptLanguage(req.headers['accept-language']);
 }
 
+const toPositiveInt = (value: string | undefined, fallback: number): number => {
+  const parsed = value ? Number.parseInt(value, 10) : Number.NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
 const registerLimiter = createRateLimitMiddleware({
-  limit: 5,
-  windowMs: 600_000,
+  limit: toPositiveInt(process.env.AUTH_REGISTER_RATE_LIMIT, 5),
+  windowMs: toPositiveInt(process.env.AUTH_REGISTER_RATE_WINDOW_MS, 600_000),
   keyGenerator: byIp,
 });
 
 const loginLimiter = createRateLimitMiddleware({
-  limit: 10,
-  windowMs: 300_000,
+  limit: toPositiveInt(process.env.AUTH_LOGIN_RATE_LIMIT, 10),
+  windowMs: toPositiveInt(process.env.AUTH_LOGIN_RATE_WINDOW_MS, 300_000),
   keyGenerator: byIp,
 });
 

@@ -223,6 +223,7 @@
     "analytics": "Analytiques",
     "tickets": "Tickets",
     "supportAdmin": "Support",
+    "reviewsAdmin": "Avis",
     "accessDenied": "Accès refusé",
     "goToHomepage": "Retour à l'accueil",
     "login": {
@@ -293,6 +294,22 @@
       "view": "Voir",
       "updateTicket": "Modifier le ticket",
       "noTickets": "Aucun ticket trouvé."
+    },
+    "reviewsPage": {
+      "subtitle": "Modérez les avis soumis par les utilisateurs.",
+      "filterStatus": "Statut",
+      "rating": "Note",
+      "comment": "Commentaire",
+      "author": "Auteur",
+      "approve": "Approuver",
+      "reject": "Rejeter",
+      "confirmApprove": "Approuver cet avis ?",
+      "confirmReject": "Rejeter cet avis ?",
+      "moderated": "Modéré",
+      "pending": "En attente",
+      "approved": "Approuvé",
+      "rejected": "Rejeté",
+      "noReviews": "Aucun avis trouvé."
     },
     "supportPage": {
       "subtitle": "Consultez et répondez aux tickets de support.",

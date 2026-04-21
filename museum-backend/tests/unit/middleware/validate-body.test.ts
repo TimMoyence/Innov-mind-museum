@@ -1,15 +1,11 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { NextFunction } from 'express';
 import { z } from 'zod';
 import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 import { AppError } from '@shared/errors/app.error';
+import { makePartialRequest, makePartialResponse } from '../../helpers/http/express-mock.helpers';
 
-const mockReq = (body: unknown): Request => ({ body }) as unknown as Request;
-
-const mockRes = (): Response =>
-  ({
-    status: jest.fn().mockReturnThis(),
-    json: jest.fn().mockReturnThis(),
-  }) as unknown as Response;
+const mockReq = (body: unknown) => makePartialRequest({ body });
+const mockRes = makePartialResponse;
 
 const noop: NextFunction = jest.fn();
 

@@ -8,4 +8,6 @@ export interface ArtworkKnowledgeRepoPort {
     data: Omit<ArtworkKnowledge, 'id' | 'createdAt' | 'updatedAt'>,
     sourceUrl: string,
   ): Promise<ArtworkKnowledge>;
+  findNeedsReview(limit?: number): Promise<ArtworkKnowledge[]>;
+  approve(id: string): Promise<ArtworkKnowledge | null>;
 }

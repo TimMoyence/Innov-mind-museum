@@ -3,6 +3,8 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import Constants from 'expo-constants';
 import { Linking, Platform } from 'react-native';
 
+import { createAppError } from '@/shared/types/AppError';
+
 /** Supported social identity providers for sign-in. */
 type SocialProvider = 'apple' | 'google';
 
@@ -66,9 +68,12 @@ const assertGoogleIosUrlSchemeIsRegistered = async (): Promise<void> => {
 
   const canOpenGoogleScheme = await Linking.canOpenURL(`${googleIosUrlScheme}://oauth`);
   if (!canOpenGoogleScheme) {
-    throw new Error(
-      'Google Sign-In is unavailable on this iOS build (missing URL scheme configuration).',
-    );
+    throw createAppError({
+      kind: 'SocialAuth',
+      code: 'ios_unavailable',
+      message:
+        'Google Sign-In is unavailable on this iOS build (missing URL scheme configuration).',
+    });
   }
 };
 
@@ -86,7 +91,11 @@ export const signInWithApple = async (): Promise<SocialAuthResult> => {
   });
 
   if (!credential.identityToken) {
-    throw new Error('Apple Sign-In failed: no identity token');
+    throw createAppError({
+      kind: 'SocialAuth',
+      code: 'apple_no_identity_token',
+      message: 'Apple Sign-In failed: no identity token',
+    });
   }
 
   return {
@@ -102,7 +111,11 @@ export const signInWithApple = async (): Promise<SocialAuthResult> => {
  */
 export const signInWithGoogle = async (): Promise<SocialAuthResult> => {
   if (isGoogleSignInInFlight) {
-    throw new Error('Google Sign-In already in progress');
+    throw createAppError({
+      kind: 'SocialAuth',
+      code: 'google_in_progress',
+      message: 'Google Sign-In already in progress',
+    });
   }
 
   isGoogleSignInInFlight = true;
@@ -117,7 +130,11 @@ export const signInWithGoogle = async (): Promise<SocialAuthResult> => {
     const response = await GoogleSignin.signIn();
 
     if (response.type !== 'success' || !response.data.idToken) {
-      throw new Error('Google Sign-In failed: no ID token');
+      throw createAppError({
+        kind: 'SocialAuth',
+        code: 'google_no_id_token',
+        message: 'Google Sign-In failed: no ID token',
+      });
     }
 
     return {

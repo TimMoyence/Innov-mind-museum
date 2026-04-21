@@ -36,6 +36,11 @@ export class RedisCacheService implements CacheService {
     await this.redis.quit();
   }
 
+  /** Alias of disconnect() — satisfies the CacheService.destroy shutdown contract. */
+  async destroy(): Promise<void> {
+    await this.disconnect();
+  }
+
   /** Retrieves and deserializes a cached value by key, returning null on miss or error. */
   async get<T>(key: string): Promise<T | null> {
     try {

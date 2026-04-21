@@ -124,8 +124,8 @@ describeE2E('golden path 8 — admin analytics & data integrity', () => {
     );
     expect(usersRes.status).toBe(200);
 
-    const usersBody = usersRes.body as { users: Array<{ id: number; email: string }> };
-    const found = usersBody.users.find((u) => u.id === target.userId);
+    const usersBody = usersRes.body as { data: { id: number; email: string }[] };
+    const found = usersBody.data.find((u) => u.id === target.userId);
     expect(found).toBeTruthy();
     expect(found?.email).toBe(targetEmail);
   });
@@ -160,18 +160,18 @@ describeE2E('golden path 8 — admin analytics & data integrity', () => {
     expect(auditRes.status).toBe(200);
 
     const auditBody = auditRes.body as {
-      logs: Array<{
+      data: {
         action: string;
         actorId: number;
         targetId?: string;
         targetType?: string;
-      }>;
+      }[];
       total: number;
     };
     expect(auditBody.total).toBeGreaterThanOrEqual(1);
 
-    const roleChangeLog = auditBody.logs.find(
-      (log) => log.action === 'ROLE_CHANGED' && String(log.targetId) === String(target.userId),
+    const roleChangeLog = auditBody.data.find(
+      (log) => log.action === 'ADMIN_ROLE_CHANGE' && String(log.targetId) === String(target.userId),
     );
     expect(roleChangeLog).toBeTruthy();
   });
@@ -257,8 +257,8 @@ describeE2E('golden path 9 — support ticket lifecycle', () => {
     const listRes = await harness.request('/api/support/tickets', { method: 'GET' }, user.token);
     expect(listRes.status).toBe(200);
 
-    const listBody = listRes.body as { tickets: Array<{ id: string; subject: string }> };
-    const userTicket = listBody.tickets.find((t) => t.id === ticketId);
+    const listBody = listRes.body as { data: { id: string; subject: string }[] };
+    const userTicket = listBody.data.find((t) => t.id === ticketId);
     expect(userTicket).toBeTruthy();
     expect(userTicket?.subject).toBe('Cannot load artwork images');
 
@@ -273,7 +273,7 @@ describeE2E('golden path 9 — support ticket lifecycle', () => {
     const detailBody = detailRes.body as {
       ticket: {
         id: string;
-        messages?: Array<{ text: string }>;
+        messages?: { text: string }[];
       };
     };
     expect(detailBody.ticket.id).toBe(ticketId);
@@ -288,9 +288,9 @@ describeE2E('golden path 9 — support ticket lifecycle', () => {
     expect(adminListRes.status).toBe(200);
 
     const adminListBody = adminListRes.body as {
-      tickets: Array<{ id: string; status: string }>;
+      data: { id: string; status: string }[];
     };
-    const adminViewTicket = adminListBody.tickets.find((t) => t.id === ticketId);
+    const adminViewTicket = adminListBody.data.find((t) => t.id === ticketId);
     expect(adminViewTicket).toBeTruthy();
     expect(adminViewTicket?.status).toBe('open');
 
@@ -424,7 +424,7 @@ describeE2E('golden path 10 — museum management', () => {
     const listRes = await harness.request('/api/museums', { method: 'GET' }, adminToken);
     expect(listRes.status).toBe(200);
 
-    const listBody = listRes.body as { museums: Array<{ id: number; name: string }> };
+    const listBody = listRes.body as { museums: { id: number; name: string }[] };
     const found = listBody.museums.find((m) => m.id === museumId);
     expect(found).toBeTruthy();
     expect(found?.name).toBe(museumName);
@@ -464,7 +464,7 @@ describeE2E('golden path 10 — museum management', () => {
     expect(directoryRes.status).toBe(200);
 
     const directoryBody = directoryRes.body as {
-      museums: Array<{ id: number; name: string; slug: string }>;
+      museums: { id: number; name: string; slug: string }[];
     };
     const dirMuseum = directoryBody.museums.find((m) => m.id === museumId);
     expect(dirMuseum).toBeTruthy();
@@ -553,12 +553,12 @@ describeE2E('golden path 10 — museum management', () => {
     expect(auditRes.status).toBe(200);
 
     const auditBody = auditRes.body as {
-      logs: Array<{ action: string; targetId?: string; targetType?: string }>;
+      data: { action: string; targetId?: string; targetType?: string }[];
       total: number;
     };
     expect(auditBody.total).toBeGreaterThanOrEqual(1);
 
-    const museumLog = auditBody.logs.find(
+    const museumLog = auditBody.data.find(
       (log) => log.action === 'MUSEUM_CREATED' && String(log.targetId) === String(museumId),
     );
     expect(museumLog).toBeTruthy();

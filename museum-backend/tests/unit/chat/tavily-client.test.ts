@@ -1,4 +1,6 @@
 import { TavilyClient } from '@modules/chat/adapters/secondary/tavily.client';
+import { mockFetch } from '../../helpers/fetch/fetch-mock.helpers';
+import { makeTavilyHit, makeTavilyApiResponse } from '../../helpers/search-clients/tavily.fixture';
 
 // Silence logger
 jest.mock('@shared/logger/logger', () => ({
@@ -14,23 +16,12 @@ describe('TavilyClient', () => {
   });
 
   it('returns search results from a successful API response', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        results: [
-          {
-            url: 'https://example.com/a',
-            title: 'Result A',
-            content: 'Snippet A',
-          },
-          {
-            url: 'https://example.com/b',
-            title: 'Result B',
-            content: 'Snippet B',
-          },
-        ],
-      }),
-    }) as unknown as typeof fetch;
+    global.fetch = mockFetch({
+      body: makeTavilyApiResponse([
+        makeTavilyHit({ url: 'https://example.com/a', title: 'Result A', content: 'Snippet A' }),
+        makeTavilyHit({ url: 'https://example.com/b', title: 'Result B', content: 'Snippet B' }),
+      ]),
+    });
 
     const client = new TavilyClient('fake-api-key');
     const results = await client.search({ query: 'art exhibitions Paris' });
@@ -50,11 +41,7 @@ describe('TavilyClient', () => {
   });
 
   it('returns empty array on HTTP error response', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: false,
-      status: 500,
-      json: async () => ({}),
-    }) as unknown as typeof fetch;
+    global.fetch = mockFetch({ ok: false, status: 500 });
 
     const client = new TavilyClient('fake-api-key');
     const results = await client.search({ query: 'something' });
@@ -63,9 +50,7 @@ describe('TavilyClient', () => {
   });
 
   it('returns empty array when fetch throws', async () => {
-    global.fetch = jest
-      .fn()
-      .mockRejectedValue(new Error('network down')) as unknown as typeof fetch;
+    global.fetch = mockFetch(new Error('network down'));
 
     const client = new TavilyClient('fake-api-key');
     const results = await client.search({ query: 'something' });
@@ -74,11 +59,8 @@ describe('TavilyClient', () => {
   });
 
   it('caps maxResults at 10', async () => {
-    const fetchSpy = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ results: [] }),
-    }) as unknown as jest.Mock;
-    global.fetch = fetchSpy as unknown as typeof fetch;
+    const fetchSpy = mockFetch({ body: makeTavilyApiResponse([]) });
+    global.fetch = fetchSpy;
 
     const client = new TavilyClient('fake-api-key');
     await client.search({ query: 'q', maxResults: 50 });
@@ -89,11 +71,8 @@ describe('TavilyClient', () => {
   });
 
   it('uses default 5 max results when not specified', async () => {
-    const fetchSpy = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ results: [] }),
-    }) as unknown as jest.Mock;
-    global.fetch = fetchSpy as unknown as typeof fetch;
+    const fetchSpy = mockFetch({ body: makeTavilyApiResponse([]) });
+    global.fetch = fetchSpy;
 
     const client = new TavilyClient('fake-api-key');
     await client.search({ query: 'q' });
@@ -104,10 +83,7 @@ describe('TavilyClient', () => {
   });
 
   it('handles missing results field gracefully', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({}),
-    }) as unknown as typeof fetch;
+    global.fetch = mockFetch({ body: {} });
 
     const client = new TavilyClient('fake-api-key');
     const results = await client.search({ query: 'something' });

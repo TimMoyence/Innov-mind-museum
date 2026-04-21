@@ -6,7 +6,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { AuthProvider } from '@/lib/auth';
 import { AdminDictProvider } from '@/lib/admin-dictionary';
 import AdminDashboardPage from '@/app/[locale]/admin/page';
-import type { Dictionary } from '@/lib/i18n';
+import { mockAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
 import type { DashboardStats } from '@/lib/admin-types';
 
 // ── Next.js mocks ───────────────────────────────────────────────────────────
@@ -44,121 +44,6 @@ vi.mock('@/lib/api', () => ({
   registerLogoutHandler: vi.fn(),
 }));
 
-// ── Admin dictionary fixture ────────────────────────────────────────────────
-
-const mockAdminDict: Dictionary['admin'] = {
-  dashboard: 'Dashboard',
-  users: 'Users',
-  auditLogs: 'Audit Logs',
-  reports: 'Reports',
-  analytics: 'Analytics',
-  tickets: 'Tickets',
-  supportAdmin: 'Support',
-  accessDenied: 'Access Denied',
-  goToHomepage: 'Go to Homepage',
-  login: {
-    title: 'Admin Login',
-    emailPlaceholder: 'Email',
-    passwordPlaceholder: 'Password',
-    submit: 'Sign In',
-    error: 'Invalid credentials',
-  },
-  common: {
-    date: 'Date',
-    status: 'Status',
-    priority: 'Priority',
-    actions: 'Actions',
-    messages: 'Messages',
-    user: 'User',
-    userId: 'User ID',
-    subject: 'Subject',
-    confirm: 'Confirm',
-    cancel: 'Cancel',
-    previous: 'Previous',
-    next: 'Next',
-    pageOf: 'Page {page} of {totalPages} ({total} total)',
-    allStatuses: 'All statuses',
-    allPriorities: 'All priorities',
-    noData: 'No data',
-    conversations: 'Conversations',
-    active: 'Active',
-    inactive: 'Inactive',
-  },
-  dashboardPage: {
-    subtitle: 'Overview of your Musaium platform.',
-  },
-  auditLogsPage: {
-    subtitle: 'Review system audit logs.',
-    filterPlaceholder: 'Filter by action...',
-    columnUser: 'User',
-    columnAction: 'Action',
-    columnResource: 'Resource',
-    columnDetails: 'Details',
-    emptyState: 'No audit logs found.',
-  },
-  usersPage: {
-    subtitle: 'Manage platform users.',
-    searchPlaceholder: 'Search...',
-    allRoles: 'All roles',
-    columnName: 'Name',
-    columnRole: 'Role',
-    columnStatus: 'Status',
-    columnLastLogin: 'Last Login',
-    emptyState: 'No users found.',
-    changeRole: 'Change Role',
-  },
-  reportsPage: {
-    subtitle: '',
-    reason: 'Reason',
-    message: 'Message',
-    review: 'Review',
-    reviewReport: 'Review Report',
-    reportedMessage: 'Reported message',
-    reviewerNotes: 'Notes',
-    reviewerNotesPlaceholder: '',
-    noReports: 'No reports',
-  },
-  ticketsPage: {
-    subtitle: '',
-    update: 'Update',
-    view: 'View',
-    updateTicket: 'Update Ticket',
-    noTickets: 'No tickets',
-  },
-  supportPage: {
-    subtitle: '',
-    selectTicket: 'Select a ticket',
-    viewTickets: 'View Tickets',
-    backToTickets: 'Back',
-    createdAt: 'Created',
-    description: 'Description',
-    noMessages: 'No messages',
-    reply: 'Reply',
-    replyPlaceholder: 'Type your reply...',
-    send: 'Send',
-    sending: 'Sending...',
-  },
-  analyticsPage: {
-    subtitle: '',
-    avgMessages: 'Avg Messages',
-    avgDuration: 'Avg Duration',
-    returnRate: 'Return Rate',
-    uniqueUsers: 'Unique Users',
-    returningUsers: 'Returning Users',
-    usage: 'Usage',
-    daily: 'Daily',
-    weekly: 'Weekly',
-    monthly: 'Monthly',
-    days: 'Days',
-    sessions: 'Sessions',
-    messagesSent: 'Messages Sent',
-    activeUsers: 'Active Users',
-    topArtworks: 'Top Artworks',
-    topMuseums: 'Top Museums',
-    museum: 'Museum',
-    guardrailBlockRate: 'Block Rate',
-  },
-};
 
 // ── Helper: wrap with required providers ─────────────────────────────────────
 

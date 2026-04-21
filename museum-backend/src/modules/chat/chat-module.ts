@@ -44,6 +44,7 @@ import type { ChatOrchestrator } from './domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from './domain/ports/image-storage.port';
 import type { OcrService } from './domain/ports/ocr.port';
 import type { WebSearchProvider } from './domain/ports/web-search.port';
+import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { BuiltKnowledgeExtractionModule } from '@modules/knowledge-extraction/index';
 import type { IMuseumRepository } from '@modules/museum/domain/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
@@ -58,6 +59,7 @@ export interface BuiltChatModule {
   ocrService: OcrService;
   userMemoryService: UserMemoryService | undefined;
   artKeywordRepository: ArtKeywordRepository;
+  artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
 }
 
 /**
@@ -376,6 +378,7 @@ export class ChatModule {
       ocrService: ocr,
       userMemoryService: userMemory,
       artKeywordRepository: artKeywordRepo,
+      artworkKnowledgeRepo: knowledgeExtraction.artworkKnowledgeRepo,
     };
     this._built = built;
     return built;

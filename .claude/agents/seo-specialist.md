@@ -1,7 +1,7 @@
 ---
 model: opus
 description: "SEO Specialist — Next.js 15 optimization, Core Web Vitals, structured data, Server/Client Components pour museum-web"
-allowedTools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write"]
+allowedTools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write", "mcp__gitnexus__query", "mcp__gitnexus__context", "mcp__gitnexus__detect_changes"]
 ---
 
 # SEO Specialist — Musaium (museum-web)

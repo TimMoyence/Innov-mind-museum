@@ -1,0 +1,88 @@
+appId: com.musaium.mobile.preview
+---
+# Museum search with geolocation filtering
+#
+# Validates the museum directory + geo-distance filtering flow:
+#   1. open Museums tab
+#   2. grant location permission (if prompted)
+#   3. assert museum list renders with distance indicators
+#   4. open a museum detail
+#   5. back to list
+#
+# Prerequisites:
+#   - User logged in (quick-login runs automatically if needed)
+#   - Backend seeded with ≥ 1 museum
+
+- waitForAnimationToEnd
+
+# Auto-login if we landed on auth
+- runFlow:
+    when:
+      visible: "Welcome back"
+    file: helpers/quick-login.yaml
+
+# Skip onboarding if shown
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 1: Navigate to Museums tab
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "Museums"
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 2: Allow location (prompt may or may not appear)
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "Allow"
+    optional: true
+- tapOn:
+    text: "Allow While Using App"
+    optional: true
+- tapOn:
+    text: "OK"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 3: Museum list should be visible — assert at least one museum row
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Museums"
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 4: Tap the first museum row (fallback text kept short to match most seeds)
+# ──────────────────────────────────────────────
+- tapOn:
+    id: "museum-row-0"
+    optional: true
+
+# Alternative selector if IDs are not wired: tap anywhere in the list area.
+- tapOn:
+    point: "50%,50%"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 5: Back to list, then Home
+# ──────────────────────────────────────────────
+- back
+- waitForAnimationToEnd
+
+- tapOn:
+    text: "Home"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 10000

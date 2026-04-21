@@ -1,7 +1,7 @@
 # AI Voice — Architecture V1
 
 > **Statut :** Production V1 (2026-04)
-> **Spec source :** `docs/plans/reports/VOICE_V1_*.md` (mesures terrain), `.claude/skills/team/team-reports/2026-04-18-challenge-roadmap/`
+> **Spec source :** `docs/archive/nl-reports-2026-04-17/reports/VOICE_V1_*.md` (mesures terrain), `.claude/skills/team/team-reports/2026-04-18-challenge-roadmap/`
 > **ADR liés :** `docs/adr/ADR-001-sse-streaming-deprecated.md`
 
 ## TL;DR

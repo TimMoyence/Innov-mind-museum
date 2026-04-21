@@ -30,4 +30,7 @@ export interface CacheService {
 
   /** Get top N members of a sorted set by score descending. */
   ztop(key: string, n: number): Promise<{ member: string; score: number }[]>;
+
+  /** Release long-lived resources (timers, sockets). Called at process shutdown. */
+  destroy?(): Promise<void>;
 }

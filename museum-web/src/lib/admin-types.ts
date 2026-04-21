@@ -130,6 +130,27 @@ export interface TicketDetail extends Ticket {
   messages: TicketMessage[];
 }
 
+// --- Reviews (public reviews + admin moderation) ---
+
+export type ReviewStatus = 'pending' | 'approved' | 'rejected';
+
+export const REVIEW_STATUSES: ReviewStatus[] = ['pending', 'approved', 'rejected'];
+
+export const MODERATION_STATUSES: Extract<ReviewStatus, 'approved' | 'rejected'>[] = [
+  'approved',
+  'rejected',
+];
+
+export interface ReviewDTO {
+  id: string;
+  userId: number;
+  userName: string;
+  rating: number;
+  comment: string;
+  status: ReviewStatus;
+  createdAt: string;
+}
+
 // --- Analytics ---
 
 export type AnalyticsGranularity = 'daily' | 'weekly' | 'monthly';

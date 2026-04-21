@@ -22,8 +22,10 @@ export function getApiKeyRepository(): ApiKeyRepository | null {
   return apiKeyRepo;
 }
 
-/** Registers a resolver to fetch the user's role for API key auth. Called once at startup. */
-export function setUserRoleResolver(resolver: (userId: number) => Promise<UserRole | null>): void {
+/** Registers (or clears with null) a resolver to fetch the user's role for API key auth. */
+export function setUserRoleResolver(
+  resolver: ((userId: number) => Promise<UserRole | null>) | null,
+): void {
   userRoleResolver = resolver;
 }
 

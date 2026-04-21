@@ -22,16 +22,11 @@ interface MockRedisStoreOverrides {
 }
 
 /**
- * Builds a mock RedisRateLimitStore with jest mocks for `increment` and `reset`.
- * @param overrides - Optional per-call mock overrides for `increment` and `reset`.
- * @returns A partially-mocked `RedisRateLimitStore` suitable for dependency injection.
+ * Builds a mock RedisRateLimitStore with jest mocks for all public methods.
  */
 const makeMockRedisStore = (
   overrides: MockRedisStoreOverrides = {},
-): {
-  increment: jest.MockedFunction<IncrementFn>;
-  reset: jest.MockedFunction<ResetFn>;
-} => {
+): jest.Mocked<RedisRateLimitStore> => {
   const defaultIncrement = jest
     .fn<ReturnType<IncrementFn>, Parameters<IncrementFn>>()
     .mockImplementation((...args) => {
@@ -45,7 +40,9 @@ const makeMockRedisStore = (
   return {
     increment: overrides.increment ?? defaultIncrement,
     reset: overrides.reset ?? defaultReset,
-  };
+    clear: jest.fn(),
+    stopSweep: jest.fn(),
+  } as unknown as jest.Mocked<RedisRateLimitStore>;
 };
 
 /** Yield to the microtask queue so background `.then()` handlers run. */
@@ -143,7 +140,7 @@ describe('login-rate-limiter', () => {
 describe('login-rate-limiter (distributed Redis path)', () => {
   it('calls redisStore.increment with prefixed key and window on recordFailedLogin', async () => {
     const mock = makeMockRedisStore();
-    setLoginRateLimitStore(mock as unknown as RedisRateLimitStore);
+    setLoginRateLimitStore(mock);
 
     recordFailedLogin('distrib@test.com');
     await flushMicrotasks();
@@ -164,7 +161,7 @@ describe('login-rate-limiter (distributed Redis path)', () => {
           return Promise.resolve({ count: 10, resetAt: Date.now() + windowMs });
         }),
     });
-    setLoginRateLimitStore(mock as unknown as RedisRateLimitStore);
+    setLoginRateLimitStore(mock);
 
     recordFailedLogin('peer@test.com');
     await flushMicrotasks();
@@ -177,7 +174,7 @@ describe('login-rate-limiter (distributed Redis path)', () => {
 
   it('calls redisStore.reset with prefixed key on clearLoginAttempts', async () => {
     const mock = makeMockRedisStore();
-    setLoginRateLimitStore(mock as unknown as RedisRateLimitStore);
+    setLoginRateLimitStore(mock);
 
     clearLoginAttempts('reset@test.com');
     await flushMicrotasks();
@@ -192,7 +189,7 @@ describe('login-rate-limiter (distributed Redis path)', () => {
         .fn<ReturnType<IncrementFn>, Parameters<IncrementFn>>()
         .mockRejectedValue(new Error('redis down')),
     });
-    setLoginRateLimitStore(mock as unknown as RedisRateLimitStore);
+    setLoginRateLimitStore(mock);
 
     // Should not throw synchronously or asynchronously
     expect(() => {
@@ -226,7 +223,7 @@ describe('login-rate-limiter (distributed Redis path)', () => {
         .fn<ReturnType<ResetFn>, Parameters<ResetFn>>()
         .mockRejectedValue(new Error('redis down')),
     });
-    setLoginRateLimitStore(mock as unknown as RedisRateLimitStore);
+    setLoginRateLimitStore(mock);
 
     // Clear should succeed locally even though Redis throws
     expect(() => {

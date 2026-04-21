@@ -1,4 +1,9 @@
 import { GoogleCseClient } from '@modules/chat/adapters/secondary/google-cse.client';
+import { mockFetch } from '../../helpers/fetch/fetch-mock.helpers';
+import {
+  makeGoogleCseItem,
+  makeGoogleCseApiResponse,
+} from '../../helpers/search-clients/google-cse.fixture';
 
 // Silence logger
 jest.mock('@shared/logger/logger', () => ({
@@ -14,23 +19,20 @@ describe('GoogleCseClient', () => {
   });
 
   it('returns search results from a successful API response', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        items: [
-          {
-            link: 'https://example.com/a',
-            title: 'Result A',
-            snippet: 'Snippet A',
-          },
-          {
-            link: 'https://example.com/b',
-            title: 'Result B',
-            snippet: 'Snippet B',
-          },
-        ],
-      }),
-    }) as unknown as typeof fetch;
+    global.fetch = mockFetch({
+      body: makeGoogleCseApiResponse([
+        makeGoogleCseItem({
+          link: 'https://example.com/a',
+          title: 'Result A',
+          snippet: 'Snippet A',
+        }),
+        makeGoogleCseItem({
+          link: 'https://example.com/b',
+          title: 'Result B',
+          snippet: 'Snippet B',
+        }),
+      ]),
+    });
 
     const client = new GoogleCseClient('fake-api-key', 'fake-cse-id');
     const results = await client.search({ query: 'art exhibitions Paris' });
@@ -44,18 +46,15 @@ describe('GoogleCseClient', () => {
   });
 
   it('maps link field to url', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        items: [
-          {
-            link: 'https://museum.example.com/monet',
-            title: 'Monet Exhibition',
-            snippet: 'Water lilies and more',
-          },
-        ],
-      }),
-    }) as unknown as typeof fetch;
+    global.fetch = mockFetch({
+      body: makeGoogleCseApiResponse([
+        makeGoogleCseItem({
+          link: 'https://museum.example.com/monet',
+          title: 'Monet Exhibition',
+          snippet: 'Water lilies and more',
+        }),
+      ]),
+    });
 
     const client = new GoogleCseClient('fake-api-key', 'fake-cse-id');
     const results = await client.search({ query: 'Monet' });
@@ -70,11 +69,7 @@ describe('GoogleCseClient', () => {
   });
 
   it('returns empty array on HTTP error response', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: false,
-      status: 403,
-      json: async () => ({}),
-    }) as unknown as typeof fetch;
+    global.fetch = mockFetch({ ok: false, status: 403 });
 
     const client = new GoogleCseClient('fake-api-key', 'fake-cse-id');
     const results = await client.search({ query: 'something' });
@@ -83,9 +78,7 @@ describe('GoogleCseClient', () => {
   });
 
   it('returns empty array when fetch throws', async () => {
-    global.fetch = jest
-      .fn()
-      .mockRejectedValue(new Error('network down')) as unknown as typeof fetch;
+    global.fetch = mockFetch(new Error('network down'));
 
     const client = new GoogleCseClient('fake-api-key', 'fake-cse-id');
     const results = await client.search({ query: 'something' });
@@ -94,40 +87,31 @@ describe('GoogleCseClient', () => {
   });
 
   it('caps maxResults at 10', async () => {
-    const fetchSpy = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ items: [] }),
-    }) as unknown as jest.Mock;
-    global.fetch = fetchSpy as unknown as typeof fetch;
+    const fetchSpy = mockFetch({ body: makeGoogleCseApiResponse([]) });
+    global.fetch = fetchSpy;
 
     const client = new GoogleCseClient('fake-api-key', 'fake-cse-id');
     await client.search({ query: 'q', maxResults: 50 });
 
-    const callUrl = (fetchSpy.mock.calls[0] as [string])[0];
+    const callUrl = fetchSpy.mock.calls[0]![0] as string;
     const url = new URL(callUrl);
     expect(url.searchParams.get('num')).toBe('10');
   });
 
   it('uses default 5 max results when not specified', async () => {
-    const fetchSpy = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ items: [] }),
-    }) as unknown as jest.Mock;
-    global.fetch = fetchSpy as unknown as typeof fetch;
+    const fetchSpy = mockFetch({ body: makeGoogleCseApiResponse([]) });
+    global.fetch = fetchSpy;
 
     const client = new GoogleCseClient('fake-api-key', 'fake-cse-id');
     await client.search({ query: 'q' });
 
-    const callUrl = (fetchSpy.mock.calls[0] as [string])[0];
+    const callUrl = fetchSpy.mock.calls[0]![0] as string;
     const url = new URL(callUrl);
     expect(url.searchParams.get('num')).toBe('5');
   });
 
   it('handles missing items field gracefully', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({}),
-    }) as unknown as typeof fetch;
+    global.fetch = mockFetch({ body: {} });
 
     const client = new GoogleCseClient('fake-api-key', 'fake-cse-id');
     const results = await client.search({ query: 'something' });
@@ -136,16 +120,13 @@ describe('GoogleCseClient', () => {
   });
 
   it('includes api key and cse id in request URL', async () => {
-    const fetchSpy = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ items: [] }),
-    }) as unknown as jest.Mock;
-    global.fetch = fetchSpy as unknown as typeof fetch;
+    const fetchSpy = mockFetch({ body: makeGoogleCseApiResponse([]) });
+    global.fetch = fetchSpy;
 
     const client = new GoogleCseClient('my-key', 'my-cx');
     await client.search({ query: 'test' });
 
-    const callUrl = (fetchSpy.mock.calls[0] as [string])[0];
+    const callUrl = fetchSpy.mock.calls[0]![0] as string;
     const url = new URL(callUrl);
     expect(url.searchParams.get('key')).toBe('my-key');
     expect(url.searchParams.get('cx')).toBe('my-cx');

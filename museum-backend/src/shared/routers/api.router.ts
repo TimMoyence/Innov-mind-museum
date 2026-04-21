@@ -1,15 +1,17 @@
 import { Router } from 'express';
 
+import { createAdminKeRouter } from '@modules/admin/adapters/primary/http/admin-ke.route';
 import adminRouter from '@modules/admin/adapters/primary/http/admin.route';
 import { createCachePurgeRouter } from '@modules/admin/adapters/primary/http/cache-purge.route';
 import authRouter from '@modules/auth/adapters/primary/http/auth.route';
 import { createChatRouter } from '@modules/chat/adapters/primary/http/chat.route';
 import {
   getArtKeywordRepository,
+  getArtworkKnowledgeRepo,
   getDescribeService,
   getLlmCircuitBreakerState,
   getUserMemoryService,
-} from '@modules/chat/index';
+} from '@modules/chat/wiring';
 import { createDailyArtRouter } from '@modules/daily-art/daily-art.route';
 import { buildLowDataPackService } from '@modules/museum';
 import { createLowDataPackRouter } from '@modules/museum/adapters/primary/http/low-data-pack.route';
@@ -186,6 +188,10 @@ function mountDomainRouters(
 
   router.use('/admin', adminRouter);
   router.use('/admin', createCachePurgeRouter(resolvedCache));
+  const artworkKnowledgeRepo = getArtworkKnowledgeRepo();
+  if (artworkKnowledgeRepo) {
+    router.use('/admin', createAdminKeRouter(artworkKnowledgeRepo));
+  }
   router.use('/support', supportRouter);
   router.use('/reviews', reviewRouter);
 }

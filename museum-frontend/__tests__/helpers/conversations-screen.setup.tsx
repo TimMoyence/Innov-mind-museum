@@ -3,6 +3,15 @@
  * Import AFTER test-utils (which provides global mocks for theme, router, etc.).
  */
 
+const mockChatApiCreateSession = jest.fn();
+
+jest.mock('@/features/chat/infrastructure/chatApi', () => ({
+  chatApi: { createSession: mockChatApiCreateSession },
+}));
+
+/** Exported handle for test files that import this setup. */
+export const convoScreenApiMocks = { createSession: mockChatApiCreateSession };
+
 export const mockUseConversationsData = jest.fn();
 jest.mock('@/features/conversation/application/useConversationsData', () => ({
   useConversationsData: () => mockUseConversationsData(),
@@ -38,10 +47,6 @@ jest.mock('@/features/conversation/application/useConversationsBulkMode', () => 
 jest.mock('@/features/conversation/infrastructure/conversationsStore', () => ({
   useConversationsStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({ items: [], savedSessionIds: [], sortMode: 'recent' }),
-}));
-
-jest.mock('@/features/chat/infrastructure/chatApi', () => ({
-  chatApi: { createSession: jest.fn() },
 }));
 
 jest.mock('@/features/settings/runtimeSettings', () => ({

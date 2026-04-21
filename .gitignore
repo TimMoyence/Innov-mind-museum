@@ -147,6 +147,7 @@ design-system/pnpm-lock.yaml
 
 # Ephemeral agent reports (not source, not docs-for-humans)
 team-reports/
+!team-reports/README.md
 museum-backend/reports/
 new.md
 

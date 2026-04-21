@@ -1,13 +1,13 @@
 {
-  "lastUpdated": "2026-04-19",
-  "testCount": 2717,
-  "frontendTestCount": 1192,
-  "frontendSuiteCount": 137,
+  "lastUpdated": "2026-04-21",
+  "testCount": 2812,
+  "frontendTestCount": 1443,
+  "frontendSuiteCount": 150,
   "typecheckErrors": 0,
   "asAnyCount": 0,
-  "coverageStatements": 90.31,
-  "coverageBranches": 80.36,
+  "coverageStatements": 90.28,
+  "coverageBranches": 80.43,
   "lintErrors": 0,
-  "_comment": "Feature flags LOT 2 audit (2026-04-19): retired multiTenancy, artTopicClassifier, userMemory, knowledgeBase, imageEnrichment, webSearch flags (now always-on). Renamed FEATURE_FLAG_KNOWLEDGE_EXTRACTION → ADMIN_ENABLE_EXTRACTION (adminFlags). 2 remaining: ocrGuard, apiKeys. +2 adminFlags tests (2715→2717).",
+  "_comment": "Team B audit complete (2026-04-21): T1 startPoolMonitor wired + clearInterval, T3 audio catch →400, T4 pessimistic stats refetch, T5 RFC 9745/8594 SSE headers, H1-H7 all implemented, H8 GitNexus re-index done (6036/15640). Score: 6.8→10/10. DoD 15/15.",
   "webTestCount": 174
 }

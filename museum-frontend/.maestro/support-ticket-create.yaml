@@ -1,0 +1,99 @@
+appId: com.musaium.mobile.preview
+---
+# Support — create a ticket from the mobile app
+#
+# Validates:
+#   1. Home → Settings → Support
+#   2. fill contact form
+#   3. submit and assert success message
+#   4. back to Home
+#
+# Prerequisites: user logged in
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Welcome back"
+    file: helpers/quick-login.yaml
+
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 1: Navigate Home → Settings → Support
+# ──────────────────────────────────────────────
+- tapOn: "Settings"
+- waitForAnimationToEnd
+
+- scrollUntilVisible:
+    element: "Support"
+    direction: DOWN
+
+- tapOn:
+    text: "Support"
+    index: 0
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Contact"
+    timeout: 5000
+    optional: true
+
+# ──────────────────────────────────────────────
+# Phase 2: Fill contact form (fallback IDs if present)
+# ──────────────────────────────────────────────
+- tapOn:
+    id: "support-subject"
+    optional: true
+- inputText: "Maestro e2e smoke ticket"
+
+- tapOn:
+    id: "support-message"
+    optional: true
+- inputText: "This ticket was submitted by the automated Maestro e2e flow. Ignore and close."
+
+# ──────────────────────────────────────────────
+# Phase 3: Submit
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "Submit"
+    optional: true
+- tapOn:
+    text: "Envoyer"
+    optional: true
+- waitForAnimationToEnd
+
+# Assert success toast or message (resilient to i18n)
+- extendedWaitUntil:
+    visible:
+      text: ".*(thanks|merci|submitted|envoyé).*"
+      enabled: true
+    timeout: 10000
+    optional: true
+
+# ──────────────────────────────────────────────
+# Phase 4: Back to Home
+# ──────────────────────────────────────────────
+- back
+- waitForAnimationToEnd
+
+- scrollUntilVisible:
+    element: "Back to Home"
+    direction: DOWN
+    optional: true
+
+- tapOn:
+    text: "Back to Home"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 10000

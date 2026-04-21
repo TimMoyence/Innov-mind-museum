@@ -420,6 +420,10 @@
     "optimistic": {
       "image_placeholder": "Bild gesendet",
       "voice_placeholder": "Sprachnachricht"
+    },
+    "lowDataDetails": "Datensparmodus — TTS deaktiviert, Bilder komprimiert",
+    "tts": {
+      "disabled_low_data": "Im Datensparmodus deaktiviert. Modus in den Einstellungen ändern."
     }
   },
   "dailyLimit": {
@@ -491,7 +495,35 @@
     "unknown": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
     "boundaryTitle": "Etwas ist schiefgelaufen",
     "boundarySubtitle": "Die App hat einen unerwarteten Fehler festgestellt. Ihre Daten sind sicher.",
-    "boundaryReload": "Neu laden"
+    "boundaryReload": "Neu laden",
+    "socialAuth": {
+      "generic": "Anmeldung fehlgeschlagen. Bitte erneut versuchen.",
+      "google_cancelled": "Google-Anmeldung abgebrochen.",
+      "google_no_id_token": "Google-Anmeldung konnte nicht abgeschlossen werden. Bitte erneut versuchen.",
+      "google_in_progress": "Eine Google-Anmeldung läuft bereits.",
+      "apple_no_identity_token": "Apple-Anmeldung wurde unterbrochen. Bitte erneut versuchen.",
+      "ios_unavailable": "Google-Anmeldung ist in dieser Version nicht verfügbar. Verwenden Sie Apple oder E-Mail."
+    },
+    "chat": {
+      "contract_invalid": "Unerwartete Serverantwort. Bitte erneut versuchen.",
+      "audio_missing": "Kein Audio zum Senden vorhanden.",
+      "streaming_unavailable": "Live-Antwort nicht verfügbar, wechsle in den Standardmodus."
+    },
+    "location": {
+      "generic": "Standort konnte nicht ermittelt werden.",
+      "timeout": "Standortsuche hat das Zeitlimit überschritten.",
+      "permission_denied": "Standortberechtigung verweigert."
+    },
+    "offlinePack": {
+      "download_failed": "Offline-Karte konnte nicht heruntergeladen werden. Bitte erneut versuchen."
+    },
+    "review": {
+      "generic": "Bewertungen können derzeit nicht geladen werden.",
+      "load_failed": "Bewertungen konnten nicht geladen werden.",
+      "load_more_failed": "Weitere Bewertungen konnten nicht geladen werden.",
+      "already_reviewed": "Sie haben bereits eine Bewertung abgegeben.",
+      "submit_failed": "Bewertung konnte nicht gesendet werden. Bitte erneut versuchen."
+    }
   },
   "errorNotice": {
     "retry": "Erneut versuchen",

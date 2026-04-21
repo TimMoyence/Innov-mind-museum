@@ -26,10 +26,14 @@ interface QueueItem {
   imageUri?: string;
 }
 
+/** Bypasses backoff delays so tests run synchronously. */
+const passthroughRetry = <T>(op: () => Promise<T>): Promise<T> => op();
+
 const makeDefaultParams = (overrides?: {
   isConnected?: boolean;
   peekQueue?: QueueItem[];
   setMessages?: React.Dispatch<React.SetStateAction<ChatUiMessage[]>>;
+  isRetryable?: (error: unknown) => boolean;
 }) => {
   const queue = overrides?.peekQueue ?? [];
   let queueIndex = 0;
@@ -50,6 +54,8 @@ const makeDefaultParams = (overrides?: {
     peek,
     dequeue,
     setMessages,
+    retry: passthroughRetry,
+    ...(overrides?.isRetryable ? { isRetryable: overrides.isRetryable } : {}),
   };
 };
 
@@ -359,6 +365,38 @@ describe('useOfflineSync', () => {
     expect(mockGetSession).toHaveBeenCalledTimes(1);
     // setMessages NOT called because getSession threw
     expect(params.setMessages).not.toHaveBeenCalled();
+  });
+
+  // ── Non-retryable (fatal) error: drop poison item and continue ─────────
+
+  it('drops a non-retryable item and continues to the next queued message', async () => {
+    const sessionResponse = makeGetSessionResponse();
+    mockGetSession.mockResolvedValue(sessionResponse);
+    // First item throws a fatal error (4xx), second succeeds
+    mockPostMessage.mockRejectedValueOnce(new Error('Bad request')).mockResolvedValueOnce({});
+
+    const params = makeDefaultParams({
+      isConnected: true,
+      peekQueue: [
+        { sessionId: SESSION_ID, text: 'poison item' },
+        { sessionId: SESSION_ID, text: 'valid item' },
+      ],
+      isRetryable: () => false, // treat all errors as non-retryable for this test
+    });
+
+    renderHook(() => {
+      useOfflineSync(params);
+    });
+
+    await waitFor(() => {
+      expect(mockPostMessage).toHaveBeenCalledTimes(2);
+    });
+
+    // Both items dequeued: first dropped (fatal), second succeeded
+    expect(params.dequeue).toHaveBeenCalledTimes(2);
+    // flushedAny = true, so getSession is called
+    expect(mockGetSession).toHaveBeenCalledTimes(1);
+    expect(params.setMessages).toHaveBeenCalled();
   });
 
   // ── Empty queue: peek returns undefined → skips refetch entirely ────────

@@ -1,5 +1,5 @@
 import type React from 'react';
-import { createContext, useContext, useMemo } from 'react';
+import { createContext, useContext, useEffect, useMemo } from 'react';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { NetInfoStateType, NetInfoCellularGeneration } from '@react-native-community/netinfo';
 
@@ -7,6 +7,7 @@ import {
   useDataModePreferenceStore,
   type DataModePreference,
 } from '@/features/settings/dataModeStore';
+import { setCurrentDataMode } from '@/shared/infrastructure/dataMode/currentDataMode';
 
 export type ResolvedDataMode = 'low' | 'normal';
 
@@ -72,6 +73,10 @@ export const DataModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const netInfo = useNetInfo();
 
   const resolved = useMemo(() => resolveDataMode(preference, netInfo), [preference, netInfo]);
+
+  useEffect(() => {
+    setCurrentDataMode(resolved);
+  }, [resolved]);
 
   const value = useMemo<DataModeContextValue>(
     () => ({

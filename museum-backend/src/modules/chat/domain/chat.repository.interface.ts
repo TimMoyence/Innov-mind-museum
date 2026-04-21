@@ -153,6 +153,24 @@ export interface ChatRepository {
   persistMessage(input: PersistMessageInput): Promise<ChatMessage>;
 
   /**
+   * Atomically persist a blocked user message together with the assistant refusal
+   * in a single database transaction.
+   *
+   * Either both rows are committed or neither is. Prevents the data-integrity bug
+   * where a user attempt lands in DB but the refusal write fails, leaving an
+   * orphan row for auditors and a broken assistant view for the user.
+   *
+   * @param input - The two messages to persist atomically.
+   * @param input.userMessage - The user's blocked attempt to persist.
+   * @param input.refusal - The assistant refusal message to persist.
+   * @returns The two persisted rows.
+   */
+  persistBlockedExchange(input: {
+    userMessage: PersistMessageInput;
+    refusal: PersistMessageInput;
+  }): Promise<{ userMessage: ChatMessage; refusal: ChatMessage }>;
+
+  /**
    * List messages for a session with cursor-based pagination.
    *
    * @param params - Session ID, limit, and optional cursor.

@@ -36,6 +36,13 @@ jest.mock('node:dns/promises', () => ({
 }));
 
 import { HtmlScraper } from '@modules/knowledge-extraction/adapters/secondary/html-scraper';
+import {
+  makeHtmlFetchResponse as makeHtmlResponse,
+  makeRedirectFetchResponse as makeRedirectResponse,
+  makeFetchSpy,
+  mockFetch,
+  mockHtmlFetch,
+} from '../../helpers/fetch/fetch-mock.helpers';
 
 const originalFetch = global.fetch;
 
@@ -48,17 +55,6 @@ afterEach(() => {
   global.fetch = originalFetch;
   jest.clearAllMocks();
 });
-
-// Helpers ----------------------------------------------------------------
-
-function makeHtmlResponse(html: string, contentType = 'text/html; charset=utf-8') {
-  return {
-    ok: true,
-    status: 200,
-    headers: { get: (key: string) => (key === 'content-type' ? contentType : null) },
-    text: async () => html,
-  };
-}
 
 const ARTICLE_HTML = `
 <!DOCTYPE html>
@@ -92,9 +88,7 @@ describe('HtmlScraper', () => {
   const scraper = new HtmlScraper({ timeoutMs: 5000, maxContentBytes: 10_000 });
 
   it('extracts readable content from HTML with article tag via Readability', async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(makeHtmlResponse(ARTICLE_HTML)) as unknown as typeof fetch;
+    global.fetch = mockHtmlFetch(ARTICLE_HTML);
 
     const result = await scraper.scrape('https://example.com/article');
 
@@ -106,9 +100,7 @@ describe('HtmlScraper', () => {
   });
 
   it('falls back to cheerio extraction when Readability returns null', async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(makeHtmlResponse(SIMPLE_HTML)) as unknown as typeof fetch;
+    global.fetch = mockHtmlFetch(SIMPLE_HTML);
 
     const result = await scraper.scrape('https://example.com/simple');
 
@@ -121,12 +113,7 @@ describe('HtmlScraper', () => {
   });
 
   it('returns null on HTTP error (404)', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: false,
-      status: 404,
-      headers: { get: () => null },
-      text: async () => '',
-    }) as unknown as typeof fetch;
+    global.fetch = mockFetch({ ok: false, status: 404 });
 
     const result = await scraper.scrape('https://example.com/missing');
 
@@ -134,11 +121,7 @@ describe('HtmlScraper', () => {
   });
 
   it('returns null on non-HTML content type (application/pdf)', async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(
-        makeHtmlResponse('%PDF-1.4 ...', 'application/pdf'),
-      ) as unknown as typeof fetch;
+    global.fetch = mockHtmlFetch('%PDF-1.4 ...', 'application/pdf');
 
     const result = await scraper.scrape('https://example.com/doc.pdf');
 
@@ -146,9 +129,7 @@ describe('HtmlScraper', () => {
   });
 
   it('returns null on network failure (fetch rejects)', async () => {
-    global.fetch = jest
-      .fn()
-      .mockRejectedValue(new Error('ECONNREFUSED')) as unknown as typeof fetch;
+    global.fetch = mockFetch(new Error('ECONNREFUSED'));
 
     const result = await scraper.scrape('https://example.com/unreachable');
 
@@ -156,8 +137,8 @@ describe('HtmlScraper', () => {
   });
 
   it('returns null for empty URL without calling fetch', async () => {
-    const fetchSpy = jest.fn();
-    global.fetch = fetchSpy as unknown as typeof fetch;
+    const fetchSpy = makeFetchSpy();
+    global.fetch = fetchSpy;
 
     const result = await scraper.scrape('   ');
 
@@ -167,9 +148,7 @@ describe('HtmlScraper', () => {
 
   it('truncates content exceeding maxContentBytes', async () => {
     const smallScraper = new HtmlScraper({ timeoutMs: 5000, maxContentBytes: 20 });
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(makeHtmlResponse(ARTICLE_HTML)) as unknown as typeof fetch;
+    global.fetch = mockHtmlFetch(ARTICLE_HTML);
 
     const result = await smallScraper.scrape('https://example.com/article');
 
@@ -178,9 +157,7 @@ describe('HtmlScraper', () => {
   });
 
   it('returns a 16-char hex contentHash derived from textContent', async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(makeHtmlResponse(ARTICLE_HTML)) as unknown as typeof fetch;
+    global.fetch = mockHtmlFetch(ARTICLE_HTML);
 
     const result = await scraper.scrape('https://example.com/article');
 
@@ -189,10 +166,10 @@ describe('HtmlScraper', () => {
   });
 
   describe('SSRF protection', () => {
-    const fetchSpy = jest.fn();
+    const fetchSpy = makeFetchSpy();
 
     beforeEach(() => {
-      global.fetch = fetchSpy as unknown as typeof fetch;
+      global.fetch = fetchSpy;
     });
 
     it('rejects IPv4 loopback (127.0.0.1)', async () => {
@@ -327,6 +304,96 @@ describe('HtmlScraper', () => {
 
       expect(result).toBeNull();
       expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('rejects cloud-metadata hostname (metadata.google.internal) before DNS', async () => {
+      const result = await scraper.scrape('http://metadata.google.internal/latest');
+
+      expect(result).toBeNull();
+      expect(fetchSpy).not.toHaveBeenCalled();
+      // Blocked at hostname policy — DNS lookup never fires.
+      expect(mockLookup).not.toHaveBeenCalled();
+    });
+
+    it('rejects IPv4-mapped IPv6 private address (::ffff:192.168.1.1)', async () => {
+      mockLookup.mockResolvedValue({ address: '::ffff:192.168.1.1', family: 6 });
+
+      const result = await scraper.scrape('http://internal.example/data');
+
+      expect(result).toBeNull();
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('SSRF protection — manual redirect chain', () => {
+    let fetchSpy: jest.MockedFunction<typeof fetch>;
+
+    beforeEach(() => {
+      mockLookup.mockResolvedValue({ address: '93.184.216.34', family: 4 });
+      fetchSpy = makeFetchSpy();
+      global.fetch = fetchSpy;
+    });
+
+    it('blocks a 302 redirect targeting a private IPv4 (169.254.169.254)', async () => {
+      fetchSpy.mockResolvedValueOnce(makeRedirectResponse('http://169.254.169.254/latest'));
+
+      const result = await scraper.scrape('https://evil.example/start');
+
+      expect(result).toBeNull();
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('blocks a 302 redirect to file:// scheme', async () => {
+      fetchSpy.mockResolvedValueOnce(makeRedirectResponse('file:///etc/passwd'));
+
+      const result = await scraper.scrape('https://evil.example/start');
+
+      expect(result).toBeNull();
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('blocks a 302 redirect to a cloud-metadata hostname', async () => {
+      fetchSpy.mockResolvedValueOnce(
+        makeRedirectResponse('http://metadata.google.internal/latest'),
+      );
+
+      const result = await scraper.scrape('https://evil.example/start');
+
+      expect(result).toBeNull();
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('blocks a rebinding chain (public → public → private)', async () => {
+      fetchSpy.mockResolvedValueOnce(makeRedirectResponse('https://second-hop.example/next', 301));
+      fetchSpy.mockResolvedValueOnce(makeRedirectResponse('http://10.0.0.5/secret'));
+
+      const result = await scraper.scrape('https://start.example/path');
+
+      expect(result).toBeNull();
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('follows a safe redirect chain to a valid HTML page', async () => {
+      fetchSpy.mockResolvedValueOnce(
+        makeRedirectResponse('https://final-hop.example/article', 302),
+      );
+      fetchSpy.mockResolvedValueOnce(makeHtmlResponse(ARTICLE_HTML));
+
+      const result = await scraper.scrape('https://chain.example/start');
+
+      expect(result).not.toBeNull();
+      expect(result!.url).toBe('https://final-hop.example/article');
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('blocks a chain exceeding MAX_REDIRECTS (5)', async () => {
+      // Always-redirecting mock; loop must abort after MAX_REDIRECTS + 1 fetches.
+      fetchSpy.mockResolvedValue(makeRedirectResponse('https://next-hop.example/step'));
+
+      const result = await scraper.scrape('https://too-many.example/start');
+
+      expect(result).toBeNull();
+      expect(fetchSpy).toHaveBeenCalledTimes(6);
     });
   });
 });

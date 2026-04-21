@@ -188,4 +188,24 @@ describe('MemoryCacheService', () => {
       unrefSpy.mockRestore();
     });
   });
+
+  describe('destroy', () => {
+    it('clears the GC timer and empties the store', async () => {
+      const clearSpy = jest.spyOn(global, 'clearInterval');
+      const cache = new MemoryCacheService();
+      await cache.set('k', 'v');
+
+      await cache.destroy();
+
+      expect(clearSpy).toHaveBeenCalled();
+      expect(await cache.get('k')).toBeNull();
+      clearSpy.mockRestore();
+    });
+
+    it('is idempotent — safe to call multiple times', async () => {
+      const cache = new MemoryCacheService();
+      await cache.destroy();
+      await expect(cache.destroy()).resolves.toBeUndefined();
+    });
+  });
 });

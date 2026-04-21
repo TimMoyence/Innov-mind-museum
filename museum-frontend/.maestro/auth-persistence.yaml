@@ -1,0 +1,61 @@
+appId: com.musaium.mobile.preview
+---
+# Auth — login persistence across app relaunch
+#
+# Validates:
+#   1. login (quick-login helper)
+#   2. assert home is reached
+#   3. killApp
+#   4. launchApp
+#   5. assert we land on home (session restored from secure-store)
+#
+# This is the single flow that catches token persistence regressions —
+# a common break when expo-secure-store config changes or refresh token
+# rotation is disabled.
+
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 1: Login via helper
+# ──────────────────────────────────────────────
+- runFlow:
+    when:
+      visible: "Welcome back"
+    file: helpers/quick-login.yaml
+
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 2: Kill the app (simulates process eviction)
+# ──────────────────────────────────────────────
+- stopApp
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 3: Relaunch — session must be restored
+# ──────────────────────────────────────────────
+- launchApp:
+    clearState: false
+
+- waitForAnimationToEnd
+
+# Skip onboarding if shown (first relaunch might re-show it)
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+# We MUST land on home — NOT on the Welcome back auth screen.
+# This is the single assertion that proves token persistence works.
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 15000
+
+- assertNotVisible: "Welcome back"

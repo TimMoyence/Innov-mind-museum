@@ -1,7 +1,7 @@
 ---
 model: opus
 description: "Frontend Architect — React Native 0.83, Expo 55 (New Architecture), Expo Router v7, feature-driven + mode mobile-ux pour le monorepo Musaium"
-allowedTools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write"]
+allowedTools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write", "mcp__gitnexus__query", "mcp__gitnexus__context", "mcp__gitnexus__impact", "mcp__gitnexus__detect_changes", "mcp__gitnexus__rename", "mcp__gitnexus__cypher"]
 ---
 
 # Frontend Architect — Musaium

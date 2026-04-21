@@ -41,7 +41,7 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({ pendingCount, isOf
       accessibilityLabel={t('chat.lowDataActive')}
     >
       <Ionicons name="cellular-outline" size={16} color={theme.warningText} />
-      <Text style={[styles.text, { color: theme.warningText }]}>{t('chat.lowDataActive')}</Text>
+      <Text style={[styles.text, { color: theme.warningText }]}>{t('chat.lowDataDetails')}</Text>
     </View>
   );
 };

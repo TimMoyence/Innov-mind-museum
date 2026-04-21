@@ -2,7 +2,6 @@ import crypto from 'node:crypto';
 
 import bcrypt from 'bcrypt';
 import { ResetPasswordUseCase } from '@modules/auth/useCase/resetPassword.useCase';
-import type { IUserRepository } from '@modules/auth/domain/user.repository.interface';
 import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import { makeUserRepo } from '../../helpers/auth/user-repo.mock';
@@ -24,7 +23,7 @@ describe('ResetPasswordUseCase', () => {
 
   it('resets password with a valid token and valid password', async () => {
     const repo = makeUserRepo(makeUser());
-    const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
+    const useCase = new ResetPasswordUseCase(repo);
 
     const result = await useCase.execute('valid-reset-token', 'NewValid1');
 
@@ -42,7 +41,7 @@ describe('ResetPasswordUseCase', () => {
 
   it('passes hashed password to repo, never plaintext', async () => {
     const repo = makeUserRepo(makeUser());
-    const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
+    const useCase = new ResetPasswordUseCase(repo);
 
     await useCase.execute('token', 'SecurePass1');
 
@@ -53,7 +52,7 @@ describe('ResetPasswordUseCase', () => {
 
   it('uses BCRYPT_ROUNDS constant for hashing', async () => {
     const repo = makeUserRepo(makeUser());
-    const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
+    const useCase = new ResetPasswordUseCase(repo);
 
     await useCase.execute('token', 'SecurePass1');
 
@@ -65,7 +64,7 @@ describe('ResetPasswordUseCase', () => {
 
   it('throws 400 for password too short (< 8 chars)', async () => {
     const repo = makeUserRepo(makeUser());
-    const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
+    const useCase = new ResetPasswordUseCase(repo);
 
     await expect(useCase.execute('token', 'Ab1')).rejects.toMatchObject({
       statusCode: 400,
@@ -76,7 +75,7 @@ describe('ResetPasswordUseCase', () => {
 
   it('throws 400 for password without uppercase letter', async () => {
     const repo = makeUserRepo(makeUser());
-    const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
+    const useCase = new ResetPasswordUseCase(repo);
 
     await expect(useCase.execute('token', 'lowercase1')).rejects.toMatchObject({
       statusCode: 400,
@@ -86,7 +85,7 @@ describe('ResetPasswordUseCase', () => {
 
   it('throws 400 for password without lowercase letter', async () => {
     const repo = makeUserRepo(makeUser());
-    const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
+    const useCase = new ResetPasswordUseCase(repo);
 
     await expect(useCase.execute('token', 'UPPERCASE1')).rejects.toMatchObject({
       statusCode: 400,
@@ -96,7 +95,7 @@ describe('ResetPasswordUseCase', () => {
 
   it('throws 400 for password without digit', async () => {
     const repo = makeUserRepo(makeUser());
-    const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
+    const useCase = new ResetPasswordUseCase(repo);
 
     await expect(useCase.execute('token', 'NoDigitHere')).rejects.toMatchObject({
       statusCode: 400,
@@ -106,7 +105,7 @@ describe('ResetPasswordUseCase', () => {
 
   it('throws 400 for password too long (> 128 chars)', async () => {
     const repo = makeUserRepo(makeUser());
-    const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
+    const useCase = new ResetPasswordUseCase(repo);
     const longPassword = 'Aa1' + 'x'.repeat(126);
 
     await expect(useCase.execute('token', longPassword)).rejects.toMatchObject({
@@ -119,7 +118,7 @@ describe('ResetPasswordUseCase', () => {
 
   it('throws 400 when token is invalid or expired', async () => {
     const repo = makeUserRepo(null);
-    const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
+    const useCase = new ResetPasswordUseCase(repo);
 
     await expect(useCase.execute('expired-token', 'ValidPass1')).rejects.toMatchObject({
       statusCode: 400,
@@ -129,7 +128,7 @@ describe('ResetPasswordUseCase', () => {
 
   it('does not call bcrypt.hash when password validation fails', async () => {
     const repo = makeUserRepo(makeUser());
-    const useCase = new ResetPasswordUseCase(repo as unknown as IUserRepository);
+    const useCase = new ResetPasswordUseCase(repo);
 
     await expect(useCase.execute('token', 'weak')).rejects.toMatchObject({
       statusCode: 400,

@@ -20,12 +20,14 @@ import {
   setTokenProvider,
   setUnauthorizedHandler,
 } from '@/shared/infrastructure/httpClient';
+import { queryClient, resetPersistedCache } from '@/shared/data/queryClient';
 
 import {
   extractUserIdFromToken,
   isAccessTokenExpired,
   isAuthInvalidError,
 } from '../domain/authLogic.pure';
+import { useAuthAppStateSync } from './useAuthAppStateSync';
 
 /** Extracts user ID from a JWT access token and sets Sentry user context. Non-critical — fails silently. */
 const identifySentryUser = (accessToken: string): void => {
@@ -36,6 +38,19 @@ const identifySentryUser = (accessToken: string): void => {
 SplashScreen.preventAutoHideAsync().catch(() => {
   /* fire-and-forget */
 });
+
+const bootstrapBreadcrumb = (step: string, data?: Record<string, unknown>): void => {
+  try {
+    Sentry.addBreadcrumb({
+      category: 'auth.bootstrap',
+      level: 'info',
+      message: step,
+      data,
+    });
+  } catch {
+    /* Sentry may not be initialised in tests */
+  }
+};
 
 interface SessionData {
   accessToken: string;
@@ -102,12 +117,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const bootstrap = async (): Promise<void> => {
+      const startedAt = Date.now();
+      bootstrapBreadcrumb('start');
       try {
         const refreshToken = await authStorage.getRefreshToken();
         if (!refreshToken) {
           await clearPersistedTokens();
           setIsAuthenticated(false);
           setIsFirstLaunch(true);
+          bootstrapBreadcrumb('no_refresh_token');
           return;
         }
 
@@ -121,6 +139,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           identifySentryUser(cachedAccess);
           const biometricOn = await getBiometricEnabled();
           if (biometricOn) setIsBiometricLocked(true);
+          bootstrapBreadcrumb('token_valid', { duration_ms: Date.now() - startedAt });
           return;
         }
 
@@ -167,6 +186,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsFirstLaunch(true);
       } finally {
         setIsLoading(false);
+        bootstrapBreadcrumb('done', { duration_ms: Date.now() - startedAt });
         try {
           await SplashScreen.hideAsync();
         } catch {
@@ -177,6 +197,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     void bootstrap();
   }, []);
+
+  const silentRefresh = useCallback(async (): Promise<string | null> => {
+    const refreshToken = await authStorage.getRefreshToken();
+    if (!refreshToken) return null;
+    try {
+      const session = await authService.refresh(refreshToken);
+      await persistSessionTokens(session.accessToken, session.refreshToken);
+      setAccessToken(session.accessToken);
+      identifySentryUser(session.accessToken);
+      return session.accessToken;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  useAuthAppStateSync(silentRefresh, {
+    onForeground: (durationMs) => {
+      if (durationMs > 30_000) {
+        // User was away long enough that volatile data (notifications, sessions)
+        // is likely stale. Invalidate only that scope — everything else stays
+        // cached so returning feels instant.
+        void queryClient.invalidateQueries({ queryKey: ['me'] });
+        void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      }
+    },
+  });
 
   useEffect(() => {
     setTokenProvider(getAccessToken);
@@ -211,6 +257,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     setUnauthorizedHandler(() => {
       void clearPersistedTokens();
+      void resetPersistedCache();
       setIsAuthenticated(false);
       setIsFirstLaunch(null);
       Sentry.setUser(null);
@@ -237,6 +284,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Token clear failure is non-critical — proceed with logout
     }
 
+    await resetPersistedCache();
     setIsAuthenticated(false);
     setIsFirstLaunch(null);
     Sentry.setUser(null);

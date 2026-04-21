@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 
 import type { ReviewDTO, ReviewStatsResponse } from '../infrastructure/reviewApi';
 import { reviewApi } from '../infrastructure/reviewApi';
+import { getErrorMessage } from '@/shared/lib/errors';
+import { createAppError } from '@/shared/types/AppError';
 
 interface UseReviewsReturn {
   reviews: ReviewDTO[];
@@ -44,7 +46,15 @@ export const useReviews = (): UseReviewsReturn => {
         setTotalPages(reviewsRes.totalPages);
         setPage(1);
       } catch {
-        setError('Failed to load reviews');
+        setError(
+          getErrorMessage(
+            createAppError({
+              kind: 'Review',
+              code: 'load_failed',
+              message: 'Failed to load reviews',
+            }),
+          ),
+        );
       } finally {
         setLoading(false);
       }
@@ -65,7 +75,15 @@ export const useReviews = (): UseReviewsReturn => {
         setPage(nextPage);
       })
       .catch(() => {
-        setError('Failed to load more reviews');
+        setError(
+          getErrorMessage(
+            createAppError({
+              kind: 'Review',
+              code: 'load_more_failed',
+              message: 'Failed to load more reviews',
+            }),
+          ),
+        );
       })
       .finally(() => {
         setLoading(false);
@@ -78,24 +96,21 @@ export const useReviews = (): UseReviewsReturn => {
       setSubmitError(null);
       try {
         const { review } = await reviewApi.submitReview(rating, comment, userName);
-        // Optimistic: add the review locally (backend returns it as pending,
-        // it may not appear in the approved list yet, but we show it to the submitter)
+        // Optimistic: add the review locally so submitter sees it immediately (pending state).
+        // Stats are NOT mutated here — backend filters stats to approved reviews only,
+        // so we wait for the next refetch to keep client/server in sync.
         setReviews((prev) => [review, ...prev]);
-        setStats((prev) =>
-          prev
-            ? {
-                average: (prev.average * prev.count + rating) / (prev.count + 1),
-                count: prev.count + 1,
-              }
-            : { average: rating, count: 1 },
-        );
+        void reviewApi
+          .getStats()
+          .then(setStats)
+          .catch(() => undefined);
         return true;
       } catch (err) {
-        const message =
+        const code =
           err instanceof Error && err.message.includes('409')
             ? 'already_reviewed'
             : 'submit_failed';
-        setSubmitError(message);
+        setSubmitError(getErrorMessage(createAppError({ kind: 'Review', code, message: code })));
         return false;
       } finally {
         setSubmitLoading(false);

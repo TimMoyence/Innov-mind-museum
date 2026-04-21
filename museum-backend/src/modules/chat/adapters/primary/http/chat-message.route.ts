@@ -43,14 +43,11 @@ function parseMessageInput(req: Request): {
   const bodyPayload = parsePostMessageRequest(parseableBody);
   const parsedContext = parseContext(rawBody.context) ?? bodyPayload.context;
 
-  const dataMode = req.headers['x-data-mode'];
-  const lowDataMode = dataMode === 'low';
-
   const context = {
     ...parsedContext,
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
     locale: parsedContext?.locale || req.clientLocale,
-    lowDataMode,
+    lowDataMode: req.dataMode === 'low',
   };
   return { bodyPayload, context };
 }
@@ -132,6 +129,12 @@ function createStreamHandler(chatService: ChatService) {
   return async (req: Request, res: Response) => {
     logger.warn('sse.stream.deprecated.hit', { sessionId: req.params.id });
 
+    // RFC 9745 (Deprecation) + RFC 8594 (Sunset) — signals programmatic migration path
+    res.set({
+      Deprecation: 'true',
+      Sunset: 'Sun, 01 Jun 2026 00:00:00 GMT',
+      Link: `</api/chat/sessions/${req.params.id}/messages>; rel="successor-version"`,
+    });
     res.setTimeout(0);
     req.socket.setTimeout(0);
     initSseResponse(res);

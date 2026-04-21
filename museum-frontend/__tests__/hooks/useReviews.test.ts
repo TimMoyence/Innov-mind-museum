@@ -98,9 +98,13 @@ describe('useReviews', () => {
     expect(result.current.hasMore).toBe(false);
   });
 
-  it('adds review optimistically after submit', async () => {
+  it('adds review optimistically but does not inflate stats before refetch', async () => {
     const newReview = makeReview({ id: 'new-1', rating: 5, comment: 'Amazing!' });
     mockSubmitReview.mockResolvedValue({ review: newReview });
+    // Server returns updated stats after the post-submit refetch
+    mockGetStats
+      .mockResolvedValueOnce(defaultStats) // initial load
+      .mockResolvedValueOnce({ average: 4.3, count: 16 }); // post-submit refetch
 
     const { result } = renderHook(() => useReviews());
 
@@ -114,8 +118,13 @@ describe('useReviews', () => {
     });
 
     expect(submitResult).toBe(true);
+    // Review is added to the local list immediately
     expect(result.current.reviews[0].id).toBe('new-1');
-    expect(result.current.stats?.count).toBe(16);
+    // Stats come from a server refetch, not a local calculation
+    await waitFor(() => {
+      expect(result.current.stats?.count).toBe(16);
+    });
+    expect(mockGetStats).toHaveBeenCalledTimes(2);
   });
 
   it('sets error on load failure', async () => {
@@ -128,7 +137,7 @@ describe('useReviews', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.error).toBe('Failed to load reviews');
+    expect(result.current.error).toBe('Failed to load reviews.');
   });
 
   it('sets already_reviewed error on 409 conflict', async () => {
@@ -146,6 +155,6 @@ describe('useReviews', () => {
     });
 
     expect(submitResult).toBe(false);
-    expect(result.current.submitError).toBe('already_reviewed');
+    expect(result.current.submitError).toBe('You have already submitted a review.');
   });
 });

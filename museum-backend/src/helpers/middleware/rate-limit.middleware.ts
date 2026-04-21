@@ -32,7 +32,21 @@ interface RateLimitOptions {
   limit: number;
   windowMs: number;
   keyGenerator: (req: Parameters<RequestHandler>[0]) => string;
+  /**
+   * Optional bucket namespace. Each middleware instance needs a distinct prefix so
+   * limiters sharing the same keyGenerator (e.g. multiple `byIp` middlewares) do not
+   * share the same bucket counter. Defaults to an auto-incremented sequence — callers
+   * with a semantic name (e.g. `"register"`) should pass it explicitly for clarity
+   * and for stable Redis keys across deployments.
+   */
+  bucketName?: string;
 }
+
+let anonymousBucketSeq = 0;
+const nextAnonymousBucketName = (): string => {
+  anonymousBucketSeq += 1;
+  return `anon-${String(anonymousBucketSeq)}`;
+};
 
 /**
  * Creates a sliding-window rate-limit middleware.
@@ -43,15 +57,18 @@ interface RateLimitOptions {
  * @param root0.limit - Maximum number of requests per window.
  * @param root0.windowMs - Window duration in milliseconds.
  * @param root0.keyGenerator - Function to extract a bucket key from the request.
+ * @param root0.bucketName - Optional bucket namespace for isolation from sibling limiters.
  * @returns Express middleware that rejects excess requests with 429.
  */
 export const createRateLimitMiddleware = ({
   limit,
   windowMs,
   keyGenerator,
+  bucketName,
 }: RateLimitOptions): RequestHandler => {
+  const namespace = bucketName ?? nextAnonymousBucketName();
   return (req, res, next) => {
-    const key = keyGenerator(req);
+    const key = `${namespace}:${keyGenerator(req)}`;
 
     if (redisStore) {
       void redisStore

@@ -318,10 +318,18 @@ adminRouter.patch(
   async (req: Request, res: Response) => {
     const reviewId = req.params.id;
     const { status } = req.body as { status: string };
+    const actorId = req.user?.id;
+    if (!actorId) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
+      return;
+    }
 
     const updated = await moderateReviewUseCaseInstance.execute({
       reviewId,
       status,
+      actorId,
+      ip: req.ip,
+      requestId: (req as { requestId?: string }).requestId,
     });
 
     res.json({ review: updated });

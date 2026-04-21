@@ -19,6 +19,8 @@ export default tseslint.config(
       'babel.config.js',
       'jest.config.js',
       'eslint.config.mjs',
+      'metro.config.js',
+      'index.js',
       'scripts/',
       'plugins/',
       'coverage/',
