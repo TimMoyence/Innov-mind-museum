@@ -27,7 +27,7 @@ esac
 
 # Skip non-source files (configs, lockfiles, team-knowledge)
 case "$FILE_PATH" in
-  *node_modules*|*pnpm-lock*|*package-lock*|*.claude/team-knowledge*|*.claude/team-reports*)
+  *node_modules*|*pnpm-lock*|*package-lock*|*.claude/*team-knowledge*|*.claude/*team-reports*)
     exit 0
     ;;
 esac
