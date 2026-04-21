@@ -1,6 +1,6 @@
 {
   "backend": {
-    "testCount": 2812,
+    "testCount": 2822,
     "asAnyCount": 0,
     "eslintDisableCount": 0,
     "tscErrors": 0
@@ -69,6 +69,14 @@
       "backend": { "testsBefore": 2645, "testsAfter": 2812, "delta": 167 },
       "frontend": { "testsBefore": 1096, "testsAfter": 1443, "delta": 347 },
       "web": { "testsBefore": 179, "testsAfter": 189, "delta": 10 }
+    },
+    {
+      "date": "2026-04-21",
+      "mode": "refactor",
+      "description": "Enterprise audit Sprint 2: PrepareMessagePipeline extraction (ChatMessageService 467→240 LOC), guardrail allow-path observability (AUDIT_SECURITY_GUARDRAIL_PASS), KE admin review endpoints (GET /ke/pending + PATCH /ke/:id/approve), port extension + TypeORM impl + wiring + 10 unit tests",
+      "backend": { "testsBefore": 2812, "testsAfter": 2822, "delta": 10 },
+      "frontend": { "testsBefore": 1443, "testsAfter": 1443, "delta": 0 },
+      "web": { "testsBefore": 189, "testsAfter": 189, "delta": 0 }
     }
   ]
 }
