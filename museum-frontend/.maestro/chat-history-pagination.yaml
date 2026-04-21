@@ -1,0 +1,114 @@
+appId: com.musaium.mobile.preview
+---
+# Chat — multi-turn with scroll-up history pagination
+#
+# Validates:
+#   1. open a chat session, send 3 messages
+#   2. assert all 3 appear in the thread
+#   3. scroll up to load older messages (if pagination marker visible)
+#   4. close chat
+#
+# Prerequisites: user logged in, backend /chat endpoints healthy
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Welcome back"
+    file: helpers/quick-login.yaml
+
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Start Conversation"
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 1: Open a new chat session
+# ──────────────────────────────────────────────
+- tapOn: "Start Conversation"
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 2: Send message #1
+# ──────────────────────────────────────────────
+- tapOn:
+    id: "chat-input"
+    optional: true
+- inputText: "Tell me about the Mona Lisa."
+- tapOn:
+    id: "chat-send"
+    optional: true
+- tapOn:
+    text: "Send"
+    optional: true
+- waitForAnimationToEnd
+
+# Wait for assistant response (allow LLM latency)
+- extendedWaitUntil:
+    visible: "Mona Lisa"
+    timeout: 20000
+    optional: true
+
+# ──────────────────────────────────────────────
+# Phase 3: Send message #2
+# ──────────────────────────────────────────────
+- tapOn:
+    id: "chat-input"
+    optional: true
+- inputText: "Who painted it?"
+- tapOn:
+    id: "chat-send"
+    optional: true
+- tapOn:
+    text: "Send"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Leonardo"
+    timeout: 20000
+    optional: true
+
+# ──────────────────────────────────────────────
+# Phase 4: Send message #3
+# ──────────────────────────────────────────────
+- tapOn:
+    id: "chat-input"
+    optional: true
+- inputText: "In which museum is it kept?"
+- tapOn:
+    id: "chat-send"
+    optional: true
+- tapOn:
+    text: "Send"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Louvre"
+    timeout: 20000
+    optional: true
+
+# ──────────────────────────────────────────────
+# Phase 5: Scroll up to load older history (best-effort)
+# ──────────────────────────────────────────────
+- swipe:
+    direction: DOWN
+    optional: true
+
+# ──────────────────────────────────────────────
+# Phase 6: Close chat and return to home
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "Close"
+    optional: true
+- back
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 10000

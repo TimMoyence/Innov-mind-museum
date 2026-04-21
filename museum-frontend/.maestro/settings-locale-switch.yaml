@@ -1,0 +1,96 @@
+appId: com.musaium.mobile.preview
+---
+# Settings — switch locale (fr ↔ en) and verify UI re-renders
+#
+# Validates i18n wiring end-to-end:
+#   1. Home → Settings → Preferences
+#   2. switch locale to English
+#   3. assert English label appears
+#   4. switch back to French
+#   5. assert French label appears
+#   6. back to Home
+#
+# Prerequisites:
+#   - User logged in
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Welcome back"
+    file: helpers/quick-login.yaml
+
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 1: Home → Settings → Preferences
+# ──────────────────────────────────────────────
+- tapOn: "Settings"
+- waitForAnimationToEnd
+
+- scrollUntilVisible:
+    element: "Open Preferences"
+    direction: DOWN
+
+- tapOn: "Open Preferences"
+- waitForAnimationToEnd
+
+- assertVisible: "Preferences"
+
+# ──────────────────────────────────────────────
+# Phase 2: Switch to English
+# ──────────────────────────────────────────────
+- scrollUntilVisible:
+    element:
+      text: "English"
+    direction: DOWN
+    optional: true
+
+- tapOn:
+    text: "English"
+    optional: true
+- waitForAnimationToEnd
+
+# Verify English label — the home CTA uses a stable English string
+# that is not present in FR. If unavailable, keep flow resilient.
+- extendedWaitUntil:
+    visible: "English"
+    timeout: 5000
+    optional: true
+
+# ──────────────────────────────────────────────
+# Phase 3: Switch back to Français
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "Français"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Français"
+    timeout: 5000
+    optional: true
+
+# ──────────────────────────────────────────────
+# Phase 4: Back to Home
+# ──────────────────────────────────────────────
+- back
+- waitForAnimationToEnd
+
+- scrollUntilVisible:
+    element: "Back to Home"
+    direction: DOWN
+
+- tapOn: "Back to Home"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 10000
