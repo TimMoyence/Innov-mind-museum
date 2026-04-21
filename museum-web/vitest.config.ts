@@ -16,5 +16,26 @@ export default defineConfig({
     setupFiles: ['./src/__tests__/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
     css: false,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov', 'json-summary'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/*.test.{ts,tsx}',
+        'src/**/*.spec.{ts,tsx}',
+        'src/__tests__/**',
+        'src/app/**/layout.tsx',
+        'src/app/**/error.tsx',
+        'src/app/**/loading.tsx',
+        'src/app/**/not-found.tsx',
+      ],
+      // Initial floor per ADR-007 — ratchets upward each quarter.
+      thresholds: {
+        lines: 70,
+        branches: 60,
+        functions: 70,
+        statements: 70,
+      },
+    },
   },
 });

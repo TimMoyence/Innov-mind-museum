@@ -66,6 +66,8 @@ jobs:
 
       - name: Test
         run: pnpm test
+      # Coverage gate (vitest.config.ts thresholds) activates after Bloc C5 lands
+      # 10 admin panel tests bringing museum-web above the 70 % floor — see ADR-007.
 
   lighthouse:
     needs: quality
