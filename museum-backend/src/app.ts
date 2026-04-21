@@ -13,6 +13,7 @@ import { setupSentryExpressErrorHandler } from '@shared/observability/sentry';
 import { createApiRouter } from '@shared/routers/api.router';
 import { env } from '@src/config/env';
 import { AppDataSource } from '@src/data/db/data-source';
+import { resolveCorsOrigin } from '@src/helpers/cors.config';
 import { dataModeMiddleware } from '@src/helpers/dataMode.middleware';
 import { acceptLanguageMiddleware } from '@src/helpers/middleware/accept-language.middleware';
 import { errorHandler } from '@src/helpers/middleware/error.middleware';
@@ -53,8 +54,7 @@ function applyGlobalMiddleware(app: Express): void {
   app.use(requestIdMiddleware);
   app.use(requestLoggerMiddleware);
 
-  const corsOrigins: cors.CorsOptions['origin'] =
-    env.corsOrigins.length > 0 ? env.corsOrigins : !isProd;
+  const corsOrigins = resolveCorsOrigin(env.corsOrigins, isProd);
 
   app.use(
     cors({
