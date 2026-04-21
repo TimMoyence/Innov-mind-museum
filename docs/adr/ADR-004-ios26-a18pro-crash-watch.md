@@ -47,4 +47,4 @@ Until Expo publishes a fix:
 
 - [expo/expo#44680](https://github.com/expo/expo/issues/44680)
 - [Expo SDK 55 changelog](https://expo.dev/changelog/sdk-55)
-- Audit enterprise-grade 2026-04-20 : `/Users/Tim/.claude/plans/generic-squishing-manatee.md` (Phase 7)
+- Audit enterprise-grade 2026-04-20 : [`docs/plans/MASTER_PLAN.md`](../plans/MASTER_PLAN.md) (Phase 7)

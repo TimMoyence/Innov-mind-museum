@@ -1,9 +1,10 @@
 # Plans Modulaires — Musaium
 
-## Plans actifs
+## Plan courant
 
-Aucun plan isolé actif dans ce dossier. Le plan courant est consolidé par l'**audit enterprise-grade du 2026-04-20** :
-- `/Users/Tim/.claude/plans/generic-squishing-manatee.md` — 7 phases, priorités cross-validées
+Le plan enterprise-grade courant est consolidé dans :
+
+- [`MASTER_PLAN.md`](MASTER_PLAN.md) — audit 2026-04-20, 8 phases, priorités cross-validées (GitNexus + WebSearch + 3 agents Explore).
 
 ## Plans archivés (2026-04-17)
 
@@ -13,6 +14,6 @@ Les rapports associés sont dans [`docs/archive/nl-reports-2026-04-17/reports/`]
 
 ## Références
 
-- **Audit courant** : `/Users/Tim/.claude/plans/generic-squishing-manatee.md`
 - **Roadmap V2** : [`docs/ROADMAP_V2.md`](../ROADMAP_V2.md)
+- **Roadmap Active** : [`docs/ROADMAP_ACTIVE.md`](../ROADMAP_ACTIVE.md)
 - **Index docs** : [`docs/DOCS_INDEX.md`](../DOCS_INDEX.md)

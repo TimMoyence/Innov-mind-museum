@@ -53,4 +53,4 @@ The InnovMind backend is at `typeorm@^0.3.27` (113 migrations, 19 entities, heav
 
 - [TypeORM 1.0 Release Notes](https://dev.typeorm.io/docs/releases/1.0/release-notes/)
 - [Release plan #11819](https://github.com/typeorm/typeorm/issues/11819)
-- Audit enterprise-grade 2026-04-20 : `/Users/Tim/.claude/plans/generic-squishing-manatee.md` (Phase 3)
+- Audit enterprise-grade 2026-04-20 : [`docs/plans/MASTER_PLAN.md`](../plans/MASTER_PLAN.md) (Phase 3)

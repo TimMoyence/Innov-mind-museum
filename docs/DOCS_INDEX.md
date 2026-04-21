@@ -12,24 +12,26 @@
 | Roadmap V2 | [`docs/ROADMAP_V2.md`](ROADMAP_V2.md) |
 | Roadmap Active (résumé) | [`docs/ROADMAP_ACTIVE.md`](ROADMAP_ACTIVE.md) |
 
-## Plans Modulaires (Next Level 2026-04-17)
+## Plans Modulaires (Next Level 2026-04-17, archived)
 
-Tous dans [`docs/plans/`](plans/README.md) :
+Les 12 plans modulaires issus de l'audit Next Level du 2026-04-17 ont été archivés dans [`docs/archive/plans-2026-04-17/`](archive/plans-2026-04-17/) :
 
 | # | Plan | Phase |
 |---|---|---|
-| [01](plans/PLAN_01_DOCS_CLEANUP.md) | Docs Cleanup | 1 |
-| [02](plans/PLAN_02_TEAM_HARDENING.md) | /team Skill Hardening | 1 |
-| [03](plans/PLAN_03_GITNEXUS_CARTOGRAPHY.md) | GitNexus Cartography | 1 |
-| [04](plans/PLAN_04_BACKEND_CHAT_SLIM.md) | Backend Chat Slim | 2 |
-| [05](plans/PLAN_05_BACKEND_SHARED_TESTS.md) | Backend shared/ Tests | 2 |
-| [06](plans/PLAN_06_BACKEND_WEBSEARCH_UNIFY.md) | Web Search Unify | 2 |
-| [07](plans/PLAN_07_MOBILE_TESTS_SETUP.md) | Mobile Tests Setup | 2 |
-| [08](plans/PLAN_08_MOBILE_CHAT_SPLIT.md) | Mobile Chat Split | 2 |
-| [09](plans/PLAN_09_MOBILE_I18N_A11Y.md) | Mobile i18n + A11y | 2 |
-| [10](plans/PLAN_10_ART_KEYWORDS_R15_FINALIZE.md) | Art Keywords R15 | 2 |
-| [11](plans/PLAN_11_AI_GUARDRAILS_V2.md) | AI Guardrails V2 | 3 |
-| [12](plans/PLAN_12_MOBILE_PERF_V2.md) | Mobile Perf V2 | 3 |
+| [01](archive/plans-2026-04-17/PLAN_01_DOCS_CLEANUP.md) | Docs Cleanup | 1 |
+| [02](archive/plans-2026-04-17/PLAN_02_TEAM_HARDENING.md) | /team Skill Hardening | 1 |
+| [03](archive/plans-2026-04-17/PLAN_03_GITNEXUS_CARTOGRAPHY.md) | GitNexus Cartography | 1 |
+| [04](archive/plans-2026-04-17/PLAN_04_BACKEND_CHAT_SLIM.md) | Backend Chat Slim | 2 |
+| [05](archive/plans-2026-04-17/PLAN_05_BACKEND_SHARED_TESTS.md) | Backend shared/ Tests | 2 |
+| [06](archive/plans-2026-04-17/PLAN_06_BACKEND_WEBSEARCH_UNIFY.md) | Web Search Unify | 2 |
+| [07](archive/plans-2026-04-17/PLAN_07_MOBILE_TESTS_SETUP.md) | Mobile Tests Setup | 2 |
+| [08](archive/plans-2026-04-17/PLAN_08_MOBILE_CHAT_SPLIT.md) | Mobile Chat Split | 2 |
+| [09](archive/plans-2026-04-17/PLAN_09_MOBILE_I18N_A11Y.md) | Mobile i18n + A11y | 2 |
+| [10](archive/plans-2026-04-17/PLAN_10_ART_KEYWORDS_R15_FINALIZE.md) | Art Keywords R15 | 2 |
+| [11](archive/plans-2026-04-17/PLAN_11_AI_GUARDRAILS_V2.md) | AI Guardrails V2 | 3 |
+| [12](archive/plans-2026-04-17/PLAN_12_MOBILE_PERF_V2.md) | Mobile Perf V2 | 3 |
+
+> Plan courant consolidé dans [`docs/plans/MASTER_PLAN.md`](plans/MASTER_PLAN.md) (audit enterprise-grade 2026-04-20).
 
 ## Opérations & Runbook
 
@@ -57,7 +59,7 @@ Tous dans [`docs/plans/`](plans/README.md) :
 |---|---|
 | Walk Backlog | [`docs/walk/BACKLOG.md`](walk/BACKLOG.md) |
 | Walk Roadmap | [`docs/walk/ROADMAP.md`](walk/ROADMAP.md) |
-| Sprint 0-5 | [`docs/walk/SPRINT_0.md`](walk/SPRINT_0.md) … [`SPRINT_5.md`](walk/SPRINT_5.md) |
+| Sprint 0-3 | [`docs/walk/SPRINT_0.md`](walk/SPRINT_0.md), [`SPRINT_1.md`](walk/SPRINT_1.md), [`SPRINT_2.md`](walk/SPRINT_2.md), [`SPRINT_3.md`](walk/SPRINT_3.md) |
 
 ## Mobile & Store
 
@@ -80,7 +82,6 @@ Tous dans [`docs/plans/`](plans/README.md) :
 ## Archive (historical reference)
 
 - [`docs/archive/roadmaps/V3_REVIEW_AND_PLAN.md`](archive/roadmaps/V3_REVIEW_AND_PLAN.md) — V3 review (source ROADMAP_ACTIVE)
-- [`docs/archive/roadmaps/V2_MUSEUM_WALK_STRATEGY.md`](archive/roadmaps/V2_MUSEUM_WALK_STRATEGY.md) — V2 walk strategy
 - [`docs/archive/fullcodebase-analyse/`](archive/fullcodebase-analyse/) — analyse initiale pré-Sprint 1 (12 rapports, référence historique)
 
 ## Skills & Agents (`.claude/`)

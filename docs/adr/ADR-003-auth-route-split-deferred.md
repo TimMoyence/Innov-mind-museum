@@ -61,4 +61,4 @@ Split strategy to adopt when executed:
 
 ## Links
 
-- Audit enterprise-grade 2026-04-20 : `/Users/Tim/.claude/plans/generic-squishing-manatee.md` (Phase 4)
+- Audit enterprise-grade 2026-04-20 : [`docs/plans/MASTER_PLAN.md`](../plans/MASTER_PLAN.md) (Phase 4)

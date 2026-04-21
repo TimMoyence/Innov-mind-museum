@@ -323,6 +323,20 @@ These are the ONLY categories where `eslint-disable` is acceptable in this proje
 - `no-namespace` for Express `declare global { namespace Express }` Request augmentation — the standard pattern required by `@types/express`
 - `max-lines-per-function` on TypeORM migration files — single atomic `up()` cannot be split
 
+## Team reports lifecycle
+
+Two locations exist for `/team` skill artefacts — they are **not duplicates**, they have different roles:
+
+| Path | Role | Writer |
+|---|---|---|
+| `.claude/skills/team/team-reports/` | **Runtime active** — the `/team` skill writes here. Contains `working/<date>-<slug>/` scratch pads (ephemeral) and recently-closed runs (≤30 days). | `/team` skill runs |
+| `/team-reports/` (repo root) | **Archive read-only** — closed audits, brainstorms, external reports. Git-ignored by default; only `README.md` is versioned. | Manual promotion from runtime after ~30 days |
+
+Rules :
+- Agents MUST write to `.claude/skills/team/team-reports/`, never to `/team-reports/`.
+- A report in `working/` is disposable; graduate it out of `working/` when the sprint closes.
+- Promotion runtime → archive is manual for now. A future `scripts/archive-team-reports.sh` may automate it.
+
 ## Deployment
 
 - Backend: Docker image → GHCR → VPS OVH (see `docs/OPS_DEPLOYMENT.md`)
@@ -339,7 +353,7 @@ Alternatives for future: Drizzle (S-tier 2026), Prisma 7, Kysely.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **InnovMind** (5912 symbols, 15222 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **InnovMind** (5941 symbols, 15371 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
