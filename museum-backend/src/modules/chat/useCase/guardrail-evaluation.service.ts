@@ -1,4 +1,7 @@
-import { AUDIT_SECURITY_GUARDRAIL_BLOCK } from '@shared/audit/audit.types';
+import {
+  AUDIT_SECURITY_GUARDRAIL_BLOCK,
+  AUDIT_SECURITY_GUARDRAIL_PASS,
+} from '@shared/audit/audit.types';
 import { logger } from '@shared/logger/logger';
 
 import {
@@ -155,9 +158,13 @@ export class GuardrailEvaluationService {
     if (!advanced.allow) return advanced;
 
     // When preClassified === 'art', skip the soft off-topic classifier — trust frontend hint
-    if (preClassified === 'art') return { allow: true };
+    if (preClassified === 'art') {
+      logger.info(AUDIT_SECURITY_GUARDRAIL_PASS, { phase: 'input', preClassified: true });
+      return { allow: true };
+    }
 
     // Default: no soft check in the synchronous guardrail (LLM classifier runs on output side)
+    logger.info(AUDIT_SECURITY_GUARDRAIL_PASS, { phase: 'input', preClassified: false });
     return decision;
   }
 
@@ -294,6 +301,12 @@ export class GuardrailEvaluationService {
       }
     }
 
+    const hasClassifier = Boolean(this.artTopicClassifier);
+    logger.info(AUDIT_SECURITY_GUARDRAIL_PASS, {
+      phase: 'output',
+      classifierRan: hasClassifier,
+      advancedRan: Boolean(this.advancedGuardrail),
+    });
     return { text, metadata, allowed: true };
   }
 }
