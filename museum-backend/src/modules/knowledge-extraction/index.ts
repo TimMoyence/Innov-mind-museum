@@ -13,13 +13,15 @@ import { ContentClassifierService } from './useCase/content-classifier.service';
 import { DbLookupService } from './useCase/db-lookup.service';
 import { ExtractionJobService } from './useCase/extraction-job.service';
 
+import type { ArtworkKnowledgeRepoPort } from './domain/ports/artwork-knowledge-repo.port';
 import type { ExtractionQueuePort } from './domain/ports/extraction-queue.port';
 import type { DataSource } from 'typeorm';
 
-/** Built module output -- consumed by ChatModule. */
+/** Built module output -- consumed by ChatModule and admin routes. */
 export interface BuiltKnowledgeExtractionModule {
   dbLookup: DbLookupService;
   extractionQueue?: ExtractionQueuePort;
+  artworkKnowledgeRepo: ArtworkKnowledgeRepoPort;
   close: () => Promise<void>;
 }
 
@@ -34,7 +36,7 @@ export class KnowledgeExtractionModule {
 
     if (!env.adminFlags.enableExtraction) {
       logger.info('knowledge_extraction_disabled');
-      return { dbLookup, close: () => Promise.resolve() };
+      return { dbLookup, artworkKnowledgeRepo: artworkRepo, close: () => Promise.resolve() };
     }
 
     const openaiKey = env.llm.openAiApiKey;
@@ -42,7 +44,7 @@ export class KnowledgeExtractionModule {
       logger.warn('knowledge_extraction_no_openai_key', {
         reason: 'OPENAI_API_KEY required for content classification',
       });
-      return { dbLookup, close: () => Promise.resolve() };
+      return { dbLookup, artworkKnowledgeRepo: artworkRepo, close: () => Promise.resolve() };
     }
 
     return this.buildPipeline(dbLookup, openaiKey, contentRepo, artworkRepo, museumRepo);
@@ -93,6 +95,11 @@ export class KnowledgeExtractionModule {
       concurrency: env.extraction.queueConcurrency,
     });
 
-    return { dbLookup, extractionQueue: worker, close: () => worker.close() };
+    return {
+      dbLookup,
+      extractionQueue: worker,
+      artworkKnowledgeRepo: artworkRepo,
+      close: () => worker.close(),
+    };
   }
 }

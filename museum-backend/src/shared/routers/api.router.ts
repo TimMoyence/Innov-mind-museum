@@ -1,11 +1,13 @@
 import { Router } from 'express';
 
+import { createAdminKeRouter } from '@modules/admin/adapters/primary/http/admin-ke.route';
 import adminRouter from '@modules/admin/adapters/primary/http/admin.route';
 import { createCachePurgeRouter } from '@modules/admin/adapters/primary/http/cache-purge.route';
 import authRouter from '@modules/auth/adapters/primary/http/auth.route';
 import { createChatRouter } from '@modules/chat/adapters/primary/http/chat.route';
 import {
   getArtKeywordRepository,
+  getArtworkKnowledgeRepo,
   getDescribeService,
   getLlmCircuitBreakerState,
   getUserMemoryService,
@@ -186,6 +188,10 @@ function mountDomainRouters(
 
   router.use('/admin', adminRouter);
   router.use('/admin', createCachePurgeRouter(resolvedCache));
+  const artworkKnowledgeRepo = getArtworkKnowledgeRepo();
+  if (artworkKnowledgeRepo) {
+    router.use('/admin', createAdminKeRouter(artworkKnowledgeRepo));
+  }
   router.use('/support', supportRouter);
   router.use('/reviews', reviewRouter);
 }

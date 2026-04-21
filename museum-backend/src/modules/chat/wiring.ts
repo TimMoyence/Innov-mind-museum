@@ -11,6 +11,7 @@ import type { ArtKeywordRepository } from './domain/artKeyword.repository.interf
 import type { ImageStorage } from './domain/ports/image-storage.port';
 import type { DescribeService } from './useCase/describe.service';
 import type { UserMemoryService } from './useCase/user-memory.service';
+import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 
 export const getImageStorage = (): ImageStorage => chatModule.getBuilt().imageStorage;
 
@@ -26,3 +27,6 @@ export const getDescribeService = (): DescribeService | undefined =>
   chatModule.isBuilt() ? chatModule.getBuilt().describeService : undefined;
 
 export const getLlmCircuitBreakerState = () => chatModule.getLlmCircuitBreakerState();
+
+export const getArtworkKnowledgeRepo = (): ArtworkKnowledgeRepoPort | undefined =>
+  chatModule.isBuilt() ? chatModule.getBuilt().artworkKnowledgeRepo : undefined;
