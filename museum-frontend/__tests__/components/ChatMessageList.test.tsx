@@ -1,5 +1,9 @@
 import '../helpers/test-utils';
 import React from 'react';
+
+jest.mock('@/features/chat/infrastructure/chatApi', () => ({
+  chatApi: { setMessageFeedback: jest.fn() },
+}));
 import { View } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 

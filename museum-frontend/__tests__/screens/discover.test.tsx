@@ -1,9 +1,13 @@
-import { chatApiMocks } from '../helpers/test-utils';
+import '../helpers/test-utils';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 
-const mockCreateSession = chatApiMocks.createSession;
+const mockCreateSession = jest.fn();
+
+jest.mock('@/features/chat/infrastructure/chatApi', () => ({
+  chatApi: { createSession: (...args: unknown[]) => mockCreateSession(...args) },
+}));
 
 import DiscoverScreen from '@/app/(stack)/discover';
 

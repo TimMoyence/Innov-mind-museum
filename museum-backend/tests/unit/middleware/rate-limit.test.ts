@@ -1,4 +1,4 @@
-import type { Request, RequestHandler } from 'express';
+import type { Request } from 'express';
 
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
@@ -15,8 +15,9 @@ import {
   _resetRedisStore,
 } from '@src/helpers/middleware/rate-limit.middleware';
 import type { RedisRateLimitStore } from '@src/helpers/middleware/redis-rate-limit-store';
+import { makePartialResponse } from '../../helpers/http/express-mock.helpers';
 
-const makeMockReq = (overrides: Record<string, unknown> = {}): Parameters<RequestHandler>[0] =>
+const makeMockReq = (overrides: Record<string, unknown> = {}): Request =>
   ({
     ip: '10.0.0.1',
     socket: { remoteAddress: '10.0.0.1' },
@@ -24,9 +25,9 @@ const makeMockReq = (overrides: Record<string, unknown> = {}): Parameters<Reques
     body: {},
     header: () => undefined,
     ...overrides,
-  }) as unknown as Parameters<RequestHandler>[0];
+  }) as unknown as Request;
 
-const makeMockRes = () => ({ setHeader: jest.fn() }) as unknown as Parameters<RequestHandler>[1];
+const makeMockRes = makePartialResponse;
 
 describe('rate-limit middleware — branch coverage', () => {
   beforeEach(() => clearRateLimitBuckets());
@@ -119,7 +120,7 @@ describe('bySession key generator', () => {
 
 describe('byUserId key generator', () => {
   it('uses user.id when available', () => {
-    const req = makeMockReq({ user: { id: 42 } }) as unknown as Request;
+    const req = makeMockReq({ user: { id: 42 } });
     expect(byUserId(req)).toBe('user:42');
   });
 
@@ -151,7 +152,7 @@ describe('byUserId limiter — multi-session abuse (SEC-20)', () => {
     const sessionIds = ['s1', 's2', 's3', 's4'];
     const calls: jest.Mock[] = [];
     for (const id of sessionIds) {
-      const req = makeMockReq({ user: { id: 42 }, params: { id } }) as unknown as Request;
+      const req = makeMockReq({ user: { id: 42 }, params: { id } });
       const next = jest.fn();
       mw(req, res, next);
       calls.push(next);
@@ -170,9 +171,9 @@ describe('byUserId limiter — multi-session abuse (SEC-20)', () => {
 
     // Two distinct users, each at the limit ceiling. Neither should affect
     // the other's bucket.
-    const reqA1 = makeMockReq({ user: { id: 1 } }) as unknown as Request;
-    const reqA2 = makeMockReq({ user: { id: 1 } }) as unknown as Request;
-    const reqB1 = makeMockReq({ user: { id: 2 } }) as unknown as Request;
+    const reqA1 = makeMockReq({ user: { id: 1 } });
+    const reqA2 = makeMockReq({ user: { id: 1 } });
+    const reqB1 = makeMockReq({ user: { id: 2 } });
 
     const nextA1 = jest.fn();
     const nextA2 = jest.fn();
@@ -192,8 +193,8 @@ describe('byUserId limiter — multi-session abuse (SEC-20)', () => {
     const res = makeMockRes();
 
     // Authenticated user 42 hits the limit.
-    const reqUser = makeMockReq({ user: { id: 42 } }) as unknown as Request;
-    const reqUser2 = makeMockReq({ user: { id: 42 } }) as unknown as Request;
+    const reqUser = makeMockReq({ user: { id: 42 } });
+    const reqUser2 = makeMockReq({ user: { id: 42 } });
     const nextUser = jest.fn();
     const nextUser2 = jest.fn();
     mw(reqUser, res, nextUser);

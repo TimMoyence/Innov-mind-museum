@@ -1,6 +1,9 @@
-import type { Request, Response, NextFunction } from 'express';
-
 import { AppError } from '@shared/errors/app.error';
+import {
+  makePartialRequest,
+  makePartialResponse,
+  makeNext,
+} from '../../helpers/http/express-mock.helpers';
 
 // Mock the auth session service BEFORE importing the middleware
 jest.mock('@modules/auth/useCase', () => ({
@@ -32,14 +35,6 @@ import {
 } from '@src/helpers/middleware/authenticated.middleware';
 import { authSessionService } from '@modules/auth/useCase';
 
-const mockRes = (): Response => {
-  const res = {
-    status: jest.fn().mockReturnThis(),
-    json: jest.fn().mockReturnThis(),
-  } as unknown as Response;
-  return res;
-};
-
 const expectUnauthorized = (fn: () => void, message: string): void => {
   try {
     fn();
@@ -56,18 +51,18 @@ describe('isAuthenticated middleware', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('throws 401 AppError when no Authorization header is present', () => {
-    const req = { headers: {} } as Request;
-    const res = mockRes();
-    const next = jest.fn() as NextFunction;
+    const req = makePartialRequest();
+    const res = makePartialResponse();
+    const next = makeNext();
 
     expectUnauthorized(() => isAuthenticated(req, res, next), 'Token required');
     expect(next).not.toHaveBeenCalled();
   });
 
   it('throws 401 AppError when Authorization header has no Bearer token', () => {
-    const req = { headers: { authorization: 'Bearer' } } as unknown as Request;
-    const res = mockRes();
-    const next = jest.fn() as NextFunction;
+    const req = makePartialRequest({ headers: { authorization: 'Bearer' } });
+    const res = makePartialResponse();
+    const next = makeNext();
 
     expectUnauthorized(() => isAuthenticated(req, res, next), 'Token required');
     expect(next).not.toHaveBeenCalled();
@@ -80,9 +75,9 @@ describe('isAuthenticated middleware', () => {
       museumId: null,
     });
 
-    const req = { headers: { authorization: 'Bearer valid-jwt' } } as unknown as Request;
-    const res = mockRes();
-    const next = jest.fn() as NextFunction;
+    const req = makePartialRequest({ headers: { authorization: 'Bearer valid-jwt' } });
+    const res = makePartialResponse();
+    const next = makeNext();
 
     isAuthenticated(req, res, next);
 
@@ -97,9 +92,9 @@ describe('isAuthenticated middleware', () => {
       museumId: 42,
     });
 
-    const req = { headers: { authorization: 'Bearer valid-jwt' } } as unknown as Request;
-    const res = mockRes();
-    const next = jest.fn() as NextFunction;
+    const req = makePartialRequest({ headers: { authorization: 'Bearer valid-jwt' } });
+    const res = makePartialResponse();
+    const next = makeNext();
 
     isAuthenticated(req, res, next);
 
@@ -111,9 +106,9 @@ describe('isAuthenticated middleware', () => {
       throw new Error('invalid token');
     });
 
-    const req = { headers: { authorization: 'Bearer bad-jwt' } } as unknown as Request;
-    const res = mockRes();
-    const next = jest.fn() as NextFunction;
+    const req = makePartialRequest({ headers: { authorization: 'Bearer bad-jwt' } });
+    const res = makePartialResponse();
+    const next = makeNext();
 
     expectUnauthorized(() => isAuthenticated(req, res, next), 'Invalid token');
     expect(next).not.toHaveBeenCalled();
@@ -125,9 +120,9 @@ describe('isAuthenticated middleware', () => {
       throw new Error('not a JWT');
     });
 
-    const req = { headers: { authorization: 'Bearer msk_testkey123' } } as unknown as Request;
-    const res = mockRes();
-    const next = jest.fn() as NextFunction;
+    const req = makePartialRequest({ headers: { authorization: 'Bearer msk_testkey123' } });
+    const res = makePartialResponse();
+    const next = makeNext();
 
     // Should fail as JWT since apiKeys is not enabled
     expectUnauthorized(() => isAuthenticated(req, res, next), 'Invalid token');
@@ -144,9 +139,9 @@ describe('isAuthenticated middleware', () => {
       museumId: null,
     });
 
-    const req = { headers: { authorization: 'Bearer valid-jwt' } } as unknown as Request;
-    const res = mockRes();
-    const next = jest.fn() as NextFunction;
+    const req = makePartialRequest({ headers: { authorization: 'Bearer valid-jwt' } });
+    const res = makePartialResponse();
+    const next = makeNext();
 
     isAuthenticated(req, res, next);
 
@@ -159,17 +154,17 @@ describe('isAuthenticatedJwtOnly middleware', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('throws 401 AppError when no token is present', () => {
-    const req = { headers: {} } as Request;
-    const res = mockRes();
-    const next = jest.fn() as NextFunction;
+    const req = makePartialRequest();
+    const res = makePartialResponse();
+    const next = makeNext();
 
     expectUnauthorized(() => isAuthenticatedJwtOnly(req, res, next), 'Token required');
   });
 
   it('rejects msk_ tokens with specific error message', () => {
-    const req = { headers: { authorization: 'Bearer msk_someapikey' } } as unknown as Request;
-    const res = mockRes();
-    const next = jest.fn() as NextFunction;
+    const req = makePartialRequest({ headers: { authorization: 'Bearer msk_someapikey' } });
+    const res = makePartialResponse();
+    const next = makeNext();
 
     expectUnauthorized(
       () => isAuthenticatedJwtOnly(req, res, next),
@@ -185,9 +180,9 @@ describe('isAuthenticatedJwtOnly middleware', () => {
       museumId: null,
     });
 
-    const req = { headers: { authorization: 'Bearer valid-jwt' } } as unknown as Request;
-    const res = mockRes();
-    const next = jest.fn() as NextFunction;
+    const req = makePartialRequest({ headers: { authorization: 'Bearer valid-jwt' } });
+    const res = makePartialResponse();
+    const next = makeNext();
 
     isAuthenticatedJwtOnly(req, res, next);
 
@@ -200,9 +195,9 @@ describe('isAuthenticatedJwtOnly middleware', () => {
       throw new Error('expired');
     });
 
-    const req = { headers: { authorization: 'Bearer expired-jwt' } } as unknown as Request;
-    const res = mockRes();
-    const next = jest.fn() as NextFunction;
+    const req = makePartialRequest({ headers: { authorization: 'Bearer expired-jwt' } });
+    const res = makePartialResponse();
+    const next = makeNext();
 
     expectUnauthorized(() => isAuthenticatedJwtOnly(req, res, next), 'Invalid token');
   });

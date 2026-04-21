@@ -1,4 +1,9 @@
 import { SearXNGClient } from '@modules/chat/adapters/secondary/searxng.client';
+import { mockFetch } from '../../helpers/fetch/fetch-mock.helpers';
+import {
+  makeSearxngHit,
+  makeSearxngApiResponse,
+} from '../../helpers/search-clients/searxng.fixture';
 
 // Silence logger
 jest.mock('@shared/logger/logger', () => ({
@@ -14,23 +19,12 @@ describe('SearXNGClient', () => {
   });
 
   it('returns search results from a successful API response', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        results: [
-          {
-            url: 'https://example.com/a',
-            title: 'Result A',
-            content: 'Snippet A',
-          },
-          {
-            url: 'https://example.com/b',
-            title: 'Result B',
-            content: 'Snippet B',
-          },
-        ],
-      }),
-    }) as unknown as typeof fetch;
+    global.fetch = mockFetch({
+      body: makeSearxngApiResponse([
+        makeSearxngHit({ url: 'https://example.com/a', title: 'Result A', content: 'Snippet A' }),
+        makeSearxngHit({ url: 'https://example.com/b', title: 'Result B', content: 'Snippet B' }),
+      ]),
+    });
 
     const client = new SearXNGClient(['https://searx.example.com']);
     const results = await client.search({ query: 'art exhibitions Paris' });
@@ -44,18 +38,15 @@ describe('SearXNGClient', () => {
   });
 
   it('maps content field to snippet', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        results: [
-          {
-            url: 'https://museum.example.com/picasso',
-            title: 'Picasso Exhibition',
-            content: 'A major retrospective of Picasso works',
-          },
-        ],
-      }),
-    }) as unknown as typeof fetch;
+    global.fetch = mockFetch({
+      body: makeSearxngApiResponse([
+        makeSearxngHit({
+          url: 'https://museum.example.com/picasso',
+          title: 'Picasso Exhibition',
+          content: 'A major retrospective of Picasso works',
+        }),
+      ]),
+    });
 
     const client = new SearXNGClient(['https://searx.example.com']);
     const results = await client.search({ query: 'Picasso' });
@@ -76,11 +67,7 @@ describe('SearXNGClient', () => {
   });
 
   it('returns empty array on HTTP error response', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: false,
-      status: 500,
-      json: async () => ({}),
-    }) as unknown as typeof fetch;
+    global.fetch = mockFetch({ ok: false, status: 500 });
 
     const client = new SearXNGClient(['https://searx.example.com']);
     const results = await client.search({ query: 'something' });
@@ -89,9 +76,7 @@ describe('SearXNGClient', () => {
   });
 
   it('returns empty array when fetch throws', async () => {
-    global.fetch = jest
-      .fn()
-      .mockRejectedValue(new Error('network down')) as unknown as typeof fetch;
+    global.fetch = mockFetch(new Error('network down'));
 
     const client = new SearXNGClient(['https://searx.example.com']);
     const results = await client.search({ query: 'something' });
@@ -100,16 +85,17 @@ describe('SearXNGClient', () => {
   });
 
   it('caps maxResults at 10', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        results: Array.from({ length: 20 }, (_, i) => ({
-          url: `https://example.com/${i}`,
-          title: `Result ${i}`,
-          content: `Snippet ${i}`,
-        })),
-      }),
-    }) as unknown as typeof fetch;
+    global.fetch = mockFetch({
+      body: makeSearxngApiResponse(
+        Array.from({ length: 20 }, (_, i) =>
+          makeSearxngHit({
+            url: `https://example.com/${i}`,
+            title: `Result ${i}`,
+            content: `Snippet ${i}`,
+          }),
+        ),
+      ),
+    });
 
     const client = new SearXNGClient(['https://searx.example.com']);
     const results = await client.search({ query: 'q', maxResults: 50 });
@@ -118,16 +104,17 @@ describe('SearXNGClient', () => {
   });
 
   it('uses default 5 max results when not specified', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        results: Array.from({ length: 20 }, (_, i) => ({
-          url: `https://example.com/${i}`,
-          title: `Result ${i}`,
-          content: `Snippet ${i}`,
-        })),
-      }),
-    }) as unknown as typeof fetch;
+    global.fetch = mockFetch({
+      body: makeSearxngApiResponse(
+        Array.from({ length: 20 }, (_, i) =>
+          makeSearxngHit({
+            url: `https://example.com/${i}`,
+            title: `Result ${i}`,
+            content: `Snippet ${i}`,
+          }),
+        ),
+      ),
+    });
 
     const client = new SearXNGClient(['https://searx.example.com']);
     const results = await client.search({ query: 'q' });
@@ -136,10 +123,7 @@ describe('SearXNGClient', () => {
   });
 
   it('handles missing results field gracefully', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({}),
-    }) as unknown as typeof fetch;
+    global.fetch = mockFetch({ body: {} });
 
     const client = new SearXNGClient(['https://searx.example.com']);
     const results = await client.search({ query: 'something' });
@@ -148,16 +132,15 @@ describe('SearXNGClient', () => {
   });
 
   it('falls back to second instance when first fails with HTTP error', async () => {
-    const fetchSpy = jest
-      .fn()
-      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({}) })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          results: [{ url: 'https://fallback.com', title: 'Fallback', content: 'OK' }],
-        }),
-      }) as unknown as jest.Mock;
-    global.fetch = fetchSpy as unknown as typeof fetch;
+    const fetchSpy = mockFetch(
+      { ok: false, status: 503 },
+      {
+        body: makeSearxngApiResponse([
+          makeSearxngHit({ url: 'https://fallback.com', title: 'Fallback', content: 'OK' }),
+        ]),
+      },
+    );
+    global.fetch = fetchSpy;
 
     const client = new SearXNGClient(['https://searx1.example.com', 'https://searx2.example.com']);
     const results = await client.search({ query: 'test' });
@@ -168,16 +151,12 @@ describe('SearXNGClient', () => {
   });
 
   it('falls back to second instance when first throws', async () => {
-    const fetchSpy = jest
-      .fn()
-      .mockRejectedValueOnce(new Error('connection refused'))
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          results: [{ url: 'https://fallback.com', title: 'Fallback', content: 'OK' }],
-        }),
-      }) as unknown as jest.Mock;
-    global.fetch = fetchSpy as unknown as typeof fetch;
+    const fetchSpy = mockFetch(new Error('connection refused'), {
+      body: makeSearxngApiResponse([
+        makeSearxngHit({ url: 'https://fallback.com', title: 'Fallback', content: 'OK' }),
+      ]),
+    });
+    global.fetch = fetchSpy;
 
     const client = new SearXNGClient(['https://searx1.example.com', 'https://searx2.example.com']);
     const results = await client.search({ query: 'test' });
@@ -187,7 +166,7 @@ describe('SearXNGClient', () => {
   });
 
   it('returns empty array when all instances fail', async () => {
-    global.fetch = jest.fn().mockRejectedValue(new Error('all down')) as unknown as typeof fetch;
+    global.fetch = mockFetch(new Error('all down'));
 
     const client = new SearXNGClient([
       'https://searx1.example.com',
@@ -200,35 +179,29 @@ describe('SearXNGClient', () => {
   });
 
   it('rotates starting instance on successive calls', async () => {
-    const fetchSpy = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ results: [] }),
-    }) as unknown as jest.Mock;
-    global.fetch = fetchSpy as unknown as typeof fetch;
+    const fetchSpy = mockFetch({ body: makeSearxngApiResponse([]) });
+    global.fetch = fetchSpy;
 
     const client = new SearXNGClient(['https://searx1.example.com', 'https://searx2.example.com']);
 
     await client.search({ query: 'first call' });
     await client.search({ query: 'second call' });
 
-    const firstCallUrl = (fetchSpy.mock.calls[0] as [string])[0];
-    const secondCallUrl = (fetchSpy.mock.calls[1] as [string])[0];
+    const firstCallUrl = fetchSpy.mock.calls[0]![0] as string;
+    const secondCallUrl = fetchSpy.mock.calls[1]![0] as string;
 
     expect(firstCallUrl).toContain('searx1.example.com');
     expect(secondCallUrl).toContain('searx2.example.com');
   });
 
   it('includes correct query params in request URL', async () => {
-    const fetchSpy = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ results: [] }),
-    }) as unknown as jest.Mock;
-    global.fetch = fetchSpy as unknown as typeof fetch;
+    const fetchSpy = mockFetch({ body: makeSearxngApiResponse([]) });
+    global.fetch = fetchSpy;
 
     const client = new SearXNGClient(['https://searx.example.com']);
     await client.search({ query: 'museum art' });
 
-    const callUrl = (fetchSpy.mock.calls[0] as [string])[0];
+    const callUrl = fetchSpy.mock.calls[0]![0] as string;
     const url = new URL(callUrl);
     expect(url.searchParams.get('q')).toBe('museum art');
     expect(url.searchParams.get('format')).toBe('json');

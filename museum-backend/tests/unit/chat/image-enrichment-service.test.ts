@@ -10,10 +10,10 @@ jest.mock('@shared/logger/logger', () => ({
 import { ImageEnrichmentService } from '@modules/chat/useCase/image-enrichment.service';
 
 import type { ImageEnrichmentConfig } from '@modules/chat/useCase/image-enrichment.service';
-import type {
-  UnsplashClient,
-  UnsplashPhoto,
-} from '@modules/chat/adapters/secondary/unsplash.client';
+import {
+  makeUnsplashClientMock,
+  makeUnsplashPhoto,
+} from '../../helpers/search-clients/unsplash.fixture';
 
 const makeConfig = (overrides: Partial<ImageEnrichmentConfig> = {}): ImageEnrichmentConfig => ({
   cacheTtlMs: 60_000,
@@ -23,19 +23,7 @@ const makeConfig = (overrides: Partial<ImageEnrichmentConfig> = {}): ImageEnrich
   ...overrides,
 });
 
-const makeUnsplashPhoto = (overrides: Partial<UnsplashPhoto> = {}): UnsplashPhoto => ({
-  url: 'https://unsplash.com/photo1.jpg',
-  thumbnailUrl: 'https://unsplash.com/photo1_thumb.jpg',
-  caption: 'Mona Lisa painting',
-  width: 1920,
-  height: 1080,
-  photographerName: 'Test Photographer',
-  ...overrides,
-});
-
-const makeMockUnsplash = (): jest.Mocked<Pick<UnsplashClient, 'searchPhotos'>> => ({
-  searchPhotos: jest.fn().mockResolvedValue([]),
-});
+const makeMockUnsplash = () => makeUnsplashClientMock();
 
 describe('ImageEnrichmentService', () => {
   describe('cache hit', () => {
@@ -43,10 +31,7 @@ describe('ImageEnrichmentService', () => {
       const unsplash = makeMockUnsplash();
       unsplash.searchPhotos.mockResolvedValue([makeUnsplashPhoto()]);
 
-      const service = new ImageEnrichmentService(
-        unsplash as unknown as UnsplashClient,
-        makeConfig(),
-      );
+      const service = new ImageEnrichmentService(unsplash, makeConfig());
 
       const first = await service.enrich('Mona Lisa');
       const second = await service.enrich('Mona Lisa');
@@ -60,10 +45,7 @@ describe('ImageEnrichmentService', () => {
       const unsplash = makeMockUnsplash();
       unsplash.searchPhotos.mockResolvedValue([makeUnsplashPhoto()]);
 
-      const service = new ImageEnrichmentService(
-        unsplash as unknown as UnsplashClient,
-        makeConfig(),
-      );
+      const service = new ImageEnrichmentService(unsplash, makeConfig());
 
       await service.enrich('  Mona Lisa  ');
       await service.enrich('mona lisa');
@@ -79,10 +61,7 @@ describe('ImageEnrichmentService', () => {
         makeUnsplashPhoto({ url: 'https://unsplash.com/a.jpg', caption: 'artwork' }),
       ]);
 
-      const service = new ImageEnrichmentService(
-        unsplash as unknown as UnsplashClient,
-        makeConfig(),
-      );
+      const service = new ImageEnrichmentService(unsplash, makeConfig());
 
       const result = await service.enrich('Starry Night');
 
@@ -126,10 +105,7 @@ describe('ImageEnrichmentService', () => {
           () => new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 100_000)),
         );
 
-        const service = new ImageEnrichmentService(
-          unsplash as unknown as UnsplashClient,
-          makeConfig({ fetchTimeoutMs: 10 }),
-        );
+        const service = new ImageEnrichmentService(unsplash, makeConfig({ fetchTimeoutMs: 10 }));
 
         const promise = service.enrich('Test', 'https://wiki.org/img.jpg');
         jest.advanceTimersByTime(11);
@@ -152,10 +128,7 @@ describe('ImageEnrichmentService', () => {
         makeUnsplashPhoto({ url: 'https://example.com/same.jpg' }),
       ]);
 
-      const service = new ImageEnrichmentService(
-        unsplash as unknown as UnsplashClient,
-        makeConfig(),
-      );
+      const service = new ImageEnrichmentService(unsplash, makeConfig());
 
       const result = await service.enrich('Art');
       const urls = result.map((img) => img.url);
@@ -175,10 +148,7 @@ describe('ImageEnrichmentService', () => {
         makeUnsplashPhoto({ url: 'https://example.com/5.jpg' }),
       ]);
 
-      const service = new ImageEnrichmentService(
-        unsplash as unknown as UnsplashClient,
-        makeConfig({ maxImagesPerResponse: 2 }),
-      );
+      const service = new ImageEnrichmentService(unsplash, makeConfig({ maxImagesPerResponse: 2 }));
 
       const result = await service.enrich('Art');
       expect(result.length).toBeLessThanOrEqual(2);
@@ -299,10 +269,7 @@ describe('ImageEnrichmentService', () => {
         const unsplash = makeMockUnsplash();
         unsplash.searchPhotos.mockResolvedValue([makeUnsplashPhoto()]);
 
-        const service = new ImageEnrichmentService(
-          unsplash as unknown as UnsplashClient,
-          makeConfig({ cacheTtlMs: 1 }),
-        );
+        const service = new ImageEnrichmentService(unsplash, makeConfig({ cacheTtlMs: 1 }));
 
         await service.enrich('Mona Lisa');
 
@@ -324,10 +291,7 @@ describe('ImageEnrichmentService', () => {
       const unsplash = makeMockUnsplash();
       unsplash.searchPhotos.mockRejectedValue(new Error('Network error'));
 
-      const service = new ImageEnrichmentService(
-        unsplash as unknown as UnsplashClient,
-        makeConfig(),
-      );
+      const service = new ImageEnrichmentService(unsplash, makeConfig());
 
       const result = await service.enrich('Art', 'https://wiki.org/art.jpg');
 
@@ -344,10 +308,7 @@ describe('ImageEnrichmentService', () => {
         makeUnsplashPhoto({ photographerName: 'Jane Doe' }),
       ]);
 
-      const service = new ImageEnrichmentService(
-        unsplash as unknown as UnsplashClient,
-        makeConfig(),
-      );
+      const service = new ImageEnrichmentService(unsplash, makeConfig());
 
       const result = await service.enrich('Art');
 

@@ -1,6 +1,7 @@
-import type { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
+import type { NextFunction, Request } from 'express';
 import type { ApiKeyRepository } from '@modules/auth/domain/apiKey.repository.interface';
+import { makePartialRequest, makePartialResponse } from '../../helpers/http/express-mock.helpers';
 
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
@@ -17,12 +18,7 @@ import {
   setUserRoleResolver,
 } from '@src/helpers/middleware/apiKey.middleware';
 
-const mockRes = (): Response => {
-  return {
-    status: jest.fn().mockReturnThis(),
-    json: jest.fn().mockReturnThis(),
-  } as unknown as Response;
-};
+const mockRes = makePartialResponse;
 
 const makeFakeApiKeyRepo = (
   overrides: Partial<jest.Mocked<ApiKeyRepository>> = {},
@@ -198,7 +194,7 @@ describe('validateApiKey middleware', () => {
     // No user role resolver set — should default to 'visitor'
     setUserRoleResolver(undefined as unknown as (userId: number) => Promise<null>);
 
-    const req = { headers: {} } as unknown as Request;
+    const req = makePartialRequest();
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
@@ -229,7 +225,7 @@ describe('validateApiKey middleware', () => {
     setApiKeyRepository(fakeRepo);
     setUserRoleResolver(async (_userId: number) => 'admin');
 
-    const req = { headers: {} } as unknown as Request;
+    const req = makePartialRequest();
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
@@ -259,7 +255,7 @@ describe('validateApiKey middleware', () => {
     setApiKeyRepository(fakeRepo);
     setUserRoleResolver(async () => null);
 
-    const req = { headers: {} } as unknown as Request;
+    const req = makePartialRequest();
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
@@ -304,7 +300,7 @@ describe('validateApiKey middleware', () => {
     setApiKeyRepository(fakeRepo);
     setUserRoleResolver(undefined as unknown as (userId: number) => Promise<null>);
 
-    const req = { headers: {} } as unknown as Request;
+    const req = makePartialRequest();
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
