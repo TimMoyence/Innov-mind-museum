@@ -7,6 +7,7 @@ import { AppError } from '@shared/errors/app.error';
 import { UserRepositoryPg } from '@modules/auth/adapters/secondary/user.repository.pg';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
+import { makeMockTypeOrmRepo } from 'tests/helpers/shared/mock-deps';
 
 // ─── Mock bcrypt ───
 jest.mock('bcrypt', () => ({
@@ -16,27 +17,15 @@ jest.mock('bcrypt', () => ({
 // ─── TypeORM repo + DataSource mock factory ───
 function buildMocks() {
   const qb = makeMockQb();
-
-  const repo = {
-    findOne: jest.fn(),
-    find: jest.fn(),
-    save: jest.fn(),
-    create: jest.fn(),
-    createQueryBuilder: jest.fn(() => qb),
-    update: jest.fn(),
-    delete: jest.fn(),
-    count: jest.fn(),
-  } as unknown as jest.Mocked<Repository<User>>;
+  const { repo } = makeMockTypeOrmRepo<User>({ qb });
 
   const txQb = makeMockQb();
-  const txManager = {
-    createQueryBuilder: jest.fn(() => txQb),
-  };
+  const txManager = { createQueryBuilder: jest.fn(() => txQb) };
 
   const dataSource = {
     getRepository: jest.fn().mockReturnValue(repo),
     transaction: jest.fn((cb: (manager: unknown) => Promise<void>) => cb(txManager)),
-  } as unknown as DataSource;
+  } as unknown as import('typeorm').DataSource;
 
   return { repo, qb, dataSource, txManager, txQb };
 }

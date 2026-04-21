@@ -4,26 +4,15 @@ import { AuthRefreshToken } from '@modules/auth/domain/authRefreshToken.entity';
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/refresh-token.repository.pg';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
+import { makeMockTypeOrmRepo } from 'tests/helpers/shared/mock-deps';
 
 import type { InsertRefreshTokenInput } from '@modules/auth/domain/refresh-token.repository.interface';
 
 // ─── TypeORM repo + DataSource mock factory ───
 function buildMocks() {
   const qb = makeMockQb({ execute: jest.fn().mockResolvedValue({ affected: 1 }) });
-
-  const repo = {
-    findOne: jest.fn(),
-    save: jest.fn(),
-    create: jest.fn().mockImplementation((data: unknown) => data),
-    createQueryBuilder: jest.fn(() => qb),
-    update: jest.fn(),
-  } as unknown as jest.Mocked<Repository<AuthRefreshToken>>;
-
-  const txRepo = {
-    save: jest.fn(),
-    create: jest.fn().mockImplementation((data: unknown) => data),
-    update: jest.fn(),
-  } as unknown as jest.Mocked<Repository<AuthRefreshToken>>;
+  const { repo } = makeMockTypeOrmRepo<AuthRefreshToken>({ qb });
+  const { repo: txRepo } = makeMockTypeOrmRepo<AuthRefreshToken>();
 
   const dataSource = {
     getRepository: jest.fn().mockReturnValue(repo),
@@ -31,7 +20,7 @@ function buildMocks() {
       (cb: (manager: { getRepository: () => typeof txRepo }) => Promise<unknown>) =>
         cb({ getRepository: () => txRepo }),
     ),
-  } as unknown as DataSource;
+  } as unknown as import('typeorm').DataSource;
 
   return { repo, qb, dataSource, txRepo };
 }

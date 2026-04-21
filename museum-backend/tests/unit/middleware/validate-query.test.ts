@@ -1,14 +1,11 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { NextFunction } from 'express';
 import { z } from 'zod';
 import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
 import { AppError } from '@shared/errors/app.error';
+import { makePartialRequest, makePartialResponse } from '../../helpers/http/express-mock.helpers';
 
-const mockReq = (query: Record<string, unknown>): Request => ({ query }) as unknown as Request;
-
-const mockRes = (): Response => {
-  const res = { locals: {} } as unknown as Response;
-  return res;
-};
+const mockReq = (query: Record<string, string | string[]>) => makePartialRequest({ query });
+const mockRes = makePartialResponse;
 
 const noop: NextFunction = jest.fn();
 
@@ -41,8 +38,8 @@ describe('validateQuery middleware', () => {
   });
 
   it('does NOT assign to req.query (Express 5 read-only compat)', () => {
-    const query = Object.freeze({ page: '5', limit: '10' });
-    const req = mockReq(query as Record<string, unknown>);
+    const query = Object.freeze({ page: '5', limit: '10' }) as Record<string, string | string[]>;
+    const req = mockReq(query);
     const res = mockRes();
 
     // Should not throw even though req.query is frozen
