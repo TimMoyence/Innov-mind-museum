@@ -162,16 +162,10 @@ class InMemoryChatRepository implements ChatRepository {
     return row;
   }
 
-  async persistBlockedExchange(input: {
-    userMessage: PersistMessageInput;
-    refusal: PersistMessageInput;
-  }): Promise<{ userMessage: ChatMessage; refusal: ChatMessage }> {
-    const userMessage = await this.persistMessage(input.userMessage);
-    const refusal = await this.persistMessage(input.refusal);
-    return { userMessage, refusal };
-  }
-
-  /** @deprecated Use artworkMatch field in persistMessage */
+  /**
+   * @param input
+   * @deprecated Use artworkMatch field in persistMessage
+   */
   async persistArtworkMatch(input: PersistArtworkMatchInput): Promise<void> {
     this.artworkMatches.push(input);
   }
@@ -382,6 +376,8 @@ interface BuildChatTestServiceOptions {
 /**
  * Test utility: builds a ChatService wired with in-memory repository, local image storage, and optional fake orchestrator.
  * Supports legacy positional args and new options object.
+ * @param orchestrator
+ * @param audioTranscriber
  */
 export function buildChatTestService(
   orchestrator?: ChatOrchestrator,
@@ -395,7 +391,7 @@ export function buildChatTestService(
   const isOptions = arg1 !== undefined && typeof arg1 === 'object' && !('generate' in arg1);
 
   if (isOptions) {
-    const opts = arg1 as BuildChatTestServiceOptions;
+    const opts = arg1;
     return new ChatService({
       repository: new InMemoryChatRepository(),
       orchestrator: opts.orchestrator ?? new FakeOrchestrator(),
@@ -410,7 +406,7 @@ export function buildChatTestService(
 
   return new ChatService({
     repository: new InMemoryChatRepository(),
-    orchestrator: (arg1 as ChatOrchestrator) ?? new FakeOrchestrator(),
+    orchestrator: arg1! ?? new FakeOrchestrator(),
     imageStorage: new LocalImageStorage(),
     audioTranscriber: arg2,
   });
