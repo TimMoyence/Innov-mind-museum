@@ -3,6 +3,8 @@ import { Queue, Worker } from 'bullmq';
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 
+import { canonicalizeUrl } from '../../domain/canonical-url';
+
 import type {
   ExtractionJobPayload,
   ExtractionQueuePort,
@@ -156,7 +158,7 @@ export class ExtractionWorker implements ExtractionQueuePort {
         jobs.map((payload) => ({
           name: 'extract',
           data: payload,
-          opts: { jobId: `extract:${payload.url}` },
+          opts: { jobId: `extract:${canonicalizeUrl(payload.url)}` },
         })),
       );
       logger.info('extraction_urls_enqueued', { count: jobs.length });

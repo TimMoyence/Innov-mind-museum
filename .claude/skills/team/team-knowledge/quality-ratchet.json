@@ -1,23 +1,23 @@
 {
   "backend": {
-    "testCount": 2645,
+    "testCount": 2812,
     "asAnyCount": 0,
     "eslintDisableCount": 0,
     "tscErrors": 0
   },
   "frontend": {
-    "testCount": 1096,
+    "testCount": 1443,
     "asAnyCount": 0,
     "eslintDisableCount": 0,
     "tscErrors": 0
   },
   "web": {
-    "testCount": 179,
+    "testCount": 189,
     "asAnyCount": 0,
     "eslintDisableCount": 0,
     "tscErrors": 0
   },
-  "lastUpdated": "2026-04-15T00:00:00.000Z",
+  "lastUpdated": "2026-04-21T00:00:00.000Z",
   "history": [
     {
       "date": "2026-04-04",
@@ -61,6 +61,14 @@
       "description": "Geolocation per-message pipeline: LocationResolver with smart cache + Nominatim reverse geocoding + fix 4 frontend bugs + haversine dedup",
       "backend": { "testsBefore": 2604, "testsAfter": 2645, "delta": 41 },
       "frontend": { "testsBefore": 1096, "testsAfter": 1096, "delta": 0 }
+    },
+    {
+      "date": "2026-04-21",
+      "mode": "audit",
+      "description": "Enterprise audit Sprint 1: TX atomicity user+refusal, hex DTO + ConcurrencyError, offline backoff, session cache fallback, chatApi mock DRY, /support web tests, KE hardening (idempotence+DLQ+canonical URL), unsafe cast fix",
+      "backend": { "testsBefore": 2645, "testsAfter": 2812, "delta": 167 },
+      "frontend": { "testsBefore": 1096, "testsAfter": 1443, "delta": 347 },
+      "web": { "testsBefore": 179, "testsAfter": 189, "delta": 10 }
     }
   ]
 }

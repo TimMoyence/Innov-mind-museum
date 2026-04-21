@@ -53,18 +53,29 @@ export class TypeOrmArtworkKnowledgeRepo implements ArtworkKnowledgeRepoPort {
           createdAt: existing.createdAt,
         });
       } else {
-        for (const key of [
+        type NullableField =
+          | 'artist'
+          | 'period'
+          | 'technique'
+          | 'historicalContext'
+          | 'dimensions'
+          | 'currentLocation';
+        const nullableFields: NullableField[] = [
           'artist',
           'period',
           'technique',
           'historicalContext',
           'dimensions',
           'currentLocation',
-        ] as const) {
-          if (existing[key] === null && data[key] !== null) {
-            (existing as unknown as Record<string, unknown>)[key] = data[key];
+        ];
+        const patch: Partial<Pick<ArtworkKnowledge, NullableField>> = {};
+        for (const key of nullableFields) {
+          const incoming = data[key];
+          if (existing[key] === null && incoming !== null) {
+            patch[key] = incoming;
           }
         }
+        Object.assign(existing, patch);
       }
       existing.needsReview = data.needsReview;
       return await this.repo.save(existing);
