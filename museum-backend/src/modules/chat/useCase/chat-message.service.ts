@@ -25,7 +25,7 @@ import type { WebSearchService } from './web-search.service';
 import type { ChatRepository } from '../domain/chat.repository.interface';
 import type { EnrichedImage, PostAudioMessageInput, PostMessageInput } from '../domain/chat.types';
 import type { AdvancedGuardrail } from '../domain/ports/advanced-guardrail.port';
-import type { AudioTranscriber } from '../domain/ports/audio-transcriber.port';
+import type { AudioTranscriptionResult, AudioTranscriber  } from '../domain/ports/audio-transcriber.port';
 import type {
   ChatOrchestrator,
   OrchestratorInput,
@@ -432,13 +432,22 @@ export class ChatMessageService {
 
     validateAudioInput(input.audio);
 
-    const transcription = await this.audioTranscriber.transcribe({
-      base64: input.audio.base64,
-      mimeType: input.audio.mimeType,
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-      locale: input.context?.locale || session.locale || undefined,
-      requestId,
-    });
+    let transcription: AudioTranscriptionResult;
+    try {
+      transcription = await this.audioTranscriber.transcribe({
+        base64: input.audio.base64,
+        mimeType: input.audio.mimeType,
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
+        locale: input.context?.locale || session.locale || undefined,
+        requestId,
+      });
+    } catch (err) {
+      if (err instanceof AppError) throw err;
+      throw badRequest('audio_transcription_failed', {
+        requestId,
+        cause: err instanceof Error ? err.message : String(err),
+      });
+    }
 
     const response = await this.postMessage(
       sessionId,

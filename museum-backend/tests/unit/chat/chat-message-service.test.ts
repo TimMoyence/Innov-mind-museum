@@ -891,6 +891,26 @@ describe('ChatMessageService', () => {
         }),
       );
     });
+
+    it('maps transcriber failure to 400 badRequest (T3)', async () => {
+      const { service } = buildService({
+        audioTranscriber: {
+          transcribe: jest.fn().mockRejectedValue(new Error('OpenAI STT unavailable')),
+        },
+      });
+
+      await expect(
+        service.postAudioMessage(
+          SESSION_ID,
+          { audio: { base64: 'dGVzdA==', mimeType: 'audio/mpeg', sizeBytes: 100 } },
+          'req-audio-fail',
+          USER_ID,
+        ),
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: 'audio_transcription_failed',
+      });
+    });
   });
 
   // ── Session locale ────────────────────────────────────────────────
