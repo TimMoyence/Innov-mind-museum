@@ -38,10 +38,8 @@ const createMockRepository = (overrides: Partial<Parameters<typeof makeChatRepo>
   });
 };
 
-/** Creates a mock AuditService with a jest.fn() log method. */
-const createMockAudit = (): { log: jest.Mock } => ({
-  log: jest.fn(),
-});
+const createMockAudit = (): jest.Mocked<AuditService> =>
+  ({ log: jest.fn(), logBatch: jest.fn() }) as unknown as jest.Mocked<AuditService>;
 
 /**
  * Creates a mock art-topic classifier.
@@ -137,7 +135,7 @@ describe('GuardrailEvaluationService', () => {
       const audit = createMockAudit();
       const service = new GuardrailEvaluationService({
         repository,
-        audit: audit as unknown as AuditService,
+        audit,
       });
 
       await service.handleInputBlock({
@@ -163,7 +161,7 @@ describe('GuardrailEvaluationService', () => {
       const audit = createMockAudit();
       const service = new GuardrailEvaluationService({
         repository,
-        audit: audit as unknown as AuditService,
+        audit,
       });
 
       await service.handleInputBlock({
@@ -183,7 +181,7 @@ describe('GuardrailEvaluationService', () => {
       const audit = createMockAudit();
       const service = new GuardrailEvaluationService({
         repository,
-        audit: audit as unknown as AuditService,
+        audit,
       });
 
       await service.handleInputBlock({
@@ -204,7 +202,7 @@ describe('GuardrailEvaluationService', () => {
       const audit = createMockAudit();
       const service = new GuardrailEvaluationService({
         repository,
-        audit: audit as unknown as AuditService,
+        audit,
       });
 
       await service.handleInputBlock({

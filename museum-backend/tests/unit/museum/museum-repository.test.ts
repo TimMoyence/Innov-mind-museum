@@ -1,9 +1,10 @@
-import type { DataSource, Repository } from 'typeorm';
+import type { Repository } from 'typeorm';
 
 import { Museum } from '@modules/museum/domain/museum.entity';
 import { AppError } from '@shared/errors/app.error';
 
 import { MuseumRepositoryPg } from '@modules/museum/adapters/secondary/museum.repository.pg';
+import { makeMockTypeOrmRepo, makeMockDataSource } from 'tests/helpers/shared/mock-deps';
 
 // ─── Museum factory ───
 function makeMuseum(overrides: Partial<Museum> = {}): Museum {
@@ -24,18 +25,8 @@ function makeMuseum(overrides: Partial<Museum> = {}): Museum {
 }
 
 function buildMocks() {
-  const repo = {
-    findOne: jest.fn(),
-    find: jest.fn(),
-    save: jest.fn(),
-    create: jest.fn(),
-    delete: jest.fn(),
-  } as unknown as jest.Mocked<Repository<Museum>>;
-
-  const dataSource = {
-    getRepository: jest.fn().mockReturnValue(repo),
-  } as unknown as DataSource;
-
+  const { repo } = makeMockTypeOrmRepo<Museum>();
+  const dataSource = makeMockDataSource(repo);
   return { repo, dataSource };
 }
 

@@ -1,10 +1,10 @@
-import type { Response, RequestHandler } from 'express';
 import {
   clearRateLimitBuckets,
   createRateLimitMiddleware,
   byIp,
   stopRateLimitSweep,
 } from '@src/helpers/middleware/rate-limit.middleware';
+import { makePartialRequest, makePartialResponse } from '../../helpers/http/express-mock.helpers';
 
 describe('rate-limit middleware — sweep and eviction', () => {
   beforeEach(() => {
@@ -17,15 +17,8 @@ describe('rate-limit middleware — sweep and eviction', () => {
     jest.useRealTimers();
   });
 
-  const makeMockReq = (ip: string) =>
-    ({
-      ip,
-      socket: { remoteAddress: ip },
-      params: {},
-      body: {},
-      header: () => undefined,
-    }) as unknown as Parameters<RequestHandler>[0];
-  const makeMockRes = () => ({ setHeader: jest.fn() }) as unknown as Response;
+  const makeMockReq = (ip: string) => makePartialRequest({ ip, socket: { remoteAddress: ip } });
+  const makeMockRes = makePartialResponse;
   const noop = jest.fn();
 
   it('evicts expired buckets after sweep interval', () => {

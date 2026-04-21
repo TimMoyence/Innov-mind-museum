@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { NextFunction } from 'express';
 import { errorHandler } from '@src/helpers/middleware/error.middleware';
 import { AppError } from '@shared/errors/app.error';
 import { MulterError } from 'multer';
@@ -14,21 +14,11 @@ jest.mock('@shared/observability/sentry', () => ({
 
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 import { logger } from '@shared/logger/logger';
+import { makePartialRequest, makePartialResponse } from '../../helpers/http/express-mock.helpers';
 
-const mockReq = (overrides: Record<string, unknown> = {}): Request =>
-  ({
-    method: 'GET',
-    originalUrl: '/api/test',
-    ...overrides,
-  }) as unknown as Request;
-
-const mockRes = (): Response => {
-  const res = {
-    status: jest.fn().mockReturnThis(),
-    json: jest.fn().mockReturnThis(),
-  } as unknown as Response;
-  return res;
-};
+const mockReq = (overrides: Record<string, unknown> = {}) =>
+  makePartialRequest({ method: 'GET', originalUrl: '/api/test', ...overrides });
+const mockRes = makePartialResponse;
 
 const noop: NextFunction = jest.fn();
 

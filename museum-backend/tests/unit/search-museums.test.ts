@@ -7,10 +7,11 @@ import type { CacheService } from '@shared/cache/cache.port';
 /* ------------------------------------------------------------------ */
 /*  Mock: Overpass client                                              */
 /* ------------------------------------------------------------------ */
-const mockQueryOverpassMuseums = jest.fn<Promise<OverpassMuseumResult[]>, []>();
+type OverpassQueryArgs = [{ bbox?: number[]; lat?: number; lng?: number; radiusMeters?: number }];
+const mockQueryOverpassMuseums = jest.fn<Promise<OverpassMuseumResult[]>, OverpassQueryArgs>();
 
 jest.mock('@shared/http/overpass.client', () => ({
-  queryOverpassMuseums: (...args: unknown[]) => mockQueryOverpassMuseums(...(args as [])),
+  queryOverpassMuseums: (...args: OverpassQueryArgs) => mockQueryOverpassMuseums(...args),
 }));
 
 /* ------------------------------------------------------------------ */
@@ -471,9 +472,7 @@ describe('SearchMuseumsUseCase', () => {
       await useCase.execute({ bbox: LISBON_BBOX });
 
       expect(mockQueryOverpassMuseums).toHaveBeenCalledTimes(1);
-      const callArgs = (mockQueryOverpassMuseums.mock.calls[0] as unknown as unknown[])[0] as {
-        bbox?: number[];
-      };
+      const [callArgs] = mockQueryOverpassMuseums.mock.calls[0];
       expect(callArgs.bbox).toEqual(LISBON_BBOX);
     });
 
@@ -484,10 +483,7 @@ describe('SearchMuseumsUseCase', () => {
 
       // Only the bbox query path should be used; the radius path uses a different cache key.
       expect(mockQueryOverpassMuseums).toHaveBeenCalledTimes(1);
-      const callArgs = (mockQueryOverpassMuseums.mock.calls[0] as unknown as unknown[])[0] as {
-        bbox?: number[];
-        lat?: number;
-      };
+      const [callArgs] = mockQueryOverpassMuseums.mock.calls[0];
       expect(callArgs.bbox).toEqual(LISBON_BBOX);
       expect(callArgs.lat).toBeUndefined();
     });

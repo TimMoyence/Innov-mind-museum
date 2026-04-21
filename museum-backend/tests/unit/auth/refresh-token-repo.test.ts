@@ -40,8 +40,13 @@ function makeInsertInput(
   };
 }
 
-/** Build a fake AuthRefreshToken entity with user relation loaded. */
-function makeRefreshTokenEntity(overrides: Partial<AuthRefreshToken> = {}): AuthRefreshToken {
+/**
+ * Build a fake AuthRefreshToken entity with user relation loaded.
+ * `userId` is the JoinColumn name — accepted on overrides for fallback scenarios.
+ */
+function makeRefreshTokenEntity(
+  overrides: Partial<AuthRefreshToken> & { userId?: number } = {},
+): AuthRefreshToken {
   const user = makeUser({ id: 1 });
   return {
     id: 'uuid-token-1',
@@ -117,21 +122,14 @@ describe('RefreshTokenRepositoryPg', () => {
 
     it('falls back to userId field when user relation is not loaded', async () => {
       const input = makeInsertInput({ userId: 7 });
-      const saved = {
+      const saved = makeRefreshTokenEntity({
         id: 'uuid-token-2',
         user: undefined,
         userId: 7,
         jti: 'jti-fallback',
         familyId: 'family-fallback',
         tokenHash: 'hash-fallback',
-        issuedAt: new Date(),
-        expiresAt: new Date(),
-        rotatedAt: null,
-        revokedAt: null,
-        reuseDetectedAt: null,
-        replacedByTokenId: null,
-        createdAt: new Date(),
-      } as unknown as AuthRefreshToken;
+      });
       repo.save.mockResolvedValue(saved);
 
       const result = await sut.insert(input);
@@ -141,20 +139,13 @@ describe('RefreshTokenRepositoryPg', () => {
 
     it('throws if userId cannot be resolved from entity', async () => {
       const input = makeInsertInput();
-      const saved = {
+      const saved = makeRefreshTokenEntity({
         id: 'uuid-broken',
         user: undefined,
         jti: 'jti-x',
         familyId: 'fam-x',
         tokenHash: 'hash-x',
-        issuedAt: new Date(),
-        expiresAt: new Date(),
-        rotatedAt: null,
-        revokedAt: null,
-        reuseDetectedAt: null,
-        replacedByTokenId: null,
-        createdAt: new Date(),
-      } as unknown as AuthRefreshToken;
+      });
       repo.save.mockResolvedValue(saved);
 
       await expect(sut.insert(input)).rejects.toThrow('Refresh token row is missing userId');

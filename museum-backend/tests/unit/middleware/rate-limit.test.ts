@@ -15,17 +15,14 @@ import {
   _resetRedisStore,
 } from '@src/helpers/middleware/rate-limit.middleware';
 import type { RedisRateLimitStore } from '@src/helpers/middleware/redis-rate-limit-store';
-import { makePartialResponse } from '../../helpers/http/express-mock.helpers';
+import { makePartialRequest, makePartialResponse } from '../../helpers/http/express-mock.helpers';
 
 const makeMockReq = (overrides: Record<string, unknown> = {}): Request =>
-  ({
+  makePartialRequest({
     ip: '10.0.0.1',
     socket: { remoteAddress: '10.0.0.1' },
-    params: {},
-    body: {},
-    header: () => undefined,
     ...overrides,
-  }) as unknown as Request;
+  });
 
 const makeMockRes = makePartialResponse;
 

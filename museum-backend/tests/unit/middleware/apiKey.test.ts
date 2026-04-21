@@ -192,7 +192,7 @@ describe('validateApiKey middleware', () => {
     setApiKeyRepository(fakeRepo);
 
     // No user role resolver set — should default to 'visitor'
-    setUserRoleResolver(undefined as unknown as (userId: number) => Promise<null>);
+    setUserRoleResolver(null);
 
     const req = makePartialRequest();
     const res = mockRes();
@@ -298,7 +298,7 @@ describe('validateApiKey middleware', () => {
       updateLastUsed: jest.fn().mockRejectedValue(new Error('update failed')),
     });
     setApiKeyRepository(fakeRepo);
-    setUserRoleResolver(undefined as unknown as (userId: number) => Promise<null>);
+    setUserRoleResolver(null);
 
     const req = makePartialRequest();
     const res = mockRes();

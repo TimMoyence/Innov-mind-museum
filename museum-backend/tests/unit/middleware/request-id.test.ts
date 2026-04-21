@@ -1,20 +1,20 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
 import { requestIdMiddleware } from '@src/helpers/middleware/request-id.middleware';
+import { makePartialRequest } from '../../helpers/http/express-mock.helpers';
 
-const mockReq = (headers: Record<string, string | undefined> = {}): Request =>
-  ({
-    header: (name: string) => headers[name.toLowerCase()],
-    headers,
-  }) as unknown as Request;
+const mockReq = (headers: Record<string, string | undefined> = {}) =>
+  makePartialRequest({ headers });
 
-const mockRes = (): Response & { headers: Record<string, string> } => {
+type MockRes = Response & { headers: Record<string, string> };
+const mockRes = (): MockRes => {
   const headers: Record<string, string> = {};
-  return {
+  const res = {
     headers,
     setHeader: jest.fn((name: string, value: string) => {
       headers[name] = value;
     }),
-  } as unknown as Response & { headers: Record<string, string> };
+  };
+  return res as unknown as MockRes;
 };
 
 describe('requestIdMiddleware', () => {

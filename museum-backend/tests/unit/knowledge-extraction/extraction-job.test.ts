@@ -17,6 +17,11 @@ import type {
 import type { TypeOrmExtractedContentRepo } from '@modules/knowledge-extraction/adapters/secondary/typeorm-extracted-content.repo';
 import type { TypeOrmArtworkKnowledgeRepo } from '@modules/knowledge-extraction/adapters/secondary/typeorm-artwork-knowledge.repo';
 import type { TypeOrmMuseumEnrichmentRepo } from '@modules/knowledge-extraction/adapters/secondary/typeorm-museum-enrichment.repo';
+import {
+  makeMockExtractedContentRepo,
+  makeMockArtworkKnowledgeRepo,
+  makeMockMuseumEnrichmentRepo,
+} from '../../helpers/knowledge-extraction/extraction.fixtures';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -85,28 +90,15 @@ function makeClassifier(
 function makeContentRepo(
   existing: { scrapedAt: Date } | null = null,
 ): jest.Mocked<TypeOrmExtractedContentRepo> {
-  return {
+  return makeMockExtractedContentRepo({
     findByUrl: jest.fn().mockResolvedValue(existing),
-    upsert: jest.fn().mockResolvedValue(undefined),
-    updateStatus: jest.fn().mockResolvedValue(undefined),
-  } as unknown as jest.Mocked<TypeOrmExtractedContentRepo>;
+  });
 }
 
-function makeArtworkRepo(): jest.Mocked<TypeOrmArtworkKnowledgeRepo> {
-  return {
-    upsertFromClassification: jest.fn().mockResolvedValue(undefined),
-    findByTitleAndLocale: jest.fn().mockResolvedValue(null),
-    searchByTitle: jest.fn().mockResolvedValue([]),
-  } as unknown as jest.Mocked<TypeOrmArtworkKnowledgeRepo>;
-}
-
-function makeMuseumRepo(): jest.Mocked<TypeOrmMuseumEnrichmentRepo> {
-  return {
-    upsertFromClassification: jest.fn().mockResolvedValue(undefined),
-    findByNameAndLocale: jest.fn().mockResolvedValue(null),
-    searchByName: jest.fn().mockResolvedValue([]),
-  } as unknown as jest.Mocked<TypeOrmMuseumEnrichmentRepo>;
-}
+const makeArtworkRepo = (): jest.Mocked<TypeOrmArtworkKnowledgeRepo> =>
+  makeMockArtworkKnowledgeRepo();
+const makeMuseumRepo = (): jest.Mocked<TypeOrmMuseumEnrichmentRepo> =>
+  makeMockMuseumEnrichmentRepo();
 
 function makeService(overrides?: {
   scraper?: jest.Mocked<ScraperPort>;

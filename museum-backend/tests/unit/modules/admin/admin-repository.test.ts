@@ -10,6 +10,7 @@ import { AdminRepositoryPg } from '@modules/admin/adapters/secondary/admin.repos
 import { makeReport, makeAuditLog } from 'tests/helpers/admin/admin.fixtures';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
+import { makeMockTypeOrmRepo, makeMockDataSourceMulti } from 'tests/helpers/shared/mock-deps';
 
 function buildMocks() {
   const userQb = makeMockQb();
@@ -18,43 +19,20 @@ function buildMocks() {
   const sessionQb = makeMockQb();
   const messageQb = makeMockQb();
 
-  const userRepo = {
-    findOneBy: jest.fn(),
-    save: jest.fn(),
-    countBy: jest.fn(),
-    createQueryBuilder: jest.fn(() => userQb),
-  } as unknown as jest.Mocked<Repository<User>>;
+  const { repo: userRepo } = makeMockTypeOrmRepo<User>({ qb: userQb });
+  const { repo: auditRepo } = makeMockTypeOrmRepo<AuditLog>({ qb: auditQb });
+  const { repo: reportRepo } = makeMockTypeOrmRepo<MessageReport>({ qb: reportQb });
+  const { repo: sessionRepo } = makeMockTypeOrmRepo<ChatSession>({ qb: sessionQb });
+  const { repo: messageRepo } = makeMockTypeOrmRepo<ChatMessage>({ qb: messageQb });
 
-  const auditRepo = {
-    createQueryBuilder: jest.fn(() => auditQb),
-  } as unknown as jest.Mocked<Repository<AuditLog>>;
-
-  const reportRepo = {
-    findOne: jest.fn(),
-    save: jest.fn(),
-    createQueryBuilder: jest.fn(() => reportQb),
-  } as unknown as jest.Mocked<Repository<MessageReport>>;
-
-  const sessionRepo = {
-    createQueryBuilder: jest.fn(() => sessionQb),
-  } as unknown as jest.Mocked<Repository<ChatSession>>;
-
-  const messageRepo = {
-    createQueryBuilder: jest.fn(() => messageQb),
-  } as unknown as jest.Mocked<Repository<ChatMessage>>;
-
-  const dataSource = {
-    getRepository: jest.fn((entity: unknown) => {
-      if (entity === User) return userRepo;
-      if (entity === AuditLog) return auditRepo;
-      if (entity === MessageReport) return reportRepo;
-      if (entity === ChatSession) return sessionRepo;
-      if (entity === ChatMessage) return messageRepo;
-      return userRepo;
-    }),
-    // For getContentAnalytics which calls this.dataSource.getRepository(ArtworkMatch)
-    query: jest.fn(),
-  } as unknown as DataSource;
+  const repoMap = new Map<unknown, unknown>([
+    [User, userRepo],
+    [AuditLog, auditRepo],
+    [MessageReport, reportRepo],
+    [ChatSession, sessionRepo],
+    [ChatMessage, messageRepo],
+  ]);
+  const dataSource = makeMockDataSourceMulti(repoMap, userRepo);
 
   return {
     userRepo,
@@ -74,7 +52,9 @@ function buildMocks() {
 describe('AdminRepositoryPg', () => {
   let sut: AdminRepositoryPg;
   let userRepo: jest.Mocked<Repository<User>>;
+  let auditRepo: jest.Mocked<Repository<AuditLog>>;
   let reportRepo: jest.Mocked<Repository<MessageReport>>;
+  let sessionRepo: jest.Mocked<Repository<ChatSession>>;
   let userQb: ReturnType<typeof makeMockQb>;
   let auditQb: ReturnType<typeof makeMockQb>;
   let reportQb: ReturnType<typeof makeMockQb>;
@@ -86,7 +66,9 @@ describe('AdminRepositoryPg', () => {
     jest.clearAllMocks();
     const mocks = buildMocks();
     userRepo = mocks.userRepo;
+    auditRepo = mocks.auditRepo;
     reportRepo = mocks.reportRepo;
+    sessionRepo = mocks.sessionRepo;
     userQb = mocks.userQb;
     auditQb = mocks.auditQb;
     reportQb = mocks.reportQb;
@@ -498,9 +480,6 @@ describe('AdminRepositoryPg', () => {
       blockedQb.getRawOne.mockResolvedValue({ total: '10' });
 
       // Override auditRepo to return different qbs
-      const auditRepo = dataSource.getRepository(AuditLog) as unknown as jest.Mocked<
-        Repository<AuditLog>
-      >;
       auditRepo.createQueryBuilder
         .mockReturnValueOnce(totalQb as never)
         .mockReturnValueOnce(blockedQb as never);
@@ -543,9 +522,6 @@ describe('AdminRepositoryPg', () => {
       const blockedQb = makeMockQb();
       blockedQb.getRawOne.mockResolvedValue({ total: '0' });
 
-      const auditRepo = dataSource.getRepository(AuditLog) as unknown as jest.Mocked<
-        Repository<AuditLog>
-      >;
       auditRepo.createQueryBuilder
         .mockReturnValueOnce(totalQb as never)
         .mockReturnValueOnce(blockedQb as never);
@@ -587,10 +563,7 @@ describe('AdminRepositoryPg', () => {
       const freshSessionQb3 = makeMockQb();
       freshSessionQb3.getRawOne.mockResolvedValue({ total_unique: '100' });
 
-      const sessionRepoMock = dataSource.getRepository(ChatSession) as unknown as jest.Mocked<
-        Repository<ChatSession>
-      >;
-      sessionRepoMock.createQueryBuilder
+      sessionRepo.createQueryBuilder
         .mockReturnValueOnce(freshSessionQb1 as never)
         .mockReturnValueOnce(freshSessionQb2 as never)
         .mockReturnValueOnce(freshSessionQb3 as never);

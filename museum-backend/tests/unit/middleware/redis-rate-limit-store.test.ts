@@ -1,28 +1,52 @@
 import type Redis from 'ioredis';
 import { RedisRateLimitStore } from '@src/helpers/middleware/redis-rate-limit-store';
+import {
+  makePartialRequest,
+  makePartialResponse,
+  makeNext,
+} from '../../helpers/http/express-mock.helpers';
 
-/** Creates a mock ioredis client with chainable multi(). */
-const createMockRedis = () => {
-  const execResults: [Error | null, unknown][][] = [];
-  let nextExecResult: [Error | null, unknown][] | null = null;
+type ExecTuple = [Error | null, unknown];
+type MockMulti = {
+  incr: jest.Mock;
+  pttl: jest.Mock;
+  exec: jest.Mock<Promise<ExecTuple[] | null>, []>;
+};
+type MockRedis = {
+  multi: jest.Mock;
+  pexpire: jest.Mock;
+  del: jest.Mock;
+  on: jest.Mock;
+  __multi: MockMulti;
+  __setExecResult: (result: ExecTuple[] | null) => void;
+  __pushExecResult: (result: ExecTuple[]) => void;
+  __clearExecResult: () => void;
+};
 
-  const multi = {
+/** Exposes the mock in the Redis shape expected by RedisRateLimitStore. Single cast. */
+const asRedis = (m: MockRedis): Redis => m as unknown as Redis;
+
+/** Creates a mock ioredis client with chainable multi(). Single cast localized here. */
+const createMockRedis = (): MockRedis => {
+  const execResults: ExecTuple[][] = [];
+  let nextExecResult: ExecTuple[] | null = null;
+
+  const multi: MockMulti = {
     incr: jest.fn().mockReturnThis(),
     pttl: jest.fn().mockReturnThis(),
     exec: jest.fn(async () => nextExecResult ?? execResults.shift() ?? null),
   };
 
-  const redis = {
+  return {
     multi: jest.fn(() => multi),
     pexpire: jest.fn(async () => 1),
     del: jest.fn(async () => 1),
     on: jest.fn().mockReturnThis(),
-    // expose internals for test control
     __multi: multi,
-    __setExecResult: (result: [Error | null, unknown][]) => {
+    __setExecResult: (result: ExecTuple[] | null) => {
       nextExecResult = result;
     },
-    __pushExecResult: (result: [Error | null, unknown][]) => {
+    __pushExecResult: (result: ExecTuple[]) => {
       nextExecResult = null;
       execResults.push(result);
     },
@@ -31,11 +55,7 @@ const createMockRedis = () => {
       execResults.length = 0;
     },
   };
-
-  return redis;
 };
-
-type MockRedis = ReturnType<typeof createMockRedis>;
 
 describe('RedisRateLimitStore', () => {
   let mockRedis: MockRedis;
@@ -43,7 +63,7 @@ describe('RedisRateLimitStore', () => {
 
   beforeEach(() => {
     mockRedis = createMockRedis();
-    store = new RedisRateLimitStore(mockRedis as unknown as Redis);
+    store = new RedisRateLimitStore(asRedis(mockRedis));
   });
 
   afterEach(() => {
@@ -78,7 +98,7 @@ describe('RedisRateLimitStore', () => {
     });
 
     it('falls back to in-memory when Redis multi returns null', async () => {
-      mockRedis.__setExecResult(null as unknown as [Error | null, unknown][]);
+      mockRedis.__setExecResult(null);
       mockRedis.__multi.exec.mockResolvedValueOnce(null);
 
       const result = await store.increment('ip:fallback', 60_000);
@@ -186,7 +206,7 @@ describe('RedisRateLimitStore — integration with rate-limit middleware', () =>
     const { RedisRateLimitStore: StoreClass } =
       await import('@src/helpers/middleware/redis-rate-limit-store');
 
-    const store = new StoreClass(mockRedis as unknown as Redis);
+    const store = new StoreClass(asRedis(mockRedis));
     setRedisRateLimitStore(store);
 
     // Simulate Redis returning count=1, pttl=59000
@@ -201,15 +221,9 @@ describe('RedisRateLimitStore — integration with rate-limit middleware', () =>
       keyGenerator: byIp,
     });
 
-    const req = {
-      ip: '10.0.0.1',
-      socket: { remoteAddress: '10.0.0.1' },
-      params: {},
-      body: {},
-      header: () => undefined,
-    } as unknown as Parameters<typeof mw>[0];
-    const res = { setHeader: jest.fn() } as unknown as Parameters<typeof mw>[1];
-    const next = jest.fn();
+    const req = makePartialRequest({ ip: '10.0.0.1', socket: { remoteAddress: '10.0.0.1' } });
+    const res = makePartialResponse();
+    const next = makeNext();
 
     mw(req, res, next);
 

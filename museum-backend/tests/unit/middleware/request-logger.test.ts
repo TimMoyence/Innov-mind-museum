@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
 import { requestLoggerMiddleware } from '@src/helpers/middleware/request-logger.middleware';
 
 jest.mock('@shared/logger/logger', () => ({
@@ -6,17 +6,13 @@ jest.mock('@shared/logger/logger', () => ({
 }));
 
 import { logger } from '@shared/logger/logger';
+import { makePartialRequest } from '../../helpers/http/express-mock.helpers';
 
 describe('requestLoggerMiddleware', () => {
   let finishHandler: (() => void) | undefined;
 
-  const mockReq = (overrides: Record<string, unknown> = {}): Request =>
-    ({
-      method: 'GET',
-      originalUrl: '/api/test',
-      ip: '127.0.0.1',
-      ...overrides,
-    }) as unknown as Request;
+  const mockReq = (overrides: Record<string, unknown> = {}) =>
+    makePartialRequest({ method: 'GET', originalUrl: '/api/test', ip: '127.0.0.1', ...overrides });
 
   const mockRes = (overrides: Record<string, unknown> = {}): Response => {
     const handlers: Record<string, (() => void)[]> = {};

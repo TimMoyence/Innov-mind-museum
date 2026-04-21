@@ -1,23 +1,14 @@
-import type { DataSource, Repository } from 'typeorm';
+import type { Repository } from 'typeorm';
 
 import { SocialAccount } from '@modules/auth/domain/socialAccount.entity';
 import { SocialAccountRepositoryPg } from '@modules/auth/adapters/secondary/social-account.repository.pg';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
+import { makeMockTypeOrmRepo, makeMockDataSource } from 'tests/helpers/shared/mock-deps';
 
 // ─── TypeORM repo + DataSource mock factory ───
 function buildMocks() {
-  const repo = {
-    findOne: jest.fn(),
-    find: jest.fn(),
-    save: jest.fn(),
-    create: jest.fn().mockImplementation((data: unknown) => data),
-    delete: jest.fn(),
-  } as unknown as jest.Mocked<Repository<SocialAccount>>;
-
-  const dataSource = {
-    getRepository: jest.fn().mockReturnValue(repo),
-  } as unknown as DataSource;
-
+  const { repo } = makeMockTypeOrmRepo<SocialAccount>();
+  const dataSource = makeMockDataSource(repo);
   return { repo, dataSource };
 }
 

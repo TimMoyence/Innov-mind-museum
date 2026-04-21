@@ -113,11 +113,7 @@ describe('LLMGuardAdapter.checkInput', () => {
 
   it('strips trailing slash from baseUrl', async () => {
     const fetchFn = makeFetch({ json: async () => ({ is_valid: true }) });
-    const adapter = new LLMGuardAdapter({
-      baseUrl: 'http://llm-guard:8081/',
-      timeoutMs: 300,
-      fetchFn: fetchFn as unknown as typeof fetch,
-    });
+    const adapter = buildAdapter(fetchFn, 'http://llm-guard:8081/');
 
     await adapter.checkInput({ text: 'hi' });
 

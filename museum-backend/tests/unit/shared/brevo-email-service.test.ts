@@ -19,11 +19,15 @@ function makeOkResponse(): Response {
   } as unknown as Response;
 }
 
-function makeErrorResponse(status: number, body: string): Response {
+function makeErrorResponse(status: number, body: string | { reject: Error }): Response {
+  const text =
+    typeof body === 'string'
+      ? jest.fn().mockResolvedValue(body)
+      : jest.fn().mockRejectedValue(body.reject);
   return {
     ok: false,
     status,
-    text: jest.fn().mockResolvedValue(body),
+    text,
   } as unknown as Response;
 }
 
@@ -106,12 +110,9 @@ describe('BrevoEmailService', () => {
     });
 
     it('handles response.text() failure gracefully', async () => {
-      const response = {
-        ok: false,
-        status: 503,
-        text: jest.fn().mockRejectedValue(new Error('stream error')),
-      } as unknown as Response;
-      mockFetch.mockResolvedValueOnce(response);
+      mockFetch.mockResolvedValueOnce(
+        makeErrorResponse(503, { reject: new Error('stream error') }),
+      );
 
       await expect(service.sendEmail('user@test.com', 'Subject', '<p>Body</p>')).rejects.toThrow(
         'Brevo email failed (503): ',

@@ -1,15 +1,14 @@
 import { createUploadAdmissionMiddleware } from '@src/helpers/middleware/upload-admission.middleware';
 
-import type { Request, Response, NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
+import { makePartialRequest } from '../../helpers/http/express-mock.helpers';
 
 interface MockResponse extends Response {
   triggerClose: () => void;
 }
 
-const mockReq = (contentType = ''): Request =>
-  ({
-    headers: { 'content-type': contentType },
-  }) as unknown as Request;
+const mockReq = (contentType = '') =>
+  makePartialRequest({ headers: { 'content-type': contentType } });
 
 const mockRes = (): MockResponse => {
   const closeHandlers: (() => void)[] = [];

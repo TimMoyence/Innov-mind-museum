@@ -1,9 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
 
 import { dataModeMiddleware } from '@src/helpers/dataMode.middleware';
+import { makePartialRequest } from '../../helpers/http/express-mock.helpers';
 
 const mockReq = (headers: Record<string, string | string[] | undefined> = {}): Request =>
-  ({ headers }) as unknown as Request;
+  makePartialRequest({ headers });
 
 const mockRes = (): Response => ({}) as Response;
 
