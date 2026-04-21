@@ -96,17 +96,14 @@ export const useReviews = (): UseReviewsReturn => {
       setSubmitError(null);
       try {
         const { review } = await reviewApi.submitReview(rating, comment, userName);
-        // Optimistic: add the review locally (backend returns it as pending,
-        // it may not appear in the approved list yet, but we show it to the submitter)
+        // Optimistic: add the review locally so submitter sees it immediately (pending state).
+        // Stats are NOT mutated here — backend filters stats to approved reviews only,
+        // so we wait for the next refetch to keep client/server in sync.
         setReviews((prev) => [review, ...prev]);
-        setStats((prev) =>
-          prev
-            ? {
-                average: (prev.average * prev.count + rating) / (prev.count + 1),
-                count: prev.count + 1,
-              }
-            : { average: rating, count: 1 },
-        );
+        void reviewApi
+          .getStats()
+          .then(setStats)
+          .catch(() => undefined);
         return true;
       } catch (err) {
         const code =
