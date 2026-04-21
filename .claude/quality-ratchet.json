@@ -1,6 +1,6 @@
 {
   "lastUpdated": "2026-04-21",
-  "testCount": 2788,
+  "testCount": 2812,
   "frontendTestCount": 1443,
   "frontendSuiteCount": 150,
   "typecheckErrors": 0,
@@ -8,6 +8,6 @@
   "coverageStatements": 90.28,
   "coverageBranches": 80.43,
   "lintErrors": 0,
-  "_comment": "Team B audit fixes (2026-04-21): H1 admin review UI, H2 audit log (SOC2/GDPR), H3 author notification + migration, H4 pessimistic UX, H5 ChatMessageService 18→8 deps (ChatEnrichmentDeps+ChatSafetyDeps), H6 chat barrel 11→5 exports (chat/wiring.ts + chat-module-singleton.ts), H7 handleJobFailure pure fn + DLQ semantics, T3 audio catch, T4 stats fix, T5 SSE RFC headers. Score: 6.8→9.5/10.",
+  "_comment": "Team B audit complete (2026-04-21): T1 startPoolMonitor wired + clearInterval, T3 audio catch →400, T4 pessimistic stats refetch, T5 RFC 9745/8594 SSE headers, H1-H7 all implemented, H8 GitNexus re-index done (6036/15640). Score: 6.8→10/10. DoD 15/15.",
   "webTestCount": 174
 }
