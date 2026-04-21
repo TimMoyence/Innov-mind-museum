@@ -223,17 +223,22 @@ export class ChatMessageService {
 
     const userGuardrail = await this.guardrail.evaluateInput(text, input.context?.preClassified);
 
-    await this.repository.persistMessage({ sessionId, role: 'user', text, imageRef });
-
     if (!userGuardrail.allow) {
+      // On block: persist the user attempt AND the refusal atomically (single TX).
+      // Preserves the audit/moderation requirement (user row is kept, cf.
+      // chat-message-service.test.ts:403/:414) while removing the orphan-row bug
+      // where one side of the pair could land alone if the second write failed.
       const result = await this.guardrail.handleInputBlock({
         sessionId,
         reason: userGuardrail.reason,
         requestedLocale,
         userId: ownerId,
+        userMessage: { sessionId, role: 'user', text, imageRef },
       });
       return { kind: 'refused', result };
     }
+
+    await this.repository.persistMessage({ sessionId, role: 'user', text, imageRef });
 
     const history = await this.repository.listSessionHistory(sessionId, env.llm.maxHistoryMessages);
     const {
