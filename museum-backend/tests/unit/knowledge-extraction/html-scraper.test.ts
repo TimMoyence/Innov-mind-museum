@@ -36,6 +36,13 @@ jest.mock('node:dns/promises', () => ({
 }));
 
 import { HtmlScraper } from '@modules/knowledge-extraction/adapters/secondary/html-scraper';
+import {
+  makeHtmlFetchResponse as makeHtmlResponse,
+  makeRedirectFetchResponse as makeRedirectResponse,
+  makeFetchSpy,
+  mockFetch,
+  mockHtmlFetch,
+} from '../../helpers/fetch/fetch-mock.helpers';
 
 const originalFetch = global.fetch;
 
@@ -48,35 +55,6 @@ afterEach(() => {
   global.fetch = originalFetch;
   jest.clearAllMocks();
 });
-
-// Helpers ----------------------------------------------------------------
-
-function makeHtmlResponse(html: string, contentType = 'text/html; charset=utf-8') {
-  return {
-    ok: true,
-    status: 200,
-    headers: {
-      get: (key: string) => (key.toLowerCase() === 'content-type' ? contentType : null),
-      has: (key: string) => key.toLowerCase() === 'content-type',
-    },
-    text: async () => html,
-    arrayBuffer: async () => new ArrayBuffer(0),
-  };
-}
-
-/** Builds a `3xx` response carrying a `Location` header, used to drive the manual redirect loop. */
-function makeRedirectResponse(location: string, status = 302) {
-  return {
-    ok: false,
-    status,
-    headers: {
-      get: (key: string) => (key.toLowerCase() === 'location' ? location : null),
-      has: (key: string) => key.toLowerCase() === 'location',
-    },
-    text: async () => '',
-    arrayBuffer: async () => new ArrayBuffer(0),
-  };
-}
 
 const ARTICLE_HTML = `
 <!DOCTYPE html>
@@ -110,9 +88,7 @@ describe('HtmlScraper', () => {
   const scraper = new HtmlScraper({ timeoutMs: 5000, maxContentBytes: 10_000 });
 
   it('extracts readable content from HTML with article tag via Readability', async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(makeHtmlResponse(ARTICLE_HTML)) as unknown as typeof fetch;
+    global.fetch = mockHtmlFetch(ARTICLE_HTML);
 
     const result = await scraper.scrape('https://example.com/article');
 
@@ -124,9 +100,7 @@ describe('HtmlScraper', () => {
   });
 
   it('falls back to cheerio extraction when Readability returns null', async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(makeHtmlResponse(SIMPLE_HTML)) as unknown as typeof fetch;
+    global.fetch = mockHtmlFetch(SIMPLE_HTML);
 
     const result = await scraper.scrape('https://example.com/simple');
 
@@ -139,12 +113,7 @@ describe('HtmlScraper', () => {
   });
 
   it('returns null on HTTP error (404)', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: false,
-      status: 404,
-      headers: { get: () => null },
-      text: async () => '',
-    }) as unknown as typeof fetch;
+    global.fetch = mockFetch({ ok: false, status: 404 });
 
     const result = await scraper.scrape('https://example.com/missing');
 
@@ -152,11 +121,7 @@ describe('HtmlScraper', () => {
   });
 
   it('returns null on non-HTML content type (application/pdf)', async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(
-        makeHtmlResponse('%PDF-1.4 ...', 'application/pdf'),
-      ) as unknown as typeof fetch;
+    global.fetch = mockHtmlFetch('%PDF-1.4 ...', 'application/pdf');
 
     const result = await scraper.scrape('https://example.com/doc.pdf');
 
@@ -164,9 +129,7 @@ describe('HtmlScraper', () => {
   });
 
   it('returns null on network failure (fetch rejects)', async () => {
-    global.fetch = jest
-      .fn()
-      .mockRejectedValue(new Error('ECONNREFUSED')) as unknown as typeof fetch;
+    global.fetch = mockFetch(new Error('ECONNREFUSED'));
 
     const result = await scraper.scrape('https://example.com/unreachable');
 
@@ -174,8 +137,8 @@ describe('HtmlScraper', () => {
   });
 
   it('returns null for empty URL without calling fetch', async () => {
-    const fetchSpy = jest.fn();
-    global.fetch = fetchSpy as unknown as typeof fetch;
+    const fetchSpy = makeFetchSpy();
+    global.fetch = fetchSpy;
 
     const result = await scraper.scrape('   ');
 
@@ -185,9 +148,7 @@ describe('HtmlScraper', () => {
 
   it('truncates content exceeding maxContentBytes', async () => {
     const smallScraper = new HtmlScraper({ timeoutMs: 5000, maxContentBytes: 20 });
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(makeHtmlResponse(ARTICLE_HTML)) as unknown as typeof fetch;
+    global.fetch = mockHtmlFetch(ARTICLE_HTML);
 
     const result = await smallScraper.scrape('https://example.com/article');
 
@@ -196,9 +157,7 @@ describe('HtmlScraper', () => {
   });
 
   it('returns a 16-char hex contentHash derived from textContent', async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(makeHtmlResponse(ARTICLE_HTML)) as unknown as typeof fetch;
+    global.fetch = mockHtmlFetch(ARTICLE_HTML);
 
     const result = await scraper.scrape('https://example.com/article');
 
@@ -207,10 +166,10 @@ describe('HtmlScraper', () => {
   });
 
   describe('SSRF protection', () => {
-    const fetchSpy = jest.fn();
+    const fetchSpy = makeFetchSpy();
 
     beforeEach(() => {
-      global.fetch = fetchSpy as unknown as typeof fetch;
+      global.fetch = fetchSpy;
     });
 
     it('rejects IPv4 loopback (127.0.0.1)', async () => {
@@ -367,12 +326,12 @@ describe('HtmlScraper', () => {
   });
 
   describe('SSRF protection — manual redirect chain', () => {
-    let fetchSpy: jest.Mock;
+    let fetchSpy: jest.MockedFunction<typeof fetch>;
 
     beforeEach(() => {
       mockLookup.mockResolvedValue({ address: '93.184.216.34', family: 4 });
-      fetchSpy = jest.fn();
-      global.fetch = fetchSpy as unknown as typeof fetch;
+      fetchSpy = makeFetchSpy();
+      global.fetch = fetchSpy;
     });
 
     it('blocks a 302 redirect targeting a private IPv4 (169.254.169.254)', async () => {

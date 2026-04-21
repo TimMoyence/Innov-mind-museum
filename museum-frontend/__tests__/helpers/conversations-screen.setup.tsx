@@ -40,10 +40,6 @@ jest.mock('@/features/conversation/infrastructure/conversationsStore', () => ({
     selector({ items: [], savedSessionIds: [], sortMode: 'recent' }),
 }));
 
-jest.mock('@/features/chat/infrastructure/chatApi', () => ({
-  chatApi: { createSession: jest.fn() },
-}));
-
 jest.mock('@/features/settings/runtimeSettings', () => ({
   loadRuntimeSettings: jest.fn().mockResolvedValue({
     defaultLocale: 'en-US',

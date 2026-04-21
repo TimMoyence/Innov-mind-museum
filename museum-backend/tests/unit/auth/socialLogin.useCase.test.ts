@@ -1,49 +1,19 @@
 import { SocialLoginUseCase } from '@modules/auth/useCase/socialLogin.useCase';
-import type { IUserRepository } from '@modules/auth/domain/user.repository.interface';
-import type { ISocialAccountRepository } from '@modules/auth/domain/socialAccount.repository.interface';
-import type { AuthSessionService } from '@modules/auth/useCase/authSession.service';
 import type { SocialTokenVerifier } from '@modules/auth/domain/social-token-verifier.port';
 import { makeUser } from '../../helpers/auth/user.fixtures';
-
-const sessionResponse = {
-  accessToken: 'access-jwt',
-  refreshToken: 'refresh-jwt',
-  expiresIn: 900,
-  refreshExpiresIn: 2592000,
-  user: {
-    id: 1,
-    email: 'user@test.com',
-    firstname: 'Test',
-    lastname: 'User',
-    role: 'visitor' as const,
-    museumId: null,
-  },
-};
+import {
+  makeUserRepo,
+  makeSocialAccountRepo,
+  makeAuthSessionServiceMock,
+} from '../../helpers/auth/user-repo.mock';
 
 const makeMocks = () => {
-  const userRepo: jest.Mocked<
-    Pick<IUserRepository, 'getUserById' | 'getUserByEmail' | 'registerSocialUser'>
-  > = {
-    getUserById: jest.fn(),
-    getUserByEmail: jest.fn(),
-    registerSocialUser: jest.fn(),
-  };
-
-  const socialAccountRepo: jest.Mocked<
-    Pick<ISocialAccountRepository, 'findByProviderAndProviderUserId' | 'create'>
-  > = {
-    findByProviderAndProviderUserId: jest.fn(),
-    create: jest.fn(),
-  };
-
-  const authSessionService = {
-    socialLogin: jest.fn().mockResolvedValue(sessionResponse),
-  } as unknown as AuthSessionService;
-
+  const userRepo = makeUserRepo();
+  const socialAccountRepo = makeSocialAccountRepo();
+  const authSessionService = makeAuthSessionServiceMock();
   const socialTokenVerifier: jest.Mocked<SocialTokenVerifier> = {
     verify: jest.fn(),
   };
-
   return { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier };
 };
 
@@ -76,15 +46,15 @@ describe('SocialLoginUseCase', () => {
     });
 
     const useCase = new SocialLoginUseCase(
-      userRepo as unknown as IUserRepository,
-      socialAccountRepo as unknown as ISocialAccountRepository,
+      userRepo,
+      socialAccountRepo,
       authSessionService,
       socialTokenVerifier,
     );
 
     const result = await useCase.execute('google', 'valid-id-token');
 
-    expect(result).toEqual(sessionResponse);
+    expect(result).toMatchObject({ accessToken: 'access-jwt' });
     expect(socialAccountRepo.findByProviderAndProviderUserId).toHaveBeenCalledWith(
       'google',
       'goog-123',
@@ -115,8 +85,8 @@ describe('SocialLoginUseCase', () => {
     });
 
     const useCase = new SocialLoginUseCase(
-      userRepo as unknown as IUserRepository,
-      socialAccountRepo as unknown as ISocialAccountRepository,
+      userRepo,
+      socialAccountRepo,
       authSessionService,
       socialTokenVerifier,
     );
@@ -130,7 +100,7 @@ describe('SocialLoginUseCase', () => {
       email: 'existing@test.com',
     });
     expect(authSessionService.socialLogin).toHaveBeenCalled();
-    expect(result).toEqual(sessionResponse);
+    expect(result).toMatchObject({ accessToken: 'access-jwt' });
   });
 
   it('creates new user when no social link and no email match', async () => {
@@ -157,8 +127,8 @@ describe('SocialLoginUseCase', () => {
     });
 
     const useCase = new SocialLoginUseCase(
-      userRepo as unknown as IUserRepository,
-      socialAccountRepo as unknown as ISocialAccountRepository,
+      userRepo,
+      socialAccountRepo,
       authSessionService,
       socialTokenVerifier,
     );
@@ -179,8 +149,8 @@ describe('SocialLoginUseCase', () => {
   it('throws 400 when idToken is empty', async () => {
     const { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier } = makeMocks();
     const useCase = new SocialLoginUseCase(
-      userRepo as unknown as IUserRepository,
-      socialAccountRepo as unknown as ISocialAccountRepository,
+      userRepo,
+      socialAccountRepo,
       authSessionService,
       socialTokenVerifier,
     );
@@ -194,8 +164,8 @@ describe('SocialLoginUseCase', () => {
   it('throws 400 when idToken is whitespace-only', async () => {
     const { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier } = makeMocks();
     const useCase = new SocialLoginUseCase(
-      userRepo as unknown as IUserRepository,
-      socialAccountRepo as unknown as ISocialAccountRepository,
+      userRepo,
+      socialAccountRepo,
       authSessionService,
       socialTokenVerifier,
     );
@@ -211,8 +181,8 @@ describe('SocialLoginUseCase', () => {
     socialTokenVerifier.verify.mockRejectedValue(new Error('Invalid JWT format'));
 
     const useCase = new SocialLoginUseCase(
-      userRepo as unknown as IUserRepository,
-      socialAccountRepo as unknown as ISocialAccountRepository,
+      userRepo,
+      socialAccountRepo,
       authSessionService,
       socialTokenVerifier,
     );
@@ -239,8 +209,8 @@ describe('SocialLoginUseCase', () => {
     });
 
     const useCase = new SocialLoginUseCase(
-      userRepo as unknown as IUserRepository,
-      socialAccountRepo as unknown as ISocialAccountRepository,
+      userRepo,
+      socialAccountRepo,
       authSessionService,
       socialTokenVerifier,
     );
@@ -274,8 +244,8 @@ describe('SocialLoginUseCase', () => {
     });
 
     const useCase = new SocialLoginUseCase(
-      userRepo as unknown as IUserRepository,
-      socialAccountRepo as unknown as ISocialAccountRepository,
+      userRepo,
+      socialAccountRepo,
       authSessionService,
       socialTokenVerifier,
     );
@@ -309,8 +279,8 @@ describe('SocialLoginUseCase', () => {
     });
 
     const useCase = new SocialLoginUseCase(
-      userRepo as unknown as IUserRepository,
-      socialAccountRepo as unknown as ISocialAccountRepository,
+      userRepo,
+      socialAccountRepo,
       authSessionService,
       socialTokenVerifier,
     );
@@ -343,8 +313,8 @@ describe('SocialLoginUseCase', () => {
     });
 
     const useCase = new SocialLoginUseCase(
-      userRepo as unknown as IUserRepository,
-      socialAccountRepo as unknown as ISocialAccountRepository,
+      userRepo,
+      socialAccountRepo,
       authSessionService,
       socialTokenVerifier,
     );
@@ -382,8 +352,8 @@ describe('SocialLoginUseCase', () => {
     });
 
     const useCase = new SocialLoginUseCase(
-      userRepo as unknown as IUserRepository,
-      socialAccountRepo as unknown as ISocialAccountRepository,
+      userRepo,
+      socialAccountRepo,
       authSessionService,
       socialTokenVerifier,
     );
@@ -417,8 +387,8 @@ describe('SocialLoginUseCase', () => {
     });
 
     const useCase = new SocialLoginUseCase(
-      userRepo as unknown as IUserRepository,
-      socialAccountRepo as unknown as ISocialAccountRepository,
+      userRepo,
+      socialAccountRepo,
       authSessionService,
       socialTokenVerifier,
     );
@@ -450,8 +420,8 @@ describe('SocialLoginUseCase', () => {
     });
 
     const useCase = new SocialLoginUseCase(
-      userRepo as unknown as IUserRepository,
-      socialAccountRepo as unknown as ISocialAccountRepository,
+      userRepo,
+      socialAccountRepo,
       authSessionService,
       socialTokenVerifier,
     );

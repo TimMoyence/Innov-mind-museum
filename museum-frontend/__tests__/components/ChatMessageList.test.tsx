@@ -37,10 +37,6 @@ jest.mock('@/features/chat/ui/WelcomeCard', () => {
   };
 });
 
-jest.mock('@/features/chat/infrastructure/chatApi', () => ({
-  chatApi: { setMessageFeedback: jest.fn() },
-}));
-
 jest.mock('@/features/chat/application/useTextToSpeech', () => ({
   useTextToSpeech: () => ({
     isPlaying: false,

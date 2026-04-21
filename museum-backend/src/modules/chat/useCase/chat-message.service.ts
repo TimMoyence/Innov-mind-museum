@@ -40,26 +40,39 @@ import type { DbLookupService } from '@modules/knowledge-extraction/useCase/db-l
 import type { AuditService } from '@shared/audit/audit.service';
 import type { CacheService } from '@shared/cache/cache.port';
 
-/** Dependencies for the message sub-service. */
-export interface ChatMessageServiceDeps {
-  repository: ChatRepository;
-  orchestrator: ChatOrchestrator;
-  imageStorage: ImageStorage;
-  audioTranscriber?: AudioTranscriber;
-  cache?: CacheService;
-  ocr?: OcrService;
-  audit?: AuditService;
+/** Content-enrichment services bundled together (replaces 7 individual deps). */
+export interface ChatEnrichmentDeps {
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
   imageEnrichment?: ImageEnrichmentService;
   webSearch?: WebSearchService;
-  artTopicClassifier?: ArtTopicClassifierPort;
-  advancedGuardrail?: AdvancedGuardrail;
-  advancedGuardrailObserveOnly?: boolean;
-  piiSanitizer?: PiiSanitizer;
   dbLookup?: DbLookupService;
   extractionQueue?: ExtractionQueuePort;
   locationResolver?: LocationResolver;
+}
+
+/** Content-safety services bundled together (replaces 5 individual deps). */
+export interface ChatSafetyDeps {
+  artTopicClassifier?: ArtTopicClassifierPort;
+  advancedGuardrail?: AdvancedGuardrail;
+  advancedGuardrailObserveOnly?: boolean;
+  audit?: AuditService;
+  piiSanitizer?: PiiSanitizer;
+}
+
+/**
+ * Dependencies for the message sub-service — 8 top-level deps (down from 18) via two
+ * feature bundles: {@link ChatEnrichmentDeps} and {@link ChatSafetyDeps}.
+ */
+export interface ChatMessageServiceDeps {
+  repository: ChatRepository; // 1 — session + message persistence
+  orchestrator: ChatOrchestrator; // 2 — LLM call
+  imageStorage: ImageStorage; // 3 — upload / ref resolution
+  audioTranscriber?: AudioTranscriber; // 4 — STT (postAudioMessage path)
+  cache?: CacheService; // 5 — response caching
+  ocr?: OcrService; // 6 — OCR text extraction from images
+  enrichment?: ChatEnrichmentDeps; // 7 — knowledge / web / memory / location
+  safety?: ChatSafetyDeps; // 8 — guardrails + PII sanitiser
 }
 
 /** Successful preparation result with all data needed to invoke the LLM. */
@@ -124,19 +137,22 @@ export class ChatMessageService {
   private readonly locationResolver?: LocationResolver;
 
   constructor(deps: ChatMessageServiceDeps) {
+    const enrichment = deps.enrichment ?? {};
+    const safety = deps.safety ?? {};
+
     this.repository = deps.repository;
     this.orchestrator = deps.orchestrator;
     this.audioTranscriber = deps.audioTranscriber ?? new DisabledAudioTranscriber();
     this.cache = deps.cache;
-    this.userMemory = deps.userMemory;
-    this.knowledgeBase = deps.knowledgeBase;
-    this.imageEnrichment = deps.imageEnrichment;
-    this.webSearch = deps.webSearch;
-    this.artTopicClassifier = deps.artTopicClassifier;
-    this.piiSanitizer = deps.piiSanitizer ?? new DisabledPiiSanitizer();
-    this.dbLookup = deps.dbLookup;
-    this.extractionQueue = deps.extractionQueue;
-    this.locationResolver = deps.locationResolver;
+    this.userMemory = enrichment.userMemory;
+    this.knowledgeBase = enrichment.knowledgeBase;
+    this.imageEnrichment = enrichment.imageEnrichment;
+    this.webSearch = enrichment.webSearch;
+    this.artTopicClassifier = safety.artTopicClassifier;
+    this.piiSanitizer = safety.piiSanitizer ?? new DisabledPiiSanitizer();
+    this.dbLookup = enrichment.dbLookup;
+    this.extractionQueue = enrichment.extractionQueue;
+    this.locationResolver = enrichment.locationResolver;
 
     this.imageProcessor = new ImageProcessingService({
       imageStorage: deps.imageStorage,
@@ -145,10 +161,10 @@ export class ChatMessageService {
 
     this.guardrail = new GuardrailEvaluationService({
       repository: deps.repository,
-      audit: deps.audit,
-      artTopicClassifier: deps.artTopicClassifier,
-      advancedGuardrail: deps.advancedGuardrail,
-      advancedGuardrailObserveOnly: deps.advancedGuardrailObserveOnly,
+      audit: safety.audit,
+      artTopicClassifier: safety.artTopicClassifier,
+      advancedGuardrail: safety.advancedGuardrail,
+      advancedGuardrailObserveOnly: safety.advancedGuardrailObserveOnly,
     });
   }
 
@@ -224,10 +240,8 @@ export class ChatMessageService {
     const userGuardrail = await this.guardrail.evaluateInput(text, input.context?.preClassified);
 
     if (!userGuardrail.allow) {
-      // On block: persist the user attempt AND the refusal atomically (single TX).
-      // Preserves the audit/moderation requirement (user row is kept, cf.
-      // chat-message-service.test.ts:403/:414) while removing the orphan-row bug
-      // where one side of the pair could land alone if the second write failed.
+      // Both user attempt and refusal are always persisted — the user row is the moderation
+      // audit trail. Atomic TX guarantees neither row lands without the other.
       const result = await this.guardrail.handleInputBlock({
         sessionId,
         reason: userGuardrail.reason,

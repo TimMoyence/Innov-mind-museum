@@ -1,5 +1,8 @@
 import { ChatMessageService } from '@modules/chat/useCase/chat-message.service';
-import type { ChatMessageServiceDeps } from '@modules/chat/useCase/chat-message.service';
+import type {
+  ChatEnrichmentDeps,
+  ChatMessageServiceDeps,
+} from '@modules/chat/useCase/chat-message.service';
 import type { PiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 import type {
   ChatRepository,
@@ -49,6 +52,10 @@ const makeRepo = (
     getMessageById: jest.fn().mockResolvedValue(null),
     deleteSessionIfEmpty: jest.fn().mockResolvedValue(true),
     persistMessage: jest.fn().mockResolvedValue(makeMessage({ role: 'assistant' })),
+    persistBlockedExchange: jest.fn().mockResolvedValue({
+      userMessage: makeMessage({ id: 'msg-user-blocked', role: 'user' }),
+      refusal: makeMessage({ id: 'msg-assistant-refusal', role: 'assistant' }),
+    }),
     listSessionMessages: jest.fn().mockResolvedValue({
       messages: [],
       nextCursor: null,
@@ -400,28 +407,54 @@ describe('ChatMessageService', () => {
       expect(orchestrator.generate).toHaveBeenCalledTimes(1);
     });
 
-    it('persists user message even when guardrail blocks', async () => {
+    it('persists user message atomically with refusal when guardrail blocks', async () => {
       const { service, repo } = buildService();
 
       await service.postMessage(SESSION_ID, { text: 'You are a stupid moron' }, 'req-1', USER_ID);
 
-      // User message should still be persisted before the guardrail refusal
-      expect(repo.persistMessage).toHaveBeenCalledWith(
-        expect.objectContaining({ role: 'user', text: 'You are a stupid moron' }),
+      // The attempted user message MUST still reach the database for audit/moderation —
+      // now delivered atomically alongside the refusal via persistBlockedExchange.
+      expect(repo.persistBlockedExchange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userMessage: expect.objectContaining({
+            role: 'user',
+            text: 'You are a stupid moron',
+          }),
+          refusal: expect.objectContaining({ role: 'assistant' }),
+        }),
       );
+      // Standalone persistMessage MUST NOT be used on the block path (previously an
+      // un-atomic second call persisted the refusal — regression guard).
+      expect(repo.persistMessage).not.toHaveBeenCalled();
     });
 
-    it('persists assistant refusal message when input is blocked', async () => {
+    it('persists assistant refusal in a single atomic call when input is blocked', async () => {
       const { service, repo } = buildService();
 
       await service.postMessage(SESSION_ID, { text: 'You are an idiot' }, 'req-1', USER_ID);
 
-      // Should persist both user message and assistant refusal
-      expect(repo.persistMessage).toHaveBeenCalledTimes(2);
-      expect(repo.persistMessage).toHaveBeenNthCalledWith(
-        2,
-        expect.objectContaining({ role: 'assistant' }),
+      // Exactly one atomic call — both user attempt and refusal committed together.
+      expect(repo.persistBlockedExchange).toHaveBeenCalledTimes(1);
+      expect(repo.persistBlockedExchange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          refusal: expect.objectContaining({ role: 'assistant' }),
+          userMessage: expect.objectContaining({ role: 'user', text: 'You are an idiot' }),
+        }),
       );
+    });
+
+    it('rolls back both rows when the atomic persist fails (no orphan user row)', async () => {
+      const repo = makeRepo();
+      repo.persistBlockedExchange.mockRejectedValueOnce(new Error('simulated DB failure'));
+      const { service } = buildService({ repository: repo });
+
+      await expect(
+        service.postMessage(SESSION_ID, { text: 'You are stupid' }, 'req-1', USER_ID),
+      ).rejects.toThrow('simulated DB failure');
+
+      // Neither a standalone user persist nor a fallback write should have occurred.
+      expect(repo.persistMessage).not.toHaveBeenCalled();
+      expect(repo.persistBlockedExchange).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -916,7 +949,7 @@ describe('ChatMessageService', () => {
       ]);
       const { service } = buildService({
         repository: repo,
-        knowledgeBase: mockKB as unknown as ChatMessageServiceDeps['knowledgeBase'],
+        enrichment: { knowledgeBase: mockKB as unknown as ChatEnrichmentDeps['knowledgeBase'] },
       });
 
       await service.postMessage(
@@ -937,7 +970,7 @@ describe('ChatMessageService', () => {
       repo.listSessionHistory.mockResolvedValue([]);
       const { service } = buildService({
         repository: repo,
-        knowledgeBase: mockKB as unknown as ChatMessageServiceDeps['knowledgeBase'],
+        enrichment: { knowledgeBase: mockKB as unknown as ChatEnrichmentDeps['knowledgeBase'] },
       });
 
       await service.postMessage(
@@ -961,7 +994,7 @@ describe('ChatMessageService', () => {
       repo.listSessionHistory.mockResolvedValue([]);
       const { service } = buildService({
         repository: repo,
-        knowledgeBase: mockKB as unknown as ChatMessageServiceDeps['knowledgeBase'],
+        enrichment: { knowledgeBase: mockKB as unknown as ChatEnrichmentDeps['knowledgeBase'] },
       });
 
       await service.postMessage(SESSION_ID, { text: 'Hello' }, 'req-1', USER_ID);
@@ -984,7 +1017,7 @@ describe('ChatMessageService', () => {
       ]);
       const { service, orchestrator } = buildService({
         repository: repo,
-        knowledgeBase: mockKB as unknown as ChatMessageServiceDeps['knowledgeBase'],
+        enrichment: { knowledgeBase: mockKB as unknown as ChatEnrichmentDeps['knowledgeBase'] },
       });
 
       // Should not throw even though KB failed
@@ -1008,7 +1041,7 @@ describe('ChatMessageService', () => {
         updateAfterSession: jest.fn().mockResolvedValue(undefined),
       };
       const { service, orchestrator } = buildService({
-        userMemory: mockMemory as unknown as ChatMessageServiceDeps['userMemory'],
+        enrichment: { userMemory: mockMemory as unknown as ChatEnrichmentDeps['userMemory'] },
       });
 
       await service.postMessage(
@@ -1032,7 +1065,7 @@ describe('ChatMessageService', () => {
         updateAfterSession: jest.fn().mockResolvedValue(undefined),
       };
       const { service, orchestrator } = buildService({
-        userMemory: mockMemory as unknown as ChatMessageServiceDeps['userMemory'],
+        enrichment: { userMemory: mockMemory as unknown as ChatEnrichmentDeps['userMemory'] },
       });
 
       await service.postMessage(
@@ -1198,7 +1231,7 @@ describe('ChatMessageService', () => {
 
     it('passes sanitized text to orchestrator in postMessage', async () => {
       const piiSanitizer = makePiiSanitizer();
-      const { service, orchestrator } = buildService({ piiSanitizer });
+      const { service, orchestrator } = buildService({ safety: { piiSanitizer } });
 
       await service.postMessage(
         SESSION_ID,
@@ -1215,7 +1248,7 @@ describe('ChatMessageService', () => {
 
     it('passes sanitized text to orchestrator in postMessageStream', async () => {
       const piiSanitizer = makePiiSanitizer();
-      const { service, orchestrator } = buildService({ piiSanitizer });
+      const { service, orchestrator } = buildService({ safety: { piiSanitizer } });
 
       await service.postMessageStream(
         SESSION_ID,
@@ -1235,7 +1268,7 @@ describe('ChatMessageService', () => {
 
     it('persists original (unsanitized) user message to database', async () => {
       const piiSanitizer = makePiiSanitizer();
-      const { service, repo } = buildService({ piiSanitizer });
+      const { service, repo } = buildService({ safety: { piiSanitizer } });
 
       await service.postMessage(
         SESSION_ID,

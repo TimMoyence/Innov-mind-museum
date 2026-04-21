@@ -39,6 +39,13 @@ export const useSessionLoader = (
     } catch (loadError) {
       Sentry.captureException(loadError, { tags: { flow: 'chat.loadSession' } });
       setError(getErrorMessage(loadError));
+      // Hydrate from cache so the user isn't left with an empty screen on a transient error.
+      const cached = useChatSessionStore.getState().sessions[sessionId];
+      if (cached) {
+        setMessages(cached.messages);
+        setSessionTitle(cached.title);
+        setMuseumName(cached.museumName);
+      }
     } finally {
       setIsLoading(false);
     }

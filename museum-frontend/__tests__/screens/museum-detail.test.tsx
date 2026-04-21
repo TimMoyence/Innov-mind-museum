@@ -14,13 +14,6 @@ expoRouter.useLocalSearchParams = () => ({
   distanceMeters: '1200',
 });
 
-const mockCreateSession = jest.fn();
-jest.mock('@/features/chat/infrastructure/chatApi', () => ({
-  chatApi: {
-    createSession: (...args: unknown[]) => mockCreateSession(...args),
-  },
-}));
-
 import MuseumDetailScreen from '@/app/(stack)/museum-detail';
 
 describe('MuseumDetailScreen', () => {

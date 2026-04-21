@@ -47,3 +47,6 @@ export const AUDIT_ADMIN_REPORT_RESOLVED = 'ADMIN_REPORT_RESOLVED';
 // ─── Support ticket events ───
 export const AUDIT_SUPPORT_TICKET_CREATED = 'SUPPORT_TICKET_CREATED';
 export const AUDIT_ADMIN_TICKET_UPDATED = 'ADMIN_TICKET_UPDATED';
+
+// ─── Review moderation events ───
+export const AUDIT_ADMIN_REVIEW_MODERATED = 'ADMIN_REVIEW_MODERATED';

@@ -144,10 +144,13 @@ describe('ListAllReviewsUseCase', () => {
 // ─── ModerateReviewUseCase ──────────────────────────────────────────
 
 describe('ModerateReviewUseCase', () => {
+  const makeAuditSpy = () => ({ log: jest.fn() });
+
   it('approves a review', async () => {
     const repo = makeFakeRepo();
-    const uc = new ModerateReviewUseCase(repo);
-    const result = await uc.execute({ reviewId: fakeReview.id, status: 'approved' });
+    const audit = makeAuditSpy();
+    const uc = new ModerateReviewUseCase(repo, audit);
+    const result = await uc.execute({ reviewId: fakeReview.id, status: 'approved', actorId: 7 });
     expect(result.status).toBe('approved');
     expect(repo.moderateReview).toHaveBeenCalledWith({
       reviewId: fakeReview.id,
@@ -157,19 +160,170 @@ describe('ModerateReviewUseCase', () => {
 
   it('rejects invalid status', async () => {
     const repo = makeFakeRepo();
-    const uc = new ModerateReviewUseCase(repo);
-    await expect(uc.execute({ reviewId: fakeReview.id, status: 'invalid' })).rejects.toThrow(
-      'status',
-    );
+    const audit = makeAuditSpy();
+    const uc = new ModerateReviewUseCase(repo, audit);
+    await expect(
+      uc.execute({ reviewId: fakeReview.id, status: 'invalid', actorId: 7 }),
+    ).rejects.toThrow('status');
+    expect(audit.log).not.toHaveBeenCalled();
   });
 
-  it('throws not found for missing review', async () => {
+  it('throws not found when review does not exist (pre-check)', async () => {
     const repo = makeFakeRepo();
-    repo.moderateReview.mockResolvedValue(null);
-    const uc = new ModerateReviewUseCase(repo);
-    await expect(uc.execute({ reviewId: 'missing-id', status: 'approved' })).rejects.toThrow(
-      'not found',
-    );
+    repo.getReviewById.mockResolvedValueOnce(null);
+    const audit = makeAuditSpy();
+    const uc = new ModerateReviewUseCase(repo, audit);
+    await expect(
+      uc.execute({ reviewId: 'missing-id', status: 'approved', actorId: 7 }),
+    ).rejects.toThrow('not found');
+    expect(repo.moderateReview).not.toHaveBeenCalled();
+    expect(audit.log).not.toHaveBeenCalled();
+  });
+
+  it('throws not found when update affects zero rows', async () => {
+    const repo = makeFakeRepo();
+    repo.moderateReview.mockResolvedValueOnce(null);
+    const audit = makeAuditSpy();
+    const uc = new ModerateReviewUseCase(repo, audit);
+    await expect(
+      uc.execute({ reviewId: fakeReview.id, status: 'approved', actorId: 7 }),
+    ).rejects.toThrow('not found');
+    expect(audit.log).not.toHaveBeenCalled();
+  });
+
+  it('emits an ADMIN_REVIEW_MODERATED audit log with before/after state', async () => {
+    const repo = makeFakeRepo();
+    const audit = makeAuditSpy();
+    const uc = new ModerateReviewUseCase(repo, audit);
+
+    await uc.execute({
+      reviewId: fakeReview.id,
+      status: 'approved',
+      actorId: 42,
+      ip: '203.0.113.7',
+      requestId: '11111111-2222-3333-4444-555555555555',
+    });
+
+    expect(audit.log).toHaveBeenCalledTimes(1);
+    expect(audit.log).toHaveBeenCalledWith({
+      action: 'ADMIN_REVIEW_MODERATED',
+      actorType: 'user',
+      actorId: 42,
+      targetType: 'review',
+      targetId: fakeReview.id,
+      metadata: { beforeStatus: 'pending', afterStatus: 'approved' },
+      ip: '203.0.113.7',
+      requestId: '11111111-2222-3333-4444-555555555555',
+    });
+  });
+
+  describe('review-moderation notification (H3)', () => {
+    const flushPromises = async (): Promise<void> => {
+      await new Promise((resolve) => setImmediate(resolve));
+    };
+
+    const baseAuthor = {
+      id: 1,
+      email: 'author@example.com',
+      firstname: 'Alice',
+      notifyOnReviewModeration: true,
+    };
+
+    it('notifies the author when they have opted-in (approved)', async () => {
+      const repo = makeFakeRepo();
+      const audit = makeAuditSpy();
+      const notify = jest.fn<Promise<void>, [unknown]>().mockResolvedValue(undefined);
+      const uc = new ModerateReviewUseCase(repo, {
+        audit,
+        notifier: { notify },
+        authorLookup: async () => baseAuthor,
+      });
+
+      await uc.execute({ reviewId: fakeReview.id, status: 'approved', actorId: 42 });
+      await flushPromises();
+
+      expect(notify).toHaveBeenCalledTimes(1);
+      expect(notify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipientEmail: 'author@example.com',
+          recipientName: 'Alice',
+          afterStatus: 'approved',
+          reviewId: fakeReview.id,
+        }),
+      );
+    });
+
+    it('skips notification when author has NOT opted in', async () => {
+      const repo = makeFakeRepo();
+      const audit = makeAuditSpy();
+      const notify = jest.fn<Promise<void>, [unknown]>().mockResolvedValue(undefined);
+      const uc = new ModerateReviewUseCase(repo, {
+        audit,
+        notifier: { notify },
+        authorLookup: async () => ({ ...baseAuthor, notifyOnReviewModeration: false }),
+      });
+
+      await uc.execute({ reviewId: fakeReview.id, status: 'approved', actorId: 42 });
+      await flushPromises();
+
+      expect(notify).not.toHaveBeenCalled();
+    });
+
+    it('skips notification when author lookup returns null', async () => {
+      const repo = makeFakeRepo();
+      const audit = makeAuditSpy();
+      const notify = jest.fn<Promise<void>, [unknown]>().mockResolvedValue(undefined);
+      const uc = new ModerateReviewUseCase(repo, {
+        audit,
+        notifier: { notify },
+        authorLookup: async () => null,
+      });
+
+      await uc.execute({ reviewId: fakeReview.id, status: 'approved', actorId: 42 });
+      await flushPromises();
+
+      expect(notify).not.toHaveBeenCalled();
+    });
+
+    it('notification failure does NOT fail the moderation (fire-and-forget)', async () => {
+      const repo = makeFakeRepo();
+      const audit = makeAuditSpy();
+      const notify = jest
+        .fn<Promise<void>, [unknown]>()
+        .mockRejectedValue(new Error('smtp timeout'));
+      const uc = new ModerateReviewUseCase(repo, {
+        audit,
+        notifier: { notify },
+        authorLookup: async () => baseAuthor,
+      });
+
+      const result = await uc.execute({
+        reviewId: fakeReview.id,
+        status: 'approved',
+        actorId: 42,
+      });
+      await flushPromises();
+
+      expect(result.status).toBe('approved');
+      expect(audit.log).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not notify when the update resolves to a non-terminal status', async () => {
+      const repo = makeFakeRepo();
+      repo.moderateReview.mockResolvedValueOnce({ ...fakeReview, status: 'pending' });
+      const audit = makeAuditSpy();
+      const notify = jest.fn<Promise<void>, [unknown]>().mockResolvedValue(undefined);
+      const uc = new ModerateReviewUseCase(repo, {
+        audit,
+        notifier: { notify },
+        authorLookup: async () => baseAuthor,
+      });
+
+      await uc.execute({ reviewId: fakeReview.id, status: 'approved', actorId: 42 });
+      await flushPromises();
+
+      expect(notify).not.toHaveBeenCalled();
+    });
   });
 });
 

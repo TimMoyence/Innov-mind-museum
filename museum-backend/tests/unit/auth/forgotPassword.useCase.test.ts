@@ -1,5 +1,4 @@
 import { ForgotPasswordUseCase } from '@modules/auth/useCase/forgotPassword.useCase';
-import type { IUserRepository } from '@modules/auth/domain/user.repository.interface';
 import type { EmailService } from '@shared/email/email.port';
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import { makeUserRepo } from '../../helpers/auth/user-repo.mock';
@@ -18,11 +17,7 @@ describe('ForgotPasswordUseCase', () => {
   it('generates token, stores it, and sends email when user exists and email service is configured', async () => {
     const repo = makeUserRepo(makeUser());
     const emailService = makeEmailService();
-    const useCase = new ForgotPasswordUseCase(
-      repo as unknown as IUserRepository,
-      emailService,
-      'https://app.musaium.com',
-    );
+    const useCase = new ForgotPasswordUseCase(repo, emailService, 'https://app.musaium.com');
 
     const token = await useCase.execute('user@test.com');
 
@@ -43,7 +38,7 @@ describe('ForgotPasswordUseCase', () => {
 
   it('generates token and logs when no email service is configured', async () => {
     const repo = makeUserRepo(makeUser());
-    const useCase = new ForgotPasswordUseCase(repo as unknown as IUserRepository);
+    const useCase = new ForgotPasswordUseCase(repo);
 
     const token = await useCase.execute('user@test.com');
 
@@ -55,7 +50,7 @@ describe('ForgotPasswordUseCase', () => {
 
   it('sets token expiration roughly 1 hour in the future', async () => {
     const repo = makeUserRepo(makeUser());
-    const useCase = new ForgotPasswordUseCase(repo as unknown as IUserRepository);
+    const useCase = new ForgotPasswordUseCase(repo);
 
     const before = Date.now();
     await useCase.execute('user@test.com');
@@ -72,11 +67,7 @@ describe('ForgotPasswordUseCase', () => {
   it('returns undefined silently when user does not exist (anti-enumeration)', async () => {
     const repo = makeUserRepo(null);
     const emailService = makeEmailService();
-    const useCase = new ForgotPasswordUseCase(
-      repo as unknown as IUserRepository,
-      emailService,
-      'https://app.musaium.com',
-    );
+    const useCase = new ForgotPasswordUseCase(repo, emailService, 'https://app.musaium.com');
 
     const result = await useCase.execute('nonexistent@test.com');
 
@@ -89,7 +80,7 @@ describe('ForgotPasswordUseCase', () => {
 
   it('returns undefined for empty email string', async () => {
     const repo = makeUserRepo(makeUser());
-    const useCase = new ForgotPasswordUseCase(repo as unknown as IUserRepository);
+    const useCase = new ForgotPasswordUseCase(repo);
 
     const result = await useCase.execute('');
 
@@ -99,7 +90,7 @@ describe('ForgotPasswordUseCase', () => {
 
   it('returns undefined for whitespace-only email', async () => {
     const repo = makeUserRepo(makeUser());
-    const useCase = new ForgotPasswordUseCase(repo as unknown as IUserRepository);
+    const useCase = new ForgotPasswordUseCase(repo);
 
     const result = await useCase.execute('   ');
 
@@ -109,7 +100,7 @@ describe('ForgotPasswordUseCase', () => {
 
   it('returns undefined for null-ish email', async () => {
     const repo = makeUserRepo(makeUser());
-    const useCase = new ForgotPasswordUseCase(repo as unknown as IUserRepository);
+    const useCase = new ForgotPasswordUseCase(repo);
 
     const result = await useCase.execute(undefined as unknown as string);
 
@@ -121,11 +112,7 @@ describe('ForgotPasswordUseCase', () => {
     const repo = makeUserRepo(makeUser());
     const emailService = makeEmailService();
     emailService.sendEmail.mockRejectedValue(new Error('SMTP timeout'));
-    const useCase = new ForgotPasswordUseCase(
-      repo as unknown as IUserRepository,
-      emailService,
-      'https://app.musaium.com',
-    );
+    const useCase = new ForgotPasswordUseCase(repo, emailService, 'https://app.musaium.com');
 
     // Should not throw
     const token = await useCase.execute('user@test.com');
@@ -137,7 +124,7 @@ describe('ForgotPasswordUseCase', () => {
 
   it('normalizes email to lowercase and trimmed', async () => {
     const repo = makeUserRepo(makeUser());
-    const useCase = new ForgotPasswordUseCase(repo as unknown as IUserRepository);
+    const useCase = new ForgotPasswordUseCase(repo);
 
     await useCase.execute('  User@Test.COM  ');
 
@@ -147,11 +134,7 @@ describe('ForgotPasswordUseCase', () => {
   it('includes reset link with frontendUrl and default locale "fr" in email HTML', async () => {
     const repo = makeUserRepo(makeUser());
     const emailService = makeEmailService();
-    const useCase = new ForgotPasswordUseCase(
-      repo as unknown as IUserRepository,
-      emailService,
-      'https://my-app.com',
-    );
+    const useCase = new ForgotPasswordUseCase(repo, emailService, 'https://my-app.com');
 
     const token = await useCase.execute('user@test.com');
 
@@ -162,11 +145,7 @@ describe('ForgotPasswordUseCase', () => {
   it('includes reset link with "en" locale when requested', async () => {
     const repo = makeUserRepo(makeUser());
     const emailService = makeEmailService();
-    const useCase = new ForgotPasswordUseCase(
-      repo as unknown as IUserRepository,
-      emailService,
-      'https://my-app.com',
-    );
+    const useCase = new ForgotPasswordUseCase(repo, emailService, 'https://my-app.com');
 
     const token = await useCase.execute('user@test.com', 'en');
 
@@ -177,7 +156,7 @@ describe('ForgotPasswordUseCase', () => {
 
   it('generates unique tokens on successive calls', async () => {
     const repo = makeUserRepo(makeUser());
-    const useCase = new ForgotPasswordUseCase(repo as unknown as IUserRepository);
+    const useCase = new ForgotPasswordUseCase(repo);
 
     const token1 = await useCase.execute('user@test.com');
     const token2 = await useCase.execute('user@test.com');

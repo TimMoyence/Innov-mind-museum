@@ -9,7 +9,7 @@ import {
   getDescribeService,
   getLlmCircuitBreakerState,
   getUserMemoryService,
-} from '@modules/chat/index';
+} from '@modules/chat/wiring';
 import { createDailyArtRouter } from '@modules/daily-art/daily-art.route';
 import { buildLowDataPackService } from '@modules/museum';
 import { createLowDataPackRouter } from '@modules/museum/adapters/primary/http/low-data-pack.route';

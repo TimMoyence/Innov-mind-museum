@@ -1,17 +1,10 @@
-import '../helpers/test-utils';
+import { chatApiMocks } from '../helpers/test-utils';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 
 // ── Screen-specific mocks ────────────────────────────────────────────────────
 
-jest.mock('@/features/chat/infrastructure/chatApi', () => ({
-  chatApi: { createSession: jest.fn() },
-}));
-
-const { chatApi } = jest.requireMock<{ chatApi: { createSession: jest.Mock } }>(
-  '@/features/chat/infrastructure/chatApi',
-);
-const mockCreateSession = chatApi.createSession;
+const mockCreateSession = chatApiMocks.createSession;
 
 const { router } = jest.requireMock<{ router: { push: jest.Mock; back: jest.Mock } }>(
   'expo-router',

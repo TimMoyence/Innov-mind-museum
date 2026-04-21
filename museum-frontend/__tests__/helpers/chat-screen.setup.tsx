@@ -67,10 +67,6 @@ jest.mock('@/features/chat/application/chatSessionLogic.pure', () => ({
   buildVisitSummary: () => ({ title: 'Visit Summary', artworks: [], totalMessages: 0 }),
 }));
 
-jest.mock('@/features/chat/infrastructure/chatApi', () => ({
-  chatApi: { createSession: jest.fn(), deleteSessionIfEmpty: jest.fn(), reportMessage: jest.fn() },
-}));
-
 jest.mock('@/shared/ui/SkeletonChatBubble', () => {
   const { View } = require('react-native');
   return { SkeletonChatBubble: () => <View testID="skeleton-chat-bubble" /> };

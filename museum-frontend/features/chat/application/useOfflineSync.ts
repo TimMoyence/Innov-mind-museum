@@ -1,8 +1,15 @@
 import { useEffect } from 'react';
 
+import { runWithRetry, isRetryableError, DEFAULT_BACKOFF_MS } from '@/shared/lib/retry';
 import type { GuideLevel } from '@/features/settings/runtimeSettings.pure';
 import { chatApi } from '../infrastructure/chatApi';
 import { sortByTime, mapApiMessageToUiMessage, type ChatUiMessage } from './chatSessionLogic.pure';
+
+/** Pluggable retry runner — swapped with a passthrough in tests to avoid real backoff delays. */
+export type OfflineSyncRetryRunner = <T>(op: () => Promise<T>) => Promise<T>;
+
+const DEFAULT_RETRY: OfflineSyncRetryRunner = (op) =>
+  runWithRetry(op, { backoff: DEFAULT_BACKOFF_MS, shouldRetry: isRetryableError });
 
 interface UseOfflineSyncParams {
   sessionId: string;
@@ -14,11 +21,18 @@ interface UseOfflineSyncParams {
   peek: () => { sessionId: string; text?: string; imageUri?: string } | undefined;
   dequeue: () => void;
   setMessages: React.Dispatch<React.SetStateAction<ChatUiMessage[]>>;
+  /** Injected in tests to bypass real backoff delays. Defaults to {@link DEFAULT_RETRY}. */
+  retry?: OfflineSyncRetryRunner;
+  /** Injected in tests for deterministic error classification. Defaults to {@link isRetryableError}. */
+  isRetryable?: (error: unknown) => boolean;
 }
 
 /**
  * Flushes queued offline messages when connectivity is restored,
  * then re-fetches the session to merge assistant replies.
+ *
+ * Non-retryable errors (e.g. 400 validation) drop the poison item and continue.
+ * Retryable errors (network, 5xx) stop the cycle — item stays queued for the next tick.
  */
 export const useOfflineSync = ({
   sessionId,
@@ -30,6 +44,8 @@ export const useOfflineSync = ({
   peek,
   dequeue,
   setMessages,
+  retry = DEFAULT_RETRY,
+  isRetryable = isRetryableError,
 }: UseOfflineSyncParams) => {
   useEffect(() => {
     if (!isConnected) return;
@@ -38,20 +54,29 @@ export const useOfflineSync = ({
       let next = peek();
       let flushedAny = false;
       while (next) {
+        const currentItem = next;
         try {
-          await chatApi.postMessage({
-            sessionId: next.sessionId,
-            text: next.text,
-            imageUri: next.imageUri,
-            museumMode,
-            location,
-            guideLevel,
-            locale,
-          });
+          await retry(() =>
+            chatApi.postMessage({
+              sessionId: currentItem.sessionId,
+              text: currentItem.text,
+              imageUri: currentItem.imageUri,
+              museumMode,
+              location,
+              guideLevel,
+              locale,
+            }),
+          );
           dequeue();
           flushedAny = true;
-        } catch {
-          break;
+        } catch (err) {
+          if (isRetryable(err)) {
+            // Retries exhausted — keep item queued for next connectivity tick
+            break;
+          }
+          // Non-retryable (e.g. 400 validation) — drop the poison item and continue
+          dequeue();
+          flushedAny = true;
         }
         next = peek();
       }
@@ -77,5 +102,7 @@ export const useOfflineSync = ({
     locale,
     sessionId,
     setMessages,
+    retry,
+    isRetryable,
   ]);
 };

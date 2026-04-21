@@ -12,6 +12,7 @@ const mockAdminDict: Dictionary['admin'] = {
   analytics: 'Analytics',
   tickets: 'Tickets',
   supportAdmin: 'Support',
+  reviewsAdmin: 'Reviews',
   accessDenied: 'Access Denied',
   goToHomepage: 'Go to Homepage',
   login: { title: '', emailPlaceholder: '', passwordPlaceholder: '', submit: '', error: '' },
@@ -35,6 +36,11 @@ const mockAdminDict: Dictionary['admin'] = {
     reportedMessage: '', reviewerNotes: '', reviewerNotesPlaceholder: '', noReports: '',
   },
   ticketsPage: { subtitle: '', update: '', view: '', updateTicket: '', noTickets: '' },
+  reviewsPage: {
+    subtitle: '', filterStatus: '', rating: '', comment: '', author: '',
+    approve: '', reject: '', confirmApprove: '', confirmReject: '', moderated: '',
+    pending: '', approved: '', rejected: '', noReviews: '',
+  },
   supportPage: {
     subtitle: '', selectTicket: '', viewTickets: '', backToTickets: '',
     createdAt: '', description: '', noMessages: '', reply: '', replyPlaceholder: '', send: '', sending: '',

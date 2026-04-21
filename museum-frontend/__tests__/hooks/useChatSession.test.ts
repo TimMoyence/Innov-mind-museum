@@ -135,20 +135,19 @@ jest.mock('@/features/chat/application/chatLocalCache', () => ({
 const mockSetSession = jest.fn();
 const mockUpdateMessages = jest.fn();
 
-jest.mock('@/features/chat/infrastructure/chatSessionStore', () => ({
-  useChatSessionStore: (
-    selector: (state: {
-      sessions: Record<string, unknown>;
-      setSession: jest.Mock;
-      updateMessages: jest.Mock;
-    }) => unknown,
-  ) =>
-    selector({
-      sessions: {},
-      setSession: mockSetSession,
-      updateMessages: mockUpdateMessages,
-    }),
-}));
+jest.mock('@/features/chat/infrastructure/chatSessionStore', () => {
+  // Lazy accessor — evaluated at call time so jest.fn() variables are initialized.
+  const getState = () => ({
+    sessions: {},
+    setSession: mockSetSession,
+    updateMessages: mockUpdateMessages,
+  });
+  const hook = Object.assign(
+    (selector: (state: ReturnType<typeof getState>) => unknown) => selector(getState()),
+    { getState },
+  );
+  return { useChatSessionStore: hook };
+});
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

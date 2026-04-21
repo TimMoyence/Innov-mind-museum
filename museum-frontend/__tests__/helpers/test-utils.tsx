@@ -211,3 +211,4 @@ jest.mock('@shopify/flash-list', () => {
     FlashList: FlatList,
   };
 });
+

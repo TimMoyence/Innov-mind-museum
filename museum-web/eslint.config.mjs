@@ -56,7 +56,14 @@ export default tseslint.config(
   },
 
   // ── Next.js ───────────────────────────────────────────────────────────
-  nextPlugin.configs.recommended,
+  // Use object-form plugin registration (flat config requires plugins as object, not array of strings)
+  {
+    plugins: { '@next/next': nextPlugin },
+    rules: {
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs['core-web-vitals'].rules,
+    },
+  },
 
   // ── Accessibility ─────────────────────────────────────────────────────
   jsxA11y.flatConfigs.recommended,

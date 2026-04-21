@@ -1,4 +1,4 @@
-import '../helpers/test-utils';
+import { chatApiMocks } from '../helpers/test-utils';
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react-native';
 
@@ -31,15 +31,7 @@ jest.mock('@/features/conversation/infrastructure/conversationsStore', () => ({
 
 // ── API + domain mocks ──────────────────────────────────────────────────────
 
-const mockListSessions = jest.fn();
-
-jest.mock('@/features/chat/infrastructure/chatApi', () => ({
-  chatApi: {
-    get listSessions() {
-      return mockListSessions;
-    },
-  },
-}));
+const mockListSessions = chatApiMocks.listSessions;
 
 jest.mock('@/features/settings/runtimeSettings', () => ({
   loadRuntimeSettings: jest.fn(() => ({ defaultLocale: 'en' })),
