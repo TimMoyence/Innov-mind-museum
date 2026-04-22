@@ -1,7 +1,11 @@
 # MUSAIUM — Product State Overview
 
-> **Date**: 2026-04-14
-> **Status**: Document autoritatif unique — remplace les roadmaps éparpillées
+> **Date**: 2026-04-14 (original) — **STALE since 2026-04-22**
+> **Status**: Sections "SSE streaming" + "9 feature flags" ci-dessous **obsolètes**. Realité actuelle V1 :
+>   • SSE streaming DÉSACTIVÉ (cf. ADR-001) — revival V2.1 post-Walk
+>   • 0 feature flag — toutes features always-on
+>   • Admin panel = V2 (pas V1)
+>   • Walk = V2 positionné (1 stub seul aujourd'hui)
 > **Méthode**: Audit /team avec 4 agents parallèles + croisement des rapports de sprints + vérification directe du code
 > **Portée**: Backend + Mobile Frontend + Web + Infrastructure + IA
 

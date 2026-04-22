@@ -1,26 +1,26 @@
 # CLAUDE.md
 
-Guidance for Claude Code (claude.ai/code) in this repo.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-Musaium — interactive museum assistant mobile app. Visitors photograph artworks or ask questions, get AI contextual responses via LangChain + LLM (OpenAI/Deepseek/Google).
+Musaium — an interactive museum assistant mobile app. Visitors photograph artworks or ask questions and get AI-powered contextual responses via LangChain + LLM (OpenAI/Deepseek/Google).
 
-Monorepo, three independent apps:
+Monorepo with three independent apps:
 - **`museum-backend/`** — Node.js 22 + Express 5 + TypeORM + PostgreSQL 16 (pnpm)
 - **`museum-frontend/`** — React Native 0.83 + Expo 55 + Expo Router (npm)
-- **`museum-web/`** — Next.js 15 + React 19 + Tailwind 4 + Framer Motion (pnpm) — landing + admin panel
+- **`museum-web/`** — Next.js 15 + React 19 + Tailwind 4 + Framer Motion (pnpm) — landing page + admin panel
 
 ## Progress Tracking
 
-Active roadmap: **`docs/ROADMAP_V2.md`** (moved from `docs/V1_Sprint/MASTER_ROADMAP_V2.md` during 2026-04-20 enterprise cleanup).
+Active roadmap reference: **`docs/ROADMAP_V2.md`** (moved from `docs/V1_Sprint/MASTER_ROADMAP_V2.md` during 2026-04-20 enterprise cleanup).
 
-Historical sprint journals archived in **`docs/archive/v1-sprint-2026-04/`**:
+Historical sprint journals are archived in **`docs/archive/v1-sprint-2026-04/`**:
 - `PROGRESS_TRACKER.md` — checkbox tracker per sprint/item
 - `SPRINT_LOG.md` — detailed technical journal
 - `*_AUDIT_2026-04-0*.md` — prior audit reports
 
-Post-2026-04-20 tracking: `.claude/tasks/` (task lists) + `team-reports/` (audit outputs) = active sources of truth.
+Post-2026-04-20 tracking: `.claude/tasks/` (task lists) + `team-reports/` (audit outputs) are the active sources of truth.
 
 ## Common Commands
 
@@ -80,7 +80,7 @@ pnpm build:tokens                # build design tokens → museum-frontend/share
 ### CI
 
 GitHub Actions workflows (`.github/workflows/`):
-- `ci-cd-backend.yml` — quality gate (tsc + ESLint + tests + OpenAPI validate + audit) → E2E (PR/nightly) → deploy prod (push main) / staging (push staging) w/ Trivy scan + Sentry release + smoke test
+- `ci-cd-backend.yml` — quality gate (tsc + ESLint + tests + OpenAPI validate + audit) → E2E (PR/nightly) → deploy prod (push main) / staging (push staging) with Trivy scan + Sentry release + smoke test
 - `ci-cd-web.yml` — quality gate (lint + build + test + audit) → Lighthouse CI (PR) → deploy Docker/GHCR → VPS (push main)
 - `ci-cd-mobile.yml` — quality gate (Expo Doctor + OpenAPI sync + audit + i18n + lint + tests) → Maestro E2E (dispatch) → EAS build + store submit (dispatch/tag)
 - `_deploy-backend.yml` — reusable deploy workflow (called by ci-cd-backend)
@@ -112,13 +112,13 @@ src/
 ```
 
 Key patterns:
-- Each module expose barrel `index.ts`, builds + wires own dependency graph
-- `createApp()` accept optional overrides for testing (inject mock chatService/healthCheck)
+- Each module exposes a barrel `index.ts` that builds and wires its own dependency graph
+- `createApp()` accepts optional overrides for testing (inject mock chatService/healthCheck)
 - Routes live in `modules/<name>/**/http/<name>.route.ts`
-- TypeORM entities in `modules/<name>/**/domain/`, `.entity.ts` suffix
+- TypeORM entities are in `modules/<name>/**/domain/` with `.entity.ts` suffix
 - Repository interfaces (ports) in `domain/`, PG implementations (adapters) in `secondary/`
 
-Chat module internals: `chat.service.ts` orchestrate LLM calls via `langchain.orchestrator.ts`, use sectioned prompts (`llm-sections.ts`), art-topic guardrail, image storage (S3 or local stub), audio transcription.
+Chat module internals: `chat.service.ts` orchestrates LLM calls via `langchain.orchestrator.ts`, uses sectioned prompts (`llm-sections.ts`), art-topic guardrail, image storage (S3 or local stub), audio transcription.
 
 ### Frontend — Feature-driven + Expo Router
 
@@ -130,7 +130,7 @@ app/                       # Expo Router file-based routing
 └── (stack)/               # stack screens (chat session, settings, onboarding, etc.)
 
 features/                  # business logic by domain
-├── art-keywords/          # offline art-topic classification (live, synced at launch + 24h stale)
+├── art-keywords/          # offline art-topic classification (WIP)
 ├── auth/                  # login/register, token storage, protected route hook
 ├── chat/                  # chat session hook, contracts, API calls, streaming, TTS
 ├── conversation/          # conversation list/dashboard
@@ -152,7 +152,7 @@ shared/                    # cross-feature utilities
 ```
 
 Key patterns:
-- API types auto-generated from backend OpenAPI spec (`npm run generate:openapi-types` → `shared/api/generated/openapi.ts`)
+- API types are auto-generated from backend OpenAPI spec (`npm run generate:openapi-types` → `shared/api/generated/openapi.ts`)
 - Auth tokens stored via `expo-secure-store`
 - App variants (development/preview/production) configured in `app.config.ts` via `APP_VARIANT` / `EAS_BUILD_PROFILE`
 
@@ -172,7 +172,7 @@ src/
 ```
 
 Key patterns:
-- Admin panel use JWT auth w/ refresh token interceptor
+- Admin panel uses JWT auth with refresh token interceptor
 - i18n via custom dictionary loader (FR/EN)
 - Framer Motion for landing page animations
 - Recharts for analytics dashboards
@@ -187,69 +187,69 @@ Key patterns:
 
 ## Token Discipline — Files NOT to Read in full
 
-Auto-generated, massive, or pure data. Reading full wastes tokens, rarely helps.
+These files are auto-generated, massive, or pure data. Reading them fully wastes tokens and rarely helps.
 
 | File | Size | Why | How to access instead |
 |---|---|---|---|
-| `museum-frontend/shared/api/generated/openapi.ts` | 83 KB / 3 510 lines | Auto-generated from backend OpenAPI spec | `Grep` for specific type/operation name, or read ±50 lines with `offset`/`limit` |
+| `museum-frontend/shared/api/generated/openapi.ts` | 83 KB / 3 510 lines | Auto-generated from backend OpenAPI spec | Use `Grep` for the specific type/operation name, or read only the relevant ±50 lines with `offset`/`limit` |
 | `museum-frontend/package-lock.json` / `pnpm-lock.yaml` / `museum-backend/pnpm-lock.yaml` / `museum-web/pnpm-lock.yaml` | multi-MB | Lockfiles | Never read directly — use `pnpm list <pkg>` or `npm ls <pkg>` |
-| `museum-backend/src/data/db/migrations/*.ts` (34 files) | ~5 KB each, 172 KB total | TypeORM migrations — immutable once run | Read only specific migration relevant to current work |
+| `museum-backend/src/data/db/migrations/*.ts` (34 files) | ~5 KB each, 172 KB total | TypeORM migrations — immutable once run | Read only the specific migration relevant to current work |
 | `museum-backend/src/modules/daily-art/artworks.data.ts` | 17 KB / 373 lines | Static artwork catalog | Grep for specific artwork ID or title |
 | `museum-frontend/shared/ui/tokens.generated.ts` | generated | Design tokens output | Edit `design-system/` source instead |
-| `docs/archive/v1-sprint-2026-04/SPRINT_LOG.md` | 169 KB | Historical journal (archived) | Read w/ offset for specific date range, never full |
+| `docs/archive/v1-sprint-2026-04/SPRINT_LOG.md` | 169 KB | Historical journal (archived) | Read with offset for a specific date range, never in full |
 | `docs/ROADMAP_V2.md` | 57 KB | Product roadmap reference | Grep by feature name, read only relevant section |
-| `docs/archive/v1-sprint-2026-04/PROGRESS_TRACKER.md` | 57 KB | Sprint tracker (archived) | Read latest sprint section only |
+| `docs/archive/v1-sprint-2026-04/PROGRESS_TRACKER.md` | 57 KB | Sprint tracker (archived) | Read the latest sprint section only |
 
-Doubt? Use `Grep` w/ specific pattern first, then `Read` relevant block w/ `offset`/`limit`.
+When in doubt: use `Grep` with a specific pattern first, then `Read` only the relevant block with `offset`/`limit`.
 
 ## Environment Setup
 
 1. Copy `.env.local.example` → `.env` in both `museum-backend/` and `museum-frontend/`
-2. Backend need: PostgreSQL (via docker-compose or local), at least one LLM API key (`OPENAI_API_KEY` / `DEEPSEEK_API_KEY` / `GOOGLE_API_KEY`), JWT secrets
-3. Frontend need: `EXPO_PUBLIC_API_BASE_URL` pointing to backend
+2. Backend needs: PostgreSQL (via docker-compose or local), at least one LLM API key (`OPENAI_API_KEY` / `DEEPSEEK_API_KEY` / `GOOGLE_API_KEY`), JWT secrets
+3. Frontend needs: `EXPO_PUBLIC_API_BASE_URL` pointing to backend
 4. Backend DB exposed on port **5433** (not 5432) when using docker-compose
 
 ## Migration Governance
 
 - Always use `node scripts/migration-cli.cjs generate --name=X` to generate migrations — never hand-write migration SQL
 - `DB_SYNCHRONIZE` must **never** be `true` in production (hard-coded `false` in `data-source.ts` for prod)
-- CI blocks if `DB_SYNCHRONIZE=true` found in any `.env*` file
-- After generating migration, verify w/ `pnpm migration:run` on clean DB then `node scripts/migration-cli.cjs generate --name=Check` — output should be empty (no schema drift)
+- CI blocks if `DB_SYNCHRONIZE=true` is found in any `.env*` file
+- After generating a migration, verify it with `pnpm migration:run` on a clean DB then `node scripts/migration-cli.cjs generate --name=Check` — output should be empty (no schema drift)
 
 ## AI Safety
 
-Chat pipeline use layered defenses:
+The chat pipeline uses layered defenses:
 
 1. **Input guardrail** (`art-topic-guardrail.ts`) — keyword-based pre-filter for insults, off-topic, injection, external actions. Runs before LLM call.
-2. **Structural prompt isolation** — system instructions + section prompts placed BEFORE user content in LLM message array. Boundary marker `[END OF SYSTEM INSTRUCTIONS]` separates system from user input.
-3. **Input sanitization** — user-controlled fields (`location`, `locale`) sanitized (Unicode normalization, zero-width char stripping, truncation) before prompt inclusion via `sanitizePromptInput()`.
+2. **Structural prompt isolation** — system instructions and section prompts are placed BEFORE user content in the LLM message array. Boundary marker `[END OF SYSTEM INSTRUCTIONS]` separates system from user input.
+3. **Input sanitization** — user-controlled fields (`location`, `locale`) are sanitized (Unicode normalization, zero-width char stripping, truncation) before prompt inclusion via `sanitizePromptInput()`.
 4. **Output guardrail** — same keyword approach on LLM output to catch leaks.
 
-When modifying chat pipeline:
+When modifying the chat pipeline:
 - Never inject user-controlled fields directly into system prompts
 - Keep message ordering: `[SystemMessage(system), SystemMessage(section), ...history, HumanMessage(user)]`
-- Guardrail in `chat.service.ts` = single source of truth for content filtering — no duplicate checks elsewhere
+- The guardrail in `chat.service.ts` is the single source of truth for content filtering — do not add duplicate checks elsewhere
 
 ### Voice V1 (2026-04)
 
-Pipeline classique STT → LLM → TTS, **toujours actif** (feature flags `FEATURE_FLAG_VOICE_MODE` et `TTS_ENABLED` retirés).
+Pipeline classique STT → LLM → TTS, **toujours actif** (les feature flags `FEATURE_FLAG_VOICE_MODE` et `TTS_ENABLED` ont été retirés).
 
 - **STT** : `gpt-4o-mini-transcribe` (env `LLM_AUDIO_TRANSCRIPTION_MODEL`), même `OPENAI_API_KEY`. Pas de "clé Whisper" séparée.
 - **LLM** : LangChain orchestrator multi-provider (cf. existant).
 - **TTS** : `gpt-4o-mini-tts` (env `TTS_MODEL`), voix `alloy` par défaut. Audio MP3 retourné en buffer + persisté S3 (`ChatMessage.audioUrl`) pour replay offline.
-- **Guardrails** : appliqués au texte intermédiaire (transcrit + réponse LLM) — voix hérite gratuitement sécurité chat texte.
+- **Guardrails** : appliqués au texte intermédiaire (transcrit + réponse LLM) — la voix hérite gratuitement de la sécurité du chat texte.
 - **SSE streaming** : @deprecated, voir `docs/adr/ADR-001-sse-streaming-deprecated.md`.
-- **Realtime WebRTC** : reporté V1.1 — réévaluation après mesure latence terrain pipeline V1.
+- **Realtime WebRTC** : reporté V1.1 — réévaluation après mesure latence terrain de la pipeline V1.
 
 Spec complète : `docs/AI_VOICE.md`.
 
 ## Test Discipline — DRY Factories
 
-**Tests MUST use shared factories. Inline object creation forbidden.**
+**Tests MUST use shared factories. Inline object creation is forbidden.**
 
 ### Principle
 
-Every test entity (User, ChatMessage, ChatSession, etc.) MUST be created via shared factory function in `tests/helpers/`. No test file should define own `makeUser()`, `makeMessage()`, or `makeSession()` inline.
+Every test entity (User, ChatMessage, ChatSession, etc.) MUST be created via a shared factory function in `tests/helpers/`. No test file should define its own `makeUser()`, `makeMessage()`, or `makeSession()` inline.
 
 ### Existing factories (use them)
 
@@ -266,11 +266,11 @@ Every test entity (User, ChatMessage, ChatSession, etc.) MUST be created via sha
 
 ### Rules
 
-1. **New entity?** → Create factory in `tests/helpers/<module>/<entity>.fixtures.ts` FIRST
-2. **Need mock repo?** → Check if in-memory repo exists in `tests/helpers/`. If not, create one.
+1. **New entity?** → Create a factory in `tests/helpers/<module>/<entity>.fixtures.ts` FIRST
+2. **Need a mock repo?** → Check if an in-memory repo exists in `tests/helpers/`. If not, create one.
 3. **Override pattern**: `makeEntity({ field: value })` — factory provides sensible defaults, test overrides only what matters
 4. **Frontend**: Use `test-utils.tsx` for shared mocks. Create factories in `__tests__/helpers/` for data objects.
-5. **Never** duplicate `jest.mock()` calls already exist in `test-utils.tsx`
+5. **Never** duplicate `jest.mock()` calls that already exist in `test-utils.tsx`
 
 ### Anti-patterns to avoid
 
@@ -284,16 +284,16 @@ Every test entity (User, ChatMessage, ChatSession, etc.) MUST be created via sha
 
 ## ESLint Discipline
 
-**`eslint-disable` = last resort, not first reflex.** If ESLint flags code, rule exists for reason — find proper fix before reaching for disable comment.
+**`eslint-disable` is a last resort, not a first reflex.** If ESLint flags code, the rule exists for a reason — find the proper fix before reaching for a disable comment.
 
 ### Decision tree
 
-1. **Understand rule** — read ESLint docs for rule. What problem does it prevent?
-2. **Fix code** — refactor to satisfy rule. Correct path 90% of time.
-3. **Only disable if ALL true:**
-   - Rule = false positive for this specific context (e.g., `require()` for RN image assets, `||` for intentional empty-string-as-falsy)
-   - No alternative code structure satisfies both rule + intent
-   - `-- reason` comment explains WHY disable necessary
+1. **Understand the rule** — read the ESLint docs for the rule. What problem does it prevent?
+2. **Fix the code** — refactor to satisfy the rule. This is the correct path 90% of the time.
+3. **Only disable if ALL of these are true:**
+   - The rule is a false positive for this specific context (e.g., `require()` for RN image assets, `||` for intentional empty-string-as-falsy)
+   - No alternative code structure satisfies both the rule and the intent
+   - A `-- reason` comment explains WHY the disable is necessary
 
 ### Common anti-patterns to avoid
 
@@ -310,79 +310,79 @@ Every test entity (User, ChatMessage, ChatSession, etc.) MUST be created via sha
 
 ### Justified disable patterns (reference)
 
-ONLY categories where `eslint-disable` acceptable in this project:
+These are the ONLY categories where `eslint-disable` is acceptable in this project:
 - `prefer-nullish-coalescing` when intentionally treating empty string as falsy (`||` vs `??`)
 - `no-unnecessary-condition` at trust boundaries (JWT payloads, raw DB rows, external API data)
 - `require-await` on no-op implementations of async interfaces (null-object pattern)
 - `no-unnecessary-type-parameters` on generic interface APIs where `T` constrains input
-- `no-require-imports` for React Native `require()` asset pattern + OpenTelemetry conditional loading
+- `no-require-imports` for React Native `require()` asset pattern and OpenTelemetry conditional loading
 - `no-control-regex` in input sanitization code
 - `sonarjs/hashing` for non-cryptographic checksums (S3 Content-MD5)
 - `sonarjs/pseudo-random` for jitter/backoff, not security
 - `react-hooks/refs` for React Native `Animated.Value` / `PanResponder` refs read once at creation (e.g. `useRef(new Animated.Value(0)).current`)
-- `no-namespace` for Express `declare global { namespace Express }` Request augmentation — standard pattern required by `@types/express`
-- `max-lines-per-function` on TypeORM migration files — single atomic `up()` can't be split
+- `no-namespace` for Express `declare global { namespace Express }` Request augmentation — the standard pattern required by `@types/express`
+- `max-lines-per-function` on TypeORM migration files — single atomic `up()` cannot be split
 
 ## Team reports lifecycle
 
-Two locations for `/team` skill artefacts — **not duplicates**, different roles:
+Two locations exist for `/team` skill artefacts — they are **not duplicates**, they have different roles:
 
 | Path | Role | Writer |
 |---|---|---|
-| `.claude/skills/team/team-reports/` | **Runtime active** — `/team` skill writes here. Contains `working/<date>-<slug>/` scratch pads (ephemeral) + recently-closed runs (≤30 days). | `/team` skill runs |
-| `/team-reports/` (repo root) | **Archive read-only** — closed audits, brainstorms, external reports. Git-ignored by default; only `README.md` versioned. | Manual promotion from runtime after ~30 days |
+| `.claude/skills/team/team-reports/` | **Runtime active** — the `/team` skill writes here. Contains `working/<date>-<slug>/` scratch pads (ephemeral) and recently-closed runs (≤30 days). | `/team` skill runs |
+| `/team-reports/` (repo root) | **Archive read-only** — closed audits, brainstorms, external reports. Git-ignored by default; only `README.md` is versioned. | Manual promotion from runtime after ~30 days |
 
-Rules:
-- Agents MUST write to `.claude/skills/team/team-reports/`, never `/team-reports/`.
-- Report in `working/` = disposable; graduate out of `working/` when sprint closes.
-- Promotion runtime → archive manual for now. Future `scripts/archive-team-reports.sh` may automate.
+Rules :
+- Agents MUST write to `.claude/skills/team/team-reports/`, never to `/team-reports/`.
+- A report in `working/` is disposable; graduate it out of `working/` when the sprint closes.
+- Promotion runtime → archive is manual for now. A future `scripts/archive-team-reports.sh` may automate it.
 
 ## Deployment
 
 - Backend: Docker image → GHCR → VPS OVH (see `docs/OPS_DEPLOYMENT.md`)
 - Mobile: EAS Build → App Store / Google Play (see `docs/MOBILE_INTERNAL_TESTING_FLOW.md`)
-- Secrets + CI config documented in `docs/CI_CD_SECRETS.md`
+- Secrets & CI config documented in `docs/CI_CD_SECRETS.md`
 
 ## Dependency Monitoring
 
 ### TypeORM
-TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
+TypeORM docs repo archived March 2026. v1.0 planned H1 2026 with breaking changes.
 Current assessment: works, migration not urgent, but monitor releases.
 Alternatives for future: Drizzle (S-tier 2026), Prisma 7, Kysely.
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-Project indexed by GitNexus as **InnovMind** (6088 symbols, 15880 relationships, 300 execution flows). Use GitNexus MCP tools to understand code, assess impact, navigate safely.
+This project is indexed by GitNexus as **InnovMind** (6088 symbols, 15880 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
-> If any GitNexus tool warns index stale, run `npx gitnexus analyze` in terminal first.
+> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
 ## Always Do
 
-- **MUST run impact analysis before editing any symbol.** Before modifying function/class/method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report blast radius (direct callers, affected processes, risk level) to user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify changes only affect expected symbols + execution flows.
-- **MUST warn user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- Exploring unfamiliar code: use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. Returns process-grouped results ranked by relevance.
-- Need full context on specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
+- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
+- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
+- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
+- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
+- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
 
 ## When Debugging
 
-1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to issue
-2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, process participation
-3. `READ gitnexus://repo/InnovMind/process/{processName}` — trace full execution flow step by step
-4. Regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what branch changed
+1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
+2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
+3. `READ gitnexus://repo/InnovMind/process/{processName}` — trace the full execution flow step by step
+4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
 
 ## When Refactoring
 
-- **Renaming**: MUST use `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` first. Review preview — graph edits safe, text_search edits need manual review. Then run w/ `dry_run: false`.
+- **Renaming**: MUST use `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` first. Review the preview — graph edits are safe, text_search edits need manual review. Then run with `dry_run: false`.
 - **Extracting/Splitting**: MUST run `gitnexus_context({name: "target"})` to see all incoming/outgoing refs, then `gitnexus_impact({target: "target", direction: "upstream"})` to find all external callers before moving code.
 - After any refactor: run `gitnexus_detect_changes({scope: "all"})` to verify only expected files changed.
 
 ## Never Do
 
-- NEVER edit function/class/method without first running `gitnexus_impact` on it.
+- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
 - NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols w/ find-and-replace — use `gitnexus_rename` which understands call graph.
+- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
 - NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
 
 ## Tools Quick Reference
@@ -416,28 +416,28 @@ Project indexed by GitNexus as **InnovMind** (6088 symbols, 15880 relationships,
 ## Self-Check Before Finishing
 
 Before completing any code modification task, verify:
-1. `gitnexus_impact` run for all modified symbols
-2. No HIGH/CRITICAL risk warnings ignored
+1. `gitnexus_impact` was run for all modified symbols
+2. No HIGH/CRITICAL risk warnings were ignored
 3. `gitnexus_detect_changes()` confirms changes match expected scope
-4. All d=1 (WILL BREAK) dependents updated
+4. All d=1 (WILL BREAK) dependents were updated
 
 ## Keeping the Index Fresh
 
-After committing code changes, GitNexus index becomes stale. Re-run analyze to update:
+After committing code changes, the GitNexus index becomes stale. Re-run analyze to update it:
 
 ```bash
 npx gitnexus analyze
 ```
 
-If index previously included embeddings, preserve by adding `--embeddings`:
+If the index previously included embeddings, preserve them by adding `--embeddings`:
 
 ```bash
 npx gitnexus analyze --embeddings
 ```
 
-Check if embeddings exist: inspect `.gitnexus/meta.json` — `stats.embeddings` field shows count (0 = no embeddings). **Running analyze without `--embeddings` deletes any previously generated embeddings.**
+To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.embeddings` field shows the count (0 means no embeddings). **Running analyze without `--embeddings` will delete any previously generated embeddings.**
 
-> Claude Code users: PostToolUse hook handles this automatically after `git commit` + `git merge`.
+> Claude Code users: A PostToolUse hook handles this automatically after `git commit` and `git merge`.
 
 ## CLI
 

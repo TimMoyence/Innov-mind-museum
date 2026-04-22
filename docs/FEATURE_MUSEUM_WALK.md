@@ -1,6 +1,7 @@
 # MUSAIUM — Feature Spec: Museum Walk (Parcours Guide)
 
-> **Date**: 2026-03-27 | **Status**: SPEC COMPLETE — Ready for implementation
+> **Date**: 2026-03-27 (spec) | 2026-04-22 (positioned)
+> **Status**: POSITIONED V2 — Not started. Only `walk-composer.tsx` stub exists in `app/(stack)/`. SSE streaming revival (ADR-001) scheduled AFTER this feature ships (V2.1).
 > **Author**: Tech Lead + 3 research agents (maps, competitors, codebase)
 > **Effort total**: ~15 jours (3 phases)
 > **Sprint tracking**: see [`docs/walk/ROADMAP.md`](./walk/ROADMAP.md)
