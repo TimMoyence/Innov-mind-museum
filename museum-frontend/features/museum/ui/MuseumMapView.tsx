@@ -11,7 +11,7 @@ import {
 import type { FeatureCollection, Point } from 'geojson';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { NativeSyntheticEvent } from 'react-native';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { PerfOverlay } from '@/features/diagnostics/PerfOverlay';
@@ -26,8 +26,10 @@ import {
   buildMuseumFeatureCollection,
   type MuseumFeatureProperties,
 } from '../application/buildMuseumFeatureCollection';
+import { haversineDistanceMeters } from '../application/haversine';
 import { useMapStyle } from '../application/useMapStyle';
 import type { MuseumWithDistance } from '../application/useMuseumDirectory';
+import { mapCameraCache } from '../infrastructure/mapCameraCache';
 
 interface MuseumMapViewProps {
   museums: MuseumWithDistance[];
@@ -78,6 +80,12 @@ const FIT_PADDING = 72;
 const FIT_MIN_SPAN_DEG = 0.01;
 const FIT_DURATION_MS = 600;
 const SINGLE_POINT_ZOOM = 14;
+/**
+ * Safety cap for auto-fit. When the dataset diagonal exceeds this (e.g. the
+ * full-France directory fallback), we skip fitBounds so the camera doesn't
+ * zoom the user out to a country-wide view after they had panned to a city.
+ */
+const MAX_FIT_SPAN_METERS = 50_000;
 
 const userPositionToCollection = (lat: number, lng: number): FeatureCollection<Point> => ({
   type: 'FeatureCollection',
@@ -125,18 +133,41 @@ export const MuseumMapView = ({
     [userLatitude, userLongitude],
   );
 
-  // Camera starts on the user's cached/current position when available so the
-  // first frame lands on the right region even before the fit effect runs.
-  // Paris was previously the hardcoded start — dropped because it made the
-  // map visibly incorrect for any user outside France on first render.
-  const initialViewState = useMemo(() => {
-    if (userLatitude !== null && userLongitude !== null) {
-      return { center: [userLongitude, userLatitude] as [number, number], zoom: USER_ONLY_ZOOM };
-    }
-    return { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM };
-    // Only consumed on first mount — intentional single capture.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Camera starts on the previously persisted view (last explicit user pan) when
+  // available, otherwise GPS, otherwise a world-centered default. The Map is
+  // rendered only after this resolves so we never paint the wrong region first
+  // and then jump — which is what the old synchronous `useMemo` path did.
+  const [initialViewState, setInitialViewState] = useState<{
+    center: [number, number];
+    zoom: number;
+  } | null>(null);
+
+  // Resolve the starting view exactly once: once we've committed an
+  // `initialViewState`, later GPS arrivals are handled by the data-driven fit
+  // effect and by the camera cache — not by re-seeding this state.
+  const hasResolvedInitialView = initialViewState !== null;
+  useEffect(() => {
+    if (hasResolvedInitialView) return;
+    let cancelled = false;
+    void mapCameraCache.load().then((cam) => {
+      if (cancelled) return;
+      if (cam) {
+        setInitialViewState({
+          center: [cam.centerLng, cam.centerLat],
+          zoom: cam.zoom,
+        });
+        return;
+      }
+      if (userLatitude !== null && userLongitude !== null) {
+        setInitialViewState({ center: [userLongitude, userLatitude], zoom: USER_ONLY_ZOOM });
+        return;
+      }
+      setInitialViewState({ center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [hasResolvedInitialView, userLatitude, userLongitude]);
 
   // Fits the camera around museums + user position. Guards against the
   // MapLibre Camera ref being populated asynchronously (the ref is set only
@@ -190,6 +221,16 @@ export const MuseumMapView = ({
       maxLat += FIT_MIN_SPAN_DEG / 2;
     }
 
+    // If the dataset covers a very wide area (e.g. the full-France directory
+    // fallback), skip auto-fit — otherwise a user who had zoomed into a city
+    // would be yanked out to a country-wide view on the next fetch. The
+    // persisted cache or GPS / user's current view governs instead.
+    const diagonalMeters = haversineDistanceMeters(minLat, minLng, maxLat, maxLng);
+    if (diagonalMeters > MAX_FIT_SPAN_METERS) {
+      hasFittedRef.current = true;
+      return;
+    }
+
     camera.fitBounds([minLng, minLat, maxLng, maxLat], {
       padding: { top: FIT_PADDING, right: FIT_PADDING, bottom: FIT_PADDING, left: FIT_PADDING },
       duration: animationDuration,
@@ -203,12 +244,16 @@ export const MuseumMapView = ({
 
   const handleRegionDidChange = useCallback(
     (event: NativeSyntheticEvent<ViewStateChangeEvent>) => {
-      const { center, bounds, userInteraction } = event.nativeEvent;
+      const { center, bounds, zoom, userInteraction } = event.nativeEvent;
       if (userInteraction) {
         userPannedRef.current = true;
       }
-      if (!onMapMoved) return;
       const [lng, lat] = center;
+      // Persist only explicit user moves. Programmatic fits (auto-fit, cluster
+      // expansion) intentionally skip so the cached camera mirrors the user's
+      // last deliberate intent, not a data-driven recenter.
+      mapCameraCache.save({ centerLng: lng, centerLat: lat, zoom }, userInteraction);
+      if (!onMapMoved) return;
       onMapMoved(lat, lng, bounds);
     },
     [onMapMoved],
@@ -262,6 +307,10 @@ export const MuseumMapView = ({
 
   const handleDidFinishLoadingMap = useCallback(() => {
     setHasLoadError(false);
+    // If the data-driven effect already ran the fit once the camera was ready,
+    // skip this retry — otherwise we'd double-fit and the map would visibly
+    // jump on load.
+    if (hasFittedRef.current) return;
     // Re-attempt the data fit once the native map is ready: the first effect
     // invocation on mount can fire before `cameraRef.current` is populated.
     fitCameraToData();
@@ -282,6 +331,21 @@ export const MuseumMapView = ({
   const isEmpty = museums.length === 0;
   const visibleMuseumCount = museumCollection.features.length;
   const mapA11yLabel = t('museumDirectory.map_a11y_label', { count: visibleMuseumCount });
+
+  if (initialViewState === null) {
+    // AsyncStorage lookup is async; holding the Map mount until we resolve
+    // the starting view prevents a flicker where the camera would render with
+    // defaults then jump to the cached/GPS position on the next frame.
+    return (
+      <View
+        style={[styles.container, styles.loadingContainer]}
+        accessibilityRole="progressbar"
+        accessibilityLabel={t('museumDirectory.map_a11y_label', { count: 0 })}
+      >
+        <ActivityIndicator color={theme.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -429,6 +493,10 @@ const styles = StyleSheet.create({
     borderRadius: semantic.card.paddingLarge,
     borderWidth: semantic.input.borderWidth,
     overflow: 'hidden',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyOverlay: {
     position: 'absolute',

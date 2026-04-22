@@ -85,6 +85,11 @@ export const useMuseumDirectory = (
   // Track last fetched coordinates to avoid re-fetching for tiny GPS fluctuations.
   const lastFetchCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
 
+  // Marks whether the geo-aware search endpoint has already produced a result.
+  // Once true, losing GPS (or the user zooming out to a region with no coords) must NOT
+  // trigger a full-France directory reload — we keep the already-loaded local results.
+  const hasServerFetchedRef = useRef(false);
+
   /** Fallback: fetch all museums from the directory endpoint and enrich client-side. */
   const fetchFromDirectory = useCallback(async (lat: number | null, lng: number | null) => {
     const entries = await museumApi.listMuseumDirectory();
@@ -122,6 +127,7 @@ export const useMuseumDirectory = (
           try {
             const results = await fetchFromSearch(lat, lng, q);
             setRawMuseums(results);
+            hasServerFetchedRef.current = true;
             return;
           } catch {
             // Search endpoint failed — fall back to directory
@@ -155,6 +161,11 @@ export const useMuseumDirectory = (
 
     if (hasCoords) {
       lastFetchCoordsRef.current = { lat: userLatitude, lng: userLongitude };
+    } else if (hasServerFetchedRef.current) {
+      // GPS lost (or never granted post-search) but we already have server-side
+      // results: keep them. Refetching the full directory would drop the local
+      // geo-scoped list the user is looking at and blow the camera out to France.
+      return;
     }
 
     void fetchMuseums(userLatitude, userLongitude);
