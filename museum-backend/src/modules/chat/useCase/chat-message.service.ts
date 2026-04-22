@@ -184,8 +184,8 @@ export class ChatMessageService {
   /**
    * Posts a message with token-by-token streaming and incremental guardrail checks.
    *
-   * @deprecated SSE streaming retired in V1 — see `docs/adr/ADR-001-sse-streaming-deprecated.md`.
-   *   Use `postMessage` instead.
+   * Status: DEACTIVATED — SSE streaming paused post-V1 (token-fluidity issues, cf. ADR-001).
+   *   Revival scheduled for V2.1 post-Walk feature. Use `postMessage` for all current flows.
    */
   async postMessageStream(
     sessionId: string,

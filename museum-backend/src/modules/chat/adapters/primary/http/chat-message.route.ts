@@ -1,7 +1,6 @@
 import { Router } from 'express';
 
-import { AppError, badRequest } from '@shared/errors/app.error';
-import { logger } from '@shared/logger/logger';
+import { badRequest } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import { dailyChatLimit } from '@src/helpers/middleware/daily-chat-limit.middleware';
@@ -19,13 +18,6 @@ import {
   extendTimeoutForUpload,
 } from './chat-route.helpers';
 import { parsePostMessageRequest } from './chat.contracts';
-import {
-  initSseResponse,
-  sendSseToken,
-  sendSseDone,
-  sendSseError,
-  sendSseGuardrail,
-} from './sse.helpers';
 
 import type { PostMessageRequest } from './chat.contracts';
 import type { ArtKeywordRepository } from '../../../domain/artKeyword.repository.interface';
@@ -89,109 +81,8 @@ function createPostMessageHandler(chatService: ChatService) {
   };
 }
 
-/** Sets up SSE keep-alive and hard-timeout timers; returns handles for cleanup. */
-function initSseTimers(
-  res: Response,
-  controller: AbortController,
-): { keepAliveTimer: NodeJS.Timeout; sseTimer: NodeJS.Timeout } {
-  const KEEP_ALIVE_MS = 15_000;
-  const keepAliveTimer = setInterval(() => {
-    if (!res.writableEnded && !res.destroyed) {
-      res.write(': keep-alive\n\n');
-    }
-  }, KEEP_ALIVE_MS);
-
-  const SSE_TIMEOUT_MS = env.llm.totalBudgetMs + 10_000;
-  const sseTimer = setTimeout(() => {
-    if (!res.writableEnded && !res.destroyed) {
-      sendSseError(
-        res,
-        'TIMEOUT',
-        `Stream timeout exceeded (${SSE_TIMEOUT_MS / 1_000}s). The response took too long.`,
-      );
-      controller.abort();
-      res.end();
-    }
-  }, SSE_TIMEOUT_MS);
-
-  return { keepAliveTimer, sseTimer };
-}
-
-/**
- * Handler factory: POST /sessions/:id/messages/stream (SSE streaming).
- *
- * @deprecated SSE streaming was retired in V1 — token-fluidity issues made it non-viable.
- *   The route remains accessible for legacy clients but logs a warning per hit so
- *   we can measure residual usage and remove the code completely once it falls below
- *   ~10/day for 30 days. See `docs/adr/ADR-001-sse-streaming-deprecated.md`.
- */
-function createStreamHandler(chatService: ChatService) {
-  return async (req: Request, res: Response) => {
-    logger.warn('sse.stream.deprecated.hit', { sessionId: req.params.id });
-
-    // RFC 9745 (Deprecation) + RFC 8594 (Sunset) — signals programmatic migration path
-    res.set({
-      Deprecation: 'true',
-      Sunset: 'Sun, 01 Jun 2026 00:00:00 GMT',
-      Link: `</api/chat/sessions/${req.params.id}/messages>; rel="successor-version"`,
-    });
-    res.setTimeout(0);
-    req.socket.setTimeout(0);
-    initSseResponse(res);
-
-    const controller = new AbortController();
-    res.on('close', () => {
-      controller.abort();
-    });
-
-    const { keepAliveTimer, sseTimer } = initSseTimers(res, controller);
-
-    try {
-      const currentUser = getRequestUser(req);
-      const { bodyPayload, context } = parseMessageInput(req);
-
-      // eslint-disable-next-line @typescript-eslint/no-deprecated, sonarjs/deprecation -- this IS the deprecated SSE handler; maintained for legacy clients per ADR-001
-      const result = await chatService.postMessageStream(
-        req.params.id,
-        { text: bodyPayload.text, context },
-        {
-          onToken: (tokenText) => {
-            clearInterval(keepAliveTimer);
-            if (!res.writableEnded && !res.destroyed) sendSseToken(res, tokenText);
-          },
-          onGuardrail: (guardrailText, reason) => {
-            clearInterval(keepAliveTimer);
-            if (!res.writableEnded && !res.destroyed) sendSseGuardrail(res, guardrailText, reason);
-          },
-          requestId: (req as { requestId?: string }).requestId,
-          currentUserId: currentUser?.id,
-          signal: controller.signal,
-        },
-      );
-
-      if (!res.writableEnded && !res.destroyed) {
-        sendSseDone(res, {
-          messageId: result.message.id,
-          createdAt: result.message.createdAt,
-          metadata: result.metadata as Record<string, unknown>,
-        });
-      }
-    } catch (error) {
-      if (!res.writableEnded && !res.destroyed) {
-        const isKnown = error instanceof AppError;
-        sendSseError(
-          res,
-          isKnown ? error.code : 'INTERNAL_ERROR',
-          isKnown ? error.message : 'Internal server error',
-        );
-      }
-    } finally {
-      clearInterval(keepAliveTimer);
-      clearTimeout(sseTimer);
-      if (!res.writableEnded) res.end();
-    }
-  };
-}
+// SSE streaming handler moved to `./chat-message.sse-dormant.ts` (DEACTIVATED post-V1,
+// revival scheduled for V2.1 post-Walk feature). See `docs/adr/ADR-001-sse-streaming-deprecated.md`.
 
 /** Handler factory: GET /art-keywords (list keywords by locale, optional since filter). */
 function createListArtKeywordsHandler(artKeywordRepo?: ArtKeywordRepository) {
@@ -294,16 +185,17 @@ export const createMessageRouter = (
     createPostMessageHandler(chatService),
   );
 
-  // POST /sessions/:id/messages/stream — SSE streaming message
-  router.post(
-    '/sessions/:id/messages/stream',
-    isAuthenticated,
-    dailyChatLimit,
-    userLimiter,
-    sessionLimiter,
-    // eslint-disable-next-line @typescript-eslint/no-deprecated, sonarjs/deprecation -- route retained for legacy clients; see ADR-001
-    createStreamHandler(chatService),
-  );
+  // POST /sessions/:id/messages/stream — SSE streaming (DEACTIVATED, revival V2.1 post-Walk).
+  //   Route intentionally unmounted. Handler `createStreamHandler` + service method kept for revival.
+  //   To reactivate: uncomment the `router.post(...)` block below + set EXPO_PUBLIC_CHAT_STREAMING=true on mobile.
+  // router.post(
+  //   '/sessions/:id/messages/stream',
+  //   isAuthenticated,
+  //   dailyChatLimit,
+  //   userLimiter,
+  //   sessionLimiter,
+  //   createStreamHandler(chatService),
+  // );
 
   // Art-keywords offline-sync endpoints (handlers extracted for max-lines-per-function compliance).
   router.get('/art-keywords', isAuthenticated, createListArtKeywordsHandler(artKeywordRepo));

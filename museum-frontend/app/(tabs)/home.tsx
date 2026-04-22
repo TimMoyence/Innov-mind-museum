@@ -46,7 +46,10 @@ export default function HomeScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.screen,
-          { paddingTop: insets.top + semantic.screen.gapSmall, paddingBottom: tabBarHeight },
+          {
+            paddingTop: insets.top + semantic.screen.gapSmall,
+            paddingBottom: tabBarHeight + semantic.screen.gap,
+          },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"

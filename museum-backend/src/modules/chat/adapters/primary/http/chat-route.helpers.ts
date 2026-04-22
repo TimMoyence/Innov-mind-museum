@@ -173,10 +173,14 @@ const parseGuideLevel = (value: unknown): ParsedContext['guideLevel'] | undefine
   return value as 'beginner' | 'intermediate' | 'expert';
 };
 
-/** Validates and extracts context.locale. */
+/** Validates and extracts context.locale (length + charset cap; whitelist happens downstream via resolveLocale). */
 const parseLocale = (value: unknown): string | undefined => {
   if (value === undefined) return undefined;
   if (typeof value !== 'string') throw badRequest('context.locale must be a string');
+  if (value.length > 10) throw badRequest('context.locale is too long');
+  if (!/^[A-Za-z0-9_-]*$/.test(value)) {
+    throw badRequest('context.locale must match BCP47 charset (alnum, dash, underscore)');
+  }
   return value;
 };
 

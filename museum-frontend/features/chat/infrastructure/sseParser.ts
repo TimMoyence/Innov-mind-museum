@@ -1,7 +1,7 @@
 /**
  * Discriminated union of all SSE event types emitted by the streaming chat endpoint.
  *
- * @deprecated SSE streaming retired in V1 — see `docs/adr/ADR-001-sse-streaming-deprecated.md`.
+ * Status: DEACTIVATED — SSE streaming paused post-V1; revival V2.1 (see ADR-001).
  */
 export type SseStreamEvent =
   | { type: 'token'; text: string }
@@ -13,15 +13,13 @@ export type SseStreamEvent =
  * Parses a raw SSE text buffer into structured events.
  * Returns parsed events and any remaining incomplete data.
  *
- * @deprecated SSE streaming retired in V1 — see `docs/adr/ADR-001-sse-streaming-deprecated.md`.
- *   Kept for residual client compatibility. Do not use for new chat flows.
+ * Status: DEACTIVATED — SSE streaming paused post-V1; revival V2.1 (see ADR-001).
+ *   Kept intact for V2.1 revival post-Walk. Do not use for new chat flows in V1/V2.
  *
  * @param buffer - Raw text from a `text/event-stream` response.
  * @returns Parsed events and the unprocessed remainder of the buffer.
  */
-// eslint-disable-next-line @typescript-eslint/no-deprecated -- deprecated type used within deprecated function implementation
 export function parseSseChunk(buffer: string): { events: SseStreamEvent[]; remainder: string } {
-  // eslint-disable-next-line @typescript-eslint/no-deprecated -- deprecated type used within deprecated function implementation
   const events: SseStreamEvent[] = [];
   const blocks = buffer.split('\n\n');
   // Last block may be incomplete — keep it as remainder

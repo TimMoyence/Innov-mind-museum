@@ -231,9 +231,9 @@ export class ChatService {
    * Streams assistant response tokens via onToken callback while processing the message.
    * Uses shared prepareMessage/commitAssistantResponse logic.
    *
-   * @deprecated SSE streaming was retired in V1 — token-fluidity issues (cf. ADR-001)
-   *   made it non-viable. Use {@link postMessage} instead. Code conserved for residual
-   *   client compatibility, scheduled for removal in V1.1 if usage falls below 10/day.
+   * Status: DEACTIVATED — SSE streaming paused post-V1 (token-fluidity issues, cf. ADR-001).
+   *   Handler extracted to `chat-message.sse-dormant.ts`; revival scheduled for V2.1
+   *   post-Walk feature. Use {@link postMessage} for all current flows.
    *   See `docs/adr/ADR-001-sse-streaming-deprecated.md`.
    *
    * @param sessionId - UUID of the target chat session.
@@ -263,7 +263,7 @@ export class ChatService {
       userId: callbacks.currentUserId,
       requestId: callbacks.requestId,
     });
-    // eslint-disable-next-line @typescript-eslint/no-deprecated, sonarjs/deprecation -- facade for the deprecated SSE path; ADR-001
+     
     return await this.messages.postMessageStream(sessionId, input, callbacks);
   }
 

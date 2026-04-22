@@ -18,7 +18,7 @@ import { LLMGuardAdapter } from './adapters/secondary/guardrails/llm-guard.adapt
 import { S3CompatibleImageStorage } from './adapters/secondary/image-storage.s3';
 import { LocalImageStorage } from './adapters/secondary/image-storage.stub';
 import { LangChainChatOrchestrator } from './adapters/secondary/langchain.orchestrator';
-import { TesseractOcrService, DisabledOcrService } from './adapters/secondary/ocr-service';
+import { TesseractOcrService, type DisabledOcrService } from './adapters/secondary/ocr-service';
 import { RegexPiiSanitizer } from './adapters/secondary/pii-sanitizer.regex';
 import { SearXNGClient } from './adapters/secondary/searxng.client';
 import { TavilyClient } from './adapters/secondary/tavily.client';
@@ -29,6 +29,7 @@ import {
 import { UnsplashClient } from './adapters/secondary/unsplash.client';
 import { TypeOrmUserMemoryRepository } from './adapters/secondary/userMemory.repository.typeorm';
 import { WikidataClient } from './adapters/secondary/wikidata.client';
+import { ArtTopicClassifier } from './useCase/art-topic-classifier';
 import { ChatService } from './useCase/chat.service';
 import { DescribeService } from './useCase/describe.service';
 import { ImageEnrichmentService } from './useCase/image-enrichment.service';
@@ -332,7 +333,7 @@ export class ChatModule {
     const tts = env.llm.openAiApiKey
       ? new OpenAiTextToSpeechService()
       : new DisabledTextToSpeechService();
-    const ocr = env.featureFlags.ocrGuard ? new TesseractOcrService() : new DisabledOcrService();
+    const ocr = new TesseractOcrService();
     const userMemory = this.buildUserMemory(dataSource, cache);
     const knowledgeBase = this.buildKnowledgeBase(cache);
     const imageEnrichment = this.buildImageEnrichment();
@@ -418,7 +419,7 @@ export class ChatModule {
       knowledgeBase: deps.knowledgeBase,
       imageEnrichment: deps.imageEnrichment,
       webSearch: deps.webSearch,
-      artTopicClassifier: undefined,
+      artTopicClassifier: new ArtTopicClassifier(),
       advancedGuardrail: this.buildAdvancedGuardrail(),
       advancedGuardrailObserveOnly: env.guardrails.observeOnly,
       piiSanitizer: new RegexPiiSanitizer(),
