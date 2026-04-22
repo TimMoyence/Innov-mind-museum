@@ -8,7 +8,13 @@ import { requireRole } from '@src/helpers/middleware/require-role.middleware';
 import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
 
-import { createMuseumSchema, searchMuseumsQuerySchema, updateMuseumSchema } from './museum.schemas';
+import {
+  createMuseumSchema,
+  getEnrichmentQuerySchema,
+  getEnrichmentStatusQuerySchema,
+  searchMuseumsQuerySchema,
+  updateMuseumSchema,
+} from './museum.schemas';
 import {
   buildSearchMuseumsUseCase,
   createMuseumUseCase,
@@ -18,6 +24,7 @@ import {
 } from '../../../useCase';
 
 import type { MuseumDirectoryDTO, UpdateMuseumInput } from '../../../domain/museum.types';
+import type { EnrichMuseumUseCase } from '../../../useCase/enrichMuseum.useCase';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /** Handler: GET /api/museums/directory — public directory of active museums. */
@@ -108,6 +115,33 @@ const handleGetMuseum = async (req: Request, res: Response) => {
   res.json({ museum });
 };
 
+/** Parses numeric `:id` param or throws 400. Shared by enrichment handlers. */
+const parseMuseumIdParam = (raw: string): number => {
+  const id = Number.parseInt(raw, 10);
+  if (Number.isNaN(id) || id <= 0) throw badRequest('Invalid museum ID');
+  return id;
+};
+
+/** Creates the handler for GET /api/museums/:id/enrichment. */
+const buildHandleGetEnrichment = (useCase: EnrichMuseumUseCase) => {
+  return async (req: Request, res: Response) => {
+    const museumId = parseMuseumIdParam(req.params.id);
+    const { locale } = res.locals.validatedQuery as { locale: string };
+    const result = await useCase.execute({ museumId, locale });
+    res.status(result.status === 'ready' ? 200 : 202).json(result);
+  };
+};
+
+/** Creates the handler for GET /api/museums/:id/enrichment/status. */
+const buildHandleGetEnrichmentStatus = (useCase: EnrichMuseumUseCase) => {
+  return async (req: Request, res: Response) => {
+    const museumId = parseMuseumIdParam(req.params.id);
+    const { locale, jobId } = res.locals.validatedQuery as { locale: string; jobId: string };
+    const result = await useCase.getJobStatus({ museumId, locale, jobId });
+    res.status(result.status === 'ready' ? 200 : 202).json(result);
+  };
+};
+
 /** Handler: PUT /api/museums/:id — update museum (admin only). */
 const handleUpdateMuseum = async (req: Request, res: Response) => {
   const id = Number.parseInt(req.params.id, 10);
@@ -125,16 +159,24 @@ const handleUpdateMuseum = async (req: Request, res: Response) => {
   res.json({ museum });
 };
 
+/** Dependencies accepted by {@link createMuseumRouter}. */
+export interface CreateMuseumRouterDeps {
+  cacheService?: CacheService;
+  /** When undefined, the two `/enrichment` endpoints return 503. */
+  enrichMuseumUseCase?: EnrichMuseumUseCase;
+}
+
 /**
- * Builds the museum Express router with all CRUD and search endpoints.
+ * Builds the museum Express router with all CRUD, search, and hybrid
+ * enrichment endpoints.
  *
- * @param cacheService - Optional cache service for Overpass API result caching.
+ * @param deps - Optional injected dependencies (cache + enrichment use case).
  * @returns Configured Express Router.
  */
-export const createMuseumRouter = (cacheService?: CacheService): Router => {
+export const createMuseumRouter = (deps: CreateMuseumRouterDeps = {}): Router => {
   const museumRouter: Router = Router();
 
-  const searchMuseumsUseCase = buildSearchMuseumsUseCase(cacheService);
+  const searchMuseumsUseCase = buildSearchMuseumsUseCase(deps.cacheService);
 
   const searchLimiter = createRateLimitMiddleware({
     limit: 15,
@@ -171,6 +213,21 @@ export const createMuseumRouter = (cacheService?: CacheService): Router => {
     validateBody(updateMuseumSchema),
     handleUpdateMuseum,
   );
+
+  if (deps.enrichMuseumUseCase) {
+    museumRouter.get(
+      '/:id/enrichment',
+      isAuthenticated,
+      validateQuery(getEnrichmentQuerySchema),
+      buildHandleGetEnrichment(deps.enrichMuseumUseCase),
+    );
+    museumRouter.get(
+      '/:id/enrichment/status',
+      isAuthenticated,
+      validateQuery(getEnrichmentStatusQuerySchema),
+      buildHandleGetEnrichmentStatus(deps.enrichMuseumUseCase),
+    );
+  }
 
   return museumRouter;
 };

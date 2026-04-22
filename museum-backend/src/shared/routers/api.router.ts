@@ -13,23 +13,23 @@ import {
   getUserMemoryService,
 } from '@modules/chat/wiring';
 import { createDailyArtRouter } from '@modules/daily-art/daily-art.route';
-import { buildLowDataPackService } from '@modules/museum';
+import { buildEnrichMuseumUseCase, buildLowDataPackService } from '@modules/museum';
 import { createLowDataPackRouter } from '@modules/museum/adapters/primary/http/low-data-pack.route';
 import { createMuseumRouter } from '@modules/museum/adapters/primary/http/museum.route';
+import { BullmqMuseumEnrichmentQueueAdapter } from '@modules/museum/adapters/secondary/bullmq-museum-enrichment-queue.adapter';
 import reviewRouter from '@modules/review/adapters/primary/http/review.route';
 import supportRouter from '@modules/support/adapters/primary/http/support.route';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { env } from '@src/config/env';
 
 import type { ChatService } from '@modules/chat/useCase/chat.service';
+import type { EnrichMuseumUseCase } from '@modules/museum/useCase/enrichMuseum.useCase';
 import type { CacheService } from '@shared/cache/cache.port';
-import type { FeatureFlagService } from '@shared/feature-flags/feature-flags.port';
 
 /** Dependencies required to build the top-level API router. */
 interface ApiRouterDeps {
   chatService: ChatService;
   healthCheck: () => Promise<{ database: 'up' | 'down' }>;
-  featureFlagService: FeatureFlagService;
   cacheService?: CacheService;
 }
 
@@ -163,6 +163,34 @@ export const createApiRouter = ({
   return router;
 };
 
+/**
+ * Singleton: holds the P3 enrichment use case + its BullMQ queue adapter.
+ * Lazy so tests injecting their own chatService don't pay the Redis connect
+ * cost, and so a missing Redis config degrades to 503 on /enrichment rather
+ * than crashing boot.
+ */
+let cachedEnrichUseCase: EnrichMuseumUseCase | null | undefined;
+
+function resolveEnrichMuseumUseCase(): EnrichMuseumUseCase | undefined {
+  if (cachedEnrichUseCase !== undefined) {
+    return cachedEnrichUseCase ?? undefined;
+  }
+  try {
+    const queue = new BullmqMuseumEnrichmentQueueAdapter({
+      host: env.redis.host,
+      port: env.redis.port,
+      password: env.redis.password,
+      maxRetriesPerRequest: null,
+      enableOfflineQueue: false,
+    });
+    cachedEnrichUseCase = buildEnrichMuseumUseCase(queue);
+    return cachedEnrichUseCase;
+  } catch {
+    cachedEnrichUseCase = null;
+    return undefined;
+  }
+}
+
 /** Mounts all domain sub-routers onto the top-level API router. */
 function mountDomainRouters(
   router: Router,
@@ -180,7 +208,10 @@ function mountDomainRouters(
   );
   router.use('/auth', authRouter);
   router.use('/daily-art', createDailyArtRouter(cacheService));
-  router.use('/museums', createMuseumRouter(cacheService));
+  router.use(
+    '/museums',
+    createMuseumRouter({ cacheService, enrichMuseumUseCase: resolveEnrichMuseumUseCase() }),
+  );
 
   const resolvedCache = cacheService ?? new NoopCacheService();
   const lowDataPackService = buildLowDataPackService(resolvedCache);

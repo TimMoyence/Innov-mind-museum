@@ -112,6 +112,15 @@ export class ExtractionJobService {
             confidence: classification.confidence,
             needsReview,
             locale,
+            // Hybrid-enrichment fields are populated only by the
+            // `museum-enrichment` BullMQ pipeline; the classification flow
+            // owns the scraped-description path and leaves them null so the
+            // dedicated worker can overwrite on first run.
+            summary: null,
+            wikidataQid: null,
+            phone: null,
+            imageUrl: null,
+            fetchedAt: new Date(),
           },
           url,
         );

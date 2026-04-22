@@ -264,11 +264,62 @@ async function fetchFromEndpoint(
 }
 
 /**
+ * Queries the Overpass API for the `opening_hours` tag of a museum at the
+ * given point. Tries the same endpoint chain as {@link queryOverpassMuseums}
+ * and returns the first non-null tag value.
+ *
+ * @param params - Location of the museum.
+ * @param params.lat - Latitude of the query point (WGS84).
+ * @param params.lng - Longitude of the query point (WGS84).
+ * @param params.radiusMeters - Search radius around the point, defaults to 50 m.
+ * @param timeoutMs - Per-endpoint timeout in milliseconds.
+ * @returns Raw OSM `opening_hours` value, or null if unavailable.
+ */
+export async function queryOverpassOpeningHours(
+  params: { lat: number; lng: number; radiusMeters?: number },
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+): Promise<string | null> {
+  const radius = params.radiusMeters ?? 50;
+  const query = [
+    `[out:json][timeout:${String(QL_TIMEOUT_SECONDS)}];`,
+    `nwr["tourism"="museum"]["opening_hours"](around:${String(radius)},${String(params.lat)},${String(params.lng)});`,
+    'out tags 1;',
+  ].join('\n');
+
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const response = await postQuery(endpoint, query, timeoutMs);
+      if (!response.ok) continue;
+      const data = (await response.json()) as OverpassResponse;
+      if (!Array.isArray(data.elements)) continue;
+      for (const el of data.elements) {
+        const value = el.tags?.opening_hours;
+        if (value?.trim()) return value;
+      }
+      return null;
+    } catch (error) {
+      logger.warn('Overpass opening_hours query failed — trying next', {
+        endpoint,
+        error: error instanceof Error ? error.message : String(error),
+        lat: params.lat,
+        lng: params.lng,
+      });
+    }
+  }
+
+  logger.warn('All Overpass endpoints failed for opening_hours', {
+    lat: params.lat,
+    lng: params.lng,
+  });
+  return null;
+}
+
+/**
  * Queries the Overpass API for museums near a given location (or inside a bbox).
  * Tries endpoints in order (main → Kumi mirror) and returns the first success.
  * Returns an empty array on full failure (all endpoints failed).
  *
- * @param params - Search parameters including coordinates, radius/bbox, and optional text filter.
+ * @param params - Search parameters (coordinates + radius OR bbox, optional text filter).
  * @param timeoutMs - HTTP request timeout per endpoint in milliseconds (default 30000).
  * @returns Array of parsed museum results.
  */

@@ -34,15 +34,11 @@ export class KnowledgeExtractionModule {
     const museumRepo = new TypeOrmMuseumEnrichmentRepo(dataSource.getRepository(MuseumEnrichment));
     const dbLookup = new DbLookupService(artworkRepo, museumRepo);
 
-    if (!env.adminFlags.enableExtraction) {
-      logger.info('knowledge_extraction_disabled');
-      return { dbLookup, artworkKnowledgeRepo: artworkRepo, close: () => Promise.resolve() };
-    }
-
     const openaiKey = env.llm.openAiApiKey;
     if (!openaiKey) {
       logger.warn('knowledge_extraction_no_openai_key', {
-        reason: 'OPENAI_API_KEY required for content classification',
+        reason:
+          'OPENAI_API_KEY required for content classification — pipeline degraded to db-lookup only',
       });
       return { dbLookup, artworkKnowledgeRepo: artworkRepo, close: () => Promise.resolve() };
     }

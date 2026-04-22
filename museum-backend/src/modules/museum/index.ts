@@ -5,6 +5,7 @@ export {
   updateMuseumUseCase,
   buildSearchMuseumsUseCase,
   buildLowDataPackService,
+  buildEnrichMuseumUseCase,
   museumRepository,
 } from './useCase';
 export type { Museum } from './domain/museum.entity';
@@ -15,3 +16,9 @@ export type {
   SearchMuseumEntry,
   SearchMuseumsResult,
 } from './useCase/searchMuseums.useCase';
+export type {
+  EnrichMuseumResult,
+  MuseumEnrichmentView,
+  ParsedOpeningHours,
+} from './domain/enrichment.types';
+export type { MuseumEnrichmentQueuePort } from './domain/ports/museum-enrichment-queue.port';

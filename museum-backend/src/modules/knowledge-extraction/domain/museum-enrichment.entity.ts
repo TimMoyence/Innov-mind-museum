@@ -11,7 +11,10 @@ import {
 import { Museum } from '@modules/museum/domain/museum.entity';
 
 /**
- *
+ * Museum enrichment — aggregated public data (OSM / Wikidata / Wikipedia) keyed
+ * by `(name, locale)`. Also used as persistent cache for the P3 hybrid
+ * per-locale enrichment endpoint (fields: summary, wikidataQid, phone,
+ * imageUrl, fetchedAt).
  */
 @Entity({ name: 'museum_enrichment' })
 @Index('IDX_museum_enrichment_name_locale', ['name', 'locale'], { unique: true })
@@ -22,8 +25,13 @@ export class MuseumEnrichment {
   @ManyToOne(() => Museum, { nullable: true, onDelete: 'SET NULL' })
   museum?: Museum | null;
 
-  @Column({ type: 'uuid', nullable: true })
-  museumId!: string | null;
+  /**
+   * Integer FK to museums.id. Historically typed as `string | null` in the TS
+   * entity while the DB column has always been `integer` (see migration
+   * 1775852800000-CreateKnowledgeExtractionTables). Corrected to match SQL.
+   */
+  @Column({ type: 'int', nullable: true })
+  museumId!: number | null;
 
   @Column({ type: 'varchar', length: 300 })
   name!: string;
@@ -57,6 +65,31 @@ export class MuseumEnrichment {
 
   @Column({ type: 'varchar', length: 10 })
   locale!: string;
+
+  // ── P3 hybrid enrichment fields ────────────────────────────────
+
+  /** Short summary (Wikipedia REST `/page/summary` extract or Wikidata description). */
+  @Column({ type: 'text', nullable: true })
+  summary!: string | null;
+
+  /** Wikidata QID (e.g. `Q19675`) — empty when lookup failed. */
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  wikidataQid!: string | null;
+
+  /** Primary phone (Wikidata P1329). Stored raw, not normalised. */
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  phone!: string | null;
+
+  /** Commons image URL (Wikidata P18). */
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  imageUrl!: string | null;
+
+  /**
+   * Last successful enrichment fetch (UTC). Used as TTL anchor by
+   * `EnrichMuseumUseCase` (30-day freshness window).
+   */
+  @Column({ type: 'timestamptz', default: () => 'NOW()' })
+  fetchedAt!: Date;
 
   @CreateDateColumn()
   createdAt!: Date;

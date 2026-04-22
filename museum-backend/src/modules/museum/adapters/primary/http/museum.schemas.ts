@@ -36,6 +36,17 @@ export const updateMuseumSchema = z.object({
 // eslint-disable-next-line security/detect-unsafe-regex -- anchored + bounded, no catastrophic backtracking
 const BBOX_REGEX = /^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?$/;
 
+/** Query for GET /museums/:id/enrichment — `locale` drives per-language cache lookup. */
+export const getEnrichmentQuerySchema = z.object({
+  locale: z.string().min(2).max(10),
+});
+
+/** Query for GET /museums/:id/enrichment/status — explicit `jobId` reuse from prior 202. */
+export const getEnrichmentStatusQuerySchema = z.object({
+  locale: z.string().min(2).max(10),
+  jobId: z.string().min(1).max(128),
+});
+
 export const searchMuseumsQuerySchema = z
   .object({
     lat: z.coerce.number().min(-90).max(90).optional(),
