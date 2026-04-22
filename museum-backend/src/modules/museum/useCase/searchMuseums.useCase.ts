@@ -6,6 +6,7 @@ import {
 } from '@shared/http/overpass.client';
 import { logger } from '@shared/logger/logger';
 import { haversineDistanceMeters } from '@shared/utils/haversine';
+import { museumNamesAreSimilar } from '@shared/utils/string-similarity';
 import { env } from '@src/config/env';
 
 import type { BoundingBox, IMuseumRepository } from '../domain/museum.repository.interface';
@@ -47,8 +48,12 @@ const DEFAULT_RADIUS = 30_000;
 const MAX_RADIUS = 50_000;
 /** Cache empty Overpass results for 5 minutes to avoid hammering a failing API. */
 const NEGATIVE_CACHE_TTL_SECONDS = 300;
-/** Distance threshold in meters below which an OSM result is considered a duplicate of a local museum. */
-const DEDUP_THRESHOLD_METERS = 100;
+/** Pure-distance threshold: two OSM entries this close are always merged (covers duplicate OSM nodes for the same building). */
+const DEDUP_OSM_OSM_METERS = 100;
+/** Pure-distance threshold for OSM vs local: below this, drop the OSM entry regardless of name. */
+const DEDUP_OSM_LOCAL_PURE_METERS = 100;
+/** Name-gated distance threshold for OSM vs local: up to this distance, drop the OSM entry only if names match. */
+const DEDUP_OSM_LOCAL_DISTANCE_METERS = 500;
 
 interface LocalMuseumWithCoords {
   name: string;
@@ -85,19 +90,142 @@ async function fetchLocalMuseumsWithCoords(
   }
 }
 
-/** Merges local and OSM results with proximity-based deduplication. */
-function mergeResults(
-  lat: number,
-  lng: number,
-  radius: number,
-  localMuseums: LocalMuseumWithCoords[],
-  osmResults: OverpassMuseumResult[],
+/**
+ * Collapses OSM-only duplicates using 2-pass clustering.
+ *
+ * Pass 1 (union-find): two OSM entries are unioned if EITHER
+ *   - their names pass the similarity check (`museumNamesAreSimilar`), OR
+ *   - they sit within `DEDUP_OSM_OSM_METERS` of each other.
+ *
+ * Pass 2 (representative pick): for each cluster, keep the entry with the
+ * longest address (richer metadata); tiebreak on longest name.
+ *
+ * Deterministic: input order is preserved for representative selection when
+ * lengths tie, because `clusters` is built by scanning indices in order.
+ */
+function dedupeOsmResults(osmResults: OverpassMuseumResult[]): OverpassMuseumResult[] {
+  const n = osmResults.length;
+  if (n <= 1) return [...osmResults];
+
+  // Union-find over indices.
+  const parent: number[] = Array.from({ length: n }, (_, i) => i);
+
+  const find = (i: number): number => {
+    let root = i;
+    while (parent[root] !== root) root = parent[root];
+    // Path compression.
+    let cur = i;
+    while (parent[cur] !== root) {
+      const next = parent[cur];
+      parent[cur] = root;
+      cur = next;
+    }
+    return root;
+  };
+
+  const union = (i: number, j: number): void => {
+    const ri = find(i);
+    const rj = find(j);
+    if (ri !== rj) parent[rj] = ri;
+  };
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const a = osmResults[i];
+      const b = osmResults[j];
+      const distance = haversineDistanceMeters(a.latitude, a.longitude, b.latitude, b.longitude);
+      if (distance <= DEDUP_OSM_OSM_METERS || museumNamesAreSimilar(a.name, b.name)) {
+        union(i, j);
+      }
+    }
+  }
+
+  // Group indices by cluster root.
+  const clusters = new Map<number, number[]>();
+  for (let i = 0; i < n; i++) {
+    const root = find(i);
+    const bucket = clusters.get(root);
+    if (bucket) bucket.push(i);
+    else clusters.set(root, [i]);
+  }
+
+  // Pick one representative per cluster: longest address, tiebreak longest name.
+  const picked: OverpassMuseumResult[] = [];
+  for (const indices of clusters.values()) {
+    let bestIdx = indices[0];
+    let bestAddrLen = (osmResults[bestIdx].address ?? '').length;
+    let bestNameLen = osmResults[bestIdx].name.length;
+    for (let k = 1; k < indices.length; k++) {
+      const idx = indices[k];
+      const addrLen = (osmResults[idx].address ?? '').length;
+      const nameLen = osmResults[idx].name.length;
+      if (addrLen > bestAddrLen || (addrLen === bestAddrLen && nameLen > bestNameLen)) {
+        bestIdx = idx;
+        bestAddrLen = addrLen;
+        bestNameLen = nameLen;
+      }
+    }
+    picked.push(osmResults[bestIdx]);
+  }
+
+  return picked;
+}
+
+/**
+ * Tests whether an OSM entry duplicates any local museum.
+ *
+ * An OSM entry is considered a duplicate if EITHER:
+ *   - it sits within `DEDUP_OSM_LOCAL_PURE_METERS` of a local museum (pure
+ *     distance, names don't need to match — covers the case where OSM and
+ *     local agree on coords but names diverge), OR
+ *   - it sits within `DEDUP_OSM_LOCAL_DISTANCE_METERS` of a local museum AND
+ *     the names pass the similarity check (covers the case where OSM places
+ *     a museum several hundred meters off from the local record, but the
+ *     name makes clear they refer to the same institution).
+ */
+function osmDuplicatesLocal(
+  osm: OverpassMuseumResult,
+  locals: readonly LocalMuseumWithCoords[],
+): boolean {
+  for (const local of locals) {
+    const distance = haversineDistanceMeters(
+      local.latitude,
+      local.longitude,
+      osm.latitude,
+      osm.longitude,
+    );
+    if (distance <= DEDUP_OSM_LOCAL_PURE_METERS) return true;
+    if (
+      distance <= DEDUP_OSM_LOCAL_DISTANCE_METERS &&
+      museumNamesAreSimilar(local.name, osm.name)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Merges local + OSM results into `SearchMuseumEntry` list, applying:
+ *   1. OSM<->OSM deduplication (clusters duplicate OSM nodes).
+ *   2. OSM vs local deduplication (drops OSM entries that duplicate a local).
+ *   3. Optional radius filtering on locals (radius search only).
+ *
+ * Distance is measured from (`centerLat`, `centerLng`) for every output entry.
+ * When `radius` is `null`, no radius filter is applied on locals (bbox mode).
+ */
+function mergeAndDedupe(
+  centerLat: number,
+  centerLng: number,
+  radius: number | null,
+  locals: readonly LocalMuseumWithCoords[],
+  osmResults: readonly OverpassMuseumResult[],
 ): SearchMuseumEntry[] {
   const entries: SearchMuseumEntry[] = [];
 
-  for (const m of localMuseums) {
-    const distance = haversineDistanceMeters(lat, lng, m.latitude, m.longitude);
-    if (distance <= radius) {
+  for (const m of locals) {
+    const distance = haversineDistanceMeters(centerLat, centerLng, m.latitude, m.longitude);
+    if (radius == null || distance <= radius) {
       entries.push({
         ...m,
         distance: Math.round(distance),
@@ -107,24 +235,19 @@ function mergeResults(
     }
   }
 
-  for (const osm of osmResults) {
-    const isDuplicate = localMuseums.some(
-      (local) =>
-        haversineDistanceMeters(local.latitude, local.longitude, osm.latitude, osm.longitude) <
-        DEDUP_THRESHOLD_METERS,
-    );
-    if (!isDuplicate) {
-      const distance = haversineDistanceMeters(lat, lng, osm.latitude, osm.longitude);
-      entries.push({
-        name: osm.name,
-        address: osm.address,
-        latitude: osm.latitude,
-        longitude: osm.longitude,
-        distance: Math.round(distance),
-        source: 'osm',
-        museumType: osm.museumType,
-      });
-    }
+  const dedupedOsm = dedupeOsmResults([...osmResults]);
+  for (const osm of dedupedOsm) {
+    if (osmDuplicatesLocal(osm, locals)) continue;
+    const distance = haversineDistanceMeters(centerLat, centerLng, osm.latitude, osm.longitude);
+    entries.push({
+      name: osm.name,
+      address: osm.address,
+      latitude: osm.latitude,
+      longitude: osm.longitude,
+      distance: Math.round(distance),
+      source: 'osm',
+      museumType: osm.museumType,
+    });
   }
 
   return entries;
@@ -165,36 +288,7 @@ export class SearchMuseumsUseCase {
       museumType: m.museumType,
     }));
 
-    const entries: SearchMuseumEntry[] = [];
-    for (const m of localWithCoords) {
-      entries.push({
-        ...m,
-        distance: Math.round(
-          haversineDistanceMeters(centerLat, centerLng, m.latitude, m.longitude),
-        ),
-        source: 'local',
-      });
-    }
-    for (const osm of osmResults) {
-      const isDuplicate = localWithCoords.some(
-        (local) =>
-          haversineDistanceMeters(local.latitude, local.longitude, osm.latitude, osm.longitude) <
-          DEDUP_THRESHOLD_METERS,
-      );
-      if (!isDuplicate) {
-        entries.push({
-          name: osm.name,
-          address: osm.address,
-          latitude: osm.latitude,
-          longitude: osm.longitude,
-          distance: Math.round(
-            haversineDistanceMeters(centerLat, centerLng, osm.latitude, osm.longitude),
-          ),
-          source: 'osm',
-          museumType: osm.museumType,
-        });
-      }
-    }
+    const entries = mergeAndDedupe(centerLat, centerLng, null, localWithCoords, osmResults);
 
     let filtered = entries;
     if (q) {
@@ -244,7 +338,7 @@ export class SearchMuseumsUseCase {
     const cacheKey = `osm:museums:${lat.toFixed(2)}:${lng.toFixed(2)}:${String(radius)}`;
 
     const osmResults = await this.fetchOsmResults(cacheKey, lat, lng, radius);
-    const entries = mergeResults(lat, lng, radius, localMuseums, osmResults);
+    const entries = mergeAndDedupe(lat, lng, radius, localMuseums, osmResults);
 
     let filtered = entries;
     if (q) {

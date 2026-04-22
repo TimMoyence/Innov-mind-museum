@@ -513,4 +513,138 @@ describe('SearchMuseumsUseCase', () => {
       expect(result.museums[0].distance).toBeLessThan(300);
     });
   });
+
+  /* ---------------------------------------------------------------- */
+  /*  OSM deduplication with name similarity                          */
+  /* ---------------------------------------------------------------- */
+
+  describe('OSM deduplication with name similarity', () => {
+    /** Bordeaux CAPC coordinates (reference for CAPC dedup scenarios). */
+    const CAPC = { lat: 44.8497, lng: -0.5714 };
+
+    it('collapses duplicate OSM entries for CAPC when a local CAPC exists (short vs long name, >100m apart)', async () => {
+      // Local CAPC at exact museum coords.
+      await repo.create({
+        name: 'CAPC',
+        slug: 'capc',
+        latitude: CAPC.lat,
+        longitude: CAPC.lng,
+      });
+
+      // Two OSM duplicates:
+      //   A: co-located with local → dropped by pure-distance rule (<100m).
+      //   B: ~164m away with a similar but longer name → dropped by
+      //      name-gated rule (<500m AND similar names).
+      mockQueryOverpassMuseums.mockResolvedValueOnce([
+        {
+          name: "CAPC musée d'art contemporain",
+          address: null,
+          latitude: CAPC.lat,
+          longitude: CAPC.lng,
+          osmId: 101,
+          museumType: 'art',
+        },
+        {
+          name: 'CAPC contemporary art',
+          address: null,
+          latitude: 44.8503,
+          longitude: -0.5695,
+          osmId: 102,
+          museumType: 'art',
+        },
+      ]);
+
+      const result = await useCase.execute({ lat: CAPC.lat, lng: CAPC.lng, radiusMeters: 10_000 });
+
+      expect(result.count).toBe(1);
+      expect(result.museums[0].name).toBe('CAPC');
+      expect(result.museums[0].source).toBe('local');
+    });
+
+    it('collapses two OSM entries 50m apart into one (Louvre duplicate nodes)', async () => {
+      // No local museum — we want to see that OSM<->OSM dedup happens
+      // before merging with locals.
+      mockQueryOverpassMuseums.mockResolvedValueOnce([
+        {
+          name: 'Musée du Louvre',
+          address: 'Rue de Rivoli',
+          latitude: 48.8606,
+          longitude: 2.3376,
+          osmId: 201,
+          museumType: 'art',
+        },
+        {
+          name: 'Musée du Louvre',
+          address: null,
+          latitude: 48.861,
+          longitude: 2.3378,
+          osmId: 202,
+          museumType: 'art',
+        },
+      ]);
+
+      const result = await useCase.execute({ lat: 48.8606, lng: 2.3376, radiusMeters: 5000 });
+
+      expect(result.count).toBe(1);
+      expect(result.museums[0].name).toBe('Musée du Louvre');
+      expect(result.museums[0].source).toBe('osm');
+      // Representative pick should be the one with the richer address.
+      expect(result.museums[0].address).toBe('Rue de Rivoli');
+    });
+
+    it('keeps the local Orsay entry and drops the OSM Orsay ~300m away (name-gated merge)', async () => {
+      await repo.create({
+        name: "Musée d'Orsay",
+        slug: 'orsay',
+        latitude: 48.86,
+        longitude: 2.3266,
+      });
+
+      mockQueryOverpassMuseums.mockResolvedValueOnce([
+        {
+          name: "Musée d'Orsay",
+          address: null,
+          latitude: 48.8625,
+          longitude: 2.328,
+          osmId: 301,
+          museumType: 'art',
+        },
+      ]);
+
+      const result = await useCase.execute({ lat: 48.86, lng: 2.3266, radiusMeters: 5000 });
+
+      expect(result.count).toBe(1);
+      expect(result.museums[0].name).toBe("Musée d'Orsay");
+      expect(result.museums[0].source).toBe('local');
+    });
+
+    it('keeps two distinct OSM museums 200m apart when their names differ', async () => {
+      // Picasso + Carnavalet: real Paris-Marais neighbours, ~200m apart,
+      // NOT the same museum. Name similarity must save them.
+      mockQueryOverpassMuseums.mockResolvedValueOnce([
+        {
+          name: 'Musée Picasso',
+          address: null,
+          latitude: 48.86,
+          longitude: 2.36,
+          osmId: 401,
+          museumType: 'art',
+        },
+        {
+          name: 'Musée Carnavalet',
+          address: null,
+          latitude: 48.8618,
+          longitude: 2.36,
+          osmId: 402,
+          museumType: 'art',
+        },
+      ]);
+
+      const result = await useCase.execute({ lat: 48.86, lng: 2.36, radiusMeters: 5000 });
+
+      expect(result.count).toBe(2);
+      const names = result.museums.map((m) => m.name).sort();
+      expect(names).toEqual(['Musée Carnavalet', 'Musée Picasso']);
+    });
+  });
 });
