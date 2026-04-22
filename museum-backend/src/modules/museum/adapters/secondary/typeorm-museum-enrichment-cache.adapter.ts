@@ -88,6 +88,29 @@ export class TypeOrmMuseumEnrichmentCacheAdapter implements MuseumEnrichmentCach
     });
     await this.repo.save(fresh);
   }
+
+  /**
+   * Returns the oldest stale rows for the daily refresh scan. Only rows with
+   * a non-null `museumId` are considered — legacy name-keyed rows predate the
+   * hybrid flow and are excluded from scheduled refresh.
+   */
+  async findStaleRows(
+    thresholdDate: Date,
+    limit: number,
+  ): Promise<{ museumId: number; locale: string }[]> {
+    const rows = await this.repo
+      .createQueryBuilder('me')
+      .select(['me.museumId', 'me.locale'])
+      .where('me.fetchedAt < :threshold', { threshold: thresholdDate })
+      .andWhere('me.museumId IS NOT NULL')
+      .orderBy('me.fetchedAt', 'ASC')
+      .limit(limit)
+      .getMany();
+
+    return rows
+      .filter((row): row is typeof row & { museumId: number } => row.museumId != null)
+      .map((row) => ({ museumId: row.museumId, locale: row.locale }));
+  }
 }
 
 function applyViewToEntity(entity: MuseumEnrichment, view: MuseumEnrichmentView): void {

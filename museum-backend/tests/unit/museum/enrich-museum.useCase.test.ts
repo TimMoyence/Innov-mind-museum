@@ -27,6 +27,10 @@ class InMemoryEnrichmentCache implements MuseumEnrichmentCachePort {
   async upsert(input: MuseumEnrichmentView): Promise<void> {
     this.rows.set(`${String(input.museumId)}:${input.locale}`, input);
   }
+
+  async findStaleRows(): Promise<{ museumId: number; locale: string }[]> {
+    return [];
+  }
 }
 
 const makeView = (overrides: Partial<MuseumEnrichmentView> = {}): MuseumEnrichmentView => ({

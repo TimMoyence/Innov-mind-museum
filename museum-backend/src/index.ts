@@ -7,6 +7,11 @@ import Redis from 'ioredis';
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/refresh-token.repository.pg';
 import { TokenCleanupService } from '@modules/auth/useCase/tokenCleanup.service';
 import { getOcrService, stopArtKeywordsRefresh, stopKnowledgeExtraction } from '@modules/chat';
+import {
+  buildRefreshStaleEnrichmentsUseCase,
+  createBullmqEnrichmentScheduler,
+} from '@modules/museum';
+import { BullmqMuseumEnrichmentQueueAdapter } from '@modules/museum/adapters/secondary/bullmq-museum-enrichment-queue.adapter';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
 import { logger } from '@shared/logger/logger';
@@ -23,6 +28,7 @@ import { RedisRateLimitStore } from '@src/helpers/middleware/redis-rate-limit-st
 
 import { createApp } from './app';
 
+import type { EnrichmentSchedulerPort } from '@modules/museum';
 import type { CacheService } from '@shared/cache/cache.port';
 import type { Server } from 'node:http';
 
@@ -76,14 +82,54 @@ function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Red
   return { cacheService: new NoopCacheService(), redisClient: undefined };
 }
 
+/**
+ * Boots the daily stale-enrichment scan scheduler. Fail-open: any error
+ * (missing Redis, BullMQ init failure) is logged and the server proceeds
+ * without the scheduler — on-demand enrichment keeps working.
+ */
+async function startEnrichmentScheduler(): Promise<EnrichmentSchedulerPort | undefined> {
+  try {
+    const queue = new BullmqMuseumEnrichmentQueueAdapter({
+      host: env.redis.host,
+      port: env.redis.port,
+      password: env.redis.password,
+      maxRetriesPerRequest: null,
+      enableOfflineQueue: false,
+    });
+    const useCase = buildRefreshStaleEnrichmentsUseCase(queue);
+    const scheduler = createBullmqEnrichmentScheduler(useCase, {
+      connection: {
+        host: env.redis.host,
+        port: env.redis.port,
+        password: env.redis.password,
+        maxRetriesPerRequest: null,
+        enableOfflineQueue: false,
+      },
+    });
+    await scheduler.start();
+    return scheduler;
+  } catch (err) {
+    logger.warn('enrichment_scheduler_boot_skipped', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return undefined;
+  }
+}
+
+/** Grouped lifecycle resources wired at boot and drained on shutdown. */
+interface ShutdownResources {
+  server: Server;
+  tokenCleanup: TokenCleanupService;
+  redisClient: Redis | undefined;
+  cacheService: CacheService;
+  poolMonitor: NodeJS.Timeout;
+  enrichmentScheduler: EnrichmentSchedulerPort | undefined;
+}
+
 /** Registers SIGINT/SIGTERM handlers that drain connections and clean up resources. */
-function registerShutdownHandlers(
-  server: Server,
-  tokenCleanup: TokenCleanupService,
-  redisClient: Redis | undefined,
-  cacheService: CacheService,
-  poolMonitor: NodeJS.Timeout,
-): void {
+function registerShutdownHandlers(resources: ShutdownResources): void {
+  const { server, tokenCleanup, redisClient, cacheService, poolMonitor, enrichmentScheduler } =
+    resources;
   let isShuttingDown = false;
 
   const shutdown = async (signal: string): Promise<void> => {
@@ -98,6 +144,15 @@ function registerShutdownHandlers(
     stopRateLimitSweep();
     stopArtKeywordsRefresh();
     await stopKnowledgeExtraction();
+    if (enrichmentScheduler) {
+      try {
+        await enrichmentScheduler.stop();
+      } catch (err) {
+        logger.warn('enrichment_scheduler_shutdown_error', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
     await shutdownOpenTelemetry();
     const ocr = getOcrService();
     if (ocr.destroy) await ocr.destroy();
@@ -173,7 +228,16 @@ const start = async (): Promise<void> => {
     tokenCleanup.startScheduler();
 
     const poolMonitor = startPoolMonitor();
-    registerShutdownHandlers(server, tokenCleanup, redisClient, cacheService, poolMonitor);
+    const enrichmentScheduler = await startEnrichmentScheduler();
+
+    registerShutdownHandlers({
+      server,
+      tokenCleanup,
+      redisClient,
+      cacheService,
+      poolMonitor,
+      enrichmentScheduler,
+    });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message || util.inspect(error) : util.inspect(error);

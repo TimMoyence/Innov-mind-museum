@@ -6,6 +6,8 @@ export {
   buildSearchMuseumsUseCase,
   buildLowDataPackService,
   buildEnrichMuseumUseCase,
+  buildRefreshStaleEnrichmentsUseCase,
+  createBullmqEnrichmentScheduler,
   museumRepository,
 } from './useCase';
 export type { Museum } from './domain/museum.entity';
@@ -22,3 +24,4 @@ export type {
   ParsedOpeningHours,
 } from './domain/enrichment.types';
 export type { MuseumEnrichmentQueuePort } from './domain/ports/museum-enrichment-queue.port';
+export type { EnrichmentSchedulerPort } from './domain/ports/enrichment-scheduler.port';

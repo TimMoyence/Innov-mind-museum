@@ -9,13 +9,19 @@ import { EnrichMuseumUseCase } from './enrichMuseum.useCase';
 import { GetMuseumUseCase } from './getMuseum.useCase';
 import { ListMuseumsUseCase } from './listMuseums.useCase';
 import { LowDataPackService } from './low-data-pack.service';
+import { RefreshStaleEnrichmentsUseCase } from './refreshStaleEnrichments.useCase';
 import { SearchMuseumsUseCase } from './searchMuseums.useCase';
 import { UpdateMuseumUseCase } from './updateMuseum.useCase';
+import {
+  BullmqEnrichmentSchedulerAdapter,
+  type BullmqEnrichmentSchedulerConfig,
+} from '../adapters/secondary/bullmq-enrichment-scheduler.adapter';
 import { MuseumQaSeedRepositoryPg } from '../adapters/secondary/museum-qa-seed.repository.typeorm';
 import { MuseumRepositoryPg } from '../adapters/secondary/museum.repository.pg';
 import { TypeOrmMuseumEnrichmentCacheAdapter } from '../adapters/secondary/typeorm-museum-enrichment-cache.adapter';
 import { Museum } from '../domain/museum.entity';
 
+import type { EnrichmentSchedulerPort } from '../domain/ports/enrichment-scheduler.port';
 import type { MuseumEnrichmentQueuePort } from '../domain/ports/museum-enrichment-queue.port';
 import type { CacheService } from '@shared/cache/cache.port';
 
@@ -48,5 +54,27 @@ export const buildEnrichMuseumUseCase = (queue: MuseumEnrichmentQueuePort): Enri
   const cache = new TypeOrmMuseumEnrichmentCacheAdapter(AppDataSource, Museum);
   return new EnrichMuseumUseCase(museumRepository, cache, queue);
 };
+
+/**
+ * Builds the {@link RefreshStaleEnrichmentsUseCase} wired to the shared
+ * TypeORM cache + the caller-injected queue port. The queue MUST be the same
+ * adapter instance used by {@link buildEnrichMuseumUseCase} so the dedup key
+ * collapses on-demand and scheduled jobs for the same `(museumId, locale)`.
+ */
+export const buildRefreshStaleEnrichmentsUseCase = (
+  queue: MuseumEnrichmentQueuePort,
+): RefreshStaleEnrichmentsUseCase => {
+  const cache = new TypeOrmMuseumEnrichmentCacheAdapter(AppDataSource, Museum);
+  return new RefreshStaleEnrichmentsUseCase(cache, queue);
+};
+
+/**
+ * Creates the BullMQ scheduler adapter that drives the daily stale-refresh
+ * scan. The caller owns the lifecycle (`start` on boot, `stop` on shutdown).
+ */
+export const createBullmqEnrichmentScheduler = (
+  useCase: RefreshStaleEnrichmentsUseCase,
+  config: BullmqEnrichmentSchedulerConfig,
+): EnrichmentSchedulerPort => new BullmqEnrichmentSchedulerAdapter(useCase, config);
 
 export { museumRepository };

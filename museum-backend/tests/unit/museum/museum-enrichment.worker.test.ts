@@ -31,6 +31,10 @@ class RecordingCache implements MuseumEnrichmentCachePort {
     this.rows.set(`${String(input.museumId)}:${input.locale}`, input);
   }
 
+  async findStaleRows(): Promise<{ museumId: number; locale: string }[]> {
+    return [];
+  }
+
   get(museumId: number, locale: string): MuseumEnrichmentView | undefined {
     return this.rows.get(`${String(museumId)}:${locale}`);
   }
