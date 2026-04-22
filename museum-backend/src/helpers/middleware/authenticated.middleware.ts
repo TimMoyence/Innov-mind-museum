@@ -1,7 +1,6 @@
 import { authSessionService } from '@modules/auth/useCase';
 import { AppError } from '@shared/errors/app.error';
 import { setUser } from '@shared/observability/sentry';
-import { env } from '@src/config/env';
 
 import { validateApiKey } from './apiKey.middleware';
 
@@ -23,8 +22,8 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
     throw unauthorized('Token required');
   }
 
-  // Route to API key validation if the token has the msk_ prefix
-  if (token.startsWith('msk_') && env.featureFlags.apiKeys) {
+  // Route to API key validation if the token has the msk_ prefix (B2B API key programme).
+  if (token.startsWith('msk_')) {
     validateApiKey(token, req, res, next).catch(next);
     return;
   }

@@ -50,8 +50,8 @@ const frontendUrl = env.frontendUrl;
 const registerUseCase = new RegisterUseCase(userRepository, emailService, frontendUrl);
 /** Singleton instance of {@link ForgotPasswordUseCase}. */
 const forgotPasswordUseCase = new ForgotPasswordUseCase(userRepository, emailService, frontendUrl);
-/** Singleton instance of {@link ResetPasswordUseCase}. */
-const resetPasswordUseCase = new ResetPasswordUseCase(userRepository);
+/** Singleton instance of {@link ResetPasswordUseCase}. Revokes refresh tokens on reset (OWASP). */
+const resetPasswordUseCase = new ResetPasswordUseCase(userRepository, refreshTokenRepository);
 /** Singleton instance of {@link AuthSessionService}. */
 const authSessionService = new AuthSessionService(userRepository, refreshTokenRepository);
 /** Singleton instance of {@link SocialLoginUseCase}. */
@@ -92,20 +92,17 @@ const verifyEmailUseCase = new VerifyEmailUseCase(userRepository);
 /** Singleton instance of {@link UpdateContentPreferencesUseCase}. */
 const updateContentPreferencesUseCase = new UpdateContentPreferencesUseCase(userRepository);
 
-// API Key use cases — only wired when feature flag is enabled
+// API Key use cases — always wired (B2B API key programme, msk_* auth).
 const apiKeyRepository = new ApiKeyRepositoryPg(AppDataSource);
 const generateApiKeyUseCase = new GenerateApiKeyUseCase(apiKeyRepository);
 const revokeApiKeyUseCase = new RevokeApiKeyUseCase(apiKeyRepository);
 const listApiKeysUseCase = new ListApiKeysUseCase(apiKeyRepository);
 
-// Register the repository with the middleware so it can validate API keys
-if (env.featureFlags.apiKeys) {
-  setApiKeyRepository(apiKeyRepository);
-  setUserRoleResolver(async (userId) => {
-    const user = await userRepository.getUserById(userId);
-    return user?.role ?? null;
-  });
-}
+setApiKeyRepository(apiKeyRepository);
+setUserRoleResolver(async (userId) => {
+  const user = await userRepository.getUserById(userId);
+  return user?.role ?? null;
+});
 
 /** Marks the user's onboarding as completed in the database. */
 const completeOnboarding = async (userId: number): Promise<void> => {

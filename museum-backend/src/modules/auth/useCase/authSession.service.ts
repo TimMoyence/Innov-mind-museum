@@ -147,6 +147,16 @@ export class AuthSessionService {
       throw unauthorized('Invalid credentials', 'INVALID_CREDENTIALS');
     }
 
+    if (!user.email_verified) {
+      clearLoginAttempts(normalizedEmail);
+      throw new AppError({
+        message:
+          'Email not verified. Check your inbox for the verification link, or request a new one.',
+        statusCode: 403,
+        code: 'EMAIL_NOT_VERIFIED',
+      });
+    }
+
     clearLoginAttempts(normalizedEmail);
 
     const session = await this.issueSession({

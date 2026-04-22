@@ -461,59 +461,54 @@ const apiKeyLimiter = createRateLimitMiddleware({
   keyGenerator: byUserId,
 });
 
-if (env.featureFlags.apiKeys) {
-  authRouter.post(
-    '/api-keys',
-    isAuthenticatedJwtOnly,
-    apiKeyLimiter,
-    validateBody(createApiKeySchema),
-    async (req: Request, res: Response) => {
-      const jwtUser = requireUser(req);
-      const { name, expiresAt } = req.body;
-      const expiry = expiresAt ? new Date(expiresAt) : undefined;
-      const result = await generateApiKeyUseCase.execute(jwtUser.id, name, expiry);
-      auditService.log({
-        action: AUDIT_API_KEY_CREATED,
-        actorType: 'user',
-        actorId: jwtUser.id,
-        targetType: 'api_key',
-        targetId: result.apiKey.prefix,
-        metadata: { name },
-        ip: req.ip,
-        requestId: req.requestId,
-      });
-      res.status(201).json(result);
-    },
-  );
-
-  authRouter.get('/api-keys', isAuthenticatedJwtOnly, async (req: Request, res: Response) => {
+// API key routes — always mounted (B2B API key programme).
+authRouter.post(
+  '/api-keys',
+  isAuthenticatedJwtOnly,
+  apiKeyLimiter,
+  validateBody(createApiKeySchema),
+  async (req: Request, res: Response) => {
     const jwtUser = requireUser(req);
-    const result = await listApiKeysUseCase.execute(jwtUser.id);
-    res.status(200).json(result);
-  });
+    const { name, expiresAt } = req.body;
+    const expiry = expiresAt ? new Date(expiresAt) : undefined;
+    const result = await generateApiKeyUseCase.execute(jwtUser.id, name, expiry);
+    auditService.log({
+      action: AUDIT_API_KEY_CREATED,
+      actorType: 'user',
+      actorId: jwtUser.id,
+      targetType: 'api_key',
+      targetId: result.apiKey.prefix,
+      metadata: { name },
+      ip: req.ip,
+      requestId: req.requestId,
+    });
+    res.status(201).json(result);
+  },
+);
 
-  authRouter.delete(
-    '/api-keys/:id',
-    isAuthenticatedJwtOnly,
-    async (req: Request, res: Response) => {
-      const jwtUser = requireUser(req);
-      const keyId = Number.parseInt(req.params.id, 10);
-      if (Number.isNaN(keyId)) {
-        throw badRequest('Invalid API key ID');
-      }
-      const result = await revokeApiKeyUseCase.execute(keyId, jwtUser.id);
-      auditService.log({
-        action: AUDIT_API_KEY_REVOKED,
-        actorType: 'user',
-        actorId: jwtUser.id,
-        targetType: 'api_key',
-        targetId: String(keyId),
-        ip: req.ip,
-        requestId: req.requestId,
-      });
-      res.status(200).json(result);
-    },
-  );
-}
+authRouter.get('/api-keys', isAuthenticatedJwtOnly, async (req: Request, res: Response) => {
+  const jwtUser = requireUser(req);
+  const result = await listApiKeysUseCase.execute(jwtUser.id);
+  res.status(200).json(result);
+});
+
+authRouter.delete('/api-keys/:id', isAuthenticatedJwtOnly, async (req: Request, res: Response) => {
+  const jwtUser = requireUser(req);
+  const keyId = Number.parseInt(req.params.id, 10);
+  if (Number.isNaN(keyId)) {
+    throw badRequest('Invalid API key ID');
+  }
+  const result = await revokeApiKeyUseCase.execute(keyId, jwtUser.id);
+  auditService.log({
+    action: AUDIT_API_KEY_REVOKED,
+    actorType: 'user',
+    actorId: jwtUser.id,
+    targetType: 'api_key',
+    targetId: String(keyId),
+    ip: req.ip,
+    requestId: req.requestId,
+  });
+  res.status(200).json(result);
+});
 
 export default authRouter;

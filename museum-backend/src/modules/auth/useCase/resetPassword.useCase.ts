@@ -6,14 +6,21 @@ import { badRequest } from '@shared/errors/app.error';
 import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
 import { validatePassword } from '@shared/validation/password';
 
+import type { IRefreshTokenRepository } from '../domain/refresh-token.repository.interface';
 import type { IUserRepository } from '../domain/user.repository.interface';
 
-/** Orchestrates password reset using a one-time token (atomic consume + update). */
+/**
+ * Orchestrates password reset using a one-time token (atomic consume + update).
+ * Revokes all active refresh tokens on success (OWASP Forgot Password Cheat Sheet).
+ */
 export class ResetPasswordUseCase {
-  constructor(private readonly userRepository: IUserRepository) {}
+  constructor(
+    private readonly userRepository: IUserRepository,
+    private readonly refreshTokenRepository: IRefreshTokenRepository,
+  ) {}
 
   /**
-   * Validate a reset token and update the user's password atomically.
+   * Validate a reset token, update the user's password, and revoke all sessions.
    *
    * @param token - The password-reset token.
    * @param newPassword - The new plain-text password.
@@ -34,6 +41,7 @@ export class ResetPasswordUseCase {
     if (!user) {
       throw badRequest('Invalid or expired reset token');
     }
+    await this.refreshTokenRepository.revokeAllForUser(user.id);
     return user;
   }
 }
