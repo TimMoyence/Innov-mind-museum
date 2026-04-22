@@ -202,7 +202,9 @@ describe('useMuseumEnrichment', () => {
 
       mockGetEnrichment.mockResolvedValueOnce(pendingResponse('job-forever'));
       // Every status call keeps returning pending — simulates a stuck job.
-      mockGetEnrichmentStatus.mockImplementation(async () => pendingResponse('job-forever'));
+      mockGetEnrichmentStatus.mockImplementation(() =>
+        Promise.resolve(pendingResponse('job-forever')),
+      );
 
       const { result } = renderHookWithQueryClient(() => useMuseumEnrichment(4, 'en'));
 

@@ -44,7 +44,8 @@ export const ContentPreferencesCard = () => {
           isSaving={isSaving}
           onToggle={toggle}
           theme={theme}
-          t={t}
+          label={t(`settings.content_preferences.options.${preference}.label`)}
+          hint={t(`settings.content_preferences.options.${preference}.hint`)}
         />
       ))}
     </GlassCard>
@@ -57,7 +58,8 @@ interface PreferenceRowProps {
   isSaving: boolean;
   onToggle: (p: ContentPreference) => Promise<void>;
   theme: ReturnType<typeof useTheme>['theme'];
-  t: ReturnType<typeof useTranslation>['t'];
+  label: string;
+  hint: string;
 }
 
 /** Single toggle row for one content preference. Extracted to keep render logic flat. */
@@ -67,17 +69,14 @@ const PreferenceRow = ({
   isSaving,
   onToggle,
   theme,
-  t,
+  label,
+  hint,
 }: PreferenceRowProps) => {
   return (
     <View style={styles.row}>
       <View style={styles.info}>
-        <Text style={[styles.label, { color: theme.textPrimary }]}>
-          {t(`settings.content_preferences.options.${preference}.label`)}
-        </Text>
-        <Text style={[styles.optionHint, { color: theme.textSecondary }]}>
-          {t(`settings.content_preferences.options.${preference}.hint`)}
-        </Text>
+        <Text style={[styles.label, { color: theme.textPrimary }]}>{label}</Text>
+        <Text style={[styles.optionHint, { color: theme.textSecondary }]}>{hint}</Text>
       </View>
       {isSaving ? (
         <ActivityIndicator color={theme.primary} />
@@ -86,7 +85,7 @@ const PreferenceRow = ({
           value={selected}
           onValueChange={() => void onToggle(preference)}
           trackColor={{ false: theme.cardBorder, true: theme.primary }}
-          accessibilityLabel={t(`settings.content_preferences.options.${preference}.label`)}
+          accessibilityLabel={label}
         />
       )}
     </View>

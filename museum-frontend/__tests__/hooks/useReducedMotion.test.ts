@@ -11,7 +11,7 @@ type ReduceMotionListener = (value: boolean) => void;
 const subscriptionRemove = jest.fn();
 let capturedListener: ReduceMotionListener | null = null;
 const isReduceMotionEnabledMock = jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled');
- 
+
 const addEventListenerMock = jest.spyOn(AccessibilityInfo, 'addEventListener') as any;
 
 beforeEach(() => {
@@ -48,7 +48,7 @@ describe('useReducedMotion', () => {
     const { result } = renderHook(() => useReducedMotion());
     expect(result.current).toBe(false);
 
-    await act(async () => {
+    act(() => {
       resolveEnabled(false);
     });
 
@@ -76,12 +76,12 @@ describe('useReducedMotion', () => {
 
     expect(capturedListener).not.toBeNull();
 
-    await act(async () => {
+    act(() => {
       capturedListener?.(true);
     });
     expect(result.current).toBe(true);
 
-    await act(async () => {
+    act(() => {
       capturedListener?.(false);
     });
     expect(result.current).toBe(false);
