@@ -2,7 +2,28 @@
  * MuseumMapView tests — mocks @maplibre/maplibre-react-native so the component
  * can be rendered without the native module, exposing callbacks and
  * GeoJSON data as props we can assert against.
+ *
+ * The Camera mock uses `useImperativeHandle` to expose shared jest.fn()
+ * instances for `fitBounds` + `flyTo` (accessible via `mockCameraApi`).
+ * `Map` also forwards `onDidFinishLoadingMap` so tests can trigger the
+ * retry-fit codepath, and captures `initialViewState` off Camera so the
+ * P0 cache-restore behavior can be asserted without a real map.
  */
+
+// Shared jest.fn() refs for the mocked Camera ref. Re-used across every
+// test — reset via `mockCameraApi.reset()` in beforeEach so each test starts
+// with a clean call log.
+export const mockCameraApi = {
+  fitBounds: jest.fn(),
+  flyTo: jest.fn(),
+  lastInitialViewState: null as null | { center: [number, number]; zoom: number },
+  reset() {
+    this.fitBounds.mockReset();
+    this.flyTo.mockReset();
+    this.lastInitialViewState = null;
+  },
+};
+
 jest.mock('@/shared/ui/ThemeContext', () => ({
   useTheme: () => ({
     theme: {
@@ -32,6 +53,7 @@ jest.mock('@maplibre/maplibre-react-native', () => {
       children,
       onRegionDidChange,
       onDidFailLoadingMap,
+      onDidFinishLoadingMap,
       accessibilityLabel,
       accessibilityHint,
     }: Record<string, unknown>) =>
@@ -41,13 +63,29 @@ jest.mock('@maplibre/maplibre-react-native', () => {
           testID: 'maplibre-map',
           onRegionDidChange,
           onDidFailLoadingMap,
+          onDidFinishLoadingMap,
           accessibilityLabel,
           accessibilityHint,
         },
         children,
       ),
-    Camera: ReactMock.forwardRef(function Camera(_props: Record<string, unknown>, _ref: unknown) {
-      return ReactMock.createElement(View, { testID: 'maplibre-camera' });
+    Camera: ReactMock.forwardRef(function Camera(
+      props: { initialViewState?: { center: [number, number]; zoom: number } },
+      ref: unknown,
+    ) {
+      ReactMock.useImperativeHandle(ref, () => ({
+        fitBounds: (...args: unknown[]) => mockCameraApi.fitBounds(...args),
+        flyTo: (...args: unknown[]) => mockCameraApi.flyTo(...args),
+      }));
+      // Capture the latest initialViewState so tests can assert the camera
+      // started on the cache / GPS / default view.
+      if (props.initialViewState) {
+        mockCameraApi.lastInitialViewState = props.initialViewState;
+      }
+      return ReactMock.createElement(View, {
+        testID: 'maplibre-camera',
+        accessibilityValue: { text: JSON.stringify(props.initialViewState ?? null) },
+      });
     }),
     GeoJSONSource: ({ id, data, children, onPress }: Record<string, unknown>) =>
       ReactMock.createElement(
@@ -72,10 +110,22 @@ jest.mock('@maplibre/maplibre-react-native', () => {
 import { act, render, screen } from '@testing-library/react-native';
 
 import { MuseumMapView } from '@/features/museum/ui/MuseumMapView';
+import { mapCameraCache } from '@/features/museum/infrastructure/mapCameraCache';
 
 import { makeMuseumWithDistance as makeMuseum } from '../helpers/factories/museum.factories';
 
 describe('MuseumMapView', () => {
+  beforeEach(async () => {
+    // Restore any spies from a previous test (e.g. spyOn(mapCameraCache.save))
+    // so they don't accumulate calls across the suite, then reset the Camera
+    // imperative-handle call logs + cached initialViewState capture.
+    jest.restoreAllMocks();
+    mockCameraApi.reset();
+    // Clear any persisted camera from a previous test — mapCameraCache is
+    // backed by AsyncStorage which persists across jest test cases.
+    await mapCameraCache.clear();
+  });
+
   it('renders the MapLibre surface with the museums source', async () => {
     render(
       <MuseumMapView
@@ -153,5 +203,191 @@ describe('MuseumMapView', () => {
       (map.props.onDidFailLoadingMap as () => void)();
     });
     expect(screen.getByRole('alert')).toBeTruthy();
+  });
+
+  // ── camera persistence and fit guards ──────────────────────────────────────
+  // Protects the P0 fix: the Map is held until mapCameraCache resolves, the
+  // restored view wins over GPS, and auto-fit is bounded so users zoomed into
+  // a city aren't yanked out to a country-wide view on the next data refresh.
+
+  describe('camera persistence and fit guards', () => {
+    it('restores camera from mapCameraCache on mount when cache is valid', async () => {
+      jest.spyOn(mapCameraCache, 'load').mockResolvedValue({
+        centerLng: 2.35,
+        centerLat: 48.85,
+        zoom: 14,
+      });
+
+      render(
+        <MuseumMapView
+          museums={[makeMuseum({ latitude: 48.8566, longitude: 2.3522 })]}
+          userLatitude={48.0}
+          userLongitude={2.0}
+        />,
+      );
+
+      await screen.findByTestId('maplibre-camera');
+      expect(mockCameraApi.lastInitialViewState).toEqual({
+        center: [2.35, 48.85],
+        zoom: 14,
+      });
+    });
+
+    it('falls back to user GPS when the camera cache is empty', async () => {
+      jest.spyOn(mapCameraCache, 'load').mockResolvedValue(null);
+
+      render(<MuseumMapView museums={[]} userLatitude={48.8566} userLongitude={2.3522} />);
+
+      await screen.findByTestId('maplibre-camera');
+      expect(mockCameraApi.lastInitialViewState).toEqual({
+        center: [2.3522, 48.8566],
+        zoom: 13,
+      });
+    });
+
+    it('persists the camera on user-interaction region change, debounced', async () => {
+      const saveSpy = jest.spyOn(mapCameraCache, 'save');
+
+      render(
+        <MuseumMapView
+          museums={[makeMuseum({ latitude: 48.8566, longitude: 2.3522 })]}
+          userLatitude={null}
+          userLongitude={null}
+        />,
+      );
+
+      const map = await screen.findByTestId('maplibre-map');
+      const handleRegionDidChange = map.props.onRegionDidChange as (e: {
+        nativeEvent: unknown;
+      }) => void;
+
+      act(() => {
+        handleRegionDidChange({
+          nativeEvent: {
+            center: [2.1, 48.1],
+            zoom: 10,
+            bounds: [2.0, 48.0, 2.2, 48.2],
+            userInteraction: true,
+          },
+        });
+        handleRegionDidChange({
+          nativeEvent: {
+            center: [2.2, 48.2],
+            zoom: 11,
+            bounds: [2.1, 48.1, 2.3, 48.3],
+            userInteraction: true,
+          },
+        });
+        handleRegionDidChange({
+          nativeEvent: {
+            center: [2.3, 48.3],
+            zoom: 12,
+            bounds: [2.2, 48.2, 2.4, 48.4],
+            userInteraction: true,
+          },
+        });
+      });
+
+      // save() is called synchronously on every region change — the debounce
+      // lives INSIDE save() itself (see mapCameraCache). Assert save() was
+      // invoked once per user pan with the right shape + flag.
+      expect(saveSpy).toHaveBeenCalledTimes(3);
+      expect(saveSpy).toHaveBeenLastCalledWith({ centerLng: 2.3, centerLat: 48.3, zoom: 12 }, true);
+    });
+
+    it('skips save when the region change was programmatic (userInteraction=false)', async () => {
+      const saveSpy = jest.spyOn(mapCameraCache, 'save');
+
+      render(
+        <MuseumMapView
+          museums={[makeMuseum({ latitude: 48.8566, longitude: 2.3522 })]}
+          userLatitude={null}
+          userLongitude={null}
+        />,
+      );
+
+      const map = await screen.findByTestId('maplibre-map');
+      const handleRegionDidChange = map.props.onRegionDidChange as (e: {
+        nativeEvent: unknown;
+      }) => void;
+
+      act(() => {
+        handleRegionDidChange({
+          nativeEvent: {
+            center: [2.1, 48.1],
+            zoom: 10,
+            bounds: [2.0, 48.0, 2.2, 48.2],
+            userInteraction: false,
+          },
+        });
+      });
+
+      // save() IS called by the component — the cache itself is responsible
+      // for skipping on `isUserInteraction=false`. Assert the correct flag
+      // propagated so the cache can make that decision.
+      expect(saveSpy).toHaveBeenCalledTimes(1);
+      expect(saveSpy).toHaveBeenCalledWith({ centerLng: 2.1, centerLat: 48.1, zoom: 10 }, false);
+    });
+
+    it('skips fitBounds when the museum span exceeds 50km (e.g. full-France fallback)', async () => {
+      jest.spyOn(mapCameraCache, 'load').mockResolvedValue(null);
+
+      render(
+        <MuseumMapView
+          museums={[
+            // Paris ↔ Marseille ≈ 660 km — way over the 50km MAX_FIT_SPAN.
+            makeMuseum({ id: 1, name: 'Louvre', latitude: 48.8606, longitude: 2.3376 }),
+            makeMuseum({ id: 2, name: 'MuCEM', latitude: 43.2965, longitude: 5.3698 }),
+          ]}
+          userLatitude={null}
+          userLongitude={null}
+        />,
+      );
+
+      await screen.findByTestId('maplibre-camera');
+
+      // Trigger the onDidFinishLoadingMap retry path too (camera ref is ready
+      // by then) — the guard still suppresses the country-wide fitBounds.
+      const map = screen.getByTestId('maplibre-map');
+      act(() => {
+        (map.props.onDidFinishLoadingMap as () => void)();
+      });
+
+      expect(mockCameraApi.fitBounds).not.toHaveBeenCalled();
+    });
+
+    it('fits the camera at most once per mount for a reasonable dataset', async () => {
+      jest.spyOn(mapCameraCache, 'load').mockResolvedValue(null);
+
+      render(
+        <MuseumMapView
+          museums={[
+            // All within Bordeaux proper — well below the 50km cap.
+            makeMuseum({ id: 1, name: 'CAPC', latitude: 44.8495, longitude: -0.5688 }),
+            makeMuseum({ id: 2, name: 'Aquitaine', latitude: 44.8333, longitude: -0.575 }),
+            makeMuseum({ id: 3, name: 'Beaux-Arts', latitude: 44.8378, longitude: -0.5795 }),
+          ]}
+          userLatitude={null}
+          userLongitude={null}
+        />,
+      );
+
+      // `initialViewState` resolves asynchronously, so the data-driven effect
+      // may run BEFORE cameraRef is populated. `handleDidFinishLoadingMap`
+      // is the documented retry entrypoint once the Map is ready.
+      await screen.findByTestId('maplibre-camera');
+      const map = screen.getByTestId('maplibre-map');
+      act(() => {
+        (map.props.onDidFinishLoadingMap as () => void)();
+      });
+      expect(mockCameraApi.fitBounds).toHaveBeenCalledTimes(1);
+
+      // Second load-finish must NOT re-fit — the hasFittedRef guard blocks
+      // the retry after the first successful fit.
+      act(() => {
+        (map.props.onDidFinishLoadingMap as () => void)();
+      });
+      expect(mockCameraApi.fitBounds).toHaveBeenCalledTimes(1);
+    });
   });
 });

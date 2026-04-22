@@ -248,4 +248,152 @@ describe('useMuseumDirectory', () => {
       expect(mockListMuseumDirectory.mock.calls.length).toBeGreaterThan(initialCallCount);
     });
   });
+
+  // ── react-query integration guards ─────────────────────────────────────────
+  // Protects P1 fixes: bbox searches must bypass the near-coords cache key
+  // (keeps pan/zoom from fragmenting the cache) and refresh() must reset the
+  // bbox override so we return to the geo-sorted results.
+
+  describe('react-query integration guards', () => {
+    it('does NOT call searchMuseums when coords are null and searchQuery is empty', async () => {
+      const { result } = renderHookWithQueryClient(() => useMuseumDirectory(null, null));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      // No coords → directory is the cold-start path; search endpoint stays idle.
+      expect(mockListMuseumDirectory).toHaveBeenCalledTimes(1);
+      expect(mockSearchMuseums).not.toHaveBeenCalled();
+    });
+
+    it('searchInBounds fetches bbox but does not pollute the near-coords cache', async () => {
+      mockSearchMuseums.mockResolvedValue({
+        museums: [
+          {
+            name: 'Louvre',
+            address: '75001 Paris',
+            latitude: 48.8606,
+            longitude: 2.3376,
+            distance: 500,
+            source: 'local' as const,
+            museumType: 'general' as const,
+          },
+        ],
+        count: 1,
+      });
+
+      const { result, client } = renderHookWithQueryClient(() =>
+        useMuseumDirectory(48.8566, 2.3522),
+      );
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      // Snapshot the near-coords cache entry BEFORE the bbox call. react-query
+      // stores the raw returned array — we capture the reference identity to
+      // assert it stays untouched.
+      const nearKey = ['museums', 'near', 48.86, 2.35] as const;
+      const snapshot = client.getQueryData(nearKey);
+      expect(snapshot).toBeDefined();
+
+      const bbox: [number, number, number, number] = [2.0, 48.0, 3.0, 49.0];
+      // Replace the search mock so we can assert the bbox arg distinct from the
+      // initial near-coords call.
+      mockSearchMuseums.mockClear();
+      mockSearchMuseums.mockResolvedValue({
+        museums: [
+          {
+            name: 'Versailles',
+            address: '78000 Versailles',
+            latitude: 48.805,
+            longitude: 2.1204,
+            distance: 20_000,
+            source: 'osm' as const,
+            museumType: 'art' as const,
+          },
+        ],
+        count: 1,
+      });
+
+      await act(async () => {
+        result.current.searchInBounds(bbox);
+        // Let the .then()/.finally() chain resolve.
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expect(result.current.museums.length).toBeGreaterThan(0);
+      });
+
+      expect(mockSearchMuseums).toHaveBeenCalledWith({ bbox });
+      // Near-coords cache entry is unchanged by the bbox call.
+      expect(client.getQueryData(nearKey)).toBe(snapshot);
+      expect(result.current.museums[0].name).toBe('Versailles');
+    });
+
+    it('refresh() resets bbox override and returns to near-coords results', async () => {
+      const { result } = renderHookWithQueryClient(() => useMuseumDirectory(48.8566, 2.3522));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      // Near-coords baseline (Louvre from beforeEach).
+      expect(result.current.museums[0].name).toBe('Louvre');
+
+      // Flip to bbox results.
+      mockSearchMuseums.mockResolvedValue({
+        museums: [
+          {
+            name: 'Versailles',
+            address: '78000 Versailles',
+            latitude: 48.805,
+            longitude: 2.1204,
+            distance: 20_000,
+            source: 'osm' as const,
+            museumType: 'art' as const,
+          },
+        ],
+        count: 1,
+      });
+
+      await act(async () => {
+        result.current.searchInBounds([2.0, 48.0, 3.0, 49.0]);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expect(result.current.museums[0].name).toBe('Versailles');
+      });
+
+      // Restore the near-coords mock and hit refresh — the bbox override must
+      // drop and the near-coords query must win again.
+      mockSearchMuseums.mockResolvedValue({
+        museums: [
+          {
+            name: 'Louvre',
+            address: '75001 Paris',
+            latitude: 48.8606,
+            longitude: 2.3376,
+            distance: 500,
+            source: 'local' as const,
+            museumType: 'general' as const,
+          },
+        ],
+        count: 1,
+      });
+
+      act(() => {
+        result.current.refresh();
+      });
+
+      await waitFor(() => {
+        expect(result.current.museums[0].name).toBe('Louvre');
+      });
+    });
+  });
 });
