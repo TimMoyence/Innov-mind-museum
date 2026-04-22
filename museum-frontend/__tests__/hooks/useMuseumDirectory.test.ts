@@ -1,7 +1,8 @@
 import '@/__tests__/helpers/test-utils';
-import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
 import { useMuseumDirectory } from '@/features/museum/application/useMuseumDirectory';
 import { makeMuseumListItem, makeGeoLocation } from '@/__tests__/helpers/factories';
+import { renderHookWithQueryClient } from '@/__tests__/helpers/data/renderWithQueryClient';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -13,14 +14,6 @@ jest.mock('@/features/museum/infrastructure/museumApi', () => ({
     listMuseumDirectory: () => mockListMuseumDirectory(),
     searchMuseums: (params: unknown) => mockSearchMuseums(params),
   },
-}));
-
-jest.mock('@/features/museum/application/haversine', () => ({
-  haversineDistanceMeters: jest.fn((lat1: number, lon1: number, lat2: number, lon2: number) => {
-    // Simplified: return absolute difference sum × 1000 as a fake distance in meters.
-    // For the jitter suppression test, tiny deltas (~0.001) → ~1 m which is < 500 m threshold.
-    return (Math.abs(lat2 - lat1) + Math.abs(lon2 - lon1)) * 1000;
-  }),
 }));
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -44,7 +37,6 @@ describe('useMuseumDirectory', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.useFakeTimers();
     mockListMuseumDirectory.mockResolvedValue([louvre, orsay]);
     mockSearchMuseums.mockResolvedValue({
       museums: [
@@ -62,12 +54,8 @@ describe('useMuseumDirectory', () => {
     });
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
   it('fetches museum directory on mount without coordinates', async () => {
-    const { result } = renderHook(() => useMuseumDirectory(null, null));
+    const { result } = renderHookWithQueryClient(() => useMuseumDirectory(null, null));
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -80,7 +68,7 @@ describe('useMuseumDirectory', () => {
   it('sorts museums alphabetically when no distance is available', async () => {
     mockListMuseumDirectory.mockResolvedValue([orsay, louvre]);
 
-    const { result } = renderHook(() => useMuseumDirectory(null, null));
+    const { result } = renderHookWithQueryClient(() => useMuseumDirectory(null, null));
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -94,7 +82,7 @@ describe('useMuseumDirectory', () => {
   it('uses search endpoint when coordinates are provided', async () => {
     const userLocation = makeGeoLocation({ latitude: 48.8566, longitude: 2.3522 });
 
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithQueryClient(() =>
       useMuseumDirectory(userLocation.latitude, userLocation.longitude),
     );
 
@@ -115,7 +103,7 @@ describe('useMuseumDirectory', () => {
     mockSearchMuseums.mockRejectedValue(new Error('Search unavailable'));
     const userLocation = makeGeoLocation({ latitude: 48.8566, longitude: 2.3522 });
 
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithQueryClient(() =>
       useMuseumDirectory(userLocation.latitude, userLocation.longitude),
     );
 
@@ -128,7 +116,7 @@ describe('useMuseumDirectory', () => {
   });
 
   it('filters museums by name via client-side search', async () => {
-    const { result } = renderHook(() => useMuseumDirectory(null, null));
+    const { result } = renderHookWithQueryClient(() => useMuseumDirectory(null, null));
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -144,7 +132,7 @@ describe('useMuseumDirectory', () => {
   });
 
   it('filters museums by address', async () => {
-    const { result } = renderHook(() => useMuseumDirectory(null, null));
+    const { result } = renderHookWithQueryClient(() => useMuseumDirectory(null, null));
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -161,7 +149,7 @@ describe('useMuseumDirectory', () => {
   it('returns empty list when fetch fails completely', async () => {
     mockListMuseumDirectory.mockRejectedValue(new Error('Network error'));
 
-    const { result } = renderHook(() => useMuseumDirectory(null, null));
+    const { result } = renderHookWithQueryClient(() => useMuseumDirectory(null, null));
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -171,9 +159,9 @@ describe('useMuseumDirectory', () => {
   });
 
   it('re-fetches when coordinates change significantly', async () => {
-    const { result, rerender } = renderHook(
+    const { result, rerender } = renderHookWithQueryClient(
       ({ lat, lng }: { lat: number | null; lng: number | null }) => useMuseumDirectory(lat, lng),
-      { initialProps: { lat: 48.8566, lng: 2.3522 } },
+      { initialProps: { lat: 48.8566 as number | null, lng: 2.3522 as number | null } },
     );
 
     await waitFor(() => {
@@ -182,7 +170,8 @@ describe('useMuseumDirectory', () => {
 
     const callCountAfterFirst = mockSearchMuseums.mock.calls.length;
 
-    // Re-render with significantly different coordinates (> 0.5 km)
+    // Re-render with significantly different coordinates — rounded key flips
+    // from [48.86, 2.35] to [49.0, 3.0] so react-query issues a fresh fetch.
     rerender({ lat: 49.0, lng: 3.0 });
 
     await waitFor(() => {
@@ -190,12 +179,12 @@ describe('useMuseumDirectory', () => {
     });
   });
 
-  // ── Distance threshold (500 m jitter suppression) ───────────────────────────
+  // ── Distance threshold (rounded-key GPS jitter suppression) ─────────────────
 
-  it('skips re-fetch when coordinates change by less than 500 m', async () => {
-    const { result, rerender } = renderHook(
+  it('skips re-fetch when coordinates round to the same 2-decimal key', async () => {
+    const { result, rerender } = renderHookWithQueryClient(
       ({ lat, lng }: { lat: number | null; lng: number | null }) => useMuseumDirectory(lat, lng),
-      { initialProps: { lat: 48.8566, lng: 2.3522 } },
+      { initialProps: { lat: 48.8566 as number | null, lng: 2.3522 as number | null } },
     );
 
     await waitFor(() => {
@@ -204,7 +193,8 @@ describe('useMuseumDirectory', () => {
 
     const callCountAfterFirst = mockSearchMuseums.mock.calls.length;
 
-    // Tiny GPS jitter: mock haversine returns (|Δlat| + |Δlng|) * 1000 ≈ 2 m (< 500 m).
+    // Tiny GPS jitter — both coord sets round to [48.86, 2.35] so react-query
+    // reuses the cached result and does NOT fire a new network request.
     rerender({ lat: 48.8576, lng: 2.3532 });
 
     // Wait a tick to let any potential effect fire
@@ -216,7 +206,7 @@ describe('useMuseumDirectory', () => {
   });
 
   it('fetches when transitioning from null coordinates to valid coordinates', async () => {
-    const { result, rerender } = renderHook(
+    const { result, rerender } = renderHookWithQueryClient(
       ({ lat, lng }: { lat: number | null; lng: number | null }) => useMuseumDirectory(lat, lng),
       { initialProps: { lat: null as number | null, lng: null as number | null } },
     );
@@ -242,7 +232,7 @@ describe('useMuseumDirectory', () => {
   });
 
   it('provides a refresh function that re-fetches data', async () => {
-    const { result } = renderHook(() => useMuseumDirectory(null, null));
+    const { result } = renderHookWithQueryClient(() => useMuseumDirectory(null, null));
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);

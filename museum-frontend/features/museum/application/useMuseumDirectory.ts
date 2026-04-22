@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { keepPreviousData } from '@tanstack/react-query';
+
+import { useAppQuery } from '@/shared/data/useAppQuery';
 
 import type { MuseumDirectoryEntry } from '../infrastructure/museumApi';
 import type { MuseumSearchEntry } from '../infrastructure/museumApi';
 import { museumApi } from '../infrastructure/museumApi';
-import { haversineDistanceMeters } from './haversine';
 
 export type { MuseumCategory } from '../infrastructure/museumApi';
 
@@ -19,9 +21,6 @@ export interface MuseumWithDistance extends MuseumDirectoryEntry {
   source: 'local' | 'osm';
 }
 
-/** GPS jitter suppression threshold: ignore coordinate changes smaller than this. */
-const MIN_COORD_CHANGE_METERS = 500;
-
 /** Bounding box ordered as [minLng, minLat, maxLng, maxLat] (WGS84). */
 export type MapBoundingBox = [number, number, number, number];
 
@@ -34,6 +33,17 @@ interface UseMuseumDirectoryResult {
   /** Re-fetches museums constrained to a visible map bounding box. */
   searchInBounds: (bbox: MapBoundingBox) => void;
 }
+
+const DEFAULT_RADIUS_METERS = 3_000;
+const STALE_TIME_MS = 5 * 60_000;
+const GC_TIME_MS = 30 * 60_000;
+const SEARCH_DEBOUNCE_MS = 500;
+const MIN_SEARCH_CHARS = 2;
+/** GPS-jitter dedup resolution: 2 decimals ≈ 1.1 km at the equator. */
+const COORD_KEY_PRECISION = 100;
+
+const roundCoord = (value: number | null): number | null =>
+  value === null ? null : Math.round(value * COORD_KEY_PRECISION) / COORD_KEY_PRECISION;
 
 /**
  * Maps a search result entry to the MuseumWithDistance shape expected by the UI.
@@ -58,6 +68,14 @@ const mapSearchEntryToMuseumWithDistance = (
   museumType: entry.museumType,
 });
 
+const mapDirectoryEntryToMuseumWithDistance = (
+  museum: MuseumDirectoryEntry,
+): MuseumWithDistance => ({
+  ...museum,
+  distanceMeters: null,
+  source: 'local' as const,
+});
+
 /**
  * Hook that fetches the museum directory, enriches entries with distance
  * from the user's location, and supports filtering by name.
@@ -67,6 +85,15 @@ const mapSearchEntryToMuseumWithDistance = (
  * with client-side distance enrichment when location is unavailable or
  * the search endpoint fails.
  *
+ * Cache strategy (react-query):
+ * - `['museums','near', roundedLat, roundedLng]` when coords available —
+ *   rounded to 2 decimals (~1.1 km) to dedup GPS jitter into the same key.
+ * - `['museums','directory']` when no coords.
+ * - `['museums','search', q]` for text searches (>= 2 chars, 500 ms debounce).
+ * - Bbox searches bypass the cache via `bboxResults` local state — the bbox
+ *   itself is ephemeral ("search in this map area") and would otherwise
+ *   explode the cache key space.
+ *
  * @param userLatitude - Current user latitude (null if unavailable).
  * @param userLongitude - Current user longitude (null if unavailable).
  */
@@ -74,127 +101,106 @@ export const useMuseumDirectory = (
   userLatitude: number | null,
   userLongitude: number | null,
 ): UseMuseumDirectoryResult => {
-  const [rawMuseums, setRawMuseums] = useState<MuseumWithDistance[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Debounced search query — triggers API call when user types >=2 chars.
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [bboxResults, setBboxResults] = useState<MuseumWithDistance[] | null>(null);
+  const [isBboxLoading, setIsBboxLoading] = useState(false);
 
-  // Track last fetched coordinates to avoid re-fetching for tiny GPS fluctuations.
-  const lastFetchCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
+  const hasCoords = userLatitude !== null && userLongitude !== null;
+  const roundedLat = roundCoord(userLatitude);
+  const roundedLng = roundCoord(userLongitude);
 
-  // Marks whether the geo-aware search endpoint has already produced a result.
-  // Once true, losing GPS (or the user zooming out to a region with no coords) must NOT
-  // trigger a full-France directory reload — we keep the already-loaded local results.
-  const hasServerFetchedRef = useRef(false);
-
-  /** Fallback: fetch all museums from the directory endpoint and enrich client-side. */
-  const fetchFromDirectory = useCallback(async (lat: number | null, lng: number | null) => {
-    const entries = await museumApi.listMuseumDirectory();
-    return entries.map<MuseumWithDistance>((museum) => {
-      let distanceMeters: number | null = null;
-
-      if (lat !== null && lng !== null && museum.latitude != null && museum.longitude != null) {
-        distanceMeters = Math.round(
-          haversineDistanceMeters(lat, lng, museum.latitude, museum.longitude),
-        );
-      }
-
-      return { ...museum, distanceMeters, source: 'local' as const };
-    });
-  }, []);
-
-  /** Primary: fetch from search endpoint using geo-coordinates and/or text query. */
-  const fetchFromSearch = useCallback(
-    async (lat: number | null, lng: number | null, q?: string) => {
-      const { museums } = await museumApi.searchMuseums({
-        ...(lat !== null && lng !== null ? { lat, lng, radius: 3_000 } : {}),
-        ...(q ? { q } : {}),
-      });
-      return museums.map(mapSearchEntryToMuseumWithDistance);
-    },
-    [],
-  );
-
-  const fetchMuseums = useCallback(
-    async (lat: number | null, lng: number | null, q?: string) => {
-      setIsLoading(true);
-      try {
-        // Use search endpoint when we have coordinates OR a text query
-        if ((lat !== null && lng !== null) || q) {
-          try {
-            const results = await fetchFromSearch(lat, lng, q);
-            setRawMuseums(results);
-            hasServerFetchedRef.current = true;
-            return;
-          } catch {
-            // Search endpoint failed — fall back to directory
-          }
-        }
-        const results = await fetchFromDirectory(lat, lng);
-        setRawMuseums(results);
-      } catch {
-        setRawMuseums([]);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [fetchFromSearch, fetchFromDirectory],
-  );
-
-  // Fetch museums when coordinates change (initial load, GPS obtained, or map pan).
-  // Skips re-fetch if coordinates moved less than MIN_COORD_CHANGE_METERS to ignore GPS jitter.
-  useEffect(() => {
-    const hasCoords = userLatitude !== null && userLongitude !== null;
-
-    if (hasCoords && lastFetchCoordsRef.current) {
-      const dist = haversineDistanceMeters(
-        userLatitude,
-        userLongitude,
-        lastFetchCoordsRef.current.lat,
-        lastFetchCoordsRef.current.lng,
-      );
-      if (dist < MIN_COORD_CHANGE_METERS) return;
-    }
-
+  const nearQueryKey = useMemo(() => {
     if (hasCoords) {
-      lastFetchCoordsRef.current = { lat: userLatitude, lng: userLongitude };
-    } else if (hasServerFetchedRef.current) {
-      // GPS lost (or never granted post-search) but we already have server-side
-      // results: keep them. Refetching the full directory would drop the local
-      // geo-scoped list the user is looking at and blow the camera out to France.
-      return;
+      return ['museums', 'near', roundedLat, roundedLng] as const;
     }
+    return ['museums', 'directory'] as const;
+  }, [hasCoords, roundedLat, roundedLng]);
 
-    void fetchMuseums(userLatitude, userLongitude);
-  }, [userLatitude, userLongitude, fetchMuseums]);
+  const museumsQuery = useAppQuery<MuseumWithDistance[]>({
+    queryKey: nearQueryKey,
+    queryFn: async () => {
+      // Geo path: prefer search endpoint, fall back to directory if search
+      // errors (keeps the UX working when the search service is degraded).
+      if (userLatitude !== null && userLongitude !== null) {
+        try {
+          const { museums } = await museumApi.searchMuseums({
+            lat: userLatitude,
+            lng: userLongitude,
+            radius: DEFAULT_RADIUS_METERS,
+          });
+          return museums.map(mapSearchEntryToMuseumWithDistance);
+        } catch {
+          const entries = await museumApi.listMuseumDirectory();
+          return entries.map(mapDirectoryEntryToMuseumWithDistance);
+        }
+      }
 
-  // Debounce search query — wait 500ms after last keystroke before API call.
+      const entries = await museumApi.listMuseumDirectory();
+      return entries.map(mapDirectoryEntryToMuseumWithDistance);
+    },
+    staleTime: STALE_TIME_MS,
+    gcTime: GC_TIME_MS,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    // Retry policy inherited from the global queryClient's `shouldRetry`,
+    // which already gates on AppError kind.
+    // When the queryKey flips (GPS acquired/lost, user pans to a new region),
+    // keep the previous data on screen while the new fetch resolves instead
+    // of flashing an empty list.
+    placeholderData: keepPreviousData,
+  });
+
+  // Debounce search query — wait 500 ms after last keystroke before API call.
+  // The query string below short-circuits on length<MIN via `enabled`, so the
+  // effect only needs to PUBLISH a committed value; it never needs to clear it.
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-
-    if (searchQuery.trim().length >= 2) {
-      debounceTimerRef.current = setTimeout(() => {
-        setDebouncedQuery(searchQuery.trim());
-      }, 500);
-    } else {
-      setDebouncedQuery('');
+    const trimmed = searchQuery.trim();
+    if (trimmed.length < MIN_SEARCH_CHARS) {
+      return undefined;
     }
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedQuery(trimmed);
+    }, SEARCH_DEBOUNCE_MS);
 
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
   }, [searchQuery]);
 
-  // Re-fetch from API when debounced query changes.
-  useEffect(() => {
-    if (debouncedQuery) {
-      void fetchMuseums(userLatitude, userLongitude, debouncedQuery);
+  // Committed debounced query used by the server-side search — collapses to
+  // empty the moment the user backspaces below MIN_SEARCH_CHARS, so a stale
+  // `debouncedQuery` from a previous input doesn't keep the search query
+  // active.
+  const effectiveSearchQuery = searchQuery.trim().length >= MIN_SEARCH_CHARS ? debouncedQuery : '';
+
+  const searchQueryResult = useAppQuery<MuseumWithDistance[]>({
+    queryKey: ['museums', 'search', effectiveSearchQuery, roundedLat, roundedLng] as const,
+    queryFn: async () => {
+      const { museums } = await museumApi.searchMuseums({
+        q: effectiveSearchQuery,
+        ...(userLatitude !== null && userLongitude !== null
+          ? { lat: userLatitude, lng: userLongitude, radius: DEFAULT_RADIUS_METERS }
+          : {}),
+      });
+      return museums.map(mapSearchEntryToMuseumWithDistance);
+    },
+    enabled: effectiveSearchQuery.length >= MIN_SEARCH_CHARS,
+    staleTime: STALE_TIME_MS,
+    gcTime: GC_TIME_MS,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  const rawMuseums: MuseumWithDistance[] = useMemo(() => {
+    if (bboxResults !== null) return bboxResults;
+    if (effectiveSearchQuery.length >= MIN_SEARCH_CHARS && searchQueryResult.data) {
+      return searchQueryResult.data;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only react to debouncedQuery changes
-  }, [debouncedQuery]);
+    return museumsQuery.data ?? [];
+  }, [bboxResults, effectiveSearchQuery, searchQueryResult.data, museumsQuery.data]);
 
   const museums = useMemo<MuseumWithDistance[]>(() => {
     let filtered = rawMuseums;
@@ -218,28 +224,33 @@ export const useMuseumDirectory = (
   }, [rawMuseums, searchQuery]);
 
   const refresh = useCallback(() => {
-    void fetchMuseums(userLatitude, userLongitude);
-  }, [fetchMuseums, userLatitude, userLongitude]);
+    setBboxResults(null);
+    void museumsQuery.refetch();
+  }, [museumsQuery]);
 
   /**
-   * Fires the backend search constrained to a map bbox. Bypasses the GPS
-   * jitter suppression so the user always gets fresh results when they
-   * explicitly ask for "search in this area".
+   * Fires the backend search constrained to a map bbox. Stored in local state
+   * (not the react-query cache) because bbox is ephemeral per-interaction and
+   * caching every pan/zoom rectangle would fragment the cache uselessly.
    */
   const searchInBounds = useCallback((bbox: MapBoundingBox) => {
-    setIsLoading(true);
+    setIsBboxLoading(true);
     void museumApi
       .searchMuseums({ bbox })
       .then(({ museums: results }) => {
-        setRawMuseums(results.map(mapSearchEntryToMuseumWithDistance));
+        setBboxResults(results.map(mapSearchEntryToMuseumWithDistance));
       })
       .catch(() => {
-        setRawMuseums([]);
+        setBboxResults([]);
       })
       .finally(() => {
-        setIsLoading(false);
+        setIsBboxLoading(false);
       });
   }, []);
+
+  const isTextSearchActive = effectiveSearchQuery.length >= MIN_SEARCH_CHARS;
+  const isLoading =
+    isBboxLoading || (isTextSearchActive ? searchQueryResult.isPending : museumsQuery.isPending);
 
   return { museums, isLoading, searchQuery, setSearchQuery, refresh, searchInBounds };
 };
