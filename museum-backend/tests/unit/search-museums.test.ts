@@ -518,6 +518,96 @@ describe('SearchMuseumsUseCase', () => {
   /*  OSM deduplication with name similarity                          */
   /* ---------------------------------------------------------------- */
 
+  /* ---------------------------------------------------------------- */
+  /*  Overpass cache behavior                                          */
+  /* ---------------------------------------------------------------- */
+
+  describe('Overpass cache behavior', () => {
+    /**
+     * Negative-cache TTL in seconds — duplicated from the useCase constant
+     * (NEGATIVE_CACHE_TTL_SECONDS) so the test will fail loudly if prod drifts.
+     */
+    const NEGATIVE_TTL = 300;
+    /** Positive-cache TTL — matches the env mock at the top of this file. */
+    const POSITIVE_TTL = 3600;
+
+    it('returns cached Overpass results and skips queryOverpassMuseums on cache hit', async () => {
+      const cache = createMockCache();
+      const cachedUseCase = new SearchMuseumsUseCase(repo, cache);
+
+      const cacheKey = `osm:museums:${PARIS.lat.toFixed(2)}:${PARIS.lng.toFixed(2)}:3000`;
+      const cached = [makeOsmResult('Cached Louvre', 0.001, 0.001, 777)];
+
+      // Prime the cache under the deterministic key the useCase builds.
+      (cache.get as jest.Mock).mockImplementationOnce(async (key: string) =>
+        key === cacheKey ? cached : null,
+      );
+
+      const result = await cachedUseCase.execute({ ...PARIS, radiusMeters: 3000 });
+
+      expect(cache.get).toHaveBeenCalledWith(cacheKey);
+      expect(mockQueryOverpassMuseums).not.toHaveBeenCalled();
+      expect(cache.set).not.toHaveBeenCalled();
+      // The cached OSM entry surfaces in the merged results.
+      expect(result.museums.some((m) => m.name === 'Cached Louvre' && m.source === 'osm')).toBe(
+        true,
+      );
+    });
+
+    it('calls Overpass and caches with the success TTL on a cache miss', async () => {
+      const cache = createMockCache();
+      const cachedUseCase = new SearchMuseumsUseCase(repo, cache);
+
+      const cacheKey = `osm:museums:${PARIS.lat.toFixed(2)}:${PARIS.lng.toFixed(2)}:3000`;
+      const osmResults = [makeOsmResult('Fresh Museum', 0.001, 0.001, 555)];
+      mockQueryOverpassMuseums.mockResolvedValueOnce(osmResults);
+
+      await cachedUseCase.execute({ ...PARIS, radiusMeters: 3000 });
+
+      expect(cache.get).toHaveBeenCalledWith(cacheKey);
+      expect(mockQueryOverpassMuseums).toHaveBeenCalledTimes(1);
+      expect(cache.set).toHaveBeenCalledTimes(1);
+      const [setKey, setValue, setTtl] = (cache.set as jest.Mock).mock.calls[0];
+      expect(setKey).toBe(cacheKey);
+      expect(setValue).toEqual(osmResults);
+      // Non-empty result → env-driven success TTL (not the negative TTL).
+      expect(setTtl).toBe(POSITIVE_TTL);
+    });
+
+    it('caches an empty Overpass response with the short negative TTL (300s)', async () => {
+      const cache = createMockCache();
+      const cachedUseCase = new SearchMuseumsUseCase(repo, cache);
+
+      mockQueryOverpassMuseums.mockResolvedValueOnce([]);
+
+      await cachedUseCase.execute({ ...PARIS, radiusMeters: 3000 });
+
+      expect(cache.set).toHaveBeenCalledTimes(1);
+      const [, setValue, setTtl] = (cache.set as jest.Mock).mock.calls[0];
+      expect(setValue).toEqual([]);
+      // Empty result path must use NEGATIVE_CACHE_TTL_SECONDS = 300, not the
+      // long positive TTL — protects against hammering a failing Overpass.
+      expect(setTtl).toBe(NEGATIVE_TTL);
+    });
+
+    it('bbox search uses a separate cache key namespace (osm:museums:bbox:...)', async () => {
+      const cache = createMockCache();
+      const cachedUseCase = new SearchMuseumsUseCase(repo, cache);
+
+      mockQueryOverpassMuseums.mockResolvedValueOnce([]);
+
+      const bbox: [number, number, number, number] = [-9.18, 38.69, -9.1, 38.75];
+      await cachedUseCase.execute({ bbox });
+
+      // The bbox branch must NOT touch the radius cache key namespace.
+      const keysGot = (cache.get as jest.Mock).mock.calls.map((c) => c[0] as string);
+      expect(keysGot).toHaveLength(1);
+      expect(keysGot[0]).toMatch(/^osm:museums:bbox:/);
+      // Key encodes the four bbox corners at 2-decimal precision.
+      expect(keysGot[0]).toBe('osm:museums:bbox:-9.18,38.69,-9.10,38.75');
+    });
+  });
+
   describe('OSM deduplication with name similarity', () => {
     /** Bordeaux CAPC coordinates (reference for CAPC dedup scenarios). */
     const CAPC = { lat: 44.8497, lng: -0.5714 };

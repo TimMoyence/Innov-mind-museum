@@ -1,8 +1,8 @@
 {
-  "lastUpdated": "2026-04-21",
+  "lastUpdated": "2026-04-22",
   "testCount": 2812,
-  "frontendTestCount": 1443,
-  "frontendSuiteCount": 150,
+  "frontendTestCount": 1472,
+  "frontendSuiteCount": 152,
   "typecheckErrors": 0,
   "asAnyCount": 0,
   "coverageStatements": 90.28,

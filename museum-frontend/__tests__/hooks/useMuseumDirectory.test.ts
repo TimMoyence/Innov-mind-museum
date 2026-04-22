@@ -334,6 +334,137 @@ describe('useMuseumDirectory', () => {
       expect(result.current.museums[0].name).toBe('Versailles');
     });
 
+    it('text search gating: does NOT call searchMuseums with q when searchQuery is below 2 chars', async () => {
+      jest.useFakeTimers();
+      try {
+        const { result } = renderHookWithQueryClient(() => useMuseumDirectory(null, null));
+
+        // Let the directory query resolve first (no coords → no search call yet).
+        await act(async () => {
+          await Promise.resolve();
+        });
+
+        // Baseline: confirm the search endpoint was not called during the
+        // coords-less cold start.
+        const baselineSearchCalls = mockSearchMuseums.mock.calls.length;
+
+        act(() => {
+          result.current.setSearchQuery('a');
+        });
+
+        // Advance well past the 500 ms debounce — nothing should fire.
+        await act(async () => {
+          jest.advanceTimersByTime(1000);
+          await Promise.resolve();
+        });
+
+        // Still no search call: length<2 short-circuits both the debounce effect
+        // AND the `enabled` gate on the search query.
+        expect(mockSearchMuseums.mock.calls.length).toBe(baselineSearchCalls);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('text search debounces: a 500 ms idle gap is required before the API call fires', async () => {
+      jest.useFakeTimers();
+      try {
+        const userLat = 48.8566;
+        const userLng = 2.3522;
+
+        const { result } = renderHookWithQueryClient(() => useMuseumDirectory(userLat, userLng));
+
+        // Drain the initial near-coords search to isolate the debounce behavior.
+        await act(async () => {
+          await Promise.resolve();
+          await Promise.resolve();
+        });
+        const beforeDebounce = mockSearchMuseums.mock.calls.length;
+
+        act(() => {
+          result.current.setSearchQuery('Louvre');
+        });
+
+        // 499 ms in — debounce hasn't fired yet, no new search call.
+        await act(async () => {
+          jest.advanceTimersByTime(499);
+          await Promise.resolve();
+        });
+        expect(mockSearchMuseums.mock.calls.length).toBe(beforeDebounce);
+
+        // Cross the 500 ms threshold — the debounced query is committed and
+        // useAppQuery fires with {q, lat, lng, radius}.
+        await act(async () => {
+          jest.advanceTimersByTime(2);
+          await Promise.resolve();
+          await Promise.resolve();
+        });
+
+        await waitFor(() => {
+          expect(mockSearchMuseums.mock.calls.length).toBeGreaterThan(beforeDebounce);
+        });
+
+        // The most recent call is the q-driven one: it includes `q` alongside
+        // the current lat/lng/radius (coords are still available in this branch).
+        const lastCall = mockSearchMuseums.mock.calls[mockSearchMuseums.mock.calls.length - 1][0];
+        expect(lastCall).toEqual(
+          expect.objectContaining({ q: 'Louvre', lat: userLat, lng: userLng, radius: 3_000 }),
+        );
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('text search collapses: backspacing below 2 chars drops the search query and stops firing q-searches', async () => {
+      jest.useFakeTimers();
+      try {
+        const { result } = renderHookWithQueryClient(() => useMuseumDirectory(48.8566, 2.3522));
+
+        // Drain initial near-coords fetch.
+        await act(async () => {
+          await Promise.resolve();
+          await Promise.resolve();
+        });
+
+        // Type "Lou" → after 500 ms one search fires with q='Lou'.
+        act(() => {
+          result.current.setSearchQuery('Lou');
+        });
+        await act(async () => {
+          jest.advanceTimersByTime(500);
+          await Promise.resolve();
+          await Promise.resolve();
+        });
+
+        await waitFor(() => {
+          expect(
+            mockSearchMuseums.mock.calls.some((c) => (c[0] as { q?: string }).q === 'Lou'),
+          ).toBe(true);
+        });
+
+        const afterFirstSearch = mockSearchMuseums.mock.calls.length;
+
+        // Backspace to "L" — below MIN_SEARCH_CHARS so the `enabled` flag flips
+        // false and no new q-search runs. The effective query collapses back
+        // to '' and the near-coords branch wins again.
+        act(() => {
+          result.current.setSearchQuery('L');
+        });
+        await act(async () => {
+          jest.advanceTimersByTime(500);
+          await Promise.resolve();
+        });
+
+        // No additional q-search call fired for the sub-threshold input.
+        const newQCalls = mockSearchMuseums.mock.calls
+          .slice(afterFirstSearch)
+          .filter((c) => (c[0] as { q?: string }).q === 'L');
+        expect(newQCalls).toHaveLength(0);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
     it('refresh() resets bbox override and returns to near-coords results', async () => {
       const { result } = renderHookWithQueryClient(() => useMuseumDirectory(48.8566, 2.3522));
 
