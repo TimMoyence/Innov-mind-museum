@@ -591,7 +591,41 @@
       "science": "Sciences",
       "specialized": "Spécialisé",
       "general": "Musée"
+    },
+    "enrichment": {
+      "open": "Ouvert",
+      "closed": "Fermé",
+      "closes_at": "Ferme à {{time}}",
+      "opens_at": "Ouvre à {{time}}",
+      "opens_on": "Ouvre {{day}} à {{time}}",
+      "website": "Site web",
+      "phone": "Téléphone",
+      "loading": "Chargement des informations…",
+      "unavailable": "Informations non disponibles",
+      "summary_heading": "À propos",
+      "hours_heading": "Horaires",
+      "weekly_range": "{{start}}–{{end}} {{opens}}–{{closes}}",
+      "weekly_single": "{{day}} {{opens}}–{{closes}}",
+      "weekly_closed": "{{day}} Fermé"
     }
+  },
+  "days": {
+    "mon": "Lun",
+    "tue": "Mar",
+    "wed": "Mer",
+    "thu": "Jeu",
+    "fri": "Ven",
+    "sat": "Sam",
+    "sun": "Dim",
+    "today": "aujourd'hui",
+    "tomorrow": "demain",
+    "on_mon": "lundi",
+    "on_tue": "mardi",
+    "on_wed": "mercredi",
+    "on_thu": "jeudi",
+    "on_fri": "vendredi",
+    "on_sat": "samedi",
+    "on_sun": "dimanche"
   },
   "offlineMaps": {
     "title": "Cartes hors-ligne",

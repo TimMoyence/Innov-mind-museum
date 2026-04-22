@@ -591,7 +591,41 @@
       "science": "Science",
       "specialized": "Specialized",
       "general": "Museum"
+    },
+    "enrichment": {
+      "open": "Open",
+      "closed": "Closed",
+      "closes_at": "Closes at {{time}}",
+      "opens_at": "Opens at {{time}}",
+      "opens_on": "Opens {{day}} at {{time}}",
+      "website": "Website",
+      "phone": "Phone",
+      "loading": "Loading information…",
+      "unavailable": "Information unavailable",
+      "summary_heading": "About",
+      "hours_heading": "Opening hours",
+      "weekly_range": "{{start}}–{{end}} {{opens}}–{{closes}}",
+      "weekly_single": "{{day}} {{opens}}–{{closes}}",
+      "weekly_closed": "{{day}} Closed"
     }
+  },
+  "days": {
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun",
+    "today": "today",
+    "tomorrow": "tomorrow",
+    "on_mon": "Monday",
+    "on_tue": "Tuesday",
+    "on_wed": "Wednesday",
+    "on_thu": "Thursday",
+    "on_fri": "Friday",
+    "on_sat": "Saturday",
+    "on_sun": "Sunday"
   },
   "offlineMaps": {
     "title": "Offline maps",

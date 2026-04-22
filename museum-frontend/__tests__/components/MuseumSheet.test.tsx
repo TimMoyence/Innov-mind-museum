@@ -1,8 +1,14 @@
 import '../helpers/test-utils';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import type { ReactElement } from 'react';
+import { fireEvent, screen } from '@testing-library/react-native';
 
 import { MuseumSheet } from '@/features/museum/ui/MuseumSheet';
 import { makeMuseumWithDistance as makeMuseum } from '../helpers/factories/museum.factories';
+import { renderWithQueryClient } from '../helpers/data/renderWithQueryClient';
+
+// MuseumSheet now eagerly prefetches enrichment via useMuseumEnrichment (react-query),
+// so every render needs a QueryClient in scope.
+const render = (ui: ReactElement) => renderWithQueryClient(ui);
 
 describe('MuseumSheet', () => {
   const baseProps = {
