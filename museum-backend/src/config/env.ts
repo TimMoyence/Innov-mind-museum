@@ -267,17 +267,9 @@ const env: AppEnv = {
         serviceName: process.env.OTEL_SERVICE_NAME || 'museum-backend',
       }
     : undefined,
-  featureFlags: {
-    // Only 2 flags remain (2026-04-19 audit). All others retired — features always-on.
-    // ocrGuard: kept pending CPU benchmark of Tesseract injection-guard.
-    // apiKeys: kept pending B2B API key programme spec (msk_* auth).
-    ocrGuard: toBoolean(process.env.FEATURE_FLAG_OCR_GUARD, false),
-    apiKeys: toBoolean(process.env.FEATURE_FLAG_API_KEYS, false),
-  },
-  adminFlags: {
-    // Operator-controlled pipeline flags (not user-facing rollouts).
-    enableExtraction: toBoolean(process.env.ADMIN_ENABLE_EXTRACTION, false),
-  },
+  // 2026-04-22: all feature flags retired. Every feature is always-on.
+  //   (OCR guard, API keys, knowledge extraction, guardrail V2 enforcement.)
+  //   Required infra (Redis, OpenAI key) must be provided in prod.
   freeTierDailyChatLimit: toNumber(process.env.FREE_TIER_DAILY_CHAT_LIMIT, 100),
   overpassCacheTtlSeconds: toNumber(process.env.OVERPASS_CACHE_TTL_SECONDS, 86400),
   knowledgeBase: {
@@ -320,7 +312,7 @@ const env: AppEnv = {
     candidate: guardrailsCandidate,
     llmGuardUrl: toOptionalString(process.env.GUARDRAILS_V2_LLM_GUARD_URL),
     timeoutMs: toNumber(process.env.GUARDRAILS_V2_TIMEOUT_MS, 300),
-    observeOnly: toBoolean(process.env.GUARDRAILS_V2_OBSERVE_ONLY, true),
+    observeOnly: toBoolean(process.env.GUARDRAILS_V2_OBSERVE_ONLY, false),
   },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
   supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.app',

@@ -7,7 +7,6 @@ import { buildChatService } from '@modules/chat';
 import { museumRepository } from '@modules/museum';
 import { MemoryCacheService } from '@shared/cache/memory-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
-import { StaticFeatureFlagService } from '@shared/feature-flags/feature-flags.port';
 import { logger } from '@shared/logger/logger';
 import { setupSentryExpressErrorHandler } from '@shared/observability/sentry';
 import { createApiRouter } from '@shared/routers/api.router';
@@ -28,7 +27,6 @@ import type { CacheService } from '@shared/cache/cache.port';
 interface CreateAppOptions {
   chatService?: ReturnType<typeof buildChatService>;
   healthCheck?: () => Promise<{ database: 'up' | 'down' }>;
-  featureFlagService?: StaticFeatureFlagService;
   cacheService?: CacheService;
 }
 
@@ -151,13 +149,12 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
     setupSwagger(app);
   }
 
-  const featureFlagService = options.featureFlagService ?? new StaticFeatureFlagService();
   const cacheService = resolveCacheService(options);
   const chatService =
     options.chatService ?? buildChatService(AppDataSource, cacheService, museumRepository);
   const healthCheck = options.healthCheck ?? createHealthCheck;
 
-  app.use('/api', createApiRouter({ chatService, healthCheck, featureFlagService, cacheService }));
+  app.use('/api', createApiRouter({ chatService, healthCheck, cacheService }));
 
   setupSentryExpressErrorHandler(app);
   app.use(errorHandler);

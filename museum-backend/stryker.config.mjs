@@ -43,7 +43,6 @@ export default {
     'src/modules/chat/useCase/session-access.ts',
     'src/shared/security/bcrypt.ts',
     'src/modules/chat/useCase/semaphore.ts',
-    'src/shared/db/with-retry.ts',
     'src/shared/utils/fire-and-forget.ts',
     'src/shared/cache/noop-cache.service.ts',
     // Phase 2 Wave 3 — middleware

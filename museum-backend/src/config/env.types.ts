@@ -132,17 +132,6 @@ export interface AppEnv {
     exporterEndpoint: string;
     serviceName: string;
   };
-  featureFlags: {
-    /** Tesseract OCR-based injection-guard for uploaded images. Kept pending CPU benchmark. */
-    ocrGuard: boolean;
-    /** B2B API key programme (msk_* auth). Kept pending spec validation. */
-    apiKeys: boolean;
-  };
-  /** Operator-controlled pipeline flags (not user-facing rollouts). */
-  adminFlags: {
-    /** When true, activates the BullMQ knowledge-extraction pipeline (LLM cost — operator decision). */
-    enableExtraction: boolean;
-  };
   /** Maximum chat messages a free-tier user can send per calendar day. */
   freeTierDailyChatLimit: number;
   /** TTL in seconds for Overpass API museum search cache entries. */

@@ -210,29 +210,7 @@ describe('env.ts module', () => {
     });
   });
 
-  describe('feature flags', () => {
-    it('remaining feature flags default to false when env vars are absent', () => {
-      const env = loadEnv({ FEATURE_FLAG_OCR_GUARD: '', FEATURE_FLAG_API_KEYS: '' });
-      expect(env.featureFlags.ocrGuard).toBe(false);
-      expect(env.featureFlags.apiKeys).toBe(false);
-    });
-
-    it('ocrGuard and apiKeys can be enabled individually', () => {
-      const env = loadEnv({ FEATURE_FLAG_OCR_GUARD: '1', FEATURE_FLAG_API_KEYS: 'true' });
-      expect(env.featureFlags.ocrGuard).toBe(true);
-      expect(env.featureFlags.apiKeys).toBe(true);
-    });
-
-    it('adminFlags.enableExtraction reads ADMIN_ENABLE_EXTRACTION', () => {
-      const env = loadEnv({ ADMIN_ENABLE_EXTRACTION: 'true' });
-      expect(env.adminFlags.enableExtraction).toBe(true);
-    });
-
-    it('adminFlags.enableExtraction defaults to false', () => {
-      const env = loadEnv({ ADMIN_ENABLE_EXTRACTION: undefined });
-      expect(env.adminFlags.enableExtraction).toBe(false);
-    });
-  });
+  // feature-flags block retired 2026-04-22 — all features always-on (no env-driven flags remain).
 
   describe('NODE_ENV validation', () => {
     it('throws on invalid NODE_ENV', () => {
