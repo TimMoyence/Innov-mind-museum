@@ -51,7 +51,7 @@ async function main(): Promise<void> {
       email_verified: true,
       role: 'visitor',
       onboarding_completed: true,
-      updated_at: now,
+      updatedAt: now,
       // Clear stale verification state so the smoke account cannot be poisoned
       // by leftover tokens from earlier deploys.
       verification_token: undefined,
@@ -69,8 +69,8 @@ async function main(): Promise<void> {
       role: 'visitor',
       email_verified: true,
       onboarding_completed: true,
-      created_at: now,
-      updated_at: now,
+      createdAt: now,
+      updatedAt: now,
     });
     console.log(`seed-smoke-account: inserted new user email=${email}`);
   }

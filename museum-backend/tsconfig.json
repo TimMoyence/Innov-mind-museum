@@ -37,7 +37,8 @@
     "src/**/*.ts",
     "tests/**/*.ts",
     "scripts/seed-museums.ts",
-    "scripts/seed-knowledge.ts"
+    "scripts/seed-knowledge.ts",
+    "scripts/seed-smoke-account.ts"
   ],
   "exclude": ["node_modules", ".stryker-tmp", ".stryker-run", "dist", "coverage"]
 }
