@@ -11,13 +11,36 @@ import {
 } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAdminDict } from '@/lib/admin-dictionary';
-import {
-  apiPost,
-  setTokens,
-  clearTokens,
-  registerLogoutHandler,
-} from '@/lib/api';
+import { apiPost, setTokens, clearTokens, registerLogoutHandler } from '@/lib/api';
 import type { LoginResponse } from '@/lib/admin-types';
+
+// ---------------------------------------------------------------------------
+// Admin authz cookie — middleware redirect hint
+// ---------------------------------------------------------------------------
+
+/**
+ * Cookie name read by `src/middleware.ts` to decide whether to redirect a
+ * request hitting `/{locale}/admin/*` to the login page. Value is intentionally
+ * opaque — backend still enforces the real JWT on every admin API call.
+ *
+ * Keep in sync with {@link ADMIN_AUTHZ_COOKIE} in `src/middleware.ts`.
+ */
+const ADMIN_AUTHZ_COOKIE = 'admin-authz';
+
+function setAdminAuthzCookie(): void {
+  if (typeof document === 'undefined') return;
+  // 8h — shorter than the refresh token so the middleware stops redirecting
+  // once the real session is effectively dead. Path=/ so it propagates to
+  // every admin sub-route. SameSite=Lax is enough: admin login is always
+  // first-party. Secure in production; HTTP OK on localhost for dev.
+  const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `${ADMIN_AUTHZ_COOKIE}=1; Path=/; Max-Age=${60 * 60 * 8}; SameSite=Lax${secureFlag}`;
+}
+
+function clearAdminAuthzCookie(): void {
+  if (typeof document === 'undefined') return;
+  document.cookie = `${ADMIN_AUTHZ_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -58,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     clearTokens();
+    clearAdminAuthzCookie();
     setUser(null);
     // Redirect to login — extract locale from current path
     const segments = window.location.pathname.split('/');
@@ -79,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       // Store both tokens in the api.ts in-memory store
       setTokens(data.tokens.accessToken, data.tokens.refreshToken);
+      setAdminAuthzCookie();
       setUser(data.user);
     } finally {
       setIsLoading(false);

@@ -459,6 +459,7 @@ export const MuseumMapView = ({
               style={[styles.emptyText, { color: theme.textPrimary }]}
               accessibilityRole="alert"
               accessibilityLiveRegion="polite"
+              accessibilityLabel={t('a11y.museum.map_empty')}
             >
               {t('museumDirectory.map_empty')}
             </Text>

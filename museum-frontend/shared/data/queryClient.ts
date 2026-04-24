@@ -61,9 +61,43 @@ export const queryClient = new QueryClient({
 });
 
 /**
+ * Query-key prefixes whose cached payloads MUST NOT leak to AsyncStorage.
+ *
+ * AsyncStorage on both iOS and Android is a plaintext file readable by anyone
+ * with device access (backup, jailbreak, `adb pull`). The in-memory React
+ * Query cache is still used at runtime — we only suppress the persister
+ * roundtrip for these keys.
+ *
+ * - `messages`, `session` — chat payloads (PII-level content)
+ * - `admin`             — admin dashboard queries (privileged visibility)
+ * - `auth`, `user`      — identity + profile
+ */
+const SENSITIVE_QUERY_KEY_PREFIXES = new Set<string>([
+  'messages',
+  'session',
+  'admin',
+  'auth',
+  'user',
+]);
+
+/**
+ * Guard run by `createAsyncStoragePersister` before every dehydrate. Returning
+ * `false` keeps the query in memory but skips the AsyncStorage write for this
+ * entry. Exported for unit tests.
+ */
+export function shouldDehydrateQuery(query: { queryKey: readonly unknown[] }): boolean {
+  const head = query.queryKey[0];
+  if (typeof head !== 'string') return true;
+  return !SENSITIVE_QUERY_KEY_PREFIXES.has(head);
+}
+
+/**
  * AsyncStorage-backed persister for {@link queryClient}. Used by
  * `PersistQueryClientProvider` in the root layout to hydrate React Query's
  * cache across cold starts.
+ *
+ * Security note: {@link shouldDehydrateQuery} filters out sensitive query
+ * keys so that chat/auth/admin payloads never reach on-device storage.
  */
 export const queryPersister = createAsyncStoragePersister({
   storage: AsyncStorage,

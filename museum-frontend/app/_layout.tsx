@@ -11,7 +11,9 @@ import {
   persistMaxAge,
   queryClient,
   queryPersister,
+  shouldDehydrateQuery,
 } from '@/shared/data/queryClient';
+import { initSentry, reactNavigationIntegration } from '@/shared/observability/sentry-init';
 
 import '@/features/museum/infrastructure/mapLibreBootstrap';
 
@@ -43,18 +45,7 @@ const sentryDsn: string | undefined =
     ? (process.env.EXPO_PUBLIC_SENTRY_DSN_ANDROID as string | undefined)
     : (process.env.EXPO_PUBLIC_SENTRY_DSN_IOS as string | undefined);
 
-const reactNavigationIntegration = Sentry.reactNavigationIntegration({
-  enableTimeToInitialDisplay: true,
-});
-
-Sentry.init({
-  dsn: sentryDsn ?? '',
-  enabled: !!sentryDsn,
-  environment: __DEV__ ? 'development' : 'production',
-  tracesSampleRate: 0.2,
-  integrations: [Sentry.reactNativeTracingIntegration(), reactNavigationIntegration],
-  enableAutoPerformanceTracing: true,
-});
+initSentry(sentryDsn);
 
 function AuthenticationGuard({ children }: { children: ReactNode }) {
   useProtectedRoute();
@@ -154,6 +145,7 @@ function RootLayout() {
           persister: queryPersister,
           maxAge: persistMaxAge,
           buster: persistBuster,
+          dehydrateOptions: { shouldDehydrateQuery },
         }}
       >
         <I18nProvider>

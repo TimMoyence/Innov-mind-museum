@@ -90,6 +90,7 @@ export default function ChangePasswordScreen() {
             onChangeText={setCurrentPassword}
             secureTextEntry
             autoComplete="current-password"
+            textContentType="password"
             accessibilityLabel={t('change_password.current')}
             accessibilityHint={t('change_password.current')}
           />
@@ -110,6 +111,7 @@ export default function ChangePasswordScreen() {
             onChangeText={setNewPassword}
             secureTextEntry
             autoComplete="new-password"
+            textContentType="newPassword"
             accessibilityLabel={t('change_password.new')}
             accessibilityHint={t('change_password.new')}
           />
@@ -130,6 +132,7 @@ export default function ChangePasswordScreen() {
             onChangeText={setConfirmPassword}
             secureTextEntry
             autoComplete="new-password"
+            textContentType="newPassword"
             accessibilityLabel={t('change_password.confirm')}
             accessibilityHint={t('change_password.confirm')}
           />

@@ -10,3 +10,7 @@ export async function getBiometricEnabled(): Promise<boolean> {
 export async function setBiometricEnabled(enabled: boolean): Promise<void> {
   await storage.setItem(KEY, String(enabled));
 }
+
+export async function clearBiometricPreference(): Promise<void> {
+  await storage.removeItem(KEY).catch(() => undefined);
+}

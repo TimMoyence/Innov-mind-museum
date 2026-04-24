@@ -602,6 +602,9 @@
       "phone": "Phone",
       "loading": "Loading information…",
       "unavailable": "Information unavailable",
+      "failed_title": "Could not load museum info",
+      "failed_retry": "Retry",
+      "additional_info_unavailable": "Additional info unavailable",
       "summary_heading": "About",
       "hours_heading": "Opening hours",
       "weekly_range": "{{start}}–{{end}} {{opens}}–{{closes}}",
@@ -769,7 +772,8 @@
       "skeleton_loading": "Loading museums",
       "list_view": "List view",
       "map_view": "Map view",
-      "results_count": "{{count}} museums found"
+      "results_count": "{{count}} museums found",
+      "map_empty": "No museums in this area"
     },
     "notFound": {
       "home": "Go to home screen"

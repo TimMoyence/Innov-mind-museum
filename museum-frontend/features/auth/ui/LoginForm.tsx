@@ -44,8 +44,7 @@ export function LoginForm({
         placeholder={t('auth.email')}
         value={email}
         onChangeText={onChangeEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
+        variant="email"
         testID="email-input"
         accessibilityLabel={t('a11y.auth.email_input')}
       />
@@ -55,7 +54,7 @@ export function LoginForm({
         placeholder={t('auth.password')}
         value={password}
         onChangeText={onChangePassword}
-        secureTextEntry
+        variant="password"
         testID="password-input"
         accessibilityLabel={t('a11y.auth.password_input')}
       />

@@ -3,8 +3,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { storage } from '@/shared/infrastructure/storage';
 import { fetchDailyArt, type DailyArtwork } from '../infrastructure/dailyArtApi';
 
-const SAVED_ARTWORKS_KEY = '@musaium/saved_artworks';
-const DISMISSED_KEY = '@musaium/daily_art_dismissed';
+export const SAVED_ARTWORKS_KEY = '@musaium/saved_artworks';
+export const DISMISSED_KEY = '@musaium/daily_art_dismissed';
 
 const todayKey = (): string => new Date().toISOString().slice(0, 10);
 

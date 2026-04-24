@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import { apiGet } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
+import { EmptyChartPlaceholder } from '@/components/admin/EmptyChartPlaceholder';
 import type {
   UsageAnalytics,
   ContentAnalytics,
@@ -65,6 +66,16 @@ function mergeUsageTimeSeries(usage: UsageAnalytics): UsageChartPoint[] {
   }
 
   return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * True when every numeric value in every row is zero. Recharts happily
+ * renders blank axes for this case, which looks broken to the admin — we
+ * want the same "no data" placeholder as for an empty array.
+ */
+function isAllZero<T>(data: readonly T[], numericKeys: readonly (keyof T)[]): boolean {
+  if (data.length === 0) return true;
+  return data.every((row) => numericKeys.every((k) => row[k] === 0));
 }
 
 // ── Component ────────────────────────────────────────────────────────────
@@ -118,8 +129,10 @@ export default function AnalyticsPage() {
     }
 
     void fetchAll();
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only effect
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only effect
   }, []);
 
   // ── Re-fetch only usage when filters change ──────────────────────────
@@ -143,21 +156,20 @@ export default function AnalyticsPage() {
       return;
     }
     void fetchUsage();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- useCallback-wrapped fetch is stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- useCallback-wrapped fetch is stable
   }, [fetchUsage]);
 
   // ── Derived data ──────────────────────────────────────────────────────
 
   const chartData = usage ? mergeUsageTimeSeries(usage) : [];
+  const usageChartIsEmpty = isAllZero(chartData, ['sessions', 'messages', 'activeUsers']);
 
   // ── Render ────────────────────────────────────────────────────────────
 
   return (
     <div>
       <h1 className="text-2xl font-bold text-text-primary">{adminDict.analytics}</h1>
-      <p className="mt-1 text-text-secondary">
-        {adminDict.analyticsPage.subtitle}
-      </p>
+      <p className="mt-1 text-text-secondary">{adminDict.analyticsPage.subtitle}</p>
 
       {/* Loading */}
       {loading && (
@@ -168,9 +180,7 @@ export default function AnalyticsPage() {
 
       {/* Error */}
       {error && (
-        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
+        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
       {/* ── KPI Cards ────────────────────────────────────────────────────── */}
@@ -234,7 +244,9 @@ export default function AnalyticsPage() {
             <div className="flex gap-3">
               <select
                 value={granularity}
-                onChange={(e) => { setGranularity(e.target.value as AnalyticsGranularity); }}
+                onChange={(e) => {
+                  setGranularity(e.target.value as AnalyticsGranularity);
+                }}
                 className="rounded-lg border border-primary-200 bg-white px-3 py-1.5 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
               >
                 {GRANULARITY_OPTIONS.map((g) => (
@@ -246,7 +258,9 @@ export default function AnalyticsPage() {
 
               <select
                 value={days}
-                onChange={(e) => { setDays(Number(e.target.value)); }}
+                onChange={(e) => {
+                  setDays(Number(e.target.value));
+                }}
                 className="rounded-lg border border-primary-200 bg-white px-3 py-1.5 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
               >
                 {DAYS_OPTIONS.map((d) => (
@@ -259,39 +273,43 @@ export default function AnalyticsPage() {
           </div>
 
           <div className="mt-6">
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="sessions"
-                  name={adminDict.analyticsPage.sessions}
-                  stroke="var(--sem-chart-primary)"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="messages"
-                  name={adminDict.analyticsPage.messagesSent}
-                  stroke="var(--sem-chart-secondary)"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="activeUsers"
-                  name={adminDict.analyticsPage.activeUsers}
-                  stroke="var(--sem-chart-tertiary)"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {usageChartIsEmpty ? (
+              <EmptyChartPlaceholder label={adminDict.common.noData} />
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="sessions"
+                    name={adminDict.analyticsPage.sessions}
+                    stroke="var(--sem-chart-primary)"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="messages"
+                    name={adminDict.analyticsPage.messagesSent}
+                    stroke="var(--sem-chart-secondary)"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="activeUsers"
+                    name={adminDict.analyticsPage.activeUsers}
+                    stroke="var(--sem-chart-tertiary)"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       )}
@@ -317,21 +335,14 @@ export default function AnalyticsPage() {
                   >
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" tick={{ fontSize: 12 }} />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      width={130}
-                      tick={{ fontSize: 11 }}
-                    />
+                    <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 11 }} />
                     <Tooltip />
                     <Bar dataKey="count" fill="var(--sem-chart-quaternary)" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p className="mt-4 text-sm text-text-muted">
-                {adminDict.common.noData}
-              </p>
+              <EmptyChartPlaceholder label={adminDict.common.noData} />
             )}
           </div>
 
@@ -367,9 +378,7 @@ export default function AnalyticsPage() {
                 </table>
               </div>
             ) : (
-              <p className="mt-4 text-sm text-text-muted">
-                {adminDict.common.noData}
-              </p>
+              <EmptyChartPlaceholder label={adminDict.common.noData} />
             )}
 
             {/* Guardrail Block Rate */}

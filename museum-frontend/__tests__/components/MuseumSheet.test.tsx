@@ -206,10 +206,37 @@ describe('MuseumSheet', () => {
       expect(screen.queryByText('museumDirectory.enrichment.unavailable')).toBeNull();
     });
 
-    it('shows the discreet "unavailable" placeholder when enrichment fails and there is no rich content', () => {
+    it('shows the error banner with retry when enrichment fails and there is no rich content', () => {
       setEnrichmentResult('error', null);
       render(<MuseumSheet museum={makeMuseum()} {...baseProps} />);
-      expect(screen.getByText('museumDirectory.enrichment.unavailable')).toBeTruthy();
+      // Failed title surfaces as the banner message.
+      expect(screen.getByText('museumDirectory.enrichment.failed_title')).toBeTruthy();
+      // ErrorNotice retry button uses the shared errorNotice.retry a11y label.
+      expect(screen.getByLabelText('errorNotice.retry')).toBeTruthy();
+    });
+
+    it('invokes the hook refresh() when the error-banner retry button is pressed', () => {
+      const refresh = jest.fn();
+      mockUseMuseumEnrichment.mockReturnValue({
+        data: null,
+        status: 'error',
+        refresh,
+      });
+      render(<MuseumSheet museum={makeMuseum()} {...baseProps} />);
+      fireEvent.press(screen.getByLabelText('errorNotice.retry'));
+      expect(refresh).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the "additional info unavailable" note when ready with null enrichment', () => {
+      setEnrichmentResult('ready', null);
+      const museum = makeMuseum({ name: 'Stub Museum', description: null });
+      render(<MuseumSheet museum={museum} {...baseProps} />);
+      // Base info (name) still visible.
+      expect(screen.getByText('Stub Museum')).toBeTruthy();
+      // New placeholder specific to the ready-but-empty case.
+      expect(
+        screen.getByText('museumDirectory.enrichment.additional_info_unavailable'),
+      ).toBeTruthy();
     });
   });
 });

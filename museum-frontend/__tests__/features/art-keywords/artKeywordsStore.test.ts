@@ -20,7 +20,11 @@ const makeKeyword = (overrides: Partial<ArtKeywordDTO> = {}): ArtKeywordDTO => (
 
 describe('artKeywordsStore', () => {
   beforeEach(() => {
-    useArtKeywordsStore.setState({ keywordsByLocale: {}, lastSyncedAt: {} });
+    useArtKeywordsStore.setState({
+      keywordsByLocale: {},
+      lastSyncedAt: {},
+      failuresByLocale: {},
+    });
   });
 
   it('starts with empty state', () => {
@@ -60,5 +64,42 @@ describe('artKeywordsStore', () => {
 
     expect(useArtKeywordsStore.getState().getKeywords('fr')).toHaveLength(1);
     expect(useArtKeywordsStore.getState().getKeywords('en')).toHaveLength(1);
+  });
+
+  it('records sync failures and increments the attempt counter', () => {
+    const t1 = '2026-04-04T10:00:00Z';
+    const t2 = '2026-04-04T10:05:00Z';
+
+    useArtKeywordsStore.getState().recordSyncFailure('fr', t1);
+    expect(useArtKeywordsStore.getState().getSyncFailure('fr')).toEqual({
+      lastFailedAt: t1,
+      attempts: 1,
+    });
+
+    useArtKeywordsStore.getState().recordSyncFailure('fr', t2);
+    expect(useArtKeywordsStore.getState().getSyncFailure('fr')).toEqual({
+      lastFailedAt: t2,
+      attempts: 2,
+    });
+  });
+
+  it('clearSyncFailure removes the failure entry', () => {
+    useArtKeywordsStore.getState().recordSyncFailure('fr', '2026-04-04T10:00:00Z');
+    expect(useArtKeywordsStore.getState().getSyncFailure('fr')).toBeDefined();
+
+    useArtKeywordsStore.getState().clearSyncFailure('fr');
+    expect(useArtKeywordsStore.getState().getSyncFailure('fr')).toBeUndefined();
+  });
+
+  it('a successful mergeKeywords clears the failure counter', () => {
+    useArtKeywordsStore.getState().recordSyncFailure('fr', '2026-04-04T10:00:00Z');
+    useArtKeywordsStore.getState().recordSyncFailure('fr', '2026-04-04T10:05:00Z');
+    expect(useArtKeywordsStore.getState().getSyncFailure('fr')?.attempts).toBe(2);
+
+    useArtKeywordsStore
+      .getState()
+      .mergeKeywords('fr', [makeKeyword({ id: 'kw-ok', locale: 'fr' })], '2026-04-04T10:10:00Z');
+
+    expect(useArtKeywordsStore.getState().getSyncFailure('fr')).toBeUndefined();
   });
 });

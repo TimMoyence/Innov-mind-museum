@@ -735,7 +735,8 @@
       "skeleton_loading": "正在加载博物馆",
       "list_view": "列表视图",
       "map_view": "地图视图",
-      "results_count": "找到 {{count}} 家博物馆"
+      "results_count": "找到 {{count}} 家博物馆",
+      "map_empty": "该区域没有博物馆"
     },
     "notFound": {
       "home": "前往主页"

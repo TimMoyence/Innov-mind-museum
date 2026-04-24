@@ -735,7 +735,8 @@
       "skeleton_loading": "جارٍ تحميل المتاحف",
       "list_view": "عرض القائمة",
       "map_view": "عرض الخريطة",
-      "results_count": "تم العثور على {{count}} متاحف"
+      "results_count": "تم العثور على {{count}} متاحف",
+      "map_empty": "لا توجد متاحف في هذه المنطقة"
     },
     "notFound": {
       "home": "الذهاب إلى الشاشة الرئيسية"

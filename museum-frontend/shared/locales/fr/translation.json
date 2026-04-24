@@ -602,6 +602,9 @@
       "phone": "Téléphone",
       "loading": "Chargement des informations…",
       "unavailable": "Informations non disponibles",
+      "failed_title": "Impossible de charger les informations",
+      "failed_retry": "Réessayer",
+      "additional_info_unavailable": "Plus d'infos indisponibles",
       "summary_heading": "À propos",
       "hours_heading": "Horaires",
       "weekly_range": "{{start}}–{{end}} {{opens}}–{{closes}}",
@@ -769,7 +772,8 @@
       "skeleton_loading": "Chargement des musées",
       "list_view": "Vue liste",
       "map_view": "Vue carte",
-      "results_count": "{{count}} musées trouvés"
+      "results_count": "{{count}} musées trouvés",
+      "map_empty": "Aucun musée dans cette zone"
     },
     "notFound": {
       "home": "Aller à l'écran d'accueil"

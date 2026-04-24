@@ -36,6 +36,7 @@ interface ChatLocalCacheStore {
   store: (entry: CachedAnswer) => void;
   bulkStore: (entries: CachedAnswer[]) => void;
   clearMuseum: (museumId: string) => void;
+  clearAll: () => Promise<void>;
   pruneExpired: () => void;
 }
 
@@ -123,6 +124,22 @@ export const useChatLocalCacheStore = create<ChatLocalCacheStore>()(
           }
           return { entries: filtered };
         });
+      },
+
+      clearAll: async (): Promise<void> => {
+        // In-memory wipe first so a disk failure below still leaves a clean
+        // cache in this runtime. Persistence errors are swallowed — disk
+        // writes are best-effort; tests exercise the crash path by mocking
+        // the whole clearAll to reject.
+        set({ entries: {} });
+        try {
+          useChatLocalCacheStore.persist.clearStorage();
+        } catch {
+          // swallow
+        }
+        // Async signature preserved so callers (AuthContext Promise.allSettled)
+        // can treat this uniformly alongside the other cleanup fns.
+        return Promise.resolve();
       },
 
       pruneExpired: (): void => {

@@ -735,7 +735,8 @@
       "skeleton_loading": "Cargando museos",
       "list_view": "Vista de lista",
       "map_view": "Vista de mapa",
-      "results_count": "{{count}} museos encontrados"
+      "results_count": "{{count}} museos encontrados",
+      "map_empty": "No hay museos en esta zona"
     },
     "notFound": {
       "home": "Ir a la pantalla de inicio"

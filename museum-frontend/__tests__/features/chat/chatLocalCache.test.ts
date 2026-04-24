@@ -1,5 +1,3 @@
- 
-
 // ── AsyncStorage mock ───────────────────────────────────────────────────────
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(),
@@ -218,6 +216,41 @@ describe('chatLocalCache store', () => {
       useChatLocalCacheStore.getState().clearMuseum('met');
 
       expect(Object.keys(useChatLocalCacheStore.getState().entries)).toHaveLength(1);
+    });
+  });
+
+  describe('clearAll', () => {
+    it('wipes all entries and clears persisted storage', async () => {
+      useChatLocalCacheStore.getState().store(makeCachedAnswer({ question: 'Q1' }));
+      useChatLocalCacheStore.getState().store(makeCachedAnswer({ question: 'Q2' }));
+      expect(Object.keys(useChatLocalCacheStore.getState().entries)).toHaveLength(2);
+
+      const clearStorageSpy = jest
+        .spyOn(useChatLocalCacheStore.persist, 'clearStorage')
+        .mockReturnValue(undefined);
+
+      await useChatLocalCacheStore.getState().clearAll();
+
+      expect(Object.keys(useChatLocalCacheStore.getState().entries)).toHaveLength(0);
+      expect(clearStorageSpy).toHaveBeenCalledTimes(1);
+
+      clearStorageSpy.mockRestore();
+    });
+
+    it('still wipes in-memory entries when persist.clearStorage throws', async () => {
+      useChatLocalCacheStore.getState().store(makeCachedAnswer({ question: 'Q1' }));
+      expect(Object.keys(useChatLocalCacheStore.getState().entries)).toHaveLength(1);
+
+      const clearStorageSpy = jest
+        .spyOn(useChatLocalCacheStore.persist, 'clearStorage')
+        .mockImplementation(() => {
+          throw new Error('io failure');
+        });
+
+      await expect(useChatLocalCacheStore.getState().clearAll()).resolves.toBeUndefined();
+      expect(Object.keys(useChatLocalCacheStore.getState().entries)).toHaveLength(0);
+
+      clearStorageSpy.mockRestore();
     });
   });
 

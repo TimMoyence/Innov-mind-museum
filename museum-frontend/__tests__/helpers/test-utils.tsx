@@ -189,9 +189,23 @@ jest.mock('@/shared/ui/SkeletonConversationCard', () => {
 
 // ── ErrorNotice ──────────────────────────────────────────────────────────────
 jest.mock('@/shared/ui/ErrorNotice', () => {
-  const { Text } = require('react-native');
+  const { Pressable, Text, View } = require('react-native');
   return {
-    ErrorNotice: ({ message }: { message: string }) => <Text testID="error-notice">{message}</Text>,
+    ErrorNotice: ({ message, onRetry }: { message: string; onRetry?: () => void }) => (
+      <View testID="error-notice">
+        <Text>{message}</Text>
+        {onRetry ? (
+          <Pressable
+            onPress={onRetry}
+            accessibilityRole="button"
+            accessibilityLabel="errorNotice.retry"
+            testID="error-notice-retry"
+          >
+            <Text>errorNotice.retry</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    ),
   };
 });
 

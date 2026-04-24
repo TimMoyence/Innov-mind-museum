@@ -735,7 +735,8 @@
       "skeleton_loading": "Museen werden geladen",
       "list_view": "Listenansicht",
       "map_view": "Kartenansicht",
-      "results_count": "{{count}} Museen gefunden"
+      "results_count": "{{count}} Museen gefunden",
+      "map_empty": "Keine Museen in diesem Gebiet"
     },
     "notFound": {
       "home": "Zum Startbildschirm gehen"

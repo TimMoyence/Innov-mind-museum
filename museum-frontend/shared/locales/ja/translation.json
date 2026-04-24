@@ -735,7 +735,8 @@
       "skeleton_loading": "ミュージアムを読み込み中",
       "list_view": "リスト表示",
       "map_view": "マップ表示",
-      "results_count": "{{count}}件のミュージアムが見つかりました"
+      "results_count": "{{count}}件のミュージアムが見つかりました",
+      "map_empty": "このエリアにミュージアムはありません"
     },
     "notFound": {
       "home": "ホーム画面に移動"

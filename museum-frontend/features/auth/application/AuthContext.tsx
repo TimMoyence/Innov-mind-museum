@@ -12,8 +12,13 @@ import {
   getAccessToken,
   authStorage,
 } from '@/features/auth/infrastructure/authTokenStore';
-import { getBiometricEnabled } from '@/features/auth/infrastructure/biometricStore';
+import {
+  clearBiometricPreference,
+  getBiometricEnabled,
+} from '@/features/auth/infrastructure/biometricStore';
 import { AUTH_ROUTE } from '@/features/auth/routes';
+import { useChatLocalCacheStore } from '@/features/chat/application/chatLocalCache';
+import { clearDailyArtStorage } from '@/features/daily-art/application/logoutCleanup';
 import { reportError } from '@/shared/observability/errorReporting';
 import {
   setAuthRefreshHandler,
@@ -94,6 +99,19 @@ const clearPersistedTokens = async (): Promise<void> => {
   await authStorage.clearRefreshToken().catch(() => undefined);
   await authStorage.clearPersistedAccessToken().catch(() => undefined);
   clearAccessToken();
+};
+
+const clearPerUserFeatureStorage = async (): Promise<void> => {
+  const results = await Promise.allSettled([
+    useChatLocalCacheStore.getState().clearAll(),
+    clearDailyArtStorage(),
+    clearBiometricPreference(),
+  ]);
+  for (const outcome of results) {
+    if (outcome.status === 'rejected') {
+      reportError(outcome.reason, { context: 'auth_logout_feature_cleanup' });
+    }
+  }
 };
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
@@ -258,6 +276,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUnauthorizedHandler(() => {
       void clearPersistedTokens();
       void resetPersistedCache();
+      void clearPerUserFeatureStorage();
       setIsAuthenticated(false);
       setIsFirstLaunch(null);
       Sentry.setUser(null);
@@ -285,6 +304,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     await resetPersistedCache();
+    await clearPerUserFeatureStorage();
     setIsAuthenticated(false);
     setIsFirstLaunch(null);
     Sentry.setUser(null);

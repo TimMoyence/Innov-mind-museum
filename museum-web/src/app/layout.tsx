@@ -14,9 +14,7 @@ export const metadata: Metadata = {
     template: '%s | Musaium',
     default: 'Musaium',
   },
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://musaium.com',
-  ),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://musaium.com'),
   icons: {
     icon: [
       { url: '/images/favicon-32.png', sizes: '32x32', type: 'image/png' },
@@ -26,19 +24,18 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const headersList = await headers();
   const locale = headersList.get('x-locale') ?? 'fr';
+  // Nonce generated in src/middleware.ts and threaded through the request
+  // headers so any <Script> tag rendered in this tree (including Sentry's
+  // auto-injected client bundle) can opt into the nonce-based CSP.
+  const nonce = headersList.get('x-nonce') ?? undefined;
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
-        {children}
-      </body>
+      <head>{nonce ? <meta property="csp-nonce" content={nonce} /> : null}</head>
+      <body className={`${inter.variable} font-sans antialiased`}>{children}</body>
     </html>
   );
 }

@@ -260,6 +260,70 @@ describe('AnalyticsPage', () => {
     expect(noDataTexts.length).toBe(2);
   });
 
+  it('shows the empty placeholder in place of the usage chart when series are empty', async () => {
+    const emptyUsage: UsageAnalytics = {
+      period: { from: '2025-05-01', to: '2025-05-30' },
+      granularity: 'daily',
+      sessionsCreated: [],
+      messagesSent: [],
+      activeUsers: [],
+    };
+    mockApiGet
+      .mockResolvedValueOnce(emptyUsage)
+      .mockResolvedValueOnce(mockContent)
+      .mockResolvedValueOnce(mockEngagement);
+
+    render(
+      <Providers>
+        <AnalyticsPage />
+      </Providers>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Usage')).toBeInTheDocument();
+    });
+
+    // Line chart is NOT rendered; the a11y-enabled placeholder is.
+    expect(screen.queryByTestId('line-chart')).not.toBeInTheDocument();
+    const placeholders = screen.getAllByRole('status', { name: 'No data' });
+    expect(placeholders.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('treats an all-zero usage series as empty and renders the placeholder', async () => {
+    const zeroUsage: UsageAnalytics = {
+      period: { from: '2025-05-01', to: '2025-05-30' },
+      granularity: 'daily',
+      sessionsCreated: [
+        { date: '2025-05-01', count: 0 },
+        { date: '2025-05-02', count: 0 },
+      ],
+      messagesSent: [
+        { date: '2025-05-01', count: 0 },
+        { date: '2025-05-02', count: 0 },
+      ],
+      activeUsers: [
+        { date: '2025-05-01', count: 0 },
+        { date: '2025-05-02', count: 0 },
+      ],
+    };
+    mockApiGet
+      .mockResolvedValueOnce(zeroUsage)
+      .mockResolvedValueOnce(mockContent)
+      .mockResolvedValueOnce(mockEngagement);
+
+    render(
+      <Providers>
+        <AnalyticsPage />
+      </Providers>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Usage')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('line-chart')).not.toBeInTheDocument();
+  });
+
   it('hides loading spinner after data loads', async () => {
     mockAllApiCalls();
 
