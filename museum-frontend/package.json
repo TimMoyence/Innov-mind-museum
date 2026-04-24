@@ -147,7 +147,8 @@
   "overrides": {
     "markdown-it": ">=14.0.0",
     "follow-redirects": ">=1.15.12",
-    "@tootallnate/once": ">=2.0.1"
+    "@tootallnate/once": ">=2.0.1",
+    "@xmldom/xmldom": ">=0.8.13"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
