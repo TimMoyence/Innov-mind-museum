@@ -37,6 +37,7 @@
     "purge:tokens": "ts-node -r tsconfig-paths/register scripts/purge-expired-tokens.ts",
     "seed:museums": "ts-node -r tsconfig-paths/register scripts/seed-museums.ts",
     "seed:knowledge": "ts-node -r tsconfig-paths/register scripts/seed-knowledge.ts",
+    "seed:smoke-account": "ts-node -r tsconfig-paths/register scripts/seed-smoke-account.ts",
     "mutation": "stryker run",
     "mutation:ci": "stryker run --incremental --concurrency 2"
   },
