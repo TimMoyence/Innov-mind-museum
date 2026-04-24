@@ -1,0 +1,99 @@
+# Gitleaks configuration — Musaium
+#
+# Scope:
+#   - Pre-commit (.husky/pre-commit) runs `gitleaks protect --staged` with this config.
+#   - CI can wire the same config for full-history scans via `gitleaks detect`.
+#
+# Strategy:
+#   1. Inherit the upstream default ruleset (covers ~160 secret patterns
+#      — AWS, GCP, Stripe, Slack, Twilio, JWT, generic API keys, etc.).
+#   2. Add Musaium-specific rules for provider tokens that appear in .env.local.example.
+#   3. Allowlist known-safe example tokens + fixture files that intentionally
+#      embed fake credentials (test vectors).
+#
+# Ruleset: https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml
+
+# Extend the upstream default gitleaks ruleset.
+# (Path is resolved by gitleaks: it pulls the embedded default config first,
+# then overlays our [[rules]] / [allowlist] entries.)
+[extend]
+useDefault = true
+
+# ── Repo-specific rules ──────────────────────────────────────────────────────
+# The defaults already catch generic "openai" / "google" keys via the
+# "generic-api-key" rule, but these strict patterns give cleaner reports
+# and reduce false positives for specific providers we use heavily.
+
+[[rules]]
+id = "musaium-openai-api-key"
+description = "OpenAI API key (sk-…)"
+regex = '''\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b'''
+keywords = ["sk-"]
+tags = ["openai", "key"]
+
+[[rules]]
+id = "musaium-google-api-key"
+description = "Google API key (AIza…)"
+regex = '''\bAIza[0-9A-Za-z\-_]{35}\b'''
+keywords = ["AIza"]
+tags = ["google", "key"]
+
+[[rules]]
+id = "musaium-github-pat"
+description = "GitHub personal access token (ghp_…)"
+regex = '''\bghp_[A-Za-z0-9]{36}\b'''
+keywords = ["ghp_"]
+tags = ["github", "pat"]
+
+[[rules]]
+id = "musaium-github-oauth"
+description = "GitHub OAuth access token (gho_…)"
+regex = '''\bgho_[A-Za-z0-9]{36}\b'''
+keywords = ["gho_"]
+tags = ["github", "oauth"]
+
+[[rules]]
+id = "musaium-sentry-user-token"
+description = "Sentry user auth token (sntryu_…)"
+regex = '''\bsntryu_[a-f0-9]{64}\b'''
+keywords = ["sntryu_"]
+tags = ["sentry"]
+
+[[rules]]
+id = "musaium-deepseek-api-key"
+description = "DeepSeek API key"
+regex = '''\bsk-[A-Fa-f0-9]{32,}\b'''
+keywords = ["DEEPSEEK_API_KEY", "sk-"]
+tags = ["deepseek", "key"]
+
+# ── Allowlist ────────────────────────────────────────────────────────────────
+# Keep this tight. Anything added here is a signed commitment that the
+# file / pattern never contains real secrets.
+
+[allowlist]
+description = "Known-safe example tokens + test fixtures"
+paths = [
+  # Env templates (checked in, *.example only — real .env is gitignored).
+  '''(^|/)\.env(\..*)?\.example$''',
+  '''(^|/)\.env\.local\.example$''',
+  # Documentation that intentionally cites placeholder tokens.
+  '''^docs/.*\.md$''',
+  # Test fixtures that may contain synthetic tokens for guardrail tests.
+  '''tests/fixtures/''',
+  '''__fixtures__/''',
+  '''__tests__/fixtures/''',
+  # PG advisory-lock bigint constants (hex literals matched by generic-api-key
+  # rule); these are integer lock keys, not credentials.
+  '''museum-backend/src/shared/audit/audit\.repository\.pg\.ts$''',
+]
+# Placeholder tokens used in docs / examples / tests. These must never
+# resemble real credentials; add a comment explaining each addition.
+regexes = [
+  # Example OpenAI token in README / .env.example.
+  '''sk-REPLACE_ME''',
+  '''sk-xxxxx+''',
+  # JWT "example" payload in API docs.
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\..{0,}example.{0,}''',
+  # PG advisory-lock constants — integer lock keys, not API keys.
+  '''AUDIT_CHAIN_LOCK_KEY''',
+]

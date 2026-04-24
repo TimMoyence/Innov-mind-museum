@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 import { badRequest } from '@shared/errors/app.error';
 
 import type { IUserRepository } from '../domain/user.repository.interface';
@@ -8,11 +10,15 @@ export class VerifyEmailUseCase {
 
   /** Consumes a verification token and marks the associated email as verified. */
   async execute(token: string): Promise<{ verified: true }> {
-    if (!token.trim()) {
+    const trimmed = token.trim();
+    if (!trimmed) {
       throw badRequest('Verification token is required');
     }
 
-    const user = await this.userRepository.verifyEmail(token.trim());
+    // SEC (H2): hash the raw token before lookup — DB only stores the SHA-256 digest.
+    const hashedToken = crypto.createHash('sha256').update(trimmed).digest('hex');
+
+    const user = await this.userRepository.verifyEmail(hashedToken);
     if (!user) {
       throw badRequest('Invalid or expired verification token');
     }

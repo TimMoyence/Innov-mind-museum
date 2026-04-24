@@ -43,7 +43,11 @@ volumes:
 
 services:
   backend:
-    image: ghcr.io/timmoyence/museum-backend:latest
+    # IMAGE_TAG is set by CI to the commit SHA for deterministic deploys.
+    # REQUIRED: no :latest fallback — operators must export IMAGE_TAG before
+    # `docker compose up`, otherwise compose refuses to start. Prevents silent
+    # drift to a mutable `:latest` tag. See docs/OPS_DEPLOYMENT.md § Immutable image tags.
+    image: ghcr.io/timmoyence/museum-backend:${IMAGE_TAG:?IMAGE_TAG required — use commit SHA from CI}
     hostname: backend
     env_file:
       - .env
@@ -85,7 +89,9 @@ services:
   # To disable: set GUARDRAILS_V2_CANDIDATE=off in .env and restart backend
   # (backend will use noopAdvancedGuardrail; this service still runs but is idle).
   llm-guard:
-    image: ghcr.io/timmoyence/museum-llm-guard:latest
+    # LLM_GUARD_IMAGE_TAG is set by CI to the commit SHA for deterministic deploys.
+    # REQUIRED: no :latest fallback (see backend service above).
+    image: ghcr.io/timmoyence/museum-llm-guard:${LLM_GUARD_IMAGE_TAG:?LLM_GUARD_IMAGE_TAG required — use commit SHA from CI}
     hostname: llm-guard
     environment:
       - LOG_LEVEL=INFO
@@ -110,6 +116,9 @@ services:
     restart: unless-stopped
 
   pgbouncer:
+    # TODO(infra): pin by digest `edoburu/pgbouncer@sha256:...` for supply-chain hardening.
+    # Follow-up to the 2026-04-24 IMAGE_TAG hardening — same rationale, but requires
+    # a live docker pull to resolve the digest; deferred to avoid blocking this change.
     image: edoburu/pgbouncer:v1.24.1-p1
     hostname: pgbouncer
     depends_on:
@@ -132,7 +141,9 @@ services:
     restart: unless-stopped
 
   museum-web:
-    image: ghcr.io/timmoyence/museum-web:latest
+    # WEB_IMAGE_TAG is set by CI to the commit SHA for deterministic deploys.
+    # REQUIRED: no :latest fallback (see backend service above).
+    image: ghcr.io/timmoyence/museum-web:${WEB_IMAGE_TAG:?WEB_IMAGE_TAG required — use commit SHA from CI}
     hostname: museum-web
     environment:
       - NODE_ENV=production
@@ -160,6 +171,7 @@ services:
       retries: 3
 
   db:
+    # TODO(infra): pin by digest `postgres@sha256:...` — see pgbouncer TODO above.
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -178,6 +190,7 @@ services:
     restart: unless-stopped
 
   redis:
+    # TODO(infra): pin by digest `redis@sha256:...` — see pgbouncer TODO above.
     image: redis:7-alpine
     command:
       - 'redis-server'

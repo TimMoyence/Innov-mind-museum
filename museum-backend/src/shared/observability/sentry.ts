@@ -1,6 +1,12 @@
 import * as Sentry from '@sentry/node';
 
 import { logger } from '@shared/logger/logger';
+import {
+  scrubEvent,
+  shouldDropBreadcrumb,
+  type ScrubbableBreadcrumb,
+  type ScrubbableEvent,
+} from '@shared/observability/sentry-scrubber';
 import { env } from '@src/config/env';
 
 import type { Span } from '@sentry/node';
@@ -33,6 +39,10 @@ export const initSentry = (): void => {
     tracesSampleRate: env.sentry.tracesSampleRate,
     profilesSampleRate: env.sentry.profilesSampleRate,
     integrations: [...Sentry.getDefaultIntegrations({})],
+    sendDefaultPii: false,
+    beforeSend: (event) => scrubEvent(event as unknown as ScrubbableEvent) as typeof event,
+    beforeBreadcrumb: (breadcrumb) =>
+      shouldDropBreadcrumb(breadcrumb as ScrubbableBreadcrumb) ? null : breadcrumb,
   });
 
   initialized = true;

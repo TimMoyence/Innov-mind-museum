@@ -28,9 +28,11 @@ describe('geocodeWithNominatim', () => {
     expect(calledUrl).toContain('format=json');
     expect(calledUrl).toContain('limit=1');
 
-    // Verify User-Agent header
+    // Verify User-Agent header matches the OSMF-compliant format:
+    //   Musaium/<version> (contact: <email>)
     const calledOptions = fetchSpy.mock.calls[0][1] as RequestInit;
-    expect((calledOptions.headers as Record<string, string>)['User-Agent']).toBe('Musaium/1.0');
+    const ua = (calledOptions.headers as Record<string, string>)['User-Agent'];
+    expect(ua).toMatch(/^Musaium\/\S+ \(contact: \S+\)$/);
   });
 
   it('returns null for an empty response array', async () => {

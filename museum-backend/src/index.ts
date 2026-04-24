@@ -2,21 +2,29 @@ import './instrumentation';
 import 'reflect-metadata';
 import util from 'node:util';
 
+import { Queue } from 'bullmq';
 import Redis from 'ioredis';
 
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/refresh-token.repository.pg';
 import { TokenCleanupService } from '@modules/auth/useCase/tokenCleanup.service';
 import { getOcrService, stopArtKeywordsRefresh, stopKnowledgeExtraction } from '@modules/chat';
 import {
+  registerChatPurgeCron,
+  type ChatPurgeCronHandle,
+} from '@modules/chat/jobs/chat-purge-cron.registrar';
+import {
+  buildPurgeDeadEnrichmentsUseCase,
   buildRefreshStaleEnrichmentsUseCase,
   createBullmqEnrichmentScheduler,
 } from '@modules/museum';
 import { BullmqMuseumEnrichmentQueueAdapter } from '@modules/museum/adapters/secondary/bullmq-museum-enrichment-queue.adapter';
+import { registerAuditCron, type AuditCronHandle } from '@shared/audit/audit-cron.registrar';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
 import { logger } from '@shared/logger/logger';
 import { shutdownOpenTelemetry } from '@shared/observability/opentelemetry';
 import { initSentry } from '@shared/observability/sentry';
+import { assertDeploymentInvariants } from '@src/config/deployment-invariants';
 import { env } from '@src/config/env';
 import { AppDataSource, startPoolMonitor } from '@src/data/db/data-source';
 import { setDailyChatLimitCacheService } from '@src/helpers/middleware/daily-chat-limit.middleware';
@@ -97,15 +105,21 @@ async function startEnrichmentScheduler(): Promise<EnrichmentSchedulerPort | und
       enableOfflineQueue: false,
     });
     const useCase = buildRefreshStaleEnrichmentsUseCase(queue);
-    const scheduler = createBullmqEnrichmentScheduler(useCase, {
-      connection: {
-        host: env.redis.host,
-        port: env.redis.port,
-        password: env.redis.password,
-        maxRetriesPerRequest: null,
-        enableOfflineQueue: false,
+    const purgeUseCase = buildPurgeDeadEnrichmentsUseCase();
+    const scheduler = createBullmqEnrichmentScheduler(
+      useCase,
+      {
+        connection: {
+          host: env.redis.host,
+          port: env.redis.port,
+          password: env.redis.password,
+          maxRetriesPerRequest: null,
+          enableOfflineQueue: false,
+        },
       },
-    });
+      purgeUseCase,
+      env.enrichment.hardDeleteAfterDays,
+    );
     await scheduler.start();
     return scheduler;
   } catch (err) {
@@ -113,6 +127,40 @@ async function startEnrichmentScheduler(): Promise<EnrichmentSchedulerPort | und
       error: err instanceof Error ? err.message : String(err),
     });
     return undefined;
+  }
+}
+
+/** BullMQ queue name used exclusively by the audit IP anonymization cron. */
+const AUDIT_CRON_QUEUE_NAME = 'audit-cron';
+
+/**
+ * Boots the daily audit IP anonymization scheduler on a dedicated queue.
+ * Fail-open: any error (missing Redis, BullMQ init failure) is logged and
+ * the server proceeds without the cron.
+ */
+async function startAuditCron(): Promise<{
+  handle: AuditCronHandle | undefined;
+  queue: Queue | undefined;
+}> {
+  try {
+    const connection = {
+      host: env.redis.host,
+      port: env.redis.port,
+      password: env.redis.password,
+      maxRetriesPerRequest: null,
+      enableOfflineQueue: false,
+    } as const;
+    const queue = new Queue(AUDIT_CRON_QUEUE_NAME, {
+      connection,
+      defaultJobOptions: { removeOnComplete: 50, removeOnFail: 100 },
+    });
+    const handle = await registerAuditCron(queue, AppDataSource, { connection });
+    return { handle, queue };
+  } catch (err) {
+    logger.warn('audit_cron_boot_skipped', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return { handle: undefined, queue: undefined };
   }
 }
 
@@ -124,12 +172,80 @@ interface ShutdownResources {
   cacheService: CacheService;
   poolMonitor: NodeJS.Timeout;
   enrichmentScheduler: EnrichmentSchedulerPort | undefined;
+  auditCron: AuditCronHandle | undefined;
+  auditCronQueue: Queue | undefined;
+  chatPurgeCron: ChatPurgeCronHandle | undefined;
+}
+
+/** Runs an async teardown step, logging any error under the given key without rethrowing. */
+async function safeTeardown(
+  label: string,
+  step: () => Promise<void> | void | undefined,
+): Promise<void> {
+  try {
+    await step();
+  } catch (err) {
+    logger.warn(label, {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+/** Stops all synchronous schedulers and the dedicated in-process sweeps. */
+function stopSynchronousSchedulers(
+  tokenCleanup: TokenCleanupService,
+  poolMonitor: NodeJS.Timeout,
+): void {
+  tokenCleanup.stopScheduler();
+  clearInterval(poolMonitor);
+  stopRateLimitSweep();
+  stopArtKeywordsRefresh();
+}
+
+/** Stops all BullMQ crons + queues + OpenTelemetry + caches, logging each failure independently. */
+async function drainAsyncResources(resources: ShutdownResources): Promise<void> {
+  const { enrichmentScheduler, auditCron, auditCronQueue, chatPurgeCron, cacheService } = resources;
+
+  await safeTeardown('knowledge_extraction_shutdown_error', () => stopKnowledgeExtraction());
+  if (enrichmentScheduler) {
+    await safeTeardown('enrichment_scheduler_shutdown_error', () => enrichmentScheduler.stop());
+  }
+  if (auditCron) {
+    await safeTeardown('audit_cron_shutdown_error', () => auditCron.stop());
+  }
+  if (auditCronQueue) {
+    await safeTeardown('audit_cron_queue_close_failed', () => auditCronQueue.close());
+  }
+  if (chatPurgeCron) {
+    await safeTeardown('chat_purge_cron_shutdown_error', () => chatPurgeCron.stop());
+  }
+  await shutdownOpenTelemetry();
+  const ocr = getOcrService();
+  if (ocr.destroy) await ocr.destroy();
+  if (cacheService.destroy) await cacheService.destroy();
+}
+
+/** Closes DB + Redis after in-flight HTTP requests drained, then exits with code 0. */
+async function finalizeShutdown(redisClient: Redis | undefined): Promise<void> {
+  try {
+    if (AppDataSource.isInitialized) {
+      await AppDataSource.destroy();
+      logger.info('database_closed');
+    }
+  } finally {
+    if (redisClient) {
+      await safeTeardown('redis_rate_limit_close_failed', async () => {
+        await redisClient.quit();
+      });
+      logger.info('redis_rate_limit_closed');
+    }
+    process.exit(0);
+  }
 }
 
 /** Registers SIGINT/SIGTERM handlers that drain connections and clean up resources. */
 function registerShutdownHandlers(resources: ShutdownResources): void {
-  const { server, tokenCleanup, redisClient, cacheService, poolMonitor, enrichmentScheduler } =
-    resources;
+  const { server, tokenCleanup, redisClient, poolMonitor } = resources;
   let isShuttingDown = false;
 
   const shutdown = async (signal: string): Promise<void> => {
@@ -138,52 +254,14 @@ function registerShutdownHandlers(resources: ShutdownResources): void {
 
     logger.info('server_shutdown_start', { signal, timeoutMs: SHUTDOWN_TIMEOUT_MS });
 
-    // 1. Stop accepting new connections
-    tokenCleanup.stopScheduler();
-    clearInterval(poolMonitor);
-    stopRateLimitSweep();
-    stopArtKeywordsRefresh();
-    await stopKnowledgeExtraction();
-    if (enrichmentScheduler) {
-      try {
-        await enrichmentScheduler.stop();
-      } catch (err) {
-        logger.warn('enrichment_scheduler_shutdown_error', {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
-    }
-    await shutdownOpenTelemetry();
-    const ocr = getOcrService();
-    if (ocr.destroy) await ocr.destroy();
-    if (cacheService.destroy) await cacheService.destroy();
+    stopSynchronousSchedulers(tokenCleanup, poolMonitor);
+    await drainAsyncResources(resources);
 
-    // 2. Close the HTTP server — stops accepting new connections,
-    //    waits for in-flight requests to complete
     server.close(() => {
       logger.info('server_connections_drained');
-      void (async () => {
-        try {
-          if (AppDataSource.isInitialized) {
-            await AppDataSource.destroy();
-            logger.info('database_closed');
-          }
-        } finally {
-          // 3. Close Redis connections
-          if (redisClient) {
-            try {
-              await redisClient.quit();
-              logger.info('redis_rate_limit_closed');
-            } catch {
-              // Best-effort
-            }
-          }
-          process.exit(0);
-        }
-      })();
+      void finalizeShutdown(redisClient);
     });
 
-    // Force exit after grace period if connections don't drain in time
     setTimeout(() => {
       logger.warn('server_shutdown_forced', {
         reason: 'drain timeout exceeded',
@@ -200,9 +278,79 @@ function registerShutdownHandlers(resources: ShutdownResources): void {
   }
 }
 
+/** Boots the chat-purge cron (Redis-enabled only). Fail-open on any registrar error. */
+async function startChatPurgeCron(): Promise<ChatPurgeCronHandle | undefined> {
+  if (!env.cache?.enabled) return undefined;
+  try {
+    return await registerChatPurgeCron(AppDataSource, {
+      connection: {
+        host: env.redis.host,
+        port: env.redis.port,
+        password: env.redis.password,
+        maxRetriesPerRequest: null,
+        enableOfflineQueue: false,
+      },
+      retentionDays: env.chatPurgeRetentionDays,
+    });
+  } catch (err) {
+    logger.warn('chat_purge_cron_boot_skipped', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return undefined;
+  }
+}
+
+/** Wires schedulers + cron jobs around the freshly-initialized cache/DB. Pure orchestration. */
+async function bootBackgroundJobs(
+  cacheService: CacheService,
+): Promise<Omit<ShutdownResources, 'server' | 'redisClient' | 'cacheService'>> {
+  const tokenCleanup = new TokenCleanupService(
+    new RefreshTokenRepositoryPg(AppDataSource),
+    cacheService,
+  );
+  tokenCleanup.startScheduler();
+
+  const poolMonitor = startPoolMonitor();
+  const enrichmentScheduler = await startEnrichmentScheduler();
+  const { handle: auditCron, queue: auditCronQueue } = env.cache?.enabled
+    ? await startAuditCron()
+    : { handle: undefined, queue: undefined };
+  const chatPurgeCron = await startChatPurgeCron();
+
+  return {
+    tokenCleanup,
+    poolMonitor,
+    enrichmentScheduler,
+    auditCron,
+    auditCronQueue,
+    chatPurgeCron,
+  };
+}
+
+/** Logs a startup failure with the most informative message available and an env hint in non-prod. */
+function logStartupFailure(error: unknown): void {
+  const errorMessage =
+    error instanceof Error ? error.message || util.inspect(error) : util.inspect(error);
+  logger.error('startup_failed', {
+    error: errorMessage,
+    dbHost: env.db.host,
+    dbPort: env.db.port,
+  });
+  if (env.nodeEnv !== 'production') {
+    logger.warn('startup_db_hint', {
+      message:
+        'Database unreachable. For docker-compose use DB_HOST=localhost and DB_PORT=5433; for local Postgres usually DB_PORT=5432.',
+    });
+  }
+}
+
 /** Initializes the database, starts the HTTP server, and registers graceful shutdown handlers. */
 const start = async (): Promise<void> => {
   initSentry();
+
+  // Fail fast on unsafe deployment topology (multi-instance + no shared Redis in prod).
+  // Must run BEFORE any external connection so the pod fails its readiness probe.
+  assertDeploymentInvariants(env, { logger });
 
   try {
     await AppDataSource.initialize();
@@ -221,37 +369,16 @@ const start = async (): Promise<void> => {
       });
     });
 
-    const tokenCleanup = new TokenCleanupService(
-      new RefreshTokenRepositoryPg(AppDataSource),
-      cacheService,
-    );
-    tokenCleanup.startScheduler();
-
-    const poolMonitor = startPoolMonitor();
-    const enrichmentScheduler = await startEnrichmentScheduler();
+    const jobs = await bootBackgroundJobs(cacheService);
 
     registerShutdownHandlers({
       server,
-      tokenCleanup,
       redisClient,
       cacheService,
-      poolMonitor,
-      enrichmentScheduler,
+      ...jobs,
     });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message || util.inspect(error) : util.inspect(error);
-    logger.error('startup_failed', {
-      error: errorMessage,
-      dbHost: env.db.host,
-      dbPort: env.db.port,
-    });
-    if (env.nodeEnv !== 'production') {
-      logger.warn('startup_db_hint', {
-        message:
-          'Database unreachable. For docker-compose use DB_HOST=localhost and DB_PORT=5433; for local Postgres usually DB_PORT=5432.',
-      });
-    }
+    logStartupFailure(error);
     process.exit(1);
   }
 };

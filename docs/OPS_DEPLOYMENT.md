@@ -288,6 +288,40 @@ Critical values:
 - `OBJECT_STORAGE_DRIVER=s3`
 - complete S3 credentials
 
+### Immutable image tags — `IMAGE_TAG` / `WEB_IMAGE_TAG` / `LLM_GUARD_IMAGE_TAG`
+
+Depuis 2026-04-24, `docker-compose.prod.yml` référence les images via une variable d’environnement **obligatoire** (plus de fallback `:latest`) :
+
+```yaml
+image: ghcr.io/timmoyence/museum-backend:${IMAGE_TAG:?IMAGE_TAG required — use commit SHA from CI}
+image: ghcr.io/timmoyence/museum-web:${WEB_IMAGE_TAG:?WEB_IMAGE_TAG required — use commit SHA from CI}
+image: ghcr.io/timmoyence/museum-llm-guard:${LLM_GUARD_IMAGE_TAG:?LLM_GUARD_IMAGE_TAG required — use commit SHA from CI}
+```
+
+La syntaxe `${VAR:?msg}` fait **échouer `docker compose` immédiatement** si la variable n’est pas définie — aucun démarrage silencieux sur un tag mutable. C’est la garantie SHA-pinning.
+
+Le pipeline CI exporte `IMAGE_TAG=${{ github.sha }}` (resp. `WEB_IMAGE_TAG`, `LLM_GUARD_IMAGE_TAG`) dans le step `appleboy/ssh-action` via `envs:`, ce qui force un pull déterministe sur la SHA du commit déployé.
+
+**Opérateurs : `docker compose` manuel sur le VPS**
+
+L’opérateur DOIT exporter les trois variables avant tout `docker compose pull` / `up -d`. Deux options :
+
+- **Option A — `/srv/museum/.env`** (persistant) : ajouter en haut du fichier :
+  ```
+  IMAGE_TAG=<commit-sha-à-déployer>
+  WEB_IMAGE_TAG=<commit-sha-à-déployer>
+  LLM_GUARD_IMAGE_TAG=<commit-sha-à-déployer>
+  ```
+- **Option B — inline** (ad hoc) :
+  ```bash
+  IMAGE_TAG=abc123 WEB_IMAGE_TAG=abc123 LLM_GUARD_IMAGE_TAG=abc123 \
+    docker compose pull && docker compose up -d
+  ```
+
+Oublier une variable → `docker compose` s’arrête avec un message clair (`IMAGE_TAG required — use commit SHA from CI`). Pas de silent drift.
+
+> Astuce rollback : `docker tag ghcr.io/…/museum-backend:<sha-précédent> ghcr.io/…/museum-backend:latest` + re-tag de la SHA ciblée dans `.env` reste le mécanisme du `rollback.sh`. Le script met à jour `IMAGE_TAG` avant le `up -d`, donc pas de régression fonctionnelle.
+
 ---
 
 ## 14. Backend Staging Deploy

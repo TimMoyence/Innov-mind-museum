@@ -59,4 +59,12 @@ export class ChatSession {
 
   @UpdateDateColumn({ type: 'timestamp' })
   updatedAt!: Date;
+
+  /**
+   * Timestamp at which session messages were purged by the retention cron
+   * (GDPR data minimization). `null` means the session is live; once set the
+   * purge worker skips the row on subsequent ticks (idempotent).
+   */
+  @Column({ type: 'timestamp', nullable: true, name: 'purged_at' })
+  purgedAt?: Date | null;
 }

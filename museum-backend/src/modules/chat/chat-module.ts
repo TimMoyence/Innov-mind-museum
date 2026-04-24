@@ -45,6 +45,7 @@ import type { ChatOrchestrator } from './domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from './domain/ports/image-storage.port';
 import type { OcrService } from './domain/ports/ocr.port';
 import type { WebSearchProvider } from './domain/ports/web-search.port';
+import type { LocationConsentChecker } from './useCase/location-resolver';
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { BuiltKnowledgeExtractionModule } from '@modules/knowledge-extraction/index';
 import type { IMuseumRepository } from '@modules/museum/domain/museum.repository.interface';
@@ -350,6 +351,8 @@ export class ChatModule {
       ? new LocationResolver(museumRepository, cache)
       : undefined;
 
+    const locationConsentChecker = buildLocationConsentChecker();
+
     const knowledgeExtraction = this.buildKnowledgeExtraction(dataSource);
     this._knowledgeExtractionClose = knowledgeExtraction.close;
 
@@ -366,6 +369,7 @@ export class ChatModule {
       webSearch,
       museumRepository,
       locationResolver,
+      locationConsentChecker,
       knowledgeExtraction,
     });
 
@@ -403,6 +407,7 @@ export class ChatModule {
     webSearch?: WebSearchService;
     museumRepository?: IMuseumRepository;
     locationResolver?: LocationResolver;
+    locationConsentChecker?: LocationConsentChecker;
     knowledgeExtraction: ReturnType<ChatModule['buildKnowledgeExtraction']>;
   }): ChatService {
     return new ChatService({
@@ -427,6 +432,21 @@ export class ChatModule {
       dbLookup: deps.knowledgeExtraction.dbLookup,
       extractionQueue: deps.knowledgeExtraction.extractionQueue,
       locationResolver: deps.locationResolver,
+      locationConsentChecker: deps.locationConsentChecker,
     });
   }
+}
+
+/**
+ * Builds the GDPR consent checker used by the chat pipeline to gate location
+ * propagation to the third-party LLM. Lazy-imports the auth module so we don't
+ * create a circular init between chat and auth at boot.
+ */
+function buildLocationConsentChecker(): LocationConsentChecker {
+  return {
+    async isGranted(userId: number, scope: 'location_to_llm'): Promise<boolean> {
+      const { userConsentRepository } = await import('@modules/auth/useCase');
+      return await userConsentRepository.isGranted(userId, scope);
+    },
+  };
 }

@@ -10,9 +10,21 @@ export type StorageDriver = 'local' | 's3';
 /** Advanced guardrail candidate for the V2 POC. `off` = noop adapter (default). */
 export type GuardrailsV2Candidate = 'off' | 'llm-guard' | 'nemo' | 'prompt-armor';
 
+/**
+ * Deployment topology hint consumed by boot-time invariant checks.
+ *
+ * - `single`: one process / replica. In-memory rate-limit and LLM cache are safe.
+ * - `multi`: horizontally scaled (PM2 cluster, K8s replicas, etc.). Shared Redis
+ *   is REQUIRED in production to avoid per-replica rate-limit bypass and
+ *   per-replica LLM cache fragmentation.
+ */
+export type DeploymentMode = 'single' | 'multi';
+
 /** Application configuration loaded from environment variables. */
 export interface AppEnv {
   nodeEnv: NodeEnv;
+  /** Deployment topology hint for boot-time invariant checks. */
+  deploymentMode: DeploymentMode;
   port: number;
   /** Resolved application version (APP_VERSION → npm_package_version → 'unknown'). */
   appVersion: string;
@@ -41,6 +53,12 @@ export interface AppEnv {
     refreshTokenSecret: string;
     accessTokenTtl: string;
     refreshTokenTtl: string;
+    /**
+     * Sliding window in seconds. If a refresh token has not been rotated for
+     * longer than this, the next refresh is rejected and the family revoked,
+     * forcing re-authentication. Default: 14 days.
+     */
+    refreshIdleWindowSeconds: number;
     appleClientId: string;
     googleClientIds: string[];
   };
@@ -136,11 +154,51 @@ export interface AppEnv {
   freeTierDailyChatLimit: number;
   /** TTL in seconds for Overpass API museum search cache entries. */
   overpassCacheTtlSeconds: number;
+  /**
+   * Overpass API (OpenStreetMap) museum-search client configuration.
+   *
+   * Complements the legacy flat {@link overpassCacheTtlSeconds} with an explicit
+   * negative-cache window so empty / null responses can be memoised short-term
+   * without poisoning the positive-cache window. Used by
+   * `createCachedOverpassClient` in `src/shared/http/overpass.client.ts`.
+   */
+  overpass: {
+    /** Positive-cache TTL for non-empty Overpass responses (seconds). Default 24h. */
+    cacheTtlSeconds: number;
+    /** Negative-cache TTL for empty/failed Overpass responses (seconds). Default 1h. */
+    negativeCacheTtlSeconds: number;
+  };
+  /**
+   * Retention window (in days) for chat sessions before the daily purge cron
+   * deletes their messages and flags the session via `purged_at`. Default 180
+   * (6 months) aligned with GDPR data-minimization policy.
+   */
+  chatPurgeRetentionDays: number;
   /** Knowledge base (Wikidata) configuration. */
   knowledgeBase: {
     timeoutMs: number;
     cacheTtlSeconds: number;
     cacheMaxEntries: number;
+  };
+  /**
+   * Nominatim (OpenStreetMap) reverse-geocoding client configuration.
+   *
+   * Enforces the OSMF Nominatim Usage Policy:
+   *   - >= 1 s between outbound requests (global in-process rate limiter)
+   *   - Mandatory client-side caching (positive + negative TTLs)
+   *   - Valid User-Agent built from `appVersion` + `contactEmail`
+   *
+   * See `src/shared/http/nominatim.client.ts`.
+   */
+  nominatim: {
+    /** Contact email embedded in the Nominatim User-Agent header. */
+    contactEmail: string;
+    /** Positive-cache TTL for successful reverse-geocode results (seconds). Default 24h. */
+    cacheTtlSeconds: number;
+    /** Negative-cache TTL for null/failed reverse-geocode lookups (seconds). Default 1h. */
+    negativeCacheTtlSeconds: number;
+    /** Minimum interval (ms) between any two outbound Nominatim fetches. Default 1000ms per OSMF policy. */
+    minRequestIntervalMs: number;
   };
   /** Image enrichment (Unsplash + Wikidata P18) configuration. */
   imageEnrichment: {
@@ -149,6 +207,20 @@ export interface AppEnv {
     cacheMaxEntries: number;
     fetchTimeoutMs: number;
     maxImagesPerResponse: number;
+  };
+  /**
+   * Museum enrichment cache retention policy. Complements the refresh scan
+   * (which re-fetches rows older than its own threshold) by hard-deleting rows
+   * untouched for longer than `hardDeleteAfterDays`. See
+   * `PurgeDeadEnrichmentsUseCase`.
+   */
+  enrichment: {
+    /**
+     * Age threshold (in days) past which an enrichment cache row is deleted
+     * outright. MUST be >= the refresh window so live rows are never purged.
+     * Default 180 (6 months).
+     */
+    hardDeleteAfterDays: number;
   };
   /** Web search multi-provider configuration. */
   webSearch: {

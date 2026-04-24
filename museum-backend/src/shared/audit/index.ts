@@ -9,6 +9,8 @@ const auditRepository = new AuditRepositoryPg(AppDataSource);
 export const auditService = new AuditService(auditRepository);
 
 export { AuditService } from './audit.service';
+export { AUDIT_CHAIN_GENESIS_HASH, computeRowHash, verifyAuditChain } from './audit-chain';
+export type { AuditChainInput, AuditChainRow, AuditChainVerifyResult } from './audit-chain';
 export type { IAuditLogRepository } from './audit.repository.interface';
 export type { AuditLogEntry } from './audit.types';
 export type { AuditLog } from './auditLog.entity';

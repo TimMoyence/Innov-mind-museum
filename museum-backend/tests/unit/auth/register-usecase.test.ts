@@ -13,6 +13,8 @@ jest.mock('@src/config/env', () => ({
   },
 }));
 
+import crypto from 'node:crypto';
+
 import { RegisterUseCase } from '@modules/auth/useCase/register.useCase';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 import { makeUserRepo } from 'tests/helpers/auth/user-repo.mock';
@@ -92,21 +94,30 @@ describe('RegisterUseCase', () => {
     );
   });
 
-  it('generates a verification token after registration', async () => {
+  it('stores a SHA-256 hash of the verification token (SEC H2)', async () => {
     const registeredUser = makeUser({ id: 5 });
     const userRepo = makeUserRepo(null, {
       registerUser: jest.fn().mockResolvedValue(registeredUser),
     });
+    const emailService = makeMockEmailService();
 
-    const useCase = new RegisterUseCase(userRepo);
+    const useCase = new RegisterUseCase(userRepo, emailService, 'https://app.example.com');
     await useCase.execute('user@test.com', 'StrongP@ss1!');
 
     expect(userRepo.setVerificationToken).toHaveBeenCalledTimes(1);
-    expect(userRepo.setVerificationToken).toHaveBeenCalledWith(
-      5,
-      expect.stringMatching(/^[a-f0-9]{64}$/), // 32 bytes -> 64 hex chars
-      expect.any(Date),
-    );
+    const [userId, storedToken, expires] = userRepo.setVerificationToken.mock.calls[0];
+    expect(userId).toBe(5);
+    expect(storedToken).toMatch(/^[a-f0-9]{64}$/); // SHA-256 hex digest
+    expect(expires).toBeInstanceOf(Date);
+
+    // Extract the raw token from the email link and verify the DB got the hash, not the raw token.
+    const htmlArg = emailService.sendEmail.mock.calls[0][2];
+    const match = /token=([a-f0-9]+)/.exec(htmlArg);
+    expect(match).not.toBeNull();
+    const rawToken = match![1];
+    const expectedHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    expect(storedToken).toBe(expectedHash);
+    expect(storedToken).not.toBe(rawToken);
   });
 
   it('sends a verification email when email service is configured', async () => {

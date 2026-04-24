@@ -21,8 +21,7 @@ jobs:
     container:
       image: semgrep/semgrep
     steps:
-      - uses: actions/checkout@v6
-
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
       - name: Semgrep scan
         run: semgrep scan --config auto --config p/javascript --config p/typescript --config p/nodejs --config p/owasp-top-ten --error --json --output semgrep-results.json museum-backend/src/ museum-frontend/features/ museum-frontend/shared/ museum-web/src/
 
@@ -31,14 +30,12 @@ jobs:
         run: semgrep scan --config auto --config p/javascript --config p/typescript --config p/nodejs --config p/owasp-top-ten --sarif --output semgrep-results.sarif museum-backend/src/ museum-frontend/features/ museum-frontend/shared/ museum-web/src/ || true
 
       - name: Upload SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225  # v4if: always()
         with:
           sarif_file: semgrep-results.sarif
 
       - name: Upload results
-        uses: actions/upload-artifact@v7
-        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7if: always()
         with:
           name: semgrep-results
           path: |

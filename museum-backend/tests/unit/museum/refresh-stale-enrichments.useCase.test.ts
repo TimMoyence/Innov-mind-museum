@@ -37,6 +37,10 @@ class ScriptableEnrichmentCache implements MuseumEnrichmentCachePort {
     this.findStaleCalls.push({ threshold: thresholdDate, limit });
     return this.staleRows.slice(0, limit);
   }
+
+  async deleteStaleSince(): Promise<number> {
+    return 0;
+  }
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1_000;

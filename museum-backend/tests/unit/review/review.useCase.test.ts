@@ -31,24 +31,64 @@ function makeFakeRepo(): jest.Mocked<IReviewRepository> {
 // ─── CreateReviewUseCase ────────────────────────────────────────────
 
 describe('CreateReviewUseCase', () => {
-  it('creates a review with valid input', async () => {
+  const fakeUser = { id: 1, firstname: 'Ada', lastname: 'Lovelace' };
+
+  it('creates a review with valid input and derives userName server-side', async () => {
     const repo = makeFakeRepo();
     const uc = new CreateReviewUseCase(repo);
     const result = await uc.execute({
-      userId: 1,
-      userName: 'Test User',
+      user: fakeUser,
       rating: 5,
       comment: 'Great museum assistant app!',
     });
     expect(result.id).toBe(fakeReview.id);
     expect(repo.createReview).toHaveBeenCalledTimes(1);
+    expect(repo.createReview).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 1, userName: 'Ada L.' }),
+    );
+  });
+
+  it('derives just firstname when lastname is absent', async () => {
+    const repo = makeFakeRepo();
+    const uc = new CreateReviewUseCase(repo);
+    await uc.execute({
+      user: { id: 2, firstname: 'Grace' },
+      rating: 4,
+      comment: 'A valid comment here.',
+    });
+    expect(repo.createReview).toHaveBeenCalledWith(expect.objectContaining({ userName: 'Grace' }));
+  });
+
+  it('falls back to "Anonymous" when firstname and lastname are both missing', async () => {
+    const repo = makeFakeRepo();
+    const uc = new CreateReviewUseCase(repo);
+    await uc.execute({
+      user: { id: 3 },
+      rating: 4,
+      comment: 'A valid comment here.',
+    });
+    expect(repo.createReview).toHaveBeenCalledWith(
+      expect.objectContaining({ userName: 'Anonymous' }),
+    );
+  });
+
+  it('rejects unauthenticated user (no id)', async () => {
+    const repo = makeFakeRepo();
+    const uc = new CreateReviewUseCase(repo);
+    await expect(
+      uc.execute({
+        user: { id: 0, firstname: 'X' },
+        rating: 5,
+        comment: 'A valid comment here.',
+      }),
+    ).rejects.toThrow('authentication');
   });
 
   it('rejects rating < 1', async () => {
     const repo = makeFakeRepo();
     const uc = new CreateReviewUseCase(repo);
     await expect(
-      uc.execute({ userId: 1, userName: 'Test', rating: 0, comment: 'A valid comment here.' }),
+      uc.execute({ user: fakeUser, rating: 0, comment: 'A valid comment here.' }),
     ).rejects.toThrow('rating');
   });
 
@@ -56,24 +96,16 @@ describe('CreateReviewUseCase', () => {
     const repo = makeFakeRepo();
     const uc = new CreateReviewUseCase(repo);
     await expect(
-      uc.execute({ userId: 1, userName: 'Test', rating: 6, comment: 'A valid comment here.' }),
+      uc.execute({ user: fakeUser, rating: 6, comment: 'A valid comment here.' }),
     ).rejects.toThrow('rating');
   });
 
   it('rejects comment shorter than 10 chars', async () => {
     const repo = makeFakeRepo();
     const uc = new CreateReviewUseCase(repo);
-    await expect(
-      uc.execute({ userId: 1, userName: 'Test', rating: 4, comment: 'Short' }),
-    ).rejects.toThrow('comment');
-  });
-
-  it('rejects empty userName', async () => {
-    const repo = makeFakeRepo();
-    const uc = new CreateReviewUseCase(repo);
-    await expect(
-      uc.execute({ userId: 1, userName: '  ', rating: 4, comment: 'A valid comment here.' }),
-    ).rejects.toThrow('userName');
+    await expect(uc.execute({ user: fakeUser, rating: 4, comment: 'Short' })).rejects.toThrow(
+      'comment',
+    );
   });
 });
 

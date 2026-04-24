@@ -1,5 +1,55 @@
 #!/bin/sh
 
+# ── 1. Secret scan (fail-closed) ──────────────────────────────────────────────
+# gitleaks runs first. If it finds a leaked credential in the staged diff, it
+# blocks the commit with a readable report. The config lives in .gitleaks.toml
+# at the repo root (extends the upstream default ruleset + repo-specific rules).
+#
+# Install options (any one is fine):
+#   - macOS:     brew install gitleaks
+#   - Linux:     https://github.com/gitleaks/gitleaks/releases (binary)
+#   - Fallback:  the hook will use the upstream Docker image if Docker is running.
+#
+# --staged limits the scan to the current git index (no history walk).
+# --redact hides secret values in log output; --no-banner keeps output tidy.
+GITLEAKS_REPORT=".gitleaks-report.json"
+
+run_gitleaks() {
+  if command -v gitleaks >/dev/null 2>&1; then
+    gitleaks protect --staged --redact --no-banner \
+      --config .gitleaks.toml \
+      --report-format json --report-path "${GITLEAKS_REPORT}"
+    return $?
+  fi
+
+  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    docker run --rm \
+      -v "$(pwd):/repo" \
+      -w /repo \
+      ghcr.io/gitleaks/gitleaks:latest \
+      protect --staged --redact --no-banner \
+      --config .gitleaks.toml \
+      --report-format json --report-path "${GITLEAKS_REPORT}"
+    return $?
+  fi
+
+  echo "[pre-commit] error: gitleaks is not installed and Docker is not running."
+  echo "             Install with 'brew install gitleaks' (macOS) or download a"
+  echo "             binary from https://github.com/gitleaks/gitleaks/releases."
+  return 1
+}
+
+if ! run_gitleaks; then
+  echo ""
+  echo "[pre-commit] gitleaks found one or more secrets in the staged diff."
+  echo "             Report: ${GITLEAKS_REPORT}"
+  echo "             Remove the secret AND rotate the exposed credential before committing."
+  exit 1
+fi
+# Clean up the empty/clean report so it doesn't end up staged by accident.
+rm -f "${GITLEAKS_REPORT}"
+
+# ── 2. Lint-staged per workspace ──────────────────────────────────────────────
 # Detect which apps have staged .ts/.tsx files and run lint-staged
 if git diff --cached --name-only | grep -q '^museum-backend/'; then
   cd museum-backend && npx lint-staged

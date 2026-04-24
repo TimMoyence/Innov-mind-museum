@@ -5,6 +5,7 @@ import { ApiKey } from '@modules/auth/domain/apiKey.entity';
 import { AuthRefreshToken } from '@modules/auth/domain/authRefreshToken.entity';
 import { SocialAccount } from '@modules/auth/domain/socialAccount.entity';
 import { User } from '@modules/auth/domain/user.entity';
+import { UserConsent } from '@modules/auth/domain/userConsent.entity';
 import { ArtKeyword } from '@modules/chat/domain/artKeyword.entity';
 import { ArtworkMatch } from '@modules/chat/domain/artworkMatch.entity';
 import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
@@ -40,6 +41,7 @@ export const AppDataSource = new DataSource({
   database: env.db.database,
   entities: [
     User,
+    UserConsent,
     AuthRefreshToken,
     SocialAccount,
     ApiKey,

@@ -45,6 +45,16 @@ export class AuthRefreshToken {
   @Column({ type: 'timestamp', nullable: true })
   rotatedAt?: Date | null;
 
+  /**
+   * Timestamp of the last rotation event on the logical session chain this
+   * token belongs to. Used to enforce a sliding idle window: if `now - lastRotatedAt`
+   * exceeds the configured idle threshold, the next refresh attempt revokes the
+   * family and forces re-authentication. On insert this defaults to the same value
+   * as `issuedAt`; on successful rotation the new token is initialised with `now`.
+   */
+  @Column({ type: 'timestamp', name: 'last_rotated_at', nullable: true })
+  lastRotatedAt?: Date | null;
+
   /** Set when this token is explicitly revoked (logout or reuse detection). */
   @Column({ type: 'timestamp', nullable: true })
   revokedAt?: Date | null;

@@ -31,6 +31,7 @@ function toRow(entity: AuthRefreshToken): StoredRefreshTokenRow {
     issuedAt: entity.issuedAt,
     expiresAt: entity.expiresAt,
     rotatedAt: entity.rotatedAt ?? null,
+    lastRotatedAt: entity.lastRotatedAt ?? null,
     revokedAt: entity.revokedAt ?? null,
     reuseDetectedAt: entity.reuseDetectedAt ?? null,
     replacedByTokenId: entity.replacedByTokenId ?? null,
@@ -62,6 +63,7 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
       tokenHash: input.tokenHash,
       issuedAt: input.issuedAt,
       expiresAt: input.expiresAt,
+      lastRotatedAt: input.lastRotatedAt ?? input.issuedAt,
     });
 
     const saved = await this.repo.save(entity);
@@ -101,6 +103,7 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
         tokenHash: params.next.tokenHash,
         issuedAt: params.next.issuedAt,
         expiresAt: params.next.expiresAt,
+        lastRotatedAt: params.next.lastRotatedAt ?? params.next.issuedAt,
       });
 
       const saved = await tokenRepo.save(entity);

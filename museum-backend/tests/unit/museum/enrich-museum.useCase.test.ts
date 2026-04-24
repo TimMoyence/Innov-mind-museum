@@ -31,6 +31,10 @@ class InMemoryEnrichmentCache implements MuseumEnrichmentCachePort {
   async findStaleRows(): Promise<{ museumId: number; locale: string }[]> {
     return [];
   }
+
+  async deleteStaleSince(): Promise<number> {
+    return 0;
+  }
 }
 
 const makeView = (overrides: Partial<MuseumEnrichmentView> = {}): MuseumEnrichmentView => ({

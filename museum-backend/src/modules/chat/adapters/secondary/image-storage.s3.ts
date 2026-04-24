@@ -13,7 +13,11 @@ import {
 import { normalizeObjectKey } from './s3-path-utils';
 
 import type { S3ImageStorageConfig } from './s3-operations';
-import type { ImageStorage, SaveImageInput } from '../../domain/ports/image-storage.port';
+import type {
+  ImageStorage,
+  LegacyImageKeyFetcher,
+  SaveImageInput,
+} from '../../domain/ports/image-storage.port';
 
 /**
  * Extracts the S3 object key from an `s3://` image reference.
@@ -98,8 +102,13 @@ export class S3CompatibleImageStorage implements ImageStorage {
       const body = Buffer.from(input.base64, 'base64');
       const extension = extensionByMime[input.mimeType] || 'img';
       const now = new Date();
+      const userSegment =
+        typeof input.userId === 'number' && Number.isFinite(input.userId)
+          ? `user-${String(input.userId)}`
+          : 'anonymous';
       const fallbackKey = [
         'chat-images',
+        userSegment,
         String(now.getUTCFullYear()),
         String(now.getUTCMonth() + 1).padStart(2, '0'),
         `${randomUUID()}.${extension}`,
@@ -130,27 +139,64 @@ export class S3CompatibleImageStorage implements ImageStorage {
   }
 
   /**
-   * Deletes all objects whose key contains the given user pattern (e.g. `user-42`).
-   * Lists all objects under `chat-images/` and filters by pattern match.
+   * Removes every image tied to a user (GDPR right-to-erasure, SEC-23).
    *
-   * @param userPattern - Substring to match within object keys (e.g. `user-42`).
+   * Strategy:
+   * 1. Native S3 prefix scan on `chat-images/user-<userId>/` — zero client-side
+   *    filtering, O(N objects for this user) list calls.
+   * 2. If `legacyFetcher` is provided, its returned keys (extracted from DB
+   *    `chat_messages.imageRef` rows owned by the user) are deleted directly
+   *    to cover records written before the user-scoped path format existed.
+   *
+   * Batches DeleteObjects calls at 1000 keys (S3 API limit).
+   *
+   * @param userId - Numeric (or stringified numeric) user ID.
+   * @param legacyFetcher - Optional callback returning legacy keys to delete.
    */
-  async deleteByPrefix(userPattern: string): Promise<void> {
-    const prefix = normalizeObjectKey({
-      key: 'chat-images/',
-      objectKeyPrefix: this.config.objectKeyPrefix,
-    });
+  async deleteByPrefix(
+    userId: number | string,
+    legacyFetcher?: LegacyImageKeyFetcher,
+  ): Promise<void> {
+    const normalizedUserId = typeof userId === 'number' ? userId : Number(userId);
+    const userSegment = `user-${String(userId)}`;
+
+    // 1. Native prefix scan — new keys live under chat-images/user-<id>/
+    // SEC: trailing slash required so `user-42` does not match `user-420/*` etc.
+    // normalizeObjectKey strips trailing slashes; re-append after normalization.
+    const userPrefix =
+      normalizeObjectKey({
+        key: `chat-images/${userSegment}`,
+        objectKeyPrefix: this.config.objectKeyPrefix,
+      }) + '/';
     let continuationToken: string | undefined;
     do {
-      const { keys, nextToken } = await listObjectsByPrefix(this.config, prefix, continuationToken);
-      const matching = keys.filter(
-        (k) => k.includes(`/${userPattern}/`) || k.includes(`/${userPattern}`),
+      const { keys, nextToken } = await listObjectsByPrefix(
+        this.config,
+        userPrefix,
+        continuationToken,
       );
-      if (matching.length > 0) {
-        // DeleteObjects supports max 1000 keys per call — list already returns max 1000
-        await deleteObjectsBatch(this.config, matching);
+      if (keys.length > 0) {
+        await deleteObjectsBatch(this.config, keys);
       }
       continuationToken = nextToken;
     } while (continuationToken);
+
+    // 2. Legacy keys — records written before the user-scoped format.
+    if (legacyFetcher && Number.isFinite(normalizedUserId)) {
+      const legacyRefs = await legacyFetcher(normalizedUserId);
+      const legacyKeys = legacyRefs
+        .map((ref) => parseS3ImageRef(ref)?.key)
+        .filter((k): k is string => typeof k === 'string' && k.length > 0);
+      // Deduplicate + filter out anything already handled by the native scan.
+      const uniqueLegacy = Array.from(new Set(legacyKeys)).filter(
+        (k) => !k.includes(`/${userSegment}/`),
+      );
+      for (let i = 0; i < uniqueLegacy.length; i += 1000) {
+        const batch = uniqueLegacy.slice(i, i + 1000);
+        if (batch.length > 0) {
+          await deleteObjectsBatch(this.config, batch);
+        }
+      }
+    }
   }
 }

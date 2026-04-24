@@ -12,6 +12,12 @@ const mockQueryOverpassMuseums = jest.fn<Promise<OverpassMuseumResult[]>, Overpa
 
 jest.mock('@shared/http/overpass.client', () => ({
   queryOverpassMuseums: (...args: OverpassQueryArgs) => mockQueryOverpassMuseums(...args),
+  // The use case calls `createCachedOverpassClient(cache)` when a cache is
+  // injected; we stub it to return a thin wrapper that still forwards to the
+  // mocked raw fn, so all existing call-count assertions keep working without
+  // caring about the sentinel envelope or TTL semantics (those live in the
+  // cached-client unit tests).
+  createCachedOverpassClient: () => mockQueryOverpassMuseums,
 }));
 
 /* ------------------------------------------------------------------ */
@@ -239,22 +245,25 @@ describe('SearchMuseumsUseCase', () => {
     expect(result.museums[0].source).toBe('local');
   });
 
-  it('uses cache on second call', async () => {
-    const cache = createMockCache();
-    const cachedUseCase = new SearchMuseumsUseCase(repo, cache);
+  it('delegates Overpass lookups to the injected cached search fn (one call per execute)', async () => {
+    // Direct-inject a cached search fn via the deps bag. The use case must
+    // call it exactly once per execute and merge its results — no DB cache
+    // key arithmetic leaks back into the use case.
+    const overpassSearch = jest.fn().mockResolvedValue([makeOsmResult('Injected', 0.001, 0.001)]);
+    const cachedUseCase = new SearchMuseumsUseCase(repo, { overpassSearch });
 
-    const osmResults = [makeOsmResult('Cached Museum', 0.001, 0.001, 300)];
-    mockQueryOverpassMuseums.mockResolvedValueOnce(osmResults);
-
-    // First call — should fetch from Overpass and cache
     await cachedUseCase.execute({ ...PARIS, radiusMeters: 10_000 });
-    expect(mockQueryOverpassMuseums).toHaveBeenCalledTimes(1);
-    expect(cache.set).toHaveBeenCalledTimes(1);
+    expect(overpassSearch).toHaveBeenCalledTimes(1);
+    expect(overpassSearch).toHaveBeenCalledWith({
+      lat: PARIS.lat,
+      lng: PARIS.lng,
+      radiusMeters: 10_000,
+    });
 
-    // Second call — should use cache, not call Overpass again
     await cachedUseCase.execute({ ...PARIS, radiusMeters: 10_000 });
-    expect(mockQueryOverpassMuseums).toHaveBeenCalledTimes(1); // still 1
-    expect(cache.get).toHaveBeenCalledTimes(2);
+    expect(overpassSearch).toHaveBeenCalledTimes(2);
+    // The raw mock is NEVER hit when overpassSearch is directly injected.
+    expect(mockQueryOverpassMuseums).not.toHaveBeenCalled();
   });
 
   it('filters results by q parameter', async () => {
@@ -519,78 +528,36 @@ describe('SearchMuseumsUseCase', () => {
   /* ---------------------------------------------------------------- */
 
   /* ---------------------------------------------------------------- */
-  /*  Overpass cache behavior                                          */
+  /*  Overpass cached-client DI wiring                                 */
   /* ---------------------------------------------------------------- */
 
-  describe('Overpass cache behavior', () => {
-    /**
-     * Negative-cache TTL in seconds — duplicated from the useCase constant
-     * (NEGATIVE_CACHE_TTL_SECONDS) so the test will fail loudly if prod drifts.
-     */
-    const NEGATIVE_TTL = 300;
-    /** Positive-cache TTL — matches the env mock at the top of this file. */
-    const POSITIVE_TTL = 3600;
+  describe('Overpass cached-client DI wiring', () => {
+    // The TTLs, cache-key shape and sentinel envelope are the cached-client's
+    // contract — exercised in tests/unit/shared/overpass-cached-client.test.ts.
+    // Here we only verify the use case's DI contract: when a cache is injected,
+    // the search call funnels through the cached client instead of the raw fn.
 
-    it('returns cached Overpass results and skips queryOverpassMuseums on cache hit', async () => {
+    it('forwards a radius search via the cached client factory wired from the injected cache', async () => {
       const cache = createMockCache();
       const cachedUseCase = new SearchMuseumsUseCase(repo, cache);
 
-      const cacheKey = `osm:museums:${PARIS.lat.toFixed(2)}:${PARIS.lng.toFixed(2)}:3000`;
-      const cached = [makeOsmResult('Cached Louvre', 0.001, 0.001, 777)];
-
-      // Prime the cache under the deterministic key the useCase builds.
-      (cache.get as jest.Mock).mockImplementationOnce(async (key: string) =>
-        key === cacheKey ? cached : null,
-      );
+      const osmResults = [makeOsmResult('Fresh Museum', 0.001, 0.001, 555)];
+      mockQueryOverpassMuseums.mockResolvedValueOnce(osmResults);
 
       const result = await cachedUseCase.execute({ ...PARIS, radiusMeters: 3000 });
 
-      expect(cache.get).toHaveBeenCalledWith(cacheKey);
-      expect(mockQueryOverpassMuseums).not.toHaveBeenCalled();
-      expect(cache.set).not.toHaveBeenCalled();
-      // The cached OSM entry surfaces in the merged results.
-      expect(result.museums.some((m) => m.name === 'Cached Louvre' && m.source === 'osm')).toBe(
+      expect(mockQueryOverpassMuseums).toHaveBeenCalledTimes(1);
+      expect(mockQueryOverpassMuseums).toHaveBeenCalledWith({
+        lat: PARIS.lat,
+        lng: PARIS.lng,
+        radiusMeters: 3000,
+      });
+      expect(result.museums.some((m) => m.name === 'Fresh Museum' && m.source === 'osm')).toBe(
         true,
       );
     });
 
-    it('calls Overpass and caches with the success TTL on a cache miss', async () => {
-      const cache = createMockCache();
-      const cachedUseCase = new SearchMuseumsUseCase(repo, cache);
-
-      const cacheKey = `osm:museums:${PARIS.lat.toFixed(2)}:${PARIS.lng.toFixed(2)}:3000`;
-      const osmResults = [makeOsmResult('Fresh Museum', 0.001, 0.001, 555)];
-      mockQueryOverpassMuseums.mockResolvedValueOnce(osmResults);
-
-      await cachedUseCase.execute({ ...PARIS, radiusMeters: 3000 });
-
-      expect(cache.get).toHaveBeenCalledWith(cacheKey);
-      expect(mockQueryOverpassMuseums).toHaveBeenCalledTimes(1);
-      expect(cache.set).toHaveBeenCalledTimes(1);
-      const [setKey, setValue, setTtl] = (cache.set as jest.Mock).mock.calls[0];
-      expect(setKey).toBe(cacheKey);
-      expect(setValue).toEqual(osmResults);
-      // Non-empty result → env-driven success TTL (not the negative TTL).
-      expect(setTtl).toBe(POSITIVE_TTL);
-    });
-
-    it('caches an empty Overpass response with the short negative TTL (300s)', async () => {
-      const cache = createMockCache();
-      const cachedUseCase = new SearchMuseumsUseCase(repo, cache);
-
-      mockQueryOverpassMuseums.mockResolvedValueOnce([]);
-
-      await cachedUseCase.execute({ ...PARIS, radiusMeters: 3000 });
-
-      expect(cache.set).toHaveBeenCalledTimes(1);
-      const [, setValue, setTtl] = (cache.set as jest.Mock).mock.calls[0];
-      expect(setValue).toEqual([]);
-      // Empty result path must use NEGATIVE_CACHE_TTL_SECONDS = 300, not the
-      // long positive TTL — protects against hammering a failing Overpass.
-      expect(setTtl).toBe(NEGATIVE_TTL);
-    });
-
-    it('bbox search uses a separate cache key namespace (osm:museums:bbox:...)', async () => {
+    it('forwards bbox payloads through the cached client as-is', async () => {
       const cache = createMockCache();
       const cachedUseCase = new SearchMuseumsUseCase(repo, cache);
 
@@ -599,12 +566,10 @@ describe('SearchMuseumsUseCase', () => {
       const bbox: [number, number, number, number] = [-9.18, 38.69, -9.1, 38.75];
       await cachedUseCase.execute({ bbox });
 
-      // The bbox branch must NOT touch the radius cache key namespace.
-      const keysGot = (cache.get as jest.Mock).mock.calls.map((c) => c[0] as string);
-      expect(keysGot).toHaveLength(1);
-      expect(keysGot[0]).toMatch(/^osm:museums:bbox:/);
-      // Key encodes the four bbox corners at 2-decimal precision.
-      expect(keysGot[0]).toBe('osm:museums:bbox:-9.18,38.69,-9.10,38.75');
+      expect(mockQueryOverpassMuseums).toHaveBeenCalledTimes(1);
+      const [callArgs] = mockQueryOverpassMuseums.mock.calls[0];
+      expect(callArgs.bbox).toEqual(bbox);
+      expect(callArgs.lat).toBeUndefined();
     });
   });
 

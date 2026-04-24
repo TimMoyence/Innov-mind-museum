@@ -7,6 +7,7 @@ export {
   buildLowDataPackService,
   buildEnrichMuseumUseCase,
   buildRefreshStaleEnrichmentsUseCase,
+  buildPurgeDeadEnrichmentsUseCase,
   createBullmqEnrichmentScheduler,
   museumRepository,
 } from './useCase';

@@ -2,11 +2,20 @@ import crypto from 'node:crypto';
 
 import { badRequest } from '@shared/errors/app.error';
 
+import type { IRefreshTokenRepository } from '../domain/refresh-token.repository.interface';
 import type { IUserRepository } from '../domain/user.repository.interface';
 
-/** Confirms an email change by consuming a one-time token (atomic consume + update). */
+/**
+ * Confirms an email change by consuming a one-time token (atomic consume + update).
+ * Revokes all active refresh tokens on success (SEC-HARDENING M13): on email
+ * change, existing sessions must be invalidated so a previously-captured refresh
+ * token cannot continue to authenticate under the new identity.
+ */
 export class ConfirmEmailChangeUseCase {
-  constructor(private readonly userRepository: IUserRepository) {}
+  constructor(
+    private readonly userRepository: IUserRepository,
+    private readonly refreshTokenRepository: IRefreshTokenRepository,
+  ) {}
 
   /**
    * Validate an email change token and update the user's email atomically.
@@ -26,6 +35,7 @@ export class ConfirmEmailChangeUseCase {
       throw badRequest('Invalid or expired email change token');
     }
 
+    await this.refreshTokenRepository.revokeAllForUser(user.id);
     return { confirmed: true };
   }
 }

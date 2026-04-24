@@ -285,15 +285,24 @@ describe('image-storage.s3', () => {
   });
 
   describe('deleteByPrefix integration', () => {
-    it('lists and deletes only matching user keys', async () => {
+    // Sprint 1 S3 agent: signature is now (userId: number | string, legacyFetcher?).
+    // Implementation scans the native `chat-images/user-<id>/` prefix then calls
+    // the optional legacy fetcher for pre-user-scoped records.
+    it('lists and deletes only matching user keys via native prefix scan', async () => {
       const requests: Array<{ method: string; path: string; body: string }> = [];
+      // Only user-42 keys surface because the S3 LIST is already scoped to
+      // `chat-images/user-42/` by the implementation — the mock server does not
+      // have to filter. This mirrors the real S3 contract.
       const listXml = `<?xml version="1.0" encoding="UTF-8"?>
         <ListBucketResult>
           <IsTruncated>false</IsTruncated>
-          <Contents><Key>chat-images/2026/03/user-42/s1/a.png</Key></Contents>
-          <Contents><Key>chat-images/2026/03/user-42/s2/b.jpg</Key></Contents>
-          <Contents><Key>chat-images/2026/03/user-99/s3/c.png</Key></Contents>
+          <Contents><Key>chat-images/user-42/2026/03/s1/a.png</Key></Contents>
+          <Contents><Key>chat-images/user-42/2026/03/s2/b.jpg</Key></Contents>
         </ListBucketResult>`;
+
+      const legacyFetcher = jest
+        .fn<Promise<string[]>, [number]>()
+        .mockResolvedValue(['s3://chat-images/2026/02/legacy-key.png']);
 
       await new Promise<void>((resolve, reject) => {
         const server = http.createServer((req, res) => {
@@ -324,7 +333,7 @@ describe('image-storage.s3', () => {
               requestTimeoutMs: 5000,
             });
 
-            await storage.deleteByPrefix('user-42');
+            await storage.deleteByPrefix(42, legacyFetcher);
             server.close();
             resolve();
           } catch (err) {
@@ -334,14 +343,65 @@ describe('image-storage.s3', () => {
         });
       });
 
-      // Expect a GET (list) and a POST (delete)
-      expect(requests.length).toBe(2);
+      // Native scan (GET) + native delete (POST) + legacy delete (POST) = 3 requests
+      expect(requests.length).toBe(3);
       expect(requests[0].method).toBe('GET');
+      // Native list must scope to chat-images/user-42/
+      expect(requests[0].path).toContain('prefix=chat-images%2Fuser-42%2F');
+
       expect(requests[1].method).toBe('POST');
-      // Delete body should contain user-42 keys but NOT user-99
-      expect(requests[1].body).toContain('user-42/s1/a.png');
-      expect(requests[1].body).toContain('user-42/s2/b.jpg');
-      expect(requests[1].body).not.toContain('user-99');
+      expect(requests[1].path).toContain('?delete=');
+      expect(requests[1].body).toContain('chat-images/user-42/2026/03/s1/a.png');
+      expect(requests[1].body).toContain('chat-images/user-42/2026/03/s2/b.jpg');
+
+      // Legacy fetcher called with numeric userId
+      expect(legacyFetcher).toHaveBeenCalledWith(42);
+
+      // Legacy delete carries the legacy-key extracted from the s3://… ref
+      expect(requests[2].method).toBe('POST');
+      expect(requests[2].body).toContain('chat-images/2026/02/legacy-key.png');
+    });
+
+    it('accepts string userId and skips legacy fetcher when omitted', async () => {
+      const requests: Array<{ method: string; path: string }> = [];
+      const emptyListXml = `<?xml version="1.0" encoding="UTF-8"?>
+        <ListBucketResult><IsTruncated>false</IsTruncated></ListBucketResult>`;
+
+      await new Promise<void>((resolve, reject) => {
+        const server = http.createServer((req, res) => {
+          requests.push({ method: req.method || '', path: req.url || '' });
+          req.on('data', () => {});
+          req.on('end', () => {
+            res.statusCode = 200;
+            res.end(req.method === 'GET' ? emptyListXml : '');
+          });
+        });
+
+        server.listen(0, '127.0.0.1', async () => {
+          try {
+            const address = server.address();
+            if (!address || typeof address === 'string') throw new Error('bind failed');
+
+            const storage = new S3CompatibleImageStorage({
+              ...config,
+              endpoint: `http://127.0.0.1:${address.port}`,
+              requestTimeoutMs: 5000,
+            });
+
+            await storage.deleteByPrefix('42');
+            server.close();
+            resolve();
+          } catch (err) {
+            server.close();
+            reject(err);
+          }
+        });
+      });
+
+      // Only the GET list is issued — nothing to delete, no legacy fetcher.
+      expect(requests.length).toBe(1);
+      expect(requests[0].method).toBe('GET');
+      expect(requests[0].path).toContain('prefix=chat-images%2Fuser-42%2F');
     });
   });
 });

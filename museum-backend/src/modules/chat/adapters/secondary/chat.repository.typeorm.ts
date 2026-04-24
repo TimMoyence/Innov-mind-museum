@@ -503,4 +503,30 @@ export class TypeOrmChatRepository implements ChatRepository {
       { audioUrl: null, audioGeneratedAt: null, audioVoice: null },
     );
   }
+
+  /**
+   * Returns every non-null `imageRef` tied to messages whose session belongs to the user.
+   *
+   * Used by the GDPR right-to-erasure cleanup to reach keys that predate the
+   * user-scoped S3 path format (`chat-images/user-<id>/YYYY/MM/<uuid>.ext`).
+   * MUST be invoked BEFORE the user row is deleted (CASCADE wipes messages/sessions).
+   *
+   * @param userId - Numeric user ID.
+   * @returns De-duplicated list of storage refs (e.g. `s3://chat-images/...`).
+   */
+  async findLegacyImageRefsByUserId(userId: number): Promise<string[]> {
+    const rows = await this.messageRepo
+      .createQueryBuilder('message')
+      .select('message.imageRef', 'imageRef')
+      .innerJoin('message.session', 'session')
+      .where('session.userId = :userId', { userId })
+      .andWhere('message.imageRef IS NOT NULL')
+      .getRawMany<{ imageRef: string | null }>();
+
+    const refs = rows
+      .map((row) => row.imageRef)
+      .filter((ref): ref is string => typeof ref === 'string' && ref.length > 0);
+
+    return Array.from(new Set(refs));
+  }
 }

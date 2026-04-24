@@ -69,8 +69,10 @@ export class RegisterUseCase {
     // Send verification email (non-blocking — registration succeeds even if this fails)
     try {
       const token = crypto.randomBytes(32).toString('hex');
+      // SEC (H2): send raw token in email, persist only SHA-256 hash (mirrors reset password flow)
+      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
       const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-      await this.userRepository.setVerificationToken(user.id, token, expires);
+      await this.userRepository.setVerificationToken(user.id, hashedToken, expires);
 
       if (this.emailService && this.frontendUrl) {
         const verifyLink = `${this.frontendUrl}/${locale}/verify-email?token=${token}`;

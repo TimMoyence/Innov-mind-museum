@@ -90,21 +90,23 @@ export interface IUserRepository {
   deleteUser(userId: number): Promise<void>;
 
   /**
-   * Store an email verification token with an expiration timestamp.
+   * Store the SHA-256 hash of an email verification token with an expiration timestamp.
+   * SEC (H2): only the hash is persisted — the raw token is sent to the user by email.
    *
    * @param userId - The user's ID.
-   * @param token - The verification token.
+   * @param hashedToken - SHA-256 hash of the verification token.
    * @param expires - Token expiration timestamp.
    */
-  setVerificationToken(userId: number, token: string, expires: Date): Promise<void>;
+  setVerificationToken(userId: number, hashedToken: string, expires: Date): Promise<void>;
 
   /**
-   * Atomically consume a verification token and mark the email as verified.
+   * Atomically consume a verification token hash and mark the email as verified.
+   * SEC (H2): callers must SHA-256-hash the raw token received from the user before calling.
    *
-   * @param token - The verification token to consume.
-   * @returns The user if the token was valid and consumed, or `null` if invalid/expired.
+   * @param hashedToken - SHA-256 hash of the verification token to consume.
+   * @returns The user if the hash matched a valid (non-expired) token, or `null` otherwise.
    */
-  verifyEmail(token: string): Promise<User | null>;
+  verifyEmail(hashedToken: string): Promise<User | null>;
 
   /**
    * Store an email change token, pending email, and expiry on the user record.

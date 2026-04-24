@@ -19,6 +19,16 @@ import {
   listUsersQuerySchema,
   auditLogsQuerySchema,
   listReportsQuerySchema,
+  usageAnalyticsQuerySchema,
+  contentAnalyticsQuerySchema,
+  engagementAnalyticsQuerySchema,
+  listTicketsQuerySchema,
+  listReviewsQuerySchema,
+  type UsageAnalyticsQuery,
+  type ContentAnalyticsQuery,
+  type EngagementAnalyticsQuery,
+  type ListTicketsQuery,
+  type ListReviewsQuery,
 } from './admin.schemas';
 import {
   listUsersUseCase,
@@ -34,11 +44,11 @@ import {
 
 const adminRouter: Router = Router();
 
-// GET /api/admin/users — Admin & moderator: paginated user list
+// GET /api/admin/users — Admin only: paginated user list (PII least-privilege)
 adminRouter.get(
   '/users',
   isAuthenticated,
-  requireRole('admin', 'moderator'),
+  requireRole('admin'),
   validateQuery(listUsersQuerySchema),
   async (_req: Request, res: Response) => {
     const { page, limit, search, role } = res.locals.validatedQuery as {
@@ -82,11 +92,11 @@ adminRouter.patch(
   },
 );
 
-// GET /api/admin/audit-logs — Admin & moderator: paginated audit logs
+// GET /api/admin/audit-logs — Admin only: paginated audit logs (security-sensitive)
 adminRouter.get(
   '/audit-logs',
   isAuthenticated,
-  requireRole('admin', 'moderator'),
+  requireRole('admin'),
   validateQuery(auditLogsQuerySchema),
   async (_req: Request, res: Response) => {
     const { page, limit, action, actorId, dateFrom, dateTo, targetType } = res.locals
@@ -182,19 +192,17 @@ adminRouter.patch(
 
 // ─── Analytics API (S4-04) ───
 
-// GET /api/admin/analytics/usage — Admin & moderator: usage time-series
+// GET /api/admin/analytics/usage — Admin only: usage time-series
 adminRouter.get(
   '/analytics/usage',
   isAuthenticated,
-  requireRole('admin', 'moderator'),
-  async (req: Request, res: Response) => {
-    const granularity = (req.query.granularity as string) || undefined;
-    const from = (req.query.from as string) || undefined;
-    const to = (req.query.to as string) || undefined;
-    const days = req.query.days ? Number.parseInt(req.query.days as string, 10) : undefined;
+  requireRole('admin'),
+  validateQuery(usageAnalyticsQuerySchema),
+  async (_req: Request, res: Response) => {
+    const { granularity, from, to, days } = res.locals.validatedQuery as UsageAnalyticsQuery;
 
     const result = await getUsageAnalyticsUseCase.execute({
-      granularity: granularity as 'daily' | 'weekly' | 'monthly' | undefined,
+      granularity,
       from,
       to,
       days,
@@ -204,15 +212,14 @@ adminRouter.get(
   },
 );
 
-// GET /api/admin/analytics/content — Admin & moderator: content analytics
+// GET /api/admin/analytics/content — Admin only: content analytics
 adminRouter.get(
   '/analytics/content',
   isAuthenticated,
-  requireRole('admin', 'moderator'),
-  async (req: Request, res: Response) => {
-    const from = (req.query.from as string) || undefined;
-    const to = (req.query.to as string) || undefined;
-    const limit = req.query.limit ? Number.parseInt(req.query.limit as string, 10) : undefined;
+  requireRole('admin'),
+  validateQuery(contentAnalyticsQuerySchema),
+  async (_req: Request, res: Response) => {
+    const { from, to, limit } = res.locals.validatedQuery as ContentAnalyticsQuery;
 
     const result = await getContentAnalyticsUseCase.execute({ from, to, limit });
 
@@ -220,14 +227,14 @@ adminRouter.get(
   },
 );
 
-// GET /api/admin/analytics/engagement — Admin & moderator: engagement analytics
+// GET /api/admin/analytics/engagement — Admin only: engagement analytics
 adminRouter.get(
   '/analytics/engagement',
   isAuthenticated,
-  requireRole('admin', 'moderator'),
-  async (req: Request, res: Response) => {
-    const from = (req.query.from as string) || undefined;
-    const to = (req.query.to as string) || undefined;
+  requireRole('admin'),
+  validateQuery(engagementAnalyticsQuerySchema),
+  async (_req: Request, res: Response) => {
+    const { from, to } = res.locals.validatedQuery as EngagementAnalyticsQuery;
 
     const result = await getEngagementAnalyticsUseCase.execute({ from, to });
 
@@ -242,11 +249,9 @@ adminRouter.get(
   '/tickets',
   isAuthenticated,
   requireRole('admin', 'moderator'),
-  async (req: Request, res: Response) => {
-    const page = Number.parseInt(req.query.page as string, 10) || 1;
-    const limit = Number.parseInt(req.query.limit as string, 10) || 20;
-    const status = (req.query.status as string) || undefined;
-    const priority = (req.query.priority as string) || undefined;
+  validateQuery(listTicketsQuerySchema),
+  async (_req: Request, res: Response) => {
+    const { page, limit, status, priority } = res.locals.validatedQuery as ListTicketsQuery;
 
     const result = await listAllTicketsUseCase.execute({
       status,
@@ -294,10 +299,9 @@ adminRouter.get(
   '/reviews',
   isAuthenticated,
   requireRole('admin', 'moderator'),
-  async (req: Request, res: Response) => {
-    const page = Number.parseInt(req.query.page as string, 10) || 1;
-    const limit = Number.parseInt(req.query.limit as string, 10) || 20;
-    const status = (req.query.status as string) || undefined;
+  validateQuery(listReviewsQuerySchema),
+  async (_req: Request, res: Response) => {
+    const { page, limit, status } = res.locals.validatedQuery as ListReviewsQuery;
 
     const result = await listAllReviewsUseCaseInstance.execute({
       status,

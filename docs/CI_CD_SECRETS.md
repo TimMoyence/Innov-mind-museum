@@ -27,10 +27,27 @@ Recommandation:
 - `.github/workflows/ci-cd-backend.yml` — quality gate + E2E + deploy prod/staging
 - `.github/workflows/ci-cd-web.yml` — quality gate + Lighthouse CI + deploy Docker/GHCR → VPS
 - `.github/workflows/ci-cd-mobile.yml` — quality gate + Maestro E2E + EAS build + store submit
-- `.github/workflows/_deploy-backend.yml` — reusable deploy workflow (called by ci-cd-backend)
 - `.github/workflows/deploy-privacy-policy.yml` — privacy policy static page deploy
 - `.github/workflows/codeql.yml` — CodeQL security analysis (security-extended + security-and-quality)
 - `.github/workflows/semgrep.yml` — SAST static analysis scanning
+
+> Le workflow réutilisable `_deploy-backend.yml` a été supprimé le 2026-04-24 : il n’était référencé par aucun `workflow_call:` (orphelin). Le déploiement backend vit entièrement dans `ci-cd-backend.yml`.
+
+## Secret scanning local (pre-commit)
+
+Depuis 2026-04-24, `.husky/pre-commit` exécute `gitleaks protect --staged` avant `lint-staged`. La configuration vit dans `.gitleaks.toml` à la racine (extend du ruleset par défaut + règles OpenAI / Google / GitHub / Sentry / DeepSeek).
+
+Installation locale (obligatoire pour committer) :
+
+- macOS : `brew install gitleaks`
+- Linux : binaire depuis https://github.com/gitleaks/gitleaks/releases
+- Fallback : le hook utilise l’image Docker `ghcr.io/gitleaks/gitleaks:latest` si Docker tourne.
+
+Le hook fait échouer le commit dès qu’un secret est détecté, rédige le rapport dans `.gitleaks-report.json`, et le supprime en cas de succès. `--no-verify` est toléré en dernier recours mais à documenter.
+
+## Épinglage SHA des GitHub Actions
+
+Depuis 2026-04-24, toutes les `uses:` des workflows CI/CD sont épinglées par SHA à 40 caractères, avec un commentaire inline indiquant le tag d’origine pour laisser Dependabot / Renovate les bumper. La liste complète est dans `docs/GITHUB_ACTIONS_SHA_PINS.md`. Règle : toute nouvelle action ajoutée doit suivre le même format `uses: owner/repo@<sha>  # <tag>`.
 
 Note mobile:
 - `ci-cd-mobile.yml` est désormais orienté release mobile uniquement.

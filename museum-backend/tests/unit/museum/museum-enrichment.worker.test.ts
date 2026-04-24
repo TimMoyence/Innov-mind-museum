@@ -35,6 +35,10 @@ class RecordingCache implements MuseumEnrichmentCachePort {
     return [];
   }
 
+  async deleteStaleSince(): Promise<number> {
+    return 0;
+  }
+
   get(museumId: number, locale: string): MuseumEnrichmentView | undefined {
     return this.rows.get(`${String(museumId)}:${locale}`);
   }

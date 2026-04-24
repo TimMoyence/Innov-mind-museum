@@ -45,6 +45,7 @@ const makeStoredToken = (
   issuedAt: new Date(),
   expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days future
   rotatedAt: null,
+  lastRotatedAt: new Date(),
   revokedAt: null,
   reuseDetectedAt: null,
   replacedByTokenId: null,
@@ -85,14 +86,16 @@ describe('AuthSessionService', () => {
   describe('login', () => {
     it('returns tokens and user info for valid credentials', async () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
-      const user = makeUser();
+      const user = makeUser({ email_verified: true });
       userRepo.getUserByEmail.mockResolvedValue(user);
 
       const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       // Use bcrypt to compare (real bcrypt)
       const hashed = await bcrypt.hash('ValidPass1', 1);
-      userRepo.getUserByEmail.mockResolvedValue(makeUser({ password: hashed }));
+      userRepo.getUserByEmail.mockResolvedValue(
+        makeUser({ password: hashed, email_verified: true }),
+      );
 
       const result = await service.login('user@test.com', 'ValidPass1');
 
@@ -113,7 +116,7 @@ describe('AuthSessionService', () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
       const hashed = await bcrypt.hash('ValidPass1', 4);
       userRepo.getUserByEmail.mockResolvedValue(
-        makeUser({ password: hashed, onboarding_completed: true }),
+        makeUser({ password: hashed, onboarding_completed: true, email_verified: true }),
       );
 
       const service = new AuthSessionService(userRepo, refreshTokenRepo);
@@ -125,7 +128,9 @@ describe('AuthSessionService', () => {
     it('calls clearLoginAttempts after successful login', async () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
       const hashed = await bcrypt.hash('ValidPass1', 4); // fast rounds for test
-      userRepo.getUserByEmail.mockResolvedValue(makeUser({ password: hashed }));
+      userRepo.getUserByEmail.mockResolvedValue(
+        makeUser({ password: hashed, email_verified: true }),
+      );
 
       const service = new AuthSessionService(userRepo, refreshTokenRepo);
       await service.login('user@test.com', 'ValidPass1');
@@ -207,7 +212,9 @@ describe('AuthSessionService', () => {
     it('inserts refresh token into repo on successful login', async () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
       const hashed = await bcrypt.hash('ValidPass1', 4);
-      userRepo.getUserByEmail.mockResolvedValue(makeUser({ password: hashed }));
+      userRepo.getUserByEmail.mockResolvedValue(
+        makeUser({ password: hashed, email_verified: true }),
+      );
 
       const service = new AuthSessionService(userRepo, refreshTokenRepo);
       await service.login('user@test.com', 'ValidPass1');
@@ -231,7 +238,7 @@ describe('AuthSessionService', () => {
   describe('refresh', () => {
     it('rotates token and returns new session for valid refresh token', async () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
-      const user = makeUser();
+      const user = makeUser({ email_verified: true });
       userRepo.getUserById.mockResolvedValue(user);
 
       const service = new AuthSessionService(userRepo, refreshTokenRepo);
@@ -239,7 +246,9 @@ describe('AuthSessionService', () => {
       // Issue an initial session to get a real refresh token
       refreshTokenRepo.insert.mockResolvedValue(makeStoredToken());
       const hashed = await bcrypt.hash('ValidPass1', 4);
-      userRepo.getUserByEmail.mockResolvedValue(makeUser({ password: hashed }));
+      userRepo.getUserByEmail.mockResolvedValue(
+        makeUser({ password: hashed, email_verified: true }),
+      );
       const loginResult = await service.login('user@test.com', 'ValidPass1');
 
       // Extract the jti/familyId from the real refresh token
@@ -278,13 +287,15 @@ describe('AuthSessionService', () => {
 
     it('preserves familyId during rotation', async () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
-      userRepo.getUserById.mockResolvedValue(makeUser());
+      userRepo.getUserById.mockResolvedValue(makeUser({ email_verified: true }));
 
       const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
       // Create initial login
       const hashed = await bcrypt.hash('ValidPass1', 4);
-      userRepo.getUserByEmail.mockResolvedValue(makeUser({ password: hashed }));
+      userRepo.getUserByEmail.mockResolvedValue(
+        makeUser({ password: hashed, email_verified: true }),
+      );
       const loginResult = await service.login('user@test.com', 'ValidPass1');
       const decoded = jwt.verify(
         loginResult.refreshToken,

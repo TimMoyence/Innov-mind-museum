@@ -349,7 +349,10 @@ authRouter.put(
     });
     res.status(200).json({
       message: 'A confirmation email has been sent to the new address.',
-      ...(env.nodeEnv === 'development' ? { debugToken: token } : {}),
+      // SEC-HARDENING (L7): debug token only surfaces in the test environment.
+      // Leaking it in dev (which can point at shared staging DBs) would enable
+      // account takeover via log inspection.
+      ...(env.nodeEnv === 'test' ? { debugToken: token } : {}),
     });
   },
 );
@@ -400,7 +403,9 @@ authRouter.post(
     });
     res.json({
       message: 'If this email exists, a reset link has been sent.',
-      ...(env.nodeEnv === 'development' ? { debugResetToken: token } : {}),
+      // SEC-HARDENING (L7): debug token only surfaces in the test environment
+      // (see /change-email above for rationale).
+      ...(env.nodeEnv === 'test' ? { debugResetToken: token } : {}),
     });
   },
 );

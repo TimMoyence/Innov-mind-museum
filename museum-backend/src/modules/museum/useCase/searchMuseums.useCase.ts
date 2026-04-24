@@ -1,13 +1,14 @@
 import { geocodeWithNominatim } from '@shared/http/nominatim.client';
 import {
+  createCachedOverpassClient,
   queryOverpassMuseums,
+  type CachedOverpassSearchFn,
   type MuseumCategory,
   type OverpassMuseumResult,
 } from '@shared/http/overpass.client';
 import { logger } from '@shared/logger/logger';
 import { haversineDistanceMeters } from '@shared/utils/haversine';
 import { museumNamesAreSimilar } from '@shared/utils/string-similarity';
-import { env } from '@src/config/env';
 
 import type { BoundingBox, IMuseumRepository } from '../domain/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
@@ -46,8 +47,6 @@ export interface SearchMuseumsResult {
 
 const DEFAULT_RADIUS = 30_000;
 const MAX_RADIUS = 50_000;
-/** Cache empty Overpass results for 5 minutes to avoid hammering a failing API. */
-const NEGATIVE_CACHE_TTL_SECONDS = 300;
 /** Pure-distance threshold: two OSM entries this close are always merged (covers duplicate OSM nodes for the same building). */
 const DEDUP_OSM_OSM_METERS = 100;
 /** Pure-distance threshold for OSM vs local: below this, drop the OSM entry regardless of name. */
@@ -253,12 +252,47 @@ function mergeAndDedupe(
   return entries;
 }
 
+/**
+ * Optional dependencies for {@link SearchMuseumsUseCase}.
+ *
+ * The Overpass search is injected as a pre-cached function so the TTLs,
+ * sentinel wrapping and probabilistic early-expiration live in
+ * `shared/http/overpass.client.ts` (the infrastructure boundary) — this use
+ * case is no longer aware of cache key shapes. Passing `cache` alone is
+ * supported for backwards-compat: the factory wires the cached fn for you.
+ */
+export interface SearchMuseumsDeps {
+  cache?: CacheService;
+  /**
+   * Pre-built cached Overpass search fn (usually from
+   * {@link createCachedOverpassClient}). Primarily for test injection; in
+   * production wiring it is derived from `cache`.
+   */
+  overpassSearch?: CachedOverpassSearchFn;
+}
+
 /** Searches for museums near a location by merging Overpass API and local DB results. */
 export class SearchMuseumsUseCase {
+  private readonly overpassSearch: CachedOverpassSearchFn;
+
   constructor(
     private readonly repository: IMuseumRepository,
-    private readonly cache?: CacheService,
-  ) {}
+    cacheOrDeps?: CacheService | SearchMuseumsDeps,
+  ) {
+    const deps: SearchMuseumsDeps = isSearchDeps(cacheOrDeps)
+      ? cacheOrDeps
+      : { cache: cacheOrDeps };
+
+    if (deps.overpassSearch) {
+      this.overpassSearch = deps.overpassSearch;
+    } else if (deps.cache) {
+      this.overpassSearch = createCachedOverpassClient(deps.cache);
+    } else {
+      // No cache and no explicit fn — fall back to raw live calls.
+      // Only hit in tests / scripts; production wiring always passes cache.
+      this.overpassSearch = (params) => queryOverpassMuseums(params);
+    }
+  }
 
   /** Executes the search, merging OSM and local results with deduplication and distance sorting. */
   async execute(input: SearchMuseumsInput): Promise<SearchMuseumsResult> {
@@ -278,7 +312,7 @@ export class SearchMuseumsUseCase {
     const centerLng = (minLng + maxLng) / 2;
 
     const localRows = await this.fetchLocalInBbox(bbox);
-    const osmResults = await this.fetchOsmResultsBbox(bbox);
+    const osmResults = await this.overpassSearch({ bbox });
 
     const localWithCoords: LocalMuseumWithCoords[] = localRows.map((m) => ({
       name: m.name,
@@ -335,9 +369,8 @@ export class SearchMuseumsUseCase {
     }
 
     const radius = Math.min(input.radiusMeters ?? DEFAULT_RADIUS, MAX_RADIUS);
-    const cacheKey = `osm:museums:${lat.toFixed(2)}:${lng.toFixed(2)}:${String(radius)}`;
 
-    const osmResults = await this.fetchOsmResults(cacheKey, lat, lng, radius);
+    const osmResults = await this.overpassSearch({ lat, lng, radiusMeters: radius });
     const entries = mergeAndDedupe(lat, lng, radius, localMuseums, osmResults);
 
     let filtered = entries;
@@ -382,62 +415,14 @@ export class SearchMuseumsUseCase {
       return [];
     }
   }
+}
 
-  /** Fetches OSM results from cache or Overpass API, caching successful responses. */
-  private async fetchOsmResults(
-    cacheKey: string,
-    lat: number,
-    lng: number,
-    radius: number,
-  ): Promise<OverpassMuseumResult[]> {
-    if (this.cache) {
-      try {
-        const cached = await this.cache.get<OverpassMuseumResult[]>(cacheKey);
-        if (cached) return cached;
-      } catch {
-        // Cache read failure is non-fatal
-      }
-    }
-
-    const results = await queryOverpassMuseums({ lat, lng, radiusMeters: radius });
-
-    if (this.cache) {
-      try {
-        const ttl = results.length > 0 ? env.overpassCacheTtlSeconds : NEGATIVE_CACHE_TTL_SECONDS;
-        await this.cache.set(cacheKey, results, ttl);
-      } catch {
-        // Cache write failure is non-fatal
-      }
-    }
-
-    return results;
-  }
-
-  /** Bbox variant of fetchOsmResults; key includes the rectangle corners at 2-decimal precision. */
-  private async fetchOsmResultsBbox(bbox: BoundingBox): Promise<OverpassMuseumResult[]> {
-    const [minLng, minLat, maxLng, maxLat] = bbox;
-    const cacheKey = `osm:museums:bbox:${minLng.toFixed(2)},${minLat.toFixed(2)},${maxLng.toFixed(2)},${maxLat.toFixed(2)}`;
-
-    if (this.cache) {
-      try {
-        const cached = await this.cache.get<OverpassMuseumResult[]>(cacheKey);
-        if (cached) return cached;
-      } catch {
-        // non-fatal
-      }
-    }
-
-    const results = await queryOverpassMuseums({ bbox });
-
-    if (this.cache) {
-      try {
-        const ttl = results.length > 0 ? env.overpassCacheTtlSeconds : NEGATIVE_CACHE_TTL_SECONDS;
-        await this.cache.set(cacheKey, results, ttl);
-      } catch {
-        // non-fatal
-      }
-    }
-
-    return results;
-  }
+/**
+ * Narrow a constructor argument to the deps-bag shape. Plain CacheService
+ * objects expose functions like `get`, never `cache` / `overpassSearch`, so
+ * presence of either sentinel key means it's a deps bag.
+ */
+function isSearchDeps(arg: CacheService | SearchMuseumsDeps | undefined): arg is SearchMuseumsDeps {
+  if (!arg) return false;
+  return 'cache' in arg || 'overpassSearch' in arg;
 }

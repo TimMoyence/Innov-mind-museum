@@ -35,6 +35,14 @@ export class ForgotPasswordUseCase {
     const user = await this.userRepository.getUserByEmail(normalizedEmail);
     if (!user) return;
 
+    // SEC-HARDENING (M16): require verified email before issuing reset token.
+    // Silently skip (keep generic response) to avoid enumerating verified
+    // vs. unverified accounts.
+    if (!user.email_verified) {
+      logger.warn('forgot_password_unverified_skipped', { email: normalizedEmail });
+      return;
+    }
+
     const token = crypto.randomBytes(32).toString('hex');
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     const expires = new Date(Date.now() + 3600000); // 1 hour expiration

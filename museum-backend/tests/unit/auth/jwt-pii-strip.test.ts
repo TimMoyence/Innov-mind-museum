@@ -23,6 +23,9 @@ const USER_DEFAULTS = {
   password: '$2b$12$hashed',
   firstname: 'Alice',
   lastname: 'Doe',
+  // login() enforces email_verified — fixture defaults to false, overridden here
+  // so the service reaches the session-issuing branch under test.
+  email_verified: true,
   onboarding_completed: false,
   createdAt: new Date('2025-01-01'),
   updatedAt: new Date('2025-06-01'),

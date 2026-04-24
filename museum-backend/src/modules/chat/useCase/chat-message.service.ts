@@ -15,7 +15,7 @@ import type { PostMessageResult, PostAudioMessageResult } from './chat.service.t
 import type { ArtTopicClassifierPort } from './guardrail-evaluation.service';
 import type { ImageEnrichmentService } from './image-enrichment.service';
 import type { KnowledgeBaseService } from './knowledge-base.service';
-import type { LocationResolver } from './location-resolver';
+import type { LocationConsentChecker, LocationResolver } from './location-resolver';
 import type { PrepareReady } from './prepare-message.pipeline';
 import type { UserMemoryService } from './user-memory.service';
 import type { WebSearchService } from './web-search.service';
@@ -44,6 +44,8 @@ export interface ChatEnrichmentDeps {
   dbLookup?: DbLookupService;
   extractionQueue?: ExtractionQueuePort;
   locationResolver?: LocationResolver;
+  /** GDPR consent port — gates whether location reaches the LLM at all. */
+  locationConsentChecker?: LocationConsentChecker;
 }
 
 /** Content-safety services bundled together (replaces 5 individual deps). */
@@ -137,6 +139,7 @@ export class ChatMessageService {
       dbLookup: enrichment.dbLookup,
       extractionQueue: enrichment.extractionQueue,
       locationResolver: enrichment.locationResolver,
+      locationConsentChecker: enrichment.locationConsentChecker,
     });
   }
 

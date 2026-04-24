@@ -4,6 +4,7 @@ import { createAdminKeRouter } from '@modules/admin/adapters/primary/http/admin-
 import adminRouter from '@modules/admin/adapters/primary/http/admin.route';
 import { createCachePurgeRouter } from '@modules/admin/adapters/primary/http/cache-purge.route';
 import authRouter from '@modules/auth/adapters/primary/http/auth.route';
+import consentRouter from '@modules/auth/adapters/primary/http/consent.route';
 import { createChatRouter } from '@modules/chat/adapters/primary/http/chat.route';
 import {
   getArtKeywordRepository,
@@ -38,12 +39,12 @@ export interface HealthPayload {
   status: 'ok' | 'degraded';
   checks: {
     database: 'up' | 'down';
-    llmConfigured: boolean;
+    llmConfigured?: boolean;
     redis?: 'up' | 'down' | 'skipped';
     llmCircuitBreaker?: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
   };
-  environment: string;
-  version: string;
+  environment?: string;
+  version?: string;
   timestamp: string;
   commitSha?: string;
   responseTimeMs?: number;
@@ -58,6 +59,7 @@ export interface HealthPayload {
  * @param params.checks.redis - Optional Redis connectivity status.
  * @param params.checks.llmCircuitBreaker - Optional LLM circuit breaker state.
  * @param params.llmConfigured - Whether at least one LLM provider is configured.
+ * @param params.nodeEnv - Optional environment override for testing; defaults to `env.nodeEnv`.
  * @returns Structured health payload with version and timestamp.
  */
 export const buildHealthPayload = (params: {
@@ -67,32 +69,48 @@ export const buildHealthPayload = (params: {
     llmCircuitBreaker?: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
   };
   llmConfigured: boolean;
+  /**
+   * Environment override for testing. Defaults to `env.nodeEnv`. In
+   * production, sensitive metadata (commitSha, environment, version,
+   * llmConfigured, llmCircuitBreaker, redis) is redacted (L4).
+   */
+  nodeEnv?: string;
 }): HealthPayload => {
   const dbUp = params.checks.database === 'up';
   const redisDown = params.checks.redis === 'down';
   const degraded = !dbUp || redisDown;
 
+  // SEC-HARDENING (L4): redact metadata in production to avoid
+  // leaking commit SHA, environment, version, LLM provider state, or
+  // circuit-breaker state to unauthenticated clients. Full payload is
+  // still returned in non-production environments for operational use.
+  const resolvedNodeEnv = params.nodeEnv ?? env.nodeEnv;
+  const isProd = resolvedNodeEnv === 'production';
+
   const payload: HealthPayload = {
     status: degraded ? 'degraded' : 'ok',
     checks: {
       database: params.checks.database,
-      llmConfigured: params.llmConfigured,
     },
-    environment: env.nodeEnv,
-    version: env.appVersion,
     timestamp: new Date().toISOString(),
   };
 
-  if (params.checks.redis !== undefined) {
-    payload.checks.redis = params.checks.redis;
-  }
+  if (!isProd) {
+    payload.checks.llmConfigured = params.llmConfigured;
+    payload.environment = env.nodeEnv;
+    payload.version = env.appVersion;
 
-  if (params.checks.llmCircuitBreaker !== undefined) {
-    payload.checks.llmCircuitBreaker = params.checks.llmCircuitBreaker;
-  }
+    if (params.checks.redis !== undefined) {
+      payload.checks.redis = params.checks.redis;
+    }
 
-  if (env.commitSha) {
-    payload.commitSha = env.commitSha;
+    if (params.checks.llmCircuitBreaker !== undefined) {
+      payload.checks.llmCircuitBreaker = params.checks.llmCircuitBreaker;
+    }
+
+    if (env.commitSha) {
+      payload.commitSha = env.commitSha;
+    }
   }
 
   return payload;
@@ -152,7 +170,11 @@ export const createApiRouter = ({
       },
       llmConfigured,
     });
-    payload.responseTimeMs = responseTimeMs;
+    // SEC-HARDENING (L4): responseTimeMs is a minor side-channel — only
+    // expose it outside production.
+    if (env.nodeEnv !== 'production') {
+      payload.responseTimeMs = responseTimeMs;
+    }
 
     const httpStatus = dbChecks.database === 'down' ? 503 : 200;
     res.status(httpStatus).json(payload);
@@ -206,6 +228,7 @@ function mountDomainRouters(
       getDescribeService(),
     ),
   );
+  router.use('/auth/consent', consentRouter);
   router.use('/auth', authRouter);
   router.use('/daily-art', createDailyArtRouter(cacheService));
   router.use(

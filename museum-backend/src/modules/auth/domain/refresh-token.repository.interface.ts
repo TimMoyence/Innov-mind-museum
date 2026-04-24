@@ -8,6 +8,12 @@ export interface StoredRefreshTokenRow {
   issuedAt: Date;
   expiresAt: Date;
   rotatedAt: Date | null;
+  /**
+   * Last rotation activity on the session chain this token belongs to.
+   * Used for the sliding idle-window check. `null` on legacy rows predating
+   * the column; consumers should fall back to `createdAt` / `issuedAt` in that case.
+   */
+  lastRotatedAt: Date | null;
   revokedAt: Date | null;
   reuseDetectedAt: Date | null;
   replacedByTokenId: string | null;
@@ -22,6 +28,12 @@ export interface InsertRefreshTokenInput {
   tokenHash: string;
   issuedAt: Date;
   expiresAt: Date;
+  /**
+   * Optional — the timestamp to persist as `lastRotatedAt`. When omitted the
+   * repository defaults to `issuedAt` (fresh login) so every new row has a
+   * deterministic anchor for the sliding window check.
+   */
+  lastRotatedAt?: Date;
 }
 
 /** Port for refresh-token lifecycle persistence operations. Implemented by {@link RefreshTokenRepositoryPg}. */

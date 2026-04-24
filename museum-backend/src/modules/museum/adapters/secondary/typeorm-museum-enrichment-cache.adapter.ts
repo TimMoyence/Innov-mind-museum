@@ -111,6 +111,25 @@ export class TypeOrmMuseumEnrichmentCacheAdapter implements MuseumEnrichmentCach
       .filter((row): row is typeof row & { museumId: number } => row.museumId != null)
       .map((row) => ({ museumId: row.museumId, locale: row.locale }));
   }
+
+  /**
+   * Deletes every hybrid-flow enrichment row older than `threshold`. Legacy
+   * name-keyed rows (`museumId IS NULL`) are left untouched — they predate the
+   * hybrid flow and are outside the scope of the scheduled purge.
+   */
+  async deleteStaleSince(threshold: Date): Promise<number> {
+    // Column identifiers are quoted to preserve camelCase casing — bare
+    // references would be lowercased by Postgres and fail to resolve.
+    const result = await this.repo
+      .createQueryBuilder()
+      .delete()
+      .from(MuseumEnrichment)
+      .where('"fetchedAt" < :threshold', { threshold })
+      .andWhere('"museumId" IS NOT NULL')
+      .execute();
+
+    return result.affected ?? 0;
+  }
 }
 
 function applyViewToEntity(entity: MuseumEnrichment, view: MuseumEnrichmentView): void {

@@ -147,4 +147,64 @@ describe('buildHealthPayload', () => {
     const parsed = new Date(payload.timestamp);
     expect(parsed.toISOString()).toBe(payload.timestamp);
   });
+
+  // ── Production redaction (L4) ──────────────────────────────────────
+
+  describe('production redaction', () => {
+    it('omits commitSha, environment, version, llmConfigured, redis, llmCircuitBreaker in prod', () => {
+      const payload = buildHealthPayload({
+        checks: { database: 'up', redis: 'up', llmCircuitBreaker: 'CLOSED' },
+        llmConfigured: true,
+        nodeEnv: 'production',
+      });
+
+      expect(payload.status).toBe('ok');
+      expect(payload.checks.database).toBe('up');
+      expect(payload.timestamp).toBeDefined();
+
+      // Redacted fields
+      expect(payload.commitSha).toBeUndefined();
+      expect(payload.environment).toBeUndefined();
+      expect(payload.version).toBeUndefined();
+      expect(payload.checks.llmConfigured).toBeUndefined();
+      expect(payload.checks.redis).toBeUndefined();
+      expect(payload.checks.llmCircuitBreaker).toBeUndefined();
+    });
+
+    it('still reports degraded status when db down in prod', () => {
+      const payload = buildHealthPayload({
+        checks: { database: 'down' },
+        llmConfigured: true,
+        nodeEnv: 'production',
+      });
+
+      expect(payload.status).toBe('degraded');
+      expect(payload.checks.database).toBe('down');
+    });
+
+    it('reports degraded when redis down even though redis key is redacted in prod', () => {
+      const payload = buildHealthPayload({
+        checks: { database: 'up', redis: 'down' },
+        llmConfigured: true,
+        nodeEnv: 'production',
+      });
+
+      expect(payload.status).toBe('degraded');
+      expect(payload.checks.redis).toBeUndefined();
+    });
+
+    it('returns full payload in non-production (explicit override)', () => {
+      const payload = buildHealthPayload({
+        checks: { database: 'up', redis: 'up', llmCircuitBreaker: 'CLOSED' },
+        llmConfigured: true,
+        nodeEnv: 'development',
+      });
+
+      expect(payload.checks.llmConfigured).toBe(true);
+      expect(payload.checks.redis).toBe('up');
+      expect(payload.checks.llmCircuitBreaker).toBe('CLOSED');
+      expect(payload.environment).toBeDefined();
+      expect(payload.version).toBeDefined();
+    });
+  });
 });

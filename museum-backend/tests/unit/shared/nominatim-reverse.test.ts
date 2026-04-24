@@ -158,7 +158,7 @@ describe('reverseGeocodeWithNominatim', () => {
     expect(calledUrl.searchParams.get('zoom')).toBe('18');
   });
 
-  it('sends User-Agent header', async () => {
+  it('sends a User-Agent header matching the OSMF-compliant format', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ display_name: 'Test', address: {} }),
@@ -167,6 +167,7 @@ describe('reverseGeocodeWithNominatim', () => {
     await reverseGeocodeWithNominatim(48.8606, 2.3376);
 
     const fetchOptions = (global.fetch as jest.Mock).mock.calls[0][1] as RequestInit;
-    expect(fetchOptions.headers).toEqual({ 'User-Agent': 'Musaium/1.0' });
+    const headers = fetchOptions.headers as Record<string, string>;
+    expect(headers['User-Agent']).toMatch(/^Musaium\/\S+ \(contact: \S+\)$/);
   });
 });

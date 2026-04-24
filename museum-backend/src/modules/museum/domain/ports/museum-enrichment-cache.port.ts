@@ -32,4 +32,19 @@ export interface MuseumEnrichmentCachePort {
     thresholdDate: Date,
     limit: number,
   ): Promise<{ museumId: number; locale: string }[]>;
+
+  /**
+   * Permanently deletes every enrichment row with `fetchedAt < threshold`.
+   * Returns the number of rows removed.
+   *
+   * Used by `PurgeDeadEnrichmentsUseCase` to bound the size of the
+   * `museum_enrichment` table — rows untouched for longer than the hard-delete
+   * window (see `env.enrichment.hardDeleteAfterDays`) are considered dead and
+   * reclaimed. Legacy name-keyed rows (`museumId IS NULL`) are preserved: they
+   * predate the hybrid flow and are not eligible for this purge.
+   *
+   * Must be idempotent + safe to run concurrently with on-demand enrichment:
+   * row-level DELETE is atomic per row.
+   */
+  deleteStaleSince(threshold: Date): Promise<number>;
 }

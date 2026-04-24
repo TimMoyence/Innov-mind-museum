@@ -19,10 +19,12 @@ import { ExportUserDataUseCase } from './exportUserData.useCase';
 import { ForgotPasswordUseCase } from './forgotPassword.useCase';
 import { GenerateApiKeyUseCase } from './generateApiKey.useCase';
 import { GetProfileUseCase } from './getProfile.useCase';
+import { GrantConsentUseCase } from './grantConsent.useCase';
 import { ListApiKeysUseCase } from './listApiKeys.useCase';
 import { RegisterUseCase } from './register.useCase';
 import { ResetPasswordUseCase } from './resetPassword.useCase';
 import { RevokeApiKeyUseCase } from './revokeApiKey.useCase';
+import { RevokeConsentUseCase } from './revokeConsent.useCase';
 import { SocialLoginUseCase } from './socialLogin.useCase';
 import { UpdateContentPreferencesUseCase } from './updateContentPreferences.useCase';
 import { VerifyEmailUseCase } from './verifyEmail.useCase';
@@ -31,6 +33,7 @@ import { RefreshTokenRepositoryPg } from '../adapters/secondary/refresh-token.re
 import { SocialAccountRepositoryPg } from '../adapters/secondary/social-account.repository.pg';
 import { SocialTokenVerifierAdapter } from '../adapters/secondary/social-token-verifier.adapter';
 import { UserRepositoryPg } from '../adapters/secondary/user.repository.pg';
+import { UserConsentRepositoryPg } from '../adapters/secondary/userConsent.repository.pg';
 
 import type { ChatDataExportPort } from '../domain/exportUserData.types';
 import type { EmailService } from '@shared/email/email.port';
@@ -85,8 +88,11 @@ const getProfileUseCase = new GetProfileUseCase(userRepository);
 const changePasswordUseCase = new ChangePasswordUseCase(userRepository, refreshTokenRepository);
 /** Singleton instance of {@link ChangeEmailUseCase}. */
 const changeEmailUseCase = new ChangeEmailUseCase(userRepository, emailService, frontendUrl);
-/** Singleton instance of {@link ConfirmEmailChangeUseCase}. */
-const confirmEmailChangeUseCase = new ConfirmEmailChangeUseCase(userRepository);
+/** Singleton instance of {@link ConfirmEmailChangeUseCase}. Revokes refresh tokens on success (M13). */
+const confirmEmailChangeUseCase = new ConfirmEmailChangeUseCase(
+  userRepository,
+  refreshTokenRepository,
+);
 /** Singleton instance of {@link VerifyEmailUseCase}. */
 const verifyEmailUseCase = new VerifyEmailUseCase(userRepository);
 /** Singleton instance of {@link UpdateContentPreferencesUseCase}. */
@@ -97,6 +103,11 @@ const apiKeyRepository = new ApiKeyRepositoryPg(AppDataSource);
 const generateApiKeyUseCase = new GenerateApiKeyUseCase(apiKeyRepository);
 const revokeApiKeyUseCase = new RevokeApiKeyUseCase(apiKeyRepository);
 const listApiKeysUseCase = new ListApiKeysUseCase(apiKeyRepository);
+
+// GDPR consent use cases.
+const userConsentRepository = new UserConsentRepositoryPg(AppDataSource);
+const grantConsentUseCase = new GrantConsentUseCase(userConsentRepository);
+const revokeConsentUseCase = new RevokeConsentUseCase(userConsentRepository);
 
 setApiKeyRepository(apiKeyRepository);
 setUserRoleResolver(async (userId) => {
@@ -127,4 +138,7 @@ export {
   listApiKeysUseCase,
   updateContentPreferencesUseCase,
   completeOnboarding,
+  grantConsentUseCase,
+  revokeConsentUseCase,
+  userConsentRepository,
 };

@@ -4,7 +4,7 @@ import { AppError } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 
-import type { ErrorRequestHandler } from 'express';
+import type { ErrorRequestHandler, Response, Request } from 'express';
 
 /** Shape of the JSON error response sent to clients. */
 interface ErrorResponseShape {
@@ -36,35 +36,50 @@ const normalizeError = (error: unknown): unknown => {
   return error;
 };
 
+const buildPayload = (error: unknown, requestId: string | undefined): ErrorResponseShape => {
+  const isKnown = error instanceof AppError;
+  return {
+    error: {
+      code: isKnown ? error.code : 'INTERNAL_ERROR',
+      message: isKnown ? error.message : 'Internal server error',
+      requestId,
+      ...(isKnown && error.details ? { details: error.details } : {}),
+    },
+  };
+};
+
+const applyResponseHeaders = (res: Response, error: unknown): void => {
+  if (!(error instanceof AppError) || !error.headers) return;
+  for (const [name, value] of Object.entries(error.headers)) {
+    res.setHeader(name, value);
+  }
+};
+
+const logServerError = (error: unknown, req: Request, requestId: string | undefined): void => {
+  captureExceptionWithContext(error, {
+    requestId,
+    method: req.method,
+    path: req.originalUrl,
+  });
+  logger.error('request_failed', {
+    requestId,
+    method: req.method,
+    path: req.originalUrl,
+    statusCode: error instanceof AppError ? error.statusCode : 500,
+    error: error instanceof Error ? error.message : String(error),
+  });
+};
+
 /** Express error-handling middleware that maps AppError instances to structured JSON responses and logs 5xx errors. */
 export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   const normalizedError = normalizeError(error);
   const requestId = (req as { requestId?: string } | undefined)?.requestId ?? undefined;
-  const isKnown = normalizedError instanceof AppError;
-  const statusCode = isKnown ? normalizedError.statusCode : 500;
-  const payload: ErrorResponseShape = {
-    error: {
-      code: isKnown ? normalizedError.code : 'INTERNAL_ERROR',
-      message: isKnown ? normalizedError.message : 'Internal server error',
-      requestId,
-      ...(isKnown && normalizedError.details ? { details: normalizedError.details } : {}),
-    },
-  };
+  const statusCode = normalizedError instanceof AppError ? normalizedError.statusCode : 500;
 
   if (statusCode >= 500) {
-    captureExceptionWithContext(normalizedError, {
-      requestId,
-      method: req.method,
-      path: req.originalUrl,
-    });
-    logger.error('request_failed', {
-      requestId,
-      method: req.method,
-      path: req.originalUrl,
-      statusCode,
-      error: normalizedError instanceof Error ? normalizedError.message : String(normalizedError),
-    });
+    logServerError(normalizedError, req, requestId);
   }
 
-  res.status(statusCode).json(payload);
+  applyResponseHeaders(res, normalizedError);
+  res.status(statusCode).json(buildPayload(normalizedError, requestId));
 };

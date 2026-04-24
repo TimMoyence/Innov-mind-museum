@@ -78,8 +78,12 @@ describe('chat-message.route — uncovered paths', () => {
   });
 
   // ── Streaming SSE happy path + callbacks (route is @deprecated, see ADR-001) ─
+  //
+  // SSE streaming was deactivated post-V1 (see docs/adr/ADR-001-sse-streaming-deprecated.md).
+  // The handler is preserved in `chat-message.sse-dormant.ts` for potential V2.1 revival.
+  // Tests stay skipped so the suite documents the expected contract once the route wakes up.
 
-  describe('POST /api/chat/sessions/:id/messages/stream — SSE streaming (deprecated)', () => {
+  describe.skip('POST /api/chat/sessions/:id/messages/stream — SSE streaming (deprecated, see ADR-001)', () => {
     it('streams tokens via SSE and sends done event', async () => {
       mockPostMessageStream.mockImplementation(
         async (

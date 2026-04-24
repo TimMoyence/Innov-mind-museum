@@ -4,14 +4,20 @@ import { ConfirmEmailChangeUseCase } from '@modules/auth/useCase/confirmEmailCha
 import type { User } from '@modules/auth/domain/user.entity';
 import type { EmailService } from '@shared/email/email.port';
 import { makeUser } from '../../helpers/auth/user.fixtures';
-import { makeUserRepo as makeUserRepoBase } from '../../helpers/auth/user-repo.mock';
+import {
+  makeRefreshTokenRepo,
+  makeUserRepo as makeUserRepoBase,
+} from '../../helpers/auth/user-repo.mock';
 
 jest.mock('bcrypt', () => ({
   ...jest.requireActual('bcrypt'),
   compare: jest.fn(),
 }));
 
-/** Wraps the shared factory: getUserByEmail defaults to null (email not taken). */
+/**
+ * Wraps the shared factory: getUserByEmail defaults to null (email not taken).
+ * @param user
+ */
 const makeUserRepo = (user: User | null = makeUser()) =>
   makeUserRepoBase(user, {
     getUserByEmail: jest.fn().mockResolvedValue(null),
@@ -178,35 +184,41 @@ describe('ChangeEmailUseCase', () => {
 });
 
 describe('ConfirmEmailChangeUseCase', () => {
-  it('confirms email change with valid token', async () => {
-    const updatedUser = makeUser({ email: 'new@test.com' });
+  it('confirms email change and revokes refresh tokens with valid token', async () => {
+    const updatedUser = makeUser({ id: 42, email: 'new@test.com' });
     const repo = makeUserRepo(updatedUser);
-    const useCase = new ConfirmEmailChangeUseCase(repo);
+    const refreshTokenRepo = makeRefreshTokenRepo();
+    const useCase = new ConfirmEmailChangeUseCase(repo, refreshTokenRepo);
 
     const result = await useCase.execute('abcd1234');
 
     expect(result).toEqual({ confirmed: true });
     expect(repo.consumeEmailChangeToken).toHaveBeenCalledWith(expect.any(String));
+    expect(refreshTokenRepo.revokeAllForUser).toHaveBeenCalledWith(42);
   });
 
   it('rejects invalid or expired token', async () => {
     const repo = makeUserRepo();
     (repo.consumeEmailChangeToken as jest.Mock).mockResolvedValueOnce(null);
-    const useCase = new ConfirmEmailChangeUseCase(repo);
+    const refreshTokenRepo = makeRefreshTokenRepo();
+    const useCase = new ConfirmEmailChangeUseCase(repo, refreshTokenRepo);
 
     await expect(useCase.execute('invalid-token')).rejects.toMatchObject({
       message: 'Invalid or expired email change token',
       statusCode: 400,
     });
+    expect(refreshTokenRepo.revokeAllForUser).not.toHaveBeenCalled();
   });
 
   it('rejects empty token', async () => {
     const repo = makeUserRepo();
-    const useCase = new ConfirmEmailChangeUseCase(repo);
+    const refreshTokenRepo = makeRefreshTokenRepo();
+    const useCase = new ConfirmEmailChangeUseCase(repo, refreshTokenRepo);
 
     await expect(useCase.execute('   ')).rejects.toMatchObject({
       message: 'Email change token is required',
       statusCode: 400,
     });
+    expect(refreshTokenRepo.revokeAllForUser).not.toHaveBeenCalled();
   });
 });

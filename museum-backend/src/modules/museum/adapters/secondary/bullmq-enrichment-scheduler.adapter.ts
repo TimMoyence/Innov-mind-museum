@@ -4,6 +4,7 @@ import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 
 import type { EnrichmentSchedulerPort } from '../../domain/ports/enrichment-scheduler.port';
+import type { PurgeDeadEnrichmentsUseCase } from '../../useCase/purgeDeadEnrichments.useCase';
 import type { RefreshStaleEnrichmentsUseCase } from '../../useCase/refreshStaleEnrichments.useCase';
 import type { ConnectionOptions } from 'bullmq';
 
@@ -41,6 +42,8 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
   constructor(
     private readonly useCase: RefreshStaleEnrichmentsUseCase,
     private readonly config: BullmqEnrichmentSchedulerConfig,
+    private readonly purgeUseCase?: PurgeDeadEnrichmentsUseCase,
+    private readonly purgeThresholdDays?: number,
   ) {
     this.queue = new Queue(ENRICHMENT_SCHEDULER_QUEUE_NAME, {
       connection: config.connection,
@@ -87,7 +90,15 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
       ENRICHMENT_SCHEDULER_QUEUE_NAME,
       async () => {
         const result = await this.useCase.execute();
-        logger.info('enrichment_scheduler_tick_completed', { ...result });
+        // Purge runs AFTER the refresh so rows newly re-fetched in this tick
+        // are never caught by the same pass. Skipped when no purge use case or
+        // threshold was wired — keeps the scheduler backward-compatible.
+        let purged = 0;
+        if (this.purgeUseCase && this.purgeThresholdDays !== undefined) {
+          const purgeResult = await this.purgeUseCase.execute(new Date(), this.purgeThresholdDays);
+          purged = purgeResult.deleted;
+        }
+        logger.info('enrichment_scheduler_tick_completed', { ...result, purged });
       },
       { connection: this.config.connection, concurrency: 1 },
     );

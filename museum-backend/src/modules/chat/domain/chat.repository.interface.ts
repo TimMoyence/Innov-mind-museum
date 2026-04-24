@@ -265,4 +265,17 @@ export interface ChatRepository {
    * @param messageId - The message UUID.
    */
   clearMessageAudio(messageId: string): Promise<void>;
+
+  /**
+   * List every `imageRef` attached to a message whose owning session belongs to the user.
+   *
+   * Used by the GDPR right-to-erasure flow (SEC-23) to resolve "legacy" image keys
+   * — records written before the user-scoped key format existed — so they can be
+   * deleted from object storage directly. MUST run BEFORE the user row is removed,
+   * otherwise the `CASCADE` will nuke the rows and the refs are lost.
+   *
+   * @param userId - Numeric user ID.
+   * @returns Array of non-null `imageRef` values belonging to the user's sessions.
+   */
+  findLegacyImageRefsByUserId(userId: number): Promise<string[]>;
 }

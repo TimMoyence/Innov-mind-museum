@@ -9,7 +9,32 @@ interface Bucket {
 }
 
 /**
- * Redis-backed rate-limit store using atomic INCR + EXPIRE.
+ * Lua script performing an atomic INCR + PEXPIRE + PTTL in a single Redis call.
+ * Guarantees that concurrent increments from multiple instances cannot race
+ * between the INCR and EXPIRE — which would leak a key without TTL and allow
+ * an unbounded bucket to persist in Redis.
+ *
+ * KEYS[1] = bucket key
+ * ARGV[1] = window TTL in ms
+ *
+ * Returns `[count, pttl]`.
+ */
+const INCR_EXPIRE_LUA = `
+local count = redis.call('INCR', KEYS[1])
+if count == 1 then
+  redis.call('PEXPIRE', KEYS[1], ARGV[1])
+  return {count, tonumber(ARGV[1])}
+end
+local pttl = redis.call('PTTL', KEYS[1])
+if pttl < 0 then
+  redis.call('PEXPIRE', KEYS[1], ARGV[1])
+  pttl = tonumber(ARGV[1])
+end
+return {count, pttl}
+`;
+
+/**
+ * Redis-backed rate-limit store using an atomic Lua script for INCR + EXPIRE.
  * Falls back to an in-memory store when Redis is unavailable.
  */
 export class RedisRateLimitStore {
@@ -26,36 +51,23 @@ export class RedisRateLimitStore {
 
   /**
    * Atomically increment the request count for a key within a time window.
+   * Uses a Lua EVAL so INCR + PEXPIRE are guaranteed atomic across instances.
    *
-   * @returns The current count after increment and the TTL remaining in ms.
+   * @param key - Bucket key (will be prefixed with `ratelimit:`).
+   * @param windowMs - Window duration in milliseconds.
+   * @returns The current count after increment and the absolute reset timestamp.
    */
   async increment(key: string, windowMs: number): Promise<{ count: number; resetAt: number }> {
     const redisKey = `${this.keyPrefix}${key}`;
 
     try {
-      const results = await this.redis.multi().incr(redisKey).pttl(redisKey).exec();
+      const result = (await this.redis.eval(INCR_EXPIRE_LUA, 1, redisKey, String(windowMs))) as [
+        number,
+        number,
+      ];
 
-      if (!results) {
-        return this.incrementFallback(key, windowMs);
-      }
-
-      const [incrResult, pttlResult] = results;
-
-      // ioredis multi().exec() returns [error, result][] — check for errors
-      if (incrResult[0] || pttlResult[0]) {
-        return this.incrementFallback(key, windowMs);
-      }
-
-      const count = incrResult[1] as number;
-      const pttl = pttlResult[1] as number;
-
-      // First request in this window: set expiry
-      if (count === 1 || pttl < 0) {
-        await this.redis.pexpire(redisKey, windowMs);
-        return { count, resetAt: Date.now() + windowMs };
-      }
-
-      // pttl is the remaining TTL in ms
+      const count = result[0];
+      const pttl = result[1];
       const resetAt = Date.now() + Math.max(pttl, 0);
       return { count, resetAt };
     } catch (err) {
@@ -68,7 +80,22 @@ export class RedisRateLimitStore {
     }
   }
 
-  /** Reset a specific key (e.g. after successful auth). */
+  /**
+   * Exposes the underlying ioredis client so callers (e.g. the login lockout
+   * counter) can run specialized atomic Lua scripts without duplicating the
+   * connection lifecycle.
+   *
+   * @returns The underlying ioredis client.
+   */
+  getRedisClient(): Redis {
+    return this.redis;
+  }
+
+  /**
+   * Reset a specific key (e.g. after successful auth).
+   *
+   * @param key - Bucket key to delete (will be prefixed with `ratelimit:`).
+   */
   async reset(key: string): Promise<void> {
     const redisKey = `${this.keyPrefix}${key}`;
     try {

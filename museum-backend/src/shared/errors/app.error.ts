@@ -3,13 +3,22 @@ export class AppError extends Error {
   readonly statusCode: number;
   readonly code: string;
   readonly details?: unknown;
+  /** Optional HTTP response headers (e.g. Retry-After on 429) applied by the error middleware. */
+  readonly headers?: Record<string, string>;
 
-  constructor(params: { message: string; statusCode?: number; code?: string; details?: unknown }) {
+  constructor(params: {
+    message: string;
+    statusCode?: number;
+    code?: string;
+    details?: unknown;
+    headers?: Record<string, string>;
+  }) {
     super(params.message);
     this.name = 'AppError';
     this.statusCode = params.statusCode ?? 500;
     this.code = params.code ?? 'INTERNAL_ERROR';
     this.details = params.details;
+    this.headers = params.headers;
   }
 }
 
@@ -77,13 +86,56 @@ export const forbidden = (message: string): AppError => {
  * Creates a 429 Too Many Requests AppError.
  *
  * @param message - Human-readable error description.
+ * @param options - Optional modifiers for the error payload.
+ * @param options.retryAfterSec - Seconds until the client may retry; sets the Retry-After header.
+ * @param options.code - Overrides the default `TOO_MANY_REQUESTS` machine code.
+ * @param options.details - Structured details to attach to the error response.
  * @returns AppError with status 429.
  */
-export const tooManyRequests = (message: string): AppError => {
+export const tooManyRequests = (
+  message: string,
+  options?: { retryAfterSec?: number; code?: string; details?: unknown },
+): AppError => {
+  const retryAfterSec = options?.retryAfterSec;
+  const headers =
+    retryAfterSec !== undefined
+      ? { 'Retry-After': String(Math.max(1, Math.ceil(retryAfterSec))) }
+      : undefined;
+  const details = options?.details ?? (retryAfterSec !== undefined ? { retryAfterSec } : undefined);
   return new AppError({
     message,
     statusCode: 429,
-    code: 'TOO_MANY_REQUESTS',
+    code: options?.code ?? 'TOO_MANY_REQUESTS',
+    details,
+    headers,
+  });
+};
+
+/**
+ * Creates a 503 Service Unavailable AppError.
+ *
+ * @param message - Human-readable error description.
+ * @param options - Optional modifiers for the error payload.
+ * @param options.retryAfterSec - Seconds until the client may retry; sets the Retry-After header.
+ * @param options.code - Overrides the default `SERVICE_UNAVAILABLE` machine code.
+ * @param options.details - Structured details to attach to the error response.
+ * @returns AppError with status 503.
+ */
+export const serviceUnavailable = (
+  message: string,
+  options?: { retryAfterSec?: number; code?: string; details?: unknown },
+): AppError => {
+  const retryAfterSec = options?.retryAfterSec;
+  const headers =
+    retryAfterSec !== undefined
+      ? { 'Retry-After': String(Math.max(1, Math.ceil(retryAfterSec))) }
+      : undefined;
+  return new AppError({
+    message,
+    statusCode: 503,
+    code: options?.code ?? 'SERVICE_UNAVAILABLE',
+    details: options?.details,
+    headers,
   });
 };
 

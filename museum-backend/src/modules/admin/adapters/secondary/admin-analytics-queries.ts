@@ -14,7 +14,15 @@ import type {
 import type { AuditLog } from '@shared/audit/auditLog.entity';
 import type { DataSource, Repository } from 'typeorm';
 
-/** Map a granularity string to a PostgreSQL date_trunc unit. */
+/**
+ * Map a granularity string to a PostgreSQL date_trunc unit.
+ *
+ * Defense-in-depth against SQL template-literal injection (finding M7/H-2):
+ * the HTTP layer validates `granularity` with a Zod enum, but if that guard
+ * is ever bypassed (direct internal caller, future regression), this runtime
+ * `default` throws rather than silently returning `undefined` which would
+ * inject `"undefined"` into the `date_trunc()` call.
+ */
 function granularityToTrunc(g: AnalyticsGranularity): string {
   switch (g) {
     case 'daily':
@@ -23,6 +31,10 @@ function granularityToTrunc(g: AnalyticsGranularity): string {
       return 'week';
     case 'monthly':
       return 'month';
+    default: {
+      const _exhaustive: never = g;
+      throw new Error(`unreachable granularity: ${String(_exhaustive)}`);
+    }
   }
 }
 

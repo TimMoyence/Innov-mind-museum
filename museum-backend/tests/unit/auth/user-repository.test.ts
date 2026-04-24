@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 import bcrypt from 'bcrypt';
 import type { DataSource, Repository, UpdateResult } from 'typeorm';
 
@@ -277,7 +279,9 @@ describe('UserRepositoryPg', () => {
       const user = makeUser({ email_verified: true });
       qb.execute.mockResolvedValue({ raw: [user] });
 
-      const result = await sut.verifyEmail('verify-tok');
+      // SEC (H2): caller must SHA-256-hash the raw token before calling verifyEmail.
+      const hashedToken = crypto.createHash('sha256').update('verify-tok').digest('hex');
+      const result = await sut.verifyEmail(hashedToken);
 
       expect(qb.update).toHaveBeenCalledWith(User);
       expect(qb.set).toHaveBeenCalledWith({
@@ -286,8 +290,8 @@ describe('UserRepositoryPg', () => {
         verification_token_expires: undefined,
       });
       expect(qb.where).toHaveBeenCalledWith(
-        'verification_token = :token AND verification_token_expires > NOW()',
-        { token: 'verify-tok' },
+        'verification_token = :hashedToken AND verification_token_expires > NOW()',
+        { hashedToken },
       );
       expect(result).toBe(user);
     });
@@ -295,7 +299,8 @@ describe('UserRepositoryPg', () => {
     it('returns null when token is invalid', async () => {
       qb.execute.mockResolvedValue({ raw: [] });
 
-      const result = await sut.verifyEmail('bad-tok');
+      const hashedToken = crypto.createHash('sha256').update('bad-tok').digest('hex');
+      const result = await sut.verifyEmail(hashedToken);
 
       expect(result).toBeNull();
     });

@@ -2,20 +2,45 @@ import { AppError } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 
 import type { IUserRepository } from '../domain/user.repository.interface';
-/** Minimal port for image cleanup — avoids direct coupling to chat adapter internals. */
-export interface ImageCleanupPort {
-  deleteByPrefix(prefix: string): Promise<void>;
+import type {
+  ImageStorage,
+  LegacyImageKeyFetcher,
+} from '@modules/chat/domain/ports/image-storage.port';
+
+/**
+ * Read-only projection of the chat repository needed by {@link DeleteAccountUseCase}.
+ *
+ * Narrow surface (one method) to keep auth ↔ chat coupling minimal and to let
+ * tests inject a trivial mock without mounting the full TypeORM repository.
+ */
+export interface LegacyImageRefLookup {
+  /** Return every `imageRef` tied to messages whose session belongs to the user. */
+  findLegacyImageRefsByUserId(userId: number): Promise<string[]>;
 }
+
+/**
+ * Minimal image-cleanup port consumed by {@link DeleteAccountUseCase}.
+ *
+ * Matches the contract of {@link ImageStorage.deleteByPrefix}: given a user id
+ * and an optional legacy-ref fetcher, delete every object tied to that user.
+ */
+export type ImageCleanupPort = Pick<ImageStorage, 'deleteByPrefix'>;
 
 /** Orchestrates permanent user account deletion (GDPR right-to-erasure). */
 export class DeleteAccountUseCase {
   constructor(
     private readonly userRepository: IUserRepository,
     private readonly imageStorage?: ImageCleanupPort,
+    private readonly legacyImageRefLookup?: LegacyImageRefLookup,
   ) {}
 
   /**
    * Delete a user and all associated data (sessions, messages, tokens, social accounts, images).
+   *
+   * Ordering is load-bearing — object-storage cleanup MUST run BEFORE the DB
+   * rows are wiped. `chat_sessions` are removed first in {@link IUserRepository.deleteUser}
+   * and CASCADE through `chat_messages`; once that happens the `imageRef` column
+   * is gone and the legacy lookup returns an empty list.
    *
    * @param userId - The ID of the user to delete.
    * @throws {AppError} 404 if the user does not exist.
@@ -30,10 +55,13 @@ export class DeleteAccountUseCase {
       });
     }
 
-    // Delete stored images (RGPD compliance — SEC-23)
+    // 1. Delete stored images (RGPD compliance — SEC-23).
+    //    Run BEFORE DB cascade so `findLegacyImageRefsByUserId` can still resolve
+    //    refs for records written under the pre-user-scoped key format.
     if (this.imageStorage) {
       try {
-        await this.imageStorage.deleteByPrefix(`user-${String(userId)}`);
+        const legacyFetcher = this.buildLegacyFetcher();
+        await this.imageStorage.deleteByPrefix(userId, legacyFetcher);
       } catch (error) {
         logger.warn('delete_account_image_cleanup_failed', {
           userId,
@@ -42,9 +70,29 @@ export class DeleteAccountUseCase {
       }
     }
 
-    // Full RGPD deletion — transaction:
-    // 1. chat_sessions (CASCADE → messages, artwork_matches, reports)
-    // 2. users (CASCADE → refresh_tokens, social_accounts)
+    // 2. Full RGPD deletion — transaction:
+    //    - chat_sessions (CASCADE → messages, artwork_matches, reports)
+    //    - users (CASCADE → refresh_tokens, social_accounts)
     await this.userRepository.deleteUser(userId);
+  }
+
+  /**
+   * Build the {@link LegacyImageKeyFetcher} passed to the storage adapter, or
+   * `undefined` when no lookup dependency is wired (tests, non-DB contexts).
+   */
+  private buildLegacyFetcher(): LegacyImageKeyFetcher | undefined {
+    const lookup = this.legacyImageRefLookup;
+    if (!lookup) return undefined;
+    return async (lookupUserId: number): Promise<string[]> => {
+      try {
+        return await lookup.findLegacyImageRefsByUserId(lookupUserId);
+      } catch (error) {
+        logger.warn('delete_account_legacy_image_lookup_failed', {
+          userId: lookupUserId,
+          error: (error as Error).message,
+        });
+        return [];
+      }
+    };
   }
 }

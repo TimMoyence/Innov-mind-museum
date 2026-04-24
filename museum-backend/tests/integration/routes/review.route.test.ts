@@ -29,7 +29,7 @@ describe('Review Routes — HTTP Layer', () => {
     it('POST /api/reviews returns 401 without token', async () => {
       const res = await request(app)
         .post('/api/reviews')
-        .send({ rating: 5, comment: 'Great museum experience!', userName: 'Alice' });
+        .send({ rating: 5, comment: 'Great museum experience!' });
       expect(res.status).toBe(401);
     });
 
@@ -61,7 +61,7 @@ describe('Review Routes — HTTP Layer', () => {
       const res = await request(app)
         .post('/api/reviews')
         .set('Authorization', `Bearer ${userToken()}`)
-        .send({ comment: 'Nice place to visit', userName: 'Bob' });
+        .send({ comment: 'Nice place to visit' });
       expect(res.status).toBe(400);
     });
 
@@ -69,7 +69,7 @@ describe('Review Routes — HTTP Layer', () => {
       const res = await request(app)
         .post('/api/reviews')
         .set('Authorization', `Bearer ${userToken()}`)
-        .send({ rating: 0, comment: 'Some comment here.', userName: 'Bob' });
+        .send({ rating: 0, comment: 'Some comment here.' });
       expect(res.status).toBe(400);
     });
 
@@ -77,7 +77,7 @@ describe('Review Routes — HTTP Layer', () => {
       const res = await request(app)
         .post('/api/reviews')
         .set('Authorization', `Bearer ${userToken()}`)
-        .send({ rating: 6, comment: 'Some comment here.', userName: 'Bob' });
+        .send({ rating: 6, comment: 'Some comment here.' });
       expect(res.status).toBe(400);
     });
 
@@ -85,15 +85,7 @@ describe('Review Routes — HTTP Layer', () => {
       const res = await request(app)
         .post('/api/reviews')
         .set('Authorization', `Bearer ${userToken()}`)
-        .send({ rating: 4, comment: 'Short', userName: 'Bob' });
-      expect(res.status).toBe(400);
-    });
-
-    it('returns 400 for missing userName', async () => {
-      const res = await request(app)
-        .post('/api/reviews')
-        .set('Authorization', `Bearer ${userToken()}`)
-        .send({ rating: 4, comment: 'A sufficiently long comment' });
+        .send({ rating: 4, comment: 'Short' });
       expect(res.status).toBe(400);
     });
 
@@ -101,7 +93,7 @@ describe('Review Routes — HTTP Layer', () => {
       const res = await request(app)
         .post('/api/reviews')
         .set('Authorization', `Bearer ${userToken()}`)
-        .send({ rating: 3.5, comment: 'A sufficiently long comment', userName: 'Bob' });
+        .send({ rating: 3.5, comment: 'A sufficiently long comment' });
       expect(res.status).toBe(400);
     });
   });

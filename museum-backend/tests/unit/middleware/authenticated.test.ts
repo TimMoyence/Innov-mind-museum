@@ -34,6 +34,7 @@ import {
   isAuthenticatedJwtOnly,
 } from '@src/helpers/middleware/authenticated.middleware';
 import { authSessionService } from '@modules/auth/useCase';
+import { validateApiKey } from '@src/helpers/middleware/apiKey.middleware';
 
 const expectUnauthorized = (fn: () => void, message: string): void => {
   try {
@@ -114,23 +115,21 @@ describe('isAuthenticated middleware', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('throws 401 AppError when msk_ token and apiKeys flag is false', () => {
-    // In test env, apiKeys flag is false, so msk_ tokens should fall to JWT
-    (authSessionService.verifyAccessToken as jest.Mock).mockImplementation(() => {
-      throw new Error('not a JWT');
-    });
+  it('routes msk_ tokens to validateApiKey (API keys always enabled after flag retirement)', () => {
+    // After the `apiKeys` feature-flag retirement (commits 22d6e3f2 + 9d8952e3),
+    // API-key auth is always-on. Any Bearer token starting with `msk_` is
+    // delegated to validateApiKey instead of JWT verification.
+    (validateApiKey as jest.Mock).mockResolvedValue(undefined);
 
     const req = makePartialRequest({ headers: { authorization: 'Bearer msk_testkey123' } });
     const res = makePartialResponse();
     const next = makeNext();
 
-    // Should fail as JWT since apiKeys is not enabled
-    expectUnauthorized(() => isAuthenticated(req, res, next), 'Invalid token');
-  });
+    isAuthenticated(req, res, next);
 
-  // Note: The msk_ + apiKeys=true branch (lines 26-27) cannot be unit-tested here
-  // because the env flag is read at module scope. It would require isolateModules
-  // but the relative import of apiKey.middleware causes resolution issues.
+    expect(validateApiKey).toHaveBeenCalledWith('msk_testkey123', req, res, next);
+    expect(authSessionService.verifyAccessToken).not.toHaveBeenCalled();
+  });
 
   it('sets req.museumId to undefined when token museumId is null', () => {
     (authSessionService.verifyAccessToken as jest.Mock).mockReturnValue({

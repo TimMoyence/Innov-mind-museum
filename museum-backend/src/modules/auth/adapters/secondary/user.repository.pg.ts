@@ -146,16 +146,22 @@ export class UserRepositoryPg implements IUserRepository {
     return raw?.[0] ?? null;
   }
 
-  /** Stores an email verification token and its expiry on a user record. */
-  async setVerificationToken(userId: number, token: string, expires: Date): Promise<void> {
+  /**
+   * Stores the SHA-256 hash of an email verification token and its expiry on a user record.
+   * SEC (H2): only the hash is persisted — the raw token is sent to the user by email.
+   */
+  async setVerificationToken(userId: number, hashedToken: string, expires: Date): Promise<void> {
     await this.repo.update(userId, {
-      verification_token: token,
+      verification_token: hashedToken,
       verification_token_expires: expires,
     });
   }
 
-  /** Marks a user's email as verified by consuming the verification token. */
-  async verifyEmail(token: string): Promise<User | null> {
+  /**
+   * Marks a user's email as verified by consuming the verification token hash.
+   * SEC (H2): the caller must SHA-256-hash the raw token received from the user before calling.
+   */
+  async verifyEmail(hashedToken: string): Promise<User | null> {
     const result = await this.repo
       .createQueryBuilder()
       .update(User)
@@ -164,7 +170,9 @@ export class UserRepositoryPg implements IUserRepository {
         verification_token: undefined,
         verification_token_expires: undefined,
       })
-      .where('verification_token = :token AND verification_token_expires > NOW()', { token })
+      .where('verification_token = :hashedToken AND verification_token_expires > NOW()', {
+        hashedToken,
+      })
       .returning('*')
       .execute();
 

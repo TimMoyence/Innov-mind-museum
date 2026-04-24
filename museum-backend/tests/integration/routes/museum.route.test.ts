@@ -4,7 +4,7 @@ import {
   resetRateLimits,
   stopRateLimitSweep,
 } from '../../helpers/http/route-test-setup';
-import { adminToken, visitorToken, makeToken } from '../../helpers/auth/token.helpers';
+import { adminToken, visitorToken, makeToken, userToken } from '../../helpers/auth/token.helpers';
 
 // ── Mock use cases so handlers execute without DB ────────────────────
 
@@ -343,11 +343,19 @@ describe('Museum Routes — HTTP Layer', () => {
     });
   });
 
-  // ── GET /api/museums/:id/low-data-pack (public, no auth) ────────
+  // ── GET /api/museums/:id/low-data-pack (authenticated + rate-limited) ──
 
   describe('GET /api/museums/:id/low-data-pack', () => {
-    it('returns 200 with low data pack (default locale fr)', async () => {
+    it('returns 401 without auth token', async () => {
       const res = await request(app).get('/api/museums/42/low-data-pack');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 200 with low data pack (default locale fr) when authenticated', async () => {
+      const token = userToken();
+      const res = await request(app)
+        .get('/api/museums/42/low-data-pack')
+        .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('museumId');
@@ -355,19 +363,40 @@ describe('Museum Routes — HTTP Layer', () => {
       expect(res.body).toHaveProperty('entries');
     });
 
-    it('returns 200 with explicit locale query param', async () => {
-      const res = await request(app).get('/api/museums/42/low-data-pack?locale=en');
+    it('returns 200 with explicit locale query param when authenticated', async () => {
+      const token = userToken();
+      const res = await request(app)
+        .get('/api/museums/42/low-data-pack?locale=en')
+        .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('entries');
     });
 
     it('sets Cache-Control header', async () => {
-      const res = await request(app).get('/api/museums/42/low-data-pack');
+      const token = userToken();
+      const res = await request(app)
+        .get('/api/museums/42/low-data-pack')
+        .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
       expect(res.headers['cache-control']).toContain('public');
       expect(res.headers['cache-control']).toContain('max-age=3600');
+    });
+
+    it('rate-limits to 10 requests per minute per IP (11th returns 429)', async () => {
+      const token = userToken();
+      // Fire 10 allowed requests
+      for (let i = 0; i < 10; i += 1) {
+        const ok = await request(app)
+          .get('/api/museums/42/low-data-pack')
+          .set('Authorization', `Bearer ${token}`);
+        expect(ok.status).toBe(200);
+      }
+      const blocked = await request(app)
+        .get('/api/museums/42/low-data-pack')
+        .set('Authorization', `Bearer ${token}`);
+      expect(blocked.status).toBe(429);
     });
   });
 });

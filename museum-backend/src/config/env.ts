@@ -4,6 +4,7 @@ import { validateProductionEnv } from './env.production-validation';
 
 import type {
   AppEnv,
+  DeploymentMode,
   GuardrailsV2Candidate,
   LlmProvider,
   NodeEnv,
@@ -114,8 +115,72 @@ const storageDriver: StorageDriver = ['local', 's3'].includes(storageDriverRaw)
   ? (storageDriverRaw as StorageDriver)
   : 'local';
 
+/**
+ * Resolves the deployment topology consumed by `assertDeploymentInvariants`.
+ *
+ * Precedence:
+ *   1. Explicit `DEPLOYMENT_MODE` env var (`single` | `multi`). Invalid values
+ *      are ignored and fall through to auto-detection.
+ *   2. Auto-detect from known multi-instance hints:
+ *        - PM2 cluster mode: `NODE_APP_INSTANCE` or `pm_id`
+ *        - Kubernetes: `KUBERNETES_SERVICE_HOST` or `K8S_POD_NAME`
+ *   3. Default to `single`.
+ *
+ * When auto-detection triggers (no explicit override), a single JSON info line
+ * is written to stderr so operators can see how the mode was inferred. We
+ * intentionally do NOT use `@shared/logger` here: the logger imports `env`,
+ * so using it would create a circular init.
+ */
+function resolveDeploymentMode(): DeploymentMode {
+  const explicit = toOptionalString(process.env.DEPLOYMENT_MODE)?.toLowerCase();
+  if (explicit === 'single' || explicit === 'multi') {
+    return explicit;
+  }
+
+  const hints: { key: string; value: string | undefined }[] = [
+    { key: 'NODE_APP_INSTANCE', value: toOptionalString(process.env.NODE_APP_INSTANCE) },
+    { key: 'pm_id', value: toOptionalString(process.env.pm_id) },
+    {
+      key: 'KUBERNETES_SERVICE_HOST',
+      value: toOptionalString(process.env.KUBERNETES_SERVICE_HOST),
+    },
+    { key: 'K8S_POD_NAME', value: toOptionalString(process.env.K8S_POD_NAME) },
+  ];
+  const detected = hints.filter((hint) => hint.value !== undefined);
+  if (detected.length > 0) {
+    process.stderr.write(
+      `${JSON.stringify({
+        level: 'info',
+        message: 'deployment_mode_autodetected',
+        mode: 'multi',
+        hints: detected.map((hint) => hint.key),
+      })}\n`,
+    );
+    return 'multi';
+  }
+
+  return 'single';
+}
+
+const deploymentMode: DeploymentMode = resolveDeploymentMode();
+
 const isDev = nodeEnv === 'development' || nodeEnv === 'test';
 const isProduction = nodeEnv === 'production';
+
+// SEC-HARDENING (H12): shout if legacy JWT_SECRET env var is still exported in
+// production. We no longer fall back to it (see `auth:` block below) but any
+// orchestration still injecting it probably also forgot to rotate to the
+// discrete JWT_ACCESS_SECRET / JWT_REFRESH_SECRET pair. Using stderr because
+// `@shared/logger` imports env and would cause a circular init.
+if (isProduction && toOptionalString(process.env.JWT_SECRET)) {
+  process.stderr.write(
+    `${JSON.stringify({
+      level: 'warn',
+      message: 'jwt_secret_legacy_env_var_ignored',
+      hint: 'JWT_SECRET is set in production but no longer honored. Rotate to JWT_ACCESS_SECRET + JWT_REFRESH_SECRET and remove JWT_SECRET from the environment.',
+    })}\n`,
+  );
+}
 
 const resolvedAppVersion = (() => {
   const explicit = toOptionalString(process.env.APP_VERSION);
@@ -134,6 +199,7 @@ const resolvedCommitSha = (() => {
 /** Resolved application configuration singleton, validated at startup. */
 const env: AppEnv = {
   nodeEnv,
+  deploymentMode,
   port: toNumber(process.env.PORT, 3000),
   appVersion: resolvedAppVersion,
   commitSha: resolvedCommitSha,
@@ -154,32 +220,31 @@ const env: AppEnv = {
     poolMax: toNumber(process.env.DB_POOL_MAX, 50),
   },
   auth: {
+    // SEC-HARDENING (H12): in production, JWT_SECRET legacy fallback is BANNED.
+    // Explicit JWT_ACCESS_SECRET + JWT_REFRESH_SECRET are required. In dev/test
+    // we still honour JWT_SECRET for local ergonomics. Length / legacy-presence
+    // assertions live in env.production-validation.ts.
     jwtSecret: isDev
       ? toOptionalString(process.env.JWT_ACCESS_SECRET) ||
         process.env.JWT_SECRET ||
         'local-dev-jwt-secret'
-      : required(
-          'JWT_ACCESS_SECRET or JWT_SECRET',
-          toOptionalString(process.env.JWT_ACCESS_SECRET) || process.env.JWT_SECRET,
-        ),
+      : required('JWT_ACCESS_SECRET', toOptionalString(process.env.JWT_ACCESS_SECRET)),
     accessTokenSecret: isDev
       ? toOptionalString(process.env.JWT_ACCESS_SECRET) ||
         process.env.JWT_SECRET ||
         'local-dev-jwt-secret'
-      : required(
-          'JWT_ACCESS_SECRET or JWT_SECRET',
-          toOptionalString(process.env.JWT_ACCESS_SECRET) || process.env.JWT_SECRET,
-        ),
+      : required('JWT_ACCESS_SECRET', toOptionalString(process.env.JWT_ACCESS_SECRET)),
     refreshTokenSecret: isDev
       ? toOptionalString(process.env.JWT_REFRESH_SECRET) ||
         process.env.JWT_SECRET ||
         'local-dev-refresh-jwt-secret'
-      : required(
-          'JWT_REFRESH_SECRET',
-          toOptionalString(process.env.JWT_REFRESH_SECRET) || process.env.JWT_SECRET,
-        ),
+      : required('JWT_REFRESH_SECRET', toOptionalString(process.env.JWT_REFRESH_SECRET)),
     accessTokenTtl: process.env.JWT_ACCESS_TTL || '15m',
-    refreshTokenTtl: process.env.JWT_REFRESH_TTL || '180d',
+    refreshTokenTtl: process.env.JWT_REFRESH_TTL || '30d',
+    refreshIdleWindowSeconds: toNumber(
+      process.env.JWT_REFRESH_IDLE_WINDOW_SECONDS,
+      14 * 24 * 60 * 60,
+    ),
     appleClientId: process.env.APPLE_CLIENT_ID || 'com.musaium.mobile',
     googleClientIds: toList(process.env.GOOGLE_OAUTH_CLIENT_ID).length
       ? toList(process.env.GOOGLE_OAUTH_CLIENT_ID)
@@ -272,10 +337,21 @@ const env: AppEnv = {
   //   Required infra (Redis, OpenAI key) must be provided in prod.
   freeTierDailyChatLimit: toNumber(process.env.FREE_TIER_DAILY_CHAT_LIMIT, 100),
   overpassCacheTtlSeconds: toNumber(process.env.OVERPASS_CACHE_TTL_SECONDS, 86400),
+  overpass: {
+    cacheTtlSeconds: toNumber(process.env.OVERPASS_CACHE_TTL_SECONDS, 86_400),
+    negativeCacheTtlSeconds: toNumber(process.env.OVERPASS_NEGATIVE_CACHE_TTL_SECONDS, 3_600),
+  },
+  chatPurgeRetentionDays: toNumber(process.env.CHAT_PURGE_RETENTION_DAYS, 180),
   knowledgeBase: {
     timeoutMs: toNumber(process.env.KB_TIMEOUT_MS, 500),
     cacheTtlSeconds: toNumber(process.env.KB_CACHE_TTL_SECONDS, 3600),
     cacheMaxEntries: toNumber(process.env.KB_CACHE_MAX_ENTRIES, 500),
+  },
+  nominatim: {
+    contactEmail: toOptionalString(process.env.NOMINATIM_CONTACT_EMAIL) || 'contact@musaium.app',
+    cacheTtlSeconds: toNumber(process.env.NOMINATIM_CACHE_TTL_SECONDS, 86_400),
+    negativeCacheTtlSeconds: toNumber(process.env.NOMINATIM_NEGATIVE_CACHE_TTL_SECONDS, 3_600),
+    minRequestIntervalMs: toNumber(process.env.NOMINATIM_MIN_REQUEST_INTERVAL_MS, 1_000),
   },
   imageEnrichment: {
     unsplashAccessKey: toOptionalString(process.env.UNSPLASH_ACCESS_KEY),
@@ -283,6 +359,9 @@ const env: AppEnv = {
     cacheMaxEntries: toNumber(process.env.IMAGE_ENRICHMENT_CACHE_MAX_ENTRIES, 200),
     fetchTimeoutMs: toNumber(process.env.IMAGE_ENRICHMENT_FETCH_TIMEOUT_MS, 3000),
     maxImagesPerResponse: toNumber(process.env.IMAGE_ENRICHMENT_MAX_IMAGES, 5),
+  },
+  enrichment: {
+    hardDeleteAfterDays: toNumber(process.env.ENRICHMENT_HARD_DELETE_AFTER_DAYS, 180),
   },
   webSearch: {
     tavilyApiKey: toOptionalString(process.env.TAVILY_API_KEY),
@@ -320,11 +399,18 @@ const env: AppEnv = {
     driver: storageDriver,
     localUploadsDir: toOptionalString(process.env.LOCAL_UPLOADS_DIR) || 'tmp/uploads',
     signedUrlTtlSeconds: toNumber(process.env.S3_SIGNED_URL_TTL_SECONDS, 900),
+    // SEC-HARDENING (L3): in production, MEDIA_SIGNING_SECRET MUST be set
+    // explicitly — no silent fallback to JWT_ACCESS_SECRET / JWT_SECRET.
+    // Sharing a single secret across signing domains means a rotation (or
+    // leak) of one defeats the other. In non-production, fall back to the
+    // JWT secrets / local dev default for developer ergonomics.
     signingSecret:
-      toOptionalString(process.env.MEDIA_SIGNING_SECRET) ||
-      toOptionalString(process.env.JWT_ACCESS_SECRET) ||
-      process.env.JWT_SECRET ||
-      'local-dev-media-signing-secret',
+      nodeEnv === 'production'
+        ? toOptionalString(process.env.MEDIA_SIGNING_SECRET) || ''
+        : toOptionalString(process.env.MEDIA_SIGNING_SECRET) ||
+          toOptionalString(process.env.JWT_ACCESS_SECRET) ||
+          process.env.JWT_SECRET ||
+          'local-dev-media-signing-secret',
     s3: {
       endpoint: toOptionalString(process.env.S3_ENDPOINT),
       region: toOptionalString(process.env.S3_REGION),
@@ -343,4 +429,4 @@ if (env.nodeEnv === 'production') {
 }
 
 export { env };
-export type { AppEnv, LlmProvider, StorageDriver };
+export type { AppEnv, DeploymentMode, LlmProvider, StorageDriver };

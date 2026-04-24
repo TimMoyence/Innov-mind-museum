@@ -12,7 +12,11 @@ import type { GuardrailEvaluationService } from './guardrail-evaluation.service'
 import type { ImageEnrichmentService } from './image-enrichment.service';
 import type { ImageProcessingService } from './image-processing.service';
 import type { KnowledgeBaseService } from './knowledge-base.service';
-import type { LocationResolver, ResolvedLocation } from './location-resolver';
+import type {
+  LocationConsentChecker,
+  LocationResolver,
+  ResolvedLocation,
+} from './location-resolver';
 import type { UserMemoryService } from './user-memory.service';
 import type { WebSearchService } from './web-search.service';
 import type { ChatRepository } from '../domain/chat.repository.interface';
@@ -64,6 +68,13 @@ export interface PrepareMessagePipelineDeps {
   dbLookup?: DbLookupService;
   extractionQueue?: ExtractionQueuePort;
   locationResolver?: LocationResolver;
+  /**
+   * GDPR consent port. When supplied, location is only propagated to the LLM
+   * prompt if the user has granted the `location_to_llm` scope. Without this
+   * port the legacy behaviour (always propagate) stands — useful for tests
+   * that pre-date the consent table.
+   */
+  locationConsentChecker?: LocationConsentChecker;
 }
 
 /**
@@ -83,6 +94,7 @@ export class PrepareMessagePipeline {
   private readonly dbLookup?: DbLookupService;
   private readonly extractionQueue?: ExtractionQueuePort;
   private readonly locationResolver?: LocationResolver;
+  private readonly locationConsentChecker?: LocationConsentChecker;
 
   constructor(deps: PrepareMessagePipelineDeps) {
     this.repository = deps.repository;
@@ -95,6 +107,7 @@ export class PrepareMessagePipeline {
     this.dbLookup = deps.dbLookup;
     this.extractionQueue = deps.extractionQueue;
     this.locationResolver = deps.locationResolver;
+    this.locationConsentChecker = deps.locationConsentChecker;
   }
 
   private validateMessageInput(text: string | undefined, image: PostMessageInput['image']): void {
@@ -208,6 +221,10 @@ export class PrepareMessagePipeline {
       this.locationResolver,
       input.context?.location,
       session,
+      {
+        userId: ownerId ?? currentUserId,
+        consentChecker: this.locationConsentChecker,
+      },
     );
 
     return {

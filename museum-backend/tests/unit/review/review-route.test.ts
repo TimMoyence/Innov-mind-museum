@@ -22,12 +22,30 @@ jest.mock('@modules/review/useCase', () => ({
   moderateReviewUseCase: { execute: jest.fn() },
 }));
 
+// ── Mock PG user repository so the default author resolver can resolve
+//    the authenticated user without a live database.
+
+const mockGetUserById = jest.fn();
+
+jest.mock('@modules/auth/adapters/secondary/user.repository.pg', () => ({
+  UserRepositoryPg: jest.fn().mockImplementation(() => ({
+    getUserById: (id: number) => mockGetUserById(id),
+  })),
+}));
+
 const { app } = createRouteTestApp();
 
 describe('Review Routes — Unit', () => {
   beforeEach(() => {
     resetRateLimits();
     jest.clearAllMocks();
+    mockGetUserById.mockResolvedValue({
+      id: 1,
+      firstname: 'Ada',
+      lastname: 'Lovelace',
+      email: 'ada@example.com',
+      role: 'visitor',
+    });
   });
 
   afterAll(() => {
@@ -40,14 +58,13 @@ describe('Review Routes — Unit', () => {
     const validBody = {
       rating: 5,
       comment: 'An absolutely wonderful museum experience!',
-      userName: 'Ada Lovelace',
     };
 
-    it('returns 201 with created review for authenticated user', async () => {
+    it('returns 201 and derives userName server-side from authenticated user', async () => {
       const mockReview = {
         id: 'rev-1',
         userId: 1,
-        userName: 'Ada Lovelace',
+        userName: 'Ada L.',
         rating: 5,
         comment: 'An absolutely wonderful museum experience!',
         status: 'pending',
@@ -63,11 +80,25 @@ describe('Review Routes — Unit', () => {
       expect(res.status).toBe(201);
       expect(res.body).toEqual({ review: mockReview });
       expect(mockCreateReview).toHaveBeenCalledWith({
-        userId: 1,
-        userName: 'Ada Lovelace',
+        user: expect.objectContaining({ id: 1, firstname: 'Ada', lastname: 'Lovelace' }),
         rating: 5,
         comment: 'An absolutely wonderful museum experience!',
       });
+    });
+
+    it('ignores client-supplied userName (schema strips it)', async () => {
+      mockCreateReview.mockResolvedValue({ id: 'rev-2' });
+
+      const res = await request(app)
+        .post('/api/reviews')
+        .set('Authorization', `Bearer ${userToken()}`)
+        .send({ ...validBody, userName: 'Spoofed Identity' });
+
+      // Schema should be permissive to extra keys (zod .object default strips),
+      // but userName must never reach the use-case payload.
+      expect(res.status).toBe(201);
+      const call = mockCreateReview.mock.calls[0][0] as Record<string, unknown>;
+      expect(call).not.toHaveProperty('userName');
     });
 
     it('returns 401 without auth token', async () => {
@@ -77,11 +108,22 @@ describe('Review Routes — Unit', () => {
       expect(mockCreateReview).not.toHaveBeenCalled();
     });
 
+    it('returns 401 when authenticated user cannot be resolved', async () => {
+      mockGetUserById.mockResolvedValueOnce(null);
+      const res = await request(app)
+        .post('/api/reviews')
+        .set('Authorization', `Bearer ${userToken()}`)
+        .send(validBody);
+
+      expect(res.status).toBe(401);
+      expect(mockCreateReview).not.toHaveBeenCalled();
+    });
+
     it('returns 400 for invalid body (missing rating)', async () => {
       const res = await request(app)
         .post('/api/reviews')
         .set('Authorization', `Bearer ${userToken()}`)
-        .send({ comment: 'A sufficiently long comment', userName: 'Bob' });
+        .send({ comment: 'A sufficiently long comment' });
 
       expect(res.status).toBe(400);
       expect(mockCreateReview).not.toHaveBeenCalled();

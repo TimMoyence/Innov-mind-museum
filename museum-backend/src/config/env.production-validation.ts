@@ -8,13 +8,35 @@ const required = (name: string, value: string | undefined): string => {
   return value;
 };
 
-/** Validates JWT secrets are set and distinct in production. */
-function validateJwtSecrets(env: AppEnv): void {
-  required(
-    'JWT_ACCESS_SECRET or JWT_SECRET',
-    process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET,
+/** Minimum length for JWT signing secrets in production (L2). */
+const MIN_JWT_SECRET_LENGTH = 32;
+
+/** Throws if the given JWT secret is shorter than {@link MIN_JWT_SECRET_LENGTH}. */
+function assertSecretLength(name: string, value: string): void {
+  if (value.length >= MIN_JWT_SECRET_LENGTH) return;
+  const required = String(MIN_JWT_SECRET_LENGTH);
+  const actual = String(value.length);
+  throw new Error(
+    `${name} must be >= ${required} chars in production (current length: ${actual}).`,
   );
+}
+
+/** Validates JWT secrets are set, distinct, and sufficiently long in production. */
+function validateJwtSecrets(env: AppEnv): void {
+  // SEC-HARDENING (H12): legacy JWT_SECRET fallback is disabled in prod.
+  // Require the discrete secrets explicitly.
+  required('JWT_ACCESS_SECRET', process.env.JWT_ACCESS_SECRET);
   required('JWT_REFRESH_SECRET', process.env.JWT_REFRESH_SECRET);
+
+  // SEC-HARDENING (H12): loudly warn operators if the legacy JWT_SECRET is
+  // still exported in production — it is silently ignored and should be
+  // removed from the environment to avoid confusion during incident response.
+  if (process.env.JWT_SECRET?.trim()) {
+    console.warn(
+      'JWT_SECRET is set in production but is no longer honored. ' +
+        'Remove it from the environment; only JWT_ACCESS_SECRET / JWT_REFRESH_SECRET are used.',
+    );
+  }
 
   // SEC-HARDENING: Access and refresh token secrets MUST differ.
   // Sharing the same secret defeats token type separation — a stolen access token
@@ -26,6 +48,12 @@ function validateJwtSecrets(env: AppEnv): void {
         'Sharing the same secret defeats token type separation.',
     );
   }
+
+  // SEC-HARDENING (L2): JWT secrets MUST be at least 32 chars (~256 bits of
+  // entropy for hex/base64-derived secrets). Short secrets are trivially
+  // brute-forced offline once a token is captured.
+  assertSecretLength('JWT_ACCESS_SECRET', env.auth.accessTokenSecret);
+  assertSecretLength('JWT_REFRESH_SECRET', env.auth.refreshTokenSecret);
 }
 
 /** Validates the LLM provider's API key is set. */
@@ -75,7 +103,21 @@ export function validateProductionEnv(env: AppEnv): void {
 
   required('PGDATABASE', process.env.PGDATABASE);
   required('CORS_ORIGINS', process.env.CORS_ORIGINS);
-  required('MEDIA_SIGNING_SECRET', process.env.MEDIA_SIGNING_SECRET);
+
+  // SEC-HARDENING (L3): MEDIA_SIGNING_SECRET must be set explicitly in
+  // production — no fallback to JWT_ACCESS_SECRET / JWT_SECRET. It must
+  // also be distinct from the JWT secrets so a rotation/leak of one does
+  // not compromise the other.
+  const mediaSigningSecret = required('MEDIA_SIGNING_SECRET', process.env.MEDIA_SIGNING_SECRET);
+  if (mediaSigningSecret === process.env.JWT_ACCESS_SECRET) {
+    throw new Error(
+      'MEDIA_SIGNING_SECRET must be distinct from JWT_ACCESS_SECRET in production. ' +
+        'Sharing secrets across signing domains defeats key rotation.',
+    );
+  }
+  if (mediaSigningSecret === process.env.JWT_REFRESH_SECRET) {
+    throw new Error('MEDIA_SIGNING_SECRET must be distinct from JWT_REFRESH_SECRET in production.');
+  }
 
   validateLlmProviderKey(env);
   validateS3Storage(env);

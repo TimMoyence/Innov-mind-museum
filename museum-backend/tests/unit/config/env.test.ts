@@ -8,6 +8,8 @@
  * via local copies. These tests exercise the real module.
  */
 
+import { validProductionEnv } from '../../helpers/config/prod-env.fixtures';
+
 describe('env.ts module', () => {
   const originalEnv = { ...process.env };
 
@@ -225,15 +227,7 @@ describe('env.ts module', () => {
     });
 
     it('accepts "production" (with required vars)', () => {
-      const env = loadEnv({
-        NODE_ENV: 'production',
-        JWT_ACCESS_SECRET: 'prod-secret',
-        JWT_REFRESH_SECRET: 'prod-refresh',
-        PGDATABASE: 'museum_prod',
-        CORS_ORIGINS: 'https://app.musaium.com',
-        MEDIA_SIGNING_SECRET: 'sign-secret',
-        OPENAI_API_KEY: 'sk-test',
-      });
+      const env = loadEnv(validProductionEnv());
       expect(env.nodeEnv).toBe('production');
     });
   });
@@ -241,44 +235,24 @@ describe('env.ts module', () => {
   describe('production validation', () => {
     it('throws when JWT_ACCESS_SECRET is missing in production', () => {
       expect(() => {
-        loadEnv({
-          NODE_ENV: 'production',
-          JWT_ACCESS_SECRET: undefined,
-          JWT_SECRET: undefined,
-          JWT_REFRESH_SECRET: 'refresh',
-          PGDATABASE: 'db',
-          CORS_ORIGINS: 'https://x.com',
-          MEDIA_SIGNING_SECRET: 'sign',
-          OPENAI_API_KEY: 'sk-test',
-        });
+        loadEnv(
+          validProductionEnv({
+            JWT_ACCESS_SECRET: undefined,
+            JWT_SECRET: undefined,
+          }),
+        );
       }).toThrow(/Missing required environment variable/);
     });
 
     it('throws when PGDATABASE is missing in production', () => {
       expect(() => {
-        loadEnv({
-          NODE_ENV: 'production',
-          JWT_ACCESS_SECRET: 'secret',
-          JWT_REFRESH_SECRET: 'refresh',
-          PGDATABASE: undefined,
-          CORS_ORIGINS: 'https://x.com',
-          MEDIA_SIGNING_SECRET: 'sign',
-          OPENAI_API_KEY: 'sk-test',
-        });
+        loadEnv(validProductionEnv({ PGDATABASE: undefined }));
       }).toThrow(/Missing required environment variable/);
     });
 
     it('throws when CORS_ORIGINS is missing in production', () => {
       expect(() => {
-        loadEnv({
-          NODE_ENV: 'production',
-          JWT_ACCESS_SECRET: 'secret',
-          JWT_REFRESH_SECRET: 'refresh',
-          PGDATABASE: 'db',
-          CORS_ORIGINS: undefined,
-          MEDIA_SIGNING_SECRET: 'sign',
-          OPENAI_API_KEY: 'sk-test',
-        });
+        loadEnv(validProductionEnv({ CORS_ORIGINS: undefined }));
       }).toThrow(/Missing required environment variable/);
     });
 
@@ -297,16 +271,7 @@ describe('env.ts module', () => {
 
   describe('LLM diagnostics', () => {
     it('forces includeDiagnostics false in production', () => {
-      const env = loadEnv({
-        NODE_ENV: 'production',
-        LLM_INCLUDE_DIAGNOSTICS: 'true',
-        JWT_ACCESS_SECRET: 'secret',
-        JWT_REFRESH_SECRET: 'refresh',
-        PGDATABASE: 'db',
-        CORS_ORIGINS: 'https://x.com',
-        MEDIA_SIGNING_SECRET: 'sign',
-        OPENAI_API_KEY: 'sk-test',
-      });
+      const env = loadEnv(validProductionEnv({ LLM_INCLUDE_DIAGNOSTICS: 'true' }));
       expect(env.llm.includeDiagnostics).toBe(false);
     });
 

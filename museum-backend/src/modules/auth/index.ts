@@ -22,11 +22,17 @@ export {
   revokeApiKeyUseCase,
   listApiKeysUseCase,
   completeOnboarding,
+  grantConsentUseCase,
+  revokeConsentUseCase,
+  userConsentRepository,
 } from './useCase';
 
 // ── Domain types ─────────────────────────────────────────────────────────────
 
 export { User } from './domain/user.entity';
+export { UserConsent, CONSENT_SCOPES, CONSENT_SOURCES } from './domain/userConsent.entity';
+export type { ConsentScope, ConsentSource } from './domain/userConsent.entity';
+export type { IUserConsentRepository } from './domain/userConsent.repository.interface';
 export { UserRole } from './domain/user-role';
 export type { IUserRepository } from './domain/user.repository.interface';
 export type { IRefreshTokenRepository } from './domain/refresh-token.repository.interface';

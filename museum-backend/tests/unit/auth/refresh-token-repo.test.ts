@@ -43,6 +43,7 @@ function makeInsertInput(
 /**
  * Build a fake AuthRefreshToken entity with user relation loaded.
  * `userId` is the JoinColumn name — accepted on overrides for fallback scenarios.
+ * @param overrides
  */
 function makeRefreshTokenEntity(
   overrides: Partial<AuthRefreshToken> & { userId?: number } = {},
@@ -57,6 +58,7 @@ function makeRefreshTokenEntity(
     issuedAt: new Date('2026-01-01T00:00:00Z'),
     expiresAt: new Date('2026-01-08T00:00:00Z'),
     rotatedAt: null,
+    lastRotatedAt: null,
     revokedAt: null,
     reuseDetectedAt: null,
     replacedByTokenId: null,
@@ -98,6 +100,7 @@ describe('RefreshTokenRepositoryPg', () => {
         tokenHash: input.tokenHash,
         issuedAt: input.issuedAt,
         expiresAt: input.expiresAt,
+        lastRotatedAt: input.issuedAt,
       });
       expect(repo.save).toHaveBeenCalled();
       expect(result.userId).toBe(1);
@@ -198,6 +201,7 @@ describe('RefreshTokenRepositoryPg', () => {
         tokenHash: nextInput.tokenHash,
         issuedAt: nextInput.issuedAt,
         expiresAt: nextInput.expiresAt,
+        lastRotatedAt: nextInput.issuedAt,
       });
       expect(txRepo.save).toHaveBeenCalled();
       expect(txRepo.update).toHaveBeenCalledWith(

@@ -9,6 +9,7 @@ import { EnrichMuseumUseCase } from './enrichMuseum.useCase';
 import { GetMuseumUseCase } from './getMuseum.useCase';
 import { ListMuseumsUseCase } from './listMuseums.useCase';
 import { LowDataPackService } from './low-data-pack.service';
+import { PurgeDeadEnrichmentsUseCase } from './purgeDeadEnrichments.useCase';
 import { RefreshStaleEnrichmentsUseCase } from './refreshStaleEnrichments.useCase';
 import { SearchMuseumsUseCase } from './searchMuseums.useCase';
 import { UpdateMuseumUseCase } from './updateMuseum.useCase';
@@ -34,7 +35,12 @@ export const getMuseumUseCase = new GetMuseumUseCase(museumRepository);
 export const listMuseumsUseCase = new ListMuseumsUseCase(museumRepository);
 export const updateMuseumUseCase = new UpdateMuseumUseCase(museumRepository);
 
-/** Creates the search use case with an optional cache service (resolved at runtime). */
+/**
+ * Creates the search use case with an optional cache service (resolved at
+ * runtime). When a cache is provided, a pre-cached Overpass search fn is
+ * derived from it by the use-case constructor (see `createCachedOverpassClient`
+ * in `shared/http/overpass.client.ts`).
+ */
 export const buildSearchMuseumsUseCase = (cache?: CacheService): SearchMuseumsUseCase =>
   new SearchMuseumsUseCase(museumRepository, cache);
 
@@ -69,12 +75,26 @@ export const buildRefreshStaleEnrichmentsUseCase = (
 };
 
 /**
+ * Builds the {@link PurgeDeadEnrichmentsUseCase} wired to the shared TypeORM
+ * cache. The scheduler invokes this daily AFTER the refresh scan so rows about
+ * to be re-fetched are never deleted prematurely.
+ */
+export const buildPurgeDeadEnrichmentsUseCase = (): PurgeDeadEnrichmentsUseCase => {
+  const cache = new TypeOrmMuseumEnrichmentCacheAdapter(AppDataSource, Museum);
+  return new PurgeDeadEnrichmentsUseCase(cache);
+};
+
+/**
  * Creates the BullMQ scheduler adapter that drives the daily stale-refresh
- * scan. The caller owns the lifecycle (`start` on boot, `stop` on shutdown).
+ * scan + the dead-row purge. The caller owns the lifecycle (`start` on boot,
+ * `stop` on shutdown).
  */
 export const createBullmqEnrichmentScheduler = (
   useCase: RefreshStaleEnrichmentsUseCase,
   config: BullmqEnrichmentSchedulerConfig,
-): EnrichmentSchedulerPort => new BullmqEnrichmentSchedulerAdapter(useCase, config);
+  purgeUseCase?: PurgeDeadEnrichmentsUseCase,
+  purgeThresholdDays?: number,
+): EnrichmentSchedulerPort =>
+  new BullmqEnrichmentSchedulerAdapter(useCase, config, purgeUseCase, purgeThresholdDays);
 
 export { museumRepository };

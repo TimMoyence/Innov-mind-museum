@@ -126,7 +126,13 @@ describe('LocationResolver', () => {
       expect(mockedReverseGeocode).toHaveBeenCalledWith(48.8606, 2.3376, 3000);
     });
 
-    it('does NOT cache when user is outside a museum', async () => {
+    it('caches outside-museum reverse geocodes via the injected cached client, keyed on rounded coordinates', async () => {
+      // The LocationResolver MUST NOT hit Nominatim live on every message
+      // when outside a museum — per OSMF policy, reverse-geocode results
+      // must be cached client-side. We verify by injecting an explicit
+      // cached reverse-geocode fn and asserting it was called with the raw
+      // coordinates (the cache layer itself owns the rounded-key logic and
+      // is tested separately in `tests/unit/shared/nominatim-cached-client.test.ts`).
       const repo = makeMuseumRepo({
         findAll: jest
           .fn()
@@ -135,10 +141,22 @@ describe('LocationResolver', () => {
           ]),
       });
       const cache = makeCache();
-      const resolver = new LocationResolver(repo, cache);
+      const cachedReverseGeocode = jest.fn().mockResolvedValue({
+        displayName: 'Rue de Rivoli, Paris, France',
+        address: { road: 'Rue de Rivoli', city: 'Paris', country: 'France' },
+      });
+      const resolver = new LocationResolver(repo, { cache, reverseGeocode: cachedReverseGeocode });
 
       await resolver.resolve(48.8606, 2.3376);
 
+      // The injected cached client was called with the raw coords.
+      expect(cachedReverseGeocode).toHaveBeenCalledWith(48.8606, 2.3376);
+      // The raw (uncached) Nominatim client must NOT have been called —
+      // the cached wrapper is the single point of external contact.
+      expect(mockedReverseGeocode).not.toHaveBeenCalled();
+      // And the top-level `geo:resolve:` cache is intentionally left alone
+      // for outside-museum cases (nearby-museum distances depend on exact
+      // coordinates; only the external Nominatim call is worth memoising).
       expect(cache.set).not.toHaveBeenCalled();
     });
 

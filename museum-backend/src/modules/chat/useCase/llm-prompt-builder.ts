@@ -178,10 +178,13 @@ const buildVisitorContextLine = (input: OrchestratorInput): string => {
   if (rl.isInsideMuseum && rl.nearbyMuseums.length > 0) {
     return `<visitor_context>The visitor is currently inside or very near: ${rl.nearbyMuseums[0].name}. Any artwork photo is most likely from this museum's collection.</visitor_context>`;
   }
-  if (rl.reverseGeocode) {
+  if (rl.reverseGeocodeCoarse) {
+    // GDPR: only the coarse (city + country) value is ever shipped to the
+    // third-party LLM. The full street-level `rl.reverseGeocode` stays inside
+    // the backend for analytics/audit. See location-resolver.ts.
     const nearbyList = formatNearbyMuseumsList(rl.nearbyMuseums);
     const nearbySuffix = nearbyList ? ` Nearby museums: ${nearbyList}.` : '';
-    return `<visitor_context>The visitor is outdoors at: ${rl.reverseGeocode}. They may be photographing a monument, statue, fountain, building facade, or public art at this exact location.${nearbySuffix}</visitor_context>`;
+    return `<visitor_context>The visitor is outdoors in: ${rl.reverseGeocodeCoarse}. They may be photographing a monument, statue, fountain, building facade, or public art in this area.${nearbySuffix}</visitor_context>`;
   }
   if (rl.nearbyMuseums.length > 0) {
     const nearbyList = formatNearbyMuseumsList(rl.nearbyMuseums);

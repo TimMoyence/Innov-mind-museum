@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 import { VerifyEmailUseCase } from '@modules/auth/useCase/verifyEmail.useCase';
 import { RegisterUseCase } from '@modules/auth/useCase/register.useCase';
 import type { EmailService } from '@shared/email/email.port';
@@ -5,14 +7,20 @@ import { makeUser } from '../../helpers/auth/user.fixtures';
 import { makeUserRepo } from '../../helpers/auth/user-repo.mock';
 
 describe('VerifyEmailUseCase', () => {
-  it('returns { verified: true } for a valid token', async () => {
+  it('hashes the raw token (SHA-256) before repository lookup (SEC H2)', async () => {
     const repo = makeUserRepo(makeUser());
     const useCase = new VerifyEmailUseCase(repo);
 
-    const result = await useCase.execute('valid-token');
+    const rawToken = 'valid-token';
+    const expectedHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    const result = await useCase.execute(rawToken);
 
     expect(result).toEqual({ verified: true });
-    expect(repo.verifyEmail).toHaveBeenCalledWith('valid-token');
+    expect(repo.verifyEmail).toHaveBeenCalledTimes(1);
+    expect(repo.verifyEmail).toHaveBeenCalledWith(expectedHash);
+    // Crucially, the raw token must never reach the repository layer.
+    expect(repo.verifyEmail).not.toHaveBeenCalledWith(rawToken);
   });
 
   it('throws 400 for expired/invalid token', async () => {

@@ -108,6 +108,12 @@ const sanitizeUser = (user: User): SafeUser => {
 export class AuthSessionService {
   private readonly accessTtlSeconds = ttlToSeconds(env.auth.accessTokenTtl);
   private readonly refreshTtlSeconds = ttlToSeconds(env.auth.refreshTokenTtl);
+  /**
+   * Sliding-window threshold (ms). Sourced from `env.auth.refreshIdleWindowSeconds`.
+   * When the elapsed time since the previous rotation on the session chain exceeds
+   * this value, the next refresh attempt is rejected and the family revoked.
+   */
+  private readonly refreshIdleWindowMs = env.auth.refreshIdleWindowSeconds * 1000;
 
   constructor(
     private readonly userRepository: IUserRepository,
@@ -314,6 +320,16 @@ export class AuthSessionService {
       await this.refreshTokenRepository.revokeByJti(stored.jti);
       throw unauthorized('Refresh token expired', 'REFRESH_TOKEN_EXPIRED');
     }
+
+    // Sliding idle window — if no rotation activity happened within the
+    // configured threshold, force re-auth. Fallback anchor for legacy rows
+    // predating the `last_rotated_at` column: createdAt (non-null by schema).
+    const idleAnchor = stored.lastRotatedAt ?? stored.createdAt;
+    const idleMs = Date.now() - idleAnchor.getTime();
+    if (idleMs > this.refreshIdleWindowMs) {
+      await this.refreshTokenRepository.revokeFamily(stored.familyId);
+      throw unauthorized('Session idle timeout', 'SESSION_IDLE_TIMEOUT');
+    }
   }
 
   private async issueSession(params: {
@@ -357,6 +373,8 @@ export class AuthSessionService {
       tokenHash: sha256(refreshToken),
       issuedAt,
       expiresAt: refreshExpiresAt,
+      // Stamp the sliding-window anchor at rotation / issue time.
+      lastRotatedAt: issuedAt,
     };
 
     await (params.rotateFrom

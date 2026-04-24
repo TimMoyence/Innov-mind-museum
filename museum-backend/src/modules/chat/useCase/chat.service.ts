@@ -19,7 +19,7 @@ import type {
 import type { ArtTopicClassifierPort } from './guardrail-evaluation.service';
 import type { ImageEnrichmentService } from './image-enrichment.service';
 import type { KnowledgeBaseService } from './knowledge-base.service';
-import type { LocationResolver } from './location-resolver';
+import type { LocationConsentChecker, LocationResolver } from './location-resolver';
 import type { UserMemoryService } from './user-memory.service';
 import type { WebSearchService } from './web-search.service';
 import type { ChatRepository } from '../domain/chat.repository.interface';
@@ -79,6 +79,8 @@ export interface ChatServiceDeps {
   dbLookup?: DbLookupService;
   extractionQueue?: ExtractionQueuePort;
   locationResolver?: LocationResolver;
+  /** GDPR consent port — gates whether the LLM prompt receives any location. */
+  locationConsentChecker?: LocationConsentChecker;
 }
 
 /**
@@ -118,6 +120,7 @@ export class ChatService {
         dbLookup: deps.dbLookup,
         extractionQueue: deps.extractionQueue,
         locationResolver: deps.locationResolver,
+        locationConsentChecker: deps.locationConsentChecker,
       },
       safety: {
         artTopicClassifier: deps.artTopicClassifier,
@@ -263,7 +266,7 @@ export class ChatService {
       userId: callbacks.currentUserId,
       requestId: callbacks.requestId,
     });
-     
+
     return await this.messages.postMessageStream(sessionId, input, callbacks);
   }
 

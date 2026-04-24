@@ -6,54 +6,24 @@ import {
   makeNext,
 } from '../../helpers/http/express-mock.helpers';
 
-type ExecTuple = [Error | null, unknown];
-type MockMulti = {
-  incr: jest.Mock;
-  pttl: jest.Mock;
-  exec: jest.Mock<Promise<ExecTuple[] | null>, []>;
-};
-type MockRedis = {
-  multi: jest.Mock;
-  pexpire: jest.Mock;
+interface MockRedis {
+  eval: jest.Mock;
   del: jest.Mock;
   on: jest.Mock;
-  __multi: MockMulti;
-  __setExecResult: (result: ExecTuple[] | null) => void;
-  __pushExecResult: (result: ExecTuple[]) => void;
-  __clearExecResult: () => void;
-};
+}
 
-/** Exposes the mock in the Redis shape expected by RedisRateLimitStore. Single cast. */
+/**
+ * Exposes the mock in the Redis shape expected by RedisRateLimitStore. Single cast.
+ * @param m
+ */
 const asRedis = (m: MockRedis): Redis => m as unknown as Redis;
 
-/** Creates a mock ioredis client with chainable multi(). Single cast localized here. */
+/** Creates a mock ioredis client exposing the minimal surface the store uses. */
 const createMockRedis = (): MockRedis => {
-  const execResults: ExecTuple[][] = [];
-  let nextExecResult: ExecTuple[] | null = null;
-
-  const multi: MockMulti = {
-    incr: jest.fn().mockReturnThis(),
-    pttl: jest.fn().mockReturnThis(),
-    exec: jest.fn(async () => nextExecResult ?? execResults.shift() ?? null),
-  };
-
   return {
-    multi: jest.fn(() => multi),
-    pexpire: jest.fn(async () => 1),
+    eval: jest.fn(async () => [1, 60_000]),
     del: jest.fn(async () => 1),
     on: jest.fn().mockReturnThis(),
-    __multi: multi,
-    __setExecResult: (result: ExecTuple[] | null) => {
-      nextExecResult = result;
-    },
-    __pushExecResult: (result: ExecTuple[]) => {
-      nextExecResult = null;
-      execResults.push(result);
-    },
-    __clearExecResult: () => {
-      nextExecResult = null;
-      execResults.length = 0;
-    },
   };
 };
 
@@ -71,55 +41,33 @@ describe('RedisRateLimitStore', () => {
   });
 
   describe('increment', () => {
-    it('increments and sets expiry on first request (count=1)', async () => {
-      mockRedis.__setExecResult([
-        [null, 1], // INCR result = 1
-        [null, -2], // PTTL result = -2 (no expiry yet)
-      ]);
+    it('returns atomic Lua result for first request (count=1)', async () => {
+      mockRedis.eval.mockResolvedValueOnce([1, 60_000]);
 
       const result = await store.increment('ip:1.2.3.4', 60_000);
 
       expect(result.count).toBe(1);
       expect(result.resetAt).toBeGreaterThan(Date.now() - 1000);
       expect(result.resetAt).toBeLessThanOrEqual(Date.now() + 60_000 + 100);
-      expect(mockRedis.pexpire).toHaveBeenCalledWith('ratelimit:ip:1.2.3.4', 60_000);
+      expect(mockRedis.eval).toHaveBeenCalledTimes(1);
+      const [, numKeys, key, windowArg] = mockRedis.eval.mock.calls[0];
+      expect(numKeys).toBe(1);
+      expect(key).toBe('ratelimit:ip:1.2.3.4');
+      expect(windowArg).toBe('60000');
     });
 
-    it('increments without setting expiry on subsequent requests', async () => {
-      mockRedis.__setExecResult([
-        [null, 5], // INCR result = 5
-        [null, 45_000], // PTTL = 45s remaining
-      ]);
+    it('returns atomic Lua result for subsequent requests', async () => {
+      mockRedis.eval.mockResolvedValueOnce([5, 45_000]);
 
       const result = await store.increment('ip:1.2.3.4', 60_000);
 
       expect(result.count).toBe(5);
-      expect(mockRedis.pexpire).not.toHaveBeenCalled();
+      expect(result.resetAt).toBeGreaterThan(Date.now());
+      expect(result.resetAt).toBeLessThanOrEqual(Date.now() + 45_000 + 100);
     });
 
-    it('falls back to in-memory when Redis multi returns null', async () => {
-      mockRedis.__setExecResult(null);
-      mockRedis.__multi.exec.mockResolvedValueOnce(null);
-
-      const result = await store.increment('ip:fallback', 60_000);
-
-      expect(result.count).toBe(1);
-      expect(result.resetAt).toBeGreaterThan(Date.now() - 1000);
-    });
-
-    it('falls back to in-memory when Redis multi returns errors', async () => {
-      mockRedis.__setExecResult([
-        [new Error('Redis error'), null],
-        [null, -2],
-      ]);
-
-      const result = await store.increment('ip:error', 60_000);
-
-      expect(result.count).toBe(1);
-    });
-
-    it('falls back to in-memory when Redis throws', async () => {
-      mockRedis.__multi.exec.mockRejectedValueOnce(new Error('Connection refused'));
+    it('falls back to in-memory when Redis EVAL throws', async () => {
+      mockRedis.eval.mockRejectedValueOnce(new Error('Connection refused'));
 
       const result = await store.increment('ip:throw', 60_000);
 
@@ -127,13 +75,11 @@ describe('RedisRateLimitStore', () => {
     });
 
     it('in-memory fallback correctly increments on repeated calls', async () => {
-      // First call — Redis throws
-      mockRedis.__multi.exec.mockRejectedValueOnce(new Error('down'));
+      mockRedis.eval.mockRejectedValueOnce(new Error('down'));
       const r1 = await store.increment('ip:repeat', 60_000);
       expect(r1.count).toBe(1);
 
-      // Second call — Redis throws again
-      mockRedis.__multi.exec.mockRejectedValueOnce(new Error('down'));
+      mockRedis.eval.mockRejectedValueOnce(new Error('down'));
       const r2 = await store.increment('ip:repeat', 60_000);
       expect(r2.count).toBe(2);
     });
@@ -141,7 +87,7 @@ describe('RedisRateLimitStore', () => {
     it('in-memory fallback resets after window expires', async () => {
       jest.useFakeTimers();
 
-      mockRedis.__multi.exec.mockRejectedValue(new Error('down'));
+      mockRedis.eval.mockRejectedValue(new Error('down'));
 
       const r1 = await store.increment('ip:expire', 1000);
       expect(r1.count).toBe(1);
@@ -169,11 +115,21 @@ describe('RedisRateLimitStore', () => {
 
   describe('stopSweep / clear', () => {
     it('stopSweep does not throw', () => {
-      expect(() => store.stopSweep()).not.toThrow();
+      expect(() => {
+        store.stopSweep();
+      }).not.toThrow();
     });
 
     it('clear does not throw', () => {
-      expect(() => store.clear()).not.toThrow();
+      expect(() => {
+        store.clear();
+      }).not.toThrow();
+    });
+  });
+
+  describe('getRedisClient', () => {
+    it('returns the underlying ioredis client', () => {
+      expect(store.getRedisClient()).toBe(asRedis(mockRedis));
     });
   });
 });
@@ -187,7 +143,6 @@ describe('RedisRateLimitStore — integration with rate-limit middleware', () =>
   });
 
   afterEach(() => {
-    // Reset the global redis store
     const { _resetRedisStore, clearRateLimitBuckets } = jest.requireActual<
       typeof import('@src/helpers/middleware/rate-limit.middleware')
     >('@src/helpers/middleware/rate-limit.middleware');
@@ -209,11 +164,7 @@ describe('RedisRateLimitStore — integration with rate-limit middleware', () =>
     const store = new StoreClass(asRedis(mockRedis));
     setRedisRateLimitStore(store);
 
-    // Simulate Redis returning count=1, pttl=59000
-    mockRedis.__setExecResult([
-      [null, 1],
-      [null, 59_000],
-    ]);
+    mockRedis.eval.mockResolvedValueOnce([1, 59_000]);
 
     const mw = createRateLimitMiddleware({
       limit: 5,
@@ -231,7 +182,7 @@ describe('RedisRateLimitStore — integration with rate-limit middleware', () =>
     await new Promise(process.nextTick);
 
     expect(next).toHaveBeenCalledWith();
-    expect(mockRedis.multi).toHaveBeenCalled();
+    expect(mockRedis.eval).toHaveBeenCalled();
 
     _resetRedisStore();
     clearRateLimitBuckets();

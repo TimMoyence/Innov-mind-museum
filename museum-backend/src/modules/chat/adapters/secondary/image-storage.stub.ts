@@ -4,7 +4,11 @@ import path from 'node:path';
 
 import { extensionByMime } from '@shared/media/mime-extensions';
 
-import type { SaveImageInput, ImageStorage } from '../../domain/ports/image-storage.port';
+import type {
+  ImageStorage,
+  LegacyImageKeyFetcher,
+  SaveImageInput,
+} from '../../domain/ports/image-storage.port';
 
 /** Default directory for local image uploads (`<cwd>/tmp/uploads`). */
 export const DEFAULT_LOCAL_UPLOADS_DIR = path.join(process.cwd(), 'tmp', 'uploads');
@@ -54,8 +58,14 @@ export class LocalImageStorage implements ImageStorage {
   /**
    * No-op for local storage — local refs are `local://uuid.ext` (flat, no user prefix
    * in filename). Dev-only storage; cleanup is handled by DB cascade on chat sessions.
+   *
+   * @param _userId - Ignored (parity with {@link ImageStorage} port).
+   * @param _legacyFetcher - Ignored (parity with {@link ImageStorage} port).
    */
-  async deleteByPrefix(_prefix: string): Promise<void> {
+  async deleteByPrefix(
+    _userId: number | string,
+    _legacyFetcher?: LegacyImageKeyFetcher,
+  ): Promise<void> {
     // Intentional no-op — see JSDoc above.
   }
 }

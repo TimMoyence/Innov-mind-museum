@@ -24,7 +24,7 @@ describe('DeleteAccountUseCase', () => {
     await useCase.execute(1);
 
     expect(repo.getUserById).toHaveBeenCalledWith(1);
-    expect(imageStorage.deleteByPrefix).toHaveBeenCalledWith('user-1');
+    expect(imageStorage.deleteByPrefix).toHaveBeenCalledWith(1, undefined);
     expect(repo.deleteUser).toHaveBeenCalledWith(1);
   });
 
@@ -63,7 +63,7 @@ describe('DeleteAccountUseCase', () => {
     // Should NOT throw
     await useCase.execute(1);
 
-    expect(imageStorage.deleteByPrefix).toHaveBeenCalledWith('user-1');
+    expect(imageStorage.deleteByPrefix).toHaveBeenCalledWith(1, undefined);
     // User must still be deleted even if images fail
     expect(repo.deleteUser).toHaveBeenCalledWith(1);
   });
@@ -87,14 +87,14 @@ describe('DeleteAccountUseCase', () => {
     expect(callOrder).toEqual(['deleteByPrefix', 'deleteUser']);
   });
 
-  it('uses correct prefix format "user-{userId}"', async () => {
+  it('passes the numeric userId through to deleteByPrefix', async () => {
     const repo = makeUserRepo(makeUser({ id: 42 }));
     const imageStorage = makeImageStorage();
     const useCase = new DeleteAccountUseCase(repo, imageStorage);
 
     await useCase.execute(42);
 
-    expect(imageStorage.deleteByPrefix).toHaveBeenCalledWith('user-42');
+    expect(imageStorage.deleteByPrefix).toHaveBeenCalledWith(42, undefined);
   });
 
   it('does not call deleteUser when getUserById throws', async () => {

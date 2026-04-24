@@ -279,6 +279,20 @@ class InMemoryChatRepository implements ChatRepository {
     message.audioVoice = null;
   }
 
+  async findLegacyImageRefsByUserId(userId: number): Promise<string[]> {
+    const refs: string[] = [];
+    for (const session of this.sessions.values()) {
+      if (session.user?.id !== userId) continue;
+      const messageList = this.messages.get(session.id) ?? [];
+      for (const message of messageList) {
+        if (typeof message.imageRef === 'string' && message.imageRef.length > 0) {
+          refs.push(message.imageRef);
+        }
+      }
+    }
+    return Array.from(new Set(refs));
+  }
+
   private findMessage(messageId: string): ChatMessage | undefined {
     for (const list of this.messages.values()) {
       const found = list.find((m) => m.id === messageId);
