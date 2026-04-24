@@ -22,6 +22,7 @@ docs/
 scripts/*
 !scripts/seed-museums.ts
 !scripts/seed-knowledge.ts
+!scripts/seed-smoke-account.ts
 
 # Docker configs (avoid recursive context)
 docker-compose*.yml
