@@ -57,19 +57,13 @@ const isFinalAttempt = (
   treatNoAttemptsAsFinal: boolean,
 ): boolean => (attemptsMax > 0 ? attemptsMade >= attemptsMax : treatNoAttemptsAsFinal);
 
-/** Builds the summary fields from either the caller's summarizer or a legacy fallback. */
+/** Builds the summary fields by delegating to the caller-supplied summarizer. */
 const buildSummary = <TData>(
   job: FailedJobSnapshot<TData> | null,
   options: HandleJobFailureOptions<TData> | undefined,
 ): Record<string, unknown> => {
-  if (options?.summarize) {
-    return job?.data ? options.summarize(job.data) : {};
-  }
-  // Legacy behaviour: always include `url` (undefined when absent) so KE
-  // log queries keep matching the old field.
-  const data =
-    job?.data && typeof job.data === 'object' ? (job.data as Record<string, unknown>) : undefined;
-  return { url: data?.url };
+  if (!options?.summarize || !job?.data) return {};
+  return options.summarize(job.data);
 };
 
 /** Converts summary values to strings for Sentry context. Drops null / undefined values. */

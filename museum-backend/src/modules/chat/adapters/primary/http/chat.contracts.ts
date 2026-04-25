@@ -1,4 +1,5 @@
 import { badRequest } from '@shared/errors/app.error';
+import { formatZodIssues } from '@shared/validation/zod-issue.formatter';
 
 import { createSessionSchema, postMessageSchema } from './chat-session.schemas';
 
@@ -10,21 +11,6 @@ import type {
 } from './chat.shared-types';
 import type { ReportReason } from '../../../domain/chat.types';
 import type { FeedbackValue } from '../../../domain/messageFeedback.entity';
-import type { z } from 'zod';
-
-/**
- * Format a Zod issue so historic parser error messages are preserved:
- * `<field> <message>` when the schema emitted a `must be ...` message;
- * the raw message otherwise (already fully prefixed or not field-scoped).
- */
-const formatZodIssue = (issue: z.ZodIssue | undefined): string => {
-  if (!issue) return 'Invalid payload';
-  const path = issue.path.join('.');
-  const { message } = issue;
-  if (!path) return message;
-  if (message.startsWith('must be ')) return `${path} ${message}`;
-  return message;
-};
 
 // Re-export shared types so existing consumers keep working
 export type {
@@ -198,7 +184,7 @@ export interface ApiErrorResponse {
 export const parseCreateSessionRequest = (payload: unknown): CreateSessionRequest => {
   const result = createSessionSchema.safeParse(payload);
   if (!result.success) {
-    throw badRequest(formatZodIssue(result.error.issues[0]));
+    throw badRequest(formatZodIssues(result.error.issues));
   }
   return result.data as CreateSessionRequest;
 };
@@ -207,7 +193,7 @@ export const parseCreateSessionRequest = (payload: unknown): CreateSessionReques
 export const parsePostMessageRequest = (payload: unknown): PostMessageRequest => {
   const result = postMessageSchema.safeParse(payload);
   if (!result.success) {
-    throw badRequest(formatZodIssue(result.error.issues[0]));
+    throw badRequest(formatZodIssues(result.error.issues));
   }
   return result.data as PostMessageRequest;
 };

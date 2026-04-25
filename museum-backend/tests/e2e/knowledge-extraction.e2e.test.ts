@@ -121,14 +121,26 @@ describeE2E('golden path 9 — knowledge extraction full pipeline', () => {
   });
 
   it('dedups repeat URL within refetchAfterDays and skips scraping', async () => {
+    // Self-contained: seed an extracted_content row directly via the repo
+    // instead of relying on the previous test's side effect. Avoids
+    // order-dependent failures (Fix #5 from 2026-04-25 code review).
+    const dedupUrl = 'https://example.com/dedup-test';
+    const contentRepo = new TypeOrmExtractedContentRepo(
+      harness.dataSource.getRepository(ExtractedContent),
+    );
+    await contentRepo.upsert({
+      url: dedupUrl,
+      title: 'Seeded',
+      textContent: 'Seeded content',
+      contentHash: 'dedup-seed-hash',
+      status: ExtractedContentStatus.CLASSIFIED,
+    });
+
     const scraperMock: ScraperPort = { scrape: jest.fn() };
     const classifierMock: ContentClassifierPort = { classify: jest.fn() };
 
     const artworkRepo = new TypeOrmArtworkKnowledgeRepo(
       harness.dataSource.getRepository(ArtworkKnowledge),
-    );
-    const contentRepo = new TypeOrmExtractedContentRepo(
-      harness.dataSource.getRepository(ExtractedContent),
     );
     const museumRepo = new TypeOrmMuseumEnrichmentRepo(
       harness.dataSource.getRepository(MuseumEnrichment),
@@ -149,8 +161,7 @@ describeE2E('golden path 9 — knowledge extraction full pipeline', () => {
       },
     );
 
-    // Previous test already persisted TEST_URL; calling again must skip.
-    await service.processUrl(TEST_URL, TEST_SEARCH_TERM, TEST_LOCALE);
+    await service.processUrl(dedupUrl, TEST_SEARCH_TERM, TEST_LOCALE);
 
     expect(scraperMock.scrape).not.toHaveBeenCalled();
     expect(classifierMock.classify).not.toHaveBeenCalled();

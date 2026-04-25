@@ -18,7 +18,7 @@ import type {
   WikidataMuseumFacts,
 } from '../secondary/wikidata-museum.client';
 import type { WikipediaClient, WikipediaSummary } from '../secondary/wikipedia.client';
-import type { ConnectionOptions } from 'bullmq';
+import type { ConnectionOptions, Job } from 'bullmq';
 
 /** Collaborators injected into the worker — pure port interfaces for testability. */
 export interface MuseumEnrichmentWorkerDeps {
@@ -172,6 +172,38 @@ interface MuseumEnrichmentWorkerConfig {
 }
 
 /**
+ * Worker `failed` event handler — delegates to the shared DLQ policy.
+ * Exported so unit tests can drive the failure path without spinning up
+ * a real BullMQ worker.
+ */
+export const onMuseumEnrichmentJobFailed = (
+  job: Job<MuseumEnrichmentJob> | undefined,
+  err: Error,
+): void => {
+  handleJobFailure<MuseumEnrichmentJob>(
+    job
+      ? {
+          id: job.id,
+          data: job.data,
+          attemptsMade: job.attemptsMade,
+          opts: { attempts: job.opts.attempts },
+        }
+      : null,
+    err,
+    {
+      log: (event, meta) => {
+        logger.warn(event, meta);
+      },
+      capture: captureExceptionWithContext,
+    },
+    {
+      queueName: MUSEUM_ENRICHMENT_QUEUE_NAME,
+      summarize: (data) => ({ museumId: data.museumId, locale: data.locale }),
+    },
+  );
+};
+
+/**
  * BullMQ worker wrapper around {@link processMuseumEnrichmentJob}. Thin —
  * the real pipeline lives in the pure function so unit tests stay
  * BullMQ-free.
@@ -201,29 +233,7 @@ export class MuseumEnrichmentWorker {
     this.worker.on('completed', (job) => {
       logger.info('museum_enrichment_job_completed', { jobId: job.id });
     });
-    this.worker.on('failed', (job, err) => {
-      handleJobFailure<MuseumEnrichmentJob>(
-        job
-          ? {
-              id: job.id,
-              data: job.data,
-              attemptsMade: job.attemptsMade,
-              opts: { attempts: job.opts.attempts },
-            }
-          : null,
-        err,
-        {
-          log: (event, meta) => {
-            logger.warn(event, meta);
-          },
-          capture: captureExceptionWithContext,
-        },
-        {
-          queueName: MUSEUM_ENRICHMENT_QUEUE_NAME,
-          summarize: (data) => ({ museumId: data.museumId, locale: data.locale }),
-        },
-      );
-    });
+    this.worker.on('failed', onMuseumEnrichmentJobFailed);
   }
 
   /** Gracefully stops the underlying BullMQ worker. Idempotent. */

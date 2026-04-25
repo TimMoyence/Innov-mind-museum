@@ -266,3 +266,80 @@ describe('processMuseumEnrichmentJob', () => {
     expect(view.fetchedAt).toBe(fixedNow.toISOString());
   });
 });
+
+/**
+ * Fix #1 from 2026-04-25 code review — the worker's failed-event handler
+ * (extracted as `onMuseumEnrichmentJobFailed`) had zero coverage. Pre-refactor
+ * it called `captureExceptionWithContext` on every retry, paging Sentry on
+ * intermediate failures. The shared DLQ policy now restricts paging to the
+ * final attempt; lock that contract in.
+ */
+describe('onMuseumEnrichmentJobFailed — DLQ policy wiring', () => {
+  const sentryModule = '@shared/observability/sentry';
+
+  beforeEach(() => {
+    jest.resetModules();
+  });
+
+  it('does NOT page Sentry on intermediate retry (attempt 1 / 2)', () => {
+    jest.doMock(sentryModule, () => ({ captureExceptionWithContext: jest.fn() }));
+    jest.doMock('@shared/logger/logger', () => ({
+      logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+    }));
+
+    /* eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.doMock requires require */
+    const { onMuseumEnrichmentJobFailed } =
+      require('@modules/museum/adapters/primary/museum-enrichment.worker') as typeof import('@modules/museum/adapters/primary/museum-enrichment.worker');
+    /* eslint-disable-next-line @typescript-eslint/no-require-imports */
+    const { captureExceptionWithContext } = require('@shared/observability/sentry') as {
+      captureExceptionWithContext: jest.Mock;
+    };
+
+    const job = {
+      id: 'me-job-intermediate',
+      data: { museumId: 99, locale: 'fr' },
+      attemptsMade: 1,
+      opts: { attempts: 2 },
+    } as unknown as Parameters<typeof onMuseumEnrichmentJobFailed>[0];
+
+    onMuseumEnrichmentJobFailed(job, new Error('overpass timeout'));
+
+    expect(captureExceptionWithContext).not.toHaveBeenCalled();
+  });
+
+  it('pages Sentry once on the final attempt with museumId + locale context', () => {
+    jest.doMock(sentryModule, () => ({ captureExceptionWithContext: jest.fn() }));
+    jest.doMock('@shared/logger/logger', () => ({
+      logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+    }));
+
+    /* eslint-disable-next-line @typescript-eslint/no-require-imports */
+    const { onMuseumEnrichmentJobFailed } =
+      require('@modules/museum/adapters/primary/museum-enrichment.worker') as typeof import('@modules/museum/adapters/primary/museum-enrichment.worker');
+    /* eslint-disable-next-line @typescript-eslint/no-require-imports */
+    const { captureExceptionWithContext } = require('@shared/observability/sentry') as {
+      captureExceptionWithContext: jest.Mock;
+    };
+
+    const job = {
+      id: 'me-job-final',
+      data: { museumId: 42, locale: 'en' },
+      attemptsMade: 2,
+      opts: { attempts: 2 },
+    } as unknown as Parameters<typeof onMuseumEnrichmentJobFailed>[0];
+    const err = new Error('wikidata 5xx');
+
+    onMuseumEnrichmentJobFailed(job, err);
+
+    expect(captureExceptionWithContext).toHaveBeenCalledTimes(1);
+    expect(captureExceptionWithContext).toHaveBeenCalledWith(
+      err,
+      expect.objectContaining({
+        queue: 'museum-enrichment',
+        jobId: 'me-job-final',
+        museumId: '42',
+        locale: 'en',
+      }),
+    );
+  });
+});

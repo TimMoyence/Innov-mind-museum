@@ -45,7 +45,9 @@ function makeSinks(): JobFailureSinks & { log: jest.Mock; capture: jest.Mock } {
   return { log: jest.fn(), capture: jest.fn() };
 }
 
-function makeJobSnapshot(overrides: Partial<FailedJobSnapshot> = {}): FailedJobSnapshot {
+function makeJobSnapshot(
+  overrides: Partial<FailedJobSnapshot<{ url: string }>> = {},
+): FailedJobSnapshot<{ url: string }> {
   return {
     id: 'job-1',
     data: { url: 'https://example.com/art' },
@@ -54,6 +56,11 @@ function makeJobSnapshot(overrides: Partial<FailedJobSnapshot> = {}): FailedJobS
     ...overrides,
   };
 }
+
+const KE_OPTIONS = {
+  queueName: 'knowledge-extraction',
+  summarize: (data: { url?: string }) => ({ url: data.url }),
+};
 
 // ── handleJobFailure DLQ semantics ────────────────────────────────────────────
 
@@ -64,6 +71,7 @@ describe('handleJobFailure — DLQ semantics', () => {
       makeJobSnapshot({ attemptsMade: 1, opts: { attempts: 2 } }),
       new Error('timeout'),
       sinks,
+      KE_OPTIONS,
     );
 
     expect(sinks.log).toHaveBeenCalledWith(
@@ -76,7 +84,12 @@ describe('handleJobFailure — DLQ semantics', () => {
   it('captures to Sentry on final attempt — dead-letter entry point', () => {
     const sinks = makeSinks();
     const err = new Error('permanent failure');
-    handleJobFailure(makeJobSnapshot({ attemptsMade: 2, opts: { attempts: 2 } }), err, sinks);
+    handleJobFailure(
+      makeJobSnapshot({ attemptsMade: 2, opts: { attempts: 2 } }),
+      err,
+      sinks,
+      KE_OPTIONS,
+    );
 
     expect(sinks.log).toHaveBeenCalledWith(
       'extraction_job_failed',
@@ -91,18 +104,23 @@ describe('handleJobFailure — DLQ semantics', () => {
 
   it('does NOT capture Sentry when attempts config is absent (defensive)', () => {
     const sinks = makeSinks();
-    handleJobFailure(makeJobSnapshot({ attemptsMade: 5, opts: {} }), new Error('x'), sinks);
+    handleJobFailure(
+      makeJobSnapshot({ attemptsMade: 5, opts: {} }),
+      new Error('x'),
+      sinks,
+      KE_OPTIONS,
+    );
 
     expect(sinks.capture).not.toHaveBeenCalled();
   });
 
   it('handles null job snapshot gracefully (BullMQ may emit null on worker crash)', () => {
     const sinks = makeSinks();
-    handleJobFailure(null, new Error('crash'), sinks);
+    handleJobFailure(null, new Error('crash'), sinks, KE_OPTIONS);
 
     expect(sinks.log).toHaveBeenCalledWith(
       'extraction_job_failed',
-      expect.objectContaining({ jobId: undefined, url: undefined, finalAttempt: false }),
+      expect.objectContaining({ jobId: undefined, finalAttempt: false }),
     );
     expect(sinks.capture).not.toHaveBeenCalled();
   });

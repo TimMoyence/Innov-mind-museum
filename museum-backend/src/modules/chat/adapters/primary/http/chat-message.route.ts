@@ -24,7 +24,17 @@ import type { ArtKeywordRepository } from '../../../domain/artKeyword.repository
 import type { ChatService } from '../../../useCase/chat.service';
 import type { Request, Response, RequestHandler } from 'express';
 
-/** Parses and validates message input from an Express request. */
+/**
+ * Parses and validates message input from an Express request.
+ *
+ * NOTE on the validation pattern: this route accepts both JSON and multipart
+ * form-data (image upload), and `context` arrives as a JSON string via
+ * multipart. The Zod schema (`postMessageSchema`) expects a parsed object,
+ * so we cannot use `validateBody(postMessageSchema)` middleware directly —
+ * we have to JSON-parse `context` first. The error wire format stays
+ * consistent with `validateBody` because `parsePostMessageRequest` and
+ * `validateBody` both delegate to the shared `formatZodIssues` formatter.
+ */
 function parseMessageInput(req: Request): {
   bodyPayload: PostMessageRequest;
   context: PostMessageRequest['context'];

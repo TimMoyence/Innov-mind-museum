@@ -32,6 +32,9 @@ const onAuditCronJobFailed = (job: Job | undefined, err: Error): void => {
     },
     {
       queueName: AUDIT_IP_ANONYMIZE_SCHEDULER_ID,
+      // Cron carries no per-job payload — explicit empty summary so the
+      // shared handler does not fall into the legacy KE `url` default.
+      summarize: () => ({}),
       // Cron has no retries — every failure must page Sentry.
       treatNoAttemptsAsFinal: true,
     },
