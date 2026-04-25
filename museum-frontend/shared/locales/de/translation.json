@@ -63,7 +63,13 @@
     "privacy_policy": "Datenschutzerklärung",
     "badge_style": "Stil",
     "badge_guide": "Begleitung",
-    "badge_safe": "Sicher"
+    "badge_safe": "Sicher",
+    "biometric_setup": {
+      "title": "{{method}} aktivieren?",
+      "description": "Beim nächsten Mal schneller anmelden.",
+      "activate": "Aktivieren",
+      "later": "Später"
+    }
   },
   "home": {
     "hero_title": "Ihr Museumsbegleiter",

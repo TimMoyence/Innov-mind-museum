@@ -63,7 +63,13 @@
     "privacy_policy": "سياسة الخصوصية",
     "badge_style": "أسلوب",
     "badge_guide": "مرشد",
-    "badge_safe": "آمن"
+    "badge_safe": "آمن",
+    "biometric_setup": {
+      "title": "تفعيل {{method}}؟",
+      "description": "سجّل الدخول بشكل أسرع في المرة القادمة.",
+      "activate": "تفعيل",
+      "later": "لاحقاً"
+    }
   },
   "home": {
     "hero_title": "رفيقك في المتحف",

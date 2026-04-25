@@ -63,7 +63,13 @@
     "privacy_policy": "Política de Privacidad",
     "badge_style": "Estilo",
     "badge_guide": "Guía",
-    "badge_safe": "Seguro"
+    "badge_safe": "Seguro",
+    "biometric_setup": {
+      "title": "¿Activar {{method}}?",
+      "description": "Inicia sesión más rápido la próxima vez.",
+      "activate": "Activar",
+      "later": "Más tarde"
+    }
   },
   "home": {
     "hero_title": "Tu compañero de museo",
