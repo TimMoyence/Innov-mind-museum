@@ -2,3 +2,10 @@
 # Affects: node_modules/npm/node_modules/picomatch inside node:22-bookworm-slim
 # Safe to ignore: picomatch is only used by npm's internal glob matching, not our application code
 CVE-2026-33671
+
+# uuid GHSA-w5hq-g745-h8pq — buffer bounds check missing in v3/v5/v6 generators
+# when the optional `buf` parameter is provided.
+# Not applicable to this codebase: we import only `validate` (UUID format check)
+# and rely on `crypto.randomUUID()` for generation. v14 is ESM-only and breaks
+# the ts-jest CommonJS test runner — staying on v11 is the correct trade-off.
+GHSA-w5hq-g745-h8pq

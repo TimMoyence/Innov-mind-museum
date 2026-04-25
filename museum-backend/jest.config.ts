@@ -3,6 +3,12 @@ import type { Config } from '@jest/types';
 const config: Config.InitialOptions = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  // Force-exit after the test run completes so dangling ioredis / BullMQ
+  // reconnect timers (when Redis is not available locally) do not hang Jest.
+  // Tests are responsible for stopping their own resources; this is a safety
+  // net for integration tests that touch transitively-loaded modules holding
+  // background sockets (rate-limit sweep, museum-enrichment cache adapter).
+  forceExit: true,
   testPathIgnorePatterns: [
     '/dist/',
     '/node_modules/',
