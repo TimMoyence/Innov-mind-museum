@@ -37,6 +37,19 @@ export interface SearchMuseumEntry {
   distance: number;
   source: 'local' | 'osm';
   museumType: MuseumCategory;
+  /**
+   * Optional OSM-sourced metadata. Present only on `source: 'osm'` entries
+   * when the originating OSM element carried the corresponding tag. Local
+   * DB-backed entries leave these undefined — clients can fall back to the
+   * dedicated enrichment endpoint for richer data.
+   */
+  openingHours?: string;
+  website?: string;
+  phone?: string;
+  imageUrl?: string;
+  description?: string;
+  /** Raw OSM `wheelchair` value: `yes` | `no` | `limited` | `designated`. */
+  wheelchair?: string;
 }
 
 /** Search results returned by the use case. */
@@ -246,6 +259,12 @@ function mergeAndDedupe(
       distance: Math.round(distance),
       source: 'osm',
       museumType: osm.museumType,
+      openingHours: osm.openingHours,
+      website: osm.website,
+      phone: osm.phone,
+      imageUrl: osm.imageUrl,
+      description: osm.description,
+      wheelchair: osm.wheelchair,
     });
   }
 

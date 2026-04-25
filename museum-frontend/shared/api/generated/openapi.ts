@@ -2143,6 +2143,27 @@ export interface paths {
                  * @enum {string}
                  */
                 museumType: 'art' | 'history' | 'science' | 'specialized' | 'general';
+                /** @description Raw OSM `opening_hours` tag (only when source=osm and tag is present) */
+                openingHours?: string;
+                /**
+                 * Format: uri
+                 * @description OSM `website` (or `contact:website`) tag
+                 */
+                website?: string;
+                /** @description OSM `phone` (or `contact:phone`) tag */
+                phone?: string;
+                /**
+                 * Format: uri
+                 * @description OSM `image` tag — direct image URL
+                 */
+                imageUrl?: string;
+                /** @description OSM `description` tag (localized variant preferred when present) */
+                description?: string;
+                /**
+                 * @description OSM `wheelchair` accessibility tag
+                 * @enum {string}
+                 */
+                wheelchair?: 'yes' | 'no' | 'limited' | 'designated';
               }[];
               count: number;
             };

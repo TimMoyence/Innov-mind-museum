@@ -5,6 +5,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { TAB_BAR_FLOATING_GAP } from '@/app/(tabs)/_layout';
 import type { DashboardSessionCard } from '@/features/chat/domain/dashboard-session';
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
 import { useConversationsData } from '@/features/conversation/application/useConversationsData';
@@ -35,6 +36,7 @@ export default function ConversationsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
+  const bottomPad = tabBarHeight + TAB_BAR_FLOATING_GAP + insets.bottom;
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const { isCreating, error: createError, startConversation } = useStartConversation();
@@ -256,7 +258,7 @@ export default function ConversationsScreen() {
         extraData={editMode ? selectedIds.size : 0}
         contentContainerStyle={{
           ...styles.listContent,
-          paddingBottom: tabBarHeight,
+          paddingBottom: bottomPad,
         }}
         refreshing={isRefreshing}
         onRefresh={() => void loadDashboard(true)}

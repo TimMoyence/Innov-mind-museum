@@ -145,6 +145,7 @@
     "guided_mode_info": "Guided Museum Mode Info",
     "compliance_title": "Compliance & Help",
     "privacy_rgpd": "Privacy (RGPD)",
+    "privacy_short": "Privacy",
     "privacy_desc": "Read data processing, rights, and legal contacts.",
     "terms_of_service": "Terms of Service",
     "terms_desc": "Read our terms and conditions of use.",
@@ -617,6 +618,14 @@
       "weekly_single": "{{day}} {{opens}}–{{closes}}",
       "weekly_closed": "{{day}} Closed"
     }
+  },
+  "museum": {
+    "about": "About",
+    "opening_hours": "Opening hours",
+    "website": "Website",
+    "phone": "Phone",
+    "loading_details": "Loading details…",
+    "no_extra_info": "No detailed info available."
   },
   "days": {
     "mon": "Mon",

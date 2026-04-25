@@ -11,8 +11,8 @@ import { semantic } from '@/shared/ui/tokens';
 // Visual height of the floating pill, independent of the device's home
 // indicator inset. We add `insets.bottom` at render time to the marginBottom
 // so the tab bar floats correctly above the home indicator on every device.
-const TAB_BAR_VISUAL_HEIGHT = 64;
-const TAB_BAR_FLOATING_GAP = 12;
+export const TAB_BAR_VISUAL_HEIGHT = 64;
+export const TAB_BAR_FLOATING_GAP = 12;
 
 /** Renders the bottom tab navigator with Dashboard and Home tabs using a frosted-glass tab bar. */
 export default function TabLayout() {

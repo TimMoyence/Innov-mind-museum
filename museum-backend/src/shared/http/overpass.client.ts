@@ -18,6 +18,19 @@ export interface OverpassMuseumResult {
   longitude: number;
   osmId: number;
   museumType: MuseumCategory;
+  /**
+   * Optional metadata harvested directly from OSM tags on the search element.
+   * Surfaced so the search response is richer without waiting for the async
+   * enrichment pipeline. All fields are optional — missing tags map to
+   * `undefined` and are stripped by the JSON serializer.
+   */
+  openingHours?: string;
+  website?: string;
+  phone?: string;
+  imageUrl?: string;
+  description?: string;
+  /** Raw OSM `wheelchair` value: `yes` | `no` | `limited` | `designated`. */
+  wheelchair?: string;
 }
 
 /** A WGS84 bounding box ordered as [minLng, minLat, maxLng, maxLat]. */
@@ -174,6 +187,54 @@ const classifyMuseumType = (tags: Record<string, string> | undefined): MuseumCat
   return 'general';
 };
 
+/**
+ * Returns the first non-empty tag value among the given keys, or undefined.
+ * Used to pick between primary OSM tags (`website`, `phone`) and their
+ * `contact:*` namespaced counterparts.
+ */
+const pickTag = (
+  tags: Record<string, string> | undefined,
+  keys: readonly string[],
+): string | undefined => {
+  if (!tags) return undefined;
+  for (const key of keys) {
+    const value = tags[key];
+    if (value && value.trim().length > 0) return value;
+  }
+  return undefined;
+};
+
+/**
+ * Extracts optional descriptive tags (opening_hours, website, phone, image,
+ * description, wheelchair) from a raw OSM element.
+ *
+ * Description prefers any localized variant present (`description:<lang>`)
+ * over the bare `description` tag. The function does NOT pick a specific
+ * locale because Overpass returns raw tags here — the calling layer can
+ * still surface the bare `description` for UI without re-querying.
+ */
+const extractOptionalTags = (
+  tags: Record<string, string> | undefined,
+): Pick<
+  OverpassMuseumResult,
+  'openingHours' | 'website' | 'phone' | 'imageUrl' | 'description' | 'wheelchair'
+> => {
+  if (!tags) return {};
+
+  const localizedDescription = Object.entries(tags).find(
+    ([k, v]) => k.startsWith('description:') && v.trim().length > 0,
+  )?.[1];
+
+  return {
+    openingHours: pickTag(tags, ['opening_hours']),
+    website: pickTag(tags, ['website', 'contact:website', 'url']),
+    phone: pickTag(tags, ['phone', 'contact:phone']),
+    imageUrl: pickTag(tags, ['image']),
+    description: localizedDescription ?? pickTag(tags, ['description']),
+    wheelchair: pickTag(tags, ['wheelchair']),
+  };
+};
+
 /** Parses a single Overpass element into a museum result, or null if unusable. */
 const parseElement = (el: OverpassElement): OverpassMuseumResult | null => {
   const name = el.tags?.name;
@@ -199,6 +260,7 @@ const parseElement = (el: OverpassElement): OverpassMuseumResult | null => {
     longitude,
     osmId: el.id,
     museumType: classifyMuseumType(el.tags),
+    ...extractOptionalTags(el.tags),
   };
 };
 

@@ -68,6 +68,7 @@ export default function SettingsScreen() {
     >
       <View style={styles.menuWrap}>
         <FloatingContextMenu
+          scrollable
           actions={[
             {
               id: 'prefs',
@@ -80,7 +81,7 @@ export default function SettingsScreen() {
             {
               id: 'privacy',
               icon: 'shield-checkmark-outline',
-              label: t('settings.privacy_rgpd'),
+              label: t('settings.privacy_short'),
               onPress: () => {
                 open('/(stack)/privacy');
               },

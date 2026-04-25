@@ -14,6 +14,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { TAB_BAR_FLOATING_GAP } from '@/app/(tabs)/_layout';
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
 import { useGeofencePreCache } from '@/features/museum/application/useGeofencePreCache';
 import { useLocation } from '@/features/museum/application/useLocation';
@@ -40,6 +41,7 @@ export default function MuseumsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
+  const bottomPad = tabBarHeight + TAB_BAR_FLOATING_GAP + insets.bottom;
   const { theme } = useTheme();
 
   const { latitude, longitude, status } = useLocation();
@@ -179,7 +181,7 @@ export default function MuseumsScreen() {
         styles.screen,
         {
           paddingTop: insets.top + semantic.screen.gapSmall,
-          paddingBottom: tabBarHeight,
+          paddingBottom: bottomPad,
         },
       ]}
     >

@@ -42,24 +42,6 @@ export const SettingsComplianceLinks = ({
             { borderColor: theme.cardBorder, backgroundColor: theme.surface },
           ]}
           onPress={() => {
-            onNavigate('/(stack)/privacy');
-          }}
-          accessibilityRole="link"
-          accessibilityLabel={t('a11y.settings.privacy_link')}
-        >
-          <Text style={[styles.linkTitle, { color: theme.textPrimary }]}>
-            {t('settings.privacy_rgpd')}
-          </Text>
-          <Text style={[styles.linkDescription, { color: theme.textSecondary }]}>
-            {t('settings.privacy_desc')}
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[
-            styles.linkRow,
-            { borderColor: theme.cardBorder, backgroundColor: theme.surface },
-          ]}
-          onPress={() => {
             onNavigate('/(stack)/terms');
           }}
           accessibilityRole="link"
