@@ -6,7 +6,6 @@ import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-loca
 import { AppError, badRequest } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { validateEmail } from '@shared/validation/email';
-import { env } from '@src/config/env';
 
 import type { IUserRepository } from '../domain/user.repository.interface';
 import type { EmailService } from '@shared/email/email.port';
@@ -93,9 +92,10 @@ export class ChangeEmailUseCase {
         });
       }
     } else {
-      if (env.nodeEnv !== 'production') {
-        logger.info('change_email_token', { userId, token });
-      }
+      logger.warn('change_email_email_skipped_no_service', {
+        userId,
+        hint: 'Configure BREVO_API_KEY + FRONTEND_URL or a dev mail catcher (MailHog/Mailpit)',
+      });
     }
 
     return token;

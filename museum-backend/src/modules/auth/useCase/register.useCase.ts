@@ -6,7 +6,6 @@ import { logger } from '@shared/logger/logger';
 import { validateEmail } from '@shared/validation/email';
 import { validateNameField } from '@shared/validation/input';
 import { validatePassword } from '@shared/validation/password';
-import { env } from '@src/config/env';
 
 import type { User } from '../domain/user.entity';
 import type { IUserRepository } from '../domain/user.repository.interface';
@@ -87,9 +86,10 @@ export class RegisterUseCase {
           htmlContent,
         );
       } else {
-        if (env.nodeEnv !== 'production') {
-          logger.info('verification_token_generated', { userId: user.id, token });
-        }
+        logger.warn('verification_email_skipped_no_service', {
+          userId: user.id,
+          hint: 'Configure BREVO_API_KEY + FRONTEND_URL or a dev mail catcher (MailHog/Mailpit)',
+        });
       }
     } catch (error) {
       logger.warn('verification_email_failed', {
