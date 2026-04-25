@@ -1,7 +1,7 @@
 import * as jwt from 'jsonwebtoken';
 
 import { createE2EHarness, E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
-import { registerAndLogin } from 'tests/helpers/e2e/e2e-auth.helpers';
+import { markEmailVerified, registerAndLogin } from 'tests/helpers/e2e/e2e-auth.helpers';
 
 const shouldRunE2E = process.env.RUN_E2E === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
@@ -24,7 +24,7 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
   // ---------------------------------------------------------------------------
   describe('GP5: token expiry -> refresh -> continue chat', () => {
     it('rejects an expired access token with 401, then refreshes and continues chatting', async () => {
-      const { token, refreshToken, email } = await registerAndLogin(harness.request);
+      const { token, refreshToken, email } = await registerAndLogin(harness);
 
       // -- Step 1: Create a session with the valid token --
       const createRes = await harness.request(
@@ -138,7 +138,7 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
     });
 
     it('rejects the old refresh token after rotation (replay detection)', async () => {
-      const { refreshToken } = await registerAndLogin(harness.request);
+      const { refreshToken } = await registerAndLogin(harness);
 
       // First refresh: succeeds and rotates the token
       const refresh1 = await harness.request('/api/auth/refresh', {
@@ -210,6 +210,8 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
           lastname: 'User',
         }),
       });
+      // E2E env has no SMTP — bypass verification email so login succeeds.
+      await markEmailVerified(harness, freshEmail);
 
       const freshLogin = await harness.request('/api/auth/login', {
         method: 'POST',
@@ -254,7 +256,7 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
     let sessionId: string;
 
     beforeAll(async () => {
-      const auth = await registerAndLogin(harness.request);
+      const auth = await registerAndLogin(harness);
       token = auth.token;
 
       // Create a session for the guardrail tests

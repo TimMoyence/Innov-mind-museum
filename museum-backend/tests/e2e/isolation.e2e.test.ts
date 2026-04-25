@@ -19,8 +19,8 @@ describeE2E('multi-tenancy isolation e2e', () => {
 
   it('prevents User B from accessing User A resources', async () => {
     // ── Register two independent users ──
-    const userA = await registerAndLogin(harness.request);
-    const userB = await registerAndLogin(harness.request);
+    const userA = await registerAndLogin(harness);
+    const userB = await registerAndLogin(harness);
 
     // ── User A creates a session and posts a message ──
     const createRes = await harness.request(

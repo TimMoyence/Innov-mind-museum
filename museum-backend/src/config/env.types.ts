@@ -244,6 +244,16 @@ export interface AppEnv {
     confidenceThreshold: number;
     reviewThreshold: number;
   };
+  /**
+   * When false, the BullMQ extraction worker, the knowledge-extraction queue,
+   * and the museum enrichment scheduler are NOT started. The chat module
+   * degrades to db-lookup-only (same fallback as the missing-OpenAI-key path),
+   * so no `new Redis(...)` ioredis client is created from the extraction path.
+   *
+   * Use in test environments without Redis (e.g. e2e harness). Default `true`
+   * so production behavior is unchanged when the env var is unset.
+   */
+  extractionWorkerEnabled: boolean;
   /** Redis connection configuration for BullMQ and other Redis-backed services. */
   redis: {
     host: string;

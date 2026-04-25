@@ -34,6 +34,14 @@ export class KnowledgeExtractionModule {
     const museumRepo = new TypeOrmMuseumEnrichmentRepo(dataSource.getRepository(MuseumEnrichment));
     const dbLookup = new DbLookupService(artworkRepo, museumRepo);
 
+    // EXTRACTION_WORKER_ENABLED=false short-circuits BEFORE any BullMQ / Redis
+    // wiring so test environments without Redis don't open ioredis clients.
+    // Chat module degrades to db-lookup-only — same shape as the missing-key path.
+    if (!env.extractionWorkerEnabled) {
+      logger.info('knowledge_extraction_disabled', { reason: 'extraction_worker_flag_off' });
+      return { dbLookup, artworkKnowledgeRepo: artworkRepo, close: () => Promise.resolve() };
+    }
+
     const openaiKey = env.llm.openAiApiKey;
     if (!openaiKey) {
       logger.warn('knowledge_extraction_no_openai_key', {

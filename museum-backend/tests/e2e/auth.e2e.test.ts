@@ -44,7 +44,7 @@ describeE2E('auth e2e (full lifecycle)', () => {
     const email = `e2e-auth-login-${Date.now()}@musaium.test`;
     const password = 'Password123!';
 
-    await registerUser(harness.request, { email, password });
+    await registerUser(harness, { email, password });
     const res = await harness.request('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
@@ -63,7 +63,7 @@ describeE2E('auth e2e (full lifecycle)', () => {
   });
 
   it('GET /api/auth/me returns profile with id, email, role', async () => {
-    const { token, email } = await registerAndLogin(harness.request);
+    const { token, email } = await registerAndLogin(harness);
 
     const res = await harness.request('/api/auth/me', { method: 'GET' }, token);
 
@@ -82,7 +82,7 @@ describeE2E('auth e2e (full lifecycle)', () => {
   it('PUT /api/auth/change-password succeeds and old password is rejected', async () => {
     const oldPassword = 'Password123!';
     const newPassword = 'NewPassword456!';
-    const { token, email } = await registerAndLogin(harness.request, {
+    const { token, email } = await registerAndLogin(harness, {
       password: oldPassword,
     });
 
@@ -116,7 +116,7 @@ describeE2E('auth e2e (full lifecycle)', () => {
   });
 
   it('POST /api/auth/forgot-password returns 200', async () => {
-    const { email } = await registerAndLogin(harness.request);
+    const { email } = await registerAndLogin(harness);
 
     const res = await harness.request('/api/auth/forgot-password', {
       method: 'POST',
@@ -133,7 +133,7 @@ describeE2E('auth e2e (full lifecycle)', () => {
 
   it('DELETE /api/auth/account returns { deleted: true } and login fails after', async () => {
     const password = 'Password123!';
-    const { token, email } = await registerAndLogin(harness.request, { password });
+    const { token, email } = await registerAndLogin(harness, { password });
 
     // Delete account
     const deleteRes = await harness.request('/api/auth/account', { method: 'DELETE' }, token);
@@ -154,7 +154,7 @@ describeE2E('auth e2e (full lifecycle)', () => {
   });
 
   it('POST /api/auth/refresh returns a new access token', async () => {
-    const { refreshToken } = await registerAndLogin(harness.request);
+    const { refreshToken } = await registerAndLogin(harness);
 
     const res = await harness.request('/api/auth/refresh', {
       method: 'POST',

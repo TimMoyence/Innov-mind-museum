@@ -35,8 +35,8 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
 
   describe('chat session owned by user A', () => {
     it('cross-user GET/DELETE returns 404, owner gets 200', async () => {
-      const userA = await registerAndLogin(harness.request);
-      const userB = await registerAndLogin(harness.request);
+      const userA = await registerAndLogin(harness);
+      const userB = await registerAndLogin(harness);
 
       const created = await harness.request(
         '/api/chat/sessions',
@@ -87,8 +87,8 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
     let userBToken: string;
 
     beforeAll(async () => {
-      const userA = await registerAndLogin(harness.request);
-      const userB = await registerAndLogin(harness.request);
+      const userA = await registerAndLogin(harness);
+      const userB = await registerAndLogin(harness);
       userAToken = userA.token;
       userBToken = userB.token;
 
@@ -174,9 +174,9 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
   describe('support ticket owned by user A', () => {
     it('cross-user gets 403, admin gets 200', async () => {
       const password = 'Password123!';
-      const userA = await registerAndLogin(harness.request, { password });
-      const userB = await registerAndLogin(harness.request, { password });
-      const admin = await registerAndLogin(harness.request, { password });
+      const userA = await registerAndLogin(harness, { password });
+      const userB = await registerAndLogin(harness, { password });
+      const admin = await registerAndLogin(harness, { password });
 
       // Promote admin
       await harness.dataSource.query(`UPDATE users SET role = 'admin' WHERE id = $1`, [
@@ -241,8 +241,8 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
 
   describe('consent scoped by JWT sub', () => {
     it('DELETE /api/auth/consent/:scope only revokes the caller own grant', async () => {
-      const userA = await registerAndLogin(harness.request);
-      const userB = await registerAndLogin(harness.request);
+      const userA = await registerAndLogin(harness);
+      const userB = await registerAndLogin(harness);
 
       // Both users grant the same scope
       await harness.request(

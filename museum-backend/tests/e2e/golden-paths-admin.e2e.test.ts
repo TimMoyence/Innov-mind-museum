@@ -49,7 +49,7 @@ describeE2E('golden path 8 — admin analytics & data integrity', () => {
 
   it('admin can access all three analytics endpoints', async () => {
     const password = 'Password123!';
-    const { userId, email } = await registerAndLogin(harness.request, { password });
+    const { userId, email } = await registerAndLogin(harness, { password });
     const adminToken = await promoteToAdmin(harness, userId, email, password);
 
     // GET /api/admin/analytics/usage
@@ -81,7 +81,7 @@ describeE2E('golden path 8 — admin analytics & data integrity', () => {
   });
 
   it('visitor cannot access analytics endpoints', async () => {
-    const { token } = await registerAndLogin(harness.request);
+    const { token } = await registerAndLogin(harness);
 
     const usageRes = await harness.request('/api/admin/analytics/usage', { method: 'GET' }, token);
     expect(usageRes.status).toBe(403);
@@ -105,12 +105,12 @@ describeE2E('golden path 8 — admin analytics & data integrity', () => {
     const password = 'Password123!';
 
     // Create admin
-    const admin = await registerAndLogin(harness.request, { password });
+    const admin = await registerAndLogin(harness, { password });
     const adminToken = await promoteToAdmin(harness, admin.userId, admin.email, password);
 
     // Create a target user with a unique email we can search for
     const targetEmail = `e2e-findme-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@musaium.test`;
-    const target = await registerAndLogin(harness.request, {
+    const target = await registerAndLogin(harness, {
       password,
       email: targetEmail,
       firstname: 'FindMe',
@@ -134,11 +134,11 @@ describeE2E('golden path 8 — admin analytics & data integrity', () => {
     const password = 'Password123!';
 
     // Create admin
-    const admin = await registerAndLogin(harness.request, { password });
+    const admin = await registerAndLogin(harness, { password });
     const adminToken = await promoteToAdmin(harness, admin.userId, admin.email, password);
 
     // Create target user
-    const target = await registerAndLogin(harness.request, { password });
+    const target = await registerAndLogin(harness, { password });
 
     // Change target's role
     const patchRes = await harness.request(
@@ -208,8 +208,8 @@ describeE2E('golden path 9 — support ticket lifecycle', () => {
     const password = 'Password123!';
 
     // ── Step 0: Set up users ──
-    const user = await registerAndLogin(harness.request, { password });
-    const admin = await registerAndLogin(harness.request, { password });
+    const user = await registerAndLogin(harness, { password });
+    const admin = await registerAndLogin(harness, { password });
     const adminToken = await promoteToAdmin(harness, admin.userId, admin.email, password);
 
     // ── Step 1: User creates a support ticket ──
@@ -321,7 +321,7 @@ describeE2E('golden path 9 — support ticket lifecycle', () => {
   });
 
   it('visitor cannot access admin ticket list', async () => {
-    const { token } = await registerAndLogin(harness.request);
+    const { token } = await registerAndLogin(harness);
 
     const res = await harness.request('/api/admin/tickets', { method: 'GET' }, token);
     expect(res.status).toBe(403);
@@ -330,8 +330,8 @@ describeE2E('golden path 9 — support ticket lifecycle', () => {
   it('user cannot see another user ticket detail', async () => {
     const password = 'Password123!';
 
-    const userA = await registerAndLogin(harness.request, { password });
-    const userB = await registerAndLogin(harness.request, { password });
+    const userA = await registerAndLogin(harness, { password });
+    const userB = await registerAndLogin(harness, { password });
 
     // User A creates a ticket
     const createRes = await harness.request(
@@ -391,7 +391,7 @@ describeE2E('golden path 10 — museum management', () => {
     const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
     // ── Step 0: Set up admin ──
-    const admin = await registerAndLogin(harness.request, { password });
+    const admin = await registerAndLogin(harness, { password });
     const adminToken = await promoteToAdmin(harness, admin.userId, admin.email, password);
 
     // ── Step 1: Admin creates a museum ──
@@ -454,7 +454,7 @@ describeE2E('golden path 10 — museum management', () => {
     expect(updateBody.museum.latitude).toBeCloseTo(48.8606, 3);
 
     // ── Step 4: Regular user can see museum in directory ──
-    const visitor = await registerAndLogin(harness.request, { password });
+    const visitor = await registerAndLogin(harness, { password });
 
     const directoryRes = await harness.request(
       '/api/museums/directory',
@@ -485,7 +485,7 @@ describeE2E('golden path 10 — museum management', () => {
   });
 
   it('visitor cannot create or update museums', async () => {
-    const { token } = await registerAndLogin(harness.request);
+    const { token } = await registerAndLogin(harness);
     const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
     // Visitor tries to create a museum
@@ -515,7 +515,7 @@ describeE2E('golden path 10 — museum management', () => {
   });
 
   it('visitor cannot list all museums (admin-only endpoint)', async () => {
-    const { token } = await registerAndLogin(harness.request);
+    const { token } = await registerAndLogin(harness);
 
     const listRes = await harness.request('/api/museums', { method: 'GET' }, token);
     expect(listRes.status).toBe(403);
@@ -525,7 +525,7 @@ describeE2E('golden path 10 — museum management', () => {
     const password = 'Password123!';
     const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
-    const admin = await registerAndLogin(harness.request, { password });
+    const admin = await registerAndLogin(harness, { password });
     const adminToken = await promoteToAdmin(harness, admin.userId, admin.email, password);
 
     // Create a museum
