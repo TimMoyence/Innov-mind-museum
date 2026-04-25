@@ -2458,7 +2458,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNSentry (8.7.0):
+  - RNSentry (8.9.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2480,7 +2480,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-    - Sentry (= 9.8.0)
+    - Sentry (= 9.11.0)
     - Yoga
   - RNWorklets (0.7.2):
     - hermes-engine
@@ -2564,9 +2564,9 @@ PODS:
   - SDWebImageWebPCoder (0.14.6):
     - libwebp (~> 1.0)
     - SDWebImage/Core (~> 5.17)
-  - Sentry (9.8.0):
-    - Sentry/Core (= 9.8.0)
-  - Sentry/Core (9.8.0)
+  - Sentry (9.11.0):
+    - Sentry/Core (= 9.11.0)
+  - Sentry/Core (9.11.0)
   - Yoga (0.0.0)
   - ZXingObjC/Core (3.6.9)
   - ZXingObjC/OneD (3.6.9):
@@ -3113,13 +3113,13 @@ SPEC CHECKSUMS:
   RNGoogleSignin: 104dd7238c56fe354e4b0a8fd267f866039ffdf3
   RNReanimated: 86e5991396f1aa514db90d6c79d4c3e37a37bb10
   RNScreens: ba6a4dec19e07ee2268e0869db26b3e9a815b814
-  RNSentry: c60f22ba4945e650f727ee40ee3b2ac73bca065a
+  RNSentry: eba3b7eacac8ef72ef6dc5dd74b43206149a1fad
   RNWorklets: 0e736f568c3c61cb3326cdcda767c4daee56a8a9
   SDWebImage: e9fc87c1aab89a8ab1bbd74eba378c6f53be8abf
   SDWebImageAVIFCoder: afe194a084e851f70228e4be35ef651df0fc5c57
   SDWebImageSVGCoder: 15a300a97ec1c8ac958f009c02220ac0402e936c
   SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
-  Sentry: 88746bf877eff714bc45315a39ad1d1efea2cdda
+  Sentry: 7561357fd868b329d1aab8152449733b2191ed6c
   Yoga: acd565934addf7423687593ec490bd4491b2a802
   ZXingObjC: 8898711ab495761b2dbbdec76d90164a6d7e14c5
 

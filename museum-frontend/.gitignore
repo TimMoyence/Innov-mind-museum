@@ -16,6 +16,8 @@ api.ts
 *.aab
 *.apk
 *.ipa
+/build/
+/build/Musaium.xcarchive/
 
 # npm cache (prevent accidental commit)
 .npm-cache/

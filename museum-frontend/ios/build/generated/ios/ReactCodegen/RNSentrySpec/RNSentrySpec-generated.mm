@@ -127,6 +127,10 @@ namespace facebook::react {
       return static_cast<ObjCTurboModule&>(turboModule).invokeObjCMethod(rt, VoidKind, "setAttributes", @selector(setAttributes:), args, count);
     }
 
+    static facebook::jsi::Value __hostFunction_NativeRNSentrySpecJSI_removeAttribute(facebook::jsi::Runtime& rt, TurboModule &turboModule, const facebook::jsi::Value* args, size_t count) {
+      return static_cast<ObjCTurboModule&>(turboModule).invokeObjCMethod(rt, VoidKind, "removeAttribute", @selector(removeAttribute:), args, count);
+    }
+
     static facebook::jsi::Value __hostFunction_NativeRNSentrySpecJSI_enableNativeFramesTracking(facebook::jsi::Runtime& rt, TurboModule &turboModule, const facebook::jsi::Value* args, size_t count) {
       return static_cast<ObjCTurboModule&>(turboModule).invokeObjCMethod(rt, VoidKind, "enableNativeFramesTracking", @selector(enableNativeFramesTracking), args, count);
     }
@@ -268,6 +272,9 @@ namespace facebook::react {
         
         
         methodMap_["setAttributes"] = MethodMetadata {1, __hostFunction_NativeRNSentrySpecJSI_setAttributes};
+        
+        
+        methodMap_["removeAttribute"] = MethodMetadata {1, __hostFunction_NativeRNSentrySpecJSI_removeAttribute};
         
         
         methodMap_["enableNativeFramesTracking"] = MethodMetadata {0, __hostFunction_NativeRNSentrySpecJSI_enableNativeFramesTracking};

@@ -1,13 +1,13 @@
 {
   "name": "RNSentry",
-  "version": "8.7.0",
+  "version": "8.9.1",
   "license": "MIT",
   "summary": "Official Sentry SDK for react-native",
   "authors": "Sentry",
   "homepage": "https://github.com/getsentry/sentry-react-native",
   "source": {
     "git": "https://github.com/getsentry/sentry-react-native.git",
-    "tag": "8.7.0"
+    "tag": "8.9.1"
   },
   "platforms": {
     "ios": "12.0",
@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "Sentry": [
-      "9.8.0"
+      "9.11.0"
     ],
     "React-Core": [],
     "React-RCTFabric": [],

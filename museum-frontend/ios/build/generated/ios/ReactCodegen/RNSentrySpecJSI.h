@@ -500,6 +500,7 @@ protected:
     methodMap_["setTag"] = MethodMetadata {.argCount = 2, .invoker = __setTag};
     methodMap_["setAttribute"] = MethodMetadata {.argCount = 2, .invoker = __setAttribute};
     methodMap_["setAttributes"] = MethodMetadata {.argCount = 1, .invoker = __setAttributes};
+    methodMap_["removeAttribute"] = MethodMetadata {.argCount = 1, .invoker = __removeAttribute};
     methodMap_["enableNativeFramesTracking"] = MethodMetadata {.argCount = 0, .invoker = __enableNativeFramesTracking};
     methodMap_["fetchModules"] = MethodMetadata {.argCount = 0, .invoker = __fetchModules};
     methodMap_["fetchViewHierarchy"] = MethodMetadata {.argCount = 0, .invoker = __fetchViewHierarchy};
@@ -705,6 +706,14 @@ private:
       "Expected setAttributes(...) to have 2 parameters");
     bridging::callFromJs<void>(rt, &T::setAttributes,  static_cast<NativeRNSentryCxxSpec*>(&turboModule)->jsInvoker_, static_cast<T*>(&turboModule),
       count <= 0 ? throw jsi::JSError(rt, "Expected argument in position 0 to be passed") : args[0].asObject(rt));return jsi::Value::undefined();
+  }
+
+  static jsi::Value __removeAttribute(jsi::Runtime &rt, TurboModule &turboModule, const jsi::Value* args, size_t count) {
+    static_assert(
+      bridging::getParameterCount(&T::removeAttribute) == 2,
+      "Expected removeAttribute(...) to have 2 parameters");
+    bridging::callFromJs<void>(rt, &T::removeAttribute,  static_cast<NativeRNSentryCxxSpec*>(&turboModule)->jsInvoker_, static_cast<T*>(&turboModule),
+      count <= 0 ? throw jsi::JSError(rt, "Expected argument in position 0 to be passed") : args[0].asString(rt));return jsi::Value::undefined();
   }
 
   static jsi::Value __enableNativeFramesTracking(jsi::Runtime &rt, TurboModule &turboModule, const jsi::Value* /*args*/, size_t /*count*/) {

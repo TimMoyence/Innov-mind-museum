@@ -95,6 +95,7 @@ namespace JS {
 - (void)setAttribute:(NSString *)key
                value:(NSString *)value;
 - (void)setAttributes:(NSDictionary *)attributes;
+- (void)removeAttribute:(NSString *)key;
 - (void)enableNativeFramesTracking;
 - (void)fetchModules:(RCTPromiseResolveBlock)resolve
               reject:(RCTPromiseRejectBlock)reject;
