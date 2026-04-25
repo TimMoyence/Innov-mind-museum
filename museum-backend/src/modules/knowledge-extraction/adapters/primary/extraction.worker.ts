@@ -2,6 +2,11 @@ import { Queue, Worker } from 'bullmq';
 
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
+import {
+  handleJobFailure,
+  type FailedJobSnapshot,
+  type JobFailureSinks,
+} from '@shared/queue/job-failure.handler';
 
 import { canonicalizeUrl } from '../../domain/canonical-url';
 
@@ -11,51 +16,9 @@ import type {
 } from '../../domain/ports/extraction-queue.port';
 import type { ExtractionJobService } from '../../useCase/extraction-job.service';
 
-/** Minimal BullMQ job snapshot used in the failure handler (avoids coupling to BullMQ types). */
-export interface FailedJobSnapshot {
-  id?: string;
-  data: { url?: string };
-  attemptsMade: number;
-  opts: { attempts?: number };
-}
-
-/** Injectable side-effect sinks for the failure handler — enables pure unit testing. */
-export interface JobFailureSinks {
-  log: (event: string, meta: Record<string, unknown>) => void;
-  capture: (err: unknown, context?: Record<string, string | undefined>) => void;
-}
-
-/**
- * Pure function: classifies a BullMQ failure event and routes it to the correct sinks.
- * Pages Sentry only on the final attempt (dead-letter semantics).
- */
-export function handleJobFailure(
-  job: FailedJobSnapshot | null,
-  err: Error,
-  sinks: JobFailureSinks,
-): void {
-  const attemptsMax = job?.opts.attempts ?? 0;
-  const attemptsMade = job?.attemptsMade ?? 0;
-  const finalAttempt = attemptsMax > 0 && attemptsMade >= attemptsMax;
-
-  sinks.log('extraction_job_failed', {
-    jobId: job?.id,
-    url: job?.data.url,
-    error: err.message,
-    attemptsMade,
-    attemptsMax,
-    finalAttempt,
-  });
-
-  if (finalAttempt) {
-    sinks.capture(err, {
-      queue: 'knowledge-extraction',
-      jobId: job?.id,
-      url: job?.data.url,
-      attemptsMade: String(attemptsMade),
-    });
-  }
-}
+// Re-export shared types so existing unit tests importing them from this module keep working.
+export type { FailedJobSnapshot, JobFailureSinks };
+export { handleJobFailure };
 
 const QUEUE_NAME = 'knowledge-extraction';
 
@@ -137,6 +100,10 @@ export class ExtractionWorker implements ExtractionQueuePort {
             logger.warn(e, m);
           },
           capture: captureExceptionWithContext,
+        },
+        {
+          queueName: QUEUE_NAME,
+          summarize: (data) => ({ url: data.url }),
         },
       );
     });

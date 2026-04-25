@@ -2,14 +2,41 @@ import { Worker } from 'bullmq';
 
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
+import { handleJobFailure } from '@shared/queue/job-failure.handler';
 
 import { runAuditIpAnonymizer } from './audit-ip-anonymizer.job';
 
-import type { Queue, ConnectionOptions } from 'bullmq';
+import type { Job, Queue, ConnectionOptions } from 'bullmq';
 import type { DataSource } from 'typeorm';
 
 /** Stable BullMQ repeatable-job id — `upsertJobScheduler` makes reboot idempotent. */
 export const AUDIT_IP_ANONYMIZE_SCHEDULER_ID = 'audit-ip-anonymize';
+
+/** Worker `failed` event handler — delegates to shared DLQ policy with cron semantics. */
+const onAuditCronJobFailed = (job: Job | undefined, err: Error): void => {
+  handleJobFailure(
+    job
+      ? {
+          id: job.id,
+          data: {},
+          attemptsMade: job.attemptsMade,
+          opts: { attempts: job.opts.attempts },
+        }
+      : null,
+    err,
+    {
+      log: (event, meta) => {
+        logger.warn(event, meta);
+      },
+      capture: captureExceptionWithContext,
+    },
+    {
+      queueName: AUDIT_IP_ANONYMIZE_SCHEDULER_ID,
+      // Cron has no retries — every failure must page Sentry.
+      treatNoAttemptsAsFinal: true,
+    },
+  );
+};
 
 /** Daily at 03:00 UTC — off-peak, before other retention / enrichment sweeps. */
 export const DEFAULT_AUDIT_IP_CRON = '0 3 * * *';
@@ -83,16 +110,7 @@ export async function registerAuditCron(
     { connection: config.connection, concurrency: 1 },
   );
 
-  worker.on('failed', (job, err) => {
-    logger.warn('audit_cron_tick_failed', {
-      jobId: job?.id,
-      error: err.message,
-    });
-    captureExceptionWithContext(err, {
-      schedulerId: AUDIT_IP_ANONYMIZE_SCHEDULER_ID,
-      jobId: job?.id,
-    });
-  });
+  worker.on('failed', onAuditCronJobFailed);
 
   return {
     stop: async () => {

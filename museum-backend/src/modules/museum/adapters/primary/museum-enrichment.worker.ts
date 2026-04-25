@@ -3,6 +3,7 @@ import { Worker } from 'bullmq';
 import { queryOverpassOpeningHours } from '@shared/http/overpass.client';
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
+import { handleJobFailure } from '@shared/queue/job-failure.handler';
 
 import { MUSEUM_ENRICHMENT_QUEUE_NAME } from '../secondary/bullmq-museum-enrichment-queue.adapter';
 import { parseOpeningHours } from '../secondary/opening-hours-parser';
@@ -201,14 +202,27 @@ export class MuseumEnrichmentWorker {
       logger.info('museum_enrichment_job_completed', { jobId: job.id });
     });
     this.worker.on('failed', (job, err) => {
-      logger.warn('museum_enrichment_job_failed', {
-        jobId: job?.id,
-        error: err.message,
-      });
-      captureExceptionWithContext(err, {
-        queue: MUSEUM_ENRICHMENT_QUEUE_NAME,
-        jobId: job?.id,
-      });
+      handleJobFailure<MuseumEnrichmentJob>(
+        job
+          ? {
+              id: job.id,
+              data: job.data,
+              attemptsMade: job.attemptsMade,
+              opts: { attempts: job.opts.attempts },
+            }
+          : null,
+        err,
+        {
+          log: (event, meta) => {
+            logger.warn(event, meta);
+          },
+          capture: captureExceptionWithContext,
+        },
+        {
+          queueName: MUSEUM_ENRICHMENT_QUEUE_NAME,
+          summarize: (data) => ({ museumId: data.museumId, locale: data.locale }),
+        },
+      );
     });
   }
 
