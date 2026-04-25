@@ -2,9 +2,11 @@ import { type Request, Router } from 'express';
 
 import { AppError } from '@shared/errors/app.error';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
+import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 
 import { getRequestUser, resolveRequestBaseUrl, buildImageReadUrl } from './chat-route.helpers';
-import { parseCreateSessionRequest, parseListSessionsQuery } from './chat.contracts';
+import { createSessionSchema, type CreateSessionBody } from './chat-session.schemas';
+import { parseListSessionsQuery } from './chat.contracts';
 
 import type { ChatService } from '../../../useCase/chat.service';
 
@@ -18,9 +20,9 @@ export const createSessionRouter = (chatService: ChatService): Router => {
   const router = Router();
 
   // POST /sessions — create a new chat session
-  router.post('/sessions', isAuthenticated, async (req, res) => {
+  router.post('/sessions', isAuthenticated, validateBody(createSessionSchema), async (req, res) => {
     const currentUser = getRequestUser(req);
-    const payload = parseCreateSessionRequest(req.body ?? {});
+    const payload = req.body as CreateSessionBody;
     const session = await chatService.createSession({
       ...payload,
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback

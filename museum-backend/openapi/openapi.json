@@ -218,6 +218,45 @@
         },
         "additionalProperties": false
       },
+      "CreateSessionRequest": {
+        "type": "object",
+        "description": "Optional metadata attached to a new chat session. Every field is optional; the server derives defaults from the authenticated user and request headers.",
+        "properties": {
+          "locale": {
+            "type": "string",
+            "description": "IETF BCP 47 locale tag (e.g. 'fr', 'en-US'). Falls back to Accept-Language."
+          },
+          "museumMode": {
+            "type": "boolean"
+          },
+          "museumId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "museumName": {
+            "type": "string"
+          },
+          "museumAddress": {
+            "type": "string"
+          },
+          "coordinates": {
+            "type": "object",
+            "required": ["lat", "lng"],
+            "properties": {
+              "lat": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "lng": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              }
+            }
+          }
+        }
+      },
       "CreateSessionResponse": {
         "type": "object",
         "required": ["session"],
@@ -2312,6 +2351,16 @@
             "bearerAuth": []
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSessionRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "Created",

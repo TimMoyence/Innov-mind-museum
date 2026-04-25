@@ -1,9 +1,6 @@
-import {
-  CONTENT_PREFERENCES,
-  isContentPreference,
-  type ContentPreference,
-} from '@modules/auth/domain/content-preference';
 import { badRequest } from '@shared/errors/app.error';
+
+import { createSessionSchema, postMessageSchema } from './chat-session.schemas';
 
 import type {
   ChatMessageResponse,
@@ -13,6 +10,21 @@ import type {
 } from './chat.shared-types';
 import type { ReportReason } from '../../../domain/chat.types';
 import type { FeedbackValue } from '../../../domain/messageFeedback.entity';
+import type { z } from 'zod';
+
+/**
+ * Format a Zod issue so historic parser error messages are preserved:
+ * `<field> <message>` when the schema emitted a `must be ...` message;
+ * the raw message otherwise (already fully prefixed or not field-scoped).
+ */
+const formatZodIssue = (issue: z.ZodIssue | undefined): string => {
+  if (!issue) return 'Invalid payload';
+  const path = issue.path.join('.');
+  const { message } = issue;
+  if (!path) return message;
+  if (message.startsWith('must be ')) return `${path} ${message}`;
+  return message;
+};
 
 // Re-export shared types so existing consumers keep working
 export type {
@@ -37,21 +49,6 @@ const optionalString = (payload: RecordValue, key: string): string | undefined =
     throw badRequest(`${key} must be a string`);
   }
   return value;
-};
-
-const optionalBoolean = (payload: RecordValue, key: string): boolean | undefined => {
-  const value = payload[key];
-  if (value === undefined || value === null || value === '') {
-    return undefined;
-  }
-  if (typeof value === 'boolean') {
-    return value;
-  }
-  if (typeof value === 'string') {
-    if (value.toLowerCase() === 'true') return true;
-    if (value.toLowerCase() === 'false') return false;
-  }
-  throw badRequest(`${key} must be a boolean`);
 };
 
 const optionalNumber = (payload: RecordValue, key: string): number | undefined => {
@@ -197,109 +194,22 @@ export interface ApiErrorResponse {
   };
 }
 
-const parseOptionalContentPreferences = (payload: RecordValue): ContentPreference[] | undefined => {
-  const raw = payload.contentPreferences;
-  if (raw === undefined || raw === null) return undefined;
-  if (!Array.isArray(raw)) throw badRequest('context.contentPreferences must be an array');
-  if (raw.length > CONTENT_PREFERENCES.length) {
-    throw badRequest(
-      `context.contentPreferences may contain at most ${String(CONTENT_PREFERENCES.length)} items`,
-    );
-  }
-  const result: ContentPreference[] = [];
-  for (const value of raw) {
-    if (!isContentPreference(value)) {
-      throw badRequest(
-        `context.contentPreferences values must be one of: ${CONTENT_PREFERENCES.join(', ')}`,
-      );
-    }
-    result.push(value);
-  }
-  return result;
-};
-
-const parseOptionalCoordinates = (
-  payload: RecordValue,
-): { lat: number; lng: number } | undefined => {
-  const raw = payload.coordinates;
-  if (raw === undefined || raw === null) return undefined;
-  if (!isRecord(raw)) throw badRequest('coordinates must be an object with lat and lng');
-  const lat = typeof raw.lat === 'number' ? raw.lat : Number.NaN;
-  const lng = typeof raw.lng === 'number' ? raw.lng : Number.NaN;
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-    throw badRequest('coordinates.lat and coordinates.lng must be finite numbers');
-  }
-  if (lat < -90 || lat > 90) throw badRequest('coordinates.lat must be between -90 and 90');
-  if (lng < -180 || lng > 180) throw badRequest('coordinates.lng must be between -180 and 180');
-  return { lat, lng };
-};
-
 /** Validates and transforms a raw request body into a {@link CreateSessionRequest}. */
 export const parseCreateSessionRequest = (payload: unknown): CreateSessionRequest => {
-  if (!isRecord(payload)) {
-    throw badRequest('Payload must be an object');
+  const result = createSessionSchema.safeParse(payload);
+  if (!result.success) {
+    throw badRequest(formatZodIssue(result.error.issues[0]));
   }
-
-  const museumId = optionalNumber(payload, 'museumId');
-  if (museumId !== undefined && (!Number.isInteger(museumId) || museumId <= 0)) {
-    throw badRequest('museumId must be a positive integer');
-  }
-
-  const coordinates = parseOptionalCoordinates(payload);
-
-  return {
-    userId: optionalNumber(payload, 'userId'),
-    locale: optionalString(payload, 'locale'),
-    museumMode: optionalBoolean(payload, 'museumMode'),
-    museumId,
-    museumName: optionalString(payload, 'museumName'),
-    museumAddress: optionalString(payload, 'museumAddress'),
-    coordinates,
-  };
+  return result.data as CreateSessionRequest;
 };
 
 /** Validates and transforms a raw request body into a {@link PostMessageRequest}. */
 export const parsePostMessageRequest = (payload: unknown): PostMessageRequest => {
-  if (!isRecord(payload)) {
-    throw badRequest('Payload must be an object');
+  const result = postMessageSchema.safeParse(payload);
+  if (!result.success) {
+    throw badRequest(formatZodIssue(result.error.issues[0]));
   }
-
-  const contextRaw = payload.context;
-  let context: PostMessageRequest['context'];
-
-  if (contextRaw !== undefined) {
-    if (!isRecord(contextRaw)) {
-      throw badRequest('context must be an object');
-    }
-
-    const guideLevelRaw = contextRaw.guideLevel;
-    let guideLevel: 'beginner' | 'intermediate' | 'expert' | undefined;
-    if (guideLevelRaw !== undefined && guideLevelRaw !== null && guideLevelRaw !== '') {
-      if (typeof guideLevelRaw !== 'string') {
-        throw badRequest('context.guideLevel must be a string');
-      }
-      if (!['beginner', 'intermediate', 'expert'].includes(guideLevelRaw)) {
-        throw badRequest('context.guideLevel must be beginner, intermediate, or expert');
-      }
-      guideLevel = guideLevelRaw as 'beginner' | 'intermediate' | 'expert';
-    }
-
-    const contentPreferences = parseOptionalContentPreferences(contextRaw);
-
-    context = {
-      location: optionalString(contextRaw, 'location'),
-      museumMode: optionalBoolean(contextRaw, 'museumMode'),
-      guideLevel,
-      locale: optionalString(contextRaw, 'locale'),
-      contentPreferences,
-    };
-  }
-
-  return {
-    text: optionalString(payload, 'text'),
-    image: optionalString(payload, 'image'),
-    context,
-  };
+  return result.data as PostMessageRequest;
 };
 
 /** Validates and transforms raw query params into a {@link ListSessionsQuery}. */

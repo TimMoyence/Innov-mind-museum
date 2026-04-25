@@ -1,11 +1,17 @@
 import { Router } from 'express';
+import { z } from 'zod';
 
-import { AppError, badRequest } from '@shared/errors/app.error';
+import { AppError } from '@shared/errors/app.error';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
+import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 
 import { getRequestUser } from './chat-route.helpers';
 
 import type { UserMemoryService } from '../../../useCase/user-memory.service';
+
+const memoryPreferenceSchema = z.object({
+  enabled: z.boolean(),
+});
 
 /**
  * Creates the memory-preference sub-router.
@@ -28,20 +34,21 @@ export const createMemoryRouter = (userMemoryService: UserMemoryService): Router
   });
 
   // PATCH /memory/preference — toggle memory opt-out
-  router.patch('/memory/preference', isAuthenticated, async (req, res) => {
-    const currentUser = getRequestUser(req);
-    if (!currentUser?.id) {
-      throw new AppError({ message: 'Token required', statusCode: 401, code: 'UNAUTHORIZED' });
-    }
+  router.patch(
+    '/memory/preference',
+    isAuthenticated,
+    validateBody(memoryPreferenceSchema),
+    async (req, res) => {
+      const currentUser = getRequestUser(req);
+      if (!currentUser?.id) {
+        throw new AppError({ message: 'Token required', statusCode: 401, code: 'UNAUTHORIZED' });
+      }
 
-    const { enabled } = req.body as { enabled?: unknown };
-    if (typeof enabled !== 'boolean') {
-      throw badRequest('enabled must be a boolean');
-    }
-
-    await userMemoryService.setDisabledByUser(currentUser.id, !enabled);
-    res.status(200).json({ enabled });
-  });
+      const { enabled } = req.body as z.infer<typeof memoryPreferenceSchema>;
+      await userMemoryService.setDisabledByUser(currentUser.id, !enabled);
+      res.status(200).json({ enabled });
+    },
+  );
 
   return router;
 };
