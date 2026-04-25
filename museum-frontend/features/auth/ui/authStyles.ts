@@ -30,17 +30,24 @@ export const authStyles = StyleSheet.create({
     gap: semantic.form.gapLarge,
   },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: semantic.section.gapTight,
+    justifyContent: 'center',
+    gap: space['4'],
+  },
+  headerText: {
+    flex: 1,
+    alignItems: 'flex-start',
+    gap: space['1'],
   },
   title: {
-    fontSize: semantic.section.titleSizeHero,
+    fontSize: fontSize.xl,
     fontWeight: '700',
-    textAlign: 'center',
+    textAlign: 'left',
   },
   subtitle: {
     fontSize: fontSize.sm,
-    textAlign: 'center',
+    textAlign: 'left',
     lineHeight: lineHeightPx['21'],
   },
   form: {

@@ -11,7 +11,7 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- RN image require pattern
 const musaiumLogo = require('../../assets/images/logo.png') as ImageSourcePropType;
 
-type BrandMarkVariant = 'auth' | 'hero' | 'header';
+type BrandMarkVariant = 'auth' | 'auth-compact' | 'hero' | 'header';
 
 interface BrandMarkProps {
   variant?: BrandMarkVariant;
@@ -26,6 +26,10 @@ const clamp = (value: number, min: number, max: number) => {
 const resolveResponsiveSize = (variant: BrandMarkVariant, viewportWidth: number) => {
   if (variant === 'auth') {
     return clamp(Math.round(viewportWidth * 0.34), 96, 132);
+  }
+
+  if (variant === 'auth-compact') {
+    return clamp(Math.round(viewportWidth * 0.18), 64, 80);
   }
 
   if (variant === 'header') {

@@ -1,10 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/features/auth/application/AuthContext';
+import { useBiometricAuth } from '@/features/auth/application/useBiometricAuth';
 import { useEmailPasswordAuth } from '@/features/auth/application/useEmailPasswordAuth';
 import { useForgotPassword } from '@/features/auth/application/useForgotPassword';
 import { useSocialLogin } from '@/features/auth/application/useSocialLogin';
@@ -12,6 +13,7 @@ import { AuthActionMenu } from '@/features/auth/ui/AuthActionMenu';
 import { AuthHeader } from '@/features/auth/ui/AuthHeader';
 import { AuthModeSwitchButton } from '@/features/auth/ui/AuthModeSwitchButton';
 import { AuthSeparator } from '@/features/auth/ui/AuthSeparator';
+import { BiometricSetupSheet } from '@/features/auth/ui/BiometricSetupSheet';
 import { LoginForm } from '@/features/auth/ui/LoginForm';
 import { RegisterForm } from '@/features/auth/ui/RegisterForm';
 import { SocialLoginButtons } from '@/features/auth/ui/SocialLoginButtons';
@@ -41,10 +43,55 @@ export default function AuthScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [gdprAccepted, setGdprAccepted] = useState(false);
+  const [showBiometricSheet, setShowBiometricSheet] = useState(false);
   const { loginWithSession } = useAuth();
+  type Session = Parameters<typeof loginWithSession>[0];
+  const pendingSessionRef = useRef<Session | null>(null);
+  const biometric = useBiometricAuth();
+
+  // Wraps the auth-context loginWithSession so that, on first successful login
+  // when biometrics are available but not enrolled yet, we open the setup
+  // sheet BEFORE flipping isAuthenticated. Otherwise the navigation guard
+  // would unmount the auth screen and the sheet would never display.
+  const loginWithSessionWithBiometricPrompt = useCallback(
+    async (session: Session): Promise<void> => {
+      if (biometric.isAvailable && !biometric.isEnabled) {
+        pendingSessionRef.current = session;
+        setShowBiometricSheet(true);
+        return;
+      }
+      await loginWithSession(session);
+    },
+    [biometric.isAvailable, biometric.isEnabled, loginWithSession],
+  );
+
+  const finalizePendingSession = useCallback(async (): Promise<void> => {
+    const session = pendingSessionRef.current;
+    pendingSessionRef.current = null;
+    setShowBiometricSheet(false);
+    if (session) {
+      await loginWithSession(session);
+    }
+  }, [loginWithSession]);
+
+  const handleBiometricActivate = useCallback(async (): Promise<void> => {
+    try {
+      await biometric.enable();
+    } finally {
+      await finalizePendingSession();
+    }
+  }, [biometric, finalizePendingSession]);
+
+  const handleBiometricSkip = useCallback(() => {
+    void finalizePendingSession();
+  }, [finalizePendingSession]);
 
   const { handleAppleSignIn, handleGoogleSignIn, isSocialLoading, appleAuthAvailable } =
-    useSocialLogin({ loginWithSession, setErrorMessage, setInfoMessage });
+    useSocialLogin({
+      loginWithSession: loginWithSessionWithBiometricPrompt,
+      setErrorMessage,
+      setInfoMessage,
+    });
 
   const { handleForgotPassword } = useForgotPassword({
     email,
@@ -65,7 +112,7 @@ export default function AuthScreen() {
     password,
     firstname,
     lastname,
-    loginWithSession,
+    loginWithSession: loginWithSessionWithBiometricPrompt,
     setIsLoading,
     setErrorMessage,
     setInfoMessage,
@@ -183,6 +230,13 @@ export default function AuthScreen() {
           </GlassCard>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <BiometricSetupSheet
+        visible={showBiometricSheet}
+        biometricLabel={biometric.biometricLabel}
+        onActivate={handleBiometricActivate}
+        onSkip={handleBiometricSkip}
+      />
     </LiquidScreen>
   );
 }

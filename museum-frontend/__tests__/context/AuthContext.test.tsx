@@ -72,10 +72,12 @@ jest.mock('@/features/daily-art/application/logoutCleanup', () => ({
   clearDailyArtStorage: (...args: unknown[]) => mockClearDailyArtStorage(...args),
 }));
 
+const mockRunAuthRefresh = jest.fn();
 jest.mock('@/shared/infrastructure/httpClient', () => ({
   setAuthRefreshHandler: jest.fn(),
   setTokenProvider: jest.fn(),
   setUnauthorizedHandler: jest.fn(),
+  runAuthRefresh: (...args: unknown[]) => mockRunAuthRefresh(...args),
 }));
 
 const mockReportErrorCalls: unknown[][] = [];
@@ -129,9 +131,10 @@ describe('AuthProvider / useAuth', () => {
     mockIsAccessTokenExpired.mockReturnValue(true);
     mockLogoutApi.mockResolvedValue({});
     mockCompleteOnboarding.mockResolvedValue(undefined);
+    mockRunAuthRefresh.mockResolvedValue({ kind: 'transient' });
   });
 
-  it('bootstrap with cached valid access token skips refresh call', async () => {
+  it('bootstrap hydrates cached access token without calling refresh', async () => {
     mockGetRefreshToken.mockResolvedValue('valid-refresh');
     mockGetPersistedAccessToken.mockResolvedValue('cached-access');
     mockIsAccessTokenExpired.mockReturnValue(false);
@@ -147,11 +150,13 @@ describe('AuthProvider / useAuth', () => {
     expect(mockSetAccessToken).toHaveBeenCalledWith('cached-access');
   });
 
-  it('bootstrap with expired cached access token triggers refresh', async () => {
+  it('bootstrap hydrates expired cached access token without calling refresh (defers to interceptor)', async () => {
+    // Single-flight invariant: bootstrap MUST NOT call /auth/refresh because
+    // the response interceptor will refresh on the first 401, and any parallel
+    // refresh would race the rotation and log the user out.
     mockGetRefreshToken.mockResolvedValue('valid-refresh');
     mockGetPersistedAccessToken.mockResolvedValue('expired-access');
     mockIsAccessTokenExpired.mockReturnValue(true);
-    mockRefresh.mockResolvedValue(makeSession());
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -160,9 +165,25 @@ describe('AuthProvider / useAuth', () => {
     });
 
     expect(result.current.isAuthenticated).toBe(true);
-    expect(mockRefresh).toHaveBeenCalledWith('valid-refresh');
-    expect(mockSetPersistedAccessToken).toHaveBeenCalledWith('new-access');
-    expect(mockSetRefreshToken).toHaveBeenCalledWith('new-refresh');
+    expect(mockRefresh).not.toHaveBeenCalled();
+    expect(mockSetAccessToken).toHaveBeenCalledWith('expired-access');
+  });
+
+  it('bootstrap without cached access still flips isAuthenticated when a refresh token is present', async () => {
+    // No access token in storage but a refresh token exists → mark as
+    // authenticated; the first authed request will produce 401 → interceptor
+    // refreshes via the single-flight coordinator.
+    mockGetRefreshToken.mockResolvedValue('valid-refresh');
+    mockGetPersistedAccessToken.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(mockRefresh).not.toHaveBeenCalled();
   });
 
   it('bootstrap without refreshToken sets isAuthenticated=false', async () => {
@@ -176,56 +197,6 @@ describe('AuthProvider / useAuth', () => {
 
     expect(result.current.isAuthenticated).toBe(false);
     expect(mockClearAccessToken).toHaveBeenCalled();
-  });
-
-  it('bootstrap clears tokens on Unauthorized refresh error', async () => {
-    mockGetRefreshToken.mockResolvedValue('stale-refresh');
-    mockRefresh.mockRejectedValue(
-      createAppError({ kind: 'Unauthorized', message: 'Invalid refresh' }),
-    );
-
-    const { result } = renderHook(() => useAuth(), { wrapper });
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(result.current.isAuthenticated).toBe(false);
-    expect(mockClearRefreshToken).toHaveBeenCalled();
-    expect(mockClearPersistedAccessToken).toHaveBeenCalled();
-  });
-
-  it('bootstrap keeps tokens and falls back to cached access on Network error', async () => {
-    mockGetRefreshToken.mockResolvedValue('good-refresh');
-    mockGetPersistedAccessToken.mockResolvedValue('stale-access');
-    mockIsAccessTokenExpired.mockReturnValue(true);
-    mockRefresh.mockRejectedValue(createAppError({ kind: 'Network', message: 'offline' }));
-
-    const { result } = renderHook(() => useAuth(), { wrapper });
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(result.current.isAuthenticated).toBe(true);
-    expect(mockSetAccessToken).toHaveBeenCalledWith('stale-access');
-    expect(mockClearRefreshToken).not.toHaveBeenCalled();
-    expect(mockClearPersistedAccessToken).not.toHaveBeenCalled();
-  });
-
-  it('bootstrap on Network error without cached access stays unauthenticated but keeps refresh token', async () => {
-    mockGetRefreshToken.mockResolvedValue('good-refresh');
-    mockGetPersistedAccessToken.mockResolvedValue(null);
-    mockRefresh.mockRejectedValue(createAppError({ kind: 'Timeout', message: 'timeout' }));
-
-    const { result } = renderHook(() => useAuth(), { wrapper });
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(result.current.isAuthenticated).toBe(false);
-    expect(mockClearRefreshToken).not.toHaveBeenCalled();
   });
 
   it('logout() clears tokens, sets isAuthenticated=false, and redirects', async () => {
@@ -356,9 +327,7 @@ describe('AuthProvider / useAuth', () => {
     });
 
     mockGetRefreshToken.mockResolvedValue('good-refresh');
-    mockRefresh.mockResolvedValue(
-      makeSession({ accessToken: 'fresh-access', refreshToken: 'fresh-refresh' }),
-    );
+    mockRunAuthRefresh.mockResolvedValue({ kind: 'success', accessToken: 'fresh-access' });
 
     let validity = false;
     await act(async () => {
@@ -366,7 +335,26 @@ describe('AuthProvider / useAuth', () => {
     });
 
     expect(validity).toBe(true);
-    expect(result.current.isAuthenticated).toBe(true);
+  });
+
+  it('checkTokenValidity() returns false on terminal refresh failure', async () => {
+    mockGetRefreshToken.mockResolvedValue('valid-refresh');
+    mockGetPersistedAccessToken.mockResolvedValue('cached');
+    mockIsAccessTokenExpired.mockReturnValue(false);
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    mockRunAuthRefresh.mockResolvedValue({ kind: 'invalid' });
+
+    let validity = true;
+    await act(async () => {
+      validity = await result.current.checkTokenValidity();
+    });
+
+    expect(validity).toBe(false);
   });
 
   it('checkTokenValidity() returns false when no refreshToken', async () => {
@@ -410,30 +398,60 @@ describe('AuthProvider / useAuth', () => {
   });
 
   // ── Onboarding state ──
+  //
+  // Bootstrap no longer calls /auth/refresh, so the authoritative
+  // onboardingCompleted flag is now produced by the registered auth refresh
+  // handler (when the response interceptor refreshes on the first 401) or by
+  // loginWithSession on a fresh login. The ex-bootstrap-refresh tests have
+  // been moved to the refresh-handler path below.
 
-  it('bootstrap with onboardingCompleted=false (via refresh) sets isFirstLaunch=true', async () => {
+  it('refresh handler with onboardingCompleted=false sets isFirstLaunch=true', async () => {
     mockGetRefreshToken.mockResolvedValue('valid-refresh');
-    mockIsAccessTokenExpired.mockReturnValue(true);
+    mockGetPersistedAccessToken.mockResolvedValue('cached');
+    mockIsAccessTokenExpired.mockReturnValue(false);
     mockRefresh.mockResolvedValue(makeSession({ user: { onboardingCompleted: false } }));
 
+    const httpClient = require('@/shared/infrastructure/httpClient');
     const { result } = renderHook(() => useAuth(), { wrapper });
 
     await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
+      expect(httpClient.setAuthRefreshHandler).toHaveBeenCalled();
+    });
+
+    const handler = (httpClient.setAuthRefreshHandler as jest.Mock).mock.calls
+      .map((call: unknown[]) => call[0])
+      .find((arg: unknown): arg is () => Promise<unknown> => typeof arg === 'function');
+
+    expect(handler).toBeDefined();
+
+    await act(async () => {
+      await handler?.();
     });
 
     expect(result.current.isFirstLaunch).toBe(true);
   });
 
-  it('bootstrap with onboardingCompleted=true (via refresh) sets isFirstLaunch=false', async () => {
+  it('refresh handler with onboardingCompleted=true sets isFirstLaunch=false', async () => {
     mockGetRefreshToken.mockResolvedValue('valid-refresh');
-    mockIsAccessTokenExpired.mockReturnValue(true);
+    mockGetPersistedAccessToken.mockResolvedValue('cached');
+    mockIsAccessTokenExpired.mockReturnValue(false);
     mockRefresh.mockResolvedValue(makeSession({ user: { onboardingCompleted: true } }));
 
+    const httpClient = require('@/shared/infrastructure/httpClient');
     const { result } = renderHook(() => useAuth(), { wrapper });
 
     await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
+      expect(httpClient.setAuthRefreshHandler).toHaveBeenCalled();
+    });
+
+    const handler = (httpClient.setAuthRefreshHandler as jest.Mock).mock.calls
+      .map((call: unknown[]) => call[0])
+      .find((arg: unknown): arg is () => Promise<unknown> => typeof arg === 'function');
+
+    expect(handler).toBeDefined();
+
+    await act(async () => {
+      await handler?.();
     });
 
     expect(result.current.isFirstLaunch).toBe(false);
@@ -453,13 +471,13 @@ describe('AuthProvider / useAuth', () => {
 
   it('markOnboardingComplete() calls API and sets isFirstLaunch=false', async () => {
     mockGetRefreshToken.mockResolvedValue('valid-refresh');
-    mockIsAccessTokenExpired.mockReturnValue(true);
-    mockRefresh.mockResolvedValue(makeSession({ user: { onboardingCompleted: false } }));
+    mockGetPersistedAccessToken.mockResolvedValue('cached');
+    mockIsAccessTokenExpired.mockReturnValue(false);
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
     await waitFor(() => {
-      expect(result.current.isFirstLaunch).toBe(true);
+      expect(result.current.isLoading).toBe(false);
     });
 
     await act(async () => {
