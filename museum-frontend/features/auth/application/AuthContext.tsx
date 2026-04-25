@@ -21,6 +21,7 @@ import { useChatLocalCacheStore } from '@/features/chat/application/chatLocalCac
 import { clearDailyArtStorage } from '@/features/daily-art/application/logoutCleanup';
 import { reportError } from '@/shared/observability/errorReporting';
 import {
+  runAuthRefresh,
   setAuthRefreshHandler,
   setTokenProvider,
   setUnauthorizedHandler,
@@ -147,57 +148,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return;
         }
 
-        // Try the persisted access token first — avoids an unconditional /refresh
-        // call on every app launch (which would log the user out on any transient
-        // network/backend failure at boot).
+        // Hydrate the cached access token regardless of expiry — the response
+        // interceptor's single-flight refresh handles renewal on the first 401
+        // (or on the first authed request if no token is set). Bootstrap MUST
+        // NOT issue its own /auth/refresh call: a parallel API call from the
+        // first screen mount would trigger a second concurrent refresh and the
+        // backend rotates the refresh token, invalidating whichever request
+        // arrives second → spurious logout on every cold start.
         const cachedAccess = await authStorage.getPersistedAccessToken();
-        if (cachedAccess && !isAccessTokenExpired(cachedAccess)) {
+        if (cachedAccess) {
           setAccessToken(cachedAccess);
-          setIsAuthenticated(true);
           identifySentryUser(cachedAccess);
-          const biometricOn = await getBiometricEnabled();
-          if (biometricOn) setIsBiometricLocked(true);
-          bootstrapBreadcrumb('token_valid', { duration_ms: Date.now() - startedAt });
-          return;
         }
-
-        // Access token missing or (near-)expired — attempt a refresh.
-        try {
-          const session = await authService.refresh(refreshToken);
-          await persistSessionTokens(session.accessToken, session.refreshToken);
-          setAccessToken(session.accessToken);
-          setIsAuthenticated(true);
-          setIsFirstLaunch(!session.user.onboardingCompleted);
-          identifySentryUser(session.accessToken);
-          const biometricOn = await getBiometricEnabled();
-          if (biometricOn) setIsBiometricLocked(true);
-        } catch (refreshError) {
-          if (isAuthInvalidError(refreshError)) {
-            await clearPersistedTokens();
-            setIsAuthenticated(false);
-            setIsFirstLaunch(true);
-            Sentry.setUser(null);
-            return;
-          }
-
-          // Network / timeout / 5xx: keep credentials so the user stays logged in
-          // when the app recovers connectivity. If a stale cached access token
-          // exists, use it — the next authed request will trigger another refresh.
-          if (cachedAccess) {
-            setAccessToken(cachedAccess);
-            setIsAuthenticated(true);
-            identifySentryUser(cachedAccess);
-            const biometricOn = await getBiometricEnabled();
-            if (biometricOn) setIsBiometricLocked(true);
-          } else {
-            // No cached access token and refresh failed transiently: stay on the
-            // auth screen for this launch, but keep the refresh token persisted
-            // so the next boot can retry.
-            setIsAuthenticated(false);
-            setIsFirstLaunch(null);
-          }
-          reportError(refreshError, { context: 'auth_bootstrap_refresh_transient' });
-        }
+        setIsAuthenticated(true);
+        const biometricOn = await getBiometricEnabled();
+        if (biometricOn) setIsBiometricLocked(true);
+        bootstrapBreadcrumb(cachedAccess ? 'token_hydrated' : 'token_pending_refresh', {
+          duration_ms: Date.now() - startedAt,
+          access_expired: cachedAccess ? isAccessTokenExpired(cachedAccess) : true,
+        });
       } catch (error) {
         reportError(error, { context: 'auth_bootstrap' });
         setIsAuthenticated(false);
@@ -217,17 +186,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const silentRefresh = useCallback(async (): Promise<string | null> => {
-    const refreshToken = await authStorage.getRefreshToken();
-    if (!refreshToken) return null;
-    try {
-      const session = await authService.refresh(refreshToken);
-      await persistSessionTokens(session.accessToken, session.refreshToken);
-      setAccessToken(session.accessToken);
-      identifySentryUser(session.accessToken);
-      return session.accessToken;
-    } catch {
-      return null;
-    }
+    const result = await runAuthRefresh();
+    return result.kind === 'success' ? result.accessToken : null;
   }, []);
 
   useAuthAppStateSync(silentRefresh, {
@@ -248,7 +208,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setAuthRefreshHandler(async () => {
       const refreshToken = await authStorage.getRefreshToken();
       if (!refreshToken) {
-        return null;
+        return { kind: 'invalid' };
       }
 
       try {
@@ -258,18 +218,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsAuthenticated(true);
         setIsFirstLaunch(!session.user.onboardingCompleted);
         identifySentryUser(session.accessToken);
-        return session.accessToken;
+        return { kind: 'success', accessToken: session.accessToken };
       } catch (error) {
         if (isAuthInvalidError(error)) {
-          await clearPersistedTokens();
-          setIsAuthenticated(false);
-          Sentry.setUser(null);
-          return null;
+          return { kind: 'invalid' };
         }
-        // Network / 5xx during refresh: don't clear tokens. Surface null so the
-        // current request fails, but the next attempt can retry with the same
-        // refresh token.
-        return null;
+        // Network / 5xx during refresh: keep tokens intact so the next attempt
+        // can retry with the same refresh token. The pending request fails
+        // with its original 401 but the session survives the outage.
+        return { kind: 'transient' };
       }
     });
 
@@ -318,32 +275,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const checkTokenValidity = async (): Promise<boolean> => {
-    try {
-      const refreshToken = await authStorage.getRefreshToken();
-      if (!refreshToken) {
-        await clearPersistedTokens();
-        setIsAuthenticated(false);
-        return false;
-      }
-
-      const session = await authService.refresh(refreshToken);
-      await persistSessionTokens(session.accessToken, session.refreshToken);
-      setAccessToken(session.accessToken);
-      setIsAuthenticated(true);
-      setIsFirstLaunch(!session.user.onboardingCompleted);
-      identifySentryUser(session.accessToken);
-      return true;
-    } catch (error) {
-      if (isAuthInvalidError(error)) {
-        await clearPersistedTokens();
-        setIsAuthenticated(false);
-        return false;
-      }
-      reportError(error, { context: 'token_validation' });
-      // Transient failure — preserve the session so the user can keep using
-      // the app; the next authed request will retry the refresh flow.
-      return isAuthenticated;
+    const refreshToken = await authStorage.getRefreshToken();
+    if (!refreshToken) {
+      await clearPersistedTokens();
+      setIsAuthenticated(false);
+      return false;
     }
+
+    const result = await runAuthRefresh();
+    if (result.kind === 'success') {
+      return true;
+    }
+    if (result.kind === 'invalid') {
+      // unauthorizedHandler has already purged the session for the shared cycle.
+      return false;
+    }
+    // Transient failure — preserve the session so the user can keep using
+    // the app; the next authed request will retry the refresh flow.
+    return isAuthenticated;
   };
 
   return (

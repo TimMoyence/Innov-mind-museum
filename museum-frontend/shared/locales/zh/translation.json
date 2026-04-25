@@ -63,7 +63,13 @@
     "privacy_policy": "隐私政策",
     "badge_style": "风格",
     "badge_guide": "导览",
-    "badge_safe": "安全"
+    "badge_safe": "安全",
+    "biometric_setup": {
+      "title": "启用{{method}}？",
+      "description": "下次更快登录。",
+      "activate": "启用",
+      "later": "稍后"
+    }
   },
   "home": {
     "hero_title": "您的博物馆伴侣",

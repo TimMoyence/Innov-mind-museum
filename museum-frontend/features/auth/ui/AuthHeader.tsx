@@ -12,8 +12,9 @@ interface AuthHeaderProps {
 }
 
 /**
- * Branded header for the auth screen: Musaium logo + mode-aware title
- * and subtitle. Pure presentational component.
+ * Branded header for the auth screen: Musaium logo (left) + mode-aware
+ * title and subtitle (right) on a horizontal 50/50 row to keep the header
+ * compact and free vertical space for the form.
  */
 export function AuthHeader({ isLogin }: AuthHeaderProps) {
   const { t } = useTranslation();
@@ -21,13 +22,15 @@ export function AuthHeader({ isLogin }: AuthHeaderProps) {
 
   return (
     <View style={styles.header}>
-      <BrandMark variant="auth" />
-      <Text style={[styles.title, { color: theme.textPrimary }]}>
-        {isLogin ? t('auth.welcome_back') : t('auth.create_account')}
-      </Text>
-      <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-        {isLogin ? t('auth.sign_in_subtitle') : t('auth.sign_up_subtitle')}
-      </Text>
+      <BrandMark variant="auth-compact" />
+      <View style={styles.headerText}>
+        <Text style={[styles.title, { color: theme.textPrimary }]}>
+          {isLogin ? t('auth.welcome_back') : t('auth.create_account')}
+        </Text>
+        <Text style={[styles.subtitle, { color: theme.textSecondary }]} numberOfLines={2}>
+          {isLogin ? t('auth.sign_in_subtitle') : t('auth.sign_up_subtitle')}
+        </Text>
+      </View>
     </View>
   );
 }

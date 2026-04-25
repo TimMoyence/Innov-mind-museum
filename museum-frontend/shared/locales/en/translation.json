@@ -63,7 +63,13 @@
     "privacy_policy": "Privacy Policy",
     "badge_style": "Style",
     "badge_guide": "Guide",
-    "badge_safe": "Safe"
+    "badge_safe": "Safe",
+    "biometric_setup": {
+      "title": "Enable {{method}}?",
+      "description": "Sign in faster next time.",
+      "activate": "Enable",
+      "later": "Later"
+    }
   },
   "home": {
     "hero_title": "Your museum companion",

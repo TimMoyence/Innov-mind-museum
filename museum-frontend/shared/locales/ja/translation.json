@@ -63,7 +63,13 @@
     "privacy_policy": "プライバシーポリシー",
     "badge_style": "スタイル",
     "badge_guide": "ガイド",
-    "badge_safe": "安全"
+    "badge_safe": "安全",
+    "biometric_setup": {
+      "title": "{{method}}を有効にしますか？",
+      "description": "次回からすばやくサインインできます。",
+      "activate": "有効化",
+      "later": "後で"
+    }
   },
   "home": {
     "hero_title": "あなたの美術館コンパニオン",
