@@ -1,28 +1,13 @@
 import type { Config } from '@jest/types';
 
-const config: Config.InitialOptions = {
+/**
+ * Shared per-project options. `preset`, `transform`, `moduleNameMapper`,
+ * `testEnvironment`, and `testPathIgnorePatterns` are project-scoped in Jest
+ * 29 and must be repeated on each entry of `projects`.
+ */
+const sharedProjectOptions = {
   preset: 'ts-jest',
-  testEnvironment: 'node',
-  // Force-exit after the test run completes so dangling ioredis / BullMQ
-  // reconnect timers (when Redis is not available locally) do not hang Jest.
-  // Tests are responsible for stopping their own resources; this is a safety
-  // net for integration tests that touch transitively-loaded modules holding
-  // background sockets (rate-limit sweep, museum-enrichment cache adapter).
-  forceExit: true,
-  // Pins env vars (EXTRACTION_WORKER_ENABLED=false, CACHE_ENABLED=false) BEFORE
-  // any test file's top-level imports trigger `@src/config/env` evaluation.
-  // Without this, transitive imports (e.g. `@shared/logger` -> `env.ts`) would
-  // capture default `extractionWorkerEnabled=true` and the e2e harness override
-  // applied later inside `createE2EHarness()` would arrive too late, leaving a
-  // BullMQ/ioredis ECONNREFUSED log flood throughout the e2e suites.
-  setupFiles: ['<rootDir>/tests/helpers/e2e/jest-env.setup.ts'],
-  testPathIgnorePatterns: [
-    '/dist/',
-    '/node_modules/',
-    '/tests/ai/',
-    '\\.stryker-tmp/',
-    '\\.stryker-run/',
-  ],
+  testEnvironment: 'node' as const,
   transform: {
     '^.+\\.tsx?$': 'ts-jest',
   },
@@ -33,6 +18,25 @@ const config: Config.InitialOptions = {
     '^@shared/(.*)$': '<rootDir>/src/shared/$1',
     '^tests/(.*)$': '<rootDir>/tests/$1',
   },
+};
+
+const baseTestPathIgnorePatterns = [
+  '/dist/',
+  '/node_modules/',
+  '/tests/ai/',
+  '\\.stryker-tmp/',
+  '\\.stryker-run/',
+];
+
+const config: Config.InitialOptions = {
+  // Force-exit after the test run completes so dangling ioredis / BullMQ
+  // reconnect timers (when Redis is not available locally) do not hang Jest.
+  // Tests are responsible for stopping their own resources; this is a safety
+  // net for integration tests that touch transitively-loaded modules holding
+  // background sockets (rate-limit sweep, museum-enrichment cache adapter).
+  forceExit: true,
+
+  // Coverage settings are global in Jest 29 — they apply across all projects.
   collectCoverage: true,
   coverageReporters: ['text-summary', 'lcov'],
   coveragePathIgnorePatterns: [
@@ -59,5 +63,28 @@ const config: Config.InitialOptions = {
       lines: 88,
     },
   },
+
+  // Two projects:
+  // - `unit-integration`: everything except tests/e2e/. NO global env pinning,
+  //   so unit/integration tests that rely on default `extractionWorkerEnabled`
+  //   (e.g. museum-enrichment route mounting) keep working.
+  // - `e2e`: only tests under tests/e2e/. Pins EXTRACTION_WORKER_ENABLED=false
+  //   and CACHE_ENABLED=false BEFORE any test file's top-level imports trigger
+  //   `@src/config/env` evaluation, preventing BullMQ/ioredis ECONNREFUSED log
+  //   floods when the e2e harness applies the same overrides too late.
+  projects: [
+    {
+      ...sharedProjectOptions,
+      displayName: 'unit-integration',
+      testPathIgnorePatterns: [...baseTestPathIgnorePatterns, '<rootDir>/tests/e2e/'],
+    },
+    {
+      ...sharedProjectOptions,
+      displayName: 'e2e',
+      testMatch: ['<rootDir>/tests/e2e/**/*.test.ts'],
+      testPathIgnorePatterns: baseTestPathIgnorePatterns,
+      setupFiles: ['<rootDir>/tests/helpers/e2e/jest-env.setup.ts'],
+    },
+  ],
 };
 export default config;
