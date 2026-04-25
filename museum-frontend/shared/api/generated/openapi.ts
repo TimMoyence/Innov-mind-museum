@@ -858,7 +858,11 @@ export interface paths {
         path?: never;
         cookie?: never;
       };
-      requestBody?: never;
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['CreateSessionRequest'];
+        };
+      };
       responses: {
         /** @description Created */
         201: {
@@ -2985,6 +2989,19 @@ export interface components {
       metadata?: {
         [key: string]: unknown;
       } | null;
+    };
+    /** @description Optional metadata attached to a new chat session. Every field is optional; the server derives defaults from the authenticated user and request headers. */
+    CreateSessionRequest: {
+      /** @description IETF BCP 47 locale tag (e.g. 'fr', 'en-US'). Falls back to Accept-Language. */
+      locale?: string;
+      museumMode?: boolean;
+      museumId?: number;
+      museumName?: string;
+      museumAddress?: string;
+      coordinates?: {
+        lat: number;
+        lng: number;
+      };
     };
     CreateSessionResponse: {
       session: components['schemas']['SessionDTO'];
