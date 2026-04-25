@@ -74,7 +74,7 @@ pnpm test                        # Vitest unit tests
 ### Design System (`cd design-system`)
 
 ```bash
-pnpm build:tokens                # build design tokens → museum-frontend/shared/ui/tokens.generated.ts
+pnpm build                       # build design tokens → museum-frontend/shared/ui/tokens.generated.ts + web css
 ```
 
 ### CI
@@ -353,7 +353,7 @@ Alternatives for future: Drizzle (S-tier 2026), Prisma 7, Kysely.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **InnovMind** (6818 symbols, 17776 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **InnovMind** (6820 symbols, 17776 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

@@ -31,7 +31,7 @@ Les 12 plans modulaires issus de l'audit Next Level du 2026-04-17 ont été arch
 | [11](archive/plans-2026-04-17/PLAN_11_AI_GUARDRAILS_V2.md) | AI Guardrails V2 | 3 |
 | [12](archive/plans-2026-04-17/PLAN_12_MOBILE_PERF_V2.md) | Mobile Perf V2 | 3 |
 
-> Plan courant consolidé dans [`docs/plans/MASTER_PLAN.md`](plans/MASTER_PLAN.md) (audit enterprise-grade 2026-04-20).
+> Plan courant consolidé dans [`docs/plans/NL_MASTER_PLAN.md`](plans/NL_MASTER_PLAN.md) (audit enterprise-grade 2026-04-20).
 
 ## Opérations & Runbook
 

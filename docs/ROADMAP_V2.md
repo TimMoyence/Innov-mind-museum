@@ -1,5 +1,8 @@
 # MUSAIUM — Master Product Roadmap & Implementation Plan
 
+> **⚠️ @deprecated — Superseded by [ROADMAP_ACTIVE.md](./ROADMAP_ACTIVE.md) since the 2026-04-19 pivot (voice V1 shipped, SSE deactivated per ADR-001, feature flags retired, docs cleanup).**
+> **This file is kept only as a historical reference for the V2 strategic framing. Do not use it to plan new work — open `ROADMAP_ACTIVE.md` instead.**
+>
 > **Date**: 2026-03-19 | **Version**: 2.0
 > **Prepared by**: Product Squad (PM, PO, Tech Lead, Design Lead, Engineers)
 > **Objective**: Enterprise-grade readiness for global B2B + B2C market launch

@@ -315,6 +315,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     experiments: {
       typedRoutes: false,
     },
+    // OTA disabled intentionally — see docs/adr/ADR-009-ota-disabled.md.
+    // Channel URL is kept configured so EAS Build metadata stays consistent;
+    // runtime flag `enabled: false` ensures no OTA fetch at app start.
     updates: {
       enabled: false,
       checkAutomatically: 'NEVER',
