@@ -13,7 +13,7 @@ import type {
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { CacheService } from '@shared/cache/cache.port';
-import { makeSession, makeMessage } from '../../helpers/chat/message.fixtures';
+import { makeSession, makeMessage, makeSessionUser } from '../../helpers/chat/message.fixtures';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 import { makeCache } from '../../helpers/chat/cache.fixtures';
 import {
@@ -44,7 +44,7 @@ const makeArtOutput = (overrides: Partial<OrchestratorOutput> = {}): Orchestrato
 const makeRepo = (
   session: ChatSession | null = makeSession({
     id: SESSION_ID,
-    user: { id: USER_ID } as ChatSession['user'],
+    user: makeSessionUser(USER_ID),
   }),
 ): jest.Mocked<ChatRepository> =>
   makeChatRepo({
@@ -227,7 +227,7 @@ describe('ChatMessageService', () => {
     });
 
     it('throws 404 when user does not own the session', async () => {
-      const session = makeSession({ user: { id: 999 } as ChatSession['user'] });
+      const session = makeSession({ user: makeSessionUser(999) });
       const repo = makeRepo(session);
       const { service } = buildService({ repository: repo });
 
@@ -259,7 +259,7 @@ describe('ChatMessageService', () => {
       const session = makeSession({
         museumMode: true,
         visitContext,
-        user: { id: USER_ID } as ChatSession['user'],
+        user: makeSessionUser(USER_ID),
       });
       const repo = makeRepo(session);
       const { service, orchestrator } = buildService({ repository: repo });
@@ -283,7 +283,7 @@ describe('ChatMessageService', () => {
       // Session ownership required — see SEC-19 note above.
       const session = makeSession({
         museumMode: false,
-        user: { id: USER_ID } as ChatSession['user'],
+        user: makeSessionUser(USER_ID),
       });
       const repo = makeRepo(session);
       const { service, orchestrator } = buildService({ repository: repo });
@@ -934,7 +934,7 @@ describe('ChatMessageService', () => {
       // Session ownership required — see SEC-19 note above.
       const session = makeSession({
         locale: 'de',
-        user: { id: USER_ID } as ChatSession['user'],
+        user: makeSessionUser(USER_ID),
       });
       const repo = makeRepo(session);
       const { service, orchestrator } = buildService({ repository: repo });

@@ -1,19 +1,16 @@
 import { env } from '@src/config/env';
 import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/langchain.orchestrator';
+import { makeMessage } from '../../helpers/chat/message.fixtures';
 
 const createMessage = (id: string, role: 'user' | 'assistant', text: string): ChatMessage =>
-  ({
+  makeMessage({
     id,
     role,
     text,
-    imageRef: null,
-    metadata: null,
-    createdAt: new Date('2026-02-18T10:00:00.000Z'),
-    session: undefined as never,
     sessionId: 'test-session',
-    artworkMatches: [],
-  }) as ChatMessage;
+    createdAt: new Date('2026-02-18T10:00:00.000Z'),
+  });
 
 interface InvokeOptions {
   signal?: AbortSignal;

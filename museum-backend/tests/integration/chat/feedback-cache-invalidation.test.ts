@@ -3,7 +3,7 @@ import { buildCacheKey } from '@modules/chat/useCase/chat-cache-key.util';
 import type { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import type { ChatSession } from '@modules/chat/domain/chatSession.entity';
 import type { ChatMessageWithSessionOwnership } from '@modules/chat/domain/chat.repository.interface';
-import { makeSession, makeMessage } from '../../helpers/chat/message.fixtures';
+import { makeSession, makeMessage, makeSessionUser } from '../../helpers/chat/message.fixtures';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 import { makeCache } from '../../helpers/chat/cache.fixtures';
 
@@ -30,7 +30,7 @@ const makeMessageRow = (
     id: SESSION_ID,
     museumId: MUSEUM_ID,
     locale: 'fr',
-    user: { id: USER_ID } as ChatSession['user'],
+    user: makeSessionUser(USER_ID),
     ...sessionOverrides,
   });
   const message = makeMessage({

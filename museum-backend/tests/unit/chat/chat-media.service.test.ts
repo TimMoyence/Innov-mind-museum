@@ -3,7 +3,7 @@ import type { ChatMessageWithSessionOwnership } from '@modules/chat/domain/chat.
 import type { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import type { ChatSession } from '@modules/chat/domain/chatSession.entity';
 import type { TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
-import { makeSession, makeMessage } from '../../helpers/chat/message.fixtures';
+import { makeSession, makeMessage, makeSessionUser } from '../../helpers/chat/message.fixtures';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 import { makeCache } from '../../helpers/chat/cache.fixtures';
 
@@ -18,7 +18,7 @@ const makeMessageRow = (
 ): ChatMessageWithSessionOwnership => {
   const session = makeSession({
     id: SESSION_ID,
-    user: { id: 42 } as ChatSession['user'],
+    user: makeSessionUser(42),
     ...sessionOverrides,
   });
   const message = makeMessage({ ...msgOverrides, session });

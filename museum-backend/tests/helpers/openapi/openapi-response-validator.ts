@@ -280,3 +280,76 @@ export const assertMatchesOpenApiResponse = (params: {
     );
   }
 };
+
+/**
+ * Resolves the `application/json` request-body schema declared in OpenAPI
+ * for a given operation, or `null` when no body is declared.
+ */
+const getRequestBodySchema = (path: string, method: HttpMethod): OpenApiSchema | null => {
+  const pathItem = (spec.paths as Record<string, unknown>)[path];
+  if (!isRecord(pathItem)) {
+    throw new Error(`OpenAPI path not found: ${path}`);
+  }
+  const operation = pathItem[method];
+  if (!isRecord(operation)) {
+    throw new Error(`OpenAPI method not found: ${method.toUpperCase()} ${path}`);
+  }
+  let requestBody: Record<string, unknown> | null = isRecord(operation.requestBody)
+    ? operation.requestBody
+    : null;
+  if (!requestBody) {
+    return null;
+  }
+  if (typeof requestBody.$ref === 'string') {
+    const resolved = getSchemaByRef(requestBody.$ref);
+    requestBody = isRecord(resolved) ? (resolved as Record<string, unknown>) : null;
+    if (!requestBody) return null;
+  }
+  const content = requestBody.content;
+  if (!isRecord(content)) {
+    return null;
+  }
+  const json = content['application/json'];
+  if (!isRecord(json)) {
+    return null;
+  }
+  const schema = json.schema;
+  if (!isRecord(schema)) {
+    return null;
+  }
+  return schema as OpenApiSchema;
+};
+
+/**
+ * Test utility: asserts that a request body structurally matches the OpenAPI
+ * spec for the given operation.
+ *
+ * Use this in contract tests to catch drift between what routes validate
+ * (Zod schemas) and what the OpenAPI spec declares (source-of-truth for
+ * external consumers + generated mobile types).
+ */
+export const assertMatchesOpenApiRequest = (params: {
+  path: string;
+  method: HttpMethod;
+  body: unknown;
+}): void => {
+  const schema = getRequestBodySchema(params.path, params.method);
+  if (!schema) {
+    if (params.body === undefined) {
+      return;
+    }
+    throw new Error(
+      `No application/json request body schema for ${params.method.toUpperCase()} ${params.path}, but body was provided`,
+    );
+  }
+
+  const errors = validateAgainstSchema(schema, params.body as JsonValue, '$');
+  if (errors.length) {
+    throw new Error(
+      [
+        `OpenAPI request validation failed for ${params.method.toUpperCase()} ${params.path}`,
+        ...errors.slice(0, 20),
+      ].join('\n'),
+    );
+  }
+};

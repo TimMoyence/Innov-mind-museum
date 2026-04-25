@@ -2,6 +2,14 @@ import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import { ChatSession } from '@modules/chat/domain/chatSession.entity';
 
 /**
+ * Creates a minimal ChatSession.user stub for tests that only need `id`.
+ * Keeps the inline `as ChatSession['user']` cast out of every call site.
+ */
+export function makeSessionUser(id: number): ChatSession['user'] {
+  return { id } as ChatSession['user'];
+}
+
+/**
  * Creates a ChatSession entity with sensible defaults.
  * Override any field via the `overrides` parameter.
  * @param overrides

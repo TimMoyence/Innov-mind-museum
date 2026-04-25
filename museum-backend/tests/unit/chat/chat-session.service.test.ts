@@ -5,7 +5,7 @@ import type {
 } from '@modules/chat/domain/chat.repository.interface';
 import type { ChatSession } from '@modules/chat/domain/chatSession.entity';
 import { AppError } from '@shared/errors/app.error';
-import { makeSession } from '../../helpers/chat/message.fixtures';
+import { makeSession, makeSessionUser } from '../../helpers/chat/message.fixtures';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 import { makeCache } from '../../helpers/chat/cache.fixtures';
 import { makeMuseum, makeMuseumRepo } from '../../helpers/museum/museum.fixtures';
@@ -17,7 +17,7 @@ const SESSION_ID = 'a0a0a0a0-b1b1-4c2c-8d3d-e4e4e4e4e4e4';
 const makeRepo = (
   session: ChatSession | null = makeSession({
     id: SESSION_ID,
-    user: { id: 42 } as ChatSession['user'],
+    user: makeSessionUser(42),
   }),
 ) =>
   makeChatRepo({
@@ -291,7 +291,7 @@ describe('ChatSessionService', () => {
     });
 
     it('throws 404 when user does not own the session', async () => {
-      const session = makeSession({ user: { id: 99 } as ChatSession['user'] });
+      const session = makeSession({ user: makeSessionUser(99) });
       const repo = makeRepo(session);
       const svc = new ChatSessionService({ repository: repo });
 
@@ -380,7 +380,7 @@ describe('ChatSessionService', () => {
     });
 
     it('throws 404 when deleting session owned by another user', async () => {
-      const session = makeSession({ user: { id: 99 } as ChatSession['user'] });
+      const session = makeSession({ user: makeSessionUser(99) });
       const repo = makeRepo(session);
       const svc = new ChatSessionService({ repository: repo });
 
