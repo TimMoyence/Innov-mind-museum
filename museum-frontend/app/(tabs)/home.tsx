@@ -3,6 +3,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { TAB_BAR_FLOATING_GAP } from '@/app/(tabs)/_layout';
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
 import { useDailyArt } from '@/features/daily-art/application/useDailyArt';
 import { DailyArtCard } from '@/features/daily-art/ui/DailyArtCard';
@@ -29,6 +30,7 @@ export default function HomeScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
+  const bottomPad = tabBarHeight + TAB_BAR_FLOATING_GAP + insets.bottom;
   const { isCreating, error, setError, startConversation } = useStartConversation();
   const { locale, museumMode } = useRuntimeSettings();
   const { artwork, isLoading: isDailyArtLoading, isSaved, dismissed, save, skip } = useDailyArt();
@@ -48,7 +50,7 @@ export default function HomeScreen() {
           styles.screen,
           {
             paddingTop: insets.top + semantic.screen.gapSmall,
-            paddingBottom: tabBarHeight + semantic.screen.gap,
+            paddingBottom: bottomPad + semantic.screen.gap,
           },
         ]}
         showsVerticalScrollIndicator={false}

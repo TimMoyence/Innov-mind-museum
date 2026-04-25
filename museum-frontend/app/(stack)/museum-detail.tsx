@@ -1,4 +1,14 @@
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,7 +16,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
 import { formatDistance } from '@/features/museum/application/formatDistance';
+import { formatOpeningHours } from '@/features/museum/application/opening-hours.formatter';
 import { openInNativeMaps } from '@/features/museum/application/openInNativeMaps';
+import { useMuseumEnrichment } from '@/features/museum/application/useMuseumEnrichment';
 import { semantic, space, fontSize, radius } from '@/shared/ui/tokens';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { GlassCard } from '@/shared/ui/GlassCard';
@@ -14,9 +26,23 @@ import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
+/** Best-effort hostname extraction so the website button shows a friendly label. */
+const extractHost = (url: string): string => {
+  try {
+    return new URL(url).host.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+};
+
+/** Opens an external URL, swallowing any platform rejection. */
+const openExternalUrl = (url: string): void => {
+  void Linking.openURL(url).catch(() => undefined);
+};
+
 /** Renders the museum detail screen showing info and a "Start Chat Here" button. */
 export default function MuseumDetailScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
 
@@ -38,6 +64,37 @@ export default function MuseumDetailScreen() {
 
   const hasCoordinates = Boolean(params.latitude && params.longitude);
 
+  // Enrichment: only enabled for real DB-backed museums (positive numeric ids).
+  // Synthetic OSM entries arrive without a usable id, so the hook stays idle.
+  const parsedMuseumId = params.id ? parseInt(params.id, 10) : NaN;
+  const enrichmentMuseumId =
+    Number.isFinite(parsedMuseumId) && parsedMuseumId > 0 ? parsedMuseumId : null;
+  const enrichment = useMuseumEnrichment(enrichmentMuseumId, i18n.language);
+  const enriched = enrichment.data;
+
+  const hoursDisplay = useMemo(
+    () => (enriched ? formatOpeningHours(enriched.openingHours, t) : null),
+    [enriched, t],
+  );
+
+  const hasRichContent =
+    enriched !== null &&
+    (enriched.imageUrl !== null ||
+      enriched.summary !== null ||
+      enriched.website !== null ||
+      enriched.phone !== null ||
+      hoursDisplay !== null);
+  const showEnrichmentLoader = enrichment.status === 'loading' && !enriched;
+  const showEmptyEnrichment = enrichment.status === 'ready' && enriched !== null && !hasRichContent;
+  const showErrorAsEmpty = enrichment.status === 'error' && !hasRichContent;
+
+  const hoursToneColor =
+    hoursDisplay?.tone === 'positive'
+      ? theme.success
+      : hoursDisplay?.tone === 'warning'
+        ? theme.warningText
+        : theme.textSecondary;
+
   const handleOpenInMaps = () => {
     openInNativeMaps({
       latitude: params.latitude,
@@ -47,7 +104,6 @@ export default function MuseumDetailScreen() {
   };
 
   const handleStartChat = () => {
-    const museumId = parseInt(params.id, 10);
     const lat = params.latitude ? Number(params.latitude) : undefined;
     const lng = params.longitude ? Number(params.longitude) : undefined;
     const coordinates =
@@ -57,7 +113,7 @@ export default function MuseumDetailScreen() {
 
     void startConversation({
       museumMode: true,
-      museumId: isNaN(museumId) || museumId <= 0 ? undefined : museumId,
+      museumId: Number.isFinite(parsedMuseumId) && parsedMuseumId > 0 ? parsedMuseumId : undefined,
       museumName: params.name || undefined,
       museumAddress: params.address || undefined,
       coordinates,
@@ -135,6 +191,103 @@ export default function MuseumDetailScreen() {
               {params.description}
             </Text>
           </GlassCard>
+        ) : null}
+
+        {enriched?.imageUrl ? (
+          <Image
+            source={{ uri: enriched.imageUrl }}
+            style={[styles.heroImage, { backgroundColor: theme.surface }]}
+            resizeMode="cover"
+            accessible
+            accessibilityRole="image"
+            accessibilityLabel={params.name}
+          />
+        ) : null}
+
+        {enriched?.summary ? (
+          <GlassCard style={styles.descCard} intensity={52}>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
+              {t('museum.about')}
+            </Text>
+            <Text style={[styles.description, { color: theme.textSecondary }]}>
+              {enriched.summary}
+            </Text>
+          </GlassCard>
+        ) : null}
+
+        {hoursDisplay ? (
+          <GlassCard style={styles.descCard} intensity={52}>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
+              {t('museum.opening_hours')}
+            </Text>
+            <View style={styles.infoRow}>
+              <Ionicons name="time-outline" size={16} color={hoursToneColor} />
+              <Text style={[styles.hoursLabel, { color: hoursToneColor }]}>
+                {hoursDisplay.label}
+              </Text>
+            </View>
+            {hoursDisplay.weeklyLines.map((line) => (
+              <Text key={line} style={[styles.weeklyLine, { color: theme.textSecondary }]}>
+                {line}
+              </Text>
+            ))}
+          </GlassCard>
+        ) : null}
+
+        {enriched?.website || enriched?.phone ? (
+          <View style={styles.contactRow}>
+            {enriched.website ? (
+              <Pressable
+                style={[
+                  styles.contactButton,
+                  { borderColor: theme.inputBorder, backgroundColor: theme.surface },
+                ]}
+                onPress={() => {
+                  openExternalUrl(enriched.website ?? '');
+                }}
+                accessibilityRole="link"
+                accessibilityLabel={t('museum.website')}
+              >
+                <Ionicons name="globe-outline" size={16} color={theme.primary} />
+                <Text style={[styles.contactButtonText, { color: theme.primary }]}>
+                  {extractHost(enriched.website)}
+                </Text>
+              </Pressable>
+            ) : null}
+            {enriched.phone ? (
+              <Pressable
+                style={[
+                  styles.contactButton,
+                  { borderColor: theme.inputBorder, backgroundColor: theme.surface },
+                ]}
+                onPress={() => {
+                  openExternalUrl(`tel:${enriched.phone ?? ''}`);
+                }}
+                accessibilityRole="link"
+                accessibilityLabel={t('museum.phone')}
+              >
+                <Ionicons name="call-outline" size={16} color={theme.primary} />
+                <Text style={[styles.contactButtonText, { color: theme.primary }]}>
+                  {enriched.phone}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+
+        {showEnrichmentLoader ? (
+          <View style={styles.loadingRow}>
+            <ActivityIndicator size="small" color={theme.textSecondary} />
+            <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>
+              {t('museum.loading_details')}
+            </Text>
+          </View>
+        ) : null}
+
+        {showEmptyEnrichment || showErrorAsEmpty ? (
+          <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>
+            {t('museum.no_extra_info')}
+          </Text>
         ) : null}
 
         {error ? (
@@ -235,6 +388,46 @@ const styles = StyleSheet.create({
   description: {
     fontSize: fontSize.sm,
     lineHeight: space['5.5'],
+  },
+  heroImage: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: radius.lg,
+  },
+  hoursLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+  },
+  weeklyLine: {
+    fontSize: fontSize.sm,
+    lineHeight: space['5'],
+  },
+  contactRow: {
+    flexDirection: 'row',
+    gap: space['2'],
+    flexWrap: 'wrap',
+  },
+  contactButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: semantic.section.gapTight,
+    borderWidth: semantic.input.borderWidth,
+    borderRadius: radius.DEFAULT,
+    paddingHorizontal: space['2.5'],
+    paddingVertical: space['2'],
+  },
+  contactButtonText: {
+    fontSize: semantic.form.labelSize,
+    fontWeight: '600',
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: semantic.section.gapTight,
+  },
+  placeholderText: {
+    fontSize: fontSize.sm,
+    fontStyle: 'italic',
   },
   mapsButton: {
     flexDirection: 'row',

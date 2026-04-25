@@ -274,6 +274,92 @@ describe('queryOverpassMuseums', () => {
     expect(results[0].address).toBe('42 Main Street, Paris');
   });
 
+  it('extracts optional metadata tags (opening_hours, website, phone, image, description, wheelchair)', async () => {
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () =>
+        makeOverpassResponse([
+          {
+            type: 'node',
+            id: 100,
+            lat: 48.86,
+            lon: 2.34,
+            tags: {
+              name: 'Rich Museum',
+              opening_hours: 'Tu-Su 10:00-18:00',
+              website: 'https://example.org',
+              phone: '+33 1 23 45 67 89',
+              image: 'https://cdn.example.org/img.jpg',
+              description: 'A grand museum.',
+              wheelchair: 'yes',
+            },
+          },
+        ]),
+    });
+
+    const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 });
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({
+      name: 'Rich Museum',
+      openingHours: 'Tu-Su 10:00-18:00',
+      website: 'https://example.org',
+      phone: '+33 1 23 45 67 89',
+      imageUrl: 'https://cdn.example.org/img.jpg',
+      description: 'A grand museum.',
+      wheelchair: 'yes',
+    });
+  });
+
+  it('falls back to contact:website / contact:phone when primary tags absent', async () => {
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () =>
+        makeOverpassResponse([
+          {
+            type: 'node',
+            id: 101,
+            lat: 48.86,
+            lon: 2.34,
+            tags: {
+              name: 'Contact Museum',
+              'contact:website': 'https://contact.example.org',
+              'contact:phone': '+33 9 99 99 99 99',
+            },
+          },
+        ]),
+    });
+
+    const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 });
+
+    expect(results[0].website).toBe('https://contact.example.org');
+    expect(results[0].phone).toBe('+33 9 99 99 99 99');
+  });
+
+  it('prefers a localized description tag over the bare description', async () => {
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () =>
+        makeOverpassResponse([
+          {
+            type: 'node',
+            id: 102,
+            lat: 48.86,
+            lon: 2.34,
+            tags: {
+              name: 'Loc Museum',
+              description: 'Bare description',
+              'description:fr': 'Description française',
+            },
+          },
+        ]),
+    });
+
+    const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 });
+
+    expect(results[0].description).toBe('Description française');
+  });
+
   it('formats address with street only (no housenumber)', async () => {
     fetchSpy.mockResolvedValueOnce({
       ok: true,

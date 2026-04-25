@@ -4178,6 +4178,33 @@
                             "type": "string",
                             "enum": ["art", "history", "science", "specialized", "general"],
                             "description": "Museum category derived from OSM tags"
+                          },
+                          "openingHours": {
+                            "type": "string",
+                            "description": "Raw OSM `opening_hours` tag (only when source=osm and tag is present)"
+                          },
+                          "website": {
+                            "type": "string",
+                            "format": "uri",
+                            "description": "OSM `website` (or `contact:website`) tag"
+                          },
+                          "phone": {
+                            "type": "string",
+                            "description": "OSM `phone` (or `contact:phone`) tag"
+                          },
+                          "imageUrl": {
+                            "type": "string",
+                            "format": "uri",
+                            "description": "OSM `image` tag — direct image URL"
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "OSM `description` tag (localized variant preferred when present)"
+                          },
+                          "wheelchair": {
+                            "type": "string",
+                            "enum": ["yes", "no", "limited", "designated"],
+                            "description": "OSM `wheelchair` accessibility tag"
                           }
                         }
                       }

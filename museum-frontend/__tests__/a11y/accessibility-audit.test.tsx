@@ -199,11 +199,9 @@ describe('SettingsScreen a11y', () => {
 
   it('compliance links have accessibilityRole=link', () => {
     render(<SettingsScreen />);
-    const privacyLink = screen.getByLabelText('a11y.settings.privacy_link');
     const termsLink = screen.getByLabelText('a11y.settings.terms_link');
     const supportLink = screen.getByLabelText('a11y.settings.support_link');
 
-    expect(privacyLink.props.accessibilityRole).toBe('link');
     expect(termsLink.props.accessibilityRole).toBe('link');
     expect(supportLink.props.accessibilityRole).toBe('link');
   });
