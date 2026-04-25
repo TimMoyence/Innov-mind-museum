@@ -205,8 +205,14 @@ jobs:
       - name: Build Android preview
         run: eas build --platform android --profile preview --non-interactive --no-wait
 
+  # Trigger semantics:
+  #   - workflow_dispatch with profile=internal + platform in (android|all)
+  #   - push to main ONLY when the commit message contains the marker
+  #     `[eas-android]` (or `[eas android]`). EAS Free plan has a tight
+  #     monthly Android build quota; the unconditional auto-trigger
+  #     drained it on every push. Operators opt in explicitly per release.
   build-internal-android:
-    if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'internal' && (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all')) || (github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, 'ios-only') && !contains(github.event.head_commit.message, 'ios only')) }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'internal' && (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all')) || (github.event_name == 'push' && github.ref == 'refs/heads/main' && (contains(github.event.head_commit.message, '[eas-android]') || contains(github.event.head_commit.message, '[eas android]'))) }}
     needs: quality
     runs-on: ubuntu-latest
     timeout-minutes: 45
