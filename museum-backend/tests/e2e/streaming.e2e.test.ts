@@ -47,7 +47,7 @@ describeE2E('SSE streaming e2e', () => {
   });
 
   it('streams tokens via SSE and ends with a done event', async () => {
-    const { token } = await registerAndLogin(harness.request);
+    const { token } = await registerAndLogin(harness);
 
     // ── Create a session ──
     const createRes = await harness.request(

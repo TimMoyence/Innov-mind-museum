@@ -1,4 +1,4 @@
-import type { E2EResponse } from './e2e-app-harness';
+import type { E2EHarness, E2EResponse } from './e2e-app-harness';
 
 type RequestFn = (path: string, init?: RequestInit, token?: string) => Promise<E2EResponse>;
 
@@ -29,13 +29,33 @@ interface RegisterAndLoginResult {
 }
 
 /**
- * Registers a new user via POST /api/auth/register.
- * Returns the userId and email from the response.
- * @param request
- * @param overrides
+ * Marks a freshly-registered user as `email_verified = true` directly in the
+ * database, bypassing the production verification-email flow that would
+ * otherwise require an SMTP round-trip plus token consumption in tests.
+ *
+ * The login useCase rejects unverified users with `403 EMAIL_NOT_VERIFIED`,
+ * so every e2e helper that needs a logged-in identity must pass through this
+ * step right after `POST /api/auth/register`.
+ */
+export async function markEmailVerified(harness: E2EHarness, email: string): Promise<void> {
+  await harness.dataSource.query(`UPDATE users SET email_verified = true WHERE email = $1`, [
+    email,
+  ]);
+}
+
+/**
+ * Registers a new user via POST /api/auth/register and immediately marks the
+ * resulting account as `email_verified = true` so subsequent `loginUser` calls
+ * succeed (the login useCase rejects unverified accounts with 403).
+ *
+ * @param harness Live E2E harness — needed both for HTTP calls (`request`) and
+ *   for the post-register DB update on the `users` table.
+ * @param overrides Optional fixture overrides (email, password, firstname,
+ *   lastname). Random unique email + `Password123!` are generated when omitted.
+ * @returns The persisted userId and email of the new account.
  */
 export async function registerUser(
-  request: RequestFn,
+  harness: E2EHarness,
   overrides: RegisterOverrides = {},
 ): Promise<RegisterResult> {
   const email =
@@ -44,7 +64,7 @@ export async function registerUser(
   const firstname = overrides.firstname ?? 'Tester';
   const lastname = overrides.lastname ?? 'User';
 
-  const res = await request('/api/auth/register', {
+  const res = await harness.request('/api/auth/register', {
     method: 'POST',
     body: JSON.stringify({ email, password, firstname, lastname }),
   });
@@ -54,12 +74,16 @@ export async function registerUser(
   }
 
   const body = res.body as { user: { id: number; email: string } };
+  await markEmailVerified(harness, body.user.email);
   return { userId: body.user.id, email: body.user.email };
 }
 
 /**
  * Logs in a user via POST /api/auth/login.
  * Returns accessToken, refreshToken, and user object.
+ *
+ * Accepts the same `RequestFn` shape as before so callers using
+ * `harness.request` keep working without churn.
  * @param request
  * @param email
  * @param password
@@ -83,18 +107,18 @@ export async function loginUser(
 }
 
 /**
- * Registers a new user and immediately logs in.
- * Returns token, userId, email, refreshToken, and password.
- * @param request
- * @param overrides
+ * Registers a new user (auto-verifying email under the hood) and immediately
+ * logs in. Returns token, userId, email, refreshToken, and password.
+ * @param harness Live E2E harness — used for register + email verification + login.
+ * @param overrides Optional fixture overrides forwarded to `registerUser`.
  */
 export async function registerAndLogin(
-  request: RequestFn,
+  harness: E2EHarness,
   overrides: RegisterOverrides = {},
 ): Promise<RegisterAndLoginResult> {
   const password = overrides.password ?? 'Password123!';
-  const { userId, email } = await registerUser(request, { ...overrides, password });
-  const login = await loginUser(request, email, password);
+  const { userId, email } = await registerUser(harness, { ...overrides, password });
+  const login = await loginUser(harness.request, email, password);
 
   return {
     token: login.accessToken,

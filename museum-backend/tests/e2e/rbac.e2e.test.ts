@@ -18,7 +18,7 @@ describeE2E('rbac e2e (role-based access control)', () => {
   });
 
   it('visitor cannot access admin endpoints', async () => {
-    const { token } = await registerAndLogin(harness.request);
+    const { token } = await registerAndLogin(harness);
 
     const usersRes = await harness.request('/api/admin/users', { method: 'GET' }, token);
     expect(usersRes.status).toBe(403);
@@ -37,11 +37,7 @@ describeE2E('rbac e2e (role-based access control)', () => {
 
   it('admin can access admin endpoints after role promotion', async () => {
     const password = 'Password123!';
-    const {
-      token: visitorToken,
-      userId,
-      email,
-    } = await registerAndLogin(harness.request, { password });
+    const { token: visitorToken, userId, email } = await registerAndLogin(harness, { password });
 
     // Verify visitor is blocked
     const beforeUsers = await harness.request('/api/admin/users', { method: 'GET' }, visitorToken);
@@ -74,13 +70,13 @@ describeE2E('rbac e2e (role-based access control)', () => {
     const password = 'Password123!';
 
     // Create the admin user
-    const admin = await registerAndLogin(harness.request, { password });
+    const admin = await registerAndLogin(harness, { password });
     await harness.dataSource.query(`UPDATE users SET role = 'admin' WHERE id = $1`, [admin.userId]);
     const adminLogin = await loginUser(harness.request, admin.email, password);
     const adminToken = adminLogin.accessToken;
 
     // Create a target visitor user
-    const target = await registerAndLogin(harness.request, { password });
+    const target = await registerAndLogin(harness, { password });
 
     // Promote target to moderator
     const patchRes = await harness.request(
@@ -107,7 +103,7 @@ describeE2E('rbac e2e (role-based access control)', () => {
     const password = 'Password123!';
 
     // Create and promote to moderator via DB
-    const mod = await registerAndLogin(harness.request, { password });
+    const mod = await registerAndLogin(harness, { password });
     await harness.dataSource.query(`UPDATE users SET role = 'moderator' WHERE id = $1`, [
       mod.userId,
     ]);
@@ -115,7 +111,7 @@ describeE2E('rbac e2e (role-based access control)', () => {
     const modToken = modLogin.accessToken;
 
     // Create target
-    const target = await registerAndLogin(harness.request, { password });
+    const target = await registerAndLogin(harness, { password });
 
     // Moderator tries to change role → should be 403
     const patchRes = await harness.request(

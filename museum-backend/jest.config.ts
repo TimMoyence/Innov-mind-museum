@@ -9,6 +9,13 @@ const config: Config.InitialOptions = {
   // net for integration tests that touch transitively-loaded modules holding
   // background sockets (rate-limit sweep, museum-enrichment cache adapter).
   forceExit: true,
+  // Pins env vars (EXTRACTION_WORKER_ENABLED=false, CACHE_ENABLED=false) BEFORE
+  // any test file's top-level imports trigger `@src/config/env` evaluation.
+  // Without this, transitive imports (e.g. `@shared/logger` -> `env.ts`) would
+  // capture default `extractionWorkerEnabled=true` and the e2e harness override
+  // applied later inside `createE2EHarness()` would arrive too late, leaving a
+  // BullMQ/ioredis ECONNREFUSED log flood throughout the e2e suites.
+  setupFiles: ['<rootDir>/tests/helpers/e2e/jest-env.setup.ts'],
   testPathIgnorePatterns: [
     '/dist/',
     '/node_modules/',

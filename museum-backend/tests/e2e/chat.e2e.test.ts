@@ -18,7 +18,7 @@ describeE2E('chat e2e (session + message lifecycle)', () => {
   });
 
   it('creates a session, posts a message, reads session, lists sessions, and deletes', async () => {
-    const { token } = await registerAndLogin(harness.request);
+    const { token } = await registerAndLogin(harness);
 
     // ── Create session ──
     const createRes = await harness.request(
@@ -91,7 +91,7 @@ describeE2E('chat e2e (session + message lifecycle)', () => {
   });
 
   it('deletes an empty session (deleted: true)', async () => {
-    const { token } = await registerAndLogin(harness.request);
+    const { token } = await registerAndLogin(harness);
 
     const createRes = await harness.request(
       '/api/chat/sessions',
@@ -130,7 +130,7 @@ describeE2E('chat e2e (session + message lifecycle)', () => {
   });
 
   it('creates multiple sessions and returns most recently active first', async () => {
-    const { token } = await registerAndLogin(harness.request);
+    const { token } = await registerAndLogin(harness);
 
     // Create session A
     const createA = await harness.request(

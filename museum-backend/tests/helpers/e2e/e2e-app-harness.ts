@@ -1,11 +1,71 @@
+import { readdirSync } from 'node:fs';
 import type { Server } from 'http';
 import type { AddressInfo } from 'net';
-import type { DataSource } from 'typeorm';
+import { join } from 'node:path';
+
+import type { DataSource, MigrationInterface } from 'typeorm';
 
 import {
   StartedPostgresTestContainer,
   startPostgresTestContainer,
 } from 'tests/helpers/e2e/postgres-testcontainer';
+
+/**
+ * Absolute path to the canonical TypeORM migrations folder.
+ * Resolved relative to this file so the harness keeps working regardless of cwd.
+ */
+const MIGRATIONS_DIR = join(__dirname, '..', '..', '..', 'src', 'data', 'db', 'migrations');
+
+/**
+ * Constructor type for a TypeORM migration class — what `runMigrations()` expects.
+ */
+type MigrationCtor = new () => MigrationInterface;
+
+/**
+ * Auto-discovers every TypeORM migration on disk, in timestamp order.
+ *
+ * Loads each `.ts` file in `src/data/db/migrations/` via dynamic import (transformed
+ * by ts-jest at test time) and returns the exported migration class constructors.
+ *
+ * Sorting alphabetically is sufficient because the project convention prefixes every
+ * migration filename with a fixed-width millisecond timestamp (e.g. `1777100000000-...`).
+ *
+ * Replacing the previous hardcoded list removes the footgun where new migrations
+ * silently fail to run in e2e tests until the harness is manually updated.
+ * @returns The migration class constructors discovered on disk, in timestamp order.
+ */
+async function discoverMigrationClasses(): Promise<MigrationCtor[]> {
+  const migrationFiles = readdirSync(MIGRATIONS_DIR)
+    .filter((name) => name.endsWith('.ts') && !name.endsWith('.d.ts'))
+    .sort((a, b) => a.localeCompare(b));
+
+  if (migrationFiles.length === 0) {
+    throw new Error(
+      `e2e harness: no migrations discovered in ${MIGRATIONS_DIR} — refusing to boot empty schema`,
+    );
+  }
+
+  const modules = await Promise.all(
+    migrationFiles.map(
+      (file) => import(join(MIGRATIONS_DIR, file)) as Promise<Record<string, unknown>>,
+    ),
+  );
+
+  const classes: MigrationCtor[] = [];
+  modules.forEach((mod, index) => {
+    const exported = Object.values(mod).filter(
+      (value): value is MigrationCtor => typeof value === 'function',
+    );
+    if (exported.length === 0) {
+      throw new Error(
+        `e2e harness: migration file ${migrationFiles[index]} exports no class — invalid migration`,
+      );
+    }
+    classes.push(...exported);
+  });
+
+  return classes;
+}
 
 /**
  * Parsed HTTP response returned by the harness `request()` helper.
@@ -63,135 +123,34 @@ export async function createE2EHarness(): Promise<E2EHarness> {
   process.env.AUTH_LOGIN_RATE_WINDOW_MS = '60000';
   process.env.LLM_PROVIDER = 'openai';
   process.env.OPENAI_API_KEY = 'e2e-fake-openai-key';
+  // No Redis in e2e — disable the BullMQ extraction worker + enrichment scheduler
+  // to prevent ioredis ECONNREFUSED log floods on 127.0.0.1:6379.
+  process.env.EXTRACTION_WORKER_ENABLED = 'false';
 
   // Dynamic imports — env vars must be ready before these run.
   const [
     { createApp },
     { AppDataSource },
-    { InitDatabase1771427010387 },
-    { AddAuthRefreshTokens1771800000000 },
-    { EnsureChatTables1771900000000 },
-    { DropLegacyImageInsightTables1772000000000 },
-    { FixChatSessionsUserFk1772000000001 },
-    { AddMuseumContextToSessions1772000000002 },
-    { AddMessageReports1773820507870 },
-    { AddSocialAccountsAndNullablePassword1773823617791 },
-    { RecreateRefreshTokenIndexes1773852493401 },
-    { AddEmailVerification1773939685275 },
-    { CreateApiKeysTable1773955771280 },
-    { AddSessionVersionColumn1774000000000 },
-    { NormalizeEmailCase1774100000000 },
-    { AddUserRoleColumn1774200000000 },
-    { CreateAuditLogsTable1774200100000 },
-    { CreateMuseumsAndTenantFKs1774300000000 },
-    { CreateUserMemoriesTable1774300100000 },
-    { AddModerationColumnsToMessageReports1774400000000 },
-    { CreateSupportTables1774400100000 },
-    { AddMuseumCoordinates1774500000000 },
-    { CreateReviewsTable1774543500000 },
-    { AddEmailChangeColumns1774620968449 },
-    { AddOnboardingCompleted1774732556635 },
-    { AddMessageFeedback1774963405720 },
-    { CreateArtKeywordsTable1775100000000 },
-    { AddCoordinatesToChatSession1775326091668 },
-    { AddArtKeywordCategoryAndUpdatedAt1775400000000 },
-    { AddUserMemoryDisabledByUser1775460051911 },
-    { AddMuseumQaSeed1775557229138 },
-    { AddMuseumType1775665772516 },
-    { CreateKnowledgeExtractionTables1775852800000 },
-    { AddUserContentPreferences1776276072750 },
-    { AddAudioToChatMessage1776593841594 },
-    { Check1776593907869 },
-    { AddUserNotifyOnReviewModeration1776600000000 },
     { ChatService },
     { TypeOrmChatRepository },
     { LocalImageStorage },
     { clearRateLimitBuckets },
+    discoveredMigrations,
   ] = await Promise.all([
     import('@src/app'),
     import('@src/data/db/data-source'),
-    import('@src/data/db/migrations/1771427010387-InitDatabase'),
-    import('@src/data/db/migrations/1771800000000-AddAuthRefreshTokens'),
-    import('@src/data/db/migrations/1771900000000-EnsureChatTables'),
-    import('@src/data/db/migrations/1772000000000-DropLegacyImageInsightTables'),
-    import('@src/data/db/migrations/1772000000001-FixChatSessionsUserFk'),
-    import('@src/data/db/migrations/1772000000002-AddMuseumContextToSessions'),
-    import('@src/data/db/migrations/1773820507870-AddMessageReports'),
-    import('@src/data/db/migrations/1773823617791-AddSocialAccountsAndNullablePassword'),
-    import('@src/data/db/migrations/1773852493401-RecreateRefreshTokenIndexes'),
-    import('@src/data/db/migrations/1773939685275-AddEmailVerification'),
-    import('@src/data/db/migrations/1773955771280-CreateApiKeysTable'),
-    import('@src/data/db/migrations/1774000000000-AddSessionVersionColumn'),
-    import('@src/data/db/migrations/1774100000000-NormalizeEmailCase'),
-    import('@src/data/db/migrations/1774200000000-AddUserRoleColumn'),
-    import('@src/data/db/migrations/1774200100000-CreateAuditLogsTable'),
-    import('@src/data/db/migrations/1774300000000-CreateMuseumsAndTenantFKs'),
-    import('@src/data/db/migrations/1774300100000-CreateUserMemoriesTable'),
-    import('@src/data/db/migrations/1774400000000-AddModerationColumnsToMessageReports'),
-    import('@src/data/db/migrations/1774400100000-CreateSupportTables'),
-    import('@src/data/db/migrations/1774500000000-AddMuseumCoordinates'),
-    import('@src/data/db/migrations/1774543500000-CreateReviewsTable'),
-    import('@src/data/db/migrations/1774620968449-AddEmailChangeColumns'),
-    import('@src/data/db/migrations/1774732556635-AddOnboardingCompleted'),
-    import('@src/data/db/migrations/1774963405720-AddMessageFeedback'),
-    import('@src/data/db/migrations/1775100000000-CreateArtKeywordsTable'),
-    import('@src/data/db/migrations/1775326091668-AddCoordinatesToChatSession'),
-    import('@src/data/db/migrations/1775400000000-AddArtKeywordCategoryAndUpdatedAt'),
-    import('@src/data/db/migrations/1775460051911-AddUserMemoryDisabledByUser'),
-    import('@src/data/db/migrations/1775557229138-AddMuseumQaSeed'),
-    import('@src/data/db/migrations/1775665772516-AddMuseumType'),
-    import('@src/data/db/migrations/1775852800000-CreateKnowledgeExtractionTables'),
-    import('@src/data/db/migrations/1776276072750-AddUserContentPreferences'),
-    import('@src/data/db/migrations/1776593841594-AddAudioToChatMessage'),
-    import('@src/data/db/migrations/1776593907869-Check'),
-    import('@src/data/db/migrations/1776600000000-AddUserNotifyOnReviewModeration'),
     import('@modules/chat/useCase/chat.service'),
     import('@modules/chat/adapters/secondary/chat.repository.typeorm'),
     import('@modules/chat/adapters/secondary/image-storage.stub'),
     import('@src/helpers/middleware/rate-limit.middleware'),
+    discoverMigrationClasses(),
   ]);
 
   clearRateLimitBuckets();
 
   const appDataSource = AppDataSource;
 
-  (appDataSource.options as { migrations?: unknown[] }).migrations = [
-    InitDatabase1771427010387,
-    AddAuthRefreshTokens1771800000000,
-    EnsureChatTables1771900000000,
-    DropLegacyImageInsightTables1772000000000,
-    FixChatSessionsUserFk1772000000001,
-    AddMuseumContextToSessions1772000000002,
-    AddMessageReports1773820507870,
-    AddSocialAccountsAndNullablePassword1773823617791,
-    RecreateRefreshTokenIndexes1773852493401,
-    AddEmailVerification1773939685275,
-    CreateApiKeysTable1773955771280,
-    AddSessionVersionColumn1774000000000,
-    NormalizeEmailCase1774100000000,
-    AddUserRoleColumn1774200000000,
-    CreateAuditLogsTable1774200100000,
-    CreateMuseumsAndTenantFKs1774300000000,
-    CreateUserMemoriesTable1774300100000,
-    AddModerationColumnsToMessageReports1774400000000,
-    CreateSupportTables1774400100000,
-    AddMuseumCoordinates1774500000000,
-    CreateReviewsTable1774543500000,
-    AddEmailChangeColumns1774620968449,
-    AddOnboardingCompleted1774732556635,
-    AddMessageFeedback1774963405720,
-    CreateArtKeywordsTable1775100000000,
-    AddCoordinatesToChatSession1775326091668,
-    AddArtKeywordCategoryAndUpdatedAt1775400000000,
-    AddUserMemoryDisabledByUser1775460051911,
-    AddMuseumQaSeed1775557229138,
-    AddMuseumType1775665772516,
-    CreateKnowledgeExtractionTables1775852800000,
-    AddUserContentPreferences1776276072750,
-    AddAudioToChatMessage1776593841594,
-    Check1776593907869,
-    AddUserNotifyOnReviewModeration1776600000000,
-  ];
+  (appDataSource.options as { migrations?: unknown[] }).migrations = discoveredMigrations;
 
   await appDataSource.initialize();
 

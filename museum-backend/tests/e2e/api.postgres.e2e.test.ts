@@ -1,4 +1,5 @@
 import { createE2EHarness, type E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
+import { markEmailVerified } from 'tests/helpers/e2e/e2e-auth.helpers';
 
 const shouldRunE2E = process.env.RUN_E2E === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
@@ -73,6 +74,8 @@ describeE2E('api e2e (express + postgres container)', () => {
         }),
       }),
     );
+    // E2E env has no SMTP — bypass verification email so login succeeds.
+    await markEmailVerified(harness, email);
 
     const login = await request('/api/auth/login', {
       method: 'POST',
@@ -188,6 +191,7 @@ describeE2E('api e2e (express + postgres container)', () => {
       }),
     });
     expect(register.status).toBe(201);
+    await markEmailVerified(harness, email);
 
     const login = await request('/api/auth/login', {
       method: 'POST',
@@ -259,6 +263,7 @@ describeE2E('api e2e (express + postgres container)', () => {
         lastname: 'EndToEnd',
       }),
     });
+    await markEmailVerified(harness, email);
 
     const login = await request('/api/auth/login', {
       method: 'POST',
@@ -373,6 +378,7 @@ describeE2E('api e2e (express + postgres container)', () => {
         lastname: 'EndToEnd',
       }),
     });
+    await markEmailVerified(harness, email);
 
     const login = await request('/api/auth/login', {
       method: 'POST',
@@ -440,6 +446,7 @@ describeE2E('api e2e (express + postgres container)', () => {
       }),
     });
     expect(register.status).toBe(201);
+    await markEmailVerified(harness, email);
 
     const login = await request('/api/auth/login', {
       method: 'POST',

@@ -1,5 +1,5 @@
 import { createE2EHarness, E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
-import { registerAndLogin } from 'tests/helpers/e2e/e2e-auth.helpers';
+import { markEmailVerified, registerAndLogin } from 'tests/helpers/e2e/e2e-auth.helpers';
 
 const shouldRunE2E = process.env.RUN_E2E === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
@@ -65,6 +65,10 @@ describeE2E('golden path e2e flows', () => {
           }),
         }),
       );
+
+      // E2E test environments have no SMTP — bypass the verification email and
+      // mark the user verified in-DB so the next step can log in successfully.
+      await markEmailVerified(harness, email);
     });
 
     it('logs in with the registered credentials', async () => {
@@ -182,7 +186,7 @@ describeE2E('golden path e2e flows', () => {
   // ---------------------------------------------------------------------------
   describe('GP2: photo upload -> contextual AI response', () => {
     it('uploads an image and receives an assistant response acknowledging it', async () => {
-      const { token } = await registerAndLogin(harness.request);
+      const { token } = await registerAndLogin(harness);
 
       // Create a session
       const createRes = await harness.request(
@@ -256,7 +260,7 @@ describeE2E('golden path e2e flows', () => {
   // ---------------------------------------------------------------------------
   describe('GP3: audio upload -> transcription -> AI response', () => {
     it('uploads audio and receives transcription + assistant response', async () => {
-      const { token } = await registerAndLogin(harness.request);
+      const { token } = await registerAndLogin(harness);
 
       // Create a session
       const createRes = await harness.request(
@@ -336,7 +340,7 @@ describeE2E('golden path e2e flows', () => {
     let sessionIds: string[];
 
     beforeAll(async () => {
-      const auth = await registerAndLogin(harness.request);
+      const auth = await registerAndLogin(harness);
       token = auth.token;
     });
 

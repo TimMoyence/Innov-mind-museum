@@ -190,12 +190,22 @@ export const createApiRouter = ({
  * Lazy so tests injecting their own chatService don't pay the Redis connect
  * cost, and so a missing Redis config degrades to 503 on /enrichment rather
  * than crashing boot.
+ *
+ * Gated by `env.extractionWorkerEnabled`: when false (e.g. e2e harness without
+ * Redis), the BullMQ queue adapter is NEVER instantiated so no ioredis client
+ * is opened and ECONNREFUSED log floods are avoided. The /museums/:id/enrichment
+ * endpoint then degrades to "no use case" — same fail-open path as a Redis-down
+ * production environment.
  */
 let cachedEnrichUseCase: EnrichMuseumUseCase | null | undefined;
 
 function resolveEnrichMuseumUseCase(): EnrichMuseumUseCase | undefined {
   if (cachedEnrichUseCase !== undefined) {
     return cachedEnrichUseCase ?? undefined;
+  }
+  if (!env.extractionWorkerEnabled) {
+    cachedEnrichUseCase = null;
+    return undefined;
   }
   try {
     const queue = new BullmqMuseumEnrichmentQueueAdapter({

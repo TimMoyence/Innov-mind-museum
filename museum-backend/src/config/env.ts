@@ -386,6 +386,12 @@ const env: AppEnv = {
     confidenceThreshold: toNumber(process.env.EXTRACTION_CONFIDENCE_THRESHOLD, 0.7),
     reviewThreshold: toNumber(process.env.EXTRACTION_REVIEW_THRESHOLD, 0.4),
   },
+  /**
+   * Default `true` preserves current production behavior. Set to `false` in
+   * test environments without Redis (e.g. e2e harness) to avoid BullMQ +
+   * ioredis ECONNREFUSED log floods. See `AppEnv.extractionWorkerEnabled`.
+   */
+  extractionWorkerEnabled: toBoolean(process.env.EXTRACTION_WORKER_ENABLED, true),
   redis: parseRedisUrlFallback(),
   guardrails: {
     candidate: guardrailsCandidate,
