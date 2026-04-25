@@ -18,6 +18,11 @@ const mockGetUsageAnalytics = jest.fn();
 const mockGetContentAnalytics = jest.fn();
 const mockGetEngagementAnalytics = jest.fn();
 
+const mockListAllTickets = jest.fn();
+const mockUpdateTicketStatus = jest.fn();
+const mockListAllReviews = jest.fn();
+const mockModerateReview = jest.fn();
+
 jest.mock('@modules/admin/useCase', () => ({
   listUsersUseCase: { execute: (...args: unknown[]) => mockListUsers(...args) },
   changeUserRoleUseCase: { execute: (...args: unknown[]) => mockChangeUserRole(...args) },
@@ -30,18 +35,21 @@ jest.mock('@modules/admin/useCase', () => ({
   getEngagementAnalyticsUseCase: {
     execute: (...args: unknown[]) => mockGetEngagementAnalytics(...args),
   },
+  // Admin-side facades wrap peer useCases. admin.route uses these, not the peers directly.
+  adminReviewFacade: {
+    list: (...args: unknown[]) => mockListAllReviews(...args),
+    moderateReview: (...args: unknown[]) => mockModerateReview(...args),
+  },
+  adminSupportFacade: {
+    list: (...args: unknown[]) => mockListAllTickets(...args),
+    update: (...args: unknown[]) => mockUpdateTicketStatus(...args),
+  },
 }));
-
-const mockListAllTickets = jest.fn();
-const mockUpdateTicketStatus = jest.fn();
 
 jest.mock('@modules/support/useCase', () => ({
   listAllTicketsUseCase: { execute: (...args: unknown[]) => mockListAllTickets(...args) },
   updateTicketStatusUseCase: { execute: (...args: unknown[]) => mockUpdateTicketStatus(...args) },
 }));
-
-const mockListAllReviews = jest.fn();
-const mockModerateReview = jest.fn();
 
 jest.mock('@modules/review/useCase', () => ({
   listAllReviewsUseCase: { execute: (...args: unknown[]) => mockListAllReviews(...args) },

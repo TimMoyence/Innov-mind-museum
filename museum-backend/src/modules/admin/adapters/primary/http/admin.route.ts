@@ -1,11 +1,5 @@
 import { type Request, type Response, Router } from 'express';
 
-import { moderateReviewSchema } from '@modules/review/adapters/primary/http/review.schemas';
-import {
-  listAllReviewsUseCase as listAllReviewsUseCaseInstance,
-  moderateReviewUseCase as moderateReviewUseCaseInstance,
-} from '@modules/review/useCase';
-import { listAllTicketsUseCase, updateTicketStatusUseCase } from '@modules/support/useCase';
 import { badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import { requireRole } from '@src/helpers/middleware/require-role.middleware';
@@ -16,6 +10,7 @@ import {
   changeUserRoleSchema,
   resolveReportSchema,
   updateTicketSchema,
+  moderateReviewSchema,
   listUsersQuerySchema,
   auditLogsQuerySchema,
   listReportsQuerySchema,
@@ -40,6 +35,8 @@ import {
   getUsageAnalyticsUseCase,
   getContentAnalyticsUseCase,
   getEngagementAnalyticsUseCase,
+  adminReviewFacade,
+  adminSupportFacade,
 } from '../../../useCase';
 
 const adminRouter: Router = Router();
@@ -253,7 +250,7 @@ adminRouter.get(
   async (_req: Request, res: Response) => {
     const { page, limit, status, priority } = res.locals.validatedQuery as ListTicketsQuery;
 
-    const result = await listAllTicketsUseCase.execute({
+    const result = await adminSupportFacade.list({
       status,
       priority,
       page,
@@ -278,7 +275,7 @@ adminRouter.patch(
       assignedTo?: number | null;
     };
 
-    const updated = await updateTicketStatusUseCase.execute({
+    const updated = await adminSupportFacade.update({
       ticketId,
       status,
       priority,
@@ -303,7 +300,7 @@ adminRouter.get(
   async (_req: Request, res: Response) => {
     const { page, limit, status } = res.locals.validatedQuery as ListReviewsQuery;
 
-    const result = await listAllReviewsUseCaseInstance.execute({
+    const result = await adminReviewFacade.list({
       status,
       page,
       limit,
@@ -328,7 +325,7 @@ adminRouter.patch(
       return;
     }
 
-    const updated = await moderateReviewUseCaseInstance.execute({
+    const updated = await adminReviewFacade.moderateReview({
       reviewId,
       status,
       actorId,

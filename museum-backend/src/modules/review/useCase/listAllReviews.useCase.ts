@@ -7,7 +7,7 @@ import type { ReviewDTO, ListReviewsFilters, ReviewStatus } from '../domain/revi
 import type { PaginatedResult } from '@shared/types/pagination';
 
 /** Input for listing all reviews (admin view). */
-interface ListAllReviewsInput {
+export interface ListAllReviewsInput {
   status?: string;
   page: number;
   limit: number;

@@ -12,7 +12,7 @@ import type {
 import type { PaginatedResult } from '@shared/types/pagination';
 
 /** Input for listing all support tickets (admin/moderator view). */
-interface ListAllTicketsInput {
+export interface ListAllTicketsInput {
   status?: string;
   priority?: string;
   page: number;

@@ -21,7 +21,7 @@ export interface ReviewAuthorSnapshot {
 export type ReviewAuthorLookup = (userId: number) => Promise<ReviewAuthorSnapshot | null>;
 
 /** Input for the moderate-review use case. */
-interface ModerateReviewUseCaseInput {
+export interface ModerateReviewUseCaseInput {
   reviewId: string;
   status: string;
   actorId: number;

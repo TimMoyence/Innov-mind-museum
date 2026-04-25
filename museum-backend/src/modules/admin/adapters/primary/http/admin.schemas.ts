@@ -4,6 +4,10 @@ import { UserRole } from '@modules/auth/domain/user-role';
 import { REVIEW_STATUSES } from '@modules/review/domain/review.types';
 import { TICKET_PRIORITIES, TICKET_STATUSES } from '@modules/support/domain/support.types';
 
+// Re-export peer-module schema so admin route imports only from admin.schemas.
+// The SSOT stays in the review module; admin module owns the HTTP binding choice.
+export { moderateReviewSchema } from '@modules/review/adapters/primary/http/review.schemas';
+
 const validRoles = Object.values(UserRole) as [string, ...string[]];
 
 export const changeUserRoleSchema = z.object({

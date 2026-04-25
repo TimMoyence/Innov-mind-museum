@@ -32,6 +32,11 @@ const mockGetStats = jest.fn().mockResolvedValue({});
 const mockChangeUserRole = jest.fn().mockResolvedValue({ id: 1 });
 const mockResolveReport = jest.fn().mockResolvedValue({ id: 'r1' });
 
+const mockListTickets = jest.fn().mockResolvedValue({ data: [], total: 0, page: 1, limit: 20 });
+const mockUpdateTicket = jest.fn().mockResolvedValue({ id: 't1' });
+const mockListReviews = jest.fn().mockResolvedValue({ data: [], total: 0, page: 1, limit: 20 });
+const mockModerateReview = jest.fn().mockResolvedValue({ id: 'rv1' });
+
 jest.mock('@modules/admin/useCase', () => ({
   listUsersUseCase: { execute: (...a: unknown[]) => mockListUsers(...a) },
   changeUserRoleUseCase: { execute: (...a: unknown[]) => mockChangeUserRole(...a) },
@@ -42,18 +47,21 @@ jest.mock('@modules/admin/useCase', () => ({
   getUsageAnalyticsUseCase: { execute: (...a: unknown[]) => mockGetUsageAnalytics(...a) },
   getContentAnalyticsUseCase: { execute: (...a: unknown[]) => mockGetContentAnalytics(...a) },
   getEngagementAnalyticsUseCase: { execute: (...a: unknown[]) => mockGetEngagementAnalytics(...a) },
+  // Admin-side facades wrap peer useCases. admin.route uses these, not the peers directly.
+  adminReviewFacade: {
+    list: (...a: unknown[]) => mockListReviews(...a),
+    moderateReview: (...a: unknown[]) => mockModerateReview(...a),
+  },
+  adminSupportFacade: {
+    list: (...a: unknown[]) => mockListTickets(...a),
+    update: (...a: unknown[]) => mockUpdateTicket(...a),
+  },
 }));
-
-const mockListTickets = jest.fn().mockResolvedValue({ data: [], total: 0, page: 1, limit: 20 });
-const mockUpdateTicket = jest.fn().mockResolvedValue({ id: 't1' });
 
 jest.mock('@modules/support/useCase', () => ({
   listAllTicketsUseCase: { execute: (...a: unknown[]) => mockListTickets(...a) },
   updateTicketStatusUseCase: { execute: (...a: unknown[]) => mockUpdateTicket(...a) },
 }));
-
-const mockListReviews = jest.fn().mockResolvedValue({ data: [], total: 0, page: 1, limit: 20 });
-const mockModerateReview = jest.fn().mockResolvedValue({ id: 'rv1' });
 
 jest.mock('@modules/review/useCase', () => ({
   listAllReviewsUseCase: { execute: (...a: unknown[]) => mockListReviews(...a) },
