@@ -1,0 +1,190 @@
+# Monthly restore drill — exercises the backup pipeline end-to-end against an ephemeral postgres.
+#
+# Pulls the most recent encrypted backup from S3, decrypts it with the operator's GPG private key
+# (mounted as a secret SCOPED TO THIS WORKFLOW ONLY — see docs/CI_CD_SECRETS.md), restores it
+# into a service postgres, and runs smoke queries to assert the dump is valid.
+#
+# Compliance: SOC2 CC7.3 requires periodic restore validation. NIST RC.RP-1.
+# Drill cadence: monthly. RTO target 1h, RPO target 24h.
+#
+# Job name `restore-drill` is stable so it can be added as a required check if desired.
+name: db-backup-monthly-restore-drill
+
+on:
+  schedule:
+    - cron: '0 4 1 * *'  # 1st of each month, 04:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-backup-monthly-restore-drill
+  cancel-in-progress: false
+
+jobs:
+  restore-drill:
+    name: restore-drill
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PG_MAJOR: '16'
+      DRILL_DB: drill_restore
+      DRILL_USER: drill
+      DRILL_PASSWORD: ${{ github.run_id }}-drill  # ephemeral, lives only for the job
+    services:
+      postgres:
+        image: postgres:16-alpine
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: drill
+          # Service env is evaluated by GHA before job env; we cannot reference DRILL_PASSWORD here.
+          # Use a separate-but-equivalent value derived the same way.
+          POSTGRES_PASSWORD: drill-${{ github.run_id }}
+          POSTGRES_DB: drill_restore
+        options: >-
+          --health-cmd "pg_isready -U drill"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          fetch-depth: 1
+
+      - name: Install postgresql-client-${{ env.PG_MAJOR }} and gnupg2
+        run: |
+          set -euo pipefail
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsS -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] \
+            https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | \
+            sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            "postgresql-client-${PG_MAJOR}" gnupg2
+          pg_restore --version
+          gpg --version | head -n 1
+
+      - name: Install s5cmd
+        run: |
+          set -euo pipefail
+          S5CMD_VERSION="2.2.2"
+          curl -fsSL "https://github.com/peak/s5cmd/releases/download/v${S5CMD_VERSION}/s5cmd_${S5CMD_VERSION}_Linux-64bit.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin s5cmd
+          s5cmd version
+
+      - name: Import GPG private key (DRILL ONLY — never used by daily backup workflow)
+        # SECURITY NOTE: BACKUP_GPG_PRIVATE_KEY is the only secret in this repo that grants
+        # decrypt capability. It exists exclusively for the monthly drill. The daily backup
+        # workflow uses BACKUP_GPG_PUBLIC_KEY only and CANNOT decrypt prior backups.
+        env:
+          BACKUP_GPG_PRIVATE_KEY: ${{ secrets.BACKUP_GPG_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BACKUP_GPG_PRIVATE_KEY}" ]; then
+            echo "::error::BACKUP_GPG_PRIVATE_KEY secret missing"
+            exit 1
+          fi
+          echo "${BACKUP_GPG_PRIVATE_KEY}" | gpg --batch --import
+          gpg --list-secret-keys
+
+      - name: Resolve and download latest backup from S3
+        id: fetch
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.S3_REGION }}
+          AWS_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+        run: |
+          set -euo pipefail
+          # List the daily prefix, sort by ISO date in the filename, pick the newest.
+          # Filenames follow YYYY-MM-DD.pgdump.gpg, so lexical sort == chronological sort.
+          LIST="$(s5cmd --endpoint-url "${AWS_ENDPOINT_URL}" \
+            ls "s3://${S3_BUCKET}/backups/daily/*.pgdump.gpg")"
+          if [ -z "${LIST}" ]; then
+            echo "::error::No backups found at s3://${S3_BUCKET}/backups/daily/"
+            exit 1
+          fi
+          LATEST_KEY="$(printf '%s\n' "${LIST}" | awk '{print $NF}' | sort | tail -n 1)"
+          echo "Latest backup: ${LATEST_KEY}"
+          echo "latest_key=${LATEST_KEY}" >> "$GITHUB_OUTPUT"
+
+          mkdir -p ./drill
+          s5cmd --endpoint-url "${AWS_ENDPOINT_URL}" \
+            cp "s3://${S3_BUCKET}/backups/daily/${LATEST_KEY}" ./drill/backup.pgdump.gpg
+          ls -lah ./drill/backup.pgdump.gpg
+
+      - name: Decrypt backup
+        run: |
+          set -euo pipefail
+          gpg --batch --yes --output ./drill/backup.pgdump --decrypt ./drill/backup.pgdump.gpg
+          ls -lah ./drill/backup.pgdump
+          # pg_restore --list confirms the archive is structurally valid.
+          pg_restore --list ./drill/backup.pgdump | head -n 20
+
+      - name: pg_restore into ephemeral postgres service
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: ${{ env.DRILL_USER }}
+          PGPASSWORD: drill-${{ github.run_id }}
+          PGDATABASE: ${{ env.DRILL_DB }}
+        run: |
+          set -euo pipefail
+          # --clean / --if-exists allows re-running on retry without dropping the DB by hand.
+          # --no-owner / --no-acl matches the dump generation flags.
+          pg_restore \
+            --no-owner \
+            --no-acl \
+            --jobs=2 \
+            --dbname="${PGDATABASE}" \
+            ./drill/backup.pgdump
+          echo "Restore complete."
+
+      - name: Smoke queries
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: ${{ env.DRILL_USER }}
+          PGPASSWORD: drill-${{ github.run_id }}
+          PGDATABASE: ${{ env.DRILL_DB }}
+          BACKUP_DRILL_TOLERATE_EMPTY: ${{ vars.BACKUP_DRILL_TOLERATE_EMPTY || 'false' }}
+        run: |
+          set -euo pipefail
+          # Tables we expect to exist post-restore. Counts asserted non-zero unless
+          # BACKUP_DRILL_TOLERATE_EMPTY=true (e.g. very early staging environments).
+          TABLES=("users" "chat_sessions" "audit_logs")
+          fail=0
+          for tbl in "${TABLES[@]}"; do
+            COUNT="$(psql -tA -c "SELECT count(*) FROM ${tbl};" 2>/dev/null || echo "ERR")"
+            if [ "${COUNT}" = "ERR" ]; then
+              echo "::error::Smoke query failed for table ${tbl} (table missing or unreadable)"
+              fail=1
+              continue
+            fi
+            echo "  ${tbl}: ${COUNT} rows"
+            if [ "${COUNT}" -eq 0 ] && [ "${BACKUP_DRILL_TOLERATE_EMPTY}" != "true" ]; then
+              echo "::error::${tbl} is empty (set var BACKUP_DRILL_TOLERATE_EMPTY=true to tolerate)"
+              fail=1
+            fi
+          done
+          [ "${fail}" -eq 0 ]
+
+      - name: Notify on failure (Better Stack)
+        if: failure()
+        env:
+          BACKUP_HEARTBEAT_URL: ${{ secrets.BACKUP_HEARTBEAT_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BACKUP_HEARTBEAT_URL:-}" ]; then
+            echo "::error::Drill failed and BACKUP_HEARTBEAT_URL is not set — no alert sent"
+            exit 0
+          fi
+          curl -fsS --max-time 10 -X POST "${BACKUP_HEARTBEAT_URL}/fail" \
+            -d "GHA restore-drill failed: run ${GITHUB_RUN_ID}" || true

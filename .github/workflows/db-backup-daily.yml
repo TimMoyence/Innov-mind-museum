@@ -1,0 +1,189 @@
+# Daily encrypted Postgres backup uploaded to S3 (existing media bucket, prefix backups/daily/).
+#
+# Architecture (operator-facing, no VPS systemd / no SSH from VPS to back itself up):
+#   GHA runner -> pg_dump (DATABASE_URL_RO, read-only role) -> gpg encrypt -> aws s3 cp -> heartbeat ping.
+#
+# Reuses the existing media S3 bucket (S3_BUCKET) under prefix backups/daily/ — NOT a separate bucket.
+# GPG recipient is the operator's pre-existing dev key. Public key only is shipped to GHA; the
+# matching private key lives on the operator workstation (and is mirrored as a GHA secret ONLY
+# in the monthly restore-drill workflow, where decrypt capability is required).
+#
+# Compliance: SOC2 CC7.3, NIST RC.RP. RTO 1h / RPO 24h. See docs/DB_BACKUP_RESTORE.md.
+#
+# IMPORTANT: if the production Postgres is not reachable from public internet, this workflow
+# cannot run as-is — the operator must either expose a read-only role through pgBouncer/SSH
+# tunnel, or fall back to operator-side cron documented in docs/DB_BACKUP_RESTORE.md.
+name: db-backup-daily
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 02:00 UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write  # for OIDC if S3 endpoint is AWS native; ignored otherwise.
+
+concurrency:
+  group: db-backup-daily
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: encrypted-pgdump-to-s3
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PG_MAJOR: '16'
+      BACKUP_DATE: ''  # populated in Setup step
+      BACKUP_KEY: ''   # populated in Setup step
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          fetch-depth: 1
+
+      - name: Resolve backup key (UTC date)
+        id: keys
+        run: |
+          BACKUP_DATE="$(date -u +%Y-%m-%d)"
+          BACKUP_KEY="backups/daily/${BACKUP_DATE}.pgdump.gpg"
+          echo "BACKUP_DATE=${BACKUP_DATE}" >> "$GITHUB_ENV"
+          echo "BACKUP_KEY=${BACKUP_KEY}" >> "$GITHUB_ENV"
+          echo "Resolved backup key: ${BACKUP_KEY}"
+
+      - name: Install postgresql-client-${{ env.PG_MAJOR }} and gnupg2
+        run: |
+          set -euo pipefail
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsS -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] \
+            https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | \
+            sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            "postgresql-client-${PG_MAJOR}" gnupg2
+          pg_dump --version
+          gpg --version | head -n 1
+
+      - name: Install s5cmd (S3-compatible CLI; works with non-AWS endpoints)
+        # The existing media S3 bucket may be S3-compatible (Scaleway / OVH / MinIO) and not AWS.
+        # s5cmd respects AWS_ENDPOINT_URL, so it works regardless of provider.
+        run: |
+          set -euo pipefail
+          S5CMD_VERSION="2.2.2"
+          curl -fsSL "https://github.com/peak/s5cmd/releases/download/v${S5CMD_VERSION}/s5cmd_${S5CMD_VERSION}_Linux-64bit.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin s5cmd
+          s5cmd version
+
+      - name: Import GPG public key (recipient = ${{ secrets.BACKUP_GPG_RECIPIENT }})
+        env:
+          BACKUP_GPG_PUBLIC_KEY: ${{ secrets.BACKUP_GPG_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BACKUP_GPG_PUBLIC_KEY}" ]; then
+            echo "::error::BACKUP_GPG_PUBLIC_KEY secret missing"
+            exit 1
+          fi
+          echo "${BACKUP_GPG_PUBLIC_KEY}" | gpg --batch --import
+          gpg --list-keys
+
+      - name: Validate required secrets
+        env:
+          DATABASE_URL_RO: ${{ secrets.DATABASE_URL_RO }}
+          BACKUP_GPG_RECIPIENT: ${{ secrets.BACKUP_GPG_RECIPIENT }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+          S3_REGION: ${{ secrets.S3_REGION }}
+          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for var in DATABASE_URL_RO BACKUP_GPG_RECIPIENT S3_BUCKET S3_ENDPOINT S3_REGION S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY; do
+            if [ -z "${!var:-}" ]; then
+              echo "::error::Required secret '${var}' is empty"
+              missing=1
+            fi
+          done
+          [ "${missing}" -eq 0 ]
+
+      - name: pg_dump | gpg encrypt | s5cmd cp to S3
+        env:
+          DATABASE_URL_RO: ${{ secrets.DATABASE_URL_RO }}
+          BACKUP_GPG_RECIPIENT: ${{ secrets.BACKUP_GPG_RECIPIENT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.S3_REGION }}
+          AWS_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+        run: |
+          set -euo pipefail
+          # Stream pg_dump output directly into gpg, then into s5cmd. No plaintext on disk.
+          # --format=custom keeps pg_restore --list / selective restore capability.
+          # --no-owner --no-acl ensures the dump can be restored under any role (drill safety).
+          # --jobs is intentionally NOT set: --format=custom with --jobs requires a directory output,
+          # incompatible with stdout streaming. We trade dump time for zero-disk-footprint.
+          set -o pipefail
+          pg_dump \
+            --format=custom \
+            --no-owner \
+            --no-acl \
+            --compress=9 \
+            "${DATABASE_URL_RO}" \
+          | gpg --batch --yes --trust-model always \
+                --encrypt --recipient "${BACKUP_GPG_RECIPIENT}" \
+          | s5cmd --endpoint-url "${AWS_ENDPOINT_URL}" \
+                pipe "s3://${S3_BUCKET}/${BACKUP_KEY}"
+          echo "Upload complete: s3://${S3_BUCKET}/${BACKUP_KEY}"
+
+      - name: Verify backup is present and non-empty
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.S3_REGION }}
+          AWS_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+        run: |
+          set -euo pipefail
+          # `s5cmd ls` exits non-zero if the object is missing.
+          OUTPUT="$(s5cmd --endpoint-url "${AWS_ENDPOINT_URL}" ls "s3://${S3_BUCKET}/${BACKUP_KEY}")"
+          echo "${OUTPUT}"
+          # Parse the size column (4th token in s5cmd ls output) and assert > 0.
+          SIZE="$(printf '%s\n' "${OUTPUT}" | awk '{print $3}')"
+          if [ -z "${SIZE}" ] || [ "${SIZE}" -le 0 ] 2>/dev/null; then
+            echo "::error::Uploaded backup has size <= 0 (${SIZE} bytes)"
+            exit 1
+          fi
+          echo "Backup size: ${SIZE} bytes"
+
+      - name: Heartbeat ping (Better Stack)
+        if: success()
+        env:
+          BACKUP_HEARTBEAT_URL: ${{ secrets.BACKUP_HEARTBEAT_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BACKUP_HEARTBEAT_URL:-}" ]; then
+            echo "::warning::BACKUP_HEARTBEAT_URL not set — skipping heartbeat"
+            exit 0
+          fi
+          curl -fsS --max-time 10 "${BACKUP_HEARTBEAT_URL}" || {
+            echo "::warning::Heartbeat ping failed (non-fatal)"
+          }
+
+      - name: Notify on failure (Better Stack)
+        if: failure()
+        env:
+          BACKUP_HEARTBEAT_URL: ${{ secrets.BACKUP_HEARTBEAT_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BACKUP_HEARTBEAT_URL:-}" ]; then
+            echo "::error::Backup failed and BACKUP_HEARTBEAT_URL is not set — no alert sent"
+            exit 0
+          fi
+          # Better Stack heartbeats: append /fail to mark the check failing immediately
+          # rather than waiting for the missed-window alert.
+          curl -fsS --max-time 10 -X POST "${BACKUP_HEARTBEAT_URL}/fail" \
+            -d "GHA db-backup-daily failed: run ${GITHUB_RUN_ID}" || true
