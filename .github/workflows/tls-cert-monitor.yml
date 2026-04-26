@@ -1,0 +1,244 @@
+# Hourly TLS certificate expiry monitor — independent observation channel.
+#
+# Rationale
+#   `tls-renewal.yml` drives renewal on a Mon/Thu schedule. If a renewal silently
+#   no-ops (DNS A record drift, ACME challenge failure, certbot misconfig) the
+#   only externally visible signal is the actual cert expiry. This workflow
+#   probes the live `https://<domain>` endpoint hourly and escalates as the cert
+#   approaches expiry. It is intentionally separate from the renewal workflow so
+#   a bug in renewal cannot also silence the alarm.
+#
+# Escalation ladder
+#   <14 days  -> open / refresh `cert-expiry-near` issue
+#   < 5 days  -> additionally ping Better Stack heartbeat /fail endpoint
+#   < 2 days  -> additionally promote issue to `incident` (plugs into the
+#                breach-72h-timer pipeline as a SOC2 availability incident)
+#
+# Compliance / cross-references:
+#   - SOC2 CC6.6 (availability)
+#   - audit team-reports/2026-04-26-security-compliance-full-audit.md § P9 / R17
+#   - companion: `.github/workflows/tls-renewal.yml`
+#   - escalation: `.github/workflows/breach-72h-timer.yml` consumes the
+#     `incident` label set at <2d.
+name: tls-cert-monitor
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # hourly, on the hour
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: tls-cert-monitor
+  cancel-in-progress: true  # superseded probes are noise
+
+jobs:
+  monitor:
+    name: Probe cert expiry per domain
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Validate required secret
+        env:
+          TLS_MONITOR_DOMAINS: ${{ secrets.TLS_MONITOR_DOMAINS }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TLS_MONITOR_DOMAINS:-}" ]; then
+            echo "::error::TLS_MONITOR_DOMAINS secret is empty (CSV expected, e.g. 'api.musaium.com,musaium.com')"
+            exit 1
+          fi
+
+      - name: Probe each domain and emit JSON report
+        id: probe
+        env:
+          TLS_MONITOR_DOMAINS: ${{ secrets.TLS_MONITOR_DOMAINS }}
+        run: |
+          set -euo pipefail
+          REPORT="$(mktemp)"
+          echo '[]' > "${REPORT}"
+
+          NOW_EPOCH="$(date -u +%s)"
+          # IFS-based split is fine for a small operator-curated CSV.
+          IFS=',' read -ra DOMAINS <<< "${TLS_MONITOR_DOMAINS}"
+
+          for raw in "${DOMAINS[@]}"; do
+            DOMAIN="$(echo "${raw}" | xargs)"  # trim whitespace
+            [ -z "${DOMAIN}" ] && continue
+            echo "Probing ${DOMAIN}..."
+
+            # Fetch the leaf cert via SNI on :443. `< /dev/null` closes stdin so
+            # openssl exits cleanly. We tolerate per-domain failures and capture
+            # them in the report for issue creation rather than failing the run.
+            if ! NOT_AFTER_RAW="$(echo | openssl s_client \
+              -servername "${DOMAIN}" \
+              -connect "${DOMAIN}:443" \
+              -verify_hostname "${DOMAIN}" 2>/dev/null \
+              | openssl x509 -noout -enddate 2>/dev/null)"; then
+              jq --arg d "${DOMAIN}" \
+                 '. + [{domain: $d, error: "tls_probe_failed", days_remaining: -1}]' \
+                 "${REPORT}" > "${REPORT}.new" && mv "${REPORT}.new" "${REPORT}"
+              continue
+            fi
+
+            # Format: "notAfter=Jun  1 12:00:00 2026 GMT"
+            NOT_AFTER="${NOT_AFTER_RAW#notAfter=}"
+            if ! EXPIRY_EPOCH="$(date -u -d "${NOT_AFTER}" +%s 2>/dev/null)"; then
+              jq --arg d "${DOMAIN}" --arg na "${NOT_AFTER}" \
+                 '. + [{domain: $d, error: "parse_failed", not_after_raw: $na, days_remaining: -1}]' \
+                 "${REPORT}" > "${REPORT}.new" && mv "${REPORT}.new" "${REPORT}"
+              continue
+            fi
+
+            DAYS_REMAINING=$(( (EXPIRY_EPOCH - NOW_EPOCH) / 86400 ))
+            echo "  ${DOMAIN}: notAfter=${NOT_AFTER}  days_remaining=${DAYS_REMAINING}"
+
+            jq --arg d "${DOMAIN}" --arg na "${NOT_AFTER}" --argjson days "${DAYS_REMAINING}" \
+               '. + [{domain: $d, not_after: $na, days_remaining: $days}]' \
+               "${REPORT}" > "${REPORT}.new" && mv "${REPORT}.new" "${REPORT}"
+          done
+
+          # Persist for the github-script step.
+          cp "${REPORT}" report.json
+          echo "report-path=report.json" >> "$GITHUB_OUTPUT"
+          jq . report.json
+
+      - name: Escalate per threshold (issue + Better Stack)
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
+        env:
+          BETTER_STACK_HEARTBEAT_URL: ${{ secrets.BETTER_STACK_HEARTBEAT_URL }}
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('report.json', 'utf8'));
+
+            const NEAR_LABEL = 'cert-expiry-near';
+            const INCIDENT_LABEL = 'incident';
+            const OPS_LABEL = 'ops';
+            const RUN_URL = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const RENEWAL_WF_URL = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/workflows/tls-renewal.yml`;
+
+            // Fetch open `cert-expiry-near` issues once; we'll match per-domain.
+            const { data: openIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: NEAR_LABEL,
+              per_page: 100,
+            });
+
+            const findIssueForDomain = (domain) =>
+              openIssues.find((i) => i.title.includes(`[TLS] ${domain}`));
+
+            // Better Stack pings de-dupe per run regardless of how many domains
+            // tripped — one alert is enough; payload lists the offenders.
+            let pingedBetterStack = false;
+            const pingBetterStackOnce = async (payload) => {
+              if (pingedBetterStack) return;
+              const url = process.env.BETTER_STACK_HEARTBEAT_URL;
+              if (!url) {
+                core.warning('BETTER_STACK_HEARTBEAT_URL not set — skipping critical alert.');
+                return;
+              }
+              try {
+                await fetch(`${url}/fail`, {
+                  method: 'POST',
+                  body: payload,
+                  signal: AbortSignal.timeout(10000),
+                });
+                pingedBetterStack = true;
+              } catch (e) {
+                core.warning(`Better Stack ping failed: ${e.message}`);
+              }
+            };
+
+            for (const entry of report) {
+              const { domain, days_remaining: days, not_after, error } = entry;
+
+              // Probe failure = treat as days=0 to force escalation; the body
+              // will show "tls_probe_failed" so the operator knows the cause.
+              const effectiveDays = error ? 0 : days;
+
+              if (effectiveDays >= 14) {
+                core.info(`${domain}: ${days} days remaining — OK.`);
+                continue;
+              }
+
+              const isCritical = effectiveDays < 5;
+              const isIncident = effectiveDays < 2;
+
+              const labels = [NEAR_LABEL, OPS_LABEL];
+              if (isIncident) labels.push(INCIDENT_LABEL);
+
+              const titlePrefix = isIncident ? '[INCIDENT] ' : '';
+              const title = `${titlePrefix}[TLS] ${domain} cert expires in ${effectiveDays}d`;
+              const body = [
+                isIncident
+                  ? `:rotating_light: **AVAILABILITY INCIDENT** — cert expiry imminent.`
+                  : isCritical
+                    ? `:warning: **Critical** — cert renewal must succeed within hours.`
+                    : `:warning: **Cert expiry approaching** — automated renewal should run on next Mon/Thu.`,
+                ``,
+                `- Domain: \`${domain}\``,
+                `- Days remaining: **${effectiveDays}**`,
+                error
+                  ? `- Probe error: \`${error}\` (raw: \`${entry.not_after_raw ?? 'n/a'}\`)`
+                  : `- notAfter: \`${not_after}\``,
+                `- Detected at: \`${new Date().toISOString()}\``,
+                ``,
+                `**Next steps**`,
+                `- Trigger renewal manually: ${RENEWAL_WF_URL} (Run workflow)`,
+                `- Or SSH fallback: \`ssh <user>@<host> 'sudo certbot renew && sudo nginx -s reload'\``,
+                `- Verify: \`ssh <user>@<host> 'sudo certbot certificates'\``,
+                `- See \`docs/OPS_DEPLOYMENT.md § 12 (DNS & TLS)\``,
+                ``,
+                isIncident
+                  ? `_This issue carries the \`incident\` label and is tracked by ` +
+                    `\`.github/workflows/breach-72h-timer.yml\` for SOC2 CC6.6 ` +
+                    `availability accountability._`
+                  : ``,
+                `_Probe run: ${RUN_URL}_`,
+              ].filter(Boolean).join('\n');
+
+              const existing = findIssueForDomain(domain);
+              if (existing) {
+                // Refresh body + ensure label set is correct.
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  title,
+                  body,
+                });
+                const existingLabels = (existing.labels || []).map((l) =>
+                  typeof l === 'string' ? l : l.name,
+                );
+                const toAdd = labels.filter((l) => !existingLabels.includes(l));
+                if (toAdd.length > 0) {
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: existing.number,
+                    labels: toAdd,
+                  });
+                }
+                core.warning(`Refreshed #${existing.number} for ${domain} (${effectiveDays}d).`);
+              } else {
+                const created = await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title,
+                  body,
+                  labels,
+                });
+                core.warning(`Filed #${created.data.number} for ${domain} (${effectiveDays}d).`);
+              }
+
+              if (isCritical) {
+                await pingBetterStackOnce(
+                  `tls-cert-monitor: ${domain} expires in ${effectiveDays}d (run ${context.runId})`,
+                );
+              }
+            }

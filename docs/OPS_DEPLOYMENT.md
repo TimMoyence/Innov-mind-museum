@@ -258,6 +258,118 @@ curl -I https://staging-api.example.com/api/health
 curl -I https://api.example.com/api/health
 ```
 
+### 12.1 TLS / certificate management
+
+> **TL;DR** — Let's Encrypt + certbot live on the VPS. Renewal is **driven from GitHub Actions** twice a week (`tls-renewal.yml`, Mon/Thu 03:17 UTC). Expiry is **probed hourly** from GHA (`tls-cert-monitor.yml`) and escalates to a GitHub `incident` issue + Better Stack alert when <2 days remain. No VPS systemd timer is required for the renewal trigger today; the manual SSH fallback is documented below.
+
+#### Architecture
+
+```
+[GHA scheduler]──cron Mon/Thu 03:17 UTC──▶ tls-renewal.yml
+       │                                          │
+       │                                          ▼
+       │                          ssh deploy@VPS  (key-based, host-pinned)
+       │                                          │
+       │                                          ▼
+       │                          sudo certbot renew --quiet
+       │                                          │
+       │                                          ▼
+       │                          --deploy-hook 'nginx -s reload'   (runs only on actual renew)
+       │                                          │
+       │             ┌────success────heartbeat──────────┘
+       │             ▼
+       │        Better Stack heartbeat (CERT_RENEWAL_HEARTBEAT_URL)
+       │
+       └─cron hourly──▶ tls-cert-monitor.yml
+                                     │
+                                     ▼
+                  openssl s_client probe per domain (TLS_MONITOR_DOMAINS)
+                                     │
+                       ┌─────────────┼──────────────┐
+                       │ <14d        │ <5d          │ <2d
+                       ▼             ▼              ▼
+                  GH issue     + BetterStack    + label `incident`
+                  (`cert-      `/fail` ping     (escalates via
+                  expiry-near`)                  breach-72h-timer.yml)
+```
+
+**On-VPS layout** (do not change without coordination):
+
+| Path / package | Role |
+|---|---|
+| `apt install certbot python3-certbot-nginx` | certbot v2.x package source: Debian/Ubuntu official repo |
+| `/etc/letsencrypt/live/<domain>/fullchain.pem` | symlink to current cert chain |
+| `/etc/letsencrypt/live/<domain>/privkey.pem` | symlink to current private key |
+| `/etc/letsencrypt/renewal/<domain>.conf` | per-cert renewal config (authenticator, deploy-hook) |
+| `/etc/nginx/sites-enabled/musaium.conf` | nginx vhost referencing the symlinks above |
+| `sudo certbot certificates` | inventory + days-to-expiry per cert |
+| `sudo certbot renew --dry-run` | validate ACME challenge end-to-end without consuming rate limits |
+
+#### Required GHA secrets
+
+Register in GitHub repo → Settings → Secrets and variables → Actions. Cross-referenced in [`docs/CI_CD_SECRETS.md` § TLS Certificate Renewal](CI_CD_SECRETS.md#secrets-tls-certificate-renewal-r17--soc2-cc66).
+
+| Secret | Purpose |
+|---|---|
+| `VPS_HOST` | SSH host (e.g. `vps.musaium.com` or its IP) |
+| `VPS_USER` | SSH user (typically `deploy`) with `NOPASSWD` sudo on `certbot` and `nginx -s reload` only |
+| `VPS_DEPLOY_SSH_KEY` | Private key (ed25519 recommended) matching the public key seeded in VPS `~/.ssh/authorized_keys` |
+| `CERT_RENEWAL_HEARTBEAT_URL` | Better Stack (or equivalent) heartbeat URL pinged on successful run |
+| `BETTER_STACK_HEARTBEAT_URL` | Better Stack heartbeat URL — pinged with `/fail` on renewal failure or <5d expiry |
+| `TLS_MONITOR_DOMAINS` | CSV of domains to probe hourly, e.g. `api.musaium.com,musaium.com` |
+
+#### Operator runbook — first-time setup
+
+1. **Generate the deploy key on a workstation** (never on the VPS, never on a CI runner):
+   ```bash
+   ssh-keygen -t ed25519 -f ~/.ssh/musaium-tls-renew -C "gha-tls-renew@musaium" -N ''
+   ```
+2. **Seed the public key on the VPS** in `~deploy/.ssh/authorized_keys`. **Constrain it** so a stolen key cannot do anything else:
+   ```
+   restrict,command="sudo /usr/bin/certbot renew --quiet --deploy-hook '/usr/sbin/nginx -s reload'" ssh-ed25519 AAAA...gha-tls-renew@musaium
+   ```
+   - `restrict` disables port forwarding, agent forwarding, X11, PTY allocation.
+   - `command="..."` pins the key to exactly one command — even if `tls-renewal.yml` is altered to send another command, the VPS executes the pinned one.
+   - The user `deploy` must have `NOPASSWD` sudo for **only** `certbot` and `nginx -s reload`. Example `/etc/sudoers.d/deploy-tls`:
+     ```
+     deploy ALL=(root) NOPASSWD: /usr/bin/certbot renew --quiet --deploy-hook /usr/sbin/nginx -s reload
+     deploy ALL=(root) NOPASSWD: /usr/bin/certbot certificates
+     ```
+3. **Register the GHA secrets** listed above. Paste the `~/.ssh/musaium-tls-renew` private key (full file, including header/footer) into `VPS_DEPLOY_SSH_KEY`.
+4. **Smoke test from GHA** (do not wait for the cron):
+   - Actions → `tls-renewal` → Run workflow (branch `main`).
+   - Verify the run succeeds and that the heartbeat URL was pinged.
+5. **Verify on the VPS**:
+   ```bash
+   ssh deploy@<VPS_HOST> 'sudo certbot certificates'
+   # Confirm "VALID: 89 days" or similar — and that the renewal is logged
+   # in /var/log/letsencrypt/letsencrypt.log
+   ```
+6. **Smoke test the monitor**:
+   - Actions → `tls-cert-monitor` → Run workflow → check the JSON report in the run logs (one entry per domain in `TLS_MONITOR_DOMAINS`, with `days_remaining` ≥ 14).
+
+#### Manual fallback (no GHA secrets yet, or GHA-side outage)
+
+If the deploy key is not yet seeded, or if GitHub Actions is unavailable, perform the renewal manually from the operator workstation:
+
+```bash
+ssh deploy@<VPS_HOST> 'sudo certbot renew && sudo nginx -s reload'
+ssh deploy@<VPS_HOST> 'sudo certbot certificates'
+```
+
+This is the same command the GHA workflow drives remotely; the only difference is the trigger.
+
+#### Failure modes and escalation
+
+| Symptom | Likely cause | Action |
+|---|---|---|
+| `tls-renewal` run fails — SSH error | Key not in authorized_keys, host key mismatch, network egress blocked | Reseed key per § 12.1 step 2; check `ssh-keyscan` output in workflow logs |
+| `tls-renewal` run fails — `certbot` error | ACME challenge failure (DNS, port 80 nginx, rate limit) | `sudo certbot renew --dry-run` on VPS; review `/var/log/letsencrypt/letsencrypt.log` |
+| `tls-cert-monitor` opens `cert-expiry-near` issue | Renewal hasn't run yet or no-op'd | Trigger `tls-renewal` manually; if it succeeds, monitor will close the loop next hour |
+| Issue gains `incident` label (<2 days) | Renewal has been failing silently for ≥10 days | Treat as **availability incident**: invoke manual fallback above, then file post-mortem in `docs/incidents/`. Per `BREACH_PLAYBOOK.md`, an availability incident under GDPR Art 4(12) may carry CNIL notification obligations if it is sustained — log via `auditCriticalSecurityEvent` so the `breach-72h-timer.yml` SLA tracker takes over (`docs/incidents/BREACH_PLAYBOOK.md § 4`) |
+
+> **SOC2 mapping**: this control closes audit finding **R17** (`team-reports/2026-04-26-security-compliance-full-audit.md § P9`) under criterion **CC6.6** (system communications & boundary protection / availability). The remediation plan tracks this work as **W2.T5** (`team-reports/2026-04-26-security-remediation-plan.md`).
+
 ---
 
 ## 13. Backend `.env` on Servers

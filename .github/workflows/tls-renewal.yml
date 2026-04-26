@@ -1,0 +1,195 @@
+# Let's Encrypt certificate renewal — GHA-driven (no VPS systemd timer).
+#
+# Architecture (operator-facing):
+#   GHA runner -> ssh deploy@VPS -> sudo certbot renew --deploy-hook 'nginx -s reload'
+#                            -> heartbeat ping (success) | failure issue + Better Stack ping
+#
+# Why GHA-only?
+#   The operator is provisionally without systemd-timer access on the VPS for the
+#   renewal job. Per audit team-reports/2026-04-26-security-compliance-full-audit.md
+#   (R17, SOC2 CC6.6 / availability) and the remediation plan W2.T5, we close the
+#   gap by driving the renewal remotely from GitHub Actions on a fixed schedule
+#   that mirrors Let's Encrypt's "twice-weekly attempt" recommendation. The VPS
+#   keeps certbot installed (apt) and nginx-aware deploy-hook locally; only the
+#   trigger lives here.
+#
+# Compliance / cross-references:
+#   - SOC2 CC6.6 (system communications & boundary protection / availability)
+#   - audit § P9 / R17 — "TLS cert renewal automation undocumented"
+#   - remediation plan § W2.T5
+#   - escalation: cert-expiry → outage qualifies as availability incident; the
+#     `tls-cert-monitor.yml` companion workflow promotes a near-expiry issue to
+#     `incident` label at <2 days, plugging into the breach-72h-timer pipeline
+#     established by W1.T5 / `breach-72h-timer.yml`.
+#
+# IMPORTANT: this workflow MUST NOT carry secrets inline. All host/key/heartbeat
+# values are sourced from `secrets.*`. See docs/CI_CD_SECRETS.md § TLS.
+name: tls-renewal
+
+on:
+  schedule:
+    # Mon + Thu 03:17 UTC. Twice-weekly per Let's Encrypt operational guidance,
+    # off-peak window for FR/EU traffic, :17 offset to dodge the :00 / :30
+    # scheduler thundering herd on GitHub-hosted runners.
+    - cron: '17 3 * * 1,4'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write  # required to file a cert-expiry issue on failure
+
+concurrency:
+  group: tls-renewal
+  cancel-in-progress: false
+
+jobs:
+  renew:
+    name: Renew Let's Encrypt certs on VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          fetch-depth: 1
+
+      - name: Validate required secrets
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_DEPLOY_SSH_KEY: ${{ secrets.VPS_DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for var in VPS_HOST VPS_USER VPS_DEPLOY_SSH_KEY; do
+            if [ -z "${!var:-}" ]; then
+              echo "::error::Required secret '${var}' is empty"
+              missing=1
+            fi
+          done
+          [ "${missing}" -eq 0 ]
+
+      - name: Set up SSH deploy key
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_DEPLOY_SSH_KEY: ${{ secrets.VPS_DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          # Write the private key. Trailing newline is mandatory for OpenSSH.
+          printf '%s\n' "${VPS_DEPLOY_SSH_KEY}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          # Pin the host key to defeat MITM. ssh-keyscan emits to stderr on
+          # failure; we treat any empty result as fatal.
+          ssh-keyscan -t ed25519,rsa -T 10 "${VPS_HOST}" > ~/.ssh/known_hosts 2>/dev/null
+          if [ ! -s ~/.ssh/known_hosts ]; then
+            echo "::error::ssh-keyscan returned no host keys for ${VPS_HOST}"
+            exit 1
+          fi
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Trigger certbot renew on VPS
+        id: renew
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          # `certbot renew` is idempotent: it is a no-op for certs >30 days from
+          # expiry. The `--deploy-hook` runs only when a cert was actually
+          # renewed, keeping nginx reloads infrequent. `--quiet` suppresses
+          # routine "no renewal needed" output but preserves errors.
+          #
+          # The remote command is intentionally minimal — no shell expansion of
+          # secrets on the runner side. If you scope the deploy key with
+          # `command="..."` in authorized_keys (recommended), this is exactly
+          # the command the key is restricted to.
+          ssh \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
+            -o ServerAliveInterval=30 \
+            "${VPS_USER}@${VPS_HOST}" \
+            "sudo certbot renew --quiet --deploy-hook 'nginx -s reload'"
+
+      - name: Heartbeat ping (Better Stack — success)
+        if: success()
+        env:
+          CERT_RENEWAL_HEARTBEAT_URL: ${{ secrets.CERT_RENEWAL_HEARTBEAT_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CERT_RENEWAL_HEARTBEAT_URL:-}" ]; then
+            echo "::warning::CERT_RENEWAL_HEARTBEAT_URL not set — skipping heartbeat"
+            exit 0
+          fi
+          curl -fsS --max-time 10 "${CERT_RENEWAL_HEARTBEAT_URL}" || {
+            echo "::warning::Heartbeat ping failed (non-fatal)"
+          }
+
+      - name: Notify Better Stack on failure
+        if: failure()
+        env:
+          BETTER_STACK_HEARTBEAT_URL: ${{ secrets.BETTER_STACK_HEARTBEAT_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BETTER_STACK_HEARTBEAT_URL:-}" ]; then
+            echo "::error::Renewal failed and BETTER_STACK_HEARTBEAT_URL is not set — no alert sent"
+            exit 0
+          fi
+          curl -fsS --max-time 10 -X POST "${BETTER_STACK_HEARTBEAT_URL}/fail" \
+            -d "GHA tls-renewal failed: run ${GITHUB_RUN_ID}" || true
+
+      - name: Open GitHub issue on failure
+        if: failure()
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const title = `[TLS] certbot renew failed (run ${context.runId})`;
+            const body = [
+              `:rotating_light: **Let's Encrypt renewal failed**`,
+              ``,
+              `Workflow run: ${runUrl}`,
+              `Trigger: \`${context.eventName}\``,
+              `Detected at: \`${new Date().toISOString()}\``,
+              ``,
+              `**Operator runbook**`,
+              `1. Inspect the workflow run logs above for the SSH/certbot error.`,
+              `2. SSH to the VPS and run \`sudo certbot certificates\` to confirm cert state.`,
+              `3. Manual fallback: \`ssh <user>@<host> 'sudo certbot renew && sudo nginx -s reload'\`.`,
+              `4. If cert is <14 days from expiry, this is an availability risk (SOC2 CC6.6).`,
+              `   See \`docs/OPS_DEPLOYMENT.md § 12 (DNS & TLS)\` and \`docs/incidents/BREACH_PLAYBOOK.md\`.`,
+              ``,
+              `_Auto-filed by \`.github/workflows/tls-renewal.yml\`._`,
+            ].join('\n');
+
+            // De-dupe: reuse the most recent open `cert-expiry` issue if one exists.
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'cert-expiry',
+              per_page: 10,
+            });
+
+            if (existing.length > 0) {
+              const issue = existing[0];
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body,
+              });
+              core.warning(`Posted comment on existing #${issue.number}`);
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['cert-expiry', 'ops', 'needs-triage'],
+            });
+            core.warning('Filed new cert-expiry issue.');
