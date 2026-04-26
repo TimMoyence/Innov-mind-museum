@@ -1,4 +1,4 @@
-/* eslint-disable sonarjs/fixme-tag -- intentional gap markers reference the W1.T2 SSRF audit ticket; removing them loses traceability */
+ 
 
 /**
  * SSRF defence matrix — V1 (CRITICAL) audit closure (2026-04-11 + 2026-04-26).
@@ -114,24 +114,12 @@ describe('SSRF matrix — isSafeImageUrl (chat image-url validator)', () => {
 describe('SSRF matrix — HtmlScraper.scrape (knowledge-extraction)', () => {
   const scraper = new HtmlScraper({ timeoutMs: 5_000, maxContentBytes: 10_000 });
 
-  // FIXME(SSRF-GAP-W1.T2): cases 10 + 11 (IPv6-mapped IPv4 literals like
-  // `[::ffff:127.0.0.1]`) currently BYPASS the html-scraper guard. Root cause:
-  // Node's WHATWG URL parser canonicalises `::ffff:127.0.0.1` → `::ffff:7f00:1`
-  // (hex-compressed form). `normalizeIp()` strips the `::ffff:` prefix and
-  // hands `7f00:1` to `isPrivateIp()`, whose string-prefix checks for
-  // `127.` / `10.` / `fc` don't match. Result: an attacker-supplied URL
-  // `https://[::ffff:127.0.0.1]/` reaches `fetch()`. Defer to backend-architect
-  // to patch `isPrivateIp` to also recognise hex-compressed embedded IPv4
-  // (parse `7f00:1` → `127.0.0.1`). Until then, isolated by:
-  //   - `isSafeImageUrl` *does* reject these (covered in Surface #1 above)
-  //   - scraper still fail-opens on the unreachable IPv6 address in practice
-  //   - knowledge-extraction URLs come from admin-curated seeds only (not
-  //     end-user input), reducing exploitability.
-  // Re-enable the assertion in xtest below once the production fix lands.
-  const SCRAPER_KNOWN_GAPS = new Set(['10-ipv6-mapped-loopback', '11-ipv6-mapped-private']);
-  const scraperCases = cases.filter((c) => !SCRAPER_KNOWN_GAPS.has(c.id));
-
-  it.each(scraperCases)(
+  // W1.T2-followup CLOSED: cases 10 + 11 (IPv6-mapped IPv4 literals
+  // `[::ffff:127.0.0.1]` / `[::ffff:10.0.0.1]`) now pass after html-scraper
+  // `normalizeIp` was extended with `ipv6MappedToIpv4`, which decodes BOTH
+  // wire shapes — decimal `::ffff:1.2.3.4` AND WHATWG-canonicalised hex
+  // `::ffff:0102:0304` — back to dotted IPv4 before the range checks run.
+  it.each(cases)(
     '[$id] $description → null + no outbound fetch',
     async (testCase: SsrfTestCase) => {
       if (testCase.dnsResolvesTo) {
@@ -147,14 +135,6 @@ describe('SSRF matrix — HtmlScraper.scrape (knowledge-extraction)', () => {
       expect(fetchSpy).not.toHaveBeenCalled();
     },
   );
-
-  // FIXME(SSRF-GAP-W1.T2) — see above. These two are skipped intentionally.
-  it.skip('[10-ipv6-mapped-loopback] IPv6-mapped IPv4 loopback ::ffff:127.0.0.1 → currently FETCHES (gap)', () => {
-    // When fixed: remove `.skip` and remove ids from SCRAPER_KNOWN_GAPS.
-  });
-  it.skip('[11-ipv6-mapped-private] IPv6-mapped IPv4 private ::ffff:10.0.0.1 → currently FETCHES (gap)', () => {
-    // When fixed: remove `.skip` and remove ids from SCRAPER_KNOWN_GAPS.
-  });
 
   it('control: legitimate public URL with public DNS resolution proceeds to fetch', async () => {
     // Replace trip-wire with an OK response so we can assert the validator

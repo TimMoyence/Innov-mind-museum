@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { lookup } from 'node:dns/promises';
+import { isIPv4 } from 'node:net';
 
 import { Readability } from '@mozilla/readability';
 import * as cheerio from 'cheerio';
@@ -36,9 +37,54 @@ const BLOCKED_HOSTNAMES = new Set([
 ]);
 
 /**
+ * Decodes an IPv4-mapped IPv6 address back to its IPv4 dotted form.
+ *
+ * Handles two wire shapes that point at the same network:
+ *   - Decimal:                 `::ffff:127.0.0.1`
+ *   - WHATWG-canonicalised hex: `::ffff:7f00:1` (Node URL parser emits this)
+ *
+ * Returns `null` when the input is not an IPv4-mapped IPv6 literal so callers
+ * can keep treating the address as a generic IPv6.
+ *
+ * Why: previously `normalizeIp` only stripped the `::ffff:` prefix and relied
+ * on string-prefix checks (`startsWith('127.')`). The hex form bypassed every
+ * range test (`7f00:1` matches no IPv4 prefix), opening an SSRF path on the
+ * scraper. Tracked as W1.T2-followup; see ssrf-matrix tests cases 10-11.
+ */
+function ipv6MappedToIpv4(address: string): string | null {
+  const HEX_FORM = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/;
+  const hexMatch = HEX_FORM.exec(address);
+  if (hexMatch) {
+    const high = Number.parseInt(hexMatch[1], 16);
+    const low = Number.parseInt(hexMatch[2], 16);
+    if (
+      Number.isFinite(high) &&
+      Number.isFinite(low) &&
+      high >= 0 &&
+      high <= 0xffff &&
+      low >= 0 &&
+      low <= 0xffff
+    ) {
+      const a = (high >> 8) & 0xff;
+      const b = high & 0xff;
+      const c = (low >> 8) & 0xff;
+      const d = low & 0xff;
+      return `${a}.${b}.${c}.${d}`;
+    }
+  }
+  if (address.startsWith('::ffff:')) {
+    const tail = address.slice(7);
+    if (isIPv4(tail)) return tail;
+  }
+  return null;
+}
+
+/**
  * Normalises an IP-like string:
  *   - Strips IPv6 URL brackets: `[::1]` → `::1`
- *   - Unwraps IPv4-mapped IPv6: `::ffff:192.168.0.1` → `192.168.0.1`
+ *   - Unwraps IPv4-mapped IPv6 in BOTH wire shapes (decimal `::ffff:1.2.3.4`
+ *     and hex-canonical `::ffff:0102:0304`) so range checks below see a single
+ *     dotted IPv4.
  *   - Lowercases hex digits
  */
 function normalizeIp(address: string): string {
@@ -46,8 +92,9 @@ function normalizeIp(address: string): string {
   if (value.startsWith('[') && value.endsWith(']')) {
     value = value.slice(1, -1);
   }
-  if (value.startsWith('::ffff:')) {
-    value = value.slice(7);
+  const unwrapped = ipv6MappedToIpv4(value);
+  if (unwrapped) {
+    return unwrapped;
   }
   return value;
 }
