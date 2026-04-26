@@ -1,3 +1,5 @@
+import { ValidationError } from '@shared/errors/app.error';
+import { assertEntityId, assertLang } from '@shared/http/wikidata-ids';
 import { logger } from '@shared/logger/logger';
 
 import type {
@@ -11,11 +13,12 @@ const WIKIDATA_API = 'https://www.wikidata.org/w/api.php';
 const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
 
 /**
- * Validates a Wikidata language code (2-3 lowercase letters).
- * Used as defense-in-depth before SPARQL interpolation.
+ * Validates a Wikidata language code (2-3 lowercase letters, optional region).
+ * Loose prefilter — kept for early rejection before throw-on-fail assertions
+ * downstream. Defense-in-depth: {@link assertLang} is the actual trust boundary.
  */
 function isValidLanguageCode(lang: string): boolean {
-  return /^[a-z]{2,3}$/i.test(lang);
+  return /^[a-z]{2,3}$/i.test(lang) || /^[a-z]{2,3}-[a-z]{2,4}$/i.test(lang);
 }
 
 const ART_KEYWORDS = [
@@ -130,10 +133,16 @@ export class WikidataClient implements KnowledgeBaseProvider {
     label: string,
     language: string,
   ): Promise<ArtworkFacts | null> {
-    // Defense-in-depth: validate QID and language format before SPARQL interpolation,
-    // even if callers (e.g. lookup()) already validate. Protects against direct calls.
-    if (!/^Q\d+$/.test(qid)) return null;
-    if (!isValidLanguageCode(language)) return null;
+    // Defense-in-depth: strict assert before SPARQL interpolation. Throws
+    // ValidationError on tampered ids — caught by the public `lookup()` wrapper
+    // (fail-open). Protects direct callers + any future consumer.
+    try {
+      assertEntityId(qid);
+      assertLang(language);
+    } catch (err) {
+      if (err instanceof ValidationError) return null;
+      throw err;
+    }
 
     const sparql = `
       SELECT ?creatorLabel ?inception ?materialLabel ?collectionLabel ?movementLabel ?genreLabel ?image

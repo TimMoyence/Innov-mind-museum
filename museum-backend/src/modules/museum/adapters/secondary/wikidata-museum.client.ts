@@ -1,3 +1,9 @@
+import { ValidationError } from '@shared/errors/app.error';
+import {
+  assertEntityId,
+  assertLang,
+  escapeSparqlLiteral as strictEscapeSparqlLiteral,
+} from '@shared/http/wikidata-ids';
 import { logger } from '@shared/logger/logger';
 
 const USER_AGENT = 'Musaium/1.0 (https://musaium.app; contact@musaium.app)';
@@ -38,13 +44,22 @@ export interface WikidataMuseumClient {
   fetchFacts(input: { qid: string; locale: string }): Promise<WikidataMuseumFacts | null>;
 }
 
+/**
+ * Loose pre-filter — kept for early rejection at the call site before the
+ * authoritative {@link assertLang} runs downstream. Now BCP47-aware (e.g. `zh-Hant`).
+ */
 function isValidLanguageCode(lang: string): boolean {
-  return /^[a-z]{2,3}$/i.test(lang);
+  return /^[a-z]{2,3}$/i.test(lang) || /^[a-z]{2,3}-[a-z]{2,4}$/i.test(lang);
 }
 
-/** Escapes a user-supplied value for safe SPARQL string literal interpolation. */
+/**
+ * Escapes a user-supplied value for safe SPARQL string literal interpolation.
+ *
+ * Delegates to the shared {@link strictEscapeSparqlLiteral} which strips control
+ * chars and rejects non-strings. Local wrapper preserves the existing call sites.
+ */
 function escapeSparqlLiteral(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, ' ');
+  return strictEscapeSparqlLiteral(value);
 }
 
 type HeadersObject = Record<string, string>;
@@ -126,7 +141,14 @@ export class HttpWikidataMuseumClient implements WikidataMuseumClient {
 
   /** Fetches structured facts for a resolved QID. Fail-open. */
   async fetchFacts(input: { qid: string; locale: string }): Promise<WikidataMuseumFacts | null> {
-    if (!/^Q\d+$/.test(input.qid)) return null;
+    // Strict assert at the trust boundary — replaces loose `/^Q\d+$/` prefilter.
+    // Caught + fail-open below to preserve existing contract (never throws).
+    try {
+      assertEntityId(input.qid);
+    } catch (err) {
+      if (err instanceof ValidationError) return null;
+      throw err;
+    }
     const language = isValidLanguageCode(input.locale) ? input.locale.toLowerCase() : 'en';
     try {
       const [sparqlFacts, sitelinkTitle] = await Promise.all([
@@ -150,6 +172,8 @@ export class HttpWikidataMuseumClient implements WikidataMuseumClient {
     name: string,
     language: string,
   ): Promise<{ qid: string; label: string; lat?: number; lng?: number }[]> {
+    // Strict assert at the trust boundary before SPARQL string composition.
+    assertLang(language);
     const safeName = escapeSparqlLiteral(name);
     const sparql = `
       SELECT ?item ?itemLabel ?coord WHERE {
@@ -254,6 +278,9 @@ export class HttpWikidataMuseumClient implements WikidataMuseumClient {
     qid: string,
     language: string,
   ): Promise<Omit<WikidataMuseumFacts, 'wikipediaTitle'> | null> {
+    // Strict assert at the trust boundary before SPARQL string composition.
+    assertEntityId(qid);
+    assertLang(language);
     const sparql = `
       SELECT ?itemLabel ?description ?website ?phone ?image WHERE {
         BIND(wd:${qid} AS ?item)
@@ -286,6 +313,9 @@ export class HttpWikidataMuseumClient implements WikidataMuseumClient {
   }
 
   private async fetchSitelinkTitle(qid: string, language: string): Promise<string | null> {
+    // Strict assert before composing the `${language}wiki` sitelink + the `ids=` URL param.
+    assertEntityId(qid);
+    assertLang(language);
     const site = `${language}wiki`;
     const params = new URLSearchParams({
       action: 'wbgetentities',
