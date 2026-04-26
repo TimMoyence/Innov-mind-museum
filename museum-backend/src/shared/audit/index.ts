@@ -9,6 +9,16 @@ const auditRepository = new AuditRepositoryPg(AppDataSource);
 export const auditService = new AuditService(auditRepository);
 
 export { AuditService } from './audit.service';
+export type {
+  BreachAuditEvent,
+  BreachAuditResult,
+  BreachContainmentStatus,
+  BreachDataClass,
+  BreachDetectionSource,
+  BreachSeverity,
+} from './audit.service';
+export { BREACH_EVENT_SET, BREACH_EVENTS } from './breach-event-types';
+export type { BreachEventName } from './breach-event-types';
 export { AUDIT_CHAIN_GENESIS_HASH, computeRowHash, verifyAuditChain } from './audit-chain';
 export type { AuditChainInput, AuditChainRow, AuditChainVerifyResult } from './audit-chain';
 export type { IAuditLogRepository } from './audit.repository.interface';

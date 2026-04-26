@@ -1,0 +1,8 @@
+{
+  "_comment": "Maximum allowed as-any count per scope. The ratchet only allows the count to go DOWN. Regenerate manually only when you intentionally lower the bar.",
+  "backend": 0,
+  "frontend": 0,
+  "web": 0,
+  "total": 0,
+  "generatedAt": "2026-04-26T08:55:54.601Z"
+}

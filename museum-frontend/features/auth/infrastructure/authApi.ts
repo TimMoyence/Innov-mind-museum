@@ -201,9 +201,9 @@ export const authService = {
    * Exports the authenticated user's personal data (GDPR).
    * @returns The user's exported data payload.
    */
-  async exportData(): Promise<OpenApiResponseFor<'/api/auth/export-data', 'get'>> {
+  async exportData(): Promise<OpenApiResponseFor<'/api/users/me/export', 'get'>> {
     return openApiRequest({
-      path: '/api/auth/export-data',
+      path: '/api/users/me/export',
       method: 'get',
     });
   },

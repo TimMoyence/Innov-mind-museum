@@ -3,7 +3,14 @@
   "name": "musaium-monorepo",
   "scripts": {
     "prepare": "husky",
-    "build:tokens": "cd design-system && npm run build"
+    "build:tokens": "cd design-system && npm run build",
+    "sentinel:as-any": "node scripts/sentinels/as-any-ratchet.mjs",
+    "sentinel:env-policy": "node scripts/sentinels/env-policy.mjs",
+    "sentinel:openapi-sync": "node scripts/sentinels/openapi-sync.mjs",
+    "sentinel:migration-revertibility": "node scripts/sentinels/migration-revertibility.mjs",
+    "sentinel:cache-key-parity": "node scripts/sentinels/cache-key-parity.mjs",
+    "sentinel:idor-smoke": "node scripts/sentinels/idor-smoke.mjs",
+    "sentinel:guardrails-ratchet": "node scripts/sentinels/guardrails-ratchet.mjs"
   },
   "devDependencies": {
     "husky": "^9.1.7"

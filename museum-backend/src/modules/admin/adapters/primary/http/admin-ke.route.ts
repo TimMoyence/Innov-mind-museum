@@ -48,7 +48,7 @@ export function createAdminKeRouter(repo: ArtworkKnowledgeRepoPort): Router {
       }
 
       if (adminId) {
-        auditService.log({
+        await auditService.log({
           action: 'KE_ARTWORK_APPROVED',
           actorType: 'user',
           actorId: adminId,

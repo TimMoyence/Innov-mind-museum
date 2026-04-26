@@ -5,59 +5,98 @@
 #
 # This file enforces approval gates on security-critical, contract, and CI files.
 # Created: 2026-04-07 (Tier 0 audit fix)
+# Updated: 2026-04-26 (W0.2 SOC2 CC5/CC8 remediation — team-based ownership)
+#
+# How CODEOWNERS interacts with GitHub branch protection:
+#   - This file alone does NOT enforce review. It declares default reviewers.
+#   - Enforcement requires the branch protection rule:
+#       Settings → Branches → Branch protection rule → "Require review from CODEOWNERS"
+#   - Once enabled on `main` and `staging`, every PR touching a path listed
+#     below will REQUIRE an approving review from the matching team/user
+#     before merge can proceed.
+#   - Solo-maintainer mode (2026-04-26): every rule resolves to @TimKraken.
+#     Path structure preserved so team handles can be substituted later
+#     (search/replace @TimKraken → @<team>) once contributors are added.
+#   - See `docs/CONTRIBUTING.md` for the full PR review flow and required
+#     status checks.
 
 # ─── Default ownership ────────────────────────────────────────────────
 *       @TimKraken
 
 # ─── Backend security-critical ────────────────────────────────────────
 # Auth module — JWT, login, password reset, social, RBAC
-museum-backend/src/modules/auth/                    @TimKraken
-museum-backend/tests/unit/auth/                     @TimKraken
-museum-backend/tests/integration/auth/              @TimKraken
-museum-backend/tests/e2e/auth.e2e.test.ts           @TimKraken
-museum-backend/tests/e2e/rbac.e2e.test.ts           @TimKraken
-museum-backend/tests/e2e/isolation.e2e.test.ts      @TimKraken
+museum-backend/src/modules/auth/**                                      @TimKraken
+museum-backend/tests/unit/auth/**                                       @TimKraken
+museum-backend/tests/integration/auth/**                                @TimKraken
+museum-backend/tests/e2e/auth.e2e.test.ts                               @TimKraken
+museum-backend/tests/e2e/rbac.e2e.test.ts                               @TimKraken
+museum-backend/tests/e2e/isolation.e2e.test.ts                          @TimKraken
+
+# Admin module — RBAC, analytics, audit logs, moderation
+museum-backend/src/modules/admin/**                                     @TimKraken
+
+# Audit logging — SOC2 CC7
+museum-backend/src/shared/audit/**                                      @TimKraken
+
+# Environment + config surface — secrets, feature flags
+museum-backend/src/config/env.ts                                        @TimKraken
 
 # AI Safety — guardrails, sanitization, prompt isolation
+museum-backend/src/modules/chat/**/guardrails/**                        @TimKraken
 museum-backend/src/modules/chat/useCase/art-topic-guardrail.ts          @TimKraken
 museum-backend/src/modules/chat/useCase/session-access.ts               @TimKraken
-museum-backend/src/modules/chat/application/                            @TimKraken
-museum-backend/src/shared/security/                                     @TimKraken
-museum-backend/src/shared/validation/                                   @TimKraken
+museum-backend/src/modules/chat/useCase/guardrail-evaluation.service.ts @TimKraken
+museum-backend/src/shared/security/**                                   @TimKraken
+museum-backend/src/shared/validation/**                                 @TimKraken
 museum-backend/tests/unit/chat/art-topic-guardrail.test.ts              @TimKraken
 museum-backend/tests/unit/chat/orchestrator-messages.test.ts            @TimKraken
 
 # Crypto + secrets surface
-museum-backend/src/modules/chat/adapters/secondary/s3-signing.ts        @TimKraken
-museum-backend/src/modules/chat/adapters/secondary/s3-path-utils.ts     @TimKraken
-museum-backend/src/modules/auth/adapters/secondary/social-token-verifier.adapter.ts  @TimKraken
+museum-backend/src/modules/chat/adapters/secondary/s3-signing.ts                      @TimKraken
+museum-backend/src/modules/chat/adapters/secondary/s3-path-utils.ts                   @TimKraken
+museum-backend/src/modules/auth/adapters/secondary/social-token-verifier.adapter.ts   @TimKraken
 
 # Multi-tenancy + B2B
-museum-backend/src/modules/museum/                                      @TimKraken
-museum-backend/src/modules/admin/                                       @TimKraken
+museum-backend/src/modules/museum/**                                    @TimKraken
 
-# OpenAPI contract — API surface
-museum-backend/openapi/                                                 @TimKraken
-museum-backend/tests/contracts/                                         @TimKraken
+# Migrations — schema irreversibility (DBA + backend leads)
+museum-backend/src/data/db/migrations/**                                @TimKraken
 
-# Migrations — schema irreversibility
-museum-backend/src/data/db/migrations/                                  @TimKraken
+# OpenAPI contract — API surface (cross-team coordination)
+museum-backend/openapi/**                                               @TimKraken
+museum-backend/tests/contracts/**                                       @TimKraken
+**/openapi*.yml                                                         @TimKraken
+**/openapi*.yaml                                                        @TimKraken
+**/openapi*.json                                                        @TimKraken
 
-# ─── CI/CD + workflows ────────────────────────────────────────────────
-.github/workflows/                                  @TimKraken
-.github/CODEOWNERS                                  @TimKraken
-.github/dependabot.yml                              @TimKraken
+# ─── Frontend (mobile / RN+Expo) ──────────────────────────────────────
+museum-frontend/**                                                      @TimKraken
+museum-frontend/features/auth/**                                        @TimKraken
+museum-frontend/shared/api/**                                           @TimKraken
+museum-frontend/shared/infrastructure/**                                @TimKraken
 
-# ─── Frontend security surface ────────────────────────────────────────
-museum-frontend/features/auth/                                          @TimKraken
-museum-frontend/shared/api/                                             @TimKraken
-museum-frontend/shared/infrastructure/                                  @TimKraken
-
-# ─── Web admin (RBAC) ─────────────────────────────────────────────────
-museum-web/src/app/[locale]/admin/                                      @TimKraken
+# ─── Web (Next.js — landing + admin panel) ────────────────────────────
+museum-web/**                                                           @TimKraken
+museum-web/src/app/[locale]/admin/**                                    @TimKraken
 museum-web/src/lib/api.ts                                               @TimKraken
 museum-web/src/hooks/useAuth.tsx                                        @TimKraken
 
+# ─── Design system (shared tokens) ────────────────────────────────────
+design-system/**                                                        @TimKraken
+
+# ─── CI/CD + workflows ────────────────────────────────────────────────
+.github/workflows/**                                                    @TimKraken
+.github/CODEOWNERS                                                      @TimKraken
+.github/dependabot.yml                                                  @TimKraken
+**/Dockerfile*                                                          @TimKraken
+**/docker-compose*.yml                                                  @TimKraken
+
+# ─── Compliance + legal + incident response ───────────────────────────
+docs/compliance/**                                                      @TimKraken
+docs/incidents/**                                                       @TimKraken
+docs/CI_CD_SECRETS.md                                                   @TimKraken
+
 # ─── Project guidance ─────────────────────────────────────────────────
-CLAUDE.md                                           @TimKraken
-docs/V1_Sprint/                                     @TimKraken
+CLAUDE.md                                                               @TimKraken
+AGENTS.md                                                               @TimKraken
+docs/CONTRIBUTING.md                                                    @TimKraken

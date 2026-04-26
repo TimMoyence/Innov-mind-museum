@@ -63,7 +63,9 @@ describeE2E('golden path 9 — knowledge extraction full pipeline', () => {
 
     const classifierMock: ContentClassifierPort = {
       classify: jest.fn().mockResolvedValue({
-        artwork: {
+        type: 'artwork',
+        confidence: 0.95,
+        data: {
           title: 'Mona Lisa',
           artist: 'Leonardo da Vinci',
           period: 'Renaissance',
@@ -73,8 +75,6 @@ describeE2E('golden path 9 — knowledge extraction full pipeline', () => {
           dimensions: '77 cm × 53 cm',
           currentLocation: 'Louvre Museum, Paris',
         },
-        museum: null,
-        confidence: 0.95,
       }),
     };
 

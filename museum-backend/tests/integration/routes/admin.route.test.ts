@@ -552,19 +552,27 @@ describe('Admin Routes — RBAC Enforcement', () => {
     });
 
     // RBAC tightening (Sprint 1 H3): moderator is now denied on admin-only endpoints
-    // (users, users/:id/role, audit-logs, analytics/*, museums/:id/cache/purge).
-    // Moderator retains access to moderation endpoints (stats, reports, tickets,
-    // reviews, ke/pending, ke/:id/approve). See docs/rbac-matrix.md + rbac-matrix.test.ts.
+    // (users/:id/role, audit-logs, analytics/*, museums/:id/cache/purge).
+    // Moderator retains read-only access to GET /users (for ticket/report
+    // triage) plus moderation endpoints (stats, reports, tickets, reviews,
+    // ke/pending, ke/:id/approve). See docs/rbac-matrix.md + rbac-matrix.test.ts.
     describe('moderator token — RBAC scope (tightened in Sprint 1)', () => {
-      it('gets 403 on admin-only GET /users', async () => {
+      it('can access admin+moderator GET /users (read-only directory)', async () => {
         const modToken = makeToken({ role: 'moderator' });
+        mockListUsers.mockResolvedValueOnce({
+          data: [],
+          total: 0,
+          page: 1,
+          limit: 20,
+          totalPages: 0,
+        });
 
         const res = await request(app)
           .get('/api/admin/users')
           .set('Authorization', `Bearer ${modToken}`);
 
-        expect(res.status).toBe(403);
-        expect(mockListUsers).not.toHaveBeenCalled();
+        expect(res.status).toBe(200);
+        expect(mockListUsers).toHaveBeenCalledTimes(1);
       });
 
       it('can access admin+moderator GET /stats', async () => {

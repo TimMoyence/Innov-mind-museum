@@ -164,6 +164,14 @@ export async function createE2EHarness(): Promise<E2EHarness> {
   await appDataSource.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
   await appDataSource.runMigrations();
 
+  // Build the chat module singleton so wiring helpers (e.g. `getChatRepository`
+  // used by the GDPR DSAR export proxy in `@modules/auth/useCase`) can resolve
+  // their dependencies. The harness still injects its own mock-orchestrator
+  // ChatService into the Express app below — `buildChatService` is just here
+  // to populate the singleton's other slots (repository, imageStorage, etc.).
+  const { buildChatService } = await import('@modules/chat');
+  buildChatService(appDataSource);
+
   const chatService = new ChatService({
     repository: new TypeOrmChatRepository(appDataSource),
     orchestrator: {

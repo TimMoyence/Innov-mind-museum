@@ -75,7 +75,9 @@ function createImageServeHandler(chatService: ChatService) {
       throw badRequest(verification.reason);
     }
 
-    const image = await chatService.getMessageImageRef(req.params.messageId);
+    // HMAC + TTL already verified above — authorization is delegated to the signed token.
+    // Use the bypass path so we don't re-enforce session ownership against an anonymous req.
+    const image = await chatService.getMessageImageRefBySignedToken(req.params.messageId);
     if (isS3ImageRef(image.imageRef)) {
       const signed = buildImageReadUrl({
         baseUrl: resolveRequestBaseUrl(req),

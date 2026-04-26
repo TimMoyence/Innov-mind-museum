@@ -174,6 +174,12 @@ export interface AppEnv {
    * (6 months) aligned with GDPR data-minimization policy.
    */
   chatPurgeRetentionDays: number;
+  /**
+   * Opt-in weekly S3 orphan-sweep job for chat-images + chat-audios prefixes.
+   * Default `false` — flip on after the in-cron media purge ships to clean
+   * historical orphans, then leave it on as a long-term safety net.
+   */
+  s3OrphanSweepEnabled: boolean;
   /** Knowledge base (Wikidata) configuration. */
   knowledgeBase: {
     timeoutMs: number;

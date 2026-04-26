@@ -1,23 +1,108 @@
-#!/bin/sh
+#!/usr/bin/env bash
+# =============================================================================
+# Musaium pre-push — NO BYPASS
+# =============================================================================
+# This hook is mandatory. There is no SKIP_PRE_PUSH escape hatch.
+# `git push --no-verify` is forbidden by team policy. Server-side CI mirrors
+# every gate below (.github/workflows/sentinel-mirror.yml) so any bypass is
+# caught at PR time. See docs/CONTRIBUTING.md § Pre-push hooks (NO BYPASS).
+#
+# Budget: < 30 seconds typical.
+# Gates (each fails fast via `set -e`):
+#   1. Backend tsc          — pnpm lint
+#   2. Frontend tsc         — npm run lint
+#   3. Web tsc              — pnpm lint
+#   4. OpenAPI sync         — backend validate + frontend types check
+#   5. Migration revertibility sentinel
+#   6. Cache-key parity sentinel (FE/BE) — auto-skips if test absent
+#   7. IDOR matrix smoke sentinel        — auto-skips if test absent
+#   8. Guardrails ratchet sentinel       — keyword count >= baseline
+#   9. as-any ratchet (full repo)        — count <= baseline
+#  10. Gitleaks scan on push range
+# =============================================================================
+set -e
 
-echo "🔍 Pre-push: type-checking backend..."
-cd museum-backend && npx tsc --noEmit
-BACKEND_EXIT=$?
-cd ..
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
 
-echo "🔍 Pre-push: type-checking frontend..."
-cd museum-frontend && npx tsc --noEmit
-FRONTEND_EXIT=$?
-cd ..
+start_ts=$(date +%s)
+gate_ts=0
+gate_start() { gate_ts=$(date +%s); echo "[pre-push] ► $1"; }
+gate_end()   { echo "[pre-push] ✓ $1 ($(( $(date +%s) - gate_ts ))s)"; }
 
-echo "🔍 Pre-push: type-checking museum-web..."
-cd museum-web && pnpm run typecheck
-WEB_EXIT=$?
-cd ..
+# ─── Gate 1 — Backend tsc ──────────────────────────────────────────────────
+gate_start "Gate 1/10 backend tsc (museum-backend)"
+( cd museum-backend && pnpm lint ) || {
+  echo "[pre-push] ✗ backend tsc failed"; exit 1;
+}
+gate_end "Gate 1"
 
-if [ $BACKEND_EXIT -ne 0 ] || [ $FRONTEND_EXIT -ne 0 ] || [ $WEB_EXIT -ne 0 ]; then
-  echo "❌ Type errors detected — push aborted."
+# ─── Gate 2 — Frontend tsc ─────────────────────────────────────────────────
+gate_start "Gate 2/10 frontend tsc (museum-frontend)"
+( cd museum-frontend && npm run lint ) || {
+  echo "[pre-push] ✗ frontend tsc failed"; exit 1;
+}
+gate_end "Gate 2"
+
+# ─── Gate 3 — Web tsc ──────────────────────────────────────────────────────
+gate_start "Gate 3/10 web tsc (museum-web)"
+( cd museum-web && pnpm lint ) || {
+  echo "[pre-push] ✗ web tsc/ESLint failed"; exit 1;
+}
+gate_end "Gate 3"
+
+# ─── Gate 4 — OpenAPI sync ─────────────────────────────────────────────────
+gate_start "Gate 4/10 OpenAPI sync (BE validate + FE types check)"
+node scripts/sentinels/openapi-sync.mjs || exit 1
+gate_end "Gate 4"
+
+# ─── Gate 5 — Migration revertibility ──────────────────────────────────────
+gate_start "Gate 5/10 migration revertibility sentinel"
+node scripts/sentinels/migration-revertibility.mjs || exit 1
+gate_end "Gate 5"
+
+# ─── Gate 6 — Cache-key parity ─────────────────────────────────────────────
+gate_start "Gate 6/10 cache-key parity sentinel"
+node scripts/sentinels/cache-key-parity.mjs || exit 1
+gate_end "Gate 6"
+
+# ─── Gate 7 — IDOR matrix smoke ────────────────────────────────────────────
+gate_start "Gate 7/10 IDOR matrix smoke sentinel"
+node scripts/sentinels/idor-smoke.mjs || exit 1
+gate_end "Gate 7"
+
+# ─── Gate 8 — Guardrails ratchet ───────────────────────────────────────────
+gate_start "Gate 8/10 guardrails ratchet sentinel"
+node scripts/sentinels/guardrails-ratchet.mjs || exit 1
+gate_end "Gate 8"
+
+# ─── Gate 9 — as-any ratchet (full repo) ───────────────────────────────────
+gate_start "Gate 9/10 as-any ratchet (full repo)"
+node scripts/sentinels/as-any-ratchet.mjs || exit 1
+gate_end "Gate 9"
+
+# ─── Gate 10 — Gitleaks on push range ──────────────────────────────────────
+gate_start "Gate 10/10 gitleaks (push range)"
+upstream="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo '')"
+if [ -n "$upstream" ]; then
+  range="${upstream}..HEAD"
+else
+  range="HEAD~10..HEAD"
+fi
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks detect --redact --no-banner --config .gitleaks.toml \
+    --log-opts="${range}" || {
+    echo "[pre-push] ✗ gitleaks found a secret in the push range (${range})"
+    exit 1
+  }
+else
+  echo "[pre-push] ✗ gitleaks binary not found — install: brew install gitleaks"
   exit 1
 fi
+gate_end "Gate 10"
 
-echo "✅ Type-check passed."
+total=$(( $(date +%s) - start_ts ))
+echo ""
+echo "[pre-push] ═══════════════════════════════════════════════════"
+echo "[pre-push] ✅ All 10 gates passed in ${total}s — push authorized"
+echo "[pre-push] ═══════════════════════════════════════════════════"

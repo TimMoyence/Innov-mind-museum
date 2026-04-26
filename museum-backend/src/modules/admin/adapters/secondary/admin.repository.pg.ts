@@ -96,25 +96,26 @@ export class AdminRepositoryPg implements IAdminRepository {
 
   /** Retrieves a paginated list of users with optional search and role filters. */
   async listUsers(filters: ListUsersFilters): Promise<PaginatedResult<AdminUserDTO>> {
-    const qb = this.userRepo.createQueryBuilder('user');
+    // Alias `u` (not `user`) — `user` is a reserved keyword in PostgreSQL (= CURRENT_USER)
+    // and breaks raw SQL fragments. See getStats() for the same pattern.
+    const qb = this.userRepo.createQueryBuilder('u');
 
     if (filters.search) {
       const pattern = `%${filters.search}%`;
-      qb.where(
-        '(user.email ILIKE :search OR user.firstname ILIKE :search OR user.lastname ILIKE :search)',
-        { search: pattern },
-      );
+      qb.where('(u.email ILIKE :search OR u.firstname ILIKE :search OR u.lastname ILIKE :search)', {
+        search: pattern,
+      });
     }
 
     if (filters.role) {
-      qb.andWhere('user.role = :role', { role: filters.role });
+      qb.andWhere('u.role = :role', { role: filters.role });
     }
 
     const { page, limit } = filters.pagination;
     const offset = (page - 1) * limit;
 
     const [users, total] = await qb
-      .orderBy('user.createdAt', 'DESC')
+      .orderBy('u.createdAt', 'DESC')
       .skip(offset)
       .take(limit)
       .getManyAndCount();
@@ -189,14 +190,13 @@ export class AdminRepositoryPg implements IAdminRepository {
   async getStats(): Promise<AdminStats> {
     const [usersResult, sessionsResult, messagesResult] = await Promise.all([
       this.userRepo
-        .createQueryBuilder('user')
-        .select('user.role', 'role')
+        // Alias `u` (not `user`) — `user` is a reserved keyword in PostgreSQL
+        // (= CURRENT_USER); raw SQL fragments emit `user.role` literally and fail.
+        .createQueryBuilder('u')
+        .select('u.role', 'role')
         .addSelect('COUNT(*)', 'total')
-        .addSelect(
-          'COUNT(*) FILTER (WHERE user."createdAt" >= NOW() - INTERVAL \'7 days\')',
-          'recent',
-        )
-        .groupBy('user.role')
+        .addSelect('COUNT(*) FILTER (WHERE u."createdAt" >= NOW() - INTERVAL \'7 days\')', 'recent')
+        .groupBy('u.role')
         .getRawMany<{ role: string; total: string; recent: string }>(),
       this.sessionRepo
         .createQueryBuilder('session')

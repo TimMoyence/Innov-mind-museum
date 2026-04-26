@@ -619,6 +619,14 @@
       "weekly_closed": "{{day}} 闭馆"
     }
   },
+  "museum": {
+    "about": "关于",
+    "opening_hours": "开放时间",
+    "website": "网站",
+    "phone": "电话",
+    "loading_details": "正在加载详情…",
+    "no_extra_info": "暂无详细信息。"
+  },
   "days": {
     "mon": "周一",
     "tue": "周二",

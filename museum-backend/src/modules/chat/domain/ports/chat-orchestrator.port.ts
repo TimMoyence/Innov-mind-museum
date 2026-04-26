@@ -30,6 +30,12 @@ export interface OrchestratorInput {
   lowDataMode?: boolean;
   /** Session-level museum ID, used for cache key scoping. */
   museumId?: number | null;
+  /**
+   * Authenticated user id of the requester. Used by the cache layer to
+   * scope user-specific entries (STRIDE I1 / R1 remediation). Null/absent
+   * disables user-scoped caching for this turn.
+   */
+  userId?: number | null;
   /** Resolved geolocation context from per-message GPS coordinates. */
   resolvedLocation?: ResolvedLocation;
   /**

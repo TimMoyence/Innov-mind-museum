@@ -1,0 +1,175 @@
+name: breach-72h-timer
+
+# GDPR Art 33 — 72h breach-notification SLA tracker.
+#
+# Runs daily, scans every open issue tagged `incident`, parses the "Detected
+# At" timestamp from the security-incident issue form (falls back to issue
+# `created_at`), and:
+#
+#   - At T+48h: posts a warning comment + adds label `breach-72h-near`
+#     (idempotent — only posts once per state transition).
+#   - At T+72h: posts an alert comment + adds label `breach-72h-elapsed`
+#     unless the issue already carries `cnil-notified` (DPO marks this label
+#     after submitting the CNIL declaration via the Art 33 portal).
+#
+# This workflow does NOT close the issue and does NOT touch any code paths.
+# It is a pure GitHub-side reminder — the source of truth for breach data
+# lives in `audit_logs` (see `museum-backend/src/shared/audit/audit.service.ts`
+# `auditCriticalSecurityEvent`) and is hash-chained for SOC2/GDPR Art 5(2)
+# accountability.
+#
+# Cross-references:
+#   - docs/incidents/BREACH_PLAYBOOK.md § 4 (72-hour timeline)
+#   - .github/ISSUE_TEMPLATE/security-incident.yml (form fields)
+#   - museum-backend/src/shared/audit/breach-event-types.ts (event constants)
+
+on:
+  schedule:
+    # 09:00 UTC daily — early enough to surface the deadline at the start of
+    # the working day for the FR / EU on-call rotation.
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: breach-72h-timer
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    name: Scan open incident issues for 72h SLA
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scan issues + post deadline reminders
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
+            const SEVENTY_TWO_HOURS_MS = 72 * 60 * 60 * 1000;
+            const NEAR_LABEL = 'breach-72h-near';
+            const ELAPSED_LABEL = 'breach-72h-elapsed';
+            const NOTIFIED_LABEL = 'cnil-notified';
+
+            // Pull open issues tagged `incident`. The security-incident
+            // template auto-applies `security`, `incident`, `needs-triage`.
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'incident',
+              per_page: 100,
+            });
+
+            core.info(`Found ${issues.length} open incident issue(s).`);
+
+            // Parse "Detected At" from the form body; fall back to created_at.
+            // The form is rendered as markdown with "### Detected At" headings.
+            // A line like `2026-04-26T08:00:00Z` (or any ISO-8601 in the body)
+            // is the canonical T+0; if absent, we use issue creation time.
+            const detectedAtFromBody = (body) => {
+              if (!body) return null;
+              // Heuristic: first ISO-8601 datetime under a "Detected At" or
+              // "Detection time" heading. Tolerant of tabs/spaces.
+              const headingMatch = body.match(
+                /###\s*(?:Detected At|Detection time|T\+0)[\s\S]{0,400}?(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)/i,
+              );
+              if (headingMatch) {
+                const d = new Date(headingMatch[1]);
+                if (!Number.isNaN(d.getTime())) return d;
+              }
+              return null;
+            };
+
+            const now = Date.now();
+
+            for (const issue of issues) {
+              if (issue.pull_request) continue; // safety: never PRs
+
+              const labels = (issue.labels || []).map((l) =>
+                typeof l === 'string' ? l : l.name,
+              );
+
+              if (labels.includes(NOTIFIED_LABEL)) {
+                core.info(`#${issue.number} already CNIL-notified — skipping.`);
+                continue;
+              }
+
+              const detectedAt =
+                detectedAtFromBody(issue.body) ?? new Date(issue.created_at);
+              const elapsedMs = now - detectedAt.getTime();
+              const deadline = new Date(
+                detectedAt.getTime() + SEVENTY_TWO_HOURS_MS,
+              ).toISOString();
+
+              core.info(
+                `#${issue.number} detectedAt=${detectedAt.toISOString()} ` +
+                  `elapsed=${Math.round(elapsedMs / 3600000)}h deadline=${deadline}`,
+              );
+
+              // T+72h: deadline passed, no CNIL-notified label.
+              if (elapsedMs >= SEVENTY_TWO_HOURS_MS) {
+                if (!labels.includes(ELAPSED_LABEL)) {
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    labels: [ELAPSED_LABEL],
+                  });
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body:
+                      `:rotating_light: **GDPR Art 33 deadline ELAPSED**\n\n` +
+                      `Detected at: \`${detectedAt.toISOString()}\` ` +
+                      `(T+0)\nDeadline (T+72h): \`${deadline}\`\n\n` +
+                      `If a CNIL notification was filed, add the ` +
+                      `\`${NOTIFIED_LABEL}\` label to silence this reminder ` +
+                      `and record the receipt number in this issue.\n\n` +
+                      `Per [BREACH_PLAYBOOK.md § 4](../docs/incidents/BREACH_PLAYBOOK.md): ` +
+                      `late notifications are permitted under Art 33(1) ` +
+                      `**only with a documented reason** in the post-mortem.`,
+                  });
+                  core.warning(`#${issue.number} — T+72h elapsed, label + comment posted.`);
+                }
+                continue;
+              }
+
+              // T+48h: approaching, but not past. Add `near` label once.
+              if (elapsedMs >= FORTY_EIGHT_HOURS_MS) {
+                if (!labels.includes(NEAR_LABEL)) {
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    labels: [NEAR_LABEL],
+                  });
+                  const remainingHours = Math.max(
+                    0,
+                    Math.round((SEVENTY_TWO_HOURS_MS - elapsedMs) / 3600000),
+                  );
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body:
+                      `:warning: **GDPR Art 33 deadline approaching** — ` +
+                      `roughly **${remainingHours}h remaining** before the ` +
+                      `72-hour CNIL notification window closes.\n\n` +
+                      `Detected at: \`${detectedAt.toISOString()}\` ` +
+                      `(T+0)\nDeadline (T+72h): \`${deadline}\`\n\n` +
+                      `Confirm the runbook is on track per ` +
+                      `[BREACH_PLAYBOOK.md § 4](../docs/incidents/BREACH_PLAYBOOK.md). ` +
+                      `Once notification is filed, add the ` +
+                      `\`${NOTIFIED_LABEL}\` label.`,
+                  });
+                  core.warning(`#${issue.number} — T+48h reached, label + comment posted.`);
+                }
+                continue;
+              }
+
+              core.info(`#${issue.number} — within first 48h, no action.`);
+            }

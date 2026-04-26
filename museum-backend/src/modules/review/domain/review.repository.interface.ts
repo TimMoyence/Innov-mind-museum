@@ -22,4 +22,11 @@ export interface IReviewRepository {
 
   /** Get average rating and total count of approved reviews. */
   getAverageRating(): Promise<{ average: number; count: number }>;
+
+  /**
+   * List all reviews authored by a single user, ordered by createdAt DESC.
+   * Used by the GDPR Art. 15 / Art. 20 data export — no pagination because
+   * a user's own review history is bounded (typically < 10 rows).
+   */
+  listForUser(userId: number): Promise<ReviewDTO[]>;
 }

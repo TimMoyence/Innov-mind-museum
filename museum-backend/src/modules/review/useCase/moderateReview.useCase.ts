@@ -83,7 +83,7 @@ export class ModerateReviewUseCase {
       throw notFound('Review not found');
     }
 
-    this.audit.log({
+    await this.audit.log({
       action: AUDIT_ADMIN_REVIEW_MODERATED,
       actorType: 'user',
       actorId: input.actorId,

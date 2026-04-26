@@ -1,13 +1,19 @@
 import os from 'node:os';
 
-import { env } from '@src/config/env';
-
 type LogContext = Record<string, unknown>;
 
+// Read process.env directly — importing `@src/config/env` from logger forces
+// eager evaluation of the full env schema as soon as ANY module pulls the
+// logger. That made the e2e harness flaky for the knowledge-extraction
+// suite: the testcontainer's host/port were set on `process.env` AFTER
+// env.ts had already snapshotted them, so AppDataSource pointed at
+// localhost:5432 and connections failed with `ECONNREFUSED ::1:5432`.
+// Logger only needs the static `service` / `environment` / `version`
+// fields, none of which depend on the rest of the env schema.
 const defaultFields = {
   service: 'museum-backend',
-  environment: env.nodeEnv,
-  version: env.appVersion,
+  environment: process.env.NODE_ENV ?? 'development',
+  version: process.env.APP_VERSION ?? process.env.npm_package_version ?? 'unknown',
   hostname: os.hostname(),
 };
 

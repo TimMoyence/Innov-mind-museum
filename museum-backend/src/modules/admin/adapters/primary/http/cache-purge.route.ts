@@ -32,7 +32,7 @@ export function createCachePurgeRouter(cache: CacheService): Router {
       logger.warn('llm_cache_admin_purged', { museumId, adminId, durationMs });
 
       if (adminId) {
-        auditService.log({
+        await auditService.log({
           action: 'CACHE_PURGE',
           actorType: 'user',
           actorId: adminId,

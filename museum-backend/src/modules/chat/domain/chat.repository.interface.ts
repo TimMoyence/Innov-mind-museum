@@ -104,6 +104,7 @@ export interface UserChatExportData {
       role: string;
       text?: string | null;
       imageRef?: string | null;
+      audioUrl?: string | null;
       createdAt: string;
       metadata?: Record<string, unknown> | null;
     }[];

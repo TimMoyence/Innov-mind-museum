@@ -311,6 +311,25 @@ export class ChatService {
   }
 
   /**
+   * Resolves the image reference for a message when the caller has already verified an HMAC
+   * signed read URL. Bypasses session-ownership because the signed token (short-lived, issued
+   * to the legitimate owner) IS the authorization on this code path.
+   *
+   * MUST only be called after `verifySignedChatImageReadUrl` returns ok.
+   *
+   * @param messageId - UUID of the message containing the image.
+   * @returns The image reference, and optionally the local file name and content type.
+   * @throws {AppError} 400 on invalid id, 404 if message or image not found.
+   */
+  async getMessageImageRefBySignedToken(messageId: string): Promise<{
+    imageRef: string;
+    fileName?: string;
+    contentType?: string;
+  }> {
+    return await this.media.getMessageImageRefBySignedToken(messageId);
+  }
+
+  /**
    * Reports an assistant message for moderation.
    *
    * @param messageId - UUID of the assistant message to report.

@@ -195,7 +195,7 @@ export class GuardrailEvaluationService {
   }): Promise<PostMessageResult> {
     const { sessionId, reason, requestedLocale, userId, userMessage } = params;
 
-    this.audit?.log({
+    await this.audit?.log({
       action: AUDIT_SECURITY_GUARDRAIL_BLOCK,
       actorType: userId ? 'user' : 'anonymous',
       actorId: userId ?? null,

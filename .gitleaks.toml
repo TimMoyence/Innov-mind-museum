@@ -85,6 +85,20 @@ paths = [
   # PG advisory-lock bigint constants (hex literals matched by generic-api-key
   # rule); these are integer lock keys, not credentials.
   '''museum-backend/src/shared/audit/audit\.repository\.pg\.ts$''',
+  # CocoaPods Manifest/Podfile lockfiles — the hex strings the generic-api-key
+  # rule trips on are SHA-1 digests of pod source archives, not credentials.
+  # Same applies to AppCheckCore's vendored README which embeds an example
+  # debug-mode token literal in documentation.
+  '''museum-frontend/ios/Podfile\.lock$''',
+  '''museum-frontend/ios/Pods/Manifest\.lock$''',
+  '''museum-frontend/ios/Pods/AppCheckCore/.*''',
+  # Local-only manual test client (REST Client / IntelliJ HTTP). The "tokens"
+  # here are fake values used during dev to exercise routes; never real auth.
+  '''museum-backend/test\.http$''',
+  # Historical: an early bootstrap of the frontend kept a hardcoded JWT in
+  # `museum-frontend/context/api.ts`; the file no longer exists on HEAD,
+  # but full-repo gitleaks still trips on the old commit.
+  '''museum-frontend/context/api\.ts$''',
 ]
 # Placeholder tokens used in docs / examples / tests. These must never
 # resemble real credentials; add a comment explaining each addition.

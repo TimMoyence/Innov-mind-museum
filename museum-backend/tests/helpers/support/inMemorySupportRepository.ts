@@ -133,6 +133,19 @@ export class InMemorySupportRepository implements ISupportRepository {
     return ticket?.userId === userId;
   }
 
+  async listForUser(userId: number): Promise<TicketDetailDTO[]> {
+    const owned = this.tickets
+      .filter((t) => t.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return owned.map((ticket) => ({
+      ...this.toTicketDTO(ticket),
+      messages: this.messages
+        .filter((m) => m.ticketId === ticket.id)
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        .map((m) => this.toMessageDTO(m)),
+    }));
+  }
+
   /** Test helper: reset all stored data. */
   clear(): void {
     this.tickets = [];
@@ -144,7 +157,10 @@ export class InMemorySupportRepository implements ISupportRepository {
     return [...this.tickets];
   }
 
-  /** Test helper: seed a ticket directly. */
+  /**
+   * Test helper: seed a ticket directly.
+   * @param ticket
+   */
   seed(
     ticket: Partial<StoredTicket> & {
       id: string;

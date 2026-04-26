@@ -45,7 +45,7 @@ export class UpdateTicketStatusUseCase {
       throw notFound('Ticket not found');
     }
 
-    auditService.log({
+    await auditService.log({
       action: AUDIT_ADMIN_TICKET_UPDATED,
       actorType: 'user',
       actorId: input.actorId,

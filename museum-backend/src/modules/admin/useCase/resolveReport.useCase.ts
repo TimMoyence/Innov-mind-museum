@@ -37,7 +37,7 @@ export class ResolveReportUseCase {
       throw notFound('Report not found');
     }
 
-    auditService.log({
+    await auditService.log({
       action: AUDIT_ADMIN_REPORT_RESOLVED,
       actorType: 'user',
       actorId: input.reviewedBy,

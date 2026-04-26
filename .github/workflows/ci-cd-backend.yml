@@ -131,8 +131,14 @@ jobs:
       - name: Docker availability
         run: docker version
 
+      # `--coverage=false`: `jest.config.ts` pins `collectCoverage: true`
+      # plus global thresholds (87/77/81/87) for the unit job. The e2e suite
+      # alone exercises ~50% of the codebase, so leaving coverage on makes
+      # the job fail with a threshold error AFTER every test passes — coverage
+      # is already enforced in the `quality` job above; we just need a
+      # green/red signal here.
       - name: E2E Postgres (Testcontainers)
-        run: RUN_E2E=true pnpm exec jest --watchman=false --runInBand --testPathPattern='tests/e2e/'
+        run: RUN_E2E=true pnpm exec jest --watchman=false --runInBand --coverage=false --testPathPattern='tests/e2e/'
 
   # ─── 3. AI integration tests (manual only) ───────────────────────────
   ai-tests:

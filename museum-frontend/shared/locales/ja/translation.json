@@ -619,6 +619,14 @@
       "weekly_closed": "{{day}} 休館"
     }
   },
+  "museum": {
+    "about": "概要",
+    "opening_hours": "開館時間",
+    "website": "ウェブサイト",
+    "phone": "電話",
+    "loading_details": "情報を読み込み中…",
+    "no_extra_info": "詳細情報はありません。"
+  },
   "days": {
     "mon": "月",
     "tue": "火",

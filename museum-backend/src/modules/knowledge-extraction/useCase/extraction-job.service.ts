@@ -3,7 +3,10 @@ import { logger } from '@shared/logger/logger';
 import { ExtractedContentStatus } from '../domain/extracted-content.entity';
 
 import type { ArtworkKnowledgeRepoPort } from '../domain/ports/artwork-knowledge-repo.port';
-import type { ContentClassifierPort } from '../domain/ports/content-classifier.port';
+import type {
+  ClassificationResult,
+  ContentClassifierPort,
+} from '../domain/ports/content-classifier.port';
 import type { ExtractedContentRepoPort } from '../domain/ports/extracted-content-repo.port';
 import type { MuseumEnrichmentRepoPort } from '../domain/ports/museum-enrichment-repo.port';
 import type { ScraperPort } from '../domain/ports/scraper.port';
@@ -91,8 +94,30 @@ export class ExtractionJobService {
 
       const needsReview = classification.confidence < this.config.confidenceThreshold;
 
-      // 6. Store structured data
-      if (classification.type === 'artwork') {
+      // 6. Store structured data — exhaustive branching on the discriminant.
+      await this.storeClassification(url, locale, classification, needsReview);
+    } catch (err) {
+      logger.error('extraction_job_error', {
+        url,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  /**
+   * Persists a classification result. Exhaustive on the discriminant `type`.
+   * - `artwork` / `museum` → upsert structured row + stamp content row CLASSIFIED.
+   * - `irrelevant` → leave structured tables alone, stamp content row LOW_CONFIDENCE
+   *   so it isn't misreported as a successful classification.
+   */
+  private async storeClassification(
+    url: string,
+    locale: string,
+    classification: ClassificationResult,
+    needsReview: boolean,
+  ): Promise<void> {
+    switch (classification.type) {
+      case 'artwork':
         await this.artworkRepo.upsertFromClassification(
           {
             ...classification.data,
@@ -103,7 +128,15 @@ export class ExtractionJobService {
           },
           url,
         );
-      } else if (classification.type === 'museum') {
+        await this.contentRepo.updateStatus(url, ExtractedContentStatus.CLASSIFIED);
+        logger.info('extraction_success', {
+          url,
+          type: classification.type,
+          confidence: classification.confidence,
+          needsReview,
+        });
+        return;
+      case 'museum':
         await this.museumRepo.upsertFromClassification(
           {
             ...classification.data,
@@ -124,20 +157,25 @@ export class ExtractionJobService {
           },
           url,
         );
+        await this.contentRepo.updateStatus(url, ExtractedContentStatus.CLASSIFIED);
+        logger.info('extraction_success', {
+          url,
+          type: classification.type,
+          confidence: classification.confidence,
+          needsReview,
+        });
+        return;
+      case 'irrelevant':
+        await this.contentRepo.updateStatus(url, ExtractedContentStatus.LOW_CONFIDENCE);
+        logger.info('extraction_irrelevant', { url, confidence: classification.confidence });
+        return;
+      default: {
+        // Exhaustiveness guard — `classification` narrows to `never` when all
+        // discriminant cases are handled. If a new variant is added to
+        // ClassificationResult without a case here, this assignment fails to compile.
+        const _exhaustive: never = classification;
+        return _exhaustive;
       }
-
-      await this.contentRepo.updateStatus(url, ExtractedContentStatus.CLASSIFIED);
-      logger.info('extraction_success', {
-        url,
-        type: classification.type,
-        confidence: classification.confidence,
-        needsReview,
-      });
-    } catch (err) {
-      logger.error('extraction_job_error', {
-        url,
-        error: err instanceof Error ? err.message : String(err),
-      });
     }
   }
 }

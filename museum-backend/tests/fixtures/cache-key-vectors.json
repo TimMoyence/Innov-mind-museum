@@ -1,57 +1,102 @@
 [
   {
+    "label": "generic / global namespace, fr/beginner",
     "input": {
       "text": "Qui a peint la Joconde ?",
       "museumId": "louvre",
       "locale": "fr",
       "guideLevel": "beginner",
-      "audioDescriptionMode": false
+      "audioDescriptionMode": false,
+      "hasHistory": false,
+      "hasAttachment": false,
+      "hasGeo": false
     },
     "normalizedText": "qui a peint la joconde ?",
-    "components": "qui a peint la joconde ?|fr|beginner|0"
+    "components": "qui a peint la joconde ?|fr|beginner|0",
+    "expectedKeyPrefix": "chat:llm:global:louvre:"
   },
   {
+    "label": "generic / global namespace, en/expert with extra whitespace",
     "input": {
       "text": "  Who painted  the Mona Lisa?  ",
       "museumId": "louvre",
       "locale": "en",
       "guideLevel": "expert",
-      "audioDescriptionMode": false
+      "audioDescriptionMode": false,
+      "hasHistory": false,
+      "hasAttachment": false,
+      "hasGeo": false
     },
     "normalizedText": "who painted the mona lisa?",
-    "components": "who painted the mona lisa?|en|expert|0"
+    "components": "who painted the mona lisa?|en|expert|0",
+    "expectedKeyPrefix": "chat:llm:global:louvre:"
   },
   {
+    "label": "generic / global namespace, audio description mode on",
     "input": {
       "text": "Quand a été créée cette œuvre ?",
       "museumId": "orsay",
       "locale": "fr",
       "guideLevel": "intermediate",
-      "audioDescriptionMode": true
+      "audioDescriptionMode": true,
+      "hasHistory": false,
+      "hasAttachment": false,
+      "hasGeo": false
     },
     "normalizedText": "quand a été créée cette œuvre ?",
-    "components": "quand a été créée cette œuvre ?|fr|intermediate|1"
+    "components": "quand a été créée cette œuvre ?|fr|intermediate|1",
+    "expectedKeyPrefix": "chat:llm:global:orsay:"
   },
   {
+    "label": "user-scoped namespace, geo Paris/FR",
+    "input": {
+      "text": "Que voir ici ?",
+      "museumId": "louvre",
+      "locale": "fr",
+      "guideLevel": "beginner",
+      "audioDescriptionMode": false,
+      "userId": 42,
+      "hasHistory": false,
+      "hasAttachment": false,
+      "hasGeo": true,
+      "geoBucket": "Paris|FR"
+    },
+    "normalizedText": "que voir ici ?",
+    "components": "que voir ici ?|fr|beginner|0|geo:Paris|FR",
+    "expectedKeyPrefix": "chat:llm:user:42:louvre:"
+  },
+  {
+    "label": "user-scoped namespace, history present forces scope",
     "input": {
       "text": "Quelle technique ?",
       "museumId": "met",
       "locale": "fr",
       "guideLevel": "beginner",
-      "audioDescriptionMode": false
+      "audioDescriptionMode": false,
+      "userId": 7,
+      "hasHistory": true,
+      "hasAttachment": false,
+      "hasGeo": false
     },
     "normalizedText": "quelle technique ?",
-    "components": "quelle technique ?|fr|beginner|0"
+    "components": "quelle technique ?|fr|beginner|0",
+    "expectedKeyPrefix": "chat:llm:user:7:met:"
   },
   {
+    "label": "anon-scoped namespace (frontend guest mode, attachment present)",
     "input": {
       "text": "Tell me about this painting",
       "museumId": "british-museum",
       "locale": "en",
       "guideLevel": "beginner",
-      "audioDescriptionMode": false
+      "audioDescriptionMode": false,
+      "anonId": "device-abc123",
+      "hasHistory": false,
+      "hasAttachment": true,
+      "hasGeo": false
     },
     "normalizedText": "tell me about this painting",
-    "components": "tell me about this painting|en|beginner|0"
+    "components": "tell me about this painting|en|beginner|0",
+    "expectedKeyPrefix": "chat:llm:anon:device-abc123:british-museum:"
   }
 ]

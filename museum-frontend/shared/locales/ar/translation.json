@@ -609,6 +609,14 @@
       "weekly_closed": "{{day}} مغلق"
     }
   },
+  "museum": {
+    "about": "حول",
+    "opening_hours": "ساعات العمل",
+    "website": "الموقع الإلكتروني",
+    "phone": "الهاتف",
+    "loading_details": "جارٍ تحميل المعلومات…",
+    "no_extra_info": "لا توجد تفاصيل إضافية متاحة."
+  },
   "days": {
     "mon": "إثن",
     "tue": "ثلا",

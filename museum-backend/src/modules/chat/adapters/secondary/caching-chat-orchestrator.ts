@@ -147,14 +147,27 @@ export class CachingChatOrchestrator implements ChatOrchestrator {
     return true;
   }
 
-  /** Builds a deterministic cache key from the input (caller must ensure text is present). */
+  /**
+   * Builds a deterministic cache key from the input (caller must ensure text is present).
+   *
+   * Why: post-2026-04-26 R1 remediation, the cache key carries enough
+   * signal for {@link isGenericQuery} to choose between the global
+   * cross-user namespace and the per-user scoped namespace.
+   */
   private computeKey(input: OrchestratorInput & { text: string }): string {
+    const hasGeo = Boolean(input.resolvedLocation?.reverseGeocodeCoarse);
+    const geoBucket = hasGeo ? (input.resolvedLocation?.reverseGeocodeCoarse ?? null) : null;
     return buildCacheKey({
       text: input.text,
       museumId: String(this.extractMuseumId(input)),
       locale: input.locale ?? 'en',
       guideLevel: input.context?.guideLevel ?? 'beginner',
       audioDescriptionMode: input.audioDescriptionMode ?? false,
+      userId: input.userId ?? null,
+      hasHistory: input.history.length > 0,
+      hasAttachment: Boolean(input.image),
+      hasGeo,
+      geoBucket,
     });
   }
 
