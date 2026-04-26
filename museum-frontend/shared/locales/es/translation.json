@@ -619,6 +619,14 @@
       "weekly_closed": "{{day}} Cerrado"
     }
   },
+  "museum": {
+    "about": "Acerca de",
+    "opening_hours": "Horario",
+    "website": "Sitio web",
+    "phone": "Teléfono",
+    "loading_details": "Cargando información…",
+    "no_extra_info": "Sin detalles adicionales disponibles."
+  },
   "days": {
     "mon": "Lun",
     "tue": "Mar",
