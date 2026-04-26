@@ -679,6 +679,169 @@
           }
         }
       },
+      "UserDataExportPayload": {
+        "type": "object",
+        "description": "GDPR Article 15 (right of access) + Article 20 (data portability) export. Saved artworks are mobile-only and intentionally absent.",
+        "required": [
+          "exportedAt",
+          "schemaVersion",
+          "user",
+          "consent",
+          "chatSessions",
+          "savedArtworks",
+          "reviews",
+          "supportTickets"
+        ],
+        "properties": {
+          "exportedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "schemaVersion": {
+            "type": "string",
+            "enum": ["1"]
+          },
+          "user": {
+            "type": "object",
+            "required": [
+              "id",
+              "email",
+              "role",
+              "firstname",
+              "lastname",
+              "locale",
+              "emailVerified",
+              "onboardingCompleted",
+              "createdAt",
+              "updatedAt"
+            ],
+            "properties": {
+              "id": { "type": "integer" },
+              "email": { "type": "string", "format": "email" },
+              "role": { "type": "string" },
+              "firstname": { "type": ["string", "null"] },
+              "lastname": { "type": ["string", "null"] },
+              "locale": { "type": ["string", "null"] },
+              "emailVerified": { "type": "boolean" },
+              "onboardingCompleted": { "type": "boolean" },
+              "createdAt": { "type": "string", "format": "date-time" },
+              "updatedAt": { "type": "string", "format": "date-time" }
+            }
+          },
+          "consent": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["scope", "version", "source", "grantedAt", "revokedAt"],
+              "properties": {
+                "scope": { "type": "string" },
+                "version": { "type": "string" },
+                "source": { "type": "string" },
+                "grantedAt": { "type": "string", "format": "date-time" },
+                "revokedAt": {
+                  "type": ["string", "null"],
+                  "format": "date-time"
+                }
+              }
+            }
+          },
+          "chatSessions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "museumMode", "createdAt", "updatedAt", "messages"],
+              "properties": {
+                "id": { "type": "string", "format": "uuid" },
+                "locale": { "type": ["string", "null"] },
+                "museumMode": { "type": "boolean" },
+                "title": { "type": ["string", "null"] },
+                "museumName": { "type": ["string", "null"] },
+                "createdAt": { "type": "string", "format": "date-time" },
+                "updatedAt": { "type": "string", "format": "date-time" },
+                "messages": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "role", "createdAt"],
+                    "properties": {
+                      "id": { "type": "string", "format": "uuid" },
+                      "role": { "type": "string" },
+                      "text": { "type": ["string", "null"] },
+                      "imageRef": { "type": ["string", "null"] },
+                      "audioUrl": { "type": ["string", "null"] },
+                      "createdAt": { "type": "string", "format": "date-time" },
+                      "metadata": {
+                        "type": ["object", "null"],
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "savedArtworks": {
+            "type": "array",
+            "description": "Always empty server-side: saved artworks live only in mobile local storage.",
+            "items": {}
+          },
+          "reviews": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "rating", "comment", "status", "userName", "createdAt"],
+              "properties": {
+                "id": { "type": "string", "format": "uuid" },
+                "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+                "comment": { "type": "string" },
+                "status": { "type": "string" },
+                "userName": { "type": "string" },
+                "createdAt": { "type": "string", "format": "date-time" }
+              }
+            }
+          },
+          "supportTickets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "subject",
+                "description",
+                "status",
+                "priority",
+                "category",
+                "createdAt",
+                "updatedAt",
+                "messages"
+              ],
+              "properties": {
+                "id": { "type": "string", "format": "uuid" },
+                "subject": { "type": "string" },
+                "description": { "type": "string" },
+                "status": { "type": "string" },
+                "priority": { "type": "string" },
+                "category": { "type": ["string", "null"] },
+                "createdAt": { "type": "string", "format": "date-time" },
+                "updatedAt": { "type": "string", "format": "date-time" },
+                "messages": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "senderRole", "text", "createdAt"],
+                    "properties": {
+                      "id": { "type": "string", "format": "uuid" },
+                      "senderRole": { "type": "string" },
+                      "text": { "type": "string" },
+                      "createdAt": { "type": "string", "format": "date-time" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "ConfirmEmailChangeResponse": {
         "type": "object",
         "required": ["confirmed"],
@@ -2155,9 +2318,11 @@
         }
       }
     },
-    "/api/auth/export-data": {
+    "/api/users/me/export": {
       "get": {
         "tags": ["Auth"],
+        "summary": "GDPR Article 15 (access) + Article 20 (portability) DSAR export",
+        "description": "Returns the full personal-data dossier for the authenticated user (`req.user.id`, never a path/query parameter). Rate-limited to 1 export per user / 7 days; on 429 the response includes a `Retry-After` header.",
         "security": [
           {
             "bearerAuth": []
@@ -2165,49 +2330,19 @@
         ],
         "responses": {
           "200": {
-            "description": "GDPR data export",
+            "description": "Personal-data export payload",
+            "headers": {
+              "Cache-Control": {
+                "description": "Always `no-store` — payload contains personal data.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": ["exportedAt", "user", "chatData"],
-                  "properties": {
-                    "exportedAt": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "user": {
-                      "type": "object",
-                      "required": ["id", "email", "createdAt", "updatedAt"],
-                      "properties": {
-                        "id": {
-                          "type": "integer"
-                        },
-                        "email": {
-                          "type": "string",
-                          "format": "email"
-                        },
-                        "firstname": {
-                          "type": ["string", "null"]
-                        },
-                        "lastname": {
-                          "type": ["string", "null"]
-                        },
-                        "createdAt": {
-                          "type": "string",
-                          "format": "date-time"
-                        },
-                        "updatedAt": {
-                          "type": "string",
-                          "format": "date-time"
-                        }
-                      }
-                    },
-                    "chatData": {
-                      "type": "object",
-                      "additionalProperties": true
-                    }
-                  }
+                  "$ref": "#/components/schemas/UserDataExportPayload"
                 }
               }
             }
@@ -2215,8 +2350,8 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }

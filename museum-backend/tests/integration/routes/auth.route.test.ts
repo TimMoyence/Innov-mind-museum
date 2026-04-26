@@ -24,6 +24,7 @@ const mockChangeEmail = jest.fn();
 const mockConfirmEmailChange = jest.fn();
 const mockVerifyEmail = jest.fn();
 const mockCompleteOnboarding = jest.fn();
+const mockGetUserById = jest.fn();
 
 jest.mock('@modules/auth/useCase', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factory runs before ESM imports
@@ -70,6 +71,7 @@ jest.mock('@modules/auth/useCase', () => {
     generateApiKeyUseCase: { execute: jest.fn() },
     revokeApiKeyUseCase: { execute: jest.fn() },
     listApiKeysUseCase: { execute: jest.fn() },
+    userRepository: { getUserById: (...args: unknown[]) => mockGetUserById(...args) },
   };
 });
 
@@ -289,8 +291,8 @@ describe('Auth Routes — HTTP Layer', () => {
       expect(res.status).toBe(401);
     });
 
-    it('GET /api/auth/export-data returns 401 without token', async () => {
-      const res = await request(app).get('/api/auth/export-data');
+    it('GET /api/users/me/export returns 401 without token', async () => {
+      const res = await request(app).get('/api/users/me/export');
       expect(res.status).toBe(401);
     });
 
@@ -584,36 +586,27 @@ describe('Auth Routes — HTTP Layer', () => {
       expect(res.status).toBe(204);
     });
 
-    it('GET /api/auth/export-data returns user data export', async () => {
-      mockGetProfile.mockResolvedValueOnce({
-        id: 1,
-        email: 'user@test.com',
-        firstname: 'Test',
-        lastname: 'User',
-        createdAt: new Date('2026-01-01'),
-        updatedAt: new Date('2026-01-02'),
-      });
-      const exportResult = { user: { id: 1, email: 'user@test.com' }, sessions: [] };
+    it('GET /api/users/me/export returns user data export', async () => {
+      mockGetUserById.mockResolvedValueOnce({ id: 1, email: 'user@test.com', role: 'visitor' });
+      const exportResult = {
+        exportedAt: '2026-04-26T10:00:00.000Z',
+        schemaVersion: '1' as const,
+        user: { id: 1, email: 'user@test.com', role: 'visitor', createdAt: '2026-01-01', lastLoginAt: null, locale: 'en' },
+        consent: { location_to_llm: false },
+        chatSessions: [],
+        savedArtworks: [],
+        reviews: [],
+        supportTickets: [],
+      };
       mockExportUserData.mockResolvedValueOnce(exportResult);
       const token = makeToken();
 
       const res = await request(app)
-        .get('/api/auth/export-data')
+        .get('/api/users/me/export')
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual(exportResult);
-    });
-
-    it('GET /api/auth/export-data returns 404 when user not found', async () => {
-      mockGetProfile.mockResolvedValueOnce(null);
-      const token = makeToken();
-
-      const res = await request(app)
-        .get('/api/auth/export-data')
-        .set('Authorization', `Bearer ${token}`);
-
-      expect(res.status).toBe(404);
     });
   });
 });

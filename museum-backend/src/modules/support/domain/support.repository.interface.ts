@@ -28,4 +28,11 @@ export interface ISupportRepository {
 
   /** Check whether a user owns a ticket. */
   isTicketOwner(ticketId: string, userId: number): Promise<boolean>;
+
+  /**
+   * List every ticket owned by a user, each with its full message thread,
+   * ordered by createdAt DESC. Used by the GDPR Art. 15 / Art. 20 data
+   * export — no pagination because a user's own ticket history is bounded.
+   */
+  listForUser(userId: number): Promise<TicketDetailDTO[]>;
 }

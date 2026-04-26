@@ -5,6 +5,7 @@ import adminRouter from '@modules/admin/adapters/primary/http/admin.route';
 import { createCachePurgeRouter } from '@modules/admin/adapters/primary/http/cache-purge.route';
 import authRouter from '@modules/auth/adapters/primary/http/auth.route';
 import consentRouter from '@modules/auth/adapters/primary/http/consent.route';
+import meRouter from '@modules/auth/adapters/primary/http/me.route';
 import { createChatRouter } from '@modules/chat/adapters/primary/http/chat.route';
 import {
   getArtKeywordRepository,
@@ -240,6 +241,10 @@ function mountDomainRouters(
   );
   router.use('/auth/consent', consentRouter);
   router.use('/auth', authRouter);
+  // GDPR DSAR (Art 15 + 20) — `GET /api/users/me/export`. Always uses
+  // `req.user.id`, never a path param, so an authenticated visitor cannot ask
+  // for someone else's dossier (anti-IDOR per security audit § 3 T2).
+  router.use('/users', meRouter);
   router.use('/daily-art', createDailyArtRouter(cacheService));
   router.use(
     '/museums',

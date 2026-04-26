@@ -25,6 +25,7 @@ function makeFakeRepo(): jest.Mocked<IReviewRepository> {
     getReviewById: jest.fn().mockResolvedValue(fakeReview),
     moderateReview: jest.fn().mockResolvedValue({ ...fakeReview, status: 'approved' }),
     getAverageRating: jest.fn().mockResolvedValue({ average: 4.5, count: 10 }),
+    listForUser: jest.fn().mockResolvedValue([fakeReview]),
   };
 }
 

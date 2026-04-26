@@ -35,7 +35,13 @@ import { SocialTokenVerifierAdapter } from '../adapters/secondary/social-token-v
 import { UserRepositoryPg } from '../adapters/secondary/user.repository.pg';
 import { UserConsentRepositoryPg } from '../adapters/secondary/userConsent.repository.pg';
 
-import type { ChatDataExportPort } from '../domain/exportUserData.types';
+import type {
+  ChatDataExportPort,
+  ReviewDataExportPort,
+  SupportDataExportPort,
+  UserReviewExportEntry,
+  UserSupportTicketExportEntry,
+} from '../domain/exportUserData.types';
 import type { EmailService } from '@shared/email/email.port';
 
 const userRepository = new UserRepositoryPg(AppDataSource);
@@ -81,7 +87,59 @@ const chatDataExportProxy: ChatDataExportPort = {
     return await getChatRepository().exportUserData(userId);
   },
 };
-const exportUserDataUseCase = new ExportUserDataUseCase({ chatDataExport: chatDataExportProxy });
+
+/** Lazy-bound proxy for GDPR review export — resolves the review repository at call time. */
+const reviewDataExportProxy: ReviewDataExportPort = {
+  async listForUser(userId: number): Promise<UserReviewExportEntry[]> {
+    const { ReviewRepositoryPg } =
+      await import('@modules/review/adapters/secondary/review.repository.pg');
+    const repo = new ReviewRepositoryPg(AppDataSource);
+    const rows = await repo.listForUser(userId);
+    return rows.map((r) => ({
+      id: r.id,
+      rating: r.rating,
+      comment: r.comment,
+      status: r.status,
+      userName: r.userName,
+      createdAt: r.createdAt,
+    }));
+  },
+};
+
+/** Lazy-bound proxy for GDPR support-ticket export — resolves the support repository at call time. */
+const supportDataExportProxy: SupportDataExportPort = {
+  async listForUser(userId: number): Promise<UserSupportTicketExportEntry[]> {
+    const { SupportRepositoryPg } =
+      await import('@modules/support/adapters/secondary/support.repository.pg');
+    const repo = new SupportRepositoryPg(AppDataSource);
+    const rows = await repo.listForUser(userId);
+    return rows.map((t) => ({
+      id: t.id,
+      subject: t.subject,
+      description: t.description,
+      status: t.status,
+      priority: t.priority,
+      category: t.category,
+      createdAt: t.createdAt,
+      updatedAt: t.updatedAt,
+      messages: t.messages.map((m) => ({
+        id: m.id,
+        senderRole: m.senderRole,
+        text: m.text,
+        createdAt: m.createdAt,
+      })),
+    }));
+  },
+};
+
+const userConsentRepository = new UserConsentRepositoryPg(AppDataSource);
+
+const exportUserDataUseCase = new ExportUserDataUseCase({
+  chatDataExport: chatDataExportProxy,
+  reviewDataExport: reviewDataExportProxy,
+  supportDataExport: supportDataExportProxy,
+  userConsentRepository,
+});
 /** Singleton instance of {@link GetProfileUseCase}. */
 const getProfileUseCase = new GetProfileUseCase(userRepository);
 /** Singleton instance of {@link ChangePasswordUseCase}. */
@@ -104,8 +162,7 @@ const generateApiKeyUseCase = new GenerateApiKeyUseCase(apiKeyRepository);
 const revokeApiKeyUseCase = new RevokeApiKeyUseCase(apiKeyRepository);
 const listApiKeysUseCase = new ListApiKeysUseCase(apiKeyRepository);
 
-// GDPR consent use cases.
-const userConsentRepository = new UserConsentRepositoryPg(AppDataSource);
+// GDPR consent use cases (userConsentRepository is initialised earlier alongside the DSAR export use case).
 const grantConsentUseCase = new GrantConsentUseCase(userConsentRepository);
 const revokeConsentUseCase = new RevokeConsentUseCase(userConsentRepository);
 
@@ -141,4 +198,5 @@ export {
   grantConsentUseCase,
   revokeConsentUseCase,
   userConsentRepository,
+  userRepository,
 };

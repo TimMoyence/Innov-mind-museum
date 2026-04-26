@@ -127,20 +127,37 @@ describe('openapi response contracts (active API)', () => {
       payload: { verified: true },
     });
     assertMatchesOpenApiResponse({
-      path: '/api/auth/export-data',
+      path: '/api/users/me/export',
       method: 'get',
       statusCode: 200,
       payload: {
         exportedAt: new Date().toISOString(),
+        schemaVersion: '1',
         user: {
           id: 42,
           email: 'user@example.com',
+          role: 'visitor',
           firstname: 'Ada',
           lastname: 'Lovelace',
+          locale: null,
+          emailVerified: true,
+          onboardingCompleted: false,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
-        chatData: {},
+        consent: [
+          {
+            scope: 'location_to_llm',
+            version: '2026-04-24',
+            source: 'ui',
+            grantedAt: new Date().toISOString(),
+            revokedAt: null,
+          },
+        ],
+        chatSessions: [],
+        savedArtworks: [],
+        reviews: [],
+        supportTickets: [],
       },
     });
 
@@ -354,11 +371,11 @@ describe('openapi response contracts (active API)', () => {
       },
     };
 
-    const errorEndpoints: Array<{
+    const errorEndpoints: {
       path: string;
       method: 'get' | 'post' | 'put' | 'delete';
       statusCode: number;
-    }> = [
+    }[] = [
       { path: '/api/auth/register', method: 'post', statusCode: 400 },
       { path: '/api/auth/login', method: 'post', statusCode: 400 },
       { path: '/api/auth/login', method: 'post', statusCode: 401 },
@@ -376,8 +393,8 @@ describe('openapi response contracts (active API)', () => {
       { path: '/api/auth/change-email', method: 'put', statusCode: 401 },
       { path: '/api/auth/confirm-email-change', method: 'post', statusCode: 400 },
       { path: '/api/auth/verify-email', method: 'post', statusCode: 400 },
-      { path: '/api/auth/export-data', method: 'get', statusCode: 401 },
-      { path: '/api/auth/export-data', method: 'get', statusCode: 404 },
+      { path: '/api/users/me/export', method: 'get', statusCode: 401 },
+      { path: '/api/users/me/export', method: 'get', statusCode: 429 },
       { path: '/api/auth/api-keys', method: 'post', statusCode: 400 },
       { path: '/api/auth/api-keys', method: 'post', statusCode: 401 },
       { path: '/api/auth/api-keys', method: 'get', statusCode: 401 },

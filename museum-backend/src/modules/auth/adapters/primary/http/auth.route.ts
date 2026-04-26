@@ -12,7 +12,6 @@ import {
   AUDIT_AUTH_PASSWORD_RESET,
   AUDIT_AUTH_EMAIL_VERIFIED,
   AUDIT_ACCOUNT_DELETED,
-  AUDIT_DATA_EXPORT,
   AUDIT_API_KEY_CREATED,
   AUDIT_API_KEY_REVOKED,
   AUDIT_SECURITY_RATE_LIMIT,
@@ -62,7 +61,6 @@ import {
   resetPasswordUseCase,
   socialLoginUseCase,
   deleteAccountUseCase,
-  exportUserDataUseCase,
   getProfileUseCase,
   changePasswordUseCase,
   changeEmailUseCase,
@@ -270,34 +268,6 @@ authRouter.delete('/account', isAuthenticated, async (req: Request, res: Respons
   });
   await deleteAccountUseCase.execute(user.id);
   res.status(200).json({ deleted: true });
-});
-
-authRouter.get('/export-data', isAuthenticated, async (req: Request, res: Response) => {
-  const jwtUser = requireUser(req);
-  const profile = await getProfileUseCase.execute(jwtUser.id);
-  if (!profile) {
-    res.status(404).json({ error: { code: 'NOT_FOUND', message: 'User not found' } });
-    return;
-  }
-
-  const result = await exportUserDataUseCase.execute({
-    id: profile.id,
-    email: profile.email,
-    firstname: profile.firstname,
-    lastname: profile.lastname,
-    createdAt: profile.createdAt,
-    updatedAt: profile.updatedAt,
-  });
-  await auditService.log({
-    action: AUDIT_DATA_EXPORT,
-    actorType: 'user',
-    actorId: jwtUser.id,
-    targetType: 'user',
-    targetId: String(jwtUser.id),
-    ip: req.ip,
-    requestId: req.requestId,
-  });
-  res.json(result);
 });
 
 authRouter.put(

@@ -171,4 +171,37 @@ export class SupportRepositoryPg implements ISupportRepository {
     });
     return count > 0;
   }
+
+  /**
+   * Lists every ticket owned by a user with all attached messages — used by
+   * the GDPR DSAR export. Two queries (tickets + messages-by-ticket-id IN ())
+   * minimise round-trips on bounded data sets.
+   */
+  async listForUser(userId: number): Promise<TicketDetailDTO[]> {
+    const tickets = await this.ticketRepo.find({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (tickets.length === 0) return [];
+
+    const ticketIds = tickets.map((t) => t.id);
+    const messages = await this.messageRepo
+      .createQueryBuilder('m')
+      .where('m.ticketId IN (:...ticketIds)', { ticketIds })
+      .orderBy('m.createdAt', 'ASC')
+      .getMany();
+
+    const messagesByTicketId = new Map<string, TicketMessage[]>();
+    for (const msg of messages) {
+      const list = messagesByTicketId.get(msg.ticketId) ?? [];
+      list.push(msg);
+      messagesByTicketId.set(msg.ticketId, list);
+    }
+
+    return tickets.map((ticket) => ({
+      ...toTicketDTO(ticket),
+      messages: (messagesByTicketId.get(ticket.id) ?? []).map(toMessageDTO),
+    }));
+  }
 }

@@ -85,6 +85,15 @@ export class ReviewRepositoryPg implements IReviewRepository {
     return entity ? toDTO(entity) : null;
   }
 
+  /** Lists every review authored by a user, most-recent first (GDPR DSAR). */
+  async listForUser(userId: number): Promise<ReviewDTO[]> {
+    const rows = await this.repo.find({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+    });
+    return rows.map(toDTO);
+  }
+
   /** Computes the average rating and total count of approved reviews. */
   async getAverageRating(): Promise<{ average: number; count: number }> {
     const result = await this.repo
