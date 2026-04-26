@@ -1,0 +1,142 @@
+name: Security incident
+description: Report a confirmed or suspected security incident (data breach, credential leak, unauthorized access, abuse).
+title: "[INCIDENT] <one-line summary>"
+labels:
+  - security
+  - incident
+  - needs-triage
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## You are opening a security-incident issue
+
+        This template starts the **GDPR Article 33 72-hour clock** when severity is set to **P0** or **P1**.
+
+        Before submitting:
+        1. If this is an active P0/P1 in progress, **also notify on-call out-of-band** (war-room channel — TBD). Do not rely on a GitHub notification reaching the right person fast enough.
+        2. Read [`docs/incidents/BREACH_PLAYBOOK.md`](../docs/incidents/BREACH_PLAYBOOK.md) for the full procedure.
+        3. **Do not paste secrets or raw personal data into this issue.** Reference paths, IDs, and SHA-256 hashes only.
+        4. After this issue is created, copy the incident folder skeleton:
+           `mkdir -p docs/incidents/$(date -u +%Y-%m-%d)-<slug>/`
+
+        ---
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: |
+        Use the matrix in [`BREACH_PLAYBOOK.md` § 3](../docs/incidents/BREACH_PLAYBOOK.md). When in doubt, escalate one level — downgrade is cheap.
+      options:
+        - P0 — Critical (mass exposure / prod credential active misuse / DB compromise)
+        - P1 — High (single-user exposure confirmed / critical control compromised)
+        - P2 — Medium (active CVE exploitable in our stack, not yet exploited)
+        - P3 — Low (policy violation, theoretical weakness, near-miss)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: detection_source
+    attributes:
+      label: Detection source
+      description: How did we become aware? Reference [`BREACH_PLAYBOOK.md` § 2](../docs/incidents/BREACH_PLAYBOOK.md).
+      options:
+        - Sentry alert (error rate spike / new high-volume event)
+        - Better Stack uptime check failure
+        - Audit log anomaly (admin off-hours / hash chain break / unusual IP)
+        - Rate-limit / login lockout spike (brute-force / credential stuffing)
+        - Third-party security disclosure (researcher / vendor breach notice / CERT-FR)
+        - User report via support ticket
+        - CI/CD finding (Trivy / Gitleaks / CodeQL / Semgrep / Dependabot)
+        - Internal accidental disclosure (committed secret / screenshot / misconfig)
+        - Other (describe in body)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: data_classes
+    attributes:
+      label: Affected personal-data classes
+      description: |
+        Per [`BREACH_PLAYBOOK.md` § 1.3](../docs/incidents/BREACH_PLAYBOOK.md). Tick **only** classes for which you have evidence (or strong suspicion) of impact. Tick "None confirmed" if no personal data is implicated yet.
+      options:
+        - label: Account credentials (email, bcrypt hash, role)
+        - label: Chat text history
+        - label: Voice audio (biometric category)
+        - label: Uploaded images (may contain people / EXIF GPS)
+        - label: Geolocation (coarse or fine)
+        - label: Audit log (IP, UA, admin actions)
+        - label: Sentry breadcrumbs (PII-scrubbed)
+        - label: Support tickets
+        - label: None confirmed (informational only)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: containment_status
+    attributes:
+      label: Containment status
+      description: At the moment of submission. Update as you progress.
+      options:
+        - Not started — investigating
+        - In progress — runbook executing
+        - Contained — bleeding stopped
+        - Eradicated — root cause removed
+        - Recovered — service back to normal
+    validations:
+      required: true
+
+  - type: input
+    id: reporter_contact
+    attributes:
+      label: Reporter contact
+      description: Name + reachable channel for follow-up (Slack / Signal / email). Out-of-band preferred for P0/P1.
+      placeholder: "@username (Signal: +33 6 …) — TBD confirm war-room channel"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: |
+        Factual, terse. No speculation. No raw secrets, no raw personal data.
+
+        Include:
+        - **What was observed** (one paragraph).
+        - **Suspected root cause** (one sentence — clearly marked as suspected if not confirmed).
+        - **Affected components** (file paths, services, infra surfaces).
+        - **Time window** (start UTC — end UTC, even if rough).
+        - **Containment runbook** to execute (link the relevant § 5.a — § 5.f from `BREACH_PLAYBOOK.md`).
+      placeholder: |
+        Observed: 503 spike on POST /api/chat/messages starting 2026-04-26T08:42Z.
+        Suspected root cause (UNCONFIRMED): credential-stuffing campaign hitting the OAuth route via missing nonce check.
+        Affected: museum-backend/src/modules/auth/adapters/primary/http/oauth.route.ts.
+        Window: 2026-04-26T08:30Z — ongoing.
+        Runbook: BREACH_PLAYBOOK.md § 5.d (OAuth bypass).
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+
+        ## After submission — 72-hour clock reminder
+
+        If you set severity **P0** or **P1**, the [GDPR Art 33](../docs/incidents/BREACH_PLAYBOOK.md) timer **starts now (T+0)**.
+
+        Required milestones (UTC, all from this issue's creation timestamp):
+
+        - **T+15 min** — war room opened, first triage comment in this issue.
+        - **T+1 h** — Tech Lead confirms severity, DPO + Legal looped in.
+        - **T+4 h** — containment runbook executing.
+        - **T+24 h** — preliminary assessment committed under `docs/incidents/<date>-<slug>/preliminary-assessment.md`.
+        - **T+48 h** — forensic snapshot complete.
+        - **T+72 h** — CNIL notification submitted (if Art 33 trigger applies). Receipt number recorded in this issue.
+        - **T+7 d** — post-mortem published using [`POST_MORTEM_TEMPLATE.md`](../docs/incidents/POST_MORTEM_TEMPLATE.md).
+        - **T+30 d** — corrective actions verified closed by Process Auditor.
+
+        Comment milestones inline as you reach them. Do **not** edit the original issue body — append.
