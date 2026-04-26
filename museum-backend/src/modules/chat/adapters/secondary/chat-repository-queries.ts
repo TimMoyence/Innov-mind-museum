@@ -125,6 +125,7 @@ export async function exportUserChatData(
             role: msg.role,
             text: msg.text,
             imageRef: msg.imageRef,
+            audioUrl: msg.audioUrl ?? null,
             createdAt: msg.createdAt.toISOString(),
             metadata: msg.metadata,
           })),

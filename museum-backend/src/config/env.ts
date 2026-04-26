@@ -344,6 +344,7 @@ const env: AppEnv = {
     negativeCacheTtlSeconds: toNumber(process.env.OVERPASS_NEGATIVE_CACHE_TTL_SECONDS, 3_600),
   },
   chatPurgeRetentionDays: toNumber(process.env.CHAT_PURGE_RETENTION_DAYS, 180),
+  s3OrphanSweepEnabled: toBoolean(process.env.S3_ORPHAN_SWEEP_ENABLED, false),
   knowledgeBase: {
     timeoutMs: toNumber(process.env.KB_TIMEOUT_MS, 500),
     cacheTtlSeconds: toNumber(process.env.KB_CACHE_TTL_SECONDS, 3600),

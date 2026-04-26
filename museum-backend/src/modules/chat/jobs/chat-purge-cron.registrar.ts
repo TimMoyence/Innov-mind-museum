@@ -3,8 +3,10 @@ import { Queue, Worker } from 'bullmq';
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 
+import { buildChatMediaPurgerFromEnv } from './chat-media-purger';
 import { runChatPurge } from './chat-purge.job';
 
+import type { ChatMediaPurger } from './chat-media-purger';
 import type { ConnectionOptions } from 'bullmq';
 import type { DataSource } from 'typeorm';
 
@@ -25,6 +27,12 @@ export interface ChatPurgeCronConfig {
   retentionDays?: number;
   /** Cron pattern override. Defaults to {@link DEFAULT_CHAT_PURGE_CRON}. */
   cron?: string;
+  /**
+   * Media purger override. When omitted, one is built from `env.storage`. The
+   * override is wired by integration tests so they can stub the S3 calls
+   * without mutating env.
+   */
+  mediaPurger?: ChatMediaPurger;
 }
 
 /** Handle returned by the registrar for graceful shutdown wiring. */
@@ -76,10 +84,13 @@ async function registerScheduler(queue: Queue, cron: string): Promise<boolean> {
 
 /** Spawns the dedicated worker that executes `runChatPurge` on every cron tick. */
 function spawnPurgeWorker(dataSource: DataSource, config: ChatPurgeCronConfig): Worker {
+  // Resolve the media purger once at boot so the worker doesn't re-read
+  // `process.env` on every tick. Tests can inject a stub via `config.mediaPurger`.
+  const mediaPurger = config.mediaPurger ?? buildChatMediaPurgerFromEnv();
   const worker = new Worker(
     CHAT_PURGE_QUEUE_NAME,
     async () => {
-      await runChatPurge(dataSource, { retentionDays: config.retentionDays });
+      await runChatPurge(dataSource, { retentionDays: config.retentionDays, mediaPurger });
     },
     { connection: config.connection, concurrency: 1 },
   );
