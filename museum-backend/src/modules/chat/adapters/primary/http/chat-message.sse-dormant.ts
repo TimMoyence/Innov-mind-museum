@@ -104,6 +104,7 @@ export function createStreamHandler(
           requestId: (req as { requestId?: string }).requestId,
           currentUserId: currentUser?.id,
           signal: controller.signal,
+          ip: req.ip,
         },
       );
 

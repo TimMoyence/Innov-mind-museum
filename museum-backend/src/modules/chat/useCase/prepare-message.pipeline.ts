@@ -21,6 +21,8 @@ import type { UserMemoryService } from './user-memory.service';
 import type { WebSearchService } from './web-search.service';
 import type { ChatRepository } from '../domain/chat.repository.interface';
 import type { EnrichedImage, PostMessageInput } from '../domain/chat.types';
+import type { ChatMessage } from '../domain/chatMessage.entity';
+import type { ChatSession } from '../domain/chatSession.entity';
 import type { OrchestratorInput } from '../domain/ports/chat-orchestrator.port';
 import type { SearchResult } from '../domain/ports/web-search.port';
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
@@ -158,8 +160,9 @@ export class PrepareMessagePipeline {
   async prepare(
     sessionId: string,
     input: PostMessageInput,
-    _requestId?: string,
+    requestId?: string,
     currentUserId?: number,
+    ip?: string,
   ): Promise<PrepareResult> {
     const session = await ensureSessionAccess(sessionId, this.repository, currentUserId);
     const ownerId = session.user?.id;
@@ -176,7 +179,13 @@ export class PrepareMessagePipeline {
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
     const requestedLocale = input.context?.locale?.trim() || session.locale || undefined;
 
-    const userGuardrail = await this.guardrail.evaluateInput(text, input.context?.preClassified);
+    const userGuardrail = await this.guardrail.evaluateInput(text, input.context?.preClassified, {
+      sessionId,
+      userId: ownerId ?? currentUserId,
+      requestId,
+      ip,
+      locale: requestedLocale,
+    });
 
     if (!userGuardrail.allow) {
       // Both user attempt and refusal are always persisted — the user row is the moderation
@@ -194,6 +203,44 @@ export class PrepareMessagePipeline {
     await this.repository.persistMessage({ sessionId, role: 'user', text, imageRef });
 
     const history = await this.repository.listSessionHistory(sessionId, env.llm.maxHistoryMessages);
+    const enrichment = await this.enrichAndResolveLocation({
+      input,
+      session,
+      requestedLocale,
+      history,
+      ownerId,
+      currentUserId,
+    });
+
+    return {
+      kind: 'ready',
+      session,
+      imageRef,
+      orchestratorImage,
+      requestedLocale,
+      history,
+      ownerId,
+      ...enrichment,
+    };
+  }
+
+  /** Post-validation enrichment + location resolution (extracted to keep `prepare` under max-lines). */
+  private async enrichAndResolveLocation(args: {
+    input: PostMessageInput;
+    session: ChatSession;
+    requestedLocale: string | undefined;
+    history: ChatMessage[];
+    ownerId: number | undefined;
+    currentUserId: number | undefined;
+  }): Promise<{
+    userMemoryBlock: string | undefined;
+    knowledgeBaseBlock: string | undefined;
+    localKnowledgeBlock: string | undefined;
+    webSearchBlock: string | undefined;
+    enrichedImages: EnrichedImage[];
+    resolvedLocation: ResolvedLocation | undefined;
+  }> {
+    const { input, session, requestedLocale, history, ownerId, currentUserId } = args;
     const {
       userMemoryBlock,
       knowledgeBaseBlock,
@@ -228,19 +275,12 @@ export class PrepareMessagePipeline {
     );
 
     return {
-      kind: 'ready',
-      session,
-      imageRef,
-      orchestratorImage,
-      requestedLocale,
-      history,
-      ownerId,
       userMemoryBlock,
       knowledgeBaseBlock,
       localKnowledgeBlock,
       webSearchBlock,
       enrichedImages,
-      resolvedLocation,
+      resolvedLocation: resolvedLocation ?? undefined,
     };
   }
 

@@ -228,6 +228,7 @@ export class ChatService {
     input: PostMessageInput,
     requestId?: string,
     currentUserId?: number,
+    ip?: string,
   ): Promise<PostMessageResult> {
     logger.info('chat_service_call', {
       method: 'postMessage',
@@ -235,7 +236,7 @@ export class ChatService {
       userId: currentUserId,
       requestId,
     });
-    return await this.messages.postMessage(sessionId, input, requestId, currentUserId);
+    return await this.messages.postMessage(sessionId, input, requestId, currentUserId, ip);
   }
 
   /**
@@ -255,6 +256,7 @@ export class ChatService {
    * @param callbacks.requestId - Optional correlation id for tracing.
    * @param callbacks.currentUserId - Authenticated user id for ownership checks.
    * @param callbacks.signal - Optional abort signal.
+   * @param callbacks.ip - Originating client IP, threaded into the audit chain on guardrail blocks.
    * @returns The assistant's reply with metadata.
    */
   async postMessageStream(
@@ -266,6 +268,7 @@ export class ChatService {
       requestId?: string;
       currentUserId?: number;
       signal?: AbortSignal;
+      ip?: string;
     },
   ): Promise<PostMessageResult> {
     logger.info('chat_service_call', {
@@ -293,8 +296,9 @@ export class ChatService {
     input: PostAudioMessageInput,
     requestId?: string,
     currentUserId?: number,
+    ip?: string,
   ): Promise<PostAudioMessageResult> {
-    return await this.messages.postAudioMessage(sessionId, input, requestId, currentUserId);
+    return await this.messages.postAudioMessage(sessionId, input, requestId, currentUserId, ip);
   }
 
   // ── Media & reporting ─────────────────────────────────────────────────

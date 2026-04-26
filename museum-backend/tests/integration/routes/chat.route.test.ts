@@ -338,6 +338,7 @@ describe('Chat Routes — HTTP Layer', () => {
         expect.objectContaining({ text: 'Tell me about the Mona Lisa' }),
         expect.any(String), // requestId
         1, // userId
+        expect.any(String), // ip — threaded into audit on guardrail block (W3.V13)
       );
     });
 

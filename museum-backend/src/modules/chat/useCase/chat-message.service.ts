@@ -151,6 +151,7 @@ export class ChatMessageService {
     sessionId: string,
     prep: PrepareReady,
     aiResult: OrchestratorOutput,
+    auditCtx?: { requestId?: string; ip?: string },
   ): Promise<PostMessageResult> {
     return await commitAssistantResponse(
       {
@@ -166,6 +167,8 @@ export class ChatMessageService {
         requestedLocale: prep.requestedLocale,
         ownerId: prep.ownerId,
         enrichedImages: prep.enrichedImages,
+        requestId: auditCtx?.requestId,
+        ip: auditCtx?.ip,
       },
     );
   }
@@ -176,8 +179,9 @@ export class ChatMessageService {
     input: PostMessageInput,
     requestId?: string,
     currentUserId?: number,
+    ip?: string,
   ): Promise<PostMessageResult> {
-    const prep = await this.pipeline.prepare(sessionId, input, requestId, currentUserId);
+    const prep = await this.pipeline.prepare(sessionId, input, requestId, currentUserId, ip);
     if (prep.kind === 'refused') return prep.result;
 
     const sanitizedText = this.piiSanitizer.sanitize(input.text?.trim() ?? '').sanitizedText;
@@ -185,7 +189,7 @@ export class ChatMessageService {
       this.pipeline.buildOrchestratorInput(prep, input, sanitizedText, requestId),
     );
 
-    return await this.commitResponse(sessionId, prep, aiResult);
+    return await this.commitResponse(sessionId, prep, aiResult, { requestId, ip });
   }
 
   /**
@@ -203,10 +207,11 @@ export class ChatMessageService {
       requestId?: string;
       currentUserId?: number;
       signal?: AbortSignal;
+      ip?: string;
     },
   ): Promise<PostMessageResult> {
-    const { onToken, onGuardrail, requestId, currentUserId, signal } = callbacks;
-    const prep = await this.pipeline.prepare(sessionId, input, requestId, currentUserId);
+    const { onToken, onGuardrail, requestId, currentUserId, signal, ip } = callbacks;
+    const prep = await this.pipeline.prepare(sessionId, input, requestId, currentUserId, ip);
     if (prep.kind === 'refused') return prep.result;
 
     if (signal?.aborted) {
@@ -233,7 +238,7 @@ export class ChatMessageService {
     await buffer.awaitPhase1();
     await awaitDrainWithTimeout(buffer);
 
-    return await this.commitResponse(sessionId, prep, aiResult);
+    return await this.commitResponse(sessionId, prep, aiResult, { requestId, ip });
   }
 
   /** Transcribes an audio message then delegates to postMessage for LLM processing. */
@@ -242,6 +247,7 @@ export class ChatMessageService {
     input: PostAudioMessageInput,
     requestId?: string,
     currentUserId?: number,
+    ip?: string,
   ): Promise<PostAudioMessageResult> {
     const session = await ensureSessionAccess(sessionId, this.repository, currentUserId);
 
@@ -272,6 +278,7 @@ export class ChatMessageService {
       },
       requestId,
       currentUserId,
+      ip,
     );
 
     return {

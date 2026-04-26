@@ -42,9 +42,12 @@ const app = createApp({
 
 // ── Helpers ────────────────────────────────────────────────────────
 
-/** Parse SSE event stream into structured events. */
-function parseSseEvents(raw: string): Array<{ event: string; data: unknown }> {
-  const events: Array<{ event: string; data: unknown }> = [];
+/**
+ * Parse SSE event stream into structured events.
+ * @param raw
+ */
+function parseSseEvents(raw: string): { event: string; data: unknown }[] {
+  const events: { event: string; data: unknown }[] = [];
   const blocks = raw.split('\n\n').filter(Boolean);
   for (const block of blocks) {
     const lines = block.split('\n');
@@ -112,8 +115,8 @@ describe('chat-message.route — uncovered paths', () => {
 
       expect(res.status).toBe(200);
       expect(res.headers['content-type']).toContain('text/event-stream');
-      expect(res.headers['deprecation']).toBe('true');
-      expect(res.headers['sunset']).toBeDefined();
+      expect(res.headers.deprecation).toBe('true');
+      expect(res.headers.sunset).toBeDefined();
 
       const events = parseSseEvents(res.text);
       const tokenEvents = events.filter((e) => e.event === 'token');
@@ -341,6 +344,7 @@ describe('chat-message.route — uncovered paths', () => {
         }),
         expect.any(String),
         1,
+        expect.any(String),
       );
     });
 
@@ -371,6 +375,7 @@ describe('chat-message.route — uncovered paths', () => {
         }),
         expect.any(String),
         1,
+        expect.any(String),
       );
     });
 
@@ -401,6 +406,7 @@ describe('chat-message.route — uncovered paths', () => {
         }),
         expect.any(String),
         1,
+        expect.any(String),
       );
     });
 

@@ -432,6 +432,7 @@ describe('chat-media.route — uncovered paths', () => {
         }),
         expect.any(String),
         1,
+        expect.any(String),
       );
     });
 

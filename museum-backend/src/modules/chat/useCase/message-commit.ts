@@ -94,13 +94,22 @@ export async function commitAssistantResponse(
     requestedLocale: string | undefined;
     ownerId: number | undefined;
     enrichedImages?: EnrichedImage[];
+    requestId?: string;
+    ip?: string;
   },
 ): Promise<PostMessageResult> {
-  const { requestedLocale, ownerId, enrichedImages } = options;
+  const { requestedLocale, ownerId, enrichedImages, requestId, ip } = options;
   const outputCheck = await deps.guardrail.evaluateOutput({
     text: aiResult.text,
     metadata: aiResult.metadata,
     requestedLocale,
+    context: {
+      sessionId,
+      userId: ownerId,
+      requestId,
+      ip,
+      locale: requestedLocale,
+    },
   });
 
   const { assistantText, assistantMetadata, sessionUpdates, artworkMatch } = buildCommitPayload(

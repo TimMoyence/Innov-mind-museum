@@ -40,6 +40,11 @@ export const AUDIT_API_KEY_REVOKED = 'API_KEY_REVOKED';
 export const AUDIT_SECURITY_RATE_LIMIT = 'SECURITY_RATE_LIMIT';
 export const AUDIT_SECURITY_GUARDRAIL_BLOCK = 'SECURITY_GUARDRAIL_BLOCK';
 export const AUDIT_SECURITY_GUARDRAIL_PASS = 'SECURITY_GUARDRAIL_PASS';
+// V13 / STRIDE R3 — phase-scoped guardrail blocks for retro-analysis (input vs output).
+// Carry redacted snippet (≤64 chars) + sha256 fingerprint to enable forensic dedup
+// without bloating the audit hash chain or echoing raw user/LLM payloads.
+export const AUDIT_GUARDRAIL_BLOCKED_INPUT = 'guardrail_blocked_input';
+export const AUDIT_GUARDRAIL_BLOCKED_OUTPUT = 'guardrail_blocked_output';
 
 // ─── Admin events (future RBAC) ───
 export const AUDIT_ADMIN_ROLE_CHANGE = 'ADMIN_ROLE_CHANGE';

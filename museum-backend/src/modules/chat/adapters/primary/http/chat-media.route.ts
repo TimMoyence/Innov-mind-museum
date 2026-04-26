@@ -56,6 +56,7 @@ function createAudioHandler(chatService: ChatService) {
       },
       (req as { requestId?: string }).requestId,
       currentUser?.id,
+      req.ip,
     );
 
     res.status(201).json(result);
