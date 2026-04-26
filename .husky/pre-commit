@@ -1,17 +1,25 @@
-#!/bin/sh
+#!/usr/bin/env bash
+# =============================================================================
+# Musaium pre-commit — NO BYPASS
+# =============================================================================
+# This hook is mandatory. There is no SKIP_PRE_COMMIT escape hatch.
+# `git commit --no-verify` is forbidden by team policy. Server-side CI mirrors
+# every gate below (.github/workflows/sentinel-mirror.yml) so any bypass is
+# caught at PR time. See docs/CONTRIBUTING.md § Pre-commit hooks (NO BYPASS).
+#
+# Budget: < 5 seconds typical.
+# Gates (in order, each `|| exit 1`):
+#   1. Gitleaks  — staged-diff secret scan
+#   2. env-policy sentinel — forbidden .env* + secret-shape regex
+#   3. lint-staged — typecheck + ESLint on staged files only
+#   4. as-any ratchet — count cannot exceed baseline
+#   5. root-hygiene — block stray .md / .sql / .log at repo root
+# =============================================================================
+set -e
 
-# ── 1. Secret scan (fail-closed) ──────────────────────────────────────────────
-# gitleaks runs first. If it finds a leaked credential in the staged diff, it
-# blocks the commit with a readable report. The config lives in .gitleaks.toml
-# at the repo root (extends the upstream default ruleset + repo-specific rules).
-#
-# Install options (any one is fine):
-#   - macOS:     brew install gitleaks
-#   - Linux:     https://github.com/gitleaks/gitleaks/releases (binary)
-#   - Fallback:  the hook will use the upstream Docker image if Docker is running.
-#
-# --staged limits the scan to the current git index (no history walk).
-# --redact hides secret values in log output; --no-banner keeps output tidy.
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
 GITLEAKS_REPORT=".gitleaks-report.json"
 
 run_gitleaks() {
@@ -21,47 +29,81 @@ run_gitleaks() {
       --report-format json --report-path "${GITLEAKS_REPORT}"
     return $?
   fi
-
   if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-    docker run --rm \
-      -v "$(pwd):/repo" \
-      -w /repo \
+    docker run --rm -v "$(pwd):/repo" -w /repo \
       ghcr.io/gitleaks/gitleaks:latest \
       protect --staged --redact --no-banner \
       --config .gitleaks.toml \
       --report-format json --report-path "${GITLEAKS_REPORT}"
     return $?
   fi
-
   echo "[pre-commit] error: gitleaks is not installed and Docker is not running."
-  echo "             Install with 'brew install gitleaks' (macOS) or download a"
-  echo "             binary from https://github.com/gitleaks/gitleaks/releases."
+  echo "             Install: brew install gitleaks (macOS)"
+  echo "             Or:      https://github.com/gitleaks/gitleaks/releases"
   return 1
 }
 
+# ─── Gate 1 — gitleaks staged-diff scan ────────────────────────────────────
+echo "[pre-commit] ► Gate 1/5 gitleaks (staged diff)"
 if ! run_gitleaks; then
   echo ""
-  echo "[pre-commit] gitleaks found one or more secrets in the staged diff."
+  echo "[pre-commit] ✗ gitleaks found one or more secrets in the staged diff."
   echo "             Report: ${GITLEAKS_REPORT}"
-  echo "             Remove the secret AND rotate the exposed credential before committing."
+  echo "             Remove the secret AND rotate the exposed credential."
   exit 1
 fi
-# Clean up the empty/clean report so it doesn't end up staged by accident.
 rm -f "${GITLEAKS_REPORT}"
+echo "[pre-commit] ✓ Gate 1"
 
-# ── 2. Lint-staged per workspace ──────────────────────────────────────────────
-# Detect which apps have staged .ts/.tsx files and run lint-staged
+# ─── Gate 2 — env-policy sentinel ──────────────────────────────────────────
+echo "[pre-commit] ► Gate 2/5 env-policy (forbidden .env + secret regex)"
+node scripts/sentinels/env-policy.mjs || exit 1
+echo "[pre-commit] ✓ Gate 2"
+
+# ─── Gate 3 — lint-staged per workspace ────────────────────────────────────
+echo "[pre-commit] ► Gate 3/5 lint-staged (tsc + ESLint on staged)"
 if git diff --cached --name-only | grep -q '^museum-backend/'; then
-  cd museum-backend && npx lint-staged
-  cd ..
+  ( cd museum-backend && npx lint-staged ) || exit 1
 fi
-
 if git diff --cached --name-only | grep -q '^museum-frontend/'; then
-  cd museum-frontend && npx lint-staged
-  cd ..
+  ( cd museum-frontend && npx lint-staged ) || exit 1
 fi
-
 if git diff --cached --name-only | grep -q '^museum-web/'; then
-  cd museum-web && npx lint-staged
-  cd ..
+  ( cd museum-web && npx lint-staged ) || exit 1
 fi
+echo "[pre-commit] ✓ Gate 3"
+
+# ─── Gate 4 — as-any ratchet ───────────────────────────────────────────────
+echo "[pre-commit] ► Gate 4/5 as-any ratchet (count must not exceed baseline)"
+node scripts/sentinels/as-any-ratchet.mjs || exit 1
+echo "[pre-commit] ✓ Gate 4"
+
+# ─── Gate 5 — root-hygiene (stray .md / .sql / .log at repo root) ──────────
+echo "[pre-commit] ► Gate 5/5 root-hygiene"
+ROOT_NEW=$(git diff --cached --name-only --diff-filter=A | grep -E '^[^/]+$' || true)
+ROOT_MD_ALLOW='^(AGENTS|CLAUDE|README|LICENSE|SECURITY|CHANGELOG|CONTRIBUTING|CODE_OF_CONDUCT|GOVERNANCE|NOTICE)\.md$'
+for f in $ROOT_NEW; do
+  case "$f" in
+    *.md)
+      if ! echo "$f" | grep -qE "$ROOT_MD_ALLOW"; then
+        echo "[pre-commit] ✗ root-hygiene: .md interdit a la racine: $f"
+        echo "             whitelist: AGENTS / CLAUDE / README / LICENSE / SECURITY / CHANGELOG /"
+        echo "                        CONTRIBUTING / CODE_OF_CONDUCT / GOVERNANCE / NOTICE"
+        exit 1
+      fi
+      ;;
+    *.sql)
+      echo "[pre-commit] ✗ root-hygiene: .sql interdit a la racine: $f — utiliser scripts/ops/sql/"
+      exit 1
+      ;;
+    *.log)
+      echo "[pre-commit] ✗ root-hygiene: .log interdit a la racine: $f (gitignored normalement)"
+      exit 1
+      ;;
+  esac
+done
+echo "[pre-commit] ✓ Gate 5"
+
+echo "[pre-commit] ═══════════════════════════════════════════════════"
+echo "[pre-commit] ✅ All 5 gates passed — commit authorized"
+echo "[pre-commit] ═══════════════════════════════════════════════════"

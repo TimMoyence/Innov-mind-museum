@@ -1,0 +1,9 @@
+{
+  "_comment": "Minimum allowed guardrail keyword count. The ratchet only allows the count to go UP. Lower the bar manually only when intentionally pruning keywords.",
+  "total": 91,
+  "perArray": {
+    "INSULT_KEYWORDS": 16,
+    "INJECTION_PATTERNS": 75
+  },
+  "generatedAt": "2026-04-26T08:55:54.644Z"
+}

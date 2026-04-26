@@ -144,10 +144,72 @@ Audit evidence: GitHub PR history, branch protection settings export (`gh api re
 
 ---
 
-## 8. References
+## 8. Pre-commit / Pre-push hooks (NO BYPASS)
+
+Effective 2026-04-26 (W1.T6). Every commit and every push runs a sequence of sentinel gates locally via Husky. **There is no bypass.** `git commit --no-verify` and `git push --no-verify` are forbidden by team policy. The same gates run server-side via `.github/workflows/sentinel-mirror.yml` on every push, so any local bypass is caught at PR time and blocks merge.
+
+### Install (once per checkout)
+
+```bash
+pnpm install              # at repo root — installs Husky + lint-staged
+```
+
+The `prepare` script wires `.husky/` into `.git/hooks/`. If hooks are missing after install, run `npx husky` manually.
+
+### Pre-commit gates (budget: < 5s)
+
+| # | Gate | What it checks | Fix on failure |
+|---|------|----------------|----------------|
+| 1 | Gitleaks (staged) | No secret in staged diff | Remove + rotate the credential |
+| 2 | env-policy sentinel | No forbidden `.env*` file + no `sk-…`, `Bearer ey…`, `AKIA…` shapes | Move to `.env.example` / scrub the literal |
+| 3 | lint-staged | tsc + ESLint on staged TS/TSX in BE / FE / Web | Fix the lint/type error |
+| 4 | as-any ratchet | `as any` count ≤ baseline (`scripts/sentinels/as-any-baseline.json`) | Remove the new `as any` or narrow with a type guard |
+| 5 | root-hygiene | No stray `.md` / `.sql` / `.log` at repo root outside the whitelist | Move under `docs/` or `scripts/ops/sql/` |
+
+### Pre-push gates (budget: < 30s)
+
+| # | Gate | What it checks |
+|---|------|----------------|
+| 1 | Backend tsc | `museum-backend && pnpm lint` |
+| 2 | Frontend tsc | `museum-frontend && npm run lint` |
+| 3 | Web tsc | `museum-web && pnpm lint` |
+| 4 | OpenAPI sync | Backend `pnpm openapi:validate` + Frontend `npm run check:openapi-types` |
+| 5 | Migration revertibility | Latest migration has non-trivial `down()` |
+| 6 | Cache-key parity | FE/BE produce identical chat-cache keys (auto-skips if test absent) |
+| 7 | IDOR matrix smoke | `tests/integration/security/idor-matrix.test.ts` (auto-skips if absent) |
+| 8 | Guardrails ratchet | Keyword count ≥ baseline (`scripts/sentinels/guardrails-baseline.json`) |
+| 9 | as-any ratchet (full) | Catches drift in unstaged files |
+| 10 | Gitleaks (push range) | `gitleaks detect --log-opts=upstream..HEAD` |
+
+### Updating a baseline
+
+The `as-any` and `guardrails` ratchets pin counts in JSON files committed to the repo. Lowering / raising those numbers is a **deliberate** action that requires its own commit:
+
+```bash
+node scripts/sentinels/as-any-ratchet.mjs --update-baseline      # only if count went DOWN
+node scripts/sentinels/guardrails-ratchet.mjs --update-baseline  # only if count went UP
+```
+
+Document the reason in the commit message. Reviewers should challenge any baseline change.
+
+### Mirror workflow (CI gate)
+
+`.github/workflows/sentinel-mirror.yml` re-runs every gate on every push. Add the job name `sentinel-mirror` to the required status checks under branch protection (see § 4). A failure means either:
+
+1. Local hooks were bypassed (`--no-verify`) — investigate via PR commit-author + reflog.
+2. A genuine regression sneaked through (e.g. someone fixed locally then broke a different gate).
+
+Either way, the failing step name from CI maps 1:1 to a local sentinel. Reproduce by running that one command.
+
+---
+
+## 9. References
 
 - `.github/CODEOWNERS` — owner-to-path mapping
-- `team-reports/2026-04-26-security-remediation-plan.md` § W0.2 — original mandate
+- `.husky/pre-commit`, `.husky/pre-push` — local sentinel runners
+- `scripts/sentinels/` — individual sentinel scripts + baselines
+- `.github/workflows/sentinel-mirror.yml` — server-side mirror
+- `team-reports/2026-04-26-security-remediation-plan.md` § W0.2 + § W1.T6 — original mandate
 - `docs/CI_CD_SECRETS.md` — CI secret catalogue
 - `CLAUDE.md` — architecture + common commands + migration governance
 - GitHub docs: <https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-rules/about-rulesets>

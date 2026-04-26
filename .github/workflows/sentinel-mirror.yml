@@ -1,0 +1,121 @@
+name: sentinel-mirror
+
+# =============================================================================
+# Server-side mirror of the local pre-commit / pre-push sentinels.
+# =============================================================================
+# Purpose: catches any commit pushed with `--no-verify` (forbidden by team
+# policy). The hooks under .husky/{pre-commit,pre-push} run the same gates
+# locally; this workflow re-runs them on every push so a bypass attempt is
+# surfaced at PR review time.
+#
+# A failure here MUST block PR merge — add this workflow's job names to the
+# required status checks under branch protection. See docs/CONTRIBUTING.md.
+# =============================================================================
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main, staging]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sentinel-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mirror:
+    name: sentinel-mirror
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - name: Install backend deps
+        working-directory: museum-backend
+        run: pnpm install --frozen-lockfile
+
+      - name: Install web deps
+        working-directory: museum-web
+        run: pnpm install --frozen-lockfile
+
+      - name: Install frontend deps
+        working-directory: museum-frontend
+        run: npm ci --legacy-peer-deps
+
+      - name: Install gitleaks
+        run: |
+          curl -sL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz \
+            | tar -xz -C /usr/local/bin gitleaks
+
+      # ────────────────────────────────────────────────────────────────────
+      # Pre-commit gate mirror
+      # ────────────────────────────────────────────────────────────────────
+      - name: 'Mirror Gate 1 — gitleaks (full repo)'
+        run: gitleaks detect --redact --no-banner --config .gitleaks.toml
+
+      - name: 'Mirror Gate 2 — env-policy sentinel'
+        run: node scripts/sentinels/env-policy.mjs
+
+      - name: 'Mirror Gate 4 — as-any ratchet'
+        run: node scripts/sentinels/as-any-ratchet.mjs
+
+      # ────────────────────────────────────────────────────────────────────
+      # Pre-push gate mirror
+      # ────────────────────────────────────────────────────────────────────
+      - name: 'Mirror Gate P1 — backend tsc'
+        working-directory: museum-backend
+        run: pnpm lint
+
+      - name: 'Mirror Gate P2 — frontend tsc'
+        working-directory: museum-frontend
+        run: npm run lint
+
+      - name: 'Mirror Gate P3 — web tsc'
+        working-directory: museum-web
+        run: pnpm lint
+
+      - name: 'Mirror Gate P4 — OpenAPI sync'
+        run: node scripts/sentinels/openapi-sync.mjs
+
+      - name: 'Mirror Gate P5 — migration revertibility'
+        run: node scripts/sentinels/migration-revertibility.mjs
+
+      - name: 'Mirror Gate P6 — cache-key parity'
+        run: node scripts/sentinels/cache-key-parity.mjs
+
+      - name: 'Mirror Gate P7 — IDOR matrix smoke'
+        run: node scripts/sentinels/idor-smoke.mjs
+
+      - name: 'Mirror Gate P8 — guardrails ratchet'
+        run: node scripts/sentinels/guardrails-ratchet.mjs
+
+      - name: 'Mirror summary'
+        if: success()
+        run: echo "✅ All sentinels mirrored successfully — no local-bypass detected."
+
+      - name: 'Mirror failed — bypass attempt or genuine regression'
+        if: failure()
+        run: |
+          echo "::error::A sentinel that local hooks cover has failed in CI."
+          echo "::error::Either local hooks were bypassed (--no-verify) or a regression slipped in."
+          echo "::error::Reproduce locally: re-run the failing gate from the step name above."
+          exit 1
