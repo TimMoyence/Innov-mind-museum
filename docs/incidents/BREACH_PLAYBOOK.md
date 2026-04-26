@@ -129,8 +129,22 @@ Each runbook below is a self-contained checklist for one breach archetype. Run o
 > **Generic preamble (run for every scenario)**:
 > 1. Open the incident issue (template). Note the source, declarer, severity.
 > 2. Notify on-call channel (TBD — confirm tooling: PagerDuty? OpsGenie? Manual phone tree?).
-> 3. Snapshot suspect resources **before** rotating: `pg_dump`, audit log export, S3 access-log archive. The point is to preserve forensic evidence.
-> 4. Only then proceed to rotation/containment.
+> 3. **Record the breach in the audit log** by calling `auditCriticalSecurityEvent` (see `museum-backend/src/shared/audit/audit.service.ts`). This is the single source of truth — the row is hash-chained, retained 13 months, and tags Sentry so existing alerting fires. Paste the returned `auditId` into the incident issue.
+>     ```ts
+>     import { auditService, BREACH_EVENTS } from '@shared/audit';
+>
+>     const { auditId, cnilDeadline } = await auditService.auditCriticalSecurityEvent({
+>       eventName: BREACH_EVENTS.JWT_SECRET_LEAKED,
+>       severity: 'P0',
+>       detectedAt: new Date(),
+>       detectionSource: 'sentry',
+>       affectedDataClasses: ['account'],
+>       containmentStatus: 'in_progress',
+>       description: 'JWT_ACCESS_SECRET found in public CI log artifact',
+>     });
+>     ```
+> 4. Snapshot suspect resources **before** rotating: `pg_dump`, audit log export, S3 access-log archive. The point is to preserve forensic evidence.
+> 5. Only then proceed to rotation/containment.
 
 ### 5.a — JWT signing secret leaked (e.g., committed to git)
 
@@ -428,3 +442,21 @@ The placeholders below MUST be filled in before this playbook is relied upon for
 - [ ] OpenAI hard budget cap + alarm thresholds confirmed — § 5.e step 2.
 - [ ] VPS egress logging strategy confirmed — § 5.f step 5.
 - [ ] First tabletop exercise scheduled within 90 days using one of the § 5 scenarios.
+
+---
+
+## 9.1 Wiring evidence (R6 / W1.T5 — 2026-04-26)
+
+The W0.3 playbook is now wired into both code paths and the GitHub-side SLA tracker:
+
+| Concern | Wired in |
+|---------|----------|
+| Canonical breach event names (one per § 5 runbook) | `museum-backend/src/shared/audit/breach-event-types.ts` — `BREACH_EVENTS` constants (`JWT_SECRET_LEAKED`, `DB_COMPROMISE`, `S3_LEAK`, `OAUTH_BYPASS`, `LLM_API_KEY_ABUSE`, `SUPPLY_CHAIN`). |
+| Hash-chained audit row + Sentry tag + CNIL deadline | `museum-backend/src/shared/audit/audit.service.ts` → `AuditService.auditCriticalSecurityEvent()`. Reuses the existing `audit_logs` table (no schema change); typed payload nested under `metadata.breach`. Sentry receives `severity=breach`, `event=…`, `auditId=…`, `breachSeverity=P0\|P1\|P2`, `detectionSource=…` and a structured `breach` context. |
+| Free-form misuse guard | `AuditService.log()` and `AuditService.logBatch()` refuse any entry whose `action` is in `BREACH_EVENT_SET` — every breach must go through `auditCriticalSecurityEvent`. |
+| 13-month retention + IP anonymizer compatibility | Hash payload excludes `ip` (see `audit-chain.ts`) so the existing IP anonymizer cron rewrites `ip` without invalidating breach rows. Verified by `tests/integration/admin/audit-breach.test.ts` (chain parity + anonymizer-safe pin). |
+| 72h reminder loop on incident issues | `.github/workflows/breach-72h-timer.yml` — daily cron at 09:00 UTC, parses "Detected At" from the issue body (falls back to `created_at`), labels `breach-72h-near` at T+48h and `breach-72h-elapsed` at T+72h, silenced once `cnil-notified` is added. |
+| Issue template alignment | `.github/ISSUE_TEMPLATE/security-incident.yml` — severity, detection source, data classes, containment status, reporter all map 1:1 onto `BreachAuditEvent` fields. |
+| Test coverage | `museum-backend/tests/integration/admin/audit-breach.test.ts` (10 cases: payload shape, CNIL deadline, Sentry tagging incl. P0→fatal / P1→error, audit-failure resilience, unknown-event rejection, log/logBatch guard, hash-chain parity, anonymizer compatibility). |
+
+**Closes**: R6 (HIGH) of `team-reports/2026-04-26-security-compliance-full-audit.md` § 5.4; W1.T5 of `team-reports/2026-04-26-security-remediation-plan.md`.
