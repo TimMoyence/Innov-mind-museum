@@ -201,14 +201,14 @@ describe('authApi', () => {
     expect(result).toEqual(response);
   });
 
-  it('exportData calls GET /api/auth/export-data', async () => {
+  it('exportData calls GET /api/users/me/export', async () => {
     const exportPayload = { user: { id: 1 }, sessions: [] };
     mockOpenApiRequest.mockResolvedValue(exportPayload);
 
     const result = await authService.exportData();
 
     expect(mockOpenApiRequest).toHaveBeenCalledWith({
-      path: '/api/auth/export-data',
+      path: '/api/users/me/export',
       method: 'get',
     });
     expect(result).toEqual(exportPayload);
