@@ -122,7 +122,7 @@ authRouter.post(
     const { email, password, firstname, lastname } = req.body;
     const locale = pickEmailLocale(req);
     const user = await registerUseCase.execute(email, password, firstname, lastname, locale);
-    auditService.log({
+    await auditService.log({
       action: AUDIT_AUTH_REGISTER,
       actorType: 'user',
       actorId: user.id,
@@ -143,7 +143,7 @@ authRouter.post(
     try {
       const { email, password } = req.body;
       const session = await authSessionService.login(email, password);
-      auditService.log({
+      await auditService.log({
         action: AUDIT_AUTH_LOGIN_SUCCESS,
         actorType: 'user',
         actorId: session.user.id,
@@ -155,7 +155,7 @@ authRouter.post(
       res.status(200).json(session);
     } catch (error) {
       if (error instanceof AppError && error.code === 'INVALID_CREDENTIALS') {
-        auditService.log({
+        await auditService.log({
           action: AUDIT_AUTH_LOGIN_FAILED,
           actorType: 'anonymous',
           metadata: { email: req.body?.email },
@@ -164,7 +164,7 @@ authRouter.post(
         });
       }
       if (error instanceof AppError && error.code === 'TOO_MANY_REQUESTS') {
-        auditService.log({
+        await auditService.log({
           action: AUDIT_SECURITY_RATE_LIMIT,
           actorType: 'anonymous',
           metadata: { email: req.body?.email, endpoint: '/login' },
@@ -186,7 +186,7 @@ authRouter.post('/refresh', validateBody(refreshSchema), async (req: Request, re
 authRouter.post('/logout', validateBody(logoutSchema), async (req: Request, res: Response) => {
   const { refreshToken } = req.body;
   await authSessionService.logout(refreshToken);
-  auditService.log({
+  await auditService.log({
     action: AUDIT_AUTH_LOGOUT,
     actorType: 'anonymous',
     ip: req.ip,
@@ -223,7 +223,7 @@ authRouter.patch(
     const jwtUser = requireUser(req);
     const { preferences } = req.body;
     const result = await updateContentPreferencesUseCase.execute(jwtUser.id, preferences);
-    auditService.log({
+    await auditService.log({
       action: AUDIT_AUTH_CONTENT_PREFERENCES_UPDATED,
       actorType: 'user',
       actorId: jwtUser.id,
@@ -243,7 +243,7 @@ authRouter.post(
   async (req: Request, res: Response) => {
     const { provider, idToken } = req.body;
     const session = await socialLoginUseCase.execute(provider, idToken);
-    auditService.log({
+    await auditService.log({
       action: AUDIT_AUTH_SOCIAL_LOGIN,
       actorType: 'user',
       actorId: session.user.id,
@@ -259,7 +259,7 @@ authRouter.post(
 
 authRouter.delete('/account', isAuthenticated, async (req: Request, res: Response) => {
   const user = requireUser(req);
-  auditService.log({
+  await auditService.log({
     action: AUDIT_ACCOUNT_DELETED,
     actorType: 'user',
     actorId: user.id,
@@ -288,7 +288,7 @@ authRouter.get('/export-data', isAuthenticated, async (req: Request, res: Respon
     createdAt: profile.createdAt,
     updatedAt: profile.updatedAt,
   });
-  auditService.log({
+  await auditService.log({
     action: AUDIT_DATA_EXPORT,
     actorType: 'user',
     actorId: jwtUser.id,
@@ -308,7 +308,7 @@ authRouter.put(
     const jwtUser = requireUser(req);
     const { currentPassword, newPassword } = req.body;
     await changePasswordUseCase.execute(jwtUser.id, currentPassword, newPassword);
-    auditService.log({
+    await auditService.log({
       action: AUDIT_AUTH_PASSWORD_CHANGE,
       actorType: 'user',
       actorId: jwtUser.id,
@@ -337,7 +337,7 @@ authRouter.put(
     const { newEmail, currentPassword } = req.body;
     const locale = pickEmailLocale(req);
     const token = await changeEmailUseCase.execute(jwtUser.id, newEmail, currentPassword, locale);
-    auditService.log({
+    await auditService.log({
       action: AUDIT_AUTH_EMAIL_CHANGE_REQUEST,
       actorType: 'user',
       actorId: jwtUser.id,
@@ -370,7 +370,7 @@ authRouter.post(
   async (req: Request, res: Response) => {
     const { token } = req.body;
     const result = await confirmEmailChangeUseCase.execute(token);
-    auditService.log({
+    await auditService.log({
       action: AUDIT_AUTH_EMAIL_CHANGE_CONFIRMED,
       actorType: 'anonymous',
       ip: req.ip,
@@ -394,7 +394,7 @@ authRouter.post(
     const { email } = req.body;
     const locale = pickEmailLocale(req);
     const token = await forgotPasswordUseCase.execute(email, locale);
-    auditService.log({
+    await auditService.log({
       action: AUDIT_AUTH_PASSWORD_RESET_REQUEST,
       actorType: 'anonymous',
       metadata: { email },
@@ -417,7 +417,7 @@ authRouter.post(
   async (req: Request, res: Response) => {
     const { token, newPassword } = req.body;
     await resetPasswordUseCase.execute(token, newPassword);
-    auditService.log({
+    await auditService.log({
       action: AUDIT_AUTH_PASSWORD_RESET,
       actorType: 'anonymous',
       ip: req.ip,
@@ -434,7 +434,7 @@ authRouter.post(
   async (req: Request, res: Response) => {
     const { token } = req.body;
     const result = await verifyEmailUseCase.execute(token);
-    auditService.log({
+    await auditService.log({
       action: AUDIT_AUTH_EMAIL_VERIFIED,
       actorType: 'anonymous',
       ip: req.ip,
@@ -447,7 +447,7 @@ authRouter.post(
 authRouter.patch('/onboarding-complete', isAuthenticated, async (req: Request, res: Response) => {
   const jwtUser = requireUser(req);
   await completeOnboarding(jwtUser.id);
-  auditService.log({
+  await auditService.log({
     action: AUDIT_AUTH_ONBOARDING_COMPLETED,
     actorType: 'user',
     actorId: jwtUser.id,
@@ -477,7 +477,7 @@ authRouter.post(
     const { name, expiresAt } = req.body;
     const expiry = expiresAt ? new Date(expiresAt) : undefined;
     const result = await generateApiKeyUseCase.execute(jwtUser.id, name, expiry);
-    auditService.log({
+    await auditService.log({
       action: AUDIT_API_KEY_CREATED,
       actorType: 'user',
       actorId: jwtUser.id,
@@ -504,7 +504,7 @@ authRouter.delete('/api-keys/:id', isAuthenticatedJwtOnly, async (req: Request, 
     throw badRequest('Invalid API key ID');
   }
   const result = await revokeApiKeyUseCase.execute(keyId, jwtUser.id);
-  auditService.log({
+  await auditService.log({
     action: AUDIT_API_KEY_REVOKED,
     actorType: 'user',
     actorId: jwtUser.id,

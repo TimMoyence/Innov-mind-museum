@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import dotenv from 'dotenv';
 
 import { validateProductionEnv } from './env.production-validation';
@@ -403,7 +405,15 @@ const env: AppEnv = {
   supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.app',
   storage: {
     driver: storageDriver,
-    localUploadsDir: toOptionalString(process.env.LOCAL_UPLOADS_DIR) || 'tmp/uploads',
+    // Resolved at parse time so downstream consumers always see an absolute path,
+    // independent of `process.cwd()` at the call site. Mirrors `LocalImageStorage`'s
+    // own default (`<cwd>/tmp/uploads`) so the harness — which constructs
+    // `new LocalImageStorage()` without override — stays compatible. Relative
+    // env values are resolved against `process.cwd()` for the same reason.
+    localUploadsDir: path.resolve(
+      process.cwd(),
+      toOptionalString(process.env.LOCAL_UPLOADS_DIR) ?? path.join('tmp', 'uploads'),
+    ),
     signedUrlTtlSeconds: toNumber(process.env.S3_SIGNED_URL_TTL_SECONDS, 900),
     // SEC-HARDENING (L3): in production, MEDIA_SIGNING_SECRET MUST be set
     // explicitly — no silent fallback to JWT_ACCESS_SECRET / JWT_SECRET.

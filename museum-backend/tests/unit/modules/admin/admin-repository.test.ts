@@ -88,7 +88,7 @@ describe('AdminRepositoryPg', () => {
         pagination: { page: 1, limit: 10 },
       });
 
-      expect(userQb.orderBy).toHaveBeenCalledWith('user.createdAt', 'DESC');
+      expect(userQb.orderBy).toHaveBeenCalledWith('u.createdAt', 'DESC');
       expect(userQb.skip).toHaveBeenCalledWith(0);
       expect(userQb.take).toHaveBeenCalledWith(10);
       expect(result.data).toHaveLength(2);
@@ -107,7 +107,7 @@ describe('AdminRepositoryPg', () => {
       });
 
       expect(userQb.where).toHaveBeenCalledWith(
-        '(user.email ILIKE :search OR user.firstname ILIKE :search OR user.lastname ILIKE :search)',
+        '(u.email ILIKE :search OR u.firstname ILIKE :search OR u.lastname ILIKE :search)',
         { search: '%john%' },
       );
     });
@@ -120,7 +120,7 @@ describe('AdminRepositoryPg', () => {
         pagination: { page: 1, limit: 10 },
       });
 
-      expect(userQb.andWhere).toHaveBeenCalledWith('user.role = :role', { role: 'admin' });
+      expect(userQb.andWhere).toHaveBeenCalledWith('u.role = :role', { role: 'admin' });
     });
 
     it('computes correct offset and totalPages for page 2', async () => {

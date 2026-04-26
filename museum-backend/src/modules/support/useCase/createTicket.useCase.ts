@@ -47,7 +47,7 @@ export class CreateTicketUseCase {
 
     const ticket = await this.repository.createTicket(createInput);
 
-    auditService.log({
+    await auditService.log({
       action: AUDIT_SUPPORT_TICKET_CREATED,
       actorType: 'user',
       actorId: input.userId,

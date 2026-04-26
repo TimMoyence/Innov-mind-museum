@@ -47,6 +47,15 @@ describeE2E('golden path 9 — knowledge extraction full pipeline', () => {
     await harness?.stop();
   });
 
+  // Each test seeds its own fixtures; truncate beforehand so any stray rows
+  // (e.g. from a prior failing run that connected to a non-ephemeral DB) do
+  // not poison the dedup check at the top of `processUrl`.
+  beforeEach(async () => {
+    await harness.dataSource.query(
+      'TRUNCATE TABLE extracted_content, artwork_knowledge, museum_enrichment RESTART IDENTITY CASCADE',
+    );
+  });
+
   const TEST_URL = 'https://example.com/mona-lisa';
   const TEST_SEARCH_TERM = 'Mona Lisa';
   const TEST_LOCALE = 'en';
@@ -63,7 +72,9 @@ describeE2E('golden path 9 — knowledge extraction full pipeline', () => {
 
     const classifierMock: ContentClassifierPort = {
       classify: jest.fn().mockResolvedValue({
-        artwork: {
+        type: 'artwork',
+        confidence: 0.95,
+        data: {
           title: 'Mona Lisa',
           artist: 'Leonardo da Vinci',
           period: 'Renaissance',
@@ -73,8 +84,6 @@ describeE2E('golden path 9 — knowledge extraction full pipeline', () => {
           dimensions: '77 cm × 53 cm',
           currentLocation: 'Louvre Museum, Paris',
         },
-        museum: null,
-        confidence: 0.95,
       }),
     };
 

@@ -1,3 +1,5 @@
+import { validate as isUuid } from 'uuid';
+
 import { AppError, badRequest, notFound } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
@@ -60,14 +62,54 @@ export class ChatMediaService {
       throw notFound('Chat message image not found');
     }
 
-    const localMeta = resolveLocalImageMeta(row.message.imageRef);
-    if (localMeta) {
-      return { imageRef: row.message.imageRef, ...localMeta };
+    return this.toImageRefResult(row.message.imageRef);
+  }
+
+  /**
+   * Resolves the image reference for a message when the caller has already proven authorization
+   * via a verified HMAC token (see `verifySignedChatImageReadUrl`). Skips the session-ownership
+   * check because the signed token IS the authorization — it was issued to the legitimate owner
+   * and is short-lived.
+   *
+   * Path-only validation (UUID) is still enforced. Use this ONLY after HMAC + TTL verification.
+   *
+   * @param messageId - UUID of the message containing the image.
+   * @returns The image reference, and optionally the local file name and content type.
+   * @throws {AppError} 400 on invalid id, 404 if message or image not found.
+   */
+  async getMessageImageRefBySignedToken(messageId: string): Promise<{
+    imageRef: string;
+    fileName?: string;
+    contentType?: string;
+  }> {
+    if (!isUuid(messageId)) {
+      throw badRequest('Invalid message id format');
     }
 
-    return {
-      imageRef: row.message.imageRef,
-    };
+    const row = await this.repository.getMessageById(messageId);
+    if (!row) {
+      throw notFound('Chat message not found');
+    }
+
+    if (!row.message.imageRef) {
+      throw notFound('Chat message image not found');
+    }
+
+    return this.toImageRefResult(row.message.imageRef);
+  }
+
+  /** Shared mapping of an `imageRef` storage string to the response shape. */
+  private toImageRefResult(imageRef: string): {
+    imageRef: string;
+    fileName?: string;
+    contentType?: string;
+  } {
+    const localMeta = resolveLocalImageMeta(imageRef);
+    if (localMeta) {
+      return { imageRef, ...localMeta };
+    }
+
+    return { imageRef };
   }
 
   /**

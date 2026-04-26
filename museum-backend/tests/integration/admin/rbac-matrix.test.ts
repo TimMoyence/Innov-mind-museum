@@ -14,9 +14,10 @@ import {
  * RBAC matrix integration test — Finding H3 remediation.
  *
  * Asserts tightened least-privilege policy across all 17 admin endpoints:
- *   - 6 admin-only: users, users/:id/role, audit-logs, analytics/{usage,content,engagement}
- *   - 11 admin+moderator: stats, reports, reports/:id, tickets, tickets/:id,
- *     reviews, reviews/:id, ke/pending, ke/:id/approve, plus museums/:id/cache/purge (admin-only)
+ *   - 5 admin-only: users/:id/role, audit-logs, analytics/{usage,content,engagement}
+ *   - 12 admin+moderator: users (read-only directory for ticket triage),
+ *     stats, reports, reports/:id, tickets, tickets/:id, reviews, reviews/:id,
+ *     ke/pending, ke/:id/approve, plus museums/:id/cache/purge (admin-only)
  *
  * Visitor is expected to be denied everywhere (403).
  * Unauthenticated is expected to be rejected everywhere (401).
@@ -126,17 +127,7 @@ const ticketBody = { status: 'in_progress' };
 const reviewBody = { status: 'approved' };
 
 const MATRIX: RouteCase[] = [
-  // admin-only (6)
-  {
-    label: 'GET /users',
-    method: 'get',
-    path: '/api/admin/users',
-    admin: 200,
-    moderator: 403,
-    visitor: 403,
-    anonymous: 401,
-    kind: 'main',
-  },
+  // admin-only (5)
   {
     label: 'PATCH /users/:id/role',
     method: 'patch',
@@ -188,7 +179,17 @@ const MATRIX: RouteCase[] = [
     anonymous: 401,
     kind: 'main',
   },
-  // admin + moderator (11)
+  // admin + moderator (12)
+  {
+    label: 'GET /users',
+    method: 'get',
+    path: '/api/admin/users',
+    admin: 200,
+    moderator: 200,
+    visitor: 403,
+    anonymous: 401,
+    kind: 'main',
+  },
   {
     label: 'GET /stats',
     method: 'get',

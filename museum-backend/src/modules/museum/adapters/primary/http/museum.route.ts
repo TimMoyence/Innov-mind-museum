@@ -90,7 +90,7 @@ const handleCreateMuseum = async (req: Request, res: Response) => {
       ? { museumType: museumType as 'art' | 'history' | 'science' | 'specialized' | 'general' }
       : {}),
   });
-  auditService.log({
+  await auditService.log({
     action: 'MUSEUM_CREATED',
     actorType: 'user',
     actorId: req.user?.id ?? null,
@@ -147,7 +147,7 @@ const handleUpdateMuseum = async (req: Request, res: Response) => {
   const id = Number.parseInt(req.params.id, 10);
   if (Number.isNaN(id)) throw badRequest('Invalid museum ID');
   const museum = await updateMuseumUseCase.execute(id, req.body as UpdateMuseumInput);
-  auditService.log({
+  await auditService.log({
     action: 'MUSEUM_UPDATED',
     actorType: 'user',
     actorId: req.user?.id ?? null,

@@ -41,11 +41,13 @@ import {
 
 const adminRouter: Router = Router();
 
-// GET /api/admin/users — Admin only: paginated user list (PII least-privilege)
+// GET /api/admin/users — Admin & moderator: paginated user list
+// Moderators need user lookup for ticket assignment / report triage.
+// Role mutation (PATCH /:id/role) remains admin-only below.
 adminRouter.get(
   '/users',
   isAuthenticated,
-  requireRole('admin'),
+  requireRole('admin', 'moderator'),
   validateQuery(listUsersQuerySchema),
   async (_req: Request, res: Response) => {
     const { page, limit, search, role } = res.locals.validatedQuery as {

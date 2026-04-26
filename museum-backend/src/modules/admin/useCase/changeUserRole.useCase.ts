@@ -47,7 +47,7 @@ export class ChangeUserRoleUseCase {
       throw notFound('User not found');
     }
 
-    auditService.log({
+    await auditService.log({
       action: AUDIT_ADMIN_ROLE_CHANGE,
       actorType: 'user',
       actorId: input.actorId,

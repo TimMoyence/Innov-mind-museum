@@ -18,6 +18,7 @@ const mockGetSession = jest.fn();
 const mockDeleteSessionIfEmpty = jest.fn();
 const mockReportMessage = jest.fn();
 const mockGetMessageImageRef = jest.fn();
+const mockGetMessageImageRefBySignedToken = jest.fn();
 const mockSetMessageFeedback = jest.fn();
 const mockPostAudioMessage = jest.fn();
 const mockSynthesizeSpeech = jest.fn();
@@ -31,6 +32,7 @@ const mockChatService: Partial<ChatService> = {
   postMessageStream: mockPostMessageStream,
   reportMessage: mockReportMessage,
   getMessageImageRef: mockGetMessageImageRef,
+  getMessageImageRefBySignedToken: mockGetMessageImageRefBySignedToken,
   setMessageFeedback: mockSetMessageFeedback,
   postAudioMessage: mockPostAudioMessage,
   synthesizeSpeech: mockSynthesizeSpeech,
@@ -293,7 +295,7 @@ describe('chat-media.route — uncovered paths', () => {
       const token = url.searchParams.get('token');
       const sig = url.searchParams.get('sig');
 
-      mockGetMessageImageRef.mockResolvedValueOnce({
+      mockGetMessageImageRefBySignedToken.mockResolvedValueOnce({
         imageRef: 's3://bucket/path/to/image.jpg',
         fileName: 'image.jpg',
         contentType: 'image/jpeg',
@@ -319,7 +321,7 @@ describe('chat-media.route — uncovered paths', () => {
       const sig = url.searchParams.get('sig');
 
       // Return a non-S3, non-local imageRef that resolveLocalImageFilePath can't handle
-      mockGetMessageImageRef.mockResolvedValueOnce({
+      mockGetMessageImageRefBySignedToken.mockResolvedValueOnce({
         imageRef: 'azure://container/blob',
         fileName: 'image.jpg',
         contentType: 'image/jpeg',
@@ -333,7 +335,7 @@ describe('chat-media.route — uncovered paths', () => {
       expect(res.body.error.code).toBe('IMAGE_STORAGE_NOT_SUPPORTED');
     });
 
-    it('forwards error when getMessageImageRef throws', async () => {
+    it('forwards error when getMessageImageRefBySignedToken throws', async () => {
       const signed = buildSignedChatImageReadUrl({
         baseUrl: 'http://127.0.0.1',
         messageId: 'msg-error',
@@ -343,7 +345,7 @@ describe('chat-media.route — uncovered paths', () => {
       const token = url.searchParams.get('token');
       const sig = url.searchParams.get('sig');
 
-      mockGetMessageImageRef.mockRejectedValueOnce(
+      mockGetMessageImageRefBySignedToken.mockRejectedValueOnce(
         new AppError({
           message: 'Message not found',
           statusCode: 404,

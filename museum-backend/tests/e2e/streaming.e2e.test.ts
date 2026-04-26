@@ -1,7 +1,13 @@
 import { createE2EHarness, E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
 import { registerAndLogin } from 'tests/helpers/e2e/e2e-auth.helpers';
 
-const shouldRunE2E = process.env.RUN_E2E === 'true';
+// SSE streaming route was DEACTIVATED post-V1 (see chat-message.route.ts:198–202
+// and chat-message.sse-dormant.ts). The route is wired to revive in V2.1 once
+// the realtime WebRTC pipeline ships. Until then, this suite is skipped to keep
+// CI green — re-enable by flipping the route back on in chat-message.route.ts and
+// removing this guard.
+const SSE_ROUTE_DEACTIVATED = true;
+const shouldRunE2E = process.env.RUN_E2E === 'true' && !SSE_ROUTE_DEACTIVATED;
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
 /** Parses raw SSE text into an array of { event, data } objects. */
