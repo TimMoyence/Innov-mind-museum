@@ -40,19 +40,7 @@ describeE2E('golden path 9 — knowledge extraction full pipeline', () => {
   let harness: E2EHarness;
 
   beforeAll(async () => {
-    try {
-      harness = await createE2EHarness();
-    } catch (err) {
-      // Surface the real cause: jest collapses an `AggregateError` thrown from
-      // `beforeAll` into an opaque empty error message, which has masked the
-      // root cause of the CI flake on this suite for several runs.
-
-      console.error('[ke-e2e][beforeAll] harness boot failed:', err);
-      if (err instanceof AggregateError) {
-        console.error('[ke-e2e][beforeAll] inner errors:', err.errors);
-      }
-      throw err;
-    }
+    harness = await createE2EHarness();
   });
 
   afterAll(async () => {
