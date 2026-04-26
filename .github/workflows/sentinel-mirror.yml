@@ -45,11 +45,17 @@ jobs:
           version: 9
           run_install: false
 
+      # Monorepo — pnpm-lock.yaml lives in each app dir, not at the repo
+      # root. List every lockfile so the cache key covers them all.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: |
+            museum-backend/pnpm-lock.yaml
+            museum-web/pnpm-lock.yaml
+            design-system/pnpm-lock.yaml
 
       - name: Install backend deps
         working-directory: museum-backend
