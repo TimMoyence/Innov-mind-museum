@@ -27,6 +27,7 @@ import type {
   AudioTranscriber,
 } from '../domain/ports/audio-transcriber.port';
 import type { ChatOrchestrator, OrchestratorOutput } from '../domain/ports/chat-orchestrator.port';
+import type { ImageProcessorPort } from '../domain/ports/image-processor.port';
 import type { ImageStorage } from '../domain/ports/image-storage.port';
 import type { OcrService } from '../domain/ports/ocr.port';
 import type { PiiSanitizer } from '../domain/ports/pii-sanitizer.port';
@@ -70,6 +71,8 @@ export interface ChatMessageServiceDeps {
   ocr?: OcrService; // 6 — OCR text extraction from images
   enrichment?: ChatEnrichmentDeps; // 7 — knowledge / web / memory / location
   safety?: ChatSafetyDeps; // 8 — guardrails + PII sanitiser
+  /** EXIF / metadata stripper (GDPR Art. 5(1)(c)). */
+  imageProcessor?: ImageProcessorPort;
 }
 
 /** Awaits stream drain with a safety timeout to prevent indefinite hangs. */
@@ -118,6 +121,7 @@ export class ChatMessageService {
     const imageProcessor = new ImageProcessingService({
       imageStorage: deps.imageStorage,
       ocr: deps.ocr,
+      imageProcessor: deps.imageProcessor,
     });
 
     this.guardrail = new GuardrailEvaluationService({

@@ -13,6 +13,7 @@ import {
 
 import type { evaluateUserInputGuardrail } from './art-topic-guardrail';
 import type { PostMessageInput } from '../domain/chat.types';
+import type { ImageProcessorPort } from '../domain/ports/image-processor.port';
 import type { ImageStorage } from '../domain/ports/image-storage.port';
 import type { OcrService } from '../domain/ports/ocr.port';
 
@@ -26,6 +27,13 @@ interface ProcessedImage {
 interface ImageProcessingServiceDeps {
   imageStorage: ImageStorage;
   ocr?: OcrService;
+  /**
+   * EXIF / metadata stripper applied between magic-byte validation and the
+   * size cap. Required for GDPR Art. 5(1)(c) data minimisation. When omitted,
+   * the pipeline still works but EXIF is preserved — only acceptable in unit
+   * tests that explicitly exercise upstream code paths.
+   */
+  imageProcessor?: ImageProcessorPort;
 }
 
 /**
@@ -35,10 +43,12 @@ interface ImageProcessingServiceDeps {
 export class ImageProcessingService {
   private readonly imageStorage: ImageStorage;
   private readonly ocr?: OcrService;
+  private readonly imageProcessor?: ImageProcessorPort;
 
   constructor(deps: ImageProcessingServiceDeps) {
     this.imageStorage = deps.imageStorage;
     this.ocr = deps.ocr;
+    this.imageProcessor = deps.imageProcessor;
   }
 
   /**
@@ -76,32 +86,47 @@ export class ImageProcessingService {
       }
 
       assertMimeType(mimeType, env.upload.allowedMimeTypes);
-      assertImageSize(sizeBytes ?? 0, env.llm.maxImageBytes);
       assertMagicBytes(normalizedBase64);
 
+      // EXIF strip BEFORE size check — GDPR Art. 5(1)(c) / STRIDE I4. An
+      // oversize-pre-strip image that fits post-strip is accepted.
+      const stripped = await this.stripExif(normalizedBase64, mimeType);
+      assertImageSize(stripped.sizeBytes, env.llm.maxImageBytes);
+
       const imageRef = await this.imageStorage.save({
-        base64: normalizedBase64,
-        mimeType,
-        objectKey: buildChatImageObjectKey({ mimeType, sessionId, userId: ownerId }),
+        base64: stripped.base64,
+        mimeType: stripped.mimeType,
+        objectKey: buildChatImageObjectKey({
+          mimeType: stripped.mimeType,
+          sessionId,
+          userId: ownerId,
+        }),
       });
 
       return {
         imageRef,
-        orchestratorImage: { source: 'upload', value: normalizedBase64, mimeType, sizeBytes },
+        orchestratorImage: {
+          source: 'upload',
+          value: stripped.base64,
+          mimeType: stripped.mimeType,
+          sizeBytes: stripped.sizeBytes,
+        },
       };
     }
 
     // Legacy base64 (data-URL or raw)
     const decoded = decodeBase64Image(image.value);
     assertMimeType(decoded.mimeType, env.upload.allowedMimeTypes);
-    assertImageSize(decoded.sizeBytes, env.llm.maxImageBytes);
     assertMagicBytes(decoded.base64);
 
+    const stripped = await this.stripExif(decoded.base64, decoded.mimeType);
+    assertImageSize(stripped.sizeBytes, env.llm.maxImageBytes);
+
     const imageRef = await this.imageStorage.save({
-      base64: decoded.base64,
-      mimeType: decoded.mimeType,
+      base64: stripped.base64,
+      mimeType: stripped.mimeType,
       objectKey: buildChatImageObjectKey({
-        mimeType: decoded.mimeType,
+        mimeType: stripped.mimeType,
         sessionId,
         userId: ownerId,
       }),
@@ -111,10 +136,36 @@ export class ImageProcessingService {
       imageRef,
       orchestratorImage: {
         source: image.source,
-        value: decoded.base64,
-        mimeType: decoded.mimeType,
-        sizeBytes: decoded.sizeBytes,
+        value: stripped.base64,
+        mimeType: stripped.mimeType,
+        sizeBytes: stripped.sizeBytes,
       },
+    };
+  }
+
+  /**
+   * Strips EXIF / metadata via the injected processor. When no processor is
+   * configured (legacy unit tests), the input is returned untouched — this
+   * branch is intentionally observable so wiring regressions surface in CI.
+   *
+   * @param base64 - Magic-byte-validated base64 payload.
+   * @param mimeType - Declared MIME type.
+   * @returns Cleaned base64, MIME, and post-strip byte size.
+   */
+  private async stripExif(
+    base64: string,
+    mimeType: string,
+  ): Promise<{ base64: string; mimeType: string; sizeBytes: number }> {
+    if (!this.imageProcessor) {
+      const sizeBytes = Buffer.from(base64, 'base64').byteLength;
+      return { base64, mimeType, sizeBytes };
+    }
+    const inputBuffer = Buffer.from(base64, 'base64');
+    const cleaned = await this.imageProcessor.stripExif(inputBuffer, mimeType);
+    return {
+      base64: cleaned.buffer.toString('base64'),
+      mimeType: cleaned.mime,
+      sizeBytes: cleaned.buffer.byteLength,
     };
   }
 

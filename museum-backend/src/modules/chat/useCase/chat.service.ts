@@ -35,6 +35,7 @@ import type { AdvancedGuardrail } from '../domain/ports/advanced-guardrail.port'
 import type { AudioStorage } from '../domain/ports/audio-storage.port';
 import type { AudioTranscriber } from '../domain/ports/audio-transcriber.port';
 import type { ChatOrchestrator } from '../domain/ports/chat-orchestrator.port';
+import type { ImageProcessorPort } from '../domain/ports/image-processor.port';
 import type { ImageStorage } from '../domain/ports/image-storage.port';
 import type { OcrService } from '../domain/ports/ocr.port';
 import type { PiiSanitizer } from '../domain/ports/pii-sanitizer.port';
@@ -61,6 +62,12 @@ export interface ChatServiceDeps {
   repository: ChatRepository;
   orchestrator: ChatOrchestrator;
   imageStorage: ImageStorage;
+  /**
+   * EXIF / metadata stripper for uploaded images. Required in production for
+   * GDPR Art. 5(1)(c) — omitting it disables the strip step (legacy unit
+   * tests only).
+   */
+  imageProcessor?: ImageProcessorPort;
   audioTranscriber?: AudioTranscriber;
   audioStorage?: AudioStorage;
   tts?: TextToSpeechService;
@@ -109,6 +116,7 @@ export class ChatService {
       repository: deps.repository,
       orchestrator: deps.orchestrator,
       imageStorage: deps.imageStorage,
+      imageProcessor: deps.imageProcessor,
       audioTranscriber,
       cache: deps.cache,
       ocr: deps.ocr,

@@ -15,6 +15,7 @@ import { DuckDuckGoClient } from './adapters/secondary/duckduckgo.client';
 import { FallbackSearchProvider } from './adapters/secondary/fallback-search.provider';
 import { GoogleCseClient } from './adapters/secondary/google-cse.client';
 import { LLMGuardAdapter } from './adapters/secondary/guardrails/llm-guard.adapter';
+import { SharpImageProcessor } from './adapters/secondary/image-processing.service';
 import { S3CompatibleImageStorage } from './adapters/secondary/image-storage.s3';
 import { LocalImageStorage } from './adapters/secondary/image-storage.stub';
 import { LangChainChatOrchestrator } from './adapters/secondary/langchain.orchestrator';
@@ -414,6 +415,7 @@ export class ChatModule {
       repository: deps.repository,
       orchestrator: deps.effectiveOrchestrator,
       imageStorage: deps.imageStorage,
+      imageProcessor: new SharpImageProcessor(),
       audioTranscriber: new OpenAiAudioTranscriber(),
       audioStorage: this.buildAudioStorage(),
       tts: deps.tts,
