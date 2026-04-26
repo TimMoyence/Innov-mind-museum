@@ -36,6 +36,7 @@
 !docs/compliance/**
 !docs/incidents/
 !docs/incidents/**
+!docs/V2_PENDING.md
 
 # frontend docs
 !museum-frontend/docs/
