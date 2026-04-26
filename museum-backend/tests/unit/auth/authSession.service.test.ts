@@ -1,7 +1,23 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import { AuthSessionService } from '@modules/auth/useCase/authSession.service';
+import {
+  AuthSessionService,
+  type AuthSessionResponse,
+} from '@modules/auth/useCase/authSession.service';
+
+/**
+ * Narrow `login()`'s discriminated-union return to the happy-path session
+ * shape. All tests in this file exercise visitor accounts (no MFA) so the
+ * branch is statically guaranteed; the helper just keeps assertions clean.
+ * @param result
+ */
+const assertSession = (result: unknown): AuthSessionResponse => {
+  if (typeof result !== 'object' || result === null || !('accessToken' in result)) {
+    throw new Error('expected AuthSessionResponse');
+  }
+  return result as AuthSessionResponse;
+};
 import type {
   IRefreshTokenRepository,
   StoredRefreshTokenRow,
@@ -97,7 +113,7 @@ describe('AuthSessionService', () => {
         makeUser({ password: hashed, email_verified: true }),
       );
 
-      const result = await service.login('user@test.com', 'ValidPass1');
+      const result = assertSession(await service.login('user@test.com', 'ValidPass1'));
 
       expect(typeof result.accessToken).toBe('string');
       expect(result.accessToken.split('.')).toHaveLength(3); // JWT format
@@ -120,7 +136,7 @@ describe('AuthSessionService', () => {
       );
 
       const service = new AuthSessionService(userRepo, refreshTokenRepo);
-      const result = await service.login('user@test.com', 'ValidPass1');
+      const result = assertSession(await service.login('user@test.com', 'ValidPass1'));
 
       expect(result.user.onboardingCompleted).toBe(true);
     });
@@ -249,7 +265,7 @@ describe('AuthSessionService', () => {
       userRepo.getUserByEmail.mockResolvedValue(
         makeUser({ password: hashed, email_verified: true }),
       );
-      const loginResult = await service.login('user@test.com', 'ValidPass1');
+      const loginResult = assertSession(await service.login('user@test.com', 'ValidPass1'));
 
       // Extract the jti/familyId from the real refresh token
       const decoded = jwt.verify(
@@ -296,7 +312,7 @@ describe('AuthSessionService', () => {
       userRepo.getUserByEmail.mockResolvedValue(
         makeUser({ password: hashed, email_verified: true }),
       );
-      const loginResult = await service.login('user@test.com', 'ValidPass1');
+      const loginResult = assertSession(await service.login('user@test.com', 'ValidPass1'));
       const decoded = jwt.verify(
         loginResult.refreshToken,
         env.auth.refreshTokenSecret,

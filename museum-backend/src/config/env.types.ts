@@ -61,6 +61,35 @@ export interface AppEnv {
     refreshIdleWindowSeconds: number;
     appleClientId: string;
     googleClientIds: string[];
+    /**
+     * AES-256-GCM key (32 raw bytes, supplied base64-encoded) used to encrypt
+     * the per-user TOTP shared secret at rest. Distinct from `JWT_*` and
+     * `MEDIA_SIGNING_SECRET` per the SEC-HARDENING H12 / L3 secret-separation
+     * pattern (`env.production-validation.ts` enforces distinctness in prod).
+     *
+     * Optional in dev/test (a deterministic dev key is injected); REQUIRED in
+     * production.
+     */
+    mfaEncryptionKey: string;
+    /**
+     * Short-lived JWT secret used to sign the `mfaSessionToken` issued between
+     * the password step and the TOTP challenge. Distinct from access/refresh
+     * secrets so a leak of one cannot replay the other. Optional in dev/test;
+     * required in production. Defaults to a derived dev value when absent.
+     */
+    mfaSessionTokenSecret: string;
+    /**
+     * TTL of the `mfaSessionToken` in seconds. Default 5 minutes — long enough
+     * for the user to retrieve a code, short enough that an interception window
+     * stays small.
+     */
+    mfaSessionTokenTtlSeconds: number;
+    /**
+     * Length of the warning window (in days) granted to existing admins who
+     * land on a build that requires MFA but have not yet enrolled. Default 30
+     * (user-confirmed). Past the deadline, login is soft-blocked.
+     */
+    mfaEnrollmentWarningDays: number;
   };
   llm: {
     provider: LlmProvider;

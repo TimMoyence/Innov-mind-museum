@@ -119,7 +119,62 @@ export function validateProductionEnv(env: AppEnv): void {
     throw new Error('MEDIA_SIGNING_SECRET must be distinct from JWT_REFRESH_SECRET in production.');
   }
 
+  // R16 MFA (W2.T4): MFA_ENCRYPTION_KEY must be present, distinct from every
+  // other signing secret, and >= 32 chars (256 bits of entropy). Sharing a
+  // signing key across MFA / JWT / media defeats key rotation: leaking one
+  // would compromise all three trust domains.
+  validateMfaSecrets(env);
+
   validateLlmProviderKey(env);
   validateS3Storage(env);
   validateRedis(env);
+}
+
+/** Enforces MFA secret presence + distinctness from JWT / media signing secrets in production. */
+function validateMfaSecrets(env: AppEnv): void {
+  const mfaKey = required('MFA_ENCRYPTION_KEY', process.env.MFA_ENCRYPTION_KEY);
+  const mfaSession = required('MFA_SESSION_TOKEN_SECRET', process.env.MFA_SESSION_TOKEN_SECRET);
+
+  assertSecretLength('MFA_ENCRYPTION_KEY', mfaKey);
+  assertSecretLength('MFA_SESSION_TOKEN_SECRET', mfaSession);
+
+  if (mfaKey === process.env.JWT_ACCESS_SECRET) {
+    throw new Error(
+      'MFA_ENCRYPTION_KEY must be distinct from JWT_ACCESS_SECRET in production. ' +
+        'Sharing secrets across signing domains defeats key rotation.',
+    );
+  }
+  if (mfaKey === process.env.JWT_REFRESH_SECRET) {
+    throw new Error('MFA_ENCRYPTION_KEY must be distinct from JWT_REFRESH_SECRET in production.');
+  }
+  if (mfaKey === process.env.MEDIA_SIGNING_SECRET) {
+    throw new Error('MFA_ENCRYPTION_KEY must be distinct from MEDIA_SIGNING_SECRET in production.');
+  }
+
+  if (mfaSession === process.env.JWT_ACCESS_SECRET) {
+    throw new Error(
+      'MFA_SESSION_TOKEN_SECRET must be distinct from JWT_ACCESS_SECRET in production.',
+    );
+  }
+  if (mfaSession === process.env.JWT_REFRESH_SECRET) {
+    throw new Error(
+      'MFA_SESSION_TOKEN_SECRET must be distinct from JWT_REFRESH_SECRET in production.',
+    );
+  }
+  if (mfaSession === mfaKey) {
+    throw new Error(
+      'MFA_SESSION_TOKEN_SECRET must be distinct from MFA_ENCRYPTION_KEY — ' +
+        'one signs short-lived JWTs, the other encrypts data at rest. Reusing ' +
+        'either as the other defeats both threat models.',
+    );
+  }
+
+  // Cross-check: the parsed env value MUST agree with the raw env var so a
+  // future refactor that drops the env.ts wiring fails fast here instead of
+  // silently bypassing the secret-distinctness contract.
+  if (env.auth.mfaEncryptionKey !== mfaKey) {
+    throw new Error(
+      'env.auth.mfaEncryptionKey is out of sync with MFA_ENCRYPTION_KEY — env.ts wiring drift.',
+    );
+  }
 }

@@ -251,6 +251,29 @@ const env: AppEnv = {
     googleClientIds: toList(process.env.GOOGLE_OAUTH_CLIENT_ID).length
       ? toList(process.env.GOOGLE_OAUTH_CLIENT_ID)
       : [],
+    // R16 MFA — AES-256-GCM key for TOTP secrets at rest. In dev/test we
+    // tolerate absence and fall back to a deterministic 32-byte dev key so the
+    // module boots without extra ceremony. In production, the absence of an
+    // explicit value is fatal (enforced in env.production-validation.ts) and
+    // the key MUST be distinct from JWT_* and MEDIA_SIGNING_SECRET (see L3 /
+    // H12 hardening pattern).
+    mfaEncryptionKey: isDev
+      ? toOptionalString(process.env.MFA_ENCRYPTION_KEY) ||
+        // 32 base64-decoded bytes — only used when the operator did not bother
+        // to set the var locally. Production fail-fast prevents this surfacing
+        // in prod even by accident.
+        'ZGV2LW1mYS1lbmNyeXB0aW9uLWtleS0zMmJ5dGVzLWxvY2Fs'
+      : required('MFA_ENCRYPTION_KEY', toOptionalString(process.env.MFA_ENCRYPTION_KEY)),
+    mfaSessionTokenSecret: isDev
+      ? toOptionalString(process.env.MFA_SESSION_TOKEN_SECRET) ||
+        toOptionalString(process.env.JWT_ACCESS_SECRET) ||
+        'local-dev-mfa-session-secret'
+      : required(
+          'MFA_SESSION_TOKEN_SECRET',
+          toOptionalString(process.env.MFA_SESSION_TOKEN_SECRET),
+        ),
+    mfaSessionTokenTtlSeconds: toNumber(process.env.MFA_SESSION_TOKEN_TTL_SECONDS, 300),
+    mfaEnrollmentWarningDays: toNumber(process.env.MFA_ENROLLMENT_WARNING_DAYS, 30),
   },
   llm: {
     provider,

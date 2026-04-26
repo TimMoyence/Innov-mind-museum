@@ -147,4 +147,15 @@ export interface IUserRepository {
    * @param preferences - The new preferences (deduplicated & validated upstream).
    */
   updateContentPreferences(userId: number, preferences: ContentPreference[]): Promise<void>;
+
+  /**
+   * Set or clear the MFA enrollment deadline column. Used by the warning-window
+   * login flow:
+   *   - On first admin login post-deploy without MFA: pass `now + 30d`.
+   *   - After successful enrollment: pass `null` to clear the deadline.
+   *
+   * @param userId - The user's ID.
+   * @param deadline - Absolute deadline timestamp, or `null` to clear.
+   */
+  setMfaEnrollmentDeadline(userId: number, deadline: Date | null): Promise<void>;
 }

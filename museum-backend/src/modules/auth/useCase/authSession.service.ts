@@ -7,11 +7,13 @@ import { AppError, badRequest } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 
 import { checkLoginRateLimit, recordFailedLogin, clearLoginAttempts } from './login-rate-limiter';
+import { issueMfaSessionToken } from './totp/mfaSessionToken';
 
 import type {
   IRefreshTokenRepository,
   StoredRefreshTokenRow,
 } from '../domain/refresh-token.repository.interface';
+import type { ITotpSecretRepository } from '../domain/totp-secret.repository.interface';
 import type { UserRole } from '../domain/user-role';
 import type { User } from '../domain/user.entity';
 import type { IUserRepository } from '../domain/user.repository.interface';
@@ -50,7 +52,48 @@ export interface AuthSessionResponse {
   /** Refresh token lifetime in seconds. */
   refreshExpiresIn: number;
   user: SafeUser;
+  /**
+   * R16 — when an admin is inside the MFA warning window, the login response
+   * carries the number of days remaining so the frontend can render a
+   * persistent banner. Absent (undefined) when:
+   *   - the user is not an admin, or
+   *   - the user is already enrolled, or
+   *   - MFA is already enforced (response shape becomes `MfaRequiredResponse`).
+   */
+  mfaWarningDaysRemaining?: number;
 }
+
+/**
+ * Returned instead of {@link AuthSessionResponse} when an enrolled admin
+ * supplies a valid password but still owes the second factor. The frontend
+ * MUST exchange `mfaSessionToken` for a real JWT pair via `/auth/mfa/challenge`
+ * (TOTP code) or `/auth/mfa/recovery` (recovery code).
+ */
+export interface MfaRequiredResponse {
+  mfaRequired: true;
+  /** Short-lived bearer (5 min) — opaque to the client beyond round-tripping. */
+  mfaSessionToken: string;
+  /** TTL of `mfaSessionToken` in seconds — drives countdown UI. */
+  mfaSessionExpiresIn: number;
+}
+
+/**
+ * Returned when an admin's MFA warning deadline has elapsed without
+ * enrollment. The frontend redirects to `/admin/mfa` (or the equivalent RN
+ * screen) which calls `/auth/mfa/enroll` directly. Until enrollment + verify
+ * complete, no JWTs are issued.
+ */
+export interface MfaEnrollmentRequiredResponse {
+  mfaEnrollmentRequired: true;
+  /** Hint URL — frontend can hard-code its own routing instead. */
+  redirectTo: string;
+}
+
+/** Discriminated union covering the three login success shapes. */
+export type LoginResponse =
+  | AuthSessionResponse
+  | MfaRequiredResponse
+  | MfaEnrollmentRequiredResponse;
 
 const unauthorized = (message: string, code = 'UNAUTHORIZED'): AppError => {
   return new AppError({
@@ -115,20 +158,37 @@ export class AuthSessionService {
    */
   private readonly refreshIdleWindowMs = env.auth.refreshIdleWindowSeconds * 1000;
 
+  /**
+   * `totpRepository` is optional so legacy unit tests that already construct
+   * `new AuthSessionService(userRepo, refreshRepo)` keep compiling. When
+   * absent, MFA is treated as not-enrolled for every user — fine in tests
+   * because they never assert on the MFA branch.
+   */
   constructor(
     private readonly userRepository: IUserRepository,
     private readonly refreshTokenRepository: IRefreshTokenRepository,
+    private readonly totpRepository?: ITotpSecretRepository,
   ) {}
 
   /**
-   * Authenticate a user with email/password and issue a token pair.
+   * Authenticate a user with email/password and issue a token pair (or an
+   * MFA challenge / enrollment-required envelope when applicable).
+   *
+   * Response shapes (R16):
+   *   - `AuthSessionResponse` — happy path. May carry
+   *     `mfaWarningDaysRemaining` when the caller is an admin still inside
+   *     the 30-day enrollment warning window.
+   *   - `MfaRequiredResponse` — admin enrolled; password verified; second
+   *     factor required via `/auth/mfa/challenge`.
+   *   - `MfaEnrollmentRequiredResponse` — admin past the warning deadline
+   *     without enrolling; no JWTs issued, frontend must redirect to enroll.
    *
    * @param email - The user's email.
    * @param password - The user's plain-text password.
-   * @returns Access/refresh tokens and user info.
-   * @throws {AppError} 400 if fields are missing, 401 if credentials are invalid or account is social-only.
+   * @returns A typed login envelope (see {@link LoginResponse}).
+   * @throws {AppError} 400 if fields are missing, 401 if credentials are invalid, 403 if email unverified.
    */
-  async login(email: string, password: string): Promise<AuthSessionResponse> {
+  async login(email: string, password: string): Promise<LoginResponse> {
     if (!email.trim() || !password) {
       throw badRequest('email and password are required');
     }
@@ -165,13 +225,101 @@ export class AuthSessionService {
 
     clearLoginAttempts(normalizedEmail);
 
+    // R16 — admin MFA gating. Visitors / moderators / managers are unaffected.
+    if (user.role === 'admin') {
+      const mfaOutcome = await this.evaluateAdminMfaGate(user);
+      if (mfaOutcome) {
+        // Schedule background cleanup but don't block on it.
+        this.refreshTokenRepository.deleteExpiredTokens().catch(() => {
+          /* noop */
+        });
+        return mfaOutcome;
+      }
+    }
+
     const session = await this.issueSession({
       user: sanitizeUser(user),
+      mfaWarningDaysRemaining: this.computeWarningDays(user),
     });
     this.refreshTokenRepository.deleteExpiredTokens().catch(() => {
       /* noop */
     });
     return session;
+  }
+
+  /**
+   * Issue a fresh JWT pair for a user that has just satisfied a second factor
+   * (TOTP code or recovery code). Public surface used by `challengeMfa` and
+   * `recoveryMfa` use cases — they cannot reach the private `issueSession()`.
+   */
+  async issueSessionForUser(user: User): Promise<AuthSessionResponse> {
+    return await this.issueSession({
+      user: sanitizeUser(user),
+    });
+  }
+
+  /**
+   * Evaluate the admin MFA policy for `user`. Returns `null` when the admin
+   * is allowed to proceed (warning window still open, or already enrolled
+   * but the caller will follow up on `/auth/mfa/challenge`).
+   *
+   * Returns:
+   *   - `MfaRequiredResponse` — enrolled admin must finish the second factor.
+   *   - `MfaEnrollmentRequiredResponse` — past the warning deadline.
+   *   - `null` — proceed to issue full JWTs (warning may still be shown via
+   *     `mfaWarningDaysRemaining` on the success response).
+   *
+   * Side effect: when an admin without MFA logs in for the first time after
+   * deploy, stamp `mfa_enrollment_deadline = now + warningDays` so the
+   * countdown is anchored to the user's first observed login (not deploy).
+   */
+  private async evaluateAdminMfaGate(
+    user: User,
+  ): Promise<MfaRequiredResponse | MfaEnrollmentRequiredResponse | null> {
+    const totpRow = await this.totpRepository?.findByUserId(user.id);
+    const enrolled = totpRow?.enrolledAt != null;
+
+    if (enrolled) {
+      return {
+        mfaRequired: true,
+        mfaSessionToken: issueMfaSessionToken(user.id),
+        mfaSessionExpiresIn: env.auth.mfaSessionTokenTtlSeconds,
+      };
+    }
+
+    // Not enrolled. Apply warning-window policy.
+    const now = Date.now();
+    let deadline = user.mfaEnrollmentDeadline ?? null;
+    if (!deadline) {
+      // First admin login post-deploy → anchor the deadline NOW.
+      const warningMs = env.auth.mfaEnrollmentWarningDays * 24 * 60 * 60 * 1000;
+      deadline = new Date(now + warningMs);
+      await this.userRepository.setMfaEnrollmentDeadline(user.id, deadline);
+      // Mutate the in-memory copy so the caller's downstream computations
+      // (warning days remaining) read consistently.
+      user.mfaEnrollmentDeadline = deadline;
+    }
+
+    if (now >= deadline.getTime()) {
+      return {
+        mfaEnrollmentRequired: true,
+        redirectTo: '/auth/mfa/enroll',
+      };
+    }
+
+    // Inside warning window: caller goes through the happy path with a
+    // banner driver attached.
+    return null;
+  }
+
+  /** Days-remaining helper for the warning banner. Returns `undefined` when N/A. */
+  private computeWarningDays(user: User): number | undefined {
+    if (user.role !== 'admin') return undefined;
+    const deadline = user.mfaEnrollmentDeadline;
+    if (!deadline) return undefined;
+    const ms = deadline.getTime() - Date.now();
+    if (ms <= 0) return 0;
+    return Math.ceil(ms / (24 * 60 * 60 * 1000));
   }
 
   /**
@@ -336,6 +484,7 @@ export class AuthSessionService {
     user: SafeUser;
     familyId?: string;
     rotateFrom?: StoredRefreshTokenRow;
+    mfaWarningDaysRemaining?: number;
   }): Promise<AuthSessionResponse> {
     const accessJti = crypto.randomUUID();
     const refreshJti = crypto.randomUUID();
@@ -384,12 +533,16 @@ export class AuthSessionService {
         })
       : this.refreshTokenRepository.insert(nextTokenRow));
 
-    return {
+    const response: AuthSessionResponse = {
       accessToken,
       refreshToken,
       expiresIn: this.accessTtlSeconds,
       refreshExpiresIn: this.refreshTtlSeconds,
       user: params.user,
     };
+    if (params.mfaWarningDaysRemaining !== undefined) {
+      response.mfaWarningDaysRemaining = params.mfaWarningDaysRemaining;
+    }
+    return response;
   }
 }

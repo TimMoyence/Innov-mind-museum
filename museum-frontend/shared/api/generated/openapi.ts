@@ -126,7 +126,172 @@ export interface paths {
         };
       };
       responses: {
-        /** @description JWT session */
+        /** @description JWT session OR MFA challenge envelope. Inspect the discriminator fields (`accessToken` vs `mfaRequired`) before reading the body. */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json':
+              | components['schemas']['AuthSessionResponse']
+              | components['schemas']['MfaRequiredResponse'];
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        /** @description MFA enrollment deadline elapsed — no JWTs issued. Body shape: MfaEnrollmentRequiredResponse. */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MfaEnrollmentRequiredResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/auth/mfa/enroll': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Start (or rotate) a TOTP enrollment for the authenticated user. */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Fresh secret + recovery codes (one-time view). */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MfaEnrollResponse'];
+          };
+        };
+        401: components['responses']['Unauthorized'];
+        /** @description MFA is already enrolled — disable it first to re-enroll. */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Too many enrollment attempts. */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/auth/mfa/enroll/verify': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Confirm a freshly enrolled TOTP secret with a 6-digit code. */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            code: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Enrollment confirmed. */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MfaVerifyResponse'];
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        /** @description No pending MFA enrollment. */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Too many verification attempts. */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/auth/mfa/challenge': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Exchange mfaSessionToken + 6-digit TOTP code for a real JWT pair. */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            mfaSessionToken: string;
+            code: string;
+          };
+        };
+      };
+      responses: {
+        /** @description JWT session. */
         200: {
           headers: {
             [name: string]: unknown;
@@ -137,6 +302,118 @@ export interface paths {
         };
         400: components['responses']['BadRequest'];
         401: components['responses']['Unauthorized'];
+        /** @description Too many MFA challenge attempts. */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/auth/mfa/recovery': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Exchange mfaSessionToken + recovery code for a JWT pair (consumes the code). */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            mfaSessionToken: string;
+            recoveryCode: string;
+          };
+        };
+      };
+      responses: {
+        /** @description JWT session + remaining recovery code count. */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MfaRecoverySessionResponse'];
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        /** @description Too many recovery attempts. */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/auth/mfa/disable': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Disable MFA after re-confirming the user's password. */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            currentPassword: string;
+          };
+        };
+      };
+      responses: {
+        /** @description MFA disabled. */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              disabled: boolean;
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        /** @description Too many disable attempts. */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
       };
     };
     delete?: never;
@@ -2967,6 +3244,38 @@ export interface components {
       expiresIn: number;
       refreshExpiresIn: number;
       user: components['schemas']['AuthUser'];
+      /** @description R16 — present when an admin is inside the MFA warning window. Drives the enroll-now banner. */
+      mfaWarningDaysRemaining?: number;
+    };
+    MfaRequiredResponse: {
+      /** @enum {boolean} */
+      mfaRequired: true;
+      /** @description Short-lived bearer used to call /auth/mfa/challenge or /auth/mfa/recovery. */
+      mfaSessionToken: string;
+      /** @description TTL of mfaSessionToken in seconds. */
+      mfaSessionExpiresIn: number;
+    };
+    MfaEnrollmentRequiredResponse: {
+      /** @enum {boolean} */
+      mfaEnrollmentRequired: true;
+      /** @description Hint URL where the frontend should drive the user to start enrollment. */
+      redirectTo: string;
+    };
+    MfaEnrollResponse: {
+      /** @description otpauth:// URI suitable for QR rendering. */
+      otpauthUrl: string;
+      /** @description Base32 secret for manual entry into authenticator apps. */
+      manualSecret: string;
+      /** @description 10 plain-text recovery codes — shown ONCE. */
+      recoveryCodes: string[];
+    };
+    MfaVerifyResponse: {
+      /** Format: date-time */
+      enrolledAt: string;
+    };
+    MfaRecoverySessionResponse: components['schemas']['AuthSessionResponse'] & {
+      /** @description Number of unused recovery codes left after this redemption. */
+      remainingRecoveryCodes: number;
     };
     SessionDTO: {
       /** Format: uuid */

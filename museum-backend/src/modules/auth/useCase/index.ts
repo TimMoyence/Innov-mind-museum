@@ -26,12 +26,18 @@ import { ResetPasswordUseCase } from './resetPassword.useCase';
 import { RevokeApiKeyUseCase } from './revokeApiKey.useCase';
 import { RevokeConsentUseCase } from './revokeConsent.useCase';
 import { SocialLoginUseCase } from './socialLogin.useCase';
+import { ChallengeMfaUseCase } from './totp/challengeMfa.useCase';
+import { DisableMfaUseCase } from './totp/disableMfa.useCase';
+import { EnrollMfaUseCase } from './totp/enrollMfa.useCase';
+import { RecoveryMfaUseCase } from './totp/recoveryMfa.useCase';
+import { VerifyMfaUseCase } from './totp/verifyMfa.useCase';
 import { UpdateContentPreferencesUseCase } from './updateContentPreferences.useCase';
 import { VerifyEmailUseCase } from './verifyEmail.useCase';
 import { ApiKeyRepositoryPg } from '../adapters/secondary/apiKey.repository.pg';
 import { RefreshTokenRepositoryPg } from '../adapters/secondary/refresh-token.repository.pg';
 import { SocialAccountRepositoryPg } from '../adapters/secondary/social-account.repository.pg';
 import { SocialTokenVerifierAdapter } from '../adapters/secondary/social-token-verifier.adapter';
+import { TotpSecretRepositoryPg } from '../adapters/secondary/totp-secret.repository.pg';
 import { UserRepositoryPg } from '../adapters/secondary/user.repository.pg';
 import { UserConsentRepositoryPg } from '../adapters/secondary/userConsent.repository.pg';
 
@@ -48,6 +54,7 @@ const userRepository = new UserRepositoryPg(AppDataSource);
 const socialAccountRepository = new SocialAccountRepositoryPg(AppDataSource);
 const socialTokenVerifier = new SocialTokenVerifierAdapter();
 const refreshTokenRepository = new RefreshTokenRepositoryPg(AppDataSource);
+const totpSecretRepository = new TotpSecretRepositoryPg(AppDataSource);
 
 const emailService: EmailService | undefined = env.brevoApiKey
   ? new BrevoEmailService(env.brevoApiKey)
@@ -62,7 +69,26 @@ const forgotPasswordUseCase = new ForgotPasswordUseCase(userRepository, emailSer
 /** Singleton instance of {@link ResetPasswordUseCase}. Revokes refresh tokens on reset (OWASP). */
 const resetPasswordUseCase = new ResetPasswordUseCase(userRepository, refreshTokenRepository);
 /** Singleton instance of {@link AuthSessionService}. */
-const authSessionService = new AuthSessionService(userRepository, refreshTokenRepository);
+const authSessionService = new AuthSessionService(
+  userRepository,
+  refreshTokenRepository,
+  totpSecretRepository,
+);
+
+/** R16 MFA singletons. */
+const enrollMfaUseCase = new EnrollMfaUseCase(userRepository, totpSecretRepository);
+const verifyMfaUseCase = new VerifyMfaUseCase(userRepository, totpSecretRepository);
+const disableMfaUseCase = new DisableMfaUseCase(userRepository, totpSecretRepository);
+const challengeMfaUseCase = new ChallengeMfaUseCase(
+  userRepository,
+  totpSecretRepository,
+  authSessionService,
+);
+const recoveryMfaUseCase = new RecoveryMfaUseCase(
+  userRepository,
+  totpSecretRepository,
+  authSessionService,
+);
 /** Singleton instance of {@link SocialLoginUseCase}. */
 const socialLoginUseCase = new SocialLoginUseCase(
   userRepository,
@@ -199,4 +225,9 @@ export {
   revokeConsentUseCase,
   userConsentRepository,
   userRepository,
+  enrollMfaUseCase,
+  verifyMfaUseCase,
+  disableMfaUseCase,
+  challengeMfaUseCase,
+  recoveryMfaUseCase,
 };

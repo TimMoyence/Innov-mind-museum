@@ -19,6 +19,7 @@ import {
   AUDIT_AUTH_EMAIL_CHANGE_CONFIRMED,
   AUDIT_AUTH_ONBOARDING_COMPLETED,
   AUDIT_AUTH_CONTENT_PREFERENCES_UPDATED,
+  AUDIT_MFA_WARNING_STARTED,
 } from '@shared/audit/audit.types';
 import {
   type EmailLocale,
@@ -140,7 +141,44 @@ authRouter.post(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { email, password } = req.body;
-      const session = await authSessionService.login(email, password);
+      const result = await authSessionService.login(email, password);
+
+      // R16 — handle the three login envelope shapes.
+      if ('mfaRequired' in result) {
+        // Enrolled admin must complete the second factor; nothing privileged
+        // happened yet, so emit no LOGIN_SUCCESS audit row.
+        res.status(200).json(result);
+        return;
+      }
+
+      if ('mfaEnrollmentRequired' in result) {
+        // Past warning deadline: deny session issuance with a 403 carrying
+        // the redirect hint. 403 is intentional — login *failed* in the
+        // sense that no JWTs were issued, even though the password was
+        // correct.
+        res.status(403).json(result);
+        return;
+      }
+
+      // Happy path. Audit success + emit MFA warning audit on the first
+      // login that anchored the deadline (recognised by the days-remaining
+      // value being exactly the configured maximum).
+      const session = result;
+      if (
+        session.mfaWarningDaysRemaining !== undefined &&
+        session.mfaWarningDaysRemaining === env.auth.mfaEnrollmentWarningDays
+      ) {
+        await auditService.log({
+          action: AUDIT_MFA_WARNING_STARTED,
+          actorType: 'user',
+          actorId: session.user.id,
+          targetType: 'user',
+          targetId: String(session.user.id),
+          metadata: { daysRemaining: session.mfaWarningDaysRemaining },
+          ip: req.ip,
+          requestId: req.requestId,
+        });
+      }
       await auditService.log({
         action: AUDIT_AUTH_LOGIN_SUCCESS,
         actorType: 'user',

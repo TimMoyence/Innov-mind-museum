@@ -93,6 +93,22 @@ export class User {
   @Column({ nullable: true, type: 'timestamp' })
   email_change_token_expiry?: Date | null;
 
+  /**
+   * Soft enrollment deadline for the MFA warning policy (R16, SOC2 CC6.1).
+   *
+   * Set to `now + MFA_ENROLLMENT_WARNING_DAYS` the first time an admin without
+   * MFA logs in after the feature ships. Inside the window the user keeps
+   * full session privileges; the login response carries a banner driver
+   * (`mfaWarningDaysRemaining`) for the UI. Past the deadline the login flow
+   * stops issuing JWTs and surfaces `mfaEnrollmentRequired = true`, forcing
+   * enrollment before any further admin action. Cleared (`null`) once the
+   * user successfully enrols.
+   *
+   * Always nullable: visitor-role users never get a deadline.
+   */
+  @Column({ type: 'timestamptz', nullable: true, name: 'mfa_enrollment_deadline' })
+  mfaEnrollmentDeadline?: Date | null;
+
   @CreateDateColumn({ type: 'timestamp' })
   createdAt!: Date;
 

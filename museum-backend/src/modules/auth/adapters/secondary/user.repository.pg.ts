@@ -245,6 +245,15 @@ export class UserRepositoryPg implements IUserRepository {
   }
 
   /**
+   * Set or clear the MFA enrollment deadline column (R16). Mirrored from the
+   * port doc: pass a Date to start/extend the warning window, or `null` to
+   * clear once enrollment succeeds.
+   */
+  async setMfaEnrollmentDeadline(userId: number, deadline: Date | null): Promise<void> {
+    await this.repo.update(userId, { mfaEnrollmentDeadline: deadline });
+  }
+
+  /**
    * Deletes a user and all related data (sessions, tokens, social accounts) in a transaction.
    *
    * @param userId - User primary key.

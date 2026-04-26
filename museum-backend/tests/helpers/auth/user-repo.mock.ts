@@ -10,7 +10,6 @@ import type { User } from '@modules/auth/domain/user.entity';
  *
  * By default, `getUserById` and `getUserByEmail` return the given user
  * (with email matching for `getUserByEmail`). Every method is a jest.fn().
- *
  * @param user - The user to return from finder methods (null = not found).
  * @param overrides - Override specific method mocks.
  */
@@ -34,6 +33,7 @@ export const makeUserRepo = (
     consumeEmailChangeToken: jest.fn().mockResolvedValue(user),
     markOnboardingCompleted: jest.fn().mockResolvedValue(undefined),
     updateContentPreferences: jest.fn().mockResolvedValue(undefined),
+    setMfaEnrollmentDeadline: jest.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 
@@ -44,7 +44,6 @@ export const makeUserRepo = (
  * Creates a fully mocked IRefreshTokenRepository.
  *
  * All methods are jest.fn() with sensible defaults.
- *
  * @param overrides - Override specific method mocks.
  */
 export const makeRefreshTokenRepo = (

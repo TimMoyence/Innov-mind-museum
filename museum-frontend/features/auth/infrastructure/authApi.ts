@@ -35,17 +35,30 @@ export const authService = {
 
   /**
    * Authenticates a user with email and password.
+   *
+   * R16 — the backend now returns a discriminated union (`AuthSessionResponse
+   * | MfaRequiredResponse`). This thin wrapper preserves the historical
+   * `LoginResponse`-only contract for callers that don't yet handle MFA.
+   * MFA-aware callers should consume `mfaApi.ts` (which exposes the same
+   * envelope as `LoginEnvelope`) instead.
+   *
    * @param email - User email address.
    * @param password - User password.
    * @returns Session tokens on success.
+   * @throws Error when the backend returns an MFA challenge — caller must
+   *   route through the dedicated MFA flow before reaching here.
    */
   async login(email: string, password: string): Promise<LoginResponse> {
-    return openApiRequest({
+    const result = await openApiRequest({
       path: '/api/auth/login',
       method: 'post',
       body: JSON.stringify({ email, password }),
       requiresAuth: false,
     });
+    if ('mfaRequired' in result) {
+      throw new Error('MFA_REQUIRED');
+    }
+    return result;
   },
 
   /**

@@ -96,6 +96,13 @@ jest.mock('@modules/auth/adapters/primary/http/me.route', () => {
   const { Router } = jest.requireActual<typeof import('express')>('express');
   return { __esModule: true, default: Router() };
 });
+// Same rationale as `me.route`: `mfa.route` pulls in the auth use-case
+// composition root (which constructs PG repositories), so it would crash on
+// the env-mocked test setup unless stubbed.
+jest.mock('@modules/auth/adapters/primary/http/mfa.route', () => {
+  const { Router } = jest.requireActual<typeof import('express')>('express');
+  return { __esModule: true, default: Router() };
+});
 jest.mock('@modules/chat/adapters/primary/http/chat.route', () => ({
   createChatRouter: () => {
     const { Router } = jest.requireActual<typeof import('express')>('express');

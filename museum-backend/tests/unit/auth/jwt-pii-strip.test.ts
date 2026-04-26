@@ -72,7 +72,9 @@ describe('S2-22: JWT PII strip', () => {
     const user = makeUser(USER_DEFAULTS);
     const service = new AuthSessionService(makeUserRepo(user), makeRefreshTokenRepo());
 
-    const session = await service.login('alice@example.com', 'ValidPass1');
+    const session = (await service.login('alice@example.com', 'ValidPass1')) as {
+      accessToken: string;
+    };
 
     const decoded = jwt.decode(session.accessToken) as Record<string, unknown>;
     expect(decoded.sub).toBe('42');
@@ -90,7 +92,9 @@ describe('S2-22: JWT PII strip', () => {
     const user = makeUser(USER_DEFAULTS);
     const service = new AuthSessionService(makeUserRepo(user), makeRefreshTokenRepo());
 
-    const session = await service.login('alice@example.com', 'ValidPass1');
+    const session = (await service.login('alice@example.com', 'ValidPass1')) as {
+      user: unknown;
+    };
     expect(session.user).toEqual({
       id: 42,
       email: 'alice@example.com',

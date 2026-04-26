@@ -132,8 +132,92 @@
           },
           "user": {
             "$ref": "#/components/schemas/AuthUser"
+          },
+          "mfaWarningDaysRemaining": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "R16 — present when an admin is inside the MFA warning window. Drives the enroll-now banner."
           }
         }
+      },
+      "MfaRequiredResponse": {
+        "type": "object",
+        "required": ["mfaRequired", "mfaSessionToken", "mfaSessionExpiresIn"],
+        "properties": {
+          "mfaRequired": {
+            "type": "boolean",
+            "enum": [true]
+          },
+          "mfaSessionToken": {
+            "type": "string",
+            "description": "Short-lived bearer used to call /auth/mfa/challenge or /auth/mfa/recovery."
+          },
+          "mfaSessionExpiresIn": {
+            "type": "integer",
+            "description": "TTL of mfaSessionToken in seconds."
+          }
+        }
+      },
+      "MfaEnrollmentRequiredResponse": {
+        "type": "object",
+        "required": ["mfaEnrollmentRequired", "redirectTo"],
+        "properties": {
+          "mfaEnrollmentRequired": {
+            "type": "boolean",
+            "enum": [true]
+          },
+          "redirectTo": {
+            "type": "string",
+            "description": "Hint URL where the frontend should drive the user to start enrollment."
+          }
+        }
+      },
+      "MfaEnrollResponse": {
+        "type": "object",
+        "required": ["otpauthUrl", "manualSecret", "recoveryCodes"],
+        "properties": {
+          "otpauthUrl": {
+            "type": "string",
+            "description": "otpauth:// URI suitable for QR rendering."
+          },
+          "manualSecret": {
+            "type": "string",
+            "description": "Base32 secret for manual entry into authenticator apps."
+          },
+          "recoveryCodes": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 10,
+            "maxItems": 10,
+            "description": "10 plain-text recovery codes — shown ONCE."
+          }
+        }
+      },
+      "MfaVerifyResponse": {
+        "type": "object",
+        "required": ["enrolledAt"],
+        "properties": {
+          "enrolledAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MfaRecoverySessionResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/AuthSessionResponse" },
+          {
+            "type": "object",
+            "required": ["remainingRecoveryCodes"],
+            "properties": {
+              "remainingRecoveryCodes": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of unused recovery codes left after this redemption."
+              }
+            }
+          }
+        ]
       },
       "SessionDTO": {
         "type": "object",
@@ -1824,11 +1908,14 @@
         },
         "responses": {
           "200": {
-            "description": "JWT session",
+            "description": "JWT session OR MFA challenge envelope. Inspect the discriminator fields (`accessToken` vs `mfaRequired`) before reading the body.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AuthSessionResponse"
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/AuthSessionResponse" },
+                    { "$ref": "#/components/schemas/MfaRequiredResponse" }
+                  ]
                 }
               }
             }
@@ -1838,7 +1925,186 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "MFA enrollment deadline elapsed — no JWTs issued. Body shape: MfaEnrollmentRequiredResponse.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MfaEnrollmentRequiredResponse"
+                }
+              }
+            }
           }
+        }
+      }
+    },
+    "/api/auth/mfa/enroll": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Start (or rotate) a TOTP enrollment for the authenticated user.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Fresh secret + recovery codes (one-time view).",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MfaEnrollResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "409": {
+            "description": "MFA is already enrolled — disable it first to re-enroll."
+          },
+          "429": {
+            "description": "Too many enrollment attempts."
+          }
+        }
+      }
+    },
+    "/api/auth/mfa/enroll/verify": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Confirm a freshly enrolled TOTP secret with a 6-digit code.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["code"],
+                "properties": {
+                  "code": { "type": "string", "minLength": 6, "maxLength": 6 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enrollment confirmed.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MfaVerifyResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "description": "No pending MFA enrollment." },
+          "429": { "description": "Too many verification attempts." }
+        }
+      }
+    },
+    "/api/auth/mfa/challenge": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Exchange mfaSessionToken + 6-digit TOTP code for a real JWT pair.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["mfaSessionToken", "code"],
+                "properties": {
+                  "mfaSessionToken": { "type": "string" },
+                  "code": { "type": "string", "minLength": 6, "maxLength": 6 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JWT session.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthSessionResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "description": "Too many MFA challenge attempts." }
+        }
+      }
+    },
+    "/api/auth/mfa/recovery": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Exchange mfaSessionToken + recovery code for a JWT pair (consumes the code).",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["mfaSessionToken", "recoveryCode"],
+                "properties": {
+                  "mfaSessionToken": { "type": "string" },
+                  "recoveryCode": { "type": "string", "minLength": 6, "maxLength": 32 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JWT session + remaining recovery code count.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MfaRecoverySessionResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "description": "Too many recovery attempts." }
+        }
+      }
+    },
+    "/api/auth/mfa/disable": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Disable MFA after re-confirming the user's password.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["currentPassword"],
+                "properties": {
+                  "currentPassword": { "type": "string", "minLength": 1 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MFA disabled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["disabled"],
+                  "properties": {
+                    "disabled": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "description": "Too many disable attempts." }
         }
       }
     },

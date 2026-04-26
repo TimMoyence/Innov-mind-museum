@@ -6,6 +6,7 @@ import { createCachePurgeRouter } from '@modules/admin/adapters/primary/http/cac
 import authRouter from '@modules/auth/adapters/primary/http/auth.route';
 import consentRouter from '@modules/auth/adapters/primary/http/consent.route';
 import meRouter from '@modules/auth/adapters/primary/http/me.route';
+import mfaRouter from '@modules/auth/adapters/primary/http/mfa.route';
 import { createChatRouter } from '@modules/chat/adapters/primary/http/chat.route';
 import {
   getArtKeywordRepository,
@@ -240,6 +241,10 @@ function mountDomainRouters(
     ),
   );
   router.use('/auth/consent', consentRouter);
+  // R16 — MFA endpoints mounted before the catch-all auth router so the
+  // `/auth/mfa/*` paths resolve to the dedicated TOTP router instead of
+  // 404-ing through `authRouter`.
+  router.use('/auth/mfa', mfaRouter);
   router.use('/auth', authRouter);
   // GDPR DSAR (Art 15 + 20) — `GET /api/users/me/export`. Always uses
   // `req.user.id`, never a path param, so an authenticated visitor cannot ask

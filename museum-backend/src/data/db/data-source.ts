@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 import { ApiKey } from '@modules/auth/domain/apiKey.entity';
 import { AuthRefreshToken } from '@modules/auth/domain/authRefreshToken.entity';
 import { SocialAccount } from '@modules/auth/domain/socialAccount.entity';
+import { TotpSecret } from '@modules/auth/domain/totp-secret.entity';
 import { User } from '@modules/auth/domain/user.entity';
 import { UserConsent } from '@modules/auth/domain/userConsent.entity';
 import { ArtKeyword } from '@modules/chat/domain/artKeyword.entity';
@@ -44,6 +45,7 @@ export const AppDataSource = new DataSource({
     UserConsent,
     AuthRefreshToken,
     SocialAccount,
+    TotpSecret,
     ApiKey,
     ChatSession,
     ChatMessage,
