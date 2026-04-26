@@ -203,18 +203,44 @@ export class ChatMediaService {
       const userMsg = assistantIdx > 0 ? history[assistantIdx - 1] : null;
 
       if (userMsg?.text && userMsg.role === 'user' && row.session.museumId) {
-        const key = buildCacheKey({
+        // R1 hybrid scoping: best-effort delete BOTH the global and the
+        // user-scoped key shapes the entry could have been written under.
+        // At feedback time we don't know which shape was used (depends on
+        // geo / attachments at write-time), so we del both.
+        const ownerId = row.session.user?.id;
+        const baseInput = {
           text: userMsg.text,
           museumId: String(row.session.museumId),
           locale: row.session.locale ?? 'fr',
           guideLevel: row.session.visitContext?.detectedExpertise ?? 'beginner',
           audioDescriptionMode: false,
-        });
-        await this.cache.del(key);
-        logger.info('llm_cache_invalidated_by_feedback', {
-          museumId: row.session.museumId,
-          key,
-        });
+        };
+        const keys: string[] = [
+          buildCacheKey({
+            ...baseInput,
+            hasHistory: false,
+            hasAttachment: false,
+            hasGeo: false,
+          }),
+        ];
+        if (ownerId !== undefined) {
+          keys.push(
+            buildCacheKey({
+              ...baseInput,
+              userId: ownerId,
+              hasHistory: false,
+              hasAttachment: false,
+              hasGeo: false,
+            }),
+          );
+        }
+        for (const key of keys) {
+          await this.cache.del(key);
+          logger.info('llm_cache_invalidated_by_feedback', {
+            museumId: row.session.museumId,
+            key,
+          });
+        }
       }
     } catch {
       // fail-open: cache invalidation failure must not affect the feedback response

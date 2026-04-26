@@ -271,6 +271,10 @@ export class PrepareMessagePipeline {
       lowDataMode: input.context?.lowDataMode ?? false,
       resolvedLocation: prep.resolvedLocation,
       contentPreferences: input.context?.contentPreferences,
+      // Cache scoping (R1): museumId + userId let the caching orchestrator
+      // pick the correct global-vs-user-scoped key namespace.
+      museumId: prep.session.museumId ?? null,
+      userId: prep.ownerId ?? null,
     };
   }
 }

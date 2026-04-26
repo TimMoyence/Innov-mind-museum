@@ -72,22 +72,29 @@ describe('Feedback cache invalidation', () => {
       listSessionHistory: jest.fn().mockResolvedValue(makeHistory(userQuestion)),
     });
 
-    const expectedKey = buildCacheKey({
+    const baseInput = {
       text: userQuestion,
       museumId: String(MUSEUM_ID),
       locale: 'fr',
       guideLevel: 'beginner',
       audioDescriptionMode: false,
-    });
+      hasHistory: false,
+      hasAttachment: false,
+      hasGeo: false,
+    } as const;
+    const expectedGlobalKey = buildCacheKey(baseInput);
+    const expectedScopedKey = buildCacheKey({ ...baseInput, userId: USER_ID });
 
-    // Pre-populate cache so we can confirm deletion
-    await cache.set(expectedKey, { text: 'cached response' });
+    // Pre-populate both shapes — invalidation must hit both.
+    await cache.set(expectedGlobalKey, { text: 'cached response' });
+    await cache.set(expectedScopedKey, { text: 'cached response' });
 
     const svc = new ChatMediaService({ repository: repo, cache });
     const result = await svc.setMessageFeedback(ASSISTANT_MSG_ID, USER_ID, 'negative');
 
     expect(result).toEqual({ messageId: ASSISTANT_MSG_ID, status: 'created' });
-    expect(cache.del).toHaveBeenCalledWith(expectedKey);
+    expect(cache.del).toHaveBeenCalledWith(expectedGlobalKey);
+    expect(cache.del).toHaveBeenCalledWith(expectedScopedKey);
     expect(repo.listSessionHistory).toHaveBeenCalledWith(SESSION_ID, 50);
   });
 
@@ -197,6 +204,10 @@ describe('Feedback cache invalidation', () => {
       locale: 'fr',
       guideLevel: 'expert',
       audioDescriptionMode: false,
+      userId: USER_ID,
+      hasHistory: false,
+      hasAttachment: false,
+      hasGeo: false,
     });
 
     const svc = new ChatMediaService({ repository: repo, cache });

@@ -62,6 +62,11 @@ function evictOldest(entries: Record<string, CachedAnswer>): Record<string, Cach
 
 /**
  * Builds a cache key from a CachedAnswer (for store/bulkStore operations).
+ *
+ * Why: this local store backs the *prefetched FAQ* surface — entries are by
+ * construction generic (turn 1, no attachment, no geo). Pinning the
+ * generic flags here keeps the frontend in the global namespace and
+ * preserves cross-user hit-rate for the safe subset.
  */
 function keyFromEntry(entry: CachedAnswer): string {
   return computeLocalCacheKey({
@@ -69,6 +74,9 @@ function keyFromEntry(entry: CachedAnswer): string {
     museumId: entry.museumId,
     locale: entry.locale,
     guideLevel: entry.guideLevel,
+    hasHistory: false,
+    hasAttachment: false,
+    hasGeo: false,
   });
 }
 
@@ -78,7 +86,16 @@ export const useChatLocalCacheStore = create<ChatLocalCacheStore>()(
       entries: {},
 
       lookup: (input: LookupInput): CachedAnswer | null => {
-        const key = computeLocalCacheKey(input);
+        // Local store mirrors the backend "global" namespace by design —
+        // it only backs prefetched FAQ-style answers. Pin the classifier
+        // flags so the key matches what the backend wrote under
+        // `chat:llm:global:...`. See `keyFromEntry()` above.
+        const key = computeLocalCacheKey({
+          ...input,
+          hasHistory: false,
+          hasAttachment: false,
+          hasGeo: false,
+        });
         const entry = get().entries[key];
         if (!entry) return null;
 

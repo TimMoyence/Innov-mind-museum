@@ -2,18 +2,18 @@ import { createHash } from 'crypto';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-import { buildCacheKey, normalizeQuestion } from '@modules/chat/useCase/chat-cache-key.util';
+import {
+  buildCacheKey,
+  normalizeQuestion,
+  type CacheKeyInput,
+} from '@modules/chat/useCase/chat-cache-key.util';
 
 interface TestVector {
-  input: {
-    text: string;
-    museumId: string;
-    locale: string;
-    guideLevel: string;
-    audioDescriptionMode: boolean;
-  };
+  label: string;
+  input: CacheKeyInput;
   normalizedText: string;
   components: string;
+  expectedKeyPrefix: string;
 }
 
 const vectors: TestVector[] = JSON.parse(
@@ -21,58 +21,46 @@ const vectors: TestVector[] = JSON.parse(
 ) as TestVector[];
 
 describe('cache key parity', () => {
-  it.each(vectors)('normalizes "$input.text" correctly', ({ input, normalizedText }) => {
+  it.each(vectors)('normalizes "$label" correctly', ({ input, normalizedText }) => {
     expect(normalizeQuestion(input.text)).toBe(normalizedText);
   });
 
   it.each(vectors)(
-    'produces deterministic key for museumId=$input.museumId locale=$input.locale',
-    ({ input, components }) => {
-      const key = buildCacheKey({
-        text: input.text,
-        museumId: input.museumId,
-        locale: input.locale,
-        guideLevel: input.guideLevel as 'beginner' | 'intermediate' | 'expert',
-        audioDescriptionMode: input.audioDescriptionMode,
-      });
+    'produces deterministic key for "$label"',
+    ({ input, components, expectedKeyPrefix }) => {
+      const key = buildCacheKey(input);
       const expectedHash = createHash('sha256').update(components).digest('hex').slice(0, 16);
-      expect(key).toBe(`chat:llm:${input.museumId}:${expectedHash}`);
+      expect(key).toBe(`${expectedKeyPrefix}${expectedHash}`);
     },
   );
 
-  it('produces different keys for different texts', () => {
-    const key1 = buildCacheKey({
-      text: 'question A',
+  it('produces different keys for different texts (same museum, generic)', () => {
+    const base: Omit<CacheKeyInput, 'text'> = {
       museumId: 'm',
       locale: 'fr',
       guideLevel: 'beginner',
       audioDescriptionMode: false,
-    });
-    const key2 = buildCacheKey({
-      text: 'question B',
-      museumId: 'm',
-      locale: 'fr',
-      guideLevel: 'beginner',
-      audioDescriptionMode: false,
-    });
-    expect(key1).not.toBe(key2);
+      hasHistory: false,
+      hasAttachment: false,
+      hasGeo: false,
+    };
+    expect(buildCacheKey({ ...base, text: 'question A' })).not.toBe(
+      buildCacheKey({ ...base, text: 'question B' }),
+    );
   });
 
-  it('produces different keys for different museums', () => {
-    const key1 = buildCacheKey({
+  it('produces different keys for different museums (generic namespace)', () => {
+    const base: Omit<CacheKeyInput, 'museumId'> = {
       text: 'same',
-      museumId: 'louvre',
       locale: 'fr',
       guideLevel: 'beginner',
       audioDescriptionMode: false,
-    });
-    const key2 = buildCacheKey({
-      text: 'same',
-      museumId: 'orsay',
-      locale: 'fr',
-      guideLevel: 'beginner',
-      audioDescriptionMode: false,
-    });
-    expect(key1).not.toBe(key2);
+      hasHistory: false,
+      hasAttachment: false,
+      hasGeo: false,
+    };
+    expect(buildCacheKey({ ...base, museumId: 'louvre' })).not.toBe(
+      buildCacheKey({ ...base, museumId: 'orsay' }),
+    );
   });
 });
