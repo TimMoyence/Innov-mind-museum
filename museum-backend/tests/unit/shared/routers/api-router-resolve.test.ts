@@ -88,6 +88,14 @@ jest.mock('@modules/auth/adapters/primary/http/consent.route', () => {
   const { Router } = jest.requireActual<typeof import('express')>('express');
   return { __esModule: true, default: Router() };
 });
+// `me.route` pulls in `@shared/audit` → `data-source.ts` at module load,
+// which evaluates `env.db.host`. The mocked env on this suite intentionally
+// omits the `db` block (this test cares only about extraction-worker wiring),
+// so we stub the router out the same way as the other auth routes.
+jest.mock('@modules/auth/adapters/primary/http/me.route', () => {
+  const { Router } = jest.requireActual<typeof import('express')>('express');
+  return { __esModule: true, default: Router() };
+});
 jest.mock('@modules/chat/adapters/primary/http/chat.route', () => ({
   createChatRouter: () => {
     const { Router } = jest.requireActual<typeof import('express')>('express');
