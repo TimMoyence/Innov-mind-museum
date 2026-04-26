@@ -653,13 +653,17 @@ export interface paths {
     };
     trace?: never;
   };
-  '/api/auth/export-data': {
+  '/api/users/me/export': {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
+    /**
+     * GDPR Article 15 (access) + Article 20 (portability) DSAR export
+     * @description Returns the full personal-data dossier for the authenticated user (`req.user.id`, never a path/query parameter). Rate-limited to 1 export per user / 7 days; on 429 the response includes a `Retry-After` header.
+     */
     get: {
       parameters: {
         query?: never;
@@ -669,34 +673,19 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description GDPR data export */
+        /** @description Personal-data export payload */
         200: {
           headers: {
+            /** @description Always `no-store` — payload contains personal data. */
+            'Cache-Control'?: string;
             [name: string]: unknown;
           };
           content: {
-            'application/json': {
-              /** Format: date-time */
-              exportedAt: string;
-              user: {
-                id: number;
-                /** Format: email */
-                email: string;
-                firstname?: string | null;
-                lastname?: string | null;
-                /** Format: date-time */
-                createdAt: string;
-                /** Format: date-time */
-                updatedAt: string;
-              };
-              chatData: {
-                [key: string]: unknown;
-              };
-            };
+            'application/json': components['schemas']['UserDataExportPayload'];
           };
         };
         401: components['responses']['Unauthorized'];
-        404: components['responses']['NotFound'];
+        429: components['responses']['TooManyRequests'];
       };
     };
     put?: never;
@@ -3185,6 +3174,95 @@ export interface components {
       message: string;
       /** @description Present in development only to simplify local testing. */
       debugToken?: string;
+    };
+    /** @description GDPR Article 15 (right of access) + Article 20 (data portability) export. Saved artworks are mobile-only and intentionally absent. */
+    UserDataExportPayload: {
+      /** Format: date-time */
+      exportedAt: string;
+      /** @enum {string} */
+      schemaVersion: '1';
+      user: {
+        id: number;
+        /** Format: email */
+        email: string;
+        role: string;
+        firstname: string | null;
+        lastname: string | null;
+        locale: string | null;
+        emailVerified: boolean;
+        onboardingCompleted: boolean;
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: date-time */
+        updatedAt: string;
+      };
+      consent: {
+        scope: string;
+        version: string;
+        source: string;
+        /** Format: date-time */
+        grantedAt: string;
+        /** Format: date-time */
+        revokedAt: string | null;
+      }[];
+      chatSessions: {
+        /** Format: uuid */
+        id: string;
+        locale?: string | null;
+        museumMode: boolean;
+        title?: string | null;
+        museumName?: string | null;
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: date-time */
+        updatedAt: string;
+        messages: {
+          /** Format: uuid */
+          id: string;
+          role: string;
+          text?: string | null;
+          imageRef?: string | null;
+          audioUrl?: string | null;
+          /** Format: date-time */
+          createdAt: string;
+          metadata?: {
+            [key: string]: unknown;
+          } | null;
+        }[];
+      }[];
+      /** @description Always empty server-side: saved artworks live only in mobile local storage. */
+      savedArtworks: unknown[];
+      reviews: {
+        /** Format: uuid */
+        id: string;
+        rating: number;
+        comment: string;
+        status: string;
+        userName: string;
+        /** Format: date-time */
+        createdAt: string;
+      }[];
+      supportTickets: {
+        /** Format: uuid */
+        id: string;
+        subject: string;
+        description: string;
+        status: string;
+        priority: string;
+        category: string | null;
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: date-time */
+        updatedAt: string;
+        messages: {
+          /** Format: uuid */
+          id: string;
+          senderRole: string;
+          text: string;
+          /** Format: date-time */
+          createdAt: string;
+        }[];
+      }[];
     };
     ConfirmEmailChangeResponse: {
       /** @enum {boolean} */
