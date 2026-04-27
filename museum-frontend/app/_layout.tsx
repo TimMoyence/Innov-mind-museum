@@ -17,9 +17,8 @@ import { initSentry, reactNavigationIntegration } from '@/shared/observability/s
 
 import '@/features/museum/infrastructure/mapLibreBootstrap';
 
-import { AuthProvider, useAuth } from '@/features/auth/application/AuthContext';
-import { useBiometricAuth } from '@/features/auth/application/useBiometricAuth';
-import { BiometricLockScreen } from '@/features/auth/ui/BiometricLockScreen';
+import { AuthProvider } from '@/features/auth/application/AuthContext';
+import { BiometricGate } from '@/features/auth/ui/BiometricGate';
 import { useProtectedRoute } from '@/features/auth/useProtectedRoute';
 import { useArtKeywordsSync } from '@/features/art-keywords/application/useArtKeywordsSync';
 import { applyRuntimeSettings, saveDefaultLocale } from '@/features/settings/runtimeSettings';
@@ -50,34 +49,6 @@ initSentry(sentryDsn);
 function AuthenticationGuard({ children }: { children: ReactNode }) {
   useProtectedRoute();
   useArtKeywordsSync();
-  return <>{children}</>;
-}
-
-function BiometricGate({ children }: { children: ReactNode }) {
-  const { isBiometricLocked, unlockBiometric } = useAuth();
-  const { authenticate, biometricLabel } = useBiometricAuth();
-  const [failed, setFailed] = useState(false);
-
-  const handleUnlock = async () => {
-    setFailed(false);
-    const success = await authenticate();
-    if (success) {
-      unlockBiometric();
-    } else {
-      setFailed(true);
-    }
-  };
-
-  if (isBiometricLocked) {
-    return (
-      <BiometricLockScreen
-        biometricLabel={biometricLabel}
-        onUnlock={() => void handleUnlock()}
-        failed={failed}
-      />
-    );
-  }
-
   return <>{children}</>;
 }
 
