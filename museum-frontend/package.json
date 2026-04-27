@@ -69,7 +69,7 @@
     "intl-pluralrules": "^2.0.1",
     "js-sha256": "^0.11.1",
     "react": "19.2.0",
-    "react-dom": "19.2.0",
+    "react-dom": "19.2.5",
     "react-i18next": "^17.0.4",
     "react-native": "0.83.6",
     "react-native-gesture-handler": "~2.31.0",
