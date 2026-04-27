@@ -17,8 +17,8 @@ importers:
         specifier: ^1.1.40
         version: 1.1.40(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.215.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.33.0(ws@8.18.1)(zod@3.25.76))(ws@8.18.1)
       '@langchain/google-genai':
-        specifier: ^2.1.26
-        version: 2.1.26(@langchain/core@1.1.40(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.215.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.33.0(ws@8.18.1)(zod@3.25.76))(ws@8.18.1))
+        specifier: ^2.1.27
+        version: 2.1.27(@langchain/core@1.1.40(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.215.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.33.0(ws@8.18.1)(zod@3.25.76))(ws@8.18.1))
       '@langchain/openai':
         specifier: ^1.4.2
         version: 1.4.2(@langchain/core@1.1.40(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.215.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.33.0(ws@8.18.1)(zod@3.25.76))(ws@8.18.1))(ws@8.18.1)
@@ -103,10 +103,6 @@ importers:
       zod:
         specifier: ^3.25.76
         version: 3.25.76
-    optionalDependencies:
-      tesseract.js:
-        specifier: ^7.0.0
-        version: 7.0.0
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -228,6 +224,10 @@ importers:
       typescript-eslint:
         specifier: ^8.58.1
         version: 8.58.1(eslint@10.2.0)(typescript@5.9.3)
+    optionalDependencies:
+      tesseract.js:
+        specifier: ^7.0.0
+        version: 7.0.0
 
 packages:
 
@@ -612,8 +612,8 @@ packages:
     peerDependencies:
       '@opentelemetry/api': ^1.9.0
 
-  '@google/generative-ai@0.24.0':
-    resolution: {integrity: sha512-fnEITCGEB7NdX0BhoYZ/cq/7WPZ1QS5IzJJfC3Tg/OwkvBetMiVJciyaan297OvE4B9Jg1xvo0zIazX/9sGu1Q==}
+  '@google/generative-ai@0.24.1':
+    resolution: {integrity: sha512-MqO+MLfM6kjxcKoy0p1wRzG3b4ZZXtPI+z2IE26UogS2Cm/XHO+7gGRBh6gcJsOiIVoH93UwKvW4HdgiOZCy9Q==}
     engines: {node: '>=18.0.0'}
 
   '@grpc/grpc-js@1.14.3':
@@ -1018,11 +1018,11 @@ packages:
     resolution: {integrity: sha512-RJ41GQEMxr9ZEZNoIiPgW0+v9nAY6FEZGlk+MjBghr2GR8He50abLam0XCe1aqUJjuKbqt2lUD6M+6SZ+2NIJg==}
     engines: {node: '>=20'}
 
-  '@langchain/google-genai@2.1.26':
-    resolution: {integrity: sha512-202ZBVEIXxKhNbDzktLKSffb9pNfrYBGPV7j54nvAR0uqfoh5reRlX8wmOZEDflojvX/GHc69jTOsc0eZKgRsA==}
+  '@langchain/google-genai@2.1.27':
+    resolution: {integrity: sha512-KCmSrOopY8dF7RweK6NpXU0qSJrrmTkv6aD4b2UJZ45jzyNwEW/tp8jQV6Ljc9e3C402fuNtjpiAjTi7KL0fZQ==}
     engines: {node: '>=20'}
     peerDependencies:
-      '@langchain/core': ^1.1.33
+      '@langchain/core': ^1.1.40
 
   '@langchain/openai@1.4.2':
     resolution: {integrity: sha512-xGtleIJUgSDNxFnQ/x5h5T/zGj5VFhw+LiICg/Q9NxpMaxBeG7ZbxYRuKQmH/XuIw+oM8cG+uWmn4lzMsgN0rg==}
@@ -5569,7 +5569,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@google/generative-ai@0.24.0': {}
+  '@google/generative-ai@0.24.1': {}
 
   '@grpc/grpc-js@1.14.3':
     dependencies:
@@ -6072,9 +6072,9 @@ snapshots:
       - openai
       - ws
 
-  '@langchain/google-genai@2.1.26(@langchain/core@1.1.40(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.215.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.33.0(ws@8.18.1)(zod@3.25.76))(ws@8.18.1))':
+  '@langchain/google-genai@2.1.27(@langchain/core@1.1.40(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.215.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.33.0(ws@8.18.1)(zod@3.25.76))(ws@8.18.1))':
     dependencies:
-      '@google/generative-ai': 0.24.0
+      '@google/generative-ai': 0.24.1
       '@langchain/core': 1.1.40(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.215.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.33.0(ws@8.18.1)(zod@3.25.76))(ws@8.18.1)
       uuid: 11.1.0
 
