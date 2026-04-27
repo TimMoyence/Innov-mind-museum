@@ -98,15 +98,11 @@ importers:
         specifier: '>=0.3.27 <1.0.0'
         version: 0.3.28(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@types/node@22.19.17)(typescript@5.9.3))
       uuid:
-        specifier: ^11.1.0
-        version: 11.1.0
+        specifier: ^14.0.0
+        version: 14.0.0
       zod:
         specifier: ^3.25.76
         version: 3.25.76
-    optionalDependencies:
-      tesseract.js:
-        specifier: ^7.0.0
-        version: 7.0.0
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -228,6 +224,10 @@ importers:
       typescript-eslint:
         specifier: ^8.58.1
         version: 8.58.1(eslint@10.2.0)(typescript@5.9.3)
+    optionalDependencies:
+      tesseract.js:
+        specifier: ^7.0.0
+        version: 7.0.0
 
 packages:
 
@@ -4938,6 +4938,10 @@ packages:
 
   uuid@11.1.0:
     resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
+    hasBin: true
+
+  uuid@14.0.0:
+    resolution: {integrity: sha512-Qo+uWgilfSmAhXCMav1uYFynlQO7fMFiMVZsQqZRMIXp0O7rR7qjkj+cPvBHLgBqi960QCoo/PH2/6ZtVqKvrg==}
     hasBin: true
 
   v8-compile-cache-lib@3.0.1:
@@ -10614,6 +10618,8 @@ snapshots:
   uuid@10.0.0: {}
 
   uuid@11.1.0: {}
+
+  uuid@14.0.0: {}
 
   v8-compile-cache-lib@3.0.1: {}
 
