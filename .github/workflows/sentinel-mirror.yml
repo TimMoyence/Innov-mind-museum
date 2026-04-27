@@ -48,7 +48,7 @@ jobs:
       # Monorepo — pnpm-lock.yaml lives in each app dir, not at the repo
       # root. List every lockfile so the cache key covers them all.
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
