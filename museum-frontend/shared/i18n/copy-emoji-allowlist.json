@@ -1,0 +1,4 @@
+{
+  "_doc": "Per-line allowlist for scripts/check-no-unicode-emoji.cjs. Each entry is an exact substring; if it appears on the offending line, the violation is silenced. Use unique, intent-bearing anchors — never bare words a future contributor might unknowingly reproduce. Add only when the codepoint is a legitimate symbol (currency, math, legal mark, attribution) NOT replaceable by Ionicons or a PNG asset.",
+  "lines": ["openstreetmap.org/copyright"]
+}

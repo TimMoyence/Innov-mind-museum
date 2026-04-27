@@ -89,6 +89,12 @@ jobs:
       - name: Check i18n completeness
         run: npm run check:i18n
 
+      - name: Check no unicode emoji in screens/copy (P4 emoji guard)
+        # UX policy: mobile uses PNG (require) + Ionicons only. Per-line
+        # allowlist at museum-frontend/shared/i18n/copy-emoji-allowlist.json
+        # for legitimate symbols (©, OSM attribution).
+        run: node ../scripts/check-no-unicode-emoji.cjs
+
       - name: Lint
         run: npm run lint
 
