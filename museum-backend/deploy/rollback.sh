@@ -25,6 +25,7 @@ SERVICE="${2:?service name required}"
 IMAGE_REF="${3:?image ref required (e.g. ghcr.io/org/museum-backend)}"
 
 STATE_DIR="${HOME}/.museum-rollback/${SERVICE}"
+PRE_FILE="${STATE_DIR}/pre-count.txt"
 APPLIED_FILE="${STATE_DIR}/applied-count.txt"
 
 if [ ! -d "${STATE_DIR}" ]; then
@@ -32,10 +33,37 @@ if [ ! -d "${STATE_DIR}" ]; then
   exit 0
 fi
 
+# Source of truth = the migrations table itself.
+# Read pre-count.txt (baseline written before migration:run) and query
+# the DB right now for the current count, then revert the delta. This is
+# resilient to a stale or missing applied-count.txt (e.g., deploy crashed
+# between migration:run and the file write) which previously made rollback
+# silently revert 0 migrations.
 APPLIED_COUNT=0
-if [ -f "${APPLIED_FILE}" ]; then
+PRE_COUNT=""
+CURRENT_COUNT=""
+
+if [ -f "${PRE_FILE}" ]; then
+  PRE_COUNT="$(cat "${PRE_FILE}" | tr -d '[:space:]')"
+fi
+
+CURRENT_COUNT="$(docker compose -f "${COMPOSE_FILE}" exec -T "${SERVICE}" \
+  node scripts/count-applied-migrations.cjs 2>/dev/null | tr -d '[:space:]' || true)"
+
+if [ -n "${PRE_COUNT}" ] && [ -n "${CURRENT_COUNT}" ] \
+   && printf '%s' "${PRE_COUNT}" | grep -qE '^[0-9]+$' \
+   && printf '%s' "${CURRENT_COUNT}" | grep -qE '^[0-9]+$'; then
+  DELTA="$(( CURRENT_COUNT - PRE_COUNT ))"
+  if [ "${DELTA}" -lt 0 ]; then DELTA=0; fi
+  APPLIED_COUNT="${DELTA}"
+  echo "[rollback] db-derived count: pre=${PRE_COUNT} current=${CURRENT_COUNT} → revert ${APPLIED_COUNT}"
+elif [ -f "${APPLIED_FILE}" ]; then
+  # Fallback: trust the file written by CI after migration:run.
   APPLIED_COUNT="$(cat "${APPLIED_FILE}" | tr -d '[:space:]')"
   APPLIED_COUNT="${APPLIED_COUNT:-0}"
+  echo "[rollback] db-query failed; falling back to applied-count.txt = ${APPLIED_COUNT}"
+else
+  echo "[rollback] no pre-count + db-query unavailable + no applied-count.txt — assuming 0 migrations to revert (code-only rollback)"
 fi
 
 echo "[rollback] starting for service=${SERVICE} (applied migrations this deploy: ${APPLIED_COUNT})"
@@ -92,7 +120,7 @@ do
   sleep 3
 done
 
-echo "[rollback] ✅ ${SERVICE} rolled back successfully — code + migrations restored"
-# Clear the state file so a subsequent successful deploy starts clean.
-rm -f "${APPLIED_FILE}"
+echo "[rollback] ${SERVICE} rolled back successfully — code + migrations restored"
+# Clear state so a subsequent successful deploy starts clean.
+rm -f "${APPLIED_FILE}" "${PRE_FILE}"
 exit 0

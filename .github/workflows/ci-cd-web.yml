@@ -188,8 +188,39 @@ jobs:
             done
             echo "museum-web is healthy."
 
-      - name: Smoke test
+      - name: Smoke test (functional)
         run: |
+          set -e
+          BASE_URL="${{ secrets.PROD_WEB_BASE_URL }}"
+          BASE_URL="${BASE_URL%/}"
           sleep 10
-          curl -sfL ${{ secrets.PROD_WEB_BASE_URL }} | grep -q '<html' || (echo "Smoke test failed" && exit 1)
-          echo "Smoke test passed"
+
+          # 1. Landing renders with locale middleware (lang attribute set, meta description present)
+          echo "[smoke] checking landing page SSR..."
+          LANDING="$(curl -sfL "${BASE_URL}/")"
+          echo "$LANDING" | grep -q '<html lang="' || (echo "FAIL: locale middleware did not set lang attribute" && exit 1)
+          echo "$LANDING" | grep -q '<meta name="description"' || (echo "FAIL: meta description missing — SEO broken" && exit 1)
+
+          # 2. Sitemap reachable (Next.js routing alive)
+          echo "[smoke] checking sitemap..."
+          curl -sfL "${BASE_URL}/sitemap.xml" | grep -q '<urlset' || (echo "FAIL: sitemap.xml unreachable or malformed" && exit 1)
+
+          # 3. Static asset bundle reachable (CSS/JS shipped)
+          echo "[smoke] checking _next static assets..."
+          ASSET_URL="$(echo "$LANDING" | grep -oE '/_next/static/[^" ]+\.(js|css)' | head -1 || true)"
+          if [ -n "$ASSET_URL" ]; then
+            curl -sfI "${BASE_URL}${ASSET_URL}" >/dev/null || (echo "FAIL: static asset ${ASSET_URL} unreachable" && exit 1)
+          else
+            echo "WARN: no /_next/static asset reference found in landing HTML"
+          fi
+
+          # 4. Backend API reachable through web proxy (/api/health round-trip)
+          echo "[smoke] checking /api/health round-trip..."
+          HEALTH_HTTP="$(curl -s -o /tmp/health.json -w '%{http_code}' "${BASE_URL}/api/health" || echo 000)"
+          if [ "$HEALTH_HTTP" != "200" ]; then
+            echo "FAIL: /api/health returned HTTP ${HEALTH_HTTP} (expected 200) — BE/FE integration broken"
+            cat /tmp/health.json || true
+            exit 1
+          fi
+
+          echo "[smoke] all functional checks passed"
