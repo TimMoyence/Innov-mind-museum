@@ -7,6 +7,7 @@ and a clear "when does this fire" trigger.
 | Runbook | Trigger | Cadence |
 |---|---|---|
 | [`auto-rollback.md`](auto-rollback.md) | Deploy or smoke test fails in CI | On-demand (CI invokes) + 90-day drill on staging |
+| [`prod-secrets-bootstrap.md`](prod-secrets-bootstrap.md) | Auto-rollback fires with `Missing required environment variable: …` or a new validator clause lands | On-demand (per failure or per validator update) |
 | [`redis-rotation.md`](redis-rotation.md) | Quarterly cron (`redis-rotation-reminder.yml`) or credential exposure | Every 90 days |
 | [`V1_FALLBACKS.md`](V1_FALLBACKS.md) | Operator-side substitutes for the dormant V2 workflows (backups, TLS, breach timer) | Daily/weekly until V2 activated |
 
