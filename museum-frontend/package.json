@@ -103,7 +103,7 @@
     "openapi-typescript": "^7.13.0",
     "prettier": "^3.8.3",
     "typescript": "~5.9.2",
-    "typescript-eslint": "^8.58.1"
+    "typescript-eslint": "^8.59.0"
   },
   "expo": {
     "install": {
