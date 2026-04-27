@@ -170,7 +170,9 @@ describe('buildVisitSummary — proactive end-of-visit aggregation (P4)', () => 
             {
               url: 'https://example.com/sunflowers.jpg',
               thumbnailUrl: 'https://example.com/sunflowers-thumb.jpg',
-              alt: 'Sunflowers',
+              caption: 'Sunflowers',
+              source: 'wikidata',
+              score: 0.95,
             },
           ],
         },
@@ -182,7 +184,11 @@ describe('buildVisitSummary — proactive end-of-visit aggregation (P4)', () => 
     expect(summary.artworks[0].imageUrl).toBe('https://example.com/sunflowers-thumb.jpg');
   });
 
-  it('falls back to the full-size url when no thumbnail variant is available', () => {
+  it('falls back to the full-size url when the thumbnailUrl is empty (defensive against malformed payloads)', () => {
+    // The type contract has `thumbnailUrl: string` non-optional, but the SUT
+    // uses `??` to defensively handle null/undefined coming from a misbehaving
+    // backend. We bypass the compile-time guard here to exercise that branch
+    // — the cast is intentional and isolated to this single fixture.
     const messages: ChatUiMessage[] = [
       makeAssistantMessage(
         { createdAt: at(0) },
@@ -197,8 +203,10 @@ describe('buildVisitSummary — proactive end-of-visit aggregation (P4)', () => 
           images: [
             {
               url: 'https://example.com/hercules.jpg',
-              thumbnailUrl: undefined,
-              alt: 'Bronze Hercules',
+              thumbnailUrl: undefined as unknown as string,
+              caption: 'Bronze Hercules',
+              source: 'wikidata',
+              score: 0.7,
             },
           ],
         },

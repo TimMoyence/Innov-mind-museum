@@ -1,13 +1,18 @@
 {
-  "lastUpdated": "2026-04-22",
-  "testCount": 2877,
-  "frontendTestCount": 1570,
-  "frontendSuiteCount": 154,
+  "lastUpdated": "2026-04-27",
+  "testCount": 3410,
+  "frontendTestCount": 1588,
+  "frontendSuiteCount": 161,
   "typecheckErrors": 0,
   "asAnyCount": 0,
-  "coverageStatements": 90.28,
-  "coverageBranches": 80.43,
+  "coverageStatements": 87.56,
+  "coverageBranches": 76.72,
+  "coverageFunctions": 81.29,
+  "coverageLines": 87.98,
   "lintErrors": 0,
-  "_comment": "Team B audit complete (2026-04-21): T1 startPoolMonitor wired + clearInterval, T3 audio catch →400, T4 pessimistic stats refetch, T5 RFC 9745/8594 SSE headers, H1-H7 all implemented, H8 GitNexus re-index done (6036/15640). Score: 6.8→10/10. DoD 15/15.",
-  "webTestCount": 174
+  "lintWarningsBackend": 27,
+  "lintWarningsFrontend": 21,
+  "_comment": "PM audit + roadmap 10/10 sprint 2026-04-27: P1 (web smoke functional + rollback DB-derived), P3 (Redis password floor + rotation reminder + mobile TLS hardening + email regex fuzz), P5 (V1 fallbacks runbook + auto-rollback + redis-rotation + README index), P4 (visit summary 8 tests + voice STT-LLM-TTS pipeline 4 tests + emoji guard CI), P2 (reset-password full flow integration 7 tests). 5 commits + tech-lead code review on each pillar. tsc + tests + lint green on all 3 apps. v1.2.0.",
+  "webTestCount": 206,
+  "webSuiteCount": 23
 }
