@@ -159,6 +159,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         NSFaceIDUsageDescription: 'Allow $(PRODUCT_NAME) to use Face ID to unlock the app.',
         NSLocationWhenInUseUsageDescription:
           'Musaium uses your location to find museums and cultural sites near you, show them on the map, and recommend nearby visits — your location is never tracked or shared with third parties.',
+        // P3.3 — Transport security hardening.
+        // Deny arbitrary cleartext loads at all times; require Certificate
+        // Transparency for production builds so misissued certs for the API
+        // domain are rejected by the OS at TLS handshake. Dev/preview keep
+        // CT off to permit staging certs that may not be CT-logged.
+        NSAppTransportSecurity: {
+          NSAllowsArbitraryLoads: false,
+          NSAllowsLocalNetworking: variant === 'development',
+          NSRequiresCertificateTransparency: variant === 'production',
+        },
       },
       privacyManifests: {
         NSPrivacyTracking: false,
@@ -256,6 +266,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         'expo-build-properties',
         {
           android: {
+            // P3.3 — Block plaintext HTTP at the OS network layer for all
+            // non-dev variants. Dev keeps cleartext on so Metro/LAN backends
+            // (http://10.0.x.x:3000) keep working; preview/internal/production
+            // are HTTPS-only.
+            usesCleartextTraffic: variant === 'development',
             blockedPermissions: [
               'android.permission.READ_EXTERNAL_STORAGE',
               'android.permission.WRITE_EXTERNAL_STORAGE',

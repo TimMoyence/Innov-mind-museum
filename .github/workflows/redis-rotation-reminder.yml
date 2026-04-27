@@ -1,0 +1,84 @@
+# Redis password rotation reminder.
+#
+# Opens a GitHub issue every 90 days (1st of Jan/Apr/Jul/Oct) to track rotation.
+# The runbook is `docs/RUNBOOKS/redis-rotation.md`. The validator in
+# `env.production-validation.ts` enforces the password floor (>=32 chars,
+# distinct from every signing secret) so a weak rotation will fail to boot.
+#
+# Compliance: SOC2 CC6.3 (credential rotation cadence).
+name: redis-rotation-reminder
+
+on:
+  schedule:
+    - cron: '0 9 1 1,4,7,10 *' # 09:00 UTC on the 1st of Jan/Apr/Jul/Oct
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: redis-rotation-reminder
+  cancel-in-progress: false
+
+jobs:
+  open-reminder:
+    name: open-reminder
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 1
+
+      - name: Open rotation reminder issue
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v8
+        with:
+          script: |
+            const today = new Date().toISOString().slice(0, 10);
+            const due = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+            // Skip if an open rotation issue already exists (manual run or overlapping schedule).
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'security,redis-rotation',
+              per_page: 5,
+            });
+            if (existing.length > 0) {
+              core.notice(`open rotation issue already exists: #${existing[0].number}`);
+              return;
+            }
+
+            const body = [
+              '## Redis password rotation due',
+              '',
+              `Quarterly rotation triggered on ${today}. Target completion: **${due}**.`,
+              '',
+              'Runbook: [`docs/RUNBOOKS/redis-rotation.md`](../blob/main/docs/RUNBOOKS/redis-rotation.md)',
+              '',
+              '### Checklist',
+              '- [ ] Generate new password (`openssl rand -base64 48 | tr -d \'+/=\' | head -c 48`)',
+              '- [ ] Update GitHub Actions secret `REDIS_PASSWORD`',
+              '- [ ] Update `/srv/museum/.env` on staging, restart redis + backend-staging',
+              '- [ ] Validate staging (`/api/health`, login flow, Sentry quiet 10 min)',
+              '- [ ] Update `/srv/museum/.env` on prod (off-peak window 02:00–05:00 UTC), restart',
+              '- [ ] Validate prod (`/api/health`, Sentry quiet 30 min)',
+              '- [ ] Close this issue with operator + completion date',
+              '',
+              '### Acceptance',
+              '`env.production-validation.ts` rejects passwords < 32 chars or matching any signing secret — a weak rotation will fail to boot, not silently succeed.',
+              '',
+              '_Opened automatically by `.github/workflows/redis-rotation-reminder.yml` (SOC2 CC6.3)._',
+            ].join('\n');
+
+            const { data: created } = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[security] Redis password rotation due — ${today}`,
+              body,
+              labels: ['security', 'redis-rotation', 'ops'],
+            });
+            core.notice(`opened rotation reminder issue: #${created.number}`);

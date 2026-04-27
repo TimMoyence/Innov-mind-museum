@@ -36,6 +36,8 @@
 !docs/compliance/**
 !docs/incidents/
 !docs/incidents/**
+!docs/RUNBOOKS/
+!docs/RUNBOOKS/**
 !docs/V2_PENDING.md
 
 # frontend docs

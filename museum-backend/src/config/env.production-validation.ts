@@ -84,8 +84,28 @@ function validateS3Storage(env: AppEnv): void {
 /** Validates Redis credentials when cache is enabled. */
 function validateRedis(env: AppEnv): void {
   if (!env.cache?.enabled) return;
-  required('REDIS_PASSWORD', env.cache.password);
+  const password = required('REDIS_PASSWORD', env.cache.password);
   required('REDIS_URL or REDIS_HOST', process.env.REDIS_URL || process.env.REDIS_HOST);
+
+  // P3.1: enforce >=32 char Redis password in production. Rate-limit buckets
+  // and the LLM cache live in Redis; a weak password == hijackable session
+  // store. Rotation playbook: docs/RUNBOOKS/redis-rotation.md (quarterly).
+  assertSecretLength('REDIS_PASSWORD', password);
+
+  // Reject sharing the Redis password with any signing secret. Operators have
+  // copy-pasted secrets across services in past incidents; this catches it.
+  if (password === process.env.JWT_ACCESS_SECRET) {
+    throw new Error(
+      'REDIS_PASSWORD must be distinct from JWT_ACCESS_SECRET in production. ' +
+        'Sharing secrets across services defeats key rotation.',
+    );
+  }
+  if (password === process.env.JWT_REFRESH_SECRET) {
+    throw new Error('REDIS_PASSWORD must be distinct from JWT_REFRESH_SECRET in production.');
+  }
+  if (password === process.env.MEDIA_SIGNING_SECRET) {
+    throw new Error('REDIS_PASSWORD must be distinct from MEDIA_SIGNING_SECRET in production.');
+  }
 }
 
 /**
