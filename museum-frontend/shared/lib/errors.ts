@@ -63,6 +63,18 @@ const socialAuthMessage = (code: string | undefined): string => {
       );
     case 'google_in_progress':
       return t('error.socialAuth.google_in_progress', 'Google sign-in is already running.');
+    case 'google_play_services_unavailable':
+      return t(
+        'error.socialAuth.google_play_services_unavailable',
+        'Google Play Services unavailable. Update Play Services and try again.',
+      );
+    case 'google_developer_error':
+      return t(
+        'error.socialAuth.google_developer_error',
+        'Google sign-in is unavailable on this version. Use email or Apple in the meantime.',
+      );
+    case 'google_unknown':
+      return t('error.socialAuth.generic', DEFAULT_SOCIAL_AUTH);
     case 'apple_no_identity_token':
       return t(
         'error.socialAuth.apple_no_identity_token',

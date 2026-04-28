@@ -1,4 +1,4 @@
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import Constants from 'expo-constants';
 import { Linking, Platform } from 'react-native';
@@ -105,9 +105,48 @@ export const signInWithApple = async (): Promise<SocialAuthResult> => {
 };
 
 /**
+ * Native Android `DEVELOPER_ERROR` rejection code emitted by RNGoogleSigninModule:
+ * `String.valueOf(CommonStatusCodes.DEVELOPER_ERROR)` = `"10"`.
+ *
+ * The library's `statusCodes` constant does not currently re-export DEVELOPER_ERROR
+ * (cf. node_modules/.../errors/errorCodes.d.ts), so we match the raw code defensively.
+ */
+const GOOGLE_DEVELOPER_ERROR_CODE = '10';
+
+/**
+ * Maps a native Google Sign-In error code to a stable AppError code consumed by the UI layer.
+ * Native error `code` values come from `statusCodes` exported by `@react-native-google-signin/google-signin`.
+ */
+const mapGoogleNativeErrorCode = (
+  nativeCode: unknown,
+):
+  | 'google_cancelled'
+  | 'google_in_progress'
+  | 'google_play_services_unavailable'
+  | 'google_developer_error'
+  | 'google_unknown' => {
+  if (nativeCode === statusCodes.SIGN_IN_CANCELLED) return 'google_cancelled';
+  if (nativeCode === statusCodes.IN_PROGRESS) return 'google_in_progress';
+  if (nativeCode === statusCodes.PLAY_SERVICES_NOT_AVAILABLE)
+    return 'google_play_services_unavailable';
+  if (nativeCode === GOOGLE_DEVELOPER_ERROR_CODE) return 'google_developer_error';
+  return 'google_unknown';
+};
+
+const isOurSocialAuthError = (error: unknown): boolean => {
+  return (
+    !!error &&
+    typeof error === 'object' &&
+    'kind' in error &&
+    (error as { kind?: unknown }).kind === 'SocialAuth'
+  );
+};
+
+/**
  * Initiates the Google Sign-In flow and returns the identity token.
  * @returns A {@link SocialAuthResult} with provider `'google'` and the ID token.
- * @throws If the user cancels or Google does not return a token.
+ * @throws An {@link AppError} with `kind: 'SocialAuth'` for cancellation, in-progress,
+ *   missing Play Services, developer config errors, or any other native failure.
  */
 export const signInWithGoogle = async (): Promise<SocialAuthResult> => {
   if (isGoogleSignInInFlight) {
@@ -141,6 +180,21 @@ export const signInWithGoogle = async (): Promise<SocialAuthResult> => {
       provider: 'google',
       idToken: response.data.idToken,
     };
+  } catch (rawError: unknown) {
+    // Re-throw our own AppErrors untouched (e.g. google_in_progress, google_no_id_token,
+    // ios_unavailable) so they keep their canonical code.
+    if (isOurSocialAuthError(rawError)) {
+      throw rawError;
+    }
+
+    const nativeCode = (rawError as { code?: unknown } | null)?.code;
+    const nativeMessage = rawError instanceof Error ? rawError.message : 'Google Sign-In failed';
+
+    throw createAppError({
+      kind: 'SocialAuth',
+      code: mapGoogleNativeErrorCode(nativeCode),
+      message: nativeMessage,
+    });
   } finally {
     isGoogleSignInInFlight = false;
   }

@@ -508,6 +508,8 @@
       "google_cancelled": "Google 登录已取消。",
       "google_no_id_token": "Google 登录无法完成，请重试。",
       "google_in_progress": "Google 登录正在进行中。",
+      "google_play_services_unavailable": "Google Play 服务不可用。请更新 Play 服务后重试。",
+      "google_developer_error": "此版本暂不支持 Google 登录。请暂时使用邮箱或 Apple 登录。",
       "apple_no_identity_token": "Apple 登录已中断，请重试。",
       "ios_unavailable": "此版本不支持 Google 登录，请使用 Apple 或邮箱。"
     },

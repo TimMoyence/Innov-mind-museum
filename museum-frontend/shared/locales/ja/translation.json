@@ -508,6 +508,8 @@
       "google_cancelled": "Googleサインインをキャンセルしました。",
       "google_no_id_token": "Googleサインインを完了できませんでした。もう一度お試しください。",
       "google_in_progress": "Googleサインインがすでに進行中です。",
+      "google_play_services_unavailable": "Google Play 開発者サービスを利用できません。Play 開発者サービスを更新してから再試行してください。",
+      "google_developer_error": "このバージョンではGoogleサインインを利用できません。当面はメールまたはAppleをご利用ください。",
       "apple_no_identity_token": "Appleサインインが中断されました。もう一度お試しください。",
       "ios_unavailable": "このビルドではGoogleサインインを利用できません。Appleまたはメールをご利用ください。"
     },

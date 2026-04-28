@@ -508,6 +508,8 @@
       "google_cancelled": "Google-Anmeldung abgebrochen.",
       "google_no_id_token": "Google-Anmeldung konnte nicht abgeschlossen werden. Bitte erneut versuchen.",
       "google_in_progress": "Eine Google-Anmeldung läuft bereits.",
+      "google_play_services_unavailable": "Google Play Services nicht verfügbar. Aktualisieren Sie Play Services und versuchen Sie es erneut.",
+      "google_developer_error": "Google-Anmeldung ist in dieser Version nicht verfügbar. Verwenden Sie vorerst E-Mail oder Apple.",
       "apple_no_identity_token": "Apple-Anmeldung wurde unterbrochen. Bitte erneut versuchen.",
       "ios_unavailable": "Google-Anmeldung ist in dieser Version nicht verfügbar. Verwenden Sie Apple oder E-Mail."
     },

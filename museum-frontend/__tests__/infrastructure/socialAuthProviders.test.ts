@@ -1,10 +1,11 @@
 /**
- * Lightweight test for socialAuthProviders — Apple-only paths.
- * Google sign-in has complex native module state and is excluded from Jest coverage.
+ * Lightweight test for socialAuthProviders — Apple-only paths plus Google native error mapping.
  */
 
 const mockSignInAsync = jest.fn();
 const mockIsAvailableAsync = jest.fn<Promise<boolean>, []>();
+const mockGoogleSignIn = jest.fn();
+const mockGoogleHasPlayServices = jest.fn();
 
 jest.mock('expo-apple-authentication', () => ({
   signInAsync: (opts: unknown) => mockSignInAsync(opts),
@@ -15,8 +16,15 @@ jest.mock('expo-apple-authentication', () => ({
 jest.mock('@react-native-google-signin/google-signin', () => ({
   GoogleSignin: {
     configure: jest.fn(),
-    hasPlayServices: jest.fn(),
-    signIn: jest.fn(),
+    hasPlayServices: (...args: unknown[]) => mockGoogleHasPlayServices(...args),
+    signIn: (...args: unknown[]) => mockGoogleSignIn(...args),
+  },
+  statusCodes: {
+    SIGN_IN_CANCELLED: '12501',
+    IN_PROGRESS: '12502',
+    PLAY_SERVICES_NOT_AVAILABLE: '12503',
+    SIGN_IN_REQUIRED: '12504',
+    DEVELOPER_ERROR: '10',
   },
 }));
 
@@ -27,6 +35,7 @@ jest.mock('expo-constants', () => ({
 
 import {
   signInWithApple,
+  signInWithGoogle,
   isAppleSignInAvailable,
 } from '@/features/auth/infrastructure/socialAuthProviders';
 import { Platform } from 'react-native';
@@ -61,6 +70,33 @@ describe('isAppleSignInAvailable', () => {
     Object.defineProperty(Platform, 'OS', { value: 'ios', writable: true });
     mockIsAvailableAsync.mockResolvedValue(true);
     expect(await isAppleSignInAvailable()).toBe(true);
+    Object.defineProperty(Platform, 'OS', { value: orig, writable: true });
+  });
+});
+
+describe('signInWithGoogle native error mapping', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGoogleHasPlayServices.mockResolvedValue(true);
+  });
+
+  it('wraps a native DEVELOPER_ERROR into an AppError with code "google_developer_error"', async () => {
+    const orig = Platform.OS;
+    Object.defineProperty(Platform, 'OS', { value: 'android', writable: true });
+
+    const nativeError = Object.assign(
+      new Error(
+        'DEVELOPER_ERROR: Follow troubleshooting instructions at https://react-native-google-signin.github.io/docs/troubleshooting',
+      ),
+      { code: '10' },
+    );
+    mockGoogleSignIn.mockRejectedValue(nativeError);
+
+    await expect(signInWithGoogle()).rejects.toMatchObject({
+      kind: 'SocialAuth',
+      code: 'google_developer_error',
+    });
+
     Object.defineProperty(Platform, 'OS', { value: orig, writable: true });
   });
 });

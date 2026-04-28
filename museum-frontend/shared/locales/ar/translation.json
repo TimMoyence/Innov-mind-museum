@@ -508,6 +508,8 @@
       "google_cancelled": "تم إلغاء تسجيل الدخول عبر Google.",
       "google_no_id_token": "تعذر إكمال تسجيل الدخول عبر Google. يرجى المحاولة مرة أخرى.",
       "google_in_progress": "هناك تسجيل دخول عبر Google قيد التنفيذ بالفعل.",
+      "google_play_services_unavailable": "خدمات Google Play غير متاحة. يرجى تحديث Play Services ثم المحاولة مرة أخرى.",
+      "google_developer_error": "تسجيل الدخول عبر Google غير متاح في هذا الإصدار. استخدم البريد الإلكتروني أو Apple في الوقت الحالي.",
       "apple_no_identity_token": "تمت مقاطعة تسجيل الدخول عبر Apple. يرجى المحاولة مرة أخرى.",
       "ios_unavailable": "تسجيل الدخول عبر Google غير متاح في هذا الإصدار. استخدم Apple أو البريد الإلكتروني."
     },

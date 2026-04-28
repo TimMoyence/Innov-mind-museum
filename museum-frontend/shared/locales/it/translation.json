@@ -508,6 +508,8 @@
       "google_cancelled": "Accesso Google annullato.",
       "google_no_id_token": "Impossibile completare l'accesso con Google. Riprova.",
       "google_in_progress": "Un accesso Google è già in corso.",
+      "google_play_services_unavailable": "Google Play Services non disponibile. Aggiorna Play Services e riprova.",
+      "google_developer_error": "L'accesso con Google non è disponibile in questa versione. Usa email o Apple per ora.",
       "apple_no_identity_token": "Accesso Apple interrotto. Riprova.",
       "ios_unavailable": "L'accesso Google non è disponibile in questa build. Usa Apple o email."
     },

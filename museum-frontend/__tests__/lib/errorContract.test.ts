@@ -3,7 +3,7 @@ type Dict = Record<string, unknown>;
 // Bundles are required (not imported) to avoid babel ESM-interop quirks on
 // JSON modules. Names are suffixed with `Bundle` to avoid shadowing Jest's
 // `it` global when the Italian locale loads.
- 
+
 const arBundle = require('@/shared/locales/ar/translation.json') as Dict;
 const deBundle = require('@/shared/locales/de/translation.json') as Dict;
 const enBundle = require('@/shared/locales/en/translation.json') as Dict;
@@ -12,7 +12,6 @@ const frBundle = require('@/shared/locales/fr/translation.json') as Dict;
 const itBundle = require('@/shared/locales/it/translation.json') as Dict;
 const jaBundle = require('@/shared/locales/ja/translation.json') as Dict;
 const zhBundle = require('@/shared/locales/zh/translation.json') as Dict;
- 
 
 const get = (obj: Dict, path: string): unknown => {
   return path.split('.').reduce<unknown>((acc, key) => {
@@ -50,6 +49,8 @@ const REQUIRED_KEYS = [
   'error.socialAuth.google_cancelled',
   'error.socialAuth.google_no_id_token',
   'error.socialAuth.google_in_progress',
+  'error.socialAuth.google_play_services_unavailable',
+  'error.socialAuth.google_developer_error',
   'error.socialAuth.apple_no_identity_token',
   'error.socialAuth.ios_unavailable',
   // Chat / streaming

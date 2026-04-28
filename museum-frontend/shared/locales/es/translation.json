@@ -508,6 +508,8 @@
       "google_cancelled": "Inicio de sesión con Google cancelado.",
       "google_no_id_token": "El inicio de sesión con Google no se completó. Inténtalo de nuevo.",
       "google_in_progress": "Ya hay un inicio de sesión con Google en curso.",
+      "google_play_services_unavailable": "Google Play Services no está disponible. Actualiza Play Services y vuelve a intentarlo.",
+      "google_developer_error": "El inicio de sesión con Google no está disponible en esta versión. Usa el correo o Apple por ahora.",
       "apple_no_identity_token": "Se interrumpió el inicio de sesión con Apple. Inténtalo de nuevo.",
       "ios_unavailable": "El inicio de sesión con Google no está disponible en esta versión. Usa Apple o correo."
     },

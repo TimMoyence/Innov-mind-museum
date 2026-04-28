@@ -508,6 +508,8 @@
       "google_cancelled": "Connexion Google annulée.",
       "google_no_id_token": "Impossible de finaliser la connexion Google. Veuillez réessayer.",
       "google_in_progress": "Une connexion Google est déjà en cours.",
+      "google_play_services_unavailable": "Google Play Services indisponible. Mets à jour Play Services puis réessaie.",
+      "google_developer_error": "Connexion Google indisponible sur cette version. Utilise l'email ou Apple en attendant.",
       "apple_no_identity_token": "Connexion Apple interrompue. Veuillez réessayer.",
       "ios_unavailable": "La connexion Google n'est pas disponible sur cette version. Utilisez Apple ou email."
     },

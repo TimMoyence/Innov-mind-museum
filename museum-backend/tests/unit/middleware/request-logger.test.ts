@@ -98,4 +98,41 @@ describe('requestLoggerMiddleware', () => {
     expect(typeof logContext.latencyMs).toBe('number');
     expect(logContext.latencyMs).toBeGreaterThanOrEqual(0);
   });
+
+  it('does not log when the request targets the /api/health endpoint', () => {
+    const req = mockReq({ originalUrl: '/api/health' });
+    const res = mockRes();
+    const next = jest.fn() as NextFunction;
+
+    requestLoggerMiddleware(req, res, next);
+    finishHandler?.();
+
+    expect(logger.info).not.toHaveBeenCalled();
+  });
+
+  it('does not log when the request targets the unprefixed /health endpoint', () => {
+    const req = mockReq({ originalUrl: '/health' });
+    const res = mockRes();
+    const next = jest.fn() as NextFunction;
+
+    requestLoggerMiddleware(req, res, next);
+    finishHandler?.();
+
+    expect(logger.info).not.toHaveBeenCalled();
+  });
+
+  it('still logs other endpoints normally', () => {
+    const req = mockReq({ originalUrl: '/api/anything-else' });
+    const res = mockRes();
+    const next = jest.fn() as NextFunction;
+
+    requestLoggerMiddleware(req, res, next);
+    finishHandler?.();
+
+    expect(logger.info).toHaveBeenCalledTimes(1);
+    expect(logger.info).toHaveBeenCalledWith(
+      'http_request',
+      expect.objectContaining({ path: '/api/anything-else' }),
+    );
+  });
 });

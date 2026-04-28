@@ -508,6 +508,8 @@
       "google_cancelled": "Google sign-in cancelled.",
       "google_no_id_token": "Google sign-in could not complete. Please try again.",
       "google_in_progress": "Google sign-in is already running.",
+      "google_play_services_unavailable": "Google Play Services unavailable. Update Play Services and try again.",
+      "google_developer_error": "Google sign-in is unavailable on this version. Use email or Apple in the meantime.",
       "apple_no_identity_token": "Apple sign-in was interrupted. Please try again.",
       "ios_unavailable": "Google sign-in is unavailable on this build. Use Apple or email instead."
     },
