@@ -1,4 +1,4 @@
-# ADR-014 — Module composition singletons (F6) deferred to dedicated PR
+# ADR-016 — Module composition singletons (F6) deferred to dedicated PR
 
 Status: Accepted — 2026-04-30
 Context: Audit 2026-04-30 finding F6
@@ -61,7 +61,7 @@ Phase 4 — drop the compatibility barrels and the chat module registry workarou
 - `createApp()` is the only thing that constructs domain modules.
 - Tests no longer need `jest.mock('@modules/<x>/useCase')` factories — they pass mock modules to `createApp()` overrides directly.
 - Backend full suite stays green per commit. Coverage threshold doesn't drop.
-- ADR-014 (this file) is removed in the same commit that lands Phase 4.
+- ADR-016 (this file) is removed in the same commit that lands Phase 4.
 
 ## Why this is honest engineering
 

@@ -1,4 +1,4 @@
-# ADR-015 — MFA RN wire (E2) deferred to dedicated PR
+# ADR-017 — MFA RN wire (E2) deferred to dedicated PR
 
 Status: Accepted — 2026-04-30
 Context: Audit 2026-04-30 finding E2
