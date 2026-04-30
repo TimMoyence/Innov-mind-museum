@@ -20,7 +20,7 @@ Historical sprint journals archived in **`docs/archive/v1-sprint-2026-04/`**:
 - `SPRINT_LOG.md` — detailed technical journal
 - `*_AUDIT_2026-04-0*.md` — prior audit reports
 
-Older roadmaps (V2, V3 review, walk spec, sprint scratch) live under `docs/archive/{roadmaps,walk-spec,superpowers-2026-Q1Q2}/`.
+V3 review preserved under `docs/archive/roadmaps/V3_REVIEW_AND_PLAN.md`. Older sprint scratch (ROADMAP_V2, walk spec, superpowers plans/specs, one-off audits, legacy team reports) was deleted on 2026-04-30 — see git history if needed.
 
 Post-2026-04-20 tracking: `.claude/tasks/` (task lists) + `.claude/skills/team/team-reports/` (runtime `/team` runs) = active sources of truth.
 
@@ -199,7 +199,6 @@ Auto-generated, massive, or pure data. Reading full wastes tokens, rarely helps.
 | `museum-backend/src/modules/daily-art/artworks.data.ts` | 17 KB / 373 lines | Static artwork catalog | Grep for specific artwork ID or title |
 | `museum-frontend/shared/ui/tokens.generated.ts` | generated | Design tokens output | Edit `design-system/` source instead |
 | `docs/archive/v1-sprint-2026-04/SPRINT_LOG.md` | 169 KB | Historical journal (archived) | Read w/ offset for specific date range, never full |
-| `docs/archive/roadmaps/ROADMAP_V2.md` | 57 KB | Archived V2 roadmap (historical) | Grep by feature name only — superseded by `docs/ROADMAP_ACTIVE.md` |
 | `docs/archive/v1-sprint-2026-04/PROGRESS_TRACKER.md` | 57 KB | Sprint tracker (archived) | Read latest sprint section only |
 
 Doubt? Use `Grep` w/ specific pattern first, then `Read` relevant block w/ `offset`/`limit`.

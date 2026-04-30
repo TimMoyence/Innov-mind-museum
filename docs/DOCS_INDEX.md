@@ -84,17 +84,13 @@
 
 | Bucket | Path | Contains |
 |---|---|---|
-| Legacy roadmaps | [`docs/archive/roadmaps/`](archive/roadmaps/) | ROADMAP_V2 (deprecated), V3_REVIEW_AND_PLAN |
+| Legacy roadmap (V3 review) | [`docs/archive/roadmaps/`](archive/roadmaps/) | V3_REVIEW_AND_PLAN |
 | V1 sprint journal | [`docs/archive/v1-sprint-2026-04/`](archive/v1-sprint-2026-04/) | Progress tracker + sprint log + audits |
-| Walk spec (POSITIONED V2, not started) | [`docs/archive/walk-spec/`](archive/walk-spec/) | FEATURE_MUSEUM_WALK + sprint plans S0-S3 |
-| Superpowers plans/specs (closed Q1-Q2 2026) | [`docs/archive/superpowers-2026-Q1Q2/`](archive/superpowers-2026-Q1Q2/) | 10 plans + 7 specs |
 | Modular plans 2026-04-17 | [`docs/archive/plans-2026-04-17/`](archive/plans-2026-04-17/) | 12 plans Phase 1-3 (closed) |
 | NL reports 2026-04-17 | [`docs/archive/nl-reports-2026-04-17/reports/`](archive/nl-reports-2026-04-17/reports/) | NL agents output |
 | Full-codebase analyse pré-S1 | [`docs/archive/fullcodebase-analyse/`](archive/fullcodebase-analyse/) | 12 reports historiques |
 | Team reports legacy v2 (March 2026) | [`docs/archive/team-reports-legacy-v2/`](archive/team-reports-legacy-v2/) | 16 audits |
-| Team reports legacy 2026-04-06 | [`docs/archive/team-reports-2026-04-legacy/`](archive/team-reports-2026-04-legacy/) | 6 reports moved from `team-reports/` root |
 | Team knowledge legacy | [`docs/archive/team-knowledge-legacy/`](archive/team-knowledge-legacy/) | Agent perf, error patterns |
-| One-off audits | [`docs/archive/audits/2026-04/`](archive/audits/2026-04/) | sprint-execution-2026-04-05 |
 
 ## Référence externe
 

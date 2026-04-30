@@ -64,5 +64,4 @@ Musaium à maturité V2.0 (auth + chat multimodal + conversations + museums + su
 - Plans modulaires archivés : [`docs/archive/plans-2026-04-17/`](archive/plans-2026-04-17/)
 - Tracking sprint archivé : [`docs/archive/v1-sprint-2026-04/PROGRESS_TRACKER.md`](archive/v1-sprint-2026-04/PROGRESS_TRACKER.md)
 - Journal sprint archivé : [`docs/archive/v1-sprint-2026-04/SPRINT_LOG.md`](archive/v1-sprint-2026-04/SPRINT_LOG.md)
-- Roadmap V2 (archivée historique) : [`docs/archive/roadmaps/ROADMAP_V2.md`](archive/roadmaps/ROADMAP_V2.md)
 - Audit enterprise-grade 2026-04-20 : [`docs/plans/NL_MASTER_PLAN.md`](plans/NL_MASTER_PLAN.md)
