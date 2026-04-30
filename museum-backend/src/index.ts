@@ -43,6 +43,20 @@ import type { Server } from 'node:http';
 /** Grace period for in-flight requests to complete before forced exit (ms). */
 const SHUTDOWN_TIMEOUT_MS = 30_000;
 
+/**
+ * Returns the BullMQ-compatible Redis connection options shared by every
+ * scheduler/queue we start at boot. Centralized so adjusting (e.g.) TLS or
+ * retry policy lands in one place.
+ */
+const createRedisConnectionOptions = () =>
+  ({
+    host: env.redis.host,
+    port: env.redis.port,
+    password: env.redis.password,
+    maxRetriesPerRequest: null,
+    enableOfflineQueue: false,
+  }) as const;
+
 /** Initializes cache and rate-limit Redis connections from environment config. */
 function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Redis | undefined } {
   if (env.cache?.enabled) {
@@ -107,26 +121,12 @@ async function startEnrichmentScheduler(): Promise<EnrichmentSchedulerPort | und
     return undefined;
   }
   try {
-    const queue = new BullmqMuseumEnrichmentQueueAdapter({
-      host: env.redis.host,
-      port: env.redis.port,
-      password: env.redis.password,
-      maxRetriesPerRequest: null,
-      enableOfflineQueue: false,
-    });
+    const queue = new BullmqMuseumEnrichmentQueueAdapter(createRedisConnectionOptions());
     const useCase = buildRefreshStaleEnrichmentsUseCase(queue);
     const purgeUseCase = buildPurgeDeadEnrichmentsUseCase();
     const scheduler = createBullmqEnrichmentScheduler(
       useCase,
-      {
-        connection: {
-          host: env.redis.host,
-          port: env.redis.port,
-          password: env.redis.password,
-          maxRetriesPerRequest: null,
-          enableOfflineQueue: false,
-        },
-      },
+      { connection: createRedisConnectionOptions() },
       purgeUseCase,
       env.enrichment.hardDeleteAfterDays,
     );
@@ -153,13 +153,7 @@ async function startAuditCron(): Promise<{
   queue: Queue | undefined;
 }> {
   try {
-    const connection = {
-      host: env.redis.host,
-      port: env.redis.port,
-      password: env.redis.password,
-      maxRetriesPerRequest: null,
-      enableOfflineQueue: false,
-    } as const;
+    const connection = createRedisConnectionOptions();
     const queue = new Queue(AUDIT_CRON_QUEUE_NAME, {
       connection,
       defaultJobOptions: { removeOnComplete: 50, removeOnFail: 100 },
@@ -293,13 +287,7 @@ async function startChatPurgeCron(): Promise<ChatPurgeCronHandle | undefined> {
   if (!env.cache?.enabled) return undefined;
   try {
     return await registerChatPurgeCron(AppDataSource, {
-      connection: {
-        host: env.redis.host,
-        port: env.redis.port,
-        password: env.redis.password,
-        maxRetriesPerRequest: null,
-        enableOfflineQueue: false,
-      },
+      connection: createRedisConnectionOptions(),
       retentionDays: env.chatPurgeRetentionDays,
     });
   } catch (err) {
