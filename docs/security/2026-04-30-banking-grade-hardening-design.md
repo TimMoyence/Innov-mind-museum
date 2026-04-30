@@ -379,12 +379,14 @@ HSTS extended to 2y + preload (matches HSTS preload list submission policy).
 
 **IMPORTANT REFRAME**: Per [NIST SP 800-63B-4 §3.1.1.2](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-63B-4.pdf), **composition rules SHALL NOT be imposed**. Original audit suggestion to "add symbol requirement" is **outdated guidance** and we will not implement it. Instead:
 
-**Decision**:
-- Min length: 12 chars (was 8).
-- **Drop** uppercase/lowercase/digit composition rules.
+**Decision** (per user gate 2026-04-30 — most conservative UX):
+- Min length: **8 chars (unchanged)** — defer length raise to a future UX-coordinated change.
+- **Drop** uppercase/lowercase/digit composition rules (per NIST 800-63B-4 §3.1.1.2 — composition rules SHALL NOT be imposed).
 - **Add** HIBP k-anonymity check (`api.pwnedpasswords.com/range/<sha1-prefix>` with `Add-Padding: true`).
 - Block on `count >= 1` at registration; warn on password change with `count > 0`.
 - HIBP timeout 2s, fallback fail-open with Sentry warning (do not lock users out on third-party outage).
+
+**UX impact**: registration form copy updates to remove composition hints (no longer enforced); HIBP block adds new error message "this password has appeared in known data breaches — please choose another". Existing accounts unaffected (no forced reset).
 
 **Files modified**:
 - `museum-backend/src/shared/validation/password.ts:20-46`
@@ -392,14 +394,15 @@ HSTS extended to 2y + preload (matches HSTS preload list submission policy).
 - `museum-backend/src/shared/validation/__tests__/password-breach.test.ts` — new
 
 **TDD plan**:
-1. **Red**: `Password1` (was passing) → expect block (length < 12).
-2. **Red**: `correcthorsebatterystaple` (12+ chars, no composition) → currently fails (no uppercase/digit) → expect pass. Plus mock HIBP returning `count=0` → pass.
-3. **Red**: `password123456` (12+ chars but in HIBP) → expect block.
-4. **Red**: HIBP timeout → expect pass + Sentry warning (fail-open on third-party).
-5. **Green**: implement. Tests pass.
-6. **Regression**: existing valid passwords (12+ char, not breached) still register OK.
+1. **Red**: `Password1` (currently passes composition + length 8) → mock HIBP `count > 0` → expect block (HIBP) post-fix.
+2. **Red**: `correcthorsebatterystaple` (no composition rules) → currently fails (no uppercase/digit) → expect pass post-fix (composition dropped) + HIBP `count=0`.
+3. **Red**: `password` (8 chars, in HIBP) → expect block.
+4. **Red**: HIBP timeout (>2s) → expect pass + Sentry warning (fail-open on third-party).
+5. **Red**: HIBP returns `count = 0` → expect pass.
+6. **Green**: implement. Tests pass.
+7. **Regression**: previously-valid 8+ char passwords not in HIBP → still register OK.
 
-**Frontend impact**: register/reset forms must update copy. Mobile + web. Tracked but not blocking backend deploy (frontend can deploy after).
+**Frontend impact**: register/reset forms remove composition hints. Add HIBP error toast. Mobile + web copy update. Tracked but not blocking backend deploy (frontend can deploy after).
 
 ---
 
