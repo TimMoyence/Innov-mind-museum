@@ -4,6 +4,14 @@ import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactNative from 'eslint-plugin-react-native';
 import prettierConfig from 'eslint-config-prettier';
+import { createRequire } from 'node:module';
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const _require = createRequire(import.meta.url);
+const musaiumTestDiscipline = _require('eslint-plugin-musaium-test-discipline');
 
 export default tseslint.config(
   // ── Global ignores ──────────────────────────────────────────────
@@ -146,6 +154,38 @@ export default tseslint.config(
       'react-native/no-inline-styles': 'off',
     },
   },
+
+  // ── Musaium Test Discipline ──────────────────────────────────────
+  {
+    files: ['__tests__/**/*.test.{ts,tsx}'],
+    plugins: { 'musaium-test-discipline': musaiumTestDiscipline },
+    rules: {
+      'musaium-test-discipline/no-inline-test-entities': 'error',
+      'musaium-test-discipline/no-undisabled-test-discipline-disable': 'error',
+    },
+  },
+
+  // ── Grandfather — baseline files exempt from no-inline-test-entities
+  //    Phase 7 will migrate these. Until then, rule is 'off' for baselined
+  //    paths so 'error' only fires on new code.
+  ...(() => {
+    const baselinePath = resolve(
+      __dirname,
+      '../tools/eslint-plugin-musaium-test-discipline/baselines/no-inline-test-entities.json',
+    );
+    if (!existsSync(baselinePath)) return [];
+    const baseline = JSON.parse(readFileSync(baselinePath, 'utf-8'));
+    const ownPaths = baseline.baseline
+      .filter((p) => p.startsWith('museum-frontend/'))
+      .map((p) => p.replace(/^museum-frontend\//, ''));
+    if (ownPaths.length === 0) return [];
+    return [
+      {
+        files: ownPaths,
+        rules: { 'musaium-test-discipline/no-inline-test-entities': 'off' },
+      },
+    ];
+  })(),
 
   // ── Prettier — must be last ───────────────────────────────────────
   prettierConfig,

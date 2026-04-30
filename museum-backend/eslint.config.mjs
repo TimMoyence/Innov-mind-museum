@@ -9,6 +9,14 @@ import security from 'eslint-plugin-security';
 import checkFile from 'eslint-plugin-check-file';
 import n from 'eslint-plugin-n';
 import prettierConfig from 'eslint-config-prettier';
+import { createRequire } from 'node:module';
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const _require = createRequire(import.meta.url);
+const musaiumTestDiscipline = _require('eslint-plugin-musaium-test-discipline');
 
 export default tseslint.config(
   // ═══════════════════════════════════════════════════════════════════
@@ -85,10 +93,7 @@ export default tseslint.config(
         // ── Infrastructure layer (DB adapters, external services) ──
         {
           type: 'infrastructure',
-          pattern: [
-            'src/modules/*/infrastructure/**',
-            'src/modules/*/adapters/secondary/**',
-          ],
+          pattern: ['src/modules/*/infrastructure/**', 'src/modules/*/adapters/secondary/**'],
           mode: 'full',
         },
 
@@ -116,12 +121,27 @@ export default tseslint.config(
             // Domain CANNOT import application, infrastructure, primary, helpers, data
             {
               from: ['domain'],
-              disallow: ['application', 'infrastructure', 'primary', 'helpers', 'data', 'module-root', 'entrypoint'],
+              disallow: [
+                'application',
+                'infrastructure',
+                'primary',
+                'helpers',
+                'data',
+                'module-root',
+                'entrypoint',
+              ],
             },
             // Application CANNOT import infrastructure, primary, helpers, data
             {
               from: ['application'],
-              disallow: ['infrastructure', 'primary', 'helpers', 'data', 'module-root', 'entrypoint'],
+              disallow: [
+                'infrastructure',
+                'primary',
+                'helpers',
+                'data',
+                'module-root',
+                'entrypoint',
+              ],
             },
             // Infrastructure CANNOT import primary, application (except via domain ports)
             {
@@ -154,13 +174,7 @@ export default tseslint.config(
       'import-x/order': [
         'error',
         {
-          groups: [
-            'builtin',
-            'external',
-            'internal',
-            ['parent', 'sibling', 'index'],
-            'type',
-          ],
+          groups: ['builtin', 'external', 'internal', ['parent', 'sibling', 'index'], 'type'],
           'newlines-between': 'always',
           alphabetize: { order: 'asc', caseInsensitive: true },
         },
@@ -208,10 +222,7 @@ export default tseslint.config(
     rules: {
       // ── Taille ──
       'max-lines': ['error', { max: 400, skipBlankLines: true, skipComments: true }],
-      'max-lines-per-function': [
-        'error',
-        { max: 60, skipBlankLines: true, skipComments: true },
-      ],
+      'max-lines-per-function': ['error', { max: 60, skipBlankLines: true, skipComments: true }],
       'max-params': ['error', { max: 5 }],
       'max-depth': ['error', { max: 4 }],
       'max-nested-callbacks': ['error', { max: 3 }],
@@ -477,6 +488,42 @@ export default tseslint.config(
       'security/detect-possible-timing-attacks': 'off',
     },
   },
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  MUSAIUM TEST DISCIPLINE
+  // ═══════════════════════════════════════════════════════════════════
+  {
+    files: ['tests/**/*.test.ts'],
+    plugins: { 'musaium-test-discipline': musaiumTestDiscipline },
+    rules: {
+      'musaium-test-discipline/no-inline-test-entities': 'error',
+      'musaium-test-discipline/no-undisabled-test-discipline-disable': 'error',
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  GRANDFATHER — baseline files exempt from no-inline-test-entities
+  //  Phase 7 will migrate these. Until then, rule is 'off' for baselined
+  //  paths so 'error' only fires on new code.
+  // ═══════════════════════════════════════════════════════════════════
+  ...(() => {
+    const baselinePath = resolve(
+      __dirname,
+      '../tools/eslint-plugin-musaium-test-discipline/baselines/no-inline-test-entities.json',
+    );
+    if (!existsSync(baselinePath)) return [];
+    const baseline = JSON.parse(readFileSync(baselinePath, 'utf-8'));
+    const ownPaths = baseline.baseline
+      .filter((p) => p.startsWith('museum-backend/'))
+      .map((p) => p.replace(/^museum-backend\//, ''));
+    if (ownPaths.length === 0) return [];
+    return [
+      {
+        files: ownPaths,
+        rules: { 'musaium-test-discipline/no-inline-test-entities': 'off' },
+      },
+    ];
+  })(),
 
   // ═══════════════════════════════════════════════════════════════════
   //  PRETTIER — must be last to disable conflicting formatting rules

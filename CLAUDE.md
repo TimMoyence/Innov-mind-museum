@@ -283,6 +283,14 @@ Every test entity (User, ChatMessage, ChatSession, etc.) MUST be created via sha
 | Copy-paste mock repo in each test | Create shared in-memory repo in `tests/helpers/` |
 | `jest.mock('@sentry/react-native')` in each test | Import `test-utils.tsx` which already mocks it |
 
+### Tier classification rule (ADR-012)
+
+A test file lives in `tests/integration/` **iff** it imports `tests/helpers/e2e/postgres-testcontainer.ts` (or a sibling Redis/S3 helper) or instantiates a TypeORM `DataSource` against a real testcontainer. Anything else belongs in `tests/unit/`. See `docs/adr/ADR-012-test-pyramid-taxonomy.md`.
+
+### Factory enforcement (ESLint)
+
+The workspace plugin `eslint-plugin-musaium-test-discipline` rejects new test files that inline-construct `User`, `ChatMessage`, `ChatSession`, `Review`, or `SupportTicket` objects. Use the factories in `tests/helpers/<module>/<entity>.fixtures.ts` (BE) or `__tests__/helpers/factories/` (FE). The grandfather baseline at `tools/eslint-plugin-musaium-test-discipline/baselines/no-inline-test-entities.json` lists files exempted at Phase 0; Phase 7 reduces this list as files are migrated. **The baseline length cannot grow** — a CI test enforces the cap.
+
 ## ESLint Discipline
 
 **`eslint-disable` = last resort, not first reflex.** If ESLint flags code, rule exists for reason — find proper fix before reaching for disable comment.
@@ -324,6 +332,16 @@ ONLY categories where `eslint-disable` acceptable in this project:
 - `no-namespace` for Express `declare global { namespace Express }` Request augmentation — standard pattern required by `@types/express`
 - `max-lines-per-function` on TypeORM migration files — single atomic `up()` can't be split
 
+### `eslint-disable` PR-validation hard rule (Phase 0)
+
+Any new `eslint-disable` (line, block, or file-level) added to a PR must include BOTH a `Justification:` paragraph (≥20 chars) AND an `Approved-by:` paragraph (reviewer username or commit SHA) in the same comment body, e.g.:
+
+```ts
+// eslint-disable-next-line some-rule -- Justification: trust-boundary unmarshalling, narrowed via type guard at L42. Approved-by: tim@2026-04-30
+```
+
+The custom rule `musaium-test-discipline/no-undisabled-test-discipline-disable` machine-enforces this for the test-discipline rules specifically. Reviewers MUST reject PRs that add an undocumented disable to any rule, even rules outside the test-discipline namespace. Pre-approved categories listed earlier in this section remain the only ones that don't require a per-PR justification — anything outside them is treated as a one-off exception requiring explicit reviewer agreement before merge.
+
 ## Team reports lifecycle
 
 Two locations for `/team` skill artefacts — **not duplicates**, different roles:
@@ -354,7 +372,7 @@ Alternatives for future: Drizzle (S-tier 2026), Prisma 7, Kysely.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (16064 symbols, 27426 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (15811 symbols, 27323 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

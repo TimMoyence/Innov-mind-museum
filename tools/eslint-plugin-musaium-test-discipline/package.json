@@ -1,0 +1,26 @@
+{
+  "name": "eslint-plugin-musaium-test-discipline",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Workspace ESLint plugin enforcing Musaium test discipline (no inline test entities, factory adoption).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "jest",
+    "lint": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "eslint": ">=8 <11"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/parser": "^8.58.1",
+    "@typescript-eslint/rule-tester": "^8.58.1",
+    "@typescript-eslint/utils": "^8.58.1",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.6.0"
+  }
+}
