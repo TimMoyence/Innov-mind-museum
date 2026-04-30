@@ -78,16 +78,18 @@ describe('AuthSessionService — refresh-token sliding idle window', () => {
     const familyId = 'fam-within';
     const token = signRefresh(jti, familyId);
 
-    // Anchor ~1 day ago — well inside the 14-day window.
-    const oneDayAgo = new Date(Date.now() - 86_400 * 1000);
+    // Anchor 1 hour ago — safely inside the (now 24h) idle window.
+    // F8 (2026-04-30) tightened the default from 14d to 24h, so anchors using
+    // the previous "~1 day ago" baseline are borderline; use a smaller offset.
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     refreshTokenRepo.findByJti.mockResolvedValue(
       makeStoredToken({
         jti,
         familyId,
         tokenHash: sha256(token),
-        lastRotatedAt: oneDayAgo,
-        createdAt: oneDayAgo,
-        issuedAt: oneDayAgo,
+        lastRotatedAt: oneHourAgo,
+        createdAt: oneHourAgo,
+        issuedAt: oneHourAgo,
       }),
     );
 
@@ -100,7 +102,7 @@ describe('AuthSessionService — refresh-token sliding idle window', () => {
     expect(refreshTokenRepo.revokeFamily).not.toHaveBeenCalled();
   });
 
-  it('rotation beyond the 14-day idle window is rejected and revokes the family', async () => {
+  it('rotation beyond the configured idle window is rejected and revokes the family', async () => {
     const userRepo = makeUserRepo();
     const refreshTokenRepo = makeRefreshTokenRepo();
     userRepo.getUserById.mockResolvedValue(makeUser());

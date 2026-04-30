@@ -242,11 +242,14 @@ const env: AppEnv = {
         'local-dev-refresh-jwt-secret'
       : required('JWT_REFRESH_SECRET', toOptionalString(process.env.JWT_REFRESH_SECRET)),
     accessTokenTtl: process.env.JWT_ACCESS_TTL || '15m',
-    refreshTokenTtl: process.env.JWT_REFRESH_TTL || '30d',
-    refreshIdleWindowSeconds: toNumber(
-      process.env.JWT_REFRESH_IDLE_WINDOW_SECONDS,
-      14 * 24 * 60 * 60,
-    ),
+    // F8 (2026-04-30) — refresh TTL tightened from 30d -> 14d absolute. Existing
+    // tokens already minted with 30d remain valid until natural expiry (the JWT
+    // carries its own exp claim). Only newly issued tokens get the 14d cap.
+    refreshTokenTtl: process.env.JWT_REFRESH_TTL || '14d',
+    // F8 — sliding idle window tightened from 14d -> 24h. Server-side check on
+    // last_rotated_at: any user idle >24h re-authenticates on next refresh.
+    // UX impact: casual visitors who skip a day will see a one-time login prompt.
+    refreshIdleWindowSeconds: toNumber(process.env.JWT_REFRESH_IDLE_WINDOW_SECONDS, 24 * 60 * 60),
     appleClientId: process.env.APPLE_CLIENT_ID || 'com.musaium.mobile',
     googleClientIds: toList(process.env.GOOGLE_OAUTH_CLIENT_ID).length
       ? toList(process.env.GOOGLE_OAUTH_CLIENT_ID)
