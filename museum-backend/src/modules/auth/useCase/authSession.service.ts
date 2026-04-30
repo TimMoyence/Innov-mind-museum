@@ -225,16 +225,18 @@ export class AuthSessionService {
 
     clearLoginAttempts(normalizedEmail);
 
-    // R16 — admin MFA gating. Visitors / moderators / managers are unaffected.
-    if (user.role === 'admin') {
-      const mfaOutcome = await this.evaluateAdminMfaGate(user);
-      if (mfaOutcome) {
-        // Schedule background cleanup but don't block on it.
-        this.refreshTokenRepository.deleteExpiredTokens().catch(() => {
-          /* noop */
-        });
-        return mfaOutcome;
-      }
+    // F6 (2026-04-30, ADR-013) — MFA enforced for any user with an active TOTP
+    // enrollment, regardless of role. Once a user opts in, every login must
+    // complete the second factor. Non-enrolled non-admins remain unaffected
+    // (opt-in stays opt-in); admins additionally inherit the warning-window
+    // enrollment policy from R16.
+    const mfaOutcome = await this.evaluateMfaGate(user);
+    if (mfaOutcome) {
+      // Schedule background cleanup but don't block on it.
+      this.refreshTokenRepository.deleteExpiredTokens().catch(() => {
+        /* noop */
+      });
+      return mfaOutcome;
     }
 
     const session = await this.issueSession({
@@ -259,21 +261,34 @@ export class AuthSessionService {
   }
 
   /**
-   * Evaluate the admin MFA policy for `user`. Returns `null` when the admin
-   * is allowed to proceed (warning window still open, or already enrolled
-   * but the caller will follow up on `/auth/mfa/challenge`).
+   * F6 (2026-04-30, renamed from `evaluateAdminMfaGate`) — Evaluate MFA policy
+   * for any user. Two coupled rules:
+   *
+   *   1. Any user with an `enrolledAt` TOTP row gates on the second factor,
+   *      regardless of role (the F6 fix — was admin-only pre-2026-04-30).
+   *   2. Admins additionally inherit the R16 warning-window enrollment policy:
+   *      first observed login stamps `mfaEnrollmentDeadline = now + warningDays`,
+   *      and once that deadline passes, login is soft-blocked with
+   *      `MfaEnrollmentRequiredResponse` until they enroll.
    *
    * Returns:
-   *   - `MfaRequiredResponse` — enrolled admin must finish the second factor.
-   *   - `MfaEnrollmentRequiredResponse` — past the warning deadline.
-   *   - `null` — proceed to issue full JWTs (warning may still be shown via
-   *     `mfaWarningDaysRemaining` on the success response).
+   *   - `MfaRequiredResponse` — caller must finish the second factor.
+   *   - `MfaEnrollmentRequiredResponse` — admin only, past the deadline.
+   *   - `null` — proceed to issue full JWTs.
    *
-   * Side effect: when an admin without MFA logs in for the first time after
-   * deploy, stamp `mfa_enrollment_deadline = now + warningDays` so the
-   * countdown is anchored to the user's first observed login (not deploy).
+   * F9 (2026-04-30 — partial) — Pre-F6 the divergent envelope shapes leaked
+   * the enrolled-vs-unenrolled status of admin accounts, enabling enumeration
+   * of which admin emails had MFA. Post-F6 the oracle is materially reduced:
+   *
+   *   - Non-admin roles always return `null` or `mfaRequired:true` —
+   *     observationally indistinguishable.
+   *   - Admins still produce three distinct shapes (mfaRequired / mfaEnrollment
+   *     Required / null) when probed across enrollment + deadline states.
+   *     Closing that residual oracle requires migrating to a uniform
+   *     `mfaRequired` envelope plus a follow-up `/api/auth/mfa/status` call —
+   *     tracked as a separate refactor (Phase 2 of the hardening sweep).
    */
-  private async evaluateAdminMfaGate(
+  private async evaluateMfaGate(
     user: User,
   ): Promise<MfaRequiredResponse | MfaEnrollmentRequiredResponse | null> {
     const totpRow = await this.totpRepository?.findByUserId(user.id);
@@ -287,7 +302,12 @@ export class AuthSessionService {
       };
     }
 
-    // Not enrolled. Apply warning-window policy.
+    // Non-enrolled: only admins are subject to the enrollment-deadline policy.
+    // Other roles keep MFA opt-in — no warning, no soft-block.
+    if (user.role !== 'admin') {
+      return null;
+    }
+
     const now = Date.now();
     let deadline = user.mfaEnrollmentDeadline ?? null;
     if (!deadline) {

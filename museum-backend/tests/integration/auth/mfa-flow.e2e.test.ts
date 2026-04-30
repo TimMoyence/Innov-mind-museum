@@ -137,6 +137,110 @@ describe('MFA flow — R16', () => {
     });
   });
 
+  // F6 (2026-04-30) — MFA enforcement extended from admin-only to ANY enrolled user.
+  // Decision per ADR-013 (banking-grade): once a user opts into TOTP, every login
+  // must complete the second factor regardless of role. Non-enrolled non-admins
+  // remain unaffected (opt-in stays opt-in).
+  describe('F6 — MFA enforced for all enrolled users', () => {
+    /** Enrolls the user's TOTP fixture so the gate sees a `enrolledAt` row. */
+    const enrollFixture = async (
+      userRepo: ReturnType<typeof statefulUserRepo>,
+      totpRepo: InMemoryTotpSecretRepository,
+      userId: number,
+    ): Promise<void> => {
+      await new EnrollMfaUseCase(userRepo, totpRepo).execute(userId);
+      const persisted = await totpRepo.findByUserId(userId);
+      if (!persisted) throw new Error('enrollment fixture missing');
+      const secret = decryptTotpSecret(persisted.secretEncrypted);
+      const code = new OTPAuth.TOTP({
+        issuer: 'Musaium',
+        label: 'fixture',
+        algorithm: 'SHA1',
+        digits: 6,
+        period: 30,
+        secret: OTPAuth.Secret.fromBase32(secret),
+      }).generate();
+      await new VerifyMfaUseCase(userRepo, totpRepo).execute(userId, code);
+    };
+
+    it('visitor with TOTP enrollment must complete the second factor (was bypassed pre-F6)', async () => {
+      const user = makeUser({
+        id: 300,
+        email: 'visitor-mfa@musaium.test',
+        role: 'visitor',
+        password: passwordHash('VisitorMfa1!'),
+        email_verified: true,
+      });
+      const userRepo = statefulUserRepo([user]);
+      const totpRepo = new InMemoryTotpSecretRepository();
+      const refreshRepo = makeRefreshTokenRepo();
+      const svc = new AuthSessionService(userRepo, refreshRepo, totpRepo);
+
+      await enrollFixture(userRepo, totpRepo, user.id);
+
+      const result = await svc.login(user.email, 'VisitorMfa1!');
+      expect('mfaRequired' in result).toBe(true);
+      if (!('mfaRequired' in result)) throw new Error('expected MFA challenge');
+      expect(result.mfaSessionToken).toBeTruthy();
+    });
+
+    it('moderator with TOTP enrollment must complete the second factor', async () => {
+      const user = makeUser({
+        id: 301,
+        email: 'mod-mfa@musaium.test',
+        role: 'moderator',
+        password: passwordHash('ModMfa1!'),
+        email_verified: true,
+      });
+      const userRepo = statefulUserRepo([user]);
+      const totpRepo = new InMemoryTotpSecretRepository();
+      const refreshRepo = makeRefreshTokenRepo();
+      const svc = new AuthSessionService(userRepo, refreshRepo, totpRepo);
+
+      await enrollFixture(userRepo, totpRepo, user.id);
+
+      const result = await svc.login(user.email, 'ModMfa1!');
+      expect('mfaRequired' in result).toBe(true);
+    });
+
+    it('museum_manager with TOTP enrollment must complete the second factor', async () => {
+      const user = makeUser({
+        id: 302,
+        email: 'mgr-mfa@musaium.test',
+        role: 'museum_manager',
+        password: passwordHash('MgrMfa1!'),
+        email_verified: true,
+      });
+      const userRepo = statefulUserRepo([user]);
+      const totpRepo = new InMemoryTotpSecretRepository();
+      const refreshRepo = makeRefreshTokenRepo();
+      const svc = new AuthSessionService(userRepo, refreshRepo, totpRepo);
+
+      await enrollFixture(userRepo, totpRepo, user.id);
+
+      const result = await svc.login(user.email, 'MgrMfa1!');
+      expect('mfaRequired' in result).toBe(true);
+    });
+
+    it('visitor without TOTP enrollment STILL gets a session (no admin warning policy)', async () => {
+      // Negative control: F6 must not regress the opt-in nature for non-admins.
+      const user = makeUser({
+        id: 303,
+        email: 'visitor-noopt@musaium.test',
+        role: 'visitor',
+        password: passwordHash('VisitorNoOpt1!'),
+        email_verified: true,
+      });
+      const userRepo = statefulUserRepo([user]);
+      const totpRepo = new InMemoryTotpSecretRepository();
+      const refreshRepo = makeRefreshTokenRepo();
+      const svc = new AuthSessionService(userRepo, refreshRepo, totpRepo);
+
+      const result = await svc.login(user.email, 'VisitorNoOpt1!');
+      expect('accessToken' in result).toBe(true);
+    });
+  });
+
   describe('enrollment + verify clears deadline', () => {
     it('enroll → verify with valid 6-digit code clears deadline + sets enrolledAt', async () => {
       const user = adminUser({
