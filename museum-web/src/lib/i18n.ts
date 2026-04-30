@@ -47,14 +47,6 @@ export interface Dictionary {
     sectionTitle: string;
     sectionSubtitle: string;
   };
-  reviews: {
-    title: string;
-    subtitle: string;
-    cta: string;
-    ctaSubtitle: string;
-    leaveReview: string;
-    stars: string;
-  };
   download: {
     title: string;
     subtitle: string;
@@ -73,14 +65,6 @@ export interface Dictionary {
     title: string;
     subtitle: string;
     bullets: string[];
-  };
-  multiDevice: {
-    title: string;
-    subtitle: string;
-  };
-  stats: {
-    title: string;
-    items: { value: number; suffix: string; label: string }[];
   };
   faq: {
     title: string;

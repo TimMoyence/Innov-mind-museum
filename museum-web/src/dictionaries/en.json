@@ -70,14 +70,6 @@
     "sectionTitle": "Experience Musaium",
     "sectionSubtitle": "See the app in action"
   },
-  "reviews": {
-    "title": "Your opinion matters",
-    "subtitle": "Help us improve Musaium by sharing your museum experience.",
-    "cta": "Leave a review",
-    "ctaSubtitle": "Share your experience and help other visitors",
-    "leaveReview": "Leave a review",
-    "stars": "stars"
-  },
   "download": {
     "title": "Ready to transform your visits?",
     "subtitle": "Download Musaium for free and start exploring museums differently.",
@@ -108,19 +100,6 @@
       "Interactive map with geolocation",
       "List or map view — your choice",
       "Worldwide coverage — all referenced museums"
-    ]
-  },
-  "multiDevice": {
-    "title": "A companion on every screen.",
-    "subtitle": "iPhone, iPad, Android — Musaium adapts natively to your device for an optimal experience, wherever you are."
-  },
-  "stats": {
-    "title": "Musaium by the numbers",
-    "items": [
-      { "value": 3, "suffix": "", "label": "Interaction modes" },
-      { "value": 10, "suffix": "+", "label": "Languages supported" },
-      { "value": 3, "suffix": "", "label": "Platforms" },
-      { "value": 100, "suffix": "%", "label": "Free" }
     ]
   },
   "faq": {

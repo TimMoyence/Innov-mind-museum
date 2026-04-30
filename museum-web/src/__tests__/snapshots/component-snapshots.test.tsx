@@ -55,7 +55,6 @@ const mockDict: Dictionary = {
   hero: { title: '', subtitle: '', cta: '', ctaSecondary: '' },
   features: { title: '', items: [], gridTitle: '', gridSubtitle: '', grid: [] },
   showcase: { title: '', description: '', caption: '', sectionTitle: '', sectionSubtitle: '' },
-  reviews: { title: '', subtitle: '', cta: '', ctaSubtitle: '', leaveReview: '', stars: '' },
   download: {
     title: '',
     subtitle: '',
@@ -66,8 +65,6 @@ const mockDict: Dictionary = {
   },
   chatShowcase: { title: '', subtitle: '', bullets: [], messages: [] },
   mapsShowcase: { title: '', subtitle: '', bullets: [] },
-  multiDevice: { title: '', subtitle: '' },
-  stats: { title: '', items: [] },
   faq: { title: '', items: [] },
   support: {
     title: '',

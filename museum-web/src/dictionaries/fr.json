@@ -70,14 +70,6 @@
     "sectionTitle": "Découvrez Musaium",
     "sectionSubtitle": "L'application en action"
   },
-  "reviews": {
-    "title": "Votre avis compte",
-    "subtitle": "Aidez-nous à améliorer Musaium en partageant votre expérience de visite.",
-    "cta": "Donner mon avis",
-    "ctaSubtitle": "Partagez votre expérience et aidez les autres visiteurs",
-    "leaveReview": "Laisser un avis",
-    "stars": "étoiles"
-  },
   "download": {
     "title": "Prêt à transformer vos visites ?",
     "subtitle": "Téléchargez Musaium gratuitement et commencez à explorer les musées autrement.",
@@ -108,19 +100,6 @@
       "Carte interactive avec géolocalisation",
       "Vue liste ou carte selon votre préférence",
       "Couverture mondiale — tous les musées référencés"
-    ]
-  },
-  "multiDevice": {
-    "title": "Un compagnon sur chaque écran.",
-    "subtitle": "iPhone, iPad, Android — Musaium s'adapte nativement à votre appareil pour une expérience optimale, où que vous soyez."
-  },
-  "stats": {
-    "title": "Musaium en chiffres",
-    "items": [
-      { "value": 3, "suffix": "", "label": "Modes d'interaction" },
-      { "value": 10, "suffix": "+", "label": "Langues supportées" },
-      { "value": 3, "suffix": "", "label": "Plateformes" },
-      { "value": 100, "suffix": "%", "label": "Gratuit" }
     ]
   },
   "faq": {
