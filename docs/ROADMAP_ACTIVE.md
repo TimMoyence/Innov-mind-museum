@@ -9,7 +9,7 @@ Audit enterprise du 2026-04-18 → **6 sprints NL-4 à NL-9** pour porter Musaiu
 
 **Rapport complet :** [`.claude/skills/team/team-reports/2026-04-18-NL-feature-audit/`](../.claude/skills/team/team-reports/2026-04-18-NL-feature-audit/README.md)
 
-- NL-4 Chat UX Unification V1 (P0, ~7 j) — inclut LOT 1 flags (voice+streaming) cf. [`FEATURE_FLAGS_AUDIT.md`](plans/FEATURE_FLAGS_AUDIT.md)
+- NL-4 Chat UX Unification V1 (P0, ~7 j) — inclut LOT 1 flags (voice+streaming). Détail audit flags : voir notes du sprint S1 BE 2026-04-19 plus bas.
 - NL-5 Walking Guide UX V1 (P1, ~7 j)
 - NL-6 Cross-app Coherence (P1, ~1.5 j)
 - NL-7 FE Test Coverage (P2, ~3 j)
@@ -64,5 +64,5 @@ Musaium à maturité V2.0 (auth + chat multimodal + conversations + museums + su
 - Plans modulaires archivés : [`docs/archive/plans-2026-04-17/`](archive/plans-2026-04-17/)
 - Tracking sprint archivé : [`docs/archive/v1-sprint-2026-04/PROGRESS_TRACKER.md`](archive/v1-sprint-2026-04/PROGRESS_TRACKER.md)
 - Journal sprint archivé : [`docs/archive/v1-sprint-2026-04/SPRINT_LOG.md`](archive/v1-sprint-2026-04/SPRINT_LOG.md)
-- Roadmap V2 complète : [`docs/ROADMAP_V2.md`](ROADMAP_V2.md)
+- Roadmap V2 (archivée historique) : [`docs/archive/roadmaps/ROADMAP_V2.md`](archive/roadmaps/ROADMAP_V2.md)
 - Audit enterprise-grade 2026-04-20 : [`docs/plans/NL_MASTER_PLAN.md`](plans/NL_MASTER_PLAN.md)

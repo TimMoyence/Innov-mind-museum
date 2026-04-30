@@ -13,14 +13,16 @@ Monorepo, three independent apps:
 
 ## Progress Tracking
 
-Active roadmap: **`docs/ROADMAP_V2.md`** (moved from `docs/V1_Sprint/MASTER_ROADMAP_V2.md` during 2026-04-20 enterprise cleanup).
+Active roadmap: **`docs/ROADMAP_ACTIVE.md`** — résumé exécutif, mis à jour à chaque sprint. Index docs : **`docs/DOCS_INDEX.md`**. Plan enterprise courant : **`docs/plans/NL_MASTER_PLAN.md`**.
 
 Historical sprint journals archived in **`docs/archive/v1-sprint-2026-04/`**:
 - `PROGRESS_TRACKER.md` — checkbox tracker per sprint/item
 - `SPRINT_LOG.md` — detailed technical journal
 - `*_AUDIT_2026-04-0*.md` — prior audit reports
 
-Post-2026-04-20 tracking: `.claude/tasks/` (task lists) + `team-reports/` (audit outputs) = active sources of truth.
+Older roadmaps (V2, V3 review, walk spec, sprint scratch) live under `docs/archive/{roadmaps,walk-spec,superpowers-2026-Q1Q2}/`.
+
+Post-2026-04-20 tracking: `.claude/tasks/` (task lists) + `.claude/skills/team/team-reports/` (runtime `/team` runs) = active sources of truth.
 
 ## Common Commands
 
@@ -197,7 +199,7 @@ Auto-generated, massive, or pure data. Reading full wastes tokens, rarely helps.
 | `museum-backend/src/modules/daily-art/artworks.data.ts` | 17 KB / 373 lines | Static artwork catalog | Grep for specific artwork ID or title |
 | `museum-frontend/shared/ui/tokens.generated.ts` | generated | Design tokens output | Edit `design-system/` source instead |
 | `docs/archive/v1-sprint-2026-04/SPRINT_LOG.md` | 169 KB | Historical journal (archived) | Read w/ offset for specific date range, never full |
-| `docs/ROADMAP_V2.md` | 57 KB | Product roadmap reference | Grep by feature name, read only relevant section |
+| `docs/archive/roadmaps/ROADMAP_V2.md` | 57 KB | Archived V2 roadmap (historical) | Grep by feature name only — superseded by `docs/ROADMAP_ACTIVE.md` |
 | `docs/archive/v1-sprint-2026-04/PROGRESS_TRACKER.md` | 57 KB | Sprint tracker (archived) | Read latest sprint section only |
 
 Doubt? Use `Grep` w/ specific pattern first, then `Read` relevant block w/ `offset`/`limit`.

@@ -1,8 +1,10 @@
 # ADR-006 — SSRF defense-in-depth for html-scraper
 
-- **Status**: Proposed (2026-04-21)
+- **Status**: Accepted — Implemented (proposed 2026-04-21, shipped before 2026-04-30)
 - **Owner**: Backend — knowledge-extraction module
 - **Supersedes**: None (tightens the baseline validated by `2026-04-20_security-full-audit.md`)
+
+> **Implementation note (2026-04-30):** the manual-redirect loop, `BLOCKED_HOSTNAMES` set, and `validateHostname` helper are live in `museum-backend/src/modules/knowledge-extraction/adapters/secondary/html-scraper.ts` (see `BLOCKED_HOSTNAMES` line 31, `validateHostname` line 146, `fetchWithSafeRedirects` line 189). The 6 targeted unit tests called out in "Follow-ups" landed in `tests/unit/knowledge-extraction/html-scraper.test.ts`.
 
 ## Context
 

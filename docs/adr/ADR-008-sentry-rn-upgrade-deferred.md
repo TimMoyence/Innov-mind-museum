@@ -1,9 +1,11 @@
 # ADR-008 — Sentry React Native 8.7 → 8.9.1 upgrade deferred
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-011](./ADR-011-sentry-rn-8.9.1-shipped.md) (2026-04-30)
 - **Date:** 2026-04-24
 - **Deciders:** Backend+Mobile audit consolidation (sprint S4)
 - **Supersedes:** N/A
+
+> **Outcome update (2026-04-30):** the bump was actually performed shortly after this ADR was written. `package.json` is now `@sentry/react-native ^8.9.1` and `ios/Podfile.lock` resolves `RNSentry 8.9.1` + `Sentry 9.11.0`. The defer reasoning below is preserved for historical context; see ADR-011 for the shipped state.
 
 ## Context
 

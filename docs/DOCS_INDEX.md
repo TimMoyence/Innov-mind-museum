@@ -1,65 +1,52 @@
 # Docs Index — Musaium
 
 > Table de vérité : toutes les docs importantes en un seul point.
-> Créé par P01 (Docs Cleanup, 2026-04-17).
+> Last cleanup: 2026-04-30 (broken refs purged + obsolete docs archived).
 
-## Tracking Sprint
+## Roadmap & Tracking
 
 | Doc | Path |
 |---|---|
+| Roadmap Active (résumé exécutif) | [`docs/ROADMAP_ACTIVE.md`](ROADMAP_ACTIVE.md) |
+| Plan enterprise courant | [`docs/plans/NL_MASTER_PLAN.md`](plans/NL_MASTER_PLAN.md) |
+| Roadmap Production 10/10 (user-first) | [`docs/plans/PROD_10_10_ROADMAP.md`](plans/PROD_10_10_ROADMAP.md) |
+| V2 Pending (features deferred from V1) | [`docs/V2_PENDING.md`](V2_PENDING.md) |
 | Progress Tracker (archived) | [`docs/archive/v1-sprint-2026-04/PROGRESS_TRACKER.md`](archive/v1-sprint-2026-04/PROGRESS_TRACKER.md) |
-| Sprint Log (archived) | [`docs/archive/v1-sprint-2026-04/SPRINT_LOG.md`](archive/v1-sprint-2026-04/SPRINT_LOG.md) |
-| Roadmap V2 | [`docs/ROADMAP_V2.md`](ROADMAP_V2.md) |
-| Roadmap Active (résumé) | [`docs/ROADMAP_ACTIVE.md`](ROADMAP_ACTIVE.md) |
+| Sprint Log (archived, immutable) | [`docs/archive/v1-sprint-2026-04/SPRINT_LOG.md`](archive/v1-sprint-2026-04/SPRINT_LOG.md) |
 
-## Plans Modulaires (Next Level 2026-04-17, archived)
+## Architecture & Decisions
 
-Les 12 plans modulaires issus de l'audit Next Level du 2026-04-17 ont été archivés dans [`docs/archive/plans-2026-04-17/`](archive/plans-2026-04-17/) :
+| Doc | Path |
+|---|---|
+| ADR index | [`docs/adr/`](adr/) |
+| AI Voice pipeline V1 | [`docs/AI_VOICE.md`](AI_VOICE.md) |
+| Feature Knowledge Base (Wikidata) | [`docs/FEATURE_KNOWLEDGE_BASE_WIKIDATA.md`](FEATURE_KNOWLEDGE_BASE_WIKIDATA.md) |
+| RBAC matrix (backend) | [`museum-backend/docs/rbac-matrix.md`](../museum-backend/docs/rbac-matrix.md) |
 
-| # | Plan | Phase |
-|---|---|---|
-| [01](archive/plans-2026-04-17/PLAN_01_DOCS_CLEANUP.md) | Docs Cleanup | 1 |
-| [02](archive/plans-2026-04-17/PLAN_02_TEAM_HARDENING.md) | /team Skill Hardening | 1 |
-| [03](archive/plans-2026-04-17/PLAN_03_GITNEXUS_CARTOGRAPHY.md) | GitNexus Cartography | 1 |
-| [04](archive/plans-2026-04-17/PLAN_04_BACKEND_CHAT_SLIM.md) | Backend Chat Slim | 2 |
-| [05](archive/plans-2026-04-17/PLAN_05_BACKEND_SHARED_TESTS.md) | Backend shared/ Tests | 2 |
-| [06](archive/plans-2026-04-17/PLAN_06_BACKEND_WEBSEARCH_UNIFY.md) | Web Search Unify | 2 |
-| [07](archive/plans-2026-04-17/PLAN_07_MOBILE_TESTS_SETUP.md) | Mobile Tests Setup | 2 |
-| [08](archive/plans-2026-04-17/PLAN_08_MOBILE_CHAT_SPLIT.md) | Mobile Chat Split | 2 |
-| [09](archive/plans-2026-04-17/PLAN_09_MOBILE_I18N_A11Y.md) | Mobile i18n + A11y | 2 |
-| [10](archive/plans-2026-04-17/PLAN_10_ART_KEYWORDS_R15_FINALIZE.md) | Art Keywords R15 | 2 |
-| [11](archive/plans-2026-04-17/PLAN_11_AI_GUARDRAILS_V2.md) | AI Guardrails V2 | 3 |
-| [12](archive/plans-2026-04-17/PLAN_12_MOBILE_PERF_V2.md) | Mobile Perf V2 | 3 |
-
-> Plan courant consolidé dans [`docs/plans/NL_MASTER_PLAN.md`](plans/NL_MASTER_PLAN.md) (audit enterprise-grade 2026-04-20).
-
-## Opérations & Runbook
+## Operations
 
 | Doc | Path |
 |---|---|
 | Deployment & Runbook (single source) | [`docs/OPS_DEPLOYMENT.md`](OPS_DEPLOYMENT.md) |
+| Runbooks (auto-rollback, redis rotation, V1 fallbacks, prod secrets bootstrap) | [`docs/RUNBOOKS/`](RUNBOOKS/) |
 | CI/CD Secrets | [`docs/CI_CD_SECRETS.md`](CI_CD_SECRETS.md) |
+| GitHub Actions SHA pins | [`docs/GITHUB_ACTIONS_SHA_PINS.md`](GITHUB_ACTIONS_SHA_PINS.md) |
 | DB Backup & Restore | [`docs/DB_BACKUP_RESTORE.md`](DB_BACKUP_RESTORE.md) |
 | Uptime Monitoring | [`docs/UPTIME_MONITORING.md`](UPTIME_MONITORING.md) |
 | Release Checklist | [`docs/RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) |
 | Horizontal Scaling | [`docs/HORIZONTAL_SCALING.md`](HORIZONTAL_SCALING.md) |
 | CDN Cloudflare Setup | [`docs/CDN_CLOUDFLARE_SETUP.md`](CDN_CLOUDFLARE_SETUP.md) |
+| Network hardening (security) | [`docs/security/network-hardening.md`](security/network-hardening.md) |
 
-## Produit & État
-
-| Doc | Path |
-|---|---|
-| Product State Overview | [`docs/PRODUCT_STATE_OVERVIEW.md`](PRODUCT_STATE_OVERVIEW.md) |
-| Feature Museum Walk | [`docs/FEATURE_MUSEUM_WALK.md`](FEATURE_MUSEUM_WALK.md) |
-| Feature Knowledge Base Wikidata | [`docs/FEATURE_KNOWLEDGE_BASE_WIKIDATA.md`](FEATURE_KNOWLEDGE_BASE_WIKIDATA.md) |
-
-## Walk (Museum Walk Sprints)
+## Incidents & Compliance
 
 | Doc | Path |
 |---|---|
-| Walk Backlog | [`docs/walk/BACKLOG.md`](walk/BACKLOG.md) |
-| Walk Roadmap | [`docs/walk/ROADMAP.md`](walk/ROADMAP.md) |
-| Sprint 0-3 | [`docs/walk/SPRINT_0.md`](walk/SPRINT_0.md), [`SPRINT_1.md`](walk/SPRINT_1.md), [`SPRINT_2.md`](walk/SPRINT_2.md), [`SPRINT_3.md`](walk/SPRINT_3.md) |
+| Breach playbook | [`docs/incidents/BREACH_PLAYBOOK.md`](incidents/BREACH_PLAYBOOK.md) |
+| Post-mortem template | [`docs/incidents/POST_MORTEM_TEMPLATE.md`](incidents/POST_MORTEM_TEMPLATE.md) |
+| Tabletop exercises | [`docs/incidents/tabletop/`](incidents/tabletop/) |
+| Data flow map | [`docs/compliance/DATA_FLOW_MAP.md`](compliance/DATA_FLOW_MAP.md) |
+| Subprocessors | [`docs/compliance/SUBPROCESSORS.md`](compliance/SUBPROCESSORS.md) |
 
 ## Mobile & Store
 
@@ -68,35 +55,48 @@ Les 12 plans modulaires issus de l'audit Next Level du 2026-04-17 ont été arch
 | Mobile Internal Testing Flow | [`docs/MOBILE_INTERNAL_TESTING_FLOW.md`](MOBILE_INTERNAL_TESTING_FLOW.md) |
 | Store Submission Guide | [`docs/STORE_SUBMISSION_GUIDE.md`](STORE_SUBMISSION_GUIDE.md) |
 | Google Play Data Safety | [`docs/GOOGLE_PLAY_DATA_SAFETY.md`](GOOGLE_PLAY_DATA_SAFETY.md) |
-| Store Listing | [`docs/store-listing/`](store-listing/) |
+| Mobile architecture map | [`museum-frontend/docs/ARCHITECTURE_MAP.md`](../museum-frontend/docs/ARCHITECTURE_MAP.md) |
+| Mobile quality guide | [`museum-frontend/docs/QUALITY_GUIDE.md`](../museum-frontend/docs/QUALITY_GUIDE.md) |
+| Mobile production runbook | [`museum-frontend/docs/NEXT_LEVEL_MOBILE_PRODUCTION_AND_TEST.md`](../museum-frontend/docs/NEXT_LEVEL_MOBILE_PRODUCTION_AND_TEST.md) |
 
-## Social Auth
+## Auth & Legal
 
-- [`docs/SOCIAL_AUTH_SETUP.md`](SOCIAL_AUTH_SETUP.md)
-
-## Legal & Compliance
-
-- [`docs/privacy-policy.html`](privacy-policy.html)
-- [`docs/GOOGLE_PLAY_DATA_SAFETY.md`](GOOGLE_PLAY_DATA_SAFETY.md)
-
-## Archive (historical reference)
-
-- [`docs/archive/roadmaps/V3_REVIEW_AND_PLAN.md`](archive/roadmaps/V3_REVIEW_AND_PLAN.md) — V3 review (source ROADMAP_ACTIVE)
-- [`docs/archive/fullcodebase-analyse/`](archive/fullcodebase-analyse/) — analyse initiale pré-Sprint 1 (12 rapports, référence historique)
+| Doc | Path |
+|---|---|
+| Social auth setup | [`docs/SOCIAL_AUTH_SETUP.md`](SOCIAL_AUTH_SETUP.md) |
+| Privacy policy (HTML, deployed) | [`docs/privacy-policy.html`](privacy-policy.html) |
+| Contributing | [`docs/CONTRIBUTING.md`](CONTRIBUTING.md) |
 
 ## Skills & Agents (`.claude/`)
 
 | Asset | Path |
 |---|---|
 | /team Skill | `.claude/skills/team/SKILL.md` |
-| /team SDLC Index | `.claude/skills/team/team-sdlc-index.md` (créé par P02) |
+| /team SDLC Index | `.claude/skills/team/team-sdlc-index.md` |
 | Agents (9) | `.claude/agents/*.md` |
+| /team runtime reports (active) | `.claude/skills/team/team-reports/` |
 
 ## GitNexus
 
 - [`AGENTS.md`](../AGENTS.md) (racine) — config GitNexus + MCP tools
 
-## Références externes
+## Archive (historical reference)
 
-- CLAUDE.md (racine) — instructions globales pour Claude Code
-- Plan maître d'audit : voir `docs/plans/README.md` pour l'index complet des 12 plans Phase 1-3
+| Bucket | Path | Contains |
+|---|---|---|
+| Legacy roadmaps | [`docs/archive/roadmaps/`](archive/roadmaps/) | ROADMAP_V2 (deprecated), V3_REVIEW_AND_PLAN |
+| V1 sprint journal | [`docs/archive/v1-sprint-2026-04/`](archive/v1-sprint-2026-04/) | Progress tracker + sprint log + audits |
+| Walk spec (POSITIONED V2, not started) | [`docs/archive/walk-spec/`](archive/walk-spec/) | FEATURE_MUSEUM_WALK + sprint plans S0-S3 |
+| Superpowers plans/specs (closed Q1-Q2 2026) | [`docs/archive/superpowers-2026-Q1Q2/`](archive/superpowers-2026-Q1Q2/) | 10 plans + 7 specs |
+| Modular plans 2026-04-17 | [`docs/archive/plans-2026-04-17/`](archive/plans-2026-04-17/) | 12 plans Phase 1-3 (closed) |
+| NL reports 2026-04-17 | [`docs/archive/nl-reports-2026-04-17/reports/`](archive/nl-reports-2026-04-17/reports/) | NL agents output |
+| Full-codebase analyse pré-S1 | [`docs/archive/fullcodebase-analyse/`](archive/fullcodebase-analyse/) | 12 reports historiques |
+| Team reports legacy v2 (March 2026) | [`docs/archive/team-reports-legacy-v2/`](archive/team-reports-legacy-v2/) | 16 audits |
+| Team reports legacy 2026-04-06 | [`docs/archive/team-reports-2026-04-legacy/`](archive/team-reports-2026-04-legacy/) | 6 reports moved from `team-reports/` root |
+| Team knowledge legacy | [`docs/archive/team-knowledge-legacy/`](archive/team-knowledge-legacy/) | Agent perf, error patterns |
+| One-off audits | [`docs/archive/audits/2026-04/`](archive/audits/2026-04/) | sprint-execution-2026-04-05 |
+
+## Référence externe
+
+- `CLAUDE.md` (racine) — instructions globales pour Claude Code
+- `AGENTS.md` (racine) — config GitNexus + MCP tools
