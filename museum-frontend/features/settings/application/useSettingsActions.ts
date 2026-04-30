@@ -4,10 +4,7 @@ import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
-import { useAuth } from '@/features/auth/application/AuthContext';
-import { authService } from '@/features/auth/infrastructure/authApi';
-import { authStorage, clearAccessToken } from '@/features/auth/infrastructure/authTokenStore';
-import { AUTH_ROUTE } from '@/features/auth/routes';
+import { useAuth, authService, authStorage, clearAccessToken, AUTH_ROUTE } from '@/features/auth';
 import { getErrorMessage } from '@/shared/lib/errors';
 
 /** Manages settings screen actions: biometric toggle, export, logout, delete account. */

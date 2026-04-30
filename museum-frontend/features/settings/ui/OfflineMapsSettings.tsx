@@ -2,9 +2,8 @@ import { useCallback } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { useOfflinePacks } from '@/features/museum/application/useOfflinePacks';
-import type { City } from '@/features/museum/infrastructure/cityCatalog';
-import { CITY_CATALOG } from '@/features/museum/infrastructure/cityCatalog';
+import { useOfflinePacks, CITY_CATALOG } from '@/features/museum';
+import type { City } from '@/features/museum';
 import { useAutoPreCachePreference } from '@/features/settings/application/useAutoPreCachePreference';
 import { reportError } from '@/shared/observability/errorReporting';
 import { GlassCard } from '@/shared/ui/GlassCard';
