@@ -40,6 +40,7 @@ import {
 } from '@src/helpers/middleware/rate-limit.middleware';
 import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 
+import { clearAuthCookies, setAuthCookies } from './auth-cookies';
 import {
   registerSchema,
   loginSchema,
@@ -232,6 +233,9 @@ authRouter.post(
         ip: req.ip,
         requestId: req.requestId,
       });
+      // F7 — dual-mode: emit BOTH the JSON envelope (mobile reads it) AND the
+      // httpOnly cookies (web reads them). JSON shape unchanged.
+      setAuthCookies(res, session);
       res.status(200).json(session);
     } catch (error) {
       if (error instanceof AppError && error.code === 'INVALID_CREDENTIALS') {
@@ -264,6 +268,9 @@ authRouter.post(
   async (req: Request, res: Response) => {
     const { refreshToken } = req.body;
     const session = await authSessionService.refresh(refreshToken);
+    // F7 — refresh the cookies in lockstep with the rotated tokens. JSON
+    // envelope kept verbatim for mobile.
+    setAuthCookies(res, session);
     res.status(200).json(session);
   },
 );
@@ -277,6 +284,9 @@ authRouter.post('/logout', validateBody(logoutSchema), async (req: Request, res:
     ip: req.ip,
     requestId: req.requestId,
   });
+  // F7 — clear all three cookies regardless of how the client authenticated.
+  // No-op on mobile (no cookies to clear).
+  clearAuthCookies(res);
   res.status(200).json({ success: true });
 });
 
@@ -339,6 +349,8 @@ authRouter.post(
       ip: req.ip,
       requestId: req.requestId,
     });
+    // F7 — same dual-mode emission as /login.
+    setAuthCookies(res, session);
     res.status(200).json(session);
   },
 );

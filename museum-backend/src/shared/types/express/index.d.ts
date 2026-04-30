@@ -10,6 +10,11 @@ declare global {
       requestId?: string;
       /** Museum tenant context, resolved by tenant middleware or auth. */
       museumId?: number | null;
+      /**
+       * Parsed cookies, populated by `cookieParserMiddleware` (F7 2026-04-30).
+       * Always defined (empty object when no Cookie header was sent).
+       */
+      cookies: Record<string, string>;
     }
   }
 }

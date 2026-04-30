@@ -25,6 +25,9 @@ export const VALID_MFA_ENCRYPTION_KEY = 'd'.repeat(48);
 /** Distinct 48-char secret for signing short-lived MFA session tokens (R16). */
 export const VALID_MFA_SESSION_TOKEN_SECRET = 'e'.repeat(48);
 
+/** Distinct 48-char secret for the CSRF double-submit HMAC key (F7 2026-04-30). */
+export const VALID_CSRF_SECRET = 'f'.repeat(48);
+
 /**
  * Minimal set of env vars that satisfy every required production check
  * in `validateProductionEnv`. Tests can override any subset to isolate a
@@ -41,6 +44,7 @@ export function validProductionEnv(
     MEDIA_SIGNING_SECRET: VALID_MEDIA_SIGNING_SECRET,
     MFA_ENCRYPTION_KEY: VALID_MFA_ENCRYPTION_KEY,
     MFA_SESSION_TOKEN_SECRET: VALID_MFA_SESSION_TOKEN_SECRET,
+    CSRF_SECRET: VALID_CSRF_SECRET,
     PGDATABASE: 'museum_prod',
     CORS_ORIGINS: 'https://app.musaium.com',
     OPENAI_API_KEY: 'sk-test',

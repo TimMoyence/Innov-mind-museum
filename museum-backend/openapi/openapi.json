@@ -22,6 +22,18 @@
         "scheme": "bearer",
         "bearerFormat": "API Key (msk_...)",
         "description": "B2B API key authentication. Pass the full API key as a Bearer token."
+      },
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "access_token",
+        "description": "F7 (2026-04-30) — Web admin session cookie. HttpOnly + Secure + SameSite=Strict. State-changing requests authenticated via this cookie MUST also send the X-CSRF-Token header (double-submit, value bound to the access_token via HMAC-SHA256)."
+      },
+      "csrfToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-CSRF-Token",
+        "description": "F7 — CSRF double-submit token. Required on POST/PUT/PATCH/DELETE when the request authenticates via the access_token cookie. Value MUST equal the csrf_token cookie (which equals HMAC-SHA256(access_token, CSRF_SECRET))."
       }
     },
     "schemas": {

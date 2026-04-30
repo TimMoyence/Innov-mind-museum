@@ -30,6 +30,9 @@ const makeEnv = (overrides: Partial<AppEnv['auth']> = {}): AppEnv =>
       refreshTokenSecret: ALT_LONG,
       mfaEncryptionKey: 'm'.repeat(48),
       mfaSessionTokenSecret: 'n'.repeat(48),
+      // F7 — CSRF secret must agree with raw env var (drift check) and be
+      // distinct from every other production secret.
+      csrfSecret: 'p'.repeat(48),
       ...overrides,
     },
   }) as unknown as AppEnv;
@@ -48,6 +51,8 @@ describe('validateProductionEnv — JWT secret hardening', () => {
       // R16 — MFA secrets must be set + distinct in prod, validator throws otherwise.
       MFA_ENCRYPTION_KEY: 'm'.repeat(48),
       MFA_SESSION_TOKEN_SECRET: 'n'.repeat(48),
+      // F7 — CSRF secret must be present + distinct in prod.
+      CSRF_SECRET: 'p'.repeat(48),
     };
     delete process.env.JWT_SECRET;
   });
@@ -140,6 +145,62 @@ describe('validateProductionEnv — JWT secret hardening', () => {
 
     it('passes when MEDIA_SIGNING_SECRET is set and distinct from JWT secrets', () => {
       process.env.MEDIA_SIGNING_SECRET = 'c'.repeat(48);
+      expect(() => {
+        validateProductionEnv(makeEnv());
+      }).not.toThrow();
+    });
+  });
+
+  // ── F7 (2026-04-30): CSRF_SECRET required + distinct + >= 32 chars ──
+
+  describe('CSRF_SECRET (F7)', () => {
+    it('throws when CSRF_SECRET is missing', () => {
+      delete process.env.CSRF_SECRET;
+      expect(() => {
+        validateProductionEnv(makeEnv());
+      }).toThrow(/CSRF_SECRET/);
+    });
+
+    it('throws when CSRF_SECRET is shorter than 32 chars', () => {
+      const short = 'p'.repeat(16);
+      process.env.CSRF_SECRET = short;
+      expect(() => {
+        validateProductionEnv(makeEnv({ csrfSecret: short }));
+      }).toThrow(/CSRF_SECRET must be >= 32 chars/);
+    });
+
+    it('throws when CSRF_SECRET equals JWT_ACCESS_SECRET', () => {
+      process.env.CSRF_SECRET = LONG;
+      expect(() => {
+        validateProductionEnv(makeEnv({ csrfSecret: LONG }));
+      }).toThrow(/CSRF_SECRET must be distinct from JWT_ACCESS_SECRET/);
+    });
+
+    it('throws when CSRF_SECRET equals JWT_REFRESH_SECRET', () => {
+      process.env.CSRF_SECRET = ALT_LONG;
+      expect(() => {
+        validateProductionEnv(makeEnv({ csrfSecret: ALT_LONG }));
+      }).toThrow(/CSRF_SECRET must be distinct from JWT_REFRESH_SECRET/);
+    });
+
+    it('throws when CSRF_SECRET equals MEDIA_SIGNING_SECRET', () => {
+      const shared = 'c'.repeat(48);
+      process.env.MEDIA_SIGNING_SECRET = shared;
+      process.env.CSRF_SECRET = shared;
+      expect(() => {
+        validateProductionEnv(makeEnv({ csrfSecret: shared }));
+      }).toThrow(/CSRF_SECRET must be distinct from MEDIA_SIGNING_SECRET/);
+    });
+
+    it('throws when env.auth.csrfSecret drifts from raw CSRF_SECRET (wiring drift)', () => {
+      process.env.CSRF_SECRET = 'p'.repeat(48);
+      expect(() => {
+        validateProductionEnv(makeEnv({ csrfSecret: 'q'.repeat(48) }));
+      }).toThrow(/env\.auth\.csrfSecret is out of sync with CSRF_SECRET/);
+    });
+
+    it('passes when CSRF_SECRET is set and distinct from every other signing secret', () => {
+      process.env.CSRF_SECRET = 'p'.repeat(48);
       expect(() => {
         validateProductionEnv(makeEnv());
       }).not.toThrow();

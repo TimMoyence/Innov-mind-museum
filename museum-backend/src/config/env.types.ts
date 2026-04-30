@@ -98,6 +98,16 @@ export interface AppEnv {
      * to `true` once every supported mobile build ships the nonce flow.
      */
     oidcNonceEnforce: boolean;
+    /**
+     * F7 (2026-04-30) — HMAC key used to bind a CSRF double-submit token to
+     * the active access-token cookie. Distinct from JWT_* / MEDIA_SIGNING_SECRET
+     * / MFA_* per the H12 / L3 secret-separation pattern. REQUIRED in
+     * production, dev/test fall back to a deterministic local value.
+     *
+     * The CSRF cookie value = HMAC-SHA256(access_token cookie, csrfSecret).
+     * Validation is constant-time (`crypto.timingSafeEqual`).
+     */
+    csrfSecret: string;
   };
   llm: {
     provider: LlmProvider;

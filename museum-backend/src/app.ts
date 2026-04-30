@@ -17,6 +17,8 @@ import { AppDataSource } from '@src/data/db/data-source';
 import { resolveCorsOrigin } from '@src/helpers/cors.config';
 import { dataModeMiddleware } from '@src/helpers/dataMode.middleware';
 import { acceptLanguageMiddleware } from '@src/helpers/middleware/accept-language.middleware';
+import { cookieParserMiddleware } from '@src/helpers/middleware/cookie-parser.middleware';
+import { csrfMiddleware } from '@src/helpers/middleware/csrf.middleware';
 import { errorHandler } from '@src/helpers/middleware/error.middleware';
 import { byIp, createRateLimitMiddleware } from '@src/helpers/middleware/rate-limit.middleware';
 import { requestIdMiddleware } from '@src/helpers/middleware/request-id.middleware';
@@ -109,6 +111,13 @@ function applyGlobalMiddleware(app: Express): void {
 
   app.use(express.json({ limit: env.jsonBodyLimit }));
   app.use(express.urlencoded({ extended: true, limit: env.jsonBodyLimit }));
+  // F7 (2026-04-30) — populate `req.cookies` BEFORE auth + CSRF run so they
+  // can read the access_token / csrf_token / refresh_token cookies.
+  app.use(cookieParserMiddleware);
+  // F7 — CSRF middleware. Skips GET/HEAD/OPTIONS and any request without an
+  // access_token cookie (Bearer/mobile path is exempt). Mounted globally so
+  // every state-changing route inherits protection without per-route wiring.
+  app.use(csrfMiddleware);
   app.use(acceptLanguageMiddleware);
   app.use(dataModeMiddleware);
 

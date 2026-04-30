@@ -280,6 +280,11 @@ const env: AppEnv = {
     // F3 — default false during the mobile rollout window. Flip to true after
     // every supported mobile build ships the OIDC nonce flow.
     oidcNonceEnforce: toBoolean(process.env.OIDC_NONCE_ENFORCE, false),
+    // F7 — HMAC key for CSRF double-submit tokens. Required in prod, distinct
+    // from every other signing secret (enforced in env.production-validation.ts).
+    csrfSecret: isDev
+      ? toOptionalString(process.env.CSRF_SECRET) || 'local-dev-csrf-secret-32chars-minimum'
+      : required('CSRF_SECRET', toOptionalString(process.env.CSRF_SECRET)),
   },
   llm: {
     provider,

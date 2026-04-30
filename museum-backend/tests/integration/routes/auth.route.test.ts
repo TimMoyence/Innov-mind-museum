@@ -624,6 +624,183 @@ describe('Auth Routes — HTTP Layer', () => {
     });
   });
 
+  // ── F7 — httpOnly cookies + CSRF token issuance ─────────────────
+  // Audit 2026-04-30: web admin stored tokens in JS module-scope vars (XSS-readable).
+  // Backend now ALSO emits httpOnly + Secure (prod) + SameSite=Strict cookies
+  // alongside the JSON response. Mobile (JSON path) is unaffected.
+
+  describe('F7 — Auth cookies (httpOnly + CSRF double-submit)', () => {
+    /**
+     * Returns the array of Set-Cookie strings from a supertest response.
+     * @param res
+     * @param res.headers
+     */
+    const cookiesOf = (res: {
+      headers: Record<string, string | string[] | undefined>;
+    }): string[] => {
+      const raw = res.headers['set-cookie'];
+      if (!raw) return [];
+      return Array.isArray(raw) ? raw : [raw];
+    };
+
+    /**
+     * Finds the Set-Cookie line whose name matches `cookieName`.
+     * @param cookies
+     * @param cookieName
+     */
+    const findCookie = (cookies: string[], cookieName: string): string | undefined =>
+      cookies.find((c) => c.startsWith(`${cookieName}=`));
+
+    it('POST /api/auth/login sets access_token, refresh_token, csrf_token cookies', async () => {
+      mockLogin.mockResolvedValueOnce({
+        accessToken: 'at-cookie-test',
+        refreshToken: 'rt-cookie-test',
+        expiresIn: 900,
+        refreshExpiresIn: 86400,
+        user: { id: 1, email: 'user@test.com' },
+      });
+
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'user@test.com', password: 'ValidPass1' });
+
+      expect(res.status).toBe(200);
+      // JSON envelope unchanged (mobile invariant).
+      expect(res.body.accessToken).toBe('at-cookie-test');
+      expect(res.body.refreshToken).toBe('rt-cookie-test');
+
+      const cookies = cookiesOf(res);
+      const access = findCookie(cookies, 'access_token');
+      const refresh = findCookie(cookies, 'refresh_token');
+      const csrf = findCookie(cookies, 'csrf_token');
+
+      expect(access).toBeDefined();
+      expect(refresh).toBeDefined();
+      expect(csrf).toBeDefined();
+
+      // access_token: HttpOnly + SameSite=Strict + Path=/
+      expect(access).toMatch(/HttpOnly/);
+      expect(access).toMatch(/SameSite=Strict/);
+      expect(access).toMatch(/Path=\//);
+
+      // refresh_token: path-scoped to /api/auth so it is NOT sent on every API call.
+      expect(refresh).toMatch(/HttpOnly/);
+      expect(refresh).toMatch(/Path=\/api\/auth/);
+
+      // csrf_token: NOT HttpOnly (web JS must read it to echo back).
+      expect(csrf).not.toMatch(/HttpOnly/);
+      expect(csrf).toMatch(/SameSite=Strict/);
+    });
+
+    it('POST /api/auth/refresh re-issues all three cookies on rotation', async () => {
+      mockRefresh.mockResolvedValueOnce({
+        accessToken: 'at-rotated',
+        refreshToken: 'rt-rotated',
+        expiresIn: 900,
+        refreshExpiresIn: 86400,
+      });
+
+      const res = await request(app).post('/api/auth/refresh').send({ refreshToken: 'rt-old' });
+
+      expect(res.status).toBe(200);
+      const cookies = cookiesOf(res);
+      expect(findCookie(cookies, 'access_token')).toBeDefined();
+      expect(findCookie(cookies, 'refresh_token')).toBeDefined();
+      expect(findCookie(cookies, 'csrf_token')).toBeDefined();
+    });
+
+    it('POST /api/auth/social-login sets the same three cookies', async () => {
+      mockSocialLogin.mockResolvedValueOnce({
+        accessToken: 'at-social',
+        refreshToken: 'rt-social',
+        expiresIn: 900,
+        refreshExpiresIn: 86400,
+        user: { id: 5, email: 'social@test.com' },
+      });
+
+      const res = await request(app)
+        .post('/api/auth/social-login')
+        .send({ provider: 'google', idToken: 'google-id-token' });
+
+      expect(res.status).toBe(200);
+      const cookies = cookiesOf(res);
+      expect(findCookie(cookies, 'access_token')).toBeDefined();
+      expect(findCookie(cookies, 'refresh_token')).toBeDefined();
+      expect(findCookie(cookies, 'csrf_token')).toBeDefined();
+    });
+
+    it('POST /api/auth/logout clears all three cookies', async () => {
+      mockLogout.mockResolvedValueOnce(undefined);
+
+      const res = await request(app)
+        .post('/api/auth/logout')
+        .send({ refreshToken: 'rt-to-invalidate' });
+
+      expect(res.status).toBe(200);
+      const cookies = cookiesOf(res);
+      // express `res.clearCookie` writes the cookie with Expires=Thu, 01 Jan 1970...
+      const access = findCookie(cookies, 'access_token');
+      const refresh = findCookie(cookies, 'refresh_token');
+      const csrf = findCookie(cookies, 'csrf_token');
+
+      expect(access).toBeDefined();
+      expect(refresh).toBeDefined();
+      expect(csrf).toBeDefined();
+
+      // All three should carry an Expires date in 1970 (epoch) which signals deletion.
+      expect(access).toMatch(/Expires=Thu, 01 Jan 1970/);
+      expect(refresh).toMatch(/Expires=Thu, 01 Jan 1970/);
+      expect(csrf).toMatch(/Expires=Thu, 01 Jan 1970/);
+
+      // Refresh cookie cleared on the same Path it was set on.
+      expect(refresh).toMatch(/Path=\/api\/auth/);
+    });
+
+    it('does NOT set Secure flag in dev/test (NODE_ENV !== production)', async () => {
+      // The harness runs under NODE_ENV=test, so Secure must be absent so
+      // local http://localhost dev still works. Production behaviour is
+      // covered by inspection of `setAuthCookies` (httpOnly + sameSite are
+      // unconditional, secure flips with env.nodeEnv).
+      mockLogin.mockResolvedValueOnce({
+        accessToken: 'at',
+        refreshToken: 'rt',
+        expiresIn: 900,
+        refreshExpiresIn: 86400,
+        user: { id: 1, email: 'user@test.com' },
+      });
+
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'user@test.com', password: 'ValidPass1' });
+
+      const cookies = cookiesOf(res);
+      const access = findCookie(cookies, 'access_token');
+      expect(access).toBeDefined();
+      expect(access).not.toMatch(/Secure/);
+    });
+
+    it('mobile JSON path remains unchanged: response body still carries accessToken + refreshToken', async () => {
+      // The dual-mode contract: JSON envelope MUST be byte-stable across the
+      // F7 rollout so already-shipped mobile builds keep parsing it.
+      mockLogin.mockResolvedValueOnce({
+        accessToken: 'at-jsonpath',
+        refreshToken: 'rt-jsonpath',
+        expiresIn: 900,
+        refreshExpiresIn: 86400,
+        user: { id: 1, email: 'mobile@test.com' },
+      });
+
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'mobile@test.com', password: 'ValidPass1' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.accessToken).toBe('at-jsonpath');
+      expect(res.body.refreshToken).toBe('rt-jsonpath');
+      expect(res.body.user).toEqual({ id: 1, email: 'mobile@test.com' });
+    });
+  });
+
   // ── F1 — Rate-limit /refresh + /social-login ────────────────────
   // Audit 2026-04-30: both endpoints lacked rate-limit middleware. Refresh keyed by IP+familyId
   // (per-family throttle so a stolen family cannot enable >30 rotations/min from one network);

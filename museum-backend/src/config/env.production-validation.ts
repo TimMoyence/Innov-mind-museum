@@ -145,9 +145,45 @@ export function validateProductionEnv(env: AppEnv): void {
   // would compromise all three trust domains.
   validateMfaSecrets(env);
 
+  // F7 (2026-04-30): CSRF_SECRET MUST be present, distinct from every other
+  // signing secret, and >= 32 chars. Same threat model as MFA / media: if it
+  // collides with JWT_ACCESS_SECRET, an attacker who learns the access token
+  // (or its signing key) can also forge the CSRF token.
+  validateCsrfSecret(env);
+
   validateLlmProviderKey(env);
   validateS3Storage(env);
   validateRedis(env);
+}
+
+/** Enforces CSRF_SECRET presence, length, and distinctness in production (F7). */
+function validateCsrfSecret(env: AppEnv): void {
+  const csrf = required('CSRF_SECRET', process.env.CSRF_SECRET);
+  assertSecretLength('CSRF_SECRET', csrf);
+
+  if (csrf === process.env.JWT_ACCESS_SECRET) {
+    throw new Error(
+      'CSRF_SECRET must be distinct from JWT_ACCESS_SECRET in production. ' +
+        'Sharing secrets across signing domains defeats key rotation.',
+    );
+  }
+  if (csrf === process.env.JWT_REFRESH_SECRET) {
+    throw new Error('CSRF_SECRET must be distinct from JWT_REFRESH_SECRET in production.');
+  }
+  if (csrf === process.env.MEDIA_SIGNING_SECRET) {
+    throw new Error('CSRF_SECRET must be distinct from MEDIA_SIGNING_SECRET in production.');
+  }
+  if (csrf === process.env.MFA_ENCRYPTION_KEY) {
+    throw new Error('CSRF_SECRET must be distinct from MFA_ENCRYPTION_KEY in production.');
+  }
+  if (csrf === process.env.MFA_SESSION_TOKEN_SECRET) {
+    throw new Error('CSRF_SECRET must be distinct from MFA_SESSION_TOKEN_SECRET in production.');
+  }
+
+  // Cross-check: parsed env agrees with raw env var (drift detection).
+  if (env.auth.csrfSecret !== csrf) {
+    throw new Error('env.auth.csrfSecret is out of sync with CSRF_SECRET — env.ts wiring drift.');
+  }
 }
 
 /** Enforces MFA secret presence + distinctness from JWT / media signing secrets in production. */
