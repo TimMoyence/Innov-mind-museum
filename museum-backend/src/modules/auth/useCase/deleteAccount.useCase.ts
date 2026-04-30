@@ -3,9 +3,9 @@ import { logger } from '@shared/logger/logger';
 
 import type { IUserRepository } from '../domain/user.repository.interface';
 import type {
-  ImageStorage,
+  ImageCleanupPort as SharedImageCleanupPort,
   LegacyImageKeyFetcher,
-} from '@modules/chat/domain/ports/image-storage.port';
+} from '@shared/ports/image-cleanup.port';
 
 /**
  * Read-only projection of the chat repository needed by {@link DeleteAccountUseCase}.
@@ -21,10 +21,13 @@ export interface LegacyImageRefLookup {
 /**
  * Minimal image-cleanup port consumed by {@link DeleteAccountUseCase}.
  *
- * Matches the contract of {@link ImageStorage.deleteByPrefix}: given a user id
- * and an optional legacy-ref fetcher, delete every object tied to that user.
+ * Re-exported here for backwards compatibility with existing call sites.
+ * The canonical definition lives in `@shared/ports/image-cleanup.port` so
+ * the auth module no longer takes a static-type dependency on the chat
+ * module's `ImageStorage` adapter; chat's `ImageStorage` still implements
+ * this shape structurally.
  */
-export type ImageCleanupPort = Pick<ImageStorage, 'deleteByPrefix'>;
+export type ImageCleanupPort = SharedImageCleanupPort;
 
 /** Orchestrates permanent user account deletion (GDPR right-to-erasure). */
 export class DeleteAccountUseCase {
