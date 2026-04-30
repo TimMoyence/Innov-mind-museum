@@ -41,10 +41,7 @@ describe('image EXIF strip pipeline', () => {
       // GPS sub-block is plumbed at runtime but exifr's recovery depends on
       // sharp's encoder. We assert at least one privacy-tagged field is
       // present pre-strip, then prove the strip pipeline removes them all.
-      const before = (await exifr.parse(buf, ['Make', 'Model'])) as Record<
-        string,
-        unknown
-      > | null;
+      const before = (await exifr.parse(buf, ['Make', 'Model'])) as Record<string, unknown> | null;
       expect(before).toBeTruthy();
       expect(before).toHaveProperty('Make');
 
