@@ -34,6 +34,7 @@ import { VerifyMfaUseCase } from './totp/verifyMfa.useCase';
 import { UpdateContentPreferencesUseCase } from './updateContentPreferences.useCase';
 import { VerifyEmailUseCase } from './verifyEmail.useCase';
 import { ApiKeyRepositoryPg } from '../adapters/secondary/apiKey.repository.pg';
+import { InMemoryNonceStore } from '../adapters/secondary/nonce-store';
 import { RefreshTokenRepositoryPg } from '../adapters/secondary/refresh-token.repository.pg';
 import { SocialAccountRepositoryPg } from '../adapters/secondary/social-account.repository.pg';
 import { SocialTokenVerifierAdapter } from '../adapters/secondary/social-token-verifier.adapter';
@@ -89,12 +90,23 @@ const recoveryMfaUseCase = new RecoveryMfaUseCase(
   totpSecretRepository,
   authSessionService,
 );
+/**
+ * F3 — OIDC nonce store. The Redis-backed adapter is preferred when a Redis
+ * client is available (multi-instance correctness) but the auth composition
+ * root runs at module load before the rate-limit Redis client is registered;
+ * for now wire the in-memory adapter and let a future migration upgrade to
+ * Redis once a shared client is exposed at module-init time. Single-instance
+ * deployments (current default) are unaffected.
+ */
+const nonceStore = new InMemoryNonceStore();
+
 /** Singleton instance of {@link SocialLoginUseCase}. */
 const socialLoginUseCase = new SocialLoginUseCase(
   userRepository,
   socialAccountRepository,
   authSessionService,
   socialTokenVerifier,
+  nonceStore,
 );
 /** Singleton instance of {@link DeleteAccountUseCase}. Lazy image cleanup via chat module's shared storage. */
 const imageCleanupProxy: ImageCleanupPort = {
@@ -216,6 +228,7 @@ export {
   resetPasswordUseCase,
   authSessionService,
   socialLoginUseCase,
+  nonceStore,
   deleteAccountUseCase,
   exportUserDataUseCase,
   getProfileUseCase,

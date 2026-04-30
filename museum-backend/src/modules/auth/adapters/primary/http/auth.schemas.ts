@@ -26,6 +26,12 @@ export const logoutSchema = z.object({
 export const socialLoginSchema = z.object({
   provider: z.enum(['apple', 'google']),
   idToken: z.string().min(1),
+  // F3 — optional during the mobile rollout window. Once `OIDC_NONCE_ENFORCE`
+  // flips to true, the use case rejects requests omitting this field.
+  // Bounds: 16 chars (~96 bits even for poorly-chosen nonces) up to 256 chars
+  // to leave headroom for client-side hashed variants without enabling DoS
+  // payloads.
+  nonce: z.string().min(16).max(256).optional(),
 });
 
 export const changePasswordSchema = z.object({

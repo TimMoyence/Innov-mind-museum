@@ -90,6 +90,14 @@ export interface AppEnv {
      * (user-confirmed). Past the deadline, login is soft-blocked.
      */
     mfaEnrollmentWarningDays: number;
+    /**
+     * F3 (2026-04-30) — when `true`, `/social-login` MUST receive a nonce and
+     * the verifier MUST find a matching `nonce` claim in the ID token (Google
+     * direct, Apple via SHA-256). When `false` (default), missing nonces are
+     * accepted so legacy mobile clients keep working through the rollout. Flip
+     * to `true` once every supported mobile build ships the nonce flow.
+     */
+    oidcNonceEnforce: boolean;
   };
   llm: {
     provider: LlmProvider;

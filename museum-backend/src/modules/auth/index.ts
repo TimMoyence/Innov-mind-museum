@@ -11,6 +11,7 @@ export {
   resetPasswordUseCase,
   authSessionService,
   socialLoginUseCase,
+  nonceStore,
   deleteAccountUseCase,
   exportUserDataUseCase,
   getProfileUseCase,
@@ -44,6 +45,7 @@ export type {
   SocialTokenPayload,
   SocialProvider,
 } from './domain/social-token-verifier.port';
+export type { NonceStore } from './domain/nonce-store.port';
 export type {
   ChatDataExportPort,
   UserChatExportData,

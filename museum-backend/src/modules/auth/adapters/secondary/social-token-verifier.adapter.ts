@@ -12,7 +12,11 @@ import type {
  */
 export class SocialTokenVerifierAdapter implements SocialTokenVerifier {
   /** Verifies a social login ID token and returns the decoded payload. */
-  async verify(provider: SocialProvider, idToken: string): Promise<SocialTokenPayload> {
-    return await verifySocialIdToken(provider, idToken);
+  async verify(
+    provider: SocialProvider,
+    idToken: string,
+    expectedNonce?: string,
+  ): Promise<SocialTokenPayload> {
+    return await verifySocialIdToken(provider, idToken, expectedNonce);
   }
 }

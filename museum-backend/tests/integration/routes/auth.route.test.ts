@@ -1,5 +1,6 @@
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
+import { AppError } from '@shared/errors/app.error';
 import {
   createRouteTestApp,
   resetRateLimits,
@@ -18,6 +19,7 @@ const mockDeleteAccount = jest.fn();
 const mockForgotPassword = jest.fn();
 const mockResetPassword = jest.fn();
 const mockSocialLogin = jest.fn();
+const mockNonceIssue = jest.fn();
 const mockExportUserData = jest.fn();
 const mockChangePassword = jest.fn();
 const mockChangeEmail = jest.fn();
@@ -60,6 +62,10 @@ jest.mock('@modules/auth/useCase', () => {
     forgotPasswordUseCase: { execute: (...args: unknown[]) => mockForgotPassword(...args) },
     resetPasswordUseCase: { execute: (...args: unknown[]) => mockResetPassword(...args) },
     socialLoginUseCase: { execute: (...args: unknown[]) => mockSocialLogin(...args) },
+    nonceStore: {
+      issue: () => mockNonceIssue(),
+      consume: jest.fn(),
+    },
     exportUserDataUseCase: { execute: (...args: unknown[]) => mockExportUserData(...args) },
     changePasswordUseCase: { execute: (...args: unknown[]) => mockChangePassword(...args) },
     changeEmailUseCase: { execute: (...args: unknown[]) => mockChangeEmail(...args) },
@@ -725,6 +731,83 @@ describe('Auth Routes — HTTP Layer', () => {
         .post('/api/auth/social-login')
         .send({ provider: 'apple', idToken: 'tok' });
       expect(stillOk.status).toBe(200);
+    });
+  });
+
+  // ── F3 — OIDC nonce verification ────────────────────────────────────────
+  // Audit 2026-04-30: /social-login accepted any signed ID token, allowing
+  // replay if an attacker captured a valid token. Mitigation: server vends
+  // a single-use nonce via /social-nonce; client passes it to the social SDK
+  // (Apple SHA-256-hashes it); backend asserts the claim and consumes the
+  // nonce so a second submission is rejected.
+
+  describe('Nonce — F3 OIDC nonce verification', () => {
+    it('POST /api/auth/social-nonce returns a freshly-issued nonce', async () => {
+      mockNonceIssue.mockResolvedValueOnce('fresh-nonce-abcdefgh1234567890');
+      const res = await request(app).post('/api/auth/social-nonce');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ nonce: 'fresh-nonce-abcdefgh1234567890' });
+    });
+
+    it('POST /api/auth/social-login threads the body nonce to the use case', async () => {
+      mockSocialLogin.mockResolvedValueOnce({
+        accessToken: 'at',
+        refreshToken: 'rt',
+        user: { id: 7, email: 'nonce@test.com' },
+      });
+      const nonceValue = 'client-supplied-nonce-1234';
+
+      const res = await request(app).post('/api/auth/social-login').send({
+        provider: 'google',
+        idToken: 'goog-id-token',
+        nonce: nonceValue,
+      });
+
+      expect(res.status).toBe(200);
+      expect(mockSocialLogin).toHaveBeenCalledWith('google', 'goog-id-token', nonceValue);
+    });
+
+    it('POST /api/auth/social-login rejects a nonce shorter than 16 chars (Zod 400)', async () => {
+      const res = await request(app).post('/api/auth/social-login').send({
+        provider: 'google',
+        idToken: 'goog-id-token',
+        nonce: 'too-short',
+      });
+      expect(res.status).toBe(400);
+      expect(mockSocialLogin).not.toHaveBeenCalled();
+    });
+
+    it('POST /api/auth/social-login surfaces INVALID_NONCE 401 from the use case (replay)', async () => {
+      mockSocialLogin.mockRejectedValueOnce(
+        new AppError({
+          message: 'Invalid or replayed nonce',
+          statusCode: 401,
+          code: 'INVALID_NONCE',
+        }),
+      );
+
+      const res = await request(app).post('/api/auth/social-login').send({
+        provider: 'google',
+        idToken: 'goog-id-token',
+        nonce: 'replayed-nonce-1234567',
+      });
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('INVALID_NONCE');
+    });
+
+    it('POST /api/auth/social-login still accepts requests without nonce (legacy clients)', async () => {
+      mockSocialLogin.mockResolvedValueOnce({
+        accessToken: 'at',
+        refreshToken: 'rt',
+        user: { id: 8, email: 'legacy@test.com' },
+      });
+      const res = await request(app).post('/api/auth/social-login').send({
+        provider: 'google',
+        idToken: 'goog-id-token',
+      });
+      expect(res.status).toBe(200);
+      expect(mockSocialLogin).toHaveBeenCalledWith('google', 'goog-id-token', undefined);
     });
   });
 });

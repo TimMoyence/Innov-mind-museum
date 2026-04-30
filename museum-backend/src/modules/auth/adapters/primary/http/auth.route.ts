@@ -61,6 +61,7 @@ import {
   registerUseCase,
   resetPasswordUseCase,
   socialLoginUseCase,
+  nonceStore,
   deleteAccountUseCase,
   getProfileUseCase,
   changePasswordUseCase,
@@ -326,8 +327,8 @@ authRouter.post(
   socialLoginLimiter,
   validateBody(socialLoginSchema),
   async (req: Request, res: Response) => {
-    const { provider, idToken } = req.body;
-    const session = await socialLoginUseCase.execute(provider, idToken);
+    const { provider, idToken, nonce } = req.body;
+    const session = await socialLoginUseCase.execute(provider, idToken, nonce);
     await auditService.log({
       action: AUDIT_AUTH_SOCIAL_LOGIN,
       actorType: 'user',
@@ -341,6 +342,14 @@ authRouter.post(
     res.status(200).json(session);
   },
 );
+
+// F3 — issue a server-bound nonce for the next /social-login attempt. Rate
+// limited (same bucket parameters as /social-login) so an attacker cannot
+// burn through the entropy pool or hammer Redis. No body required.
+authRouter.post('/social-nonce', socialLoginLimiter, async (_req: Request, res: Response) => {
+  const issuedNonce = await nonceStore.issue();
+  res.status(200).json({ nonce: issuedNonce });
+});
 
 authRouter.delete('/account', isAuthenticated, async (req: Request, res: Response) => {
   const user = requireUser(req);

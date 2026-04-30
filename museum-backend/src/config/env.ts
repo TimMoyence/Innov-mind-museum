@@ -274,6 +274,9 @@ const env: AppEnv = {
         ),
     mfaSessionTokenTtlSeconds: toNumber(process.env.MFA_SESSION_TOKEN_TTL_SECONDS, 300),
     mfaEnrollmentWarningDays: toNumber(process.env.MFA_ENROLLMENT_WARNING_DAYS, 30),
+    // F3 — default false during the mobile rollout window. Flip to true after
+    // every supported mobile build ships the OIDC nonce flow.
+    oidcNonceEnforce: toBoolean(process.env.OIDC_NONCE_ENFORCE, false),
   },
   llm: {
     provider,

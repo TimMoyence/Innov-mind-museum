@@ -23,10 +23,24 @@ export interface SocialTokenVerifier {
   /**
    * Verifies an ID token from the given social provider.
    *
+   * F3 — when `expectedNonce` is provided, implementations MUST assert that
+   * the ID token's `nonce` claim is bound to it: Google directly (claim ===
+   * expectedNonce), Apple via SHA-256 (`claim === sha256(expectedNonce)`
+   * lowercase hex). When `expectedNonce` is `undefined`, implementations
+   * defer to `env.auth.oidcNonceEnforce` — `true` rejects with
+   * `INVALID_NONCE`, `false` skips the check (migration window).
+   *
    * @param provider - Social provider (`apple` or `google`).
    * @param idToken - Raw JWT string from the provider.
+   * @param expectedNonce - Server-issued nonce previously vended via
+   *   `/social-nonce` (raw value, pre-hash for Apple).
    * @returns Decoded identity claims.
+   * @throws {AppError} `INVALID_NONCE` (401) on nonce mismatch.
    * @throws {Error} For unsupported providers or invalid tokens.
    */
-  verify(provider: SocialProvider, idToken: string): Promise<SocialTokenPayload>;
+  verify(
+    provider: SocialProvider,
+    idToken: string,
+    expectedNonce?: string,
+  ): Promise<SocialTokenPayload>;
 }
