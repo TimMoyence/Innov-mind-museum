@@ -1,9 +1,18 @@
+import { AppError } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 
-/** Thrown when the circuit breaker is in OPEN state and LLM calls are blocked. */
-export class CircuitOpenError extends Error {
+/**
+ * Thrown when the circuit breaker is in OPEN state and LLM calls are blocked.
+ * Extends `AppError` so the global error middleware emits a 503 response
+ * uniformly across degraded-dependency paths.
+ */
+export class CircuitOpenError extends AppError {
   constructor() {
-    super('Circuit breaker is OPEN — LLM calls are temporarily blocked');
+    super({
+      message: 'Circuit breaker is OPEN — LLM calls are temporarily blocked',
+      statusCode: 503,
+      code: 'CIRCUIT_BREAKER_OPEN',
+    });
     this.name = 'CircuitOpenError';
   }
 }

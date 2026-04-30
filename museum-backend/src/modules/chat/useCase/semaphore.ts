@@ -1,19 +1,32 @@
+import { AppError } from '@shared/errors/app.error';
+
 /**
- *
+ * Thrown when the semaphore queue is at capacity and a new acquirer cannot
+ * be enqueued. Extends `AppError` so the global error middleware returns 503.
  */
-export class SemaphoreQueueFullError extends Error {
+export class SemaphoreQueueFullError extends AppError {
   constructor(queueSize: number) {
-    super(`Semaphore queue is full (${queueSize} waiting)`);
+    super({
+      message: `Semaphore queue is full (${queueSize} waiting)`,
+      statusCode: 503,
+      code: 'SEMAPHORE_QUEUE_FULL',
+    });
     this.name = 'SemaphoreQueueFullError';
   }
 }
 
 /**
- *
+ * Thrown when an enqueued acquirer waited longer than the configured timeout
+ * before a slot freed up. Extends `AppError` so the global error middleware
+ * returns 503.
  */
-export class SemaphoreTimeoutError extends Error {
+export class SemaphoreTimeoutError extends AppError {
   constructor(timeoutMs: number) {
-    super(`Semaphore acquire timed out after ${timeoutMs}ms`);
+    super({
+      message: `Semaphore acquire timed out after ${timeoutMs}ms`,
+      statusCode: 503,
+      code: 'SEMAPHORE_TIMEOUT',
+    });
     this.name = 'SemaphoreTimeoutError';
   }
 }

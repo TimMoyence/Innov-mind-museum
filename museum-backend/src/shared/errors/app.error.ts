@@ -1,22 +1,3 @@
-/**
- * Thrown when caller-supplied input fails strict validation
- * (e.g. Wikidata QID format, SPARQL literal control chars).
- *
- * Distinct subclass so tests can assert on type via `toThrow(ValidationError)`
- * without falsely matching unrelated 400 errors. Always 400/`VALIDATION_ERROR`.
- */
-export class ValidationError extends Error {
-  readonly statusCode = 400;
-  readonly code = 'VALIDATION_ERROR';
-  readonly details?: unknown;
-
-  constructor(message: string, details?: unknown) {
-    super(message);
-    this.name = 'ValidationError';
-    this.details = details;
-  }
-}
-
 /** Represents a structured application error with an HTTP status code and machine-readable code. */
 export class AppError extends Error {
   readonly statusCode: number;
@@ -38,6 +19,23 @@ export class AppError extends Error {
     this.code = params.code ?? 'INTERNAL_ERROR';
     this.details = params.details;
     this.headers = params.headers;
+  }
+}
+
+/**
+ * Thrown when caller-supplied input fails strict validation
+ * (e.g. Wikidata QID format, SPARQL literal control chars).
+ *
+ * Distinct subclass so tests can assert on type via `toThrow(ValidationError)`
+ * without falsely matching unrelated 400 errors. Always 400/`VALIDATION_ERROR`.
+ *
+ * Extends `AppError` so the global error middleware maps it to a 400 response
+ * automatically (previously it inherited `Error` directly and degraded to 500).
+ */
+export class ValidationError extends AppError {
+  constructor(message: string, details?: unknown) {
+    super({ message, statusCode: 400, code: 'VALIDATION_ERROR', details });
+    this.name = 'ValidationError';
   }
 }
 

@@ -19,12 +19,12 @@ Adopt the following four-tier taxonomy across the three apps. Tier membership is
 |---|---|---|---|
 | **Unit** | `tests/unit/` (BE), `__tests__/` (FE), `src/__tests__/` (web) | Tests a single function, class, or pure module in isolation. No I/O. No real time, file system, network, or DB. | Pure functions, fakes/stubs of collaborators, in-memory repos *iff the test exercises orchestration logic that needs a repo shape but not real persistence* |
 | **Integration** | `tests/integration/` (BE only) | Tests a slice of the system that crosses **at least one infrastructure boundary** — real DB (Postgres testcontainer), real Redis, real S3 (LocalStack), or real LangChain orchestrator with stub LLM client. | Real DB via `tests/helpers/e2e/postgres-testcontainer.ts`, real Redis via container, real BullMQ queues, mock external HTTP only |
-| **E2E** | `tests/e2e/` (BE), `museum-frontend/.maestro/` (mobile), `museum-web/e2e/` (web — added in Phase 3) | Tests a full user-visible flow across the full stack. HTTP request → DB → response. Mobile: real RN screen + mock backend or staging. Web: real Next.js + real backend or staging. | Full app harness; only the LLM provider is mocked (cost) |
+| **E2E** | `tests/e2e/` (BE), `museum-frontend/.maestro/` (mobile), `museum-web/e2e/` (web — to be created in Phase 3) | Tests a full user-visible flow across the full stack. HTTP request → DB → response. Mobile: real RN screen + mock backend or staging. Web: real Next.js + real backend or staging. | Full app harness; only the LLM provider is mocked (cost) |
 | **Contract** | `tests/contract/` (BE) | Tests OpenAPI spec ↔ runtime traffic agreement. Either Pact-style consumer-driven, or runtime-recorded fixtures replayed against the live spec. | Spec file + recorded request/response fixtures |
 
 ### Decision rule (mechanically checkable)
 
-> A file lives in `tests/integration/` **iff** it imports either (a) a TypeORM `DataSource` / `getRepository(...)` against a real testcontainer, or (b) `tests/helpers/e2e/postgres-testcontainer.ts` (or its sibling Redis/S3 helpers). If neither is true, the file belongs in `tests/unit/`.
+> A file lives in `tests/integration/` **iff** it satisfies at least one of: (a) imports a TypeORM `DataSource` / `getRepository(...)` against a real testcontainer, (b) imports `tests/helpers/e2e/postgres-testcontainer.ts` (or its sibling Redis / S3 helpers), or (c) issues a real outbound network request (`fetch` / `axios` / `got` / `node:http(s)`) against a non-stub URL — i.e., crosses any infrastructure boundary, not just the DB. If none of those hold, the file belongs in `tests/unit/`.
 
 ### In-memory repo policy
 
@@ -53,6 +53,7 @@ In-memory repos (`createInMemoryUserRepo`, etc.) remain legal in `tests/unit/` (
 ### Negative
 - 8 existing files require `git mv` to comply with the taxonomy on day one. Mitigation: one atomic commit dedicated to the move (Phase 0 Commit B).
 - 1 existing file (`tests/integration/security/ssrf-matrix.test.ts`) sits in a grey zone — exercises real `fetch` but no DB. Decision: keep under `tests/integration/` because it crosses the network boundary; rename to `*.integration.test.ts` for clarity.
+- Until Phase 1 lands the CI tier-signature guard, the rule is grep-able for reviewers but not self-enforcing for authors. A new test author who forgets to import the testcontainer helper can silently land a real-DB test under `tests/unit/` (or omit the integration suffix). Mitigation: Phase 0 Commit D's ESLint plugin focuses on factory adoption, not tier classification — the tier-classification CI guard is explicitly tracked as a Phase 1 follow-up.
 
 ## Follow-ups
 
