@@ -418,6 +418,17 @@ const env: AppEnv = {
    * ioredis ECONNREFUSED log floods. See `AppEnv.extractionWorkerEnabled`.
    */
   extractionWorkerEnabled: toBoolean(process.env.EXTRACTION_WORKER_ENABLED, true),
+  /**
+   * Default `false`: the BullMQ scheduler that produces `museum-enrichment`
+   * jobs has no consumer wired in production yet (`MuseumEnrichmentWorker` is
+   * defined but never instantiated), so leaving the producer enabled by
+   * default lets jobs accumulate in Redis indefinitely. Flip to `true`
+   * explicitly once a worker is wired at boot. See `AppEnv.museumEnrichmentSchedulerEnabled`.
+   */
+  museumEnrichmentSchedulerEnabled: toBoolean(
+    process.env.MUSEUM_ENRICHMENT_SCHEDULER_ENABLED,
+    false,
+  ),
   redis: parseRedisUrlFallback(),
   guardrails: {
     candidate: guardrailsCandidate,

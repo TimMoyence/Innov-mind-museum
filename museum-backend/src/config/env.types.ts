@@ -280,15 +280,26 @@ export interface AppEnv {
     reviewThreshold: number;
   };
   /**
-   * When false, the BullMQ extraction worker, the knowledge-extraction queue,
-   * and the museum enrichment scheduler are NOT started. The chat module
-   * degrades to db-lookup-only (same fallback as the missing-OpenAI-key path),
-   * so no `new Redis(...)` ioredis client is created from the extraction path.
+   * When false, the BullMQ extraction worker and the knowledge-extraction queue
+   * are NOT started. The chat module degrades to db-lookup-only (same fallback
+   * as the missing-OpenAI-key path), so no `new Redis(...)` ioredis client is
+   * created from the extraction path.
    *
    * Use in test environments without Redis (e.g. e2e harness). Default `true`
    * so production behavior is unchanged when the env var is unset.
+   *
+   * NOTE: This flag no longer gates the museum-enrichment scheduler — see
+   * `museumEnrichmentSchedulerEnabled` for that.
    */
   extractionWorkerEnabled: boolean;
+  /**
+   * Gates the BullMQ producer that schedules `museum-enrichment` jobs (stale
+   * cache refresh + dead-row purge). The matching `MuseumEnrichmentWorker`
+   * consumer is defined but not yet instantiated at boot, so leaving the
+   * producer on causes Redis job accumulation. Default `false` until a worker
+   * is wired.
+   */
+  museumEnrichmentSchedulerEnabled: boolean;
   /** Redis connection configuration for BullMQ and other Redis-backed services. */
   redis: {
     host: string;

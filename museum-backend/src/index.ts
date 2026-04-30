@@ -95,13 +95,15 @@ function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Red
  * (missing Redis, BullMQ init failure) is logged and the server proceeds
  * without the scheduler — on-demand enrichment keeps working.
  *
- * Skipped entirely when `EXTRACTION_WORKER_ENABLED=false` so test environments
- * without Redis (e.g. e2e harness) don't spawn ioredis clients that flood logs
- * with ECONNREFUSED.
+ * Default-off (`MUSEUM_ENRICHMENT_SCHEDULER_ENABLED=false`) until the matching
+ * `MuseumEnrichmentWorker` consumer is wired at boot — without a consumer, the
+ * producer just fills Redis with unprocessed jobs.
  */
 async function startEnrichmentScheduler(): Promise<EnrichmentSchedulerPort | undefined> {
-  if (!env.extractionWorkerEnabled) {
-    logger.info('enrichment_scheduler_disabled', { reason: 'extraction_worker_flag_off' });
+  if (!env.museumEnrichmentSchedulerEnabled) {
+    logger.info('enrichment_scheduler_disabled', {
+      reason: 'museum_enrichment_scheduler_flag_off',
+    });
     return undefined;
   }
   try {

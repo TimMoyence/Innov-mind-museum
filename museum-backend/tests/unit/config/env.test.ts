@@ -346,6 +346,32 @@ describe('env.ts module', () => {
     });
   });
 
+  describe('museumEnrichmentSchedulerEnabled flag', () => {
+    it('defaults to false when MUSEUM_ENRICHMENT_SCHEDULER_ENABLED is unset', () => {
+      const env = loadEnv({ MUSEUM_ENRICHMENT_SCHEDULER_ENABLED: undefined });
+      expect(env.museumEnrichmentSchedulerEnabled).toBe(false);
+    });
+
+    it('is true when MUSEUM_ENRICHMENT_SCHEDULER_ENABLED=true', () => {
+      const env = loadEnv({ MUSEUM_ENRICHMENT_SCHEDULER_ENABLED: 'true' });
+      expect(env.museumEnrichmentSchedulerEnabled).toBe(true);
+    });
+
+    it('is false when MUSEUM_ENRICHMENT_SCHEDULER_ENABLED=false', () => {
+      const env = loadEnv({ MUSEUM_ENRICHMENT_SCHEDULER_ENABLED: 'false' });
+      expect(env.museumEnrichmentSchedulerEnabled).toBe(false);
+    });
+
+    it('is independent of EXTRACTION_WORKER_ENABLED', () => {
+      const env = loadEnv({
+        EXTRACTION_WORKER_ENABLED: 'true',
+        MUSEUM_ENRICHMENT_SCHEDULER_ENABLED: undefined,
+      });
+      expect(env.extractionWorkerEnabled).toBe(true);
+      expect(env.museumEnrichmentSchedulerEnabled).toBe(false);
+    });
+  });
+
   describe('storage driver', () => {
     it('defaults to local when OBJECT_STORAGE_DRIVER is not set', () => {
       const env = loadEnv({ OBJECT_STORAGE_DRIVER: undefined });
