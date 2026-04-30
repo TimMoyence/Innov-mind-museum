@@ -123,6 +123,14 @@ export interface AppEnv {
      */
     userLimit: number;
     windowMs: number;
+    /**
+     * F2 (2026-04-30) — when `true` and the Redis store is configured but
+     * unreachable, rate-limit middlewares respond 503 instead of degrading
+     * to per-instance in-memory buckets (which silently disable distributed
+     * limits in multi-instance deployments). Production default = `true`,
+     * dev/test default = `false` so local stacks without Redis still work.
+     */
+    failClosed: boolean;
   };
   upload: {
     allowedMimeTypes: string[];

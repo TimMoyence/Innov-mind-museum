@@ -288,8 +288,14 @@ describe('rate-limit middleware — Redis fail-closed fallback', () => {
     mw(req, res, next);
     await new Promise(process.nextTick);
 
-    expect(logger.warn).toHaveBeenCalledWith('rate_limit_redis_fail_closed_fallback', {
-      key: 'redis-fail-test:10.0.0.1',
-    });
+    // F2 (2026-04-30) — log message renamed: legacy fall-back path is now
+    // explicitly named "degraded_to_local_bucket" since the failClosed=true
+    // path emits its own distinct log + Sentry event. See rate-limit-fail-closed.test.ts.
+    expect(logger.warn).toHaveBeenCalledWith(
+      'rate_limit_redis_unavailable_degraded_to_local_bucket',
+      {
+        key: 'redis-fail-test:10.0.0.1',
+      },
+    );
   });
 });

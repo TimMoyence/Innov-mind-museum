@@ -1,9 +1,14 @@
-import { tooManyRequests } from '@shared/errors/app.error';
+import { AppError, tooManyRequests } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
+import { captureExceptionWithContext } from '@shared/observability/sentry';
 import { InMemoryBucketStore } from '@shared/rate-limit/in-memory-bucket-store';
+import { env } from '@src/config/env';
 
 import type { RedisRateLimitStore } from './redis-rate-limit-store';
 import type { Request, RequestHandler } from 'express';
+
+/** Retry-After header value (seconds) returned when failing closed on Redis outage. */
+const FAIL_CLOSED_RETRY_AFTER_SECONDS = 30;
 
 interface Bucket {
   count: number;
@@ -60,6 +65,72 @@ const nextAnonymousBucketName = (): string => {
  * @param root0.bucketName - Optional bucket namespace for isolation from sibling limiters.
  * @returns Express middleware that rejects excess requests with 429.
  */
+type Next = Parameters<RequestHandler>[2];
+type Res = Parameters<RequestHandler>[1];
+
+interface BucketContext {
+  key: string;
+  limit: number;
+  windowMs: number;
+  res: Res;
+  next: Next;
+}
+
+/** Drains the in-memory bucket for `key`. */
+const consumeMemoryBucket = (ctx: BucketContext): void => {
+  const { key, limit, windowMs, res, next } = ctx;
+  const now = Date.now();
+  const current = store.get(key);
+
+  if (!current || current.resetAt <= now) {
+    store.set(key, { count: 1, resetAt: now + windowMs });
+    next();
+    return;
+  }
+
+  if (current.count >= limit) {
+    const retryAfterSec = Math.max(1, Math.ceil((current.resetAt - now) / 1000));
+    res.setHeader('Retry-After', retryAfterSec.toString());
+    next(tooManyRequests('Too many requests. Please retry later.'));
+    return;
+  }
+
+  current.count += 1;
+  store.set(key, current);
+  next();
+};
+
+/**
+ * F2 — Handles a Redis-store rejection. Two paths:
+ *   - failClosed=true  (prod default): respond 503 + Sentry alert.
+ *   - failClosed=false (dev default): degrade to per-instance memory bucket.
+ */
+const handleRedisFailure = (redisError: unknown, ctx: BucketContext): void => {
+  const { key, res, next } = ctx;
+  if (env.rateLimit.failClosed) {
+    logger.error('rate_limit_redis_unavailable_failclosed', {
+      key,
+      error: redisError instanceof Error ? redisError.message : String(redisError),
+    });
+    captureExceptionWithContext(
+      redisError instanceof Error ? redisError : new Error(String(redisError)),
+      { component: 'rate-limit', mode: 'fail-closed', key },
+    );
+    res.setHeader('Retry-After', FAIL_CLOSED_RETRY_AFTER_SECONDS.toString());
+    next(
+      new AppError({
+        statusCode: 503,
+        code: 'RATE_LIMIT_UNAVAILABLE',
+        message: 'Rate limit service temporarily unavailable. Please retry shortly.',
+      }),
+    );
+    return;
+  }
+
+  logger.warn('rate_limit_redis_unavailable_degraded_to_local_bucket', { key });
+  consumeMemoryBucket(ctx);
+};
+
 export const createRateLimitMiddleware = ({
   limit,
   windowMs,
@@ -69,6 +140,7 @@ export const createRateLimitMiddleware = ({
   const namespace = bucketName ?? nextAnonymousBucketName();
   return (req, res, next) => {
     const key = `${namespace}:${keyGenerator(req)}`;
+    const ctx: BucketContext = { key, limit, windowMs, res, next };
 
     if (redisStore) {
       void redisStore
@@ -82,52 +154,13 @@ export const createRateLimitMiddleware = ({
           }
           next();
         })
-        .catch(() => {
-          // Fail-closed: fall back to in-memory rate limiting when Redis is down
-          logger.warn('rate_limit_redis_fail_closed_fallback', { key });
-          const now = Date.now();
-          const current = store.get(key);
-
-          if (!current || current.resetAt <= now) {
-            store.set(key, { count: 1, resetAt: now + windowMs });
-            next();
-            return;
-          }
-
-          if (current.count >= limit) {
-            const retryAfterSec = Math.max(1, Math.ceil((current.resetAt - now) / 1000));
-            res.setHeader('Retry-After', retryAfterSec.toString());
-            next(tooManyRequests('Too many requests. Please retry later.'));
-            return;
-          }
-
-          current.count += 1;
-          store.set(key, current);
-          next();
+        .catch((redisError: unknown) => {
+          handleRedisFailure(redisError, ctx);
         });
       return;
     }
 
-    // In-memory fallback path (original behavior)
-    const now = Date.now();
-    const current = store.get(key);
-
-    if (!current || current.resetAt <= now) {
-      store.set(key, { count: 1, resetAt: now + windowMs });
-      next();
-      return;
-    }
-
-    if (current.count >= limit) {
-      const retryAfterSec = Math.max(1, Math.ceil((current.resetAt - now) / 1000));
-      res.setHeader('Retry-After', retryAfterSec.toString());
-      next(tooManyRequests('Too many requests. Please retry later.'));
-      return;
-    }
-
-    current.count += 1;
-    store.set(key, current);
-    next();
+    consumeMemoryBucket(ctx);
   };
 };
 

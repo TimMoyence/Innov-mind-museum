@@ -302,6 +302,9 @@ const env: AppEnv = {
     sessionLimit: toNumber(process.env.RATE_LIMIT_SESSION, 120),
     userLimit: toNumber(process.env.RATE_LIMIT_USER, 200),
     windowMs: toNumber(process.env.RATE_LIMIT_WINDOW_MS, 60000),
+    // F2 — fail-closed when Redis is configured-but-down. Defaults to true in prod,
+    // false in dev/test so local stacks without Redis are unaffected.
+    failClosed: toBoolean(process.env.RATE_LIMIT_FAIL_CLOSED, isProduction),
   },
   upload: {
     allowedMimeTypes: toList(process.env.UPLOAD_ALLOWED_MIME_TYPES).length
