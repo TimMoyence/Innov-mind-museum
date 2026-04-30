@@ -36,13 +36,30 @@ export const useSocialLogin = ({
     }
   };
 
+  /**
+   * F3 (2026-04-30) — Fetches a single-use OIDC nonce from the backend.
+   * Returns `undefined` on transport failure so the caller can still proceed
+   * (backend tolerates missing nonce while `OIDC_NONCE_ENFORCE=false`). Once
+   * enforce flips on, a missing nonce will be a hard 401 — at that point any
+   * transport failure here surfaces as a normal sign-in error downstream.
+   */
+  const safeRequestNonce = async (): Promise<string | undefined> => {
+    try {
+      const { nonce } = await authService.requestSocialNonce();
+      return nonce;
+    } catch {
+      return undefined;
+    }
+  };
+
   const handleAppleSignIn = async (): Promise<void> => {
     setIsSocialLoading(true);
     setErrorMessage(null);
     setInfoMessage(null);
     try {
-      const { provider, idToken } = await signInWithApple();
-      const response = await authService.socialLogin(provider, idToken);
+      const nonce = await safeRequestNonce();
+      const { provider, idToken } = await signInWithApple({ nonce });
+      const response = await authService.socialLogin(provider, idToken, nonce);
       await handleSocialLoginSuccess(response);
     } catch (error) {
       const message = getErrorMessage(error);
@@ -59,8 +76,9 @@ export const useSocialLogin = ({
     setErrorMessage(null);
     setInfoMessage(null);
     try {
-      const { provider, idToken } = await signInWithGoogle();
-      const response = await authService.socialLogin(provider, idToken);
+      const nonce = await safeRequestNonce();
+      const { provider, idToken } = await signInWithGoogle({ nonce });
+      const response = await authService.socialLogin(provider, idToken, nonce);
       await handleSocialLoginSuccess(response);
     } catch (error) {
       const message = getErrorMessage(error);

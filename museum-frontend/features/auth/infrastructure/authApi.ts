@@ -102,18 +102,41 @@ export const authService = {
 
   /**
    * Authenticates via a social provider (Apple/Google).
+   *
    * @param provider - Social identity provider name.
    * @param idToken - Identity token obtained from the social provider SDK.
+   * @param nonce - Optional OIDC nonce previously obtained via {@link requestSocialNonce}
+   *   and passed to the native SDK before sign-in. Required when the backend
+   *   has `OIDC_NONCE_ENFORCE=true`. Backend asserts the JWT `nonce` claim
+   *   matches (Google: direct compare; Apple: SHA-256(nonce) lowercase hex).
    * @returns Session tokens on success.
    */
   async socialLogin(
     provider: SocialLoginPayload['provider'],
     idToken: string,
+    nonce?: string,
   ): Promise<LoginResponse> {
     return openApiRequest({
       path: '/api/auth/social-login',
       method: 'post',
-      body: JSON.stringify({ provider, idToken }),
+      body: JSON.stringify(nonce ? { provider, idToken, nonce } : { provider, idToken }),
+      requiresAuth: false,
+    });
+  },
+
+  /**
+   * F3 (2026-04-30) — Requests a single-use OIDC nonce from the backend.
+   * Mobile MUST call this immediately before invoking the native social SDK
+   * and pass the returned `nonce` to `signInWithApple` / `signInWithGoogle`.
+   * The backend stores it in Redis with a 5-min TTL and asserts a single
+   * consume on the matching `/social-login` call.
+   *
+   * @returns A 128-bit base64url nonce.
+   */
+  async requestSocialNonce(): Promise<{ nonce: string }> {
+    return openApiRequest({
+      path: '/api/auth/social-nonce',
+      method: 'post',
       requiresAuth: false,
     });
   },

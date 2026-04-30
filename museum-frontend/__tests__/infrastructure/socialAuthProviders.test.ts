@@ -100,3 +100,63 @@ describe('signInWithGoogle native error mapping', () => {
     Object.defineProperty(Platform, 'OS', { value: orig, writable: true });
   });
 });
+
+// ── F3 — OIDC nonce binding ─────────────────────────────────────────
+describe('signInWithApple — F3 nonce', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('passes the nonce through to the Apple SDK and echoes it back to the caller', async () => {
+    mockSignInAsync.mockResolvedValue({ identityToken: 'apple-token' });
+    const result = await signInWithApple({ nonce: 'fixed-nonce-value' });
+    expect(mockSignInAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ nonce: 'fixed-nonce-value' }),
+    );
+    expect(result).toEqual({
+      provider: 'apple',
+      idToken: 'apple-token',
+      nonce: 'fixed-nonce-value',
+    });
+  });
+
+  it('omits the nonce option when none is provided (legacy callers)', async () => {
+    mockSignInAsync.mockResolvedValue({ identityToken: 'apple-token' });
+    const result = await signInWithApple();
+    expect(mockSignInAsync).toHaveBeenCalledTimes(1);
+    expect(mockSignInAsync.mock.calls[0][0]).not.toHaveProperty('nonce');
+    expect(result.nonce).toBeUndefined();
+  });
+});
+
+describe('signInWithGoogle — F3 nonce (deferred to Phase 2)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGoogleHasPlayServices.mockResolvedValue(true);
+    mockGoogleSignIn.mockResolvedValue({
+      type: 'success',
+      data: { idToken: 'google-token' },
+    });
+  });
+
+  it('accepts a nonce option for API symmetry but does NOT forward it to the SDK (legacy GoogleSignin API has no nonce field — Phase 2 migration to GoogleOneTapSignIn)', async () => {
+    const orig = Platform.OS;
+    Object.defineProperty(Platform, 'OS', { value: 'android', writable: true });
+
+    const result = await signInWithGoogle({ nonce: 'g-nonce-123' });
+    // SDK called with no args — nonce intentionally dropped (see JSDoc).
+    expect(mockGoogleSignIn).toHaveBeenCalledWith();
+    // nonce intentionally undefined in result so backend skips assertion.
+    expect(result).toEqual({ provider: 'google', idToken: 'google-token' });
+
+    Object.defineProperty(Platform, 'OS', { value: orig, writable: true });
+  });
+
+  it('legacy callers without nonce option still work', async () => {
+    const orig = Platform.OS;
+    Object.defineProperty(Platform, 'OS', { value: 'android', writable: true });
+
+    const result = await signInWithGoogle();
+    expect(result.nonce).toBeUndefined();
+
+    Object.defineProperty(Platform, 'OS', { value: orig, writable: true });
+  });
+});

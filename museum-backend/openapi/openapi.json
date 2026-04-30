@@ -2236,6 +2236,12 @@
                   },
                   "idToken": {
                     "type": "string"
+                  },
+                  "nonce": {
+                    "type": "string",
+                    "minLength": 16,
+                    "maxLength": 256,
+                    "description": "F3 (2026-04-30) — single-use OIDC nonce previously fetched via POST /api/auth/social-nonce. Optional during the rollout window (when OIDC_NONCE_ENFORCE=false on the backend); becomes required once enforcement flips on."
                   }
                 }
               }
@@ -2258,6 +2264,36 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/auth/social-nonce": {
+      "post": {
+        "tags": ["Auth"],
+        "security": [],
+        "summary": "Issue a single-use OIDC nonce (F3 2026-04-30)",
+        "description": "Mobile MUST call this immediately before invoking the native social SDK. Pass the returned nonce into Apple's `signInAsync({nonce})` (Apple SDK SHA-256-hashes it client-side) or Google One Tap / GoogleOneTapSignIn. The backend stores the nonce with a 5-minute TTL and consumes it atomically on the matching POST /api/auth/social-login.",
+        "responses": {
+          "200": {
+            "description": "Single-use nonce issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["nonce"],
+                  "properties": {
+                    "nonce": {
+                      "type": "string",
+                      "description": "128-bit base64url nonce. Single-use, 5-minute TTL."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }

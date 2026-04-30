@@ -568,6 +568,8 @@ export interface paths {
             /** @enum {string} */
             provider: 'apple' | 'google';
             idToken: string;
+            /** @description F3 (2026-04-30) — single-use OIDC nonce previously fetched via POST /api/auth/social-nonce. Optional during the rollout window (when OIDC_NONCE_ENFORCE=false on the backend); becomes required once enforcement flips on. */
+            nonce?: string;
           };
         };
       };
@@ -583,6 +585,49 @@ export interface paths {
         };
         400: components['responses']['BadRequest'];
         401: components['responses']['Unauthorized'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/auth/social-nonce': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Issue a single-use OIDC nonce (F3 2026-04-30)
+     * @description Mobile MUST call this immediately before invoking the native social SDK. Pass the returned nonce into Apple's `signInAsync({nonce})` (Apple SDK SHA-256-hashes it client-side) or Google One Tap / GoogleOneTapSignIn. The backend stores the nonce with a 5-minute TTL and consumes it atomically on the matching POST /api/auth/social-login.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Single-use nonce issued */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @description 128-bit base64url nonce. Single-use, 5-minute TTL. */
+              nonce: string;
+            };
+          };
+        };
+        429: components['responses']['TooManyRequests'];
       };
     };
     delete?: never;

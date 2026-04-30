@@ -5,21 +5,29 @@ import { makeAuthTokens } from '@/__tests__/helpers/factories';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-const mockSignInWithApple = jest.fn<Promise<{ provider: 'apple'; idToken: string }>, []>();
-const mockSignInWithGoogle = jest.fn<Promise<{ provider: 'google'; idToken: string }>, []>();
+const mockSignInWithApple = jest.fn<
+  Promise<{ provider: 'apple'; idToken: string; nonce?: string }>,
+  [unknown?]
+>();
+const mockSignInWithGoogle = jest.fn<
+  Promise<{ provider: 'google'; idToken: string; nonce?: string }>,
+  [unknown?]
+>();
 const mockIsAppleSignInAvailable = jest.fn<Promise<boolean>, []>();
 
 jest.mock('@/features/auth/infrastructure/socialAuthProviders', () => ({
-  signInWithApple: () => mockSignInWithApple(),
-  signInWithGoogle: () => mockSignInWithGoogle(),
+  signInWithApple: (opts: unknown) => mockSignInWithApple(opts),
+  signInWithGoogle: (opts: unknown) => mockSignInWithGoogle(opts),
   isAppleSignInAvailable: () => mockIsAppleSignInAvailable(),
 }));
 
 const mockSocialLogin = jest.fn();
+const mockRequestSocialNonce = jest.fn<Promise<{ nonce: string }>, []>();
 
 jest.mock('@/features/auth/infrastructure/authApi', () => ({
   authService: {
     socialLogin: (...args: unknown[]) => mockSocialLogin(...args),
+    requestSocialNonce: () => mockRequestSocialNonce(),
   },
 }));
 
@@ -37,8 +45,17 @@ describe('useSocialLogin', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockIsAppleSignInAvailable.mockResolvedValue(true);
-    mockSignInWithApple.mockResolvedValue({ provider: 'apple', idToken: 'apple-token-123' });
-    mockSignInWithGoogle.mockResolvedValue({ provider: 'google', idToken: 'google-token-456' });
+    mockRequestSocialNonce.mockResolvedValue({ nonce: 'fixed-nonce' });
+    mockSignInWithApple.mockResolvedValue({
+      provider: 'apple',
+      idToken: 'apple-token-123',
+      nonce: 'fixed-nonce',
+    });
+    mockSignInWithGoogle.mockResolvedValue({
+      provider: 'google',
+      idToken: 'google-token-456',
+      nonce: 'fixed-nonce',
+    });
   });
 
   it('checks Apple Sign-In availability on mount', async () => {
@@ -75,7 +92,10 @@ describe('useSocialLogin', () => {
     });
 
     expect(mockSignInWithGoogle).toHaveBeenCalledTimes(1);
-    expect(mockSocialLogin).toHaveBeenCalledWith('google', 'google-token-456');
+    expect(mockSignInWithGoogle).toHaveBeenCalledWith({ nonce: 'fixed-nonce' });
+    // F3: hook still passes the nonce it fetched downstream — provider returns whatever
+    // it knows to echo (Apple = real nonce, Google = undefined per Phase-2 deferral).
+    expect(mockSocialLogin).toHaveBeenCalledWith('google', 'google-token-456', 'fixed-nonce');
     expect(opts.loginWithSession).toHaveBeenCalledWith(tokens);
     expect(result.current.isSocialLoading).toBe(false);
   });
@@ -92,7 +112,8 @@ describe('useSocialLogin', () => {
     });
 
     expect(mockSignInWithApple).toHaveBeenCalledTimes(1);
-    expect(mockSocialLogin).toHaveBeenCalledWith('apple', 'apple-token-123');
+    expect(mockSignInWithApple).toHaveBeenCalledWith({ nonce: 'fixed-nonce' });
+    expect(mockSocialLogin).toHaveBeenCalledWith('apple', 'apple-token-123', 'fixed-nonce');
     expect(opts.loginWithSession).toHaveBeenCalledWith(tokens);
     expect(result.current.isSocialLoading).toBe(false);
   });
@@ -169,5 +190,44 @@ describe('useSocialLogin', () => {
     });
 
     expect(opts.loginWithSession).not.toHaveBeenCalled();
+  });
+
+  // ── F3 — OIDC nonce binding ───────────────────────────────────────
+  describe('F3 nonce', () => {
+    it('falls through with undefined nonce when /social-nonce request fails (rollout window)', async () => {
+      mockRequestSocialNonce.mockRejectedValue(new Error('network'));
+      mockSignInWithApple.mockResolvedValue({ provider: 'apple', idToken: 'apple-tok' });
+      mockSocialLogin.mockResolvedValue(makeAuthTokens());
+      const opts = defaultOptions();
+
+      const { result } = renderHook(() => useSocialLogin(opts));
+      await act(async () => {
+        await result.current.handleAppleSignIn();
+      });
+
+      // Apple SDK still invoked (no nonce field) and backend call carries no nonce.
+      expect(mockSignInWithApple).toHaveBeenCalledWith({ nonce: undefined });
+      expect(mockSocialLogin).toHaveBeenCalledWith('apple', 'apple-tok', undefined);
+    });
+
+    it('threads the fetched nonce end-to-end on Google flow', async () => {
+      mockRequestSocialNonce.mockResolvedValue({ nonce: 'specific-google-nonce' });
+      mockSignInWithGoogle.mockResolvedValue({
+        provider: 'google',
+        idToken: 'g-tok',
+        nonce: 'specific-google-nonce',
+      });
+      mockSocialLogin.mockResolvedValue(makeAuthTokens());
+      const opts = defaultOptions();
+
+      const { result } = renderHook(() => useSocialLogin(opts));
+      await act(async () => {
+        await result.current.handleGoogleSignIn();
+      });
+
+      expect(mockRequestSocialNonce).toHaveBeenCalledTimes(1);
+      expect(mockSignInWithGoogle).toHaveBeenCalledWith({ nonce: 'specific-google-nonce' });
+      expect(mockSocialLogin).toHaveBeenCalledWith('google', 'g-tok', 'specific-google-nonce');
+    });
   });
 });

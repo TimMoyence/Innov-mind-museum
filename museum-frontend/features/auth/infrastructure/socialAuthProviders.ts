@@ -8,10 +8,18 @@ import { createAppError } from '@/shared/types/AppError';
 /** Supported social identity providers for sign-in. */
 type SocialProvider = 'apple' | 'google';
 
-/** Result of a successful social sign-in containing the provider name and its identity token. */
+/**
+ * Result of a successful social sign-in containing the provider name, its identity token,
+ * and the OIDC nonce embedded in that token (if `signInWith*` was called with one).
+ *
+ * The nonce MUST be forwarded to `authService.socialLogin(provider, idToken, nonce)` so
+ * the backend can assert single-use replay protection (F3, 2026-04-30).
+ */
 interface SocialAuthResult {
   provider: SocialProvider;
   idToken: string;
+  /** Raw nonce echoed for backend verification — `undefined` only on legacy callers. */
+  nonce?: string;
 }
 
 const DEFAULT_GOOGLE_WEB_CLIENT_ID =
@@ -79,15 +87,24 @@ const assertGoogleIosUrlSchemeIsRegistered = async (): Promise<void> => {
 
 /**
  * Initiates the Apple Sign-In flow and returns the identity token.
- * @returns A {@link SocialAuthResult} with provider `'apple'` and the identity token.
+ *
+ * @param options.nonce - Optional OIDC nonce (F3). Apple's SDK hashes it with
+ *   SHA-256 client-side and embeds the digest as the `nonce` claim of the
+ *   returned ID token. Pass it through to `authService.socialLogin` so the
+ *   backend can verify a single-use binding.
+ * @returns A {@link SocialAuthResult} with provider `'apple'`, the identity token,
+ *   and the original (un-hashed) nonce echoed for backend verification.
  * @throws If the user cancels or Apple does not return a token.
  */
-export const signInWithApple = async (): Promise<SocialAuthResult> => {
+export const signInWithApple = async (
+  options: { nonce?: string } = {},
+): Promise<SocialAuthResult> => {
   const credential = await AppleAuthentication.signInAsync({
     requestedScopes: [
       AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
       AppleAuthentication.AppleAuthenticationScope.EMAIL,
     ],
+    ...(options.nonce ? { nonce: options.nonce } : {}),
   });
 
   if (!credential.identityToken) {
@@ -101,6 +118,7 @@ export const signInWithApple = async (): Promise<SocialAuthResult> => {
   return {
     provider: 'apple',
     idToken: credential.identityToken,
+    nonce: options.nonce,
   };
 };
 
@@ -144,11 +162,21 @@ const isOurSocialAuthError = (error: unknown): boolean => {
 
 /**
  * Initiates the Google Sign-In flow and returns the identity token.
- * @returns A {@link SocialAuthResult} with provider `'google'` and the ID token.
+ *
+ * @param options.nonce - Optional OIDC nonce (F3). **Currently ignored on Google**:
+ *   the legacy `GoogleSignin.signIn()` API exposed by `@react-native-google-signin`
+ *   v16 does not embed a nonce in the ID token (only the newer `GoogleOneTapSignIn`
+ *   flow does). Migrating to One Tap is tracked as a phase-2 follow-up; until then
+ *   the backend tolerates a missing Google nonce while `OIDC_NONCE_ENFORCE=false`.
+ *   Apple sign-in DOES enforce nonce binding today.
+ * @returns A {@link SocialAuthResult} with provider `'google'`, the ID token,
+ *   and `nonce: undefined` (see note above).
  * @throws An {@link AppError} with `kind: 'SocialAuth'` for cancellation, in-progress,
  *   missing Play Services, developer config errors, or any other native failure.
  */
-export const signInWithGoogle = async (): Promise<SocialAuthResult> => {
+export const signInWithGoogle = async (
+  _options: { nonce?: string } = {},
+): Promise<SocialAuthResult> => {
   if (isGoogleSignInInFlight) {
     throw createAppError({
       kind: 'SocialAuth',
@@ -179,6 +207,7 @@ export const signInWithGoogle = async (): Promise<SocialAuthResult> => {
     return {
       provider: 'google',
       idToken: response.data.idToken,
+      // nonce intentionally undefined — see JSDoc above + Phase 2 backlog.
     };
   } catch (rawError: unknown) {
     // Re-throw our own AppErrors untouched (e.g. google_in_progress, google_no_id_token,
