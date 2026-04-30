@@ -210,10 +210,13 @@ describe('SSRF matrix — ImageEnrichmentService does not fetch user-supplied UR
     const root = path.resolve(__dirname, '../../../src/modules/chat');
     const files = await collectTsFilesRec(root);
 
+    // matches imageUrl, imageURL, ImageUrl, ImageURL
+    // Caveat: regex is text-based, not AST-aware; commented-out `fetch(imageUrl)`
+    // would also match. Acceptable trade-off vs the cost of an AST visitor.
     const offenders: string[] = [];
     for (const file of files) {
       const src = await fs.readFile(file, 'utf-8');
-      const hasUnsafeFetch = /\bfetch\s*\(\s*[^)]*[Ii]mage[Uu]rl/.test(src);
+      const hasUnsafeFetch = /\bfetch\s*\(\s*[^)]*[Ii]mage[Uu][Rr][Ll]/.test(src);
       const hasGuardImport = /isSafeImageUrl|assertSafeImageUrl/.test(src);
       if (hasUnsafeFetch && !hasGuardImport) {
         offenders.push(path.relative(root, file));
@@ -231,10 +234,13 @@ describe('SSRF matrix — ImageEnrichmentService does not fetch user-supplied UR
     const root = path.resolve(__dirname, '__fixtures__');
     const files = await collectTsFilesRec(root);
 
+    // matches imageUrl, imageURL, ImageUrl, ImageURL
+    // Caveat: regex is text-based, not AST-aware; commented-out `fetch(imageUrl)`
+    // would also match. Acceptable trade-off vs the cost of an AST visitor.
     const offenders: string[] = [];
     for (const file of files) {
       const src = await fs.readFile(file, 'utf-8');
-      const hasUnsafeFetch = /\bfetch\s*\(\s*[^)]*[Ii]mage[Uu]rl/.test(src);
+      const hasUnsafeFetch = /\bfetch\s*\(\s*[^)]*[Ii]mage[Uu][Rr][Ll]/.test(src);
       const hasGuardImport = /isSafeImageUrl|assertSafeImageUrl/.test(src);
       if (hasUnsafeFetch && !hasGuardImport) {
         offenders.push(path.relative(root, file));

@@ -149,10 +149,11 @@ describe('ChatMessageBubble — role-based rendering', () => {
     expect(getByText('Hello, how can I help?')).toBeTruthy();
   });
 
-  // pins: assistant messages expose the report button (user moderation affordance)
+  // pins: assistant messages must expose a report affordance with a screen-reader-accessible
+  // label matching /report/i (AssistantMetaActions renders a flagging button for moderation)
   it('exposes a report affordance on assistant messages', () => {
     const onReport = jest.fn();
-    const { queryByText, queryByLabelText } = render(
+    const { getByLabelText } = render(
       <ChatMessageBubble
         message={{ ...baseMessage, role: 'assistant' as const }}
         locale="en"
@@ -160,11 +161,9 @@ describe('ChatMessageBubble — role-based rendering', () => {
         onReport={onReport}
       />,
     );
-    // Either text content or a labelled affordance must exist; both checks survive
-    // copy changes that keep the regression-relevant a11y label.
-    const reportable =
-      queryByText('Hello, how can I help?') !== null || queryByLabelText(/report/i) !== null;
-    expect(reportable).toBe(true);
+    // AssistantMetaActions always renders a report Pressable with accessibilityLabel
+    // matching the i18n key 'messageMenu.report' — must be present for moderation to work
+    expect(getByLabelText(/report/i)).toBeTruthy();
   });
 });
 
@@ -189,20 +188,18 @@ describe('ChatInput — disabled/sending state', () => {
     expect(isDisabled).toBeFalsy();
   });
 
-  // pins: while a message is in flight, the send affordance is disabled
-  // (prevents duplicate sends — user-visible regression if it breaks)
+  // pins: while a message is in flight, the send button is always rendered but disabled
+  // (prevents duplicate sends — Pressable is always mounted, isSending sets disabled={true})
   it('disables send when isSending is true', () => {
     const onSend = jest.fn();
     const { queryByRole } = render(
       <ChatInput value="Hello" onChangeText={jest.fn()} onSend={onSend} isSending={true} />,
     );
     const sendButton = queryByRole('button', { name: /send/i });
-    if (sendButton) {
-      expect(
-        sendButton.props.accessibilityState?.disabled ?? sendButton.props.disabled,
-      ).toBeTruthy();
-    }
-    // If no send button surfaces during the sending state at all, that's also acceptable
-    // (some implementations swap in a spinner). The contract is "user cannot trigger another send".
+    // button is always rendered (never hidden) — a missing button means a regression
+    expect(sendButton).not.toBeNull();
+    expect(
+      sendButton!.props.accessibilityState?.disabled ?? sendButton!.props.disabled,
+    ).toBeTruthy();
   });
 });
