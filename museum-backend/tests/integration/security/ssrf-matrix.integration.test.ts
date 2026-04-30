@@ -198,21 +198,49 @@ describe('SSRF matrix — Wikidata clients expose no URL override', () => {
 
 // ─────────────────────────────────────────────────────────────────────
 // Surface #4 — ImageEnrichmentService never fetches user-controlled URLs
-// (Document the contract — Wikidata imageUrl is forwarded after the
-// upstream `isSafeImageUrl` validator already covered in Surface #1.)
+// (Import-graph guard: scan src/modules/chat/ for unsafe fetch patterns.)
 // ─────────────────────────────────────────────────────────────────────
 
 describe('SSRF matrix — ImageEnrichmentService does not fetch user-supplied URLs', () => {
-  it('documents that wikidataImageUrl is stored, not fetched server-side', () => {
-    // This test is intentionally a contract assertion: verify the source
-    // file does NOT introduce a `fetch(wikidataImageUrl)` call. We do not
-    // import the module here to avoid coupling — instead, the upstream
-    // unit test (`tests/unit/chat/image-enrichment-service.test.ts`)
-    // exercises the path without any outbound HTTP.
-    //
-    // If a future commit adds direct fetching of `wikidataImageUrl`, add a
-    // surface for it here AND wire `isSafeImageUrl` (or the scraper-style
-    // DNS-resolving guard) before the fetch.
-    expect(true).toBe(true);
+  it('image enrichment must not fetch Wikidata image URL without SSRF guard', async () => {
+    const { collectTsFilesRec } = await import('../../helpers/import-graph/collect-ts-files');
+    const path = await import('node:path');
+    const { promises: fs } = await import('node:fs');
+
+    const root = path.resolve(__dirname, '../../../src/modules/chat');
+    const files = await collectTsFilesRec(root);
+
+    const offenders: string[] = [];
+    for (const file of files) {
+      const src = await fs.readFile(file, 'utf-8');
+      const hasUnsafeFetch = /\bfetch\s*\(\s*[^)]*[Ii]mage[Uu]rl/.test(src);
+      const hasGuardImport = /isSafeImageUrl|assertSafeImageUrl/.test(src);
+      if (hasUnsafeFetch && !hasGuardImport) {
+        offenders.push(path.relative(root, file));
+      }
+    }
+
+    expect(offenders).toEqual([]);
+  });
+
+  it('guard self-test: detects a synthetic violator fixture', async () => {
+    const { collectTsFilesRec } = await import('../../helpers/import-graph/collect-ts-files');
+    const path = await import('node:path');
+    const { promises: fs } = await import('node:fs');
+
+    const root = path.resolve(__dirname, '__fixtures__');
+    const files = await collectTsFilesRec(root);
+
+    const offenders: string[] = [];
+    for (const file of files) {
+      const src = await fs.readFile(file, 'utf-8');
+      const hasUnsafeFetch = /\bfetch\s*\(\s*[^)]*[Ii]mage[Uu]rl/.test(src);
+      const hasGuardImport = /isSafeImageUrl|assertSafeImageUrl/.test(src);
+      if (hasUnsafeFetch && !hasGuardImport) {
+        offenders.push(path.relative(root, file));
+      }
+    }
+
+    expect(offenders).toContain('SSRF_FIXTURE_violator.ts');
   });
 });

@@ -77,9 +77,12 @@ describe('Prompt injection — user input guardrail matrix', () => {
   // These payloads ARE known to pass the current keyword guardrail. The
   // structural defenses (system-prompt ordering, sanitizePromptInput on
   // context fields, LLM system-role boundary) limit blast radius, but the
-  // guardrail itself does not flag them. Documented here as TODO — revisit
-  // when we tighten the guardrail (e.g. fold homoglyphs, strip zero-width,
-  // base64-decode short candidate tokens).
+  // guardrail itself does not flag them.
+  //
+  // @TODO Phase 5: variant analysis — when the guardrail is hardened
+  //   (homoglyph folding, zero-width strip, base64 candidate decoding),
+  //   flip each `expect(allow).toBe(true)` to `.toBe(false)` and move the
+  //   key into EXPECTED_BLOCKED_INJECTIONS. Track in the Phase 5 spec.
   describe.skip('KNOWN BYPASSES — TODO variant analysis', () => {
     it.each(KNOWN_GUARDRAIL_BYPASSES)(
       'payload %s — TODO: current guardrail does not catch this',
