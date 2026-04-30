@@ -192,11 +192,18 @@ const listApiKeysUseCase = new ListApiKeysUseCase(apiKeyRepository);
 const grantConsentUseCase = new GrantConsentUseCase(userConsentRepository);
 const revokeConsentUseCase = new RevokeConsentUseCase(userConsentRepository);
 
-setApiKeyRepository(apiKeyRepository);
-setUserRoleResolver(async (userId) => {
-  const user = await userRepository.getUserById(userId);
-  return user?.role ?? null;
-});
+/**
+ * Registers the API-key middleware globals (apiKeyRepository + userRoleResolver).
+ * Called from `createApp()` so module import alone has no side effects on the
+ * shared middleware state — keeps test isolation predictable.
+ */
+const wireAuthMiddleware = (): void => {
+  setApiKeyRepository(apiKeyRepository);
+  setUserRoleResolver(async (userId) => {
+    const user = await userRepository.getUserById(userId);
+    return user?.role ?? null;
+  });
+};
 
 /** Marks the user's onboarding as completed in the database. */
 const completeOnboarding = async (userId: number): Promise<void> => {
@@ -230,4 +237,5 @@ export {
   disableMfaUseCase,
   challengeMfaUseCase,
   recoveryMfaUseCase,
+  wireAuthMiddleware,
 };

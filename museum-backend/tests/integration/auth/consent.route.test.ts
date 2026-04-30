@@ -68,6 +68,7 @@ jest.mock('@modules/auth/useCase', () => {
     grantConsentUseCase,
     revokeConsentUseCase,
     userConsentRepository: sharedRepo,
+    wireAuthMiddleware: jest.fn(),
   };
 });
 

@@ -25,6 +25,7 @@ export {
   grantConsentUseCase,
   revokeConsentUseCase,
   userConsentRepository,
+  wireAuthMiddleware,
 } from './useCase';
 
 // ── Domain types ─────────────────────────────────────────────────────────────

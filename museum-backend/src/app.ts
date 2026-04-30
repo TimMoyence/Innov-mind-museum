@@ -3,6 +3,7 @@ import cors from 'cors';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
 
+import { wireAuthMiddleware } from '@modules/auth';
 import { buildChatService } from '@modules/chat';
 import { museumRepository } from '@modules/museum';
 import { MemoryCacheService } from '@shared/cache/memory-cache.service';
@@ -142,6 +143,8 @@ function resolveCacheService(options: CreateAppOptions): CacheService {
  */
 export const createApp = (options: CreateAppOptions = {}): Express => {
   const app = express();
+
+  wireAuthMiddleware();
 
   applyGlobalMiddleware(app);
 
