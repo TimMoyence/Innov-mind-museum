@@ -1,8 +1,7 @@
 import { type Request, type Response, Router } from 'express';
 
-import { UserRepositoryPg } from '@modules/auth/adapters/secondary/user.repository.pg';
+import { userRepository } from '@modules/auth/useCase';
 import { unauthorized } from '@shared/errors/app.error';
-import { AppDataSource } from '@src/data/db/data-source';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
@@ -20,8 +19,7 @@ import type { ReviewAuthorProfile } from '../../../useCase/createReview.useCase'
 export type ReviewAuthorResolver = (userId: number) => Promise<ReviewAuthorProfile | null>;
 
 const defaultAuthorResolver: ReviewAuthorResolver = async (userId) => {
-  const repo = new UserRepositoryPg(AppDataSource);
-  const user = await repo.getUserById(userId);
+  const user = await userRepository.getUserById(userId);
   if (!user) return null;
   return {
     id: user.id,

@@ -2,7 +2,7 @@
  * Review module composition root.
  * Wires the PG repository to use-case classes and exports ready-to-use singletons.
  */
-import { UserRepositoryPg } from '@modules/auth/adapters/secondary/user.repository.pg';
+import { userRepository } from '@modules/auth/useCase';
 import { BrevoEmailService } from '@shared/email/brevo-email.service';
 import { env } from '@src/config/env';
 import { AppDataSource } from '@src/data/db/data-source';
@@ -21,7 +21,6 @@ import { ReviewRepositoryPg } from '../adapters/secondary/review.repository.pg';
 import type { ReviewAuthorLookup } from './moderateReview.useCase';
 
 const reviewRepository = new ReviewRepositoryPg(AppDataSource);
-const userRepository = new UserRepositoryPg(AppDataSource);
 const reviewModerationNotifier = env.brevoApiKey
   ? new EmailReviewModerationNotifier(new BrevoEmailService(env.brevoApiKey))
   : new NoopReviewModerationNotifier();
