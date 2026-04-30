@@ -4,7 +4,7 @@
  * Builds and tears down the chat module singleton. For lazy runtime accessors
  * (getters used at request time), import from `@modules/chat/wiring`.
  */
-import { chatModule } from './chat-module-singleton';
+import { getActiveChatModule } from './chat-module-singleton';
 
 import type { BuiltChatModule } from './chat-module';
 import type { OcrService } from './domain/ports/ocr.port';
@@ -20,17 +20,17 @@ export const buildChatService = (
   dataSource: DataSource,
   cache?: CacheService,
   museumRepository?: IMuseumRepository,
-): ChatService => chatModule.build(dataSource, cache, museumRepository).chatService;
+): ChatService => getActiveChatModule().build(dataSource, cache, museumRepository).chatService;
 
 /** Returns the shared OCR service instance. Throws if module is not built. */
-export const getOcrService = (): OcrService => chatModule.getBuilt().ocrService;
+export const getOcrService = (): OcrService => getActiveChatModule().getBuilt().ocrService;
 
 /** Stops the periodic art-keywords refresh timer. Call during graceful shutdown. */
 export const stopArtKeywordsRefresh = (): void => {
-  chatModule.stopArtKeywordsRefresh();
+  getActiveChatModule().stopArtKeywordsRefresh();
 };
 
 /** Gracefully shuts down the knowledge extraction BullMQ worker. */
 export const stopKnowledgeExtraction = async (): Promise<void> => {
-  await chatModule.stopKnowledgeExtraction();
+  await getActiveChatModule().stopKnowledgeExtraction();
 };

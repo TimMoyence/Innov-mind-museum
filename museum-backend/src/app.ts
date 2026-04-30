@@ -5,6 +5,7 @@ import helmet from 'helmet';
 
 import { wireAuthMiddleware } from '@modules/auth';
 import { buildChatService } from '@modules/chat';
+import { setActiveChatModule } from '@modules/chat/chat-module-singleton';
 import { museumRepository } from '@modules/museum';
 import { MemoryCacheService } from '@shared/cache/memory-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
@@ -22,11 +23,19 @@ import { requestIdMiddleware } from '@src/helpers/middleware/request-id.middlewa
 import { requestLoggerMiddleware } from '@src/helpers/middleware/request-logger.middleware';
 import { setupSwagger } from '@src/helpers/swagger';
 
+import type { ChatModule } from '@modules/chat/chat-module';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /** Optional overrides for dependency injection, primarily used in tests. */
 interface CreateAppOptions {
   chatService?: ReturnType<typeof buildChatService>;
+  /**
+   * When set, replaces the active chat module accessed by `wiring.ts` getters
+   * (used by auth proxies for image cleanup + GDPR export). Lets tests verify
+   * paths that cross the auth/chat boundary without mocking the entire auth
+   * module factory.
+   */
+  chatModule?: ChatModule;
   healthCheck?: () => Promise<{ database: 'up' | 'down' }>;
   cacheService?: CacheService;
 }
@@ -143,6 +152,10 @@ function resolveCacheService(options: CreateAppOptions): CacheService {
  */
 export const createApp = (options: CreateAppOptions = {}): Express => {
   const app = express();
+
+  if (options.chatModule) {
+    setActiveChatModule(options.chatModule);
+  }
 
   wireAuthMiddleware();
 
