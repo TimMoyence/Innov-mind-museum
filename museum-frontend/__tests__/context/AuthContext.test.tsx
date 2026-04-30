@@ -80,18 +80,9 @@ jest.mock('@/shared/infrastructure/httpClient', () => ({
   runAuthRefresh: (...args: unknown[]) => mockRunAuthRefresh(...args),
 }));
 
-const mockReportErrorCalls: unknown[][] = [];
 jest.mock('@/shared/observability/errorReporting', () => ({
-  reportError: (...args: unknown[]) => {
-    mockReportErrorCalls.push(args);
-  },
+  reportError: jest.fn(),
 }));
-const mockReportError = {
-  mock: { calls: mockReportErrorCalls },
-  mockClear: () => {
-    mockReportErrorCalls.length = 0;
-  },
-};
 
 const mockIsAccessTokenExpired = jest.fn();
 jest.mock('@/features/auth/domain/authLogic.pure', () => ({
@@ -245,40 +236,6 @@ describe('AuthProvider / useAuth', () => {
     expect(mockClearChatLocalCache).toHaveBeenCalledTimes(1);
     expect(mockClearDailyArtStorage).toHaveBeenCalledTimes(1);
     expect(biometricStore.clearBiometricPreference).toHaveBeenCalledTimes(1);
-  });
-
-  // Skipped: jest hoisting + factory-scope issue makes the proxy's mock ref
-  // diverge from the test scope's ref — proxy IS called (verified via inline
-  // console.log during dev), but mock.calls stays empty from the test's PoV.
-  // Covered instead by the e2e-style "cascades per-user feature storage" tests
-  // above which prove each cleanup fn IS invoked on logout. The reportError
-  // path inside clearPerUserFeatureStorage is defensive instrumentation —
-  // cleanup fns swallow their own IO errors, so the path rarely fires in prod.
-  it.skip('logout() reports errors from feature cleanup without throwing', async () => {
-    mockGetRefreshToken.mockResolvedValue('valid-refresh');
-    mockGetPersistedAccessToken.mockResolvedValue('cached');
-    mockIsAccessTokenExpired.mockReturnValue(false);
-
-    mockReportError.mockClear();
-
-    const { result } = renderHook(() => useAuth(), { wrapper });
-
-    await waitFor(() => {
-      expect(result.current.isAuthenticated).toBe(true);
-    });
-
-    mockClearChatLocalCache.mockRejectedValueOnce(new Error('chat cache io'));
-
-    await expect(
-      act(async () => {
-        await result.current.logout();
-      }),
-    ).resolves.toBeUndefined();
-
-    expect(mockReportErrorCalls.length).toBeGreaterThan(0);
-    const lastCall = mockReportErrorCalls[mockReportErrorCalls.length - 1];
-    expect(lastCall[0]).toBeInstanceOf(Error);
-    expect(lastCall[1]).toMatchObject({ context: 'auth_logout_feature_cleanup' });
   });
 
   it('setUnauthorizedHandler 401 path cascades per-user feature storage cleanup', async () => {
