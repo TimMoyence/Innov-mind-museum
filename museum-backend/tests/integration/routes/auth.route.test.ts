@@ -72,6 +72,7 @@ jest.mock('@modules/auth/useCase', () => {
     revokeApiKeyUseCase: { execute: jest.fn() },
     listApiKeysUseCase: { execute: jest.fn() },
     userRepository: { getUserById: (...args: unknown[]) => mockGetUserById(...args) },
+    wireAuthMiddleware: jest.fn(),
   };
 });
 
@@ -591,7 +592,14 @@ describe('Auth Routes — HTTP Layer', () => {
       const exportResult = {
         exportedAt: '2026-04-26T10:00:00.000Z',
         schemaVersion: '1' as const,
-        user: { id: 1, email: 'user@test.com', role: 'visitor', createdAt: '2026-01-01', lastLoginAt: null, locale: 'en' },
+        user: {
+          id: 1,
+          email: 'user@test.com',
+          role: 'visitor',
+          createdAt: '2026-01-01',
+          lastLoginAt: null,
+          locale: 'en',
+        },
         consent: { location_to_llm: false },
         chatSessions: [],
         savedArtworks: [],
@@ -607,6 +615,116 @@ describe('Auth Routes — HTTP Layer', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual(exportResult);
+    });
+  });
+
+  // ── F1 — Rate-limit /refresh + /social-login ────────────────────
+  // Audit 2026-04-30: both endpoints lacked rate-limit middleware. Refresh keyed by IP+familyId
+  // (per-family throttle so a stolen family cannot enable >30 rotations/min from one network);
+  // social-login keyed by IP+provider (per-provider throttle).
+
+  describe('Rate-limit — F1 /refresh + /social-login', () => {
+    const stubRefreshToken = (familyId: string): string => {
+      const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString(
+        'base64url',
+      );
+      const payload = Buffer.from(JSON.stringify({ familyId, sub: '1', type: 'refresh' })).toString(
+        'base64url',
+      );
+      return `${header}.${payload}.signature`;
+    };
+
+    it('POST /api/auth/refresh returns 429 after limit exceeded for same IP+family', async () => {
+      mockRefresh.mockResolvedValue({ accessToken: 'at', refreshToken: 'rt' });
+      const tok = stubRefreshToken('family-A');
+      for (let i = 0; i < 30; i += 1) {
+        const ok = await request(app).post('/api/auth/refresh').send({ refreshToken: tok });
+        expect(ok.status).toBe(200);
+      }
+      const blocked = await request(app).post('/api/auth/refresh').send({ refreshToken: tok });
+      expect(blocked.status).toBe(429);
+      expect(blocked.headers['retry-after']).toBeDefined();
+    });
+
+    it('POST /api/auth/refresh isolates buckets between different families on same IP', async () => {
+      mockRefresh.mockResolvedValue({ accessToken: 'at', refreshToken: 'rt' });
+      const famA = stubRefreshToken('family-A');
+      const famB = stubRefreshToken('family-B');
+      for (let i = 0; i < 30; i += 1) {
+        await request(app).post('/api/auth/refresh').send({ refreshToken: famA });
+      }
+      const stillOk = await request(app).post('/api/auth/refresh').send({ refreshToken: famB });
+      expect(stillOk.status).toBe(200);
+    });
+
+    it('POST /api/auth/refresh falls back to IP-only key when token is malformed', async () => {
+      mockRefresh.mockResolvedValue({ accessToken: 'at', refreshToken: 'rt' });
+      for (let i = 0; i < 30; i += 1) {
+        const ok = await request(app)
+          .post('/api/auth/refresh')
+          .send({ refreshToken: 'malformed-string' });
+        expect(ok.status).toBe(200);
+      }
+      const blocked = await request(app)
+        .post('/api/auth/refresh')
+        .send({ refreshToken: 'malformed-string' });
+      expect(blocked.status).toBe(429);
+    });
+
+    it('POST /api/auth/refresh falls back to IP-only key when JWT payload is non-JSON', async () => {
+      mockRefresh.mockResolvedValue({ accessToken: 'at', refreshToken: 'rt' });
+      // Valid JWT structure (3 segments) but payload base64 decodes to non-JSON → catch branch.
+      const header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString('base64url');
+      const badPayload = Buffer.from('not-json-text').toString('base64url');
+      const malformed = `${header}.${badPayload}.sig`;
+      const res = await request(app).post('/api/auth/refresh').send({ refreshToken: malformed });
+      expect(res.status).toBe(200);
+    });
+
+    it('POST /api/auth/refresh: limiter counts invalid bodies toward IP bucket', async () => {
+      // Limiter runs before validateBody so probing with missing refreshToken still drains bucket.
+      for (let i = 0; i < 30; i += 1) {
+        const res = await request(app).post('/api/auth/refresh').send({});
+        expect(res.status).toBe(400);
+      }
+      const blocked = await request(app).post('/api/auth/refresh').send({});
+      expect(blocked.status).toBe(429);
+    });
+
+    it('POST /api/auth/social-login returns 429 after limit exceeded for same IP+provider', async () => {
+      mockSocialLogin.mockResolvedValue({
+        accessToken: 'at',
+        refreshToken: 'rt',
+        user: { id: 1, email: 'a@b.c' },
+      });
+      for (let i = 0; i < 10; i += 1) {
+        const ok = await request(app)
+          .post('/api/auth/social-login')
+          .send({ provider: 'google', idToken: 'tok' });
+        expect(ok.status).toBe(200);
+      }
+      const blocked = await request(app)
+        .post('/api/auth/social-login')
+        .send({ provider: 'google', idToken: 'tok' });
+      expect(blocked.status).toBe(429);
+      expect(blocked.headers['retry-after']).toBeDefined();
+    });
+
+    it('POST /api/auth/social-login isolates buckets between different providers on same IP', async () => {
+      mockSocialLogin.mockResolvedValue({
+        accessToken: 'at',
+        refreshToken: 'rt',
+        user: { id: 1, email: 'a@b.c' },
+      });
+      for (let i = 0; i < 10; i += 1) {
+        await request(app)
+          .post('/api/auth/social-login')
+          .send({ provider: 'google', idToken: 'tok' });
+      }
+      const stillOk = await request(app)
+        .post('/api/auth/social-login')
+        .send({ provider: 'apple', idToken: 'tok' });
+      expect(stillOk.status).toBe(200);
     });
   });
 });

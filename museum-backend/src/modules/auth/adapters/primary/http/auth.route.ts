@@ -113,6 +113,49 @@ const loginLimiter = createRateLimitMiddleware({
   keyGenerator: byIp,
 });
 
+// F1 — refresh limiter keyed by IP+familyId. Decoded best-effort from the JWT body
+// without verifying the signature (verification happens later in the handler). Falls
+// back to IP-only when the token is malformed so a parse failure cannot bypass the
+// limit.
+const decodeFamilyIdUnsafe = (token: string | undefined): string | null => {
+  if (typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as {
+      familyId?: unknown;
+    };
+    return typeof payload.familyId === 'string' ? payload.familyId : null;
+  } catch {
+    return null;
+  }
+};
+
+const refreshLimiter = createRateLimitMiddleware({
+  limit: toPositiveInt(process.env.AUTH_REFRESH_RATE_LIMIT, 30),
+  windowMs: toPositiveInt(process.env.AUTH_REFRESH_RATE_WINDOW_MS, 60_000),
+  keyGenerator: (req) => {
+    const ip = byIp(req);
+    const refreshToken = (req.body as { refreshToken?: unknown } | undefined)?.refreshToken;
+    const familyId = decodeFamilyIdUnsafe(
+      typeof refreshToken === 'string' ? refreshToken : undefined,
+    );
+    return familyId ? `${ip}:${familyId}` : ip;
+  },
+  bucketName: 'auth-refresh',
+});
+
+const socialLoginLimiter = createRateLimitMiddleware({
+  limit: toPositiveInt(process.env.AUTH_SOCIAL_LOGIN_RATE_LIMIT, 10),
+  windowMs: toPositiveInt(process.env.AUTH_SOCIAL_LOGIN_RATE_WINDOW_MS, 60_000),
+  keyGenerator: (req) => {
+    const ip = byIp(req);
+    const provider = (req.body as { provider?: unknown } | undefined)?.provider;
+    return typeof provider === 'string' ? `${ip}:${provider}` : ip;
+  },
+  bucketName: 'auth-social-login',
+});
+
 authRouter.post(
   '/register',
   registerLimiter,
@@ -213,11 +256,16 @@ authRouter.post(
   },
 );
 
-authRouter.post('/refresh', validateBody(refreshSchema), async (req: Request, res: Response) => {
-  const { refreshToken } = req.body;
-  const session = await authSessionService.refresh(refreshToken);
-  res.status(200).json(session);
-});
+authRouter.post(
+  '/refresh',
+  refreshLimiter,
+  validateBody(refreshSchema),
+  async (req: Request, res: Response) => {
+    const { refreshToken } = req.body;
+    const session = await authSessionService.refresh(refreshToken);
+    res.status(200).json(session);
+  },
+);
 
 authRouter.post('/logout', validateBody(logoutSchema), async (req: Request, res: Response) => {
   const { refreshToken } = req.body;
@@ -275,6 +323,7 @@ authRouter.patch(
 
 authRouter.post(
   '/social-login',
+  socialLoginLimiter,
   validateBody(socialLoginSchema),
   async (req: Request, res: Response) => {
     const { provider, idToken } = req.body;
