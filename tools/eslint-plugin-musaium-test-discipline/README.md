@@ -32,3 +32,7 @@ See `docs/superpowers/specs/2026-04-30-phase0-test-truth-foundations-design.md` 
 ## Grandfather Baseline
 
 Current violators are tracked in `baselines/no-inline-test-entities.json`. The baseline length is capped by a CI test — it can only shrink as Phase 7 migrates files to factories.
+
+## Known limitations
+
+- The rule resolves entity types by direct identifier name only. Aliases (`type U = User; const u: U = {...}`) bypass detection. Acceptable trade-off vs. the cost of a full type-checker integration; revisit when Phase 7 migration completes if needed.

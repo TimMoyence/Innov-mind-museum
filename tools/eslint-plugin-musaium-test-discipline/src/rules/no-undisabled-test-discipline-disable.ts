@@ -45,7 +45,8 @@ export default createRule<[], MessageIds>({
             continue;
           }
 
-          const value = comment.value.trim();
+          // Normalise to single-line so multiline block comments don't bypass matching
+          const value = comment.value.replace(/\s+/g, ' ').trim();
 
           // Match eslint-disable or eslint-disable-next-line with rule names
           const disableMatch = value.match(
@@ -63,9 +64,15 @@ export default createRule<[], MessageIds>({
           );
           if (!targetsOurPlugin) continue;
 
-          // Require both Justification: and Approved-by:
-          const hasJustification = /Justification:\s*\S/.test(justification);
-          const hasApprovedBy = /Approved-by:\s*\S/.test(justification);
+          // Require Justification: with ≥20 chars body (stopped before Approved-by:),
+          // and Approved-by: with ≥1 char
+          const justificationMatch = justification.match(
+            /Justification:\s*(.*?)(?:\s+Approved-by:|$)/,
+          );
+          const approvedByMatch = justification.match(/Approved-by:\s*([^\n]*)/);
+          const hasJustification =
+            !!justificationMatch && justificationMatch[1].trim().length >= 20;
+          const hasApprovedBy = !!approvedByMatch && approvedByMatch[1].trim().length >= 1;
 
           if (!hasJustification || !hasApprovedBy) {
             context.report({

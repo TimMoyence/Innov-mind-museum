@@ -5,7 +5,6 @@ type Options = [
     entities?: string[];
     factoryHints?: Record<string, string>;
     helperPaths?: string[];
-    factoryPrefixes?: string[];
   },
 ];
 
@@ -47,7 +46,6 @@ export default createRule<Options, MessageIds>({
           entities: { type: 'array', items: { type: 'string' } },
           factoryHints: { type: 'object', additionalProperties: { type: 'string' } },
           helperPaths: { type: 'array', items: { type: 'string' } },
-          factoryPrefixes: { type: 'array', items: { type: 'string' } },
         },
         additionalProperties: false,
       },

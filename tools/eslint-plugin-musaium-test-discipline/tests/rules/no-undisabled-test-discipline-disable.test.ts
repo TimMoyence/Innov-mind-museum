@@ -40,5 +40,25 @@ ruleTester.run('no-undisabled-test-discipline-disable', rule, {
       code: '/* eslint-disable musaium-test-discipline/no-inline-test-entities */ const u = { id: 1 } as User;',
       errors: [{ messageId: 'requireJustification' }],
     },
+    // Finding 5a: Justification present but Approved-by missing
+    {
+      code: '// eslint-disable-next-line musaium-test-discipline/no-inline-test-entities -- Justification: missing approver field in this comment\nconst u = { id: 1 } as User;',
+      errors: [{ messageId: 'requireJustification' }],
+    },
+    // Finding 5b: Approved-by present but Justification missing
+    {
+      code: '// eslint-disable-next-line musaium-test-discipline/no-inline-test-entities -- Approved-by: tim, missing justification reason entirely\nconst u = { id: 1 } as User;',
+      errors: [{ messageId: 'requireJustification' }],
+    },
+    // Finding 3: Multiline block comment — dash-dash on line 2 should not bypass detection
+    {
+      code: '/* eslint-disable musaium-test-discipline/no-inline-test-entities\n-- no justification here */ const u = { id: 1 } as User;',
+      errors: [{ messageId: 'requireJustification' }],
+    },
+    // Finding 6: Justification body shorter than 20 chars should fire
+    {
+      code: '// eslint-disable-next-line musaium-test-discipline/no-inline-test-entities -- Justification: ok. Approved-by: tim\nconst u = { id: 1 } as User;',
+      errors: [{ messageId: 'requireJustification' }],
+    },
   ],
 });
