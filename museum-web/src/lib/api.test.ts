@@ -25,25 +25,35 @@ function mockFetch(response: Partial<Response> & { json?: () => Promise<unknown>
   return vi.spyOn(globalThis, 'fetch').mockResolvedValue(defaults as Response);
 }
 
+/** Sets a csrf_token cookie on the jsdom `document` for the duration of a test. */
+function setCsrfCookie(value: string): void {
+  document.cookie = `csrf_token=${value}; Path=/`;
+}
+
+function clearCsrfCookie(): void {
+  document.cookie = 'csrf_token=; Path=/; Max-Age=0';
+}
+
 // ---------------------------------------------------------------------------
-// Tests
+// F7 (2026-04-30) — cookie auth + CSRF double-submit
 // ---------------------------------------------------------------------------
 
-describe('api.ts — token store', () => {
+describe('api.ts — token store (F7 backward-compat shim)', () => {
   beforeEach(() => {
     clearTokens();
+    clearCsrfCookie();
   });
 
-  it('getAccessToken returns null when no token is set', () => {
+  it('getAccessToken returns null (cookies are HttpOnly, JS cannot read)', () => {
     expect(getAccessToken()).toBeNull();
   });
 
-  it('setTokens stores the access token', () => {
+  it('setTokens is a no-op post-F7 (tokens live in HttpOnly cookies)', () => {
     setTokens('access-123', 'refresh-456');
-    expect(getAccessToken()).toBe('access-123');
+    expect(getAccessToken()).toBeNull();
   });
 
-  it('clearTokens resets the access token to null', () => {
+  it('clearTokens is a no-op post-F7 (cookie clearing happens server-side via /logout)', () => {
     setTokens('a', 'b');
     clearTokens();
     expect(getAccessToken()).toBeNull();
@@ -68,6 +78,7 @@ describe('api.ts — ApiError', () => {
 describe('api.ts — request functions', () => {
   beforeEach(() => {
     clearTokens();
+    clearCsrfCookie();
     vi.restoreAllMocks();
   });
 
@@ -102,25 +113,63 @@ describe('api.ts — request functions', () => {
     expect((init as RequestInit).method).toBe('PATCH');
   });
 
-  it('attaches Authorization header when token is set', async () => {
-    setTokens('my-token', 'my-refresh');
+  it('every request uses credentials: include so HttpOnly cookies flow', async () => {
+    const spy = mockFetch({ json: () => Promise.resolve({}) });
+
+    await apiGet('/api/me');
+
+    const [, init] = spy.mock.calls[0];
+    expect((init as RequestInit).credentials).toBe('include');
+  });
+
+  it('does NOT attach Authorization header — cookie auth replaces Bearer (F7)', async () => {
     const spy = mockFetch({ json: () => Promise.resolve({}) });
 
     await apiGet('/api/me');
 
     const [, init] = spy.mock.calls[0];
     const headers = (init as RequestInit).headers as Record<string, string>;
-    expect(headers.Authorization).toBe('Bearer my-token');
+    expect(headers.Authorization).toBeUndefined();
   });
 
-  it('does not attach Authorization header when no token', async () => {
+  it('attaches X-CSRF-Token header on POST when csrf_token cookie is present', async () => {
+    setCsrfCookie('abc-csrf-123');
     const spy = mockFetch({ json: () => Promise.resolve({}) });
 
-    await apiGet('/api/public');
+    await apiPost('/api/items', { x: 1 });
 
     const [, init] = spy.mock.calls[0];
     const headers = (init as RequestInit).headers as Record<string, string>;
-    expect(headers.Authorization).toBeUndefined();
+    expect(headers['X-CSRF-Token']).toBe('abc-csrf-123');
+  });
+
+  it('attaches X-CSRF-Token on PATCH (state-changing method)', async () => {
+    setCsrfCookie('csrf-patch');
+    const spy = mockFetch({ json: () => Promise.resolve({}) });
+
+    await apiPatch('/api/items/1', { x: 2 });
+
+    const headers = (spy.mock.calls[0][1] as RequestInit).headers as Record<string, string>;
+    expect(headers['X-CSRF-Token']).toBe('csrf-patch');
+  });
+
+  it('does NOT attach X-CSRF-Token on GET (state-changing methods only)', async () => {
+    setCsrfCookie('should-not-appear');
+    const spy = mockFetch({ json: () => Promise.resolve({}) });
+
+    await apiGet('/api/items');
+
+    const headers = (spy.mock.calls[0][1] as RequestInit).headers as Record<string, string>;
+    expect(headers['X-CSRF-Token']).toBeUndefined();
+  });
+
+  it('omits X-CSRF-Token on POST when no csrf_token cookie is set (rollout window)', async () => {
+    const spy = mockFetch({ json: () => Promise.resolve({}) });
+
+    await apiPost('/api/items', {});
+
+    const headers = (spy.mock.calls[0][1] as RequestInit).headers as Record<string, string>;
+    expect(headers['X-CSRF-Token']).toBeUndefined();
   });
 
   it('throws ApiError on non-ok response', async () => {
@@ -146,16 +195,17 @@ describe('api.ts — request functions', () => {
     expect(result).toBeUndefined();
   });
 
-  it('calls logout handler on 401 without refresh token', async () => {
+  it('calls logout handler on 401 when refresh also fails', async () => {
     const logoutSpy = vi.fn();
     registerLogoutHandler(logoutSpy);
 
-    mockFetch({
+    // First call → 401, second call (refresh) → 401, then onLogout fires.
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: false,
       status: 401,
       statusText: 'Unauthorized',
       json: () => Promise.resolve({}),
-    });
+    } as Response);
 
     await expect(apiGet('/api/protected')).rejects.toThrow(ApiError);
     expect(logoutSpy).toHaveBeenCalledOnce();
