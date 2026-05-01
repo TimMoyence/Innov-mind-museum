@@ -179,3 +179,43 @@ export const buttonTokens = {
 
 export type ButtonVariant = keyof typeof buttonTokens.variants;
 export type ButtonSize = keyof typeof buttonTokens.sizes;
+
+// Component tokens — empty-state primitive (Spec B / T35)
+export const emptyStateTokens = {
+  variants: {
+    chat: {
+      iconName: 'chatbubble-ellipses-outline',
+      iconColor: '#2563EB',
+      iconBg: '#EAF2FF',
+    },
+    museums: {
+      iconName: 'business-outline',
+      iconColor: '#0EA5E9',
+      iconBg: '#E0F2FE',
+    },
+    reviews: {
+      iconName: 'star-outline',
+      iconColor: '#D4A853',
+      iconBg: '#FEF9EC',
+    },
+    dailyArt: {
+      iconName: 'image-outline',
+      iconColor: '#7C3AED',
+      iconBg: '#EDE9FE',
+    },
+    conversations: {
+      iconName: 'albums-outline',
+      iconColor: '#0EA5E9',
+      iconBg: '#E0F2FE',
+    },
+  },
+  layout: {
+    padding: 32,
+    gap: 16,
+    iconSize: 80,
+    titleSize: 18,
+    descriptionSize: 14,
+  },
+} as const;
+
+export type EmptyStateVariant = keyof typeof emptyStateTokens.variants;
