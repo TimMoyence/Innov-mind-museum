@@ -11,22 +11,7 @@
       "approved_by": "phase1-spec-§5"
     },
     {
-      "path": "museum-backend/tests/integration/admin/admin-schemas.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
       "path": "museum-backend/tests/integration/admin/audit-breach.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
-      "path": "museum-backend/tests/integration/admin/rbac-matrix.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
-      "path": "museum-backend/tests/integration/auth/consent.route.test.ts",
       "reason": "phase1-migration-pending — remove on file migration",
       "approved_by": "phase1-spec-§5"
     },
@@ -71,17 +56,7 @@
       "approved_by": "phase1-spec-§5"
     },
     {
-      "path": "museum-backend/tests/integration/routes/admin.route.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
       "path": "museum-backend/tests/integration/routes/auth.route.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
-      "path": "museum-backend/tests/integration/routes/chat.route.test.ts",
       "reason": "phase1-migration-pending — remove on file migration",
       "approved_by": "phase1-spec-§5"
     },
@@ -102,11 +77,6 @@
     },
     {
       "path": "museum-backend/tests/integration/routes/support.route.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
-      "path": "museum-backend/tests/integration/security/stored-xss.test.ts",
       "reason": "phase1-migration-pending — remove on file migration",
       "approved_by": "phase1-spec-§5"
     }
