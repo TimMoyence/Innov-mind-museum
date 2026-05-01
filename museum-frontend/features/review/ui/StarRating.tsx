@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
@@ -35,7 +36,10 @@ export const StarRating = ({
           return (
             <Pressable
               key={star}
-              onPress={() => onRatingChange?.(star)}
+              onPress={() => {
+                void Haptics.selectionAsync();
+                onRatingChange?.(star);
+              }}
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={`${String(star)} star${star > 1 ? 's' : ''}`}
