@@ -11,8 +11,14 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  * `totp_secrets` / `user_consents`, `recovery_codes` jsonb cast, CONCURRENTLY
  * index recreation, `ChatSession.version` default removal). Bundling that
  * cleanup here would expand scope beyond Spec A T1.2 and risk conflicts with
- * parallel agents' work. The body below matches the exact SQL the CLI would
- * have produced for the `intent` column alone.
+ * parallel agents' work.
+ *
+ * Hand-written deviation: adds `IF NOT EXISTS` for idempotency, matching the
+ * convention established in the two prior `chat_sessions` migrations
+ * (`AddChatSessionPurgedAt`, `AddRefreshTokenLastRotatedAt`). Protects against
+ * partially-migrated dev DB states (e.g. crash between T1.1 and T1.2, or
+ * column hand-created during development). `down()` keeps a bare `DROP COLUMN`
+ * — revert should fail loudly if state is unexpected.
  *
  * Spec: docs/superpowers/specs/2026-04-30-spec-a-cleanup-decisions-design.md
  */
@@ -27,7 +33,7 @@ export class AddChatSessionIntent1777614158533 implements MigrationInterface {
    */
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE "chat_sessions" ADD "intent" character varying(16) NOT NULL DEFAULT 'default'`,
+      `ALTER TABLE "chat_sessions" ADD COLUMN IF NOT EXISTS "intent" character varying(16) NOT NULL DEFAULT 'default'`,
     );
   }
 
