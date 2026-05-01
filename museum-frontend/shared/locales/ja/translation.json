@@ -245,33 +245,21 @@
     "next": "次へ",
     "get_started": "はじめる",
     "v2": {
-      "slide1": {
-        "title": "Musaiumが美術を語る",
-        "subtitle": "会話の雰囲気を一目でチェック。",
-        "demo_user": "モナ・リザについて教えて",
-        "demo_assistant": "1503年頃にレオナルド・ダ・ヴィンチが描いたモナ・リザは、とらえどころのない微笑で人々を魅了します。スフマート技法の秘密を知りたいですか？"
+      "greeting": {
+        "title": "Musaiumへようこそ",
+        "description": "あなたのAI美術館コンパニオン。撮影、質問、アート散歩。"
       },
-      "slide2": {
-        "title": "見て、聴いて、語る",
-        "subtitle": "ポケットの中で美術を楽しむ3つの方法。",
-        "pillar_photo": "作品を撮影すると、その物語が届きます。",
-        "pillar_photo_a11y": "写真の柱：作品を撮影すると、その物語が届きます。",
-        "pillar_voice": "ギャラリーでも声で質問できます。",
-        "pillar_voice_a11y": "音声の柱：ギャラリーでも声で質問できます。",
-        "pillar_guide": "美術館内の充実したコースをたどります。",
-        "pillar_guide_a11y": "ガイドの柱：美術館内の充実したコースをたどります。"
+      "museumMode": {
+        "title": "ミュージアムモード",
+        "description": "位置情報に対応。今いる美術館に根ざした回答が得られます。"
       },
-      "slide3": {
-        "title": "何から始めますか？",
-        "subtitle": "きっかけを選べば、あとはMusaiumにお任せ。",
-        "chip_museum_label": "近くの美術館",
-        "chip_museum_prompt": "近くの美術館を探して、最初に見るべきものを教えて。",
-        "chip_masterpiece_label": "名作について教えて",
-        "chip_masterpiece_prompt": "象徴的な作品を選んで、その物語を案内して。",
-        "chip_tour_label": "ガイドツアーを始める",
-        "chip_tour_prompt": "私が気に入りそうな美術館の短いガイドツアーを始めて。",
-        "skip_cta": "自分で探す",
-        "skip_cta_a11y": "提案をスキップしてホーム画面へ"
+      "cameraIntent": {
+        "title": "作品を撮影する",
+        "description": "写真を撮ってください。Musaiumが識別し、解説し、文脈を示します。"
+      },
+      "walkIntent": {
+        "title": "ガイド付き散歩",
+        "description": "散歩を始めましょう。次の作品の提案付きガイドツアーをお届けします。"
       }
     }
   },

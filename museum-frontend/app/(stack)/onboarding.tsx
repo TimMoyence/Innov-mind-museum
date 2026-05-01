@@ -1,6 +1,5 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef } from 'react';
 import {
-  Alert,
   Dimensions,
   FlatList,
   Pressable,
@@ -13,36 +12,31 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useAuth } from '@/features/auth/application/AuthContext';
-import { useStartConversation } from '@/features/chat/application/useStartConversation';
 import { useOnboarding } from '@/features/onboarding/application/useOnboarding';
-import { ChatDemoSlide } from '@/features/onboarding/ui/ChatDemoSlide';
-import {
-  FirstPromptChipsSlide,
-  type ChipDefinition,
-} from '@/features/onboarding/ui/FirstPromptChipsSlide';
+import { CameraIntentSlide } from '@/features/onboarding/ui/CameraIntentSlide';
+import { GreetingSlide } from '@/features/onboarding/ui/GreetingSlide';
+import { MuseumModeSlide } from '@/features/onboarding/ui/MuseumModeSlide';
 import { StepIndicator } from '@/features/onboarding/ui/StepIndicator';
-import { ValuePropSlide } from '@/features/onboarding/ui/ValuePropSlide';
+import { WalkIntentSlide } from '@/features/onboarding/ui/WalkIntentSlide';
+import { useUserProfileStore } from '@/features/settings/infrastructure/userProfileStore';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic } from '@/shared/ui/tokens';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const SLIDE_COUNT = 3;
+const SLIDE_COUNT = 4;
 
-type SlideKey = 'demo' | 'value' | 'chips';
+type SlideKey = 'greeting' | 'museumMode' | 'cameraIntent' | 'walkIntent';
 
-/** Renders the Onboarding v2 carousel: animated chat demo → value prop → first-prompt chips. */
+/** Renders the Onboarding v2 Spec B carousel: Greeting → MuseumMode → CameraIntent → WalkIntent. */
 export default function OnboardingScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList<SlideKey>>(null);
-  const { markOnboardingComplete } = useAuth();
-  const { startConversation } = useStartConversation();
+  const setHasSeenOnboarding = useUserProfileStore((s) => s.setHasSeenOnboarding);
   const { currentStep, goToStep, next, isLast } = useOnboarding(SLIDE_COUNT);
-  const [isCompleting, setIsCompleting] = useState(false);
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -56,64 +50,38 @@ export default function OnboardingScreen() {
   // eslint-disable-next-line react-hooks/refs -- stable config ref pattern
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
-  const completeOnboarding = useCallback(async () => {
-    if (isCompleting) return false;
-    setIsCompleting(true);
-    try {
-      await markOnboardingComplete();
-      return true;
-    } catch {
-      setIsCompleting(false);
-      Alert.alert(t('common.error'), t('error.network'));
-      return false;
-    }
-  }, [isCompleting, markOnboardingComplete, t]);
+  const handleComplete = useCallback(() => {
+    setHasSeenOnboarding(true);
+    router.replace('/(tabs)/home');
+  }, [setHasSeenOnboarding]);
 
-  const handleSkip = useCallback(async () => {
-    const ok = await completeOnboarding();
-    if (ok) router.replace('/(tabs)/home');
-  }, [completeOnboarding]);
-
-  const handleExplore = useCallback(async () => {
-    await handleSkip();
-  }, [handleSkip]);
-
-  const handleChip = useCallback(
-    async ({ prompt }: { id: ChipDefinition['id']; prompt: string }) => {
-      const ok = await completeOnboarding();
-      if (!ok) return;
-      await startConversation({ initialPrompt: prompt });
-    },
-    [completeOnboarding, startConversation],
-  );
+  const handleSkip = useCallback(() => {
+    handleComplete();
+  }, [handleComplete]);
 
   const handleNext = useCallback(() => {
-    if (isLast) return;
+    if (isLast) {
+      handleComplete();
+      return;
+    }
     next();
     flatListRef.current?.scrollToIndex({ index: currentStep + 1, animated: true });
-  }, [isLast, next, currentStep]);
+  }, [isLast, next, currentStep, handleComplete]);
 
-  const renderSlide = useCallback(
-    ({ item }: { item: SlideKey }) => {
-      switch (item) {
-        case 'demo':
-          return <ChatDemoSlide />;
-        case 'value':
-          return <ValuePropSlide />;
-        case 'chips':
-          return (
-            <FirstPromptChipsSlide
-              onChipPress={(args) => void handleChip(args)}
-              onSkip={() => void handleExplore()}
-              disabled={isCompleting}
-            />
-          );
-      }
-    },
-    [handleChip, handleExplore, isCompleting],
-  );
+  const renderSlide = useCallback(({ item }: { item: SlideKey }) => {
+    switch (item) {
+      case 'greeting':
+        return <GreetingSlide />;
+      case 'museumMode':
+        return <MuseumModeSlide />;
+      case 'cameraIntent':
+        return <CameraIntentSlide />;
+      case 'walkIntent':
+        return <WalkIntentSlide />;
+    }
+  }, []);
 
-  const slides: SlideKey[] = ['demo', 'value', 'chips'];
+  const slides: SlideKey[] = ['greeting', 'museumMode', 'cameraIntent', 'walkIntent'];
 
   return (
     <LiquidScreen
@@ -121,7 +89,7 @@ export default function OnboardingScreen() {
       contentStyle={[styles.screen, { paddingTop: insets.top + semantic.screen.padding }]}
     >
       <Pressable
-        onPress={() => void handleSkip()}
+        onPress={handleSkip}
         style={styles.skipButton}
         accessibilityRole="button"
         accessibilityLabel={t('a11y.onboarding.skip')}
@@ -153,20 +121,18 @@ export default function OnboardingScreen() {
 
       <StepIndicator totalSteps={SLIDE_COUNT} currentStep={currentStep} />
 
-      {!isLast ? (
-        <View style={styles.footer}>
-          <Pressable
-            style={[styles.primaryButton, { backgroundColor: theme.primary }]}
-            onPress={handleNext}
-            accessibilityRole="button"
-            accessibilityLabel={t('a11y.onboarding.next')}
-          >
-            <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
-              {t('onboarding.next')}
-            </Text>
-          </Pressable>
-        </View>
-      ) : null}
+      <View style={styles.footer}>
+        <Pressable
+          style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+          onPress={handleNext}
+          accessibilityRole="button"
+          accessibilityLabel={isLast ? t('a11y.onboarding.get_started') : t('a11y.onboarding.next')}
+        >
+          <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
+            {isLast ? t('onboarding.get_started') : t('onboarding.next')}
+          </Text>
+        </Pressable>
+      </View>
     </LiquidScreen>
   );
 }

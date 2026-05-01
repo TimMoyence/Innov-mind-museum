@@ -245,33 +245,21 @@
     "next": "Next",
     "get_started": "Get Started",
     "v2": {
-      "slide1": {
-        "title": "Musaium speaks art",
-        "subtitle": "A live glimpse of what a conversation feels like.",
-        "demo_user": "Tell me about the Mona Lisa",
-        "demo_assistant": "The Mona Lisa, painted by Leonardo da Vinci around 1503, fascinates with her elusive smile. Want to know the secret behind the sfumato technique?"
+      "greeting": {
+        "title": "Welcome to Musaium",
+        "description": "Your AI museum companion. Snap, ask, walk through art."
       },
-      "slide2": {
-        "title": "Sees, hears, and tells you",
-        "subtitle": "Three ways to explore art, right in your pocket.",
-        "pillar_photo": "Snap an artwork and receive its story.",
-        "pillar_photo_a11y": "Photo pillar: snap an artwork and receive its story.",
-        "pillar_voice": "Ask your question out loud, even in the gallery.",
-        "pillar_voice_a11y": "Voice pillar: ask your question out loud, even in the gallery.",
-        "pillar_guide": "Follow an enriched trail through the museum.",
-        "pillar_guide_a11y": "Guide pillar: follow an enriched trail through the museum."
+      "museumMode": {
+        "title": "Museum mode",
+        "description": "Geo-aware. Get answers grounded in the museum you're visiting."
       },
-      "slide3": {
-        "title": "Where shall we start?",
-        "subtitle": "Pick a prompt and Musaium takes it from there.",
-        "chip_museum_label": "Museum near me",
-        "chip_museum_prompt": "Find a museum near me and tell me what to see first.",
-        "chip_masterpiece_label": "Tell me about a masterpiece",
-        "chip_masterpiece_prompt": "Pick an iconic artwork and walk me through its story.",
-        "chip_tour_label": "Start a guided tour",
-        "chip_tour_prompt": "Start a short guided tour of a museum I'd love.",
-        "skip_cta": "Explore on my own",
-        "skip_cta_a11y": "Skip chips and go to the home screen"
+      "cameraIntent": {
+        "title": "Photograph artworks",
+        "description": "Take a photo. Musaium identifies, explains, and contextualizes."
+      },
+      "walkIntent": {
+        "title": "Guided walks",
+        "description": "Tap walk. Get a guided tour with next-artwork suggestions."
       }
     }
   },

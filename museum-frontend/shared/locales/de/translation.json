@@ -245,33 +245,21 @@
     "next": "Weiter",
     "get_started": "Loslegen",
     "v2": {
-      "slide1": {
-        "title": "Musaium spricht über Kunst",
-        "subtitle": "Ein lebendiger Vorgeschmack auf ein Gespräch.",
-        "demo_user": "Erzähl mir von der Mona Lisa",
-        "demo_assistant": "Die Mona Lisa, um 1503 von Leonardo da Vinci gemalt, fasziniert mit ihrem schwer zu fassenden Lächeln. Möchtest du das Geheimnis der Sfumato-Technik erfahren?"
+      "greeting": {
+        "title": "Willkommen bei Musaium",
+        "description": "Dein KI-Museumsbegleiter. Fotografieren, fragen, durch Kunst spazieren."
       },
-      "slide2": {
-        "title": "Sieht, hört und erzählt",
-        "subtitle": "Drei Wege, Kunst zu erkunden – direkt in deiner Tasche.",
-        "pillar_photo": "Fotografiere ein Kunstwerk und erhalte seine Geschichte.",
-        "pillar_photo_a11y": "Foto-Säule: Fotografiere ein Kunstwerk und erhalte seine Geschichte.",
-        "pillar_voice": "Stelle deine Frage laut – auch im Saal.",
-        "pillar_voice_a11y": "Stimm-Säule: Stelle deine Frage laut – auch im Saal.",
-        "pillar_guide": "Folge einer bereicherten Museumstour.",
-        "pillar_guide_a11y": "Guide-Säule: Folge einer bereicherten Museumstour."
+      "museumMode": {
+        "title": "Museumsmodus",
+        "description": "Standortbewusst. Antworten, die im besuchten Museum verwurzelt sind."
       },
-      "slide3": {
-        "title": "Womit beginnen wir?",
-        "subtitle": "Wähle einen Vorschlag und Musaium übernimmt.",
-        "chip_museum_label": "Museum in meiner Nähe",
-        "chip_museum_prompt": "Finde ein nahegelegenes Museum und sag mir, was ich zuerst sehen soll.",
-        "chip_masterpiece_label": "Erzähl mir von einem Meisterwerk",
-        "chip_masterpiece_prompt": "Wähle ein ikonisches Kunstwerk und erzähle mir seine Geschichte.",
-        "chip_tour_label": "Starte eine geführte Tour",
-        "chip_tour_prompt": "Starte eine kurze geführte Tour durch ein Museum, das mir gefallen würde.",
-        "skip_cta": "Allein erkunden",
-        "skip_cta_a11y": "Vorschläge überspringen und zum Startbildschirm gehen"
+      "cameraIntent": {
+        "title": "Kunstwerke fotografieren",
+        "description": "Mach ein Foto. Musaium erkennt, erklärt und kontextualisiert."
+      },
+      "walkIntent": {
+        "title": "Geführte Rundgänge",
+        "description": "Starte einen Spaziergang. Erhalte eine Führung mit Vorschlägen zum nächsten Werk."
       }
     }
   },

@@ -245,33 +245,21 @@
     "next": "Avanti",
     "get_started": "Inizia",
     "v2": {
-      "slide1": {
-        "title": "Musaium parla d'arte",
-        "subtitle": "Uno sguardo dal vivo a com'è una conversazione.",
-        "demo_user": "Parlami della Gioconda",
-        "demo_assistant": "La Gioconda, dipinta da Leonardo da Vinci intorno al 1503, affascina con il suo sorriso sfuggente. Vuoi conoscere il segreto della tecnica dello sfumato?"
+      "greeting": {
+        "title": "Benvenuto su Musaium",
+        "description": "Il tuo compagno AI al museo. Scatta, chiedi, cammina tra l'arte."
       },
-      "slide2": {
-        "title": "Vede, ascolta e racconta",
-        "subtitle": "Tre modi per esplorare l'arte, in tasca.",
-        "pillar_photo": "Fotografa un'opera e ricevine la storia.",
-        "pillar_photo_a11y": "Pilastro foto: fotografa un'opera e ricevine la storia.",
-        "pillar_voice": "Fai la tua domanda a voce alta, anche in sala.",
-        "pillar_voice_a11y": "Pilastro voce: fai la tua domanda a voce alta, anche in sala.",
-        "pillar_guide": "Segui un percorso arricchito nel museo.",
-        "pillar_guide_a11y": "Pilastro guida: segui un percorso arricchito nel museo."
+      "museumMode": {
+        "title": "Modalità museo",
+        "description": "Geolocalizzato. Risposte radicate nel museo che stai visitando."
       },
-      "slide3": {
-        "title": "Da dove iniziamo?",
-        "subtitle": "Scegli uno spunto e Musaium farà il resto.",
-        "chip_museum_label": "Museo vicino a me",
-        "chip_museum_prompt": "Trova un museo vicino e dimmi cosa vedere per primo.",
-        "chip_masterpiece_label": "Parlami di un capolavoro",
-        "chip_masterpiece_prompt": "Scegli un'opera iconica e raccontamene la storia.",
-        "chip_tour_label": "Inizia una visita guidata",
-        "chip_tour_prompt": "Avvia una breve visita guidata di un museo che mi piacerebbe.",
-        "skip_cta": "Esplorare da solo",
-        "skip_cta_a11y": "Salta i suggerimenti e vai alla home"
+      "cameraIntent": {
+        "title": "Fotografa le opere",
+        "description": "Scatta una foto. Musaium identifica, spiega e contestualizza."
+      },
+      "walkIntent": {
+        "title": "Passeggiate guidate",
+        "description": "Avvia una passeggiata. Ricevi un percorso guidato con suggerimenti sull'opera successiva."
       }
     }
   },

@@ -245,33 +245,21 @@
     "next": "Siguiente",
     "get_started": "Comenzar",
     "v2": {
-      "slide1": {
-        "title": "Musaium habla de arte",
-        "subtitle": "Un vistazo en vivo a cómo se siente una conversación.",
-        "demo_user": "Háblame de la Mona Lisa",
-        "demo_assistant": "La Mona Lisa, pintada por Leonardo da Vinci hacia 1503, fascina por su sonrisa esquiva. ¿Quieres conocer el secreto de la técnica sfumato?"
+      "greeting": {
+        "title": "Bienvenido a Musaium",
+        "description": "Tu compañero de IA en el museo. Fotografía, pregunta, recorre el arte."
       },
-      "slide2": {
-        "title": "Ve, escucha y cuenta",
-        "subtitle": "Tres formas de explorar el arte, en el bolsillo.",
-        "pillar_photo": "Fotografía una obra y recibe su historia.",
-        "pillar_photo_a11y": "Pilar foto: fotografía una obra y recibe su historia.",
-        "pillar_voice": "Haz tu pregunta en voz alta, incluso en la sala.",
-        "pillar_voice_a11y": "Pilar voz: haz tu pregunta en voz alta, incluso en la sala.",
-        "pillar_guide": "Sigue un recorrido enriquecido por el museo.",
-        "pillar_guide_a11y": "Pilar guía: sigue un recorrido enriquecido por el museo."
+      "museumMode": {
+        "title": "Modo museo",
+        "description": "Geolocalizado. Respuestas ancladas en el museo que estás visitando."
       },
-      "slide3": {
-        "title": "¿Por dónde empezamos?",
-        "subtitle": "Elige una pista y Musaium se encarga del resto.",
-        "chip_museum_label": "Museo cercano",
-        "chip_museum_prompt": "Encuentra un museo cercano y dime qué ver primero.",
-        "chip_masterpiece_label": "Háblame de una obra maestra",
-        "chip_masterpiece_prompt": "Elige una obra icónica y cuéntame su historia.",
-        "chip_tour_label": "Empieza una visita guiada",
-        "chip_tour_prompt": "Lanza una visita guiada corta por un museo que me gustaría.",
-        "skip_cta": "Explorar por mi cuenta",
-        "skip_cta_a11y": "Omitir sugerencias e ir al inicio"
+      "cameraIntent": {
+        "title": "Fotografía obras de arte",
+        "description": "Haz una foto. Musaium identifica, explica y contextualiza."
+      },
+      "walkIntent": {
+        "title": "Recorridos guiados",
+        "description": "Inicia un paseo. Recibe una visita guiada con sugerencias de la siguiente obra."
       }
     }
   },

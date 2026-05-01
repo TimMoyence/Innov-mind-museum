@@ -245,33 +245,21 @@
     "next": "下一步",
     "get_started": "开始使用",
     "v2": {
-      "slide1": {
-        "title": "Musaium 带你看艺术",
-        "subtitle": "先感受一下对话的样子。",
-        "demo_user": "跟我聊聊蒙娜丽莎",
-        "demo_assistant": "蒙娜丽莎由列奥纳多·达·芬奇于约 1503 年创作，她那捉摸不定的微笑令人着迷。想知道晕涂法背后的秘密吗？"
+      "greeting": {
+        "title": "欢迎来到 Musaium",
+        "description": "你的 AI 博物馆伴侣。拍照、提问、漫步于艺术之间。"
       },
-      "slide2": {
-        "title": "会看、会听、会讲故事",
-        "subtitle": "三种探索艺术的方式，就在口袋里。",
-        "pillar_photo": "拍下一件作品，收到它的故事。",
-        "pillar_photo_a11y": "图像支柱：拍下一件作品，收到它的故事。",
-        "pillar_voice": "在展厅也能用语音提问。",
-        "pillar_voice_a11y": "语音支柱：在展厅也能用语音提问。",
-        "pillar_guide": "跟随博物馆内丰富的导览路线。",
-        "pillar_guide_a11y": "导览支柱：跟随博物馆内丰富的导览路线。"
+      "museumMode": {
+        "title": "博物馆模式",
+        "description": "基于地理位置，获取与你所在博物馆相关的答案。"
       },
-      "slide3": {
-        "title": "从哪里开始？",
-        "subtitle": "挑一个提示，Musaium 帮你接管。",
-        "chip_museum_label": "附近的博物馆",
-        "chip_museum_prompt": "找一家附近的博物馆，告诉我先看什么。",
-        "chip_masterpiece_label": "讲讲一件名作",
-        "chip_masterpiece_prompt": "挑一件代表作，带我走进它的故事。",
-        "chip_tour_label": "开始一次导览",
-        "chip_tour_prompt": "为我开始一次我可能喜欢的博物馆短途导览。",
-        "skip_cta": "我自己探索",
-        "skip_cta_a11y": "跳过提示进入主页"
+      "cameraIntent": {
+        "title": "拍摄艺术作品",
+        "description": "拍一张照片。Musaium 识别、解释并提供背景信息。"
+      },
+      "walkIntent": {
+        "title": "导览漫步",
+        "description": "开启漫步。获取带有下一件作品建议的导览路线。"
       }
     }
   },
