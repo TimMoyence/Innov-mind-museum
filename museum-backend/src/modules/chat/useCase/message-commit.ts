@@ -1,5 +1,6 @@
 import { conflict } from '@shared/errors/app.error';
 import { resolveLocale } from '@shared/i18n/locale';
+import { sanitizePromptInput } from '@shared/validation/input';
 
 import { computeSessionUpdates } from './visit-context';
 
@@ -153,6 +154,11 @@ export async function commitAssistantResponse(
     sessionUpdates,
   );
 
+  const sanitizedSuggestions =
+    aiResult.suggestions && aiResult.suggestions.length > 0
+      ? aiResult.suggestions.map((s) => sanitizePromptInput(s, 60))
+      : undefined;
+
   return {
     sessionId,
     message: {
@@ -160,6 +166,7 @@ export async function commitAssistantResponse(
       role: 'assistant',
       text: assistantText,
       createdAt: assistantMessage.createdAt.toISOString(),
+      ...(sanitizedSuggestions ? { suggestions: sanitizedSuggestions } : {}),
     },
     metadata: assistantMetadata,
   };

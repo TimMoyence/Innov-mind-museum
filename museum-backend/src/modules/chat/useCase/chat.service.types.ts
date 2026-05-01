@@ -19,6 +19,8 @@ export interface PostMessageResult {
     role: 'assistant';
     text: string;
     createdAt: string;
+    /** Next-artwork suggestion chips, present only for intent='walk' sessions. Sanitized, max 60 chars each. */
+    suggestions?: string[];
   };
   metadata: ChatAssistantMetadata;
 }

@@ -388,6 +388,12 @@
               "createdAt": {
                 "type": "string",
                 "format": "date-time"
+              },
+              "suggestions": {
+                "type": "array",
+                "description": "Optional suggestion chips returned only for chat sessions with intent='walk'.",
+                "items": { "type": "string", "maxLength": 60 },
+                "maxItems": 3
               }
             }
           },
