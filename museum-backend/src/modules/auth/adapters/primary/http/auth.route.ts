@@ -115,6 +115,24 @@ const loginLimiter = createRateLimitMiddleware({
   keyGenerator: byIp,
 });
 
+// Phase F (2026-04-30) — per-attempted-account limiter on /login. Sits in front of
+// the existing per-IP loginLimiter and catches CGNAT bypass: when many users share
+// one IP, the IP bucket is too coarse to detect "one account being hammered from
+// dozens of distinct IPs". Bucket key = email-after-normalisation. Returns 429
+// before the password compare so the response shape doesn't leak which accounts
+// exist (UFR — keep enumeration oracle closed).
+const loginByAccountLimiter = createRateLimitMiddleware({
+  limit: toPositiveInt(process.env.AUTH_LOGIN_ACCOUNT_RATE_LIMIT, 20),
+  windowMs: toPositiveInt(process.env.AUTH_LOGIN_ACCOUNT_RATE_WINDOW_MS, 5 * 60_000),
+  keyGenerator: (req) => {
+    const email = (req.body as { email?: unknown } | undefined)?.email;
+    return typeof email === 'string' && email.length > 0
+      ? `email:${email.trim().toLowerCase()}`
+      : `email:unknown`;
+  },
+  bucketName: 'auth-login-account',
+});
+
 // F1 — refresh limiter keyed by IP+familyId. Decoded best-effort from the JWT body
 // without verifying the signature (verification happens later in the handler). Falls
 // back to IP-only when the token is malformed so a parse failure cannot bypass the
@@ -182,6 +200,7 @@ authRouter.post(
 authRouter.post(
   '/login',
   loginLimiter,
+  loginByAccountLimiter,
   validateBody(loginSchema),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

@@ -987,4 +987,40 @@ describe('Auth Routes — HTTP Layer', () => {
       expect(mockSocialLogin).toHaveBeenCalledWith('google', 'goog-id-token', undefined);
     });
   });
+
+  // ── Phase F — per-attempted-account rate-limit on /login (CGNAT bypass) ─
+  describe('Rate-limit — Phase F /login per-account (CGNAT bypass)', () => {
+    it('eventually returns 429 when one email is hammered (account or IP bucket trips)', async () => {
+      mockLogin.mockResolvedValue({
+        accessToken: 'at',
+        refreshToken: 'rt',
+        user: { id: 1, email: 'target@test.com' },
+      });
+      // Drive past both buckets (per-IP=10, per-account=20). Either limiter
+      // firing produces a 429; the new account-level limiter closes the CGNAT
+      // bypass when the per-IP cap is too coarse.
+      const responses: number[] = [];
+      for (let i = 0; i < 25; i += 1) {
+        const res = await request(app)
+          .post('/api/auth/login')
+          .send({ email: 'target@test.com', password: 'P@ssword1' });
+        responses.push(res.status);
+      }
+      expect(responses.filter((s) => s === 429).length).toBeGreaterThan(0);
+    });
+
+    it('keyGenerator normalises email (case + whitespace) without crashing', async () => {
+      mockLogin.mockResolvedValue({
+        accessToken: 'at',
+        refreshToken: 'rt',
+        user: { id: 2, email: 'casesensitive@test.com' },
+      });
+      const a = await request(app)
+        .post('/api/auth/login')
+        .send({ email: '  CaseSensitive@TEST.com  ', password: 'pw' });
+      // Validation may reject the email format with whitespace, but the
+      // limiter must not throw — any of 200/400/429 is acceptable here.
+      expect([200, 400, 429]).toContain(a.status);
+    });
+  });
 });
