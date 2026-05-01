@@ -9,7 +9,7 @@
  */
 
 import '../helpers/test-utils';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -17,6 +17,11 @@ const mockSetHasSeenOnboarding = jest.fn();
 jest.mock('@/features/settings/infrastructure/userProfileStore', () => ({
   useUserProfileStore: (selector: (s: { setHasSeenOnboarding: jest.Mock }) => unknown) =>
     selector({ setHasSeenOnboarding: mockSetHasSeenOnboarding }),
+}));
+
+const mockMarkOnboardingComplete = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/auth/application/AuthContext', () => ({
+  useAuth: () => ({ markOnboardingComplete: mockMarkOnboardingComplete }),
 }));
 
 import { router as expoRouter } from 'expo-router';
@@ -92,6 +97,7 @@ import OnboardingScreen from '@/app/(stack)/onboarding';
 describe('OnboardingScreen v2', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockMarkOnboardingComplete.mockResolvedValue(undefined);
     mockUseOnboarding.mockReturnValue({
       currentStep: 0,
       goToStep: mockGoToStep,
@@ -118,14 +124,17 @@ describe('OnboardingScreen v2', () => {
     expect(screen.getByTestId('slide-walk-intent')).toBeTruthy();
   });
 
-  it('Skip on slide 1 sets hasSeenOnboarding and navigates home', () => {
+  it('Skip on slide 1 sets hasSeenOnboarding and navigates home', async () => {
     render(<OnboardingScreen />);
     fireEvent.press(screen.getByLabelText('a11y.onboarding.skip'));
-    expect(mockSetHasSeenOnboarding).toHaveBeenCalledWith(true);
-    expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)/home');
+    await waitFor(() => {
+      expect(mockMarkOnboardingComplete).toHaveBeenCalledTimes(1);
+      expect(mockSetHasSeenOnboarding).toHaveBeenCalledWith(true);
+      expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)/home');
+    });
   });
 
-  it('Done on slide 4 sets hasSeenOnboarding and navigates home', () => {
+  it('Done on slide 4 sets hasSeenOnboarding and navigates home', async () => {
     mockUseOnboarding.mockReturnValue({
       currentStep: 3,
       goToStep: mockGoToStep,
@@ -134,7 +143,20 @@ describe('OnboardingScreen v2', () => {
     });
     render(<OnboardingScreen />);
     fireEvent.press(screen.getByLabelText('a11y.onboarding.get_started'));
-    expect(mockSetHasSeenOnboarding).toHaveBeenCalledWith(true);
-    expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)/home');
+    await waitFor(() => {
+      expect(mockMarkOnboardingComplete).toHaveBeenCalledTimes(1);
+      expect(mockSetHasSeenOnboarding).toHaveBeenCalledWith(true);
+      expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)/home');
+    });
+  });
+
+  it('still navigates home when markOnboardingComplete throws (graceful degradation)', async () => {
+    mockMarkOnboardingComplete.mockRejectedValueOnce(new Error('network'));
+    render(<OnboardingScreen />);
+    fireEvent.press(screen.getByLabelText('a11y.onboarding.skip'));
+    await waitFor(() => {
+      expect(mockSetHasSeenOnboarding).toHaveBeenCalledWith(true);
+      expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)/home');
+    });
   });
 });

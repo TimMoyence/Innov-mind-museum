@@ -1,5 +1,5 @@
 import '../helpers/test-utils';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 // ── Screen-specific mocks ────────────────────────────────────────────────────
 
@@ -7,6 +7,11 @@ const mockSetHasSeenOnboarding = jest.fn();
 jest.mock('@/features/settings/infrastructure/userProfileStore', () => ({
   useUserProfileStore: (selector: (s: { setHasSeenOnboarding: jest.Mock }) => unknown) =>
     selector({ setHasSeenOnboarding: mockSetHasSeenOnboarding }),
+}));
+
+const mockMarkOnboardingComplete = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/auth/application/AuthContext', () => ({
+  useAuth: () => ({ markOnboardingComplete: mockMarkOnboardingComplete }),
 }));
 
 import { router as expoRouter } from 'expo-router';
@@ -79,6 +84,7 @@ import OnboardingScreen from '@/app/(stack)/onboarding';
 describe('OnboardingScreen v2 (Spec B)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockMarkOnboardingComplete.mockResolvedValue(undefined);
     mockUseOnboarding.mockReturnValue({
       currentStep: 0,
       goToStep: mockGoToStep,
@@ -123,14 +129,16 @@ describe('OnboardingScreen v2 (Spec B)', () => {
     expect(screen.getByText('onboarding.get_started')).toBeTruthy();
   });
 
-  it('Skip on slide 1 sets hasSeenOnboarding and navigates home', () => {
+  it('Skip on slide 1 sets hasSeenOnboarding and navigates home', async () => {
     render(<OnboardingScreen />);
     fireEvent.press(screen.getByLabelText('a11y.onboarding.skip'));
-    expect(mockSetHasSeenOnboarding).toHaveBeenCalledWith(true);
-    expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)/home');
+    await waitFor(() => {
+      expect(mockSetHasSeenOnboarding).toHaveBeenCalledWith(true);
+      expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)/home');
+    });
   });
 
-  it('Done on slide 4 sets hasSeenOnboarding and navigates home', () => {
+  it('Done on slide 4 sets hasSeenOnboarding and navigates home', async () => {
     mockUseOnboarding.mockReturnValue({
       currentStep: 3,
       goToStep: mockGoToStep,
@@ -139,7 +147,9 @@ describe('OnboardingScreen v2 (Spec B)', () => {
     });
     render(<OnboardingScreen />);
     fireEvent.press(screen.getByLabelText('a11y.onboarding.get_started'));
-    expect(mockSetHasSeenOnboarding).toHaveBeenCalledWith(true);
-    expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)/home');
+    await waitFor(() => {
+      expect(mockSetHasSeenOnboarding).toHaveBeenCalledWith(true);
+      expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)/home');
+    });
   });
 });

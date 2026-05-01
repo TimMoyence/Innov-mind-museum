@@ -12,6 +12,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAuth } from '@/features/auth/application/AuthContext';
 import { useOnboarding } from '@/features/onboarding/application/useOnboarding';
 import { CameraIntentSlide } from '@/features/onboarding/ui/CameraIntentSlide';
 import { GreetingSlide } from '@/features/onboarding/ui/GreetingSlide';
@@ -36,6 +37,7 @@ export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList<SlideKey>>(null);
   const setHasSeenOnboarding = useUserProfileStore((s) => s.setHasSeenOnboarding);
+  const { markOnboardingComplete } = useAuth();
   const { currentStep, goToStep, next, isLast } = useOnboarding(SLIDE_COUNT);
 
   const onViewableItemsChanged = useCallback(
@@ -50,18 +52,23 @@ export default function OnboardingScreen() {
   // eslint-disable-next-line react-hooks/refs -- stable config ref pattern
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
-  const handleComplete = useCallback(() => {
+  const handleComplete = useCallback(async () => {
+    try {
+      await markOnboardingComplete();
+    } catch (err) {
+      console.warn('[onboarding] markOnboardingComplete failed', err);
+    }
     setHasSeenOnboarding(true);
     router.replace('/(tabs)/home');
-  }, [setHasSeenOnboarding]);
+  }, [markOnboardingComplete, setHasSeenOnboarding]);
 
-  const handleSkip = useCallback(() => {
-    handleComplete();
+  const handleSkip = useCallback(async () => {
+    await handleComplete();
   }, [handleComplete]);
 
   const handleNext = useCallback(() => {
     if (isLast) {
-      handleComplete();
+      void handleComplete();
       return;
     }
     next();
@@ -89,7 +96,9 @@ export default function OnboardingScreen() {
       contentStyle={[styles.screen, { paddingTop: insets.top + semantic.screen.padding }]}
     >
       <Pressable
-        onPress={handleSkip}
+        onPress={() => {
+          void handleSkip();
+        }}
         style={styles.skipButton}
         accessibilityRole="button"
         accessibilityLabel={t('a11y.onboarding.skip')}

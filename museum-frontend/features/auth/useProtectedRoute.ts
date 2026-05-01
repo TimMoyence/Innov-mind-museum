@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useRouter, useSegments } from 'expo-router';
 
 import { useAuth } from '@/features/auth/application/AuthContext';
+import { useUserProfileStore } from '@/features/settings/infrastructure/userProfileStore';
 import { AUTH_ROUTE, HOME_ROUTE, ONBOARDING_ROUTE } from './routes';
 
 /**
@@ -11,6 +12,7 @@ import { AUTH_ROUTE, HOME_ROUTE, ONBOARDING_ROUTE } from './routes';
  */
 export const useProtectedRoute = (): void => {
   const { isAuthenticated, isLoading, isFirstLaunch } = useAuth();
+  const hasSeenOnboarding = useUserProfileStore((s) => s.hasSeenOnboarding);
   const segments = useSegments();
   const router = useRouter();
 
@@ -30,7 +32,7 @@ export const useProtectedRoute = (): void => {
     }
 
     if (isAuthenticated && isAuthRoute) {
-      if (isFirstLaunch) {
+      if (isFirstLaunch && !hasSeenOnboarding) {
         router.replace(ONBOARDING_ROUTE);
       } else {
         router.replace(HOME_ROUTE);
@@ -38,9 +40,15 @@ export const useProtectedRoute = (): void => {
       return;
     }
 
-    // If authenticated, first launch, and not already on onboarding screen, redirect there
-    if (isAuthenticated && isFirstLaunch && !isOnboardingRoute && !isAuthRoute) {
+    // If authenticated, first launch, local flag not yet set, and not already on onboarding screen, redirect there
+    if (
+      isAuthenticated &&
+      isFirstLaunch &&
+      !hasSeenOnboarding &&
+      !isOnboardingRoute &&
+      !isAuthRoute
+    ) {
       router.replace(ONBOARDING_ROUTE);
     }
-  }, [isAuthenticated, isLoading, isFirstLaunch, router, segments]);
+  }, [isAuthenticated, isLoading, isFirstLaunch, hasSeenOnboarding, router, segments]);
 };
