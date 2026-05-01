@@ -7,11 +7,22 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  *
  * Generated via `migration-cli.cjs generate --name=Check` after Voice V1 entities.
  *
- * ⚠️  DATA SAFETY: The user_memories column renames are implemented as DROP + ADD
- * (TypeORM limitation — cannot detect renames). This destroys any existing rows'
- * data in those columns. Verify `SELECT COUNT(*) FROM user_memories` is 0 before
- * running in staging/prod. If non-empty, rewrite each pair as:
- *   ALTER TABLE user_memories RENAME COLUMN old_name TO "newName"
+ * ⚠️  DATA SAFETY — DO NOT REWRITE THIS MIGRATION ⚠️
+ *
+ * The `user_memories` column renames are implemented as DROP + ADD because
+ * TypeORM's `migration:generate` cannot detect renames. **This destroys any
+ * existing rows' data in those columns.** This migration has already been
+ * applied in dev / staging / prod (verify against the `migrations` table).
+ * Rewriting the body would change the TypeORM checksum and corrupt the
+ * migration ledger.
+ *
+ * If a future operator finds this migration NOT YET applied on a target
+ * environment AND the `user_memories` table is non-empty, they MUST hand-edit
+ * the body BEFORE applying — replace each DROP+ADD pair with:
+ *   ALTER TABLE user_memories RENAME COLUMN <old> TO "<new>"
+ *
+ * For NEW migrations, follow `docs/MIGRATION_GOVERNANCE.md` so this class
+ * of migration is never generated again.
  *
  * Fully reversible via `down()` (down() has the same DROP + ADD caveat).
  */

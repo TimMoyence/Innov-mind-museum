@@ -39,6 +39,7 @@
 !docs/RUNBOOKS/
 !docs/RUNBOOKS/**
 !docs/V2_PENDING.md
+!docs/MIGRATION_GOVERNANCE.md
 
 # frontend docs
 !museum-frontend/docs/

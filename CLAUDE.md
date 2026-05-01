@@ -212,6 +212,8 @@ Doubt? Use `Grep` w/ specific pattern first, then `Read` relevant block w/ `offs
 
 ## Migration Governance
 
+See [`docs/MIGRATION_GOVERNANCE.md`](docs/MIGRATION_GOVERNANCE.md) for the full rules. Quick reference:
+
 - Always use `node scripts/migration-cli.cjs generate --name=X` to generate migrations — never hand-write migration SQL
 - `DB_SYNCHRONIZE` must **never** be `true` in production (hard-coded `false` in `data-source.ts` for prod)
 - CI blocks if `DB_SYNCHRONIZE=true` found in any `.env*` file
