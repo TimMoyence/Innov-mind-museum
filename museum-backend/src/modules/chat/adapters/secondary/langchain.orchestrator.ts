@@ -530,6 +530,22 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
       };
     }
 
+    // Guard: structured output is optional on the ChatModel port. Test fakes and
+    // older provider adapters may omit it. Fall back gracefully with a distinct
+    // citation marker so this case is observable in metadata.
+    if (!model.withStructuredOutput) {
+      logger.warn('llm_walk_no_structured_output', {
+        requestId: input.requestId,
+        provider: env.llm.provider,
+        model: env.llm.model,
+      });
+      return {
+        text: MISSING_LLM_KEY_FALLBACK,
+        metadata: { citations: ['system:missing-structured-output'] },
+        suggestions: undefined,
+      };
+    }
+
     const prepared = buildOrchestratorMessages(input);
     const { systemPrompt, historyMessages, userMessage, sectionPlan } = prepared;
 
@@ -558,34 +574,28 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     const insertAt = humanIdx >= 0 ? humanIdx : messages.length;
     messages.splice(insertAt, 0, new SystemMessage(WALK_TOUR_GUIDE_SECTION));
 
-    const structuredChain = (
-      model as unknown as {
-        withStructuredOutput: (
-          schema: typeof walkAssistantOutputSchema,
-          options: { name: string },
-        ) => {
-          invoke: (
-            messages: unknown,
-            options?: { signal?: AbortSignal },
-          ) => Promise<{ answer: string; suggestions: string[] }>;
-        };
-      }
-    ).withStructuredOutput(walkAssistantOutputSchema, { name: 'WalkAssistantOutput' });
+    const structured = model.withStructuredOutput(walkAssistantOutputSchema, {
+      name: 'WalkAssistantOutput',
+    });
 
     const signal = AbortSignal.timeout(env.llm.totalBudgetMs);
-    const result = await structuredChain.invoke(messages, { signal });
+    const result = await structured.invoke(messages, { signal });
+
+    // Schema applies `.default([])` so suggestions is always present at runtime,
+    // but the inferred ZodSchema<T> may surface it as optional. Coalesce defensively.
+    const suggestions = result.suggestions ?? [];
 
     logger.info('llm_walk_orchestration_complete', {
       requestId: input.requestId,
       provider: env.llm.provider,
       model: env.llm.model,
-      suggestionsCount: result.suggestions.length,
+      suggestionsCount: suggestions.length,
     });
 
     return {
       text: result.answer,
       metadata: { citations: [] },
-      suggestions: result.suggestions,
+      suggestions,
     };
   }
 }

@@ -11,6 +11,7 @@ import type { buildOrchestratorMessages } from '../../useCase/llm-prompt-builder
 import type { SectionRunResult, SectionRunnerHooks } from '../../useCase/llm-section-runner';
 import type { LlmSectionName } from '../../useCase/llm-sections';
 import type { Semaphore } from '../../useCase/semaphore';
+import type { ZodSchema } from 'zod';
 
 /** Fallback response when LLM produces no usable text after all retries/parsing. */
 export const EMPTY_RESPONSE_FALLBACK =
@@ -27,6 +28,23 @@ export interface ChatModel {
     messages: unknown,
     options?: { signal?: AbortSignal },
   ): Promise<AsyncIterable<{ content: unknown }>>;
+  /**
+   * Optional structured-output adapter. Satisfied by LangChain BaseChatModel's
+   * `withStructuredOutput<T>(schema, opts?)`. Used by the walk-intent path to
+   * receive `{ answer, suggestions }` validated by walkAssistantOutputSchema.
+   * Test fakes implement this only when exercising the structured path.
+   *
+   * Method-shorthand syntax is intentional: TS strictFunctionTypes leaves
+   * method parameters bivariant, so LangChain's stricter `BaseLanguageModelInput`
+   * input type remains assignable to our `unknown` parameter here without an
+   * explicit cast in `toModel()`.
+   */
+  withStructuredOutput?<T>(
+    schema: ZodSchema<T>,
+    opts?: { name?: string },
+  ): {
+    invoke(messages: unknown, opts?: { signal?: AbortSignal }): Promise<T>;
+  };
 }
 
 /** Parameters for a single section LLM invocation. */

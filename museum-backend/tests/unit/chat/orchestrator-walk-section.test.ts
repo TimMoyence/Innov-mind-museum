@@ -44,6 +44,8 @@ jest.mock('@langchain/google-genai', () => ({
   ChatGoogleGenerativeAI: jest.fn(),
 }));
 
+import { HumanMessage } from '@langchain/core/messages';
+
 import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/langchain.orchestrator';
 import { MISSING_LLM_KEY_FALLBACK } from '@modules/chat/adapters/secondary/langchain-orchestrator-support';
 
@@ -137,7 +139,7 @@ describe('LangChainChatOrchestrator — walk intent', () => {
       const walkIdx = messages.findIndex((m) =>
         contentOf(m).includes('guided-walk museum companion'),
       );
-      const humanIdx = messages.findIndex((m) => m._getType?.() === 'human');
+      const humanIdx = messages.findIndex((m) => m instanceof HumanMessage);
 
       // Walk section must be present, located after at least one prior system message,
       // and BEFORE the user's HumanMessage. This catches the regression where the
