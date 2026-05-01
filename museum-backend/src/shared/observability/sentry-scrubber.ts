@@ -15,7 +15,15 @@ const SENSITIVE_HEADER_REGEX = /^(authorization|cookie|x-api-key|x-auth-token)$/
 const SENSITIVE_FIELD_REGEX = /password|token|secret|api[_-]?key|refresh/i;
 
 /** Query-string keys whose values must be stripped from captured URLs. */
-const SENSITIVE_QUERY_KEYS: ReadonlySet<string> = new Set(['token', 'password']);
+export const SENSITIVE_QUERY_KEYS: ReadonlySet<string> = new Set([
+  'token',
+  'password',
+  'access_token',
+  'refresh_token',
+  'api_key',
+  'apikey',
+  'secret',
+]);
 
 /** Auth-adjacent paths where breadcrumb bodies could leak credentials. */
 const SENSITIVE_BREADCRUMB_PATHS: readonly string[] = [
