@@ -32,7 +32,7 @@
     "migration:create": "node ./scripts/migration-cli.cjs create",
     "migration:generate": "node ./scripts/migration-cli.cjs generate",
     "migration:new": "npm run migration:generate --",
-    "migration:run": "npm run typeorm -- migration:run",
+    "migration:run": "npm run typeorm -- migration:run --transaction each",
     "migration:show": "npm run typeorm -- migration:show",
     "migration:revert": "npm run typeorm -- migration:revert",
     "purge:tokens": "ts-node -r tsconfig-paths/register scripts/purge-expired-tokens.ts",
