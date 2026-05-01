@@ -26,6 +26,8 @@ interface UseEmailPasswordAuthResult {
   isPending: boolean;
   errorMessage: string | null;
   infoMessage: string | null;
+  /** Resets login + register mutation errors and clears the info message. */
+  clearError: () => void;
 }
 
 /**
@@ -103,11 +105,18 @@ export function useEmailPasswordAuth({
       ? getErrorMessage(registerMutation.error)
       : null;
 
+  const clearError = useCallback(() => {
+    loginMutation.reset();
+    registerMutation.reset();
+    setInfoMessage(null);
+  }, [loginMutation, registerMutation]);
+
   return {
     handleLogin,
     handleRegister,
     isPending: loginMutation.isPending || registerMutation.isPending,
     errorMessage,
     infoMessage,
+    clearError,
   };
 }

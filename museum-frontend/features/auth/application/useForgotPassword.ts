@@ -16,6 +16,8 @@ interface UseForgotPasswordResult {
   isPending: boolean;
   errorMessage: string | null;
   infoMessage: string | null;
+  /** Resets the forgot-password mutation error + info message. */
+  clearError: () => void;
 }
 
 /**
@@ -54,10 +56,16 @@ export function useForgotPassword({ email }: UseForgotPasswordArgs): UseForgotPa
     ]);
   }, [email, mutation, t]);
 
+  const clearError = useCallback(() => {
+    mutation.reset();
+    setInfoMessage(null);
+  }, [mutation]);
+
   return {
     handleForgotPassword,
     isPending: mutation.isPending,
     errorMessage: mutation.error ? getErrorMessage(mutation.error) : null,
     infoMessage,
+    clearError,
   };
 }

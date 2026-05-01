@@ -22,6 +22,8 @@ interface UseSocialLoginResult {
   isPending: boolean;
   errorMessage: string | null;
   infoMessage: string | null;
+  /** Resets Apple + Google mutation errors. */
+  clearError: () => void;
 }
 
 /**
@@ -98,6 +100,11 @@ export const useSocialLogin = ({
       ? rawError
       : null;
 
+  const clearError = (): void => {
+    appleMutation.reset();
+    googleMutation.reset();
+  };
+
   return {
     handleAppleSignIn,
     handleGoogleSignIn,
@@ -106,5 +113,6 @@ export const useSocialLogin = ({
     isPending: isSocialLoading,
     errorMessage,
     infoMessage: null,
+    clearError,
   };
 };
