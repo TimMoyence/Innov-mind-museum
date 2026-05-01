@@ -227,6 +227,30 @@
     "backToHome": "Back to home",
     "openApp": "Open Musaium"
   },
+  "landing": {
+    "story": {
+      "title": "How Musaium turns a visit into a story",
+      "subtitle": "Four steps from arrival to discovery.",
+      "steps": [
+        {
+          "title": "Visit a museum",
+          "description": "Walk into a partner museum and Musaium grounds in the venue."
+        },
+        {
+          "title": "Snap or speak",
+          "description": "Take a photo of an artwork or ask a question out loud."
+        },
+        {
+          "title": "AI answers in your tone",
+          "description": "Musaium adapts vocabulary, depth, and language to you."
+        },
+        {
+          "title": "Follow the next chip",
+          "description": "Suggestions guide you to the next discovery, gallery after gallery."
+        }
+      ]
+    }
+  },
   "admin": {
     "dashboard": "Dashboard",
     "users": "Users",

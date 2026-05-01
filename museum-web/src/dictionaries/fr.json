@@ -227,6 +227,30 @@
     "backToHome": "Retour à l'accueil",
     "openApp": "Ouvrir Musaium"
   },
+  "landing": {
+    "story": {
+      "title": "Comment Musaium transforme une visite en histoire",
+      "subtitle": "Quatre étapes de l'arrivée à la découverte.",
+      "steps": [
+        {
+          "title": "Visite un musée",
+          "description": "Entre dans un musée partenaire — Musaium s'ancre dans le lieu."
+        },
+        {
+          "title": "Photographie ou parle",
+          "description": "Photographie une œuvre ou pose une question à voix haute."
+        },
+        {
+          "title": "L'IA répond avec ton ton",
+          "description": "Musaium adapte le vocabulaire, la profondeur et la langue."
+        },
+        {
+          "title": "Suis la suggestion suivante",
+          "description": "Les suggestions te guident vers la prochaine découverte, salle après salle."
+        }
+      ]
+    }
+  },
   "admin": {
     "dashboard": "Tableau de bord",
     "users": "Utilisateurs",

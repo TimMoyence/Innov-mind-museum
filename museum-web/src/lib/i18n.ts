@@ -133,6 +133,13 @@ export interface Dictionary {
     backToHome: string;
     openApp: string;
   };
+  landing: {
+    story: {
+      title: string;
+      subtitle: string;
+      steps: { title: string; description: string }[];
+    };
+  };
   admin: {
     dashboard: string;
     users: string;
