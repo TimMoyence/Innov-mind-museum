@@ -174,6 +174,14 @@ export interface Dictionary {
     };
     dashboardPage: {
       subtitle: string;
+      stats: {
+        totalUsers: string;
+        activeUsers: string;
+        conversations: string;
+        messages: string;
+        newToday: string;
+        messagesThisWeek: string;
+      };
     };
     auditLogsPage: {
       subtitle: string;

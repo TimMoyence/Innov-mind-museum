@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { apiGet } from '@/lib/api';
-import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
+import { useAdminDict } from '@/lib/admin-dictionary';
+import type { Dictionary } from '@/lib/i18n';
 import type { DashboardStats } from '@/lib/admin-types';
 
+type StatLabelKey = keyof Dictionary['admin']['dashboardPage']['stats'];
+
 interface StatCardDef {
-  labelKey: string;
+  labelKey: StatLabelKey;
   valueKey: keyof DashboardStats;
   color: string;
 }
@@ -14,35 +17,21 @@ interface StatCardDef {
 const STAT_CARDS: StatCardDef[] = [
   { labelKey: 'totalUsers', valueKey: 'totalUsers', color: 'bg-primary-50 text-primary-700' },
   { labelKey: 'activeUsers', valueKey: 'activeUsers', color: 'bg-green-50 text-green-700' },
-  { labelKey: 'conversations', valueKey: 'totalConversations', color: 'bg-accent-400/10 text-accent-600' },
+  {
+    labelKey: 'conversations',
+    valueKey: 'totalConversations',
+    color: 'bg-accent-400/10 text-accent-600',
+  },
   { labelKey: 'messages', valueKey: 'totalMessages', color: 'bg-purple-50 text-purple-700' },
   { labelKey: 'newToday', valueKey: 'newUsersToday', color: 'bg-amber-50 text-amber-700' },
   { labelKey: 'messagesThisWeek', valueKey: 'messagesThisWeek', color: 'bg-rose-50 text-rose-700' },
 ];
-
-/** Stat card display labels — keyed for i18n (fallback English). */
-const STAT_LABELS: Record<string, { en: string; fr: string }> = {
-  totalUsers: { en: 'Total Users', fr: 'Utilisateurs totaux' },
-  activeUsers: { en: 'Active Users', fr: 'Utilisateurs actifs' },
-  conversations: { en: 'Conversations', fr: 'Conversations' },
-  messages: { en: 'Messages', fr: 'Messages' },
-  newToday: { en: 'New Today', fr: "Nouveaux aujourd'hui" },
-  messagesThisWeek: { en: 'Messages This Week', fr: 'Messages cette semaine' },
-};
-
-function getStatLabel(key: string, locale: string): string {
-  const entry = STAT_LABELS[key] as { en: string; fr: string } | undefined;
-  if (!entry) return key;
-  return locale === 'fr' ? entry.fr : entry.en;
-}
 
 export default function AdminDashboardPage() {
   const adminDict = useAdminDict();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const locale = useAdminLocale();
 
   useEffect(() => {
     let cancelled = false;
@@ -65,7 +54,9 @@ export default function AdminDashboardPage() {
     }
 
     void fetchStats();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
@@ -93,11 +84,9 @@ export default function AdminDashboardPage() {
               className={`rounded-xl border border-primary-100 p-6 ${card.color}`}
             >
               <p className="text-sm font-medium opacity-80">
-                {getStatLabel(card.labelKey, locale)}
+                {adminDict.dashboardPage.stats[card.labelKey]}
               </p>
-              <p className="mt-2 text-3xl font-bold">
-                {stats[card.valueKey].toLocaleString()}
-              </p>
+              <p className="mt-2 text-3xl font-bold">{stats[card.valueKey].toLocaleString()}</p>
             </div>
           ))}
         </div>

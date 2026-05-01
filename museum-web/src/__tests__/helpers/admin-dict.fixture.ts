@@ -42,6 +42,14 @@ export const mockAdminDict: Dictionary['admin'] = {
   },
   dashboardPage: {
     subtitle: 'Overview of your Musaium platform.',
+    stats: {
+      totalUsers: 'Total Users',
+      activeUsers: 'Active Users',
+      conversations: 'Conversations',
+      messages: 'Messages',
+      newToday: 'New Today',
+      messagesThisWeek: 'Messages This Week',
+    },
   },
   auditLogsPage: {
     subtitle: 'Review system audit logs.',

@@ -88,9 +88,15 @@
     ],
     "messages": [
       { "role": "user", "text": "Venus de milo" },
-      { "role": "assistant", "text": "The Venus de Milo is a famous ancient Greek sculpture from the 2nd century BC. It represents Aphrodite, the goddess of love and beauty. Despite missing arms, it radiates remarkable elegance through the draping of its robes." },
+      {
+        "role": "assistant",
+        "text": "The Venus de Milo is a famous ancient Greek sculpture from the 2nd century BC. It represents Aphrodite, the goddess of love and beauty. Despite missing arms, it radiates remarkable elegance through the draping of its robes."
+      },
       { "role": "user", "text": "What about this painting?" },
-      { "role": "assistant", "text": "This is The Raft of the Medusa by Théodore Géricault, painted in 1818-1819. It depicts a group of shipwrecked sailors fighting for survival on a raft, showcasing dramatic realism and human desperation." }
+      {
+        "role": "assistant",
+        "text": "This is The Raft of the Medusa by Théodore Géricault, painted in 1818-1819. It depicts a group of shipwrecked sailors fighting for survival on a raft, showcasing dramatic realism and human desperation."
+      }
     ]
   },
   "mapsShowcase": {
@@ -105,13 +111,34 @@
   "faq": {
     "title": "Frequently asked questions",
     "items": [
-      { "question": "Is the app free?", "answer": "Yes, Musaium is completely free. Some advanced features may be offered as premium in the future." },
-      { "question": "Which museums are compatible?", "answer": "Musaium works in all museums. The AI recognizes artworks through computer vision and enriches responses via Wikidata." },
-      { "question": "Is my data protected?", "answer": "Absolutely. Your photos are never shared with third parties. See our privacy policy for full details." },
-      { "question": "Can the AI be wrong?", "answer": "Yes, that's why Musaium displays a transparency disclaimer before each session. Responses are AI-generated and may contain inaccuracies. We encourage you to verify important facts." },
-      { "question": "Do I need an internet connection?", "answer": "A connection is needed for new conversations. However, your previous conversations are accessible offline." },
-      { "question": "In which countries does Musaium work?", "answer": "Musaium works worldwide. The app uses geolocation to find nearby museums, and the AI can analyze artworks from any origin." },
-      { "question": "How do I contact support?", "answer": "Use the contact form on our support page or reach us on social media." }
+      {
+        "question": "Is the app free?",
+        "answer": "Yes, Musaium is completely free. Some advanced features may be offered as premium in the future."
+      },
+      {
+        "question": "Which museums are compatible?",
+        "answer": "Musaium works in all museums. The AI recognizes artworks through computer vision and enriches responses via Wikidata."
+      },
+      {
+        "question": "Is my data protected?",
+        "answer": "Absolutely. Your photos are never shared with third parties. See our privacy policy for full details."
+      },
+      {
+        "question": "Can the AI be wrong?",
+        "answer": "Yes, that's why Musaium displays a transparency disclaimer before each session. Responses are AI-generated and may contain inaccuracies. We encourage you to verify important facts."
+      },
+      {
+        "question": "Do I need an internet connection?",
+        "answer": "A connection is needed for new conversations. However, your previous conversations are accessible offline."
+      },
+      {
+        "question": "In which countries does Musaium work?",
+        "answer": "Musaium works worldwide. The app uses geolocation to find nearby museums, and the AI can analyze artworks from any origin."
+      },
+      {
+        "question": "How do I contact support?",
+        "answer": "Use the contact form on our support page or reach us on social media."
+      }
     ]
   },
   "support": {
@@ -234,7 +261,15 @@
       "inactive": "Inactive"
     },
     "dashboardPage": {
-      "subtitle": "Overview of your Musaium platform."
+      "subtitle": "Overview of your Musaium platform.",
+      "stats": {
+        "totalUsers": "Total Users",
+        "activeUsers": "Active Users",
+        "conversations": "Conversations",
+        "messages": "Messages",
+        "newToday": "New Today",
+        "messagesThisWeek": "Messages This Week"
+      }
     },
     "auditLogsPage": {
       "subtitle": "Review system audit logs.",
