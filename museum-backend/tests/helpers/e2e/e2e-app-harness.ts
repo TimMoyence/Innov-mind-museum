@@ -10,6 +10,9 @@ import {
   startPostgresTestContainer,
 } from 'tests/helpers/e2e/postgres-testcontainer';
 
+import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
+import type { CacheService } from '@shared/cache/cache.port';
+
 /**
  * Absolute path to the canonical TypeORM migrations folder.
  * Resolved relative to this file so the harness keeps working regardless of cwd.
@@ -76,6 +79,29 @@ export interface E2EResponse {
 }
 
 /**
+ * Options accepted by {@link createE2EHarness}.
+ * All fields are optional — omitting them preserves the existing default behaviour.
+ */
+export interface E2EHarnessOptions {
+  /**
+   * Phase 6 chaos: override the cache service injected into ChatService.
+   * Defaults to undefined (ChatService uses its own default — no cache in e2e).
+   */
+  cacheService?: CacheService;
+  /**
+   * Phase 6 chaos: override the chat orchestrator.
+   * Replaces the harness's synthetic orchestrator with any compatible implementation.
+   */
+  chatOrchestratorOverride?: ChatOrchestrator;
+  /**
+   * Phase 6 chaos: whether to start the BullMQ knowledge-extraction worker.
+   * Default: false (worker is NOT started in e2e — matches existing behaviour because
+   * EXTRACTION_WORKER_ENABLED=false is set by default in the harness env block).
+   */
+  startKnowledgeExtractionWorker?: boolean;
+}
+
+/**
  * Re-usable E2E test harness wrapping a real Postgres container, fully-migrated
  * DataSource, fake chat orchestrator, and an Express server on a random port.
  */
@@ -101,8 +127,9 @@ export interface E2EHarness {
  * with a fake orchestrator, and an Express server listening on port 0.
  *
  * Mirrors the exact setup from `api.postgres.e2e.test.ts` but extracted into a reusable function.
+ * @param options
  */
-export async function createE2EHarness(): Promise<E2EHarness> {
+export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2EHarness> {
   const postgresContainer: StartedPostgresTestContainer = await startPostgresTestContainer();
 
   // Environment variables MUST be set before any dynamic import that touches `env.ts`.
@@ -193,24 +220,32 @@ export async function createE2EHarness(): Promise<E2EHarness> {
   const { buildChatService } = await import('@modules/chat');
   buildChatService(appDataSource);
 
+  // Phase 6 chaos: allow callers to override the orchestrator.
+  // Falls back to the existing synthetic stub when no override is provided.
+  const orchestrator = options?.chatOrchestratorOverride ?? {
+    async generate() {
+      return {
+        text: 'Synthetic assistant response for e2e',
+        metadata: { citations: ['e2e'] },
+      };
+    },
+    async generateStream(_input: unknown, onChunk: (t: string) => void) {
+      const result = {
+        text: 'Synthetic assistant response for e2e',
+        metadata: { citations: ['e2e'] },
+      };
+      onChunk(result.text);
+      return result;
+    },
+  };
+
   const chatService = new ChatService({
     repository: new TypeOrmChatRepository(appDataSource),
-    orchestrator: {
-      async generate() {
-        return {
-          text: 'Synthetic assistant response for e2e',
-          metadata: { citations: ['e2e'] },
-        };
-      },
-      async generateStream(_input: unknown, onChunk: (t: string) => void) {
-        const result = {
-          text: 'Synthetic assistant response for e2e',
-          metadata: { citations: ['e2e'] },
-        };
-        onChunk(result.text);
-        return result;
-      },
-    },
+    // Phase 6 chaos: orchestrator and cache are configurable via options.
+
+    orchestrator: orchestrator as any,
+    // Phase 6 chaos: cacheService override (undefined = no cache, matching existing behaviour).
+    cache: options?.cacheService,
     imageStorage: new LocalImageStorage(),
     audioTranscriber: {
       async transcribe() {
