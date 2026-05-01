@@ -131,6 +131,18 @@ GitHub Actions workflows (`.github/workflows/`):
 - Social JWT+JWKS spoof helper at `tests/helpers/auth/social-jwt-spoof.ts` boots a local HTTP JWKS server + signs RS256 ID tokens — exercises the real verifier code path, not a mock.
 - See `docs/superpowers/specs/2026-05-01-phase5-auth-e2e-design.md`.
 
+### Chaos resilience (Phase 6)
+
+- 4 chaos e2e files in `museum-backend/tests/e2e/chaos-*`:
+  - `chaos-redis-down.e2e.test.ts` — `BrokenRedisCache` injects ECONNREFUSED on every cache op; chat continues degraded (7 cases).
+  - `chaos-llm-provider.e2e.test.ts` — `StubLLMOrchestrator` throws configurable errors; assertions on fallback OR 503 (no 500 leak), no provider-name leak (5 cases).
+  - `chaos-circuit-breaker.e2e.test.ts` — CLOSED → OPEN → HALF_OPEN transitions, 503 on open, env-var-driven breaker tuning for fast deterministic tests (6 cases).
+  - `chaos-bullmq-worker.e2e.test.ts` — knowledge-extraction worker offline; sync chat API unaffected (6 cases).
+- Chaos helpers at `museum-backend/tests/helpers/chaos/` (`broken-redis-cache.ts` + `stub-llm-orchestrator.ts` + README).
+- Harness gains 3 options: `cacheService`, `chatOrchestratorOverride`, `startKnowledgeExtractionWorker`. Defaults preserve existing behavior.
+- Banking-grade contract: dependency failure → graceful degradation → no 500/stack-trace leak → no provider-name leak.
+- See `docs/superpowers/specs/2026-05-01-phase6-chaos-resilience-design.md`.
+
 ## Architecture
 
 ### Backend — Hexagonal (Ports & Adapters)
