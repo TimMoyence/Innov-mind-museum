@@ -60,9 +60,8 @@ export const useStartConversation = (): UseStartConversationReturn => {
         payload.coordinates = options?.coordinates;
       }
 
-      const dtoIntent = options?.intent;
-      if (dtoIntent === 'default' || dtoIntent === 'walk') {
-        payload.intent = dtoIntent;
+      if (intent === 'default' || intent === 'walk') {
+        payload.intent = intent;
       }
 
       const response = await chatApi.createSession(payload);

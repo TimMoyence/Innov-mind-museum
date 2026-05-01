@@ -119,4 +119,21 @@ describe('useStartConversation — walk intent', () => {
     expect(router.push).toHaveBeenCalledWith(`/(stack)/chat/${sessionId}`);
     expect(mockCreateSession).toHaveBeenCalledWith(expect.objectContaining({ intent: 'default' }));
   });
+
+  it('uses default intent when options is omitted entirely', async () => {
+    const sessionResponse = makeCreateSessionResponse();
+    const sessionId = sessionResponse.session.id;
+    mockCreateSession.mockResolvedValueOnce(sessionResponse);
+
+    const { result } = renderHook(() => useStartConversation());
+
+    await act(async () => {
+      await result.current.startConversation();
+    });
+
+    expect(mockCreateSession).toHaveBeenCalledWith(expect.objectContaining({ intent: 'default' }));
+    expect(router.push).toHaveBeenCalledWith(`/(stack)/chat/${sessionId}`);
+    const lastNav = (router.push as jest.Mock).mock.calls.at(-1)?.[0] as string | undefined;
+    expect(lastNav).not.toContain('intent=');
+  });
 });
