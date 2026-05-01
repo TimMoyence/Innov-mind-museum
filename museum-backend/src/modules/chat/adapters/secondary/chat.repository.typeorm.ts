@@ -72,6 +72,7 @@ export class TypeOrmChatRepository implements ChatRepository {
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
       locale: input.locale || null,
       museumMode: input.museumMode ?? false,
+      intent: input.intent ?? 'default',
       user: input.userId ? ({ id: input.userId } as ChatSession['user']) : null,
       museumId: input.museumId ?? null,
       museumName: input.museumName ?? null,

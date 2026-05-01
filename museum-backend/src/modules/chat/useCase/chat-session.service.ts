@@ -77,6 +77,7 @@ export class ChatSessionService {
       userId: input.userId,
       locale: input.locale,
       museumMode: input.museumMode,
+      intent: input.intent ?? 'default',
       museumId: input.museumId,
       museumName,
       coordinates: input.coordinates,
