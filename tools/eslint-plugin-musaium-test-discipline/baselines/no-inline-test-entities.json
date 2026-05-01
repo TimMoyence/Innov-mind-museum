@@ -1,5 +1,3 @@
 {
-  "baseline": [
-    "museum-backend/tests/unit/support/support-repository.test.ts"
-  ]
+  "baseline": []
 }

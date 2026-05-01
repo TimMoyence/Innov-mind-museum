@@ -3,9 +3,9 @@ import * as path from 'node:path';
 
 const BASELINE_PATH = path.join(__dirname, '..', 'baselines', 'no-inline-test-entities.json');
 
-// Phase 0 baseline cap — set 2026-04-30, do NOT raise this number.
-// Phase 7 reduces it as files are migrated; nothing else can grow it.
-const PHASE_0_CAP = 1;
+// Phase 7 (2026-05-01) — baseline emptied. Cap is now 0; any new inline
+// `as Entity` outside helpers triggers an immediate gate fail.
+const PHASE_0_CAP = 0;
 
 describe('grandfather baseline cap', () => {
   it('baseline length never grows beyond the Phase 0 cap', () => {

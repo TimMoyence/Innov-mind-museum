@@ -6,35 +6,7 @@ import { TicketMessage } from '@modules/support/domain/ticketMessage.entity';
 import { SupportRepositoryPg } from '@modules/support/adapters/secondary/support.repository.pg';
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 import { makeMockTypeOrmRepo, makeMockDataSourceMulti } from 'tests/helpers/shared/mock-deps';
-
-// ─── Factories ───
-function makeTicket(overrides: Partial<SupportTicket> = {}): SupportTicket {
-  return {
-    id: 'ticket-001',
-    userId: 1,
-    subject: 'Help needed',
-    description: 'I have a problem',
-    status: 'open',
-    priority: 'medium',
-    category: null,
-    assignedTo: null,
-    createdAt: new Date('2025-06-01'),
-    updatedAt: new Date('2025-06-01'),
-    ...overrides,
-  } as SupportTicket;
-}
-
-function makeTicketMessage(overrides: Partial<TicketMessage> = {}): TicketMessage {
-  return {
-    id: 'msg-001',
-    ticketId: 'ticket-001',
-    senderId: 1,
-    senderRole: 'visitor',
-    text: 'Hello',
-    createdAt: new Date('2025-06-01'),
-    ...overrides,
-  } as TicketMessage;
-}
+import { makeTicket, makeTicketMessage } from 'tests/helpers/support/ticket.fixtures';
 
 function buildMocks() {
   const qb = makeMockQb();
