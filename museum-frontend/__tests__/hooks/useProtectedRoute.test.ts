@@ -14,18 +14,31 @@ jest.mock('@/features/auth/application/AuthContext', () => ({
   useAuth: jest.fn(() => ({ isAuthenticated: false, isLoading: true, isFirstLaunch: null })),
 }));
 
+jest.mock('@/features/settings/infrastructure/userProfileStore', () => ({
+  useUserProfileStore: jest.fn((selector: (s: { hasSeenOnboarding: boolean }) => unknown) =>
+    selector({ hasSeenOnboarding: false }),
+  ),
+}));
+
 // Pull the mocked functions so we can change return values per test
 import { useSegments } from 'expo-router';
 import { useAuth } from '@/features/auth/application/AuthContext';
+import { useUserProfileStore } from '@/features/settings/infrastructure/userProfileStore';
 
 const mockedUseSegments = useSegments as jest.Mock;
 const mockedUseAuth = useAuth as jest.Mock;
+const mockedUseUserProfileStore = useUserProfileStore as unknown as jest.Mock;
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useProtectedRoute', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Default: user has NOT yet seen onboarding
+    mockedUseUserProfileStore.mockImplementation(
+      (selector: (s: { hasSeenOnboarding: boolean }) => unknown) =>
+        selector({ hasSeenOnboarding: false }),
+    );
   });
 
   it('does not redirect while loading', () => {
@@ -130,5 +143,35 @@ describe('useProtectedRoute', () => {
     });
 
     expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('skips onboarding redirect when hasSeenOnboarding is true (offline-complete case)', () => {
+    mockedUseAuth.mockReturnValue({ isAuthenticated: true, isLoading: false, isFirstLaunch: true });
+    mockedUseSegments.mockReturnValue(['(tabs)']);
+    mockedUseUserProfileStore.mockImplementation(
+      (selector: (s: { hasSeenOnboarding: boolean }) => unknown) =>
+        selector({ hasSeenOnboarding: true }),
+    );
+
+    renderHook(() => {
+      useProtectedRoute();
+    });
+
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('redirects to HOME_ROUTE from auth screen when isFirstLaunch but hasSeenOnboarding', () => {
+    mockedUseAuth.mockReturnValue({ isAuthenticated: true, isLoading: false, isFirstLaunch: true });
+    mockedUseSegments.mockReturnValue(['auth']);
+    mockedUseUserProfileStore.mockImplementation(
+      (selector: (s: { hasSeenOnboarding: boolean }) => unknown) =>
+        selector({ hasSeenOnboarding: true }),
+    );
+
+    renderHook(() => {
+      useProtectedRoute();
+    });
+
+    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/home');
   });
 });
