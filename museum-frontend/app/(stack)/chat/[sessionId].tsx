@@ -63,10 +63,7 @@ export default function ChatSessionScreen() {
   }, [params.intent]);
   // Walk mode drives UX changes (header label + suggestion chips) without camera/audio auto-actions.
   const isWalkMode = params.intent === 'walk';
-  const initialPrompt = useMemo(
-    () => (params.initialPrompt ? params.initialPrompt : null),
-    [params.initialPrompt],
-  );
+  const initialPrompt = useMemo(() => params.initialPrompt ?? null, [params.initialPrompt]);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
@@ -101,7 +98,6 @@ export default function ChatSessionScreen() {
     retryMessage,
     refreshMessageImageUrl,
     locale,
-    museumMode,
     sessionTitle,
     museumName,
   } = useChatSession(sessionId);
@@ -376,10 +372,8 @@ export default function ChatSessionScreen() {
                 isSending={isSending}
                 isStreaming={isStreaming}
                 locale={locale}
-                museumMode={museumMode}
                 onFollowUpPress={onFollowUpPress}
                 onRecommendationPress={onRecommendationPress}
-                onSuggestion={(suggestion) => void onSend(suggestion)}
                 onCamera={() => void onTakePicture()}
                 onImageError={onMessageImageError}
                 onReport={onMessageLongPress}

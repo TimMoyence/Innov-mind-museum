@@ -34,13 +34,6 @@ jest.mock('@/features/chat/ui/TypingIndicator', () => {
   };
 });
 
-jest.mock('@/features/chat/ui/WelcomeCard', () => {
-  const { View: RNView } = require('react-native');
-  return {
-    WelcomeCard: () => <RNView testID="welcome-card" />,
-  };
-});
-
 jest.mock('@/features/chat/application/useTextToSpeech', () => ({
   useTextToSpeech: () => ({
     isPlaying: false,
@@ -69,10 +62,8 @@ const defaultProps = {
   isSending: false,
   isStreaming: false,
   locale: 'en',
-  museumMode: false,
   onFollowUpPress: jest.fn(),
   onRecommendationPress: jest.fn(),
-  onSuggestion: jest.fn(),
   onCamera: jest.fn(),
   onImageError: jest.fn(),
   onReport: jest.fn(),
@@ -97,10 +88,10 @@ describe('ChatMessageList', () => {
     expect(screen.getByTestId('chat-bubble-msg-3')).toBeTruthy();
   });
 
-  it('shows WelcomeCard when messages array is empty', () => {
+  it('shows EmptyState when messages array is empty', () => {
     render(<ChatMessageList {...defaultProps} messages={[]} />);
 
-    expect(screen.getByTestId('welcome-card')).toBeTruthy();
+    expect(screen.getByTestId('chat-empty-state')).toBeTruthy();
   });
 
   it('shows TypingIndicator when isSending=true and isStreaming=false', () => {
@@ -119,11 +110,11 @@ describe('ChatMessageList', () => {
     expect(screen.queryByTestId('typing-indicator')).toBeNull();
   });
 
-  it('does NOT show WelcomeCard when there are messages', () => {
+  it('does NOT show EmptyState when there are messages', () => {
     const messages: ChatUiMessage[] = [createMessage({ id: 'msg-1', role: 'user', text: 'Hello' })];
 
     render(<ChatMessageList {...defaultProps} messages={messages} />);
 
-    expect(screen.queryByTestId('welcome-card')).toBeNull();
+    expect(screen.queryByTestId('chat-empty-state')).toBeNull();
   });
 });

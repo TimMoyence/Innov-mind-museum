@@ -893,5 +893,31 @@
     "empty": "Ancora nessuna recensione. Sii il primo!",
     "reviewCount": "{{count}} recensioni",
     "submitFailed": "Invio fallito. Riprova."
+  },
+  "empty": {
+    "chat": {
+      "title": "Inizia una conversazione",
+      "description": "Tocca un chip nella schermata principale o invia il primo messaggio.",
+      "actionLabel": "Apri fotocamera"
+    },
+    "museums": {
+      "title": "Nessun museo trovato",
+      "description": "Allarga il raggio di ricerca o spostati in un'altra zona.",
+      "actionLabel": "Aggiorna"
+    },
+    "reviews": {
+      "title": "Nessuna recensione",
+      "description": "Sii il primo a condividere la tua esperienza."
+    },
+    "dailyArt": {
+      "title": "Nessuna opera salvata",
+      "description": "Scorri verso destra su un'opera del giorno per salvarla qui.",
+      "actionLabel": "Vai alla home"
+    },
+    "conversations": {
+      "title": "Nessuna conversazione",
+      "description": "Le conversazioni passate appariranno qui.",
+      "actionLabel": "Inizia una conversazione"
+    }
   }
 }

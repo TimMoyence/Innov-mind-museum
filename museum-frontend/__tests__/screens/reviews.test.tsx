@@ -94,7 +94,7 @@ describe('ReviewsScreen', () => {
       stats: { average: 0, count: 0 },
     });
     render(<ReviewsScreen />);
-    expect(screen.getByText('reviews.empty')).toBeTruthy();
+    expect(screen.getByTestId('reviews-empty-state')).toBeTruthy();
   });
 
   it('renders write review button', () => {

@@ -5,6 +5,8 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { EmptyState } from '@/shared/ui/EmptyState';
+
 import { TAB_BAR_FLOATING_GAP } from '@/app/(tabs)/_layout';
 import type { DashboardSessionCard } from '@/features/chat/domain/dashboard-session';
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
@@ -23,7 +25,7 @@ import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { SkeletonConversationCard } from '@/shared/ui/SkeletonConversationCard';
-import { semantic, space, fontSize, radius } from '@/shared/ui/tokens';
+import { semantic, fontSize } from '@/shared/ui/tokens';
 
 type ListRow =
   | { kind: 'sticky' }
@@ -149,27 +151,21 @@ export default function ConversationsScreen() {
 
       if (item.kind === 'empty') {
         return (
-          <GlassCard style={styles.emptyState} intensity={48}>
-            <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>
-              {t('conversations.empty_title')}
-            </Text>
-            <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-              {isSavedOnly ? t('conversations.empty_saved') : t('conversations.empty_body')}
-            </Text>
-            {!isSavedOnly ? (
-              <Pressable
-                style={[styles.emptyActionButton, { backgroundColor: theme.primary }]}
-                onPress={() => void startConversation()}
-                accessibilityRole="button"
-                accessibilityLabel={t('a11y.conversations.start_new')}
-                testID="empty-state-start-button"
-              >
-                <Text style={[styles.emptyActionText, { color: theme.primaryContrast }]}>
-                  {t('conversations.start_new')}
-                </Text>
-              </Pressable>
-            ) : null}
-          </GlassCard>
+          <EmptyState
+            variant="conversations"
+            title={t('empty.conversations.title')}
+            description={t('empty.conversations.description')}
+            primaryAction={
+              !isSavedOnly
+                ? {
+                    label: t('empty.conversations.actionLabel'),
+                    onPress: () => void startConversation(),
+                    iconName: 'chatbubble-outline',
+                  }
+                : undefined
+            }
+            testID="empty-state-start-button"
+          />
         );
       }
 
@@ -328,27 +324,5 @@ const styles = StyleSheet.create({
     fontSize: fontSize['3xl'],
     fontWeight: '700',
     textAlign: 'center',
-  },
-  emptyState: {
-    marginTop: space['7'],
-    padding: semantic.card.padding,
-  },
-  emptyTitle: {
-    fontSize: semantic.section.subtitleSize,
-    fontWeight: '700',
-  },
-  emptySubtitle: {
-    marginTop: semantic.section.gapTight,
-    lineHeight: space['5'],
-  },
-  emptyActionButton: {
-    marginTop: semantic.card.gap,
-    borderRadius: radius.DEFAULT,
-    paddingVertical: semantic.list.itemPaddingYCompact,
-    alignItems: 'center',
-  },
-  emptyActionText: {
-    fontWeight: '700',
-    fontSize: semantic.form.labelSize,
   },
 });

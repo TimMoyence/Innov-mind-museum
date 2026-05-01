@@ -893,5 +893,31 @@
     "empty": "Aucun avis pour le moment. Soyez le premier !",
     "reviewCount": "{{count}} avis",
     "submitFailed": "Échec de l'envoi. Veuillez réessayer."
+  },
+  "empty": {
+    "chat": {
+      "title": "Démarre une conversation",
+      "description": "Touche une puce d'accueil ou envoie ton premier message.",
+      "actionLabel": "Ouvrir la caméra"
+    },
+    "museums": {
+      "title": "Aucun musée trouvé",
+      "description": "Élargis le rayon de recherche ou déplace-toi dans une autre zone.",
+      "actionLabel": "Actualiser"
+    },
+    "reviews": {
+      "title": "Pas encore d'avis",
+      "description": "Sois le premier à partager ton expérience."
+    },
+    "dailyArt": {
+      "title": "Aucune œuvre enregistrée",
+      "description": "Glisse vers la droite sur une œuvre du jour pour la garder ici.",
+      "actionLabel": "Aller à l'accueil"
+    },
+    "conversations": {
+      "title": "Aucune conversation",
+      "description": "Tes conversations passées apparaîtront ici.",
+      "actionLabel": "Démarrer une conversation"
+    }
   }
 }

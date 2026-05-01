@@ -10,6 +10,7 @@ import { DailyArtCard } from '@/features/daily-art/ui/DailyArtCard';
 import { HeroSettingsButton } from '@/features/home/ui/HeroSettingsButton';
 import { HomeIntentChips, type HomeIntent } from '@/features/home/ui/HomeIntentChips';
 import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSettings';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorNotice } from '@/shared/ui/ErrorNotice';
 import { BrandMark } from '@/shared/ui/BrandMark';
 import { GlassCard } from '@/shared/ui/GlassCard';
@@ -77,6 +78,13 @@ export default function HomeScreen() {
             isSaved={isSaved}
             onSave={() => void save()}
             onSkip={() => void skip()}
+          />
+        ) : dismissed && !isDailyArtLoading ? (
+          <EmptyState
+            variant="dailyArt"
+            title={t('empty.dailyArt.title')}
+            description={t('empty.dailyArt.description')}
+            testID="daily-art-empty-state"
           />
         ) : null}
 

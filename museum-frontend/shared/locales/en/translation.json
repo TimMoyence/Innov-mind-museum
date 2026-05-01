@@ -893,5 +893,31 @@
     "empty": "No reviews yet. Be the first!",
     "reviewCount": "{{count}} reviews",
     "submitFailed": "Failed to submit review. Please try again."
+  },
+  "empty": {
+    "chat": {
+      "title": "Start a conversation",
+      "description": "Tap a chip on the home screen or send your first message.",
+      "actionLabel": "Open camera"
+    },
+    "museums": {
+      "title": "No museums found",
+      "description": "Try widening your search radius or moving to a different area.",
+      "actionLabel": "Refresh"
+    },
+    "reviews": {
+      "title": "No reviews yet",
+      "description": "Be the first to share your experience."
+    },
+    "dailyArt": {
+      "title": "No saved artworks yet",
+      "description": "Swipe right on any daily artwork to keep it here.",
+      "actionLabel": "Go to home"
+    },
+    "conversations": {
+      "title": "No conversations yet",
+      "description": "Your past chats will appear here.",
+      "actionLabel": "Start a conversation"
+    }
   }
 }

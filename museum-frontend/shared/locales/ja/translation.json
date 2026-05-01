@@ -893,5 +893,31 @@
     "empty": "まだレビューがありません。最初のレビューを書きましょう！",
     "reviewCount": "{{count}}件のレビュー",
     "submitFailed": "送信に失敗しました。もう一度お試しください。"
+  },
+  "empty": {
+    "chat": {
+      "title": "会話を始めよう",
+      "description": "ホーム画面のチップをタップするか、最初のメッセージを送ってください。",
+      "actionLabel": "カメラを開く"
+    },
+    "museums": {
+      "title": "美術館が見つかりません",
+      "description": "検索範囲を広げるか、別のエリアに移動してください。",
+      "actionLabel": "更新"
+    },
+    "reviews": {
+      "title": "まだレビューはありません",
+      "description": "最初に体験をシェアしましょう。"
+    },
+    "dailyArt": {
+      "title": "保存した作品はまだありません",
+      "description": "本日の作品を右にスワイプして保存できます。",
+      "actionLabel": "ホームへ"
+    },
+    "conversations": {
+      "title": "会話はまだありません",
+      "description": "過去の会話がここに表示されます。",
+      "actionLabel": "会話を始める"
+    }
   }
 }

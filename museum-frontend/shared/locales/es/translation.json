@@ -893,5 +893,31 @@
     "empty": "Aún no hay reseñas. ¡Sé el primero!",
     "reviewCount": "{{count}} reseñas",
     "submitFailed": "Error al enviar. Inténtalo de nuevo."
+  },
+  "empty": {
+    "chat": {
+      "title": "Inicia una conversación",
+      "description": "Toca un chip en la pantalla de inicio o envía tu primer mensaje.",
+      "actionLabel": "Abrir cámara"
+    },
+    "museums": {
+      "title": "No se encontraron museos",
+      "description": "Amplía el radio de búsqueda o muévete a otra zona.",
+      "actionLabel": "Actualizar"
+    },
+    "reviews": {
+      "title": "Aún no hay reseñas",
+      "description": "Sé el primero en compartir tu experiencia."
+    },
+    "dailyArt": {
+      "title": "Aún no hay obras guardadas",
+      "description": "Desliza a la derecha en cualquier obra del día para guardarla aquí.",
+      "actionLabel": "Ir al inicio"
+    },
+    "conversations": {
+      "title": "Aún no hay conversaciones",
+      "description": "Tus conversaciones anteriores aparecerán aquí.",
+      "actionLabel": "Iniciar una conversación"
+    }
   }
 }

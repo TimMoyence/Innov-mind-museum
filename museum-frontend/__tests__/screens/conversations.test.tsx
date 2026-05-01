@@ -35,12 +35,11 @@ describe('ConversationsScreen', () => {
 
   it('renders empty state when no conversations', () => {
     render(<ConversationsScreen />);
-    expect(screen.getByText('conversations.empty_title')).toBeTruthy();
-    expect(screen.getByText('conversations.empty_body')).toBeTruthy();
+    expect(screen.getByTestId('empty-state-start-button')).toBeTruthy();
   });
 
-  it('renders empty state start button', () => {
+  it('renders empty state i18n title', () => {
     render(<ConversationsScreen />);
-    expect(screen.getByTestId('empty-state-start-button')).toBeTruthy();
+    expect(screen.getByText('empty.conversations.title')).toBeTruthy();
   });
 });

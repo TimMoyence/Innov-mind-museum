@@ -153,8 +153,7 @@ describe('ConversationsScreen', () => {
       expect(screen.queryByTestId('skeleton-card')).toBeNull();
     });
 
-    expect(screen.getByText('conversations.empty_title')).toBeTruthy();
-    expect(screen.getByText('conversations.empty_body')).toBeTruthy();
+    expect(screen.getByText('empty.conversations.title')).toBeTruthy();
     expect(screen.getByTestId('empty-state-start-button')).toBeTruthy();
   });
 });

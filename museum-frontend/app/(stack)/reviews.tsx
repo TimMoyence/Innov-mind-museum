@@ -9,6 +9,7 @@ import { semantic, space, fontSize, radius } from '@/shared/ui/tokens';
 import { ReviewCard } from '@/features/review/ui/ReviewCard';
 import { StarRating } from '@/features/review/ui/StarRating';
 import type { ReviewDTO } from '@/features/review/infrastructure/reviewApi';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
@@ -186,9 +187,12 @@ export default function ReviewsScreen() {
   const renderEmpty = () => {
     if (loading) return null;
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>{t('reviews.empty')}</Text>
-      </View>
+      <EmptyState
+        variant="reviews"
+        title={t('empty.reviews.title')}
+        description={t('empty.reviews.description')}
+        testID="reviews-empty-state"
+      />
     );
   };
 
@@ -333,10 +337,6 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: space['2.5'],
-  },
-  emptyText: {
-    fontSize: fontSize.sm,
-    textAlign: 'center',
   },
   footerLoader: {
     paddingVertical: semantic.card.padding,

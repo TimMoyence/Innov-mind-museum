@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useTranslation } from 'react-i18next';
 
-import { GlassCard } from '@/shared/ui/GlassCard';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, fontSize } from '@/shared/ui/tokens';
 import { SkeletonConversationCard } from '@/shared/ui/SkeletonConversationCard';
@@ -18,6 +18,7 @@ interface MuseumDirectoryListProps {
   onMuseumPress: (museum: MuseumWithDistance) => void;
   onRefresh: () => void;
   isRefreshing?: boolean;
+  onRefreshAction?: () => void;
 }
 
 /** Scrollable list of MuseumCards with search bar header, pull-to-refresh, and empty state. */
@@ -29,6 +30,7 @@ export const MuseumDirectoryList = ({
   onMuseumPress,
   onRefresh,
   isRefreshing = false,
+  onRefreshAction,
 }: MuseumDirectoryListProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -83,11 +85,21 @@ export const MuseumDirectoryList = ({
         refreshing={isRefreshing}
         onRefresh={onRefresh}
         ListEmptyComponent={
-          <GlassCard style={styles.emptyState} intensity={48}>
-            <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>
-              {t('museumDirectory.no_results')}
-            </Text>
-          </GlassCard>
+          <EmptyState
+            variant="museums"
+            title={t('empty.museums.title')}
+            description={t('empty.museums.description')}
+            primaryAction={
+              onRefreshAction !== undefined
+                ? {
+                    label: t('empty.museums.actionLabel'),
+                    onPress: onRefreshAction,
+                    iconName: 'refresh-outline',
+                  }
+                : undefined
+            }
+            testID="museums-empty-state"
+          />
         }
         ItemSeparatorComponent={ItemSeparator}
       />
@@ -115,14 +127,5 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: semantic.screen.paddingLarge,
-  },
-  emptyState: {
-    marginTop: semantic.screen.paddingXL,
-    padding: semantic.card.padding,
-    alignItems: 'center',
-  },
-  emptyTitle: {
-    fontSize: semantic.button.fontSizeLarge,
-    fontWeight: '700',
   },
 });

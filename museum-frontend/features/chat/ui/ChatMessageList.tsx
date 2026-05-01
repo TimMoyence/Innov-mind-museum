@@ -10,7 +10,7 @@ import { useTextToSpeech } from '@/features/chat/application/useTextToSpeech';
 import { ChatMessageBubble } from '@/features/chat/ui/ChatMessageBubble';
 import { MessageActions } from '@/features/chat/ui/MessageActions';
 import { TypingIndicator } from '@/features/chat/ui/TypingIndicator';
-import { WelcomeCard } from '@/features/chat/ui/WelcomeCard';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
 
@@ -23,15 +23,11 @@ interface ChatMessageListProps {
   isStreaming?: boolean;
   /** Locale string for time formatting. */
   locale: string;
-  /** Whether museum mode is active (affects welcome card suggestions). */
-  museumMode: boolean;
   /** Called when a follow-up question is pressed. */
   onFollowUpPress: (text: string) => void;
   /** Called when a recommendation chip is pressed. */
   onRecommendationPress: (text: string) => void;
-  /** Called when a welcome card suggestion is pressed. */
-  onSuggestion: (text: string) => void;
-  /** Called when the camera button on the welcome card is pressed. */
+  /** Called when the camera button on the empty state is pressed. */
   onCamera: () => void;
   /** Called when a message image fails to load. */
   onImageError: (messageId: string) => void;
@@ -52,10 +48,8 @@ export const ChatMessageList = ({
   isSending,
   isStreaming = false,
   locale,
-  museumMode,
   onFollowUpPress,
   onRecommendationPress,
-  onSuggestion,
   onCamera,
   onImageError,
   onReport,
@@ -225,11 +219,16 @@ export const ChatMessageList = ({
       accessibilityLabel={t('a11y.chat.messages_list')}
       accessibilityRole="list"
       ListEmptyComponent={
-        <WelcomeCard
-          museumMode={museumMode}
-          onSuggestion={onSuggestion}
-          onCamera={onCamera}
-          disabled={isSending}
+        <EmptyState
+          variant="chat"
+          title={t('empty.chat.title')}
+          description={t('empty.chat.description')}
+          primaryAction={{
+            label: t('empty.chat.actionLabel'),
+            onPress: onCamera,
+            iconName: 'camera-outline',
+          }}
+          testID="chat-empty-state"
         />
       }
       ListFooterComponent={showTypingIndicator ? <TypingIndicator /> : null}

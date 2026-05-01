@@ -893,5 +893,31 @@
     "empty": "Noch keine Bewertungen. Sei der Erste!",
     "reviewCount": "{{count}} Bewertungen",
     "submitFailed": "Senden fehlgeschlagen. Bitte erneut versuchen."
+  },
+  "empty": {
+    "chat": {
+      "title": "Beginne ein Gespräch",
+      "description": "Tippe einen Chip auf dem Startbildschirm an oder sende deine erste Nachricht.",
+      "actionLabel": "Kamera öffnen"
+    },
+    "museums": {
+      "title": "Keine Museen gefunden",
+      "description": "Erweitere den Suchradius oder bewege dich in eine andere Gegend.",
+      "actionLabel": "Aktualisieren"
+    },
+    "reviews": {
+      "title": "Noch keine Bewertungen",
+      "description": "Sei der Erste, der seine Erfahrung teilt."
+    },
+    "dailyArt": {
+      "title": "Noch keine gespeicherten Werke",
+      "description": "Wische bei einem Tageswerk nach rechts, um es hier zu speichern.",
+      "actionLabel": "Zur Startseite"
+    },
+    "conversations": {
+      "title": "Noch keine Gespräche",
+      "description": "Deine bisherigen Gespräche erscheinen hier.",
+      "actionLabel": "Gespräch starten"
+    }
   }
 }

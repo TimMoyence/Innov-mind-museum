@@ -55,7 +55,7 @@ describe('MuseumDirectoryList', () => {
 
   it('renders empty state when museum list is empty', () => {
     render(<MuseumDirectoryList {...defaultProps} />);
-    expect(screen.getByText('museumDirectory.no_results')).toBeTruthy();
+    expect(screen.getByTestId('museums-empty-state')).toBeTruthy();
   });
 
   it('renders museum list items', () => {

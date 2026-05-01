@@ -893,5 +893,31 @@
     "empty": "暂无评价，快来写第一条吧！",
     "reviewCount": "{{count}}条评价",
     "submitFailed": "提交失败，请重试。"
+  },
+  "empty": {
+    "chat": {
+      "title": "开启一段对话",
+      "description": "在主屏幕点击芯片或发送第一条消息。",
+      "actionLabel": "打开相机"
+    },
+    "museums": {
+      "title": "未找到博物馆",
+      "description": "请扩大搜索范围或前往其他区域。",
+      "actionLabel": "刷新"
+    },
+    "reviews": {
+      "title": "暂无评价",
+      "description": "成为第一个分享体验的人。"
+    },
+    "dailyArt": {
+      "title": "尚未保存任何作品",
+      "description": "在每日作品上向右滑动以保存。",
+      "actionLabel": "前往主页"
+    },
+    "conversations": {
+      "title": "尚无对话",
+      "description": "您的过往对话将显示于此。",
+      "actionLabel": "开始对话"
+    }
   }
 }
