@@ -623,7 +623,13 @@
     "website": "Sitio web",
     "phone": "Teléfono",
     "loading_details": "Cargando información…",
-    "no_extra_info": "Sin detalles adicionales disponibles."
+    "no_extra_info": "Sin detalles adicionales disponibles.",
+    "offlinePack": {
+      "title": "Estás cerca de {{cityName}}",
+      "description": "Descarga el contenido sin conexión para explorar sin red.",
+      "accept": "Descargar",
+      "decline": "Más tarde"
+    }
   },
   "days": {
     "mon": "Lun",

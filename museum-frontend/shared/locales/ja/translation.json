@@ -623,7 +623,13 @@
     "website": "ウェブサイト",
     "phone": "電話",
     "loading_details": "情報を読み込み中…",
-    "no_extra_info": "詳細情報はありません。"
+    "no_extra_info": "詳細情報はありません。",
+    "offlinePack": {
+      "title": "{{cityName}}の近くにいます",
+      "description": "オフラインコンテンツをダウンロードして接続なしで探索できます。",
+      "accept": "ダウンロード",
+      "decline": "後で"
+    }
   },
   "days": {
     "mon": "月",

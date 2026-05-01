@@ -623,7 +623,13 @@
     "website": "Website",
     "phone": "Phone",
     "loading_details": "Loading details…",
-    "no_extra_info": "No detailed info available."
+    "no_extra_info": "No detailed info available.",
+    "offlinePack": {
+      "title": "You're near {{cityName}}",
+      "description": "Download the offline content to explore without a connection.",
+      "accept": "Download",
+      "decline": "Later"
+    }
   },
   "days": {
     "mon": "Mon",
