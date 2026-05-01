@@ -1,3 +1,4 @@
+import { SystemMessage } from '@langchain/core/messages';
 import * as Sentry from '@sentry/node';
 
 import { logger } from '@shared/logger/logger';
@@ -25,6 +26,10 @@ import {
   type SectionTask,
 } from '../../useCase/llm-section-runner';
 import { createSummaryFallback, type LlmSectionName } from '../../useCase/llm-sections';
+import {
+  WALK_TOUR_GUIDE_SECTION,
+  walkAssistantOutputSchema,
+} from '../../useCase/llm-sections/walk-tour-guide';
 import { Semaphore } from '../../useCase/semaphore';
 
 import type {
@@ -254,6 +259,10 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         },
       },
       async () => {
+        if (input.intent === 'walk') {
+          return await this.generateWalk(input);
+        }
+
         const startedAt = Date.now();
 
         const prepared = buildOrchestratorMessages(input);
@@ -433,6 +442,12 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         },
       },
       async () => {
+        if (input.intent === 'walk') {
+          const walkResult = await this.generateWalk(input);
+          onChunk(walkResult.text);
+          return walkResult;
+        }
+
         const prepared = buildOrchestratorMessages(input);
         const { normalizedText, recentHistory, sectionPlan } = prepared;
 
@@ -496,5 +511,78 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         }
       },
     ); // end startSpan('llm.orchestrate.stream')
+  }
+
+  /**
+   * Dedicated orchestration path for intent='walk'. Injects WALK_TOUR_GUIDE_SECTION
+   * as an additional system message and uses LangChain withStructuredOutput to return
+   * a { answer, suggestions } object validated by walkAssistantOutputSchema.
+   *
+   * No section runner, no retry logic — exceptions propagate to the caller.
+   */
+  private async generateWalk(input: OrchestratorInput): Promise<OrchestratorOutput> {
+    const model = this.model;
+    if (!model) {
+      return {
+        text: MISSING_LLM_KEY_FALLBACK,
+        metadata: { citations: ['system:missing-llm-api-key'] },
+        suggestions: undefined,
+      };
+    }
+
+    const prepared = buildOrchestratorMessages(input);
+    const { systemPrompt, historyMessages, userMessage, sectionPlan } = prepared;
+
+    // Use the first section prompt (summary) as the base section prompt.
+    const sectionPrompt = sectionPlan[0]?.prompt ?? '';
+
+    // Build message array mirroring buildSectionMessages layout but inserting
+    // WALK_TOUR_GUIDE_SECTION as a SystemMessage right before the user message.
+    const messages = buildSectionMessages(
+      systemPrompt,
+      sectionPrompt,
+      historyMessages,
+      userMessage,
+      {
+        userMemoryBlock: input.userMemoryBlock,
+        knowledgeBaseBlock: input.knowledgeBaseBlock,
+        webSearchBlock: input.webSearchBlock,
+        localKnowledgeBlock: input.localKnowledgeBlock,
+      },
+    );
+
+    // Insert WALK_TOUR_GUIDE_SECTION immediately before the last user message.
+    // buildSectionMessages places the HumanMessage last, so we inject at length-1.
+    messages.splice(messages.length - 1, 0, new SystemMessage(WALK_TOUR_GUIDE_SECTION));
+
+    const structuredChain = (
+      model as unknown as {
+        withStructuredOutput: (
+          schema: typeof walkAssistantOutputSchema,
+          options: { name: string },
+        ) => {
+          invoke: (
+            messages: unknown,
+            options?: { signal?: AbortSignal },
+          ) => Promise<{ answer: string; suggestions: string[] }>;
+        };
+      }
+    ).withStructuredOutput(walkAssistantOutputSchema, { name: 'WalkAssistantOutput' });
+
+    const signal = AbortSignal.timeout(env.llm.totalBudgetMs);
+    const result = await structuredChain.invoke(messages, { signal });
+
+    logger.info('llm_walk_orchestration_complete', {
+      requestId: input.requestId,
+      provider: env.llm.provider,
+      model: env.llm.model,
+      suggestionsCount: result.suggestions.length,
+    });
+
+    return {
+      text: result.answer,
+      metadata: { citations: [] },
+      suggestions: result.suggestions,
+    };
   }
 }

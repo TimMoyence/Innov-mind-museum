@@ -1,5 +1,10 @@
 import type { ResolvedLocation } from '../../useCase/location-resolver';
-import type { ChatAssistantMetadata, ContentPreference, VisitContext } from '../chat.types';
+import type {
+  ChatAssistantMetadata,
+  ChatSessionIntent,
+  ContentPreference,
+  VisitContext,
+} from '../chat.types';
 import type { ChatMessage } from '../chatMessage.entity';
 
 /** Input for the LLM orchestrator. */
@@ -43,6 +48,12 @@ export interface OrchestratorInput {
    * (history, technique, artist). Read-only hint for the LLM; does not filter content.
    */
   contentPreferences?: readonly ContentPreference[];
+  /**
+   * Session-level intent that controls which orchestration path is used.
+   * When 'walk', injects WALK_TOUR_GUIDE_SECTION and uses structured output
+   * to return up to 3 next-artwork suggestions alongside the answer.
+   */
+  intent?: ChatSessionIntent;
 }
 
 /** Result returned by {@link ChatOrchestrator.generate}. */
@@ -51,6 +62,12 @@ export interface OrchestratorOutput {
   text: string;
   /** Structured metadata extracted from the LLM response (citations, diagnostics, etc.). */
   metadata: ChatAssistantMetadata;
+  /**
+   * Next-artwork suggestions returned only when intent='walk'. Up to 3 short strings
+   * (each ≤60 chars), validated by walkAssistantOutputSchema before being set here.
+   * Undefined for all other intents.
+   */
+  suggestions?: string[];
 }
 
 /** Port for LLM orchestration -- generates assistant responses from conversation context. */
