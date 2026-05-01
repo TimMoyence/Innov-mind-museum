@@ -3,6 +3,7 @@ import { logger } from '@shared/logger/logger';
 import { ChatMediaService } from './chat-media.service';
 import { ChatMessageService } from './chat-message.service';
 import { ChatSessionService } from './chat-session.service';
+import { LlmCacheServiceImpl } from './llm-cache.service';
 import { DisabledAudioTranscriber } from '../domain/ports/audio-transcriber.port';
 
 import type { GuardrailBlockReason } from './art-topic-guardrail';
@@ -123,6 +124,7 @@ export class ChatService {
       imageProcessor: deps.imageProcessor,
       audioTranscriber,
       cache: deps.cache,
+      llmCache: deps.cache ? new LlmCacheServiceImpl(deps.cache) : undefined,
       ocr: deps.ocr,
       enrichment: {
         userMemory: deps.userMemory,

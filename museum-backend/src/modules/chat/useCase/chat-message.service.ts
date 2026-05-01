@@ -1,4 +1,8 @@
+import { createHash } from 'node:crypto';
+
 import { AppError, badRequest } from '@shared/errors/app.error';
+import { logger } from '@shared/logger/logger';
+import { env } from '@src/config/env';
 
 import { validateAudioInput } from './audio-validation';
 import { GuardrailEvaluationService } from './guardrail-evaluation.service';
@@ -15,6 +19,7 @@ import type { PostMessageResult, PostAudioMessageResult } from './chat.service.t
 import type { ArtTopicClassifierPort, LlmJudgeFn } from './guardrail-evaluation.service';
 import type { ImageEnrichmentService } from './image-enrichment.service';
 import type { KnowledgeBaseService } from './knowledge-base.service';
+import type { LlmCacheKeyInput, LlmCacheService } from './llm-cache.types';
 import type { LocationConsentChecker, LocationResolver } from './location-resolver';
 import type { PrepareReady } from './prepare-message.pipeline';
 import type { UserMemoryService } from './user-memory.service';
@@ -35,6 +40,16 @@ import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/p
 import type { DbLookupService } from '@modules/knowledge-extraction/useCase/db-lookup.service';
 import type { AuditService } from '@shared/audit/audit.service';
 import type { CacheService } from '@shared/cache/cache.port';
+
+/** Context bundle passed to internal LLM-cache helpers to avoid long parameter lists. */
+interface LlmCacheCtx {
+  prep: PrepareReady;
+  sanitizedText: string;
+  input: PostMessageInput;
+  orchestratorInput: { image?: unknown };
+  sessionId: string;
+  requestId: string | undefined;
+}
 
 /** Content-enrichment services bundled together (replaces 7 individual deps). */
 export interface ChatEnrichmentDeps {
@@ -77,6 +92,12 @@ export interface ChatMessageServiceDeps {
   safety?: ChatSafetyDeps; // 8 — guardrails + PII sanitiser
   /** EXIF / metadata stripper (GDPR Art. 5(1)(c)). */
   imageProcessor?: ImageProcessorPort;
+  /**
+   * G (2026-05-01) — LLM response cache. When provided, non-streaming text
+   * responses are looked up before the LLM call and stored on miss.
+   * Bypass conditions: streaming path, env.llm.cacheEnabled=false, image present.
+   */
+  llmCache?: LlmCacheService;
 }
 
 /** Awaits stream drain with a safety timeout to prevent indefinite hangs. */
@@ -109,6 +130,7 @@ export class ChatMessageService {
   private readonly userMemory?: UserMemoryService;
   private readonly artTopicClassifier?: ArtTopicClassifierPort;
   private readonly piiSanitizer: PiiSanitizer;
+  private readonly llmCache?: LlmCacheService;
 
   constructor(deps: ChatMessageServiceDeps) {
     const enrichment = deps.enrichment ?? {};
@@ -118,6 +140,7 @@ export class ChatMessageService {
     this.orchestrator = deps.orchestrator;
     this.audioTranscriber = deps.audioTranscriber ?? new DisabledAudioTranscriber();
     this.cache = deps.cache;
+    this.llmCache = deps.llmCache;
     this.userMemory = enrichment.userMemory;
     this.artTopicClassifier = safety.artTopicClassifier;
     this.piiSanitizer = safety.piiSanitizer ?? new DisabledPiiSanitizer();
@@ -191,11 +214,66 @@ export class ChatMessageService {
     if (prep.kind === 'refused') return prep.result;
 
     const sanitizedText = this.piiSanitizer.sanitize(input.text?.trim() ?? '').sanitizedText;
-    const aiResult = await this.orchestrator.generate(
-      this.pipeline.buildOrchestratorInput(prep, input, sanitizedText, requestId),
+    const orchestratorInput = this.pipeline.buildOrchestratorInput(
+      prep,
+      input,
+      sanitizedText,
+      requestId,
     );
 
+    const cacheCtx: LlmCacheCtx = {
+      prep,
+      sanitizedText,
+      input,
+      orchestratorInput,
+      sessionId,
+      requestId,
+    };
+    const cached = await this.tryLlmCacheLookup(cacheCtx);
+    if (cached) {
+      return await this.commitResponse(sessionId, prep, cached, { requestId, ip });
+    }
+
+    const aiResult = await this.orchestrator.generate(orchestratorInput);
+    await this.tryLlmCacheStore(cacheCtx, aiResult);
+
     return await this.commitResponse(sessionId, prep, aiResult, { requestId, ip });
+  }
+
+  /** G — Attempts cache lookup; returns the cached result on hit, null on miss/bypass. */
+  private async tryLlmCacheLookup(ctx: LlmCacheCtx): Promise<OrchestratorOutput | null> {
+    const llmCache = this.llmCache;
+    if (!llmCache || !env.llm.cacheEnabled || ctx.input.image || ctx.orchestratorInput.image)
+      return null;
+    const cacheInput = this.buildLlmCacheInput(ctx.prep, ctx.sanitizedText);
+    if (!cacheInput) return null;
+    const result = await llmCache.lookup<OrchestratorOutput>(cacheInput);
+    if (result.hit && result.value) {
+      logger.info('llm_cache_hit', {
+        contextClass: result.contextClass,
+        userId: ctx.prep.ownerId ?? 'anon',
+        sessionId: ctx.sessionId,
+        requestId: ctx.requestId,
+      });
+      return result.value;
+    }
+    return null;
+  }
+
+  /** G — Stores fresh LLM result in cache (bypass on same conditions as lookup). */
+  private async tryLlmCacheStore(ctx: LlmCacheCtx, aiResult: OrchestratorOutput): Promise<void> {
+    const llmCache = this.llmCache;
+    if (!llmCache || !env.llm.cacheEnabled || ctx.input.image || ctx.orchestratorInput.image)
+      return;
+    const cacheInput = this.buildLlmCacheInput(ctx.prep, ctx.sanitizedText);
+    if (!cacheInput) return;
+    await llmCache.store(cacheInput, aiResult);
+    logger.info('llm_cache_miss', {
+      contextClass: llmCache.classify(cacheInput),
+      userId: ctx.prep.ownerId ?? 'anon',
+      sessionId: ctx.sessionId,
+      requestId: ctx.requestId,
+    });
   }
 
   /**
@@ -292,4 +370,29 @@ export class ChatMessageService {
       transcription,
     };
   }
+
+  /**
+   * Builds the LlmCacheKeyInput from the prepared pipeline state.
+   * Returns null when the prompt is empty (image-only, no cacheable text).
+   */
+  private buildLlmCacheInput(prep: PrepareReady, sanitizedText: string): LlmCacheKeyInput | null {
+    if (!sanitizedText) return null;
+    return {
+      model: env.llm.model,
+      userId: prep.ownerId ?? 'anon',
+      systemSection: 'chat-default',
+      locale: prep.requestedLocale ?? 'en',
+      museumContext: {
+        museumId: prep.session.museumId ?? null,
+        museumName: prep.session.museumName ?? null,
+      },
+      userPreferencesHash: prep.userMemoryBlock ? hashString16(prep.userMemoryBlock) : undefined,
+      prompt: sanitizedText,
+    };
+  }
+}
+
+/** 16-char hex SHA-256 digest of a string — used to derive a stable userPreferencesHash. */
+function hashString16(value: string): string {
+  return createHash('sha256').update(value).digest('hex').slice(0, 16);
 }

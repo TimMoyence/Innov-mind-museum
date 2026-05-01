@@ -313,6 +313,10 @@ const env: AppEnv = {
     openAiApiKey: process.env.OPENAI_API_KEY,
     deepseekApiKey: process.env.DEEPSEEK_API_KEY,
     googleApiKey: process.env.GOOGLE_API_KEY,
+    // G (2026-05-01) — LLM response cache kill switch. Defaults true; set
+    // LLM_CACHE_ENABLED=false to bypass cache for all requests (e.g. during
+    // cache debugging or rollout of a prompt change).
+    cacheEnabled: toBoolean(process.env.LLM_CACHE_ENABLED, true),
   },
   rateLimit: {
     ipLimit: toNumber(process.env.RATE_LIMIT_IP, 200),

@@ -137,6 +137,8 @@ export interface AppEnv {
     openAiApiKey?: string;
     deepseekApiKey?: string;
     googleApiKey?: string;
+    /** Whether the LLM response cache (G spec) is active. Defaults true; set false to bypass. */
+    cacheEnabled: boolean;
   };
   rateLimit: {
     ipLimit: number;
