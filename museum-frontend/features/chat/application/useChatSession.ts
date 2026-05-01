@@ -232,6 +232,15 @@ export const useChatSession = (sessionId: string) => {
 
   const isEmpty = messages.length === 0;
 
+  const lastAssistantPending = useMemo(() => {
+    if (!isSending) return false;
+    if (messages.length === 0) return true; // user just submitted, nothing yet
+    const last = messages[messages.length - 1];
+    if (last.role === 'user') return true;
+    if (last.role === 'assistant' && (!last.text || last.text.length === 0)) return true;
+    return false;
+  }, [isSending, messages]);
+
   return {
     messages,
     isEmpty,
@@ -256,5 +265,6 @@ export const useChatSession = (sessionId: string) => {
     museumMode,
     sessionTitle,
     museumName,
+    lastAssistantPending,
   };
 };

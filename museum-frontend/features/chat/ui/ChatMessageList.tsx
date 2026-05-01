@@ -10,6 +10,7 @@ import { useTextToSpeech } from '@/features/chat/application/useTextToSpeech';
 import { ChatMessageBubble } from '@/features/chat/ui/ChatMessageBubble';
 import { MessageActions } from '@/features/chat/ui/MessageActions';
 import { TypingIndicator } from '@/features/chat/ui/TypingIndicator';
+import { TypingPlaceholder } from '@/features/chat/ui/TypingPlaceholder';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
@@ -37,6 +38,8 @@ interface ChatMessageListProps {
   onLinkPress?: (url: string) => boolean;
   /** Called to retry sending a failed message. */
   onRetry?: (message: ChatUiMessage) => void;
+  /** Whether the assistant response is pending (between user submit and first token). */
+  isAssistantPending?: boolean;
 }
 
 /**
@@ -55,6 +58,7 @@ export const ChatMessageList = ({
   onReport,
   onLinkPress,
   onRetry,
+  isAssistantPending = false,
 }: ChatMessageListProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -231,7 +235,12 @@ export const ChatMessageList = ({
           testID="chat-empty-state"
         />
       }
-      ListFooterComponent={showTypingIndicator ? <TypingIndicator /> : null}
+      ListFooterComponent={
+        <>
+          <TypingPlaceholder visible={isAssistantPending} testID="chat-assistant-pending" />
+          {showTypingIndicator ? <TypingIndicator /> : null}
+        </>
+      }
       ItemSeparatorComponent={ItemSeparator}
     />
   );

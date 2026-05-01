@@ -34,6 +34,14 @@ jest.mock('@/features/chat/ui/TypingIndicator', () => {
   };
 });
 
+jest.mock('@/features/chat/ui/TypingPlaceholder', () => {
+  const { View: RNView } = require('react-native');
+  return {
+    TypingPlaceholder: ({ visible, testID }: { visible: boolean; testID?: string }) =>
+      visible ? <RNView testID={testID ?? 'typing-placeholder'} /> : null,
+  };
+});
+
 jest.mock('@/features/chat/application/useTextToSpeech', () => ({
   useTextToSpeech: () => ({
     isPlaying: false,
@@ -116,5 +124,21 @@ describe('ChatMessageList', () => {
     render(<ChatMessageList {...defaultProps} messages={messages} />);
 
     expect(screen.queryByTestId('chat-empty-state')).toBeNull();
+  });
+
+  it('renders TypingPlaceholder when isAssistantPending is true', () => {
+    const messages: ChatUiMessage[] = [createMessage({ id: 'msg-1', role: 'user', text: 'Hello' })];
+
+    render(<ChatMessageList {...defaultProps} messages={messages} isAssistantPending={true} />);
+
+    expect(screen.getByTestId('chat-assistant-pending')).toBeTruthy();
+  });
+
+  it('hides TypingPlaceholder when isAssistantPending is false', () => {
+    const messages: ChatUiMessage[] = [createMessage({ id: 'msg-1', role: 'user', text: 'Hello' })];
+
+    render(<ChatMessageList {...defaultProps} messages={messages} isAssistantPending={false} />);
+
+    expect(screen.queryByTestId('chat-assistant-pending')).toBeNull();
   });
 });

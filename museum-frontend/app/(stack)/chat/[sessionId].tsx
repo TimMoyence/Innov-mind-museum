@@ -100,6 +100,7 @@ export default function ChatSessionScreen() {
     locale,
     sessionTitle,
     museumName,
+    lastAssistantPending,
   } = useChatSession(sessionId);
 
   useMuseumPrefetch(museumName ?? null, locale);
@@ -386,6 +387,7 @@ export default function ChatSessionScreen() {
                 onReport={onMessageLongPress}
                 onLinkPress={onMessageLinkPress}
                 onRetry={retryMessage}
+                isAssistantPending={lastAssistantPending}
               />
             )}
           </GlassCard>
