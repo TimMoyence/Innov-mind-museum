@@ -101,6 +101,16 @@ GitHub Actions workflows (`.github/workflows/`):
 - Helper scripts: `museum-frontend/scripts/maestro-runner-setup.sh` (backend boot), `museum-frontend/scripts/maestro-run-shard.sh` (flow runner). Bats-tested.
 - See `docs/superpowers/specs/2026-05-01-phase2-maestro-mobile-pr-design.md` for the full spec.
 
+### Web admin Playwright + a11y (Phase 3)
+
+- 4 admin flow specs in `museum-web/e2e/flows/` (admin-login, users, audit-logs, reports-moderation).
+- 6 a11y specs in `museum-web/e2e/a11y/` running real `@axe-core/playwright` against WCAG 2.1 AA: 3 public routes (`/en`, `/en/support`, `/en/privacy`) + 3 admin routes (`/en/admin/login`, `/en/admin`, `/en/admin/users`).
+- `globalSetup` registers a fresh admin user via real `/api/auth/register`, promotes role via DB UPDATE, logs in via the real LoginForm, and saves `storageState.json` for reuse across all flow + admin a11y specs.
+- PR pipeline: `playwright-pr` job runs Chromium only (~5–7 min wall clock); fails the PR on flow regression or a11y violation.
+- Nightly cron (03:23 UTC): `playwright-nightly` job runs the full 3-browser matrix (chromium + firefox + webkit).
+- a11y disable-rules baseline at `museum-web/e2e/a11y/_disable-rules.json`. Vitest cap test enforces baseline length ≤ `PHASE_3_DISABLE_RULES_CAP` (currently 0; only shrinks).
+- See `docs/superpowers/specs/2026-05-01-phase3-web-admin-playwright-design.md` for the full spec.
+
 ## Architecture
 
 ### Backend — Hexagonal (Ports & Adapters)

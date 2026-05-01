@@ -10,6 +10,8 @@ on:
       - 'museum-web/**'
       - '.github/workflows/ci-cd-web.yml'
     branches: ['main']
+  schedule:
+    - cron: '23 3 * * *'   # 03:23 UTC nightly — multi-browser Playwright run
 
 # Top-level least-privilege default. Deploy job overrides with packages: write.
 permissions:
@@ -67,6 +69,214 @@ jobs:
         run: pnpm test
       # Coverage gate (vitest.config.ts thresholds) activates after Bloc C5 lands
       # 10 admin panel tests bringing museum-web above the 70 % floor — see ADR-007.
+
+  # ─── Playwright e2e (Chromium on PR + push) ─────────────────────────────
+  playwright-pr:
+    needs: quality
+    if: ${{ github.event_name != 'schedule' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: museum-web
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: museum_dev
+          POSTGRES_PASSWORD: museum_dev_password
+          POSTGRES_DB: museum_dev
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320  # v5
+        with:
+          version: 10
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: |
+            museum-web/pnpm-lock.yaml
+            museum-backend/pnpm-lock.yaml
+
+      # Backend: install + migrate + start
+      - name: Install backend deps
+        working-directory: museum-backend
+        run: pnpm install --frozen-lockfile
+      - name: Run backend migrations
+        working-directory: museum-backend
+        env:
+          DB_HOST: localhost
+          DB_PORT: '5433'
+          DB_USER: museum_dev
+          DB_PASSWORD: museum_dev_password
+          PGDATABASE: museum_dev
+        run: pnpm migration:run
+      - name: Start backend
+        working-directory: museum-backend
+        env:
+          DB_HOST: localhost
+          DB_PORT: '5433'
+          DB_USER: museum_dev
+          DB_PASSWORD: museum_dev_password
+          PGDATABASE: museum_dev
+          PORT: '3000'
+          JWT_ACCESS_SECRET: phase3-access
+          JWT_REFRESH_SECRET: phase3-refresh
+          CORS_ORIGINS: http://localhost:3001
+        run: nohup pnpm dev > /tmp/be.log 2>&1 &
+      - name: Wait for backend health
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/api/health > /dev/null 2>&1; then exit 0; fi
+            sleep 2
+          done
+          echo "Backend did not become healthy"; tail -50 /tmp/be.log; exit 1
+
+      # Web: install + start dev server
+      - name: Install web deps
+        run: pnpm install --frozen-lockfile
+      - name: Start Next.js dev server
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:3000
+        run: nohup pnpm dev > /tmp/web.log 2>&1 &
+      - name: Wait for web ready
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3001/en > /dev/null 2>&1; then exit 0; fi
+            sleep 2
+          done
+          echo "Web did not come up"; tail -50 /tmp/web.log; exit 1
+
+      # Playwright
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run Playwright suite (Chromium)
+        env:
+          PW_BROWSERS: chromium
+          DB_HOST: localhost
+          DB_PORT: '5433'
+          DB_USER: museum_dev
+          DB_PASSWORD: museum_dev_password
+          PGDATABASE: museum_dev
+        run: pnpm test:e2e
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: playwright-report-pr
+          path: museum-web/playwright-report/
+          retention-days: 7
+
+  # ─── Playwright e2e (3-browser matrix nightly) ──────────────────────────
+  playwright-nightly:
+    needs: quality
+    if: ${{ github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: museum-web
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: museum_dev
+          POSTGRES_PASSWORD: museum_dev_password
+          POSTGRES_DB: museum_dev
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320  # v5
+        with:
+          version: 10
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: |
+            museum-web/pnpm-lock.yaml
+            museum-backend/pnpm-lock.yaml
+      - name: Install backend deps
+        working-directory: museum-backend
+        run: pnpm install --frozen-lockfile
+      - name: Run backend migrations
+        working-directory: museum-backend
+        env:
+          DB_HOST: localhost
+          DB_PORT: '5433'
+          DB_USER: museum_dev
+          DB_PASSWORD: museum_dev_password
+          PGDATABASE: museum_dev
+        run: pnpm migration:run
+      - name: Start backend
+        working-directory: museum-backend
+        env:
+          DB_HOST: localhost
+          DB_PORT: '5433'
+          DB_USER: museum_dev
+          DB_PASSWORD: museum_dev_password
+          PGDATABASE: museum_dev
+          PORT: '3000'
+          JWT_ACCESS_SECRET: phase3-access
+          JWT_REFRESH_SECRET: phase3-refresh
+          CORS_ORIGINS: http://localhost:3001
+        run: nohup pnpm dev > /tmp/be.log 2>&1 &
+      - name: Wait for backend
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/api/health > /dev/null 2>&1; then exit 0; fi
+            sleep 2
+          done
+          tail -50 /tmp/be.log; exit 1
+      - name: Install web deps
+        run: pnpm install --frozen-lockfile
+      - name: Start web
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:3000
+        run: nohup pnpm dev > /tmp/web.log 2>&1 &
+      - name: Wait for web
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3001/en > /dev/null 2>&1; then exit 0; fi
+            sleep 2
+          done
+          tail -50 /tmp/web.log; exit 1
+      - name: Install Playwright browsers (all)
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
+      - name: Run Playwright suite (all browsers)
+        env:
+          PW_BROWSERS: chromium,firefox,webkit
+          DB_HOST: localhost
+          DB_PORT: '5433'
+          DB_USER: museum_dev
+          DB_PASSWORD: museum_dev_password
+          PGDATABASE: museum_dev
+        run: pnpm test:e2e
+      - name: Upload Playwright nightly report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: playwright-report-nightly
+          path: museum-web/playwright-report/
+          retention-days: 14
 
   lighthouse:
     needs: quality
