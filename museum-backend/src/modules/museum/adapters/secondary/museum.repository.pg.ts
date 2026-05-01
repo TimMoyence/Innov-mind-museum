@@ -1,5 +1,6 @@
 import { Between } from 'typeorm';
 
+import { withOptimisticLockRetry } from '@shared/db/optimistic-lock-retry';
 import { conflict } from '@shared/errors/app.error';
 
 import { Museum } from '../../domain/museum.entity';
@@ -39,26 +40,41 @@ export class MuseumRepositoryPg implements IMuseumRepository {
 
   /** Dynamically updates museum fields and returns the updated record. */
   async update(id: number, input: UpdateMuseumInput): Promise<Museum | null> {
-    const existing = await this.findById(id);
+    let existing = await this.findById(id);
     if (!existing) return null;
 
-    if (input.name !== undefined) existing.name = input.name;
-    if (input.slug !== undefined) existing.slug = input.slug;
-    if (input.address !== undefined) existing.address = input.address;
-    if (input.description !== undefined) existing.description = input.description;
-    if (input.latitude !== undefined) existing.latitude = input.latitude;
-    if (input.longitude !== undefined) existing.longitude = input.longitude;
-    if (input.config !== undefined) existing.config = input.config;
-    if (input.isActive !== undefined) existing.isActive = input.isActive;
+    this.applyUpdates(existing, input);
 
     try {
-      return await this.repo.save(existing);
+      return await withOptimisticLockRetry({
+        mutation: () => this.repo.save(existing),
+        refetch: async () => {
+          const fresh = await this.findById(id);
+          if (fresh) {
+            existing = fresh;
+            this.applyUpdates(existing, input);
+          }
+        },
+        context: `museum.update id=${id}`,
+      });
     } catch (err: unknown) {
       if ((err as { code?: string }).code === '23505') {
         throw conflict('A museum with this slug already exists');
       }
       throw err;
     }
+  }
+
+  /** Applies partial update fields onto an existing Museum entity in place. */
+  private applyUpdates(entity: Museum, input: UpdateMuseumInput): void {
+    if (input.name !== undefined) entity.name = input.name;
+    if (input.slug !== undefined) entity.slug = input.slug;
+    if (input.address !== undefined) entity.address = input.address;
+    if (input.description !== undefined) entity.description = input.description;
+    if (input.latitude !== undefined) entity.latitude = input.latitude;
+    if (input.longitude !== undefined) entity.longitude = input.longitude;
+    if (input.config !== undefined) entity.config = input.config;
+    if (input.isActive !== undefined) entity.isActive = input.isActive;
   }
 
   /** Finds a museum by its numeric ID. */

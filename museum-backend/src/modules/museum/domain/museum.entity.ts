@@ -4,6 +4,7 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  VersionColumn,
 } from 'typeorm';
 
 import type { MuseumCategory } from '@shared/http/overpass.client';
@@ -46,4 +47,12 @@ export class Museum {
 
   @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
   updatedAt!: Date;
+
+  /**
+   * Optimistic-locking version column. Auto-incremented by TypeORM on every
+   * save. Detects concurrent admin edits — see withOptimisticLockRetry helper
+   * in src/shared/db/optimistic-lock-retry.ts.
+   */
+  @VersionColumn()
+  version!: number;
 }
