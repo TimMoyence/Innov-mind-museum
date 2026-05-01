@@ -825,7 +825,8 @@
     "skip": "跳过",
     "saved": "已收藏！",
     "by": "作者",
-    "fun_fact": "你知道吗？"
+    "fun_fact": "你知道吗？",
+    "swipeToSave": "保存"
   },
   "tickets": {
     "title": "我的工单",

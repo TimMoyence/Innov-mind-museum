@@ -825,7 +825,8 @@
     "skip": "Salta",
     "saved": "Salvato!",
     "by": "di",
-    "fun_fact": "Lo sapevi?"
+    "fun_fact": "Lo sapevi?",
+    "swipeToSave": "Salva"
   },
   "tickets": {
     "title": "I miei ticket",

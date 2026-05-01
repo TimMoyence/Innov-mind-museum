@@ -825,7 +825,8 @@
     "skip": "スキップ",
     "saved": "保存済み！",
     "by": "作",
-    "fun_fact": "ご存知でしたか？"
+    "fun_fact": "ご存知でしたか？",
+    "swipeToSave": "保存"
   },
   "tickets": {
     "title": "マイチケット",

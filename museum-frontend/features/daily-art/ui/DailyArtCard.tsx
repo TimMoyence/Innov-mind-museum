@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated as RNAnimated, Pressable, StyleSheet, Text, View } from 'react-native';
 import ReAnimated, {
   useAnimatedStyle,
@@ -6,10 +6,13 @@ import ReAnimated, {
   Extrapolation,
   type SharedValue,
 } from 'react-native-reanimated';
+import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
 import type { DailyArtwork } from '../infrastructure/dailyArtApi';
+import { toggleSavedArtwork } from '../application/useDailyArt';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
 import { useTheme } from '@/shared/ui/ThemeContext';
@@ -23,15 +26,26 @@ interface DailyArtCardProps {
   /** Optional shared value from parent ScrollView. When provided, the hero image
    *  translates up at 50% of scroll speed and scales 1.0 → 1.05 over 100 px. */
   scrollY?: SharedValue<number>;
+  /** When false, the swipe-to-save gesture is disabled (e.g. in saved-list view). Defaults to true. */
+  swipeToSave?: boolean;
 }
 
 /** Renders a glass card showcasing the daily artwork with save/skip actions and an expandable fun fact. */
-export const DailyArtCard = ({ artwork, isSaved, onSave, onSkip, scrollY }: DailyArtCardProps) => {
+export const DailyArtCard = ({
+  artwork,
+  isSaved,
+  onSave,
+  onSkip,
+  scrollY,
+  swipeToSave = true,
+}: DailyArtCardProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const reduceMotion = useReducedMotion();
   const [funFactExpanded, setFunFactExpanded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- Swipeable uses legacy Animated API
+  const swipeableRef = useRef<Swipeable>(null);
 
   const fadeAnim = useMemo(() => new RNAnimated.Value(reduceMotion ? 1 : 0), [reduceMotion]);
 
@@ -59,102 +73,146 @@ export const DailyArtCard = ({ artwork, isSaved, onSave, onSkip, scrollY }: Dail
     };
   });
 
+  const handleSwipeSave = useCallback(async () => {
+    await toggleSavedArtwork(artwork);
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    swipeableRef.current?.close();
+  }, [artwork]);
+
+  const renderRightActions = useCallback(
+    () => (
+      <Pressable
+        style={[styles.saveAction, { backgroundColor: theme.danger }]}
+        onPress={() => {
+          void handleSwipeSave();
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={t('dailyArt.swipeToSave')}
+      >
+        <Ionicons name="heart-outline" size={24} color={theme.primaryContrast} />
+        <Text style={[styles.saveActionText, { color: theme.primaryContrast }]}>
+          {t('dailyArt.swipeToSave')}
+        </Text>
+      </Pressable>
+    ),
+    [handleSwipeSave, t, theme],
+  );
+
+  const cardBody = (
+    <GlassCard style={styles.card} intensity={58}>
+      <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+        {t('dailyArt.title')}
+      </Text>
+
+      {artwork.imageUrl && !imageError ? (
+        <ReAnimated.Image
+          source={{ uri: artwork.imageUrl }}
+          style={[styles.image, imageAnimatedStyle]}
+          resizeMode="cover"
+          onError={() => {
+            setImageError(true);
+          }}
+          accessibilityLabel={artwork.title}
+        />
+      ) : (
+        <View style={[styles.imageFallback, { backgroundColor: theme.surface }]}>
+          <Ionicons name="image-outline" size={40} color={theme.textTertiary} />
+        </View>
+      )}
+
+      <Text style={[styles.title, { color: theme.textPrimary }]}>{artwork.title}</Text>
+      <Text style={[styles.artist, { color: theme.textSecondary }]}>
+        {t('dailyArt.by')} {artwork.artist}
+        {artwork.year ? ` (${artwork.year})` : ''}
+      </Text>
+
+      {artwork.museum ? (
+        <Text style={[styles.museum, { color: theme.textTertiary }]}>{artwork.museum}</Text>
+      ) : null}
+
+      {artwork.funFact ? (
+        <Pressable
+          style={styles.funFactToggle}
+          onPress={() => {
+            setFunFactExpanded((v) => !v);
+          }}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: funFactExpanded }}
+        >
+          <Ionicons
+            name={funFactExpanded ? 'chevron-up' : 'chevron-down'}
+            size={14}
+            color={theme.primary}
+          />
+          <Text style={[styles.funFactLabel, { color: theme.primary }]}>
+            {t('dailyArt.fun_fact')}
+          </Text>
+        </Pressable>
+      ) : null}
+
+      {funFactExpanded && artwork.funFact ? (
+        <Text style={[styles.funFactText, { color: theme.textSecondary }]}>{artwork.funFact}</Text>
+      ) : null}
+
+      <View style={styles.actions}>
+        <Pressable
+          style={[
+            styles.actionButton,
+            { borderColor: theme.inputBorder, backgroundColor: theme.surface },
+          ]}
+          onPress={onSave}
+          disabled={isSaved}
+          accessibilityRole="button"
+          accessibilityLabel={isSaved ? t('dailyArt.saved') : t('dailyArt.save')}
+        >
+          <Ionicons
+            name={isSaved ? 'heart' : 'heart-outline'}
+            size={16}
+            color={isSaved ? theme.error : theme.textPrimary}
+          />
+          <Text style={[styles.actionText, { color: isSaved ? theme.error : theme.textPrimary }]}>
+            {isSaved ? t('dailyArt.saved') : t('dailyArt.save')}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={[
+            styles.actionButton,
+            { borderColor: theme.inputBorder, backgroundColor: theme.surface },
+          ]}
+          onPress={onSkip}
+          accessibilityRole="button"
+          accessibilityLabel={t('dailyArt.skip')}
+        >
+          <Ionicons name="close-outline" size={16} color={theme.textPrimary} />
+          <Text style={[styles.actionText, { color: theme.textPrimary }]}>
+            {t('dailyArt.skip')}
+          </Text>
+        </Pressable>
+      </View>
+    </GlassCard>
+  );
+
   return (
     <RNAnimated.View style={{ opacity: fadeAnim }}>
-      <GlassCard style={styles.card} intensity={58}>
-        <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
-          {t('dailyArt.title')}
-        </Text>
-
-        {artwork.imageUrl && !imageError ? (
-          <ReAnimated.Image
-            source={{ uri: artwork.imageUrl }}
-            style={[styles.image, imageAnimatedStyle]}
-            resizeMode="cover"
-            onError={() => {
-              setImageError(true);
-            }}
-            accessibilityLabel={artwork.title}
-          />
-        ) : (
-          <View style={[styles.imageFallback, { backgroundColor: theme.surface }]}>
-            <Ionicons name="image-outline" size={40} color={theme.textTertiary} />
-          </View>
-        )}
-
-        <Text style={[styles.title, { color: theme.textPrimary }]}>{artwork.title}</Text>
-        <Text style={[styles.artist, { color: theme.textSecondary }]}>
-          {t('dailyArt.by')} {artwork.artist}
-          {artwork.year ? ` (${artwork.year})` : ''}
-        </Text>
-
-        {artwork.museum ? (
-          <Text style={[styles.museum, { color: theme.textTertiary }]}>{artwork.museum}</Text>
-        ) : null}
-
-        {artwork.funFact ? (
-          <Pressable
-            style={styles.funFactToggle}
-            onPress={() => {
-              setFunFactExpanded((v) => !v);
-            }}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: funFactExpanded }}
-          >
-            <Ionicons
-              name={funFactExpanded ? 'chevron-up' : 'chevron-down'}
-              size={14}
-              color={theme.primary}
-            />
-            <Text style={[styles.funFactLabel, { color: theme.primary }]}>
-              {t('dailyArt.fun_fact')}
-            </Text>
-          </Pressable>
-        ) : null}
-
-        {funFactExpanded && artwork.funFact ? (
-          <Text style={[styles.funFactText, { color: theme.textSecondary }]}>
-            {artwork.funFact}
-          </Text>
-        ) : null}
-
-        <View style={styles.actions}>
-          <Pressable
-            style={[
-              styles.actionButton,
-              { borderColor: theme.inputBorder, backgroundColor: theme.surface },
-            ]}
-            onPress={onSave}
-            disabled={isSaved}
-            accessibilityRole="button"
-            accessibilityLabel={isSaved ? t('dailyArt.saved') : t('dailyArt.save')}
-          >
-            <Ionicons
-              name={isSaved ? 'heart' : 'heart-outline'}
-              size={16}
-              color={isSaved ? theme.error : theme.textPrimary}
-            />
-            <Text style={[styles.actionText, { color: isSaved ? theme.error : theme.textPrimary }]}>
-              {isSaved ? t('dailyArt.saved') : t('dailyArt.save')}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={[
-              styles.actionButton,
-              { borderColor: theme.inputBorder, backgroundColor: theme.surface },
-            ]}
-            onPress={onSkip}
-            accessibilityRole="button"
-            accessibilityLabel={t('dailyArt.skip')}
-          >
-            <Ionicons name="close-outline" size={16} color={theme.textPrimary} />
-            <Text style={[styles.actionText, { color: theme.textPrimary }]}>
-              {t('dailyArt.skip')}
-            </Text>
-          </Pressable>
-        </View>
-      </GlassCard>
+      {swipeToSave ? (
+        // eslint-disable-next-line @typescript-eslint/no-deprecated -- Swipeable uses legacy Animated API
+        <Swipeable
+          ref={swipeableRef}
+          renderRightActions={renderRightActions}
+          friction={2}
+          rightThreshold={80}
+          onSwipeableOpen={(direction) => {
+            if (direction === 'right') {
+              void handleSwipeSave();
+            }
+          }}
+        >
+          {cardBody}
+        </Swipeable>
+      ) : (
+        cardBody
+      )}
     </RNAnimated.View>
   );
 };
@@ -228,6 +286,18 @@ const styles = StyleSheet.create({
     paddingVertical: space['2.5'],
   },
   actionText: {
+    fontSize: semantic.button.fontSize,
+    fontWeight: '600',
+  },
+  saveAction: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: space['4'],
+    gap: space['1'],
+    borderRadius: semantic.card.radiusCompact,
+    marginLeft: space['2'],
+  },
+  saveActionText: {
     fontSize: semantic.button.fontSize,
     fontWeight: '600',
   },

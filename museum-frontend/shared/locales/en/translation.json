@@ -825,7 +825,8 @@
     "skip": "Skip",
     "saved": "Saved!",
     "by": "by",
-    "fun_fact": "Did you know?"
+    "fun_fact": "Did you know?",
+    "swipeToSave": "Save"
   },
   "tickets": {
     "title": "My Tickets",

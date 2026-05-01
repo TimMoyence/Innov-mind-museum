@@ -825,7 +825,8 @@
     "skip": "تخطي",
     "saved": "تم الحفظ!",
     "by": "بواسطة",
-    "fun_fact": "هل تعلم؟"
+    "fun_fact": "هل تعلم؟",
+    "swipeToSave": "حفظ"
   },
   "tickets": {
     "title": "تذاكري",

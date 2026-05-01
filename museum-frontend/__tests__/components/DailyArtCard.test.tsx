@@ -1,6 +1,35 @@
 import '../helpers/test-utils';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, fireEvent, act } from '@testing-library/react-native';
 import { useSharedValue } from 'react-native-reanimated';
+
+// ── react-native-gesture-handler — Swipeable mock that captures callbacks ────
+// Must appear before the component import so Jest hoisting applies correctly.
+let capturedOnSwipeableOpen: ((direction: string) => void) | undefined;
+jest.mock('react-native-gesture-handler', () => {
+  const { View } = require('react-native');
+  return {
+    Swipeable: ({
+      children,
+      onSwipeableOpen,
+    }: {
+      children: React.ReactNode;
+      onSwipeableOpen?: (direction: string) => void;
+    }) => {
+      capturedOnSwipeableOpen = onSwipeableOpen;
+      return <View testID="swipeable-wrapper">{children}</View>;
+    },
+    GestureHandlerRootView: ({ children }: { children: React.ReactNode }) => (
+      <View>{children}</View>
+    ),
+  };
+});
+
+// ── toggleSavedArtwork mock ──────────────────────────────────────────────────
+const mockToggleSavedArtwork = jest.fn().mockResolvedValue({ saved: true });
+jest.mock('@/features/daily-art/application/useDailyArt', () => ({
+  ...jest.requireActual('@/features/daily-art/application/useDailyArt'),
+  toggleSavedArtwork: (...args: unknown[]) => mockToggleSavedArtwork(...args),
+}));
 
 import { DailyArtCard } from '@/features/daily-art/ui/DailyArtCard';
 import type { DailyArtwork } from '@/features/daily-art/infrastructure/dailyArtApi';
@@ -164,5 +193,34 @@ describe('DailyArtCard', () => {
   it('renders without crashing when scrollY is omitted (non-parallax fallback)', () => {
     render(<DailyArtCard {...defaultProps} />);
     expect(screen.getByLabelText('Starry Night')).toBeTruthy();
+  });
+
+  it('swipe open right calls toggleSavedArtwork with the artwork and fires haptic', async () => {
+    const Haptics = require('expo-haptics') as {
+      notificationAsync: jest.Mock;
+      NotificationFeedbackType: { Success: string };
+    };
+    capturedOnSwipeableOpen = undefined;
+    render(<DailyArtCard {...defaultProps} />);
+
+    // Swipeable mock captures onSwipeableOpen during render
+    expect(capturedOnSwipeableOpen).toBeDefined();
+
+    await act(async () => {
+      capturedOnSwipeableOpen?.('right');
+      await Promise.resolve();
+    });
+
+    expect(mockToggleSavedArtwork).toHaveBeenCalledWith(sampleArtwork);
+    expect(Haptics.notificationAsync).toHaveBeenCalledWith(
+      Haptics.NotificationFeedbackType.Success,
+    );
+  });
+
+  it('swipeToSave=false renders card without Swipeable wrapper', () => {
+    render(<DailyArtCard {...defaultProps} swipeToSave={false} />);
+    expect(screen.queryByTestId('swipeable-wrapper')).toBeNull();
+    // Card content still renders
+    expect(screen.getByText('Starry Night')).toBeTruthy();
   });
 });

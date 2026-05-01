@@ -6,6 +6,17 @@ import { fetchDailyArt, type DailyArtwork } from '../infrastructure/dailyArtApi'
 export const SAVED_ARTWORKS_KEY = '@musaium/saved_artworks';
 export const DISMISSED_KEY = '@musaium/daily_art_dismissed';
 
+/** Toggles an artwork in the saved list. Returns whether it ended up saved. */
+export async function toggleSavedArtwork(artwork: DailyArtwork): Promise<{ saved: boolean }> {
+  const list = (await storage.getJSON<DailyArtwork[]>(SAVED_ARTWORKS_KEY)) ?? [];
+  const exists = list.some((a) => a.title === artwork.title && a.artist === artwork.artist);
+  const next = exists
+    ? list.filter((a) => !(a.title === artwork.title && a.artist === artwork.artist))
+    : [...list, artwork];
+  await storage.setJSON(SAVED_ARTWORKS_KEY, next);
+  return { saved: !exists };
+}
+
 const todayKey = (): string => new Date().toISOString().slice(0, 10);
 
 /** Hook that fetches the daily artwork, tracks save/skip state, and handles dismissal for the day. */

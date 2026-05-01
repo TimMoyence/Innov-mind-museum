@@ -825,7 +825,8 @@
     "skip": "Omitir",
     "saved": "¡Guardado!",
     "by": "por",
-    "fun_fact": "¿Sabías que...?"
+    "fun_fact": "¿Sabías que...?",
+    "swipeToSave": "Guardar"
   },
   "tickets": {
     "title": "Mis tickets",
