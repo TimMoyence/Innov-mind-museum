@@ -39,9 +39,15 @@ export class LLMCircuitBreaker {
   private openedAt: number | null = null;
 
   constructor(options?: CircuitBreakerOptions) {
-    this.failureThreshold = options?.failureThreshold ?? 5;
-    this.windowMs = options?.windowMs ?? 60_000;
-    this.openDurationMs = options?.openDurationMs ?? 30_000;
+    // Env-var overrides allow chaos e2e tests to tune the breaker to short windows
+    // for fast deterministic tests (LLM_CB_FAILURE_THRESHOLD=3, LLM_CB_WINDOW_MS=1000,
+    // LLM_CB_OPEN_DURATION_MS=500). Production deployments leave these unset so the
+    // safe defaults (5 / 60 000 / 30 000) apply unchanged.
+    this.failureThreshold =
+      options?.failureThreshold ?? Number(process.env.LLM_CB_FAILURE_THRESHOLD ?? 5);
+    this.windowMs = options?.windowMs ?? Number(process.env.LLM_CB_WINDOW_MS ?? 60_000);
+    this.openDurationMs =
+      options?.openDurationMs ?? Number(process.env.LLM_CB_OPEN_DURATION_MS ?? 30_000);
   }
 
   /** Returns current state, transitioning from OPEN to HALF_OPEN when the cooldown expires. */
