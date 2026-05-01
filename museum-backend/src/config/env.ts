@@ -286,6 +286,11 @@ const env: AppEnv = {
     csrfSecret: isDev
       ? toOptionalString(process.env.CSRF_SECRET) || 'local-dev-csrf-secret-32chars-minimum'
       : required('CSRF_SECRET', toOptionalString(process.env.CSRF_SECRET)),
+    // Phase 5 — email service implementation selector. 'test' enables in-memory
+    // capture for e2e tests. Production rejects 'test' loudly (sentinel in
+    // env.production-validation.ts). Default 'brevo'.
+    emailServiceKind:
+      (process.env.AUTH_EMAIL_SERVICE_KIND as 'test' | 'brevo' | 'noop' | undefined) ?? 'brevo',
   },
   llm: {
     provider,

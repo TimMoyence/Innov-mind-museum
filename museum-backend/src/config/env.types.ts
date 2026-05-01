@@ -116,6 +116,16 @@ export interface AppEnv {
      * Validation is constant-time (`crypto.timingSafeEqual`).
      */
     csrfSecret: string;
+    /**
+     * Phase 5 — selects the email service implementation at composition-root
+     * init time. `'test'` activates the in-memory `TestEmailService` for e2e
+     * tests. `'brevo'` (default) uses `BrevoEmailService` when `brevoApiKey`
+     * is set. `'noop'` disables email delivery silently.
+     *
+     * NEVER set to `'test'` in production — a sentinel in
+     * `env.production-validation.ts` rejects it loudly at startup.
+     */
+    emailServiceKind: 'test' | 'brevo' | 'noop';
   };
   llm: {
     provider: LlmProvider;

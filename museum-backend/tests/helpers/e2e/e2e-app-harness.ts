@@ -88,6 +88,12 @@ export interface E2EHarness {
   dataSource: DataSource;
   /** Tears down the server, DataSource, and schedules container cleanup. */
   stop: () => Promise<void>;
+  /**
+   * Phase 5 — in-memory email service instance active when
+   * `AUTH_EMAIL_SERVICE_KIND=test`. Null when another email backend is used.
+   * Use to retrieve verification tokens after registration in e2e tests.
+   */
+  testEmailService: import('@src/shared/email/test-email-service').TestEmailService | null;
 }
 
 /**
@@ -126,6 +132,9 @@ export async function createE2EHarness(): Promise<E2EHarness> {
   // No Redis in e2e — disable the BullMQ extraction worker + enrichment scheduler
   // to prevent ioredis ECONNREFUSED log floods on 127.0.0.1:6379.
   process.env.EXTRACTION_WORKER_ENABLED = 'false';
+  // Phase 5 — activate the in-memory email service so e2e tests can intercept
+  // verification emails without a real Brevo API key.
+  process.env.AUTH_EMAIL_SERVICE_KIND ??= 'test';
 
   // Dynamic imports — env vars must be ready before these run.
   const [
@@ -204,6 +213,11 @@ export async function createE2EHarness(): Promise<E2EHarness> {
 
   const app = createApp({ chatService });
 
+  // Phase 5 — retrieve the TestEmailService singleton exported by the auth
+  // composition root (only non-null when AUTH_EMAIL_SERVICE_KIND='test').
+  const authModule = await import('@modules/auth/useCase');
+  const testEmailService = authModule.__testEmailService ?? null;
+
   let server: Server;
   await new Promise<void>((resolve) => {
     server = app.listen(0, () => {
@@ -274,5 +288,5 @@ export async function createE2EHarness(): Promise<E2EHarness> {
     }
   };
 
-  return { baseUrl, request, dataSource: appDataSource, stop };
+  return { baseUrl, request, dataSource: appDataSource, stop, testEmailService };
 }

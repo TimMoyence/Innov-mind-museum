@@ -115,6 +115,16 @@ function validateRedis(env: AppEnv): void {
  * Throws on missing/invalid configuration to fail fast on startup.
  */
 export function validateProductionEnv(env: AppEnv): void {
+  // Phase 5 sentinel: 'test' email service is forbidden in production.
+  // It silently swallows all outbound emails into an in-memory store, so any
+  // misconfiguration would cause real verification emails to be lost.
+  if (env.auth.emailServiceKind === 'test') {
+    throw new Error(
+      "AUTH_EMAIL_SERVICE_KIND='test' is forbidden in production. " +
+        "Set BREVO_API_KEY and use 'brevo', or set AUTH_EMAIL_SERVICE_KIND='noop' to disable email delivery.",
+    );
+  }
+
   if (!env.brevoApiKey) {
     console.warn('BREVO_API_KEY not set \u2014 password reset emails will not be sent');
   }

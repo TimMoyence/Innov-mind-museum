@@ -3,6 +3,7 @@
  * Wires repository implementations to use-case classes and exports ready-to-use singleton instances.
  */
 import { BrevoEmailService } from '@shared/email/brevo-email.service';
+import { TestEmailService } from '@shared/email/test-email-service';
 import { env } from '@src/config/env';
 import { AppDataSource } from '@src/data/db/data-source';
 import {
@@ -57,9 +58,13 @@ const socialTokenVerifier = new SocialTokenVerifierAdapter();
 const refreshTokenRepository = new RefreshTokenRepositoryPg(AppDataSource);
 const totpSecretRepository = new TotpSecretRepositoryPg(AppDataSource);
 
-const emailService: EmailService | undefined = env.brevoApiKey
-  ? new BrevoEmailService(env.brevoApiKey)
-  : undefined;
+const testEmailService = env.auth.emailServiceKind === 'test' ? new TestEmailService() : null;
+
+const emailService: EmailService | undefined =
+  testEmailService ?? (env.brevoApiKey ? new BrevoEmailService(env.brevoApiKey) : undefined);
+
+/** Test-only handle on the in-memory email service. Null in prod. */
+export const __testEmailService = testEmailService;
 
 const frontendUrl = env.frontendUrl;
 
