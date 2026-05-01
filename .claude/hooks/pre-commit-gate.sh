@@ -45,6 +45,35 @@ if ! (cd "$REPO_ROOT/museum-backend" && pnpm test -- --bail --changedSince=HEAD 
   ERRORS="${ERRORS}Backend tests FAIL. "
 fi
 
+# 4. Stryker incremental (smart skip — only if a mutate-list file is staged)
+STAGED_BE_TS=$(git diff --cached --name-only --diff-filter=d 2>/dev/null | grep '^museum-backend/src/.*\.ts$' || true)
+if [ -n "$STAGED_BE_TS" ]; then
+  # Extract mutate list (positive entries only) from stryker.config.mjs
+  MUTATE_PATHS=$(node -e '
+    import("./museum-backend/stryker.config.mjs").then((m) => {
+      const cfg = m.default;
+      console.log((cfg.mutate ?? []).filter((p) => !p.startsWith("!")).join("\n"));
+    }).catch((e) => { process.stderr.write(e.message); process.exit(1); });
+  ' 2>/dev/null)
+
+  if [ -n "$MUTATE_PATHS" ]; then
+    STAGED_RELATIVE=$(echo "$STAGED_BE_TS" | sed 's|^museum-backend/||')
+    STAGED_MUTATE=$(echo "$STAGED_RELATIVE" | grep -Fxf <(echo "$MUTATE_PATHS") || true)
+
+    if [ -n "$STAGED_MUTATE" ]; then
+      echo "[stryker] mutate-list files touched — running incremental:"
+      echo "$STAGED_MUTATE" | sed 's/^/  /'
+      if ! (cd "$REPO_ROOT/museum-backend" && pnpm run mutation:ci 2>&1 | tail -20); then
+        ERRORS="${ERRORS}Stryker incremental FAIL. "
+      else
+        if ! (cd "$REPO_ROOT/museum-backend" && pnpm run mutation:gate 2>&1 | tail -20); then
+          ERRORS="${ERRORS}Stryker hot-files gate FAIL (kill ratio < threshold on a hot file). "
+        fi
+      fi
+    fi
+  fi
+fi
+
 # If any errors, block the commit
 if [ -n "$ERRORS" ]; then
   # Escape for JSON
