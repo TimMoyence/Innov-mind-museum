@@ -19,7 +19,29 @@ export class TypeOrmUserMemoryRepository implements UserMemoryRepository {
     return await this.repo.findOne({ where: { userId } });
   }
 
-  /** Creates or updates a user memory record with the given fields. */
+  /**
+   * Atomic UPSERT for the user-memory row.
+   *
+   * Uses TypeORM's `.insert().orUpdate()` which compiles to a single
+   * `INSERT … ON CONFLICT (user_id) DO UPDATE` SQL statement — one
+   * round-trip, atomic at the row level. Concurrent callers cannot lose
+   * updates because Postgres serialises the conflict resolution per row.
+   *
+   * The `@VersionColumn` on the entity (see UserMemory entity) is passive
+   * on this path: TypeORM's `@VersionColumn` auto-increment is only
+   * triggered by the entity manager's `.save()` / `.update()` paths, not
+   * by a raw query-builder INSERT. The column therefore does NOT increment
+   * on each upsert — it remains a monotonic counter seeded at `1` for
+   * `.save()` inserts and unchanged on subsequent `.orUpdate()` calls.
+   * If client-side cache invalidation relies on `version` changing, prefer
+   * using `updatedAt` (which Postgres does update via `@UpdateDateColumn`)
+   * or switch to `.save()` with a transaction guard on this path.
+   *
+   * To add version incrementing here without switching to `.save()`, add
+   * `version` to the `orUpdate` columns list with a raw expression like
+   * `user_memories.version + 1`. This is intentionally left as a future
+   * decision rather than an undocumented behaviour.
+   */
   async upsert(userId: number, updates: UserMemoryUpdates): Promise<UserMemory> {
     // Build column-value maps for the INSERT … ON CONFLICT … DO UPDATE statement.
     const values: Record<string, unknown> = { userId, ...updates };

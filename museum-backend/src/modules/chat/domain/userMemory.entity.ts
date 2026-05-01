@@ -59,6 +59,18 @@ export class UserMemory {
   @Column({ type: 'uuid', nullable: true })
   lastSessionId!: string | null;
 
+  /**
+   * Optimistic-lock version. Currently passive on the primary `upsert()` path —
+   * TypeORM only auto-increments `@VersionColumn` via `.save()` / `.update()`,
+   * not via the query-builder `.insert().orUpdate()` used by `UserMemoryRepository.upsert()`.
+   * Kept for two reasons:
+   *
+   * 1. **Defensive guard**: any future code path that switches to `.save()` will
+   *    gain optimistic-lock protection automatically without a schema change.
+   * 2. **Passive counter**: the column is seeded at `1` on first insert (via any
+   *    `.save()` path). Use `updatedAt` for cache invalidation on the UPSERT path
+   *    since `version` does not increment there.
+   */
   @VersionColumn()
   version!: number;
 

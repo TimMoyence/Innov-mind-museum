@@ -132,6 +132,21 @@ export async function commitAssistantResponse(
       artworkMatch,
     });
   } catch (error) {
+    /*
+     * ChatSession optimistic-lock policy — surface 409, do NOT auto-retry.
+     *
+     * The assistant reply was generated against an older session snapshot
+     * (visit context, museum mode, intent, etc.). Retrying the persistMessage
+     * call against a refreshed session would commit a reply that may
+     * disagree with the current session state — silent inconsistency.
+     *
+     * The 409 forces the client to refresh and re-prompt, so the next
+     * generation runs against the up-to-date session.
+     *
+     * The Museum admin path (C.1, withOptimisticLockRetry) auto-retries
+     * because admin edits are a single short transaction; here the prior
+     * LLM call cannot be safely re-run.
+     */
     if ((error as Error).name === 'OptimisticLockVersionMismatchError') {
       throw conflict('Session was modified concurrently');
     }
