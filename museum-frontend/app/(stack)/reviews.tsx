@@ -1,8 +1,19 @@
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  AccessibilityInfo,
+  ActivityIndicator,
+  Dimensions,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import * as Haptics from 'expo-haptics';
+import ConfettiCannon from 'react-native-confetti-cannon';
 
 import { useReviews } from '@/features/review/application/useReviews';
 import { semantic, space, fontSize, radius } from '@/shared/ui/tokens';
@@ -40,6 +51,19 @@ export default function ReviewsScreen() {
   const [userName, setUserName] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
+  const [showConfetti, setShowConfetti] = useState(false);
+  const reduceMotionRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (!cancelled) reduceMotionRef.current = enabled;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const onSubmit = useCallback(async () => {
     if (rating === 0 || comment.trim().length === 0 || userName.trim().length === 0) return;
     const ok = await submitReview(rating, comment.trim(), userName.trim());
@@ -49,6 +73,13 @@ export default function ReviewsScreen() {
       setRating(0);
       setComment('');
       setUserName('');
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (!reduceMotionRef.current) {
+        setShowConfetti(true);
+        setTimeout(() => {
+          setShowConfetti(false);
+        }, 1500);
+      }
     }
   }, [rating, comment, userName, submitReview]);
 
@@ -231,6 +262,17 @@ export default function ReviewsScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {showConfetti ? (
+        <ConfettiCannon
+          count={80}
+          origin={{ x: Dimensions.get('window').width / 2, y: 0 }}
+          fadeOut
+          fallSpeed={2500}
+          autoStart
+          testID="reviews-confetti"
+        />
+      ) : null}
     </LiquidScreen>
   );
 }
