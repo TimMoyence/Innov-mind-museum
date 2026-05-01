@@ -64,11 +64,9 @@ Note mobile:
 ## Secrets Maestro E2E (Mobile)
 
 ### `MAESTRO_CLOUD_API_KEY`
-- Rôle: API key for Maestro Cloud, used to run E2E mobile tests on cloud devices.
-- Utilisé par:
-  - `ci-cd-mobile.yml` (`maestro-e2e` job)
-- Portée recommandée: repository.
-- Configuration: Generate from [maestro.mobile.dev](https://maestro.mobile.dev) dashboard → API Keys.
+- **DEPRECATED (Phase 2)** — Maestro E2E migrated to self-hosted `macos-latest` runners (no cloud). This secret is no longer referenced in any workflow.
+- TODO for repo admin: `gh secret delete MAESTRO_CLOUD_API_KEY` (cannot be done from a PR).
+- Rôle (historical): API key for Maestro Cloud, used to run E2E mobile tests on cloud devices via `mobile-dev-inc/action-maestro-cloud`.
 
 ## Secrets Backend Deploy (GHCR + VPS)
 

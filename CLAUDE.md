@@ -84,11 +84,22 @@ pnpm build                       # build design tokens → museum-frontend/share
 GitHub Actions workflows (`.github/workflows/`):
 - `ci-cd-backend.yml` — quality gate (tsc + ESLint + tests + OpenAPI validate + audit) → E2E (PR/nightly) → deploy prod (push main) / staging (push staging) w/ Trivy scan + Sentry release + smoke test
 - `ci-cd-web.yml` — quality gate (lint + build + test + audit) → Lighthouse CI (PR) → deploy Docker/GHCR → VPS (push main)
-- `ci-cd-mobile.yml` — quality gate (Expo Doctor + OpenAPI sync + audit + i18n + lint + tests) → Maestro E2E (dispatch) → EAS build + store submit (dispatch/tag)
+- `ci-cd-mobile.yml` — quality gate (Expo Doctor + OpenAPI sync + audit + i18n + lint + tests + shard-manifest sentinel) → Maestro Android matrix PR (4 shards) + iOS nightly cron → EAS build + store submit (dispatch/tag)
 - `_deploy-backend.yml` — reusable deploy workflow (called by ci-cd-backend)
 - `deploy-privacy-policy.yml` — privacy policy static page deploy
 - `codeql.yml` — CodeQL security analysis (security-extended + security-and-quality)
 - `semgrep.yml` — SAST static analysis scanning
+
+### Maestro mobile E2E (Phase 2)
+
+- 11 flows in `museum-frontend/.maestro/`, sharded 4 ways for PR matrix Android runs (`auth | chat | museum | settings`). Shard manifest at `museum-frontend/.maestro/shards.json`.
+- Self-hosted on `macos-latest` GitHub runners — no Maestro Cloud.
+- PR pipeline: `prebuild` (cached APK) → 4× `maestro-shard` (parallel) → `maestro-summary` PR comment.
+- iOS nightly (03:17 UTC cron) runs the full set sequentially in `maestro-ios-nightly`.
+- Backend: docker-compose stack on the runner. V2 will swap to public staging.
+- New flow files MUST be added to `shards.json`; the `maestro-shard-manifest.mjs` sentinel in the `quality` job rejects PRs that violate this.
+- Helper scripts: `museum-frontend/scripts/maestro-runner-setup.sh` (backend boot), `museum-frontend/scripts/maestro-run-shard.sh` (flow runner). Bats-tested.
+- See `docs/superpowers/specs/2026-05-01-phase2-maestro-mobile-pr-design.md` for the full spec.
 
 ## Architecture
 

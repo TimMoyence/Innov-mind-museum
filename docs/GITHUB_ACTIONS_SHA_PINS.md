@@ -41,14 +41,14 @@ lands:
 | `appleboy/scp-action` | `v1.0.0` | `ff85246acaad7bdce478db94a363cd2bf7c90345` |
 | `aquasecurity/trivy-action` | `0.35.0` | `57a97c7e7821a5776cebc9bb87c984fa69cba8f1` |
 | `treosh/lighthouse-ci-action` | `v12` | `3e7e23fb74242897f95c0ba9cabad3d0227b9b18` |
-| `mobile-dev-inc/action-maestro-cloud` | `v2` | `34906065ba3e85fd57ed533b178187eefb042aed` |
+| ~~`mobile-dev-inc/action-maestro-cloud`~~ | ~~`v2`~~ | ~~`34906065ba3e85fd57ed533b178187eefb042aed`~~ | **Removed (Phase 2)** — self-hosted runners replace cloud |
 | `github/codeql-action/init` | `v4` | `95e58e9a2cdfd71adc6e0353d5c52f41a045d225` |
 | `github/codeql-action/analyze` | `v4` | `95e58e9a2cdfd71adc6e0353d5c52f41a045d225` |
 | `github/codeql-action/upload-sarif` | `v4` | `95e58e9a2cdfd71adc6e0353d5c52f41a045d225` |
 
 Notes:
 
-- `pnpm/action-setup@v5`, `treosh/lighthouse-ci-action@v12`, `mobile-dev-inc/action-maestro-cloud@v2`, and `github/codeql-action@v4` publish **annotated** tags; the SHA above is the dereferenced commit (via `gh api repos/<owner>/<repo>/git/tags/<annotated-sha>`), not the annotated-tag SHA.
+- `pnpm/action-setup@v5`, `treosh/lighthouse-ci-action@v12`, and `github/codeql-action@v4` publish **annotated** tags; the SHA above is the dereferenced commit (via `gh api repos/<owner>/<repo>/git/tags/<annotated-sha>`), not the annotated-tag SHA. (`mobile-dev-inc/action-maestro-cloud` removed in Phase 2.)
 - `github/codeql-action` sub-paths (`init`, `analyze`, `upload-sarif`) share the same repository and therefore the same release commit.
 
 ## How to resolve a SHA manually
