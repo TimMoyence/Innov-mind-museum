@@ -6,7 +6,13 @@ import { useAdminDict } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import { useAuth } from '@/lib/auth';
 import { AdminPagination } from '@/components/admin/AdminPagination';
-import type { PaginatedResponse, User, UserRole } from '@/lib/admin-types';
+import type { PaginatedResponse, AdminUserDTO, UserRole } from '@/lib/admin-types';
+
+/** Derive a display name from AdminUserDTO (firstname + lastname, or email fallback). */
+function displayName(u: AdminUserDTO): string {
+  const parts = [u.firstname, u.lastname].filter(Boolean);
+  return parts.length > 0 ? parts.join(' ') : u.email;
+}
 
 // ── Role badge colors ──────────────────────────────────────────────────
 
@@ -41,7 +47,7 @@ export default function UsersPage() {
   const { user: currentUser } = useAuth();
   const isAdmin = currentUser?.role === 'admin';
 
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<AdminUserDTO[]>([]);
   const [totalPages, setTotalPages] = useState(0);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -51,7 +57,7 @@ export default function UsersPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Change role modal state
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<AdminUserDTO | null>(null);
   const [newRole, setNewRole] = useState<UserRole>('visitor');
   const [changingRole, setChangingRole] = useState(false);
 
@@ -74,7 +80,9 @@ export default function UsersPage() {
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (roleFilter) params.set('role', roleFilter);
 
-      const data = await apiGet<PaginatedResponse<User>>(`/api/admin/users?${params.toString()}`);
+      const data = await apiGet<PaginatedResponse<AdminUserDTO>>(
+        `/api/admin/users?${params.toString()}`,
+      );
       setUsers(data.data);
       setTotalPages(data.totalPages);
       setTotal(data.total);
@@ -95,7 +103,7 @@ export default function UsersPage() {
     if (!editingUser) return;
     setChangingRole(true);
     try {
-      await apiPatch<User>(`/api/admin/users/${editingUser.id}/role`, {
+      await apiPatch<AdminUserDTO>(`/api/admin/users/${editingUser.id}/role`, {
         role: newRole,
       });
       setEditingUser(null);
@@ -172,7 +180,7 @@ export default function UsersPage() {
                     {adminDict.usersPage.columnStatus}
                   </th>
                   <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.usersPage.columnLastLogin}
+                    {adminDict.common.date}
                   </th>
                   {isAdmin && (
                     <th className="px-6 py-3 font-medium text-text-secondary">
@@ -195,12 +203,12 @@ export default function UsersPage() {
                   users.map((u) => (
                     <tr key={u.id} className="hover:bg-surface-muted/50">
                       <td className="whitespace-nowrap px-6 py-3 font-medium text-text-primary">
-                        {u.name}
+                        {displayName(u)}
                       </td>
                       <td className="whitespace-nowrap px-6 py-3 text-text-secondary">{u.email}</td>
                       <td className="whitespace-nowrap px-6 py-3">
                         <span
-                          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_COLORS[u.role]}`}
+                          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_COLORS[u.role as UserRole]}`}
                         >
                           {u.role}
                         </span>
@@ -208,22 +216,20 @@ export default function UsersPage() {
                       <td className="whitespace-nowrap px-6 py-3">
                         <span
                           className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            u.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                            u.emailVerified
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-gray-100 text-gray-500'
                           }`}
                         >
-                          {u.isActive ? adminDict.common.active : adminDict.common.inactive}
+                          {u.emailVerified ? adminDict.common.active : adminDict.common.inactive}
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
-                        {u.lastLoginAt
-                          ? formatDate(u.lastLoginAt, dateLocale, {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })
-                          : '—'}
+                        {formatDate(u.createdAt, dateLocale, {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
                       </td>
                       {isAdmin && (
                         <td className="whitespace-nowrap px-6 py-3">
@@ -231,7 +237,7 @@ export default function UsersPage() {
                             type="button"
                             onClick={() => {
                               setEditingUser(u);
-                              setNewRole(u.role);
+                              setNewRole(u.role as UserRole);
                             }}
                             className="rounded-md px-3 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50"
                           >
@@ -276,7 +282,7 @@ export default function UsersPage() {
               {adminDict.usersPage.changeRole}
             </h2>
             <p className="mt-1 text-sm text-text-secondary">
-              {editingUser.name} ({editingUser.email})
+              {displayName(editingUser)} ({editingUser.email})
             </p>
 
             <select

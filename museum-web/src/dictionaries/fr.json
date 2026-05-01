@@ -87,12 +87,18 @@
       "Conversation naturelle — posez vos questions de suivi"
     ],
     "messages": [
-      { "role": "user", "text": "Vénus de Milo" },
+      {
+        "role": "user",
+        "text": "Vénus de Milo"
+      },
       {
         "role": "assistant",
         "text": "La Vénus de Milo est une célèbre sculpture grecque datant du IIe siècle avant J.-C. Elle représente Aphrodite, déesse de l'amour et de la beauté. Malgré ses bras manquants, elle dégage une élégance remarquable à travers le drapé de sa robe."
       },
-      { "role": "user", "text": "Et ce tableau ?" },
+      {
+        "role": "user",
+        "text": "Et ce tableau ?"
+      },
       {
         "role": "assistant",
         "text": "Il s'agit du Radeau de la Méduse de Théodore Géricault, peint en 1818-1819. Il représente un groupe de naufragés luttant pour leur survie sur un radeau, mêlant réalisme dramatique et désespoir humain."
@@ -264,11 +270,10 @@
       "subtitle": "Vue d'ensemble de votre plateforme Musaium.",
       "stats": {
         "totalUsers": "Utilisateurs totaux",
-        "activeUsers": "Utilisateurs actifs",
-        "conversations": "Conversations",
-        "messages": "Messages",
-        "newToday": "Nouveaux aujourd'hui",
-        "messagesThisWeek": "Messages cette semaine"
+        "totalSessions": "Sessions totales",
+        "totalMessages": "Messages totaux",
+        "recentSignups": "Nouveaux cette semaine",
+        "recentSessions": "Sessions récentes"
       }
     },
     "auditLogsPage": {

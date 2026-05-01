@@ -5,13 +5,13 @@ import { apiGet } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import { AdminPagination } from '@/components/admin/AdminPagination';
-import type { AuditLog, PaginatedResponse } from '@/lib/admin-types';
+import type { AdminAuditLogDTO, PaginatedResponse } from '@/lib/admin-types';
 
 export default function AuditLogsPage() {
   const adminDict = useAdminDict();
   const dateLocale = useDateLocale();
 
-  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [logs, setLogs] = useState<AdminAuditLogDTO[]>([]);
   const [totalPages, setTotalPages] = useState(0);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -33,7 +33,7 @@ export default function AuditLogsPage() {
       params.set('limit', '20');
       if (actionFilter) params.set('action', actionFilter);
 
-      const data = await apiGet<PaginatedResponse<AuditLog>>(
+      const data = await apiGet<PaginatedResponse<AdminAuditLogDTO>>(
         `/api/admin/audit-logs?${params.toString()}`,
       );
       setLogs(data.data);
@@ -125,7 +125,7 @@ export default function AuditLogsPage() {
                         })}
                       </td>
                       <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
-                        {log.userEmail ?? '—'}
+                        {log.actorId != null ? `#${String(log.actorId)}` : '—'}
                       </td>
                       <td className="whitespace-nowrap px-6 py-3">
                         <span className="inline-block rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700">
@@ -133,14 +133,14 @@ export default function AuditLogsPage() {
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
-                        {log.resource}
-                        {log.resourceId ? ` #${log.resourceId.slice(0, 8)}` : ''}
+                        {log.targetType ?? '—'}
+                        {log.targetId ? ` #${log.targetId.slice(0, 8)}` : ''}
                       </td>
                       <td className="max-w-xs truncate px-6 py-3 text-text-muted">
-                        {log.details ? JSON.stringify(log.details) : '—'}
+                        {log.metadata ? JSON.stringify(log.metadata) : '—'}
                       </td>
                       <td className="whitespace-nowrap px-6 py-3 text-text-muted">
-                        {log.ipAddress ?? '—'}
+                        {log.ip ?? '—'}
                       </td>
                     </tr>
                   ))

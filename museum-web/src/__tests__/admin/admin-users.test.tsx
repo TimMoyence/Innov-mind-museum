@@ -7,7 +7,7 @@ import { AuthProvider, useAuth } from '@/lib/auth';
 import { AdminDictProvider } from '@/lib/admin-dictionary';
 import UsersPage from '@/app/[locale]/admin/users/page';
 import { mockAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
-import type { PaginatedResponse, User } from '@/lib/admin-types';
+import type { PaginatedResponse, AdminUserDTO } from '@/lib/admin-types';
 
 // ── Next.js mocks ───────────────────────────────────────────────────────────
 
@@ -47,28 +47,39 @@ vi.mock('@/lib/api', () => ({
   registerLogoutHandler: vi.fn(),
 }));
 
-
 // ── Test data ───────────────────────────────────────────────────────────────
 
-function makeUser(overrides: Partial<User> = {}): User {
+function makeUser(overrides: Partial<AdminUserDTO> = {}): AdminUserDTO {
   return {
-    id: '1',
+    id: 1,
     email: 'alice@test.com',
-    name: 'Alice Martin',
+    firstname: 'Alice',
+    lastname: 'Martin',
     role: 'visitor',
-    isActive: true,
+    emailVerified: true,
     createdAt: '2025-01-01T00:00:00Z',
     updatedAt: '2025-06-01T00:00:00Z',
-    lastLoginAt: '2025-06-01T12:00:00Z',
     ...overrides,
   };
 }
 
-const mockUsersPage1: PaginatedResponse<User> = {
+const mockUsersPage1: PaginatedResponse<AdminUserDTO> = {
   data: [
-    makeUser({ id: '1', name: 'Alice Martin', email: 'alice@test.com', role: 'visitor' }),
-    makeUser({ id: '2', name: 'Bob Dupont', email: 'bob@test.com', role: 'admin' }),
-    makeUser({ id: '3', name: 'Charlie Renard', email: 'charlie@test.com', role: 'moderator' }),
+    makeUser({
+      id: 1,
+      firstname: 'Alice',
+      lastname: 'Martin',
+      email: 'alice@test.com',
+      role: 'visitor',
+    }),
+    makeUser({ id: 2, firstname: 'Bob', lastname: 'Dupont', email: 'bob@test.com', role: 'admin' }),
+    makeUser({
+      id: 3,
+      firstname: 'Charlie',
+      lastname: 'Renard',
+      email: 'charlie@test.com',
+      role: 'moderator',
+    }),
   ],
   page: 1,
   limit: 10,
@@ -109,10 +120,20 @@ describe('UsersPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Default: apiPost resolves for login (admin user)
+    // Default: apiPost resolves for login (admin user) — AuthSessionResponse shape
     mockApiPost.mockResolvedValue({
-      user: { id: '99', email: 'admin@test.com', name: 'Super Admin', role: 'admin' },
-      tokens: { accessToken: 'at', refreshToken: 'rt' },
+      accessToken: 'at',
+      refreshToken: 'rt',
+      expiresIn: 900,
+      refreshExpiresIn: 86400,
+      user: {
+        id: 99,
+        email: 'admin@test.com',
+        firstname: 'Super',
+        lastname: 'Admin',
+        role: 'admin',
+        onboardingCompleted: true,
+      },
     });
   });
 
@@ -318,7 +339,7 @@ describe('UsersPage', () => {
 
     // Second call after search: return filtered results
     mockApiGet.mockResolvedValueOnce({
-      data: [makeUser({ id: '1', name: 'Alice Martin', email: 'alice@test.com' })],
+      data: [makeUser({ id: 1, firstname: 'Alice', lastname: 'Martin', email: 'alice@test.com' })],
       page: 1,
       limit: 10,
       total: 1,

@@ -176,11 +176,10 @@ export interface Dictionary {
       subtitle: string;
       stats: {
         totalUsers: string;
-        activeUsers: string;
-        conversations: string;
-        messages: string;
-        newToday: string;
-        messagesThisWeek: string;
+        totalSessions: string;
+        totalMessages: string;
+        recentSignups: string;
+        recentSessions: string;
       };
     };
     auditLogsPage: {

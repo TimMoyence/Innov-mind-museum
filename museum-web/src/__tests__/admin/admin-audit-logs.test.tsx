@@ -6,7 +6,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AuthProvider } from '@/lib/auth';
 import { AdminDictProvider } from '@/lib/admin-dictionary';
 import AuditLogsPage from '@/app/[locale]/admin/audit-logs/page';
-import type { AuditLog, PaginatedResponse } from '@/lib/admin-types';
+import type { AdminAuditLogDTO, PaginatedResponse } from '@/lib/admin-types';
 import { mockAdminDict } from '../helpers/admin-dict.fixture';
 
 // ── Next.js mocks ───────────────────────────────────────────────────────────
@@ -56,32 +56,32 @@ function Providers({ children }: { children: React.ReactNode }) {
 
 // ── Test data ───────────────────────────────────────────────────────────────
 
-function makeAuditLog(overrides: Partial<AuditLog> = {}): AuditLog {
+function makeAuditLog(overrides: Partial<AdminAuditLogDTO> = {}): AdminAuditLogDTO {
   return {
     id: 'log-1',
-    userId: 'user-1',
-    userEmail: 'admin@test.com',
+    actorType: 'user',
+    actorId: 1,
     action: 'USER_ROLE_CHANGE',
-    resource: 'user',
-    resourceId: 'res-abc123def',
-    details: { oldRole: 'visitor', newRole: 'moderator' },
-    ipAddress: '192.168.1.1',
+    targetType: 'user',
+    targetId: 'res-abc123def',
+    metadata: { oldRole: 'visitor', newRole: 'moderator' },
+    ip: '192.168.1.1',
     createdAt: '2025-06-01T10:30:00Z',
     ...overrides,
   };
 }
 
-const mockLogsPage1: PaginatedResponse<AuditLog> = {
+const mockLogsPage1: PaginatedResponse<AdminAuditLogDTO> = {
   data: [
-    makeAuditLog({ id: 'log-1', action: 'USER_ROLE_CHANGE', userEmail: 'admin@test.com' }),
+    makeAuditLog({ id: 'log-1', action: 'USER_ROLE_CHANGE', actorId: 1 }),
     makeAuditLog({
       id: 'log-2',
       action: 'USER_LOGIN',
-      userEmail: 'bob@test.com',
-      resourceId: null,
-      details: null,
+      actorId: 2,
+      targetId: null,
+      metadata: null,
     }),
-    makeAuditLog({ id: 'log-3', action: 'REPORT_REVIEW', userEmail: null, ipAddress: null }),
+    makeAuditLog({ id: 'log-3', action: 'REPORT_REVIEW', actorId: null, ip: null }),
   ],
   page: 1,
   limit: 20,
@@ -137,11 +137,9 @@ describe('AuditLogsPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('admin@test.com')).toBeInTheDocument();
+      expect(screen.getByText('USER_ROLE_CHANGE')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('bob@test.com')).toBeInTheDocument();
-    expect(screen.getByText('USER_ROLE_CHANGE')).toBeInTheDocument();
     expect(screen.getByText('USER_LOGIN')).toBeInTheDocument();
     expect(screen.getByText('REPORT_REVIEW')).toBeInTheDocument();
   });
@@ -156,7 +154,7 @@ describe('AuditLogsPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('admin@test.com')).toBeInTheDocument();
+      expect(screen.getByText('USER_ROLE_CHANGE')).toBeInTheDocument();
     });
 
     expect(screen.getByText('Action')).toBeInTheDocument();
@@ -166,7 +164,7 @@ describe('AuditLogsPage', () => {
     expect(screen.getByText('User')).toBeInTheDocument();
   });
 
-  it('displays resource with truncated resourceId', async () => {
+  it('displays targetType with truncated targetId', async () => {
     mockApiGet.mockResolvedValueOnce(mockLogsPage1);
 
     render(
@@ -176,16 +174,16 @@ describe('AuditLogsPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('admin@test.com')).toBeInTheDocument();
+      expect(screen.getByText('USER_ROLE_CHANGE')).toBeInTheDocument();
     });
 
-    // resourceId "res-abc123def" truncated to first 8 chars: "res-abc1"
-    // Two logs share the same resourceId, so use getAllByText
+    // targetId "res-abc123def" truncated to first 8 chars: "res-abc1"
+    // Two logs share the same targetId, so use getAllByText
     const resourceCells = screen.getAllByText('user #res-abc1');
     expect(resourceCells.length).toBe(2);
   });
 
-  it('shows dash for null userEmail and ipAddress', async () => {
+  it('shows dash for null actorId and ip', async () => {
     mockApiGet.mockResolvedValueOnce(mockLogsPage1);
 
     render(
@@ -199,7 +197,7 @@ describe('AuditLogsPage', () => {
     });
 
     // Null values render as dashes
-    const dashes = screen.getAllByText('\u2014');
+    const dashes = screen.getAllByText('—');
     expect(dashes.length).toBeGreaterThanOrEqual(2);
   });
 
@@ -213,7 +211,7 @@ describe('AuditLogsPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('admin@test.com')).toBeInTheDocument();
+      expect(screen.getByText('USER_ROLE_CHANGE')).toBeInTheDocument();
     });
 
     expect(screen.getByText('Previous')).toBeInTheDocument();
@@ -231,7 +229,7 @@ describe('AuditLogsPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('admin@test.com')).toBeInTheDocument();
+      expect(screen.getByText('USER_ROLE_CHANGE')).toBeInTheDocument();
     });
 
     expect(screen.getByText('Previous')).toBeDisabled();
@@ -310,7 +308,7 @@ describe('AuditLogsPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('admin@test.com')).toBeInTheDocument();
+      expect(screen.getByText('USER_ROLE_CHANGE')).toBeInTheDocument();
     });
 
     mockApiGet.mockResolvedValueOnce({

@@ -12,7 +12,7 @@ import {
 import { useRouter, usePathname } from 'next/navigation';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { apiPost, setTokens, clearTokens, registerLogoutHandler } from '@/lib/api';
-import type { LoginResponse } from '@/lib/admin-types';
+import type { AuthSessionResponse } from '@/lib/admin-types';
 
 // ---------------------------------------------------------------------------
 // Admin authz cookie — middleware redirect hint
@@ -50,8 +50,9 @@ function clearAdminAuthzCookie(): void {
 export type UserRole = 'visitor' | 'moderator' | 'museum_manager' | 'admin';
 
 export interface AuthUser {
-  id: string;
+  id: number;
   email: string;
+  /** Display name derived from firstname + lastname (or email fallback). */
   name: string;
   role: UserRole;
 }
@@ -97,14 +98,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const data = await apiPost<LoginResponse>('/api/auth/login', {
+      const data = await apiPost<AuthSessionResponse>('/api/auth/login', {
         email,
         password,
       });
-      // Store both tokens in the api.ts in-memory store
-      setTokens(data.tokens.accessToken, data.tokens.refreshToken);
+      // F7 — tokens live in HttpOnly cookies; setTokens is a no-op. Called for
+      // legacy compat only. Backend sets access_token + refresh_token cookies.
+      setTokens(data.accessToken, data.refreshToken);
       setAdminAuthzCookie();
-      setUser(data.user);
+      // Map AuthSessionResponse.user (AuthUser from spec) to local AuthUser shape.
+      const u = data.user;
+      const nameParts = [u.firstname, u.lastname].filter(Boolean);
+      const name = nameParts.length > 0 ? nameParts.join(' ') : u.email;
+      setUser({ id: u.id, email: u.email, name, role: u.role as UserRole });
     } finally {
       setIsLoading(false);
     }

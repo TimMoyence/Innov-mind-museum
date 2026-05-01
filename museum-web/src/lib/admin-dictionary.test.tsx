@@ -41,11 +41,10 @@ const mockAdminDict: Dictionary['admin'] = {
     subtitle: '',
     stats: {
       totalUsers: '',
-      activeUsers: '',
-      conversations: '',
-      messages: '',
-      newToday: '',
-      messagesThisWeek: '',
+      totalSessions: '',
+      totalMessages: '',
+      recentSignups: '',
+      recentSessions: '',
     },
   },
   auditLogsPage: {

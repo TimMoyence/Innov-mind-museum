@@ -4,32 +4,43 @@ import { useEffect, useState } from 'react';
 import { apiGet } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import type { Dictionary } from '@/lib/i18n';
-import type { DashboardStats } from '@/lib/admin-types';
+import type { AdminStats } from '@/lib/admin-types';
 
 type StatLabelKey = keyof Dictionary['admin']['dashboardPage']['stats'];
 
 interface StatCardDef {
   labelKey: StatLabelKey;
-  valueKey: keyof DashboardStats;
+  valueKey: keyof AdminStats;
   color: string;
 }
 
 const STAT_CARDS: StatCardDef[] = [
   { labelKey: 'totalUsers', valueKey: 'totalUsers', color: 'bg-primary-50 text-primary-700' },
-  { labelKey: 'activeUsers', valueKey: 'activeUsers', color: 'bg-green-50 text-green-700' },
   {
-    labelKey: 'conversations',
-    valueKey: 'totalConversations',
+    labelKey: 'totalSessions',
+    valueKey: 'totalSessions',
+    color: 'bg-green-50 text-green-700',
+  },
+  {
+    labelKey: 'totalMessages',
+    valueKey: 'totalMessages',
     color: 'bg-accent-400/10 text-accent-600',
   },
-  { labelKey: 'messages', valueKey: 'totalMessages', color: 'bg-purple-50 text-purple-700' },
-  { labelKey: 'newToday', valueKey: 'newUsersToday', color: 'bg-amber-50 text-amber-700' },
-  { labelKey: 'messagesThisWeek', valueKey: 'messagesThisWeek', color: 'bg-rose-50 text-rose-700' },
+  {
+    labelKey: 'recentSignups',
+    valueKey: 'recentSignups',
+    color: 'bg-amber-50 text-amber-700',
+  },
+  {
+    labelKey: 'recentSessions',
+    valueKey: 'recentSessions',
+    color: 'bg-rose-50 text-rose-700',
+  },
 ];
 
 export default function AdminDashboardPage() {
   const adminDict = useAdminDict();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [stats, setStats] = useState<AdminStats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -38,7 +49,7 @@ export default function AdminDashboardPage() {
 
     async function fetchStats() {
       try {
-        const data = await apiGet<DashboardStats>('/api/admin/stats');
+        const data = await apiGet<AdminStats>('/api/admin/stats');
         if (!cancelled) {
           setStats(data);
         }
@@ -78,17 +89,24 @@ export default function AdminDashboardPage() {
 
       {stats && (
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {STAT_CARDS.map((card) => (
-            <div
-              key={card.labelKey}
-              className={`rounded-xl border border-primary-100 p-6 ${card.color}`}
-            >
-              <p className="text-sm font-medium opacity-80">
-                {adminDict.dashboardPage.stats[card.labelKey]}
-              </p>
-              <p className="mt-2 text-3xl font-bold">{stats[card.valueKey].toLocaleString()}</p>
-            </div>
-          ))}
+          {STAT_CARDS.map((card) => {
+            const value = stats[card.valueKey];
+            // usersByRole is a Record<string,number> — skip numeric display for it
+            const numericValue = typeof value === 'number' ? value : null;
+            return (
+              <div
+                key={card.labelKey}
+                className={`rounded-xl border border-primary-100 p-6 ${card.color}`}
+              >
+                <p className="text-sm font-medium opacity-80">
+                  {adminDict.dashboardPage.stats[card.labelKey]}
+                </p>
+                <p className="mt-2 text-3xl font-bold">
+                  {numericValue !== null ? numericValue.toLocaleString() : '—'}
+                </p>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

@@ -87,12 +87,18 @@
       "Natural conversation — ask follow-up questions"
     ],
     "messages": [
-      { "role": "user", "text": "Venus de milo" },
+      {
+        "role": "user",
+        "text": "Venus de milo"
+      },
       {
         "role": "assistant",
         "text": "The Venus de Milo is a famous ancient Greek sculpture from the 2nd century BC. It represents Aphrodite, the goddess of love and beauty. Despite missing arms, it radiates remarkable elegance through the draping of its robes."
       },
-      { "role": "user", "text": "What about this painting?" },
+      {
+        "role": "user",
+        "text": "What about this painting?"
+      },
       {
         "role": "assistant",
         "text": "This is The Raft of the Medusa by Théodore Géricault, painted in 1818-1819. It depicts a group of shipwrecked sailors fighting for survival on a raft, showcasing dramatic realism and human desperation."
@@ -264,11 +270,10 @@
       "subtitle": "Overview of your Musaium platform.",
       "stats": {
         "totalUsers": "Total Users",
-        "activeUsers": "Active Users",
-        "conversations": "Conversations",
-        "messages": "Messages",
-        "newToday": "New Today",
-        "messagesThisWeek": "Messages This Week"
+        "totalSessions": "Total Sessions",
+        "totalMessages": "Total Messages",
+        "recentSignups": "New This Week",
+        "recentSessions": "Recent Sessions"
       }
     },
     "auditLogsPage": {

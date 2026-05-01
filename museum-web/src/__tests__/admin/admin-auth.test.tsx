@@ -44,7 +44,6 @@ vi.mock('@/lib/api', () => ({
   registerLogoutHandler: vi.fn(),
 }));
 
-
 // ── Helper: wrap with required providers ─────────────────────────────────────
 
 function Providers({ children }: { children: React.ReactNode }) {
@@ -141,8 +140,18 @@ describe('RoleGuard', () => {
     const { apiPost } = await import('@/lib/api');
     const mockedApiPost = vi.mocked(apiPost);
     mockedApiPost.mockResolvedValueOnce({
-      user: { id: '1', email: 'visitor@test.com', name: 'Visitor', role: 'visitor' },
-      tokens: { accessToken: 'at', refreshToken: 'rt' },
+      accessToken: 'at',
+      refreshToken: 'rt',
+      expiresIn: 900,
+      refreshExpiresIn: 86400,
+      user: {
+        id: 1,
+        email: 'visitor@test.com',
+        firstname: 'Visitor',
+        lastname: null,
+        role: 'visitor',
+        onboardingCompleted: true,
+      },
     });
 
     // Component that logs in then renders RoleGuard
@@ -183,8 +192,18 @@ describe('RoleGuard', () => {
     const { apiPost } = await import('@/lib/api');
     const mockedApiPost = vi.mocked(apiPost);
     mockedApiPost.mockResolvedValueOnce({
-      user: { id: '1', email: 'admin@test.com', name: 'Admin', role: 'admin' },
-      tokens: { accessToken: 'at', refreshToken: 'rt' },
+      accessToken: 'at',
+      refreshToken: 'rt',
+      expiresIn: 900,
+      refreshExpiresIn: 86400,
+      user: {
+        id: 1,
+        email: 'admin@test.com',
+        firstname: 'Admin',
+        lastname: null,
+        role: 'admin',
+        onboardingCompleted: true,
+      },
     });
 
     function TestComponent() {
@@ -218,8 +237,18 @@ describe('RoleGuard', () => {
     const { apiPost } = await import('@/lib/api');
     const mockedApiPost = vi.mocked(apiPost);
     mockedApiPost.mockResolvedValueOnce({
-      user: { id: '2', email: 'mod@test.com', name: 'Moderator', role: 'moderator' },
-      tokens: { accessToken: 'at', refreshToken: 'rt' },
+      accessToken: 'at',
+      refreshToken: 'rt',
+      expiresIn: 900,
+      refreshExpiresIn: 86400,
+      user: {
+        id: 2,
+        email: 'mod@test.com',
+        firstname: 'Moderator',
+        lastname: null,
+        role: 'moderator',
+        onboardingCompleted: true,
+      },
     });
 
     function TestComponent() {
@@ -284,8 +313,18 @@ describe('LoginForm', () => {
     const { apiPost } = await import('@/lib/api');
     const mockedApiPost = vi.mocked(apiPost);
     mockedApiPost.mockResolvedValueOnce({
-      user: { id: '1', email: 'admin@test.com', name: 'Admin', role: 'admin' },
-      tokens: { accessToken: 'access-123', refreshToken: 'refresh-456' },
+      accessToken: 'access-123',
+      refreshToken: 'refresh-456',
+      expiresIn: 900,
+      refreshExpiresIn: 86400,
+      user: {
+        id: 1,
+        email: 'admin@test.com',
+        firstname: 'Admin',
+        lastname: null,
+        role: 'admin',
+        onboardingCompleted: true,
+      },
     });
 
     render(
@@ -350,8 +389,18 @@ describe('Logout', () => {
     const mockedClearTokens = vi.mocked(clearTokens);
 
     mockedApiPost.mockResolvedValueOnce({
-      user: { id: '1', email: 'admin@test.com', name: 'Admin', role: 'admin' },
-      tokens: { accessToken: 'at', refreshToken: 'rt' },
+      accessToken: 'at',
+      refreshToken: 'rt',
+      expiresIn: 900,
+      refreshExpiresIn: 86400,
+      user: {
+        id: 1,
+        email: 'admin@test.com',
+        firstname: 'Admin',
+        lastname: null,
+        role: 'admin',
+        onboardingCompleted: true,
+      },
     });
 
     render(

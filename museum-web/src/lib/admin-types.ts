@@ -41,20 +41,42 @@ export type TicketMessage = TicketMessageDTO;
 export type TicketDetail = TicketDetailDTO;
 
 // ---------------------------------------------------------------------------
+// Path A — aliases where the hand-rolled type matches an existing OpenAPI schema
+// ---------------------------------------------------------------------------
+
+/** Alias for AdminUserDTO — replaces the old hand-rolled User interface. */
+export type User = AdminUserDTO;
+
+/** Alias for AdminAuditLogDTO — replaces the old hand-rolled AuditLog interface. */
+export type AuditLog = AdminAuditLogDTO;
+
+/** Alias for AdminStats — replaces the old hand-rolled DashboardStats interface. */
+export type DashboardStats = AdminStats;
+
+/** Login response — alias to AuthSessionResponse (the shape the backend /login endpoint returns). */
+export type LoginResponse = AuthSessionResponse;
+
+/** Refresh response — alias to AuthSessionResponse (the shape the backend /refresh endpoint returns). */
+export type RefreshResponse = AuthSessionResponse;
+
+/** Auth tokens — derived subset of AuthSessionResponse. */
+export type AuthTokens = Pick<AuthSessionResponse, 'accessToken' | 'refreshToken'>;
+
+// ---------------------------------------------------------------------------
 // Derived string-literal unions — no named schema counterpart in spec
 // ---------------------------------------------------------------------------
 
-// TODO(openapi): TicketStatus is embedded in TicketDTO.status, not a named schema component
+// Intentionally hand-rolled — TicketStatus is embedded in TicketDTO.status, not a named schema component
 export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
-// TODO(openapi): TicketPriority is embedded in TicketDTO.priority, not a named schema component
+// Intentionally hand-rolled — TicketPriority is embedded in TicketDTO.priority, not a named schema component
 export type TicketPriority = 'low' | 'medium' | 'high';
-// TODO(openapi): ReportStatus is embedded in AdminReportDTO.status, not a named schema component
+// Intentionally hand-rolled — ReportStatus is embedded in AdminReportDTO.status, not a named schema component
 export type ReportStatus = 'pending' | 'reviewed' | 'dismissed';
-// TODO(openapi): ReviewStatus is embedded in ReviewDTO.status, not a named schema component
+// Intentionally hand-rolled — ReviewStatus is embedded in ReviewDTO.status, not a named schema component
 export type ReviewStatus = 'pending' | 'approved' | 'rejected';
-// TODO(openapi): AnalyticsGranularity is embedded in UsageAnalytics.granularity, not a named schema component
+// Intentionally hand-rolled — AnalyticsGranularity is embedded in UsageAnalytics.granularity, not a named schema component
 export type AnalyticsGranularity = 'daily' | 'weekly' | 'monthly';
-// TODO(openapi): UserRole is embedded in AuthUser.role, not a named schema component
+// Intentionally hand-rolled — UserRole is embedded in AuthUser.role, not a named schema component
 export type UserRole = 'visitor' | 'moderator' | 'museum_manager' | 'admin';
 
 // ---------------------------------------------------------------------------
@@ -70,59 +92,15 @@ export const MODERATION_STATUSES: Extract<ReviewStatus, 'approved' | 'rejected'>
 ];
 
 // ---------------------------------------------------------------------------
-// Hand-rolled types — field set differs from any available schema, or no
-// counterpart exists in the backend OpenAPI spec.
+// Path B — intentionally hand-rolled: generic meta-shape or query-param helper
+// that cannot be expressed in components.schemas of OpenAPI 3.0.
 // ---------------------------------------------------------------------------
 
 /**
- * TODO(openapi): Hand-rolled admin user shape used by /admin/users — differs from
- * AdminUserDTO (uses name/isActive/lastLoginAt, not firstname/lastname/emailVerified)
- * and AuthUser (id is string here, number in spec). Align backend DTO to expose
- * a unified AdminUserView schema then re-export.
- */
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: UserRole;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  lastLoginAt: string | null;
-}
-
-/**
- * TODO(openapi): AuthTokens is inlined in AuthSessionResponse — no standalone
- * component in the spec. Extract as a named component if needed.
- */
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-}
-
-/**
- * TODO(openapi): LoginResponse wraps User + AuthTokens — shape differs from
- * AuthSessionResponse (which uses AuthUser and includes expiresIn/refreshExpiresIn).
- * Keep hand-rolled until admin auth is aligned with the OpenAPI spec shape.
- */
-export interface LoginResponse {
-  user: User;
-  tokens: AuthTokens;
-}
-
-/**
- * TODO(openapi): RefreshResponse is a subset of AuthSessionResponse.
- * Consider replacing with Schemas['AuthSessionResponse'] once refresh endpoint
- * is documented to return the full session shape.
- */
-export interface RefreshResponse {
-  accessToken: string;
-  refreshToken: string;
-}
-
-/** Paginated result — flat structure matching backend PaginatedResult<T>.
- * TODO(openapi): Backend generates named paginated schemas (e.g. ReviewListResponse)
- * rather than a generic component. Keep hand-rolled generic for now.
+ * Intentionally hand-rolled — meta-shape outside OpenAPI components.schemas.
+ * Backend generates named paginated schemas (e.g. ReviewListResponse) rather
+ * than a generic component. PaginatedResponse<T> stays as a reusable generic
+ * wrapper for admin page state until OpenAPI 3.1 discriminated generics land.
  */
 export interface PaginatedResponse<T> {
   data: T[];
@@ -133,8 +111,9 @@ export interface PaginatedResponse<T> {
 }
 
 /**
- * TODO(openapi): ListUsersParams is a query-parameter shape rendered under paths,
- * not components.schemas — openapi-typescript does not surface it as a named type.
+ * Intentionally hand-rolled — meta-shape outside OpenAPI components.schemas.
+ * ListUsersParams is a query-parameter shape rendered under paths, not
+ * components.schemas — openapi-typescript does not surface it as a named type.
  */
 export interface ListUsersParams {
   page?: number;
@@ -146,25 +125,9 @@ export interface ListUsersParams {
 }
 
 /**
- * TODO(openapi): AuditLog hand-rolled shape uses userId/userEmail/resource/resourceId/
- * details/ipAddress — differs from AdminAuditLogDTO (actorType/actorId/targetType/
- * targetId/metadata/ip). Keep until admin UI is migrated to AdminAuditLogDTO field names.
- */
-export interface AuditLog {
-  id: string;
-  userId: string | null;
-  userEmail: string | null;
-  action: string;
-  resource: string;
-  resourceId: string | null;
-  details: Record<string, unknown> | null;
-  ipAddress: string | null;
-  createdAt: string;
-}
-
-/**
- * TODO(openapi): ListAuditLogsParams is a query-parameter shape — not in
- * components.schemas.
+ * Intentionally hand-rolled — meta-shape outside OpenAPI components.schemas.
+ * ListAuditLogsParams is a query-parameter shape rendered under paths, not
+ * components.schemas — openapi-typescript does not surface it as a named type.
  */
 export interface ListAuditLogsParams {
   page?: number;
@@ -172,18 +135,4 @@ export interface ListAuditLogsParams {
   action?: string;
   startDate?: string;
   endDate?: string;
-}
-
-/**
- * TODO(openapi): DashboardStats fields (activeUsers/totalConversations/newUsersToday/
- * messagesThisWeek) differ from AdminStats (usersByRole/totalSessions/recentSignups/
- * recentSessions). Keep until backend exposes a matching DashboardStats schema.
- */
-export interface DashboardStats {
-  totalUsers: number;
-  activeUsers: number;
-  totalConversations: number;
-  totalMessages: number;
-  newUsersToday: number;
-  messagesThisWeek: number;
 }

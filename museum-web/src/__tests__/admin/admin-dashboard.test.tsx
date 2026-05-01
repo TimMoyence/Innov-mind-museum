@@ -7,7 +7,7 @@ import { AuthProvider } from '@/lib/auth';
 import { AdminDictProvider } from '@/lib/admin-dictionary';
 import AdminDashboardPage from '@/app/[locale]/admin/page';
 import { mockAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
-import type { DashboardStats } from '@/lib/admin-types';
+import type { AdminStats } from '@/lib/admin-types';
 
 // ── Next.js mocks ───────────────────────────────────────────────────────────
 
@@ -44,7 +44,6 @@ vi.mock('@/lib/api', () => ({
   registerLogoutHandler: vi.fn(),
 }));
 
-
 // ── Helper: wrap with required providers ─────────────────────────────────────
 
 function Providers({ children }: { children: React.ReactNode }) {
@@ -57,13 +56,13 @@ function Providers({ children }: { children: React.ReactNode }) {
 
 // ── Test data ───────────────────────────────────────────────────────────────
 
-const mockStats: DashboardStats = {
+const mockStats: AdminStats = {
   totalUsers: 1250,
-  activeUsers: 430,
-  totalConversations: 8920,
+  usersByRole: { visitor: 1100, moderator: 100, admin: 50 },
+  totalSessions: 8920,
   totalMessages: 45000,
-  newUsersToday: 12,
-  messagesThisWeek: 3200,
+  recentSignups: 12,
+  recentSessions: 3200,
 };
 
 // ============================================================================
@@ -124,15 +123,13 @@ describe('AdminDashboardPage', () => {
     });
 
     // Verify stat labels are rendered
-    expect(screen.getByText('Active Users')).toBeInTheDocument();
-    expect(screen.getByText('Conversations')).toBeInTheDocument();
-    expect(screen.getByText('Messages')).toBeInTheDocument();
-    expect(screen.getByText('New Today')).toBeInTheDocument();
-    expect(screen.getByText('Messages This Week')).toBeInTheDocument();
+    expect(screen.getByText('Total Sessions')).toBeInTheDocument();
+    expect(screen.getByText('Total Messages')).toBeInTheDocument();
+    expect(screen.getByText('New This Week')).toBeInTheDocument();
+    expect(screen.getByText('Recent Sessions')).toBeInTheDocument();
 
     // Verify numeric values are present (use regex to handle locale-specific separators)
     expect(screen.getByText(/1.?250/)).toBeInTheDocument();
-    expect(screen.getByText('430')).toBeInTheDocument();
     expect(screen.getByText(/8.?920/)).toBeInTheDocument();
     expect(screen.getByText(/45.?000/)).toBeInTheDocument();
     expect(screen.getByText('12')).toBeInTheDocument();

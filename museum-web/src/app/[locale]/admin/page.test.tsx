@@ -8,7 +8,7 @@ import { AuthProvider } from '@/lib/auth';
 import { AdminDictProvider } from '@/lib/admin-dictionary';
 import AdminDashboardPage from './page';
 import { mockAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
-import type { DashboardStats } from '@/lib/admin-types';
+import type { AdminStats } from '@/lib/admin-types';
 
 // ── Next.js mocks ───────────────────────────────────────────────────────────
 
@@ -47,13 +47,13 @@ vi.mock('@/lib/api', () => ({
 
 // ── Test data ───────────────────────────────────────────────────────────────
 
-const mockStats: DashboardStats = {
+const mockStats: AdminStats = {
   totalUsers: 12,
-  activeUsers: 5,
-  totalConversations: 7,
+  usersByRole: { visitor: 10, admin: 2 },
+  totalSessions: 7,
   totalMessages: 42,
-  newUsersToday: 1,
-  messagesThisWeek: 9,
+  recentSignups: 1,
+  recentSessions: 9,
 };
 
 /** French dictionary slice — exercises the new `dashboardPage.stats` lookup. */
@@ -63,11 +63,10 @@ const frenchDict: typeof mockAdminDict = {
     subtitle: "Vue d'ensemble de votre plateforme Musaium.",
     stats: {
       totalUsers: 'Utilisateurs totaux',
-      activeUsers: 'Utilisateurs actifs',
-      conversations: 'Conversations',
-      messages: 'Messages',
-      newToday: "Nouveaux aujourd'hui",
-      messagesThisWeek: 'Messages cette semaine',
+      totalSessions: 'Sessions totales',
+      totalMessages: 'Messages totaux',
+      recentSignups: 'Nouveaux cette semaine',
+      recentSessions: 'Sessions récentes',
     },
   },
 };
@@ -107,9 +106,9 @@ describe('AdminDashboardPage stats labels (T2.1: dictionary-driven)', () => {
     await waitFor(() => {
       expect(screen.getByText('Utilisateurs totaux')).toBeInTheDocument();
     });
-    expect(screen.getByText('Utilisateurs actifs')).toBeInTheDocument();
-    expect(screen.getByText("Nouveaux aujourd'hui")).toBeInTheDocument();
-    expect(screen.getByText('Messages cette semaine')).toBeInTheDocument();
+    expect(screen.getByText('Sessions totales')).toBeInTheDocument();
+    expect(screen.getByText('Nouveaux cette semaine')).toBeInTheDocument();
+    expect(screen.getByText('Sessions récentes')).toBeInTheDocument();
   });
 
   it('renders localized English stat labels from the dictionary', async () => {
@@ -124,8 +123,8 @@ describe('AdminDashboardPage stats labels (T2.1: dictionary-driven)', () => {
     await waitFor(() => {
       expect(screen.getByText('Total Users')).toBeInTheDocument();
     });
-    expect(screen.getByText('New Today')).toBeInTheDocument();
-    expect(screen.getByText('Messages This Week')).toBeInTheDocument();
+    expect(screen.getByText('New This Week')).toBeInTheDocument();
+    expect(screen.getByText('Recent Sessions')).toBeInTheDocument();
   });
 
   it('renders the localized subtitle from the dictionary', async () => {
