@@ -47,6 +47,11 @@
 !museum-frontend/docs/DEPLOYMENT.md
 !museum-frontend/docs/NEXT_LEVEL_MOBILE_PRODUCTION_AND_TEST.md
 
+# backend perf bench artifacts (EXPLAIN ANALYZE outputs + reports)
+!museum-backend/docs/
+!museum-backend/docs/perf/
+!museum-backend/docs/perf/**
+
 # OS X
 **/.DS_Store*
 **/Icon?

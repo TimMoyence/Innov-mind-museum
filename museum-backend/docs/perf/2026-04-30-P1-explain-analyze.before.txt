@@ -1,0 +1,55 @@
+=== P1 — assigned tickets (BEFORE A2 indexes) ===
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=857.52..857.61 rows=35 width=818) (actual time=3.662..3.669 rows=50 loops=1)
+   Buffers: shared hit=773
+   ->  Sort  (cost=857.52..857.61 rows=35 width=818) (actual time=3.661..3.664 rows=50 loops=1)
+         Sort Key: "createdAt" DESC
+         Sort Method: quicksort  Memory: 31kB
+         Buffers: shared hit=773
+         ->  Seq Scan on support_tickets  (cost=0.00..856.62 rows=35 width=818) (actual time=0.088..3.631 rows=50 loops=1)
+               Filter: (assigned_to = 1)
+               Rows Removed by Filter: 49950
+               Buffers: shared hit=770
+ Planning:
+   Buffers: shared hit=101
+ Planning Time: 0.453 ms
+ Execution Time: 3.699 ms
+(14 rows)
+
+
+=== P1 — reset_token lookup (BEFORE A2 indexes) ===
+                                                     QUERY PLAN                                                     
+--------------------------------------------------------------------------------------------------------------------
+ Gather  (cost=1000.00..10750.36 rows=1 width=26) (actual time=20.823..22.558 rows=1 loops=1)
+   Workers Planned: 2
+   Workers Launched: 2
+   Buffers: shared hit=8 read=7137
+   ->  Parallel Seq Scan on users  (cost=0.00..9750.26 rows=1 width=26) (actual time=18.431..18.432 rows=0 loops=3)
+         Filter: ((reset_token)::text = 'token-50'::text)
+         Rows Removed by Filter: 166666
+         Buffers: shared hit=8 read=7137
+ Planning:
+   Buffers: shared hit=75
+ Planning Time: 0.280 ms
+ Execution Time: 22.574 ms
+(12 rows)
+
+
+=== P1 — email_change_token lookup (BEFORE A2 indexes) ===
+                                                     QUERY PLAN                                                     
+--------------------------------------------------------------------------------------------------------------------
+ Gather  (cost=1000.00..10750.36 rows=1 width=26) (actual time=20.206..21.763 rows=1 loops=1)
+   Workers Planned: 2
+   Workers Launched: 2
+   Buffers: shared hit=104 read=7041
+   ->  Parallel Seq Scan on users  (cost=0.00..9750.26 rows=1 width=26) (actual time=18.395..18.397 rows=0 loops=3)
+         Filter: ((email_change_token)::text = 'echg-250'::text)
+         Rows Removed by Filter: 166666
+         Buffers: shared hit=104 read=7041
+ Planning:
+   Buffers: shared hit=3
+ Planning Time: 0.080 ms
+ Execution Time: 21.776 ms
+(12 rows)
+

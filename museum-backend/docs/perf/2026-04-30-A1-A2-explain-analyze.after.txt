@@ -1,0 +1,86 @@
+=== Hot 1 — list session messages (AFTER A1+A2 indexes) ===
+                                                                          QUERY PLAN                                                                          
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=44.79..44.82 rows=10 width=258) (actual time=4.143..4.150 rows=10 loops=1)
+   Buffers: shared hit=5 read=12
+   InitPlan 1 (returns $0)
+     ->  Limit  (cost=0.00..0.02 rows=1 width=16) (actual time=0.091..0.096 rows=1 loops=1)
+           Buffers: shared read=1
+           ->  Seq Scan on chat_sessions  (cost=0.00..21364.00 rows=1000000 width=16) (actual time=0.091..0.096 rows=1 loops=1)
+                 Buffers: shared read=1
+   ->  Sort  (cost=44.77..44.80 rows=10 width=258) (actual time=4.142..4.143 rows=10 loops=1)
+         Sort Key: chat_messages."createdAt"
+         Sort Method: quicksort  Memory: 26kB
+         Buffers: shared hit=5 read=12
+         ->  Index Scan using "IDX_chat_messages_sessionId" on chat_messages  (cost=0.43..44.61 rows=10 width=258) (actual time=0.680..4.092 rows=10 loops=1)
+               Index Cond: ("sessionId" = $0)
+               Buffers: shared hit=2 read=12
+ Planning:
+   Buffers: shared hit=138 read=19 dirtied=3
+ Planning Time: 4.249 ms
+ Execution Time: 4.232 ms
+(18 rows)
+
+
+=== Hot 2 — list user sessions (AFTER A1+A2 indexes) ===
+                                                                        QUERY PLAN                                                                        
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=11.52..11.53 rows=2 width=1160) (actual time=0.158..0.159 rows=2 loops=1)
+   Buffers: shared hit=2 read=4
+   InitPlan 1 (returns $0)
+     ->  Limit  (cost=0.00..0.02 rows=1 width=4) (actual time=0.005..0.005 rows=1 loops=1)
+           Buffers: shared hit=1
+           ->  Seq Scan on chat_sessions chat_sessions_1  (cost=0.00..21364.00 rows=900133 width=4) (actual time=0.005..0.005 rows=1 loops=1)
+                 Filter: ("userId" IS NOT NULL)
+                 Buffers: shared hit=1
+   ->  Sort  (cost=11.50..11.50 rows=2 width=1160) (actual time=0.158..0.158 rows=2 loops=1)
+         Sort Key: chat_sessions."updatedAt" DESC
+         Sort Method: quicksort  Memory: 25kB
+         Buffers: shared hit=2 read=4
+         ->  Index Scan using "IDX_chat_sessions_userId" on chat_sessions  (cost=0.42..11.49 rows=2 width=1160) (actual time=0.101..0.151 rows=2 loops=1)
+               Index Cond: ("userId" = $0)
+               Buffers: shared hit=2 read=4
+ Planning:
+   Buffers: shared hit=52 read=2
+ Planning Time: 0.301 ms
+ Execution Time: 0.184 ms
+(19 rows)
+
+
+=== Hot 3 — artwork matches per message (AFTER A1+A2 indexes) ===
+                                                                     QUERY PLAN                                                                     
+----------------------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using "IDX_artwork_matches_messageId" on artwork_matches  (cost=0.48..8.50 rows=1 width=1105) (actual time=1.586..2.002 rows=2 loops=1)
+   Index Cond: ("messageId" = $0)
+   Buffers: shared hit=4 read=2
+   InitPlan 1 (returns $0)
+     ->  Limit  (cost=0.00..0.05 rows=1 width=16) (actual time=0.042..0.043 rows=1 loops=1)
+           Buffers: shared hit=1
+           ->  Seq Scan on chat_messages  (cost=0.00..263889.45 rows=5054685 width=16) (actual time=0.042..0.042 rows=1 loops=1)
+                 Filter: ((role)::text = 'assistant'::text)
+                 Buffers: shared hit=1
+ Planning:
+   Buffers: shared hit=71 read=4 dirtied=1
+ Planning Time: 1.901 ms
+ Execution Time: 2.041 ms
+(13 rows)
+
+
+=== Hot 4 — cascade delete one user, ROLLBACK (AFTER A1+A2 indexes) ===
+BEGIN
+                                                                   QUERY PLAN                                                                    
+-------------------------------------------------------------------------------------------------------------------------------------------------
+ Delete on chat_sessions  (cost=0.42..11.49 rows=0 width=0) (actual time=0.451..0.452 rows=0 loops=1)
+   Buffers: shared hit=8 read=6 dirtied=3
+   ->  Index Scan using "IDX_chat_sessions_userId" on chat_sessions  (cost=0.42..11.49 rows=2 width=6) (actual time=0.077..0.115 rows=2 loops=1)
+         Index Cond: ("userId" = 100)
+         Buffers: shared hit=3 read=2
+ Planning Time: 0.034 ms
+ Trigger for constraint FK_a82476a8acdd6cd6936378cb72d on chat_sessions: time=6.846 calls=2
+ Trigger for constraint FK_4e09da4e92fddfef0d14f634d5e on chat_messages: time=14.344 calls=20
+ Trigger for constraint FK_0b9283515f07ae088c9e0328609 on chat_messages: time=1.750 calls=20
+ Trigger for constraint FK_7078835e4cc127f9394f40ac6e7 on chat_messages: time=2.005 calls=20
+ Execution Time: 26.362 ms
+(11 rows)
+
+ROLLBACK

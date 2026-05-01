@@ -1,0 +1,111 @@
+=== Hot 1 — list session messages (BEFORE A1 indexes, Seq Scan expected) ===
+                                                                  QUERY PLAN                                                                  
+----------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=191972.61..191973.54 rows=8 width=258) (actual time=1366.181..1375.608 rows=10 loops=1)
+   Buffers: shared hit=1800 read=137162
+   InitPlan 1 (returns $0)
+     ->  Limit  (cost=0.00..0.02 rows=1 width=16) (actual time=0.068..0.072 rows=1 loops=1)
+           Buffers: shared hit=1
+           ->  Seq Scan on chat_sessions  (cost=0.00..21364.00 rows=1000000 width=16) (actual time=0.060..0.065 rows=1 loops=1)
+                 Buffers: shared hit=1
+   ->  Gather Merge  (cost=191972.58..191973.52 rows=8 width=258) (actual time=1344.101..1353.517 rows=10 loops=1)
+         Workers Planned: 2
+         Params Evaluated: $0
+         Workers Launched: 2
+         Buffers: shared hit=1800 read=137162
+         ->  Sort  (cost=190972.56..190972.57 rows=4 width=258) (actual time=1258.166..1258.179 rows=3 loops=3)
+               Sort Key: chat_messages."createdAt"
+               Sort Method: quicksort  Memory: 25kB
+               Buffers: shared hit=1799 read=137162
+               Worker 0:  Sort Method: quicksort  Memory: 25kB
+               Worker 1:  Sort Method: quicksort  Memory: 25kB
+               ->  Parallel Seq Scan on chat_messages  (cost=0.00..190972.52 rows=4 width=258) (actual time=404.747..1257.818 rows=3 loops=3)
+                     Filter: ("sessionId" = $0)
+                     Rows Removed by Filter: 3333330
+                     Buffers: shared hit=1727 read=137162
+ Planning:
+   Buffers: shared hit=130
+ Planning Time: 8.528 ms
+ JIT:
+   Functions: 16
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+   Timing: Generation 5.276 ms, Inlining 0.000 ms, Optimization 2.601 ms, Emission 55.220 ms, Total 63.097 ms
+ Execution Time: 1559.690 ms
+(30 rows)
+
+
+=== Hot 2 — list user sessions (BEFORE A1 indexes, Seq Scan expected) ===
+                                                                  QUERY PLAN                                                                  
+----------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=17572.57..17572.57 rows=2 width=1160) (actual time=101.269..106.433 rows=2 loops=1)
+   Buffers: shared hit=5 read=11360
+   InitPlan 1 (returns $0)
+     ->  Limit  (cost=0.00..0.02 rows=1 width=4) (actual time=0.013..0.014 rows=1 loops=1)
+           Buffers: shared hit=1
+           ->  Seq Scan on chat_sessions chat_sessions_1  (cost=0.00..21364.00 rows=900133 width=4) (actual time=0.013..0.013 rows=1 loops=1)
+                 Filter: ("userId" IS NOT NULL)
+                 Buffers: shared hit=1
+   ->  Sort  (cost=17572.54..17572.55 rows=2 width=1160) (actual time=101.268..106.430 rows=2 loops=1)
+         Sort Key: chat_sessions."updatedAt" DESC
+         Sort Method: quicksort  Memory: 25kB
+         Buffers: shared hit=5 read=11360
+         ->  Gather  (cost=1000.00..17572.53 rows=2 width=1160) (actual time=0.577..106.389 rows=2 loops=1)
+               Workers Planned: 2
+               Params Evaluated: $0
+               Workers Launched: 2
+               Buffers: shared hit=5 read=11360
+               ->  Parallel Seq Scan on chat_sessions  (cost=0.00..16572.33 rows=1 width=1160) (actual time=28.508..72.548 rows=1 loops=3)
+                     Filter: ("userId" = $0)
+                     Rows Removed by Filter: 333333
+                     Buffers: shared hit=4 read=11360
+ Planning:
+   Buffers: shared hit=48
+ Planning Time: 0.492 ms
+ Execution Time: 106.479 ms
+(25 rows)
+
+
+=== Hot 3 — artwork matches per message (BEFORE A1 indexes, Seq Scan expected) ===
+                                                            QUERY PLAN                                                             
+-----------------------------------------------------------------------------------------------------------------------------------
+ Gather  (cost=1000.05..39989.03 rows=1 width=1105) (actual time=60.525..156.875 rows=2 loops=1)
+   Workers Planned: 2
+   Params Evaluated: $0
+   Workers Launched: 2
+   Buffers: shared hit=242 read=28331
+   InitPlan 1 (returns $0)
+     ->  Limit  (cost=0.00..0.05 rows=1 width=16) (actual time=0.015..0.016 rows=1 loops=1)
+           Buffers: shared hit=1
+           ->  Seq Scan on chat_messages  (cost=0.00..263889.45 rows=5054685 width=16) (actual time=0.014..0.015 rows=1 loops=1)
+                 Filter: ((role)::text = 'assistant'::text)
+                 Buffers: shared hit=1
+   ->  Parallel Seq Scan on artwork_matches  (cost=0.00..38988.88 rows=1 width=1105) (actual time=104.064..135.013 rows=1 loops=3)
+         Filter: ("messageId" = $0)
+         Rows Removed by Filter: 666666
+         Buffers: shared hit=241 read=28331
+ Planning:
+   Buffers: shared hit=54
+ Planning Time: 0.492 ms
+ Execution Time: 156.898 ms
+(19 rows)
+
+
+=== Hot 4 — cascade delete one user, ROLLBACK (BEFORE A1 indexes) ===
+BEGIN
+                                                    QUERY PLAN                                                    
+------------------------------------------------------------------------------------------------------------------
+ Delete on chat_sessions  (cost=0.00..23864.00 rows=0 width=0) (actual time=72.725..72.726 rows=0 loops=1)
+   Buffers: shared hit=107 read=11264
+   ->  Seq Scan on chat_sessions  (cost=0.00..23864.00 rows=2 width=6) (actual time=0.017..72.510 rows=2 loops=1)
+         Filter: ("userId" = 100)
+         Rows Removed by Filter: 999998
+         Buffers: shared hit=100 read=11264
+ Planning Time: 0.049 ms
+ Trigger for constraint FK_a82476a8acdd6cd6936378cb72d on chat_sessions: time=1687.039 calls=2
+ Trigger for constraint FK_4e09da4e92fddfef0d14f634d5e on chat_messages: time=3239.700 calls=20
+ Trigger for constraint FK_0b9283515f07ae088c9e0328609 on chat_messages: time=3.156 calls=20
+ Trigger for constraint FK_7078835e4cc127f9394f40ac6e7 on chat_messages: time=0.882 calls=20
+ Execution Time: 5003.666 ms
+(12 rows)
+
+ROLLBACK

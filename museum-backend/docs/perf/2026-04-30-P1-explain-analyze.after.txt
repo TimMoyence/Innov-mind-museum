@@ -1,0 +1,48 @@
+=== P1 — assigned tickets (AFTER A2 indexes) ===
+                                                                       QUERY PLAN                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=123.50..123.59 rows=35 width=818) (actual time=0.214..0.221 rows=50 loops=1)
+   Buffers: shared hit=55
+   ->  Sort  (cost=123.50..123.59 rows=35 width=818) (actual time=0.213..0.216 rows=50 loops=1)
+         Sort Key: "createdAt" DESC
+         Sort Method: quicksort  Memory: 31kB
+         Buffers: shared hit=55
+         ->  Bitmap Heap Scan on support_tickets  (cost=4.55..122.60 rows=35 width=818) (actual time=0.025..0.167 rows=50 loops=1)
+               Recheck Cond: (assigned_to = 1)
+               Heap Blocks: exact=50
+               Buffers: shared hit=52
+               ->  Bitmap Index Scan on "IDX_support_tickets_assigned_to"  (cost=0.00..4.54 rows=35 width=0) (actual time=0.013..0.013 rows=50 loops=1)
+                     Index Cond: (assigned_to = 1)
+                     Buffers: shared hit=2
+ Planning:
+   Buffers: shared hit=122
+ Planning Time: 0.538 ms
+ Execution Time: 0.259 ms
+(17 rows)
+
+
+=== P1 — reset_token lookup (AFTER A2 indexes) ===
+                                                           QUERY PLAN                                                           
+--------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using "IDX_users_reset_token" on users  (cost=0.14..8.16 rows=1 width=26) (actual time=0.015..0.015 rows=1 loops=1)
+   Index Cond: ((reset_token)::text = 'token-50'::text)
+   Buffers: shared hit=2
+ Planning:
+   Buffers: shared hit=100
+ Planning Time: 0.362 ms
+ Execution Time: 0.021 ms
+(7 rows)
+
+
+=== P1 — email_change_token lookup (AFTER A2 indexes) ===
+                                                              QUERY PLAN                                                               
+---------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using "IDX_users_email_change_token" on users  (cost=0.14..8.15 rows=1 width=26) (actual time=0.013..0.014 rows=1 loops=1)
+   Index Cond: ((email_change_token)::text = 'echg-250'::text)
+   Buffers: shared hit=2
+ Planning:
+   Buffers: shared hit=3
+ Planning Time: 0.036 ms
+ Execution Time: 0.035 ms
+(7 rows)
+
