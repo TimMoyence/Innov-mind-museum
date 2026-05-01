@@ -16,6 +16,7 @@ import { env } from '@src/config/env';
 import { AppDataSource } from '@src/data/db/data-source';
 import { resolveCorsOrigin } from '@src/helpers/cors.config';
 import { dataModeMiddleware } from '@src/helpers/dataMode.middleware';
+import { httpMetricsMiddleware, metricsHandler } from '@src/helpers/metrics-middleware';
 import { acceptLanguageMiddleware } from '@src/helpers/middleware/accept-language.middleware';
 import { cookieParserMiddleware } from '@src/helpers/middleware/cookie-parser.middleware';
 import { csrfMiddleware } from '@src/helpers/middleware/csrf.middleware';
@@ -199,6 +200,13 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   wireAuthMiddleware();
 
   applyGlobalMiddleware(app);
+
+  // H (2026-05-01) — Prometheus scrape endpoint + per-request RED metrics.
+  // Mounted after global middleware (auth, rate-limit, etc.) so the /metrics
+  // route inherits CORS and security headers, but BEFORE API routes so every
+  // subsequent handler is observed by httpMetricsMiddleware.
+  app.use(httpMetricsMiddleware);
+  app.get('/metrics', metricsHandler);
 
   if (!isProd) {
     setupSwagger(app);

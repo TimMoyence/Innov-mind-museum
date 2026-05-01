@@ -19,6 +19,8 @@ export default tseslint.config(
       'next.config.ts',
       'sentry.*.config.ts',
       'next-env.d.ts',
+      // Auto-generated from backend OpenAPI spec — do not lint
+      'src/lib/api/generated/',
     ],
   },
 

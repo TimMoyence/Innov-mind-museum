@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { logger } from '@shared/logger/logger';
+import { llmCacheHitsTotal, llmCacheMissesTotal } from '@shared/observability/prometheus-metrics';
 
 import type {
   LlmCacheKeyInput,
@@ -43,6 +44,11 @@ export class LlmCacheServiceImpl implements LlmCacheService {
     const contextClass = this.classify(input);
     const key = this.buildKey(input, contextClass);
     const value = await this.cache.get<T>(key);
+    if (value !== null) {
+      llmCacheHitsTotal.inc({ context_class: contextClass });
+    } else {
+      llmCacheMissesTotal.inc({ context_class: contextClass });
+    }
     return { hit: value !== null, value, contextClass };
   }
 
