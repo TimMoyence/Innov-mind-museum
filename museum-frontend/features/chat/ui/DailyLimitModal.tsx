@@ -1,8 +1,9 @@
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
+import { LiquidButton } from '@/shared/ui/LiquidButton';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
 
@@ -46,16 +47,13 @@ export const DailyLimitModal = ({ visible, onDismiss }: DailyLimitModalProps) =>
             </Text>
           </View>
 
-          <Pressable
-            style={[styles.dismissButton, { backgroundColor: theme.primary }]}
+          <LiquidButton
+            label={t('common.dismiss')}
             onPress={onDismiss}
-            accessibilityRole="button"
+            variant="primary"
+            size="lg"
             accessibilityLabel={t('common.dismiss')}
-          >
-            <Text style={[styles.dismissText, { color: theme.primaryContrast }]}>
-              {t('common.dismiss')}
-            </Text>
-          </Pressable>
+          />
         </View>
       </SafeAreaView>
     </Modal>
@@ -106,16 +104,5 @@ const styles = StyleSheet.create({
   hintText: {
     flex: 1,
     fontSize: fontSize.sm,
-  },
-  dismissButton: {
-    borderRadius: semantic.button.radius,
-    paddingVertical: semantic.button.paddingY,
-    paddingHorizontal: semantic.button.paddingX,
-    alignItems: 'center',
-    width: '100%',
-  },
-  dismissText: {
-    fontSize: fontSize['lg-'],
-    fontWeight: '700',
   },
 });

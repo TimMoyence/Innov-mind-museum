@@ -2,6 +2,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
+import { LiquidButton } from '@/shared/ui/LiquidButton';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
 
@@ -105,16 +106,13 @@ export const AiConsentModal = ({ visible, onAccept, onPrivacy }: AiConsentModalP
         </ScrollView>
 
         <View style={[styles.footer, { borderTopColor: theme.separator }]}>
-          <Pressable
-            style={[styles.acceptButton, { backgroundColor: theme.primary }]}
+          <LiquidButton
+            label={t('consent.accept')}
             onPress={onAccept}
-            accessibilityRole="button"
+            variant="primary"
+            size="lg"
             accessibilityLabel={t('consent.accept')}
-          >
-            <Text style={[styles.acceptText, { color: theme.primaryContrast }]}>
-              {t('consent.accept')}
-            </Text>
-          </Pressable>
+          />
         </View>
       </View>
     </Modal>
@@ -183,14 +181,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: semantic.screen.paddingXL,
     paddingVertical: semantic.modal.padding,
     borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  acceptButton: {
-    borderRadius: semantic.button.radius,
-    paddingVertical: semantic.card.padding,
-    alignItems: 'center',
-  },
-  acceptText: {
-    fontSize: fontSize['lg-'],
-    fontWeight: '700',
   },
 });
