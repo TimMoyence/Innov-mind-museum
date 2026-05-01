@@ -1,8 +1,9 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  Entity,
+  Index,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 
@@ -32,6 +33,7 @@ export class SupportTicket {
   @Column({ type: 'varchar', length: 64, nullable: true })
   category!: string | null;
 
+  @Index('IDX_support_tickets_assigned_to', { where: '"assigned_to" IS NOT NULL' })
   @Column({ type: 'integer', nullable: true, name: 'assigned_to' })
   assignedTo!: number | null;
 

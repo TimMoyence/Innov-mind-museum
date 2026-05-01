@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 /**
  *
@@ -11,6 +11,7 @@ export class TicketMessage {
   @Column({ type: 'uuid', name: 'ticket_id' })
   ticketId!: string;
 
+  @Index('IDX_ticket_messages_sender_id')
   @Column({ type: 'integer', name: 'sender_id' })
   senderId!: number;
 

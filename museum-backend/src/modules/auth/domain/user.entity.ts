@@ -3,6 +3,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -40,6 +41,7 @@ export class User {
   lastname?: string;
 
   /** One-time token for password reset flow. */
+  @Index('IDX_users_reset_token', { where: '"reset_token" IS NOT NULL' })
   @Column({ nullable: true })
   reset_token?: string;
 
@@ -86,6 +88,7 @@ export class User {
   pending_email?: string | null;
 
   /** Hashed token for confirming an email change. */
+  @Index('IDX_users_email_change_token', { where: '"email_change_token" IS NOT NULL' })
   @Column({ type: 'varchar', length: 128, nullable: true })
   email_change_token?: string | null;
 

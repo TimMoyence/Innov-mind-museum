@@ -30,6 +30,7 @@ export class MuseumEnrichment {
    * entity while the DB column has always been `integer` (see migration
    * 1775852800000-CreateKnowledgeExtractionTables). Corrected to match SQL.
    */
+  @Index('IDX_museum_enrichment_museumId')
   @Column({ type: 'int', nullable: true })
   museumId!: number | null;
 
