@@ -9,7 +9,7 @@ import type {
   SessionInfo,
   VisitorContext,
 } from './chat.shared-types';
-import type { ReportReason } from '../../../domain/chat.types';
+import type { ChatSessionIntent, ReportReason } from '../../../domain/chat.types';
 import type { FeedbackValue } from '../../../domain/messageFeedback.entity';
 
 // Re-export shared types so existing consumers keep working
@@ -63,7 +63,7 @@ export interface CreateSessionRequest {
   museumName?: string;
   museumAddress?: string;
   coordinates?: { lat: number; lng: number };
-  intent?: 'default' | 'walk';
+  intent?: ChatSessionIntent;
 }
 
 /** Response shape for `POST /sessions`. */

@@ -15,8 +15,10 @@ export interface EnrichedImage {
 /** Role of a message within a chat session. */
 export type ChatRole = 'user' | 'assistant' | 'system';
 
+/** Allowed intent values for a chat session — single source of truth for the type + Zod enum. */
+export const CHAT_SESSION_INTENTS = ['default', 'walk'] as const;
 /** Intent of a chat session — drives prompt strategy and UX flow. */
-export type ChatSessionIntent = 'default' | 'walk';
+export type ChatSessionIntent = (typeof CHAT_SESSION_INTENTS)[number];
 
 /** Reason a user may report a message. */
 export type ReportReason = 'offensive' | 'inaccurate' | 'inappropriate' | 'other';

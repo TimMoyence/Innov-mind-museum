@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { CONTENT_PREFERENCES, isContentPreference } from '@modules/auth/domain/content-preference';
+import { CHAT_SESSION_INTENTS } from '@modules/chat/domain/chat.types';
 
 /**
  * Zod schemas for chat HTTP routes.
@@ -89,7 +90,7 @@ export const createSessionSchema = z.object(
     museumName: optionalNonEmptyString,
     museumAddress: optionalNonEmptyString,
     coordinates: optionalCoordinates,
-    intent: z.enum(['default', 'walk']).optional(),
+    intent: z.enum(CHAT_SESSION_INTENTS).optional(),
   },
   { message: 'Payload must be an object' },
 );
