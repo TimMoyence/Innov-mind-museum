@@ -135,6 +135,18 @@ export async function createE2EHarness(): Promise<E2EHarness> {
   // Phase 5 — activate the in-memory email service so e2e tests can intercept
   // verification emails without a real Brevo API key.
   process.env.AUTH_EMAIL_SERVICE_KIND ??= 'test';
+  // Phase 5 — social-login JWKS spoof. Placeholder URLs; the social-login e2e
+  // test starts the real spoof server in beforeAll and overrides these env vars
+  // BEFORE calling createE2EHarness() so env.ts reads the correct spoof URL.
+  // In all other e2e suites these defaults point at canonical provider endpoints
+  // (which are never actually called because social-login is not exercised).
+  process.env.APPLE_OIDC_JWKS_URL ??= 'https://appleid.apple.com/auth/keys';
+  process.env.GOOGLE_OIDC_JWKS_URL ??= 'https://www.googleapis.com/oauth2/v3/certs';
+  process.env.OIDC_NONCE_ENFORCE ??= 'false';
+  // Apple audience defaults to the app bundle id; GOOGLE_OAUTH_CLIENT_ID left
+  // unset so env.ts returns an empty array (social login is mocked in e2e via spoof).
+  process.env.APPLE_CLIENT_ID ??= 'com.musaium.mobile.test';
+  process.env.GOOGLE_OAUTH_CLIENT_ID ??= 'phase5-test-audience.apps.googleusercontent.com';
 
   // Dynamic imports — env vars must be ready before these run.
   const [

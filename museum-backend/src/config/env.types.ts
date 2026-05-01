@@ -99,6 +99,18 @@ export interface AppEnv {
      */
     mfaEnrollmentWarningDays: number;
     /**
+     * Phase 5 — JWKS endpoint URL for Apple Sign-In token verification.
+     * Defaults to Apple's canonical URL in production. Overridable in tests
+     * to point at the local `startSocialJwtSpoof()` HTTP server.
+     */
+    appleJwksUrl: string;
+    /**
+     * Phase 5 — JWKS endpoint URL for Google Sign-In token verification.
+     * Defaults to Google's canonical URL in production. Overridable in tests
+     * to point at the local `startSocialJwtSpoof()` HTTP server.
+     */
+    googleJwksUrl: string;
+    /**
      * F3 (2026-04-30) — when `true`, `/social-login` MUST receive a nonce and
      * the verifier MUST find a matching `nonce` claim in the ID token (Google
      * direct, Apple via SHA-256). When `false` (default), missing nonces are

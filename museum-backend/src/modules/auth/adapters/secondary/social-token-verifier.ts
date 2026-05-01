@@ -159,7 +159,7 @@ export const verifyAppleIdToken = async (
     throw new Error('Apple ID token missing kid in header');
   }
 
-  const publicKey = await getSigningKey('https://appleid.apple.com/auth/keys', header.kid);
+  const publicKey = await getSigningKey(env.auth.appleJwksUrl, header.kid);
 
   const decoded = jwt.verify(idToken, publicKey, {
     algorithms: ['RS256'],
@@ -195,7 +195,7 @@ export const verifyGoogleIdToken = async (
     throw new Error('Google ID token missing kid in header');
   }
 
-  const publicKey = await getSigningKey('https://www.googleapis.com/oauth2/v3/certs', header.kid);
+  const publicKey = await getSigningKey(env.auth.googleJwksUrl, header.kid);
 
   const decoded = jwt.verify(idToken, publicKey, {
     algorithms: ['RS256'],

@@ -255,6 +255,10 @@ const env: AppEnv = {
     googleClientIds: toList(process.env.GOOGLE_OAUTH_CLIENT_ID).length
       ? toList(process.env.GOOGLE_OAUTH_CLIENT_ID)
       : [],
+    // Phase 5 — JWKS endpoint URLs for social-login token verification. Default
+    // to the canonical provider URLs. Overridable via env for e2e test spoofing.
+    appleJwksUrl: process.env.APPLE_OIDC_JWKS_URL || 'https://appleid.apple.com/auth/keys',
+    googleJwksUrl: process.env.GOOGLE_OIDC_JWKS_URL || 'https://www.googleapis.com/oauth2/v3/certs',
     // R16 MFA — AES-256-GCM key for TOTP secrets at rest. In dev/test we
     // tolerate absence and fall back to a deterministic 32-byte dev key so the
     // module boots without extra ceremony. In production, the absence of an
