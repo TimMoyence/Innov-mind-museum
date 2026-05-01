@@ -111,6 +111,15 @@ GitHub Actions workflows (`.github/workflows/`):
 - a11y disable-rules baseline at `museum-web/e2e/a11y/_disable-rules.json`. Vitest cap test enforces baseline length ≤ `PHASE_3_DISABLE_RULES_CAP` (currently 0; only shrinks).
 - See `docs/superpowers/specs/2026-05-01-phase3-web-admin-playwright-design.md` for the full spec.
 
+### Stryker mutation testing (Phase 4)
+
+- 7 banking-grade hot files registered at `museum-backend/.stryker-hot-files.json` with per-file `killRatioMin` (currently 80%): art-topic-guardrail, cursor-codec, sanitizePromptInput, audit-chain, llm-circuit-breaker, refresh-token.repository.pg, authSession.service.
+- `museum-backend/scripts/stryker-hot-files-gate.mjs` parses `reports/mutation/mutation.json` and asserts each hot file ≥ killRatioMin. Exits 0/1/2.
+- Pre-commit hook (`.claude/hooks/pre-commit-gate.sh`) runs `pnpm mutation:ci` + `pnpm mutation:gate` ONLY when staged BE files intersect the `mutate:` list. Most commits skip Stryker entirely (0s overhead). First-run cold cache may take ~20–40 min — run `pnpm mutation:warm` overnight to bootstrap.
+- CI: `mutation` job in `ci-cd-backend.yml` runs incremental on every push (any branch) + full nightly via cron (03:17 UTC). Stryker incremental cache shared across runs via `actions/cache@v4`.
+- Hard-fail policy: a hot file dropping below 80% blocks commit AND CI. Global thresholds: high=85, low=70, break=70.
+- See `docs/superpowers/specs/2026-05-01-phase4-stryker-mutation-design.md`.
+
 ## Architecture
 
 ### Backend — Hexagonal (Ports & Adapters)
@@ -395,7 +404,7 @@ Alternatives for future: Drizzle (S-tier 2026), Prisma 7, Kysely.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (15811 symbols, 27323 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (17317 symbols, 29545 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

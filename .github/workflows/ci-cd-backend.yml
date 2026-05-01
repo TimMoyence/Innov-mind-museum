@@ -133,7 +133,79 @@ jobs:
         env:
           RUN_INTEGRATION: 'true'
 
-  # ─── 3. E2E tests (PR + nightly only) ────────────────────────────────
+  # ─── 3. Mutation testing (Stryker — incremental on push, full nightly) ──
+  mutation:
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    defaults:
+      run:
+        working-directory: museum-backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: museum_dev
+          POSTGRES_PASSWORD: museum_dev_password
+          POSTGRES_DB: museum_dev
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320  # v5
+        with:
+          version: 10
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: museum-backend/pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Restore Stryker incremental cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: museum-backend/reports/stryker-incremental.json
+          key: stryker-cache-${{ hashFiles('museum-backend/stryker.config.mjs', 'museum-backend/jest.config.ts', 'museum-backend/.stryker-hot-files.json') }}
+          restore-keys: |
+            stryker-cache-
+
+      - name: Run Stryker (incremental on push, full nightly)
+        env:
+          DB_HOST: localhost
+          DB_PORT: '5433'
+          DB_USER: museum_dev
+          DB_PASSWORD: museum_dev_password
+          PGDATABASE: museum_dev
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "[mutation] Nightly — running FULL Stryker (cache regen)"
+            pnpm run mutation
+          else
+            echo "[mutation] Push/PR — running INCREMENTAL Stryker"
+            pnpm run mutation:ci
+          fi
+
+      - name: Hot-files kill-ratio gate
+        run: pnpm run mutation:gate
+
+      - name: Upload Stryker HTML report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: stryker-report-${{ github.event_name }}-${{ github.run_number }}
+          path: museum-backend/reports/mutation/
+          retention-days: 14
+
+  # ─── 4. E2E tests (PR + nightly only) ────────────────────────────────
   e2e:
     needs: quality
     if: github.event_name == 'pull_request' || github.event_name == 'schedule'
@@ -171,7 +243,7 @@ jobs:
       - name: E2E Postgres (Testcontainers)
         run: RUN_E2E=true pnpm exec jest --watchman=false --runInBand --coverage=false --testPathPattern='tests/e2e/'
 
-  # ─── 4. AI integration tests (manual only) ───────────────────────────
+  # ─── 5. AI integration tests (manual only) ───────────────────────────
   ai-tests:
     needs: quality
     if: github.event_name == 'workflow_dispatch'
@@ -204,7 +276,7 @@ jobs:
       - name: AI Integration Tests
         run: pnpm run test:ai
 
-  # ─── 5. Deploy to production (push to main) ──────────────────────────
+  # ─── 6. Deploy to production (push to main) ──────────────────────────
   deploy-prod:
     needs: quality
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -485,7 +557,7 @@ jobs:
           echo "::error::Production deploy rolled back — see docs/RUNBOOKS/auto-rollback.md"
           exit 1
 
-  # ─── 6. Deploy to staging (push to staging) ──────────────────────────
+  # ─── 7. Deploy to staging (push to staging) ──────────────────────────
   deploy-staging:
     needs: quality
     if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
