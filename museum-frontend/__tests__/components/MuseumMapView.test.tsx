@@ -43,6 +43,82 @@ jest.mock('@/features/diagnostics/PerfOverlay', () => ({
   PerfOverlay: () => null,
 }));
 
+// ── NetInfo — default to wifi; individual tests can override ─────────────────
+jest.mock('@react-native-community/netinfo', () => ({
+  __esModule: true,
+  default: {
+    fetch: jest.fn(() => Promise.resolve({ type: 'wifi', isConnected: true, details: null })),
+  },
+}));
+
+// ── offlinePackChoiceStore — isolated per test via zustand reset util ─────────
+jest.mock('@/features/museum/infrastructure/offlinePackChoiceStore', () => {
+  const { create } = require('zustand') as { create: typeof ZustandCreate };
+  const mockStore = create<{
+    choices: Record<string, { decision: 'accepted' | 'declined'; recordedAt: string }>;
+    acceptOfflinePack: (cityId: string) => void;
+    declineOfflinePack: (cityId: string) => void;
+    getChoice: (cityId: string) => { decision: string } | undefined;
+    clearChoice: (cityId: string) => void;
+  }>()((set, get) => ({
+    choices: {},
+    acceptOfflinePack: (cityId: string) => {
+      set((s) => ({
+        choices: {
+          ...s.choices,
+          [cityId]: { decision: 'accepted', recordedAt: new Date().toISOString() },
+        },
+      }));
+    },
+    declineOfflinePack: (cityId: string) => {
+      set((s) => ({
+        choices: {
+          ...s.choices,
+          [cityId]: { decision: 'declined', recordedAt: new Date().toISOString() },
+        },
+      }));
+    },
+    getChoice: (cityId: string) => get().choices[cityId],
+    clearChoice: (cityId: string) => {
+      set((s) => {
+        const { [cityId]: _removed, ...rest } = s.choices;
+        return { choices: rest };
+      });
+    },
+  }));
+  return { useOfflinePackChoiceStore: mockStore };
+});
+
+// ── OfflinePackPrompt — lightweight stub that renders testID-bearing buttons ──
+jest.mock('@/features/museum/ui/OfflinePackPrompt', () => {
+  const { View, Pressable, Text } = require('react-native');
+  return {
+    OfflinePackPrompt: ({
+      visible,
+      cityName,
+      onAccept,
+      onDecline,
+      testID,
+    }: {
+      visible: boolean;
+      cityId: string;
+      cityName: string;
+      onAccept: () => void;
+      onDecline: () => void;
+      testID?: string;
+    }) => {
+      if (!visible) return null;
+      return (
+        <View testID={testID ?? 'offline-prompt'}>
+          <Text testID={`${testID ?? 'offline-prompt'}-city`}>{cityName}</Text>
+          <Pressable testID={`${testID ?? 'offline-prompt'}-accept`} onPress={onAccept} />
+          <Pressable testID={`${testID ?? 'offline-prompt'}-decline`} onPress={onDecline} />
+        </View>
+      );
+    },
+  };
+});
+
 jest.mock('@maplibre/maplibre-react-native', () => {
   const ReactMock = require('react');
   const { View } = require('react-native');
@@ -107,7 +183,8 @@ jest.mock('@maplibre/maplibre-react-native', () => {
   };
 });
 
-import { act, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import type { create as ZustandCreate } from 'zustand';
 
 import { MuseumMapView } from '@/features/museum/ui/MuseumMapView';
 import { mapCameraCache } from '@/features/museum/infrastructure/mapCameraCache';
@@ -388,6 +465,88 @@ describe('MuseumMapView', () => {
         (map.props.onDidFinishLoadingMap as () => void)();
       });
       expect(mockCameraApi.fitBounds).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ── Offline-pack prompt ─────────────────────────────────────────────────────
+  // Verifies T6.3: prompt surfaces when nearestCity is in catalog + wifi + no
+  // prior choice, and that accept/decline record intent via the store.
+
+  describe('offline pack prompt', () => {
+    // Paris centroid — inside the Paris bounding box in cityCatalog.ts
+    // [2.224, 48.815, 2.47, 48.902]
+    const PARIS_LAT = 48.86;
+    const PARIS_LNG = 2.35;
+
+    beforeEach(() => {
+      // Reset the in-process store choices before each test so decisions
+      // from one test don't leak into the next.
+      const { useOfflinePackChoiceStore } = jest.requireMock(
+        '@/features/museum/infrastructure/offlinePackChoiceStore',
+      );
+      const state = useOfflinePackChoiceStore.getState();
+      Object.keys(state.choices).forEach((id) => {
+        state.clearChoice(id);
+      });
+
+      // Default: wifi connection
+      const NetInfo = jest.requireMock('@react-native-community/netinfo');
+      NetInfo.default.fetch.mockResolvedValue({ type: 'wifi', isConnected: true, details: null });
+    });
+
+    it('shows the prompt when nearest museum is in a catalog city + wifi + no prior choice', async () => {
+      render(
+        <MuseumMapView
+          museums={[makeMuseum({ latitude: PARIS_LAT, longitude: PARIS_LNG, distanceMeters: 100 })]}
+          userLatitude={PARIS_LAT}
+          userLongitude={PARIS_LNG}
+        />,
+      );
+      // Wait for map to mount and the NetInfo promise to resolve
+      await screen.findByTestId('maplibre-map');
+      expect(await screen.findByTestId('museum-map-offline-prompt')).toBeTruthy();
+    });
+
+    it('hides the prompt when the user already has a choice for that city', async () => {
+      // Pre-record a decline for Paris before render
+      const { useOfflinePackChoiceStore } = jest.requireMock(
+        '@/features/museum/infrastructure/offlinePackChoiceStore',
+      );
+      useOfflinePackChoiceStore.getState().declineOfflinePack('paris');
+
+      render(
+        <MuseumMapView
+          museums={[makeMuseum({ latitude: PARIS_LAT, longitude: PARIS_LNG, distanceMeters: 100 })]}
+          userLatitude={PARIS_LAT}
+          userLongitude={PARIS_LNG}
+        />,
+      );
+      await screen.findByTestId('maplibre-map');
+      // Give the NetInfo promise time to settle
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(screen.queryByTestId('museum-map-offline-prompt')).toBeNull();
+    });
+
+    it('records accepted decision and hides the prompt on accept', async () => {
+      const { useOfflinePackChoiceStore } = jest.requireMock(
+        '@/features/museum/infrastructure/offlinePackChoiceStore',
+      );
+
+      render(
+        <MuseumMapView
+          museums={[makeMuseum({ latitude: PARIS_LAT, longitude: PARIS_LNG, distanceMeters: 100 })]}
+          userLatitude={PARIS_LAT}
+          userLongitude={PARIS_LNG}
+        />,
+      );
+      await screen.findByTestId('museum-map-offline-prompt');
+      act(() => {
+        fireEvent.press(screen.getByTestId('museum-map-offline-prompt-accept'));
+      });
+      expect(screen.queryByTestId('museum-map-offline-prompt')).toBeNull();
+      expect(useOfflinePackChoiceStore.getState().choices.paris?.decision).toBe('accepted');
     });
   });
 });

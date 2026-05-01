@@ -8,6 +8,7 @@ import {
   type PressEventWithFeatures,
   type ViewStateChangeEvent,
 } from '@maplibre/maplibre-react-native';
+import NetInfo from '@react-native-community/netinfo';
 import type { FeatureCollection, Point } from 'geojson';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { NativeSyntheticEvent } from 'react-native';
@@ -29,7 +30,10 @@ import {
 import { haversineDistanceMeters } from '../application/haversine';
 import { useMapStyle } from '../application/useMapStyle';
 import type { MuseumWithDistance } from '../application/useMuseumDirectory';
+import { useNearestCity } from '../application/useNearestCity';
 import { mapCameraCache } from '../infrastructure/mapCameraCache';
+import { useOfflinePackChoiceStore } from '../infrastructure/offlinePackChoiceStore';
+import { OfflinePackPrompt } from './OfflinePackPrompt';
 
 interface MuseumMapViewProps {
   museums: MuseumWithDistance[];
@@ -122,6 +126,53 @@ export const MuseumMapView = ({
   const hasFittedRef = useRef(false);
   const reduceMotion = useReducedMotion();
   const [hasLoadError, setHasLoadError] = useState(false);
+
+  // ── Offline-pack prompt ─────────────────────────────────────────────────────
+  const nearestCity = useNearestCity(museums);
+  const offlineChoice = useOfflinePackChoiceStore((s) =>
+    nearestCity ? s.choices[nearestCity.cityId] : undefined,
+  );
+  const acceptOfflinePack = useOfflinePackChoiceStore((s) => s.acceptOfflinePack);
+  const declineOfflinePack = useOfflinePackChoiceStore((s) => s.declineOfflinePack);
+  const [showOfflinePrompt, setShowOfflinePrompt] = useState(false);
+
+  useEffect(() => {
+    if (!nearestCity) return;
+    if (offlineChoice !== undefined) return; // user already decided for this city
+    let cancelled = false;
+    void NetInfo.fetch().then((state) => {
+      if (cancelled) return;
+      // NetInfo `type` and `cellularGeneration` are string enums at runtime
+      // but TypeScript models them as opaque enum members. Narrowing through
+      // `unknown` lets us compare against the runtime-equivalent strings
+      // without tripping `no-unsafe-enum-comparison`, and the explicit
+      // optional-shape cast on `details` removes the nullability assumption
+      // that triggers `no-unnecessary-condition`.
+      const type: unknown = state.type;
+      const details = (state as { details?: { cellularGeneration?: unknown } | null }).details;
+      const gen: unknown = details?.cellularGeneration;
+      const isStrong = type === 'wifi' || (type === 'cellular' && (gen === '4g' || gen === '5g'));
+      if (isStrong) setShowOfflinePrompt(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [nearestCity, offlineChoice]);
+
+  const handleOfflineAccept = useCallback(() => {
+    if (nearestCity) {
+      acceptOfflinePack(nearestCity.cityId);
+    }
+    setShowOfflinePrompt(false);
+  }, [acceptOfflinePack, nearestCity]);
+
+  const handleOfflineDecline = useCallback(() => {
+    if (nearestCity) {
+      declineOfflinePack(nearestCity.cityId);
+    }
+    setShowOfflinePrompt(false);
+  }, [declineOfflinePack, nearestCity]);
+  // ── End offline-pack prompt ─────────────────────────────────────────────────
 
   const mapStyle = useMapStyle();
   const museumCollection = useMemo(() => buildMuseumFeatureCollection(museums), [museums]);
@@ -480,6 +531,16 @@ export const MuseumMapView = ({
         </View>
       ) : null}
       {__DEV__ ? <PerfOverlay /> : null}
+      {nearestCity ? (
+        <OfflinePackPrompt
+          visible={showOfflinePrompt}
+          cityId={nearestCity.cityId}
+          cityName={nearestCity.cityName}
+          onAccept={handleOfflineAccept}
+          onDecline={handleOfflineDecline}
+          testID="museum-map-offline-prompt"
+        />
+      ) : null}
     </View>
   );
 };
