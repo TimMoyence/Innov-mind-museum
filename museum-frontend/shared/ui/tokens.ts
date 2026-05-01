@@ -27,3 +27,7 @@ export { functional, withOpacity } from './tokens.functional';
 
 // Layer 3 — Semantic (component tokens)
 export { semantic } from './tokens.semantic';
+
+// Layer 4 — Component tokens (Spec B primitives)
+export { buttonTokens } from './tokens.generated';
+export type { ButtonVariant, ButtonSize } from './tokens.generated';

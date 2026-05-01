@@ -144,3 +144,38 @@ export const radius = {
 export const gradientColors = {
   lightEnd: '#D5F0FF',
 } as const;
+
+// Component tokens — button primitive (Spec B / T33)
+export const buttonTokens = {
+  variants: {
+    primary: {
+      bg: '#2563EB',
+      bgPressed: '#1D4ED8',
+      bgDisabled: '#B0CFFF',
+      border: 'transparent',
+      text: '#FFFFFF',
+    },
+    secondary: {
+      bg: 'transparent',
+      bgPressed: '#EAF2FF',
+      bgDisabled: 'transparent',
+      border: '#2563EB',
+      text: '#2563EB',
+    },
+    destructive: {
+      bg: '#DC2626',
+      bgPressed: '#B91C1C',
+      bgDisabled: '#FCA5A5',
+      border: 'transparent',
+      text: '#FFFFFF',
+    },
+  },
+  sizes: {
+    sm: { paddingV: 8, paddingH: 12, fontSize: 13, radius: 8 },
+    md: { paddingV: 12, paddingH: 16, fontSize: 15, radius: 10 },
+    lg: { paddingV: 16, paddingH: 20, fontSize: 17, radius: 12 },
+  },
+} as const;
+
+export type ButtonVariant = keyof typeof buttonTokens.variants;
+export type ButtonSize = keyof typeof buttonTokens.sizes;
