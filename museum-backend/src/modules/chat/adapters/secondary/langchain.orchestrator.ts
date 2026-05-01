@@ -1,4 +1,4 @@
-import { SystemMessage } from '@langchain/core/messages';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import * as Sentry from '@sentry/node';
 
 import { logger } from '@shared/logger/logger';
@@ -551,9 +551,12 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
       },
     );
 
-    // Insert WALK_TOUR_GUIDE_SECTION immediately before the last user message.
-    // buildSectionMessages places the HumanMessage last, so we inject at length-1.
-    messages.splice(messages.length - 1, 0, new SystemMessage(WALK_TOUR_GUIDE_SECTION));
+    // Insert WALK_TOUR_GUIDE_SECTION AFTER existing system instructions and BEFORE
+    // the user's HumanMessage. buildSectionMessages also appends a trailing reminder
+    // SystemMessage after the HumanMessage, so we cannot rely on length-1 here.
+    const humanIdx = messages.findIndex((m) => m instanceof HumanMessage);
+    const insertAt = humanIdx >= 0 ? humanIdx : messages.length;
+    messages.splice(insertAt, 0, new SystemMessage(WALK_TOUR_GUIDE_SECTION));
 
     const structuredChain = (
       model as unknown as {

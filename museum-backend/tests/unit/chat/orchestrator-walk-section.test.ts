@@ -116,7 +116,7 @@ class FakeDefaultModel {
 
 describe('LangChainChatOrchestrator — walk intent', () => {
   describe('generate() with intent=walk', () => {
-    it('includes WALK_TOUR_GUIDE_SECTION as a system message', async () => {
+    it('includes WALK_TOUR_GUIDE_SECTION as a system message before the HumanMessage', async () => {
       const model = new FakeWalkModel();
       const orchestrator = new LangChainChatOrchestrator({ model: model as never });
 
@@ -128,15 +128,22 @@ describe('LangChainChatOrchestrator — walk intent', () => {
         content?: unknown;
         lc_kwargs?: { content?: unknown };
       }[];
-      const contents = messages.map((m) => {
-        // LangChain BaseMessage exposes content directly
+      const contentOf = (m: { content?: unknown; lc_kwargs?: { content?: unknown } }): string => {
         if (typeof m.content === 'string') return m.content;
         if (m.lc_kwargs && typeof m.lc_kwargs.content === 'string') return m.lc_kwargs.content;
         return '';
-      });
+      };
 
-      const hasWalkSection = contents.some((c) => c.includes('guided-walk museum companion'));
-      expect(hasWalkSection).toBe(true);
+      const walkIdx = messages.findIndex((m) =>
+        contentOf(m).includes('guided-walk museum companion'),
+      );
+      const humanIdx = messages.findIndex((m) => m._getType?.() === 'human');
+
+      // Walk section must be present, located after at least one prior system message,
+      // and BEFORE the user's HumanMessage. This catches the regression where the
+      // section was mis-spliced between HumanMessage and the trailing reminder.
+      expect(walkIdx).toBeGreaterThan(0);
+      expect(humanIdx).toBeGreaterThan(walkIdx);
     });
 
     it('returns suggestions from structured output', async () => {
