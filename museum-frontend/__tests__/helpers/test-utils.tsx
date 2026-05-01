@@ -209,6 +209,48 @@ jest.mock('@/shared/ui/ErrorNotice', () => {
   };
 });
 
+// ── ErrorState ───────────────────────────────────────────────────────────────
+jest.mock('@/shared/ui/ErrorState', () => {
+  const { Pressable, Text, View } = require('react-native');
+  return {
+    ErrorState: ({
+      title,
+      onRetry,
+      onDismiss,
+      testID,
+    }: {
+      title: string;
+      onRetry?: () => void;
+      onDismiss?: () => void;
+      testID?: string;
+    }) => (
+      <View testID={testID ?? 'error-state'}>
+        <Text>{title}</Text>
+        {onRetry ? (
+          <Pressable
+            onPress={onRetry}
+            accessibilityRole="button"
+            accessibilityLabel="errorNotice.retry"
+            testID={testID !== undefined ? `${testID}-retry` : 'error-state-retry'}
+          >
+            <Text>errorNotice.retry</Text>
+          </Pressable>
+        ) : null}
+        {onDismiss ? (
+          <Pressable
+            onPress={onDismiss}
+            accessibilityRole="button"
+            accessibilityLabel="errorNotice.dismiss"
+            testID={testID !== undefined ? `${testID}-dismiss` : 'error-state-dismiss'}
+          >
+            <Text>errorNotice.dismiss</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    ),
+  };
+});
+
 // ── @/shared/lib/errors ─────────────────────────────────────────────────────
 // Mirrors the production getErrorMessage() contract in a minimal way:
 // an AppError's .message (carried by the Error instance) is returned.

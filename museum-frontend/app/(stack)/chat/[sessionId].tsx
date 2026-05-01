@@ -39,7 +39,7 @@ import { AiConsentModal } from '@/features/chat/ui/AiConsentModal';
 import { DailyLimitModal } from '@/features/chat/ui/DailyLimitModal';
 import { VisitSummaryModal } from '@/features/chat/ui/VisitSummaryModal';
 import { useMessageActions } from '@/features/chat/application/useMessageActions';
-import { ErrorNotice } from '@/shared/ui/ErrorNotice';
+import { ErrorState } from '@/shared/ui/ErrorState';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { InAppBrowser } from '@/shared/ui/InAppBrowser';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -357,7 +357,14 @@ export default function ChatSessionScreen() {
           ) : null}
 
           <OfflineBanner pendingCount={pendingCount} isOffline={isOffline} />
-          {error ? <ErrorNotice message={error} onDismiss={clearError} /> : null}
+          {error ? (
+            <ErrorState
+              variant="inline"
+              title={error}
+              onDismiss={clearError}
+              testID="error-notice"
+            />
+          ) : null}
 
           <GlassCard style={styles.chatSurface} intensity={42}>
             {isLoading ? (

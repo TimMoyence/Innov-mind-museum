@@ -14,7 +14,7 @@ import {
 } from '@/features/support/ui/ticketHelpers';
 import type { components } from '@/shared/api/generated/openapi';
 import { getErrorMessage } from '@/shared/lib/errors';
-import { ErrorNotice } from '@/shared/ui/ErrorNotice';
+import { ErrorState } from '@/shared/ui/ErrorState';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
@@ -207,11 +207,13 @@ export default function TicketsScreen() {
       </View>
 
       {error ? (
-        <ErrorNotice
-          message={error}
+        <ErrorState
+          variant="inline"
+          title={error}
           onDismiss={() => {
             setError(null);
           }}
+          testID="error-notice"
         />
       ) : null}
 

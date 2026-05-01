@@ -19,7 +19,7 @@ import { ConversationItem } from '@/features/conversation/ui/ConversationItem';
 import { ConversationSearchBar } from '@/features/conversation/ui/ConversationSearchBar';
 import { useConversationsStore } from '@/features/conversation/infrastructure/conversationsStore';
 import { BrandMark } from '@/shared/ui/BrandMark';
-import { ErrorNotice } from '@/shared/ui/ErrorNotice';
+import { ErrorState } from '@/shared/ui/ErrorState';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
@@ -223,11 +223,13 @@ export default function ConversationsScreen() {
       ) : null}
 
       {(error ?? createError) ? (
-        <ErrorNotice
-          message={error ?? createError ?? ''}
+        <ErrorState
+          variant="inline"
+          title={error ?? createError ?? ''}
           onDismiss={() => {
             setError(null);
           }}
+          testID="error-notice"
         />
       ) : null}
 

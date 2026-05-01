@@ -20,7 +20,7 @@ import { formatOpeningHours } from '@/features/museum/application/opening-hours.
 import { openInNativeMaps } from '@/features/museum/application/openInNativeMaps';
 import { useMuseumEnrichment } from '@/features/museum/application/useMuseumEnrichment';
 import { semantic, space, fontSize, radius } from '@/shared/ui/tokens';
-import { ErrorNotice } from '@/shared/ui/ErrorNotice';
+import { ErrorState } from '@/shared/ui/ErrorState';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
@@ -291,11 +291,13 @@ export default function MuseumDetailScreen() {
         ) : null}
 
         {error ? (
-          <ErrorNotice
-            message={error}
+          <ErrorState
+            variant="inline"
+            title={error}
             onDismiss={() => {
               setError(null);
             }}
+            testID="error-notice"
           />
         ) : null}
 

@@ -11,7 +11,7 @@ import { HeroSettingsButton } from '@/features/home/ui/HeroSettingsButton';
 import { HomeIntentChips, type HomeIntent } from '@/features/home/ui/HomeIntentChips';
 import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSettings';
 import { EmptyState } from '@/shared/ui/EmptyState';
-import { ErrorNotice } from '@/shared/ui/ErrorNotice';
+import { ErrorState } from '@/shared/ui/ErrorState';
 import { BrandMark } from '@/shared/ui/BrandMark';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -91,11 +91,13 @@ export default function HomeScreen() {
         <HomeIntentChips onPress={handleIntentPress} disabled={isCreating} />
 
         {error ? (
-          <ErrorNotice
-            message={error}
+          <ErrorState
+            variant="inline"
+            title={error}
             onDismiss={() => {
               setError(null);
             }}
+            testID="error-notice"
           />
         ) : null}
 

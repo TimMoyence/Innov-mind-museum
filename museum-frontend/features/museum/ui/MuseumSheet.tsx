@@ -14,7 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
-import { ErrorNotice } from '@/shared/ui/ErrorNotice';
+import { ErrorState } from '@/shared/ui/ErrorState';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
 import { formatDistance } from '../application/formatDistance';
@@ -280,9 +280,12 @@ export const MuseumSheet = ({
             ) : null}
 
             {enrichment.status === 'error' && !hasRichContent ? (
-              <ErrorNotice
-                message={t('museumDirectory.enrichment.failed_title')}
+              <ErrorState
+                variant="inline"
+                title={t('museumDirectory.enrichment.failed_title')}
                 onRetry={enrichment.refresh}
+                retryLabel={t('common.retry')}
+                testID="error-notice"
               />
             ) : null}
 

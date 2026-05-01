@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
 import { semantic, space, fontSize, lineHeightPx } from '@/shared/ui/tokens';
-import { ErrorNotice } from '@/shared/ui/ErrorNotice';
+import { ErrorState } from '@/shared/ui/ErrorState';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -82,11 +82,13 @@ export default function DiscoverScreen() {
             <Text style={[styles.statusLine, { color: theme.primary }]}>{actionStatus}</Text>
           ) : null}
           {error ? (
-            <ErrorNotice
-              message={error}
+            <ErrorState
+              variant="inline"
+              title={error}
               onDismiss={() => {
                 setError(null);
               }}
+              testID="error-notice"
             />
           ) : null}
         </GlassCard>
