@@ -40,6 +40,7 @@
     "seed:knowledge": "ts-node -r tsconfig-paths/register scripts/seed-knowledge.ts",
     "seed:smoke-account": "ts-node -r tsconfig-paths/register scripts/seed-smoke-account.ts",
     "seed:perf": "ts-node -r tsconfig-paths/register scripts/seed-perf-load.ts",
+    "prune:retention": "ts-node -r tsconfig-paths/register scripts/prune-retention.ts",
     "mutation": "stryker run",
     "mutation:ci": "stryker run --incremental --concurrency 2"
   },

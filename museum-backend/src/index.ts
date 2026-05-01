@@ -8,6 +8,7 @@ import Redis from 'ioredis';
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/refresh-token.repository.pg';
 import { TokenCleanupService } from '@modules/auth/useCase/tokenCleanup.service';
 import { getOcrService, stopArtKeywordsRefresh, stopKnowledgeExtraction } from '@modules/chat';
+import { registerArtKeywordsRetentionCron } from '@modules/chat/jobs/art-keywords-retention-cron.registrar';
 import {
   registerChatPurgeCron,
   type ChatPurgeCronHandle,
@@ -18,6 +19,8 @@ import {
   createBullmqEnrichmentScheduler,
 } from '@modules/museum';
 import { BullmqMuseumEnrichmentQueueAdapter } from '@modules/museum/adapters/secondary/bullmq-museum-enrichment-queue.adapter';
+import { registerReviewRetentionCron } from '@modules/review/jobs/review-retention-cron.registrar';
+import { registerSupportRetentionCron } from '@modules/support/jobs/support-retention-cron.registrar';
 import { registerAuditCron, type AuditCronHandle } from '@shared/audit/audit-cron.registrar';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
@@ -38,6 +41,7 @@ import { createApp } from './app';
 
 import type { EnrichmentSchedulerPort } from '@modules/museum';
 import type { CacheService } from '@shared/cache/cache.port';
+import type { ScheduledJobHandle } from '@shared/queue/scheduled-jobs';
 import type { Server } from 'node:http';
 
 /** Grace period for in-flight requests to complete before forced exit (ms). */
@@ -179,6 +183,7 @@ interface ShutdownResources {
   auditCron: AuditCronHandle | undefined;
   auditCronQueue: Queue | undefined;
   chatPurgeCron: ChatPurgeCronHandle | undefined;
+  retentionCrons: ScheduledJobHandle[];
 }
 
 /** Runs an async teardown step, logging any error under the given key without rethrowing. */
@@ -208,7 +213,14 @@ function stopSynchronousSchedulers(
 
 /** Stops all BullMQ crons + queues + OpenTelemetry + caches, logging each failure independently. */
 async function drainAsyncResources(resources: ShutdownResources): Promise<void> {
-  const { enrichmentScheduler, auditCron, auditCronQueue, chatPurgeCron, cacheService } = resources;
+  const {
+    enrichmentScheduler,
+    auditCron,
+    auditCronQueue,
+    chatPurgeCron,
+    retentionCrons,
+    cacheService,
+  } = resources;
 
   await safeTeardown('knowledge_extraction_shutdown_error', () => stopKnowledgeExtraction());
   if (enrichmentScheduler) {
@@ -222,6 +234,9 @@ async function drainAsyncResources(resources: ShutdownResources): Promise<void> 
   }
   if (chatPurgeCron) {
     await safeTeardown('chat_purge_cron_shutdown_error', () => chatPurgeCron.stop());
+  }
+  for (const handle of retentionCrons) {
+    await safeTeardown('retention_cron_shutdown_error', () => handle.close());
   }
   await shutdownOpenTelemetry();
   const ocr = getOcrService();
@@ -298,6 +313,64 @@ async function startChatPurgeCron(): Promise<ChatPurgeCronHandle | undefined> {
   }
 }
 
+/**
+ * Boots the three daily retention crons (support_tickets, reviews, art_keywords).
+ * Gated by `RETENTION_PRUNE_ENABLED` (default true) AND Redis being available.
+ * Fail-open: any registrar error is logged and the server proceeds without the cron.
+ */
+async function startRetentionCrons(): Promise<ScheduledJobHandle[]> {
+  if (!env.cache?.enabled || !env.retention.enabled) {
+    logger.info('retention_crons_disabled', {
+      cacheEnabled: Boolean(env.cache?.enabled),
+      retentionEnabled: env.retention.enabled,
+    });
+    return [];
+  }
+  try {
+    const connection = createRedisConnectionOptions();
+    const {
+      cronPattern,
+      batchLimit,
+      supportTicketsDays,
+      reviewsRejectedDays,
+      reviewsPendingDays,
+      artKeywordsDays,
+      artKeywordsHitThreshold,
+    } = env.retention;
+
+    const supportHandle = registerSupportRetentionCron(AppDataSource, {
+      connection,
+      cronPattern,
+      daysClosed: supportTicketsDays,
+      batchLimit,
+    });
+    const reviewHandle = registerReviewRetentionCron(AppDataSource, {
+      connection,
+      cronPattern,
+      rejectedDays: reviewsRejectedDays,
+      pendingDays: reviewsPendingDays,
+      batchLimit,
+    });
+    const artKeywordsHandle = registerArtKeywordsRetentionCron(AppDataSource, {
+      connection,
+      cronPattern,
+      days: artKeywordsDays,
+      hitThreshold: artKeywordsHitThreshold,
+      batchLimit,
+    });
+
+    await Promise.all([supportHandle.start(), reviewHandle.start(), artKeywordsHandle.start()]);
+
+    logger.info('retention_crons_started', { cronPattern });
+    return [supportHandle, reviewHandle, artKeywordsHandle];
+  } catch (err) {
+    logger.warn('retention_crons_boot_skipped', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return [];
+  }
+}
+
 /** Wires schedulers + cron jobs around the freshly-initialized cache/DB. Pure orchestration. */
 async function bootBackgroundJobs(
   cacheService: CacheService,
@@ -314,6 +387,7 @@ async function bootBackgroundJobs(
     ? await startAuditCron()
     : { handle: undefined, queue: undefined };
   const chatPurgeCron = await startChatPurgeCron();
+  const retentionCrons = await startRetentionCrons();
 
   return {
     tokenCleanup,
@@ -322,6 +396,7 @@ async function bootBackgroundJobs(
     auditCron,
     auditCronQueue,
     chatPurgeCron,
+    retentionCrons,
   };
 }
 

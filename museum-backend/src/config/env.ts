@@ -459,6 +459,16 @@ const env: AppEnv = {
     judgeTimeoutMs: toNumber(process.env.LLM_GUARDRAIL_JUDGE_TIMEOUT_MS, 500),
     judgeMinMessageLength: toNumber(process.env.LLM_GUARDRAIL_JUDGE_MIN_LENGTH, 50),
   },
+  retention: {
+    enabled: toBoolean(process.env.RETENTION_PRUNE_ENABLED, true),
+    cronPattern: process.env.RETENTION_CRON_PATTERN || '15 3 * * *',
+    batchLimit: toNumber(process.env.RETENTION_BATCH_LIMIT, 1000),
+    supportTicketsDays: toNumber(process.env.RETENTION_SUPPORT_TICKETS_DAYS, 365),
+    reviewsRejectedDays: toNumber(process.env.RETENTION_REVIEWS_REJECTED_DAYS, 30),
+    reviewsPendingDays: toNumber(process.env.RETENTION_REVIEWS_PENDING_DAYS, 60),
+    artKeywordsDays: toNumber(process.env.RETENTION_ART_KEYWORDS_DAYS, 90),
+    artKeywordsHitThreshold: toNumber(process.env.RETENTION_ART_KEYWORDS_HIT_THRESHOLD, 1),
+  },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
   supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.app',
   storage: {

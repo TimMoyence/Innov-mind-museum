@@ -339,6 +339,29 @@ export interface AppEnv {
     password?: string;
   };
   /**
+   * Data-retention prune configuration (ADR-018 / ADR-019 / ADR-020).
+   * Controls the three daily housekeeping crons that hard-delete stale rows
+   * from support_tickets, reviews, and art_keywords.
+   */
+  retention: {
+    /** Master on/off switch. When false, no cron is registered at boot. Default true. */
+    enabled: boolean;
+    /** BullMQ cron pattern shared by all three retention jobs. Default '15 3 * * *'. */
+    cronPattern: string;
+    /** Max rows deleted per chunked DELETE transaction. Default 1000. */
+    batchLimit: number;
+    /** Days since updatedAt before a closed/resolved support ticket is purged. Default 365. */
+    supportTicketsDays: number;
+    /** Days since updatedAt before a rejected review is purged. Default 30. */
+    reviewsRejectedDays: number;
+    /** Days since updatedAt before a pending review is purged. Default 60. */
+    reviewsPendingDays: number;
+    /** Days since updatedAt before a low-hit art keyword is purged. Default 90. */
+    artKeywordsDays: number;
+    /** hitCount threshold — art keywords with hitCount <= this are candidates. Default 1. */
+    artKeywordsHitThreshold: number;
+  };
+  /**
    * Advanced guardrail V2 configuration. Controls the optional semantic guardrail
    * layer that runs AFTER the deterministic keyword guardrail (kept as first defense).
    * `candidate: 'off'` (default) installs the noop adapter and is a no-op at runtime.
