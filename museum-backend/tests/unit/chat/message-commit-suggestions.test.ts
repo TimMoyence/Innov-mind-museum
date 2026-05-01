@@ -143,4 +143,25 @@ describe('commitAssistantResponse — suggestions plumbing', () => {
 
     expect('suggestions' in result.message).toBe(false);
   });
+
+  it('omits the suggestions field when sanitization collapses every item to empty', async () => {
+    const text = 'Response.';
+    // Each item: whitespace + zero-width chars only (U+200B). sanitizePromptInput
+    // strips the zero-width chars and trims, leaving an empty string.
+    const aiResult = baseAiResult({ suggestions: ['  ​  ', '​​', '   '] });
+
+    const result = await commitAssistantResponse(
+      {
+        guardrail: makeGuardrail(text),
+        repository: makeRepo(text),
+      },
+      'session-abc',
+      baseSession,
+      aiResult,
+      baseOptions,
+    );
+
+    expect(result.message.suggestions).toBeUndefined();
+    expect('suggestions' in result.message).toBe(false);
+  });
 });

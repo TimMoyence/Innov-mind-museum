@@ -154,10 +154,11 @@ export async function commitAssistantResponse(
     sessionUpdates,
   );
 
-  const sanitizedSuggestions =
+  const mappedSuggestions =
     aiResult.suggestions && aiResult.suggestions.length > 0
-      ? aiResult.suggestions.map((s) => sanitizePromptInput(s, 60))
-      : undefined;
+      ? aiResult.suggestions.map((s) => sanitizePromptInput(s, 60)).filter((s) => s.length > 0)
+      : [];
+  const sanitizedSuggestions = mappedSuggestions.length > 0 ? mappedSuggestions : undefined;
 
   return {
     sessionId,
