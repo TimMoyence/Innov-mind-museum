@@ -3,11 +3,19 @@ import {
   CreateDateColumn,
   Entity,
   PrimaryGeneratedColumn,
+  Unique,
   UpdateDateColumn,
 } from 'typeorm';
 
-/** Crowdsourced art keyword used for dynamic guardrail enrichment. */
+/**
+ * Crowdsourced art keyword used for dynamic guardrail enrichment.
+ *
+ * The `(keyword, locale)` composite is UNIQUE — required by the atomic
+ * UPSERT path in `TypeOrmArtKeywordRepository.upsert()` and `bulkUpsert()`,
+ * which use `INSERT ... ON CONFLICT (keyword, locale) DO UPDATE`.
+ */
 @Entity('art_keywords')
+@Unique('UQ_art_keywords_keyword_locale', ['keyword', 'locale'])
 export class ArtKeyword {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
