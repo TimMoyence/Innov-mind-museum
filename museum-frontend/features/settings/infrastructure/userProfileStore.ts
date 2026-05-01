@@ -29,6 +29,8 @@ interface UserProfileState {
   contentPreferences: ContentPreference[];
   /** True once the store has been hydrated from device storage. */
   _hydrated: boolean;
+  /** True once the user has completed (or dismissed) the onboarding flow. */
+  hasSeenOnboarding: boolean;
 
   /** Replace the full preferences array (used after a successful PATCH). */
   setContentPreferences: (preferences: ContentPreference[]) => void;
@@ -36,6 +38,8 @@ interface UserProfileState {
   toggleContentPreference: (preference: ContentPreference) => ContentPreference[];
   /** Clear all preferences. */
   clearContentPreferences: () => void;
+  /** Mark onboarding as seen (or reset it for testing/re-onboarding). */
+  setHasSeenOnboarding: (value: boolean) => void;
 }
 
 export const useUserProfileStore = create<UserProfileState>()(
@@ -43,6 +47,7 @@ export const useUserProfileStore = create<UserProfileState>()(
     (set, get) => ({
       contentPreferences: [],
       _hydrated: false,
+      hasSeenOnboarding: false,
 
       setContentPreferences: (preferences) => {
         set({ contentPreferences: preferences });
@@ -60,12 +65,19 @@ export const useUserProfileStore = create<UserProfileState>()(
       clearContentPreferences: () => {
         set({ contentPreferences: [] });
       },
+
+      setHasSeenOnboarding: (value) => {
+        set({ hasSeenOnboarding: value });
+      },
     }),
     {
       name: 'musaium.userProfile',
       storage: createJSONStorage(() => storage),
       version: 1,
-      partialize: (state) => ({ contentPreferences: state.contentPreferences }),
+      partialize: (state) => ({
+        contentPreferences: state.contentPreferences,
+        hasSeenOnboarding: state.hasSeenOnboarding,
+      }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state._hydrated = true;
