@@ -369,6 +369,9 @@
   },
   "chat": {
     "typing_announcement": "L'assistant écrit…",
+    "typing": {
+      "label": "Musaium réfléchit..."
+    },
     "fallback_title": "Session artistique",
     "report_thanks_title": "Merci",
     "report_thanks_body": "Votre signalement a été soumis.",

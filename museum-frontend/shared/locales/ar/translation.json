@@ -369,6 +369,9 @@
   },
   "chat": {
     "typing_announcement": "المساعد يكتب…",
+    "typing": {
+      "label": "Musaium يفكر..."
+    },
     "fallback_title": "جلسة فنية",
     "report_thanks_title": "شكرًا",
     "report_thanks_body": "تم إرسال بلاغك.",

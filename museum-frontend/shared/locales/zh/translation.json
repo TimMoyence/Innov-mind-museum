@@ -369,6 +369,9 @@
   },
   "chat": {
     "typing_announcement": "助手正在输入…",
+    "typing": {
+      "label": "Musaium正在思考..."
+    },
     "fallback_title": "艺术会话",
     "report_thanks_title": "感谢您",
     "report_thanks_body": "您的举报已提交。",

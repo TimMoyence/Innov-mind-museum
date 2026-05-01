@@ -369,6 +369,9 @@
   },
   "chat": {
     "typing_announcement": "アシスタントが入力中…",
+    "typing": {
+      "label": "Musaiumが考えています..."
+    },
     "fallback_title": "アートセッション",
     "report_thanks_title": "ありがとうございます",
     "report_thanks_body": "報告が送信されました。",
