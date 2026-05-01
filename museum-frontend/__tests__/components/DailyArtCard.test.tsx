@@ -1,5 +1,6 @@
 import '../helpers/test-utils';
 import { render, screen, fireEvent } from '@testing-library/react-native';
+import { useSharedValue } from 'react-native-reanimated';
 
 import { DailyArtCard } from '@/features/daily-art/ui/DailyArtCard';
 import type { DailyArtwork } from '@/features/daily-art/infrastructure/dailyArtApi';
@@ -148,5 +149,20 @@ describe('DailyArtCard', () => {
 
     // After error, the fallback icon should be shown
     expect(screen.getByText('image-outline')).toBeTruthy();
+  });
+
+  it('renders without crashing when scrollY shared value is provided (parallax smoke test)', () => {
+    // Wrap in a component so the hook runs inside a React tree
+    function Wrapper() {
+      const scrollY = useSharedValue(0);
+      return <DailyArtCard {...defaultProps} scrollY={scrollY} />;
+    }
+    render(<Wrapper />);
+    expect(screen.getByLabelText('Starry Night')).toBeTruthy();
+  });
+
+  it('renders without crashing when scrollY is omitted (non-parallax fallback)', () => {
+    render(<DailyArtCard {...defaultProps} />);
+    expect(screen.getByLabelText('Starry Night')).toBeTruthy();
   });
 });

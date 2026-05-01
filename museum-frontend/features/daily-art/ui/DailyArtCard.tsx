@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated as RNAnimated, Pressable, StyleSheet, Text, View } from 'react-native';
+import ReAnimated, {
+  useAnimatedStyle,
+  interpolate,
+  Extrapolation,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
@@ -14,17 +20,20 @@ interface DailyArtCardProps {
   isSaved: boolean;
   onSave: () => void;
   onSkip: () => void;
+  /** Optional shared value from parent ScrollView. When provided, the hero image
+   *  translates up at 50% of scroll speed and scales 1.0 → 1.05 over 100 px. */
+  scrollY?: SharedValue<number>;
 }
 
 /** Renders a glass card showcasing the daily artwork with save/skip actions and an expandable fun fact. */
-export const DailyArtCard = ({ artwork, isSaved, onSave, onSkip }: DailyArtCardProps) => {
+export const DailyArtCard = ({ artwork, isSaved, onSave, onSkip, scrollY }: DailyArtCardProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const reduceMotion = useReducedMotion();
   const [funFactExpanded, setFunFactExpanded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  const fadeAnim = useMemo(() => new Animated.Value(reduceMotion ? 1 : 0), [reduceMotion]);
+  const fadeAnim = useMemo(() => new RNAnimated.Value(reduceMotion ? 1 : 0), [reduceMotion]);
 
   useEffect(() => {
     if (reduceMotion) {
@@ -32,24 +41,35 @@ export const DailyArtCard = ({ artwork, isSaved, onSave, onSkip }: DailyArtCardP
       fadeAnim.setValue(1);
       return;
     }
-    Animated.timing(fadeAnim, {
+    RNAnimated.timing(fadeAnim, {
       toValue: 1,
       duration: 400,
       useNativeDriver: true,
     }).start();
   }, [fadeAnim, reduceMotion]);
 
+  const imageAnimatedStyle = useAnimatedStyle(() => {
+    if (!scrollY) return {};
+    const y = scrollY.value;
+    return {
+      transform: [
+        { translateY: interpolate(y, [0, 200], [0, -100], Extrapolation.CLAMP) },
+        { scale: interpolate(y, [0, 100], [1.0, 1.05], Extrapolation.CLAMP) },
+      ],
+    };
+  });
+
   return (
-    <Animated.View style={{ opacity: fadeAnim }}>
+    <RNAnimated.View style={{ opacity: fadeAnim }}>
       <GlassCard style={styles.card} intensity={58}>
         <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
           {t('dailyArt.title')}
         </Text>
 
         {artwork.imageUrl && !imageError ? (
-          <Image
+          <ReAnimated.Image
             source={{ uri: artwork.imageUrl }}
-            style={styles.image}
+            style={[styles.image, imageAnimatedStyle]}
             resizeMode="cover"
             onError={() => {
               setImageError(true);
@@ -135,7 +155,7 @@ export const DailyArtCard = ({ artwork, isSaved, onSave, onSkip }: DailyArtCardP
           </Pressable>
         </View>
       </GlassCard>
-    </Animated.View>
+    </RNAnimated.View>
   );
 };
 
