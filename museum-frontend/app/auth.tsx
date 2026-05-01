@@ -21,7 +21,7 @@ import { LoginForm } from '@/features/auth/ui/LoginForm';
 import { RegisterForm } from '@/features/auth/ui/RegisterForm';
 import { SocialLoginButtons } from '@/features/auth/ui/SocialLoginButtons';
 import { authStyles as styles } from '@/features/auth/ui/authStyles';
-import { ErrorNotice } from '@/shared/ui/ErrorNotice';
+import { ErrorState } from '@/shared/ui/ErrorState';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
@@ -139,6 +139,12 @@ export default function AuthScreen() {
   const { handleForgotPassword } = forgot;
   const { handleLogin, handleRegister } = emailPasswordAuth;
 
+  const handleDismissError = useCallback(() => {
+    emailPasswordAuth.clearError();
+    forgot.clearError();
+    social.clearError();
+  }, [emailPasswordAuth, forgot, social]);
+
   const toggleAuthMode = () => {
     if (isLoading || isSocialLoading) {
       return;
@@ -170,7 +176,15 @@ export default function AuthScreen() {
             <AuthHeader isLogin={isLogin} />
 
             <View style={styles.form}>
-              {errorMessage ? <ErrorNotice message={errorMessage} /> : null}
+              {errorMessage ? (
+                <ErrorState
+                  variant="inline"
+                  title={t('common.error')}
+                  description={errorMessage}
+                  onDismiss={handleDismissError}
+                  testID="auth-error-state"
+                />
+              ) : null}
               {infoMessage ? (
                 <Text style={[styles.infoText, { color: theme.success }]}>{infoMessage}</Text>
               ) : null}
