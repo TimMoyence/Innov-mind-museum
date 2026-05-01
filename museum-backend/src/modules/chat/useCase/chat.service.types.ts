@@ -1,4 +1,4 @@
-import type { ChatAssistantMetadata } from '../domain/chat.types';
+import type { ChatAssistantMetadata, ChatSessionIntent } from '../domain/chat.types';
 
 /** Returned after a new chat session is created. */
 export interface CreateSessionResult {
@@ -9,6 +9,8 @@ export interface CreateSessionResult {
   museumName?: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Session-level intent — drives prompt strategy and suggestion chips. */
+  intent: ChatSessionIntent;
 }
 
 /** Returned after a user message is processed and the assistant replies. */

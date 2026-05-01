@@ -29,6 +29,7 @@ const toSessionDTO = (session: ChatSession): CreateSessionResult => ({
   museumName: session.museumName ?? null,
   createdAt: session.createdAt.toISOString(),
   updatedAt: session.updatedAt.toISOString(),
+  intent: session.intent,
 });
 
 /** Dependencies for the session sub-service. */

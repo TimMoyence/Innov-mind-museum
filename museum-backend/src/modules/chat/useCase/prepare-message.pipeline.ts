@@ -315,6 +315,9 @@ export class PrepareMessagePipeline {
       // pick the correct global-vs-user-scoped key namespace.
       museumId: prep.session.museumId ?? null,
       userId: prep.ownerId ?? null,
+      // Walk-intent routing: propagated so the orchestrator can select the
+      // walk prompt section and return structured suggestions.
+      intent: prep.session.intent,
     };
   }
 }
