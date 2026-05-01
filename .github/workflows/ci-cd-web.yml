@@ -59,6 +59,9 @@ jobs:
           ignore-unfixed: true
           trivyignores: .trivyignore
 
+      - name: Verify OpenAPI types up to date
+        run: pnpm run check:openapi-types
+
       - name: Lint
         run: pnpm run lint
 
