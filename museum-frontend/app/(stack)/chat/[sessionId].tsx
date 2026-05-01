@@ -186,6 +186,12 @@ export default function ChatSessionScreen() {
   const onRecommendationPress = useCallback((recommendationText: string) => {
     setText(recommendationText);
   }, []);
+  const onWalkChipSelect = useCallback(
+    (chipText: string) => {
+      void sendMessage({ text: chipText });
+    },
+    [sendMessage],
+  );
 
   useEffect(() => {
     if (error) void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -394,12 +400,7 @@ export default function ChatSessionScreen() {
             toggleRecording={toggleRecording}
           />
 
-          <WalkSuggestionChips
-            suggestions={lastWalkSuggestions}
-            onSelect={(chipText) => {
-              void sendMessage({ text: chipText });
-            }}
-          />
+          <WalkSuggestionChips suggestions={lastWalkSuggestions} onSelect={onWalkChipSelect} />
 
           <ChatInput
             value={text}

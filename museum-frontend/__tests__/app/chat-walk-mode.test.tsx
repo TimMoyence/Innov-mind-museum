@@ -15,11 +15,14 @@ import { render, screen } from '@testing-library/react-native';
 import ChatSessionScreen from '@/app/(stack)/chat/[sessionId]';
 
 // Override WalkSuggestionChips with a testable stub that honours the suggestions prop.
+// Wrapped in jest.fn() so tests can read .mock.calls to capture the onSelect prop
+// and assert the screen-level wiring fires sendMessage with the chip text.
 jest.mock('@/features/chat/ui/WalkSuggestionChips', () => {
   const { View } = require('react-native');
   return {
-    WalkSuggestionChips: ({ suggestions }: { suggestions: string[] }) =>
+    WalkSuggestionChips: jest.fn(({ suggestions }: { suggestions: string[] }) =>
       suggestions.length > 0 ? <View testID="walk-suggestion-chips" /> : null,
+    ),
   };
 });
 
@@ -92,5 +95,23 @@ describe('ChatSessionScreen — walk mode UX', () => {
     mockUseChatSession.mockReturnValue(defaultChatSession());
     render(<ChatSessionScreen />);
     expect(screen.queryByTestId('walk-mode-banner')).toBeNull();
+  });
+
+  it('fires sendMessage with chip text when chip is selected', () => {
+    setParams('walk');
+    const session = sessionWithSuggestions(['Mona Lisa']);
+    const mockSend = jest.fn().mockResolvedValue(true);
+    mockUseChatSession.mockReturnValue({ ...session, sendMessage: mockSend });
+    render(<ChatSessionScreen />);
+
+    // Capture the onSelect prop passed to the mocked WalkSuggestionChips.
+    const stub = jest.requireMock<{ WalkSuggestionChips: jest.Mock }>(
+      '@/features/chat/ui/WalkSuggestionChips',
+    );
+    const lastCall = stub.WalkSuggestionChips.mock.calls.at(-1);
+    const onSelect = (lastCall?.[0] as { onSelect?: (text: string) => void } | undefined)?.onSelect;
+    expect(onSelect).toBeDefined();
+    onSelect?.('Mona Lisa');
+    expect(mockSend).toHaveBeenCalledWith({ text: 'Mona Lisa' });
   });
 });

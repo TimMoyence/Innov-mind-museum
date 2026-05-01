@@ -106,6 +106,9 @@ export const sendMessageStreaming = async (
     // Non-streaming fallback (image messages or streaming not available)
     if (response && (!context.streamingIdRef.current || attempt.imageUri)) {
       context.resetStreaming();
+      // Invariant: when SSE streaming completes via onDone in chatApi.sendMessageSmart,
+      // it returns result.message.text === '' so this fallback block is skipped.
+      // If chatApi ever returns partial streamed text on onDone, this guard breaks.
       if (response.message.text) {
         context.setMessages((prev) => {
           const hasPlaceholder = prev.some((m) => m.id === streamingPlaceholderId);
