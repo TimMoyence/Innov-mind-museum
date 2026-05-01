@@ -120,6 +120,17 @@ GitHub Actions workflows (`.github/workflows/`):
 - Hard-fail policy: a hot file dropping below 80% blocks commit AND CI. Global thresholds: high=85, low=70, break=70.
 - See `docs/superpowers/specs/2026-05-01-phase4-stryker-mutation-design.md`.
 
+### Auth e2e completeness (Phase 5)
+
+- 4 e2e files in `museum-backend/tests/e2e/auth-*`:
+  - `auth-verify-email.e2e.test.ts` — full token consumption leg via TestEmailService interception (7 cases).
+  - `auth-social-login.e2e.test.ts` — Apple + Google ID-token verification with local JWT+JWKS spoof, F3 nonce binding contract, replay/expired/wrong-audience paths (9 cases).
+  - `auth-refresh-rate-limit.e2e.test.ts` — exact F1 contract: 30 req/min OK, 31st returns 429 (4 cases).
+  - `auth-refresh-rotation.e2e.test.ts` — token rotation, replay-attack family revocation, chained rotations, logout invalidates family (5 cases).
+- TestEmailService activated by `AUTH_EMAIL_SERVICE_KIND=test` env var. Production env rejects 'test' loud (sentinel in `config/env.ts`).
+- Social JWT+JWKS spoof helper at `tests/helpers/auth/social-jwt-spoof.ts` boots a local HTTP JWKS server + signs RS256 ID tokens — exercises the real verifier code path, not a mock.
+- See `docs/superpowers/specs/2026-05-01-phase5-auth-e2e-design.md`.
+
 ## Architecture
 
 ### Backend — Hexagonal (Ports & Adapters)
