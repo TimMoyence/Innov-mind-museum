@@ -431,6 +431,9 @@
     "lowDataDetails": "Risparmio dati — TTS disattivato, immagini compresse",
     "tts": {
       "disabled_low_data": "Disattivato in modalità risparmio dati. Modifica in Impostazioni."
+    },
+    "walk": {
+      "headerLabel": "Visita guidata"
     }
   },
   "dailyLimit": {
@@ -888,10 +891,5 @@
     "empty": "Ancora nessuna recensione. Sii il primo!",
     "reviewCount": "{{count}} recensioni",
     "submitFailed": "Invio fallito. Riprova."
-  },
-  "walkComposer": {
-    "title": "Passeggiata culturale",
-    "subtitle": "Pianifica una passeggiata culturale nella tua città — musei, monumenti, luoghi nascosti.",
-    "coming_soon": "Prossimamente"
   }
 }

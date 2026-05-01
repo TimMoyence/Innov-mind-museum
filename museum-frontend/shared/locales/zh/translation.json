@@ -431,6 +431,9 @@
     "lowDataDetails": "省流量模式 — TTS 已停用，图片已压缩",
     "tts": {
       "disabled_low_data": "省流量模式下已停用。在设置中更改模式。"
+    },
+    "walk": {
+      "headerLabel": "导览游"
     }
   },
   "dailyLimit": {
@@ -888,10 +891,5 @@
     "empty": "暂无评价，快来写第一条吧！",
     "reviewCount": "{{count}}条评价",
     "submitFailed": "提交失败，请重试。"
-  },
-  "walkComposer": {
-    "title": "文化漫步",
-    "subtitle": "规划您城市中的文化漫步 — 博物馆、地标、隐藏景点。",
-    "coming_soon": "即将推出"
   }
 }

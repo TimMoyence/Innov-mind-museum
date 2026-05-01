@@ -431,6 +431,9 @@
     "lowDataDetails": "Ahorro de datos — TTS desactivado, imágenes comprimidas",
     "tts": {
       "disabled_low_data": "Desactivado en modo ahorro de datos. Cámbialo en Ajustes."
+    },
+    "walk": {
+      "headerLabel": "Visita guiada"
     }
   },
   "dailyLimit": {
@@ -888,10 +891,5 @@
     "empty": "Aún no hay reseñas. ¡Sé el primero!",
     "reviewCount": "{{count}} reseñas",
     "submitFailed": "Error al enviar. Inténtalo de nuevo."
-  },
-  "walkComposer": {
-    "title": "Paseo cultural",
-    "subtitle": "Planifica un paseo cultural en tu ciudad — museos, monumentos, lugares ocultos.",
-    "coming_soon": "Próximamente"
   }
 }

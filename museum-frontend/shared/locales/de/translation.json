@@ -431,6 +431,9 @@
     "lowDataDetails": "Datensparmodus — TTS deaktiviert, Bilder komprimiert",
     "tts": {
       "disabled_low_data": "Im Datensparmodus deaktiviert. Modus in den Einstellungen ändern."
+    },
+    "walk": {
+      "headerLabel": "Geführte Tour"
     }
   },
   "dailyLimit": {
@@ -888,10 +891,5 @@
     "empty": "Noch keine Bewertungen. Sei der Erste!",
     "reviewCount": "{{count}} Bewertungen",
     "submitFailed": "Senden fehlgeschlagen. Bitte erneut versuchen."
-  },
-  "walkComposer": {
-    "title": "Kulturspaziergang",
-    "subtitle": "Plane einen kulturellen Spaziergang in deiner Stadt — Museen, Sehenswürdigkeiten, Geheimtipps.",
-    "coming_soon": "Demnächst verfügbar"
   }
 }

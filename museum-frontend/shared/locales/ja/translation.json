@@ -431,6 +431,9 @@
     "lowDataDetails": "データセーバー有効 — TTSは無効、画像は圧縮",
     "tts": {
       "disabled_low_data": "データセーバーで無効です。設定で変更できます。"
+    },
+    "walk": {
+      "headerLabel": "ガイドツアー"
     }
   },
   "dailyLimit": {
@@ -888,10 +891,5 @@
     "empty": "まだレビューがありません。最初のレビューを書きましょう！",
     "reviewCount": "{{count}}件のレビュー",
     "submitFailed": "送信に失敗しました。もう一度お試しください。"
-  },
-  "walkComposer": {
-    "title": "文化散策",
-    "subtitle": "街での文化散策を計画しましょう — 美術館、名所、隠れた名店。",
-    "coming_soon": "近日公開"
   }
 }

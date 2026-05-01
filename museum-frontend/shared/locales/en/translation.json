@@ -431,6 +431,9 @@
     "lowDataDetails": "Data saver on — TTS disabled, images compressed",
     "tts": {
       "disabled_low_data": "Disabled in data saver mode. Change mode in Settings."
+    },
+    "walk": {
+      "headerLabel": "Guided walk"
     }
   },
   "dailyLimit": {
@@ -888,10 +891,5 @@
     "empty": "No reviews yet. Be the first!",
     "reviewCount": "{{count}} reviews",
     "submitFailed": "Failed to submit review. Please try again."
-  },
-  "walkComposer": {
-    "title": "Cultural walk",
-    "subtitle": "Plan a guided cultural walk in your city — museums, landmarks, hidden gems.",
-    "coming_soon": "Coming soon"
   }
 }

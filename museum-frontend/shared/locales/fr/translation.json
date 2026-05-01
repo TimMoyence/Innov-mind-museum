@@ -431,6 +431,9 @@
     "lowDataDetails": "Mode data économe : TTS désactivé, images compressées",
     "tts": {
       "disabled_low_data": "Désactivé en mode data économe. Changez de mode dans Réglages."
+    },
+    "walk": {
+      "headerLabel": "Visite guidée"
     }
   },
   "dailyLimit": {
@@ -888,10 +891,5 @@
     "empty": "Aucun avis pour le moment. Soyez le premier !",
     "reviewCount": "{{count}} avis",
     "submitFailed": "Échec de l'envoi. Veuillez réessayer."
-  },
-  "walkComposer": {
-    "title": "Marche culturelle",
-    "subtitle": "Composez une balade culturelle dans votre ville — musées, monuments, lieux insolites.",
-    "coming_soon": "Bientôt disponible"
   }
 }
