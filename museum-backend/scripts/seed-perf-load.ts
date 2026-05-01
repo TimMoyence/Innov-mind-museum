@@ -44,10 +44,10 @@ const seedUsers = async (cp: Checkpoint): Promise<void> => {
     const end = Math.min(start + BATCH - 1, TARGET.users);
     const values: string[] = [];
     for (let i = start; i <= end; i += 1) {
-      values.push(`('perf-${i}@test.local','x','U','${i}','perf')`);
+      values.push(`('perf-${i}@test.local','x','U','${i}')`);
     }
     await ds.query(
-      `INSERT INTO "users" ("email","password","firstname","lastname","provider") ` +
+      `INSERT INTO "users" ("email","password","firstname","lastname") ` +
         `VALUES ${values.join(',')} ON CONFLICT (email) DO NOTHING`,
     );
     cp.users = end;
@@ -65,11 +65,11 @@ const seedSessions = async (cp: Checkpoint): Promise<void> => {
     const values: string[] = [];
     for (let i = start; i <= end; i += 1) {
       const userId = i % 10 === 0 ? 'NULL' : `${(i % TARGET.users) + 1}`;
-      values.push(`(uuid_generate_v4(),'fr',false,${userId},NOW(),NOW())`);
+      values.push(`(uuid_generate_v4(),'fr',false,${userId},NOW(),NOW(),1)`);
     }
     await ds.query(
       `INSERT INTO "chat_sessions" ` +
-        `("id","locale","museumMode","userId","createdAt","updatedAt") ` +
+        `("id","locale","museumMode","userId","createdAt","updatedAt","version") ` +
         `VALUES ${values.join(',')}`,
     );
     cp.sessions = end;
