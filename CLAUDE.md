@@ -143,6 +143,28 @@ GitHub Actions workflows (`.github/workflows/`):
 - Banking-grade contract: dependency failure → graceful degradation → no 500/stack-trace leak → no provider-name leak.
 - See `docs/superpowers/specs/2026-05-01-phase6-chaos-resilience-design.md`.
 
+### Factory locations + shape-match rule (Phase 7)
+
+Test factories live by convention:
+- BE: `museum-backend/tests/helpers/<module>/<entity>.fixtures.ts` (e.g., `tests/helpers/auth/user.fixtures.ts`).
+- FE: `museum-frontend/__tests__/helpers/factories/<entity>.factories.ts` (e.g., `__tests__/helpers/factories/auth.factories.ts`).
+
+To add a new entity factory:
+1. Create the file at the convention path.
+2. Export `make<Entity>(overrides?: Partial<E>): E` returning a complete entity with sensible defaults.
+3. The `} as Entity` cast lives ONLY in the helper file — test files import the factory.
+4. Update `tools/eslint-plugin-musaium-test-discipline/src/rules/no-inline-test-entities.ts` `DEFAULT_SHAPE_SIGNATURES` to add the entity's signature so shape-match catches inline-anti-patterns.
+
+Shape-match detection (Phase 7 extension to the no-inline-test-entities rule):
+- Enabled via `detectShapeMatch: true` in BE + FE eslint configs.
+- Fires on object literals matching ANY entity's signature prop set, even without a cast or annotation.
+- Default signatures: User=[id,email,passwordHash], ChatMessage=[id,sessionId,role,text], ChatSession=[id,userId,locale,museumMode], Review=[id,rating,comment], SupportTicket=[id,userId,subject,description,status], MuseumEntity=[id,name,city,country], AuditEvent=[id,actorId,action,targetId].
+- Exemptions: helper paths, factory call arguments (`makeUser({...})`), objects already covered by the 3 existing rule paths (cast / type-assertion / annotated declarator).
+
+Phase 0 grandfather baseline shrunk to 0 in Phase 7. The cap test (`tools/eslint-plugin-musaium-test-discipline/tests/baseline-cap.test.ts`) enforces `PHASE_0_CAP = 0` — any future `as Entity` outside helpers triggers immediate gate fail.
+
+See `docs/superpowers/specs/2026-05-01-phase7-factory-migration-design.md`.
+
 ## Architecture
 
 ### Backend — Hexagonal (Ports & Adapters)
