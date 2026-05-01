@@ -273,6 +273,67 @@ jobs:
             if (!issueNumber) return;
             await github.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body });
 
+  # ─── 5. iOS nightly Maestro suite (cron-only) ───────────────────────────
+  maestro-ios-nightly:
+    if: ${{ github.event_name == 'schedule' }}
+    needs: quality
+    runs-on: macos-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: museum-frontend
+    env:
+      MAESTRO_VERSION: '1.43.0'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: museum-frontend/package-lock.json
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320  # v5
+        with:
+          version: 10
+      - name: Install npm deps
+        run: npm install --no-audit --no-fund
+      - name: Expo prebuild iOS
+        run: npx expo prebuild --platform ios --clean
+      - name: Build iOS Debug app for Simulator
+        run: |
+          cd ios
+          xcodebuild -workspace Musaium.xcworkspace \
+            -scheme Musaium \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+      - name: Install Maestro CLI
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Boot backend (docker-compose + migrations + API)
+        run: ./scripts/maestro-runner-setup.sh
+      - name: Boot iOS Simulator
+        run: |
+          xcrun simctl create maestro-sim "iPhone 15" "iOS17.5" || true
+          xcrun simctl boot "maestro-sim" || true
+      - name: Install app on simulator
+        run: |
+          APP_PATH=$(find ios/build/Build/Products/Debug-iphonesimulator -name "*.app" -type d | head -1)
+          xcrun simctl install booted "$APP_PATH"
+      - name: Run all Maestro flows (sequential)
+        run: ./scripts/maestro-run-shard.sh all
+      - name: Upload iOS Maestro logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: maestro-ios-nightly-logs
+          path: museum-frontend/.maestro/logs/
+          retention-days: 7
+
   build-preview-ios:
     if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'preview' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all') }}
     needs: quality
