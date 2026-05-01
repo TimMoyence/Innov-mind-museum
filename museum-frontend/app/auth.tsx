@@ -3,6 +3,9 @@ import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-na
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 import { useAuth } from '@/features/auth/application/AuthContext';
 import { useBiometricAuth } from '@/features/auth/application/useBiometricAuth';
@@ -24,6 +27,19 @@ import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
+// ── Form schema (ADR-025: react-hook-form + Zod for ≥3 validated fields) ──────
+// Register-only fields (firstname, lastname, gdprAccepted) are optional in the
+// schema; the existing useEmailPasswordAuth handler enforces them at submit time
+// so we don't duplicate that validation here.
+const authSchema = z.object({
+  email: z.email(),
+  password: z.string().min(8),
+  firstname: z.string().optional(),
+  lastname: z.string().optional(),
+  gdprAccepted: z.boolean().optional(),
+});
+type AuthFormValues = z.infer<typeof authSchema>;
+
 /**
  * Orchestrates the authentication screen: toggles between login and
  * registration modes, owns the form state and business handlers, and
@@ -35,15 +51,25 @@ export default function AuthScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [firstname, setFirstname] = useState('');
-  const [lastname, setLastname] = useState('');
+  // TODO(spec-followup): migrate setIsLoading/setErrorMessage/setInfoMessage to useMutation;
+  // requires rewriting useEmailPasswordAuth + useForgotPassword + useSocialLogin DI callbacks.
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
-  const [gdprAccepted, setGdprAccepted] = useState(false);
   const [showBiometricSheet, setShowBiometricSheet] = useState(false);
+
+  // ── Form fields (ADR-025: react-hook-form + Zod) ────────────────────────────
+  const { watch, setValue } = useForm<AuthFormValues>({
+    resolver: zodResolver(authSchema),
+    mode: 'onBlur',
+    defaultValues: { email: '', password: '', firstname: '', lastname: '', gdprAccepted: false },
+  });
+
+  const email = watch('email');
+  const password = watch('password');
+  const firstname = watch('firstname') ?? '';
+  const lastname = watch('lastname') ?? '';
+  const gdprAccepted = watch('gdprAccepted') ?? false;
   const { loginWithSession } = useAuth();
   type Session = Parameters<typeof loginWithSession>[0];
   const pendingSessionRef = useRef<Session | null>(null);
@@ -102,10 +128,10 @@ export default function AuthScreen() {
 
   const onRegistrationComplete = useCallback(() => {
     setIsLogin(true);
-    setFirstname('');
-    setLastname('');
-    setPassword('');
-  }, []);
+    setValue('firstname', '');
+    setValue('lastname', '');
+    setValue('password', '');
+  }, [setValue]);
 
   const { handleLogin, handleRegister } = useEmailPasswordAuth({
     email,
@@ -126,7 +152,7 @@ export default function AuthScreen() {
     setIsLogin((value) => !value);
     setErrorMessage(null);
     setInfoMessage(null);
-    setGdprAccepted(false);
+    setValue('gdprAccepted', false);
   };
 
   const gdprGated = !isLogin && !gdprAccepted;
@@ -170,8 +196,12 @@ export default function AuthScreen() {
                   password={password}
                   isLoading={isLoading}
                   isSocialLoading={isSocialLoading}
-                  onChangeEmail={setEmail}
-                  onChangePassword={setPassword}
+                  onChangeEmail={(value) => {
+                    setValue('email', value, { shouldValidate: true });
+                  }}
+                  onChangePassword={(value) => {
+                    setValue('password', value, { shouldValidate: true });
+                  }}
                   onForgotPassword={handleForgotPassword}
                   onSubmit={() => {
                     void handleLogin();
@@ -186,12 +216,20 @@ export default function AuthScreen() {
                   gdprAccepted={gdprAccepted}
                   isLoading={isLoading}
                   isSocialLoading={isSocialLoading}
-                  onChangeEmail={setEmail}
-                  onChangePassword={setPassword}
-                  onChangeFirstname={setFirstname}
-                  onChangeLastname={setLastname}
+                  onChangeEmail={(value) => {
+                    setValue('email', value, { shouldValidate: true });
+                  }}
+                  onChangePassword={(value) => {
+                    setValue('password', value, { shouldValidate: true });
+                  }}
+                  onChangeFirstname={(value) => {
+                    setValue('firstname', value, { shouldValidate: true });
+                  }}
+                  onChangeLastname={(value) => {
+                    setValue('lastname', value, { shouldValidate: true });
+                  }}
                   onToggleGdpr={() => {
-                    setGdprAccepted((v) => !v);
+                    setValue('gdprAccepted', !gdprAccepted);
                   }}
                   onSubmit={() => {
                     void handleRegister();
