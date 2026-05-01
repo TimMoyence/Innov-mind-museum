@@ -40,6 +40,7 @@
 !docs/RUNBOOKS/**
 !docs/V2_PENDING.md
 !docs/MIGRATION_GOVERNANCE.md
+!docs/CAPACITY_PLAN.md
 
 # frontend docs
 !museum-frontend/docs/
