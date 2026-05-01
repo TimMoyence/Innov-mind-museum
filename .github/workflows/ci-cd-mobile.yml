@@ -95,6 +95,9 @@ jobs:
         # for legitimate symbols (©, OSM attribution).
         run: node ../scripts/check-no-unicode-emoji.cjs
 
+      - name: Maestro shard-manifest sentinel
+        run: node ../scripts/sentinels/maestro-shard-manifest.mjs
+
       - name: Lint
         run: npm run lint
 

@@ -1,0 +1,22 @@
+{
+  "shards": [
+    {
+      "name": "auth",
+      "flows": ["auth-flow.yaml", "auth-persistence.yaml", "onboarding-flow.yaml"]
+    },
+    {
+      "name": "chat",
+      "flows": ["chat-flow.yaml", "chat-history-pagination.yaml", "museum-chat-flow.yaml"]
+    },
+    {
+      "name": "museum",
+      "flows": ["museum-search-geo.yaml", "navigation-flow.yaml"]
+    },
+    {
+      "name": "settings",
+      "flows": ["settings-flow.yaml", "settings-locale-switch.yaml", "support-ticket-create.yaml"]
+    }
+  ],
+  "iosNightly": "all",
+  "excluded": ["config.yaml"]
+}
