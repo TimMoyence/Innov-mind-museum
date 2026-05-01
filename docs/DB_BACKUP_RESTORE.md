@@ -288,3 +288,60 @@ Both GHA workflows ping `BACKUP_HEARTBEAT_URL` on success and `BACKUP_HEARTBEAT_
 on failure (Better Stack heartbeat semantics). Configure the heartbeat in Better Stack
 with a 25h window for the daily job and a 35-day window for the monthly drill so a
 single missed cycle pages the on-call engineer.
+
+## Index migration recovery — INVALID after a CONCURRENTLY interrupt
+
+`CREATE INDEX CONCURRENTLY` runs without taking an `ACCESS EXCLUSIVE` lock,
+so a SIGKILL or connection drop during the build leaves the index in
+`pg_index` with `indisvalid = false`. Postgres ignores invalid indexes when
+planning queries but will refuse to create a new index with the same name
+unless the broken one is dropped first.
+
+### Diagnose
+
+```sql
+SELECT i.relname AS index_name, c.relname AS table_name, x.indisvalid
+FROM pg_index x
+JOIN pg_class i ON i.oid = x.indexrelid
+JOIN pg_class c ON c.oid = x.indrelid
+WHERE x.indisvalid = false;
+```
+
+Any row returned is a stale invalid index from an interrupted build.
+
+### Recover
+
+1. Drop the invalid index (CONCURRENTLY so reads keep flowing):
+
+   ```sql
+   DROP INDEX CONCURRENTLY IF EXISTS "<index-name>";
+   ```
+
+2. Re-run the migration. The migration's `IF NOT EXISTS` clause is safe — it
+   simply rebuilds the missing index.
+
+   ```bash
+   pnpm migration:run
+   ```
+
+3. Verify validity:
+
+   ```sql
+   SELECT relname, indisvalid FROM pg_class
+   JOIN pg_index ON pg_class.oid = indexrelid
+   WHERE relname = '<index-name>';
+   ```
+
+   `indisvalid = t` confirms recovery.
+
+### When to use this
+
+Triggered automatically if a CI deploy step is killed mid-`migration:run` for
+an index migration (A1 / A2 / future). For non-index migrations, the
+TypeORM migration table tracks completion atomically — they either run
+fully or roll back.
+
+Note: any migration declaring `transaction = false` (CONCURRENTLY-style)
+must use the `--transaction each` flag for `migration:run` and `--transaction
+none` for `migration:revert`. Both are wired into `museum-backend/package.json`
+since A1 (commits 6368e468 and the follow-up `--transaction none` fix).
