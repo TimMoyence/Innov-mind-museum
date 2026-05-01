@@ -5,6 +5,10 @@ type Options = [
     entities?: string[];
     factoryHints?: Record<string, string>;
     helperPaths?: string[];
+    /** Phase 7: enable shape-match detection (default false). */
+    detectShapeMatch?: boolean;
+    /** Phase 7: per-entity signature for shape-match. */
+    shapeSignatures?: Record<string, string[]>;
   },
 ];
 
@@ -24,6 +28,16 @@ const DEFAULT_FACTORY_HINTS: Record<string, string> = {
   User: 'makeUser() from tests/helpers/auth/user.fixtures.ts',
   ChatMessage: 'makeMessage() from tests/helpers/chat/message.fixtures.ts',
   ChatSession: 'makeSession() from tests/helpers/chat/message.fixtures.ts',
+};
+
+const DEFAULT_SHAPE_SIGNATURES: Record<string, string[]> = {
+  User: ['id', 'email', 'passwordHash'],
+  ChatMessage: ['id', 'sessionId', 'role', 'text'],
+  ChatSession: ['id', 'userId', 'locale', 'museumMode'],
+  Review: ['id', 'rating', 'comment'],
+  SupportTicket: ['id', 'userId', 'subject', 'description', 'status'],
+  MuseumEntity: ['id', 'name', 'city', 'country'],
+  AuditEvent: ['id', 'actorId', 'action', 'targetId'],
 };
 
 const createRule = ESLintUtils.RuleCreator(
@@ -46,6 +60,11 @@ export default createRule<Options, MessageIds>({
           entities: { type: 'array', items: { type: 'string' } },
           factoryHints: { type: 'object', additionalProperties: { type: 'string' } },
           helperPaths: { type: 'array', items: { type: 'string' } },
+          detectShapeMatch: { type: 'boolean' },
+          shapeSignatures: {
+            type: 'object',
+            additionalProperties: { type: 'array', items: { type: 'string' } },
+          },
         },
         additionalProperties: false,
       },
@@ -61,6 +80,8 @@ export default createRule<Options, MessageIds>({
     const entities = opts?.entities ?? DEFAULT_ENTITIES;
     const helperPaths = opts?.helperPaths ?? DEFAULT_HELPER_PATHS;
     const factoryHints = { ...DEFAULT_FACTORY_HINTS, ...(opts?.factoryHints ?? {}) };
+    const detectShapeMatch = opts?.detectShapeMatch ?? false;
+    const shapeSignatures = { ...DEFAULT_SHAPE_SIGNATURES, ...(opts?.shapeSignatures ?? {}) };
 
     // Skip factory/helper files themselves
     if (helperPaths.some((p) => filename.includes(p))) {
@@ -89,6 +110,56 @@ export default createRule<Options, MessageIds>({
       return null;
     };
 
+    function objectExpressionPropNames(node: TSESTree.ObjectExpression): Set<string> {
+      const names = new Set<string>();
+      for (const prop of node.properties) {
+        if (prop.type === 'Property' && prop.key.type === 'Identifier') {
+          names.add(prop.key.name);
+        } else if (
+          prop.type === 'Property' &&
+          prop.key.type === 'Literal' &&
+          typeof prop.key.value === 'string'
+        ) {
+          names.add(prop.key.value);
+        }
+      }
+      return names;
+    }
+
+    function matchingShapeEntity(
+      node: TSESTree.ObjectExpression,
+      signatures: Record<string, string[]>,
+    ): string | null {
+      const names = objectExpressionPropNames(node);
+      for (const [entity, signature] of Object.entries(signatures)) {
+        if (signature.every((p) => names.has(p))) {
+          return entity;
+        }
+      }
+      return null;
+    }
+
+    function isFactoryCallArgument(node: TSESTree.ObjectExpression): boolean {
+      const parent = (node as TSESTree.Node & { parent?: TSESTree.Node }).parent;
+      if (parent?.type !== 'CallExpression') return false;
+      const callee = (parent as TSESTree.CallExpression).callee;
+      if (callee.type === 'Identifier') {
+        return /^(make|build|create)[A-Z]/.test(callee.name);
+      }
+      return false;
+    }
+
+    function isAlreadyCoveredByOtherPath(node: TSESTree.ObjectExpression): boolean {
+      const parent = (node as TSESTree.Node & { parent?: TSESTree.Node }).parent;
+      if (!parent) return false;
+      if (parent.type === 'TSAsExpression' || parent.type === 'TSTypeAssertion') return true;
+      if (parent.type === 'VariableDeclarator') {
+        const decl = parent as TSESTree.VariableDeclarator;
+        if (decl.id.type === 'Identifier' && decl.id.typeAnnotation) return true;
+      }
+      return false;
+    }
+
     return {
       // pattern A: { ... } as User
       TSAsExpression(node) {
@@ -116,6 +187,16 @@ export default createRule<Options, MessageIds>({
           if (name && entities.includes(name)) {
             reportInlineEntity(node.init, name);
           }
+        }
+      },
+      // pattern D (Phase 7): shape-match — ObjectExpression containing all signature props
+      ObjectExpression(node) {
+        if (!detectShapeMatch) return;
+        if (isFactoryCallArgument(node)) return;
+        if (isAlreadyCoveredByOtherPath(node)) return;
+        const entity = matchingShapeEntity(node, shapeSignatures);
+        if (entity) {
+          reportInlineEntity(node, entity);
         }
       },
     };

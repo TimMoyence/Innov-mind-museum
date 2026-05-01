@@ -1,5 +1,6 @@
 import '../helpers/test-utils';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { makeReview } from '../helpers/factories/review.factories';
 
 // ── Screen-specific mocks ────────────────────────────────────────────────────
 
@@ -60,24 +61,21 @@ describe('ReviewsScreen', () => {
     mockUseReviews.mockReturnValue({
       ...defaultHookReturn,
       reviews: [
-        {
+        makeReview({
           id: '1',
-          userId: 1,
           userName: 'Alice',
           rating: 5,
           comment: 'Great!',
-          status: 'approved',
           createdAt: '2026-01-01',
-        },
-        {
+        }),
+        makeReview({
           id: '2',
           userId: 2,
           userName: 'Bob',
           rating: 4,
           comment: 'Good',
-          status: 'approved',
           createdAt: '2026-01-02',
-        },
+        }),
       ],
     });
     render(<ReviewsScreen />);

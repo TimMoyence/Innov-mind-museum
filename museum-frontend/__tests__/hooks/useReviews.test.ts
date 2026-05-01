@@ -5,6 +5,7 @@ import type {
   ReviewStatsResponse,
   ReviewListResponse,
 } from '@/features/review/infrastructure/reviewApi';
+import { makeReview } from '../helpers/factories/review.factories';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -21,17 +22,6 @@ jest.mock('@/features/review/infrastructure/reviewApi', () => ({
 }));
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-const makeReview = (overrides?: Partial<ReviewDTO>): ReviewDTO => ({
-  id: `review-${Math.random().toString(36).slice(2, 8)}`,
-  userId: 1,
-  userName: 'Test User',
-  rating: 4,
-  comment: 'Great experience',
-  status: 'approved',
-  createdAt: '2026-04-01T10:00:00Z',
-  ...overrides,
-});
 
 const defaultStats: ReviewStatsResponse = { average: 4.2, count: 15 };
 

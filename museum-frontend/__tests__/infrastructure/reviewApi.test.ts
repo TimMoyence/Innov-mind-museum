@@ -1,4 +1,5 @@
 import { reviewApi } from '@/features/review/infrastructure/reviewApi';
+import { makeReview } from '../helpers/factories/review.factories';
 
 jest.mock('@/shared/api/openapiClient', () => ({
   openApiRequest: jest.fn(),
@@ -64,15 +65,14 @@ describe('reviewApi', () => {
 
   describe('submitReview', () => {
     it('sends POST /api/reviews with rating, comment, and userName', async () => {
-      const review = {
+      const review = makeReview({
         id: 'uuid-1',
-        userId: 1,
         userName: 'Alice',
         rating: 5,
         comment: 'Great museum!',
-        status: 'pending' as const,
+        status: 'pending',
         createdAt: '2026-04-04T10:00:00Z',
-      };
+      });
       mockOpenApiRequest.mockResolvedValue({ review });
 
       const result = await reviewApi.submitReview(5, 'Great museum!', 'Alice');

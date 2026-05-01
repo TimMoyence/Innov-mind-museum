@@ -500,7 +500,7 @@ export default tseslint.config(
     files: ['tests/**/*.test.ts'],
     plugins: { 'musaium-test-discipline': musaiumTestDiscipline },
     rules: {
-      'musaium-test-discipline/no-inline-test-entities': 'error',
+      'musaium-test-discipline/no-inline-test-entities': ['error', { detectShapeMatch: true }],
       'musaium-test-discipline/no-undisabled-test-discipline-disable': 'error',
     },
   },
