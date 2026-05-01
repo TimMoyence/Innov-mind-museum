@@ -40,19 +40,20 @@ export class MuseumRepositoryPg implements IMuseumRepository {
 
   /** Dynamically updates museum fields and returns the updated record. */
   async update(id: number, input: UpdateMuseumInput): Promise<Museum | null> {
-    let existing = await this.findById(id);
-    if (!existing) return null;
+    const found = await this.findById(id);
+    if (!found) return null;
 
-    this.applyUpdates(existing, input);
+    let entity: Museum = found;
+    this.applyUpdates(entity, input);
 
     try {
       return await withOptimisticLockRetry({
-        mutation: () => this.repo.save(existing),
+        mutation: () => this.repo.save(entity),
         refetch: async () => {
           const fresh = await this.findById(id);
           if (fresh) {
-            existing = fresh;
-            this.applyUpdates(existing, input);
+            entity = fresh;
+            this.applyUpdates(entity, input);
           }
         },
         context: `museum.update id=${id}`,

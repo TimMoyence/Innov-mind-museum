@@ -275,12 +275,20 @@ describe('env.ts module', () => {
       expect(env.llm.includeDiagnostics).toBe(false);
     });
 
-    it('allows includeDiagnostics true in test', () => {
+    it('allows includeDiagnostics true in development', () => {
+      const env = loadEnv({
+        NODE_ENV: 'development',
+        LLM_INCLUDE_DIAGNOSTICS: 'true',
+      });
+      expect(env.llm.includeDiagnostics).toBe(true);
+    });
+
+    it('forces includeDiagnostics false in test (strict-dev-only, F13)', () => {
       const env = loadEnv({
         NODE_ENV: 'test',
         LLM_INCLUDE_DIAGNOSTICS: 'true',
       });
-      expect(env.llm.includeDiagnostics).toBe(true);
+      expect(env.llm.includeDiagnostics).toBe(false);
     });
   });
 

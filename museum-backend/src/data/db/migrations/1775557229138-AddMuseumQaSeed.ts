@@ -3,6 +3,10 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
 /**
  * Creates the museum_qa_seed table with a composite index on (museumId, locale)
  * for the low-data pack pre-fetch feature.
+ *
+ * Note on `museumId`: declared as `varchar(64)` deliberately — it holds free-form
+ * pack identifiers (e.g. `'louvre'`, `'orsay'`) and is NOT a foreign key to
+ * `museums.id`. See `MuseumQaSeed.museumId` JSDoc for the design rationale.
  */
 export class AddMuseumQaSeed1775557229138 implements MigrationInterface {
   name = 'AddMuseumQaSeed1775557229138';
