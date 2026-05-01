@@ -89,6 +89,7 @@ export const createSessionSchema = z.object(
     museumName: optionalNonEmptyString,
     museumAddress: optionalNonEmptyString,
     coordinates: optionalCoordinates,
+    intent: z.enum(['default', 'walk']).optional(),
   },
   { message: 'Payload must be an object' },
 );

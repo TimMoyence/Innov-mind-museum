@@ -63,6 +63,7 @@ export interface CreateSessionRequest {
   museumName?: string;
   museumAddress?: string;
   coordinates?: { lat: number; lng: number };
+  intent?: 'default' | 'walk';
 }
 
 /** Response shape for `POST /sessions`. */
