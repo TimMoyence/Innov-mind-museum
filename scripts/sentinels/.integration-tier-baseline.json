@@ -9,56 +9,6 @@
       "path": "museum-backend/tests/integration/security/ssrf-matrix.integration.test.ts",
       "reason": "outbound network boundary; test mocks global.fetch to assert no real fetch leaks — sentinel regex requires a real fetch call but the test intent IS the network boundary (SSRF defence); no DB needed",
       "approved_by": "phase1-spec-§5"
-    },
-    {
-      "path": "museum-backend/tests/integration/admin/audit-breach.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
-      "path": "museum-backend/tests/integration/auth/mfa-flow.e2e.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
-      "path": "museum-backend/tests/integration/auth/password-reset-flow.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
-      "path": "museum-backend/tests/integration/chat/chat-service-cache.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
-      "path": "museum-backend/tests/integration/chat/chat-service-tts.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
-      "path": "museum-backend/tests/integration/routes/auth.route.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
-      "path": "museum-backend/tests/integration/routes/museum-enrichment.route.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
-      "path": "museum-backend/tests/integration/routes/museum.route.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
-      "path": "museum-backend/tests/integration/routes/review.route.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
-      "path": "museum-backend/tests/integration/routes/support.route.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
     }
   ]
 }

@@ -6,10 +6,11 @@ import { createIntegrationHarness } from 'tests/helpers/integration/integration-
 const REPO_ROOT = resolve(__dirname, '..', '..', '..', '..');
 const BASELINE_PATH = join(REPO_ROOT, 'scripts/sentinels/.integration-tier-baseline.json');
 
-// Cap at the highest length the baseline reaches during Phase 1.
-// After Phase 1's last commit, this drops to the long-term cap (≤2 files).
-// Set initially to the length captured by Step 1.3.2; tighten when commits land.
-const PHASE_1_BASELINE_CAP = 25;
+// Long-term cap (post-Phase-1). The baseline currently holds 2 entries documenting
+// files that legitimately live in tests/integration/ without crossing
+// an infra boundary. Cap can shrink, never grow.
+// New entries require ADR amendment.
+const PHASE_1_BASELINE_CAP = 2;
 
 describe('integration tier-signature baseline cap', () => {
   it('baseline length never grows beyond the Phase 1 cap', () => {

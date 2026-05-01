@@ -47,6 +47,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Tier-signature sentinel (ADR-012 §4.2)
+        run: node scripts/sentinels/integration-tier-signature.mjs
+        working-directory: ${{ github.workspace }}
+
       - name: Audit dependencies
         # pnpm audit uses retired npm endpoints (both /audits and /audits/quick return 410).
         # Trivy fs scan reads pnpm-lock.yaml directly — consistent with image scanning below.
@@ -102,7 +106,34 @@ jobs:
         # Use pnpm exec jest directly to pass flags without the -- ambiguity.
         run: pnpm exec jest --watchman=false --runInBand --forceExit --coverage --testPathIgnorePatterns=tests/e2e
 
-  # ─── 2. E2E tests (PR + nightly only) ────────────────────────────────
+  # ─── 2. Integration tests (real PG via Docker testcontainer) ─────────
+  integration:
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: museum-backend
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320  # v5
+        with:
+          version: 10
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: museum-backend/pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run integration suite (real PG via Docker testcontainer)
+        run: pnpm run test:integration
+        env:
+          RUN_INTEGRATION: 'true'
+
+  # ─── 3. E2E tests (PR + nightly only) ────────────────────────────────
   e2e:
     needs: quality
     if: github.event_name == 'pull_request' || github.event_name == 'schedule'
@@ -140,7 +171,7 @@ jobs:
       - name: E2E Postgres (Testcontainers)
         run: RUN_E2E=true pnpm exec jest --watchman=false --runInBand --coverage=false --testPathPattern='tests/e2e/'
 
-  # ─── 3. AI integration tests (manual only) ───────────────────────────
+  # ─── 4. AI integration tests (manual only) ───────────────────────────
   ai-tests:
     needs: quality
     if: github.event_name == 'workflow_dispatch'
@@ -173,7 +204,7 @@ jobs:
       - name: AI Integration Tests
         run: pnpm run test:ai
 
-  # ─── 4. Deploy to production (push to main) ──────────────────────────
+  # ─── 5. Deploy to production (push to main) ──────────────────────────
   deploy-prod:
     needs: quality
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -454,7 +485,7 @@ jobs:
           echo "::error::Production deploy rolled back — see docs/RUNBOOKS/auto-rollback.md"
           exit 1
 
-  # ─── 5. Deploy to staging (push to staging) ──────────────────────────
+  # ─── 6. Deploy to staging (push to staging) ──────────────────────────
   deploy-staging:
     needs: quality
     if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
