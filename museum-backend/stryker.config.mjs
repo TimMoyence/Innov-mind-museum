@@ -64,6 +64,11 @@ export default {
     'src/modules/review/useCase/moderateReview.useCase.ts',
     'src/modules/review/useCase/createReview.useCase.ts',
     'src/modules/admin/useCase/resolveReport.useCase.ts',
+    // Phase 4 Wave 5 — banking-grade hot files
+    'src/shared/audit/audit-chain.ts',
+    'src/modules/chat/adapters/secondary/llm-circuit-breaker.ts',
+    'src/modules/auth/adapters/secondary/refresh-token.repository.pg.ts',
+    'src/modules/auth/useCase/authSession.service.ts',
     // Exclusions
     '!src/**/*.entity.ts',
     '!src/**/*.migration.ts',
@@ -71,9 +76,9 @@ export default {
     '!src/**/*.types.ts',
   ],
   thresholds: {
-    high: 80,
-    low: 60,
-    break: 50,
+    high: 85,
+    low: 70,
+    break: 70,
   },
   timeoutMS: 30000,
   concurrency: 2,

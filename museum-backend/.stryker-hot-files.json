@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "description": "Banking-grade hot files. Each entry MUST also be in stryker.config.mjs `mutate:` list. The hot-files gate script enforces killRatioMin per file.",
+  "hotFiles": [
+    {
+      "path": "src/modules/chat/useCase/art-topic-guardrail.ts",
+      "killRatioMin": 80,
+      "rationale": "Input guardrail — blocks insults, off-topic, prompt injection. Banking-grade contract."
+    },
+    {
+      "path": "src/shared/pagination/cursor-codec.ts",
+      "killRatioMin": 80,
+      "rationale": "Cursor encode/decode — IDOR risk if a mutant flips the boundary check."
+    },
+    {
+      "path": "src/shared/validation/input.ts",
+      "killRatioMin": 80,
+      "rationale": "sanitizePromptInput — Unicode normalisation + zero-width strip + truncation. SSRF/injection adjacent."
+    },
+    {
+      "path": "src/shared/audit/audit-chain.ts",
+      "killRatioMin": 80,
+      "rationale": "Audit log chain integrity. Mutation here = silent compliance break."
+    },
+    {
+      "path": "src/modules/chat/adapters/secondary/llm-circuit-breaker.ts",
+      "killRatioMin": 80,
+      "rationale": "Circuit breaker for LLM provider failures. Mutation = stuck-open or stuck-closed."
+    },
+    {
+      "path": "src/modules/auth/adapters/secondary/refresh-token.repository.pg.ts",
+      "killRatioMin": 80,
+      "rationale": "Refresh-token rotation persistence. Mutation = token-reuse vulnerability."
+    },
+    {
+      "path": "src/modules/auth/useCase/authSession.service.ts",
+      "killRatioMin": 80,
+      "rationale": "Auth session orchestration including rotation policy + MFA gating. Co-pinned with refresh-token repo."
+    }
+  ]
+}
