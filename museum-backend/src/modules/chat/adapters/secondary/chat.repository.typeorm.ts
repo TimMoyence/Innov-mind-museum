@@ -64,7 +64,7 @@ export class TypeOrmChatRepository implements ChatRepository {
   /**
    * Creates a new chat session.
    *
-   * @param input - Session creation parameters (locale, museumMode, userId).
+   * @param input - Session creation parameters (locale, museumMode, intent, userId).
    * @returns The persisted ChatSession entity.
    */
   async createSession(input: CreateSessionInput): Promise<ChatSession> {

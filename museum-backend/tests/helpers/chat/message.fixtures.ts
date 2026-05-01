@@ -1,5 +1,6 @@
 import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import { ChatSession } from '@modules/chat/domain/chatSession.entity';
+import type { ChatSessionIntent } from '@modules/chat/domain/chat.types';
 
 /**
  * Creates a minimal ChatSession.user stub for tests that only need `id`.
@@ -19,6 +20,7 @@ export function makeSession(overrides: Partial<ChatSession> = {}): ChatSession {
     id: 'session-001',
     locale: 'en',
     museumMode: false,
+    intent: 'default' as ChatSessionIntent,
     title: null,
     museumName: null,
     museumId: null,
