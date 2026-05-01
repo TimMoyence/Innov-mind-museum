@@ -77,11 +77,17 @@ const config: Config.InitialOptions = {
   //   and CACHE_ENABLED=false BEFORE any test file's top-level imports trigger
   //   `@src/config/env` evaluation, preventing BullMQ/ioredis ECONNREFUSED log
   //   floods when the e2e harness applies the same overrides too late.
+  // - `scripts-esm`: native ESM .mjs test files for standalone Node scripts
+  //   (e.g. stryker-hot-files-gate). Requires NODE_OPTIONS=--experimental-vm-modules.
   projects: [
     {
       ...sharedProjectOptions,
       displayName: 'unit-integration',
-      testPathIgnorePatterns: [...baseTestPathIgnorePatterns, '<rootDir>/tests/e2e/'],
+      testPathIgnorePatterns: [
+        ...baseTestPathIgnorePatterns,
+        '<rootDir>/tests/e2e/',
+        '<rootDir>/scripts/__tests__/',
+      ],
     },
     {
       ...sharedProjectOptions,
@@ -89,6 +95,12 @@ const config: Config.InitialOptions = {
       testMatch: ['<rootDir>/tests/e2e/**/*.test.ts'],
       testPathIgnorePatterns: baseTestPathIgnorePatterns,
       setupFiles: ['<rootDir>/tests/helpers/e2e/jest-env.setup.ts'],
+    },
+    {
+      displayName: 'scripts-esm',
+      testEnvironment: 'node',
+      testMatch: ['<rootDir>/scripts/__tests__/**/*.test.mjs'],
+      transform: {},
     },
   ],
 };

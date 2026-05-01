@@ -42,7 +42,9 @@
     "seed:perf": "ts-node -r tsconfig-paths/register scripts/seed-perf-load.ts",
     "prune:retention": "ts-node -r tsconfig-paths/register scripts/prune-retention.ts",
     "mutation": "stryker run",
-    "mutation:ci": "stryker run --incremental --concurrency 2"
+    "mutation:ci": "stryker run --incremental --concurrency 2",
+    "mutation:gate": "node scripts/stryker-hot-files-gate.mjs",
+    "mutation:warm": "stryker run --concurrency 2"
   },
   "keywords": [],
   "author": "",
