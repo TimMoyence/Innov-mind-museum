@@ -15,7 +15,16 @@ export interface IntegrationHarness {
   dataSource: import('typeorm').DataSource;
   /** TRUNCATE every TypeORM entity table CASCADE + RESTART IDENTITY. ~5ms. */
   reset: () => Promise<void>;
-  /** Stop the container. Idempotent. */
+  /**
+   * Stop the container and destroy the DataSource. Idempotent.
+   *
+   * **Do NOT call this directly from a test's `afterAll` hook** — the harness
+   * is shared across all suites in a Jest worker, so stopping it mid-run
+   * breaks subsequent suites. Use `scheduleStop()` instead, which delegates
+   * to the container's process-exit hook.
+   *
+   * Direct callers: end-of-process cleanup scripts only.
+   */
   stop: () => Promise<void>;
   /** Wire afterAll(stop) for the calling Jest suite. */
   scheduleStop: () => void;

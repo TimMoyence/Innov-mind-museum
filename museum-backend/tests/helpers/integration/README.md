@@ -61,3 +61,14 @@ describe('auth.route [integration]', () => {
 - One container per Jest worker, reused across suites in that worker.
 - `reset()` runs `TRUNCATE … RESTART IDENTITY CASCADE` on every entity table — single round-trip, ~5ms.
 - Migrations run once per worker on first `createIntegrationHarness()` call.
+
+## Running integration tests
+
+Integration tests are gated by `RUN_INTEGRATION=true` (set automatically by the script):
+
+```bash
+pnpm test:integration                                          # full integration suite
+pnpm test:integration -- --testPathPattern=<file basename>     # single file
+```
+
+`pnpm test` (no suffix) runs **only** the unit suite, regardless of how many integration files exist. This is intentional — integration tests require Docker and are slower.
