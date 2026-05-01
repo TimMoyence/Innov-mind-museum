@@ -15,6 +15,9 @@ export interface EnrichedImage {
 /** Role of a message within a chat session. */
 export type ChatRole = 'user' | 'assistant' | 'system';
 
+/** Intent of a chat session — drives prompt strategy and UX flow. */
+export type ChatSessionIntent = 'default' | 'walk';
+
 /** Reason a user may report a message. */
 export type ReportReason = 'offensive' | 'inaccurate' | 'inappropriate' | 'other';
 
@@ -66,6 +69,7 @@ export interface CreateSessionInput {
   coordinates?: { lat: number; lng: number };
   /** Pre-seeded visit context (set by ChatSessionService when resolving museum info). */
   visitContext?: VisitContext;
+  intent?: ChatSessionIntent;
 }
 
 /** Client-provided context attached to each chat message request. */

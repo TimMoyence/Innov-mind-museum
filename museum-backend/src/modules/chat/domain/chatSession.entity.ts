@@ -13,7 +13,7 @@ import { User } from '@modules/auth/domain/user.entity';
 
 import { ChatMessage } from './chatMessage.entity';
 
-import type { VisitContext } from './chat.types';
+import type { ChatSessionIntent, VisitContext } from './chat.types';
 
 /** Represents a chat session between a visitor and the assistant. Mapped to `chat_sessions`. */
 @Entity({ name: 'chat_sessions' })
@@ -29,6 +29,9 @@ export class ChatSession {
 
   @Column({ type: 'boolean', default: false })
   museumMode!: boolean;
+
+  @Column({ type: 'varchar', length: 16, default: 'default' })
+  intent!: ChatSessionIntent;
 
   @Column({ type: 'varchar', length: 256, nullable: true })
   title?: string | null;
