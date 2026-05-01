@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { apiGet } from '@/lib/api';
-import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
+import { useAdminDict } from '@/lib/admin-dictionary';
+import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import type { AuditLog, PaginatedResponse } from '@/lib/admin-types';
 
 export default function AuditLogsPage() {
   const adminDict = useAdminDict();
-  const locale = useAdminLocale();
-  const isFr = locale === 'fr';
+  const dateLocale = useDateLocale();
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [totalPages, setTotalPages] = useState(0);
@@ -70,9 +70,7 @@ export default function AuditLogsPage() {
 
       {/* Error */}
       {error && (
-        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
+        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
       {/* Loading */}
@@ -118,7 +116,7 @@ export default function AuditLogsPage() {
                   logs.map((log) => (
                     <tr key={log.id} className="hover:bg-surface-muted/50">
                       <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
-                        {new Date(log.createdAt).toLocaleDateString(isFr ? 'fr-FR' : 'en-US', {
+                        {formatDate(log.createdAt, dateLocale, {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',

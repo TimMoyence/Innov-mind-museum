@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiGet, apiPatch } from '@/lib/api';
-import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
+import { useAdminDict } from '@/lib/admin-dictionary';
+import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import type { PaginatedResponse, ReviewDTO, ReviewStatus } from '@/lib/admin-types';
 import { REVIEW_STATUSES, MODERATION_STATUSES } from '@/lib/admin-types';
@@ -19,9 +20,7 @@ const STATUS_COLORS: Record<ReviewStatus, string> = {
 
 export default function AdminReviewsPage() {
   const adminDict = useAdminDict();
-  const locale = useAdminLocale();
-  const isFr = locale === 'fr';
-  const dateLocale = isFr ? 'fr-FR' : 'en-US';
+  const dateLocale = useDateLocale();
 
   const [reviews, setReviews] = useState<ReviewDTO[]>([]);
   const [totalPages, setTotalPages] = useState(0);
@@ -166,7 +165,7 @@ export default function AdminReviewsPage() {
                   reviews.map((r) => (
                     <tr key={r.id} className="hover:bg-surface-muted/50">
                       <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
-                        {new Date(r.createdAt).toLocaleDateString(dateLocale, {
+                        {formatDate(r.createdAt, dateLocale, {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',

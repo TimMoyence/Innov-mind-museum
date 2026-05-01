@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiGet, apiPatch } from '@/lib/api';
-import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
+import { useAdminDict } from '@/lib/admin-dictionary';
+import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import { useAuth } from '@/lib/auth';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import type { PaginatedResponse, User, UserRole } from '@/lib/admin-types';
@@ -23,8 +24,12 @@ const ALL_ROLES: UserRole[] = ['visitor', 'moderator', 'museum_manager', 'admin'
 function useDebouncedValue(value: string, delay: number): string {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
-    const id = setTimeout(() => { setDebounced(value); }, delay);
-    return () => { clearTimeout(id); };
+    const id = setTimeout(() => {
+      setDebounced(value);
+    }, delay);
+    return () => {
+      clearTimeout(id);
+    };
   }, [value, delay]);
   return debounced;
 }
@@ -52,7 +57,7 @@ export default function UsersPage() {
 
   const debouncedSearch = useDebouncedValue(search, 300);
 
-  const isFr = useAdminLocale() === 'fr';
+  const dateLocale = useDateLocale();
 
   // Reset page when filters change
   useEffect(() => {
@@ -69,9 +74,7 @@ export default function UsersPage() {
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (roleFilter) params.set('role', roleFilter);
 
-      const data = await apiGet<PaginatedResponse<User>>(
-        `/api/admin/users?${params.toString()}`,
-      );
+      const data = await apiGet<PaginatedResponse<User>>(`/api/admin/users?${params.toString()}`);
       setUsers(data.data);
       setTotalPages(data.totalPages);
       setTotal(data.total);
@@ -141,9 +144,7 @@ export default function UsersPage() {
 
       {/* Error */}
       {error && (
-        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
+        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
       {/* Loading */}
@@ -196,9 +197,7 @@ export default function UsersPage() {
                       <td className="whitespace-nowrap px-6 py-3 font-medium text-text-primary">
                         {u.name}
                       </td>
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
-                        {u.email}
-                      </td>
+                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">{u.email}</td>
                       <td className="whitespace-nowrap px-6 py-3">
                         <span
                           className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_COLORS[u.role]}`}
@@ -209,9 +208,7 @@ export default function UsersPage() {
                       <td className="whitespace-nowrap px-6 py-3">
                         <span
                           className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            u.isActive
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-gray-100 text-gray-500'
+                            u.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
                           }`}
                         >
                           {u.isActive ? adminDict.common.active : adminDict.common.inactive}
@@ -219,7 +216,7 @@ export default function UsersPage() {
                       </td>
                       <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
                         {u.lastLoginAt
-                          ? new Date(u.lastLoginAt).toLocaleDateString(isFr ? 'fr-FR' : 'en-US', {
+                          ? formatDate(u.lastLoginAt, dateLocale, {
                               day: 'numeric',
                               month: 'short',
                               year: 'numeric',
@@ -284,7 +281,9 @@ export default function UsersPage() {
 
             <select
               value={newRole}
-              onChange={(e) => { setNewRole(e.target.value as UserRole); }}
+              onChange={(e) => {
+                setNewRole(e.target.value as UserRole);
+              }}
               className="mt-4 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
             >
               {ALL_ROLES.map((r) => (

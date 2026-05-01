@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiGet, apiPatch } from '@/lib/api';
 import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
+import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import type { PaginatedResponse, Ticket, TicketStatus, TicketPriority } from '@/lib/admin-types';
 import { TICKET_STATUSES, TICKET_PRIORITIES } from '@/lib/admin-types';
@@ -27,7 +28,7 @@ const PRIORITY_COLORS: Record<TicketPriority, string> = {
 export default function TicketsPage() {
   const adminDict = useAdminDict();
   const locale = useAdminLocale();
-  const isFr = locale === 'fr';
+  const dateLocale = useDateLocale();
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [totalPages, setTotalPages] = useState(0);
@@ -189,7 +190,7 @@ export default function TicketsPage() {
                   tickets.map((t) => (
                     <tr key={t.id} className="hover:bg-surface-muted/50">
                       <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
-                        {new Date(t.createdAt).toLocaleDateString(isFr ? 'fr-FR' : 'en-US', {
+                        {formatDate(t.createdAt, dateLocale, {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',
