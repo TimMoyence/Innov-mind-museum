@@ -220,6 +220,7 @@ const env: AppEnv = {
     password: toOptionalString(process.env.DB_PASSWORD),
     database: toOptionalString(process.env.PGDATABASE) || 'museumAI',
     poolMax: toNumber(process.env.DB_POOL_MAX, 50),
+    replicaUrl: toOptionalString(process.env.DB_REPLICA_URL) ?? null, // F Phase 2 — read-replica URL
   },
   auth: {
     // SEC-HARDENING (H12): in production, JWT_SECRET legacy fallback is BANNED.
@@ -448,7 +449,10 @@ const env: AppEnv = {
     process.env.MUSEUM_ENRICHMENT_SCHEDULER_ENABLED,
     false,
   ),
-  redis: parseRedisUrlFallback(),
+  redis: {
+    ...parseRedisUrlFallback(),
+    clusterNodes: toOptionalString(process.env.REDIS_CLUSTER_NODES) ?? null,
+  },
   guardrails: {
     candidate: guardrailsCandidate,
     llmGuardUrl: toOptionalString(process.env.GUARDRAILS_V2_LLM_GUARD_URL),

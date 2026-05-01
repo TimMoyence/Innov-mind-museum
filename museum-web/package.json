@@ -16,7 +16,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:install": "playwright install --with-deps"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.49.0",
@@ -29,12 +32,15 @@
     "recharts": "^3.8.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
     "@eslint/js": "^9.39.4",
     "@next/eslint-plugin-next": "^15.5.15",
+    "@playwright/test": "^1.49.0",
     "@tailwindcss/postcss": "^4.1.8",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^22.15.21",
+    "@types/pg": "^8.11.0",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^19.1.4",
     "@types/react-dom": "^19.1.5",
@@ -46,6 +52,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "jsdom": "^29.0.2",
     "lint-staged": "^16.4.0",
+    "pg": "^8.13.0",
     "tailwindcss": "^4.1.8",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.58.2",

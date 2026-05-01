@@ -435,6 +435,10 @@ export default tseslint.config(
     files: ['src/config/**/*.ts'],
     rules: {
       '@typescript-eslint/prefer-nullish-coalescing': 'off',
+      // env.ts is a single-responsibility config file that grows with each
+      // new env var block; splitting it would break the single-source-of-truth
+      // pattern. max-lines-per-function still applies per function.
+      'max-lines': 'off',
     },
   },
 

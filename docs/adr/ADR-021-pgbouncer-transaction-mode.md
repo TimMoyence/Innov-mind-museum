@@ -49,3 +49,25 @@ After PgBouncer ships:
   in 2026 but ops familiarity weights toward PgBouncer for first deploy.
   PgCat revisit in 12 months for read-write splitting at the proxy layer.
 - **No pooler (TypeORM-only)**: works at <10 backend replicas, breaks beyond.
+
+## Audit results — 2026-05-01
+
+Codebase grep for PgBouncer-incompatible patterns (`LISTEN`, `NOTIFY`,
+`pg_advisory_lock`, `PREPARE`):
+
+- **LISTEN/NOTIFY**: none found.
+- **pg_advisory_lock (session-scoped)**: none found.
+- **pg_advisory_xact_lock (transaction-scoped)**: 1 instance found in
+  `src/shared/audit/audit.repository.pg.ts`. Uses `pg_advisory_xact_lock`
+  (the `_xact_` variant), which is automatically released at
+  `COMMIT`/`ROLLBACK` — this is **transaction-scoped, not session-scoped**,
+  and is therefore **fully compatible** with PgBouncer transaction mode.
+- **PREPARE statements (server-side)**: none found. TypeORM uses simple-query
+  mode by default; no `manager.query('PREPARE …')` calls exist.
+- **Session-scoped SET without LOCAL**: none found in application code.
+
+**Conclusion**: codebase is PgBouncer-transaction-mode compatible as of
+2026-05-01. The single advisory lock usage (`pg_advisory_xact_lock` in the
+audit hash-chain repo) is explicitly safe. Future PRs that add `LISTEN/NOTIFY`,
+session-scoped advisory locks, or persistent prepared statements must coordinate
+with the ops team before deploy.
