@@ -16,7 +16,7 @@ import type {
   ReportMessageResult,
   SessionResult,
 } from './chat.service.types';
-import type { ArtTopicClassifierPort } from './guardrail-evaluation.service';
+import type { ArtTopicClassifierPort, LlmJudgeFn } from './guardrail-evaluation.service';
 import type { ImageEnrichmentService } from './image-enrichment.service';
 import type { KnowledgeBaseService } from './knowledge-base.service';
 import type { LocationConsentChecker, LocationResolver } from './location-resolver';
@@ -81,6 +81,10 @@ export interface ChatServiceDeps {
   artTopicClassifier?: ArtTopicClassifierPort;
   advancedGuardrail?: AdvancedGuardrail;
   advancedGuardrailObserveOnly?: boolean;
+  /** F4 — LLM judge callable. Wired by chat-module to bind the orchestrator. */
+  llmJudge?: LlmJudgeFn;
+  /** F4 — true when env.guardrails.candidate === 'llm-judge'. */
+  llmJudgeEnabled?: boolean;
   piiSanitizer?: PiiSanitizer;
   museumRepository?: IMuseumRepository;
   dbLookup?: DbLookupService;
@@ -134,6 +138,8 @@ export class ChatService {
         artTopicClassifier: deps.artTopicClassifier,
         advancedGuardrail: deps.advancedGuardrail,
         advancedGuardrailObserveOnly: deps.advancedGuardrailObserveOnly,
+        llmJudge: deps.llmJudge,
+        llmJudgeEnabled: deps.llmJudgeEnabled,
         audit: deps.audit,
         piiSanitizer: deps.piiSanitizer,
       },

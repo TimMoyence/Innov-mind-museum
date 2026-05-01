@@ -22,7 +22,13 @@ export const normalize = (value: string): string => {
     .trim();
 };
 
+// F4 (2026-04-30) — multilingual insult coverage matches INJECTION_PATTERNS reach
+// (8 languages). Closes the asymmetry where attackers using DE/ES/IT/JA/ZH/AR
+// insults bypassed the keyword pre-filter while injection attempts in the same
+// languages were blocked. Order: English, French, German, Spanish, Italian,
+// Japanese, Chinese, Arabic. CJK / Arabic entries matched via includes().
 const INSULT_KEYWORDS = [
+  // English
   'idiot',
   'stupid',
   'dumb',
@@ -31,6 +37,7 @@ const INSULT_KEYWORDS = [
   'shit',
   'bitch',
   'asshole',
+  // French
   'connard',
   'con',
   'salope',
@@ -39,6 +46,42 @@ const INSULT_KEYWORDS = [
   'fdp',
   'nique ta mere',
   'ta gueule',
+  // German
+  'arschloch',
+  'scheisse',
+  'hurensohn',
+  'wichser',
+  'verpiss dich',
+  // Spanish
+  'pendejo',
+  'gilipollas',
+  'cabron',
+  'hijo de puta',
+  'mierda',
+  // Italian
+  'stronzo',
+  'coglione',
+  'vaffanculo',
+  'figlio di puttana',
+  'cazzo',
+  // Japanese (CJK — matched via includes())
+  'バカ',
+  '馬鹿',
+  'クソ',
+  'くたばれ',
+  '死ね',
+  // Chinese (CJK — matched via includes())
+  '傻逼',
+  '混蛋',
+  '操你',
+  '去死',
+  '白痴',
+  // Arabic (matched via includes())
+  'احمق',
+  'غبي',
+  'كلب',
+  'تبا لك',
+  'اخرس',
 ];
 
 const INJECTION_PATTERNS = [

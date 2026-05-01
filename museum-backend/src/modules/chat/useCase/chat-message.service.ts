@@ -12,7 +12,7 @@ import { DisabledPiiSanitizer } from '../domain/ports/pii-sanitizer.port';
 
 import type { GuardrailBlockReason } from './art-topic-guardrail';
 import type { PostMessageResult, PostAudioMessageResult } from './chat.service.types';
-import type { ArtTopicClassifierPort } from './guardrail-evaluation.service';
+import type { ArtTopicClassifierPort, LlmJudgeFn } from './guardrail-evaluation.service';
 import type { ImageEnrichmentService } from './image-enrichment.service';
 import type { KnowledgeBaseService } from './knowledge-base.service';
 import type { LocationConsentChecker, LocationResolver } from './location-resolver';
@@ -56,6 +56,10 @@ export interface ChatSafetyDeps {
   advancedGuardrailObserveOnly?: boolean;
   audit?: AuditService;
   piiSanitizer?: PiiSanitizer;
+  /** F4 — LLM judge callable wired to the chat orchestrator. */
+  llmJudge?: LlmJudgeFn;
+  /** F4 — true when env.guardrails.candidate === 'llm-judge'. */
+  llmJudgeEnabled?: boolean;
 }
 
 /**
@@ -130,6 +134,8 @@ export class ChatMessageService {
       artTopicClassifier: safety.artTopicClassifier,
       advancedGuardrail: safety.advancedGuardrail,
       advancedGuardrailObserveOnly: safety.advancedGuardrailObserveOnly,
+      llmJudge: safety.llmJudge,
+      llmJudgeEnabled: safety.llmJudgeEnabled,
     });
 
     this.pipeline = new PrepareMessagePipeline({

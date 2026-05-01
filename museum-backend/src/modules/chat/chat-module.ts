@@ -35,6 +35,7 @@ import { ChatService } from './useCase/chat.service';
 import { DescribeService } from './useCase/describe.service';
 import { ImageEnrichmentService } from './useCase/image-enrichment.service';
 import { KnowledgeBaseService } from './useCase/knowledge-base.service';
+import { judgeWithLlm } from './useCase/llm-judge-guardrail';
 import { LocationResolver } from './useCase/location-resolver';
 import { UserMemoryService } from './useCase/user-memory.service';
 import { WebSearchService } from './useCase/web-search.service';
@@ -429,6 +430,11 @@ export class ChatModule {
       artTopicClassifier: new ArtTopicClassifier(),
       advancedGuardrail: this.buildAdvancedGuardrail(),
       advancedGuardrailObserveOnly: env.guardrails.observeOnly,
+      // F4 (2026-04-30) — bind the judge to the live orchestrator. Disabled
+      // unless `GUARDRAILS_V2_CANDIDATE=llm-judge` so the noop path stays cost-free.
+      llmJudgeEnabled: env.guardrails.candidate === 'llm-judge',
+      llmJudge: async (message: string) =>
+        await judgeWithLlm(message, { orchestrator: deps.effectiveOrchestrator }),
       piiSanitizer: new RegexPiiSanitizer(),
       museumRepository: deps.museumRepository,
       dbLookup: deps.knowledgeExtraction.dbLookup,

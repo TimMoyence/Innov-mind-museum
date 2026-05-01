@@ -23,6 +23,7 @@
     "test:ai": "RUN_AI_TESTS=true jest --watchman=false --runInBand --testPathPattern=tests/ai/ --testPathIgnorePatterns '/dist/' '/node_modules/'",
     "test:contract:openapi": "jest --watchman=false --runInBand --coverage=false tests/contract/openapi/openapi-response.contract.test.ts",
     "test:e2e": "RUN_E2E=true jest --watchman=false --runInBand --testPathPattern=tests/e2e/ --forceExit",
+    "test:integration": "RUN_INTEGRATION=true jest --watchman=false --runInBand --coverage=false --testPathPattern=tests/integration/ --forceExit",
     "perf:auth": "k6 run tests/perf/k6/auth-flow.k6.js",
     "perf:chat": "k6 run tests/perf/k6/chat-flow.k6.js",
     "perf:load": "k6 run tests/perf/k6/concurrent-users.k6.js",

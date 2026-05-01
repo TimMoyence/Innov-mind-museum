@@ -107,7 +107,7 @@ const provider: LlmProvider = ['openai', 'deepseek', 'google'].includes(provider
 
 const guardrailsCandidateRaw = (process.env.GUARDRAILS_V2_CANDIDATE || 'off').toLowerCase();
 const guardrailsCandidate: GuardrailsV2Candidate = (
-  ['off', 'llm-guard', 'nemo', 'prompt-armor'] as const
+  ['off', 'llm-guard', 'nemo', 'prompt-armor', 'llm-judge'] as const
 ).includes(guardrailsCandidateRaw as GuardrailsV2Candidate)
   ? (guardrailsCandidateRaw as GuardrailsV2Candidate)
   : 'off';
@@ -449,6 +449,10 @@ const env: AppEnv = {
     llmGuardUrl: toOptionalString(process.env.GUARDRAILS_V2_LLM_GUARD_URL),
     timeoutMs: toNumber(process.env.GUARDRAILS_V2_TIMEOUT_MS, 300),
     observeOnly: toBoolean(process.env.GUARDRAILS_V2_OBSERVE_ONLY, false),
+    // F4 (2026-04-30) — LLM judge layer config (defaults: 5€/day, 500ms, 50 chars)
+    budgetCentsPerDay: toNumber(process.env.LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY, 500),
+    judgeTimeoutMs: toNumber(process.env.LLM_GUARDRAIL_JUDGE_TIMEOUT_MS, 500),
+    judgeMinMessageLength: toNumber(process.env.LLM_GUARDRAIL_JUDGE_MIN_LENGTH, 50),
   },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
   supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.app',

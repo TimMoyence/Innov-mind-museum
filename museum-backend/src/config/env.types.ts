@@ -7,8 +7,14 @@ export type LlmProvider = 'openai' | 'deepseek' | 'google';
 /** Supported object-storage driver identifiers. */
 export type StorageDriver = 'local' | 's3';
 
-/** Advanced guardrail candidate for the V2 POC. `off` = noop adapter (default). */
-export type GuardrailsV2Candidate = 'off' | 'llm-guard' | 'nemo' | 'prompt-armor';
+/**
+ * Advanced guardrail candidate for the V2 POC. `off` = noop adapter (default).
+ *
+ * F4 (2026-04-30) — `llm-judge` adds a structured-output LLM second-layer verdict
+ * AFTER the deterministic keyword guardrail, gated by message length and budget.
+ * See `src/modules/chat/useCase/llm-judge-guardrail.ts`.
+ */
+export type GuardrailsV2Candidate = 'off' | 'llm-guard' | 'nemo' | 'prompt-armor' | 'llm-judge';
 
 /**
  * Deployment topology hint consumed by boot-time invariant checks.
@@ -346,5 +352,27 @@ export interface AppEnv {
     timeoutMs: number;
     /** When true, never block — only log decisions (Phase A "observe" mode). */
     observeOnly: boolean;
+    /**
+     * F4 (2026-04-30) — daily cost cap (in cents) for the `llm-judge` candidate.
+     * Tracked in-memory with a UTC-midnight reset; once exceeded, the judge
+     * falls back to the keyword-only decision for the remainder of the day.
+     *
+     * NOTE: per-process counter — multi-instance prod will have per-instance
+     * budget, so cumulative spend across N replicas can be up to N×. Acceptable
+     * trade-off for v1; Phase 2 moves the counter to Redis (SET with TTL).
+     */
+    budgetCentsPerDay: number;
+    /**
+     * F4 — hard timeout (ms) for an individual LLM judge call. On elapsed, the
+     * judge returns null and the caller falls back to the keyword decision.
+     * p99 ≤ 500ms target.
+     */
+    judgeTimeoutMs: number;
+    /**
+     * F4 — minimum message length (chars) below which the judge is NOT invoked.
+     * Short messages are decided by keyword-only signal — keeps the cost <15%
+     * of total chat traffic.
+     */
+    judgeMinMessageLength: number;
   };
 }

@@ -4,6 +4,7 @@ import {
   AUDIT_SECURITY_GUARDRAIL_PASS,
 } from '@shared/audit/audit.types';
 import { logger } from '@shared/logger/logger';
+import { env } from '@src/config/env';
 
 import {
   buildGuardrailRefusal,
@@ -15,6 +16,7 @@ import { redactSnippetForAudit } from '../util/guardrail-snippet';
 
 import type { GuardrailBlockReason } from './art-topic-guardrail';
 import type { PostMessageResult } from './chat.service.types';
+import type { JudgeDecision } from './llm-judge-guardrail';
 import type { ChatRepository, PersistMessageInput } from '../domain/chat.repository.interface';
 import type { ChatAssistantMetadata } from '../domain/chat.types';
 import type { AdvancedGuardrail } from '../domain/ports/advanced-guardrail.port';
@@ -45,6 +47,15 @@ export interface GuardrailAuditContext {
   locale?: string;
 }
 
+/**
+ * F4 (2026-04-30) — callable shape for the LLM-judge second layer. Returns a
+ * validated decision or `null` to signal fail-open (timeout / parse / budget).
+ *
+ * Wired in production by `chat-module.ts` to bind the orchestrator. Tests pass
+ * a `jest.fn()` with the same signature.
+ */
+export type LlmJudgeFn = (message: string) => Promise<JudgeDecision | null>;
+
 /** Dependencies for the guardrail evaluation service. */
 interface GuardrailEvaluationServiceDeps {
   repository: ChatRepository;
@@ -58,6 +69,19 @@ interface GuardrailEvaluationServiceDeps {
    */
   advancedGuardrail?: AdvancedGuardrail;
   advancedGuardrailObserveOnly?: boolean;
+  /**
+   * F4 — LLM judge callable. Runs ONLY when `llmJudgeEnabled` is true AND the
+   * keyword pre-filter returned allow AND the message length is above the
+   * configured threshold. The judge cannot upgrade keyword blocks to allow.
+   *
+   * `null` from the judge = fail-open (caller falls back to keyword decision).
+   */
+  llmJudge?: LlmJudgeFn;
+  /**
+   * F4 — toggle that mirrors `env.guardrails.candidate === 'llm-judge'`. Kept
+   * as an explicit dep so tests can flip it without env mutation.
+   */
+  llmJudgeEnabled?: boolean;
 }
 
 /**
@@ -70,6 +94,8 @@ export class GuardrailEvaluationService {
   private readonly artTopicClassifier?: ArtTopicClassifierPort;
   private readonly advancedGuardrail?: AdvancedGuardrail;
   private readonly advancedGuardrailObserveOnly: boolean;
+  private readonly llmJudge?: LlmJudgeFn;
+  private readonly llmJudgeEnabled: boolean;
 
   constructor(deps: GuardrailEvaluationServiceDeps) {
     this.repository = deps.repository;
@@ -77,6 +103,41 @@ export class GuardrailEvaluationService {
     this.artTopicClassifier = deps.artTopicClassifier;
     this.advancedGuardrail = deps.advancedGuardrail;
     this.advancedGuardrailObserveOnly = deps.advancedGuardrailObserveOnly ?? true;
+    this.llmJudge = deps.llmJudge;
+    this.llmJudgeEnabled = deps.llmJudgeEnabled ?? false;
+  }
+
+  /**
+   * F4 — runs the LLM judge after the keyword pre-filter has already returned
+   * allow. The judge can ONLY downgrade allow → block; never upgrade block →
+   * allow (the caller never invokes this when keyword decision is already
+   * blocking).
+   *
+   * Confidence floor of 0.6 — below that, the judge's verdict is too weak to
+   * justify overriding the deterministic keyword pass.
+   */
+  private async runLlmJudge(
+    text: string,
+  ): Promise<{ allow: true } | { allow: false; reason: GuardrailBlockReason }> {
+    if (!this.llmJudgeEnabled || !this.llmJudge) return { allow: true };
+    if (text.length <= env.guardrails.judgeMinMessageLength) return { allow: true };
+
+    const decision = await this.llmJudge(text);
+    if (!decision) return { allow: true }; // fail-open
+
+    if (decision.decision === 'allow' || decision.confidence < 0.6) {
+      return { allow: true };
+    }
+
+    const reason = GuardrailEvaluationService.judgeVerdictToReason(decision.decision);
+
+    logger.info('guardrail_judge_block', {
+      verdict: decision.decision,
+      confidence: decision.confidence,
+      mappedReason: reason,
+    });
+
+    return { allow: false, reason };
   }
 
   /**
@@ -119,6 +180,18 @@ export class GuardrailEvaluationService {
       ip: context?.ip ?? null,
       requestId: context?.requestId ?? null,
     });
+  }
+
+  /**
+   * F4 — maps a JudgeVerdict to the canonical GuardrailBlockReason. The judge
+   * cannot return `block:offtopic` for hard-block channels — those map to
+   * `off_topic` (soft channel) and the keyword pre-filter still wins for
+   * insult / prompt_injection blocks.
+   */
+  private static judgeVerdictToReason(verdict: JudgeDecision['decision']): GuardrailBlockReason {
+    if (verdict === 'block:abuse') return 'insult';
+    if (verdict === 'block:injection') return 'prompt_injection';
+    return 'off_topic';
   }
 
   /**
@@ -241,6 +314,23 @@ export class GuardrailEvaluationService {
         context,
       });
       return advanced;
+    }
+
+    // F4 (2026-04-30) — LLM judge second layer. Selective invocation: only on
+    // long inputs where the keyword pre-filter said allow. Cannot upgrade
+    // keyword blocks (those returned earlier above). Hard-block channels —
+    // insult / prompt_injection — always trump the preClassified='art' hint.
+    const judgeDecision = await this.runLlmJudge(text ?? '');
+    if (!judgeDecision.allow) {
+      await this.logBlock({
+        phase: 'input',
+        reason: judgeDecision.reason,
+        fullText: text ?? '',
+        classifierRan: false,
+        advancedRan: false,
+        context,
+      });
+      return judgeDecision;
     }
 
     // When preClassified === 'art', skip the soft off-topic classifier — trust frontend hint
