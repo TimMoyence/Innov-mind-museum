@@ -1,5 +1,6 @@
 import '@/__tests__/helpers/test-utils';
-import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
+import { renderHookWithQueryClient } from '@/__tests__/helpers/data/renderWithQueryClient';
 import { useSocialLogin } from '@/features/auth/application/useSocialLogin';
 import { makeAuthTokens } from '@/__tests__/helpers/factories';
 
@@ -35,8 +36,6 @@ jest.mock('@/features/auth/infrastructure/authApi', () => ({
 
 const defaultOptions = () => ({
   loginWithSession: jest.fn<Promise<void>, [unknown]>().mockResolvedValue(undefined),
-  setErrorMessage: jest.fn(),
-  setInfoMessage: jest.fn(),
 });
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -60,7 +59,7 @@ describe('useSocialLogin', () => {
 
   it('checks Apple Sign-In availability on mount', async () => {
     const opts = defaultOptions();
-    const { result } = renderHook(() => useSocialLogin(opts));
+    const { result } = renderHookWithQueryClient(() => useSocialLogin(opts));
 
     await waitFor(() => {
       expect(result.current.appleAuthAvailable).toBe(true);
@@ -73,7 +72,7 @@ describe('useSocialLogin', () => {
     mockIsAppleSignInAvailable.mockResolvedValue(false);
     const opts = defaultOptions();
 
-    const { result } = renderHook(() => useSocialLogin(opts));
+    const { result } = renderHookWithQueryClient(() => useSocialLogin(opts));
 
     await waitFor(() => {
       expect(result.current.appleAuthAvailable).toBe(false);
@@ -85,7 +84,7 @@ describe('useSocialLogin', () => {
     mockSocialLogin.mockResolvedValue(tokens);
     const opts = defaultOptions();
 
-    const { result } = renderHook(() => useSocialLogin(opts));
+    const { result } = renderHookWithQueryClient(() => useSocialLogin(opts));
 
     await act(async () => {
       await result.current.handleGoogleSignIn();
@@ -105,7 +104,7 @@ describe('useSocialLogin', () => {
     mockSocialLogin.mockResolvedValue(tokens);
     const opts = defaultOptions();
 
-    const { result } = renderHook(() => useSocialLogin(opts));
+    const { result } = renderHookWithQueryClient(() => useSocialLogin(opts));
 
     await act(async () => {
       await result.current.handleAppleSignIn();
@@ -122,15 +121,14 @@ describe('useSocialLogin', () => {
     mockSignInWithGoogle.mockRejectedValue(new Error('User cancelled the sign-in'));
     const opts = defaultOptions();
 
-    const { result } = renderHook(() => useSocialLogin(opts));
+    const { result } = renderHookWithQueryClient(() => useSocialLogin(opts));
 
     await act(async () => {
-      await result.current.handleGoogleSignIn();
+      await result.current.handleGoogleSignIn().catch(() => undefined);
     });
 
-    // setErrorMessage is called with null to clear, but never with an error string
-    const errorCalls = opts.setErrorMessage.mock.calls.filter(([arg]: [unknown]) => arg !== null);
-    expect(errorCalls).toHaveLength(0);
+    // Cancellation messages are filtered out — errorMessage stays null.
+    expect(result.current.errorMessage).toBeNull();
     expect(result.current.isSocialLoading).toBe(false);
   });
 
@@ -138,52 +136,37 @@ describe('useSocialLogin', () => {
     mockSignInWithApple.mockRejectedValue(new Error('User canceled'));
     const opts = defaultOptions();
 
-    const { result } = renderHook(() => useSocialLogin(opts));
+    const { result } = renderHookWithQueryClient(() => useSocialLogin(opts));
 
     await act(async () => {
-      await result.current.handleAppleSignIn();
+      await result.current.handleAppleSignIn().catch(() => undefined);
     });
 
-    // setErrorMessage is called with null to clear, but never with an error string
-    const errorCalls = opts.setErrorMessage.mock.calls.filter(([arg]: [unknown]) => arg !== null);
-    expect(errorCalls).toHaveLength(0);
+    expect(result.current.errorMessage).toBeNull();
     expect(result.current.isSocialLoading).toBe(false);
   });
 
-  it('sets error message on non-cancellation Google sign-in error', async () => {
+  it('exposes error message on non-cancellation Google sign-in error', async () => {
     mockSignInWithGoogle.mockRejectedValue(new Error('Network error'));
     const opts = defaultOptions();
 
-    const { result } = renderHook(() => useSocialLogin(opts));
+    const { result } = renderHookWithQueryClient(() => useSocialLogin(opts));
 
     await act(async () => {
-      await result.current.handleGoogleSignIn();
+      await result.current.handleGoogleSignIn().catch(() => undefined);
     });
 
-    expect(opts.setErrorMessage).toHaveBeenCalledWith(expect.stringContaining('Network error'));
+    await waitFor(() => {
+      expect(result.current.errorMessage).toEqual(expect.stringContaining('Network error'));
+    });
     expect(result.current.isSocialLoading).toBe(false);
-  });
-
-  it('clears previous error and info messages before sign-in attempt', async () => {
-    const tokens = makeAuthTokens();
-    mockSocialLogin.mockResolvedValue(tokens);
-    const opts = defaultOptions();
-
-    const { result } = renderHook(() => useSocialLogin(opts));
-
-    await act(async () => {
-      await result.current.handleGoogleSignIn();
-    });
-
-    expect(opts.setErrorMessage).toHaveBeenCalledWith(null);
-    expect(opts.setInfoMessage).toHaveBeenCalledWith(null);
   });
 
   it('does not call loginWithSession when response lacks tokens', async () => {
     mockSocialLogin.mockResolvedValue({ accessToken: null, refreshToken: null });
     const opts = defaultOptions();
 
-    const { result } = renderHook(() => useSocialLogin(opts));
+    const { result } = renderHookWithQueryClient(() => useSocialLogin(opts));
 
     await act(async () => {
       await result.current.handleGoogleSignIn();
@@ -200,7 +183,7 @@ describe('useSocialLogin', () => {
       mockSocialLogin.mockResolvedValue(makeAuthTokens());
       const opts = defaultOptions();
 
-      const { result } = renderHook(() => useSocialLogin(opts));
+      const { result } = renderHookWithQueryClient(() => useSocialLogin(opts));
       await act(async () => {
         await result.current.handleAppleSignIn();
       });
@@ -220,7 +203,7 @@ describe('useSocialLogin', () => {
       mockSocialLogin.mockResolvedValue(makeAuthTokens());
       const opts = defaultOptions();
 
-      const { result } = renderHook(() => useSocialLogin(opts));
+      const { result } = renderHookWithQueryClient(() => useSocialLogin(opts));
       await act(async () => {
         await result.current.handleGoogleSignIn();
       });

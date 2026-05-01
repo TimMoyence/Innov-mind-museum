@@ -51,11 +51,6 @@ export default function AuthScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [isLogin, setIsLogin] = useState(true);
-  // TODO(spec-followup): migrate setIsLoading/setErrorMessage/setInfoMessage to useMutation;
-  // requires rewriting useEmailPasswordAuth + useForgotPassword + useSocialLogin DI callbacks.
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [showBiometricSheet, setShowBiometricSheet] = useState(false);
 
   // ── Form fields (ADR-025: react-hook-form + Zod) ────────────────────────────
@@ -112,19 +107,11 @@ export default function AuthScreen() {
     void finalizePendingSession();
   }, [finalizePendingSession]);
 
-  const { handleAppleSignIn, handleGoogleSignIn, isSocialLoading, appleAuthAvailable } =
-    useSocialLogin({
-      loginWithSession: loginWithSessionWithBiometricPrompt,
-      setErrorMessage,
-      setInfoMessage,
-    });
-
-  const { handleForgotPassword } = useForgotPassword({
-    email,
-    setIsLoading,
-    setErrorMessage,
-    setInfoMessage,
+  const social = useSocialLogin({
+    loginWithSession: loginWithSessionWithBiometricPrompt,
   });
+
+  const forgot = useForgotPassword({ email });
 
   const onRegistrationComplete = useCallback(() => {
     setIsLogin(true);
@@ -133,25 +120,30 @@ export default function AuthScreen() {
     setValue('password', '');
   }, [setValue]);
 
-  const { handleLogin, handleRegister } = useEmailPasswordAuth({
+  const emailPasswordAuth = useEmailPasswordAuth({
     email,
     password,
     firstname,
     lastname,
     loginWithSession: loginWithSessionWithBiometricPrompt,
-    setIsLoading,
-    setErrorMessage,
-    setInfoMessage,
     onRegistrationComplete,
   });
+
+  const isLoading = emailPasswordAuth.isPending || forgot.isPending || social.isPending;
+  const errorMessage =
+    emailPasswordAuth.errorMessage ?? forgot.errorMessage ?? social.errorMessage ?? null;
+  const infoMessage =
+    emailPasswordAuth.infoMessage ?? forgot.infoMessage ?? social.infoMessage ?? null;
+
+  const { handleAppleSignIn, handleGoogleSignIn, isSocialLoading, appleAuthAvailable } = social;
+  const { handleForgotPassword } = forgot;
+  const { handleLogin, handleRegister } = emailPasswordAuth;
 
   const toggleAuthMode = () => {
     if (isLoading || isSocialLoading) {
       return;
     }
     setIsLogin((value) => !value);
-    setErrorMessage(null);
-    setInfoMessage(null);
     setValue('gdprAccepted', false);
   };
 
@@ -178,14 +170,7 @@ export default function AuthScreen() {
             <AuthHeader isLogin={isLogin} />
 
             <View style={styles.form}>
-              {errorMessage ? (
-                <ErrorNotice
-                  message={errorMessage}
-                  onDismiss={() => {
-                    setErrorMessage(null);
-                  }}
-                />
-              ) : null}
+              {errorMessage ? <ErrorNotice message={errorMessage} /> : null}
               {infoMessage ? (
                 <Text style={[styles.infoText, { color: theme.success }]}>{infoMessage}</Text>
               ) : null}

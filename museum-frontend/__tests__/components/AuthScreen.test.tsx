@@ -1,6 +1,7 @@
 import '../helpers/test-utils';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { screen, fireEvent } from '@testing-library/react-native';
+import { renderWithQueryClient as render } from '../helpers/data/renderWithQueryClient';
 
 // ── Screen-specific mocks ────────────────────────────────────────────────────
 

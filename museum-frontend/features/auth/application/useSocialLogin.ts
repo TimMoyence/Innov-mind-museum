@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 
 import { authService, type LoginResponse } from '@/features/auth/infrastructure/authApi';
 import {
@@ -10,20 +11,27 @@ import { getErrorMessage } from '@/shared/lib/errors';
 
 interface UseSocialLoginOptions {
   loginWithSession: (session: LoginResponse) => Promise<void>;
-  setErrorMessage: (value: string | null) => void;
-  setInfoMessage: (value: string | null) => void;
+}
+
+interface UseSocialLoginResult {
+  handleAppleSignIn: () => Promise<void>;
+  handleGoogleSignIn: () => Promise<void>;
+  /** Alias for isPending — kept for backward compat with SocialLoginButtons prop. */
+  isSocialLoading: boolean;
+  appleAuthAvailable: boolean;
+  isPending: boolean;
+  errorMessage: string | null;
+  infoMessage: string | null;
 }
 
 /**
  * Hook that encapsulates Apple and Google social sign-in flows.
- * Handles token storage, authentication state, and error reporting.
+ * Handles token storage, authentication state, and error reporting
+ * via the hook's own return value (no setter DI).
  */
 export const useSocialLogin = ({
   loginWithSession,
-  setErrorMessage,
-  setInfoMessage,
-}: UseSocialLoginOptions) => {
-  const [isSocialLoading, setIsSocialLoading] = useState(false);
+}: UseSocialLoginOptions): UseSocialLoginResult => {
   const [appleAuthAvailable, setAppleAuthAvailable] = useState(false);
 
   useEffect(() => {
@@ -52,48 +60,51 @@ export const useSocialLogin = ({
     }
   };
 
-  const handleAppleSignIn = async (): Promise<void> => {
-    setIsSocialLoading(true);
-    setErrorMessage(null);
-    setInfoMessage(null);
-    try {
+  const appleMutation = useMutation({
+    mutationFn: async () => {
       const nonce = await safeRequestNonce();
       const { provider, idToken } = await signInWithApple({ nonce });
       const response = await authService.socialLogin(provider, idToken, nonce);
       await handleSocialLoginSuccess(response);
-    } catch (error) {
-      const message = getErrorMessage(error);
-      if (!message.includes('canceled') && !message.includes('cancelled')) {
-        setErrorMessage(message);
-      }
-    } finally {
-      setIsSocialLoading(false);
-    }
-  };
+    },
+  });
 
-  const handleGoogleSignIn = async (): Promise<void> => {
-    setIsSocialLoading(true);
-    setErrorMessage(null);
-    setInfoMessage(null);
-    try {
+  const googleMutation = useMutation({
+    mutationFn: async () => {
       const nonce = await safeRequestNonce();
       const { provider, idToken } = await signInWithGoogle({ nonce });
       const response = await authService.socialLogin(provider, idToken, nonce);
       await handleSocialLoginSuccess(response);
-    } catch (error) {
-      const message = getErrorMessage(error);
-      if (!message.includes('canceled') && !message.includes('cancelled')) {
-        setErrorMessage(message);
-      }
-    } finally {
-      setIsSocialLoading(false);
-    }
+    },
+  });
+
+  const handleAppleSignIn = async (): Promise<void> => {
+    await appleMutation.mutateAsync();
   };
+
+  const handleGoogleSignIn = async (): Promise<void> => {
+    await googleMutation.mutateAsync();
+  };
+
+  const isSocialLoading = appleMutation.isPending || googleMutation.isPending;
+
+  const appleError = appleMutation.error ? getErrorMessage(appleMutation.error) : null;
+  const googleError = googleMutation.error ? getErrorMessage(googleMutation.error) : null;
+  const rawError = appleError ?? googleError ?? null;
+
+  // User-cancelled sign-in is not an error — swallow silently.
+  const errorMessage =
+    rawError !== null && !rawError.includes('canceled') && !rawError.includes('cancelled')
+      ? rawError
+      : null;
 
   return {
     handleAppleSignIn,
     handleGoogleSignIn,
     isSocialLoading,
     appleAuthAvailable,
+    isPending: isSocialLoading,
+    errorMessage,
+    infoMessage: null,
   };
 };
