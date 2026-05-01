@@ -302,8 +302,13 @@ const env: AppEnv = {
     maxImageBytes: toNumber(process.env.LLM_MAX_IMAGE_BYTES, 3 * 1024 * 1024),
     maxAudioBytes: toNumber(process.env.LLM_MAX_AUDIO_BYTES, 12 * 1024 * 1024),
     maxOutputTokens: toNumber(process.env.LLM_MAX_OUTPUT_TOKENS, 800),
+    // F13 (2026-04-30) — diagnostics ONLY enabled in strict `development`. Staging
+    // and test default to `false`; production is hard-disabled. Guards against a
+    // NODE_ENV typo (e.g. `staging`) silently exposing model internals / prompt
+    // fragments to staging users or logs. Operators can still opt in for local
+    // debugging in dev via the env var.
     includeDiagnostics:
-      nodeEnv === 'production' ? false : toBoolean(process.env.LLM_INCLUDE_DIAGNOSTICS, true),
+      nodeEnv === 'development' ? toBoolean(process.env.LLM_INCLUDE_DIAGNOSTICS, true) : false,
     openAiApiKey: process.env.OPENAI_API_KEY,
     deepseekApiKey: process.env.DEEPSEEK_API_KEY,
     googleApiKey: process.env.GOOGLE_API_KEY,

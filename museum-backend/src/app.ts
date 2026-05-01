@@ -57,6 +57,39 @@ const createHealthCheck = async (): Promise<{ database: 'up' | 'down' }> => {
   }
 };
 
+/**
+ * F5 (2026-04-30) — explicit CSP + HSTS preload in production. Helmet's defaults
+ * are reasonable but we lock down for upcoming admin HTML surfaces and submit to
+ * the HSTS preload list (max-age=2y + preload directive). Dev / test keep helmet
+ * mostly off so http://localhost works and inline tooling (Sentry replay, etc.)
+ * doesn't get blocked during local debugging.
+ */
+function buildHelmetOptions(isProduction: boolean): Parameters<typeof helmet>[0] {
+  if (!isProduction) {
+    return { contentSecurityPolicy: false as const, hsts: false as const };
+  }
+  return {
+    hsts: { maxAge: 63_072_000, includeSubDomains: true, preload: true },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        // No 'unsafe-inline' — admin HTML must use nonces or CSS modules.
+        scriptSrc: ["'self'"],
+        // 'unsafe-inline' kept for style-src as a stop-gap; remove once admin
+        // CSS migrates off inline tag styles (Phase 2 follow-up).
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https://*.s3.amazonaws.com', 'https://*.amazonaws.com'],
+        connectSrc: ["'self'"],
+        frameAncestors: ["'none'"],
+        formAction: ["'self'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+  };
+}
+
 /** Registers security, compression, timeout, and parsing middleware on the Express app. */
 function applyGlobalMiddleware(app: Express): void {
   app.set('trust proxy', env.trustProxy ? 1 : 0);
@@ -91,10 +124,7 @@ function applyGlobalMiddleware(app: Express): void {
     }),
   );
 
-  const helmetOpts = isProd
-    ? { hsts: { maxAge: 31536000, includeSubDomains: true } }
-    : { contentSecurityPolicy: false as const, hsts: false as const };
-  app.use(helmet(helmetOpts));
+  app.use(helmet(buildHelmetOptions(isProd)));
   app.use(
     compression({
       filter: (req, res) => {
