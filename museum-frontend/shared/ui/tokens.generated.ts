@@ -219,3 +219,21 @@ export const emptyStateTokens = {
 } as const;
 
 export type EmptyStateVariant = keyof typeof emptyStateTokens.variants;
+
+// Component tokens — error-state primitive (Spec B / T34)
+export const errorStateTokens = {
+  iconName: 'warning-outline' as const,
+  // Amber-100 equivalent — closest to colors.status.warningBg.light without RGBA
+  iconBg: '#FEF3C7',
+  iconColor: '#92400E', // colors.status.warning.light
+  titleColor: '#172554', // colors.primary[900]
+  descriptionColor: '#1E40AF', // colors.primary[700]
+  layout: {
+    padding: 20, // spacing['5'].px
+    gap: 12, // spacing['3'].px
+    inlineRadius: 10,
+    fullscreenPadding: 32, // spacing['8'].px
+  },
+} as const;
+
+export type ErrorStateVariant = 'inline' | 'fullscreen';

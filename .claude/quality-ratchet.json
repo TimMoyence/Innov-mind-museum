@@ -1,8 +1,8 @@
 {
   "lastUpdated": "2026-04-27",
   "testCount": 3410,
-  "frontendTestCount": 1613,
-  "frontendSuiteCount": 161,
+  "frontendTestCount": 1656,
+  "frontendSuiteCount": 168,
   "typecheckErrors": 0,
   "asAnyCount": 0,
   "coverageStatements": 87.56,
@@ -13,6 +13,6 @@
   "lintWarningsBackend": 27,
   "lintWarningsFrontend": 21,
   "_comment": "PM audit + roadmap 10/10 sprint 2026-04-27: P1 (web smoke functional + rollback DB-derived), P3 (Redis password floor + rotation reminder + mobile TLS hardening + email regex fuzz), P5 (V1 fallbacks runbook + auto-rollback + redis-rotation + README index), P4 (visit summary 8 tests + voice STT-LLM-TTS pipeline 4 tests + emoji guard CI), P2 (reset-password full flow integration 7 tests). 5 commits + tech-lead code review on each pillar. tsc + tests + lint green on all 3 apps. v1.2.0.",
-  "webTestCount": 206,
+  "webTestCount": 222,
   "webSuiteCount": 23
 }
