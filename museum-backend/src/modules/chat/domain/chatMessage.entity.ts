@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -23,6 +24,7 @@ export class ChatMessage {
   })
   session!: ChatSession;
 
+  @Index('IDX_chat_messages_sessionId')
   @Column({ type: 'uuid' })
   sessionId!: string;
 

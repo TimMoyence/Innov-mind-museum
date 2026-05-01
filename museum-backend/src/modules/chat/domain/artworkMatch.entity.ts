@@ -1,4 +1,11 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 import { ChatMessage } from './chatMessage.entity';
 
@@ -8,6 +15,7 @@ export class ArtworkMatch {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
+  @Index('IDX_artwork_matches_messageId')
   @ManyToOne(() => ChatMessage, (message) => message.artworkMatches, {
     onDelete: 'CASCADE',
   })

@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -21,6 +22,7 @@ export class ChatSession {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
+  @Index('IDX_chat_sessions_userId')
   @ManyToOne(() => User, { nullable: true, eager: false, onDelete: 'SET NULL' })
   user?: User | null;
 

@@ -232,7 +232,7 @@ Output committed to `museum-backend/docs/perf/2026-04-30-A1-explain-analyze.md` 
 
 ### 6.1 Existing tests must pass unchanged
 
-The migration is purely additive: no schema change for entities, no behaviour change for repositories. The full Jest suite (`pnpm test`) is the regression gate. We do not modify any entity, repository, or service file.
+The migration is purely additive: no behaviour change for repositories. We add `@Index('IDX_<table>_<col>')` decorators to the three entity FK columns (annotation-only, no runtime impact) so that `migration-cli generate` produces "No changes" — without decorators TypeORM's schema diff would generate a migration dropping the new indexes on every run. The full Jest suite (`pnpm test`) is the regression gate.
 
 ### 6.2 New test — migration idempotence
 
