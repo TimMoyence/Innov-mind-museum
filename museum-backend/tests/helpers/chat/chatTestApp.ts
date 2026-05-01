@@ -67,6 +67,7 @@ class InMemoryChatRepository implements ChatRepository {
       id: randomUUID(),
       locale: input.locale || null,
       museumMode: input.museumMode ?? false,
+      intent: input.intent ?? 'default',
       user: input.userId ? ({ id: input.userId } as ChatSession['user']) : null,
       messages: [],
       version: 1,
