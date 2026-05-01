@@ -86,6 +86,8 @@ export interface ListSessionsResult {
     museumName?: string | null;
     createdAt: string;
     updatedAt: string;
+    /** Session-level intent — drives prompt strategy and walk-mode UX. */
+    intent: ChatSessionIntent;
     preview?: {
       text: string;
       createdAt: string;

@@ -247,6 +247,7 @@ export class ChatSessionService {
         museumName: row.session.museumName ?? null,
         createdAt: row.session.createdAt.toISOString(),
         updatedAt: row.session.updatedAt.toISOString(),
+        intent: row.session.intent,
         preview: row.preview
           ? {
               // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback

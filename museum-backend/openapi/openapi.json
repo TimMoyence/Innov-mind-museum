@@ -233,7 +233,7 @@
       },
       "SessionDTO": {
         "type": "object",
-        "required": ["id", "museumMode", "createdAt", "updatedAt"],
+        "required": ["id", "museumMode", "createdAt", "updatedAt", "intent"],
         "properties": {
           "id": {
             "type": "string",
@@ -258,6 +258,11 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "intent": {
+            "type": "string",
+            "enum": ["default", "walk"],
+            "description": "Session-level intent — drives prompt strategy and walk-mode UX."
           }
         }
       },
@@ -573,7 +578,7 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["id", "museumMode", "createdAt", "updatedAt", "messageCount"],
+              "required": ["id", "museumMode", "createdAt", "updatedAt", "messageCount", "intent"],
               "properties": {
                 "id": {
                   "type": "string",
@@ -598,6 +603,11 @@
                 "updatedAt": {
                   "type": "string",
                   "format": "date-time"
+                },
+                "intent": {
+                  "type": "string",
+                  "enum": ["default", "walk"],
+                  "description": "Session-level intent — drives prompt strategy and walk-mode UX."
                 },
                 "messageCount": {
                   "type": "integer"

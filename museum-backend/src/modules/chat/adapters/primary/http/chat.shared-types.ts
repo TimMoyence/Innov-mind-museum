@@ -1,3 +1,5 @@
+import type { ChatSessionIntent, ContentPreference } from '../../../domain/chat.types';
+
 /** Reusable session info shape shared across multiple chat HTTP contract types. */
 export interface SessionInfo {
   id: string;
@@ -7,6 +9,8 @@ export interface SessionInfo {
   museumName?: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Session-level intent — drives prompt strategy and walk-mode UX. */
+  intent: ChatSessionIntent;
 }
 
 /** Reusable pagination info shape shared across paginated chat HTTP responses. */
@@ -29,8 +33,6 @@ export interface ChatMessageResponse {
   createdAt: string;
   metadata?: Record<string, unknown> | null;
 }
-
-import type { ContentPreference } from '../../../domain/chat.types';
 
 /** Visitor context sent with message requests. */
 export interface VisitorContext {
