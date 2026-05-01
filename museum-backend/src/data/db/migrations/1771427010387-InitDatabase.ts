@@ -45,14 +45,18 @@ export class InitDatabase1771427010387 implements MigrationInterface {
 
   /** Revert the InitDatabase migration. */
   public async down(queryRunner: QueryRunner): Promise<void> {
+    // EnsureChatTables (the next migration) also manages artwork_matches /
+    // chat_messages / chat_sessions in its own down(). Use IF EXISTS so that
+    // reverting InitDatabase after EnsureChatTables has already cleaned up
+    // those objects does not fail.
     await queryRunner.query(
-      `ALTER TABLE "artwork_matches" DROP CONSTRAINT "FK_4e09da4e92fddfef0d14f634d5e"`,
+      `ALTER TABLE IF EXISTS "artwork_matches" DROP CONSTRAINT IF EXISTS "FK_4e09da4e92fddfef0d14f634d5e"`,
     );
     await queryRunner.query(
-      `ALTER TABLE "chat_messages" DROP CONSTRAINT "FK_a82476a8acdd6cd6936378cb72d"`,
+      `ALTER TABLE IF EXISTS "chat_messages" DROP CONSTRAINT IF EXISTS "FK_a82476a8acdd6cd6936378cb72d"`,
     );
     await queryRunner.query(
-      `ALTER TABLE "chat_sessions" DROP CONSTRAINT "FK_d0320df1059d8a029a460f4161d"`,
+      `ALTER TABLE IF EXISTS "chat_sessions" DROP CONSTRAINT IF EXISTS "FK_d0320df1059d8a029a460f4161d"`,
     );
     await queryRunner.query(
       `ALTER TABLE "image_insight_conversations" DROP CONSTRAINT "FK_be40cc010dd6fd7c67bb8bebd91"`,
@@ -60,9 +64,9 @@ export class InitDatabase1771427010387 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE "image_insight_messages" DROP CONSTRAINT "FK_30f03922716e25cfaefb72a9e5f"`,
     );
-    await queryRunner.query(`DROP TABLE "artwork_matches"`);
-    await queryRunner.query(`DROP TABLE "chat_messages"`);
-    await queryRunner.query(`DROP TABLE "chat_sessions"`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "artwork_matches"`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "chat_messages"`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "chat_sessions"`);
     await queryRunner.query(`DROP TABLE "image_insight_conversations"`);
     await queryRunner.query(`DROP TABLE "image_insight_messages"`);
     await queryRunner.query(`DROP TABLE "users"`);

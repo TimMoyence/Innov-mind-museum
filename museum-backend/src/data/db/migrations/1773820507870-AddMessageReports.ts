@@ -18,9 +18,12 @@ export class AddMessageReports1773820507870 implements MigrationInterface {
 
   /** Revert the AddMessageReports migration. */
   public async down(queryRunner: QueryRunner): Promise<void> {
+    // Use IF EXISTS: AddSocialAccountsAndNullablePassword (the next migration) also
+    // drops message_reports in its own down(), so by the time this down() runs during
+    // a full revert sequence the table may already be gone.
     await queryRunner.query(
-      `ALTER TABLE "message_reports" DROP CONSTRAINT "FK_7078835e4cc127f9394f40ac6e7"`,
+      `ALTER TABLE IF EXISTS "message_reports" DROP CONSTRAINT IF EXISTS "FK_7078835e4cc127f9394f40ac6e7"`,
     );
-    await queryRunner.query(`DROP TABLE "message_reports"`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "message_reports"`);
   }
 }
