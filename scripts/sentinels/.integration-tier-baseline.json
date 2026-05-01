@@ -31,27 +31,7 @@
       "approved_by": "phase1-spec-§5"
     },
     {
-      "path": "museum-backend/tests/integration/chat/chat-service-orchestrator-errors.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
-      "path": "museum-backend/tests/integration/chat/chat-service-ownership.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
-      "path": "museum-backend/tests/integration/chat/chat-service-pagination.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
       "path": "museum-backend/tests/integration/chat/chat-service-tts.test.ts",
-      "reason": "phase1-migration-pending — remove on file migration",
-      "approved_by": "phase1-spec-§5"
-    },
-    {
-      "path": "museum-backend/tests/integration/chat/feedback-cache-invalidation.test.ts",
       "reason": "phase1-migration-pending — remove on file migration",
       "approved_by": "phase1-spec-§5"
     },
