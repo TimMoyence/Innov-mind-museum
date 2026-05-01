@@ -433,7 +433,9 @@
       "disabled_low_data": "Im Datensparmodus deaktiviert. Modus in den Einstellungen ändern."
     },
     "walk": {
-      "headerLabel": "Geführte Tour"
+      "headerLabel": "Geführte Tour",
+      "suggestionsLabel": "Vorschläge für die Tour",
+      "suggestionHint": "Schickt diesen Vorschlag als Ihre nächste Eingabe"
     }
   },
   "dailyLimit": {

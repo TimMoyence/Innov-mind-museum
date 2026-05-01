@@ -433,7 +433,9 @@
       "disabled_low_data": "データセーバーで無効です。設定で変更できます。"
     },
     "walk": {
-      "headerLabel": "ガイドツアー"
+      "headerLabel": "ガイドツアー",
+      "suggestionsLabel": "ツアーの提案",
+      "suggestionHint": "この提案を次のメッセージとして送信"
     }
   },
   "dailyLimit": {

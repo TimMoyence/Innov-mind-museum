@@ -433,7 +433,9 @@
       "disabled_low_data": "معطّل في وضع توفير البيانات. غيّر الوضع من الإعدادات."
     },
     "walk": {
-      "headerLabel": "جولة مرشدة"
+      "headerLabel": "جولة مرشدة",
+      "suggestionsLabel": "اقتراحات الجولة",
+      "suggestionHint": "إرسال هذا الاقتراح كرسالتك التالية"
     }
   },
   "dailyLimit": {

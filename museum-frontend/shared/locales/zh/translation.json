@@ -433,7 +433,9 @@
       "disabled_low_data": "省流量模式下已停用。在设置中更改模式。"
     },
     "walk": {
-      "headerLabel": "导览游"
+      "headerLabel": "导览游",
+      "suggestionsLabel": "导览建议",
+      "suggestionHint": "将该建议作为您的下一条消息发送"
     }
   },
   "dailyLimit": {

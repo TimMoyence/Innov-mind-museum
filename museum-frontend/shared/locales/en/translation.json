@@ -433,7 +433,9 @@
       "disabled_low_data": "Disabled in data saver mode. Change mode in Settings."
     },
     "walk": {
-      "headerLabel": "Guided walk"
+      "headerLabel": "Guided walk",
+      "suggestionsLabel": "Walk suggestions",
+      "suggestionHint": "Sends this suggestion as your next prompt"
     }
   },
   "dailyLimit": {

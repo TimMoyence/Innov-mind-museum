@@ -433,7 +433,9 @@
       "disabled_low_data": "Desactivado en modo ahorro de datos. Cámbialo en Ajustes."
     },
     "walk": {
-      "headerLabel": "Visita guiada"
+      "headerLabel": "Visita guiada",
+      "suggestionsLabel": "Sugerencias de la visita",
+      "suggestionHint": "Envía esta sugerencia como tu próximo mensaje"
     }
   },
   "dailyLimit": {
