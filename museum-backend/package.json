@@ -39,6 +39,7 @@
     "seed:museums": "ts-node -r tsconfig-paths/register scripts/seed-museums.ts",
     "seed:knowledge": "ts-node -r tsconfig-paths/register scripts/seed-knowledge.ts",
     "seed:smoke-account": "ts-node -r tsconfig-paths/register scripts/seed-smoke-account.ts",
+    "seed:perf": "ts-node -r tsconfig-paths/register scripts/seed-perf-load.ts",
     "mutation": "stryker run",
     "mutation:ci": "stryker run --incremental --concurrency 2"
   },
