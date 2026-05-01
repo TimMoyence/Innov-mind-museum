@@ -14,6 +14,7 @@ import ShowcaseSection from '@/components/marketing/ShowcaseSection';
 import DemoChat from '@/components/marketing/DemoChat';
 import FAQSection from '@/components/marketing/FAQSection';
 import DemoMapLoader from '@/components/marketing/DemoMapLoader';
+import { StorySection } from '@/components/marketing/StorySection';
 
 interface LandingPageProps {
   params: Promise<{ locale: string }>;
@@ -394,6 +395,15 @@ export default async function LandingPage({ params }: LandingPageProps) {
           aria-hidden="true"
         />
       </section>
+
+      {/* ================================================================ */}
+      {/* SECTION 1.5: STORY — How Musaium turns a visit into a story      */}
+      {/* ================================================================ */}
+      <StorySection
+        title={dict.landing.story.title}
+        subtitle={dict.landing.story.subtitle}
+        steps={dict.landing.story.steps}
+      />
 
       {/* ================================================================ */}
       {/* SECTION 2: APP PREVIEW — The app's world                        */}
