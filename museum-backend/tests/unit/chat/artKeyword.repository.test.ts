@@ -33,40 +33,51 @@ const createRepository = () => {
 };
 
 describe('TypeOrmArtKeywordRepository', () => {
-  it('upsert creates new keyword when not existing', async () => {
+  it('upsert executes atomic INSERT ON CONFLICT query', async () => {
     const { repository, repo } = createRepository();
-    repo.findOne.mockResolvedValue(null);
-
-    await repository.upsert('ceramics', 'en');
-
-    expect(repo.create).toHaveBeenCalledWith({ keyword: 'ceramics', locale: 'en', hitCount: 1 });
-    expect(repo.save).toHaveBeenCalled();
-  });
-
-  it('upsert increments hitCount for existing keyword', async () => {
-    const { repository, repo } = createRepository();
-    const existing = {
+    const mockRow = {
       id: 'uuid-1',
       keyword: 'ceramics',
       locale: 'en',
-      hitCount: 3,
+      hitCount: 1,
+      category: 'general',
       createdAt: new Date(),
       updatedAt: new Date(),
     } as ArtKeyword;
-    repo.findOne.mockResolvedValue(existing);
+    repo.query.mockResolvedValue([mockRow]);
 
-    await repository.upsert('Ceramics', 'en');
+    const result = await repository.upsert('ceramics', 'en');
 
-    expect(existing.hitCount).toBe(4);
-    expect(repo.save).toHaveBeenCalledWith(existing);
+    expect(repo.query).toHaveBeenCalledTimes(1);
+    const [sql, params] = (repo.query as jest.Mock).mock.calls[0] as [string, string[]];
+    expect(sql).toContain('INSERT INTO "art_keywords"');
+    expect(sql).toContain('ON CONFLICT ("keyword", "locale")');
+    expect(sql).toContain('"hitCount" = "art_keywords"."hitCount" + 1');
+    expect(sql).toContain('RETURNING *');
+    expect(params).toEqual(['ceramics', 'en']);
+    expect(result).toBe(mockRow);
   });
 
-  it('upsert normalizes keyword to lowercase trimmed', async () => {
+  it('upsert normalizes keyword to lowercase trimmed before SQL', async () => {
     const { repository, repo } = createRepository();
+    repo.query.mockResolvedValue([{ keyword: 'mosaic', locale: 'fr', hitCount: 1 } as ArtKeyword]);
 
     await repository.upsert('  MOSAIC  ', 'fr');
 
-    expect(repo.findOne).toHaveBeenCalledWith({ where: { keyword: 'mosaic', locale: 'fr' } });
+    const [, params] = (repo.query as jest.Mock).mock.calls[0] as [string, string[]];
+    expect(params[0]).toBe('mosaic');
+    expect(params[1]).toBe('fr');
+  });
+
+  it('upsert does not call findOne or save (no read-modify-write)', async () => {
+    const { repository, repo } = createRepository();
+    repo.query.mockResolvedValue([{ keyword: 'fresco', locale: 'en', hitCount: 2 } as ArtKeyword]);
+
+    await repository.upsert('fresco', 'en');
+
+    expect(repo.findOne).not.toHaveBeenCalled();
+    expect(repo.save).not.toHaveBeenCalled();
+    expect(repo.create).not.toHaveBeenCalled();
   });
 
   it('findByLocale with wildcard returns all', async () => {

@@ -33,15 +33,24 @@ export class TypeOrmArtKeywordRepository implements ArtKeywordRepository {
     return await qb.getMany();
   }
 
-  /** Inserts a keyword or increments its hit count if it already exists. */
+  /**
+   * Atomically inserts a keyword or increments its `hitCount` if the
+   * `(keyword, locale)` pair already exists. Single round-trip — no
+   * read-modify-write race under concurrent callers.
+   */
   async upsert(keyword: string, locale: string): Promise<ArtKeyword> {
     const normalized = keyword.toLowerCase().trim();
-    const existing = await this.repo.findOne({ where: { keyword: normalized, locale } });
-    if (existing) {
-      existing.hitCount += 1;
-      return await this.repo.save(existing);
-    }
-    return await this.repo.save(this.repo.create({ keyword: normalized, locale, hitCount: 1 }));
+
+    const rows = await this.repo.query(
+      `INSERT INTO "art_keywords" ("keyword", "locale", "hitCount")
+       VALUES ($1, $2, 1)
+       ON CONFLICT ("keyword", "locale") DO UPDATE
+         SET "hitCount" = "art_keywords"."hitCount" + 1,
+             "updatedAt" = NOW()
+       RETURNING *`,
+      [normalized, locale],
+    );
+    return (rows as ArtKeyword[])[0];
   }
 
   /** Bulk upserts multiple keywords, incrementing hit counts on conflict. */
