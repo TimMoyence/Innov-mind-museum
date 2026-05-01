@@ -10,6 +10,8 @@ import {
 } from 'typeorm';
 
 import { User } from '@modules/auth/domain/user.entity';
+import { NotableArtworksSchema } from '@shared/db/jsonb-schemas/user-memory-notable-artworks.schema';
+import { jsonbValidator } from '@shared/db/jsonb-validator';
 
 import type { NotableArtwork } from './userMemory.types';
 
@@ -41,7 +43,11 @@ export class UserMemory {
   @Column({ type: 'integer', default: 0 })
   totalArtworksDiscussed!: number;
 
-  @Column({ type: 'jsonb', default: '[]' })
+  @Column({
+    type: 'jsonb',
+    default: '[]',
+    transformer: jsonbValidator(NotableArtworksSchema, 'user_memories.notableArtworks'),
+  })
   notableArtworks!: NotableArtwork[];
 
   @Column({ type: 'text', array: true, default: '{}' })

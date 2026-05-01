@@ -1,5 +1,8 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
+import { MuseumQaSeedMetadataSchema } from '@shared/db/jsonb-schemas/museum-qa-seed-metadata.schema';
+import { jsonbValidator } from '@shared/db/jsonb-validator';
+
 /** Seeded Q&A entries for museum low-data packs. Mapped to `museum_qa_seed`. */
 @Entity({ name: 'museum_qa_seed' })
 @Index(['museumId', 'locale'])
@@ -30,7 +33,11 @@ export class MuseumQaSeed {
   @Column({ type: 'text' })
   answer!: string;
 
-  @Column({ type: 'jsonb', default: {} })
+  @Column({
+    type: 'jsonb',
+    default: {},
+    transformer: jsonbValidator(MuseumQaSeedMetadataSchema, 'museum_qa_seed.metadata'),
+  })
   metadata!: Record<string, unknown>;
 
   @CreateDateColumn({ type: 'timestamptz' })

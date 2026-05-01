@@ -1,5 +1,8 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
+import { AuditMetadataSchema } from '@shared/db/jsonb-schemas/audit-metadata.schema';
+import { jsonbValidator } from '@shared/db/jsonb-validator';
+
 /** Immutable audit log entry. INSERT only — no UPDATE/DELETE at the application level. */
 @Entity({ name: 'audit_logs' })
 export class AuditLog {
@@ -21,7 +24,11 @@ export class AuditLog {
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'target_id' })
   targetId!: string | null;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({
+    type: 'jsonb',
+    nullable: true,
+    transformer: jsonbValidator(AuditMetadataSchema, 'audit_logs.metadata'),
+  })
   metadata!: Record<string, unknown> | null;
 
   @Column({ type: 'inet', nullable: true })

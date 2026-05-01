@@ -9,6 +9,15 @@ import {
 } from 'typeorm';
 
 import { Museum } from '@modules/museum/domain/museum.entity';
+import {
+  AccessibilitySchema,
+  AdmissionFeesSchema,
+  CollectionsSchema,
+  CurrentExhibitionsSchema,
+  OpeningHoursSchema,
+  SourceUrlsSchema,
+} from '@shared/db/jsonb-schemas/museum-enrichment.schemas';
+import { jsonbValidator } from '@shared/db/jsonb-validator';
 
 /**
  * Museum enrichment — aggregated public data (OSM / Wikidata / Wikipedia) keyed
@@ -37,25 +46,49 @@ export class MuseumEnrichment {
   @Column({ type: 'varchar', length: 300 })
   name!: string;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({
+    type: 'jsonb',
+    nullable: true,
+    transformer: jsonbValidator(OpeningHoursSchema, 'museum_enrichment.openingHours'),
+  })
   openingHours!: Record<string, unknown> | null;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({
+    type: 'jsonb',
+    nullable: true,
+    transformer: jsonbValidator(AdmissionFeesSchema, 'museum_enrichment.admissionFees'),
+  })
   admissionFees!: Record<string, unknown> | null;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   website!: string | null;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({
+    type: 'jsonb',
+    nullable: true,
+    transformer: jsonbValidator(CollectionsSchema, 'museum_enrichment.collections'),
+  })
   collections!: Record<string, unknown> | null;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({
+    type: 'jsonb',
+    nullable: true,
+    transformer: jsonbValidator(CurrentExhibitionsSchema, 'museum_enrichment.currentExhibitions'),
+  })
   currentExhibitions!: Record<string, unknown> | null;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({
+    type: 'jsonb',
+    nullable: true,
+    transformer: jsonbValidator(AccessibilitySchema, 'museum_enrichment.accessibility'),
+  })
   accessibility!: Record<string, unknown> | null;
 
-  @Column({ type: 'jsonb', default: [] })
+  @Column({
+    type: 'jsonb',
+    default: [],
+    transformer: jsonbValidator(SourceUrlsSchema, 'museum_enrichment.sourceUrls'),
+  })
   sourceUrls!: string[];
 
   @Column({ type: 'float' })

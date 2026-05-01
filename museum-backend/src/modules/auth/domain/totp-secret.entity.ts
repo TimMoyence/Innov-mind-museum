@@ -9,6 +9,9 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+import { TotpRecoveryCodesSchema } from '@shared/db/jsonb-schemas/totp-recovery-codes.schema';
+import { jsonbValidator } from '@shared/db/jsonb-validator';
+
 import { User } from './user.entity';
 
 /**
@@ -64,7 +67,12 @@ export class TotpSecret {
    * its own consumption timestamp; `null` means the code is still valid.
    * Stored as JSONB to keep migrations and partial-update queries simple.
    */
-  @Column({ type: 'jsonb', name: 'recovery_codes', default: () => "'[]'::jsonb" })
+  @Column({
+    type: 'jsonb',
+    name: 'recovery_codes',
+    default: () => "'[]'::jsonb",
+    transformer: jsonbValidator(TotpRecoveryCodesSchema, 'totp_secrets.recovery_codes'),
+  })
   recoveryCodes!: TotpRecoveryCode[];
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })

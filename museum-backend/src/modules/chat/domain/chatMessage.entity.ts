@@ -8,6 +8,9 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
+import { ChatMessageMetadataSchema } from '@shared/db/jsonb-schemas/chat-message-metadata.schema';
+import { jsonbValidator } from '@shared/db/jsonb-validator';
+
 import { ArtworkMatch } from './artworkMatch.entity';
 import { ChatSession } from './chatSession.entity';
 
@@ -37,7 +40,11 @@ export class ChatMessage {
   @Column({ type: 'text', nullable: true })
   imageRef?: string | null;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({
+    type: 'jsonb',
+    nullable: true,
+    transformer: jsonbValidator(ChatMessageMetadataSchema, 'chat_messages.metadata'),
+  })
   metadata?: Record<string, unknown> | null;
 
   /**

@@ -7,6 +7,9 @@ import {
   VersionColumn,
 } from 'typeorm';
 
+import { MuseumConfigSchema } from '@shared/db/jsonb-schemas/museum-config.schema';
+import { jsonbValidator } from '@shared/db/jsonb-validator';
+
 import type { MuseumCategory } from '@shared/http/overpass.client';
 
 /** Represents a museum tenant in the B2B multi-tenancy model. Mapped to `museums`. */
@@ -27,7 +30,11 @@ export class Museum {
   @Column({ type: 'text', nullable: true })
   description?: string | null;
 
-  @Column({ type: 'jsonb', default: '{}' })
+  @Column({
+    type: 'jsonb',
+    default: '{}',
+    transformer: jsonbValidator(MuseumConfigSchema, 'museums.config'),
+  })
   config!: Record<string, unknown>;
 
   @Column({ type: 'varchar', length: 32, default: 'general' })
