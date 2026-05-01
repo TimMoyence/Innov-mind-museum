@@ -77,20 +77,24 @@ describe('AuthScreen', () => {
     expect(screen.getByLabelText('a11y.auth.apple_signin')).toBeTruthy();
   });
 
-  it('toggles to register mode and back', () => {
+  it('toggles to register mode and back', async () => {
     render(<AuthScreen />);
     expect(screen.getByText('auth.welcome_back')).toBeTruthy();
 
     // Toggle to register
     fireEvent.press(screen.getByLabelText('a11y.auth.toggle_register'));
-    expect(screen.getByText('auth.create_account')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText('auth.create_account')).toBeTruthy();
+    });
 
     // Toggle back to login
     fireEvent.press(screen.getByLabelText('a11y.auth.toggle_login'));
-    expect(screen.getByText('auth.welcome_back')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText('auth.welcome_back')).toBeTruthy();
+    });
   });
 
-  it('shows firstname and lastname fields only in register mode', () => {
+  it('shows firstname and lastname fields only in register mode', async () => {
     render(<AuthScreen />);
     // Login mode: no name fields
     expect(screen.queryByLabelText('a11y.auth.firstname_input')).toBeNull();
@@ -98,16 +102,20 @@ describe('AuthScreen', () => {
 
     // Switch to register mode
     fireEvent.press(screen.getByLabelText('a11y.auth.toggle_register'));
-    expect(screen.getByLabelText('a11y.auth.firstname_input')).toBeTruthy();
-    expect(screen.getByLabelText('a11y.auth.lastname_input')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByLabelText('a11y.auth.firstname_input')).toBeTruthy();
+      expect(screen.getByLabelText('a11y.auth.lastname_input')).toBeTruthy();
+    });
   });
 
-  it('shows GDPR checkbox only in register mode', () => {
+  it('shows GDPR checkbox only in register mode', async () => {
     render(<AuthScreen />);
     expect(screen.queryByLabelText('a11y.auth.gdpr_checkbox')).toBeNull();
 
     fireEvent.press(screen.getByLabelText('a11y.auth.toggle_register'));
-    expect(screen.getByLabelText('a11y.auth.gdpr_checkbox')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByLabelText('a11y.auth.gdpr_checkbox')).toBeTruthy();
+    });
   });
 
   it('shows forgot password button in login mode', () => {
@@ -143,15 +151,17 @@ describe('AuthScreen', () => {
     });
   });
 
-  it('register button is disabled until GDPR checkbox is checked', () => {
+  it('register button is disabled until GDPR checkbox is checked', async () => {
     render(<AuthScreen />);
     fireEvent.press(screen.getByLabelText('a11y.auth.toggle_register'));
-    const registerButton = screen.getByLabelText('a11y.auth.register_button');
+    const registerButton = await waitFor(() => screen.getByLabelText('a11y.auth.register_button'));
     expect(registerButton.props.accessibilityState.disabled).toBe(true);
 
     // Check GDPR
     fireEvent.press(screen.getByLabelText('a11y.auth.gdpr_checkbox'));
-    expect(registerButton.props.accessibilityState.disabled).toBe(false);
+    await waitFor(() => {
+      expect(registerButton.props.accessibilityState.disabled).toBe(false);
+    });
   });
 
   it('displays separator with social login text', () => {
@@ -164,9 +174,13 @@ describe('AuthScreen', () => {
     expect(screen.getByText('auth.legal_notice')).toBeTruthy();
   });
 
-  it('hides legal notice text in register mode', () => {
+  it('hides legal notice text in register mode', async () => {
     render(<AuthScreen />);
     fireEvent.press(screen.getByLabelText('a11y.auth.toggle_register'));
+    // Wait for register mode to be active (positive assertion first)
+    await waitFor(() => {
+      expect(screen.getByLabelText('a11y.auth.firstname_input')).toBeTruthy();
+    });
     expect(screen.queryByText('auth.legal_notice')).toBeNull();
   });
 

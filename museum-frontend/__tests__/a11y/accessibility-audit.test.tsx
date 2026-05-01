@@ -9,7 +9,7 @@
  */
 import '../helpers/test-utils';
 import React from 'react';
-import { screen, fireEvent } from '@testing-library/react-native';
+import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithQueryClient as render } from '../helpers/data/renderWithQueryClient';
 
 // ── AuthScreen mocks ────────────────────────────────────────────────────────
@@ -123,29 +123,35 @@ describe('AuthScreen a11y', () => {
     expect(toggleButton.props.accessibilityRole).toBe('button');
   });
 
-  it('register mode: firstname and lastname inputs have accessibilityLabel', () => {
+  it('register mode: firstname and lastname inputs have accessibilityLabel', async () => {
     render(<AuthScreen />);
     fireEvent.press(screen.getByLabelText('a11y.auth.toggle_register'));
 
-    expect(screen.getByLabelText('a11y.auth.firstname_input')).toBeTruthy();
-    expect(screen.getByLabelText('a11y.auth.lastname_input')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByLabelText('a11y.auth.firstname_input')).toBeTruthy();
+      expect(screen.getByLabelText('a11y.auth.lastname_input')).toBeTruthy();
+    });
   });
 
-  it('register mode: submit button has register label', () => {
+  it('register mode: submit button has register label', async () => {
     render(<AuthScreen />);
     fireEvent.press(screen.getByLabelText('a11y.auth.toggle_register'));
 
-    const registerButton = screen.getByLabelText('a11y.auth.register_button');
-    expect(registerButton).toBeTruthy();
-    expect(registerButton.props.accessibilityRole).toBe('button');
+    await waitFor(() => {
+      const registerButton = screen.getByLabelText('a11y.auth.register_button');
+      expect(registerButton).toBeTruthy();
+      expect(registerButton.props.accessibilityRole).toBe('button');
+    });
   });
 
-  it('register mode: GDPR checkbox has accessibilityRole=checkbox', () => {
+  it('register mode: GDPR checkbox has accessibilityRole=checkbox', async () => {
     render(<AuthScreen />);
     fireEvent.press(screen.getByLabelText('a11y.auth.toggle_register'));
 
-    const gdprCheckbox = screen.getByLabelText('a11y.auth.gdpr_checkbox');
-    expect(gdprCheckbox.props.accessibilityRole).toBe('checkbox');
+    await waitFor(() => {
+      const gdprCheckbox = screen.getByLabelText('a11y.auth.gdpr_checkbox');
+      expect(gdprCheckbox.props.accessibilityRole).toBe('checkbox');
+    });
   });
 
   it('Google sign-in button has accessibilityRole=button and label', () => {

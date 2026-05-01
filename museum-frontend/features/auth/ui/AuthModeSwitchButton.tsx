@@ -1,9 +1,6 @@
-import { Pressable, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { useTheme } from '@/shared/ui/ThemeContext';
-
-import { authStyles as styles } from './authStyles';
+import { LiquidButton } from '@/shared/ui/LiquidButton';
 
 interface AuthModeSwitchButtonProps {
   /** Whether the screen is currently in login mode (otherwise register). */
@@ -21,22 +18,15 @@ interface AuthModeSwitchButtonProps {
  */
 export function AuthModeSwitchButton({ isLogin, disabled, onPress }: AuthModeSwitchButtonProps) {
   const { t } = useTranslation();
-  const { theme } = useTheme();
 
   return (
-    <Pressable
-      style={[
-        styles.switchButton,
-        { borderColor: theme.cardBorder, backgroundColor: theme.cardBackground },
-      ]}
+    <LiquidButton
+      label={isLogin ? t('auth.no_account') : t('auth.has_account')}
       onPress={onPress}
       disabled={disabled}
-      accessibilityRole="button"
       accessibilityLabel={isLogin ? t('a11y.auth.toggle_register') : t('a11y.auth.toggle_login')}
-    >
-      <Text style={[styles.switchButtonText, { color: theme.textPrimary }]}>
-        {isLogin ? t('auth.no_account') : t('auth.has_account')}
-      </Text>
-    </Pressable>
+      variant="secondary"
+      size="md"
+    />
   );
 }

@@ -1,7 +1,8 @@
-import { ActivityIndicator, Pressable, Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { FormInput } from '@/shared/ui/FormInput';
+import { LiquidButton } from '@/shared/ui/LiquidButton';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
 import { authStyles as styles } from './authStyles';
@@ -71,27 +72,16 @@ export function LoginForm({
         </Text>
       </Pressable>
 
-      <Pressable
-        style={[
-          styles.submitButton,
-          { backgroundColor: theme.primary, shadowColor: theme.shadowColor },
-          disabled && styles.submitButtonDisabled,
-        ]}
+      <LiquidButton
+        label={t('auth.log_in')}
         onPress={onSubmit}
+        loading={isLoading}
         disabled={disabled}
-        testID="auth-submit"
-        accessibilityRole="button"
         accessibilityLabel={t('a11y.auth.login_button')}
-        accessibilityState={{ disabled }}
-      >
-        {disabled ? (
-          <ActivityIndicator color={theme.primaryContrast} />
-        ) : (
-          <Text style={[styles.submitButtonText, { color: theme.primaryContrast }]}>
-            {t('auth.log_in')}
-          </Text>
-        )}
-      </Pressable>
+        testID="auth-submit"
+        variant="primary"
+        size="md"
+      />
     </>
   );
 }

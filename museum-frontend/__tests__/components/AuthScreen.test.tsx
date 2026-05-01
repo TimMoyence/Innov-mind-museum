@@ -1,6 +1,6 @@
 import '../helpers/test-utils';
 import React from 'react';
-import { screen, fireEvent } from '@testing-library/react-native';
+import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithQueryClient as render } from '../helpers/data/renderWithQueryClient';
 
 // ── Screen-specific mocks ────────────────────────────────────────────────────
@@ -61,7 +61,7 @@ describe('AuthScreen', () => {
     expect(screen.getByText('auth.welcome_back')).toBeTruthy();
   });
 
-  it('toggles to register mode and shows firstname/lastname fields', () => {
+  it('toggles to register mode and shows firstname/lastname fields', async () => {
     render(<AuthScreen />);
 
     // Initially in login mode — no name fields
@@ -73,24 +73,28 @@ describe('AuthScreen', () => {
     fireEvent.press(toggleButton);
 
     // Now in register mode — name fields should be visible
-    expect(screen.getByLabelText('a11y.auth.firstname_input')).toBeTruthy();
-    expect(screen.getByLabelText('a11y.auth.lastname_input')).toBeTruthy();
-    expect(screen.getByText('auth.create_account')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByLabelText('a11y.auth.firstname_input')).toBeTruthy();
+      expect(screen.getByLabelText('a11y.auth.lastname_input')).toBeTruthy();
+      expect(screen.getByText('auth.create_account')).toBeTruthy();
+    });
   });
 
-  it('shows GDPR checkbox in register mode', () => {
+  it('shows GDPR checkbox in register mode', async () => {
     render(<AuthScreen />);
 
     // Toggle to register mode
     const toggleButton = screen.getByLabelText('a11y.auth.toggle_register');
     fireEvent.press(toggleButton);
 
-    const checkbox = screen.getByLabelText('a11y.auth.gdpr_checkbox');
-    expect(checkbox).toBeTruthy();
-    expect(checkbox.props.accessibilityRole).toBe('checkbox');
+    await waitFor(() => {
+      const checkbox = screen.getByLabelText('a11y.auth.gdpr_checkbox');
+      expect(checkbox).toBeTruthy();
+      expect(checkbox.props.accessibilityRole).toBe('checkbox');
+    });
   });
 
-  it('shows correct submit button text for login vs register mode', () => {
+  it('shows correct submit button text for login vs register mode', async () => {
     render(<AuthScreen />);
 
     // Login mode — shows login text
@@ -101,11 +105,13 @@ describe('AuthScreen', () => {
     fireEvent.press(toggleButton);
 
     // Register mode — shows sign up text
-    expect(screen.getByText('auth.sign_up')).toBeTruthy();
-    expect(screen.queryByText('auth.log_in')).toBeNull();
+    await waitFor(() => {
+      expect(screen.getByText('auth.sign_up')).toBeTruthy();
+      expect(screen.queryByText('auth.log_in')).toBeNull();
+    });
   });
 
-  it('shows forgot password link only in login mode', () => {
+  it('shows forgot password link only in login mode', async () => {
     render(<AuthScreen />);
 
     // Login mode — forgot password visible
@@ -114,6 +120,11 @@ describe('AuthScreen', () => {
     // Toggle to register
     const toggleButton = screen.getByLabelText('a11y.auth.toggle_register');
     fireEvent.press(toggleButton);
+
+    // Wait for register mode indicator to confirm toggle happened
+    await waitFor(() => {
+      expect(screen.getByLabelText('a11y.auth.firstname_input')).toBeTruthy();
+    });
 
     // Register mode — forgot password hidden
     expect(screen.queryByText('auth.forgot_password')).toBeNull();

@@ -1,10 +1,8 @@
-import { ActivityIndicator, Pressable, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { FormInput } from '@/shared/ui/FormInput';
-import { useTheme } from '@/shared/ui/ThemeContext';
+import { LiquidButton } from '@/shared/ui/LiquidButton';
 
-import { authStyles as styles } from './authStyles';
 import { GdprConsentCheckbox } from './GdprConsentCheckbox';
 
 interface RegisterFormProps {
@@ -50,7 +48,6 @@ export function RegisterForm({
   onOpenPrivacy,
 }: RegisterFormProps) {
   const { t } = useTranslation();
-  const { theme } = useTheme();
 
   const disabled = isLoading || isSocialLoading || !gdprAccepted;
 
@@ -98,27 +95,16 @@ export function RegisterForm({
         onOpenPrivacy={onOpenPrivacy}
       />
 
-      <Pressable
-        style={[
-          styles.submitButton,
-          { backgroundColor: theme.primary, shadowColor: theme.shadowColor },
-          disabled && styles.submitButtonDisabled,
-        ]}
+      <LiquidButton
+        label={t('auth.sign_up')}
         onPress={onSubmit}
+        loading={isLoading || isSocialLoading}
         disabled={disabled}
-        testID="auth-submit"
-        accessibilityRole="button"
         accessibilityLabel={t('a11y.auth.register_button')}
-        accessibilityState={{ disabled }}
-      >
-        {isLoading || isSocialLoading ? (
-          <ActivityIndicator color={theme.primaryContrast} />
-        ) : (
-          <Text style={[styles.submitButtonText, { color: theme.primaryContrast }]}>
-            {t('auth.sign_up')}
-          </Text>
-        )}
-      </Pressable>
+        testID="auth-submit"
+        variant="primary"
+        size="md"
+      />
     </>
   );
 }

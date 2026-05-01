@@ -1,9 +1,8 @@
-import { Pressable, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useTranslation } from 'react-i18next';
 
-import { useTheme } from '@/shared/ui/ThemeContext';
+import { LiquidButton } from '@/shared/ui/LiquidButton';
 
 import { authStyles as styles } from './authStyles';
 
@@ -32,7 +31,6 @@ export function SocialLoginButtons({
   onGooglePress,
 }: SocialLoginButtonsProps) {
   const { t } = useTranslation();
-  const { theme } = useTheme();
 
   return (
     <>
@@ -54,23 +52,16 @@ export function SocialLoginButtons({
         </View>
       ) : null}
 
-      <Pressable
-        style={[
-          styles.googleButton,
-          { borderColor: theme.cardBorder, backgroundColor: theme.assistantBubble },
-          // eslint-disable-next-line react-native/no-inline-styles -- dynamic opacity for GDPR gate: computed from login + consent state
-          gdprGated && { opacity: 0.5 },
-        ]}
+      <LiquidButton
+        label={t('auth.sign_in_google')}
         onPress={onGooglePress}
         disabled={disabled || gdprGated}
-        accessibilityRole="button"
+        iconName="logo-google"
+        iconPosition="leading"
         accessibilityLabel={t('a11y.auth.google_signin')}
-      >
-        <Ionicons name="logo-google" size={20} color={theme.textPrimary} />
-        <Text style={[styles.googleButtonText, { color: theme.textPrimary }]}>
-          {t('auth.sign_in_google')}
-        </Text>
-      </Pressable>
+        variant="secondary"
+        size="md"
+      />
     </>
   );
 }

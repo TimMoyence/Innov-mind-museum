@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { LiquidButton } from '@/shared/ui/LiquidButton';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { fontSize, lineHeightPx, radius, semantic, space } from '@/shared/ui/tokens';
 
@@ -137,35 +138,23 @@ export function BiometricSetupSheet({
             {descriptionText}
           </Text>
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryButton,
-              { backgroundColor: theme.primary },
-              pressed ? styles.pressed : null,
-              isActivating ? styles.disabled : null,
-            ]}
-            onPress={() => {
-              void handleActivate();
-            }}
+          <LiquidButton
+            label={activateText}
+            onPress={handleActivate}
+            loading={isActivating}
             disabled={isActivating}
-            accessibilityRole="button"
             accessibilityLabel={activateText}
-          >
-            <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
-              {activateText}
-            </Text>
-          </Pressable>
+            variant="primary"
+            size="md"
+          />
 
-          <Pressable
-            style={({ pressed }) => [styles.secondaryButton, pressed ? styles.pressed : null]}
+          <LiquidButton
+            label={laterText}
             onPress={onSkip}
-            accessibilityRole="button"
             accessibilityLabel={laterText}
-          >
-            <Text style={[styles.secondaryButtonText, { color: theme.textSecondary }]}>
-              {laterText}
-            </Text>
-          </Pressable>
+            variant="secondary"
+            size="md"
+          />
         </Animated.View>
       </Animated.View>
     </Modal>
@@ -204,31 +193,5 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     lineHeight: lineHeightPx['21'],
     textAlign: 'center',
-  },
-  primaryButton: {
-    width: '100%',
-    borderRadius: semantic.button.radius,
-    paddingVertical: semantic.button.paddingYCompact,
-    alignItems: 'center',
-    marginTop: space['2'],
-  },
-  primaryButtonText: {
-    fontSize: fontSize['base-'],
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    width: '100%',
-    paddingVertical: semantic.button.paddingY,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    fontSize: semantic.button.fontSize,
-    fontWeight: '600',
-  },
-  pressed: {
-    opacity: 0.85,
-  },
-  disabled: {
-    opacity: 0.6,
   },
 });
