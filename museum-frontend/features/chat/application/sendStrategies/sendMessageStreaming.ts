@@ -91,6 +91,7 @@ export const sendMessageStreaming = async (
                   createdAt: payload.createdAt,
                   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
                   metadata: (payload.metadata as ChatUiMessageMetadata) ?? null,
+                  suggestions: (payload.metadata.suggestions as string[] | undefined) ?? undefined,
                 }
               : m,
           ),
@@ -119,6 +120,7 @@ export const sendMessageStreaming = async (
                   createdAt: response.message.createdAt,
                   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
                   metadata: (response.metadata as ChatUiMessageMetadata) ?? null,
+                  suggestions: response.message.suggestions ?? undefined,
                   image: null,
                 }
               : m,

@@ -43,6 +43,11 @@ export interface ChatUiMessage {
   sendFailed?: boolean;
   /** When true the response was served from local cache (low-data mode). */
   cached?: boolean;
+  /**
+   * Walk-mode suggestion chips from the API response (Path A: co-located with
+   * the message they belong to, survives re-renders naturally).
+   */
+  suggestions?: string[];
 }
 
 /** Sorts messages by createdAt ascending (earliest first). */

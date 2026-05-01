@@ -53,6 +53,7 @@ export const sendMessageAudio = async (
       createdAt: response.message.createdAt,
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
       metadata: (response.metadata as ChatUiMessageMetadata) ?? null,
+      suggestions: response.message.suggestions ?? undefined,
       transcription:
         'transcription' in response && response.transcription
           ? { text: (response.transcription as { text: string }).text }

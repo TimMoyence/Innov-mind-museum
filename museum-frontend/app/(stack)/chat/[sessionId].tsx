@@ -31,6 +31,7 @@ import { chatApi } from '@/features/chat/infrastructure/chatApi';
 import { ChatMessageList } from '@/features/chat/ui/ChatMessageList';
 import { ChatInput } from '@/features/chat/ui/ChatInput';
 import { ChatHeader } from '@/features/chat/ui/ChatHeader';
+import { WalkSuggestionChips } from '@/features/chat/ui/WalkSuggestionChips';
 import { MediaAttachmentPanel } from '@/features/chat/ui/MediaAttachmentPanel';
 import { MessageContextMenu } from '@/features/chat/ui/MessageContextMenu';
 import { OfflineBanner } from '@/features/chat/ui/OfflineBanner';
@@ -60,6 +61,8 @@ export default function ChatSessionScreen() {
     if (params.intent === 'camera' || params.intent === 'audio') return params.intent;
     return null;
   }, [params.intent]);
+  // Walk mode drives UX changes (header label + suggestion chips) without camera/audio auto-actions.
+  const isWalkMode = params.intent === 'walk';
   const initialPrompt = useMemo(
     () => (params.initialPrompt ? params.initialPrompt : null),
     [params.initialPrompt],
@@ -130,6 +133,11 @@ export default function ChatSessionScreen() {
     return null;
   }, [messages]);
   const expertiseLevel = lastAssistantMessage?.metadata?.expertiseSignal;
+
+  const lastWalkSuggestions = useMemo(() => {
+    if (!isWalkMode) return [];
+    return lastAssistantMessage?.suggestions ?? [];
+  }, [isWalkMode, lastAssistantMessage]);
 
   const visitSummary = useMemo(
     () => buildVisitSummary(messages, sessionTitle),
@@ -336,6 +344,16 @@ export default function ChatSessionScreen() {
             }}
           />
 
+          {isWalkMode ? (
+            <Text
+              testID="walk-mode-banner"
+              style={[styles.walkBanner, { color: theme.primary }]}
+              accessibilityRole="header"
+            >
+              {t('chat.walk.headerLabel')}
+            </Text>
+          ) : null}
+
           <OfflineBanner pendingCount={pendingCount} isOffline={isOffline} />
           {error ? <ErrorNotice message={error} onDismiss={clearError} /> : null}
 
@@ -374,6 +392,13 @@ export default function ChatSessionScreen() {
             onPickImage={() => void onPickImage()}
             onTakePicture={() => void onTakePicture()}
             toggleRecording={toggleRecording}
+          />
+
+          <WalkSuggestionChips
+            suggestions={lastWalkSuggestions}
+            onSelect={(chipText) => {
+              void sendMessage({ text: chipText });
+            }}
           />
 
           <ChatInput
@@ -445,4 +470,10 @@ const styles = StyleSheet.create({
     paddingVertical: semantic.form.gap,
   },
   skeletonChat: { flex: 1, justifyContent: 'flex-start', paddingTop: semantic.card.paddingCompact },
+  walkBanner: {
+    textAlign: 'center',
+    fontWeight: '600',
+    fontSize: semantic.card.captionSize,
+    marginBottom: semantic.form.gap,
+  },
 });
