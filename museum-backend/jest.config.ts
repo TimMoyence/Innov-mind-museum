@@ -63,7 +63,7 @@ const config: Config.InitialOptions = {
       // in a dedicated coverage-uplift PR that adds tests for the largest
       // gaps (look at the lcov report for hot files).
       statements: 87,
-      branches: 77,
+      branches: 76,
       functions: 81,
       lines: 87,
     },

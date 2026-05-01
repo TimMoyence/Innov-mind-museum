@@ -7,6 +7,8 @@ jest.mock('@src/config/env', () => ({
     auth: {
       appleClientId: 'com.example.app',
       googleClientIds: ['google-client-id-1', 'google-client-id-2'],
+      appleJwksUrl: 'https://appleid.apple.com/auth/keys',
+      googleJwksUrl: 'https://www.googleapis.com/oauth2/v3/certs',
     },
   },
 }));
