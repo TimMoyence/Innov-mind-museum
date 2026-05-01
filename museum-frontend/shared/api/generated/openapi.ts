@@ -3333,6 +3333,11 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
+      /**
+       * @description Session-level intent — drives prompt strategy and walk-mode UX.
+       * @enum {string}
+       */
+      intent: 'default' | 'walk';
     };
     ChatMessageImage: {
       /** Format: uri */
@@ -3381,6 +3386,8 @@ export interface components {
         text: string;
         /** Format: date-time */
         createdAt: string;
+        /** @description Optional suggestion chips returned only for chat sessions with intent='walk'. */
+        suggestions?: string[];
       };
       metadata: {
         detectedArtwork?: {
@@ -3462,6 +3469,11 @@ export interface components {
         createdAt: string;
         /** Format: date-time */
         updatedAt: string;
+        /**
+         * @description Session-level intent — drives prompt strategy and walk-mode UX.
+         * @enum {string}
+         */
+        intent: 'default' | 'walk';
         messageCount: number;
         preview?: {
           text?: string;

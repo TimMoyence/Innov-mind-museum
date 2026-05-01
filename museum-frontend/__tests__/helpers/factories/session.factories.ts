@@ -19,6 +19,7 @@ const makeSessionDTO = (overrides?: Partial<SessionDTO>): SessionDTO => ({
   museumName: faker.company.name(),
   createdAt: faker.date.recent().toISOString(),
   updatedAt: faker.date.recent().toISOString(),
+  intent: 'default',
   ...overrides,
 });
 
@@ -65,6 +66,7 @@ export const makeListSessionsResponse = (
     museumName: faker.company.name(),
     createdAt: now,
     updatedAt: now,
+    intent: 'default',
     messageCount: faker.number.int({ min: 1, max: 20 }),
     preview: {
       text: faker.lorem.sentence(),

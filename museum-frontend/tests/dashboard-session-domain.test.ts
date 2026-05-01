@@ -15,6 +15,7 @@ const makeSessionItem = (overrides: Partial<SessionListItemDTO> = {}): SessionLi
   museumName: null,
   createdAt: '2026-03-15T10:00:00.000Z',
   updatedAt: '2026-03-15T10:30:00.000Z',
+  intent: 'default',
   messageCount: 5,
   preview: {
     text: 'Last message text',

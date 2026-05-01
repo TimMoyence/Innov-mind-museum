@@ -83,6 +83,7 @@ describe('useSessionLoader', () => {
         museumName: 'Orsay',
         createdAt: '2025-01-01T00:00:00Z',
         updatedAt: '2025-01-01T00:00:00Z',
+        intent: 'default',
       },
     });
     mockGetSession.mockResolvedValue(response);
@@ -148,6 +149,7 @@ describe('useSessionLoader', () => {
         museumName: 'Louvre',
         createdAt: '2025-01-01T00:00:00Z',
         updatedAt: '2025-01-01T00:00:00Z',
+        intent: 'default',
       },
     });
     mockGetSession.mockResolvedValue(response);
@@ -221,6 +223,7 @@ describe('useSessionLoader', () => {
         museumName: null,
         createdAt: '2025-01-01T00:00:00Z',
         updatedAt: '2025-01-01T00:00:00Z',
+        intent: 'default',
       },
     });
     const response2 = makeGetSessionResponse({
@@ -232,6 +235,7 @@ describe('useSessionLoader', () => {
         museumName: 'Met',
         createdAt: '2025-01-01T00:00:00Z',
         updatedAt: '2025-01-01T00:00:00Z',
+        intent: 'default',
       },
     });
     mockGetSession.mockResolvedValueOnce(response1).mockResolvedValueOnce(response2);
@@ -261,6 +265,7 @@ describe('useSessionLoader', () => {
         museumName: null,
         createdAt: '2025-01-01T00:00:00Z',
         updatedAt: '2025-01-01T00:00:00Z',
+        intent: 'default',
       },
     });
     mockGetSession.mockResolvedValue(response);

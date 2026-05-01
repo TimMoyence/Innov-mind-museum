@@ -119,10 +119,9 @@ describe('HomeScreen', () => {
     render(<HomeScreen />);
     fireEvent.press(screen.getByLabelText('a11y.home.start_conversation'));
     await waitFor(() => {
-      expect(mockCreateSession).toHaveBeenCalledWith({
-        locale: 'en-US',
-        museumMode: false,
-      });
+      expect(mockCreateSession).toHaveBeenCalledWith(
+        expect.objectContaining({ locale: 'en-US', museumMode: false }),
+      );
     });
   });
 
@@ -161,10 +160,14 @@ describe('HomeScreen', () => {
     expect(router.push).toHaveBeenCalledWith('/(stack)/chat/sess-cam?intent=camera');
   });
 
-  it('navigates to walk composer without creating a session when walk chip is pressed', () => {
+  it('creates a walk session and navigates with ?intent=walk when walk chip is pressed', async () => {
+    mockCreateSession.mockResolvedValue({ session: { id: 'sess-walk' } });
     render(<HomeScreen />);
     fireEvent.press(screen.getByTestId('home-intent-chip-walk'));
-    expect(mockCreateSession).not.toHaveBeenCalled();
-    expect(router.push).toHaveBeenCalledWith('/(stack)/walk-composer');
+    await waitFor(() => {
+      expect(mockCreateSession).toHaveBeenCalledTimes(1);
+    });
+    expect(mockCreateSession).toHaveBeenCalledWith(expect.objectContaining({ intent: 'walk' }));
+    expect(router.push).toHaveBeenCalledWith('/(stack)/chat/sess-walk?intent=walk');
   });
 });

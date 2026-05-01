@@ -9,8 +9,6 @@ import type { CreateSessionRequestDTO } from '../domain/contracts';
 
 type ConversationIntent = 'default' | 'camera' | 'audio' | 'walk';
 
-const WALK_COMPOSER_ROUTE = '/(stack)/walk-composer' as const;
-
 interface StartConversationOptions {
   intent?: ConversationIntent;
   museumMode?: boolean;
@@ -41,12 +39,6 @@ export const useStartConversation = (): UseStartConversationReturn => {
 
     const intent = options?.intent ?? 'default';
 
-    // Walk intent is a pure navigation — no chat session created.
-    if (intent === 'walk') {
-      router.push(WALK_COMPOSER_ROUTE);
-      return;
-    }
-
     guardRef.current = true;
     setIsCreating(true);
     setError(null);
@@ -66,6 +58,11 @@ export const useStartConversation = (): UseStartConversationReturn => {
         payload.museumMode = options?.museumMode ?? defaultMuseumMode;
         payload.museumId = options?.museumId;
         payload.coordinates = options?.coordinates;
+      }
+
+      const dtoIntent = options?.intent;
+      if (dtoIntent === 'default' || dtoIntent === 'walk') {
+        payload.intent = dtoIntent;
       }
 
       const response = await chatApi.createSession(payload);

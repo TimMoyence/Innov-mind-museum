@@ -38,10 +38,9 @@ describe('DiscoverScreen', () => {
     fireEvent.press(screen.getByLabelText('a11y.discover.photo_card'));
 
     await waitFor(() => {
-      expect(mockCreateSession).toHaveBeenCalledWith({
-        locale: 'en',
-        museumMode: true,
-      });
+      expect(mockCreateSession).toHaveBeenCalledWith(
+        expect.objectContaining({ locale: 'en', museumMode: true }),
+      );
     });
 
     expect(router.push).toHaveBeenCalledWith('/(stack)/chat/new-session?intent=camera');

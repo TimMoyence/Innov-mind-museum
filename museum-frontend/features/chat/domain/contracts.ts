@@ -9,6 +9,7 @@ export interface CreateSessionRequestDTO {
   museumName?: string;
   museumAddress?: string;
   coordinates?: { lat: number; lng: number };
+  intent?: 'default' | 'walk';
 }
 
 type Schemas = components['schemas'];
