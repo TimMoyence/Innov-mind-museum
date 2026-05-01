@@ -45,6 +45,8 @@
 !docs/CHAOS_RUNBOOKS.md
 !docs/observability/
 !docs/observability/**
+!docs/audits/
+!docs/audits/**
 
 # frontend docs
 !museum-frontend/docs/
