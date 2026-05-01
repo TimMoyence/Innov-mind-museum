@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import { badRequest } from '@shared/errors/app.error';
 import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
 import { validatePassword } from '@shared/validation/password';
+import { assertPasswordNotBreached } from '@shared/validation/password-breach-check';
 
 import type { IRefreshTokenRepository } from '../domain/refresh-token.repository.interface';
 import type { IUserRepository } from '../domain/user.repository.interface';
@@ -32,6 +33,8 @@ export class ResetPasswordUseCase {
     if (!pw.valid) {
       throw badRequest(pw.reason ?? 'Invalid password');
     }
+    // F10 — block breached passwords at reset; same fail-open semantics as registration.
+    await assertPasswordNotBreached(newPassword);
     const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     const user = await this.userRepository.consumeResetTokenAndUpdatePassword(

@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 
 import { AppError, badRequest } from '@shared/errors/app.error';
 import { validatePassword } from '@shared/validation/password';
+import { assertPasswordNotBreached } from '@shared/validation/password-breach-check';
 
 import type { IRefreshTokenRepository } from '../domain/refresh-token.repository.interface';
 import type { IUserRepository } from '../domain/user.repository.interface';
@@ -39,6 +40,10 @@ export class ChangePasswordUseCase {
     if (!pw.valid) {
       throw badRequest(pw.reason ?? 'Invalid password');
     }
+
+    // F10 — block breached new passwords at change. Banking-grade default;
+    // re-assess if support tickets pile up.
+    await assertPasswordNotBreached(newPassword);
 
     const isSame = await bcrypt.compare(newPassword, user.password);
     if (isSame) {

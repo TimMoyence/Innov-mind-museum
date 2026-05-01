@@ -6,6 +6,7 @@ import { logger } from '@shared/logger/logger';
 import { validateEmail } from '@shared/validation/email';
 import { validateNameField } from '@shared/validation/input';
 import { validatePassword } from '@shared/validation/password';
+import { assertPasswordNotBreached } from '@shared/validation/password-breach-check';
 
 import type { User } from '../domain/user.entity';
 import type { IUserRepository } from '../domain/user.repository.interface';
@@ -48,6 +49,11 @@ export class RegisterUseCase {
     if (!pw.valid) {
       throw badRequest(pw.reason ?? 'Invalid password');
     }
+
+    // F10 (2026-04-30) — block known-breached passwords at registration via HIBP
+    // k-anonymity. Throws AppError(PASSWORD_BREACHED, 400) on hit; fails open
+    // with a Sentry warning if HIBP itself is unavailable (no SLA).
+    await assertPasswordNotBreached(password);
 
     let sanitizedFirstname: string | undefined;
     let sanitizedLastname: string | undefined;

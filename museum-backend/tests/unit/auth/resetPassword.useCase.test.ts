@@ -11,6 +11,14 @@ jest.mock('bcrypt', () => ({
   hash: jest.fn(),
 }));
 
+// F10 (2026-04-30) — HIBP breach check is fail-open; mock to "not breached" so
+// unit tests don't depend on api.pwnedpasswords.com. Behaviour coverage lives
+// in `tests/unit/auth/password-breach-check.test.ts`.
+jest.mock('@shared/validation/password-breach-check', () => ({
+  assertPasswordNotBreached: jest.fn().mockResolvedValue(undefined),
+  checkPasswordBreach: jest.fn().mockResolvedValue({ breached: false, count: 0, failOpen: false }),
+}));
+
 const mockHash = bcrypt.hash as jest.MockedFunction<typeof bcrypt.hash>;
 
 describe('ResetPasswordUseCase', () => {
@@ -73,34 +81,28 @@ describe('ResetPasswordUseCase', () => {
     expect(repo.consumeResetTokenAndUpdatePassword).not.toHaveBeenCalled();
   });
 
-  it('throws 400 for password without uppercase letter', async () => {
+  // F10 (2026-04-30) — composition rules dropped per NIST 800-63B-4. Three
+  // previously-rejected passwords now succeed; HIBP mock returns not-breached.
+
+  it('accepts a password without uppercase (composition rule dropped)', async () => {
     const repo = makeUserRepo(makeUser());
     const useCase = new ResetPasswordUseCase(repo, makeRefreshTokenRepo());
 
-    await expect(useCase.execute('token', 'lowercase1')).rejects.toMatchObject({
-      statusCode: 400,
-      message: expect.stringContaining('uppercase'),
-    });
+    await expect(useCase.execute('token', 'lowercase1')).resolves.toBeDefined();
   });
 
-  it('throws 400 for password without lowercase letter', async () => {
+  it('accepts a password without lowercase (composition rule dropped)', async () => {
     const repo = makeUserRepo(makeUser());
     const useCase = new ResetPasswordUseCase(repo, makeRefreshTokenRepo());
 
-    await expect(useCase.execute('token', 'UPPERCASE1')).rejects.toMatchObject({
-      statusCode: 400,
-      message: expect.stringContaining('lowercase'),
-    });
+    await expect(useCase.execute('token', 'UPPERCASE1')).resolves.toBeDefined();
   });
 
-  it('throws 400 for password without digit', async () => {
+  it('accepts a password without a digit (composition rule dropped)', async () => {
     const repo = makeUserRepo(makeUser());
     const useCase = new ResetPasswordUseCase(repo, makeRefreshTokenRepo());
 
-    await expect(useCase.execute('token', 'NoDigitHere')).rejects.toMatchObject({
-      statusCode: 400,
-      message: expect.stringContaining('digit'),
-    });
+    await expect(useCase.execute('token', 'NoDigitHere')).resolves.toBeDefined();
   });
 
   it('throws 400 for password too long (> 128 chars)', async () => {
