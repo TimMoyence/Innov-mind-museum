@@ -45,7 +45,8 @@ jobs:
       JWT_ACCESS_SECRET: ci-access-secret-for-promptfoo-only
       JWT_REFRESH_SECRET: ci-refresh-secret-for-promptfoo-only
       MEDIA_SIGNING_SECRET: ci-media-secret-for-promptfoo-only
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_CI }}
+      # Reuse the existing OPENAI_API_KEY secret (same one ci-cd-backend.yml uses).
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       NODE_ENV: test
       PORT: '3000'
 

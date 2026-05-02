@@ -46,7 +46,7 @@ jobs:
     if: github.event_name == 'push'
     uses: ./.github/workflows/cosign-sign-image.yml
     with:
-      image: ghcr.io/${{ github.repository_owner }}/musaium-backend
+      image: ghcr.io/${{ github.repository_owner }}/museum-backend
       digest: ${{ needs.build.outputs.digest }}
     permissions:
       id-token: write
@@ -58,7 +58,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/cosign-verify-deploy.yml
     with:
-      image: ghcr.io/${{ github.repository_owner }}/musaium-backend
+      image: ghcr.io/${{ github.repository_owner }}/museum-backend
       digest: ${{ needs.build.outputs.digest }}
 
   deploy-prod:
@@ -77,12 +77,12 @@ Once a build runs through the signing job:
 brew install cosign
 
 # Verify signature
-cosign verify ghcr.io/<owner>/musaium-backend@sha256:<digest> \
+cosign verify ghcr.io/<owner>/museum-backend@sha256:<digest> \
   --certificate-identity-regexp 'https://github.com/<owner>/<repo>/.github/workflows/.*' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 
 # Verify SLSA provenance
-cosign verify-attestation --type slsaprovenance ghcr.io/<owner>/musaium-backend@sha256:<digest> \
+cosign verify-attestation --type slsaprovenance ghcr.io/<owner>/museum-backend@sha256:<digest> \
   --certificate-identity-regexp 'https://github.com/<owner>/<repo>/.github/workflows/.*' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```

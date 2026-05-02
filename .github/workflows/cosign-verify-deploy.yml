@@ -9,7 +9,7 @@ name: cosign verify before deploy (reusable)
 #     verify:
 #       uses: ./.github/workflows/cosign-verify-deploy.yml
 #       with:
-#         image: ghcr.io/${{ github.repository_owner }}/musaium-backend
+#         image: ghcr.io/${{ github.repository_owner }}/museum-backend
 #         digest: ${{ needs.build.outputs.digest }}
 #     deploy:
 #       needs: verify
