@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://musaium.app/team/state.schema.json",
+  "title": "Team v12 run state",
+  "description": "Durable state for a single /team run. Survives crash/restart. Optimistic lock via `version` (increment on every write, reject stale).",
+  "type": "object",
+  "required": ["runId", "version", "createdAt", "updatedAt", "mode", "pipeline", "currentStep", "status"],
+  "properties": {
+    "runId":      { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+$", "description": "YYYY-MM-DD-slug" },
+    "version":    { "type": "integer", "minimum": 1, "description": "Increment on every write. Concurrent writer rejects if version stale." },
+    "createdAt":  { "type": "string", "format": "date-time" },
+    "updatedAt":  { "type": "string", "format": "date-time" },
+    "mode":       { "enum": ["feature", "bug", "mockup", "refactor", "hotfix", "chore", "audit"] },
+    "pipeline":   { "enum": ["micro", "standard", "enterprise", "audit"] },
+    "currentStep":{ "type": "string", "description": "Phase name from the pipeline template" },
+    "status":     { "enum": ["initializing", "running", "blocked", "completed", "failed", "abandoned"] },
+    "startCommit":{ "type": "string", "pattern": "^[0-9a-f]{7,40}$", "description": "git rev-parse HEAD captured at run init. Used by post-edit hooks to scope the diff." },
+    "spec":       { "type": "string", "description": "Path to spec.md (Spec Kit, EARS-format)" },
+    "design":     { "type": "string", "description": "Path to design.md" },
+    "tasks":      { "type": "string", "description": "Path to tasks.md (atomic task list)" },
+    "story":      { "type": "string", "description": "Path to STORY.md (append-only journal)" },
+    "storyHashes": {
+      "type": "object",
+      "description": "Per-phase sha256 of STORY.md sections. Written by pre-complete-verify.sh; mismatch on a prior phase = history rewrite = FAIL.",
+      "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+    },
+    "agents": {
+      "type": "array",
+      "description": "Agents dispatched and their state",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "role", "model", "status"],
+        "properties": {
+          "name":   { "type": "string" },
+          "role":   { "enum": ["architect", "editor", "verifier", "security", "reviewer", "documenter"] },
+          "model":  { "enum": ["opus-4.7", "opus-4.6"] },
+          "status": { "enum": ["pending", "running", "completed", "failed"] },
+          "startedAt":  { "type": "string", "format": "date-time" },
+          "endedAt":    { "type": "string", "format": "date-time" },
+          "tokensIn":   { "type": "integer" },
+          "tokensOut":  { "type": "integer" }
+        }
+      }
+    },
+    "handoffs": {
+      "type": "array",
+      "description": "Brief messages between agents (≤200 tokens each, enforced by post-edit-lint.sh)",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to", "task"],
+        "properties": {
+          "from":         { "type": "string" },
+          "to":           { "type": "string" },
+          "task":         { "type": "string" },
+          "context_refs": { "type": "array", "items": { "type": "string" } },
+          "decisions":    { "type": "array", "items": { "type": "string" } },
+          "blockers":     { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "gates": {
+      "type": "array",
+      "description": "Quality-gate verdicts emitted during the run",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "verdict", "ts"],
+        "properties": {
+          "name":    { "enum": ["import-coherence", "quality-ratchet", "product", "lint", "typecheck", "tests", "security", "review"] },
+          "verdict": { "enum": ["PASS", "WARN", "FAIL"] },
+          "ts":      { "type": "string", "format": "date-time" },
+          "details": { "type": "string" }
+        }
+      }
+    },
+    "telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Aggregate metrics for this run (mirrors what Langfuse stores)",
+      "properties": {
+        "tokensTotalIn":  { "type": "integer" },
+        "tokensTotalOut": { "type": "integer" },
+        "elapsedMs":      { "type": "integer" },
+        "costUSD":        { "type": "number" },
+        "correctiveLoops":{ "type": "integer", "description": "Cap = 2 per V12 anti-patterns; escalate beyond." }
+      }
+    }
+  },
+  "additionalProperties": false
+}

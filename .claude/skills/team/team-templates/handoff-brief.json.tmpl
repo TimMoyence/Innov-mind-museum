@@ -1,0 +1,19 @@
+{
+  "_filename_convention": "NNN-<from>-to-<to>.json (NNN = zero-padded sequence, e.g. 001-architect-to-editor.json). Place in team-state/<RUN_ID>/handoffs/.",
+  "_constraint": "Total payload MUST stay <200 tokens (~800 chars). Trim ruthlessly — references over inline content. Enforced by team-hooks/post-edit-lint.sh (FAIL if oversized).",
+  "from": "architect",
+  "to": "editor",
+  "task": "Implement F4 backend (auth refresh rate-limit) per design.md §4 + tasks.md T1.1..T1.4",
+  "context_refs": [
+    "team-state/{{RUN_ID}}/spec.md",
+    "team-state/{{RUN_ID}}/design.md",
+    "team-state/{{RUN_ID}}/tasks.md",
+    "museum-backend/src/modules/auth/secondary/refresh-token.repository.pg.ts",
+    "docs/adr/ADR-013.md"
+  ],
+  "decisions": [
+    "Use repository port — do not access TypeORM DataSource from use-case directly",
+    "Fail-closed on Redis down (per CLAUDE.md chaos contract)"
+  ],
+  "blockers": []
+}

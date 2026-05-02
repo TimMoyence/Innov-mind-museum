@@ -1,0 +1,85 @@
+# Spec — {{TASK_TITLE}}
+
+> **Run:** {{RUN_ID}} · **Mode:** {{MODE}} · **Pipeline:** {{PIPELINE}}
+> **Author:** architect (opus-4.7) · **Created:** {{ISO_TS}}
+
+EARS-format requirements. Source of truth for this run. Editor + verifier read this before touching code.
+
+---
+
+## 1. Problem statement
+
+<!-- One paragraph. Why does this need to exist? What user pain or system gap does it solve? -->
+
+## 2. Scope
+
+**In scope:**
+- ...
+
+**Out of scope:**
+- ...
+
+## 3. Requirements (EARS)
+
+> Use the five EARS clause patterns.
+> Ubiquitous: "The system shall …"
+> Event-driven: "When <trigger>, the system shall …"
+> State-driven: "While <state>, the system shall …"
+> Optional: "Where <feature>, the system shall …"
+> Unwanted: "If <condition>, then the system shall …"
+
+| ID | Type | Statement | Acceptance |
+|---|---|---|---|
+| R1 | event | When … | … verified by test/route/manual |
+| R2 | state | While … | … |
+| R3 | unwanted | If … | … |
+
+## 4. Constraints
+
+- KISS / DRY / hexagonal (CLAUDE.md).
+- All test data via shared factories (CLAUDE.md test discipline).
+- No `eslint-disable` without `Justification:` + `Approved-by:` (Phase 0 hard rule).
+- `as Entity` casts only in `tests/helpers/` (Phase 7).
+- All `/team` agents `model: opus-4.7` or `opus-4.6` (UFR-010 + V12 all-Opus).
+- Honesty rule (UFR-013): no fabrication, no fake verification, no masking failures. Verify via Read / Grep / Bash / WebFetch BEFORE asserting. "I don't know" is allowed.
+
+## 5. Non-functional requirements (NFR)
+
+<!-- NFRs don't fit EARS table. Quantify wherever possible. -->
+
+| Category | Target | Notes |
+|---|---|---|
+| Latency | p50 < … ms, p95 < … ms | Measured via Langfuse / k6 / Lighthouse |
+| Throughput | … req/s sustained | Source of truth: SLO doc if exists |
+| Error budget | < … % of requests | Aligns with `docs/SLO.md` |
+| Accessibility | WCAG 2.1 AA | Web admin: real `@axe-core/playwright`. Mobile: react-native a11y props mandatory. |
+| Security | … | Reference OWASP LLM Top-10 / API Top-10 IDs covered by this change |
+| Privacy / GDPR | … | PII flowing through this code path? Retention? Right-to-erasure path? |
+| i18n | FR + EN | Add new strings to both dictionaries; never hardcode |
+| Telemetry | Spans emitted | Which Langfuse spans / metrics this code creates |
+
+## 6. Glossary
+
+<!-- Domain terms used in this spec. Prevents drift across architect/editor/reviewer. -->
+
+| Term | Definition |
+|---|---|
+| Museum | … |
+| Visitor | … |
+| MuseumMode | … |
+| ChatSession | … |
+
+## 7. Stakeholders + personas
+
+| Stakeholder | Concern |
+|---|---|
+| End-user (visitor) | … |
+| Curator (admin) | … |
+| Operator (devops) | … |
+| Compliance | … |
+
+## 8. Open questions
+
+<!-- List anything that still needs the user. Block the run if BLOCK-class. -->
+
+- Q1: ...

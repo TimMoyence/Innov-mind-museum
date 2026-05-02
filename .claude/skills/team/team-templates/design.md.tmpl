@@ -1,0 +1,79 @@
+# Design — {{TASK_TITLE}}
+
+> **Run:** {{RUN_ID}} · **Author:** architect (opus-4.7) · **Created:** {{ISO_TS}}
+> **Companion to:** [spec.md](./spec.md)
+
+Architecture decisions for this run. Editor reads this and ONLY this for the "what to build" view.
+
+---
+
+## 1. Overview
+
+<!-- 3-5 sentence summary of the approach. -->
+
+## 2. Module touch list
+
+| Module | Files | Change type |
+|---|---|---|
+| `museum-backend/src/modules/X/` | port + adapter + route | add |
+| `museum-frontend/features/Y/` | hook + screen | modify |
+
+## 3. Hexagonal mapping (BE)
+
+- **Domain:** new entities, value objects, repository ports.
+- **Use cases:** new orchestration functions.
+- **Primary adapters:** HTTP routes / Express handlers.
+- **Secondary adapters:** PG repo / S3 / LangChain wrapper.
+
+## 4. Data model
+
+```ts
+// Entity sketches, not full TypeORM definitions
+interface X { id: string; ... }
+```
+
+Migrations needed: { yes / no }. If yes, generate via `node scripts/migration-cli.cjs generate --name=...`.
+
+## 5. API contract changes
+
+OpenAPI spec impact: { none / additive / breaking }.
+If non-none → update `museum-backend/src/helpers/swagger.ts` and run `pnpm openapi:validate` + FE `npm run generate:openapi-types`.
+
+## 6. Test plan
+
+- Unit: …
+- Integration (testcontainers): …
+- E2E: …
+- Mutation (if banking-grade hot file): …
+- Maestro flow (if mobile UX surface changes): list new flow files + add to `museum-frontend/.maestro/shards.json`.
+- Playwright (if web admin UX surface changes): list new spec files.
+
+## 7. Security review
+
+- Touches LLM pipeline? → guardrail audit required.
+- Touches auth? → security-analyst gate required.
+- Touches user-controlled data flowing into prompts? → `sanitizePromptInput()` audit.
+
+## 8. Rollback path
+
+How does prod rollback work if this ships and breaks? Migration revert? Feature flag? Adapter swap?
+
+## 9. Decisions
+
+- D1: chose X over Y because Z.
+- D2: …
+
+## 10. Observability
+
+<!-- Required: every new code path either emits telemetry or has a justification why not. -->
+
+| Concern | Plan |
+|---|---|
+| Langfuse spans | Span name(s) emitted, attributes captured (PII-safe), where in the code |
+| Metrics | Counters / histograms added (latency, error count, business KPI) |
+| Logs | New structured log fields. NO PII. NO secrets. |
+| Alerts | New alert rules (Sentry / Grafana). Threshold + ownership. |
+| Dashboards | Existing dashboards updated, new dashboards added |
+| Trace context | sessionId / userId / requestId propagation through new modules |
+
+If this change introduces an LLM call: spans MUST tag `model`, `input_token_count`, `output_token_count`, `cost_usd_estimate`, and a hash (NOT raw text) of the prompt prefix.

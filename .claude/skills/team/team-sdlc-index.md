@@ -14,23 +14,22 @@
 
 Source : [`team-protocols/sdlc-pipelines.md`](team-protocols/sdlc-pipelines.md)
 
-## 9 Agents Spécialisés
+## 6 Agents V12 (consolidation 2026-05-02)
 
-| Agent | Mandat | Pipelines | Model | Tools |
-|---|---|---|---|---|
-| [api-contract-specialist](../../agents/api-contract-specialist.md) | OpenAPI + types + contract | standard, enterprise | opus | R/G/Gl/B/E/W |
-| [backend-architect](../../agents/backend-architect.md) | Hexagonal + TypeORM + Express + LangChain | standard, enterprise | opus | R/G/Gl/B/E/W |
-| [code-reviewer](../../agents/code-reviewer.md) | Conventions + hexagonal compliance + naming | tous | opus | R/G/Gl/B |
-| [devops-engineer](../../agents/devops-engineer.md) | Docker + GHA + EAS + migrations + deploy | standard, enterprise | opus | R/G/Gl/B/E/W |
-| [frontend-architect](../../agents/frontend-architect.md) | RN 0.83 + Expo 55 + Expo Router v7 | standard, enterprise | opus | R/G/Gl/B/E/W |
-| [process-auditor](../../agents/process-auditor.md) | Sentinelle CTO — verdicts PASS/WARN/FAIL | standard, enterprise | opus | R/G/Gl/B |
-| [qa-engineer](../../agents/qa-engineer.md) | Jest BE + jest-expo FE + contract + e2e | tous | opus | R/G/Gl/B/E/W |
-| [security-analyst](../../agents/security-analyst.md) | Auth + guardrails LLM + OWASP | enterprise | opus | R/G/Gl/B |
-| [seo-specialist](../../agents/seo-specialist.md) | Next.js SEO + CWV + structured data | standard (web) | opus | R/G/Gl/B/E/W |
+| Agent | Role | Mandat | Pipelines | Model | Write scope | Inherits from |
+|---|---|---|---|---|---|---|
+| [architect](../../agents/architect.md) | architect | Spec Kit (spec/design/tasks) — hexagonal + feature-driven + OpenAPI contract-first | standard, enterprise | opus-4.7 | `team-state/<RUN_ID>/*.md` only | backend-architect + frontend-architect + api-contract-specialist |
+| [editor](../../agents/editor.md) | editor | Implementation BE/FE/Web/CI/migrations/SEO. Triggers post-edit hooks. | tous | opus-4.6 | source code (no deploy/git push) | backend-architect + frontend-architect + api-contract-specialist + devops-engineer + seo-specialist (impl patterns) |
+| [verifier](../../agents/verifier.md) | verifier | Tests + DoD machine-verified + scope boundary + spot-check + anti-hallucination (Sentinelle DoD) | standard, enterprise | opus-4.6 | read-only on code; `state.json.gates[]` via hooks | qa-engineer + process-auditor (DoD slice) |
+| [security](../../agents/security.md) | security | Auth + LLM guardrails (OWASP LLM Top-10) + API Top-10 + SAST chain (semgrep, codeql, supply-chain) | enterprise | opus-4.6 | read-only | security-analyst |
+| [reviewer](../../agents/reviewer.md) | reviewer | Fresh-context semantic review (KISS / DRY / hexagonal compliance / spec↔impl parity / UFR alignment). Sentinelle review. | tous | opus-4.7 | read-only | code-reviewer + process-auditor (semantic slice) |
+| [documenter](../../agents/documenter.md) | documenter | ADR drafts, STORY.md finalize, CHANGELOG, doc updates triggered by code changes | enterprise (optional standard) | opus-4.6 | `docs/`, `README*.md`, `CHANGELOG.md`, `STORY.md` only | NEW (V12) |
 
-**Tools shortcuts** : R=Read, G=Grep, Gl=Glob, B=Bash, E=Edit, W=Write.
+**UFR-010 + V12 all-Opus** : architect/reviewer = `opus-4.7` ; editor/verifier/security/documenter = `opus-4.6`. Aucun Sonnet.
 
-**UFR-010** : Tous en `model: opus` (décision utilisateur, opérationnel > économie tokens).
+**allowedTools generosity rule** : chaque agent dispose de `Read`, `Grep`, `Glob`, `Bash`, `WebFetch`, `WebSearch`, `mcp__gitnexus__*`, `mcp__serena__*`, plus `mcp__repomix__*` quand pertinent. Write/Edit restreint au scope du role. Liste exhaustive dans le frontmatter de chaque agent.
+
+**Sentinelle (anciennement process-auditor)** : split entre `verifier` (DoD machine-verified, scope-boundary, spot-check, anti-hallucination) et `reviewer` (semantic review fresh-context). Aucun agent persistant ; les hooks deterministes (`team-hooks/`) couvrent ce que process-auditor faisait à chaque porte.
 
 ## 8 Protocoles SDLC
 

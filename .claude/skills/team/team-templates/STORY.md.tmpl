@@ -1,0 +1,55 @@
+# STORY — {{TASK_TITLE}}
+
+> **Run:** {{RUN_ID}} · **Started:** {{ISO_TS}}
+> **APPEND-ONLY.** Each agent appends a section when its phase completes. Never edit prior sections.
+
+---
+
+## brainstorm — architect (opus-4.7) — {{ISO_TS}}
+
+- input: ...
+- output: spec.md
+- decisions: ...
+- open questions handed to user: ...
+
+## plan — architect (opus-4.7) — {{ISO_TS}}
+
+- input: spec.md
+- output: design.md, tasks.md
+- module touch list: ...
+- risks identified: ...
+
+## implement — editor (opus-4.6) — {{ISO_TS}}
+
+- input: tasks.md (T1.1…T3.x)
+- changed files: ...
+- gates that passed inline (post-edit hooks): lint ✅, tsc ✅
+- gates deferred to verifier: tests, mutation
+- notes: ...
+
+## verify — verifier (opus-4.6) — {{ISO_TS}}
+
+- gates run: lint, tsc, tests, gitnexus_detect_changes
+- verdict: PASS / WARN / FAIL
+- failures: ...
+- corrective loops used: 0 / 1 / 2 (cap)
+
+## security — security (opus-4.6) — {{ISO_TS}}
+
+- scope: ...
+- findings: ...
+- promptfoo regression: PASS / FAIL
+- verdict: PASS / WARN / FAIL
+
+## review — reviewer (opus-4.7, fresh context) — {{ISO_TS}}
+
+- spec ↔ implementation alignment: ...
+- KISS / DRY / hexagonal compliance: ...
+- verdict: PASS / WARN / FAIL
+- comments: ...
+
+## finalize — dispatcher — {{ISO_TS}}
+
+- commit: ...
+- KB updates: velocity-metrics, agent-roi, error-patterns
+- telemetry summary (Langfuse): tokens=... cost=$... elapsed=...

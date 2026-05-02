@@ -1,0 +1,60 @@
+# Tasks — {{TASK_TITLE}}
+
+> **Run:** {{RUN_ID}} · **Author:** architect (opus-4.7) · **Created:** {{ISO_TS}}
+> **Companion to:** [design.md](./design.md)
+
+Atomic task list. Editor agent works through this top-down. Each task = one logical commit OR one PR section.
+
+Conventions:
+- `[T1.1]` etc. — ID. T1.x = phase 1 subtask.
+- "DONE-WHEN" line = the verification command or acceptance check.
+- One task = one file or tightly-scoped change. Split larger work.
+
+---
+
+## Phase 1 — { e.g. backend port + adapter }
+
+### [T1.1] Create domain entity X
+
+**File:** `museum-backend/src/modules/X/domain/X.entity.ts`
+**Why:** … (see design §3)
+**DONE-WHEN:** `pnpm tsc --noEmit` passes scoped to `modules/X/`
+
+### [T1.2] Add repository port
+
+**File:** `museum-backend/src/modules/X/domain/X.repository.ts`
+**DONE-WHEN:** type-checks, no implementation yet.
+
+### [T1.3] PG adapter implementation
+
+**File:** `museum-backend/src/modules/X/secondary/X.repository.pg.ts`
+**DONE-WHEN:** unit test in `tests/unit/X/X.repository.pg.test.ts` passes.
+
+## Phase 2 — { e.g. HTTP route }
+
+### [T2.1] Route + zod schema
+
+**File:** `museum-backend/src/modules/X/primary/http/X.route.ts`
+**DONE-WHEN:** route appears in OpenAPI spec, `pnpm test:contract:openapi` passes.
+
+## Phase 3 — { e.g. frontend hook }
+
+### [T3.1] API call hook
+
+**File:** `museum-frontend/features/X/api/useX.ts`
+**DONE-WHEN:** `npm run lint` passes, hook test added.
+
+---
+
+## Verification gate (run by verifier agent)
+
+> Use `;` (NOT `&&`) so a single failure does not hide later failures. Verifier collects ALL verdicts.
+
+- [ ] `cd museum-backend; pnpm lint; pnpm test`
+- [ ] `cd museum-frontend; npm run lint; npm test`
+- [ ] `cd museum-web; pnpm lint; pnpm test` (if web touched)
+- [ ] `gitnexus_detect_changes()` shows only expected scope
+- [ ] no new `eslint-disable` without justification (Phase 0 hard rule)
+- [ ] no inline test entities (factory shape-match passes — Phase 7)
+- [ ] handoff briefs ≤ 200 tokens (`team-hooks/post-edit-lint.sh` enforces)
+- [ ] STORY.md untouched on prior phases (`team-hooks/pre-complete-verify.sh` enforces via sha256 chain)

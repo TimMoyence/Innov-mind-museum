@@ -1,0 +1,5 @@
+# Per-run state directories (ephemeral). Versioned files: README.md, state.schema.json.
+20[0-9][0-9]-*/
+# state-mutation backups (CAS .tmp leftovers, ad-hoc *.bak)
+*.bak
+*.tmp
