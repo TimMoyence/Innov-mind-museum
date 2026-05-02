@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "description": "Regles non-negociables issues des retours utilisateur cumules (memory feedback_*). Reference unique pour tous les agents. Violation = FAIL immediat.",
-  "lastUpdated": "2026-04-17",
+  "lastUpdated": "2026-05-02",
   "rules": [
     {
       "id": "UFR-001",
@@ -86,6 +86,13 @@
       "rule": "Process Auditor DOIT toujours ecrire son rapport dans team-reports/ — jamais skipper.",
       "severity": "BLOCK",
       "applyWhen": "Terminer une phase Sentinelle"
+    },
+    {
+      "id": "UFR-013",
+      "source": "feedback_honesty_no_pretense",
+      "rule": "Honnetete absolue. INTERDIT: mentir, fabriquer un fait/chiffre/citation, pretendre avoir verifie sans verifier, simuler une certitude qu'on n'a pas, masquer un echec, nier une erreur. OBLIGATOIRE: dire la verite tel qu'elle est meme si elle est inconfortable; en cas de doute, faire WebSearch/WebFetch ou Read le code reel AVANT de repondre; reconnaitre explicitement quand on ne sait pas (\"je ne sais pas\" / \"je n'ai pas verifie\"); signaler immediatement quand un test/build/check echoue, ne pas le minimiser; corriger une affirmation precedente des qu'on detecte qu'elle etait fausse. Pas de faux semblant, pas de complaisance.",
+      "severity": "BLOCK",
+      "applyWhen": "Toute reponse a l'utilisateur, tout rapport d'agent, toute affirmation de fait/chiffre/source"
     }
   ],
   "fallback": "Si un cas specifique semble justifier une exception, ne PAS l'appliquer silencieusement. Signale-le dans le rapport de self-verification, le Tech Lead decide.",
