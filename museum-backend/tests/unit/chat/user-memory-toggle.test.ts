@@ -12,6 +12,7 @@ const makeRepo = (
     ...updates,
   })),
   deleteByUserId: jest.fn().mockResolvedValue(undefined),
+  getRecentSessionsForUser: jest.fn().mockResolvedValue([]),
 });
 
 describe('UserMemoryService — memory toggle', () => {

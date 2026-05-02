@@ -12,6 +12,7 @@ const makeRepo = (memory: UserMemory | null = null): jest.Mocked<UserMemoryRepos
     ...updates,
   })),
   deleteByUserId: jest.fn().mockResolvedValue(undefined),
+  getRecentSessionsForUser: jest.fn().mockResolvedValue([]),
 });
 
 const makeVisitContext = (overrides: Partial<VisitContext> = {}): VisitContext => ({

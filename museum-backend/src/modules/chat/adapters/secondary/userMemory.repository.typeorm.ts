@@ -1,6 +1,7 @@
 import { UserMemory } from '../../domain/userMemory.entity';
 
 import type {
+  RecentSessionAggregate,
   UserMemoryRepository,
   UserMemoryUpdates,
 } from '../../domain/userMemory.repository.interface';
@@ -68,6 +69,14 @@ export class TypeOrmUserMemoryRepository implements UserMemoryRepository {
   /** Deletes the user memory record for a given user. */
   async deleteByUserId(userId: number): Promise<void> {
     await this.repo.delete({ userId });
+  }
+
+  /**
+   * Spec C T1.4 placeholder — real SQL aggregate is implemented in the next task.
+   * Rejects so the missing implementation is loud at runtime; lint stays green.
+   */
+  getRecentSessionsForUser(_userId: number, _limit: number): Promise<RecentSessionAggregate[]> {
+    return Promise.reject(new Error('not implemented — Spec C T1.4'));
   }
 
   /** Converts a camelCase property name to snake_case column name. */
