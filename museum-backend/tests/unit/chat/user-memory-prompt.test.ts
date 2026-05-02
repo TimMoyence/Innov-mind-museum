@@ -15,6 +15,8 @@ const makeMemory = (overrides: Partial<UserMemory> = {}): UserMemory =>
     summary: null,
     sessionCount: 0,
     lastSessionId: null,
+    languagePreference: null,
+    sessionDurationP90Minutes: null,
     version: 1,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -141,5 +143,44 @@ describe('buildUserMemoryPromptBlock', () => {
     expect(block).toContain('A5');
     expect(block).not.toContain('A6');
     expect(block).not.toContain('A7');
+  });
+
+  it('renders languagePreference when set', () => {
+    const memory = makeMemory({
+      sessionCount: 2,
+      languagePreference: 'fr',
+    });
+    const block = buildUserMemoryPromptBlock(memory);
+    expect(block).toContain('User typically converses in: fr');
+  });
+
+  it('renders sessionDurationP90Minutes when set', () => {
+    const memory = makeMemory({
+      sessionCount: 2,
+      sessionDurationP90Minutes: 35,
+    });
+    const block = buildUserMemoryPromptBlock(memory);
+    expect(block).toContain('Typical session length: ~35 minutes');
+  });
+
+  it('omits both lines when null', () => {
+    const memory = makeMemory({
+      sessionCount: 2,
+      languagePreference: null,
+      sessionDurationP90Minutes: null,
+    });
+    const block = buildUserMemoryPromptBlock(memory);
+    expect(block).not.toContain('typically converses');
+    expect(block).not.toContain('Typical session length');
+  });
+
+  it('sanitizes injected content (zero-width strip) on languagePreference', () => {
+    const memory = makeMemory({
+      sessionCount: 2,
+      languagePreference: 'fr​',
+    });
+    const block = buildUserMemoryPromptBlock(memory);
+    expect(block).toContain('User typically converses in: fr');
+    expect(block).not.toContain('​');
   });
 });

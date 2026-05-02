@@ -58,6 +58,16 @@ export const buildUserMemoryPromptBlock = (memory: UserMemory | null | undefined
     lines.push(`Artworks discussed so far: ${String(memory.totalArtworksDiscussed)}.`);
   }
 
+  if (memory.languagePreference) {
+    const sanitized = sanitizePromptInput(memory.languagePreference, 16);
+    if (sanitized) lines.push(`User typically converses in: ${sanitized}.`);
+  }
+
+  if (memory.sessionDurationP90Minutes != null) {
+    const n = Math.max(1, Math.min(240, memory.sessionDurationP90Minutes));
+    lines.push(`Typical session length: ~${String(n)} minutes. Pace responses accordingly.`);
+  }
+
   if (memory.summary) {
     lines.push(sanitizePromptInput(memory.summary, 200));
   }
