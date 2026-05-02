@@ -7,19 +7,21 @@
 #   [DERIVATIVE] — color within ΔE<30 of an SSOT color (drift from design system)
 #   [NEW COLOR]  — color far from any SSOT color (intentional new palette?)
 
+# pipefail catches grep-in-pipe failures. NO -e/-u: many `|| true` paths rely on
+# falling through cleanly when grep matches nothing.
+set -o pipefail
+
 REPO_ROOT="/Users/Tim/Desktop/all/dev/Pro/InnovMind"
 TOKENS_FILE="$REPO_ROOT/design-system/tokens/colors.ts"
 
 [[ ! -f "$TOKENS_FILE" ]] && exit 0
+[[ ! -d "$REPO_ROOT/.git" ]] && exit 0
 
 # ── Extract SSOT hex colors ─────────────────────────────────────────────────
 SSOT_COLORS=$(grep -oE "'#[0-9A-Fa-f]{6}'" "$TOKENS_FILE" | tr -d "'" | tr '[:lower:]' '[:upper:]' | sort -u)
 [[ -z "$SSOT_COLORS" ]] && exit 0
 
 # ── RGB distance function (awk) ─────────────────────────────────────────────
-# Returns: "distance nearest_ssot_color" or "exact MATCH"
-# Threshold: 30 = catches subtle hue/lightness shifts while ignoring unrelated colors
-# (max euclidean RGB distance = ~441 for #000000 vs #FFFFFF)
 check_color() {
   local color="$1"
   echo "$SSOT_COLORS" | awk -v c="$color" '
@@ -55,7 +57,8 @@ check_color() {
 }
 
 # ── Get changed files ───────────────────────────────────────────────────────
-CHANGED_FILES=$(cd "$REPO_ROOT" && git diff --name-only HEAD 2>/dev/null; cd "$REPO_ROOT" && git diff --name-only --cached 2>/dev/null; cd "$REPO_ROOT" && git ls-files --others --exclude-standard 2>/dev/null)
+# Hard-fail cd: refuse to run git in arbitrary CWD.
+CHANGED_FILES=$( { cd "$REPO_ROOT" || exit 0; git diff --name-only HEAD 2>/dev/null; git diff --name-only --cached 2>/dev/null; git ls-files --others --exclude-standard 2>/dev/null; } )
 CHANGED_FILES=$(echo "$CHANGED_FILES" | sort -u | grep -E '\.(ts|tsx|css)$' | grep -E '^(museum-frontend|museum-web)/' | grep -v 'tokens\.generated' | grep -v 'node_modules')
 
 [[ -z "$CHANGED_FILES" ]] && exit 0
@@ -70,7 +73,7 @@ NEW_COLORS=""
 while IFS= read -r file; do
   [[ -z "$file" || ! -f "$REPO_ROOT/$file" ]] && continue
 
-  DIFF_OUTPUT=$(cd "$REPO_ROOT" && git diff HEAD -- "$file" 2>/dev/null | grep '^+' | grep -v '^+++')
+  DIFF_OUTPUT=$( { cd "$REPO_ROOT" || exit 0; git diff HEAD -- "$file" 2>/dev/null; } | grep '^+' | grep -v '^+++')
   if [[ -z "$DIFF_OUTPUT" ]]; then
     DIFF_OUTPUT=$(cat "$REPO_ROOT/$file" 2>/dev/null)
   fi
@@ -79,7 +82,6 @@ while IFS= read -r file; do
 
   while IFS= read -r color; do
     [[ -z "$color" ]] && continue
-    # Skip universal base colors
     echo "$SKIP_COLORS" | grep -qw "$color" && continue
 
     result=$(check_color "$color")
@@ -89,15 +91,15 @@ while IFS= read -r file; do
 
     case "$kind" in
       exact)
-        line_info=$(cd "$REPO_ROOT" && grep -n -i "${color}" "$file" | head -1 | cut -c1-120)
-        HARDCODED="${HARDCODED}\n  ${file}:${line_info} → use token import"
+        line_info=$( { cd "$REPO_ROOT" || exit 0; grep -n -i "${color}" "$file"; } | head -1 | cut -c1-120)
+        HARDCODED="${HARDCODED}\n  ${file}:${line_info} -> use token import"
         ;;
       derivative)
-        line_info=$(cd "$REPO_ROOT" && grep -n -i "${color}" "$file" | head -1 | cut -c1-120)
-        DERIVATIVES="${DERIVATIVES}\n  ${file}:${line_info} → drift from ${nearest} (Δ=${dist})"
+        line_info=$( { cd "$REPO_ROOT" || exit 0; grep -n -i "${color}" "$file"; } | head -1 | cut -c1-120)
+        DERIVATIVES="${DERIVATIVES}\n  ${file}:${line_info} -> drift from ${nearest} (delta=${dist})"
         ;;
       new)
-        NEW_COLORS="${NEW_COLORS}\n  ${file}: ${color} (nearest SSOT: ${nearest}, Δ=${dist})"
+        NEW_COLORS="${NEW_COLORS}\n  ${file}: ${color} (nearest SSOT: ${nearest}, delta=${dist})"
         ;;
     esac
   done <<< "$ADDED_COLORS"

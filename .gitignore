@@ -178,5 +178,8 @@ xcshareddata/swiftpm/configuration/
 # Claude Code session lock (ephemeral, per-PID)
 .claude/scheduled_tasks.lock
 
+# Quality hooks ephemeral cache (bg-runner output + alerts log)
+.claude/.cache/
+
 # Perf seed checkpoint (local state, not for VCS)
 museum-backend/.perf-seed-checkpoint.json

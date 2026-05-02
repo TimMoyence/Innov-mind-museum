@@ -14,6 +14,27 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/Tim/Desktop/all/dev/Pro/InnovMind/.claude/hooks/stop-quality-summary.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "/Users/Tim/Desktop/all/dev/Pro/InnovMind/.claude/hooks/ratchet-check.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "/Users/Tim/Desktop/all/dev/Pro/InnovMind/.claude/hooks/ssot-sentinel.sh",
+            "timeout": 15
+          }
+        ]
+      }
     ]
   }
 }
