@@ -25,6 +25,12 @@ const MAX_PERIODS = 10;
  */
 const RECENT_SESSIONS_LIMIT = 20;
 
+/** Minimum non-null session count required to compute a p90 duration. */
+const MIN_SESSIONS_FOR_P90 = 5;
+
+/** Hard cap (in minutes) applied to the chosen p90 — not to individual durations. */
+const MAX_DURATION_MINUTES = 240;
+
 const CACHE_TTL_SECONDS = 3600; // 1 hour
 const CACHE_PREFIX = 'memory:prompt:';
 
@@ -184,6 +190,7 @@ export class UserMemoryService {
     // they aggregate over `recentSessions` so they must run even when the
     // caller passes `null` (e.g. session ended without a captured context).
     this.mergeLanguagePreference(updates, recentSessions, existing);
+    this.mergeSessionDurationP90(updates, recentSessions, existing);
 
     try {
       await this.repository.upsert(userId, updates);
@@ -295,6 +302,46 @@ export class UserMemoryService {
 
     if (existing?.languagePreference === mode) return;
     updates.languagePreference = mode;
+  }
+
+  /**
+   * Sets `updates.sessionDurationP90Minutes` to the 90th-percentile duration
+   * (in minutes) across the user's last {@link RECENT_SESSIONS_LIMIT} sessions.
+   *
+   * - Sessions without a `lastMessageAt` are skipped (a session with zero
+   *   messages has no observable duration).
+   * - Per-session durations are clamped to a minimum of 1 minute so that
+   *   degenerate clock-skew rows (`lastMessageAt < createdAt`) or sub-minute
+   *   sessions still contribute one signal rather than zero/negative noise.
+   * - The {@link MAX_DURATION_MINUTES} cap is applied to the chosen p90 value
+   *   AFTER index selection — capping individual durations before sort would
+   *   lose information when many sessions exceed the cap.
+   * - Index formula: `ceil(0.9 * n) - 1` (nearest-rank). For n=10 → idx 8;
+   *   for n=5 → idx 4 (the max).
+   * - No-ops (leaves `updates.sessionDurationP90Minutes` undefined) when:
+   *   fewer than {@link MIN_SESSIONS_FOR_P90} usable sessions, or the
+   *   computed p90 equals the currently-persisted value.
+   */
+  private mergeSessionDurationP90(
+    updates: UserMemoryUpdates,
+    recentSessions: RecentSessionAggregate[],
+    existing: UserMemory | null,
+  ): void {
+    const durations: number[] = [];
+    for (const s of recentSessions) {
+      if (!s.lastMessageAt) continue;
+      const ms = s.lastMessageAt.getTime() - s.createdAt.getTime();
+      durations.push(Math.max(1, Math.round(ms / 60_000)));
+    }
+
+    if (durations.length < MIN_SESSIONS_FOR_P90) return;
+
+    durations.sort((a, b) => a - b);
+    const idx = Math.ceil(0.9 * durations.length) - 1;
+    const p90 = Math.min(MAX_DURATION_MINUTES, durations[idx]);
+
+    if (existing?.sessionDurationP90Minutes === p90) return;
+    updates.sessionDurationP90Minutes = p90;
   }
 
   /** Hard-deletes the user's memory (GDPR erasure) and invalidates cache. */
