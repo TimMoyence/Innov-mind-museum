@@ -5,6 +5,23 @@ import type { Config } from '@jest/types';
  * `testEnvironment`, and `testPathIgnorePatterns` are project-scoped in Jest
  * 29 and must be repeated on each entry of `projects`.
  */
+const sharedCoveragePathIgnorePatterns = [
+  '/node_modules/',
+  '/dist/',
+  '/tests/',
+  '\\.stryker-tmp/',
+  'src/index\\.ts$',
+  'src/instrumentation\\.ts$',
+  'src/data/db/run-migrations\\.ts$',
+  'src/data/db/migrations/',
+  'src/data/db/data-source\\.ts$',
+  'src/modules/chat/index\\.ts$',
+  'src/modules/auth/useCase/index\\.ts$',
+  'src/modules/support/useCase/index\\.ts$',
+  'src/shared/audit/index\\.ts$',
+  'src/shared/cache/noop-cache\\.service\\.ts$',
+];
+
 const sharedProjectOptions = {
   preset: 'ts-jest',
   testEnvironment: 'node' as const,
@@ -18,6 +35,7 @@ const sharedProjectOptions = {
     '^@shared/(.*)$': '<rootDir>/src/shared/$1',
     '^tests/(.*)$': '<rootDir>/tests/$1',
   },
+  coveragePathIgnorePatterns: sharedCoveragePathIgnorePatterns,
 };
 
 const baseTestPathIgnorePatterns = [
@@ -36,25 +54,12 @@ const config: Config.InitialOptions = {
   // background sockets (rate-limit sweep, museum-enrichment cache adapter).
   forceExit: true,
 
-  // Coverage settings are global in Jest 29 — they apply across all projects.
+  // Coverage reporters are global; coveragePathIgnorePatterns is project-scoped
+  // in Jest 29 with `projects`, so the patterns are wired into
+  // `sharedProjectOptions` above and re-applied per project.
   collectCoverage: true,
   coverageReporters: ['text-summary', 'lcov'],
-  coveragePathIgnorePatterns: [
-    '/node_modules/',
-    '/dist/',
-    '/tests/',
-    '\\.stryker-tmp/',
-    'src/index\\.ts$',
-    'src/instrumentation\\.ts$',
-    'src/data/db/run-migrations\\.ts$',
-    'src/data/db/migrations/',
-    'src/data/db/data-source\\.ts$',
-    'src/modules/chat/index\\.ts$',
-    'src/modules/auth/useCase/index\\.ts$',
-    'src/modules/support/useCase/index\\.ts$',
-    'src/shared/audit/index\\.ts$',
-    'src/shared/cache/noop-cache\\.service\\.ts$',
-  ],
+  coveragePathIgnorePatterns: sharedCoveragePathIgnorePatterns,
   coverageThreshold: {
     global: {
       // TODO(coverage-uplift): targets ratcheted slightly below pre-existing
