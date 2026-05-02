@@ -1,0 +1,16 @@
+# ast-grep — AST-aware codemod + lint engine.
+# V12 W7. Install: brew install ast-grep   |   npm i -g @ast-grep/cli
+# Run all rules:        ast-grep scan
+# Run specific rule:    ast-grep scan --rule tools/ast-grep-rules/<rule>.yml
+# JSON output for CI:   ast-grep scan --json
+#
+# Project layout:
+#   sgconfig.yml                       — this file (workspace root)
+#   tools/ast-grep-rules/*.yml         — rule definitions
+
+ruleDirs:
+  - tools/ast-grep-rules
+
+testConfigs:
+  - testDir: tools/ast-grep-rules/__tests__
+    snapshotDir: __snapshots__

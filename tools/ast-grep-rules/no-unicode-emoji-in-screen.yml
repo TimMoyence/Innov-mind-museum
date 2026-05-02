@@ -1,0 +1,39 @@
+# Forbid unicode emojis in mobile screens / web pages.
+# Musaium UX rule (memory: feedback_no_unicode_emoji): PNG (require) + Ionicons only.
+# Catches emojis embedded in JSX text or string literals in app/, features/<>/ui/, components/.
+
+id: no-unicode-emoji-in-screen
+language: tsx
+severity: warning
+message: |
+  Unicode emoji forbidden in screens / copy. Use a PNG asset via `require(...)`
+  or an Ionicon component. Rationale: cross-platform render inconsistency,
+  accessibility (screen readers verbalize differently per OS), and brand
+  consistency with the design system.
+
+note: |
+  Examples:
+    Bad : <Text>Welcome 👋</Text>
+    Good: <Image source={require('@/assets/wave.png')} />
+    Good: <Ionicons name="hand-left-outline" />
+
+# Match emoji unicode ranges in JSX text or string literals.
+# Regex covers: emoticons, symbols & pictographs, transport & map, flags,
+# misc symbols, dingbats, enclosed alphanumerics, and the ZWJ/VS-16 combiners.
+rule:
+  any:
+    - pattern: $TEXT
+      regex: '[\u{1F300}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F100}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{200D}\u{FE0F}]'
+
+files:
+  - 'museum-frontend/app/**/*.tsx'
+  - 'museum-frontend/features/**/ui/**/*.tsx'
+  - 'museum-frontend/components/**/*.tsx'
+  - 'museum-frontend/shared/ui/**/*.tsx'
+  - 'museum-web/src/app/**/*.tsx'
+  - 'museum-web/src/components/**/*.tsx'
+ignores:
+  - '**/*.test.tsx'
+  - '**/__tests__/**'
+  # Documentation strings inside RN screens for technical comments are OK.
+  - 'museum-frontend/app/_layout.tsx'

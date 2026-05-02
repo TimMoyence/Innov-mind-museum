@@ -1,0 +1,37 @@
+# Forbid raw `throw new Error(...)` in BE modules — use AppError factories.
+# CLAUDE.md § Backend Architect, agent-mandate.md regle 5.
+#
+# Allowlist: domain/ entity files (entity validation throws OK), test fixtures.
+
+id: no-raw-throw-error
+language: typescript
+severity: error
+message: |
+  Use AppError factories (badRequest, notFound, conflict, tooManyRequests) from
+  @shared/errors/app.error.ts instead of raw `throw new Error(...)`. Raw errors
+  bypass the centralized error middleware and produce 500s with stack traces.
+
+note: |
+  Examples:
+    Bad : throw new Error('user not found')
+    Good: throw notFound('user')
+
+  Justified exceptions (add per-line `// ast-grep-ignore: no-raw-throw-error`):
+    - Domain entity validation (early-construction guards in core/domain/)
+    - Test fixtures explicitly testing error paths
+
+rule:
+  pattern: throw new Error($MSG)
+  inside:
+    kind: program
+    has:
+      pattern: import $$ from '$$$'
+      stopBy: end
+files:
+  - 'museum-backend/src/**/*.ts'
+ignores:
+  - 'museum-backend/src/**/domain/**/*.entity.ts'
+  - 'museum-backend/src/**/domain/**/*.value-object.ts'
+  - 'museum-backend/src/data/db/migrations/**'
+  - 'museum-backend/src/**/*.test.ts'
+  - 'museum-backend/tests/**'

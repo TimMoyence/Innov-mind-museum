@@ -1,0 +1,39 @@
+# Forbid React `dangerouslySetInnerHTML` unless DOMPurify is imported in the file.
+# V12 §8 anti-pattern: rendering raw LLM markdown without sanitization.
+# Web-only: react-native does not have this prop.
+
+id: no-dangerously-set-inner-html-without-purify
+language: tsx
+severity: error
+message: |
+  `dangerouslySetInnerHTML` requires DOMPurify sanitization. Import DOMPurify
+  (`import DOMPurify from 'isomorphic-dompurify'`) and pass the value through
+  `DOMPurify.sanitize(...)` before assigning to `__html`.
+
+note: |
+  Examples:
+    Bad : <div dangerouslySetInnerHTML={{ __html: llmResponse }} />
+    Good: import DOMPurify from 'isomorphic-dompurify'
+          <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(llmResponse) }} />
+
+  Why: LLM responses can contain script tags or onload handlers. Raw injection
+  = stored XSS. V12 §8 OWASP LLM02 indirect injection vector.
+
+rule:
+  any:
+    - pattern: dangerouslySetInnerHTML={{ __html: $X }}
+    - pattern: dangerouslySetInnerHTML={{__html: $X}}
+  not:
+    inside:
+      kind: program
+      has:
+        any:
+          - pattern: import $_ from 'isomorphic-dompurify'
+          - pattern: import $_ from 'dompurify'
+          - pattern: import { $$$ } from 'isomorphic-dompurify'
+          - pattern: import { $$$ } from 'dompurify'
+        stopBy: end
+
+files:
+  - 'museum-web/src/**/*.tsx'
+  - 'museum-web/src/**/*.jsx'
