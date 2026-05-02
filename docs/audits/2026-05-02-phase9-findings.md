@@ -2,6 +2,16 @@
 
 _Generated 2026-05-02 by Phase 9 chat-repository-typeorm integration test._
 
+> **STATUS — Phase 10 closed both bugs.** Bug 2 fixed in Sprint 10.1
+> (commit `a7849fc8`, MessageFeedback findOne/delete switched to the
+> explicit `messageId` column). Bug 1 fixed in Sprint 10.2 (commit
+> `0999cd9d`, migration `1777721420875-ChatTimestamptz` converts five
+> chat timestamp columns to `TIMESTAMP WITH TIME ZONE`). All 6
+> `it.skip` markers flipped to `it()`; the integration suite is now
+> 41/41 under `RUN_INTEGRATION=true`, including the original Bug 1
+> repro under `TZ=Europe/Paris`. Sections below preserved as the
+> post-mortem reference.
+
 The Phase 9 Sprint 9.4 integration tests against a real Postgres testcontainer
 surfaced two latent bugs in the `TypeOrmChatRepository` adapter. Both are
 pinned via `it.skip` in

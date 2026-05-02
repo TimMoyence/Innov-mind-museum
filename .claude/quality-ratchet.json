@@ -1,14 +1,14 @@
 {
   "lastUpdated": "2026-05-02",
-  "testCount": 3782,
+  "testCount": 3801,
   "frontendTestCount": 1966,
   "frontendSuiteCount": 182,
   "typecheckErrors": 0,
   "asAnyCount": 0,
-  "coverageStatements": 90.27,
-  "coverageBranches": 79.31,
+  "coverageStatements": 90.28,
+  "coverageBranches": 79.33,
   "coverageFunctions": 85.8,
-  "coverageLines": 90.69,
+  "coverageLines": 90.71,
   "coverageStatementsFrontend": 91.92,
   "coverageBranchesFrontend": 78.39,
   "coverageFunctionsFrontend": 81.44,
@@ -16,7 +16,7 @@
   "lintErrors": 0,
   "lintWarningsBackend": 50,
   "lintWarningsFrontend": 22,
-  "_comment": "Phase 9 close 2026-05-02. BE thresholds 90/78/85/90 (was already at floor — Phase 8). FE thresholds lifted from 82/68/71/83 to 91/78/80/91, matching Phase 9 Sprint 9.3 actuals (91.92/78.39/81.44/92.14). +300 FE tests across 6 sprints (1666→1966): Sprint 9.1 easy wins (+84), 9.2 mid effort (+118), 9.3 high screens (+98). +32 BE tests (Sprint 9.4 testability: chat-repository-typeorm.integration +35 passing/6 deferred Phase 10, audio-storage.s3 unit +12). Sprint 9.5 HTTP-route flake root-cause investigation deferred Phase 10 (--testTimeout=30000 hack remains).",
+  "_comment": "Phase 10 close 2026-05-02. Both Phase 9 production bugs fixed: Sprint 10.1 (Bug 2 — MessageFeedback malformed SQL, switched to messageId column lookup); Sprint 10.2 (Bug 1 — TZ-sensitive cursor pagination, TIMESTAMPTZ migration 1777721420875-ChatTimestamptz for chat_sessions + chat_messages timestamp columns; verified under TZ=Europe/Paris). Sprint 10.3 — Redis testcontainer harness extension + bullmq scheduler integration test (+9 tests). Sprint 10.4 — investigated SWC-jest swap to drop --testTimeout=30000 hack; reverted (TypeORM circular @ManyToOne hoisting fails under SWC legacy-decorator emit; Phase 11 follow-up). All 6 it.skip Phase 9 markers in chat-repository-typeorm.integration.test.ts flipped to it() — 41/41 pass with RUN_INTEGRATION=true. BE testCount default 3801 (rises to 3851 with RUN_INTEGRATION). Coverage with RUN_INTEGRATION=true: 91.82/81.38/87.84/92.26.",
   "webTestCount": 222,
   "webSuiteCount": 23
 }

@@ -165,9 +165,9 @@ Phase 0 grandfather baseline shrunk to 0 in Phase 7. The cap test (`tools/eslint
 
 See `docs/superpowers/specs/2026-05-01-phase7-factory-migration-design.md`.
 
-### Coverage uplift gates (Phase 8 + Phase 9 close)
+### Coverage uplift gates (Phase 8 + Phase 9 + Phase 10 close)
 
-- BE thresholds: 90 / 78 / 85 / 90 (statements / branches / functions / lines), enforced in `museum-backend/jest.config.ts`. Default actuals 90.27 / 79.31 / 85.80 / 90.69 (rises to 91.41 / 81.04 / 87.45 / 91.84 with `RUN_INTEGRATION=true`).
+- BE thresholds: 90 / 78 / 85 / 90 (statements / branches / functions / lines), enforced in `museum-backend/jest.config.ts`. Default actuals 90.28 / 79.33 / 85.80 / 90.71 (rises to 91.82 / 81.38 / 87.84 / 92.26 with `RUN_INTEGRATION=true`).
 - FE thresholds: 91 / 78 / 80 / 91, enforced in `museum-frontend/jest.config.js`. Phase 9 Sprint 9.3 actuals 91.92 / 78.39 / 81.44 / 92.14 (over the original 90 / 80 / 80 / 90 long-term target on every metric except branches, where the 78 floor is intentional — see ADR-007).
 - Web Vitest: unchanged at 70 / 60 / 70 / 70 (Phase 8 Q5=a — Playwright + a11y + Lighthouse cover web; Vitest uplift deferred).
 - Pre-commit gate (`.claude/hooks/pre-commit-gate.sh`) runs `pnpm run test:coverage` (BE) + `npm run test:coverage` (FE) ONLY when staged files include source under `museum-backend/src/` or `museum-frontend/{src,features,shared,app}/`. Most commits skip (0s overhead).
@@ -175,9 +175,9 @@ See `docs/superpowers/specs/2026-05-01-phase7-factory-migration-design.md`.
 - CI hard-fail: `ci-cd-backend.yml` (`quality` job) runs `pnpm run test:coverage`; `ci-cd-mobile.yml` (`quality` job) runs `npm run test:coverage`. Threshold miss blocks the PR.
 - Branches threshold deliberately stays at 78 BE / 78 FE — Phase 0 challenger pushback + ADR-007. The Phase 4 Stryker mutation kill ratio (≥ 80% on hot files) is the banking-grade signal; aggressive branches uplift forces cosmetic test patterns.
 - Jest config note: `coveragePathIgnorePatterns` is project-scoped in Jest 29 with `projects:`, so the patterns are wired into `sharedProjectOptions` in `jest.config.ts` and re-applied per project. A top-level-only declaration is silently ignored (Phase 8 Group B fixed this).
-- BE `test:coverage` script pins `--testTimeout=30000` to absorb the slowdown coverage instrumentation introduces on supertest-driven HTTP route tests (preexisting "socket hang up" flakes). Phase 10 follow-up: investigate `swc-jest` swap to drop this hack.
-- Phase 9 deferred to Phase 10: (1) bullmq-enrichment-scheduler.adapter.ts integration test (needs Redis testcontainer harness extension); (2) 6 `it.skip` entries in `chat-repository-typeorm.integration.test.ts` mask **2 real production bugs** Phase 9 surfaced — TZ-sensitive cursor pagination + malformed `getMessageFeedback` SQL. Full repro + fix candidates in `docs/audits/2026-05-02-phase9-findings.md`. (3) HTTP-route flake root-cause; (4) Web Vitest uplift if real value vs Playwright.
-- Stats summary (2026-05-02): 3782 BE tests + 1966 FE tests = 5748 total; +47 BE / +300 FE delivered across Phase 9 Sprints 9.1-9.4 (≈350 new tests in one session via 7 parallel subagent runs).
+- BE `test:coverage` script pins `--testTimeout=30000` to absorb the slowdown coverage instrumentation introduces on supertest-driven HTTP route tests (preexisting "socket hang up" flakes). Phase 11 follow-up: ts-jest → swc-jest swap was attempted in Phase 10 Sprint 10.4 but reverted — SWC's legacy-decorator emit fails on TypeORM circular `@ManyToOne` references (`Cannot access 'X' before initialization`). Either ship the SWC `experimentalDecorators` plugin once stable, or refactor entities to non-circular reference style.
+- Phase 10 closed: (1) Bug 2 — `getMessageFeedback` malformed SQL FIXED (Sprint 10.1, switched relation-where to `messageId` column lookup); (2) Bug 1 — TZ-sensitive cursor pagination FIXED (Sprint 10.2, TIMESTAMPTZ migration `1777721420875-ChatTimestamptz` for chat_sessions + chat_messages timestamp columns; verified under `TZ=Europe/Paris`); (3) bullmq scheduler integration test LANDED (Sprint 10.3, new `tests/helpers/e2e/redis-testcontainer.ts` Redis 7 testcontainer + 9-test integration suite); (4) all 6 `it.skip` Phase 9 markers in `chat-repository-typeorm.integration.test.ts` flipped to `it()` — 41/41 pass under `RUN_INTEGRATION=true`. Findings recap in `docs/audits/2026-05-02-phase9-findings.md`.
+- Stats summary (2026-05-02): 3801 BE tests (default) → 3851 BE (+RUN_INTEGRATION) + 1966 FE = up to 5817 total; ≈350 new tests across Phases 9 + 10. Two latent production bugs caught and fixed by the Phase 9 integration suite.
 - See `docs/superpowers/specs/2026-05-01-phase8-coverage-uplift-design.md`.
 
 ## Architecture
@@ -506,7 +506,7 @@ Alternatives for future: Drizzle (S-tier 2026), Prisma 7, Kysely.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (18112 symbols, 30560 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (18565 symbols, 31252 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

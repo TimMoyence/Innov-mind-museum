@@ -25,6 +25,15 @@ const sharedCoveragePathIgnorePatterns = [
 const sharedProjectOptions = {
   preset: 'ts-jest',
   testEnvironment: 'node' as const,
+  // Phase 10 Sprint 10.4 investigated swapping ts-jest → @swc/jest for the
+  // supertest+coverage flake (the ~5× faster transform should have removed
+  // the timeout pressure that requires the `--testTimeout=30000` hack).
+  // SWC's legacy-decorator emit failed to hoist TypeORM circular @ManyToOne
+  // imports correctly — every entity-touching test failed with
+  // `ReferenceError: Cannot access 'ChatMessage' before initialization`.
+  // Reverted to ts-jest; the `--testTimeout=30000` hack stays in place.
+  // Phase 11 follow-up: revisit with `experimentalDecorators` SWC plugin
+  // OR migrate TypeORM entities to non-circular reference style.
   transform: {
     '^.+\\.tsx?$': 'ts-jest',
   },
