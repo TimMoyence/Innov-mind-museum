@@ -1,0 +1,88 @@
+name: openapi diff
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'museum-backend/openapi/openapi.json'
+      - '.github/workflows/ci-cd-openapi-diff.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ci-cd-openapi-diff-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  oasdiff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          path: head
+
+      - name: Checkout PR base
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+
+      - name: Install oasdiff
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/oasdiff/oasdiff/main/install.sh | sh
+          oasdiff --version
+
+      - name: Detect breaking changes
+        id: diff
+        run: |
+          set +e
+          oasdiff breaking \
+            base/museum-backend/openapi/openapi.json \
+            head/museum-backend/openapi/openapi.json \
+            --fail-on ERR \
+            --format text > breaking.txt 2>&1
+          DIFF_RC=$?
+          set -e
+          echo "rc=$DIFF_RC" >> "$GITHUB_OUTPUT"
+          {
+            echo 'report<<EOF'
+            cat breaking.txt
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Generate full changelog
+        if: always()
+        run: |
+          oasdiff changelog \
+            base/museum-backend/openapi/openapi.json \
+            head/museum-backend/openapi/openapi.json \
+            --format markdown > changelog.md || true
+
+      - name: Comment on PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const breaking = fs.readFileSync('breaking.txt', 'utf8').trim();
+            const changelog = fs.existsSync('changelog.md') ? fs.readFileSync('changelog.md', 'utf8') : '(no changelog)';
+            const status = '${{ steps.diff.outputs.rc }}' === '0'
+              ? '✅ No breaking changes detected'
+              : '❌ Breaking changes detected — see below';
+            const body = `## OpenAPI diff\n\n${status}\n\n<details><summary>Breaking changes report</summary>\n\n\`\`\`\n${breaking || '(none)'}\n\`\`\`\n\n</details>\n\n<details><summary>Full changelog</summary>\n\n${changelog}\n\n</details>`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+      - name: Fail PR on breaking
+        if: steps.diff.outputs.rc != '0'
+        run: |
+          echo "::error::OpenAPI breaking changes detected. Either roll back the change or add a versioning strategy (deprecation header, /api/v2 path)."
+          exit 1
