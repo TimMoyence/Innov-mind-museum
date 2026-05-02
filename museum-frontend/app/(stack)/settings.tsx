@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useBiometricAuth } from '@/features/auth/application/useBiometricAuth';
+import { useMe } from '@/features/auth/application/useMe';
 import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSettings';
 import { useSettingsActions } from '@/features/settings/application/useSettingsActions';
 import { SettingsThemeCard } from '@/features/settings/ui/SettingsThemeCard';
@@ -13,6 +14,7 @@ import { SettingsAccessibilityCard } from '@/features/settings/ui/SettingsAccess
 import { DataModeSettingsSection } from '@/features/settings/ui/DataModeSettingsSection';
 import { SettingsComplianceLinks } from '@/features/settings/ui/SettingsComplianceLinks';
 import { SettingsDangerZone } from '@/features/settings/ui/SettingsDangerZone';
+import { VoicePreferenceSection } from '@/features/settings/ui/VoicePreferenceSection';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { semantic, space, fontSize } from '@/shared/ui/tokens';
@@ -37,6 +39,7 @@ export default function SettingsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { locale, museumMode, guideLevel, isLoading: isLoadingPrefs } = useRuntimeSettings();
+  const { data: profile } = useMe();
   const { theme, mode, setMode } = useTheme();
   const {
     isAvailable: biometricAvailable,
@@ -207,6 +210,8 @@ export default function SettingsScreen() {
         <SettingsPrivacyCard />
 
         <SettingsAccessibilityCard />
+
+        <VoicePreferenceSection currentVoice={profile?.user.ttsVoice ?? null} />
 
         <DataModeSettingsSection />
 

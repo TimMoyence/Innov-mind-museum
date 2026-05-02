@@ -23,6 +23,15 @@ jest.mock('@/features/auth/application/useBiometricAuth', () => ({
   }),
 }));
 
+jest.mock('@/features/auth/application/useMe', () => ({
+  useMe: () => ({
+    data: { user: { ttsVoice: null } },
+    isPending: false,
+    isError: false,
+    error: null,
+  }),
+}));
+
 const mockOnLogout = jest.fn().mockResolvedValue(undefined);
 const mockOnDeleteAccount = jest.fn();
 const mockOnExportData = jest.fn().mockResolvedValue(undefined);
@@ -48,7 +57,12 @@ jest.mock('@/features/settings/ui/SettingsThemeCard', () => {
       capturedOnSetMode = props.onSetMode;
       return (
         <View testID="settings-theme-card">
-          <Pressable testID="theme-dark-button" onPress={() => { props.onSetMode('dark'); }}>
+          <Pressable
+            testID="theme-dark-button"
+            onPress={() => {
+              props.onSetMode('dark');
+            }}
+          >
             <Text>settings.theme_dark</Text>
           </Pressable>
         </View>
@@ -92,6 +106,15 @@ jest.mock('@/features/settings/ui/SettingsDangerZone', () => {
           <Text>settings.delete_account</Text>
         </Pressable>
       </View>
+    ),
+  };
+});
+
+jest.mock('@/features/settings/ui/VoicePreferenceSection', () => {
+  const { View } = require('react-native');
+  return {
+    VoicePreferenceSection: (_props: { currentVoice: string | null }) => (
+      <View testID="voice-preference-section" />
     ),
   };
 });
