@@ -198,6 +198,11 @@
       "low": "Ahorro activado",
       "normal": "Desactivado",
       "description": "La app detecta la calidad de tu conexión"
+    },
+    "voice": {
+      "sectionTitle": "Voz",
+      "description": "Elige la voz de Musaium para las respuestas habladas.",
+      "useDefault": "Predeterminado (Alloy)"
     }
   },
   "change_password": {

@@ -198,6 +198,11 @@
       "low": "التوفير مفعّل",
       "normal": "معطّل",
       "description": "يكشف التطبيق جودة اتصالك"
+    },
+    "voice": {
+      "sectionTitle": "الصوت",
+      "description": "اختر صوت Musaium للردود المنطوقة.",
+      "useDefault": "افتراضي (Alloy)"
     }
   },
   "change_password": {

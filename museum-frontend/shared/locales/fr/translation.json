@@ -198,6 +198,11 @@
       "low": "Économie activée",
       "normal": "Désactivée",
       "description": "L'app détecte la qualité de votre connexion"
+    },
+    "voice": {
+      "sectionTitle": "Voix",
+      "description": "Choisis la voix de Musaium pour les réponses parlées.",
+      "useDefault": "Par défaut (Alloy)"
     }
   },
   "change_password": {

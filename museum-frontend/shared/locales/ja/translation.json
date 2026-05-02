@@ -198,6 +198,11 @@
       "low": "節約有効",
       "normal": "無効",
       "description": "アプリが接続品質を検出します"
+    },
+    "voice": {
+      "sectionTitle": "音声",
+      "description": "Musaiumの音声応答の声を選択してください。",
+      "useDefault": "デフォルト (Alloy)"
     }
   },
   "change_password": {

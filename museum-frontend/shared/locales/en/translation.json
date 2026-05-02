@@ -198,6 +198,11 @@
       "low": "Saving enabled",
       "normal": "Disabled",
       "description": "The app detects your connection quality"
+    },
+    "voice": {
+      "sectionTitle": "Voice",
+      "description": "Choose Musaium's voice for spoken replies.",
+      "useDefault": "Default (Alloy)"
     }
   },
   "change_password": {

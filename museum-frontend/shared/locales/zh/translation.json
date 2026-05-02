@@ -198,6 +198,11 @@
       "low": "节省已启用",
       "normal": "已禁用",
       "description": "应用检测您的连接质量"
+    },
+    "voice": {
+      "sectionTitle": "语音",
+      "description": "选择Musaium的语音回复声音。",
+      "useDefault": "默认 (Alloy)"
     }
   },
   "change_password": {

@@ -198,6 +198,11 @@
       "low": "Sparen aktiviert",
       "normal": "Deaktiviert",
       "description": "Die App erkennt Ihre Verbindungsqualität"
+    },
+    "voice": {
+      "sectionTitle": "Stimme",
+      "description": "Wähle Musaiums Stimme für gesprochene Antworten.",
+      "useDefault": "Standard (Alloy)"
     }
   },
   "change_password": {
