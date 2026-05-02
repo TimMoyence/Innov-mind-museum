@@ -27,7 +27,15 @@ export type UserMemoryUpdates = Partial<
  */
 export interface RecentSessionAggregate {
   sessionId: string;
-  locale: string;
+  /**
+   * Session locale (e.g. `'fr'`, `'en-US'`). Nullable because
+   * `chat_sessions.locale` is itself nullable at the entity/DB level — the
+   * column is `varchar(32) NULL` and `ChatSession.locale` is typed
+   * `string | null`. Mergers (e.g. `mergeLanguagePreference` in T1.6) MUST
+   * filter out null entries from their tally rather than push the
+   * not-null assumption down into the aggregate layer.
+   */
+  locale: string | null;
   createdAt: Date;
   /** null when the session has no messages yet. */
   lastMessageAt: Date | null;
