@@ -5,6 +5,7 @@ import {
   type OpenApiJsonRequestBodyFor,
   type OpenApiResponseFor,
 } from '@/shared/api/openapiClient';
+import type { TtsVoice } from '@/features/settings/voice-catalog';
 
 type Schemas = components['schemas'];
 type RegisterPayload = OpenApiJsonRequestBodyFor<'/api/auth/register', 'post'>;
@@ -14,6 +15,8 @@ type AuthLogoutResponse =
 type SocialLoginPayload = OpenApiJsonRequestBodyFor<'/api/auth/social-login', 'post'>;
 type DeleteAccountResponse =
   paths['/api/auth/account']['delete']['responses'][200]['content']['application/json'];
+type UpdateTtsVoiceResponse =
+  paths['/api/auth/tts-voice']['patch']['responses'][200]['content']['application/json'];
 
 /** Response payload for successful login or token refresh, containing access and refresh tokens. */
 export type LoginResponse = Schemas['AuthSessionResponse'];
@@ -241,6 +244,21 @@ export const authService = {
     return openApiRequest({
       path: '/api/users/me/export',
       method: 'get',
+    });
+  },
+
+  /**
+   * Updates the authenticated user's preferred TTS voice (Spec C T2.8).
+   *
+   * @param voice - One of the voices in {@link TTS_VOICES}, or `null` to
+   *   reset the preference and fall back to the env-level default.
+   * @returns The persisted preference as confirmed by the backend.
+   */
+  async updateTtsVoice(voice: TtsVoice | null): Promise<UpdateTtsVoiceResponse> {
+    return openApiRequest({
+      path: '/api/auth/tts-voice',
+      method: 'patch',
+      body: JSON.stringify({ voice }),
     });
   },
 };
