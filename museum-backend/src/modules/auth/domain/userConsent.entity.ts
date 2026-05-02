@@ -10,6 +10,8 @@ import {
 
 import { User } from './user.entity';
 
+import type { Relation } from 'typeorm';
+
 /**
  * GDPR consent scopes tracked by the platform. Add new values here as new
  * personal-data flows go live; the enum-like union is intentionally open for
@@ -47,7 +49,7 @@ export class UserConsent {
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
-  user!: User;
+  user!: Relation<User>;
 
   @Column({ name: 'user_id' })
   userId!: number;

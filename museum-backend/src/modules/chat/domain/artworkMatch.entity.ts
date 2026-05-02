@@ -9,6 +9,8 @@ import {
 
 import { ChatMessage } from './chatMessage.entity';
 
+import type { Relation } from 'typeorm';
+
 /** Represents an artwork identified from a user message (image or text). Mapped to `artwork_matches`. */
 @Entity({ name: 'artwork_matches' })
 export class ArtworkMatch {
@@ -19,7 +21,7 @@ export class ArtworkMatch {
   @ManyToOne(() => ChatMessage, (message) => message.artworkMatches, {
     onDelete: 'CASCADE',
   })
-  message!: ChatMessage;
+  message!: Relation<ChatMessage>;
 
   @Column({ type: 'varchar', length: 128, nullable: true })
   artworkId?: string | null;

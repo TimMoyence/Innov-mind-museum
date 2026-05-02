@@ -10,6 +10,8 @@ import {
 
 import { User } from './user.entity';
 
+import type { Relation } from 'typeorm';
+
 /** Represents a stored refresh token for JWT rotation. Mapped to `auth_refresh_tokens`. */
 @Entity({ name: 'auth_refresh_tokens' })
 export class AuthRefreshToken {
@@ -19,7 +21,7 @@ export class AuthRefreshToken {
   @Index('idx_refresh_token_user')
   @ManyToOne(() => User, { nullable: false, eager: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
-  user!: User;
+  user!: Relation<User>;
 
   /** Unique JWT ID claim — used to look up the token. */
   @Column({ type: 'uuid', unique: true })

@@ -14,6 +14,8 @@ import { jsonbValidator } from '@shared/db/jsonb-validator';
 
 import { User } from './user.entity';
 
+import type { Relation } from 'typeorm';
+
 /**
  * Per-user TOTP shared secret + recovery code material (R16, SOC2 CC6.1).
  *
@@ -41,7 +43,7 @@ export class TotpSecret {
   @Index('idx_totp_secrets_user', { unique: true })
   @OneToOne(() => User, { nullable: false, eager: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
-  user!: User;
+  user!: Relation<User>;
 
   @Column({ type: 'integer', name: 'user_id' })
   userId!: number;

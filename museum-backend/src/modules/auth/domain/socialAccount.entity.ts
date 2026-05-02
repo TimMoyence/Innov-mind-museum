@@ -11,6 +11,8 @@ import {
 
 import { User } from './user.entity';
 
+import type { Relation } from 'typeorm';
+
 /** Represents a linked social identity (Apple, Google) for a user. Mapped to `social_accounts`. */
 @Entity({ name: 'social_accounts' })
 @Unique(['provider', 'providerUserId'])
@@ -20,7 +22,7 @@ export class SocialAccount {
 
   @ManyToOne(() => User, { nullable: false, eager: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
-  user!: User;
+  user!: Relation<User>;
 
   @Index()
   @Column({ type: 'integer' })

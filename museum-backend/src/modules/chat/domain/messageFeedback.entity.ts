@@ -9,6 +9,8 @@ import {
 
 import { ChatMessage } from './chatMessage.entity';
 
+import type { Relation } from 'typeorm';
+
 /** Allowed feedback values for a message. */
 export type FeedbackValue = 'positive' | 'negative';
 
@@ -20,7 +22,7 @@ export class MessageFeedback {
   id!: string;
 
   @ManyToOne(() => ChatMessage, { onDelete: 'CASCADE' })
-  message!: ChatMessage;
+  message!: Relation<ChatMessage>;
 
   @Column({ type: 'uuid' })
   messageId!: string;

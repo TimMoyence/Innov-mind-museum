@@ -10,6 +10,8 @@ import {
 
 import { User } from './user.entity';
 
+import type { Relation } from 'typeorm';
+
 /** Represents a B2B API key for programmatic access. Mapped to `api_keys`. */
 @Entity('api_keys')
 export class ApiKey {
@@ -30,7 +32,7 @@ export class ApiKey {
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
-  user!: User;
+  user!: Relation<User>;
 
   @Column({ name: 'user_id' })
   userId!: number;

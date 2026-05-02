@@ -14,6 +14,7 @@ import { NotableArtworksSchema } from '@shared/db/jsonb-schemas/user-memory-nota
 import { jsonbValidator } from '@shared/db/jsonb-validator';
 
 import type { NotableArtwork } from './userMemory.types';
+import type { Relation } from 'typeorm';
 
 /** Persists cross-session memory for a user (expertise, favourite artists/periods, etc.). Mapped to `user_memories`. */
 @Entity({ name: 'user_memories' })
@@ -23,7 +24,7 @@ export class UserMemory {
 
   @OneToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
-  user!: User;
+  user!: Relation<User>;
 
   @Column({ type: 'integer', name: 'user_id', unique: true })
   userId!: number;

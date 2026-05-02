@@ -123,6 +123,12 @@
           "onboardingCompleted": {
             "type": "boolean",
             "description": "Whether the user has completed the onboarding flow"
+          },
+          "ttsVoice": {
+            "type": "string",
+            "enum": ["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
+            "nullable": true,
+            "description": "Spec C T2.4 — visitor's preferred TTS voice. `null` means inherit the env-level default."
           }
         }
       },
@@ -2641,6 +2647,70 @@
         "responses": {
           "204": {
             "description": "Onboarding marked as completed"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/auth/tts-voice": {
+      "patch": {
+        "tags": ["Auth"],
+        "summary": "Update the authenticated user's preferred TTS voice",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["voice"],
+                "properties": {
+                  "voice": {
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "enum": ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
+                      },
+                      { "type": "null" }
+                    ],
+                    "description": "OpenAI TTS voice id, or `null` to reset to the env-level default."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Voice updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["ttsVoice"],
+                  "properties": {
+                    "ttsVoice": {
+                      "oneOf": [
+                        {
+                          "type": "string",
+                          "enum": ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
+                        },
+                        { "type": "null" }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"

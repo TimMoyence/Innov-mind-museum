@@ -19,6 +19,8 @@ import {
 } from '@shared/db/jsonb-schemas/museum-enrichment.schemas';
 import { jsonbValidator } from '@shared/db/jsonb-validator';
 
+import type { Relation } from 'typeorm';
+
 /**
  * Museum enrichment — aggregated public data (OSM / Wikidata / Wikipedia) keyed
  * by `(name, locale)`. Also used as persistent cache for the P3 hybrid
@@ -32,7 +34,7 @@ export class MuseumEnrichment {
   id!: string;
 
   @ManyToOne(() => Museum, { nullable: true, onDelete: 'SET NULL' })
-  museum?: Museum | null;
+  museum?: Relation<Museum> | null;
 
   /**
    * Integer FK to museums.id. Historically typed as `string | null` in the TS

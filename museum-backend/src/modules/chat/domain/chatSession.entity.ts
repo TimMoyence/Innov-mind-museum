@@ -15,6 +15,7 @@ import { User } from '@modules/auth/domain/user.entity';
 import { ChatMessage } from './chatMessage.entity';
 
 import type { ChatSessionIntent, VisitContext } from './chat.types';
+import type { Relation } from 'typeorm';
 
 /** Represents a chat session between a visitor and the assistant. Mapped to `chat_sessions`. */
 @Entity({ name: 'chat_sessions' })
@@ -24,7 +25,7 @@ export class ChatSession {
 
   @Index('IDX_chat_sessions_userId')
   @ManyToOne(() => User, { nullable: true, eager: false, onDelete: 'SET NULL' })
-  user?: User | null;
+  user?: Relation<User> | null;
 
   @Column({ type: 'varchar', length: 32, nullable: true })
   locale?: string | null;
@@ -54,7 +55,7 @@ export class ChatSession {
     cascade: false,
     eager: false,
   })
-  messages!: ChatMessage[];
+  messages!: Relation<ChatMessage>[];
 
   @VersionColumn()
   version!: number;
