@@ -62,9 +62,9 @@ const config: Config.InitialOptions = {
   coveragePathIgnorePatterns: sharedCoveragePathIgnorePatterns,
   coverageThreshold: {
     global: {
-      // Phase 8 floor: thresholds match Phase 8 Group B achieved values
-      // (statements 90.14%, branches 79.36%, functions 85.57%, lines 90.53%)
-      // with a small downward buffer to absorb day-to-day fluctuation.
+      // Phase 9 close: thresholds match Phase 9 Sprint 9.4 default actuals
+      // (statements 90.27%, branches 79.31%, functions 85.80%, lines 90.69%
+      // without RUN_INTEGRATION; rises to 91.41/81.04/87.45/91.84 with).
       // Branches deliberately stays at 78 — Phase 0 challenger pushback +
       // ADR-007: the Phase 4 Stryker mutation kill ratio (≥80% on hot files)
       // is the banking-grade signal; pushing branches further forces

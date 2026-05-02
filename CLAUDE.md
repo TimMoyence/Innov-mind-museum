@@ -165,16 +165,19 @@ Phase 0 grandfather baseline shrunk to 0 in Phase 7. The cap test (`tools/eslint
 
 See `docs/superpowers/specs/2026-05-01-phase7-factory-migration-design.md`.
 
-### Coverage uplift gates (Phase 8)
+### Coverage uplift gates (Phase 8 + Phase 9 close)
 
-- BE thresholds: 90 / 78 / 85 / 90 (statements / branches / functions / lines), enforced in `museum-backend/jest.config.ts`.
-- FE thresholds: 82 / 68 / 71 / 83 — Phase 8 Q=B floor matched to Phase 8 Group C actuals (83.48 / 68.90 / 72.32 / 83.96). Phase 9 will lift toward 85 / 70 / 74 / 85, then 90 / 80 / 80 / 90 as test additions land.
+- BE thresholds: 90 / 78 / 85 / 90 (statements / branches / functions / lines), enforced in `museum-backend/jest.config.ts`. Default actuals 90.27 / 79.31 / 85.80 / 90.69 (rises to 91.41 / 81.04 / 87.45 / 91.84 with `RUN_INTEGRATION=true`).
+- FE thresholds: 91 / 78 / 80 / 91, enforced in `museum-frontend/jest.config.js`. Phase 9 Sprint 9.3 actuals 91.92 / 78.39 / 81.44 / 92.14 (over the original 90 / 80 / 80 / 90 long-term target on every metric except branches, where the 78 floor is intentional — see ADR-007).
 - Web Vitest: unchanged at 70 / 60 / 70 / 70 (Phase 8 Q5=a — Playwright + a11y + Lighthouse cover web; Vitest uplift deferred).
 - Pre-commit gate (`.claude/hooks/pre-commit-gate.sh`) runs `pnpm run test:coverage` (BE) + `npm run test:coverage` (FE) ONLY when staged files include source under `museum-backend/src/` or `museum-frontend/{src,features,shared,app}/`. Most commits skip (0s overhead).
 - Escape hatch: `SKIP_COVERAGE_GATE=1 git commit ...` for fast local iteration; CI still enforces unconditionally.
 - CI hard-fail: `ci-cd-backend.yml` (`quality` job) runs `pnpm run test:coverage`; `ci-cd-mobile.yml` (`quality` job) runs `npm run test:coverage`. Threshold miss blocks the PR.
-- Branches threshold deliberately stays at 78 BE / 68 FE — Phase 0 challenger pushback + ADR-007. The Phase 4 Stryker mutation kill ratio (≥ 80% on hot files) is the banking-grade signal; aggressive branches uplift forces cosmetic test patterns.
+- Branches threshold deliberately stays at 78 BE / 78 FE — Phase 0 challenger pushback + ADR-007. The Phase 4 Stryker mutation kill ratio (≥ 80% on hot files) is the banking-grade signal; aggressive branches uplift forces cosmetic test patterns.
 - Jest config note: `coveragePathIgnorePatterns` is project-scoped in Jest 29 with `projects:`, so the patterns are wired into `sharedProjectOptions` in `jest.config.ts` and re-applied per project. A top-level-only declaration is silently ignored (Phase 8 Group B fixed this).
+- BE `test:coverage` script pins `--testTimeout=30000` to absorb the slowdown coverage instrumentation introduces on supertest-driven HTTP route tests (preexisting "socket hang up" flakes). Phase 10 follow-up: investigate `swc-jest` swap to drop this hack.
+- Phase 9 deferred to Phase 10: (1) bullmq-enrichment-scheduler.adapter.ts integration test (needs Redis testcontainer harness extension); (2) 6 `it.skip` entries in `chat-repository-typeorm.integration.test.ts` (cursor pagination + MessageFeedback upsert path); (3) HTTP-route flake root-cause; (4) Web Vitest uplift if real value vs Playwright.
+- Stats summary (2026-05-02): 3782 BE tests + 1966 FE tests = 5748 total; +47 BE / +300 FE delivered across Phase 9 Sprints 9.1-9.4 (≈350 new tests in one session via 7 parallel subagent runs).
 - See `docs/superpowers/specs/2026-05-01-phase8-coverage-uplift-design.md`.
 
 ## Architecture
@@ -296,6 +299,48 @@ Doubt? Use `Grep` w/ specific pattern first, then `Read` relevant block w/ `offs
 2. Backend need: PostgreSQL (via docker-compose or local), at least one LLM API key (`OPENAI_API_KEY` / `DEEPSEEK_API_KEY` / `GOOGLE_API_KEY`), JWT secrets
 3. Frontend need: `EXPO_PUBLIC_API_BASE_URL` pointing to backend
 4. Backend DB exposed on port **5433** (not 5432) when using docker-compose
+
+## Honesty + truth-telling (UFR-013)
+
+**Non-negotiable.** Applies to every response, every agent report, every claim of fact, number, or source.
+
+### FORBIDDEN
+
+- Lying or fabricating any fact, number, citation, file path, line number, function name, command output, test result, or external source.
+- Claiming to have verified something without actually running the verification.
+- Simulating certainty when you are uncertain (e.g. "this works" when you haven't tested it).
+- Hiding or minimizing a failure (test failure, build error, type error, regression).
+- Denying a mistake after it is pointed out, or trying to retroactively reframe it.
+- Pretense or sycophancy ("great question", "you're absolutely right") when it adds no information.
+
+### REQUIRED
+
+- State the truth as it is, even when uncomfortable.
+- When in doubt, **verify before answering**: `WebSearch` / `WebFetch` for external facts; `Read` / `Grep` for code claims; run the command and report the actual output.
+- Say "I don't know" or "I haven't verified that" explicitly when you don't or haven't.
+- Report failures (test, build, lint, smoke check) immediately and accurately. Do not soften the language. Quote the error verbatim.
+- When you detect a previous claim was wrong, correct it in the next message — name the claim, name the correction.
+- Distinguish "the code says X" (verified by reading) from "I expect X" (not verified) from "X is generally true" (general knowledge, may be stale).
+
+### Verification ladder (cheapest → strongest)
+
+1. Memory / general knowledge — lowest confidence. Mark as such if used.
+2. `Read` the file in question.
+3. `Grep` / `gitnexus_query` to confirm a claim crosses the codebase consistently.
+4. Run the command (`pnpm test`, `pnpm tsc --noEmit`, `pnpm lint`, smoke script). Report the exit code and the relevant lines of output.
+5. `WebSearch` / `WebFetch` for external facts (library APIs, RFCs, CVEs, product changelogs). Cite the URL in the response.
+
+When the cost of being wrong is high (security claim, breaking change claim, "this is safe to deploy"), climb to step 4 or 5 before answering.
+
+### Anti-patterns
+
+| Don't say | Say instead |
+|---|---|
+| "This is fixed." (no verification run) | "I made the change. I have not yet run the tests; want me to?" |
+| "All tests pass." (didn't actually run) | "I ran `pnpm test` — output: `Tests: 3700 passed`. Pasted above." |
+| "The library supports X." (from memory) | "Per the docs at `<URL>` (just fetched), the library supports X via `Y`." |
+| "You're right, sorry, fixing now." (when you weren't actually wrong) | "Let me re-check — the code at `path/to/file.ts:42` actually does Z, which matches the original behavior. I think the disagreement is about W; can you confirm?" |
+| Silent skip of a failing check | "The smoke test failed: `<exact error>`. Stopping here so we can debug." |
 
 ## Migration Governance
 
