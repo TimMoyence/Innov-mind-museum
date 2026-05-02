@@ -25,6 +25,9 @@ Dispatcher avec etat durable (`team-state/<run-id>/`), Spec Kit (spec → design
 9. Pas de critic-agent pour lint/tsc/tests : delegue aux hooks `team-hooks/`
 10. Sentinelle = role `verifier` (DoD machine-verified, scope-boundary, spot-check, anti-hallucination) + role `reviewer` (fresh-context semantic review). Process-auditor v4 fusionne dans verifier.
 11. **Honnetete absolue (UFR-013) :** interdit de mentir, fabriquer, pretendre avoir verifie sans verifier, masquer un echec. En cas de doute → WebSearch / WebFetch / Read le code reel AVANT de repondre. "Je ne sais pas" est une reponse valide. Toute regression / test failure / erreur DOIT etre rapportee verbatim, sans minimisation.
+12. **Parallélisme = READ-ONLY uniquement (V12 §1 #1) :** spawn agents en parallèle UNIQUEMENT pour audit/research/investigation (verifier, security, reviewer, architect mode "explore"). TOUS les writes (editor, documenter) sont sérialisés. Cognition Labs + Anthropic + LangGraph convergent : context collapse + race conditions sur les writes parallèles. Max 5 sub-agents read-only en parallèle (au-delà : synthesis cost > savings).
+13. **Reviewer JAMAIS dans contexte editor (V12 §8) :** le reviewer DOIT être spawné via Agent tool fresh-context, jamais via SendMessage continuation. Si fuite contexte détectée → BLOCK-CONTEXT-LEAK + re-spawn.
+14. **Cap 2 boucles correctives ENFORCED (V12 §8) :** `state.json.telemetry.correctiveLoops >= 2` → dispatcher STOP + escalade user. Pas de bypass. Voir Step 5 CAP MECHANISM.
 
 ---
 
@@ -104,14 +107,38 @@ Append STORY.md sections `brainstorm` et `plan`.
 
 Editor agent (opus-4.6) consomme tasks.md top-down :
 ```
-1. Lit handoff brief depuis team-state/$RUN_ID/handoffs/architect-to-editor.json
+1. Lit handoff brief depuis team-state/$RUN_ID/handoffs/001-architect-to-editor.json
 2. Pour chaque task T1.x..Tn.x :
    a. Edit/Write les fichiers
-   b. PostToolUse hook : .claude/skills/team/team-hooks/post-edit-lint.sh (auto)
-   c. Si FAIL → boucle corrective (cap 2)
+   b. RUN_ID=$RUN_ID .claude/skills/team/team-hooks/post-edit-lint.sh
+   c. RUN_ID=$RUN_ID .claude/skills/team/team-hooks/post-edit-typecheck.sh
+   d. Si FAIL → boucle corrective (voir CAP MECHANISM ci-dessous)
 3. Append STORY.md section `implement`
 4. Update state.json : agents[editor].status = "completed" + version++
 ```
+
+#### CAP MECHANISM — corrective loops (V12 §8 hard limit)
+
+**Compteur** : `state.json.telemetry.correctiveLoops` (integer, schéma déjà déclaré).
+
+**Protocole par task qui FAIL un hook** :
+```
+1. Read current value:
+     LOOPS=$(jq -r '.telemetry.correctiveLoops // 0' team-state/$RUN_ID/state.json)
+2. Increment via CAS pattern (mêmes mkdir lock que team-hooks):
+     update_state '.telemetry.correctiveLoops = ($__loops + 1)' --argjson __loops "$LOOPS"
+3. If LOOPS+1 >= 2 → STOP, do NOT retry. Append STORY.md:
+     "## implement — editor — <ts> [LOOP-CAP REACHED]
+       - Task T<id> failed at hook <name>
+       - Loops used: 2 (cap)
+       - Last error: <verbatim quote>
+       - Verdict: ESCALATE-USER"
+   Then update state.json `status: "blocked"` + `currentStep: "blocked-loop-cap"`.
+   The dispatcher returns to the user with the failure quote.
+4. Else (LOOPS+1 < 2) → retry the task once with the corrective fix.
+```
+
+Le dispatcher REFUSE de continuer si `correctiveLoops >= 2` détecté à n'importe quel Step. Pas de bypass.
 
 ### Step 6 — Verify (verifier + hooks deterministes)
 
@@ -136,11 +163,36 @@ Security agent (opus-4.6, allowedTools: Read/Grep/Bash(promptfoo*,semgrep*) — 
 
 ### Step 8 — Review (reviewer fresh context)
 
-Reviewer agent (opus-4.7, FRESH CONTEXT obligatoire — V12 §8 anti-pattern "rubber stamp") :
+Reviewer agent (opus-4.7, FRESH CONTEXT obligatoire — V12 §8 anti-pattern "rubber stamp").
+
+#### FRESH-CONTEXT ENFORCEMENT (V12 §8)
+
+**Le dispatcher DOIT spawn le reviewer via Agent tool (nouveau process), JAMAIS via SendMessage continuation d'une session existante.** Critère de validité du spawn :
+
 ```
-1. Lit spec.md + design.md + diff
-2. Verdict KISS/DRY/hexagonal compliance + UFR alignement
-3. Append STORY.md section `review`
+1. Le contexte du reviewer ne contient AUCUN message de l'editor (ni system, ni user, ni assistant).
+2. Le reviewer reçoit en input UNIQUEMENT :
+   - Path vers team-state/$RUN_ID/spec.md
+   - Path vers team-state/$RUN_ID/design.md
+   - Le run ID (pour git diff $startCommit..HEAD)
+3. Pas de résumé, pas de "voici ce que l'editor a fait" — le reviewer LIT le diff brut + spec + design from scratch.
+```
+
+**Si le reviewer détecte fuite de contexte** (système prompt mentionne editor, ou messages historiques visibles avec edits) → il REFUSE le review et émet :
+```
+VERDICT: BLOCK-CONTEXT-LEAK
+Reason: spawn was a continuation, not fresh-context. Re-spawn via Agent tool.
+```
+
+#### Workflow
+
+```
+1. Lit team-state/$RUN_ID/spec.md + design.md
+2. git diff $(jq -r .startCommit team-state/$RUN_ID/state.json)..HEAD
+3. mcp__gitnexus__impact downstream sur symboles touchés
+4. Cross-check spec EARS R1..Rn ↔ tasks DONE-WHEN ↔ implementation ↔ tests
+5. Verdict KISS/DRY/hexagonal compliance + UFR alignement + spec↔impl parity matrix
+6. Append STORY.md section `review` (sha256 chain enforce — pre-complete-verify détecte rewrite)
 ```
 
 ### Step 9 — Finalize (Tech Lead)
