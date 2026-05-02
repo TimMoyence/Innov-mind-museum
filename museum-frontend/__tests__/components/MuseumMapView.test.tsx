@@ -24,6 +24,19 @@ export const mockCameraApi = {
   },
 };
 
+// Shared cluster-expansion handle for the mocked GeoJSONSource ref.
+// Tests can override `nextZoom` / `shouldReject` per-case.
+export const mockSourceApi = {
+  getClusterExpansionZoom: jest.fn(),
+  nextZoom: 17,
+  shouldReject: false,
+  reset() {
+    this.getClusterExpansionZoom.mockReset();
+    this.nextZoom = 17;
+    this.shouldReject = false;
+  },
+};
+
 jest.mock('@/shared/ui/ThemeContext', () => ({
   useTheme: () => ({
     theme: {
@@ -163,8 +176,15 @@ jest.mock('@maplibre/maplibre-react-native', () => {
         accessibilityValue: { text: JSON.stringify(props.initialViewState ?? null) },
       });
     }),
-    GeoJSONSource: ({ id, data, children, onPress }: Record<string, unknown>) =>
-      ReactMock.createElement(
+    GeoJSONSource: ReactMock.forwardRef(function GeoJSONSource(
+      { id, data, children, onPress }: Record<string, unknown>,
+      ref: unknown,
+    ) {
+      ReactMock.useImperativeHandle(ref, () => ({
+        getClusterExpansionZoom: (clusterId: number) =>
+          mockSourceApi.getClusterExpansionZoom(clusterId),
+      }));
+      return ReactMock.createElement(
         View,
         {
           testID: `source-${String(id)}`,
@@ -172,7 +192,8 @@ jest.mock('@maplibre/maplibre-react-native', () => {
           accessibilityValue: { text: JSON.stringify(data) },
         },
         children,
-      ),
+      );
+    }),
     Layer: ({ id }: Record<string, unknown>) =>
       ReactMock.createElement(View, { testID: `layer-${String(id)}` }),
     LogManager: {
@@ -547,6 +568,285 @@ describe('MuseumMapView', () => {
       });
       expect(screen.queryByTestId('museum-map-offline-prompt')).toBeNull();
       expect(useOfflinePackChoiceStore.getState().choices.paris?.decision).toBe('accepted');
+    });
+
+    it('records declined decision and hides the prompt on decline', async () => {
+      const { useOfflinePackChoiceStore } = jest.requireMock(
+        '@/features/museum/infrastructure/offlinePackChoiceStore',
+      );
+
+      render(
+        <MuseumMapView
+          museums={[makeMuseum({ latitude: PARIS_LAT, longitude: PARIS_LNG, distanceMeters: 100 })]}
+          userLatitude={PARIS_LAT}
+          userLongitude={PARIS_LNG}
+        />,
+      );
+      await screen.findByTestId('museum-map-offline-prompt');
+      act(() => {
+        fireEvent.press(screen.getByTestId('museum-map-offline-prompt-decline'));
+      });
+      expect(screen.queryByTestId('museum-map-offline-prompt')).toBeNull();
+      expect(useOfflinePackChoiceStore.getState().choices.paris?.decision).toBe('declined');
+    });
+  });
+
+  // ── Marker-press dispatching ────────────────────────────────────────────────
+  // Pins the dual-branch contract of `handleMuseumPress`:
+  //  - cluster feature → `getClusterExpansionZoom` resolves → camera.flyTo at
+  //    the resolved zoom; on rejection, fallback zoom is used.
+  //  - non-cluster feature → `onMuseumSelect` invoked with the matching museum.
+
+  describe('marker press dispatching', () => {
+    beforeEach(() => {
+      mockSourceApi.reset();
+    });
+
+    it('flies the camera to the resolved cluster expansion zoom on cluster press', async () => {
+      mockSourceApi.getClusterExpansionZoom.mockResolvedValue(15);
+
+      render(
+        <MuseumMapView
+          museums={[makeMuseum({ id: 1, latitude: 48.85, longitude: 2.35 })]}
+          userLatitude={null}
+          userLongitude={null}
+        />,
+      );
+
+      const source = await screen.findByTestId('source-museums');
+      const onPress = source.props.onPress as (e: { nativeEvent: unknown }) => void;
+
+      await act(async () => {
+        onPress({
+          nativeEvent: {
+            features: [
+              {
+                geometry: { type: 'Point', coordinates: [2.35, 48.85] },
+                properties: {
+                  cluster: true,
+                  cluster_id: 99,
+                  point_count: 5,
+                  point_count_abbreviated: '5',
+                },
+              },
+            ],
+          },
+        });
+        await Promise.resolve();
+      });
+
+      expect(mockSourceApi.getClusterExpansionZoom).toHaveBeenCalledWith(99);
+      expect(mockCameraApi.flyTo).toHaveBeenCalledWith({
+        center: [2.35, 48.85],
+        zoom: 15,
+        duration: 450,
+      });
+    });
+
+    it('falls back to the safe expansion zoom when getClusterExpansionZoom rejects', async () => {
+      mockSourceApi.getClusterExpansionZoom.mockRejectedValue(new Error('zoom-failure'));
+
+      render(
+        <MuseumMapView
+          museums={[makeMuseum({ id: 1, latitude: 48.85, longitude: 2.35 })]}
+          userLatitude={null}
+          userLongitude={null}
+        />,
+      );
+
+      const source = await screen.findByTestId('source-museums');
+      const onPress = source.props.onPress as (e: { nativeEvent: unknown }) => void;
+
+      await act(async () => {
+        onPress({
+          nativeEvent: {
+            features: [
+              {
+                geometry: { type: 'Point', coordinates: [2.35, 48.85] },
+                properties: {
+                  cluster: true,
+                  cluster_id: 7,
+                  point_count: 3,
+                  point_count_abbreviated: '3',
+                },
+              },
+            ],
+          },
+        });
+        // flush the rejection
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      // CLUSTER_EXPAND_ZOOM_FALLBACK = 16
+      expect(mockCameraApi.flyTo).toHaveBeenCalledWith({
+        center: [2.35, 48.85],
+        zoom: 16,
+        duration: 450,
+      });
+    });
+
+    it('invokes onMuseumSelect with the matching museum on a non-cluster point press', async () => {
+      const onMuseumSelect = jest.fn();
+      const target = makeMuseum({ id: 123, latitude: 48.85, longitude: 2.35 });
+
+      render(
+        <MuseumMapView
+          museums={[target, makeMuseum({ id: 124, latitude: 48.86, longitude: 2.36 })]}
+          userLatitude={null}
+          userLongitude={null}
+          onMuseumSelect={onMuseumSelect}
+        />,
+      );
+
+      const source = await screen.findByTestId('source-museums');
+      const onPress = source.props.onPress as (e: { nativeEvent: unknown }) => void;
+
+      act(() => {
+        onPress({
+          nativeEvent: {
+            features: [
+              {
+                geometry: { type: 'Point', coordinates: [2.35, 48.85] },
+                properties: { museumId: 123, museumType: 'art' },
+              },
+            ],
+          },
+        });
+      });
+
+      expect(onMuseumSelect).toHaveBeenCalledTimes(1);
+      expect(onMuseumSelect).toHaveBeenCalledWith(target);
+    });
+
+    it('is a no-op when the pressed point has no matching museumId in the dataset', async () => {
+      const onMuseumSelect = jest.fn();
+      render(
+        <MuseumMapView
+          museums={[makeMuseum({ id: 1, latitude: 48.85, longitude: 2.35 })]}
+          userLatitude={null}
+          userLongitude={null}
+          onMuseumSelect={onMuseumSelect}
+        />,
+      );
+
+      const source = await screen.findByTestId('source-museums');
+      const onPress = source.props.onPress as (e: { nativeEvent: unknown }) => void;
+
+      act(() => {
+        onPress({
+          nativeEvent: {
+            features: [
+              {
+                geometry: { type: 'Point', coordinates: [2.35, 48.85] },
+                properties: { museumId: 999, museumType: 'art' },
+              },
+            ],
+          },
+        });
+      });
+
+      expect(onMuseumSelect).not.toHaveBeenCalled();
+    });
+
+    it('is a no-op when the press carries no features at all', async () => {
+      const onMuseumSelect = jest.fn();
+      render(
+        <MuseumMapView
+          museums={[makeMuseum({ id: 1, latitude: 48.85, longitude: 2.35 })]}
+          userLatitude={null}
+          userLongitude={null}
+          onMuseumSelect={onMuseumSelect}
+        />,
+      );
+
+      const source = await screen.findByTestId('source-museums');
+      const onPress = source.props.onPress as (e: { nativeEvent: unknown }) => void;
+
+      act(() => {
+        onPress({ nativeEvent: { features: [] } });
+      });
+
+      expect(onMuseumSelect).not.toHaveBeenCalled();
+      expect(mockCameraApi.flyTo).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── fitCameraToData edge cases ─────────────────────────────────────────────
+  // Pins the FIT_MIN_SPAN_DEG widening branch (two museums with identical
+  // coordinates → zero-span dataset → expanded by FIT_MIN_SPAN_DEG / 2 on
+  // both axes before fitBounds is called) and the "no points" early return.
+
+  describe('fitCameraToData edge cases', () => {
+    it('widens an effectively-zero-span dataset before fitBounds', async () => {
+      jest.spyOn(mapCameraCache, 'load').mockResolvedValue(null);
+
+      // Two museums at the *same* lat/lng → maxLng-minLng = 0 < FIT_MIN_SPAN
+      // and maxLat-minLat = 0 < FIT_MIN_SPAN → both widening branches run.
+      render(
+        <MuseumMapView
+          museums={[
+            makeMuseum({ id: 1, latitude: 48.85, longitude: 2.35 }),
+            makeMuseum({ id: 2, latitude: 48.85, longitude: 2.35 }),
+          ]}
+          userLatitude={null}
+          userLongitude={null}
+        />,
+      );
+
+      await screen.findByTestId('maplibre-camera');
+      const map = screen.getByTestId('maplibre-map');
+      act(() => {
+        (map.props.onDidFinishLoadingMap as () => void)();
+      });
+
+      expect(mockCameraApi.fitBounds).toHaveBeenCalledTimes(1);
+      const [bounds] = mockCameraApi.fitBounds.mock.calls[0] as [
+        [number, number, number, number],
+        unknown,
+      ];
+      // FIT_MIN_SPAN_DEG = 0.01 → expanded by 0.005 each side around 2.35/48.85.
+      expect(bounds[0]).toBeCloseTo(2.345, 5);
+      expect(bounds[2]).toBeCloseTo(2.355, 5);
+      expect(bounds[1]).toBeCloseTo(48.845, 5);
+      expect(bounds[3]).toBeCloseTo(48.855, 5);
+    });
+
+    it('does not call fitBounds or flyTo when no points and no user location are available', async () => {
+      jest.spyOn(mapCameraCache, 'load').mockResolvedValue(null);
+
+      render(<MuseumMapView museums={[]} userLatitude={null} userLongitude={null} />);
+
+      await screen.findByTestId('maplibre-camera');
+      const map = screen.getByTestId('maplibre-map');
+      act(() => {
+        (map.props.onDidFinishLoadingMap as () => void)();
+      });
+
+      expect(mockCameraApi.fitBounds).not.toHaveBeenCalled();
+      expect(mockCameraApi.flyTo).not.toHaveBeenCalled();
+    });
+
+    it('flyTo on a single-point dataset uses SINGLE_POINT_ZOOM=14', async () => {
+      jest.spyOn(mapCameraCache, 'load').mockResolvedValue(null);
+
+      render(
+        <MuseumMapView
+          museums={[makeMuseum({ id: 1, latitude: 48.85, longitude: 2.35 })]}
+          userLatitude={null}
+          userLongitude={null}
+        />,
+      );
+
+      await screen.findByTestId('maplibre-camera');
+      const map = screen.getByTestId('maplibre-map');
+      act(() => {
+        (map.props.onDidFinishLoadingMap as () => void)();
+      });
+
+      expect(mockCameraApi.flyTo).toHaveBeenCalledWith(
+        expect.objectContaining({ center: [2.35, 48.85], zoom: 14, duration: 0 }),
+      );
     });
   });
 });
