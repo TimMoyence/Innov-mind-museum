@@ -104,8 +104,11 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Test
-        run: npm test -- --coverage
+      - name: Test with coverage gate
+        # Phase 8: dedicated `test:coverage` script invokes Jest with --coverage,
+        # so the global coverage threshold in jest.config.js hard-fails the PR
+        # if FE drops below the Phase 8 floor (Phase 9 will lift toward 85/70/74/85).
+        run: npm run test:coverage
 
   # ─── 2. Maestro APK prebuild (cached on mobile-source content hash) ──────
   prebuild:

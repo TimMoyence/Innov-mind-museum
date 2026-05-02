@@ -165,6 +165,18 @@ Phase 0 grandfather baseline shrunk to 0 in Phase 7. The cap test (`tools/eslint
 
 See `docs/superpowers/specs/2026-05-01-phase7-factory-migration-design.md`.
 
+### Coverage uplift gates (Phase 8)
+
+- BE thresholds: 90 / 78 / 85 / 90 (statements / branches / functions / lines), enforced in `museum-backend/jest.config.ts`.
+- FE thresholds: 82 / 68 / 71 / 83 — Phase 8 Q=B floor matched to Phase 8 Group C actuals (83.48 / 68.90 / 72.32 / 83.96). Phase 9 will lift toward 85 / 70 / 74 / 85, then 90 / 80 / 80 / 90 as test additions land.
+- Web Vitest: unchanged at 70 / 60 / 70 / 70 (Phase 8 Q5=a — Playwright + a11y + Lighthouse cover web; Vitest uplift deferred).
+- Pre-commit gate (`.claude/hooks/pre-commit-gate.sh`) runs `pnpm run test:coverage` (BE) + `npm run test:coverage` (FE) ONLY when staged files include source under `museum-backend/src/` or `museum-frontend/{src,features,shared,app}/`. Most commits skip (0s overhead).
+- Escape hatch: `SKIP_COVERAGE_GATE=1 git commit ...` for fast local iteration; CI still enforces unconditionally.
+- CI hard-fail: `ci-cd-backend.yml` (`quality` job) runs `pnpm run test:coverage`; `ci-cd-mobile.yml` (`quality` job) runs `npm run test:coverage`. Threshold miss blocks the PR.
+- Branches threshold deliberately stays at 78 BE / 68 FE — Phase 0 challenger pushback + ADR-007. The Phase 4 Stryker mutation kill ratio (≥ 80% on hot files) is the banking-grade signal; aggressive branches uplift forces cosmetic test patterns.
+- Jest config note: `coveragePathIgnorePatterns` is project-scoped in Jest 29 with `projects:`, so the patterns are wired into `sharedProjectOptions` in `jest.config.ts` and re-applied per project. A top-level-only declaration is silently ignored (Phase 8 Group B fixed this).
+- See `docs/superpowers/specs/2026-05-01-phase8-coverage-uplift-design.md`.
+
 ## Architecture
 
 ### Backend — Hexagonal (Ports & Adapters)
@@ -449,7 +461,7 @@ Alternatives for future: Drizzle (S-tier 2026), Prisma 7, Kysely.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (17317 symbols, 29545 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (18112 symbols, 30560 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

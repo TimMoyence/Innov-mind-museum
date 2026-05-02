@@ -74,6 +74,28 @@ if [ -n "$STAGED_BE_TS" ]; then
   fi
 fi
 
+# 5. Coverage gate (Phase 8) — runs full coverage when source files are staged.
+# Smart-skip: most commits (docs, tests, config) skip entirely. SKIP_COVERAGE_GATE=1
+# escape hatch for fast iteration; CI still enforces unconditionally.
+if [ -z "${SKIP_COVERAGE_GATE:-}" ]; then
+  STAGED_BE_SRC=$(git diff --cached --name-only --diff-filter=d 2>/dev/null | grep -E '^museum-backend/src/.*\.ts$' || true)
+  STAGED_FE_SRC=$(git diff --cached --name-only --diff-filter=d 2>/dev/null | grep -E '^museum-frontend/(src|features|shared|app)/.*\.tsx?$' || true)
+
+  if [ -n "$STAGED_BE_SRC" ]; then
+    echo "[coverage] BE source staged — running coverage gate"
+    if ! (cd "$REPO_ROOT/museum-backend" && pnpm run test:coverage 2>&1 | tail -25); then
+      ERRORS="${ERRORS}BE coverage threshold FAIL. "
+    fi
+  fi
+
+  if [ -n "$STAGED_FE_SRC" ]; then
+    echo "[coverage] FE source staged — running coverage gate"
+    if ! (cd "$REPO_ROOT/museum-frontend" && npm run test:coverage 2>&1 | tail -25); then
+      ERRORS="${ERRORS}FE coverage threshold FAIL. "
+    fi
+  fi
+fi
+
 # If any errors, block the commit
 if [ -n "$ERRORS" ]; then
   # Escape for JSON

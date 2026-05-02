@@ -101,10 +101,11 @@ jobs:
             exit 1
           fi
 
-      - name: Unit/Integration Tests (non-E2E)
-        # pnpm 10 changed -- forwarding: args land as Jest patterns instead of flags.
-        # Use pnpm exec jest directly to pass flags without the -- ambiguity.
-        run: pnpm exec jest --watchman=false --runInBand --forceExit --coverage --testPathIgnorePatterns=tests/e2e
+      - name: Unit/Integration Tests (non-E2E) with coverage gate
+        # Phase 8: `test:coverage` script invokes Jest with --coverage and
+        # --selectProjects unit-integration, so the global coverage threshold
+        # in jest.config.ts hard-fails the PR if BE drops below 90/78/85/90.
+        run: pnpm run test:coverage
 
   # ─── 2. Integration tests (real PG via Docker testcontainer) ─────────
   integration:

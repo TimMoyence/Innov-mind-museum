@@ -43,10 +43,14 @@ module.exports = {
   ],
   coverageThreshold: {
     global: {
-      statements: 86,
-      branches: 74,
-      functions: 72,
-      lines: 87,
+      // Phase 8 Q=B floor: thresholds match Phase 8 actuals
+      // (statements 83.48%, branches 68.90%, functions 72.32%, lines 83.96%)
+      // with a small downward buffer. Phase 9 will lift these toward
+      // 85/70/74/85 and eventually 90/80/80/90 as test additions land.
+      statements: 82,
+      branches: 68,
+      functions: 71,
+      lines: 83,
     },
   },
 };

@@ -62,15 +62,17 @@ const config: Config.InitialOptions = {
   coveragePathIgnorePatterns: sharedCoveragePathIgnorePatterns,
   coverageThreshold: {
     global: {
-      // TODO(coverage-uplift): targets ratcheted slightly below pre-existing
-      // main reality (statements 87.92%, branches 77.26%, functions 81.97%,
-      // lines 88.36% on CI) so this infra fix can land. Raise back to 88/85
-      // in a dedicated coverage-uplift PR that adds tests for the largest
-      // gaps (look at the lcov report for hot files).
-      statements: 87,
-      branches: 76,
-      functions: 81,
-      lines: 87,
+      // Phase 8 floor: thresholds match Phase 8 Group B achieved values
+      // (statements 90.14%, branches 79.36%, functions 85.57%, lines 90.53%)
+      // with a small downward buffer to absorb day-to-day fluctuation.
+      // Branches deliberately stays at 78 — Phase 0 challenger pushback +
+      // ADR-007: the Phase 4 Stryker mutation kill ratio (≥80% on hot files)
+      // is the banking-grade signal; pushing branches further forces
+      // cosmetic test patterns.
+      statements: 90,
+      branches: 78,
+      functions: 85,
+      lines: 90,
     },
   },
 
