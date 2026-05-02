@@ -5,6 +5,7 @@ import { buildUserMemoryPromptBlock } from './user-memory.prompt';
 import type { VisitContext } from '../domain/chat.types';
 import type { UserMemory } from '../domain/userMemory.entity';
 import type {
+  RecentSessionAggregate,
   UserMemoryRepository,
   UserMemoryUpdates,
 } from '../domain/userMemory.repository.interface';
@@ -17,6 +18,12 @@ const MAX_ARTISTS = 10;
 const MAX_MUSEUMS = 10;
 const MAX_ARTWORKS = 20;
 const MAX_PERIODS = 10;
+
+/**
+ * Number of most-recent sessions fetched per `updateAfterSession` call and fed
+ * into the locale-mode + session-duration-p90 mergers (Spec C T1.6/T1.7).
+ */
+const RECENT_SESSIONS_LIMIT = 20;
 
 const CACHE_TTL_SECONDS = 3600; // 1 hour
 const CACHE_PREFIX = 'memory:prompt:';
@@ -155,6 +162,10 @@ export class UserMemoryService {
     locale = 'en',
   ): Promise<void> {
     const existing = await this.repository.getByUserId(userId);
+    const recentSessions = await this.repository.getRecentSessionsForUser(
+      userId,
+      RECENT_SESSIONS_LIMIT,
+    );
 
     const updates: UserMemoryUpdates = {
       sessionCount: (existing?.sessionCount ?? 0) + 1,
@@ -168,6 +179,11 @@ export class UserMemoryService {
       mergeArtists(updates, existing, visitContext);
       await this.mergePeriods(updates, existing, visitContext, locale);
     }
+
+    // Mergers below are independent of the current session's visitContext —
+    // they aggregate over `recentSessions` so they must run even when the
+    // caller passes `null` (e.g. session ended without a captured context).
+    this.mergeLanguagePreference(updates, recentSessions, existing);
 
     try {
       await this.repository.upsert(userId, updates);
@@ -227,6 +243,58 @@ export class UserMemoryService {
 
     if (newPeriods.length === 0) return;
     updates.favoritePeriods = [...existingPeriods, ...newPeriods].slice(-MAX_PERIODS);
+  }
+
+  /**
+   * Sets `updates.languagePreference` to the modal locale across the user's
+   * last {@link RECENT_SESSIONS_LIMIT} sessions.
+   *
+   * - Sessions with `locale === null` are skipped (the column is nullable;
+   *   null doesn't constitute a language preference signal).
+   * - Tie-breaker: when two locales share the top count, the more recent
+   *   one wins. `recentSessions` is ordered DESC by `createdAt`, so we
+   *   seed the running mode with the first non-null locale and only
+   *   replace it when a *strictly* greater count is observed.
+   * - No-ops (leaves `updates.languagePreference` undefined) when:
+   *   no sessions, no non-null locales, or the computed mode equals the
+   *   currently-persisted value.
+   */
+  private mergeLanguagePreference(
+    updates: UserMemoryUpdates,
+    recentSessions: RecentSessionAggregate[],
+    existing: UserMemory | null,
+  ): void {
+    if (recentSessions.length === 0) return;
+
+    const tally = new Map<string, number>();
+    for (const s of recentSessions) {
+      if (s.locale === null) continue;
+      tally.set(s.locale, (tally.get(s.locale) ?? 0) + 1);
+    }
+
+    if (tally.size === 0) return;
+
+    // Seed the running mode with the most-recent non-null locale so ties
+    // resolve in favour of recency rather than insertion order in the tally.
+    let mode: string | null = null;
+    for (const s of recentSessions) {
+      if (s.locale !== null) {
+        mode = s.locale;
+        break;
+      }
+    }
+    if (mode === null) return;
+
+    let modeCount = tally.get(mode) ?? 0;
+    for (const [locale, count] of tally) {
+      if (count > modeCount) {
+        mode = locale;
+        modeCount = count;
+      }
+    }
+
+    if (existing?.languagePreference === mode) return;
+    updates.languagePreference = mode;
   }
 
   /** Hard-deletes the user's memory (GDPR erasure) and invalidates cache. */
