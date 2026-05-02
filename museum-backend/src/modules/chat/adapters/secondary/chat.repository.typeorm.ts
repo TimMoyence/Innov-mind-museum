@@ -447,7 +447,13 @@ export class TypeOrmChatRepository implements ChatRepository {
    * @param userId - Numeric user ID.
    */
   async deleteMessageFeedback(messageId: string, userId: number): Promise<void> {
-    await this.feedbackRepo.delete({ message: { id: messageId }, userId });
+    // Uses the explicit `messageId` FK column (not the `message` relation), so
+    // TypeORM emits a flat `WHERE message_id = $1 AND user_id = $2` DELETE.
+    // The relation form `{ message: { id } }` triggers a faulty
+    // `distinctAlias.MessageFeedback_id` projection on certain TypeORM
+    // versions when combined with `select`/`distinct` paths — see Phase 10
+    // findings doc.
+    await this.feedbackRepo.delete({ messageId, userId });
   }
 
   /**
@@ -461,8 +467,13 @@ export class TypeOrmChatRepository implements ChatRepository {
     messageId: string,
     userId: number,
   ): Promise<{ value: FeedbackValue } | null> {
+    // Uses the explicit `messageId` FK column. Combining a relation `where`
+    // with a `select` projection on the parent entity makes TypeORM emit
+    // `SELECT distinctAlias.MessageFeedback_id FROM ... distinctAlias` —
+    // a column that never appears in the CTE, breaking the query in
+    // production (Phase 10 findings — chat-media.service.ts:178 caller).
     const row = await this.feedbackRepo.findOne({
-      where: { message: { id: messageId }, userId },
+      where: { messageId, userId },
       select: ['value'],
     });
 

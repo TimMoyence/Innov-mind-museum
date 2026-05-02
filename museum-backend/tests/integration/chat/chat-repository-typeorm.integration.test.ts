@@ -663,8 +663,7 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
   // ────────────────────────────────────────────────────────────────────────
 
   describe('upsertMessageFeedback / getMessageFeedback / deleteMessageFeedback', () => {
-    // TODO Phase 10: green-on-real-PG — pagination cursor/feedback-upsert path not yet aligned with repo behaviour; integration-tier only, no CI impact today.
-    it.skip('upsert inserts a new feedback entry for a fresh (msg,user) pair', async () => {
+    it('upsert inserts a new feedback entry for a fresh (msg,user) pair', async () => {
       const userId = await seedUser({ email: 'feedback-insert@test.dev' });
       const session = await repo.createSession({ userId });
       const message = await repo.persistMessage({
@@ -679,8 +678,7 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       expect(fetched).toEqual({ value: 'positive' });
     });
 
-    // TODO Phase 10: green-on-real-PG — pagination cursor/feedback-upsert path not yet aligned with repo behaviour; integration-tier only, no CI impact today.
-    it.skip('upsert updates the existing entry on (msg,user) conflict (positive → negative)', async () => {
+    it('upsert updates the existing entry on (msg,user) conflict (positive → negative)', async () => {
       const userId = await seedUser({ email: 'feedback-upsert@test.dev' });
       const session = await repo.createSession({ userId });
       const message = await repo.persistMessage({
@@ -701,8 +699,7 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       expect(allRows).toHaveLength(1);
     });
 
-    // TODO Phase 10: green-on-real-PG — pagination cursor/feedback-upsert path not yet aligned with repo behaviour; integration-tier only, no CI impact today.
-    it.skip('getMessageFeedback returns null when no entry exists', async () => {
+    it('getMessageFeedback returns null when no entry exists', async () => {
       const userId = await seedUser({ email: 'feedback-missing@test.dev' });
       const session = await repo.createSession({ userId });
       const message = await repo.persistMessage({
@@ -715,8 +712,7 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       expect(fetched).toBeNull();
     });
 
-    // TODO Phase 10: green-on-real-PG — pagination cursor/feedback-upsert path not yet aligned with repo behaviour; integration-tier only, no CI impact today.
-    it.skip('deleteMessageFeedback removes the entry', async () => {
+    it('deleteMessageFeedback removes the entry', async () => {
       const userId = await seedUser({ email: 'feedback-delete@test.dev' });
       const session = await repo.createSession({ userId });
       const message = await repo.persistMessage({
