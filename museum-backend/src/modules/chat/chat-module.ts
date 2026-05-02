@@ -193,9 +193,10 @@ export class ChatModule {
   private buildUserMemory(
     dataSource: DataSource,
     cache?: CacheService,
+    artworkRepo?: ArtworkKnowledgeRepoPort,
   ): UserMemoryService | undefined {
     const repo = new TypeOrmUserMemoryRepository(dataSource);
-    return new UserMemoryService(repo, cache);
+    return new UserMemoryService(repo, cache, { artworkRepo });
   }
 
   /** Creates the knowledge base service (Wikidata, always active in V1). */
@@ -337,7 +338,6 @@ export class ChatModule {
       ? new OpenAiTextToSpeechService()
       : new DisabledTextToSpeechService();
     const ocr = new TesseractOcrService();
-    const userMemory = this.buildUserMemory(dataSource, cache);
     const knowledgeBase = this.buildKnowledgeBase(cache);
     const imageEnrichment = this.buildImageEnrichment();
     const webSearch = this.buildWebSearch(cache);
@@ -357,6 +357,14 @@ export class ChatModule {
 
     const knowledgeExtraction = this.buildKnowledgeExtraction(dataSource);
     this._knowledgeExtractionClose = knowledgeExtraction.close;
+
+    // UserMemory depends on the knowledge-extraction artwork repo for the
+    // mergePeriods enrichment (Spec C T1.5) — must build *after* knowledgeExtraction.
+    const userMemory = this.buildUserMemory(
+      dataSource,
+      cache,
+      knowledgeExtraction.artworkKnowledgeRepo,
+    );
 
     const chatService = this.buildChatService({
       repository,

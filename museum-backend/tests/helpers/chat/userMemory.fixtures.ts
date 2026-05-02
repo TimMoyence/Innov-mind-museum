@@ -83,3 +83,53 @@ export function makeInMemoryUserMemoryRepository(
     },
   };
 }
+
+/**
+ * Capture-style stub of {@link UserMemoryRepository} used by the merger unit
+ * tests (Spec C T1.5/T1.6/T1.7). Unlike {@link makeInMemoryUserMemoryRepository}
+ * (which keeps a Map-backed store), this stub:
+ * - returns a single fixed `UserMemory` from {@link makeMemory} on `getByUserId`,
+ *   shaped by the optional `initial` overrides;
+ * - records every `upsert` call as `[userId, UserMemoryUpdates]` tuples on
+ *   `upsertCalls` so tests can assert against the *exact* updates payload
+ *   rather than the round-tripped entity;
+ * - exposes a settable `recentSessions` property to seed
+ *   {@link UserMemoryRepository.getRecentSessionsForUser} for the locale-mode
+ *   and session-duration-p90 mergers.
+ * @param initial - Partial UserMemory shape returned by `getByUserId`.
+ *   When omitted, returns `null` (no memory yet).
+ */
+export function makeUserMemoryRepoStub(initial?: Partial<UserMemory>): UserMemoryRepository & {
+  /** Captured `[userId, updates]` pairs from every `upsert` call, in order. */
+  upsertCalls: [number, UserMemoryUpdates][];
+  /** Mutable seed for `getRecentSessionsForUser` (defaults to empty array). */
+  recentSessions: RecentSessionAggregate[];
+} {
+  const upsertCalls: [number, UserMemoryUpdates][] = [];
+  const memory = initial ? makeMemory(initial) : null;
+  const stub = {
+    upsertCalls,
+    recentSessions: [] as RecentSessionAggregate[],
+
+    async getByUserId(_userId: number): Promise<UserMemory | null> {
+      return memory;
+    },
+
+    async upsert(userId: number, updates: UserMemoryUpdates): Promise<UserMemory> {
+      upsertCalls.push([userId, updates]);
+      return makeMemory({ ...(memory ?? {}), userId, ...updates });
+    },
+
+    async deleteByUserId(_userId: number): Promise<void> {
+      /* no-op for stub */
+    },
+
+    async getRecentSessionsForUser(
+      _userId: number,
+      limit: number,
+    ): Promise<RecentSessionAggregate[]> {
+      return stub.recentSessions.slice(0, limit);
+    },
+  };
+  return stub;
+}

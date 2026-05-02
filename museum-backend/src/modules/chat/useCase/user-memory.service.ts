@@ -9,12 +9,14 @@ import type {
   UserMemoryUpdates,
 } from '../domain/userMemory.repository.interface';
 import type { NotableArtwork } from '../domain/userMemory.types';
+import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /** Array cap constants to prevent unbounded growth. */
 const MAX_ARTISTS = 10;
 const MAX_MUSEUMS = 10;
 const MAX_ARTWORKS = 20;
+const MAX_PERIODS = 10;
 
 const CACHE_TTL_SECONDS = 3600; // 1 hour
 const CACHE_PREFIX = 'memory:prompt:';
@@ -81,14 +83,37 @@ const mergeArtists = (
 };
 
 /**
+ * Optional dependencies for {@link UserMemoryService}. Kept as a separate
+ * options bag (rather than additional positional ctor args) so future Spec C
+ * mergers can add ports here without breaking existing call sites.
+ */
+export interface UserMemoryServiceOptionalDeps {
+  /**
+   * Knowledge-extraction port. When supplied, {@link UserMemoryService.updateAfterSession}
+   * looks up the `period` for each discussed artwork and merges new entries
+   * into `UserMemory.favoritePeriods`.
+   */
+  artworkRepo?: ArtworkKnowledgeRepoPort;
+}
+
+/**
  * Application service for cross-session user memory.
  * Reads/writes user memory, builds prompt blocks, and manages cache invalidation.
  */
 export class UserMemoryService {
+  private readonly repository: UserMemoryRepository;
+  private readonly cache?: CacheService;
+  private readonly artworkRepo?: ArtworkKnowledgeRepoPort;
+
   constructor(
-    private readonly repository: UserMemoryRepository,
-    private readonly cache?: CacheService,
-  ) {}
+    repository: UserMemoryRepository,
+    cache?: CacheService,
+    optional?: UserMemoryServiceOptionalDeps,
+  ) {
+    this.repository = repository;
+    this.cache = cache;
+    this.artworkRepo = optional?.artworkRepo;
+  }
 
   /**
    * Returns the prompt block for a user, reading from cache first.
@@ -116,11 +141,18 @@ export class UserMemoryService {
   /**
    * Merges data from the completed session into the user's persistent memory.
    * Caps arrays to prevent unbounded growth.
+   *
+   * @param userId - Owner of the memory row.
+   * @param visitContext - Aggregated session signals (museum, artworks, expertise).
+   * @param sessionId - Source session id (recorded as `lastSessionId`).
+   * @param locale - Session locale used for artwork-knowledge lookups
+   *   (defaults to `'en'` so existing call sites keep working).
    */
   async updateAfterSession(
     userId: number,
     visitContext: VisitContext | null | undefined,
     sessionId: string,
+    locale = 'en',
   ): Promise<void> {
     const existing = await this.repository.getByUserId(userId);
 
@@ -134,6 +166,7 @@ export class UserMemoryService {
       mergeMuseums(updates, existing, visitContext.museumName);
       mergeArtworks(updates, existing, visitContext, sessionId);
       mergeArtists(updates, existing, visitContext);
+      await this.mergePeriods(updates, existing, visitContext, locale);
     }
 
     try {
@@ -147,6 +180,53 @@ export class UserMemoryService {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+
+  /**
+   * Merges new {@link ArtworkKnowledge.period} values from artworks discussed
+   * in the session onto `UserMemory.favoritePeriods`.
+   *
+   * - Skipped entirely when no artworkRepo was injected, or when no artworks
+   *   were discussed (cheap early return — no DB hit).
+   * - Dedupe is case-insensitive against the existing list AND across the
+   *   current batch (so two artworks of the same period in one session yield
+   *   a single new entry).
+   * - Lookup failures are logged and skipped per-title so a single network
+   *   blip can't lose the whole batch.
+   * - Capped at {@link MAX_PERIODS} keeping the most recent entries (slice(-N)).
+   */
+  private async mergePeriods(
+    updates: UserMemoryUpdates,
+    existing: UserMemory | null,
+    visitContext: VisitContext,
+    locale: string,
+  ): Promise<void> {
+    if (!this.artworkRepo) return;
+    if (visitContext.artworksDiscussed.length === 0) return;
+
+    const existingPeriods = existing?.favoritePeriods ?? [];
+    const lowerExisting = new Set(existingPeriods.map((p) => p.toLowerCase()));
+    const newPeriods: string[] = [];
+
+    for (const a of visitContext.artworksDiscussed) {
+      try {
+        const knowledge = await this.artworkRepo.findByTitleAndLocale(a.title, locale);
+        const period = knowledge?.period?.trim();
+        if (!period) continue;
+        const lower = period.toLowerCase();
+        if (lowerExisting.has(lower)) continue;
+        lowerExisting.add(lower);
+        newPeriods.push(period);
+      } catch (err) {
+        logger.warn('user_memory_period_lookup_failed', {
+          title: a.title,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
+    if (newPeriods.length === 0) return;
+    updates.favoritePeriods = [...existingPeriods, ...newPeriods].slice(-MAX_PERIODS);
   }
 
   /** Hard-deletes the user's memory (GDPR erasure) and invalidates cache. */

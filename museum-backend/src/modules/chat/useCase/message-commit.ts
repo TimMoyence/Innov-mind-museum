@@ -66,6 +66,7 @@ export async function postCommitSideEffects(
   sessionId: string,
   ownerId: number | undefined,
   sessionUpdates: ReturnType<typeof computeSessionUpdates> | undefined,
+  locale?: string | null,
 ): Promise<void> {
   if (deps.cache) {
     await deps.cache.delByPrefix(`session:${sessionId}:`);
@@ -76,7 +77,7 @@ export async function postCommitSideEffects(
 
   if (deps.userMemory && ownerId && sessionUpdates?.visitContext) {
     deps.userMemory
-      .updateAfterSession(ownerId, sessionUpdates.visitContext, sessionId)
+      .updateAfterSession(ownerId, sessionUpdates.visitContext, sessionId, locale ?? 'en')
       .catch(() => {
         // swallowed — user memory is non-critical
       });
@@ -167,13 +168,13 @@ export async function commitAssistantResponse(
     sessionId,
     ownerId,
     sessionUpdates,
+    session.locale,
   );
 
-  const mappedSuggestions =
-    aiResult.suggestions && aiResult.suggestions.length > 0
-      ? aiResult.suggestions.map((s) => sanitizePromptInput(s, 60)).filter((s) => s.length > 0)
-      : [];
-  const sanitizedSuggestions = mappedSuggestions.length > 0 ? mappedSuggestions : undefined;
+  const mapped = (aiResult.suggestions ?? [])
+    .map((s) => sanitizePromptInput(s, 60))
+    .filter((s) => s.length > 0);
+  const sanitizedSuggestions = mapped.length > 0 ? mapped : undefined;
 
   return {
     sessionId,
