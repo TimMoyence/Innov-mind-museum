@@ -8,8 +8,9 @@
  *
  * Tapping a row fires {@link useUpdateTtsVoice} with either the chosen
  * `TtsVoice` or `null` (the Default row resets the preference to the
- * env-level default). The mutation invalidates the `['me']` profile query
- * on success so the parent settings screen re-reads the persisted value.
+ * env-level default). The mutation invalidates the `['user', 'me']`
+ * profile query on success so the parent settings screen re-reads the
+ * persisted value.
  *
  * The currently-selected row is reflected via `accessibilityState.selected`
  * and a checkmark Ionicon. While a write is in flight, only the row that

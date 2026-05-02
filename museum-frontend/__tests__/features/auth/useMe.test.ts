@@ -2,9 +2,11 @@
  * Tests for {@link useMe} (Spec C T2.10).
  *
  * The hook wraps `GET /api/auth/me` via `authService.me` and caches the
- * profile envelope under the `['me']` query key so the existing
+ * profile envelope under the `['user', 'me']` query key so the existing
  * invalidation calls from {@link useUpdateTtsVoice} and the AuthContext
- * foreground resync actually have a subscriber to refetch.
+ * foreground resync actually have a subscriber to refetch. The `'user'`
+ * head segment inherits the existing `SENSITIVE_QUERY_KEY_PREFIXES`
+ * exclusion in `shared/data/queryClient.ts` (no AsyncStorage persistence).
  */
 import '@/__tests__/helpers/test-utils';
 import { waitFor } from '@testing-library/react-native';

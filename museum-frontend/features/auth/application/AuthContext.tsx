@@ -196,7 +196,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // User was away long enough that volatile data (notifications, sessions)
         // is likely stale. Invalidate only that scope — everything else stays
         // cached so returning feels instant.
-        void queryClient.invalidateQueries({ queryKey: ['me'] });
+        void queryClient.invalidateQueries({ queryKey: ['user', 'me'] });
         void queryClient.invalidateQueries({ queryKey: ['notifications'] });
       }
     },

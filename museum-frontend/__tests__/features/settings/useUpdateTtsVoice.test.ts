@@ -3,8 +3,8 @@
  *
  * Covers the TanStack mutation hook that posts the chosen TTS voice to
  * `PATCH /api/auth/tts-voice` via {@link authService.updateTtsVoice} and
- * invalidates the `['me']` profile query on success so the UI re-reads
- * the freshly persisted value.
+ * invalidates the `['user', 'me']` profile query on success so the UI
+ * re-reads the freshly persisted value.
  */
 import '@/__tests__/helpers/test-utils';
 import { act, waitFor } from '@testing-library/react-native';
@@ -60,7 +60,7 @@ describe('useUpdateTtsVoice (Spec C T2.8)', () => {
     expect(mutationResult).toEqual({ ttsVoice: null });
   });
 
-  it("invalidates the ['me'] query on success so the profile re-reads the new value", async () => {
+  it("invalidates the ['user', 'me'] query on success so the profile re-reads the new value", async () => {
     mockUpdateTtsVoice.mockResolvedValueOnce({ ttsVoice: 'nova' });
 
     const { result, client } = renderHookWithQueryClient(() => useUpdateTtsVoice());
@@ -71,7 +71,7 @@ describe('useUpdateTtsVoice (Spec C T2.8)', () => {
     });
 
     await waitFor(() => {
-      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['me'] });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['user', 'me'] });
     });
   });
 });
