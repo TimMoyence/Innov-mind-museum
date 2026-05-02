@@ -237,6 +237,13 @@ export interface AppEnv {
     exporterEndpoint: string;
     serviceName: string;
   };
+  /** Langfuse LLM observability (V12 W1 — disabled by default). */
+  langfuse?: {
+    enabled: boolean;
+    publicKey: string | undefined;
+    secretKey: string | undefined;
+    host: string;
+  };
   /** Maximum chat messages a free-tier user can send per calendar day. */
   freeTierDailyChatLimit: number;
   /** TTL in seconds for Overpass API museum search cache entries. */

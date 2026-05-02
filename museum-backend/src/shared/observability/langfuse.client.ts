@@ -8,9 +8,9 @@
  * @module shared/observability/langfuse.client
  */
 
-import { logger } from '@shared/logger';
 import { Langfuse } from 'langfuse';
 
+import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
 let _client: Langfuse | null = null;
@@ -32,8 +32,8 @@ export function getLangfuse(): Langfuse | null {
   if (!env.langfuse.publicKey || !env.langfuse.secretKey) {
     if (!_warnedMissingKeys) {
       logger.warn(
-        { host: env.langfuse.host },
         'LANGFUSE_ENABLED=true but LANGFUSE_PUBLIC_KEY or LANGFUSE_SECRET_KEY missing — telemetry disabled',
+        { host: env.langfuse.host },
       );
       _warnedMissingKeys = true;
     }
@@ -66,7 +66,7 @@ export async function shutdownLangfuse(): Promise<void> {
   try {
     await _client.shutdownAsync();
   } catch (err) {
-    logger.warn({ err }, 'langfuse shutdownAsync failed (telemetry drop)');
+    logger.warn('langfuse shutdownAsync failed (telemetry drop)', { err });
   }
   _client = null;
 }

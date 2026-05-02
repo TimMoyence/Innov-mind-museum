@@ -8,7 +8,7 @@
  * @module shared/observability/safeTrace
  */
 
-import { logger } from '@shared/logger';
+import { logger } from '@shared/logger/logger';
 
 /**
  * Runs `fn` and returns its result, or `undefined` on any throw.
@@ -21,7 +21,7 @@ export function safeTrace<T>(label: string, fn: () => T): T | undefined {
   try {
     return fn();
   } catch (err) {
-    logger.warn({ err, label }, 'langfuse trace dropped (fail-open)');
+    logger.warn('langfuse trace dropped (fail-open)', { err, label });
     return undefined;
   }
 }
