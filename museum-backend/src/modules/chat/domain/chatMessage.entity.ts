@@ -55,7 +55,7 @@ export class ChatMessage {
   audioUrl?: string | null;
 
   /** When the cached TTS audio was generated. Used to invalidate stale cache entries. */
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   audioGeneratedAt?: Date | null;
 
   /** OpenAI voice identifier used to generate the cached audio (e.g. `alloy`, `verse`). */
@@ -68,6 +68,6 @@ export class ChatMessage {
   })
   artworkMatches!: ArtworkMatch[];
 
-  @CreateDateColumn({ type: 'timestamp' })
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }

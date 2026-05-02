@@ -403,8 +403,7 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       expect(page.nextCursor).toBeNull();
     });
 
-    // TODO Phase 10: green-on-real-PG — pagination cursor/feedback-upsert path not yet aligned with repo behaviour; integration-tier only, no CI impact today.
-    it.skip('paginates with cursor across two pages of size 2 over 5 messages', async () => {
+    it('paginates with cursor across two pages of size 2 over 5 messages', async () => {
       const userId = await seedUser({ email: 'list-msg-page@test.dev' });
       const session = await repo.createSession({ userId });
       const ids: string[] = [];
@@ -546,8 +545,7 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       expect(page.nextCursor).toBeNull();
     });
 
-    // TODO Phase 10: green-on-real-PG — pagination cursor/feedback-upsert path not yet aligned with repo behaviour; integration-tier only, no CI impact today.
-    it.skip('paginates sessions with a cursor', async () => {
+    it('paginates sessions with a cursor', async () => {
       const userId = await seedUser({ email: 'list-sessions-page@test.dev' });
       const ids: string[] = [];
       for (let i = 0; i < 3; i += 1) {

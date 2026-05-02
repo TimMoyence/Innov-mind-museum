@@ -59,10 +59,10 @@ export class ChatSession {
   @VersionColumn()
   version!: number;
 
-  @CreateDateColumn({ type: 'timestamp' })
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
-  @UpdateDateColumn({ type: 'timestamp' })
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
 
   /**
@@ -70,6 +70,6 @@ export class ChatSession {
    * (GDPR data minimization). `null` means the session is live; once set the
    * purge worker skips the row on subsequent ticks (idempotent).
    */
-  @Column({ type: 'timestamp', nullable: true, name: 'purged_at' })
+  @Column({ type: 'timestamptz', nullable: true, name: 'purged_at' })
   purgedAt?: Date | null;
 }
