@@ -8,6 +8,6 @@ it('declares ttsVoice column (varchar 32, nullable, name=tts_voice)', () => {
   expect(col).toBeDefined();
   expect(col?.options.name).toBe('tts_voice');
   expect(col?.options.type).toBe('varchar');
-  expect(col?.options.length).toBe('32');
+  expect(col?.options.length).toBe(32);
   expect(col?.options.nullable).toBe(true);
 });

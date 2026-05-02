@@ -82,7 +82,7 @@ export class User {
    * "use the env-level default" (`env.tts.voice`). Validated server-side
    * against the catalog before persistence.
    */
-  @Column({ type: 'varchar', length: '32', nullable: true, name: 'tts_voice' })
+  @Column({ type: 'varchar', length: 32, nullable: true, name: 'tts_voice' })
   ttsVoice!: string | null;
 
   @Column({ nullable: true })
