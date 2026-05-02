@@ -285,6 +285,10 @@ jobs:
     permissions:
       contents: read
       packages: write
+    # Exposed for the sign-prod job (V12 W8 — keyless cosign + SLSA L3).
+    outputs:
+      image: ${{ steps.refs.outputs.image }}
+      digest: ${{ steps.push.outputs.digest }}
     env:
       HAS_SENTRY_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
     steps:
@@ -334,7 +338,12 @@ jobs:
           ignore-unfixed: true
           trivyignores: .trivyignore
 
+      - name: Compute image refs (for cosign job output)
+        id: refs
+        run: echo "image=ghcr.io/${{ secrets.GHCR_USER }}/museum-backend" >> "$GITHUB_OUTPUT"
+
       - name: Push image to GHCR
+        id: push
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
         with:
           context: ./museum-backend
@@ -566,6 +575,10 @@ jobs:
     permissions:
       contents: read
       packages: write
+    # Exposed for the sign-staging job (V12 W8 — keyless cosign + SLSA L3).
+    outputs:
+      image: ${{ steps.refs.outputs.image }}
+      digest: ${{ steps.push.outputs.digest }}
     env:
       HAS_SENTRY_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
     steps:
@@ -615,7 +628,12 @@ jobs:
           ignore-unfixed: true
           trivyignores: .trivyignore
 
+      - name: Compute staging image refs (for cosign job output)
+        id: refs
+        run: echo "image=ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging" >> "$GITHUB_OUTPUT"
+
       - name: Push staging image to GHCR
+        id: push
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
         with:
           context: ./museum-backend
@@ -824,3 +842,36 @@ jobs:
         run: |
           echo "::error::Staging deploy rolled back — see docs/RUNBOOKS/auto-rollback.md"
           exit 1
+
+  # ─── 8. Cosign sign + SLSA L3 attestation (prod) ─────────────────────
+  # V12 W8 — keyless cosign signature + SLSA L3 build provenance attached
+  # to the GHCR image. Runs after deploy-prod succeeds; the deployed image
+  # carries the same digest, so the signature/attestation cover it
+  # post-hoc. Verification (cosign-verify-deploy.yml) is run by ops at
+  # release-pull time. Reusable workflow definition: cosign-sign-image.yml.
+  sign-prod:
+    needs: deploy-prod
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+      attestations: write
+    uses: ./.github/workflows/cosign-sign-image.yml
+    with:
+      image: ${{ needs.deploy-prod.outputs.image }}
+      digest: ${{ needs.deploy-prod.outputs.digest }}
+
+  # ─── 9. Cosign sign + SLSA L3 attestation (staging) ──────────────────
+  sign-staging:
+    needs: deploy-staging
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+      attestations: write
+    uses: ./.github/workflows/cosign-sign-image.yml
+    with:
+      image: ${{ needs.deploy-staging.outputs.image }}
+      digest: ${{ needs.deploy-staging.outputs.digest }}

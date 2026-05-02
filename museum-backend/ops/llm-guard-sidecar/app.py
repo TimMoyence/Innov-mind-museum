@@ -63,7 +63,7 @@ def _build_input_scanners(names: list[str], banned: list[str], entities: list[st
     return scanners
 
 
-def _build_output_scanners(names: list[str]) -> list:
+def _build_output_scanners(names: list[str], entities: list[str]) -> list:
     scanners = []
     for n in names:
         if n == "NoRefusal":
@@ -71,7 +71,10 @@ def _build_output_scanners(names: list[str]) -> list:
         elif n == "Bias":
             scanners.append(Bias())
         elif n == "Sensitive":
-            scanners.append(Sensitive())
+            # entity_types matches the input Anonymize list so output PII coverage
+            # is symmetric — restricted to pure PII (no PERSON/LOCATION/ORG which
+            # false-positive on artist/museum/painting names). V12 W5 §3.3.
+            scanners.append(Sensitive(entity_types=entities))
         elif n == "Relevance":
             scanners.append(Relevance())
         else:
@@ -89,7 +92,7 @@ async def lifespan(_: FastAPI):
     banned = [s.strip() for s in os.getenv("BANNED_TOPICS", DEFAULT_BANNED_TOPICS).split(",")]
     entities = [s.strip() for s in os.getenv("ANONYMIZE_ENTITIES", DEFAULT_ANONYMIZE_ENTITIES).split(",")]
     state["input_scanners"] = _build_input_scanners(input_names, banned, entities)
-    state["output_scanners"] = _build_output_scanners(output_names)
+    state["output_scanners"] = _build_output_scanners(output_names, entities)
     logger.info(
         "scanners loaded in %.1fs — input=%d output=%d",
         time.time() - t0,

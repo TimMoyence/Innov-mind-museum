@@ -8,13 +8,37 @@
  * @module shared/observability/langfuse.client
  */
 
-import { Langfuse } from 'langfuse';
-
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
+import type { Langfuse } from 'langfuse';
+
 let _client: Langfuse | null = null;
 let _warnedMissingKeys = false;
+let _LangfuseCtor: (new (cfg: ConstructorParameters<typeof Langfuse>[0]) => Langfuse) | null = null;
+
+/**
+ * Lazily loads the `langfuse` runtime module. Deferred so the SDK (which uses
+ * `dynamicImport` internally and trips Jest under SWC at module bootstrap) is
+ * only required when telemetry is actually enabled. Returns `null` if the SDK
+ * fails to load — chat path stays alive (UFR fail-open).
+ */
+function loadLangfuseCtor():
+  | (new (cfg: ConstructorParameters<typeof Langfuse>[0]) => Langfuse)
+  | null {
+  if (_LangfuseCtor) return _LangfuseCtor;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy require avoids eager SDK load that breaks Jest+SWC bootstrap
+    const mod = require('langfuse') as {
+      Langfuse: new (cfg: ConstructorParameters<typeof Langfuse>[0]) => Langfuse;
+    };
+    _LangfuseCtor = mod.Langfuse;
+    return _LangfuseCtor;
+  } catch (err) {
+    logger.warn('langfuse SDK load failed (telemetry disabled)', { err });
+    return null;
+  }
+}
 
 /**
  * Returns the shared Langfuse client, or `null` if disabled / unconfigured.
@@ -42,7 +66,10 @@ export function getLangfuse(): Langfuse | null {
 
   if (_client) return _client;
 
-  _client = new Langfuse({
+  const LangfuseCtor = loadLangfuseCtor();
+  if (!LangfuseCtor) return null;
+
+  _client = new LangfuseCtor({
     publicKey: env.langfuse.publicKey,
     secretKey: env.langfuse.secretKey,
     baseUrl: env.langfuse.host,

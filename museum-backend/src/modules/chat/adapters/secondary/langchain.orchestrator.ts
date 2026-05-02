@@ -2,6 +2,8 @@ import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import * as Sentry from '@sentry/node';
 
 import { logger } from '@shared/logger/logger';
+import { getLangfuse } from '@shared/observability/langfuse.client';
+import { safeTrace } from '@shared/observability/safeTrace';
 import { startSpan } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
 
@@ -62,6 +64,53 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
   /** Returns the circuit breaker's observable state for health-check endpoints. */
   getCircuitBreakerState() {
     return this.circuitBreaker.getState();
+  }
+
+  /**
+   * Wraps an orchestration call with a top-level Langfuse trace. Fail-open via
+   * `safeTrace`: any exception in the Langfuse SDK is swallowed and the chat
+   * path continues. When `LANGFUSE_ENABLED=false` (default), `getLangfuse()`
+   * returns `null` and this is a near-zero-cost no-op (one nullable read).
+   */
+  private async withLangfuseTrace<T extends OrchestratorOutput>(
+    name: string,
+    input: OrchestratorInput,
+    fn: () => Promise<T>,
+  ): Promise<T> {
+    const lf = getLangfuse();
+    const baseMeta = {
+      provider: env.llm.provider,
+      model: env.llm.model,
+      requestId: input.requestId,
+      intent: input.intent,
+      hasImage: !!input.image,
+      historyLength: input.history.length,
+      locale: input.locale,
+      museumMode: input.museumMode,
+    };
+    const trace = safeTrace('langfuse.trace.create', () => lf?.trace({ name, metadata: baseMeta }));
+    const startedAt = Date.now();
+    try {
+      const result = await fn();
+      safeTrace('langfuse.trace.update', () => {
+        trace?.update({
+          output: { textLength: result.text.length },
+          metadata: { ...baseMeta, latencyMs: Date.now() - startedAt },
+        });
+      });
+      return result;
+    } catch (err) {
+      safeTrace('langfuse.trace.update.error', () => {
+        trace?.update({
+          metadata: {
+            ...baseMeta,
+            latencyMs: Date.now() - startedAt,
+            error: err instanceof Error ? err.message : String(err),
+          },
+        });
+      });
+      throw err;
+    }
   }
 
   /** Invokes the LLM for a single section behind circuit-breaker + semaphore, wrapped in a Sentry span. */
@@ -247,57 +296,59 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
    * @returns Generated text and metadata (citations, diagnostics).
    */
   async generate(input: OrchestratorInput): Promise<OrchestratorOutput> {
-    return await startSpan(
-      {
-        name: 'llm.orchestrate',
-        op: 'ai.orchestrate',
-        attributes: {
-          'llm.provider': env.llm.provider,
-          'llm.model': env.llm.model,
-          'llm.has_image': !!input.image,
-          'llm.history_length': input.history.length,
+    return await this.withLangfuseTrace('llm.orchestrate', input, () =>
+      startSpan(
+        {
+          name: 'llm.orchestrate',
+          op: 'ai.orchestrate',
+          attributes: {
+            'llm.provider': env.llm.provider,
+            'llm.model': env.llm.model,
+            'llm.has_image': !!input.image,
+            'llm.history_length': input.history.length,
+          },
         },
-      },
-      async () => {
-        if (input.intent === 'walk') {
-          return await this.generateWalk(input);
-        }
+        async () => {
+          if (input.intent === 'walk') {
+            return await this.generateWalk(input);
+          }
 
-        const startedAt = Date.now();
+          const startedAt = Date.now();
 
-        const prepared = buildOrchestratorMessages(input);
-        const { normalizedText, recentHistory, sectionPlan } = prepared;
+          const prepared = buildOrchestratorMessages(input);
+          const { normalizedText, recentHistory, sectionPlan } = prepared;
 
-        const model = this.model;
-        if (!model) {
-          return {
-            text: MISSING_LLM_KEY_FALLBACK,
-            metadata: { citations: ['system:missing-llm-api-key'] },
-          };
-        }
+          const model = this.model;
+          if (!model) {
+            return {
+              text: MISSING_LLM_KEY_FALLBACK,
+              metadata: { citations: ['system:missing-llm-api-key'] },
+            };
+          }
 
-        const tasks = this.buildSectionTasks(model, prepared, input);
+          const tasks = this.buildSectionTasks(model, prepared, input);
 
-        const sectionResults = await runSectionTasks(
-          tasks,
-          this.buildRunnerOptions(input.requestId),
-        );
+          const sectionResults = await runSectionTasks(
+            tasks,
+            this.buildRunnerOptions(input.requestId),
+          );
 
-        const bySection = new Map<LlmSectionName, SectionRunResult<string>>();
-        for (const result of sectionResults) {
-          bySection.set(result.name as LlmSectionName, result);
-        }
+          const bySection = new Map<LlmSectionName, SectionRunResult<string>>();
+          for (const result of sectionResults) {
+            bySection.set(result.name as LlmSectionName, result);
+          }
 
-        return this.assembleResponse({
-          input,
-          sectionPlan,
-          bySection,
-          recentHistory,
-          normalizedText,
-          startedAt,
-        });
-      },
-    ); // end startSpan('llm.orchestrate')
+          return this.assembleResponse({
+            input,
+            sectionPlan,
+            bySection,
+            recentHistory,
+            normalizedText,
+            startedAt,
+          });
+        },
+      ),
+    ); // end withLangfuseTrace('llm.orchestrate') wrapping startSpan
   }
 
   /** Builds section tasks from the plan for use with the section runner. */
@@ -392,6 +443,15 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     };
   }
 
+  /**
+   * Runs `fn` behind the LLM circuit breaker and the per-request semaphore.
+   * Extracted into a single helper so call sites stay one nesting level shallow
+   * (sonarjs/no-nested-functions + max-nested-callbacks).
+   */
+  private async _executeGuarded<T>(fn: () => Promise<T>): Promise<T> {
+    return await this.circuitBreaker.execute(() => this.semaphore.use(fn));
+  }
+
   /** Parses raw streamed content into the final response, optionally attaching diagnostics. */
   private buildStreamSuccessResponse(rawContent: string, requestId?: string): OrchestratorOutput {
     const parsed = parseAssistantResponse(rawContent);
@@ -431,86 +491,79 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     input: OrchestratorInput,
     onChunk: (text: string) => void,
   ): Promise<OrchestratorOutput> {
-    return await startSpan(
-      {
-        name: 'llm.orchestrate.stream',
-        op: 'ai.orchestrate',
-        attributes: {
-          'llm.provider': env.llm.provider,
-          'llm.model': env.llm.model,
-          'llm.has_image': !!input.image,
+    return await this.withLangfuseTrace('llm.orchestrate.stream', input, () =>
+      startSpan(
+        {
+          name: 'llm.orchestrate.stream',
+          op: 'ai.orchestrate',
+          attributes: {
+            'llm.provider': env.llm.provider,
+            'llm.model': env.llm.model,
+            'llm.has_image': !!input.image,
+          },
         },
-      },
-      async () => {
-        if (input.intent === 'walk') {
-          const walkResult = await this.generateWalk(input);
-          onChunk(walkResult.text);
-          return walkResult;
-        }
-
-        const prepared = buildOrchestratorMessages(input);
-        const { normalizedText, recentHistory, sectionPlan } = prepared;
-
-        const model = this.model;
-        if (!model) {
-          onChunk(MISSING_LLM_KEY_FALLBACK);
-          return {
-            text: MISSING_LLM_KEY_FALLBACK,
-            metadata: { citations: ['system:missing-llm-api-key'] },
-          };
-        }
-
-        const section = sectionPlan[0];
-        const sectionMessages = this.buildFirstSectionMessages(section, prepared, input);
-
-        const { controller, clearStreamTimeout } = this.createStreamTimeout(section.timeoutMs);
-        const accumulator = { text: '' };
-
-        try {
-          const rawContent = await this.circuitBreaker.execute(() =>
-            this.semaphore.use(
-              async () =>
-                await this.streamSection(
-                  model,
-                  sectionMessages,
-                  controller.signal,
-                  onChunk,
-                  accumulator,
-                ),
-            ),
-          );
-
-          clearStreamTimeout();
-          return this.buildStreamSuccessResponse(rawContent, input.requestId);
-        } catch (error) {
-          clearStreamTimeout();
-
-          logger.warn('llm_stream_error', {
-            requestId: input.requestId,
-            provider: env.llm.provider,
-            model: env.llm.model,
-            error: (error as Error).message,
-          });
-
-          // If we have partial content, try to parse what we have
-          if (accumulator.text.length > 0) {
-            const parsed = parseAssistantResponse(accumulator.text);
-            return { text: parsed.answer, metadata: parsed.metadata };
+        async () => {
+          if (input.intent === 'walk') {
+            const walkResult = await this.generateWalk(input);
+            onChunk(walkResult.text);
+            return walkResult;
           }
 
-          // Fallback
-          const fallbackText = createSummaryFallback({
-            history: recentHistory,
-            question: normalizedText,
-            location: input.context?.location,
-            locale: input.locale,
-            museumMode: input.museumMode,
-          });
+          const prepared = buildOrchestratorMessages(input);
+          const { normalizedText, recentHistory, sectionPlan } = prepared;
 
-          return { text: fallbackText, metadata: {} };
-        }
-      },
-    ); // end startSpan('llm.orchestrate.stream')
+          const model = this.model;
+          if (!model) {
+            onChunk(MISSING_LLM_KEY_FALLBACK);
+            return {
+              text: MISSING_LLM_KEY_FALLBACK,
+              metadata: { citations: ['system:missing-llm-api-key'] },
+            };
+          }
+
+          const section = sectionPlan[0];
+          const sectionMessages = this.buildFirstSectionMessages(section, prepared, input);
+
+          const { controller, clearStreamTimeout } = this.createStreamTimeout(section.timeoutMs);
+          const accumulator = { text: '' };
+
+          try {
+            const rawContent = await this._executeGuarded(() =>
+              this.streamSection(model, sectionMessages, controller.signal, onChunk, accumulator),
+            );
+
+            clearStreamTimeout();
+            return this.buildStreamSuccessResponse(rawContent, input.requestId);
+          } catch (error) {
+            clearStreamTimeout();
+
+            logger.warn('llm_stream_error', {
+              requestId: input.requestId,
+              provider: env.llm.provider,
+              model: env.llm.model,
+              error: (error as Error).message,
+            });
+
+            // If we have partial content, try to parse what we have
+            if (accumulator.text.length > 0) {
+              const parsed = parseAssistantResponse(accumulator.text);
+              return { text: parsed.answer, metadata: parsed.metadata };
+            }
+
+            // Fallback
+            const fallbackText = createSummaryFallback({
+              history: recentHistory,
+              question: normalizedText,
+              location: input.context?.location,
+              locale: input.locale,
+              museumMode: input.museumMode,
+            });
+
+            return { text: fallbackText, metadata: {} };
+          }
+        },
+      ),
+    ); // end withLangfuseTrace('llm.orchestrate.stream') wrapping startSpan
   }
 
   /**

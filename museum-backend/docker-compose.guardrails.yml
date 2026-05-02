@@ -34,9 +34,14 @@ services:
       - LOG_LEVEL=INFO
       # v3 validated config — see docs/plans/reports/P11-decision.md
       - INPUT_SCANNERS=PromptInjection,Anonymize,Toxicity
+      # V12 W5 §3.3 — Sensitive uses Presidio internally on output (no separate
+      # Anonymize output scanner exists in protectai/llm-guard). Sensitive now
+      # accepts the same entity_types as input Anonymize for symmetric PII
+      # coverage; see ops/llm-guard-sidecar/app.py:_build_output_scanners.
       - OUTPUT_SCANNERS=NoRefusal,Bias,Sensitive,Relevance
-      # Anonymize restricted to pure PII — excludes PERSON/LOCATION/ORG/NRP/DATE_TIME
-      # which otherwise flag every artist/museum/painting name as PII.
+      # Restricted to pure PII — excludes PERSON/LOCATION/ORG/NRP/DATE_TIME which
+      # otherwise flag every artist/museum/painting name as PII. Applied to BOTH
+      # input Anonymize and output Sensitive so coverage is symmetric.
       - ANONYMIZE_ENTITIES=EMAIL_ADDRESS,PHONE_NUMBER,CREDIT_CARD,IBAN_CODE,IP_ADDRESS,US_SSN,US_PASSPORT,US_DRIVER_LICENSE,CRYPTO,URL,MEDICAL_LICENSE
     restart: unless-stopped
     healthcheck:

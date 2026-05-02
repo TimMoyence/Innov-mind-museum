@@ -25,6 +25,7 @@ import { registerAuditCron, type AuditCronHandle } from '@shared/audit/audit-cro
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
 import { logger } from '@shared/logger/logger';
+import { shutdownLangfuse } from '@shared/observability/langfuse.client';
 import { shutdownOpenTelemetry } from '@shared/observability/opentelemetry';
 import { initSentry } from '@shared/observability/sentry';
 import { assertDeploymentInvariants } from '@src/config/deployment-invariants';
@@ -244,6 +245,17 @@ async function drainAsyncResources(resources: ShutdownResources): Promise<void> 
   if (cacheService.destroy) await cacheService.destroy();
 }
 
+/**
+ * Flushes Langfuse spans then closes DB + Redis. Called inside the
+ * `server.close()` callback so Langfuse fires AFTER the in-flight HTTP drain
+ * (per langfuse.client.ts contract). Wrapper isolates the async sequence from
+ * the callback's lexical scope (sonarjs/no-nested-functions).
+ */
+async function flushTelemetryAndFinalize(redisClient: Redis | undefined): Promise<void> {
+  await safeTeardown('langfuse_shutdown_failed', () => shutdownLangfuse());
+  await finalizeShutdown(redisClient);
+}
+
 /** Closes DB + Redis after in-flight HTTP requests drained, then exits with code 0. */
 async function finalizeShutdown(redisClient: Redis | undefined): Promise<void> {
   try {
@@ -278,7 +290,7 @@ function registerShutdownHandlers(resources: ShutdownResources): void {
 
     server.close(() => {
       logger.info('server_connections_drained');
-      void finalizeShutdown(redisClient);
+      void flushTelemetryAndFinalize(redisClient);
     });
 
     setTimeout(() => {
