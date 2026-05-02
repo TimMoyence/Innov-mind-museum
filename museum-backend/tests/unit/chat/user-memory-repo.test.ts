@@ -8,9 +8,34 @@ import { makeMockTypeOrmRepo, makeMockDataSource } from 'tests/helpers/shared/mo
 
 // ─── Mock helpers ─────────────────────────────────────────────────────
 
+/**
+ * Property → DB-column map mirroring the actual `user_memories` schema after
+ * migration `Check1776593907869` (which kept most columns in camelCase but
+ * snake_cased a few — `user_id`, `language_preference`,
+ * `session_duration_p90_minutes`). The SUT consults `repo.metadata`
+ * to resolve each property, so the mock must return the exact wire-level
+ * column names that Postgres expects in the `ON CONFLICT` clause.
+ */
+const USER_MEMORY_COLUMN_MAP: Record<string, string> = {
+  userId: 'user_id',
+  preferredExpertise: 'preferredExpertise',
+  favoritePeriods: 'favoritePeriods',
+  favoriteArtists: 'favoriteArtists',
+  museumsVisited: 'museumsVisited',
+  totalArtworksDiscussed: 'totalArtworksDiscussed',
+  notableArtworks: 'notableArtworks',
+  interests: 'interests',
+  summary: 'summary',
+  disabledByUser: 'disabledByUser',
+  sessionCount: 'sessionCount',
+  lastSessionId: 'lastSessionId',
+  languagePreference: 'language_preference',
+  sessionDurationP90Minutes: 'session_duration_p90_minutes',
+};
+
 function buildMocks() {
   const qb = makeMockQb({ execute: jest.fn().mockResolvedValue({}) });
-  const { repo } = makeMockTypeOrmRepo<UserMemory>({ qb });
+  const { repo } = makeMockTypeOrmRepo<UserMemory>({ qb, columnMap: USER_MEMORY_COLUMN_MAP });
   const dataSource = makeMockDataSource(repo);
   return { repo, qb, dataSource };
 }
@@ -88,7 +113,7 @@ describe('TypeOrmUserMemoryRepository', () => {
           preferredExpertise: 'expert',
         }),
       );
-      expect(qb.orUpdate).toHaveBeenCalledWith(['preferred_expertise'], ['user_id']);
+      expect(qb.orUpdate).toHaveBeenCalledWith(['preferredExpertise'], ['user_id']);
       expect(qb.execute).toHaveBeenCalled();
       expect(result).toBe(memory);
     });
@@ -108,22 +133,36 @@ describe('TypeOrmUserMemoryRepository', () => {
       });
 
       expect(qb.orUpdate).toHaveBeenCalledWith(
-        ['favorite_artists', 'session_count', 'last_session_id'],
+        ['favoriteArtists', 'sessionCount', 'lastSessionId'],
         ['user_id'],
       );
       expect(result).toBe(memory);
     });
 
-    it('converts camelCase keys to snake_case for orUpdate columns', async () => {
+    it('resolves orUpdate columns via TypeORM metadata (entity-faithful names)', async () => {
+      // Migration `Check1776593907869` dropped+re-added user_memories columns
+      // in mixed casing: most stayed camelCase, but a handful are snake_case
+      // (user_id, language_preference, session_duration_p90_minutes). The
+      // SUT now consults `repo.metadata.findColumnWithPropertyName(...)` so
+      // the resolved column names are always entity-faithful — no naive
+      // snake_case rewrite that silently breaks the `excluded.<col>`
+      // reference inside Postgres ON CONFLICT.
       repo.findOne.mockResolvedValue(makeUserMemory());
 
       await sut.upsert(1, {
         totalArtworksDiscussed: 10,
         museumsVisited: ['Louvre'],
+        languagePreference: 'fr',
+        sessionDurationP90Minutes: 25,
       });
 
       expect(qb.orUpdate).toHaveBeenCalledWith(
-        ['total_artworks_discussed', 'museums_visited'],
+        [
+          'totalArtworksDiscussed',
+          'museumsVisited',
+          'language_preference',
+          'session_duration_p90_minutes',
+        ],
         ['user_id'],
       );
     });

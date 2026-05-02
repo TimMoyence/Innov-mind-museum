@@ -17,9 +17,23 @@ import { makeMemory } from 'tests/helpers/chat/userMemory.fixtures';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
+/**
+ * Property → DB-column map mirroring the `user_memories` schema after
+ * migration `Check1776593907869`. The SUT resolves `orUpdate` columns via
+ * `repo.metadata.findColumnWithPropertyName(...)`, so the mock must expose
+ * `metadata` for any property the test exercises.
+ */
+const USER_MEMORY_COLUMN_MAP: Record<string, string> = {
+  userId: 'user_id',
+  preferredExpertise: 'preferredExpertise',
+  totalArtworksDiscussed: 'totalArtworksDiscussed',
+  sessionCount: 'sessionCount',
+  lastSessionId: 'lastSessionId',
+};
+
 function buildMocks() {
   const qb = makeMockQb({ execute: jest.fn().mockResolvedValue({}) });
-  const { repo } = makeMockTypeOrmRepo<UserMemory>({ qb });
+  const { repo } = makeMockTypeOrmRepo<UserMemory>({ qb, columnMap: USER_MEMORY_COLUMN_MAP });
   const dataSource = makeMockDataSource(repo);
   return { repo, qb, dataSource };
 }
@@ -50,7 +64,7 @@ describe('TypeOrmUserMemoryRepository.upsert() — single SQL round-trip', () =>
     await sut.upsert(2, { sessionCount: 5, lastSessionId: 'sess-abc' });
 
     expect(qb.orUpdate).toHaveBeenCalledWith(
-      expect.arrayContaining(['session_count', 'last_session_id']),
+      expect.arrayContaining(['sessionCount', 'lastSessionId']),
       ['user_id'],
     );
   });

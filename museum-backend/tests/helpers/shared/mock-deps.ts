@@ -16,6 +16,15 @@ export interface MockRepoOptions {
   methods?: Partial<Record<string, jest.Mock>>;
   /** Custom query builder (defaults to makeMockQb()) */
   qb?: Record<string, jest.Mock>;
+  /**
+   * Optional entity-metadata stub: maps entity property names to their actual
+   * DB column names (`databaseName`). Required when the SUT calls
+   * `repo.metadata.findColumnWithPropertyName(...)` — e.g.
+   * `TypeOrmUserMemoryRepository.upsert` resolves `orUpdate` columns this way.
+   * When omitted, `repo.metadata` is left undefined; SUTs that don't touch
+   * metadata are unaffected.
+   */
+  columnMap?: Record<string, string>;
 }
 
 /**
@@ -23,11 +32,22 @@ export interface MockRepoOptions {
  *
  * All returned methods are jest.fn() stubs. The repo's `createQueryBuilder`
  * returns the provided (or default) mock query builder.
+ * @param options
  */
 export function makeMockTypeOrmRepo<T extends ObjectLiteral>(
   options: MockRepoOptions = {},
 ): { repo: jest.Mocked<Repository<T>>; qb: Record<string, jest.Mock> } {
   const qb = options.qb ?? makeMockQb();
+
+  const metadata = options.columnMap
+    ? {
+        findColumnWithPropertyName: (propertyName: string) => {
+          const databaseName = options.columnMap?.[propertyName];
+          if (databaseName === undefined) return undefined;
+          return { databaseName };
+        },
+      }
+    : undefined;
 
   const repo = {
     find: jest.fn(),
@@ -41,6 +61,7 @@ export function makeMockTypeOrmRepo<T extends ObjectLiteral>(
     countBy: jest.fn(),
     createQueryBuilder: jest.fn(() => qb),
     query: jest.fn(),
+    ...(metadata ? { metadata } : {}),
     ...options.methods,
   } as unknown as jest.Mocked<Repository<T>>;
 
@@ -51,6 +72,7 @@ export function makeMockTypeOrmRepo<T extends ObjectLiteral>(
  * Creates a mocked DataSource wrapping a single repository.
  *
  * For multi-repo scenarios, use `makeMockDataSourceMulti` instead.
+ * @param repo
  */
 export function makeMockDataSource<T extends ObjectLiteral>(
   repo: jest.Mocked<Repository<T>>,
@@ -62,7 +84,6 @@ export function makeMockDataSource<T extends ObjectLiteral>(
 
 /**
  * Creates a mocked DataSource with entity-based repository routing.
- *
  * @param repoMap - Map from entity class to its mock repository.
  * @param fallback - Optional fallback repository for unknown entities.
  */

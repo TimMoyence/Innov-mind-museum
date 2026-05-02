@@ -51,15 +51,29 @@ export class TypeOrmUserMemoryRepository implements UserMemoryRepository {
     // Build column-value maps for the INSERT … ON CONFLICT … DO UPDATE statement.
     const values: Record<string, unknown> = { userId, ...updates };
 
+    // Resolve each entity property name to its actual DB column name from
+    // TypeORM metadata. The previous implementation used a naive
+    // camelCase→snake_case helper which silently broke for columns kept in
+    // camelCase by migration `Check1776593907869` (e.g. `sessionCount`,
+    // `favoritePeriods`) — those columns retain their property name in PG
+    // (double-quoted) and were missing the `name:` override on the entity,
+    // so a hand-rolled converter cannot know which casing wins per-field.
+    const propertyToColumnName = (propertyName: string): string => {
+      const column = this.repo.metadata.findColumnWithPropertyName(propertyName);
+      if (!column) {
+        throw new Error(
+          `UserMemory entity has no column for property "${propertyName}" — check entity definition or update the UserMemoryUpdates type`,
+        );
+      }
+      return column.databaseName;
+    };
+
     await this.repo
       .createQueryBuilder()
       .insert()
       .into(UserMemory)
       .values(values as unknown as UserMemory)
-      .orUpdate(
-        Object.keys(updates).map((k) => this.camelToSnake(k)),
-        ['user_id'],
-      )
+      .orUpdate(Object.keys(updates).map(propertyToColumnName), [propertyToColumnName('userId')])
       .execute();
 
     // Return the freshly-written row.
@@ -118,10 +132,5 @@ export class TypeOrmUserMemoryRepository implements UserMemoryRepository {
       createdAt: new Date(r.createdAt),
       lastMessageAt: r.lastMessageAt ? new Date(r.lastMessageAt) : null,
     }));
-  }
-
-  /** Converts a camelCase property name to snake_case column name. */
-  private camelToSnake(str: string): string {
-    return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
   }
 }
