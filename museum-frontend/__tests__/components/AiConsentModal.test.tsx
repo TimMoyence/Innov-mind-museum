@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 
 import '../helpers/test-utils';
 import { AiConsentModal } from '@/features/chat/ui/AiConsentModal';
@@ -18,10 +18,15 @@ describe('AiConsentModal', () => {
     expect(getByText('consent.title')).toBeTruthy();
   });
 
-  it('calls onAccept when accept button is pressed', () => {
+  // The accept button uses LiquidButton, which fires haptic feedback before
+  // invoking onPress in an async chain. fireEvent.press resolves synchronously,
+  // so the assertion must wait for the microtask queue to drain.
+  it('calls onAccept when accept button is pressed', async () => {
     const { getByText } = render(<AiConsentModal {...defaultProps} />);
     fireEvent.press(getByText('consent.accept'));
-    expect(defaultProps.onAccept).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(defaultProps.onAccept).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('calls onPrivacy when privacy link is pressed', () => {
