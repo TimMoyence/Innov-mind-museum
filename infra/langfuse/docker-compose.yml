@@ -1,0 +1,57 @@
+# Langfuse self-host — observability stack for /team agents + LangChain orchestrator.
+# V12 W1 baseline: tokens / latency / errors per agent and per LLM call.
+#
+# Usage:
+#   cp .env.example .env  # set NEXTAUTH_SECRET, SALT, ENCRYPTION_KEY
+#   docker compose -f infra/langfuse/docker-compose.yml up -d
+#   open http://localhost:3002
+#
+# Anti-collision:
+#   museum-backend   → 3000
+#   museum-web       → 3001
+#   langfuse-web     → 3002 (HOST), 3000 (container internal)
+#   langfuse-pg      → 5434 (HOST), 5432 (container internal); Musaium PG already on 5433
+#
+# Storage: bind-mounted volume for PG (./data/postgres) so wiping = single rm -rf.
+
+services:
+  langfuse-db:
+    image: postgres:16-alpine
+    container_name: langfuse-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: ${LANGFUSE_DB_PASSWORD:-langfuse_dev_only}
+      POSTGRES_DB: langfuse
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse -d langfuse"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  langfuse-web:
+    image: langfuse/langfuse:latest
+    container_name: langfuse-web
+    restart: unless-stopped
+    depends_on:
+      langfuse-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://langfuse:${LANGFUSE_DB_PASSWORD:-langfuse_dev_only}@langfuse-db:5432/langfuse
+      NEXTAUTH_URL: http://localhost:3002
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      SALT: ${SALT}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      TELEMETRY_ENABLED: "false"
+      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
+    ports:
+      - "3002:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/public/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
