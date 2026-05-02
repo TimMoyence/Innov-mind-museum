@@ -1,3 +1,5 @@
+import { ChatMessage } from '../../domain/chatMessage.entity';
+import { ChatSession } from '../../domain/chatSession.entity';
 import { UserMemory } from '../../domain/userMemory.entity';
 
 import type {
@@ -10,8 +12,10 @@ import type { DataSource, Repository } from 'typeorm';
 /** TypeORM/PG implementation of {@link UserMemoryRepository}. */
 export class TypeOrmUserMemoryRepository implements UserMemoryRepository {
   private readonly repo: Repository<UserMemory>;
+  private readonly dataSource: DataSource;
 
   constructor(dataSource: DataSource) {
+    this.dataSource = dataSource;
     this.repo = dataSource.getRepository(UserMemory);
   }
 
@@ -72,11 +76,48 @@ export class TypeOrmUserMemoryRepository implements UserMemoryRepository {
   }
 
   /**
-   * Spec C T1.4 placeholder — real SQL aggregate is implemented in the next task.
-   * Rejects so the missing implementation is loud at runtime; lint stays green.
+   * Returns the user's last `limit` sessions, each annotated with its locale and
+   * the timestamp of its most recent message.
+   *
+   * Implementation notes:
+   *  - LEFT JOIN on `chat_messages` so sessions with no messages still appear
+   *    (their `lastMessageAt` is `null`).
+   *  - GROUP BY `s.id` is sufficient on Postgres (functional dependency on PK).
+   *  - ORDER BY `s.createdAt DESC` matches the locale-mode/p90 mergers' contract:
+   *    most recent session first.
+   *  - The `s."userId"` column name comes from the default `@JoinColumn` on
+   *    `ChatSession.user` (camelCase, double-quoted because Postgres folds
+   *    unquoted identifiers to lowercase).
+   *
+   * @param userId - Owning user id.
+   * @param limit - Maximum number of rows to return.
    */
-  getRecentSessionsForUser(_userId: number, _limit: number): Promise<RecentSessionAggregate[]> {
-    return Promise.reject(new Error('not implemented — Spec C T1.4'));
+  async getRecentSessionsForUser(userId: number, limit: number): Promise<RecentSessionAggregate[]> {
+    const rows = await this.dataSource
+      .createQueryBuilder()
+      .select('s.id', 'sessionId')
+      .addSelect('s.locale', 'locale')
+      .addSelect('s.createdAt', 'createdAt')
+      .addSelect('MAX(m.createdAt)', 'lastMessageAt')
+      .from(ChatSession, 's')
+      .leftJoin(ChatMessage, 'm', 'm."sessionId" = s.id')
+      .where('s."userId" = :userId', { userId })
+      .groupBy('s.id')
+      .orderBy('s.createdAt', 'DESC')
+      .limit(limit)
+      .getRawMany<{
+        sessionId: string;
+        locale: string;
+        createdAt: Date | string;
+        lastMessageAt: Date | string | null;
+      }>();
+
+    return rows.map((r) => ({
+      sessionId: r.sessionId,
+      locale: r.locale,
+      createdAt: new Date(r.createdAt),
+      lastMessageAt: r.lastMessageAt ? new Date(r.lastMessageAt) : null,
+    }));
   }
 
   /** Converts a camelCase property name to snake_case column name. */

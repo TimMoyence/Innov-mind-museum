@@ -210,7 +210,13 @@ export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2E
   ).master?.on?.('error', () => undefined);
 
   await appDataSource.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
-  await appDataSource.runMigrations();
+  // Some migrations declare `transaction = false` (e.g. the CONCURRENTLY index
+  // migrations P0/P1). TypeORM defaults `migrationsTransactionMode` to "all" when
+  // unset, which conflicts with per-migration overrides and triggers
+  // `ForbiddenTransactionModeOverrideError`. Forcing `transaction: 'each'` here
+  // matches CLI behaviour (the project's `migration:run` script) without changing
+  // the global DataSource options.
+  await appDataSource.runMigrations({ transaction: 'each' });
 
   // Build the chat module singleton so wiring helpers (e.g. `getChatRepository`
   // used by the GDPR DSAR export proxy in `@modules/auth/useCase`) can resolve
