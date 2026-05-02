@@ -390,6 +390,17 @@ const env: AppEnv = {
         serviceName: process.env.OTEL_SERVICE_NAME || 'museum-backend',
       }
     : undefined,
+  // V12 W1 — Langfuse LLM observability. Default OFF; opt-in per env.
+  // When ENABLED=true, the public+secret keys are required (env.ts will
+  // surface undefined as a runtime warning via the client wrapper).
+  langfuse: toBoolean(process.env.LANGFUSE_ENABLED, false)
+    ? {
+        enabled: true,
+        publicKey: toOptionalString(process.env.LANGFUSE_PUBLIC_KEY),
+        secretKey: toOptionalString(process.env.LANGFUSE_SECRET_KEY),
+        host: process.env.LANGFUSE_HOST || 'http://localhost:3002',
+      }
+    : undefined,
   // 2026-04-22: all feature flags retired. Every feature is always-on.
   //   (OCR guard, API keys, knowledge extraction, guardrail V2 enforcement.)
   //   Required infra (Redis, OpenAI key) must be provided in prod.
