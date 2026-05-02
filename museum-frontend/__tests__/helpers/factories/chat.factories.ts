@@ -3,6 +3,7 @@ import { faker } from '@faker-js/faker';
 import type {
   ChatUiMessage,
   ChatUiMessageMetadata,
+  ChatUiEnrichedImage,
   ApiMessage,
 } from '@/features/chat/application/chatSessionLogic.pure';
 import type { DashboardSessionCard } from '@/features/chat/domain/dashboard-session';
@@ -55,6 +56,18 @@ export const makeAssistantMessage = (
     ...overrides,
   };
 };
+
+/** Creates a ChatUiEnrichedImage with sensible defaults. */
+export const makeEnrichedImage = (
+  overrides?: Partial<ChatUiEnrichedImage>,
+): ChatUiEnrichedImage => ({
+  url: 'https://example.com/full.jpg',
+  thumbnailUrl: 'https://example.com/thumb.jpg',
+  caption: 'A painting',
+  source: 'wikidata',
+  score: 0.9,
+  ...overrides,
+});
 
 /** Creates a DashboardSessionCard view-model with sensible defaults. */
 export const makeDashboardSessionCard = (

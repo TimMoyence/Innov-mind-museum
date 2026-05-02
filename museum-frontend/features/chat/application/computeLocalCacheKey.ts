@@ -118,7 +118,7 @@ export function computeLocalCacheKey(input: LocalCacheKeyInput): string {
   }
 
   if (key.length > MAX_CACHE_KEY_BYTES) {
-    throw new Error(`chat-cache-key: key exceeds ${MAX_CACHE_KEY_BYTES} bytes`);
+    throw new Error(`chat-cache-key: key exceeds ${String(MAX_CACHE_KEY_BYTES)} bytes`);
   }
   return key;
 }
