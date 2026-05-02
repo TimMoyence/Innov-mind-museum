@@ -285,7 +285,7 @@ export class ChatMediaService {
       });
     }
 
-    const targetVoice = env.tts.voice;
+    const targetVoice = row.session.user?.ttsVoice ?? env.tts.voice;
 
     const cacheKey = `tts:${messageId}`;
     if (this.cache) {
