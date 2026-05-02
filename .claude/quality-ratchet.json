@@ -17,6 +17,10 @@
   "lintWarningsBackend": 50,
   "lintWarningsFrontend": 22,
   "_comment": "Phase 11 close 2026-05-02. Sprint 11.2 SWC swap retried + LANDED: every TypeORM cross-entity property wrapped in Relation<> type alias (12 entity files), breaking the legacy-decorator circular emit chain that blocked Phase 10's first attempt. Full BE suite 519s → 119s (~4×); --testTimeout 30s → 15s. Coverage thresholds re-pinned to SWC actuals (89/75/87/89): SWC's decoratorMetadata: true emits more instrumentable nodes than ts-jest (~1pt line/branch shift), but functions coverage RISES from 85.80 → 87.19. Earlier Phase 10 close: Sprint 10.1 fixed Bug 2 (MessageFeedback messageId column lookup); Sprint 10.2 fixed Bug 1 (TIMESTAMPTZ migration); Sprint 10.3 added Redis testcontainer + bullmq scheduler integration. All 6 it.skip Phase 9 markers in chat-repository-typeorm.integration.test.ts now green (41/41 with RUN_INTEGRATION=true).",
-  "webTestCount": 222,
-  "webSuiteCount": 23
+  "webTestCount": 226,
+  "webSuiteCount": 23,
+  "coverageStatementsWeb": 68.51,
+  "coverageBranchesWeb": 54.82,
+  "coverageFunctionsWeb": 64.44,
+  "coverageLinesWeb": 70.39
 }
