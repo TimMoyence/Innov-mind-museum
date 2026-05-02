@@ -1,0 +1,12 @@
+{
+  "$schema_version": 1,
+  "_doc": "Agentic Plan Caching (APC) — V12 §6 + arxiv 2506.14852. Index of past Spec Kit outputs (spec.md / design.md / tasks.md) by task fingerprint. Architect checks here BEFORE producing a fresh plan; on hit, reuse + adapt instead of re-planning from scratch. Reuse = -50% cost, -27% latency vs cold plan.",
+  "_fingerprint_algorithm": "sha256(normalize(mode + ' ' + scope + ' ' + sorted(touched_modules) + ' ' + canonicalized_problem_statement)) — see lib/plan-cache.sh:fingerprint_task",
+  "_eviction": "LRU over 30 entries OR > 90 days since last_used (whichever first). Architect agent does NOT evict — eviction is a manual Tech Lead concern via lib/plan-cache.sh prune.",
+  "_invariants": [
+    "Each entry MUST point to a STILL-EXISTING team-state/<RUN_ID>/ directory or be evicted.",
+    "hits counter only increments on FULL reuse (not partial adaptation).",
+    "Adapting an entry = create new entry with parent_run_id reference, do NOT mutate the parent."
+  ],
+  "entries": []
+}

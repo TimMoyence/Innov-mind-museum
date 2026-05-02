@@ -82,15 +82,60 @@ enterprise: 20+ fichiers OU cross-module OU migration DB OU security-sensitive
 
 V12 §6 : SINGLE warm call avant fan-out parallele (Anthropic prompt caching, evite 5-10x cost blow-up).
 
-| Pipeline | Fichiers charges (avec `cache_control: ephemeral`) |
+#### Fichiers chargés (cache_control: ephemeral marker à appliquer)
+
+| Pipeline | Fichiers chargés |
 |---|---|
 | micro | quality-ratchet.json + error-patterns.json + micro.md |
 | standard | + quality-gates.md + agent-mandate.md + import-coherence.md + prompt-enrichments.json + standard.md |
 | enterprise | + tous les protocoles + tous les KB JSON + enterprise.md |
 
-Warm-up = 1 appel Opus 4.7 sequentiel avec full prefix avant tout dispatch parallele.
+#### Warm-up protocole CONCRET (ENFORCE)
+
+```
+1. Le dispatcher charge la liste de fichiers du pipeline ci-dessus dans une SEULE
+   string concaténée (ordre stable : protocoles → KB JSON → templates).
+2. Il fait UN seul appel Agent (architect, opus-4.7) avec ce prefix + un prompt
+   trivial : "Acknowledge cache warm. Reply: WARM-OK + token count of input."
+3. Cette response s'inscrit dans le prompt cache d'Anthropic (TTL 5 min, étendu
+   automatiquement par les hits suivants).
+4. SEULEMENT APRÈS WARM-OK, le dispatcher peut spawner :
+   - architect en parallèle (s'il y a plusieurs scopes — RARE, normalement 1)
+   - verifier + security + reviewer en parallèle (read-only, V12 §1 #1)
+5. Si l'utilisateur demande un run rapide (< 1 min total) → SKIP warm-up
+   acceptable (bénéfice < overhead).
+6. Si run > 1 min → warm-up MANDATORY. Skipping = 5-10× cost blow-up.
+```
+
+**Anti-pattern (interdit) :** spawn 3+ agents en parallèle SANS warm-up préalable. Chaque agent paie le full prefix individuellement = 3-10× overcost.
 
 ### Step 4 — Spec Kit (brainstorm + plan)
+
+#### APC — Agentic Plan Caching (V12 §6 + arxiv 2506.14852) — CHECK FIRST
+
+AVANT de spawner architect pour produire un plan from scratch, le dispatcher consulte le plan-cache :
+
+```
+1. Calculer fingerprint :
+     FP=$(.claude/skills/team/lib/plan-cache.sh fingerprint \
+            "<mode>" "<scope>" "<modules-csv>" "<problem-statement>")
+2. Lookup :
+     HIT=$(.claude/skills/team/lib/plan-cache.sh lookup "$FP")
+3a. Si HIT non-vide ET les paths du HIT existent encore :
+      - Reuse FULL : symlink ou cp les 3 fichiers (spec/design/tasks) vers
+        team-state/$RUN_ID/
+      - .claude/skills/team/lib/plan-cache.sh bump "$FP"
+      - Spawn architect en mode "ADAPT" (pas "fresh") pour valider/ajuster
+        seulement les sections variables (Glossary, Stakeholders, Open Q)
+      - Économie attendue : -50% cost, -27% latency vs cold plan
+3b. Si HIT vide OU paths obsolètes :
+      - Spawn architect en mode "fresh" (workflow normal ci-dessous)
+      - À la fin : .claude/skills/team/lib/plan-cache.sh insert "$FP" "$RUN_ID"
+4. Documenter dans STORY.md `brainstorm` section :
+      - "APC: HIT (parent_run_id=X, hits=Y)" OU "APC: MISS, cold plan"
+```
+
+#### Workflow architect (mode fresh)
 
 Architect agent (opus-4.7) produit dans cet ordre :
 
@@ -98,10 +143,24 @@ Architect agent (opus-4.7) produit dans cet ordre :
 1. team-state/$RUN_ID/spec.md   ← cp template, fill EARS-format requirements
 2. team-state/$RUN_ID/design.md ← cp template, fill architecture decisions
 3. team-state/$RUN_ID/tasks.md  ← cp template, atomic task list T1.1..Tn.x
+4. team-state/$RUN_ID/handoffs/001-architect-to-editor.json (≤200 tokens)
 ```
 
 Update state.json : `spec`, `design`, `tasks` paths + `status: "running"` + version++.
 Append STORY.md sections `brainstorm` et `plan`.
+
+#### Workflow architect (mode adapt — APC HIT)
+
+Architect agent (opus-4.7, contexte chargé avec les 3 fichiers du HIT) :
+
+```
+1. Read parent spec.md / design.md / tasks.md.
+2. Identifier les deltas vs la demande actuelle (Glossary terms différents,
+   stakeholders différents, NFRs différents — domaine technique souvent stable).
+3. Produire des PATCH files (pas full rewrite) appliqués sur les copies dans
+   team-state/$RUN_ID/.
+4. Update state.json + APC bump.
+```
 
 ### Step 5 — Implement (editor)
 
