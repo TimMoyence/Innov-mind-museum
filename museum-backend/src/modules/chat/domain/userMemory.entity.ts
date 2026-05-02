@@ -65,6 +65,12 @@ export class UserMemory {
   @Column({ type: 'uuid', nullable: true })
   lastSessionId!: string | null;
 
+  @Column({ type: 'varchar', length: 10, nullable: true, name: 'language_preference' })
+  languagePreference!: string | null;
+
+  @Column({ type: 'integer', nullable: true, name: 'session_duration_p90_minutes' })
+  sessionDurationP90Minutes!: number | null;
+
   /**
    * Optimistic-lock version. Currently passive on the primary `upsert()` path —
    * TypeORM only auto-increments `@VersionColumn` via `.save()` / `.update()`,
