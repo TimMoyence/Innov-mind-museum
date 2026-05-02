@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { TTS_VOICES } from '@modules/chat/voice-catalog';
+
 import { CONTENT_PREFERENCES } from '../../../domain/content-preference';
 
 export const registerSchema = z.object({
@@ -72,4 +74,11 @@ export const updateContentPreferencesSchema = z.object({
   preferences: z
     .array(z.enum(CONTENT_PREFERENCES as readonly [string, ...string[]]))
     .max(CONTENT_PREFERENCES.length),
+});
+
+// Spec C T2.4 — Visitor's preferred TTS voice. `null` resets to the env-level
+// default. Accepts only voices listed in the shared TTS_VOICES catalog; any
+// other value (unknown voice, non-string, missing field) → 400 from Zod.
+export const updateTtsVoiceSchema = z.object({
+  voice: z.union([z.null(), z.enum(TTS_VOICES)]),
 });

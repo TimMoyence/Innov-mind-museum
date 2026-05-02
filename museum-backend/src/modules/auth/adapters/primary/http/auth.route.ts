@@ -1,7 +1,5 @@
 import { type NextFunction, type Request, type Response, Router } from 'express';
-import { z } from 'zod';
 
-import { TTS_VOICES, type TtsVoice } from '@modules/chat/voice-catalog';
 import { auditService } from '@shared/audit';
 import {
   AUDIT_AUTH_LOGIN_SUCCESS,
@@ -58,6 +56,7 @@ import {
   verifyEmailSchema,
   createApiKeySchema,
   updateContentPreferencesSchema,
+  updateTtsVoiceSchema,
 } from './auth.schemas';
 import {
   authSessionService,
@@ -356,20 +355,16 @@ authRouter.patch(
   },
 );
 
-// Spec C T2.4 — Persist visitor's preferred TTS voice. `null` resets to the
-// env-level default. Accepts only voices listed in the shared TTS_VOICES catalog;
-// any other value (unknown voice, non-string, missing field) → 400 from Zod.
-const updateTtsVoiceSchema = z.object({
-  voice: z.union([z.null(), z.enum(TTS_VOICES)]),
-});
-
+// Spec C T2.4 — Persist visitor's preferred TTS voice. Schema validation +
+// catalog enforcement live in updateTtsVoiceSchema (./auth.schemas.ts);
+// `null` resets to the env-level default.
 authRouter.patch(
   '/tts-voice',
   isAuthenticated,
   validateBody(updateTtsVoiceSchema),
   async (req: Request, res: Response) => {
     const jwtUser = requireUser(req);
-    const { voice } = req.body as { voice: TtsVoice | null };
+    const { voice } = req.body;
     const result = await updateTtsVoiceUseCase.execute(jwtUser.id, voice);
     await auditService.log({
       action: AUDIT_AUTH_TTS_VOICE_UPDATED,
