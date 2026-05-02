@@ -12,8 +12,10 @@
  * on success so the parent settings screen re-reads the persisted value.
  *
  * The currently-selected row is reflected via `accessibilityState.selected`
- * and a checkmark Ionicon. While a write is in flight every row exposes
- * `accessibilityState.busy=true`.
+ * and a checkmark Ionicon. While a write is in flight, only the row that
+ * triggered the mutation exposes `accessibilityState.busy=true` (per the
+ * WAI-ARIA contract — busy marks the specific control being updated, so
+ * VoiceOver doesn't announce "busy" on rows the user isn't waiting on).
  */
 import type { ReactElement } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
@@ -47,6 +49,12 @@ export const VoicePreferenceSection = ({
   const { theme } = useTheme();
   const mutation = useUpdateTtsVoice();
 
+  // `mutation.variables` is the arg passed to mutate(): `null` on Default
+  // press, `'echo' | 'alloy' | …` on a voice press. Track which row is
+  // mid-write so only that row exposes `accessibilityState.busy` (per
+  // WAI-ARIA — `busy` marks the specific control being updated).
+  const pendingId: Row['id'] | null = mutation.isPending ? (mutation.variables ?? 'default') : null;
+
   const rows: Row[] = [
     { id: 'default', label: t('settings.voice.useDefault') },
     ...TTS_VOICES.map((v) => ({ id: v, label: capitalize(v) })),
@@ -73,7 +81,7 @@ export const VoicePreferenceSection = ({
           key={row.id}
           row={row}
           selected={isSelected(row)}
-          busy={mutation.isPending}
+          busy={pendingId === row.id}
           onPress={onPress}
           theme={theme}
         />
