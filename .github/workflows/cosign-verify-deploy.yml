@@ -1,0 +1,78 @@
+name: cosign verify before deploy (reusable)
+
+# V12 W8 — verify cosign signature + SLSA provenance attestation before any
+# deployment proceeds. Fails the deploy if the image was not signed by a
+# trusted GitHub Actions workflow in this repo.
+#
+# Usage from ci-cd-backend.yml deploy job:
+#   jobs:
+#     verify:
+#       uses: ./.github/workflows/cosign-verify-deploy.yml
+#       with:
+#         image: ghcr.io/${{ github.repository_owner }}/musaium-backend
+#         digest: ${{ needs.build.outputs.digest }}
+#     deploy:
+#       needs: verify
+#       ...
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: 'Full image ref to verify (e.g. ghcr.io/owner/name)'
+        required: true
+        type: string
+      digest:
+        description: 'Image digest to verify against (sha256:...)'
+        required: true
+        type: string
+      identity-regexp:
+        description: 'Cosign --certificate-identity-regexp (defaults to this-repo/.github/workflows/.*)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.4.1'
+
+      - name: Resolve identity-regexp default
+        id: identity
+        run: |
+          if [ -n "${{ inputs.identity-regexp }}" ]; then
+            echo "regexp=${{ inputs.identity-regexp }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "regexp=https://github.com/${{ github.repository }}/.github/workflows/.*" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Cosign verify (keyless)
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+        run: |
+          cosign verify \
+            --certificate-identity-regexp "${{ steps.identity.outputs.regexp }}" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            "${{ inputs.image }}@${{ inputs.digest }}"
+
+      - name: Verify SLSA provenance attestation
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+        run: |
+          cosign verify-attestation \
+            --type slsaprovenance \
+            --certificate-identity-regexp "${{ steps.identity.outputs.regexp }}" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            "${{ inputs.image }}@${{ inputs.digest }}"

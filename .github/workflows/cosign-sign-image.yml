@@ -1,0 +1,72 @@
+name: cosign sign image (reusable)
+
+# V12 W8 — sigstore/cosign keyless image signing + SLSA L3 provenance attestation.
+# Usage: called by ci-cd-backend.yml after the image push step.
+#
+# Requirements:
+#   - id-token: write    (OIDC for keyless cosign)
+#   - packages: write    (push attestation to GHCR)
+#
+# Verify locally:
+#   cosign verify ghcr.io/<owner>/<image>:<tag> \
+#     --certificate-identity-regexp 'https://github.com/<owner>/<repo>/.github/workflows/.*' \
+#     --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: 'Full image ref (registry/owner/name)'
+        required: true
+        type: string
+      digest:
+        description: 'Image digest (sha256:...) returned by docker/build-push-action outputs.digest'
+        required: true
+        type: string
+    outputs:
+      attestation-bundle:
+        description: 'Path of the cosign bundle file (sig + cert + log entry)'
+        value: ${{ jobs.sign.outputs.bundle }}
+
+permissions:
+  contents: read
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      packages: write
+      contents: read
+      attestations: write
+    outputs:
+      bundle: ${{ steps.sign.outputs.bundle }}
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.4.1'
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cosign sign (keyless)
+        id: sign
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+        run: |
+          cosign sign --yes \
+            --output-signature /tmp/cosign-sig.bundle \
+            "${{ inputs.image }}@${{ inputs.digest }}"
+          echo "bundle=/tmp/cosign-sig.bundle" >> "$GITHUB_OUTPUT"
+
+      - name: Generate SLSA provenance attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ inputs.image }}
+          subject-digest: ${{ inputs.digest }}
+          push-to-registry: true

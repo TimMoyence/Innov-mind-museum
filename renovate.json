@@ -1,0 +1,104 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":dependencyDashboard"
+  ],
+  "timezone": "Europe/Paris",
+  "schedule": ["before 7am every weekday"],
+  "labels": ["dependencies", "renovate"],
+  "rangeStrategy": "replace",
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security", "dependencies"],
+    "schedule": ["at any time"]
+  },
+
+  "packageRules": [
+    {
+      "description": "V12 W8: pin LangChain stack — minor releases have shipped breaking sec patches in 2024-2025",
+      "matchPackagePatterns": [
+        "^langchain$",
+        "^@langchain/"
+      ],
+      "rangeStrategy": "pin",
+      "labels": ["security", "dependencies", "langchain-pin"],
+      "schedule": ["at any time"],
+      "minimumReleaseAge": "3 days",
+      "prPriority": 10
+    },
+    {
+      "description": "Auto-merge dev-only patch + minor for low-risk packages",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "matchPackagePatterns": [
+        "^@types/",
+        "^eslint",
+        "^prettier",
+        "^jest",
+        "^ts-jest",
+        "^@stryker-mutator/",
+        "^vitest",
+        "^@vitejs/",
+        "^playwright",
+        "^@playwright/"
+      ],
+      "automerge": true,
+      "automergeType": "branch",
+      "platformAutomerge": true
+    },
+    {
+      "description": "OpenAI + Google + Deepseek SDKs — manual review (LLM contract risk)",
+      "matchPackageNames": ["openai", "@google/generative-ai", "@deepseek-ai/api"],
+      "rangeStrategy": "pin",
+      "labels": ["llm-sdk", "manual-review"],
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "Major upgrades — never auto-merge, always manual review",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["major-upgrade", "manual-review"],
+      "minimumReleaseAge": "14 days"
+    },
+    {
+      "description": "TypeORM — pin (V1 in flight, breaking changes possible)",
+      "matchPackageNames": ["typeorm", "pg", "reflect-metadata"],
+      "rangeStrategy": "pin",
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "Expo + React Native — bundle minor updates, defer until SDK changelog reviewed",
+      "matchPackagePatterns": [
+        "^expo",
+        "^react-native",
+        "^@react-native"
+      ],
+      "groupName": "expo + react-native",
+      "schedule": ["before 7am on monday"],
+      "minimumReleaseAge": "7 days"
+    }
+  ],
+
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 7am on monday"],
+    "automerge": false
+  },
+
+  "postUpdateOptions": [
+    "pnpmDedupe"
+  ],
+
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/.stryker-tmp/**",
+    "**/.expo/**",
+    "**/dist/**",
+    "infra/langfuse/**"
+  ]
+}
