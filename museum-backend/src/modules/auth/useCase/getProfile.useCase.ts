@@ -10,6 +10,11 @@ interface UserProfile {
   role: UserRole;
   onboardingCompleted: boolean;
   contentPreferences: ContentPreference[];
+  /**
+   * Spec C T2.4 — Visitor's preferred TTS voice (one of `TTS_VOICES` from
+   * `@modules/chat/voice-catalog`). `null` means "use the env-level default".
+   */
+  ttsVoice: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +38,7 @@ export class GetProfileUseCase {
       onboardingCompleted: user.onboarding_completed,
       // Migration ensures NOT NULL DEFAULT '{}', so entity type guarantees this is never null.
       contentPreferences: user.contentPreferences,
+      ttsVoice: user.ttsVoice ?? null,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

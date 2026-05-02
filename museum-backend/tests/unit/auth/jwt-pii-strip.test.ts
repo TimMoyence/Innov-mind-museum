@@ -121,6 +121,8 @@ describe('GetProfileUseCase', () => {
       role: 'visitor',
       onboardingCompleted: false,
       contentPreferences: [],
+      // Spec C T2.4 — `ttsVoice` is null when the visitor has not yet picked one.
+      ttsVoice: null,
       createdAt: new Date('2025-01-01'),
       updatedAt: new Date('2025-06-01'),
     });

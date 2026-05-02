@@ -1,5 +1,7 @@
 import { type NextFunction, type Request, type Response, Router } from 'express';
+import { z } from 'zod';
 
+import { TTS_VOICES, type TtsVoice } from '@modules/chat/voice-catalog';
 import { auditService } from '@shared/audit';
 import {
   AUDIT_AUTH_LOGIN_SUCCESS,
@@ -19,6 +21,7 @@ import {
   AUDIT_AUTH_EMAIL_CHANGE_CONFIRMED,
   AUDIT_AUTH_ONBOARDING_COMPLETED,
   AUDIT_AUTH_CONTENT_PREFERENCES_UPDATED,
+  AUDIT_AUTH_TTS_VOICE_UPDATED,
   AUDIT_MFA_WARNING_STARTED,
 } from '@shared/audit/audit.types';
 import {
@@ -73,6 +76,7 @@ import {
   revokeApiKeyUseCase,
   listApiKeysUseCase,
   updateContentPreferencesUseCase,
+  updateTtsVoiceUseCase,
   completeOnboarding,
 } from '../../../useCase';
 
@@ -325,6 +329,7 @@ authRouter.get('/me', isAuthenticated, async (req: Request, res: Response) => {
       role: profile.role,
       onboardingCompleted: profile.onboardingCompleted,
       contentPreferences: profile.contentPreferences,
+      ttsVoice: profile.ttsVoice,
     },
   });
 });
@@ -348,6 +353,35 @@ authRouter.patch(
       requestId: req.requestId,
     });
     res.status(200).json({ contentPreferences: result.contentPreferences });
+  },
+);
+
+// Spec C T2.4 — Persist visitor's preferred TTS voice. `null` resets to the
+// env-level default. Accepts only voices listed in the shared TTS_VOICES catalog;
+// any other value (unknown voice, non-string, missing field) → 400 from Zod.
+const updateTtsVoiceSchema = z.object({
+  voice: z.union([z.null(), z.enum(TTS_VOICES)]),
+});
+
+authRouter.patch(
+  '/tts-voice',
+  isAuthenticated,
+  validateBody(updateTtsVoiceSchema),
+  async (req: Request, res: Response) => {
+    const jwtUser = requireUser(req);
+    const { voice } = req.body as { voice: TtsVoice | null };
+    const result = await updateTtsVoiceUseCase.execute(jwtUser.id, voice);
+    await auditService.log({
+      action: AUDIT_AUTH_TTS_VOICE_UPDATED,
+      actorType: 'user',
+      actorId: jwtUser.id,
+      targetType: 'user',
+      targetId: String(jwtUser.id),
+      metadata: { voice: result.ttsVoice },
+      ip: req.ip,
+      requestId: req.requestId,
+    });
+    res.status(200).json({ ttsVoice: result.ttsVoice });
   },
 );
 
