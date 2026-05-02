@@ -149,6 +149,16 @@ export interface IUserRepository {
   updateContentPreferences(userId: number, preferences: ContentPreference[]): Promise<void>;
 
   /**
+   * Persist the user's preferred TTS voice (catalog id) or clear it (`null`).
+   * The caller is expected to have validated the value against the shared
+   * voice catalog beforehand.
+   *
+   * @param userId - The user's ID.
+   * @param voice - Catalog voice id, or `null` to reset to the env default.
+   */
+  updateTtsVoice(userId: number, voice: string | null): Promise<void>;
+
+  /**
    * Set or clear the MFA enrollment deadline column. Used by the warning-window
    * login flow:
    *   - On first admin login post-deploy without MFA: pass `now + 30d`.

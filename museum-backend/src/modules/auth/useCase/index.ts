@@ -33,6 +33,7 @@ import { EnrollMfaUseCase } from './totp/enrollMfa.useCase';
 import { RecoveryMfaUseCase } from './totp/recoveryMfa.useCase';
 import { VerifyMfaUseCase } from './totp/verifyMfa.useCase';
 import { UpdateContentPreferencesUseCase } from './updateContentPreferences.useCase';
+import { UpdateTtsVoiceUseCase } from './updateTtsVoice.useCase';
 import { VerifyEmailUseCase } from './verifyEmail.useCase';
 import { ApiKeyRepositoryPg } from '../adapters/secondary/apiKey.repository.pg';
 import { InMemoryNonceStore } from '../adapters/secondary/nonce-store';
@@ -198,6 +199,8 @@ const confirmEmailChangeUseCase = new ConfirmEmailChangeUseCase(
 const verifyEmailUseCase = new VerifyEmailUseCase(userRepository);
 /** Singleton instance of {@link UpdateContentPreferencesUseCase}. */
 const updateContentPreferencesUseCase = new UpdateContentPreferencesUseCase(userRepository);
+/** Singleton instance of {@link UpdateTtsVoiceUseCase}. */
+const updateTtsVoiceUseCase = new UpdateTtsVoiceUseCase(userRepository);
 
 // API Key use cases — always wired (B2B API key programme, msk_* auth).
 const apiKeyRepository = new ApiKeyRepositoryPg(AppDataSource);
@@ -245,6 +248,7 @@ export {
   revokeApiKeyUseCase,
   listApiKeysUseCase,
   updateContentPreferencesUseCase,
+  updateTtsVoiceUseCase,
   completeOnboarding,
   grantConsentUseCase,
   revokeConsentUseCase,

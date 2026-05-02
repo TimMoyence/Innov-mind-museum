@@ -244,6 +244,11 @@ export class UserRepositoryPg implements IUserRepository {
     await this.repo.update(userId, { contentPreferences: preferences });
   }
 
+  /** Persists the user's preferred TTS voice or clears it (`null`). */
+  async updateTtsVoice(userId: number, voice: string | null): Promise<void> {
+    await this.repo.update(userId, { ttsVoice: voice });
+  }
+
   /**
    * Set or clear the MFA enrollment deadline column (R16). Mirrored from the
    * port doc: pass a Date to start/extend the warning window, or `null` to

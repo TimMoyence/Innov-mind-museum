@@ -33,6 +33,7 @@ export const makeUserRepo = (
     consumeEmailChangeToken: jest.fn().mockResolvedValue(user),
     markOnboardingCompleted: jest.fn().mockResolvedValue(undefined),
     updateContentPreferences: jest.fn().mockResolvedValue(undefined),
+    updateTtsVoice: jest.fn().mockResolvedValue(undefined),
     setMfaEnrollmentDeadline: jest.fn().mockResolvedValue(undefined),
     ...overrides,
   };
