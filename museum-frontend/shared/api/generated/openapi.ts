@@ -975,6 +975,53 @@ export interface paths {
     };
     trace?: never;
   };
+  '/api/auth/tts-voice': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update the authenticated user's preferred TTS voice */
+    patch: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @description OpenAI TTS voice id, or `null` to reset to the env-level default. */
+            voice: ('alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer') | null;
+          };
+        };
+      };
+      responses: {
+        /** @description Voice updated */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              ttsVoice: ('alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer') | null;
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+      };
+    };
+    trace?: never;
+  };
   '/api/users/me/export': {
     parameters: {
       query?: never;
@@ -3282,6 +3329,11 @@ export interface components {
       role: 'visitor' | 'moderator' | 'museum_manager' | 'admin';
       /** @description Whether the user has completed the onboarding flow */
       onboardingCompleted: boolean;
+      /**
+       * @description Spec C T2.4 — visitor's preferred TTS voice. `null` means inherit the env-level default.
+       * @enum {string|null}
+       */
+      ttsVoice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' | null;
     };
     AuthSessionResponse: {
       accessToken: string;
