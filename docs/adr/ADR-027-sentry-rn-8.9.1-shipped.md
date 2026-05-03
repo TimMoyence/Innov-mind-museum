@@ -1,4 +1,6 @@
-# ADR-011 — Sentry React Native 8.7 → 8.9.1 shipped
+# ADR-027 — Sentry React Native 8.7 → 8.9.1 shipped
+
+> Renumbered 2026-05-03 — was ADR-011 (collision with ADR-011-rate-limit-fail-closed). Original commit `59c9fe8e2`.
 
 - **Status:** Accepted (2026-04-30)
 - **Owner:** Mobile platform

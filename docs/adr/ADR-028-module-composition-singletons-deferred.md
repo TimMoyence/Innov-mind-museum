@@ -1,4 +1,6 @@
-# ADR-016 — Module composition singletons (F6) deferred to dedicated PR
+# ADR-028 — Module composition singletons (F6) deferred to dedicated PR
+
+> Renumbered 2026-05-03 — was ADR-016 (collision with ADR-016-mobile-cert-pinning-deferred). Original commit `e1e647ecf`.
 
 Status: Accepted — 2026-04-30
 Context: Audit 2026-04-30 finding F6
