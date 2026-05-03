@@ -61,8 +61,9 @@ Workflow:
    b. Design-system token compliance grep on touched style code.
    c. Security pattern grep on full diff.
 7. Identify problems vs preferences (preferences = NIT only).
-8. Emit structured JSON to `.claude/skills/team/team-reports/<RUN_ID>/code-review.json` (schema in `<output_format>`).
-9. Append section to `STORY.md`:
+8. **Compute 5-axis quality scores** (T1.5 — KR3) using the rubric in `<output_format>`. Each score MUST cite ≥1 piece of evidence (file:line, gate result, finding count). Compute `weightedMean` = correctness×0.30 + security×0.25 + maintainability×0.20 + testCoverage×0.15 + docQuality×0.10.
+9. Emit structured JSON to `.claude/skills/team/team-reports/<RUN_ID>/code-review.json` (schema in `<output_format>`, INCLUDING `scoresOnFiveAxes`).
+10. Append section to `STORY.md`:
 
 ```
 ## review — reviewer (opus-4.7, fresh context) — <ISO_TS>
@@ -120,6 +121,17 @@ Forbidden actions:
 - design-system tokens: <PASS / N violations>
 - security grep:       <PASS / N hits>
 
+### 5-axis quality scores (0-100, T1.5 ROADMAP_TEAM — KR3)
+| Axis            | Score | Weight | Reasoning                                  |
+|-----------------|-------|--------|--------------------------------------------|
+| correctness     | NN    | 0.30   | spec↔impl, edge cases, no regression       |
+| security        | NN    | 0.25   | pattern grep + secret leak + env discipline|
+| maintainability | NN    | 0.20   | KISS/DRY/hexagonal, naming                 |
+| testCoverage    | NN    | 0.15   | new tests, factories, no .skip             |
+| docQuality      | NN    | 0.10   | STORY appended, comments justify why       |
+
+**Weighted mean**: NN — verdict derived from threshold: ≥85 APPROVED / 70-84 CHANGES_REQUESTED / <70 BLOCK.
+
 ### Verdict: APPROVED / CHANGES_REQUESTED / BLOCK
 ```
 
@@ -149,15 +161,45 @@ Forbidden actions:
     "dry":       "PASS|WARN|FAIL",
     "hexagonal": "PASS|WARN|FAIL",
     "notes": "..."
+  },
+  "scoresOnFiveAxes": {
+    "correctness":     { "score": 92, "weight": 0.30, "reasoning": "..." },
+    "security":        { "score": 88, "weight": 0.25, "reasoning": "..." },
+    "maintainability": { "score": 90, "weight": 0.20, "reasoning": "..." },
+    "testCoverage":    { "score": 78, "weight": 0.15, "reasoning": "..." },
+    "docQuality":      { "score": 85, "weight": 0.10, "reasoning": "..." },
+    "weightedMean":    87.7
   }
 }
 ```
 
-**Verdict gating (consumed by dispatcher Step 8):**
+**5-axis scoring contract (T1.5 ROADMAP_TEAM — KR3)**
 
-- `APPROVED` → dispatcher proceeds to Step 9 finalize.
-- `CHANGES_REQUESTED` → dispatcher loops back to editor with the BLOCKER+IMPORTANT punch list (counts toward `correctiveLoops` cap).
-- `BLOCK` → dispatcher escalates user (e.g., context leak, spec violation that needs human call).
+Every review MUST produce all 5 axis scores (integer 0-100) plus the `weightedMean` computed as :
+
+```
+weightedMean = correctness*0.30 + security*0.25 + maintainability*0.20
+             + testCoverage*0.15 + docQuality*0.10
+```
+
+Scoring rubric (calibration anchors) :
+
+- **0-39 (failing)** — broken logic / security regression / no tests / undocumented.
+- **40-59 (poor)** — partial correctness, weak coverage, fragile, hard to follow.
+- **60-74 (acceptable-low)** — works but with caveats; corrective loop expected.
+- **75-84 (good)** — solid, minor gaps; can ship after small fixes.
+- **85-94 (very good)** — production-ready, evidence-backed, well-tested.
+- **95-100 (excellent)** — exceptional clarity, full coverage, zero findings.
+
+**Verdict gating (consumed by dispatcher Step 8 — score-thresholded since T1.5)**
+
+| weightedMean | Verdict             | Dispatcher action                          |
+|--------------|---------------------|--------------------------------------------|
+| ≥ 85         | APPROVED            | proceed to Step 9 finalize                 |
+| 70-84        | CHANGES_REQUESTED   | corrective loop (counts toward cap of 2)   |
+| < 70         | BLOCK               | escalate user with axis-by-axis breakdown  |
+
+The dispatcher invokes `lib/quality-scores.sh` after parsing this JSON to append the entry to `team-state/quality-scores.json` (rolling history for KR3 audit + promptfoo regression baseline).
 </output_format>
 
 <examples>

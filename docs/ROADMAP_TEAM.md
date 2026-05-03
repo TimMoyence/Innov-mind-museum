@@ -96,6 +96,12 @@ Self-test : `bash .claude/skills/team/team-hooks/pre-feature-spec-check.sh --sel
 - [x] SKILL.md Step 8 verdict gating thresholded — ≥85 APPROVED / 70-84 CHANGES_REQUESTED / <70 BLOCK + cohérence override (verdict explicite agent prime sur metric pour BLOCK ; mean<70 + verdict APPROVED → reject + re-spawn).
 - [x] Promptfoo regression — 20-feature synthetic corpus (`team-promptfoo/corpus.json`), eval shim (`lib/reviewer-eval-shim.sh`, mock + real Anthropic API modes), regression detector (`lib/quality-regression.sh`, fail >5pts drop), CI workflow `team-quality-regression.yml` (PR mock + cron weekly real). Baseline calibrated mock-bootstrap, awaits first real-mode run for re-bake.
 
+### T1.5b Real-mode baseline rebake + bake helper
+
+- [ ] After first Mon-04:00 UTC real Anthropic-API cron run lands, write `lib/quality-baseline-bake.sh` to derive new `baseline-scores.json` from a real-mode `output.json` (axisMeans + perFeature)
+- [ ] Re-commit baseline w/ `calibrationMode: "real-anthropic-opus-4.7"` and timestamp
+- [ ] Document rebake protocol in `team-promptfoo/README.md` (replace mock-bootstrap section with real-baked steps)
+
 ### T1.6 Auto-consolidation roadmap (intégration ROADMAP × /team)
 
 - [ ] Hook `team-hooks/pre-cycle-roadmap-load.sh` — dispatcher lit `docs/ROADMAP_PRODUCT.md` + ce fichier au démarrage chaque cycle

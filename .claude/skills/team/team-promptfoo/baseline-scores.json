@@ -1,0 +1,54 @@
+{
+  "calibratedAt": "2026-05-03T07:10:00Z",
+  "calibrationMode": "mock-bootstrap",
+  "calibrationNote": "Synthetic deterministic baseline from reviewer-eval-shim.sh mock mode. Re-calibrate with REVIEWER_EVAL_MODE=real after first real Anthropic-API run.",
+  "perFeature": {
+    "01-pagination-cursor": { "weightedMean": 78.10, "correctness": 76, "security": 80, "maintainability": 84, "testCoverage": 74, "docQuality": 74 }
+    ,
+    "02-auth-rate-limit": { "weightedMean": 82.45, "correctness": 87, "security": 78, "maintainability": 79, "testCoverage": 87, "docQuality": 80 }
+    ,
+    "03-typeorm-migration": { "weightedMean": 80.55, "correctness": 81, "security": 83, "maintainability": 85, "testCoverage": 74, "docQuality": 74 }
+    ,
+    "04-fe-component-museum-card": { "weightedMean": 80.25, "correctness": 82, "security": 79, "maintainability": 81, "testCoverage": 80, "docQuality": 77 }
+    ,
+    "05-i18n-fr-en-keys": { "weightedMean": 82.45, "correctness": 81, "security": 87, "maintainability": 81, "testCoverage": 78, "docQuality": 85 }
+    ,
+    "06-security-injection-fix": { "weightedMean": 84.05, "correctness": 82, "security": 91, "maintainability": 89, "testCoverage": 76, "docQuality": 75 }
+    ,
+    "07-doc-only-readme": { "weightedMean": 77.80, "correctness": 75, "security": 80, "maintainability": 84, "testCoverage": 74, "docQuality": 74 }
+    ,
+    "08-refactor-extract-helper": { "weightedMean": 83.35, "correctness": 88, "security": 82, "maintainability": 83, "testCoverage": 81, "docQuality": 77 }
+    ,
+    "09-observability-trace": { "weightedMean": 83.45, "correctness": 77, "security": 87, "maintainability": 88, "testCoverage": 82, "docQuality": 87 }
+    ,
+    "10-eslint-disable-justification": { "weightedMean": 79.70, "correctness": 79, "security": 82, "maintainability": 85, "testCoverage": 74, "docQuality": 74 }
+    ,
+    "11-bug-fix-tz-pagination": { "weightedMean": 80.85, "correctness": 82, "security": 83, "maintainability": 85, "testCoverage": 74, "docQuality": 74 }
+    ,
+    "12-mobile-feature-flag-kill": { "weightedMean": 87.40, "correctness": 85, "security": 91, "maintainability": 90, "testCoverage": 83, "docQuality": 87 }
+    ,
+    "13-banking-grade-mutation": { "weightedMean": 83.35, "correctness": 83, "security": 82, "maintainability": 86, "testCoverage": 81, "docQuality": 86 }
+    ,
+    "14-design-token-migration": { "weightedMean": 83.65, "correctness": 87, "security": 86, "maintainability": 87, "testCoverage": 75, "docQuality": 74 }
+    ,
+    "15-a11y-axe-fix": { "weightedMean": 79.25, "correctness": 81, "security": 79, "maintainability": 77, "testCoverage": 76, "docQuality": 84 }
+    ,
+    "16-prompt-injection-guard": { "weightedMean": 81.85, "correctness": 77, "security": 89, "maintainability": 88, "testCoverage": 76, "docQuality": 75 }
+    ,
+    "17-ci-cosign-call": { "weightedMean": 79.00, "correctness": 79, "security": 82, "maintainability": 81, "testCoverage": 70, "docQuality": 81 }
+    ,
+    "18-dependency-cve-bump": { "weightedMean": 82.30, "correctness": 79, "security": 86, "maintainability": 85, "testCoverage": 82, "docQuality": 78 }
+    ,
+    "19-flaky-test-quarantine": { "weightedMean": 84.80, "correctness": 85, "security": 87, "maintainability": 90, "testCoverage": 75, "docQuality": 83 }
+    ,
+    "20-roadmap-update": { "weightedMean": 79.70, "correctness": 75, "security": 84, "maintainability": 80, "testCoverage": 78, "docQuality": 85 }
+  },
+  "axisMeans": {
+    "correctness": 81.05    ,
+    "security": 83.90    ,
+    "maintainability": 84.40    ,
+    "testCoverage": 77.50    ,
+    "docQuality": 79.20    ,
+    "weightedMean": 81.72
+  }
+}

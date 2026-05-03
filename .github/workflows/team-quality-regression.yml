@@ -1,0 +1,117 @@
+name: /team quality regression
+
+# T1.5 ROADMAP_TEAM (KR3) — runs reviewer 5-axis quality eval against 20-feature
+# corpus and fails if axis mean drops >5pts vs baseline.
+
+on:
+  pull_request:
+    paths:
+      - '.claude/agents/reviewer.md'
+      - '.claude/skills/team/team-promptfoo/**'
+      - '.claude/skills/team/lib/reviewer-eval-shim.sh'
+      - '.claude/skills/team/lib/quality-regression.sh'
+      - '.claude/skills/team/lib/quality-scores.sh'
+      - '.github/workflows/team-quality-regression.yml'
+  schedule:
+    # Weekly Monday 04:00 UTC — full real-mode run (Anthropic API).
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Eval mode (mock | real)'
+        required: false
+        default: 'mock'
+
+concurrency:
+  group: team-quality-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  regression:
+    name: reviewer 5-axis regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # PR runs default to mock (free, deterministic, harness-correctness check).
+      # Cron + manual dispatch can override.
+      REVIEWER_EVAL_MODE: ${{ github.event_name == 'schedule' && 'real' || (github.event.inputs.mode || 'mock') }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verify jq + shellcheck available
+        run: |
+          jq --version
+          shellcheck --version
+          which bash
+
+      - name: Lint shell scripts
+        run: |
+          shellcheck .claude/skills/team/lib/reviewer-eval-shim.sh
+          shellcheck .claude/skills/team/lib/quality-regression.sh
+          shellcheck .claude/skills/team/lib/quality-scores.sh
+
+      - name: Install promptfoo
+        run: npm install -g promptfoo@latest
+
+      - name: Run reviewer regression eval
+        working-directory: .claude/skills/team/team-promptfoo
+        run: |
+          echo "Mode: $REVIEWER_EVAL_MODE"
+          if [ "$REVIEWER_EVAL_MODE" = "real" ] && [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::error::REVIEWER_EVAL_MODE=real but ANTHROPIC_API_KEY secret is not set"
+            exit 1
+          fi
+          npx promptfoo eval --output output.json --no-cache
+
+      - name: Compare to baseline (>5pts drop = FAIL)
+        working-directory: .claude/skills/team/team-promptfoo
+        run: |
+          set +e
+          ../lib/quality-regression.sh output.json baseline-scores.json > regression-result.json
+          rc=$?
+          cat regression-result.json | jq .
+          if [ $rc -ne 0 ]; then
+            echo "::error::Quality regression detected — at least one axis dropped >5pts vs baseline."
+            jq -c '.perAxis | to_entries | map(select(.value.breach)) | map({axis: .key, current: .value.current, baseline: .value.baseline, delta: .value.delta})' regression-result.json
+            exit 1
+          fi
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-regression-${{ github.run_id }}
+          path: |
+            .claude/skills/team/team-promptfoo/output.json
+            .claude/skills/team/team-promptfoo/regression-result.json
+          retention-days: 30
+
+      - name: Comment on PR (mock-mode summary)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = '.claude/skills/team/team-promptfoo/regression-result.json';
+            if (!fs.existsSync(path)) return;
+            const r = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const perAxis = Object.entries(r.perAxis || {}).map(
+              ([axis, v]) => `| ${axis} | ${v.current} | ${v.baseline} | ${v.delta} | ${v.breach ? '❌' : '✅'} |`
+            ).join('\n');
+            const body = `## /team reviewer 5-axis regression (mode: \`${process.env.REVIEWER_EVAL_MODE}\`)\n\n${r.pass ? '✅ PASS' : '❌ FAIL'}\n\n| axis | current | baseline | delta | within 5pts? |\n|---|---|---|---|---|\n${perAxis}\n\n_Mock mode is harness sanity only; real-mode regression runs nightly on Mondays via cron._`;
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });

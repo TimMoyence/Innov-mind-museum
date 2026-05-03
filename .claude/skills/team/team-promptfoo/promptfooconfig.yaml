@@ -1,0 +1,36 @@
+# /team reviewer 5-axis quality regression — T1.5 ROADMAP_TEAM (KR3)
+# Runs the reviewer agent against a 20-feature corpus and asserts axis scores
+# are within ±5pts of the baseline.
+#
+# Local run:
+#   cd .claude/skills/team/team-promptfoo
+#   npx promptfoo eval --output output.json
+#   ../lib/quality-regression.sh output.json baseline-scores.json
+#
+# CI: .github/workflows/team-quality-regression.yml (cron weekly).
+#
+# Offline (no Anthropic key): the eval shim returns deterministic mock scores —
+# regression detection still runs against the same mock to catch harness drift.
+# Set ANTHROPIC_API_KEY to switch to real reviewer scoring.
+
+description: '/team reviewer 5-axis quality regression vs 20-feature corpus'
+
+providers:
+  - id: 'exec:bash ../lib/reviewer-eval-shim.sh'
+    config:
+      timeoutMs: 120000
+      transformResponse: 'JSON.parse(output)'
+
+prompts:
+  - 'feature_id={{feature_id}}|category={{category}}|description={{description}}|diff={{diff_excerpt}}|spec={{spec_excerpt}}'
+
+tests: file://corpus.json
+
+defaultTest:
+  assert:
+    - type: javascript
+      value: 'output.scoresOnFiveAxes && typeof output.scoresOnFiveAxes.weightedMean === "number"'
+    - type: javascript
+      value: 'output.scoresOnFiveAxes.weightedMean >= 0 && output.scoresOnFiveAxes.weightedMean <= 100'
+    - type: javascript
+      value: '["correctness","security","maintainability","testCoverage","docQuality"].every(k => typeof output.scoresOnFiveAxes[k]?.score === "number")'

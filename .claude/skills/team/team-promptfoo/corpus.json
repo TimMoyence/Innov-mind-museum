@@ -1,0 +1,182 @@
+[
+  {
+    "vars": {
+      "feature_id": "01-pagination-cursor",
+      "category": "backend-feature",
+      "description": "Add cursor-based pagination to GET /api/chat/sessions",
+      "spec_excerpt": "R1: cursor opaque base64 of (createdAt,id). R2: limit clamp 1-100. R3: 200 OK with nextCursor. R4: 400 on malformed cursor.",
+      "diff_excerpt": "+ chat.repository.ts: list({cursor, limit}) decode → query orderBy(createdAt DESC, id DESC). + tests: 5 cases (happy + edge: empty page, last page, malformed cursor 400, limit clamp, TZ-stable)."
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "02-auth-rate-limit",
+      "category": "backend-security",
+      "description": "Add 5 req/min rate limit to POST /api/auth/login",
+      "spec_excerpt": "R1: 5 attempts/min/IP. R2: 429 on 6th. R3: counter resets after 60s sliding window.",
+      "diff_excerpt": "+ login-rate-limiter.ts express middleware (Redis INCR + EXPIRE 60). + integration test 6th request → 429."
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "03-typeorm-migration",
+      "category": "backend-migration",
+      "description": "Add audit_logs table with hash-chained integrity",
+      "spec_excerpt": "R1: id UUID, prev_hash CHAR(64), this_hash CHAR(64), payload JSONB. R2: index on (created_at) DESC.",
+      "diff_excerpt": "+ migrations/1777800000000-AuditLogsHashChain.ts up()/down() symmetric. + tests on rollback parity."
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "04-fe-component-museum-card",
+      "category": "frontend-feature",
+      "description": "MuseumCard component for directory list",
+      "spec_excerpt": "R1: name, city, image. R2: a11y label per Pressable. R3: design-system tokens only.",
+      "diff_excerpt": "+ features/museum/components/MuseumCard.tsx with Pressable accessibilityLabel + tokens.spacing.md."
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "05-i18n-fr-en-keys",
+      "category": "frontend-i18n",
+      "description": "Add EN translations for chat onboarding keys",
+      "spec_excerpt": "R1: every FR key has EN counterpart. R2: lint-staged guard for missing keys.",
+      "diff_excerpt": "+ locales/en/chat.json 12 new keys mirroring fr/chat.json. + i18n-key-parity check passes."
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "06-security-injection-fix",
+      "category": "backend-security",
+      "description": "Fix SQL injection in audit search filter",
+      "spec_excerpt": "R1: switch raw query to parameterized. R2: regression test attempts injection payload.",
+      "diff_excerpt": "- queryRunner.query(`SELECT ... WHERE id='${id}'`) + queryRunner.query('SELECT ... WHERE id=$1', [id]). + injection-payload test."
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "07-doc-only-readme",
+      "category": "docs",
+      "description": "Update CLAUDE.md with new ESLint discipline section",
+      "spec_excerpt": "R1: documents eslint-disable hard rule. R2: examples accurate.",
+      "diff_excerpt": "+ CLAUDE.md +30 lines covering ESLint rule justifications + Approved-by header pattern."
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "08-refactor-extract-helper",
+      "category": "refactor",
+      "description": "Extract date-formatting logic into shared util",
+      "spec_excerpt": "R1: behavior unchanged. R2: 3 callsites updated. R3: existing tests still pass.",
+      "diff_excerpt": "+ shared/lib/format-iso-date.ts. - 3 inline new Date().toISOString() calls. Tests untouched and pass."
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "09-observability-trace",
+      "category": "observability",
+      "description": "Wrap chat.service.invokeLLM with Langfuse span",
+      "spec_excerpt": "R1: span.name='chat.invokeLLM'. R2: input/output tokens recorded. R3: fail-open on telemetry error.",
+      "diff_excerpt": "+ safeTrace wrapper around invokeLLM call. + try/catch swallows trace errors. + unit test: trace failure does NOT fail chat."
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "10-eslint-disable-justification",
+      "category": "tooling",
+      "description": "Add custom ESLint rule no-undisabled-test-discipline-disable",
+      "spec_excerpt": "R1: any new eslint-disable in test files needs Justification + Approved-by. R2: rule fixture tests cover happy/sad path.",
+      "diff_excerpt": "+ tools/eslint-plugin-musaium-test-discipline/rules/no-undisabled.ts + tests/no-undisabled.test.ts"
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "11-bug-fix-tz-pagination",
+      "category": "bug",
+      "description": "Fix TZ-sensitive cursor pagination drift across regions",
+      "spec_excerpt": "R1: server in Europe/Paris must produce same cursor as in UTC. R2: regression test under TZ=Europe/Paris.",
+      "diff_excerpt": "Migration TIMESTAMPTZ on chat_sessions.createdAt. Cursor codec uses Date.toISOString() instead of getTime(). 41 prior .skip flipped to .it under TZ=Europe/Paris."
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "12-mobile-feature-flag-kill",
+      "category": "frontend-cleanup",
+      "description": "Remove FEATURE_FLAG_VOICE_MODE after V1 ship",
+      "spec_excerpt": "R1: flag removed everywhere (config, runtime checks, tests). R2: voice mode now always-on.",
+      "diff_excerpt": "- 12 callsites of FEATURE_FLAG_VOICE_MODE. - 1 config entry. + assertion in app.config.ts that voice is on. Coverage maintained."
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "13-banking-grade-mutation",
+      "category": "tests",
+      "description": "Stryker mutation gate ≥80% on auth-chain.ts",
+      "spec_excerpt": "R1: kill ratio ≥0.8. R2: hot-files JSON registers it.",
+      "diff_excerpt": "+ .stryker-hot-files.json entry. + 4 new mutation-killing tests in tests/integration/auth/audit-chain.mutation.test.ts. Achieved 0.84 kill."
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "14-design-token-migration",
+      "category": "frontend-design-system",
+      "description": "Replace 8 raw hex literals with tokens",
+      "spec_excerpt": "R1: zero raw hex outside design-system/. R2: visual diff ≤1px.",
+      "diff_excerpt": "- 8 #ff... literals across 4 components. + tokens.colors.surfacePrimary etc. Snapshot tests updated."
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "15-a11y-axe-fix",
+      "category": "frontend-a11y",
+      "description": "Fix 5 axe violations on /admin/users page",
+      "spec_excerpt": "R1: 0 axe critical/serious violations. R2: e2e a11y test asserts.",
+      "diff_excerpt": "+ aria-label on 3 IconButton, + role=table on UsersList wrapper, + aria-live=polite on toast. axe scan now PASS."
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "16-prompt-injection-guard",
+      "category": "backend-security",
+      "description": "Indirect-injection wrapper for LLM input",
+      "spec_excerpt": "R1: external doc text wrapped in <untrusted_input> tags. R2: regression test attempts to break out of wrapper.",
+      "diff_excerpt": "+ wrapIndirectInput(text) helper. + chat.service uses wrapper for retrieved docs. + promptfoo regression case."
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "17-ci-cosign-call",
+      "category": "ci",
+      "description": "Add cosign sign step to docker push workflow",
+      "spec_excerpt": "R1: cosign sign --yes invoked post-push. R2: secret COSIGN_PRIVATE_KEY referenced (not inlined).",
+      "diff_excerpt": "+ .github/workflows/ci-cd-backend.yml cosign step. Secret referenced via secrets.COSIGN_PRIVATE_KEY."
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "18-dependency-cve-bump",
+      "category": "chore",
+      "description": "Bump uuid to fix CVE-2026-XXXXX",
+      "spec_excerpt": "R1: uuid version ≥ X.Y.Z. R2: lockfile updated. R3: tests pass unchanged.",
+      "diff_excerpt": "package.json + pnpm-lock.yaml. uuid 11.0.3 → 11.1.0. No code changes. Tests untouched."
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "19-flaky-test-quarantine",
+      "category": "tests",
+      "description": "Quarantine flaky e2e auth-social-login Apple",
+      "spec_excerpt": "R1: it.skip with TODO referencing tracking issue. R2: flake rate metric still computed.",
+      "diff_excerpt": "+ it.skip('Apple ID-token under network latency', ...) + // TODO(MUS-431). - Issue created."
+    }
+  },
+  {
+    "vars": {
+      "feature_id": "20-roadmap-update",
+      "category": "docs",
+      "description": "Mark T1.5 done in ROADMAP_TEAM with reasoning",
+      "spec_excerpt": "R1: 4/4 boxes ticked. R2: deviations from original spec documented.",
+      "diff_excerpt": "+ ROADMAP_TEAM.md T1.5 → ✅ done with notes on synthetic corpus, baseline calibration deferred to first real run."
+    }
+  }
+]
