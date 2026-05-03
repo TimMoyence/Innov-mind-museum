@@ -69,9 +69,18 @@
     {
       "id": "UFR-010",
       "source": "feedback_all_agents_opus",
-      "rule": "Tous les agents /team DOIVENT utiliser model: opus. Excellence operationnelle, pas economie de tokens.",
+      "rule": "Tous les agents /team DOIVENT utiliser model: opus, SAUF exceptions explicites listees dans .exceptions. Excellence operationnelle, pas economie de tokens.",
       "severity": "BLOCK",
-      "applyWhen": "Spawner un agent"
+      "applyWhen": "Spawner un agent",
+      "exceptions": [
+        {
+          "role": "documenter",
+          "model": "claude-sonnet-4-6",
+          "amendedAt": "2026-05-03",
+          "ticket": "ROADMAP_TEAM T1.3",
+          "rationale": "Output formate simple (ADR template, STORY.md append, CHANGELOG bullets). Pas de raisonnement architectural complexe — architect a deja decide. Sonnet-4.6 fournit synthese suffisante a ~3x moins cher (input $3/M vs $15/M Opus 2026-05). Revert obligatoire si regression qualite detectee sur 5-run check (Sonnet vs Opus comparison). Aucune autre exception autorisee : architect/editor/verifier/security/reviewer restent Opus."
+        }
+      ]
     },
     {
       "id": "UFR-011",

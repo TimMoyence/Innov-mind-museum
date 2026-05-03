@@ -28,7 +28,7 @@ Doit produire des features de qualité prod sans micro-management humain, en res
 | Langfuse observability — `safeTrace` + spans | shipped |
 | UFR-013 honesty rule | shipped |
 | Promptfoo CI gate (jailbreak corpus) | shipped |
-| Tous-Opus (UFR-010) | shipped |
+| Tous-Opus (UFR-010, exception explicite Documenter→Sonnet 2026-05-03 ADR-029) | shipped |
 
 ## Ce qui manque (gap analysis user 2026-05-03)
 
@@ -38,7 +38,7 @@ Doit produire des features de qualité prod sans micro-management humain, en res
 4. Pas d'eval auto qualité output (score post-run ≥85)
 5. Pas de code review fait par agent dédié (cf. superpowers:requesting-code-review style)
 6. Spec Kit pas mandatoire (opt-in actuel)
-7. Tous-Opus = cher pour rôles non-critiques (Documenter)
+7. ~~Tous-Opus = cher pour rôles non-critiques (Documenter)~~ — résolu 2026-05-03 T1.3 (Sonnet swap, ADR-029)
 
 ---
 
@@ -77,9 +77,9 @@ Doit produire des features de qualité prod sans micro-management humain, en res
 
 ### T1.3 Sonnet swap Documenter (C2)
 
-- [ ] Edit `.claude/agents/documenter.md` — `model: claude-sonnet-4-6`
-- [ ] UFR-010 amendment — exception explicite Documenter (justifier : output formaté simple, pas de raisonnement complexe, économie ~3× sans perte qualité)
-- [ ] Verify regression — 5 runs documenter Sonnet vs Opus, compare output qualité
+- [x] Edit `.claude/agents/documenter.md` — `model: claude-sonnet-4-6` (+ inline justification ligne 11). state.schema.json enum étendu. SKILL.md REGLES §2 cohérent.
+- [x] UFR-010 amendment — `.exceptions[]` array sur UFR-010 listant explicit role `documenter` + amendedAt + ticket + rationale. ADR-029 publié.
+- [ ] Verify regression — 5 runs documenter Sonnet vs Opus, compare output qualité (manuel multi-cycle, voir ADR-029 §Verification protocol)
 
 ### T1.4 Spec Kit mandatoire enforcement (KR2)
 
@@ -89,12 +89,12 @@ Doit produire des features de qualité prod sans micro-management humain, en res
 
 Self-test : `bash .claude/skills/team/team-hooks/pre-feature-spec-check.sh --self-test` → 8/8 scenarios PASS. Run de référence : `team-state/2026-05-03-spec-kit-mandatory-enforcement/`.
 
-### T1.5 Auto-eval qualité output (KR3)
+### T1.5 Auto-eval qualité output (KR3) — ✅ done 2026-05-03
 
-- [ ] Reviewer agent score post-run sur 5 axes (correctness, security, maintainability, test coverage, doc quality), 0-100 chacun
-- [ ] Aggregate dans `team-state/quality-scores.json`
-- [ ] Trigger amélioration : score <70 → escalade user, score 70-85 → corrective loop, score ≥85 → ship
-- [ ] Promptfoo regression suite étendu — corpus 20 features types, fail si score moyen baisse >5pts entre runs
+- [x] Reviewer 5-axis scoring (correctness 0.30 / security 0.25 / maintainability 0.20 / testCoverage 0.15 / docQuality 0.10) — JSON schema + workflow step + rubric + weighted-mean formula in `.claude/agents/reviewer.md` `<output_format>`
+- [x] `lib/quality-scores.sh` — append reviewer JSON entry to `team-state/quality-scores.json` (mkdir-CAS lock, 200-entry truncate). Initial empty `[]`.
+- [x] SKILL.md Step 8 verdict gating thresholded — ≥85 APPROVED / 70-84 CHANGES_REQUESTED / <70 BLOCK + cohérence override (verdict explicite agent prime sur metric pour BLOCK ; mean<70 + verdict APPROVED → reject + re-spawn).
+- [x] Promptfoo regression — 20-feature synthetic corpus (`team-promptfoo/corpus.json`), eval shim (`lib/reviewer-eval-shim.sh`, mock + real Anthropic API modes), regression detector (`lib/quality-regression.sh`, fail >5pts drop), CI workflow `team-quality-regression.yml` (PR mock + cron weekly real). Baseline calibrated mock-bootstrap, awaits first real-mode run for re-bake.
 
 ### T1.6 Auto-consolidation roadmap (intégration ROADMAP × /team)
 

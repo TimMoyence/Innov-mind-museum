@@ -18,7 +18,7 @@ Dispatcher avec etat durable (`team-state/<run-id>/`), Spec Kit (spec → design
 ## REGLES ABSOLUES
 
 1. NE JAMAIS avancer sans gates PASS du pipeline
-2. Tous agents en `model: opus-4.7` (architect, reviewer) ou `opus-4.6` (editor, verifier, security, documenter) — UFR-010 + V12 all-Opus
+2. Tous agents en `model: opus-4.7` (architect, reviewer) ou `opus-4.6` (editor, verifier, security) ; documenter = `sonnet-4.6` (UFR-010 exception, T1.3 ROADMAP_TEAM)
 3. Agents ne commitent PAS — seul le Tech Lead git add/commit/push
 4. Agents n'ecrivent PAS dans `team-knowledge/` ni `team-reports/`
 5. Agents respectent les 13 UFR (`shared/user-feedback-rules.json`)

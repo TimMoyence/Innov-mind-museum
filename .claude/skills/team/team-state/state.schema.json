@@ -34,7 +34,7 @@
         "properties": {
           "name":   { "type": "string" },
           "role":   { "enum": ["architect", "editor", "verifier", "security", "reviewer", "documenter"] },
-          "model":  { "enum": ["opus-4.7", "opus-4.6"] },
+          "model":  { "enum": ["opus-4.7", "opus-4.6", "sonnet-4.6"] },
           "status": { "enum": ["pending", "running", "completed", "failed"] },
           "startedAt":  { "type": "string", "format": "date-time" },
           "endedAt":    { "type": "string", "format": "date-time" },
