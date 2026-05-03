@@ -16,6 +16,21 @@ interface ErrorResponseShape {
   };
 }
 
+/**
+ * Duck-typed AppError check. Plain `instanceof AppError` breaks across module
+ * boundaries when Jest calls `jest.resetModules()` (e2e harness reset for
+ * multi-container test files): the orchestrator and middleware end up holding
+ * two distinct AppError class identities, so an AppError thrown by code from
+ * pre-reset modules looks "unknown" to the middleware and degrades to 500.
+ * The `name` + `statusCode` shape uniquely identifies our errors.
+ */
+const isAppErrorLike = (error: unknown): error is AppError => {
+  if (error instanceof AppError) return true;
+  if (!(error instanceof Error)) return false;
+  const candidate = error as Error & { statusCode?: unknown; code?: unknown };
+  return typeof candidate.statusCode === 'number' && typeof candidate.code === 'string';
+};
+
 const normalizeError = (error: unknown): unknown => {
   if (error instanceof MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
@@ -37,7 +52,7 @@ const normalizeError = (error: unknown): unknown => {
 };
 
 const buildPayload = (error: unknown, requestId: string | undefined): ErrorResponseShape => {
-  const isKnown = error instanceof AppError;
+  const isKnown = isAppErrorLike(error);
   return {
     error: {
       code: isKnown ? error.code : 'INTERNAL_ERROR',
@@ -49,7 +64,7 @@ const buildPayload = (error: unknown, requestId: string | undefined): ErrorRespo
 };
 
 const applyResponseHeaders = (res: Response, error: unknown): void => {
-  if (!(error instanceof AppError) || !error.headers) return;
+  if (!isAppErrorLike(error) || !error.headers) return;
   for (const [name, value] of Object.entries(error.headers)) {
     res.setHeader(name, value);
   }
@@ -65,7 +80,7 @@ const logServerError = (error: unknown, req: Request, requestId: string | undefi
     requestId,
     method: req.method,
     path: req.originalUrl,
-    statusCode: error instanceof AppError ? error.statusCode : 500,
+    statusCode: isAppErrorLike(error) ? error.statusCode : 500,
     error: error instanceof Error ? error.message : String(error),
   });
 };
@@ -74,7 +89,7 @@ const logServerError = (error: unknown, req: Request, requestId: string | undefi
 export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   const normalizedError = normalizeError(error);
   const requestId = (req as { requestId?: string } | undefined)?.requestId ?? undefined;
-  const statusCode = normalizedError instanceof AppError ? normalizedError.statusCode : 500;
+  const statusCode = isAppErrorLike(normalizedError) ? normalizedError.statusCode : 500;
 
   if (statusCode >= 500) {
     logServerError(normalizedError, req, requestId);

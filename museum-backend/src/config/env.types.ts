@@ -138,6 +138,16 @@ export interface AppEnv {
      * `env.production-validation.ts` rejects it loudly at startup.
      */
     emailServiceKind: 'test' | 'brevo' | 'noop';
+    /**
+     * F10 — toggle for the HIBP Pwned Passwords k-anonymity check.
+     * Default `true` everywhere except e2e tests, where the harness overrides
+     * it to `false` to avoid a network round-trip on every register/reset call
+     * (and to keep canonical fixture passwords like `Password123!` usable).
+     *
+     * Production rejects `false` loudly via `env.production-validation.ts` —
+     * disabling the breach gate in prod would weaken the registration pipeline.
+     */
+    passwordBreachCheckEnabled: boolean;
   };
   llm: {
     provider: LlmProvider;

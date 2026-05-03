@@ -33,6 +33,8 @@ const makeEnv = (overrides: Partial<AppEnv['auth']> = {}): AppEnv =>
       // F7 — CSRF secret must agree with raw env var (drift check) and be
       // distinct from every other production secret.
       csrfSecret: 'p'.repeat(48),
+      // F10 — production sentinel rejects false; default true keeps the stub valid.
+      passwordBreachCheckEnabled: true,
       ...overrides,
     },
   }) as unknown as AppEnv;

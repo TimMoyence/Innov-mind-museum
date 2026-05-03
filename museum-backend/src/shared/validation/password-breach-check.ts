@@ -22,6 +22,7 @@ import crypto from 'node:crypto';
 import { AppError } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
+import { env } from '@src/config/env';
 
 /** Default HTTP timeout for the HIBP range API call. */
 const DEFAULT_TIMEOUT_MS = 2000;
@@ -132,6 +133,9 @@ export async function checkPasswordBreach(
  * we only warn rather than refuse — see audit design §7 F10).
  */
 export async function assertPasswordNotBreached(password: string): Promise<void> {
+  if (!env.auth.passwordBreachCheckEnabled) {
+    return;
+  }
   const result = await checkPasswordBreach(password);
   if (result.breached) {
     throw new AppError({

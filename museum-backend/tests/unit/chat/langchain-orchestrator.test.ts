@@ -238,6 +238,29 @@ describe('LangChainChatOrchestrator', () => {
         CircuitOpenError,
       );
     });
+
+    it('orchestrator.generate() fast-fails CircuitOpenError when breaker is OPEN at entry', async () => {
+      // Banking-grade contract: once the breaker is OPEN, generate() must
+      // surface 503/CIRCUIT_BREAKER_OPEN immediately without ever invoking
+      // the model — otherwise the section-level fallback would mask the
+      // degraded-dependency state behind a synthetic 201 response.
+      const circuitBreaker = new LLMCircuitBreaker({
+        failureThreshold: 1,
+        windowMs: 60000,
+        openDurationMs: 60000,
+      });
+      circuitBreaker.recordFailure();
+      expect(circuitBreaker.getState().state).toBe('OPEN');
+
+      const model = {
+        invoke: jest.fn().mockResolvedValue({ content: 'should never be called' }),
+        stream: jest.fn(),
+      };
+      const orchestrator = new LangChainChatOrchestrator({ model, circuitBreaker });
+
+      await expect(orchestrator.generate(makeInput())).rejects.toThrow(CircuitOpenError);
+      expect(model.invoke).not.toHaveBeenCalled();
+    });
   });
 
   describe('semaphore integration', () => {

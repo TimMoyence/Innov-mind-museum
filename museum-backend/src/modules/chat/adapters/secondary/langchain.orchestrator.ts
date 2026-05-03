@@ -14,7 +14,7 @@ import {
   isRetryableError,
   sectionRunnerHooks,
 } from './langchain-orchestrator-support';
-import { LLMCircuitBreaker } from './llm-circuit-breaker';
+import { CircuitOpenError, LLMCircuitBreaker } from './llm-circuit-breaker';
 import { parseAssistantResponse } from '../../useCase/assistant-response';
 import {
   buildOrchestratorMessages,
@@ -313,6 +313,13 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
             return await this.generateWalk(input);
           }
 
+          // Banking-grade fast-fail: if the breaker is OPEN at orchestration entry,
+          // surface the CIRCUIT_BREAKER_OPEN 503 immediately so callers stop retrying
+          // and the synthetic per-section fallback can't mask a degraded provider.
+          if (this.circuitBreaker.state === 'OPEN') {
+            throw new CircuitOpenError();
+          }
+
           const startedAt = Date.now();
 
           const prepared = buildOrchestratorMessages(input);
@@ -332,6 +339,13 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
             tasks,
             this.buildRunnerOptions(input.requestId),
           );
+
+          // (Section-level errors degrade gracefully via the fallback path in
+          // resolveSummary — see unit tests "fallback when section errors".
+          // The breaker fast-fail at orchestrator entry above is the only
+          // path that surfaces 503 to the caller for the LLM-provider-down
+          // contract; once the breaker is OPEN, individual failed sections
+          // never even start invoking the model.)
 
           const bySection = new Map<LlmSectionName, SectionRunResult<string>>();
           for (const result of sectionResults) {

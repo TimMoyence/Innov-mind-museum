@@ -22,3 +22,19 @@ process.env.EXTRACTION_WORKER_ENABLED = process.env.EXTRACTION_WORKER_ENABLED ??
 // CACHE_ENABLED already defaults to false in `env.ts`, but pinning it here
 // guarantees no accidental Redis cache wiring picks up a left-over CI value.
 process.env.CACHE_ENABLED = process.env.CACHE_ENABLED ?? 'false';
+
+// F10 — disable HIBP breach gate in e2e (mirrors createE2EHarness override).
+// Pinned here too because env.ts reads `passwordBreachCheckEnabled` at module
+// load, and any top-level `@modules/auth/*` import from a test file would
+// freeze the value to true before the harness body ever runs.
+process.env.PASSWORD_BREACH_CHECK_ENABLED = process.env.PASSWORD_BREACH_CHECK_ENABLED ?? 'false';
+
+// Phase 5 — pin the in-memory email service implementation for the same
+// reason (TestEmailService captures verification tokens; harness applies the
+// same default but only after top-level imports may have already evaluated env).
+process.env.AUTH_EMAIL_SERVICE_KIND = process.env.AUTH_EMAIL_SERVICE_KIND ?? 'test';
+
+// FRONTEND_URL guards email sending in RegisterUseCase + ForgotPasswordUseCase
+// (`if (this.emailService && this.frontendUrl)`). Pin a placeholder so e2e
+// tests using TestEmailService actually capture a verification email.
+process.env.FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:8081';

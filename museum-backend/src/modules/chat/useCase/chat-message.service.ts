@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { AppError, badRequest } from '@shared/errors/app.error';
+import { AppError, badRequest, serviceUnavailable } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
@@ -40,6 +40,30 @@ import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/p
 import type { DbLookupService } from '@modules/knowledge-extraction/useCase/db-lookup.service';
 import type { AuditService } from '@shared/audit/audit.service';
 import type { CacheService } from '@shared/cache/cache.port';
+
+/**
+ * Maps a thrown orchestrator/LLM provider error to a user-facing AppError.
+ * AppError instances (CircuitOpenError 503, validation 400, etc.) and any
+ * Error already carrying a numeric `statusCode` + string `code` shape are
+ * preserved verbatim; everything else becomes 503 LLM_UNAVAILABLE so the
+ * response stays banking-grade (no 500 leak, no provider-name leak).
+ */
+const mapOrchestratorError = (err: unknown, requestId?: string): Error => {
+  if (err instanceof AppError) return err;
+  const candidate = err as { statusCode?: unknown; code?: unknown } | undefined;
+  if (
+    err instanceof Error &&
+    typeof candidate?.statusCode === 'number' &&
+    typeof candidate.code === 'string'
+  ) {
+    return err;
+  }
+  logger.warn('orchestrator_error_mapped_to_503', {
+    requestId,
+    error: err instanceof Error ? err.message : String(err),
+  });
+  return serviceUnavailable('LLM provider unavailable', { code: 'LLM_UNAVAILABLE' });
+};
 
 /** Context bundle passed to internal LLM-cache helpers to avoid long parameter lists. */
 interface LlmCacheCtx {
@@ -234,7 +258,16 @@ export class ChatMessageService {
       return await this.commitResponse(sessionId, prep, cached, { requestId, ip });
     }
 
-    const aiResult = await this.orchestrator.generate(orchestratorInput);
+    let aiResult: OrchestratorOutput;
+    try {
+      aiResult = await this.orchestrator.generate(orchestratorInput);
+    } catch (err) {
+      // Surface orchestrator errors as 503 SERVICE_UNAVAILABLE rather than a
+      // generic 500. Banking-grade contract: a downstream LLM provider failure
+      // is a degraded-dependency state, not an internal server bug. Preserves
+      // AppError subclasses (CircuitOpenError 503, etc.) verbatim.
+      throw mapOrchestratorError(err, requestId);
+    }
     await this.tryLlmCacheStore(cacheCtx, aiResult);
 
     return await this.commitResponse(sessionId, prep, aiResult, { requestId, ip });

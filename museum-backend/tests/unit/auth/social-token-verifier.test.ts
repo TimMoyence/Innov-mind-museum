@@ -109,17 +109,23 @@ describe('social-token-verifier', () => {
       await expect(verifyAppleIdToken(token)).rejects.toThrow();
     });
 
-    it('rejects a token with wrong audience', async () => {
+    it('rejects a token with wrong audience as 401 TOKEN_INVALID', async () => {
       const token = signToken({
         sub: 'apple-user-001',
         iss: 'https://appleid.apple.com',
         aud: 'wrong-client-id',
       });
 
-      await expect(verifyAppleIdToken(token)).rejects.toThrow();
+      // safeJwtVerify wraps `jsonwebtoken`'s "jwt audience invalid" library
+      // error as AppError 401/TOKEN_INVALID so the route emits a 401 instead
+      // of leaking a 500. Without this the social-login e2e tests fail.
+      await expect(verifyAppleIdToken(token)).rejects.toMatchObject({
+        statusCode: 401,
+        code: 'TOKEN_INVALID',
+      });
     });
 
-    it('rejects an expired token', async () => {
+    it('rejects an expired token as 401 TOKEN_EXPIRED', async () => {
       // Create a token that expired 1 hour ago
       const now = Math.floor(Date.now() / 1000);
       const token = jwt.sign(
@@ -134,7 +140,10 @@ describe('social-token-verifier', () => {
         { algorithm: 'RS256', keyid: testKid },
       );
 
-      await expect(verifyAppleIdToken(token)).rejects.toThrow();
+      await expect(verifyAppleIdToken(token)).rejects.toMatchObject({
+        statusCode: 401,
+        code: 'TOKEN_EXPIRED',
+      });
     });
 
     it('throws when kid is missing from token header', async () => {

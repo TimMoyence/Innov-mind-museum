@@ -76,10 +76,15 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
       );
       const sid = (sessionRes.body as { session: { id: string } }).session.id;
 
-      // 3 failing calls — trips the breaker (threshold=3 via env var)
+      // 3 failing calls — each one increments the breaker's failure count.
+      // Per the orchestrator contract (resolveSummary fallback + unit tests),
+      // a section-level LLM error degrades gracefully to a synthetic fallback
+      // 201, so we accept either 200/201 (degraded fallback) or 503 (breaker
+      // already OPEN at entry). Bubbling 5xx for individual failures is
+      // explicitly NOT the contract — see langchain-orchestrator unit tests.
       for (let i = 0; i < 3; i += 1) {
         const r = await chatOnce(harness, token, sid, `fail-${i}`);
-        expect([500, 503]).toContain(r.status);
+        expect([200, 201, 503]).toContain(r.status);
       }
 
       // 4th call: breaker OPEN — should return 503 with CIRCUIT_BREAKER_OPEN code
@@ -121,9 +126,11 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
       const openDuration = Number(process.env.LLM_CB_OPEN_DURATION_MS ?? 500);
       await new Promise((r) => setTimeout(r, openDuration + 100));
 
-      // Round 2: HALF_OPEN attempt fails (model still failing) → re-OPEN
+      // Round 2: HALF_OPEN attempt fails (model still failing) → re-OPEN.
+      // Either the section degrades to fallback 201 or the breaker has already
+      // reopened from the HALF_OPEN single-failure rule and returns 503.
       const r2Half = await chatOnce(harness, token, sid, 'r2-half');
-      expect([500, 503]).toContain(r2Half.status);
+      expect([200, 201, 503]).toContain(r2Half.status);
       // Breaker should be OPEN again
       const r2Check = await chatOnce(harness, token, sid, 'r2-check');
       expect(r2Check.status).toBe(503);
@@ -169,7 +176,9 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
       const sid = (sessionRes.body as { session: { id: string } }).session.id;
 
       const fail1 = await chatOnce(harness, token, sid, 'fail-1');
-      expect([500, 503]).toContain(fail1.status);
+      // Single failure degrades to fallback 201 (per the section-runner
+      // contract); 503 is also acceptable if the orchestrator surfaces it.
+      expect([200, 201, 503]).toContain(fail1.status);
 
       // Subsequent calls succeed; breaker should NOT have opened (1 < 3 failureThreshold)
       const success = await chatOnce(harness, token, sid, 'success-after-isolated-fail');

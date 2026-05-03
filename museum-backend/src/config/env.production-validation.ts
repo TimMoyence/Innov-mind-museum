@@ -125,6 +125,16 @@ export function validateProductionEnv(env: AppEnv): void {
     );
   }
 
+  // F10 sentinel: disabling the HIBP breach gate is forbidden in production.
+  // Allowing breached passwords at registration would defeat NIST SP 800-63B-4
+  // §3.1.1.2 password screening and let attackers reuse leaked credentials.
+  if (!env.auth.passwordBreachCheckEnabled) {
+    throw new Error(
+      'PASSWORD_BREACH_CHECK_ENABLED=false is forbidden in production. ' +
+        'The HIBP Pwned Passwords k-anonymity gate is required at registration.',
+    );
+  }
+
   if (!env.brevoApiKey) {
     console.warn('BREVO_API_KEY not set \u2014 password reset emails will not be sent');
   }

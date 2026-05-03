@@ -162,13 +162,19 @@ export class UserRepositoryPg implements IUserRepository {
    * SEC (H2): the caller must SHA-256-hash the raw token received from the user before calling.
    */
   async verifyEmail(hashedToken: string): Promise<User | null> {
+    // TypeORM UpdateQueryBuilder.set() SKIPS columns whose value is `undefined`,
+    // so writing `verification_token: undefined` would leave the consumed token
+    // intact and allow infinite replays. Use raw `() => 'NULL'` expressions to
+    // force the SET clause to actually clear both columns. Without this the
+    // 200 OK from replaying the same token is impossible to distinguish from
+    // the legitimate first verification.
     const result = await this.repo
       .createQueryBuilder()
       .update(User)
       .set({
         email_verified: true,
-        verification_token: undefined,
-        verification_token_expires: undefined,
+        verification_token: () => 'NULL',
+        verification_token_expires: () => 'NULL',
       })
       .where('verification_token = :hashedToken AND verification_token_expires > NOW()', {
         hashedToken,

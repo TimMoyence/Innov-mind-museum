@@ -284,11 +284,22 @@ describe('UserRepositoryPg', () => {
       const result = await sut.verifyEmail(hashedToken);
 
       expect(qb.update).toHaveBeenCalledWith(User);
-      expect(qb.set).toHaveBeenCalledWith({
-        email_verified: true,
-        verification_token: undefined,
-        verification_token_expires: undefined,
-      });
+      // `verification_token` and `verification_token_expires` are passed as
+      // `() => 'NULL'` raw expressions so TypeORM emits `SET ... = NULL`.
+      // Asserting object shape with function references doesn't survive the
+      // `toEqual` strict comparison; assert payload structure + the NULL
+      // emission contract via `.mock.calls[0][0]`.
+      expect(qb.set).toHaveBeenCalledTimes(1);
+      const setArg = qb.set.mock.calls[0][0] as {
+        email_verified: boolean;
+        verification_token: () => string;
+        verification_token_expires: () => string;
+      };
+      expect(setArg.email_verified).toBe(true);
+      expect(typeof setArg.verification_token).toBe('function');
+      expect(setArg.verification_token()).toBe('NULL');
+      expect(typeof setArg.verification_token_expires).toBe('function');
+      expect(setArg.verification_token_expires()).toBe('NULL');
       expect(qb.where).toHaveBeenCalledWith(
         'verification_token = :hashedToken AND verification_token_expires > NOW()',
         { hashedToken },

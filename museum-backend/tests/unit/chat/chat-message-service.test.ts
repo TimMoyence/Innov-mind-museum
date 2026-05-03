@@ -343,14 +343,59 @@ describe('ChatMessageService', () => {
       ).rejects.toThrow('DB connection lost');
     });
 
-    it('propagates orchestrator errors', async () => {
+    it('maps unknown orchestrator errors to 503 SERVICE_UNAVAILABLE', async () => {
+      // Banking-grade contract: a downstream LLM provider failure surfaces as
+      // 503 LLM_UNAVAILABLE so callers see a degraded-dependency state instead
+      // of a generic 500. Existing AppError instances are passed through
+      // verbatim — see `mapOrchestratorError` in chat-message.service.
       const orchestrator = makeOrchestrator();
       orchestrator.generate.mockRejectedValue(new Error('LLM exploded'));
       const { service } = buildService({ orchestrator });
 
       await expect(
         service.postMessage(SESSION_ID, { text: 'Tell me about art' }, 'req-1', USER_ID),
-      ).rejects.toThrow('LLM exploded');
+      ).rejects.toMatchObject({
+        statusCode: 503,
+        code: 'LLM_UNAVAILABLE',
+      });
+    });
+
+    it('passes through AppError instances thrown by the orchestrator verbatim', async () => {
+      // mapOrchestratorError must NOT re-wrap real AppError instances
+      // (CircuitOpenError 503, NotFound 404 from a deeper guardrail, etc.) —
+      // doing so would erase the original code/statusCode and degrade the
+      // banking-grade error contract.
+      const orchestrator = makeOrchestrator();
+      const { AppError } =
+        require('@shared/errors/app.error') as typeof import('@shared/errors/app.error');
+      orchestrator.generate.mockRejectedValue(
+        new AppError({ message: 'circuit open', statusCode: 503, code: 'CIRCUIT_BREAKER_OPEN' }),
+      );
+      const { service } = buildService({ orchestrator });
+
+      await expect(
+        service.postMessage(SESSION_ID, { text: 'Tell me about art' }, 'req-1', USER_ID),
+      ).rejects.toMatchObject({
+        statusCode: 503,
+        code: 'CIRCUIT_BREAKER_OPEN',
+      });
+    });
+
+    it('passes through duck-typed AppError-shaped errors verbatim', async () => {
+      // Cross-module AppError check: a thrown `Error` carrying numeric
+      // `statusCode` + string `code` (the post-resetModules e2e shape)
+      // must keep its existing fields rather than being rewrapped as 503.
+      const orchestrator = makeOrchestrator();
+      const customError = Object.assign(new Error('rate limit'), {
+        statusCode: 429,
+        code: 'RATE_LIMIT',
+      });
+      orchestrator.generate.mockRejectedValue(customError);
+      const { service } = buildService({ orchestrator });
+
+      await expect(
+        service.postMessage(SESSION_ID, { text: 'Tell me about art' }, 'req-1', USER_ID),
+      ).rejects.toMatchObject({ statusCode: 429, code: 'RATE_LIMIT' });
     });
   });
 

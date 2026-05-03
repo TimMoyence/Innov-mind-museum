@@ -41,6 +41,7 @@ const makeEnvWithCache = (cacheOverrides: Partial<NonNullable<AppEnv['cache']>> 
       mfaEncryptionKey: VALID_MFA_ENCRYPTION_KEY,
       mfaSessionTokenSecret: VALID_MFA_SESSION_TOKEN_SECRET,
       csrfSecret: VALID_CSRF_SECRET,
+      passwordBreachCheckEnabled: true,
     },
   }) as unknown as AppEnv;
 

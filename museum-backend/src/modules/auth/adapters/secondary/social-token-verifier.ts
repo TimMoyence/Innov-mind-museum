@@ -105,6 +105,37 @@ const invalidNonce = (): AppError =>
     code: 'INVALID_NONCE',
   });
 
+const invalidToken = (code: string, reason: string): AppError =>
+  new AppError({
+    message: `Invalid social ID token: ${reason}`,
+    statusCode: 401,
+    code,
+  });
+
+/**
+ * Wraps `jsonwebtoken` verification so library errors (TokenExpiredError,
+ * JsonWebTokenError including "jwt audience invalid", signature failures,
+ * malformed tokens, etc.) surface as AppError 401 instead of bubbling up as
+ * an opaque 500. Any non-jsonwebtoken error is re-thrown unchanged.
+ */
+const safeJwtVerify = (
+  idToken: string,
+  publicKey: string,
+  options: jwt.VerifyOptions,
+): jwt.JwtPayload => {
+  try {
+    return jwt.verify(idToken, publicKey, options) as jwt.JwtPayload;
+  } catch (err) {
+    if (err instanceof jwt.TokenExpiredError) {
+      throw invalidToken('TOKEN_EXPIRED', 'expired');
+    }
+    if (err instanceof jwt.JsonWebTokenError) {
+      throw invalidToken('TOKEN_INVALID', err.message);
+    }
+    throw err;
+  }
+};
+
 /**
  * F3 — assert the `nonce` claim against the server-issued expected nonce.
  *
@@ -161,11 +192,11 @@ export const verifyAppleIdToken = async (
 
   const publicKey = await getSigningKey(env.auth.appleJwksUrl, header.kid);
 
-  const decoded = jwt.verify(idToken, publicKey, {
+  const decoded = safeJwtVerify(idToken, publicKey, {
     algorithms: ['RS256'],
     issuer: 'https://appleid.apple.com',
     audience: env.auth.appleClientId,
-  }) as jwt.JwtPayload;
+  });
 
   assertNonce('apple', decoded.nonce, expectedNonce);
 
@@ -197,11 +228,11 @@ export const verifyGoogleIdToken = async (
 
   const publicKey = await getSigningKey(env.auth.googleJwksUrl, header.kid);
 
-  const decoded = jwt.verify(idToken, publicKey, {
+  const decoded = safeJwtVerify(idToken, publicKey, {
     algorithms: ['RS256'],
     issuer: ['accounts.google.com', 'https://accounts.google.com'],
     audience: env.auth.googleClientIds as [string, ...string[]],
-  }) as jwt.JwtPayload;
+  });
 
   assertNonce('google', decoded.nonce, expectedNonce);
 

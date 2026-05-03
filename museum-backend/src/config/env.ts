@@ -295,6 +295,10 @@ const env: AppEnv = {
     // env.production-validation.ts). Default 'brevo'.
     emailServiceKind:
       (process.env.AUTH_EMAIL_SERVICE_KIND as 'test' | 'brevo' | 'noop' | undefined) ?? 'brevo',
+    // F10 — HIBP breach gate toggle. Default true. e2e harness flips false to
+    // avoid blocking the test suite on the third-party HIBP API every register
+    // call. Production sentinel (env.production-validation.ts) rejects false.
+    passwordBreachCheckEnabled: toBoolean(process.env.PASSWORD_BREACH_CHECK_ENABLED, true),
   },
   llm: {
     provider,

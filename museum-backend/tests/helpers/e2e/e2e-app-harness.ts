@@ -130,6 +130,17 @@ export interface E2EHarness {
  * @param options
  */
 export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2EHarness> {
+  // NOTE: we intentionally do NOT call `jest.resetModules()` here. Resetting
+  // the module cache between harnesses produced two pre-merge regressions:
+  //   1. Pre-imported entity classes (`import { ExtractedContent }` at the top
+  //      of an e2e test file) ended up with a different class identity than
+  //      the entities registered on the post-reset AppDataSource → TypeORM's
+  //      `getRepository(ExtractedContent)` raised "EntityMetadataNotFound".
+  //   2. Pre-imported error classes (`AppError`, `CircuitOpenError`) had a
+  //      different prototype chain than the post-reset middleware, so
+  //      `instanceof AppError` failed and 503s degraded to 500.
+  // Instead, we keep a single set of module instances and re-bind the
+  // singleton AppDataSource to the freshly-started container (see below).
   const postgresContainer: StartedPostgresTestContainer = await startPostgresTestContainer();
 
   // Environment variables MUST be set before any dynamic import that touches `env.ts`.
@@ -160,8 +171,16 @@ export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2E
   // to prevent ioredis ECONNREFUSED log floods on 127.0.0.1:6379.
   process.env.EXTRACTION_WORKER_ENABLED = 'false';
   // Phase 5 — activate the in-memory email service so e2e tests can intercept
-  // verification emails without a real Brevo API key.
+  // verification emails without a real Brevo API key. FRONTEND_URL is required
+  // because RegisterUseCase + ForgotPasswordUseCase only send mail when BOTH
+  // emailService AND frontendUrl are truthy (used to build the verify link).
   process.env.AUTH_EMAIL_SERVICE_KIND ??= 'test';
+  process.env.FRONTEND_URL ??= 'http://localhost:8081';
+  // F10 — disable HIBP breach gate in e2e. Avoids a real network round-trip
+  // to api.pwnedpasswords.com on every register/reset call (which also breaks
+  // the canonical fixture password `Password123!` because it appears in the
+  // public breach corpus). The gate itself is unit-tested independently.
+  process.env.PASSWORD_BREACH_CHECK_ENABLED ??= 'false';
   // Phase 5 — social-login JWKS spoof. Placeholder URLs; the social-login e2e
   // test starts the real spoof server in beforeAll and overrides these env vars
   // BEFORE calling createE2EHarness() so env.ts reads the correct spoof URL.
@@ -198,8 +217,31 @@ export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2E
 
   const appDataSource = AppDataSource;
 
-  (appDataSource.options as { migrations?: unknown[] }).migrations = discoveredMigrations;
+  // Re-bind the singleton DataSource to the freshly-started container. The
+  // module-level `new DataSource({ host: env.db.host, ... })` snapshot was
+  // taken from env vars at first import; by the time the SECOND harness boots
+  // (e.g. golden-paths-admin's three describe blocks) the env points at a
+  // new container but the DataSource still holds the old host/port. Mutate
+  // the options object in place + destroy() any prior connection so the next
+  // initialize() opens a fresh pool against the right container.
+  const dsOptions = appDataSource.options as {
+    host?: string;
+    port?: number;
+    username?: string;
+    password?: string;
+    database?: string;
+    migrations?: unknown[];
+  };
+  dsOptions.host = postgresContainer.host;
+  dsOptions.port = postgresContainer.port;
+  dsOptions.username = postgresContainer.user;
+  dsOptions.password = postgresContainer.password;
+  dsOptions.database = postgresContainer.database;
+  dsOptions.migrations = discoveredMigrations;
 
+  if (appDataSource.isInitialized) {
+    await appDataSource.destroy();
+  }
   await appDataSource.initialize();
 
   // Suppress stale-connection errors from the underlying pg driver.
@@ -245,13 +287,21 @@ export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2E
     },
   };
 
+  const { ResilientCacheWrapper } = await import('@shared/cache/resilient-cache.wrapper');
+  // Wrap any caller-provided cacheService (e.g. BrokenRedisCache from the chaos
+  // suite) in the resilient wrapper so backend failures degrade to cache-miss
+  // instead of bubbling up as 500s — matches the createApp() path.
+  const wrappedCache = options?.cacheService
+    ? new ResilientCacheWrapper(options.cacheService)
+    : undefined;
+
   const chatService = new ChatService({
     repository: new TypeOrmChatRepository(appDataSource),
     // Phase 6 chaos: orchestrator and cache are configurable via options.
 
     orchestrator: orchestrator as any,
     // Phase 6 chaos: cacheService override (undefined = no cache, matching existing behaviour).
-    cache: options?.cacheService,
+    cache: wrappedCache,
     imageStorage: new LocalImageStorage(),
     audioTranscriber: {
       async transcribe() {
@@ -337,7 +387,11 @@ export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2E
     }
 
     if (postgresContainer) {
-      postgresContainer.scheduleStop();
+      // Synchronous stop: scheduleStop's detached `sleep 30` cleanup process is
+      // killed when Jest exits (forceExit + macOS process-group propagation),
+      // leaking the container. Awaiting stop() costs ~1s per suite (SIGTERM
+      // grace --time 1 + container --rm auto-removal) and guarantees cleanup.
+      await postgresContainer.stop();
     }
   };
 

@@ -37,6 +37,7 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
     oidcNonceEnforce: false,
     csrfSecret: 'f'.repeat(32),
     emailServiceKind: 'brevo',
+    passwordBreachCheckEnabled: true,
     ...overrides,
   };
 

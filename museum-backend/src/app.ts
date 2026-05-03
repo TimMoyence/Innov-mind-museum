@@ -9,6 +9,7 @@ import { setActiveChatModule } from '@modules/chat/chat-module-singleton';
 import { museumRepository } from '@modules/museum';
 import { MemoryCacheService } from '@shared/cache/memory-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
+import { ResilientCacheWrapper } from '@shared/cache/resilient-cache.wrapper';
 import { logger } from '@shared/logger/logger';
 import { setupSentryExpressErrorHandler } from '@shared/observability/sentry';
 import { createApiRouter } from '@shared/routers/api.router';
@@ -159,10 +160,16 @@ function applyGlobalMiddleware(app: Express): void {
   });
 }
 
-/** Resolves the cache service from options or environment configuration. */
+/**
+ * Resolves the cache service from options or environment configuration.
+ * The result is always wrapped in {@link ResilientCacheWrapper} so backend
+ * failures (Redis unreachable, malformed payload, etc.) degrade to cache-miss
+ * semantics instead of bubbling up as 500s. Banking-grade contract enforced
+ * by the chaos-redis-down e2e suite.
+ */
 function resolveCacheService(options: CreateAppOptions): CacheService {
   if (options.cacheService) {
-    return options.cacheService;
+    return new ResilientCacheWrapper(options.cacheService);
   }
 
   if (env.cache?.enabled) {
@@ -175,13 +182,13 @@ function resolveCacheService(options: CreateAppOptions): CacheService {
         error: err instanceof Error ? err.message : String(err),
       });
     });
-    return redisCacheService;
+    return new ResilientCacheWrapper(redisCacheService);
   }
 
   logger.info('cache_memory_fallback', {
     reason: 'CACHE_ENABLED=false — using in-memory cache (Overpass, LLM, etc.)',
   });
-  return new MemoryCacheService();
+  return new ResilientCacheWrapper(new MemoryCacheService());
 }
 
 /**

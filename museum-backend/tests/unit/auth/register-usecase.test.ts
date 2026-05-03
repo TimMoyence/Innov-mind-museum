@@ -10,6 +10,9 @@ jest.mock('@shared/logger/logger', () => ({
 jest.mock('@src/config/env', () => ({
   env: {
     nodeEnv: 'test',
+    auth: {
+      passwordBreachCheckEnabled: false,
+    },
   },
 }));
 
