@@ -30,7 +30,7 @@ export interface PruneReviewsConfig {
  *
  * Returns total rowsAffected + details (rejected count, pending count, cutoffs).
  *
- * Spec: docs/superpowers/specs/2026-05-01-E-retention-policies-design.md section 3.2
+ * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
  * ADR: docs/adr/ADR-019-reviews-retention.md
  */
 export async function pruneReviews(

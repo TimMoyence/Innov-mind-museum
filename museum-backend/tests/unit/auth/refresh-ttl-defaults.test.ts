@@ -1,10 +1,11 @@
 /**
  * F8 (2026-04-30) — Refresh-token TTL defaults tightened for banking-grade hardening.
  *
- * Asserts the new defaults documented in
- * `docs/security/2026-04-30-banking-grade-hardening-design.md` §3 Phase A F8:
+ * Asserts the F8 contract:
  *   - JWT_REFRESH_TTL default = '14d' (was '30d')
  *   - JWT_REFRESH_IDLE_WINDOW_SECONDS default = 86_400 (24h, was 14 * 86_400)
+ *
+ * Original design ref: git commit `01233ff21` (banking-grade hardening F8 — design doc deleted 2026-05-03).
  *
  * We assert the defaults at the SOURCE level (no env coupling) by reading
  * `src/config/env.ts` and grepping for the literal defaults — production

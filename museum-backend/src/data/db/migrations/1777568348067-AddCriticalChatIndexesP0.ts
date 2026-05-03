@@ -17,7 +17,7 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  * Recovery runbook for INVALID indexes (after a CONCURRENTLY build is killed)
  * lives in docs/DB_BACKUP_RESTORE.md.
  *
- * Spec: docs/superpowers/specs/2026-04-30-A1-A2-critical-fk-indexes-design.md
+ * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
  */
 export class AddCriticalChatIndexesP01777568348067 implements MigrationInterface {
   name = 'AddCriticalChatIndexesP01777568348067';

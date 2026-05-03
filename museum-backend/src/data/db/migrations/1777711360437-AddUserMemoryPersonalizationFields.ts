@@ -21,7 +21,7 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  * line was stripped to keep the migration scope-pure to Spec C, matching the
  * Spec A precedent.
  *
- * Spec: docs/superpowers/specs/ (Spec C — Personalization + Voice Continuity)
+ * Spec: see git log (deleted 2026-05-03 — Spec C Personalization + Voice Continuity, original in commit history)
  */
 export class AddUserMemoryPersonalizationFields1777711360437 implements MigrationInterface {
   name = 'AddUserMemoryPersonalizationFields1777711360437';

@@ -4,7 +4,7 @@ import { Counter, Histogram, Registry, collectDefaultMetrics } from 'prom-client
  * Prometheus metrics registry. Holds the RED metrics + business metrics
  * surfaced via the /metrics endpoint.
  *
- * Spec: docs/superpowers/specs/2026-05-01-H-observability-design.md
+ * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
  */
 export const registry = new Registry();
 

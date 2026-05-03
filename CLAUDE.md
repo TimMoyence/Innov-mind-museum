@@ -4,25 +4,34 @@ Guidance for Claude Code (claude.ai/code) in this repo.
 
 ## Project Overview
 
-Musaium — interactive museum assistant mobile app. Visitors photograph artworks or ask questions, get AI contextual responses via LangChain + LLM (OpenAI/Deepseek/Google).
+Musaium — assistant balade culturelle hors-musée et intra-musée, multi-musées, voice-first. Visiteurs photographient les œuvres, parlent à l'AI, suivent des balades guidées multi-points-d'intérêt. AI conversationnel via LangChain + LLM (OpenAI/Deepseek/Google).
+
+Audience : B2C visiteur (freemium) + B2B musée (licence) + institutionnel (subvention).
+Launch V1 : 2026-06-01.
 
 Monorepo, three independent apps:
 - **`museum-backend/`** — Node.js 22 + Express 5 + TypeORM + PostgreSQL 16 (pnpm)
 - **`museum-frontend/`** — React Native 0.83 + Expo 55 + Expo Router (npm)
 - **`museum-web/`** — Next.js 15 + React 19 + Tailwind 4 + Framer Motion (pnpm) — landing + admin panel
 
-## Progress Tracking
+## Roadmap (vivante, double)
 
-Active roadmap: **`docs/ROADMAP_ACTIVE.md`** — résumé exécutif, mis à jour à chaque sprint. Index docs : **`docs/DOCS_INDEX.md`**. Plan enterprise courant : **`docs/plans/NL_MASTER_PLAN.md`**.
+Source de vérité unique :
+- **`docs/ROADMAP_PRODUCT.md`** — features produit, OKR Q2-2026, NOW/NEXT/LATER. Coche `[x]` au merge.
+- **`docs/ROADMAP_TEAM.md`** — orchestrateur /team v13, OKR cost+quality, T1.x backlog.
+
+Réécrites complètement chaque sprint (4 semaines). Snapshots précédents = `git log -- docs/ROADMAP_*.md`. CHAQUE feature non-trivial passe par `/team` Spec Kit (spec.md + design.md + tasks.md). Le dispatcher `/team` lit ces 2 fichiers en début de cycle et coche au merge (cf. ROADMAP_TEAM §T1.6).
+
+Index docs : **`docs/DOCS_INDEX.md`**.
 
 Historical sprint journals archived in **`docs/archive/v1-sprint-2026-04/`**:
 - `PROGRESS_TRACKER.md` — checkbox tracker per sprint/item
 - `SPRINT_LOG.md` — detailed technical journal
 - `*_AUDIT_2026-04-0*.md` — prior audit reports
 
-V3 review preserved under `docs/archive/roadmaps/V3_REVIEW_AND_PLAN.md`. Older sprint scratch (ROADMAP_V2, walk spec, superpowers plans/specs, one-off audits, legacy team reports) was deleted on 2026-04-30 — see git history if needed.
+V3 review preserved under `docs/archive/roadmaps/V3_REVIEW_AND_PLAN.md`. Sprint scratch antérieur (ROADMAP_V2, walk spec, superpowers plans/specs, V12 W1-W8 plans, banking-grade design, NL_MASTER_PLAN, PROD_10_10) supprimé 2026-04-30 et 2026-05-03 — voir git history si besoin.
 
-Post-2026-04-20 tracking: `.claude/tasks/` (task lists) + `.claude/skills/team/team-reports/` (runtime `/team` runs) = active sources of truth.
+Post-2026-04-20 runtime tracking: `.claude/tasks/` (task lists) + `.claude/skills/team/team-reports/` (runtime `/team` runs).
 
 ## Common Commands
 
@@ -99,7 +108,6 @@ GitHub Actions workflows (`.github/workflows/`):
 - Backend: docker-compose stack on the runner. V2 will swap to public staging.
 - New flow files MUST be added to `shards.json`; the `maestro-shard-manifest.mjs` sentinel in the `quality` job rejects PRs that violate this.
 - Helper scripts: `museum-frontend/scripts/maestro-runner-setup.sh` (backend boot), `museum-frontend/scripts/maestro-run-shard.sh` (flow runner). Bats-tested.
-- See `docs/superpowers/specs/2026-05-01-phase2-maestro-mobile-pr-design.md` for the full spec.
 
 ### Web admin Playwright + a11y (Phase 3)
 
@@ -109,7 +117,6 @@ GitHub Actions workflows (`.github/workflows/`):
 - PR pipeline: `playwright-pr` job runs Chromium only (~5–7 min wall clock); fails the PR on flow regression or a11y violation.
 - Nightly cron (03:23 UTC): `playwright-nightly` job runs the full 3-browser matrix (chromium + firefox + webkit).
 - a11y disable-rules baseline at `museum-web/e2e/a11y/_disable-rules.json`. Vitest cap test enforces baseline length ≤ `PHASE_3_DISABLE_RULES_CAP` (currently 0; only shrinks).
-- See `docs/superpowers/specs/2026-05-01-phase3-web-admin-playwright-design.md` for the full spec.
 
 ### Stryker mutation testing (Phase 4)
 
@@ -118,7 +125,6 @@ GitHub Actions workflows (`.github/workflows/`):
 - Pre-commit hook (`.claude/hooks/pre-commit-gate.sh`) runs `pnpm mutation:ci` + `pnpm mutation:gate` ONLY when staged BE files intersect the `mutate:` list. Most commits skip Stryker entirely (0s overhead). First-run cold cache may take ~20–40 min — run `pnpm mutation:warm` overnight to bootstrap.
 - CI: `mutation` job in `ci-cd-backend.yml` runs incremental on every push (any branch) + full nightly via cron (03:17 UTC). Stryker incremental cache shared across runs via `actions/cache@v4`.
 - Hard-fail policy: a hot file dropping below 80% blocks commit AND CI. Global thresholds: high=85, low=70, break=70.
-- See `docs/superpowers/specs/2026-05-01-phase4-stryker-mutation-design.md`.
 
 ### Auth e2e completeness (Phase 5)
 
@@ -129,7 +135,6 @@ GitHub Actions workflows (`.github/workflows/`):
   - `auth-refresh-rotation.e2e.test.ts` — token rotation, replay-attack family revocation, chained rotations, logout invalidates family (5 cases).
 - TestEmailService activated by `AUTH_EMAIL_SERVICE_KIND=test` env var. Production env rejects 'test' loud (sentinel in `config/env.ts`).
 - Social JWT+JWKS spoof helper at `tests/helpers/auth/social-jwt-spoof.ts` boots a local HTTP JWKS server + signs RS256 ID tokens — exercises the real verifier code path, not a mock.
-- See `docs/superpowers/specs/2026-05-01-phase5-auth-e2e-design.md`.
 
 ### Chaos resilience (Phase 6)
 
@@ -141,7 +146,6 @@ GitHub Actions workflows (`.github/workflows/`):
 - Chaos helpers at `museum-backend/tests/helpers/chaos/` (`broken-redis-cache.ts` + `stub-llm-orchestrator.ts` + README).
 - Harness gains 3 options: `cacheService`, `chatOrchestratorOverride`, `startKnowledgeExtractionWorker`. Defaults preserve existing behavior.
 - Banking-grade contract: dependency failure → graceful degradation → no 500/stack-trace leak → no provider-name leak.
-- See `docs/superpowers/specs/2026-05-01-phase6-chaos-resilience-design.md`.
 
 ### Factory locations + shape-match rule (Phase 7)
 
@@ -163,7 +167,6 @@ Shape-match detection (Phase 7 extension to the no-inline-test-entities rule):
 
 Phase 0 grandfather baseline shrunk to 0 in Phase 7. The cap test (`tools/eslint-plugin-musaium-test-discipline/tests/baseline-cap.test.ts`) enforces `PHASE_0_CAP = 0` — any future `as Entity` outside helpers triggers immediate gate fail.
 
-See `docs/superpowers/specs/2026-05-01-phase7-factory-migration-design.md`.
 
 ### Coverage uplift gates (Phase 8 + Phase 9 + Phase 10 + Phase 11 close)
 
@@ -176,9 +179,8 @@ See `docs/superpowers/specs/2026-05-01-phase7-factory-migration-design.md`.
 - Branches threshold deliberately stays at 78 BE / 78 FE — Phase 0 challenger pushback + ADR-007. The Phase 4 Stryker mutation kill ratio (≥ 80% on hot files) is the banking-grade signal; aggressive branches uplift forces cosmetic test patterns.
 - Jest config note: `coveragePathIgnorePatterns` is project-scoped in Jest 29 with `projects:`, so the patterns are wired into `sharedProjectOptions` in `jest.config.ts` and re-applied per project. A top-level-only declaration is silently ignored (Phase 8 Group B fixed this).
 - BE `test:coverage` pins `--testTimeout=15000` (down from 30000 since Phase 11 SWC swap halved transform pressure). Phase 11 Sprint 11.2 wrapped every cross-entity TypeORM property in the `Relation<>` type alias (e.g. `user!: Relation<User>`) — that breaks the SWC legacy-decorator circular-emit chain (`ReferenceError: Cannot access 'X' before initialization`) which had blocked the prior swap attempt in Phase 10 Sprint 10.4. The `Relation<T>` wrapper is a TypeORM-recommended type-only marker; runtime semantics unchanged.
-- Phase 10 closed: (1) Bug 2 — `getMessageFeedback` malformed SQL FIXED (Sprint 10.1, switched relation-where to `messageId` column lookup); (2) Bug 1 — TZ-sensitive cursor pagination FIXED (Sprint 10.2, TIMESTAMPTZ migration `1777721420875-ChatTimestamptz` for chat_sessions + chat_messages timestamp columns; verified under `TZ=Europe/Paris`); (3) bullmq scheduler integration test LANDED (Sprint 10.3, new `tests/helpers/e2e/redis-testcontainer.ts` Redis 7 testcontainer + 9-test integration suite); (4) all 6 `it.skip` Phase 9 markers in `chat-repository-typeorm.integration.test.ts` flipped to `it()` — 41/41 pass under `RUN_INTEGRATION=true`. Findings recap in `docs/audits/2026-05-02-phase9-findings.md`.
+- Phase 10 closed: (1) Bug 2 — `getMessageFeedback` malformed SQL FIXED (Sprint 10.1, switched relation-where to `messageId` column lookup); (2) Bug 1 — TZ-sensitive cursor pagination FIXED (Sprint 10.2, TIMESTAMPTZ migration `1777721420875-ChatTimestamptz` for chat_sessions + chat_messages timestamp columns; verified under `TZ=Europe/Paris`); (3) bullmq scheduler integration test LANDED (Sprint 10.3, new `tests/helpers/e2e/redis-testcontainer.ts` Redis 7 testcontainer + 9-test integration suite); (4) all 6 `it.skip` Phase 9 markers in `chat-repository-typeorm.integration.test.ts` flipped to `it()` — 41/41 pass under `RUN_INTEGRATION=true`. Findings recap in git commit `bfd1a925f` (audit doc deleted 2026-05-03).
 - Stats summary (2026-05-02): 3801 BE tests (default) → 3851 BE (+RUN_INTEGRATION) + 1966 FE = up to 5817 total; ≈350 new tests across Phases 9 + 10. Two latent production bugs caught and fixed by the Phase 9 integration suite.
-- See `docs/superpowers/specs/2026-05-01-phase8-coverage-uplift-design.md`.
 
 ## Architecture
 

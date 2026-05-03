@@ -28,7 +28,7 @@ export interface PruneStaleArtKeywordsConfig {
  *
  * Returns total rowsAffected + details (cutoffDate, hitThreshold).
  *
- * Spec: docs/superpowers/specs/2026-05-01-E-retention-policies-design.md section 3.3
+ * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
  * ADR: docs/adr/ADR-020-art-keywords-retention.md
  */
 export async function pruneStaleArtKeywords(

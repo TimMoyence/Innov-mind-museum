@@ -20,7 +20,7 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  * column hand-created during development). `down()` keeps a bare `DROP COLUMN`
  * — revert should fail loudly if state is unexpected.
  *
- * Spec: docs/superpowers/specs/2026-04-30-spec-a-cleanup-decisions-design.md
+ * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
  */
 export class AddChatSessionIntent1777614158533 implements MigrationInterface {
   name = 'AddChatSessionIntent1777614158533';

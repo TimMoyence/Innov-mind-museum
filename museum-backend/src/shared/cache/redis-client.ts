@@ -31,7 +31,7 @@ const parseClusterNodes = (raw: string): ClusterNode[] =>
  *     // use existing single-instance client
  *   }
  *
- * Spec: docs/superpowers/specs/2026-05-01-F-scale-infra-design.md section 5.2
+ * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
  * ADR: docs/adr/ADR-023-redis-cluster-topology.md
  */
 export function createRedisClusterClient(opts?: ClusterOptions): Cluster | null {

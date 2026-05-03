@@ -23,7 +23,7 @@ const TTL_PERSONALIZED_S = 60 * 60; // 1 hour
  * Adaptive LLM response cache. Exact-match key derivation; semantic
  * similarity matching is deferred to G Phase 2.
  *
- * Spec: docs/superpowers/specs/2026-05-01-G-llm-cache-design.md
+ * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
  */
 export class LlmCacheServiceImpl implements LlmCacheService {
   constructor(private readonly cache: CacheService) {}

@@ -49,7 +49,7 @@ The legacy in-memory fallback path is preserved under `failClosed=false` for dev
 
 ## References
 
-- `docs/security/2026-04-30-banking-grade-hardening-design.md` §3 (Phase A F2)
+- banking-grade hardening design (deleted 2026-05-03 — see git commit history)
 - [OWASP ASVS 6.3.1](https://github.com/OWASP/ASVS/blob/master/5.0/en/0x15-V6-Authentication.md) — rate-limit failure controls
 - Commit: `a7052550 feat(rate-limit): F2 fail-closed when Redis is down (ADR-011)`
 - Test contract: `museum-backend/tests/unit/middleware/rate-limit-fail-closed.test.ts`

@@ -12,7 +12,7 @@ export type AssetCacheClass =
  * for the given asset class. Compatible with Cloudflare's `s-maxage` directive
  * (edge cache) and standard browser cache.
  *
- * Spec: docs/superpowers/specs/2026-05-01-F-scale-infra-design.md section 5.4
+ * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
  * ADR: docs/adr/ADR-024-cloudflare-cdn-strategy.md
  *
  * Usage:

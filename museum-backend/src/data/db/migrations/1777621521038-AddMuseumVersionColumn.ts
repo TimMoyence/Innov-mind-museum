@@ -13,7 +13,7 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  * TypeORM `VersionColumn` metadata (NOT NULL, no DB-level default — TypeORM
  * manages the value at the application layer).
  *
- * Spec: `docs/superpowers/specs/2026-05-01-C-data-debt-design.md` section 3.1.
+ * Spec: see git log (deleted 2026-05-03 — Spec C data-debt original in commit history).
  */
 export class AddMuseumVersionColumn1777621521038 implements MigrationInterface {
   name = 'AddMuseumVersionColumn1777621521038';

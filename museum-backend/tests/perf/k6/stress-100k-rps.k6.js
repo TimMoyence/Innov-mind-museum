@@ -6,7 +6,7 @@ import { check, sleep } from 'k6';
  * kicks off when subsystem F infra is provisioned. Runbook in
  * tests/perf/k6/helpers/100k-runbook.md.
  *
- * Spec: docs/superpowers/specs/2026-05-01-H-observability-design.md
+ * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
  */
 export const options = {
   scenarios: {

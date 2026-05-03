@@ -104,7 +104,7 @@ Example correct ADR (GOOD):
 > Decision: Pin `langfuse/langfuse:2` for dev; v3 stack reserved for prod migration.
 > Consequences: dev simplicity (2 containers), but missing v3 features (better trace UI). Migration cost = ~1 day.
 > Alternatives: (a) accept v3 stack in dev — rejected, infra heavy. (b) Langfuse Cloud — rejected, vendor lock for telemetry.
-> References: `infra/langfuse/docker-compose.yml`, `docs/plans/V12_W1_LANGFUSE_INTEGRATION.md`."
+> References: `infra/langfuse/docker-compose.yml`, original spec in git commit `be7258432`."
 
 Example forbidden behavior (BAD — fabrication):
 > "Updated `README.md` to mention the new `/api/admin/audit-export` endpoint." — endpoint does NOT exist in code (verified via `grep -r 'audit-export' museum-backend/src`). UFR-013 violation.

@@ -19,7 +19,7 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  *    generator's DROP/ADD restatement is a destructive no-op that would also
  *    wipe row data. Stripped to keep the migration scope-pure to T2.2.
  *
- * Spec: docs/superpowers/specs/ (Spec C — Personalization + Voice Continuity)
+ * Spec: see git log (deleted 2026-05-03 — Spec C Personalization + Voice Continuity, original in commit history)
  */
 export class AddUserTtsVoice1777722694031 implements MigrationInterface {
   name = 'AddUserTtsVoice1777722694031';

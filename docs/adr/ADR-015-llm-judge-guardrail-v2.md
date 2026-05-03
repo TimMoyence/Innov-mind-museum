@@ -69,7 +69,7 @@ Audit decision binary (per design spec §2 ADR-012, now this file):
 
 ## References
 
-- `docs/security/2026-04-30-banking-grade-hardening-design.md` §6 (Phase D F4)
+- banking-grade hardening design (deleted 2026-05-03 — see git commit history) (Phase D F4)
 - ADR-005 — prompt-injection-v2 (predecessor, keyword-only v1)
 - Commit `80e3e1cb` — `feat(chat): F4 LLM-judge guardrail v2 + multilingual insult coverage`
 - Test contracts: `museum-backend/tests/unit/chat/{art-topic-guardrail-multilingue,llm-judge-guardrail,guardrail-budget,chat.service.guardrail-v2}.test.ts`

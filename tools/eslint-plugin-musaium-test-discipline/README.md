@@ -27,7 +27,7 @@ Requires every `eslint-disable` comment targeting a `musaium-test-discipline` ru
 
 ## Spec
 
-See `docs/superpowers/specs/2026-04-30-phase0-test-truth-foundations-design.md` §7.
+See git log (spec deleted 2026-05-03 — see commit history).
 
 ## Grandfather Baseline
 

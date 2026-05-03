@@ -17,7 +17,7 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  *
  * Same CONCURRENTLY / `transaction = false` discipline as A1.
  *
- * Spec: docs/superpowers/specs/2026-04-30-A1-A2-critical-fk-indexes-design.md
+ * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
  */
 export class AddP1FKAndTokenIndexes1777617893834 implements MigrationInterface {
   name = 'AddP1FKAndTokenIndexes1777617893834';

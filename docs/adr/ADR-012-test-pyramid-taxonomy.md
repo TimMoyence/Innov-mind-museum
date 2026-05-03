@@ -3,7 +3,7 @@
 - **Status**: Accepted (2026-04-30)
 - **Owner**: QA/SDET
 - **Scope**: museum-backend, museum-frontend, museum-web
-- **Spec**: `docs/superpowers/specs/2026-04-30-phase0-test-truth-foundations-design.md`
+- **Spec**: see git log (deleted 2026-05-03 — original in commit history)
 
 ## Context
 

@@ -8,9 +8,8 @@
  * MULTI-INSTANCE NOTE: this counter is per-process. In a horizontally scaled
  * deployment with N replicas, cumulative spend across the fleet can be up to
  * N× the configured `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY`. Acceptable v1
- * trade-off documented in
- * `docs/security/2026-04-30-banking-grade-hardening-design.md` §6 F4.
- * Phase 2 plan: move counter to Redis (SET with ~25h TTL).
+ * trade-off — see ADR-015 (LLM judge guardrail v2). Phase 2 plan: move
+ * counter to Redis (SET with ~25h TTL).
  */
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';

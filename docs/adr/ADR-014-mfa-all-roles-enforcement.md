@@ -62,7 +62,7 @@ For admins specifically, the three-shape oracle remains because the warning-wind
 
 ## References
 
-- `docs/security/2026-04-30-banking-grade-hardening-design.md` §4 (Phase B F6) + §2 (originally numbered ADR-013)
+- banking-grade hardening design (deleted 2026-05-03 — see git commit history) (Phase B F6) + §2 (originally numbered ADR-013)
 - ASVS 6.3.x — Authentication / Authenticator Lifecycle
 - SOC2 CC6.1 — Logical access controls
 - Commit `f334bf05` — `feat(auth): F6+F9 — MFA enforced for all enrolled users (ADR-013)` *(commit message references ADR-013; ADR file moved to ADR-014 due to numbering collision — see Numbering note above)*

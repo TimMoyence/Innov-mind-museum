@@ -2,7 +2,7 @@
 
 **Owner**: Platform / SRE
 **Date**: 2026-04-30 (initial)
-**Audit ref**: `docs/security/2026-04-30-banking-grade-hardening-design.md` §8 Phase F
+**Audit ref**: banking-grade hardening design (deleted 2026-05-03 — see git commit history)
 
 ## Cadence
 

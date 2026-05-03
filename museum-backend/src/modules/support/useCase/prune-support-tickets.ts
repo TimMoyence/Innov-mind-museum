@@ -26,7 +26,7 @@ export interface PruneSupportTicketsConfig {
  *
  * Returns total rowsAffected + details (cutoffDate ISO string).
  *
- * Spec: docs/superpowers/specs/2026-05-01-E-retention-policies-design.md section 3.1
+ * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
  * ADR: docs/adr/ADR-018-support-tickets-retention.md
  */
 export async function pruneSupportTickets(

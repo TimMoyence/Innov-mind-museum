@@ -59,4 +59,4 @@ This compose is **local dev only**. For prod:
 
 ## Integration plan
 
-See `docs/plans/V12_W1_LANGFUSE_INTEGRATION.md` for the BE OTel wiring spec (orchestrator instrumentation, LangChain callback handler, /team Bash hook trace forwarder).
+BE OTel wiring shipped 2026-05-02 — see `museum-backend/src/shared/observability/{langfuse.client,safeTrace}.ts` and `langchain.orchestrator.ts:75-114`. /team Bash hook trace forwarder at `.claude/skills/team/lib/trace.sh`. Original spec preserved in git commit `be7258432`.

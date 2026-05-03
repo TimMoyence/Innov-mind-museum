@@ -3,7 +3,7 @@
 **Status:** Accepted (design — provisioning deferred to ops)
 **Date:** 2026-05-01
 **Deciders:** staff DB/SRE pass — subsystem F
-**Spec:** docs/superpowers/specs/2026-05-01-F-scale-infra-design.md
+**Spec:** see git log (deleted 2026-05-03 — original in commit history)
 
 ## Context
 

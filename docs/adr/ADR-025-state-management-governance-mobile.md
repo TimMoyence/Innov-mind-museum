@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-01
 **Status:** Accepted
-**Context:** Spec A — Cleanup & Decisions (`docs/superpowers/specs/2026-04-30-spec-a-cleanup-decisions-design.md`)
+**Context:** Spec A — Cleanup & Decisions (see git log (spec deleted 2026-05-03))
 
 ## Context
 
@@ -47,5 +47,5 @@ Each piece of state is classified into one of four buckets and the corresponding
 
 ## Related
 
-- Plan: `docs/superpowers/plans/2026-04-30-spec-a-cleanup-decisions.md` Task 3.1
-- Spec: `docs/superpowers/specs/2026-04-30-spec-a-cleanup-decisions-design.md` Section 3
+- Plan: see git log (plan deleted 2026-05-03) Task 3.1
+- Spec: see git log (spec deleted 2026-05-03) Section 3

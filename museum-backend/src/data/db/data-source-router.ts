@@ -20,7 +20,7 @@ import { AppDataSource } from './data-source';
  * Read-after-write paths (e.g. immediately reading the row just inserted)
  * stay on `dataSourceRouter.write` to avoid stale reads from replica lag.
  *
- * Spec: docs/superpowers/specs/2026-05-01-F-scale-infra-design.md section 5.1
+ * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
  * ADR: docs/adr/ADR-022-pg-read-replica-strategy.md
  */
 class DataSourceRouter {

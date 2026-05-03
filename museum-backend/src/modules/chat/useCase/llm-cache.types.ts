@@ -30,7 +30,7 @@ export interface LlmCacheLookupResult<T> {
  * LLM response cache port. Wraps the underlying CacheService with
  * LLM-specific key derivation and TTL adaptation.
  *
- * Spec: docs/superpowers/specs/2026-05-01-G-llm-cache-design.md
+ * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
  */
 export interface LlmCacheService {
   /** Classifies the input into a ContextClass for adaptive TTL. */

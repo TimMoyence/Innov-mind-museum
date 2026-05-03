@@ -1,7 +1,7 @@
 # Chaos Runbooks — Musaium Backend
 
 **Owner:** staff DB/SRE pass — subsystem H
-**Spec:** docs/superpowers/specs/2026-05-01-H-observability-design.md
+**Spec:** see git log (deleted 2026-05-03 — original in commit history)
 
 Three controlled chaos experiments validate the F-component fault
 tolerance. **All experiments are run on staging only** unless an

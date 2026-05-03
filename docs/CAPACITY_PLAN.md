@@ -2,7 +2,7 @@
 
 **Status:** Draft (design — guides ops provisioning, not prescriptive)
 **Date:** 2026-05-01
-**Spec:** docs/superpowers/specs/2026-05-01-F-scale-infra-design.md
+**Spec:** see git log (deleted 2026-05-03 — original in commit history)
 
 This worksheet sizes infrastructure for three traffic tiers. Numbers are
 order-of-magnitude estimates from PostgreSQL tuning best practices, Redis

@@ -53,7 +53,7 @@ Pinning is **defense-in-depth**, not a primary control: HTTPS + HSTS already pre
 
 ## References
 
-- `docs/security/2026-04-30-banking-grade-hardening-design.md` §8 Phase F
+- banking-grade hardening design (deleted 2026-05-03 — see git commit history)
 - [OWASP Mobile Top 10 — M3 Insufficient Cryptography](https://owasp.org/www-project-mobile-top-10/2014-risks/m6-broken-cryptography)
 - [react-native-ssl-public-key-pinning](https://github.com/frw/react-native-ssl-public-key-pinning)
 - [TrustKit (iOS)](https://github.com/datatheorem/TrustKit) — underlying iOS implementation

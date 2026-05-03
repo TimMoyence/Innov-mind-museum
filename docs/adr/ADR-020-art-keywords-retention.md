@@ -3,7 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-05-01
 **Deciders:** staff DB/SRE pass — subsystem E
-**Spec:** docs/superpowers/specs/2026-05-01-E-retention-policies-design.md
+**Spec:** see git log (deleted 2026-05-03 — original in commit history)
 
 ## Context
 

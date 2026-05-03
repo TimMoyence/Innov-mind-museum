@@ -1,34 +1,36 @@
 # Docs Index — Musaium
 
 > Table de vérité : toutes les docs importantes en un seul point.
-> Last cleanup: 2026-04-30 (broken refs purged + obsolete docs archived).
+> Last cleanup: **2026-05-03** (consolidation V12, suppression 56 specs/plans/audits shipped, double roadmap PRODUCT+TEAM introduite).
 
-## Roadmap & Tracking
+## Roadmap (vivante, double)
 
-| Doc | Path |
-|---|---|
-| Roadmap Active (résumé exécutif) | [`docs/ROADMAP_ACTIVE.md`](ROADMAP_ACTIVE.md) |
-| Plan enterprise courant | [`docs/plans/NL_MASTER_PLAN.md`](plans/NL_MASTER_PLAN.md) |
-| Roadmap Production 10/10 (user-first) | [`docs/plans/PROD_10_10_ROADMAP.md`](plans/PROD_10_10_ROADMAP.md) |
-| V2 Pending (features deferred from V1) | [`docs/V2_PENDING.md`](V2_PENDING.md) |
-| Progress Tracker (archived) | [`docs/archive/v1-sprint-2026-04/PROGRESS_TRACKER.md`](archive/v1-sprint-2026-04/PROGRESS_TRACKER.md) |
-| Sprint Log (archived, immutable) | [`docs/archive/v1-sprint-2026-04/SPRINT_LOG.md`](archive/v1-sprint-2026-04/SPRINT_LOG.md) |
+| Doc | Path | Refresh |
+|---|---|---|
+| **Roadmap Produit** (features, OKR, NOW/NEXT/LATER) | [`docs/ROADMAP_PRODUCT.md`](ROADMAP_PRODUCT.md) | Réécrit chaque sprint (4 sem) |
+| **Roadmap /team** (orchestrateur v13, OKR cost+quality) | [`docs/ROADMAP_TEAM.md`](ROADMAP_TEAM.md) | Réécrit chaque sprint (4 sem) |
+
+Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 
 ## Architecture & Decisions
 
 | Doc | Path |
 |---|---|
-| ADR index | [`docs/adr/`](adr/) |
+| ADRs (002-028) | [`docs/adr/`](adr/) |
 | AI Voice pipeline V1 | [`docs/AI_VOICE.md`](AI_VOICE.md) |
 | Feature Knowledge Base (Wikidata) | [`docs/FEATURE_KNOWLEDGE_BASE_WIKIDATA.md`](FEATURE_KNOWLEDGE_BASE_WIKIDATA.md) |
 | RBAC matrix (backend) | [`museum-backend/docs/rbac-matrix.md`](../museum-backend/docs/rbac-matrix.md) |
+| SLO + observability strategy | [`docs/SLO.md`](SLO.md) |
+| Capacity plan (10rps→1K→100K tiers) | [`docs/CAPACITY_PLAN.md`](CAPACITY_PLAN.md) |
 
 ## Operations
 
 | Doc | Path |
 |---|---|
 | Deployment & Runbook (single source) | [`docs/OPS_DEPLOYMENT.md`](OPS_DEPLOYMENT.md) |
-| Runbooks (auto-rollback, redis rotation, V1 fallbacks, prod secrets bootstrap) | [`docs/RUNBOOKS/`](RUNBOOKS/) |
+| Migration governance | [`docs/MIGRATION_GOVERNANCE.md`](MIGRATION_GOVERNANCE.md) |
+| Chaos runbooks | [`docs/CHAOS_RUNBOOKS.md`](CHAOS_RUNBOOKS.md) |
+| Runbooks | [`docs/RUNBOOKS/`](RUNBOOKS/) — auto-rollback, redis rotation, V1 fallbacks, prod secrets bootstrap, secrets rotation, audit-chain forensics |
 | CI/CD Secrets | [`docs/CI_CD_SECRETS.md`](CI_CD_SECRETS.md) |
 | GitHub Actions SHA pins | [`docs/GITHUB_ACTIONS_SHA_PINS.md`](GITHUB_ACTIONS_SHA_PINS.md) |
 | DB Backup & Restore | [`docs/DB_BACKUP_RESTORE.md`](DB_BACKUP_RESTORE.md) |
@@ -37,6 +39,7 @@
 | Horizontal Scaling | [`docs/HORIZONTAL_SCALING.md`](HORIZONTAL_SCALING.md) |
 | CDN Cloudflare Setup | [`docs/CDN_CLOUDFLARE_SETUP.md`](CDN_CLOUDFLARE_SETUP.md) |
 | Network hardening (security) | [`docs/security/network-hardening.md`](security/network-hardening.md) |
+| Grafana dashboard JSON | [`docs/observability/musaium-backend-dashboard.json`](observability/musaium-backend-dashboard.json) |
 
 ## Incidents & Compliance
 
@@ -73,8 +76,12 @@
 |---|---|
 | /team Skill | `.claude/skills/team/SKILL.md` |
 | /team SDLC Index | `.claude/skills/team/team-sdlc-index.md` |
-| Agents (9) | `.claude/agents/*.md` |
+| Agents (6 — architect, editor, verifier, security, reviewer, documenter) | `.claude/agents/*.md` |
 | /team runtime reports (active) | `.claude/skills/team/team-reports/` |
+| /team protocols | `.claude/skills/team/team-protocols/` |
+| /team templates (Spec Kit) | `.claude/skills/team/team-templates/` |
+| /team hooks | `.claude/skills/team/team-hooks/` |
+| /team durable state | `.claude/skills/team/team-state/` |
 
 ## GitNexus
 
@@ -96,3 +103,10 @@
 
 - `CLAUDE.md` (racine) — instructions globales pour Claude Code
 - `AGENTS.md` (racine) — config GitNexus + MCP tools
+
+## Ce qui a été supprimé (2026-05-03)
+
+Pour info : 56 docs (V12 W1-W8 plans, banking-grade design, 13 superpower plans + 20 superpower specs Phase 0-8 / Spec A-D / lettered A-H, 2 audits, ADR 001/005/008 superseded, NL_LINKEDIN_*, NL_MASTER_PLAN, PROD_10_10_ROADMAP, NL5_S1, ROADMAP_ACTIVE, V2_PENDING). Tout est dans `git log` si besoin de référence historique.
+
+Source vérité produit : ROADMAP_PRODUCT.md uniquement.
+Source vérité orchestrateur : ROADMAP_TEAM.md uniquement.

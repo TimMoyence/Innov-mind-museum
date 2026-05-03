@@ -6,9 +6,12 @@ argument-hint: '[type?:feature|bug|mockup|refactor|hotfix|chore|audit] [descript
 # /team v12 — Orchestrateur SDLC Musaium
 
 > **Reference unique** : `team-sdlc-index.md` pour la table de verite (pipelines, agents, protocoles, templates, UFR, gates, skills).
-> **Architecture v12** : `docs/plans/TEAM_V12_RESEARCH_REPORT.md`.
+> **Roadmap orchestrateur** : `docs/ROADMAP_TEAM.md` (v13 OKR cost+quality+spec-kit-mandatory).
+> **Roadmap produit** : `docs/ROADMAP_PRODUCT.md` (features NOW/NEXT/LATER).
 
-Dispatcher avec etat durable (`team-state/<run-id>/`), Spec Kit (spec → design → tasks), handoffs structures (≤200 tokens), hooks deterministes (lint/tsc), telemetry Langfuse, modeles all-Opus.
+Dispatcher avec etat durable (`team-state/<run-id>/`), Spec Kit (spec → design → tasks), handoffs structures (≤200 tokens), hooks deterministes (lint/tsc), telemetry Langfuse, all-Opus sauf Documenter (Sonnet — cf. ROADMAP_TEAM T1.3).
+
+**Roadmap consumption** : à chaque cycle, dispatcher lit `docs/ROADMAP_PRODUCT.md` + `docs/ROADMAP_TEAM.md` pour piocher l'item NOW à exécuter (auto-consolidation T1.6 en cours de wire). Au merge feature → coche `[x]` sur item correspondant. Fin de sprint → réécriture complète des 2 ROADMAPs.
 
 ---
 
@@ -268,9 +271,9 @@ Reason: spawn was a continuation, not fresh-context. Re-spawn via Agent tool.
 
 ---
 
-## TELEMETRY (V12 W1 — Langfuse)
+## TELEMETRY (V12 W1 — Langfuse, shipped)
 
-Tous les dispatch / gate / agent doivent emit un span via `lib/trace.sh` (helper a creer en W1, voir `docs/plans/V12_W1_LANGFUSE_INTEGRATION.md`). Fail-open : si Langfuse unreachable, dispatch continue.
+Tous les dispatch / gate / agent doivent emit un span via `lib/trace.sh`. Live infra : `infra/langfuse/`, BE wiring `museum-backend/src/shared/observability/{langfuse.client,safeTrace}.ts`. Fail-open : si Langfuse unreachable, dispatch continue.
 
 Metriques cles : tokens/agent, latence/phase, cost/run, corrective-loops/run, gate verdict ratio.
 
@@ -337,7 +340,7 @@ Exemples : `/team compose:recap,feature "ajouter pagination"`, `/team compose:se
 |   |   | Handoff briefs ≤200 tokens (~800 chars), enforced by `post-edit-lint.sh`. |
 |   |   | Deterministic hooks : `post-edit-lint.sh`, `post-edit-typecheck.sh`, `pre-complete-verify.sh`. |
 |   |   | All-Opus : architect/reviewer = 4.7, editor/verifier/security/documenter = 4.6 (UFR-010). |
-|   |   | Langfuse infra (`infra/langfuse/`) + integration plan (`docs/plans/V12_W1_LANGFUSE_INTEGRATION.md`). |
+|   |   | Langfuse infra (`infra/langfuse/`) + BE OTel wiring shipped (commit `be7258432`). |
 |   |   | Cache warm-up sequencing avant fan-out. Resume protocol via `/team resume:<run-id>`. |
 
 ## KNOWN GAPS (W4+)
