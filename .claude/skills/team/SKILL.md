@@ -40,9 +40,12 @@ Dispatcher avec etat durable (`team-state/<run-id>/`), Spec Kit (spec → design
 
 **Disambiguation rule (BLOCK on ambiguity) :**
 - `$1` matches strict regex `^resume:[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+$` → RESUME mode. Run ID = `${1#resume:}`.
+- `$1` matches strict regex `^roadmap:rotate$` → ROADMAP-ROTATE mode (T1.6). Dispatcher delegates to `lib/roadmap-rotate.sh`, no architect/editor agents spawned, no Spec Kit. Optional `--sprint-end YYYY-MM-DD` appended after the prefix is forwarded as-is. Returns helper exit code as run verdict (0 ok, 2 dirty tree, 1 internal). The only currently valid `roadmap:` subcommand is `rotate`.
+- `$1` matches strict regex `^learning:review$` → LEARNING-REVIEW mode (T2.1). Dispatcher walks `team-knowledge/amendments/pending/` (skipping `_curator-batch-*.md` summaries), prompts the user per amendment, applies/rejects via `git apply`. No `team-state/<run-id>/` is created. See "LEARNING SUBCOMMAND" section. The only currently valid `learning:` subcommand is `review`.
+- `$1` starts with `compose:` → SKILL-COMPOSE mode (see "SKILL COMPOSABILITY" section).
 - Anything else (including the English word "resume" inside a description like `feature resume the auth flow`) → INIT mode.
 
-The literal `resume:` prefix prevents collision with English prose. Refuse `resume` alone (no colon, no id) — ask the user which run.
+The literal `resume:` / `roadmap:` / `learning:` / `compose:` prefixes prevent collision with English prose. Refuse `resume` alone (no colon, no id) — ask the user which run. Refuse `roadmap:` or `learning:` without a known subcommand — list valid subcommands.
 
 Si RESUME :
 ```
@@ -61,6 +64,11 @@ Si INIT :
 5. Write state.json initial (version: 1, status: "initializing", startCommit)
 6. Set RUN_ID env pour tous les hooks/agents downstream
 7. Pruning : supprimer team-state/<run-id>/ dont updatedAt > 30 jours
+8. Roadmap context loader (T1.6) :
+     RUN_ID=$RUN_ID .claude/skills/team/team-hooks/pre-cycle-roadmap-load.sh
+   - Produit team-state/$RUN_ID/roadmap-context.json (lecture-seule).
+   - verdict=PASS attendu ; verdict=WARN tolere (roadmap absente → arrays vides, dispatch continue).
+   - Architect peut consulter ce JSON pour cadrer le scope (non-bloquant si absent).
 ```
 
 ### Step 1 — Parse & Classify
@@ -363,9 +371,28 @@ Le verdict prioritaire est le `weightedMean` des 5 axes (T1.5 KR3) — l'agent c
    - Update state.json telemetry.{tokensTotalIn,tokensTotalOut,costUSD} from $ACT.
    - KR1 success metric : |deltaPct| ≤ 30% sur 10 runs glissants. Audit hebdo (T1.7).
 
-3. Tech Lead git add + commit (jamais agents)
-4. Update state.json : status: "completed" + telemetry summary
-5. Optional : promote run → team-reports/ archive si milestone
+3. Update state.json : `status: "completed"` + telemetry summary (tokensTotalIn/Out, costUSD, elapsedMs) ;
+   - **CRITICAL ORDERING** : status flip MUST happen here, BEFORE the lesson hook (§4) so the hook's guard `state.json.status == "completed"` is reachable. Reviewer cycle 2026-05-03 caught the inverse ordering as a BLOCKER.
+
+4. Lesson capture (T2.1 ROADMAP_TEAM — KR4) :
+     RUN_ID=$RUN_ID .claude/skills/team/team-hooks/post-complete-lesson-capture.sh
+   - Fail-open: hook exit non-0 NEVER blocks finalize (R10).
+   - Skips silently if state.json `.status != "completed"` (R3) — should always be `completed` because §3 already flipped it.
+   - Output: `team-knowledge/lessons/<RUN_ID>.md` (timestamp-suffixed on collision per R4).
+   - state.json `gates[]` gains `lesson-capture` verdict (`PASS` or `WARN`).
+   - Hook reads STORY.md + state.json (read-only) ; appends `gates[]` entry ; that's its only state mutation.
+
+5. Roadmap tick proposal (T1.6) :
+     RUN_ID=$RUN_ID DESCRIPTION="$DESCRIPTION" MODE=$MODE \
+         .claude/skills/team/team-hooks/post-cycle-roadmap-update.sh
+   - Lit `team-state/$RUN_ID/roadmap-context.json` (produit par Step 0 §8).
+   - Verdict MATCH → display patch (`team-state/$RUN_ID/roadmap-tick.patch`) + ASK user to apply (NEVER auto-commit, NEVER auto git add).
+   - Verdict AMBIGUOUS → display top 5 candidates with scores ; ask user to pick one or skip.
+   - Verdict NO_MATCH / SKIP / WARN → log only, no prompt.
+   - Hook fail-open : non-blocking ; finalize continue même si verdict=NO_MATCH.
+
+6. Tech Lead git add + commit (jamais agents) — includes the lesson file written at §4
+7. Optional : promote run → team-reports/ archive si milestone
 ```
 
 ---
@@ -417,7 +444,12 @@ Metriques cles : tokens/agent, latence/phase, cost/run, corrective-loops/run, ga
 |---|---|---|
 | `team-hooks/post-edit-lint.sh` | Apres editor task | scoped ESLint + handoff brief size gate (≤200 tokens) |
 | `team-hooks/post-edit-typecheck.sh` | Apres editor task | scoped tsc --noEmit |
+| `team-hooks/pre-feature-spec-check.sh` | Fin Step 4 (Spec Kit closing gate) | T1.4 KR2 — vérifie spec.md/design.md/tasks.md ≥ 200B chacun pour runs non-triviaux |
+| `team-hooks/pre-cycle-roadmap-load.sh` | Step 0 INIT §8 | T1.6 — lit `docs/ROADMAP_PRODUCT.md` + `docs/ROADMAP_TEAM.md`, parse items NOW non cochés, écrit `team-state/$RUN_ID/roadmap-context.json`. WARN tolerant. |
 | `team-hooks/pre-complete-verify.sh` | Avant `status: completed` | scoped tests + STORY.md append-only check via sha256 chain |
+| `team-hooks/post-complete-lesson-capture.sh` | Step 9 (Finalize) après cost delta | T2.1 KR4 — extrait 1 lesson markdown depuis STORY.md vers `team-knowledge/lessons/<RUN_ID>.md`. Fail-open. |
+| `team-hooks/post-cycle-roadmap-update.sh` | Step 9 (Finalize) après lesson capture | T1.6 — fuzzy-match DESCRIPTION ↔ items NOW, propose patch `[x]` staged (jamais auto-commit). |
+| `lib/roadmap-rotate.sh` | `/team roadmap:rotate` (manual) | T1.6 — fin de sprint : archive ROADMAPs courants, promote NEXT → NOW, insère NEXT — TBD vide. Refuse tree dirty (exit 2). |
 
 Tous les hooks mutent `state.json` via le pattern compare-and-swap (`mkdir state.json.lock.d` atomique POSIX, recovery PID stale, timeout 3s). Pas de dependance `flock`.
 
@@ -427,6 +459,80 @@ Tous les hooks mutent `state.json` via le pattern compare-and-swap (`mkdir state
 /team compose:skill1,skill2 [mode] [description]
 ```
 Exemples : `/team compose:recap,feature "ajouter pagination"`, `/team compose:semgrep,security-scan "audit OWASP"`
+
+## LEARNING SUBCOMMAND (T2.1 — KR4)
+
+`/team learning:review` ouvre la file de revue d'amendments produits par l'agent `learning-curator` (`.claude/agents/learning-curator.md`).
+
+### Mode dispatcher
+
+LEARNING-REVIEW est un mode dédié (pas un run team-state). Pas de `RUN_ID` créé, pas de Spec Kit, pas de cost gate, pas d'agents architect/editor/verifier/reviewer/security spawnés. Le dispatcher exécute directement le workflow ci-dessous.
+
+### Workflow
+
+```
+1. Le dispatcher liste les fichiers dans `.claude/skills/team/team-knowledge/amendments/pending/`,
+   en excluant les summaries `_curator-batch-*.md`. Tri par `risk` ascendant (low → high)
+   pour que les patches sûrs soient présentés en premier.
+
+2. Pour chaque amendment file :
+   a. Lit la frontmatter (target, risk, sourceLessons, contentHash, proposedAt) + body
+      (## Rationale, ## Patch, ## Risk + rollback).
+   b. Affiche au user (formaté) : risk badge, target path, source lesson IDs, le diff hunk
+      complet, la rationale, la note risk + rollback.
+   c. Prompt : `[a]pprove / [r]eject / [d]efer / [s]kip-all-remaining`.
+
+3. Sur [a]pprove :
+     PATCH=$(awk '/^```diff$/,/^```$/' "$AMENDMENT" | sed '1d;$d')
+     printf '%s\n' "$PATCH" | git apply --check 2>&1   # dry-run validation
+     printf '%s\n' "$PATCH" | git apply
+   - Exit 0 → mv "$AMENDMENT" → `team-knowledge/amendments/applied/`, update frontmatter
+     `status: applied`, `appliedAt: <ISO 8601 UTC>`. NE COMMIT PAS — le user fait le commit
+     séparément (REGLE §3 : agents + dispatcher ne commitent jamais).
+   - Exit non-0 → laisse le file en pending/, affiche le stderr de `git apply` verbatim
+     au user (UFR-013 R9 honnêteté), passe au suivant.
+
+4. Sur [r]eject : prompt rejection reason → mv vers `team-knowledge/amendments/rejected/`
+   + update frontmatter `status: rejected`, `rejectedAt: <ISO>`,
+   `rejectionReason: <user-input verbatim>`.
+
+5. Sur [d]efer : laisse le file en pending/, passe au suivant.
+
+6. Sur [s]kip-all-remaining : break loop, exit.
+
+7. À la fin : print summary `<N> approved, <N> rejected, <N> deferred, <N> apply-failed`
+   + reminder "git diff to inspect, git commit when ready".
+```
+
+### Curator invocation (V1 manuel, T2.2 ajoute cron)
+
+L'agent `learning-curator` (`.claude/agents/learning-curator.md`, opus-4.7, read-only) doit être spawné explicitement par le user via le tool Agent :
+
+```
+description: "Aggregate lessons batch"
+subagent_type: general-purpose
+prompt: |
+  Tu es l'agent learning-curator (.claude/agents/learning-curator.md). Lis ton rôle.
+  Args :
+    --since 7d          # window (default 7d)
+  Working dir: $REPO_ROOT
+  Suis le workflow Step 1..8. Écris les amendments dans
+  .claude/skills/team/team-knowledge/amendments/pending/.
+  Toujours écrire `_curator-batch-<date>.md` (D7 honesty rule).
+```
+
+V1 = manuel sur demande. T2.2 ROADMAP_TEAM ajoute cron weekly automatique.
+
+### Garde-fous
+
+- L'utilisateur reste seul décideur — `/team learning:review` ne peut JAMAIS auto-approve
+  (cf. memory `feedback_autonomy_100_only` : autonomy L2+ requires 100/100 score).
+- `git apply` opère en working tree local — ne push pas, ne commit pas, n'altère pas le remote.
+- Si le file pending/ a déjà `status` ≠ `pending`, le subcommand le saute (déjà traité —
+  défense en profondeur contre double-traitement).
+- Le curator est read-only sur la production (`.claude/agents/`, `SKILL.md`, hooks, protocoles) ;
+  il ne peut écrire QUE dans `team-knowledge/amendments/pending/`. AllowedTools exclut Edit/Write
+  pour tout autre path.
 
 ## CHANGELOG
 
@@ -441,6 +547,8 @@ Exemples : `/team compose:recap,feature "ajouter pagination"`, `/team compose:se
 |   |   | All-Opus : architect/reviewer = 4.7, editor/verifier/security/documenter = 4.6 (UFR-010). |
 |   |   | Langfuse infra (`infra/langfuse/`) + BE OTel wiring shipped (commit `be7258432`). |
 |   |   | Cache warm-up sequencing avant fan-out. Resume protocol via `/team resume:<run-id>`. |
+| **v13** | **2026-05-03** | T1.6 ROADMAP × /team auto-consolidation : pre-cycle hook (Step 0 §8 charge `roadmap-context.json`), post-cycle hook (Step 9 propose tick `[x]` via patch staged), `/team roadmap:rotate` (rotation fin sprint). 3 nouveaux composants bash, 3 emplacements wirés dans SKILL.md. Cohérent UFR + règle "Tech Lead seul commite". |
+|   |   | T2.1 Feedback-loop interne (KR4) : `post-complete-lesson-capture.sh` hook (fail-open, self-test 6/6) wired Step 9 §4 ; `learning-curator` agent (opus-4.7, read-only, allowedTools sans Edit/Write) ; `/team learning:review` mode dédié (Step 0 disambiguation `^learning:review$`, workflow approve/reject/defer + `git apply`). state.schema.json étendu (`learning-curator` role + `lesson-capture` gate). Knowledge dirs scaffolded `team-knowledge/{lessons,amendments/{pending,applied,rejected}}/` + 2 SCHEMA.md. Step 9 sequence reorderé (status flip §3 → lesson §4 → roadmap §5 → commit §6) — corrective loop reviewer cycle 1. |
 
 ## KNOWN GAPS (W4+)
 

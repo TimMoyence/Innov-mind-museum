@@ -33,7 +33,7 @@
         "required": ["name", "role", "model", "status"],
         "properties": {
           "name":   { "type": "string" },
-          "role":   { "enum": ["architect", "editor", "verifier", "security", "reviewer", "documenter"] },
+          "role":   { "enum": ["architect", "editor", "verifier", "security", "reviewer", "documenter", "learning-curator"] },
           "model":  { "enum": ["opus-4.7", "opus-4.6", "sonnet-4.6"] },
           "status": { "enum": ["pending", "running", "completed", "failed"] },
           "startedAt":  { "type": "string", "format": "date-time" },
@@ -68,7 +68,7 @@
         "additionalProperties": false,
         "required": ["name", "verdict", "ts"],
         "properties": {
-          "name":    { "enum": ["import-coherence", "quality-ratchet", "product", "lint", "typecheck", "tests", "security", "review", "spec-kit"] },
+          "name":    { "enum": ["import-coherence", "quality-ratchet", "product", "lint", "typecheck", "tests", "security", "review", "spec-kit", "lesson-capture"] },
           "verdict": { "enum": ["PASS", "WARN", "FAIL"] },
           "ts":      { "type": "string", "format": "date-time" },
           "details": { "type": "string" }

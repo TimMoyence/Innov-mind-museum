@@ -102,21 +102,25 @@ Self-test : `bash .claude/skills/team/team-hooks/pre-feature-spec-check.sh --sel
 - [ ] Re-commit baseline w/ `calibrationMode: "real-anthropic-opus-4.7"` and timestamp
 - [ ] Document rebake protocol in `team-promptfoo/README.md` (replace mock-bootstrap section with real-baked steps)
 
-### T1.6 Auto-consolidation roadmap (intégration ROADMAP × /team)
+### T1.6 Auto-consolidation roadmap (intégration ROADMAP × /team) — ✅ done 2026-05-03
 
-- [ ] Hook `team-hooks/pre-cycle-roadmap-load.sh` — dispatcher lit `docs/ROADMAP_PRODUCT.md` + ce fichier au démarrage chaque cycle
-- [ ] Hook `team-hooks/post-cycle-roadmap-update.sh` — au merge feature, propose `[x]` automatique sur item correspondant
-- [ ] Fin sprint trigger — `/team roadmap:rotate` réécrit les 2 ROADMAPs (vide NOW, promote NEXT, archive snapshot via git commit)
+- [x] Hook `team-hooks/pre-cycle-roadmap-load.sh` — dispatcher lit `docs/ROADMAP_PRODUCT.md` + ce fichier au démarrage chaque cycle (Step 0 §8). Awk parser tracks parent `### Tx.y` H3 headers + emits `parentSection` per item. WARN-tolerant: missing roadmap → empty arrays + dispatch continues. 4/4 self-tests PASS.
+- [x] Hook `team-hooks/post-cycle-roadmap-update.sh` — Step 9 §4 fuzzy-match Jaccard (id + parent + text vs DESCRIPTION tokens, threshold 0.6, gap 0.1). Verdicts MATCH (patch staged, NEVER auto-commit) / AMBIGUOUS / NO_MATCH / SKIP (chore/hotfix/audit/mockup). 4/4 self-tests PASS. Known limitation : DESCRIPTION at parent-feature level (e.g. "T1.6 ...") matches all 3 sub-items at ~0.33 → NO_MATCH ; user applies patches manually from candidates list.
+- [x] Fin sprint trigger — `/team roadmap:rotate` (`lib/roadmap-rotate.sh`) archive ROADMAPs courants à `docs/archive/roadmaps/<sprint-end>/` (collide-safe `-2`/`-3`/...), promote NEXT body → NOW, insère `## NEXT — TBD` placeholder. Refuse tree dirty (exit 2). NEVER `git add`/`commit`/`push`. 4/4 self-tests PASS.
+
+Run de référence : `team-state/2026-05-03-t1-6-roadmap-auto-consolidation/` (spec + design + tasks + STORY).
 
 ---
 
 ## NEXT — Post-launch (juin–juillet)
 
-### T2.1 Feedback-loop interne (KR4)
+### T2.1 Feedback-loop interne (KR4) — ✅ pulled forward + done 2026-05-03
 
-- [ ] Hook `team-hooks/post-complete-lesson-capture.sh` — chaque run produit 1 lesson markdown dans `team-knowledge/lessons/<date>-<slug>.md`
-- [ ] Aggregator weekly — agent `learning-curator` synthétise lessons de la semaine, propose amendments à dispatcher rules
-- [ ] User review queue — amendments proposés visibles via `/team learning:review`
+- [x] Hook `team-hooks/post-complete-lesson-capture.sh` — chaque run produit 1 lesson markdown dans `team-knowledge/lessons/<RUN_ID>.md`. Self-test 6/6, fail-open (R10), graceful skip si status≠completed (R3), timestamp suffix sur RUN_ID collision (R4). UFR-013 honesty : `_no data captured_` litéral si STORY.md sans signal. Wired Step 9 SKILL.md.
+- [x] Aggregator manuel V1 — agent `.claude/agents/learning-curator.md` (opus-4.7, read-only, allowedTools sans Edit/Write hors `team-knowledge/`) synthétise lessons par tag + recency, produit 0..N amendments + toujours `_curator-batch-<date>.md` summary (D7 honesty rule). Cron weekly deferred → T2.2.
+- [x] User review queue — `/team learning:review` mode dédié (LEARNING-REVIEW dans Step 0 disambiguation, pas de team-state run créé), workflow approve/reject/defer/skip-all + `git apply` + verbatim git error sur fail (R9). state.schema.json étendu (`learning-curator` role + `lesson-capture` gate). Knowledge dirs scaffolded : `team-knowledge/{lessons,amendments/{pending,applied,rejected}}/` + 2 SCHEMA.md docs.
+
+Run de référence : `team-state/2026-05-03-feedback-loop-interne-t21/`. Décision : cron auto-curator → T2.2 (improvement continu).
 
 ### T2.2 Improvement continu (KR4)
 

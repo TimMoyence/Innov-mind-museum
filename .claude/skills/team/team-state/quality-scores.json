@@ -1,1 +1,40 @@
-[]
+[
+  {
+    "runId": "2026-05-03-feedback-loop-interne-t21",
+    "ts": "2026-05-03T07:46:43Z",
+    "verdict": "APPROVED",
+    "scores": {
+      "correctness": {
+        "score": 92,
+        "weight": 0.30,
+        "reasoning": "All 10 spec EARS requirements verified PASS end-to-end. Step 9 ordering fixed (BLOCKER cycle 1 resolved): §3 status flip precedes §4 lesson hook, with explicit CRITICAL ORDERING marker referencing the corrective loop. Hook self-test 6/6 PASS. R1 (file ≥200B) verified — lesson file 959B. R3/R4/R10 covered by self-test scenarios 2/3/4/6. Schema enums extended consistently (learning-curator role + lesson-capture gate). Edge cases (corrupt state.json, missing STORY.md, RUN_ID collision) handled gracefully."
+      },
+      "security": {
+        "score": 90,
+        "weight": 0.25,
+        "reasoning": "Security grep PASS (no dangerouslySetInnerHTML / eval / raw SQL / env leak / hardcoded secrets in T2.1 diff). Curator allowedTools excludes Edit/Write — write scope cannot escape team-knowledge/. R5 wording now consistent with impl: scope enforcement via prompt body, not tool restriction (matching reviewer/architect convention). git apply runs in working tree only — no remote, no auto-commit. Hook is read-only on STORY.md + state.json. -10 because Bash is unrestricted at tool level, so a misbehaving curator (LLM, not adversarial) could in theory `bash -c` to bypass — but R5 explicitly accepts this trade-off and the prompt body has 6 distinct guardrails (line 9, line 32-38 forbidden paths, honesty checklist line 144-156, output_format restriction line 133-141)."
+      },
+      "maintainability": {
+        "score": 90,
+        "weight": 0.20,
+        "reasoning": "KISS: hook = pure shell + jq, no LLM call (D1). Curator = single-purpose agent. DRY: SKILL.md / SCHEMA.md / learning-curator.md cross-reference rather than duplicate. Hexagonal N/A (infra). Naming consistent (RUN_ID, contentHash, sourceLessons match across schema + agent + dispatcher). State mutation uses existing mkdir-CAS pattern from pre-feature-spec-check.sh — no new lock primitive invented. Three eslint/shellcheck disables in the hook all carry `Justification:` comments per CLAUDE.md ESLint discipline."
+      },
+      "testCoverage": {
+        "score": 85,
+        "weight": 0.15,
+        "reasoning": "Hook self-test 6/6 PASS covering all 6 design.md test scenarios (status=completed write, status=running skip, status=failed skip, RUN_ID collision suffix, missing STORY.md → _no data captured_, corrupt state.json graceful). Smoke lesson file at team-knowledge/lessons/2026-05-03-feedback-loop-interne-t21.md exists post-run (959B). Curator agent has no executable tests yet (LLM agent, not shell — relies on prompt discipline + manual dry-run). Subcommand /team learning:review has no automated test (workflow is dispatcher-driven interactive prompts). -15 for absence of curator dry-run + subcommand smoke; deferred to T2.2 acceptable."
+      },
+      "docQuality": {
+        "score": 92,
+        "weight": 0.10,
+        "reasoning": "SKILL.md CHANGELOG v13 row now has explicit T2.1 sub-row enumerating all components AND acknowledging the cycle 1 corrective loop (cycle 2 IMPORTANT 2 fix). spec.md R5 reworded to match implementation precisely (cycle 2 IMPORTANT 1 fix). Step 9 §3 has inline CRITICAL ORDERING note documenting the BLOCKER fix rationale. Two SCHEMA.md files (lessons + amendments) precise + cross-referenced. ROADMAP_TEAM.md T2.1 section ticked with implementation notes per item. Architect's spec/design preserved verbatim, no drift between intent + outcome."
+      },
+      "weightedMean": 90.05
+    },
+    "findingsCount": {
+      "blocker": 0,
+      "important": 0,
+      "nit": 3
+    }
+  }
+]
