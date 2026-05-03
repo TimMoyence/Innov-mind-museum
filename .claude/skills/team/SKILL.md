@@ -193,6 +193,35 @@ Architect agent (opus-4.7, contexte chargé avec les 3 fichiers du HIT) :
 4. Update state.json + APC bump.
 ```
 
+#### Step 4 closing gate — Spec Kit mandatoire (T1.4 ROADMAP_TEAM — KR2)
+
+AVANT de passer au Step 5, le dispatcher invoque le hook qui machine-vérifie la présence + non-vacuité de spec.md / design.md / tasks.md pour les runs non-triviaux. Ferme le loophole "architect a sauté Spec Kit en silence".
+
+```
+RUN_ID=$RUN_ID \
+MODE=$MODE \
+DESCRIPTION="$DESCRIPTION" \
+OVERRIDE_SPEC_KIT="${OVERRIDE_SPEC_KIT:-}" \
+.claude/skills/team/team-hooks/pre-feature-spec-check.sh
+```
+
+Comportement :
+
+| Cas | Verdict gate | Exit | Suite |
+|---|---|---|---|
+| `mode in {chore, hotfix, audit, mockup}` ET pas de force keyword | PASS (mode bypass) | 0 | Step 5 |
+| Description matche keywords triviaux (`typo`, `dep[s]? bump`, `version bump`, `lockfile`, `whitespace`, `rename file only`) ET mode ∉ {feature, refactor} ET pas de force keyword | PASS (trivial bypass) | 0 | Step 5 |
+| Description matche force keywords (`security`, `auth`, `migration`, `password`, `token`, `permission`, `rbac`, `oauth`, `jwt`, `crypto`, `encrypt`) ET Spec Kit incomplet | FAIL | 1 | STOP run + escalade user |
+| `mode in {feature, refactor}` ET Spec Kit absent / fichier <200B / placeholders non remplis | FAIL | 1 | STOP run + escalade user |
+| Spec Kit complet (3 fichiers, ≥200B chacun, headers `## ` remplis) | PASS | 0 | Step 5 |
+| `OVERRIDE_SPEC_KIT=1` (CLI flag `--no-spec-kit`) | WARN | 0 | Step 5 + audit STORY.md `## override` |
+
+**Override flag `--no-spec-kit`** : le dispatcher accepte cet argv au démarrage du run, le propage en env `OVERRIDE_SPEC_KIT=1` au hook. La gate emit verdict=WARN (pas PASS) et le hook append une section `## override — dispatcher — <ts>` à STORY.md avec la description verbatim. Le reviewer (Step 8) DOIT justifier l'override dans son section review.
+
+**Exit 1 = STOP** : le dispatcher ne passe pas à Step 5. Update `state.json.status="blocked"` + escalade user avec le verdict du hook (verbatim, UFR-013).
+
+Self-test du hook : `bash .claude/skills/team/team-hooks/pre-feature-spec-check.sh --self-test` → 8/8 scenarios PASS.
+
 ### Step 5 — Implement (editor)
 
 Editor agent (opus-4.6) consomme tasks.md top-down :
@@ -298,14 +327,24 @@ Reason: spawn was a continuation, not fresh-context. Re-spawn via Agent tool.
 
 3. Parse le retour Agent → verdict + path JSON.
 4. Read le JSON → record gates ('a11y', 'designSystem', 'securityGrep', 'kissDryHexagonal') dans state.json gates[].
-5. Append section review à STORY.md (l'agent imprime la section ; le dispatcher l'écrit append-only).
+5. **T1.5 — KR3 quality history** : append entry à `team-state/quality-scores.json` :
+     .claude/skills/team/lib/quality-scores.sh "$RUN_ID" "$JSON_PATH"
+   - Persiste les 5 axes + verdict + findings count.
+   - Échec script (e.g. scoresOnFiveAxes manquant dans JSON reviewer) → BLOCK + re-spawn reviewer.
+6. Append section review à STORY.md (l'agent imprime la section ; le dispatcher l'écrit append-only).
 ```
 
-#### Verdict gating (consommé avant Step 9)
+#### Verdict gating (T1.5 — score-thresholded)
 
-- **APPROVED** → Step 9 finalize.
-- **CHANGES_REQUESTED** → re-spawn editor avec `findings.blocker` + `findings.important` du JSON comme input. Incrément `state.json.telemetry.correctiveLoops`. Si cap atteint (≥2) → escalade user (Step 5 CAP MECHANISM).
-- **BLOCK** (incl. BLOCK-CONTEXT-LEAK) → dispatcher STOP + escalade user avec le commentaire reviewer verbatim.
+Le verdict prioritaire est le `weightedMean` des 5 axes (T1.5 KR3) — l'agent calcule, le dispatcher applique :
+
+| weightedMean      | Verdict           | Action                                                           |
+|-------------------|-------------------|------------------------------------------------------------------|
+| ≥ 85              | APPROVED          | Step 9 finalize                                                   |
+| 70.0 — 84.9       | CHANGES_REQUESTED | re-spawn editor avec `findings.blocker` + `findings.important` ; incrémente `correctiveLoops` ; cap ≥2 → escalade |
+| < 70              | BLOCK             | STOP + escalade user avec breakdown axe-par-axe                   |
+
+**Override de cohérence** : si l'agent émet `verdict: BLOCK` (e.g. BLOCK-CONTEXT-LEAK) MAIS le mean ≥ 85, le verdict explicite agent prime (sécurité > metric). À l'inverse si mean < 70 mais verdict agent = APPROVED, le dispatcher REJECT le review et re-spawn (incohérence — UFR-013 honnêteté violation suspectée).
 
 ### Step 9 — Finalize (Tech Lead)
 

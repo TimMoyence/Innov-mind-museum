@@ -68,7 +68,7 @@
         "additionalProperties": false,
         "required": ["name", "verdict", "ts"],
         "properties": {
-          "name":    { "enum": ["import-coherence", "quality-ratchet", "product", "lint", "typecheck", "tests", "security", "review"] },
+          "name":    { "enum": ["import-coherence", "quality-ratchet", "product", "lint", "typecheck", "tests", "security", "review", "spec-kit"] },
           "verdict": { "enum": ["PASS", "WARN", "FAIL"] },
           "ts":      { "type": "string", "format": "date-time" },
           "details": { "type": "string" }

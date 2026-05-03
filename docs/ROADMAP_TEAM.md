@@ -83,9 +83,11 @@ Doit produire des features de qualité prod sans micro-management humain, en res
 
 ### T1.4 Spec Kit mandatoire enforcement (KR2)
 
-- [ ] Dispatcher gate `team-hooks/pre-feature-spec-check.sh` — feature classifiée non-triviale (>3 fichiers ou >100 lignes ou touche security/auth/migration) sans `spec.md` + `design.md` + `tasks.md` → REJECT
-- [ ] Trivial features (typo fix, dep bump, comment update) bypass auto
-- [ ] Override flag `--no-spec-kit` réservé à user explicit (audit trail)
+- [x] Dispatcher gate `team-hooks/pre-feature-spec-check.sh` — non-trivial run (force keywords security/auth/migration/password/token/permission/rbac/oauth/jwt/crypto/encrypt OU mode∈{feature,refactor}) sans `spec.md` + `design.md` + `tasks.md` ≥ 200B + headers remplis → REJECT (exit 1, gate verdict=FAIL, dispatcher STOP). Heuristique fichiers/lignes (>3 / >100) deferred — editor n'a pas tourné à Step 4 (cf. design.md §9 D2).
+- [x] Trivial features bypass auto — modes `chore|hotfix|audit|mockup` OU keywords triviaux (`typo`, `dep[s]? bump`, `version bump`, `lockfile`, `whitespace`, `rename file only`) sur mode hors {feature,refactor} → PASS sans Spec Kit.
+- [x] Override flag `--no-spec-kit` (env `OVERRIDE_SPEC_KIT=1`) réservé à user explicit — gate verdict=WARN (pas PASS) + audit trail dans `STORY.md ## override` section. Reviewer DOIT justifier dans review section.
+
+Self-test : `bash .claude/skills/team/team-hooks/pre-feature-spec-check.sh --self-test` → 8/8 scenarios PASS. Run de référence : `team-state/2026-05-03-spec-kit-mandatory-enforcement/`.
 
 ### T1.5 Auto-eval qualité output (KR3)
 
