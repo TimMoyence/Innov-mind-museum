@@ -59,12 +59,13 @@ Doit produire des features de qualité prod sans micro-management humain, en res
 
 > Coche `[x]` au merge. /team auto-consolide cette roadmap fin de chaque cycle.
 
-### T1.1 Cost estimation per agent (KR1)
+### T1.1 Cost estimation per agent (KR1) — ✅ done 2026-05-03
 
-- [ ] Helper `team-protocols/cost-estimate.sh` — input feature size + agent list, output budget tokens prévisionnel
-- [ ] Langfuse query script — agrégation cost réel par feature (group by Spec Kit feature ID)
-- [ ] Pre-run gate — dispatcher refuse run si budget non estimé
-- [ ] Post-run delta — log estimation vs réel dans `team-state/cost-history.json`
+- [x] Helper `lib/cost-estimate.sh` (path : `lib/` not `team-protocols/` for consistency w/ trace.sh + plan-cache.sh) — input pipeline + agents-csv + complexity 1..5, output JSON budget per-agent + total tokens + USD
+- [x] Langfuse query script `lib/cost-aggregate.sh` — query `/api/public/observations?traceId=trace-<runId>` — fail-open fallback to state.json telemetry. Note: usage selector schema may need refresh on first real Langfuse run (T1.7 audit).
+- [x] Pre-run gate (SKILL.md Step 2.5) — dispatcher REFUSE run si script exit ≠ 0 OU stdout vide OU totalCostUSD null. Threshold $20 warn / $50 refuse. Override `--no-cost-estimate` audit-trailed.
+- [x] Post-run delta `lib/cost-history.sh` — append `{estimated, actual, delta, deltaPct}` to `team-state/cost-history.json` (CAS lock mkdir, 200-entry truncate). Wired in SKILL.md Step 9.
+- [x] state.schema.json telemetry extended — `estimatedTokensIn/Out` + `estimatedCostUSD` fields
 
 ### T1.2 Code review agent dédié (KR3) — ✅ done 2026-05-03
 

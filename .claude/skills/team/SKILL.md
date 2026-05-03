@@ -81,6 +81,34 @@ standard:   6-20 fichiers OU multi-scope OU interface publique modifiee
 enterprise: 20+ fichiers OU cross-module OU migration DB OU security-sensitive
 ```
 
+### Step 2.5 — Cost Estimate Gate (T1.1 ROADMAP_TEAM — KR1)
+
+Pre-run forecast obligatoire AVANT context loading. Bloque le run si l'estimation échoue.
+
+```
+1. Determiner agent list selon pipeline :
+   - micro:      architect,editor (skip verifier — hooks suffisent)
+   - standard:   architect,editor,verifier,reviewer
+   - enterprise: architect,editor,verifier,security,reviewer,documenter
+2. Determiner complexity 1..5 (heuristique : files touched / 4, clamp 1..5).
+3. Run :
+     EST=$(.claude/skills/team/lib/cost-estimate.sh <pipeline> <agents-csv> <complexity>)
+4. Parse JSON :
+     totalCostUSD = $(echo "$EST" | jq -r '.totalCostUSD')
+5. Update state.json telemetry :
+     estimatedTokensIn  = totalTokensIn
+     estimatedTokensOut = totalTokensOut
+     estimatedCostUSD   = totalCostUSD
+   (CAS lock via mkdir, schéma identique aux hooks).
+6. Persist EST raw output dans `team-state/$RUN_ID/cost-estimate.json` (input pour Step 9 delta).
+7. Gate failure conditions :
+   - Script exit ≠ 0 OU stdout vide OU totalCostUSD null/0 → REFUSE run + escalade user.
+   - Override flag `--no-cost-estimate` (passé en argv) → log audit STORY.md `cost-estimate: SKIPPED (user override)` + continue.
+8. Threshold check :
+   - Si totalCostUSD > $20 : warn user + demander confirmation interactive AVANT continue.
+   - Si totalCostUSD > $50 : refuse implicite, escalade systematique.
+```
+
 ### Step 3 — Smart Context Loading + Cache Warm-up
 
 V12 §6 : SINGLE warm call avant fan-out parallele (Anthropic prompt caching, evite 5-10x cost blow-up).
@@ -286,9 +314,19 @@ Reason: spawn was a continuation, not fresh-context. Re-spawn via Agent tool.
    - velocity-metrics.json
    - agent-roi.json
    - error-patterns.json (si nouveau pattern)
-2. Tech Lead git add + commit (jamais agents)
-3. Update state.json : status: "completed" + telemetry summary
-4. Optional : promote run → team-reports/ archive si milestone
+
+2. Cost delta (T1.1 ROADMAP_TEAM — KR1) :
+     ACT=$(.claude/skills/team/lib/cost-aggregate.sh $RUN_ID)
+     EST=$(cat .claude/skills/team/team-state/$RUN_ID/cost-estimate.json)
+     .claude/skills/team/lib/cost-history.sh \
+         "$RUN_ID" "$MODE" "$PIPELINE" "$EST" "$ACT"
+   - Result appended to `.claude/skills/team/team-state/cost-history.json`.
+   - Update state.json telemetry.{tokensTotalIn,tokensTotalOut,costUSD} from $ACT.
+   - KR1 success metric : |deltaPct| ≤ 30% sur 10 runs glissants. Audit hebdo (T1.7).
+
+3. Tech Lead git add + commit (jamais agents)
+4. Update state.json : status: "completed" + telemetry summary
+5. Optional : promote run → team-reports/ archive si milestone
 ```
 
 ---

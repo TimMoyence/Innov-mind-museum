@@ -80,11 +80,14 @@
       "additionalProperties": false,
       "description": "Aggregate metrics for this run (mirrors what Langfuse stores)",
       "properties": {
-        "tokensTotalIn":  { "type": "integer" },
-        "tokensTotalOut": { "type": "integer" },
-        "elapsedMs":      { "type": "integer" },
-        "costUSD":        { "type": "number" },
-        "correctiveLoops":{ "type": "integer", "description": "Cap = 2 per V12 anti-patterns; escalate beyond." }
+        "tokensTotalIn":      { "type": "integer" },
+        "tokensTotalOut":     { "type": "integer" },
+        "elapsedMs":          { "type": "integer" },
+        "costUSD":            { "type": "number", "description": "Actual cost (post-run, from cost-aggregate.sh)." },
+        "estimatedTokensIn":  { "type": "integer", "description": "Pre-run forecast (cost-estimate.sh)." },
+        "estimatedTokensOut": { "type": "integer", "description": "Pre-run forecast (cost-estimate.sh)." },
+        "estimatedCostUSD":   { "type": "number",  "description": "Pre-run forecast in USD. KR1 gate refuses dispatch if missing." },
+        "correctiveLoops":    { "type": "integer", "description": "Cap = 2 per V12 anti-patterns; escalate beyond." }
       }
     }
   },
