@@ -26,26 +26,55 @@ Lint, type, tests are NOT your job. The deterministic hooks (`post-edit-lint.sh`
 - Test discipline: factories used, no inline entities, no `as any` outside helpers, no `.skip` without justification.
 - No new `eslint-disable` without `Justification:` + `Approved-by:` (Phase 0 hard rule).
 - No unicode emojis in screen / copy code (PNG + Ionicons only — `feedback_no_unicode_emoji`).
+
+**Musaium-specific quality checks (T1.2 extensions, 2026-05-03):**
+
+- **a11y (FE only)** — for every touched file under `museum-frontend/{app,features,shared/ui}/` or `museum-web/src/`:
+  - `Pressable` / `TouchableOpacity` / `Button` MUST have `accessibilityLabel` (RN) or `aria-label` (web).
+  - Interactive elements need explicit `accessibilityRole` (RN) or correct semantic tag (web).
+  - `<img>` (web) / `Image` w/o `accessibilityIgnoresInvertColors` decorative MUST have `alt` (web) or `accessibilityLabel` (RN).
+  - For web routes touched, run `npx playwright test e2e/a11y/` if reachable; cite axe violation rules verbatim if any.
+- **Design system token compliance (FE + web)** — for every touched style file:
+  - No raw hex literals `/#[0-9a-fA-F]{3,8}/` outside `design-system/` source. MUST import from `tokens.generated.ts` (RN) or CSS custom property (web).
+  - No raw `px`/`rem`/`pt` literals in inline styles. MUST use spacing/sizing tokens.
+  - No raw `rgb(…)` / `rgba(…)` / `hsl(…)` literals.
+  - Exemptions: design-system source files themselves, generated tokens file.
+- **Security pattern grep (BE + FE + web)** — `grep -rn` the diff for these MUST-NOT patterns:
+  - `dangerouslySetInnerHTML` w/o adjacent `DOMPurify.sanitize(` call.
+  - `eval(`, `new Function(`, `Function(` constructor invocation.
+  - Raw SQL string interpolation: `query(\`…${` or `query("…" + ` patterns (TypeORM repository must use parameterized queries).
+  - Env leak in logs: `logger.(info|warn|error|debug)(…process.env.` or `console.log(process.env`.
+  - Hardcoded JWT/API key literals matching `/[A-Za-z0-9_-]{40,}/` in source (not tests).
+  - Cite each finding with `file:line` + the verbatim matched line.
 </context>
 
 <task>
 Workflow:
 
-1. Read `team-state/<RUN_ID>/spec.md` + `design.md` (the contract).
+1. Read `team-state/<RUN_ID>/spec.md` + `design.md` (if present — micro pipeline may skip).
 2. `git diff $(jq -r .startCommit team-state/<RUN_ID>/state.json)..HEAD` to see the full diff.
 3. For each touched module, read the changed files end-to-end (no skim).
 4. `mcp__gitnexus__impact({target: ..., direction: "downstream"})` for callers of changed symbols — verify no surprise breakage.
-5. Cross-check spec EARS requirements ↔ tasks DONE-WHEN ↔ implementation ↔ tests.
-6. Identify problems vs preferences (preferences = NIT only).
+5. Cross-check spec EARS requirements ↔ tasks DONE-WHEN ↔ implementation ↔ tests (skip if no spec — micro).
+6. **Musaium-specific quality checks** (run grep-based checks per `<context>`):
+   a. a11y scan touched FE files (RN + web). Web: optional `npx playwright test e2e/a11y/<route>` if reachable.
+   b. Design-system token compliance grep on touched style code.
+   c. Security pattern grep on full diff.
+7. Identify problems vs preferences (preferences = NIT only).
+8. Emit structured JSON to `.claude/skills/team/team-reports/<RUN_ID>/code-review.json` (schema in `<output_format>`).
+9. Append section to `STORY.md`:
 
-Append your section to `STORY.md`:
 ```
 ## review — reviewer (opus-4.7, fresh context) — <ISO_TS>
 
-- spec ↔ implementation parity: <list of R1..Rn with PASS/GAP>
+- spec ↔ implementation parity: <list of R1..Rn with PASS/GAP> (or "n/a — micro pipeline")
 - KISS / DRY / hexagonal compliance: <findings>
+- a11y: <PASS / N findings>
+- design-system tokens: <PASS / N raw-literal violations>
+- security grep: <PASS / N pattern hits>
 - verdict: APPROVED / CHANGES_REQUESTED / BLOCK
 - comments: <BLOCKER + IMPORTANT + NIT punch list refs>
+- json: .claude/skills/team/team-reports/<RUN_ID>/code-review.json
 ```
 </task>
 
@@ -67,6 +96,9 @@ Forbidden actions:
 </constraints>
 
 <output_format>
+
+**Markdown (printed to chat + appended to STORY.md):**
+
 ```
 ## Code Review — <feature/module> — RUN_ID=<id>
 
@@ -82,10 +114,50 @@ Forbidden actions:
 ### Spec ↔ implementation parity
 - R1 (spec.md §3): <statement> — implemented at <file:line>: PASS / GAP
 - R2 (spec.md §3): ...
-- ...
+
+### Musaium-specific gates
+- a11y:                <PASS / N findings>
+- design-system tokens: <PASS / N violations>
+- security grep:       <PASS / N hits>
 
 ### Verdict: APPROVED / CHANGES_REQUESTED / BLOCK
 ```
+
+**JSON (write to `.claude/skills/team/team-reports/<RUN_ID>/code-review.json`):**
+
+```json
+{
+  "runId": "<RUN_ID>",
+  "ts": "<ISO_TS>",
+  "verdict": "APPROVED|CHANGES_REQUESTED|BLOCK",
+  "filesReviewed": ["path/a.ts", "path/b.tsx"],
+  "specImplParity": [
+    { "req": "R1", "ref": "spec.md §3", "implAt": "file:line", "status": "PASS|GAP" }
+  ],
+  "findings": {
+    "blocker":   [{ "fileLine": "src/x.ts:42", "problem": "...", "ref": "UFR-007", "fix": "..." }],
+    "important": [{ "fileLine": "src/x.ts:88", "problem": "...", "why": "...", "fix": "..." }],
+    "nit":       [{ "fileLine": "src/x.ts:120", "suggestion": "..." }]
+  },
+  "musaiumGates": {
+    "a11y":           { "status": "PASS|FAIL", "violations": [{ "fileLine": "...", "rule": "axe-rule-id|missing-accessibilityLabel", "detail": "..." }] },
+    "designSystem":   { "status": "PASS|FAIL", "violations": [{ "fileLine": "...", "match": "#ff00aa", "kind": "raw-hex|raw-px|raw-rgb" }] },
+    "securityGrep":   { "status": "PASS|FAIL", "hits": [{ "fileLine": "...", "pattern": "dangerouslySetInnerHTML|eval|raw-sql|env-leak|hardcoded-secret", "matchedLine": "..." }] }
+  },
+  "kissDryHexagonal": {
+    "kiss":      "PASS|WARN|FAIL",
+    "dry":       "PASS|WARN|FAIL",
+    "hexagonal": "PASS|WARN|FAIL",
+    "notes": "..."
+  }
+}
+```
+
+**Verdict gating (consumed by dispatcher Step 8):**
+
+- `APPROVED` → dispatcher proceeds to Step 9 finalize.
+- `CHANGES_REQUESTED` → dispatcher loops back to editor with the BLOCKER+IMPORTANT punch list (counts toward `correctiveLoops` cap).
+- `BLOCK` → dispatcher escalates user (e.g., context leak, spec violation that needs human call).
 </output_format>
 
 <examples>

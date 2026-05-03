@@ -66,13 +66,13 @@ Doit produire des features de qualité prod sans micro-management humain, en res
 - [ ] Pre-run gate — dispatcher refuse run si budget non estimé
 - [ ] Post-run delta — log estimation vs réel dans `team-state/cost-history.json`
 
-### T1.2 Code review agent dédié (KR3)
+### T1.2 Code review agent dédié (KR3) — ✅ done 2026-05-03
 
-- [ ] Création agent `code-reviewer.md` (Opus, fresh context, no edit tools)
-- [ ] Skill source : `superpowers:requesting-code-review` adapté projet Musaium
-- [ ] Mandate : lint + typecheck + tests + a11y (FE) + security pattern check + design system compliance
-- [ ] Wire dans dispatcher : invoqué après Editor avant Verifier
-- [ ] Output structured : `.claude/skills/team/team-reports/<run>/code-review.json`
+- [x] Agent `reviewer.md` existant (Opus 4.7, fresh context, read-only) confirmé après audit V12 — inherits former code-reviewer
+- [x] Mandate étendu (2026-05-03) : a11y axe-core scan FE + design-system token compliance (no raw hex/px) + security pattern grep (dangerouslySetInnerHTML / eval / raw SQL / env leak / hardcoded secret)
+- [x] Wire dans dispatcher (Step 8) : explicit Agent tool spawn fresh-context + verdict gate APPROVED/CHANGES_REQUESTED/BLOCK + corrective loops cap
+- [x] Output structured : `.claude/skills/team/team-reports/<run>/code-review.json` schema défini dans reviewer.md `<output_format>`
+- [x] Décision : pas de fichier `code-reviewer.md` séparé — réutiliser reviewer.md existant (lint/tsc/tests délégués aux hooks par règle V12 #9)
 
 ### T1.3 Sonnet swap Documenter (C2)
 

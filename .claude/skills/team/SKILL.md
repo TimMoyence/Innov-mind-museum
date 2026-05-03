@@ -225,7 +225,7 @@ Security agent (opus-4.6, allowedTools: Read/Grep/Bash(promptfoo*,semgrep*) — 
 
 ### Step 8 — Review (reviewer fresh context)
 
-Reviewer agent (opus-4.7, FRESH CONTEXT obligatoire — V12 §8 anti-pattern "rubber stamp").
+Reviewer agent (opus-4.7, FRESH CONTEXT obligatoire — V12 §8 anti-pattern "rubber stamp"). Agent file : `.claude/agents/reviewer.md` (T1.2 ROADMAP_TEAM — KR3 quality unblock, mandate étendu 2026-05-03).
 
 #### FRESH-CONTEXT ENFORCEMENT (V12 §8)
 
@@ -234,9 +234,10 @@ Reviewer agent (opus-4.7, FRESH CONTEXT obligatoire — V12 §8 anti-pattern "ru
 ```
 1. Le contexte du reviewer ne contient AUCUN message de l'editor (ni system, ni user, ni assistant).
 2. Le reviewer reçoit en input UNIQUEMENT :
-   - Path vers team-state/$RUN_ID/spec.md
-   - Path vers team-state/$RUN_ID/design.md
+   - Path vers team-state/$RUN_ID/spec.md (si présent — micro pipeline peut omettre)
+   - Path vers team-state/$RUN_ID/design.md (si présent)
    - Le run ID (pour git diff $startCommit..HEAD)
+   - Path d'output JSON : .claude/skills/team/team-reports/$RUN_ID/code-review.json
 3. Pas de résumé, pas de "voici ce que l'editor a fait" — le reviewer LIT le diff brut + spec + design from scratch.
 ```
 
@@ -246,16 +247,37 @@ VERDICT: BLOCK-CONTEXT-LEAK
 Reason: spawn was a continuation, not fresh-context. Re-spawn via Agent tool.
 ```
 
-#### Workflow
+#### Spawn (concrete dispatcher action)
 
 ```
-1. Lit team-state/$RUN_ID/spec.md + design.md
-2. git diff $(jq -r .startCommit team-state/$RUN_ID/state.json)..HEAD
-3. mcp__gitnexus__impact downstream sur symboles touchés
-4. Cross-check spec EARS R1..Rn ↔ tasks DONE-WHEN ↔ implementation ↔ tests
-5. Verdict KISS/DRY/hexagonal compliance + UFR alignement + spec↔impl parity matrix
-6. Append STORY.md section `review` (sha256 chain enforce — pre-complete-verify détecte rewrite)
+1. mkdir -p .claude/skills/team/team-reports/$RUN_ID/
+
+2. Le dispatcher invoque le tool Agent avec ces paramètres :
+   - description: "Code review fresh-context"
+   - subagent_type: general-purpose (chargé du système prompt .claude/agents/reviewer.md)
+   - prompt :
+       "Tu es l'agent reviewer (.claude/agents/reviewer.md). Lis ton rôle.
+        Inputs :
+        - RUN_ID=$RUN_ID
+        - spec=team-state/$RUN_ID/spec.md (peut ne pas exister — micro)
+        - design=team-state/$RUN_ID/design.md (peut ne pas exister — micro)
+        - diff base = $(jq -r .startCommit team-state/$RUN_ID/state.json)
+        - output JSON = .claude/skills/team/team-reports/$RUN_ID/code-review.json
+
+        Exécute le workflow complet (incl. Musaium-specific gates : a11y / DS tokens / security grep).
+        Émets le markdown au chat + écris le JSON au path donné.
+        Réponse FINALE : verdict (APPROVED|CHANGES_REQUESTED|BLOCK) + path JSON."
+
+3. Parse le retour Agent → verdict + path JSON.
+4. Read le JSON → record gates ('a11y', 'designSystem', 'securityGrep', 'kissDryHexagonal') dans state.json gates[].
+5. Append section review à STORY.md (l'agent imprime la section ; le dispatcher l'écrit append-only).
 ```
+
+#### Verdict gating (consommé avant Step 9)
+
+- **APPROVED** → Step 9 finalize.
+- **CHANGES_REQUESTED** → re-spawn editor avec `findings.blocker` + `findings.important` du JSON comme input. Incrément `state.json.telemetry.correctiveLoops`. Si cap atteint (≥2) → escalade user (Step 5 CAP MECHANISM).
+- **BLOCK** (incl. BLOCK-CONTEXT-LEAK) → dispatcher STOP + escalade user avec le commentaire reviewer verbatim.
 
 ### Step 9 — Finalize (Tech Lead)
 
