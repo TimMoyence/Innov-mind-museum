@@ -2,8 +2,8 @@ import { logger } from '@shared/logger/logger';
 
 import { buildLocalKnowledgeBlock } from './db-lookup.prompt';
 
-import type { ArtworkKnowledgeRepoPort } from '../domain/ports/artwork-knowledge-repo.port';
-import type { MuseumEnrichmentRepoPort } from '../domain/ports/museum-enrichment-repo.port';
+import type { ArtworkKnowledgeRepoPort } from '../../domain/ports/artwork-knowledge-repo.port';
+import type { MuseumEnrichmentRepoPort } from '../../domain/ports/museum-enrichment-repo.port';
 
 /**
  * Queries the local knowledge DB for artwork/museum data and returns a formatted prompt block.

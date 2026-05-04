@@ -1,7 +1,7 @@
 import { sanitizePromptInput } from '@shared/validation/input';
 
-import type { ArtworkKnowledge } from '../domain/artwork-knowledge.entity';
-import type { MuseumEnrichment } from '../domain/museum-enrichment.entity';
+import type { ArtworkKnowledge } from '../../domain/artwork-knowledge/artwork-knowledge.entity';
+import type { MuseumEnrichment } from '../../domain/museum-enrichment/museum-enrichment.entity';
 
 const MAX_BLOCK_LENGTH = 1500;
 

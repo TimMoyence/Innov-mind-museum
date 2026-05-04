@@ -2,16 +2,16 @@ import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
 import { ExtractionWorker } from './adapters/primary/extraction.worker';
-import { HtmlScraper } from './adapters/secondary/html-scraper';
-import { TypeOrmArtworkKnowledgeRepo } from './adapters/secondary/typeorm-artwork-knowledge.repo';
-import { TypeOrmExtractedContentRepo } from './adapters/secondary/typeorm-extracted-content.repo';
-import { TypeOrmMuseumEnrichmentRepo } from './adapters/secondary/typeorm-museum-enrichment.repo';
-import { ArtworkKnowledge } from './domain/artwork-knowledge.entity';
-import { ExtractedContent } from './domain/extracted-content.entity';
-import { MuseumEnrichment } from './domain/museum-enrichment.entity';
-import { ContentClassifierService } from './useCase/content-classifier.service';
-import { DbLookupService } from './useCase/db-lookup.service';
-import { ExtractionJobService } from './useCase/extraction-job.service';
+import { TypeOrmArtworkKnowledgeRepo } from './adapters/secondary/pg/typeorm-artwork-knowledge.repo';
+import { TypeOrmExtractedContentRepo } from './adapters/secondary/pg/typeorm-extracted-content.repo';
+import { TypeOrmMuseumEnrichmentRepo } from './adapters/secondary/pg/typeorm-museum-enrichment.repo';
+import { HtmlScraper } from './adapters/secondary/scraper/html-scraper';
+import { ArtworkKnowledge } from './domain/artwork-knowledge/artwork-knowledge.entity';
+import { ExtractedContent } from './domain/extracted-content/extracted-content.entity';
+import { MuseumEnrichment } from './domain/museum-enrichment/museum-enrichment.entity';
+import { ContentClassifierService } from './useCase/classification/content-classifier.service';
+import { ExtractionJobService } from './useCase/extraction/extraction-job.service';
+import { DbLookupService } from './useCase/lookup/db-lookup.service';
 
 import type { ArtworkKnowledgeRepoPort } from './domain/ports/artwork-knowledge-repo.port';
 import type { ExtractionQueuePort } from './domain/ports/extraction-queue.port';

@@ -8,7 +8,7 @@ import { parseHTML } from 'linkedom';
 
 import { logger } from '@shared/logger/logger';
 
-import type { ScrapedPage, ScraperPort } from '../../domain/ports/scraper.port';
+import type { ScrapedPage, ScraperPort } from '../../../domain/ports/scraper.port';
 
 /**
  * Configuration for the HTML scraper adapter.
@@ -69,7 +69,7 @@ function ipv6MappedToIpv4(address: string): string | null {
       const b = high & 0xff;
       const c = (low >> 8) & 0xff;
       const d = low & 0xff;
-      return `${a}.${b}.${c}.${d}`;
+      return [a, b, c, d].join('.');
     }
   }
   if (address.startsWith('::ffff:')) {
@@ -99,9 +99,8 @@ function normalizeIp(address: string): string {
   return value;
 }
 
-/** Returns true if the IP belongs to a private, reserved, loopback, or link-local range. */
-function isPrivateIp(rawIp: string): boolean {
-  const ip = normalizeIp(rawIp);
+/** Returns true if `ip` is in a private/reserved IPv4 range. */
+function isPrivateIpv4(ip: string): boolean {
   if (ip.startsWith('127.') || ip.startsWith('10.') || ip.startsWith('0.')) return true;
   if (ip.startsWith('192.168.')) return true;
   // 169.254.0.0/16 covers AWS/Azure/GCP IMDS at 169.254.169.254
@@ -110,11 +109,19 @@ function isPrivateIp(rawIp: string): boolean {
     const second = Number.parseInt(ip.split('.')[1] ?? '', 10);
     if (Number.isFinite(second) && second >= 16 && second <= 31) return true;
   }
-  // IPv6 loopback (::1), ULA (fc00::/7), link-local (fe80::/10)
-  if (ip === '::1' || ip.startsWith('fc') || ip.startsWith('fd') || ip.startsWith('fe80')) {
-    return true;
-  }
   return false;
+}
+
+/** Returns true if `ip` is in a private/reserved IPv6 range. */
+function isPrivateIpv6(ip: string): boolean {
+  // IPv6 loopback (::1), ULA (fc00::/7), link-local (fe80::/10)
+  return ip === '::1' || ip.startsWith('fc') || ip.startsWith('fd') || ip.startsWith('fe80');
+}
+
+/** Returns true if the IP belongs to a private, reserved, loopback, or link-local range. */
+function isPrivateIp(rawIp: string): boolean {
+  const ip = normalizeIp(rawIp);
+  return isPrivateIpv4(ip) || isPrivateIpv6(ip);
 }
 
 type HostnameCheck =
@@ -334,6 +341,7 @@ export class HtmlScraper implements ScraperPort {
   }
 
   private extractContent(url: string, html: string): ScrapedPage | null {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Justification: linkedom's parseHTML returns a Window-shaped object whose `document` property has type `Document` from a DOM lib not loaded in this Node project (tsconfig lib: ES2023), so TS treats it as an error type. Readability accepts the linkedom Document at runtime; tests cover the path. Approved-by: tim@2026-05-03
     const { document } = parseHTML(html);
     const reader = new Readability(document);
     const article = reader.parse();

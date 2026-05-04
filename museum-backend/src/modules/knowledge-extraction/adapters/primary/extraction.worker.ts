@@ -8,13 +8,13 @@ import {
   type JobFailureSinks,
 } from '@shared/queue/job-failure.handler';
 
-import { canonicalizeUrl } from '../../domain/canonical-url';
+import { canonicalizeUrl } from '../../domain/extracted-content/canonical-url';
 
 import type {
   ExtractionJobPayload,
   ExtractionQueuePort,
 } from '../../domain/ports/extraction-queue.port';
-import type { ExtractionJobService } from '../../useCase/extraction-job.service';
+import type { ExtractionJobService } from '../../useCase/extraction/extraction-job.service';
 
 // Re-export shared types so existing unit tests importing them from this module keep working.
 export type { FailedJobSnapshot, JobFailureSinks };

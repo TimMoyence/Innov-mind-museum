@@ -1,4 +1,4 @@
-import { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-enrichment.entity';
+import { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-enrichment/museum-enrichment.entity';
 
 import type { MuseumEnrichmentView, ParsedOpeningHours } from '../../domain/enrichment.types';
 import type { Museum } from '../../domain/museum.entity';

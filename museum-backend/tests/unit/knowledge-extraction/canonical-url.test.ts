@@ -1,4 +1,4 @@
-import { canonicalizeUrl } from '@modules/knowledge-extraction/domain/canonical-url';
+import { canonicalizeUrl } from '@modules/knowledge-extraction/domain/extracted-content/canonical-url';
 
 describe('canonicalizeUrl', () => {
   // ── Trailing slash ──────────────────────────────────────────────────────────

@@ -53,7 +53,7 @@ jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 
-import { HtmlScraper } from '@modules/knowledge-extraction/adapters/secondary/html-scraper';
+import { HtmlScraper } from '@modules/knowledge-extraction/adapters/secondary/scraper/html-scraper';
 import { isSafeImageUrl } from '@modules/chat/useCase/image-input';
 import { WikidataClient } from '@modules/chat/adapters/secondary/wikidata.client';
 import { HttpWikidataMuseumClient } from '@modules/museum/adapters/secondary/wikidata-museum.client';

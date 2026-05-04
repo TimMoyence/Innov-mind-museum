@@ -26,7 +26,7 @@ import type { ChatSession } from '../domain/chatSession.entity';
 import type { OrchestratorInput } from '../domain/ports/chat-orchestrator.port';
 import type { SearchResult } from '../domain/ports/web-search.port';
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
-import type { DbLookupService } from '@modules/knowledge-extraction/useCase/db-lookup.service';
+import type { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
 
 /** Preparation succeeded — all data needed to invoke the LLM. */
 export interface PrepareReady {

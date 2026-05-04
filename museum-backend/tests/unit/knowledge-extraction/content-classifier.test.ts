@@ -16,7 +16,7 @@ jest.mock('@langchain/core/messages', () => ({
   HumanMessage: jest.fn().mockImplementation((content: string) => ({ content, role: 'human' })),
 }));
 
-import { ContentClassifierService } from '@modules/knowledge-extraction/useCase/content-classifier.service';
+import { ContentClassifierService } from '@modules/knowledge-extraction/useCase/classification/content-classifier.service';
 import type {
   ClassificationResult,
   ClassifiedArtworkData,

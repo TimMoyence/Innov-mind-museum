@@ -1,15 +1,15 @@
 import { createE2EHarness, type E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
 
-import { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge.entity';
+import { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge/artwork-knowledge.entity';
 import {
   ExtractedContent,
   ExtractedContentStatus,
-} from '@modules/knowledge-extraction/domain/extracted-content.entity';
-import { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-enrichment.entity';
-import { TypeOrmArtworkKnowledgeRepo } from '@modules/knowledge-extraction/adapters/secondary/typeorm-artwork-knowledge.repo';
-import { TypeOrmExtractedContentRepo } from '@modules/knowledge-extraction/adapters/secondary/typeorm-extracted-content.repo';
-import { TypeOrmMuseumEnrichmentRepo } from '@modules/knowledge-extraction/adapters/secondary/typeorm-museum-enrichment.repo';
-import { ExtractionJobService } from '@modules/knowledge-extraction/useCase/extraction-job.service';
+} from '@modules/knowledge-extraction/domain/extracted-content/extracted-content.entity';
+import { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-enrichment/museum-enrichment.entity';
+import { TypeOrmArtworkKnowledgeRepo } from '@modules/knowledge-extraction/adapters/secondary/pg/typeorm-artwork-knowledge.repo';
+import { TypeOrmExtractedContentRepo } from '@modules/knowledge-extraction/adapters/secondary/pg/typeorm-extracted-content.repo';
+import { TypeOrmMuseumEnrichmentRepo } from '@modules/knowledge-extraction/adapters/secondary/pg/typeorm-museum-enrichment.repo';
+import { ExtractionJobService } from '@modules/knowledge-extraction/useCase/extraction/extraction-job.service';
 
 import type { ContentClassifierPort } from '@modules/knowledge-extraction/domain/ports/content-classifier.port';
 import type { ScraperPort } from '@modules/knowledge-extraction/domain/ports/scraper.port';

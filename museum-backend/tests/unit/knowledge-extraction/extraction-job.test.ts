@@ -2,8 +2,8 @@ jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
-import { ExtractionJobService } from '@modules/knowledge-extraction/useCase/extraction-job.service';
-import { ExtractedContentStatus } from '@modules/knowledge-extraction/domain/extracted-content.entity';
+import { ExtractionJobService } from '@modules/knowledge-extraction/useCase/extraction/extraction-job.service';
+import { ExtractedContentStatus } from '@modules/knowledge-extraction/domain/extracted-content/extracted-content.entity';
 import type {
   ScraperPort,
   ScrapedPage,
@@ -14,9 +14,9 @@ import type {
   ClassifiedArtworkData,
   ClassifiedMuseumData,
 } from '@modules/knowledge-extraction/domain/ports/content-classifier.port';
-import type { TypeOrmExtractedContentRepo } from '@modules/knowledge-extraction/adapters/secondary/typeorm-extracted-content.repo';
-import type { TypeOrmArtworkKnowledgeRepo } from '@modules/knowledge-extraction/adapters/secondary/typeorm-artwork-knowledge.repo';
-import type { TypeOrmMuseumEnrichmentRepo } from '@modules/knowledge-extraction/adapters/secondary/typeorm-museum-enrichment.repo';
+import type { TypeOrmExtractedContentRepo } from '@modules/knowledge-extraction/adapters/secondary/pg/typeorm-extracted-content.repo';
+import type { TypeOrmArtworkKnowledgeRepo } from '@modules/knowledge-extraction/adapters/secondary/pg/typeorm-artwork-knowledge.repo';
+import type { TypeOrmMuseumEnrichmentRepo } from '@modules/knowledge-extraction/adapters/secondary/pg/typeorm-museum-enrichment.repo';
 import {
   makeMockExtractedContentRepo,
   makeMockArtworkKnowledgeRepo,

@@ -2,14 +2,14 @@ jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
-import { buildLocalKnowledgeBlock } from '@modules/knowledge-extraction/useCase/db-lookup.prompt';
-import { DbLookupService } from '@modules/knowledge-extraction/useCase/db-lookup.service';
+import { buildLocalKnowledgeBlock } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.prompt';
+import { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
 import {
   makeArtworkKnowledge,
   makeMuseumEnrichment,
 } from '../../helpers/knowledge-extraction/extraction.fixtures';
-import type { TypeOrmArtworkKnowledgeRepo } from '@modules/knowledge-extraction/adapters/secondary/typeorm-artwork-knowledge.repo';
-import type { TypeOrmMuseumEnrichmentRepo } from '@modules/knowledge-extraction/adapters/secondary/typeorm-museum-enrichment.repo';
+import type { TypeOrmArtworkKnowledgeRepo } from '@modules/knowledge-extraction/adapters/secondary/pg/typeorm-artwork-knowledge.repo';
+import type { TypeOrmMuseumEnrichmentRepo } from '@modules/knowledge-extraction/adapters/secondary/pg/typeorm-museum-enrichment.repo';
 
 function makeMockArtworkRepo(
   results: Awaited<ReturnType<TypeOrmArtworkKnowledgeRepo['searchByTitle']>>,

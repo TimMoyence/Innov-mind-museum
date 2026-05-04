@@ -10,8 +10,8 @@ import 'dotenv/config';
 import 'reflect-metadata';
 
 import { AppDataSource } from '@data/db/data-source';
-import { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge.entity';
-import { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-enrichment.entity';
+import { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge/artwork-knowledge.entity';
+import { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-enrichment/museum-enrichment.entity';
 
 // ────────────────────────────────────────────────────────────
 // Artwork seed data — real artworks from major world museums

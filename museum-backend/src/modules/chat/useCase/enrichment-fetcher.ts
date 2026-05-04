@@ -5,7 +5,7 @@ import type { WebSearchService } from './web-search.service';
 import type { EnrichedImage } from '../domain/chat.types';
 import type { ArtworkFacts } from '../domain/ports/knowledge-base.port';
 import type { SearchResult } from '../domain/ports/web-search.port';
-import type { DbLookupService } from '@modules/knowledge-extraction/useCase/db-lookup.service';
+import type { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
 
 /** Dependencies needed by fetchEnrichmentData (subset of ChatMessageServiceDeps). */
 interface EnrichmentDeps {

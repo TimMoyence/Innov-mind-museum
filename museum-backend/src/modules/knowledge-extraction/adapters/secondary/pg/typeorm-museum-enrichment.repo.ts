@@ -1,5 +1,5 @@
-import type { MuseumEnrichment } from '../../domain/museum-enrichment.entity';
-import type { MuseumEnrichmentRepoPort } from '../../domain/ports/museum-enrichment-repo.port';
+import type { MuseumEnrichment } from '../../../domain/museum-enrichment/museum-enrichment.entity';
+import type { MuseumEnrichmentRepoPort } from '../../../domain/ports/museum-enrichment-repo.port';
 import type { Repository } from 'typeorm';
 
 /**

@@ -1,13 +1,13 @@
 import {
   ExtractedContent,
   ExtractedContentStatus,
-} from '@modules/knowledge-extraction/domain/extracted-content.entity';
-import { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge.entity';
-import { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-enrichment.entity';
+} from '@modules/knowledge-extraction/domain/extracted-content/extracted-content.entity';
+import { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge/artwork-knowledge.entity';
+import { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-enrichment/museum-enrichment.entity';
 
-import type { TypeOrmExtractedContentRepo } from '@modules/knowledge-extraction/adapters/secondary/typeorm-extracted-content.repo';
-import type { TypeOrmArtworkKnowledgeRepo } from '@modules/knowledge-extraction/adapters/secondary/typeorm-artwork-knowledge.repo';
-import type { TypeOrmMuseumEnrichmentRepo } from '@modules/knowledge-extraction/adapters/secondary/typeorm-museum-enrichment.repo';
+import type { TypeOrmExtractedContentRepo } from '@modules/knowledge-extraction/adapters/secondary/pg/typeorm-extracted-content.repo';
+import type { TypeOrmArtworkKnowledgeRepo } from '@modules/knowledge-extraction/adapters/secondary/pg/typeorm-artwork-knowledge.repo';
+import type { TypeOrmMuseumEnrichmentRepo } from '@modules/knowledge-extraction/adapters/secondary/pg/typeorm-museum-enrichment.repo';
 
 export function makeExtractedContent(overrides?: Partial<ExtractedContent>): ExtractedContent {
   const content = new ExtractedContent();

@@ -2,7 +2,7 @@ import { UserMemoryService } from '@modules/chat/useCase/user-memory.service';
 import { makeUserMemoryRepoStub } from '../../helpers/chat/userMemory.fixtures';
 
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
-import type { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge.entity';
+import type { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge/artwork-knowledge.entity';
 
 const makeArtworkRepoStub = (
   byTitle: Record<string, Partial<ArtworkKnowledge>>,

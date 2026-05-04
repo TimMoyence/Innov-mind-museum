@@ -35,7 +35,7 @@ jest.mock('node:dns/promises', () => ({
   lookup: (...args: unknown[]) => mockLookup(args[0] as string),
 }));
 
-import { HtmlScraper } from '@modules/knowledge-extraction/adapters/secondary/html-scraper';
+import { HtmlScraper } from '@modules/knowledge-extraction/adapters/secondary/scraper/html-scraper';
 import {
   makeHtmlFetchResponse as makeHtmlResponse,
   makeRedirectFetchResponse as makeRedirectResponse,

@@ -8,7 +8,7 @@ import { sanitizePromptInput } from '@shared/validation/input';
 import type {
   ClassificationResult,
   ContentClassifierPort,
-} from '../domain/ports/content-classifier.port';
+} from '../../domain/ports/content-classifier.port';
 
 const artworkDataSchema = z.object({
   title: z.string(),

@@ -1,4 +1,7 @@
-import type { ExtractedContent, ExtractedContentStatus } from '../extracted-content.entity';
+import type {
+  ExtractedContent,
+  ExtractedContentStatus,
+} from '../extracted-content/extracted-content.entity';
 
 /** Port for extracted content persistence. */
 export interface ExtractedContentRepoPort {

@@ -7,8 +7,8 @@ jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
-import { ExtractionJobService } from '@modules/knowledge-extraction/useCase/extraction-job.service';
-import { ExtractedContentStatus } from '@modules/knowledge-extraction/domain/extracted-content.entity';
+import { ExtractionJobService } from '@modules/knowledge-extraction/useCase/extraction/extraction-job.service';
+import { ExtractedContentStatus } from '@modules/knowledge-extraction/domain/extracted-content/extracted-content.entity';
 import type {
   ScraperPort,
   ScrapedPage,

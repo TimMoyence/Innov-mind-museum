@@ -1,15 +1,15 @@
 import { logger } from '@shared/logger/logger';
 
-import { ExtractedContentStatus } from '../domain/extracted-content.entity';
+import { ExtractedContentStatus } from '../../domain/extracted-content/extracted-content.entity';
 
-import type { ArtworkKnowledgeRepoPort } from '../domain/ports/artwork-knowledge-repo.port';
+import type { ArtworkKnowledgeRepoPort } from '../../domain/ports/artwork-knowledge-repo.port';
 import type {
   ClassificationResult,
   ContentClassifierPort,
-} from '../domain/ports/content-classifier.port';
-import type { ExtractedContentRepoPort } from '../domain/ports/extracted-content-repo.port';
-import type { MuseumEnrichmentRepoPort } from '../domain/ports/museum-enrichment-repo.port';
-import type { ScraperPort } from '../domain/ports/scraper.port';
+} from '../../domain/ports/content-classifier.port';
+import type { ExtractedContentRepoPort } from '../../domain/ports/extracted-content-repo.port';
+import type { MuseumEnrichmentRepoPort } from '../../domain/ports/museum-enrichment-repo.port';
+import type { ScraperPort } from '../../domain/ports/scraper.port';
 
 /** Configuration thresholds and TTL for the extraction pipeline. */
 interface ExtractionJobConfig {

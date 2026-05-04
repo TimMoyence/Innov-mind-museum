@@ -33,7 +33,7 @@ import type {
   FailedJobSnapshot,
   JobFailureSinks,
 } from '@modules/knowledge-extraction/adapters/primary/extraction.worker';
-import type { ExtractionJobService } from '@modules/knowledge-extraction/useCase/extraction-job.service';
+import type { ExtractionJobService } from '@modules/knowledge-extraction/useCase/extraction/extraction-job.service';
 
 const WORKER_CONFIG = {
   concurrency: 2,
