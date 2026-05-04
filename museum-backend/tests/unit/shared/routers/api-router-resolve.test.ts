@@ -64,17 +64,17 @@ jest.mock('@modules/museum/adapters/primary/http/museum.route', () => ({
 // Stub remaining sub-routers to keep the test hermetic — none of them
 // participate in the assertions, but their import-time side effects (rate
 // limiters, etc.) would otherwise pollute the test environment.
-jest.mock('@modules/admin/adapters/primary/http/admin-ke.route', () => ({
+jest.mock('@modules/admin/adapters/primary/http/routes/admin-ke.route', () => ({
   createAdminKeRouter: () => {
     const { Router } = jest.requireActual<typeof import('express')>('express');
     return Router();
   },
 }));
-jest.mock('@modules/admin/adapters/primary/http/admin.route', () => {
+jest.mock('@modules/admin/adapters/primary/http/routes/admin.route', () => {
   const { Router } = jest.requireActual<typeof import('express')>('express');
   return { __esModule: true, default: Router() };
 });
-jest.mock('@modules/admin/adapters/primary/http/cache-purge.route', () => ({
+jest.mock('@modules/admin/adapters/primary/http/routes/cache-purge.route', () => ({
   createCachePurgeRouter: () => {
     const { Router } = jest.requireActual<typeof import('express')>('express');
     return Router();

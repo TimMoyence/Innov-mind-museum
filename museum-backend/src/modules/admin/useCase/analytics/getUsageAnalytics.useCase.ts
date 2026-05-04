@@ -1,5 +1,5 @@
-import type { IAdminRepository } from '../domain/admin.repository.interface';
-import type { UsageAnalytics, UsageAnalyticsFilters } from '../domain/admin.types';
+import type { IAdminRepository } from '../../domain/admin/admin.repository.interface';
+import type { UsageAnalytics, UsageAnalyticsFilters } from '../../domain/admin/admin.types';
 
 /** Delegates usage analytics retrieval to the repository. */
 export class GetUsageAnalyticsUseCase {

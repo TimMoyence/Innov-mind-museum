@@ -1,5 +1,5 @@
-import { ResolveReportUseCase } from '@modules/admin/useCase/resolveReport.useCase';
-import type { IAdminRepository } from '@modules/admin/domain/admin.repository.interface';
+import { ResolveReportUseCase } from '@modules/admin/useCase/reports/resolveReport.useCase';
+import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import { makeAdminRepo } from 'tests/helpers/admin/repo.fixtures';
 
 // Silence audit logging

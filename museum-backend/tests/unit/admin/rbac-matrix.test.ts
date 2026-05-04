@@ -1,7 +1,7 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import request from 'supertest';
 
-import { createAdminKeRouter } from '@modules/admin/adapters/primary/http/admin-ke.route';
+import { createAdminKeRouter } from '@modules/admin/adapters/primary/http/routes/admin-ke.route';
 import { makeMockArtworkKnowledgeRepo } from '../../helpers/knowledge-extraction/extraction.fixtures';
 import { adminToken, makeToken, visitorToken } from '../../helpers/auth/token.helpers';
 import {

@@ -341,7 +341,6 @@ export class HtmlScraper implements ScraperPort {
   }
 
   private extractContent(url: string, html: string): ScrapedPage | null {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Justification: linkedom's parseHTML returns a Window-shaped object whose `document` property has type `Document` from a DOM lib not loaded in this Node project (tsconfig lib: ES2023), so TS treats it as an error type. Readability accepts the linkedom Document at runtime; tests cover the path. Approved-by: tim@2026-05-03
     const { document } = parseHTML(html);
     const reader = new Readability(document);
     const article = reader.parse();

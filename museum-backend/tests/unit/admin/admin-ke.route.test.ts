@@ -6,7 +6,7 @@ import {
   makeMockArtworkKnowledgeRepo,
 } from '../../helpers/knowledge-extraction/extraction.fixtures';
 import { adminToken, visitorToken } from '../../helpers/auth/token.helpers';
-import { createAdminKeRouter } from '@modules/admin/adapters/primary/http/admin-ke.route';
+import { createAdminKeRouter } from '@modules/admin/adapters/primary/http/routes/admin-ke.route';
 
 // ── Auth middleware mocks ──────────────────────────────────────────────────────
 

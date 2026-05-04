@@ -2,8 +2,8 @@ import { UserRole } from '@modules/auth/domain/user-role';
 import { auditService, AUDIT_ADMIN_ROLE_CHANGE } from '@shared/audit';
 import { badRequest, notFound, conflict } from '@shared/errors/app.error';
 
-import type { IAdminRepository } from '../domain/admin.repository.interface';
-import type { AdminUserDTO } from '../domain/admin.types';
+import type { IAdminRepository } from '../../domain/admin/admin.repository.interface';
+import type { AdminUserDTO } from '../../domain/admin/admin.types';
 
 /** Input for the change-user-role use case. */
 interface ChangeUserRoleInput {

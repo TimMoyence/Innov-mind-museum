@@ -6,7 +6,7 @@ import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import { MessageReport } from '@modules/chat/domain/messageReport.entity';
 import { AuditLog } from '@shared/audit/auditLog.entity';
 
-import { AdminRepositoryPg } from '@modules/admin/adapters/secondary/admin.repository.pg';
+import { AdminRepositoryPg } from '@modules/admin/adapters/secondary/pg/admin.repository.pg';
 import { makeReport, makeAuditLog } from 'tests/helpers/admin/admin.fixtures';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';

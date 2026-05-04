@@ -1,5 +1,5 @@
-import { ChangeUserRoleUseCase } from '@modules/admin/useCase/changeUserRole.useCase';
-import type { AdminUserDTO } from '@modules/admin/domain/admin.types';
+import { ChangeUserRoleUseCase } from '@modules/admin/useCase/users/changeUserRole.useCase';
+import type { AdminUserDTO } from '@modules/admin/domain/admin/admin.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 import { AppError } from '@shared/errors/app.error';
 import { makeAdminRepo } from '../../../helpers/admin/repo.fixtures';

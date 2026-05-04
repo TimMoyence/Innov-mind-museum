@@ -386,11 +386,11 @@ export default tseslint.config(
   // ═══════════════════════════════════════════════════════════════════
   {
     files: [
-      'src/modules/*/adapters/primary/http/*.route.ts',
-      'src/modules/*/adapters/secondary/*.ts',
-      'src/modules/*/infrastructure/*.ts',
+      'src/modules/*/adapters/primary/http/**/*.route.ts',
+      'src/modules/*/adapters/secondary/**/*.ts',
+      'src/modules/*/infrastructure/**/*.ts',
       'src/data/db/**/*.ts',
-      'src/shared/audit/*.ts',
+      'src/shared/audit/**/*.ts',
     ],
     rules: {
       // ── Complexity ──

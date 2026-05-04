@@ -1,4 +1,4 @@
-import type { IAdminRepository } from '@modules/admin/domain/admin.repository.interface';
+import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 
 /** Shared mock IAdminRepository factory. */
 export const makeAdminRepo = (overrides: Partial<IAdminRepository> = {}): IAdminRepository => ({

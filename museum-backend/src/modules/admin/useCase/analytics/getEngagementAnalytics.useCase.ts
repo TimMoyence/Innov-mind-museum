@@ -1,5 +1,8 @@
-import type { IAdminRepository } from '../domain/admin.repository.interface';
-import type { EngagementAnalytics, EngagementAnalyticsFilters } from '../domain/admin.types';
+import type { IAdminRepository } from '../../domain/admin/admin.repository.interface';
+import type {
+  EngagementAnalytics,
+  EngagementAnalyticsFilters,
+} from '../../domain/admin/admin.types';
 
 /** Delegates engagement analytics retrieval to the repository. */
 export class GetEngagementAnalyticsUseCase {

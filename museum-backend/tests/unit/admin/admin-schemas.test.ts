@@ -273,7 +273,7 @@ describe('GET /api/admin/reviews — Zod validation', () => {
 describe('granularityToTrunc exhaustive default', () => {
   it('throws on unreachable branch (simulating Zod bypass)', async () => {
     const { queryUsageAnalytics } =
-      await import('@modules/admin/adapters/secondary/admin-analytics-queries');
+      await import('@modules/admin/adapters/secondary/pg/admin-analytics-queries');
     // Pass in a repo bundle that never gets reached; the granularity coercion
     // happens synchronously before any DB call.
     const repos = {

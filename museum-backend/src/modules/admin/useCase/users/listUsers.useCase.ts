@@ -1,8 +1,7 @@
 import { badRequest } from '@shared/errors/app.error';
 
-
-import type { IAdminRepository } from '../domain/admin.repository.interface';
-import type { AdminUserDTO, ListUsersFilters } from '../domain/admin.types';
+import type { IAdminRepository } from '../../domain/admin/admin.repository.interface';
+import type { AdminUserDTO, ListUsersFilters } from '../../domain/admin/admin.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 
 /** Validates pagination, sanitizes search input, and delegates to the repository. */

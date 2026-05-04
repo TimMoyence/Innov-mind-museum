@@ -16,7 +16,6 @@ import type {
 } from './admin.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 
-
 /** Port for admin dashboard data access. */
 export interface IAdminRepository {
   /** List users with optional search, role filter, and pagination. */

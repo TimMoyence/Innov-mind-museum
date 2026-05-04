@@ -10,7 +10,7 @@ import type {
   EngagementAnalytics,
   EngagementAnalyticsFilters,
   AnalyticsGranularity,
-} from '../../domain/admin.types';
+} from '../../../domain/admin/admin.types';
 import type { AuditLog } from '@shared/audit/auditLog.entity';
 import type { DataSource, Repository } from 'typeorm';
 

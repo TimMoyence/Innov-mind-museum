@@ -1,5 +1,5 @@
-import { ListAuditLogsUseCase } from '@modules/admin/useCase/listAuditLogs.useCase';
-import type { IAdminRepository } from '@modules/admin/domain/admin.repository.interface';
+import { ListAuditLogsUseCase } from '@modules/admin/useCase/audit/listAuditLogs.useCase';
+import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import { makeAdminRepo } from 'tests/helpers/admin/repo.fixtures';
 
 const mockRepo = (overrides: Partial<IAdminRepository> = {}): IAdminRepository =>

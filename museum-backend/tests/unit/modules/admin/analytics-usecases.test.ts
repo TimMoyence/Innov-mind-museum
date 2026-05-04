@@ -1,14 +1,14 @@
-import type { IAdminRepository } from '@modules/admin/domain/admin.repository.interface';
+import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import type {
   ContentAnalytics,
   EngagementAnalytics,
   UsageAnalytics,
   AdminStats,
-} from '@modules/admin/domain/admin.types';
-import { GetContentAnalyticsUseCase } from '@modules/admin/useCase/getContentAnalytics.useCase';
-import { GetEngagementAnalyticsUseCase } from '@modules/admin/useCase/getEngagementAnalytics.useCase';
-import { GetStatsUseCase } from '@modules/admin/useCase/getStats.useCase';
-import { GetUsageAnalyticsUseCase } from '@modules/admin/useCase/getUsageAnalytics.useCase';
+} from '@modules/admin/domain/admin/admin.types';
+import { GetContentAnalyticsUseCase } from '@modules/admin/useCase/analytics/getContentAnalytics.useCase';
+import { GetEngagementAnalyticsUseCase } from '@modules/admin/useCase/analytics/getEngagementAnalytics.useCase';
+import { GetStatsUseCase } from '@modules/admin/useCase/analytics/getStats.useCase';
+import { GetUsageAnalyticsUseCase } from '@modules/admin/useCase/analytics/getUsageAnalytics.useCase';
 
 function makeAdminRepo(overrides: Partial<IAdminRepository> = {}): IAdminRepository {
   return {

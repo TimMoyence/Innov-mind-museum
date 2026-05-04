@@ -14,18 +14,18 @@ import {
 } from '@modules/support/useCase';
 import { AppDataSource } from '@src/data/db/data-source';
 
-import { AdminReviewFacade } from './admin-review.facade';
-import { AdminSupportFacade } from './admin-support.facade';
-import { ChangeUserRoleUseCase } from './changeUserRole.useCase';
-import { GetContentAnalyticsUseCase } from './getContentAnalytics.useCase';
-import { GetEngagementAnalyticsUseCase } from './getEngagementAnalytics.useCase';
-import { GetStatsUseCase } from './getStats.useCase';
-import { GetUsageAnalyticsUseCase } from './getUsageAnalytics.useCase';
-import { ListAuditLogsUseCase } from './listAuditLogs.useCase';
-import { ListReportsUseCase } from './listReports.useCase';
-import { ListUsersUseCase } from './listUsers.useCase';
-import { ResolveReportUseCase } from './resolveReport.useCase';
-import { AdminRepositoryPg } from '../adapters/secondary/admin.repository.pg';
+import { GetContentAnalyticsUseCase } from './analytics/getContentAnalytics.useCase';
+import { GetEngagementAnalyticsUseCase } from './analytics/getEngagementAnalytics.useCase';
+import { GetStatsUseCase } from './analytics/getStats.useCase';
+import { GetUsageAnalyticsUseCase } from './analytics/getUsageAnalytics.useCase';
+import { ListAuditLogsUseCase } from './audit/listAuditLogs.useCase';
+import { AdminReviewFacade } from './facades/admin-review.facade';
+import { AdminSupportFacade } from './facades/admin-support.facade';
+import { ListReportsUseCase } from './reports/listReports.useCase';
+import { ResolveReportUseCase } from './reports/resolveReport.useCase';
+import { ChangeUserRoleUseCase } from './users/changeUserRole.useCase';
+import { ListUsersUseCase } from './users/listUsers.useCase';
+import { AdminRepositoryPg } from '../adapters/secondary/pg/admin.repository.pg';
 
 const adminRepository = new AdminRepositoryPg(AppDataSource);
 

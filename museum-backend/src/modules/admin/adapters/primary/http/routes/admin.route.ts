@@ -7,6 +7,19 @@ import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
 
 import {
+  listUsersUseCase,
+  changeUserRoleUseCase,
+  listAuditLogsUseCase,
+  getStatsUseCase,
+  listReportsUseCase,
+  resolveReportUseCase,
+  getUsageAnalyticsUseCase,
+  getContentAnalyticsUseCase,
+  getEngagementAnalyticsUseCase,
+  adminReviewFacade,
+  adminSupportFacade,
+} from '../../../../useCase';
+import {
   changeUserRoleSchema,
   resolveReportSchema,
   updateTicketSchema,
@@ -24,20 +37,7 @@ import {
   type EngagementAnalyticsQuery,
   type ListTicketsQuery,
   type ListReviewsQuery,
-} from './admin.schemas';
-import {
-  listUsersUseCase,
-  changeUserRoleUseCase,
-  listAuditLogsUseCase,
-  getStatsUseCase,
-  listReportsUseCase,
-  resolveReportUseCase,
-  getUsageAnalyticsUseCase,
-  getContentAnalyticsUseCase,
-  getEngagementAnalyticsUseCase,
-  adminReviewFacade,
-  adminSupportFacade,
-} from '../../../useCase';
+} from '../schemas/admin.schemas';
 
 const adminRouter: Router = Router();
 
