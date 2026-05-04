@@ -15,7 +15,7 @@ import {
   getLlmCircuitBreakerState,
   getUserMemoryService,
 } from '@modules/chat/wiring';
-import { createDailyArtRouter } from '@modules/daily-art/daily-art.route';
+import { createDailyArtRouter } from '@modules/daily-art';
 import { buildEnrichMuseumUseCase, buildLowDataPackService } from '@modules/museum';
 import { createLowDataPackRouter } from '@modules/museum/adapters/primary/http/low-data-pack.route';
 import { createMuseumRouter } from '@modules/museum/adapters/primary/http/museum.route';

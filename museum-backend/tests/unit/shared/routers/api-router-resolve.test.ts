@@ -116,7 +116,7 @@ jest.mock('@modules/chat/wiring', () => ({
   getLlmCircuitBreakerState: () => undefined,
   getUserMemoryService: () => undefined,
 }));
-jest.mock('@modules/daily-art/daily-art.route', () => ({
+jest.mock('@modules/daily-art', () => ({
   createDailyArtRouter: () => {
     const { Router } = jest.requireActual<typeof import('express')>('express');
     return Router();

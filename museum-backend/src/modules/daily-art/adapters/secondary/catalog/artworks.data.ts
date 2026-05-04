@@ -2,17 +2,7 @@
  * Curated list of 30 famous public-domain artworks for the Daily Art feature.
  * Images sourced from Wikimedia Commons.
  */
-
-/** Shape of a curated artwork entry. */
-export interface Artwork {
-  title: string;
-  artist: string;
-  year: string;
-  imageUrl: string;
-  description: string;
-  funFact: string;
-  museum: string;
-}
+import type { Artwork } from '@modules/daily-art/domain/artwork/artwork.types';
 
 const artworks: readonly Artwork[] = [
   {

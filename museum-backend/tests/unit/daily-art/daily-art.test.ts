@@ -1,4 +1,4 @@
-import { selectArtworkForDate, artworks } from '@modules/daily-art/daily-art.route';
+import { selectArtworkForDate, artworks } from '@modules/daily-art';
 
 describe('daily-art', () => {
   describe('selectArtworkForDate', () => {

@@ -1,47 +1,14 @@
 import { Router } from 'express';
 
+import {
+  selectArtworkForDate,
+  toDateString,
+} from '@modules/daily-art/useCase/listing/getDailyArtwork.useCase';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 
-import { artworks } from './artworks.data';
-
-import type { Artwork } from './artworks.data';
+import type { Artwork } from '@modules/daily-art/domain/artwork/artwork.types';
 import type { CacheService } from '@shared/cache/cache.port';
 import type { Request, Response } from 'express';
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Returns the day-of-year (1-366) for a given date.
- */
-const getDayOfYear = (date: Date): number => {
-  const start = new Date(date.getFullYear(), 0, 0);
-  const diff = date.getTime() - start.getTime();
-  const oneDay = 1_000 * 60 * 60 * 24;
-  return Math.floor(diff / oneDay);
-};
-
-/**
- * Returns a `YYYY-MM-DD` date string used as the cache key suffix.
- */
-const toDateString = (date: Date): string => date.toISOString().slice(0, 10);
-
-/**
- * Selects today's artwork from the curated list using deterministic rotation.
- */
-export const selectArtworkForDate = (date: Date): Artwork => {
-  const dayOfYear = getDayOfYear(date);
-  return artworks[dayOfYear % artworks.length];
-};
-
-// Re-export for tests
-export { artworks } from './artworks.data';
-export type { Artwork } from './artworks.data';
-
-// ---------------------------------------------------------------------------
-// Router factory
-// ---------------------------------------------------------------------------
 
 const CACHE_TTL_SECONDS = 86_400; // 24 hours
 
