@@ -19,7 +19,7 @@ import { ExtractedContent } from '@modules/knowledge-extraction/domain/extracted
 import { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-enrichment.entity';
 import { Museum } from '@modules/museum/domain/museum.entity';
 import { MuseumQaSeed } from '@modules/museum/domain/museumQaSeed.entity';
-import { Review } from '@modules/review/domain/review.entity';
+import { Review } from '@modules/review/domain/review/review.entity';
 import { SupportTicket } from '@modules/support/domain/supportTicket.entity';
 import { TicketMessage } from '@modules/support/domain/ticketMessage.entity';
 import { AuditLog } from '@shared/audit/auditLog.entity';

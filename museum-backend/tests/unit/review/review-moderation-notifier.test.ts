@@ -2,9 +2,9 @@ import {
   EmailReviewModerationNotifier,
   NoopReviewModerationNotifier,
   __test,
-} from '@modules/review/adapters/secondary/review-moderation-email.notifier';
+} from '@modules/review/adapters/secondary/notifier/review-moderation-email.notifier';
 
-import type { ReviewModerationPayload } from '@modules/review/domain/review-moderation-notifier.port';
+import type { ReviewModerationPayload } from '@modules/review/domain/ports/review-moderation-notifier.port';
 import type { EmailService } from '@shared/email/email.port';
 
 const basePayload: ReviewModerationPayload = {

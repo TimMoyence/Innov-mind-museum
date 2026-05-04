@@ -1,10 +1,10 @@
-import { CreateReviewUseCase } from '@modules/review/useCase/createReview.useCase';
-import { ListApprovedReviewsUseCase } from '@modules/review/useCase/listApprovedReviews.useCase';
-import { ListAllReviewsUseCase } from '@modules/review/useCase/listAllReviews.useCase';
-import { ModerateReviewUseCase } from '@modules/review/useCase/moderateReview.useCase';
-import { GetReviewStatsUseCase } from '@modules/review/useCase/getReviewStats.useCase';
-import type { IReviewRepository } from '@modules/review/domain/review.repository.interface';
-import type { ReviewDTO } from '@modules/review/domain/review.types';
+import { CreateReviewUseCase } from '@modules/review/useCase/public/createReview.useCase';
+import { ListApprovedReviewsUseCase } from '@modules/review/useCase/public/listApprovedReviews.useCase';
+import { ListAllReviewsUseCase } from '@modules/review/useCase/admin/listAllReviews.useCase';
+import { ModerateReviewUseCase } from '@modules/review/useCase/moderation/moderateReview.useCase';
+import { GetReviewStatsUseCase } from '@modules/review/useCase/public/getReviewStats.useCase';
+import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
+import type { ReviewDTO } from '@modules/review/domain/review/review.types';
 
 const fakeReview: ReviewDTO = {
   id: '00000000-0000-0000-0000-000000000001',

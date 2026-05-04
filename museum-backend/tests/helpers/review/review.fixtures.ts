@@ -1,4 +1,4 @@
-import type { Review } from '@modules/review/domain/review.entity';
+import type { Review } from '@modules/review/domain/review/review.entity';
 
 /**
  * Creates a Review entity with sensible defaults. Override any field via `overrides`.

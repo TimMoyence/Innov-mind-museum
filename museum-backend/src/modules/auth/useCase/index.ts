@@ -136,7 +136,7 @@ const chatDataExportProxy: ChatDataExportPort = {
 const reviewDataExportProxy: ReviewDataExportPort = {
   async listForUser(userId: number): Promise<UserReviewExportEntry[]> {
     const { ReviewRepositoryPg } =
-      await import('@modules/review/adapters/secondary/review.repository.pg');
+      await import('@modules/review/adapters/secondary/pg/review.repository.pg');
     const repo = new ReviewRepositoryPg(AppDataSource);
     const rows = await repo.listForUser(userId);
     return rows.map((r) => ({

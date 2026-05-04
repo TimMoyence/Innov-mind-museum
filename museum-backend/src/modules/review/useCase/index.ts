@@ -7,18 +7,18 @@ import { BrevoEmailService } from '@shared/email/brevo-email.service';
 import { env } from '@src/config/env';
 import { AppDataSource } from '@src/data/db/data-source';
 
-import { CreateReviewUseCase } from './createReview.useCase';
-import { GetReviewStatsUseCase } from './getReviewStats.useCase';
-import { ListAllReviewsUseCase } from './listAllReviews.useCase';
-import { ListApprovedReviewsUseCase } from './listApprovedReviews.useCase';
-import { ModerateReviewUseCase } from './moderateReview.useCase';
+import { ListAllReviewsUseCase } from './admin/listAllReviews.useCase';
+import { ModerateReviewUseCase } from './moderation/moderateReview.useCase';
+import { CreateReviewUseCase } from './public/createReview.useCase';
+import { GetReviewStatsUseCase } from './public/getReviewStats.useCase';
+import { ListApprovedReviewsUseCase } from './public/listApprovedReviews.useCase';
 import {
   EmailReviewModerationNotifier,
   NoopReviewModerationNotifier,
-} from '../adapters/secondary/review-moderation-email.notifier';
-import { ReviewRepositoryPg } from '../adapters/secondary/review.repository.pg';
+} from '../adapters/secondary/notifier/review-moderation-email.notifier';
+import { ReviewRepositoryPg } from '../adapters/secondary/pg/review.repository.pg';
 
-import type { ReviewAuthorLookup } from './moderateReview.useCase';
+import type { ReviewAuthorLookup } from './moderation/moderateReview.useCase';
 
 const reviewRepository = new ReviewRepositoryPg(AppDataSource);
 const reviewModerationNotifier = env.brevoApiKey

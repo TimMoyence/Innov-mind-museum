@@ -1,11 +1,11 @@
 import type {
   ListAllReviewsInput,
   ListAllReviewsUseCase,
-} from '@modules/review/useCase/listAllReviews.useCase';
+} from '@modules/review/useCase/admin/listAllReviews.useCase';
 import type {
   ModerateReviewUseCase,
   ModerateReviewUseCaseInput,
-} from '@modules/review/useCase/moderateReview.useCase';
+} from '@modules/review/useCase/moderation/moderateReview.useCase';
 
 /**
  * Admin-side facade over the review module.

@@ -6,14 +6,14 @@ import { isAuthenticated } from '@src/helpers/middleware/authenticated.middlewar
 import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
 
-import { createReviewSchema, listReviewsQuerySchema } from './review.schemas';
 import {
   createReviewUseCase,
   listApprovedReviewsUseCase,
   getReviewStatsUseCase,
-} from '../../../useCase';
+} from '../../../../useCase';
+import { createReviewSchema, listReviewsQuerySchema } from '../schemas/review.schemas';
 
-import type { ReviewAuthorProfile } from '../../../useCase/createReview.useCase';
+import type { ReviewAuthorProfile } from '../../../../useCase/public/createReview.useCase';
 
 /** Resolves the author profile used to derive the review display name. */
 export type ReviewAuthorResolver = (userId: number) => Promise<ReviewAuthorProfile | null>;

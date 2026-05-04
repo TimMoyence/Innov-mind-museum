@@ -1,8 +1,8 @@
 import type { Repository, UpdateResult } from 'typeorm';
 
-import { Review } from '@modules/review/domain/review.entity';
+import { Review } from '@modules/review/domain/review/review.entity';
 
-import { ReviewRepositoryPg } from '@modules/review/adapters/secondary/review.repository.pg';
+import { ReviewRepositoryPg } from '@modules/review/adapters/secondary/pg/review.repository.pg';
 import { makeReview } from 'tests/helpers/review/review.fixtures';
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 import { makeMockTypeOrmRepo, makeMockDataSource } from 'tests/helpers/shared/mock-deps';

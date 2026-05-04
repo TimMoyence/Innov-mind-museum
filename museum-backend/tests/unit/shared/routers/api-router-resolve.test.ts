@@ -128,7 +128,7 @@ jest.mock('@modules/museum/adapters/primary/http/low-data-pack.route', () => ({
     return Router();
   },
 }));
-jest.mock('@modules/review/adapters/primary/http/review.route', () => {
+jest.mock('@modules/review/adapters/primary/http/routes/review.route', () => {
   const { Router } = jest.requireActual<typeof import('express')>('express');
   return { __esModule: true, default: Router() };
 });

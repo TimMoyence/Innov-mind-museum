@@ -1,12 +1,12 @@
-import { Review } from '../../domain/review.entity';
+import { Review } from '../../../domain/review/review.entity';
 
-import type { IReviewRepository } from '../../domain/review.repository.interface';
+import type { IReviewRepository } from '../../../domain/review/review.repository.interface';
 import type {
   CreateReviewInput,
   ReviewDTO,
   ListReviewsFilters,
   ModerateReviewInput,
-} from '../../domain/review.types';
+} from '../../../domain/review/review.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 import type { DataSource, Repository } from 'typeorm';
 

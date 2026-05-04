@@ -1,4 +1,4 @@
-import { pruneReviews } from '@modules/review/useCase/prune-reviews';
+import { pruneReviews } from '@modules/review/useCase/moderation/prune-reviews';
 
 import type { DataSource } from 'typeorm';
 
