@@ -1,8 +1,8 @@
 import { badRequest } from '@shared/errors/app.error';
 
-import type { Museum } from '../../domain/museum/museum.entity';
-import type { IMuseumRepository } from '../../domain/museum/museum.repository.interface';
-import type { CreateMuseumInput } from '../../domain/museum/museum.types';
+import type { Museum } from '@modules/museum/domain/museum/museum.entity';
+import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
+import type { CreateMuseumInput } from '@modules/museum/domain/museum/museum.types';
 
 /** Validates required fields and creates a new museum. */
 export class CreateMuseumUseCase {

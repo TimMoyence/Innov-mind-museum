@@ -4,11 +4,11 @@ export {
   listAuditLogsUseCase,
   getStatsUseCase,
 } from './useCase';
-export type { IAdminRepository } from './domain/admin/admin.repository.interface';
+export type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 export type {
   AdminUserDTO,
   AdminAuditLogDTO,
   AdminStats,
   ListUsersFilters,
   ListAuditLogsFilters,
-} from './domain/admin/admin.types';
+} from '@modules/admin/domain/admin/admin.types';

@@ -1,14 +1,16 @@
 # Docs Index — Musaium
 
 > Table de vérité : toutes les docs importantes en un seul point.
-> Last cleanup: **2026-05-03** (consolidation V12, suppression 56 specs/plans/audits shipped, double roadmap PRODUCT+TEAM introduite).
+> Last cleanup: **2026-05-05** (backend hexagonal cleanup `2026-05-03-backend-arch-cleanup` — 8 commits subgrouping `domain/<aggregate>/`, `useCase/<capability>/`, `adapters/{primary,secondary}/<category>/`. CLAUDE.md ## Architecture refreshed. ADR-003 + AI_VOICE.md + ADR-013 paths updated. Codemod enforces same-dir-relative + alias-cross-dir. 0 logic change, 3842/3842 tests pass).
+> Previous cleanup: 2026-05-03 (consolidation V12, suppression 56 specs/plans/audits shipped, double roadmap PRODUCT+TEAM introduite).
 
-## Roadmap (vivante, double)
+## Roadmap (vivante, triple)
 
 | Doc | Path | Refresh |
 |---|---|---|
 | **Roadmap Produit** (features, OKR, NOW/NEXT/LATER) | [`docs/ROADMAP_PRODUCT.md`](ROADMAP_PRODUCT.md) | Réécrit chaque sprint (4 sem) |
 | **Roadmap /team** (orchestrateur v13, OKR cost+quality) | [`docs/ROADMAP_TEAM.md`](ROADMAP_TEAM.md) | Réécrit chaque sprint (4 sem) |
+| **Roadmap FE RN best practices** (audit 2026-05-03 → score 86 → 92+) | [`docs/ROADMAP_FE_RN_BEST_PRACTICES.md`](ROADMAP_FE_RN_BEST_PRACTICES.md) | Réécrit chaque sprint (4 sem) |
 
 Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 

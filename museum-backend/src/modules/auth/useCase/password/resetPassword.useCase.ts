@@ -7,8 +7,8 @@ import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
 import { validatePassword } from '@shared/validation/password';
 import { assertPasswordNotBreached } from '@shared/validation/password-breach-check';
 
-import type { IRefreshTokenRepository } from '../../domain/refresh-token/refresh-token.repository.interface';
-import type { IUserRepository } from '../../domain/user/user.repository.interface';
+import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
 /**
  * Orchestrates password reset using a one-time token (atomic consume + update).

@@ -3,7 +3,7 @@ import { logger } from '@shared/logger/logger';
 import type {
   ReviewModerationNotifier,
   ReviewModerationPayload,
-} from '../../../domain/ports/review-moderation-notifier.port';
+} from '@modules/review/domain/ports/review-moderation-notifier.port';
 import type { EmailService } from '@shared/email/email.port';
 
 /** Escapes a string for safe HTML embedding in the email body. */

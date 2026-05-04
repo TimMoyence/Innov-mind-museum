@@ -5,6 +5,7 @@ import util from 'node:util';
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';
 
+import { AppDataSource, startPoolMonitor } from '@data/db/data-source';
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/pg/refresh-token.repository.pg';
 import { TokenCleanupService } from '@modules/auth/useCase/session/tokenCleanup.service';
 import { getOcrService, stopArtKeywordsRefresh, stopKnowledgeExtraction } from '@modules/chat';
@@ -30,7 +31,6 @@ import { shutdownOpenTelemetry } from '@shared/observability/opentelemetry';
 import { initSentry } from '@shared/observability/sentry';
 import { assertDeploymentInvariants } from '@src/config/deployment-invariants';
 import { env } from '@src/config/env';
-import { AppDataSource, startPoolMonitor } from '@src/data/db/data-source';
 import { setDailyChatLimitCacheService } from '@src/helpers/middleware/daily-chat-limit.middleware';
 import {
   stopRateLimitSweep,

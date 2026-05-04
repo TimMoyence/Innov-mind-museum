@@ -1,7 +1,7 @@
-import { SupportTicket } from '../../../domain/ticket/supportTicket.entity';
-import { TicketMessage } from '../../../domain/ticket/ticketMessage.entity';
+import { SupportTicket } from '@modules/support/domain/ticket/supportTicket.entity';
+import { TicketMessage } from '@modules/support/domain/ticket/ticketMessage.entity';
 
-import type { ISupportRepository } from '../../../domain/ticket/support.repository.interface';
+import type { ISupportRepository } from '@modules/support/domain/ticket/support.repository.interface';
 import type {
   CreateTicketInput,
   TicketDTO,
@@ -10,7 +10,7 @@ import type {
   AddTicketMessageInput,
   TicketMessageDTO,
   UpdateTicketInput,
-} from '../../../domain/ticket/support.types';
+} from '@modules/support/domain/ticket/support.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 import type { DataSource, Repository } from 'typeorm';
 

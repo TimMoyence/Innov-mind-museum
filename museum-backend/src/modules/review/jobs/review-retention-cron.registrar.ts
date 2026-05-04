@@ -1,6 +1,5 @@
+import { pruneReviews } from '@modules/review/useCase/moderation/prune-reviews';
 import { registerScheduledJob, type ScheduledJobHandle } from '@shared/queue/scheduled-jobs';
-
-import { pruneReviews } from '../useCase/moderation/prune-reviews';
 
 import type { ConnectionOptions } from 'bullmq';
 import type { DataSource } from 'typeorm';

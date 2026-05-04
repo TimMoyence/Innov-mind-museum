@@ -2,17 +2,6 @@ import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import * as Sentry from '@sentry/node';
 
 import {
-  EMPTY_RESPONSE_FALLBACK,
-  MISSING_LLM_KEY_FALLBACK,
-  toModel,
-  isRetryableError,
-  sectionRunnerHooks,
-} from '@modules/chat/adapters/secondary/llm/langchain-orchestrator-support';
-import {
-  CircuitOpenError,
-  LLMCircuitBreaker,
-} from '@modules/chat/adapters/secondary/llm/llm-circuit-breaker';
-import {
   buildOrchestratorMessages,
   buildSectionMessages,
   toContentString,
@@ -36,12 +25,21 @@ import { safeTrace } from '@shared/observability/safeTrace';
 import { startSpan } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
 
+import {
+  EMPTY_RESPONSE_FALLBACK,
+  MISSING_LLM_KEY_FALLBACK,
+  toModel,
+  isRetryableError,
+  sectionRunnerHooks,
+} from './langchain-orchestrator-support';
+import { CircuitOpenError, LLMCircuitBreaker } from './llm-circuit-breaker';
+
 import type {
   ChatModel,
   InvokeSectionInput,
   AssembleResponseInput,
   LangChainChatOrchestratorDeps,
-} from '@modules/chat/adapters/secondary/llm/langchain-orchestrator-support';
+} from './langchain-orchestrator-support';
 import type {
   ChatAssistantDiagnostics,
   ChatAssistantMetadata,

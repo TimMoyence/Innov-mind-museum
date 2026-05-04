@@ -5,7 +5,7 @@ Context: Audit 2026-04-30 finding F7
 
 ## Question
 
-The 2026-04-30 audit flagged `museum-backend/src/modules/admin/adapters/secondary/admin.repository.pg.ts` as an "anemic facade" because it imports entities from three other modules (`auth.User`, `chat.ChatMessage`, `chat.ChatSession`, `chat.MessageReport`, `shared.AuditLog`) without owning any of them. The audit offered two paths:
+The 2026-04-30 audit flagged `museum-backend/src/modules/admin/adapters/secondary/pg/admin.repository.pg.ts` as an "anemic facade" because it imports entities from three other modules (`auth.User`, `chat.ChatMessage`, `chat.ChatSession`, `chat.MessageReport`, `shared.AuditLog`) without owning any of them. The audit offered two paths:
 
 1. **Inline** the queries directly into admin route handlers and delete the facade.
 2. **Justify** the indirection.

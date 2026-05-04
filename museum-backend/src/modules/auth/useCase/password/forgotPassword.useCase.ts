@@ -4,7 +4,7 @@ import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-loca
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
-import type { IUserRepository } from '../../domain/user/user.repository.interface';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 import type { EmailService } from '@shared/email/email.port';
 
 /** Orchestrates the "forgot password" flow: generates a reset token if the user exists. */

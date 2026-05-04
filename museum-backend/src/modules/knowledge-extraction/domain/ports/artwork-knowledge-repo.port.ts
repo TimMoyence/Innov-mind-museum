@@ -1,4 +1,4 @@
-import type { ArtworkKnowledge } from '../artwork-knowledge/artwork-knowledge.entity';
+import type { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge/artwork-knowledge.entity';
 
 /** Port for artwork knowledge persistence. */
 export interface ArtworkKnowledgeRepoPort {

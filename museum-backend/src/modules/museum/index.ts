@@ -11,18 +11,22 @@ export {
   createBullmqEnrichmentScheduler,
   museumRepository,
 } from './useCase';
-export type { Museum } from './domain/museum/museum.entity';
-export type { IMuseumRepository } from './domain/museum/museum.repository.interface';
-export type { MuseumDTO, CreateMuseumInput, UpdateMuseumInput } from './domain/museum/museum.types';
+export type { Museum } from '@modules/museum/domain/museum/museum.entity';
+export type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
+export type {
+  MuseumDTO,
+  CreateMuseumInput,
+  UpdateMuseumInput,
+} from '@modules/museum/domain/museum/museum.types';
 export type {
   SearchMuseumsInput,
   SearchMuseumEntry,
   SearchMuseumsResult,
-} from './useCase/search/searchMuseums.useCase';
+} from '@modules/museum/useCase/search/searchMuseums.useCase';
 export type {
   EnrichMuseumResult,
   MuseumEnrichmentView,
   ParsedOpeningHours,
-} from './domain/enrichment/enrichment.types';
-export type { MuseumEnrichmentQueuePort } from './domain/ports/museum-enrichment-queue.port';
-export type { EnrichmentSchedulerPort } from './domain/ports/enrichment-scheduler.port';
+} from '@modules/museum/domain/enrichment/enrichment.types';
+export type { MuseumEnrichmentQueuePort } from '@modules/museum/domain/ports/museum-enrichment-queue.port';
+export type { EnrichmentSchedulerPort } from '@modules/museum/domain/ports/enrichment-scheduler.port';

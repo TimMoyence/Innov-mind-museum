@@ -1,6 +1,6 @@
 import { notFound } from '@shared/errors/app.error';
 
-import type { ApiKeyRepository } from '../../domain/api-key/apiKey.repository.interface';
+import type { ApiKeyRepository } from '@modules/auth/domain/api-key/apiKey.repository.interface';
 
 /** Revokes (soft-deletes) an API key. Only the key owner can revoke. */
 export class RevokeApiKeyUseCase {

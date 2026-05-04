@@ -1,16 +1,15 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 
-import { requireUser } from '@shared/http/requireUser';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
-
-import { CONSENT_SCOPES } from '../../../../domain/consent/userConsent.entity';
+import { CONSENT_SCOPES } from '@modules/auth/domain/consent/userConsent.entity';
 import {
   grantConsentUseCase,
   revokeConsentUseCase,
   userConsentRepository,
-} from '../../../../useCase';
+} from '@modules/auth/useCase';
+import { requireUser } from '@shared/http/requireUser';
+import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
+import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 
 /** Zod schema for POST /api/auth/consent. */
 export const grantConsentSchema = z.object({

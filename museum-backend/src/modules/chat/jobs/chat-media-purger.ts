@@ -1,15 +1,14 @@
 import { unlink } from 'node:fs/promises';
 
+import { parseS3AudioRef } from '@modules/chat/adapters/secondary/storage/audio-storage.s3';
+import { resolveLocalAudioFilePath } from '@modules/chat/adapters/secondary/storage/audio-storage.stub';
+import { parseS3ImageRef } from '@modules/chat/adapters/secondary/storage/image-storage.s3';
+import { resolveLocalImageFilePath } from '@modules/chat/adapters/secondary/storage/image-storage.stub';
+import { deleteObjectsBatch } from '@modules/chat/adapters/secondary/storage/s3-operations';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
-import { parseS3AudioRef } from '../adapters/secondary/storage/audio-storage.s3';
-import { resolveLocalAudioFilePath } from '../adapters/secondary/storage/audio-storage.stub';
-import { parseS3ImageRef } from '../adapters/secondary/storage/image-storage.s3';
-import { resolveLocalImageFilePath } from '../adapters/secondary/storage/image-storage.stub';
-import { deleteObjectsBatch } from '../adapters/secondary/storage/s3-operations';
-
-import type { S3ImageStorageConfig } from '../adapters/secondary/storage/s3-operations';
+import type { S3ImageStorageConfig } from '@modules/chat/adapters/secondary/storage/s3-operations';
 
 /** Per-batch outcome reported by {@link ChatMediaPurger.deleteRefs}. */
 export interface ChatMediaPurgeResult {

@@ -7,7 +7,7 @@ export {
   listAllTicketsUseCase,
   updateTicketStatusUseCase,
 } from './useCase';
-export type { ISupportRepository } from './domain/ticket/support.repository.interface';
+export type { ISupportRepository } from '@modules/support/domain/ticket/support.repository.interface';
 export type {
   TicketDTO,
   TicketMessageDTO,
@@ -18,4 +18,4 @@ export type {
   AddTicketMessageInput,
   UpdateTicketInput,
   ListTicketsFilters,
-} from './domain/ticket/support.types';
+} from '@modules/support/domain/ticket/support.types';

@@ -2,8 +2,8 @@ import crypto from 'node:crypto';
 
 import { badRequest } from '@shared/errors/app.error';
 
-import type { IRefreshTokenRepository } from '../../domain/refresh-token/refresh-token.repository.interface';
-import type { IUserRepository } from '../../domain/user/user.repository.interface';
+import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
 /**
  * Confirms an email change by consuming a one-time token (atomic consume + update).

@@ -1,7 +1,7 @@
 import { badRequest } from '@shared/errors/app.error';
 
-import type { IReviewRepository } from '../../domain/review/review.repository.interface';
-import type { ReviewDTO, ListReviewsFilters } from '../../domain/review/review.types';
+import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
+import type { ReviewDTO, ListReviewsFilters } from '@modules/review/domain/review/review.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 
 /** Input for listing approved reviews (public). */

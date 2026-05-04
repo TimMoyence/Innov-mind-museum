@@ -3,6 +3,7 @@ import cors from 'cors';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
 
+import { AppDataSource } from '@data/db/data-source';
 import { wireAuthMiddleware } from '@modules/auth';
 import { buildChatService } from '@modules/chat';
 import { setActiveChatModule } from '@modules/chat/chat-module-singleton';
@@ -14,7 +15,6 @@ import { logger } from '@shared/logger/logger';
 import { setupSentryExpressErrorHandler } from '@shared/observability/sentry';
 import { createApiRouter } from '@shared/routers/api.router';
 import { env } from '@src/config/env';
-import { AppDataSource } from '@src/data/db/data-source';
 import { resolveCorsOrigin } from '@src/helpers/cors.config';
 import { dataModeMiddleware } from '@src/helpers/dataMode.middleware';
 import { httpMetricsMiddleware, metricsHandler } from '@src/helpers/metrics-middleware';

@@ -16,25 +16,27 @@ Conventions:
 
 ### [T1.1] Create domain entity X
 
-**File:** `museum-backend/src/modules/X/domain/X.entity.ts`
-**Why:** … (see design §3)
+**File:** `museum-backend/src/modules/X/domain/<aggregate>/X.entity.ts`
+**Why:** … (see design §3). New entities go under their aggregate folder; keep `domain/<module>.types.ts` for cross-aggregate types.
 **DONE-WHEN:** `pnpm tsc --noEmit` passes scoped to `modules/X/`
 
 ### [T1.2] Add repository port
 
-**File:** `museum-backend/src/modules/X/domain/X.repository.ts`
-**DONE-WHEN:** type-checks, no implementation yet.
+**File:** `museum-backend/src/modules/X/domain/<aggregate>/X.repository.interface.ts`
+**DONE-WHEN:** type-checks, no implementation yet. Cross-aggregate ports go to `domain/ports/` instead.
 
 ### [T1.3] PG adapter implementation
 
-**File:** `museum-backend/src/modules/X/secondary/X.repository.pg.ts`
+**File:** `museum-backend/src/modules/X/adapters/secondary/pg/X.repository.pg.ts`
 **DONE-WHEN:** unit test in `tests/unit/X/X.repository.pg.test.ts` passes.
 
 ## Phase 2 — { e.g. HTTP route }
 
 ### [T2.1] Route + zod schema
 
-**File:** `museum-backend/src/modules/X/primary/http/X.route.ts`
+**Route file:** `museum-backend/src/modules/X/adapters/primary/http/routes/X.route.ts`
+**Schema file:** `museum-backend/src/modules/X/adapters/primary/http/schemas/X.schemas.ts`
+**Helpers (if any):** `museum-backend/src/modules/X/adapters/primary/http/helpers/X-route.helpers.ts`
 **DONE-WHEN:** route appears in OpenAPI spec, `pnpm test:contract:openapi` passes.
 
 ## Phase 3 — { e.g. frontend hook }

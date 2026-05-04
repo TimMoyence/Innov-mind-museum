@@ -1,4 +1,4 @@
-import type { ApiKeyRepository } from '../../domain/api-key/apiKey.repository.interface';
+import type { ApiKeyRepository } from '@modules/auth/domain/api-key/apiKey.repository.interface';
 
 /** Public API key info — never includes hash or salt. */
 interface ApiKeyListItem {

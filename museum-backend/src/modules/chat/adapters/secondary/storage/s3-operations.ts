@@ -8,13 +8,8 @@ import {
   normalizeEndpoint,
   buildObjectPath,
   buildReadBaseUrlAndPath,
-} from '@modules/chat/adapters/secondary/storage/s3-path-utils';
-import {
-  sha256Hex,
-  toAmzDate,
-  buildCanonicalHeaders,
-  signString,
-} from '@modules/chat/adapters/secondary/storage/s3-signing';
+} from './s3-path-utils';
+import { sha256Hex, toAmzDate, buildCanonicalHeaders, signString } from './s3-signing';
 
 /** Configuration for an S3-compatible storage backend (images and audio). */
 export interface S3ImageStorageConfig {

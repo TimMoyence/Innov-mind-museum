@@ -2,23 +2,22 @@
  * Review module composition root.
  * Wires the PG repository to use-case classes and exports ready-to-use singletons.
  */
+import { AppDataSource } from '@data/db/data-source';
 import { userRepository } from '@modules/auth/useCase';
-import { BrevoEmailService } from '@shared/email/brevo-email.service';
-import { env } from '@src/config/env';
-import { AppDataSource } from '@src/data/db/data-source';
-
-import { ListAllReviewsUseCase } from './admin/listAllReviews.useCase';
-import { ModerateReviewUseCase } from './moderation/moderateReview.useCase';
-import { CreateReviewUseCase } from './public/createReview.useCase';
-import { GetReviewStatsUseCase } from './public/getReviewStats.useCase';
-import { ListApprovedReviewsUseCase } from './public/listApprovedReviews.useCase';
 import {
   EmailReviewModerationNotifier,
   NoopReviewModerationNotifier,
-} from '../adapters/secondary/notifier/review-moderation-email.notifier';
-import { ReviewRepositoryPg } from '../adapters/secondary/pg/review.repository.pg';
+} from '@modules/review/adapters/secondary/notifier/review-moderation-email.notifier';
+import { ReviewRepositoryPg } from '@modules/review/adapters/secondary/pg/review.repository.pg';
+import { ListAllReviewsUseCase } from '@modules/review/useCase/admin/listAllReviews.useCase';
+import { ModerateReviewUseCase } from '@modules/review/useCase/moderation/moderateReview.useCase';
+import { CreateReviewUseCase } from '@modules/review/useCase/public/createReview.useCase';
+import { GetReviewStatsUseCase } from '@modules/review/useCase/public/getReviewStats.useCase';
+import { ListApprovedReviewsUseCase } from '@modules/review/useCase/public/listApprovedReviews.useCase';
+import { BrevoEmailService } from '@shared/email/brevo-email.service';
+import { env } from '@src/config/env';
 
-import type { ReviewAuthorLookup } from './moderation/moderateReview.useCase';
+import type { ReviewAuthorLookup } from '@modules/review/useCase/moderation/moderateReview.useCase';
 
 const reviewRepository = new ReviewRepositoryPg(AppDataSource);
 const reviewModerationNotifier = env.brevoApiKey

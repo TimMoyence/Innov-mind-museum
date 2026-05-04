@@ -1,5 +1,45 @@
 import { type NextFunction, type Request, type Response, Router } from 'express';
 
+import {
+  clearAuthCookies,
+  setAuthCookies,
+} from '@modules/auth/adapters/primary/http/helpers/auth-cookies';
+import {
+  registerSchema,
+  loginSchema,
+  refreshSchema,
+  logoutSchema,
+  socialLoginSchema,
+  changePasswordSchema,
+  changeEmailSchema,
+  confirmEmailChangeSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  verifyEmailSchema,
+  createApiKeySchema,
+  updateContentPreferencesSchema,
+  updateTtsVoiceSchema,
+} from '@modules/auth/adapters/primary/http/schemas/auth.schemas';
+import {
+  authSessionService,
+  forgotPasswordUseCase,
+  registerUseCase,
+  resetPasswordUseCase,
+  socialLoginUseCase,
+  nonceStore,
+  deleteAccountUseCase,
+  getProfileUseCase,
+  changePasswordUseCase,
+  changeEmailUseCase,
+  confirmEmailChangeUseCase,
+  verifyEmailUseCase,
+  generateApiKeyUseCase,
+  revokeApiKeyUseCase,
+  listApiKeysUseCase,
+  updateContentPreferencesUseCase,
+  updateTtsVoiceUseCase,
+  completeOnboarding,
+} from '@modules/auth/useCase';
 import { auditService } from '@shared/audit';
 import {
   AUDIT_AUTH_LOGIN_SUCCESS,
@@ -40,44 +80,6 @@ import {
   byIp,
 } from '@src/helpers/middleware/rate-limit.middleware';
 import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
-
-import {
-  authSessionService,
-  forgotPasswordUseCase,
-  registerUseCase,
-  resetPasswordUseCase,
-  socialLoginUseCase,
-  nonceStore,
-  deleteAccountUseCase,
-  getProfileUseCase,
-  changePasswordUseCase,
-  changeEmailUseCase,
-  confirmEmailChangeUseCase,
-  verifyEmailUseCase,
-  generateApiKeyUseCase,
-  revokeApiKeyUseCase,
-  listApiKeysUseCase,
-  updateContentPreferencesUseCase,
-  updateTtsVoiceUseCase,
-  completeOnboarding,
-} from '../../../../useCase';
-import { clearAuthCookies, setAuthCookies } from '../helpers/auth-cookies';
-import {
-  registerSchema,
-  loginSchema,
-  refreshSchema,
-  logoutSchema,
-  socialLoginSchema,
-  changePasswordSchema,
-  changeEmailSchema,
-  confirmEmailChangeSchema,
-  forgotPasswordSchema,
-  resetPasswordSchema,
-  verifyEmailSchema,
-  createApiKeySchema,
-  updateContentPreferencesSchema,
-  updateTtsVoiceSchema,
-} from '../schemas/auth.schemas';
 
 /**
  * Express router for authentication endpoints (register, login, refresh, logout, social-login,

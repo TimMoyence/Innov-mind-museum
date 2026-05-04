@@ -6,6 +6,7 @@ import { badRequest } from '@shared/errors/app.error';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
+import type { PostMessageResult } from './chat.service.types';
 import type { EnrichedImage, PostMessageInput } from '@modules/chat/domain/chat.types';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
@@ -22,7 +23,6 @@ import type {
   ResolvedLocation,
 } from '@modules/chat/useCase/location/location-resolver';
 import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
-import type { PostMessageResult } from '@modules/chat/useCase/orchestration/chat.service.types';
 import type { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
 import type { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';

@@ -1,12 +1,11 @@
-import { badRequest, notFound } from '@shared/errors/app.error';
-
 import {
   CONTENT_PREFERENCES,
   isContentPreference,
   type ContentPreference,
-} from '../../domain/consent/content-preference';
+} from '@modules/auth/domain/consent/content-preference';
+import { badRequest, notFound } from '@shared/errors/app.error';
 
-import type { IUserRepository } from '../../domain/user/user.repository.interface';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
 /**
  * Persists a user's content preferences (which aspects of an artwork they

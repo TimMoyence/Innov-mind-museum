@@ -1,8 +1,8 @@
 import type {
   ExtractedContent,
   ExtractedContentStatus,
-} from '../../../domain/extracted-content/extracted-content.entity';
-import type { ExtractedContentRepoPort } from '../../../domain/ports/extracted-content-repo.port';
+} from '@modules/knowledge-extraction/domain/extracted-content/extracted-content.entity';
+import type { ExtractedContentRepoPort } from '@modules/knowledge-extraction/domain/ports/extracted-content-repo.port';
 import type { Repository } from 'typeorm';
 
 /**

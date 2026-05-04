@@ -1,8 +1,8 @@
 import { auditService, AUDIT_SUPPORT_TICKET_CREATED } from '@shared/audit';
 import { badRequest } from '@shared/errors/app.error';
 
-import type { ISupportRepository } from '../../domain/ticket/support.repository.interface';
-import type { CreateTicketInput, TicketDTO } from '../../domain/ticket/support.types';
+import type { ISupportRepository } from '@modules/support/domain/ticket/support.repository.interface';
+import type { CreateTicketInput, TicketDTO } from '@modules/support/domain/ticket/support.types';
 
 /** Input for the create-ticket use case. */
 interface CreateTicketUseCaseInput {

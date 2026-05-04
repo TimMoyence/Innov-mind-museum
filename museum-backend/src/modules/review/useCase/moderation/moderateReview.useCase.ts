@@ -4,9 +4,9 @@ import { badRequest, notFound } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 
-import type { ReviewModerationNotifier } from '../../domain/ports/review-moderation-notifier.port';
-import type { IReviewRepository } from '../../domain/review/review.repository.interface';
-import type { ReviewDTO, ReviewStatus } from '../../domain/review/review.types';
+import type { ReviewModerationNotifier } from '@modules/review/domain/ports/review-moderation-notifier.port';
+import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
+import type { ReviewDTO, ReviewStatus } from '@modules/review/domain/review/review.types';
 import type { AuditService } from '@shared/audit';
 
 /** Minimal user snapshot needed to build the moderation notification. */

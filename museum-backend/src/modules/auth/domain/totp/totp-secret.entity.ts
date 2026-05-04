@@ -9,10 +9,9 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+import { User } from '@modules/auth/domain/user/user.entity';
 import { TotpRecoveryCodesSchema } from '@shared/db/jsonb-schemas/totp-recovery-codes.schema';
 import { jsonbValidator } from '@shared/db/jsonb-validator';
-
-import { User } from '../user/user.entity';
 
 import type { Relation } from 'typeorm';
 

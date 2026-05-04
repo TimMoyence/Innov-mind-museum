@@ -1,3 +1,32 @@
+import { OpenAiAudioTranscriber } from '@modules/chat/adapters/secondary/audio/audio-transcriber.openai';
+import {
+  OpenAiTextToSpeechService,
+  DisabledTextToSpeechService,
+} from '@modules/chat/adapters/secondary/audio/text-to-speech.openai';
+import { LLMGuardAdapter } from '@modules/chat/adapters/secondary/guardrails/llm-guard.adapter';
+import { SharpImageProcessor } from '@modules/chat/adapters/secondary/image/image-processing.service';
+import {
+  TesseractOcrService,
+  type DisabledOcrService,
+} from '@modules/chat/adapters/secondary/image/ocr-service';
+import { CachingChatOrchestrator } from '@modules/chat/adapters/secondary/llm/caching-chat-orchestrator';
+import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/llm/langchain.orchestrator';
+import { TypeOrmArtKeywordRepository } from '@modules/chat/adapters/secondary/persistence/artKeyword.repository.typeorm';
+import { TypeOrmChatRepository } from '@modules/chat/adapters/secondary/persistence/chat.repository.typeorm';
+import { TypeOrmUserMemoryRepository } from '@modules/chat/adapters/secondary/persistence/userMemory.repository.typeorm';
+import { RegexPiiSanitizer } from '@modules/chat/adapters/secondary/pii/pii-sanitizer.regex';
+import { BraveSearchClient } from '@modules/chat/adapters/secondary/search/brave-search.client';
+import { DuckDuckGoClient } from '@modules/chat/adapters/secondary/search/duckduckgo.client';
+import { FallbackSearchProvider } from '@modules/chat/adapters/secondary/search/fallback-search.provider';
+import { GoogleCseClient } from '@modules/chat/adapters/secondary/search/google-cse.client';
+import { SearXNGClient } from '@modules/chat/adapters/secondary/search/searxng.client';
+import { TavilyClient } from '@modules/chat/adapters/secondary/search/tavily.client';
+import { UnsplashClient } from '@modules/chat/adapters/secondary/search/unsplash.client';
+import { WikidataClient } from '@modules/chat/adapters/secondary/search/wikidata.client';
+import { S3CompatibleAudioStorage } from '@modules/chat/adapters/secondary/storage/audio-storage.s3';
+import { LocalAudioStorage } from '@modules/chat/adapters/secondary/storage/audio-storage.stub';
+import { S3CompatibleImageStorage } from '@modules/chat/adapters/secondary/storage/image-storage.s3';
+import { LocalImageStorage } from '@modules/chat/adapters/secondary/storage/image-storage.stub';
 import { DescribeService } from '@modules/chat/useCase/describe/describe.service';
 import { ArtTopicClassifier } from '@modules/chat/useCase/guardrail/art-topic-classifier';
 import { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
@@ -13,43 +42,13 @@ import { logger } from '@shared/logger/logger';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
-import { OpenAiAudioTranscriber } from './adapters/secondary/audio/audio-transcriber.openai';
-import {
-  OpenAiTextToSpeechService,
-  DisabledTextToSpeechService,
-} from './adapters/secondary/audio/text-to-speech.openai';
-import { LLMGuardAdapter } from './adapters/secondary/guardrails/llm-guard.adapter';
-import { SharpImageProcessor } from './adapters/secondary/image/image-processing.service';
-import {
-  TesseractOcrService,
-  type DisabledOcrService,
-} from './adapters/secondary/image/ocr-service';
-import { CachingChatOrchestrator } from './adapters/secondary/llm/caching-chat-orchestrator';
-import { LangChainChatOrchestrator } from './adapters/secondary/llm/langchain.orchestrator';
-import { TypeOrmArtKeywordRepository } from './adapters/secondary/persistence/artKeyword.repository.typeorm';
-import { TypeOrmChatRepository } from './adapters/secondary/persistence/chat.repository.typeorm';
-import { TypeOrmUserMemoryRepository } from './adapters/secondary/persistence/userMemory.repository.typeorm';
-import { RegexPiiSanitizer } from './adapters/secondary/pii/pii-sanitizer.regex';
-import { BraveSearchClient } from './adapters/secondary/search/brave-search.client';
-import { DuckDuckGoClient } from './adapters/secondary/search/duckduckgo.client';
-import { FallbackSearchProvider } from './adapters/secondary/search/fallback-search.provider';
-import { GoogleCseClient } from './adapters/secondary/search/google-cse.client';
-import { SearXNGClient } from './adapters/secondary/search/searxng.client';
-import { TavilyClient } from './adapters/secondary/search/tavily.client';
-import { UnsplashClient } from './adapters/secondary/search/unsplash.client';
-import { WikidataClient } from './adapters/secondary/search/wikidata.client';
-import { S3CompatibleAudioStorage } from './adapters/secondary/storage/audio-storage.s3';
-import { LocalAudioStorage } from './adapters/secondary/storage/audio-storage.stub';
-import { S3CompatibleImageStorage } from './adapters/secondary/storage/image-storage.s3';
-import { LocalImageStorage } from './adapters/secondary/storage/image-storage.stub';
-
-import type { AdvancedGuardrail } from './domain/ports/advanced-guardrail.port';
-import type { AudioStorage } from './domain/ports/audio-storage.port';
-import type { ChatOrchestrator } from './domain/ports/chat-orchestrator.port';
-import type { ImageStorage } from './domain/ports/image-storage.port';
-import type { OcrService } from './domain/ports/ocr.port';
-import type { WebSearchProvider } from './domain/ports/web-search.port';
 import type { ArtKeywordRepository } from '@modules/chat/domain/art-keyword/artKeyword.repository.interface';
+import type { AdvancedGuardrail } from '@modules/chat/domain/ports/advanced-guardrail.port';
+import type { AudioStorage } from '@modules/chat/domain/ports/audio-storage.port';
+import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
+import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
+import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
+import type { WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
 import type { LocationConsentChecker } from '@modules/chat/useCase/location/location-resolver';
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { BuiltKnowledgeExtractionModule } from '@modules/knowledge-extraction/index';

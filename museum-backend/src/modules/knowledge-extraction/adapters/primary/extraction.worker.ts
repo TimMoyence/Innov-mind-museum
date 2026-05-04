@@ -1,5 +1,6 @@
 import { Queue, Worker } from 'bullmq';
 
+import { canonicalizeUrl } from '@modules/knowledge-extraction/domain/extracted-content/canonical-url';
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 import {
@@ -8,13 +9,11 @@ import {
   type JobFailureSinks,
 } from '@shared/queue/job-failure.handler';
 
-import { canonicalizeUrl } from '../../domain/extracted-content/canonical-url';
-
 import type {
   ExtractionJobPayload,
   ExtractionQueuePort,
-} from '../../domain/ports/extraction-queue.port';
-import type { ExtractionJobService } from '../../useCase/extraction/extraction-job.service';
+} from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
+import type { ExtractionJobService } from '@modules/knowledge-extraction/useCase/extraction/extraction-job.service';
 
 // Re-export shared types so existing unit tests importing them from this module keep working.
 export type { FailedJobSnapshot, JobFailureSinks };

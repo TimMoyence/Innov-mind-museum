@@ -1,12 +1,13 @@
 import { AIMessage, HumanMessage, SystemMessage } from '@langchain/core/messages';
 
 import { evaluateUserInputGuardrail } from '@modules/chat/useCase/guardrail/art-topic-guardrail';
-import { createLlmSectionPlan } from '@modules/chat/useCase/llm/llm-sections';
 import { applyHistoryWindow } from '@modules/chat/useCase/orchestration/history-window';
 import { buildVisitContextPromptBlock } from '@modules/chat/useCase/session/visit-context';
 import { resolveLocale, localeToLanguageName } from '@shared/i18n/locale';
 import { sanitizePromptInput } from '@shared/validation/input';
 import { env } from '@src/config/env';
+
+import { createLlmSectionPlan } from './llm-sections';
 
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';

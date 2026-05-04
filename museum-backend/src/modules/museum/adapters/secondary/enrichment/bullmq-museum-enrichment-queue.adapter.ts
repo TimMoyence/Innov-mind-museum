@@ -6,7 +6,7 @@ import type {
   MuseumEnrichmentJob,
   MuseumEnrichmentJobStatus,
   MuseumEnrichmentQueuePort,
-} from '../../../domain/ports/museum-enrichment-queue.port';
+} from '@modules/museum/domain/ports/museum-enrichment-queue.port';
 import type { ConnectionOptions } from 'bullmq';
 
 export const MUSEUM_ENRICHMENT_QUEUE_NAME = 'museum-enrichment';

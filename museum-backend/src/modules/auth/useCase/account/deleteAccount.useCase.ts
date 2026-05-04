@@ -1,7 +1,7 @@
 import { AppError } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 
-import type { IUserRepository } from '../../domain/user/user.repository.interface';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 import type {
   ImageCleanupPort as SharedImageCleanupPort,
   LegacyImageKeyFetcher,

@@ -3,12 +3,12 @@ import { conflict } from '@shared/errors/app.error';
 import { resolveLocale } from '@shared/i18n/locale';
 import { sanitizePromptInput } from '@shared/validation/input';
 
+import type { PostMessageResult } from './chat.service.types';
 import type { EnrichedImage } from '@modules/chat/domain/chat.types';
 import type { OrchestratorOutput } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
 import type { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
 import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
-import type { PostMessageResult } from '@modules/chat/useCase/orchestration/chat.service.types';
 import type { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
 import type { CacheService } from '@shared/cache/cache.port';
 

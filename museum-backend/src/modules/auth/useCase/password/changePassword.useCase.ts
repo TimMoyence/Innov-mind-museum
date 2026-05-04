@@ -4,8 +4,8 @@ import { AppError, badRequest } from '@shared/errors/app.error';
 import { validatePassword } from '@shared/validation/password';
 import { assertPasswordNotBreached } from '@shared/validation/password-breach-check';
 
-import type { IRefreshTokenRepository } from '../../domain/refresh-token/refresh-token.repository.interface';
-import type { IUserRepository } from '../../domain/user/user.repository.interface';
+import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
 /**
  * Changes a user's password after verifying the current one.

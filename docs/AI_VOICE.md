@@ -48,15 +48,15 @@ Mobile                 Backend                          OpenAI
 
 | Composant | Localisation | Rôle |
 |---|---|---|
-| `OpenAiAudioTranscriber` | `museum-backend/src/modules/chat/adapters/secondary/audio-transcriber.openai.ts` | STT via `gpt-4o-mini-transcribe` (env `LLM_AUDIO_TRANSCRIPTION_MODEL`). |
-| `LangChainChatOrchestrator` | `museum-backend/src/modules/chat/adapters/secondary/langchain.orchestrator.ts` | LLM multi-provider (openai/deepseek/google) via `env.llm.provider`. |
-| `OpenAiTextToSpeechService` | `museum-backend/src/modules/chat/adapters/secondary/text-to-speech.openai.ts` | TTS via `gpt-4o-mini-tts` (env `TTS_MODEL`), voix `alloy` par défaut (env `TTS_VOICE`). |
+| `OpenAiAudioTranscriber` | `museum-backend/src/modules/chat/adapters/secondary/audio/audio-transcriber.openai.ts` | STT via `gpt-4o-mini-transcribe` (env `LLM_AUDIO_TRANSCRIPTION_MODEL`). |
+| `LangChainChatOrchestrator` | `museum-backend/src/modules/chat/adapters/secondary/llm/langchain.orchestrator.ts` | LLM multi-provider (openai/deepseek/google) via `env.llm.provider`. |
+| `OpenAiTextToSpeechService` | `museum-backend/src/modules/chat/adapters/secondary/audio/text-to-speech.openai.ts` | TTS via `gpt-4o-mini-tts` (env `TTS_MODEL`), voix `alloy` par défaut (env `TTS_VOICE`). |
 | `AudioStorage` (port) | `museum-backend/src/modules/chat/domain/ports/audio-storage.port.ts` | Abstraction stockage audio. |
-| `S3CompatibleAudioStorage` | `museum-backend/src/modules/chat/adapters/secondary/audio-storage.s3.ts` | Adapter S3 — préfixe `chat-audios/<year>/<month>/<uuid>.mp3`. |
-| `LocalAudioStorage` | `museum-backend/src/modules/chat/adapters/secondary/audio-storage.stub.ts` | Adapter dev (`tmp/audios/`). |
-| `ChatMediaService.synthesizeSpeech` | `museum-backend/src/modules/chat/useCase/chat-media.service.ts:188` | Cache Redis (TTL 1d) + persistance S3 + DB (audioUrl). |
-| `ChatMediaService.getMessageAudioUrl` | `museum-backend/src/modules/chat/useCase/chat-media.service.ts` | Retourne URL signée S3 pour download direct mobile. |
-| `ChatRepository.updateMessageAudio` | `museum-backend/src/modules/chat/domain/chat.repository.interface.ts` | Persiste `audioUrl/audioGeneratedAt/audioVoice` sur `ChatMessage`. |
+| `S3CompatibleAudioStorage` | `museum-backend/src/modules/chat/adapters/secondary/storage/audio-storage.s3.ts` | Adapter S3 — préfixe `chat-audios/<year>/<month>/<uuid>.mp3`. |
+| `LocalAudioStorage` | `museum-backend/src/modules/chat/adapters/secondary/storage/audio-storage.stub.ts` | Adapter dev (`tmp/audios/`). |
+| `ChatMediaService.synthesizeSpeech` | `museum-backend/src/modules/chat/useCase/audio/chat-media.service.ts:188` | Cache Redis (TTL 1d) + persistance S3 + DB (audioUrl). |
+| `ChatMediaService.getMessageAudioUrl` | `museum-backend/src/modules/chat/useCase/audio/chat-media.service.ts` | Retourne URL signée S3 pour download direct mobile. |
+| `ChatRepository.updateMessageAudio` | `museum-backend/src/modules/chat/domain/session/chat.repository.interface.ts` | Persiste `audioUrl/audioGeneratedAt/audioVoice` sur `ChatMessage`. |
 
 ### Frontend (mobile)
 

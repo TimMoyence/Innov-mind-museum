@@ -3,8 +3,8 @@ import { AppError, badRequest } from '@shared/errors/app.error';
 import { decryptTotpSecret } from './totpEncryption';
 import { verifyTotpCode } from './totpService';
 
-import type { ITotpSecretRepository } from '../../domain/totp/totp-secret.repository.interface';
-import type { IUserRepository } from '../../domain/user/user.repository.interface';
+import type { ITotpSecretRepository } from '@modules/auth/domain/totp/totp-secret.repository.interface';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
 /** Result of confirming an enrollment. */
 export interface VerifyMfaResult {

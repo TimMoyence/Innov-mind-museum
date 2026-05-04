@@ -130,7 +130,7 @@ Example handoff brief (good — ≤200 tokens):
     "team-state/2026-05-02-rate-limit/spec.md",
     "team-state/2026-05-02-rate-limit/design.md",
     "team-state/2026-05-02-rate-limit/tasks.md",
-    "src/modules/auth/useCase/login-rate-limiter.ts:42"
+    "src/modules/auth/useCase/session/login-rate-limiter.ts:42"
   ],
   "decisions": [
     "Reuse in-memory-bucket-store; do not introduce Redis dep for this change",

@@ -1,15 +1,17 @@
 import { Between } from 'typeorm';
 
+import { Museum } from '@modules/museum/domain/museum/museum.entity';
 import { withOptimisticLockRetry } from '@shared/db/optimistic-lock-retry';
 import { conflict } from '@shared/errors/app.error';
-
-import { Museum } from '../../../domain/museum/museum.entity';
 
 import type {
   BoundingBox,
   IMuseumRepository,
-} from '../../../domain/museum/museum.repository.interface';
-import type { CreateMuseumInput, UpdateMuseumInput } from '../../../domain/museum/museum.types';
+} from '@modules/museum/domain/museum/museum.repository.interface';
+import type {
+  CreateMuseumInput,
+  UpdateMuseumInput,
+} from '@modules/museum/domain/museum/museum.types';
 import type { DataSource, Repository } from 'typeorm';
 
 /** TypeORM implementation of the museum repository. */

@@ -1,6 +1,6 @@
-import type { ContentPreference } from '../../domain/consent/content-preference';
-import type { UserRole } from '../../domain/user/user-role';
-import type { IUserRepository } from '../../domain/user/user.repository.interface';
+import type { ContentPreference } from '@modules/auth/domain/consent/content-preference';
+import type { UserRole } from '@modules/auth/domain/user/user-role';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
 interface UserProfile {
   id: number;
@@ -12,7 +12,7 @@ interface UserProfile {
   contentPreferences: ContentPreference[];
   /**
    * Spec C T2.4 — Visitor's preferred TTS voice (one of `TTS_VOICES` from
-   * `@modules/chat/voice-catalog`). `null` means "use the env-level default".
+   * `@modules/chat/domain/voice/voice-catalog`). `null` means "use the env-level default".
    */
   ttsVoice: string | null;
   createdAt: Date;

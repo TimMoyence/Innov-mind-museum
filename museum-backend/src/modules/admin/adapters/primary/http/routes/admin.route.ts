@@ -1,24 +1,5 @@
 import { type Request, type Response, Router } from 'express';
 
-import { badRequest } from '@shared/errors/app.error';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { requireRole } from '@src/helpers/middleware/require-role.middleware';
-import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
-import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
-
-import {
-  listUsersUseCase,
-  changeUserRoleUseCase,
-  listAuditLogsUseCase,
-  getStatsUseCase,
-  listReportsUseCase,
-  resolveReportUseCase,
-  getUsageAnalyticsUseCase,
-  getContentAnalyticsUseCase,
-  getEngagementAnalyticsUseCase,
-  adminReviewFacade,
-  adminSupportFacade,
-} from '../../../../useCase';
 import {
   changeUserRoleSchema,
   resolveReportSchema,
@@ -37,7 +18,25 @@ import {
   type EngagementAnalyticsQuery,
   type ListTicketsQuery,
   type ListReviewsQuery,
-} from '../schemas/admin.schemas';
+} from '@modules/admin/adapters/primary/http/schemas/admin.schemas';
+import {
+  listUsersUseCase,
+  changeUserRoleUseCase,
+  listAuditLogsUseCase,
+  getStatsUseCase,
+  listReportsUseCase,
+  resolveReportUseCase,
+  getUsageAnalyticsUseCase,
+  getContentAnalyticsUseCase,
+  getEngagementAnalyticsUseCase,
+  adminReviewFacade,
+  adminSupportFacade,
+} from '@modules/admin/useCase';
+import { badRequest } from '@shared/errors/app.error';
+import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
+import { requireRole } from '@src/helpers/middleware/require-role.middleware';
+import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
 
 const adminRouter: Router = Router();
 

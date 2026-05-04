@@ -1,11 +1,12 @@
 import { Router } from 'express';
 
-import { createDescribeRouter } from '@modules/chat/adapters/primary/http/routes/chat-describe.route';
-import { createMediaRouter } from '@modules/chat/adapters/primary/http/routes/chat-media.route';
-import { createMemoryRouter } from '@modules/chat/adapters/primary/http/routes/chat-memory.route';
-import { createMessageRouter } from '@modules/chat/adapters/primary/http/routes/chat-message.route';
-import { createSessionRouter } from '@modules/chat/adapters/primary/http/routes/chat-session.route';
 import { createUploadAdmissionMiddleware } from '@src/helpers/middleware/upload-admission.middleware';
+
+import { createDescribeRouter } from './chat-describe.route';
+import { createMediaRouter } from './chat-media.route';
+import { createMemoryRouter } from './chat-memory.route';
+import { createMessageRouter } from './chat-message.route';
+import { createSessionRouter } from './chat-session.route';
 
 import type { ArtKeywordRepository } from '@modules/chat/domain/art-keyword/artKeyword.repository.interface';
 import type { DescribeService } from '@modules/chat/useCase/describe/describe.service';

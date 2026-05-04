@@ -1,10 +1,13 @@
+import { TICKET_STATUSES, TICKET_PRIORITIES } from '@modules/support/domain/ticket/support.types';
 import { auditService, AUDIT_ADMIN_TICKET_UPDATED } from '@shared/audit';
 import { badRequest, notFound } from '@shared/errors/app.error';
 
-import { TICKET_STATUSES, TICKET_PRIORITIES } from '../../domain/ticket/support.types';
-
-import type { ISupportRepository } from '../../domain/ticket/support.repository.interface';
-import type { TicketDTO, TicketStatus, TicketPriority } from '../../domain/ticket/support.types';
+import type { ISupportRepository } from '@modules/support/domain/ticket/support.repository.interface';
+import type {
+  TicketDTO,
+  TicketStatus,
+  TicketPriority,
+} from '@modules/support/domain/ticket/support.types';
 
 /** Input for the update-ticket-status use case. */
 export interface UpdateTicketStatusInput {

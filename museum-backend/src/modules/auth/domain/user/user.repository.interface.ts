@@ -1,5 +1,5 @@
 import type { User } from './user.entity';
-import type { ContentPreference } from '../consent/content-preference';
+import type { ContentPreference } from '@modules/auth/domain/consent/content-preference';
 
 /** Port for user persistence operations. Implemented by {@link UserRepositoryPg}. */
 export interface IUserRepository {

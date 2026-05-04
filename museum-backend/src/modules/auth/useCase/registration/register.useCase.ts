@@ -8,8 +8,8 @@ import { validateNameField } from '@shared/validation/input';
 import { validatePassword } from '@shared/validation/password';
 import { assertPasswordNotBreached } from '@shared/validation/password-breach-check';
 
-import type { User } from '../../domain/user/user.entity';
-import type { IUserRepository } from '../../domain/user/user.repository.interface';
+import type { User } from '@modules/auth/domain/user/user.entity';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 import type { EmailService } from '@shared/email/email.port';
 
 /** Orchestrates new user registration with email/password. */

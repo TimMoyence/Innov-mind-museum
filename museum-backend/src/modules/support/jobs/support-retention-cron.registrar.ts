@@ -1,6 +1,5 @@
+import { pruneSupportTickets } from '@modules/support/useCase/retention/prune-support-tickets';
 import { registerScheduledJob, type ScheduledJobHandle } from '@shared/queue/scheduled-jobs';
-
-import { pruneSupportTickets } from '../useCase/retention/prune-support-tickets';
 
 import type { ConnectionOptions } from 'bullmq';
 import type { DataSource } from 'typeorm';

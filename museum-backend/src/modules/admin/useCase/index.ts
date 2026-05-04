@@ -4,6 +4,19 @@
  * Cross-module facades (review, support) are also composed here to keep the
  * primary adapter free of peer-module imports.
  */
+import { AppDataSource } from '@data/db/data-source';
+import { AdminRepositoryPg } from '@modules/admin/adapters/secondary/pg/admin.repository.pg';
+import { GetContentAnalyticsUseCase } from '@modules/admin/useCase/analytics/getContentAnalytics.useCase';
+import { GetEngagementAnalyticsUseCase } from '@modules/admin/useCase/analytics/getEngagementAnalytics.useCase';
+import { GetStatsUseCase } from '@modules/admin/useCase/analytics/getStats.useCase';
+import { GetUsageAnalyticsUseCase } from '@modules/admin/useCase/analytics/getUsageAnalytics.useCase';
+import { ListAuditLogsUseCase } from '@modules/admin/useCase/audit/listAuditLogs.useCase';
+import { AdminReviewFacade } from '@modules/admin/useCase/facades/admin-review.facade';
+import { AdminSupportFacade } from '@modules/admin/useCase/facades/admin-support.facade';
+import { ListReportsUseCase } from '@modules/admin/useCase/reports/listReports.useCase';
+import { ResolveReportUseCase } from '@modules/admin/useCase/reports/resolveReport.useCase';
+import { ChangeUserRoleUseCase } from '@modules/admin/useCase/users/changeUserRole.useCase';
+import { ListUsersUseCase } from '@modules/admin/useCase/users/listUsers.useCase';
 import {
   listAllReviewsUseCase as peerListAllReviewsUseCase,
   moderateReviewUseCase as peerModerateReviewUseCase,
@@ -12,20 +25,6 @@ import {
   listAllTicketsUseCase as peerListAllTicketsUseCase,
   updateTicketStatusUseCase as peerUpdateTicketStatusUseCase,
 } from '@modules/support/useCase';
-import { AppDataSource } from '@src/data/db/data-source';
-
-import { GetContentAnalyticsUseCase } from './analytics/getContentAnalytics.useCase';
-import { GetEngagementAnalyticsUseCase } from './analytics/getEngagementAnalytics.useCase';
-import { GetStatsUseCase } from './analytics/getStats.useCase';
-import { GetUsageAnalyticsUseCase } from './analytics/getUsageAnalytics.useCase';
-import { ListAuditLogsUseCase } from './audit/listAuditLogs.useCase';
-import { AdminReviewFacade } from './facades/admin-review.facade';
-import { AdminSupportFacade } from './facades/admin-support.facade';
-import { ListReportsUseCase } from './reports/listReports.useCase';
-import { ResolveReportUseCase } from './reports/resolveReport.useCase';
-import { ChangeUserRoleUseCase } from './users/changeUserRole.useCase';
-import { ListUsersUseCase } from './users/listUsers.useCase';
-import { AdminRepositoryPg } from '../adapters/secondary/pg/admin.repository.pg';
 
 const adminRepository = new AdminRepositoryPg(AppDataSource);
 

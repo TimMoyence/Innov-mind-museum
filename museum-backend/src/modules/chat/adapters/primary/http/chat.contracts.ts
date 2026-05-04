@@ -10,7 +10,7 @@ import type {
   PaginationInfo,
   SessionInfo,
   VisitorContext,
-} from '@modules/chat/adapters/primary/http/chat.shared-types';
+} from './chat.shared-types';
 import type { ChatSessionIntent, ReportReason } from '@modules/chat/domain/chat.types';
 import type { FeedbackValue } from '@modules/chat/domain/message/messageFeedback.entity';
 
@@ -20,7 +20,7 @@ export type {
   PaginationInfo,
   SessionInfo,
   VisitorContext,
-} from '@modules/chat/adapters/primary/http/chat.shared-types';
+} from './chat.shared-types';
 
 type RecordValue = Record<string, unknown>;
 
@@ -285,4 +285,4 @@ export {
   isFeedbackMessageResponse,
   isReportMessageResponse,
   isListSessionsResponse,
-} from '@modules/chat/adapters/primary/http/chat.type-guards';
+} from './chat.type-guards';

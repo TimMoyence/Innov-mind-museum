@@ -7,7 +7,7 @@ import { AppError, badRequest } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { validateEmail } from '@shared/validation/email';
 
-import type { IUserRepository } from '../../domain/user/user.repository.interface';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 import type { EmailService } from '@shared/email/email.port';
 
 /**

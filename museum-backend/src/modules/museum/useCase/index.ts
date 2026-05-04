@@ -2,28 +2,27 @@
  * Museum module composition root.
  * Wires repository implementations to use-case classes and exports ready-to-use singletons.
  */
-import { AppDataSource } from '@src/data/db/data-source';
-
-import { CreateMuseumUseCase } from './crud/createMuseum.useCase';
-import { GetMuseumUseCase } from './crud/getMuseum.useCase';
-import { ListMuseumsUseCase } from './crud/listMuseums.useCase';
-import { UpdateMuseumUseCase } from './crud/updateMuseum.useCase';
-import { EnrichMuseumUseCase } from './enrichment/enrichMuseum.useCase';
-import { PurgeDeadEnrichmentsUseCase } from './enrichment/purgeDeadEnrichments.useCase';
-import { RefreshStaleEnrichmentsUseCase } from './enrichment/refreshStaleEnrichments.useCase';
-import { LowDataPackService } from './search/low-data-pack.service';
-import { SearchMuseumsUseCase } from './search/searchMuseums.useCase';
+import { AppDataSource } from '@data/db/data-source';
 import {
   BullmqEnrichmentSchedulerAdapter,
   type BullmqEnrichmentSchedulerConfig,
-} from '../adapters/secondary/enrichment/bullmq-enrichment-scheduler.adapter';
-import { TypeOrmMuseumEnrichmentCacheAdapter } from '../adapters/secondary/enrichment/typeorm-museum-enrichment-cache.adapter';
-import { MuseumQaSeedRepositoryPg } from '../adapters/secondary/pg/museum-qa-seed.repository.typeorm';
-import { MuseumRepositoryPg } from '../adapters/secondary/pg/museum.repository.pg';
-import { Museum } from '../domain/museum/museum.entity';
+} from '@modules/museum/adapters/secondary/enrichment/bullmq-enrichment-scheduler.adapter';
+import { TypeOrmMuseumEnrichmentCacheAdapter } from '@modules/museum/adapters/secondary/enrichment/typeorm-museum-enrichment-cache.adapter';
+import { MuseumQaSeedRepositoryPg } from '@modules/museum/adapters/secondary/pg/museum-qa-seed.repository.typeorm';
+import { MuseumRepositoryPg } from '@modules/museum/adapters/secondary/pg/museum.repository.pg';
+import { Museum } from '@modules/museum/domain/museum/museum.entity';
+import { CreateMuseumUseCase } from '@modules/museum/useCase/crud/createMuseum.useCase';
+import { GetMuseumUseCase } from '@modules/museum/useCase/crud/getMuseum.useCase';
+import { ListMuseumsUseCase } from '@modules/museum/useCase/crud/listMuseums.useCase';
+import { UpdateMuseumUseCase } from '@modules/museum/useCase/crud/updateMuseum.useCase';
+import { EnrichMuseumUseCase } from '@modules/museum/useCase/enrichment/enrichMuseum.useCase';
+import { PurgeDeadEnrichmentsUseCase } from '@modules/museum/useCase/enrichment/purgeDeadEnrichments.useCase';
+import { RefreshStaleEnrichmentsUseCase } from '@modules/museum/useCase/enrichment/refreshStaleEnrichments.useCase';
+import { LowDataPackService } from '@modules/museum/useCase/search/low-data-pack.service';
+import { SearchMuseumsUseCase } from '@modules/museum/useCase/search/searchMuseums.useCase';
 
-import type { EnrichmentSchedulerPort } from '../domain/ports/enrichment-scheduler.port';
-import type { MuseumEnrichmentQueuePort } from '../domain/ports/museum-enrichment-queue.port';
+import type { EnrichmentSchedulerPort } from '@modules/museum/domain/ports/enrichment-scheduler.port';
+import type { MuseumEnrichmentQueuePort } from '@modules/museum/domain/ports/museum-enrichment-queue.port';
 import type { CacheService } from '@shared/cache/cache.port';
 
 const DEFAULT_LOW_DATA_PACK_MAX_ENTRIES = 50;

@@ -4,7 +4,7 @@ import { ChatOpenAI } from '@langchain/openai';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
-import type { LLMCircuitBreaker } from '@modules/chat/adapters/secondary/llm/llm-circuit-breaker';
+import type { LLMCircuitBreaker } from './llm-circuit-breaker';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { buildOrchestratorMessages } from '@modules/chat/useCase/llm/llm-prompt-builder';

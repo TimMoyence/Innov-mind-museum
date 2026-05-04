@@ -1,5 +1,8 @@
-import type { IAdminRepository } from '../../domain/admin/admin.repository.interface';
-import type { ContentAnalytics, ContentAnalyticsFilters } from '../../domain/admin/admin.types';
+import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
+import type {
+  ContentAnalytics,
+  ContentAnalyticsFilters,
+} from '@modules/admin/domain/admin/admin.types';
 
 /** Delegates content analytics retrieval to the repository. */
 export class GetContentAnalyticsUseCase {

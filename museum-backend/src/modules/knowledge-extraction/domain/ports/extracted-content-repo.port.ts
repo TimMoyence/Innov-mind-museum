@@ -1,7 +1,7 @@
 import type {
   ExtractedContent,
   ExtractedContentStatus,
-} from '../extracted-content/extracted-content.entity';
+} from '@modules/knowledge-extraction/domain/extracted-content/extracted-content.entity';
 
 /** Port for extracted content persistence. */
 export interface ExtractedContentRepoPort {

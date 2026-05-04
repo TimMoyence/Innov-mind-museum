@@ -1,4 +1,4 @@
-import type { MuseumEnrichment } from '../museum-enrichment/museum-enrichment.entity';
+import type { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-enrichment/museum-enrichment.entity';
 
 /** Port for museum enrichment persistence. */
 export interface MuseumEnrichmentRepoPort {

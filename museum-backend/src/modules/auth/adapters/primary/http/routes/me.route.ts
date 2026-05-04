@@ -1,13 +1,12 @@
 import { type Request, type Response, Router } from 'express';
 
+import { exportUserDataUseCase, userRepository } from '@modules/auth/useCase';
 import { auditService } from '@shared/audit';
 import { AUDIT_DATA_EXPORT } from '@shared/audit/audit.types';
 import { AppError } from '@shared/errors/app.error';
 import { requireUser } from '@shared/http/requireUser';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import { byUserId, createRateLimitMiddleware } from '@src/helpers/middleware/rate-limit.middleware';
-
-import { exportUserDataUseCase, userRepository } from '../../../../useCase';
 
 /**
  * Express router for current-user (`req.user`) GDPR endpoints.

@@ -1,8 +1,8 @@
 import { auditService, AUDIT_ADMIN_REPORT_RESOLVED } from '@shared/audit';
 import { badRequest, notFound } from '@shared/errors/app.error';
 
-import type { IAdminRepository } from '../../domain/admin/admin.repository.interface';
-import type { AdminReportDTO, ReportStatus } from '../../domain/admin/admin.types';
+import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
+import type { AdminReportDTO, ReportStatus } from '@modules/admin/domain/admin/admin.types';
 
 /** Input for the resolve-report use case. */
 interface ResolveReportUseCaseInput {

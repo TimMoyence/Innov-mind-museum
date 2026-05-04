@@ -1,6 +1,6 @@
 import { logger } from '@shared/logger/logger';
 
-import type { IRefreshTokenRepository } from '../../domain/refresh-token/refresh-token.repository.interface';
+import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
 
 const LOCK_KEY = 'token-cleanup:lock';

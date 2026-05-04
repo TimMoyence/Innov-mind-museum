@@ -1,23 +1,22 @@
 import { type Request, type Response, Router } from 'express';
 
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { byIp, createRateLimitMiddleware } from '@src/helpers/middleware/rate-limit.middleware';
-import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
-import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
-
+import {
+  createTicketSchema,
+  submitSupportContactSchema,
+  addTicketMessageSchema,
+  listTicketsQuerySchema,
+} from '@modules/support/adapters/primary/http/schemas/support.schemas';
 import {
   createTicketUseCase,
   submitSupportContactUseCase,
   listUserTicketsUseCase,
   getTicketDetailUseCase,
   addTicketMessageUseCase,
-} from '../../../../useCase';
-import {
-  createTicketSchema,
-  submitSupportContactSchema,
-  addTicketMessageSchema,
-  listTicketsQuerySchema,
-} from '../schemas/support.schemas';
+} from '@modules/support/useCase';
+import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
+import { byIp, createRateLimitMiddleware } from '@src/helpers/middleware/rate-limit.middleware';
+import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
 
 const supportRouter: Router = Router();
 

@@ -1,8 +1,9 @@
 import { findNearbyMuseums } from '@modules/chat/useCase/enrichment/nearby-museums.provider';
 import { isValidSessionListCursor } from '@modules/chat/useCase/image/chat-image.helpers';
-import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
 import { badRequest } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
+
+import { ensureSessionAccess } from './session-access';
 
 import type {
   CreateSessionInput,

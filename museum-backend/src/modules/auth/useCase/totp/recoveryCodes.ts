@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 
 import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
 
-import type { TotpRecoveryCode } from '../../domain/totp/totp-secret.entity';
+import type { TotpRecoveryCode } from '@modules/auth/domain/totp/totp-secret.entity';
 
 /** Number of recovery codes generated per enrollment (R16). */
 export const RECOVERY_CODE_COUNT = 10;

@@ -1,6 +1,14 @@
 import { type Request, type Response, Router } from 'express';
 import { z } from 'zod';
 
+import {
+  challengeMfaUseCase,
+  disableMfaUseCase,
+  enrollMfaUseCase,
+  recoveryMfaUseCase,
+  verifyMfaUseCase,
+} from '@modules/auth/useCase';
+import { verifyMfaSessionToken } from '@modules/auth/useCase/totp/mfaSessionToken';
 import { auditService } from '@shared/audit';
 import {
   AUDIT_MFA_CHALLENGE_FAILED,
@@ -19,15 +27,6 @@ import {
   createRateLimitMiddleware,
 } from '@src/helpers/middleware/rate-limit.middleware';
 import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
-
-import {
-  challengeMfaUseCase,
-  disableMfaUseCase,
-  enrollMfaUseCase,
-  recoveryMfaUseCase,
-  verifyMfaUseCase,
-} from '../../../../useCase';
-import { verifyMfaSessionToken } from '../../../../useCase/totp/mfaSessionToken';
 
 /**
  * R16 MFA endpoints (SOC2 CC6.1).

@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import { byIp, createRateLimitMiddleware } from '@src/helpers/middleware/rate-limit.middleware';
 
-import type { LowDataPackService } from '../../../../useCase/search/low-data-pack.service';
+import type { LowDataPackService } from '@modules/museum/useCase/search/low-data-pack.service';
 
 /**
  * Builds the low-data pack Express router.

@@ -10,7 +10,7 @@ import {
   queryEngagementAnalytics,
 } from './admin-analytics-queries';
 
-import type { IAdminRepository } from '../../../domain/admin/admin.repository.interface';
+import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import type {
   AdminUserDTO,
   ListUsersFilters,
@@ -26,7 +26,7 @@ import type {
   ContentAnalyticsFilters,
   EngagementAnalytics,
   EngagementAnalyticsFilters,
-} from '../../../domain/admin/admin.types';
+} from '@modules/admin/domain/admin/admin.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 import type { DataSource, Repository } from 'typeorm';
 

@@ -1,13 +1,12 @@
 import bcrypt from 'bcrypt';
 import { type DataSource, MoreThan, type Repository } from 'typeorm';
 
+import { User } from '@modules/auth/domain/user/user.entity';
 import { conflict } from '@shared/errors/app.error';
 import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
 
-import { User } from '../../../domain/user/user.entity';
-
-import type { ContentPreference } from '../../../domain/consent/content-preference';
-import type { IUserRepository } from '../../../domain/user/user.repository.interface';
+import type { ContentPreference } from '@modules/auth/domain/consent/content-preference';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
 /** TypeORM implementation of {@link IUserRepository}. */
 export class UserRepositoryPg implements IUserRepository {

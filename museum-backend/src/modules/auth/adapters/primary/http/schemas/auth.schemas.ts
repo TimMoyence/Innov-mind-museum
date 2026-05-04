@@ -1,8 +1,7 @@
 import { z } from 'zod';
 
-import { TTS_VOICES } from '@modules/chat/voice-catalog';
-
-import { CONTENT_PREFERENCES } from '../../../../domain/consent/content-preference';
+import { CONTENT_PREFERENCES } from '@modules/auth/domain/consent/content-preference';
+import { TTS_VOICES } from '@modules/chat/domain/voice/voice-catalog';
 
 export const registerSchema = z.object({
   email: z.string().email(),

@@ -1,20 +1,19 @@
+import { ExtractionWorker } from '@modules/knowledge-extraction/adapters/primary/extraction.worker';
+import { TypeOrmArtworkKnowledgeRepo } from '@modules/knowledge-extraction/adapters/secondary/pg/typeorm-artwork-knowledge.repo';
+import { TypeOrmExtractedContentRepo } from '@modules/knowledge-extraction/adapters/secondary/pg/typeorm-extracted-content.repo';
+import { TypeOrmMuseumEnrichmentRepo } from '@modules/knowledge-extraction/adapters/secondary/pg/typeorm-museum-enrichment.repo';
+import { HtmlScraper } from '@modules/knowledge-extraction/adapters/secondary/scraper/html-scraper';
+import { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge/artwork-knowledge.entity';
+import { ExtractedContent } from '@modules/knowledge-extraction/domain/extracted-content/extracted-content.entity';
+import { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-enrichment/museum-enrichment.entity';
+import { ContentClassifierService } from '@modules/knowledge-extraction/useCase/classification/content-classifier.service';
+import { ExtractionJobService } from '@modules/knowledge-extraction/useCase/extraction/extraction-job.service';
+import { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
-import { ExtractionWorker } from './adapters/primary/extraction.worker';
-import { TypeOrmArtworkKnowledgeRepo } from './adapters/secondary/pg/typeorm-artwork-knowledge.repo';
-import { TypeOrmExtractedContentRepo } from './adapters/secondary/pg/typeorm-extracted-content.repo';
-import { TypeOrmMuseumEnrichmentRepo } from './adapters/secondary/pg/typeorm-museum-enrichment.repo';
-import { HtmlScraper } from './adapters/secondary/scraper/html-scraper';
-import { ArtworkKnowledge } from './domain/artwork-knowledge/artwork-knowledge.entity';
-import { ExtractedContent } from './domain/extracted-content/extracted-content.entity';
-import { MuseumEnrichment } from './domain/museum-enrichment/museum-enrichment.entity';
-import { ContentClassifierService } from './useCase/classification/content-classifier.service';
-import { ExtractionJobService } from './useCase/extraction/extraction-job.service';
-import { DbLookupService } from './useCase/lookup/db-lookup.service';
-
-import type { ArtworkKnowledgeRepoPort } from './domain/ports/artwork-knowledge-repo.port';
-import type { ExtractionQueuePort } from './domain/ports/extraction-queue.port';
+import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
+import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
 import type { DataSource } from 'typeorm';
 
 /** Built module output -- consumed by ChatModule and admin routes. */

@@ -1,6 +1,6 @@
-import { TotpSecret, type TotpRecoveryCode } from '../../../domain/totp/totp-secret.entity';
+import { TotpSecret, type TotpRecoveryCode } from '@modules/auth/domain/totp/totp-secret.entity';
 
-import type { ITotpSecretRepository } from '../../../domain/totp/totp-secret.repository.interface';
+import type { ITotpSecretRepository } from '@modules/auth/domain/totp/totp-secret.repository.interface';
 import type { DataSource, Repository } from 'typeorm';
 
 /** TypeORM implementation of {@link ITotpSecretRepository}. */

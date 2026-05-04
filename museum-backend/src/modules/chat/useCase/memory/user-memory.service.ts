@@ -1,5 +1,6 @@
-import { buildUserMemoryPromptBlock } from '@modules/chat/useCase/memory/user-memory.prompt';
 import { logger } from '@shared/logger/logger';
+
+import { buildUserMemoryPromptBlock } from './user-memory.prompt';
 
 import type { VisitContext } from '@modules/chat/domain/chat.types';
 import type { UserMemory } from '@modules/chat/domain/memory/userMemory.entity';

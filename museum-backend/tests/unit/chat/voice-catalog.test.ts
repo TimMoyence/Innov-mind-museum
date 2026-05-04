@@ -1,4 +1,4 @@
-import { TTS_VOICES, isTtsVoice } from '@modules/chat/voice-catalog';
+import { TTS_VOICES, isTtsVoice } from '@modules/chat/domain/voice/voice-catalog';
 
 describe('TTS voice catalog (Spec C sentinel)', () => {
   it('exports exactly 6 voices in a canonical order', () => {

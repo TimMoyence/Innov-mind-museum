@@ -1,9 +1,12 @@
+import { REVIEW_STATUSES } from '@modules/review/domain/review/review.types';
 import { badRequest } from '@shared/errors/app.error';
 
-import { REVIEW_STATUSES } from '../../domain/review/review.types';
-
-import type { IReviewRepository } from '../../domain/review/review.repository.interface';
-import type { ReviewDTO, ListReviewsFilters, ReviewStatus } from '../../domain/review/review.types';
+import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
+import type {
+  ReviewDTO,
+  ListReviewsFilters,
+  ReviewStatus,
+} from '@modules/review/domain/review/review.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 
 /** Input for listing all reviews (admin view). */

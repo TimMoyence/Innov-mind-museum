@@ -1,4 +1,4 @@
-import type { IReviewRepository } from '../../domain/review/review.repository.interface';
+import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
 
 /** Stats returned by the get-review-stats use case. */
 export interface ReviewStats {

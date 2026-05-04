@@ -1,14 +1,17 @@
 import { AppError } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 
-import type { NonceStore } from '../../domain/ports/nonce-store.port';
+import type { NonceStore } from '@modules/auth/domain/ports/nonce-store.port';
 import type {
   SocialTokenVerifier,
   SocialProvider,
-} from '../../domain/ports/social-token-verifier.port';
-import type { ISocialAccountRepository } from '../../domain/social-account/socialAccount.repository.interface';
-import type { IUserRepository } from '../../domain/user/user.repository.interface';
-import type { AuthSessionService, AuthSessionResponse } from '../session/authSession.service';
+} from '@modules/auth/domain/ports/social-token-verifier.port';
+import type { ISocialAccountRepository } from '@modules/auth/domain/social-account/socialAccount.repository.interface';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
+import type {
+  AuthSessionService,
+  AuthSessionResponse,
+} from '@modules/auth/useCase/session/authSession.service';
 
 const APPLE_PRIVATE_RELAY_SUFFIX = '@privaterelay.appleid.com';
 

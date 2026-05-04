@@ -2,47 +2,49 @@
  * Auth module composition root.
  * Wires repository implementations to use-case classes and exports ready-to-use singleton instances.
  */
+import { AppDataSource } from '@data/db/data-source';
+import { ApiKeyRepositoryPg } from '@modules/auth/adapters/secondary/pg/apiKey.repository.pg';
+import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/pg/refresh-token.repository.pg';
+import { SocialAccountRepositoryPg } from '@modules/auth/adapters/secondary/pg/social-account.repository.pg';
+import { TotpSecretRepositoryPg } from '@modules/auth/adapters/secondary/pg/totp-secret.repository.pg';
+import { UserRepositoryPg } from '@modules/auth/adapters/secondary/pg/user.repository.pg';
+import { UserConsentRepositoryPg } from '@modules/auth/adapters/secondary/pg/userConsent.repository.pg';
+import { InMemoryNonceStore } from '@modules/auth/adapters/secondary/social/nonce-store';
+import { SocialTokenVerifierAdapter } from '@modules/auth/adapters/secondary/social/social-token-verifier.adapter';
+import {
+  DeleteAccountUseCase,
+  type ImageCleanupPort,
+} from '@modules/auth/useCase/account/deleteAccount.useCase';
+import { ExportUserDataUseCase } from '@modules/auth/useCase/account/exportUserData.useCase';
+import { GetProfileUseCase } from '@modules/auth/useCase/account/getProfile.useCase';
+import { GenerateApiKeyUseCase } from '@modules/auth/useCase/api-keys/generateApiKey.useCase';
+import { ListApiKeysUseCase } from '@modules/auth/useCase/api-keys/listApiKeys.useCase';
+import { RevokeApiKeyUseCase } from '@modules/auth/useCase/api-keys/revokeApiKey.useCase';
+import { GrantConsentUseCase } from '@modules/auth/useCase/consent/grantConsent.useCase';
+import { RevokeConsentUseCase } from '@modules/auth/useCase/consent/revokeConsent.useCase';
+import { UpdateContentPreferencesUseCase } from '@modules/auth/useCase/consent/updateContentPreferences.useCase';
+import { UpdateTtsVoiceUseCase } from '@modules/auth/useCase/consent/updateTtsVoice.useCase';
+import { ChangeEmailUseCase } from '@modules/auth/useCase/email/changeEmail.useCase';
+import { ConfirmEmailChangeUseCase } from '@modules/auth/useCase/email/confirmEmailChange.useCase';
+import { ChangePasswordUseCase } from '@modules/auth/useCase/password/changePassword.useCase';
+import { ForgotPasswordUseCase } from '@modules/auth/useCase/password/forgotPassword.useCase';
+import { ResetPasswordUseCase } from '@modules/auth/useCase/password/resetPassword.useCase';
+import { RegisterUseCase } from '@modules/auth/useCase/registration/register.useCase';
+import { VerifyEmailUseCase } from '@modules/auth/useCase/registration/verifyEmail.useCase';
+import { AuthSessionService } from '@modules/auth/useCase/session/authSession.service';
+import { SocialLoginUseCase } from '@modules/auth/useCase/social/socialLogin.useCase';
+import { ChallengeMfaUseCase } from '@modules/auth/useCase/totp/challengeMfa.useCase';
+import { DisableMfaUseCase } from '@modules/auth/useCase/totp/disableMfa.useCase';
+import { EnrollMfaUseCase } from '@modules/auth/useCase/totp/enrollMfa.useCase';
+import { RecoveryMfaUseCase } from '@modules/auth/useCase/totp/recoveryMfa.useCase';
+import { VerifyMfaUseCase } from '@modules/auth/useCase/totp/verifyMfa.useCase';
 import { BrevoEmailService } from '@shared/email/brevo-email.service';
 import { TestEmailService } from '@shared/email/test-email-service';
 import { env } from '@src/config/env';
-import { AppDataSource } from '@src/data/db/data-source';
 import {
   setApiKeyRepository,
   setUserRoleResolver,
 } from '@src/helpers/middleware/apiKey.middleware';
-
-import { DeleteAccountUseCase, type ImageCleanupPort } from './account/deleteAccount.useCase';
-import { ExportUserDataUseCase } from './account/exportUserData.useCase';
-import { GetProfileUseCase } from './account/getProfile.useCase';
-import { GenerateApiKeyUseCase } from './api-keys/generateApiKey.useCase';
-import { ListApiKeysUseCase } from './api-keys/listApiKeys.useCase';
-import { RevokeApiKeyUseCase } from './api-keys/revokeApiKey.useCase';
-import { GrantConsentUseCase } from './consent/grantConsent.useCase';
-import { RevokeConsentUseCase } from './consent/revokeConsent.useCase';
-import { UpdateContentPreferencesUseCase } from './consent/updateContentPreferences.useCase';
-import { UpdateTtsVoiceUseCase } from './consent/updateTtsVoice.useCase';
-import { ChangeEmailUseCase } from './email/changeEmail.useCase';
-import { ConfirmEmailChangeUseCase } from './email/confirmEmailChange.useCase';
-import { ChangePasswordUseCase } from './password/changePassword.useCase';
-import { ForgotPasswordUseCase } from './password/forgotPassword.useCase';
-import { ResetPasswordUseCase } from './password/resetPassword.useCase';
-import { RegisterUseCase } from './registration/register.useCase';
-import { VerifyEmailUseCase } from './registration/verifyEmail.useCase';
-import { AuthSessionService } from './session/authSession.service';
-import { SocialLoginUseCase } from './social/socialLogin.useCase';
-import { ChallengeMfaUseCase } from './totp/challengeMfa.useCase';
-import { DisableMfaUseCase } from './totp/disableMfa.useCase';
-import { EnrollMfaUseCase } from './totp/enrollMfa.useCase';
-import { RecoveryMfaUseCase } from './totp/recoveryMfa.useCase';
-import { VerifyMfaUseCase } from './totp/verifyMfa.useCase';
-import { ApiKeyRepositoryPg } from '../adapters/secondary/pg/apiKey.repository.pg';
-import { RefreshTokenRepositoryPg } from '../adapters/secondary/pg/refresh-token.repository.pg';
-import { SocialAccountRepositoryPg } from '../adapters/secondary/pg/social-account.repository.pg';
-import { TotpSecretRepositoryPg } from '../adapters/secondary/pg/totp-secret.repository.pg';
-import { UserRepositoryPg } from '../adapters/secondary/pg/user.repository.pg';
-import { UserConsentRepositoryPg } from '../adapters/secondary/pg/userConsent.repository.pg';
-import { InMemoryNonceStore } from '../adapters/secondary/social/nonce-store';
-import { SocialTokenVerifierAdapter } from '../adapters/secondary/social/social-token-verifier.adapter';
 
 import type {
   ChatDataExportPort,
@@ -50,7 +52,7 @@ import type {
   SupportDataExportPort,
   UserReviewExportEntry,
   UserSupportTicketExportEntry,
-} from '../domain/export/exportUserData.types';
+} from '@modules/auth/domain/export/exportUserData.types';
 import type { EmailService } from '@shared/email/email.port';
 
 const userRepository = new UserRepositoryPg(AppDataSource);

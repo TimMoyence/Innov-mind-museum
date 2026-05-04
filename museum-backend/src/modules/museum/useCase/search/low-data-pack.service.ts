@@ -1,6 +1,6 @@
 import { logger } from '@shared/logger/logger';
 
-import type { MuseumQaSeedRepository } from '../../domain/qa-seed/museumQaSeed.repository.interface';
+import type { MuseumQaSeedRepository } from '@modules/museum/domain/qa-seed/museumQaSeed.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
 
 interface CachedEntry {

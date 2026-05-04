@@ -1,4 +1,4 @@
-import { AppDataSource } from '@src/data/db/data-source';
+import { AppDataSource } from '@data/db/data-source';
 
 import { AuditRepositoryPg } from './audit.repository.pg';
 import { AuditService } from './audit.service';

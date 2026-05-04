@@ -13,7 +13,7 @@ import { museumNamesAreSimilar } from '@shared/utils/string-similarity';
 import type {
   BoundingBox,
   IMuseumRepository,
-} from '../../domain/museum/museum.repository.interface';
+} from '@modules/museum/domain/museum/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
 
 export type { MuseumCategory } from '@shared/http/overpass.client';

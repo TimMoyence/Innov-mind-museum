@@ -1,12 +1,12 @@
-import type { IUserConsentRepository } from '../../domain/consent/userConsent.repository.interface';
+import type { IUserConsentRepository } from '@modules/auth/domain/consent/userConsent.repository.interface';
 import type {
   ChatDataExportPort,
   ReviewDataExportPort,
   SupportDataExportPort,
   UserConsentExportEntry,
   UserExportPayload,
-} from '../../domain/export/exportUserData.types';
-import type { User } from '../../domain/user/user.entity';
+} from '@modules/auth/domain/export/exportUserData.types';
+import type { User } from '@modules/auth/domain/user/user.entity';
 
 interface ExportUserDataDeps {
   chatDataExport: ChatDataExportPort;

@@ -1,5 +1,5 @@
 import { UpdateTtsVoiceUseCase } from '@modules/auth/useCase/consent/updateTtsVoice.useCase';
-import type { TtsVoice } from '@modules/chat/voice-catalog';
+import type { TtsVoice } from '@modules/chat/domain/voice/voice-catalog';
 
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import { makeUserRepo } from '../../helpers/auth/user-repo.mock';

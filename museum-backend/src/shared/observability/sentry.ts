@@ -1,13 +1,14 @@
 import * as Sentry from '@sentry/node';
 
 import { logger } from '@shared/logger/logger';
+import { env } from '@src/config/env';
+
 import {
   scrubEvent,
   shouldDropBreadcrumb,
   type ScrubbableBreadcrumb,
   type ScrubbableEvent,
-} from '@shared/observability/sentry-scrubber';
-import { env } from '@src/config/env';
+} from './sentry-scrubber';
 
 import type { Span } from '@sentry/node';
 import type { Express } from 'express';

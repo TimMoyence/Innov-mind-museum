@@ -1,5 +1,6 @@
-import { buildWebSearchPromptBlock } from '@modules/chat/useCase/web-search/web-search.prompt';
 import { logger } from '@shared/logger/logger';
+
+import { buildWebSearchPromptBlock } from './web-search.prompt';
 
 import type {
   SearchResult,

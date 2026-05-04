@@ -1,12 +1,13 @@
-import { scoreImage } from '@modules/chat/useCase/image/image-scoring';
 import { logger } from '@shared/logger/logger';
 
+import { scoreImage } from './image-scoring';
+
+import type { ImageCandidate } from './image-scoring';
 import type { EnrichedImage } from '@modules/chat/domain/chat.types';
 import type {
   ImageSourceClient,
   ImageSourcePhoto,
 } from '@modules/chat/domain/ports/image-source.port';
-import type { ImageCandidate } from '@modules/chat/useCase/image/image-scoring';
 
 /** Configuration for the image enrichment service. */
 export interface ImageEnrichmentConfig {

@@ -1,9 +1,8 @@
+import { listObjectsByPrefix } from '@modules/chat/adapters/secondary/storage/s3-operations';
 import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import { logger } from '@shared/logger/logger';
 
-import { listObjectsByPrefix } from '../adapters/secondary/storage/s3-operations';
-
-import type { S3ImageStorageConfig } from '../adapters/secondary/storage/s3-operations';
+import type { S3ImageStorageConfig } from '@modules/chat/adapters/secondary/storage/s3-operations';
 import type { DataSource } from 'typeorm';
 
 /** Default key prefixes the chat module writes under (production layout). */

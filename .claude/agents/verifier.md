@@ -162,7 +162,7 @@ Example fabricated verdict (BAD — UFR-013, score 0):
 Example honest WARN (GOOD):
 > "VERDICT: WARN
 > Gate: spot-check
-> Evidence: I read `museum-backend/src/modules/auth/useCase/login-rate-limiter.ts:42`. Found `as any` cast at line 67 — this is NEW since startCommit (verified via `git blame`). Editor's self-verification missed it.
+> Evidence: I read `museum-backend/src/modules/auth/useCase/session/login-rate-limiter.ts:42`. Found `as any` cast at line 67 — this is NEW since startCommit (verified via `git blame`). Editor's self-verification missed it.
 > Failures: file:line auth/.../login-rate-limiter.ts:67 — `as any` outside tests/helpers, violates Phase 7 shape-match.
 > Recommendation: refactor to typed cast OR move pattern to a fixture; do not merge."
 

@@ -1,5 +1,5 @@
-import type { ArtworkKnowledge } from '../../../domain/artwork-knowledge/artwork-knowledge.entity';
-import type { ArtworkKnowledgeRepoPort } from '../../../domain/ports/artwork-knowledge-repo.port';
+import type { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge/artwork-knowledge.entity';
+import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { Repository } from 'typeorm';
 
 /**

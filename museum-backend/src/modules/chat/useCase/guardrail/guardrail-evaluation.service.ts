@@ -1,8 +1,3 @@
-import {
-  buildGuardrailRefusal,
-  evaluateAssistantOutputGuardrail,
-  evaluateUserInputGuardrail,
-} from '@modules/chat/useCase/guardrail/art-topic-guardrail';
 import { withPolicyCitation } from '@modules/chat/useCase/image/chat-image.helpers';
 import { redactSnippetForAudit } from '@modules/chat/util/guardrail-snippet';
 import {
@@ -13,13 +8,19 @@ import {
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
+import {
+  buildGuardrailRefusal,
+  evaluateAssistantOutputGuardrail,
+  evaluateUserInputGuardrail,
+} from './art-topic-guardrail';
+
+import type { GuardrailBlockReason } from './art-topic-guardrail';
 import type { ChatAssistantMetadata } from '@modules/chat/domain/chat.types';
 import type { AdvancedGuardrail } from '@modules/chat/domain/ports/advanced-guardrail.port';
 import type {
   ChatRepository,
   PersistMessageInput,
 } from '@modules/chat/domain/session/chat.repository.interface';
-import type { GuardrailBlockReason } from '@modules/chat/useCase/guardrail/art-topic-guardrail';
 import type { JudgeDecision } from '@modules/chat/useCase/llm/llm-judge-guardrail';
 import type { PostMessageResult } from '@modules/chat/useCase/orchestration/chat.service.types';
 import type { AuditService } from '@shared/audit/audit.service';

@@ -1,3 +1,4 @@
+import type { ChatSession } from './chatSession.entity';
 import type {
   CreateSessionInput,
   ChatRole,
@@ -6,7 +7,6 @@ import type {
 } from '@modules/chat/domain/chat.types';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { FeedbackValue } from '@modules/chat/domain/message/messageFeedback.entity';
-import type { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 
 /** Cursor-based pagination parameters for listing session messages. */
 export interface ListSessionMessagesParams {

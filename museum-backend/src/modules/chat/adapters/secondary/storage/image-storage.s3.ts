@@ -1,17 +1,18 @@
 import { randomUUID } from 'node:crypto';
 
+import { extensionByMime } from '@shared/media/mime-extensions';
+import { startSpan } from '@shared/observability/sentry';
+
 import {
   buildS3SignedHeadersForPut,
   buildS3PresignedReadUrl,
   httpPut,
   listObjectsByPrefix,
   deleteObjectsBatch,
-} from '@modules/chat/adapters/secondary/storage/s3-operations';
-import { normalizeObjectKey } from '@modules/chat/adapters/secondary/storage/s3-path-utils';
-import { extensionByMime } from '@shared/media/mime-extensions';
-import { startSpan } from '@shared/observability/sentry';
+} from './s3-operations';
+import { normalizeObjectKey } from './s3-path-utils';
 
-import type { S3ImageStorageConfig } from '@modules/chat/adapters/secondary/storage/s3-operations';
+import type { S3ImageStorageConfig } from './s3-operations';
 import type {
   ImageStorage,
   LegacyImageKeyFetcher,
@@ -83,11 +84,7 @@ export const buildS3SignedReadUrlFromRef = (params: {
 };
 
 // Re-export shared S3 operations for external consumers
-export {
-  buildS3PresignedReadUrl,
-  listObjectsByPrefix,
-  deleteObjectsBatch,
-} from '@modules/chat/adapters/secondary/storage/s3-operations';
+export { buildS3PresignedReadUrl, listObjectsByPrefix, deleteObjectsBatch } from './s3-operations';
 
 /** S3-compatible implementation of {@link ImageStorage} — uploads images via signed PUT requests. */
 export class S3CompatibleImageStorage implements ImageStorage {

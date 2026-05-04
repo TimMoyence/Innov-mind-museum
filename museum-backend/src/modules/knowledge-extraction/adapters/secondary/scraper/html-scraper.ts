@@ -8,7 +8,10 @@ import { parseHTML } from 'linkedom';
 
 import { logger } from '@shared/logger/logger';
 
-import type { ScrapedPage, ScraperPort } from '../../../domain/ports/scraper.port';
+import type {
+  ScrapedPage,
+  ScraperPort,
+} from '@modules/knowledge-extraction/domain/ports/scraper.port';
 
 /**
  * Configuration for the HTML scraper adapter.

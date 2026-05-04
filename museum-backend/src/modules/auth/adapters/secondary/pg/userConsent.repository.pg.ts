@@ -1,9 +1,9 @@
 import { IsNull } from 'typeorm';
 
-import { UserConsent } from '../../../domain/consent/userConsent.entity';
+import { UserConsent } from '@modules/auth/domain/consent/userConsent.entity';
 
-import type { ConsentScope, ConsentSource } from '../../../domain/consent/userConsent.entity';
-import type { IUserConsentRepository } from '../../../domain/consent/userConsent.repository.interface';
+import type { ConsentScope, ConsentSource } from '@modules/auth/domain/consent/userConsent.entity';
+import type { IUserConsentRepository } from '@modules/auth/domain/consent/userConsent.repository.interface';
 import type { DataSource, Repository } from 'typeorm';
 
 /** TypeORM implementation of {@link IUserConsentRepository}. */

@@ -1,6 +1,6 @@
 import { logger } from '@shared/logger/logger';
 
-import type { MuseumEnrichmentCachePort } from '../../domain/ports/museum-enrichment-cache.port';
+import type { MuseumEnrichmentCachePort } from '@modules/museum/domain/ports/museum-enrichment-cache.port';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1_000;
 

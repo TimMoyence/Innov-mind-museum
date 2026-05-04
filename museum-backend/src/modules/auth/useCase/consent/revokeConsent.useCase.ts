@@ -1,9 +1,8 @@
+import { CONSENT_SCOPES } from '@modules/auth/domain/consent/userConsent.entity';
 import { badRequest } from '@shared/errors/app.error';
 
-import { CONSENT_SCOPES } from '../../domain/consent/userConsent.entity';
-
-import type { ConsentScope } from '../../domain/consent/userConsent.entity';
-import type { IUserConsentRepository } from '../../domain/consent/userConsent.repository.interface';
+import type { ConsentScope } from '@modules/auth/domain/consent/userConsent.entity';
+import type { IUserConsentRepository } from '@modules/auth/domain/consent/userConsent.repository.interface';
 
 const isConsentScope = (value: string): value is ConsentScope =>
   (CONSENT_SCOPES as readonly string[]).includes(value);

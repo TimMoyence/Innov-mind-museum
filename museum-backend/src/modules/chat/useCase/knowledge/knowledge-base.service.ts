@@ -1,5 +1,6 @@
-import { buildKnowledgeBasePromptBlock } from '@modules/chat/useCase/knowledge/knowledge-base.prompt';
 import { logger } from '@shared/logger/logger';
+
+import { buildKnowledgeBasePromptBlock } from './knowledge-base.prompt';
 
 import type {
   ArtworkFacts,

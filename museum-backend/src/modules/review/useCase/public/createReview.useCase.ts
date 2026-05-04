@@ -1,7 +1,7 @@
 import { badRequest, unauthorized } from '@shared/errors/app.error';
 
-import type { IReviewRepository } from '../../domain/review/review.repository.interface';
-import type { CreateReviewInput, ReviewDTO } from '../../domain/review/review.types';
+import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
+import type { CreateReviewInput, ReviewDTO } from '@modules/review/domain/review/review.types';
 
 /** Authenticated user profile used to derive the display name server-side. */
 export interface ReviewAuthorProfile {

@@ -1,14 +1,15 @@
-import { buildChatImageObjectKey } from '@modules/chat/useCase/image/chat-image.helpers';
+import { AppError, badRequest } from '@shared/errors/app.error';
+import { logger } from '@shared/logger/logger';
+import { env } from '@src/config/env';
+
+import { buildChatImageObjectKey } from './chat-image.helpers';
 import {
   assertImageSize,
   assertMagicBytes,
   assertMimeType,
   decodeBase64Image,
   isSafeImageUrl,
-} from '@modules/chat/useCase/image/image-input';
-import { AppError, badRequest } from '@shared/errors/app.error';
-import { logger } from '@shared/logger/logger';
-import { env } from '@src/config/env';
+} from './image-input';
 
 import type { PostMessageInput } from '@modules/chat/domain/chat.types';
 import type { ImageProcessorPort } from '@modules/chat/domain/ports/image-processor.port';

@@ -1,5 +1,19 @@
 import { type Request, type Response, Router } from 'express';
 
+import {
+  createMuseumSchema,
+  getEnrichmentQuerySchema,
+  getEnrichmentStatusQuerySchema,
+  searchMuseumsQuerySchema,
+  updateMuseumSchema,
+} from '@modules/museum/adapters/primary/http/schemas/museum.schemas';
+import {
+  buildSearchMuseumsUseCase,
+  createMuseumUseCase,
+  getMuseumUseCase,
+  listMuseumsUseCase,
+  updateMuseumUseCase,
+} from '@modules/museum/useCase';
 import { auditService } from '@shared/audit';
 import { badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
@@ -8,23 +22,11 @@ import { requireRole } from '@src/helpers/middleware/require-role.middleware';
 import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
 
-import {
-  buildSearchMuseumsUseCase,
-  createMuseumUseCase,
-  getMuseumUseCase,
-  listMuseumsUseCase,
-  updateMuseumUseCase,
-} from '../../../../useCase';
-import {
-  createMuseumSchema,
-  getEnrichmentQuerySchema,
-  getEnrichmentStatusQuerySchema,
-  searchMuseumsQuerySchema,
-  updateMuseumSchema,
-} from '../schemas/museum.schemas';
-
-import type { MuseumDirectoryDTO, UpdateMuseumInput } from '../../../../domain/museum/museum.types';
-import type { EnrichMuseumUseCase } from '../../../../useCase/enrichment/enrichMuseum.useCase';
+import type {
+  MuseumDirectoryDTO,
+  UpdateMuseumInput,
+} from '@modules/museum/domain/museum/museum.types';
+import type { EnrichMuseumUseCase } from '@modules/museum/useCase/enrichment/enrichMuseum.useCase';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /** Handler: GET /api/museums/directory — public directory of active museums. */

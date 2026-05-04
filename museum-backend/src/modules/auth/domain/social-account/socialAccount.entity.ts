@@ -9,7 +9,7 @@ import {
   Unique,
 } from 'typeorm';
 
-import { User } from '../user/user.entity';
+import { User } from '@modules/auth/domain/user/user.entity';
 
 import type { Relation } from 'typeorm';
 

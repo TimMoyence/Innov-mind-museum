@@ -1,4 +1,4 @@
-import type { ReviewStatus } from '../review/review.types';
+import type { ReviewStatus } from '@modules/review/domain/review/review.types';
 
 /** Payload delivered to the notifier when a review is moderated. */
 export interface ReviewModerationPayload {

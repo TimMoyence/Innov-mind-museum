@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 
 import type { UserRole } from './user-role';
-import type { ContentPreference } from '../consent/content-preference';
+import type { ContentPreference } from '@modules/auth/domain/consent/content-preference';
 
 /** Represents a registered user account. Mapped to `users`. */
 @Entity({ name: 'users' })

@@ -7,7 +7,7 @@
 import { getActiveChatModule } from './chat-module-singleton';
 
 import type { BuiltChatModule } from './chat-module';
-import type { OcrService } from './domain/ports/ocr.port';
+import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';

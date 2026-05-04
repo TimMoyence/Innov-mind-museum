@@ -3,20 +3,20 @@ import crypto from 'node:crypto';
 import bcrypt from 'bcrypt';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 
+import { issueMfaSessionToken } from '@modules/auth/useCase/totp/mfaSessionToken';
 import { AppError, badRequest } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 
 import { checkLoginRateLimit, recordFailedLogin, clearLoginAttempts } from './login-rate-limiter';
-import { issueMfaSessionToken } from '../totp/mfaSessionToken';
 
 import type {
   IRefreshTokenRepository,
   StoredRefreshTokenRow,
-} from '../../domain/refresh-token/refresh-token.repository.interface';
-import type { ITotpSecretRepository } from '../../domain/totp/totp-secret.repository.interface';
-import type { UserRole } from '../../domain/user/user-role';
-import type { User } from '../../domain/user/user.entity';
-import type { IUserRepository } from '../../domain/user/user.repository.interface';
+} from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
+import type { ITotpSecretRepository } from '@modules/auth/domain/totp/totp-secret.repository.interface';
+import type { UserRole } from '@modules/auth/domain/user/user-role';
+import type { User } from '@modules/auth/domain/user/user.entity';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
 interface SafeUser {
   id: number;

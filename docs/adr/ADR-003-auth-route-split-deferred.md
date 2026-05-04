@@ -5,7 +5,7 @@
 
 ## Context
 
-`museum-backend/src/modules/auth/adapters/primary/http/auth.route.ts` contains **19 HTTP endpoints in 514 lines**:
+`museum-backend/src/modules/auth/adapters/primary/http/routes/auth.route.ts` contains **19 HTTP endpoints in 645 lines** (post backend hexagonal cleanup 2026-05-04 — path moved to `routes/`, file size grew):
 
 - `POST /register`, `/login`, `/refresh`, `/logout`
 - `GET /me`, `/export-data`
@@ -29,7 +29,7 @@ The file breaches `max-lines-per-function`-style intuition and is hard to test i
 
 Split strategy to adopt when executed:
 
-1. Create 5 sub-routers in `museum-backend/src/modules/auth/adapters/primary/http/`:
+1. Create 5 sub-routers in `museum-backend/src/modules/auth/adapters/primary/http/routes/`:
    - `register-login.router.ts` (4 endpoints, ~100 L)
    - `profile.router.ts` (4 endpoints, ~90 L)
    - `password.router.ts` (3 endpoints, ~80 L)
@@ -37,7 +37,7 @@ Split strategy to adopt when executed:
    - `api-keys.router.ts` (3 endpoints, ~80 L)
    - `social.router.ts` (1 endpoint + OAuth callbacks, existing)
 2. Compose in `auth.router.ts` (~40 L): `router.use(registerLogin); router.use(profile); ...`
-3. Move shared helpers (`pickEmailLocale`, validators) into `auth-route.helpers.ts`.
+3. Move shared helpers (`pickEmailLocale`, validators) into `helpers/auth-route.helpers.ts`.
 4. Impact-analysis gate: run `mcp__gitnexus__impact({target: "authRouter", direction: "upstream"})` — expect d=1 HITS in `src/app.ts` + test harness, nothing deeper.
 5. Run full test suite including E2E and contract tests before commit.
 

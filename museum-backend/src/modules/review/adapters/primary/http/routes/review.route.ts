@@ -1,19 +1,21 @@
 import { type Request, type Response, Router } from 'express';
 
 import { userRepository } from '@modules/auth/useCase';
+import {
+  createReviewSchema,
+  listReviewsQuerySchema,
+} from '@modules/review/adapters/primary/http/schemas/review.schemas';
+import {
+  createReviewUseCase,
+  listApprovedReviewsUseCase,
+  getReviewStatsUseCase,
+} from '@modules/review/useCase';
 import { unauthorized } from '@shared/errors/app.error';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
 
-import {
-  createReviewUseCase,
-  listApprovedReviewsUseCase,
-  getReviewStatsUseCase,
-} from '../../../../useCase';
-import { createReviewSchema, listReviewsQuerySchema } from '../schemas/review.schemas';
-
-import type { ReviewAuthorProfile } from '../../../../useCase/public/createReview.useCase';
+import type { ReviewAuthorProfile } from '@modules/review/useCase/public/createReview.useCase';
 
 /** Resolves the author profile used to derive the review display name. */
 export type ReviewAuthorResolver = (userId: number) => Promise<ReviewAuthorProfile | null>;

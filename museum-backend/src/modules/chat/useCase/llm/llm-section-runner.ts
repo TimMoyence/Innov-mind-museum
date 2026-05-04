@@ -4,7 +4,7 @@
  * adding analysis, metadata extraction, or multi-language sections
  * without changing the runner infrastructure.
  */
-import { Semaphore } from '@modules/chat/useCase/llm/semaphore';
+import { Semaphore } from './semaphore';
 
 /** Terminal status of a single section execution attempt. */
 type SectionRunStatus = 'success' | 'timeout' | 'error';

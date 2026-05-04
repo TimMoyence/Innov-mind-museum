@@ -1,14 +1,13 @@
+import { TICKET_STATUSES, TICKET_PRIORITIES } from '@modules/support/domain/ticket/support.types';
 import { badRequest } from '@shared/errors/app.error';
 
-import { TICKET_STATUSES, TICKET_PRIORITIES } from '../../domain/ticket/support.types';
-
-import type { ISupportRepository } from '../../domain/ticket/support.repository.interface';
+import type { ISupportRepository } from '@modules/support/domain/ticket/support.repository.interface';
 import type {
   TicketDTO,
   ListTicketsFilters,
   TicketStatus,
   TicketPriority,
-} from '../../domain/ticket/support.types';
+} from '@modules/support/domain/ticket/support.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 
 /** Input for listing all support tickets (admin/moderator view). */

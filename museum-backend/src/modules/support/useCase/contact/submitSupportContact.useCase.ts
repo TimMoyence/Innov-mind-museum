@@ -4,7 +4,7 @@ import { validateEmail } from '@shared/validation/email';
 import type {
   SupportContactNotifier,
   SupportContactPayload,
-} from '../../domain/ports/support-contact-notifier.port';
+} from '@modules/support/domain/ports/support-contact-notifier.port';
 
 /** Input accepted from the public support-contact endpoint. */
 interface SubmitSupportContactInput {

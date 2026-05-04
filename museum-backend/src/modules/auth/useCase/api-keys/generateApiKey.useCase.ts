@@ -1,10 +1,9 @@
 import crypto from 'node:crypto';
 
+import { ApiKey } from '@modules/auth/domain/api-key/apiKey.entity';
 import { badRequest } from '@shared/errors/app.error';
 
-import { ApiKey } from '../../domain/api-key/apiKey.entity';
-
-import type { ApiKeyRepository } from '../../domain/api-key/apiKey.repository.interface';
+import type { ApiKeyRepository } from '@modules/auth/domain/api-key/apiKey.repository.interface';
 
 const MAX_KEYS_PER_USER = 5;
 

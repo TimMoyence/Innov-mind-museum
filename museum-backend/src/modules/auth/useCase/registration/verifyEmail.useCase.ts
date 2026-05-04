@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 
 import { badRequest } from '@shared/errors/app.error';
 
-import type { IUserRepository } from '../../domain/user/user.repository.interface';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
 /** Verifies a user's email by consuming a verification token. */
 export class VerifyEmailUseCase {

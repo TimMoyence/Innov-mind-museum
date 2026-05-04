@@ -8,7 +8,7 @@ import type {
   LlmCacheLookupResult,
   LlmCacheService,
   LlmContextClass,
-} from '@modules/chat/useCase/llm/llm-cache.types';
+} from './llm-cache.types';
 import type { CacheService } from '@shared/cache/cache.port';
 
 const KEY_VERSION = 'v1';

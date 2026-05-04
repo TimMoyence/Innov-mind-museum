@@ -21,7 +21,7 @@ import crypto from 'node:crypto';
 
 import { env } from '@src/config/env';
 
-import type { NonceStore } from '../../../domain/ports/nonce-store.port';
+import type { NonceStore } from '@modules/auth/domain/ports/nonce-store.port';
 import type Redis from 'ioredis';
 
 const NONCE_BYTES = 16; // 128 bits — OIDC recommended floor.

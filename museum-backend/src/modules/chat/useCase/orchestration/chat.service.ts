@@ -6,6 +6,16 @@ import { ChatSessionService } from '@modules/chat/useCase/session/chat-session.s
 import { logger } from '@shared/logger/logger';
 
 import type {
+  CreateSessionResult,
+  DeleteSessionResult,
+  FeedbackMessageResult,
+  ListSessionsResult,
+  PostAudioMessageResult,
+  PostMessageResult,
+  ReportMessageResult,
+  SessionResult,
+} from './chat.service.types';
+import type {
   CreateSessionInput,
   MessagePageQuery,
   PostAudioMessageInput,
@@ -35,16 +45,6 @@ import type {
   LocationResolver,
 } from '@modules/chat/useCase/location/location-resolver';
 import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
-import type {
-  CreateSessionResult,
-  DeleteSessionResult,
-  FeedbackMessageResult,
-  ListSessionsResult,
-  PostAudioMessageResult,
-  PostMessageResult,
-  ReportMessageResult,
-  SessionResult,
-} from '@modules/chat/useCase/orchestration/chat.service.types';
 import type { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
 import type { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
@@ -61,7 +61,7 @@ export type {
   ReportMessageResult,
   SessionResult,
   ListSessionsResult,
-} from '@modules/chat/useCase/orchestration/chat.service.types';
+} from './chat.service.types';
 
 /** Dependencies for constructing a ChatService instance. */
 export interface ChatServiceDeps {
