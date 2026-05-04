@@ -1,4 +1,4 @@
-import type { User } from '@modules/auth/domain/user.entity';
+import type { User } from '@modules/auth/domain/user/user.entity';
 
 export const makeUser = (overrides: Partial<User> = {}): User =>
   ({

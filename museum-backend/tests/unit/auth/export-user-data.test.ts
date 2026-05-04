@@ -1,4 +1,4 @@
-import { ExportUserDataUseCase } from '@modules/auth/useCase/exportUserData.useCase';
+import { ExportUserDataUseCase } from '@modules/auth/useCase/account/exportUserData.useCase';
 
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 
@@ -9,9 +9,9 @@ import type {
   UserChatExportData,
   UserReviewExportEntry,
   UserSupportTicketExportEntry,
-} from '@modules/auth/domain/exportUserData.types';
-import type { IUserConsentRepository } from '@modules/auth/domain/userConsent.repository.interface';
-import type { UserConsent } from '@modules/auth/domain/userConsent.entity';
+} from '@modules/auth/domain/export/exportUserData.types';
+import type { IUserConsentRepository } from '@modules/auth/domain/consent/userConsent.repository.interface';
+import type { UserConsent } from '@modules/auth/domain/consent/userConsent.entity';
 
 const makeChatPort = (data: UserChatExportData): ChatDataExportPort => ({
   getAllUserData: async () => data,

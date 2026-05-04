@@ -1,7 +1,7 @@
 import {
   DeleteAccountUseCase,
   ImageCleanupPort,
-} from '@modules/auth/useCase/deleteAccount.useCase';
+} from '@modules/auth/useCase/account/deleteAccount.useCase';
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import { makeUserRepo } from '../../helpers/auth/user-repo.mock';
 

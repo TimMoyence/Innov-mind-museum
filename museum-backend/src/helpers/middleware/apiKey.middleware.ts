@@ -4,8 +4,8 @@ import { AppError } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { setUser } from '@shared/observability/sentry';
 
-import type { ApiKeyRepository } from '@modules/auth/domain/apiKey.repository.interface';
-import type { UserRole } from '@modules/auth/domain/user-role';
+import type { ApiKeyRepository } from '@modules/auth/domain/api-key/apiKey.repository.interface';
+import type { UserRole } from '@modules/auth/domain/user/user-role';
 import type { Request, Response, NextFunction } from 'express';
 
 /** Singleton reference set during auth module initialization. */

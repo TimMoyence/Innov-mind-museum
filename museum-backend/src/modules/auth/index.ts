@@ -31,23 +31,23 @@ export {
 
 // ── Domain types ─────────────────────────────────────────────────────────────
 
-export { User } from './domain/user.entity';
-export { UserConsent, CONSENT_SCOPES, CONSENT_SOURCES } from './domain/userConsent.entity';
-export type { ConsentScope, ConsentSource } from './domain/userConsent.entity';
-export type { IUserConsentRepository } from './domain/userConsent.repository.interface';
-export { UserRole } from './domain/user-role';
-export type { IUserRepository } from './domain/user.repository.interface';
-export type { IRefreshTokenRepository } from './domain/refresh-token.repository.interface';
-export type { ISocialAccountRepository } from './domain/socialAccount.repository.interface';
-export type { ApiKeyRepository } from './domain/apiKey.repository.interface';
+export { User } from './domain/user/user.entity';
+export { UserConsent, CONSENT_SCOPES, CONSENT_SOURCES } from './domain/consent/userConsent.entity';
+export type { ConsentScope, ConsentSource } from './domain/consent/userConsent.entity';
+export type { IUserConsentRepository } from './domain/consent/userConsent.repository.interface';
+export { UserRole } from './domain/user/user-role';
+export type { IUserRepository } from './domain/user/user.repository.interface';
+export type { IRefreshTokenRepository } from './domain/refresh-token/refresh-token.repository.interface';
+export type { ISocialAccountRepository } from './domain/social-account/socialAccount.repository.interface';
+export type { ApiKeyRepository } from './domain/api-key/apiKey.repository.interface';
 export type {
   SocialTokenVerifier,
   SocialTokenPayload,
   SocialProvider,
-} from './domain/social-token-verifier.port';
-export type { NonceStore } from './domain/nonce-store.port';
+} from './domain/ports/social-token-verifier.port';
+export type { NonceStore } from './domain/ports/nonce-store.port';
 export type {
   ChatDataExportPort,
   UserChatExportData,
   UserExportPayload,
-} from './domain/exportUserData.types';
+} from './domain/export/exportUserData.types';

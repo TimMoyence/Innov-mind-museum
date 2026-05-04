@@ -23,7 +23,7 @@ import { ChatSession } from '@modules/chat/domain/chatSession.entity';
 import { MessageFeedback } from '@modules/chat/domain/messageFeedback.entity';
 import { MessageReport } from '@modules/chat/domain/messageReport.entity';
 import { TypeOrmChatRepository } from '@modules/chat/adapters/secondary/chat.repository.typeorm';
-import { User } from '@modules/auth/domain/user.entity';
+import { User } from '@modules/auth/domain/user/user.entity';
 
 const shouldRunIntegration = process.env.RUN_INTEGRATION === 'true';
 const describeIntegration = shouldRunIntegration ? describe : describe.skip;

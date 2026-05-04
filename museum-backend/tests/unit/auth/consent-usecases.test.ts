@@ -1,7 +1,7 @@
 import { AppError } from '@shared/errors/app.error';
 
-import { GrantConsentUseCase } from '@modules/auth/useCase/grantConsent.useCase';
-import { RevokeConsentUseCase } from '@modules/auth/useCase/revokeConsent.useCase';
+import { GrantConsentUseCase } from '@modules/auth/useCase/consent/grantConsent.useCase';
+import { RevokeConsentUseCase } from '@modules/auth/useCase/consent/revokeConsent.useCase';
 
 import { makeUserConsentRepo } from '../../helpers/auth/userConsent-repo.mock';
 

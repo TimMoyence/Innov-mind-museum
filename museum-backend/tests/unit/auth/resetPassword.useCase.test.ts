@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
 import bcrypt from 'bcrypt';
-import { ResetPasswordUseCase } from '@modules/auth/useCase/resetPassword.useCase';
+import { ResetPasswordUseCase } from '@modules/auth/useCase/password/resetPassword.useCase';
 import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import { makeRefreshTokenRepo, makeUserRepo } from '../../helpers/auth/user-repo.mock';

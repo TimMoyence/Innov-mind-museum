@@ -11,38 +11,38 @@ import {
   setUserRoleResolver,
 } from '@src/helpers/middleware/apiKey.middleware';
 
-import { AuthSessionService } from './authSession.service';
-import { ChangeEmailUseCase } from './changeEmail.useCase';
-import { ChangePasswordUseCase } from './changePassword.useCase';
-import { ConfirmEmailChangeUseCase } from './confirmEmailChange.useCase';
-import { DeleteAccountUseCase, type ImageCleanupPort } from './deleteAccount.useCase';
-import { ExportUserDataUseCase } from './exportUserData.useCase';
-import { ForgotPasswordUseCase } from './forgotPassword.useCase';
-import { GenerateApiKeyUseCase } from './generateApiKey.useCase';
-import { GetProfileUseCase } from './getProfile.useCase';
-import { GrantConsentUseCase } from './grantConsent.useCase';
-import { ListApiKeysUseCase } from './listApiKeys.useCase';
-import { RegisterUseCase } from './register.useCase';
-import { ResetPasswordUseCase } from './resetPassword.useCase';
-import { RevokeApiKeyUseCase } from './revokeApiKey.useCase';
-import { RevokeConsentUseCase } from './revokeConsent.useCase';
-import { SocialLoginUseCase } from './socialLogin.useCase';
+import { DeleteAccountUseCase, type ImageCleanupPort } from './account/deleteAccount.useCase';
+import { ExportUserDataUseCase } from './account/exportUserData.useCase';
+import { GetProfileUseCase } from './account/getProfile.useCase';
+import { GenerateApiKeyUseCase } from './api-keys/generateApiKey.useCase';
+import { ListApiKeysUseCase } from './api-keys/listApiKeys.useCase';
+import { RevokeApiKeyUseCase } from './api-keys/revokeApiKey.useCase';
+import { GrantConsentUseCase } from './consent/grantConsent.useCase';
+import { RevokeConsentUseCase } from './consent/revokeConsent.useCase';
+import { UpdateContentPreferencesUseCase } from './consent/updateContentPreferences.useCase';
+import { UpdateTtsVoiceUseCase } from './consent/updateTtsVoice.useCase';
+import { ChangeEmailUseCase } from './email/changeEmail.useCase';
+import { ConfirmEmailChangeUseCase } from './email/confirmEmailChange.useCase';
+import { ChangePasswordUseCase } from './password/changePassword.useCase';
+import { ForgotPasswordUseCase } from './password/forgotPassword.useCase';
+import { ResetPasswordUseCase } from './password/resetPassword.useCase';
+import { RegisterUseCase } from './registration/register.useCase';
+import { VerifyEmailUseCase } from './registration/verifyEmail.useCase';
+import { AuthSessionService } from './session/authSession.service';
+import { SocialLoginUseCase } from './social/socialLogin.useCase';
 import { ChallengeMfaUseCase } from './totp/challengeMfa.useCase';
 import { DisableMfaUseCase } from './totp/disableMfa.useCase';
 import { EnrollMfaUseCase } from './totp/enrollMfa.useCase';
 import { RecoveryMfaUseCase } from './totp/recoveryMfa.useCase';
 import { VerifyMfaUseCase } from './totp/verifyMfa.useCase';
-import { UpdateContentPreferencesUseCase } from './updateContentPreferences.useCase';
-import { UpdateTtsVoiceUseCase } from './updateTtsVoice.useCase';
-import { VerifyEmailUseCase } from './verifyEmail.useCase';
-import { ApiKeyRepositoryPg } from '../adapters/secondary/apiKey.repository.pg';
-import { InMemoryNonceStore } from '../adapters/secondary/nonce-store';
-import { RefreshTokenRepositoryPg } from '../adapters/secondary/refresh-token.repository.pg';
-import { SocialAccountRepositoryPg } from '../adapters/secondary/social-account.repository.pg';
-import { SocialTokenVerifierAdapter } from '../adapters/secondary/social-token-verifier.adapter';
-import { TotpSecretRepositoryPg } from '../adapters/secondary/totp-secret.repository.pg';
-import { UserRepositoryPg } from '../adapters/secondary/user.repository.pg';
-import { UserConsentRepositoryPg } from '../adapters/secondary/userConsent.repository.pg';
+import { ApiKeyRepositoryPg } from '../adapters/secondary/pg/apiKey.repository.pg';
+import { RefreshTokenRepositoryPg } from '../adapters/secondary/pg/refresh-token.repository.pg';
+import { SocialAccountRepositoryPg } from '../adapters/secondary/pg/social-account.repository.pg';
+import { TotpSecretRepositoryPg } from '../adapters/secondary/pg/totp-secret.repository.pg';
+import { UserRepositoryPg } from '../adapters/secondary/pg/user.repository.pg';
+import { UserConsentRepositoryPg } from '../adapters/secondary/pg/userConsent.repository.pg';
+import { InMemoryNonceStore } from '../adapters/secondary/social/nonce-store';
+import { SocialTokenVerifierAdapter } from '../adapters/secondary/social/social-token-verifier.adapter';
 
 import type {
   ChatDataExportPort,
@@ -50,7 +50,7 @@ import type {
   SupportDataExportPort,
   UserReviewExportEntry,
   UserSupportTicketExportEntry,
-} from '../domain/exportUserData.types';
+} from '../domain/export/exportUserData.types';
 import type { EmailService } from '@shared/email/email.port';
 
 const userRepository = new UserRepositoryPg(AppDataSource);

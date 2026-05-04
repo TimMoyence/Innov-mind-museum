@@ -1,7 +1,7 @@
 import type { Repository, UpdateResult } from 'typeorm';
 
-import { ApiKey } from '@modules/auth/domain/apiKey.entity';
-import { ApiKeyRepositoryPg } from '@modules/auth/adapters/secondary/apiKey.repository.pg';
+import { ApiKey } from '@modules/auth/domain/api-key/apiKey.entity';
+import { ApiKeyRepositoryPg } from '@modules/auth/adapters/secondary/pg/apiKey.repository.pg';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 import { makeMockTypeOrmRepo, makeMockDataSource } from 'tests/helpers/shared/mock-deps';
 

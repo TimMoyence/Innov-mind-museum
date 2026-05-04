@@ -1,9 +1,9 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { AuthSessionService } from '@modules/auth/useCase/authSession.service';
-import { GetProfileUseCase } from '@modules/auth/useCase/getProfile.useCase';
-import type { IUserRepository } from '@modules/auth/domain/user.repository.interface';
-import type { User } from '@modules/auth/domain/user.entity';
+import { AuthSessionService } from '@modules/auth/useCase/session/authSession.service';
+import { GetProfileUseCase } from '@modules/auth/useCase/account/getProfile.useCase';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
+import type { User } from '@modules/auth/domain/user/user.entity';
 import { makeUser } from '../../helpers/auth/user.fixtures';
 
 jest.mock('bcrypt', () => ({

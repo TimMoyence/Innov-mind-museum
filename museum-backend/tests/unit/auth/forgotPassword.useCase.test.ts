@@ -1,4 +1,4 @@
-import { ForgotPasswordUseCase } from '@modules/auth/useCase/forgotPassword.useCase';
+import { ForgotPasswordUseCase } from '@modules/auth/useCase/password/forgotPassword.useCase';
 import type { EmailService } from '@shared/email/email.port';
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import { makeUserRepo } from '../../helpers/auth/user-repo.mock';

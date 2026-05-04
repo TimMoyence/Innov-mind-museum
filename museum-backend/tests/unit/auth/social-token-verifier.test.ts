@@ -64,15 +64,15 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 describe('social-token-verifier', () => {
-  let verifyAppleIdToken: typeof import('@modules/auth/adapters/secondary/social-token-verifier').verifyAppleIdToken;
-  let verifyGoogleIdToken: typeof import('@modules/auth/adapters/secondary/social-token-verifier').verifyGoogleIdToken;
-  let verifySocialIdToken: typeof import('@modules/auth/adapters/secondary/social-token-verifier').verifySocialIdToken;
+  let verifyAppleIdToken: typeof import('@modules/auth/adapters/secondary/social/social-token-verifier').verifyAppleIdToken;
+  let verifyGoogleIdToken: typeof import('@modules/auth/adapters/secondary/social/social-token-verifier').verifyGoogleIdToken;
+  let verifySocialIdToken: typeof import('@modules/auth/adapters/secondary/social/social-token-verifier').verifySocialIdToken;
 
   beforeEach(async () => {
     jest.clearAllMocks();
     // Re-import module each time to reset JWKS cache (module-level Map)
     jest.resetModules();
-    const mod = await import('@modules/auth/adapters/secondary/social-token-verifier');
+    const mod = await import('@modules/auth/adapters/secondary/social/social-token-verifier');
     verifyAppleIdToken = mod.verifyAppleIdToken;
     verifyGoogleIdToken = mod.verifyGoogleIdToken;
     verifySocialIdToken = mod.verifySocialIdToken;
@@ -300,7 +300,7 @@ describe('social-token-verifier', () => {
       mockFetch.mockReset();
       mockFetch.mockResolvedValue({ ok: false, status: 500 });
       jest.resetModules();
-      const mod = await import('@modules/auth/adapters/secondary/social-token-verifier');
+      const mod = await import('@modules/auth/adapters/secondary/social/social-token-verifier');
 
       const googleToken = signToken({
         sub: 'user',

@@ -64,13 +64,13 @@ const mockFetch = jest.fn();
 (global as any).fetch = mockFetch;
 
 describe('social-token-verifier — F3 nonce binding', () => {
-  let verifySocialIdToken: typeof import('@modules/auth/adapters/secondary/social-token-verifier').verifySocialIdToken;
+  let verifySocialIdToken: typeof import('@modules/auth/adapters/secondary/social/social-token-verifier').verifySocialIdToken;
 
   beforeEach(async () => {
     jest.clearAllMocks();
     jest.resetModules();
     oidcNonceEnforce = false;
-    const mod = await import('@modules/auth/adapters/secondary/social-token-verifier');
+    const mod = await import('@modules/auth/adapters/secondary/social/social-token-verifier');
     verifySocialIdToken = mod.verifySocialIdToken;
     mockFetch.mockResolvedValue({
       ok: true,

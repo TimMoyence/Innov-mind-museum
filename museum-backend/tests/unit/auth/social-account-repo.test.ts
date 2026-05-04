@@ -1,7 +1,7 @@
 import type { Repository } from 'typeorm';
 
-import { SocialAccount } from '@modules/auth/domain/socialAccount.entity';
-import { SocialAccountRepositoryPg } from '@modules/auth/adapters/secondary/social-account.repository.pg';
+import { SocialAccount } from '@modules/auth/domain/social-account/socialAccount.entity';
+import { SocialAccountRepositoryPg } from '@modules/auth/adapters/secondary/pg/social-account.repository.pg';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 import { makeMockTypeOrmRepo, makeMockDataSource } from 'tests/helpers/shared/mock-deps';
 

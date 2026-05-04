@@ -3,10 +3,10 @@ import { Router } from 'express';
 import { createAdminKeRouter } from '@modules/admin/adapters/primary/http/routes/admin-ke.route';
 import adminRouter from '@modules/admin/adapters/primary/http/routes/admin.route';
 import { createCachePurgeRouter } from '@modules/admin/adapters/primary/http/routes/cache-purge.route';
-import authRouter from '@modules/auth/adapters/primary/http/auth.route';
-import consentRouter from '@modules/auth/adapters/primary/http/consent.route';
-import meRouter from '@modules/auth/adapters/primary/http/me.route';
-import mfaRouter from '@modules/auth/adapters/primary/http/mfa.route';
+import authRouter from '@modules/auth/adapters/primary/http/routes/auth.route';
+import consentRouter from '@modules/auth/adapters/primary/http/routes/consent.route';
+import meRouter from '@modules/auth/adapters/primary/http/routes/me.route';
+import mfaRouter from '@modules/auth/adapters/primary/http/routes/mfa.route';
 import { createChatRouter } from '@modules/chat/adapters/primary/http/chat.route';
 import {
   getArtKeywordRepository,

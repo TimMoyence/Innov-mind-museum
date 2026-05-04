@@ -1,4 +1,4 @@
-import { UpdateContentPreferencesUseCase } from '@modules/auth/useCase/updateContentPreferences.useCase';
+import { UpdateContentPreferencesUseCase } from '@modules/auth/useCase/consent/updateContentPreferences.useCase';
 import { AppError } from '@shared/errors/app.error';
 
 import { makeUser } from '../../helpers/auth/user.fixtures';

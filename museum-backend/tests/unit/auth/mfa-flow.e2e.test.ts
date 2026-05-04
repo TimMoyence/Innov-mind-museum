@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 
-import { AuthSessionService } from '@modules/auth/useCase/authSession.service';
+import { AuthSessionService } from '@modules/auth/useCase/session/authSession.service';
 import { ChallengeMfaUseCase } from '@modules/auth/useCase/totp/challengeMfa.useCase';
 import { DisableMfaUseCase } from '@modules/auth/useCase/totp/disableMfa.useCase';
 import { EnrollMfaUseCase } from '@modules/auth/useCase/totp/enrollMfa.useCase';
@@ -17,8 +17,8 @@ import { InMemoryTotpSecretRepository } from '../../helpers/auth/mfa-fixtures';
 
 import * as OTPAuth from 'otpauth';
 
-import type { User } from '@modules/auth/domain/user.entity';
-import type { IUserRepository } from '@modules/auth/domain/user.repository.interface';
+import type { User } from '@modules/auth/domain/user/user.entity';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
 /**
  * R16 MFA flow — covers the eight policy branches from the W2.T4 mandate

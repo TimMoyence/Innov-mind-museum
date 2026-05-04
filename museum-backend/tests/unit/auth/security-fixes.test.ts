@@ -1,4 +1,4 @@
-import { AuthSessionService } from '@modules/auth/useCase/authSession.service';
+import { AuthSessionService } from '@modules/auth/useCase/session/authSession.service';
 import { parseReportMessageRequest } from '@modules/chat/adapters/primary/http/chat.contracts';
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import { makeUserRepo, makeRefreshTokenRepo } from '../../helpers/auth/user-repo.mock';

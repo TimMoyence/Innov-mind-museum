@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { UserRole } from '@modules/auth/domain/user-role';
+import { UserRole } from '@modules/auth/domain/user/user-role';
 import { REVIEW_STATUSES } from '@modules/review/domain/review/review.types';
 import { TICKET_PRIORITIES, TICKET_STATUSES } from '@modules/support/domain/ticket/support.types';
 

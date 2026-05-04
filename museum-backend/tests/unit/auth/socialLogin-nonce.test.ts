@@ -10,7 +10,7 @@
  *   4. When `env.auth.oidcNonceEnforce` is `true`, an absent nonce is rejected
  *      at the use-case boundary *before* hitting the verifier.
  */
-import { SocialLoginUseCase } from '@modules/auth/useCase/socialLogin.useCase';
+import { SocialLoginUseCase } from '@modules/auth/useCase/social/socialLogin.useCase';
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import {
   makeUserRepo,
@@ -18,8 +18,8 @@ import {
   makeAuthSessionServiceMock,
 } from '../../helpers/auth/user-repo.mock';
 
-import type { NonceStore } from '@modules/auth/domain/nonce-store.port';
-import type { SocialTokenVerifier } from '@modules/auth/domain/social-token-verifier.port';
+import type { NonceStore } from '@modules/auth/domain/ports/nonce-store.port';
+import type { SocialTokenVerifier } from '@modules/auth/domain/ports/social-token-verifier.port';
 
 let oidcNonceEnforce = false;
 

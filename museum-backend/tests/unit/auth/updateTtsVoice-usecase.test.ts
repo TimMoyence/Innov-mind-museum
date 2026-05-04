@@ -1,4 +1,4 @@
-import { UpdateTtsVoiceUseCase } from '@modules/auth/useCase/updateTtsVoice.useCase';
+import { UpdateTtsVoiceUseCase } from '@modules/auth/useCase/consent/updateTtsVoice.useCase';
 import type { TtsVoice } from '@modules/chat/voice-catalog';
 
 import { makeUser } from '../../helpers/auth/user.fixtures';

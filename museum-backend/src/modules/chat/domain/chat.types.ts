@@ -1,4 +1,4 @@
-import type { ContentPreference } from '@modules/auth/domain/content-preference';
+import type { ContentPreference } from '@modules/auth/domain/consent/content-preference';
 
 export type { ContentPreference };
 

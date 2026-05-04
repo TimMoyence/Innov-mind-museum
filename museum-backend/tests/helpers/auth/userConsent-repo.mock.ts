@@ -2,8 +2,8 @@ import type {
   ConsentScope,
   ConsentSource,
   UserConsent,
-} from '@modules/auth/domain/userConsent.entity';
-import type { IUserConsentRepository } from '@modules/auth/domain/userConsent.repository.interface';
+} from '@modules/auth/domain/consent/userConsent.entity';
+import type { IUserConsentRepository } from '@modules/auth/domain/consent/userConsent.repository.interface';
 
 /**
  * In-memory factory for {@link IUserConsentRepository} — DRY helper used by

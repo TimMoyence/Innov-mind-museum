@@ -1,4 +1,4 @@
-import { TokenCleanupService } from '@modules/auth/useCase/tokenCleanup.service';
+import { TokenCleanupService } from '@modules/auth/useCase/session/tokenCleanup.service';
 import { makeRefreshTokenRepo as makeFullRefreshTokenRepo } from '../../helpers/auth/user-repo.mock';
 
 jest.mock('@shared/logger/logger', () => ({

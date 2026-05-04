@@ -1,7 +1,7 @@
-import { GenerateApiKeyUseCase } from '@modules/auth/useCase/generateApiKey.useCase';
-import { ApiKey } from '@modules/auth/domain/apiKey.entity';
+import { GenerateApiKeyUseCase } from '@modules/auth/useCase/api-keys/generateApiKey.useCase';
+import { ApiKey } from '@modules/auth/domain/api-key/apiKey.entity';
 
-import type { ApiKeyRepository } from '@modules/auth/domain/apiKey.repository.interface';
+import type { ApiKeyRepository } from '@modules/auth/domain/api-key/apiKey.repository.interface';
 
 const makeApiKey = (overrides: Partial<ApiKey> = {}): ApiKey => {
   const key = new ApiKey();

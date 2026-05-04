@@ -18,11 +18,11 @@
 import bcrypt from 'bcrypt';
 import crypto from 'node:crypto';
 
-import { ForgotPasswordUseCase } from '@modules/auth/useCase/forgotPassword.useCase';
-import { ResetPasswordUseCase } from '@modules/auth/useCase/resetPassword.useCase';
-import type { IUserRepository } from '@modules/auth/domain/user.repository.interface';
-import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token.repository.interface';
-import type { User } from '@modules/auth/domain/user.entity';
+import { ForgotPasswordUseCase } from '@modules/auth/useCase/password/forgotPassword.useCase';
+import { ResetPasswordUseCase } from '@modules/auth/useCase/password/resetPassword.useCase';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
+import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
+import type { User } from '@modules/auth/domain/user/user.entity';
 import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import { makeUserRepo, makeRefreshTokenRepo } from '../../helpers/auth/user-repo.mock';

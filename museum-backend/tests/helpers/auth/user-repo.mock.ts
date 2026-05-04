@@ -1,9 +1,9 @@
-import type { IUserRepository } from '@modules/auth/domain/user.repository.interface';
-import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token.repository.interface';
-import type { ISocialAccountRepository } from '@modules/auth/domain/socialAccount.repository.interface';
-import type { AuthSessionService } from '@modules/auth/useCase/authSession.service';
-import type { AuthSessionResponse } from '@modules/auth/useCase/authSession.service';
-import type { User } from '@modules/auth/domain/user.entity';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
+import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
+import type { ISocialAccountRepository } from '@modules/auth/domain/social-account/socialAccount.repository.interface';
+import type { AuthSessionService } from '@modules/auth/useCase/session/authSession.service';
+import type { AuthSessionResponse } from '@modules/auth/useCase/session/authSession.service';
+import type { User } from '@modules/auth/domain/user/user.entity';
 
 /**
  * Creates a fully mocked IUserRepository.

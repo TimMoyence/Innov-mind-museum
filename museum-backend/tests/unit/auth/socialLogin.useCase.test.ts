@@ -1,5 +1,5 @@
-import { SocialLoginUseCase } from '@modules/auth/useCase/socialLogin.useCase';
-import type { SocialTokenVerifier } from '@modules/auth/domain/social-token-verifier.port';
+import { SocialLoginUseCase } from '@modules/auth/useCase/social/socialLogin.useCase';
+import type { SocialTokenVerifier } from '@modules/auth/domain/ports/social-token-verifier.port';
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import {
   makeUserRepo,

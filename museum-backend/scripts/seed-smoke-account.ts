@@ -4,7 +4,7 @@ import 'reflect-metadata';
 import bcrypt from 'bcrypt';
 
 import { AppDataSource } from '@data/db/data-source';
-import { User } from '@modules/auth/domain/user.entity';
+import { User } from '@modules/auth/domain/user/user.entity';
 
 /**
  * Idempotent seed for the post-deploy smoke-test account.

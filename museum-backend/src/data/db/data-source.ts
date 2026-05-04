@@ -1,12 +1,12 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 
-import { ApiKey } from '@modules/auth/domain/apiKey.entity';
-import { AuthRefreshToken } from '@modules/auth/domain/authRefreshToken.entity';
-import { SocialAccount } from '@modules/auth/domain/socialAccount.entity';
-import { TotpSecret } from '@modules/auth/domain/totp-secret.entity';
-import { User } from '@modules/auth/domain/user.entity';
-import { UserConsent } from '@modules/auth/domain/userConsent.entity';
+import { ApiKey } from '@modules/auth/domain/api-key/apiKey.entity';
+import { UserConsent } from '@modules/auth/domain/consent/userConsent.entity';
+import { AuthRefreshToken } from '@modules/auth/domain/refresh-token/authRefreshToken.entity';
+import { SocialAccount } from '@modules/auth/domain/social-account/socialAccount.entity';
+import { TotpSecret } from '@modules/auth/domain/totp/totp-secret.entity';
+import { User } from '@modules/auth/domain/user/user.entity';
 import { ArtKeyword } from '@modules/chat/domain/artKeyword.entity';
 import { ArtworkMatch } from '@modules/chat/domain/artworkMatch.entity';
 import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';

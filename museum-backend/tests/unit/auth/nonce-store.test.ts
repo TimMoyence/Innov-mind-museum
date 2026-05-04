@@ -12,7 +12,7 @@ import {
   createNonceStore,
   InMemoryNonceStore,
   RedisNonceStore,
-} from '@modules/auth/adapters/secondary/nonce-store';
+} from '@modules/auth/adapters/secondary/social/nonce-store';
 
 import type Redis from 'ioredis';
 

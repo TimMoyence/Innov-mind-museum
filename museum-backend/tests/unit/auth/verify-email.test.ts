@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-import { VerifyEmailUseCase } from '@modules/auth/useCase/verifyEmail.useCase';
-import { RegisterUseCase } from '@modules/auth/useCase/register.useCase';
+import { VerifyEmailUseCase } from '@modules/auth/useCase/registration/verifyEmail.useCase';
+import { RegisterUseCase } from '@modules/auth/useCase/registration/register.useCase';
 import type { EmailService } from '@shared/email/email.port';
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import { makeUserRepo } from '../../helpers/auth/user-repo.mock';

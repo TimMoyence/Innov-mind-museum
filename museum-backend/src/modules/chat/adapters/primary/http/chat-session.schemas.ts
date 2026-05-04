@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
-import { CONTENT_PREFERENCES, isContentPreference } from '@modules/auth/domain/content-preference';
+import {
+  CONTENT_PREFERENCES,
+  isContentPreference,
+} from '@modules/auth/domain/consent/content-preference';
 import { CHAT_SESSION_INTENTS } from '@modules/chat/domain/chat.types';
 
 /**

@@ -9,7 +9,7 @@ import {
   VersionColumn,
 } from 'typeorm';
 
-import { User } from '@modules/auth/domain/user.entity';
+import { User } from '@modules/auth/domain/user/user.entity';
 import { NotableArtworksSchema } from '@shared/db/jsonb-schemas/user-memory-notable-artworks.schema';
 import { jsonbValidator } from '@shared/db/jsonb-validator';
 

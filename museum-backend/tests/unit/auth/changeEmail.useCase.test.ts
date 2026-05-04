@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
-import { ChangeEmailUseCase } from '@modules/auth/useCase/changeEmail.useCase';
-import { ConfirmEmailChangeUseCase } from '@modules/auth/useCase/confirmEmailChange.useCase';
-import type { User } from '@modules/auth/domain/user.entity';
+import { ChangeEmailUseCase } from '@modules/auth/useCase/email/changeEmail.useCase';
+import { ConfirmEmailChangeUseCase } from '@modules/auth/useCase/email/confirmEmailChange.useCase';
+import type { User } from '@modules/auth/domain/user/user.entity';
 import type { EmailService } from '@shared/email/email.port';
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import {

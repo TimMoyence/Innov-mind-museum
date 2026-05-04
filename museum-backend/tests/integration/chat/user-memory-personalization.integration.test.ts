@@ -29,7 +29,7 @@ import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
 import { ChatSession } from '@modules/chat/domain/chatSession.entity';
 import { TypeOrmArtworkKnowledgeRepo } from '@modules/knowledge-extraction/adapters/secondary/pg/typeorm-artwork-knowledge.repo';
 import { TypeOrmUserMemoryRepository } from '@modules/chat/adapters/secondary/userMemory.repository.typeorm';
-import { User } from '@modules/auth/domain/user.entity';
+import { User } from '@modules/auth/domain/user/user.entity';
 import { UserMemory } from '@modules/chat/domain/userMemory.entity';
 import { UserMemoryService } from '@modules/chat/useCase/user-memory.service';
 

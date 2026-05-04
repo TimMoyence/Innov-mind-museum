@@ -4,8 +4,8 @@ import { generateRecoveryCodes } from './recoveryCodes';
 import { encryptTotpSecret } from './totpEncryption';
 import { generateTotpSecret } from './totpService';
 
-import type { ITotpSecretRepository } from '../../domain/totp-secret.repository.interface';
-import type { IUserRepository } from '../../domain/user.repository.interface';
+import type { ITotpSecretRepository } from '../../domain/totp/totp-secret.repository.interface';
+import type { IUserRepository } from '../../domain/user/user.repository.interface';
 
 /** Result of starting (or rotating) an MFA enrollment. */
 export interface EnrollMfaResult {

@@ -1,9 +1,9 @@
 import bcrypt from 'bcrypt';
 
-import { TotpSecret, type TotpRecoveryCode } from '@modules/auth/domain/totp-secret.entity';
+import { TotpSecret, type TotpRecoveryCode } from '@modules/auth/domain/totp/totp-secret.entity';
 import { encryptTotpSecret } from '@modules/auth/useCase/totp/totpEncryption';
 
-import type { ITotpSecretRepository } from '@modules/auth/domain/totp-secret.repository.interface';
+import type { ITotpSecretRepository } from '@modules/auth/domain/totp/totp-secret.repository.interface';
 
 /**
  * Build a {@link TotpSecret} entity with sensible defaults. Override any field

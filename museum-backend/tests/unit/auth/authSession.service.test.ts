@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import {
   AuthSessionService,
   type AuthSessionResponse,
-} from '@modules/auth/useCase/authSession.service';
+} from '@modules/auth/useCase/session/authSession.service';
 
 /**
  * Narrow `login()`'s discriminated-union return to the happy-path session
@@ -21,11 +21,11 @@ const assertSession = (result: unknown): AuthSessionResponse => {
 import type {
   IRefreshTokenRepository,
   StoredRefreshTokenRow,
-} from '@modules/auth/domain/refresh-token.repository.interface';
-import type { IUserRepository } from '@modules/auth/domain/user.repository.interface';
+} from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
+import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 import { env } from '@src/config/env';
 
-jest.mock('@modules/auth/useCase/login-rate-limiter', () => ({
+jest.mock('@modules/auth/useCase/session/login-rate-limiter', () => ({
   checkLoginRateLimit: jest.fn(),
   recordFailedLogin: jest.fn(),
   clearLoginAttempts: jest.fn(),
@@ -35,7 +35,7 @@ import {
   checkLoginRateLimit,
   recordFailedLogin,
   clearLoginAttempts,
-} from '@modules/auth/useCase/login-rate-limiter';
+} from '@modules/auth/useCase/session/login-rate-limiter';
 
 const mockCheckLoginRateLimit = checkLoginRateLimit as jest.MockedFunction<
   typeof checkLoginRateLimit

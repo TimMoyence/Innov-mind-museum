@@ -1,4 +1,4 @@
-import type { UserRole } from '@modules/auth/domain/user-role';
+import type { UserRole } from '@modules/auth/domain/user/user-role';
 
 /** Claims embedded in a signed JWT access token identifying the authenticated user. */
 export interface UserJwtPayload {

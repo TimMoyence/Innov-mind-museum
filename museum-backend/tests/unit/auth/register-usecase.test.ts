@@ -18,7 +18,7 @@ jest.mock('@src/config/env', () => ({
 
 import crypto from 'node:crypto';
 
-import { RegisterUseCase } from '@modules/auth/useCase/register.useCase';
+import { RegisterUseCase } from '@modules/auth/useCase/registration/register.useCase';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 import { makeUserRepo } from 'tests/helpers/auth/user-repo.mock';
 

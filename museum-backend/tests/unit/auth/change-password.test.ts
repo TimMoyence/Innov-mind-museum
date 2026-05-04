@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import { ChangePasswordUseCase } from '@modules/auth/useCase/changePassword.useCase';
+import { ChangePasswordUseCase } from '@modules/auth/useCase/password/changePassword.useCase';
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import { makeUserRepo, makeRefreshTokenRepo } from '../../helpers/auth/user-repo.mock';
 

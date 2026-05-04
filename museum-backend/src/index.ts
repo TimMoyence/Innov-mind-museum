@@ -5,8 +5,8 @@ import util from 'node:util';
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';
 
-import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/refresh-token.repository.pg';
-import { TokenCleanupService } from '@modules/auth/useCase/tokenCleanup.service';
+import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/pg/refresh-token.repository.pg';
+import { TokenCleanupService } from '@modules/auth/useCase/session/tokenCleanup.service';
 import { getOcrService, stopArtKeywordsRefresh, stopKnowledgeExtraction } from '@modules/chat';
 import { registerArtKeywordsRetentionCron } from '@modules/chat/jobs/art-keywords-retention-cron.registrar';
 import {

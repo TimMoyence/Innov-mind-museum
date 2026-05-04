@@ -1,5 +1,5 @@
-import { ApiKey } from '@modules/auth/domain/apiKey.entity';
-import type { ApiKeyRepository } from '@modules/auth/domain/apiKey.repository.interface';
+import { ApiKey } from '@modules/auth/domain/api-key/apiKey.entity';
+import type { ApiKeyRepository } from '@modules/auth/domain/api-key/apiKey.repository.interface';
 
 /** In-memory implementation of ApiKeyRepository for unit tests. */
 export class InMemoryApiKeyRepository implements ApiKeyRepository {

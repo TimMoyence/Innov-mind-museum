@@ -15,9 +15,9 @@ jest.mock('@modules/auth/useCase', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factory runs before ESM imports
   const { env: envConfig } = require('@src/config/env');
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- same reason
-  const { GrantConsentUseCase } = require('@modules/auth/useCase/grantConsent.useCase');
+  const { GrantConsentUseCase } = require('@modules/auth/useCase/consent/grantConsent.useCase');
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- same reason
-  const { RevokeConsentUseCase } = require('@modules/auth/useCase/revokeConsent.useCase');
+  const { RevokeConsentUseCase } = require('@modules/auth/useCase/consent/revokeConsent.useCase');
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- factory hoisted above top-level imports
   const { makeUserConsentRepo: makeRepo } = require('../../helpers/auth/userConsent-repo.mock');
 

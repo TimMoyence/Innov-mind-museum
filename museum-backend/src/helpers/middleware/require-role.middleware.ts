@@ -1,4 +1,4 @@
-import type { UserRole } from '@modules/auth/domain/user-role';
+import type { UserRole } from '@modules/auth/domain/user/user-role';
 import type { Request, Response, NextFunction } from 'express';
 
 /**

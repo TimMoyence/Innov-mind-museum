@@ -1,7 +1,7 @@
 import crypto from 'crypto';
-import { GenerateApiKeyUseCase } from '@modules/auth/useCase/generateApiKey.useCase';
-import { RevokeApiKeyUseCase } from '@modules/auth/useCase/revokeApiKey.useCase';
-import { ListApiKeysUseCase } from '@modules/auth/useCase/listApiKeys.useCase';
+import { GenerateApiKeyUseCase } from '@modules/auth/useCase/api-keys/generateApiKey.useCase';
+import { RevokeApiKeyUseCase } from '@modules/auth/useCase/api-keys/revokeApiKey.useCase';
+import { ListApiKeysUseCase } from '@modules/auth/useCase/api-keys/listApiKeys.useCase';
 import { InMemoryApiKeyRepository } from '../../helpers/auth/inMemoryApiKeyRepository';
 
 describe('API Key Authentication', () => {

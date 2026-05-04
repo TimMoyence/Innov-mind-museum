@@ -3,10 +3,10 @@ import crypto from 'node:crypto';
 import bcrypt from 'bcrypt';
 import type { DataSource, Repository, UpdateResult } from 'typeorm';
 
-import { User } from '@modules/auth/domain/user.entity';
+import { User } from '@modules/auth/domain/user/user.entity';
 import { AppError } from '@shared/errors/app.error';
 
-import { UserRepositoryPg } from '@modules/auth/adapters/secondary/user.repository.pg';
+import { UserRepositoryPg } from '@modules/auth/adapters/secondary/pg/user.repository.pg';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 import { makeMockTypeOrmRepo } from 'tests/helpers/shared/mock-deps';

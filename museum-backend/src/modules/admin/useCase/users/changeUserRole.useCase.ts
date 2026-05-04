@@ -1,4 +1,4 @@
-import { UserRole } from '@modules/auth/domain/user-role';
+import { UserRole } from '@modules/auth/domain/user/user-role';
 import { auditService, AUDIT_ADMIN_ROLE_CHANGE } from '@shared/audit';
 import { badRequest, notFound, conflict } from '@shared/errors/app.error';
 

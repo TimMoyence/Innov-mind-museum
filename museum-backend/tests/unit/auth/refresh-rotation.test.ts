@@ -14,13 +14,13 @@ import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 
 import { env } from '@src/config/env';
-import { AuthSessionService } from '@modules/auth/useCase/authSession.service';
-import type { StoredRefreshTokenRow } from '@modules/auth/domain/refresh-token.repository.interface';
+import { AuthSessionService } from '@modules/auth/useCase/session/authSession.service';
+import type { StoredRefreshTokenRow } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
 
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import { makeRefreshTokenRepo, makeUserRepo } from '../../helpers/auth/user-repo.mock';
 
-jest.mock('@modules/auth/useCase/login-rate-limiter', () => ({
+jest.mock('@modules/auth/useCase/session/login-rate-limiter', () => ({
   checkLoginRateLimit: jest.fn(),
   recordFailedLogin: jest.fn(),
   clearLoginAttempts: jest.fn(),

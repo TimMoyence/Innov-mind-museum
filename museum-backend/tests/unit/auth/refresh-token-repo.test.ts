@@ -1,12 +1,12 @@
 import type { DataSource, Repository } from 'typeorm';
 
-import { AuthRefreshToken } from '@modules/auth/domain/authRefreshToken.entity';
-import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/refresh-token.repository.pg';
+import { AuthRefreshToken } from '@modules/auth/domain/refresh-token/authRefreshToken.entity';
+import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/pg/refresh-token.repository.pg';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 import { makeMockTypeOrmRepo } from 'tests/helpers/shared/mock-deps';
 
-import type { InsertRefreshTokenInput } from '@modules/auth/domain/refresh-token.repository.interface';
+import type { InsertRefreshTokenInput } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
 
 // ─── TypeORM repo + DataSource mock factory ───
 function buildMocks() {

@@ -4,9 +4,9 @@ import { verifyMfaSessionToken } from './mfaSessionToken';
 import { decryptTotpSecret } from './totpEncryption';
 import { verifyTotpCode } from './totpService';
 
-import type { ITotpSecretRepository } from '../../domain/totp-secret.repository.interface';
-import type { IUserRepository } from '../../domain/user.repository.interface';
-import type { AuthSessionResponse, AuthSessionService } from '../authSession.service';
+import type { ITotpSecretRepository } from '../../domain/totp/totp-secret.repository.interface';
+import type { IUserRepository } from '../../domain/user/user.repository.interface';
+import type { AuthSessionResponse, AuthSessionService } from '../session/authSession.service';
 
 /**
  * Step 2 of the MFA login flow: exchange `mfaSessionToken + 6-digit code` for
