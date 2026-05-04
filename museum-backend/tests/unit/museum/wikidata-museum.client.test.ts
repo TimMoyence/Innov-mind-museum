@@ -1,4 +1,4 @@
-import { HttpWikidataMuseumClient } from '@modules/museum/adapters/secondary/wikidata-museum.client';
+import { HttpWikidataMuseumClient } from '@modules/museum/adapters/secondary/external/wikidata-museum.client';
 
 type FetchMock = jest.SpyInstance<ReturnType<typeof fetch>, Parameters<typeof fetch>>;
 

@@ -2,10 +2,10 @@ import {
   RefreshStaleEnrichmentsUseCase,
   SCAN_BATCH_SIZE,
   STALE_ENRICHMENT_THRESHOLD_DAYS,
-} from '@modules/museum/useCase/refreshStaleEnrichments.useCase';
+} from '@modules/museum/useCase/enrichment/refreshStaleEnrichments.useCase';
 
 import type { MuseumEnrichmentCachePort } from '@modules/museum/domain/ports/museum-enrichment-cache.port';
-import type { MuseumEnrichmentView } from '@modules/museum/domain/enrichment.types';
+import type { MuseumEnrichmentView } from '@modules/museum/domain/enrichment/enrichment.types';
 
 import { InMemoryMuseumEnrichmentQueue } from '../../helpers/museum/in-memory-museum-enrichment-queue';
 

@@ -1,9 +1,12 @@
-import { Museum } from '@modules/museum/domain/museum.entity';
+import { Museum } from '@modules/museum/domain/museum/museum.entity';
 import type {
   BoundingBox,
   IMuseumRepository,
-} from '@modules/museum/domain/museum.repository.interface';
-import type { CreateMuseumInput, UpdateMuseumInput } from '@modules/museum/domain/museum.types';
+} from '@modules/museum/domain/museum/museum.repository.interface';
+import type {
+  CreateMuseumInput,
+  UpdateMuseumInput,
+} from '@modules/museum/domain/museum/museum.types';
 
 /** In-memory implementation of IMuseumRepository for unit tests. */
 export class InMemoryMuseumRepository implements IMuseumRepository {

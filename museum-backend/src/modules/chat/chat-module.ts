@@ -50,7 +50,7 @@ import type { WebSearchProvider } from './domain/ports/web-search.port';
 import type { LocationConsentChecker } from './useCase/location-resolver';
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { BuiltKnowledgeExtractionModule } from '@modules/knowledge-extraction/index';
-import type { IMuseumRepository } from '@modules/museum/domain/museum.repository.interface';
+import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
 import type { DataSource } from 'typeorm';
 

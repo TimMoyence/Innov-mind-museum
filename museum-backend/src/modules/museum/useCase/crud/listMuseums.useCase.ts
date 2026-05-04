@@ -1,5 +1,5 @@
-import type { Museum } from '../domain/museum.entity';
-import type { IMuseumRepository } from '../domain/museum.repository.interface';
+import type { Museum } from '../../domain/museum/museum.entity';
+import type { IMuseumRepository } from '../../domain/museum/museum.repository.interface';
 
 /** Lists all museums with optional active-only filtering. */
 export class ListMuseumsUseCase {

@@ -1,7 +1,7 @@
-import { PurgeDeadEnrichmentsUseCase } from '@modules/museum/useCase/purgeDeadEnrichments.useCase';
+import { PurgeDeadEnrichmentsUseCase } from '@modules/museum/useCase/enrichment/purgeDeadEnrichments.useCase';
 
 import type { MuseumEnrichmentCachePort } from '@modules/museum/domain/ports/museum-enrichment-cache.port';
-import type { MuseumEnrichmentView } from '@modules/museum/domain/enrichment.types';
+import type { MuseumEnrichmentView } from '@modules/museum/domain/enrichment/enrichment.types';
 
 /**
  * Scriptable cache double — records every `deleteStaleSince` call and returns

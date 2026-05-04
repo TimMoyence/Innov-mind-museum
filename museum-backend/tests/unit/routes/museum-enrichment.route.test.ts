@@ -9,7 +9,7 @@ import {
 
 import { notFound } from '@shared/errors/app.error';
 
-import type { EnrichMuseumResult } from '@modules/museum/domain/enrichment.types';
+import type { EnrichMuseumResult } from '@modules/museum/domain/enrichment/enrichment.types';
 
 // ── Mocks ────────────────────────────────────────────────────────
 // Museum barrel — replace `buildEnrichMuseumUseCase` with our in-memory
@@ -44,15 +44,18 @@ jest.mock('@modules/museum/useCase', () => {
 });
 
 // Prevent BullMQ/Redis real connection at boot.
-jest.mock('@modules/museum/adapters/secondary/bullmq-museum-enrichment-queue.adapter', () => ({
-  MUSEUM_ENRICHMENT_QUEUE_NAME: 'museum-enrichment',
-  BullmqMuseumEnrichmentQueueAdapter: jest.fn().mockImplementation(() => ({
-    enqueue: jest.fn(),
-    getJobStatus: jest.fn(),
-    isJobActive: jest.fn(),
-    close: jest.fn(),
-  })),
-}));
+jest.mock(
+  '@modules/museum/adapters/secondary/enrichment/bullmq-museum-enrichment-queue.adapter',
+  () => ({
+    MUSEUM_ENRICHMENT_QUEUE_NAME: 'museum-enrichment',
+    BullmqMuseumEnrichmentQueueAdapter: jest.fn().mockImplementation(() => ({
+      enqueue: jest.fn(),
+      getJobStatus: jest.fn(),
+      isJobActive: jest.fn(),
+      close: jest.fn(),
+    })),
+  }),
+);
 
 jest.mock('@shared/audit', () => ({
   auditService: { log: jest.fn() },

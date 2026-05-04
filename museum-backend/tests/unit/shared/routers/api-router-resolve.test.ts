@@ -34,12 +34,15 @@ jest.mock('@src/config/env', () => ({
 }));
 
 const bullmqAdapterCtor = jest.fn();
-jest.mock('@modules/museum/adapters/secondary/bullmq-museum-enrichment-queue.adapter', () => ({
-  BullmqMuseumEnrichmentQueueAdapter: jest.fn().mockImplementation((...args: unknown[]) => {
-    bullmqAdapterCtor(...args);
-    return {};
+jest.mock(
+  '@modules/museum/adapters/secondary/enrichment/bullmq-museum-enrichment-queue.adapter',
+  () => ({
+    BullmqMuseumEnrichmentQueueAdapter: jest.fn().mockImplementation((...args: unknown[]) => {
+      bullmqAdapterCtor(...args);
+      return {};
+    }),
   }),
-}));
+);
 
 const buildEnrichMuseumUseCaseMock = jest.fn();
 const buildLowDataPackServiceMock = jest.fn(() => ({}));
@@ -53,7 +56,7 @@ jest.mock('@modules/museum', () => ({
 
 // Stub the museum router so we can capture the deps passed by mountDomainRouters.
 const createMuseumRouterMock = jest.fn();
-jest.mock('@modules/museum/adapters/primary/http/museum.route', () => ({
+jest.mock('@modules/museum/adapters/primary/http/routes/museum.route', () => ({
   createMuseumRouter: (deps: unknown) => {
     createMuseumRouterMock(deps);
     const { Router } = jest.requireActual<typeof import('express')>('express');
@@ -122,7 +125,7 @@ jest.mock('@modules/daily-art', () => ({
     return Router();
   },
 }));
-jest.mock('@modules/museum/adapters/primary/http/low-data-pack.route', () => ({
+jest.mock('@modules/museum/adapters/primary/http/routes/low-data-pack.route', () => ({
   createLowDataPackRouter: () => {
     const { Router } = jest.requireActual<typeof import('express')>('express');
     return Router();
@@ -138,7 +141,7 @@ jest.mock('@modules/support/adapters/primary/http/routes/support.route', () => {
 });
 
 import { createApiRouter } from '@shared/routers/api.router';
-import { BullmqMuseumEnrichmentQueueAdapter } from '@modules/museum/adapters/secondary/bullmq-museum-enrichment-queue.adapter';
+import { BullmqMuseumEnrichmentQueueAdapter } from '@modules/museum/adapters/secondary/enrichment/bullmq-museum-enrichment-queue.adapter';
 
 import type { ChatService } from '@modules/chat/useCase/chat.service';
 

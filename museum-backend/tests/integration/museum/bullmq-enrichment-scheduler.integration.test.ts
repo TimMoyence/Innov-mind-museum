@@ -21,7 +21,7 @@ import {
   DEFAULT_STALE_ENRICHMENT_CRON,
   ENRICHMENT_SCHEDULER_QUEUE_NAME,
   STALE_ENRICHMENT_SCAN_SCHEDULER_ID,
-} from '@modules/museum/adapters/secondary/bullmq-enrichment-scheduler.adapter';
+} from '@modules/museum/adapters/secondary/enrichment/bullmq-enrichment-scheduler.adapter';
 import {
   startRedisTestContainer,
   type StartedRedisTestContainer,
@@ -29,8 +29,8 @@ import {
 
 import { Queue } from 'bullmq';
 
-import type { PurgeDeadEnrichmentsUseCase } from '@modules/museum/useCase/purgeDeadEnrichments.useCase';
-import type { RefreshStaleEnrichmentsUseCase } from '@modules/museum/useCase/refreshStaleEnrichments.useCase';
+import type { PurgeDeadEnrichmentsUseCase } from '@modules/museum/useCase/enrichment/purgeDeadEnrichments.useCase';
+import type { RefreshStaleEnrichmentsUseCase } from '@modules/museum/useCase/enrichment/refreshStaleEnrichments.useCase';
 
 const shouldRunIntegration = process.env.RUN_INTEGRATION === 'true';
 const describeIntegration = shouldRunIntegration ? describe : describe.skip;

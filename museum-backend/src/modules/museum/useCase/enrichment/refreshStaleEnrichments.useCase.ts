@@ -1,7 +1,7 @@
 import { logger } from '@shared/logger/logger';
 
-import type { MuseumEnrichmentCachePort } from '../domain/ports/museum-enrichment-cache.port';
-import type { MuseumEnrichmentQueuePort } from '../domain/ports/museum-enrichment-queue.port';
+import type { MuseumEnrichmentCachePort } from '../../domain/ports/museum-enrichment-cache.port';
+import type { MuseumEnrichmentQueuePort } from '../../domain/ports/museum-enrichment-queue.port';
 
 /**
  * TTL ceiling for cached enrichment rows: 180 days (6 months). Upper bound on

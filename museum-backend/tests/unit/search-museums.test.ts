@@ -1,4 +1,4 @@
-import { SearchMuseumsUseCase } from '@modules/museum/useCase/searchMuseums.useCase';
+import { SearchMuseumsUseCase } from '@modules/museum/useCase/search/searchMuseums.useCase';
 import { InMemoryMuseumRepository } from 'tests/helpers/museum/inMemoryMuseumRepository';
 import type { OverpassMuseumResult } from '@shared/http/overpass.client';
 import type { NominatimGeocodingResult } from '@shared/http/nominatim.client';

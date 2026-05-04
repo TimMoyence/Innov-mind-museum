@@ -1,6 +1,6 @@
-import { Museum } from '@modules/museum/domain/museum.entity';
+import { Museum } from '@modules/museum/domain/museum/museum.entity';
 
-import type { IMuseumRepository } from '@modules/museum/domain/museum.repository.interface';
+import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
 
 /** Shared mock IMuseumRepository factory. All methods default to jest.fn(). */
 export const makeMuseumRepo = (

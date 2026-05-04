@@ -1,4 +1,4 @@
-import type { MuseumEnrichmentView } from '../enrichment.types';
+import type { MuseumEnrichmentView } from '../enrichment/enrichment.types';
 
 /**
  * Persistence port for the hybrid museum enrichment cache row. Keeps the

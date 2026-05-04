@@ -1,4 +1,4 @@
-import { ListMuseumsUseCase } from '@modules/museum/useCase/listMuseums.useCase';
+import { ListMuseumsUseCase } from '@modules/museum/useCase/crud/listMuseums.useCase';
 import { InMemoryMuseumRepository } from 'tests/helpers/museum/inMemoryMuseumRepository';
 
 describe('ListMuseumsUseCase', () => {

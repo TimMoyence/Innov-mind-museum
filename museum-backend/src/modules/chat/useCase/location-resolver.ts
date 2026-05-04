@@ -8,7 +8,7 @@ import { findNearbyMuseums } from './nearby-museums.provider';
 
 import type { NearbyMuseum } from './nearby-museums.provider';
 import type { ChatSession } from '../domain/chatSession.entity';
-import type { IMuseumRepository } from '@modules/museum/domain/museum.repository.interface';
+import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
 import type { CachedReverseGeocodeFn } from '@shared/http/nominatim.client';
 

@@ -1,6 +1,6 @@
-import { MuseumQaSeed } from '../../domain/museumQaSeed.entity';
+import { MuseumQaSeed } from '../../../domain/qa-seed/museumQaSeed.entity';
 
-import type { MuseumQaSeedRepository } from '../../domain/museumQaSeed.repository.interface';
+import type { MuseumQaSeedRepository } from '../../../domain/qa-seed/museumQaSeed.repository.interface';
 import type { DataSource, Repository } from 'typeorm';
 
 /** TypeORM implementation of the museum Q&A seed repository. */

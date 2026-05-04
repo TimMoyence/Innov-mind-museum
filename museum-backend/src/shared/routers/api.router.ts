@@ -17,16 +17,16 @@ import {
 } from '@modules/chat/wiring';
 import { createDailyArtRouter } from '@modules/daily-art';
 import { buildEnrichMuseumUseCase, buildLowDataPackService } from '@modules/museum';
-import { createLowDataPackRouter } from '@modules/museum/adapters/primary/http/low-data-pack.route';
-import { createMuseumRouter } from '@modules/museum/adapters/primary/http/museum.route';
-import { BullmqMuseumEnrichmentQueueAdapter } from '@modules/museum/adapters/secondary/bullmq-museum-enrichment-queue.adapter';
+import { createLowDataPackRouter } from '@modules/museum/adapters/primary/http/routes/low-data-pack.route';
+import { createMuseumRouter } from '@modules/museum/adapters/primary/http/routes/museum.route';
+import { BullmqMuseumEnrichmentQueueAdapter } from '@modules/museum/adapters/secondary/enrichment/bullmq-museum-enrichment-queue.adapter';
 import reviewRouter from '@modules/review/adapters/primary/http/routes/review.route';
 import supportRouter from '@modules/support/adapters/primary/http/routes/support.route';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { env } from '@src/config/env';
 
 import type { ChatService } from '@modules/chat/useCase/chat.service';
-import type { EnrichMuseumUseCase } from '@modules/museum/useCase/enrichMuseum.useCase';
+import type { EnrichMuseumUseCase } from '@modules/museum/useCase/enrichment/enrichMuseum.useCase';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /** Dependencies required to build the top-level API router. */

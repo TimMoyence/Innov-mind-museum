@@ -1,8 +1,8 @@
-import { LowDataPackService } from '@modules/museum/useCase/low-data-pack.service';
+import { LowDataPackService } from '@modules/museum/useCase/search/low-data-pack.service';
 import { makeMockCache } from 'tests/helpers/chat/cacheService.fixtures';
 
-import type { MuseumQaSeedRepository } from '@modules/museum/domain/museumQaSeed.repository.interface';
-import type { MuseumQaSeed } from '@modules/museum/domain/museumQaSeed.entity';
+import type { MuseumQaSeedRepository } from '@modules/museum/domain/qa-seed/museumQaSeed.repository.interface';
+import type { MuseumQaSeed } from '@modules/museum/domain/qa-seed/museumQaSeed.entity';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /**

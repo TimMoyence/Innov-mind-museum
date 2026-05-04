@@ -1,6 +1,6 @@
 import { haversineDistanceMeters } from '@shared/utils/haversine';
 
-import type { IMuseumRepository } from '@modules/museum/domain/museum.repository.interface';
+import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
 
 /** A museum within range of the user's coordinates, with haversine distance. */
 export interface NearbyMuseum {

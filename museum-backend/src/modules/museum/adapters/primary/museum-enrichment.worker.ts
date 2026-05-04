@@ -5,19 +5,22 @@ import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 import { handleJobFailure } from '@shared/queue/job-failure.handler';
 
-import { MUSEUM_ENRICHMENT_QUEUE_NAME } from '../secondary/bullmq-museum-enrichment-queue.adapter';
-import { parseOpeningHours } from '../secondary/opening-hours-parser';
+import { MUSEUM_ENRICHMENT_QUEUE_NAME } from '../secondary/enrichment/bullmq-museum-enrichment-queue.adapter';
+import { parseOpeningHours } from '../secondary/parsers/opening-hours-parser';
 
-import type { MuseumEnrichmentView, ParsedOpeningHours } from '../../domain/enrichment.types';
-import type { Museum } from '../../domain/museum.entity';
-import type { IMuseumRepository } from '../../domain/museum.repository.interface';
+import type {
+  MuseumEnrichmentView,
+  ParsedOpeningHours,
+} from '../../domain/enrichment/enrichment.types';
+import type { Museum } from '../../domain/museum/museum.entity';
+import type { IMuseumRepository } from '../../domain/museum/museum.repository.interface';
 import type { MuseumEnrichmentCachePort } from '../../domain/ports/museum-enrichment-cache.port';
 import type { MuseumEnrichmentJob } from '../../domain/ports/museum-enrichment-queue.port';
 import type {
   WikidataMuseumClient,
   WikidataMuseumFacts,
-} from '../secondary/wikidata-museum.client';
-import type { WikipediaClient, WikipediaSummary } from '../secondary/wikipedia.client';
+} from '../secondary/external/wikidata-museum.client';
+import type { WikipediaClient, WikipediaSummary } from '../secondary/external/wikipedia.client';
 import type { ConnectionOptions, Job } from 'bullmq';
 
 /** Collaborators injected into the worker — pure port interfaces for testability. */

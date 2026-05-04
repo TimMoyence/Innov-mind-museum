@@ -8,7 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-import { Museum } from '@modules/museum/domain/museum.entity';
+import { Museum } from '@modules/museum/domain/museum/museum.entity';
 import {
   AccessibilitySchema,
   AdmissionFeesSchema,

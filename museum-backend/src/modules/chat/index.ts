@@ -9,7 +9,7 @@ import { getActiveChatModule } from './chat-module-singleton';
 import type { BuiltChatModule } from './chat-module';
 import type { OcrService } from './domain/ports/ocr.port';
 import type { ChatService } from './useCase/chat.service';
-import type { IMuseumRepository } from '@modules/museum/domain/museum.repository.interface';
+import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
 import type { DataSource } from 'typeorm';
 

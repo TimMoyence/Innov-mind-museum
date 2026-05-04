@@ -1,5 +1,5 @@
 import type { EnrichmentSchedulerPort } from '@modules/museum/domain/ports/enrichment-scheduler.port';
-import type { RefreshStaleEnrichmentsUseCase } from '@modules/museum/useCase/refreshStaleEnrichments.useCase';
+import type { RefreshStaleEnrichmentsUseCase } from '@modules/museum/useCase/enrichment/refreshStaleEnrichments.useCase';
 
 /**
  * In-memory stub for {@link EnrichmentSchedulerPort}.

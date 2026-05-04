@@ -9,22 +9,22 @@ import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
 
 import {
-  createMuseumSchema,
-  getEnrichmentQuerySchema,
-  getEnrichmentStatusQuerySchema,
-  searchMuseumsQuerySchema,
-  updateMuseumSchema,
-} from './museum.schemas';
-import {
   buildSearchMuseumsUseCase,
   createMuseumUseCase,
   getMuseumUseCase,
   listMuseumsUseCase,
   updateMuseumUseCase,
-} from '../../../useCase';
+} from '../../../../useCase';
+import {
+  createMuseumSchema,
+  getEnrichmentQuerySchema,
+  getEnrichmentStatusQuerySchema,
+  searchMuseumsQuerySchema,
+  updateMuseumSchema,
+} from '../schemas/museum.schemas';
 
-import type { MuseumDirectoryDTO, UpdateMuseumInput } from '../../../domain/museum.types';
-import type { EnrichMuseumUseCase } from '../../../useCase/enrichMuseum.useCase';
+import type { MuseumDirectoryDTO, UpdateMuseumInput } from '../../../../domain/museum/museum.types';
+import type { EnrichMuseumUseCase } from '../../../../useCase/enrichment/enrichMuseum.useCase';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /** Handler: GET /api/museums/directory — public directory of active museums. */

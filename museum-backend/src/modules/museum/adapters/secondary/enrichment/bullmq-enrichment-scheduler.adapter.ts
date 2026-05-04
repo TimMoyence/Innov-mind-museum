@@ -3,9 +3,9 @@ import { Queue, Worker } from 'bullmq';
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 
-import type { EnrichmentSchedulerPort } from '../../domain/ports/enrichment-scheduler.port';
-import type { PurgeDeadEnrichmentsUseCase } from '../../useCase/purgeDeadEnrichments.useCase';
-import type { RefreshStaleEnrichmentsUseCase } from '../../useCase/refreshStaleEnrichments.useCase';
+import type { EnrichmentSchedulerPort } from '../../../domain/ports/enrichment-scheduler.port';
+import type { PurgeDeadEnrichmentsUseCase } from '../../../useCase/enrichment/purgeDeadEnrichments.useCase';
+import type { RefreshStaleEnrichmentsUseCase } from '../../../useCase/enrichment/refreshStaleEnrichments.useCase';
 import type { ConnectionOptions } from 'bullmq';
 
 /** Dedicated queue used only by the stale-enrichment scan scheduler. */

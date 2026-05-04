@@ -1,7 +1,7 @@
 import { notFound } from '@shared/errors/app.error';
 
-import type { Museum } from '../domain/museum.entity';
-import type { IMuseumRepository } from '../domain/museum.repository.interface';
+import type { Museum } from '../../domain/museum/museum.entity';
+import type { IMuseumRepository } from '../../domain/museum/museum.repository.interface';
 
 /** Retrieves a museum by numeric ID or slug. */
 export class GetMuseumUseCase {

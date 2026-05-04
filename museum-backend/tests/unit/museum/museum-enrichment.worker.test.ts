@@ -1,16 +1,16 @@
 import { processMuseumEnrichmentJob } from '@modules/museum/adapters/primary/museum-enrichment.worker';
 
-import type { MuseumEnrichmentView } from '@modules/museum/domain/enrichment.types';
+import type { MuseumEnrichmentView } from '@modules/museum/domain/enrichment/enrichment.types';
 import type { MuseumEnrichmentCachePort } from '@modules/museum/domain/ports/museum-enrichment-cache.port';
 import type {
   WikidataMuseumClient,
   WikidataMuseumFacts,
   WikidataMuseumMatch,
-} from '@modules/museum/adapters/secondary/wikidata-museum.client';
+} from '@modules/museum/adapters/secondary/external/wikidata-museum.client';
 import type {
   WikipediaClient,
   WikipediaSummary,
-} from '@modules/museum/adapters/secondary/wikipedia.client';
+} from '@modules/museum/adapters/secondary/external/wikipedia.client';
 
 import { InMemoryMuseumRepository } from '../../helpers/museum/inMemoryMuseumRepository';
 

@@ -1,6 +1,6 @@
-import { EnrichMuseumUseCase } from '@modules/museum/useCase/enrichMuseum.useCase';
+import { EnrichMuseumUseCase } from '@modules/museum/useCase/enrichment/enrichMuseum.useCase';
 
-import type { MuseumEnrichmentView } from '@modules/museum/domain/enrichment.types';
+import type { MuseumEnrichmentView } from '@modules/museum/domain/enrichment/enrichment.types';
 import type { MuseumEnrichmentCachePort } from '@modules/museum/domain/ports/museum-enrichment-cache.port';
 
 import { InMemoryMuseumRepository } from '../../helpers/museum/inMemoryMuseumRepository';

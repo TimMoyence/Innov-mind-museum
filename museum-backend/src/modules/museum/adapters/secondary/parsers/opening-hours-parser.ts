@@ -18,7 +18,7 @@ import type {
   OpeningDay,
   ParsedOpeningDay,
   ParsedOpeningHours,
-} from '../../domain/enrichment.types';
+} from '../../../domain/enrichment/enrichment.types';
 
 const WEEK: OpeningDay[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 

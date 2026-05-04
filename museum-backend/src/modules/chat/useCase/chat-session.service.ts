@@ -18,7 +18,7 @@ import type {
 } from '../domain/chat.repository.interface';
 import type { CreateSessionInput, MessagePageQuery, VisitContext } from '../domain/chat.types';
 import type { ChatSession } from '../domain/chatSession.entity';
-import type { IMuseumRepository } from '@modules/museum/domain/museum.repository.interface';
+import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
 
 const toSessionDTO = (session: ChatSession): CreateSessionResult => ({

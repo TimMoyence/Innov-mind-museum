@@ -1,8 +1,11 @@
 import { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-enrichment/museum-enrichment.entity';
 
-import type { MuseumEnrichmentView, ParsedOpeningHours } from '../../domain/enrichment.types';
-import type { Museum } from '../../domain/museum.entity';
-import type { MuseumEnrichmentCachePort } from '../../domain/ports/museum-enrichment-cache.port';
+import type {
+  MuseumEnrichmentView,
+  ParsedOpeningHours,
+} from '../../../domain/enrichment/enrichment.types';
+import type { Museum } from '../../../domain/museum/museum.entity';
+import type { MuseumEnrichmentCachePort } from '../../../domain/ports/museum-enrichment-cache.port';
 import type { DataSource, Repository } from 'typeorm';
 
 /**

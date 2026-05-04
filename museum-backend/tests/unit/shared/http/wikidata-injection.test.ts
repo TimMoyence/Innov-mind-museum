@@ -6,7 +6,7 @@ import {
   escapeSparqlLiteral,
 } from '@shared/http/wikidata-ids';
 import { WikidataClient } from '@modules/chat/adapters/secondary/wikidata.client';
-import { HttpWikidataMuseumClient } from '@modules/museum/adapters/secondary/wikidata-museum.client';
+import { HttpWikidataMuseumClient } from '@modules/museum/adapters/secondary/external/wikidata-museum.client';
 
 import {
   asFetchResponse,
@@ -47,14 +47,22 @@ describe('Wikidata strict id validators (R14 / V2 / H1)', () => {
     ];
 
     it.each(cases)('rejects %s', (_label, payload) => {
-      expect(() => { assertEntityId(payload); }).toThrow(ValidationError);
+      expect(() => {
+        assertEntityId(payload);
+      }).toThrow(ValidationError);
     });
 
     it('accepts canonical IDs', () => {
-      expect(() => { assertEntityId('Q42'); }).not.toThrow();
-      expect(() => { assertEntityId('Q12345678'); }).not.toThrow();
+      expect(() => {
+        assertEntityId('Q42');
+      }).not.toThrow();
+      expect(() => {
+        assertEntityId('Q12345678');
+      }).not.toThrow();
       // Boundary: 12 digits is the max allowed (Q + up to 12 digits).
-      expect(() => { assertEntityId(`Q9${'0'.repeat(11)}`); }).not.toThrow();
+      expect(() => {
+        assertEntityId(`Q9${'0'.repeat(11)}`);
+      }).not.toThrow();
     });
 
     it('truncates echoed input in error message (≤ 32 + ellipsis)', () => {
@@ -74,23 +82,41 @@ describe('Wikidata strict id validators (R14 / V2 / H1)', () => {
 
   describe('assertPropertyId', () => {
     it('rejects alpha tail (`PA`)', () => {
-      expect(() => { assertPropertyId('PA'); }).toThrow(ValidationError);
+      expect(() => {
+        assertPropertyId('PA');
+      }).toThrow(ValidationError);
     });
     it('rejects leading zero (`P0`, `P01`)', () => {
-      expect(() => { assertPropertyId('P0'); }).toThrow(ValidationError);
-      expect(() => { assertPropertyId('P01'); }).toThrow(ValidationError);
+      expect(() => {
+        assertPropertyId('P0');
+      }).toThrow(ValidationError);
+      expect(() => {
+        assertPropertyId('P01');
+      }).toThrow(ValidationError);
     });
     it('rejects entity prefix in property slot', () => {
-      expect(() => { assertPropertyId('Q170'); }).toThrow(ValidationError);
+      expect(() => {
+        assertPropertyId('Q170');
+      }).toThrow(ValidationError);
     });
     it('rejects null / undefined', () => {
-      expect(() => { assertPropertyId(null); }).toThrow(ValidationError);
-      expect(() => { assertPropertyId(undefined); }).toThrow(ValidationError);
+      expect(() => {
+        assertPropertyId(null);
+      }).toThrow(ValidationError);
+      expect(() => {
+        assertPropertyId(undefined);
+      }).toThrow(ValidationError);
     });
     it('accepts canonical property ids', () => {
-      expect(() => { assertPropertyId('P170'); }).not.toThrow();
-      expect(() => { assertPropertyId('P1'); }).not.toThrow();
-      expect(() => { assertPropertyId('P99999999'); }).not.toThrow();
+      expect(() => {
+        assertPropertyId('P170');
+      }).not.toThrow();
+      expect(() => {
+        assertPropertyId('P1');
+      }).not.toThrow();
+      expect(() => {
+        assertPropertyId('P99999999');
+      }).not.toThrow();
     });
   });
 
@@ -105,14 +131,24 @@ describe('Wikidata strict id validators (R14 / V2 / H1)', () => {
     ];
 
     it.each(cases)('rejects %s', (_label, payload) => {
-      expect(() => { assertLang(payload); }).toThrow(ValidationError);
+      expect(() => {
+        assertLang(payload);
+      }).toThrow(ValidationError);
     });
 
     it('accepts BCP47-ish tags', () => {
-      expect(() => { assertLang('en'); }).not.toThrow();
-      expect(() => { assertLang('fr'); }).not.toThrow();
-      expect(() => { assertLang('zh-Hant'); }).not.toThrow();
-      expect(() => { assertLang('EN'); }).not.toThrow();
+      expect(() => {
+        assertLang('en');
+      }).not.toThrow();
+      expect(() => {
+        assertLang('fr');
+      }).not.toThrow();
+      expect(() => {
+        assertLang('zh-Hant');
+      }).not.toThrow();
+      expect(() => {
+        assertLang('EN');
+      }).not.toThrow();
     });
   });
 

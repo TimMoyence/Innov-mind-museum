@@ -10,7 +10,10 @@ import { logger } from '@shared/logger/logger';
 import { haversineDistanceMeters } from '@shared/utils/haversine';
 import { museumNamesAreSimilar } from '@shared/utils/string-similarity';
 
-import type { BoundingBox, IMuseumRepository } from '../domain/museum.repository.interface';
+import type {
+  BoundingBox,
+  IMuseumRepository,
+} from '../../domain/museum/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
 
 export type { MuseumCategory } from '@shared/http/overpass.client';

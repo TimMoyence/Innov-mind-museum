@@ -1,9 +1,12 @@
 import { notFound } from '@shared/errors/app.error';
 
-import type { EnrichMuseumResult, MuseumEnrichmentView } from '../domain/enrichment.types';
-import type { IMuseumRepository } from '../domain/museum.repository.interface';
-import type { MuseumEnrichmentCachePort } from '../domain/ports/museum-enrichment-cache.port';
-import type { MuseumEnrichmentQueuePort } from '../domain/ports/museum-enrichment-queue.port';
+import type {
+  EnrichMuseumResult,
+  MuseumEnrichmentView,
+} from '../../domain/enrichment/enrichment.types';
+import type { IMuseumRepository } from '../../domain/museum/museum.repository.interface';
+import type { MuseumEnrichmentCachePort } from '../../domain/ports/museum-enrichment-cache.port';
+import type { MuseumEnrichmentQueuePort } from '../../domain/ports/museum-enrichment-queue.port';
 
 /** Default 30-day TTL on cached enrichment rows. */
 const DEFAULT_FRESH_WINDOW_MS = 30 * 24 * 60 * 60 * 1_000;

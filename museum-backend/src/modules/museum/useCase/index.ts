@@ -4,23 +4,23 @@
  */
 import { AppDataSource } from '@src/data/db/data-source';
 
-import { CreateMuseumUseCase } from './createMuseum.useCase';
-import { EnrichMuseumUseCase } from './enrichMuseum.useCase';
-import { GetMuseumUseCase } from './getMuseum.useCase';
-import { ListMuseumsUseCase } from './listMuseums.useCase';
-import { LowDataPackService } from './low-data-pack.service';
-import { PurgeDeadEnrichmentsUseCase } from './purgeDeadEnrichments.useCase';
-import { RefreshStaleEnrichmentsUseCase } from './refreshStaleEnrichments.useCase';
-import { SearchMuseumsUseCase } from './searchMuseums.useCase';
-import { UpdateMuseumUseCase } from './updateMuseum.useCase';
+import { CreateMuseumUseCase } from './crud/createMuseum.useCase';
+import { GetMuseumUseCase } from './crud/getMuseum.useCase';
+import { ListMuseumsUseCase } from './crud/listMuseums.useCase';
+import { UpdateMuseumUseCase } from './crud/updateMuseum.useCase';
+import { EnrichMuseumUseCase } from './enrichment/enrichMuseum.useCase';
+import { PurgeDeadEnrichmentsUseCase } from './enrichment/purgeDeadEnrichments.useCase';
+import { RefreshStaleEnrichmentsUseCase } from './enrichment/refreshStaleEnrichments.useCase';
+import { LowDataPackService } from './search/low-data-pack.service';
+import { SearchMuseumsUseCase } from './search/searchMuseums.useCase';
 import {
   BullmqEnrichmentSchedulerAdapter,
   type BullmqEnrichmentSchedulerConfig,
-} from '../adapters/secondary/bullmq-enrichment-scheduler.adapter';
-import { MuseumQaSeedRepositoryPg } from '../adapters/secondary/museum-qa-seed.repository.typeorm';
-import { MuseumRepositoryPg } from '../adapters/secondary/museum.repository.pg';
-import { TypeOrmMuseumEnrichmentCacheAdapter } from '../adapters/secondary/typeorm-museum-enrichment-cache.adapter';
-import { Museum } from '../domain/museum.entity';
+} from '../adapters/secondary/enrichment/bullmq-enrichment-scheduler.adapter';
+import { TypeOrmMuseumEnrichmentCacheAdapter } from '../adapters/secondary/enrichment/typeorm-museum-enrichment-cache.adapter';
+import { MuseumQaSeedRepositoryPg } from '../adapters/secondary/pg/museum-qa-seed.repository.typeorm';
+import { MuseumRepositoryPg } from '../adapters/secondary/pg/museum.repository.pg';
+import { Museum } from '../domain/museum/museum.entity';
 
 import type { EnrichmentSchedulerPort } from '../domain/ports/enrichment-scheduler.port';
 import type { MuseumEnrichmentQueuePort } from '../domain/ports/museum-enrichment-queue.port';

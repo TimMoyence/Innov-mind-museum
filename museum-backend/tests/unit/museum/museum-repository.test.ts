@@ -1,9 +1,9 @@
 import type { Repository } from 'typeorm';
 
-import { Museum } from '@modules/museum/domain/museum.entity';
+import { Museum } from '@modules/museum/domain/museum/museum.entity';
 import { AppError } from '@shared/errors/app.error';
 
-import { MuseumRepositoryPg } from '@modules/museum/adapters/secondary/museum.repository.pg';
+import { MuseumRepositoryPg } from '@modules/museum/adapters/secondary/pg/museum.repository.pg';
 import { makeMockTypeOrmRepo, makeMockDataSource } from 'tests/helpers/shared/mock-deps';
 
 // ─── Museum factory ───

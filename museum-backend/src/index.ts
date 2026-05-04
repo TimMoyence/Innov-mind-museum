@@ -18,7 +18,7 @@ import {
   buildRefreshStaleEnrichmentsUseCase,
   createBullmqEnrichmentScheduler,
 } from '@modules/museum';
-import { BullmqMuseumEnrichmentQueueAdapter } from '@modules/museum/adapters/secondary/bullmq-museum-enrichment-queue.adapter';
+import { BullmqMuseumEnrichmentQueueAdapter } from '@modules/museum/adapters/secondary/enrichment/bullmq-museum-enrichment-queue.adapter';
 import { registerReviewRetentionCron } from '@modules/review/jobs/review-retention-cron.registrar';
 import { registerSupportRetentionCron } from '@modules/support/jobs/support-retention-cron.registrar';
 import { registerAuditCron, type AuditCronHandle } from '@shared/audit/audit-cron.registrar';

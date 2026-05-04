@@ -2,7 +2,7 @@ import 'dotenv/config';
 import 'reflect-metadata';
 
 import { AppDataSource } from '@data/db/data-source';
-import { Museum } from '@modules/museum/domain/museum.entity';
+import { Museum } from '@modules/museum/domain/museum/museum.entity';
 
 interface MuseumSeed {
   name: string;

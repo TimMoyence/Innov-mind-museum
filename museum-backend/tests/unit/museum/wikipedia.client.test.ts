@@ -1,4 +1,4 @@
-import { HttpWikipediaClient } from '@modules/museum/adapters/secondary/wikipedia.client';
+import { HttpWikipediaClient } from '@modules/museum/adapters/secondary/external/wikipedia.client';
 
 type FetchMock = jest.SpyInstance<ReturnType<typeof fetch>, Parameters<typeof fetch>>;
 
