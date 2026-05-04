@@ -5,8 +5,8 @@
  * uncertain (allow + msg long). Fails open: timeout / parse error / budget
  * exhaustion all return null so caller falls back to keyword decision.
  */
-import { judgeWithLlm } from '@modules/chat/useCase/llm-judge-guardrail';
-import { resetBudget, recordJudgeCost } from '@modules/chat/useCase/guardrail-budget';
+import { judgeWithLlm } from '@modules/chat/useCase/llm/llm-judge-guardrail';
+import { resetBudget, recordJudgeCost } from '@modules/chat/useCase/guardrail/guardrail-budget';
 
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
 

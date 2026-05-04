@@ -1,4 +1,4 @@
-import { BraveSearchClient } from '@modules/chat/adapters/secondary/brave-search.client';
+import { BraveSearchClient } from '@modules/chat/adapters/secondary/search/brave-search.client';
 import { mockFetch } from '../../helpers/fetch/fetch-mock.helpers';
 import {
   makeBraveHit,

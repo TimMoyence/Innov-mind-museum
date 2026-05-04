@@ -10,7 +10,7 @@
 import {
   buildS3AudioRef,
   parseS3AudioRef,
-} from '@src/modules/chat/adapters/secondary/audio-storage.s3';
+} from '@src/modules/chat/adapters/secondary/storage/audio-storage.s3';
 
 describe('parseS3AudioRef', () => {
   it('returns { key } for a well-formed s3:// reference', () => {

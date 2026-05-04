@@ -1,6 +1,6 @@
-import { ArtworkMatch } from '@modules/chat/domain/artworkMatch.entity';
-import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
-import { ChatSession } from '@modules/chat/domain/chatSession.entity';
+import { ArtworkMatch } from '@modules/chat/domain/art-keyword/artworkMatch.entity';
+import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
+import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 
 import type {
   UsageAnalytics,

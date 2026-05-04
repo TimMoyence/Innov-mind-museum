@@ -1,6 +1,6 @@
 import { env } from '@src/config/env';
-import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
-import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/langchain.orchestrator';
+import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
+import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/llm/langchain.orchestrator';
 import { makeMessage } from '../../helpers/chat/message.fixtures';
 
 const createMessage = (id: string, role: 'user' | 'assistant', text: string): ChatMessage =>

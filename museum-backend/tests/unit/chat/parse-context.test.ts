@@ -1,4 +1,4 @@
-import { parseContext } from '@modules/chat/adapters/primary/http/chat-route.helpers';
+import { parseContext } from '@modules/chat/adapters/primary/http/helpers/chat-route.helpers';
 
 describe('parseContext — payload size limit', () => {
   it('accepts a context object under the size limit', () => {

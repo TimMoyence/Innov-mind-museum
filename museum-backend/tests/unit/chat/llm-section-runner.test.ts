@@ -1,4 +1,4 @@
-import { runSectionTasks, SectionTask } from '@modules/chat/useCase/llm-section-runner';
+import { runSectionTasks, SectionTask } from '@modules/chat/useCase/llm/llm-section-runner';
 
 const wait = async (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 

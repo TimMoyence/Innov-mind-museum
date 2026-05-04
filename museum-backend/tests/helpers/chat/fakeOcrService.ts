@@ -1,4 +1,4 @@
-import type { OcrService, OcrResult } from '@modules/chat/adapters/secondary/ocr-service';
+import type { OcrService, OcrResult } from '@modules/chat/adapters/secondary/image/ocr-service';
 
 /** Fake OCR service for tests. Returns configurable text extraction results. */
 export class FakeOcrService implements OcrService {

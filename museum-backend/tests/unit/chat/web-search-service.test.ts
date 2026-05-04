@@ -1,4 +1,4 @@
-import { WebSearchService } from '@modules/chat/useCase/web-search.service';
+import { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
 import { makeMockCache } from '../../helpers/chat/cacheService.fixtures';
 import type {
   SearchResult,

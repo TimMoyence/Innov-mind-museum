@@ -6,7 +6,7 @@
  * representative entries (>=3 per language) and validates negative controls
  * (legit art questions in same languages) still pass.
  */
-import { evaluateUserInputGuardrail } from '@modules/chat/useCase/art-topic-guardrail';
+import { evaluateUserInputGuardrail } from '@modules/chat/useCase/guardrail/art-topic-guardrail';
 
 describe('evaluateUserInputGuardrail — multilingual insult coverage (F4)', () => {
   describe('blocks insults in 8 languages', () => {

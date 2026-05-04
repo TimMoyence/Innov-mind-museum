@@ -3,7 +3,7 @@ import type {
   ChatOrchestrator,
   OrchestratorOutput,
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
-import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/langchain.orchestrator';
+import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/llm/langchain.orchestrator';
 
 class ThrowingOrchestrator implements ChatOrchestrator {
   async generate(): Promise<OrchestratorOutput> {

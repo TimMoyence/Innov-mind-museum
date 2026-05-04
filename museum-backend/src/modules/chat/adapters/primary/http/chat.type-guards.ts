@@ -7,7 +7,7 @@ import type {
   PostAudioMessageResponse,
   PostMessageResponse,
   ReportMessageResponse,
-} from './chat.contracts';
+} from '@modules/chat/adapters/primary/http/chat.contracts';
 
 type RecordValue = Record<string, unknown>;
 

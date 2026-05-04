@@ -1,7 +1,7 @@
 import {
   LLMCircuitBreaker,
   CircuitOpenError,
-} from '@modules/chat/adapters/secondary/llm-circuit-breaker';
+} from '@modules/chat/adapters/secondary/llm/llm-circuit-breaker';
 
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },

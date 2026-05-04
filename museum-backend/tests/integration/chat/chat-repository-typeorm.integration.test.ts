@@ -17,12 +17,12 @@ import {
 } from 'tests/helpers/integration/integration-harness';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 
-import { ArtworkMatch } from '@modules/chat/domain/artworkMatch.entity';
-import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
-import { ChatSession } from '@modules/chat/domain/chatSession.entity';
-import { MessageFeedback } from '@modules/chat/domain/messageFeedback.entity';
-import { MessageReport } from '@modules/chat/domain/messageReport.entity';
-import { TypeOrmChatRepository } from '@modules/chat/adapters/secondary/chat.repository.typeorm';
+import { ArtworkMatch } from '@modules/chat/domain/art-keyword/artworkMatch.entity';
+import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
+import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
+import { MessageFeedback } from '@modules/chat/domain/message/messageFeedback.entity';
+import { MessageReport } from '@modules/chat/domain/message/messageReport.entity';
+import { TypeOrmChatRepository } from '@modules/chat/adapters/secondary/persistence/chat.repository.typeorm';
 import { User } from '@modules/auth/domain/user/user.entity';
 
 const shouldRunIntegration = process.env.RUN_INTEGRATION === 'true';

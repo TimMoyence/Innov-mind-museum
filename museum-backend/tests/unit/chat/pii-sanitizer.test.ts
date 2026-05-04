@@ -1,4 +1,4 @@
-import { RegexPiiSanitizer } from '@modules/chat/adapters/secondary/pii-sanitizer.regex';
+import { RegexPiiSanitizer } from '@modules/chat/adapters/secondary/pii/pii-sanitizer.regex';
 import { DisabledPiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 
 describe('RegexPiiSanitizer', () => {

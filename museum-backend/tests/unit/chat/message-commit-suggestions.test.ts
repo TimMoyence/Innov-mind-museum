@@ -3,9 +3,9 @@
  * Verifies sanitization via sanitizePromptInput(s, 60) and omit-when-absent semantics.
  */
 
-import { commitAssistantResponse } from '@modules/chat/useCase/message-commit';
+import { commitAssistantResponse } from '@modules/chat/useCase/orchestration/message-commit';
 import type { OrchestratorOutput } from '@modules/chat/domain/ports/chat-orchestrator.port';
-import type { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail-evaluation.service';
+import type { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 import { makeSession, makeMessage } from '../../helpers/chat/message.fixtures';
 

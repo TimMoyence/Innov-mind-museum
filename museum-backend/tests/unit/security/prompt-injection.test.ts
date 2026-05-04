@@ -1,4 +1,4 @@
-import { evaluateUserInputGuardrail } from '@modules/chat/useCase/art-topic-guardrail';
+import { evaluateUserInputGuardrail } from '@modules/chat/useCase/guardrail/art-topic-guardrail';
 
 import {
   PROMPT_INJECTION_PAYLOADS,

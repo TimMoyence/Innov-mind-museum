@@ -206,9 +206,9 @@ export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2E
   ] = await Promise.all([
     import('@src/app'),
     import('@src/data/db/data-source'),
-    import('@modules/chat/useCase/chat.service'),
-    import('@modules/chat/adapters/secondary/chat.repository.typeorm'),
-    import('@modules/chat/adapters/secondary/image-storage.stub'),
+    import('@modules/chat/useCase/orchestration/chat.service'),
+    import('@modules/chat/adapters/secondary/persistence/chat.repository.typeorm'),
+    import('@modules/chat/adapters/secondary/storage/image-storage.stub'),
     import('@src/helpers/middleware/rate-limit.middleware'),
     discoverMigrationClasses(),
   ]);

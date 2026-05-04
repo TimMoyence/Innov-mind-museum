@@ -6,8 +6,8 @@ import {
   buildOrchestratorMessages,
   toContentString,
   deriveConversationPhase,
-} from '@modules/chat/useCase/llm-prompt-builder';
-import type { ChatModelMessage } from '@modules/chat/useCase/llm-prompt-builder';
+} from '@modules/chat/useCase/llm/llm-prompt-builder';
+import type { ChatModelMessage } from '@modules/chat/useCase/llm/llm-prompt-builder';
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import { makeMessage } from 'tests/helpers/chat/message.fixtures';
 

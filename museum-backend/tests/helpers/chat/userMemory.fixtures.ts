@@ -1,10 +1,10 @@
-import { UserMemory } from '@modules/chat/domain/userMemory.entity';
+import { UserMemory } from '@modules/chat/domain/memory/userMemory.entity';
 
 import type {
   RecentSessionAggregate,
   UserMemoryRepository,
   UserMemoryUpdates,
-} from '@modules/chat/domain/userMemory.repository.interface';
+} from '@modules/chat/domain/memory/userMemory.repository.interface';
 
 /**
  * Creates a UserMemory entity with sensible defaults.

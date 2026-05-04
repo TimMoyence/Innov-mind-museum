@@ -1,4 +1,4 @@
-import { UnsplashClient } from '@modules/chat/adapters/secondary/unsplash.client';
+import { UnsplashClient } from '@modules/chat/adapters/secondary/search/unsplash.client';
 
 let fetchSpy: jest.SpyInstance;
 

@@ -1,7 +1,7 @@
-import { LlmCacheServiceImpl } from '@modules/chat/useCase/llm-cache.service';
+import { LlmCacheServiceImpl } from '@modules/chat/useCase/llm/llm-cache.service';
 
 import type { CacheService } from '@shared/cache/cache.port';
-import type { LlmCacheKeyInput } from '@modules/chat/useCase/llm-cache.types';
+import type { LlmCacheKeyInput } from '@modules/chat/useCase/llm/llm-cache.types';
 
 const buildMockCache = (): jest.Mocked<CacheService> =>
   ({

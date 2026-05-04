@@ -1,11 +1,11 @@
-import type { ResolvedLocation } from '../../useCase/location-resolver';
 import type {
   ChatAssistantMetadata,
   ChatSessionIntent,
   ContentPreference,
   VisitContext,
-} from '../chat.types';
-import type { ChatMessage } from '../chatMessage.entity';
+} from '@modules/chat/domain/chat.types';
+import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
+import type { ResolvedLocation } from '@modules/chat/useCase/location/location-resolver';
 
 /** Input for the LLM orchestrator. */
 export interface OrchestratorInput {

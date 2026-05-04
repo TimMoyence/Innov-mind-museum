@@ -1,5 +1,5 @@
-import type { KnowledgeBaseService } from '@modules/chat/useCase/knowledge-base.service';
-import type { UserMemoryService } from '@modules/chat/useCase/user-memory.service';
+import type { KnowledgeBaseService } from '@modules/chat/useCase/knowledge/knowledge-base.service';
+import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 
 type JestMocked<T> = {
   [K in keyof T]: T[K] extends (...args: infer A) => infer R ? jest.Mock<R, A> : T[K];

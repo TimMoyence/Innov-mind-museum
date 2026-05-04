@@ -1,5 +1,5 @@
-import { UserMemoryService } from '@modules/chat/useCase/user-memory.service';
-import type { UserMemoryRepository } from '@modules/chat/domain/userMemory.repository.interface';
+import { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
+import type { UserMemoryRepository } from '@modules/chat/domain/memory/userMemory.repository.interface';
 import { makeMemory } from 'tests/helpers/chat/userMemory.fixtures';
 import { makeCache } from '../../helpers/chat/cache.fixtures';
 

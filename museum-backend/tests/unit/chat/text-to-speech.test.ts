@@ -17,7 +17,7 @@ import { AppError } from '@shared/errors/app.error';
 import {
   OpenAiTextToSpeechService,
   DisabledTextToSpeechService,
-} from '@modules/chat/adapters/secondary/text-to-speech.openai';
+} from '@modules/chat/adapters/secondary/audio/text-to-speech.openai';
 import { env } from '@src/config/env';
 
 describe('OpenAiTextToSpeechService', () => {

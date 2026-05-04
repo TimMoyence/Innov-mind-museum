@@ -1,4 +1,7 @@
-import { createLlmSectionPlan, createSummaryFallback } from '@modules/chat/useCase/llm-sections';
+import {
+  createLlmSectionPlan,
+  createSummaryFallback,
+} from '@modules/chat/useCase/llm/llm-sections';
 import { makeMessage } from '../../helpers/chat/message.fixtures';
 
 describe('llm-sections', () => {

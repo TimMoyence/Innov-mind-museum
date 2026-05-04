@@ -1,5 +1,5 @@
 import { ChatOpenAI } from '@langchain/openai';
-import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/langchain.orchestrator';
+import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/llm/langchain.orchestrator';
 import { buildChatTestService } from 'tests/helpers/chat/chatTestApp';
 
 const AI_MODEL = process.env.LLM_MODEL || 'gpt-4o-mini';

@@ -44,12 +44,12 @@ jest.mock('@langchain/google-genai', () => ({
   ChatGoogleGenerativeAI: jest.fn(),
 }));
 
-import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/langchain.orchestrator';
+import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/llm/langchain.orchestrator';
 import {
   LLMCircuitBreaker,
   CircuitOpenError,
-} from '@modules/chat/adapters/secondary/llm-circuit-breaker';
-import { Semaphore } from '@modules/chat/useCase/semaphore';
+} from '@modules/chat/adapters/secondary/llm/llm-circuit-breaker';
+import { Semaphore } from '@modules/chat/useCase/llm/semaphore';
 import { makeMessage } from 'tests/helpers/chat/message.fixtures';
 
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';

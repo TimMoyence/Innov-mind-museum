@@ -46,8 +46,8 @@ jest.mock('@langchain/google-genai', () => ({
 
 import { HumanMessage } from '@langchain/core/messages';
 
-import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/langchain.orchestrator';
-import { MISSING_LLM_KEY_FALLBACK } from '@modules/chat/adapters/secondary/langchain-orchestrator-support';
+import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/llm/langchain.orchestrator';
+import { MISSING_LLM_KEY_FALLBACK } from '@modules/chat/adapters/secondary/llm/langchain-orchestrator-support';
 
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
 

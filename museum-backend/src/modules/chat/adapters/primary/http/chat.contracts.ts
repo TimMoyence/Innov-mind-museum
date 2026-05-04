@@ -1,16 +1,18 @@
+import {
+  createSessionSchema,
+  postMessageSchema,
+} from '@modules/chat/adapters/primary/http/schemas/chat-session.schemas';
 import { badRequest } from '@shared/errors/app.error';
 import { formatZodIssues } from '@shared/validation/zod-issue.formatter';
-
-import { createSessionSchema, postMessageSchema } from './chat-session.schemas';
 
 import type {
   ChatMessageResponse,
   PaginationInfo,
   SessionInfo,
   VisitorContext,
-} from './chat.shared-types';
-import type { ChatSessionIntent, ReportReason } from '../../../domain/chat.types';
-import type { FeedbackValue } from '../../../domain/messageFeedback.entity';
+} from '@modules/chat/adapters/primary/http/chat.shared-types';
+import type { ChatSessionIntent, ReportReason } from '@modules/chat/domain/chat.types';
+import type { FeedbackValue } from '@modules/chat/domain/message/messageFeedback.entity';
 
 // Re-export shared types so existing consumers keep working
 export type {
@@ -18,7 +20,7 @@ export type {
   PaginationInfo,
   SessionInfo,
   VisitorContext,
-} from './chat.shared-types';
+} from '@modules/chat/adapters/primary/http/chat.shared-types';
 
 type RecordValue = Record<string, unknown>;
 
@@ -283,4 +285,4 @@ export {
   isFeedbackMessageResponse,
   isReportMessageResponse,
   isListSessionsResponse,
-} from './chat.type-guards';
+} from '@modules/chat/adapters/primary/http/chat.type-guards';

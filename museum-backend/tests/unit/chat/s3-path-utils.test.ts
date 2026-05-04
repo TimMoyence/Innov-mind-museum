@@ -6,7 +6,7 @@ import {
   joinKeyParts,
   normalizeObjectKey,
   buildReadBaseUrlAndPath,
-} from '@modules/chat/adapters/secondary/s3-path-utils';
+} from '@modules/chat/adapters/secondary/storage/s3-path-utils';
 
 describe('s3-path-utils', () => {
   describe('encodeRfc3986', () => {

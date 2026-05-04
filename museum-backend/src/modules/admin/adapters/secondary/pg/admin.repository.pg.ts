@@ -1,7 +1,7 @@
 import { User } from '@modules/auth/domain/user/user.entity';
-import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
-import { ChatSession } from '@modules/chat/domain/chatSession.entity';
-import { MessageReport } from '@modules/chat/domain/messageReport.entity';
+import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
+import { MessageReport } from '@modules/chat/domain/message/messageReport.entity';
+import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import { AuditLog } from '@shared/audit/auditLog.entity';
 
 import {

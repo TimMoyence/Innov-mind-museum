@@ -25,13 +25,13 @@
 import { createE2EHarness, type E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
 
 import { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge/artwork-knowledge.entity';
-import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
-import { ChatSession } from '@modules/chat/domain/chatSession.entity';
+import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
+import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import { TypeOrmArtworkKnowledgeRepo } from '@modules/knowledge-extraction/adapters/secondary/pg/typeorm-artwork-knowledge.repo';
-import { TypeOrmUserMemoryRepository } from '@modules/chat/adapters/secondary/userMemory.repository.typeorm';
+import { TypeOrmUserMemoryRepository } from '@modules/chat/adapters/secondary/persistence/userMemory.repository.typeorm';
 import { User } from '@modules/auth/domain/user/user.entity';
-import { UserMemory } from '@modules/chat/domain/userMemory.entity';
-import { UserMemoryService } from '@modules/chat/useCase/user-memory.service';
+import { UserMemory } from '@modules/chat/domain/memory/userMemory.entity';
+import { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 
 const shouldRunE2E = process.env.RUN_E2E === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;

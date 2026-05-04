@@ -1,4 +1,4 @@
-import { findNearbyMuseums } from '@modules/chat/useCase/nearby-museums.provider';
+import { findNearbyMuseums } from '@modules/chat/useCase/enrichment/nearby-museums.provider';
 
 import { makeMuseum, makeMuseumRepo } from '../../helpers/museum/museum.fixtures';
 

@@ -6,7 +6,7 @@
  * not needed: the helper returns a fully-formed value matching the type.
  */
 
-import type { S3ImageStorageConfig } from '@modules/chat/adapters/secondary/s3-operations';
+import type { S3ImageStorageConfig } from '@modules/chat/adapters/secondary/storage/s3-operations';
 
 const DEFAULT_S3_CONFIG: S3ImageStorageConfig = {
   endpoint: 'https://s3.example.com',

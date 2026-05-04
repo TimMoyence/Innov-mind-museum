@@ -22,7 +22,7 @@ jest.mock('@src/config/env', () => ({
   },
 }));
 
-import { OpenAiAudioTranscriber } from '@modules/chat/adapters/secondary/audio-transcriber.openai';
+import { OpenAiAudioTranscriber } from '@modules/chat/adapters/secondary/audio/audio-transcriber.openai';
 import { DisabledAudioTranscriber } from '@modules/chat/domain/ports/audio-transcriber.port';
 import { AppError } from '@shared/errors/app.error';
 

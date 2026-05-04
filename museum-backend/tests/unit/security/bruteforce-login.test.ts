@@ -4,7 +4,7 @@ import {
   recordFailedLogin,
   setLoginRateLimitStore,
   _resetAllAttempts,
-} from '@modules/auth/useCase/login-rate-limiter';
+} from '@modules/auth/useCase/session/login-rate-limiter';
 
 import type { AppError } from '@shared/errors/app.error';
 import type { RedisRateLimitStore } from '@src/helpers/middleware/redis-rate-limit-store';

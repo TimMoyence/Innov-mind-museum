@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 
-import { ArtKeyword } from '@modules/chat/domain/artKeyword.entity';
-import { TypeOrmArtKeywordRepository } from '@modules/chat/adapters/secondary/artKeyword.repository.typeorm';
+import { ArtKeyword } from '@modules/chat/domain/art-keyword/artKeyword.entity';
+import { TypeOrmArtKeywordRepository } from '@modules/chat/adapters/secondary/persistence/artKeyword.repository.typeorm';
 
 /**
  * Atomic UPSERT spec for the singular-keyword path. The test asserts the

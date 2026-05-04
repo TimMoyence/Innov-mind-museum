@@ -10,7 +10,7 @@ import {
   recordJudgeCost,
   resetBudget,
   __setNowForTest,
-} from '@modules/chat/useCase/guardrail-budget';
+} from '@modules/chat/useCase/guardrail/guardrail-budget';
 
 describe('guardrail-budget', () => {
   beforeEach(() => {

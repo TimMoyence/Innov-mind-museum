@@ -2,7 +2,7 @@ import {
   Semaphore,
   SemaphoreQueueFullError,
   SemaphoreTimeoutError,
-} from '@modules/chat/useCase/semaphore';
+} from '@modules/chat/useCase/llm/semaphore';
 
 describe('Semaphore', () => {
   beforeEach(() => {

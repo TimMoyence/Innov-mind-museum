@@ -1,4 +1,4 @@
-import { KnowledgeBaseService } from '@modules/chat/useCase/knowledge-base.service';
+import { KnowledgeBaseService } from '@modules/chat/useCase/knowledge/knowledge-base.service';
 import { makeMockCache } from '../../helpers/chat/cacheService.fixtures';
 import type {
   ArtworkFacts,

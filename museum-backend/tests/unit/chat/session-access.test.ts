@@ -1,4 +1,7 @@
-import { ensureSessionAccess, ensureSessionOwnership } from '@modules/chat/useCase/session-access';
+import {
+  ensureSessionAccess,
+  ensureSessionOwnership,
+} from '@modules/chat/useCase/session/session-access';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 
 describe('ensureSessionOwnership', () => {

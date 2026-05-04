@@ -14,7 +14,7 @@ import {
   DEFAULT_LOCAL_AUDIOS_DIR,
   LocalAudioStorage,
   resolveLocalAudioFilePath,
-} from '@src/modules/chat/adapters/secondary/audio-storage.stub';
+} from '@src/modules/chat/adapters/secondary/storage/audio-storage.stub';
 
 describe('resolveLocalAudioFilePath', () => {
   it('returns absolute path under audiosDir for a valid ref', () => {

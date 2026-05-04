@@ -1,7 +1,7 @@
 import { createE2EHarness, type E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
 import { registerAndLogin } from 'tests/helpers/e2e/e2e-auth.helpers';
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
-import type { LangChainChatOrchestratorDeps } from '@modules/chat/adapters/secondary/langchain-orchestrator-support';
+import type { LangChainChatOrchestratorDeps } from '@modules/chat/adapters/secondary/llm/langchain-orchestrator-support';
 
 const shouldRunE2E = process.env.RUN_E2E === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
@@ -23,9 +23,9 @@ async function buildFailingOrchestrator(
   errorMessage = 'LLM provider 500',
 ): Promise<ChatOrchestrator> {
   const { LangChainChatOrchestrator } =
-    await import('@modules/chat/adapters/secondary/langchain.orchestrator');
+    await import('@modules/chat/adapters/secondary/llm/langchain.orchestrator');
   const { LLMCircuitBreaker } =
-    await import('@modules/chat/adapters/secondary/llm-circuit-breaker');
+    await import('@modules/chat/adapters/secondary/llm/llm-circuit-breaker');
 
   // Fake ChatModel: every invoke/stream call throws to simulate provider down.
   const alwaysFailModel: LangChainChatOrchestratorDeps['model'] = {
@@ -143,9 +143,9 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
     let callCount = 0;
     // Model: throws once, then succeeds
     const { LangChainChatOrchestrator } =
-      await import('@modules/chat/adapters/secondary/langchain.orchestrator');
+      await import('@modules/chat/adapters/secondary/llm/langchain.orchestrator');
     const { LLMCircuitBreaker } =
-      await import('@modules/chat/adapters/secondary/llm-circuit-breaker');
+      await import('@modules/chat/adapters/secondary/llm/llm-circuit-breaker');
     const onceFailModel = {
       invoke: async () => {
         callCount += 1;

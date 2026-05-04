@@ -13,9 +13,9 @@
  */
 import { createE2EHarness, type E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
 
-import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
-import { ChatSession } from '@modules/chat/domain/chatSession.entity';
-import { TypeOrmUserMemoryRepository } from '@modules/chat/adapters/secondary/userMemory.repository.typeorm';
+import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
+import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
+import { TypeOrmUserMemoryRepository } from '@modules/chat/adapters/secondary/persistence/userMemory.repository.typeorm';
 import { User } from '@modules/auth/domain/user/user.entity';
 
 const shouldRunE2E = process.env.RUN_E2E === 'true';

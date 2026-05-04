@@ -6,7 +6,7 @@ import { resetRateLimits, stopRateLimitSweep } from 'tests/helpers/http/route-te
 import { userToken } from 'tests/helpers/auth/token.helpers';
 import { buildSignedChatImageReadUrl } from '@modules/chat/adapters/primary/http/chat.image-url';
 
-import type { ChatService } from '@modules/chat/useCase/chat.service';
+import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 
 // ── Mock ChatService ────────────────────────────────────────────────
 

@@ -1,4 +1,4 @@
-import { TavilyClient } from '@modules/chat/adapters/secondary/tavily.client';
+import { TavilyClient } from '@modules/chat/adapters/secondary/search/tavily.client';
 import { mockFetch } from '../../helpers/fetch/fetch-mock.helpers';
 import { makeTavilyHit, makeTavilyApiResponse } from '../../helpers/search-clients/tavily.fixture';
 

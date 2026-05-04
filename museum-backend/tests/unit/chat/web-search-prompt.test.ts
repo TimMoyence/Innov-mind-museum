@@ -1,4 +1,4 @@
-import { buildWebSearchPromptBlock } from '@modules/chat/useCase/web-search.prompt';
+import { buildWebSearchPromptBlock } from '@modules/chat/useCase/web-search/web-search.prompt';
 import type { SearchResult } from '@modules/chat/domain/ports/web-search.port';
 
 const sampleResults: SearchResult[] = [

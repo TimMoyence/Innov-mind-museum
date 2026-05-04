@@ -7,9 +7,9 @@ jest.mock('@shared/logger/logger', () => ({
   },
 }));
 
-import { ImageEnrichmentService } from '@modules/chat/useCase/image-enrichment.service';
+import { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
 
-import type { ImageEnrichmentConfig } from '@modules/chat/useCase/image-enrichment.service';
+import type { ImageEnrichmentConfig } from '@modules/chat/useCase/image/image-enrichment.service';
 import {
   makeUnsplashClientMock,
   makeUnsplashPhoto,

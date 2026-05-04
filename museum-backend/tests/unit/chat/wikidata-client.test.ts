@@ -1,4 +1,4 @@
-import { WikidataClient } from '@modules/chat/adapters/secondary/wikidata.client';
+import { WikidataClient } from '@modules/chat/adapters/secondary/search/wikidata.client';
 
 const mockSearchResponse = (items: Array<{ id: string; label: string; description?: string }>) => ({
   search: items,

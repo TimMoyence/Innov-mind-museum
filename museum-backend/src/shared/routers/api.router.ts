@@ -7,7 +7,7 @@ import authRouter from '@modules/auth/adapters/primary/http/routes/auth.route';
 import consentRouter from '@modules/auth/adapters/primary/http/routes/consent.route';
 import meRouter from '@modules/auth/adapters/primary/http/routes/me.route';
 import mfaRouter from '@modules/auth/adapters/primary/http/routes/mfa.route';
-import { createChatRouter } from '@modules/chat/adapters/primary/http/chat.route';
+import { createChatRouter } from '@modules/chat/adapters/primary/http/routes/chat.route';
 import {
   getArtKeywordRepository,
   getArtworkKnowledgeRepo,
@@ -25,7 +25,7 @@ import supportRouter from '@modules/support/adapters/primary/http/routes/support
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { env } from '@src/config/env';
 
-import type { ChatService } from '@modules/chat/useCase/chat.service';
+import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 import type { EnrichMuseumUseCase } from '@modules/museum/useCase/enrichment/enrichMuseum.useCase';
 import type { CacheService } from '@shared/cache/cache.port';
 

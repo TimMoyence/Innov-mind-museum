@@ -4,8 +4,8 @@ import {
   buildGuardrailRefusal,
   buildGuardrailCitation,
   type GuardrailBlockReason,
-} from '@modules/chat/useCase/art-topic-guardrail';
-import { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail-evaluation.service';
+} from '@modules/chat/useCase/guardrail/art-topic-guardrail';
+import { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
 
 describe('evaluateUserInputGuardrail', () => {
   it('allows empty text', () => {

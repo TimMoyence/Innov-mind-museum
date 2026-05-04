@@ -34,7 +34,7 @@ import { AppError } from '@shared/errors/app.error';
 import {
   TesseractOcrService,
   DisabledOcrService,
-} from '@modules/chat/adapters/secondary/ocr-service';
+} from '@modules/chat/adapters/secondary/image/ocr-service';
 
 describe('TesseractOcrService', () => {
   let service: TesseractOcrService;

@@ -5,7 +5,7 @@ import {
   toAmzDate,
   buildCanonicalHeaders,
   signString,
-} from '@modules/chat/adapters/secondary/s3-signing';
+} from '@modules/chat/adapters/secondary/storage/s3-signing';
 
 describe('s3-signing', () => {
   describe('sha256Hex', () => {

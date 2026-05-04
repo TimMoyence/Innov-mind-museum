@@ -1,4 +1,4 @@
-import type { ChatSessionIntent, ContentPreference } from '../../../domain/chat.types';
+import type { ChatSessionIntent, ContentPreference } from '@modules/chat/domain/chat.types';
 
 /** Reusable session info shape shared across multiple chat HTTP contract types. */
 export interface SessionInfo {

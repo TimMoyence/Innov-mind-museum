@@ -5,7 +5,7 @@ import {
   sendSseDone,
   sendSseError,
   sendSseGuardrail,
-} from '@modules/chat/adapters/primary/http/sse.helpers';
+} from '@modules/chat/adapters/primary/http/helpers/sse.helpers';
 import type { Response } from 'express';
 
 const makeMockRes = (

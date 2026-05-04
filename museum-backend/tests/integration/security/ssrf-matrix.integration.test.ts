@@ -54,8 +54,8 @@ jest.mock('@shared/logger/logger', () => ({
 }));
 
 import { HtmlScraper } from '@modules/knowledge-extraction/adapters/secondary/scraper/html-scraper';
-import { isSafeImageUrl } from '@modules/chat/useCase/image-input';
-import { WikidataClient } from '@modules/chat/adapters/secondary/wikidata.client';
+import { isSafeImageUrl } from '@modules/chat/useCase/image/image-input';
+import { WikidataClient } from '@modules/chat/adapters/secondary/search/wikidata.client';
 import { HttpWikidataMuseumClient } from '@modules/museum/adapters/secondary/external/wikidata-museum.client';
 import {
   buildSsrfUrls,

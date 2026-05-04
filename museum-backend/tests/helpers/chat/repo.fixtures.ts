@@ -1,4 +1,4 @@
-import type { ChatRepository } from '@modules/chat/domain/chat.repository.interface';
+import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
 
 /**
  * Shared mock ChatRepository factory. All methods default to jest.fn().

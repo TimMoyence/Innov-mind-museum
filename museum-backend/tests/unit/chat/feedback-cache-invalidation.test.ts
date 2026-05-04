@@ -1,8 +1,8 @@
-import { ChatMediaService } from '@modules/chat/useCase/chat-media.service';
-import { buildCacheKey } from '@modules/chat/useCase/chat-cache-key.util';
-import type { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
-import type { ChatSession } from '@modules/chat/domain/chatSession.entity';
-import type { ChatMessageWithSessionOwnership } from '@modules/chat/domain/chat.repository.interface';
+import { ChatMediaService } from '@modules/chat/useCase/audio/chat-media.service';
+import { buildCacheKey } from '@modules/chat/useCase/message/chat-cache-key.util';
+import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
+import type { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
+import type { ChatMessageWithSessionOwnership } from '@modules/chat/domain/session/chat.repository.interface';
 import { makeSession, makeMessage, makeSessionUser } from '../../helpers/chat/message.fixtures';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 import { makeCache } from '../../helpers/chat/cache.fixtures';

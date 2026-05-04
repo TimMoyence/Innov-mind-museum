@@ -86,7 +86,7 @@ jest.mock('@modules/support/useCase', () => ({
 
 // Review route fetches the user profile through its own UserRepositoryPg —
 // patch the DefaultReviewRouter author resolver by mocking UserRepositoryPg.
-jest.mock('@modules/auth/adapters/secondary/user.repository.pg', () => ({
+jest.mock('@modules/auth/adapters/secondary/pg/user.repository.pg', () => ({
   UserRepositoryPg: class {
     async getUserById(id: number) {
       return { id, firstname: 'Test', lastname: 'User' };

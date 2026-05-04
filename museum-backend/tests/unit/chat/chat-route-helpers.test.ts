@@ -7,7 +7,7 @@ import {
   contentTypeByExtension,
   upload,
   audioUpload,
-} from '@modules/chat/adapters/primary/http/chat-route.helpers';
+} from '@modules/chat/adapters/primary/http/helpers/chat-route.helpers';
 
 jest.mock('@modules/chat/adapters/primary/http/chat.image-url', () => ({
   buildSignedChatImageReadUrl: jest.fn(() => ({
@@ -16,7 +16,7 @@ jest.mock('@modules/chat/adapters/primary/http/chat.image-url', () => ({
   })),
 }));
 
-jest.mock('@modules/chat/adapters/secondary/image-storage.s3', () => ({
+jest.mock('@modules/chat/adapters/secondary/storage/image-storage.s3', () => ({
   isS3ImageRef: jest.fn((ref: string) => typeof ref === 'string' && ref.startsWith('s3://')),
   buildS3SignedReadUrlFromRef: jest.fn(() => ({
     url: 'https://s3.example.com/signed',

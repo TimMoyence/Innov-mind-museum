@@ -9,7 +9,7 @@ import {
   parseS3ImageRef,
   listObjectsByPrefix,
   deleteObjectsBatch,
-} from '@modules/chat/adapters/secondary/image-storage.s3';
+} from '@modules/chat/adapters/secondary/storage/image-storage.s3';
 
 const config = {
   endpoint: 'https://storage.example.com',

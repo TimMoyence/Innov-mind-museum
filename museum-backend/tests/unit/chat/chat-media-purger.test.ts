@@ -8,10 +8,10 @@ import {
   noopMediaPurger,
   S3ChatMediaPurger,
 } from '@modules/chat/jobs/chat-media-purger';
-import { DEFAULT_LOCAL_AUDIOS_DIR } from '@modules/chat/adapters/secondary/audio-storage.stub';
-import { DEFAULT_LOCAL_UPLOADS_DIR } from '@modules/chat/adapters/secondary/image-storage.stub';
+import { DEFAULT_LOCAL_AUDIOS_DIR } from '@modules/chat/adapters/secondary/storage/audio-storage.stub';
+import { DEFAULT_LOCAL_UPLOADS_DIR } from '@modules/chat/adapters/secondary/storage/image-storage.stub';
 
-import type { S3ImageStorageConfig } from '@modules/chat/adapters/secondary/s3-operations';
+import type { S3ImageStorageConfig } from '@modules/chat/adapters/secondary/storage/s3-operations';
 
 const FAKE_S3_CONFIG: S3ImageStorageConfig = {
   endpoint: 'https://s3.example.com',

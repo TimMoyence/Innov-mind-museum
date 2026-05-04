@@ -1,4 +1,4 @@
-import { LocationResolver } from '@modules/chat/useCase/location-resolver';
+import { LocationResolver } from '@modules/chat/useCase/location/location-resolver';
 import * as nominatimClient from '@shared/http/nominatim.client';
 
 import { makeMuseum, makeMuseumRepo } from '../../helpers/museum/museum.fixtures';

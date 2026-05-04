@@ -1,5 +1,5 @@
-import type { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
-import type { MessageReport } from '@modules/chat/domain/messageReport.entity';
+import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
+import type { MessageReport } from '@modules/chat/domain/message/messageReport.entity';
 import type { AuditLog } from '@shared/audit/auditLog.entity';
 
 /**

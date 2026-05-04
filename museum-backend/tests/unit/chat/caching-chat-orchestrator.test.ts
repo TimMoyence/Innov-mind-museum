@@ -14,7 +14,7 @@ jest.mock('@shared/logger/logger', () => ({
   },
 }));
 
-import { CachingChatOrchestrator } from '@modules/chat/adapters/secondary/caching-chat-orchestrator';
+import { CachingChatOrchestrator } from '@modules/chat/adapters/secondary/llm/caching-chat-orchestrator';
 import { makeMockCache } from '../../helpers/chat/cacheService.fixtures';
 
 // ---------------------------------------------------------------------------

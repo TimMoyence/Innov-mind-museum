@@ -1,4 +1,4 @@
-import { SearXNGClient } from '@modules/chat/adapters/secondary/searxng.client';
+import { SearXNGClient } from '@modules/chat/adapters/secondary/search/searxng.client';
 import { mockFetch } from '../../helpers/fetch/fetch-mock.helpers';
 import {
   makeSearxngHit,

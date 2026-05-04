@@ -5,7 +5,7 @@ import {
   assertPropertyId,
   escapeSparqlLiteral,
 } from '@shared/http/wikidata-ids';
-import { WikidataClient } from '@modules/chat/adapters/secondary/wikidata.client';
+import { WikidataClient } from '@modules/chat/adapters/secondary/search/wikidata.client';
 import { HttpWikidataMuseumClient } from '@modules/museum/adapters/secondary/external/wikidata-museum.client';
 
 import {

@@ -1,9 +1,9 @@
-import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
+import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import { runS3OrphanPurge } from '@modules/chat/jobs/s3-orphan-purge.job';
 
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 
-import type { S3ImageStorageConfig } from '@modules/chat/adapters/secondary/s3-operations';
+import type { S3ImageStorageConfig } from '@modules/chat/adapters/secondary/storage/s3-operations';
 import type { DataSource } from 'typeorm';
 
 const FAKE_S3_CONFIG: S3ImageStorageConfig = {

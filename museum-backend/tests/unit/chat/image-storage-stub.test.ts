@@ -1,7 +1,7 @@
 import {
   resolveLocalImageFilePath,
   DEFAULT_LOCAL_UPLOADS_DIR,
-} from '@modules/chat/adapters/secondary/image-storage.stub';
+} from '@modules/chat/adapters/secondary/storage/image-storage.stub';
 import path from 'path';
 
 describe('resolveLocalImageFilePath', () => {

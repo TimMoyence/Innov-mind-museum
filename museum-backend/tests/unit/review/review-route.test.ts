@@ -27,7 +27,7 @@ jest.mock('@modules/review/useCase', () => ({
 
 const mockGetUserById = jest.fn();
 
-jest.mock('@modules/auth/adapters/secondary/user.repository.pg', () => ({
+jest.mock('@modules/auth/adapters/secondary/pg/user.repository.pg', () => ({
   UserRepositoryPg: jest.fn().mockImplementation(() => ({
     getUserById: (id: number) => mockGetUserById(id),
   })),

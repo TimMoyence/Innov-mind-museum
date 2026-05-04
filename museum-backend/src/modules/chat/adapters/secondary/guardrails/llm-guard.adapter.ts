@@ -6,7 +6,7 @@ import type {
   AdvancedGuardrailDecision,
   AdvancedGuardrailInput,
   AdvancedGuardrailOutput,
-} from '../../../domain/ports/advanced-guardrail.port';
+} from '@modules/chat/domain/ports/advanced-guardrail.port';
 
 /**
  * Wire-level response expected from the LLM Guard sidecar.

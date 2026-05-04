@@ -6,11 +6,11 @@
  */
 import { getActiveChatModule } from './chat-module-singleton';
 
-import type { TypeOrmChatRepository } from './adapters/secondary/chat.repository.typeorm';
-import type { ArtKeywordRepository } from './domain/artKeyword.repository.interface';
+import type { TypeOrmChatRepository } from './adapters/secondary/persistence/chat.repository.typeorm';
 import type { ImageStorage } from './domain/ports/image-storage.port';
-import type { DescribeService } from './useCase/describe.service';
-import type { UserMemoryService } from './useCase/user-memory.service';
+import type { ArtKeywordRepository } from '@modules/chat/domain/art-keyword/artKeyword.repository.interface';
+import type { DescribeService } from '@modules/chat/useCase/describe/describe.service';
+import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 
 export const getImageStorage = (): ImageStorage => getActiveChatModule().getBuilt().imageStorage;

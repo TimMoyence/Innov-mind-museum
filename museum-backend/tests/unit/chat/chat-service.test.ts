@@ -1,15 +1,15 @@
-import { ChatService } from '@modules/chat/useCase/chat.service';
-import { ChatSessionService } from '@modules/chat/useCase/chat-session.service';
-import { ChatMessageService } from '@modules/chat/useCase/chat-message.service';
-import { ChatMediaService } from '@modules/chat/useCase/chat-media.service';
-import type { ChatServiceDeps } from '@modules/chat/useCase/chat.service';
+import { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
+import { ChatSessionService } from '@modules/chat/useCase/session/chat-session.service';
+import { ChatMessageService } from '@modules/chat/useCase/message/chat-message.service';
+import { ChatMediaService } from '@modules/chat/useCase/audio/chat-media.service';
+import type { ChatServiceDeps } from '@modules/chat/useCase/orchestration/chat.service';
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 
-jest.mock('@modules/chat/useCase/chat-session.service');
-jest.mock('@modules/chat/useCase/chat-message.service');
-jest.mock('@modules/chat/useCase/chat-media.service');
+jest.mock('@modules/chat/useCase/session/chat-session.service');
+jest.mock('@modules/chat/useCase/message/chat-message.service');
+jest.mock('@modules/chat/useCase/audio/chat-media.service');
 
 const MockedSessionService = ChatSessionService as jest.MockedClass<typeof ChatSessionService>;
 const MockedMessageService = ChatMessageService as jest.MockedClass<typeof ChatMessageService>;

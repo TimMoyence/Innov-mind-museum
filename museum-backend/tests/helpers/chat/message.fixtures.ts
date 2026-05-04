@@ -1,5 +1,5 @@
-import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
-import { ChatSession } from '@modules/chat/domain/chatSession.entity';
+import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
+import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import type { ChatSessionIntent } from '@modules/chat/domain/chat.types';
 
 /**

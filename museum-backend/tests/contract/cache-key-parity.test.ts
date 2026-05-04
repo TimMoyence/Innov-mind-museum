@@ -6,7 +6,7 @@ import {
   buildCacheKey,
   normalizeQuestion,
   type CacheKeyInput,
-} from '@modules/chat/useCase/chat-cache-key.util';
+} from '@modules/chat/useCase/message/chat-cache-key.util';
 
 interface TestVector {
   label: string;

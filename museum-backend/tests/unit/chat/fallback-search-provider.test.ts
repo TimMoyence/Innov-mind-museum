@@ -1,4 +1,4 @@
-import { FallbackSearchProvider } from '@modules/chat/adapters/secondary/fallback-search.provider';
+import { FallbackSearchProvider } from '@modules/chat/adapters/secondary/search/fallback-search.provider';
 import type { WebSearchProvider, WebSearchQuery } from '@modules/chat/domain/ports/web-search.port';
 
 // Silence logger output during tests

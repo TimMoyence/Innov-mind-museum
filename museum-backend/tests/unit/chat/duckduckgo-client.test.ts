@@ -1,4 +1,4 @@
-import { DuckDuckGoClient } from '@modules/chat/adapters/secondary/duckduckgo.client';
+import { DuckDuckGoClient } from '@modules/chat/adapters/secondary/search/duckduckgo.client';
 import { mockFetch } from '../../helpers/fetch/fetch-mock.helpers';
 import {
   makeDuckDuckGoApiResponse,

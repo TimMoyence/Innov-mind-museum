@@ -2,7 +2,7 @@ import {
   updateVisitContext,
   deriveSessionTitle,
   buildVisitContextPromptBlock,
-} from '@modules/chat/useCase/visit-context';
+} from '@modules/chat/useCase/session/visit-context';
 import type { ChatAssistantMetadata, VisitContext } from '@modules/chat/domain/chat.types';
 import { makeSession } from '../../helpers/chat/message.fixtures';
 

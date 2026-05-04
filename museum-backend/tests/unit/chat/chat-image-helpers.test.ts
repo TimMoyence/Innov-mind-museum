@@ -5,7 +5,7 @@ import {
   withPolicyCitation,
   isValidSessionListCursor,
   resolveLocalImageMeta,
-} from '@modules/chat/useCase/chat-image.helpers';
+} from '@modules/chat/useCase/image/chat-image.helpers';
 import type { ChatAssistantMetadata } from '@modules/chat/domain/chat.types';
 
 describe('toLocalImageFileName', () => {

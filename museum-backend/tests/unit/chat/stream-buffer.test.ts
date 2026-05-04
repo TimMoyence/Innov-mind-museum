@@ -1,5 +1,5 @@
-import { StreamBuffer } from '@modules/chat/useCase/stream-buffer';
-import type { GuardrailBlockReason } from '@modules/chat/useCase/art-topic-guardrail';
+import { StreamBuffer } from '@modules/chat/useCase/orchestration/stream-buffer';
+import type { GuardrailBlockReason } from '@modules/chat/useCase/guardrail/art-topic-guardrail';
 
 describe('StreamBuffer', () => {
   beforeEach(() => {

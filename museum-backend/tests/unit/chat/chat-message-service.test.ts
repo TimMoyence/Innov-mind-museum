@@ -1,12 +1,12 @@
-import { ChatMessageService } from '@modules/chat/useCase/chat-message.service';
-import type { ChatMessageServiceDeps } from '@modules/chat/useCase/chat-message.service';
+import { ChatMessageService } from '@modules/chat/useCase/message/chat-message.service';
+import type { ChatMessageServiceDeps } from '@modules/chat/useCase/message/chat-message.service';
 import type { PiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 import type {
   ChatRepository,
   SessionMessagesPage,
   ChatSessionsPage,
-} from '@modules/chat/domain/chat.repository.interface';
-import type { ChatSession } from '@modules/chat/domain/chatSession.entity';
+} from '@modules/chat/domain/session/chat.repository.interface';
+import type { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import type {
   ChatOrchestrator,
   OrchestratorOutput,

@@ -1,7 +1,7 @@
-import { ChatMediaService } from '@modules/chat/useCase/chat-media.service';
-import type { ChatMessageWithSessionOwnership } from '@modules/chat/domain/chat.repository.interface';
-import type { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
-import type { ChatSession } from '@modules/chat/domain/chatSession.entity';
+import { ChatMediaService } from '@modules/chat/useCase/audio/chat-media.service';
+import type { ChatMessageWithSessionOwnership } from '@modules/chat/domain/session/chat.repository.interface';
+import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
+import type { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import type { TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
 import { makeSession, makeMessage, makeSessionUser } from '../../helpers/chat/message.fixtures';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';

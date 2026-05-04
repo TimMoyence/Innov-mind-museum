@@ -1,5 +1,5 @@
-import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
-import { ChatSession } from '@modules/chat/domain/chatSession.entity';
+import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
+import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import { logger } from '@shared/logger/logger';
 
 import { noopMediaPurger } from './chat-media-purger';

@@ -83,11 +83,11 @@ jest.mock('@modules/admin/adapters/primary/http/routes/cache-purge.route', () =>
     return Router();
   },
 }));
-jest.mock('@modules/auth/adapters/primary/http/auth.route', () => {
+jest.mock('@modules/auth/adapters/primary/http/routes/auth.route', () => {
   const { Router } = jest.requireActual<typeof import('express')>('express');
   return { __esModule: true, default: Router() };
 });
-jest.mock('@modules/auth/adapters/primary/http/consent.route', () => {
+jest.mock('@modules/auth/adapters/primary/http/routes/consent.route', () => {
   const { Router } = jest.requireActual<typeof import('express')>('express');
   return { __esModule: true, default: Router() };
 });
@@ -95,18 +95,18 @@ jest.mock('@modules/auth/adapters/primary/http/consent.route', () => {
 // which evaluates `env.db.host`. The mocked env on this suite intentionally
 // omits the `db` block (this test cares only about extraction-worker wiring),
 // so we stub the router out the same way as the other auth routes.
-jest.mock('@modules/auth/adapters/primary/http/me.route', () => {
+jest.mock('@modules/auth/adapters/primary/http/routes/me.route', () => {
   const { Router } = jest.requireActual<typeof import('express')>('express');
   return { __esModule: true, default: Router() };
 });
 // Same rationale as `me.route`: `mfa.route` pulls in the auth use-case
 // composition root (which constructs PG repositories), so it would crash on
 // the env-mocked test setup unless stubbed.
-jest.mock('@modules/auth/adapters/primary/http/mfa.route', () => {
+jest.mock('@modules/auth/adapters/primary/http/routes/mfa.route', () => {
   const { Router } = jest.requireActual<typeof import('express')>('express');
   return { __esModule: true, default: Router() };
 });
-jest.mock('@modules/chat/adapters/primary/http/chat.route', () => ({
+jest.mock('@modules/chat/adapters/primary/http/routes/chat.route', () => ({
   createChatRouter: () => {
     const { Router } = jest.requireActual<typeof import('express')>('express');
     return Router();
@@ -143,7 +143,7 @@ jest.mock('@modules/support/adapters/primary/http/routes/support.route', () => {
 import { createApiRouter } from '@shared/routers/api.router';
 import { BullmqMuseumEnrichmentQueueAdapter } from '@modules/museum/adapters/secondary/enrichment/bullmq-museum-enrichment-queue.adapter';
 
-import type { ChatService } from '@modules/chat/useCase/chat.service';
+import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 
 describe('resolveEnrichMuseumUseCase — EXTRACTION_WORKER_ENABLED=false', () => {
   beforeEach(() => {

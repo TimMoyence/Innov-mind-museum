@@ -1,6 +1,6 @@
-import { UserMemoryService } from '@modules/chat/useCase/user-memory.service';
-import type { UserMemoryRepository } from '@modules/chat/domain/userMemory.repository.interface';
-import type { UserMemory } from '@modules/chat/domain/userMemory.entity';
+import { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
+import type { UserMemoryRepository } from '@modules/chat/domain/memory/userMemory.repository.interface';
+import type { UserMemory } from '@modules/chat/domain/memory/userMemory.entity';
 import type { VisitContext } from '@modules/chat/domain/chat.types';
 import { makeMemory } from 'tests/helpers/chat/userMemory.fixtures';
 import { makeCache } from '../../helpers/chat/cache.fixtures';

@@ -1,9 +1,9 @@
 import type { DataSource, Repository } from 'typeorm';
 
-import { User } from '@modules/auth/domain/user.entity';
-import { ChatSession } from '@modules/chat/domain/chatSession.entity';
-import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
-import { MessageReport } from '@modules/chat/domain/messageReport.entity';
+import { User } from '@modules/auth/domain/user/user.entity';
+import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
+import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
+import { MessageReport } from '@modules/chat/domain/message/messageReport.entity';
 import { AuditLog } from '@shared/audit/auditLog.entity';
 
 import { AdminRepositoryPg } from '@modules/admin/adapters/secondary/pg/admin.repository.pg';

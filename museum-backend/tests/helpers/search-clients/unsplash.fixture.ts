@@ -1,7 +1,7 @@
 import type {
   UnsplashClient,
   UnsplashPhoto,
-} from '@modules/chat/adapters/secondary/unsplash.client';
+} from '@modules/chat/adapters/secondary/search/unsplash.client';
 
 export function makeUnsplashPhoto(overrides: Partial<UnsplashPhoto> = {}): UnsplashPhoto {
   return {

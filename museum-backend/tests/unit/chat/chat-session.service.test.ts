@@ -1,9 +1,9 @@
-import { ChatSessionService } from '@modules/chat/useCase/chat-session.service';
+import { ChatSessionService } from '@modules/chat/useCase/session/chat-session.service';
 import type {
   ChatSessionsPage,
   SessionMessagesPage,
-} from '@modules/chat/domain/chat.repository.interface';
-import type { ChatSession } from '@modules/chat/domain/chatSession.entity';
+} from '@modules/chat/domain/session/chat.repository.interface';
+import type { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import { AppError } from '@shared/errors/app.error';
 import { makeSession, makeSessionUser } from '../../helpers/chat/message.fixtures';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';

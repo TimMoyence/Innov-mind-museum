@@ -9,8 +9,8 @@
  * callers are serialised at the Postgres row level.
  */
 
-import { UserMemory } from '@modules/chat/domain/userMemory.entity';
-import { TypeOrmUserMemoryRepository } from '@modules/chat/adapters/secondary/userMemory.repository.typeorm';
+import { UserMemory } from '@modules/chat/domain/memory/userMemory.entity';
+import { TypeOrmUserMemoryRepository } from '@modules/chat/adapters/secondary/persistence/userMemory.repository.typeorm';
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 import { makeMockTypeOrmRepo, makeMockDataSource } from 'tests/helpers/shared/mock-deps';
 import { makeMemory } from 'tests/helpers/chat/userMemory.fixtures';

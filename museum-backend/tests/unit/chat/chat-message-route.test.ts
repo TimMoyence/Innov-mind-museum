@@ -5,7 +5,7 @@ import { createApp } from '@src/app';
 import { resetRateLimits, stopRateLimitSweep } from 'tests/helpers/http/route-test-setup';
 import { userToken, makeToken } from 'tests/helpers/auth/token.helpers';
 
-import type { ChatService } from '@modules/chat/useCase/chat.service';
+import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 
 // ── Mock ChatService ────────────────────────────────────────────────
 

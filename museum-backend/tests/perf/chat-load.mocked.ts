@@ -1,6 +1,6 @@
 import { performance } from 'perf_hooks';
 
-import { ChatService } from '@modules/chat/useCase/chat.service';
+import { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 import type {
   ChatOrchestrator,
   OrchestratorOutput,

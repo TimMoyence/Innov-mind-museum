@@ -1,5 +1,5 @@
-import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
-import { ChatSession } from '@modules/chat/domain/chatSession.entity';
+import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
+import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import { runChatPurge } from '@modules/chat/jobs/chat-purge.job';
 
 import { makeMessage, makeSession } from 'tests/helpers/chat/message.fixtures';

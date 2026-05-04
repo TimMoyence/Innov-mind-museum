@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import type { NextFunction, Request } from 'express';
-import type { ApiKeyRepository } from '@modules/auth/domain/apiKey.repository.interface';
+import type { ApiKeyRepository } from '@modules/auth/domain/api-key/apiKey.repository.interface';
 import { makePartialRequest, makePartialResponse } from '../../helpers/http/express-mock.helpers';
 
 jest.mock('@shared/logger/logger', () => ({

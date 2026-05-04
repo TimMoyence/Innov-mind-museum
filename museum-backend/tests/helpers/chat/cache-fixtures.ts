@@ -1,4 +1,4 @@
-import type { CacheKeyInput } from '@modules/chat/useCase/chat-cache-key.util';
+import type { CacheKeyInput } from '@modules/chat/useCase/message/chat-cache-key.util';
 
 /**
  * Sensible defaults for a {@link CacheKeyInput}. The defaults intentionally

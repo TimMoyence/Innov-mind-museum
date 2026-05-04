@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 
-import { ChatService } from '@modules/chat/useCase/chat.service';
+import { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 import type {
   ChatSessionsPage,
   ChatRepository,
@@ -12,20 +12,20 @@ import type {
   PersistMessageReportInput,
   SessionMessagesPage,
   UserChatExportData,
-} from '@modules/chat/domain/chat.repository.interface';
+} from '@modules/chat/domain/session/chat.repository.interface';
 import type { CreateSessionInput } from '@modules/chat/domain/chat.types';
-import type { FeedbackValue } from '@modules/chat/domain/messageFeedback.entity';
-import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
-import { ChatSession } from '@modules/chat/domain/chatSession.entity';
-import { LocalImageStorage } from '@modules/chat/adapters/secondary/image-storage.stub';
+import type { FeedbackValue } from '@modules/chat/domain/message/messageFeedback.entity';
+import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
+import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
+import { LocalImageStorage } from '@modules/chat/adapters/secondary/storage/image-storage.stub';
 import type {
   ChatOrchestrator,
   OrchestratorOutput,
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { AudioTranscriber } from '@modules/chat/domain/ports/audio-transcriber.port';
-import type { TextToSpeechService } from '@modules/chat/adapters/secondary/text-to-speech.openai';
-import type { OcrService } from '@modules/chat/adapters/secondary/ocr-service';
-import type { ArtTopicClassifierPort } from '@modules/chat/useCase/guardrail-evaluation.service';
+import type { TextToSpeechService } from '@modules/chat/adapters/secondary/audio/text-to-speech.openai';
+import type { OcrService } from '@modules/chat/adapters/secondary/image/ocr-service';
+import type { ArtTopicClassifierPort } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /** Test utility: in-memory ChatRepository implementation that stores sessions and messages in Maps. */

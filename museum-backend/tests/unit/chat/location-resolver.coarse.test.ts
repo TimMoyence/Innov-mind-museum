@@ -2,7 +2,7 @@ import {
   LocationResolver,
   resolveLocationForMessage,
   type LocationConsentChecker,
-} from '@modules/chat/useCase/location-resolver';
+} from '@modules/chat/useCase/location/location-resolver';
 import * as nominatimClient from '@shared/http/nominatim.client';
 
 import { makeMuseum, makeMuseumRepo } from '../../helpers/museum/museum.fixtures';

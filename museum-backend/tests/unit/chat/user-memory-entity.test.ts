@@ -1,5 +1,5 @@
 import { getMetadataArgsStorage } from 'typeorm';
-import { UserMemory } from '@modules/chat/domain/userMemory.entity';
+import { UserMemory } from '@modules/chat/domain/memory/userMemory.entity';
 
 describe('UserMemory entity columns', () => {
   it('declares languagePreference column', () => {

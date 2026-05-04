@@ -23,25 +23,25 @@ jest.mock('@shared/observability/sentry', () => ({
   ),
 }));
 
-jest.mock('@modules/chat/adapters/secondary/s3-operations', () => ({
+jest.mock('@modules/chat/adapters/secondary/storage/s3-operations', () => ({
   buildS3SignedHeadersForPut: jest.fn(),
   buildS3PresignedReadUrl: jest.fn(),
   deleteObjectsBatch: jest.fn(),
   httpPut: jest.fn(),
 }));
 
-jest.mock('@modules/chat/adapters/secondary/s3-path-utils', () => ({
+jest.mock('@modules/chat/adapters/secondary/storage/s3-path-utils', () => ({
   normalizeObjectKey: jest.fn(),
 }));
 
-import { S3CompatibleAudioStorage } from '@modules/chat/adapters/secondary/audio-storage.s3';
+import { S3CompatibleAudioStorage } from '@modules/chat/adapters/secondary/storage/audio-storage.s3';
 import {
   buildS3PresignedReadUrl,
   buildS3SignedHeadersForPut,
   deleteObjectsBatch,
   httpPut,
-} from '@modules/chat/adapters/secondary/s3-operations';
-import { normalizeObjectKey } from '@modules/chat/adapters/secondary/s3-path-utils';
+} from '@modules/chat/adapters/secondary/storage/s3-operations';
+import { normalizeObjectKey } from '@modules/chat/adapters/secondary/storage/s3-path-utils';
 
 import { makeS3Config } from '../../helpers/chat/s3-config.fixtures';
 

@@ -1,4 +1,4 @@
-import { pruneStaleArtKeywords } from '@modules/chat/useCase/prune-stale-art-keywords';
+import { pruneStaleArtKeywords } from '@modules/chat/useCase/retention/prune-stale-art-keywords';
 
 import type { DataSource } from 'typeorm';
 

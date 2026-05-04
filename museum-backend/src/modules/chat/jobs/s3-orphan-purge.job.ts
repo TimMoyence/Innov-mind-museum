@@ -1,9 +1,9 @@
-import { ChatMessage } from '@modules/chat/domain/chatMessage.entity';
+import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import { logger } from '@shared/logger/logger';
 
-import { listObjectsByPrefix } from '../adapters/secondary/s3-operations';
+import { listObjectsByPrefix } from '../adapters/secondary/storage/s3-operations';
 
-import type { S3ImageStorageConfig } from '../adapters/secondary/s3-operations';
+import type { S3ImageStorageConfig } from '../adapters/secondary/storage/s3-operations';
 import type { DataSource } from 'typeorm';
 
 /** Default key prefixes the chat module writes under (production layout). */
@@ -198,7 +198,8 @@ export async function runS3OrphanPurge(
   const prefixes = opts.prefixes ?? DEFAULT_CHAT_KEY_PREFIXES;
   const pageLister = opts.pageLister ?? defaultPageLister;
   const batchDeleter =
-    opts.batchDeleter ?? (await import('../adapters/secondary/s3-operations')).deleteObjectsBatch;
+    opts.batchDeleter ??
+    (await import('@modules/chat/adapters/secondary/storage/s3-operations')).deleteObjectsBatch;
 
   const cutoffMs = Date.now() - opts.retentionDays * 24 * 60 * 60 * 1000;
 

@@ -2,7 +2,7 @@ import {
   scoreImage,
   normalizeForScoring,
   type ImageCandidate,
-} from '@src/modules/chat/useCase/image-scoring';
+} from '@src/modules/chat/useCase/image/image-scoring';
 
 describe('image-scoring', () => {
   describe('normalizeForScoring', () => {

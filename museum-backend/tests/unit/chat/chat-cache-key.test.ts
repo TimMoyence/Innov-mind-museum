@@ -3,7 +3,7 @@ import {
   isGenericQuery,
   GENERIC_TEXT_MAX_LEN,
   MAX_CACHE_KEY_BYTES,
-} from '@modules/chat/useCase/chat-cache-key.util';
+} from '@modules/chat/useCase/message/chat-cache-key.util';
 
 import { makeCacheKeyInput } from '../../helpers/chat/cache-fixtures';
 

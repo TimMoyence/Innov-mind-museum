@@ -14,8 +14,8 @@ import {
   ImageDecodeError,
   SharpImageProcessor,
   stripExifFromImage,
-} from '@modules/chat/adapters/secondary/image-processing.service';
-import { ImageProcessingService } from '@modules/chat/useCase/image-processing.service';
+} from '@modules/chat/adapters/secondary/image/image-processing.service';
+import { ImageProcessingService } from '@modules/chat/useCase/image/image-processing.service';
 
 import {
   createAnimatedGif,

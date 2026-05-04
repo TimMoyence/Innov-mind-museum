@@ -13,11 +13,11 @@
  * guardrail evaluator is the single source of truth for input decisions
  * (chat.service / chat-message.service simply delegate to it).
  */
-import { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail-evaluation.service';
-import { resetBudget } from '@modules/chat/useCase/guardrail-budget';
+import { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
+import { resetBudget } from '@modules/chat/useCase/guardrail/guardrail-budget';
 
-import type { ChatRepository } from '@modules/chat/domain/chat.repository.interface';
-import type { JudgeDecision } from '@modules/chat/useCase/llm-judge-guardrail';
+import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
+import type { JudgeDecision } from '@modules/chat/useCase/llm/llm-judge-guardrail';
 
 const repoStub = {
   persistMessage: async () => ({ id: 'x', createdAt: new Date() }),

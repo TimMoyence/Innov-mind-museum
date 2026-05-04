@@ -1,4 +1,4 @@
-import { GoogleCseClient } from '@modules/chat/adapters/secondary/google-cse.client';
+import { GoogleCseClient } from '@modules/chat/adapters/secondary/search/google-cse.client';
 import { mockFetch } from '../../helpers/fetch/fetch-mock.helpers';
 import {
   makeGoogleCseItem,

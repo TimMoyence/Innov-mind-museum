@@ -1,4 +1,4 @@
-import { UserMemoryService } from '@modules/chat/useCase/user-memory.service';
+import { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 import { makeUserMemoryRepoStub } from '../../helpers/chat/userMemory.fixtures';
 
 const minutes = (n: number) => n * 60_000;

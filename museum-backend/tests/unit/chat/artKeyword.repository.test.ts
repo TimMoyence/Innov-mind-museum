@@ -1,5 +1,5 @@
-import { TypeOrmArtKeywordRepository } from '@modules/chat/adapters/secondary/artKeyword.repository.typeorm';
-import { ArtKeyword } from '@modules/chat/domain/artKeyword.entity';
+import { TypeOrmArtKeywordRepository } from '@modules/chat/adapters/secondary/persistence/artKeyword.repository.typeorm';
+import { ArtKeyword } from '@modules/chat/domain/art-keyword/artKeyword.entity';
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 
 import type { Repository } from 'typeorm';

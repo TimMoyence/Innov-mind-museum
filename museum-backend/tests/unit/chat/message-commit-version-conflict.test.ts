@@ -9,9 +9,9 @@
  * session state. The 409 forces the client to re-prompt instead.
  */
 
-import { commitAssistantResponse } from '@modules/chat/useCase/message-commit';
+import { commitAssistantResponse } from '@modules/chat/useCase/orchestration/message-commit';
 import type { OrchestratorOutput } from '@modules/chat/domain/ports/chat-orchestrator.port';
-import type { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail-evaluation.service';
+import type { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 import { makeSession } from '../../helpers/chat/message.fixtures';
 

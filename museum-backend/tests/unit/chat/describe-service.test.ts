@@ -1,4 +1,4 @@
-import { DescribeService } from '@modules/chat/useCase/describe.service';
+import { DescribeService } from '@modules/chat/useCase/describe/describe.service';
 
 import type {
   ChatOrchestrator,
