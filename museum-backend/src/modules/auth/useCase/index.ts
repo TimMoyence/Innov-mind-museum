@@ -154,7 +154,7 @@ const reviewDataExportProxy: ReviewDataExportPort = {
 const supportDataExportProxy: SupportDataExportPort = {
   async listForUser(userId: number): Promise<UserSupportTicketExportEntry[]> {
     const { SupportRepositoryPg } =
-      await import('@modules/support/adapters/secondary/support.repository.pg');
+      await import('@modules/support/adapters/secondary/pg/support.repository.pg');
     const repo = new SupportRepositoryPg(AppDataSource);
     const rows = await repo.listForUser(userId);
     return rows.map((t) => ({

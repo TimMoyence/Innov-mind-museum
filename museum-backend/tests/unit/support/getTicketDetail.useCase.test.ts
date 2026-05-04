@@ -1,4 +1,4 @@
-import { GetTicketDetailUseCase } from '@modules/support/useCase/getTicketDetail.useCase';
+import { GetTicketDetailUseCase } from '@modules/support/useCase/ticket-user/getTicketDetail.useCase';
 import { InMemorySupportRepository } from 'tests/helpers/support/inMemorySupportRepository';
 
 describe('GetTicketDetailUseCase', () => {

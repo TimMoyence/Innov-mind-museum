@@ -21,7 +21,7 @@ import { createLowDataPackRouter } from '@modules/museum/adapters/primary/http/l
 import { createMuseumRouter } from '@modules/museum/adapters/primary/http/museum.route';
 import { BullmqMuseumEnrichmentQueueAdapter } from '@modules/museum/adapters/secondary/bullmq-museum-enrichment-queue.adapter';
 import reviewRouter from '@modules/review/adapters/primary/http/routes/review.route';
-import supportRouter from '@modules/support/adapters/primary/http/support.route';
+import supportRouter from '@modules/support/adapters/primary/http/routes/support.route';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { env } from '@src/config/env';
 

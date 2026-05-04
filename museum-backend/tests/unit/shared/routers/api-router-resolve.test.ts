@@ -132,7 +132,7 @@ jest.mock('@modules/review/adapters/primary/http/routes/review.route', () => {
   const { Router } = jest.requireActual<typeof import('express')>('express');
   return { __esModule: true, default: Router() };
 });
-jest.mock('@modules/support/adapters/primary/http/support.route', () => {
+jest.mock('@modules/support/adapters/primary/http/routes/support.route', () => {
   const { Router } = jest.requireActual<typeof import('express')>('express');
   return { __esModule: true, default: Router() };
 });

@@ -1,11 +1,11 @@
 import type {
   ListAllTicketsInput,
   ListAllTicketsUseCase,
-} from '@modules/support/useCase/listAllTickets.useCase';
+} from '@modules/support/useCase/ticket-admin/listAllTickets.useCase';
 import type {
   UpdateTicketStatusInput,
   UpdateTicketStatusUseCase,
-} from '@modules/support/useCase/updateTicketStatus.useCase';
+} from '@modules/support/useCase/ticket-admin/updateTicketStatus.useCase';
 
 /**
  * Admin-side facade over the support (tickets) module.

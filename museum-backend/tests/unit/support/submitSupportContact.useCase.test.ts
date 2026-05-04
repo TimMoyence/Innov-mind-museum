@@ -1,6 +1,6 @@
-import { SubmitSupportContactUseCase } from '@modules/support/useCase/submitSupportContact.useCase';
+import { SubmitSupportContactUseCase } from '@modules/support/useCase/contact/submitSupportContact.useCase';
 
-import type { SupportContactNotifier } from '@modules/support/domain/support-contact-notifier.port';
+import type { SupportContactNotifier } from '@modules/support/domain/ports/support-contact-notifier.port';
 
 describe('SubmitSupportContactUseCase', () => {
   const notify = jest.fn<Promise<void>, [Parameters<SupportContactNotifier['notify']>[0]]>();

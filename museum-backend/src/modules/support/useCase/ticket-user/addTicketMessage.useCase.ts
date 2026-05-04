@@ -1,7 +1,7 @@
 import { badRequest, notFound, forbidden } from '@shared/errors/app.error';
 
-import type { ISupportRepository } from '../domain/support.repository.interface';
-import type { TicketMessageDTO } from '../domain/support.types';
+import type { ISupportRepository } from '../../domain/ticket/support.repository.interface';
+import type { TicketMessageDTO } from '../../domain/ticket/support.types';
 
 /** Input for adding a message to a support ticket. */
 export interface AddTicketMessageInput {

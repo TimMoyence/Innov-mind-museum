@@ -1,9 +1,9 @@
 import {
   EmailSupportContactNotifier,
   NoopSupportContactNotifier,
-} from '@modules/support/adapters/secondary/support-contact-email.notifier';
+} from '@modules/support/adapters/secondary/notifier/support-contact-email.notifier';
 import type { EmailService } from '@shared/email/email.port';
-import type { SupportContactPayload } from '@modules/support/domain/support-contact-notifier.port';
+import type { SupportContactPayload } from '@modules/support/domain/ports/support-contact-notifier.port';
 
 jest.mock('@shared/logger/logger', () => ({
   logger: {

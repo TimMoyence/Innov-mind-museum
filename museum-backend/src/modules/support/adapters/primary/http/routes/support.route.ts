@@ -6,18 +6,18 @@ import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
 
 import {
-  createTicketSchema,
-  submitSupportContactSchema,
-  addTicketMessageSchema,
-  listTicketsQuerySchema,
-} from './support.schemas';
-import {
   createTicketUseCase,
   submitSupportContactUseCase,
   listUserTicketsUseCase,
   getTicketDetailUseCase,
   addTicketMessageUseCase,
-} from '../../../useCase';
+} from '../../../../useCase';
+import {
+  createTicketSchema,
+  submitSupportContactSchema,
+  addTicketMessageSchema,
+  listTicketsQuerySchema,
+} from '../schemas/support.schemas';
 
 const supportRouter: Router = Router();
 

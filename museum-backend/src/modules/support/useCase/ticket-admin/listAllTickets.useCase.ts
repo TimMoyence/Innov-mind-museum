@@ -1,31 +1,30 @@
 import { badRequest } from '@shared/errors/app.error';
 
-import { TICKET_STATUSES, TICKET_PRIORITIES } from '../domain/support.types';
+import { TICKET_STATUSES, TICKET_PRIORITIES } from '../../domain/ticket/support.types';
 
-import type { ISupportRepository } from '../domain/support.repository.interface';
+import type { ISupportRepository } from '../../domain/ticket/support.repository.interface';
 import type {
   TicketDTO,
   ListTicketsFilters,
   TicketStatus,
   TicketPriority,
-} from '../domain/support.types';
+} from '../../domain/ticket/support.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 
-/** Input for listing a specific user's support tickets. */
-interface ListUserTicketsInput {
-  userId: number;
+/** Input for listing all support tickets (admin/moderator view). */
+export interface ListAllTicketsInput {
   status?: string;
   priority?: string;
   page: number;
   limit: number;
 }
 
-/** Validates pagination and lists tickets for a specific user. */
-export class ListUserTicketsUseCase {
+/** Validates pagination and lists all tickets (admin/moderator use). */
+export class ListAllTicketsUseCase {
   constructor(private readonly repository: ISupportRepository) {}
 
-  /** Validates pagination and filter enums, then retrieves a paginated list of the user's tickets. */
-  async execute(input: ListUserTicketsInput): Promise<PaginatedResult<TicketDTO>> {
+  /** Validates pagination and filter enums, then retrieves a paginated list of all tickets. */
+  async execute(input: ListAllTicketsInput): Promise<PaginatedResult<TicketDTO>> {
     if (!Number.isInteger(input.page) || input.page < 1) {
       throw badRequest('page must be a positive integer');
     }
@@ -41,7 +40,6 @@ export class ListUserTicketsUseCase {
     }
 
     const filters: ListTicketsFilters = {
-      userId: input.userId,
       status: input.status as TicketStatus | undefined,
       priority: input.priority as TicketPriority | undefined,
       pagination: { page: input.page, limit: input.limit },

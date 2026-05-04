@@ -1,4 +1,4 @@
-import { AddTicketMessageUseCase } from '@modules/support/useCase/addTicketMessage.useCase';
+import { AddTicketMessageUseCase } from '@modules/support/useCase/ticket-user/addTicketMessage.useCase';
 import { InMemorySupportRepository } from 'tests/helpers/support/inMemorySupportRepository';
 
 describe('AddTicketMessageUseCase', () => {

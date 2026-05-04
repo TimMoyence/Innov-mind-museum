@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { UserRole } from '@modules/auth/domain/user-role';
 import { REVIEW_STATUSES } from '@modules/review/domain/review/review.types';
-import { TICKET_PRIORITIES, TICKET_STATUSES } from '@modules/support/domain/support.types';
+import { TICKET_PRIORITIES, TICKET_STATUSES } from '@modules/support/domain/ticket/support.types';
 
 // Re-export peer-module schema so admin route imports only from admin.schemas.
 // The SSOT stays in the review module; admin module owns the HTTP binding choice.

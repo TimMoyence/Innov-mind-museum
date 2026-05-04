@@ -1,4 +1,4 @@
-import { ListAllTicketsUseCase } from '@modules/support/useCase/listAllTickets.useCase';
+import { ListAllTicketsUseCase } from '@modules/support/useCase/ticket-admin/listAllTickets.useCase';
 import { InMemorySupportRepository } from 'tests/helpers/support/inMemorySupportRepository';
 
 describe('ListAllTicketsUseCase', () => {

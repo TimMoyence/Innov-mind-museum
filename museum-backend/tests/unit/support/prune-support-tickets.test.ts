@@ -1,4 +1,4 @@
-import { pruneSupportTickets } from '@modules/support/useCase/prune-support-tickets';
+import { pruneSupportTickets } from '@modules/support/useCase/retention/prune-support-tickets';
 
 import type { DataSource } from 'typeorm';
 

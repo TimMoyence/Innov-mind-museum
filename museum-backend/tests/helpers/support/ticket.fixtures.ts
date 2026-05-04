@@ -1,5 +1,5 @@
-import { SupportTicket } from '@modules/support/domain/supportTicket.entity';
-import { TicketMessage } from '@modules/support/domain/ticketMessage.entity';
+import { SupportTicket } from '@modules/support/domain/ticket/supportTicket.entity';
+import { TicketMessage } from '@modules/support/domain/ticket/ticketMessage.entity';
 
 /**
  * Test factory for a SupportTicket entity. Override fields via the

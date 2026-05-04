@@ -1,4 +1,4 @@
-import { CreateTicketUseCase } from '@modules/support/useCase/createTicket.useCase';
+import { CreateTicketUseCase } from '@modules/support/useCase/ticket-user/createTicket.useCase';
 import { InMemorySupportRepository } from 'tests/helpers/support/inMemorySupportRepository';
 
 // Mock the audit module — the use case imports the singleton directly

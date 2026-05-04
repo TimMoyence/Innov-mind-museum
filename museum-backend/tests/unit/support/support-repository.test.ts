@@ -1,9 +1,9 @@
 import type { DataSource, Repository, UpdateResult } from 'typeorm';
 
-import { SupportTicket } from '@modules/support/domain/supportTicket.entity';
-import { TicketMessage } from '@modules/support/domain/ticketMessage.entity';
+import { SupportTicket } from '@modules/support/domain/ticket/supportTicket.entity';
+import { TicketMessage } from '@modules/support/domain/ticket/ticketMessage.entity';
 
-import { SupportRepositoryPg } from '@modules/support/adapters/secondary/support.repository.pg';
+import { SupportRepositoryPg } from '@modules/support/adapters/secondary/pg/support.repository.pg';
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 import { makeMockTypeOrmRepo, makeMockDataSourceMulti } from 'tests/helpers/shared/mock-deps';
 import { makeTicket, makeTicketMessage } from 'tests/helpers/support/ticket.fixtures';

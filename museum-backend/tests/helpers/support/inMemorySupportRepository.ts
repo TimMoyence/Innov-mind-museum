@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { PaginatedResult } from '@shared/types/pagination';
-import type { ISupportRepository } from '@modules/support/domain/support.repository.interface';
+import type { ISupportRepository } from '@modules/support/domain/ticket/support.repository.interface';
 import type {
   CreateTicketInput,
   TicketDTO,
@@ -9,7 +9,7 @@ import type {
   AddTicketMessageInput,
   TicketMessageDTO,
   UpdateTicketInput,
-} from '@modules/support/domain/support.types';
+} from '@modules/support/domain/ticket/support.types';
 
 interface StoredTicket {
   id: string;

@@ -1,7 +1,7 @@
-import { SupportTicket } from '../../domain/supportTicket.entity';
-import { TicketMessage } from '../../domain/ticketMessage.entity';
+import { SupportTicket } from '../../../domain/ticket/supportTicket.entity';
+import { TicketMessage } from '../../../domain/ticket/ticketMessage.entity';
 
-import type { ISupportRepository } from '../../domain/support.repository.interface';
+import type { ISupportRepository } from '../../../domain/ticket/support.repository.interface';
 import type {
   CreateTicketInput,
   TicketDTO,
@@ -10,7 +10,7 @@ import type {
   AddTicketMessageInput,
   TicketMessageDTO,
   UpdateTicketInput,
-} from '../../domain/support.types';
+} from '../../../domain/ticket/support.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 import type { DataSource, Repository } from 'typeorm';
 
@@ -100,9 +100,10 @@ export class SupportRepositoryPg implements ISupportRepository {
     const { entities, raw } = await dataQb.getRawAndEntities();
 
     return {
-      data: entities.map((entity, idx) =>
-        toTicketDTO(entity, Number.parseInt(raw[idx]?.messageCount as string, 10) || 0),
-      ),
+      data: entities.map((entity, idx) => {
+        const rawRow = raw[idx] as { messageCount?: string } | undefined;
+        return toTicketDTO(entity, Number.parseInt(rawRow?.messageCount ?? '', 10) || 0);
+      }),
       total,
       page,
       limit,

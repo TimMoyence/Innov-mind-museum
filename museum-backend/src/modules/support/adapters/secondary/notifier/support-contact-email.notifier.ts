@@ -3,7 +3,7 @@ import { logger } from '@shared/logger/logger';
 import type {
   SupportContactNotifier,
   SupportContactPayload,
-} from '../../domain/support-contact-notifier.port';
+} from '../../../domain/ports/support-contact-notifier.port';
 import type { EmailService } from '@shared/email/email.port';
 
 const escapeHtml = (value: string): string => {
