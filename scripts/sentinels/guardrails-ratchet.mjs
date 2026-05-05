@@ -3,8 +3,8 @@
  * Sentinel: guardrails-ratchet
  *
  * Counts pattern entries declared in the chat art-topic guardrail
- * (museum-backend/src/modules/chat/useCase/art-topic-guardrail.ts) and asserts
- * the total never drops below the committed baseline.
+ * (museum-backend/src/modules/chat/useCase/guardrail/art-topic-guardrail.ts)
+ * and asserts the total never drops below the committed baseline.
  *
  * The count is derived from quoted-string entries inside the four arrays:
  *   INSULT_KEYWORDS, INJECTION_PATTERNS, OFF_TOPIC_KEYWORDS, UNSAFE_OUTPUT_*
@@ -31,6 +31,7 @@ const target = path.join(
   'modules',
   'chat',
   'useCase',
+  'guardrail',
   'art-topic-guardrail.ts',
 );
 const baselinePath = path.join(__dirname, 'guardrails-baseline.json');
