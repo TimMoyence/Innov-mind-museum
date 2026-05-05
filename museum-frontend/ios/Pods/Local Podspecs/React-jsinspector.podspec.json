@@ -1,6 +1,6 @@
 {
   "name": "React-jsinspector",
-  "version": "0.83.4",
+  "version": "0.83.6",
   "summary": "React Native subsystem for modern debugging over the Chrome DevTools Protocol (CDP)",
   "homepage": "https://reactnative.dev/",
   "license": "MIT",
@@ -10,7 +10,7 @@
   },
   "source": {
     "git": "https://github.com/facebook/react-native.git",
-    "tag": "v0.83.4"
+    "tag": "v0.83.6"
   },
   "source_files": "*.h",
   "header_dir": "jsinspector-modern",
@@ -28,7 +28,7 @@
     "React-jsinspectornetwork": [],
     "React-jsinspectortracing": [],
     "React-perflogger": [
-      "0.83.4"
+      "0.83.6"
     ],
     "React-utils": [],
     "hermes-engine": [],

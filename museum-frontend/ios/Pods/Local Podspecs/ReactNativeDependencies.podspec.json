@@ -1,6 +1,6 @@
 {
   "name": "ReactNativeDependencies",
-  "version": "0.83.4",
+  "version": "0.83.6",
   "summary": "React Native Dependencies",
   "description": "ReactNativeDependencies is a podspec that contains all the third-party dependencies of React Native.",
   "homepage": "https://github.com/facebook/react-native",
@@ -13,7 +13,7 @@
     "WARNING_CFLAGS": "-Wno-comma -Wno-shorten-64-to-32"
   },
   "source": {
-    "http": "file:///Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/ios/Pods/ReactNativeDependencies-artifacts/reactnative-dependencies-0.83.4-debug.tar.gz"
+    "http": "file:///Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/ios/Pods/ReactNativeDependencies-artifacts/reactnative-dependencies-0.83.6-debug.tar.gz"
   },
   "preserve_paths": "**/*.*",
   "vendored_frameworks": "framework/packages/react-native/ReactNativeDependencies.xcframework",
@@ -23,7 +23,7 @@
   "script_phases": {
     "name": "[RNDeps] Replace React Native Dependencies for the right configuration, if needed",
     "execution_position": "before_compile",
-    "script": "      . \"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\n\n      CONFIG=\"Release\"\n      if echo $GCC_PREPROCESSOR_DEFINITIONS | grep -q \"DEBUG=1\"; then\n        CONFIG=\"Debug\"\n      fi\n\n      \"$NODE_BINARY\" \"$REACT_NATIVE_PATH/third-party-podspecs/replace_dependencies_version.js\" -c \"$CONFIG\" -r \"0.83.4\" -p \"$PODS_ROOT\"\n",
+    "script": "      . \"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\n\n      CONFIG=\"Release\"\n      if echo $GCC_PREPROCESSOR_DEFINITIONS | grep -q \"DEBUG=1\"; then\n        CONFIG=\"Debug\"\n      fi\n\n      \"$NODE_BINARY\" \"$REACT_NATIVE_PATH/third-party-podspecs/replace_dependencies_version.js\" -c \"$CONFIG\" -r \"0.83.6\" -p \"$PODS_ROOT\"\n",
     "always_out_of_date": "1"
   }
 }

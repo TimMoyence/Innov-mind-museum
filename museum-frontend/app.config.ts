@@ -330,7 +330,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       '@maplibre/maplibre-react-native',
     ],
     experiments: {
-      typedRoutes: false,
+      typedRoutes: true,
     },
     // OTA disabled intentionally — see docs/adr/ADR-009-ota-disabled.md.
     // Channel URL is kept configured so EAS Build metadata stays consistent;

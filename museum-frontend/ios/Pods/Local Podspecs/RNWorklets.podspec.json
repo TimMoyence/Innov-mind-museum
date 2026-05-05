@@ -1,6 +1,6 @@
 {
   "name": "RNWorklets",
-  "version": "0.7.2",
+  "version": "0.7.4",
   "summary": "The React Native multithreading library",
   "homepage": "https://github.com/software-mansion/react-native-reanimated",
   "license": "MIT",
@@ -15,7 +15,7 @@
   },
   "source": {
     "git": "https://github.com/software-mansion/react-native-reanimated.git",
-    "tag": "0.7.2"
+    "tag": "0.7.4"
   },
   "compiler_flags": "-DRCT_NEW_ARCH_ENABLED=1",
   "dependencies": {
@@ -50,7 +50,7 @@
     "CLANG_CXX_LANGUAGE_STANDARD": "c++20",
     "GCC_PREPROCESSOR_DEFINITIONS[config=*Debug*]": "$(inherited) HERMES_ENABLE_DEBUGGER=1 ",
     "GCC_PREPROCESSOR_DEFINITIONS[config=*Release*]": "$(inherited) ",
-    "OTHER_CFLAGS": "$(inherited) -DWORKLETS_FEATURE_FLAGS=\"[RUNTIME_TEST_FLAG:false][IOS_DYNAMIC_FRAMERATE_ENABLED:true]\" -DWORKLETS_VERSION=0.7.2 -DREACT_NATIVE_MINOR_VERSION=83 "
+    "OTHER_CFLAGS": "$(inherited) -DWORKLETS_FEATURE_FLAGS=\"[RUNTIME_TEST_FLAG:false][IOS_DYNAMIC_FRAMERATE_ENABLED:true]\" -DWORKLETS_VERSION=0.7.4 -DREACT_NATIVE_MINOR_VERSION=83 "
   },
   "xcconfig": {
     "HEADER_SEARCH_PATHS": "\"$(PODS_ROOT)/boost\" \"$(PODS_ROOT)/boost-for-react-native\" \"$(PODS_ROOT)/glog\" \"$(PODS_ROOT)/RCT-Folly\" \"$(PODS_ROOT)/Headers/Public/React-hermes\" \"$(PODS_ROOT)/Headers/Public/hermes-engine\" \"$(PODS_ROOT)/../../node_modules/react-native/ReactCommon\" \"$(PODS_ROOT)/../../node_modules/react-native-worklets/apple\" \"$(PODS_ROOT)/../../node_modules/react-native-worklets/Common/cpp\""

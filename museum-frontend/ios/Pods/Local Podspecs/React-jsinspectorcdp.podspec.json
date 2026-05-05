@@ -1,6 +1,6 @@
 {
   "name": "React-jsinspectorcdp",
-  "version": "0.83.4",
+  "version": "0.83.6",
   "summary": "Common helper functions for working with CDP messages in jsinspector-modern",
   "homepage": "https://reactnative.dev/",
   "license": "MIT",
@@ -10,7 +10,7 @@
   },
   "source": {
     "git": "https://github.com/facebook/react-native.git",
-    "tag": "v0.83.4"
+    "tag": "v0.83.6"
   },
   "source_files": "*.h",
   "header_dir": "jsinspector-modern/cdp",

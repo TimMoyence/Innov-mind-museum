@@ -41,8 +41,8 @@ import { StartupConfigurationErrorScreen } from '@/shared/ui/StartupConfiguratio
 
 const sentryDsn: string | undefined =
   Platform.OS === 'android'
-    ? (process.env.EXPO_PUBLIC_SENTRY_DSN_ANDROID as string | undefined)
-    : (process.env.EXPO_PUBLIC_SENTRY_DSN_IOS as string | undefined);
+    ? process.env.EXPO_PUBLIC_SENTRY_DSN_ANDROID
+    : process.env.EXPO_PUBLIC_SENTRY_DSN_IOS;
 
 initSentry(sentryDsn);
 

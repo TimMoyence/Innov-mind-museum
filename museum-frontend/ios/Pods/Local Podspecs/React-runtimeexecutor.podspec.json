@@ -1,7 +1,7 @@
 {
   "name": "React-runtimeexecutor",
   "module_name": "React_runtimeexecutor",
-  "version": "0.83.4",
+  "version": "0.83.6",
   "summary": "-",
   "homepage": "https://reactnative.dev/",
   "license": "MIT",
@@ -11,7 +11,7 @@
   },
   "source": {
     "git": "https://github.com/facebook/react-native.git",
-    "tag": "v0.83.4"
+    "tag": "v0.83.6"
   },
   "source_files": [
     "ReactCommon/*.h",
@@ -28,7 +28,7 @@
     "ReactNativeDependencies": [],
     "React-Core-prebuilt": [],
     "React-jsi": [
-      "0.83.4"
+      "0.83.6"
     ],
     "React-featureflags": [],
     "React-debug": [],

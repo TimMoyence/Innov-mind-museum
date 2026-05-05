@@ -1,6 +1,6 @@
 {
   "name": "React-jsitooling",
-  "version": "0.83.4",
+  "version": "0.83.6",
   "summary": "-",
   "homepage": "https://reactnative.dev/",
   "license": "MIT",
@@ -10,7 +10,7 @@
   },
   "source": {
     "git": "https://github.com/facebook/react-native.git",
-    "tag": "v0.83.4"
+    "tag": "v0.83.6"
   },
   "source_files": "react/runtime/*.h",
   "header_dir": "react/runtime",
@@ -21,10 +21,10 @@
   },
   "dependencies": {
     "React-cxxreact": [
-      "0.83.4"
+      "0.83.6"
     ],
     "React-jsi": [
-      "0.83.4"
+      "0.83.6"
     ],
     "React-debug": [],
     "React-runtimeexecutor": [],
