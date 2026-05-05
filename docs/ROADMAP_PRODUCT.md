@@ -42,6 +42,8 @@
 
 > **Discipline :** chaque feature non-trivial passe par /team Spec Kit (spec.md + design.md + tasks.md).
 > Coche `[x]` au merge. Fais ressortir blocages explicitement.
+>
+> **Sprint segment intermédiaire P1 closure :** 2026-05-05 → 2026-05-19, plan détaillé dans [`docs/SPRINT_2026-05-05_PLAN.md`](./SPRINT_2026-05-05_PLAN.md). Feature freeze 2026-05-19, soak staging 48h, release checklist post-19.
 
 ### Walk V1 IMPROVE (priorité 1 — différenciateur core)
 

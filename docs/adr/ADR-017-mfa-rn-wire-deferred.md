@@ -1,7 +1,7 @@
-# ADR-017 — MFA RN wire (E2) deferred to dedicated PR
+# ADR-017 — MFA RN wire (E2) deferred to post-launch + 30 days
 
-Status: Accepted — 2026-04-30
-Context: Audit 2026-04-30 finding E2
+Status: Accepted — 2026-04-30 · re-confirmed 2026-05-05 (defer post-launch+30d)
+Context: Audit 2026-04-30 finding E2 · sprint 2026-05-05 P1 closure decision
 
 ## Question
 
@@ -78,3 +78,39 @@ Backend MFA shipped (R16 + the 2026-04-30 OIDC nonce work in commit `76e860d4`).
 The `coming_soon` stub for the screens shipped early so admins could test the backend in isolation. The product UX call (how aggressive to be about encouraging MFA, what the "dismiss + remind in 30 days" flow looks like, how to express the recovery-code state) is a designer-and-PM conversation, not a tail-end implementation. This ADR records the user-confirmed product decisions captured this session so the future PR starts from agreement instead of re-discovery.
 
 Audit finding E2 is not closed; it is sequenced.
+
+## 2026-05-05 re-decision — post-launch + 30 days
+
+Sprint planning task F (`web-version-harmonize-roadmap-2026-05-05`) re-evaluated the SHIP-V1 vs DEFER question. Decision: **defer to post-launch + 30 days** (target window 2026-07-01 → 2026-07-15 if the launch holds the 2026-06-01 GA), not to an arbitrary future PR.
+
+### Rationale
+
+1. **Launch KR4 is acquisition (100 visitors B2C inscrits semaine 1)** — adding an MFA prompt to the onboarding funnel adds friction precisely where conversion is the priority. MFA is a conversion-rate killer for B2C apps in week 1; we prefer to ship MFA *after* the acquisition cohort baseline is measured (week 1 NPS + signup rate), not before.
+2. **No regulatory requirement at GA** — Musaium V1 holds no PII beyond email + chat history; ADR-014 (`mfa-all-roles-enforcement`) already enforces MFA on admin / museum-admin roles via the existing web admin panel. Visitor MFA is a defense-in-depth nice-to-have, not a compliance gate.
+3. **Risk to launch readiness** — the Phase 1-6 wire-up remains a 1-2 dev-day surface change with cross-cutting touches (login flow, settings screen, banner, i18n keys, Maestro E2E). Doing it in the 2026-05-05 → 2026-05-19 P1 closure window competes with iOS 26 crash diagnostics, F3 MuseumSheet finalize, and cert pinning Phase 2 (cf. SPRINT_2026-05-05_PLAN.md). Those P1 items must ship; MFA RN can slip without affecting GA.
+4. **Soak window keeps the surface small** — feature freeze on 2026-05-19 prefers narrowing the change set on the release branch. Adding MFA RN crosses 4-5 features (auth, settings, i18n, banner) — a wide blast radius right before freeze is the opposite of soak hygiene.
+5. **Backend is ready and stays ready** — the BE MFA + recovery codes shipped (commit `76e860d4`). Deferring the RN wire does not regress backend test coverage or chaos resilience.
+
+### Post-launch + 30 days checklist (target window 2026-07-01 → 2026-07-15)
+
+Open the dedicated PR only when **all 4** are true:
+
+1. KR4 baseline measured — at least 14 days of post-launch acquisition data captured in Langfuse + analytics. The conversion-rate impact of an MFA prompt at signup is informed, not assumed.
+2. iOS 26 crash investigation closed (cf. `project_ios26_crash_investigation` memo + ADR-004) — MFA enrollment shows TOTP secret QR codes; we do not want to layer a new flow on a still-debugging iOS surface.
+3. No active P0 in mobile crash-free rate (Sentry ≥ 99.5% sustained 14 days post-launch).
+4. UX wireframe sign-off on the visitor-facing `MfaEncouragementBanner` and the settings security section copy (FR + EN). The wire-up is multi-surface; UX-led not engineering-led.
+
+### Post-launch + 30 days plan recap
+
+The Phase 1-6 plan documented above (route wire / login flow / settings security / banner / i18n / tests) remains the implementation playbook. No revision required — only the trigger date is bound.
+
+### Scope expectation
+
+When the future PR ships, it must include:
+
+- Maestro E2E flow `auth-mfa-enroll-challenge` added to `museum-frontend/.maestro/` and registered in `shards.json` (per CLAUDE.md Maestro rules).
+- New i18n keys present in both FR + EN dictionaries.
+- Vitest / Jest unit tests for the migrated `useEmailPasswordAuth` MFA branch.
+- One coordinated commit chain (route wire → login flow → settings → banner → i18n → tests), not a single mega-commit.
+
+The dedicated PR will explicitly link this ADR and either close it (Status: Superseded) or amend the trigger checklist if a constraint pushes it back further.

@@ -133,6 +133,8 @@ Run de référence : `team-state/2026-05-03-feedback-loop-interne-t21/`. Décisi
 - [ ] Estimation cumulée par sprint — alerte si budget mensuel projection >X€ avant launch
 - [ ] Cost dashboard Grafana — Langfuse → Prometheus exporter
 
+> **Pickup contingent — sprint 2026-05-05 P1 closure note (2026-05-05) :** start only if bandwidth available after the 2026-05-19 feature freeze ramp closes the P1 stack (cf. `docs/SPRINT_2026-05-05_PLAN.md`). KR3 stability + KR4 acquisition prime over orchestrateur tooling pre-launch. Re-evaluate at the post-launch + 14d retro.
+
 ---
 
 ## LATER — Q3+ 2026
