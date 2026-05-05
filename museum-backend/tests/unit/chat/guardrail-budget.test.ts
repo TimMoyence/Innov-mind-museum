@@ -153,4 +153,48 @@ describe('guardrail-budget (redis backend via stub CacheService)', () => {
 
     expect(await getBudgetExhausted()).toBe(true);
   });
+
+  it('fails CLOSED when ping() returns false (Redis unreachable — DDoS bypass guard)', async () => {
+    __setNowForTest(new Date('2026-05-05T10:00:00Z'));
+    const unreachableCache = {
+      get: async () => null,
+      set: async () => undefined,
+      del: async () => undefined,
+      delByPrefix: async () => undefined,
+      setNx: async () => false,
+      incrBy: async () => null,
+      ping: async () => false,
+      zadd: async () => undefined,
+      ztop: async () => [],
+    } as unknown as CacheService;
+    configureGuardrailBudget({ cache: unreachableCache });
+
+    expect(await getBudgetExhausted()).toBe(true);
+  });
+
+  it('fails CLOSED when ping() throws (network error during health probe)', async () => {
+    __setNowForTest(new Date('2026-05-05T10:00:00Z'));
+    const throwingCache = {
+      get: async () => null,
+      set: async () => undefined,
+      del: async () => undefined,
+      delByPrefix: async () => undefined,
+      setNx: async () => false,
+      incrBy: async () => null,
+      ping: async () => {
+        throw new Error('ECONNREFUSED 127.0.0.1:6379');
+      },
+      zadd: async () => undefined,
+      ztop: async () => [],
+    } as unknown as CacheService;
+    configureGuardrailBudget({ cache: throwingCache });
+
+    expect(await getBudgetExhausted()).toBe(true);
+  });
+
+  it('returns 0 (legitimate first-of-day) when ping=true and counter missing', async () => {
+    __setNowForTest(new Date('2026-05-05T10:00:00Z'));
+    // InMemoryCacheService.ping() returns true; no recordCost yet → key absent.
+    expect(await getBudgetExhausted()).toBe(false);
+  });
 });

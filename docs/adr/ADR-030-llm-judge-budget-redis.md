@@ -31,9 +31,17 @@ Migrate the cumulative cost counter to a Redis-backed atomic counter, configurab
 
 ### Fail-CLOSED on Redis outage
 
-When Redis is unreachable (`CacheService` returns `null` from `incrBy` / `get`), the Redis adapter treats malformed counters as **infinite** spend. `getBudgetExhausted()` returns `true`, the LLM judge bails, and the keyword-only fallback handles the request. This protects against a Redis-DDoS used to bypass the cumulative cap.
+The Redis adapter has three levels of fail-CLOSED protection on the `cumulativeCents()` read path. They run in this order:
 
-A misbehaving Redis that returns negative values is also treated as fail-CLOSED (logged via `guardrail_judge_budget_counter_invalid`).
+1. **Reachability gate (primary).** `cumulativeCents()` calls `cache.ping()` first. If `ping` returns `false` or throws, the adapter returns `Number.POSITIVE_INFINITY` so `getBudgetExhausted()` returns `true`, the LLM judge bails, and the keyword-only fallback handles the request. Logged via `guardrail_judge_budget_redis_unreachable_fail_closed`. **This is the Redis-DDoS bypass guard.**
+2. **Malformed counter (defensive).** A misbehaving Redis that returns non-finite or negative values is also treated as fail-CLOSED (Infinity). Logged via `guardrail_judge_budget_counter_invalid`.
+3. **Legitimate first-of-day miss (post-ping = healthy).** Once the reachability gate has confirmed Redis is up, a `null` from `cache.get` for the day's key is interpreted as "no `recordCost` has fired yet today" and returns `0`. Without the upstream ping gate this branch would be ambiguous (outage vs miss); with the gate it is safe.
+
+#### Why a ping gate, not "null = Infinity"?
+
+The naïve fail-CLOSED rule "if `cache.get` returns `null`, return Infinity" is rejected because `cache.get` cannot distinguish a Redis outage from a legitimate first-of-day miss. Treating both as Infinity would block the LLM judge on every first call after midnight UTC, even when Redis is healthy. The two-step `ping → get` flow keeps the legitimate miss path open while still closing the outage bypass.
+
+The `ping` adds one round-trip per `cumulativeCents()` call. In a per-request hot path that's measurable; the LLM judge is gated on a length threshold and a sampling cap upstream, so the ping cost only fires when the judge would have run anyway. Acceptable trade.
 
 ### TTL semantics
 

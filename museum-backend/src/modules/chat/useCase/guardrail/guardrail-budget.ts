@@ -85,11 +85,22 @@ class InProcessGuardrailBudgetStore implements IGuardrailBudgetStore {
 /**
  * Redis adapter — uses CacheService.incrBy for atomic counter + TTL semantics.
  *
- * Fail-CLOSED: when Redis is unreachable (CacheService returns null from
- * incrBy / get), `cumulativeCents()` returns Infinity so the calling guard
- * (`getBudgetExhausted`) treats the budget as exhausted and the LLM judge
- * falls back to keyword-only filtering. This protects against a Redis-DDoS
- * attack used to bypass the cumulative cap.
+ * Fail-CLOSED policy (Redis-DDoS bypass guard):
+ *
+ *   1. Reachability gate — `cumulativeCents()` calls `cache.ping()` first. If
+ *      Redis is unreachable, returns `Infinity` so the calling guard
+ *      (`getBudgetExhausted`) treats the budget as exhausted and the LLM
+ *      judge falls back to keyword-only filtering. Without this gate, a
+ *      Redis outage would surface as a `null` from `cache.get` (cannot be
+ *      distinguished from a legitimate first-of-day miss), and the judge
+ *      would run uncapped.
+ *
+ *   2. Malformed counter — non-finite or negative values returned by Redis
+ *      are treated as fail-CLOSED (Infinity).
+ *
+ *   3. Legitimate null (post-ping = healthy) — first-of-day miss before any
+ *      `recordCost` call returns 0. Without the ping gate this branch would
+ *      conflate outage-with-miss; with the gate it's safe.
  */
 class RedisGuardrailBudgetStore implements IGuardrailBudgetStore {
   constructor(private readonly cache: CacheService) {}
@@ -106,10 +117,18 @@ class RedisGuardrailBudgetStore implements IGuardrailBudgetStore {
   }
 
   async cumulativeCents(): Promise<number> {
+    // Reachability gate — see class comment §1. Closes the outage-vs-miss
+    // ambiguity that `cache.get` returning null cannot resolve on its own.
+    const reachable = await this.cache.ping().catch(() => false);
+    if (!reachable) {
+      logger.warn('guardrail_judge_budget_redis_unreachable_fail_closed', {});
+      return Number.POSITIVE_INFINITY;
+    }
+
     const value = await this.cache.get<number>(this.keyForToday());
     if (value === null) return 0;
     if (!Number.isFinite(value) || value < 0) {
-      // Treat malformed counter as fail-CLOSED — see class comment.
+      // Treat malformed counter as fail-CLOSED — see class comment §2.
       logger.warn('guardrail_judge_budget_counter_invalid', { value });
       return Number.POSITIVE_INFINITY;
     }
