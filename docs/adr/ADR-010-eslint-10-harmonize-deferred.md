@@ -1,8 +1,8 @@
 # ADR-010 — ESLint 10 harmonization across the monorepo: deferred
 
-- **Status:** Accepted
-- **Date:** 2026-04-24
-- **Deciders:** Backend + mobile audit consolidation (sprint S16)
+- **Status:** Accepted (re-confirmed 2026-05-05)
+- **Date:** 2026-04-24 · re-confirmed 2026-05-05
+- **Deciders:** Backend + mobile audit consolidation (sprint S16) · re-confirmation web sprint 2026-05-05
 - **Supersedes:** N/A
 
 ## Context
@@ -63,3 +63,18 @@ Mobile + web stay on v9 until `eslint-plugin-react` (and downstream `eslint-plug
 - ESLint 10 migration guide: <https://eslint.org/docs/latest/use/migrate-to-10.0.0>
 - `eslint-plugin-react` tracking issue for v10 support (upstream).
 - Audit report 2026-04-24 — item P1-13 "ESLint 9 vs 10 monorepo consistency" reclassified P3.
+
+## Re-confirmation 2026-05-05
+
+Verified against the npm registry on 2026-05-05:
+
+```
+$ npm view eslint-plugin-react version
+7.37.5
+$ npm view eslint-plugin-react peerDependencies
+{ eslint: '^3 || ^4 || ^5 || ^6 || ^7 || ^8 || ^9.7' }
+```
+
+`eslint-plugin-react@7.37.5` is still the only published release (since 2025-04-03) — no v10-compatible version has shipped in 13 months. The peer range still tops out at `^9.7`, confirming the `contextOrFilename.getFilename` blocker documented in the original Context section is unresolved upstream.
+
+**Decision restated:** keep `eslint ^9.39.4` on mobile + web, `eslint ^10.2.0` on backend. The next check-in is **2026-Q4** (post-launch); revisit only if upstream ships a v10-compatible release in the interim. Memo to Renovate: keep `eslint-plugin-react` on auto-merge but block the parent `eslint` major from bumping past 9 on mobile + web until this ADR is superseded.
