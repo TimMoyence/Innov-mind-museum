@@ -91,3 +91,15 @@ If those three converge, run a single coordinated bump on a dedicated `chore/ts-
 - SPRINT_2026-05-05_PLAN.md task C
 - TypeScript 6.0 release notes (consult at re-evaluation time)
 - typescript-eslint compatibility matrix (consult at re-evaluation time)
+
+## Post-sprint cross-app version drift audit (2026-05-05, sprint task H)
+
+End-of-sprint snapshot for the three managed dev-tool versions across `museum-backend`, `museum-frontend`, `museum-web`:
+
+| Tool | Backend | Frontend | Web | Status | ADR |
+|---|---|---|---|---|---|
+| TypeScript | `^5.9.3` | `~5.9.2` | `~5.9.3` (post-bump) | **Aligned (5.9.x)** ✓ | ADR-032 (this) |
+| ESLint | `^10.2.0` | `^9.39.4` | `^9.39.4` | Deferred — split intentional, awaits upstream `eslint-plugin-react` v10 fix | ADR-010 (re-confirmed 2026-05-05) |
+| zod | `^3.25.76` | `^4.4.1` | (none) | Status-quo — re-eval 2026-Q4 post-launch, no shared schema | ADR-033 |
+
+Convergence achieved on TypeScript only. ESLint + zod remain deferred by explicit ADR with concrete trigger checklists. No blocker for the 2026-05-19 feature freeze ramp.
