@@ -22,7 +22,7 @@ const INTEGRATION_DIR = resolve(REPO_ROOT, 'museum-backend/tests/integration');
 const BASELINE_PATH = resolve(__dirname, '.integration-tier-baseline.json');
 
 const REAL_INTEGRATION_PATTERNS = [
-  /from ['"]tests\/helpers\/(e2e|integration)\/(postgres-testcontainer|integration-harness|e2e-app-harness)['"]/,
+  /from ['"]tests\/helpers\/(e2e|integration)\/(postgres-testcontainer|redis-testcontainer|integration-harness|e2e-app-harness)['"]/,
   /from ['"]tests\/helpers\/integration\/[^'"]+['"]/,
   /\bDataSource\b[\s\S]{0,200}?from ['"]typeorm['"]/,
   /\bgetRepository\s*\(/,
