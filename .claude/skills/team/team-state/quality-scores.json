@@ -36,5 +36,43 @@
       "important": 0,
       "nit": 3
     }
+  },
+  {
+    "runId": "2026-05-05-f3-museumsheet-refactor",
+    "ts": "2026-05-05T07:59:37Z",
+    "verdict": "APPROVED",
+    "scores": {
+      "correctness": {
+        "score": 95,
+        "weight": 0.30,
+        "reasoning": "All 12 R1-R12 PASS with cited evidence. Hook body mirrors pre-refactor MuseumSheet.tsx:62-105 verbatim (cross-checked via git show 186631b8). Existing 16/16 test suite passes without any test-file edit. New 11-case hook test exceeds spec'd 7. Consumer (app/(tabs)/museums.tsx) untouched. `wc -l` 104 ≤ 300. useEffect count 1 actual call ≤ 2."
+      },
+      "security": {
+        "score": 95,
+        "weight": 0.25,
+        "reasoning": "Pure FE refactor — no LLM input flow, no DB, no JWT. grep on dangerouslySetInnerHTML/eval/innerHTML returns 0 hits across 7 files. Linking.openURL for external website + tel: defers to platform URL handler (.catch(()=>undefined) silences any thrown error — no env leak). No regression vs pre-refactor security posture."
+      },
+      "maintainability": {
+        "score": 94,
+        "weight": 0.20,
+        "reasoning": "532 LOC monolith → 104 LOC shell + 5 single-concern modules (49/95/187/171/66). Each sub-component is single-screenful and named after its concern. Hook signature (museum, lang, t)→{enrichment, enriched, hoursDisplay, hasRichContent, showEnrichmentLoader, hoursToneColor} is honest about its inputs/outputs. Editor's swap from design.md's TFunction to local I18nTranslator is an improvement (no i18next surface leak). Explicit useMemo preserved on hoursDisplay per spec §4 React Compiler caveat. -1 for the two NITs (dead `?? ''` defaults + raw shadow scalars; both pre-existing patterns)."
+      },
+      "testCoverage": {
+        "score": 92,
+        "weight": 0.15,
+        "reasoning": "11 unit tests for the new hook (spec asked 7 minimum; 4 extra on tone branches + null museum + cached-loading-data + hours-only rich-content). Uses renderHook + makeMuseumWithDistance factory — no inline entity (Phase 7 compliant). Module-level mock of useMuseumEnrichment + opening-hours.formatter. Coverage post-refactor 91.97 stmts / 78.64 br / 81.55 fn / 92.17 lines — all over thresholds 91/78/80/91 (state.json). Existing 16/16 MuseumSheet.test.tsx passes without edit (contract preserved)."
+      },
+      "docQuality": {
+        "score": 88,
+        "weight": 0.10,
+        "reasoning": "Hook has a JSDoc paragraph naming the synthetic-OSM guard intent (useMuseumSheetEnrichmentData.ts:22-27). Shell has a comment describing the eager-fetch contract (MuseumSheet.tsx:35-37). State.json STORY ledger updated with all 4 gate verdicts. -2 for the NIT delta (TFunction→I18nTranslator swap not noted in STORY) — minor."
+      },
+      "weightedMean": 93.65
+    },
+    "findingsCount": {
+      "blocker": 0,
+      "important": 0,
+      "nit": 3
+    }
   }
 ]
