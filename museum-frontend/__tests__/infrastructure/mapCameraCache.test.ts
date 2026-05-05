@@ -39,7 +39,7 @@ describe('mapCameraCache', () => {
       await Promise.resolve();
 
       expect(setJSONSpy).toHaveBeenCalledTimes(1);
-      const [key, payload] = setJSONSpy.mock.calls[0];
+      const [key, payload] = setJSONSpy.mock.calls[0]!;
       expect(key).toBe(STORAGE_KEY);
       expect(payload).toMatchObject({
         centerLng: sampleView.centerLng,
@@ -77,7 +77,7 @@ describe('mapCameraCache', () => {
 
       expect(setJSONSpy).toHaveBeenCalledTimes(1);
       // Only the latest view is persisted — earlier calls are coalesced away.
-      const [, payload] = setJSONSpy.mock.calls[0];
+      const [, payload] = setJSONSpy.mock.calls[0]!;
       expect(payload).toMatchObject({ centerLng: 2.2, centerLat: 48.2, zoom: 12 });
     });
   });

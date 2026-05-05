@@ -83,8 +83,8 @@ describe('useReviews', () => {
       expect(result.current.reviews).toHaveLength(2);
     });
 
-    expect(result.current.reviews[0].id).toBe('r1');
-    expect(result.current.reviews[1].id).toBe('r2');
+    expect(result.current.reviews[0]?.id).toBe('r1');
+    expect(result.current.reviews[1]?.id).toBe('r2');
     expect(result.current.hasMore).toBe(false);
   });
 
@@ -109,7 +109,7 @@ describe('useReviews', () => {
 
     expect(submitResult).toBe(true);
     // Review is added to the local list immediately
-    expect(result.current.reviews[0].id).toBe('new-1');
+    expect(result.current.reviews[0]?.id).toBe('new-1');
     // Stats come from a server refetch, not a local calculation
     await waitFor(() => {
       expect(result.current.stats?.count).toBe(16);

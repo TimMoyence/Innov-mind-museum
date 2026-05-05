@@ -23,7 +23,7 @@ describe('buildMuseumFeatureCollection', () => {
     const fc = buildMuseumFeatureCollection([louvre]);
 
     expect(fc.features).toHaveLength(1);
-    const [feature] = fc.features;
+    const feature = fc.features[0]!;
     expect(feature.type).toBe('Feature');
     expect(feature.geometry.type).toBe('Point');
     // RFC 7946 mandates [longitude, latitude]. Flip this and the map breaks.
@@ -45,7 +45,7 @@ describe('buildMuseumFeatureCollection', () => {
     const fc = buildMuseumFeatureCollection(museums);
 
     expect(fc.features).toHaveLength(1);
-    expect(fc.features[0].properties.museumId).toBe(2);
+    expect(fc.features[0]?.properties.museumId).toBe(2);
   });
 
   it('filters out museums with null longitude', () => {
@@ -57,7 +57,7 @@ describe('buildMuseumFeatureCollection', () => {
     const fc = buildMuseumFeatureCollection(museums);
 
     expect(fc.features).toHaveLength(1);
-    expect(fc.features[0].properties.museumId).toBe(2);
+    expect(fc.features[0]?.properties.museumId).toBe(2);
   });
 
   it('filters out museums with both coords null', () => {

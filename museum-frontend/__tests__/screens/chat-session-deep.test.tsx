@@ -251,7 +251,9 @@ function getChildMock(name: string): jest.Mock {
   const spec = childMockSpec[name];
   if (!spec) throw new Error(`Unknown child mock ${name}`);
   const mod = jest.requireMock<Record<string, jest.Mock>>(spec.module);
-  return mod[spec.export];
+  const fn = mod[spec.export];
+  if (!fn) throw new Error(`Mock export missing: ${spec.module}#${spec.export}`);
+  return fn;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- Justification: test-only call-site narrowing of captured prop bag — the generic exists to let each of the 63 callers use a different ad-hoc Pick<> shape without an extra `as` cast at every site. Approved-by: tim@2026-05-02
@@ -696,7 +698,7 @@ describe('ChatSessionScreen — long press + report', () => {
     });
 
     expect(alertSpy).toHaveBeenCalledTimes(1);
-    const buttons = alertSpy.mock.calls[0][2] ?? [];
+    const buttons = alertSpy.mock.calls[0]?.[2] ?? [];
     expect(buttons).toHaveLength(5);
     expect(buttons[4]?.style).toBe('cancel');
     alertSpy.mockRestore();
@@ -713,7 +715,7 @@ describe('ChatSessionScreen — long press + report', () => {
     act(() => {
       ctxOnReport('msg-x');
     });
-    const buttons = alertSpy.mock.calls[0][2] ?? [];
+    const buttons = alertSpy.mock.calls[0]?.[2] ?? [];
     act(() => {
       buttons[0]?.onPress?.();
     });
@@ -738,7 +740,7 @@ describe('ChatSessionScreen — long press + report', () => {
     act(() => {
       ctxOnReport('msg-x');
     });
-    const buttons = alertSpy.mock.calls[0][2] ?? [];
+    const buttons = alertSpy.mock.calls[0]?.[2] ?? [];
     act(() => {
       buttons[0]?.onPress?.();
     });
@@ -747,7 +749,7 @@ describe('ChatSessionScreen — long press + report', () => {
       // First call = the 5-option menu; second = the error confirmation.
       expect(alertSpy).toHaveBeenCalledTimes(2);
     });
-    expect(alertSpy.mock.calls[1][0]).toBe('common.error');
+    expect(alertSpy.mock.calls[1]?.[0]).toBe('common.error');
     alertSpy.mockRestore();
   });
 });
@@ -974,7 +976,7 @@ describe('ChatSessionScreen — report Alert button branches', () => {
         ctxOnReport('msg-x');
       });
 
-      const buttons = alertSpy.mock.calls[0][2] ?? [];
+      const buttons = alertSpy.mock.calls[0]?.[2] ?? [];
       const idx = reasons.indexOf(reason);
       act(() => {
         buttons[idx]?.onPress?.();

@@ -112,7 +112,7 @@ describe('useImageManipulation', () => {
       await result.current.rotateImage(sourceUri);
     });
 
-    const callArgs = mockManipulateAsync.mock.calls[0];
+    const callArgs = mockManipulateAsync.mock.calls[0]!;
     expect(callArgs[2]).toEqual({ compress: 0.8, format: 'jpeg' });
   });
 });

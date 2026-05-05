@@ -79,9 +79,9 @@ describe('useMuseumPrefetch', () => {
       source: string;
     }[];
     expect(storedEntries).toHaveLength(2);
-    expect(storedEntries[0].question).toBe('Who painted the Mona Lisa?');
-    expect(storedEntries[0].museumId).toBe('louvre');
-    expect(storedEntries[0].source).toBe('prefetch');
+    expect(storedEntries[0]?.question).toBe('Who painted the Mona Lisa?');
+    expect(storedEntries[0]?.museumId).toBe('louvre');
+    expect(storedEntries[0]?.source).toBe('prefetch');
   });
 
   it('skips prefetch on cellular when low-data mode is active', async () => {
@@ -183,7 +183,7 @@ describe('useMuseumPrefetch', () => {
         source: 'prefetch',
       }),
     );
-    expect(typeof storedEntries[0].cachedAt).toBe('number');
+    expect(typeof storedEntries[0]?.cachedAt).toBe('number');
   });
 
   it('does nothing when museumId is null', async () => {

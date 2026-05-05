@@ -49,13 +49,17 @@ function evictOldest(entries: Record<string, CachedAnswer>): Record<string, Cach
   if (keys.length <= MAX_LOCAL_ENTRIES) return entries;
 
   const sorted = keys
-    .map((k) => ({ key: k, cachedAt: entries[k].cachedAt }))
+    .flatMap((k) => {
+      const entry = entries[k];
+      return entry ? [{ key: k, cachedAt: entry.cachedAt }] : [];
+    })
     .sort((a, b) => b.cachedAt - a.cachedAt);
 
   const kept = sorted.slice(0, MAX_LOCAL_ENTRIES);
   const result: Record<string, CachedAnswer> = {};
   for (const { key } of kept) {
-    result[key] = entries[key];
+    const entry = entries[key];
+    if (entry) result[key] = entry;
   }
   return result;
 }

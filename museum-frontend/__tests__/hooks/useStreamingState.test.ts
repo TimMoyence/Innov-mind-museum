@@ -78,7 +78,7 @@ describe('useStreamingState', () => {
       result.current.flushStreamText();
     });
 
-    expect(result.current.messages[0].text).toBe('original');
+    expect(result.current.messages[0]?.text).toBe('original');
   });
 
   it('scheduleFlush triggers a flush after 40ms', () => {
@@ -92,13 +92,13 @@ describe('useStreamingState', () => {
     });
 
     // Before 40ms: no flush
-    expect(result.current.messages[0].text).toBe('');
+    expect(result.current.messages[0]?.text).toBe('');
 
     act(() => {
       jest.advanceTimersByTime(40);
     });
 
-    expect(result.current.messages[0].text).toBe('delayed flush');
+    expect(result.current.messages[0]?.text).toBe('delayed flush');
   });
 
   it('scheduleFlush throttles: only one timer at a time', () => {
@@ -122,7 +122,7 @@ describe('useStreamingState', () => {
     });
 
     // Should flush with the latest accumulated text
-    expect(result.current.messages[0].text).toBe('second');
+    expect(result.current.messages[0]?.text).toBe('second');
   });
 
   it('resetStreaming clears refs and cancels pending timer', () => {
@@ -148,7 +148,7 @@ describe('useStreamingState', () => {
       jest.advanceTimersByTime(100);
     });
 
-    expect(result.current.messages[0].text).toBe('');
+    expect(result.current.messages[0]?.text).toBe('');
   });
 
   it('cleanup on unmount clears pending timers', () => {
@@ -187,8 +187,8 @@ describe('useStreamingState', () => {
       result.current.flushStreamText();
     });
 
-    expect(result.current.messages[0].text).toBe('keep me');
-    expect(result.current.messages[1].text).toBe('new text');
+    expect(result.current.messages[0]?.text).toBe('keep me');
+    expect(result.current.messages[1]?.text).toBe('new text');
   });
 
   it('scheduleFlush allows a new timer after the first one fires', () => {
@@ -205,7 +205,7 @@ describe('useStreamingState', () => {
       jest.advanceTimersByTime(40);
     });
 
-    expect(result.current.messages[0].text).toBe('batch-1');
+    expect(result.current.messages[0]?.text).toBe('batch-1');
 
     // Now schedule a second flush
     act(() => {
@@ -217,6 +217,6 @@ describe('useStreamingState', () => {
       jest.advanceTimersByTime(40);
     });
 
-    expect(result.current.messages[0].text).toBe('batch-2');
+    expect(result.current.messages[0]?.text).toBe('batch-2');
   });
 });

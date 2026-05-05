@@ -55,8 +55,8 @@ describe('useAuthAppStateSync', () => {
     mockGetAccessToken.mockReturnValue(buildValidJwt(60 * 60 * 1000));
 
     renderHook(() => { useAuthAppStateSync(refresh); });
-    handlers[0]('background');
-    handlers[0]('active');
+    handlers[0]!('background');
+    handlers[0]!('active');
 
     expect(refresh).not.toHaveBeenCalled();
   });
@@ -66,8 +66,8 @@ describe('useAuthAppStateSync', () => {
     mockGetAccessToken.mockReturnValue(buildValidJwt(60 * 1000));
 
     renderHook(() => { useAuthAppStateSync(refresh); });
-    handlers[0]('background');
-    handlers[0]('active');
+    handlers[0]!('background');
+    handlers[0]!('active');
 
     expect(refresh).toHaveBeenCalledTimes(1);
   });
@@ -77,10 +77,10 @@ describe('useAuthAppStateSync', () => {
     mockGetAccessToken.mockReturnValue(buildValidJwt(30 * 1000));
 
     renderHook(() => { useAuthAppStateSync(refresh); });
-    handlers[0]('background');
-    handlers[0]('active');
-    handlers[0]('background');
-    handlers[0]('active');
+    handlers[0]!('background');
+    handlers[0]!('active');
+    handlers[0]!('background');
+    handlers[0]!('active');
 
     expect(refresh).toHaveBeenCalledTimes(1);
   });
@@ -96,8 +96,8 @@ describe('useAuthAppStateSync', () => {
     nowSpy.mockReturnValue(1_045_000);
 
     renderHook(() => { useAuthAppStateSync(refresh, { onForeground }); });
-    handlers[0]('background');
-    handlers[0]('active');
+    handlers[0]!('background');
+    handlers[0]!('active');
 
     expect(onForeground).toHaveBeenCalledWith(45_000);
   });

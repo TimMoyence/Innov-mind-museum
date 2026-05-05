@@ -8,9 +8,9 @@ export function withOpacity(hex: string, alpha: number): string {
   const clean = hex.replace('#', '');
   let r: number, g: number, b: number;
   if (clean.length === 3) {
-    r = parseInt(clean[0] + clean[0], 16);
-    g = parseInt(clean[1] + clean[1], 16);
-    b = parseInt(clean[2] + clean[2], 16);
+    r = parseInt(clean.charAt(0) + clean.charAt(0), 16);
+    g = parseInt(clean.charAt(1) + clean.charAt(1), 16);
+    b = parseInt(clean.charAt(2) + clean.charAt(2), 16);
   } else {
     r = parseInt(clean.slice(0, 2), 16);
     g = parseInt(clean.slice(2, 4), 16);

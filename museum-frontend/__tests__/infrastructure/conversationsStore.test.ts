@@ -58,7 +58,7 @@ describe('conversationsStore', () => {
       useConversationsStore.getState().setItems(cards);
 
       expect(useConversationsStore.getState().items).toHaveLength(2);
-      expect(useConversationsStore.getState().items[0].id).toBe(cards[0].id);
+      expect(useConversationsStore.getState().items[0]?.id).toBe(cards[0]?.id);
     });
 
     it('overwrites previous items', () => {
@@ -88,8 +88,8 @@ describe('conversationsStore', () => {
       useConversationsStore.getState().appendItems(secondPage);
 
       expect(useConversationsStore.getState().items).toHaveLength(2);
-      expect(useConversationsStore.getState().items[0].id).toBe('page1');
-      expect(useConversationsStore.getState().items[1].id).toBe('page2');
+      expect(useConversationsStore.getState().items[0]?.id).toBe('page1');
+      expect(useConversationsStore.getState().items[1]?.id).toBe('page2');
     });
 
     it('appends to empty list', () => {
@@ -124,7 +124,7 @@ describe('conversationsStore', () => {
 
       const items = useConversationsStore.getState().items;
       expect(items).toHaveLength(1);
-      expect(items[0].id).toBe('keep');
+      expect(items[0]?.id).toBe('keep');
     });
 
     it('also removes IDs from savedSessionIds', () => {

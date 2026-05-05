@@ -75,8 +75,8 @@ describe('useMuseumDirectory', () => {
     });
 
     // Without coordinates, distance is null; should sort alphabetically
-    expect(result.current.museums[0].name).toBe('Louvre');
-    expect(result.current.museums[1].name).toBe('Musee d Orsay');
+    expect(result.current.museums[0]?.name).toBe('Louvre');
+    expect(result.current.museums[1]?.name).toBe('Musee d Orsay');
   });
 
   it('uses search endpoint when coordinates are provided', async () => {
@@ -128,7 +128,7 @@ describe('useMuseumDirectory', () => {
 
     // Client-side filter is immediate (no debounce for display)
     expect(result.current.museums.length).toBe(1);
-    expect(result.current.museums[0].name).toBe('Louvre');
+    expect(result.current.museums[0]?.name).toBe('Louvre');
   });
 
   it('filters museums by address', async () => {
@@ -143,7 +143,7 @@ describe('useMuseumDirectory', () => {
     });
 
     expect(result.current.museums.length).toBe(1);
-    expect(result.current.museums[0].name).toBe('Musee d Orsay');
+    expect(result.current.museums[0]?.name).toBe('Musee d Orsay');
   });
 
   it('returns empty list when fetch fails completely', async () => {
@@ -331,7 +331,7 @@ describe('useMuseumDirectory', () => {
       expect(mockSearchMuseums).toHaveBeenCalledWith({ bbox });
       // Near-coords cache entry is unchanged by the bbox call.
       expect(client.getQueryData(nearKey)).toBe(snapshot);
-      expect(result.current.museums[0].name).toBe('Versailles');
+      expect(result.current.museums[0]?.name).toBe('Versailles');
     });
 
     it('text search gating: does NOT call searchMuseums with q when searchQuery is below 2 chars', async () => {
@@ -473,7 +473,7 @@ describe('useMuseumDirectory', () => {
       });
 
       // Near-coords baseline (Louvre from beforeEach).
-      expect(result.current.museums[0].name).toBe('Louvre');
+      expect(result.current.museums[0]?.name).toBe('Louvre');
 
       // Flip to bbox results.
       mockSearchMuseums.mockResolvedValue({
@@ -498,7 +498,7 @@ describe('useMuseumDirectory', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.museums[0].name).toBe('Versailles');
+        expect(result.current.museums[0]?.name).toBe('Versailles');
       });
 
       // Restore the near-coords mock and hit refresh — the bbox override must
@@ -523,7 +523,7 @@ describe('useMuseumDirectory', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.museums[0].name).toBe('Louvre');
+        expect(result.current.museums[0]?.name).toBe('Louvre');
       });
     });
   });

@@ -53,7 +53,7 @@ export const generateSyntheticPois = ({
     const dLng = faker.number.float({ min: -spreadDegrees, max: spreadDegrees });
     const latitude = centerLat + dLat;
     const longitude = centerLng + dLng;
-    const museumType = MUSEUM_TYPES[i % MUSEUM_TYPES.length];
+    const museumType = MUSEUM_TYPES[i % MUSEUM_TYPES.length] ?? 'general';
     pois.push({
       id: -(i + 1),
       name: faker.company.name(),

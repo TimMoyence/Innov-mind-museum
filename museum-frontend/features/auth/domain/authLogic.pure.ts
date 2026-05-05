@@ -2,7 +2,9 @@ import type { AppError } from '@/shared/types/AppError';
 
 export const extractUserIdFromToken = (accessToken: string): string | null => {
   try {
-    const payload = JSON.parse(atob(accessToken.split('.')[1])) as Record<string, unknown>;
+    const segment = accessToken.split('.')[1];
+    if (!segment) return null;
+    const payload = JSON.parse(atob(segment)) as Record<string, unknown>;
     const userId = (payload.id ?? payload.sub) as string | number | undefined;
     return userId ? String(userId) : null;
   } catch {
@@ -12,7 +14,9 @@ export const extractUserIdFromToken = (accessToken: string): string | null => {
 
 const decodeJwtPayload = (token: string): Record<string, unknown> | null => {
   try {
-    return JSON.parse(atob(token.split('.')[1])) as Record<string, unknown>;
+    const segment = token.split('.')[1];
+    if (!segment) return null;
+    return JSON.parse(atob(segment)) as Record<string, unknown>;
   } catch {
     return null;
   }

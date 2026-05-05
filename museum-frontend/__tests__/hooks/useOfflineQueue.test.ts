@@ -144,7 +144,7 @@ describe('useOfflineQueue', () => {
 
     expect(result.current.pendingCount).toBe(1);
     // imageUri should be cleared since persistence failed
-    expect(result.current.pendingMessages[0].imageUri).toBeUndefined();
+    expect(result.current.pendingMessages[0]?.imageUri).toBeUndefined();
   });
 
   it('dequeue cleans up the persisted image', async () => {

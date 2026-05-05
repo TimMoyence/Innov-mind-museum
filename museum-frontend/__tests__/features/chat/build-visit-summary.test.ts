@@ -98,7 +98,7 @@ describe('buildVisitSummary — proactive end-of-visit aggregation (P4)', () => 
     const summary = buildVisitSummary(messages, null);
 
     expect(summary.artworks).toHaveLength(1);
-    expect(summary.artworks[0].title).toBe('La Joconde');
+    expect(summary.artworks[0]?.title).toBe('La Joconde');
     expect(summary.roomsVisited).toEqual(['Salle des États']);
   });
 
@@ -181,7 +181,7 @@ describe('buildVisitSummary — proactive end-of-visit aggregation (P4)', () => 
 
     const summary = buildVisitSummary(messages, null);
 
-    expect(summary.artworks[0].imageUrl).toBe('https://example.com/sunflowers-thumb.jpg');
+    expect(summary.artworks[0]?.imageUrl).toBe('https://example.com/sunflowers-thumb.jpg');
   });
 
   it('falls back to the full-size url when the thumbnailUrl is empty (defensive against malformed payloads)', () => {
@@ -215,7 +215,7 @@ describe('buildVisitSummary — proactive end-of-visit aggregation (P4)', () => 
 
     const summary = buildVisitSummary(messages, null);
 
-    expect(summary.artworks[0].imageUrl).toBe('https://example.com/hercules.jpg');
+    expect(summary.artworks[0]?.imageUrl).toBe('https://example.com/hercules.jpg');
   });
 
   it('returns 0 minutes and now-based timestamps for an empty session', () => {

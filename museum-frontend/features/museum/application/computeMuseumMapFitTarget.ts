@@ -55,15 +55,16 @@ export const computeMuseumMapFitTarget = (
   if (userLatitude !== null && userLongitude !== null) {
     points.push([userLongitude, userLatitude]);
   }
-  if (points.length === 0) return { kind: 'skip-empty' };
+  const first = points[0];
+  if (!first) return { kind: 'skip-empty' };
   if (points.length === 1) {
-    return { kind: 'flyTo', center: points[0], zoom: SINGLE_POINT_ZOOM };
+    return { kind: 'flyTo', center: first, zoom: SINGLE_POINT_ZOOM };
   }
 
-  let minLng = points[0][0];
-  let maxLng = points[0][0];
-  let minLat = points[0][1];
-  let maxLat = points[0][1];
+  let minLng = first[0];
+  let maxLng = first[0];
+  let minLat = first[1];
+  let maxLat = first[1];
   for (const [lng, lat] of points) {
     if (lng < minLng) minLng = lng;
     if (lng > maxLng) maxLng = lng;

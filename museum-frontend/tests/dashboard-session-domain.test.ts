@@ -125,8 +125,8 @@ describe('mapSessionsToDashboardCards', () => {
     const cards = mapSessionsToDashboardCards(sessions);
 
     assert.equal(cards.length, 2);
-    assert.equal(cards[0].id, 'a');
-    assert.equal(cards[1].id, 'b');
+    assert.equal(cards[0]?.id, 'a');
+    assert.equal(cards[1]?.id, 'b');
   });
 
   it('returns empty array for empty input', () => {
