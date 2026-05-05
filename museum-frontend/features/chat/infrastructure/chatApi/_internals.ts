@@ -60,3 +60,22 @@ export const isChatStreamingEnabled = (): boolean => {
   const raw = process.env.EXPO_PUBLIC_CHAT_STREAMING?.toLowerCase();
   return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
 };
+
+/**
+ * React Native's `FormData.append` accepts the `{ uri, name, type }` shape
+ * for file uploads, but the lib.dom.d.ts types only declare `Blob | string`.
+ * This helper isolates the platform cast in one place — every other call
+ * site stays cleanly typed.
+ *
+ * @see https://reactnative.dev/docs/network#sending-multipart-data
+ */
+export const appendRnFile = (
+  formData: FormData,
+  field: string,
+  file: { uri: string; name: string; type: string },
+): void => {
+  // React Native's FormData polyfill accepts this object shape natively at
+  // runtime. The browser DOM types reject it at compile time, so we narrow
+  // the cast to this single helper instead of leaking it to every caller.
+  formData.append(field, file as unknown as Blob);
+};

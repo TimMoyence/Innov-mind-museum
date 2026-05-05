@@ -16,6 +16,7 @@ import {
 } from '../../domain/contracts';
 import {
   CHAT_BASE,
+  appendRnFile,
   ensureContract,
   isChatStreamingEnabled,
   normalizeImageMimeTypeFromExtension,
@@ -116,11 +117,11 @@ export const postMessage = async (
         contentPreferences,
       }),
     );
-    formData.append('image', {
+    appendRnFile(formData, 'image', {
       uri: imageUri,
       name: fileName,
       type: normalizeImageMimeTypeFromExtension(extension),
-    } as unknown as Blob);
+    });
 
     payload = formData;
   } else {

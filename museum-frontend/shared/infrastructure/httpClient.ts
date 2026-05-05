@@ -216,7 +216,7 @@ httpClient.interceptors.response.use(
     if (__DEV__) {
       console.debug('[HTTP] <-', response.status, response.config.url);
     }
-    emitHttpBreadcrumb(response.config as unknown as HttpRequestConfig, response.status, 'info');
+    emitHttpBreadcrumb(response.config as typeof response.config & HttpRequestConfig, response.status, 'info');
     return response;
   },
   async (error: unknown) => {

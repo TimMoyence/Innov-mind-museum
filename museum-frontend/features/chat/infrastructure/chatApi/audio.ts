@@ -6,7 +6,7 @@ import type { GuideLevel } from '@/features/settings/runtimeSettings';
 
 import type { PostMessageResponseDTO } from '../../domain/contracts';
 import { isPostMessageResponseDTO } from '../../domain/contracts';
-import { CHAT_BASE, audioMimeByExtension, ensureContract } from './_internals';
+import { CHAT_BASE, appendRnFile, audioMimeByExtension, ensureContract } from './_internals';
 
 export interface PostAudioMessageParams {
   sessionId: string;
@@ -73,12 +73,8 @@ export const postAudioMessage = async (
   );
   if (audioBlob) {
     formData.append('audio', audioBlob, fileName);
-  } else {
-    formData.append('audio', {
-      uri: audioUri,
-      name: fileName,
-      type: mimeType,
-    } as unknown as Blob);
+  } else if (audioUri) {
+    appendRnFile(formData, 'audio', { uri: audioUri, name: fileName, type: mimeType });
   }
 
   const data = await httpRequest<unknown>(`${CHAT_BASE}/sessions/${sessionId}/audio`, {
