@@ -4,7 +4,6 @@ import {
   changeUserRoleSchema,
   resolveReportSchema,
   updateTicketSchema,
-  moderateReviewSchema,
   listUsersQuerySchema,
   auditLogsQuerySchema,
   listReportsQuerySchema,
@@ -32,6 +31,7 @@ import {
   adminReviewFacade,
   adminSupportFacade,
 } from '@modules/admin/useCase';
+import { moderateReviewSchema } from '@modules/review/adapters/primary/http/schemas/review.schemas';
 import { badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
 import { requireRole } from '@src/helpers/middleware/require-role.middleware';
