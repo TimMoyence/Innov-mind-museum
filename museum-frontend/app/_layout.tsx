@@ -39,6 +39,7 @@ import {
 } from '@/shared/infrastructure/apiConfig';
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 import { StartupConfigurationErrorScreen } from '@/shared/ui/StartupConfigurationErrorScreen';
+import { initCertPinning } from '@/shared/infrastructure/cert-pinning-init';
 
 const sentryDsn: string | undefined =
   Platform.OS === 'android'
@@ -47,6 +48,21 @@ const sentryDsn: string | undefined =
 
 initSentry(sentryDsn);
 logInitPhase('sentry.initialized', { platform: Platform.OS, hasDsn: Boolean(sentryDsn) });
+
+// Cert pinning init runs PRE-axios so the first network request is pinned
+// when the env flag and kill-switch agree. The env defaults to false, so
+// V1 launches ship un-pinned; flip `EXPO_PUBLIC_CERT_PINNING_ENABLED=true`
+// only after capturing real SPKI hashes (see ADR-031, CERT_ROTATION runbook).
+// Fire-and-forget: a slow kill-switch fetch must not block the React tree.
+void initCertPinning({ apiBaseUrl: getApiConfigurationSnapshot().resolvedBaseUrl })
+  .then((outcome) => {
+    logInitPhase('certPinning.resolved', outcome);
+  })
+  .catch((error: unknown) => {
+    logInitPhase('certPinning.error', {
+      message: error instanceof Error ? error.message : String(error),
+    });
+  });
 
 function AuthenticationGuard({ children }: { children: ReactNode }) {
   useProtectedRoute();
