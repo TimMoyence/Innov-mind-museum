@@ -1,3 +1,4 @@
+import type { StyleProp, ViewStyle } from 'react-native';
 import { View } from 'react-native';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
@@ -20,8 +21,8 @@ interface ChatSessionSurfaceProps {
   onLinkPress: (url: string) => boolean;
   onRetry?: (message: ChatUiMessage) => void;
   isAssistantPending: boolean;
-  surfaceStyle: import('react-native').StyleProp<import('react-native').ViewStyle>;
-  skeletonStyle: import('react-native').StyleProp<import('react-native').ViewStyle>;
+  surfaceStyle: StyleProp<ViewStyle>;
+  skeletonStyle: StyleProp<ViewStyle>;
 }
 
 /**

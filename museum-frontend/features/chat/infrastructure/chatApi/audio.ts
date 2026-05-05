@@ -56,7 +56,7 @@ export const postAudioMessage = async (
   const extension = fileName.includes('.')
     ? (fileName.split('.').pop()?.toLowerCase() ?? fallbackExt)
     : fallbackExt;
-  const mimeType = audioBlob?.type ?? (audioMimeByExtension[extension] || 'audio/mp4');
+  const mimeType = audioBlob?.type ?? (audioMimeByExtension[extension] ?? 'audio/mp4');
 
   const formData = new FormData();
   formData.append(

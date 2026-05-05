@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 import { storage } from '@/shared/infrastructure/storage';
 
-import { computeLocalCacheKey, type LocalCacheKeyInput } from './computeLocalCacheKey';
+import { computeLocalCacheKey } from './computeLocalCacheKey';
 
 /** Maximum number of entries kept in the local cache. */
 export const MAX_LOCAL_ENTRIES = 200;

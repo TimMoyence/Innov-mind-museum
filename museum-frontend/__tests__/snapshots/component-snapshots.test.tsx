@@ -13,6 +13,7 @@ import { render } from '@testing-library/react-native';
 
 import { WelcomeCard } from '@/features/chat/ui/WelcomeCard';
 import { ChatInput } from '@/features/chat/ui/ChatInput';
+import { nonNull } from '../helpers/nonNull';
 
 // ── ErrorBoundary-specific mocks ────────────────────────────────────────────
 jest.mock('@/shared/i18n/i18n', () => ({
@@ -198,8 +199,9 @@ describe('ChatInput — disabled/sending state', () => {
     const sendButton = queryByRole('button', { name: /send/i });
     // button is always rendered (never hidden) — a missing button means a regression
     expect(sendButton).not.toBeNull();
+    const button = nonNull(sendButton);
     expect(
-      sendButton!.props.accessibilityState?.disabled ?? sendButton!.props.disabled,
+      button.props.accessibilityState?.disabled ?? button.props.disabled,
     ).toBeTruthy();
   });
 });

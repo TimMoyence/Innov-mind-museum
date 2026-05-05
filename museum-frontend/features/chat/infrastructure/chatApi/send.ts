@@ -14,6 +14,7 @@ import {
   isCreateSessionResponseDTO,
   isPostMessageResponseDTO,
 } from '../../domain/contracts';
+import type { PostMessageStreamParams } from './stream';
 import {
   CHAT_BASE,
   appendRnFile,
@@ -152,7 +153,7 @@ export const postMessage = async (
 
 interface SmartSendDeps {
   postMessage: (params: PostMessageParams) => Promise<PostMessageResponseDTO>;
-  postMessageStream: (params: import('./stream').PostMessageStreamParams) => Promise<void>;
+  postMessageStream: (params: PostMessageStreamParams) => Promise<void>;
 }
 
 /**

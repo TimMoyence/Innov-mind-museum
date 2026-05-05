@@ -42,7 +42,6 @@ export const useChatSession = (sessionId: string) => {
   const storeUpdateMessages = useChatSessionStore((s) => s.updateMessages);
 
   const [messages, setMessages] = useState<ChatUiMessage[]>(
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cachedSession can be undefined at runtime (store key miss)
     () => cachedSession?.messages ?? [],
   );
   const [isSending, setIsSending] = useState(false);

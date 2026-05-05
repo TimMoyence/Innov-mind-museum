@@ -88,7 +88,9 @@ export const offlinePackManager = {
 
   async downloadPack(
     request: CityPackRequest,
-    onProgress: (progress: CityPackProgress) => void = () => {},
+    onProgress: (progress: CityPackProgress) => void = () => {
+      /* noop */
+    },
   ): Promise<CityPackSummary> {
     // Check for an existing pack without calling status() on every pack in the catalog.
     const allPacks = await OfflineManager.getPacks();

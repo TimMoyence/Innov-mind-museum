@@ -52,6 +52,7 @@ describe('useReducedMotion', () => {
       resolveEnabled(false);
     });
 
+    await Promise.resolve();
     expect(result.current).toBe(false);
   });
 

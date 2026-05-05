@@ -57,7 +57,8 @@ export const ensureContract = <T>(
  * falls back to a non-streaming POST and shows a typing indicator.
  */
 export const isChatStreamingEnabled = (): boolean => {
-  const raw = process.env.EXPO_PUBLIC_CHAT_STREAMING?.toLowerCase();
+  const envValue: unknown = process.env.EXPO_PUBLIC_CHAT_STREAMING;
+  const raw = typeof envValue === 'string' ? envValue.toLowerCase() : undefined;
   return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
 };
 

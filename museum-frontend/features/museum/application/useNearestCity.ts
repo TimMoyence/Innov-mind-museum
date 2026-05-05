@@ -33,10 +33,6 @@ export function useNearestCity(museums: readonly MuseumWithDistance[]): NearestC
   for (const city of CITY_CATALOG) {
     const [west, south, east, north] = city.bounds;
     if (
-      west !== undefined &&
-      south !== undefined &&
-      east !== undefined &&
-      north !== undefined &&
       longitude >= west &&
       longitude <= east &&
       latitude >= south &&

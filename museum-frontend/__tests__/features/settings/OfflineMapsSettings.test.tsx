@@ -1,6 +1,7 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import '../../helpers/test-utils';
+import { nonNull } from '../../helpers/nonNull';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -141,7 +142,7 @@ describe('OfflineMapsSettings', () => {
 
   it('calls download(city) with the catalog city object on Download press', async () => {
     const { getAllByText } = render(<OfflineMapsSettings />);
-    fireEvent.press(getAllByText('offlineMaps.download')[0]!);
+    fireEvent.press(nonNull(getAllByText('offlineMaps.download')[0]));
     await waitFor(() => {
       expect(mockDownload).toHaveBeenCalledTimes(1);
     });
@@ -167,7 +168,7 @@ describe('OfflineMapsSettings', () => {
   it('routes a download failure through reportError with cityId and component context', async () => {
     mockDownload.mockRejectedValueOnce(new Error('disk full'));
     const { getAllByText } = render(<OfflineMapsSettings />);
-    fireEvent.press(getAllByText('offlineMaps.download')[0]!);
+    fireEvent.press(nonNull(getAllByText('offlineMaps.download')[0]));
     await waitFor(() => {
       expect(mockReportError).toHaveBeenCalledTimes(1);
     });

@@ -16,7 +16,7 @@ export function withOpacity(hex: string, alpha: number): string {
     g = parseInt(clean.slice(2, 4), 16);
     b = parseInt(clean.slice(4, 6), 16);
   }
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  return `rgba(${String(r)}, ${String(g)}, ${String(b)}, ${String(alpha)})`;
 }
 
 export const functional = {

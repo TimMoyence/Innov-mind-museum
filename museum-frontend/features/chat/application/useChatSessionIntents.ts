@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import * as Haptics from 'expo-haptics';
 
 interface ChatSessionIntentsParams {
@@ -30,8 +30,9 @@ interface ChatSessionIntents {
  *  - error haptic → fire `Haptics.notificationAsync(Error)` whenever the
  *    `error` value flips truthy.
  *
- * Each intent is guarded by a `useState` flag so the side-effect runs at
- * most once per mount.
+ * Each intent is guarded by a `useRef` flag so the side-effect runs at
+ * most once per mount without triggering an extra render (avoids the
+ * react-hooks/set-state-in-effect cascade).
  */
 export const useChatSessionIntents = (params: ChatSessionIntentsParams): ChatSessionIntents => {
   const initialIntent = useMemo<'camera' | 'audio' | null>(() => {
@@ -41,16 +42,16 @@ export const useChatSessionIntents = (params: ChatSessionIntentsParams): ChatSes
   const isWalkMode = params.intent === 'walk';
   const initialPrompt = useMemo(() => params.initialPrompt ?? null, [params.initialPrompt]);
 
-  const [isIntentHandled, setIsIntentHandled] = useState(false);
-  const [isPromptHandled, setIsPromptHandled] = useState(false);
+  const intentHandledRef = useRef(false);
+  const promptHandledRef = useRef(false);
 
   useEffect(() => {
     if (params.error) void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
   }, [params.error]);
 
   useEffect(() => {
-    if (isIntentHandled || !initialIntent) return;
-    setIsIntentHandled(true);
+    if (intentHandledRef.current || !initialIntent) return;
+    intentHandledRef.current = true;
     if (initialIntent === 'camera') {
       void params.onTakePicture();
       return;
@@ -62,13 +63,13 @@ export const useChatSessionIntents = (params: ChatSessionIntentsParams): ChatSes
     return () => {
       clearTimeout(timer);
     };
-  }, [initialIntent, isIntentHandled, params]);
+  }, [initialIntent, params]);
 
   useEffect(() => {
-    if (isPromptHandled || !initialPrompt || params.isLoading) return;
-    setIsPromptHandled(true);
+    if (promptHandledRef.current || !initialPrompt || params.isLoading) return;
+    promptHandledRef.current = true;
     void params.sendMessage({ text: initialPrompt });
-  }, [initialPrompt, isPromptHandled, params]);
+  }, [initialPrompt, params]);
 
   return { initialIntent, initialPrompt, isWalkMode };
 };

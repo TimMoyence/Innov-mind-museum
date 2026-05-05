@@ -43,7 +43,7 @@ export default function OnboardingScreen() {
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       const first = viewableItems[0];
-      if (first && first.index != null) {
+      if (first?.index != null) {
         goToStep(first.index);
       }
     },

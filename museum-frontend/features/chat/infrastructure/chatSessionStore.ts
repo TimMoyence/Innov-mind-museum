@@ -63,7 +63,6 @@ export const useChatSessionStore = create<ChatSessionState>()(
       updateMessages: (sessionId, messages) =>
         set((state) => {
           const existing = state.sessions[sessionId];
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive store guard
           if (!existing) return state;
           return {
             sessions: {
@@ -76,7 +75,6 @@ export const useChatSessionStore = create<ChatSessionState>()(
       appendMessage: (sessionId, message) =>
         set((state) => {
           const existing = state.sessions[sessionId];
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive store guard
           if (!existing) return state;
           return {
             sessions: {

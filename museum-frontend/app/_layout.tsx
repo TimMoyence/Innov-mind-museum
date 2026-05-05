@@ -41,10 +41,13 @@ import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 import { StartupConfigurationErrorScreen } from '@/shared/ui/StartupConfigurationErrorScreen';
 import { initCertPinning } from '@/shared/infrastructure/cert-pinning-init';
 
+const readEnvString = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.length > 0 ? value : undefined;
+
 const sentryDsn: string | undefined =
   Platform.OS === 'android'
-    ? process.env.EXPO_PUBLIC_SENTRY_DSN_ANDROID
-    : process.env.EXPO_PUBLIC_SENTRY_DSN_IOS;
+    ? readEnvString(process.env.EXPO_PUBLIC_SENTRY_DSN_ANDROID)
+    : readEnvString(process.env.EXPO_PUBLIC_SENTRY_DSN_IOS);
 
 initSentry(sentryDsn);
 logInitPhase('sentry.initialized', { platform: Platform.OS, hasDsn: Boolean(sentryDsn) });

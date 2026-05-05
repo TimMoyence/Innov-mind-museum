@@ -6,6 +6,7 @@ import {
   makeListSessionsResponse,
   makePostMessageResponse,
 } from '@/__tests__/helpers/factories';
+import { nonNull } from '@/__tests__/helpers/nonNull';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -605,7 +606,7 @@ describe('chatApi', () => {
         },
       });
 
-      const fetchCall = mockExpoFetch.mock.calls[0]!;
+      const fetchCall = nonNull(mockExpoFetch.mock.calls[0]);
       expect(fetchCall[0]).toBe('https://api.test.com/api/chat/sessions/sess-1/messages/stream');
       const headers = fetchCall[1]?.headers as Record<string, string>;
       expect(headers.Authorization).toBe('Bearer test-access-token');
