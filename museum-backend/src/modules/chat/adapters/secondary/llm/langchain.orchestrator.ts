@@ -1,5 +1,4 @@
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
-import * as Sentry from '@sentry/node';
 
 import {
   buildOrchestratorMessages,
@@ -20,31 +19,28 @@ import {
 import { Semaphore } from '@modules/chat/useCase/llm/semaphore';
 import { parseAssistantResponse } from '@modules/chat/useCase/orchestration/assistant-response';
 import { logger } from '@shared/logger/logger';
-import { getLangfuse } from '@shared/observability/langfuse.client';
-import { safeTrace } from '@shared/observability/safeTrace';
 import { startSpan } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
 
+import { assembleResponse, buildStreamSuccessResponse } from './langchain-orchestrator-assembly';
 import {
-  EMPTY_RESPONSE_FALLBACK,
+  buildFirstSectionMessages,
+  buildRunnerOptions,
+  createStreamTimeout,
+} from './langchain-orchestrator-stream';
+import {
   MISSING_LLM_KEY_FALLBACK,
   toModel,
   isRetryableError,
-  sectionRunnerHooks,
 } from './langchain-orchestrator-support';
+import { withLangfuseTrace } from './langchain-orchestrator-tracing';
 import { CircuitOpenError, LLMCircuitBreaker } from './llm-circuit-breaker';
 
 import type {
   ChatModel,
   InvokeSectionInput,
-  AssembleResponseInput,
   LangChainChatOrchestratorDeps,
 } from './langchain-orchestrator-support';
-import type {
-  ChatAssistantDiagnostics,
-  ChatAssistantMetadata,
-} from '@modules/chat/domain/chat.types';
-import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type {
   OrchestratorInput,
   OrchestratorOutput,
@@ -65,55 +61,8 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
   }
 
   /** Returns the circuit breaker's observable state for health-check endpoints. */
-  getCircuitBreakerState() {
+  getCircuitBreakerState(): ReturnType<LLMCircuitBreaker['getState']> {
     return this.circuitBreaker.getState();
-  }
-
-  /**
-   * Wraps an orchestration call with a top-level Langfuse trace. Fail-open via
-   * `safeTrace`: any exception in the Langfuse SDK is swallowed and the chat
-   * path continues. When `LANGFUSE_ENABLED=false` (default), `getLangfuse()`
-   * returns `null` and this is a near-zero-cost no-op (one nullable read).
-   */
-  private async withLangfuseTrace<T extends OrchestratorOutput>(
-    name: string,
-    input: OrchestratorInput,
-    fn: () => Promise<T>,
-  ): Promise<T> {
-    const lf = getLangfuse();
-    const baseMeta = {
-      provider: env.llm.provider,
-      model: env.llm.model,
-      requestId: input.requestId,
-      intent: input.intent,
-      hasImage: !!input.image,
-      historyLength: input.history.length,
-      locale: input.locale,
-      museumMode: input.museumMode,
-    };
-    const trace = safeTrace('langfuse.trace.create', () => lf?.trace({ name, metadata: baseMeta }));
-    const startedAt = Date.now();
-    try {
-      const result = await fn();
-      safeTrace('langfuse.trace.update', () => {
-        trace?.update({
-          output: { textLength: result.text.length },
-          metadata: { ...baseMeta, latencyMs: Date.now() - startedAt },
-        });
-      });
-      return result;
-    } catch (err) {
-      safeTrace('langfuse.trace.update.error', () => {
-        trace?.update({
-          metadata: {
-            ...baseMeta,
-            latencyMs: Date.now() - startedAt,
-            error: err instanceof Error ? err.message : String(err),
-          },
-        });
-      });
-      throw err;
-    }
   }
 
   /** Invokes the LLM for a single section behind circuit-breaker + semaphore, wrapped in a Sentry span. */
@@ -163,135 +112,6 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     });
   }
 
-  /** Resolves summary text + metadata from section results, applying fallback when needed. */
-  private resolveSummary(
-    bySection: Map<LlmSectionName, SectionRunResult<string>>,
-    input: OrchestratorInput,
-    recentHistory: ChatMessage[],
-    normalizedText: string | undefined,
-  ): {
-    text: string;
-    metadata: ChatAssistantMetadata;
-    degraded: boolean;
-    fallbackApplied: boolean;
-  } {
-    const summaryResult = bySection.get('summary');
-
-    if (summaryResult?.status === 'success') {
-      const parsed = parseAssistantResponse(summaryResult.value);
-      return {
-        text: parsed.answer || EMPTY_RESPONSE_FALLBACK,
-        metadata: parsed.metadata,
-        degraded: false,
-        fallbackApplied: false,
-      };
-    }
-
-    logger.warn('llm_section_fallback', {
-      requestId: input.requestId,
-      section: 'summary',
-      reason:
-        summaryResult?.status === 'timeout'
-          ? 'timeout'
-          : (summaryResult?.status ?? 'missing-result'),
-    });
-
-    const text = createSummaryFallback({
-      history: recentHistory,
-      question: normalizedText,
-      location: input.context?.location,
-      locale: input.locale,
-      museumMode: input.museumMode,
-    });
-
-    return {
-      text: text || EMPTY_RESPONSE_FALLBACK,
-      metadata: {},
-      degraded: true,
-      fallbackApplied: true,
-    };
-  }
-
-  /** Builds per-section diagnostics entries for observability metadata. */
-  private buildDiagnosticsSections(
-    sectionPlan: ReturnType<typeof buildOrchestratorMessages>['sectionPlan'],
-    bySection: Map<LlmSectionName, SectionRunResult<string>>,
-    fallbackApplied: boolean,
-  ): ChatAssistantDiagnostics['sections'] {
-    return sectionPlan.map((section) => {
-      const result = bySection.get(section.name);
-
-      if (!result) {
-        return {
-          name: section.name,
-          status: fallbackApplied ? 'fallback' : 'error',
-          attempts: 0,
-          latencyMs: 0,
-          timeoutMs: section.timeoutMs,
-          payloadBytes: 0,
-          error: 'No section result',
-        };
-      }
-
-      return {
-        name: section.name,
-        status: fallbackApplied ? 'fallback' : result.status,
-        attempts: result.attempts,
-        latencyMs: result.latencyMs,
-        timeoutMs: result.timeoutMs,
-        payloadBytes: result.payloadBytes,
-        ...(result.status !== 'success' ? { error: result.error } : {}),
-      };
-    });
-  }
-
-  /** Assembles diagnostics sections and logs orchestration completion. */
-  private assembleResponse(params: AssembleResponseInput): OrchestratorOutput {
-    const { input, sectionPlan, bySection, recentHistory, normalizedText, startedAt } = params;
-    const {
-      text,
-      metadata: baseMeta,
-      degraded,
-      fallbackApplied,
-    } = this.resolveSummary(bySection, input, recentHistory, normalizedText);
-
-    const totalLatencyMs = Date.now() - startedAt;
-    const profile: ChatAssistantDiagnostics['profile'] = 'single_section';
-    const diagnosticsSections = this.buildDiagnosticsSections(
-      sectionPlan,
-      bySection,
-      fallbackApplied,
-    );
-
-    logger.info('llm_orchestration_complete', {
-      requestId: input.requestId,
-      profile,
-      provider: env.llm.provider,
-      model: env.llm.model,
-      degraded,
-      totalLatencyMs,
-      sections: diagnosticsSections.map((section) => ({
-        name: section.name,
-        status: section.status,
-        attempts: section.attempts,
-        latencyMs: section.latencyMs,
-      })),
-    });
-
-    let metadata = baseMeta;
-    if (env.llm.includeDiagnostics) {
-      metadata = {
-        ...metadata,
-        diagnostics: { profile, degraded, totalLatencyMs, sections: diagnosticsSections },
-      };
-    }
-
-    Sentry.getActiveSpan()?.setAttribute('llm.latency_ms', totalLatencyMs);
-    Sentry.getActiveSpan()?.setAttribute('llm.degraded', degraded);
-
-    return { text, metadata };
-  }
-
   /**
    * Builds section-based prompts, invokes the LLM with retry/timeout logic, and assembles the final response.
    *
@@ -299,7 +119,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
    * @returns Generated text and metadata (citations, diagnostics).
    */
   async generate(input: OrchestratorInput): Promise<OrchestratorOutput> {
-    return await this.withLangfuseTrace('llm.orchestrate', input, () =>
+    return await withLangfuseTrace('llm.orchestrate', input, () =>
       startSpan(
         {
           name: 'llm.orchestrate',
@@ -340,7 +160,13 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
 
           const sectionResults = await runSectionTasks(
             tasks,
-            this.buildRunnerOptions(input.requestId),
+            buildRunnerOptions({
+              requestId: input.requestId,
+              shouldRetry: (error: unknown, status: string) => {
+                if (status === 'timeout') return true;
+                return isRetryableError(error);
+              },
+            }),
           );
 
           // (Section-level errors degrade gracefully via the fallback path in
@@ -355,7 +181,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
             bySection.set(result.name as LlmSectionName, result);
           }
 
-          return this.assembleResponse({
+          return assembleResponse({
             input,
             sectionPlan,
             bySection,
@@ -365,7 +191,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           });
         },
       ),
-    ); // end withLangfuseTrace('llm.orchestrate') wrapping startSpan
+    );
   }
 
   /** Builds section tasks from the plan for use with the section runner. */
@@ -406,60 +232,6 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     });
   }
 
-  /** Builds runner options for section task execution. */
-  private buildRunnerOptions(requestId?: string) {
-    return {
-      maxConcurrent: 1,
-      retries: env.llm.retries,
-      retryBaseDelayMs: env.llm.retryBaseDelayMs,
-      totalBudgetMs: env.llm.totalBudgetMs,
-      requestId,
-      shouldRetry: (error: unknown, status: string) => {
-        if (status === 'timeout') return true;
-        return isRetryableError(error);
-      },
-      hooks: sectionRunnerHooks,
-    };
-  }
-
-  /** Builds messages for the first section of a plan (used in streaming). */
-  private buildFirstSectionMessages(
-    section: ReturnType<typeof buildOrchestratorMessages>['sectionPlan'][0],
-    prepared: ReturnType<typeof buildOrchestratorMessages>,
-    input: OrchestratorInput,
-  ) {
-    return buildSectionMessages(
-      prepared.systemPrompt,
-      section.prompt,
-      prepared.historyMessages,
-      prepared.userMessage,
-      {
-        userMemoryBlock: input.userMemoryBlock,
-        knowledgeBaseBlock: input.knowledgeBaseBlock,
-        webSearchBlock: input.webSearchBlock,
-        localKnowledgeBlock: input.localKnowledgeBlock,
-      },
-    );
-  }
-
-  /** Creates an AbortController + timeout pair for stream time-limiting. */
-  private createStreamTimeout(timeoutMs: number): {
-    controller: AbortController;
-    clearStreamTimeout: () => void;
-  } {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      controller.abort();
-    }, timeoutMs);
-
-    return {
-      controller,
-      clearStreamTimeout: () => {
-        clearTimeout(timeoutId);
-      },
-    };
-  }
-
   /**
    * Runs `fn` behind the LLM circuit breaker and the per-request semaphore.
    * Extracted into a single helper so call sites stay one nesting level shallow
@@ -467,33 +239,6 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
    */
   private async _executeGuarded<T>(fn: () => Promise<T>): Promise<T> {
     return await this.circuitBreaker.execute(() => this.semaphore.use(fn));
-  }
-
-  /** Parses raw streamed content into the final response, optionally attaching diagnostics. */
-  private buildStreamSuccessResponse(rawContent: string, requestId?: string): OrchestratorOutput {
-    const parsed = parseAssistantResponse(rawContent);
-
-    logger.info('llm_stream_complete', {
-      requestId,
-      provider: env.llm.provider,
-      model: env.llm.model,
-      textLength: rawContent.length,
-    });
-
-    let metadata = parsed.metadata;
-    if (env.llm.includeDiagnostics) {
-      metadata = {
-        ...metadata,
-        diagnostics: {
-          profile: 'single_section' as const,
-          degraded: false,
-          totalLatencyMs: 0,
-          sections: [],
-        },
-      };
-    }
-
-    return { text: parsed.answer, metadata };
   }
 
   /**
@@ -508,7 +253,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     input: OrchestratorInput,
     onChunk: (text: string) => void,
   ): Promise<OrchestratorOutput> {
-    return await this.withLangfuseTrace('llm.orchestrate.stream', input, () =>
+    return await withLangfuseTrace('llm.orchestrate.stream', input, () =>
       startSpan(
         {
           name: 'llm.orchestrate.stream',
@@ -539,9 +284,9 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           }
 
           const section = sectionPlan[0];
-          const sectionMessages = this.buildFirstSectionMessages(section, prepared, input);
+          const sectionMessages = buildFirstSectionMessages(section, prepared, input);
 
-          const { controller, clearStreamTimeout } = this.createStreamTimeout(section.timeoutMs);
+          const { controller, clearStreamTimeout } = createStreamTimeout(section.timeoutMs);
           const accumulator = { text: '' };
 
           try {
@@ -550,7 +295,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
             );
 
             clearStreamTimeout();
-            return this.buildStreamSuccessResponse(rawContent, input.requestId);
+            return buildStreamSuccessResponse(rawContent, input.requestId);
           } catch (error) {
             clearStreamTimeout();
 
@@ -580,7 +325,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           }
         },
       ),
-    ); // end withLangfuseTrace('llm.orchestrate.stream') wrapping startSpan
+    );
   }
 
   /**
