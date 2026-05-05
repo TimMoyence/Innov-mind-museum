@@ -5,9 +5,6 @@ import type {
   ImageSourcePhoto,
 } from '@modules/chat/domain/ports/image-source.port';
 
-/** @deprecated Use `ImageSourcePhoto` from the port instead. Kept for backward compatibility. */
-export type UnsplashPhoto = ImageSourcePhoto;
-
 /** Unsplash API client for searching artwork-related photos. Never throws from public methods. */
 export class UnsplashClient implements ImageSourceClient {
   private readonly baseUrl = 'https://api.unsplash.com';
