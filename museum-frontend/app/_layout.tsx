@@ -14,6 +14,7 @@ import {
   shouldDehydrateQuery,
 } from '@/shared/data/queryClient';
 import { initSentry, reactNavigationIntegration } from '@/shared/observability/sentry-init';
+import { logInitPhase } from '@/shared/observability/init-phase-breadcrumbs';
 
 import '@/features/museum/infrastructure/mapLibreBootstrap';
 
@@ -45,6 +46,7 @@ const sentryDsn: string | undefined =
     : process.env.EXPO_PUBLIC_SENTRY_DSN_IOS;
 
 initSentry(sentryDsn);
+logInitPhase('sentry.initialized', { platform: Platform.OS, hasDsn: Boolean(sentryDsn) });
 
 function AuthenticationGuard({ children }: { children: ReactNode }) {
   useProtectedRoute();
@@ -62,9 +64,11 @@ function RootLayout() {
   const ref = useNavigationContainerRef();
 
   useEffect(() => {
+    logInitPhase('rootLayout.mounted');
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- ref guard
     if (ref) {
       reactNavigationIntegration.registerNavigationContainer(ref);
+      logInitPhase('navigationContainer.registered');
     }
   }, [ref]);
 
@@ -83,11 +87,15 @@ function RootLayout() {
 
     setOnLanguageChange((lang) => void saveDefaultLocale(lang));
 
-    applyRuntimeSettings().catch((error: unknown) => {
-      setRuntimeStartupError(
-        error instanceof Error ? error : new Error('Failed to apply runtime settings'),
-      );
-    });
+    applyRuntimeSettings()
+      .then(() => {
+        logInitPhase('runtimeSettings.applied');
+      })
+      .catch((error: unknown) => {
+        setRuntimeStartupError(
+          error instanceof Error ? error : new Error('Failed to apply runtime settings'),
+        );
+      });
   }, [startupConfiguration.error]);
 
   if (startupConfiguration.error) {
