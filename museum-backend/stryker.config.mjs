@@ -21,6 +21,10 @@ export default {
     // Phase 1 — original 7 files
     'src/modules/chat/useCase/guardrail/art-topic-guardrail.ts',
     'src/modules/chat/useCase/guardrail/guardrail-evaluation.service.ts',
+    // 2026-05-05 Step H — pure helpers extracted from guardrail-evaluation.service.
+    'src/modules/chat/useCase/guardrail/guardrail-reason-mapping.ts',
+    'src/modules/chat/useCase/guardrail/guardrail-audit-payload.ts',
+    'src/modules/chat/useCase/guardrail/guardrail-refusal-builder.ts',
     'src/shared/validation/input.ts',
     'src/shared/pagination/cursor-codec.ts',
     'src/modules/chat/useCase/llm/llm-prompt-builder.ts',

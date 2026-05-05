@@ -1,10 +1,5 @@
 import { withPolicyCitation } from '@modules/chat/useCase/image/chat-image.helpers';
-import { redactSnippetForAudit } from '@modules/chat/util/guardrail-snippet';
-import {
-  AUDIT_GUARDRAIL_BLOCKED_INPUT,
-  AUDIT_GUARDRAIL_BLOCKED_OUTPUT,
-  AUDIT_SECURITY_GUARDRAIL_PASS,
-} from '@shared/audit/audit.types';
+import { AUDIT_SECURITY_GUARDRAIL_PASS } from '@shared/audit/audit.types';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
@@ -13,8 +8,15 @@ import {
   evaluateAssistantOutputGuardrail,
   evaluateUserInputGuardrail,
 } from './art-topic-guardrail';
+import { buildGuardrailBlockAuditEntry } from './guardrail-audit-payload';
+import {
+  judgeVerdictToReason,
+  mapAdvancedReason,
+} from './guardrail-reason-mapping';
+import { buildBlockedOutputPayload } from './guardrail-refusal-builder';
 
 import type { GuardrailBlockReason } from './art-topic-guardrail';
+import type { GuardrailAuditContext } from './guardrail-audit-payload';
 import type { ChatAssistantMetadata } from '@modules/chat/domain/chat.types';
 import type { AdvancedGuardrail } from '@modules/chat/domain/ports/advanced-guardrail.port';
 import type {
@@ -25,6 +27,8 @@ import type { JudgeDecision } from '@modules/chat/useCase/llm/llm-judge-guardrai
 import type { PostMessageResult } from '@modules/chat/useCase/orchestration/chat.service.types';
 import type { AuditService } from '@shared/audit/audit.service';
 
+export type { GuardrailAuditContext } from './guardrail-audit-payload';
+
 /** Minimal interface for the art-topic classifier used by the guardrail service. */
 export interface ArtTopicClassifierPort {
   isArtRelated(text: string): Promise<boolean>;
@@ -34,20 +38,6 @@ export interface ArtTopicClassifierPort {
 interface InputGuardrailResult {
   allow: boolean;
   reason?: GuardrailBlockReason;
-}
-
-/**
- * Optional request-scoped context threaded into guardrail audit rows so
- * forensic queries can pivot by session, actor, request id, ip, and locale
- * (V13 / STRIDE R3). All fields optional — anonymous traffic still logs, just
- * with `actorType: 'anonymous'` and `actorId: null`.
- */
-export interface GuardrailAuditContext {
-  sessionId?: string;
-  userId?: number;
-  requestId?: string;
-  ip?: string;
-  locale?: string;
 }
 
 /**
@@ -132,7 +122,7 @@ export class GuardrailEvaluationService {
       return { allow: true };
     }
 
-    const reason = GuardrailEvaluationService.judgeVerdictToReason(decision.decision);
+    const reason = judgeVerdictToReason(decision.decision);
 
     logger.info('guardrail_judge_block', {
       verdict: decision.decision,
@@ -144,11 +134,8 @@ export class GuardrailEvaluationService {
   }
 
   /**
-   * Routes a guardrail block to the audit chain (V13 / STRIDE R3).
-   *
-   * Single forensic entry per block: phase-scoped action, actor identification,
-   * redacted snippet (≤64 chars + sha256 of full text), classifier flags, locale,
-   * and request correlation fields. Never throws — `auditService.log()` swallows
+   * Routes a guardrail block to the audit chain (V13 / STRIDE R3). Single
+   * forensic entry per block; never throws — `auditService.log()` swallows
    * pipeline errors so a hiccup in audit insert can't break the chat hot path.
    */
   private async logBlock(params: {
@@ -160,63 +147,7 @@ export class GuardrailEvaluationService {
     context?: GuardrailAuditContext;
   }): Promise<void> {
     if (!this.audit) return;
-
-    const { phase, reason, fullText, classifierRan, advancedRan, context } = params;
-    const { snippetPreview, snippetFingerprint } = redactSnippetForAudit(fullText);
-    const userId = context?.userId;
-
-    await this.audit.log({
-      action: phase === 'input' ? AUDIT_GUARDRAIL_BLOCKED_INPUT : AUDIT_GUARDRAIL_BLOCKED_OUTPUT,
-      actorType: userId ? 'user' : 'anonymous',
-      actorId: userId ?? null,
-      targetType: 'chat_session',
-      targetId: context?.sessionId ?? null,
-      metadata: {
-        phase,
-        reason: reason ?? null,
-        snippetPreview,
-        snippetFingerprint,
-        locale: context?.locale ?? null,
-        classifierRan,
-        advancedRan,
-      },
-      ip: context?.ip ?? null,
-      requestId: context?.requestId ?? null,
-    });
-  }
-
-  /**
-   * F4 — maps a JudgeVerdict to the canonical GuardrailBlockReason. The judge
-   * cannot return `block:offtopic` for hard-block channels — those map to
-   * `off_topic` (soft channel) and the keyword pre-filter still wins for
-   * insult / prompt_injection blocks.
-   */
-  private static judgeVerdictToReason(verdict: JudgeDecision['decision']): GuardrailBlockReason {
-    if (verdict === 'block:abuse') return 'insult';
-    if (verdict === 'block:injection') return 'prompt_injection';
-    return 'off_topic';
-  }
-
-  /**
-   * Maps an AdvancedGuardrail reason to our canonical GuardrailBlockReason, used
-   * downstream by the refusal message builder and audit log.
-   */
-  private static mapAdvancedReason(reason: string | undefined): GuardrailBlockReason {
-    switch (reason) {
-      case 'pii':
-      case 'bias':
-      case 'toxicity':
-      case 'data_exfiltration':
-      case 'schema_violation':
-      case 'error':
-        return 'unsafe_output';
-      case 'off_topic':
-        return 'off_topic';
-      case 'jailbreak':
-      case 'prompt_injection':
-      default:
-        return 'prompt_injection';
-    }
+    await this.audit.log(buildGuardrailBlockAuditEntry(params));
   }
 
   /**
@@ -245,7 +176,7 @@ export class GuardrailEvaluationService {
 
     if (raw.allow) return { allow: true };
 
-    const mappedReason = GuardrailEvaluationService.mapAdvancedReason(raw.reason);
+    const mappedReason = mapAdvancedReason(raw.reason);
 
     if (this.advancedGuardrailObserveOnly) {
       logger.info('advanced_guardrail_observe_would_block', {
@@ -273,7 +204,6 @@ export class GuardrailEvaluationService {
    *
    * Every block decision is routed through the audit chain (V13 / STRIDE R3) so
    * attack patterns, frequency, locale, and offending users can be retro-analysed.
-   * Pass decisions stay on the structured logger — only blocks are audit-logged.
    *
    * @param text - User message text.
    * @param preClassified - Optional frontend pre-classification hint.
@@ -351,12 +281,6 @@ export class GuardrailEvaluationService {
    * Handles a blocked input: logs the audit event and persists both the attempted
    * user message and the assistant refusal in a single atomic transaction.
    *
-   * The `userMessage` parameter is required: the product decision is to preserve
-   * the user's blocked attempt for audit/moderation (see
-   * `chat-message-service.test.ts:403/:414`). Passing it through to the repo's
-   * `persistBlockedExchange` guarantees both rows land together or neither does —
-   * no more orphan user row if the refusal write fails.
-   *
    * @param params - Session context, guardrail reason, locale, and the user message to persist atomically.
    * @param params.sessionId - Chat session identifier.
    * @param params.reason - Guardrail block reason category.
@@ -431,11 +355,11 @@ export class GuardrailEvaluationService {
         advancedRan,
         context,
       });
-      return {
-        text: buildGuardrailRefusal(requestedLocale, 'unsafe_output'),
-        metadata: withPolicyCitation(metadata, 'unsafe_output'),
-        allowed: false,
-      };
+      return buildBlockedOutputPayload({
+        reason: 'unsafe_output',
+        requestedLocale,
+        metadata,
+      });
     }
     if (!isArt) {
       await this.logBlock({
@@ -446,11 +370,11 @@ export class GuardrailEvaluationService {
         advancedRan,
         context,
       });
-      return {
-        text: buildGuardrailRefusal(requestedLocale, 'off_topic'),
-        metadata: withPolicyCitation(metadata, 'off_topic'),
-        allowed: false,
-      };
+      return buildBlockedOutputPayload({
+        reason: 'off_topic',
+        requestedLocale,
+        metadata,
+      });
     }
     return undefined;
   }
@@ -493,11 +417,11 @@ export class GuardrailEvaluationService {
         advancedRan: false,
         context,
       });
-      return {
-        text: buildGuardrailRefusal(requestedLocale, safetyDecision.reason),
-        metadata: withPolicyCitation(metadata, safetyDecision.reason),
-        allowed: false,
-      };
+      return buildBlockedOutputPayload({
+        reason: safetyDecision.reason,
+        requestedLocale,
+        metadata,
+      });
     }
 
     // Advanced V2 output check when configured (defense-in-depth after keywords).
@@ -518,11 +442,11 @@ export class GuardrailEvaluationService {
         advancedRan,
         context,
       });
-      return {
-        text: buildGuardrailRefusal(requestedLocale, advanced.reason),
-        metadata: withPolicyCitation(metadata, advanced.reason),
-        allowed: false,
-      };
+      return buildBlockedOutputPayload({
+        reason: advanced.reason,
+        requestedLocale,
+        metadata,
+      });
     }
 
     const classifierBlock = await this.runArtTopicClassifier({
