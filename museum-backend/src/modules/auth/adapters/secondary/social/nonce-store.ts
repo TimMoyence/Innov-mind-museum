@@ -124,10 +124,7 @@ export class RedisNonceStore implements NonceStore {
     try {
       // GETDEL is the canonical atomic read-and-delete (Redis ≥6.2). Returns
       // `null` when the key never existed or already expired.
-      const redisWithGetdel = this.redis as unknown as {
-        getdel: (k: string) => Promise<string | null>;
-      };
-      const value = await redisWithGetdel.getdel(key);
+      const value = await this.redis.getdel(key);
       if (value !== null) return true;
       // Try fallback in case the nonce was issued via the in-memory path
       // during a transient Redis outage.

@@ -79,7 +79,7 @@ export class TypeOrmMuseumEnrichmentCacheAdapter implements MuseumEnrichmentCach
       website: input.website,
       phone: input.phone,
       imageUrl: input.imageUrl,
-      openingHours: input.openingHours as unknown as Record<string, unknown> | null,
+      openingHours: parsedToJsonb(input.openingHours),
       admissionFees: null,
       collections: null,
       currentExhibitions: null,
@@ -141,8 +141,21 @@ function applyViewToEntity(entity: MuseumEnrichment, view: MuseumEnrichmentView)
   entity.website = view.website;
   entity.phone = view.phone;
   entity.imageUrl = view.imageUrl;
-  entity.openingHours = view.openingHours as unknown as Record<string, unknown> | null;
+  entity.openingHours = parsedToJsonb(view.openingHours);
   entity.fetchedAt = new Date(view.fetchedAt);
+}
+
+/**
+ * Bridges the typed view model `ParsedOpeningHours` (museum bounded context)
+ * to the JSONB storage shape `Record<string, unknown>` declared on the
+ * `museum_enrichment` entity (knowledge-extraction bounded context). Single
+ * cast site for the variance gap — keeps the adapter mapper layer honest about
+ * the boundary crossing without sprinkling unknown casts across call sites.
+ */
+function parsedToJsonb(
+  value: ParsedOpeningHours | null,
+): Record<string, unknown> | null {
+  return value as unknown as Record<string, unknown> | null;
 }
 
 function toView(row: MuseumEnrichment): MuseumEnrichmentView {
