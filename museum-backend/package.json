@@ -43,6 +43,7 @@
     "seed:smoke-account": "ts-node -r tsconfig-paths/register scripts/seed-smoke-account.ts",
     "seed:perf": "ts-node -r tsconfig-paths/register scripts/seed-perf-load.ts",
     "prune:retention": "ts-node -r tsconfig-paths/register scripts/prune-retention.ts",
+    "audit-chain:verify": "ts-node -r tsconfig-paths/register scripts/audit-chain-verify.ts",
     "mutation": "stryker run",
     "mutation:ci": "stryker run --incremental --concurrency 2",
     "mutation:gate": "node scripts/stryker-hot-files-gate.mjs",
