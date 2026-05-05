@@ -27,6 +27,6 @@ export function isSupportedLocale(code: string): code is SupportedLocale {
  * Returns "en" when the code is not recognized.
  */
 export function toSupportedLocale(raw: string): SupportedLocale {
-  const code = raw.toLowerCase().split(/[-_]/)[0];
+  const code = raw.toLowerCase().split(/[-_]/)[0] ?? '';
   return isSupportedLocale(code) ? code : 'en';
 }

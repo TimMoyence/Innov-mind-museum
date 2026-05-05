@@ -131,7 +131,6 @@ export const ImageFullscreenModal = React.memo(
     ).current;
 
     const current = images[currentIndex];
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive runtime bounds check
     if (!current) return null;
 
     return (

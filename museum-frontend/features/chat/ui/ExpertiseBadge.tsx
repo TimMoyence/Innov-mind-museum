@@ -10,11 +10,11 @@ interface ExpertiseBadgeProps {
 
 /** Displays a color-coded pill badge indicating the user's expertise level (beginner, intermediate, or expert). */
 export const ExpertiseBadge = ({ level }: ExpertiseBadgeProps) => {
-  const { theme, isDark } = useTheme();
+  const { isDark } = useTheme();
   const { t } = useTranslation();
   const label = t(`expertiseBadge.${level}`);
   const levelColors = semantic.expertiseLevels[level];
-  const color = (isDark ? levelColors.dark : levelColors.light) || theme.primary;
+  const color = isDark ? levelColors.dark : levelColors.light;
 
   return (
     <View style={[styles.pill, { backgroundColor: `${color}14` }]}>

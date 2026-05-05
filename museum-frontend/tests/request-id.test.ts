@@ -23,6 +23,6 @@ describe('generateRequestId', () => {
 
   it('sets variant bits correctly (8, 9, a, or b)', () => {
     const id = generateRequestId();
-    assert.ok(['8', '9', 'a', 'b'].includes(id[19]));
+    assert.ok(['8', '9', 'a', 'b'].includes(id[19] ?? ''));
   });
 });

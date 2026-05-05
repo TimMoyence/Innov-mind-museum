@@ -1,8 +1,8 @@
 # ADR-016 — Mobile Cert Pinning: Library Selected, Production Wire-up Deferred
 
-**Status**: Accepted (research complete, implementation deferred to a subsequent release)
-**Date**: 2026-04-30
-**Deciders**: Tech Lead (sec-hardening-2026-04-30 team), user gate
+**Status**: Accepted — Phase 2 scaffolded (V1 ship-disabled). Production activation deferred to post-launch SPKI capture. See [ADR-031](ADR-031-mobile-cert-pinning-kill-switch.md) for the kill-switch architecture.
+**Date**: 2026-04-30 (initial), 2026-05-05 (Phase 2 scaffold landed)
+**Deciders**: Tech Lead (sec-hardening-2026-04-30 team), user gate; Mobile (sprint mobile-hardening-cert-pinning-ios26-2026-05-05) for Phase 2 scaffolding
 
 ## Context
 
@@ -27,12 +27,13 @@ Pinning is **defense-in-depth**, not a primary control: HTTPS + HSTS already pre
    - A **kill-switch** must be wired via remote config so pinning can be disabled in a mass-mispin event WITHOUT shipping a new app build. The current Expo over-the-air update path works, but the kill-switch design is its own ADR.
    - Dev/CI/staging build profiles must not pin (different cert) — env-gated configuration is straightforward but needs validation.
 
-3. **Phase 2 deliverables** (tracked, not in scope this audit):
-   - Add `react-native-ssl-public-key-pinning` to `package.json`.
-   - Pin two SPKI hashes for `api.musaium.app` (production only). Pin set lives in `museum-frontend/shared/config/cert-pinning.ts`.
-   - Wire kill-switch into existing Expo EAS Update / remote-config path.
-   - Add E2E test under `museum-frontend/tests/e2e/cert-pinning.test.ts` validating: prod build refuses connection on cert mismatch; dev build does not pin.
-   - Document the cert-rotation procedure for the prod TLS cert in `docs/RUNBOOKS/cert-rotation.md` (cert renewal must update the pin set + ship an OTA before the new cert goes live).
+3. **Phase 2 deliverables** (status update 2026-05-05):
+   - [x] Add `react-native-ssl-public-key-pinning` to `package.json` (sprint mobile-hardening 2026-05-05).
+   - [x] Pin set scaffold lives in `museum-frontend/shared/config/cert-pinning.ts`. **Hashes are placeholders** named `PLACEHOLDER_SPKI_HASHES_TBD_PROD` and must be replaced per [`docs/RUNBOOKS/CERT_ROTATION.md`](../RUNBOOKS/CERT_ROTATION.md) before flipping the env flag.
+   - [x] Kill-switch architecture published as [ADR-031](ADR-031-mobile-cert-pinning-kill-switch.md). Implementation in `museum-frontend/shared/infrastructure/cert-pinning-init.ts` — BE endpoint `GET /api/config/cert-pinning-enabled` is a soft dependency (fail-open on 404 / network error). Activation gated by `EXPO_PUBLIC_CERT_PINNING_ENABLED` (default `false` for V1 launch).
+   - [x] Unit coverage: 14 cases under `museum-frontend/__tests__/infrastructure/cert-pinning-init.test.ts` (parse, cache, fail-open, 4 init outcomes).
+   - [ ] E2E validation under `museum-frontend/__tests__/integration/cert-pinning.test.ts` — pending; activation work pairs it with the real SPKI capture and a staging environment TLS endpoint.
+   - [x] Cert rotation runbook published at [`docs/RUNBOOKS/CERT_ROTATION.md`](../RUNBOOKS/CERT_ROTATION.md).
 
 ## Adversarial Review (Challenger)
 

@@ -1,6 +1,7 @@
 import '@/__tests__/helpers/test-utils';
 import { renderHook, act } from '@testing-library/react-native';
 import { useImageManipulation } from '@/features/chat/application/useImageManipulation';
+import { nonNull } from '@/__tests__/helpers/nonNull';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -112,7 +113,7 @@ describe('useImageManipulation', () => {
       await result.current.rotateImage(sourceUri);
     });
 
-    const callArgs = mockManipulateAsync.mock.calls[0];
+    const callArgs = nonNull(mockManipulateAsync.mock.calls[0]);
     expect(callArgs[2]).toEqual({ compress: 0.8, format: 'jpeg' });
   });
 });

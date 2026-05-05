@@ -28,7 +28,7 @@ export const initSentry = (dsn: string | null | undefined): void => {
     integrations: [Sentry.reactNativeTracingIntegration(), reactNavigationIntegration],
     enableAutoPerformanceTracing: true,
     sendDefaultPii: false,
-    beforeSend: (event) => scrubEvent(event as unknown as ScrubbableEvent) as typeof event,
+    beforeSend: (event) => scrubEvent(event as ScrubbableEvent) as typeof event,
     beforeBreadcrumb: (breadcrumb) =>
       shouldDropBreadcrumb(breadcrumb as ScrubbableBreadcrumb) ? null : breadcrumb,
   });

@@ -1,4 +1,5 @@
 import { buildMuseumFeatureCollection } from '@/features/museum/application/buildMuseumFeatureCollection';
+import { nonNull } from '@/__tests__/helpers/nonNull';
 import { makeMuseumWithDistance } from '@/__tests__/helpers/factories/museum.factories';
 
 describe('buildMuseumFeatureCollection', () => {
@@ -23,7 +24,7 @@ describe('buildMuseumFeatureCollection', () => {
     const fc = buildMuseumFeatureCollection([louvre]);
 
     expect(fc.features).toHaveLength(1);
-    const [feature] = fc.features;
+    const feature = nonNull(fc.features[0]);
     expect(feature.type).toBe('Feature');
     expect(feature.geometry.type).toBe('Point');
     // RFC 7946 mandates [longitude, latitude]. Flip this and the map breaks.
@@ -45,7 +46,7 @@ describe('buildMuseumFeatureCollection', () => {
     const fc = buildMuseumFeatureCollection(museums);
 
     expect(fc.features).toHaveLength(1);
-    expect(fc.features[0].properties.museumId).toBe(2);
+    expect(fc.features[0]?.properties.museumId).toBe(2);
   });
 
   it('filters out museums with null longitude', () => {
@@ -57,7 +58,7 @@ describe('buildMuseumFeatureCollection', () => {
     const fc = buildMuseumFeatureCollection(museums);
 
     expect(fc.features).toHaveLength(1);
-    expect(fc.features[0].properties.museumId).toBe(2);
+    expect(fc.features[0]?.properties.museumId).toBe(2);
   });
 
   it('filters out museums with both coords null', () => {

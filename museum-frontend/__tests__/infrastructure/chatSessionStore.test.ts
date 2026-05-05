@@ -1,6 +1,7 @@
 import '@/__tests__/helpers/test-utils';
 
 import { makeChatUiMessage } from '@/__tests__/helpers/factories';
+import { nonNull } from '@/__tests__/helpers/nonNull';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -37,8 +38,7 @@ describe('chatSessionStore', () => {
 
       useChatSessionStore.getState().setSession('sess-1', messages, 'Mona Lisa Chat', 'Louvre');
 
-      const session = useChatSessionStore.getState().sessions['sess-1'];
-      expect(session).toBeDefined();
+      const session = nonNull(useChatSessionStore.getState().sessions['sess-1']);
       expect(session.messages).toHaveLength(2);
       expect(session.title).toBe('Mona Lisa Chat');
       expect(session.museumName).toBe('Louvre');
@@ -49,7 +49,7 @@ describe('chatSessionStore', () => {
 
       useChatSessionStore.getState().setSession('sess-1', [], null, null);
 
-      const session = useChatSessionStore.getState().sessions['sess-1'];
+      const session = nonNull(useChatSessionStore.getState().sessions['sess-1']);
       expect(session.updatedAt).toBeGreaterThanOrEqual(before);
       expect(session.updatedAt).toBeLessThanOrEqual(Date.now());
     });
@@ -62,9 +62,9 @@ describe('chatSessionStore', () => {
       store.setSession('sess-1', [msg1], 'Old', null);
       store.setSession('sess-1', [msg2], 'New', 'Museum');
 
-      const session = useChatSessionStore.getState().sessions['sess-1'];
+      const session = nonNull(useChatSessionStore.getState().sessions['sess-1']);
       expect(session.messages).toHaveLength(1);
-      expect(session.messages[0].text).toBe('second');
+      expect(session.messages[0]?.text).toBe('second');
       expect(session.title).toBe('New');
     });
   });
@@ -82,7 +82,7 @@ describe('chatSessionStore', () => {
       ];
       useChatSessionStore.getState().updateMessages('sess-1', newMessages);
 
-      const session = useChatSessionStore.getState().sessions['sess-1'];
+      const session = nonNull(useChatSessionStore.getState().sessions['sess-1']);
       expect(session.messages).toHaveLength(2);
     });
 
@@ -92,7 +92,7 @@ describe('chatSessionStore', () => {
 
       useChatSessionStore.getState().updateMessages('sess-1', [makeChatUiMessage()]);
 
-      const session = useChatSessionStore.getState().sessions['sess-1'];
+      const session = nonNull(useChatSessionStore.getState().sessions['sess-1']);
       expect(session.title).toBe('Keep Title');
       expect(session.museumName).toBe('Keep Museum');
     });
@@ -109,12 +109,12 @@ describe('chatSessionStore', () => {
     it('updates the updatedAt timestamp', () => {
       const store = useChatSessionStore.getState();
       store.setSession('sess-1', [], null, null);
-      const firstTimestamp = useChatSessionStore.getState().sessions['sess-1'].updatedAt;
+      const firstTimestamp = nonNull(useChatSessionStore.getState().sessions['sess-1']).updatedAt;
 
       // Small delay to ensure different timestamp
       useChatSessionStore.getState().updateMessages('sess-1', [makeChatUiMessage()]);
 
-      const newTimestamp = useChatSessionStore.getState().sessions['sess-1'].updatedAt;
+      const newTimestamp = nonNull(useChatSessionStore.getState().sessions['sess-1']).updatedAt;
       expect(newTimestamp).toBeGreaterThanOrEqual(firstTimestamp);
     });
   });
@@ -129,9 +129,9 @@ describe('chatSessionStore', () => {
       const newMsg = makeChatUiMessage({ role: 'assistant', text: 'Hi there' });
       useChatSessionStore.getState().appendMessage('sess-1', newMsg);
 
-      const messages = useChatSessionStore.getState().sessions['sess-1'].messages;
+      const messages = nonNull(useChatSessionStore.getState().sessions['sess-1']).messages;
       expect(messages).toHaveLength(2);
-      expect(messages[1].text).toBe('Hi there');
+      expect(messages[1]?.text).toBe('Hi there');
     });
 
     it('does not modify state for non-existent session', () => {

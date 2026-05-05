@@ -135,8 +135,8 @@ describe('useSessionLoader', () => {
 
     expect(result.current.messages).toHaveLength(2);
     // Messages should be sorted by createdAt ascending
-    expect(result.current.messages[0].id).toBe('msg-1');
-    expect(result.current.messages[1].id).toBe('msg-2');
+    expect(result.current.messages[0]?.id).toBe('msg-1');
+    expect(result.current.messages[1]?.id).toBe('msg-2');
   });
 
   it('persists loaded data to the Zustand store', async () => {
@@ -325,7 +325,7 @@ describe('useSessionLoader', () => {
 
     // Messages hydrated from cache
     expect(result.current.messages).toHaveLength(1);
-    expect(result.current.messages[0].id).toBe('cached-msg-1');
+    expect(result.current.messages[0]?.id).toBe('cached-msg-1');
     expect(result.current.sessionTitle).toBe('Cached Title');
     expect(result.current.museumName).toBe('Cached Museum');
     // Error is still set so the user knows the API is down

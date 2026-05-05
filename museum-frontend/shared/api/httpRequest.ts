@@ -1,3 +1,5 @@
+import type { AxiosRequestConfig } from 'axios';
+
 import { httpClient, mapAxiosError } from '@/shared/infrastructure/httpClient';
 import { isAppError } from '@/shared/lib/errors';
 
@@ -33,24 +35,23 @@ export const httpRequest = async <T>(
     ...(headers ?? {}),
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- body type guard
   if (body && !isFormData(body) && finalHeaders['Content-Type'] === undefined) {
     finalHeaders['Content-Type'] = 'application/json';
   }
 
   try {
-    const requestConfig = {
+    const requestConfig: AxiosRequestConfig & { requiresAuth: boolean } = {
       url,
       method: method ?? 'GET',
       data: body,
       headers: finalHeaders,
       requiresAuth,
       ...(responseType ? { responseType } : {}),
-    } as unknown as never;
+    };
 
-    const response = await httpClient.request(requestConfig);
+    const response = await httpClient.request<T>(requestConfig);
 
-    return (response as { data: T }).data;
+    return response.data;
   } catch (error) {
     if (isAppError(error)) {
       throw error;

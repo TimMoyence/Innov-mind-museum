@@ -65,12 +65,17 @@ const buildWeeklyLines = (weekly: ParsedOpeningDay[], t: I18nTranslator): string
 
   for (let i = 1; i <= orderedRows.length; i += 1) {
     const prev = orderedRows[i - 1];
+    if (!prev) continue;
     const current = i < orderedRows.length ? orderedRows[i] : null;
-    const sameAsPrev = current !== null && rowSignature(current) === rowSignature(prev);
+    const sameAsPrev = current !== null && current !== undefined && rowSignature(current) === rowSignature(prev);
     if (sameAsPrev) continue;
 
     const startRow = orderedRows[groupStart];
     const endRow = prev;
+    if (!startRow) {
+      groupStart = i;
+      continue;
+    }
     const isClosed = startRow.opens === null || startRow.closes === null;
 
     if (isClosed) {
@@ -114,14 +119,14 @@ const buildWeeklyLines = (weekly: ParsedOpeningDay[], t: I18nTranslator): string
  */
 const nextDay = (today: OpeningDay): OpeningDay => {
   const idx = DAY_ORDER.indexOf(today);
-  return DAY_ORDER[(idx + 1) % DAY_ORDER.length];
+  return DAY_ORDER[(idx + 1) % DAY_ORDER.length] ?? 'mon';
 };
 
 const todayCode = (now: Date): OpeningDay => {
   // Date.getDay(): 0=Sun, 1=Mon … 6=Sat. Normalize to Mon-first.
   const raw = now.getDay();
   const monFirst: OpeningDay[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-  return monFirst[raw];
+  return monFirst[raw] ?? 'mon';
 };
 
 /**

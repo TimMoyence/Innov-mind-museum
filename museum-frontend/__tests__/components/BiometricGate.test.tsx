@@ -151,6 +151,7 @@ describe('BiometricGate (P6 — auto-prompt UX)', () => {
 
       const retry = await screen.findByLabelText('biometric.unlock');
       await act(async () => {
+        await Promise.resolve();
         fireEvent.press(retry);
       });
 

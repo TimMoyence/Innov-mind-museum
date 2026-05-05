@@ -190,7 +190,7 @@ export const MuseumMapView = ({
       if (isClusterProperties(properties)) {
         userPannedRef.current = true;
         const source = museumsSourceRef.current;
-        const point = feature.geometry?.type === 'Point' ? feature.geometry : null;
+        const point = feature.geometry.type === 'Point' ? feature.geometry : null;
         const center = point?.coordinates as [number, number] | undefined;
         if (!source || !center) return;
         const duration = reduceMotion ? 0 : CLUSTER_EXPAND_DURATION_MS;

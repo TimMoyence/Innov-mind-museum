@@ -40,6 +40,8 @@ export function useTypewriter({
   }, [onDone]);
 
   const reset = useCallback(() => {
+    setVisible('');
+    setIsDone(false);
     setRunToken((prev) => prev + 1);
   }, []);
 
@@ -48,9 +50,6 @@ export function useTypewriter({
 
     const timers: ReturnType<typeof setTimeout>[] = [];
     let cancelled = false;
-
-    setVisible('');
-    setIsDone(false);
 
     const revealChar = (index: number) => {
       if (cancelled) return;
@@ -66,6 +65,9 @@ export function useTypewriter({
       timers.push(timer);
     };
 
+    // Reveal is driven exclusively by timer callbacks — no setState in effect
+    // body, satisfying react-hooks/set-state-in-effect. State resets happen in
+    // `reset()` (event-driven) and in the useState initializer.
     const startTimer = setTimeout(() => {
       revealChar(1);
     }, firstCharDelayMs);

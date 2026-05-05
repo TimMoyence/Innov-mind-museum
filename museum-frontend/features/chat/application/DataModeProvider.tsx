@@ -55,9 +55,12 @@ export function resolveDataMode(
   // Auto mode: evaluate network conditions
   if (netInfo.isConnected === false) return 'low';
 
-  if (netInfo.type === NetInfoStateType.cellular && netInfo.details) {
+  if (netInfo.type === (NetInfoStateType.cellular as string) && netInfo.details) {
     const gen = netInfo.details.cellularGeneration;
-    if (gen === NetInfoCellularGeneration['2g'] || gen === NetInfoCellularGeneration['3g']) {
+    if (
+      gen === (NetInfoCellularGeneration['2g'] as string) ||
+      gen === (NetInfoCellularGeneration['3g'] as string)
+    ) {
       return 'low';
     }
   }

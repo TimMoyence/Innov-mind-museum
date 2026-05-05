@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-deprecated -- this file tests the deprecated SSE parser (retained for residual client compat, ADR-001) */
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 

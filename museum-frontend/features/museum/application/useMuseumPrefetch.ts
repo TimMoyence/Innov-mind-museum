@@ -38,7 +38,7 @@ export function useMuseumPrefetch(museumId: string | null, locale: string): void
 
     void NetInfo.fetch().then((info) => {
       // Skip prefetch on non-wifi when in low-data mode (avoid burning expensive data)
-      if (info.type !== 'wifi' && isLowData) return;
+      if ((info.type as string) !== 'wifi' && isLowData) return;
 
       void fetchLowDataPack(museumId, locale)
         .then((pack) => {

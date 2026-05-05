@@ -42,7 +42,6 @@ export const useChatSession = (sessionId: string) => {
   const storeUpdateMessages = useChatSessionStore((s) => s.updateMessages);
 
   const [messages, setMessages] = useState<ChatUiMessage[]>(
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cachedSession can be undefined at runtime (store key miss)
     () => cachedSession?.messages ?? [],
   );
   const [isSending, setIsSending] = useState(false);
@@ -236,6 +235,7 @@ export const useChatSession = (sessionId: string) => {
     if (!isSending) return false;
     if (messages.length === 0) return true; // user just submitted, nothing yet
     const last = messages[messages.length - 1];
+    if (!last) return true;
     if (last.role === 'user') return true;
     if (last.role === 'assistant' && (!last.text || last.text.length === 0)) return true;
     return false;

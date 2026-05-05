@@ -80,6 +80,7 @@ describe('useMapInitialViewState', () => {
     const { unmount } = renderHook(() => useMapInitialViewState(NO_MUSEUMS, null, null));
     unmount();
     await act(async () => {
+      await Promise.resolve();
       resolveCache?.(null);
     });
     // No unhandled rejection or "set state on unmounted" warning means the

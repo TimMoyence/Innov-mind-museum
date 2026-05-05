@@ -46,8 +46,9 @@ export const useImagePicker = () => {
       return; // Picker failed or was cancelled abnormally
     }
 
-    if (!result.canceled && result.assets.length) {
-      await setOptimizedImage(result.assets[0].uri);
+    if (!result.canceled) {
+      const firstAsset = result.assets[0];
+      if (firstAsset) await setOptimizedImage(firstAsset.uri);
     }
   }, [setOptimizedImage, t]);
 
@@ -73,8 +74,9 @@ export const useImagePicker = () => {
       return; // Picker failed or was cancelled abnormally
     }
 
-    if (!result.canceled && result.assets.length) {
-      await setOptimizedImage(result.assets[0].uri);
+    if (!result.canceled) {
+      const firstAsset = result.assets[0];
+      if (firstAsset) await setOptimizedImage(firstAsset.uri);
     }
   }, [setOptimizedImage, t]);
 

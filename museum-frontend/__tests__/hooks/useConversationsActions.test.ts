@@ -3,6 +3,7 @@ import { Alert, Share } from 'react-native';
 
 import { useConversationsActions } from '@/features/conversation/application/useConversationsActions';
 import { makeDashboardSessionCard } from '@/__tests__/helpers/factories';
+import { nonNull } from '@/__tests__/helpers/nonNull';
 import type { DashboardSessionCard } from '@/features/chat/domain/dashboard-session';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
@@ -107,7 +108,7 @@ describe('useConversationsActions', () => {
       result.current.toggleSortMode();
     });
 
-    const buttons = mockAlertAlert.mock.calls[0][2] as {
+    const buttons = nonNull(mockAlertAlert.mock.calls[0])[2] as {
       text: string;
       onPress?: () => void;
     }[];
@@ -128,7 +129,7 @@ describe('useConversationsActions', () => {
       result.current.toggleSortMode();
     });
 
-    const buttons = mockAlertAlert.mock.calls[0][2] as {
+    const buttons = nonNull(mockAlertAlert.mock.calls[0])[2] as {
       text: string;
       onPress?: () => void;
     }[];
@@ -213,9 +214,9 @@ describe('useConversationsActions', () => {
     ];
     expect(title).toBe('conversations.delete_confirm');
     expect(buttons).toHaveLength(2);
-    expect(buttons[0].text).toBe('common.cancel');
-    expect(buttons[1].text).toBe('common.delete');
-    expect(buttons[1].style).toBe('destructive');
+    expect(buttons[0]?.text).toBe('common.cancel');
+    expect(buttons[1]?.text).toBe('common.delete');
+    expect(buttons[1]?.style).toBe('destructive');
   });
 
   it('confirmDeleteSingle onPress calls deleteSession API and removes from store', async () => {
@@ -226,7 +227,7 @@ describe('useConversationsActions', () => {
     });
 
     // Simulate pressing the delete button
-    const buttons = mockAlertAlert.mock.calls[0][2] as {
+    const buttons = nonNull(mockAlertAlert.mock.calls[0])[2] as {
       text: string;
       onPress?: () => void;
     }[];
@@ -289,7 +290,7 @@ describe('useConversationsActions', () => {
       result.current.confirmDeleteSingle('session-1');
     });
 
-    const buttons = mockAlertAlert.mock.calls[0][2] as {
+    const buttons = nonNull(mockAlertAlert.mock.calls[0])[2] as {
       text: string;
       onPress?: () => void;
     }[];

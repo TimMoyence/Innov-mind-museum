@@ -1,6 +1,8 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 
+import { nonNull } from '@/__tests__/helpers/nonNull';
+
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockSynthesizeSpeech = jest.fn<Promise<ArrayBuffer | null>, [string]>();
@@ -31,7 +33,8 @@ const fsState: { exists: Record<string, boolean>; written: Record<string, string
   written: {},
 };
 const mockGetInfoAsync = jest.fn(
-  (path: string): Promise<{ exists: boolean }> => Promise.resolve({ exists: fsState.exists[path] }),
+  (path: string): Promise<{ exists: boolean }> =>
+    Promise.resolve({ exists: fsState.exists[path] ?? false }),
 );
 const mockMakeDirectoryAsync = jest.fn((path: string): Promise<void> => {
   fsState.exists[path] = true;
@@ -122,8 +125,8 @@ describe('useTextToSpeech — web platform branch', () => {
     });
 
     expect(ctor).toHaveBeenCalledTimes(1);
-    expect(ctor.mock.calls[0][0]).toMatch(/^data:audio\/mpeg;base64,/);
-    expect(created[0].play).toHaveBeenCalledTimes(1);
+    expect(ctor.mock.calls[0]?.[0]).toMatch(/^data:audio\/mpeg;base64,/);
+    expect(nonNull(created[0]).play).toHaveBeenCalledTimes(1);
     expect(mockCreateAudioPlayer).not.toHaveBeenCalled();
     expect(result.current.isPlaying).toBe(true);
     expect(result.current.activeMessageId).toBe('msg-web-1');
@@ -143,7 +146,7 @@ describe('useTextToSpeech — web platform branch', () => {
     expect(result.current.isPlaying).toBe(true);
 
     act(() => {
-      created[0].onended?.();
+      nonNull(created[0]).onended?.();
     });
 
     await waitFor(() => {
@@ -164,7 +167,7 @@ describe('useTextToSpeech — web platform branch', () => {
     });
 
     act(() => {
-      created[0].onerror?.();
+      nonNull(created[0]).onerror?.();
     });
 
     await waitFor(() => {
@@ -188,7 +191,7 @@ describe('useTextToSpeech — web platform branch', () => {
       result.current.stopPlayback();
     });
 
-    expect(created[0].pause).toHaveBeenCalledTimes(1);
+    expect(nonNull(created[0]).pause).toHaveBeenCalledTimes(1);
     expect(result.current.isPlaying).toBe(false);
   });
 
@@ -205,7 +208,7 @@ describe('useTextToSpeech — web platform branch', () => {
 
     unmount();
 
-    expect(created[0].pause).toHaveBeenCalled();
+    expect(nonNull(created[0]).pause).toHaveBeenCalled();
   });
 });
 
@@ -258,7 +261,7 @@ describe('useTextToSpeech — native FS cache', () => {
     // Directory created (intermediates) since no prior dirInfo entry.
     expect(mockMakeDirectoryAsync).toHaveBeenCalledWith('file:///cache/tts/');
     expect(mockWriteAsStringAsync).toHaveBeenCalledTimes(1);
-    expect(mockWriteAsStringAsync.mock.calls[0][0]).toBe('file:///cache/tts/msg-fresh.mp3');
+    expect(mockWriteAsStringAsync.mock.calls[0]?.[0]).toBe('file:///cache/tts/msg-fresh.mp3');
     expect(mockCreateAudioPlayer).toHaveBeenCalledWith({
       uri: 'file:///cache/tts/msg-fresh.mp3',
     });

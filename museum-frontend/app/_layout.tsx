@@ -14,6 +14,7 @@ import {
   shouldDehydrateQuery,
 } from '@/shared/data/queryClient';
 import { initSentry, reactNavigationIntegration } from '@/shared/observability/sentry-init';
+import { logInitPhase } from '@/shared/observability/init-phase-breadcrumbs';
 
 import '@/features/museum/infrastructure/mapLibreBootstrap';
 
@@ -38,13 +39,33 @@ import {
 } from '@/shared/infrastructure/apiConfig';
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 import { StartupConfigurationErrorScreen } from '@/shared/ui/StartupConfigurationErrorScreen';
+import { initCertPinning } from '@/shared/infrastructure/cert-pinning-init';
+
+const readEnvString = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.length > 0 ? value : undefined;
 
 const sentryDsn: string | undefined =
   Platform.OS === 'android'
-    ? process.env.EXPO_PUBLIC_SENTRY_DSN_ANDROID
-    : process.env.EXPO_PUBLIC_SENTRY_DSN_IOS;
+    ? readEnvString(process.env.EXPO_PUBLIC_SENTRY_DSN_ANDROID)
+    : readEnvString(process.env.EXPO_PUBLIC_SENTRY_DSN_IOS);
 
 initSentry(sentryDsn);
+logInitPhase('sentry.initialized', { platform: Platform.OS, hasDsn: Boolean(sentryDsn) });
+
+// Cert pinning init runs PRE-axios so the first network request is pinned
+// when the env flag and kill-switch agree. The env defaults to false, so
+// V1 launches ship un-pinned; flip `EXPO_PUBLIC_CERT_PINNING_ENABLED=true`
+// only after capturing real SPKI hashes (see ADR-031, CERT_ROTATION runbook).
+// Fire-and-forget: a slow kill-switch fetch must not block the React tree.
+void initCertPinning({ apiBaseUrl: getApiConfigurationSnapshot().resolvedBaseUrl })
+  .then((outcome) => {
+    logInitPhase('certPinning.resolved', outcome);
+  })
+  .catch((error: unknown) => {
+    logInitPhase('certPinning.error', {
+      message: error instanceof Error ? error.message : String(error),
+    });
+  });
 
 function AuthenticationGuard({ children }: { children: ReactNode }) {
   useProtectedRoute();
@@ -62,9 +83,11 @@ function RootLayout() {
   const ref = useNavigationContainerRef();
 
   useEffect(() => {
+    logInitPhase('rootLayout.mounted');
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- ref guard
     if (ref) {
       reactNavigationIntegration.registerNavigationContainer(ref);
+      logInitPhase('navigationContainer.registered');
     }
   }, [ref]);
 
@@ -83,11 +106,15 @@ function RootLayout() {
 
     setOnLanguageChange((lang) => void saveDefaultLocale(lang));
 
-    applyRuntimeSettings().catch((error: unknown) => {
-      setRuntimeStartupError(
-        error instanceof Error ? error : new Error('Failed to apply runtime settings'),
-      );
-    });
+    applyRuntimeSettings()
+      .then(() => {
+        logInitPhase('runtimeSettings.applied');
+      })
+      .catch((error: unknown) => {
+        setRuntimeStartupError(
+          error instanceof Error ? error : new Error('Failed to apply runtime settings'),
+        );
+      });
   }, [startupConfiguration.error]);
 
   if (startupConfiguration.error) {

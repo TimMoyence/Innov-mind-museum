@@ -31,7 +31,7 @@ export function useAutoTts({ messages, enabled }: UseAutoTtsParams) {
 
     // Find the latest assistant message
     const lastMessage = messages[messages.length - 1];
-    if (lastMessage.role !== 'assistant') return;
+    if (lastMessage?.role !== 'assistant') return;
     // Skip streaming placeholders (no real text yet)
     if (!lastMessage.text || lastMessage.id.endsWith('-streaming')) return;
 

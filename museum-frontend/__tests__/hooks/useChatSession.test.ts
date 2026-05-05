@@ -198,8 +198,8 @@ describe('useChatSession', () => {
 
     expect(mockGetSession).toHaveBeenCalledWith(SESSION_ID);
     expect(result.current.messages).toHaveLength(2);
-    expect(result.current.messages[0].text).toBe('Hello');
-    expect(result.current.messages[1].text).toBe('Welcome!');
+    expect(result.current.messages[0]?.text).toBe('Hello');
+    expect(result.current.messages[1]?.text).toBe('Welcome!');
     expect(result.current.sessionTitle).toBe('Test Session');
     expect(result.current.museumName).toBe('Louvre');
   });

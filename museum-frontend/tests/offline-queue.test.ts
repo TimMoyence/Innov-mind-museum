@@ -165,8 +165,8 @@ describe('OfflineQueue', () => {
 
     const all = queue.getAll();
     assert.equal(all.length, 2);
-    assert.equal(all[0].text, 'a');
-    assert.equal(all[1].text, 'b');
+    assert.equal(all[0]?.text, 'a');
+    assert.equal(all[1]?.text, 'b');
   });
 
   it('getAll snapshot is not affected by subsequent mutations', () => {
@@ -293,8 +293,8 @@ describe('OfflineQueue', () => {
       await q.hydrate();
 
       assert.equal(evicted.length, 1);
-      assert.equal(evicted[0].id, 'old-1');
-      assert.equal(evicted[0].imageUri, 'file:///tmp/img.jpg');
+      assert.equal(evicted[0]?.id, 'old-1');
+      assert.equal(evicted[0]?.imageUri, 'file:///tmp/img.jpg');
     });
 
     it('hydrate does not call onEvict when nothing is expired', async () => {
@@ -402,7 +402,7 @@ describe('OfflineQueue', () => {
 
       q.prune();
       assert.equal(evicted.length, 1, 'onEvict should receive the pruned message');
-      assert.equal(evicted[0].imageUri, 'file:///tmp/photo.jpg');
+      assert.equal(evicted[0]?.imageUri, 'file:///tmp/photo.jpg');
     });
 
     it('prune does not call onEvict if nothing was pruned', () => {

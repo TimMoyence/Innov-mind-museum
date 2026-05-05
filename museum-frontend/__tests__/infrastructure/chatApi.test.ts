@@ -6,6 +6,7 @@ import {
   makeListSessionsResponse,
   makePostMessageResponse,
 } from '@/__tests__/helpers/factories';
+import { nonNull } from '@/__tests__/helpers/nonNull';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -131,7 +132,7 @@ describe('chatApi', () => {
         }),
       );
 
-      const callBody = mockHttpRequest.mock.calls[0][1]?.body as string;
+      const callBody = mockHttpRequest.mock.calls[0]?.[1]?.body as string;
       const parsed = JSON.parse(callBody) as Record<string, unknown>;
       expect(parsed.text).toBe('Hello');
       expect(parsed.context).toEqual(expect.objectContaining({ museumMode: true, locale: 'en' }));
@@ -148,7 +149,7 @@ describe('chatApi', () => {
         museumMode: false,
       });
 
-      const callBody = mockHttpRequest.mock.calls[0][1]?.body;
+      const callBody = mockHttpRequest.mock.calls[0]?.[1]?.body;
       expect(callBody).toBeInstanceOf(FormData);
     });
 
@@ -158,7 +159,7 @@ describe('chatApi', () => {
 
       await chatApi.postMessage({ sessionId: 's', text: '  spaced  ' });
 
-      const callBody = mockHttpRequest.mock.calls[0][1]?.body as string;
+      const callBody = mockHttpRequest.mock.calls[0]?.[1]?.body as string;
       const parsed = JSON.parse(callBody) as { text: string };
       expect(parsed.text).toBe('spaced');
     });
@@ -189,7 +190,7 @@ describe('chatApi', () => {
         '/api/chat/sessions/sess-1/audio',
         expect.objectContaining({ method: 'POST' }),
       );
-      const callBody = mockHttpRequest.mock.calls[0][1]?.body;
+      const callBody = mockHttpRequest.mock.calls[0]?.[1]?.body;
       expect(callBody).toBeInstanceOf(FormData);
     });
 
@@ -203,7 +204,7 @@ describe('chatApi', () => {
         audioBlob: blob,
       });
 
-      const callBody = mockHttpRequest.mock.calls[0][1]?.body;
+      const callBody = mockHttpRequest.mock.calls[0]?.[1]?.body;
       expect(callBody).toBeInstanceOf(FormData);
     });
 
@@ -605,7 +606,7 @@ describe('chatApi', () => {
         },
       });
 
-      const fetchCall = mockExpoFetch.mock.calls[0];
+      const fetchCall = nonNull(mockExpoFetch.mock.calls[0]);
       expect(fetchCall[0]).toBe('https://api.test.com/api/chat/sessions/sess-1/messages/stream');
       const headers = fetchCall[1]?.headers as Record<string, string>;
       expect(headers.Authorization).toBe('Bearer test-access-token');
@@ -803,7 +804,7 @@ describe('chatApi', () => {
         imageUri: '/path/to/photo.jpeg',
       });
 
-      const callBody = mockHttpRequest.mock.calls[0][1]?.body as FormData;
+      const callBody = mockHttpRequest.mock.calls[0]?.[1]?.body as FormData;
       expect(callBody).toBeInstanceOf(FormData);
     });
 
@@ -816,7 +817,7 @@ describe('chatApi', () => {
         imageUri: '/path/to/photo.png',
       });
 
-      const callBody = mockHttpRequest.mock.calls[0][1]?.body as FormData;
+      const callBody = mockHttpRequest.mock.calls[0]?.[1]?.body as FormData;
       expect(callBody).toBeInstanceOf(FormData);
     });
 
@@ -829,7 +830,7 @@ describe('chatApi', () => {
         imageUri: '/path/to/photo.webp',
       });
 
-      const callBody = mockHttpRequest.mock.calls[0][1]?.body as FormData;
+      const callBody = mockHttpRequest.mock.calls[0]?.[1]?.body as FormData;
       expect(callBody).toBeInstanceOf(FormData);
     });
 
@@ -842,7 +843,7 @@ describe('chatApi', () => {
         imageUri: '/path/to/photo.heic',
       });
 
-      const callBody = mockHttpRequest.mock.calls[0][1]?.body as FormData;
+      const callBody = mockHttpRequest.mock.calls[0]?.[1]?.body as FormData;
       expect(callBody).toBeInstanceOf(FormData);
     });
   });

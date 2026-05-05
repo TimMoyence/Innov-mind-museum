@@ -54,9 +54,15 @@ export const museumBackgrounds: ResponsiveBackground[] = [
 
 /** Returns a museum background by index, wrapping around if the index exceeds the available set. */
 export const pickMuseumBackground = (index: number): ResponsiveBackground => {
-  const length = museumBackgrounds.length;
+  const [first, ...rest] = museumBackgrounds;
+  // Module-level constant has at least one entry — `first` cannot be undefined,
+  // but the destructure satisfies noUncheckedIndexedAccess by capturing it
+  // before indexing.
+  if (!first) throw new Error('museumBackgrounds must not be empty');
+  const all = [first, ...rest];
+  const length = all.length;
   const normalized = ((index % length) + length) % length;
-  return museumBackgrounds[normalized];
+  return all[normalized] ?? first;
 };
 
 /** Returns theme-aware color tokens for the liquid design system. */

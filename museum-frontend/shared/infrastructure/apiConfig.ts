@@ -58,8 +58,8 @@ const resolveBuildVariant = (): BuildVariant => {
   const extra = readExtra();
   const fromExtra = trimOrUndefined(extra.APP_VARIANT);
   const raw: string = (
-    process.env.APP_VARIANT ??
-    process.env.EAS_BUILD_PROFILE ??
+    trimOrUndefined(process.env.APP_VARIANT) ??
+    trimOrUndefined(process.env.EAS_BUILD_PROFILE) ??
     fromExtra ??
     'development'
   ).toLowerCase();

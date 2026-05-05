@@ -27,9 +27,9 @@ describe('sortByTime', () => {
 
     const sorted = sortByTime(messages);
 
-    assert.equal(sorted[0].id, '1');
-    assert.equal(sorted[1].id, '2');
-    assert.equal(sorted[2].id, '3');
+    assert.equal(sorted[0]?.id, '1');
+    assert.equal(sorted[1]?.id, '2');
+    assert.equal(sorted[2]?.id, '3');
   });
 
   it('does not mutate the original array', () => {
@@ -40,8 +40,8 @@ describe('sortByTime', () => {
 
     const sorted = sortByTime(messages);
 
-    assert.equal(messages[0].id, 'b', 'original array should be unchanged');
-    assert.equal(sorted[0].id, 'a');
+    assert.equal(messages[0]?.id, 'b', 'original array should be unchanged');
+    assert.equal(sorted[0]?.id, 'a');
   });
 
   it('handles empty array', () => {
@@ -56,7 +56,7 @@ describe('sortByTime', () => {
 
     const sorted = sortByTime(messages);
     assert.equal(sorted.length, 1);
-    assert.equal(sorted[0].id, '1');
+    assert.equal(sorted[0]?.id, '1');
   });
 });
 
@@ -300,9 +300,9 @@ describe('buildVisitSummary', () => {
     const summary = buildVisitSummary(messages, null);
 
     assert.equal(summary.artworks.length, 1);
-    assert.equal(summary.artworks[0].title, 'Mona Lisa');
-    assert.equal(summary.artworks[0].artist, 'Leonardo da Vinci');
-    assert.equal(summary.artworks[0].room, 'Room 711');
+    assert.equal(summary.artworks[0]?.title, 'Mona Lisa');
+    assert.equal(summary.artworks[0]?.artist, 'Leonardo da Vinci');
+    assert.equal(summary.artworks[0]?.room, 'Room 711');
     assert.equal(summary.museumName, 'Louvre');
   });
 
@@ -329,7 +329,7 @@ describe('buildVisitSummary', () => {
     const summary = buildVisitSummary(messages, null);
 
     assert.equal(summary.artworks.length, 1);
-    assert.equal(summary.artworks[0].title, 'Starry Night');
+    assert.equal(summary.artworks[0]?.title, 'Starry Night');
   });
 
   it('extracts imageUrl from enriched images', () => {
@@ -357,7 +357,7 @@ describe('buildVisitSummary', () => {
 
     const summary = buildVisitSummary(messages, null);
 
-    assert.equal(summary.artworks[0].imageUrl, 'https://img.example.com/thumb.jpg');
+    assert.equal(summary.artworks[0]?.imageUrl, 'https://img.example.com/thumb.jpg');
   });
 
   it('falls back to url when thumbnailUrl is missing from enriched images', () => {
@@ -386,7 +386,7 @@ describe('buildVisitSummary', () => {
     const summary = buildVisitSummary(messages, null);
 
     // thumbnailUrl is undefined so ?? falls back to url
-    assert.equal(summary.artworks[0].imageUrl, 'https://img.example.com/full.jpg');
+    assert.equal(summary.artworks[0]?.imageUrl, 'https://img.example.com/full.jpg');
   });
 
   it('calculates duration correctly', () => {
@@ -487,7 +487,7 @@ describe('buildVisitSummary', () => {
     const summary = buildVisitSummary(messages, null);
 
     assert.equal(summary.artworks.length, 1);
-    assert.equal(summary.artworks[0].title, 'Actual Art');
+    assert.equal(summary.artworks[0]?.title, 'Actual Art');
   });
 
   it('skips assistant messages without metadata', () => {
@@ -512,7 +512,7 @@ describe('buildVisitSummary', () => {
     const summary = buildVisitSummary(messages, null);
 
     assert.equal(summary.artworks.length, 1);
-    assert.equal(summary.artworks[0].title, 'The Thinker');
+    assert.equal(summary.artworks[0]?.title, 'The Thinker');
   });
 
   it('uses first museum name found when multiple are present', () => {
