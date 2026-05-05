@@ -2,201 +2,37 @@ import path from 'node:path';
 
 import dotenv from 'dotenv';
 
+import { required, toBoolean, toList, toNumber, toOptionalString } from './env-helpers';
+import {
+  parseRedisUrlFallback,
+  resolveAppVersion,
+  resolveCommitSha,
+  resolveDeploymentMode,
+  resolveGuardrailsCandidate,
+  resolveLlmProvider,
+  resolveNodeEnv,
+  resolveStorageDriver,
+  warnLegacyJwtSecret,
+} from './env-resolvers';
 import { validateProductionEnv } from './env.production-validation';
 
-import type {
-  AppEnv,
-  DeploymentMode,
-  GuardrailsV2Candidate,
-  LlmProvider,
-  NodeEnv,
-  StorageDriver,
-} from './env.types';
+import type { AppEnv, DeploymentMode, LlmProvider, StorageDriver } from './env.types';
 
 dotenv.config();
 
-const toNumber = (value: string | undefined, fallback: number): number => {
-  if (!value) return fallback;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
-
-const toBoolean = (value: string | undefined, fallback: boolean): boolean => {
-  if (!value) return fallback;
-  return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
-};
-
-const toList = (value: string | undefined): string[] => {
-  if (!value) return [];
-  return value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-};
-
-const toOptionalString = (value: string | undefined): string | undefined => {
-  if (!value) {
-    return undefined;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length ? trimmed : undefined;
-};
-
-const required = (name: string, value: string | undefined): string => {
-  if (!value?.trim()) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-
-  return value;
-};
-
-/**
- * Resolves Redis connection config with a URL fallback.
- *
- * Priority:
- *   1. REDIS_HOST (+ REDIS_PORT / REDIS_PASSWORD) — explicit discrete vars
- *   2. REDIS_URL — parsed via URL() for managed-Redis providers (e.g. prod)
- *   3. localhost:6379 defaults
- *
- * Prevents ECONNREFUSED floods when only REDIS_URL is set in production.
- */
-function parseRedisUrlFallback(): { host: string; port: number; password: string | undefined } {
-  const host = toOptionalString(process.env.REDIS_HOST);
-  if (host) {
-    return {
-      host,
-      port: toNumber(process.env.REDIS_PORT, 6379),
-      password: toOptionalString(process.env.REDIS_PASSWORD),
-    };
-  }
-
-  const urlStr = toOptionalString(process.env.REDIS_URL);
-  if (urlStr) {
-    try {
-      const url = new URL(urlStr);
-      return {
-        host: url.hostname || 'localhost',
-        port: url.port ? Number(url.port) : 6379,
-        password:
-          toOptionalString(process.env.REDIS_PASSWORD) ||
-          (url.password ? decodeURIComponent(url.password) : undefined),
-      };
-    } catch {
-      /* malformed URL — fall through to defaults */
-    }
-  }
-
-  return {
-    host: 'localhost',
-    port: 6379,
-    password: toOptionalString(process.env.REDIS_PASSWORD),
-  };
-}
-
-const nodeEnvRaw = (process.env.NODE_ENV || 'development') as NodeEnv;
-if (!['development', 'test', 'production'].includes(nodeEnvRaw)) {
-  throw new Error(`Invalid NODE_ENV="${nodeEnvRaw}". Must be development, test, or production.`);
-}
-const nodeEnv: NodeEnv = nodeEnvRaw;
-
-const providerRaw = (process.env.LLM_PROVIDER || 'openai').toLowerCase();
-const provider: LlmProvider = ['openai', 'deepseek', 'google'].includes(providerRaw)
-  ? (providerRaw as LlmProvider)
-  : 'openai';
-
-const guardrailsCandidateRaw = (process.env.GUARDRAILS_V2_CANDIDATE || 'off').toLowerCase();
-const guardrailsCandidate: GuardrailsV2Candidate = (
-  ['off', 'llm-guard', 'nemo', 'prompt-armor', 'llm-judge'] as const
-).includes(guardrailsCandidateRaw as GuardrailsV2Candidate)
-  ? (guardrailsCandidateRaw as GuardrailsV2Candidate)
-  : 'off';
-
-const storageDriverRaw = (process.env.OBJECT_STORAGE_DRIVER || 'local').toLowerCase();
-const storageDriver: StorageDriver = ['local', 's3'].includes(storageDriverRaw)
-  ? (storageDriverRaw as StorageDriver)
-  : 'local';
-
-/**
- * Resolves the deployment topology consumed by `assertDeploymentInvariants`.
- *
- * Precedence:
- *   1. Explicit `DEPLOYMENT_MODE` env var (`single` | `multi`). Invalid values
- *      are ignored and fall through to auto-detection.
- *   2. Auto-detect from known multi-instance hints:
- *        - PM2 cluster mode: `NODE_APP_INSTANCE` or `pm_id`
- *        - Kubernetes: `KUBERNETES_SERVICE_HOST` or `K8S_POD_NAME`
- *   3. Default to `single`.
- *
- * When auto-detection triggers (no explicit override), a single JSON info line
- * is written to stderr so operators can see how the mode was inferred. We
- * intentionally do NOT use `@shared/logger` here: the logger imports `env`,
- * so using it would create a circular init.
- */
-function resolveDeploymentMode(): DeploymentMode {
-  const explicit = toOptionalString(process.env.DEPLOYMENT_MODE)?.toLowerCase();
-  if (explicit === 'single' || explicit === 'multi') {
-    return explicit;
-  }
-
-  const hints: { key: string; value: string | undefined }[] = [
-    { key: 'NODE_APP_INSTANCE', value: toOptionalString(process.env.NODE_APP_INSTANCE) },
-    { key: 'pm_id', value: toOptionalString(process.env.pm_id) },
-    {
-      key: 'KUBERNETES_SERVICE_HOST',
-      value: toOptionalString(process.env.KUBERNETES_SERVICE_HOST),
-    },
-    { key: 'K8S_POD_NAME', value: toOptionalString(process.env.K8S_POD_NAME) },
-  ];
-  const detected = hints.filter((hint) => hint.value !== undefined);
-  if (detected.length > 0) {
-    process.stderr.write(
-      `${JSON.stringify({
-        level: 'info',
-        message: 'deployment_mode_autodetected',
-        mode: 'multi',
-        hints: detected.map((hint) => hint.key),
-      })}\n`,
-    );
-    return 'multi';
-  }
-
-  return 'single';
-}
-
-const deploymentMode: DeploymentMode = resolveDeploymentMode();
+const nodeEnv = resolveNodeEnv();
+const provider = resolveLlmProvider();
+const guardrailsCandidate = resolveGuardrailsCandidate();
+const storageDriver = resolveStorageDriver();
+const deploymentMode = resolveDeploymentMode();
 
 const isDev = nodeEnv === 'development' || nodeEnv === 'test';
 const isProduction = nodeEnv === 'production';
 
-// SEC-HARDENING (H12): shout if legacy JWT_SECRET env var is still exported in
-// production. We no longer fall back to it (see `auth:` block below) but any
-// orchestration still injecting it probably also forgot to rotate to the
-// discrete JWT_ACCESS_SECRET / JWT_REFRESH_SECRET pair. Using stderr because
-// `@shared/logger` imports env and would cause a circular init.
-if (isProduction && toOptionalString(process.env.JWT_SECRET)) {
-  process.stderr.write(
-    `${JSON.stringify({
-      level: 'warn',
-      message: 'jwt_secret_legacy_env_var_ignored',
-      hint: 'JWT_SECRET is set in production but no longer honored. Rotate to JWT_ACCESS_SECRET + JWT_REFRESH_SECRET and remove JWT_SECRET from the environment.',
-    })}\n`,
-  );
-}
+warnLegacyJwtSecret(isProduction);
 
-const resolvedAppVersion = (() => {
-  const explicit = toOptionalString(process.env.APP_VERSION);
-  if (explicit) return explicit;
-  const pkg = toOptionalString(process.env.npm_package_version);
-  if (pkg) return pkg;
-  return 'unknown';
-})();
-
-const resolvedCommitSha = (() => {
-  const source = process.env.COMMIT_SHA || process.env.GITHUB_SHA;
-  const trimmed = source?.trim();
-  return trimmed?.length ? trimmed : undefined;
-})();
+const resolvedAppVersion = resolveAppVersion();
+const resolvedCommitSha = resolveCommitSha();
 
 /** Resolved application configuration singleton, validated at startup. */
 const env: AppEnv = {
