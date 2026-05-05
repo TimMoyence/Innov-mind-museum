@@ -23,6 +23,11 @@ process.env.EXTRACTION_WORKER_ENABLED = process.env.EXTRACTION_WORKER_ENABLED ??
 // guarantees no accidental Redis cache wiring picks up a left-over CI value.
 process.env.CACHE_ENABLED = process.env.CACHE_ENABLED ?? 'false';
 
+// ADR-030 (2026-05-05) — pin the LLM-judge budget store to in-memory in e2e so
+// the harness does not require a Redis instance for the budget cumulative
+// counter. Production defaults to 'redis'.
+process.env.GUARDRAIL_BUDGET_BACKEND = process.env.GUARDRAIL_BUDGET_BACKEND ?? 'memory';
+
 // F10 — disable HIBP breach gate in e2e (mirrors createE2EHarness override).
 // Pinned here too because env.ts reads `passwordBreachCheckEnabled` at module
 // load, and any top-level `@modules/auth/*` import from a test file would

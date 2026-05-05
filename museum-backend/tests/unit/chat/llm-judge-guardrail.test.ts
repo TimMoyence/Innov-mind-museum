@@ -43,8 +43,8 @@ const buildOrchestrator = (behaviour: FakeOrchestratorBehaviour): ChatOrchestrat
 };
 
 describe('judgeWithLlm', () => {
-  beforeEach(() => {
-    resetBudget();
+  beforeEach(async () => {
+    await resetBudget();
   });
 
   it('returns parsed decision when LLM emits valid JSON allow verdict', async () => {
@@ -138,7 +138,7 @@ describe('judgeWithLlm', () => {
   });
 
   it('returns null when daily budget already exhausted (no orchestrator call)', async () => {
-    recordJudgeCost(10_000); // far above default cap
+    await recordJudgeCost(10_000); // far above default cap
     const orchestrator = buildOrchestrator({ text: '{"decision":"allow","confidence":0.9}' });
     const generateSpy = jest.spyOn(orchestrator, 'generate');
 

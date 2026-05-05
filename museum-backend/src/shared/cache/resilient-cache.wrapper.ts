@@ -68,6 +68,16 @@ export class ResilientCacheWrapper implements CacheService {
     }
   }
 
+  /** Atomic numeric increment with TTL; returns null on backend failure. */
+  async incrBy(key: string, amount: number, ttlSeconds: number): Promise<number | null> {
+    try {
+      return await this.inner.incrBy(key, amount, ttlSeconds);
+    } catch (err) {
+      this.warn('cache_incrby_failed', key, err);
+      return null;
+    }
+  }
+
   /** Health probe; returns false on backend failure (treat as unreachable). */
   async ping(): Promise<boolean> {
     try {

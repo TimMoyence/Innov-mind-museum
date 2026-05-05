@@ -140,6 +140,7 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
       budgetCentsPerDay: 500,
       judgeTimeoutMs: 500,
       judgeMinMessageLength: 50,
+      budgetBackend: 'memory',
     },
     retention: {
       enabled: true,

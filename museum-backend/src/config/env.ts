@@ -490,6 +490,12 @@ const env: AppEnv = {
     budgetCentsPerDay: toNumber(process.env.LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY, 500),
     judgeTimeoutMs: toNumber(process.env.LLM_GUARDRAIL_JUDGE_TIMEOUT_MS, 500),
     judgeMinMessageLength: toNumber(process.env.LLM_GUARDRAIL_JUDGE_MIN_LENGTH, 50),
+    // ADR-030 (2026-05-05) — backend store for the cumulative judge budget.
+    // 'memory' = per-process counter (acceptable for dev/test/single-instance).
+    // 'redis'  = shared counter across replicas via SET INCRBY + TTL.
+    // Default is 'redis' in production so multi-instance deploys do not 2× spend;
+    // tests pin 'memory' to avoid coupling to a Redis container.
+    budgetBackend: process.env.GUARDRAIL_BUDGET_BACKEND === 'memory' ? 'memory' : 'redis',
   },
   retention: {
     enabled: toBoolean(process.env.RETENTION_PRUNE_ENABLED, true),

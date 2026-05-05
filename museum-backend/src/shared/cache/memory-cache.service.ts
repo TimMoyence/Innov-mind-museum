@@ -86,6 +86,16 @@ export class MemoryCacheService implements CacheService {
     return true;
   }
 
+  /** Atomically increments a numeric value by `amount` and refreshes the TTL. */
+  async incrBy(key: string, amount: number, ttlSeconds: number): Promise<number | null> {
+    if (!Number.isFinite(amount) || amount === 0) return null;
+    if (!Number.isFinite(ttlSeconds) || ttlSeconds <= 0) return null;
+    const current = (await this.get<number>(key)) ?? 0;
+    const next = current + Math.trunc(amount);
+    await this.set(key, next, ttlSeconds);
+    return next;
+  }
+
   /** Always returns true — in-memory cache is always reachable. */
   // eslint-disable-next-line @typescript-eslint/require-await -- must match async CacheService interface
   async ping(): Promise<boolean> {

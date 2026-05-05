@@ -77,6 +77,7 @@ function createMockCache(): CacheService {
     del: jest.fn(async () => {}),
     delByPrefix: jest.fn(async () => {}),
     setNx: jest.fn(async () => true) as CacheService['setNx'],
+    incrBy: jest.fn(async () => null),
     ping: jest.fn(async () => true),
     zadd: jest.fn(async () => {}),
     ztop: jest.fn(async () => []),

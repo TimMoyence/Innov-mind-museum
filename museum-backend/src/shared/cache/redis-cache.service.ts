@@ -105,6 +105,29 @@ export class RedisCacheService implements CacheService {
     }
   }
 
+  /**
+   * Atomic INCRBY + (re-)apply TTL via a Lua script so the increment and the
+   * expiry are committed together. Returns the new value or null on Redis
+   * failure (caller treats null as "skip update" — fail-soft).
+   *
+   * Lua is used instead of pipelined INCRBY+EXPIRE because pipelines are not
+   * atomic across replicas; a failure between the two commands would leave a
+   * key without a TTL (memory leak).
+   */
+  async incrBy(key: string, amount: number, ttlSeconds: number): Promise<number | null> {
+    if (!Number.isFinite(amount) || amount === 0) return null;
+    if (!Number.isFinite(ttlSeconds) || ttlSeconds <= 0) return null;
+
+    const lua = "local v = redis.call('INCRBY', KEYS[1], ARGV[1]); redis.call('EXPIRE', KEYS[1], ARGV[2]); return v";
+    try {
+      const result = await this.redis.eval(lua, 1, key, String(Math.trunc(amount)), String(Math.trunc(ttlSeconds)));
+      const numeric = typeof result === 'number' ? result : Number(result);
+      return Number.isFinite(numeric) ? numeric : null;
+    } catch {
+      return null;
+    }
+  }
+
   /** Check if Redis is reachable. */
   async ping(): Promise<boolean> {
     try {

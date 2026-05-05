@@ -29,6 +29,7 @@ import { S3CompatibleImageStorage } from '@modules/chat/adapters/secondary/stora
 import { LocalImageStorage } from '@modules/chat/adapters/secondary/storage/image-storage.stub';
 import { DescribeService } from '@modules/chat/useCase/describe/describe.service';
 import { ArtTopicClassifier } from '@modules/chat/useCase/guardrail/art-topic-classifier';
+import { configureGuardrailBudget } from '@modules/chat/useCase/guardrail/guardrail-budget';
 import { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
 import { KnowledgeBaseService } from '@modules/chat/useCase/knowledge/knowledge-base.service';
 import { judgeWithLlm } from '@modules/chat/useCase/llm/llm-judge-guardrail';
@@ -328,6 +329,7 @@ export class ChatModule {
    * @param museumRepository - Optional museum repository for resolving museum info at session creation.
    * @returns Built module with all services guaranteed initialized.
    */
+  // eslint-disable-next-line max-lines-per-function -- Justification: composition root that intentionally wires every dependency in one place; splitting hides ordering invariants documented inline (artKeyword → orchestrator → guardrail-budget → userMemory). 1 LOC over the soft cap (61) post-ADR-030 wiring. Approved-by: tim@2026-05-05
   build(
     dataSource: DataSource,
     cache?: CacheService,
@@ -350,11 +352,10 @@ export class ChatModule {
     const orchestrator = new LangChainChatOrchestrator();
     this._orchestrator = orchestrator;
     const effectiveOrchestrator = this.buildEffectiveOrchestrator(orchestrator, cache);
-
+    configureGuardrailBudget({ cache }); // ADR-030 — judge budget Redis/in-process pick
     const locationResolver = museumRepository
       ? new LocationResolver(museumRepository, cache)
       : undefined;
-
     const locationConsentChecker = buildLocationConsentChecker();
 
     const knowledgeExtraction = this.buildKnowledgeExtraction(dataSource);
