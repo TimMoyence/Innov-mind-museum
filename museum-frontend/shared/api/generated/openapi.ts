@@ -156,6 +156,56 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/auth/mfa/status': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Read the calling user's MFA enrollment state (F9 envelope).
+     * @description Self-scoped read of the calling user's MFA status. Drives the Enable/Disable MFA UI without exposing the encrypted secret. RBAC: authenticated user only — req.user.id IS the user being read.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description MFA status envelope. */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @description True iff TOTP has been enrolled AND verified at least once. */
+              mfaEnrolled: boolean;
+              /** @description Active second-factor methods. Today only TOTP. Forward-compatible with WebAuthn / push. */
+              methods: 'totp'[];
+              /**
+               * Format: date-time
+               * @description ISO 8601 of the last successful TOTP / recovery verification. Null when MFA never verified.
+               */
+              lastVerifiedAt: string | null;
+            };
+          };
+        };
+        401: components['responses']['Unauthorized'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/auth/mfa/enroll': {
     parameters: {
       query?: never;
