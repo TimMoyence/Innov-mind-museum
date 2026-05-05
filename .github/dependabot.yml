@@ -1,5 +1,20 @@
+# Dependabot configuration — Musaium monorepo
+#
+# POLICY (audit 2026-05-05):
+#   - Every Dependabot PR requires manual human review.
+#   - No auto-merge is wired anywhere in this repo by design — review is the
+#     supply-chain gate. CODEOWNERS routes security-sensitive paths to the
+#     security lead. A future auto-merge introduction would need its own ADR
+#     because it widens the supply-chain attack surface (label drift, transitive
+#     prod-deps mislabelled as dev, etc.).
+#   - Groupings below batch routine minor/patch updates so reviewers see one PR
+#     per ecosystem per week rather than a storm of single-package PRs. This
+#     reduces rubber-stamp fatigue without weakening the manual gate.
+#   - prod-deps minor/major still get individual PRs (intentional — visibility).
+
 version: 2
 updates:
+  # ── museum-backend (Node 22 + Express 5 + TypeORM + PostgreSQL 16) ────────
   - package-ecosystem: "npm"
     directory: "/museum-backend"
     schedule:
@@ -9,7 +24,19 @@ updates:
     labels:
       - "dependencies"
       - "backend"
+    versioning-strategy: increase
+    groups:
+      backend-dev-deps:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      backend-prod-deps-patch:
+        dependency-type: "production"
+        update-types:
+          - "patch"
 
+  # ── museum-frontend (RN 0.83 + Expo 55) ───────────────────────────────────
   - package-ecosystem: "npm"
     directory: "/museum-frontend"
     schedule:
@@ -19,7 +46,19 @@ updates:
     labels:
       - "dependencies"
       - "frontend"
+    versioning-strategy: increase
+    groups:
+      frontend-dev-deps:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      frontend-prod-deps-patch:
+        dependency-type: "production"
+        update-types:
+          - "patch"
 
+  # ── museum-web (Next.js 15 + React 19 + Tailwind 4) ───────────────────────
   - package-ecosystem: "npm"
     directory: "/museum-web"
     schedule:
@@ -29,7 +68,19 @@ updates:
     labels:
       - "dependencies"
       - "web"
+    versioning-strategy: increase
+    groups:
+      web-dev-deps:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      web-prod-deps-patch:
+        dependency-type: "production"
+        update-types:
+          - "patch"
 
+  # ── github-actions ────────────────────────────────────────────────────────
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -39,3 +90,8 @@ updates:
     labels:
       - "dependencies"
       - "ci"
+    groups:
+      gha-actions:
+        update-types:
+          - "minor"
+          - "patch"
