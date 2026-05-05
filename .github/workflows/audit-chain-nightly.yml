@@ -1,0 +1,73 @@
+name: audit-chain nightly
+
+# Verifies the production audit_logs SHA-256 hash chain is intact every night.
+# Runs `dist/scripts/audit-chain-verify.js` inside the running backend container
+# on the VPS — no DB credentials need to leave the GitHub runner. The script
+# fail-loud POSTs a Slack alert when the chain breaks (DEPLOY_ALERT_SLACK_WEBHOOK).
+#
+# Exit semantics:
+#   0 — chain intact (workflow succeeds)
+#   1 — chain BROKEN (workflow fails; Slack alert already POSTed by the script)
+#   2 — unexpected error (DB connect failure, container missing, etc.)
+#
+# Manual run: workflow_dispatch from GitHub UI or `gh workflow run`.
+
+on:
+  schedule:
+    # 03:30 UTC daily — slotted after the 03:17 mutation cron and the 03:23
+    # Playwright nightly so the VPS isn't running three heavy CI jobs in
+    # parallel against the same staging stack.
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-chain-nightly
+  cancel-in-progress: false
+
+jobs:
+  verify-prod:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Verify audit_logs hash chain on VPS
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
+        env:
+          SLACK_WEBHOOK: ${{ secrets.DEPLOY_ALERT_SLACK_WEBHOOK }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          envs: SLACK_WEBHOOK
+          script: |
+            set -e
+            cd /srv/museum
+
+            # The script writes a single-line JSON verdict to stdout. We tee it
+            # to the workflow log so failures are diagnosable without SSHing
+            # back into the VPS.
+            docker compose exec -T \
+              -e DEPLOY_ALERT_SLACK_WEBHOOK="$SLACK_WEBHOOK" \
+              backend node dist/scripts/audit-chain-verify.js
+
+      - name: Notify Slack of unexpected workflow failure
+        # Fires only when the SSH or container plumbing itself failed (script
+        # exit ≥ 2 OR action error). The script's own exit-1 path already POSTs
+        # a chain-break alert via the embedded fetch — this step covers the
+        # "we couldn't even run the verifier" case.
+        if: failure()
+        env:
+          SLACK_WEBHOOK: ${{ secrets.DEPLOY_ALERT_SLACK_WEBHOOK }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK" ]; then
+            echo "::warning::DEPLOY_ALERT_SLACK_WEBHOOK secret missing — no Slack alert sent."
+            exit 0
+          fi
+          # Plain string body — keep payload minimal so a malformed webhook
+          # secret can't accidentally inject markdown formatting traversal.
+          curl -sS -X POST -H 'Content-Type: application/json' \
+            --data "{\"text\":\":warning: audit-chain nightly job failed (run ${RUN_URL}). Investigate.\"}" \
+            "$SLACK_WEBHOOK" || true

@@ -21,6 +21,10 @@ export default {
     // Phase 1 — original 7 files
     'src/modules/chat/useCase/guardrail/art-topic-guardrail.ts',
     'src/modules/chat/useCase/guardrail/guardrail-evaluation.service.ts',
+    // 2026-05-05 Step H — pure helpers extracted from guardrail-evaluation.service.
+    'src/modules/chat/useCase/guardrail/guardrail-reason-mapping.ts',
+    'src/modules/chat/useCase/guardrail/guardrail-audit-payload.ts',
+    'src/modules/chat/useCase/guardrail/guardrail-refusal-builder.ts',
     'src/shared/validation/input.ts',
     'src/shared/pagination/cursor-codec.ts',
     'src/modules/chat/useCase/llm/llm-prompt-builder.ts',
@@ -69,6 +73,11 @@ export default {
     'src/modules/chat/adapters/secondary/llm/llm-circuit-breaker.ts',
     'src/modules/auth/adapters/secondary/pg/refresh-token.repository.pg.ts',
     'src/modules/auth/useCase/session/authSession.service.ts',
+    // 2026-05-05 Step G — sub-services extracted from authSession.service.ts.
+    // Mutation coverage follows the security-critical logic into the new files.
+    'src/modules/auth/useCase/session/token-jwt.service.ts',
+    'src/modules/auth/useCase/session/session-issuer.service.ts',
+    'src/modules/auth/useCase/session/mfa-gate.service.ts',
     // Exclusions
     '!src/**/*.entity.ts',
     '!src/**/*.migration.ts',

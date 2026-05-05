@@ -2,8 +2,8 @@
 
 > Renumbered 2026-05-03 — was ADR-016 (collision with ADR-016-mobile-cert-pinning-deferred). Original commit `e1e647ecf`.
 
-Status: Accepted — 2026-04-30
-Context: Audit 2026-04-30 finding F6
+Status: Accepted — defer post-launch confirmed (2026-05-05)
+Context: Audit 2026-04-30 finding F6 + 2026-05-05 sprint review (backend hardening sprint)
 
 ## Question
 
@@ -70,3 +70,34 @@ Phase 4 — drop the compatibility barrels and the chat module registry workarou
 The "anti-pattern" framing of module-load singletons is real but the cost-of-fix in this codebase is high precisely because the pattern is consistent — every module already does it. The right time to refactor is when the productivity tax bites (a real test-isolation incident, a circular-init bug that lazy imports can't break) or when an adjacent feature requires the change (e.g. multi-tenant per-request module instances). Until then, this ADR records the awareness.
 
 Audit finding F6 is not closed; it is sequenced.
+
+## 2026-05-05 sprint review — defer-post-launch confirmed
+
+The 2026-05-05 backend-hardening sprint reconsidered Phase 1 (auth-module factory rewrite) and confirmed DEFER post-launch. Rationale:
+
+- The 2026-06-01 V1 launch is the dominant risk. Phase 1 is a multi-day refactor touching ~30 auth exports and ~80 call sites; landing it inside the launch sprint trades known low-grade tech debt for unknown launch risk.
+- None of the items the deferral was originally motivated by (test-isolation incident, circular-init bug, multi-tenant per-request module instances) has materialised in the seven months between F6 and this review.
+- The four wins listed above (F2 middleware factory, F3 chat module registry, F4 review consolidation, F5 cross-module port lift) already capture the tractable benefits of the broader DI agenda. The remaining gap is architectural cleanliness, not a load-bearing defect.
+
+### Trigger conditions for re-opening (any one is sufficient)
+
+Re-open Phase 1 in the next sprint that meets any of these:
+
+1. A real test-isolation incident is filed against `@modules/<x>/useCase` named imports (flaky test caused by shared module state across files).
+2. A circular-init bug appears that cannot be fixed by lazy imports inside the affected file (the existing escape hatch for this class of problem).
+3. The product roadmap commits to a multi-tenant per-request module shape (e.g. per-museum DI scope), which the current singleton pattern blocks.
+4. Two or more new modules need wiring with non-trivial cross-dependencies and the singleton pattern would create a new circular import.
+
+### Post-launch checklist (when Phase 1 ships)
+
+- [ ] Phase 1 — auth/useCase/index.ts → `buildAuthModule({ dataSource, ... })` factory; thin barrel for unmigrated tooling; consumers receive built module via DI.
+- [ ] Phase 1 — every `jest.mock('@modules/auth/useCase')` factory updated to mock `buildAuthModule`.
+- [ ] Phase 1 — backend full suite green; coverage thresholds (89/75/87/89) maintained.
+- [ ] Phase 2 — museum/useCase/index.ts mirrors Phase 1.
+- [ ] Phase 3 — review + support bundled.
+- [ ] Phase 4 — chat-module-singleton.ts merged into createApp(); `setActiveChatModule()` test hook removed.
+- [ ] On Phase 4 merge, this ADR file is deleted in the same commit (it has served its purpose).
+
+### Status flip
+
+This ADR was a "defer to a dedicated PR" placeholder when accepted on 2026-04-30. The 2026-05-05 sprint review explicitly re-affirmed defer-post-launch and added the trigger conditions + post-launch checklist above. The decision is final until one of the trigger conditions fires.

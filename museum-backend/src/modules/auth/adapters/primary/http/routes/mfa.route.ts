@@ -5,6 +5,7 @@ import {
   challengeMfaUseCase,
   disableMfaUseCase,
   enrollMfaUseCase,
+  getMfaStatusUseCase,
   recoveryMfaUseCase,
   verifyMfaUseCase,
 } from '@modules/auth/useCase';
@@ -99,6 +100,20 @@ const recoverySchema = z.object({
   recoveryCode: z.string().min(6).max(32),
 });
 const disableSchema = z.object({ currentPassword: z.string().min(1) });
+
+/**
+ * F9 — admin envelope GET /auth/mfa/status. Self-scoped read of the calling
+ * user's MFA enrollment state. Drives the "Enable / Disable MFA" toggle on
+ * the mobile + admin clients without exposing the encrypted secret.
+ *
+ * RBAC: authenticated user only — `req.user.id` IS the user being read. No
+ * admin-impersonation path; admin-on-other-user goes through the audit log.
+ */
+mfaRouter.get('/status', isAuthenticated, async (req: Request, res: Response) => {
+  const user = requireUser(req);
+  const envelope = await getMfaStatusUseCase.execute(user.id);
+  res.status(200).json(envelope);
+});
 
 mfaRouter.post('/enroll', isAuthenticated, enrollLimiter, async (req: Request, res: Response) => {
   const user = requireUser(req);

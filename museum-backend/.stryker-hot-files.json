@@ -35,7 +35,12 @@
     {
       "path": "src/modules/auth/useCase/session/authSession.service.ts",
       "killRatioMin": 80,
-      "rationale": "Auth session orchestration including rotation policy + MFA gating. Co-pinned with refresh-token repo."
+      "rationale": "Auth session orchestration façade. Co-pinned with refresh-token repo. Post-Step-G the security-critical logic moved to session-issuer + token-jwt + mfa-gate; the façade still flows the contract end-to-end."
+    },
+    {
+      "path": "src/modules/auth/useCase/session/session-issuer.service.ts",
+      "killRatioMin": 80,
+      "rationale": "Refresh-token rotation contract: assertRefreshTokenUsable + issueSession. Mutation = token-reuse vulnerability or stuck-open idle window. Banking-grade — co-pinned with refresh-token repo and authSession façade."
     }
   ]
 }

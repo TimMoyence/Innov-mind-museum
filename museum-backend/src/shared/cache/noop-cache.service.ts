@@ -29,6 +29,12 @@ export class NoopCacheService implements CacheService {
     return true;
   }
 
+  /** Returns null (no-op — no counter exists). */
+  // eslint-disable-next-line @typescript-eslint/require-await -- must match async CacheService interface
+  async incrBy(): Promise<number | null> {
+    return null;
+  }
+
   /** Always returns true (no-op — no real cache to check). */
   // eslint-disable-next-line @typescript-eslint/require-await -- must match async CacheService interface
   async ping(): Promise<boolean> {

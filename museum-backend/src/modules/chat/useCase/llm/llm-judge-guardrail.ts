@@ -143,7 +143,7 @@ export const judgeWithLlm = async (
   message: string,
   opts: JudgeWithLlmOptions = {},
 ): Promise<JudgeDecision | null> => {
-  if (getBudgetExhausted()) {
+  if (await getBudgetExhausted()) {
     logger.warn('guardrail_judge_budget_exceeded', {
       cap_cents: env.guardrails.budgetCentsPerDay,
     });
@@ -164,7 +164,7 @@ export const judgeWithLlm = async (
 
   // Charge the budget BEFORE invocation so a long-tail of timed-out calls still
   // counts towards the daily cap (otherwise an attacker could spam the judge).
-  recordJudgeCost(ESTIMATED_COST_CENTS_PER_CALL);
+  await recordJudgeCost(ESTIMATED_COST_CENTS_PER_CALL);
 
   const startedAt = Date.now();
   let raw: string | null;

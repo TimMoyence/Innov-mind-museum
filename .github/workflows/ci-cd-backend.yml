@@ -282,10 +282,14 @@ jobs:
     needs: quality
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # V12 W8 hardening (2026-05-05): inline cosign sign + SLSA attest + cosign verify
+    # run BEFORE the SSH deploy step. id-token + attestations needed for keyless
+    # signing and provenance push. See `## supply-chain audit` finding A1/A2.
     permissions:
       contents: read
       packages: write
-    # Exposed for the sign-prod job (V12 W8 — keyless cosign + SLSA L3).
+      id-token: write
+      attestations: write
     outputs:
       image: ${{ steps.refs.outputs.image }}
       digest: ${{ steps.push.outputs.digest }}
@@ -354,6 +358,50 @@ jobs:
             ghcr.io/${{ secrets.GHCR_USER }}/museum-backend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # ── V12 W8 hardening (2026-05-05) — pre-deploy signature gate ─────────
+      # Inline cosign sign + SLSA L3 attest, then cosign verify, BEFORE any
+      # SSH step pulls the image onto the VPS. Replaces the post-hoc
+      # sign-prod job (removed). Hard-fails the deploy if signing or
+      # verification fails — banking-grade supply-chain gate.
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.4.1'
+
+      - name: Cosign sign image (keyless)
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+        run: |
+          cosign sign --yes \
+            "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend@${{ steps.push.outputs.digest }}"
+
+      - name: SLSA L3 build-provenance attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/${{ secrets.GHCR_USER }}/museum-backend
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - name: Cosign verify signature (pre-deploy gate)
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+        run: |
+          cosign verify \
+            --certificate-identity-regexp "https://github.com/${{ github.repository }}/.github/workflows/.*" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend@${{ steps.push.outputs.digest }}"
+
+      - name: Cosign verify SLSA provenance (pre-deploy gate)
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+        run: |
+          cosign verify-attestation \
+            --type slsaprovenance \
+            --certificate-identity-regexp "https://github.com/${{ github.repository }}/.github/workflows/.*" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend@${{ steps.push.outputs.digest }}"
+      # ── end pre-deploy signature gate ─────────────────────────────────────
 
       - name: Create Sentry release
         if: env.HAS_SENTRY_TOKEN == 'true'
@@ -572,10 +620,14 @@ jobs:
     needs: quality
     if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
     runs-on: ubuntu-latest
+    # V12 W8 hardening (2026-05-05): inline cosign sign + SLSA attest + cosign verify
+    # run BEFORE the SSH deploy step. Mirrors deploy-prod hardening — staging
+    # validates the same supply-chain contract the prod path enforces.
     permissions:
       contents: read
       packages: write
-    # Exposed for the sign-staging job (V12 W8 — keyless cosign + SLSA L3).
+      id-token: write
+      attestations: write
     outputs:
       image: ${{ steps.refs.outputs.image }}
       digest: ${{ steps.push.outputs.digest }}
@@ -644,6 +696,46 @@ jobs:
             ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # ── V12 W8 hardening (2026-05-05) — pre-deploy signature gate (staging) ──
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.4.1'
+
+      - name: Cosign sign staging image (keyless)
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+        run: |
+          cosign sign --yes \
+            "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging@${{ steps.push.outputs.digest }}"
+
+      - name: SLSA L3 build-provenance attestation (staging)
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - name: Cosign verify staging signature (pre-deploy gate)
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+        run: |
+          cosign verify \
+            --certificate-identity-regexp "https://github.com/${{ github.repository }}/.github/workflows/.*" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging@${{ steps.push.outputs.digest }}"
+
+      - name: Cosign verify staging SLSA provenance (pre-deploy gate)
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+        run: |
+          cosign verify-attestation \
+            --type slsaprovenance \
+            --certificate-identity-regexp "https://github.com/${{ github.repository }}/.github/workflows/.*" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging@${{ steps.push.outputs.digest }}"
+      # ── end pre-deploy signature gate (staging) ─────────────────────────────
 
       - name: Create Sentry release
         if: env.HAS_SENTRY_TOKEN == 'true'
@@ -843,35 +935,15 @@ jobs:
           echo "::error::Staging deploy rolled back — see docs/RUNBOOKS/auto-rollback.md"
           exit 1
 
-  # ─── 8. Cosign sign + SLSA L3 attestation (prod) ─────────────────────
-  # V12 W8 — keyless cosign signature + SLSA L3 build provenance attached
-  # to the GHCR image. Runs after deploy-prod succeeds; the deployed image
-  # carries the same digest, so the signature/attestation cover it
-  # post-hoc. Verification (cosign-verify-deploy.yml) is run by ops at
-  # release-pull time. Reusable workflow definition: cosign-sign-image.yml.
-  sign-prod:
-    needs: deploy-prod
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-      id-token: write
-      packages: write
-      attestations: write
-    uses: ./.github/workflows/cosign-sign-image.yml
-    with:
-      image: ${{ needs.deploy-prod.outputs.image }}
-      digest: ${{ needs.deploy-prod.outputs.digest }}
-
-  # ─── 9. Cosign sign + SLSA L3 attestation (staging) ──────────────────
-  sign-staging:
-    needs: deploy-staging
-    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
-    permissions:
-      contents: read
-      id-token: write
-      packages: write
-      attestations: write
-    uses: ./.github/workflows/cosign-sign-image.yml
-    with:
-      image: ${{ needs.deploy-staging.outputs.image }}
-      digest: ${{ needs.deploy-staging.outputs.digest }}
+  # ─── 8. Cosign + SLSA hardening (2026-05-05) ─────────────────────────
+  # The post-hoc sign-prod / sign-staging jobs were removed in this commit.
+  # Signing + verification now run INLINE in deploy-prod / deploy-staging
+  # immediately after the GHCR push step, BEFORE any SSH step pulls the
+  # image onto the VPS. Hard-fails the deploy if signature creation or
+  # verification fails. See `## supply-chain audit` in the run STORY.md
+  # (run 2026-05-05-backend-hardening-supply-chain) for the threat model
+  # that motivated the move from post-hoc to pre-deploy gating.
+  #
+  # The reusable workflows cosign-sign-image.yml and cosign-verify-deploy.yml
+  # are kept on disk for ops use (manual ad-hoc signing or release-pull-time
+  # verification) but are no longer wired into the deploy path.

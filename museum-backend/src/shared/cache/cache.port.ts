@@ -22,6 +22,17 @@ export interface CacheService {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- generic interface API where T constrains input
   setNx<T>(key: string, value: T, ttlSeconds: number): Promise<boolean>;
 
+  /**
+   * Atomically increments a numeric value by `amount` and (re)applies a TTL on
+   * the key. Returns the new value after the increment, or `null` on failure
+   * (callers should treat null as "skip this update" — the operation is
+   * fail-soft, mirroring `set`/`del` semantics in this port).
+   *
+   * Used for cumulative counters where atomicity matters (e.g. multi-instance
+   * guardrail-judge budget, rate-limit windows).
+   */
+  incrBy(key: string, amount: number, ttlSeconds: number): Promise<number | null>;
+
   /** Check if the cache backend is reachable. Returns true if healthy. */
   ping(): Promise<boolean>;
 

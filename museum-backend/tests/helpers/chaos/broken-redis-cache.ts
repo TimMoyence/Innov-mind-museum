@@ -78,6 +78,11 @@ export class BrokenRedisCache implements CacheService {
     return false;
   }
 
+  async incrBy(_key: string, _amount: number, _ttlSeconds: number): Promise<number | null> {
+    this.maybeFail();
+    return null;
+  }
+
   async ping(): Promise<boolean> {
     this.callCount += 1;
     if (this.opts.mode === 'always-throw') {

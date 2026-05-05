@@ -442,5 +442,11 @@ export interface AppEnv {
      * of total chat traffic.
      */
     judgeMinMessageLength: number;
+    /**
+     * ADR-030 (2026-05-05) — backend store for the cumulative judge budget
+     * counter. 'memory' = per-process (legacy F4 behaviour); 'redis' = shared
+     * counter across replicas via SET INCRBY + TTL.
+     */
+    budgetBackend: 'memory' | 'redis';
   };
 }

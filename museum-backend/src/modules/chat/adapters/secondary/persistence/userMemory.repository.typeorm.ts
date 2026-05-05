@@ -49,7 +49,9 @@ export class TypeOrmUserMemoryRepository implements UserMemoryRepository {
    */
   async upsert(userId: number, updates: UserMemoryUpdates): Promise<UserMemory> {
     // Build column-value maps for the INSERT … ON CONFLICT … DO UPDATE statement.
-    const values: Record<string, unknown> = { userId, ...updates };
+    // Partial<UserMemory> is the precise QueryDeepPartialEntity-compatible
+    // shape TypeORM expects on `.values()` for an upsert path.
+    const values: Partial<UserMemory> = { userId, ...updates };
 
     // Resolve each entity property name to its actual DB column name from
     // TypeORM metadata. The previous implementation used a naive
@@ -72,7 +74,7 @@ export class TypeOrmUserMemoryRepository implements UserMemoryRepository {
       .createQueryBuilder()
       .insert()
       .into(UserMemory)
-      .values(values as unknown as UserMemory)
+      .values(values)
       .orUpdate(Object.keys(updates).map(propertyToColumnName), [propertyToColumnName('userId')])
       .execute();
 

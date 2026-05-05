@@ -45,6 +45,14 @@ export function makeMockCache(): CacheService & {
       return true;
     },
 
+    async incrBy(key: string, amount: number, _ttlSeconds: number): Promise<number | null> {
+      if (!Number.isFinite(amount) || amount === 0) return null;
+      const current = store.has(key) ? Number(store.get(key)) : 0;
+      const next = (Number.isFinite(current) ? current : 0) + Math.trunc(amount);
+      store.set(key, next);
+      return next;
+    },
+
     async ping(): Promise<boolean> {
       return true;
     },

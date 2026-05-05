@@ -54,6 +54,15 @@ export class TypeOrmMuseumEnrichmentRepo implements MuseumEnrichmentRepoPort {
           createdAt: existing.createdAt,
         });
       } else {
+        // Backfill nullable fields when the new payload provides a value but
+        // the stored row didn't. The per-key generic preserves the variance
+        // proof that `data[K]` is assignable to `existing[K]` for each K.
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- Justification: K constrains input to bind data[K] and existing[K] together for the assignment at L64; without it TypeScript widens to a union value type that's not assignable. Approved-by: tim@2026-05-05
+        const fillIfNull = <K extends keyof typeof data & keyof MuseumEnrichment>(key: K): void => {
+          if (existing[key] === null && data[key] !== null) {
+            existing[key] = data[key];
+          }
+        };
         for (const key of [
           'openingHours',
           'admissionFees',
@@ -62,9 +71,7 @@ export class TypeOrmMuseumEnrichmentRepo implements MuseumEnrichmentRepoPort {
           'currentExhibitions',
           'accessibility',
         ] as const) {
-          if (existing[key] === null && data[key] !== null) {
-            (existing as unknown as Record<string, unknown>)[key] = data[key];
-          }
+          fillIfNull(key);
         }
       }
       existing.needsReview = data.needsReview;

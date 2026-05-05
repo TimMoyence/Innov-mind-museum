@@ -67,7 +67,11 @@ const jwkToPem = (jwk: JwksKey): string => {
     format: 'jwk',
   });
 
-  return key.export({ type: 'spki', format: 'pem' }) as unknown as string;
+  const exported = key.export({ type: 'spki', format: 'pem' });
+  if (typeof exported !== 'string') {
+    throw new Error('jwkToPem: expected PEM string from KeyObject.export({format:"pem"})');
+  }
+  return exported;
 };
 
 const getSigningKey = async (jwksUrl: string, kid: string): Promise<string> => {

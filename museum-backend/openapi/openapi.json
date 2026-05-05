@@ -1973,6 +1973,45 @@
         }
       }
     },
+    "/api/auth/mfa/status": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Read the calling user's MFA enrollment state (F9 envelope).",
+        "description": "Self-scoped read of the calling user's MFA status. Drives the Enable/Disable MFA UI without exposing the encrypted secret. RBAC: authenticated user only — req.user.id IS the user being read.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "MFA status envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["mfaEnrolled", "methods", "lastVerifiedAt"],
+                  "properties": {
+                    "mfaEnrolled": {
+                      "type": "boolean",
+                      "description": "True iff TOTP has been enrolled AND verified at least once."
+                    },
+                    "methods": {
+                      "type": "array",
+                      "items": { "type": "string", "enum": ["totp"] },
+                      "description": "Active second-factor methods. Today only TOTP. Forward-compatible with WebAuthn / push."
+                    },
+                    "lastVerifiedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true,
+                      "description": "ISO 8601 of the last successful TOTP / recovery verification. Null when MFA never verified."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
     "/api/auth/mfa/enroll": {
       "post": {
         "tags": ["Auth"],

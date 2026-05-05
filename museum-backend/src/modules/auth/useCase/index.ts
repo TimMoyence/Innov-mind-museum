@@ -36,6 +36,7 @@ import { SocialLoginUseCase } from '@modules/auth/useCase/social/socialLogin.use
 import { ChallengeMfaUseCase } from '@modules/auth/useCase/totp/challengeMfa.useCase';
 import { DisableMfaUseCase } from '@modules/auth/useCase/totp/disableMfa.useCase';
 import { EnrollMfaUseCase } from '@modules/auth/useCase/totp/enrollMfa.useCase';
+import { GetMfaStatusUseCase } from '@modules/auth/useCase/totp/getMfaStatus.useCase';
 import { RecoveryMfaUseCase } from '@modules/auth/useCase/totp/recoveryMfa.useCase';
 import { VerifyMfaUseCase } from '@modules/auth/useCase/totp/verifyMfa.useCase';
 import { BrevoEmailService } from '@shared/email/brevo-email.service';
@@ -88,6 +89,7 @@ const authSessionService = new AuthSessionService(
 const enrollMfaUseCase = new EnrollMfaUseCase(userRepository, totpSecretRepository);
 const verifyMfaUseCase = new VerifyMfaUseCase(userRepository, totpSecretRepository);
 const disableMfaUseCase = new DisableMfaUseCase(userRepository, totpSecretRepository);
+const getMfaStatusUseCase = new GetMfaStatusUseCase(totpSecretRepository);
 const challengeMfaUseCase = new ChallengeMfaUseCase(
   userRepository,
   totpSecretRepository,
@@ -261,5 +263,6 @@ export {
   disableMfaUseCase,
   challengeMfaUseCase,
   recoveryMfaUseCase,
+  getMfaStatusUseCase,
   wireAuthMiddleware,
 };

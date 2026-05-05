@@ -20,6 +20,7 @@ const makeCacheService = (setNxResult = true) => ({
   del: jest.fn(),
   delByPrefix: jest.fn(),
   setNx: jest.fn().mockResolvedValue(setNxResult),
+  incrBy: jest.fn().mockResolvedValue(null),
   ping: jest.fn().mockResolvedValue(true),
   zadd: jest.fn().mockResolvedValue(undefined),
   ztop: jest.fn().mockResolvedValue([]),

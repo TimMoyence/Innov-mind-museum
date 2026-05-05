@@ -41,7 +41,7 @@ export const initSentry = (): void => {
     profilesSampleRate: env.sentry.profilesSampleRate,
     integrations: [...Sentry.getDefaultIntegrations({})],
     sendDefaultPii: false,
-    beforeSend: (event) => scrubEvent(event as unknown as ScrubbableEvent) as typeof event,
+    beforeSend: (event) => scrubEvent(event as ScrubbableEvent) as typeof event,
     beforeBreadcrumb: (breadcrumb) =>
       shouldDropBreadcrumb(breadcrumb as ScrubbableBreadcrumb) ? null : breadcrumb,
   });
