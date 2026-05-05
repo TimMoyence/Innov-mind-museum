@@ -8,6 +8,16 @@ import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import { CursorCodec } from '@shared/pagination/cursor-codec';
 
 import {
+  clearMessageAudio,
+  findLegacyImageRefsByUserId,
+  updateMessageAudio,
+} from './chat-repository-audio';
+import {
+  deleteMessageFeedback,
+  getMessageFeedback,
+  upsertMessageFeedback,
+} from './chat-repository-feedback';
+import {
   fetchMessageCounts,
   fetchMessagePreviews,
   exportUserChatData,
@@ -419,126 +429,48 @@ export class TypeOrmChatRepository implements ChatRepository {
     return await exportUserChatData(this.sessionRepo, userId);
   }
 
-  /**
-   * Inserts or updates a feedback entry for a message/user pair.
-   *
-   * @param messageId - UUID of the message.
-   * @param userId - Numeric user ID.
-   * @param value - Feedback value ('positive' or 'negative').
-   */
+  /** Inserts or updates a feedback entry for a message/user pair. */
   async upsertMessageFeedback(
     messageId: string,
     userId: number,
     value: FeedbackValue,
   ): Promise<void> {
-    await this.feedbackRepo
-      .createQueryBuilder()
-      .insert()
-      .into(MessageFeedback)
-      .values({ messageId, userId, value })
-      .orUpdate(['value'], ['messageId', 'userId'])
-      .execute();
+    await upsertMessageFeedback(this.feedbackRepo, messageId, userId, value);
   }
 
-  /**
-   * Deletes a feedback entry for a message/user pair.
-   *
-   * @param messageId - UUID of the message.
-   * @param userId - Numeric user ID.
-   */
+  /** Deletes a feedback entry for a message/user pair. */
   async deleteMessageFeedback(messageId: string, userId: number): Promise<void> {
-    // Uses the explicit `messageId` FK column (not the `message` relation), so
-    // TypeORM emits a flat `WHERE message_id = $1 AND user_id = $2` DELETE.
-    // The relation form `{ message: { id } }` triggers a faulty
-    // `distinctAlias.MessageFeedback_id` projection on certain TypeORM
-    // versions when combined with `select`/`distinct` paths — see Phase 10
-    // findings doc.
-    await this.feedbackRepo.delete({ messageId, userId });
+    await deleteMessageFeedback(this.feedbackRepo, messageId, userId);
   }
 
-  /**
-   * Retrieves the current feedback for a message by a user.
-   *
-   * @param messageId - UUID of the message.
-   * @param userId - Numeric user ID.
-   * @returns The feedback value, or `null` if none exists.
-   */
+  /** Retrieves the current feedback for a message by a user. */
   async getMessageFeedback(
     messageId: string,
     userId: number,
   ): Promise<{ value: FeedbackValue } | null> {
-    // Uses the explicit `messageId` FK column. Combining a relation `where`
-    // with a `select` projection on the parent entity makes TypeORM emit
-    // `SELECT distinctAlias.MessageFeedback_id FROM ... distinctAlias` —
-    // a column that never appears in the CTE, breaking the query in
-    // production (Phase 10 findings — chat-media.service.ts:178 caller).
-    const row = await this.feedbackRepo.findOne({
-      where: { messageId, userId },
-      select: ['value'],
-    });
-
-    if (!row) return null;
-    return { value: row.value };
+    return await getMessageFeedback(this.feedbackRepo, messageId, userId);
   }
 
-  /**
-   * Persists a TTS audio reference for a message (assistant only).
-   *
-   * @param messageId - UUID of the message.
-   * @param input - Audio storage reference, generation timestamp, voice id.
-   * @param input.audioUrl - Storage reference.
-   * @param input.audioGeneratedAt - Generation timestamp.
-   * @param input.audioVoice - Voice id.
-   */
+  /** Persists a TTS audio reference for a message (assistant only). */
   async updateMessageAudio(
     messageId: string,
     input: { audioUrl: string; audioGeneratedAt: Date; audioVoice: string },
   ): Promise<void> {
-    await this.messageRepo.update(
-      { id: messageId },
-      {
-        audioUrl: input.audioUrl,
-        audioGeneratedAt: input.audioGeneratedAt,
-        audioVoice: input.audioVoice,
-      },
-    );
+    await updateMessageAudio(this.messageRepo, messageId, input);
   }
 
-  /**
-   * Clears the cached TTS audio reference for a message.
-   *
-   * @param messageId - UUID of the message.
-   */
+  /** Clears the cached TTS audio reference for a message. */
   async clearMessageAudio(messageId: string): Promise<void> {
-    await this.messageRepo.update(
-      { id: messageId },
-      { audioUrl: null, audioGeneratedAt: null, audioVoice: null },
-    );
+    await clearMessageAudio(this.messageRepo, messageId);
   }
 
   /**
    * Returns every non-null `imageRef` tied to messages whose session belongs to the user.
-   *
    * Used by the GDPR right-to-erasure cleanup to reach keys that predate the
-   * user-scoped S3 path format (`chat-images/user-<id>/YYYY/MM/<uuid>.ext`).
-   * MUST be invoked BEFORE the user row is deleted (CASCADE wipes messages/sessions).
-   *
-   * @param userId - Numeric user ID.
-   * @returns De-duplicated list of storage refs (e.g. `s3://chat-images/...`).
+   * user-scoped S3 path format. MUST be invoked BEFORE the user row is deleted
+   * (CASCADE wipes messages/sessions).
    */
   async findLegacyImageRefsByUserId(userId: number): Promise<string[]> {
-    const rows = await this.messageRepo
-      .createQueryBuilder('message')
-      .select('message.imageRef', 'imageRef')
-      .innerJoin('message.session', 'session')
-      .where('session.userId = :userId', { userId })
-      .andWhere('message.imageRef IS NOT NULL')
-      .getRawMany<{ imageRef: string | null }>();
-
-    const refs = rows
-      .map((row) => row.imageRef)
-      .filter((ref): ref is string => typeof ref === 'string' && ref.length > 0);
-
-    return Array.from(new Set(refs));
+    return await findLegacyImageRefsByUserId(this.messageRepo, userId);
   }
 }
