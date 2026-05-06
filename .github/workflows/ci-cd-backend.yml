@@ -325,7 +325,9 @@ jobs:
       - name: Build image
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
         with:
-          context: ./museum-backend
+          # Context = repo root so the `file:../tools/eslint-plugin-musaium-test-discipline`
+          # workspace dep in museum-backend/package.json resolves inside the build (E4 fix).
+          context: .
           file: ./museum-backend/deploy/Dockerfile.prod
           load: true
           tags: museum-backend:ci
@@ -350,7 +352,8 @@ jobs:
         id: push
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
         with:
-          context: ./museum-backend
+          # Context = repo root (E4 fix — see Build image step above).
+          context: .
           file: ./museum-backend/deploy/Dockerfile.prod
           push: true
           tags: |
@@ -663,7 +666,8 @@ jobs:
       - name: Build staging image
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
         with:
-          context: ./museum-backend
+          # Context = repo root (E4 fix — workspace plugin file:.. resolution).
+          context: .
           file: ./museum-backend/deploy/Dockerfile.prod
           load: true
           tags: museum-backend-staging:ci
@@ -688,7 +692,8 @@ jobs:
         id: push
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
         with:
-          context: ./museum-backend
+          # Context = repo root (E4 fix).
+          context: .
           file: ./museum-backend/deploy/Dockerfile.prod
           push: true
           tags: |

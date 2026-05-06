@@ -1,0 +1,50 @@
+# Dockerfile.prod uses repo-root build context (E4 fix).
+# BuildKit picks up <dockerfile>.dockerignore co-located with the Dockerfile,
+# in preference to <context>/.dockerignore. Mirrors museum-backend/.dockerignore
+# but with paths re-rooted to the repo root + tools/ scoping.
+
+# Sibling apps + top-level dirs (irrelevant to BE build)
+museum-frontend/
+museum-web/
+design-system/
+docs/
+.github/
+.claude/
+team-reports/
+.husky/
+.git/
+.gitignore
+.DS_Store
+
+# museum-backend exclusions — paths re-rooted to repo root.
+# Mirrors museum-backend/.dockerignore exactly.
+museum-backend/node_modules
+museum-backend/dist
+museum-backend/coverage
+museum-backend/.git
+museum-backend/.gitignore
+museum-backend/.DS_Store
+museum-backend/.env
+museum-backend/.env.*
+museum-backend/npm-debug.log
+museum-backend/tests/
+museum-backend/**/*.test.ts
+museum-backend/jest.config.ts
+museum-backend/docs/
+museum-backend/*.md
+!museum-backend/README.md
+museum-backend/scripts/*
+!museum-backend/scripts/seed-museums.ts
+!museum-backend/scripts/seed-knowledge.ts
+!museum-backend/scripts/seed-smoke-account.ts
+museum-backend/docker-compose*.yml
+museum-backend/deploy/
+museum-backend/.vscode/
+museum-backend/.claude/
+museum-backend/.github/
+
+# tools/ — only the eslint-plugin is consumed; trim its noise
+tools/eslint-plugin-musaium-test-discipline/node_modules
+tools/eslint-plugin-musaium-test-discipline/coverage
+tools/eslint-plugin-musaium-test-discipline/tests
+tools/eslint-plugin-musaium-test-discipline/.git
