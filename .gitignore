@@ -90,6 +90,8 @@ package-lock.json
 **/dist/
 dist/
 **/dist/*
+!tools/eslint-plugin-musaium-test-discipline/dist/
+!tools/eslint-plugin-musaium-test-discipline/dist/**
 
 # Test coverage
 coverage/

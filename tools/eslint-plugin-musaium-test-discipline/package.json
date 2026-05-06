@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "test": "jest",
     "lint": "tsc --noEmit",
-    "prepare": "tsc -p tsconfig.json"
+    "check-dist": "bash scripts/check-dist-fresh.sh"
   },
   "peerDependencies": {
     "eslint": ">=8 <11"
