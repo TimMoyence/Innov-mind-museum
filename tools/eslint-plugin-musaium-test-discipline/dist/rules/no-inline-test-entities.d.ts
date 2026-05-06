@@ -1,4 +1,3 @@
-import { ESLintUtils } from '@typescript-eslint/utils';
 type Options = [
     {
         entities?: string[];
@@ -10,7 +9,7 @@ type Options = [
         shapeSignatures?: Record<string, string[]>;
     }
 ];
-declare const _default: ESLintUtils.RuleModule<"inlineEntity", Options, unknown, ESLintUtils.RuleListener> & {
+declare const _default: import("@typescript-eslint/utils/eslint-utils").RuleModule<"inlineEntity", Options, unknown, import("@typescript-eslint/utils/eslint-utils").RuleListener> & {
     name: string;
 };
 export default _default;

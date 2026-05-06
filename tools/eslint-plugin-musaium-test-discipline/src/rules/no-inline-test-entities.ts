@@ -1,4 +1,5 @@
-import { ESLintUtils, TSESTree } from '@typescript-eslint/utils';
+import { RuleCreator } from '@typescript-eslint/utils/eslint-utils';
+import type { TSESTree } from '@typescript-eslint/utils';
 
 type Options = [
   {
@@ -40,7 +41,7 @@ const DEFAULT_SHAPE_SIGNATURES: Record<string, string[]> = {
   AuditEvent: ['id', 'actorId', 'action', 'targetId'],
 };
 
-const createRule = ESLintUtils.RuleCreator(
+const createRule = RuleCreator(
   (name) =>
     `https://github.com/innovmind/musaium/blob/main/tools/eslint-plugin-musaium-test-discipline/README.md#${name}`,
 );

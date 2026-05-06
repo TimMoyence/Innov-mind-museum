@@ -1,4 +1,12 @@
-import { ESLintUtils, TSESTree, AST_TOKEN_TYPES } from '@typescript-eslint/utils';
+import { RuleCreator } from '@typescript-eslint/utils/eslint-utils';
+import type { TSESTree } from '@typescript-eslint/utils';
+
+// Inline AST_TOKEN_TYPES values used (only what's needed) to avoid pulling
+// in @typescript-eslint/utils/ts-eslint which transitively requires 'eslint'.
+const AST_TOKEN_TYPES = {
+  Line: 'Line',
+  Block: 'Block',
+} as const;
 
 const TARGET_PLUGIN = 'musaium-test-discipline';
 const TARGET_RULES = [
@@ -6,7 +14,7 @@ const TARGET_RULES = [
   'musaium-test-discipline/no-undisabled-test-discipline-disable',
 ];
 
-const createRule = ESLintUtils.RuleCreator(
+const createRule = RuleCreator(
   (name) =>
     `https://github.com/innovmind/musaium/blob/main/tools/eslint-plugin-musaium-test-discipline/README.md#${name}`,
 );

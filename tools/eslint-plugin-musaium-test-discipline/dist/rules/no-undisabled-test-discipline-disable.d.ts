@@ -1,5 +1,4 @@
-import { ESLintUtils } from '@typescript-eslint/utils';
-declare const _default: ESLintUtils.RuleModule<"requireJustification", [], unknown, ESLintUtils.RuleListener> & {
+declare const _default: import("@typescript-eslint/utils/eslint-utils").RuleModule<"requireJustification", [], unknown, import("@typescript-eslint/utils/eslint-utils").RuleListener> & {
     name: string;
 };
 export default _default;
