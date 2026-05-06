@@ -395,15 +395,20 @@ jobs:
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend@${{ steps.push.outputs.digest }}"
 
-      - name: Cosign verify SLSA provenance (pre-deploy gate)
+      - name: Verify SLSA provenance attestation (pre-deploy gate)
+        # actions/attest-build-provenance@v2 publishes the SLSA provenance via the
+        # OCI 1.1 Referrers API. cosign 2.4.x verify-attestation only looks at the
+        # legacy `<digest>.att` tag, so it reports "no matching attestations" even
+        # when the attestation is uploaded. `gh attestation verify` speaks the
+        # actions/attest-build-provenance format natively (looks up by subject
+        # digest via the GitHub API), so we use it as the discovery layer here.
         env:
-          COSIGN_EXPERIMENTAL: '1'
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cosign verify-attestation \
-            --type slsaprovenance1 \
-            --certificate-identity-regexp "https://github.com/${{ github.repository }}/.github/workflows/.*" \
-            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend@${{ steps.push.outputs.digest }}"
+          gh attestation verify \
+            "oci://ghcr.io/${{ secrets.GHCR_USER }}/museum-backend@${{ steps.push.outputs.digest }}" \
+            --owner "${{ github.repository_owner }}" \
+            --predicate-type "https://slsa.dev/provenance/v1"
       # ── end pre-deploy signature gate ─────────────────────────────────────
 
       - name: Create Sentry release
@@ -731,15 +736,18 @@ jobs:
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging@${{ steps.push.outputs.digest }}"
 
-      - name: Cosign verify staging SLSA provenance (pre-deploy gate)
+      - name: Verify staging SLSA provenance attestation (pre-deploy gate)
+        # See deploy-prod variant for rationale: cosign verify-attestation does not
+        # discover attestations published via the OCI 1.1 Referrers API by
+        # actions/attest-build-provenance@v2, so we use `gh attestation verify`
+        # which queries the GitHub API by subject digest.
         env:
-          COSIGN_EXPERIMENTAL: '1'
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cosign verify-attestation \
-            --type slsaprovenance1 \
-            --certificate-identity-regexp "https://github.com/${{ github.repository }}/.github/workflows/.*" \
-            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging@${{ steps.push.outputs.digest }}"
+          gh attestation verify \
+            "oci://ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging@${{ steps.push.outputs.digest }}" \
+            --owner "${{ github.repository_owner }}" \
+            --predicate-type "https://slsa.dev/provenance/v1"
       # ── end pre-deploy signature gate (staging) ─────────────────────────────
 
       - name: Create Sentry release
