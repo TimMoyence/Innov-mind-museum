@@ -114,7 +114,9 @@ jobs:
   prebuild:
     needs: quality
     runs-on: macos-latest
-    timeout-minutes: 20
+    # Cold-cache Gradle assembleDebug on macOS runner can exceed 20 min;
+    # bumped to 35 to give headroom. Warm-cache run is ~3 min.
+    timeout-minutes: 35
     defaults:
       run:
         working-directory: museum-frontend
