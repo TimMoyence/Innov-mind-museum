@@ -33,6 +33,9 @@
     "outDir": "./dist",
     "lib": ["ES2023"]
   },
+  "ts-node": {
+    "files": true
+  },
   "include": [
     "src/**/*.ts",
     "tests/**/*.ts",
