@@ -6,9 +6,60 @@ export default {
   jest: {
     configFile: 'jest.config.ts',
     enableFindRelatedTests: false,
+    // Stryker's jest runner does NOT support `--selectProjects`. The base
+    // jest.config.ts declares 3 projects (unit-integration / e2e / scripts-esm).
+    // Default `pnpm test` and `pnpm test:coverage` pin `--selectProjects
+    // unit-integration`, so they never load the `scripts-esm` project (which
+    // contains native ESM `.mjs` files that need NODE_OPTIONS=--experimental-vm
+    // -modules). Stryker spawns jest *without* --selectProjects, so it
+    // discovers all 3 projects and tries to parse `scripts/__tests__/*.test.mjs`
+    // with the default node:vm Script loader, failing with:
+    //   SyntaxError: Cannot use import statement outside a module
+    //
+    // Stryker's jest runner merges file-based config with this override via
+    // `{...configFromFile, ...config, ...JEST_OVERRIDE_OPTIONS}`, so passing
+    // `projects:` here cleanly replaces the file-based projects list. We keep
+    // exactly the `unit-integration` project, which mirrors the path used by
+    // the regular coverage gate. The `scripts-esm` project is irrelevant to
+    // mutation testing — none of the `mutate:` files below are exercised by
+    // those Node-script unit tests; and the `e2e` project requires
+    // testcontainer infra (Postgres + Redis) which Stryker's per-mutant runs
+    // would re-spin per worker (40+ minutes of overhead for zero coverage
+    // signal on the hot files).
     config: {
-      // Remove .stryker-tmp/ from ignore — Stryker runs Jest inside its sandbox
-      testPathIgnorePatterns: ['/dist/', '/node_modules/', '/tests/ai/'],
+      projects: [
+        {
+          displayName: 'unit-integration',
+          testEnvironment: 'node',
+          transform: {
+            '^.+\\.tsx?$': '@swc/jest',
+          },
+          moduleNameMapper: {
+            '^@src/(.*)$': '<rootDir>/src/$1',
+            '^@modules/(.*)$': '<rootDir>/src/modules/$1',
+            '^@data/(.*)$': '<rootDir>/src/data/$1',
+            '^@shared/(.*)$': '<rootDir>/src/shared/$1',
+            '^tests/(.*)$': '<rootDir>/tests/$1',
+          },
+          testPathIgnorePatterns: [
+            '/dist/',
+            '/node_modules/',
+            '/tests/ai/',
+            '\\.stryker-run/',
+            '<rootDir>/tests/e2e/',
+            '<rootDir>/scripts/__tests__/',
+            // Integration tests need live infra (Postgres testcontainer, Redis,
+            // testcontainer S3) and a repo-root sentinel baseline that lives
+            // OUTSIDE the museum-backend project. Stryker's sandbox isolates
+            // museum-backend/, breaking the path traversal in
+            // _smoke/integration-tier-baseline-cap.test.ts and incurring
+            // testcontainer spin-up overhead per mutant that would inflate
+            // mutation runs by 40+ minutes for zero coverage signal on the
+            // banking-grade hot files (which are exercised by unit tests).
+            '<rootDir>/tests/integration/',
+          ],
+        },
+      ],
     },
   },
   coverageAnalysis: 'perTest',
