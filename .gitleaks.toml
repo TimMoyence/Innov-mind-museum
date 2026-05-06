@@ -99,6 +99,11 @@ paths = [
   # `museum-frontend/context/api.ts`; the file no longer exists on HEAD,
   # but full-repo gitleaks still trips on the old commit.
   '''museum-frontend/context/api\.ts$''',
+  # Bundled ESLint plugin output (esbuild --bundle). The committed dist files
+  # inline @typescript-eslint/utils + transitive deps; gitleaks generic-api-key
+  # rule false-positives on minified function names like `getKeys`. Source code
+  # under tools/eslint-plugin-musaium-test-discipline/src/ is still scanned.
+  '''^tools/eslint-plugin-musaium-test-discipline/dist/''',
 ]
 # Placeholder tokens used in docs / examples / tests. These must never
 # resemble real credentials; add a comment explaining each addition.
