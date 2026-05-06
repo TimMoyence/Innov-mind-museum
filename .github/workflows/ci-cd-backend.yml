@@ -400,7 +400,7 @@ jobs:
           COSIGN_EXPERIMENTAL: '1'
         run: |
           cosign verify-attestation \
-            --type slsaprovenance \
+            --type slsaprovenance1 \
             --certificate-identity-regexp "https://github.com/${{ github.repository }}/.github/workflows/.*" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend@${{ steps.push.outputs.digest }}"
@@ -736,7 +736,7 @@ jobs:
           COSIGN_EXPERIMENTAL: '1'
         run: |
           cosign verify-attestation \
-            --type slsaprovenance \
+            --type slsaprovenance1 \
             --certificate-identity-regexp "https://github.com/${{ github.repository }}/.github/workflows/.*" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging@${{ steps.push.outputs.digest }}"
