@@ -8,7 +8,10 @@ import * as Sentry from '@sentry/react-native';
  */
 export const logInitPhase = (phase: string, data?: Record<string, unknown>): void => {
   const ts = new Date().toISOString();
-  console.log(`[MUSAIUM_INIT] js.${phase} ts=${ts}`, data ?? {});
+  // Literal format string (semgrep `unsafe-formatstring`): `phase` and `ts` are
+  // forwarded as separate args so an unexpected `%s`-bearing phase name cannot
+  // forge log fields by abusing util.format's specifier handling.
+  console.log('[MUSAIUM_INIT] js.%s ts=%s', phase, ts, data ?? {});
   Sentry.addBreadcrumb({
     category: 'rn.init',
     level: 'info',
