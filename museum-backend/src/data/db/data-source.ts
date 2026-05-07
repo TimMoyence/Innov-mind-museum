@@ -67,6 +67,11 @@ export const AppDataSource = new DataSource({
   migrations: isCompiledRuntime
     ? ['dist/src/data/db/migrations/*.js']
     : ['src/data/db/migrations/*.ts'],
+  // 'each' wraps each migration in its own transaction AND honors the
+  // `public readonly transaction = false` opt-out used by index migrations
+  // that need CREATE INDEX CONCURRENTLY (forbidden inside a transaction).
+  // Default 'all' rejects per-migration overrides with ForbiddenTransactionModeOverrideError.
+  migrationsTransactionMode: 'each',
   ssl:
     env.nodeEnv === 'production' && env.dbSsl
       ? { rejectUnauthorized: env.dbSslRejectUnauthorized }
