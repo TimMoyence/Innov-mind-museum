@@ -26,7 +26,7 @@ export default function Footer({ dict, locale }: FooterProps) {
             />
             <div className="space-y-0.5">
               <p className="text-sm text-text-secondary">{copyright}</p>
-              <p className="text-xs text-text-muted">{dict.footer.madeBy}</p>
+              <p className="text-xs text-text-tertiary">{dict.footer.madeBy}</p>
             </div>
           </div>
 
