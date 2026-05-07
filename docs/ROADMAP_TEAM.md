@@ -110,6 +110,17 @@ Self-test : `bash .claude/skills/team/team-hooks/pre-feature-spec-check.sh --sel
 
 Run de référence : `team-state/2026-05-03-t1-6-roadmap-auto-consolidation/` (spec + design + tasks + STORY).
 
+### T1.7 Deploy ops follow-ups (sprint 2026-05-05 review)
+
+> Issus de la revue pédagogique du sprint 2026-04-30 → 2026-05-05 (cf. `docs/explications-sprint-2026-05-05/`). Tous à boucler avant ou immédiatement après le launch 2026-06-01.
+
+- [ ] **Audit-chain alerting — wire email Brevo (option B)** — le cron `audit-chain-nightly` pingue actuellement `DEPLOY_ALERT_SLACK_WEBHOOK`, secret jamais set → alerte perdue. Patch `museum-backend/scripts/audit-chain-verify.ts` pour ajouter un fallback email via `BREVO_API_KEY` (déjà présent), destinataire `m.rivet@expertgcl.fr`. Cf. `docs/explications-sprint-2026-05-05/03-audit-chain-slack.md` § Option B. ~10 min de patch + 1 commit.
+- [ ] **Guardrails V2 calibrage V1** — flipper `GUARDRAILS_V2_CANDIDATE=off` dans `/srv/museum/.env` prod pour ne garder que le keyword pre-filter (~5 ms) + Promptfoo CI. Optionnel : commenter le service `llm-guard` dans `museum-backend/deploy/docker-compose.prod.yml` pour libérer ~2 GB RAM. Cf. `docs/explications-sprint-2026-05-05/04-guardrails-juges-promptfoo-latence.md`. ~5 min de modif env + restart backend.
+- [ ] **GHCR_TOKEN scope check** — vérifier que le PAT GitHub a `read:packages` en plus de `write:packages` pour que `cosign verify` puisse télécharger les signatures attachées. GitHub → Developer settings → Personal access tokens. ~2 min.
+- [ ] **Trim INSULT_KEYWORDS français** (optionnel, à valider) — retirer `con` et `dumb` qui produisent des faux positifs sur des phrases familières inoffensives ("ce con de Cézanne"). PR ~5 min.
+- [ ] **Wire `RedisNonceStore`** (uniquement si scale multi-instance prévu post-launch) — remplacer `new InMemoryNonceStore()` ligne 111 de `museum-backend/src/modules/auth/useCase/index.ts`. Single-instance V1 = OK sans ce fix. Multi-instance avec rotation LB = social login casse sans ce fix.
+- [ ] **Tighten `@xmldom/xmldom` override** `^0.8.10` → `^0.8.12` dans `museum-frontend/package.json` pour fermer la fenêtre théorique sous le 0.8.12 advisory fix. ~30 sec de modif.
+
 ---
 
 ## NEXT — Post-launch (juin–juillet)

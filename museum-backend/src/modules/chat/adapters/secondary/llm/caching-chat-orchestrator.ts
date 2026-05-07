@@ -32,7 +32,16 @@ export interface CachingChatOrchestratorDeps {
 
 const MAX_TEXT_LENGTH = 500;
 const REPLAY_CHUNK_SIZE = 8;
-/** Aligned with StreamBuffer releaseIntervalMs and frontend FLUSH_INTERVAL_MS to avoid beat-frequency stutter. */
+/**
+ * Aligned with StreamBuffer releaseIntervalMs and frontend FLUSH_INTERVAL_MS
+ * to avoid beat-frequency stutter.
+ *
+ * Sprint D rationale (2026-04-15): pre-fix the cache replay used 25ms while
+ * frontend flushed at 40ms — the resulting stutter pattern was visible in the
+ * UI as irregular text appearance. Backend stream + cache replay + frontend
+ * flush MUST stay aligned (currently all at 30ms). Don't change this constant
+ * without updating the other two in lockstep.
+ */
 const REPLAY_CHUNK_DELAY_MS = 30;
 
 /**

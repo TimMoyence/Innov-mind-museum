@@ -24,12 +24,11 @@ Réécrites complètement chaque sprint (4 semaines). Snapshots précédents = `
 
 Index docs : **`docs/DOCS_INDEX.md`**.
 
-Historical sprint journals archived in **`docs/archive/v1-sprint-2026-04/`**:
-- `PROGRESS_TRACKER.md` — checkbox tracker per sprint/item
-- `SPRINT_LOG.md` — detailed technical journal
-- `*_AUDIT_2026-04-0*.md` — prior audit reports
+Tech debts ouverts trackés : **`docs/TECH_DEBT.md`**.
 
-V3 review preserved under `docs/archive/roadmaps/V3_REVIEW_AND_PLAN.md`. Sprint scratch antérieur (ROADMAP_V2, walk spec, superpowers plans/specs, V12 W1-W8 plans, banking-grade design, NL_MASTER_PLAN, PROD_10_10) supprimé 2026-04-30 et 2026-05-03 — voir git history si besoin.
+Sprint debrief pédagogique du sprint 2026-04-30 → 2026-05-05 : **`docs/explications-sprint-2026-05-05/`** (22 fichiers, ~6200 lignes en français, "professeur explicatif"). Lire `README.md` du dossier pour la table des matières.
+
+Sprint scratch antérieur (PROGRESS_TRACKER, SPRINT_LOG, NL reports, plans 2026-04-17, audits 2026-04-01/02, ROADMAP_V2, walk spec, superpowers plans/specs, V12 W1-W8 plans, banking-grade design, NL_MASTER_PLAN, PROD_10_10) supprimé 2026-04-30 / 2026-05-03 / 2026-05-07 (cleanup complet de `docs/archive/` après consolidation des 3 tech debts dans `TECH_DEBT.md` + extension d'ADR-015 avec les seuils Phase A→B→C). Voir git history pour historique brut.
 
 Post-2026-04-20 runtime tracking: `.claude/tasks/` (task lists) + `.claude/skills/team/team-reports/` (runtime `/team` runs).
 
@@ -328,10 +327,19 @@ Auto-generated, massive, or pure data. Reading full wastes tokens, rarely helps.
 | `museum-backend/src/data/db/migrations/*.ts` (34 files) | ~5 KB each, 172 KB total | TypeORM migrations — immutable once run | Read only specific migration relevant to current work |
 | `museum-backend/src/modules/daily-art/artworks.data.ts` | 17 KB / 373 lines | Static artwork catalog | Grep for specific artwork ID or title |
 | `museum-frontend/shared/ui/tokens.generated.ts` | generated | Design tokens output | Edit `design-system/` source instead |
-| `docs/archive/v1-sprint-2026-04/SPRINT_LOG.md` | 169 KB | Historical journal (archived) | Read w/ offset for specific date range, never full |
-| `docs/archive/v1-sprint-2026-04/PROGRESS_TRACKER.md` | 57 KB | Sprint tracker (archived) | Read latest sprint section only |
 
 Doubt? Use `Grep` w/ specific pattern first, then `Read` relevant block w/ `offset`/`limit`.
+
+## Pièges connus (gotchas opérationnels)
+
+Leçons techniques non évidentes consolidées des sprints précédents. Ajoute ici tout piège qui a fait perdre du temps à un dev / agent — pas les bugs métier, juste les surprises infrastructure.
+
+- **Hook Jest cache parfois flaky** — un ratchet coverage qui plante sans raison apparente est souvent un cache Jest stale. Run `pnpm jest --clearCache` (BE) ou `npm test -- --clearCache` (FE) avant de réinvestiguer. Seen 2026-04-17 SESSION_FINAL leçon 3.
+- **`docs/` whitelisted dans .gitignore** — ce dossier est gitignored par défaut, les sous-dossiers doivent être whitelistés explicitement (`!docs/<sub>/`). Si tu crées un nouveau sous-dossier dans `docs/` et que `git status` ne le voit pas, c'est ça. Voir `.gitignore` pour les whitelists existantes (ROADMAP_*, RUNBOOKS, adr, etc.).
+- **GitNexus auto-inject `<!-- gitnexus:start -->` dans `AGENTS.md`** — `npx gitnexus analyze` expand ce bloc avec la config MCP courante. Comportement intentionnel à conserver (visible `AGENTS.md` ligne 18+). Ne pas effacer le marker.
+- **TypeORM `.set({ field: undefined })` est silencieusement skip** — `UpdateQueryBuilder` ne génère PAS de `SET field = NULL` quand on passe `undefined`. Si tu veux vraiment NULL, utilise `() => 'NULL'` raw expression. Bug verifyEmail 2026-05 (cf. doc 17 explications-sprint § Bug 4).
+- **PgBouncer transaction mode interdit `LISTEN/NOTIFY`, session-scoped advisory locks, persistent prepared statements** — Musaium n'utilise rien de ça aujourd'hui (audit ADR-021), mais à vérifier au cas par cas si tu ajoutes une lib Postgres exotique.
+- **SWC + TypeORM cross-entity = ReferenceError circular** — fix = wrap les FK avec le type alias `Relation<T>` (cf. doc 16 explications-sprint § Phase 11). Ne pas s'écarter de ce pattern sur les nouvelles entités.
 
 ## Environment Setup
 

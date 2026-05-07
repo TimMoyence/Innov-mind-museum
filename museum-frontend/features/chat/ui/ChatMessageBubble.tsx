@@ -34,6 +34,12 @@ interface ChatMessageBubbleProps {
  * TtsSection, FeedbackSection — around a user/assistant bubble frame. Memoized to
  * skip re-renders when inputs are structurally identical; during streaming, only
  * text + isStreaming trigger a re-render.
+ *
+ * Sprint D rationale (2026-04-15): the comparator returns true (skip render) when
+ * text is unchanged during streaming. Pre-fix, React.memo was unconditionally
+ * bypassed during streaming, re-rendering on every flush (every 30ms) — visible
+ * "clignotement" in the UI. Don't refactor this comparator without measuring
+ * the streaming UX end-to-end.
  */
 export const ChatMessageBubble = React.memo(
   ({

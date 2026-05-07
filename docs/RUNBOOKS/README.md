@@ -9,6 +9,9 @@ and a clear "when does this fire" trigger.
 | [`auto-rollback.md`](auto-rollback.md) | Deploy or smoke test fails in CI | On-demand (CI invokes) + 90-day drill on staging |
 | [`prod-secrets-bootstrap.md`](prod-secrets-bootstrap.md) | Auto-rollback fires with `Missing required environment variable: …` or a new validator clause lands | On-demand (per failure or per validator update) |
 | [`redis-rotation.md`](redis-rotation.md) | Quarterly cron (`redis-rotation-reminder.yml`) or credential exposure | Every 90 days |
+| [`secrets-rotation.md`](secrets-rotation.md) | Scheduled rotation cadence per secret class (JWT 90d, MFA 180d w/ re-encryption, MEDIA_SIGNING 180d, CSRF 90d, OPENAI/DEEPSEEK/GOOGLE 180d) OR out-of-cycle compromise | On-demand + scheduled |
+| [`audit-chain-forensics.md`](audit-chain-forensics.md) | Audit-chain SHA-256 verifier nightly cron breaks OR post-incident integrity audit needed | On-demand + nightly cron 03:30 UTC |
+| [`CERT_ROTATION.md`](CERT_ROTATION.md) | Mobile cert pinning Phase 2 SPKI hash capture, planned rotation 3-pin transition, OR mass-mispin emergency response | On-demand (rare) |
 | [`V1_FALLBACKS.md`](V1_FALLBACKS.md) | Operator-side substitutes for the dormant V2 workflows (backups, TLS, breach timer) | Daily/weekly until V2 activated |
 
 ## Adding a new runbook

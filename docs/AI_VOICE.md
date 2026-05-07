@@ -1,8 +1,8 @@
 # AI Voice — Architecture V1
 
 > **Statut :** Production V1 (2026-04)
-> **Spec source :** `docs/archive/nl-reports-2026-04-17/reports/VOICE_V1_*.md` (mesures terrain), `.claude/skills/team/team-reports/2026-04-18-challenge-roadmap/`
-> **ADR liés :** `docs/adr/ADR-001-sse-streaming-deprecated.md`
+> **Spec source :** mesures latence terrain consolidées dans cette page (origine `docs/archive/` purgée 2026-05-07, voir git log si besoin du raw).
+> **ADR liés :** ADR-001-sse-streaming-deprecated supprimée 2026-05-03 (SSE streaming dropped pour V1, le pipeline voice est synchrone end-to-end).
 
 ## TL;DR
 
@@ -144,7 +144,7 @@ Décomposition à logger :
 ## Évolution V1.1 (out of scope V1)
 
 - **OpenAI Realtime WebRTC** — uniquement si latence V1 inacceptable.
-- **Streaming TTS chunks** (audio pendant LLM stream) — non viable sans SSE actif (cf. ADR-001).
+- **Streaming TTS chunks** (audio pendant LLM stream) — non viable sans SSE actif (SSE dropped pour V1 par décision archivée, voir git log `ADR-001-sse-streaming-deprecated` supprimé 2026-05-03).
 - **Multi-langue switch in-session** (FR ↔ EN).
 - **Multiple voices in-session** (V1 = 1 voix par défaut).
 - **Lock-screen integration** via `react-native-track-player`.

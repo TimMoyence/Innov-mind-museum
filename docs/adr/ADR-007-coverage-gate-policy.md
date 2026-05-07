@@ -1,6 +1,6 @@
 # ADR-007 — Coverage gate CI policy
 
-- **Status**: Proposed (2026-04-21)
+- **Status**: Accepted — Implemented (proposed 2026-04-21, shipped Phase 8 2026-05-04, pre-commit gate + CI hard-fail wired)
 - **Owner**: Platform / CI
 - **Scope**: museum-backend, museum-frontend, museum-web
 

@@ -15,15 +15,14 @@
 !docs/ROADMAP_PRODUCT.md
 !docs/ROADMAP_TEAM.md
 !docs/ROADMAP_FE_RN_BEST_PRACTICES.md
-!docs/SPRINT_2026-05-05_PLAN.md
 !docs/DOCS_INDEX.md
 !docs/UPTIME_MONITORING.md
 !docs/SOCIAL_AUTH_SETUP.md
-!docs/FEATURE_KNOWLEDGE_BASE_WIKIDATA.md
-!docs/CDN_CLOUDFLARE_SETUP.md
-!docs/HORIZONTAL_SCALING.md
 !docs/RELEASE_CHECKLIST.md
 !docs/AI_VOICE.md
+!docs/TECH_DEBT.md
+!docs/SPRINT_RECAP_2026-04-30_TO_2026-05-05.md
+!docs/GITHUB_ACTIONS_SHA_PINS.md
 !docs/adr/
 !docs/adr/**
 !docs/CONTRIBUTING.md
@@ -41,13 +40,15 @@
 !docs/observability/**
 !docs/security/
 !docs/security/**
+!docs/explications-sprint-2026-05-05/
+!docs/explications-sprint-2026-05-05/**
 
 # frontend docs
 !museum-frontend/docs/
 !museum-frontend/docs/ARCHITECTURE_MAP.md
 !museum-frontend/docs/QUALITY_GUIDE.md
-!museum-frontend/docs/DEPLOYMENT.md
 !museum-frontend/docs/NEXT_LEVEL_MOBILE_PRODUCTION_AND_TEST.md
+!museum-frontend/docs/IOS26_CRASH_DIAG.md
 
 # backend perf bench artifacts (EXPLAIN ANALYZE outputs + reports)
 !museum-backend/docs/
