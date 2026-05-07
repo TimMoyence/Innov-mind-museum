@@ -14,6 +14,10 @@ interface DisableRulesFile {
   rules: DisableRule[];
 }
 
+// `__dirname` is undefined under ESM (`"type": "module"` in package.json).
+// `import.meta.dirname` is the Node-22 native equivalent.
+const __dirname = import.meta.dirname;
+
 let cachedDisable: DisableRulesFile | null = null;
 function loadDisableRules(): DisableRulesFile {
   if (cachedDisable) return cachedDisable;

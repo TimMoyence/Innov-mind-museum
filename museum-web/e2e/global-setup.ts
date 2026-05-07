@@ -3,6 +3,9 @@ import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Client } from 'pg';
 
+// `__dirname` is undefined under ESM (`"type": "module"` in package.json).
+// `import.meta.dirname` is the Node-22 native equivalent.
+const __dirname = import.meta.dirname;
 const STORAGE_PATH = resolve(__dirname, 'playwright-storage', 'storageState.json');
 
 async function seedAdminUser(email: string, password: string): Promise<void> {
