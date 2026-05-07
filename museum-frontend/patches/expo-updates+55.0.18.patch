@@ -1,0 +1,19 @@
+diff --git a/node_modules/expo-updates/utils/build/createManifestForBuildAsync.js b/node_modules/expo-updates/utils/build/createManifestForBuildAsync.js
+index 6745c25..c544865 100644
+--- a/node_modules/expo-updates/utils/build/createManifestForBuildAsync.js
++++ b/node_modules/expo-updates/utils/build/createManifestForBuildAsync.js
+@@ -16,8 +16,13 @@ async function createManifestForBuildAsync(platform, projectRoot, destinationDir
+         (0, paths_1.resolveRelativeEntryPoint)(projectRoot, { platform }) ||
+         'index.js';
+     // Android uses absolute paths for the entry file, so we need to convert that to a relative path.
++    // Preserve .js extension when present — convertEntryPointToRelative() strips it on the assumption
++    // that Metro will re-resolve via package main field, which fails inside the embed bundler context
++    // for paths like node_modules/expo-router/entry (Metro 404). See expo-updates Android SDK 55 bug.
+     if (path_1.default.isAbsolute(entryFile)) {
+-        entryFile = (0, paths_1.convertEntryPointToRelative)(projectRoot, entryFile);
++        const rel = path_1.default.relative(projectRoot, entryFile);
++        const stripped = (0, paths_1.convertEntryPointToRelative)(projectRoot, entryFile);
++        entryFile = (rel.endsWith('.js') || rel.endsWith('.jsx') || rel.endsWith('.ts') || rel.endsWith('.tsx')) ? rel : stripped;
+     }
+     process.chdir(projectRoot);
+     const options = {

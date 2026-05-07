@@ -18,6 +18,7 @@ api.ts
 *.ipa
 /build/
 /build/Musaium.xcarchive/
+/build-logs/
 
 # npm cache (prevent accidental commit)
 .npm-cache/

@@ -19,7 +19,8 @@
       "channel": "preview",
       "env": {
         "APP_VARIANT": "preview",
-        "EXPO_PUBLIC_API_ENVIRONMENT": "staging"
+        "EXPO_PUBLIC_API_ENVIRONMENT": "staging",
+        "ENTRY_FILE": "node_modules/expo-router/entry.js"
       }
     },
     "internal": {
@@ -35,7 +36,8 @@
       "autoIncrement": true,
       "env": {
         "APP_VARIANT": "production",
-        "EXPO_PUBLIC_API_ENVIRONMENT": "production"
+        "EXPO_PUBLIC_API_ENVIRONMENT": "production",
+        "ENTRY_FILE": "node_modules/expo-router/entry.js"
       },
       "android": {
         "env": {
