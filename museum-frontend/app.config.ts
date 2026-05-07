@@ -328,6 +328,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ['./plugins/withNetworkSecurity', { variant }],
       './plugins/withFmtConstevalPatch',
       '@maplibre/maplibre-react-native',
+      // Bumps `org.gradle.jvmargs` to -Xmx6144m to keep D8 dex-merge under
+      // the new-architecture (Hermes V1, RN 0.83) heap pressure on CI runners.
+      // Kept last so any earlier plugin that mutates gradle.properties cannot
+      // overwrite the heap setting.
+      './plugins/withGradleJvmHeap',
     ],
     experiments: {
       typedRoutes: true,

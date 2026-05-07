@@ -53,19 +53,44 @@ async function loginAndSaveStorage(
   password: string,
   baseURL: string,
 ): Promise<void> {
+  // API-driven login. The prior UI-form flow was timing-fragile in CI: the
+  // browser-side `setAdminAuthzCookie()` (src/lib/auth.tsx:31) had to land
+  // before `context.storageState()` ran, otherwise the persisted state was
+  // missing `admin-authz` and every spec hit the Edge middleware redirect
+  // (src/middleware.ts:108-115) — 307 to /admin/login → no admin heading.
   const browser = await chromium.launch();
   const context = await browser.newContext();
-  const page = await context.newPage();
+  try {
+    const res = await context.request.post(`${baseURL}/api/auth/login`, {
+      data: { email, password },
+    });
+    if (!res.ok()) {
+      throw new Error(`API login failed (${res.status()}): ${await res.text()}`);
+    }
+    // The backend's setAuthCookies() emits access_token + refresh_token + csrf_token
+    // via Set-Cookie headers — context.request stores them in the shared cookie jar.
+    // We additionally set `admin-authz` here because in production it is set
+    // client-side by setAdminAuthzCookie() at src/lib/auth.tsx:31; keep this
+    // shape (name/value/path/sameSite/expires) in sync with that helper.
+    const url = new URL(baseURL);
+    await context.addCookies([
+      {
+        name: 'admin-authz',
+        value: '1',
+        domain: url.hostname,
+        path: '/',
+        sameSite: 'Lax',
+        expires: Math.floor(Date.now() / 1000) + 60 * 60 * 8,
+        httpOnly: false,
+        secure: url.protocol === 'https:',
+      },
+    ]);
 
-  await page.goto(`${baseURL}/en/admin/login`);
-  await page.getByLabel(/email/i).fill(email);
-  await page.getByLabel(/password/i).fill(password);
-  await page.getByRole('button', { name: /log in|sign in|connecter/i }).click();
-  await page.waitForURL(/\/en\/admin(\/|$)/, { timeout: 15_000 });
-
-  mkdirSync(resolve(__dirname, 'playwright-storage'), { recursive: true });
-  await context.storageState({ path: STORAGE_PATH });
-  await browser.close();
+    mkdirSync(resolve(__dirname, 'playwright-storage'), { recursive: true });
+    await context.storageState({ path: STORAGE_PATH });
+  } finally {
+    await browser.close();
+  }
 }
 
 export default async function globalSetup(config: FullConfig): Promise<void> {
