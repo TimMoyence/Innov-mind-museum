@@ -233,6 +233,15 @@ jobs:
       - name: Verify Maestro version
         run: maestro --version
 
+      - name: Install Colima + Docker (E37 — macos-latest has neither preinstalled)
+        # macos-latest GitHub runners ship without Docker Desktop / colima. The
+        # downstream `maestro-runner-setup.sh` calls `docker compose up`, which
+        # exits 127 on a clean runner. Install via brew, start colima with a
+        # small VM (~3-4 min cold), then docker / docker compose work natively.
+        run: |
+          brew install --quiet colima docker docker-compose
+          colima start --cpu 2 --memory 4 --disk 20
+
       - name: Boot backend (docker-compose + migrations + API)
         working-directory: museum-frontend
         run: ./scripts/maestro-runner-setup.sh
