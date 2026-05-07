@@ -15,10 +15,18 @@ interface HeaderProps {
 export default function Header({ dict, locale }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { scrollY } = useScroll();
+  // At scrollY=0 the header overlaps the hero's dark gradient AND the
+  // decorative primary-500/15 orb that bleeds through to the top-left.
+  // axe-core's color-contrast pass measures the pixel actually behind the
+  // text — without an explicit dark backdrop here, white brand text lands
+  // on the orb's near-white composite (#e2eafc) and fails 4.5:1.
+  // A 50%-opaque deep-slate fill keeps the visual "transparent" feel while
+  // making the rendered backdrop solid-dark for axe (composite over
+  // #0a0a0b stays ~#0a0a0b → white text → ~19:1).
   const headerBg = useTransform(
     scrollY,
     [0, 100],
-    ['rgba(255,255,255,0)', 'var(--fn-web-glass-heavy)'],
+    ['rgba(15,23,42,0.55)', 'var(--fn-web-glass-heavy)'],
   );
   const headerBorder = useTransform(
     scrollY,
