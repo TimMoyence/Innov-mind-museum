@@ -171,7 +171,12 @@ jobs:
 
       - name: Gradle assembleDebug (cache miss only)
         if: steps.cache-apk.outputs.cache-hit != 'true'
-        run: cd android && ./gradlew assembleDebug --no-daemon
+        # `--stacktrace --info` surfaces the actual D8 dex-merge conflict (which
+        # class / dex archive). Without them the previous run died with an
+        # empty `DexArchiveMergerException: Error while merging dex archives:`
+        # message and we couldn't pinpoint the offending dependency. The flags
+        # add a few seconds to the log; harmless for a 5-min cached path.
+        run: cd android && ./gradlew assembleDebug --no-daemon --stacktrace --info
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
