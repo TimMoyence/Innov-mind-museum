@@ -135,6 +135,7 @@ export default function UsersPage() {
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200 sm:max-w-xs"
         />
         <select
+          aria-label={adminDict.usersPage.columnRole}
           value={roleFilter}
           onChange={(e) => {
             setRoleFilter(e.target.value as UserRole | '');
@@ -286,6 +287,7 @@ export default function UsersPage() {
             </p>
 
             <select
+              aria-label={adminDict.usersPage.changeRole}
               value={newRole}
               onChange={(e) => {
                 setNewRole(e.target.value as UserRole);

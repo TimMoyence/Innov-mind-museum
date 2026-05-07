@@ -98,7 +98,7 @@ export default function AdminDashboardPage() {
                 key={card.labelKey}
                 className={`rounded-xl border border-primary-100 p-6 ${card.color}`}
               >
-                <p className="text-sm font-medium opacity-80">
+                <p className="text-sm font-medium">
                   {adminDict.dashboardPage.stats[card.labelKey]}
                 </p>
                 <p className="mt-2 text-3xl font-bold">
