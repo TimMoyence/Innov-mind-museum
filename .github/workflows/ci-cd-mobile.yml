@@ -115,9 +115,12 @@ jobs:
     needs: quality
     runs-on: macos-latest
     # E17: gradle/actions/setup-gradle caches ~/.gradle/caches + wrapper across
-    # runs, so cold first run still ~30 min, warm runs ~3-5 min. 25 min is the
-    # "should be enough with warm cache" budget — bump back if cold runs exceed.
-    timeout-minutes: 25
+    # runs, so cold first run still ~30 min, warm runs ~3-5 min.
+    # E34: bumped 25 → 35 after run 25508936326 hit the 25min cap on the cold
+    # path with the new 6GB heap (heap fixed OOM but D8 :app:mergeExtDexDebug
+    # still wants ~18-22 min wall on cold cache for 4 ABIs). Warm cache stays
+    # well under 5 min, so this only widens the cold-path budget.
+    timeout-minutes: 35
     defaults:
       run:
         working-directory: museum-frontend

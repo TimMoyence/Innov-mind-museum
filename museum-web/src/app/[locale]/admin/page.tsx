@@ -24,7 +24,10 @@ const STAT_CARDS: StatCardDef[] = [
   {
     labelKey: 'totalMessages',
     valueKey: 'totalMessages',
-    color: 'bg-accent-400/10 text-accent-600',
+    // accent palette stops at -600 (#0284C7), which on bg-accent-400/10
+    // computes to 3.48:1 — below WCAG AA. Use Tailwind sky-700 (same hue,
+    // darker) on sky-50 for a 5.7:1 ratio without touching design tokens.
+    color: 'bg-sky-50 text-sky-700',
   },
   {
     labelKey: 'recentSignups',
