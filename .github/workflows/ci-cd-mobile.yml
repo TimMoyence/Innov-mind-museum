@@ -233,17 +233,29 @@ jobs:
       - name: Verify Maestro version
         run: maestro --version
 
-      - name: Install Colima + Docker (E37 — macos-latest has neither preinstalled)
-        # macos-latest GitHub runners ship without Docker Desktop / colima. The
-        # downstream `maestro-runner-setup.sh` calls `docker compose up`, which
-        # exits 127 on a clean runner. Install via brew, start colima with a
-        # small VM (~3-4 min cold), then docker / docker compose work natively.
+      - name: Install + start native Postgres (E37bis — macos-latest has no Docker, Colima/VZ fails on hosted M1)
+        # E37 (Colima) failed because the macos-latest hosted M1 runner can't
+        # nest the VZ driver. Switching to native Homebrew Postgres avoids the
+        # VM entirely and is faster (no boot, ~10s readiness).
         run: |
-          brew install --quiet colima docker docker-compose
-          colima start --cpu 2 --memory 4 --disk 20
+          brew install --quiet postgresql@16
+          brew services start postgresql@16
+          # Wait for pg_isready, then create the role + database the BE expects
+          for i in $(seq 1 30); do
+            if /opt/homebrew/opt/postgresql@16/bin/pg_isready -h localhost -p 5432 > /dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          /opt/homebrew/opt/postgresql@16/bin/createuser -s museum_dev || true
+          /opt/homebrew/opt/postgresql@16/bin/psql -d postgres -c "ALTER USER museum_dev WITH PASSWORD 'museum_dev_password';"
+          /opt/homebrew/opt/postgresql@16/bin/createdb -O museum_dev museum_dev || true
 
-      - name: Boot backend (docker-compose + migrations + API)
+      - name: Boot backend (native PG + migrations + API)
         working-directory: museum-frontend
+        env:
+          SKIP_DOCKER_COMPOSE: '1'
+          DB_PORT: '5432'
         run: ./scripts/maestro-runner-setup.sh
 
       - name: Enable KVM (for hardware-accelerated emulator)
