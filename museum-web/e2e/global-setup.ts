@@ -1,4 +1,5 @@
 import { chromium, request, type FullConfig } from '@playwright/test';
+import { randomBytes } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Client } from 'pg';
@@ -66,7 +67,11 @@ async function loginAndSaveStorage(
 
 export default async function globalSetup(config: FullConfig): Promise<void> {
   const email = `e2e-admin-${Date.now()}@test.musaium.dev`;
-  const password = 'AdminTest123!';
+  // Random per-run password — defeats backend's HIBP breach check (the prior
+  // hard-coded `AdminTest123!` is in the HaveIBeenPwned corpus and registered
+  // with 400 PASSWORD_BREACHED). 32 random bytes → 64 hex chars, well above
+  // the password policy floor and impossible to be in any breach list.
+  const password = `E2e!${randomBytes(32).toString('hex')}A`;
   const baseURL = config.projects[0]?.use.baseURL ?? 'http://localhost:3001';
 
   await seedAdminUser(email, password);
