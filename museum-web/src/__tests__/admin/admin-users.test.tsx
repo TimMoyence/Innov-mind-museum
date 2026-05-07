@@ -120,6 +120,13 @@ describe('UsersPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
+    // Wipe the admin-authz cookie that a previous test's login() may have
+    // set on `document.cookie`. AuthProvider keys its mount-time
+    // /api/auth/me hydration on this cookie — leaving it set leaks into
+    // the next test and consumes the `mockApiGet.mockResolvedValueOnce`
+    // queued for the users-list call.
+    document.cookie = 'admin-authz=; Path=/; Max-Age=0; SameSite=Lax';
+
     // Default: apiPost resolves for login (admin user) — AuthSessionResponse shape
     mockApiPost.mockResolvedValue({
       accessToken: 'at',

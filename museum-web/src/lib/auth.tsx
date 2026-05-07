@@ -6,12 +6,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAdminDict } from '@/lib/admin-dictionary';
-import { apiPost, setTokens, clearTokens, registerLogoutHandler } from '@/lib/api';
+import { apiGet, apiPost, setTokens, clearTokens, registerLogoutHandler } from '@/lib/api';
 import type { AuthSessionResponse } from '@/lib/admin-types';
 
 // ---------------------------------------------------------------------------
@@ -42,6 +43,11 @@ function clearAdminAuthzCookie(): void {
   document.cookie = `${ADMIN_AUTHZ_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
+function hasAdminAuthzCookie(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.cookie.split('; ').some((c) => c.startsWith(`${ADMIN_AUTHZ_COOKIE}=1`));
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -61,6 +67,8 @@ interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  /** True while the mount-time `/api/auth/me` probe is in flight. */
+  isHydrating: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -75,10 +83,60 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 // Provider
 // ---------------------------------------------------------------------------
 
+interface AuthMeResponse {
+  user: {
+    id: number;
+    email: string;
+    firstname: string | null;
+    lastname: string | null;
+    role: string;
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // `isHydrating` is the mount-time `/api/auth/me` probe state. Kept
+  // separate from `isLoading` so LoginForm's submit-button text doesn't
+  // flicker through "..." on first render of the login page (where the
+  // probe never runs because admin-authz is absent).
+  const [isHydrating, setIsHydrating] = useState(true);
   const router = useRouter();
+
+  // Hydrate session from the HttpOnly access_token cookie on mount.
+  // Gated on the readable `admin-authz` hint cookie so the public-route
+  // / unit-test cases (no admin session ever) skip the fetch entirely
+  // and resolve to `isLoading=false` synchronously.
+  // The mutable ref is the standard "ignore late response after unmount"
+  // pattern — `let cancelled = false` would trip
+  // `@typescript-eslint/no-unnecessary-condition` because the linter
+  // can't see that cleanup runs in a different tick.
+  const cancelledRef = useRef(false);
+  useEffect(() => {
+    cancelledRef.current = false;
+    if (!hasAdminAuthzCookie()) {
+      setIsHydrating(false);
+      return;
+    }
+    void (async () => {
+      try {
+        const data = await apiGet<AuthMeResponse>('/api/auth/me');
+        if (cancelledRef.current) return;
+        const u = data.user;
+        const nameParts = [u.firstname, u.lastname].filter(Boolean);
+        const name = nameParts.length > 0 ? nameParts.join(' ') : u.email;
+        setUser({ id: u.id, email: u.email, name, role: u.role as UserRole });
+      } catch {
+        if (cancelledRef.current) return;
+        setUser(null);
+      } finally {
+        if (!cancelledRef.current) setIsHydrating(false);
+      }
+    })();
+    return () => {
+      cancelledRef.current = true;
+    };
+  }, []);
 
   const logout = useCallback(() => {
     clearTokens();
@@ -121,10 +179,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isAuthenticated: user !== null,
       isLoading,
+      isHydrating,
       login,
       logout,
     }),
-    [user, isLoading, login, logout],
+    [user, isLoading, isHydrating, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -147,19 +206,20 @@ export function useAuth(): AuthContextValue {
 // ---------------------------------------------------------------------------
 
 export function AuthGuard({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isHydrating } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const blocking = isLoading || isHydrating;
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!blocking && !isAuthenticated) {
       // Derive locale from pathname (e.g. /fr/admin/… → fr)
       const locale = pathname.split('/')[1] ?? 'fr';
       router.replace(`/${locale}/admin/login`);
     }
-  }, [isAuthenticated, isLoading, router, pathname]);
+  }, [isAuthenticated, blocking, router, pathname]);
 
-  if (isLoading) {
+  if (blocking) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
@@ -184,19 +244,20 @@ interface RoleGuardProps {
 }
 
 export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, isHydrating } = useAuth();
   const adminDict = useAdminDict();
   const router = useRouter();
   const pathname = usePathname();
+  const blocking = isLoading || isHydrating;
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!blocking && !isAuthenticated) {
       const locale = pathname.split('/')[1] ?? 'fr';
       router.replace(`/${locale}/admin/login`);
     }
-  }, [isAuthenticated, isLoading, router, pathname]);
+  }, [isAuthenticated, blocking, router, pathname]);
 
-  if (isLoading) {
+  if (blocking) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
