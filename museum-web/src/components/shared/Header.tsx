@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { motion, useMotionValueEvent, useScroll, useTransform } from 'framer-motion';
 import type { Dictionary, Locale } from '@/lib/i18n';
 import LanguageSwitcher from '@/components/shared/LanguageSwitcher';
@@ -13,6 +14,9 @@ interface HeaderProps {
 }
 
 export default function Header({ dict, locale }: HeaderProps) {
+  // All hooks first — admin-route bail-out happens after hook ordering is
+  // locked in, to satisfy `react-hooks/rules-of-hooks`.
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const { scrollY } = useScroll();
   // At scrollY=0 the header overlaps the hero's dark gradient AND the
@@ -45,6 +49,13 @@ export default function Header({ dict, locale }: HeaderProps) {
     { href: `/${locale}/support`, label: dict.nav.support },
     { href: `/${locale}/privacy`, label: dict.nav.privacy },
   ];
+
+  // Marketing nav must not render on the admin shell — admin routes mount
+  // their own AdminShell chrome (sidebar + auth) and the marketing header
+  // both clashes visually and trips axe color-contrast on the white admin
+  // background. Locale-prefix-tolerant: matches `/<locale>/admin` and
+  // `/<locale>/admin/...`.
+  if (/\/[a-z]{2}\/admin(\/|$)/.test(pathname)) return null;
 
   return (
     <motion.header

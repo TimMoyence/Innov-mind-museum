@@ -1,5 +1,8 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import type { Dictionary, Locale } from '@/lib/i18n';
 
 interface FooterProps {
@@ -8,8 +11,13 @@ interface FooterProps {
 }
 
 export default function Footer({ dict, locale }: FooterProps) {
+  const pathname = usePathname();
   const year = new Date().getFullYear();
   const copyright = dict.footer.copyright.replace('{year}', String(year));
+
+  // Mirror Header: admin shell ships its own chrome; the marketing footer
+  // is wrong context on /<locale>/admin/*.
+  if (/\/[a-z]{2}\/admin(\/|$)/.test(pathname)) return null;
 
   return (
     <footer className="border-t border-primary-100/50 bg-white/50 backdrop-blur-sm">
