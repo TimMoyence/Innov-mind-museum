@@ -19,18 +19,21 @@ export default function Header({ dict, locale }: HeaderProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const { scrollY } = useScroll();
-  // At scrollY=0 the header overlaps the hero's dark gradient AND the
-  // decorative primary-500/15 orb that bleeds through to the top-left.
-  // axe-core's color-contrast pass measures the pixel actually behind the
-  // text — without an explicit dark backdrop here, white brand text lands
-  // on the orb's near-white composite (#e2eafc) and fails 4.5:1.
-  // A 50%-opaque deep-slate fill keeps the visual "transparent" feel while
-  // making the rendered backdrop solid-dark for axe (composite over
-  // #0a0a0b stays ~#0a0a0b → white text → ~19:1).
+  // At scrollY=0 the header sits over different page contexts:
+  //   /<locale>            — dark hero gradient (#0a0a0b)
+  //   /<locale>/support    — light bg
+  //   /<locale>/privacy    — light bg
+  // axe-core composites whatever's actually rendered, so a translucent
+  // backdrop turns into mid-gray on light routes and fails 4.5:1 against
+  // text-white. A 90%-opaque deep-slate keeps the "soft glass" feel
+  // (composite still hints at the page below) but is solid-enough that
+  // axe sees a near-solid dark backdrop on every public route.
+  // Composite math vs white: 0.9*#0F172A + 0.1*#FFFFFF ≈ #272A3E
+  // (12.6:1 vs white text). Vs hero #0a0a0b: ≈ #0e1024 (16:1). Both pass.
   const headerBg = useTransform(
     scrollY,
     [0, 100],
-    ['rgba(15,23,42,0.55)', 'var(--fn-web-glass-heavy)'],
+    ['rgba(15,23,42,0.9)', 'var(--fn-web-glass-heavy)'],
   );
   const headerBorder = useTransform(
     scrollY,
