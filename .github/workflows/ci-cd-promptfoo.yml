@@ -40,7 +40,15 @@ jobs:
           --health-retries 5
 
     env:
+      # data-source.ts reads DB_* (env.ts L53-57) — not DATABASE_URL.
+      # The host-side postgres service is mapped to :5433, so DB_PORT must
+      # follow it; the previous config silently fell back to 5432 → ECONNREFUSED.
       DATABASE_URL: postgresql://musaium:musaium_ci@localhost:5433/musaium
+      DB_HOST: localhost
+      DB_PORT: '5433'
+      DB_USER: musaium
+      DB_PASSWORD: musaium_ci
+      PGDATABASE: musaium
       DB_SYNCHRONIZE: 'false'
       JWT_ACCESS_SECRET: ci-access-secret-for-promptfoo-only
       JWT_REFRESH_SECRET: ci-refresh-secret-for-promptfoo-only
