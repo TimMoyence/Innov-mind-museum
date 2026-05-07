@@ -114,9 +114,10 @@ jobs:
   prebuild:
     needs: quality
     runs-on: macos-latest
-    # Cold-cache Gradle assembleDebug on macOS runner can exceed 20 min;
-    # bumped to 35 to give headroom. Warm-cache run is ~3 min.
-    timeout-minutes: 35
+    # E17: gradle/actions/setup-gradle caches ~/.gradle/caches + wrapper across
+    # runs, so cold first run still ~30 min, warm runs ~3-5 min. 25 min is the
+    # "should be enough with warm cache" budget — bump back if cold runs exceed.
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: museum-frontend
@@ -154,6 +155,19 @@ jobs:
       - name: Expo prebuild Android (cache miss only)
         if: steps.cache-apk.outputs.cache-hit != 'true'
         run: npx expo prebuild --platform android --clean
+
+      - name: Setup Gradle (cache deps, cache miss only)
+        # E17: caches ~/.gradle/caches/modules-2 (~1-2 GB) + ~/.gradle/wrapper
+        # (~150 MB) keyed on **/*.gradle*, **/gradle-wrapper.properties.
+        # First run still cold (writes cache); subsequent cold-source runs warm-
+        # restore in ~30s, cutting Gradle assembleDebug from ~35min → ~5min.
+        # GRADLE_ENCRYPTION_KEY secret would encrypt the cache; left out for
+        # now (works unencrypted) — future hardening when secret is provisioned.
+        if: steps.cache-apk.outputs.cache-hit != 'true'
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a  # v4.4.3
+        with:
+          cache-read-only: false
+          build-root-directory: museum-frontend/android
 
       - name: Gradle assembleDebug (cache miss only)
         if: steps.cache-apk.outputs.cache-hit != 'true'
