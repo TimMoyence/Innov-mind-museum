@@ -129,7 +129,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: APP_NAME,
     slug: APP_SLUG,
-    version: '1.3.0',
+    version: '1.2.1',
     orientation: 'portrait',
     icon: BRAND_ICON,
     scheme: APP_SCHEME,

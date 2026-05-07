@@ -422,7 +422,7 @@ PODS:
     - React-utils
     - ReactNativeDependencies
     - Yoga
-  - React-Core-prebuilt (0.83.4):
+  - React-Core-prebuilt (0.83.6):
     - ReactNativeDependencies
   - React-Core/CoreModulesHeaders (0.83.6):
     - hermes-engine
@@ -1865,6 +1865,30 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - react-native-ssl-public-key-pinning (1.2.6):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-RCTNetwork
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - TrustKit
+    - Yoga
   - react-native-webview (13.16.0):
     - hermes-engine
     - RCTRequired
@@ -2613,6 +2637,7 @@ PODS:
   - Sentry (9.11.0):
     - Sentry/Core (= 9.11.0)
   - Sentry/Core (9.11.0)
+  - TrustKit (3.0.7)
   - Yoga (0.0.0)
   - ZXingObjC/Core (3.6.9)
   - ZXingObjC/OneD (3.6.9):
@@ -2705,6 +2730,7 @@ DEPENDENCIES:
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
+  - react-native-ssl-public-key-pinning (from `../node_modules/react-native-ssl-public-key-pinning`)
   - react-native-webview (from `../node_modules/react-native-webview`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-networking (from `../node_modules/react-native/ReactCommon/react/networking`)
@@ -2768,6 +2794,7 @@ SPEC REPOS:
     - SDWebImageSVGCoder
     - SDWebImageWebPCoder
     - Sentry
+    - TrustKit
     - ZXingObjC
 
 EXTERNAL SOURCES:
@@ -2938,6 +2965,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-community/netinfo"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
+  react-native-ssl-public-key-pinning:
+    :path: "../node_modules/react-native-ssl-public-key-pinning"
   react-native-webview:
     :path: "../node_modules/react-native-webview"
   React-NativeModulesApple:
@@ -3092,7 +3121,7 @@ SPEC CHECKSUMS:
   React: 9b033c7a99e1c8eec40960b6b2e6844e011e8bd1
   React-callinvoker: f64c8d57f45173835b6b9891cda27f1625551972
   React-Core: 341863a2597c4a2320f916b4232d280cb8a28e4b
-  React-Core-prebuilt: bf779884bde18d5921f01bfe479f756cc9e98861
+  React-Core-prebuilt: 9695887ba9c7f5415c38eab89f6c2ccf63cf5072
   React-CoreModules: 9370769c9b2b1732c58960687f4d50d9d3510efc
   React-cxxreact: 41ae74bd9eab80af9c5da6a9b4934eb97e2c7569
   React-debug: eb0f19ff879ad3870dc760b6c21ad56cbb3e4b98
@@ -3122,6 +3151,7 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: 203b41906d627dac7d697bccba6137b630951fae
   react-native-netinfo: f852c868bf5175e46165c7e4db48a204a95c3800
   react-native-safe-area-context: ae7587b95fb580d1800c5b0b2a7bd48c2868e67a
+  react-native-ssl-public-key-pinning: 4989ec98b570302ea9aede25b8baa0361a9ff448
   react-native-webview: 3e303e80cadb5f17118c8c1502aa398e9287e415
   React-NativeModulesApple: 9068613f7650828eed29ead6fc0d0a1620117e6a
   React-networking: 233dd85e1b890ca191f64f0896153165571b3039
@@ -3170,6 +3200,7 @@ SPEC CHECKSUMS:
   SDWebImageSVGCoder: 15a300a97ec1c8ac958f009c02220ac0402e936c
   SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
   Sentry: 7561357fd868b329d1aab8152449733b2191ed6c
+  TrustKit: 1050f3ce0595f8ed775f1237b7f590e3a4f93e91
   Yoga: e41d64347f52d634dd8c2f6bac33f95081959fd3
   ZXingObjC: 8898711ab495761b2dbbdec76d90164a6d7e14c5
 

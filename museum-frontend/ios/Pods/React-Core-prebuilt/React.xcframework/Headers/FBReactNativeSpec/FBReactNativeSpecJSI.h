@@ -281,7 +281,9 @@ protected:
     methodMap_["fixMappingOfEventPrioritiesBetweenFabricAndReact"] = MethodMetadata {.argCount = 0, .invoker = __fixMappingOfEventPrioritiesBetweenFabricAndReact};
     methodMap_["fuseboxAssertSingleHostState"] = MethodMetadata {.argCount = 0, .invoker = __fuseboxAssertSingleHostState};
     methodMap_["fuseboxEnabledRelease"] = MethodMetadata {.argCount = 0, .invoker = __fuseboxEnabledRelease};
+    methodMap_["fuseboxFrameRecordingEnabled"] = MethodMetadata {.argCount = 0, .invoker = __fuseboxFrameRecordingEnabled};
     methodMap_["fuseboxNetworkInspectionEnabled"] = MethodMetadata {.argCount = 0, .invoker = __fuseboxNetworkInspectionEnabled};
+    methodMap_["fuseboxScreenshotCaptureEnabled"] = MethodMetadata {.argCount = 0, .invoker = __fuseboxScreenshotCaptureEnabled};
     methodMap_["hideOffscreenVirtualViewsOnIOS"] = MethodMetadata {.argCount = 0, .invoker = __hideOffscreenVirtualViewsOnIOS};
     methodMap_["overrideBySynchronousMountPropsAtMountingAndroid"] = MethodMetadata {.argCount = 0, .invoker = __overrideBySynchronousMountPropsAtMountingAndroid};
     methodMap_["perfIssuesEnabled"] = MethodMetadata {.argCount = 0, .invoker = __perfIssuesEnabled};
@@ -718,11 +720,25 @@ private:
     return bridging::callFromJs<bool>(rt, &T::fuseboxEnabledRelease,  static_cast<NativeReactNativeFeatureFlagsCxxSpec*>(&turboModule)->jsInvoker_, static_cast<T*>(&turboModule));
   }
 
+  static jsi::Value __fuseboxFrameRecordingEnabled(jsi::Runtime &rt, TurboModule &turboModule, const jsi::Value* /*args*/, size_t /*count*/) {
+    static_assert(
+      bridging::getParameterCount(&T::fuseboxFrameRecordingEnabled) == 1,
+      "Expected fuseboxFrameRecordingEnabled(...) to have 1 parameters");
+    return bridging::callFromJs<bool>(rt, &T::fuseboxFrameRecordingEnabled,  static_cast<NativeReactNativeFeatureFlagsCxxSpec*>(&turboModule)->jsInvoker_, static_cast<T*>(&turboModule));
+  }
+
   static jsi::Value __fuseboxNetworkInspectionEnabled(jsi::Runtime &rt, TurboModule &turboModule, const jsi::Value* /*args*/, size_t /*count*/) {
     static_assert(
       bridging::getParameterCount(&T::fuseboxNetworkInspectionEnabled) == 1,
       "Expected fuseboxNetworkInspectionEnabled(...) to have 1 parameters");
     return bridging::callFromJs<bool>(rt, &T::fuseboxNetworkInspectionEnabled,  static_cast<NativeReactNativeFeatureFlagsCxxSpec*>(&turboModule)->jsInvoker_, static_cast<T*>(&turboModule));
+  }
+
+  static jsi::Value __fuseboxScreenshotCaptureEnabled(jsi::Runtime &rt, TurboModule &turboModule, const jsi::Value* /*args*/, size_t /*count*/) {
+    static_assert(
+      bridging::getParameterCount(&T::fuseboxScreenshotCaptureEnabled) == 1,
+      "Expected fuseboxScreenshotCaptureEnabled(...) to have 1 parameters");
+    return bridging::callFromJs<bool>(rt, &T::fuseboxScreenshotCaptureEnabled,  static_cast<NativeReactNativeFeatureFlagsCxxSpec*>(&turboModule)->jsInvoker_, static_cast<T*>(&turboModule));
   }
 
   static jsi::Value __hideOffscreenVirtualViewsOnIOS(jsi::Runtime &rt, TurboModule &turboModule, const jsi::Value* /*args*/, size_t /*count*/) {

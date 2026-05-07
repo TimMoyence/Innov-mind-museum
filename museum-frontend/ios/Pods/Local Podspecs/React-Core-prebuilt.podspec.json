@@ -1,6 +1,6 @@
 {
   "name": "React-Core-prebuilt",
-  "version": "0.83.4",
+  "version": "0.83.6",
   "summary": "The core of React Native prebuilt frameworks.",
   "homepage": "https://reactnative.dev/",
   "license": "MIT",
@@ -9,7 +9,7 @@
     "ios": "15.1"
   },
   "source": {
-    "http": "file:///Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/ios/Pods/ReactNativeCore-artifacts/reactnative-core-0.83.4-debug.tar.gz"
+    "http": "file:///Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/ios/Pods/ReactNativeCore-artifacts/reactnative-core-0.83.6-debug.tar.gz"
   },
   "vendored_frameworks": "React.xcframework",
   "preserve_paths": "**/*.*",
@@ -30,7 +30,7 @@
   "script_phases": {
     "name": "[RNDeps] Replace React Native Core for the right configuration, if needed",
     "execution_position": "before_compile",
-    "script": "      . \"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\n\n      CONFIG=\"Release\"\n      if echo $GCC_PREPROCESSOR_DEFINITIONS | grep -q \"DEBUG=1\"; then\n        CONFIG=\"Debug\"\n      fi\n\n      \"$NODE_BINARY\" \"$REACT_NATIVE_PATH/scripts/replace-rncore-version.js\" -c \"$CONFIG\" -r \"0.83.4\" -p \"$PODS_ROOT\"\n",
+    "script": "      . \"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\n\n      CONFIG=\"Release\"\n      if echo $GCC_PREPROCESSOR_DEFINITIONS | grep -q \"DEBUG=1\"; then\n        CONFIG=\"Debug\"\n      fi\n\n      \"$NODE_BINARY\" \"$REACT_NATIVE_PATH/scripts/replace-rncore-version.js\" -c \"$CONFIG\" -r \"0.83.6\" -p \"$PODS_ROOT\"\n",
     "always_out_of_date": "1"
   }
 }

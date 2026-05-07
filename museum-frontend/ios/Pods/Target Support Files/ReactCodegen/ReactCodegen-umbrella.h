@@ -80,6 +80,8 @@
 #import "rnscreensJSI.h"
 #import "RNSentrySpec/RNSentrySpec.h"
 #import "RNSentrySpecJSI.h"
+#import "RNSslPublicKeyPinningSpec/RNSslPublicKeyPinningSpec.h"
+#import "RNSslPublicKeyPinningSpecJSI.h"
 #import "rnsvg/rnsvg.h"
 #import "rnsvgJSI.h"
 #import "rnworklets/rnworklets.h"

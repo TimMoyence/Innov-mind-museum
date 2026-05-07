@@ -24,6 +24,10 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | Doc | Path |
 |---|---|
 | ADRs (002-035) | [`docs/adr/`](adr/) |
+| Architecture (BE hex / FE Expo / Web Next.js) | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) |
+| Phase history (test/quality hardening 2-11) | [`docs/PHASE_HISTORY.md`](PHASE_HISTORY.md) |
+| Test discipline — DRY factories | [`docs/TEST_FACTORIES.md`](TEST_FACTORIES.md) |
+| ESLint discipline | [`docs/LINT_DISCIPLINE.md`](LINT_DISCIPLINE.md) |
 | Tech debts trackés | [`docs/TECH_DEBT.md`](TECH_DEBT.md) |
 | AI Voice pipeline V1 | [`docs/AI_VOICE.md`](AI_VOICE.md) |
 | Knowledge Base (Wikidata) | [`docs/adr/ADR-035-knowledge-base-wikidata.md`](adr/ADR-035-knowledge-base-wikidata.md) |

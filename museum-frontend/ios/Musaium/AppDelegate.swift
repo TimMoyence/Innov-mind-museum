@@ -109,13 +109,6 @@ enum RNCrashCapture {
       }
       appendEvent(entry)
       NSLog("[MUSAIUM_INIT] phase=%@ ts=%@", phase, isoNow())
-
-      if SentrySDK.isEnabled {
-        let crumb = Breadcrumb(level: .info, category: "rn.init")
-        crumb.message = phase
-        crumb.data = details
-        SentrySDK.addBreadcrumb(crumb)
-      }
     }
   }
 

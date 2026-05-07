@@ -16,21 +16,16 @@ Monorepo, three independent apps:
 
 ## Roadmap (vivante, double)
 
-Source de vérité unique :
 - **`docs/ROADMAP_PRODUCT.md`** — features produit, OKR Q2-2026, NOW/NEXT/LATER. Coche `[x]` au merge.
 - **`docs/ROADMAP_TEAM.md`** — orchestrateur /team v13, OKR cost+quality, T1.x backlog.
 
-Réécrites complètement chaque sprint (4 semaines). Snapshots précédents = `git log -- docs/ROADMAP_*.md`. CHAQUE feature non-trivial passe par `/team` Spec Kit (spec.md + design.md + tasks.md). Le dispatcher `/team` lit ces 2 fichiers en début de cycle et coche au merge (cf. ROADMAP_TEAM §T1.6).
+Réécrites complètement chaque sprint (4 semaines). Snapshots précédents = `git log -- docs/ROADMAP_*.md`. CHAQUE feature non-trivial passe par `/team` Spec Kit (spec.md + design.md + tasks.md). Le dispatcher `/team` lit ces 2 fichiers en début de cycle et coche au merge.
 
-Index docs : **`docs/DOCS_INDEX.md`**.
+Index docs : **`docs/DOCS_INDEX.md`**. Tech debts ouverts : **`docs/TECH_DEBT.md`**.
 
-Tech debts ouverts trackés : **`docs/TECH_DEBT.md`**.
+Sprint debrief pédagogique 2026-04-30 → 2026-05-05 : **`docs/explications-sprint-2026-05-05/`** (22 fichiers, ~6200 lignes en français).
 
-Sprint debrief pédagogique du sprint 2026-04-30 → 2026-05-05 : **`docs/explications-sprint-2026-05-05/`** (22 fichiers, ~6200 lignes en français, "professeur explicatif"). Lire `README.md` du dossier pour la table des matières.
-
-Sprint scratch antérieur (PROGRESS_TRACKER, SPRINT_LOG, NL reports, plans 2026-04-17, audits 2026-04-01/02, ROADMAP_V2, walk spec, superpowers plans/specs, V12 W1-W8 plans, banking-grade design, NL_MASTER_PLAN, PROD_10_10) supprimé 2026-04-30 / 2026-05-03 / 2026-05-07 (cleanup complet de `docs/archive/` après consolidation des 3 tech debts dans `TECH_DEBT.md` + extension d'ADR-015 avec les seuils Phase A→B→C). Voir git history pour historique brut.
-
-Post-2026-04-20 runtime tracking: `.claude/tasks/` (task lists) + `.claude/skills/team/team-reports/` (runtime `/team` runs).
+Post-2026-04-20 runtime tracking : `.claude/tasks/` + `.claude/skills/team/team-reports/`.
 
 ## Common Commands
 
@@ -90,223 +85,24 @@ pnpm build                       # build design tokens → museum-frontend/share
 ### CI
 
 GitHub Actions workflows (`.github/workflows/`):
-- `ci-cd-backend.yml` — quality gate (tsc + ESLint + tests + OpenAPI validate + audit) → E2E (PR/nightly) → deploy prod (push main) / staging (push staging) w/ Trivy scan + Sentry release + smoke test
-- `ci-cd-web.yml` — quality gate (lint + build + test + audit) → Lighthouse CI (PR) → deploy Docker/GHCR → VPS (push main)
-- `ci-cd-mobile.yml` — quality gate (Expo Doctor + OpenAPI sync + audit + i18n + lint + tests + shard-manifest sentinel) → Maestro Android matrix PR (4 shards) + iOS nightly cron → EAS build + store submit (dispatch/tag)
-- `_deploy-backend.yml` — reusable deploy workflow (called by ci-cd-backend)
+- `ci-cd-backend.yml` — quality gate (tsc + ESLint + tests + OpenAPI validate + audit) → E2E (PR/nightly) → deploy prod (push main) / staging (push staging) w/ Trivy + Sentry + smoke
+- `ci-cd-web.yml` — quality (lint + build + test + audit) → Lighthouse CI (PR) → deploy Docker/GHCR → VPS
+- `ci-cd-mobile.yml` — quality (Expo Doctor + OpenAPI sync + audit + i18n + lint + tests + shard-manifest sentinel) → Maestro Android matrix (4 shards) + iOS nightly cron → EAS build + store submit
+- `_deploy-backend.yml` — reusable deploy workflow
 - `deploy-privacy-policy.yml` — privacy policy static page deploy
-- `codeql.yml` — CodeQL security analysis (security-extended + security-and-quality)
-- `semgrep.yml` — SAST static analysis scanning
+- `codeql.yml` — CodeQL security analysis
+- `semgrep.yml` — SAST static analysis
 
-### Maestro mobile E2E (Phase 2)
-
-- 11 flows in `museum-frontend/.maestro/`, sharded 4 ways for PR matrix Android runs (`auth | chat | museum | settings`). Shard manifest at `museum-frontend/.maestro/shards.json`.
-- Self-hosted on `macos-latest` GitHub runners — no Maestro Cloud.
-- PR pipeline: `prebuild` (cached APK) → 4× `maestro-shard` (parallel) → `maestro-summary` PR comment.
-- iOS nightly (03:17 UTC cron) runs the full set sequentially in `maestro-ios-nightly`.
-- Backend: docker-compose stack on the runner. V2 will swap to public staging.
-- New flow files MUST be added to `shards.json`; the `maestro-shard-manifest.mjs` sentinel in the `quality` job rejects PRs that violate this.
-- Helper scripts: `museum-frontend/scripts/maestro-runner-setup.sh` (backend boot), `museum-frontend/scripts/maestro-run-shard.sh` (flow runner). Bats-tested.
-
-### Web admin Playwright + a11y (Phase 3)
-
-- 4 admin flow specs in `museum-web/e2e/flows/` (admin-login, users, audit-logs, reports-moderation).
-- 6 a11y specs in `museum-web/e2e/a11y/` running real `@axe-core/playwright` against WCAG 2.1 AA: 3 public routes (`/en`, `/en/support`, `/en/privacy`) + 3 admin routes (`/en/admin/login`, `/en/admin`, `/en/admin/users`).
-- `globalSetup` registers a fresh admin user via real `/api/auth/register`, promotes role via DB UPDATE, logs in via the real LoginForm, and saves `storageState.json` for reuse across all flow + admin a11y specs.
-- PR pipeline: `playwright-pr` job runs Chromium only (~5–7 min wall clock); fails the PR on flow regression or a11y violation.
-- Nightly cron (03:23 UTC): `playwright-nightly` job runs the full 3-browser matrix (chromium + firefox + webkit).
-- a11y disable-rules baseline at `museum-web/e2e/a11y/_disable-rules.json`. Vitest cap test enforces baseline length ≤ `PHASE_3_DISABLE_RULES_CAP` (currently 0; only shrinks).
-
-### Stryker mutation testing (Phase 4)
-
-- 7 banking-grade hot files registered at `museum-backend/.stryker-hot-files.json` with per-file `killRatioMin` (currently 80%): art-topic-guardrail, cursor-codec, sanitizePromptInput, audit-chain, llm-circuit-breaker, refresh-token.repository.pg, authSession.service.
-- `museum-backend/scripts/stryker-hot-files-gate.mjs` parses `reports/mutation/mutation.json` and asserts each hot file ≥ killRatioMin. Exits 0/1/2.
-- Pre-commit hook (`.claude/hooks/pre-commit-gate.sh`) runs `pnpm mutation:ci` + `pnpm mutation:gate` ONLY when staged BE files intersect the `mutate:` list. Most commits skip Stryker entirely (0s overhead). First-run cold cache may take ~20–40 min — run `pnpm mutation:warm` overnight to bootstrap.
-- CI: `mutation` job in `ci-cd-backend.yml` runs incremental on every push (any branch) + full nightly via cron (03:17 UTC). Stryker incremental cache shared across runs via `actions/cache@v4`.
-- Hard-fail policy: a hot file dropping below 80% blocks commit AND CI. Global thresholds: high=85, low=70, break=70.
-
-### Auth e2e completeness (Phase 5)
-
-- 4 e2e files in `museum-backend/tests/e2e/auth-*`:
-  - `auth-verify-email.e2e.test.ts` — full token consumption leg via TestEmailService interception (7 cases).
-  - `auth-social-login.e2e.test.ts` — Apple + Google ID-token verification with local JWT+JWKS spoof, F3 nonce binding contract, replay/expired/wrong-audience paths (9 cases).
-  - `auth-refresh-rate-limit.e2e.test.ts` — exact F1 contract: 30 req/min OK, 31st returns 429 (4 cases).
-  - `auth-refresh-rotation.e2e.test.ts` — token rotation, replay-attack family revocation, chained rotations, logout invalidates family (5 cases).
-- TestEmailService activated by `AUTH_EMAIL_SERVICE_KIND=test` env var. Production env rejects 'test' loud (sentinel in `config/env.ts`).
-- Social JWT+JWKS spoof helper at `tests/helpers/auth/social-jwt-spoof.ts` boots a local HTTP JWKS server + signs RS256 ID tokens — exercises the real verifier code path, not a mock.
-
-### Chaos resilience (Phase 6)
-
-- 4 chaos e2e files in `museum-backend/tests/e2e/chaos-*`:
-  - `chaos-redis-down.e2e.test.ts` — `BrokenRedisCache` injects ECONNREFUSED on every cache op; chat continues degraded (7 cases).
-  - `chaos-llm-provider.e2e.test.ts` — `StubLLMOrchestrator` throws configurable errors; assertions on fallback OR 503 (no 500 leak), no provider-name leak (5 cases).
-  - `chaos-circuit-breaker.e2e.test.ts` — CLOSED → OPEN → HALF_OPEN transitions, 503 on open, env-var-driven breaker tuning for fast deterministic tests (6 cases).
-  - `chaos-bullmq-worker.e2e.test.ts` — knowledge-extraction worker offline; sync chat API unaffected (6 cases).
-- Chaos helpers at `museum-backend/tests/helpers/chaos/` (`broken-redis-cache.ts` + `stub-llm-orchestrator.ts` + README).
-- Harness gains 3 options: `cacheService`, `chatOrchestratorOverride`, `startKnowledgeExtractionWorker`. Defaults preserve existing behavior.
-- Banking-grade contract: dependency failure → graceful degradation → no 500/stack-trace leak → no provider-name leak.
-
-### Factory locations + shape-match rule (Phase 7)
-
-Test factories live by convention:
-- BE: `museum-backend/tests/helpers/<module>/<entity>.fixtures.ts` (e.g., `tests/helpers/auth/user.fixtures.ts`).
-- FE: `museum-frontend/__tests__/helpers/factories/<entity>.factories.ts` (e.g., `__tests__/helpers/factories/auth.factories.ts`).
-
-To add a new entity factory:
-1. Create the file at the convention path.
-2. Export `make<Entity>(overrides?: Partial<E>): E` returning a complete entity with sensible defaults.
-3. The `} as Entity` cast lives ONLY in the helper file — test files import the factory.
-4. Update `tools/eslint-plugin-musaium-test-discipline/src/rules/no-inline-test-entities.ts` `DEFAULT_SHAPE_SIGNATURES` to add the entity's signature so shape-match catches inline-anti-patterns.
-
-Shape-match detection (Phase 7 extension to the no-inline-test-entities rule):
-- Enabled via `detectShapeMatch: true` in BE + FE eslint configs.
-- Fires on object literals matching ANY entity's signature prop set, even without a cast or annotation.
-- Default signatures: User=[id,email,passwordHash], ChatMessage=[id,sessionId,role,text], ChatSession=[id,userId,locale,museumMode], Review=[id,rating,comment], SupportTicket=[id,userId,subject,description,status], MuseumEntity=[id,name,city,country], AuditEvent=[id,actorId,action,targetId].
-- Exemptions: helper paths, factory call arguments (`makeUser({...})`), objects already covered by the 3 existing rule paths (cast / type-assertion / annotated declarator).
-
-Phase 0 grandfather baseline shrunk to 0 in Phase 7. The cap test (`tools/eslint-plugin-musaium-test-discipline/tests/baseline-cap.test.ts`) enforces `PHASE_0_CAP = 0` — any future `as Entity` outside helpers triggers immediate gate fail.
-
-
-### Coverage uplift gates (Phase 8 + Phase 9 + Phase 10 + Phase 11 close)
-
-- BE thresholds: 89 / 75 / 87 / 89 (statements / branches / functions / lines), enforced in `museum-backend/jest.config.ts`. Default actuals 89.02 / 75.88 / 87.19 / 89.97 under SWC-jest. Phase 11 Sprint 11.2 swapped ts-jest → @swc/jest (~4× faster transform: full BE suite 519s → 119s); the SWC `decoratorMetadata: true` emit exposes more instrumentable nodes (TypeORM `@Column` / `@ManyToOne` lines previously type-stripped), shifting line/branch aggregates ~1pt vs ts-jest while function coverage rises 87.19 (was 85.80).
-- FE thresholds: 91 / 78 / 80 / 91, enforced in `museum-frontend/jest.config.js`. Phase 9 Sprint 9.3 actuals 91.92 / 78.39 / 81.44 / 92.14 (over the original 90 / 80 / 80 / 90 long-term target on every metric except branches, where the 78 floor is intentional — see ADR-007).
-- Web Vitest (Phase 11 Sprint 11.1): scope refined to pure logic (`src/lib`) + admin / auth / shared component slices; marketing pages + page shells excluded (Playwright + a11y + Lighthouse cover those routes). Thresholds 68 / 54 / 64 / 70 (Statements / Branches / Functions / Lines), matching the focused-scope actuals; the 226-Vitest suite is intentionally narrow and complementary to the Phase 3 Playwright coverage.
-- Pre-commit gate (`.claude/hooks/pre-commit-gate.sh`) runs `pnpm run test:coverage` (BE) + `npm run test:coverage` (FE) ONLY when staged files include source under `museum-backend/src/` or `museum-frontend/{src,features,shared,app}/`. Most commits skip (0s overhead).
-- Escape hatch: `SKIP_COVERAGE_GATE=1 git commit ...` for fast local iteration; CI still enforces unconditionally.
-- CI hard-fail: `ci-cd-backend.yml` (`quality` job) runs `pnpm run test:coverage`; `ci-cd-mobile.yml` (`quality` job) runs `npm run test:coverage`. Threshold miss blocks the PR.
-- Branches threshold deliberately stays at 78 BE / 78 FE — Phase 0 challenger pushback + ADR-007. The Phase 4 Stryker mutation kill ratio (≥ 80% on hot files) is the banking-grade signal; aggressive branches uplift forces cosmetic test patterns.
-- Jest config note: `coveragePathIgnorePatterns` is project-scoped in Jest 29 with `projects:`, so the patterns are wired into `sharedProjectOptions` in `jest.config.ts` and re-applied per project. A top-level-only declaration is silently ignored (Phase 8 Group B fixed this).
-- BE `test:coverage` pins `--testTimeout=15000` (down from 30000 since Phase 11 SWC swap halved transform pressure). Phase 11 Sprint 11.2 wrapped every cross-entity TypeORM property in the `Relation<>` type alias (e.g. `user!: Relation<User>`) — that breaks the SWC legacy-decorator circular-emit chain (`ReferenceError: Cannot access 'X' before initialization`) which had blocked the prior swap attempt in Phase 10 Sprint 10.4. The `Relation<T>` wrapper is a TypeORM-recommended type-only marker; runtime semantics unchanged.
-- Phase 10 closed: (1) Bug 2 — `getMessageFeedback` malformed SQL FIXED (Sprint 10.1, switched relation-where to `messageId` column lookup); (2) Bug 1 — TZ-sensitive cursor pagination FIXED (Sprint 10.2, TIMESTAMPTZ migration `1777721420875-ChatTimestamptz` for chat_sessions + chat_messages timestamp columns; verified under `TZ=Europe/Paris`); (3) bullmq scheduler integration test LANDED (Sprint 10.3, new `tests/helpers/e2e/redis-testcontainer.ts` Redis 7 testcontainer + 9-test integration suite); (4) all 6 `it.skip` Phase 9 markers in `chat-repository-typeorm.integration.test.ts` flipped to `it()` — 41/41 pass under `RUN_INTEGRATION=true`. Findings recap in git commit `bfd1a925f` (audit doc deleted 2026-05-03).
-- Stats summary (2026-05-02): 3801 BE tests (default) → 3851 BE (+RUN_INTEGRATION) + 1966 FE = up to 5817 total; ≈350 new tests across Phases 9 + 10. Two latent production bugs caught and fixed by the Phase 9 integration suite.
+Phase history (Maestro / Web a11y / Stryker / Auth e2e / Chaos / Coverage gates) consolidé dans **`docs/PHASE_HISTORY.md`**.
 
 ## Architecture
 
-### Backend — Hexagonal (Ports & Adapters)
+Détail complet par app (BE hexagonal, FE Expo Router, Web Next.js App Router) : **`docs/ARCHITECTURE.md`**.
 
-Layout post backend hexagonal cleanup (run `2026-05-03-backend-arch-cleanup`, 8 commits, 2026-05-04). Every module follows the same canonical 3-layer subgrouping: **domain → useCase → adapters**. Inside each layer, files are subgrouped by **aggregate** / **capability** / **category**.
-
-```
-src/
-├── config/env.ts                       # all env vars parsed & validated in one place
-├── data/db/                            # TypeORM data-source + migrations/
-├── modules/<module>/
-│   ├── domain/
-│   │   ├── <aggregate>/                # entities + repository interface per aggregate (e.g. session/, message/, user/)
-│   │   ├── ports/                      # outbound port interfaces consumed by the useCase layer
-│   │   └── <module>.types.ts           # cross-aggregate shared types (kept top-level)
-│   ├── useCase/
-│   │   ├── <capability>/               # one folder per capability (e.g. orchestration/, session/, llm/, guardrail/)
-│   │   └── index.ts                    # OPTIONAL barrel — only when module has no composition root
-│   ├── adapters/
-│   │   ├── primary/http/
-│   │   │   ├── routes/                 # Router factories (ONE per Express endpoint group)
-│   │   │   ├── schemas/                # zod request/response schemas
-│   │   │   ├── helpers/                # cookies, sse, route-utility plumbing
-│   │   │   └── <module>.contracts.ts   # public DTOs (kept flat at primary/http/ root)
-│   │   └── secondary/
-│   │       ├── pg/                     # TypeORM repositories
-│   │       ├── notifier/, social/, search/, storage/, audio/, image/, pii/, llm/, guardrails/, …
-│   │       └── …                       # category by external concern, NEVER a flat dump
-│   ├── jobs/                           # BullMQ workers / cron registrars (composition layer; relative imports OK)
-│   ├── <module>-module.ts              # composition root (chat, knowledge-extraction): wire DI graph
-│   ├── wiring.ts                       # lazy runtime accessors (request-time getters)
-│   └── index.ts                        # public lifecycle barrel (build + teardown API)
-├── shared/                             # cross-cutting: errors, logger, routers, validation, domain types
-├── helpers/                            # middleware (error handler, rate limit, request ID/logger), swagger setup
-├── app.ts                              # Express app factory (middleware chain + router mount)
-└── index.ts                            # entrypoint (DB init → app.listen)
-```
-
-Modules + composition pattern:
-- **admin / auth / museum / review / support** — barrel pattern. `useCase/index.ts` re-exports the public application services.
-- **chat / knowledge-extraction** — composition-root pattern. `<module>-module.ts` builds the DI graph; `useCase/index.ts` is intentionally absent (composition root replaces it).
-- **daily-art** — hexagonal scaffold normalized at Phase 0bis. Tiny module (1 use case, 1 catalog), still follows the same skeleton for repo coherence.
-
-Key patterns:
-- TypeORM entities in `modules/<name>/domain/<aggregate>/`, `.entity.ts` suffix.
-- Repository interfaces (ports) live with their aggregate (e.g. `domain/session/chat.repository.interface.ts`); cross-aggregate ports in `domain/ports/`.
-- PG implementations in `adapters/secondary/pg/`. External services in `adapters/secondary/<category>/` (search/, storage/, llm/, audio/, image/, etc.).
-- Routes live in `modules/<name>/adapters/primary/http/routes/<name>.route.ts` and import the matching schemas from `…/schemas/` and helpers from `…/helpers/`.
-- DTOs (`<module>.contracts.ts`) stay at `adapters/primary/http/` root — they are the public surface, not infra.
-- `createApp()` accept optional overrides for testing (inject mock chatService/healthCheck).
-
-#### Import discipline (enforced via codemod 2026-05-05)
-
-Single rule across the BE codebase, applied uniformly by `eslint --fix` + a one-shot codemod:
-- **Same directory** → `from './<sibling>'` (relative).
-- **Cross-directory within same top-level module** → `from '@modules/<module>/<layer>/<sub>/<file>'` (alias).
-- **Cross-module / shared / data** → `from '@modules/<other>/...' | '@shared/...' | '@data/...'`.
-- 4-level relative paths (`'../../../../X'`) are forbidden — always alias.
-- Self-aliases that resolve to the same directory as the importer are forbidden — use `'./X'` instead.
-- Composition layer files (`<module>-module.ts`, `wiring.ts`, `jobs/*`) are exempt and may use relative paths to their `adapters/` dependencies.
-
-#### Barrel-file policy (2026 perf evidence)
-
-Atlassian reported [+75% faster builds](https://www.atlassian.com/blog/atlassian-engineering/faster-builds-when-removing-barrel-files) by removing internal barrel files. The repo follows a **minimal-barrel** policy:
-- The single `<module>/index.ts` barrel is the module's public API surface (lifecycle + factories). Keep it.
-- `<module>/useCase/index.ts` is barrel-only for the barrel-pattern modules (admin/auth/museum/review/support). Composition-root modules (chat/KE) do not have one.
-- Do NOT introduce new internal barrels (e.g. `domain/<aggregate>/index.ts`, `adapters/secondary/<category>/index.ts`). Direct imports keep build/test cold-start fast.
-
-Chat module internals: `chat.service.ts` (under `useCase/orchestration/`) orchestrates LLM calls via `langchain.orchestrator.ts` (under `adapters/secondary/llm/`), uses sectioned prompts (`useCase/llm/llm-sections.ts`), art-topic guardrail (`useCase/guardrail/`), image storage S3-or-stub (`adapters/secondary/storage/`), audio transcription + TTS (`adapters/secondary/audio/`).
-
-### Frontend — Feature-driven + Expo Router
-
-```
-app/                       # Expo Router file-based routing
-├── _layout.tsx            # root layout
-├── auth.tsx               # auth screen
-├── (tabs)/                # bottom tab navigator (home, conversations)
-└── (stack)/               # stack screens (chat session, settings, onboarding, etc.)
-
-features/                  # business logic by domain
-├── art-keywords/          # offline art-topic classification (live, synced at launch + 24h stale)
-├── auth/                  # login/register, token storage, protected route hook
-├── chat/                  # chat session hook, contracts, API calls, streaming, TTS
-├── conversation/          # conversation list/dashboard
-├── daily-art/             # daily artwork card, saved artworks
-├── legal/                 # privacy policy, terms of service content
-├── museum/                # museum directory, map view, geolocation
-├── onboarding/            # first-launch carousel
-├── review/                # public reviews, star rating
-├── settings/              # runtime settings, theme, security, compliance
-└── support/               # ticket system, contact form
-
-shared/                    # cross-feature utilities
-├── api/                   # Axios client, generated OpenAPI types
-├── config/                # app configuration
-├── infrastructure/        # platform-level concerns
-├── lib/                   # utility functions
-├── types/                 # shared TypeScript types
-└── ui/                    # reusable UI components
-```
-
-Key patterns:
-- API types auto-generated from backend OpenAPI spec (`npm run generate:openapi-types` → `shared/api/generated/openapi.ts`)
-- Auth tokens stored via `expo-secure-store`
-- App variants (development/preview/production) configured in `app.config.ts` via `APP_VARIANT` / `EAS_BUILD_PROFILE`
-
-### Web — Next.js 15 (App Router)
-
-```
-src/
-├── app/[locale]/          # i18n routing (FR/EN)
-│   ├── page.tsx           # landing page (6 animated sections)
-│   ├── support/           # FAQ + contact form
-│   ├── privacy/           # GDPR privacy policy
-│   └── admin/             # admin panel (dashboard, users, analytics, tickets, reports)
-├── components/            # shared React components
-├── hooks/                 # custom hooks (auth, API)
-├── lib/                   # utilities, API client, i18n config
-└── styles/                # global CSS + Tailwind config
-```
-
-Key patterns:
-- Admin panel use JWT auth w/ refresh token interceptor
-- i18n via custom dictionary loader (FR/EN)
-- Framer Motion for landing page animations
-- Recharts for analytics dashboards
+Résumé :
+- **Backend** — hexagonal (domain → useCase → adapters), modules barrel-pattern (admin/auth/museum/review/support) ou composition-root (chat/knowledge-extraction). Import discipline via codemod 2026-05-05 (alias `@modules/*`/`@shared/*`/`@data/*`, no 4-level relative). Minimal-barrel policy.
+- **Frontend** — feature-driven sous `features/`, routing Expo Router, types API auto-générés depuis OpenAPI, tokens via `expo-secure-store`.
+- **Web** — App Router i18n FR/EN, admin panel JWT + refresh interceptor, Framer Motion landing.
 
 ## Path Aliases
 
@@ -335,11 +131,11 @@ Doubt? Use `Grep` w/ specific pattern first, then `Read` relevant block w/ `offs
 Leçons techniques non évidentes consolidées des sprints précédents. Ajoute ici tout piège qui a fait perdre du temps à un dev / agent — pas les bugs métier, juste les surprises infrastructure.
 
 - **Hook Jest cache parfois flaky** — un ratchet coverage qui plante sans raison apparente est souvent un cache Jest stale. Run `pnpm jest --clearCache` (BE) ou `npm test -- --clearCache` (FE) avant de réinvestiguer. Seen 2026-04-17 SESSION_FINAL leçon 3.
-- **`docs/` whitelisted dans .gitignore** — ce dossier est gitignored par défaut, les sous-dossiers doivent être whitelistés explicitement (`!docs/<sub>/`). Si tu crées un nouveau sous-dossier dans `docs/` et que `git status` ne le voit pas, c'est ça. Voir `.gitignore` pour les whitelists existantes (ROADMAP_*, RUNBOOKS, adr, etc.).
-- **GitNexus auto-inject `<!-- gitnexus:start -->` dans `AGENTS.md`** — `npx gitnexus analyze` expand ce bloc avec la config MCP courante. Comportement intentionnel à conserver (visible `AGENTS.md` ligne 18+). Ne pas effacer le marker.
-- **TypeORM `.set({ field: undefined })` est silencieusement skip** — `UpdateQueryBuilder` ne génère PAS de `SET field = NULL` quand on passe `undefined`. Si tu veux vraiment NULL, utilise `() => 'NULL'` raw expression. Bug verifyEmail 2026-05 (cf. doc 17 explications-sprint § Bug 4).
-- **PgBouncer transaction mode interdit `LISTEN/NOTIFY`, session-scoped advisory locks, persistent prepared statements** — Musaium n'utilise rien de ça aujourd'hui (audit ADR-021), mais à vérifier au cas par cas si tu ajoutes une lib Postgres exotique.
-- **SWC + TypeORM cross-entity = ReferenceError circular** — fix = wrap les FK avec le type alias `Relation<T>` (cf. doc 16 explications-sprint § Phase 11). Ne pas s'écarter de ce pattern sur les nouvelles entités.
+- **`docs/` whitelisted dans .gitignore** — gitignored par défaut, sous-dossiers doivent être whitelistés explicitement (`!docs/<sub>/`). Si `git status` ne voit pas un nouveau sous-dossier dans `docs/`, c'est ça.
+- **GitNexus auto-inject `<!-- gitnexus:start -->` dans `AGENTS.md`** — `npx gitnexus analyze` expand ce bloc. Comportement intentionnel, ne pas effacer le marker.
+- **TypeORM `.set({ field: undefined })` est silencieusement skip** — `UpdateQueryBuilder` ne génère PAS de `SET field = NULL` quand on passe `undefined`. Use `() => 'NULL'` raw expression. Bug verifyEmail 2026-05.
+- **PgBouncer transaction mode interdit `LISTEN/NOTIFY`, session-scoped advisory locks, persistent prepared statements** — Musaium n'utilise rien de ça aujourd'hui (audit ADR-021), mais à vérifier au cas par cas.
+- **SWC + TypeORM cross-entity = ReferenceError circular** — fix = wrap les FK avec le type alias `Relation<T>`. Ne pas s'écarter de ce pattern sur les nouvelles entités.
 
 ## Environment Setup
 
@@ -350,51 +146,23 @@ Leçons techniques non évidentes consolidées des sprints précédents. Ajoute 
 
 ## Honesty + truth-telling (UFR-013)
 
-**Non-negotiable.** Applies to every response, every agent report, every claim of fact, number, or source.
+**Non-negotiable.** Applies to every response, every agent report.
 
-### FORBIDDEN
+**FORBIDDEN :** lying or fabricating any fact / number / citation / file path / line / function / command output / test result / source ; claiming verification without verifying ; simulating certainty when uncertain ; hiding or minimizing failures (test/build/lint) ; denying a mistake after it's pointed out ; pretense or sycophancy.
 
-- Lying or fabricating any fact, number, citation, file path, line number, function name, command output, test result, or external source.
-- Claiming to have verified something without actually running the verification.
-- Simulating certainty when you are uncertain (e.g. "this works" when you haven't tested it).
-- Hiding or minimizing a failure (test failure, build error, type error, regression).
-- Denying a mistake after it is pointed out, or trying to retroactively reframe it.
-- Pretense or sycophancy ("great question", "you're absolutely right") when it adds no information.
+**REQUIRED :** state truth as it is, even uncomfortable ; verify before answering (`Read`/`Grep` for code, `WebSearch`/`WebFetch` for external) ; "I don't know" valid ; report failures verbatim ; correct prior wrong claims explicitly ; distinguish "code says X" (verified) vs "I expect X" (not verified) vs "general knowledge" (may be stale).
 
-### REQUIRED
+**Verification ladder (cheapest → strongest) :** memory < `Read` file < `Grep`/`gitnexus_query` < run command (report exit code + output) < `WebSearch`/`WebFetch` (cite URL).
 
-- State the truth as it is, even when uncomfortable.
-- When in doubt, **verify before answering**: `WebSearch` / `WebFetch` for external facts; `Read` / `Grep` for code claims; run the command and report the actual output.
-- Say "I don't know" or "I haven't verified that" explicitly when you don't or haven't.
-- Report failures (test, build, lint, smoke check) immediately and accurately. Do not soften the language. Quote the error verbatim.
-- When you detect a previous claim was wrong, correct it in the next message — name the claim, name the correction.
-- Distinguish "the code says X" (verified by reading) from "I expect X" (not verified) from "X is generally true" (general knowledge, may be stale).
+When cost of being wrong is high (security claim, breaking change, "safe to deploy") → climb to step 4 or 5 before answering.
 
-### Verification ladder (cheapest → strongest)
-
-1. Memory / general knowledge — lowest confidence. Mark as such if used.
-2. `Read` the file in question.
-3. `Grep` / `gitnexus_query` to confirm a claim crosses the codebase consistently.
-4. Run the command (`pnpm test`, `pnpm tsc --noEmit`, `pnpm lint`, smoke script). Report the exit code and the relevant lines of output.
-5. `WebSearch` / `WebFetch` for external facts (library APIs, RFCs, CVEs, product changelogs). Cite the URL in the response.
-
-When the cost of being wrong is high (security claim, breaking change claim, "this is safe to deploy"), climb to step 4 or 5 before answering.
-
-### Anti-patterns
-
-| Don't say | Say instead |
-|---|---|
-| "This is fixed." (no verification run) | "I made the change. I have not yet run the tests; want me to?" |
-| "All tests pass." (didn't actually run) | "I ran `pnpm test` — output: `Tests: 3700 passed`. Pasted above." |
-| "The library supports X." (from memory) | "Per the docs at `<URL>` (just fetched), the library supports X via `Y`." |
-| "You're right, sorry, fixing now." (when you weren't actually wrong) | "Let me re-check — the code at `path/to/file.ts:42` actually does Z, which matches the original behavior. I think the disagreement is about W; can you confirm?" |
-| Silent skip of a failing check | "The smoke test failed: `<exact error>`. Stopping here so we can debug." |
+**Anti-patterns key :** "all tests pass" without running ≠ "I ran `pnpm test` — output: …" ; "this is fixed" without verification ≠ "I made the change, want me to run tests?" ; silent skip of failing check ≠ "smoke test failed: `<exact error>`. Stopping."
 
 ## Migration Governance
 
-See [`docs/MIGRATION_GOVERNANCE.md`](docs/MIGRATION_GOVERNANCE.md) for the full rules. Quick reference:
+See [`docs/MIGRATION_GOVERNANCE.md`](docs/MIGRATION_GOVERNANCE.md) for full rules. Quick reference:
 
-- Always use `node scripts/migration-cli.cjs generate --name=X` to generate migrations — never hand-write migration SQL
+- Always use `node scripts/migration-cli.cjs generate --name=X` to generate migrations — never hand-write SQL
 - `DB_SYNCHRONIZE` must **never** be `true` in production (hard-coded `false` in `data-source.ts` for prod)
 - CI blocks if `DB_SYNCHRONIZE=true` found in any `.env*` file
 - After generating migration, verify w/ `pnpm migration:run` on clean DB then `node scripts/migration-cli.cjs generate --name=Check` — output should be empty (no schema drift)
@@ -415,14 +183,14 @@ When modifying chat pipeline:
 
 ### Voice V1 (2026-04)
 
-Pipeline classique STT → LLM → TTS, **toujours actif** (feature flags `FEATURE_FLAG_VOICE_MODE` et `TTS_ENABLED` retirés).
+Pipeline classique STT → LLM → TTS, **toujours actif** (feature flags retirés).
 
-- **STT** : `gpt-4o-mini-transcribe` (env `LLM_AUDIO_TRANSCRIPTION_MODEL`), même `OPENAI_API_KEY`. Pas de "clé Whisper" séparée.
-- **LLM** : LangChain orchestrator multi-provider (cf. existant).
-- **TTS** : `gpt-4o-mini-tts` (env `TTS_MODEL`), voix `alloy` par défaut. Audio MP3 retourné en buffer + persisté S3 (`ChatMessage.audioUrl`) pour replay offline.
-- **Guardrails** : appliqués au texte intermédiaire (transcrit + réponse LLM) — voix hérite gratuitement sécurité chat texte.
+- **STT** : `gpt-4o-mini-transcribe` (env `LLM_AUDIO_TRANSCRIPTION_MODEL`), même `OPENAI_API_KEY`.
+- **LLM** : LangChain orchestrator multi-provider.
+- **TTS** : `gpt-4o-mini-tts` (env `TTS_MODEL`), voix `alloy` par défaut. Audio MP3 buffer + persisté S3 (`ChatMessage.audioUrl`).
+- **Guardrails** : appliqués au texte intermédiaire (transcrit + réponse LLM).
 - **SSE streaming** : @deprecated, voir `docs/adr/ADR-001-sse-streaming-deprecated.md`.
-- **Realtime WebRTC** : reporté V1.1 — réévaluation après mesure latence terrain pipeline V1.
+- **Realtime WebRTC** : reporté V1.1.
 
 Spec complète : `docs/AI_VOICE.md`.
 
@@ -430,126 +198,49 @@ Spec complète : `docs/AI_VOICE.md`.
 
 **Tests MUST use shared factories. Inline object creation forbidden.**
 
-### Principle
+Détail complet (factories existantes, rules, anti-patterns, tier classification ADR-012, ESLint enforcement) : **`docs/TEST_FACTORIES.md`**.
 
-Every test entity (User, ChatMessage, ChatSession, etc.) MUST be created via shared factory function in `tests/helpers/`. No test file should define own `makeUser()`, `makeMessage()`, or `makeSession()` inline.
-
-### Existing factories (use them)
-
-| Factory | Location | Creates |
-|---------|----------|---------|
-| `makeUser(overrides?)` | `tests/helpers/auth/user.fixtures.ts` | `User` entity with defaults |
-| `makeToken(overrides?)` | `tests/helpers/auth/token.helpers.ts` | JWT access token |
-| `adminToken()` / `visitorToken()` | `tests/helpers/auth/token.helpers.ts` | Role-specific tokens |
-| `makeMessage(overrides?)` | `tests/helpers/chat/message.fixtures.ts` | `ChatMessage` entity |
-| `makeSession(overrides?)` | `tests/helpers/chat/message.fixtures.ts` | `ChatSession` entity |
-| `buildChatTestService()` | `tests/helpers/chat/chatTestApp.ts` | Full ChatService with in-memory deps |
-| `createRouteTestApp()` | `tests/helpers/http/route-test-setup.ts` | Express test app |
-| `createE2EHarness()` | `tests/helpers/e2e/e2e-app-harness.ts` | Full E2E environment |
-
-### Rules
-
-1. **New entity?** → Create factory in `tests/helpers/<module>/<entity>.fixtures.ts` FIRST
-2. **Need mock repo?** → Check if in-memory repo exists in `tests/helpers/`. If not, create one.
-3. **Override pattern**: `makeEntity({ field: value })` — factory provides sensible defaults, test overrides only what matters
-4. **Frontend**: Use `test-utils.tsx` for shared mocks. Create factories in `__tests__/helpers/` for data objects.
-5. **Never** duplicate `jest.mock()` calls already exist in `test-utils.tsx`
-
-### Anti-patterns to avoid
-
-| Don't do this | Do this instead |
-|---|---|
-| `const user = { id: 1, email: '...', ... } as User` inline | `const user = makeUser()` or `makeUser({ email: 'custom@test.com' })` |
-| `const msg = { id: 'x', role: 'user', text: '...' } as ChatMessage` inline | `const msg = makeMessage({ text: 'my text' })` |
-| Local `makeUser()` in each test file | Import from `tests/helpers/auth/user.fixtures.ts` |
-| Copy-paste mock repo in each test | Create shared in-memory repo in `tests/helpers/` |
-| `jest.mock('@sentry/react-native')` in each test | Import `test-utils.tsx` which already mocks it |
-
-### Tier classification rule (ADR-012)
-
-A test file lives in `tests/integration/` **iff** it imports `tests/helpers/e2e/postgres-testcontainer.ts` (or a sibling Redis/S3 helper) or instantiates a TypeORM `DataSource` against a real testcontainer. Anything else belongs in `tests/unit/`. See `docs/adr/ADR-012-test-pyramid-taxonomy.md`.
-
-### Factory enforcement (ESLint)
-
-The workspace plugin `eslint-plugin-musaium-test-discipline` rejects new test files that inline-construct `User`, `ChatMessage`, `ChatSession`, `Review`, or `SupportTicket` objects. Use the factories in `tests/helpers/<module>/<entity>.fixtures.ts` (BE) or `__tests__/helpers/factories/` (FE). The grandfather baseline at `tools/eslint-plugin-musaium-test-discipline/baselines/no-inline-test-entities.json` lists files exempted at Phase 0; Phase 7 reduces this list as files are migrated. **The baseline length cannot grow** — a CI test enforces the cap.
+Quick reference :
+- BE factories : `museum-backend/tests/helpers/<module>/<entity>.fixtures.ts`
+- FE factories : `museum-frontend/__tests__/helpers/factories/<entity>.factories.ts`
+- Pattern : `makeUser()` / `makeUser({ field: value })` — never inline `{ id, email, … } as User`
+- ESLint plugin `eslint-plugin-musaium-test-discipline` blocks new violations ; baseline at `tools/eslint-plugin-musaium-test-discipline/baselines/no-inline-test-entities.json` cannot grow.
 
 ## ESLint Discipline
 
-**`eslint-disable` = last resort, not first reflex.** If ESLint flags code, rule exists for reason — find proper fix before reaching for disable comment.
+**`eslint-disable` = last resort, not first reflex.**
 
-### Decision tree
+Détail (decision tree, common anti-patterns, justified disable patterns whitelist, PR-validation hard rule) : **`docs/LINT_DISCIPLINE.md`**.
 
-1. **Understand rule** — read ESLint docs for rule. What problem does it prevent?
-2. **Fix code** — refactor to satisfy rule. Correct path 90% of time.
-3. **Only disable if ALL true:**
-   - Rule = false positive for this specific context (e.g., `require()` for RN image assets, `||` for intentional empty-string-as-falsy)
-   - No alternative code structure satisfies both rule + intent
-   - `-- reason` comment explains WHY disable necessary
-
-### Common anti-patterns to avoid
-
-| Don't do this | Do this instead |
-|---|---|
-| `eslint-disable complexity` on a 60-line function | Extract helper functions to reduce cyclomatic complexity |
-| `eslint-disable max-lines-per-function` repeatedly | Split the function or extract sub-routines |
-| `eslint-disable max-params` with 7+ params | Use an options object: `fn(id, options: { ... })` |
-| `eslint-disable react/display-name` on `memo()` | `memo(function ComponentName() { ... })` |
-| `eslint-disable @typescript-eslint/no-misused-promises` | `onPress={() => { void handleAsync() }}` |
-| `eslint-disable @typescript-eslint/no-explicit-any` | Use `unknown` and narrow with type guards |
-| `eslint-disable max-lines` at file level | Split the file into focused modules |
-| `eslint-disable @typescript-eslint/prefer-optional-chain` | Use `foo?.bar` instead of `foo && foo.bar` |
-
-### Justified disable patterns (reference)
-
-ONLY categories where `eslint-disable` acceptable in this project:
-- `prefer-nullish-coalescing` when intentionally treating empty string as falsy (`||` vs `??`)
-- `no-unnecessary-condition` at trust boundaries (JWT payloads, raw DB rows, external API data)
-- `require-await` on no-op implementations of async interfaces (null-object pattern)
-- `no-unnecessary-type-parameters` on generic interface APIs where `T` constrains input
-- `no-require-imports` for React Native `require()` asset pattern + OpenTelemetry conditional loading
-- `no-control-regex` in input sanitization code
-- `sonarjs/hashing` for non-cryptographic checksums (S3 Content-MD5)
-- `sonarjs/pseudo-random` for jitter/backoff, not security
-- `react-hooks/refs` for React Native `Animated.Value` / `PanResponder` refs read once at creation (e.g. `useRef(new Animated.Value(0)).current`)
-- `no-namespace` for Express `declare global { namespace Express }` Request augmentation — standard pattern required by `@types/express`
-- `max-lines-per-function` on TypeORM migration files — single atomic `up()` can't be split
-
-### `eslint-disable` PR-validation hard rule (Phase 0)
-
-Any new `eslint-disable` (line, block, or file-level) added to a PR must include BOTH a `Justification:` paragraph (≥20 chars) AND an `Approved-by:` paragraph (reviewer username or commit SHA) in the same comment body, e.g.:
-
-```ts
-// eslint-disable-next-line some-rule -- Justification: trust-boundary unmarshalling, narrowed via type guard at L42. Approved-by: tim@2026-04-30
-```
-
-The custom rule `musaium-test-discipline/no-undisabled-test-discipline-disable` machine-enforces this for the test-discipline rules specifically. Reviewers MUST reject PRs that add an undocumented disable to any rule, even rules outside the test-discipline namespace. Pre-approved categories listed earlier in this section remain the only ones that don't require a per-PR justification — anything outside them is treated as a one-off exception requiring explicit reviewer agreement before merge.
+Quick reference :
+- Read rule docs → fix code (90% of cases) → only disable if false positive in this context, no alternative, `-- reason` comment
+- Any new `eslint-disable` in PR must include `Justification: ≥20 chars` + `Approved-by: <reviewer/SHA>` paragraphs
+- Pre-approved categories listed in `docs/LINT_DISCIPLINE.md` are the only ones not requiring per-PR justification
 
 ## Team reports lifecycle
 
-Two locations for `/team` skill artefacts — **not duplicates**, different roles:
+Two locations for `/team` skill artefacts — **not duplicates**:
 
 | Path | Role | Writer |
 |---|---|---|
-| `.claude/skills/team/team-reports/` | **Runtime active** — `/team` skill writes here. Contains `working/<date>-<slug>/` scratch pads (ephemeral) + recently-closed runs (≤30 days). | `/team` skill runs |
-| `/team-reports/` (repo root) | **Archive read-only** — closed audits, brainstorms, external reports. Git-ignored by default; only `README.md` versioned. | Manual promotion from runtime after ~30 days |
+| `.claude/skills/team/team-reports/` | **Runtime active** — `/team` skill writes here. Contains `working/<date>-<slug>/` (ephemeral) + recently-closed runs (≤30 days). | `/team` skill runs |
+| `/team-reports/` (repo root) | **Archive read-only** — closed audits, brainstorms, external reports. Git-ignored ; only `README.md` versioned. | Manual promotion ~30 days |
 
-Rules:
+Rules :
 - Agents MUST write to `.claude/skills/team/team-reports/`, never `/team-reports/`.
-- Report in `working/` = disposable; graduate out of `working/` when sprint closes.
-- Promotion runtime → archive manual for now. Future `scripts/archive-team-reports.sh` may automate.
+- Report in `working/` = disposable.
+- Promotion runtime → archive manual for now.
 
 ## Deployment
 
-- Backend: Docker image → GHCR → VPS OVH (see `docs/OPS_DEPLOYMENT.md`)
-- Mobile: EAS Build → App Store / Google Play (see `docs/MOBILE_INTERNAL_TESTING_FLOW.md`)
-- Secrets + CI config documented in `docs/CI_CD_SECRETS.md`
+- Backend : Docker image → GHCR → VPS OVH (see `docs/OPS_DEPLOYMENT.md`)
+- Mobile : EAS Build → App Store / Google Play (see `docs/MOBILE_INTERNAL_TESTING_FLOW.md`)
+- Secrets + CI config : `docs/CI_CD_SECRETS.md`
 
 ## Dependency Monitoring
 
 ### TypeORM
-TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
-Current assessment: works, migration not urgent, but monitor releases.
-Alternatives for future: Drizzle (S-tier 2026), Prisma 7, Kysely.
+TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes. Current : works, migration not urgent, monitor releases. Alternatives for future : Drizzle (S-tier 2026), Prisma 7, Kysely.
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

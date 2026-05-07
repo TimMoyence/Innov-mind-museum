@@ -759,6 +759,16 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
+		<key>TrustKit-TrustKit.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>TrustKit.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
 		<key>Yoga.xcscheme</key>
 		<dict>
 			<key>isShown</key>
@@ -825,6 +835,11 @@
 			<false/>
 		</dict>
 		<key>react-native-safe-area-context.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>react-native-ssl-public-key-pinning.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
