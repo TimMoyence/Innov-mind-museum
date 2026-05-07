@@ -16,7 +16,10 @@ async function seedAdminUser(email: string, password: string): Promise<void> {
       data: {
         email,
         password,
-        firstname: 'E2E',
+        // Letters-only — backend validator rejects digits in given/family
+        // names with "firstname contains invalid characters" (zod schema in
+        // museum-backend/src/modules/auth/adapters/primary/http/schemas).
+        firstname: 'PlaywrightTest',
         lastname: 'Admin',
         gdprConsent: true,
       },
