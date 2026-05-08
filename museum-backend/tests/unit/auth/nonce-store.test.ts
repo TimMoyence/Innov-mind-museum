@@ -70,6 +70,76 @@ describe('InMemoryNonceStore — F3 (OIDC nonce single-use)', () => {
     // After clear the previously-issued nonce is no longer redeemable.
     await expect(store.consume(nonce)).resolves.toBe(false);
   });
+
+  // Stryker survivor #1 — EqualityOperator at L34 (`override > 0` → `>= 0`).
+  // ttlSeconds=0 must NOT be honoured as a literal "0-second TTL"; it should
+  // fall through to the env / 300s default. If the operator mutates to `>= 0`,
+  // a freshly-issued nonce would be born already expired (expiresAt === now)
+  // and consume() would return false — proving the mutant.
+  it('issue() with ttlSeconds=0 falls back to env default rather than treating 0 as a valid TTL', async () => {
+    const previous = process.env.SOCIAL_NONCE_TTL_SECONDS;
+    delete process.env.SOCIAL_NONCE_TTL_SECONDS;
+    try {
+      let nowMs = 1_000;
+      const store = new InMemoryNonceStore({ ttlSeconds: 0, now: () => nowMs });
+      const nonce = await store.issue();
+      // Within the 300s default the nonce must still be redeemable.
+      nowMs += 60_000; // 60s — well inside the 300s default fallback window.
+      await expect(store.consume(nonce)).resolves.toBe(true);
+    } finally {
+      if (previous === undefined) delete process.env.SOCIAL_NONCE_TTL_SECONDS;
+      else process.env.SOCIAL_NONCE_TTL_SECONDS = previous;
+    }
+  });
+
+  // Stryker survivor #2 — EqualityOperator at L77 (`expiresAt > now` → `>=`).
+  // A nonce whose stored expiresAt EXACTLY equals the wall clock at consume
+  // time is past its window (the TTL is a strict upper bound). The mutant
+  // would accept it as still-valid.
+  it('consume() rejects a nonce whose expiresAt equals the current clock (boundary)', async () => {
+    let nowMs = 0;
+    const store = new InMemoryNonceStore({ ttlSeconds: 60, now: () => nowMs });
+    const nonce = await store.issue(); // expiresAt = 0 + 60_000 = 60_000
+    nowMs = 60_000; // advance to the exact expiry instant
+    await expect(store.consume(nonce)).resolves.toBe(false);
+  });
+
+  // Stryker survivor #3 — MethodRemoval at L37 (`Number.isFinite(parsed)`
+  // dropped). With a non-numeric env value, parseInt returns NaN; without the
+  // isFinite gate the mutant would propagate NaN and hand back NaN as TTL.
+  // Default-300s fallback proves the gate is doing its job.
+  it('resolveTtlSeconds falls back to 300s when env SOCIAL_NONCE_TTL_SECONDS is non-numeric', async () => {
+    const previous = process.env.SOCIAL_NONCE_TTL_SECONDS;
+    process.env.SOCIAL_NONCE_TTL_SECONDS = 'abc';
+    try {
+      let nowMs = 0;
+      // No ttlSeconds override → resolveTtlSeconds reads the (garbage) env.
+      const store = new InMemoryNonceStore({ now: () => nowMs });
+      const nonce = await store.issue();
+      // 299s in: still inside the 300s default — must be redeemable.
+      nowMs = 299_000;
+      await expect(store.consume(nonce)).resolves.toBe(true);
+
+      const nonce2 = await store.issue();
+      // 301s past issue → outside the 300s default — must be rejected.
+      nowMs = 299_000 + 301_000;
+      await expect(store.consume(nonce2)).resolves.toBe(false);
+    } finally {
+      if (previous === undefined) delete process.env.SOCIAL_NONCE_TTL_SECONDS;
+      else process.env.SOCIAL_NONCE_TTL_SECONDS = previous;
+    }
+  });
+
+  // Stryker survivor #4 — ArgumentChange at L30 (`randomBytes(NONCE_BYTES)`).
+  // 16 bytes → exactly 22 base64url chars (no padding). A mutant that lowers
+  // the byte count to 15 would produce 20 chars; a higher count would produce
+  // ≥24. The existing `{22,}` regex is permissive — pin it to exactly 22.
+  it('issue() returns a nonce of exactly 22 base64url chars (16 bytes, no padding)', async () => {
+    const store = new InMemoryNonceStore();
+    const nonce = await store.issue();
+    expect(nonce).toHaveLength(22);
+    expect(nonce).toMatch(/^[A-Za-z0-9_-]{22}$/);
+  });
 });
 
 /**

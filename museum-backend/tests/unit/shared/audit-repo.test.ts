@@ -37,7 +37,10 @@ function buildMocks(tailRowHash: string | null = null) {
   return { repo, dataSource, manager, managerQuery };
 }
 
-/** Build a minimal AuditLogEntry. */
+/**
+ * Build a minimal AuditLogEntry.
+ * @param overrides
+ */
 function makeAuditEntry(overrides: Partial<AuditLogEntry> = {}): AuditLogEntry {
   return {
     action: 'AUTH_LOGIN_SUCCESS',
@@ -57,11 +60,15 @@ const HEX_64 = /^[0-9a-f]{64}$/;
 describe('AuditRepositoryPg', () => {
   let sut: AuditRepositoryPg;
   let repo: jest.Mocked<Repository<AuditLog>>;
+  let managerQuery: jest.Mock;
+  let dataSource: DataSource;
 
   beforeEach(() => {
     jest.clearAllMocks();
     const mocks = buildMocks();
     repo = mocks.repo;
+    managerQuery = mocks.managerQuery;
+    dataSource = mocks.dataSource;
     sut = new AuditRepositoryPg(mocks.dataSource);
   });
 
@@ -196,6 +203,60 @@ describe('AuditRepositoryPg', () => {
       expect(createArg.rowHash).toMatch(HEX_64);
       expect(createArg.rowHash).not.toBe(existingTail);
     });
+
+    it('issues advisory lock BEFORE the tail SELECT (chain serialization)', async () => {
+      // Mutant: removing `await this.acquireChainLock(manager)` would still
+      // produce a valid INSERT but allow concurrent writers to race on the
+      // chain tail. Assert the exact ordering: pg_advisory_xact_lock first,
+      // then the tail SELECT, then repo.save — not in any other order.
+      repo.save.mockResolvedValue({} as AuditLog);
+
+      await sut.insert(makeAuditEntry());
+
+      expect(managerQuery).toHaveBeenCalledTimes(2);
+      const firstSql = managerQuery.mock.calls[0][0] as string;
+      const secondSql = managerQuery.mock.calls[1][0] as string;
+      expect(firstSql).toContain('pg_advisory_xact_lock');
+      expect(secondSql).toContain('SELECT "row_hash"');
+      // save must have run AFTER both query calls (lock+tail) finished.
+      const lockOrder = managerQuery.mock.invocationCallOrder[0];
+      const tailOrder = managerQuery.mock.invocationCallOrder[1];
+      const saveOrder = repo.save.mock.invocationCallOrder[0];
+      expect(lockOrder).toBeLessThan(tailOrder);
+      expect(tailOrder).toBeLessThan(saveOrder);
+    });
+
+    it('selects the tail row with DESC ordering on created_at AND id', async () => {
+      // Mutant: `ORDER BY ... DESC` → `ASC` would pull the OLDEST row as the
+      // tail, corrupting the hash chain on every append. Assert the literal
+      // SQL contains DESC for both ordering columns.
+      repo.save.mockResolvedValue({} as AuditLog);
+
+      await sut.insert(makeAuditEntry());
+
+      const tailCall = managerQuery.mock.calls.find((call) =>
+        (call[0] as string).includes('SELECT "row_hash"'),
+      );
+      expect(tailCall).toBeDefined();
+      const tailSql = tailCall![0] as string;
+      expect(tailSql).toContain('"created_at" DESC');
+      expect(tailSql).toContain('"id" DESC');
+      expect(tailSql).toContain('LIMIT 1');
+    });
+
+    it('preserves actorId === 0 (uses ?? not ||)', async () => {
+      // Mutant: `entry.actorId ?? null` → `entry.actorId || null` would
+      // collapse a valid `0` actorId to null. Feed 0 and assert it is
+      // persisted as exactly 0 (not coerced to null).
+      const entry = makeAuditEntry({ actorId: 0 });
+      repo.save.mockResolvedValue({} as AuditLog);
+
+      await sut.insert(entry);
+
+      const createArg = repo.create.mock.calls[0][0] as { actorId: number | null };
+      expect(createArg.actorId).toBe(0);
+      expect(createArg.actorId).not.toBeNull();
+    });
   });
 
   // ─── insertBatch ───
@@ -243,6 +304,38 @@ describe('AuditRepositoryPg', () => {
 
       expect(repo.create).not.toHaveBeenCalled();
       expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    it('skips the transaction (no lock acquire) for an empty batch', async () => {
+      // Mutant: removing the `if (entries.length === 0) return;` early-return
+      // would still call `dataSource.transaction` and acquire the advisory
+      // lock for nothing — wasteful and observable. Assert the wrapper is
+      // never invoked AND no SQL (lock or tail) hits the manager.
+      await sut.insertBatch([]);
+
+      expect(dataSource.transaction).not.toHaveBeenCalled();
+      expect(managerQuery).not.toHaveBeenCalled();
+    });
+
+    it('short-circuits ALL side-effects for an empty batch (kills ConditionalExpression→false at L47)', async () => {
+      // Direct kill of the L47 Stryker survivor: `entries.length === 0` mutated
+      // to `false` would skip the early return for an empty array, then call
+      // `dataSource.transaction` → `acquireChainLock` (a managerQuery hit) and
+      // walk an empty for-loop. Assert the precise no-side-effect contract:
+      // zero transaction wrappers, zero SQL, zero entity create/save calls.
+      // The promise must still resolve to `undefined` (no throw, no return).
+      const before = (dataSource.transaction as jest.Mock).mock.calls.length;
+      const queriesBefore = managerQuery.mock.calls.length;
+      const createsBefore = repo.create.mock.calls.length;
+      const savesBefore = repo.save.mock.calls.length;
+
+      const result = await sut.insertBatch([]);
+
+      expect(result).toBeUndefined();
+      expect((dataSource.transaction as jest.Mock).mock.calls.length).toBe(before);
+      expect(managerQuery.mock.calls.length).toBe(queriesBefore);
+      expect(repo.create.mock.calls.length).toBe(createsBefore);
+      expect(repo.save.mock.calls.length).toBe(savesBefore);
     });
 
     it('each row stores a valid hash pair (prev_hash + row_hash)', async () => {

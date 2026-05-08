@@ -43,4 +43,45 @@ describe('totpEncryption', () => {
     expect(() => decryptTotpSecret('only:two')).toThrow(/Malformed/);
     expect(() => decryptTotpSecret('aaaa:bbbb:cccc')).toThrow();
   });
+
+  // Mutation guard: pin segment count to exactly 3 so an off-by-one operator
+  // mutation (e.g. `!== 3` → `!== 4`) silently accepting 4-segment wires is
+  // caught. Each distinct count must trip the "Malformed" branch.
+  it.each([
+    ['1 segment (no colon)', 'no-colons-here'],
+    ['2 segments', 'one:two'],
+    ['4 segments', 'one:two:three:four'],
+    ['5 segments', 'a:b:c:d:e'],
+  ])('rejects wire format with %s', (_label, wire) => {
+    expect(() => decryptTotpSecret(wire)).toThrow(/Malformed/);
+  });
+
+  // Mutation guard: pin IV length to exactly IV_BYTES (12). Forge a wire with
+  // a valid 16-byte tag + non-empty ciphertext but an IV of 11 / 13 bytes —
+  // a mutant flipping `!== IV_BYTES` to `<` / `>` / a different constant would
+  // silently feed a wrong-length IV into AES-GCM.
+  it.each([
+    ['11-byte IV (one short)', 11],
+    ['13-byte IV (one long)', 13],
+  ])('rejects wire format with %s', (_label, ivLen) => {
+    const iv = Buffer.alloc(ivLen, 0x01);
+    const tag = Buffer.alloc(16, 0x02);
+    const ct = Buffer.alloc(8, 0x03);
+    const wire = `${iv.toString('base64')}:${tag.toString('base64')}:${ct.toString('base64')}`;
+    expect(() => decryptTotpSecret(wire)).toThrow(/Invalid IV length/);
+  });
+
+  // Mutation guard: pin auth-tag length to exactly TAG_BYTES (16). Same shape
+  // as the IV case — a mutant relaxing the equality check would let a forged
+  // 15- or 17-byte tag reach `setAuthTag` and produce a different error class.
+  it.each([
+    ['15-byte tag (one short)', 15],
+    ['17-byte tag (one long)', 17],
+  ])('rejects wire format with %s', (_label, tagLen) => {
+    const iv = Buffer.alloc(12, 0x01);
+    const tag = Buffer.alloc(tagLen, 0x02);
+    const ct = Buffer.alloc(8, 0x03);
+    const wire = `${iv.toString('base64')}:${tag.toString('base64')}:${ct.toString('base64')}`;
+    expect(() => decryptTotpSecret(wire)).toThrow(/Invalid auth tag length/);
+  });
 });

@@ -123,6 +123,41 @@ describe('UserRepositoryPg', () => {
       });
     });
 
+    // Stryker survivor: ConditionalExpression `if (existingUser)` -> `if (!existingUser)`.
+    // Asserts that when an existing user IS found we throw AND we never reach
+    // create/save — flipping the condition would proceed to create() and pass
+    // a weak "throws" check otherwise.
+    it('does not create or save user when email already exists', async () => {
+      repo.findOne.mockResolvedValue(makeUser({ email: 'taken@test.com' }));
+
+      await expect(sut.registerUser('taken@test.com', 'pass', 'Jane', 'Doe')).rejects.toMatchObject(
+        {
+          statusCode: 409,
+          code: 'CONFLICT',
+        },
+      );
+
+      expect(repo.create).not.toHaveBeenCalled();
+      expect(repo.save).not.toHaveBeenCalled();
+      expect(bcrypt.hash).not.toHaveBeenCalled();
+    });
+
+    // Stryker survivor companion: when no existing user, creation MUST proceed.
+    // Mirrors the "happy path" but explicitly contrasts the negative branch
+    // above so the conditional cannot be flipped without one of the two
+    // assertions failing.
+    it('proceeds to create + save when no existing user is found', async () => {
+      repo.findOne.mockResolvedValue(null);
+      const created = makeUser({ email: 'fresh@test.com' });
+      repo.create.mockReturnValue(created);
+      repo.save.mockResolvedValue(created);
+
+      await sut.registerUser('fresh@test.com', 'plaintext');
+
+      expect(repo.create).toHaveBeenCalledTimes(1);
+      expect(repo.save).toHaveBeenCalledTimes(1);
+    });
+
     it('handles optional firstname/lastname as undefined', async () => {
       repo.findOne.mockResolvedValue(null);
       const created = makeUser();
@@ -191,6 +226,41 @@ describe('UserRepositoryPg', () => {
 
       expect(result).toBeNull();
     });
+
+    // Stryker survivor: EqualityOperator `MoreThan(new Date())` -> `MoreThanOrEqual`.
+    // With fake timers we freeze "now" so the FindOperator value is pinned to
+    // the exact same Date passed to MoreThan. Asserting `_type === 'moreThan'`
+    // (not 'moreThanOrEqual') AND that `_value` strictly equals the frozen
+    // `now` makes the mutation fail: a `MoreThanOrEqual` would carry
+    // `_type === 'moreThanOrEqual'`, which differs from our equality check.
+    it('passes MoreThan(now) — boundary token (expires === now) is rejected', async () => {
+      jest.useFakeTimers();
+      try {
+        const now = new Date('2026-05-09T12:00:00.000Z');
+        jest.setSystemTime(now);
+
+        repo.findOne.mockResolvedValue(null);
+
+        await sut.getUserByResetToken('reset-tok');
+
+        const call = repo.findOne.mock.calls[0]?.[0] as unknown as {
+          where: {
+            reset_token: string;
+            reset_token_expires: { _type: string; _value: Date };
+          };
+        };
+        expect(call.where.reset_token).toBe('reset-tok');
+        // Strict operator type: MoreThanOrEqual would expose 'moreThanOrEqual'.
+        expect(call.where.reset_token_expires._type).toBe('moreThan');
+        expect(call.where.reset_token_expires._type).not.toBe('moreThanOrEqual');
+        // Value pinned to the frozen "now" — a token whose `expires` equals
+        // `now` would NOT satisfy `MoreThan(now)` (strict >), confirming the
+        // exact-boundary token is rejected.
+        expect(call.where.reset_token_expires._value).toEqual(now);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
   });
 
   // ─── updatePassword ───
@@ -255,6 +325,28 @@ describe('UserRepositoryPg', () => {
       const result = await sut.consumeResetTokenAndUpdatePassword('bad-tok', '$2b$12$hash');
 
       expect(result).toBeNull();
+    });
+
+    // Stryker survivor: EqualityOperator on the raw SQL `reset_token_expires > NOW()`.
+    // A mutation flipping `>` -> `>=` would accept a token whose expiry equals
+    // NOW() (the exact boundary). We pin the SQL string AND explicitly forbid
+    // `>=` so any operator mutation breaks at least one assertion.
+    it('uses strict `> NOW()` (not `>= NOW()`) — boundary token rejected', async () => {
+      const user = makeUser();
+      qb.execute.mockResolvedValue({ raw: [user] });
+
+      await sut.consumeResetTokenAndUpdatePassword('tok', '$2b$12$newhash');
+
+      // Capture SQL fragment + parameter binding from the qb spy.
+      const whereCall = qb.where.mock.calls[0] as [string, { token: string }];
+      const sql = whereCall[0];
+      const params = whereCall[1];
+
+      expect(sql).toBe('reset_token = :token AND reset_token_expires > NOW()');
+      // Defense in depth — operator mutation would inject `>=`.
+      expect(sql).toMatch(/reset_token_expires\s+>\s+NOW\(\)/);
+      expect(sql).not.toMatch(/reset_token_expires\s+>=\s+NOW\(\)/);
+      expect(params).toEqual({ token: 'tok' });
     });
   });
 
@@ -396,6 +488,26 @@ describe('UserRepositoryPg', () => {
       const result = await sut.consumeEmailChangeToken('bad-tok');
 
       expect(result).toBeNull();
+    });
+
+    // Stryker survivor: EqualityOperator on the raw SQL
+    // `email_change_token_expiry > NOW()`. A `>` -> `>=` mutation would
+    // accept an exact-boundary token. Same dual assertion pattern as
+    // consumeResetTokenAndUpdatePassword.
+    it('uses strict `> NOW()` (not `>= NOW()`) — boundary email-change token rejected', async () => {
+      const user = makeUser({ email: 'new@test.com' });
+      qb.execute.mockResolvedValue({ raw: [user] });
+
+      await sut.consumeEmailChangeToken('hashed-tok');
+
+      const whereCall = qb.where.mock.calls[0] as [string, { hashedToken: string }];
+      const sql = whereCall[0];
+      const params = whereCall[1];
+
+      expect(sql).toBe('email_change_token = :hashedToken AND email_change_token_expiry > NOW()');
+      expect(sql).toMatch(/email_change_token_expiry\s+>\s+NOW\(\)/);
+      expect(sql).not.toMatch(/email_change_token_expiry\s+>=\s+NOW\(\)/);
+      expect(params).toEqual({ hashedToken: 'hashed-tok' });
     });
   });
 

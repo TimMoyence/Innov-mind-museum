@@ -6,6 +6,9 @@ export default {
   jest: {
     configFile: 'jest.config.ts',
     enableFindRelatedTests: false,
+    // Inline forceExit redeclared in the merged `config:` block below — Stryker's
+    // jest plugin overrides projects[] which can drop top-level options like
+    // forceExit from jest.config.ts.
     // Stryker's jest runner does NOT support `--selectProjects`. The base
     // jest.config.ts declares 3 projects (unit-integration / e2e / scripts-esm).
     // Default `pnpm test` and `pnpm test:coverage` pin `--selectProjects
@@ -27,6 +30,13 @@ export default {
     // would re-spin per worker (40+ minutes of overhead for zero coverage
     // signal on the hot files).
     config: {
+      // forceExit MUST be false to enable Stryker's hot-reload (load tests
+      // once, run with multiple mutants in-process). Base jest.config.ts has
+      // forceExit:true (defensive default for `pnpm test`); we override here.
+      // Pre-req: source modules in scope must not register module-load timers
+      // that don't .unref() — see prometheus-metrics.ts enableDefaultMetrics()
+      // refactor (lazy registration moved to app bootstrap).
+      forceExit: false,
       projects: [
         {
           displayName: 'unit-integration',
@@ -69,80 +79,38 @@ export default {
   // pnpm strict hoisting: jest-runner must be explicitly listed
   appendPlugins: ['@stryker-mutator/jest-runner'],
   mutate: [
-    // Phase 1 — original 7 files
-    'src/modules/chat/useCase/guardrail/art-topic-guardrail.ts',
-    'src/modules/chat/useCase/guardrail/guardrail-evaluation.service.ts',
-    // 2026-05-05 Step H — pure helpers extracted from guardrail-evaluation.service.
-    'src/modules/chat/useCase/guardrail/guardrail-reason-mapping.ts',
-    'src/modules/chat/useCase/guardrail/guardrail-audit-payload.ts',
-    'src/modules/chat/useCase/guardrail/guardrail-refusal-builder.ts',
-    'src/shared/validation/input.ts',
-    'src/shared/pagination/cursor-codec.ts',
-    'src/modules/chat/useCase/llm/llm-prompt-builder.ts',
-    'src/modules/chat/useCase/orchestration/history-window.ts',
-    'src/modules/chat/useCase/llm/llm-sections.ts',
-    // Phase 2 Wave 1 — pure functions & validation
-    'src/shared/validation/email.ts',
-    'src/shared/validation/password.ts',
-    'src/shared/i18n/locale.ts',
-    'src/shared/i18n/fallback-messages.ts',
-    'src/shared/i18n/guardrail-refusals.ts',
-    'src/modules/chat/useCase/image/image-scoring.ts',
-    'src/modules/chat/useCase/orchestration/assistant-response.ts',
-    'src/modules/chat/useCase/session/visit-context.ts',
-    'src/modules/chat/useCase/image/chat-image.helpers.ts',
-    'src/modules/chat/useCase/guardrail/art-topic-classifier.ts',
-    // Phase 2 Wave 2 — security & infrastructure
-    'src/modules/auth/useCase/session/login-rate-limiter.ts',
-    'src/shared/rate-limit/in-memory-bucket-store.ts',
-    'src/modules/chat/useCase/session/session-access.ts',
-    'src/shared/security/bcrypt.ts',
-    'src/modules/chat/useCase/llm/semaphore.ts',
-    'src/shared/utils/fire-and-forget.ts',
-    'src/shared/cache/noop-cache.service.ts',
-    // Phase 2 Wave 3 — middleware
-    'src/helpers/middleware/require-role.middleware.ts',
-    'src/helpers/middleware/authenticated.middleware.ts',
-    'src/helpers/middleware/error.middleware.ts',
-    'src/helpers/middleware/rate-limit.middleware.ts',
-    'src/helpers/middleware/accept-language.middleware.ts',
-    'src/helpers/middleware/daily-chat-limit.middleware.ts',
-    'src/helpers/middleware/validate-body.middleware.ts',
-    'src/helpers/middleware/validate-query.middleware.ts',
-    'src/helpers/middleware/apiKey.middleware.ts',
-    // Phase 2 Wave 4 — use cases
-    'src/modules/auth/useCase/registration/register.useCase.ts',
-    'src/modules/auth/useCase/password/changePassword.useCase.ts',
-    'src/modules/auth/useCase/registration/verifyEmail.useCase.ts',
-    'src/modules/auth/useCase/api-keys/generateApiKey.useCase.ts',
-    'src/modules/auth/useCase/api-keys/revokeApiKey.useCase.ts',
-    'src/modules/review/useCase/moderation/moderateReview.useCase.ts',
-    'src/modules/review/useCase/public/createReview.useCase.ts',
-    'src/modules/admin/useCase/reports/resolveReport.useCase.ts',
-    // Phase 4 Wave 5 — banking-grade hot files
-    'src/shared/audit/audit-chain.ts',
-    'src/modules/chat/adapters/secondary/llm/llm-circuit-breaker.ts',
-    'src/modules/auth/adapters/secondary/pg/refresh-token.repository.pg.ts',
-    'src/modules/auth/useCase/session/authSession.service.ts',
-    // 2026-05-05 Step G — sub-services extracted from authSession.service.ts.
-    // Mutation coverage follows the security-critical logic into the new files.
-    'src/modules/auth/useCase/session/token-jwt.service.ts',
-    'src/modules/auth/useCase/session/session-issuer.service.ts',
-    'src/modules/auth/useCase/session/mfa-gate.service.ts',
-    // Exclusions
+    // Full BE coverage (2026-05-08): the prior explicit phase-by-phase list
+    // (~50 files) was a curated banking-grade subset. Expanding to every
+    // source file under src/** trades runtime for completeness — incremental
+    // mode + a versioned `reports/stryker-incremental.json` keeps the cost
+    // low after the first full run.
+    'src/**/*.ts',
+    // Exclusions — generated, declarative, or low-signal targets where every
+    // mutant survives by construction (entity decorators, migration SQL
+    // strings, type-only re-exports, env parsing).
     '!src/**/*.entity.ts',
     '!src/**/*.migration.ts',
     '!src/**/*.d.ts',
     '!src/**/*.types.ts',
+    '!src/data/db/migrations/**',
+    '!src/data/db/data-source.ts',
+    '!src/index.ts',
+    '!src/app.ts',
+    '!src/config/env.ts',
   ],
   thresholds: {
     high: 85,
     low: 70,
     break: 70,
   },
-  timeoutMS: 30000,
-  // ubuntu-latest GitHub runners ship 4 vCPUs; 2 left half the box idle. Bumped
-  // 2 → 4 on 2026-05-08 to cut wall-clock by ~2× so the first full run lands
-  // under the 90-min CI cap and writes the incremental cache.
-  concurrency: 4,
+  // Dry-run baseline = 14ms/test moyen. timeoutFactor (1.5) × baseline + timeoutMS
+  // gives the effective per-mutant timeout. 30s was massively over-provisioned —
+  // 1693 timeouts at 4% wasted ~14h on hangs. 10s leaves comfortable margin for
+  // the rare IO test while freeing workers ~3× faster on infinite-loop mutants.
+  timeoutMS: 10000,
+  // CI ubuntu-latest = 4 vCPUs (cap 4). Local M1 Pro = 8-10 cores, 16GB RAM,
+  // can sustain 6 concurrent Jest workers (~500MB each, 3GB total — well
+  // under RAM budget). 6 (not 8) keeps 2 cores free for IDE / browser /
+  // Claude during overnight runs so the machine stays usable.
+  concurrency: process.env.CI === 'true' ? 4 : 6,
 };

@@ -7,12 +7,22 @@ export interface FakeAuditRow {
   createdAt: Date;
 }
 
+/** A single recorded `manager.query()` invocation — preserves call order for assertions. */
+export interface RecordedQuery {
+  /** Raw SQL exactly as the job passed it (whitespace preserved). */
+  sql: string;
+  /** Bound parameters as the job passed them. */
+  params?: unknown[];
+}
+
 /** Factory output so tests can introspect state + drive the DataSource. */
 export interface FakeAuditDataSource {
   dataSource: DataSource;
   rows: FakeAuditRow[];
   /** Flag flipped to `true` while a transaction set `app.audit_anonymization_allowed`. */
   sawAnonymizationWhitelist: boolean;
+  /** All `manager.query()` invocations the job made, in order. */
+  queryCalls: RecordedQuery[];
 }
 
 /**
@@ -62,9 +72,14 @@ function maskIpv6(ip: string): string {
  * @param initialRows
  */
 export function createFakeAuditDataSource(initialRows: FakeAuditRow[]): FakeAuditDataSource {
-  const state: { rows: FakeAuditRow[]; sawAnonymizationWhitelist: boolean } = {
+  const state: {
+    rows: FakeAuditRow[];
+    sawAnonymizationWhitelist: boolean;
+    queryCalls: RecordedQuery[];
+  } = {
     rows: initialRows.map((row) => ({ ...row })),
     sawAnonymizationWhitelist: false,
+    queryCalls: [],
   };
 
   const thirteenMonthsAgo = (): Date => {
@@ -76,6 +91,7 @@ export function createFakeAuditDataSource(initialRows: FakeAuditRow[]): FakeAudi
 
   const manager = {
     query: async <T>(sql: string, params?: unknown[]): Promise<T> => {
+      state.queryCalls.push({ sql, params });
       const normalized = sql.replace(/\s+/g, ' ').trim();
 
       if (normalized.startsWith(`SET LOCAL app.audit_anonymization_allowed = 'true'`)) {
@@ -119,6 +135,9 @@ export function createFakeAuditDataSource(initialRows: FakeAuditRow[]): FakeAudi
     rows: state.rows,
     get sawAnonymizationWhitelist(): boolean {
       return state.sawAnonymizationWhitelist;
+    },
+    get queryCalls(): RecordedQuery[] {
+      return state.queryCalls;
     },
   } as FakeAuditDataSource;
 }

@@ -12,6 +12,7 @@ import { MemoryCacheService } from '@shared/cache/memory-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
 import { ResilientCacheWrapper } from '@shared/cache/resilient-cache.wrapper';
 import { logger } from '@shared/logger/logger';
+import { enableDefaultMetrics } from '@shared/observability/prometheus-metrics';
 import { setupSentryExpressErrorHandler } from '@shared/observability/sentry';
 import { createApiRouter } from '@shared/routers/api.router';
 import { env } from '@src/config/env';
@@ -212,6 +213,11 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   // Mounted after global middleware (auth, rate-limit, etc.) so the /metrics
   // route inherits CORS and security headers, but BEFORE API routes so every
   // subsequent handler is observed by httpMetricsMiddleware.
+  // enableDefaultMetrics() spins up prom-client's process-level collectors
+  // (CPU, memory, event-loop lag, FDs) — wired here, not at module load,
+  // because those collectors register setIntervals that don't `.unref()` and
+  // would keep Node alive past Stryker mutant runs (kills hot-reload throughput).
+  enableDefaultMetrics();
   app.use(httpMetricsMiddleware);
   app.get('/metrics', metricsHandler);
 

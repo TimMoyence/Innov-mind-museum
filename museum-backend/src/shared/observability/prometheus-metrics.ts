@@ -8,8 +8,24 @@ import { Counter, Histogram, Registry, collectDefaultMetrics } from 'prom-client
  */
 export const registry = new Registry();
 
-// Default Node.js process metrics (CPU, memory, event-loop lag, etc).
-collectDefaultMetrics({ register: registry });
+let defaultMetricsRegistered = false;
+
+/**
+ * Enables default Node.js process metrics (CPU, memory, event-loop lag, file
+ * descriptors). Idempotent. Call ONCE from app bootstrap (`src/index.ts`).
+ *
+ * Was previously called at module load — but `prom-client` registers
+ * setInterval-based collectors that don't `.unref()`, which kept Node alive
+ * past test/Stryker mutant runs and broke Stryker's hot-reload throughput
+ * (forced spawn-per-mutant fallback, ~10x slowdown).
+ *
+ * Tests that need default metrics in the output must call this explicitly.
+ */
+export function enableDefaultMetrics(): void {
+  if (defaultMetricsRegistered) return;
+  collectDefaultMetrics({ register: registry });
+  defaultMetricsRegistered = true;
+}
 
 /** RED — Rate. Total HTTP requests by route + status + method. */
 export const httpRequestsTotal = new Counter({

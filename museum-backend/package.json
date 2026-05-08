@@ -47,7 +47,9 @@
     "mutation": "stryker run",
     "mutation:ci": "stryker run --incremental",
     "mutation:gate": "node scripts/stryker-hot-files-gate.mjs",
-    "mutation:warm": "stryker run"
+    "mutation:warm": "stryker run",
+    "mutation:baseline": "stryker run stryker.baseline.config.mjs",
+    "mutation:chunk": "stryker run --mutate"
   },
   "keywords": [],
   "author": "",

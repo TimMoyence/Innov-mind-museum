@@ -1,0 +1,16 @@
+{
+  "ignore_dirs": [
+    ".stryker-tmp",
+    "node_modules",
+    "dist",
+    ".test-dist",
+    ".next",
+    "coverage",
+    ".expo",
+    "ios/Pods",
+    "ios/build",
+    "android/build",
+    "android/.gradle",
+    "android/app/build"
+  ]
+}

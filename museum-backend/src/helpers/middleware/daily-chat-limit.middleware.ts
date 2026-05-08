@@ -135,9 +135,15 @@ export const dailyChatLimit = (req: Request, _res: Response, next: NextFunction)
       });
     })
     .catch(() => {
-      // Redis failed — fall back to in-memory counting
+      // Redis failed — fall back to in-memory counting. Wrap to prevent any
+      // sync throw from `checkInMemory` (or its mutated variants under Stryker)
+      // from becoming an unhandled rejection that crashes the worker.
       logger.warn('daily_chat_limit_redis_fallback', { userId: user.id });
-      checkInMemory(key, limit, dateStr, next);
+      try {
+        checkInMemory(key, limit, dateStr, next);
+      } catch (err) {
+        next(err instanceof Error ? err : new Error(String(err)));
+      }
     });
 };
 

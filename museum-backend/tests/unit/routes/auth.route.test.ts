@@ -622,6 +622,168 @@ describe('Auth Routes — HTTP Layer', () => {
       expect(res.status).toBe(200);
       expect(res.body).toEqual(exportResult);
     });
+
+    /**
+     * Stryker survivor — `byteSize <= STREAMING_THRESHOLD_BYTES` boundary at the
+     * 10 MB cutover. Builds a payload whose serialised size is *exactly*
+     * `STREAMING_THRESHOLD_BYTES` and asserts the small path (`res.send`) is
+     * taken — Express then emits `Content-Length` and no
+     * `Transfer-Encoding: chunked`. The chunked path would flip both signals.
+     */
+    it('GET /api/users/me/export uses non-streaming path when byteSize === threshold', async () => {
+      mockGetUserById.mockResolvedValueOnce({ id: 1, email: 'user@test.com', role: 'visitor' });
+
+      const STREAMING_THRESHOLD_BYTES = 10 * 1024 * 1024;
+      const base = {
+        exportedAt: '2026-04-26T10:00:00.000Z',
+        schemaVersion: '1' as const,
+        user: {
+          id: 1,
+          email: 'user@test.com',
+          role: 'visitor',
+          createdAt: '2026-01-01',
+          lastLoginAt: null,
+          locale: 'en',
+        },
+        consent: { location_to_llm: false },
+        chatSessions: [],
+        savedArtworks: [],
+        reviews: [],
+        supportTickets: [],
+        pad: '',
+      };
+      const baseSize = Buffer.byteLength(JSON.stringify(base), 'utf8');
+      const padLength = STREAMING_THRESHOLD_BYTES - baseSize;
+      const padded = { ...base, pad: 'a'.repeat(padLength) };
+      expect(Buffer.byteLength(JSON.stringify(padded), 'utf8')).toBe(STREAMING_THRESHOLD_BYTES);
+
+      mockExportUserData.mockResolvedValueOnce(padded);
+      const token = makeToken();
+
+      // `Accept-Encoding: identity` disables the compression middleware so the
+      // response surface reveals which write path the handler took.
+      const res = await request(app)
+        .get('/api/users/me/export')
+        .set('Authorization', `Bearer ${token}`)
+        .set('Accept-Encoding', 'identity');
+
+      expect(res.status).toBe(200);
+      // Small path → Express sets Content-Length, no chunked transfer.
+      expect(res.headers['content-length']).toBe(String(STREAMING_THRESHOLD_BYTES));
+      expect(res.headers['transfer-encoding']).toBeUndefined();
+    });
+
+    /**
+     * Stryker survivor — same boundary, off by one. At
+     * `STREAMING_THRESHOLD_BYTES + 1` the handler MUST switch to the chunked
+     * write/end path so we never buffer >10 MB of JSON. Surfaces as
+     * `Transfer-Encoding: chunked` and no `Content-Length`.
+     */
+    it('GET /api/users/me/export uses streaming path when byteSize === threshold + 1', async () => {
+      mockGetUserById.mockResolvedValueOnce({ id: 1, email: 'user@test.com', role: 'visitor' });
+
+      const STREAMING_THRESHOLD_BYTES = 10 * 1024 * 1024;
+      const target = STREAMING_THRESHOLD_BYTES + 1;
+      const base = {
+        exportedAt: '2026-04-26T10:00:00.000Z',
+        schemaVersion: '1' as const,
+        user: {
+          id: 1,
+          email: 'user@test.com',
+          role: 'visitor',
+          createdAt: '2026-01-01',
+          lastLoginAt: null,
+          locale: 'en',
+        },
+        consent: { location_to_llm: false },
+        chatSessions: [],
+        savedArtworks: [],
+        reviews: [],
+        supportTickets: [],
+        pad: '',
+      };
+      const baseSize = Buffer.byteLength(JSON.stringify(base), 'utf8');
+      const padded = { ...base, pad: 'a'.repeat(target - baseSize) };
+      expect(Buffer.byteLength(JSON.stringify(padded), 'utf8')).toBe(target);
+
+      mockExportUserData.mockResolvedValueOnce(padded);
+      const token = makeToken();
+
+      // `Accept-Encoding: identity` disables compression so chunked-transfer
+      // observation isn't masked by gzip.
+      const res = await request(app)
+        .get('/api/users/me/export')
+        .set('Authorization', `Bearer ${token}`)
+        .set('Accept-Encoding', 'identity');
+
+      expect(res.status).toBe(200);
+      // Streaming path → chunked transfer, no Content-Length.
+      expect(res.headers['transfer-encoding']).toBe('chunked');
+      expect(res.headers['content-length']).toBeUndefined();
+    });
+
+    /**
+     * Stryker survivor — `mediaCount` reduce: counts a message as "with media"
+     * when EITHER `imageRef` OR `audioUrl` is set. A `||→&&` mutant would only
+     * count messages that have BOTH. Three messages (image-only, audio-only,
+     * neither) → expected mediaCount === 2; mutant would yield 0.
+     * Also asserts `res.status(200)` AND `Content-Type` header are emitted —
+     * killing the MethodRemoval mutant on either call (response would still
+     * carry the body but lose status / content-type).
+     */
+    it('GET /api/users/me/export logs mediaCount counting EITHER imageRef OR audioUrl, and emits status+content-type', async () => {
+      mockGetUserById.mockResolvedValueOnce({ id: 1, email: 'user@test.com', role: 'visitor' });
+
+      const exportResult = {
+        exportedAt: '2026-04-26T10:00:00.000Z',
+        schemaVersion: '1' as const,
+        user: {
+          id: 1,
+          email: 'user@test.com',
+          role: 'visitor',
+          createdAt: '2026-01-01',
+          lastLoginAt: null,
+          locale: 'en',
+        },
+        consent: { location_to_llm: false },
+        chatSessions: [
+          {
+            id: 'sess-1',
+            museumMode: false,
+            createdAt: '2026-01-01',
+            updatedAt: '2026-01-01',
+            messages: [
+              { id: 'm1', role: 'user', text: 'hi', imageRef: 's3://img', audioUrl: null },
+              { id: 'm2', role: 'user', text: 'hi', imageRef: null, audioUrl: 's3://aud' },
+              { id: 'm3', role: 'user', text: 'hi', imageRef: null, audioUrl: null },
+            ],
+          },
+        ],
+        savedArtworks: [],
+        reviews: [],
+        supportTickets: [],
+      };
+      mockExportUserData.mockResolvedValueOnce(exportResult);
+
+      const { auditService } = jest.requireMock('@shared/audit');
+
+      const token = makeToken();
+      const res = await request(app)
+        .get('/api/users/me/export')
+        .set('Authorization', `Bearer ${token}`);
+
+      // status(200) + content-type emitted (kills MethodRemoval on either)
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toMatch(/application\/json/);
+
+      // mediaCount = 2 (image-only + audio-only); 0 under the && mutant
+      expect(auditService.log).toHaveBeenCalledTimes(1);
+      const logArg = auditService.log.mock.calls[0][0] as {
+        metadata: { mediaCount: number; sessionsCount: number };
+      };
+      expect(logArg.metadata.mediaCount).toBe(2);
+      expect(logArg.metadata.sessionsCount).toBe(1);
+    });
   });
 
   // ── F7 — httpOnly cookies + CSRF token issuance ─────────────────
