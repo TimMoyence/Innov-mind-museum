@@ -1,0 +1,16 @@
+apiVersion: 1
+
+# Provisioned data source — Grafana auto-discovers this on boot.
+# Editing through the Grafana UI is disallowed (`editable: false`) so the
+# YAML stays the source of truth.
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    uid: musaium-prometheus
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: 30s
+      httpMethod: POST

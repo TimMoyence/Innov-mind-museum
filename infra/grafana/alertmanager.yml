@@ -1,0 +1,24 @@
+# AlertManager — single receiver routing to the Telegram bridge.
+# AlertManager has no native Telegram receiver ; the bridge service
+# (alertmanager-telegram) translates the AM webhook payload to the
+# Telegram Bot API `sendMessage`.
+
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: telegram-ops
+  group_by: ["alertname", "service"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: telegram-ops
+    webhook_configs:
+      - url: "http://alertmanager-telegram:9094/alert"
+        send_resolved: true
+        max_alerts: 0
+
+# No inhibition rules yet — keep the surface tight pre-launch.
+inhibit_rules: []

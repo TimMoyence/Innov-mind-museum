@@ -74,3 +74,17 @@ Content-Type: audio/mp4
 
 < ./fixtures/voice-note.m4a
 --Boundary--
+
+
+### /metrics endpoint smoke (T2.8 — C1 PR Phase 2)
+GET http://localhost:3000/metrics
+
+### /metrics filtered to chat_phase_duration_seconds (Phase 2 dashboard sources)
+GET http://localhost:3000/metrics
+Accept: text/plain
+
+### AlertManager — list active silences (ops debug)
+GET http://localhost:9093/api/v2/silences
+
+### AlertManager — list alerts (ops debug)
+GET http://localhost:9093/api/v2/alerts

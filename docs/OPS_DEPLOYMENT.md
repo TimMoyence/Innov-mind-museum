@@ -887,3 +887,103 @@ eas update --branch production --message "Rollback to stable"
 - [`docs/UPTIME_MONITORING.md`](UPTIME_MONITORING.md) — uptime checks and alerting
 - [`docs/MOBILE_INTERNAL_TESTING_FLOW.md`](MOBILE_INTERNAL_TESTING_FLOW.md) — internal mobile testing
 - [`docs/RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) — release checklist
+
+---
+
+## Grafana + Prometheus + AlertManager (C1.1, ADR-036)
+
+Self-hosted observability stack — boots alongside the backend on the same VPS,
+provisioned as code in `infra/grafana/`. The dashboards JSON, datasource YAML,
+AlertManager YAML, and Prometheus scrape config are all version-controlled —
+**never edit through the Grafana UI** (drift is invisible and silently
+overridden on the next provisioner pass).
+
+### Topology (compose services)
+
+| Service | Port | Image | Role |
+|---|---|---|---|
+| `prometheus` | `9090` | `prom/prometheus:v2.55.1` | Scrapes backend `/metrics` every 30s ; 14d retention. |
+| `grafana` | `3002` | `grafana/grafana:11.4.0` | Dashboard host. Basic auth (`admin` user). Iframe-embeddable. |
+| `alertmanager` | `9093` | `prom/alertmanager:v0.27.0` | Routes firing alerts to the Telegram bridge. |
+| `alertmanager-telegram` | `9094` (internal) | local build | Translates AM webhook → Telegram Bot API `sendMessage`. |
+
+### Boot
+
+```bash
+# Required env vars (commit to your secret store, NEVER to .env in repo):
+export GRAFANA_ADMIN_PASSWORD=...     # 24+ char random
+export TELEGRAM_BOT_TOKEN=...         # from @BotFather
+export TELEGRAM_CHAT_ID=...           # from getUpdates after first /start to the bot
+
+docker compose -f infra/grafana/docker-compose.yml up -d
+```
+
+### Telegram bot setup (one-shot, per environment)
+
+1. Open Telegram → search `@BotFather` → `/newbot` → choose name + handle → copy the token into `TELEGRAM_BOT_TOKEN`.
+2. Send `/start` to your new bot from your personal Telegram.
+3. Fetch the chat id:
+   ```bash
+   curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates" \
+     | jq -r '.result[].message.chat.id' | head -1
+   ```
+4. Set `TELEGRAM_CHAT_ID` to the value returned above.
+5. Bring the stack up — the bridge logs `alertmanager-telegram listening on :9094` on success.
+6. Test fire from a workstation with `amtool` (install via `brew install prometheus-alertmanager` or use the in-container binary):
+   ```bash
+   docker exec musaium-alertmanager amtool alert add chat_e2e_p99_high \
+     severity=warning service=musaium-backend --annotation summary="manual smoke"
+   ```
+   The bridge should deliver a Telegram message within a few seconds.
+
+### Dashboard editing workflow
+
+1. Pull the JSON: `cp infra/grafana/dashboards/chat-latency.json /tmp/before.json`.
+2. Edit in Grafana UI (visually nicer than YAML).
+3. Export: dashboard menu → Share → Export → "Save to file".
+4. `mv ~/Downloads/chat-latency-*.json infra/grafana/dashboards/chat-latency.json` and review the diff.
+5. PR the change. The provisioner reloads on next compose `up -d`.
+
+### Alert silencing
+
+Use the AlertManager UI at `http://${VPS_IP}:9093` → "Silences" → "New". Always
+include a comment + an expiry. Silences are not version-controlled; mirror them
+into the on-call runbook if they outlive a deploy.
+
+### Rollback
+
+- Dashboard JSON / alerting rules / scrape config are git-tracked → `git revert`
+  + restart restores the prior state. Prometheus retains its data, no loss.
+- AlertManager rule reload: `curl -X POST http://${VPS_IP}:9093/-/reload` after
+  editing `infra/grafana/alertmanager.yml`.
+
+### Grafana iframe panel limitation (D9)
+
+The museum-web admin route `/admin/ops/grafana` embeds the dashboard same-origin
+via the nginx reverse proxy at `/grafana/*`. **This is an ops-only panel —
+restricted to the `admin` role at the museum-web layer.**
+
+What this iframe exposes:
+
+- **All tenants' chat data, aggregated.** There is no `museumId` scoping in the
+  Prometheus metrics (cardinality budget per spec §5 NFR forbade museum-scoped
+  labels). A B2B `museum_manager` MUST NOT see this panel — they would observe
+  data from other museums in the aggregates.
+
+What this iframe does NOT replace:
+
+- The proper B2B museum-admin panel — that ships in **W3.2** post-launch with
+  Recharts + a backend proxy that scopes queries to the caller's `museumId`.
+  Until W3.2 ships, B2B museum admins have no chat-latency visibility (by
+  design).
+
+Enforcement:
+
+- `museum-web/src/app/[locale]/admin/ops/grafana/layout.tsx` wraps the route
+  in `<RoleGuard allowedRoles={['admin']}>`. A `moderator` or `museum_manager`
+  is redirected to `/admin` with a denied-access toast.
+- The nginx location does not add auth — it relies on Grafana's own basic auth
+  (`GF_AUTH_BASIC_ENABLED=true`). The first time an admin visits
+  `/admin/ops/grafana`, the iframe prompts a basic-auth dialog.
+- CSP `default-src 'self'` (museum-web middleware) covers `frame-src` so
+  same-origin iframes work without a per-route CSP relaxation.

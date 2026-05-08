@@ -459,3 +459,8 @@ Operator runbook: `docs/OPS_DEPLOYMENT.md § 12.1 (TLS / certificate management)
 10. Déclencher manuellement `db-backup-monthly-restore-drill` et vérifier que les smoke queries passent.
 11. Configurer les secrets TLS renewal (`VPS_HOST`, `VPS_USER`, `VPS_DEPLOY_SSH_KEY`, `CERT_RENEWAL_HEARTBEAT_URL`, `BETTER_STACK_HEARTBEAT_URL`, `TLS_MONITOR_DOMAINS`) — voir `docs/OPS_DEPLOYMENT.md § 12.1`.
 12. Déclencher manuellement `tls-renewal` (workflow_dispatch) et vérifier sur le VPS via `sudo certbot certificates` que les certs sont valides; déclencher `tls-cert-monitor` et vérifier que le rapport JSON liste tous les domaines avec `days_remaining ≥ 14`.
+13. Configurer les secrets Grafana / AlertManager / Telegram (C1.1 — D11) :
+    - `GRAFANA_ADMIN_PASSWORD` — 24+ chars random ; admin local Grafana basic auth.
+    - `TELEGRAM_BOT_TOKEN` — depuis `@BotFather`, token du bot d'alerting.
+    - `TELEGRAM_CHAT_ID` — chat id Tim, récupéré via `getUpdates` après premier `/start` au bot.
+    Procédure complète : `docs/OPS_DEPLOYMENT.md` § Grafana + Prometheus + AlertManager. Rotation : tokens Telegram = révoqués dans BotFather si compromis ; password Grafana = rotation trimestrielle ou sur incident. Ces secrets sont environnement-spécifiques (recommandé : un bot Telegram par environnement pour ne pas mélanger les alertes).

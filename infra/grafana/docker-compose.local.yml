@@ -1,0 +1,53 @@
+# Local-only Docker compose stack for T2.7 — k6 spike test against a
+# self-contained Prometheus + Grafana + AlertManager + Telegram bridge.
+# The backend is expected to be running on the host (musaium-backend
+# `pnpm dev` on :3000) — host.docker.internal resolves to the host from
+# inside the containers (Docker Desktop on macOS / Linux with extra-host).
+#
+# Usage:
+#   export TELEGRAM_BOT_TOKEN=...   # BotFather token
+#   export TELEGRAM_CHAT_ID=...     # chat_id from getUpdates
+#   export GRAFANA_ADMIN_PASSWORD=...
+#   docker compose -f infra/grafana/docker-compose.local.yml up -d
+#   k6 run museum-backend/tests/load/chat-spike.k6.js \
+#     -e AUTH_BEARER=$DEV_TOKEN -e SESSION_ID=$DEV_SESSION_ID
+#
+# The stack reuses the docker-compose.yml services with overrides so the
+# bridge points at the local dashboard URL instead of the prod one.
+
+services:
+  prometheus:
+    extends:
+      file: docker-compose.yml
+      service: prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    extends:
+      file: docker-compose.yml
+      service: grafana
+    environment:
+      GRAFANA_ROOT_URL: "http://localhost:3002/"
+      GRAFANA_SERVE_FROM_SUB_PATH: "false"
+
+  alertmanager:
+    extends:
+      file: docker-compose.yml
+      service: alertmanager
+
+  alertmanager-telegram:
+    extends:
+      file: docker-compose.yml
+      service: alertmanager-telegram
+    environment:
+      DASHBOARD_BASE_URL: "http://localhost:3002"
+
+volumes:
+  prom_data:
+  grafana_data:
+  am_data:
+
+networks:
+  obs:
+    driver: bridge

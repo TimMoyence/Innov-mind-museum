@@ -1,0 +1,35 @@
+# Prometheus scrape config — backend /metrics endpoint.
+# Mounted by infra/grafana/docker-compose.yml as /etc/prometheus/prometheus.yml.
+# Retention is 14d (set on the Prometheus command-line, not here).
+
+global:
+  scrape_interval: 30s
+  scrape_timeout: 10s
+  evaluation_interval: 30s
+  external_labels:
+    # external_labels accepts ${VAR} expansion when Prometheus is started
+    # with `--enable-feature=expand-external-labels`. We rely on the
+    # feature flag in the docker-compose command-line.
+    service: musaium-backend
+    env: ${ENV}
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+rule_files:
+  - /etc/prometheus/alerting/*.yml
+
+scrape_configs:
+  - job_name: musaium-backend
+    metrics_path: /metrics
+    # Compose sets `extra_hosts: host.docker.internal:host-gateway` so the
+    # Prom container can reach a backend running on the host. In a fully-
+    # Compose deploy where the backend is a service on the same network,
+    # change this to the service hostname (`musaium-backend:3000`).
+    static_configs:
+      - targets:
+          - "host.docker.internal:3000"
+        labels:
+          service: musaium-backend

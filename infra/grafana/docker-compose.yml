@@ -1,0 +1,94 @@
+services:
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: musaium-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=14d"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+      # external_labels uses ${VAR} expansion — required for env: ${ENV}.
+      - "--enable-feature=expand-external-labels"
+    environment:
+      ENV: "${ENV:-prod}"
+    volumes:
+      - ../../museum-backend/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerting:/etc/prometheus/alerting:ro
+      - prom_data:/prometheus
+    ports:
+      - "9090:9090"
+    extra_hosts:
+      # Resolves host.docker.internal on Linux (Docker Desktop on macOS
+      # already provides it). Required for the scrape config to reach a
+      # backend running on the host (`pnpm dev`).
+      - "host.docker.internal:host-gateway"
+    networks:
+      - obs
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: musaium-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      # ── Auth (D7 — basic auth Tim-only, OIDC differé) ──────────────
+      GF_AUTH_BASIC_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set}"
+      # ── Iframe embed (D9 — museum-web admin same-origin via nginx) ─
+      # cf. docs/OPS_DEPLOYMENT.md §Grafana for the threat model and the
+      # super-admin-only access guarantee at the museum-web layer.
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_SECURITY_COOKIE_SAMESITE: "lax"
+      GF_SECURITY_X_FRAME_OPTIONS: ""
+      # ── Server ─────────────────────────────────────────────────────
+      GF_SERVER_ROOT_URL: "${GRAFANA_ROOT_URL:-http://localhost:3002/}"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "${GRAFANA_SERVE_FROM_SUB_PATH:-false}"
+    volumes:
+      - ./provisioning:/etc/grafana/provisioning:ro
+      - ./dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3002:3000"
+    networks:
+      - obs
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: musaium-alertmanager
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - am_data:/alertmanager
+    ports:
+      - "9093:9093"
+    networks:
+      - obs
+
+  alertmanager-telegram:
+    build: ./alertmanager-telegram
+    container_name: musaium-alertmanager-telegram
+    restart: unless-stopped
+    environment:
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN must be set}"
+      TELEGRAM_CHAT_ID: "${TELEGRAM_CHAT_ID:?TELEGRAM_CHAT_ID must be set}"
+      DASHBOARD_BASE_URL: "${GRAFANA_ROOT_URL:-http://localhost:3002}"
+      PORT: "9094"
+    networks:
+      - obs
+
+volumes:
+  prom_data:
+  grafana_data:
+  am_data:
+
+networks:
+  obs:
+    driver: bridge
