@@ -13,6 +13,8 @@
 
 Référence transverse : `museum-frontend/docs/QUALITY_GUIDE.md` (qualité runtime + tests), `museum-frontend/docs/ARCHITECTURE_MAP.md` (dossiers + patterns), `museum-frontend/docs/NEXT_LEVEL_MOBILE_PRODUCTION_AND_TEST.md` (release engineering).
 
+**Produit context (décision 2026-05-08) :** ROADMAP_PRODUCT priorise **Phase 1 Consolidation (chat fast / image / Wikidata / no-halluc / compare / paywall stub) AVANT Phase 2 Walk V1**. Cette roadmap FE = **track parallèle indépendant** (dette Expo / RN). Items F3/F5/F12 ci-dessous restent sur leur cadence WT2, **pas bloqués** par Phase 1 produit, **pas prioritaires** sur elle. Coordination : cf. `docs/SPRINT_2026-05-05_PLAN.md`.
+
 ---
 
 ## NOW — Sprint launch (2026-05-03 → 2026-06-01)

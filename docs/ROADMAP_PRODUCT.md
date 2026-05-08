@@ -19,7 +19,7 @@
 
 | Segment | Modèle | État |
 |---|---|---|
-| **B2C visiteur** | Freemium (3 sessions/mois free, abonnement Premium illimité) | Hypothèse — valider 4 sem post-launch |
+| **B2C visiteur** | Freemium (3 sessions/mois free, abonnement Premium illimité) | Hypothèse — soft-paywall stub V1 (C6) pour valider data-driven |
 | **B2B musée** | Licence annuelle + co-branding optionnel | Hypothèse — pilotes à signer avant juin |
 | **Institutionnel** | Subvention culture / appel à projets | Backlog 2026 H2 |
 
@@ -38,59 +38,128 @@
 
 ---
 
-## NOW — Sprint launch (2026-05-03 → 2026-06-01)
+## Stratégie : Phase 1 Consolidation → Phase 2 Évolution
+
+Décision 2026-05-08 (brainstorm reprio) : **consolider l'existant à un niveau premium AVANT d'empiler Walk V1**.
+
+Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade dès V1, alors :
+- KR2 (NPS Walk) bénéficie d'un fondement chat solide
+- Pitch B2B (KR1) montre features différenciantes (image compare = wow)
+- Soft-paywall stub (KR4 funnel data) valide hypothèse freemium pré-Stripe full
+- Phase 2 démarre sur fondation stable, pas sur surcouche fragile
+
+**Phase 1 (NOW)** = items C1…C7 ci-dessous. Bloque démarrage Phase 2 tant qu'incomplet.
+**Phase 2 (NEXT)** = items Walk V1 + multi-tenancy + admin + landing, déplacés depuis l'ancien NOW.
+
+---
+
+## NOW — Phase 1 Consolidation (sprint launch 2026-05-03 → 2026-06-01)
 
 > **Discipline :** chaque feature non-trivial passe par /team Spec Kit (spec.md + design.md + tasks.md).
-> Coche `[x]` au merge. Fais ressortir blocages explicitement.
+> Coche `[x]` au merge. Bloqué = `[BLOCKED: raison]` inline.
 >
 > **Sprint segment intermédiaire P1 closure :** 2026-05-05 → 2026-05-19, plan détaillé dans [`docs/SPRINT_2026-05-05_PLAN.md`](./SPRINT_2026-05-05_PLAN.md). Feature freeze 2026-05-19, soak staging 48h, release checklist post-19.
 
-### Walk V1 IMPROVE (priorité 1 — différenciateur core)
+### C1 — Chat fast (latency premium)
 
-- [ ] **W1.1 Transitions entre œuvres** — orchestrateur chat détecte fin de discussion œuvre A, propose transition fluide vers œuvre B (suggestion proactive, sans rupture cognitive)
+> Existant : sync-only pipeline shipped + Langfuse spans + targets P50<3.5s WiFi. Manque dashboard p99 baseline + LLM cache audit + optim data-driven.
+
+- [ ] **C1.1 Dashboard Grafana p50/p95/p99** — STT + LLM + TTS depuis spans Langfuse existants. Alerte si p99 >6s. (ex-V5.1)
+- [ ] **C1.2 LLM cache audit + activate** — vérifier wiring `llm-cache.service.ts` (ADR-035) en prod, mesurer hit-rate, tune TTL si actif
+- [ ] **C1.3 Optim data-driven** — après baseline, attaquer goulot identifié (parallélisation tools, prompt compaction, model routing si pertinent)
+
+### C2 — Image dans chat finition
+
+> Existant : BE solide (S3 + multimodal LLM + EXIF strip + OCR + image-scoring + Wikidata/Unsplash enrichment). FE single-image only, pas de retry.
+
+- [ ] **C2.1 Multi-image par message** — `PostMessageInput.image` single → array, BE + FE
+- [ ] **C2.2 Retry upload sur fail** — queue local + exponential backoff + UI feedback explicite
+- [ ] **C2.3 Draft gallery FE** — carrousel queued avant envoi, edit/remove
+- [ ] **C2.4 Polish UX `useImagePicker.ts`** — batch picker, preview qualité, perf perçue
+
+### C3 — Image comparative full
+
+> Existant : 0. Feature différenciante : visiteur envoie photo œuvre, bot répond avec œuvre similaire + photo + rationale.
+
+- [ ] **C3.1 Embeddings stack** — CLIP ou SigLIP image encoder, BE service dédié
+- [ ] **C3.2 pgvector index** — migration TypeORM nouvelle table `artwork_embeddings`
+- [ ] **C3.3 Catalogue seed initial** — pull Wikidata + Wikimedia Commons sur top musées contractés (~10-20k œuvres), ingest pipeline
+- [ ] **C3.4 Endpoint similarity** — `/chat/compare` : input image user → top-K similaires + Wikidata enrichment + scoring fusion (visual + metadata)
+- [ ] **C3.5 UX FE compare** — message bot inclut card `ImageCompareCarousel` avec œuvre similaire + photo + caption rationale (pourquoi celle-là)
+
+### C4 — IA sans hallucination
+
+> Existant : keyword guardrail multilingue + LLM judge V2 confidence scoring + output guardrail + KB Wikidata. Manque : WebSearch fallback wiring orchestrateur + threshold tuning + citations sources + regression eval continu.
+
+- [ ] **C4.1 WebSearch fallback wiring** — Brave wrapper existe, brancher orchestrateur quand KB miss + judge confidence < threshold (ex-W1.7)
+- [ ] **C4.2 Threshold confidence tuning** — calibrer cutoff LLM judge V2 sur dataset réel chat prod
+- [ ] **C4.3 Promptfoo regression suite anti-hallucination** — T1.5b real-mode bake (cf. ROADMAP_TEAM.md)
+- [ ] **C4.4 Citation enforce** — LLM doit citer source dans réponse (struct output `sources[]: {url, type, title}`), affichage FE clickable
+
+### C5 — Wikidata premium (resilient)
+
+> Existant : live SPARQL + Redis cache 7d + fail-open + prompt injection wrap (ADR-035 Accepted-Implemented). Manque : circuit-breaker + downtime metric + local dump fallback.
+
+- [ ] **C5.1 Circuit-breaker SPARQL** — open après N fails consécutifs, half-open après cooldown, fermé sur succès
+- [ ] **C5.2 Downtime metric Langfuse** — alerte si p95 >500ms ou error-rate >5%
+- [ ] **C5.3 Local dump backup** — Wikidata monthly dump art-related entities only, restore fallback en cas SPARQL down >X min
+- [ ] **C5.4 Cache hit-rate monitoring** — expose metric Redis 7d TTL, dashboard Grafana
+
+### C6 — Premium soft-paywall stub
+
+> Existant : 0. Hypothèse 3 sessions/mois free → premium illimité = à valider AVANT Stripe full. Stub V1 = compteur + écran upsell sans paiement.
+
+- [ ] **C6.1 BE compteur sessions/mois par user** — table tracking + middleware quota check pré-orchestrator
+- [ ] **C6.2 Tier model `free | premium` sur User entity** — migration TypeORM, pas de Stripe yet
+- [ ] **C6.3 FE écran upsell** — modal sur quota dépassé, CTA "rejoindre liste premium" → email capture (Brevo list)
+- [ ] **C6.4 Admin override** — toggle premium manuel pour pilots B2B testers (cf. M2.x Phase 2)
+- [ ] **C6.5 Telemetry conversion funnel** — combien hit quota, combien click upsell, combien email captured
+
+### C7 — Stabilité prod (KR3)
+
+- [ ] **C7.1 S6.1 Smoke prod** — `pnpm smoke:api` étendu auth + chat + image upload + voice end-to-end
+- [ ] **C7.2 S6.2 Chaos game-day** — `docs/CHAOS_RUNBOOKS.md` Redis kill + LLM down + DB readonly sur staging
+- [ ] **C7.3 S6.3 P0 bug zero** — triage Sentry + Linear, aucun ouvert avant 1er juin
+- [ ] **C7.4 S6.4 Release checklist run** — `docs/RELEASE_CHECKLIST.md` exécutée et signée
+
+---
+
+## NEXT — Phase 2 Évolution Walk V1 + B2B (post-Phase 1)
+
+> Démarrage conditionné fin Phase 1. Tous les items déplacés depuis l'ancien NOW (renommés en `Wx.y`). Re-priorisation interne possible au moment du pivot.
+
+### W1 — Walk V1 IMPROVE (différenciateur core, ex-priorité 1)
+
+- [ ] **W1.1 Transitions entre œuvres** — orchestrateur chat détecte fin discussion œuvre A, propose transition fluide vers œuvre B (suggestion proactive, sans rupture cognitive)
 - [ ] **W1.2 Audio guide auto** — TTS streaming continu pour balade, déclenché à l'entrée d'un point d'intérêt, pause/reprise par geste ou voix
 - [ ] **W1.3 Chemin GPS** — itinéraire balade généré (musée→musée hors-mur, ou intra-salle musée), points d'intérêt ordonnés, ETA, navigation simple
 - [ ] **W1.4 UX choix musée** — sélecteur musée explicite (recherche, carte, favoris), pas seulement géolocalisation passive
 - [ ] **W1.5 Détection musée auto** — geofence + LocationResolver (déjà partiel, étendre à liste musées contractés)
 - [ ] **W1.6 Détection endroit intra-musée** — beacon BLE, QR-code à l'entrée salle, ou estimation pos via image (œuvre vue caméra)
-- [ ] **W1.7 Enrichissement data WebSearch** — fallback Brave/Wikidata quand KB locale vide, déjà présent côté wrapper, étendre couverture musées hors top-50
-- [ ] **W1.8 Photo dans chat** — visiteur prend photo d'une œuvre, message multimodal envoyé au LLM, réponse contextuelle (déjà partiel, finaliser UX galerie + retry)
 
-### Multi-tenancy musées (priorité 2 — KR1 pré-requis)
+### W2 — Multi-tenancy musées (ex-priorité 2, KR1 pré-requis)
 
-- [ ] **M2.1 Onboarding musée** — flow admin pour ajout musée (nom, géo, horaires, KB locale, branding)
-- [ ] **M2.2 Branding optionnel** — couleur primaire + logo musée dans header chat (B2B value)
-- [ ] **M2.3 Stats par musée** — dashboard admin : sessions, NPS, top œuvres demandées
-- [ ] **M2.4 Seed initial** — 3 musées pilotes contractés chargés en DB prod
+- [ ] **W2.1 Onboarding musée** — flow admin pour ajout musée (nom, géo, horaires, KB locale, branding)
+- [ ] **W2.2 Branding optionnel** — couleur primaire + logo musée dans header chat (B2B value)
+- [ ] **W2.3 Stats par musée** — dashboard admin : sessions, NPS, top œuvres demandées
+- [ ] **W2.4 Seed initial** — 3 musées pilotes contractés chargés en DB prod
 
-### Web admin (priorité 3 — KR1 + KR4)
+### W3 — Web admin enrichi (ex-priorité 3, KR1 + KR4)
 
-- [ ] **A3.1 RBAC complet** — rôles museum-admin (1 musée), super-admin (tous), visitor — déjà partiel
-- [ ] **A3.2 Page stats musée** — graphes Recharts (sessions/jour, NPS, top œuvres) — pour pitch B2B
-- [ ] **A3.3 Modération reviews** — déjà shipped, vérifier UX museum-admin scoping
-- [ ] **A3.4 Export CSV** — sessions, reviews, tickets — exigence légale + B2B reporting
+- [ ] **W3.1 RBAC complet** — rôles museum-admin (1 musée), super-admin (tous), visitor — déjà partiel
+- [ ] **W3.2 Page stats musée** — graphes Recharts (sessions/jour, NPS, top œuvres) — pour pitch B2B
+- [ ] **W3.3 Modération reviews** — déjà shipped, vérifier UX museum-admin scoping
+- [ ] **W3.4 Export CSV** — sessions, reviews, tickets — exigence légale + B2B reporting
 
-### Landing web (priorité 4 — KR4)
+### W4 — Landing web (ex-priorité 4, KR4)
 
-- [ ] **L4.1 Polish FR/EN existant** — StorySection shipped, vérifier copy + a11y + Lighthouse ≥95
-- [ ] **L4.2 CTA inscription bêta** — formulaire email → liste pré-launch (1ère vague 100 testers)
-- [ ] **L4.3 Page B2B** — pitch musée (offre, pricing fourchette, contact form)
+- [ ] **W4.1 Polish FR/EN existant** — StorySection shipped, vérifier copy + a11y + Lighthouse ≥95
+- [ ] **W4.2 CTA inscription bêta** — formulaire email → liste pré-launch (1ère vague 100 testers) — coupler avec C6.3
+- [ ] **W4.3 Page B2B** — pitch musée (offre, pricing fourchette, contact form)
 
-### Voice V1 (priorité 5 — observation seulement)
+### W5 — Voice decision review (ex-priorité 5)
 
-- [ ] **V5.1 Latency baseline** — Langfuse spans déjà wired, créer dashboard Grafana p50/p95/p99 STT+LLM+TTS, target alerte si p99 >6s
-- [ ] **V5.2 Decision review** — 4 sem post-launch, décide WebRTC V1.1 (NEXT) ou continue features
-
-### Stabilité & launch (priorité 6 — KR3)
-
-- [ ] **S6.1 Smoke prod** — script `pnpm smoke:api` étendu (auth + chat + image upload + voice end-to-end)
-- [ ] **S6.2 Chaos game-day** — exécute `docs/CHAOS_RUNBOOKS.md` Redis kill + LLM down + DB readonly sur staging
-- [ ] **S6.3 P0 bug zero** — triage Sentry + Linear, aucun ouvert avant 1er juin
-- [ ] **S6.4 Release checklist run** — `docs/RELEASE_CHECKLIST.md` exécutée et signée
-
----
-
-## NEXT — Post-launch (juin–juillet)
+- [ ] **W5.1 Decision review** — 4 sem post-launch, décide WebRTC V1.1 (NEXT) ou continue features (V5.1 latency baseline a migré → C1.1)
 
 ### Personnalisation Spec C (deferred du sprint launch)
 
@@ -102,6 +171,12 @@
 
 - [ ] **Si KR2 NPS-voice <7** : intégration `gpt-4o-realtime` + WebRTC infra mobile + token streaming
 - [ ] **Sinon** : skip, capacité dev redirigée Recommendations
+
+### Premium full (post-stub validation)
+
+- [ ] Stripe + iOS receipt + Android billing — démarrage conditionné data soft-paywall stub C6 (taux conversion + retention free→premium)
+- [ ] Pricing décidé selon funnel data + benchmarks
+- [ ] Receipt validation BE + entitlement cache
 
 ### Recommandations multi-musées
 
@@ -139,9 +214,10 @@
 
 ## Comment utiliser cette roadmap
 
-1. **Début sprint** : /team lit ce fichier + ROADMAP_TEAM.md, propose features NOW à attaquer (Spec Kit obligatoire si non-trivial).
+1. **Début sprint** : /team lit ce fichier + ROADMAP_TEAM.md, propose features Phase 1 (NOW) à attaquer (Spec Kit obligatoire si non-trivial). Phase 2 (NEXT) bloquée tant que Phase 1 incomplète.
 2. **Pendant sprint** : coche `[x]` au merge. Bloqué = note inline `[BLOCKED: raison]`.
-3. **Fin sprint** : réécriture file complète (NOW vidé, NEXT remonte, LATER trié, KILLED preserve), commit `docs(roadmap): sprint <YYYY-MM-DD>`.
-4. **Hors sprint** : nouvelle idée → ajoute LATER avec date. Promotion vers NEXT au tri suivant.
+3. **Pivot Phase 1 → Phase 2** : quand C1…C7 tous cochés, NEXT remonte en NOW au prochain `/team roadmap:rotate`.
+4. **Fin sprint** : réécriture file complète (NOW vidé, NEXT remonte, LATER trié, KILLED preserve), commit `docs(roadmap): sprint <YYYY-MM-DD>`.
+5. **Hors sprint** : nouvelle idée → ajoute LATER avec date. Promotion vers NEXT au tri suivant.
 
 **Source de vérité unique pour produit.** CLAUDE.md pointe ici. /team consolide à chaque cycle (cf. ROADMAP_TEAM.md §Auto-consolidation).

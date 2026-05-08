@@ -173,6 +173,8 @@ Run de référence : `team-state/2026-05-03-feedback-loop-interne-t21/`. Décisi
 
 `/team` lit ce fichier + `ROADMAP_PRODUCT.md` au démarrage chaque cycle (`team-hooks/pre-cycle-roadmap-load.sh`). Le dispatcher pioche dans NOW selon priorité + dépendances.
 
+**Sequencing produit (décision 2026-05-08) :** ROADMAP_PRODUCT structure NOW en **Phase 1 Consolidation (C1…C7)** puis **Phase 2 Évolution Walk (W1…W5)**. Phase 2 bloquée tant que Phase 1 incomplète. /team T1.6 hook `pre-cycle-roadmap-load.sh` doit pondérer Phase 1 items en priorité ; T1.6 deferred enhancement = filtrer items Phase 2 tant que tous C1…C7 non cochés (à wirer dans `lib/roadmap-context.sh` parser, pas bloquant).
+
 **Au merge feature** → coche auto `[x]` (`post-cycle-roadmap-update.sh`).
 **Fin de sprint** → `/team roadmap:rotate` réécrit les 2 ROADMAPs propres, commit snapshot.
 
