@@ -45,9 +45,9 @@
     "prune:retention": "ts-node -r tsconfig-paths/register scripts/prune-retention.ts",
     "audit-chain:verify": "ts-node -r tsconfig-paths/register scripts/audit-chain-verify.ts",
     "mutation": "stryker run",
-    "mutation:ci": "stryker run --incremental --concurrency 2",
+    "mutation:ci": "stryker run --incremental",
     "mutation:gate": "node scripts/stryker-hot-files-gate.mjs",
-    "mutation:warm": "stryker run --concurrency 2"
+    "mutation:warm": "stryker run"
   },
   "keywords": [],
   "author": "",

@@ -8,7 +8,11 @@
  *
  * Skip rules:
  *   - GET / HEAD / OPTIONS always skipped (read-only)
- *   - No `access_token` cookie ⇒ skipped (Bearer/mobile path)
+ *   - `Authorization: Bearer …` header ⇒ skipped (mobile / SPA path; CSRF
+ *     does not apply because Authorization is not auto-sent cross-origin)
+ *   - Pre-auth endpoints (login / register / social-* / refresh / etc.) ⇒
+ *     skipped (route does not trust the existing cookie for authentication)
+ *   - No `access_token` cookie ⇒ skipped (anonymous request)
  *
  * Failure ⇒ 403 CSRF_INVALID.
  */
@@ -40,12 +44,14 @@ const VALID_CSRF = crypto.createHmac('sha256', CSRF_SECRET).update(ACCESS_TOKEN)
 const makeReq = (
   init: {
     method?: string;
+    path?: string;
     cookies?: Record<string, string>;
     headers?: Record<string, string>;
   } = {},
 ): Request => {
   return makePartialRequest({
     method: init.method ?? 'POST',
+    path: init.path ?? '/api/protected/something',
     headers: init.headers ?? {},
     cookies: init.cookies ?? {},
   });
@@ -83,7 +89,9 @@ describe('csrfMiddleware', () => {
     const res = makeRes();
     const next = makeNext();
 
-    expect(() => csrfMiddleware(req, res, next)).toThrow(AppError);
+    expect(() => {
+      csrfMiddleware(req, res, next);
+    }).toThrow(AppError);
     try {
       csrfMiddleware(req, res, next);
     } catch (error) {
@@ -101,7 +109,9 @@ describe('csrfMiddleware', () => {
     const res = makeRes();
     const next = makeNext();
 
-    expect(() => csrfMiddleware(req, res, next)).toThrow(AppError);
+    expect(() => {
+      csrfMiddleware(req, res, next);
+    }).toThrow(AppError);
   });
 
   it('throws 403 CSRF_INVALID when csrf cookie is not the HMAC of the access_token cookie', () => {
@@ -116,7 +126,9 @@ describe('csrfMiddleware', () => {
     const res = makeRes();
     const next = makeNext();
 
-    expect(() => csrfMiddleware(req, res, next)).toThrow(AppError);
+    expect(() => {
+      csrfMiddleware(req, res, next);
+    }).toThrow(AppError);
     try {
       csrfMiddleware(req, res, next);
     } catch (error) {
@@ -168,6 +180,72 @@ describe('csrfMiddleware', () => {
     expect(next).toHaveBeenCalledTimes(1);
   });
 
+  it('skips when Authorization Bearer header is present even if a stale access_token cookie is also set (regression: 2026-05-08 iOS URLSession leftover cookies)', () => {
+    // iOS URLSession persists Set-Cookie auth_token from a prior session and
+    // auto-attaches it on subsequent requests. The mobile client still
+    // authenticates via Bearer, so CSRF must not gate the request on a cookie
+    // the mobile client never opted into.
+    const req = makeReq({
+      method: 'POST',
+      cookies: { access_token: 'stale-from-prior-session', csrf_token: 'stale' },
+      headers: { authorization: 'Bearer some.jwt.token' },
+    });
+    const res = makeRes();
+    const next = makeNext();
+
+    csrfMiddleware(req, res, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(next).toHaveBeenCalledWith();
+  });
+
+  it.each([
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/auth/social-login',
+    '/api/auth/social-nonce',
+    '/api/auth/refresh',
+    '/api/auth/forgot-password',
+    '/api/auth/reset-password',
+    '/api/auth/verify-email',
+  ])(
+    'skips %s even with stale access_token cookie present (regression: 2026-05-08 social-login 403 CSRF_INVALID)',
+    (path) => {
+      // Pre-auth endpoints do not trust the existing cookie; they verify
+      // creds fresh and issue new tokens. iOS URLSession can leave a stale
+      // access_token cookie behind from a prior session that would otherwise
+      // trip the cookie-auth branch.
+      const req = makeReq({
+        method: 'POST',
+        path,
+        cookies: { access_token: 'stale-from-prior-session' },
+        headers: {},
+      });
+      const res = makeRes();
+      const next = makeNext();
+
+      csrfMiddleware(req, res, next);
+
+      expect(next).toHaveBeenCalledTimes(1);
+      expect(next).toHaveBeenCalledWith();
+    },
+  );
+
+  it('still enforces CSRF on /api/auth/logout (post-auth, cookie-cleared route — keeps protection)', () => {
+    const req = makeReq({
+      method: 'POST',
+      path: '/api/auth/logout',
+      cookies: { access_token: ACCESS_TOKEN },
+      headers: {},
+    });
+    const res = makeRes();
+    const next = makeNext();
+
+    expect(() => {
+      csrfMiddleware(req, res, next);
+    }).toThrow(AppError);
+  });
+
   it('skips when access_token cookie is absent even if csrf_token cookie is set', () => {
     // Edge case: client somehow has stale csrf_token cookie but no session.
     // Without an active cookie session the CSRF check is irrelevant — let it
@@ -194,7 +272,9 @@ describe('csrfMiddleware', () => {
     const res = makeRes();
     const next = makeNext();
 
-    expect(() => csrfMiddleware(req, res, next)).toThrow(AppError);
+    expect(() => {
+      csrfMiddleware(req, res, next);
+    }).toThrow(AppError);
   });
 
   it('uses constant-time comparison (no early-exit timing leak)', () => {
@@ -211,7 +291,9 @@ describe('csrfMiddleware', () => {
     const res = makeRes();
     const next = makeNext();
 
-    expect(() => csrfMiddleware(req, res, next)).toThrow(AppError);
+    expect(() => {
+      csrfMiddleware(req, res, next);
+    }).toThrow(AppError);
   });
 
   it('rejects PUT, PATCH, DELETE same as POST', () => {
@@ -224,7 +306,9 @@ describe('csrfMiddleware', () => {
       const res = makeRes();
       const next = makeNext();
 
-      expect(() => csrfMiddleware(req, res, next)).toThrow(AppError);
+      expect(() => {
+        csrfMiddleware(req, res, next);
+      }).toThrow(AppError);
     }
   });
 });

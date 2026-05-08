@@ -16,9 +16,20 @@
  *
  * Skip rules (no CSRF needed):
  *   - GET / HEAD / OPTIONS — read-only, no state change
- *   - No `access_token` cookie — request authenticates via Bearer (mobile) or
- *     anonymously; browsers do not auto-send Authorization headers, so no CSRF
- *     vector exists.
+ *   - `Authorization: Bearer …` header present — request authenticates via
+ *     Bearer (mobile / SPA). Browsers do not auto-send Authorization headers
+ *     cross-origin, so the request is not forgeable by an attacker page. The
+ *     stray `access_token` cookie that iOS URLSession persists from prior
+ *     responses is irrelevant when Bearer is the active credential.
+ *   - Pre-auth endpoints (login, register, social-login, social-nonce,
+ *     refresh, forgot-password, reset-password, verify-email) — these do
+ *     not trust the existing cookie for authentication; they verify creds
+ *     fresh and issue new tokens. iOS URLSession may auto-send a stale
+ *     access_token cookie inherited from a prior session, which would
+ *     otherwise trip the cookie-auth branch even though the route never
+ *     reads that cookie.
+ *   - No `access_token` cookie — request authenticates anonymously; nothing
+ *     to forge against.
  *
  * Validation uses `crypto.timingSafeEqual` against equal-length buffers to
  * prevent string-comparison timing leaks.
@@ -33,6 +44,24 @@ import type { NextFunction, Request, Response } from 'express';
 
 /** Methods that never trigger CSRF validation (RFC 9110 §9.2.1 safe methods). */
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+/**
+ * Pre-auth endpoints exempt from CSRF validation. These routes verify
+ * credentials fresh (login/register/social) or echo a server-bound token
+ * (refresh / verify-email / forgot-reset-password) and never trust the
+ * existing cookie for authentication. A stale cookie auto-sent by iOS
+ * URLSession therefore cannot be weaponised against them.
+ */
+const PRE_AUTH_PATHS = new Set([
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/social-login',
+  '/api/auth/social-nonce',
+  '/api/auth/refresh',
+  '/api/auth/forgot-password',
+  '/api/auth/reset-password',
+  '/api/auth/verify-email',
+]);
 
 const csrfInvalid = (): AppError =>
   new AppError({
@@ -80,9 +109,29 @@ export function csrfMiddleware(req: Request, _res: Response, next: NextFunction)
     return;
   }
 
+  // Authorization Bearer ⇒ mobile / SPA path. Browsers do not auto-send
+  // Authorization headers cross-origin, so CSRF is moot. Checked BEFORE the
+  // cookie probe because iOS URLSession persists `access_token` cookies from
+  // previous responses even when the app authenticates via Bearer (incident
+  // 2026-05-08 — social-login 403 CSRF_INVALID for cookies the mobile client
+  // never opted into).
+  const authHeader = req.headers.authorization;
+  if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    next();
+    return;
+  }
+
+  // Pre-auth endpoints don't trust the existing cookie for authentication —
+  // see header docstring. Same incident 2026-05-08 root cause as the Bearer
+  // skip above.
+  if (PRE_AUTH_PATHS.has(req.path)) {
+    next();
+    return;
+  }
+
   const cookies = req.cookies;
   const accessTokenCookie = cookies.access_token;
-  // No cookie session ⇒ Bearer/mobile or anonymous; CSRF doesn't apply.
+  // No cookie session ⇒ anonymous; CSRF doesn't apply.
   if (!accessTokenCookie) {
     next();
     return;

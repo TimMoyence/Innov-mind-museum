@@ -138,7 +138,12 @@ jobs:
   mutation:
     needs: quality
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    # Bumped 50 → 90 (2026-05-08): the prior 50-min cap killed every full run
+    # before Stryker could write `reports/stryker-incremental.json`, so the
+    # `actions/cache` SAVE step never ran and every subsequent run started
+    # cold. Letting the first full run finish unlocks incremental mode for
+    # all push-triggered runs.
+    timeout-minutes: 90
     defaults:
       run:
         working-directory: museum-backend

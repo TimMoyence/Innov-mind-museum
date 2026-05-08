@@ -141,5 +141,8 @@ export default {
     break: 70,
   },
   timeoutMS: 30000,
-  concurrency: 2,
+  // ubuntu-latest GitHub runners ship 4 vCPUs; 2 left half the box idle. Bumped
+  // 2 → 4 on 2026-05-08 to cut wall-clock by ~2× so the first full run lands
+  // under the 90-min CI cap and writes the incremental cache.
+  concurrency: 4,
 };
