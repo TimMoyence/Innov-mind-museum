@@ -35,11 +35,23 @@ networks:
   private:
     driver: bridge
     internal: true
+  # ── Observability network (C1.1, ADR-036) ────────────────────────────
+  # Bridge network shared by Prometheus / Grafana / AlertManager / the
+  # Telegram bridge. NOT internal: alertmanager-telegram needs egress to
+  # api.telegram.org. Prometheus + Grafana also sit on `private` so they
+  # can scrape backend on the internal bus, and Grafana sits on `web` so
+  # nginx can reverse-proxy `/grafana/*` to it.
+  obs:
+    driver: bridge
+    internal: false
 
 volumes:
   pgdata:
   redis_data:
   uploads:
+  prom_data:
+  grafana_data:
+  alertmanager_data:
 
 services:
   backend:
@@ -187,6 +199,114 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  # ── Observability stack (C1.1, ADR-036) ────────────────────────────────
+  # Bind-mounts under `./obs/` resolve to `/srv/museum/obs/` on the VPS.
+  # The bootstrap `rsync` step (see docs/OPS_DEPLOYMENT.md §Grafana) keeps
+  # /srv/museum/obs/ in sync with the repo's `infra/grafana/` source of
+  # truth. Operators MUST re-run the rsync after editing dashboards/rules
+  # before `docker compose up -d`.
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    hostname: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=14d'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+      - '--enable-feature=expand-external-labels'
+    environment:
+      ENV: '${ENV:-prod}'
+    volumes:
+      - ./obs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./obs/alerting:/etc/prometheus/alerting:ro
+      - prom_data:/prometheus
+    networks:
+      - private
+      - obs
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--spider', 'http://localhost:9090/-/ready']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    hostname: alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    volumes:
+      - ./obs/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - obs
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--spider', 'http://localhost:9093/-/healthy']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  alertmanager-telegram:
+    build: ./obs/alertmanager-telegram
+    hostname: alertmanager-telegram
+    environment:
+      TELEGRAM_BOT_TOKEN: '${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN required for prod alerting (BotFather)}'
+      TELEGRAM_CHAT_ID: '${TELEGRAM_CHAT_ID:?TELEGRAM_CHAT_ID required for prod alerting}'
+      DASHBOARD_BASE_URL: '${GRAFANA_ROOT_URL:-https://musaium.fr/grafana}'
+      PORT: '9094'
+    networks:
+      - obs
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    hostname: grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    environment:
+      # Single-auth UX (D9 — see ADR-036): Grafana is configured for
+      # anonymous Viewer ; the actual gate is at the nginx layer via
+      # `auth_request → /api/auth/super-admin-check`. The admin password
+      # remains for direct /grafana/login operator actions (managing
+      # dashboards), but is NOT used by the iframe path.
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: 'Viewer'
+      GF_AUTH_ANONYMOUS_HIDE_VERSION: 'true'
+      GF_AUTH_BASIC_ENABLED: 'true'
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_SECURITY_ADMIN_USER: '${GRAFANA_ADMIN_USER:-admin}'
+      GF_SECURITY_ADMIN_PASSWORD: '${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD required for prod}'
+      # Iframe embedding via nginx same-origin reverse proxy.
+      GF_SECURITY_ALLOW_EMBEDDING: 'true'
+      GF_SECURITY_COOKIE_SAMESITE: 'lax'
+      GF_SECURITY_X_FRAME_OPTIONS: ''
+      # Server URL — must match the nginx-exposed path.
+      GF_SERVER_ROOT_URL: '${GRAFANA_ROOT_URL:-https://musaium.fr/grafana/}'
+      GF_SERVER_SERVE_FROM_SUB_PATH: 'true'
+    volumes:
+      - ./obs/provisioning:/etc/grafana/provisioning:ro
+      - ./obs/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      private: {}
+      obs: {}
+      web:
+        aliases:
+          - grafana
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--spider', 'http://localhost:3000/api/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
 
   redis:

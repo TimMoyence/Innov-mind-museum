@@ -4,6 +4,20 @@ import { env } from '@src/config/env';
 import type { ITotpSecretRepository } from '@modules/auth/domain/totp/totp-secret.repository.interface';
 import type { User } from '@modules/auth/domain/user/user.entity';
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
+import type { UserRole } from '@modules/auth/domain/user/user-role';
+
+/**
+ * MFA enrollment is mandatory for any role with cross-tenant or
+ * elevated privileges — `admin` (B2B museum operator) AND `super_admin`
+ * (Musaium platform owner). Excluding `super_admin` from MFA would
+ * leave the highest-privilege account unprotected, which is the
+ * inverse of the intended security posture (R16 / SOC2 CC6.1).
+ *
+ * Other roles keep MFA opt-in (no warning, no soft-block).
+ */
+function requiresMfa(role: UserRole): boolean {
+  return role === 'admin' || role === 'super_admin';
+}
 
 /**
  * Returned instead of `AuthSessionResponse` when an enrolled admin
@@ -85,9 +99,9 @@ export class MfaGateService {
       };
     }
 
-    // Non-enrolled: only admins are subject to the enrollment-deadline policy.
-    // Other roles keep MFA opt-in — no warning, no soft-block.
-    if (user.role !== 'admin') {
+    // Non-enrolled: only roles flagged by `requiresMfa` are subject to the
+    // enrollment-deadline policy. Other roles keep MFA opt-in.
+    if (!requiresMfa(user.role)) {
       return null;
     }
 
@@ -117,7 +131,7 @@ export class MfaGateService {
 
   /** Days-remaining helper for the warning banner. Returns `undefined` when N/A. */
   computeWarningDays(user: User): number | undefined {
-    if (user.role !== 'admin') return undefined;
+    if (!requiresMfa(user.role)) return undefined;
     const deadline = user.mfaEnrollmentDeadline;
     if (!deadline) return undefined;
     const ms = deadline.getTime() - Date.now();

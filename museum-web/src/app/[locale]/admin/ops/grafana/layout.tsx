@@ -2,17 +2,16 @@ import type { ReactNode } from 'react';
 import { RoleGuard } from '@/lib/auth';
 
 /**
- * Ops sub-tree layout — gates the Grafana iframe panel to the highest
- * role available in the `UserRole` enum (`admin`). The backend currently
- * does not distinguish a `super_admin` role from `admin`; if Tim wants
- * that granularity it lands as a backend `UserRole` enum extension and
- * the `allowedRoles` here flips to `['super_admin']`. Until then,
- * `admin` is the de-facto super-admin (V1 has exactly one — Tim).
+ * Ops sub-tree layout — gates the Grafana iframe panel to `super_admin`
+ * exclusively. B2B museum operators (`admin` role) MUST NOT reach this
+ * surface because the embedded Grafana dashboard exposes cross-tenant
+ * latency / cache data without a `museumId` scope.
  *
- * The layout renders inside the parent `AdminShell` so the side-nav and
- * dictionary context stay intact ; the `RoleGuard` runs a second time
- * here so a `moderator` (allowed by `AdminShell`) is rejected.
+ * The route is also gated server-side by nginx `auth_request →
+ * GET /api/auth/super-admin-check`. This `RoleGuard` is the client-side
+ * defense-in-depth so a `moderator` or `admin` who hits `/admin/ops/...`
+ * sees the museum-web denied UI rather than a raw 401 from the iframe.
  */
 export default function OpsLayout({ children }: { children: ReactNode }) {
-  return <RoleGuard allowedRoles={['admin']}>{children}</RoleGuard>;
+  return <RoleGuard allowedRoles={['super_admin']}>{children}</RoleGuard>;
 }

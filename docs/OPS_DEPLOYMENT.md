@@ -892,98 +892,173 @@ eas update --branch production --message "Rollback to stable"
 
 ## Grafana + Prometheus + AlertManager (C1.1, ADR-036)
 
-Self-hosted observability stack — boots alongside the backend on the same VPS,
-provisioned as code in `infra/grafana/`. The dashboards JSON, datasource YAML,
-AlertManager YAML, and Prometheus scrape config are all version-controlled —
-**never edit through the Grafana UI** (drift is invisible and silently
-overridden on the next provisioner pass).
+Self-hosted observability stack — runs as part of the production
+docker-compose alongside the backend / pgbouncer / redis / db / museum-web.
+Dashboards JSON, AlertManager rules, datasource YAML, Prometheus scrape
+config — all version-controlled in `infra/grafana/` (source of truth).
+**Never edit through the Grafana UI** ; drift is invisible and silently
+overridden on the next provisioner pass.
 
-### Topology (compose services)
+### Topology
 
-| Service | Port | Image | Role |
+The 4 obs services (`prometheus`, `grafana`, `alertmanager`,
+`alertmanager-telegram`) are declared in
+`museum-backend/deploy/docker-compose.prod.yml`. They share the `obs`
+bridge network ; `grafana` also joins the existing `web` network so
+nginx can reach it ; `prometheus` also joins `private` to scrape the
+backend at `backend:3000/metrics`.
+
+| Service | Network(s) | Image | Role |
 |---|---|---|---|
-| `prometheus` | `9090` | `prom/prometheus:v2.55.1` | Scrapes backend `/metrics` every 30s ; 14d retention. |
-| `grafana` | `3002` | `grafana/grafana:11.4.0` | Dashboard host. Basic auth (`admin` user). Iframe-embeddable. |
-| `alertmanager` | `9093` | `prom/alertmanager:v0.27.0` | Routes firing alerts to the Telegram bridge. |
-| `alertmanager-telegram` | `9094` (internal) | local build | Translates AM webhook → Telegram Bot API `sendMessage`. |
+| `prometheus` | obs + private | `prom/prometheus:v2.55.1` | Scrapes backend `/metrics` every 30s ; 14d retention. |
+| `grafana` | obs + private + web | `grafana/grafana:11.4.0` | Dashboard host. Anonymous Viewer (the gate is at nginx — see § Single-auth iframe). |
+| `alertmanager` | obs | `prom/alertmanager:v0.27.0` | Routes firing alerts to the Telegram bridge. |
+| `alertmanager-telegram` | obs | local build (`./obs/alertmanager-telegram`) | Translates AM webhook → Telegram Bot API `sendMessage`. |
 
-### Boot
+### One-shot bootstrap (first-ever deploy)
 
 ```bash
-# Required env vars (commit to your secret store, NEVER to .env in repo):
-export GRAFANA_ADMIN_PASSWORD=...     # 24+ char random
-export TELEGRAM_BOT_TOKEN=...         # from @BotFather
-export TELEGRAM_CHAT_ID=...           # from getUpdates after first /start to the bot
+# 1. Create the Telegram bot.
+#    - Open Telegram → @BotFather → /newbot → copy the token.
+#    - /start your new bot from Tim's Telegram account.
+#    - Get the chat id:
+#        curl -s "https://api.telegram.org/bot<TOKEN>/getUpdates" \
+#          | jq -r '.result[].message.chat.id' | head -1
 
-docker compose -f infra/grafana/docker-compose.yml up -d
+# 2. Add the 5 obs vars to /srv/museum/.env on the VPS:
+#      ENV=prod
+#      GRAFANA_ADMIN_USER=admin
+#      GRAFANA_ADMIN_PASSWORD=<24+ char random>
+#      GRAFANA_ROOT_URL=https://musaium.fr/grafana/
+#      TELEGRAM_BOT_TOKEN=<token from BotFather>
+#      TELEGRAM_CHAT_ID=<chat id from getUpdates>
+
+# 3. Sync the obs config from the repo to the VPS deploy directory.
+#    The compose bind-mounts `./obs/` ; the canonical source is
+#    `infra/grafana/` in the repo. Run from your workstation:
+rsync -av --delete \
+  infra/grafana/ \
+  user@vps:/srv/museum/obs/
+
+# 4. Install the nginx snippet that gates /grafana/ behind
+#    auth_request → /api/auth/super-admin-check.
+scp infra/nginx/conf.d/grafana.conf user@vps:/tmp/musaium-grafana.conf
+ssh user@vps 'sudo install -m 0644 /tmp/musaium-grafana.conf /etc/nginx/snippets/musaium-grafana.conf'
+# Then add ONE line in /etc/nginx/sites-enabled/musaium.conf inside the
+# `server { }` block that terminates TLS for musaium.fr:
+#   include /etc/nginx/snippets/musaium-grafana.conf;
+ssh user@vps 'sudo nginx -t && sudo systemctl reload nginx'
+
+# 5. Bring the stack up.
+ssh user@vps 'cd /srv/museum && docker compose pull prometheus grafana alertmanager alertmanager-telegram \
+  && docker compose up -d prometheus grafana alertmanager alertmanager-telegram'
+
+# 6. Verify the gate.
+SUPER_ADMIN_PASSWORD=... ./museum-backend/scripts/smoke-grafana-prod.sh
 ```
 
-### Telegram bot setup (one-shot, per environment)
+The migration `1778240000000-AddSuperAdminRoleAndBackfill` extends the
+`users_role_enum` and the next migration
+`1778240010000-BackfillSuperAdminOwner` promotes
+`tim.moyence@gmail.com` to `super_admin` automatically — both run in the
+backend deploy pipeline. No manual SQL needed unless you ever lose
+super_admin and need to re-promote :
 
-1. Open Telegram → search `@BotFather` → `/newbot` → choose name + handle → copy the token into `TELEGRAM_BOT_TOKEN`.
-2. Send `/start` to your new bot from your personal Telegram.
-3. Fetch the chat id:
-   ```bash
-   curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates" \
-     | jq -r '.result[].message.chat.id' | head -1
-   ```
-4. Set `TELEGRAM_CHAT_ID` to the value returned above.
-5. Bring the stack up — the bridge logs `alertmanager-telegram listening on :9094` on success.
-6. Test fire from a workstation with `amtool` (install via `brew install prometheus-alertmanager` or use the in-container binary):
-   ```bash
-   docker exec musaium-alertmanager amtool alert add chat_e2e_p99_high \
-     severity=warning service=musaium-backend --annotation summary="manual smoke"
-   ```
-   The bridge should deliver a Telegram message within a few seconds.
+```sql
+UPDATE users SET role = 'super_admin' WHERE email = 'tim.moyence@gmail.com';
+```
+
+### Single-auth iframe (D9 update — 2026-05-08 PR-G)
+
+The earlier Phase 2 design relied on Grafana basic-auth as a second login
+prompt inside the iframe. PR-G replaces that with an `auth_request` gate
+at the nginx layer pointing at the backend
+`GET /api/auth/super-admin-check` endpoint:
+
+```
+client → nginx /grafana/...  ── auth_request ──►  backend /api/auth/super-admin-check
+                                                  ├─ 204  → nginx forwards to grafana
+                                                  └─ 401  → nginx returns 401, no Grafana hop
+```
+
+Grafana itself runs `GF_AUTH_ANONYMOUS_ENABLED=true` with `Viewer` org
+role — the actual gate is the nginx subrequest. A network-level bypass
+of nginx would expose a read-only dashboard, but Grafana only listens on
+the `obs` Docker network (no `ports:` mapping), so the only path from
+the public internet is through nginx.
+
+The session cookie set by museum-web at login is the ONLY credential the
+super_admin user provides. From their perspective : they log into
+`/fr/admin`, click "Ops · Grafana" in the sidebar, and the dashboard
+loads inside the iframe.
+
+### Roles + access matrix
+
+| Role | Sees /fr/admin ? | Sees Ops · Grafana nav ? | /grafana/ via nginx ? |
+|---|---|---|---|
+| `visitor` | no (login redirect) | no | 401 |
+| `moderator` | yes | no | 401 |
+| `museum_manager` | no (admin shell role guard rejects) | no | 401 |
+| `admin` (B2B museum operator) | yes | no | 401 |
+| **`super_admin`** (Tim, Musaium) | **yes** | **yes** | **200** |
+
+The strict separation means a museum operator with `admin` role NEVER
+sees cross-tenant ops data, by construction.
+
+### Telegram smoke-fire
+
+```bash
+ssh user@vps "docker exec museum-alertmanager-1 amtool alert add chat_e2e_p99_high \
+  severity=warning service=musaium-backend \
+  --annotation summary='manual smoke' \
+  --annotation description='triggered by ops to verify the bridge'"
+```
+
+Expect a Telegram message in Tim's chat within a few seconds. If the
+bridge is down, AlertManager logs the webhook failure but the alert
+itself remains tracked in the AlertManager UI at `:9093`.
 
 ### Dashboard editing workflow
 
-1. Pull the JSON: `cp infra/grafana/dashboards/chat-latency.json /tmp/before.json`.
-2. Edit in Grafana UI (visually nicer than YAML).
+1. `cp infra/grafana/dashboards/chat-latency.json /tmp/before.json`.
+2. Edit in Grafana UI (visually nicer than hand-editing JSON).
 3. Export: dashboard menu → Share → Export → "Save to file".
 4. `mv ~/Downloads/chat-latency-*.json infra/grafana/dashboards/chat-latency.json` and review the diff.
-5. PR the change. The provisioner reloads on next compose `up -d`.
+5. PR the change.
+6. After merge, on the VPS: `rsync` infra/grafana/ → /srv/museum/obs/, then `docker compose restart grafana`.
 
 ### Alert silencing
 
-Use the AlertManager UI at `http://${VPS_IP}:9093` → "Silences" → "New". Always
-include a comment + an expiry. Silences are not version-controlled; mirror them
-into the on-call runbook if they outlive a deploy.
+UI at `http://${VPS_IP}:9093` → "Silences" → "New". Comment + expiry
+mandatory. Silences are not version-controlled — mirror them into the
+on-call runbook if they outlive a deploy.
 
 ### Rollback
 
-- Dashboard JSON / alerting rules / scrape config are git-tracked → `git revert`
-  + restart restores the prior state. Prometheus retains its data, no loss.
-- AlertManager rule reload: `curl -X POST http://${VPS_IP}:9093/-/reload` after
-  editing `infra/grafana/alertmanager.yml`.
+- Dashboard JSON / alerting rules / scrape config are git-tracked →
+  `git revert` + `rsync` + `docker compose restart grafana prometheus`
+  restores prior state. Prometheus retains its TSDB data, no loss.
+- AlertManager rule hot-reload: `curl -X POST http://${VPS_IP}:9093/-/reload`.
+- Demote tim back to `admin` (last-resort, manual): see SQL one-liner above.
 
-### Grafana iframe panel limitation (D9)
+### What the iframe exposes (cross-tenant data warning, D9)
 
-The museum-web admin route `/admin/ops/grafana` embeds the dashboard same-origin
-via the nginx reverse proxy at `/grafana/*`. **This is an ops-only panel —
-restricted to the `admin` role at the museum-web layer.**
+- **All tenants' chat data, aggregated.** There is no `museumId` scoping
+  in the Prometheus metrics (cardinality budget per spec §5 NFR forbade
+  museum-scoped labels).
+- The proper B2B museum-admin latency panel ships in **W3.2** post-launch
+  with Recharts + a backend proxy that scopes queries to the caller's
+  `museumId`. Until W3.2 ships, B2B museum admins have no chat-latency
+  visibility (by design).
 
-What this iframe exposes:
+### Enforcement layers (defense in depth)
 
-- **All tenants' chat data, aggregated.** There is no `museumId` scoping in the
-  Prometheus metrics (cardinality budget per spec §5 NFR forbade museum-scoped
-  labels). A B2B `museum_manager` MUST NOT see this panel — they would observe
-  data from other museums in the aggregates.
-
-What this iframe does NOT replace:
-
-- The proper B2B museum-admin panel — that ships in **W3.2** post-launch with
-  Recharts + a backend proxy that scopes queries to the caller's `museumId`.
-  Until W3.2 ships, B2B museum admins have no chat-latency visibility (by
-  design).
-
-Enforcement:
-
-- `museum-web/src/app/[locale]/admin/ops/grafana/layout.tsx` wraps the route
-  in `<RoleGuard allowedRoles={['admin']}>`. A `moderator` or `museum_manager`
-  is redirected to `/admin` with a denied-access toast.
-- The nginx location does not add auth — it relies on Grafana's own basic auth
-  (`GF_AUTH_BASIC_ENABLED=true`). The first time an admin visits
-  `/admin/ops/grafana`, the iframe prompts a basic-auth dialog.
-- CSP `default-src 'self'` (museum-web middleware) covers `frame-src` so
-  same-origin iframes work without a per-route CSP relaxation.
+1. nginx `auth_request /grafana-auth-check` → backend.
+2. backend `/api/auth/super-admin-check` returns 204 only for
+   `req.user.role === 'super_admin'`.
+3. museum-web `RoleGuard allowedRoles={['super_admin']}` on
+   `/admin/ops/grafana/layout.tsx` (defense for the iframe page itself).
+4. museum-web `AdminShell` only renders the "Ops · Grafana" nav link for
+   `super_admin` users (UX-level guard, not security — assume hidden links
+   are still discoverable).
+5. Grafana not exposed via host port — only reachable through nginx.

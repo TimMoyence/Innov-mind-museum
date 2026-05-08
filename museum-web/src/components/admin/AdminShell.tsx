@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { AuthProvider, RoleGuard } from '@/lib/auth';
+import { AuthProvider, RoleGuard, useAuth } from '@/lib/auth';
 import { AdminDictProvider, useAdminDict } from '@/lib/admin-dictionary';
 import type { ReactNode } from 'react';
 import type { Dictionary } from '@/lib/i18n';
@@ -47,6 +47,8 @@ function AuthenticatedLayout({
   const adminDict = useAdminDict();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
 
   const basePath = `/${locale}/admin`;
 
@@ -104,6 +106,26 @@ function AuthenticatedLayout({
                 </li>
               );
             })}
+            {isSuperAdmin && (
+              // Super-admin-only ops surface (Grafana iframe). Hidden for
+              // every other role — including `admin` (B2B operator) — so
+              // cross-tenant ops data never appears in a museum operator's
+              // navigation. Server-side defense at nginx auth_request +
+              // RoleGuard at the page layout.
+              <li key="ops-grafana">
+                <Link
+                  href={`${basePath}/ops/grafana`}
+                  onClick={() => { setSidebarOpen(false); }}
+                  className={`flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    isActive(`${basePath}/ops/grafana`)
+                      ? 'bg-primary-50 text-primary-700'
+                      : 'text-text-secondary hover:bg-surface-muted hover:text-text-primary'
+                  }`}
+                >
+                  Ops · Grafana
+                </Link>
+              </li>
+            )}
           </ul>
         </nav>
       </aside>
@@ -171,7 +193,7 @@ export default function AdminShell({
   return (
     <AdminDictProvider dict={adminDict} locale={locale as 'fr' | 'en'}>
       <AuthProvider>
-        <RoleGuard allowedRoles={['admin', 'moderator']}>
+        <RoleGuard allowedRoles={['admin', 'moderator', 'super_admin']}>
           <AuthenticatedLayout locale={locale}>
             {children}
           </AuthenticatedLayout>
