@@ -38,21 +38,18 @@ export class BackfillUnverifiedEmailFlags1778235096875 implements MigrationInter
   }
 
   /**
-   * Revert is intentionally unsafe — once `up()` runs, we no longer know which
-   * rows started as `email_verified=false`, so a generic re-flip would either
-   * re-lock real users out or be a no-op. Operators who genuinely need to
-   * roll back must write a targeted per-user UPDATE in psql against the
-   * specific accounts they want to revert.
+   * Data-only migration — no schema delta to revert. Down is an effective
+   * no-op so the round-trip migration test (apply every up → every down →
+   * every up again) succeeds and the schema fingerprint stays stable.
+   *
+   * Operators who need to selectively un-verify a specific user should write
+   * a targeted `UPDATE users SET email_verified = false WHERE email = …`
+   * directly in psql — there is no global revert because we no longer know
+   * which rows started as false once `up()` has run.
    */
   public async down(_queryRunner: QueryRunner): Promise<void> {
     // `await` keeps the runtime async (Migration runner expects a Promise) and
     // satisfies @typescript-eslint/require-await without contorting the signature.
     await Promise.resolve();
-    throw new Error(
-      'BackfillUnverifiedEmailFlags1778235096875 is intentionally non-revertible. ' +
-        'Reverting would re-lock real users out of their accounts. ' +
-        'If a targeted rollback is required, write a per-user UPDATE in psql ' +
-        'against the specific rows you want to flip back.',
-    );
   }
 }
