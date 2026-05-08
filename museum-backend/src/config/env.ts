@@ -209,8 +209,9 @@ const env: AppEnv = {
         password: parseRedisUrlFallback().password,
         sessionTtlSeconds: toNumber(process.env.CACHE_SESSION_TTL_SECONDS, 3600),
         listTtlSeconds: toNumber(process.env.CACHE_LIST_TTL_SECONDS, 300),
-        llmTtlSeconds: toNumber(process.env.CACHE_LLM_TTL_SECONDS, 604_800),
-        llmPopularityTtlSeconds: toNumber(process.env.CACHE_LLM_POPULARITY_TTL_SECONDS, 2_592_000),
+        // LLM TTL constants live in `llm-cache.service.ts` per ADR-036 — the
+        // env knobs that previously fed the deleted L2 decorator have been
+        // removed (PR-B 2026-05-08).
         lowDataPackMaxEntries: toNumber(process.env.LOW_DATA_PACK_MAX_ENTRIES, 30),
       }
     : undefined,

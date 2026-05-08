@@ -136,6 +136,7 @@ Leçons techniques non évidentes consolidées des sprints précédents. Ajoute 
 - **TypeORM `.set({ field: undefined })` est silencieusement skip** — `UpdateQueryBuilder` ne génère PAS de `SET field = NULL` quand on passe `undefined`. Use `() => 'NULL'` raw expression. Bug verifyEmail 2026-05.
 - **PgBouncer transaction mode interdit `LISTEN/NOTIFY`, session-scoped advisory locks, persistent prepared statements** — Musaium n'utilise rien de ça aujourd'hui (audit ADR-021), mais à vérifier au cas par cas.
 - **SWC + TypeORM cross-entity = ReferenceError circular** — fix = wrap les FK avec le type alias `Relation<T>`. Ne pas s'écarter de ce pattern sur les nouvelles entités.
+- **LLM response cache = `LlmCacheServiceImpl` only (ADR-036)** — un seul layer, use-case-level. Ne PAS réintroduire de décorateur adapter-level (`CachingChatOrchestrator` supprimé 2026-05-08 PR-B). Cache key shape = `llm:v1:{contextClass}:{museumId|none}:{userId|anon}:{sha256}`. TTL tune = data-driven only, ≥7j bake + ADR-036 amendment requis (R11/R13).
 
 ## Environment Setup
 

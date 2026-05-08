@@ -314,6 +314,34 @@ describe('ChatMessageService', () => {
       expect(cache.delByPrefix).toHaveBeenCalledWith(`sessions:user:${String(USER_ID)}:`);
     });
 
+    // ── PR-A T1.12 + PR-B — kill-switch (R10) static regression guard ────
+    //
+    // Runtime exercise of `LLM_CACHE_ENABLED=false` requires either a top-
+    // level `jest.mock('@src/config/env', ...)` covering every env section
+    // touched by the service (heavy) or a process-level Docker compose smoke
+    // (out of unit-test scope). This guard asserts the bypass branch is
+    // physically wired so a future refactor that drops it trips this test.
+    // R10 end-to-end coverage lives in the manual smoke (see ADR-036
+    // §Status timeline, PR-B precondition: `LLM_CACHE_ENABLED=false` smoke
+    // verified locally).
+    it('R10 — kill-switch bypass branch wired in tryLlmCacheLookup (static guard)', () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- static source read for regression guard, no module load
+      const { readFileSync } = require('fs') as typeof import('fs');
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- ditto
+      const { resolve } = require('path') as typeof import('path');
+      const src = readFileSync(
+        resolve(
+          __dirname,
+          '../../../src/modules/chat/useCase/message/chat-message.service.ts',
+        ),
+        'utf8',
+      );
+      // The condition (cache wired AND kill-switch flipped off) and the
+      // observable side effect (the named log event) must coexist.
+      expect(src).toMatch(/!env\.llm\.cacheEnabled/);
+      expect(src).toMatch(/llm_cache_disabled_bypass/);
+    });
+
     it('handles optimistic lock error as 409 conflict', async () => {
       const repo = makeRepo();
       // First persistMessage (user) succeeds, second (assistant) throws

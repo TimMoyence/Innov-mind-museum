@@ -228,10 +228,6 @@ export interface AppEnv {
     password?: string;
     sessionTtlSeconds: number;
     listTtlSeconds: number;
-    /** TTL for LLM response cache entries (seconds). Default 7 days. */
-    llmTtlSeconds: number;
-    /** TTL for popularity ZSET entries (seconds). Default 30 days. */
-    llmPopularityTtlSeconds: number;
     /** Maximum entries per museum in low-data pack. Default 30. */
     lowDataPackMaxEntries: number;
   };

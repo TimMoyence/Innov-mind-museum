@@ -9,7 +9,6 @@ import {
   TesseractOcrService,
   type DisabledOcrService,
 } from '@modules/chat/adapters/secondary/image/ocr-service';
-import { CachingChatOrchestrator } from '@modules/chat/adapters/secondary/llm/caching-chat-orchestrator';
 import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/llm/langchain.orchestrator';
 import { TypeOrmArtKeywordRepository } from '@modules/chat/adapters/secondary/persistence/artKeyword.repository.typeorm';
 import { TypeOrmChatRepository } from '@modules/chat/adapters/secondary/persistence/chat.repository.typeorm';
@@ -235,21 +234,6 @@ export class ChatModule {
     return new KnowledgeExtractionModule().build(dataSource);
   }
 
-  /** Wraps orchestrator with caching decorator if cache is available. */
-  private buildEffectiveOrchestrator(
-    orchestrator: LangChainChatOrchestrator,
-    cache?: CacheService,
-  ): ChatOrchestrator {
-    if (!cache) return orchestrator;
-    return new CachingChatOrchestrator({
-      delegate: orchestrator,
-      cache,
-      ttlSeconds: env.cache?.llmTtlSeconds ?? 604_800,
-      popularityZsetTtlSeconds: env.cache?.llmPopularityTtlSeconds ?? 2_592_000,
-      piiSanitizer: new RegexPiiSanitizer(),
-    });
-  }
-
   /** Creates web search with multi-provider fallback. Natural gate: provider key presence. DuckDuckGo always included as last resort. */
   private buildWebSearch(cache?: CacheService): WebSearchService | undefined {
     const providers: WebSearchProvider[] = [];
@@ -351,7 +335,9 @@ export class ChatModule {
 
     const orchestrator = new LangChainChatOrchestrator();
     this._orchestrator = orchestrator;
-    const effectiveOrchestrator = this.buildEffectiveOrchestrator(orchestrator, cache);
+    // Cache is owned by the use-case layer (LlmCacheServiceImpl) since
+    // ADR-036 — no adapter-level decorator. The orchestrator is wired bare.
+    const effectiveOrchestrator: ChatOrchestrator = orchestrator;
     configureGuardrailBudget({ cache }); // ADR-030 — judge budget Redis/in-process pick
     const locationResolver = museumRepository
       ? new LocationResolver(museumRepository, cache)

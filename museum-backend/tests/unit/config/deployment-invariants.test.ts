@@ -72,8 +72,6 @@ describe('assertDeploymentInvariants', () => {
           url: 'redis://localhost:6379',
           sessionTtlSeconds: 3600,
           listTtlSeconds: 300,
-          llmTtlSeconds: 604_800,
-          llmPopularityTtlSeconds: 2_592_000,
           lowDataPackMaxEntries: 30,
         },
       });
@@ -118,8 +116,6 @@ describe('assertDeploymentInvariants', () => {
           url: 'redis://localhost:6379',
           sessionTtlSeconds: 3600,
           listTtlSeconds: 300,
-          llmTtlSeconds: 604_800,
-          llmPopularityTtlSeconds: 2_592_000,
           lowDataPackMaxEntries: 30,
         } as AppEnv['cache'],
       });
@@ -138,8 +134,6 @@ describe('assertDeploymentInvariants', () => {
           url: 'redis://redis:6379',
           sessionTtlSeconds: 3600,
           listTtlSeconds: 300,
-          llmTtlSeconds: 604_800,
-          llmPopularityTtlSeconds: 2_592_000,
           lowDataPackMaxEntries: 30,
         },
       });

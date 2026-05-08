@@ -1,6 +1,6 @@
 # ADR-036 — LLM cache strategy (single-source consolidation)
 
-- **Status**: Proposed (PR-A merged 2026-05-08, transitions to Accepted at PR-B merge — see §Status timeline)
+- **Status**: Accepted (PR-A merged 2026-05-08 ; PR-B merged 2026-05-08 — single-source consolidation now live)
 - **Date**: 2026-05-08
 - **Owner**: backend / chat module
 - **Scope**: museum-backend chat orchestration — LLM response cache layer
@@ -43,7 +43,7 @@ The cache is owned by the use-case layer. The adapter layer is plain orchestrati
 This ADR ships in two PRs sequentially because production = staging (no separate staging environment, see `docs/ROADMAP_PRODUCT.md` Phase 1 / `team-state/2026-05-08-c1-chat-fast/spec.md` §10):
 
 - **PR-A — instrumentation only (this PR, 2026-05-08)**: Status = **Proposed**. Adds Prometheus histograms (`chat_phase_duration_seconds`, `chat_request_duration_seconds`, `chat_phase_errors_total`), introduces `ChatPhaseTimer` (RAII Prom + Langfuse span emitter), wires it into STT/TTS adapters and `chat.service.ts`, adds `llm_cache_disabled_bypass` log event for kill-switch observability, and lands integration tests covering pipeline spans + cache invalidation across both museum-scoped context classes. **L2 is NOT removed in PR-A** — it stays in the composition root as-is until PR-B ships.
-- **PR-B — L2 removal (separate PR after 24h prod bake of PR-A)**: Status flips to **Accepted**. Removes `CachingChatOrchestrator` from the composition root, deletes the file and its tests, asserts `grep -rn "CachingChatOrchestrator" museum-backend/src/` returns zero. Pre-condition for PR-B: PR-A bakes 24h in production with no regression observed AND `LLM_CACHE_ENABLED=false` validated locally via Docker compose smoke (lookup skip + store skip + `llm_cache_disabled_bypass` log event emitted).
+- **PR-B — L2 removal (separate PR after 24h prod bake of PR-A — fast-tracked 2026-05-08 per user direction)**: Status flips to **Accepted**. Removes `CachingChatOrchestrator` from the composition root (`chat-module.ts:243` no longer wraps the orchestrator), deletes the file and its tests, `grep -rn "CachingChatOrchestrator" museum-backend/src museum-backend/tests` returns zero. Adds fail-open semantics to `LlmCacheServiceImpl.lookup` and `LlmCacheServiceImpl.store` (try/catch + `llm_cache_lookup_failed` / `llm_cache_store_failed` warn logs ; spec R8). The 24h bake gate was overridden by the user — the operational kill-switch (`LLM_CACHE_ENABLED=false`) remains the rollback path.
 
 The two-PR split exists to enable bisect: if cache hit-rate regresses after PR-B merges, the diff to investigate is small and isolated. There is no staging where this could be rehearsed.
 
