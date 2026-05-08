@@ -287,6 +287,17 @@ export class ChatMessageService {
   /** G — Attempts cache lookup; returns the cached result on hit, null on miss/bypass. */
   private async tryLlmCacheLookup(ctx: LlmCacheCtx): Promise<OrchestratorOutput | null> {
     const llmCache = this.llmCache;
+    if (llmCache && !env.llm.cacheEnabled) {
+      // Spec R10 — kill-switch observability. Logged once per request at the
+      // lookup site so a single line covers both the skipped lookup and
+      // the symmetrically skipped store later in the same request.
+      logger.info('llm_cache_disabled_bypass', {
+        userId: ctx.prep.ownerId ?? 'anon',
+        sessionId: ctx.sessionId,
+        requestId: ctx.requestId,
+      });
+      return null;
+    }
     if (!llmCache || !env.llm.cacheEnabled || ctx.input.image || ctx.orchestratorInput.image)
       return null;
     const cacheInput = this.buildLlmCacheInput(ctx.prep, ctx.sanitizedText);

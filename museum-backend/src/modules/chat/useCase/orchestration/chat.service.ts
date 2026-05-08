@@ -1,9 +1,11 @@
+import { CircuitOpenError } from '@modules/chat/adapters/secondary/llm/llm-circuit-breaker';
 import { DisabledAudioTranscriber } from '@modules/chat/domain/ports/audio-transcriber.port';
 import { ChatMediaService } from '@modules/chat/useCase/audio/chat-media.service';
 import { LlmCacheServiceImpl } from '@modules/chat/useCase/llm/llm-cache.service';
 import { ChatMessageService } from '@modules/chat/useCase/message/chat-message.service';
 import { ChatSessionService } from '@modules/chat/useCase/session/chat-session.service';
 import { logger } from '@shared/logger/logger';
+import { chatRequestDurationSeconds } from '@shared/observability/prometheus-metrics';
 
 import type {
   CreateSessionResult,
@@ -249,7 +251,9 @@ export class ChatService {
       userId: currentUserId,
       requestId,
     });
-    return await this.messages.postMessage(sessionId, input, requestId, currentUserId, ip);
+    return await measureChatRequest(() =>
+      this.messages.postMessage(sessionId, input, requestId, currentUserId, ip),
+    );
   }
 
   /**
@@ -311,7 +315,9 @@ export class ChatService {
     currentUserId?: number,
     ip?: string,
   ): Promise<PostAudioMessageResult> {
-    return await this.messages.postAudioMessage(sessionId, input, requestId, currentUserId, ip);
+    return await measureChatRequest(() =>
+      this.messages.postAudioMessage(sessionId, input, requestId, currentUserId, ip),
+    );
   }
 
   // ── Media & reporting ─────────────────────────────────────────────────
@@ -420,4 +426,48 @@ export class ChatService {
   ): Promise<{ url: string; expiresAt: string; voice: string; generatedAt: string } | null> {
     return await this.media.getMessageAudioUrl(messageId, currentUserId);
   }
+}
+
+type ChatRequestOutcome =
+  | 'success'
+  | 'error'
+  | 'guardrail_blocked'
+  | 'circuit_open'
+  | 'cache_hit';
+
+/**
+ * Wraps a chat request execution and records `chat_request_duration_seconds`
+ * with the resolved outcome label. Fail-open: a Prom client throw cannot
+ * propagate into the chat path.
+ *
+ * The `cache_hit` and `guardrail_blocked` outcomes are reachable today only
+ * via thrown errors; success-path detection of those two states needs a
+ * structured signal from {@link ChatMessageService} (e.g. an attached
+ * `outcome` field on the result). That extension lands in PR-B alongside
+ * the L2 removal so the signal can be wired through the cache code in one
+ * change instead of churning the metadata schema twice.
+ */
+async function measureChatRequest<T>(fn: () => Promise<T>): Promise<T> {
+  const startedAtMs = Date.now();
+  let outcome: ChatRequestOutcome = 'success';
+  try {
+    return await fn();
+  } catch (err) {
+    outcome = classifyChatRequestError(err);
+    throw err;
+  } finally {
+    try {
+      chatRequestDurationSeconds.observe({ outcome }, (Date.now() - startedAtMs) / 1000);
+    } catch (metricErr) {
+      logger.warn('chat_request_metric_drop', {
+        outcome,
+        err: metricErr instanceof Error ? metricErr.message : String(metricErr),
+      });
+    }
+  }
+}
+
+function classifyChatRequestError(err: unknown): ChatRequestOutcome {
+  if (err instanceof CircuitOpenError) return 'circuit_open';
+  return 'error';
 }

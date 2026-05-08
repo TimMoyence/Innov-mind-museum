@@ -14,7 +14,14 @@ export interface TextToSpeechService {
    * @param input - Text to synthesize and optional voice override.
    * @param input.text - Text content to synthesize.
    * @param input.voice - Optional voice identifier override.
+   * @param input.requestId - Optional request id used to correlate the
+   *   adapter's `chat.tts` phase span with the parent chat request. When
+   *   absent, instrumentation falls back to `'unknown'`.
    * @returns Audio buffer with content type metadata.
    */
-  synthesize(input: { text: string; voice?: string }): Promise<TtsResult>;
+  synthesize(input: {
+    text: string;
+    voice?: string;
+    requestId?: string;
+  }): Promise<TtsResult>;
 }
