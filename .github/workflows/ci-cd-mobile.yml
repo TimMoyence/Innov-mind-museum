@@ -41,6 +41,14 @@ on:
       - 'museum-frontend/**'
       - 'museum-backend/openapi/**'
       - '.github/workflows/ci-cd-mobile.yml'
+  schedule:
+    # E39 — Nightly Maestro Android matrix at 03:17 UTC (matches the existing
+    # iOS nightly slot). PR/push only run quality + prebuild for fast feedback;
+    # the slow emulator path is gated to nightly + manual dispatch because
+    # GitHub macos-latest hosted runners can't expose Hypervisor Framework
+    # (HVF_UNSUPPORTED), so arm64 AVDs run software-only and time out at 600s.
+    # Future: self-hosted Mac runner with HVF would enable per-PR maestro.
+    - cron: '17 3 * * *'
 
 concurrency:
   group: ci-cd-mobile-${{ github.ref }}
@@ -188,9 +196,12 @@ jobs:
           path: museum-frontend/android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 1
 
-  # ─── 3. Maestro shard matrix (Android, PR + push to main/staging) ─────────
+  # ─── 3. Maestro shard matrix (Android, nightly cron + manual dispatch) ───
+  # E39 — gated off PR/push because hosted macos-latest runners can't run the
+  # arm64 emulator (HVF unavailable). Re-enable per-PR when a self-hosted Mac
+  # runner is provisioned.
   maestro-shard:
-    if: ${{ github.event_name != 'schedule' }}
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     needs: prebuild
     runs-on: macos-latest
     timeout-minutes: 20
@@ -293,7 +304,10 @@ jobs:
 
   # ─── 4. Aggregate shard results into a PR comment ─────────────────────────
   maestro-summary:
-    if: ${{ always() && github.event_name == 'pull_request' }}
+    # E39 — only PR runs ever produced shard logs to summarize, but PR no
+    # longer runs maestro-shard. Keep gate consistent — runs only when the
+    # shard matrix above runs (nightly cron + dispatch).
+    if: ${{ always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
     needs: maestro-shard
     runs-on: ubuntu-latest
     timeout-minutes: 5
