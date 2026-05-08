@@ -40,7 +40,9 @@ export async function pruneStaleArtKeywords(
   let chunkDeleted = -1;
 
   while (chunkDeleted !== 0) {
-    const result = await dataSource.query(
+    // TypeORM 0.3.x DELETE result is `[rows, rowCount]` — see prune-support-tickets.ts
+    // for the production-incident background (2026-05-08).
+    const result = await dataSource.query<[unknown[], number] | undefined>(
       `DELETE FROM "art_keywords"
        WHERE id IN (
          SELECT id FROM "art_keywords"
@@ -52,7 +54,7 @@ export async function pruneStaleArtKeywords(
        RETURNING id`,
       [cfg.hitThreshold, cutoff.toISOString(), cfg.batchLimit],
     );
-    chunkDeleted = result.length;
+    chunkDeleted = Array.isArray(result) && typeof result[1] === 'number' ? result[1] : 0;
     totalDeleted += chunkDeleted;
     if (chunkDeleted > 0) {
       logger.info('prune_art_keywords_chunk', {

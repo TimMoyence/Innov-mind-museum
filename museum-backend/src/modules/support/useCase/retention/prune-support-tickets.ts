@@ -38,7 +38,12 @@ export async function pruneSupportTickets(
   let chunkDeleted = -1;
 
   while (chunkDeleted !== 0) {
-    const result = await dataSource.query(
+    // TypeORM 0.3.x normalizes DELETE/UPDATE results to `[rows, rowCount]`
+    // (PostgresQueryRunner.js, raw.command switch). Earlier code read
+    // `result.length` which is always 2 for this tuple → infinite loop and
+    // production DB saturation (incident 2026-05-08). Same shape handling as
+    // shared/audit/audit-ip-anonymizer.job.ts.
+    const result = await dataSource.query<[unknown[], number] | undefined>(
       `DELETE FROM "support_tickets"
        WHERE id IN (
          SELECT id FROM "support_tickets"
@@ -50,7 +55,7 @@ export async function pruneSupportTickets(
        RETURNING id`,
       [cutoff.toISOString(), cfg.batchLimit],
     );
-    chunkDeleted = result.length;
+    chunkDeleted = Array.isArray(result) && typeof result[1] === 'number' ? result[1] : 0;
     totalDeleted += chunkDeleted;
     if (chunkDeleted > 0) {
       logger.info('prune_support_tickets_chunk', {

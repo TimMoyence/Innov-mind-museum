@@ -44,7 +44,9 @@ export async function pruneReviews(
   let rejectedDeleted = 0;
   let chunkDeleted = -1;
   while (chunkDeleted !== 0) {
-    const result = await dataSource.query(
+    // TypeORM 0.3.x DELETE result is `[rows, rowCount]` — see prune-support-tickets.ts
+    // for the production-incident background (2026-05-08).
+    const result = await dataSource.query<[unknown[], number] | undefined>(
       `DELETE FROM "reviews"
        WHERE id IN (
          SELECT id FROM "reviews"
@@ -56,7 +58,7 @@ export async function pruneReviews(
        RETURNING id`,
       [rejectedCutoff.toISOString(), cfg.batchLimit],
     );
-    chunkDeleted = result.length;
+    chunkDeleted = Array.isArray(result) && typeof result[1] === 'number' ? result[1] : 0;
     rejectedDeleted += chunkDeleted;
     if (chunkDeleted > 0) {
       logger.info('prune_reviews_rejected_chunk', {
@@ -70,7 +72,7 @@ export async function pruneReviews(
   let pendingDeleted = 0;
   chunkDeleted = -1;
   while (chunkDeleted !== 0) {
-    const result = await dataSource.query(
+    const result = await dataSource.query<[unknown[], number] | undefined>(
       `DELETE FROM "reviews"
        WHERE id IN (
          SELECT id FROM "reviews"
@@ -82,7 +84,7 @@ export async function pruneReviews(
        RETURNING id`,
       [pendingCutoff.toISOString(), cfg.batchLimit],
     );
-    chunkDeleted = result.length;
+    chunkDeleted = Array.isArray(result) && typeof result[1] === 'number' ? result[1] : 0;
     pendingDeleted += chunkDeleted;
     if (chunkDeleted > 0) {
       logger.info('prune_reviews_pending_chunk', {
