@@ -85,6 +85,30 @@ const logServerError = (error: unknown, req: Request, requestId: string | undefi
   });
 };
 
+/**
+ * Logs auth-path 4xx with the AppError `code` so we can see *why* an
+ * `/api/auth/...` call rejected without scraping the response body. Scoped to
+ * `/api/auth/` to avoid flooding logs with every wrong password attempt across
+ * the surface; widen if a future incident demands it.
+ */
+const logAuth4xx = (
+  error: unknown,
+  req: Request,
+  requestId: string | undefined,
+  statusCode: number,
+): void => {
+  if (statusCode < 400 || statusCode >= 500) return;
+  if (!req.originalUrl.startsWith('/api/auth/')) return;
+  logger.warn('auth_4xx', {
+    requestId,
+    method: req.method,
+    path: req.originalUrl,
+    statusCode,
+    code: isAppErrorLike(error) ? error.code : 'UNKNOWN',
+    message: isAppErrorLike(error) ? error.message : undefined,
+  });
+};
+
 /** Express error-handling middleware that maps AppError instances to structured JSON responses and logs 5xx errors. */
 export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   const normalizedError = normalizeError(error);
@@ -93,6 +117,8 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
 
   if (statusCode >= 500) {
     logServerError(normalizedError, req, requestId);
+  } else {
+    logAuth4xx(normalizedError, req, requestId, statusCode);
   }
 
   applyResponseHeaders(res, normalizedError);
