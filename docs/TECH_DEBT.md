@@ -98,6 +98,27 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
   4. Test e2e : download pack ville → mode avion → vérifier tuiles identiques en/offline.
   5. Cocher TD-3 ici.
 
+### TD-4 — Pas de test d'intégration real-PG sur les 3 prune retention use cases
+
+- [ ] **Statut** : ouvert (créé 2026-05-08 post-incident `2026-05-08-prune-hardening`)
+- **Référence code** :
+  ```
+  museum-backend/src/modules/support/useCase/retention/prune-support-tickets.ts
+  museum-backend/src/modules/chat/useCase/retention/prune-stale-art-keywords.ts
+  museum-backend/src/modules/review/useCase/moderation/prune-reviews.ts
+  museum-backend/tests/unit/{support,chat,review}/prune-*.test.ts   # mock-only, pas de vraie PG
+  ```
+- **Sprint d'origine** : 2026-05-08 (incident retention busy-loop — commit `8a32293f5` + run `/team 2026-05-08-prune-hardening`).
+- **Pourquoi pas fait dans le sprint d'origine** : l'incident avait déjà couté ~11h de prod ; la priorité était de stopper la saignée + ajouter les régressions unit + variant analysis. Un harness real-PG sur les 3 prunes demande 2-3h d'infra (testcontainers + factories + setup teardown sur tables avec CASCADE FK) — hors scope du hotfix.
+- **Pourquoi c'est important** : le bug d'origine (lecture `result.length` sur tuple `[rows, rowCount]`) est passé à travers la suite unit existante car le mock retournait un array de rows direct, pas le tuple driver réel. Un test integration sur vraie PG aurait attrapé ça avant prod.
+- **Effort estimé** : 2-3 heures (réutiliser `tests/integration/db/migration-round-trip.test.ts` pour le setup harness ; ajouter des fixtures qui insèrent N rows éligibles, exécutent le prune, assertent rowsAffected + DB state ; vérifier que le tuple driver shape est bien consommée).
+- **Comment fermer** :
+  1. Créer `tests/integration/retention/prune-support-tickets.integration.test.ts` (et 2 frères pour chat/review).
+  2. Réutiliser `createIntegrationHarness()` (cf. `migration-round-trip.test.ts`).
+  3. Insérer ~50 rows éligibles via factory + ~50 non-éligibles, exécuter le prune, vérifier `rowsAffected === 50` et que les non-éligibles restent.
+  4. Exécuter au minimum sur la pipeline `integration` du workflow CI.
+  5. Cocher TD-4 ici.
+
 ---
 
 ## Tech debts fermés (gardés 1 sprint avant purge)

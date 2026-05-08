@@ -371,7 +371,14 @@ async function startRetentionCrons(): Promise<ScheduledJobHandle[]> {
       batchLimit,
     });
 
-    await Promise.all([supportHandle.start(), reviewHandle.start(), artKeywordsHandle.start()]);
+    // Sequential startup so the three retention workers do not race the DB at
+    // boot. BullMQ already enforces concurrency=1 per queue, but a parallel
+    // `Promise.all` here briefly tripled the cron-tick load and contributed to
+    // the 2026-05-08 pgbouncer saturation when the prune busy-loop hit (see
+    // /team run `2026-05-08-prune-hardening`).
+    await supportHandle.start();
+    await reviewHandle.start();
+    await artKeywordsHandle.start();
 
     logger.info('retention_crons_started', { cronPattern });
     return [supportHandle, reviewHandle, artKeywordsHandle];

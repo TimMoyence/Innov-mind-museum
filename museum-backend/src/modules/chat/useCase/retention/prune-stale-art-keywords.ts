@@ -1,6 +1,15 @@
+import { setTimeout as sleep } from 'node:timers/promises';
+
 import { logger } from '@shared/logger/logger';
 
 import type { DataSource } from 'typeorm';
+
+/**
+ * Pause inserted between non-empty chunks so a runaway purge cannot monopolise
+ * pgbouncer (incident 2026-05-08 hardening — see /team run
+ * `2026-05-08-prune-hardening`).
+ */
+const CHUNK_THROTTLE_MS = 50;
 
 /** Result of a single prune run. */
 export interface PruneArtKeywordsResult {
@@ -61,6 +70,7 @@ export async function pruneStaleArtKeywords(
         deleted: chunkDeleted,
         totalSoFar: totalDeleted,
       });
+      await sleep(CHUNK_THROTTLE_MS);
     }
   }
 
