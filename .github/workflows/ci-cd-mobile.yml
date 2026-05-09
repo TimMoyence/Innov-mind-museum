@@ -145,7 +145,7 @@ jobs:
 
       - name: Restore APK cache
         id: cache-apk
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: museum-frontend/android/app/build/outputs/apk/debug/app-debug.apk
           key: maestro-apk-${{ runner.os }}-${{ hashFiles('museum-frontend/src/**', 'museum-frontend/features/**', 'museum-frontend/shared/**', 'museum-frontend/app/**', 'museum-frontend/assets/**', 'museum-frontend/app.config.ts', 'museum-frontend/package.json', 'museum-frontend/package-lock.json') }}
