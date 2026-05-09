@@ -396,7 +396,7 @@ jobs:
             "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend@${{ steps.push.outputs.digest }}"
 
       - name: SLSA L3 build-provenance attestation
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ghcr.io/${{ secrets.GHCR_USER }}/museum-backend
           subject-digest: ${{ steps.push.outputs.digest }}
@@ -899,7 +899,7 @@ jobs:
             "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging@${{ steps.push.outputs.digest }}"
 
       - name: SLSA L3 build-provenance attestation (staging)
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging
           subject-digest: ${{ steps.push.outputs.digest }}

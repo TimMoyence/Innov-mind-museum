@@ -65,7 +65,7 @@ jobs:
           echo "bundle=/tmp/cosign-sig.bundle" >> "$GITHUB_OUTPUT"
 
       - name: Generate SLSA provenance attestation
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ inputs.image }}
           subject-digest: ${{ inputs.digest }}
