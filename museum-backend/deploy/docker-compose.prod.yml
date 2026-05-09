@@ -56,10 +56,12 @@ volumes:
 services:
   backend:
     # IMAGE_TAG is set by CI to the commit SHA for deterministic deploys.
-    # REQUIRED: no :latest fallback — operators must export IMAGE_TAG before
-    # `docker compose up`, otherwise compose refuses to start. Prevents silent
-    # drift to a mutable `:latest` tag. See docs/OPS_DEPLOYMENT.md § Immutable image tags.
-    image: ghcr.io/timmoyence/museum-backend:${IMAGE_TAG:?IMAGE_TAG required — use commit SHA from CI}
+    # Soft-default to `:latest` so operator manual `docker compose up` (no
+    # IMAGE_TAG exported) keeps working — CI always overrides via the
+    # `export IMAGE_TAG=${github.sha}` step in ci-cd-backend.yml deploy-prod.
+    # Migration to strict `:?` enforcement is tracked as a follow-up
+    # (requires every operator command to set IMAGE_TAG first).
+    image: ghcr.io/timmoyence/museum-backend:${IMAGE_TAG:-latest}
     hostname: backend
     env_file:
       - .env
@@ -101,9 +103,9 @@ services:
   # To disable: set GUARDRAILS_V2_CANDIDATE=off in .env and restart backend
   # (backend will use noopAdvancedGuardrail; this service still runs but is idle).
   llm-guard:
-    # LLM_GUARD_IMAGE_TAG is set by CI to the commit SHA for deterministic deploys.
-    # REQUIRED: no :latest fallback (see backend service above).
-    image: ghcr.io/timmoyence/museum-llm-guard:${LLM_GUARD_IMAGE_TAG:?LLM_GUARD_IMAGE_TAG required — use commit SHA from CI}
+    # LLM_GUARD_IMAGE_TAG is set by CI to the commit SHA for deterministic
+    # deploys. Soft-default to `:latest` (see backend service note above).
+    image: ghcr.io/timmoyence/museum-llm-guard:${LLM_GUARD_IMAGE_TAG:-latest}
     hostname: llm-guard
     environment:
       - LOG_LEVEL=INFO
@@ -154,8 +156,8 @@ services:
 
   museum-web:
     # WEB_IMAGE_TAG is set by CI to the commit SHA for deterministic deploys.
-    # REQUIRED: no :latest fallback (see backend service above).
-    image: ghcr.io/timmoyence/museum-web:${WEB_IMAGE_TAG:?WEB_IMAGE_TAG required — use commit SHA from CI}
+    # Soft-default to `:latest` (see backend service note above).
+    image: ghcr.io/timmoyence/museum-web:${WEB_IMAGE_TAG:-latest}
     hostname: museum-web
     environment:
       - NODE_ENV=production
@@ -183,8 +185,15 @@ services:
       retries: 3
 
   db:
-    # TODO(infra): pin by digest `postgres@sha256:...` — see pgbouncer TODO above.
-    image: postgres:16-alpine
+    # pgvector/pgvector:pg16 — Postgres 16 with the pgvector extension
+    # baked in. Required by the chat module's vector embeddings (Spec G
+    # cache popularity ranking, KB enrichment) and by the user-memory
+    # personalisation features. Switching back to vanilla
+    # `postgres:16-alpine` would silently break vector inserts on next
+    # boot (CREATE EXTENSION vector fails) — DO NOT downgrade.
+    # TODO(infra): pin by digest `pgvector/pgvector@sha256:...` — see
+    # pgbouncer TODO above.
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}

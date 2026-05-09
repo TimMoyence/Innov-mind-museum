@@ -915,22 +915,31 @@ backend at `backend:3000/metrics`.
 | `alertmanager` | obs | `prom/alertmanager:v0.27.0` | Routes firing alerts to the Telegram bridge. |
 | `alertmanager-telegram` | obs | local build (`./obs/alertmanager-telegram`) | Translates AM webhook → Telegram Bot API `sendMessage`. |
 
-### One-shot bootstrap (manual — only what CI cannot do)
+### Single source of truth — compose, /srv/museum/, and CI
 
-> **Why anything is manual.** The compose that runs on the VPS at
-> `/srv/museum/docker-compose.yml` is **not** the
-> `museum-backend/deploy/docker-compose.prod.yml` that lives in the
-> repo. The VPS compose is operator-owned and edited in place ; the
-> repo file is a hardening reference (immutable image tags etc.) that
-> we have NOT migrated to. CI pulls images and bind-mount config files
-> via the live VPS compose, but it does NOT scp the compose itself —
-> too critical to mutate from a runner.
+`museum-backend/deploy/docker-compose.prod.yml` in the repo IS the
+prod compose. Every push to `main` SCPs it to
+`/srv/museum/docker-compose.yml` on the VPS, after backing up the
+previous file to `docker-compose.yml.bak.<UTC-timestamp>`. The CI step
+`Install compose + obs config + nginx snippet on VPS` validates the
+candidate compose with `docker compose ... config` BEFORE replacing
+the live one — a syntax error or a missing required env var aborts
+the deploy with prod still running on the prior compose.
 
-CI/CD (`ci-cd-backend.yml` deploy-prod) handles the recurring sync
-(rsync `infra/grafana/` → `/srv/museum/obs/`, install nginx snippet,
-reload nginx, `docker compose up -d` the obs services, smoke gate) on
-every push to `main`. The operator owns four things ONCE per
-environment :
+Operators no longer hand-edit the live compose. Schema changes go
+through PR + review + CI. If you ever need to rescue prod by
+reverting to the previous compose:
+
+```bash
+ssh user@vps 'sudo cp /srv/museum/docker-compose.yml.bak.<TIMESTAMP> /srv/museum/docker-compose.yml \
+  && cd /srv/museum && docker compose up -d --remove-orphans'
+```
+
+### One-shot bootstrap (only what CI cannot do)
+
+CI handles compose scp + obs rsync + nginx snippet install + reload +
+`docker compose up -d` + RBAC smoke on every push. The operator owns
+three things ONCE per environment :
 
 ```bash
 # A. Create the Telegram bot.
@@ -948,36 +957,36 @@ environment :
 #      TELEGRAM_BOT_TOKEN=<token from BotFather>
 #      TELEGRAM_CHAT_ID=<chat id from getUpdates>
 
-# C. Patch your VPS docker-compose.yml with the 4 obs services.
-#    The repo ships the additive snippet at:
-#        museum-backend/deploy/obs-services.snippet.yml
-#    Open /srv/museum/docker-compose.yml and merge:
-#      - the `obs` network into your top-level `networks:` block
-#      - `prom_data`, `grafana_data`, `alertmanager_data` into `volumes:`
-#      - the 4 services (prometheus, alertmanager, alertmanager-telegram,
-#        grafana) into `services:`
-#    Do NOT replace the existing backend / pgbouncer / db / redis / web /
-#    llm-guard services — they stay as they are. The snippet is purely
-#    additive.
-#    Reference of what to copy:
-scp museum-backend/deploy/obs-services.snippet.yml \
-    user@vps:/tmp/musaium-obs-snippet.yml
-ssh user@vps 'less /tmp/musaium-obs-snippet.yml'   # eyeball
-ssh user@vps 'sudo nano /srv/museum/docker-compose.yml'   # paste the 3 sections
-
-# D. Add ONE line to /etc/nginx/sites-enabled/musaium.conf inside the
+# C. Add ONE line to /etc/nginx/sites-enabled/musaium.conf inside the
 #    `server { }` block that terminates TLS for musaium.fr:
 #        include /etc/nginx/snippets/musaium-grafana.conf;
-#    The CI step "Install obs config + nginx snippet on VPS" places the
-#    snippet at /etc/nginx/snippets/musaium-grafana.conf on every deploy,
-#    but it does NOT touch the vhost itself (too critical to mutate from
-#    CI). Without this `include` line the snippet exists-but-unused —
-#    /grafana/ returns nginx default (404) until you add it.
+#    CI installs the snippet at /etc/nginx/snippets/musaium-grafana.conf
+#    on every deploy but does NOT touch the vhost itself (too critical
+#    to mutate from a runner). Without this `include`, /grafana/
+#    returns nginx default (404).
 sudo nano /etc/nginx/sites-enabled/musaium.conf  # add the include
 sudo nginx -t && sudo systemctl reload nginx     # validate + apply
 ```
 
-That's it. The next push to `main` will deploy the stack automatically.
+That's it. The next push to `main` deploys the full stack automatically.
+
+### First-time bootstrap from an existing manually-edited compose
+
+If your VPS currently runs a hand-edited `/srv/museum/docker-compose.yml`
+(pre-PR-G state) and you want CI to take over:
+
+```bash
+# 1. Inspect the diff between your live compose and the repo version.
+ssh user@vps 'cat /srv/museum/docker-compose.yml' > /tmp/live-compose.yml
+diff /tmp/live-compose.yml museum-backend/deploy/docker-compose.prod.yml
+# Reconcile any operator customisations into the repo file BEFORE the
+# next push, otherwise they are lost on the first scp+install.
+
+# 2. Make a manual safety backup before the first CI-driven deploy.
+ssh user@vps 'sudo cp /srv/museum/docker-compose.yml /srv/museum/docker-compose.yml.pre-pr-g'
+
+# 3. Push to main. CI does the rest.
+```
 
 ### Recurring deploy (every push to `main`)
 
@@ -985,15 +994,13 @@ Owned by `ci-cd-backend.yml` `deploy-prod` job. The relevant steps are :
 
 | Step | What it does |
 |---|---|
-| `Sync obs config to VPS (/tmp staging)` | scp `infra/grafana/` + `infra/nginx/conf.d/grafana.conf` to `/tmp/musaium-obs-staging/` |
-| `Install obs config + nginx snippet on VPS` | `sudo rsync` to `/srv/museum/obs/`, `sudo install` the nginx snippet, `sudo nginx -t && systemctl reload nginx` |
-| `Deploy obs stack on VPS` | `docker compose pull prometheus grafana alertmanager` + `docker compose up -d` the 4 obs services + Grafana healthcheck wait + Prometheus rule loaded check |
-| `Post-deploy obs smoke (RBAC gate)` | runs `museum-backend/scripts/smoke-grafana-prod.sh` ; only if `PROD_SUPER_ADMIN_PASSWORD` is set in repo secrets |
+| `Sync prod compose + obs config to VPS (/tmp staging)` | scp `museum-backend/deploy/docker-compose.prod.yml` + `infra/grafana/` + `infra/nginx/conf.d/grafana.conf` to `/tmp/musaium-deploy-staging/` |
+| `Install compose + obs config + nginx snippet on VPS` | `docker compose config` validates candidate compose → backup live to `.bak.<ts>` → install candidate as `/srv/museum/docker-compose.yml` → rsync `/srv/museum/obs/` → install nginx snippet → `nginx -t && systemctl reload nginx` |
+| `Deploy obs stack on VPS` | `docker compose pull prometheus grafana alertmanager` + `up -d` the 4 obs services + Grafana healthcheck wait + Prometheus rule-loaded grep |
+| `Post-deploy obs smoke (RBAC gate)` | runs `museum-backend/scripts/smoke-grafana-prod.sh` ; only if `PROD_SUPER_ADMIN_PASSWORD` is set in repo secrets, otherwise skipped silently |
 
 The smoke step is conditional on the secret so a deploy from a fresh
-clone (no super_admin secrets yet) still goes green — it skips the
-RBAC assertion silently and lets you backfill secrets later without
-blocking the pipeline.
+clone (no super_admin secrets yet) still goes green.
 
 The migration `1778240000000-AddSuperAdminRoleAndBackfill` extends the
 `users_role_enum` and the next migration

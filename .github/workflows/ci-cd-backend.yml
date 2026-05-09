@@ -576,28 +576,33 @@ jobs:
               backend node dist/scripts/seed-smoke-account.js
 
       # ── Observability stack (C1.1, ADR-036) ────────────────────────────
-      # Deploys the Grafana / Prometheus / AlertManager / Telegram-bridge
-      # services declared in docker-compose.prod.yml. The 5 obs env vars
-      # (ENV, GRAFANA_ADMIN_PASSWORD, GRAFANA_ROOT_URL, TELEGRAM_BOT_TOKEN,
-      # TELEGRAM_CHAT_ID) MUST already be set in /srv/museum/.env on the
-      # VPS — the bootstrap procedure in docs/OPS_DEPLOYMENT.md §Grafana
-      # walks an operator through this once. CI does NOT manage these
-      # secrets to avoid moving them through GitHub Actions logs.
+      # Deploys Grafana / Prometheus / AlertManager / Telegram-bridge
+      # services declared in /srv/museum/docker-compose.yml.
+      #
+      # Single-source-of-truth pattern:
+      #   museum-backend/deploy/docker-compose.prod.yml is THE compose.
+      #   Every deploy SCPs it to /srv/museum/docker-compose.yml on the
+      #   VPS, after backing up the previous file to .bak. Operators do
+      #   NOT hand-edit the live compose anymore — changes go through
+      #   PR + CI.
+      #
+      # The 5 obs env vars (ENV, GRAFANA_ADMIN_PASSWORD, GRAFANA_ROOT_URL,
+      # TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID) MUST already be set in
+      # /srv/museum/.env. CI does NOT manage these secrets.
 
-      - name: Sync obs config to VPS (/tmp staging)
+      - name: Sync prod compose + obs config to VPS (/tmp staging)
         uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345  # v1.0.0
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_KEY }}
-          source: 'infra/grafana/*,infra/nginx/conf.d/grafana.conf'
-          target: /tmp/musaium-obs-staging
-          # strip_components flattens the leading `infra/` so we can mv
-          # /tmp/musaium-obs-staging/grafana/ → /srv/museum/obs/ in the
-          # next step.
-          strip_components: 1
+          source: 'museum-backend/deploy/docker-compose.prod.yml,infra/grafana/*,infra/nginx/conf.d/grafana.conf'
+          target: /tmp/musaium-deploy-staging
+          # strip_components=2 drops `museum-backend/deploy/` from the compose
+          # path AND `infra/` from the obs/nginx paths.
+          strip_components: 2
 
-      - name: Install obs config + nginx snippet on VPS
+      - name: Install compose + obs config + nginx snippet on VPS
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -606,33 +611,51 @@ jobs:
           script: |
             set -e
 
-            # 1. Sync the Grafana/Prom/AM provisioning + dashboards into
-            #    the compose bind-mount target. --delete keeps the VPS
-            #    in lockstep with the repo (renamed dashboards / removed
-            #    rules vanish from Grafana on next reload).
+            # 1. Validate the new compose BEFORE touching the live one —
+            #    syntax error or missing env var → abort, leave prod
+            #    running on the existing compose.
+            cd /srv/museum
+            sudo cp /tmp/musaium-deploy-staging/docker-compose.prod.yml \
+              /tmp/musaium-deploy-staging/docker-compose.yml.candidate
+            (cd /srv/museum && \
+              docker compose \
+                -f /tmp/musaium-deploy-staging/docker-compose.yml.candidate \
+                --env-file /srv/museum/.env \
+                config > /dev/null)
+
+            # 2. Backup current compose, install candidate as the live one.
+            BACKUP_TS="$(date -u +%Y%m%dT%H%M%SZ)"
+            if [ -f /srv/museum/docker-compose.yml ]; then
+              sudo cp /srv/museum/docker-compose.yml \
+                "/srv/museum/docker-compose.yml.bak.${BACKUP_TS}"
+              echo "[deploy] backed up previous compose to docker-compose.yml.bak.${BACKUP_TS}"
+            fi
+            sudo install -m 0644 \
+              /tmp/musaium-deploy-staging/docker-compose.yml.candidate \
+              /srv/museum/docker-compose.yml
+
+            # 3. Sync Grafana/Prom/AM provisioning + dashboards into the
+            #    compose bind-mount target. --delete keeps the VPS in
+            #    lockstep with the repo.
             sudo mkdir -p /srv/museum/obs
             sudo rsync -av --delete \
-              /tmp/musaium-obs-staging/grafana/ \
+              /tmp/musaium-deploy-staging/grafana/ \
               /srv/museum/obs/
 
-            # 2. Install the nginx snippet that gates /grafana/* via
-            #    auth_request → backend /api/auth/super-admin-check.
+            # 4. Install nginx snippet (auth_request gate for /grafana/*).
             sudo install -m 0644 \
-              /tmp/musaium-obs-staging/nginx/conf.d/grafana.conf \
+              /tmp/musaium-deploy-staging/nginx/conf.d/grafana.conf \
               /etc/nginx/snippets/musaium-grafana.conf
 
-            # 3. Validate + reload nginx. If the operator has not yet
-            #    added `include /etc/nginx/snippets/musaium-grafana.conf;`
-            #    to /etc/nginx/sites-enabled/musaium.conf, the snippet is
-            #    present-but-unused — `nginx -t` still passes. The
-            #    one-shot include step is documented in
-            #    docs/OPS_DEPLOYMENT.md §Grafana bootstrap and is the
-            #    only manual touch the operator owns.
+            # 5. Validate + reload nginx. The vhost-level
+            #    `include /etc/nginx/snippets/musaium-grafana.conf;`
+            #    is operator-owned (one-shot, see OPS_DEPLOYMENT) — its
+            #    absence does NOT fail nginx -t.
             sudo nginx -t
             sudo systemctl reload nginx
 
-            # 4. Cleanup the staging dir.
-            rm -rf /tmp/musaium-obs-staging
+            # 6. Cleanup staging dir.
+            rm -rf /tmp/musaium-deploy-staging
 
       - name: Deploy obs stack on VPS
         id: deploy_obs
@@ -652,15 +675,15 @@ jobs:
             # Re-login (idempotent — same token as the backend deploy).
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin || true
 
-            # Pull + restart the 4 obs services. The Telegram bridge
-            # builds locally (no GHCR pull); compose handles the build
-            # transparently.
+            # Pull + restart the 4 obs services. alertmanager-telegram
+            # builds locally from /srv/museum/obs/alertmanager-telegram/
+            # — compose handles the build transparently.
             docker compose pull prometheus grafana alertmanager
             docker compose up -d --remove-orphans --timeout 30 \
               prometheus grafana alertmanager alertmanager-telegram
 
-            # Wait for Grafana to pass its healthcheck (confirms
-            # provisioning loaded the dashboard + datasource cleanly).
+            # Wait for Grafana healthcheck (confirms provisioning loaded
+            # the dashboard + datasource cleanly).
             echo "Waiting for Grafana healthcheck..."
             TRIES=0
             MAX_TRIES=20
@@ -676,9 +699,7 @@ jobs:
             done
             echo "Grafana is healthy."
 
-            # Confirm the alerting rule loaded by Prometheus (the rule
-            # path must resolve under /etc/prometheus/alerting/*.yml in
-            # the container — typo or mount drift is caught here).
+            # Confirm the alerting rule loaded by Prometheus.
             if ! docker compose exec -T prometheus wget -qO- http://localhost:9090/api/v1/rules \
                 | grep -q chat_e2e_p99_high; then
               echo "::warning::Prometheus did not load chat_e2e_p99_high rule — check /srv/museum/obs/alerting/"
