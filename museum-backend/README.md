@@ -1,6 +1,6 @@
 # Musaium Backend
 
-Express 5 + TypeORM backend for Musaium (mobile-first API).
+Express 5 + TypeORM backend for Musaium (mobile-first API). PostgreSQL via the `pgvector/pgvector:pg16` image (vector-search ready for the C3 visual-similarity workstream — see `docs/ROADMAP_PRODUCT.md`).
 
 ## API Surface
 
