@@ -133,6 +133,7 @@ Leçons techniques non évidentes consolidées des sprints précédents. Ajoute 
 - **Hook Jest cache parfois flaky** — un ratchet coverage qui plante sans raison apparente est souvent un cache Jest stale. Run `pnpm jest --clearCache` (BE) ou `npm test -- --clearCache` (FE) avant de réinvestiguer. Seen 2026-04-17 SESSION_FINAL leçon 3.
 - **`docs/` whitelisted dans .gitignore** — gitignored par défaut, sous-dossiers doivent être whitelistés explicitement (`!docs/<sub>/`). Si `git status` ne voit pas un nouveau sous-dossier dans `docs/`, c'est ça.
 - **GitNexus auto-inject `<!-- gitnexus:start -->` dans `AGENTS.md`** — `npx gitnexus analyze` expand ce bloc. Comportement intentionnel, ne pas effacer le marker.
+- **GitNexus skills installent en nested par défaut** — le binaire upstream installe à `.claude/skills/gitnexus/gitnexus-X/SKILL.md` (deux niveaux), or Claude Code skill loader ne recurse pas → skills jamais chargés. Patch local : `scripts/patch-gitnexus.sh` qui réécrit le binaire global pour pointer top-level. Re-lancer le script après tout `npm install -g gitnexus` / `npm update -g gitnexus`.
 - **TypeORM `.set({ field: undefined })` est silencieusement skip** — `UpdateQueryBuilder` ne génère PAS de `SET field = NULL` quand on passe `undefined`. Use `() => 'NULL'` raw expression. Bug verifyEmail 2026-05.
 - **PgBouncer transaction mode interdit `LISTEN/NOTIFY`, session-scoped advisory locks, persistent prepared statements** — Musaium n'utilise rien de ça aujourd'hui (audit ADR-021), mais à vérifier au cas par cas.
 - **SWC + TypeORM cross-entity = ReferenceError circular** — fix = wrap les FK avec le type alias `Relation<T>`. Ne pas s'écarter de ce pattern sur les nouvelles entités.
@@ -247,7 +248,7 @@ TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (20910 symbols, 34425 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (21086 symbols, 34563 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -279,11 +280,11 @@ This project is indexed by GitNexus as **Innov-mind-museum** (20910 symbols, 344
 
 | Task | Read this skill file |
 |------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
+| Understand architecture / "How does X work?" | `.claude/skills/gitnexus-exploring/SKILL.md` |
+| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus-impact-analysis/SKILL.md` |
+| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus-debugging/SKILL.md` |
+| Rename / extract / split / refactor | `.claude/skills/gitnexus-refactoring/SKILL.md` |
+| Tools, resources, schema reference | `.claude/skills/gitnexus-guide/SKILL.md` |
+| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
