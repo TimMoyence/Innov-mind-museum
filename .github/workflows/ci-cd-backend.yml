@@ -629,6 +629,7 @@ jobs:
             (cd /srv/museum && \
               docker compose \
                 -f /tmp/musaium-deploy-staging/docker-compose.yml.candidate \
+                --project-directory /srv/museum \
                 --env-file /srv/museum/.env \
                 config > /dev/null)
 
