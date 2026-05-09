@@ -35,7 +35,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.0",
-    "@eslint/js": "^9.39.4",
+    "@eslint/js": "^10.0.0",
     "@next/eslint-plugin-next": "^15.5.15",
     "@playwright/test": "^1.49.0",
     "@tailwindcss/postcss": "^4.1.8",
@@ -48,7 +48,7 @@
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.4",
-    "eslint": "^9.39.4",
+    "eslint": "^10.0.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
