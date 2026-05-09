@@ -137,13 +137,15 @@ jobs:
   # ─── 3. Mutation testing (Stryker — incremental on push, full nightly) ──
   mutation:
     needs: quality
-    # Disabled on push-to-main 2026-05-09: a dedicated cache-builder agent
-    # owns the Stryker incremental cache regeneration on main, so running
-    # Stryker again here is duplicate work and competes for the cache key.
-    # Pull requests and the nightly cron still run Stryker — those are the
-    # gates that catch regressions before / after the merge window.
-    # Manual workflow_dispatch is preserved so an operator can force a run.
-    if: github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/staging')
+    # FULLY DISABLED 2026-05-09 — a dedicated local cache-builder agent
+    # is regenerating the Stryker incremental cache offline (long-running
+    # job). Once that cache is committed + pushed, flip `if: false` back
+    # to the conditional from c17c404e:
+    #   github.event_name == 'pull_request'
+    #   || github.event_name == 'schedule'
+    #   || github.event_name == 'workflow_dispatch'
+    #   || (github.event_name == 'push' && github.ref == 'refs/heads/staging')
+    if: false
     runs-on: ubuntu-latest
     # Bumped 50 → 90 (2026-05-08): the prior 50-min cap killed every full run
     # before Stryker could write `reports/stryker-incremental.json`, so the
