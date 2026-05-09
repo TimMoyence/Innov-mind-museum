@@ -15,4 +15,6 @@ providers:
     allowUiUpdates: false
     options:
       path: /var/lib/grafana/dashboards
-      foldersFromFilesStructure: true
+      # Note: foldersFromFilesStructure is incompatible with explicit
+      # folder/folderUid above. Re-enable it (and clear folder/folderUid)
+      # only when adding sub-folder structure under infra/grafana/dashboards/.
