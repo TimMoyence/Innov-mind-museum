@@ -2,7 +2,7 @@
   "name": "musaium-backend",
   "version": "1.2.1",
   "description": "",
-  "packageManager": "pnpm@10.8.0",
+  "packageManager": "pnpm@10.33.4",
   "engines": {
     "node": ">=22.0.0"
   },
