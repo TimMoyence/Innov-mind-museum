@@ -69,4 +69,22 @@ describe('parseLocationString', () => {
     expect(parseLocationString('lat:90,lng:180')).toEqual({ lat: 90, lng: 180 });
     expect(parseLocationString('lat:-90,lng:-180')).toEqual({ lat: -90, lng: -180 });
   });
+
+  // Inputs that match the regex character class [-\d.] but produce a non-finite
+  // parseFloat result. Kills the isFinite OR -> AND mutant and the
+  // ConditionalExpression -> false mutant on L15.
+  it('returns null when lat parses to NaN (e.g. lone "."" inside the digit class)', () => {
+    expect(parseLocationString('lat:.,lng:1.0')).toBeNull();
+  });
+
+  it('returns null when lng parses to NaN (lone "." inside the digit class)', () => {
+    expect(parseLocationString('lat:1.0,lng:.')).toBeNull();
+  });
+
+  // Anchored-start regex: any leading characters before "lat:" must reject.
+  // Kills the Regex mutant that drops the `^` anchor on L11.
+  it('rejects strings with content before the lat: prefix', () => {
+    expect(parseLocationString('xlat:1.0,lng:2.0')).toBeNull();
+    expect(parseLocationString(' x lat:1.0,lng:2.0')).toBeNull();
+  });
 });
