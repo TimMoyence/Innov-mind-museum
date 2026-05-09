@@ -40,7 +40,7 @@ jobs:
       # `setup-node` reads `cache: pnpm` and shells out to `pnpm` — so pnpm
       # MUST be on PATH before `setup-node` runs. Order matters here.
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 9
           run_install: false
