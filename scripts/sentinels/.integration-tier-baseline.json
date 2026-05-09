@@ -9,6 +9,16 @@
       "path": "museum-backend/tests/integration/security/ssrf-matrix.integration.test.ts",
       "reason": "outbound network boundary; test mocks global.fetch to assert no real fetch leaks — sentinel regex requires a real fetch call but the test intent IS the network boundary (SSRF defence); no DB needed",
       "approved_by": "phase1-spec-§5"
+    },
+    {
+      "path": "museum-backend/tests/integration/chat/chat-pipeline-spans.integration.test.ts",
+      "reason": "C1 PR-A — pins Prom histogram emission via buildChatTestService (in-memory orchestrator + repo) and via direct ChatPhaseTimer.start/end. Driving the real OpenAI HTTP path from CI would need a live API key or full HTTP mocking — neither belongs in deterministic CI. End-to-end smoke covers the live path via pnpm smoke:api on staging.",
+      "approved_by": "C1-spec-R1-R2"
+    },
+    {
+      "path": "museum-backend/tests/integration/admin/admin-museum-cache-invalidation.integration.test.ts",
+      "reason": "C1 PR-A — pins LlmCacheServiceImpl.invalidateMuseum contract (R9: both museum-mode and personalized buckets purged) against a mocked CacheService. The SQL paths are exhaustively covered in tests/unit/chat/llm-cache.service.test.ts; this file is the cross-module admin↔chat contract pin and does not need a real Postgres+Redis testcontainer.",
+      "approved_by": "C1-spec-R9"
     }
   ]
 }
