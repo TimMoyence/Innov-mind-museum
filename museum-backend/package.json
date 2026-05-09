@@ -73,7 +73,7 @@
     "@stryker-mutator/typescript-checker": "^9.6.0",
     "@swc/core": "^1.15.32",
     "@swc/jest": "^0.2.39",
-    "@types/bcrypt": "^5.0.2",
+    "@types/bcrypt": "^6.0.0",
     "@types/compression": "^1.8.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.1",
