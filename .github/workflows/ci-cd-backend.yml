@@ -575,6 +575,131 @@ jobs:
               -e SMOKE_TEST_PASSWORD="$SMOKE_TEST_PASSWORD" \
               backend node dist/scripts/seed-smoke-account.js
 
+      # ── Observability stack (C1.1, ADR-036) ────────────────────────────
+      # Deploys the Grafana / Prometheus / AlertManager / Telegram-bridge
+      # services declared in docker-compose.prod.yml. The 5 obs env vars
+      # (ENV, GRAFANA_ADMIN_PASSWORD, GRAFANA_ROOT_URL, TELEGRAM_BOT_TOKEN,
+      # TELEGRAM_CHAT_ID) MUST already be set in /srv/museum/.env on the
+      # VPS — the bootstrap procedure in docs/OPS_DEPLOYMENT.md §Grafana
+      # walks an operator through this once. CI does NOT manage these
+      # secrets to avoid moving them through GitHub Actions logs.
+
+      - name: Sync obs config to VPS (/tmp staging)
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345  # v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          source: 'infra/grafana/*,infra/nginx/conf.d/grafana.conf'
+          target: /tmp/musaium-obs-staging
+          # strip_components flattens the leading `infra/` so we can mv
+          # /tmp/musaium-obs-staging/grafana/ → /srv/museum/obs/ in the
+          # next step.
+          strip_components: 1
+
+      - name: Install obs config + nginx snippet on VPS
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          script: |
+            set -e
+
+            # 1. Sync the Grafana/Prom/AM provisioning + dashboards into
+            #    the compose bind-mount target. --delete keeps the VPS
+            #    in lockstep with the repo (renamed dashboards / removed
+            #    rules vanish from Grafana on next reload).
+            sudo mkdir -p /srv/museum/obs
+            sudo rsync -av --delete \
+              /tmp/musaium-obs-staging/grafana/ \
+              /srv/museum/obs/
+
+            # 2. Install the nginx snippet that gates /grafana/* via
+            #    auth_request → backend /api/auth/super-admin-check.
+            sudo install -m 0644 \
+              /tmp/musaium-obs-staging/nginx/conf.d/grafana.conf \
+              /etc/nginx/snippets/musaium-grafana.conf
+
+            # 3. Validate + reload nginx. If the operator has not yet
+            #    added `include /etc/nginx/snippets/musaium-grafana.conf;`
+            #    to /etc/nginx/sites-enabled/musaium.conf, the snippet is
+            #    present-but-unused — `nginx -t` still passes. The
+            #    one-shot include step is documented in
+            #    docs/OPS_DEPLOYMENT.md §Grafana bootstrap and is the
+            #    only manual touch the operator owns.
+            sudo nginx -t
+            sudo systemctl reload nginx
+
+            # 4. Cleanup the staging dir.
+            rm -rf /tmp/musaium-obs-staging
+
+      - name: Deploy obs stack on VPS
+        id: deploy_obs
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GHCR_USER: ${{ secrets.GHCR_USER }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          envs: GHCR_TOKEN,GHCR_USER
+          script: |
+            set -e
+            cd /srv/museum
+
+            # Re-login (idempotent — same token as the backend deploy).
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin || true
+
+            # Pull + restart the 4 obs services. The Telegram bridge
+            # builds locally (no GHCR pull); compose handles the build
+            # transparently.
+            docker compose pull prometheus grafana alertmanager
+            docker compose up -d --remove-orphans --timeout 30 \
+              prometheus grafana alertmanager alertmanager-telegram
+
+            # Wait for Grafana to pass its healthcheck (confirms
+            # provisioning loaded the dashboard + datasource cleanly).
+            echo "Waiting for Grafana healthcheck..."
+            TRIES=0
+            MAX_TRIES=20
+            until docker compose exec -T grafana wget --quiet --spider http://localhost:3000/api/health 2>/dev/null; do
+              TRIES=$((TRIES + 1))
+              if [ "$TRIES" -ge "$MAX_TRIES" ]; then
+                echo "Grafana healthcheck failed after ${MAX_TRIES} attempts"
+                docker compose logs --tail=50 grafana || true
+                exit 1
+              fi
+              echo "  attempt ${TRIES}/${MAX_TRIES}..."
+              sleep 3
+            done
+            echo "Grafana is healthy."
+
+            # Confirm the alerting rule loaded by Prometheus (the rule
+            # path must resolve under /etc/prometheus/alerting/*.yml in
+            # the container — typo or mount drift is caught here).
+            if ! docker compose exec -T prometheus wget -qO- http://localhost:9090/api/v1/rules \
+                | grep -q chat_e2e_p99_high; then
+              echo "::warning::Prometheus did not load chat_e2e_p99_high rule — check /srv/museum/obs/alerting/"
+            fi
+
+      - name: Post-deploy obs smoke (RBAC gate)
+        # Asserts the single-auth contract: anonymous /grafana/ → 401,
+        # super_admin login → 200 dashboard. Skipped silently if the
+        # ADMIN_*/SUPER_ADMIN_* smoke secrets are missing — keeps deploys
+        # green on environments that haven't bootstrapped Grafana yet.
+        if: ${{ env.OBS_SMOKE_ENABLED == 'true' }}
+        env:
+          OBS_SMOKE_ENABLED: ${{ secrets.PROD_SUPER_ADMIN_PASSWORD != '' && 'true' || 'false' }}
+          BASE_URL: ${{ secrets.PROD_SMOKE_API_BASE_URL }}
+          SUPER_ADMIN_EMAIL: ${{ secrets.PROD_SUPER_ADMIN_EMAIL }}
+          SUPER_ADMIN_PASSWORD: ${{ secrets.PROD_SUPER_ADMIN_PASSWORD }}
+          ADMIN_EMAIL: ${{ secrets.PROD_ADMIN_NEGATIVE_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.PROD_ADMIN_NEGATIVE_PASSWORD }}
+        working-directory: museum-backend
+        run: bash ./scripts/smoke-grafana-prod.sh
+
       - name: Validate prod smoke secrets
         env:
           PROD_SMOKE_API_BASE_URL: ${{ secrets.PROD_SMOKE_API_BASE_URL }}

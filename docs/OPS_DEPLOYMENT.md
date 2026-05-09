@@ -915,47 +915,58 @@ backend at `backend:3000/metrics`.
 | `alertmanager` | obs | `prom/alertmanager:v0.27.0` | Routes firing alerts to the Telegram bridge. |
 | `alertmanager-telegram` | obs | local build (`./obs/alertmanager-telegram`) | Translates AM webhook → Telegram Bot API `sendMessage`. |
 
-### One-shot bootstrap (first-ever deploy)
+### One-shot bootstrap (manual — only what CI cannot do)
+
+CI/CD (`ci-cd-backend.yml`) handles the recurring sync (rsync `infra/grafana/`
+→ `/srv/museum/obs/`, install nginx snippet, reload nginx, `docker compose
+up -d` the obs services, smoke gate) on every push to `main`. The operator
+owns three things ONCE per environment :
 
 ```bash
-# 1. Create the Telegram bot.
+# A. Create the Telegram bot.
 #    - Open Telegram → @BotFather → /newbot → copy the token.
 #    - /start your new bot from Tim's Telegram account.
 #    - Get the chat id:
 #        curl -s "https://api.telegram.org/bot<TOKEN>/getUpdates" \
 #          | jq -r '.result[].message.chat.id' | head -1
 
-# 2. Add the 5 obs vars to /srv/museum/.env on the VPS:
-#      ENV=prod
+# B. Add the 5 obs vars to /srv/museum/.env on the VPS:
+#      ENV=production
 #      GRAFANA_ADMIN_USER=admin
 #      GRAFANA_ADMIN_PASSWORD=<24+ char random>
 #      GRAFANA_ROOT_URL=https://musaium.fr/grafana/
 #      TELEGRAM_BOT_TOKEN=<token from BotFather>
 #      TELEGRAM_CHAT_ID=<chat id from getUpdates>
 
-# 3. Sync the obs config from the repo to the VPS deploy directory.
-#    The compose bind-mounts `./obs/` ; the canonical source is
-#    `infra/grafana/` in the repo. Run from your workstation:
-rsync -av --delete \
-  infra/grafana/ \
-  user@vps:/srv/museum/obs/
-
-# 4. Install the nginx snippet that gates /grafana/ behind
-#    auth_request → /api/auth/super-admin-check.
-scp infra/nginx/conf.d/grafana.conf user@vps:/tmp/musaium-grafana.conf
-ssh user@vps 'sudo install -m 0644 /tmp/musaium-grafana.conf /etc/nginx/snippets/musaium-grafana.conf'
-# Then add ONE line in /etc/nginx/sites-enabled/musaium.conf inside the
-# `server { }` block that terminates TLS for musaium.fr:
-#   include /etc/nginx/snippets/musaium-grafana.conf;
-ssh user@vps 'sudo nginx -t && sudo systemctl reload nginx'
-
-# 5. Bring the stack up.
-ssh user@vps 'cd /srv/museum && docker compose pull prometheus grafana alertmanager alertmanager-telegram \
-  && docker compose up -d prometheus grafana alertmanager alertmanager-telegram'
-
-# 6. Verify the gate.
-SUPER_ADMIN_PASSWORD=... ./museum-backend/scripts/smoke-grafana-prod.sh
+# C. Add ONE line to /etc/nginx/sites-enabled/musaium.conf inside the
+#    `server { }` block that terminates TLS for musaium.fr:
+#        include /etc/nginx/snippets/musaium-grafana.conf;
+#    The CI step "Install obs config + nginx snippet on VPS" places the
+#    snippet at /etc/nginx/snippets/musaium-grafana.conf on every deploy,
+#    but it does NOT touch the vhost itself (too critical to mutate from
+#    CI). Without this `include` line the snippet exists-but-unused —
+#    /grafana/ returns nginx default (404) until you add it.
+sudo nano /etc/nginx/sites-enabled/musaium.conf  # add the include
+sudo nginx -t && sudo systemctl reload nginx     # validate + apply
 ```
+
+That's it. The next push to `main` will deploy the stack automatically.
+
+### Recurring deploy (every push to `main`)
+
+Owned by `ci-cd-backend.yml` `deploy-prod` job. The relevant steps are :
+
+| Step | What it does |
+|---|---|
+| `Sync obs config to VPS (/tmp staging)` | scp `infra/grafana/` + `infra/nginx/conf.d/grafana.conf` to `/tmp/musaium-obs-staging/` |
+| `Install obs config + nginx snippet on VPS` | `sudo rsync` to `/srv/museum/obs/`, `sudo install` the nginx snippet, `sudo nginx -t && systemctl reload nginx` |
+| `Deploy obs stack on VPS` | `docker compose pull prometheus grafana alertmanager` + `docker compose up -d` the 4 obs services + Grafana healthcheck wait + Prometheus rule loaded check |
+| `Post-deploy obs smoke (RBAC gate)` | runs `museum-backend/scripts/smoke-grafana-prod.sh` ; only if `PROD_SUPER_ADMIN_PASSWORD` is set in repo secrets |
+
+The smoke step is conditional on the secret so a deploy from a fresh
+clone (no super_admin secrets yet) still goes green — it skips the
+RBAC assertion silently and lets you backfill secrets later without
+blocking the pipeline.
 
 The migration `1778240000000-AddSuperAdminRoleAndBackfill` extends the
 `users_role_enum` and the next migration

@@ -463,4 +463,10 @@ Operator runbook: `docs/OPS_DEPLOYMENT.md § 12.1 (TLS / certificate management)
     - `GRAFANA_ADMIN_PASSWORD` — 24+ chars random ; admin local Grafana basic auth.
     - `TELEGRAM_BOT_TOKEN` — depuis `@BotFather`, token du bot d'alerting.
     - `TELEGRAM_CHAT_ID` — chat id Tim, récupéré via `getUpdates` après premier `/start` au bot.
-    Procédure complète : `docs/OPS_DEPLOYMENT.md` § Grafana + Prometheus + AlertManager. Rotation : tokens Telegram = révoqués dans BotFather si compromis ; password Grafana = rotation trimestrielle ou sur incident. Ces secrets sont environnement-spécifiques (recommandé : un bot Telegram par environnement pour ne pas mélanger les alertes).
+    Ces 3 vars vivent dans `/srv/museum/.env` (lus par `docker-compose.prod.yml`), PAS dans GitHub Secrets — pour que les secrets ne transitent pas par les logs Actions. Procédure complète : `docs/OPS_DEPLOYMENT.md` § Grafana + Prometheus + AlertManager. Rotation : tokens Telegram = révoqués dans BotFather si compromis ; password Grafana = rotation trimestrielle ou sur incident.
+14. Configurer les secrets smoke Grafana RBAC (C1 PR-G — `ci-cd-backend.yml` step "Post-deploy obs smoke") — TOUS optionnels :
+    - `PROD_SUPER_ADMIN_EMAIL` — email du super_admin (Tim) pour le smoke. Default : `tim.moyence@gmail.com` post-migration backfill.
+    - `PROD_SUPER_ADMIN_PASSWORD` — password Tim. **Si absent, le smoke obs est skip silencieusement** — keeps deploys green pendant le bootstrap.
+    - `PROD_ADMIN_NEGATIVE_EMAIL` (optionnel) — email d'un user role=`admin` (B2B operator) pour le test négatif (admin doit voir 401 sur `/grafana/`).
+    - `PROD_ADMIN_NEGATIVE_PASSWORD` (optionnel) — password de ce user.
+    Sans ces 4 secrets, le step "Post-deploy obs smoke" log un skip et le deploy continue. Les ajouter active la vérification automatique du gate RBAC à chaque deploy. Portée recommandée : repository.

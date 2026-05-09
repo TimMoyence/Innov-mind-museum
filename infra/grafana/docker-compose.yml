@@ -11,7 +11,7 @@ services:
       # external_labels uses ${VAR} expansion — required for env: ${ENV}.
       - "--enable-feature=expand-external-labels"
     environment:
-      ENV: "${ENV:-prod}"
+      ENV: "${ENV:-production}"
     volumes:
       - ../../museum-backend/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./alerting:/etc/prometheus/alerting:ro

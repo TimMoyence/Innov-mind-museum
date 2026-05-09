@@ -218,7 +218,7 @@ services:
       - '--web.enable-lifecycle'
       - '--enable-feature=expand-external-labels'
     environment:
-      ENV: '${ENV:-prod}'
+      ENV: '${ENV:-production}'
     volumes:
       - ./obs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./obs/alerting:/etc/prometheus/alerting:ro
