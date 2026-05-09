@@ -175,7 +175,7 @@ jobs:
         # GRADLE_ENCRYPTION_KEY secret would encrypt the cache; left out for
         # now (works unencrypted) — future hardening when secret is provisioned.
         if: steps.cache-apk.outputs.cache-hit != 'true'
-        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a  # v4.4.3
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e  # v6.1.0
         with:
           cache-read-only: false
           build-root-directory: museum-frontend/android
