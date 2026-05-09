@@ -957,18 +957,36 @@ three things ONCE per environment :
 #      TELEGRAM_BOT_TOKEN=<token from BotFather>
 #      TELEGRAM_CHAT_ID=<chat id from getUpdates>
 
-# C. Add ONE line to /etc/nginx/sites-enabled/musaium.conf inside the
-#    `server { }` block that terminates TLS for musaium.fr:
-#        include /etc/nginx/snippets/musaium-grafana.conf;
-#    CI installs the snippet at /etc/nginx/snippets/musaium-grafana.conf
-#    on every deploy but does NOT touch the vhost itself (too critical
-#    to mutate from a runner). Without this `include`, /grafana/
-#    returns nginx default (404).
-sudo nano /etc/nginx/sites-enabled/musaium.conf  # add the include
-sudo nginx -t && sudo systemctl reload nginx     # validate + apply
+# C. Edit your nginx Docker container's site.conf (operator-owned).
+#    nginx runs in Docker — CI cannot install snippets inside the
+#    container. The 3 location blocks + 1-character CSP flip live in
+#    `infra/nginx/conf.d/grafana.conf` (header explains where to paste
+#    each block). Concretely, in your nginx repo's site.conf inside the
+#    `server { server_name musaium.com musaium.fr; ... }`:
+#
+#    1. Paste BLOCK 1 (internal /grafana-auth-check) — anywhere.
+#    2. Paste BLOCK 2 (location /grafana/) BEFORE the catch-all
+#       `location / { proxy_pass http://museum-web:3001; }` so the
+#       more specific path matches first.
+#    3. Paste BLOCK 3 (location /grafana/api/live/) — near BLOCK 2.
+#    4. Flip CSP `frame-ancestors 'none'` → `frame-ancestors 'self'`
+#       in the `add_header Content-Security-Policy` directive of the
+#       same server block. (Iframe child inherits server-level CSP ;
+#       'none' rejects the same-origin embed.)
+#
+# Reload nginx (Docker):
+docker exec <nginx-container-name> nginx -t           # validate
+docker exec <nginx-container-name> nginx -s reload    # apply
+# OR
+docker compose -f <nginx-compose>.yml restart nginx
 ```
 
-That's it. The next push to `main` deploys the full stack automatically.
+That's it. The next push to `main` deploys the backend + obs stack
+automatically. nginx changes stay manual because the file is operator-
+maintained (multi-tenant: musaium.fr alongside asilidesign.fr +
+voice-ia.telegram). Future automation would require either checking
+the full site.conf into the repo, or splitting Musaium into its own
+nginx container — both bigger lifts than the current pattern.
 
 ### First-time bootstrap from an existing manually-edited compose
 

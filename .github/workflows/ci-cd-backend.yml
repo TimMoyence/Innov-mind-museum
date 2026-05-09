@@ -603,13 +603,13 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_KEY }}
-          source: 'museum-backend/deploy/docker-compose.prod.yml,infra/grafana/*,infra/nginx/conf.d/grafana.conf'
+          source: 'museum-backend/deploy/docker-compose.prod.yml,infra/grafana/*'
           target: /tmp/musaium-deploy-staging
           # strip_components=2 drops `museum-backend/deploy/` from the compose
-          # path AND `infra/` from the obs/nginx paths.
+          # path AND `infra/` from the obs paths.
           strip_components: 2
 
-      - name: Install compose + obs config + nginx snippet on VPS
+      - name: Install compose + obs config on VPS
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -649,19 +649,15 @@ jobs:
               /tmp/musaium-deploy-staging/grafana/ \
               /srv/museum/obs/
 
-            # 4. Install nginx snippet (auth_request gate for /grafana/*).
-            sudo install -m 0644 \
-              /tmp/musaium-deploy-staging/nginx/conf.d/grafana.conf \
-              /etc/nginx/snippets/musaium-grafana.conf
+            # 4. nginx config is operator-owned (Docker container with a
+            #    hand-maintained site.conf — paths under
+            #    /etc/nginx/snippets/ inside the container are NOT
+            #    accessible from the host runner). The one-shot edit of
+            #    site.conf + nginx reload is documented in
+            #    docs/OPS_DEPLOYMENT.md §Grafana bootstrap (manual step C).
+            #    CI never touches nginx.
 
-            # 5. Validate + reload nginx. The vhost-level
-            #    `include /etc/nginx/snippets/musaium-grafana.conf;`
-            #    is operator-owned (one-shot, see OPS_DEPLOYMENT) — its
-            #    absence does NOT fail nginx -t.
-            sudo nginx -t
-            sudo systemctl reload nginx
-
-            # 6. Cleanup staging dir.
+            # 5. Cleanup staging dir.
             rm -rf /tmp/musaium-deploy-staging
 
       - name: Deploy obs stack on VPS
