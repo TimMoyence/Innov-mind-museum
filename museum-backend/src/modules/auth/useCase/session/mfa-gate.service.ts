@@ -2,9 +2,9 @@ import { issueMfaSessionToken } from '@modules/auth/useCase/totp/mfaSessionToken
 import { env } from '@src/config/env';
 
 import type { ITotpSecretRepository } from '@modules/auth/domain/totp/totp-secret.repository.interface';
+import type { UserRole } from '@modules/auth/domain/user/user-role';
 import type { User } from '@modules/auth/domain/user/user.entity';
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
-import type { UserRole } from '@modules/auth/domain/user/user-role';
 
 /**
  * MFA enrollment is mandatory for any role with cross-tenant or
