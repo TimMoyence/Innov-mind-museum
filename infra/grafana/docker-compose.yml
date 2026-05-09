@@ -33,7 +33,7 @@ services:
       - obs
 
   grafana:
-    image: grafana/grafana:11.4.0
+    image: grafana/grafana:13.0.1
     container_name: musaium-grafana
     restart: unless-stopped
     depends_on:
