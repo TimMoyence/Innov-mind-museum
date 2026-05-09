@@ -218,7 +218,7 @@ services:
   # before `docker compose up -d`.
 
   prometheus:
-    image: prom/prometheus:v2.55.1
+    image: prom/prometheus:v3.11.2
     hostname: prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
