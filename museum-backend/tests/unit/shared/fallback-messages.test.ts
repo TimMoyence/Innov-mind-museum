@@ -11,6 +11,12 @@ describe('buildLocalizedFallback', () => {
     expect(result).toContain('Quick summary: The painting shows a starry night.');
     expect(result).toContain('Next step: compare composition details');
     expect(result).toContain('Would you like');
+    // Segments must be joined with a single space (kills .join(' ') -> .join('') mutant)
+    expect(result).toContain('starry night. Next step: compare composition details');
+    expect(result).toMatch(/nearby work\.\s+Would you like/);
+    // Without location, output must start with quickSummary (kills the
+    // `: ''` → `: "<anything>"` empty-string mutant on the locationLine fallback).
+    expect(result.startsWith('Quick summary:')).toBe(true);
   });
 
   it('builds English fallback with location prefix', () => {
