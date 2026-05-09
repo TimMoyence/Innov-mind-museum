@@ -137,6 +137,7 @@ Leçons techniques non évidentes consolidées des sprints précédents. Ajoute 
 - **PgBouncer transaction mode interdit `LISTEN/NOTIFY`, session-scoped advisory locks, persistent prepared statements** — Musaium n'utilise rien de ça aujourd'hui (audit ADR-021), mais à vérifier au cas par cas.
 - **SWC + TypeORM cross-entity = ReferenceError circular** — fix = wrap les FK avec le type alias `Relation<T>`. Ne pas s'écarter de ce pattern sur les nouvelles entités.
 - **LLM response cache = `LlmCacheServiceImpl` only (ADR-036)** — un seul layer, use-case-level. Ne PAS réintroduire de décorateur adapter-level (`CachingChatOrchestrator` supprimé 2026-05-08 PR-B). Cache key shape = `llm:v1:{contextClass}:{museumId|none}:{userId|anon}:{sha256}`. TTL tune = data-driven only, ≥7j bake + ADR-036 amendment requis (R11/R13).
+- **Prometheus `static_configs.targets` n'expand PAS `${VAR}`** — seul `external_labels` accepte `${VAR}` (avec `--enable-feature=expand-external-labels`). Pour différencier prod/dev, on monte 2 fichiers distincts : `infra/grafana/prometheus.yml` (target `backend:3000` pour prod, scp'd via CI vers `/srv/museum/obs/`) et `infra/grafana/prometheus.local.yml` (target `host.docker.internal:3000` pour le local stack `infra/grafana/docker-compose*.yml`). Ne pas tenter de paramétrer le target via env — c'est silencieusement ignoré.
 
 ## Environment Setup
 

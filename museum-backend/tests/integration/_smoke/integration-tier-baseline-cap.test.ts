@@ -14,7 +14,7 @@ const BASELINE_PATH = join(REPO_ROOT, 'scripts/sentinels/.integration-tier-basel
 // 2026-05-09 (C1 PR-G): bumped 2 → 4 to admit the two PR-A integration
 // tests pinning chat-pipeline span emission (R1/R2) and admin↔chat
 // invalidateMuseum contract (R9). Both have justifications + approval
-// refs in the baseline JSON. Reduce back to 4 only by deleting one of
+// refs in the baseline JSON. Reduce back to 2 only by deleting one of
 // those entries, never by adding more.
 const PHASE_1_BASELINE_CAP = 4;
 
