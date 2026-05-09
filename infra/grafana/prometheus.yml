@@ -24,12 +24,20 @@ rule_files:
 scrape_configs:
   - job_name: musaium-backend
     metrics_path: /metrics
-    # Compose sets `extra_hosts: host.docker.internal:host-gateway` so the
-    # Prom container can reach a backend running on the host. In a fully-
-    # Compose deploy where the backend is a service on the same network,
-    # change this to the service hostname (`musaium-backend:3000`).
+    # `backend:3000` resolves via Docker DNS because the prometheus
+    # service in /srv/museum/docker-compose.yml joins the `private`
+    # network alongside the backend container. `obs` is also attached
+    # for AlertManager + Grafana connectivity ; the scrape target sits
+    # on `private`.
+    #
+    # Prometheus does NOT expand ${VAR} inside `static_configs.targets`
+    # (only `external_labels` accepts that flag). For local dev where
+    # the backend runs on the host (pnpm dev), use the sibling file
+    # prometheus.local.yml (target = host.docker.internal:3000) — the
+    # local-stack compose at infra/grafana/docker-compose.local.yml
+    # overrides this volume mount accordingly.
     static_configs:
       - targets:
-          - "host.docker.internal:3000"
+          - "backend:3000"
         labels:
           service: musaium-backend

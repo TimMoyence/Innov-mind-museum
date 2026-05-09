@@ -15,7 +15,7 @@ export default function OpsGrafanaPage() {
         <h1 className="text-2xl font-bold text-text-primary">Chat latency — ops view</h1>
         <p className="mt-1 text-text-secondary">
           Self-hosted Grafana panel embedded same-origin. Data scope: all tenants. Restricted
-          to <code>admin</code> role. See{' '}
+          to <code>super_admin</code> role. See{' '}
           <code>docs/OPS_DEPLOYMENT.md</code> §Grafana iframe limitation for the threat model.
         </p>
       </header>

@@ -13,7 +13,13 @@ services:
     environment:
       ENV: "${ENV:-production}"
     volumes:
-      - ../../museum-backend/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # Local standalone stack — backend runs on the host (pnpm dev), so
+      # we mount prometheus.local.yml whose scrape target is
+      # host.docker.internal:3000 (paired with the extra_hosts entry
+      # below). Production uses the sibling prometheus.yml (target
+      # backend:3000) mounted by museum-backend/deploy/docker-compose.prod.yml
+      # via the obs/ rsync from CI.
+      - ./prometheus.local.yml:/etc/prometheus/prometheus.yml:ro
       - ./alerting:/etc/prometheus/alerting:ro
       - prom_data:/prometheus
     ports:
