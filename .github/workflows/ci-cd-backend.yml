@@ -599,16 +599,35 @@ jobs:
       # TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID) MUST already be set in
       # /srv/museum/.env. CI does NOT manage these secrets.
 
-      - name: Sync prod compose + obs config to VPS (/tmp staging)
+      - name: Sync prod compose to VPS (/tmp staging)
         uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345  # v1.0.0
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_KEY }}
-          source: 'museum-backend/deploy/docker-compose.prod.yml,infra/grafana/*'
+          source: 'museum-backend/deploy/docker-compose.prod.yml'
           target: /tmp/musaium-deploy-staging
-          # strip_components=2 drops `museum-backend/deploy/` from the compose
-          # path AND `infra/` from the obs paths.
+          # strip_components=2 drops `museum-backend/deploy/` so the file lands
+          # at /tmp/musaium-deploy-staging/docker-compose.prod.yml.
+          strip_components: 2
+
+      - name: Sync grafana provisioning to VPS (/tmp staging)
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345  # v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          source: 'infra/grafana/*'
+          target: /tmp/musaium-deploy-staging/grafana
+          # strip_components=2 drops `infra/grafana/` from each path so the
+          # files preserve their inner structure (dashboards/, provisioning/,
+          # alerting/, alertmanager-telegram/) under /tmp/.../grafana/.
+          # Split from the compose scp because a single scp-action with one
+          # strip-value can't satisfy both 'museum-backend/deploy/X' (needs
+          # strip 2) and 'infra/grafana/Y/Z' (needs the grafana/ prefix kept,
+          # which strip 2 does too — but with target=.../grafana, not the
+          # parent staging dir). PR #207 had them merged, which dropped the
+          # grafana/ folder and broke the rsync sync step downstream.
           strip_components: 2
 
       - name: Install compose + obs config on VPS
