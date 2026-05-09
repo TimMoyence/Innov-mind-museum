@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Scan issues + post deadline reminders
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
