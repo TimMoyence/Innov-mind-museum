@@ -1,0 +1,38 @@
+# Prometheus alerting rules — chat pipeline latency.
+# Loaded by Prometheus via `rule_files` glob in museum-backend/prometheus.yml.
+# AlertManager routes the firing alerts to the `telegram-ops` receiver
+# defined in infra/grafana/alertmanager.yml (D11 — user choice 2026-05-08).
+
+groups:
+  - name: chat-latency
+    interval: 30s
+    rules:
+      - alert: chat_e2e_p99_high
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum(rate(chat_request_duration_seconds_bucket[5m])) by (le)
+          ) > 6
+        for: 5m
+        labels:
+          severity: warning
+          service: musaium-backend
+          surface: chat
+          owner: tim
+        annotations:
+          summary: "Chat p99 latency above 6s (5m window)"
+          description: |
+            Chat end-to-end p99 latency over the last 5 minutes is
+            {{ $value | printf "%.2f" }}s, which exceeds the 6s budget
+            documented in spec NFR (`team-state/2026-05-08-c1-chat-fast/spec.md` §5).
+
+            First action: open the Grafana dashboard `chat-latency` and
+            inspect "Per-phase latency (p95 stacked)" + "Phase share at p95"
+            to identify the dominant phase.
+
+            If the upstream LLM provider is degraded, flip
+            `LLM_CACHE_ENABLED=false` is NOT a fix (cache is post-LLM
+            response). Engage circuit breaker behavior or fall back to a
+            secondary provider per CHAOS_RUNBOOKS.
+          dashboard: "{{ .ExternalURL }}/d/chat-latency"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/CHAOS_RUNBOOKS.md#chat-latency"

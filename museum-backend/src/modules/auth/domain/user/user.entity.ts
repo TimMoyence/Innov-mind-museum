@@ -22,7 +22,7 @@ export class User {
 
   @Column({
     type: 'enum',
-    enum: ['visitor', 'moderator', 'museum_manager', 'admin'],
+    enum: ['visitor', 'moderator', 'museum_manager', 'admin', 'super_admin'],
     default: 'visitor',
   })
   role!: UserRole;

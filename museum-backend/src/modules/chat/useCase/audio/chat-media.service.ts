@@ -297,7 +297,11 @@ export class ChatMediaService {
       }
     }
 
-    const result = await this.tts.synthesize({ text: row.message.text, voice: targetVoice });
+    const result = await this.tts.synthesize({
+      text: row.message.text,
+      voice: targetVoice,
+      requestId: messageId,
+    });
 
     if (this.cache) {
       await this.cache.set(

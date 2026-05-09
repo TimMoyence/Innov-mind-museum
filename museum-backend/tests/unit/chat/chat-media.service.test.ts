@@ -151,7 +151,11 @@ describe('ChatMediaService', () => {
 
       expect(result).not.toBeNull();
       expect(result!.contentType).toBe('audio/mpeg');
-      expect(tts.synthesize).toHaveBeenCalledWith({ text: 'Hello world', voice: 'alloy' });
+      expect(tts.synthesize).toHaveBeenCalledWith({
+        text: 'Hello world',
+        voice: 'alloy',
+        requestId: MESSAGE_ID,
+      });
     });
 
     it('throws 501 when TTS is not configured', async () => {

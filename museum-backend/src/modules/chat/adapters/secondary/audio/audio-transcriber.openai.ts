@@ -1,5 +1,10 @@
 import { AppError, badRequest } from '@shared/errors/app.error';
 import { extensionByMime } from '@shared/media/mime-extensions';
+import {
+  ChatPhaseTimer,
+  type ChatPhaseErrorType,
+  type ChatPhaseOutcome,
+} from '@shared/observability/chat-phase-timer';
 import { startSpan } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
 
@@ -146,28 +151,62 @@ export class OpenAiAudioTranscriber implements AudioTranscriber {
    * @throws {AppError} With code `UPSTREAM_AUDIO_TRANSCRIPTION_ERROR` on API failure.
    */
   async transcribe(input: AudioTranscriberInput): Promise<AudioTranscriptionResult> {
-    return await startSpan(
-      {
-        name: 'audio.transcribe',
-        op: 'ai.transcribe',
-        attributes: {
-          'audio.mime_type': input.mimeType,
-          'audio.model': env.llm.audioTranscriptionModel,
+    const requestId = input.requestId ?? 'unknown';
+    const timer = ChatPhaseTimer.start('stt', 'openai', requestId, {
+      model: env.llm.audioTranscriptionModel,
+      metadata: { mimeType: input.mimeType, locale: input.locale },
+    });
+    let outcome: ChatPhaseOutcome = 'success';
+    let errorType: ChatPhaseErrorType = 'unknown';
+    try {
+      return await startSpan(
+        {
+          name: 'audio.transcribe',
+          op: 'ai.transcribe',
+          attributes: {
+            'audio.mime_type': input.mimeType,
+            'audio.model': env.llm.audioTranscriptionModel,
+          },
         },
-      },
-      async () => {
-        assertOpenAiAvailable();
-        const audioBuffer = decodeAudioPayload(input.base64);
-        const formData = buildTranscriptionFormData(input, audioBuffer);
-        const response = await fetchTranscription(formData);
-        const text = await parseTranscriptionResponse(response);
+        async () => {
+          assertOpenAiAvailable();
+          const audioBuffer = decodeAudioPayload(input.base64);
+          const formData = buildTranscriptionFormData(input, audioBuffer);
+          const response = await fetchTranscription(formData);
+          const text = await parseTranscriptionResponse(response);
 
-        return {
-          text,
-          model: env.llm.audioTranscriptionModel,
-          provider: 'openai',
-        };
-      },
-    ); // end startSpan('audio.transcribe')
+          return {
+            text,
+            model: env.llm.audioTranscriptionModel,
+            provider: 'openai',
+          };
+        },
+      ); // end startSpan('audio.transcribe')
+    } catch (err) {
+      outcome = 'error';
+      errorType = classifySttError(err);
+      throw err;
+    } finally {
+      timer.end(outcome, errorType);
+    }
   }
+}
+
+function classifySttError(err: unknown): ChatPhaseErrorType {
+  if (err instanceof AppError) {
+    if (err.code === 'UPSTREAM_TIMEOUT') return 'timeout';
+    if (
+      err.code === 'UPSTREAM_AUDIO_TRANSCRIPTION_ERROR' ||
+      err.code === 'UPSTREAM_AUDIO_TRANSCRIPTION_INVALID'
+    ) {
+      return 'upstream_5xx';
+    }
+  }
+  if (
+    err instanceof DOMException &&
+    (err.name === 'TimeoutError' || err.name === 'AbortError')
+  ) {
+    return err.name === 'TimeoutError' ? 'timeout' : 'abort';
+  }
+  return 'unknown';
 }

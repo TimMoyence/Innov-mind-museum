@@ -52,8 +52,16 @@ function hasAdminAuthzCookie(): boolean {
 // Types
 // ---------------------------------------------------------------------------
 
-/** Matches backend UserRole enum exactly. */
-export type UserRole = 'visitor' | 'moderator' | 'museum_manager' | 'admin';
+/**
+ * Matches backend UserRole enum exactly. `super_admin` is a Musaium-platform
+ * tier reserved for the platform operator (Tim) — distinct from `admin`
+ * which is granted to B2B museum operators on a per-tenant basis.
+ *
+ * UI rule: `super_admin` SHALL implicitly satisfy any `admin`-only check.
+ * Where a guard wants "admin or above", pass both literals to
+ * `<RoleGuard allowedRoles={['admin', 'super_admin']}>`.
+ */
+export type UserRole = 'visitor' | 'moderator' | 'museum_manager' | 'admin' | 'super_admin';
 
 export interface AuthUser {
   id: number;

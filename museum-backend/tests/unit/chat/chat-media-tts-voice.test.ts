@@ -69,7 +69,11 @@ describe('chat-media TTS voice resolution (Spec C T2.5)', () => {
 
     await svc.synthesizeSpeech(MESSAGE_ID, 42);
 
-    expect(tts.synthesize).toHaveBeenCalledWith({ text: 'Hello world', voice: 'echo' });
+    expect(tts.synthesize).toHaveBeenCalledWith({
+      text: 'Hello world',
+      voice: 'echo',
+      requestId: MESSAGE_ID,
+    });
   });
 
   it('falls back to env.tts.voice when user.ttsVoice is null', async () => {
@@ -83,6 +87,7 @@ describe('chat-media TTS voice resolution (Spec C T2.5)', () => {
     expect(tts.synthesize).toHaveBeenCalledWith({
       text: 'Hello world',
       voice: 'alloy', // env.tts.voice default per env.ts
+      requestId: MESSAGE_ID,
     });
   });
 
@@ -94,6 +99,10 @@ describe('chat-media TTS voice resolution (Spec C T2.5)', () => {
 
     await svc.synthesizeSpeech(MESSAGE_ID, 42);
 
-    expect(tts.synthesize).toHaveBeenCalledWith({ text: 'Hello world', voice: 'alloy' });
+    expect(tts.synthesize).toHaveBeenCalledWith({
+      text: 'Hello world',
+      voice: 'alloy',
+      requestId: MESSAGE_ID,
+    });
   });
 });

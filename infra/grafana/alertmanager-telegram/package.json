@@ -1,0 +1,15 @@
+{
+  "name": "musaium-alertmanager-telegram",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bridge service: AlertManager webhook → Telegram Bot API sendMessage. Fail-open: returns 200 even if Telegram is unreachable so AlertManager does not retry-storm.",
+  "license": "UNLICENSED",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test test.js"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

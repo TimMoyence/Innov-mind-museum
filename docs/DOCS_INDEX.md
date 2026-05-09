@@ -23,7 +23,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 
 | Doc | Path |
 |---|---|
-| ADRs (002-035) | [`docs/adr/`](adr/) |
+| ADRs (002-036) | [`docs/adr/`](adr/) |
 | Architecture (BE hex / FE Expo / Web Next.js) | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) |
 | Phase history (test/quality hardening 2-11) | [`docs/PHASE_HISTORY.md`](PHASE_HISTORY.md) |
 | Test discipline — DRY factories | [`docs/TEST_FACTORIES.md`](TEST_FACTORIES.md) |
@@ -31,6 +31,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | Tech debts trackés | [`docs/TECH_DEBT.md`](TECH_DEBT.md) |
 | AI Voice pipeline V1 | [`docs/AI_VOICE.md`](AI_VOICE.md) |
 | Knowledge Base (Wikidata) | [`docs/adr/ADR-035-knowledge-base-wikidata.md`](adr/ADR-035-knowledge-base-wikidata.md) |
+| LLM cache strategy (single-source) | [`docs/adr/ADR-036-llm-cache-strategy.md`](adr/ADR-036-llm-cache-strategy.md) |
 | RBAC matrix (backend) | [`museum-backend/docs/rbac-matrix.md`](../museum-backend/docs/rbac-matrix.md) |
 | SLO + observability strategy | [`docs/SLO.md`](SLO.md) |
 | Capacity plan (10rps→1K→100K tiers) | [`docs/CAPACITY_PLAN.md`](CAPACITY_PLAN.md) |

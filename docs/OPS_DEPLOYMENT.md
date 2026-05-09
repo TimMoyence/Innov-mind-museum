@@ -887,3 +887,241 @@ eas update --branch production --message "Rollback to stable"
 - [`docs/UPTIME_MONITORING.md`](UPTIME_MONITORING.md) — uptime checks and alerting
 - [`docs/MOBILE_INTERNAL_TESTING_FLOW.md`](MOBILE_INTERNAL_TESTING_FLOW.md) — internal mobile testing
 - [`docs/RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) — release checklist
+
+---
+
+## Grafana + Prometheus + AlertManager (C1.1, ADR-036)
+
+Self-hosted observability stack — runs as part of the production
+docker-compose alongside the backend / pgbouncer / redis / db / museum-web.
+Dashboards JSON, AlertManager rules, datasource YAML, Prometheus scrape
+config — all version-controlled in `infra/grafana/` (source of truth).
+**Never edit through the Grafana UI** ; drift is invisible and silently
+overridden on the next provisioner pass.
+
+### Topology
+
+The 4 obs services (`prometheus`, `grafana`, `alertmanager`,
+`alertmanager-telegram`) are declared in
+`museum-backend/deploy/docker-compose.prod.yml`. They share the `obs`
+bridge network ; `grafana` also joins the existing `web` network so
+nginx can reach it ; `prometheus` also joins `private` to scrape the
+backend at `backend:3000/metrics`.
+
+| Service | Network(s) | Image | Role |
+|---|---|---|---|
+| `prometheus` | obs + private | `prom/prometheus:v2.55.1` | Scrapes backend `/metrics` every 30s ; 14d retention. |
+| `grafana` | obs + private + web | `grafana/grafana:11.4.0` | Dashboard host. Anonymous Viewer (the gate is at nginx — see § Single-auth iframe). |
+| `alertmanager` | obs | `prom/alertmanager:v0.27.0` | Routes firing alerts to the Telegram bridge. |
+| `alertmanager-telegram` | obs | local build (`./obs/alertmanager-telegram`) | Translates AM webhook → Telegram Bot API `sendMessage`. |
+
+### Single source of truth — compose, /srv/museum/, and CI
+
+`museum-backend/deploy/docker-compose.prod.yml` in the repo IS the
+prod compose. Every push to `main` SCPs it to
+`/srv/museum/docker-compose.yml` on the VPS, after backing up the
+previous file to `docker-compose.yml.bak.<UTC-timestamp>`. The CI step
+`Install compose + obs config + nginx snippet on VPS` validates the
+candidate compose with `docker compose ... config` BEFORE replacing
+the live one — a syntax error or a missing required env var aborts
+the deploy with prod still running on the prior compose.
+
+Operators no longer hand-edit the live compose. Schema changes go
+through PR + review + CI. If you ever need to rescue prod by
+reverting to the previous compose:
+
+```bash
+ssh user@vps 'sudo cp /srv/museum/docker-compose.yml.bak.<TIMESTAMP> /srv/museum/docker-compose.yml \
+  && cd /srv/museum && docker compose up -d --remove-orphans'
+```
+
+### One-shot bootstrap (only what CI cannot do)
+
+CI handles compose scp + obs rsync + nginx snippet install + reload +
+`docker compose up -d` + RBAC smoke on every push. The operator owns
+three things ONCE per environment :
+
+```bash
+# A. Create the Telegram bot.
+#    - Open Telegram → @BotFather → /newbot → copy the token.
+#    - /start your new bot from Tim's Telegram account.
+#    - Get the chat id:
+#        curl -s "https://api.telegram.org/bot<TOKEN>/getUpdates" \
+#          | jq -r '.result[].message.chat.id' | head -1
+
+# B. Add the 5 obs vars to /srv/museum/.env on the VPS:
+#      ENV=production
+#      GRAFANA_ADMIN_USER=admin
+#      GRAFANA_ADMIN_PASSWORD=<24+ char random>
+#      GRAFANA_ROOT_URL=https://musaium.fr/grafana/
+#      TELEGRAM_BOT_TOKEN=<token from BotFather>
+#      TELEGRAM_CHAT_ID=<chat id from getUpdates>
+
+# C. Edit your nginx Docker container's site.conf (operator-owned).
+#    nginx runs in Docker — CI cannot install snippets inside the
+#    container. The 3 location blocks + 1-character CSP flip live in
+#    `infra/nginx/conf.d/grafana.conf` (header explains where to paste
+#    each block). Concretely, in your nginx repo's site.conf inside the
+#    `server { server_name musaium.com musaium.fr; ... }`:
+#
+#    1. Paste BLOCK 1 (internal /grafana-auth-check) — anywhere.
+#    2. Paste BLOCK 2 (location /grafana/) BEFORE the catch-all
+#       `location / { proxy_pass http://museum-web:3001; }` so the
+#       more specific path matches first.
+#    3. Paste BLOCK 3 (location /grafana/api/live/) — near BLOCK 2.
+#    4. Flip CSP `frame-ancestors 'none'` → `frame-ancestors 'self'`
+#       in the `add_header Content-Security-Policy` directive of the
+#       same server block. (Iframe child inherits server-level CSP ;
+#       'none' rejects the same-origin embed.)
+#
+# Reload nginx (Docker):
+docker exec <nginx-container-name> nginx -t           # validate
+docker exec <nginx-container-name> nginx -s reload    # apply
+# OR
+docker compose -f <nginx-compose>.yml restart nginx
+```
+
+That's it. The next push to `main` deploys the backend + obs stack
+automatically. nginx changes stay manual because the file is operator-
+maintained (multi-tenant: musaium.fr alongside asilidesign.fr +
+voice-ia.telegram). Future automation would require either checking
+the full site.conf into the repo, or splitting Musaium into its own
+nginx container — both bigger lifts than the current pattern.
+
+### First-time bootstrap from an existing manually-edited compose
+
+If your VPS currently runs a hand-edited `/srv/museum/docker-compose.yml`
+(pre-PR-G state) and you want CI to take over:
+
+```bash
+# 1. Inspect the diff between your live compose and the repo version.
+ssh user@vps 'cat /srv/museum/docker-compose.yml' > /tmp/live-compose.yml
+diff /tmp/live-compose.yml museum-backend/deploy/docker-compose.prod.yml
+# Reconcile any operator customisations into the repo file BEFORE the
+# next push, otherwise they are lost on the first scp+install.
+
+# 2. Make a manual safety backup before the first CI-driven deploy.
+ssh user@vps 'sudo cp /srv/museum/docker-compose.yml /srv/museum/docker-compose.yml.pre-pr-g'
+
+# 3. Push to main. CI does the rest.
+```
+
+### Recurring deploy (every push to `main`)
+
+Owned by `ci-cd-backend.yml` `deploy-prod` job. The relevant steps are :
+
+| Step | What it does |
+|---|---|
+| `Sync prod compose + obs config to VPS (/tmp staging)` | scp `museum-backend/deploy/docker-compose.prod.yml` + `infra/grafana/` + `infra/nginx/conf.d/grafana.conf` to `/tmp/musaium-deploy-staging/` |
+| `Install compose + obs config + nginx snippet on VPS` | `docker compose config` validates candidate compose → backup live to `.bak.<ts>` → install candidate as `/srv/museum/docker-compose.yml` → rsync `/srv/museum/obs/` → install nginx snippet → `nginx -t && systemctl reload nginx` |
+| `Deploy obs stack on VPS` | `docker compose pull prometheus grafana alertmanager` + `up -d` the 4 obs services + Grafana healthcheck wait + Prometheus rule-loaded grep |
+| `Post-deploy obs smoke (RBAC gate)` | runs `museum-backend/scripts/smoke-grafana-prod.sh` ; only if `PROD_SUPER_ADMIN_PASSWORD` is set in repo secrets, otherwise skipped silently |
+
+The smoke step is conditional on the secret so a deploy from a fresh
+clone (no super_admin secrets yet) still goes green.
+
+The migration `1778240000000-AddSuperAdminRoleAndBackfill` extends the
+`users_role_enum` and the next migration
+`1778240010000-BackfillSuperAdminOwner` promotes
+`tim.moyence@gmail.com` to `super_admin` automatically — both run in the
+backend deploy pipeline. No manual SQL needed unless you ever lose
+super_admin and need to re-promote :
+
+```sql
+UPDATE users SET role = 'super_admin' WHERE email = 'tim.moyence@gmail.com';
+```
+
+### Single-auth iframe (D9 update — 2026-05-08 PR-G)
+
+The earlier Phase 2 design relied on Grafana basic-auth as a second login
+prompt inside the iframe. PR-G replaces that with an `auth_request` gate
+at the nginx layer pointing at the backend
+`GET /api/auth/super-admin-check` endpoint:
+
+```
+client → nginx /grafana/...  ── auth_request ──►  backend /api/auth/super-admin-check
+                                                  ├─ 204  → nginx forwards to grafana
+                                                  └─ 401  → nginx returns 401, no Grafana hop
+```
+
+Grafana itself runs `GF_AUTH_ANONYMOUS_ENABLED=true` with `Viewer` org
+role — the actual gate is the nginx subrequest. A network-level bypass
+of nginx would expose a read-only dashboard, but Grafana only listens on
+the `obs` Docker network (no `ports:` mapping), so the only path from
+the public internet is through nginx.
+
+The session cookie set by museum-web at login is the ONLY credential the
+super_admin user provides. From their perspective : they log into
+`/fr/admin`, click "Ops · Grafana" in the sidebar, and the dashboard
+loads inside the iframe.
+
+### Roles + access matrix
+
+| Role | Sees /fr/admin ? | Sees Ops · Grafana nav ? | /grafana/ via nginx ? |
+|---|---|---|---|
+| `visitor` | no (login redirect) | no | 401 |
+| `moderator` | yes | no | 401 |
+| `museum_manager` | no (admin shell role guard rejects) | no | 401 |
+| `admin` (B2B museum operator) | yes | no | 401 |
+| **`super_admin`** (Tim, Musaium) | **yes** | **yes** | **200** |
+
+The strict separation means a museum operator with `admin` role NEVER
+sees cross-tenant ops data, by construction.
+
+### Telegram smoke-fire
+
+```bash
+ssh user@vps "docker exec museum-alertmanager-1 amtool alert add chat_e2e_p99_high \
+  severity=warning service=musaium-backend \
+  --annotation summary='manual smoke' \
+  --annotation description='triggered by ops to verify the bridge'"
+```
+
+Expect a Telegram message in Tim's chat within a few seconds. If the
+bridge is down, AlertManager logs the webhook failure but the alert
+itself remains tracked in the AlertManager UI at `:9093`.
+
+### Dashboard editing workflow
+
+1. `cp infra/grafana/dashboards/chat-latency.json /tmp/before.json`.
+2. Edit in Grafana UI (visually nicer than hand-editing JSON).
+3. Export: dashboard menu → Share → Export → "Save to file".
+4. `mv ~/Downloads/chat-latency-*.json infra/grafana/dashboards/chat-latency.json` and review the diff.
+5. PR the change.
+6. After merge, on the VPS: `rsync` infra/grafana/ → /srv/museum/obs/, then `docker compose restart grafana`.
+
+### Alert silencing
+
+UI at `http://${VPS_IP}:9093` → "Silences" → "New". Comment + expiry
+mandatory. Silences are not version-controlled — mirror them into the
+on-call runbook if they outlive a deploy.
+
+### Rollback
+
+- Dashboard JSON / alerting rules / scrape config are git-tracked →
+  `git revert` + `rsync` + `docker compose restart grafana prometheus`
+  restores prior state. Prometheus retains its TSDB data, no loss.
+- AlertManager rule hot-reload: `curl -X POST http://${VPS_IP}:9093/-/reload`.
+- Demote tim back to `admin` (last-resort, manual): see SQL one-liner above.
+
+### What the iframe exposes (cross-tenant data warning, D9)
+
+- **All tenants' chat data, aggregated.** There is no `museumId` scoping
+  in the Prometheus metrics (cardinality budget per spec §5 NFR forbade
+  museum-scoped labels).
+- The proper B2B museum-admin latency panel ships in **W3.2** post-launch
+  with Recharts + a backend proxy that scopes queries to the caller's
+  `museumId`. Until W3.2 ships, B2B museum admins have no chat-latency
+  visibility (by design).
+
+### Enforcement layers (defense in depth)
+
+1. nginx `auth_request /grafana-auth-check` → backend.
+2. backend `/api/auth/super-admin-check` returns 204 only for
+   `req.user.role === 'super_admin'`.
+3. museum-web `RoleGuard allowedRoles={['super_admin']}` on
+   `/admin/ops/grafana/layout.tsx` (defense for the iframe page itself).
+4. museum-web `AdminShell` only renders the "Ops · Grafana" nav link for
+   `super_admin` users (UX-level guard, not security — assume hidden links
+   are still discoverable).
+5. Grafana not exposed via host port — only reachable through nginx.

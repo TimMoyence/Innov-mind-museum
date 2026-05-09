@@ -10,4 +10,5 @@ export const makeToken = (overrides: Record<string, unknown> = {}) =>
 
 export const adminToken = () => makeToken({ role: 'admin' });
 export const visitorToken = () => makeToken({ role: 'visitor' });
+export const superAdminToken = () => makeToken({ role: 'super_admin' });
 export const userToken = () => makeToken();

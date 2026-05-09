@@ -1,0 +1,230 @@
+{
+  "title": "Chat Latency",
+  "uid": "chat-latency",
+  "tags": ["musaium", "chat", "latency", "c1"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "musaium-prometheus"
+        },
+        "hide": 0
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "name": "Deployments",
+        "datasource": "${datasource}",
+        "enable": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "titleFormat": "Deploy",
+        "target": {
+          "expr": "changes(process_start_time_seconds{service=\"musaium-backend\"}[1m]) > 0",
+          "refId": "Anno"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "End-to-end latency (p50 / p95 / p99)",
+      "description": "Wall-clock time from POST /chat/sessions/:id/messages received to response sent. Source: chat_request_duration_seconds_bucket. Alert fires when p99 > 6s over 5 min (chat-latency.yml).",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 3.5 },
+              { "color": "red", "value": 6 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "calcs": ["mean", "max"] }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum(rate(chat_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum(rate(chat_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum(rate(chat_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Per-phase latency (p95 stacked)",
+      "description": "Latency contribution per phase (stt, llm, tts). Source: chat_phase_duration_seconds_bucket. Use this to identify the dominant bottleneck before C1.3 optim.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "stacking": { "mode": "normal", "group": "A" }
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(chat_phase_duration_seconds_bucket{phase=\"stt\"}[5m])) by (le))",
+          "legendFormat": "stt p95"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum(rate(chat_phase_duration_seconds_bucket{phase=\"llm\"}[5m])) by (le))",
+          "legendFormat": "llm p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.95, sum(rate(chat_phase_duration_seconds_bucket{phase=\"tts\"}[5m])) by (le))",
+          "legendFormat": "tts p95"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "barchart",
+      "title": "Phase share at p95 (which phase dominates)",
+      "description": "Share of the p95 budget consumed by each phase. Uses the p95 quantile per phase / sum to express the bottleneck. Drives the C1.3 runbook decision.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(chat_phase_duration_seconds_bucket{phase=\"stt\"}[15m])) by (le)) / scalar(sum(histogram_quantile(0.95, sum(rate(chat_phase_duration_seconds_bucket[15m])) by (le, phase))))",
+          "legendFormat": "stt"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum(rate(chat_phase_duration_seconds_bucket{phase=\"llm\"}[15m])) by (le)) / scalar(sum(histogram_quantile(0.95, sum(rate(chat_phase_duration_seconds_bucket[15m])) by (le, phase))))",
+          "legendFormat": "llm"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.95, sum(rate(chat_phase_duration_seconds_bucket{phase=\"tts\"}[15m])) by (le)) / scalar(sum(histogram_quantile(0.95, sum(rate(chat_phase_duration_seconds_bucket[15m])) by (le, phase))))",
+          "legendFormat": "tts"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "LLM cache hit-rate by context_class",
+      "description": "Derived from llm_cache_hits_total / (llm_cache_hits_total + llm_cache_misses_total). Targets per ADR-036: generic ≥25%, museum-mode ≥10%, personalized ≥2%. R11 gates the TTL tune on ≥7d of this measure.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(llm_cache_hits_total{context_class=\"generic\"}[15m])) / (sum(rate(llm_cache_hits_total{context_class=\"generic\"}[15m])) + sum(rate(llm_cache_misses_total{context_class=\"generic\"}[15m])))",
+          "legendFormat": "generic"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(llm_cache_hits_total{context_class=\"museum-mode\"}[15m])) / (sum(rate(llm_cache_hits_total{context_class=\"museum-mode\"}[15m])) + sum(rate(llm_cache_misses_total{context_class=\"museum-mode\"}[15m])))",
+          "legendFormat": "museum-mode"
+        },
+        {
+          "refId": "C",
+          "expr": "sum(rate(llm_cache_hits_total{context_class=\"personalized\"}[15m])) / (sum(rate(llm_cache_hits_total{context_class=\"personalized\"}[15m])) + sum(rate(llm_cache_misses_total{context_class=\"personalized\"}[15m])))",
+          "legendFormat": "personalized"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Outcome distribution (last 1h)",
+      "description": "Per-outcome request count over the last 1h. Watch for `cache_hit` rising as warmup completes, and for `circuit_open` spikes during upstream LLM degradation.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 18 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(chat_request_duration_seconds_count[1h])) by (outcome)",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Error rate by phase + provider",
+      "description": "Source: chat_phase_errors_total. Stable taxonomy: timeout, upstream_5xx, abort, unknown. Use to spot upstream degradation BEFORE p99 alert fires.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 18 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(chat_phase_errors_total[5m])) by (phase, provider, error_type)",
+          "legendFormat": "{{phase}} / {{provider}} / {{error_type}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Request volume per minute",
+      "description": "Total chat_request_duration_seconds_count rate. Check that the bake window has enough traffic (≥100 req/day per ADR-036 D12) before any TTL tune.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 24 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(chat_request_duration_seconds_count[1m]))",
+          "legendFormat": "requests / sec"
+        }
+      ]
+    }
+  ]
+}

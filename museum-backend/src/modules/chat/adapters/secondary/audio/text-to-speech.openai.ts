@@ -1,4 +1,9 @@
 import { AppError } from '@shared/errors/app.error';
+import {
+  ChatPhaseTimer,
+  type ChatPhaseErrorType,
+  type ChatPhaseOutcome,
+} from '@shared/observability/chat-phase-timer';
 import { env } from '@src/config/env';
 
 import type { TtsResult, TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
@@ -72,23 +77,62 @@ export class OpenAiTextToSpeechService implements TextToSpeechService {
   /**
    * Sends text to the OpenAI TTS API and returns the synthesized audio.
    *
+   * Wraps the synthesis call in a {@link ChatPhaseTimer} so the `tts` phase
+   * latency lands in `chat_phase_duration_seconds{phase="tts",provider="openai"}`
+   * and a `audio.tts.synthesize` Langfuse span is emitted (fail-open).
+   *
    * @param input - Text to synthesize and optional voice override.
    * @param input.text - Text content to synthesize.
    * @param input.voice - Optional voice identifier override.
+   * @param input.requestId - Optional request id used to correlate the span
+   *   with the parent chat request. Falls back to `'unknown'` when missing.
    * @returns MP3 audio buffer.
    * @throws {AppError} With code `FEATURE_UNAVAILABLE` if OpenAI API key is missing.
    * @throws {AppError} With code `UPSTREAM_TTS_ERROR` on API failure.
    */
-  async synthesize(input: { text: string; voice?: string }): Promise<TtsResult> {
-    const apiKey = requireApiKey();
+  async synthesize(input: {
+    text: string;
+    voice?: string;
+    requestId?: string;
+  }): Promise<TtsResult> {
     const text = input.text.slice(0, env.tts.maxTextLength);
     const voice = input.voice ?? env.tts.voice;
+    const requestId = input.requestId ?? 'unknown';
 
-    const response = await fetchSpeech(apiKey, text, voice);
-    const audio = await parseSpeechResponse(response);
+    const timer = ChatPhaseTimer.start('tts', 'openai', requestId, {
+      model: env.tts.model,
+      metadata: { textLength: text.length, voice },
+    });
 
-    return { audio, contentType: 'audio/mpeg' };
+    let outcome: ChatPhaseOutcome = 'success';
+    let errorType: ChatPhaseErrorType = 'unknown';
+    try {
+      const apiKey = requireApiKey();
+      const response = await fetchSpeech(apiKey, text, voice);
+      const audio = await parseSpeechResponse(response);
+      return { audio, contentType: 'audio/mpeg' };
+    } catch (err) {
+      outcome = 'error';
+      errorType = classifyTtsError(err);
+      throw err;
+    } finally {
+      timer.end(outcome, errorType);
+    }
   }
+}
+
+function classifyTtsError(err: unknown): ChatPhaseErrorType {
+  if (err instanceof AppError) {
+    if (err.code === 'UPSTREAM_TIMEOUT') return 'timeout';
+    if (err.code === 'UPSTREAM_TTS_ERROR') return 'upstream_5xx';
+  }
+  if (
+    err instanceof DOMException &&
+    (err.name === 'TimeoutError' || err.name === 'AbortError')
+  ) {
+    return err.name === 'TimeoutError' ? 'timeout' : 'abort';
+  }
+  return 'unknown';
 }
 
 /** Stub TTS service that always throws — used when text-to-speech is disabled. */

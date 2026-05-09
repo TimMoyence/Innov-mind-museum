@@ -137,6 +137,15 @@ jobs:
   # ─── 3. Mutation testing (Stryker — incremental on push, full nightly) ──
   mutation:
     needs: quality
+    # FULLY DISABLED 2026-05-09 — a dedicated local cache-builder agent
+    # is regenerating the Stryker incremental cache offline (long-running
+    # job). Once that cache is committed + pushed, flip `if: false` back
+    # to the conditional from c17c404e:
+    #   github.event_name == 'pull_request'
+    #   || github.event_name == 'schedule'
+    #   || github.event_name == 'workflow_dispatch'
+    #   || (github.event_name == 'push' && github.ref == 'refs/heads/staging')
+    if: false
     runs-on: ubuntu-latest
     # Bumped 50 → 90 (2026-05-08): the prior 50-min cap killed every full run
     # before Stryker could write `reports/stryker-incremental.json`, so the
@@ -574,6 +583,148 @@ jobs:
               -e SMOKE_TEST_EMAIL="$SMOKE_TEST_EMAIL" \
               -e SMOKE_TEST_PASSWORD="$SMOKE_TEST_PASSWORD" \
               backend node dist/scripts/seed-smoke-account.js
+
+      # ── Observability stack (C1.1, ADR-036) ────────────────────────────
+      # Deploys Grafana / Prometheus / AlertManager / Telegram-bridge
+      # services declared in /srv/museum/docker-compose.yml.
+      #
+      # Single-source-of-truth pattern:
+      #   museum-backend/deploy/docker-compose.prod.yml is THE compose.
+      #   Every deploy SCPs it to /srv/museum/docker-compose.yml on the
+      #   VPS, after backing up the previous file to .bak. Operators do
+      #   NOT hand-edit the live compose anymore — changes go through
+      #   PR + CI.
+      #
+      # The 5 obs env vars (ENV, GRAFANA_ADMIN_PASSWORD, GRAFANA_ROOT_URL,
+      # TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID) MUST already be set in
+      # /srv/museum/.env. CI does NOT manage these secrets.
+
+      - name: Sync prod compose + obs config to VPS (/tmp staging)
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345  # v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          source: 'museum-backend/deploy/docker-compose.prod.yml,infra/grafana/*'
+          target: /tmp/musaium-deploy-staging
+          # strip_components=2 drops `museum-backend/deploy/` from the compose
+          # path AND `infra/` from the obs paths.
+          strip_components: 2
+
+      - name: Install compose + obs config on VPS
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          script: |
+            set -e
+
+            # 1. Validate the new compose BEFORE touching the live one —
+            #    syntax error or missing env var → abort, leave prod
+            #    running on the existing compose.
+            cd /srv/museum
+            sudo cp /tmp/musaium-deploy-staging/docker-compose.prod.yml \
+              /tmp/musaium-deploy-staging/docker-compose.yml.candidate
+            (cd /srv/museum && \
+              docker compose \
+                -f /tmp/musaium-deploy-staging/docker-compose.yml.candidate \
+                --env-file /srv/museum/.env \
+                config > /dev/null)
+
+            # 2. Backup current compose, install candidate as the live one.
+            BACKUP_TS="$(date -u +%Y%m%dT%H%M%SZ)"
+            if [ -f /srv/museum/docker-compose.yml ]; then
+              sudo cp /srv/museum/docker-compose.yml \
+                "/srv/museum/docker-compose.yml.bak.${BACKUP_TS}"
+              echo "[deploy] backed up previous compose to docker-compose.yml.bak.${BACKUP_TS}"
+            fi
+            sudo install -m 0644 \
+              /tmp/musaium-deploy-staging/docker-compose.yml.candidate \
+              /srv/museum/docker-compose.yml
+
+            # 3. Sync Grafana/Prom/AM provisioning + dashboards into the
+            #    compose bind-mount target. --delete keeps the VPS in
+            #    lockstep with the repo.
+            sudo mkdir -p /srv/museum/obs
+            sudo rsync -av --delete \
+              /tmp/musaium-deploy-staging/grafana/ \
+              /srv/museum/obs/
+
+            # 4. nginx config is operator-owned (Docker container with a
+            #    hand-maintained site.conf — paths under
+            #    /etc/nginx/snippets/ inside the container are NOT
+            #    accessible from the host runner). The one-shot edit of
+            #    site.conf + nginx reload is documented in
+            #    docs/OPS_DEPLOYMENT.md §Grafana bootstrap (manual step C).
+            #    CI never touches nginx.
+
+            # 5. Cleanup staging dir.
+            rm -rf /tmp/musaium-deploy-staging
+
+      - name: Deploy obs stack on VPS
+        id: deploy_obs
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GHCR_USER: ${{ secrets.GHCR_USER }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          envs: GHCR_TOKEN,GHCR_USER
+          script: |
+            set -e
+            cd /srv/museum
+
+            # Re-login (idempotent — same token as the backend deploy).
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin || true
+
+            # Pull + restart the 4 obs services. alertmanager-telegram
+            # builds locally from /srv/museum/obs/alertmanager-telegram/
+            # — compose handles the build transparently.
+            docker compose pull prometheus grafana alertmanager
+            docker compose up -d --remove-orphans --timeout 30 \
+              prometheus grafana alertmanager alertmanager-telegram
+
+            # Wait for Grafana healthcheck (confirms provisioning loaded
+            # the dashboard + datasource cleanly).
+            echo "Waiting for Grafana healthcheck..."
+            TRIES=0
+            MAX_TRIES=20
+            until docker compose exec -T grafana wget --quiet --spider http://localhost:3000/api/health 2>/dev/null; do
+              TRIES=$((TRIES + 1))
+              if [ "$TRIES" -ge "$MAX_TRIES" ]; then
+                echo "Grafana healthcheck failed after ${MAX_TRIES} attempts"
+                docker compose logs --tail=50 grafana || true
+                exit 1
+              fi
+              echo "  attempt ${TRIES}/${MAX_TRIES}..."
+              sleep 3
+            done
+            echo "Grafana is healthy."
+
+            # Confirm the alerting rule loaded by Prometheus.
+            if ! docker compose exec -T prometheus wget -qO- http://localhost:9090/api/v1/rules \
+                | grep -q chat_e2e_p99_high; then
+              echo "::warning::Prometheus did not load chat_e2e_p99_high rule — check /srv/museum/obs/alerting/"
+            fi
+
+      - name: Post-deploy obs smoke (RBAC gate)
+        # Asserts the single-auth contract: anonymous /grafana/ → 401,
+        # super_admin login → 200 dashboard. Skipped silently if the
+        # ADMIN_*/SUPER_ADMIN_* smoke secrets are missing — keeps deploys
+        # green on environments that haven't bootstrapped Grafana yet.
+        if: ${{ env.OBS_SMOKE_ENABLED == 'true' }}
+        env:
+          OBS_SMOKE_ENABLED: ${{ secrets.PROD_SUPER_ADMIN_PASSWORD != '' && 'true' || 'false' }}
+          BASE_URL: ${{ secrets.PROD_SMOKE_API_BASE_URL }}
+          SUPER_ADMIN_EMAIL: ${{ secrets.PROD_SUPER_ADMIN_EMAIL }}
+          SUPER_ADMIN_PASSWORD: ${{ secrets.PROD_SUPER_ADMIN_PASSWORD }}
+          ADMIN_EMAIL: ${{ secrets.PROD_ADMIN_NEGATIVE_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.PROD_ADMIN_NEGATIVE_PASSWORD }}
+        working-directory: museum-backend
+        run: bash ./scripts/smoke-grafana-prod.sh
 
       - name: Validate prod smoke secrets
         env:

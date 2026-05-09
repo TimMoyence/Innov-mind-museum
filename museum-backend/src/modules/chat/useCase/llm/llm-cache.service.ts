@@ -39,11 +39,26 @@ export class LlmCacheServiceImpl implements LlmCacheService {
     return 'generic';
   }
 
-  /** Looks up a cached LLM response. Returns hit=false on miss. */
+  /**
+   * Looks up a cached LLM response. Returns hit=false on miss OR on a cache-
+   * layer exception (fail-open per ADR-036 + spec R8). The chat path never
+   * throws because of the cache.
+   */
   async lookup<T>(input: LlmCacheKeyInput): Promise<LlmCacheLookupResult<T>> {
     const contextClass = this.classify(input);
     const key = this.buildKey(input, contextClass);
-    const value = await this.cache.get<T>(key);
+    let value: T | null;
+    try {
+      value = await this.cache.get<T>(key);
+    } catch (err) {
+      logger.warn('llm_cache_lookup_failed', {
+        layer: 'l1',
+        contextClass,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      llmCacheMissesTotal.inc({ context_class: contextClass });
+      return { hit: false, value: null, contextClass };
+    }
     if (value !== null) {
       llmCacheHitsTotal.inc({ context_class: contextClass });
     } else {
@@ -52,13 +67,25 @@ export class LlmCacheServiceImpl implements LlmCacheService {
     return { hit: value !== null, value, contextClass };
   }
 
-  /** Stores an LLM response under the derived key with the TTL for its context class. */
+  /**
+   * Stores an LLM response under the derived key with the TTL for its
+   * context class. Fail-open: a cache-layer exception is caught and logged,
+   * never propagates (ADR-036 + spec R8).
+   */
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- generic interface API where T constrains the stored value shape
   async store<T>(input: LlmCacheKeyInput, value: T): Promise<void> {
     const contextClass = this.classify(input);
     const key = this.buildKey(input, contextClass);
     const ttl = this.ttlFor(contextClass);
-    await this.cache.set(key, value, ttl);
+    try {
+      await this.cache.set(key, value, ttl);
+    } catch (err) {
+      logger.warn('llm_cache_store_failed', {
+        layer: 'l1',
+        contextClass,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
   /** Drops all museum-scoped entries (museum-mode + personalized). Called from museum admin update. */

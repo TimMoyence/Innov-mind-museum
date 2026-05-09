@@ -1,0 +1,18 @@
+apiVersion: 1
+
+# Auto-load every JSON file under /var/lib/grafana/dashboards on boot.
+# The bind-mount comes from `infra/grafana/dashboards/` ; check the JSON
+# in via PR, never click in Grafana UI (drift is invisible otherwise).
+providers:
+  - name: musaium-default
+    orgId: 1
+    folder: Musaium
+    folderUid: musaium-default
+    type: file
+    disableDeletion: true
+    editable: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true

@@ -139,9 +139,21 @@ export class AdminRepositoryPg implements IAdminRepository {
     return mapUser(saved);
   }
 
-  /** Returns the total number of users with the admin role. */
+  /**
+   * Returns the count of users carrying any privileged role (`admin` OR
+   * `super_admin`). Used by the last-admin guard in
+   * `ChangeUserRoleUseCase` — `super_admin` is the highest privilege
+   * (Musaium platform owner) so demoting the only `admin` while a
+   * `super_admin` still exists is safe ; the inverse is also safe.
+   * Counting both prevents a false "last admin" conflict in the V1
+   * single-platform-owner state where Tim is `super_admin` and no B2B
+   * `admin` exists yet.
+   */
   async countAdmins(): Promise<number> {
-    return await this.userRepo.countBy({ role: 'admin' });
+    return (
+      (await this.userRepo.countBy({ role: 'admin' })) +
+      (await this.userRepo.countBy({ role: 'super_admin' }))
+    );
   }
 
   /** Retrieves a paginated list of audit log entries with optional filters. */
