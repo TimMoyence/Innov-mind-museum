@@ -5,11 +5,13 @@ on:
   pull_request:
     paths:
       - 'museum-backend/**'
+      - 'infra/**'
       - '.github/workflows/ci-cd-backend.yml'
   push:
     branches: ['main', 'staging']
     paths:
       - 'museum-backend/**'
+      - 'infra/**'
       - '.github/workflows/ci-cd-backend.yml'
   schedule:
     - cron: '17 3 * * *'
