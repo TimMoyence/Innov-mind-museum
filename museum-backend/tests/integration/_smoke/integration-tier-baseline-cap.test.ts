@@ -6,11 +6,17 @@ import { createIntegrationHarness } from 'tests/helpers/integration/integration-
 const REPO_ROOT = resolve(__dirname, '..', '..', '..', '..');
 const BASELINE_PATH = join(REPO_ROOT, 'scripts/sentinels/.integration-tier-baseline.json');
 
-// Long-term cap (post-Phase-1). The baseline currently holds 2 entries documenting
+// Long-term cap (post-Phase-1). The baseline holds entries documenting
 // files that legitimately live in tests/integration/ without crossing
 // an infra boundary. Cap can shrink, never grow.
 // New entries require ADR amendment.
-const PHASE_1_BASELINE_CAP = 2;
+//
+// 2026-05-09 (C1 PR-G): bumped 2 → 4 to admit the two PR-A integration
+// tests pinning chat-pipeline span emission (R1/R2) and admin↔chat
+// invalidateMuseum contract (R9). Both have justifications + approval
+// refs in the baseline JSON. Reduce back to 4 only by deleting one of
+// those entries, never by adding more.
+const PHASE_1_BASELINE_CAP = 4;
 
 describe('integration tier-signature baseline cap', () => {
   it('baseline length never grows beyond the Phase 1 cap', () => {

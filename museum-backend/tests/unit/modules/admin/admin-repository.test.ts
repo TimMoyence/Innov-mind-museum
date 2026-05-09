@@ -188,15 +188,24 @@ describe('AdminRepositoryPg', () => {
     });
   });
 
-  // ─── countAdmins ───
+  // ─── countAdmins (admin + super_admin since C1 PR-G) ───
   describe('countAdmins', () => {
-    it('returns count of admin users', async () => {
-      userRepo.countBy.mockResolvedValue(3);
+    it('returns combined count of admin + super_admin users', async () => {
+      userRepo.countBy.mockResolvedValueOnce(3).mockResolvedValueOnce(1);
 
       const result = await sut.countAdmins();
 
-      expect(result).toBe(3);
-      expect(userRepo.countBy).toHaveBeenCalledWith({ role: 'admin' });
+      expect(result).toBe(4);
+      expect(userRepo.countBy).toHaveBeenNthCalledWith(1, { role: 'admin' });
+      expect(userRepo.countBy).toHaveBeenNthCalledWith(2, { role: 'super_admin' });
+    });
+
+    it('returns 0 when no privileged users exist', async () => {
+      userRepo.countBy.mockResolvedValue(0);
+
+      const result = await sut.countAdmins();
+
+      expect(result).toBe(0);
     });
   });
 
