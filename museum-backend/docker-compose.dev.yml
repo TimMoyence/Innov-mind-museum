@@ -17,7 +17,10 @@ services:
     restart: unless-stopped
 
   db:
-    image: postgres:16-alpine
+    # pgvector/pgvector:pg16 = Debian Bookworm slim PG16 + pgvector preinstalled.
+    # Required for C3 visual similarity (artwork_embeddings.embedding halfvec(768)).
+    # Data volume from postgres:16-alpine is binary-compatible (same PG major + data dir layout).
+    image: pgvector/pgvector:pg16
     container_name: dev-postgres
     environment:
       POSTGRES_USER: ${DB_USER}

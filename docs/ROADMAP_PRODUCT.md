@@ -68,14 +68,19 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 - [ ] **C1.2 LLM cache audit + activate** — vérifier wiring `llm-cache.service.ts` (ADR-035) en prod, mesurer hit-rate, tune TTL si actif
 - [ ] **C1.3 Optim data-driven** — après baseline, attaquer goulot identifié (parallélisation tools, prompt compaction, model routing si pertinent)
 
-### C2 — Image dans chat finition
+### C2 — Image dans chat finition (AI-side enrichissement)
 
-> Existant : BE solide (S3 + multimodal LLM + EXIF strip + OCR + image-scoring + Wikidata/Unsplash enrichment). FE single-image only, pas de retry.
+> **AI-side uniquement.** L'IA enrichit ses réponses avec des images plus pertinentes, en plus grand nombre, mieux légendées. Le multi-image upload côté visiteur est explicitement non-souhaité (le visiteur enverra ses images une par une) — voir mémoire `project_c2_ai_side_only`. Ne PAS toucher `image-input.ts` / `image-processing.service.ts` / `useImagePicker.ts` / `OfflineQueue` single.
+>
+> Existant : LLM produit déjà `ChatAssistantMetadata.suggestedImages: { query, description }[]` (parsé `assistant-response.ts:117`, **non consommé** pour fetch). `ImageEnrichmentService.enrich()` interroge Wikidata P18 + Unsplash sur 1 seul `searchTerm` extrait via `extractSearchTerm()`, score + dedup, slice à `maxImagesPerResponse`. `ImageCarousel.tsx` rend en bas du bubble assistant. Manque : consommation des suggestedImages, sources élargies (Commons + catalogue interne), caption/rationale didactique LLM-authored, repositionnement carrousel-au-dessus.
+>
+> Spec Kit complet : `team-state/2026-05-08-c2-image-finition/{spec,design,tasks}.md`.
 
-- [ ] **C2.1 Multi-image par message** — `PostMessageInput.image` single → array, BE + FE
-- [ ] **C2.2 Retry upload sur fail** — queue local + exponential backoff + UI feedback explicite
-- [ ] **C2.3 Draft gallery FE** — carrousel queued avant envoi, edit/remove
-- [ ] **C2.4 Polish UX `useImagePicker.ts`** — batch picker, preview qualité, perf perçue
+- [ ] **C2.1 Multi-search-term enrich** — `enrichment-fetcher` consomme `suggestedImages[]` LLM-produit et fan-out parallèle vers `ImageEnrichmentService.enrich()` ; prompt-tune `llm-sections.ts` 1-2 → 2-4 entries sur sujets comparatifs (déclenche la quantité)
+- [ ] **C2.2 Sources élargies** — nouveaux clients `WikimediaCommonsClient` (Category API, gratos, no auth) + `MusaiumCatalogueClient` (lookup `artworks.data.ts` interne, score=1.0 max-trust) via port `ImageSourceClient` existant ; tie-break dedup `musaium > wikidata > commons > unsplash`
+- [ ] **C2.3 Caption + rationale LLM-authored** — schema `SuggestedImage` v2 `{query, description, rationale, caption}` (rationale + caption REQUIRED) ; propagation FE rendue sous chaque thumb (`ChatUiEnrichedImage.rationale`) ; alias-aware `titleMatchScore` (FR/EN alt-labels Wikidata)
+- [ ] **C2.4 Carrousel au-dessus du texte** — `ImageCarousel.tsx` repositionné AVANT le bubble texte assistant (statu quo = en bas), aligné conventions LLM modernes (Claude / ChatGPT / Gemini image-first display) ; aucun nouveau composant, sibling reorder uniquement
+- [ ] **C2.5 Kill-switch + observabilité** — env `CHAT_ENRICHMENT_V2_ENABLED` (rollback instantané sans code revert) + Langfuse spans `chat.enrichment.image_source` par source ; promptfoo regression 4 scénarios (comparative / single-visual / non-visual / no-PII rationale)
 
 ### C3 — Image comparative full
 

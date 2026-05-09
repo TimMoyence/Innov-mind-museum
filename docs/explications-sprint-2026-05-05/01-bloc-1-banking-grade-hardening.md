@@ -23,19 +23,19 @@ Avant ce sprint, Musaium avait des défenses correctes mais classiques (JWT, bcr
 
 ## Vocabulaire commun (à connaître pour la suite)
 
-| Terme | Définition pratique |
-|-------|---------------------|
-| **Rate-limit** | Limite le nombre de requêtes qu'un client peut faire (ex. 30 / minute) sur un endpoint. Empêche le brute-force. |
-| **Fail-closed** | Quand une dépendance (ex. Redis) tombe, on **bloque** l'opération plutôt que de continuer en mode dégradé. C'est l'inverse de "fail-open". |
-| **httpOnly** | Cookie qu'un script JavaScript du navigateur **ne peut pas lire**. Le navigateur le renvoie automatiquement, mais XSS ne peut pas le voler. |
-| **CSRF** | Cross-Site Request Forgery. Un site attaquant déclenche une action sur ton site auth en exploitant le fait que le navigateur envoie automatiquement les cookies. |
-| **HMAC** | Une signature cryptographique qui prouve que deux choses sont liées (ex. ce token CSRF a bien été généré pour cet access token). |
-| **Constant-time compare** | Comparaison qui prend toujours exactement le même temps, qu'elle réussisse vite ou pas. Empêche les "timing attacks" (l'attaquant mesure le temps pour deviner le secret). |
-| **MFA / TOTP** | Multi-Factor Authentication / Time-based One-Time Password. Le code à 6 chiffres dans Google Authenticator. |
-| **HIBP** | Have I Been Pwned : base de données publique des mots de passe leakés dans des fuites. |
-| **OIDC nonce** | Une chaîne aléatoire qu'on génère côté serveur, qu'on attache à une requête de login social, et qu'on retrouve dans le token retourné par Apple/Google. Empêche le replay d'un ancien token. |
-| **CSP** | Content Security Policy : un header HTTP qui dit au navigateur "tu n'as le droit de charger des scripts QUE depuis ce domaine". Bloque les XSS. |
-| **HSTS** | HTTP Strict Transport Security : "tu te connectes à ce domaine uniquement en HTTPS pendant 2 ans". Empêche le downgrade HTTP. |
+| Terme                     | Définition pratique                                                                                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Rate-limit**            | Limite le nombre de requêtes qu'un client peut faire (ex. 30 / minute) sur un endpoint. Empêche le brute-force.                                                                              |
+| **Fail-closed**           | Quand une dépendance (ex. Redis) tombe, on **bloque** l'opération plutôt que de continuer en mode dégradé. C'est l'inverse de "fail-open".                                                   |
+| **httpOnly**              | Cookie qu'un script JavaScript du navigateur **ne peut pas lire**. Le navigateur le renvoie automatiquement, mais XSS ne peut pas le voler.                                                  |
+| **CSRF**                  | Cross-Site Request Forgery. Un site attaquant déclenche une action sur ton site auth en exploitant le fait que le navigateur envoie automatiquement les cookies.                             |
+| **HMAC**                  | Une signature cryptographique qui prouve que deux choses sont liées (ex. ce token CSRF a bien été généré pour cet access token).                                                             |
+| **Constant-time compare** | Comparaison qui prend toujours exactement le même temps, qu'elle réussisse vite ou pas. Empêche les "timing attacks" (l'attaquant mesure le temps pour deviner le secret).                   |
+| **MFA / TOTP**            | Multi-Factor Authentication / Time-based One-Time Password. Le code à 6 chiffres dans Google Authenticator.                                                                                  |
+| **HIBP**                  | Have I Been Pwned : base de données publique des mots de passe leakés dans des fuites.                                                                                                       |
+| **OIDC nonce**            | Une chaîne aléatoire qu'on génère côté serveur, qu'on attache à une requête de login social, et qu'on retrouve dans le token retourné par Apple/Google. Empêche le replay d'un ancien token. |
+| **CSP**                   | Content Security Policy : un header HTTP qui dit au navigateur "tu n'as le droit de charger des scripts QUE depuis ce domaine". Bloque les XSS.                                              |
+| **HSTS**                  | HTTP Strict Transport Security : "tu te connectes à ce domaine uniquement en HTTPS pendant 2 ans". Empêche le downgrade HTTP.                                                                |
 
 ---
 
@@ -249,7 +249,7 @@ function buildHelmetOptions(isProduction: boolean): Parameters<typeof helmet>[0]
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],   // stop-gap
+        styleSrc: ["'self'", "'unsafe-inline'"], // stop-gap
         imgSrc: ["'self'", 'data:', 'https://*.s3.amazonaws.com', 'https://*.amazonaws.com'],
         connectSrc: ["'self'"],
         frameAncestors: ["'none'"],
@@ -627,14 +627,14 @@ Pas du code, des procédures. Utile uniquement si tu (ou un futur ops) les lit e
 
 C'est ce que le récap appelle "Defense-in-Depth recap". Lecture : **pour chaque type de menace, on a 2 ou 3 couches qui peuvent l'arrêter, donc casser une couche ne suffit pas pour passer**.
 
-| Menace | Couche 1 | Couche 2 | Couche 3 |
-|--------|----------|----------|----------|
-| Credential stuffing | F1 IP+familyId limiter | F-DiD per-account | F2 fail-closed Redis + F8 idle 24h |
-| Replay social token | F3 nonce single-use Redis | F3 vérif vs JWT claim | F1 limiter /social-login |
-| Prompt injection direct | Keyword 8 langues | Juge LLM | Boundary marker prompt |
-| XSS exfiltrant tokens | F7 cookies httpOnly | F5 CSP no inline-script | F7 SameSite=Strict |
-| CSRF | Double-submit | HMAC binding | Constant-time compare |
-| Audit log tampering | Insert immuable | Hash chain SHA-256 | Cron nightly + Slack |
+| Menace                  | Couche 1                  | Couche 2                | Couche 3                           |
+| ----------------------- | ------------------------- | ----------------------- | ---------------------------------- |
+| Credential stuffing     | F1 IP+familyId limiter    | F-DiD per-account       | F2 fail-closed Redis + F8 idle 24h |
+| Replay social token     | F3 nonce single-use Redis | F3 vérif vs JWT claim   | F1 limiter /social-login           |
+| Prompt injection direct | Keyword 8 langues         | Juge LLM                | Boundary marker prompt             |
+| XSS exfiltrant tokens   | F7 cookies httpOnly       | F5 CSP no inline-script | F7 SameSite=Strict                 |
+| CSRF                    | Double-submit             | HMAC binding            | Constant-time compare              |
+| Audit log tampering     | Insert immuable           | Hash chain SHA-256      | Cron nightly + Slack               |
 
 **Lecture :** un attaquant qui essaie de faire du credential stuffing doit passer F1 ET F-DiD ET soit avoir lieu pendant un incident Redis (F2 le bloquerait sinon) ET supporter le fait que les sessions expirent en 24h (F8). Probabilité de réussite : faible.
 
@@ -645,6 +645,7 @@ C'est ce que le récap appelle "Defense-in-Depth recap". Lecture : **pour chaque
 **Non, mais avec deux nuances.**
 
 **Ce qui est clairement pertinent même pour V1 :**
+
 - F1, F2, F-DiD (rate-limit) — sans ça, credential stuffing trivial.
 - F3 (nonce social) — réseau social = vecteur principal de login, doit être propre.
 - F5, F7 (CSP + cookies httpOnly) — protège l'admin web qui est ta surface d'attaque la plus juteuse.
@@ -654,10 +655,12 @@ C'est ce que le récap appelle "Defense-in-Depth recap". Lecture : **pour chaque
 - F-DiD runbooks — documentation, à zéro coût pendant qu'on attend l'incident.
 
 **Ce qui est plus discutable pour V1 :**
+
 - F4 juge LLM : gain marginal, latence + coût. **Garde-le désactivé en V1**, observe, active si signal clair (cf. doc 04).
 - F6 MFA forcé tous rôles : OK pour rôles écriture (museum_manager, moderator, admin), garde opt-in pour visitor.
 
 **Ce qui est documenté résiduel et à régler post-launch :**
+
 - Wire `RedisNonceStore` au lieu d'`InMemoryNonceStore` (priorité #1 si multi-instance).
 - Resserrer `@xmldom/xmldom` à `^0.8.12`.
 - Fix `/api/health?…` query-string still logged (cosmétique, pas crit).

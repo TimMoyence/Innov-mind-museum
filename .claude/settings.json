@@ -1,7 +1,4 @@
 {
-  "enabledPlugins": {
-    "superpowers@superpowers-marketplace": true
-  },
   "hooks": {
     "PostToolUse": [
       {
