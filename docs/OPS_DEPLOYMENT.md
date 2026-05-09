@@ -917,10 +917,20 @@ backend at `backend:3000/metrics`.
 
 ### One-shot bootstrap (manual — only what CI cannot do)
 
-CI/CD (`ci-cd-backend.yml`) handles the recurring sync (rsync `infra/grafana/`
-→ `/srv/museum/obs/`, install nginx snippet, reload nginx, `docker compose
-up -d` the obs services, smoke gate) on every push to `main`. The operator
-owns three things ONCE per environment :
+> **Why anything is manual.** The compose that runs on the VPS at
+> `/srv/museum/docker-compose.yml` is **not** the
+> `museum-backend/deploy/docker-compose.prod.yml` that lives in the
+> repo. The VPS compose is operator-owned and edited in place ; the
+> repo file is a hardening reference (immutable image tags etc.) that
+> we have NOT migrated to. CI pulls images and bind-mount config files
+> via the live VPS compose, but it does NOT scp the compose itself —
+> too critical to mutate from a runner.
+
+CI/CD (`ci-cd-backend.yml` deploy-prod) handles the recurring sync
+(rsync `infra/grafana/` → `/srv/museum/obs/`, install nginx snippet,
+reload nginx, `docker compose up -d` the obs services, smoke gate) on
+every push to `main`. The operator owns four things ONCE per
+environment :
 
 ```bash
 # A. Create the Telegram bot.
@@ -938,7 +948,24 @@ owns three things ONCE per environment :
 #      TELEGRAM_BOT_TOKEN=<token from BotFather>
 #      TELEGRAM_CHAT_ID=<chat id from getUpdates>
 
-# C. Add ONE line to /etc/nginx/sites-enabled/musaium.conf inside the
+# C. Patch your VPS docker-compose.yml with the 4 obs services.
+#    The repo ships the additive snippet at:
+#        museum-backend/deploy/obs-services.snippet.yml
+#    Open /srv/museum/docker-compose.yml and merge:
+#      - the `obs` network into your top-level `networks:` block
+#      - `prom_data`, `grafana_data`, `alertmanager_data` into `volumes:`
+#      - the 4 services (prometheus, alertmanager, alertmanager-telegram,
+#        grafana) into `services:`
+#    Do NOT replace the existing backend / pgbouncer / db / redis / web /
+#    llm-guard services — they stay as they are. The snippet is purely
+#    additive.
+#    Reference of what to copy:
+scp museum-backend/deploy/obs-services.snippet.yml \
+    user@vps:/tmp/musaium-obs-snippet.yml
+ssh user@vps 'less /tmp/musaium-obs-snippet.yml'   # eyeball
+ssh user@vps 'sudo nano /srv/museum/docker-compose.yml'   # paste the 3 sections
+
+# D. Add ONE line to /etc/nginx/sites-enabled/musaium.conf inside the
 #    `server { }` block that terminates TLS for musaium.fr:
 #        include /etc/nginx/snippets/musaium-grafana.conf;
 #    The CI step "Install obs config + nginx snippet on VPS" places the

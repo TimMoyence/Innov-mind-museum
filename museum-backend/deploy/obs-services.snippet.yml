@@ -1,0 +1,153 @@
+# ─────────────────────────────────────────────────────────────────────
+# C1.1 / ADR-036 — observability stack additive snippet
+#
+# This is NOT a standalone compose — it's the patch you copy/paste into
+# your existing /srv/museum/docker-compose.yml on the VPS to enable the
+# Grafana iframe + Prometheus + AlertManager + Telegram bridge.
+#
+# Three things to merge into the live compose:
+#   1) Add the `obs` network to top-level `networks:` (existing networks
+#      `web` and `private` stay unchanged).
+#   2) Add 3 volumes (`prom_data`, `grafana_data`, `alertmanager_data`)
+#      to top-level `volumes:`.
+#   3) Append the 4 services (`prometheus`, `alertmanager`,
+#      `alertmanager-telegram`, `grafana`) under `services:`.
+#
+# Image-tag policy: the snippet uses pinned tags (no `:latest` for the
+# obs services — they don't ship from CI, they pull from upstream
+# Docker Hub directly). Backend / museum-web continue using whatever
+# image-tag policy is already in your compose (`:latest` today).
+#
+# Required `.env` vars on the VPS (compose `${VAR:?...}` blocks boot
+# otherwise):
+#   ENV=production
+#   GRAFANA_ADMIN_USER=admin
+#   GRAFANA_ADMIN_PASSWORD=<24+ char random>
+#   GRAFANA_ROOT_URL=https://musaium.fr/grafana/
+#   TELEGRAM_BOT_TOKEN=<from BotFather>
+#   TELEGRAM_CHAT_ID=<numeric chat id>
+#
+# CI/CD ownership after this snippet is merged:
+#   ci-cd-backend.yml deploy-prod automatically rsyncs `infra/grafana/`
+#   into /srv/museum/obs/, installs the nginx snippet, reloads nginx,
+#   and runs `docker compose pull prometheus grafana alertmanager` +
+#   `docker compose up -d prometheus grafana alertmanager
+#   alertmanager-telegram` on every push to `main`. You never re-touch
+#   this file unless adding/removing an obs service.
+# ─────────────────────────────────────────────────────────────────────
+
+# 1) Add to your existing `networks:` block (KEEP `web` and `private`):
+networks:
+  obs:
+    driver: bridge
+    internal: false   # alertmanager-telegram needs egress to api.telegram.org
+
+# 2) Add to your existing `volumes:` block (KEEP pgdata, redis_data,
+#    uploads):
+volumes:
+  prom_data:
+  grafana_data:
+  alertmanager_data:
+
+# 3) Append to your existing `services:` block:
+services:
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    hostname: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=14d'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+      - '--enable-feature=expand-external-labels'
+    environment:
+      ENV: '${ENV:-production}'
+    volumes:
+      - ./obs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./obs/alerting:/etc/prometheus/alerting:ro
+      - prom_data:/prometheus
+    networks:
+      - private
+      - obs
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--spider', 'http://localhost:9090/-/ready']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    hostname: alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    volumes:
+      - ./obs/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - obs
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--spider', 'http://localhost:9093/-/healthy']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  alertmanager-telegram:
+    # Built locally from the rsynced ./obs/alertmanager-telegram/
+    # directory — no GHCR push for this 150-line shim.
+    build: ./obs/alertmanager-telegram
+    hostname: alertmanager-telegram
+    environment:
+      TELEGRAM_BOT_TOKEN: '${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN required for prod alerting (BotFather)}'
+      TELEGRAM_CHAT_ID: '${TELEGRAM_CHAT_ID:?TELEGRAM_CHAT_ID required for prod alerting}'
+      DASHBOARD_BASE_URL: '${GRAFANA_ROOT_URL:-https://musaium.fr/grafana}'
+      PORT: '9094'
+    networks:
+      - obs
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    hostname: grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    environment:
+      # Single-auth UX: anonymous Viewer here ; the actual gate is the
+      # nginx auth_request → backend /api/auth/super-admin-check. The
+      # admin password remains for direct /grafana/login operator
+      # actions (managing dashboards), NOT used by the iframe path.
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: 'Viewer'
+      GF_AUTH_ANONYMOUS_HIDE_VERSION: 'true'
+      GF_AUTH_BASIC_ENABLED: 'true'
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_SECURITY_ADMIN_USER: '${GRAFANA_ADMIN_USER:-admin}'
+      GF_SECURITY_ADMIN_PASSWORD: '${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD required for prod}'
+      # Iframe embedding via nginx same-origin reverse proxy.
+      GF_SECURITY_ALLOW_EMBEDDING: 'true'
+      GF_SECURITY_COOKIE_SAMESITE: 'lax'
+      GF_SECURITY_X_FRAME_OPTIONS: ''
+      GF_SERVER_ROOT_URL: '${GRAFANA_ROOT_URL:-https://musaium.fr/grafana/}'
+      GF_SERVER_SERVE_FROM_SUB_PATH: 'true'
+    volumes:
+      - ./obs/provisioning:/etc/grafana/provisioning:ro
+      - ./obs/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      private: {}
+      obs: {}
+      web:
+        aliases:
+          - grafana
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--spider', 'http://localhost:3000/api/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
