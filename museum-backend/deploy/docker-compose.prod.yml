@@ -244,7 +244,7 @@ services:
     restart: unless-stopped
 
   alertmanager:
-    image: prom/alertmanager:v0.27.0
+    image: prom/alertmanager:v0.32.1
     hostname: alertmanager
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
