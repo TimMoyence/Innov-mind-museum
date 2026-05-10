@@ -48,6 +48,9 @@ describe('validateEmail — fuzz (P3.4)', () => {
       ['leading @', '@example.com'],
       ['trailing @', 'user@'],
       ['only TLD', '@.com'],
+      // Trailing chars after a valid-looking email — kills the mutant that
+      // drops the `$` end-anchor on the email regex.
+      ['trailing junk after valid email', 'user@example.com extra'],
     ])('rejects %s', (_label, email) => {
       const { result } = assertCompletesWithin(() => validateEmail(email), MAX_MS, 'negative');
       expect(result).toBe(false);

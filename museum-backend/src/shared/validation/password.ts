@@ -13,7 +13,9 @@
 
 /** Result of a password validation check. */
 interface PasswordValidationResult {
+  /** True when the password passes all length checks. */
   valid: boolean;
+  /** Human-readable reason set when `valid` is false. */
   reason?: string;
 }
 

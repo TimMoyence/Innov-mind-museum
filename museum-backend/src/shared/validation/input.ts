@@ -47,6 +47,11 @@ export const validateNameField = (
     return undefined;
   }
 
+  // Stryker equivalent mutants — `value` is typed `string | undefined` and the
+  // `value == null` early-return above eliminates undefined, so the `else`
+  // branch (`String(value)`) is unreachable for typed callers and produces an
+  // identical result for valid string input.
+  // Stryker disable next-line ConditionalExpression,StringLiteral
   const str = typeof value === 'string' ? value : String(value);
   const trimmed = str.trim();
   if (trimmed.length === 0) {
