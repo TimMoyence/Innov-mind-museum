@@ -82,4 +82,42 @@ describe('requireRole middleware', () => {
     expect(body.error.message).not.toContain('admin');
     expect(body.error.message).toBe('Insufficient permissions');
   });
+
+  // super_admin = platform owner tier (see user-role.ts hierarchy).
+  // Centralized escalation so a new admin endpoint cannot lock Tim out.
+  describe('super_admin escalation', () => {
+    it('passes a requireRole(admin) check', () => {
+      const middleware = requireRole('admin');
+      const req = makePartialRequest({ user: { id: 1, role: 'super_admin' } });
+      const res = makePartialResponse();
+      const next = makeNext();
+
+      middleware(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(res.status).not.toHaveBeenCalled();
+    });
+
+    it('passes a requireRole(moderator) check', () => {
+      const middleware = requireRole('moderator');
+      const req = makePartialRequest({ user: { id: 1, role: 'super_admin' } });
+      const res = makePartialResponse();
+      const next = makeNext();
+
+      middleware(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+    });
+
+    it('passes a requireRole(museum_manager) check', () => {
+      const middleware = requireRole('museum_manager');
+      const req = makePartialRequest({ user: { id: 1, role: 'super_admin' } });
+      const res = makePartialResponse();
+      const next = makeNext();
+
+      middleware(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+    });
+  });
 });
