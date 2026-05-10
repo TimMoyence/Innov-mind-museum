@@ -1,17 +1,8 @@
 /**
- * shared/cache/resilient-cache.wrapper scope — DEDICATED follow-up scope.
+ * AUDIT-only baseline config — fallback when full baseline is too slow.
+ * 10 files, ~300-400 mutants. Should complete in ~20-30 min on M1 Pro.
  *
- * 1 file, 48 mutants. Initial run on 2026-05-10 produced 23 survivors at
- * 47.73% covered. Wrapper logic (circuit-breaker / fallback) needs more
- * fault-injection tests (timeouts, network errors, breaker-open transitions).
- * Carved out of stryker.shared-cache so that baseline could land at 100%.
- *
- * Strategy when this scope is run: extend resilient-cache-wrapper.test.ts
- * with breaker state transition cases and explicit assertions on logger
- * payloads / sentry tags fired on each fallback path.
- *
- * Usage : `pnpm stryker run stryker.shared-resilient-cache.config.mjs`
- * Optional: `STRYKER_CONCURRENCY=2 …` (default 8 local / 4 CI).
+ * Usage : `pnpm stryker run stryker/audit.config.mjs`
  */
 
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
@@ -23,12 +14,17 @@ export default {
     configFile: 'jest.config.ts',
     enableFindRelatedTests: false,
     config: {
+      // forceExit:false → enables Stryker hot-reload (~10x throughput vs
+      // spawn-per-mutant). Pre-req: no unref'd module-load timers in scope
+      // (verified: prometheus-metrics now lazy via enableDefaultMetrics).
       forceExit: false,
       projects: [
         {
           displayName: 'unit-integration',
           testEnvironment: 'node',
-          transform: { '^.+\\.tsx?$': '@swc/jest' },
+          transform: {
+            '^.+\\.tsx?$': '@swc/jest',
+          },
           moduleNameMapper: {
             '^@src/(.*)$': '<rootDir>/src/$1',
             '^@modules/(.*)$': '<rootDir>/src/modules/$1',
@@ -54,13 +50,13 @@ export default {
   incremental: true,
   incrementalFile: 'reports/stryker-incremental.json',
   appendPlugins: ['@stryker-mutator/jest-runner'],
-  mutate: ['src/shared/cache/resilient-cache.wrapper.ts'],
-  thresholds: { high: 85, low: 50, break: 50 },
+  mutate: [
+    'src/shared/audit/**/*.ts',
+    '!src/**/*.entity.ts',
+    '!src/**/*.types.ts',
+  ],
+  thresholds: { high: 85, low: 70, break: 70 },
   timeoutMS: 5000,
   timeoutFactor: 0.5,
-  concurrency: process.env.STRYKER_CONCURRENCY
-    ? Number(process.env.STRYKER_CONCURRENCY)
-    : process.env.CI === 'true'
-      ? 4
-      : 8,
+  concurrency: process.env.CI === 'true' ? 4 : 8,
 };

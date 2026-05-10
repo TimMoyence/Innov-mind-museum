@@ -1,8 +1,15 @@
 /**
- * shared-misc bundle — single-file dirs grouped to amortize Stryker boot.
- * 7 fichiers : errors, logger, media, pagination, ports, rate-limit, routers.
+ * shared/cache/memory-cache.service scope — DEDICATED follow-up scope.
  *
- * Usage : `pnpm stryker run stryker.shared-misc.config.mjs`
+ * 1 file, 99 mutants. Initial run on 2026-05-10 produced 19 survivors at
+ * 76.54% covered + 16 NoCoverage entries. Carved out of stryker.shared-cache
+ * so that baseline could land at 100%.
+ *
+ * Strategy when this scope is run: extend memory-cache tests with assertions
+ * around Date.now() boundary (TTL expiry), eviction order, and zset-based
+ * expirations.
+ *
+ * Usage : `pnpm stryker run stryker/shared-memory-cache.config.mjs`
  * Optional: `STRYKER_CONCURRENCY=2 …` (default 8 local / 4 CI).
  */
 
@@ -46,18 +53,8 @@ export default {
   incremental: true,
   incrementalFile: 'reports/stryker-incremental.json',
   appendPlugins: ['@stryker-mutator/jest-runner'],
-  mutate: [
-    'src/shared/errors/**/*.ts',
-    'src/shared/logger/**/*.ts',
-    'src/shared/media/**/*.ts',
-    'src/shared/pagination/**/*.ts',
-    'src/shared/ports/**/*.ts',
-    'src/shared/rate-limit/**/*.ts',
-    'src/shared/routers/**/*.ts',
-    '!src/**/*.entity.ts',
-    '!src/**/*.types.ts',
-  ],
-  thresholds: { high: 85, low: 70, break: 70 },
+  mutate: ['src/shared/cache/memory-cache.service.ts'],
+  thresholds: { high: 85, low: 60, break: 60 },
   timeoutMS: 5000,
   timeoutFactor: 0.5,
   concurrency: process.env.STRYKER_CONCURRENCY

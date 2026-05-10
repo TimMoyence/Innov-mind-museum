@@ -87,7 +87,7 @@ function main() {
     for (const m of missing) console.error(`  - ${m}`);
     console.error('');
     console.error(
-      'Add the file to stryker.config.mjs `mutate:` list, OR remove from .stryker-hot-files.json.',
+      'Add the file to stryker/config.mjs `mutate:` list, OR remove from .stryker-hot-files.json.',
     );
     process.exit(2);
   }

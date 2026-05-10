@@ -1,11 +1,8 @@
 /**
- * shared/validation scope — email, input, password.
- * 3 fichiers (password-breach-check.ts and zod-issue.formatter.ts carved out;
- * see stryker.shared-password-breach-check.config.mjs and
- * stryker.shared-zod-issue.config.mjs — they accumulated 14 + 8 survivors on
- * the first run, dedicated scopes keep this baseline at 100%).
+ * shared/email scope — Brevo email service + email-locale helpers + ports.
+ * 4 fichiers.
  *
- * Usage : `pnpm stryker run stryker.shared-validation.config.mjs`
+ * Usage : `pnpm stryker run stryker/shared-email.config.mjs`
  * Optional: `STRYKER_CONCURRENCY=2 …` (default 8 local / 4 CI).
  */
 
@@ -50,9 +47,7 @@ export default {
   incrementalFile: 'reports/stryker-incremental.json',
   appendPlugins: ['@stryker-mutator/jest-runner'],
   mutate: [
-    'src/shared/validation/**/*.ts',
-    '!src/shared/validation/password-breach-check.ts',
-    '!src/shared/validation/zod-issue.formatter.ts',
+    'src/shared/email/**/*.ts',
     '!src/**/*.entity.ts',
     '!src/**/*.types.ts',
   ],

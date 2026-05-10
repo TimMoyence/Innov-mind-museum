@@ -1,22 +1,10 @@
 /**
- * shared/validation/password-breach-check scope — DEDICATED follow-up scope.
+ * shared/queue scope — scheduled-jobs only (job-failure.handler.ts has no direct
+ * test → moved to no-test backlog, excluded from this scope to avoid drowning
+ * the score with NoCoverage mutants).
  *
- * 1 file (149 lignes), 79 mutants, HIBP k-anonymity client + assertPasswordNotBreached.
- * Initial run on 2026-05-10 produced 14 survivors at 81.82% covered — carved out
- * of stryker.shared-validation so that baseline could land at 100%.
- *
- * Survivor categories observed:
- *   - StringLiteral mutants on log event names ('hibp_unexpected_status', 'hibp_unavailable_failopen')
- *   - ObjectLiteral mutants on logger.warn / captureExceptionWithContext payloads
- *   - LogicalOperator mutant on `options.timeoutMs ?? DEFAULT_TIMEOUT_MS`
- *   - ConditionalExpression on `if (result.breached) throw AppError`
- *
- * Strategy when this scope is run: extend tests/unit/auth/password-breach-check.test.ts
- * with assertions on logger.warn calls (event name + meta), captureExceptionWithContext
- * payload contracts, and explicit timeoutMs override path.
- *
- * Usage : `pnpm stryker run stryker.shared-password-breach-check.config.mjs`
- * Optional: `STRYKER_CONCURRENCY=2 …` (default 8 local / 4 CI).
+ * Usage : `pnpm stryker run stryker/shared-queue.config.mjs`
+ * Optional: `STRYKER_CONCURRENCY=2 pnpm stryker run …` (default 8 local / 4 CI).
  */
 
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
@@ -33,7 +21,9 @@ export default {
         {
           displayName: 'unit-integration',
           testEnvironment: 'node',
-          transform: { '^.+\\.tsx?$': '@swc/jest' },
+          transform: {
+            '^.+\\.tsx?$': '@swc/jest',
+          },
           moduleNameMapper: {
             '^@src/(.*)$': '<rootDir>/src/$1',
             '^@modules/(.*)$': '<rootDir>/src/modules/$1',
@@ -59,7 +49,11 @@ export default {
   incremental: true,
   incrementalFile: 'reports/stryker-incremental.json',
   appendPlugins: ['@stryker-mutator/jest-runner'],
-  mutate: ['src/shared/validation/password-breach-check.ts'],
+  mutate: [
+    'src/shared/queue/scheduled-jobs.ts',
+    '!src/**/*.entity.ts',
+    '!src/**/*.types.ts',
+  ],
   thresholds: { high: 85, low: 70, break: 70 },
   timeoutMS: 5000,
   timeoutFactor: 0.5,

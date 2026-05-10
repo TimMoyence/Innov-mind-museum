@@ -1,18 +1,23 @@
 /**
- * shared/utils/string-similarity scope — DEDICATED follow-up scope.
+ * shared/http scope — small + well-tested files only.
  *
- * 1 file (202 lignes), ~161 mutants, complex algorithm (Levenshtein + Jaro-Winkler
- * variants). Initial run on 2026-05-10 produced 49 survivors at 69.57% covered —
- * carved out of stryker.shared-utils so the utils baseline could land at 100%.
+ * Mutate: overpass-cache.ts + overpass-tags.ts + wikidata-ids.ts (3 files,
+ * each with a dedicated test).
  *
- * Strategy when this scope is run:
- *   1. Categorize survivors: equivalent mutants (algorithmic equivalences) vs
- *      assertion gaps (test data not exercising the branch).
- *   2. For assertion gaps, add tests that exercise specific edge cases.
- *   3. For equivalent mutants, document via // stryker-disable-next-line
- *      with reason.
+ * Carved out (deferred to dedicated scopes — high mutant density without
+ * matching test surface or large fault-injection scope):
+ *   - nominatim.client.ts  (stryker/shared-nominatim-client.config.mjs)
+ *   - overpass.client.ts   (stryker/shared-overpass-client.config.mjs)
+ *   - overpass-constants.ts, overpass-queries.ts, overpass-transport.ts,
+ *     overpass-types.ts, requireUser.ts — bundled into
+ *     stryker/shared-http-no-test.config.mjs
  *
- * Usage : `pnpm stryker run stryker.shared-string-similarity.config.mjs`
+ * Background: a single shared-http run with all 10 files instrumented 547
+ * mutants and was killed at ~50 min after exhausting test-runner memory and
+ * still showing ~290 untested mutants. Splitting into well-bounded scopes
+ * keeps Stryker progress reliable and the cache-write lifecycle short.
+ *
+ * Usage : `pnpm stryker run stryker/shared-http.config.mjs`
  * Optional: `STRYKER_CONCURRENCY=2 …` (default 8 local / 4 CI).
  */
 
@@ -56,10 +61,12 @@ export default {
   incremental: true,
   incrementalFile: 'reports/stryker-incremental.json',
   appendPlugins: ['@stryker-mutator/jest-runner'],
-  mutate: ['src/shared/utils/string-similarity.ts'],
-  // Lower break threshold while the survivor backlog is being worked through —
-  // bumped back to 70 once <10 survivors remain.
-  thresholds: { high: 85, low: 50, break: 50 },
+  mutate: [
+    'src/shared/http/overpass-cache.ts',
+    'src/shared/http/overpass-tags.ts',
+    'src/shared/http/wikidata-ids.ts',
+  ],
+  thresholds: { high: 85, low: 70, break: 70 },
   timeoutMS: 5000,
   timeoutFactor: 0.5,
   concurrency: process.env.STRYKER_CONCURRENCY

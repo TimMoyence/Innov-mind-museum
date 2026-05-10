@@ -1,8 +1,12 @@
 /**
- * AUDIT-only baseline config — fallback when full baseline is too slow.
- * 10 files, ~300-400 mutants. Should complete in ~20-30 min on M1 Pro.
+ * shared/validation scope — email, input, password.
+ * 3 fichiers (password-breach-check.ts and zod-issue.formatter.ts carved out;
+ * see stryker/shared-password-breach-check.config.mjs and
+ * stryker/shared-zod-issue.config.mjs — they accumulated 14 + 8 survivors on
+ * the first run, dedicated scopes keep this baseline at 100%).
  *
- * Usage : `pnpm stryker run stryker.audit.config.mjs`
+ * Usage : `pnpm stryker run stryker/shared-validation.config.mjs`
+ * Optional: `STRYKER_CONCURRENCY=2 …` (default 8 local / 4 CI).
  */
 
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
@@ -14,17 +18,12 @@ export default {
     configFile: 'jest.config.ts',
     enableFindRelatedTests: false,
     config: {
-      // forceExit:false → enables Stryker hot-reload (~10x throughput vs
-      // spawn-per-mutant). Pre-req: no unref'd module-load timers in scope
-      // (verified: prometheus-metrics now lazy via enableDefaultMetrics).
       forceExit: false,
       projects: [
         {
           displayName: 'unit-integration',
           testEnvironment: 'node',
-          transform: {
-            '^.+\\.tsx?$': '@swc/jest',
-          },
+          transform: { '^.+\\.tsx?$': '@swc/jest' },
           moduleNameMapper: {
             '^@src/(.*)$': '<rootDir>/src/$1',
             '^@modules/(.*)$': '<rootDir>/src/modules/$1',
@@ -51,12 +50,18 @@ export default {
   incrementalFile: 'reports/stryker-incremental.json',
   appendPlugins: ['@stryker-mutator/jest-runner'],
   mutate: [
-    'src/shared/audit/**/*.ts',
+    'src/shared/validation/**/*.ts',
+    '!src/shared/validation/password-breach-check.ts',
+    '!src/shared/validation/zod-issue.formatter.ts',
     '!src/**/*.entity.ts',
     '!src/**/*.types.ts',
   ],
   thresholds: { high: 85, low: 70, break: 70 },
   timeoutMS: 5000,
   timeoutFactor: 0.5,
-  concurrency: process.env.CI === 'true' ? 4 : 8,
+  concurrency: process.env.STRYKER_CONCURRENCY
+    ? Number(process.env.STRYKER_CONCURRENCY)
+    : process.env.CI === 'true'
+      ? 4
+      : 8,
 };
