@@ -45,6 +45,10 @@ export class RedisCacheService implements CacheService {
   async get<T>(key: string): Promise<T | null> {
     try {
       const raw = await this.redis.get(key);
+      // Stryker equivalent mutant: removing this guard would still return null
+      // when raw is null because JSON.parse(null) -> JSON.parse('null') -> null,
+      // then `null as T` -> null. Same observable behavior.
+      // Stryker disable next-line ConditionalExpression
       if (raw === null) return null;
       return JSON.parse(raw) as T;
     } catch {

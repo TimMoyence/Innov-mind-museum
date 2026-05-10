@@ -1,3 +1,5 @@
+import RedisCtor from 'ioredis';
+
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
 
 // ── Mock ioredis ──────────────────────────────────────────────────────
@@ -19,6 +21,8 @@ jest.mock('ioredis', () => {
   };
 });
 
+const RedisCtorMock = RedisCtor as unknown as jest.Mock;
+
 // ── Tests ─────────────────────────────────────────────────────────────
 
 describe('RedisCacheService', () => {
@@ -27,6 +31,34 @@ describe('RedisCacheService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     cache = new RedisCacheService({ url: 'redis://localhost:6379', defaultTtlSeconds: 60 });
+  });
+
+  describe('constructor', () => {
+    it('passes enableReadyCheck=false + lazyConnect=true + maxRetriesPerRequest=1 to ioredis', () => {
+      const lastCall = RedisCtorMock.mock.calls.at(-1) as [string, Record<string, unknown>];
+      expect(lastCall[0]).toBe('redis://localhost:6379');
+      expect(lastCall[1]).toMatchObject({
+        enableReadyCheck: false,
+        lazyConnect: true,
+        maxRetriesPerRequest: 1,
+      });
+    });
+
+    it('threads optional password into the ioredis options when provided', () => {
+      new RedisCacheService({
+        url: 'redis://x',
+        defaultTtlSeconds: 1,
+        password: 's3cret',
+      });
+      const lastCall = RedisCtorMock.mock.calls.at(-1) as [string, Record<string, unknown>];
+      expect(lastCall[1]).toMatchObject({ password: 's3cret' });
+    });
+
+    it('omits password key when not provided (no shape mutation)', () => {
+      new RedisCacheService({ url: 'redis://nopass', defaultTtlSeconds: 1 });
+      const lastCall = RedisCtorMock.mock.calls.at(-1) as [string, Record<string, unknown>];
+      expect(lastCall[1]).not.toHaveProperty('password');
+    });
   });
 
   // ── connect / disconnect ──────────────────────────────────────────

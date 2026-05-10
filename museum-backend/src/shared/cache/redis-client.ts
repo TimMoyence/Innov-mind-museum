@@ -36,6 +36,12 @@ const parseClusterNodes = (raw: string): ClusterNode[] =>
  */
 export function createRedisClusterClient(opts?: ClusterOptions): Cluster | null {
   const raw = env.redis.clusterNodes;
+  // Stryker mutant on `if (!raw)` cannot be killed by a unit test because
+  // `env` is captured at module-load time and tests run with REDIS_CLUSTER_NODES
+  // unset (raw === null). Toggling at runtime would require a process-wide
+  // env reset, which the test suite intentionally avoids — see existing test
+  // header "env.ts caches values at module load time…".
+  // Stryker disable next-line ConditionalExpression
   if (!raw) return null;
   const nodes = parseClusterNodes(raw);
   if (nodes.length === 0) return null;
