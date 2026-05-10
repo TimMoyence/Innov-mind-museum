@@ -78,6 +78,61 @@ describe('Wikidata strict id validators (R14 / V2 / H1)', () => {
         expect(msg).not.toContain('A'.repeat(100));
       }
     });
+
+    // Kills L57:31 StringLiteral, L39 ConditionalExpression/StringLiteral,
+    // L42:10 StringLiteral mutations on the error message + describeForError.
+    it('throws with a message-anchored prefix and verbatim echo for short strings', () => {
+      expect(() => {
+        assertEntityId('Q!!!short');
+      }).toThrow(/^invalid Wikidata entity id: Q!!!short$/);
+    });
+
+    it('throws with <typeof> placeholder for non-string inputs', () => {
+      expect(() => {
+        assertEntityId(123);
+      }).toThrow(/^invalid Wikidata entity id: <number>$/);
+      expect(() => {
+        assertEntityId(null);
+      }).toThrow(/^invalid Wikidata entity id: <object>$/);
+      expect(() => {
+        assertEntityId(undefined);
+      }).toThrow(/^invalid Wikidata entity id: <undefined>$/);
+      expect(() => {
+        assertEntityId({ id: 'Q1' });
+      }).toThrow(/^invalid Wikidata entity id: <object>$/);
+    });
+
+    // Boundary: exactly 32 chars must echo verbatim (no ellipsis).
+    // Kills L40:12 EqualityOperator (> → >=).
+    it('does not truncate a 32-character string (boundary, no ellipsis)', () => {
+      const at32 = `Q!!!${'A'.repeat(28)}`; // 32 chars total
+      expect(at32).toHaveLength(32);
+      try {
+        assertEntityId(at32);
+        fail('expected throw');
+      } catch (err) {
+        const msg = (err as Error).message;
+        expect(msg).toBe(`invalid Wikidata entity id: ${at32}`);
+        expect(msg).not.toContain('…');
+      }
+    });
+
+    // 33 chars must truncate to 32 + ellipsis.
+    // Kills L40:44 StringLiteral (slice template → empty) and L40:12
+    // ConditionalExpression (length > 32 → true forces truncation regardless).
+    it('truncates a 33-character string to 32 chars plus ellipsis', () => {
+      const at33 = `Q!!!${'A'.repeat(29)}`; // 33 chars total
+      expect(at33).toHaveLength(33);
+      try {
+        assertEntityId(at33);
+        fail('expected throw');
+      } catch (err) {
+        const msg = (err as Error).message;
+        expect(msg).toBe(`invalid Wikidata entity id: ${at33.slice(0, 32)}…`);
+        expect(msg).toContain('…');
+        expect(msg).not.toContain(at33); // full 33-char string must NOT appear
+      }
+    });
   });
 
   describe('assertPropertyId', () => {
@@ -118,6 +173,16 @@ describe('Wikidata strict id validators (R14 / V2 / H1)', () => {
         assertPropertyId('P99999999');
       }).not.toThrow();
     });
+
+    // Kills L69:31 StringLiteral on the error message prefix.
+    it('throws with a message-anchored prefix', () => {
+      expect(() => {
+        assertPropertyId('PA');
+      }).toThrow(/^invalid Wikidata property id: PA$/);
+      expect(() => {
+        assertPropertyId(123);
+      }).toThrow(/^invalid Wikidata property id: <number>$/);
+    });
   });
 
   describe('assertLang', () => {
@@ -150,6 +215,16 @@ describe('Wikidata strict id validators (R14 / V2 / H1)', () => {
         assertLang('EN');
       }).not.toThrow();
     });
+
+    // Kills L84:31 StringLiteral on the error message prefix.
+    it('throws with a message-anchored prefix', () => {
+      expect(() => {
+        assertLang('engl');
+      }).toThrow(/^invalid Wikidata language tag: engl$/);
+      expect(() => {
+        assertLang(2);
+      }).toThrow(/^invalid Wikidata language tag: <number>$/);
+    });
   });
 
   describe('escapeSparqlLiteral', () => {
@@ -163,6 +238,14 @@ describe('Wikidata strict id validators (R14 / V2 / H1)', () => {
     it('throws on non-string input', () => {
       expect(() => escapeSparqlLiteral(null)).toThrow(ValidationError);
       expect(() => escapeSparqlLiteral(42 as unknown)).toThrow(ValidationError);
+    });
+
+    // Kills L104:31 StringLiteral on the error message prefix.
+    it('throws with a message-anchored prefix', () => {
+      expect(() => escapeSparqlLiteral(null)).toThrow(/^invalid SPARQL literal: <object>$/);
+      expect(() => escapeSparqlLiteral(42 as unknown)).toThrow(
+        /^invalid SPARQL literal: <number>$/,
+      );
     });
   });
 });

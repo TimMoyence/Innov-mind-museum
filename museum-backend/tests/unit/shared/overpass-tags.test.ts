@@ -60,6 +60,19 @@ describe('overpass-tags', () => {
     it('returns undefined for undefined tags', () => {
       expect(pickTag(undefined, ['phone'])).toBeUndefined();
     });
+
+    // Kills L61:18 ConditionalExpression/EqualityOperator/MethodExpression: a
+    // whitespace-only value must NOT be picked, both standalone and when
+    // followed by a real value.
+    it('skips whitespace-only values when picking', () => {
+      expect(pickTag({ phone: '   ', 'contact:phone': '+33-1' }, ['phone', 'contact:phone'])).toBe(
+        '+33-1',
+      );
+    });
+
+    it('returns undefined when every candidate is whitespace-only', () => {
+      expect(pickTag({ phone: '   ' }, ['phone'])).toBeUndefined();
+    });
   });
 
   describe('extractOptionalTags', () => {
@@ -78,6 +91,23 @@ describe('overpass-tags', () => {
 
     it('returns empty object for undefined tags', () => {
       expect(extractOptionalTags(undefined)).toEqual({});
+    });
+
+    // Kills L84:49 ConditionalExpression/EqualityOperator/MethodExpression: a
+    // whitespace-only localized description must NOT shadow a real bare value.
+    it('ignores whitespace-only localized descriptions and falls back', () => {
+      const out = extractOptionalTags({
+        'description:fr': '   ',
+        description: 'Bare description',
+      });
+      expect(out.description).toBe('Bare description');
+    });
+
+    // Kills L89:59 StringLiteral 'url' → '': the `url` fallback key MUST be used
+    // when neither website nor contact:website is set.
+    it('falls back to url tag when website/contact:website missing', () => {
+      const out = extractOptionalTags({ url: 'http://example.com' });
+      expect(out.website).toBe('http://example.com');
     });
   });
 
@@ -116,6 +146,38 @@ describe('overpass-tags', () => {
 
     it('returns null when coordinates missing on way without center', () => {
       expect(parseElement({ type: 'way', id: 4, tags: { name: 'Anonymous' } })).toBeNull();
+    });
+
+    // Kills L113 LogicalOperator (|| → &&) + ConditionalExpression mutations:
+    // each axis individually undefined must yield null, not silently coerce.
+    it('returns null when node has lat but no lon', () => {
+      expect(parseElement({ type: 'node', id: 5, lat: 48.86, tags: { name: 'X' } })).toBeNull();
+    });
+
+    it('returns null when node has lon but no lat', () => {
+      expect(parseElement({ type: 'node', id: 6, lon: 2.34, tags: { name: 'Y' } })).toBeNull();
+    });
+
+    it('returns null when way has center.lat but no center.lon', () => {
+      expect(
+        parseElement({
+          type: 'way',
+          id: 7,
+          center: { lat: 48.86 } as { lat: number; lon: number },
+          tags: { name: 'Z' },
+        }),
+      ).toBeNull();
+    });
+
+    it('returns null when way has center.lon but no center.lat', () => {
+      expect(
+        parseElement({
+          type: 'way',
+          id: 8,
+          center: { lon: 2.34 } as { lat: number; lon: number },
+          tags: { name: 'W' },
+        }),
+      ).toBeNull();
     });
   });
 });

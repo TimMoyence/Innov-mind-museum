@@ -110,6 +110,7 @@ export function shouldOverpassEarlyRefresh(entry: OverpassCacheEntry, nowMs: num
   const ttlMs = entry.ttlSeconds * 1_000;
   if (ttlMs <= 0) return false;
   const elapsedRatio = elapsedMs / ttlMs;
+  // Stryker disable next-line ConditionalExpression,EqualityOperator: removing the early-return or flipping < to <= is observationally equivalent — both paths yield false when adjustment is ≤ 0 (Math.random < non-positive always false).
   if (elapsedRatio < EARLY_REFRESH_THRESHOLD) return false;
   // eslint-disable-next-line sonarjs/pseudo-random -- non-security: TTL jitter
   return Math.random() < (elapsedRatio - EARLY_REFRESH_THRESHOLD) / (1 - EARLY_REFRESH_THRESHOLD);
