@@ -115,6 +115,7 @@ jest.mock('@modules/chat/adapters/primary/http/routes/chat.route', () => ({
 jest.mock('@modules/chat/wiring', () => ({
   getArtKeywordRepository: () => undefined,
   getArtworkKnowledgeRepo: () => undefined,
+  getCompareImageUseCase: () => undefined,
   getDescribeService: () => undefined,
   getLlmCircuitBreakerState: () => undefined,
   getUserMemoryService: () => undefined,

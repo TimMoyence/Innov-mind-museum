@@ -12,6 +12,16 @@ import { QueryFailedError } from 'typeorm/error/QueryFailedError';
 // Mocks
 // ---------------------------------------------------------------------------
 
+// Prevent dotenv.config() (called inside @src/config/env at module load) from
+// re-injecting CACHE_ENABLED + REDIS_URL from the host's .env. Without this,
+// resolveCacheService(options) at app.ts:177 instantiates a live
+// RedisCacheService that tries to connect to `redis://...redis:6379`
+// (Docker DNS hostname), `cacheService.ping()` fails, the /health route
+// reports redis='down' and the test's expected status='ok' assertion fails.
+// Mocking dotenv keeps env.cache?.enabled === false → MemoryCacheService
+// fallback → ping() returns true → redisStatus='up' → status='ok'.
+jest.mock('dotenv', () => ({ config: jest.fn() }));
+
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
@@ -20,6 +30,15 @@ jest.mock('@shared/observability/sentry', () => ({
   captureExceptionWithContext: jest.fn(),
   setupSentryExpressErrorHandler: jest.fn(),
 }));
+
+// Auto-mock bullmq: createApp transitively imports the BullMQ enrichment
+// queue adapter, and despite the comment in api.router.ts:197 about lazy
+// instantiation, the queue still resolves to ioredis on app boot when
+// REDIS_HOST=redis (Docker DNS) leaks from the host .env. Auto-mock makes
+// Queue/Worker no-op constructors so the integration test exercises the DB
+// resilience surface without requiring a reachable Redis. The dedicated
+// Redis-resilience tests live in tests/integration/cache/.
+jest.mock('bullmq');
 
 // ---------------------------------------------------------------------------
 // Helpers shared across sections

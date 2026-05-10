@@ -10,6 +10,13 @@
 
 import { validProductionEnv } from '../../helpers/config/prod-env.fixtures';
 
+// Prevent dotenv.config() (called inside @src/config/env at module load) from
+// re-injecting REDIS_*/SENTRY_DSN/etc. from the host's .env file after the
+// test sets process.env to a clean override. Without this mock, deleting
+// process.env.X then re-requiring env.ts would silently restore the host
+// value via dotenv, defeating the per-test isolation.
+jest.mock('dotenv', () => ({ config: jest.fn() }));
+
 describe('env.ts module', () => {
   const originalEnv = { ...process.env };
 

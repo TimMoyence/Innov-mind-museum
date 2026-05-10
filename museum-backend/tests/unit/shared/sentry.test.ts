@@ -5,6 +5,11 @@
  * by re-importing the module fresh. We use jest.isolateModules for this.
  */
 
+// Prevent dotenv.config() (called inside @src/config/env) from re-injecting
+// SENTRY_DSN from the host's .env after the test deletes it. The "no DSN"
+// branches assume process.env.SENTRY_DSN remains absent across the require.
+jest.mock('dotenv', () => ({ config: jest.fn() }));
+
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));

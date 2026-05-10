@@ -17,6 +17,10 @@ const mockStartSpan = jest.fn((_ctx: Record<string, unknown>, cb: (span: unknown
 );
 const mockGetDefaultIntegrations = jest.fn(() => []);
 
+// Prevent dotenv.config() (called inside @src/config/env) from re-injecting
+// SENTRY_DSN from the host's .env after the test deletes it.
+jest.mock('dotenv', () => ({ config: jest.fn() }));
+
 jest.mock('@sentry/node', () => ({
   init: mockSentryInit,
   setupExpressErrorHandler: mockSetupExpressErrorHandler,
