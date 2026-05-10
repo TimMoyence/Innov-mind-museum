@@ -20,7 +20,7 @@
 
 set -uo pipefail
 
-REPO_ROOT="/Users/Tim/Desktop/all/dev/Pro/InnovMind"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 
 # --- Force-non-trivial keywords (always require Spec Kit, regardless of mode) ---
 FORCE_REGEX='(security|auth|migration|password|token|permission|rbac|oauth|jwt|crypto|encrypt)'

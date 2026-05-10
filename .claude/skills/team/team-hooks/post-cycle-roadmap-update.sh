@@ -34,7 +34,7 @@ set -uo pipefail
 # Force C locale so awk printf "%.4f" uses '.' (not ',' on FR), needed for jq.
 export LC_ALL=C LANG=C
 
-REPO_ROOT="/Users/Tim/Desktop/all/dev/Pro/InnovMind"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 DEFAULT_THRESHOLD="0.6"
 
 # ---------------------------------------------------------------------------
