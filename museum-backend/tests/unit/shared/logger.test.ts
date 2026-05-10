@@ -89,4 +89,95 @@ describe('logger', () => {
     expect(output.message).toBe('no_context');
     // Should only have default fields, no extra context keys
   });
+
+  // Kills L13 ObjectLiteral → {}: an empty defaultFields strips every literal
+  // value out of the emitted JSON. Asserting each field by exact value (not
+  // typeof) makes the mutation observable on the first log call.
+  it('emits service="museum-backend" verbatim (not just a string-typed value)', () => {
+    logger.info('x');
+    const output = JSON.parse(logSpy.mock.calls[0][0]);
+    expect(output.service).toBe('museum-backend');
+  });
+
+  it('emits hostname matching os.hostname() exactly', () => {
+    // Lazy-require os to avoid hoisting issues; both runtime and test use the
+    // same Node binary so os.hostname() is identical.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- minimal local require, hostname is invariant across the test
+    const { hostname } = require('node:os') as typeof import('node:os');
+    logger.info('x');
+    const output = JSON.parse(logSpy.mock.calls[0][0]);
+    expect(output.hostname).toBe(hostname());
+  });
+});
+
+// Kills L13 ObjectLiteral, L14 StringLiteral, L15/L16 LogicalOperator, and
+// L16 StringLiteral mutations on the static defaultFields object by
+// re-evaluating the module under controlled process.env states.
+describe('logger defaultFields under various env states', () => {
+  /**
+   * @param env
+   * @param body
+   */
+  function withEnv(
+    env: Record<string, string | undefined>,
+    body: (out: Record<string, unknown>) => void,
+  ): void {
+    const prev = { ...process.env };
+    for (const [k, v] of Object.entries(env)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+    try {
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic re-import to re-evaluate the module-level defaultFields with the env override active
+        const fresh = require('@shared/logger/logger') as typeof import('@shared/logger/logger');
+        const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        try {
+          fresh.logger.info('probe');
+          const output = JSON.parse(spy.mock.calls[0][0] as string) as Record<string, unknown>;
+          body(output);
+        } finally {
+          spy.mockRestore();
+        }
+      });
+    } finally {
+      process.env = prev;
+    }
+  }
+
+  it('uses NODE_ENV when set', () => {
+    withEnv({ NODE_ENV: 'staging' }, (out) => {
+      expect(out.environment).toBe('staging');
+    });
+  });
+
+  it('falls back to "development" when NODE_ENV is unset', () => {
+    withEnv({ NODE_ENV: undefined }, (out) => {
+      expect(out.environment).toBe('development');
+    });
+  });
+
+  it('uses APP_VERSION when set (takes precedence over npm_package_version)', () => {
+    withEnv({ APP_VERSION: '9.9.9', npm_package_version: '7.7.7' }, (out) => {
+      expect(out.version).toBe('9.9.9');
+    });
+  });
+
+  it('falls back to npm_package_version when APP_VERSION is unset', () => {
+    withEnv({ APP_VERSION: undefined, npm_package_version: '7.7.7' }, (out) => {
+      expect(out.version).toBe('7.7.7');
+    });
+  });
+
+  it('falls back to "unknown" when neither APP_VERSION nor npm_package_version are set', () => {
+    withEnv({ APP_VERSION: undefined, npm_package_version: undefined }, (out) => {
+      expect(out.version).toBe('unknown');
+    });
+  });
+
+  it('emits service="museum-backend" even after module re-evaluation', () => {
+    withEnv({}, (out) => {
+      expect(out.service).toBe('museum-backend');
+    });
+  });
 });
