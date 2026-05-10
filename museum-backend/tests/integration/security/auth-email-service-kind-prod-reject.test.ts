@@ -122,7 +122,6 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
       wVisual: 0.7,
       wMeta: 0.3,
       fallbackVisualThreshold: 0.4,
-      compareEnabled: true,
       embeddingsCacheTtlMs: 3600000,
       encodeTimeoutMs: 3000,
     },

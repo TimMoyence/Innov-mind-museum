@@ -384,8 +384,6 @@ export interface AppEnv {
      * Default 0.4. Raise to bias precision; lower to bias recall.
      */
     fallbackVisualThreshold: number;
-    /** Master kill-switch for `/chat/compare`. When false the route returns 503. Default true. */
-    compareEnabled: boolean;
     /**
      * TTL (ms) for the in-memory + Redis embedding cache (queries dedup'd by
      * SHA256 of the input bytes). Default 1h. Raise for stable catalogs.

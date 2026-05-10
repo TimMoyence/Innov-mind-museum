@@ -27,6 +27,18 @@ import {
   makeNearestResult,
 } from '../../../helpers/chat/visual-similarity/compare.fixtures';
 
+// T9.1 — `getLangfuse()` returns null by default (no LANGFUSE_* env in tests),
+// which short-circuits all `parent?.span(...)` / `parent?.update(...)` calls in
+// the SUT. Mocking lets ONE test inject a fake trace to exercise the truthy
+// branches and keep coverage above the 75% branches threshold.
+jest.mock('@shared/observability/langfuse.client', () => ({
+  getLangfuse: jest.fn(() => null),
+}));
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- mock helper
+const { getLangfuse: mockGetLangfuse } = require('@shared/observability/langfuse.client') as {
+  getLangfuse: jest.Mock;
+};
+
 import { EncoderUnavailableError } from '@modules/chat/domain/ports/embeddings.port';
 
 import type {
@@ -309,6 +321,132 @@ describe('VisualSimilarityService.compare (T5.3 — orchestrator)', () => {
     expect(result.fallbackReason).toBe('encoder_unavailable');
     expect(repo.findNearest).not.toHaveBeenCalled();
     expect(enricher.enrichBatch).not.toHaveBeenCalled();
+  });
+
+  // T9.1 — Langfuse instrumentation, fail-open. Exercised so the truthy
+  // span / update branches stay covered (Phase 9 added ~16 such branches across
+  // happy path, cache hit, encoder unavailable, no-neighbour fallback).
+
+  /** Stand up a fake Langfuse trace + queue it for the next compare call. */
+  function armFakeLangfuse(): { fakeTrace: { span: jest.Mock; update: jest.Mock } } {
+    const fakeTrace = { span: jest.fn(), update: jest.fn() };
+    const fakeLangfuse = { trace: jest.fn().mockReturnValue(fakeTrace) };
+    mockGetLangfuse.mockReturnValueOnce(
+      fakeLangfuse as unknown as ReturnType<typeof mockGetLangfuse>,
+    );
+    return { fakeTrace };
+  }
+
+  it('T9.1 — cache hit emits the cache-hit parent update span', async () => {
+    const { fakeTrace } = armFakeLangfuse();
+    const cachedResult: CompareResult = {
+      matches: [],
+      durationMs: 4,
+      modelVersion: DEFAULT_MODEL_VERSION,
+      fallbackReason: 'no_visual_neighbor',
+    };
+    const { encoder, repo, enricher } = buildMocks();
+    const cache = makeCache({ get: jest.fn().mockResolvedValue(cachedResult) });
+    const service = new VisualSimilarityService({
+      encoder,
+      repo,
+      enricher,
+      cache,
+      weights: { wVisual: 0.7, wMeta: 0.3 },
+    });
+
+    await service.compare({ ...DEFAULT_INPUT, buffer });
+
+    expect(fakeTrace.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        output: expect.objectContaining({ cacheHit: true }),
+        metadata: expect.objectContaining({ stage: 'cache' }),
+      }),
+    );
+  });
+
+  it('T9.1 — encoder unavailable emits the encoder fallback parent update span', async () => {
+    const { fakeTrace } = armFakeLangfuse();
+    const { encoder, repo, enricher, cache } = buildMocks();
+    encoder.encode.mockRejectedValue(new EncoderUnavailableError('encoder offline'));
+    const service = new VisualSimilarityService({
+      encoder,
+      repo,
+      enricher,
+      cache,
+      weights: { wVisual: 0.7, wMeta: 0.3 },
+    });
+
+    await service.compare({ ...DEFAULT_INPUT, buffer });
+
+    expect(fakeTrace.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        output: expect.objectContaining({ fallbackReason: 'encoder_unavailable' }),
+        metadata: expect.objectContaining({
+          stage: 'encode',
+          error: 'EncoderUnavailableError',
+        }),
+      }),
+    );
+  });
+
+  it('T9.1 — empty neighbours emits the no-neighbour parent update span', async () => {
+    const { fakeTrace } = armFakeLangfuse();
+    const { encoder, repo, enricher, cache } = buildMocks([]);
+    const service = new VisualSimilarityService({
+      encoder,
+      repo,
+      enricher,
+      cache,
+      weights: { wVisual: 0.7, wMeta: 0.3 },
+    });
+
+    await service.compare({ ...DEFAULT_INPUT, buffer });
+
+    expect(fakeTrace.span).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'chat.compare.search' }),
+    );
+    expect(fakeTrace.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        output: expect.objectContaining({ fallbackReason: 'no_visual_neighbor' }),
+        metadata: expect.objectContaining({ stage: 'search' }),
+      }),
+    );
+  });
+
+  it('T9.1 — emits parent + per-stage Langfuse spans when Langfuse is enabled', async () => {
+    const fakeTrace = { span: jest.fn(), update: jest.fn() };
+    const fakeLangfuse = { trace: jest.fn().mockReturnValue(fakeTrace) };
+    mockGetLangfuse.mockReturnValueOnce(fakeLangfuse as unknown as ReturnType<typeof mockGetLangfuse>);
+
+    const { encoder, repo, enricher, cache } = buildMocks();
+    const service = new VisualSimilarityService({
+      encoder,
+      repo,
+      enricher,
+      cache,
+      weights: { wVisual: 0.7, wMeta: 0.3 },
+    });
+
+    await service.compare({ ...DEFAULT_INPUT, buffer });
+
+    expect(fakeLangfuse.trace).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'chat.compare.total' }),
+    );
+    // 4 stage spans expected on the happy path: encode, search, enrich, fusion.
+    const spanNames = fakeTrace.span.mock.calls.map((call) => call[0].name);
+    expect(spanNames).toEqual([
+      'chat.compare.encode',
+      'chat.compare.search',
+      'chat.compare.enrich',
+      'chat.compare.fusion',
+    ]);
+    // Final parent update fires with `stage: complete`.
+    expect(fakeTrace.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({ stage: 'complete' }),
+      }),
+    );
   });
 
   it('cache hit — second call with identical buffer skips encoder + repo + enricher', async () => {

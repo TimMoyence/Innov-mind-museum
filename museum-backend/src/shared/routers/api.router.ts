@@ -12,6 +12,7 @@ import {
   getArtKeywordRepository,
   getArtworkKnowledgeRepo,
   getCompareImageUseCase,
+  getCompareSessionAccessVerifier,
   getDescribeService,
   getLlmCircuitBreakerState,
   getUserMemoryService,
@@ -240,6 +241,7 @@ function mountDomainRouters(
       getUserMemoryService(),
       getDescribeService(),
       getCompareImageUseCase(),
+      getCompareSessionAccessVerifier(),
     ),
   );
   router.use('/auth/consent', consentRouter);

@@ -49,3 +49,14 @@ export const getArtworkKnowledgeRepo = (): ArtworkKnowledgeRepoPort | undefined 
  */
 export const getCompareImageUseCase = (): BuiltChatModule['compareImageUseCase'] =>
   getActiveChatModule().isBuilt() ? getActiveChatModule().getBuilt().compareImageUseCase : undefined;
+
+/**
+ * C3 — runtime accessor for the session-ownership verifier paired with the
+ * compare use-case. Mirrors `getCompareImageUseCase()`. Returns `undefined`
+ * when the module is not built (boot-order tolerance), in which case the
+ * compare router is not mounted at all (so the verifier is not consulted).
+ */
+export const getCompareSessionAccessVerifier = (): BuiltChatModule['compareSessionAccessVerifier'] =>
+  getActiveChatModule().isBuilt()
+    ? getActiveChatModule().getBuilt().compareSessionAccessVerifier
+    : undefined;

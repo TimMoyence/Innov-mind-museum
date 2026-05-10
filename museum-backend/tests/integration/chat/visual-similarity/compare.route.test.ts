@@ -62,6 +62,13 @@ interface CompareRouterDeps {
    * unavailable'` into a 503 response.
    */
   compareImageUseCase: (input: CompareUseCaseInput) => Promise<CompareResult>;
+  /**
+   * Session-ownership verifier piped from the composition root. Required by
+   * the compare router (security 2026-05-10 BLOCKER). The test default is a
+   * no-op that resolves — individual cases override it to assert it is
+   * invoked, or to make it throw a 404 to exercise the negative path.
+   */
+  verifySessionAccess: (sessionId: string, ownerId: number | undefined) => Promise<void>;
   /** Optional shared upload-admission middleware (concurrency limiter). */
   uploadAdmission?: RequestHandler;
 }
@@ -90,11 +97,16 @@ const VALID_SESSION_ID = '8c7b1e0a-3f4d-4e21-9b6a-1c2d3e4f5a6b';
  * @param deps - Router dependencies — the compare use-case spy + optional admission middleware.
  * @returns A configured Express app ready for `supertest`.
  */
-function buildApp(deps: CompareRouterDeps): Express {
+function buildApp(deps: Omit<CompareRouterDeps, 'verifySessionAccess'> & {
+  verifySessionAccess?: CompareRouterDeps['verifySessionAccess'];
+}): Express {
   const app = express();
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
-  app.use('/chat', createCompareRouter(deps));
+  // No-op verifier by default — individual cases override to exercise the
+  // negative path (404 on ownership mismatch).
+  const verifySessionAccess = deps.verifySessionAccess ?? (async () => undefined);
+  app.use('/chat', createCompareRouter({ ...deps, verifySessionAccess }));
   app.use(errorHandler);
   return app;
 }
@@ -148,6 +160,53 @@ describe('POST /chat/compare (T6.2 — route integration)', () => {
     expect(res.body.matches.length).toBeGreaterThan(0);
     expect(typeof res.body.modelVersion).toBe('string');
     expect(typeof res.body.durationMs).toBe('number');
+  });
+
+  // ── Security: session-ownership invariant (2026-05-10 BLOCKER fix) ────
+
+  it('SEC — invokes verifySessionAccess with the parsed sessionId + authenticated ownerId', async () => {
+    const compareImageUseCase = buildHappyUseCase();
+    const verifySessionAccess = jest.fn(async () => undefined);
+    const app = buildApp({ compareImageUseCase, verifySessionAccess });
+
+    const res = await request(app)
+      .post('/chat/compare')
+      .set('Authorization', `Bearer ${userToken()}`)
+      .field('sessionId', VALID_SESSION_ID)
+      .field('topK', '5')
+      .field('locale', 'en')
+      .attach('image', imageBuffer, { filename: 'fixture.jpg', contentType: 'image/jpeg' });
+
+    expect(res.status).toBe(200);
+    expect(verifySessionAccess).toHaveBeenCalledTimes(1);
+    const [sessionId, ownerId] = verifySessionAccess.mock.calls[0] as unknown as [string, number | undefined];
+    expect(sessionId).toBe(VALID_SESSION_ID);
+    expect(typeof ownerId).toBe('number');
+  });
+
+  it('SEC — propagates 404 when verifySessionAccess throws (cross-tenant write rejected)', async () => {
+    const compareImageUseCase = buildHappyUseCase();
+    const { notFound } = require('@shared/errors/app.error') as {
+      notFound: (msg: string) => Error;
+    };
+    const verifySessionAccess = jest.fn(async () => {
+      throw notFound('Chat session not found');
+    });
+    const app = buildApp({ compareImageUseCase, verifySessionAccess });
+
+    const res = await request(app)
+      .post('/chat/compare')
+      .set('Authorization', `Bearer ${userToken()}`)
+      .field('sessionId', VALID_SESSION_ID)
+      .field('topK', '5')
+      .field('locale', 'en')
+      .attach('image', imageBuffer, { filename: 'fixture.jpg', contentType: 'image/jpeg' });
+
+    expect(res.status).toBe(404);
+    expect(verifySessionAccess).toHaveBeenCalledTimes(1);
+    // Use-case must NOT run when the ownership check fails — otherwise we'd
+    // burn the encoder + pgvector budget for a request that's about to be rejected.
+    expect(compareImageUseCase).not.toHaveBeenCalled();
   });
 
   it('200 — calls the compareImageUseCase exactly once with the parsed body + multer buffer', async () => {

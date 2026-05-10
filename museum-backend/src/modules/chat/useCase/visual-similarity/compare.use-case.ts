@@ -39,6 +39,10 @@
  * `chat.service.ts` from this T5.4 task.
  */
 
+import { createHash } from 'node:crypto';
+
+import { logger } from '@shared/logger/logger';
+
 import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
 
 /**
@@ -146,6 +150,16 @@ export function compareImageUseCase(
   const { imageProcessor, similarityService, chatService } = deps;
 
   return async function runCompare(input: CompareUseCaseInput): Promise<CompareResult> {
+    const startedAt = Date.now();
+    // R14 audit log — the image hash is precomputed BEFORE the processor runs
+    // so the audit trail keys on the bytes the user actually submitted (not
+    // the post-EXIF-strip buffer, which would diverge on every re-upload of
+    // the same photo with different EXIF). Hashing once up front also avoids
+    // the cost on the encoder cache-hit path. SHA-256 is overkill for a log
+    // dedup key but matches the cache-key hash function so an operator can
+    // grep the audit log by the same hex digest the cache uses.
+    const queryEmbeddingHash = createHash('sha256').update(input.buffer).digest('hex');
+
     // 1) Re-use the shared image processing pipeline (R12). Any failure here
     //    aborts the request — the user message was rejected, so no assistant
     //    turn is persisted.
@@ -174,6 +188,18 @@ export function compareImageUseCase(
     //    Other fallback reasons (`no_visual_neighbor`, `quota_exceeded`)
     //    DO persist below so the FE empty-result UX has a stable record.
     if (result.fallbackReason === 'encoder_unavailable') {
+      // R14 audit log even on the no-persist path — operators need to see the
+      // outage hit per session (not just the aggregate Prom counter). No
+      // matchesCount field because the result is empty by contract.
+      logger.info('compare_request', {
+        sessionId: input.sessionId,
+        userId: input.ownerId ?? null,
+        queryEmbeddingHash,
+        topK: input.topK,
+        locale: input.locale,
+        durationMs: Date.now() - startedAt,
+        fallbackReason: 'encoder_unavailable',
+      });
       return result;
     }
 
@@ -191,6 +217,23 @@ export function compareImageUseCase(
     await chatService.appendAssistantMessage({
       sessionId: input.sessionId,
       metadata,
+    });
+
+    // R14 audit log — emit AFTER persistence so the message id is on the
+    // conversation row by the time an operator searches the log. Fields
+    // mirror spec.md R14 verbatim ({userId|guest, sessionId, queryEmbeddingHash,
+    // topK, durationMs}) plus matchesCount + fallbackReason for triage.
+    logger.info('compare_request', {
+      sessionId: input.sessionId,
+      userId: input.ownerId ?? null,
+      queryEmbeddingHash,
+      topK: input.topK,
+      locale: input.locale,
+      durationMs: Date.now() - startedAt,
+      matchesCount: result.matches.length,
+      ...(result.fallbackReason !== undefined
+        ? { fallbackReason: result.fallbackReason }
+        : {}),
     });
 
     return result;

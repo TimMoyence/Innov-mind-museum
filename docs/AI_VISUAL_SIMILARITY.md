@@ -1,0 +1,109 @@
+# AI Visual Similarity (C3) — Operational doc
+
+End-to-end runbook for the `/api/chat/compare` pipeline. ADR-037 captures the architectural decisions; this doc is what oncall reads at 03:00.
+
+## Pipeline overview
+
+`POST /api/chat/compare` (multipart) → `museum-backend/src/modules/chat/useCase/visual-similarity/similarity.service.ts#compare()` runs:
+
+1. **Cache lookup** — Redis, key = `visual-similarity:compare:v1:{locale}:{topK}:{sortedMuseumQids},{sha256(buffer)}`. TTL 1 h.
+2. **Encode** — SigLIP `siglip-base-patch16-224@onnx-fp16`, ONNX Runtime CPU. Output L2-normalised float32(768).
+3. **kNN search** — `artwork_embeddings` table, pgvector `halfvec(768)` cosine, IVFFlat index. `topN = max(20, 4 * topK)`.
+4. **Enrich** — Wikidata SPARQL batch (one HTTP per locale, qids deduplicated). Drop candidates without resolved facts (UFR-013).
+5. **Score + fuse** — `finalScore = 0.7 * visualScore + 0.3 * metadataScore`. V1 metadataScore = 0 (no query facts).
+6. **Sort + truncate** to `topK`.
+7. **Cache write** — best-effort, Redis outage logged + swallowed.
+
+Frontend glue: `museum-frontend/features/chat/application/useCompareImage.ts` (React Query mutation), rendered by `museum-frontend/features/chat/ui/ImageCompareCarousel.tsx` inside `ChatMessageBubble.tsx`.
+
+## Environment variables
+
+| Name | Default | Purpose |
+|---|---|---|
+| `SIGLIP_ONNX_MODEL_PATH` | `models/siglip-base-patch16-224.onnx` | Path to the ONNX model file (loaded once at process start). |
+| `SIGLIP_ONNX_PROVIDER` | `cpu` | Execution provider. `cuda` requires GPU + driver — V1 ships CPU-only. |
+| `WIKIDATA_SPARQL_ENDPOINT` | `https://query.wikidata.org/sparql` | Public Wikidata endpoint. Self-hosted mirror configurable. |
+| `VISUAL_COMPARE_CACHE_TTL_SECONDS` | `3600` | Redis result-cache TTL. |
+| `SMOKE_COMPARE_ENABLED` | `"true"` | Whether `pnpm smoke:api` exercises `/api/chat/compare`. Disable only in legitimate degraded-environment runs. |
+
+## CLI usage
+
+### Catalogue ingestion
+
+```bash
+cd museum-backend
+pnpm tsx scripts/catalog-ingest.ts \
+  --museum-qid Q19675 \
+  --concurrency 4 \
+  --batch-size 20
+```
+
+Pipes Wikidata SPARQL → license filter (PD + CC-0 V1 only) → polite per-hostname downloader (1 req/s) → SigLIP encode → `artwork_embeddings.upsertBatch`.
+
+`--dry-run` skips encode + upsert but still tallies `totalSeen` / `licenseRejected`.
+
+### Smoke test
+
+```bash
+SMOKE_API_BASE_URL=https://api.musaium.com \
+SMOKE_TEST_EMAIL=... SMOKE_TEST_PASSWORD=... \
+pnpm smoke:api
+```
+
+Posts a synthetic 1×1 PNG to `/api/chat/compare` and asserts contractual response (`200` + `matches[]` + `modelVersion`, OR `503` + `error.code = COMPARE_ENCODER_UNAVAILABLE`).
+
+### Maestro nightly
+
+```
+museum-frontend/.maestro/chat-compare.yaml
+```
+
+Validates the visitor-facing flow on a real device. Fixture image: `museum-frontend/.maestro/fixtures/test-artwork.jpg` (uploaded by the CI nightly job).
+
+## Runbook — failure modes
+
+### `compare_encoder_unavailable_total > 5/5min` (Sentry alert)
+
+1. Check oncall Grafana panel "Encoder unavailability rate" (`infra/grafana/dashboards/visual-compare.json`).
+2. SSH to the BE host. `docker logs musaium-backend | grep -i "encoder"` — usual suspects:
+   - ONNX Runtime crashed → restart container.
+   - Model file missing / corrupted → re-run the model deploy step.
+   - CPU saturation (AVX2 throttled) → scale up.
+3. While debugging, the `/api/chat/compare` endpoint returns `503` with the contractual fallback envelope. The FE shows `chat.compare.error.unavailable`. **No outage on the rest of chat** — only compare degrades.
+4. Long-term fallback (V1.1): wire Replicate hosted-SigLIP. Estimated cost ~90 USD/month at 1 k/day.
+
+### `compare p95 > 3s sur 10min` (Sentry alert)
+
+1. Open the Langfuse `chat.compare.total` traces — sort by latency desc.
+2. Check the per-stage spans (`chat.compare.{encode,search,enrich,fusion}`):
+   - **encode** dominant → CPU saturation or model not warm. Restart, then check AVX2 baseline.
+   - **search** dominant → catalog grew past IVFFlat sweet spot. `REINDEX INDEX artwork_embeddings_vector_idx` with a higher `lists` parameter.
+   - **enrich** dominant → Wikidata SPARQL slowdown. Check `query.wikidata.org` status, fall back to a self-hosted mirror.
+   - **fusion** dominant → unlikely (pure CPU sort), check for unexpected GC pauses.
+
+### `recall@5 < 0.85` on fixture set
+
+1. Run the recall regression test locally (T7.4 — currently `skipped`, opt-in via `RECALL_REGRESSION=true pnpm test`).
+2. If the IVFFlat index was rebuilt with too few `lists` for catalogue size, `REINDEX` with `lists = sqrt(rowcount)`.
+3. If a new model version was deployed, re-encode the catalogue: drop + re-run `scripts/catalog-ingest.ts --reset`.
+
+### `artwork_embeddings_count < 9000` (Sentry alert — T9.5)
+
+The catalogue is missing rows. Check:
+1. `scripts/catalog-ingest.ts` last run logs in CI — was there a SPARQL outage?
+2. `SELECT count(*) FROM artwork_embeddings WHERE model_version = '<current>'` — confirm a model-version mismatch hasn't shadow-rejected a chunk.
+3. Re-run ingestion with `--museum-qid <missing>` to top up.
+
+## Monitoring
+
+- **Grafana dashboard**: `infra/grafana/dashboards/visual-compare.json` (UID `visual-compare`). Panels: end-to-end p50/p95/p99, throughput by status, encoder unavailability rate, error rate split 5xx/4xx.
+- **Langfuse traces**: `chat.compare.total` parent + 4 child stage spans. Drill in via the Langfuse UI for per-request forensics.
+- **Sentry alerts** (T9.5 — pending ops action): see the Sentry alert rules referenced by ADR-037.
+
+## Known limitations (V1)
+
+- **No per-stage Prometheus histograms.** Per-stage observability is Langfuse-only today. Add `compare_stage_duration_seconds_bucket{stage="..."}` to surface in Grafana.
+- **No catalog-count gauge job (T9.2).** The `artwork_embeddings` row count is not currently emitted as a Prometheus gauge. Workaround: query Postgres directly when investigating an alert.
+- **Maestro fixture pending.** The nightly flow expects `museum-frontend/.maestro/fixtures/test-artwork.jpg`; the fixture is added by a follow-up CI iteration.
+- **Empty `metadataScore` in V1.** No query-side enrichment yet — `finalScore` collapses to `wVisual * visualScore`. V2 introduces query-facts resolution.
+- **Single encoder.** No Replicate fallback in V1. Encoder downtime → `503` contractual envelope.

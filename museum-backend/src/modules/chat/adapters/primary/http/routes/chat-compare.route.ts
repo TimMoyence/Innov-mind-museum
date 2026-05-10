@@ -33,7 +33,14 @@ import {
   compareInvalidTopK,
 } from '@shared/errors/app.error';
 import { formatZodIssues } from '@shared/validation/zod-issue.formatter';
+import { env } from '@src/config/env';
 import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
+import { dailyChatLimit } from '@src/helpers/middleware/daily-chat-limit.middleware';
+import {
+  bySession,
+  byUserId,
+  createRateLimitMiddleware,
+} from '@src/helpers/middleware/rate-limit.middleware';
 
 import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
 import type { Request, Response, RequestHandler } from 'express';
@@ -70,6 +77,17 @@ export interface CompareRouterDeps {
   compareImageUseCase: (input: CompareUseCaseInput) => Promise<CompareResult>;
   /** Optional shared upload-admission middleware (concurrency limiter). */
   uploadAdmission?: RequestHandler;
+  /**
+   * Verify that the authenticated user owns the target chat session BEFORE the
+   * use-case runs. Mirrors the `ensureSessionAccess()` invariant on every other
+   * chat write path (`chat-session.service.ts:170,291`). Wired by the
+   * composition root from the chat repository; throws `404 Chat session not
+   * found` on UUID parse failure or ownership mismatch (parity with the rest
+   * of the chat surface). Required field — making it optional invites the
+   * exact cross-tenant write bug the security review surfaced
+   * (2026-05-10 BLOCKER).
+   */
+  verifySessionAccess: (sessionId: string, ownerId: number | undefined) => Promise<void>;
 }
 
 /**
@@ -209,6 +227,13 @@ function createCompareHandler(deps: CompareRouterDeps) {
     const locale = resolveLocale(body.locale, req);
     const ownerId = (req as Request & { user?: { id?: number } }).user?.id;
 
+    // Authorization — verify the authenticated user owns the target session.
+    // Mirrors `ensureSessionAccess()` on every other chat write path. Throws
+    // 400 (bad UUID) or 404 (not found / not owned) — parity with the rest of
+    // the chat surface (security BLOCKER 2026-05-10: without this guard,
+    // user A could append assistant messages to user B's session).
+    await deps.verifySessionAccess(body.sessionId, ownerId);
+
     const mimeType = req.file.mimetype as CompareUseCaseInput['mimeType'];
 
     const useCaseInput: CompareUseCaseInput = {
@@ -254,9 +279,30 @@ function createCompareHandler(deps: CompareRouterDeps) {
 export const createCompareRouter = (deps: CompareRouterDeps): Router => {
   const router = Router();
 
+  // Rate limiting — mirrors `chat-message.route.ts:168-191`. Compare is
+  // encoder + DB + Wikidata-bound (much more expensive than a plain message),
+  // so reusing the same per-user / per-session windows is a reasonable
+  // floor. Stricter compare-specific limits are a follow-up if the
+  // production traffic profile warrants. Without these, an authenticated
+  // attacker could hammer the route at line speed (security BLOCKER
+  // 2026-05-10: cache thrashing + encoder saturation).
+  const sessionLimiter = createRateLimitMiddleware({
+    limit: env.rateLimit.sessionLimit,
+    windowMs: env.rateLimit.windowMs,
+    keyGenerator: bySession,
+  });
+  const userLimiter = createRateLimitMiddleware({
+    limit: env.rateLimit.userLimit,
+    windowMs: env.rateLimit.windowMs,
+    keyGenerator: byUserId,
+  });
+
   router.post(
     '/compare',
     isAuthenticated,
+    dailyChatLimit,
+    userLimiter,
+    sessionLimiter,
     ...(deps.uploadAdmission ? [deps.uploadAdmission] : []),
     upload.single('image'),
     createCompareHandler(deps),

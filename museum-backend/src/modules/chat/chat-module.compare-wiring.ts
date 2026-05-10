@@ -33,6 +33,7 @@ import { SharpImageProcessor } from '@modules/chat/adapters/secondary/image/imag
 import { ArtworkEmbeddingRepositoryPg } from '@modules/chat/adapters/secondary/persistence/artwork-embedding.repository.pg';
 import { WikidataClient } from '@modules/chat/adapters/secondary/search/wikidata.client';
 import { ImageProcessingService as ImageProcessingPipelineService } from '@modules/chat/useCase/image/image-processing.service';
+import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
 import { compareImageUseCase as createCompareImageUseCase } from '@modules/chat/useCase/visual-similarity/compare.use-case';
 import { VisualSimilarityService } from '@modules/chat/useCase/visual-similarity/similarity.service';
 import { WikidataEnricher } from '@modules/chat/useCase/visual-similarity/wikidata-enricher';
@@ -175,4 +176,25 @@ export function buildCompareImageUseCase(
     similarityService: visualSimilarityService,
     chatService: buildCompareChatPersistence(repository),
   });
+}
+
+/**
+ * Build the `verifySessionAccess` callback consumed by the compare router.
+ *
+ * Closes over the chat repository so the route does not need to know about
+ * persistence wiring. The check raises:
+ *   - 400 when `sessionId` is not a valid UUID,
+ *   - 404 when the session does not exist OR is not owned by `ownerId`
+ *     (parity with `chat-session.service.ts:170,291`).
+ *
+ * Mirroring the existing `ensureSessionAccess()` invariant on every other
+ * chat write path closes the cross-tenant write the security review surfaced
+ * on 2026-05-10 (BLOCKER).
+ */
+export function buildCompareSessionAccessVerifier(
+  repository: TypeOrmChatRepository,
+): (sessionId: string, ownerId: number | undefined) => Promise<void> {
+  return async (sessionId, ownerId) => {
+    await ensureSessionAccess(sessionId, repository, ownerId);
+  };
 }

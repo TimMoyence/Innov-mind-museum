@@ -41,6 +41,14 @@ import { createHash } from 'node:crypto';
 
 import { EncoderUnavailableError } from '@modules/chat/domain/ports/embeddings.port';
 import { logger } from '@shared/logger/logger';
+import { getLangfuse } from '@shared/observability/langfuse.client';
+import {
+  compareCacheHitsTotal,
+  compareDurationSeconds,
+  compareFallbackTotal,
+  compareRequestsTotal,
+} from '@shared/observability/prometheus-metrics';
+import { safeTrace } from '@shared/observability/safeTrace';
 
 import { templateRationale, type SharedAttribute } from './rationale-templater';
 import { computeMetadataScore, fuse } from './similarity-scoring';
@@ -117,6 +125,57 @@ export interface CompareInput {
   locale: 'fr' | 'en';
   /** Optional museum-scope filter forwarded to the kNN search. */
   museumQids?: string[];
+}
+
+/**
+ * Narrow structural shape of the parent Langfuse trace surface the service
+ * consumes. Decouples from the SDK type so the file does not require the
+ * full `Langfuse` typings on every call site (and stays mockable in tests).
+ */
+interface VisualCompareTrace {
+  span(args: {
+    name: string;
+    startTime?: Date;
+    endTime?: Date;
+    metadata?: Record<string, unknown>;
+  }): unknown;
+  update(args: { output?: unknown; metadata?: Record<string, unknown> }): void;
+}
+
+/**
+ * Records a child stage span on the parent trace AND the per-stage Prometheus
+ * histogram. Both fail-open so a Langfuse / Prom-registry outage never breaks
+ * the chat path.
+ */
+function recordStageSpan(
+  parent: VisualCompareTrace | undefined,
+  name: string,
+  startMs: number,
+  metadata: Record<string, unknown>,
+): void {
+  const durationSec = (Date.now() - startMs) / 1000;
+  safeTrace(`visualSimilarity.span.${name}`, () => {
+    parent?.span({
+      name: `chat.compare.${name}`,
+      startTime: new Date(startMs),
+      endTime: new Date(),
+      metadata: { ...metadata, durationMs: Date.now() - startMs },
+    });
+  });
+  safeTrace(`visualSimilarity.metric.${name}`, () => {
+    compareDurationSeconds.observe({ stage: name }, durationSec);
+  });
+}
+
+/** Updates the parent trace with a final output + metadata, fail-open. */
+function updateParentTrace(
+  parent: VisualCompareTrace | undefined,
+  output: Record<string, unknown>,
+  metadata: Record<string, unknown>,
+): void {
+  safeTrace('visualSimilarity.span.update', () => {
+    parent?.update({ output, metadata });
+  });
 }
 
 /**
@@ -245,52 +304,33 @@ export class VisualSimilarityService {
     const topK = input.topK > 0 ? input.topK : this.defaultTopK;
     const cacheKey = resultCacheKey({ ...input, topK });
 
-    // 1) Cache short-circuit — fail-soft on cache errors, fall through to the
-    //    full pipeline. We never let a cache outage break the API contract.
-    try {
-      const cached = await this.cache.get<CompareResult>(cacheKey);
-      if (cached !== null) {
-        return cached;
-      }
-    } catch (err) {
-      logger.warn('visual_similarity_cache_get_error', {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
+    // §10 NFR — total throughput counter. Increment exactly once per compare
+    // call (post-rate-limit, post-auth: this is the use-case entry point).
+    safeTrace('visualSimilarity.metric.requests', () => {
+      compareRequestsTotal.inc();
+    });
 
-    // 2) Encode — translate the EncoderUnavailableError into the contract
-    //    fallback so the HTTP adapter can map cleanly to a 503.
-    let vector: Float32Array;
-    let modelVersion: string;
-    try {
-      const encoded = await this.encoder.encode({
-        buffer: input.buffer,
-        mimeType: input.mimeType,
-      });
-      vector = encoded.vector;
-      modelVersion = encoded.modelVersion;
-    } catch (err) {
-      if (err instanceof EncoderUnavailableError) {
-        logger.warn('visual_similarity_encoder_unavailable', {
-          error: err.message,
-        });
-        return {
-          matches: [],
-          durationMs: Date.now() - startedAt,
-          modelVersion: '',
-          fallbackReason: 'encoder_unavailable',
-        };
-      }
-      throw err;
-    }
+    // T9.1 — open the parent Langfuse span for the whole compare op. Every
+    // stage opens a child span via the `recordStageSpan` helper, all fail-open.
+    const parentSpan = this.openParentSpan(input, topK);
 
-    // 3) kNN search.
+    const cacheHit = await this.tryCache(cacheKey, parentSpan, startedAt);
+    if (cacheHit !== undefined) return cacheHit;
+
+    const encoded = await this.encodeOrFallback(input, parentSpan, startedAt);
+    if ('fallback' in encoded) return encoded.fallback;
+    const { vector, modelVersion } = encoded;
+
+    const searchStart = Date.now();
     const topN = resolveTopN(topK, this.topNOverride);
     const findOpts =
       input.museumQids !== undefined ? { museumQids: input.museumQids } : undefined;
     const neighbours = await this.repo.findNearest(vector, topN, findOpts);
+    recordStageSpan(parentSpan, 'search', searchStart, {
+      topN,
+      neighboursCount: neighbours.length,
+    });
 
-    // 4) Empty neighbour set → contractual fallback.
     if (neighbours.length === 0) {
       const result: CompareResult = {
         matches: [],
@@ -298,39 +338,185 @@ export class VisualSimilarityService {
         modelVersion,
         fallbackReason: 'no_visual_neighbor',
       };
+      updateParentTrace(
+        parentSpan,
+        { fallbackReason: 'no_visual_neighbor' },
+        { stage: 'search', durationMs: result.durationMs },
+      );
+      safeTrace('visualSimilarity.metric.fallback_no_neighbor', () => {
+        compareFallbackTotal.inc({ reason: 'no_visual_neighbor' });
+        compareDurationSeconds.observe({ stage: 'total' }, result.durationMs / 1000);
+      });
       await this.writeCache(cacheKey, result);
       return result;
     }
 
-    // 5) Enrich the candidate list with verified Wikidata facts. Candidates
-    //    that do not resolve are dropped (UFR-013: never fabricate facts).
+    const enrichStart = Date.now();
     const qids = neighbours.map((n) => n.qid);
     const factsByQid = await this.enricher.enrichBatch(qids, input.locale);
+    recordStageSpan(parentSpan, 'enrich', enrichStart, {
+      requestedQids: qids.length,
+      resolvedQids: factsByQid.size,
+      droppedCount: qids.length - factsByQid.size,
+    });
 
-    // 6) Score + fuse + template — collect into intermediate `CompareMatch[]`.
+    const result = this.scoreAndPackage({
+      neighbours,
+      factsByQid,
+      locale: input.locale,
+      topK,
+      modelVersion,
+      startedAt,
+      parentSpan,
+    });
+
+    updateParentTrace(
+      parentSpan,
+      {
+        matchesCount: result.matches.length,
+        fallbackReason: result.fallbackReason ?? null,
+      },
+      { stage: 'complete', durationMs: result.durationMs },
+    );
+    safeTrace('visualSimilarity.metric.total', () => {
+      compareDurationSeconds.observe({ stage: 'total' }, result.durationMs / 1000);
+    });
+
+    await this.writeCache(cacheKey, result);
+    return result;
+  }
+
+  /** Opens the parent Langfuse trace for one compare call. */
+  private openParentSpan(input: CompareInput, topK: number): VisualCompareTrace | undefined {
+    const lf = getLangfuse();
+    return safeTrace(
+      'visualSimilarity.span.create',
+      () =>
+        lf?.trace({
+          name: 'chat.compare.total',
+          metadata: {
+            topK,
+            locale: input.locale,
+            mimeType: input.mimeType,
+            museumQidsCount: input.museumQids?.length ?? 0,
+          },
+        }) as VisualCompareTrace | undefined,
+    );
+  }
+
+  /** Returns the cached result if present, else `undefined`. */
+  private async tryCache(
+    cacheKey: string,
+    parentSpan: VisualCompareTrace | undefined,
+    startedAt: number,
+  ): Promise<CompareResult | undefined> {
+    try {
+      const cached = await this.cache.get<CompareResult>(cacheKey);
+      if (cached !== null) {
+        updateParentTrace(
+          parentSpan,
+          { cacheHit: true, matchesCount: cached.matches.length },
+          { stage: 'cache', durationMs: Date.now() - startedAt },
+        );
+        safeTrace('visualSimilarity.metric.cache_hit', () => {
+          compareCacheHitsTotal.inc();
+          compareDurationSeconds.observe(
+            { stage: 'total' },
+            (Date.now() - startedAt) / 1000,
+          );
+        });
+        return cached;
+      }
+    } catch (err) {
+      logger.warn('visual_similarity_cache_get_error', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return undefined;
+  }
+
+  /**
+   * Encodes the input image, returning the vector + modelVersion or — on
+   * `EncoderUnavailableError` — the contractual fallback `CompareResult`
+   * wrapped in a `{ fallback }` discriminator.
+   */
+  private async encodeOrFallback(
+    input: CompareInput,
+    parentSpan: VisualCompareTrace | undefined,
+    startedAt: number,
+  ): Promise<
+    | { vector: Float32Array; modelVersion: string }
+    | { fallback: CompareResult }
+  > {
+    const encodeStart = Date.now();
+    try {
+      const encoded = await this.encoder.encode({
+        buffer: input.buffer,
+        mimeType: input.mimeType,
+      });
+      recordStageSpan(parentSpan, 'encode', encodeStart, {
+        modelVersion: encoded.modelVersion,
+      });
+      return { vector: encoded.vector, modelVersion: encoded.modelVersion };
+    } catch (err) {
+      if (!(err instanceof EncoderUnavailableError)) throw err;
+      logger.warn('visual_similarity_encoder_unavailable', { error: err.message });
+      updateParentTrace(
+        parentSpan,
+        { fallbackReason: 'encoder_unavailable' },
+        {
+          stage: 'encode',
+          durationMs: Date.now() - startedAt,
+          error: 'EncoderUnavailableError',
+        },
+      );
+      safeTrace('visualSimilarity.metric.fallback_encoder', () => {
+        compareFallbackTotal.inc({ reason: 'encoder_unavailable' });
+        compareDurationSeconds.observe(
+          { stage: 'total' },
+          (Date.now() - startedAt) / 1000,
+        );
+      });
+      return {
+        fallback: {
+          matches: [],
+          durationMs: Date.now() - startedAt,
+          modelVersion: '',
+          fallbackReason: 'encoder_unavailable',
+        },
+      };
+    }
+  }
+
+  /** Score, fuse, sort, truncate, and package — emits the fusion stage span. */
+  private scoreAndPackage(args: {
+    neighbours: NearestResult[];
+    factsByQid: Map<string, ArtworkFacts>;
+    locale: 'fr' | 'en';
+    topK: number;
+    modelVersion: string;
+    startedAt: number;
+    parentSpan: VisualCompareTrace | undefined;
+  }): CompareResult {
+    const { neighbours, factsByQid, locale, topK, modelVersion, startedAt, parentSpan } = args;
+    const fusionStart = Date.now();
     const matches: CompareMatch[] = [];
     for (const neighbour of neighbours) {
       const facts = factsByQid.get(neighbour.qid);
-      if (facts === undefined) {
-        continue;
-      }
-      matches.push(scoreCandidate(neighbour, facts, this.weights, input.locale));
+      if (facts === undefined) continue;
+      matches.push(scoreCandidate(neighbour, facts, this.weights, locale));
     }
-
-    // 7) Sort by finalScore desc, then truncate to top-K.
     matches.sort((a, b) => b.finalScore - a.finalScore);
     const topMatches = matches.slice(0, topK);
-
-    const result: CompareResult = {
+    recordStageSpan(parentSpan, 'fusion', fusionStart, {
+      scoredCount: matches.length,
+      returnedCount: topMatches.length,
+    });
+    return {
       matches: topMatches,
       durationMs: Date.now() - startedAt,
       modelVersion,
     };
-
-    // 8) Cache write — fail-soft.
-    await this.writeCache(cacheKey, result);
-
-    return result;
   }
 
   /**

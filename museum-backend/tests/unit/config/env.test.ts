@@ -417,7 +417,6 @@ describe('env.ts module', () => {
         VISUAL_W_VISUAL: undefined,
         VISUAL_W_META: undefined,
         VISUAL_FALLBACK_VISUAL_THRESHOLD: undefined,
-        VISUAL_COMPARE_ENABLED: undefined,
         EMBEDDINGS_CACHE_TTL_MS: undefined,
         EMBEDDINGS_ENCODE_TIMEOUT_MS: undefined,
       });
@@ -431,7 +430,6 @@ describe('env.ts module', () => {
         wVisual: 0.7,
         wMeta: 0.3,
         fallbackVisualThreshold: 0.4,
-        compareEnabled: true,
         embeddingsCacheTtlMs: 3_600_000,
         encodeTimeoutMs: 3000,
       });
@@ -479,18 +477,6 @@ describe('env.ts module', () => {
     it('overrides EMBEDDINGS_DIM (still numeric, no validation here)', () => {
       const env = loadEnv({ EMBEDDINGS_DIM: '1024' });
       expect(env.visualSimilarity.embeddingsDim).toBe(1024);
-    });
-  });
-
-  describe('visualSimilarity boolean kill-switch', () => {
-    it('VISUAL_COMPARE_ENABLED defaults to true when unset', () => {
-      const env = loadEnv({ VISUAL_COMPARE_ENABLED: undefined });
-      expect(env.visualSimilarity.compareEnabled).toBe(true);
-    });
-
-    it('VISUAL_COMPARE_ENABLED=false flips the kill-switch', () => {
-      const env = loadEnv({ VISUAL_COMPARE_ENABLED: 'false' });
-      expect(env.visualSimilarity.compareEnabled).toBe(false);
     });
   });
 

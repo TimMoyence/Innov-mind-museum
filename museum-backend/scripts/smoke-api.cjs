@@ -29,6 +29,76 @@ function buildUrl(baseUrl, path) {
   return new URL(path, baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`).toString();
 }
 
+/**
+ * Minimal 1×1 PNG, base-64 encoded — synthetic fixture for the C3 compare
+ * smoke. Used when no real fixture is uploaded by the CI job. The pipeline
+ * accepts it (passes magic-byte validation), but a brand-new test pixel will
+ * not match any catalogued artwork — so the smoke asserts the endpoint
+ * RESPONDS within the contract (200 + matches[] OR 503 + encoder fallback),
+ * not that it returns specific neighbours. Real recall regression is the
+ * Maestro flow's job (`.maestro/chat-compare.yaml`, T8.8).
+ */
+const SMOKE_TEST_PNG_B64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+/**
+ * POST a multipart/form-data payload (used for `/api/chat/compare` which only
+ * accepts a file + scalar fields, never JSON). Returns the same `{ status, json }`
+ * shape as `fetchJson` so the call sites stay symmetrical.
+ */
+async function fetchMultipart({ baseUrl, path, token, fields, timeoutMs = DEFAULT_TIMEOUT_MS, expected }) {
+  const url = buildUrl(baseUrl, path);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const formData = new FormData();
+    for (const [key, value] of Object.entries(fields)) {
+      if (value && typeof value === 'object' && Buffer.isBuffer(value.buffer)) {
+        // File field: { buffer, filename, contentType } shape.
+        formData.append(
+          key,
+          new Blob([value.buffer], { type: value.contentType || 'application/octet-stream' }),
+          value.filename || 'upload',
+        );
+      } else {
+        formData.append(key, String(value));
+      }
+    }
+
+    const headers = { Accept: 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+      signal: controller.signal,
+      redirect: 'manual',
+    });
+
+    const text = await response.text();
+    let json = null;
+    if (text) {
+      try {
+        json = JSON.parse(text);
+      } catch (error) {
+        throw new Error(`Non-JSON response from POST ${path}: ${text.slice(0, 300)}`);
+      }
+    }
+
+    const expectedCodes = Array.isArray(expected) ? expected : [expected];
+    if (!expectedCodes.includes(response.status)) {
+      throw new Error(
+        `Unexpected status for POST ${path}: ${response.status}. Body: ${text.slice(0, 500) || '<empty>'}`,
+      );
+    }
+
+    return { status: response.status, json };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchJson({ baseUrl, path, method = 'GET', token, body, timeoutMs = DEFAULT_TIMEOUT_MS, expected }) {
   const url = buildUrl(baseUrl, path);
   const controller = new AbortController();
@@ -259,6 +329,66 @@ async function main() {
     throw new Error('Created session not found in list response');
   }
   console.log('[smoke:api] list sessions OK');
+
+  // T9.3 — `/api/chat/compare` smoke (Phase 9 / C3 visual similarity).
+  //
+  // Default: ENABLED. The endpoint MUST exist and respond contractually in
+  // every smoke run — it's a public contract. Disable explicitly with
+  // `SMOKE_COMPARE_ENABLED=false` only when running against an environment
+  // where the SigLIP encoder is genuinely down (and you're in the middle of
+  // remediation). Skipping silently in normal operation would defeat the
+  // smoke's purpose.
+  const compareEnabled = getEnv('SMOKE_COMPARE_ENABLED', 'true').toLowerCase() === 'true';
+  if (compareEnabled) {
+    const compare = await fetchMultipart({
+      baseUrl,
+      path: '/api/chat/compare',
+      token: accessToken,
+      fields: {
+        sessionId: createdSessionId,
+        topK: '5',
+        locale: 'fr',
+        image: {
+          buffer: Buffer.from(SMOKE_TEST_PNG_B64, 'base64'),
+          filename: 'smoke-test.png',
+          contentType: 'image/png',
+        },
+      },
+      timeoutMs,
+      // 200: encoder + catalog reachable. 503: encoder offline → fallback
+      // contractual response (matches=[], fallbackReason=encoder_unavailable).
+      // Either is contractually valid for the smoke.
+      expected: [200, 503],
+    });
+    if (compare.status === 200) {
+      const matches = compare.json?.matches;
+      if (!Array.isArray(matches)) {
+        throw new Error(
+          `Compare 200 response missing matches[]: ${JSON.stringify(compare.json).slice(0, 300)}`,
+        );
+      }
+      // Synthetic 1×1 PNG → matches[] may be empty (no neighbour in catalog),
+      // BUT the response MUST carry modelVersion + durationMs (contract).
+      if (typeof compare.json?.modelVersion !== 'string' || compare.json.modelVersion === '') {
+        throw new Error(
+          `Compare 200 response missing modelVersion: ${JSON.stringify(compare.json).slice(0, 300)}`,
+        );
+      }
+      console.log(
+        `[smoke:api] compare OK (status=200, matches=${matches.length}, modelVersion=${compare.json.modelVersion})`,
+      );
+    } else {
+      // 503 — encoder offline. Verify the contractual fallback envelope.
+      if (compare.json?.error?.code !== 'COMPARE_ENCODER_UNAVAILABLE') {
+        throw new Error(
+          `Compare 503 response not contractual (expected error.code=COMPARE_ENCODER_UNAVAILABLE): ${JSON.stringify(compare.json).slice(0, 300)}`,
+        );
+      }
+      console.log('[smoke:api] compare OK (status=503, encoder unavailable — contractual fallback)');
+    }
+  } else {
+    console.log('[smoke:api] compare SKIPPED (SMOKE_COMPARE_ENABLED=false)');
+  }
 
   const deleted = await fetchJson({
     baseUrl,

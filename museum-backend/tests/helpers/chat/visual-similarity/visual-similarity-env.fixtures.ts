@@ -36,7 +36,6 @@ export const makeVisualSimilarityEnv = (
   wVisual: 0.7,
   wMeta: 0.3,
   fallbackVisualThreshold: 0.4,
-  compareEnabled: true,
   embeddingsCacheTtlMs: 3_600_000,
   encodeTimeoutMs: 3_000,
   ...overrides,

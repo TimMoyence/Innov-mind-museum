@@ -125,6 +125,64 @@ export const chatEnrichmentSourceLatencySeconds = new Histogram({
   registers: [registry],
 });
 
+/**
+ * C3 visual similarity (2026-05 / Phase 9 T9.x corrective) — Prometheus
+ * surface mandated by `spec.md §10 NFR`. Cardinality is bounded so the
+ * series count stays explainable:
+ *   - `requests_total` has no labels (just total throughput).
+ *   - `duration_seconds` carries one `stage` label ∈ {total, encode, search,
+ *     enrich, fusion}. 5 active series.
+ *   - `fallback_total` carries one `reason` label ∈ {encoder_unavailable,
+ *     no_visual_neighbor}. 2 active series.
+ *   - `cache_hits_total` has no labels — a single counter, paired with
+ *     `requests_total` for the hit-rate computation in the dashboard.
+ *
+ * Total compare-namespaced active series ≤ 9. The Grafana dashboard
+ * (`infra/grafana/dashboards/visual-compare.json`) consumes the per-stage
+ * histogram for the latency panels and the fallback counter for the
+ * encoder-unavailability rate.
+ */
+export const compareRequestsTotal = new Counter({
+  name: 'compare_requests_total',
+  help: 'Total /chat/compare requests reaching the use-case (post-auth, post-rate-limit)',
+  registers: [registry],
+});
+
+/**
+ * Per-stage latency histogram. Bucket boundaries pinned to the spec NFR
+ * latency budget (p95 ≤ 3s for `total`); finer buckets at the low end so
+ * fast cache hits / single-stage spikes resolve in the panel.
+ */
+export const compareDurationSeconds = new Histogram({
+  name: 'compare_duration_seconds',
+  help: 'Per-stage latency of the /chat/compare pipeline',
+  labelNames: ['stage'] as const,
+  buckets: [0.05, 0.1, 0.25, 0.5, 1, 1.5, 2, 3, 5, 8],
+  registers: [registry],
+});
+
+/**
+ * Counter of fallback responses by reason. Increments on the contractual
+ * fallback paths in the orchestrator (encoder unavailable, no neighbour).
+ * 4xx client errors are tracked via `http_requests_total` instead.
+ */
+export const compareFallbackTotal = new Counter({
+  name: 'compare_fallback_total',
+  help: 'Total /chat/compare requests that returned a contractual fallback envelope',
+  labelNames: ['reason'] as const,
+  registers: [registry],
+});
+
+/**
+ * Top-K result-cache hit counter. Pair with `compare_requests_total` to
+ * compute the cache hit rate in the dashboard.
+ */
+export const compareCacheHitsTotal = new Counter({
+  name: 'compare_cache_hits_total',
+  help: 'Total /chat/compare requests served from the top-K result cache (no encoder/repo hit)',
+  registers: [registry],
+});
+
 /** Returns the Prometheus-format metrics dump. */
 export async function renderMetrics(): Promise<string> {
   return await registry.metrics();
