@@ -292,10 +292,6 @@ const env: AppEnv = {
     cacheMaxEntries: toNumber(process.env.IMAGE_ENRICHMENT_CACHE_MAX_ENTRIES, 200),
     fetchTimeoutMs: toNumber(process.env.IMAGE_ENRICHMENT_FETCH_TIMEOUT_MS, 3000),
     maxImagesPerResponse: toNumber(process.env.IMAGE_ENRICHMENT_MAX_IMAGES, 5),
-    // C2 v2 (2026-05) — kill-switch, default false. Strict-true so a typo
-    // (`yes`, `1`) does NOT silently flip behaviour. Operators flip to `true`
-    // only after the bake window. See `.env.local.example` for documentation.
-    v2Enabled: process.env.CHAT_ENRICHMENT_V2_ENABLED === 'true',
   },
   // C3 (2026-05) — visual similarity engine config. Additive block, no impact
   // on existing pipelines until `/chat/compare` ships (Phase 6 wiring).
@@ -310,7 +306,6 @@ const env: AppEnv = {
     wVisual: toNumber(process.env.VISUAL_W_VISUAL, 0.7),
     wMeta: toNumber(process.env.VISUAL_W_META, 0.3),
     fallbackVisualThreshold: toNumber(process.env.VISUAL_FALLBACK_VISUAL_THRESHOLD, 0.4),
-    compareEnabled: toBoolean(process.env.VISUAL_COMPARE_ENABLED, true),
     embeddingsCacheTtlMs: toNumber(process.env.EMBEDDINGS_CACHE_TTL_MS, 3_600_000),
     encodeTimeoutMs: toNumber(process.env.EMBEDDINGS_ENCODE_TIMEOUT_MS, 3000),
   },

@@ -2,28 +2,13 @@
  * T7.1 — POST `/sessions/:id/messages` v2 enrichment integration test.
  *
  * Drives the full chat HTTP pipeline against a real Postgres testcontainer
- * (via `createE2EHarness`) with the four C2 image-source clients mocked, and
- * asserts the kill-switch contract:
+ * (via `createE2EHarness`) with the four C2 image-source clients mocked.
+ * The second turn's `metadata.images` MUST carry entries from Wikidata,
+ * Unsplash, Wikimedia Commons, and the Musaium catalogue, with
+ * `caption` + `rationale` propagated from the prior assistant turn's
+ * `suggestedImages[]` array (R1, R5, R8 of spec §3).
  *
- *   - Scenario A — `CHAT_ENRICHMENT_V2_ENABLED=true` + all 4 sources wired:
- *       the second turn's `metadata.images` carries entries from Wikidata,
- *       Unsplash, Wikimedia Commons, and the Musaium catalogue, with
- *       `caption` + `rationale` propagated from the prior assistant turn's
- *       `suggestedImages[]` array (R1, R5, R8 of spec §3).
- *
- *   - Scenario B — `CHAT_ENRICHMENT_V2_ENABLED=false` + only Unsplash wired
- *       (mirrors the production `chat-module.ts:230-249` build path):
- *       the assistant response does NOT include any `commons` / `musaium`
- *       sourced images and stays at or below the legacy v1 cap of 3 images
- *       (R9 kill-switch — byte-identical pre-C2 behaviour).
- *
- * Each scenario boots its own harness inside `jest.isolateModulesAsync` so
- * `@src/config/env` can re-evaluate `process.env.CHAT_ENRICHMENT_V2_ENABLED`
- * fresh per scenario; the e2e harness's no-resetModules guard rails are
- * preserved within each isolate.
- *
- * Gated on `RUN_E2E=true` per the chat-suite convention; CI nightly runs
- * with the flag set, local dev opts in via:
+ * Gated on `RUN_E2E=true`. Local dev opts in via:
  *
  *   RUN_E2E=true pnpm jest --runInBand \
  *     tests/integration/chat/post-message-c2-enrichment.integration.test.ts
@@ -33,7 +18,7 @@ import type { Express } from 'express';
 import type { Server } from 'http';
 import type { AddressInfo } from 'net';
 
-import { makeUnsplashClientMock, makeUnsplashPhoto } from '../../helpers/search-clients/unsplash.fixture';
+import { makeUnsplashPhoto } from '../../helpers/search-clients/unsplash.fixture';
 import { makeArtworkFacts } from '../../helpers/chat/visual-similarity/artwork-facts.fixtures';
 
 import type {
@@ -173,9 +158,7 @@ async function bootHarnessWithMockedEnrichment(args: BootArgs): Promise<BootedHa
   const postgresContainer = await startPostgresTestContainer();
 
   // Force-override every env var we care about (`=`, not `??=`) so a value
-  // leaking from an earlier suite cannot poison this isolate. The
-  // CHAT_ENRICHMENT_V2_ENABLED flag is set by the calling describe block's
-  // beforeAll, BEFORE we enter the isolateModulesAsync scope.
+  // leaking from an earlier suite cannot poison this isolate.
   process.env.NODE_ENV = 'test';
   process.env.PORT = '0';
   process.env.TRUST_PROXY = 'false';
@@ -460,19 +443,13 @@ async function postUserMessage(
   return res as AssistantTurnResponse;
 }
 
-/* ────────────────────────────── Scenario A ─────────────────────────────── */
-
 describeE2E('POST /sessions/:id/messages — C2 v2 enrichment (PG testcontainer)', () => {
   jest.setTimeout(180_000);
 
-  describe('Scenario A — v2 enabled, all 4 sources wired', () => {
+  describe('all 4 sources wired', () => {
     let booted: BootedHarness;
 
     beforeAll(async () => {
-      // CRITICAL — set BEFORE entering the isolate so the freshly-imported
-      // `env.ts` captures the value at module load.
-      process.env.CHAT_ENRICHMENT_V2_ENABLED = 'true';
-
       await jest.isolateModulesAsync(async () => {
         const orchestrator = new V2SuggestingOrchestrator();
 
@@ -585,90 +562,6 @@ describeE2E('POST /sessions/:id/messages — C2 v2 enrichment (PG testcontainer)
 
         const sourcesPresent = new Set(images!.map((img) => img.source));
         expect(sourcesPresent.size).toBeGreaterThanOrEqual(2);
-      },
-    );
-  });
-
-  /* ────────────────────────────── Scenario B ─────────────────────────────── */
-
-  describe('Scenario B — v2 disabled, only Unsplash + Wikidata wired (legacy v1 path)', () => {
-    let booted: BootedHarness;
-
-    beforeAll(async () => {
-      process.env.CHAT_ENRICHMENT_V2_ENABLED = 'false';
-
-      await jest.isolateModulesAsync(async () => {
-        const orchestrator = new V2SuggestingOrchestrator();
-
-        // Only Unsplash + Wikidata — Commons & Musaium clients are NOT wired,
-        // matching the production `chat-module.ts:230-249` build path when
-        // `v2Enabled === false` (the new clients are simply not constructed).
-        const unsplashClient = makeUnsplashClientMock([
-          makeUnsplashPhoto({
-            url: 'https://unsplash.test/legacy-unsplash.jpg',
-            thumbnailUrl: 'https://unsplash.test/legacy-unsplash-thumb.jpg',
-            caption: 'Unsplash legacy photo',
-            photographerName: 'Legacy Photographer',
-          }),
-        ]);
-        const knowledgeBaseProvider = makeKnowledgeBaseProviderMock(
-          makeArtworkFacts({
-            qid: 'Q12342',
-            title: "Monet's Water Lilies",
-            imageUrl: 'https://wikidata.test/legacy-wikidata.jpg',
-          }),
-        );
-
-        booted = await bootHarnessWithMockedEnrichment({
-          unsplashClient,
-          commonsClient: undefined,
-          musaiumClient: undefined,
-          knowledgeBaseProvider,
-          orchestrator,
-        });
-      });
-    }, 180_000);
-
-    afterAll(async () => {
-      await booted?.stop();
-    });
-
-    it(
-      'returns ≤3 images and never includes commons or musaium sources (legacy v1 cap)',
-      async () => {
-        const visitor = await registerAndLoginVisitor(booted);
-        const sessionId = await createSession(booted, visitor.token);
-
-        const t1 = await postUserMessage(
-          booted,
-          sessionId,
-          visitor.token,
-          "Compare Monet's Water Lilies to Manet's Olympia",
-        );
-        expect(t1.status).toBe(201);
-
-        const t2 = await postUserMessage(
-          booted,
-          sessionId,
-          visitor.token,
-          'Tell me more about the brushwork.',
-        );
-        expect(t2.status).toBe(201);
-
-        const images = t2.body.metadata.images ?? [];
-        // Legacy cap: maxImagesPerResponse defaults to 5 in our test build but
-        // the v1 path with only Unsplash + Wikidata physically cannot produce
-        // more than 3 entries (1 Wikidata P18 + 1 Unsplash photo, plus the
-        // optional KB-merged Wikidata image). The mission spec asserts ≤3.
-        expect(images.length).toBeLessThanOrEqual(3);
-
-        const blockedSources: ReadonlySet<EnrichedImage['source']> = new Set([
-          'commons',
-          'musaium',
-        ]);
-        for (const img of images) {
-          expect(blockedSources.has(img.source)).toBe(false);
-        }
       },
     );
   });

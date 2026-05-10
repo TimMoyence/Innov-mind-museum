@@ -44,7 +44,10 @@ import { logger } from '@shared/logger/logger';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
-import { buildCompareImageUseCase } from './chat-module.compare-wiring';
+import {
+  buildCompareImageUseCase,
+  buildCompareSessionAccessVerifier,
+} from './chat-module.compare-wiring';
 
 import type { ArtKeywordRepository } from '@modules/chat/domain/art-keyword/artKeyword.repository.interface';
 import type { AdvancedGuardrail } from '@modules/chat/domain/ports/advanced-guardrail.port';
@@ -79,6 +82,12 @@ export interface BuiltChatModule {
    * test harnesses build the module without the C3 pipeline.
    */
   compareImageUseCase?: (input: CompareUseCaseInput) => Promise<CompareResult>;
+  /**
+   * C3 Visual Similarity — session-ownership check piped to the compare router.
+   * Closes over the chat repository so the route does not import persistence.
+   * Optional in lockstep with `compareImageUseCase`.
+   */
+  compareSessionAccessVerifier?: (sessionId: string, ownerId: number | undefined) => Promise<void>;
 }
 
 /**
@@ -228,25 +237,12 @@ export class ChatModule {
     );
   }
 
-  /**
-   * Creates image enrichment with v1 (Unsplash + Wikidata P18) and, when
-   * `CHAT_ENRICHMENT_V2_ENABLED=true`, the v2 sources (Wikimedia Commons +
-   * Musaium curated catalogue). The kill-switch governs ONLY the v2 wiring;
-   * the legacy Unsplash gate (key presence) is preserved verbatim.
-   *
-   * R9 — when v2 is disabled the new clients are NOT instantiated, so the
-   * service receives `undefined` for both and resolves to byte-identical
-   * pre-C2 behaviour.
-   */
   private buildImageEnrichment(): ImageEnrichmentService | undefined {
     const unsplashClient = env.imageEnrichment.unsplashAccessKey
       ? new UnsplashClient(env.imageEnrichment.unsplashAccessKey)
       : undefined;
-    const v2Enabled = env.imageEnrichment.v2Enabled;
-    const commonsClient = v2Enabled
-      ? new WikimediaCommonsClient(env.imageEnrichment.fetchTimeoutMs)
-      : undefined;
-    const musaiumClient = v2Enabled ? new MusaiumCatalogueClient() : undefined;
+    const commonsClient = new WikimediaCommonsClient(env.imageEnrichment.fetchTimeoutMs);
+    const musaiumClient = new MusaiumCatalogueClient();
     return new ImageEnrichmentService(
       unsplashClient,
       {
@@ -405,7 +401,10 @@ export class ChatModule {
 
     const describeService = new DescribeService({ orchestrator: effectiveOrchestrator, tts });
 
-    // C3 Visual Similarity (T5.5) — wire the `POST /chat/compare` use case.
+    // C3 Visual Similarity (T5.5) — wire the `POST /chat/compare` use case
+    // plus the session-ownership verifier consumed by the route (security
+    // BLOCKER 2026-05-10: parity with `ensureSessionAccess()` on every other
+    // chat write path).
     const compareImageUseCase = buildCompareImageUseCase(
       repository,
       dataSource,
@@ -413,6 +412,7 @@ export class ChatModule {
       ocr,
       cache,
     );
+    const compareSessionAccessVerifier = buildCompareSessionAccessVerifier(repository);
 
     const built: BuiltChatModule = {
       chatService,
@@ -424,6 +424,7 @@ export class ChatModule {
       artKeywordRepository: artKeywordRepo,
       artworkKnowledgeRepo: knowledgeExtraction.artworkKnowledgeRepo,
       compareImageUseCase,
+      compareSessionAccessVerifier,
     };
     this._built = built;
     return built;

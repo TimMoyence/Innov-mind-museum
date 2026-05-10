@@ -1,5 +1,3 @@
-import { env } from '@src/config/env';
-
 import type { EnrichedImage, SuggestedImage } from '@modules/chat/domain/chat.types';
 import type { ArtworkFacts } from '@modules/chat/domain/ports/knowledge-base.port';
 import type { SearchResult } from '@modules/chat/domain/ports/web-search.port';
@@ -115,16 +113,11 @@ function fetchKbFacts(
 }
 
 /**
- * Fetches image enrichment results — fail-open.
+ * Fetches image enrichment — fail-open.
  *
- * v2 (C2 finition 2026-05): when `CHAT_ENRICHMENT_V2_ENABLED=true` AND the
- * last assistant turn carries a v2 `suggestedImages[]` array, fan out one
- * `enrich()` call per entry with the LLM-authored caption + rationale carried
- * through. Otherwise (v1 metadata, env disabled, or empty entries) falls back
- * to the legacy single-term path (R2).
- *
- * Kill-switch (R9): `env.imageEnrichment.v2Enabled === false` forces the
- * legacy path even if v2 metadata is present, byte-identical to pre-C2.
+ * When the last assistant turn carries a `suggestedImages[]` array, fan out
+ * one `enrich()` call per entry with LLM-authored caption + rationale carried
+ * through. Otherwise falls back to the legacy single-term path (R2).
  */
 interface FetchImagesArgs {
   searchTerm: string | null;
@@ -139,8 +132,7 @@ function fetchImages(
 ): Promise<EnrichedImage[] | undefined> {
   const { searchTerm, suggestedEntries, museumMode, requestId } = args;
   if (!deps.imageEnrichment) return NONE;
-  const v2Enabled = env.imageEnrichment.v2Enabled;
-  if (v2Enabled && suggestedEntries && suggestedEntries.length > 0) {
+  if (suggestedEntries && suggestedEntries.length > 0) {
     const queries = suggestedEntries.map((s) => s.query.trim()).filter(Boolean);
     if (queries.length === 0) return NONE;
     const annotations: SuggestedImageAnnotation[] = suggestedEntries.map((s) => ({

@@ -112,7 +112,6 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
       cacheMaxEntries: 200,
       fetchTimeoutMs: 3000,
       maxImagesPerResponse: 5,
-      v2Enabled: false,
     },
     visualSimilarity: {
       provider: 'siglip-onnx',

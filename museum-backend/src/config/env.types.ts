@@ -338,20 +338,6 @@ export interface AppEnv {
     cacheMaxEntries: number;
     fetchTimeoutMs: number;
     maxImagesPerResponse: number;
-    /**
-     * C2 v2 (2026-05) — multi-source enrichment kill-switch.
-     *
-     * When `true`, `enrichment-fetcher.fetchImages` consumes
-     * `suggestedImages[]` from the LLM and fans out to Wikimedia Commons +
-     * Musaium catalogue alongside Wikidata + Unsplash. When `false` (default),
-     * the legacy single-term path is forced and the new clients are NOT
-     * wired at the composition root — behaviour is byte-identical to pre-C2.
-     *
-     * Bake plan: ≥7 days at `false` after merge → flip to `true` for canary,
-     * then ≥7 days at `true` before bumping the default in code (memory
-     * `project_no_staging_v1` — prod = stage).
-     */
-    v2Enabled: boolean;
   };
   /**
    * C3 (2026-05) — visual similarity engine (`/chat/compare`) configuration.
