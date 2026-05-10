@@ -26,7 +26,6 @@ interface LocaleCopy {
   heading: (status: ReviewStatus) => string;
   body: (name: string, rating: number, status: ReviewStatus) => string;
   preheader: (status: ReviewStatus) => string;
-  reviewLabel: string;
   ratingLabel: string;
   footer: string;
   approvedTag: string;
@@ -47,8 +46,7 @@ export const REVIEW_LOCALES: Record<ReviewLocale, LocaleCopy> = {
       status === 'approved'
         ? 'Merci pour votre retour, il est en ligne.'
         : "Votre avis n'a pas été publié.",
-    reviewLabel: 'Votre avis',
-    ratingLabel: 'Note',
+    ratingLabel: 'Votre note',
     footer:
       'Vous recevez cet email parce que vous avez activé les notifications de modération. Vous pouvez les désactiver à tout moment dans vos paramètres.',
     approvedTag: 'Publié',
@@ -67,8 +65,7 @@ export const REVIEW_LOCALES: Record<ReviewLocale, LocaleCopy> = {
       status === 'approved'
         ? 'Thanks for your review, it is now live.'
         : 'Your review was not published.',
-    reviewLabel: 'Your review',
-    ratingLabel: 'Rating',
+    ratingLabel: 'Your rating',
     footer:
       'You are receiving this email because you enabled moderation notifications. You can disable them anytime in your settings.',
     approvedTag: 'Published',
@@ -90,7 +87,6 @@ export function buildReviewModerationEmail(input: ReviewModerationEmailInput): s
   const tagText = isApproved ? copy.approvedTag : copy.rejectedTag;
   const tagBg = isApproved ? '#DCFCE7' : '#FEF3C7';
   const tagColor = isApproved ? '#166534' : '#92400E';
-  const accent = isApproved ? '#0EA5E9' : '#C49A3C';
 
   const bodyText = escapeHtml(copy.body(input.recipientName, input.rating, input.status));
   const safeComment = escapeHtml(input.comment).replaceAll('\n', '<br/>');
@@ -98,10 +94,10 @@ export function buildReviewModerationEmail(input: ReviewModerationEmailInput): s
   const blockquote =
     isApproved && input.comment.trim().length > 0
       ? `
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;background-color:#F8FAFC;border-left:3px solid ${accent};border-radius:0 10px 10px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;background-color:#F8FAFC;border-left:3px solid #C49A3C;border-radius:0 10px 10px 0;">
           <tr>
             <td style="padding:18px 22px;font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.65;color:#334155;font-style:italic;">
-              “${safeComment}”
+              "${safeComment}"
             </td>
           </tr>
         </table>`
@@ -132,7 +128,6 @@ export function buildReviewModerationEmail(input: ReviewModerationEmailInput): s
     bodyHtml,
     preheader: copy.preheader(input.status),
     locale: input.locale,
-    accentColor: accent,
     footerNote: copy.footer,
   });
 }

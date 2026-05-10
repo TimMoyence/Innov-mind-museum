@@ -21,8 +21,8 @@ const COPY: Record<
   }
 > = {
   fr: {
-    heading: 'Réinitialisation de votre mot de passe',
-    preheader: 'Réinitialisez votre mot de passe Musaium en un clic.',
+    heading: 'Réinitialisation du mot de passe',
+    preheader: 'Choisissez un nouveau mot de passe Musaium en un clic.',
     lead: 'Vous avez demandé à réinitialiser votre mot de passe Musaium. Cliquez sur le bouton ci-dessous pour en choisir un nouveau.',
     expires: 'Ce lien est valable 1 heure pour des raisons de sécurité.',
     ignored:
@@ -33,7 +33,7 @@ const COPY: Record<
   },
   en: {
     heading: 'Reset your password',
-    preheader: 'Reset your Musaium password in one click.',
+    preheader: 'Choose a new Musaium password in one click.',
     lead: 'You requested a password reset for your Musaium account. Click the button below to choose a new one.',
     expires: 'This link is valid for 1 hour for security reasons.',
     ignored:

@@ -28,7 +28,7 @@ export class BrevoEmailService implements EmailService {
 
     if (!response.ok) {
       const body = await response.text().catch(() => '');
-      throw new Error(`Brevo email failed (${String(response.status)}): ${body.slice(0, 200)}`);
+      throw new Error(`Brevo email failed (${String(response.status)}): ${body.slice(0, 800)}`);
     }
   }
 }
