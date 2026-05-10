@@ -54,6 +54,9 @@ export default {
   thresholds: { high: 85, low: 70, break: 70 },
   timeoutMS: 5000,
   timeoutFactor: 0.5,
+  // Bumped from default 5min — under heavy concurrent agents the initial 4123-test
+  // dry-run can take 6+ min on M1 Pro. Per-mutant timeouts above are unaffected.
+  dryRunTimeoutMinutes: 10,
   concurrency: process.env.STRYKER_CONCURRENCY
     ? Number(process.env.STRYKER_CONCURRENCY)
     : process.env.CI === 'true'
