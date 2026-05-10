@@ -1,7 +1,6 @@
 import {
   EmailReviewModerationNotifier,
   NoopReviewModerationNotifier,
-  __test,
 } from '@modules/review/adapters/secondary/notifier/review-moderation-email.notifier';
 
 import type { ReviewModerationPayload } from '@modules/review/domain/ports/review-moderation-notifier.port';
@@ -33,7 +32,8 @@ describe('EmailReviewModerationNotifier', () => {
     const [to, subject, html] = emailService.sendEmail.mock.calls[0];
     expect(to).toBe('alice@example.com');
     expect(subject).toBe('Votre avis a été publié');
-    expect(html).toContain('Avis publié');
+    expect(html).toContain('Votre avis est en ligne');
+    expect(html).toContain('Publié');
     expect(html).toContain('Alice');
     expect(html).toContain('Nice museum');
   });
@@ -44,8 +44,8 @@ describe('EmailReviewModerationNotifier', () => {
 
     const [, subject, html] = emailService.sendEmail.mock.calls[0];
     expect(subject).toBe('Your review was rejected');
-    expect(html).toContain('Review rejected');
-    // Rejected emails must NOT echo the original comment (UX decision — do not rub the content in)
+    expect(html).toContain('Your review was not published');
+    expect(html).toContain('Rejected');
     expect(html).not.toContain('Nice museum');
   });
 
@@ -61,12 +61,6 @@ describe('EmailReviewModerationNotifier', () => {
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('&lt;script&gt;');
     expect(html).toContain('Great &lt;b&gt;museum&lt;/b&gt;');
-  });
-
-  it('throws on pending status (template can only render terminal states)', () => {
-    expect(() => __test.buildEmailHtml({ ...basePayload, afterStatus: 'pending' })).toThrow(
-      'terminal status',
-    );
   });
 
   it('does NOT send anything when status is pending at send time (defensive)', async () => {

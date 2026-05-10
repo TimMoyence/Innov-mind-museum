@@ -13,9 +13,7 @@ jest.mock('@shared/logger/logger', () => ({
   },
 }));
 
-const { logger } = jest.requireMock('@shared/logger/logger') as {
-  logger: { info: jest.Mock; warn: jest.Mock; error: jest.Mock };
-};
+const { logger } = jest.requireMock('@shared/logger/logger');
 
 const makePayload = (overrides: Partial<SupportContactPayload> = {}): SupportContactPayload => ({
   name: 'Ada Lovelace',
@@ -87,17 +85,17 @@ describe('EmailSupportContactNotifier', () => {
     expect(subject.length).toBeLessThanOrEqual(200);
   });
 
-  it('includes all HTML sections in output', async () => {
+  it('includes all expected sections in output', async () => {
     await notifier.notify(makePayload());
 
     const html = sendEmail.mock.calls[0][2] as string;
-    expect(html).toContain('<h2>New Musaium Support Contact</h2>');
-    expect(html).toContain('<strong>Name:</strong>');
-    expect(html).toContain('<strong>Email:</strong>');
-    expect(html).toContain('<strong>Request ID:</strong>');
-    expect(html).toContain('<strong>IP:</strong>');
-    expect(html).toContain('<strong>User-Agent:</strong>');
-    expect(html).toContain('<hr/>');
+    expect(html).toContain('New support contact');
+    expect(html).toContain('Name');
+    expect(html).toContain('Email');
+    expect(html).toContain('Request ID');
+    expect(html).toContain('IP');
+    expect(html).toContain('User-Agent');
+    expect(html).toContain('Message');
   });
 
   it('uses "unknown" for missing ip and userAgent, "n/a" for requestId', async () => {
@@ -116,7 +114,7 @@ describe('EmailSupportContactNotifier', () => {
 
   it('uses provided optional fields when present', async () => {
     const payload = makePayload({
-      ip: '192.168.1.1',
+      ip: '192.0.2.42',
       requestId: 'req-abc-123',
       userAgent: 'TestAgent/1.0',
     });
@@ -124,7 +122,7 @@ describe('EmailSupportContactNotifier', () => {
     await notifier.notify(payload);
 
     const html = sendEmail.mock.calls[0][2] as string;
-    expect(html).toContain('192.168.1.1');
+    expect(html).toContain('192.0.2.42');
     expect(html).toContain('req-abc-123');
     expect(html).toContain('TestAgent/1.0');
   });
@@ -157,7 +155,7 @@ describe('NoopSupportContactNotifier', () => {
   });
 
   it('logs a warning with requestId and hasIp info', async () => {
-    await notifier.notify(makePayload({ requestId: 'req-42', ip: '10.0.0.1' }));
+    await notifier.notify(makePayload({ requestId: 'req-42', ip: '198.51.100.7' }));
 
     expect(logger.warn).toHaveBeenCalledWith('support_contact_notifier_noop', {
       requestId: 'req-42',

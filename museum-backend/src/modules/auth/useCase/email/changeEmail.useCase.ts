@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import bcrypt from 'bcrypt';
 
 import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
+import { buildChangeEmailEmail } from '@shared/email/templates';
 import { AppError, badRequest } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { validateEmail } from '@shared/validation/email';
@@ -74,11 +75,7 @@ export class ChangeEmailUseCase {
 
     if (this.emailService && this.frontendUrl) {
       const confirmLink = `${this.frontendUrl}/${locale}/confirm-email-change?token=${token}`;
-      const htmlContent =
-        '<h1>Confirm your email change</h1>' +
-        '<p>You requested to change your Musaium email address. Click the link below to confirm.</p>' +
-        `<p><a href="${confirmLink}">${confirmLink}</a></p>` +
-        '<p>This link expires in 1 hour. If you did not request this change, you can safely ignore this email.</p>';
+      const htmlContent = buildChangeEmailEmail({ confirmUrl: confirmLink, locale });
       try {
         await this.emailService.sendEmail(
           normalizedEmail,

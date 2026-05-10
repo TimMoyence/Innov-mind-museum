@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 
 import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
+import { buildResetPasswordEmail } from '@shared/email/templates';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
@@ -50,15 +51,7 @@ export class ForgotPasswordUseCase {
 
     if (this.emailService && this.frontendUrl) {
       const resetLink = `${this.frontendUrl}/${locale}/reset-password?token=${token}`;
-      const htmlContent =
-        '<h1>Reset your password</h1>' +
-        '<p>Click the link below to reset your Musaium password. This link expires in 1 hour.</p>' +
-        '<p><a href="' +
-        resetLink +
-        '">' +
-        resetLink +
-        '</a></p>' +
-        '<p>If you did not request this, you can safely ignore this email.</p>';
+      const htmlContent = buildResetPasswordEmail({ resetUrl: resetLink, locale });
       try {
         await this.emailService.sendEmail(
           normalizedEmail,

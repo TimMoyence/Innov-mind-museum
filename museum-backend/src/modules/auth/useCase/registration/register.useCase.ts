@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 
 import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
+import { buildVerifyEmail } from '@shared/email/templates';
 import { badRequest } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { validateEmail } from '@shared/validation/email';
@@ -81,11 +82,7 @@ export class RegisterUseCase {
 
       if (this.emailService && this.frontendUrl) {
         const verifyLink = `${this.frontendUrl}/${locale}/verify-email?token=${token}`;
-        const htmlContent =
-          '<h1>Verify your email</h1>' +
-          '<p>Welcome to Musaium! Click the link below to verify your email address.</p>' +
-          `<p><a href="${verifyLink}">${verifyLink}</a></p>` +
-          '<p>This link expires in 24 hours. If you did not create an account, you can safely ignore this email.</p>';
+        const htmlContent = buildVerifyEmail({ verifyUrl: verifyLink, locale });
         await this.emailService.sendEmail(
           normalizedEmail,
           'Verify your Musaium email',
